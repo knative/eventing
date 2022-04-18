@@ -117,7 +117,7 @@ func (c *FakeEventTypes) UpdateStatus(ctx context.Context, eventType *v1beta1.Ev
 // Delete takes name of the eventType and deletes it. Returns an error if one occurs.
 func (c *FakeEventTypes) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(eventtypesResource, c.ns, name), &v1beta1.EventType{})
+		Invokes(testing.NewDeleteActionWithOptions(eventtypesResource, c.ns, name, opts), &v1beta1.EventType{})
 
 	return err
 }

@@ -22,6 +22,7 @@ import (
 
 	"github.com/google/uuid"
 	"knative.dev/eventing/test/rekt/resources/broker"
+	"knative.dev/eventing/test/rekt/resources/delivery"
 	"knative.dev/eventing/test/rekt/resources/eventlibrary"
 	"knative.dev/eventing/test/rekt/resources/flaker"
 	"knative.dev/eventing/test/rekt/resources/trigger"
@@ -70,18 +71,21 @@ func SourceToSink(brokerName string) *feature.Feature {
 	return f
 }
 
-// SourceToSinkWithDLQ tests to see if a Ready Broker acts as middleware.
+// SourceToSinkWithDLQ tests to see if a Trigger with no DLQ and a bad Sink, subscribed
+// to a Ready Broker, forward unsent events to it's Broker's DLQ
 //
 // source ---> broker<Via> --[trigger]--> bad uri
 //                |
-//                +--[DLQ]--> sink
+//                +--[DLQ]--> dlq
 //
-func SourceToSinkWithDLQ(brokerName, sinkName string, prober *eventshub.EventProber) *feature.Feature {
-	prober.SetTargetResource(broker.GVR(), brokerName)
-
-	via := feature.MakeRandomK8sName("via")
-
+func SourceToSinkWithDLQ() *feature.Feature {
 	f := feature.NewFeature()
+
+	prober := eventshub.NewProber()
+	brokerName := feature.MakeRandomK8sName("broker")
+	dlq := feature.MakeRandomK8sName("dlq")
+	via := feature.MakeRandomK8sName("via")
+	source := feature.MakeRandomK8sName("source")
 
 	lib := feature.MakeRandomK8sName("lib")
 	f.Setup("install events", eventlibrary.Install(lib))
@@ -91,73 +95,29 @@ func SourceToSinkWithDLQ(brokerName, sinkName string, prober *eventshub.EventPro
 		panic(fmt.Errorf("can not find event files: %s", err))
 	}
 
-	f.Setup("install trigger", trigger.Install(via, brokerName, trigger.WithSubscriber(nil, "bad://uri")))
+	f.Setup("install dlq", prober.ReceiverInstall(dlq))
 
-	// Resources ready.
+	brokerConfig := append(broker.WithEnvConfig(), delivery.WithDeadLetterSink(prober.AsKReference(dlq), ""))
+	f.Setup("install broker", broker.Install(brokerName, brokerConfig...))
+	// Block till broker is ready
+	f.Setup("Broker is ready", broker.IsReady(brokerName))
+	prober.SetTargetResource(broker.GVR(), brokerName)
+
+	f.Setup("install trigger", trigger.Install(via, brokerName, trigger.WithSubscriber(nil, "bad://uri")))
+	// Trigger is ready.
 	f.Setup("trigger goes ready", trigger.IsReady(via))
 
 	// Install events after data plane is ready.
-	f.Setup("install source", prober.SenderInstall("source"))
+	f.Setup("install source", prober.SenderInstall(source))
 
 	// After we have finished sending.
-	f.Requirement("sender is finished", prober.SenderDone("source"))
+	f.Requirement("sender is finished", prober.SenderDone(source))
+	f.Requirement("receiver is finished", prober.ReceiverDone(source, dlq))
 
 	// Assert events ended up where we expected.
 	f.Stable("broker with DLQ").
-		Must("accepted all events", prober.AssertSentAll("source")).
-		Must("deliver event to DLQ", prober.AssertReceivedAll("source", sinkName))
-
-	return f
-}
-
-// SourceToTwoSinksWithDLQ tests to see if a Ready Broker acts as middleware.
-//
-// source ---> broker +--[trigger<via1>]--> bad uri
-//                |   |
-//                |   +--[trigger<vai2>]--> sink2
-//                |
-//                +--[DLQ]--> sink1
-//
-func SourceToTwoSinksWithDLQ(brokerName, sink1, sink2 string, prober *eventshub.EventProber) *feature.Feature {
-	prober.SetTargetResource(broker.GVR(), brokerName)
-
-	via1 := feature.MakeRandomK8sName("via")
-	via2 := feature.MakeRandomK8sName("via")
-
-	f := feature.NewFeature()
-
-	lib := feature.MakeRandomK8sName("lib")
-	f.Setup("install events", eventlibrary.Install(lib))
-	f.Setup("event cache is ready", eventlibrary.IsReady(lib))
-	f.Setup("use events cache", prober.SenderEventsFromSVC(lib, "events/three.ce"))
-	if err := prober.ExpectYAMLEvents(eventlibrary.PathFor("events/three.ce")); err != nil {
-		panic(fmt.Errorf("can not find event files: %s", err))
-	}
-
-	// Setup Probes
-	f.Setup("install recorder2", prober.ReceiverInstall(sink2))
-
-	// Setup data plane
-	f.Setup("install trigger via1", trigger.Install(via1, brokerName, trigger.WithSubscriber(nil, "bad://uri")))
-	f.Setup("install trigger via2", trigger.Install(via2, brokerName, trigger.WithSubscriber(prober.AsKReference(sink2), "")))
-
-	// Resources ready.
-	f.Setup("trigger1 goes ready", trigger.IsReady(via1))
-	f.Setup("trigger2 goes ready", trigger.IsReady(via2))
-
-	// Install events after data plane is ready.
-	f.Setup("install source", prober.SenderInstall("source"))
-
-	// After we have finished sending.
-	f.Requirement("sender is finished", prober.SenderDone("source"))
-	f.Requirement("receiver 1 is finished", prober.ReceiverDone("source", sink1))
-	f.Requirement("receiver 2 is finished", prober.ReceiverDone("source", sink2))
-
-	// Assert events ended up where we expected.
-	f.Stable("broker with DLQ").
-		Must("accepted all events", prober.AssertSentAll("source")).
-		Must("deliver event to DLQ (via1)", prober.AssertReceivedAll("source", sink1)).
-		Must("deliver event to sink (via2)", prober.AssertReceivedAll("source", sink2))
+		Must("accepted all events", prober.AssertSentAll(source)).
+		Must("deliver event to DLQ", prober.AssertReceivedAll(source, dlq))
 
 	return f
 }

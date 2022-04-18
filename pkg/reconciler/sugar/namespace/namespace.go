@@ -23,15 +23,15 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kubelabels "k8s.io/apimachinery/pkg/labels"
 
+	sugarconfig "knative.dev/eventing/pkg/apis/sugar"
+	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
+	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1"
+	"knative.dev/eventing/pkg/reconciler/sugar/resources"
 	namespacereconciler "knative.dev/pkg/client/injection/kube/reconciler/core/v1/namespace"
 	"knative.dev/pkg/logging"
 	pkgreconciler "knative.dev/pkg/reconciler"
-
-	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
-	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1"
-	"knative.dev/eventing/pkg/reconciler/sugar"
-	"knative.dev/eventing/pkg/reconciler/sugar/resources"
 )
 
 const (
@@ -42,8 +42,6 @@ const (
 type Reconciler struct {
 	eventingClientSet clientset.Interface
 
-	isEnabled sugar.LabelFilterFn
-
 	// listers index properties about resources
 	brokerLister eventinglisters.BrokerLister
 }
@@ -52,12 +50,20 @@ type Reconciler struct {
 var _ namespacereconciler.Interface = (*Reconciler)(nil)
 
 func (r *Reconciler) ReconcileKind(ctx context.Context, ns *corev1.Namespace) pkgreconciler.Event {
-	if !r.isEnabled(ns.Labels) {
-		logging.FromContext(ctx).Debug("Injection for Namespace not enabled.")
+	cfg := sugarconfig.FromContext(ctx)
+
+	selector, err := metav1.LabelSelectorAsSelector(cfg.NamespaceSelector)
+	if err != nil {
+		return fmt.Errorf("invalid label selector for namespaces: %w", err)
+	}
+	if !selector.Matches(kubelabels.Set(ns.ObjectMeta.Labels)) {
+		logging.FromContext(ctx).Debugf("Sugar Controller disabled for Namespace:%s in configmap 'config-sugar'", ns.Name)
 		return nil
+	} else {
+		logging.FromContext(ctx).Debugf("Sugar Controller enabled for Namespace:%s in configmap 'config-sugar'", ns.Name)
 	}
 
-	_, err := r.brokerLister.Brokers(ns.Name).Get(resources.DefaultBrokerName)
+	_, err = r.brokerLister.Brokers(ns.Name).Get(resources.DefaultBrokerName)
 
 	// If the resource doesn't exist, we'll create it.
 	if k8serrors.IsNotFound(err) {

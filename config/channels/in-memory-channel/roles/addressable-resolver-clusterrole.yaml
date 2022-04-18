@@ -20,7 +20,7 @@ metadata:
     eventing.knative.dev/release: devel
     duck.knative.dev/addressable: "true"
     app.kubernetes.io/version: devel
-    app.kubernetes.io/part-of: knative-eventing
+    app.kubernetes.io/name: knative-eventing
 # Do not use this role directly. These rules will be added to the "addressable-resolver" role.
 rules:
   - apiGroups:

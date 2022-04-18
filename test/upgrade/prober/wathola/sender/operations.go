@@ -25,6 +25,7 @@ import (
 // New creates new Sender
 func New() Sender {
 	config.ReadIfPresent()
+	config.SetupTracing()
 	return &sender{
 		eventsSent: 0,
 	}

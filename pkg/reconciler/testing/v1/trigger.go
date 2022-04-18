@@ -196,6 +196,15 @@ func WithTriggerStatusDeadLetterSinkURI(uri string) TriggerOption {
 	}
 }
 
+func WithLabel(key, value string) TriggerOption {
+	return func(t *v1.Trigger) {
+		if t.Labels == nil {
+			t.Labels = make(map[string]string)
+		}
+		t.Labels[key] = value
+	}
+}
+
 func WithAnnotation(key, value string) TriggerOption {
 	return func(t *v1.Trigger) {
 		if t.Annotations == nil {

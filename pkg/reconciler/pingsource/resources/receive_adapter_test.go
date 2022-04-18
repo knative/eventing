@@ -21,6 +21,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
+	"knative.dev/eventing/pkg/adapter/v2"
 	reconcilersource "knative.dev/eventing/pkg/reconciler/source"
 	"knative.dev/pkg/system"
 	_ "knative.dev/pkg/system/testing"
@@ -34,6 +35,13 @@ func TestMakePingAdapter(t *testing.T) {
 	}
 
 	want := []corev1.EnvVar{{
+		Name: adapter.EnvConfigNamespace,
+		ValueFrom: &corev1.EnvVarSource{
+			FieldRef: &corev1.ObjectFieldSelector{
+				FieldPath: "metadata.namespace",
+			},
+		},
+	}, {
 		Name: system.NamespaceEnvKey,
 		ValueFrom: &corev1.EnvVarSource{
 			FieldRef: &corev1.ObjectFieldSelector{
@@ -41,6 +49,7 @@ func TestMakePingAdapter(t *testing.T) {
 			},
 		},
 	}, {
+
 		Name:  "K_LEADER_ELECTION_CONFIG",
 		Value: "",
 	}, {

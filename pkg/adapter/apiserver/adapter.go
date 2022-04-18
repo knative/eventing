@@ -64,12 +64,12 @@ func (a *apiServerAdapter) start(ctx context.Context, stopCh <-chan struct{}) er
 	resyncPeriod := 10 * time.Hour
 
 	var delegate cache.Store = &resourceDelegate{
-		ce:     a.ce,
-		source: a.source,
-		logger: a.logger,
-		ref:    a.config.EventMode == v1.ReferenceMode,
+		ce:                  a.ce,
+		source:              a.source,
+		logger:              a.logger,
+		ref:                 a.config.EventMode == v1.ReferenceMode,
+		apiServerSourceName: a.name,
 	}
-
 	if a.config.ResourceOwner != nil {
 		a.logger.Infow("will be filtered",
 			zap.String("APIVersion", a.config.ResourceOwner.APIVersion),

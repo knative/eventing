@@ -17,13 +17,13 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 
 	"github.com/google/uuid"
 	"github.com/kelseyhightower/envconfig"
 	"go.uber.org/zap"
-
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	configmap "knative.dev/pkg/configmap/informer"
 	"knative.dev/pkg/controller"
@@ -36,12 +36,12 @@ import (
 	"knative.dev/pkg/tracing"
 	tracingconfig "knative.dev/pkg/tracing/config"
 
-	broker "knative.dev/eventing/cmd/broker"
+	"knative.dev/eventing/cmd/broker"
+	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/eventing/pkg/broker/filter"
-	"knative.dev/eventing/pkg/reconciler/names"
-
 	eventingclientset "knative.dev/eventing/pkg/client/clientset/versioned"
 	eventinginformers "knative.dev/eventing/pkg/client/informers/externalversions"
+	"knative.dev/eventing/pkg/reconciler/names"
 )
 
 const (
@@ -103,6 +103,14 @@ func main() {
 	// Watch the observability config map and dynamically update request logs.
 	configMapWatcher.Watch(logging.ConfigMapName(), logging.UpdateLevelFromConfigMap(sl, atomicLevel, component))
 
+	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"))
+	featureStore.WatchConfigs(configMapWatcher)
+
+	// Decorate contexts with the current state of the feature config.
+	ctxFunc := func(ctx context.Context) context.Context {
+		return featureStore.ToContext(ctx)
+	}
+
 	bin := fmt.Sprintf("%s.%s", names.BrokerFilterName, system.Namespace())
 	if err = tracing.SetupDynamicPublishing(sl, configMapWatcher, bin, tracingconfig.ConfigName); err != nil {
 		logger.Fatal("Error setting up trace publishing", zap.Error(err))
@@ -112,7 +120,7 @@ func main() {
 
 	// We are running both the receiver (takes messages in from the Broker) and the dispatcher (send
 	// the messages to the triggers' subscribers) in this binary.
-	handler, err := filter.NewHandler(logger, triggerInformer.Lister(), reporter, env.Port)
+	handler, err := filter.NewHandler(logger, triggerInformer.Lister(), reporter, env.Port, ctxFunc)
 	if err != nil {
 		logger.Fatal("Error creating Handler", zap.Error(err))
 	}

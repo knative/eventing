@@ -373,6 +373,35 @@ func TestReconcile(t *testing.T) {
 					WithDLSNotConfigured()),
 			}},
 		}, {
+			Name: "Successful Reconciliation. Using legacy channel template config element.",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
+					WithBrokerConfig(config()),
+					WithInitBrokerConditions),
+				createChannel(withChannelReady),
+				imcConfigMapLegacy(),
+				NewEndpoints(filterServiceName, systemNS,
+					WithEndpointsLabels(FilterLabels()),
+					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
+				NewEndpoints(ingressServiceName, systemNS,
+					WithEndpointsLabels(IngressLabels()),
+					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
+					WithBrokerConfig(config()),
+					WithBrokerReady,
+					WithBrokerAddressURI(brokerAddress),
+					WithChannelAddressAnnotation(triggerChannelURL),
+					WithChannelAPIVersionAnnotation(triggerChannelAPIVersion),
+					WithChannelKindAnnotation(triggerChannelKind),
+					WithChannelNameAnnotation(triggerChannelName),
+					WithDLSNotConfigured()),
+			}},
+		}, {
 			Name: "Successful Reconciliation, status update fails",
 			Key:  testKey,
 			Objects: []runtime.Object{
@@ -574,6 +603,14 @@ func config() *duckv1.KReference {
 }
 
 func imcConfigMap() *corev1.ConfigMap {
+	return NewConfigMap(configMapName, testNS,
+		WithConfigMapData(map[string]string{"channel-template-spec": imcSpec}))
+}
+
+// imcConfigMapLegacy returns a confirmap using the legacy configuration
+// element channelTemplateSpec . This element name will be deprecated in
+// favor of channel-template-spec.
+func imcConfigMapLegacy() *corev1.ConfigMap {
 	return NewConfigMap(configMapName, testNS,
 		WithConfigMapData(map[string]string{"channelTemplateSpec": imcSpec}))
 }

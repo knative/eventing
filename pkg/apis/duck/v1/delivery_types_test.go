@@ -21,14 +21,18 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"k8s.io/utils/pointer"
-	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+
+	"knative.dev/eventing/pkg/apis/feature"
 )
 
 func TestDeliverySpecValidation(t *testing.T) {
 	deliveryTimeoutEnabledCtx := feature.ToContext(context.TODO(), feature.Flags{
 		feature.DeliveryTimeout: feature.Enabled,
+	})
+	deliveryRetryAfterEnabledCtx := feature.ToContext(context.TODO(), feature.Flags{
+		feature.DeliveryRetryAfter: feature.Enabled,
 	})
 
 	invalidString := "invalid time"
@@ -102,9 +106,41 @@ func TestDeliverySpecValidation(t *testing.T) {
 	}, {
 		name: "valid retry 0",
 		spec: &DeliverySpec{Retry: pointer.Int32Ptr(0)},
+		want: nil,
 	}, {
 		name: "valid retry 1",
 		spec: &DeliverySpec{Retry: pointer.Int32Ptr(1)},
+		want: nil,
+	}, {
+		name: "valid retryAfterMax",
+		ctx:  deliveryRetryAfterEnabledCtx,
+		spec: &DeliverySpec{RetryAfterMax: &validDuration},
+		want: nil,
+	}, {
+		name: "zero retryAfterMax",
+		ctx:  deliveryRetryAfterEnabledCtx,
+		spec: &DeliverySpec{RetryAfterMax: pointer.StringPtr("PT0S")},
+		want: nil,
+	}, {
+		name: "empty retryAfterMax",
+		ctx:  deliveryRetryAfterEnabledCtx,
+		spec: &DeliverySpec{RetryAfterMax: pointer.StringPtr("")},
+		want: func() *apis.FieldError {
+			return apis.ErrInvalidValue("", "retryAfterMax")
+		}(),
+	}, {
+		name: "invalid retryAfterMax",
+		ctx:  deliveryRetryAfterEnabledCtx,
+		spec: &DeliverySpec{RetryAfterMax: &invalidDuration},
+		want: func() *apis.FieldError {
+			return apis.ErrInvalidValue(invalidDuration, "retryAfterMax")
+		}(),
+	}, {
+		name: "disabled feature with retryAfterMax",
+		spec: &DeliverySpec{RetryAfterMax: &validDuration},
+		want: func() *apis.FieldError {
+			return apis.ErrDisallowedFields("retryAfterMax")
+		}(),
 	}}
 
 	for _, test := range tests {

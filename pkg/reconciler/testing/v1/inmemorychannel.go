@@ -25,11 +25,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/apis"
 
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+
 	eventingv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/messaging"
 	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 // InMemoryChannelOption enables further configuration of a v1.InMemoryChannel.
@@ -219,7 +220,7 @@ func WithInMemoryChannelDLSResolvedFailed() InMemoryChannelOption {
 	return func(imc *v1.InMemoryChannel) {
 		imc.Status.MarkDeadLetterSinkResolvedFailed(
 			"Unable to get the DeadLetterSink's URI",
-			fmt.Sprintf(`services "%s" not found`,
+			fmt.Sprintf(`failed to get object test-namespace/test-dls: services "%s" not found`,
 				imc.Spec.Delivery.DeadLetterSink.Ref.Name,
 			),
 		)

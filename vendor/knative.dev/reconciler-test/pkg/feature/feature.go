@@ -18,13 +18,17 @@ package feature
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"runtime"
 	"strings"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/injection/clients/dynamicclient"
 
@@ -38,6 +42,31 @@ type Feature struct {
 	State state.Store
 	// Contains all the resources created as part of this Feature.
 	refs []corev1.ObjectReference
+}
+
+func (f Feature) MarshalJSON() ([]byte, error) {
+	in := struct {
+		Name  string                   `json:"name"`
+		Steps []Step                   `json:"steps"`
+		State state.Store              `json:"state"`
+		Refs  []corev1.ObjectReference `json:"refs"`
+	}{
+		Name:  f.Name,
+		Steps: f.Steps,
+		State: f.State,
+		Refs:  f.refs,
+	}
+	return json.MarshalIndent(in, "", " ")
+}
+
+// DumpWith calls the provided log function with a nicely formatted string
+// that represents the Feature.
+func (f Feature) DumpWith(log func(args ...interface{})) {
+	b, err := f.MarshalJSON()
+	if err != nil {
+		log("Skipping feature logging due to error: " + err.Error())
+	}
+	log(string(b))
 }
 
 // NewFeatureNamed creates a new feature with the provided name
@@ -64,7 +93,7 @@ func NewFeature() *Feature {
 // FeatureSet is a list of features and feature set name.
 type FeatureSet struct {
 	Name     string
-	Features []Feature
+	Features []*Feature
 }
 
 // StepFn is the function signature for steps.
@@ -73,11 +102,11 @@ type StepFn func(ctx context.Context, t T)
 // Step is a structure to hold the step function, step name and state, level and
 // timing configuration.
 type Step struct {
-	Name string
-	S    States
-	L    Levels
-	T    Timing
-	Fn   StepFn
+	Name string `json:"name"`
+	S    States `json:"states"`
+	L    Levels `json:"levels"`
+	T    Timing `json:"timing"`
+	Fn   StepFn `json:"-"`
 }
 
 // TestName returns the constructed test name based on the timing, step, state,
@@ -103,24 +132,80 @@ func (f *Feature) References() []corev1.ObjectReference {
 	return f.refs
 }
 
-// DeleteResourcesFn delete all known resources to the Feature registered
-// via `Reference`. Expected to be used as a StepFn.
+// DeleteResources delete all known resources to the Feature registered
+// via `Reference`.
+//
+// It doesn't fail when a referenced resource couldn't be deleted.
+// Use References to get the undeleted resources.
+//
+// Expected to be used as a StepFn.
 func (f *Feature) DeleteResources(ctx context.Context, t T) {
 	dc := dynamicclient.Get(ctx)
 	for _, ref := range f.References() {
+
 		gv, err := schema.ParseGroupVersion(ref.APIVersion)
 		if err != nil {
-			t.Errorf("Could not parse GroupVersion for %+v", ref.APIVersion)
-		} else {
-			resource := apis.KindToResource(gv.WithKind(ref.Kind))
-			t.Logf("Deleting %s/%s of GVR: %+v", ref.Namespace, ref.Name, resource)
-			if err := dc.Resource(resource).Namespace(ref.Namespace).Delete(ctx, ref.Name, *metav1.NewDeleteOptions(0)); err != nil {
-				t.Logf("Warning, failed to delete %s/%s of GVR: %+v", ref.Namespace, ref.Name, resource)
-			}
+			t.Fatalf("Could not parse GroupVersion for %+v", ref.APIVersion)
+		}
+
+		resource := apis.KindToResource(gv.WithKind(ref.Kind))
+		t.Logf("Deleting %s/%s of GVR: %+v", ref.Namespace, ref.Name, resource)
+
+		deleteOptions := &metav1.DeleteOptions{}
+		// Set delete propagation policy to foreground
+		foregroundDeletePropagation := metav1.DeletePropagationForeground
+		deleteOptions.PropagationPolicy = &foregroundDeletePropagation
+
+		err = dc.Resource(resource).Namespace(ref.Namespace).Delete(ctx, ref.Name, *deleteOptions)
+		// Ignore not found errors.
+		if err != nil && !apierrors.IsNotFound(err) {
+			t.Logf("Warning, failed to delete %s/%s of GVR: %+v: %v", ref.Namespace, ref.Name, resource, err)
 		}
 	}
-	f.refs = []corev1.ObjectReference(nil)
+
+	// refFailedDeletion keeps the failed to delete resources.
+	var refFailedDeletion []corev1.ObjectReference
+
+	err := wait.Poll(time.Second, 4*time.Minute, func() (bool, error) {
+		refFailedDeletion = nil // Reset failed deletion.
+		for _, ref := range f.References() {
+			gv, err := schema.ParseGroupVersion(ref.APIVersion)
+			if err != nil {
+				t.Fatalf("Could not parse GroupVersion for %+v", ref.APIVersion)
+			}
+
+			resource := apis.KindToResource(gv.WithKind(ref.Kind))
+			t.Logf("Deleting %s/%s of GVR: %+v", ref.Namespace, ref.Name, resource)
+
+			_, err = dc.Resource(resource).
+				Namespace(ref.Namespace).
+				Get(ctx, ref.Name, metav1.GetOptions{})
+			if apierrors.IsNotFound(err) {
+				continue
+			}
+			if err != nil {
+				refFailedDeletion = append(refFailedDeletion, ref)
+				return false, fmt.Errorf("failed to get resource %+v %s/%s: %w", resource, ref.Namespace, ref.Name, err)
+			}
+
+			t.Logf("Resource %+v %s/%s still present", resource, ref.Namespace, ref.Name)
+			return false, nil
+		}
+
+		return true, nil
+	})
+	if err != nil {
+		LogReferences(refFailedDeletion...)(ctx, t)
+		t.Fatalf("failed to wait for resources to be deleted: %v", err)
+	}
+
+	f.refs = refFailedDeletion
 }
+
+var (
+	// Expected to be used as a StepFn.
+	_ StepFn = (&Feature{}).DeleteResources
+)
 
 // Setup adds a step function to the feature set at the Setup timing phase.
 func (f *Feature) Setup(name string, fn StepFn) {

@@ -117,7 +117,7 @@ func (c *FakeSequences) UpdateStatus(ctx context.Context, sequence *flowsv1.Sequ
 // Delete takes name of the sequence and deletes it. Returns an error if one occurs.
 func (c *FakeSequences) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(sequencesResource, c.ns, name), &flowsv1.Sequence{})
+		Invokes(testing.NewDeleteActionWithOptions(sequencesResource, c.ns, name, opts), &flowsv1.Sequence{})
 
 	return err
 }

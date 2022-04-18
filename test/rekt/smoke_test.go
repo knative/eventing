@@ -23,9 +23,12 @@ import (
 	"strconv"
 	"testing"
 
+	"k8s.io/utils/pointer"
 	_ "knative.dev/pkg/system/testing"
 
-	"knative.dev/eventing/pkg/apis/eventing"
+	"knative.dev/reconciler-test/pkg/manifest"
+
+	eventingduck "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/test/rekt/features/apiserversource"
 	"knative.dev/eventing/test/rekt/features/broker"
 	"knative.dev/eventing/test/rekt/features/containersource"
@@ -33,8 +36,12 @@ import (
 	"knative.dev/eventing/test/rekt/features/pingsource"
 	"knative.dev/eventing/test/rekt/features/sequence"
 	b "knative.dev/eventing/test/rekt/resources/broker"
+	"knative.dev/eventing/test/rekt/resources/channel_impl"
+	"knative.dev/eventing/test/rekt/resources/delivery"
 	ps "knative.dev/eventing/test/rekt/resources/pingsource"
-	"knative.dev/reconciler-test/pkg/manifest"
+	sresources "knative.dev/eventing/test/rekt/resources/sequence"
+
+	presources "knative.dev/eventing/test/rekt/resources/parallel"
 )
 
 // TestSmoke_Broker
@@ -53,7 +60,7 @@ func TestSmoke_Broker(t *testing.T) {
 	}
 
 	for _, name := range names {
-		env.Test(ctx, t, broker.GoesReady(name, b.WithBrokerClass(eventing.MTChannelBrokerClassValue)))
+		env.Test(ctx, t, broker.GoesReady(name, b.WithEnvConfig()...))
 	}
 }
 
@@ -73,7 +80,7 @@ func TestSmoke_Trigger(t *testing.T) {
 	}
 	brokerName := "broker-rekt"
 
-	env.Prerequisite(ctx, t, broker.GoesReady(brokerName, b.WithBrokerClass(eventing.MTChannelBrokerClassValue)))
+	env.Prerequisite(ctx, t, broker.GoesReady(brokerName, b.WithEnvConfig()...))
 
 	for _, name := range names {
 		env.Test(ctx, t, broker.TriggerGoesReady(name, brokerName))
@@ -171,6 +178,30 @@ func TestSmoke_Parallel(t *testing.T) {
 	}
 }
 
+// TestSmoke_ParallelDelivery
+func TestSmoke_ParallelDelivery(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment()
+	t.Cleanup(env.Finish)
+
+	names := []string{
+		"customname",
+		"name-with-dash",
+		"name1with2numbers3",
+		"name63-0123456789012345678901234567890123456789012345678901234",
+	}
+
+	for _, name := range names {
+		template := presources.ChannelTemplate{
+			TypeMeta: channel_impl.TypeMeta(),
+			Spec:     map[string]interface{}{},
+		}
+		SpecDelivery(template.Spec)
+		env.Test(ctx, t, parallel.GoesReady(name, presources.WithChannelTemplate(template)))
+	}
+}
+
 // TestSmoke_Sequence
 func TestSmoke_Sequence(t *testing.T) {
 	t.Parallel()
@@ -186,6 +217,39 @@ func TestSmoke_Sequence(t *testing.T) {
 	}
 
 	for _, name := range names {
-		env.Test(ctx, t, sequence.GoesReady(name))
+		template := sresources.ChannelTemplate{
+			TypeMeta: channel_impl.TypeMeta(),
+			Spec:     map[string]interface{}{},
+		}
+		env.Test(ctx, t, sequence.GoesReady(name, sresources.WithChannelTemplate(template)))
 	}
+}
+
+// TestSmoke_SequenceDelivery
+func TestSmoke_SequenceDelivery(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment()
+	t.Cleanup(env.Finish)
+
+	names := []string{
+		"customname",
+		"name-with-dash",
+		"name1with2numbers3",
+		"name63-0123456789012345678901234567890123456789012345678901234",
+	}
+
+	for _, name := range names {
+		template := sresources.ChannelTemplate{
+			TypeMeta: channel_impl.TypeMeta(),
+			Spec:     map[string]interface{}{},
+		}
+		SpecDelivery(template.Spec)
+		env.Test(ctx, t, sequence.GoesReady(name, sresources.WithChannelTemplate(template)))
+	}
+}
+
+func SpecDelivery(spec map[string]interface{}) {
+	linear := eventingduck.BackoffPolicyLinear
+	delivery.WithRetry(10, &linear, pointer.StringPtr("PT1S"))(spec)
 }

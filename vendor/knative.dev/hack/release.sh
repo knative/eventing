@@ -82,10 +82,10 @@ function publish_to_gcs() {
 # These are global environment variables.
 SKIP_TESTS=0
 PRESUBMIT_TEST_FAIL_FAST=1
-TAG_RELEASE=0
+export TAG_RELEASE=0
 PUBLISH_RELEASE=0
 PUBLISH_TO_GITHUB=0
-TAG=""
+export TAG=""
 BUILD_COMMIT_HASH=""
 BUILD_YYYYMMDD=""
 BUILD_TIMESTAMP=""
@@ -122,10 +122,10 @@ function git_push() {
    git push "${repo_url}" ${git_args} )
 }
 
-# Return the master version of a release.
+# Return the major+minor version of a release.
 # For example, "v0.2.1" returns "0.2"
 # Parameters: $1 - release version label.
-function master_version() {
+function major_minor_version() {
   local release="${1//v/}"
   local tokens=(${release//\./ })
   echo "${tokens[0]}.${tokens[1]}"
@@ -141,8 +141,7 @@ function hash_from_tag() {
 # Setup the repository upstream, if not set.
 function setup_upstream() {
   # hub and checkout need the upstream URL to be set
-  # TODO(adrcunha): Use "git remote get-url" once available on Prow.
-  local upstream="$(git config --get remote.upstream.url)"
+  local upstream="$(git remote get-url upstream)"
   echo "Remote upstream URL is '${upstream}'"
   if [[ -z "${upstream}" ]]; then
     echo "Setting remote upstream URL to '${REPO_UPSTREAM}'"
@@ -223,7 +222,7 @@ function prepare_dot_release() {
   if [[ -z "${RELEASE_BRANCH}" ]]; then
     echo "Last release is ${last_version}"
     # Determine branch
-    major_minor_version="$(master_version "${last_version}")"
+    major_minor_version="$(major_minor_version "${last_version}")"
     RELEASE_BRANCH="release-${major_minor_version}"
     echo "Last release branch is ${RELEASE_BRANCH}"
   else
@@ -428,7 +427,7 @@ function parse_flags() {
     # TODO(adrcunha): "dot" releases from release branches require releasing nightlies
     # for such branches, which we don't do yet.
     [[ "${RELEASE_VERSION}" =~ ^[0-9]+\.[0-9]+\.0$ ]] || abort "version format must be 'X.Y.0'"
-    RELEASE_BRANCH="release-$(master_version "${RELEASE_VERSION}")"
+    RELEASE_BRANCH="release-$(major_minor_version "${RELEASE_VERSION}")"
     prepare_from_nightly_release
     setup_upstream
   fi
@@ -606,8 +605,6 @@ function publish_to_github() {
   if [[ -n "${RELEASE_NOTES}" ]]; then
     cat "${RELEASE_NOTES}" >> "${description}"
   fi
-  git tag -a "${github_tag}" -m "${title}"
-  git_push tag "${github_tag}"
 
   # Include a tag for the go module version
   #
@@ -621,7 +618,13 @@ function publish_to_github() {
     local go_module_version="v0.$(( release_minor + 27 )).$(patch_version $TAG)"
     git tag -a "${go_module_version}" -m "${title}"
     git_push tag "${go_module_version}"
+  else
+    # Pre-1.0 - use the tag as the release tag
+    github_tag="${TAG}"
   fi
+
+  git tag -a "${github_tag}" -m "${title}"
+  git_push tag "${github_tag}"
 
   [[ -n "${RELEASE_BRANCH}" ]] && commitish="--commitish=${RELEASE_BRANCH}"
   for i in {2..0}; do

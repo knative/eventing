@@ -117,7 +117,7 @@ func (c *FakeSubscriptions) UpdateStatus(ctx context.Context, subscription *mess
 // Delete takes name of the subscription and deletes it. Returns an error if one occurs.
 func (c *FakeSubscriptions) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(subscriptionsResource, c.ns, name), &messagingv1.Subscription{})
+		Invokes(testing.NewDeleteActionWithOptions(subscriptionsResource, c.ns, name, opts), &messagingv1.Subscription{})
 
 	return err
 }

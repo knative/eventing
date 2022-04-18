@@ -30,9 +30,9 @@ import (
 func Defaulting() *feature.FeatureSet {
 	fs := &feature.FeatureSet{
 		Name: "Knative Trigger Specification - Defaulting",
-		Features: []feature.Feature{
-			*Defaulting_Filter(),
-			*Defaulting_SubscriberNamespace(),
+		Features: []*feature.Feature{
+			Defaulting_Filter(),
+			Defaulting_SubscriberNamespace(),
 		},
 	}
 

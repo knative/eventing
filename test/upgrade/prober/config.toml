@@ -1,6 +1,7 @@
 # logLevel = 'DEBUG'
+tracingConfig = '{{- .TracingConfig -}}'
 [sender]
 address = '{{- .Endpoint -}}'
 interval = {{ .Config.Interval.Nanoseconds }}
 [forwarder]
-target = 'http://wathola-receiver.{{- .Namespace -}}.svc.cluster.local'
+target = '{{- .ForwarderTarget -}}'

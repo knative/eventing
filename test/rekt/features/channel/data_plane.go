@@ -35,8 +35,8 @@ import (
 func DataPlaneConformance(channelName string) *feature.FeatureSet {
 	fs := &feature.FeatureSet{
 		Name: "Knative Channel Specification - Data Plane",
-		Features: []feature.Feature{
-			*DataPlaneChannel(channelName),
+		Features: []*feature.Feature{
+			DataPlaneChannel(channelName),
 		},
 	}
 
@@ -214,6 +214,6 @@ func addControlPlaneDelivery(fs *feature.FeatureSet) {
 		f.Stable("Conformance").Should(tt.name, knconf.AssertEventPatterns(prober, expected))
 
 		// Add this feature to the feature set.
-		fs.Features = append(fs.Features, *f)
+		fs.Features = append(fs.Features, f)
 	}
 }

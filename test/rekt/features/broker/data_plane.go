@@ -31,10 +31,10 @@ import (
 func DataPlaneConformance(brokerName string) *feature.FeatureSet {
 	fs := &feature.FeatureSet{
 		Name: "Knative Broker Specification - Data Plane",
-		Features: []feature.Feature{
-			*DataPlaneIngress(brokerName),
-			*DataPlaneObservability(brokerName),
-			*DataPlaneAddressability(brokerName),
+		Features: []*feature.Feature{
+			DataPlaneIngress(brokerName),
+			DataPlaneObservability(brokerName),
+			DataPlaneAddressability(brokerName),
 		},
 	}
 
@@ -138,7 +138,7 @@ func addDataPlaneDelivery(brokerName string, fs *feature.FeatureSet) {
 		Should("If the reply event was not accepted, the initial event SHOULD be redelivered to the subscriber.",
 			todo)
 
-	fs.Features = append(fs.Features, *f)
+	fs.Features = append(fs.Features, f)
 
 }
 

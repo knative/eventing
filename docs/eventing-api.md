@@ -76,7 +76,7 @@ Channelable ObjectReferences and access their subscription and address data.  Th
 <td>
 <code>metadata</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -392,6 +392,31 @@ More information on Duration format:
 For exponential policy, backoff delay is backoffDelay*2^<numberOfRetries>.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>retryAfterMax</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>RetryAfterMax provides an optional upper bound on the duration specified in a &ldquo;Retry-After&rdquo; header
+when calculating backoff times for retrying 429 and 503 response codes.  Setting the value to
+zero (&ldquo;PT0S&rdquo;) can be used to opt-out of respecting &ldquo;Retry-After&rdquo; header values altogether. This
+value only takes effect if &ldquo;Retry&rdquo; is configured, and also depends on specific implementations
+(Channels, Sources, etc.) choosing to provide this capability.</p>
+<p>Note: This API is EXPERIMENTAL and might be changed at anytime. While this experimental
+feature is in the Alpha/Beta stage, you must provide a valid value to opt-in for
+supporting &ldquo;Retry-After&rdquo; headers.  When the feature becomes Stable/GA &ldquo;Retry-After&rdquo;
+headers will be respected by default, and you can choose to specify &ldquo;PT0S&rdquo; to
+opt-out of supporting &ldquo;Retry-After&rdquo; headers.
+For more details: <a href="https://github.com/knative/eventing/issues/5811">https://github.com/knative/eventing/issues/5811</a></p>
+<p>More information on Duration format:
+- <a href="https://www.iso.org/iso-8601-date-and-time-format.html">https://www.iso.org/iso-8601-date-and-time-format.html</a>
+- <a href="https://en.wikipedia.org/wiki/ISO_8601">https://en.wikipedia.org/wiki/ISO_8601</a></p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="duck.knative.dev/v1.DeliveryStatus">DeliveryStatus
@@ -446,7 +471,7 @@ SubscribableType ObjectReferences and access the Subscription data.  This is not
 <td>
 <code>metadata</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -699,7 +724,7 @@ int64
 <td>
 <code>ready</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#conditionstatus-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#conditionstatus-v1-core">
 Kubernetes core/v1.ConditionStatus
 </a>
 </em>
@@ -821,7 +846,7 @@ access the Placeable data.  This is not a real resource.</p>
 <td>
 <code>metadata</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -933,7 +958,7 @@ Channelable ObjectReferences and access their subscription and address data.  Th
 <td>
 <code>metadata</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -1274,7 +1299,7 @@ SubscribableType ObjectReferences and access the Subscription data.  This is not
 <td>
 <code>metadata</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -1527,7 +1552,7 @@ int64
 <td>
 <code>ready</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#conditionstatus-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#conditionstatus-v1-core">
 Kubernetes core/v1.ConditionStatus
 </a>
 </em>
@@ -1599,7 +1624,7 @@ string
 <td>
 <code>metadata</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -1711,7 +1736,7 @@ string
 <td>
 <code>metadata</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -2066,20 +2091,14 @@ expression cannot be empty strings.</p>
 </tr>
 <tr>
 <td>
-<code>Extensions</code><br/>
+<code>cesql</code><br/>
 <em>
-map[string]*k8s.io/apimachinery/pkg/runtime.RawExtension
+string
 </em>
 </td>
 <td>
-<p>
-(Members of <code>Extensions</code> are embedded into this type.)
-</p>
 <em>(Optional)</em>
-<p>Extensions includes the list of additional filter dialects supported by
-specific broker implementations. Check out the documentation of the
-broker implementation you&rsquo;re using to know about what additional filters
-are supported.</p>
+<p>CESQL is a CloudEvents SQL expression that will be evaluated to true or false against each CloudEvent.</p>
 </td>
 </tr>
 </tbody>
@@ -2333,7 +2352,7 @@ string
 <td>
 <code>metadata</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -2615,7 +2634,7 @@ series through Channels and Subscriptions.</p>
 <td>
 <code>metadata</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -2853,7 +2872,7 @@ ParallelSubscriptionStatus
 <td>
 <code>channel</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectreference-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#objectreference-v1-core">
 Kubernetes core/v1.ObjectReference
 </a>
 </em>
@@ -3037,7 +3056,7 @@ It generally has the form {channel}.{namespace}.svc.{cluster domain name}</p>
 <td>
 <code>subscription</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectreference-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#objectreference-v1-core">
 Kubernetes core/v1.ObjectReference
 </a>
 </em>
@@ -3079,7 +3098,7 @@ series through Channels and Subscriptions.</p>
 <td>
 <code>metadata</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -3186,7 +3205,7 @@ date.</p>
 <td>
 <code>channel</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectreference-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#objectreference-v1-core">
 Kubernetes core/v1.ObjectReference
 </a>
 </em>
@@ -3419,7 +3438,7 @@ This includes things like retries, DLS, etc.</p>
 <td>
 <code>subscription</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectreference-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#objectreference-v1-core">
 Kubernetes core/v1.ObjectReference
 </a>
 </em>
@@ -3491,7 +3510,7 @@ string
 <td>
 <code>metadata</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -3602,7 +3621,7 @@ string
 <td>
 <code>metadata</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -3698,7 +3717,7 @@ string
 <td>
 <code>metadata</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -3950,6 +3969,11 @@ in verbatim to the Channel CRD as Spec section.</p>
 </tr>
 </tbody>
 </table>
+<h3 id="messaging.knative.dev/v1.ChannelTemplateSpecOption">ChannelTemplateSpecOption
+</h3>
+<p>
+<p>ChannelTemplateSpecOption is an optional function for ChannelTemplateSpec.</p>
+</p>
 <h3 id="messaging.knative.dev/v1.InMemoryChannelSpec">InMemoryChannelSpec
 </h3>
 <p>
@@ -4283,7 +4307,7 @@ string
 <td>
 <code>metadata</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -4436,7 +4460,7 @@ string
 <td>
 <code>metadata</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -4483,7 +4507,7 @@ and modifications of the event sent to the sink.</p>
 <td>
 <code>template</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#podtemplatespec-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#podtemplatespec-v1-core">
 Kubernetes core/v1.PodTemplateSpec
 </a>
 </em>
@@ -4543,7 +4567,7 @@ string
 <td>
 <code>metadata</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -4706,7 +4730,7 @@ string
 <td>
 <code>metadata</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -4868,7 +4892,7 @@ More info: <a href="https://git.k8s.io/community/contributors/devel/sig-architec
 <td>
 <code>selector</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#labelselector-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#labelselector-v1-meta">
 Kubernetes meta/v1.LabelSelector
 </a>
 </em>
@@ -5059,7 +5083,7 @@ and modifications of the event sent to the sink.</p>
 <td>
 <code>template</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#podtemplatespec-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#podtemplatespec-v1-core">
 Kubernetes core/v1.PodTemplateSpec
 </a>
 </em>
@@ -5391,7 +5415,7 @@ string
 <td>
 <code>metadata</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>

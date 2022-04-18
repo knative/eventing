@@ -28,11 +28,7 @@ jobs:
         include:
           - repo: eventing-autoscaler-keda
             org: knative-sandbox
-          - repo: eventing-awssqs
-            org: knative-sandbox
           - repo: eventing-ceph
-            org: knative-sandbox
-          - repo: eventing-couchdb
             org: knative-sandbox
           - repo: eventing-github
             org: knative-sandbox
@@ -44,8 +40,6 @@ jobs:
             org: knative-sandbox
           - repo: eventing-natss
             org: knative-sandbox
-          - repo: eventing-prometheus
-            org: knative-sandbox
           - repo: eventing-rabbitmq
             org: knative-sandbox
 
@@ -53,10 +47,10 @@ jobs:
     env:
       GOPATH: ${{ github.workspace }}
     steps:
-    - name: Set up Go 1.16.x
+    - name: Set up Go
       uses: actions/setup-go@v2
       with:
-        go-version: 1.16.x
+        go-version: 1.17.x
     - name: Install Dependencies
       run: |
         go get github.com/google/go-licenses

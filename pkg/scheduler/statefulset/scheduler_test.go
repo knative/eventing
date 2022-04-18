@@ -25,7 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-
+	"k8s.io/apimachinery/pkg/util/wait"
 	kubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/apps/v1/statefulset/fake"
 
@@ -165,7 +165,7 @@ func TestStatefulsetScheduler(t *testing.T) {
 			vreplicas: 1,
 			replicas:  int32(0),
 			err:       scheduler.ErrNotEnoughReplicas,
-			expected:  []duckv1alpha1.Placement{},
+			expected:  nil,
 			schedulerPolicy: &scheduler.SchedulerPolicy{
 				Predicates: []scheduler.PredicatePolicy{
 					{Name: "PodFitsResources"},
@@ -208,7 +208,7 @@ func TestStatefulsetScheduler(t *testing.T) {
 			vreplicas: 15,
 			replicas:  int32(1),
 			err:       scheduler.ErrNotEnoughReplicas,
-			expected:  []duckv1alpha1.Placement{{PodName: "statefulset-name-0", VReplicas: 10}},
+			expected:  nil,
 			schedulerPolicy: &scheduler.SchedulerPolicy{
 				Predicates: []scheduler.PredicatePolicy{
 					{Name: "PodFitsResources"},
@@ -314,7 +314,7 @@ func TestStatefulsetScheduler(t *testing.T) {
 			vreplicas: 1,
 			replicas:  int32(0),
 			err:       scheduler.ErrNotEnoughReplicas,
-			expected:  []duckv1alpha1.Placement{},
+			expected:  nil,
 			schedulerPolicy: &scheduler.SchedulerPolicy{
 				Predicates: []scheduler.PredicatePolicy{
 					{Name: "PodFitsResources"},
@@ -367,7 +367,7 @@ func TestStatefulsetScheduler(t *testing.T) {
 			vreplicas: 15,
 			replicas:  int32(1),
 			err:       scheduler.ErrNotEnoughReplicas,
-			expected:  []duckv1alpha1.Placement{},
+			expected:  nil,
 			schedulerPolicy: &scheduler.SchedulerPolicy{
 				Predicates: []scheduler.PredicatePolicy{
 					{Name: "PodFitsResources"},
@@ -714,16 +714,16 @@ func TestStatefulsetScheduler(t *testing.T) {
 			if tc.pending != nil {
 				s.pending = tc.pending
 			}
-			// Give some time for the informer to notify the scheduler and set the number of replicas
-			time.Sleep(200 * time.Millisecond)
 
-			func() {
+			// Give some time for the informer to notify the scheduler and set the number of replicas
+			err = wait.PollImmediate(200*time.Millisecond, time.Second, func() (bool, error) {
 				s.lock.Lock()
 				defer s.lock.Unlock()
-				if s.replicas != tc.replicas {
-					t.Fatalf("expected number of statefulset replica to be %d (got %d)", tc.replicas, s.replicas)
-				}
-			}()
+				return s.replicas == tc.replicas, nil
+			})
+			if err != nil {
+				t.Fatalf("expected number of statefulset replica to be %d (got %d)", tc.replicas, s.replicas)
+			}
 
 			vpod := vpodClient.Create(vpodNamespace, vpodName, tc.vreplicas, tc.placements)
 			placements, err := s.Schedule(vpod)
@@ -740,6 +740,76 @@ func TestStatefulsetScheduler(t *testing.T) {
 				t.Errorf("got %v, want %v", placements, tc.expected)
 			}
 
+		})
+	}
+}
+
+func TestReservePlacements(t *testing.T) {
+	testCases := []struct {
+		name       string
+		vpod       scheduler.VPod
+		placements []duckv1alpha1.Placement
+		reserved   map[string]int32
+	}{
+		{
+			name:       "no replicas, no placement, no reserved",
+			vpod:       tscheduler.NewVPod(testNs, "vpod-1", 0, nil),
+			placements: nil,
+			reserved:   make(map[string]int32),
+		},
+		{
+			name: "one vpod, with placements in 2 pods, no reserved",
+			vpod: tscheduler.NewVPod(testNs, "vpod-1", 15, []duckv1alpha1.Placement{
+				{PodName: "statefulset-name-0", VReplicas: int32(8)},
+				{PodName: "statefulset-name-1", VReplicas: int32(7)}}),
+			placements: nil,
+			reserved:   make(map[string]int32),
+		},
+		{
+			name: "no replicas, new placements, with reserved",
+			vpod: tscheduler.NewVPod(testNs, "vpod-1", 0, nil),
+			placements: []duckv1alpha1.Placement{
+				{PodName: "statefulset-name-0", VReplicas: 1},
+			},
+			reserved: map[string]int32{"statefulset-name-0": 1},
+		},
+		{
+			name: "one vpod, with placements in 2 pods, with reserved",
+			vpod: tscheduler.NewVPod(testNs, "vpod-1", 15, []duckv1alpha1.Placement{
+				{PodName: "statefulset-name-0", VReplicas: int32(8)},
+				{PodName: "statefulset-name-1", VReplicas: int32(7)}}),
+			placements: []duckv1alpha1.Placement{
+				{PodName: "statefulset-name-0", VReplicas: 1},
+			},
+			reserved: map[string]int32{"statefulset-name-0": 1, "statefulset-name-1": 7},
+		},
+		{
+			name: "one vpod, with placements in 2 pods, with reserved",
+			vpod: tscheduler.NewVPod(testNs, "vpod-1", 15, []duckv1alpha1.Placement{
+				{PodName: "statefulset-name-0", VReplicas: int32(8)},
+				{PodName: "statefulset-name-1", VReplicas: int32(7)}}),
+			placements: []duckv1alpha1.Placement{
+				{PodName: "statefulset-name-0", VReplicas: 1},
+				{PodName: "statefulset-name-1", VReplicas: 1},
+			},
+			reserved: map[string]int32{"statefulset-name-0": 1, "statefulset-name-1": 1},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx, _ := tscheduler.SetupFakeContext(t)
+
+			vpodClient := tscheduler.NewVPodClient()
+			vpodClient.Append(tc.vpod)
+
+			s := NewStatefulSetScheduler(ctx, testNs, sfsName, vpodClient.List, nil, nil, nil).(*StatefulSetScheduler)
+			s.reservePlacements(tc.vpod, tc.vpod.GetPlacements()) //initial reserve
+
+			s.reservePlacements(tc.vpod, tc.placements) //new reserve
+			if !reflect.DeepEqual(s.reserved[tc.vpod.GetKey()], tc.reserved) {
+				t.Errorf("got %v, want %v", s.reserved[tc.vpod.GetKey()], tc.reserved)
+			}
 		})
 	}
 }

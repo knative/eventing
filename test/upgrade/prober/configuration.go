@@ -18,7 +18,6 @@ package prober
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"path"
@@ -27,8 +26,11 @@ import (
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
+	"github.com/pkg/errors"
 	"knative.dev/eventing/test/lib/resources"
 	"knative.dev/eventing/test/upgrade/prober/sut"
+	"knative.dev/eventing/test/upgrade/prober/wathola/forwarder"
+	"knative.dev/eventing/test/upgrade/prober/wathola/receiver"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	pkgTest "knative.dev/pkg/test"
 	pkgupgrade "knative.dev/pkg/test/upgrade"
@@ -40,7 +42,6 @@ const (
 	defaultHomedir           = "/home/nonroot"
 	defaultConfigFilename    = "config.toml"
 	defaultHealthEndpoint    = "/healthz"
-	defaultFinishedSleep     = 5 * time.Second
 
 	// Silence will suppress notification about event duplicates.
 	Silence DuplicateAction = "silence"
@@ -50,6 +51,8 @@ const (
 	Error DuplicateAction = "error"
 
 	prefix = "eventing_upgrade_tests"
+
+	forwarderTargetFmt = "http://" + receiver.Name + ".%s.svc.cluster.local"
 )
 
 var (
@@ -63,12 +66,11 @@ type DuplicateAction string
 // Config represents a configuration for prober.
 type Config struct {
 	Wathola
-	Interval      time.Duration
-	FinishedSleep time.Duration
-	Serving       ServingConfig
-	FailOnErrors  bool
-	OnDuplicate   DuplicateAction
-	Ctx           context.Context
+	Interval     time.Duration
+	Serving      ServingConfig
+	FailOnErrors bool
+	OnDuplicate  DuplicateAction
+	Ctx          context.Context
 }
 
 // Wathola represents options related strictly to wathola testing tool.
@@ -109,11 +111,10 @@ func NewConfigOrFail(c pkgupgrade.Context) *Config {
 // NewConfig will create a prober.Config or return error.
 func NewConfig() (*Config, error) {
 	config := &Config{
-		Interval:      Interval,
-		FinishedSleep: defaultFinishedSleep,
-		FailOnErrors:  true,
-		OnDuplicate:   Warn,
-		Ctx:           context.Background(),
+		Interval:     Interval,
+		FailOnErrors: true,
+		OnDuplicate:  Warn,
+		Ctx:          context.Background(),
 		Serving: ServingConfig{
 			Use:         false,
 			ScaleToZero: true,
@@ -144,9 +145,9 @@ func (p *prober) deployConfiguration() {
 		Log:    p.log,
 		Client: p.client,
 	}
-	ref := resources.KnativeRefForService(receiverName, p.client.Namespace)
+	ref := resources.KnativeRefForService(receiver.Name, p.client.Namespace)
 	if p.config.Serving.Use {
-		ref = resources.KnativeRefForKservice(forwarderName, p.client.Namespace)
+		ref = resources.KnativeRefForKservice(forwarder.Name, p.client.Namespace)
 	}
 	dest := duckv1.Destination{Ref: ref}
 	s := p.config.SystemUnderTest
@@ -156,19 +157,20 @@ func (p *prober) deployConfiguration() {
 			tr.Teardown(sc)
 		}
 	})
+
 	p.deployConfigToml(endpoint)
 }
 
 func (p *prober) deployConfigToml(endpoint interface{}) {
 	name := p.config.ConfigMapName
 	p.log.Infof("Deploying config map: \"%s/%s\"", p.client.Namespace, name)
-	configData := p.compileTemplate(p.config.ConfigTemplate, endpoint)
+	configData := p.compileTemplate(p.config.ConfigTemplate, endpoint, p.client.TracingCfg)
 	p.client.CreateConfigMapOrFail(name, p.client.Namespace, map[string]string{
 		p.config.ConfigFilename: configData,
 	})
 }
 
-func (p *prober) compileTemplate(templateName string, endpoint interface{}) string {
+func (p *prober) compileTemplate(templateName string, endpoint interface{}, tracingConfig string) string {
 	_, filename, _, _ := runtime.Caller(0)
 	templateFilepath := path.Join(path.Dir(filename), templateName)
 	templateBytes, err := ioutil.ReadFile(templateFilepath)
@@ -178,15 +180,20 @@ func (p *prober) compileTemplate(templateName string, endpoint interface{}) stri
 	var buff bytes.Buffer
 	data := struct {
 		*Config
+		// Deprecated: use ForwarderTarget
 		Namespace string
 		// Deprecated: use Endpoint
-		BrokerURL string
-		Endpoint  interface{}
+		BrokerURL       string
+		Endpoint        interface{}
+		TracingConfig   string
+		ForwarderTarget string
 	}{
 		p.config,
 		p.client.Namespace,
 		fmt.Sprintf("%v", endpoint),
 		endpoint,
+		tracingConfig,
+		fmt.Sprintf(forwarderTargetFmt, p.client.Namespace),
 	}
 	p.ensureNoError(tmpl.Execute(&buff, data))
 	return buff.String()

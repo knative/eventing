@@ -117,7 +117,7 @@ func (c *FakeContainerSources) UpdateStatus(ctx context.Context, containerSource
 // Delete takes name of the containerSource and deletes it. Returns an error if one occurs.
 func (c *FakeContainerSources) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(containersourcesResource, c.ns, name), &sourcesv1.ContainerSource{})
+		Invokes(testing.NewDeleteActionWithOptions(containersourcesResource, c.ns, name, opts), &sourcesv1.ContainerSource{})
 
 	return err
 }

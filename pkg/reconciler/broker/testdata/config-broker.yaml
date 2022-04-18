@@ -36,7 +36,7 @@ data:
     # to actually change the configuration.
 
     # This defines the default channel template to use for the broker.
-    channelTemplateSpec: |
+    channel-template-spec: |
       # The api and version of the kind of channel to use inthe broker.
       # This field required.
       apiVersion: messaging.knative.dev/v1

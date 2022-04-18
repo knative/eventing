@@ -18,7 +18,6 @@ package helpers
 
 import (
 	"context"
-	"net/http"
 	"testing"
 	"time"
 
@@ -105,9 +104,9 @@ func tracingTest(
 func getTraceIDHeader(t *testing.T, evInfos []recordevents.EventInfo) string {
 	for i := range evInfos {
 		if nil != evInfos[i].HTTPHeaders {
-			sc := trace.RemoteSpanContextFromContext(propagation.TraceContext{}.Extract(context.TODO(), http.Header(evInfos[i].HTTPHeaders)))
+			sc := trace.SpanContextFromContext(propagation.TraceContext{}.Extract(context.TODO(), propagation.HeaderCarrier(evInfos[i].HTTPHeaders)))
 			if sc.HasTraceID() {
-				return sc.TraceID.String()
+				return sc.TraceID().String()
 			}
 		}
 	}

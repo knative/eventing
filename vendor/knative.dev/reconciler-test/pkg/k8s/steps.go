@@ -19,7 +19,6 @@ package k8s
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
 
 	"knative.dev/pkg/apis"
@@ -44,7 +43,7 @@ func IsReady(gvr schema.GroupVersionResource, name string, timing ...time.Durati
 	return func(ctx context.Context, t feature.T) {
 		interval, timeout := PollTimings(ctx, timing)
 		env := environment.FromContext(ctx)
-		if err := WaitForResourceReady(ctx, env.Namespace(), name, gvr, interval, timeout); err != nil {
+		if err := WaitForResourceReady(ctx, t, env.Namespace(), name, gvr, interval, timeout); err != nil {
 			t.Error(gvr, "did not become ready,", err)
 		}
 	}
@@ -56,7 +55,7 @@ func IsNotReady(gvr schema.GroupVersionResource, name string, timing ...time.Dur
 	return func(ctx context.Context, t feature.T) {
 		interval, timeout := PollTimings(ctx, timing)
 		env := environment.FromContext(ctx)
-		if err := WaitForResourceNotReady(ctx, env.Namespace(), name, gvr, interval, timeout); err != nil {
+		if err := WaitForResourceNotReady(ctx, t, env.Namespace(), name, gvr, interval, timeout); err != nil {
 			t.Error(gvr, "did become ready,", err)
 		}
 	}
@@ -67,10 +66,11 @@ func IsNotReady(gvr schema.GroupVersionResource, name string, timing ...time.Dur
 func IsAddressable(gvr schema.GroupVersionResource, name string, timing ...time.Duration) feature.StepFn {
 	return func(ctx context.Context, t feature.T) {
 		interval, timeout := PollTimings(ctx, timing)
-		lastMsg := ""
+		var lastError error
 		err := wait.PollImmediate(interval, timeout, func() (bool, error) {
 			addr, err := Address(ctx, gvr, name)
 			if err != nil {
+				lastError = err
 				if apierrors.IsNotFound(err) {
 					// keep polling
 					return false, nil
@@ -78,20 +78,15 @@ func IsAddressable(gvr schema.GroupVersionResource, name string, timing ...time.
 				return false, err
 			}
 			if addr == nil {
-				msg := fmt.Sprintf("%s %s has no status.address.url, %s", gvr, name, err)
-				if msg != lastMsg {
-					log.Println(msg)
-					lastMsg = msg
-				}
+				lastError = fmt.Errorf("%s %s has no status.address.url %w", gvr, name, err)
 				return false, nil
 			}
 
 			// Success!
-			log.Printf("%s %s is addressable: %s\n", gvr, name, addr)
 			return true, nil
 		})
 		if err != nil {
-			t.Error(gvr, "did not become addressable,", err)
+			t.Fatalf("%s %s did not become addressable %v: %w", gvr, name, err, lastError)
 		}
 	}
 }

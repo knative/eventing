@@ -43,9 +43,9 @@ const (
 func DataPlane_SinkTypes() *feature.FeatureSet {
 	fs := &feature.FeatureSet{
 		Name: "Knative ApiServerSource - Data Plane - Sink Types",
-		Features: []feature.Feature{
-			*SendsEventsWithSinkRef(),
-			*SendsEventsWithSinkUri(),
+		Features: []*feature.Feature{
+			SendsEventsWithSinkRef(),
+			SendsEventsWithSinkUri(),
 
 			// TODO: things to test:
 			// - check if we actually receive add, update and delete events
@@ -58,9 +58,9 @@ func DataPlane_SinkTypes() *feature.FeatureSet {
 func DataPlane_EventModes() *feature.FeatureSet {
 	fs := &feature.FeatureSet{
 		Name: "Knative ApiServerSource - Data Plane - Event Modes",
-		Features: []feature.Feature{
-			*SendsEventsWithObjectReferencePayload(),
-			*SendsEventsWithResourceEventPayload(),
+		Features: []*feature.Feature{
+			SendsEventsWithObjectReferencePayload(),
+			SendsEventsWithResourceEventPayload(),
 
 			// TODO: things to test:
 			// - check if we actually receive add, update and delete events
@@ -73,11 +73,11 @@ func DataPlane_EventModes() *feature.FeatureSet {
 func DataPlane_ResourceMatching() *feature.FeatureSet {
 	fs := &feature.FeatureSet{
 		Name: "Knative ApiServerSource - Data Plane - Resource Matching",
-		Features: []feature.Feature{
-			*SendsEventsForAllResources(),
-			*SendsEventsForLabelMatchingResources(),
+		Features: []*feature.Feature{
+			SendsEventsForAllResources(),
+			SendsEventsForLabelMatchingResources(),
 			//*DoesNotSendEventsForNonLabelMatchingResources(),
-			*SendEventsForLabelExpressionMatchingResources(),
+			SendEventsForLabelExpressionMatchingResources(),
 
 			// TODO: things to test:
 			// - check if we actually receive add, update and delete events

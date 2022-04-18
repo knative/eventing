@@ -24,6 +24,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"go.uber.org/automaxprocs/maxprocs" // automatically set GOMAXPROCS based on cgroups
@@ -34,6 +35,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/rest"
 
@@ -110,6 +112,42 @@ var (
 	WebhookMainWithContext = MainWithContext
 	WebhookMainWithConfig  = MainWithConfig
 )
+
+// MainNamed runs the generic main flow for controllers and webhooks.
+//
+// In addition to the MainWithConfig flow, it defines a `disabled-controllers` flag that allows disabling controllers
+// by name.
+func MainNamed(ctx context.Context, component string, ctors ...injection.NamedControllerConstructor) {
+
+	disabledControllers := flag.String("disable-controllers", "", "Comma-separated list of disabled controllers.")
+
+	// HACK: This parses flags, so the above should be set once this runs.
+	cfg := injection.ParseAndGetRESTConfigOrDie()
+
+	enabledCtors := enabledControllers(strings.Split(*disabledControllers, ","), ctors)
+	MainWithConfig(ctx, component, cfg, toControllerConstructors(enabledCtors)...)
+}
+
+func enabledControllers(disabledControllers []string, ctors []injection.NamedControllerConstructor) []injection.NamedControllerConstructor {
+	disabledControllersSet := sets.NewString(disabledControllers...)
+	activeCtors := make([]injection.NamedControllerConstructor, 0, len(ctors))
+	for _, ctor := range ctors {
+		if disabledControllersSet.Has(ctor.Name) {
+			log.Printf("Disabling controller %s", ctor.Name)
+			continue
+		}
+		activeCtors = append(activeCtors, ctor)
+	}
+	return activeCtors
+}
+
+func toControllerConstructors(namedCtors []injection.NamedControllerConstructor) []injection.ControllerConstructor {
+	ctors := make([]injection.ControllerConstructor, 0, len(namedCtors))
+	for _, ctor := range namedCtors {
+		ctors = append(ctors, ctor.ControllerConstructor)
+	}
+	return ctors
+}
 
 // MainWithContext runs the generic main flow for controllers and
 // webhooks. Use MainWithContext if you do not need to serve webhooks.
@@ -228,7 +266,9 @@ func MainWithConfig(ctx context.Context, component string, cfg *rest.Config, cto
 		wh.InformersHaveSynced()
 	}
 	logger.Info("Starting controllers...")
-	go controller.StartAll(ctx, controllers...)
+	eg.Go(func() error {
+		return controller.StartAll(ctx, controllers...)
+	})
 
 	// This will block until either a signal arrives or one of the grouped functions
 	// returns an error.

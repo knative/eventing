@@ -22,9 +22,12 @@ import (
 	"fmt"
 	"regexp"
 
+	cesqlparser "github.com/cloudevents/sdk-go/sql/v2/parser"
+	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/kmp"
+	"knative.dev/pkg/logging"
 
 	"knative.dev/eventing/pkg/apis/feature"
 )
@@ -193,6 +196,24 @@ func ValidateSubscriptionAPIFiltersList(ctx context.Context, filters []Subscript
 	return errs
 }
 
+func ValidateCESQLExpression(ctx context.Context, expression string) (errs *apis.FieldError) {
+	if expression == "" {
+		return nil
+	}
+	// Need to recover in case Parse panics
+	defer func() {
+		if r := recover(); r != nil {
+			logging.FromContext(ctx).Debug("Warning! Calling CESQL Parser panicked. Treating expression as invalid.", zap.Any("recovered value", r), zap.String("CESQL", expression))
+			errs = apis.ErrInvalidValue(expression, apis.CurrentField)
+		}
+	}()
+
+	if _, err := cesqlparser.Parse(expression); err != nil {
+		return apis.ErrInvalidValue(expression, apis.CurrentField, err.Error())
+	}
+	return nil
+}
+
 func ValidateSubscriptionAPIFilter(ctx context.Context, filter *SubscriptionsAPIFilter) (errs *apis.FieldError) {
 	if filter == nil {
 		return nil
@@ -211,6 +232,8 @@ func ValidateSubscriptionAPIFilter(ctx context.Context, filter *SubscriptionsAPI
 		ValidateSubscriptionAPIFiltersList(ctx, filter.Any).ViaField("any"),
 	).Also(
 		ValidateSubscriptionAPIFilter(ctx, filter.Not).ViaField("not"),
+	).Also(
+		ValidateCESQLExpression(ctx, filter.CESQL).ViaField("cesql"),
 	)
 	return errs
 }
@@ -262,7 +285,7 @@ func hasMultipleDialects(filter *SubscriptionsAPIFilter) bool {
 			dialectFound = true
 		}
 	}
-	if len(filter.Extensions) > 0 && dialectFound {
+	if filter.CESQL != "" && dialectFound {
 		return true
 	}
 	return false

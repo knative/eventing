@@ -17,9 +17,15 @@ limitations under the License.
 package channel_test
 
 import (
+	"embed"
+	"encoding/json"
 	"os"
 
+	"k8s.io/apimachinery/pkg/runtime"
 	"knative.dev/reconciler-test/pkg/manifest"
+
+	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
+	"knative.dev/eventing/test/rekt/resources/channel"
 )
 
 // The following examples validate the processing of the With* helper methods
@@ -105,4 +111,54 @@ func Example_full() {
 	//     retry: 42
 	//     backoffPolicy: exponential
 	//     backoffDelay: "2007-03-01T13:00:00Z/P1Y2M10DT2H30M"
+}
+
+//go:embed *.yaml
+var yaml embed.FS
+
+func Example_withTemplate() {
+
+	spec := map[string]string{
+		"thing1": "value1",
+		"thing2": "value2",
+	}
+	bytesSpec, err := json.Marshal(spec)
+	if err != nil {
+		panic(err)
+	}
+
+	re := &runtime.RawExtension{
+		Raw: bytesSpec,
+	}
+
+	images := map[string]string{}
+	cfg := map[string]interface{}{
+		"name":      "foo",
+		"namespace": "bar",
+	}
+	withTemplate := channel.WithTemplate(func(spec *messagingv1.ChannelTemplateSpec) error {
+		spec.Spec = re
+		return nil
+	})
+	withTemplate(cfg)
+
+	files, err := manifest.ExecuteYAML(yaml, images, cfg)
+	if err != nil {
+		panic(err)
+	}
+
+	manifest.OutputYAML(os.Stdout, files)
+	// Output:
+	// apiVersion: messaging.knative.dev/v1
+	// kind: Channel
+	// metadata:
+	//   name: foo
+	//   namespace: bar
+	// spec:
+	//   channelTemplate:
+	//     apiVersion: messaging.knative.dev/v1
+	//     kind: InMemoryChannel
+	//     spec:
+	//       thing1: value1
+	//       thing2: value2
 }

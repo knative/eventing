@@ -16,6 +16,10 @@ limitations under the License.
 
 package feature
 
+import (
+	"fmt"
+)
+
 type Timing uint8
 
 const (
@@ -27,6 +31,10 @@ const (
 
 func (t Timing) String() string {
 	return timingMapping[t]
+}
+
+func (t Timing) MarshalJSON() ([]byte, error) {
+	return []byte(fmt.Sprintf("%q", t.String())), nil
 }
 
 func Timings() []Timing {

@@ -33,6 +33,9 @@ func TestOurConfig(t *testing.T) {
 	actual, example := ConfigMapsFromTestFile(t, "config-broker")
 	exampleSpec := runtime.RawExtension{Raw: []byte(`"customValue: foo\n"`)}
 
+	// Using legacy ConfiMap with to be deprecated element.
+	actualLegacy, exampleLegacy := ConfigMapsFromTestFile(t, "config-broker")
+
 	for _, tt := range []struct {
 		name    string
 		wantErr string
@@ -40,9 +43,14 @@ func TestOurConfig(t *testing.T) {
 		data    *corev1.ConfigMap
 	}{{
 		name:    "Actual config, no defaults.",
-		wantErr: "not found",
+		wantErr: "empty or missing value for config",
 		want:    nil,
 		data:    actual,
+	}, {
+		name:    "Actual config, no defaults. Legacy configuration",
+		wantErr: "empty or missing value for config",
+		want:    nil,
+		data:    actualLegacy,
 	}, {
 		name: "Example config",
 		want: &Config{
@@ -55,12 +63,23 @@ func TestOurConfig(t *testing.T) {
 			}},
 		data: example,
 	}, {
+		name: "Example config. Legacy configuration",
+		want: &Config{
+			DefaultChannelTemplate: messagingv1.ChannelTemplateSpec{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "messaging.knative.dev/v1",
+					Kind:       "InMemoryChannel",
+				},
+				Spec: &exampleSpec,
+			}},
+		data: exampleLegacy,
+	}, {
 		name:    "Empty string for config",
-		wantErr: "empty value for config",
+		wantErr: "empty or missing value for config",
 		want:    nil,
 		data: &corev1.ConfigMap{
 			Data: map[string]string{
-				"channelTemplateSpec": "",
+				"channel-template-spec": "",
 			},
 		},
 	}, {
@@ -69,11 +88,29 @@ func TestOurConfig(t *testing.T) {
 		want:    nil,
 		data: &corev1.ConfigMap{
 			Data: map[string]string{
-				"channelTemplateSpec": "asdf",
+				"channel-template-spec": "asdf",
 			},
 		},
 	}, {
 		name: "With values",
+		want: &Config{
+			DefaultChannelTemplate: messagingv1.ChannelTemplateSpec{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "Foo/v1",
+					Kind:       "Bar",
+				},
+			},
+		},
+		data: &corev1.ConfigMap{
+			Data: map[string]string{
+				"channel-template-spec": `
+      apiVersion: Foo/v1
+      kind: Bar
+`,
+			},
+		},
+	}, {
+		name: "With values - legacy",
 		want: &Config{
 			DefaultChannelTemplate: messagingv1.ChannelTemplateSpec{
 				TypeMeta: metav1.TypeMeta{

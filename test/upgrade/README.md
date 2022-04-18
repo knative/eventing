@@ -119,3 +119,24 @@ struct can be influenced, by using `EVENTING_UPGRADE_TESTS_XXXXX` environmental
 variable prefix (using
 [kelseyhightower/envconfig](https://github.com/kelseyhightower/envconfig#usage)
 usage).
+
+#### Inspecting Zipkin traces for undelivered events
+
+When tracing is enabled in the `config-tracing` config map in the system namespace
+the prober collects traces for undelivered events. The traces are exported as json files
+under the artifacts dir. Traces for each event are stored in a separate file.
+Step event traces are stored as `$ARTIFACTS/traces/missed-events/step-<step_number>.json`
+The finished event traces are stored as `$ARTIFACTS/traces/missed-events/finished.json`
+
+Traces can be viewed as follows:
+- Start a Zipkin container on localhost:
+   ```
+   $ docker run -d -p 9411:9411 ghcr.io/openzipkin/zipkin:2
+   ```
+- Send traces to the Zipkin endpoint:
+   ```
+   $ curl -v -X POST localhost:9411/api/v2/spans \
+     -H 'Content-Type: application/json' \
+     -d @$ARTIFACTS/traces/missed-events/step-<step_number>.json
+   ```
+- View traces in Zipkin UI at `http://localhost:9411/zipkin`

@@ -34,6 +34,10 @@ spec:
       {{ $key }}: "{{ $value }}"
     {{ end }}
   {{ end }}
+  {{ if .filters }}
+  filters:
+  {{ .filters }}
+  {{ end }}
   {{ if .subscriber }}
   subscriber:
     {{ if .subscriber.ref }}

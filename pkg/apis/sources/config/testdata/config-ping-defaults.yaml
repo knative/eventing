@@ -38,4 +38,4 @@ data:
 
     # Max number of bytes allowed to be sent for message excluding any
     # base64 decoding.  Default is no limit set for data
-    dataMaxSize: 4096
+    data-max-size: 4096

@@ -23,12 +23,27 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"go.opencensus.io/stats/view"
+	"go.uber.org/zap"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	_ "knative.dev/pkg/client/injection/kube/client/fake"
+
+	kubeclient "knative.dev/pkg/client/injection/kube/client/fake"
+	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/leaderelection"
+	"knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/reconciler"
 	_ "knative.dev/pkg/system/testing"
+)
+
+const (
+	tNamespace                  = "test"
+	tLoggerConfigMapName        = "logger-config-test"
+	tObservabilityConfigMapName = "observability-config-test"
+	tTracingConfigMapName       = "tracing-config-test"
+	tComponentName              = "test-component"
+	tMetricsDomain              = "test-metrics-domain"
 )
 
 type myAdapter struct {
@@ -218,3 +233,125 @@ func (m *myAdapter) Promote(b reconciler.Bucket, enq func(reconciler.Bucket, typ
 }
 
 func (m *myAdapter) Demote(reconciler.Bucket) {}
+
+func TestMain_LogConfigWatcher(t *testing.T) {
+	lcm := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: tNamespace,
+			Name:      tLoggerConfigMapName,
+		},
+		Data: map[string]string{
+			"zap-logger-config":          `{"level": "info"}`,
+			"loglevel." + tComponentName: "info",
+		},
+	}
+	ocm := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: tNamespace,
+			Name:      tObservabilityConfigMapName,
+		},
+		Data: map[string]string{
+			"metrics.backend-destination":       "prometheus",
+			"profiling.enable":                  "false",
+			"sink-event-error-reporting.enable": "true",
+		},
+	}
+	tcm := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: tNamespace,
+			Name:      tTracingConfigMapName,
+		},
+		Data: map[string]string{
+			"backend": "none",
+		},
+	}
+
+	os.Setenv("K_SINK", "http://sink")
+	os.Setenv("K_LOGGING_CONFIG", "this should not be applied")
+	os.Setenv("NAMESPACE", "ns from context should be used")
+	os.Setenv("POD_NAME", "my-test-pod")
+	os.Setenv(metrics.DomainEnv, "env-metrics-domain")
+
+	defer func() {
+		os.Unsetenv("K_SINK")
+		os.Unsetenv("NAMESPACE")
+		os.Unsetenv("K_LOGGING_CONFIG")
+		os.Unsetenv("POD_NAME")
+	}()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	ctx = WithNamespace(ctx, tNamespace)
+	ctx, _ = kubeclient.With(ctx, lcm, ocm)
+
+	cmw := &configmap.ManualWatcher{
+		Namespace: NamespaceFromContext(ctx),
+	}
+	ctx = WithConfigWatcher(ctx, cmw)
+
+	ctx = WithConfiguratorOptions(ctx, []ConfiguratorOption{
+		WithLoggerConfigurator(NewLoggerConfiguratorFromConfigMap(tComponentName,
+			WithLoggerConfiguratorConfigMapName(tLoggerConfigMapName))),
+
+		// Other configurator options are also enabled to make sure that at least
+		// they do not panic when ConfigMaps are updated.
+		WithMetricsExporterConfigurator(
+			NewMetricsExporterConfiguratorFromConfigMap(tComponentName,
+				WithMetricsExporterConfiguratorConfigMapName(tObservabilityConfigMapName),
+				WithMetricsExporterConfiguratorMetricsDomain(tMetricsDomain))),
+		WithTracingConfigurator(NewTracingConfiguratorFromConfigMap(
+			WithTracingConfiguratorConfigMapName(tTracingConfigMapName))),
+		WithCloudEventsStatusReporterConfigurator(NewCloudEventsReporterConfiguratorFromConfigMap(
+			WithCloudEventsStatusReporterConfiguratorConfigMapName(tObservabilityConfigMapName))),
+		WithProfilerConfigurator(NewProfilerConfiguratorFromConfigMap(
+			WithProfilerConfiguratorConfigMapName(tObservabilityConfigMapName))),
+	})
+
+	env := ConstructEnvOrDie(func() EnvConfigAccessor { return &myEnvConfig{} })
+	done := make(chan bool)
+	go func() {
+		MainWithInformers(ctx, tComponentName, env,
+			func(ctx context.Context, processed EnvConfigAccessor, client cloudevents.Client) Adapter {
+				env := processed.(*myEnvConfig)
+
+				if env.Sink != "http://sink" {
+					t.Error("Expected sinkURI http://sink, got:", env.Sink)
+				}
+
+				logger := logging.FromContext(ctx).Desugar()
+
+				// Check that we cannot log a debug message when info level
+				// is configured.
+				if r := logger.Check(zap.DebugLevel, "debug message"); r != nil {
+					t.Error("Debug message should not be logged when info level is configured")
+				}
+
+				// Change the log level to debug at the ConfigMap
+				lcm.Data["loglevel."+tComponentName] = "debug"
+				cmw.OnChange(lcm)
+
+				// Check that we can log the same message when debug level
+				// is configured.
+				if r := logger.Check(zap.DebugLevel, "debug message"); r == nil {
+					t.Error("Debug message should not be logged when debug level is configured")
+				}
+
+				// Change observability ConfigMap settings.
+				ocm.Data["metrics.backend-destination"] = "opencensus"
+				ocm.Data["profiling.enable"] = "true"
+				ocm.Data["sink-event-error-reporting.enable"] = "true"
+				cmw.OnChange(ocm)
+
+				// Change tracing ConfigMap settings.
+				tcm.Data["backend"] = "zipkin"
+				tcm.Data["zipkin-endpoint"] = "http://zipking-test-endpoint"
+				cmw.OnChange(tcm)
+
+				return &myAdapter{blocking: true}
+			})
+		done <- true
+	}()
+
+	cancel()
+	<-done
+	defer view.Unregister(metrics.NewMemStatsAll().DefaultViews()...)
+}

@@ -19,7 +19,6 @@ package lib
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
@@ -29,7 +28,6 @@ import (
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/util/retry"
 
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/reconciler"
@@ -43,6 +41,7 @@ import (
 	"knative.dev/eventing/pkg/utils"
 	"knative.dev/eventing/test/lib/duck"
 	"knative.dev/eventing/test/lib/resources"
+	ti "knative.dev/eventing/test/test_images"
 )
 
 // TODO(chizhg): break this file into multiple files when it grows too large.
@@ -52,23 +51,8 @@ var coreAPIVersion = corev1.SchemeGroupVersion.Version
 var rbacAPIGroup = rbacv1.SchemeGroupVersion.Group
 var rbacAPIVersion = rbacv1.SchemeGroupVersion.Version
 
-// This is a workaround for https://github.com/knative/pkg/issues/1509
-// Because tests currently fail immediately on any creation failure, this
-// is problematic. On the reconcilers it's not an issue because they recover,
-// but tests need this retry.
-//
-// https://github.com/knative/eventing/issues/3681
-func isWebhookError(err error) bool {
-	return strings.Contains(err.Error(), "eventing-webhook.knative-eventing")
-}
-
 func (c *Client) RetryWebhookErrors(updater func(int) error) error {
-	attempts := 0
-	return retry.OnError(retry.DefaultRetry, isWebhookError, func() error {
-		err := updater(attempts)
-		attempts++
-		return err
-	})
+	return duck.RetryWebhookErrors(updater)
 }
 
 // CreateChannelOrFail will create a typed Channel Resource in Eventing or fail the test if there is an error.
@@ -189,7 +173,7 @@ func (c *Client) CreateBrokerConfigMapOrFail(name string, channel *metav1.TypeMe
 			Namespace: c.Namespace,
 		},
 		Data: map[string]string{
-			"channelTemplateSpec": fmt.Sprintf(`
+			"channel-template-spec": fmt.Sprintf(`
       apiVersion: %q
       kind: %q
 `, channel.APIVersion, channel.Kind),
@@ -583,9 +567,9 @@ func (c *Client) CreateClusterRoleBindingOrFail(saName, crName, crbName string) 
 
 func (c *Client) applyAdditionalEnv(pod *corev1.PodSpec) {
 	for i := 0; i < len(pod.Containers); i++ {
-		pod.Containers[i].Env = append(pod.Containers[i].Env, c.tracingEnv)
-		if c.loggingEnv != nil {
-			pod.Containers[i].Env = append(pod.Containers[i].Env, *c.loggingEnv)
+		pod.Containers[i].Env = append(pod.Containers[i].Env, corev1.EnvVar{Name: ti.ConfigTracingEnv, Value: c.TracingCfg})
+		if c.loggingCfg != "" {
+			pod.Containers[i].Env = append(pod.Containers[i].Env, corev1.EnvVar{Name: ti.ConfigLoggingEnv, Value: c.loggingCfg})
 		}
 	}
 }

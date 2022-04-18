@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
+
 	"knative.dev/reconciler-test/pkg/feature"
 )
 

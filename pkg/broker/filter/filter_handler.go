@@ -33,10 +33,12 @@ import (
 	"knative.dev/pkg/logging"
 
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	"knative.dev/eventing/pkg/apis/feature"
 	broker "knative.dev/eventing/pkg/broker"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1"
 	"knative.dev/eventing/pkg/eventfilter"
 	"knative.dev/eventing/pkg/eventfilter/attributes"
+	"knative.dev/eventing/pkg/eventfilter/subscriptionsapi"
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/reconciler/sugar/trigger/path"
 	"knative.dev/eventing/pkg/tracing"
@@ -65,11 +67,12 @@ type Handler struct {
 
 	triggerLister eventinglisters.TriggerLister
 	logger        *zap.Logger
+	withContext   func(ctx context.Context) context.Context
 }
 
 // NewHandler creates a new Handler and its associated MessageReceiver. The caller is responsible for
 // Start()ing the returned Handler.
-func NewHandler(logger *zap.Logger, triggerLister eventinglisters.TriggerLister, reporter StatsReporter, port int) (*Handler, error) {
+func NewHandler(logger *zap.Logger, triggerLister eventinglisters.TriggerLister, reporter StatsReporter, port int, wc func(ctx context.Context) context.Context) (*Handler, error) {
 	kncloudevents.ConfigureConnectionArgs(&kncloudevents.ConnectionArgs{
 		MaxIdleConns:        defaultMaxIdleConnections,
 		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
@@ -86,6 +89,7 @@ func NewHandler(logger *zap.Logger, triggerLister eventinglisters.TriggerLister,
 		reporter:      reporter,
 		triggerLister: triggerLister,
 		logger:        logger,
+		withContext:   wc,
 	}, nil
 }
 
@@ -119,7 +123,7 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	ctx := request.Context()
+	ctx := h.withContext(request.Context())
 
 	message := cehttp.NewMessageFromHttpRequest(request)
 	defer message.Finish(nil)
@@ -151,7 +155,7 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 		// event wasn't sent by the Broker, so we can drop it.
 		h.logger.Warn("No TTL seen, dropping", zap.Any("triggerRef", triggerRef), zap.Any("event", event))
 		// Return a BadRequest error, so the upstream can decide how to handle it, e.g. sending
-		// the message to a DLQ.
+		// the message to a Dead Letter Sink.
 		writer.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -184,8 +188,8 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	// Check if the event should be sent.
-	ctx = logging.WithLogger(ctx, h.logger.Sugar())
-	filterResult := filterEvent(ctx, t.Spec.Filter, *event)
+	ctx = logging.WithLogger(ctx, h.logger.Sugar().With(zap.String("trigger", fmt.Sprintf("%s/%s", t.GetNamespace(), t.GetName()))))
+	filterResult := filterEvent(ctx, t.Spec, *event)
 
 	if filterResult == eventfilter.FailFilter {
 		// We do not count the event. The event will be counted in the broker ingress.
@@ -274,6 +278,7 @@ func (h *Handler) writeResponse(ctx context.Context, writer http.ResponseWriter,
 			writer.WriteHeader(http.StatusBadGateway)
 			return http.StatusBadGateway, errors.New("received a non-empty response not recognized as CloudEvent. The response MUST be either empty or a valid CloudEvent")
 		}
+		proxyHeaders(resp.Header, writer) // Proxy original Response Headers for downstream use
 		h.logger.Debug("Response doesn't contain a CloudEvent, replying with an empty response", zap.Any("target", target))
 		writer.WriteHeader(resp.StatusCode)
 		return resp.StatusCode, nil
@@ -296,6 +301,9 @@ func (h *Handler) writeResponse(ctx context.Context, writer http.ResponseWriter,
 
 	eventResponse := binding.ToMessage(event)
 	defer eventResponse.Finish(nil)
+
+	// Proxy the original Response Headers for downstream use
+	proxyHeaders(resp.Header, writer)
 
 	if err := cehttp.WriteResponseWriter(ctx, eventResponse, resp.StatusCode, writer); err != nil {
 		return http.StatusInternalServerError, fmt.Errorf("failed to write response event: %w", err)
@@ -329,15 +337,86 @@ func (h *Handler) getTrigger(ref path.NamespacedNameUID) (*eventingv1.Trigger, e
 	return t, nil
 }
 
-func filterEvent(ctx context.Context, filter *eventingv1.TriggerFilter, event cloudevents.Event) eventfilter.FilterResult {
-	if filter == nil {
+func filterEvent(ctx context.Context, triggerSpec eventingv1.TriggerSpec, event cloudevents.Event) eventfilter.FilterResult {
+	switch {
+	case feature.FromContext(ctx).IsEnabled(feature.NewTriggerFilters) && len(triggerSpec.Filters) > 0:
+		logging.FromContext(ctx).Debugw("New trigger filters feature is enabled. Applying new filters.", zap.Any("filters", triggerSpec.Filters))
+		return applySubscriptionsAPIFilters(ctx, triggerSpec.Filters, event)
+	case triggerSpec.Filter != nil:
+		logging.FromContext(ctx).Debugw("Applying attributes filter.", zap.Any("filter", triggerSpec.Filter))
+		return applyAttributesFilter(ctx, triggerSpec.Filter, event)
+	default:
+		logging.FromContext(ctx).Debugw("Found no filters in trigger", zap.Any("triggerSpec", triggerSpec))
 		return eventfilter.NoFilter
 	}
-	var filters eventfilter.Filters
-	if filter.Attributes != nil && len(filter.Attributes) != 0 {
-		filters = append(filters, attributes.NewAttributesFilter(filter.Attributes))
+}
+
+func applySubscriptionsAPIFilters(ctx context.Context, filters []eventingv1.SubscriptionsAPIFilter, event cloudevents.Event) eventfilter.FilterResult {
+	return subscriptionsapi.NewAllFilter(materializeFiltersList(ctx, filters)...).Filter(ctx, event)
+}
+
+func materializeSubscriptionsAPIFilter(ctx context.Context, filter eventingv1.SubscriptionsAPIFilter) eventfilter.Filter {
+	var materializedFilter eventfilter.Filter
+	var err error
+	switch {
+	case len(filter.Exact) > 0:
+		// The webhook validates that this map has only a single key:value pair.
+		for attribute, value := range filter.Exact {
+			materializedFilter, err = subscriptionsapi.NewExactFilter(attribute, value)
+			if err != nil {
+				logging.FromContext(ctx).Debugw("Invalid exact expression", zap.String("attribute", attribute), zap.String("value", value), zap.Error(err))
+				return nil
+			}
+		}
+	case len(filter.Prefix) > 0:
+		// The webhook validates that this map has only a single key:value pair.
+		for attribute, prefix := range filter.Prefix {
+			materializedFilter, err = subscriptionsapi.NewPrefixFilter(attribute, prefix)
+			if err != nil {
+				logging.FromContext(ctx).Debugw("Invalid prefix expression", zap.String("attribute", attribute), zap.String("prefix", prefix), zap.Error(err))
+				return nil
+			}
+		}
+	case len(filter.Suffix) > 0:
+		// The webhook validates that this map has only a single key:value pair.
+		for attribute, suffix := range filter.Suffix {
+			materializedFilter, err = subscriptionsapi.NewSuffixFilter(attribute, suffix)
+			if err != nil {
+				logging.FromContext(ctx).Debugw("Invalid suffix expression", zap.String("attribute", attribute), zap.String("suffix", suffix), zap.Error(err))
+				return nil
+			}
+		}
+	case len(filter.All) > 0:
+		materializedFilter = subscriptionsapi.NewAllFilter(materializeFiltersList(ctx, filter.All)...)
+	case len(filter.Any) > 0:
+		materializedFilter = subscriptionsapi.NewAnyFilter(materializeFiltersList(ctx, filter.Any)...)
+	case filter.Not != nil:
+		materializedFilter = subscriptionsapi.NewNotFilter(materializeSubscriptionsAPIFilter(ctx, *filter.Not))
+	case filter.CESQL != "":
+		if materializedFilter, err = subscriptionsapi.NewCESQLFilter(filter.CESQL); err != nil {
+			// This is weird, CESQL expression should be validated when Trigger's are created.
+			logging.FromContext(ctx).Debugw("Found an Invalid CE SQL expression", zap.String("expression", filter.CESQL))
+			return nil
+		}
 	}
-	return filters.Filter(ctx, event)
+	return materializedFilter
+}
+
+func materializeFiltersList(ctx context.Context, filters []eventingv1.SubscriptionsAPIFilter) []eventfilter.Filter {
+	materializedFilters := make([]eventfilter.Filter, 0, len(filters))
+	for _, f := range filters {
+		f := materializeSubscriptionsAPIFilter(ctx, f)
+		if f == nil {
+			logging.FromContext(ctx).Warnw("Failed to parse filter. Skipping filter.", zap.Any("filter", f))
+			continue
+		}
+		materializedFilters = append(materializedFilters, f)
+	}
+	return materializedFilters
+}
+
+func applyAttributesFilter(ctx context.Context, filter *eventingv1.TriggerFilter, event cloudevents.Event) eventfilter.FilterResult {
+	return attributes.NewAttributesFilter(filter.Attributes).Filter(ctx, event)
 }
 
 // triggerFilterAttribute returns the filter attribute value for a given `attributeName`. If it doesn't not exist,
@@ -351,4 +430,13 @@ func triggerFilterAttribute(filter *eventingv1.TriggerFilter, attributeName stri
 		}
 	}
 	return attributeValue
+}
+
+// proxyHeaders adds the specified HTTP Headers to the ResponseWriter.
+func proxyHeaders(httpHeader http.Header, writer http.ResponseWriter) {
+	for headerKey, headerValues := range httpHeader {
+		for _, headerValue := range headerValues {
+			writer.Header().Add(headerKey, headerValue)
+		}
+	}
 }

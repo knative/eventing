@@ -177,21 +177,6 @@ func (in *SubscriptionsAPIFilter) DeepCopyInto(out *SubscriptionsAPIFilter) {
 			(*out)[key] = val
 		}
 	}
-	if in.Extensions != nil {
-		in, out := &in.Extensions, &out.Extensions
-		*out = make(map[string]*runtime.RawExtension, len(*in))
-		for key, val := range *in {
-			var outVal *runtime.RawExtension
-			if val == nil {
-				(*out)[key] = nil
-			} else {
-				in, out := &val, &outVal
-				*out = new(runtime.RawExtension)
-				(*in).DeepCopyInto(*out)
-			}
-			(*out)[key] = outVal
-		}
-	}
 	return
 }
 

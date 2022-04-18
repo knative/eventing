@@ -21,9 +21,9 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/cache"
+	sugarconfig "knative.dev/eventing/pkg/apis/sugar"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1/broker"
-	"knative.dev/eventing/pkg/reconciler/sugar"
 	"knative.dev/pkg/client/injection/kube/informers/core/v1/namespace"
 	namespacereconciler "knative.dev/pkg/client/injection/kube/reconciler/core/v1/namespace"
 	"knative.dev/pkg/configmap"
@@ -43,13 +43,17 @@ func NewController(
 
 	r := &Reconciler{
 		eventingClientSet: eventingclient.Get(ctx),
-		isEnabled:         sugar.LabelFilterFnOrDie(ctx),
 		brokerLister:      brokerInformer.Lister(),
 	}
 
 	impl := namespacereconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
+
+		configStore := sugarconfig.NewStore(logging.FromContext(ctx).Named("config-sugar-store"))
+		configStore.WatchConfigs(cmw)
+
 		return controller.Options{
 			SkipStatusUpdates: true,
+			ConfigStore:       configStore,
 		}
 	})
 

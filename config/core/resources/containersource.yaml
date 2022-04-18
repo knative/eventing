@@ -21,7 +21,7 @@ metadata:
     duck.knative.dev/source: "true"
     knative.dev/crd-install: "true"
     app.kubernetes.io/version: devel
-    app.kubernetes.io/part-of: knative-eventing
+    app.kubernetes.io/name: knative-eventing
   name: containersources.sources.knative.dev
 spec:
   group: sources.knative.dev

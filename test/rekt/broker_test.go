@@ -21,6 +21,7 @@ package rekt
 
 import (
 	"testing"
+	"time"
 
 	"knative.dev/pkg/system"
 	_ "knative.dev/pkg/system/testing"
@@ -28,13 +29,10 @@ import (
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/knative"
 
-	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/test/rekt/features/broker"
 	b "knative.dev/eventing/test/rekt/resources/broker"
-	"knative.dev/reconciler-test/pkg/eventshub"
 )
 
-// TestBrokerAsMiddleware
 func TestBrokerAsMiddleware(t *testing.T) {
 	t.Parallel()
 
@@ -43,14 +41,14 @@ func TestBrokerAsMiddleware(t *testing.T) {
 		knative.WithLoggingConfig,
 		knative.WithTracingConfig,
 		k8s.WithEventListener,
+		environment.WithPollTimings(5*time.Second, 4*time.Minute),
 	)
 
 	// Install and wait for a Ready Broker.
-	env.Prerequisite(ctx, t, broker.GoesReady("default", b.WithBrokerClass(eventing.MTChannelBrokerClassValue)))
+	env.Prerequisite(ctx, t, broker.GoesReady("default", b.WithEnvConfig()...))
 
 	// Test that a Broker can act as middleware.
 	env.Test(ctx, t, broker.SourceToSink("default"))
-
 	env.Finish()
 }
 
@@ -62,43 +60,19 @@ func TestBrokerWithDLQ(t *testing.T) {
 		knative.WithTracingConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
+		environment.WithPollTimings(5*time.Second, 4*time.Minute),
 	)
 
-	// The following will reuse the same environment for two different tests.
-
-	// Test that a Broker "test1" works as expected with the following topology:
-	// source ---> broker<Via> --[trigger]--> bad uri
+	// Test that a Broker works as expected with the following topology:
+	// source ---> broker --[trigger]--> bad uri
 	//                |
 	//                +--[DLQ]--> sink
-	// Setup data plane
-
-	// Install probes.
-	prober := eventshub.NewProber()
-	brokerName := "normal-broker"
-	sink1 := "sink"
-
-	// Wait till broker is ready since we need it to run the test
-	env.Prerequisite(ctx, t, broker.GoesReadyWithProbeReceiver(brokerName, sink1, prober, b.WithEnvConfig()...))
-	env.Test(ctx, t, broker.SourceToSinkWithDLQ(brokerName, sink1, prober))
-
-	// Test that a Broker "test2" works as expected with the following topology:
-	// source ---> broker +--[trigger<via1>]--> bad uri
-	//                |   |
-	//                |   +--[trigger<vai2>]--> sink2
-	//                |
-	//                +--[DLQ]--> sink1
-	// Wait till broker is ready since we need it to run this test
-	brokerName = "dls-broker"
-	sink2 := "sink2"
-	env.Prerequisite(ctx, t, broker.GoesReadyWithProbeReceiver(brokerName, sink1, prober, b.WithEnvConfig()...))
-	env.Test(ctx, t, broker.SourceToTwoSinksWithDLQ(brokerName, sink1, sink2, prober))
+	env.Test(ctx, t, broker.SourceToSinkWithDLQ())
 }
 
 // TestBrokerWithFlakyDLQ
 func TestBrokerWithFlakyDLQ(t *testing.T) {
 	t.Skip("Eventshub needs work")
-
-	class := eventing.MTChannelBrokerClassValue
 
 	ctx, env := global.Environment(
 		knative.WithKnativeNamespace(system.Namespace()),
@@ -106,10 +80,11 @@ func TestBrokerWithFlakyDLQ(t *testing.T) {
 		knative.WithTracingConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
+		environment.WithPollTimings(5*time.Second, 4*time.Minute),
 	)
 
 	// Install and wait for a Ready Broker.
-	env.Prerequisite(ctx, t, broker.GoesReady("default", b.WithBrokerClass(class)))
+	env.Prerequisite(ctx, t, broker.GoesReady("default", b.WithEnvConfig()...))
 
 	// Test that a Broker can act as middleware.
 	env.Test(ctx, t, broker.SourceToSinkWithFlakyDLQ("default"))
@@ -123,10 +98,24 @@ func TestBrokerConformance(t *testing.T) {
 		knative.WithTracingConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
+		environment.WithPollTimings(5*time.Second, 4*time.Minute),
 	)
 
 	// Install and wait for a Ready Broker.
 	env.Prerequisite(ctx, t, broker.GoesReady("default", b.WithEnvConfig()...))
 	env.TestSet(ctx, t, broker.ControlPlaneConformance("default"))
 	env.TestSet(ctx, t, broker.DataPlaneConformance("default"))
+}
+
+func TestBrokerDefaultDelivery(t *testing.T) {
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+		environment.WithPollTimings(5*time.Second, 4*time.Minute),
+	)
+
+	env.Test(ctx, t, broker.DefaultDeliverySpec())
 }

@@ -117,6 +117,13 @@ func TestNewK8sServiceWithExternal(t *testing.T) {
 		Spec: corev1.ServiceSpec{
 			Type:         corev1.ServiceTypeExternalName,
 			ExternalName: "dispatcher-name.dispatcher-namespace.svc.cluster.local",
+			Ports: []corev1.ServicePort{
+				{
+					Name:     PortName,
+					Protocol: corev1.ProtocolTCP,
+					Port:     PortNumber,
+				},
+			},
 		},
 	}
 

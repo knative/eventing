@@ -31,7 +31,7 @@ import (
 var log = config.Log
 
 // ReceiveEvent represents a function that receive event
-type ReceiveEvent func(e cloudevents.Event)
+type ReceiveEvent func(ctx context.Context, e cloudevents.Event)
 
 // Receive events and push then to passed fn
 func Receive(
@@ -45,6 +45,7 @@ func Receive(
 	opts = append(opts, cloudevents.WithRoundTripper(&ochttp.Transport{
 		Propagation: tracecontextb3.TraceContextEgress,
 	}))
+	opts = append(opts, cloudevents.WithMiddleware(tracingMiddleware))
 	if config.Instance.Readiness.Enabled {
 		readyOpt := cloudevents.WithMiddleware(readinessMiddleware)
 		opts = append(opts, readyOpt)
@@ -53,11 +54,7 @@ func Receive(
 		opt := cloudevents.WithMiddleware(m)
 		opts = append(opts, opt)
 	}
-	http, err := cloudevents.NewHTTP(opts...)
-	if err != nil {
-		log.Fatalf("failed to create http transport, %v", err)
-	}
-	c, err := cloudevents.NewClient(http)
+	c, err := cloudevents.NewClientHTTP(opts...)
 	if err != nil {
 		log.Fatalf("failed to create client, %v", err)
 	}
@@ -105,4 +102,11 @@ func headersOf(req *nethttp.Request) string {
 	ensure.NoError(req.Header.Write(&b))
 	headers := b.String()
 	return strings.ReplaceAll(headers, "\r\n", "; ")
+}
+
+func tracingMiddleware(h nethttp.Handler) nethttp.Handler {
+	return &ochttp.Handler{
+		Propagation: tracecontextb3.TraceContextEgress,
+		Handler:     h,
+	}
 }

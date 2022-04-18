@@ -20,7 +20,7 @@ metadata:
   labels:
     eventing.knative.dev/release: devel
     app.kubernetes.io/version: devel
-    app.kubernetes.io/part-of: knative-eventing
+    app.kubernetes.io/name: knative-eventing
 data:
   # Configures the default for any Broker that does not specify a spec.config or Broker class.
   default-br-config: |
@@ -30,3 +30,7 @@ data:
       kind: ConfigMap
       name: config-br-default-channel
       namespace: knative-eventing
+      delivery:
+        retry: 10
+        backoffPolicy: exponential
+        backoffDelay: PT0.2S

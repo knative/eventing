@@ -20,7 +20,7 @@ metadata:
     knative.dev/crd-install: "true"
     duck.knative.dev/addressable: "true"
     app.kubernetes.io/version: devel
-    app.kubernetes.io/part-of: knative-eventing
+    app.kubernetes.io/name: knative-eventing
 spec:
   group: flows.knative.dev
   versions:
@@ -50,7 +50,8 @@ spec:
                     type: string
                   spec:
                     description: Spec defines the Spec to use for each channel created. Passed in verbatim to the Channel CRD as Spec section.
-                    type: string
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
               reply:
                 description: Reply is a Reference to where the result of the last Subscriber gets sent to.
                 type: object

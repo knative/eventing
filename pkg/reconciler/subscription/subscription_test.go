@@ -22,40 +22,37 @@ import (
 	"fmt"
 	"testing"
 
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	"k8s.io/utils/pointer"
-	"knative.dev/eventing/pkg/apis/feature"
-	"knative.dev/pkg/injection/clients/dynamicclient"
-	"knative.dev/pkg/kref"
-	"knative.dev/pkg/network"
-	"knative.dev/pkg/tracker"
-
-	eventingclient "knative.dev/eventing/pkg/client/injection/client"
-	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
-
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	clientgotesting "k8s.io/client-go/testing"
+	"k8s.io/utils/pointer"
+
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
+	"knative.dev/pkg/injection/clients/dynamicclient"
+	"knative.dev/pkg/kref"
 	logtesting "knative.dev/pkg/logging/testing"
+	"knative.dev/pkg/network"
+	. "knative.dev/pkg/reconciler/testing"
 	"knative.dev/pkg/resolver"
+	"knative.dev/pkg/tracker"
 
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1"
+	"knative.dev/eventing/pkg/apis/feature"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
+	eventingclient "knative.dev/eventing/pkg/client/injection/client"
+	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
+	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/channel/fake"
+	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/inmemorychannel/fake"
 	"knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/subscription"
 	"knative.dev/eventing/pkg/duck"
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
-
-	. "knative.dev/pkg/reconciler/testing"
-
-	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/channel/fake"
-	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/inmemorychannel/fake"
 	. "knative.dev/eventing/pkg/reconciler/testing/v1"
 )
 
@@ -653,7 +650,7 @@ func TestAllCases(t *testing.T) {
 			Key: testNS + "/" + subscriptionName,
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", subscriptionName),
-				Eventf(corev1.EventTypeWarning, "SubscriberResolveFailed", "Failed to resolve spec.subscriber: subscribers.messaging.knative.dev %q not found", subscriberName),
+				Eventf(corev1.EventTypeWarning, "SubscriberResolveFailed", "Failed to resolve spec.subscriber: failed to get object testnamespace/subscriber: subscribers.messaging.knative.dev %q not found", subscriberName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
@@ -662,7 +659,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
-					WithSubscriptionReferencesNotResolved(subscriberResolveFailed, `Failed to resolve spec.subscriber: subscribers.messaging.knative.dev "subscriber" not found`),
+					WithSubscriptionReferencesNotResolved(subscriberResolveFailed, `Failed to resolve spec.subscriber: failed to get object testnamespace/subscriber: subscribers.messaging.knative.dev "subscriber" not found`),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
@@ -687,7 +684,7 @@ func TestAllCases(t *testing.T) {
 			Key: testNS + "/" + subscriptionName,
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", subscriptionName),
-				Eventf(corev1.EventTypeWarning, "ReplyResolveFailed", `Failed to resolve spec.reply: inmemorychannels.messaging.knative.dev %q not found`, replyName),
+				Eventf(corev1.EventTypeWarning, "ReplyResolveFailed", `Failed to resolve spec.reply: failed to get object testnamespace/reply: inmemorychannels.messaging.knative.dev %q not found`, replyName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
@@ -698,7 +695,7 @@ func TestAllCases(t *testing.T) {
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
 					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
-					WithSubscriptionReferencesNotResolved(replyResolveFailed, fmt.Sprintf(`Failed to resolve spec.reply: inmemorychannels.messaging.knative.dev %q not found`, replyName)),
+					WithSubscriptionReferencesNotResolved(replyResolveFailed, fmt.Sprintf(`Failed to resolve spec.reply: failed to get object testnamespace/reply: inmemorychannels.messaging.knative.dev %q not found`, replyName)),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
@@ -806,7 +803,7 @@ func TestAllCases(t *testing.T) {
 			WantErr: false,
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", subscriptionName),
-				Eventf(corev1.EventTypeWarning, "DeadLetterSinkResolveFailed", `Failed to resolve spec.delivery.deadLetterSink: subscribers.messaging.knative.dev "dls" not found`),
+				Eventf(corev1.EventTypeWarning, "DeadLetterSinkResolveFailed", `Failed to resolve spec.delivery.deadLetterSink: failed to get object testnamespace/dls: subscribers.messaging.knative.dev "dls" not found`),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
@@ -816,7 +813,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionDeliveryRef(subscriberGVK, dlsName, testNS),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
-					WithSubscriptionReferencesNotResolved("DeadLetterSinkResolveFailed", `Failed to resolve spec.delivery.deadLetterSink: subscribers.messaging.knative.dev "dls" not found`),
+					WithSubscriptionReferencesNotResolved("DeadLetterSinkResolveFailed", `Failed to resolve spec.delivery.deadLetterSink: failed to get object testnamespace/dls: subscribers.messaging.knative.dev "dls" not found`),
 					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
 				),
 			}},
@@ -1493,6 +1490,66 @@ func TestAllCases(t *testing.T) {
 			},
 		},
 		{
+			Name: "v1 imc - delivery defaulting - optional features",
+			Ctx: feature.ToContext(context.TODO(), feature.Flags{
+				feature.DeliveryTimeout:    feature.Enabled,
+				feature.DeliveryRetryAfter: feature.Enabled,
+			}),
+			Objects: []runtime.Object{
+				NewSubscription("a-"+subscriptionName, testNS,
+					WithSubscriptionUID("a-"+subscriptionUID),
+					WithSubscriptionChannel(imcV1GVK, channelName),
+					WithSubscriptionSubscriberRef(serviceGVK, serviceName, testNS),
+				),
+				NewUnstructured(subscriberGVK, dlcName, testNS,
+					WithUnstructuredAddressable(dlcDNS),
+				),
+				NewInMemoryChannel(channelName, testNS,
+					WithInitInMemoryChannelConditions,
+					WithInMemoryChannelSubscribers(nil),
+					WithInMemoryChannelAddress(channelDNS),
+					WithInMemoryChannelReadySubscriber("a-"+subscriptionUID),
+					WithInMemoryChannelDelivery(&eventingduck.DeliverySpec{
+						Timeout:       pointer.StringPtr("PT1S"),
+						RetryAfterMax: pointer.StringPtr("PT2S"),
+					}),
+					WithInMemoryChannelStatusDLSURI(dlcURI),
+				),
+				NewService(serviceName, testNS),
+			},
+			Key:     testNS + "/" + "a-" + subscriptionName,
+			WantErr: false,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", "a-"+subscriptionName),
+				Eventf(corev1.EventTypeNormal, "SubscriberSync", "Subscription was synchronized to channel %q", channelName),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewSubscription("a-"+subscriptionName, testNS,
+					WithSubscriptionUID("a-"+subscriptionUID),
+					WithSubscriptionChannel(imcV1GVK, channelName),
+					WithSubscriptionSubscriberRef(serviceGVK, serviceName, testNS),
+					// The first reconciliation will initialize the status conditions.
+					WithInitSubscriptionConditions,
+					MarkReferencesResolved,
+					MarkAddedToChannel,
+					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI),
+				),
+			}},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
+					{
+						UID:           "a-" + subscriptionUID,
+						SubscriberURI: serviceURI,
+						Delivery: &eventingduck.DeliverySpec{
+							Timeout:       pointer.StringPtr("PT1S"),
+							RetryAfterMax: pointer.StringPtr("PT2S"),
+						},
+					},
+				}),
+				patchFinalizers(testNS, "a-"+subscriptionName),
+			},
+		},
+		{
 			Name: "v1 imc - no dls on imc nor subscription",
 			Objects: []runtime.Object{
 				NewSubscription("a-"+subscriptionName, testNS,
@@ -1683,6 +1740,76 @@ func TestAllCases(t *testing.T) {
 							Retry:         pointer.Int32Ptr(10),
 							BackoffPolicy: &linear,
 							BackoffDelay:  pointer.StringPtr("PT1S"),
+						},
+					},
+				}),
+				patchFinalizers(testNS, "a-"+subscriptionName),
+			},
+		},
+		{
+			Name: "v1 imc - don't default delivery - optional features",
+			Ctx: feature.ToContext(context.TODO(), feature.Flags{
+				feature.DeliveryTimeout:    feature.Enabled,
+				feature.DeliveryRetryAfter: feature.Enabled,
+			}),
+			Objects: []runtime.Object{
+				NewSubscription("a-"+subscriptionName, testNS,
+					WithSubscriptionUID("a-"+subscriptionUID),
+					WithSubscriptionChannel(imcV1GVK, channelName),
+					WithSubscriptionSubscriberRef(serviceGVK, serviceName, testNS),
+					WithSubscriptionDeliverySpec(&eventingduck.DeliverySpec{
+						Timeout:       pointer.StringPtr("PT1S"),
+						RetryAfterMax: pointer.StringPtr("PT2S"),
+					}),
+				),
+				NewUnstructured(subscriberGVK, dlsName, testNS,
+					WithUnstructuredAddressable(dlsDNS),
+				),
+				NewUnstructured(subscriberGVK, dlc2Name, testNS,
+					WithUnstructuredAddressable(dlc2DNS),
+				),
+				NewInMemoryChannel(channelName, testNS,
+					WithInitInMemoryChannelConditions,
+					WithInMemoryChannelSubscribers(nil),
+					WithInMemoryChannelAddress(channelDNS),
+					WithInMemoryChannelReadySubscriber("a-"+subscriptionUID),
+					WithInMemoryChannelDelivery(&eventingduck.DeliverySpec{
+						Timeout:       pointer.StringPtr("PT10S"),
+						RetryAfterMax: pointer.StringPtr("PT20S"),
+					}),
+				),
+				NewService(serviceName, testNS),
+			},
+			Key:     testNS + "/" + "a-" + subscriptionName,
+			WantErr: false,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", "a-"+subscriptionName),
+				Eventf(corev1.EventTypeNormal, "SubscriberSync", "Subscription was synchronized to channel %q", channelName),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewSubscription("a-"+subscriptionName, testNS,
+					WithSubscriptionUID("a-"+subscriptionUID),
+					WithSubscriptionChannel(imcV1GVK, channelName),
+					WithSubscriptionSubscriberRef(serviceGVK, serviceName, testNS),
+					// The first reconciliation will initialize the status conditions.
+					WithInitSubscriptionConditions,
+					MarkReferencesResolved,
+					MarkAddedToChannel,
+					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI),
+					WithSubscriptionDeliverySpec(&eventingduck.DeliverySpec{
+						Timeout:       pointer.StringPtr("PT1S"),
+						RetryAfterMax: pointer.StringPtr("PT2S"),
+					}),
+				),
+			}},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
+					{
+						UID:           "a-" + subscriptionUID,
+						SubscriberURI: serviceURI,
+						Delivery: &eventingduck.DeliverySpec{
+							Timeout:       pointer.StringPtr("PT1S"),
+							RetryAfterMax: pointer.StringPtr("PT2S"),
 						},
 					},
 				}),

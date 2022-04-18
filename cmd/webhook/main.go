@@ -51,6 +51,7 @@ import (
 	pingdefaultconfig "knative.dev/eventing/pkg/apis/sources/config"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	sourcesv1beta2 "knative.dev/eventing/pkg/apis/sources/v1beta2"
+	sugar "knative.dev/eventing/pkg/apis/sugar"
 	"knative.dev/eventing/pkg/reconciler/sinkbinding"
 )
 
@@ -175,6 +176,7 @@ func NewConfigValidationController(ctx context.Context, _ configmap.Watcher) *co
 			// metrics.ConfigMapName():   metricsconfig.NewObservabilityConfigFromConfigMap,
 			logging.ConfigMapName():        logging.NewConfigFromConfigMap,
 			leaderelection.ConfigMapName(): leaderelection.NewConfigFromConfigMap,
+			sugar.ConfigName:               sugar.NewConfigFromConfigMap,
 		},
 	)
 }

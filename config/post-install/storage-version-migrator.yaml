@@ -19,6 +19,9 @@ metadata:
   namespace: knative-eventing
   labels:
     app: "storage-version-migration-eventing"
+    app.kubernetes.io/name: knative-eventing
+    app.kubernetes.io/component: storage-version-migration-job
+    app.kubernetes.io/version: devel
     eventing.knative.dev/release: devel
 spec:
   ttlSecondsAfterFinished: 600
@@ -27,6 +30,9 @@ spec:
     metadata:
       labels:
         app: "storage-version-migration-eventing"
+        app.kubernetes.io/name: knative-eventing
+        app.kubernetes.io/component: storage-version-migration-job
+        app.kubernetes.io/version: devel
         eventing.knative.dev/release: devel
       annotations:
         sidecar.istio.io/inject: "false"
@@ -35,7 +41,7 @@ spec:
       restartPolicy: OnFailure
       containers:
         - name: migrate
-          image: ko://knative.dev/eventing/vendor/knative.dev/pkg/apiextensions/storageversion/cmd/migrate
+          image: ko://knative.dev/pkg/apiextensions/storageversion/cmd/migrate
           args:
             - "apiserversources.sources.knative.dev"
             - "brokers.eventing.knative.dev"

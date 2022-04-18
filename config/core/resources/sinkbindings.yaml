@@ -22,7 +22,7 @@ metadata:
     duck.knative.dev/binding: "true"
     knative.dev/crd-install: "true"
     app.kubernetes.io/version: devel
-    app.kubernetes.io/part-of: knative-eventing
+    app.kubernetes.io/name: knative-eventing
   name: sinkbindings.sources.knative.dev
 spec:
   group: sources.knative.dev

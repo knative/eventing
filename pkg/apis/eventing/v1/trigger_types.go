@@ -169,13 +169,10 @@ type SubscriptionsAPIFilter struct {
 	// +optional
 	Suffix map[string]string `json:"suffix,omitempty"`
 
-	// Extensions includes the list of additional filter dialects supported by
-	// specific broker implementations. Check out the documentation of the
-	// broker implementation you're using to know about what additional filters
-	// are supported.
+	// CESQL is a CloudEvents SQL expression that will be evaluated to true or false against each CloudEvent.
 	//
 	// +optional
-	Extensions map[string]*runtime.RawExtension `json:",inline"`
+	CESQL string `json:"cesql,omitempty"`
 }
 
 // TriggerFilterAttributes is a map of context attribute names to values for

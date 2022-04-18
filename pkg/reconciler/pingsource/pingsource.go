@@ -52,7 +52,6 @@ const (
 	pingSourceDeploymentUpdated = "PingSourceDeploymentUpdated"
 
 	component     = "pingsource"
-	mtcomponent   = "pingsource-mt-adapter"
 	mtadapterName = "pingsource-mt-adapter"
 	containerName = "dispatcher"
 )

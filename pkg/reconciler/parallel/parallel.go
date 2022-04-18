@@ -30,8 +30,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/dynamic"
-
 	duckapis "knative.dev/pkg/apis/duck"
+
 	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/logging"
 	pkgreconciler "knative.dev/pkg/reconciler"
@@ -97,7 +97,8 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, p *v1.Parallel) pkgrecon
 
 		channelable, err := r.reconcileChannel(ctx, channelResourceInterface, p, channelObjRef)
 		if err != nil {
-			logging.FromContext(ctx).Errorw(fmt.Sprintf("Failed to reconcile Channel Object: %s/%s", p.Namespace, channelName), zap.Error(err))
+			err = fmt.Errorf("failed to reconcile channel %s at step %d: %w", channelName, i, err)
+			p.Status.MarkChannelsNotReady("ChannelsNotReady", err.Error())
 			return err
 		}
 		logging.FromContext(ctx).Infof("Reconciled Channel Object: %s/%s %+v", p.Namespace, channelName, channelable)
@@ -152,34 +153,27 @@ func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterf
 				},
 				ducklib.WithPhysicalChannelSpec(p.Spec.ChannelTemplate.Spec),
 			)
-			logger.Errorf("Creating Channel Object: %+v", newChannel)
 			if err != nil {
-				logger.Errorw("Failed to create Channel resource object", zap.Any("channel", channelObjRef), zap.Error(err))
-				return nil, err
+				return nil, fmt.Errorf("failed to create Channel resource %v: %w", channelObjRef, err)
 			}
 			created, err := channelResourceInterface.Create(ctx, newChannel, metav1.CreateOptions{})
 			if err != nil {
-				logger.Errorw("Failed to create Channel", zap.Any("channel", channelObjRef), zap.Error(err))
-				return nil, err
+				return nil, fmt.Errorf("failed to create channel %v: %w", channelObjRef, err)
 			}
 			logger.Debugw("Created Channel", zap.Any("channel", newChannel))
 			// Convert to Channel duck so that we can treat all Channels the same.
 			channelable := &duckv1.Channelable{}
-			err = duckapis.FromUnstructured(created, channelable)
-			if err != nil {
-				logger.Errorw("Failed to convert to Channelable Object", zap.Any("channel", created), zap.Error(err))
-				return nil, err
+			if err = duckapis.FromUnstructured(created, channelable); err != nil {
+				return nil, fmt.Errorf("failed to convert Channelable %v: %w", created, err)
 			}
 			return channelable, nil
 		}
-		logger.Errorw("Failed to get Channel", zap.Any("channel", channelObjRef), zap.Error(err))
-		return nil, err
+		return nil, fmt.Errorf("failed to get channel %v: %w", channelObjRef, err)
 	}
 	logger.Debugw("Found Channel", zap.Any("channel", channelObjRef))
 	channelable, ok := c.(*duckv1.Channelable)
 	if !ok {
-		logger.Errorw("Failed to convert to Channelable Object", zap.Any("channel", channelObjRef), zap.Error(err))
-		return nil, fmt.Errorf("failed to convert to Channelable Object: %+v", c)
+		return nil, fmt.Errorf("failed to convert to Channelable Object %+v: %w", c, err)
 	}
 	return channelable, nil
 }
@@ -237,23 +231,21 @@ func (r *Reconciler) reconcileSubscription(ctx context.Context, branchNumber int
 	return sub, nil
 }
 
-func (r *Reconciler) trackAndFetchChannel(ctx context.Context, p *v1.Parallel, ref corev1.ObjectReference) (runtime.Object, pkgreconciler.Event) {
+func (r *Reconciler) trackAndFetchChannel(ctx context.Context, p *v1.Parallel, ref corev1.ObjectReference) (runtime.Object, error) {
 	// Track the channel using the channelableTracker.
 	// We don't need the explicitly set a channelInformer, as this will dynamically generate one for us.
 	// This code needs to be called before checking the existence of the `channel`, in order to make sure the
 	// subscription controller will reconcile upon a `channel` change.
 	if err := r.channelableTracker.TrackInNamespace(ctx, p)(ref); err != nil {
-		return nil, pkgreconciler.NewEvent(corev1.EventTypeWarning, "TrackerFailed", "unable to track changes to Channel %+v : %w", ref, err)
+		return nil, fmt.Errorf("unable to track changes to Channel ref %+v: %w", ref, err)
 	}
 	chLister, err := r.channelableTracker.ListerFor(ref)
 	if err != nil {
-		logging.FromContext(ctx).Errorw("Error getting lister for Channel", zap.Any("channel", ref), zap.Error(err))
-		return nil, err
+		return nil, fmt.Errorf("failed to get lister for channel ref %v: %w", ref, err)
 	}
 	obj, err := chLister.ByNamespace(p.Namespace).Get(ref.Name)
 	if err != nil {
-		logging.FromContext(ctx).Errorw("Error getting Channel from lister", zap.Any("channel", ref), zap.Error(err))
-		return nil, err
+		return nil, fmt.Errorf("failed to get channel from lister for ref %v: %w", ref, err)
 	}
 	return obj, err
 }

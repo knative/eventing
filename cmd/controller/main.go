@@ -31,6 +31,8 @@ import (
 	"knative.dev/eventing/pkg/reconciler/sequence"
 	sourcecrd "knative.dev/eventing/pkg/reconciler/source/crd"
 	"knative.dev/eventing/pkg/reconciler/subscription"
+	sugarnamespace "knative.dev/eventing/pkg/reconciler/sugar/namespace"
+	sugartrigger "knative.dev/eventing/pkg/reconciler/sugar/trigger"
 )
 
 func main() {
@@ -52,5 +54,9 @@ func main() {
 		containersource.NewController,
 		// Sources CRD
 		sourcecrd.NewController,
+
+		// Sugar
+		sugarnamespace.NewController,
+		sugartrigger.NewController,
 	)
 }
