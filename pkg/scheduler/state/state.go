@@ -371,8 +371,8 @@ func withReserved(key types.NamespacedName, podName string, committed int32, res
 
 func isPodUnschedulable(pod *v1.Pod) bool {
 	annotVal, ok := pod.ObjectMeta.Annotations[scheduler.PodAnnotationKey]
-	unschedulable, _ := strconv.ParseBool(annotVal)
-	return ok && unschedulable
+	unschedulable, val := strconv.ParseBool(annotVal)
+	return ok && val == nil && unschedulable
 }
 
 func isNodeUnschedulable(node *v1.Node) bool {
@@ -388,8 +388,7 @@ func isNodeUnschedulable(node *v1.Node) bool {
 
 	return node.Spec.Unschedulable ||
 		contains(node.Spec.Taints, noExec) ||
-		contains(node.Spec.Taints, noSched) ||
-		isControlPlaneNode(node)
+		contains(node.Spec.Taints, noSched)
 }
 
 func contains(taints []v1.Taint, taint *v1.Taint) bool {
@@ -399,11 +398,4 @@ func contains(taints []v1.Taint, taint *v1.Taint) bool {
 		}
 	}
 	return false
-}
-
-func isControlPlaneNode(node *v1.Node) bool {
-	// "master" is deprecated but there are providers using it.
-	_, m := node.GetLabels()["node-role.kubernetes.io/master"]
-	_, cp := node.GetLabels()["node-role.kubernetes.io/control-plane"]
-	return m || cp
 }

@@ -86,18 +86,6 @@ func MakeNode(name, zonename string) *v1.Node {
 	return obj
 }
 
-func MakeControlPlaneNode(name string) *v1.Node {
-	obj := &v1.Node{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-			Labels: map[string]string{
-				"node-role.kubernetes.io/control-plane": "",
-			},
-		},
-	}
-	return obj
-}
-
 func MakeNodeNoLabel(name string) *v1.Node {
 	obj := &v1.Node{
 		ObjectMeta: metav1.ObjectMeta{
