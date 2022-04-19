@@ -1,4 +1,4 @@
 csv_file = ARG1
 set datafile separator comma
-plot csv_file u 1:5 with lines title "Sender throughput", csv_file u 1:6 with lines title "Receiver throughput"
+plot csv_file u 1:5 with lines title "Sender throughput", csv_file u 1:8 with lines title "Receiver throughput"
 pause -1
