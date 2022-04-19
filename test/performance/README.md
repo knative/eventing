@@ -37,9 +37,10 @@ To run a benchmark continuously, and make the result available on
 
 1.  Use `ko` to apply yaml files in the benchmark directory.
 
-    ```
-    ko apply -f test/performance/benchmarks/broker-imc/200-broker-imc-continuous-load-setup
-    ```
+
+   ```
+   ko apply -f test/performance/benchmarks/broker-imc/200-broker-imc-continuous-load-setup.yaml
+   ```
 
 ### Run without Mako
 
@@ -54,7 +55,7 @@ To run a benchmark once, and use the result from `mako-stub` for plotting:
 1. Start the benchmarking job:
 
    ```
-   ko apply -f test/performance/benchmarks/broker-imc/300-channel-imc-constant-load-setup.yaml
+   ko apply -f test/performance/benchmarks/broker-imc/300-broker-imc-increasing-load-setup.yaml
    ```
 
 1. Wait until all the pods in namespace `perf-eventing` are completed.
