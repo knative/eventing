@@ -135,7 +135,7 @@ func (r *Reconciler) reconcileController(ctx context.Context, crd *v1.CustomReso
 	logging.FromContext(ctx).Infow("Starting Source Duck Controller", zap.String("GVR", gvr.String()), zap.String("GVK", gvk.String()))
 	go func(c *controller.Impl) {
 		if c != nil {
-			if err := c.Run(controller.DefaultThreadsPerController, sdctx.Done()); err != nil {
+			if err := c.RunContext(sdctx, controller.DefaultThreadsPerController); err != nil {
 				logging.FromContext(ctx).Errorw("Unable to start Source Duck Controller", zap.String("GVR", gvr.String()), zap.String("GVK", gvk.String()))
 			}
 		}

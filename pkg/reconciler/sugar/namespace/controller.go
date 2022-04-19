@@ -53,11 +53,10 @@ func NewController(
 		}
 	})
 
-	logging.FromContext(ctx).Info("Setting up event handlers")
 	namespaceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 	brokerInformer.Informer().AddEventHandler(
 		cache.FilteringResourceEventHandler{
-			FilterFunc: controller.FilterControllerGVK(corev1.SchemeGroupVersion.WithKind("Namespace")),
+			FilterFunc: controller.FilterControllerGK(corev1.SchemeGroupVersion.WithKind("Namespace").GroupKind()),
 			Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 		})
 

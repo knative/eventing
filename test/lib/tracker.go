@@ -50,8 +50,9 @@ type Tracker struct {
 
 // ResourceDeleter holds the resource interface and name of resource to be cleaned
 type ResourceDeleter struct {
-	Resource dynamic.ResourceInterface
-	Name     string
+	Resource  dynamic.ResourceInterface
+	Name      string
+	Namespace string
 }
 
 // NewTracker creates a new Tracker
@@ -86,8 +87,9 @@ func (t *Tracker) Add(group string, version string, resource string, namespace s
 		unstructured = t.dynamicClient.Resource(gvr)
 	}
 	res := ResourceDeleter{
-		Resource: unstructured,
-		Name:     name,
+		Resource:  unstructured,
+		Name:      name,
+		Namespace: namespace,
 	}
 	// this is actually a prepend, we want to delete resources in reverse order
 	t.resourcesToClean = append([]ResourceDeleter{res}, t.resourcesToClean...)

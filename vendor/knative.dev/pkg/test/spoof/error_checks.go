@@ -21,6 +21,7 @@ package spoof
 import (
 	"errors"
 	"net"
+	"net/http"
 	"strings"
 )
 
@@ -57,4 +58,13 @@ func isConnectionRefused(err error) bool {
 
 func isConnectionReset(err error) bool {
 	return err != nil && strings.Contains(err.Error(), "connection reset by peer")
+}
+
+func isNoRouteToHostError(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "connect: no route to host")
+}
+
+func isResponseDNSError(resp *Response) bool {
+	// no such host with 502 is sent back from istio-ingressgateway when it fails to resolve domain.
+	return resp.StatusCode == http.StatusBadGateway && strings.Contains(string(resp.Body), "no such host")
 }

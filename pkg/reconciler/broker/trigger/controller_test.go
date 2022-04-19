@@ -20,15 +20,18 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
-	v1lister "knative.dev/eventing/pkg/client/listers/eventing/v1"
-
 	"k8s.io/apimachinery/pkg/runtime"
-
+	apiseventing "knative.dev/eventing/pkg/apis/eventing"
+	eventing "knative.dev/eventing/pkg/apis/eventing/v1"
+	brokerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/broker"
+	v1lister "knative.dev/eventing/pkg/client/listers/eventing/v1"
 	testingv1 "knative.dev/eventing/pkg/reconciler/testing/v1"
 	"knative.dev/pkg/configmap"
 	logtesting "knative.dev/pkg/logging/testing"
+
 	. "knative.dev/pkg/reconciler/testing"
 
 	// Fake injection informers
@@ -46,6 +49,84 @@ func TestNew(t *testing.T) {
 
 	if c == nil {
 		t.Fatal("Expected NewController to return a non-nil value")
+	}
+}
+
+func TestFilterTriggers(t *testing.T) {
+	ctx, _ := SetupFakeContext(t)
+
+	tt := []struct {
+		name    string
+		trigger interface{}
+		pass    bool
+		brokers []*eventing.Broker
+	}{{
+		name:    "unknown type",
+		trigger: &eventing.Broker{},
+		pass:    false,
+	}, {
+		name: "non matching broker",
+		trigger: &eventing.Trigger{
+			Spec: eventing.TriggerSpec{
+				Broker: "does-not-exists",
+			},
+		},
+		pass: false,
+	}, {
+		name: "exiting matching broker",
+		trigger: &eventing.Trigger{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "ns",
+				Name:      "tr",
+			},
+			Spec: eventing.TriggerSpec{
+				Broker: "br",
+			},
+		},
+		brokers: []*eventing.Broker{{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "ns",
+				Name:      "br",
+				Annotations: map[string]string{
+					eventing.BrokerClassAnnotationKey: apiseventing.MTChannelBrokerClassValue,
+				},
+			},
+		}},
+		pass: true,
+	}, {
+		name: "exiting non matching broker",
+		trigger: &eventing.Trigger{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "ns",
+				Name:      "tr",
+			},
+			Spec: eventing.TriggerSpec{
+				Broker: "br",
+			},
+		},
+		brokers: []*eventing.Broker{{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "ns",
+				Name:      "br",
+				Annotations: map[string]string{
+					eventing.BrokerClassAnnotationKey: "some-other-broker",
+				},
+			},
+		}},
+		pass: false,
+	}}
+
+	for _, tc := range tt {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			brokerInformer := brokerinformer.Get(ctx)
+			for _, obj := range tc.brokers {
+				_ = brokerInformer.Informer().GetStore().Add(obj)
+			}
+			filter := filterTriggers(brokerInformer.Lister())
+			pass := filter(tc.trigger)
+			assert.Equal(t, tc.pass, pass)
+		})
 	}
 }
 
@@ -91,7 +172,7 @@ func TestGetTriggersForBroker(t *testing.T) {
 
 type TriggerListerFailer struct{}
 
-func (failer *TriggerListerFailer) List(selector labels.Selector) (ret []*v1.Trigger, err error) {
+func (failer *TriggerListerFailer) List(selector labels.Selector) (ret []*eventing.Trigger, err error) {
 	return nil, nil
 }
 
@@ -103,12 +184,12 @@ type TriggerNamespaceListerFailer struct{}
 
 // List lists all Triggers in the indexer.
 // Objects returned here must be treated as read-only.
-func (failer *TriggerNamespaceListerFailer) List(selector labels.Selector) (ret []*v1.Trigger, err error) {
+func (failer *TriggerNamespaceListerFailer) List(selector labels.Selector) (ret []*eventing.Trigger, err error) {
 	return nil, fmt.Errorf("Inducing test failure for List")
 }
 
 // Triggers returns an object that can list and get Triggers.
-func (failer *TriggerNamespaceListerFailer) Get(name string) (*v1.Trigger, error) {
+func (failer *TriggerNamespaceListerFailer) Get(name string) (*eventing.Trigger, error) {
 	return nil, nil
 }
 

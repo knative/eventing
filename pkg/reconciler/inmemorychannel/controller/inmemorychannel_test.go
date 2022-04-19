@@ -22,14 +22,17 @@ import (
 	"strconv"
 	"testing"
 
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/reconciler/inmemorychannel/controller/config"
+	"knative.dev/pkg/tracker"
 
 	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 	"knative.dev/pkg/network"
+	"knative.dev/pkg/resolver"
 
 	"knative.dev/eventing/pkg/apis/eventing"
 
@@ -46,15 +49,19 @@ import (
 	"knative.dev/eventing/pkg/reconciler/inmemorychannel/controller/resources"
 	. "knative.dev/eventing/pkg/reconciler/testing/v1"
 	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/kmeta"
 	logtesting "knative.dev/pkg/logging/testing"
 	. "knative.dev/pkg/reconciler/testing"
+
+	v1addr "knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
 )
 
 const (
 	systemNS              = "knative-testing"
+	dlsName               = "test-dls"
 	testNS                = "test-namespace"
 	imcName               = "test-imc"
 	channelServiceAddress = "test-imc-kn-channel.test-namespace.svc.cluster.local"
@@ -63,6 +70,19 @@ const (
 	maxIdleConnsPerHost   = 200
 
 	imcGeneration = 7
+)
+
+var (
+	imcDest = duckv1.Destination{
+		Ref: &duckv1.KReference{
+			Name:       dlsName,
+			Kind:       "Service",
+			APIVersion: "v1",
+			Namespace:  testNS,
+		},
+	}
+
+	dlsURI, _ = apis.ParseURL("http://test-dls.test-namespace.svc.cluster.local")
 )
 
 func TestAllCases(t *testing.T) {
@@ -145,7 +165,8 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelServiceReady(),
 					WithInMemoryChannelEndpointsReady(),
 					WithInMemoryChannelChannelServiceReady(),
-					WithInMemoryChannelAddress(channelServiceAddress)),
+					WithInMemoryChannelAddress(channelServiceAddress),
+					WithInMemoryChannelDLSUnknown()),
 			}},
 		}, {
 			Name: "the status of deployment is unknown",
@@ -167,7 +188,8 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelServiceReady(),
 					WithInMemoryChannelEndpointsReady(),
 					WithInMemoryChannelChannelServiceReady(),
-					WithInMemoryChannelAddress(channelServiceAddress)),
+					WithInMemoryChannelAddress(channelServiceAddress),
+					WithInMemoryChannelDLSUnknown()),
 			}},
 		}, {
 			Name: "Service does not exist",
@@ -227,14 +249,50 @@ func TestAllCases(t *testing.T) {
 				Eventf(corev1.EventTypeWarning, "InternalError", `there are no endpoints ready for Dispatcher service`),
 			},
 		}, {
-			Name: "Works, creates new channel",
+			Name: "Doesn't work, Dead Letter Sink Resolve Failed",
 			Key:  imcKey,
 			Objects: []runtime.Object{
 				makeReadyDeployment(),
 				makeService(),
 				makeReadyEndpoints(),
 				NewInMemoryChannel(imcName, testNS,
-					WithInMemoryChannelGeneration(imcGeneration)),
+					WithDeadLetterSink(imcDest.Ref, ""),
+					WithInMemoryChannelGeneration(imcGeneration),
+				),
+			},
+			WantErr: true,
+			WantCreates: []runtime.Object{
+				makeChannelService(NewInMemoryChannel(imcName, testNS)),
+			},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, "InternalError", fmt.Sprintf(`Failed to resolve Dead Letter Sink URI: services "%s" not found`, dlsName)),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewInMemoryChannel(imcName, testNS,
+					WithInitInMemoryChannelConditions,
+					WithInMemoryChannelDeploymentReady(),
+					WithInMemoryChannelGeneration(imcGeneration),
+					WithInMemoryChannelStatusObservedGeneration(imcGeneration),
+					WithInMemoryChannelServiceReady(),
+					WithInMemoryChannelEndpointsReady(),
+					WithInMemoryChannelChannelServiceReady(),
+					WithInMemoryChannelAddress(channelServiceAddress),
+					WithDeadLetterSink(imcDest.Ref, ""),
+					WithInMemoryChannelDLSResolvedFailed(),
+				),
+			}},
+		}, {
+			Name: "Works, creates new channel",
+			Key:  imcKey,
+			Objects: []runtime.Object{
+				makeDLSServiceAsUnstructured(),
+				makeReadyDeployment(),
+				makeService(),
+				makeReadyEndpoints(),
+				NewInMemoryChannel(imcName, testNS,
+					WithDeadLetterSink(imcDest.Ref, ""),
+					WithInMemoryChannelGeneration(imcGeneration),
+				),
 			},
 			WantErr: false,
 			WantCreates: []runtime.Object{
@@ -250,6 +308,8 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelEndpointsReady(),
 					WithInMemoryChannelChannelServiceReady(),
 					WithInMemoryChannelAddress(channelServiceAddress),
+					WithDeadLetterSink(imcDest.Ref, ""),
+					WithInMemoryChannelStatusDLSURI(dlsURI),
 				),
 			}},
 		}, {
@@ -259,7 +319,9 @@ func TestAllCases(t *testing.T) {
 				makeReadyDeployment(),
 				makeService(),
 				makeReadyEndpoints(),
-				NewInMemoryChannel(imcName, testNS),
+				makeDLSServiceAsUnstructured(),
+				NewInMemoryChannel(imcName, testNS,
+					WithDeadLetterSink(imcDest.Ref, "")),
 				makeChannelService(NewInMemoryChannel(imcName, testNS)),
 			},
 			WantErr: false,
@@ -271,6 +333,8 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelEndpointsReady(),
 					WithInMemoryChannelChannelServiceReady(),
 					WithInMemoryChannelAddress(channelServiceAddress),
+					WithDeadLetterSink(imcDest.Ref, ""),
+					WithInMemoryChannelStatusDLSURI(dlsURI),
 				),
 			}},
 		}, {
@@ -303,8 +367,10 @@ func TestAllCases(t *testing.T) {
 				makeReadyDeployment(),
 				makeService(),
 				makeReadyEndpoints(),
+				makeDLSServiceAsUnstructured(),
 				NewInMemoryChannel(imcName, testNS,
-					WithInMemoryChannelSubscribers(subscribers)),
+					WithInMemoryChannelSubscribers(subscribers),
+					WithDeadLetterSink(imcDest.Ref, "")),
 				makeChannelService(NewInMemoryChannel(imcName, testNS)),
 			},
 			WantErr: false,
@@ -317,6 +383,8 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelChannelServiceReady(),
 					WithInMemoryChannelSubscribers(subscribers),
 					WithInMemoryChannelAddress(channelServiceAddress),
+					WithDeadLetterSink(imcDest.Ref, ""),
+					WithInMemoryChannelStatusDLSURI(dlsURI),
 				),
 			}},
 		}, {
@@ -326,10 +394,12 @@ func TestAllCases(t *testing.T) {
 				makeReadyDeployment(),
 				makeService(),
 				makeReadyEndpoints(),
+				makeDLSServiceAsUnstructured(),
 				NewInMemoryChannel(imcName, testNS,
 					WithInMemoryChannelSubscribers(subscribers),
 					WithInMemoryChannelReadySubscriberAndGeneration(string(subscriber1UID), subscriber1Generation),
-					WithInMemoryChannelReadySubscriberAndGeneration(string(subscriber2UID), subscriber2Generation)),
+					WithInMemoryChannelReadySubscriberAndGeneration(string(subscriber2UID), subscriber2Generation),
+					WithDeadLetterSink(imcDest.Ref, "")),
 				makeChannelService(NewInMemoryChannel(imcName, testNS)),
 			},
 			WantErr: false,
@@ -343,6 +413,8 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelSubscribers(subscribers),
 					WithInMemoryChannelStatusSubscribers(subscriberStatuses),
 					WithInMemoryChannelAddress(channelServiceAddress),
+					WithDeadLetterSink(imcDest.Ref, ""),
+					WithInMemoryChannelStatusDLSURI(dlsURI),
 				),
 			}},
 		}, {
@@ -378,12 +450,14 @@ func TestAllCases(t *testing.T) {
 
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
+		ctx = v1addr.WithDuck(ctx)
 		r := &Reconciler{
 			kubeClientSet:    fakekubeclient.Get(ctx),
 			systemNamespace:  testNS,
 			deploymentLister: listers.GetDeploymentLister(),
 			serviceLister:    listers.GetServiceLister(),
 			endpointsLister:  listers.GetEndpointsLister(),
+			uriResolver:      resolver.NewURIResolverFromTracker(ctx, tracker.New(func(types.NamespacedName) {}, 0)),
 		}
 		return inmemorychannel.NewReconciler(ctx, logger,
 			fakeeventingclient.Get(ctx), listers.GetInMemoryChannelLister(),
@@ -402,7 +476,10 @@ func TestInNamespace(t *testing.T) {
 			Key:  imcKey,
 			Objects: []runtime.Object{
 				makeEventDispatcherConfigMap(),
-				NewInMemoryChannel(imcName, testNS, WithInMemoryScopeAnnotation(eventing.ScopeNamespace)),
+				makeDLSServiceAsUnstructured(),
+				NewInMemoryChannel(imcName, testNS,
+					WithInMemoryScopeAnnotation(eventing.ScopeNamespace),
+					WithDeadLetterSink(imcDest.Ref, "")),
 				makeRoleBinding(systemNS, dispatcherName+"-"+testNS, "eventing-config-reader", NewInMemoryChannel(imcName, testNS)),
 				makeReadyEndpoints(),
 			},
@@ -422,6 +499,8 @@ func TestInNamespace(t *testing.T) {
 					WithInMemoryChannelEndpointsReady(),
 					WithInMemoryChannelChannelServiceReady(),
 					WithInMemoryChannelAddress(channelServiceAddress),
+					WithDeadLetterSink(imcDest.Ref, ""),
+					WithInMemoryChannelStatusDLSURI(dlsURI),
 				),
 			}},
 			WantEvents: []string{
@@ -436,7 +515,10 @@ func TestInNamespace(t *testing.T) {
 			Key:  imcKey,
 			Objects: []runtime.Object{
 				makeEventDispatcherConfigMap(),
-				NewInMemoryChannel(imcName, testNS, WithInMemoryScopeAnnotation(eventing.ScopeNamespace)),
+				makeDLSServiceAsUnstructured(),
+				NewInMemoryChannel(imcName, testNS,
+					WithInMemoryScopeAnnotation(eventing.ScopeNamespace),
+					WithDeadLetterSink(imcDest.Ref, "")),
 				makeServiceAccount(NewInMemoryChannel(imcName, testNS)),
 				makeRoleBinding(testNS, dispatcherName, dispatcherName, NewInMemoryChannel(imcName, testNS)),
 				makeRoleBinding(systemNS, dispatcherName+"-"+testNS, "eventing-config-reader", NewInMemoryChannel(imcName, "knative-testing")),
@@ -456,6 +538,8 @@ func TestInNamespace(t *testing.T) {
 					WithInMemoryChannelEndpointsReady(),
 					WithInMemoryChannelChannelServiceReady(),
 					WithInMemoryChannelAddress(channelServiceAddress),
+					WithDeadLetterSink(imcDest.Ref, ""),
+					WithInMemoryChannelStatusDLSURI(dlsURI),
 				),
 			}},
 		},
@@ -465,7 +549,7 @@ func TestInNamespace(t *testing.T) {
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		eventDispatcherConfigStore := config.NewEventDispatcherConfigStore(logger)
 		eventDispatcherConfigStore.WatchConfigs(cmw)
-
+		ctx = v1addr.WithDuck(ctx)
 		r := &Reconciler{
 			kubeClientSet:              fakekubeclient.Get(ctx),
 			dispatcherImage:            imageName,
@@ -476,6 +560,7 @@ func TestInNamespace(t *testing.T) {
 			serviceAccountLister:       listers.GetServiceAccountLister(),
 			roleBindingLister:          listers.GetRoleBindingLister(),
 			eventDispatcherConfigStore: eventDispatcherConfigStore,
+			uriResolver:                resolver.NewURIResolverFromTracker(ctx, tracker.New(func(types.NamespacedName) {}, 0)),
 		}
 		return inmemorychannel.NewReconciler(ctx, logger,
 			fakeeventingclient.Get(ctx), listers.GetInMemoryChannelLister(),
@@ -629,6 +714,19 @@ func makeEventDispatcherConfigMap() *corev1.ConfigMap {
 		Data: map[string]string{
 			"MaxIdleConnections":        strconv.Itoa(maxIdleConns),
 			"MaxIdleConnectionsPerHost": strconv.Itoa(maxIdleConnsPerHost),
+		},
+	}
+}
+
+func makeDLSServiceAsUnstructured() *unstructured.Unstructured {
+	return &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "v1",
+			"kind":       "Service",
+			"metadata": map[string]interface{}{
+				"namespace": testNS,
+				"name":      dlsName,
+			},
 		},
 	}
 }

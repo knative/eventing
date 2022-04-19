@@ -77,12 +77,6 @@ type Reconciler struct {
 
 func (r *Reconciler) ReconcileKind(ctx context.Context, t *eventingv1.Trigger) pkgreconciler.Event {
 	logging.FromContext(ctx).Infow("Reconciling", zap.Any("Trigger", t))
-	t.Status.InitializeConditions()
-
-	if t.DeletionTimestamp != nil {
-		// Everything is cleaned up by the garbage collector.
-		return nil
-	}
 
 	b, err := r.brokerLister.Brokers(t.Namespace).Get(t.Spec.Broker)
 	if err != nil {
@@ -105,7 +99,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, t *eventingv1.Trigger) p
 	t.Status.PropagateBrokerCondition(b.Status.GetTopLevelCondition())
 
 	// If Broker is not ready, we're done, but once it becomes ready, we'll get requeued.
-	if !b.Status.IsReady() {
+	if !b.IsReady() {
 		logging.FromContext(ctx).Errorw("Broker is not ready", zap.Any("Broker", b))
 		return nil
 	}
@@ -131,6 +125,10 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, t *eventingv1.Trigger) p
 	t.Status.SubscriberURI = subscriberURI
 	t.Status.MarkSubscriberResolvedSucceeded()
 
+	if err := r.resolveDeadLetterSink(ctx, b, t); err != nil {
+		return err
+	}
+
 	sub, err := r.subscribeToBrokerChannel(ctx, b, t, brokerTrigger)
 	if err != nil {
 		logging.FromContext(ctx).Errorw("Unable to Subscribe", zap.Error(err))
@@ -141,6 +139,38 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, t *eventingv1.Trigger) p
 
 	if err := r.checkDependencyAnnotation(ctx, t); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (r *Reconciler) resolveDeadLetterSink(ctx context.Context, b *eventingv1.Broker, t *eventingv1.Trigger) error {
+	// resolve the trigger's dls first, fall back to the broker's
+	if t.Spec.Delivery != nil && t.Spec.Delivery.DeadLetterSink != nil {
+		deadLetterSinkURI, err := r.uriResolver.URIFromDestinationV1(ctx, *t.Spec.Delivery.DeadLetterSink, t)
+		if err != nil {
+			t.Status.DeadLetterSinkURI = nil
+			logging.FromContext(ctx).Errorw("Unable to get the dead letter sink's URI", zap.Error(err))
+			t.Status.MarkDeadLetterSinkResolvedFailed("Unable to get the dead letter sink's URI", "%v", err)
+			return err
+		}
+
+		t.Status.DeadLetterSinkURI = deadLetterSinkURI
+		t.Status.MarkDeadLetterSinkResolvedSucceeded()
+		// In case there is no DLS defined in the Trigger Spec, fallback to Broker's
+	} else if b.Spec.Delivery != nil && b.Spec.Delivery.DeadLetterSink != nil {
+		if b.Status.DeadLetterSinkURI != nil {
+			t.Status.DeadLetterSinkURI = b.Status.DeadLetterSinkURI
+			t.Status.MarkDeadLetterSinkResolvedSucceeded()
+		} else {
+			t.Status.DeadLetterSinkURI = nil
+			t.Status.MarkDeadLetterSinkResolvedFailed(fmt.Sprintf("Broker %s didn't set status.deadLetterSinkURI", b.Name), "")
+			return fmt.Errorf("broker %s didn't set status.deadLetterSinkURI", b.Name)
+		}
+	} else {
+		// There is no DLS defined in neither Trigger nor the Broker
+		t.Status.DeadLetterSinkURI = nil
+		t.Status.MarkDeadLetterSinkNotConfigured()
 	}
 
 	return nil

@@ -27,9 +27,10 @@ import (
 )
 
 type resourceDelegate struct {
-	ce     cloudevents.Client
-	source string
-	ref    bool
+	ce                  cloudevents.Client
+	source              string
+	ref                 bool
+	apiServerSourceName string
 
 	logger *zap.SugaredLogger
 }
@@ -37,7 +38,7 @@ type resourceDelegate struct {
 var _ cache.Store = (*resourceDelegate)(nil)
 
 func (a *resourceDelegate) Add(obj interface{}) error {
-	ctx, event, err := events.MakeAddEvent(a.source, obj, a.ref)
+	ctx, event, err := events.MakeAddEvent(a.source, a.apiServerSourceName, obj, a.ref)
 	if err != nil {
 		a.logger.Infow("event creation failed", zap.Error(err))
 		return err
@@ -47,7 +48,7 @@ func (a *resourceDelegate) Add(obj interface{}) error {
 }
 
 func (a *resourceDelegate) Update(obj interface{}) error {
-	ctx, event, err := events.MakeUpdateEvent(a.source, obj, a.ref)
+	ctx, event, err := events.MakeUpdateEvent(a.source, a.apiServerSourceName, obj, a.ref)
 	if err != nil {
 		a.logger.Info("event creation failed", zap.Error(err))
 		return err
@@ -57,7 +58,7 @@ func (a *resourceDelegate) Update(obj interface{}) error {
 }
 
 func (a *resourceDelegate) Delete(obj interface{}) error {
-	ctx, event, err := events.MakeDeleteEvent(a.source, obj, a.ref)
+	ctx, event, err := events.MakeDeleteEvent(a.source, a.apiServerSourceName, obj, a.ref)
 	if err != nil {
 		a.logger.Info("event creation failed", zap.Error(err))
 		return err

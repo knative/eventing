@@ -5,21 +5,18 @@ aliases:
   api-core-wg-leads:
   - dprotaso
   autoscaling-reviewers:
+  - nader-ziada
+  - psschwei
   - taragu
   autoscaling-wg-leads:
-  - markusthoemmes
-  - vagababov
+  - julz
   autoscaling-writers:
   - julz
-  - markusthoemmes
-  - vagababov
   - yanweiguo
-  channel-wg-leads:
-  - matzew
-  - slinkydeveloper
   client-reviewers:
   - itsmurugappan
   client-wg-leads:
+  - dsimansk
   - navidshaikh
   - rhuss
   client-writers:
@@ -27,22 +24,29 @@ aliases:
   - maximilien
   - navidshaikh
   - rhuss
-  conformance-wg-leads:
-  - tayarani
+  conformance-task-force-leads:
+  - omerbensaadon
+  - salaboy
   conformance-writers:
-  - tayarani
+  - omerbensaadon
+  - salaboy
   docs-reviewers:
   - RichardJJG
-  - jonatasbaldin
   - mpetason
+  - nainaz
   - omerbensaadon
   - pmbanugo
   - snneji
-  docs-wg-leads: []
+  docs-wg-leads:
+  - csantanapr
+  - snneji
   docs-writers:
+  - RichardJJG
   - abrennan89
   - carieshmarie
+  - csantanapr
   - richieescarez
+  - snneji
   eventing-reviewers:
   - aslom
   - tayarani
@@ -51,12 +55,9 @@ aliases:
   - akashrv
   - antoineco
   - lberk
-  - n3wscott
-  - slinkydeveloper
   eventing-wg-leads:
   - devguyio
   - lionelvillard
-  - vaikas
   eventing-writers:
   - akashrv
   - aliok
@@ -65,13 +66,10 @@ aliases:
   - lberk
   - lionelvillard
   - matzew
-  - n3wscott
   - pierDipi
-  - slinkydeveloper
   - vaikas
   knative-admin:
-  - RichieEscarez
-  - bsnchan
+  - csantanapr
   - dprotaso
   - duglin
   - evankanderson
@@ -80,42 +78,18 @@ aliases:
   - knative-prow-robot
   - knative-prow-updater-robot
   - knative-test-reporter-robot
+  - lance
   - markusthoemmes
   - matzew
-  - mbehrendt
+  - nak3
   - pmorie
   - rhuss
   - spencerdillard
   - thisisnotapril
   - vaikas
-  knative-milestone-maintainers:
-  - ImJasonH
-  - ZhiminXiang
-  - andrew-su
-  - aslom
-  - chaodaiG
-  - chizhg
-  - csantanapr
-  - dprotaso
-  - evankanderson
-  - igsong
-  - julz
-  - lionelvillard
-  - markusthoemmes
-  - n3wscott
-  - nak3
-  - navidshaikh
-  - rhuss
-  - shashwathi
-  - slinkydeveloper
-  - tanzeeb
-  - tcnghia
-  - vagababov
-  - vaikas
   knative-release-leads:
-  - RichieEscarez
-  - dprotaso
   - matzew
+  - nak3
   knative-robots:
   - knative-prow-releaser-robot
   - knative-prow-robot
@@ -126,7 +100,7 @@ aliases:
   - ZhiminXiang
   - andrew-su
   - arturenault
-  - markusthoemmes
+  - carlisia
   - nak3
   - shashwathi
   - tcnghia
@@ -145,9 +119,7 @@ aliases:
   - aliok
   - houshengbo
   - jcrossley3
-  - markusthoemmes
   - matzew
-  - n3wscott
   - trshafer
   operations-wg-leads:
   - houshengbo
@@ -156,9 +128,7 @@ aliases:
   - aliok
   - houshengbo
   - jcrossley3
-  - markusthoemmes
   - matzew
-  - n3wscott
   - trshafer
   pkg-configmap-reviewers:
   - dprotaso
@@ -185,6 +155,8 @@ aliases:
   - evankanderson
   - gerardo-lc
   - joshua-bone
+  - kvmware
+  - shinigambit
   - steuhs
   productivity-wg-leads:
   - chizhg
@@ -206,7 +178,11 @@ aliases:
   serving-observability-writers:
   - yanweiguo
   serving-reviewers:
+  - carlisia
   - julz
+  - nader-ziada
+  - nealhu
+  - psschwei
   - whaught
   serving-writers:
   - dprotaso
@@ -216,10 +192,9 @@ aliases:
   - vagababov
   source-wg-leads:
   - lionelvillard
-  - n3wscott
   steering-committee:
-  - bsnchan
-  - mbehrendt
+  - csantanapr
+  - lance
   - pmorie
   - thisisnotapril
   - vaikas
@@ -230,12 +205,12 @@ aliases:
   - markusthoemmes
   - rhuss
   trademark-committee:
-  - bsnchan
   - duglin
+  - evankanderson
   - spencerdillard
   ux-wg-leads:
   - csantanapr
-  - omerbensaadon
+  - snneji
   ux-writers:
   - csantanapr
-  - omerbensaadon
+  - snneji

@@ -45,6 +45,19 @@ User stories:
 - Create a new Channel implementation
 - Create a new Broker implementation
 
+### System Operator
+
+A System Operator manages the Knative Eventing including installing and upgrading Knative Eventing.
+They also monitor the system health and manage access for developers.
+
+User stories:
+
+- Install new CRDs (Sources, Broker Implementations)
+- Upgrade Knative Eventing
+- Upgrade Broker's backing infrastructure (eg. Kafka or RabbitMQ)
+- Grant access to developers
+
+
 ## Contributors
 
 Contributors are an important part of the Knative project. As such, we will also

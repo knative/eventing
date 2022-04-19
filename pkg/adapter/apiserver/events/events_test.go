@@ -31,6 +31,8 @@ import (
 
 var contentType = "application/json"
 
+const apiServerSourceNameTest = "test-apiserversource"
+
 func simplePod(name, namespace string) *unstructured.Unstructured {
 	return &unstructured.Unstructured{
 		Object: map[string]interface{}{
@@ -84,7 +86,7 @@ func TestMakeAddEvent(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			_, got, err := events.MakeAddEvent(tc.source, tc.obj, false)
+			_, got, err := events.MakeAddEvent(tc.source, apiServerSourceNameTest, tc.obj, false)
 			validate(t, got, err, tc.want, tc.wantData, tc.wantErr)
 		})
 	}
@@ -125,7 +127,7 @@ func TestMakeUpdateEvent(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			_, got, err := events.MakeUpdateEvent(tc.source, tc.obj, false)
+			_, got, err := events.MakeUpdateEvent(tc.source, apiServerSourceNameTest, tc.obj, false)
 			validate(t, got, err, tc.want, tc.wantData, tc.wantErr)
 		})
 	}
@@ -166,7 +168,7 @@ func TestMakeDeleteEvent(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			_, got, err := events.MakeDeleteEvent(tc.source, tc.obj, false)
+			_, got, err := events.MakeDeleteEvent(tc.source, apiServerSourceNameTest, tc.obj, false)
 			validate(t, got, err, tc.want, tc.wantData, tc.wantErr)
 		})
 	}
@@ -207,7 +209,7 @@ func TestMakeAddRefEvent(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			_, got, err := events.MakeAddEvent(tc.source, tc.obj, true)
+			_, got, err := events.MakeAddEvent(tc.source, apiServerSourceNameTest, tc.obj, true)
 			validate(t, got, err, tc.want, tc.wantData, tc.wantErr)
 		})
 	}
@@ -248,7 +250,7 @@ func TestMakeUpdateRefEvent(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			_, got, err := events.MakeUpdateEvent(tc.source, tc.obj, true)
+			_, got, err := events.MakeUpdateEvent(tc.source, apiServerSourceNameTest, tc.obj, true)
 			validate(t, got, err, tc.want, tc.wantData, tc.wantErr)
 		})
 	}
@@ -289,7 +291,7 @@ func TestMakeDeleteRefEvent(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			_, got, err := events.MakeDeleteEvent(tc.source, tc.obj, true)
+			_, got, err := events.MakeDeleteEvent(tc.source, apiServerSourceNameTest, tc.obj, true)
 			validate(t, got, err, tc.want, tc.wantData, tc.wantErr)
 		})
 	}

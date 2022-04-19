@@ -21,9 +21,10 @@ import (
 
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 
+	"knative.dev/pkg/apis"
+
 	"knative.dev/eventing/pkg/apis/config"
 	"knative.dev/eventing/pkg/apis/eventing"
-	"knative.dev/pkg/apis"
 )
 
 func (b *Broker) SetDefaults(ctx context.Context) {
@@ -53,4 +54,5 @@ func (bs *BrokerSpec) SetDefaults(ctx context.Context) {
 	if bs.Config != nil {
 		bs.Config.SetDefaults(ctx)
 	}
+	bs.Delivery.SetDefaults(ctx)
 }

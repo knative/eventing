@@ -4,6 +4,9 @@
 <a href="#duck.knative.dev%2fv1">duck.knative.dev/v1</a>
 </li>
 <li>
+<a href="#duck.knative.dev%2fv1alpha1">duck.knative.dev/v1alpha1</a>
+</li>
+<li>
 <a href="#duck.knative.dev%2fv1beta1">duck.knative.dev/v1beta1</a>
 </li>
 <li>
@@ -73,7 +76,7 @@ Channelable ObjectReferences and access their subscription and address data.  Th
 <td>
 <code>metadata</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -263,6 +266,24 @@ SubscribableStatus
 </tr>
 <tr>
 <td>
+<code>DeliveryStatus</code><br/>
+<em>
+<a href="#duck.knative.dev/v1.DeliveryStatus">
+DeliveryStatus
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>DeliveryStatus</code> are embedded into this type.)
+</p>
+<em>(Optional)</em>
+<p>DeliveryStatus contains a resolved URL to the dead letter sink address, and any other
+resolved delivery options.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>deadLetterChannel</code><br/>
 <em>
 <a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#KReference">
@@ -273,7 +294,8 @@ knative.dev/pkg/apis/duck/v1.KReference
 <td>
 <em>(Optional)</em>
 <p>DeadLetterChannel is a KReference and is set by the channel when it supports native error handling via a channel
-Failed messages are delivered here.</p>
+Failed messages are delivered here.
+Deprecated in favor of DeliveryStatus, to be removed September 2022.</p>
 </td>
 </tr>
 </tbody>
@@ -370,12 +392,40 @@ More information on Duration format:
 For exponential policy, backoff delay is backoffDelay*2^<numberOfRetries>.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>retryAfterMax</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>RetryAfterMax provides an optional upper bound on the duration specified in a &ldquo;Retry-After&rdquo; header
+when calculating backoff times for retrying 429 and 503 response codes.  Setting the value to
+zero (&ldquo;PT0S&rdquo;) can be used to opt-out of respecting &ldquo;Retry-After&rdquo; header values altogether. This
+value only takes effect if &ldquo;Retry&rdquo; is configured, and also depends on specific implementations
+(Channels, Sources, etc.) choosing to provide this capability.</p>
+<p>Note: This API is EXPERIMENTAL and might be changed at anytime. While this experimental
+feature is in the Alpha/Beta stage, you must provide a valid value to opt-in for
+supporting &ldquo;Retry-After&rdquo; headers.  When the feature becomes Stable/GA &ldquo;Retry-After&rdquo;
+headers will be respected by default, and you can choose to specify &ldquo;PT0S&rdquo; to
+opt-out of supporting &ldquo;Retry-After&rdquo; headers.
+For more details: <a href="https://github.com/knative/eventing/issues/5811">https://github.com/knative/eventing/issues/5811</a></p>
+<p>More information on Duration format:
+- <a href="https://www.iso.org/iso-8601-date-and-time-format.html">https://www.iso.org/iso-8601-date-and-time-format.html</a>
+- <a href="https://en.wikipedia.org/wiki/ISO_8601">https://en.wikipedia.org/wiki/ISO_8601</a></p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="duck.knative.dev/v1.DeliveryStatus">DeliveryStatus
 </h3>
 <p>
-<p>DeliveryStatus contains the Status of an object supporting delivery options.</p>
+(<em>Appears on:</em><a href="#duck.knative.dev/v1.ChannelableStatus">ChannelableStatus</a>, <a href="#eventing.knative.dev/v1.BrokerStatus">BrokerStatus</a>, <a href="#eventing.knative.dev/v1.TriggerStatus">TriggerStatus</a>, <a href="#messaging.knative.dev/v1.SubscriptionStatusPhysicalSubscription">SubscriptionStatusPhysicalSubscription</a>)
+</p>
+<p>
+<p>DeliveryStatus contains the Status of an object supporting delivery options. This type is intended to be embedded into a status struct.</p>
 </p>
 <table>
 <thead>
@@ -387,16 +437,16 @@ For exponential policy, backoff delay is backoffDelay*2^<numberOfRetries>.</p>
 <tbody>
 <tr>
 <td>
-<code>deadLetterChannel</code><br/>
+<code>deadLetterSinkUri</code><br/>
 <em>
-<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#KReference">
-knative.dev/pkg/apis/duck/v1.KReference
+<a href="https://pkg.go.dev/knative.dev/pkg/apis#URL">
+knative.dev/pkg/apis.URL
 </a>
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>DeadLetterChannel is a KReference that is the reference to the native, platform specific channel
+<p>DeadLetterSink is a KReference that is the reference to the native, platform specific channel
 where failed events are sent to.</p>
 </td>
 </tr>
@@ -421,7 +471,7 @@ SubscribableType ObjectReferences and access the Subscription data.  This is not
 <td>
 <code>metadata</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -674,7 +724,7 @@ int64
 <td>
 <code>ready</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#conditionstatus-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#conditionstatus-v1-core">
 Kubernetes core/v1.ConditionStatus
 </a>
 </em>
@@ -693,6 +743,168 @@ string
 <td>
 <em>(Optional)</em>
 <p>A human readable message indicating details of Ready status.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<hr/>
+<h2 id="duck.knative.dev/v1alpha1">duck.knative.dev/v1alpha1</h2>
+<p>
+</p>
+Resource Types:
+<ul></ul>
+<h3 id="duck.knative.dev/v1alpha1.Placeable">Placeable
+</h3>
+<p>
+(<em>Appears on:</em><a href="#duck.knative.dev/v1alpha1.PlaceableStatus">PlaceableStatus</a>)
+</p>
+<p>
+<p>Placeable is a list of podName and virtual replicas pairs.
+Each pair represents the assignment of virtual replicas to a pod</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>maxAllowedVReplicas</code><br/>
+<em>
+int32
+</em>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<code>placements</code><br/>
+<em>
+<a href="#duck.knative.dev/v1alpha1.Placement">
+[]Placement
+</a>
+</em>
+</td>
+<td>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="duck.knative.dev/v1alpha1.PlaceableStatus">PlaceableStatus
+</h3>
+<p>
+(<em>Appears on:</em><a href="#duck.knative.dev/v1alpha1.PlaceableType">PlaceableType</a>)
+</p>
+<p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>Placeable</code><br/>
+<em>
+<a href="#duck.knative.dev/v1alpha1.Placeable">
+Placeable
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>Placeable</code> are embedded into this type.)
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="duck.knative.dev/v1alpha1.PlaceableType">PlaceableType
+</h3>
+<p>
+<p>PlaceableType is a skeleton type wrapping Placeable in the manner we expect
+resource writers defining compatible resources to embed it.  We will
+typically use this type to deserialize Placeable ObjectReferences and
+access the Placeable data.  This is not a real resource.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>metadata</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#objectmeta-v1-meta">
+Kubernetes meta/v1.ObjectMeta
+</a>
+</em>
+</td>
+<td>
+Refer to the Kubernetes API documentation for the fields of the
+<code>metadata</code> field.
+</td>
+</tr>
+<tr>
+<td>
+<code>status</code><br/>
+<em>
+<a href="#duck.knative.dev/v1alpha1.PlaceableStatus">
+PlaceableStatus
+</a>
+</em>
+</td>
+<td>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="duck.knative.dev/v1alpha1.Placement">Placement
+</h3>
+<p>
+(<em>Appears on:</em><a href="#duck.knative.dev/v1alpha1.Placeable">Placeable</a>)
+</p>
+<p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>podName</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>PodName is the name of the pod where the resource is placed</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>vreplicas</code><br/>
+<em>
+int32
+</em>
+</td>
+<td>
+<p>VReplicas is the number of virtual replicas assigned to in the pod</p>
 </td>
 </tr>
 </tbody>
@@ -746,7 +958,7 @@ Channelable ObjectReferences and access their subscription and address data.  Th
 <td>
 <code>metadata</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -1087,7 +1299,7 @@ SubscribableType ObjectReferences and access the Subscription data.  This is not
 <td>
 <code>metadata</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -1340,7 +1552,7 @@ int64
 <td>
 <code>ready</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#conditionstatus-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#conditionstatus-v1-core">
 Kubernetes core/v1.ConditionStatus
 </a>
 </em>
@@ -1412,7 +1624,7 @@ string
 <td>
 <code>metadata</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -1524,7 +1736,7 @@ string
 <td>
 <code>metadata</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -1577,6 +1789,29 @@ filter will be sent to the Subscriber. If not specified, will default to allowin
 </tr>
 <tr>
 <td>
+<code>filters</code><br/>
+<em>
+<a href="#eventing.knative.dev/v1.SubscriptionsAPIFilter">
+[]SubscriptionsAPIFilter
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Filters is an experimental field that conforms to the CNCF CloudEvents Subscriptions
+API. It&rsquo;s an array of filter expressions that evaluate to true or false.
+If any filter expression in the array evaluates to false, the event MUST
+NOT be sent to the Subscriber. If all the filter expressions in the array
+evaluate to true, the event MUST be attempted to be delivered. Absence of
+a filter or empty array implies a value of true. In the event of users
+specifying both Filter and Filters, then the latter will override the former.
+This will allow users to try out the effect of the new Filters field
+without compromising the existing attribute-based Filter and try it out on existing
+Trigger objects.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>subscriber</code><br/>
 <em>
 <a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#Destination">
@@ -1585,8 +1820,8 @@ knative.dev/pkg/apis/duck/v1.Destination
 </em>
 </td>
 <td>
-<p>Subscriber is the addressable that receives events from the Broker that pass the Filter. It
-is required.</p>
+<p>Subscriber is the addressable that receives events from the Broker that pass
+the Filter. It is required.</p>
 </td>
 </tr>
 <tr>
@@ -1721,6 +1956,157 @@ knative.dev/pkg/apis/duck/v1.Addressable
 delivered into the Broker mesh.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>DeliveryStatus</code><br/>
+<em>
+<a href="#duck.knative.dev/v1.DeliveryStatus">
+DeliveryStatus
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>DeliveryStatus</code> are embedded into this type.)
+</p>
+<p>DeliveryStatus contains a resolved URL to the dead letter sink address, and any other
+resolved delivery options.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="eventing.knative.dev/v1.SubscriptionsAPIFilter">SubscriptionsAPIFilter
+</h3>
+<p>
+(<em>Appears on:</em><a href="#eventing.knative.dev/v1.SubscriptionsAPIFilter">SubscriptionsAPIFilter</a>, <a href="#eventing.knative.dev/v1.TriggerSpec">TriggerSpec</a>)
+</p>
+<p>
+<p>SubscriptionsAPIFilter allows defining a filter expression using CloudEvents
+Subscriptions API. If multiple filters are specified, then the same semantics
+of SubscriptionsAPIFilter.All is applied. If no filter dialect or empty
+object is specified, then the filter always accept the events.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>all</code><br/>
+<em>
+<a href="#eventing.knative.dev/v1.SubscriptionsAPIFilter">
+[]SubscriptionsAPIFilter
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>All evaluates to true if all the nested expressions evaluate to true.
+It must contain at least one filter expression.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>any</code><br/>
+<em>
+<a href="#eventing.knative.dev/v1.SubscriptionsAPIFilter">
+[]SubscriptionsAPIFilter
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Any evaluates to true if at least one of the nested expressions evaluates
+to true. It must contain at least one filter expression.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>not</code><br/>
+<em>
+<a href="#eventing.knative.dev/v1.SubscriptionsAPIFilter">
+SubscriptionsAPIFilter
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Not evaluates to true if the nested expression evaluates to false.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>exact</code><br/>
+<em>
+map[string]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Exact evaluates to true if the value of the matching CloudEvents
+attribute matches exactly the String value specified (case-sensitive).
+Exact must contain exactly one property, where the key is the name of the
+CloudEvents attribute to be matched, and its value is the String value to
+use in the comparison. The attribute name and value specified in the filter
+expression cannot be empty strings.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>prefix</code><br/>
+<em>
+map[string]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Prefix evaluates to true if the value of the matching CloudEvents
+attribute starts with the String value specified (case-sensitive). Prefix
+must contain exactly one property, where the key is the name of the
+CloudEvents attribute to be matched, and its value is the String value to
+use in the comparison. The attribute name and value specified in the filter
+expression cannot be empty strings.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>suffix</code><br/>
+<em>
+map[string]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Suffix evaluates to true if the value of the matching CloudEvents
+attribute ends with the String value specified (case-sensitive). Suffix
+must contain exactly one property, where the key is the name of the
+CloudEvents attribute to be matched, and its value is the String value to
+use in the comparison. The attribute name and value specified in the filter
+expression cannot be empty strings.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>Extensions</code><br/>
+<em>
+map[string]*k8s.io/apimachinery/pkg/runtime.RawExtension
+</em>
+</td>
+<td>
+<p>
+(Members of <code>Extensions</code> are embedded into this type.)
+</p>
+<em>(Optional)</em>
+<p>Extensions includes the list of additional filter dialects supported by
+specific broker implementations. Check out the documentation of the
+broker implementation you&rsquo;re using to know about what additional filters
+are supported.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="eventing.knative.dev/v1.TriggerFilter">TriggerFilter
@@ -1752,8 +2138,8 @@ TriggerFilterAttributes
 <p>Attributes filters events by exact match on event context attributes.
 Each key in the map is compared with the equivalent key in the event
 context. An event passes the filter if all values are equal to the
-specified values.</p>
-<p>Nested context attributes are not supported as keys. Only string values are supported.</p>
+specified values. Nested context attributes are not supported as keys. Only
+string values are supported.</p>
 </td>
 </tr>
 </tbody>
@@ -1765,8 +2151,8 @@ specified values.</p>
 </p>
 <p>
 <p>TriggerFilterAttributes is a map of context attribute names to values for
-filtering by equality. Only exact matches will pass the filter. You can use the value &ldquo;
-to indicate all strings match.</p>
+filtering by equality. Only exact matches will pass the filter. You can use
+the value &ldquo; to indicate all strings match.</p>
 </p>
 <h3 id="eventing.knative.dev/v1.TriggerSpec">TriggerSpec
 </h3>
@@ -1811,6 +2197,29 @@ filter will be sent to the Subscriber. If not specified, will default to allowin
 </tr>
 <tr>
 <td>
+<code>filters</code><br/>
+<em>
+<a href="#eventing.knative.dev/v1.SubscriptionsAPIFilter">
+[]SubscriptionsAPIFilter
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Filters is an experimental field that conforms to the CNCF CloudEvents Subscriptions
+API. It&rsquo;s an array of filter expressions that evaluate to true or false.
+If any filter expression in the array evaluates to false, the event MUST
+NOT be sent to the Subscriber. If all the filter expressions in the array
+evaluate to true, the event MUST be attempted to be delivered. Absence of
+a filter or empty array implies a value of true. In the event of users
+specifying both Filter and Filters, then the latter will override the former.
+This will allow users to try out the effect of the new Filters field
+without compromising the existing attribute-based Filter and try it out on existing
+Trigger objects.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>subscriber</code><br/>
 <em>
 <a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#Destination">
@@ -1819,8 +2228,8 @@ knative.dev/pkg/apis/duck/v1.Destination
 </em>
 </td>
 <td>
-<p>Subscriber is the addressable that receives events from the Broker that pass the Filter. It
-is required.</p>
+<p>Subscriber is the addressable that receives events from the Broker that pass
+the Filter. It is required.</p>
 </td>
 </tr>
 <tr>
@@ -1887,6 +2296,23 @@ knative.dev/pkg/apis.URL
 <p>SubscriberURI is the resolved URI of the receiver for this Trigger.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>DeliveryStatus</code><br/>
+<em>
+<a href="#duck.knative.dev/v1.DeliveryStatus">
+DeliveryStatus
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>DeliveryStatus</code> are embedded into this type.)
+</p>
+<p>DeliveryStatus contains a resolved URL to the dead letter sink address, and any other
+resolved delivery options.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <hr/>
@@ -1932,7 +2358,7 @@ string
 <td>
 <code>metadata</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -2214,7 +2640,7 @@ series through Channels and Subscriptions.</p>
 <td>
 <code>metadata</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -2371,7 +2797,7 @@ DeliverySpec
 <td>
 <em>(Optional)</em>
 <p>Delivery is the delivery specification for events to the subscriber
-This includes things like retries, DLQ, etc.</p>
+This includes things like retries, DLS, etc.</p>
 </td>
 </tr>
 </tbody>
@@ -2452,7 +2878,7 @@ ParallelSubscriptionStatus
 <td>
 <code>channel</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectreference-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#objectreference-v1-core">
 Kubernetes core/v1.ObjectReference
 </a>
 </em>
@@ -2636,7 +3062,7 @@ It generally has the form {channel}.{namespace}.svc.{cluster domain name}</p>
 <td>
 <code>subscription</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectreference-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#objectreference-v1-core">
 Kubernetes core/v1.ObjectReference
 </a>
 </em>
@@ -2678,7 +3104,7 @@ series through Channels and Subscriptions.</p>
 <td>
 <code>metadata</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -2785,7 +3211,7 @@ date.</p>
 <td>
 <code>channel</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectreference-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#objectreference-v1-core">
 Kubernetes core/v1.ObjectReference
 </a>
 </em>
@@ -2913,6 +3339,7 @@ knative.dev/pkg/apis/duck/v1.Status
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>SubscriptionStatuses is an array of corresponding Subscription statuses.
 Matches the Spec.Steps array in the order.</p>
 </td>
@@ -2927,6 +3354,7 @@ Matches the Spec.Steps array in the order.</p>
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>ChannelStatuses is an array of corresponding Channel statuses.
 Matches the Spec.Steps array in the order.</p>
 </td>
@@ -2992,7 +3420,7 @@ DeliverySpec
 <td>
 <em>(Optional)</em>
 <p>Delivery is the delivery specification for events to the subscriber
-This includes things like retries, DLQ, etc.</p>
+This includes things like retries, DLS, etc.</p>
 </td>
 </tr>
 </tbody>
@@ -3016,7 +3444,7 @@ This includes things like retries, DLQ, etc.</p>
 <td>
 <code>subscription</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectreference-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#objectreference-v1-core">
 Kubernetes core/v1.ObjectReference
 </a>
 </em>
@@ -3088,7 +3516,7 @@ string
 <td>
 <code>metadata</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -3199,7 +3627,7 @@ string
 <td>
 <code>metadata</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -3295,7 +3723,7 @@ string
 <td>
 <code>metadata</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -3547,6 +3975,11 @@ in verbatim to the Channel CRD as Spec section.</p>
 </tr>
 </tbody>
 </table>
+<h3 id="messaging.knative.dev/v1.ChannelTemplateSpecOption">ChannelTemplateSpecOption
+</h3>
+<p>
+<p>ChannelTemplateSpecOption is an optional function for ChannelTemplateSpec.</p>
+</p>
 <h3 id="messaging.knative.dev/v1.InMemoryChannelSpec">InMemoryChannelSpec
 </h3>
 <p>
@@ -3612,7 +4045,7 @@ ChannelableStatus
 <p>
 (Members of <code>ChannelableStatus</code> are embedded into this type.)
 </p>
-<p>Channel conforms to Duck type Channelable.</p>
+<p>Channel conforms to Duck type ChannelableStatus.</p>
 </td>
 </tr>
 </tbody>
@@ -3626,9 +4059,9 @@ ChannelableStatus
 <p>SubscriptionSpec specifies the Channel for incoming events, a Subscriber target
 for processing those events and where to put the result of the processing. Only
 From (where the events are coming from) is always required. You can optionally
-only Process the events (results in no output events) by leaving out the Result.
+only Process the events (results in no output events) by leaving out the Reply.
 You can also perform an identity transformation on the incoming events by leaving
-out the Subscriber and only specifying Result.</p>
+out the Subscriber and only specifying Reply.</p>
 <p>The following are all valid specifications:
 channel &ndash;[subscriber]&ndash;&gt; reply
 Sink, no outgoing events:
@@ -3814,16 +4247,19 @@ knative.dev/pkg/apis.URL
 </tr>
 <tr>
 <td>
-<code>deadLetterSinkUri</code><br/>
+<code>DeliveryStatus</code><br/>
 <em>
-<a href="https://pkg.go.dev/knative.dev/pkg/apis#URL">
-knative.dev/pkg/apis.URL
+<a href="#duck.knative.dev/v1.DeliveryStatus">
+DeliveryStatus
 </a>
 </em>
 </td>
 <td>
-<em>(Optional)</em>
-<p>ReplyURI is the fully resolved URI for the spec.delivery.deadLetterSink.</p>
+<p>
+(Members of <code>DeliveryStatus</code> are embedded into this type.)
+</p>
+<p>DeliveryStatus contains a resolved URL to the dead letter sink address, and any other
+resolved delivery options.</p>
 </td>
 </tr>
 </tbody>
@@ -3877,7 +4313,7 @@ string
 <td>
 <code>metadata</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -4030,7 +4466,7 @@ string
 <td>
 <code>metadata</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -4077,7 +4513,7 @@ and modifications of the event sent to the sink.</p>
 <td>
 <code>template</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#podtemplatespec-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#podtemplatespec-v1-core">
 Kubernetes core/v1.PodTemplateSpec
 </a>
 </em>
@@ -4137,7 +4573,7 @@ string
 <td>
 <code>metadata</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -4300,7 +4736,7 @@ string
 <td>
 <code>metadata</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -4462,7 +4898,7 @@ More info: <a href="https://git.k8s.io/community/contributors/devel/sig-architec
 <td>
 <code>selector</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#labelselector-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#labelselector-v1-meta">
 Kubernetes meta/v1.LabelSelector
 </a>
 </em>
@@ -4653,7 +5089,7 @@ and modifications of the event sent to the sink.</p>
 <td>
 <code>template</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#podtemplatespec-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#podtemplatespec-v1-core">
 Kubernetes core/v1.PodTemplateSpec
 </a>
 </em>
@@ -4985,7 +5421,7 @@ string
 <td>
 <code>metadata</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>

@@ -67,13 +67,12 @@ func NewController(
 
 	impl := apiserversourcereconciler.NewImpl(ctx, r)
 
-	r.sinkResolver = resolver.NewURIResolver(ctx, impl.EnqueueKey)
+	r.sinkResolver = resolver.NewURIResolverFromTracker(ctx, impl.Tracker)
 
-	logging.FromContext(ctx).Info("Setting up event handlers")
 	apiServerSourceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	deploymentInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.FilterControllerGK(v1.Kind("ApiServerSource")),
+		FilterFunc: controller.FilterController(&v1.ApiServerSource{}),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 

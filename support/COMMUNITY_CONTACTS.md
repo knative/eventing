@@ -34,8 +34,9 @@ community contact's duty (subject to change) is as followed:
 - Check 'Eventing Triage' Peribolos group
   https://github.com/knative/community/blob/main/peribolos/knative.yaml and send
   a PR to add yourself if you aren't already in there.
-- Check the [Eventing test grid](https://testgrid.k8s.io/knative-eventing) for
-  flakiness to pick a test and focus on fixing it during your week. Once you
+- Check the
+  [Eventing test grid](https://testgrid.k8s.io/r/knative-own-testgrid/eventing)
+  for flakiness to pick a test and focus on fixing it during your week. Once you
   pick the test flake, assign the corresponding bug filed by flakiness test
   reporter to yourself so that others won't pick the same test to fix.
 - Join the @eventing-help user group if you haven't been invited by the previous
@@ -68,10 +69,10 @@ We seed this rotation with all approvers and reviewers from all the Eventing
 workgroups, excluding productivity. If you are no longer active in Knative, or
 if you are contributing on personal capacity and do not have time to contribute
 in the rotation, feel free to send a PR to remove yourself and add yourself to
-the NON_ROSTER file. Similarly you can trade your timeslot with others by
+the NON_ROSTER file. Similarly, you can trade your timeslot with others by
 sending PRs.
 
-## Volunteeres
+## Volunteers
 
 Those who aren't reviewers or approvers and are interested in volunteering are
 welcome to add themselves to the `support/VOLUNTEERS` file.
@@ -82,21 +83,21 @@ The schedule can be regenerated randomly for a new cycle with the command (run
 from the eventing base directory).
 
 ```sh
-ROSTER=$(grep -v -e '^$' support/ROSTER)
+ROSTER=$(cat support/ROSTER support/VOLUNTEERS)
 echo ${ROSTER} | sed 's/ /\n/g' | sort | uniq | sort -R
 ```
 
 - [antoineco](https://github.com/antoineco)
 - [lionelvillard](https://github.com/lionelvillard)
 - [matzew](https://github.com/matzew)
-- [n3wscott](https://github.com/n3wscott)
-- [vaikas](https://github.com/vaikas)
 - [lberk](https://github.com/lberk)
 - [pierDipi](https://github.com/pierDipi)
 - [aliok](https://github.com/aliok)
 - [aslom](https://github.com/aslom)
-- [tayarani](https://github.com/tayarani)
 - [devguyio](https://github.com/devguyio)
+- [benmoss](https://github.com/benmoss)
+- [odacremolbap](https://github.com/odacremolbap)
+- [gabo1208](https://github.com/gabo1208)
 
 # Schedule
 

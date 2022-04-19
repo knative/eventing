@@ -19,7 +19,6 @@ package k8s
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
 
 	batchv1 "k8s.io/api/batch/v1"
@@ -30,18 +29,20 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"knative.dev/pkg/logging"
+
+	"knative.dev/reconciler-test/pkg/feature"
 )
 
 // WaitUntilJobDone waits until a job has finished.
 // Timing is optional but if provided is [interval, timeout].
-func WaitUntilJobDone(ctx context.Context, client kubernetes.Interface, namespace, name string, timing ...time.Duration) error {
+func WaitUntilJobDone(ctx context.Context, t feature.T, client kubernetes.Interface, namespace, name string, timing ...time.Duration) error {
 	interval, timeout := PollTimings(ctx, timing)
 
 	err := wait.PollImmediate(interval, timeout, func() (bool, error) {
 		job, err := client.BatchV1().Jobs(namespace).Get(context.Background(), name, metav1.GetOptions{})
 		if err != nil {
 			if apierrors.IsNotFound(err) {
-				log.Println(namespace, name, "not found", err)
+				t.Log(namespace, name, "not found", err)
 				// keep polling
 				return false, nil
 			}
@@ -58,7 +59,7 @@ func WaitUntilJobDone(ctx context.Context, client kubernetes.Interface, namespac
 
 // WaitForJobTerminationMessage waits for a job to end and then collects the termination message.
 // Timing is optional but if provided is [interval, timeout].
-func WaitForJobTerminationMessage(ctx context.Context, client kubernetes.Interface, namespace, name string, timing ...time.Duration) (string, error) {
+func WaitForJobTerminationMessage(ctx context.Context, t feature.T, client kubernetes.Interface, namespace, name string, timing ...time.Duration) (string, error) {
 	interval, timeout := PollTimings(ctx, timing)
 
 	// poll until the pod is terminated.
@@ -66,7 +67,7 @@ func WaitForJobTerminationMessage(ctx context.Context, client kubernetes.Interfa
 		pod, err := GetJobPodByJobName(context.Background(), client, namespace, name)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
-				log.Println(namespace, name, "not found", err)
+				t.Log(namespace, name, "not found", err)
 				// keep polling
 				return false, nil
 			}
@@ -123,7 +124,7 @@ func JobFailedMessage(job *batchv1.Job) string {
 	return ""
 }
 
-// GetJobProd will find the Pod that belongs to the resource that created it.
+// GetJobPod will find the Pod that belongs to the resource that created it.
 // Uses label ""controller-uid  as the label selector. So, your job should
 // tag the job with that label as the UID of the resource that's needing it.
 // For example, if you create a storage object that requires us to create

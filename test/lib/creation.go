@@ -19,7 +19,6 @@ package lib
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
@@ -29,7 +28,6 @@ import (
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/util/retry"
 
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/reconciler"
@@ -52,23 +50,8 @@ var coreAPIVersion = corev1.SchemeGroupVersion.Version
 var rbacAPIGroup = rbacv1.SchemeGroupVersion.Group
 var rbacAPIVersion = rbacv1.SchemeGroupVersion.Version
 
-// This is a workaround for https://github.com/knative/pkg/issues/1509
-// Because tests currently fail immediately on any creation failure, this
-// is problematic. On the reconcilers it's not an issue because they recover,
-// but tests need this retry.
-//
-// https://github.com/knative/eventing/issues/3681
-func isWebhookError(err error) bool {
-	return strings.Contains(err.Error(), "eventing-webhook.knative-eventing")
-}
-
 func (c *Client) RetryWebhookErrors(updater func(int) error) error {
-	attempts := 0
-	return retry.OnError(retry.DefaultRetry, isWebhookError, func() error {
-		err := updater(attempts)
-		attempts++
-		return err
-	})
+	return duck.RetryWebhookErrors(updater)
 }
 
 // CreateChannelOrFail will create a typed Channel Resource in Eventing or fail the test if there is an error.
@@ -515,7 +498,7 @@ func (c *Client) CreateServiceAccountOrFail(saName string) {
 	sa := resources.ServiceAccount(saName, namespace)
 	sas := c.Kube.CoreV1().ServiceAccounts(namespace)
 	c.T.Logf("Creating service account %+v", sa)
-	if _, err := sas.Create(context.Background(), sa, metav1.CreateOptions{}); err != nil {
+	if _, err := sas.Create(context.Background(), sa, metav1.CreateOptions{}); err != nil && !apierrs.IsAlreadyExists(err) {
 		c.T.Fatalf("Failed to create service account %q: %v", saName, err)
 	}
 	c.Tracker.Add(coreAPIGroup, coreAPIVersion, "serviceaccounts", namespace, saName)
@@ -552,8 +535,7 @@ func (c *Client) CreateRoleOrFail(r *rbacv1.Role) {
 }
 
 const (
-	ClusterRoleKind = "ClusterRole"
-	RoleKind        = "Role"
+	RoleKind = "Role"
 )
 
 // CreateRoleBindingOrFail will create a RoleBinding or fail the test if there is an error.
@@ -582,38 +564,6 @@ func (c *Client) CreateClusterRoleBindingOrFail(saName, crName, crbName string) 
 	c.Tracker.Add(rbacAPIGroup, rbacAPIVersion, "clusterrolebindings", "", crb.GetName())
 }
 
-const (
-	// the two ServiceAccounts are required for creating new Brokers in the current namespace
-	saIngressName = "eventing-broker-ingress"
-	saFilterName  = "eventing-broker-filter"
-
-	// the ClusterRoles are preinstalled in Knative Eventing setup
-	crIngressName = "eventing-broker-ingress"
-	crFilterName  = "eventing-broker-filter"
-)
-
-// CreateRBACResourcesForBrokers creates required RBAC resources for creating Brokers,
-// see https://github.com/knative/docs/blob/main/docs/eventing/broker-trigger.md - Manual Setup.
-func (c *Client) CreateRBACResourcesForBrokers() {
-	c.CreateServiceAccountOrFail(saIngressName)
-	c.CreateServiceAccountOrFail(saFilterName)
-	// The two RoleBindings are required for running Brokers correctly.
-	c.CreateRoleBindingOrFail(
-		saIngressName,
-		ClusterRoleKind,
-		crIngressName,
-		fmt.Sprintf("%s-%s", saIngressName, crIngressName),
-		c.Namespace,
-	)
-	c.CreateRoleBindingOrFail(
-		saFilterName,
-		ClusterRoleKind,
-		crFilterName,
-		fmt.Sprintf("%s-%s", saFilterName, crFilterName),
-		c.Namespace,
-	)
-}
-
 func (c *Client) applyAdditionalEnv(pod *corev1.PodSpec) {
 	for i := 0; i < len(pod.Containers); i++ {
 		pod.Containers[i].Env = append(pod.Containers[i].Env, c.tracingEnv)
@@ -621,4 +571,32 @@ func (c *Client) applyAdditionalEnv(pod *corev1.PodSpec) {
 			pod.Containers[i].Env = append(pod.Containers[i].Env, *c.loggingEnv)
 		}
 	}
+}
+
+func CreateRBACPodsEventsGetListWatch(client *Client, name string) {
+	client.CreateServiceAccountOrFail(name)
+	client.CreateRoleOrFail(resources.Role(name,
+		resources.WithRuleForRole(&rbacv1.PolicyRule{
+			APIGroups: []string{""},
+			Resources: []string{"pods", "events"},
+			Verbs:     []string{"get", "list", "watch"}}),
+	))
+	client.CreateRoleBindingOrFail(name, RoleKind, name, name, client.Namespace)
+}
+
+func CreateRBACPodsGetEventsAll(client *Client, name string) {
+	client.CreateServiceAccountOrFail(name)
+	client.CreateRoleOrFail(resources.Role(name,
+		resources.WithRuleForRole(&rbacv1.PolicyRule{
+			APIGroups: []string{""},
+			Resources: []string{"pods"},
+			Verbs:     []string{"get"},
+		}),
+		resources.WithRuleForRole(&rbacv1.PolicyRule{
+			APIGroups: []string{""},
+			Resources: []string{"events"},
+			Verbs:     []string{rbacv1.VerbAll},
+		}),
+	))
+	client.CreateRoleBindingOrFail(name, RoleKind, name, name, client.Namespace)
 }

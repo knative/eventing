@@ -74,7 +74,7 @@ func (r *Reconciler) ObserveKind(ctx context.Context, imc *v1.InMemoryChannel) r
 func (r *Reconciler) reconcile(ctx context.Context, imc *v1.InMemoryChannel) reconciler.Event {
 	logging.FromContext(ctx).Infow("Reconciling", zap.Any("InMemoryChannel", imc))
 
-	if !imc.Status.IsReady() {
+	if !imc.IsReady() {
 		logging.FromContext(ctx).Debug("IMC is not ready, skipping")
 		return nil
 	}

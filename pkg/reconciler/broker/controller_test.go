@@ -36,7 +36,7 @@ import (
 func TestNew(t *testing.T) {
 	ctx, _ := SetupFakeContext(t)
 
-	c := NewController(ctx, configmap.NewStaticWatcher())
+	c := NewController(ctx, &configmap.ManualWatcher{})
 
 	if c == nil {
 		t.Fatal("Expected NewController to return a non-nil value")

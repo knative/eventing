@@ -20,11 +20,11 @@ metadata:
   labels:
     app: eventshub-{{ .name }}
 spec:
-  serviceAccountName: "{{ .name }}"
+  serviceAccountName: "{{ .namespace }}"
   restartPolicy: "Never"
   containers:
     - name: eventshub
-      image: ko://knative.dev/reconciler-test/cmd/eventshub
+      image: {{ .image }}
       imagePullPolicy: "IfNotPresent"
       env:
         - name: "SYSTEM_NAMESPACE"

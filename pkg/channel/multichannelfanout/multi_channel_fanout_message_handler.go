@@ -42,6 +42,7 @@ type MultiChannelMessageHandler interface {
 	SetChannelHandler(host string, handler fanout.MessageHandler)
 	DeleteChannelHandler(host string)
 	GetChannelHandler(host string) fanout.MessageHandler
+	CountChannelHandlers() int
 }
 
 // makeChannelKeyFromConfig creates the channel key for a given channelConfig. It is a helper around
@@ -107,6 +108,12 @@ func (h *MessageHandler) GetChannelHandler(host string) fanout.MessageHandler {
 	h.handlersLock.RLock()
 	defer h.handlersLock.RUnlock()
 	return h.handlers[host]
+}
+
+func (h *MessageHandler) CountChannelHandlers() int {
+	h.handlersLock.RLock()
+	defer h.handlersLock.RUnlock()
+	return len(h.handlers)
 }
 
 // ServeHTTP delegates the actual handling of the request to a fanout.MessageHandler, based on the

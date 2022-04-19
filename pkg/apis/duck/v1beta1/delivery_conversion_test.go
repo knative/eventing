@@ -23,24 +23,11 @@ import (
 	"github.com/google/go-cmp/cmp"
 	v1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/pkg/apis"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 	pkgduck "knative.dev/pkg/apis/duck/v1"
 )
 
 func TestDeliverySpecConversionBadType(t *testing.T) {
 	good, bad := &DeliverySpec{}, &DeliverySpec{}
-
-	if err := good.ConvertTo(context.Background(), bad); err == nil {
-		t.Errorf("ConvertTo() = %#v, wanted error", bad)
-	}
-
-	if err := good.ConvertFrom(context.Background(), bad); err == nil {
-		t.Errorf("ConvertFrom() = %#v, wanted error", good)
-	}
-}
-
-func TestDeliveryStatusConversionBadType(t *testing.T) {
-	good, bad := &DeliveryStatus{}, &DeliveryStatus{}
 
 	if err := good.ConvertTo(context.Background(), bad); err == nil {
 		t.Errorf("ConvertTo() = %#v, wanted error", bad)
@@ -205,78 +192,5 @@ func TestDeliverySpecConversionV1(t *testing.T) {
 	}
 }
 
-// Test v1beta1 -> v1 -> v1beta1
-func TestDeliveryStatusConversion(t *testing.T) {
-	tests := []struct {
-		name string
-		in   *DeliveryStatus
-		err  *string
-	}{{
-		name: "min configuration",
-		in: &DeliveryStatus{
-			DeadLetterChannel: &duckv1.KReference{
-				Kind:       "dlKind",
-				Namespace:  "dlNamespace",
-				Name:       "dlName",
-				APIVersion: "dlAPIVersion",
-			},
-		},
-	}}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			ver := &v1.DeliveryStatus{}
-			err := test.in.ConvertTo(context.Background(), ver)
-			if err != nil {
-				if test.err == nil || *test.err != err.Error() {
-					t.Error("ConvertTo() =", err)
-				}
-				return
-			}
-			got := &DeliveryStatus{}
-			if err := got.ConvertFrom(context.Background(), ver); err != nil {
-				t.Error("ConvertFrom() =", err)
-			}
-			if diff := cmp.Diff(test.in, got); diff != "" {
-				t.Error("roundtrip (-want, +got) =", diff)
-			}
-		})
-	}
-}
-
-// Test v1 -> v1beta1 -> v1
-func TestDeliveryStatusConversionV1(t *testing.T) {
-	tests := []struct {
-		name string
-		in   *v1.DeliveryStatus
-		err  *string
-	}{{
-		name: "min configuration",
-		in: &v1.DeliveryStatus{
-			DeadLetterChannel: &duckv1.KReference{
-				Kind:       "dlKind",
-				Namespace:  "dlNamespace",
-				Name:       "dlName",
-				APIVersion: "dlAPIVersion",
-			},
-		},
-	}}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			ver := &DeliveryStatus{}
-			err := ver.ConvertFrom(context.Background(), test.in)
-			if err != nil {
-				if test.err == nil || *test.err != err.Error() {
-					t.Error("ConvertFrom() =", err)
-				}
-				return
-			}
-			got := &v1.DeliveryStatus{}
-			if err := ver.ConvertTo(context.Background(), got); err != nil {
-				t.Error("ConvertTo() =", err)
-			}
-			if diff := cmp.Diff(test.in, got); diff != "" {
-				t.Error("roundtrip (-want, +got) =", diff)
-			}
-		})
-	}
-}
+// v1beta1 and v1 DeliveryStatus are not convertable to each other.
+// (channel ref vs apis.URL)

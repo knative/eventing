@@ -1,3 +1,4 @@
+//go:build e2e
 // +build e2e
 
 /*
@@ -102,4 +103,18 @@ func TestApiServerSourceDataPlane_ResourceMatching(t *testing.T) {
 	)
 
 	env.TestSet(ctx, t, apiserversourcefeatures.DataPlane_ResourceMatching())
+}
+
+func TestApiServerSourceDataPlane_EventsRetries(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+	)
+
+	env.Test(ctx, t, apiserversourcefeatures.SendsEventsWithRetries())
 }

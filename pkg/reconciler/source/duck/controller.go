@@ -64,9 +64,10 @@ func NewController(crd string, gvr schema.GroupVersionResource, gvk schema.Group
 			gvr:               gvr,
 			crdName:           crd,
 		}
-		impl := controller.NewImpl(r, logger, ReconcilerName)
+		impl := controller.NewContext(ctx, r, controller.ControllerOptions{
+			Logger: logger, WorkQueueName: ReconcilerName,
+		})
 
-		logger.Info("Setting up event handlers")
 		sourceInformer.AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 		eventTypeInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{

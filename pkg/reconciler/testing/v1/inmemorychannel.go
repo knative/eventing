@@ -15,6 +15,7 @@ package testing
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"k8s.io/apimachinery/pkg/types"
@@ -24,10 +25,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/apis"
 
-	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	eventingv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/messaging"
 	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 // InMemoryChannelOption enables further configuration of a v1.InMemoryChannel.
@@ -71,7 +73,7 @@ func WithInMemoryChannelDeleted(imc *v1.InMemoryChannel) {
 	imc.ObjectMeta.SetDeletionTimestamp(&deleteTime)
 }
 
-func WithInMemoryChannelSubscribers(subscribers []duckv1.SubscriberSpec) InMemoryChannelOption {
+func WithInMemoryChannelSubscribers(subscribers []eventingv1.SubscriberSpec) InMemoryChannelOption {
 	return func(imc *v1.InMemoryChannel) {
 		imc.Spec.Subscribers = subscribers
 	}
@@ -164,7 +166,7 @@ func WithInMemoryChannelReadySubscriber(uid string) InMemoryChannelOption {
 
 func WithInMemoryChannelReadySubscriberAndGeneration(uid string, observedGeneration int64) InMemoryChannelOption {
 	return func(c *v1.InMemoryChannel) {
-		c.Status.Subscribers = append(c.Status.Subscribers, duckv1.SubscriberStatus{
+		c.Status.Subscribers = append(c.Status.Subscribers, eventingv1.SubscriberStatus{
 			UID:                types.UID(uid),
 			ObservedGeneration: observedGeneration,
 			Ready:              corev1.ConditionTrue,
@@ -172,13 +174,13 @@ func WithInMemoryChannelReadySubscriberAndGeneration(uid string, observedGenerat
 	}
 }
 
-func WithInMemoryChannelDelivery(d *duckv1.DeliverySpec) InMemoryChannelOption {
+func WithInMemoryChannelDelivery(d *eventingv1.DeliverySpec) InMemoryChannelOption {
 	return func(c *v1.InMemoryChannel) {
 		c.Spec.Delivery = d
 	}
 }
 
-func WithInMemoryChannelStatusSubscribers(subscriberStatuses []duckv1.SubscriberStatus) InMemoryChannelOption {
+func WithInMemoryChannelStatusSubscribers(subscriberStatuses []eventingv1.SubscriberStatus) InMemoryChannelOption {
 	return func(imc *v1.InMemoryChannel) {
 		imc.Status.Subscribers = subscriberStatuses
 	}
@@ -198,5 +200,44 @@ func WithInMemoryScopeAnnotation(value string) InMemoryChannelOption {
 			imc.Annotations = make(map[string]string)
 		}
 		imc.Annotations[eventing.ScopeAnnotationKey] = value
+	}
+}
+
+func WithInMemoryChannelStatusDLSURI(dlsURI *apis.URL) InMemoryChannelOption {
+	return func(imc *v1.InMemoryChannel) {
+		imc.Status.MarkDeadLetterSinkResolvedSucceeded(dlsURI)
+	}
+}
+
+func WithInMemoryChannelDLSUnknown() InMemoryChannelOption {
+	return func(imc *v1.InMemoryChannel) {
+		imc.Status.MarkDeadLetterSinkNotConfigured()
+	}
+}
+
+func WithInMemoryChannelDLSResolvedFailed() InMemoryChannelOption {
+	return func(imc *v1.InMemoryChannel) {
+		imc.Status.MarkDeadLetterSinkResolvedFailed(
+			"Unable to get the DeadLetterSink's URI",
+			fmt.Sprintf(`services "%s" not found`,
+				imc.Spec.Delivery.DeadLetterSink.Ref.Name,
+			),
+		)
+	}
+}
+
+func WithDeadLetterSink(ref *duckv1.KReference, uri string) InMemoryChannelOption {
+	return func(imc *v1.InMemoryChannel) {
+		if imc.Spec.Delivery == nil {
+			imc.Spec.Delivery = new(eventingv1.DeliverySpec)
+		}
+		var u *apis.URL
+		if uri != "" {
+			u, _ = apis.ParseURL(uri)
+		}
+		imc.Spec.Delivery.DeadLetterSink = &duckv1.Destination{
+			Ref: ref,
+			URI: u,
+		}
 	}
 }

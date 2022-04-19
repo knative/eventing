@@ -21,6 +21,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/eventing/pkg/apis/feature"
 
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/logging"
@@ -61,6 +62,22 @@ func TestNew(t *testing.T) {
 		}, &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      config.ConfigName,
+				Namespace: "knative-eventing",
+			},
+			Data: map[string]string{
+				"_example": "test-config",
+			},
+		}, &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      feature.FlagsConfigName,
+				Namespace: "knative-eventing",
+			},
+			Data: map[string]string{
+				"_example": "test-config",
+			},
+		}, &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "config-kreference-mapping",
 				Namespace: "knative-eventing",
 			},
 			Data: map[string]string{

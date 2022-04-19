@@ -21,13 +21,15 @@ import (
 	"embed"
 	"time"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"knative.dev/eventing/test/rekt/resources/addressable"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/manifest"
+
+	"knative.dev/eventing/test/rekt/resources/addressable"
 )
 
 //go:embed *.yaml
@@ -132,5 +134,26 @@ func WithReply(ref *duckv1.KReference, uri string) manifest.CfgFn {
 			rref["namespace"] = ref.Namespace
 			rref["name"] = ref.Name
 		}
+	}
+}
+
+type ChannelTemplate struct {
+	metav1.TypeMeta
+
+	Spec map[string]interface{}
+}
+
+// WithChannelTemplate adds the top level channel references.
+func WithChannelTemplate(template ChannelTemplate) manifest.CfgFn {
+	return func(cfg map[string]interface{}) {
+		if _, set := cfg["channelTemplate"]; !set {
+			cfg["channelTemplate"] = map[string]interface{}{}
+		}
+		channelTemplate := cfg["channelTemplate"].(map[string]interface{})
+
+		channelTemplate["kind"] = template.Kind
+		channelTemplate["apiVersion"] = template.APIVersion
+
+		channelTemplate["spec"] = template.Spec
 	}
 }

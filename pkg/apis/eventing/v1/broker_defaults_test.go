@@ -21,14 +21,16 @@ import (
 	"testing"
 
 	"k8s.io/utils/pointer"
+
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 
 	"github.com/google/go-cmp/cmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+
 	"knative.dev/eventing/pkg/apis/config"
 	"knative.dev/eventing/pkg/apis/eventing"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 var (
@@ -393,6 +395,61 @@ func TestBrokerSetDefaults(t *testing.T) {
 							Ref: &duckv1.KReference{
 								Kind:       "Service",
 								Namespace:  "rando",
+								Name:       "handle-error",
+								APIVersion: "serving.knative.dev/v1",
+							},
+						},
+						Retry:         pointer.Int32Ptr(5),
+						BackoffPolicy: (*eventingduckv1.BackoffPolicyType)(pointer.StringPtr("linear")),
+						BackoffDelay:  pointer.StringPtr("5s"),
+					},
+				},
+			},
+		},
+		"missing deadLetterSink.ref.namespace, defaulted": {
+			initial: Broker{
+				ObjectMeta: metav1.ObjectMeta{Name: "broker", Namespace: "custom"},
+				Spec: BrokerSpec{
+					Config: &duckv1.KReference{
+						Kind:       "ConfigMap",
+						Name:       "natss-channel",
+						Namespace:  "custom1",
+						APIVersion: "v1",
+					},
+					Delivery: &eventingduckv1.DeliverySpec{
+						DeadLetterSink: &duckv1.Destination{
+							Ref: &duckv1.KReference{
+								Kind:       "Service",
+								Name:       "handle-error",
+								APIVersion: "serving.knative.dev/v1",
+							},
+						},
+						Retry:         pointer.Int32Ptr(5),
+						BackoffPolicy: (*eventingduckv1.BackoffPolicyType)(pointer.StringPtr("linear")),
+						BackoffDelay:  pointer.StringPtr("5s"),
+					},
+				},
+			},
+			expected: Broker{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "broker",
+					Namespace: "custom",
+					Annotations: map[string]string{
+						eventing.BrokerClassKey: "MTChannelBasedBroker",
+					},
+				},
+				Spec: BrokerSpec{
+					Config: &duckv1.KReference{
+						Kind:       "ConfigMap",
+						Namespace:  "custom1",
+						Name:       "natss-channel",
+						APIVersion: "v1",
+					},
+					Delivery: &eventingduckv1.DeliverySpec{
+						DeadLetterSink: &duckv1.Destination{
+							Ref: &duckv1.KReference{
+								Kind:       "Service",
+								Namespace:  "custom",
 								Name:       "handle-error",
 								APIVersion: "serving.knative.dev/v1",
 							},

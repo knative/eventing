@@ -53,7 +53,7 @@ func TestBrokerImmutableFields(t *testing.T) {
 		"BrokerClassAnnotation mutated": {
 			og: original,
 			wantErr: &apis.FieldError{
-				Message: "Immutable fields changed (-old +new)",
+				Message: "Immutable annotations changed (-old +new)",
 				Paths:   []string{"annotations"},
 				Details: `{string}:
 	-: "original"
@@ -205,7 +205,7 @@ func TestValidateUpdate(t *testing.T) {
 		bNew Broker
 		want *apis.FieldError
 	}{{
-		name: "valid config change",
+		name: "invalid config change, spec.config",
 		b: Broker{
 			ObjectMeta: metav1.ObjectMeta{
 				Annotations: map[string]string{"eventing.knative.dev/broker.class": "MTChannelBasedBroker"},
@@ -231,6 +231,14 @@ func TestValidateUpdate(t *testing.T) {
 					APIVersion: "apiversion",
 				},
 			},
+		},
+		want: &apis.FieldError{
+			Message: "Immutable fields changed (-old +new)",
+			Paths:   []string{"spec"},
+			Details: `{v1.BrokerSpec}.Config.Name:
+	-: "name"
+	+: "name2"
+`,
 		},
 	}, {
 		name: "invalid config change, broker.class",
@@ -261,7 +269,7 @@ func TestValidateUpdate(t *testing.T) {
 			},
 		},
 		want: &apis.FieldError{
-			Message: "Immutable fields changed (-old +new)",
+			Message: "Immutable annotations changed (-old +new)",
 			Paths:   []string{"annotations"},
 			Details: `{string}:
 	-: "MTChannelBasedBroker"

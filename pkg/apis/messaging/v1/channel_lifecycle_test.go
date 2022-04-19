@@ -105,6 +105,9 @@ func TestChannelInitializeConditions(t *testing.T) {
 						Type:   ChannelConditionBackingChannelReady,
 						Status: corev1.ConditionUnknown,
 					}, {
+						Type:   ChannelConditionDeadLetterSinkResolved,
+						Status: corev1.ConditionUnknown,
+					}, {
 						Type:   ChannelConditionReady,
 						Status: corev1.ConditionUnknown,
 					}},
@@ -131,6 +134,9 @@ func TestChannelInitializeConditions(t *testing.T) {
 						Status: corev1.ConditionFalse,
 					}, {
 						Type:   ChannelConditionBackingChannelReady,
+						Status: corev1.ConditionUnknown,
+					}, {
+						Type:   ChannelConditionDeadLetterSinkResolved,
 						Status: corev1.ConditionUnknown,
 					}, {
 						Type:   ChannelConditionReady,
@@ -161,6 +167,9 @@ func TestChannelInitializeConditions(t *testing.T) {
 						Type:   ChannelConditionBackingChannelReady,
 						Status: corev1.ConditionTrue,
 					}, {
+						Type:   ChannelConditionDeadLetterSinkResolved,
+						Status: corev1.ConditionUnknown,
+					}, {
 						Type:   ChannelConditionReady,
 						Status: corev1.ConditionUnknown,
 					}},
@@ -187,11 +196,13 @@ func TestChannelConditionStatus(t *testing.T) {
 		name                 string
 		address              *duckv1.Addressable
 		backingChannelStatus corev1.ConditionStatus
+		DLSResolved          corev1.ConditionStatus
 		wantConditionStatus  corev1.ConditionStatus
 	}{{
 		name:                 "all happy",
 		address:              validAddress,
 		backingChannelStatus: corev1.ConditionTrue,
+		DLSResolved:          corev1.ConditionTrue,
 		wantConditionStatus:  corev1.ConditionTrue,
 	}, {
 		name:                 "address not set",
@@ -226,6 +237,10 @@ func TestChannelConditionStatus(t *testing.T) {
 				cs.MarkBackingChannelFailed("ChannelFailure", "testing")
 			} else {
 				cs.MarkBackingChannelUnknown("ChannelUnknown", "testing")
+			}
+
+			if test.DLSResolved == corev1.ConditionTrue {
+				cs.MarkDeadLetterSinkResolvedSucceeded(nil)
 			}
 			got := cs.GetTopLevelCondition().Status
 			if test.wantConditionStatus != got {
@@ -404,6 +419,7 @@ func TestChannelPropagateStatuses(t *testing.T) {
 		t.Run(n, func(t *testing.T) {
 			cs := &ChannelStatus{}
 			cs.PropagateStatuses(tc.channelableStatus)
+			cs.MarkDeadLetterSinkNotConfigured()
 			got := cs.GetTopLevelCondition().Status
 			if tc.wantConditionStatus != got {
 				t.Errorf("unexpected readiness: want %v, got %v", tc.wantConditionStatus, got)

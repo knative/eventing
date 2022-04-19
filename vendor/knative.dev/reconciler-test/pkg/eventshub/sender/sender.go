@@ -26,6 +26,7 @@ import (
 	nethttp "net/http"
 	"strconv"
 	"time"
+	"unicode"
 
 	conformanceevent "github.com/cloudevents/conformance/pkg/event"
 	conformancehttp "github.com/cloudevents/conformance/pkg/http"
@@ -48,8 +49,8 @@ type generator struct {
 	// Sink url for the message destination
 	Sink string `envconfig:"SINK" required:"true"`
 
-	// The number of seconds to wait before starting sending the first message
-	Delay int `envconfig:"DELAY" default:"5" required:"false"`
+	// The duration to wait before starting sending the first message
+	Delay string `envconfig:"DELAY" default:"5" required:"false"`
 
 	// ProbeSink will probe the sink until it responds.
 	ProbeSink bool `envconfig:"PROBE_SINK" default:"true"`
@@ -88,8 +89,8 @@ type generator struct {
 	// Override the event time with the time when sending the event.
 	OverrideTime bool `envconfig:"OVERRIDE_TIME" default:"false" required:"false"`
 
-	// The number of seconds between messages.
-	Period int `envconfig:"PERIOD" default:"5" required:"false"`
+	// The duration between messages.
+	Period string `envconfig:"PERIOD" default:"5" required:"false"`
 
 	// The number of messages to attempt to send. -1 for inferred, 0 for unlimited.
 	MaxMessages int `envconfig:"MAX_MESSAGES" default:"-1" required:"false"`
@@ -117,8 +118,15 @@ func Start(ctx context.Context, logs *eventshub.EventLogs) error {
 
 	logging.FromContext(ctx).Infof("Sender environment configuration: %+v", env)
 
-	period := time.Duration(env.Period) * time.Second
-	delay := time.Duration(env.Delay) * time.Second
+	period, err := time.ParseDuration(durationWithUnit(env.Period))
+	if err != nil {
+		return err
+	}
+
+	delay, err := time.ParseDuration(durationWithUnit(env.Delay))
+	if err != nil {
+		return err
+	}
 
 	if delay > 0 {
 		logging.FromContext(ctx).Info("will sleep for ", delay)
@@ -439,4 +447,16 @@ func (g *generator) nextGenerated(ctx context.Context) (*nethttp.Request, *cloud
 	}
 
 	return req, event, nil
+}
+
+func durationWithUnit(s string) string {
+	// [-+]?([0-9]*(\.[0-9]*)?[a-z]+)+
+
+	if len(s) > 0 {
+		if !unicode.IsLower(rune(s[len(s)-1])) {
+			return s + "s"
+		}
+	}
+
+	return s
 }

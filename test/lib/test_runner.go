@@ -47,7 +47,7 @@ import (
 const (
 	podLogsDir         = "pod-logs"
 	testPullSecretName = "kn-eventing-test-pull-secret"
-	MaxNamespaceSkip   = 20
+	MaxNamespaceSkip   = 100
 	MaxRetries         = 5
 	RetrySleepDuration = 2 * time.Second
 )
@@ -74,7 +74,6 @@ func (tr *ComponentsTestRunner) RunTests(
 	feature Feature,
 	testFunc func(st *testing.T, component metav1.TypeMeta),
 ) {
-	t.Parallel()
 	for _, component := range tr.ComponentsToTest {
 		// If a component is not present in the map, then assume it has all properties. This is so an
 		// unknown component (e.g. a Channel) can be specified via a dedicated flag (e.g. --channels) and have tests run.
@@ -154,9 +153,10 @@ var SetupClientOptionNoop SetupClientOption = func(*Client) {
 	// nothing
 }
 
-// Setup creates the client objects needed in the e2e tests,
-// and does other setups, like creating namespaces, set the test case to run in parallel, etc.
-func Setup(t *testing.T, runInParallel bool, options ...SetupClientOption) *Client {
+// GSetup creates
+// - the client objects needed in the e2e tests,
+// - the namespace hosting all objects needed by the test
+func GSetup(t *testing.T, options ...SetupClientOption) *Client {
 	client, err := CreateNamespacedClient(t)
 	if err != nil {
 		t.Fatal("Couldn't initialize clients:", err)
@@ -166,19 +166,27 @@ func Setup(t *testing.T, runInParallel bool, options ...SetupClientOption) *Clie
 	if !ReuseNamespace {
 		SetupServiceAccount(t, client)
 		SetupPullSecret(t, client)
+		CreateRBACPodsGetEventsAll(client, client.Namespace)
+		CreateRBACPodsEventsGetListWatch(client, client.Namespace+"-eventwatcher")
 	}
-
-	// Run the test case in parallel if needed.
-	if runInParallel {
-		t.Parallel()
-	}
-
-	// Clean up resources if the test is interrupted in the middle.
-	pkgTest.CleanupOnInterrupt(func() { TearDown(client) }, t.Logf)
 
 	// Run further setups for the client.
 	for _, option := range options {
 		option(client)
+	}
+
+	return client
+}
+
+// Setup creates
+// - the client objects needed in the e2e tests,
+// - the namespace hosting all objects needed by the test
+func Setup(t *testing.T, runInParallel bool, options ...SetupClientOption) *Client {
+	client := GSetup(t, options...)
+
+	// Run the test case in parallel if needed.
+	if runInParallel {
+		t.Parallel()
 	}
 
 	return client
@@ -244,8 +252,8 @@ func CreateNamespaceWithRetry(client *Client, namespace string) error {
 	for retries < MaxRetries {
 		nsSpec := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
 		if _, err = client.Kube.CoreV1().Namespaces().
-			Create(context.Background(), nsSpec, metav1.CreateOptions{}); err == nil {
-			return nil
+			Create(context.Background(), nsSpec, metav1.CreateOptions{}); err == nil || apierrs.IsAlreadyExists(err) {
+			return err
 		}
 		retries++
 		time.Sleep(RetrySleepDuration)

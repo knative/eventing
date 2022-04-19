@@ -19,6 +19,9 @@ metadata:
   namespace: knative-eventing
   labels:
     eventing.knative.dev/release: devel
+    app.kubernetes.io/component: eventing-webhook
+    app.kubernetes.io/version: devel
+    app.kubernetes.io/name: knative-eventing
 spec:
   selector:
     matchLabels: &labels
@@ -26,7 +29,12 @@ spec:
       role: eventing-webhook
   template:
     metadata:
-      labels: *labels
+      labels:
+        <<: *labels
+        eventing.knative.dev/release: devel
+        app.kubernetes.io/component: eventing-webhook
+        app.kubernetes.io/version: devel
+        app.kubernetes.io/name: knative-eventing
     spec:
       # To avoid node becoming SPOF, spread our replicas to different nodes.
       affinity:
@@ -88,6 +96,11 @@ spec:
 
         securityContext:
           allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          capabilities:
+            drop:
+            - all
 
         ports:
         - name: https-webhook
@@ -120,6 +133,9 @@ metadata:
   labels:
     eventing.knative.dev/release: devel
     role: eventing-webhook
+    app.kubernetes.io/component: eventing-webhook
+    app.kubernetes.io/version: devel
+    app.kubernetes.io/name: knative-eventing
   name: eventing-webhook
   namespace: knative-eventing
 spec:

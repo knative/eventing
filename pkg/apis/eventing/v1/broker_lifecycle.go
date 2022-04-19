@@ -23,11 +23,12 @@ import (
 )
 
 const (
-	BrokerConditionReady                             = apis.ConditionReady
-	BrokerConditionIngress        apis.ConditionType = "IngressReady"
-	BrokerConditionTriggerChannel apis.ConditionType = "TriggerChannelReady"
-	BrokerConditionFilter         apis.ConditionType = "FilterReady"
-	BrokerConditionAddressable    apis.ConditionType = "Addressable"
+	BrokerConditionReady                                     = apis.ConditionReady
+	BrokerConditionIngress                apis.ConditionType = "IngressReady"
+	BrokerConditionTriggerChannel         apis.ConditionType = "TriggerChannelReady"
+	BrokerConditionFilter                 apis.ConditionType = "FilterReady"
+	BrokerConditionAddressable            apis.ConditionType = "Addressable"
+	BrokerConditionDeadLetterSinkResolved apis.ConditionType = "DeadLetterSinkResolved"
 )
 
 var brokerCondSet = apis.NewLivingConditionSet(
@@ -35,6 +36,7 @@ var brokerCondSet = apis.NewLivingConditionSet(
 	BrokerConditionTriggerChannel,
 	BrokerConditionFilter,
 	BrokerConditionAddressable,
+	BrokerConditionDeadLetterSinkResolved,
 )
 var brokerCondSetLock = sync.RWMutex{}
 
@@ -83,12 +85,29 @@ func (bs *BrokerStatus) GetCondition(t apis.ConditionType) *apis.Condition {
 	return bs.GetConditionSet().Manage(bs).GetCondition(t)
 }
 
-// IsReady returns true if the resource is ready overall.
-func (bs *BrokerStatus) IsReady() bool {
-	return bs.GetConditionSet().Manage(bs).IsHappy()
+// IsReady returns true if the resource is ready overall and the latest spec has been observed.
+func (b *Broker) IsReady() bool {
+	bs := b.Status
+	return bs.ObservedGeneration == b.Generation &&
+		b.GetConditionSet().Manage(&bs).IsHappy()
 }
 
 // InitializeConditions sets relevant unset conditions to Unknown state.
 func (bs *BrokerStatus) InitializeConditions() {
 	bs.GetConditionSet().Manage(bs).InitializeConditions()
+}
+
+func (bs *BrokerStatus) MarkDeadLetterSinkResolvedSucceeded(deadLetterSinkURI *apis.URL) {
+	bs.DeadLetterSinkURI = deadLetterSinkURI
+	bs.GetConditionSet().Manage(bs).MarkTrue(BrokerConditionDeadLetterSinkResolved)
+}
+
+func (bs *BrokerStatus) MarkDeadLetterSinkNotConfigured() {
+	bs.DeadLetterSinkURI = nil
+	bs.GetConditionSet().Manage(bs).MarkTrueWithReason(BrokerConditionDeadLetterSinkResolved, "DeadLetterSinkNotConfigured", "No dead letter sink is configured.")
+}
+
+func (bs *BrokerStatus) MarkDeadLetterSinkResolvedFailed(reason, messageFormat string, messageA ...interface{}) {
+	bs.DeadLetterSinkURI = nil
+	bs.GetConditionSet().Manage(bs).MarkFalse(BrokerConditionDeadLetterSinkResolved, reason, messageFormat, messageA...)
 }

@@ -26,6 +26,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/spf13/pflag"
+
 	"go.uber.org/automaxprocs/maxprocs" // automatically set GOMAXPROCS based on cgroups
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
@@ -34,6 +36,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/rest"
 
@@ -111,6 +114,43 @@ var (
 	WebhookMainWithConfig  = MainWithConfig
 )
 
+// MainNamed runs the generic main flow for controllers and webhooks.
+//
+// In addition to the MainWithConfig flow, it defines a `disabled-controllers` flag that allows disabling controllers
+// by name.
+func MainNamed(ctx context.Context, component string, ctors ...injection.NamedControllerConstructor) {
+
+	disabledControllers := pflag.StringSlice("disable-controllers", []string{}, "Comma-separated list of disabled controllers.")
+
+	// HACK: This parses flags, so the above should be set once this runs.
+	cfg := injection.ParseAndGetRESTConfigOrDie()
+
+	enabledCtors := enabledControllers(*disabledControllers, ctors)
+
+	MainWithConfig(ctx, component, cfg, toControllerConstructors(enabledCtors)...)
+}
+
+func enabledControllers(disabledControllers []string, ctors []injection.NamedControllerConstructor) []injection.NamedControllerConstructor {
+	disabledControllersSet := sets.NewString(disabledControllers...)
+	activeCtors := make([]injection.NamedControllerConstructor, 0, len(ctors))
+	for _, ctor := range ctors {
+		if disabledControllersSet.Has(ctor.Name) {
+			log.Printf("Disabling controller %s", ctor.Name)
+			continue
+		}
+		activeCtors = append(activeCtors, ctor)
+	}
+	return activeCtors
+}
+
+func toControllerConstructors(namedCtors []injection.NamedControllerConstructor) []injection.ControllerConstructor {
+	ctors := make([]injection.ControllerConstructor, 0, len(namedCtors))
+	for _, ctor := range namedCtors {
+		ctors = append(ctors, ctor.ControllerConstructor)
+	}
+	return ctors
+}
+
 // MainWithContext runs the generic main flow for controllers and
 // webhooks. Use MainWithContext if you do not need to serve webhooks.
 func MainWithContext(ctx context.Context, component string, ctors ...injection.ControllerConstructor) {
@@ -167,6 +207,10 @@ func MainWithConfig(ctx context.Context, component string, cfg *rest.Config, cto
 	logger, atomicLevel := SetupLoggerOrDie(ctx, component)
 	defer flush(logger)
 	ctx = logging.WithLogger(ctx, logger)
+
+	// Override client-go's warning handler to give us nicely printed warnings.
+	rest.SetDefaultWarningHandler(&logging.WarningHandler{Logger: logger})
+
 	profilingHandler := profiling.NewHandler(logger, false)
 	profilingServer := profiling.NewServer(profilingHandler)
 

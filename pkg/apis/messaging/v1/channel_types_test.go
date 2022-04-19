@@ -27,7 +27,7 @@ func TestChannelGetStatus(t *testing.T) {
 	}
 }
 
-func TestChannel_GetGroupVersionKind(t *testing.T) {
+func TestChannelGetGroupVersionKind(t *testing.T) {
 	c := Channel{}
 	gvk := c.GetGroupVersionKind()
 	if gvk.Kind != "Channel" {

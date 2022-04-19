@@ -21,7 +21,6 @@ package test
 import (
 	"context"
 	"net/url"
-	"strings"
 	"time"
 
 	"k8s.io/client-go/kubernetes"
@@ -37,11 +36,6 @@ type RequestOption = spoof.RequestOption
 //
 // Deprecated: Use the spoof package version
 var WithHeader = spoof.WithHeader
-
-// Retrying modifies a ResponseChecker to retry certain response codes.
-//
-// Deprecated: Use the spoof package version
-var Retrying = spoof.Retrying
 
 // IsOneOfStatusCodes checks that the response code is equal to the given one.
 //
@@ -74,15 +68,6 @@ var MatchesBody = spoof.MatchesBody
 //
 // Deprecated: Use the spoof package version
 var MatchesAllOf = spoof.MatchesAllOf
-
-// EventuallyMatchesBody checks that the response body *eventually* matches the expected body.
-// TODO(#1178): Delete me. We don't want to need this; we should be waiting for an appropriate Status instead.
-func EventuallyMatchesBody(expected string) spoof.ResponseChecker {
-	return func(resp *spoof.Response) (bool, error) {
-		// Returning (false, nil) causes SpoofingClient.Poll to retry.
-		return strings.Contains(string(resp.Body), expected), nil
-	}
-}
 
 // WaitForEndpointState will poll an endpoint until inState indicates the state is achieved,
 // or default timeout is reached.
@@ -120,6 +105,22 @@ func WaitForEndpointStateWithTimeout(
 	timeout time.Duration,
 	opts ...interface{}) (*spoof.Response, error) {
 
+	client, rOpts, err := makeSpoofClient(ctx, kubeClient, logf, url, resolvable, timeout, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return client.WaitForEndpointState(ctx, url, inState, desc, rOpts...)
+}
+
+func makeSpoofClient(
+	ctx context.Context,
+	kubeClient kubernetes.Interface,
+	logf logging.FormatLogger,
+	url *url.URL,
+	resolvable bool,
+	timeout time.Duration,
+	opts ...interface{}) (*spoof.SpoofingClient, []spoof.RequestOption, error) {
+
 	var tOpts []spoof.TransportOption
 	var rOpts []spoof.RequestOption
 
@@ -134,9 +135,26 @@ func WaitForEndpointStateWithTimeout(
 
 	client, err := NewSpoofingClient(ctx, kubeClient, logf, url.Hostname(), resolvable, tOpts...)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	client.RequestTimeout = timeout
 
-	return client.WaitForEndpointState(ctx, url, inState, desc, rOpts...)
+	return client, rOpts, nil
+}
+
+func CheckEndpointState(
+	ctx context.Context,
+	kubeClient kubernetes.Interface,
+	logf logging.FormatLogger,
+	url *url.URL,
+	inState spoof.ResponseChecker,
+	desc string,
+	resolvable bool,
+	opts ...interface{},
+) (*spoof.Response, error) {
+	client, rOpts, err := makeSpoofClient(ctx, kubeClient, logf, url, resolvable, Flags.SpoofRequestTimeout, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return client.CheckEndpointState(ctx, url, inState, desc, rOpts...)
 }

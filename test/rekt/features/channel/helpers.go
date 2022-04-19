@@ -86,6 +86,7 @@ func getChannelable(ctx context.Context, t feature.T) *duckv1.Channelable {
 	if err = runtime.DefaultUnstructuredConverter.FromUnstructured(obj.Object, channel); err != nil {
 		t.Fatalf("Failed to convert channelImpl to Channelable: %v", err)
 	}
+
 	channel.ResourceVersion = channel_impl.GVR().Version
 	channel.APIVersion = channel_impl.GVR().GroupVersion().String()
 

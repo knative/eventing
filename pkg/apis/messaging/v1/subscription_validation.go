@@ -19,6 +19,8 @@ package v1
 import (
 	"context"
 
+	"knative.dev/eventing/pkg/apis/feature"
+
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"knative.dev/pkg/apis"
@@ -50,10 +52,20 @@ func (ss *SubscriptionSpec) Validate(ctx context.Context) *apis.FieldError {
 
 	missingSubscriber := isDestinationNilOrEmpty(ss.Subscriber)
 	missingReply := isDestinationNilOrEmpty(ss.Reply)
-	if missingSubscriber && missingReply {
-		fe := apis.ErrMissingField("reply", "subscriber")
-		fe.Details = "the Subscription must reference at least one of (reply or a subscriber)"
+
+	// Check if StrictSubscriber flag is enabled, if so we follow the spec and check for a valid reference to a subscriber
+	if missingSubscriber && feature.FromContext(ctx).IsEnabled(feature.StrictSubscriber) {
+		fe := apis.ErrMissingField("subscriber")
+		fe.Details = "the Subscription must reference a subscriber"
 		errs = errs.Also(fe)
+
+	} else { // if the flag is not set, we use pre 0.26 behavior
+		if missingSubscriber && missingReply {
+			fe := apis.ErrMissingField("reply", "subscriber")
+			fe.Details = "the Subscription must reference at least one of (reply or a subscriber)"
+			errs = errs.Also(fe)
+		}
+
 	}
 
 	if !missingSubscriber {
@@ -65,6 +77,12 @@ func (ss *SubscriptionSpec) Validate(ctx context.Context) *apis.FieldError {
 	if !missingReply {
 		if fe := ss.Reply.Validate(ctx); fe != nil {
 			errs = errs.Also(fe.ViaField("reply"))
+		}
+	}
+
+	if ss.Delivery != nil {
+		if fe := ss.Delivery.Validate(ctx); fe != nil {
+			errs = errs.Also(fe.ViaField("delivery"))
 		}
 	}
 
@@ -81,7 +99,7 @@ func (s *Subscription) CheckImmutableFields(ctx context.Context, original *Subsc
 	}
 
 	// Only Subscriber and Reply are mutable.
-	ignoreArguments := cmpopts.IgnoreFields(SubscriptionSpec{}, "Subscriber", "Reply")
+	ignoreArguments := cmpopts.IgnoreFields(SubscriptionSpec{}, "Subscriber", "Reply", "Delivery")
 	if diff, err := kmp.ShortDiff(original.Spec, s.Spec, ignoreArguments); err != nil {
 		return &apis.FieldError{
 			Message: "Failed to diff Subscription",
