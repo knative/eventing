@@ -32,9 +32,10 @@ import (
 	clientappsv1 "k8s.io/client-go/kubernetes/typed/apps/v1"
 	corev1 "k8s.io/client-go/listers/core/v1"
 
-	scheduler "knative.dev/eventing/pkg/scheduler"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/logging"
+
+	"knative.dev/eventing/pkg/scheduler"
 )
 
 type StateAccessor interface {
@@ -189,16 +190,6 @@ func (s *stateBuilder) State(reserved map[types.NamespacedName]map[string]int32)
 	nodeSpread := make(map[types.NamespacedName]map[string]int32)
 	zoneSpread := make(map[types.NamespacedName]map[string]int32)
 
-	noexec := &v1.Taint{
-		Key:    "node.kubernetes.io/unreachable",
-		Effect: v1.TaintEffectNoExecute,
-	}
-
-	nosched := &v1.Taint{
-		Key:    "node.kubernetes.io/unreachable",
-		Effect: v1.TaintEffectNoSchedule,
-	}
-
 	//Build the node to zone map
 	nodes, err := s.nodeLister.List(labels.Everything())
 	if err != nil {
@@ -209,22 +200,20 @@ func (s *stateBuilder) State(reserved map[types.NamespacedName]map[string]int32)
 	zoneMap := make(map[string]struct{})
 	for i := 0; i < len(nodes); i++ {
 		node := nodes[i]
-		if node.Spec.Unschedulable {
-			continue //ignore node that is currently unschedulable
-		}
 
-		taints := node.Spec.Taints
-		if contains(taints, noexec) || contains(taints, nosched) {
-			continue //ignore node that is currently unschedulable
+		if isNodeUnschedulable(node) {
+			// Ignore node that is currently unschedulable.
+			continue
 		}
 
 		zoneName, ok := node.GetLabels()[scheduler.ZoneLabel]
-		if !ok {
-			continue //ignore node that doesn't have zone info (maybe a test setup or control node)
+		if ok && zoneName != "" {
+			nodeToZoneMap[node.Name] = zoneName
+			zoneMap[zoneName] = struct{}{}
+		} else {
+			nodeToZoneMap[node.Name] = scheduler.UnknownZone
+			zoneMap[scheduler.UnknownZone] = struct{}{}
 		}
-
-		nodeToZoneMap[node.Name] = zoneName
-		zoneMap[zoneName] = struct{}{}
 	}
 
 	for podId := int32(0); podId < scale.Spec.Replicas && s.podLister != nil; podId++ {
@@ -235,25 +224,24 @@ func (s *stateBuilder) State(reserved map[types.NamespacedName]map[string]int32)
 		})
 
 		if pod != nil {
-			var unschedulable bool
-			annotVal, ok := pod.ObjectMeta.Annotations[scheduler.PodAnnotationKey] //Pod is marked for eviction - CANNOT SCHEDULE VREPS on this pod
-			if ok {
-				unschedulable, _ = strconv.ParseBool(annotVal)
-			}
 
-			nodeName := pod.Spec.NodeName
-			node, err := s.nodeLister.Get(nodeName) //Node could be marked as Unschedulable - CANNOT SCHEDULE VREPS on a pod running on this node
+			node, err := s.nodeLister.Get(pod.Spec.NodeName)
 			if err != nil {
 				return nil, err
 			}
 
-			_, okZone := node.GetLabels()[scheduler.ZoneLabel] //Node has no zone info (maybe zone is down or a control node) - CANNOT SCHEDULE VREPS on a pod running on this node
-
-			taints := node.Spec.Taints
-
-			if (!ok || !unschedulable) && !node.Spec.Unschedulable && okZone && !contains(taints, noexec) && !contains(taints, nosched) { //Pod has no annotation or not annotated as unschedulable and not on an unschedulable node, so add to feasible
-				schedulablePods = append(schedulablePods, podId)
+			if isNodeUnschedulable(node) {
+				// Node is marked as Unschedulable - CANNOT SCHEDULE VREPS on a pod running on this node.
+				continue
 			}
+			if isPodUnschedulable(pod) {
+				// Pod is marked for eviction - CANNOT SCHEDULE VREPS on this pod.
+				continue
+			}
+
+			// Pod has no annotation or not annotated as unschedulable and
+			// not on an unschedulable node, so add to feasible
+			schedulablePods = append(schedulablePods, podId)
 		}
 	}
 
@@ -381,12 +369,33 @@ func withReserved(key types.NamespacedName, podName string, committed int32, res
 	return committed
 }
 
+func isPodUnschedulable(pod *v1.Pod) bool {
+	annotVal, ok := pod.ObjectMeta.Annotations[scheduler.PodAnnotationKey]
+	unschedulable, val := strconv.ParseBool(annotVal)
+	return ok && val == nil && unschedulable
+}
+
+func isNodeUnschedulable(node *v1.Node) bool {
+	noExec := &v1.Taint{
+		Key:    "node.kubernetes.io/unreachable",
+		Effect: v1.TaintEffectNoExecute,
+	}
+
+	noSched := &v1.Taint{
+		Key:    "node.kubernetes.io/unreachable",
+		Effect: v1.TaintEffectNoSchedule,
+	}
+
+	return node.Spec.Unschedulable ||
+		contains(node.Spec.Taints, noExec) ||
+		contains(node.Spec.Taints, noSched)
+}
+
 func contains(taints []v1.Taint, taint *v1.Taint) bool {
 	for _, v := range taints {
 		if v.MatchTaint(taint) {
 			return true
 		}
 	}
-
 	return false
 }

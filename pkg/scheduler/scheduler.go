@@ -42,6 +42,8 @@ const (
 
 const (
 	ZoneLabel = "topology.kubernetes.io/zone"
+
+	UnknownZone = "unknown"
 )
 
 const (
