@@ -54,7 +54,7 @@ const (
 func (p *prober) Verify() (eventErrs []error, eventsSent int) {
 	var report *receiver.Report
 	// Enable port-forwarding for Zipkin endpoint.
-	if err := zipkin.SetupZipkinTracingFromConfigTracing(context.Background(),
+	if err := zipkin.SetupZipkinTracingFromConfigTracing(p.config.Ctx,
 		p.client.Kube, p.client.T.Logf, system.Namespace()); err != nil {
 		p.log.Warnf("Failed to setup Zipkin tracing. Traces for events won't be available.")
 	} else {
@@ -64,8 +64,12 @@ func (p *prober) Verify() (eventErrs []error, eventsSent int) {
 	p.log.Info("Waiting for complete report from receiver...")
 	start := time.Now()
 	if err := wait.PollImmediate(jobWaitInterval, jobWaitTimeout, func() (bool, error) {
-		report = p.fetchReport()
-		return report.State != "active", nil
+		var err error
+		report, err = p.fetchReport()
+		if err != nil {
+			return false, err
+		}
+		return report != nil && report.State != "active", nil
 	}); err != nil {
 		if err := p.exportTrace(p.getTraceForFinishedEvent(), "finished.json"); err != nil {
 			p.log.Warnf("Failed to export trace for Finished event: %v", err)
@@ -169,10 +173,13 @@ func (p *prober) exportTrace(trace []byte, fileName string) error {
 	return nil
 }
 
-func (p *prober) fetchReport() *receiver.Report {
-	exec := p.fetchExecution()
+func (p *prober) fetchReport() (*receiver.Report, error) {
+	exec, err := p.fetchExecution()
+	if err != nil {
+		return nil, err
+	}
 	replayLogs(p.log, exec)
-	return exec.Report
+	return exec.Report, nil
 }
 
 func replayLogs(log *zap.SugaredLogger, exec *fetcher.Execution) {
@@ -190,14 +197,18 @@ func replayLogs(log *zap.SugaredLogger, exec *fetcher.Execution) {
 	}
 }
 
-func (p *prober) fetchExecution() *fetcher.Execution {
+func (p *prober) fetchExecution() (*fetcher.Execution, error) {
 	ns := p.client.Namespace
 	job := p.deployFetcher()
 	defer p.deleteFetcher(job.Name)
 	pod, err := p.findSucceededPod(job)
-	p.ensureNoError(err)
+	if err != nil {
+		return nil, err
+	}
 	bytes, err := pkgTest.PodLogs(p.config.Ctx, p.client.Kube, pod.Name, fetcherName, ns)
-	p.ensureNoError(err)
+	if err != nil {
+		return nil, err
+	}
 	ex := &fetcher.Execution{
 		Logs: []fetcher.LogEntry{},
 		Report: &receiver.Report{
@@ -213,8 +224,7 @@ func (p *prober) fetchExecution() *fetcher.Execution {
 		},
 	}
 	err = json.Unmarshal(bytes, ex)
-	p.ensureNoError(err)
-	return ex
+	return ex, err
 }
 
 func (p *prober) deployFetcher() *batchv1.Job {
