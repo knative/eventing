@@ -22,15 +22,23 @@ import (
 	"fmt"
 	"strings"
 
-	cloudevents "github.com/cloudevents/sdk-go/v2"
-	"github.com/wavesoftware/go-ensure"
-	"knative.dev/eventing/test/upgrade/prober/wathola/config"
-	"knative.dev/eventing/test/upgrade/prober/wathola/event"
-
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	cloudevents "github.com/cloudevents/sdk-go/v2"
+	cloudeventshttp "github.com/cloudevents/sdk-go/v2/protocol/http"
+	"github.com/wavesoftware/go-ensure"
+	"go.opencensus.io/plugin/ochttp"
+	"go.opencensus.io/trace"
+	"knative.dev/eventing/test/upgrade/prober/wathola/config"
+	"knative.dev/eventing/test/upgrade/prober/wathola/event"
+	"knative.dev/pkg/tracing/propagation/tracecontextb3"
+)
+
+const (
+	Name = "wathola-sender"
 )
 
 var (
@@ -38,9 +46,10 @@ var (
 	// supported by any of the event senders that are registered.
 	ErrEndpointTypeNotSupported = errors.New("given endpoint isn't " +
 		"supported by any registered event sender")
-	log          = config.Log
-	senderConfig = &config.Instance.Sender
-	eventSenders = make([]EventSender, 0, 1)
+	log                     = config.Log
+	senderConfig            = &config.Instance.Sender
+	eventSenders            = make([]EventSender, 0, 1)
+	eventSendersWithContext = make([]EventSenderWithContext, 0, 1)
 )
 
 type sender struct {
@@ -54,7 +63,12 @@ type sender struct {
 
 func (s *sender) SendContinually() {
 	var shutdownCh = make(chan struct{})
-	defer s.sendFinished()
+	defer func() {
+		s.sendFinished()
+		// Give time to send tracing information.
+		// https://github.com/knative/pkg/issues/2475
+		time.Sleep(5 * time.Second)
+	}()
 
 	go func() {
 		c := make(chan os.Signal, 1)
@@ -119,20 +133,36 @@ func NewCloudEvent(data interface{}, typ string) cloudevents.Event {
 // ResetEventSenders will reset configured event senders to defaults.
 func ResetEventSenders() {
 	eventSenders = make([]EventSender, 0, 1)
+	eventSendersWithContext = make([]EventSenderWithContext, 0, 1)
 }
 
 // RegisterEventSender will register a EventSender to be used.
+// Deprecated. Use RegisterEventSenderWithContext.
 func RegisterEventSender(es EventSender) {
 	eventSenders = append(eventSenders, es)
 }
 
+// RegisterEventSenderWithContext will register EventSenderWithContext to be used.
+func RegisterEventSenderWithContext(es EventSenderWithContext) {
+	eventSendersWithContext = append(eventSendersWithContext, es)
+}
+
 // SendEvent will send cloud event to given url
-func SendEvent(ce cloudevents.Event, endpoint interface{}) error {
+func SendEvent(ctx context.Context, ce cloudevents.Event, endpoint interface{}) error {
+	sendersWithCtx := make([]EventSenderWithContext, 0, len(eventSendersWithContext)+1)
+	sendersWithCtx = append(sendersWithCtx, eventSendersWithContext...)
+	if len(eventSendersWithContext) == 0 && len(eventSenders) == 0 {
+		sendersWithCtx = append(sendersWithCtx, httpSender{})
+	}
+	for _, eventSender := range sendersWithCtx {
+		if eventSender.Supports(endpoint) {
+			return eventSender.SendEventWithContext(ctx, ce, endpoint)
+		}
+	}
+	// Backwards compatibility.
+	// TODO: Remove when downstream repositories start using EventSenderWithContext.
 	senders := make([]EventSender, 0, len(eventSenders)+1)
 	senders = append(senders, eventSenders...)
-	if len(senders) == 0 {
-		senders = append(senders, httpSender{})
-	}
 	for _, eventSender := range senders {
 		if eventSender.Supports(endpoint) {
 			return eventSender.SendEvent(ce, endpoint)
@@ -154,14 +184,22 @@ func (h httpSender) Supports(endpoint interface{}) bool {
 }
 
 func (h httpSender) SendEvent(ce cloudevents.Event, endpoint interface{}) error {
+	return h.SendEventWithContext(context.Background(), ce, endpoint)
+}
+
+func (h httpSender) SendEventWithContext(ctx context.Context, ce cloudevents.Event, endpoint interface{}) error {
 	url := endpoint.(string)
-	c, err := cloudevents.NewClientHTTP()
+	opts := []cloudeventshttp.Option{
+		cloudevents.WithRoundTripper(&ochttp.Transport{
+			Propagation: tracecontextb3.TraceContextEgress,
+		}),
+	}
+	c, err := cloudevents.NewClientHTTP(opts...)
 	if err != nil {
 		return err
 	}
-	ctx := cloudevents.ContextWithTarget(context.Background(), url)
-
-	result := c.Send(ctx, ce)
+	ctxWithTarget := cloudevents.ContextWithTarget(ctx, url)
+	result := c.Send(ctxWithTarget, ce)
 	if cloudevents.IsACK(result) {
 		return nil
 	}
@@ -171,9 +209,12 @@ func (h httpSender) SendEvent(ce cloudevents.Event, endpoint interface{}) error 
 func (s *sender) sendStep() error {
 	step := event.Step{Number: s.eventsSent + 1}
 	ce := NewCloudEvent(step, event.StepType)
+	ctx, span := PopulateSpanWithEvent(context.Background(), ce, Name)
+	defer span.End()
+	span.AddAttributes(trace.Int64Attribute("step", int64(step.Number)))
 	endpoint := senderConfig.Address
 	log.Infof("Sending step event #%v to %#v", step.Number, endpoint)
-	err := SendEvent(ce, endpoint)
+	err := SendEvent(ctx, ce, endpoint)
 	// Record every request regardless of the result
 	s.totalRequests++
 	if err != nil {
@@ -190,6 +231,18 @@ func (s *sender) sendFinished() {
 	finished := event.Finished{EventsSent: s.eventsSent, TotalRequests: s.totalRequests, UnavailablePeriods: s.unavailablePeriods}
 	endpoint := senderConfig.Address
 	ce := NewCloudEvent(finished, event.FinishedType)
+	ctx, span := PopulateSpanWithEvent(context.Background(), ce, Name)
+	defer span.End()
 	log.Infof("Sending finished event (count: %v) to %#v", finished.EventsSent, endpoint)
-	ensure.NoError(SendEvent(ce, endpoint))
+	ensure.NoError(SendEvent(ctx, ce, endpoint))
+}
+
+func PopulateSpanWithEvent(ctx context.Context, ce cloudevents.Event, spanName string) (context.Context, *trace.Span) {
+	ctxWithSpan, span := trace.StartSpan(ctx, spanName)
+	span.AddAttributes(
+		trace.StringAttribute("cloudevents.type", ce.Type()),
+		trace.StringAttribute("cloudevents.id", ce.ID()),
+		trace.StringAttribute("target", config.Instance.Forwarder.Target),
+	)
+	return ctxWithSpan, span
 }
