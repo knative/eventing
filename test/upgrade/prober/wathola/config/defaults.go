@@ -79,6 +79,7 @@ func defaultValues() *Config {
 			Message: "OK",
 			Status:  nethttp.StatusOK,
 		},
-		LogLevel: zap.InfoLevel.String(),
+		LogLevel:      zap.InfoLevel.String(),
+		TracingConfig: `{"backend":"none","debug":"false","sample-rate":"0.1"}`,
 	}
 }

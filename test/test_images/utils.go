@@ -56,23 +56,17 @@ const (
 	ConfigLoggingEnv = "K_CONFIG_LOGGING"
 )
 
-// ConfigureTracing can be used in test-images to configure tracing
+// ConfigureTracing can be used in test-images to configure tracing.
 func ConfigureTracing(logger *zap.SugaredLogger, serviceName string) error {
 	tracingEnv := os.Getenv(ConfigTracingEnv)
-
-	if tracingEnv == "" {
-		return tracing.SetupStaticPublishing(logger, serviceName, config.NoopConfig())
-	}
-
 	conf, err := config.JSONToTracingConfig(tracingEnv)
 	if err != nil {
-		return err
+		logger.Warn("Error while trying to read the tracing config, using NoopConfig: ", err)
 	}
-
 	return tracing.SetupStaticPublishing(logger, serviceName, conf)
 }
 
-// ConfigureTracing can be used in test-images to configure tracing
+// ConfigureLogging can be used in test-images to configure logging.
 func ConfigureLogging(ctx context.Context, name string) context.Context {
 	loggingEnv := os.Getenv(ConfigLoggingEnv)
 	conf, err := logging.JSONToConfig(loggingEnv)

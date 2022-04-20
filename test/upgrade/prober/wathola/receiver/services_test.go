@@ -16,6 +16,7 @@
 package receiver
 
 import (
+	"context"
 	"fmt"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
@@ -75,6 +76,6 @@ func waitUntilFinished(r *receiver) error {
 
 func sendEvent(t *testing.T, e cloudevents.Event, port int) {
 	url := fmt.Sprintf("http://localhost:%v/", port)
-	err := sender.SendEvent(e, url)
+	err := sender.SendEvent(context.Background(), e, url)
 	assert.NoError(t, err)
 }
