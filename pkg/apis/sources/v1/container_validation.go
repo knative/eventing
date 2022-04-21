@@ -44,6 +44,7 @@ func (cs *ContainerSourceSpec) Validate(ctx context.Context) *apis.FieldError {
 			}
 		}
 	}
+	errs = errs.Also(cs.SourceSpec.Validate(ctx))
 	return errs
 }
 

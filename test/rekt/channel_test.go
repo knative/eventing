@@ -1,3 +1,4 @@
+//go:build e2e
 // +build e2e
 
 /*
@@ -22,15 +23,18 @@ import (
 	"testing"
 
 	"github.com/cloudevents/sdk-go/v2/binding"
-	"knative.dev/eventing/test/rekt/features/channel"
-	ch "knative.dev/eventing/test/rekt/resources/channel"
-	chimpl "knative.dev/eventing/test/rekt/resources/channel_impl"
-	"knative.dev/eventing/test/rekt/resources/subscription"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/system"
 	_ "knative.dev/pkg/system/testing"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/knative"
+	"knative.dev/reconciler-test/pkg/manifest"
+
+	"knative.dev/eventing/test/rekt/features/channel"
+	ch "knative.dev/eventing/test/rekt/resources/channel"
+	chimpl "knative.dev/eventing/test/rekt/resources/channel_impl"
+	"knative.dev/eventing/test/rekt/resources/subscription"
 )
 
 // TestChannelConformance
@@ -179,6 +183,25 @@ func TestChannelDeadLetterSink(t *testing.T) {
 	)
 
 	env.Test(ctx, t, channel.DeadLetterSink())
+}
+
+// TestGenericChannelDeadLetterSink tests if the events that cannot be delivered end up in
+// the dead letter sink.
+func TestGenericChannelDeadLetterSink(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+	)
+
+	createSubscriberFn := func(ref *duckv1.KReference, uri string) manifest.CfgFn {
+		return subscription.WithSubscriber(ref, uri)
+	}
+	env.Test(ctx, t, channel.DeadLetterSinkGenericChannel(createSubscriberFn))
 }
 
 /*

@@ -84,7 +84,7 @@ func TTLDefaulter(logger *zap.Logger, defaultTTL int32) client.EventDefaulter {
 			}
 		}
 		// Overwrite the TTL into the event.
-		if err := event.Context.SetExtension(TTLAttribute, ttl); err != nil {
+		if err := SetTTL(event.Context, ttl); err != nil {
 			logger.Error("Failed to set TTL on outbound event.",
 				zap.String("event.id", event.ID()),
 				zap.Int32(TTLAttribute, ttl),

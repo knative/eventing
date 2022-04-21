@@ -43,6 +43,7 @@ import (
 	"knative.dev/eventing/pkg/reconciler/inmemorychannel/controller/config"
 	"knative.dev/eventing/pkg/reconciler/inmemorychannel/controller/resources"
 	"knative.dev/pkg/logging"
+	"knative.dev/pkg/resolver"
 )
 
 const (
@@ -81,6 +82,8 @@ type Reconciler struct {
 	roleBindingLister    rbacv1listers.RoleBindingLister
 
 	eventDispatcherConfigStore *config.EventDispatcherConfigStore
+
+	uriResolver *resolver.URIResolver
 }
 
 // Check that our Reconciler implements Interface
@@ -155,6 +158,19 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1.InMemoryChannel)
 	}
 	imc.Status.MarkChannelServiceTrue()
 	imc.Status.SetAddress(apis.HTTP(network.GetServiceHostname(svc.Name, svc.Namespace)))
+
+	// If a DeadLetterSink is defined in Spec.Delivery then whe resolve its URI and update the stauts
+	if imc.Spec.Delivery != nil && imc.Spec.Delivery.DeadLetterSink != nil {
+		deadLetterSinkUri, err := r.uriResolver.URIFromDestinationV1(ctx, *imc.Spec.Delivery.DeadLetterSink, imc)
+		if err != nil {
+			logging.FromContext(ctx).Errorw("Unable to get the DeadLetterSink's URI", zap.Error(err))
+			imc.Status.MarkDeadLetterSinkResolvedFailed("Unable to get the DeadLetterSink's URI", "%v", err)
+			return fmt.Errorf("Failed to resolve Dead Letter Sink URI: %v", err)
+		}
+		imc.Status.MarkDeadLetterSinkResolvedSucceeded(deadLetterSinkUri)
+	} else {
+		imc.Status.MarkDeadLetterSinkNotConfigured()
+	}
 
 	// Ok, so now the Dispatcher Deployment & Service have been created, we're golden since the
 	// dispatcher watches the Channel and where it needs to dispatch events to.

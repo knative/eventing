@@ -38,7 +38,7 @@ func TestChannelChannelableManipulatorClusterRoleTestRunner(
 ) {
 
 	const aggregationClusterRoleName = "channelable-manipulator"
-	var permissionTestCaseVerbs = []string{"get", "list", "watch", "update", "patch"}
+	var permissionTestCaseVerbs = []string{"get", "list", "watch", "update", "patch", "delete"}
 
 	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
 		client := testlib.Setup(st, true, options...)

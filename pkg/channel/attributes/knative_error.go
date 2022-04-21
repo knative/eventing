@@ -17,22 +17,26 @@ limitations under the License.
 package attributes
 
 import (
+	"net/url"
+
 	"github.com/cloudevents/sdk-go/v2/binding"
 	"github.com/cloudevents/sdk-go/v2/binding/transformer"
 )
 
 const (
+	KnativeErrorDestExtensionKey       = "knativeerrordest"
 	KnativeErrorCodeExtensionKey       = "knativeerrorcode"
 	KnativeErrorDataExtensionKey       = "knativeerrordata"
 	KnativeErrorDataExtensionMaxLength = 1024
 )
 
-// KnativeErrorTransformers returns Transformers which add the specified error code and data extensions.
-func KnativeErrorTransformers(code int, data string) binding.Transformers {
+// KnativeErrorTransformers returns Transformers which add the specified destination and error code/data extensions.
+func KnativeErrorTransformers(destination url.URL, code int, data string) binding.Transformers {
+	destTransformer := transformer.AddExtension(KnativeErrorDestExtensionKey, destination)
 	codeTransformer := transformer.AddExtension(KnativeErrorCodeExtensionKey, code)
 	if len(data) > KnativeErrorDataExtensionMaxLength {
 		data = data[:KnativeErrorDataExtensionMaxLength] // Truncate data to max length
 	}
 	dataTransformer := transformer.AddExtension(KnativeErrorDataExtensionKey, data)
-	return binding.Transformers{codeTransformer, dataTransformer}
+	return binding.Transformers{destTransformer, codeTransformer, dataTransformer}
 }

@@ -68,6 +68,14 @@ type ResponseChecker func(resp *Response) (done bool, err error)
 // If an error should be retried, it should return true and the wrapped error to explain why to retry.
 type ErrorRetryChecker func(e error) (retry bool, err error)
 
+// ResponseRetryChecker is used to determine if a response should be retried or not.
+// If a response should be retried, it should return true and an error to explain why to retry.
+//
+// This is distinct from ResponseChecker in that it shall be used to retry responses,
+// where the HTTP request was technically successful (it returned something) but indicates
+// an error (e.g. the overload page of a loadbalancer).
+type ResponseRetryChecker func(resp *Response) (retry bool, err error)
+
 // SpoofingClient is a minimal HTTP client wrapper that spoofs the domain of requests
 // for non-resolvable domains.
 type SpoofingClient struct {
@@ -147,16 +155,16 @@ func ResolveEndpoint(ctx context.Context, kubeClientset kubernetes.Interface, do
 // Do dispatches to the underlying http.Client.Do, spoofing domains as needed
 // and transforming the http.Response into a spoof.Response.
 // Each response is augmented with "ZipkinTraceID" header that identifies the zipkin trace corresponding to the request.
-func (sc *SpoofingClient) Do(req *http.Request, errorRetryCheckers ...ErrorRetryChecker) (*Response, error) {
+func (sc *SpoofingClient) Do(req *http.Request, errorRetryCheckers ...interface{}) (*Response, error) {
 	return sc.Poll(req, func(*Response) (bool, error) { return true, nil }, errorRetryCheckers...)
 }
 
 // Poll executes an http request until it satisfies the inState condition or, if there's an error,
 // none of the error retry checkers permit a retry.
 // If no retry checkers are specified `DefaultErrorRetryChecker` will be used.
-func (sc *SpoofingClient) Poll(req *http.Request, inState ResponseChecker, errorRetryCheckers ...ErrorRetryChecker) (*Response, error) {
-	if len(errorRetryCheckers) == 0 {
-		errorRetryCheckers = []ErrorRetryChecker{DefaultErrorRetryChecker}
+func (sc *SpoofingClient) Poll(req *http.Request, inState ResponseChecker, checkers ...interface{}) (*Response, error) {
+	if len(checkers) == 0 {
+		checkers = []interface{}{ErrorRetryChecker(DefaultErrorRetryChecker), ResponseRetryChecker(DefaultResponseRetryChecker)}
 	}
 
 	var resp *Response
@@ -166,11 +174,13 @@ func (sc *SpoofingClient) Poll(req *http.Request, inState ResponseChecker, error
 		defer span.End()
 		rawResp, err := sc.Client.Do(req.WithContext(traceContext))
 		if err != nil {
-			for _, checker := range errorRetryCheckers {
-				retry, newErr := checker(err)
-				if retry {
-					sc.Logf("Retrying %s: %v", req.URL.String(), newErr)
-					return false, nil
+			for _, checker := range checkers {
+				if ec, ok := checker.(ErrorRetryChecker); ok {
+					retry, newErr := ec(err)
+					if retry {
+						sc.Logf("Retrying %s: %v", req.URL.String(), newErr)
+						return false, nil
+					}
 				}
 			}
 			sc.Logf("NOT Retrying %s: %v", req.URL.String(), err)
@@ -190,6 +200,20 @@ func (sc *SpoofingClient) Poll(req *http.Request, inState ResponseChecker, error
 			Header:     rawResp.Header,
 			Body:       body,
 		}
+
+		// This is distinct from inState in that it allows us to uniformly check for
+		// error responses to retry HTTP requests that have technically been successful,
+		// but haven't reached their destination (e.g. got a loadbalancer overload page).
+		for _, checker := range checkers {
+			if rc, ok := checker.(ResponseRetryChecker); ok {
+				retry, newErr := rc(resp)
+				if retry {
+					sc.Logf("Retrying %s: %v", req.URL.String(), newErr)
+					return false, nil
+				}
+			}
+		}
+
 		return inState(resp)
 	})
 
@@ -208,7 +232,7 @@ func DefaultErrorRetryChecker(err error) (bool, error) {
 	if isTCPTimeout(err) {
 		return true, fmt.Errorf("retrying for TCP timeout: %w", err)
 	}
-	// Retrying on DNS error, since we may be using xip.io or nip.io in tests.
+	// Retrying on DNS error, since we may be using sslip.io or nip.io in tests.
 	if isDNSError(err) {
 		return true, fmt.Errorf("retrying for DNS error: %w", err)
 	}
@@ -223,7 +247,20 @@ func DefaultErrorRetryChecker(err error) (bool, error) {
 	if errors.Is(err, io.EOF) {
 		return true, fmt.Errorf("retrying for: %w", err)
 	}
+	// No route to host errors are in the same category as connection refused errors and
+	// are usually transient.
+	if isNoRouteToHostError(err) {
+		return true, fmt.Errorf("retrying for 'no route to host' error: %w", err)
+	}
 	return false, err
+}
+
+// DefaultResponseRetryChecker implements the defaults for retrying on response.
+func DefaultResponseRetryChecker(resp *Response) (bool, error) {
+	if isResponseDNSError(resp) {
+		return true, fmt.Errorf("retrying for DNS related failure response: %v", resp)
+	}
+	return false, nil
 }
 
 // logZipkinTrace provides support to log Zipkin Trace for param: spoofResponse
@@ -254,7 +291,25 @@ func (sc *SpoofingClient) WaitForEndpointState(
 	desc string,
 	opts ...RequestOption) (*Response, error) {
 
-	defer logging.GetEmitableSpan(ctx, "WaitForEndpointState/"+desc).End()
+	return sc.endpointState(
+		ctx,
+		url,
+		inState,
+		desc,
+		func(req *http.Request, check ResponseChecker) (*Response, error) { return sc.Poll(req, check) },
+		"WaitForEndpointState",
+		opts...)
+}
+
+func (sc *SpoofingClient) endpointState(
+	ctx context.Context,
+	url *url.URL,
+	inState ResponseChecker,
+	desc string,
+	f func(*http.Request, ResponseChecker) (*Response, error),
+	logName string,
+	opts ...RequestOption) (*Response, error) {
+	defer logging.GetEmitableSpan(ctx, logName+"/"+desc).End()
 
 	if url.Scheme == "" || url.Host == "" {
 		return nil, fmt.Errorf("invalid URL: %q", url.String())
@@ -269,5 +324,38 @@ func (sc *SpoofingClient) WaitForEndpointState(
 		opt(req)
 	}
 
-	return sc.Poll(req, inState)
+	return f(req, inState)
+}
+
+func (sc *SpoofingClient) Check(req *http.Request, inState ResponseChecker, checkers ...interface{}) (*Response, error) {
+	resp, err := sc.Do(req, checkers...)
+	if err != nil {
+		return nil, err
+	}
+
+	ok, err := inState(resp)
+	if err != nil {
+		return resp, fmt.Errorf("response: %s did not pass checks: %w", resp, err)
+	}
+	if ok {
+		return resp, nil
+	}
+
+	return nil, err
+}
+
+func (sc *SpoofingClient) CheckEndpointState(
+	ctx context.Context,
+	url *url.URL,
+	inState ResponseChecker,
+	desc string,
+	opts ...RequestOption) (*Response, error) {
+	return sc.endpointState(
+		ctx,
+		url,
+		inState,
+		desc,
+		func(req *http.Request, check ResponseChecker) (*Response, error) { return sc.Check(req, check) },
+		"CheckEndpointState",
+		opts...)
 }

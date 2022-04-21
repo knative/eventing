@@ -103,6 +103,28 @@ func TestDispatchMessage(t *testing.T) {
 					"x-request-id":   {"id123"},
 					"knative-1":      {"knative-1-value"},
 					"knative-2":      {"knative-2-value"},
+					"prefer":         {"reply"},
+					"traceparent":    {"ignored-value-header"},
+					"ce-abc":         {`"ce-abc-value"`},
+					"ce-id":          {"ignored-value-header"},
+					"ce-time":        {"ignored-value-header"},
+					"ce-source":      {testCeSource},
+					"ce-type":        {testCeType},
+					"ce-specversion": {cloudevents.VersionV1},
+				},
+				Body: `"destination"`,
+			},
+			lastReceiver: "destination",
+		},
+		"destination - nil additional headers": {
+			sendToDestination: true,
+			body:              "destination",
+			eventExtensions: map[string]string{
+				"abc": `"ce-abc-value"`,
+			},
+			expectedDestRequest: &requestValidation{
+				Headers: map[string][]string{
+					"prefer":         {"reply"},
 					"traceparent":    {"ignored-value-header"},
 					"ce-abc":         {`"ce-abc-value"`},
 					"ce-id":          {"ignored-value-header"},
@@ -133,6 +155,7 @@ func TestDispatchMessage(t *testing.T) {
 					"x-request-id":   {"id123"},
 					"knative-1":      {"knative-1-value"},
 					"knative-2":      {"knative-2-value"},
+					"prefer":         {"reply"},
 					"traceparent":    {"ignored-value-header"},
 					"ce-abc":         {`"ce-abc-value"`},
 					"ce-id":          {"ignored-value-header"},
@@ -233,6 +256,7 @@ func TestDispatchMessage(t *testing.T) {
 					"x-request-id":   {"id123"},
 					"knative-1":      {"knative-1-value"},
 					"knative-2":      {"knative-2-value"},
+					"prefer":         {"reply"},
 					"traceparent":    {"ignored-value-header"},
 					"ce-abc":         {`"ce-abc-value"`},
 					"ce-id":          {"ignored-value-header"},
@@ -269,6 +293,7 @@ func TestDispatchMessage(t *testing.T) {
 					"x-request-id":   {"id123"},
 					"knative-1":      {"knative-1-value"},
 					"knative-2":      {"knative-2-value"},
+					"prefer":         {"reply"},
 					"traceparent":    {"ignored-value-header"},
 					"ce-abc":         {`"ce-abc-value"`},
 					"ce-id":          {"ignored-value-header"},
@@ -310,6 +335,7 @@ func TestDispatchMessage(t *testing.T) {
 					"x-request-id":   {"id123"},
 					"knative-1":      {"knative-1-value"},
 					"knative-2":      {"knative-2-value"},
+					"prefer":         {"reply"},
 					"traceparent":    {"ignored-value-header"},
 					"ce-abc":         {`"ce-abc-value"`},
 					"ce-id":          {"ignored-value-header"},
@@ -370,6 +396,7 @@ func TestDispatchMessage(t *testing.T) {
 					"x-request-id":   {"id123"},
 					"knative-1":      {"knative-1-value"},
 					"knative-2":      {"knative-2-value"},
+					"prefer":         {"reply"},
 					"traceparent":    {"ignored-value-header"},
 					"ce-abc":         {`"ce-abc-value"`},
 					"ce-id":          {"ignored-value-header"},
@@ -437,6 +464,7 @@ func TestDispatchMessage(t *testing.T) {
 					"x-request-id":   {"id123"},
 					"knative-1":      {"knative-1-value"},
 					"knative-2":      {"knative-2-value"},
+					"prefer":         {"reply"},
 					"traceparent":    {"ignored-value-header"},
 					"ce-abc":         {`"ce-abc-value"`},
 					"ce-id":          {"ignored-value-header"},
@@ -550,6 +578,7 @@ func TestDispatchMessage(t *testing.T) {
 					"x-request-id":   {"id123"},
 					"knative-1":      {"knative-1-value"},
 					"knative-2":      {"knative-2-value"},
+					"prefer":         {"reply"},
 					"traceparent":    {"ignored-value-header"},
 					"ce-abc":         {`"ce-abc-value"`},
 					"ce-id":          {"ignored-value-header"},
@@ -645,6 +674,7 @@ func TestDispatchMessage(t *testing.T) {
 					"x-request-id":   {"id123"},
 					"knative-1":      {"knative-1-value"},
 					"knative-2":      {"knative-2-value"},
+					"prefer":         {"reply"},
 					"traceparent":    {"ignored-value-header"},
 					"ce-abc":         {`"ce-abc-value"`},
 					"ce-id":          {"ignored-value-header"},
@@ -759,7 +789,11 @@ func TestDispatchMessage(t *testing.T) {
 				finishInvoked++
 			})
 
-			info, err := md.DispatchMessage(ctx, message, utils.PassThroughHeaders(tc.header), destination, reply, deadLetterSink)
+			var headers http.Header = nil
+			if tc.header != nil {
+				headers = utils.PassThroughHeaders(tc.header)
+			}
+			info, err := md.DispatchMessage(ctx, message, headers, destination, reply, deadLetterSink)
 
 			if tc.lastReceiver != "" {
 				switch tc.lastReceiver {
@@ -799,6 +833,11 @@ func TestDispatchMessage(t *testing.T) {
 				assertEquality(t, replyServer.URL, *tc.expectedReplyRequest, rv)
 			}
 			if tc.expectedDeadLetterRequest != nil {
+				if tc.sendToReply {
+					tc.expectedDeadLetterRequest.Headers.Set("ce-knativeerrordest", replyServer.URL+"/")
+				} else if tc.sendToDestination {
+					tc.expectedDeadLetterRequest.Headers.Set("ce-knativeerrordest", destServer.URL+"/")
+				}
 				rv := deadLetterSinkHandler.popRequest(t)
 				assertEquality(t, deadLetterSinkServer.URL, *tc.expectedDeadLetterRequest, rv)
 			}

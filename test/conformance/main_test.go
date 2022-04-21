@@ -1,3 +1,4 @@
+//go:build e2e
 // +build e2e
 
 /*
@@ -33,8 +34,6 @@ import (
 )
 
 const (
-	roleName                = "event-watcher-r"
-	serviceAccountName      = "event-watcher-sa"
 	recordEventsAPIPodName  = "api-server-source-logger-pod"
 	recordEventsPingPodName = "ping-source-logger-pod"
 )
@@ -89,7 +88,7 @@ func addSourcesInitializers() {
 		testlib.ApiServerSourceTypeMeta,
 		setupclientoptions.ApiServerSourceV1ClientSetupOption(
 			ctx, apiSrcName, "Reference",
-			recordEventsAPIPodName, roleName, serviceAccountName),
+			recordEventsAPIPodName),
 	)
 	sourcesTestRunner.AddComponentSetupClientOption(
 		testlib.PingSourceTypeMeta,

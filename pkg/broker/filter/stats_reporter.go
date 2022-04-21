@@ -27,6 +27,7 @@ import (
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
 	broker "knative.dev/eventing/pkg/broker"
+	eventingmetrics "knative.dev/eventing/pkg/metrics"
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/metrics/metricskey"
 )
@@ -66,9 +67,9 @@ var (
 	// go.opencensus.io/tag/validate.go. Currently those restrictions are:
 	// - length between 1 and 255 inclusive
 	// - characters are printable US-ASCII
-	triggerFilterTypeKey = tag.MustNewKey(metricskey.LabelFilterType)
-	responseCodeKey      = tag.MustNewKey(metricskey.LabelResponseCode)
-	responseCodeClassKey = tag.MustNewKey(metricskey.LabelResponseCodeClass)
+	triggerFilterTypeKey = tag.MustNewKey(eventingmetrics.LabelFilterType)
+	responseCodeKey      = tag.MustNewKey(eventingmetrics.LabelResponseCode)
+	responseCodeClassKey = tag.MustNewKey(eventingmetrics.LabelResponseCodeClass)
 )
 
 type ReportArgs struct {
@@ -172,11 +173,11 @@ func (r *reporter) ReportEventProcessingTime(args *ReportArgs, d time.Duration) 
 
 func (r *reporter) generateTag(args *ReportArgs, tags ...tag.Mutator) (context.Context, error) {
 	ctx := metricskey.WithResource(emptyContext, resource.Resource{
-		Type: metricskey.ResourceTypeKnativeTrigger,
+		Type: eventingmetrics.ResourceTypeKnativeTrigger,
 		Labels: map[string]string{
-			metricskey.LabelNamespaceName: args.ns,
-			metricskey.LabelBrokerName:    args.broker,
-			metricskey.LabelTriggerName:   args.trigger,
+			eventingmetrics.LabelNamespaceName: args.ns,
+			eventingmetrics.LabelBrokerName:    args.broker,
+			eventingmetrics.LabelTriggerName:   args.trigger,
 		},
 	})
 	// Note that filterType and filterSource can be empty strings, so they need a special treatment.

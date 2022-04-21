@@ -23,6 +23,14 @@ spec:
       containers:
         - image: ko://knative.dev/eventing/cmd/websocketsource
           name: hue
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop:
+              - all
+
   sink:
     ref:
       apiVersion: serving.knative.dev/v1

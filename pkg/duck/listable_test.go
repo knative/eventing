@@ -33,6 +33,7 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/client/injection/ducks/duck/v1alpha1/addressable"
 	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
+	"knative.dev/pkg/tracker"
 )
 
 const ns = "test-ns"
@@ -83,7 +84,7 @@ func TestResourceTracker(t *testing.T) {
 			}
 			ctx, _ := fakedynamicclient.With(context.Background(), scheme.Scheme)
 			ctx = addressable.WithDuck(ctx)
-			tr := NewListableTracker(ctx, addressable.Get, func(types.NamespacedName) {}, time.Minute)
+			tr := NewListableTrackerFromTracker(ctx, addressable.Get, tracker.New(func(types.NamespacedName) {}, time.Minute))
 			rt, _ := tr.(*listableTracker)
 			rt.informerFactory = fif
 			track := rt.TrackInNamespace(context.Background(),
@@ -142,7 +143,7 @@ func TestResourceTrackerForKReference(t *testing.T) {
 			}
 			ctx, _ := fakedynamicclient.With(context.Background(), scheme.Scheme)
 			ctx = addressable.WithDuck(ctx)
-			tr := NewListableTracker(ctx, addressable.Get, func(types.NamespacedName) {}, time.Minute)
+			tr := NewListableTrackerFromTracker(ctx, addressable.Get, tracker.New(func(types.NamespacedName) {}, time.Minute))
 			rt, _ := tr.(*listableTracker)
 			rt.informerFactory = fif
 			track := rt.TrackInNamespaceKReference(
@@ -202,7 +203,7 @@ func TestResourceListerForKReference(t *testing.T) {
 			}
 			ctx, _ := fakedynamicclient.With(context.Background(), scheme.Scheme)
 			ctx = addressable.WithDuck(ctx)
-			tr := NewListableTracker(ctx, addressable.Get, func(types.NamespacedName) {}, time.Minute)
+			tr := NewListableTrackerFromTracker(ctx, addressable.Get, tracker.New(func(types.NamespacedName) {}, time.Minute))
 			rt, _ := tr.(*listableTracker)
 			rt.informerFactory = fif
 			track := rt.TrackInNamespaceKReference(
@@ -259,7 +260,7 @@ func TestResourceInformerForKReference(t *testing.T) {
 			}
 			ctx, _ := fakedynamicclient.With(context.Background(), scheme.Scheme)
 			ctx = addressable.WithDuck(ctx)
-			tr := NewListableTracker(ctx, addressable.Get, func(types.NamespacedName) {}, time.Minute)
+			tr := NewListableTrackerFromTracker(ctx, addressable.Get, tracker.New(func(types.NamespacedName) {}, time.Minute))
 			rt, _ := tr.(*listableTracker)
 			rt.informerFactory = fif
 			track := rt.TrackInNamespaceKReference(

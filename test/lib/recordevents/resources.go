@@ -18,112 +18,22 @@ package recordevents
 
 import (
 	"context"
-	"encoding/json"
 	"strings"
 
-	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	pkgtest "knative.dev/pkg/test"
 
 	testlib "knative.dev/eventing/test/lib"
-	"knative.dev/eventing/test/lib/resources"
 )
 
-type EventRecordOption = func(*corev1.Pod, *testlib.Client) error
+const EventRecordReceivePort = 8080
 
 func noop(pod *corev1.Pod, client *testlib.Client) error {
 	return nil
-}
-
-func compose(options ...EventRecordOption) EventRecordOption {
-	return func(pod *corev1.Pod, client *testlib.Client) error {
-		for _, opt := range options {
-			if err := opt(pod, client); err != nil {
-				return err
-			}
-		}
-		return nil
-	}
-}
-
-func envOptionalOpt(key, value string) EventRecordOption {
-	if value != "" {
-		return func(pod *corev1.Pod, client *testlib.Client) error {
-			pod.Spec.Containers[0].Env = append(
-				pod.Spec.Containers[0].Env,
-				corev1.EnvVar{Name: key, Value: value},
-			)
-			return nil
-		}
-	} else {
-		return noop
-	}
-}
-
-func envOption(key, value string) EventRecordOption {
-	return func(pod *corev1.Pod, client *testlib.Client) error {
-		pod.Spec.Containers[0].Env = append(
-			pod.Spec.Containers[0].Env,
-			corev1.EnvVar{Name: key, Value: value},
-		)
-		return nil
-	}
-}
-
-// EchoEvent is an option to let the recordevents reply with the received event
-var EchoEvent EventRecordOption = envOption("REPLY", "true")
-
-// ReplyWithTransformedEvent is an option to let the recordevents reply with the transformed event
-func ReplyWithTransformedEvent(replyEventType string, replyEventSource string, replyEventData string) EventRecordOption {
-	return compose(
-		envOption("REPLY", "true"),
-		envOptionalOpt("REPLY_EVENT_TYPE", replyEventType),
-		envOptionalOpt("REPLY_EVENT_SOURCE", replyEventSource),
-		envOptionalOpt("REPLY_EVENT_DATA", replyEventData),
-	)
-}
-
-// ReplyWithAppendedData is an option to let the recordevents reply with the transformed event with appended data
-func ReplyWithAppendedData(appendData string) EventRecordOption {
-	return compose(
-		envOption("REPLY", "true"),
-		envOptionalOpt("REPLY_APPEND_DATA", appendData),
-	)
-}
-
-// InputEvent is an option to provide the event to send when deploying the event sender
-func InputEvent(event cloudevents.Event) EventRecordOption {
-	encodedEvent, err := json.Marshal(event)
-	if err != nil {
-		return func(pod *corev1.Pod, client *testlib.Client) error {
-			return err
-		}
-	}
-	return envOption("INPUT_EVENT", string(encodedEvent))
-}
-
-// AddTracing adds tracing headers when sending events.
-func AddTracing() EventRecordOption {
-	return envOption("ADD_TRACING", "true")
-}
-
-// EnableIncrementalId creates a new incremental id for each sent event.
-func EnableIncrementalId() EventRecordOption {
-	return envOption("INCREMENTAL_ID", "true")
-}
-
-// InputEncoding forces the encoding of the event for each sent event.
-func InputEncoding(encoding cloudevents.Encoding) EventRecordOption {
-	return envOption("EVENT_ENCODING", encoding.String())
-}
-
-// InputHeaders adds the following headers to the sent requests.
-func InputHeaders(headers map[string]string) EventRecordOption {
-	return envOption("INPUT_HEADERS", serializeHeaders(headers))
 }
 
 func serializeHeaders(headers map[string]string) string {
@@ -136,28 +46,14 @@ func serializeHeaders(headers map[string]string) string {
 
 // DeployEventRecordOrFail deploys the recordevents image with necessary sa, roles, rb to execute the image
 func DeployEventRecordOrFail(ctx context.Context, client *testlib.Client, name string, options ...EventRecordOption) *corev1.Pod {
-	client.CreateServiceAccountOrFail(name)
-	client.CreateRoleOrFail(resources.Role(name,
-		resources.WithRuleForRole(&rbacv1.PolicyRule{
-			APIGroups: []string{""},
-			Resources: []string{"pods"},
-			Verbs:     []string{"get"},
-		}),
-		resources.WithRuleForRole(&rbacv1.PolicyRule{
-			APIGroups: []string{""},
-			Resources: []string{"events"},
-			Verbs:     []string{rbacv1.VerbAll},
-		}),
-	))
-	client.CreateRoleBindingOrFail(name, "Role", name, name, client.Namespace)
-
 	options = append(
 		options,
 		testlib.WithService(name),
 		envOption("EVENT_GENERATORS", "receiver"),
 	)
 
-	eventRecordPod := recordEventsPod("recordevents", name, name)
+	readinessProbe := true
+	eventRecordPod := recordEventsPod("recordevents", name, client.Namespace, readinessProbe)
 	client.CreatePodOrFail(eventRecordPod, options...)
 	err := pkgtest.WaitForPodRunning(ctx, client.Kube, name, client.Namespace)
 	if err != nil {
@@ -169,28 +65,14 @@ func DeployEventRecordOrFail(ctx context.Context, client *testlib.Client, name s
 
 // DeployEventSenderOrFail deploys the recordevents image with necessary sa, roles, rb to execute the image
 func DeployEventSenderOrFail(ctx context.Context, client *testlib.Client, name string, sink string, options ...EventRecordOption) *corev1.Pod {
-	client.CreateServiceAccountOrFail(name)
-	client.CreateRoleOrFail(resources.Role(name,
-		resources.WithRuleForRole(&rbacv1.PolicyRule{
-			APIGroups: []string{""},
-			Resources: []string{"pods"},
-			Verbs:     []string{"get"},
-		}),
-		resources.WithRuleForRole(&rbacv1.PolicyRule{
-			APIGroups: []string{""},
-			Resources: []string{"events"},
-			Verbs:     []string{rbacv1.VerbAll},
-		}),
-	))
-	client.CreateRoleBindingOrFail(name, "Role", name, name, client.Namespace)
-
 	options = append(
 		options,
 		envOption("EVENT_GENERATORS", "sender"),
 		envOption("SINK", sink),
 	)
 
-	eventRecordPod := recordEventsPod("recordevents", name, name)
+	readinessProbe := false // this is not needed for sender pod
+	eventRecordPod := recordEventsPod("recordevents", name, client.Namespace, readinessProbe)
 	client.CreatePodOrFail(eventRecordPod, options...)
 	err := pkgtest.WaitForPodRunning(ctx, client.Kube, name, client.Namespace)
 	if err != nil {
@@ -199,8 +81,8 @@ func DeployEventSenderOrFail(ctx context.Context, client *testlib.Client, name s
 	return eventRecordPod
 }
 
-func recordEventsPod(imageName string, name string, serviceAccountName string) *corev1.Pod {
-	return &corev1.Pod{
+func recordEventsPod(imageName string, name string, serviceAccountName string, readinessProbe bool) *corev1.Pod {
+	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   name,
 			Labels: map[string]string{"e2etest": string(uuid.NewUUID())},
@@ -224,9 +106,26 @@ func recordEventsPod(imageName string, name string, serviceAccountName string) *
 					Name:  "EVENT_LOGS",
 					Value: "recorder,logger",
 				}},
+				Ports: []corev1.ContainerPort{
+					{
+						Name:          "receive",
+						ContainerPort: EventRecordReceivePort,
+					},
+				},
 			}},
 			ServiceAccountName: serviceAccountName,
 			RestartPolicy:      corev1.RestartPolicyAlways,
 		},
 	}
+	if readinessProbe {
+		pod.Spec.Containers[0].ReadinessProbe = &corev1.Probe{
+			Handler: corev1.Handler{
+				HTTPGet: &corev1.HTTPGetAction{
+					Port: intstr.FromString("receive"),
+					Path: "/healthz",
+				},
+			},
+		}
+	}
+	return pod
 }

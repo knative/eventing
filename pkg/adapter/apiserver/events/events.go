@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	kncloudevents "knative.dev/eventing/pkg/adapter/v2"
 
@@ -35,7 +36,7 @@ const (
 )
 
 // MakeAddEvent returns a cloudevent when a k8s api event is created.
-func MakeAddEvent(source string, obj interface{}, ref bool) (context.Context, cloudevents.Event, error) {
+func MakeAddEvent(source string, apiServerSourceName string, obj interface{}, ref bool) (context.Context, cloudevents.Event, error) {
 	if obj == nil {
 		return nil, cloudevents.Event{}, fmt.Errorf("resource can not be nil")
 	}
@@ -51,11 +52,11 @@ func MakeAddEvent(source string, obj interface{}, ref bool) (context.Context, cl
 		eventType = sources.ApiServerSourceAddEventType
 	}
 
-	return makeEvent(source, eventType, object, data)
+	return makeEvent(source, apiServerSourceName, eventType, object, data)
 }
 
 // MakeUpdateEvent returns a cloudevent when a k8s api event is updated.
-func MakeUpdateEvent(source string, obj interface{}, ref bool) (context.Context, cloudevents.Event, error) {
+func MakeUpdateEvent(source string, apiServerSourceName string, obj interface{}, ref bool) (context.Context, cloudevents.Event, error) {
 	if obj == nil {
 		return nil, cloudevents.Event{}, fmt.Errorf("resource can not be nil")
 	}
@@ -71,11 +72,11 @@ func MakeUpdateEvent(source string, obj interface{}, ref bool) (context.Context,
 		eventType = sources.ApiServerSourceUpdateEventType
 	}
 
-	return makeEvent(source, eventType, object, data)
+	return makeEvent(source, apiServerSourceName, eventType, object, data)
 }
 
 // MakeDeleteEvent returns a cloudevent when a k8s api event is deleted.
-func MakeDeleteEvent(source string, obj interface{}, ref bool) (context.Context, cloudevents.Event, error) {
+func MakeDeleteEvent(source string, apiServerSourceName string, obj interface{}, ref bool) (context.Context, cloudevents.Event, error) {
 	if obj == nil {
 		return nil, cloudevents.Event{}, fmt.Errorf("resource can not be nil")
 	}
@@ -91,7 +92,7 @@ func MakeDeleteEvent(source string, obj interface{}, ref bool) (context.Context,
 		eventType = sources.ApiServerSourceDeleteEventType
 	}
 
-	return makeEvent(source, eventType, object, data)
+	return makeEvent(source, apiServerSourceName, eventType, object, data)
 }
 
 func getRef(object *unstructured.Unstructured) corev1.ObjectReference {
@@ -103,7 +104,7 @@ func getRef(object *unstructured.Unstructured) corev1.ObjectReference {
 	}
 }
 
-func makeEvent(source, eventType string, obj *unstructured.Unstructured, data interface{}) (context.Context, cloudevents.Event, error) {
+func makeEvent(source, apiServerSourceName, eventType string, obj *unstructured.Unstructured, data interface{}) (context.Context, cloudevents.Event, error) {
 	resourceName := obj.GetName()
 	kind := obj.GetKind()
 	namespace := obj.GetNamespace()
@@ -129,10 +130,11 @@ func makeEvent(source, eventType string, obj *unstructured.Unstructured, data in
 	ctx := context.Background()
 	metricTag := &kncloudevents.MetricTag{
 		Namespace:     namespace,
-		Name:          resourceName,
+		Name:          apiServerSourceName,
 		ResourceGroup: resourceGroup,
 	}
 	ctx = kncloudevents.ContextWithMetricTag(ctx, metricTag)
+	ctx = cloudevents.ContextWithRetriesExponentialBackoff(ctx, 50*time.Millisecond, 5)
 
 	return ctx, event, nil
 }

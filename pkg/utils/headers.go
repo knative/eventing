@@ -36,8 +36,8 @@ var (
 	// Then the SDK will set them as ce- headers when sending them through HTTP. Otherwise, when using replies we would
 	// duplicate ce- headers.
 	forwardPrefixes = []string{
-		// knative
-		"knative-",
+		"knative-", // Knative
+		"x-b3-",    // Zipkin (Istio) B3
 	}
 )
 

@@ -20,20 +20,27 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	pointer "knative.dev/pkg/ptr"
+
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	"knative.dev/eventing/pkg/apis/feature"
 )
 
 const (
-	channelKind       = "MyChannel"
-	channelAPIVersion = "messaging.knative.dev/v1"
-	routeKind         = "Route"
-	routeAPIVersion   = "serving.knative.dev/v1"
-	channelName       = "subscribedChannel"
-	replyChannelName  = "toChannel"
-	subscriberName    = "subscriber"
-	namespace         = "namespace"
+	channelKind         = "MyChannel"
+	channelAPIVersion   = "messaging.knative.dev/v1"
+	routeKind           = "Route"
+	routeAPIVersion     = "serving.knative.dev/v1"
+	channelName         = "subscribedChannel"
+	replyChannelName    = "toChannel"
+	subscriberName      = "subscriber"
+	namespace           = "namespace"
+	retryCount          = int32(3)
+	backoffPolicy       = eventingduckv1.BackoffPolicyExponential
+	backoffDelayValid   = "PT0.5S"
+	backoffDelayInvalid = "invalid-delay"
 )
 
 func getValidChannelRef() duckv1.KReference {
@@ -66,6 +73,16 @@ func getValidDestination() *duckv1.Destination {
 	}
 }
 
+func getDelivery(delay string) *eventingduckv1.DeliverySpec {
+	retry := retryCount
+	policy := backoffPolicy
+	return &eventingduckv1.DeliverySpec{
+		Retry:         &retry,
+		BackoffPolicy: &policy,
+		BackoffDelay:  &delay,
+	}
+}
+
 func TestSubscriptionValidation(t *testing.T) {
 	name := "empty channel"
 	c := &Subscription{
@@ -94,7 +111,7 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 		c    *SubscriptionSpec
 		want *apis.FieldError
 	}{{
-		name: "valid",
+		name: "valid minimal spec",
 		c: &SubscriptionSpec{
 			Channel:    getValidChannelRef(),
 			Subscriber: getValidDestination(),
@@ -106,6 +123,14 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 			Channel:    getValidChannelRef(),
 			Subscriber: getValidDestination(),
 			Reply:      getValidReply(),
+		},
+		want: nil,
+	}, {
+		name: "valid with delivery",
+		c: &SubscriptionSpec{
+			Channel:    getValidChannelRef(),
+			Subscriber: getValidDestination(),
+			Delivery:   getDelivery(backoffDelayValid),
 		},
 		want: nil,
 	}, {
@@ -153,13 +178,6 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 			fe.Details = "the Subscription must reference at least one of (reply or a subscriber)"
 			return fe
 		}(),
-	}, {
-		name: "missing Reply",
-		c: &SubscriptionSpec{
-			Channel:    getValidChannelRef(),
-			Subscriber: getValidDestination(),
-		},
-		want: nil,
 	}, {
 		name: "empty Reply",
 		c: &SubscriptionSpec{
@@ -218,7 +236,7 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 		},
 		want: apis.ErrMissingField("subscriber.ref.name"),
 	}, {
-		name: "missing name in Subscriber.Ref",
+		name: "empty name in Subscriber.Ref",
 		c: &SubscriptionSpec{
 			Channel:    getValidChannelRef(),
 			Subscriber: getValidDestination(),
@@ -232,6 +250,14 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 			},
 		},
 		want: apis.ErrMissingField("reply.ref.name"),
+	}, {
+		name: "invalid Delivery",
+		c: &SubscriptionSpec{
+			Channel:    getValidChannelRef(),
+			Subscriber: getValidDestination(),
+			Delivery:   getDelivery(backoffDelayInvalid),
+		},
+		want: apis.ErrInvalidValue(backoffDelayInvalid, "delivery.backoffDelay"),
 	}}
 
 	for _, test := range tests {
@@ -504,6 +530,23 @@ func TestSubscriptionImmutable(t *testing.T) {
 		},
 		want: nil,
 	}, {
+		name: "valid, change delivery spec",
+		c: &Subscription{
+			Spec: SubscriptionSpec{
+				Channel:    getValidChannelRef(),
+				Subscriber: getValidDestination(),
+				Delivery:   &eventingduckv1.DeliverySpec{Retry: pointer.Int32(2)},
+			},
+		},
+		og: &Subscription{
+			Spec: SubscriptionSpec{
+				Channel:    getValidChannelRef(),
+				Subscriber: getValidDestination(),
+				Delivery:   &eventingduckv1.DeliverySpec{Retry: pointer.Int32(3)},
+			},
+		},
+		want: nil,
+	}, {
 		name: "Channel changed",
 		c: &Subscription{
 			Spec: SubscriptionSpec{
@@ -601,6 +644,83 @@ func TestValidChannel(t *testing.T) {
 			got := isValidChannel(context.TODO(), test.c)
 			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
 				t.Error("isValidChannel (-want, +got) =", diff)
+			}
+		})
+	}
+}
+
+func TestSubscriptionSpecValidationWithStrictSubscriber(t *testing.T) {
+	tests := []struct {
+		name string
+		c    *SubscriptionSpec
+		want *apis.FieldError
+	}{{
+		name: "missing Subscriber and Reply",
+		c: &SubscriptionSpec{
+			Channel: getValidChannelRef(),
+		},
+		want: func() *apis.FieldError {
+			fe := apis.ErrMissingField("subscriber")
+			fe.Details = "the Subscription must reference a subscriber"
+			return fe
+		}(),
+	}, {
+		name: "empty Subscriber and Reply",
+		c: &SubscriptionSpec{
+			Channel:    getValidChannelRef(),
+			Subscriber: &duckv1.Destination{},
+			Reply:      &duckv1.Destination{},
+		},
+		want: func() *apis.FieldError {
+			fe := apis.ErrMissingField("subscriber")
+			fe.Details = "the Subscription must reference a subscriber"
+			return fe
+		}(),
+	}, {
+		name: "missing Subscriber",
+		c: &SubscriptionSpec{
+			Channel: getValidChannelRef(),
+			Reply:   getValidReply(),
+		},
+		want: func() *apis.FieldError {
+			fe := apis.ErrMissingField("subscriber")
+			fe.Details = "the Subscription must reference a subscriber"
+			return fe
+		}(),
+	}, {
+		name: "empty Subscriber",
+		c: &SubscriptionSpec{
+			Channel:    getValidChannelRef(),
+			Subscriber: &duckv1.Destination{},
+			Reply:      getValidReply(),
+		},
+		want: func() *apis.FieldError {
+			fe := apis.ErrMissingField("subscriber")
+			fe.Details = "the Subscription must reference a subscriber"
+			return fe
+		}(),
+	}, {
+		name: "missing name in channel, and missing subscriber, reply",
+		c: &SubscriptionSpec{
+			Channel: duckv1.KReference{
+				Kind:       channelKind,
+				APIVersion: channelAPIVersion,
+			},
+		},
+		want: func() *apis.FieldError {
+			fe := apis.ErrMissingField("subscriber")
+			fe.Details = "the Subscription must reference a subscriber"
+			return apis.ErrMissingField("channel.name").Also(fe)
+		}(),
+	}}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctx := feature.ToContext(context.TODO(), feature.Flags{
+				feature.StrictSubscriber: feature.Enabled,
+			})
+			got := test.c.Validate(ctx)
+			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
+				t.Errorf("%s: strictSubscriber (-want, +got) = %v", test.name, diff)
 			}
 		})
 	}

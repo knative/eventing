@@ -27,3 +27,4 @@ fi
 source $(dirname $0)/../vendor/knative.dev/hack/library.sh
 
 go run "${REPO_ROOT_DIR}/vendor/knative.dev/pkg/configmap/hash-gen" "${REPO_ROOT_DIR}"/config/core/configmaps/*.yaml
+go run "${REPO_ROOT_DIR}/vendor/knative.dev/pkg/configmap/hash-gen" "${REPO_ROOT_DIR}"/config/channels/in-memory-channel/configmaps/*.yaml

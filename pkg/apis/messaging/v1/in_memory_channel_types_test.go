@@ -27,7 +27,7 @@ func TestInMemoryChannelGetStatus(t *testing.T) {
 	}
 }
 
-func TestInMemoryChannel_GetGroupVersionKind(t *testing.T) {
+func TestInMemoryChannelGetGroupVersionKind(t *testing.T) {
 	imc := InMemoryChannel{}
 	gvk := imc.GetGroupVersionKind()
 	if gvk.Kind != "InMemoryChannel" {

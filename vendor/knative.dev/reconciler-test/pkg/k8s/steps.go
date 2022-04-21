@@ -44,8 +44,20 @@ func IsReady(gvr schema.GroupVersionResource, name string, timing ...time.Durati
 	return func(ctx context.Context, t feature.T) {
 		interval, timeout := PollTimings(ctx, timing)
 		env := environment.FromContext(ctx)
-		if err := WaitForResourceReady(ctx, env.Namespace(), name, gvr, interval, timeout); err != nil {
+		if err := WaitForResourceReady(ctx, t, env.Namespace(), name, gvr, interval, timeout); err != nil {
 			t.Error(gvr, "did not become ready,", err)
+		}
+	}
+}
+
+// IsNotReady returns a reusable feature.StepFn to assert if a resource is not ready
+// within the time given. Timing is optional but if provided is [interval, timeout].
+func IsNotReady(gvr schema.GroupVersionResource, name string, timing ...time.Duration) feature.StepFn {
+	return func(ctx context.Context, t feature.T) {
+		interval, timeout := PollTimings(ctx, timing)
+		env := environment.FromContext(ctx)
+		if err := WaitForResourceNotReady(ctx, t, env.Namespace(), name, gvr, interval, timeout); err != nil {
+			t.Error(gvr, "did become ready,", err)
 		}
 	}
 }

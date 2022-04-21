@@ -19,6 +19,8 @@ metadata:
   name: addressable-resolver
   labels:
     eventing.knative.dev/release: devel
+    app.kubernetes.io/version: devel
+    app.kubernetes.io/name: knative-eventing
 aggregationRule:
   clusterRoleSelectors:
   - matchLabels:
@@ -34,6 +36,8 @@ metadata:
   labels:
     eventing.knative.dev/release: devel
     duck.knative.dev/addressable: "true"
+    app.kubernetes.io/version: devel
+    app.kubernetes.io/name: knative-eventing
 # Do not use this role directly. These rules will be added to the "addressable-resolver" role.
 rules:
 - apiGroups:
@@ -54,6 +58,8 @@ metadata:
   labels:
     eventing.knative.dev/release: devel
     duck.knative.dev/addressable: "true"
+    app.kubernetes.io/version: devel
+    app.kubernetes.io/name: knative-eventing
 # Do not use this role directly. These rules will be added to the "addressable-resolver" role.
 rules:
 - apiGroups:
@@ -77,6 +83,8 @@ metadata:
   labels:
     eventing.knative.dev/release: devel
     duck.knative.dev/addressable: "true"
+    app.kubernetes.io/version: devel
+    app.kubernetes.io/name: knative-eventing
 # Do not use this role directly. These rules will be added to the "addressable-resolver" role.
 rules:
 - apiGroups:
@@ -104,6 +112,8 @@ metadata:
   labels:
     eventing.knative.dev/release: devel
     duck.knative.dev/addressable: "true"
+    app.kubernetes.io/version: devel
+    app.kubernetes.io/name: knative-eventing
 # Do not use this role directly. These rules will be added to the "addressable-resolver" role.
 rules:
 - apiGroups:
@@ -121,33 +131,12 @@ rules:
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: messaging-addressable-resolver
-  labels:
-    eventing.knative.dev/release: devel
-    duck.knative.dev/addressable: "true"
-# Do not use this role directly. These rules will be added to the "addressable-resolver" role.
-rules:
-- apiGroups:
-  - messaging.knative.dev
-  resources:
-  - sequences
-  - sequences/status
-  - parallels
-  - parallels/status
-  verbs:
-  - get
-  - list
-  - watch
-
----
-
-kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
   name: flows-addressable-resolver
   labels:
     eventing.knative.dev/release: devel
     duck.knative.dev/addressable: "true"
+    app.kubernetes.io/version: devel
+    app.kubernetes.io/name: knative-eventing
 # Do not use this role directly. These rules will be added to the "addressable-resolver" role.
 rules:
 - apiGroups:

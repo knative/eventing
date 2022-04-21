@@ -31,7 +31,7 @@ import (
 const (
 	ChannelUsage = "The names of the channel type metas, separated by comma. " +
 		`Example: "messaging.knative.dev/v1:InMemoryChannel,` +
-		`messaging.cloud.google.com/v1alpha1:Channel,messaging.knative.dev/v1beta1:KafkaChannel".`
+		`messaging.knative.dev/v1beta1:KafkaChannel".`
 	BrokerClassUsage = "Which brokerclass to test, requires the proper Broker " +
 		"implementation to have been installed, and only one value. brokerclass " +
 		"must be (for now) 'MTChannelBasedBroker'."

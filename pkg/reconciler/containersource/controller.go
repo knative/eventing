@@ -29,7 +29,6 @@ import (
 	deploymentinformer "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
-	"knative.dev/pkg/logging"
 )
 
 // NewController creates a Reconciler for ContainerSource and returns the result of NewImpl.
@@ -53,7 +52,6 @@ func NewController(
 	}
 	impl := v1containersource.NewImpl(ctx, r)
 
-	logging.FromContext(ctx).Info("Setting up event handlers.")
 	containersourceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	deploymentInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
@@ -62,7 +60,7 @@ func NewController(
 	})
 
 	sinkbindingInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.FilterControllerGK(v1.Kind("ContainerSource")),
+		FilterFunc: controller.FilterController(&v1.ContainerSource{}),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 

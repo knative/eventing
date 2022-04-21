@@ -21,8 +21,15 @@ package broker
 import (
 	context "context"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	labels "k8s.io/apimachinery/pkg/labels"
+	cache "k8s.io/client-go/tools/cache"
+	apiseventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	versioned "knative.dev/eventing/pkg/client/clientset/versioned"
 	v1 "knative.dev/eventing/pkg/client/informers/externalversions/eventing/v1"
+	client "knative.dev/eventing/pkg/client/injection/client"
 	factory "knative.dev/eventing/pkg/client/injection/informers/factory"
+	eventingv1 "knative.dev/eventing/pkg/client/listers/eventing/v1"
 	controller "knative.dev/pkg/controller"
 	injection "knative.dev/pkg/injection"
 	logging "knative.dev/pkg/logging"
@@ -30,6 +37,7 @@ import (
 
 func init() {
 	injection.Default.RegisterInformer(withInformer)
+	injection.Dynamic.RegisterDynamicInformer(withDynamicInformer)
 }
 
 // Key is used for associating the Informer inside the context.Context.
@@ -41,6 +49,11 @@ func withInformer(ctx context.Context) (context.Context, controller.Informer) {
 	return context.WithValue(ctx, Key{}, inf), inf.Informer()
 }
 
+func withDynamicInformer(ctx context.Context) context.Context {
+	inf := &wrapper{client: client.Get(ctx), resourceVersion: injection.GetResourceVersion(ctx)}
+	return context.WithValue(ctx, Key{}, inf)
+}
+
 // Get extracts the typed informer from the context.
 func Get(ctx context.Context) v1.BrokerInformer {
 	untyped := ctx.Value(Key{})
@@ -49,4 +62,55 @@ func Get(ctx context.Context) v1.BrokerInformer {
 			"Unable to fetch knative.dev/eventing/pkg/client/informers/externalversions/eventing/v1.BrokerInformer from context.")
 	}
 	return untyped.(v1.BrokerInformer)
+}
+
+type wrapper struct {
+	client versioned.Interface
+
+	namespace string
+
+	resourceVersion string
+}
+
+var _ v1.BrokerInformer = (*wrapper)(nil)
+var _ eventingv1.BrokerLister = (*wrapper)(nil)
+
+func (w *wrapper) Informer() cache.SharedIndexInformer {
+	return cache.NewSharedIndexInformer(nil, &apiseventingv1.Broker{}, 0, nil)
+}
+
+func (w *wrapper) Lister() eventingv1.BrokerLister {
+	return w
+}
+
+func (w *wrapper) Brokers(namespace string) eventingv1.BrokerNamespaceLister {
+	return &wrapper{client: w.client, namespace: namespace, resourceVersion: w.resourceVersion}
+}
+
+// SetResourceVersion allows consumers to adjust the minimum resourceVersion
+// used by the underlying client.  It is not accessible via the standard
+// lister interface, but can be accessed through a user-defined interface and
+// an implementation check e.g. rvs, ok := foo.(ResourceVersionSetter)
+func (w *wrapper) SetResourceVersion(resourceVersion string) {
+	w.resourceVersion = resourceVersion
+}
+
+func (w *wrapper) List(selector labels.Selector) (ret []*apiseventingv1.Broker, err error) {
+	lo, err := w.client.EventingV1().Brokers(w.namespace).List(context.TODO(), metav1.ListOptions{
+		LabelSelector:   selector.String(),
+		ResourceVersion: w.resourceVersion,
+	})
+	if err != nil {
+		return nil, err
+	}
+	for idx := range lo.Items {
+		ret = append(ret, &lo.Items[idx])
+	}
+	return ret, nil
+}
+
+func (w *wrapper) Get(name string) (*apiseventingv1.Broker, error) {
+	return w.client.EventingV1().Brokers(w.namespace).Get(context.TODO(), name, metav1.GetOptions{
+		ResourceVersion: w.resourceVersion,
+	})
 }

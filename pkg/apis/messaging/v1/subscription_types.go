@@ -61,9 +61,9 @@ var (
 // SubscriptionSpec specifies the Channel for incoming events, a Subscriber target
 // for processing those events and where to put the result of the processing. Only
 // From (where the events are coming from) is always required. You can optionally
-// only Process the events (results in no output events) by leaving out the Result.
+// only Process the events (results in no output events) by leaving out the Reply.
 // You can also perform an identity transformation on the incoming events by leaving
-// out the Subscriber and only specifying Result.
+// out the Subscriber and only specifying Reply.
 //
 // The following are all valid specifications:
 // channel --[subscriber]--> reply
@@ -128,9 +128,9 @@ type SubscriptionStatusPhysicalSubscription struct {
 	// +optional
 	ReplyURI *apis.URL `json:"replyUri,omitempty"`
 
-	// ReplyURI is the fully resolved URI for the spec.delivery.deadLetterSink.
-	// +optional
-	DeadLetterSinkURI *apis.URL `json:"deadLetterSinkUri,omitempty"`
+	// DeliveryStatus contains a resolved URL to the dead letter sink address, and any other
+	// resolved delivery options.
+	eventingduckv1.DeliveryStatus `json:",inline"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

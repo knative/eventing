@@ -53,7 +53,7 @@ const (
 // NewImpl returns a controller.Impl that handles queuing and feeding work from
 // the queue through an implementation of controller.Reconciler, delegating to
 // the provided Interface and optional Finalizer methods. OptionsFn is used to return
-// controller.Options to be used by the internal reconciler.
+// controller.ControllerOptions to be used by the internal reconciler.
 func NewImpl(ctx context.Context, r Interface, classValue string, optionsFns ...controller.OptionsFn) *controller.Impl {
 	logger := logging.FromContext(ctx)
 
@@ -66,6 +66,8 @@ func NewImpl(ctx context.Context, r Interface, classValue string, optionsFns ...
 
 	lister := brokerInformer.Lister()
 
+	var promoteFilterFunc func(obj interface{}) bool
+
 	rec := &reconcilerImpl{
 		LeaderAwareFuncs: reconciler.LeaderAwareFuncs{
 			PromoteFunc: func(bkt reconciler.Bucket, enq func(reconciler.Bucket, types.NamespacedName)) error {
@@ -74,7 +76,11 @@ func NewImpl(ctx context.Context, r Interface, classValue string, optionsFns ...
 					return err
 				}
 				for _, elt := range all {
-					// TODO: Consider letting users specify a filter in options.
+					if promoteFilterFunc != nil {
+						if ok := promoteFilterFunc(elt); !ok {
+							continue
+						}
+					}
 					enq(bkt, types.NamespacedName{
 						Namespace: elt.GetNamespace(),
 						Name:      elt.GetName(),
@@ -99,7 +105,7 @@ func NewImpl(ctx context.Context, r Interface, classValue string, optionsFns ...
 		zap.String(logkey.Kind, "eventing.knative.dev.Broker"),
 	)
 
-	impl := controller.NewImpl(rec, logger, ctrTypeName)
+	impl := controller.NewContext(ctx, rec, controller.ControllerOptions{WorkQueueName: ctrTypeName, Logger: logger})
 	agentName := defaultControllerAgentName
 
 	// Pass impl to the options. Save any optional results.
@@ -119,6 +125,9 @@ func NewImpl(ctx context.Context, r Interface, classValue string, optionsFns ...
 		}
 		if opts.DemoteFunc != nil {
 			rec.DemoteFunc = opts.DemoteFunc
+		}
+		if opts.PromoteFilterFunc != nil {
+			promoteFilterFunc = opts.PromoteFilterFunc
 		}
 	}
 

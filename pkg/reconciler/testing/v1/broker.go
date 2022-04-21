@@ -15,9 +15,11 @@ package testing
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	eventingv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/apis/eventing"
 	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/broker"
@@ -103,6 +105,11 @@ func WithBrokerAddressURI(uri *apis.URL) BrokerOption {
 
 // WithBrokerReady sets .Status to ready.
 func WithBrokerReady(b *v1.Broker) {
+	b.Status = *v1.TestHelper.ReadyBrokerStatusWithoutDLS()
+}
+
+// WithBrokerReady sets .Status to ready with the DLS defined.
+func WithBrokerReadyWithDLS(b *v1.Broker) {
 	b.Status = *v1.TestHelper.ReadyBrokerStatus()
 }
 
@@ -166,6 +173,12 @@ func WithChannelAddressAnnotation(address string) BrokerOption {
 	}
 }
 
+func WithBrokerStatusDLSURI(dlsURI *apis.URL) BrokerOption {
+	return func(b *v1.Broker) {
+		b.Status.MarkDeadLetterSinkResolvedSucceeded(dlsURI)
+	}
+}
+
 func WithChannelAPIVersionAnnotation(apiVersion string) BrokerOption {
 	return func(b *v1.Broker) {
 		if b.Status.Annotations == nil {
@@ -190,5 +203,53 @@ func WithChannelNameAnnotation(name string) BrokerOption {
 			b.Status.Annotations = make(map[string]string, 1)
 		}
 		b.Status.Annotations[eventing.BrokerChannelNameStatusAnnotationKey] = name
+	}
+}
+
+func WithDeadLeaderSink(ref *duckv1.KReference, uri string) BrokerOption {
+	return func(b *v1.Broker) {
+		if b.Spec.Delivery == nil {
+			b.Spec.Delivery = new(eventingv1.DeliverySpec)
+		}
+		var u *apis.URL
+		if uri != "" {
+			u, _ = apis.ParseURL(uri)
+		}
+		b.Spec.Delivery.DeadLetterSink = &duckv1.Destination{
+			Ref: ref,
+			URI: u,
+		}
+	}
+}
+
+func WithBrokerDeliveryRetries(retry int32) BrokerOption {
+	return func(b *v1.Broker) {
+		if b.Spec.Delivery == nil {
+			b.Spec.Delivery = new(eventingv1.DeliverySpec)
+		}
+		b.Spec.Delivery.Retry = &retry
+	}
+}
+
+func WithAddressableUnknown() BrokerOption {
+	return func(b *v1.Broker) {
+		b.Status.MarkBrokerAddressableUnknown("", "")
+	}
+}
+
+func WithDLSResolvedFailed() BrokerOption {
+	return func(b *v1.Broker) {
+		b.Status.MarkDeadLetterSinkResolvedFailed(
+			"Unable to get the DeadLetterSink's URI",
+			fmt.Sprintf(`brokers.eventing.knative.dev "%s" not found`,
+				b.Spec.Delivery.DeadLetterSink.Ref.Name,
+			),
+		)
+	}
+}
+
+func WithDLSNotConfigured() BrokerOption {
+	return func(b *v1.Broker) {
+		b.Status.MarkDeadLetterSinkNotConfigured()
 	}
 }

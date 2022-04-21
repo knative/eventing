@@ -18,10 +18,21 @@ package v1
 
 import (
 	"context"
+
+	"knative.dev/pkg/apis"
 )
 
 func (s *Subscription) SetDefaults(ctx context.Context) {
+	if s == nil {
+		return
+	}
+	ctx = apis.WithinParent(ctx, s.ObjectMeta)
 	s.Spec.SetDefaults(ctx)
 }
 
-func (ss *SubscriptionSpec) SetDefaults(ctx context.Context) {}
+func (ss *SubscriptionSpec) SetDefaults(ctx context.Context) {
+	if ss == nil {
+		return
+	}
+	ss.Delivery.SetDefaults(ctx)
+}

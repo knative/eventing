@@ -17,11 +17,29 @@ limitations under the License.
 package upgrade
 
 import (
+	testlib "knative.dev/eventing/test/lib"
+	"knative.dev/pkg/test/migrate"
 	pkgupgrade "knative.dev/pkg/test/upgrade"
 )
 
-func PostUpgradeTest() pkgupgrade.Operation {
+func SmokePostUpgradeTest() pkgupgrade.Operation {
 	return pkgupgrade.NewOperation("EventingPostUpgradeTest", func(c pkgupgrade.Context) {
 		runSmokeTest(c.T)
 	})
+}
+
+func CRDPostUpgradeTest() pkgupgrade.Operation {
+	return pkgupgrade.NewOperation("PostUpgradeCRDTest", func(c pkgupgrade.Context) {
+		client := testlib.Setup(c.T, true)
+		defer testlib.TearDown(client)
+		migrate.ExpectSingleStoredVersion(c.T, client.Apiextensions.CustomResourceDefinitions(), "knative.dev")
+	})
+}
+
+// PostUpgradeTests is an umbrella function for grouping all Eventing post-upgrade tests.
+func PostUpgradeTests() []pkgupgrade.Operation {
+	return []pkgupgrade.Operation{
+		SmokePostUpgradeTest(),
+		CRDPostUpgradeTest(),
+	}
 }

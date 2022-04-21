@@ -96,7 +96,7 @@ type ParallelBranch struct {
 	Reply *duckv1.Destination `json:"reply,omitempty"`
 
 	// Delivery is the delivery specification for events to the subscriber
-	// This includes things like retries, DLQ, etc.
+	// This includes things like retries, DLS, etc.
 	// +optional
 	Delivery *eventingduckv1.DeliverySpec `json:"delivery,omitempty"`
 }

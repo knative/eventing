@@ -31,74 +31,109 @@ func TestContainerSourceValidation(t *testing.T) {
 		name string
 		spec ContainerSourceSpec
 		want *apis.FieldError
-	}{{
-		name: "missing container",
-		spec: ContainerSourceSpec{
-			Template: corev1.PodTemplateSpec{},
-			SourceSpec: duckv1.SourceSpec{
-				Sink: duckv1.Destination{
-					Ref: &duckv1.KReference{
-						APIVersion: "v1",
-						Kind:       "Broker",
-						Name:       "default",
+	}{
+		{
+			name: "missing container",
+			spec: ContainerSourceSpec{
+				Template: corev1.PodTemplateSpec{},
+				SourceSpec: duckv1.SourceSpec{
+					Sink: duckv1.Destination{
+						Ref: &duckv1.KReference{
+							APIVersion: "v1",
+							Kind:       "Broker",
+							Name:       "default",
+						},
 					},
 				},
 			},
-		},
-		want: func() *apis.FieldError {
-			var errs *apis.FieldError
-			fe := apis.ErrMissingField("containers")
-			errs = errs.Also(fe)
-			return errs
-		}(),
-	}, {
-		name: "missing container image",
-		spec: ContainerSourceSpec{
-			Template: corev1.PodTemplateSpec{
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{{
-						Name: "test-name",
-					}},
+			want: func() *apis.FieldError {
+				var errs *apis.FieldError
+				fe := apis.ErrMissingField("containers")
+				errs = errs.Also(fe)
+				return errs
+			}(),
+		}, {
+			name: "missing container image",
+			spec: ContainerSourceSpec{
+				Template: corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{{
+							Name: "test-name",
+						}},
+					},
 				},
-			},
-			SourceSpec: duckv1.SourceSpec{
-				Sink: duckv1.Destination{
-					Ref: &duckv1.KReference{
-						APIVersion: "eventing.knative.dev/v1",
-						Kind:       "Broker",
-						Name:       "default",
+				SourceSpec: duckv1.SourceSpec{
+					Sink: duckv1.Destination{
+						Ref: &duckv1.KReference{
+							APIVersion: "eventing.knative.dev/v1",
+							Kind:       "Broker",
+							Name:       "default",
+						},
 					},
 				},
 			},
-		},
-		want: func() *apis.FieldError {
-			var errs *apis.FieldError
-			fe := apis.ErrMissingField("containers[0].image")
-			errs = errs.Also(fe)
-			return errs
-		}(),
-	}, {
-		name: "empty sink",
-		spec: ContainerSourceSpec{
-			Template: corev1.PodTemplateSpec{
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{{
-						Name:  "name",
-						Image: "image",
-					}},
+			want: func() *apis.FieldError {
+				var errs *apis.FieldError
+				fe := apis.ErrMissingField("containers[0].image")
+				errs = errs.Also(fe)
+				return errs
+			}(),
+		}, {
+			name: "empty sink",
+			spec: ContainerSourceSpec{
+				Template: corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{{
+							Name:  "name",
+							Image: "image",
+						}},
+					},
+				},
+				SourceSpec: duckv1.SourceSpec{
+					Sink: duckv1.Destination{},
 				},
 			},
-			SourceSpec: duckv1.SourceSpec{
-				Sink: duckv1.Destination{},
+			want: func() *apis.FieldError {
+				var errs *apis.FieldError
+				fe := apis.ErrGeneric("expected at least one, got none", "sink.ref", "sink.uri")
+				errs = errs.Also(fe)
+				return errs
+			}(),
+		}, {
+			name: "invalid spec ceOverrides validation",
+			spec: ContainerSourceSpec{
+				Template: corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{{
+							Name:  "name",
+							Image: "image",
+						}},
+					},
+				},
+				SourceSpec: duckv1.SourceSpec{
+					CloudEventOverrides: &duckv1.CloudEventOverrides{
+						Extensions: map[string]string{"Invalid_type": "any value"},
+					},
+					Sink: duckv1.Destination{
+						Ref: &duckv1.KReference{
+							APIVersion: "v1",
+							Kind:       "broker",
+							Name:       "default",
+						},
+					},
+				},
 			},
+			want: func() *apis.FieldError {
+				var errs *apis.FieldError
+				fe := apis.ErrInvalidKeyName(
+					"Invalid_type",
+					"ceOverrides.extensions",
+					"keys are expected to be alphanumeric",
+				)
+				errs = errs.Also(fe)
+				return errs
+			}(),
 		},
-		want: func() *apis.FieldError {
-			var errs *apis.FieldError
-			fe := apis.ErrGeneric("expected at least one, got none", "sink.ref", "sink.uri")
-			errs = errs.Also(fe)
-			return errs
-		}(),
-	},
 	}
 
 	for _, test := range tests {

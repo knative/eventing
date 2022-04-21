@@ -202,15 +202,9 @@ function install_head {
 function install_latest_release() {
   header ">> Installing Knative Eventing latest public release"
 
-  # Delete InMemoryController Webhook for downgrade 0.22 from 0.23.
-  kubectl delete ValidatingWebhookConfiguration validation.inmemorychannel.eventing.knative.dev || true
-  kubectl delete MutatingWebhookConfiguration inmemorychannel.eventing.knative.dev || true
-
   install_knative_eventing \
     "latest-release" || \
     fail_test "Knative latest release installation failed"
-
-
 }
 
 function install_mt_broker() {
@@ -333,7 +327,7 @@ function install_channel_crds() {
   if [[ -z "${EVENTING_IN_MEMORY_CHANNEL_YAML:-}" ]]; then
     build_knative_from_source
   else
-    echo "use exist EVENTING_SUGAR_CONTROLLER_YAML"
+    echo "use existing ${EVENTING_IN_MEMORY_CHANNEL_YAML}"
   fi
   local EVENTING_IN_MEMORY_CHANNEL_NAME=${TMP_DIR}/${EVENTING_IN_MEMORY_CHANNEL_YAML##*/}
   sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" ${EVENTING_IN_MEMORY_CHANNEL_YAML} > ${EVENTING_IN_MEMORY_CHANNEL_NAME}

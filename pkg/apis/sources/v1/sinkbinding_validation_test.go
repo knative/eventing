@@ -110,6 +110,42 @@ func TestSinkBindingValidation(t *testing.T) {
 			},
 		},
 		want: apis.ErrGeneric("expected at least one, got none", "spec.sink.ref", "spec.sink.uri"),
+	}, {
+		name: "invalid spec ceOverrides validation",
+		in: &SinkBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gabo",
+				Namespace: "test",
+			},
+			Spec: SinkBindingSpec{
+				BindingSpec: duckv1.BindingSpec{
+					Subject: tracker.Reference{
+						APIVersion: "apps/v1",
+						Kind:       "Deployment",
+						Name:       "jeanne",
+						Namespace:  "test",
+					},
+				},
+				SourceSpec: duckv1.SourceSpec{
+					CloudEventOverrides: &duckv1.CloudEventOverrides{
+						Extensions: map[string]string{"Invalid_type": "any value"},
+					},
+					Sink: duckv1.Destination{
+						Ref: &duckv1.KReference{
+							APIVersion: "serving.knative.dev/v1",
+							Kind:       "Service",
+							Name:       "gemma",
+							Namespace:  "test",
+						},
+					},
+				},
+			},
+		},
+		want: apis.ErrInvalidKeyName(
+			"Invalid_type",
+			"spec.ceOverrides.extensions",
+			"keys are expected to be alphanumeric",
+		),
 	}}
 
 	for _, test := range tests {

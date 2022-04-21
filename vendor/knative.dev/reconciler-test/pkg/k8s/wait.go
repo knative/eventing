@@ -18,8 +18,8 @@ package k8s
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"log"
 	"strings"
 	"time"
 
@@ -35,11 +35,12 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/injection/clients/dynamicclient"
+
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"
 )
 
-// PollTimings will find the the correct timings based on priority:
+// PollTimings will find the correct timings based on priority:
 // - passed timing slice [interval, timeout].
 // - values from from context.
 // - defaults.
@@ -66,7 +67,7 @@ func PollTimings(ctx context.Context, timings []time.Duration) (time.Duration /*
 
 // WaitForReadyOrDone will wait for a resource to become ready or succeed.
 // Timing is optional but if provided is [interval, timeout].
-func WaitForReadyOrDone(ctx context.Context, ref corev1.ObjectReference, timing ...time.Duration) error {
+func WaitForReadyOrDone(ctx context.Context, t feature.T, ref corev1.ObjectReference, timing ...time.Duration) error {
 	interval, timeout := PollTimings(ctx, timing)
 
 	k := ref.GroupVersionKind()
@@ -74,14 +75,14 @@ func WaitForReadyOrDone(ctx context.Context, ref corev1.ObjectReference, timing 
 
 	switch gvr.Resource {
 	case "jobs":
-		err := WaitUntilJobDone(ctx, kubeclient.Get(ctx), ref.Namespace, ref.Name, interval, timeout)
+		err := WaitUntilJobDone(ctx, t, kubeclient.Get(ctx), ref.Namespace, ref.Name, interval, timeout)
 		if err != nil {
 			return err
 		}
 		return nil
 
 	default:
-		err := WaitForResourceReady(ctx, ref.Namespace, ref.Name, gvr, interval, timeout)
+		err := WaitForResourceReady(ctx, t, ref.Namespace, ref.Name, gvr, interval, timeout)
 		if err != nil {
 			return err
 		}
@@ -92,10 +93,25 @@ func WaitForReadyOrDone(ctx context.Context, ref corev1.ObjectReference, timing 
 
 // WaitForResourceReady waits until the specified resource in the given namespace are ready.
 // Timing is optional but if provided is [interval, timeout].
-func WaitForResourceReady(ctx context.Context, namespace, name string, gvr schema.GroupVersionResource, timing ...time.Duration) error {
+func WaitForResourceReady(ctx context.Context, t feature.T, namespace, name string, gvr schema.GroupVersionResource, timing ...time.Duration) error {
+	return WaitForResourceCondition(ctx, t, namespace, name, gvr, isReady(t, name), timing...)
+}
+
+// WaitForResourceNotReady waits until the specified resource in the given namespace is not ready.
+// Only the top level ready condition is considered (internal `happy` condition of knative.dev/pkg).
+// Timing is optional but if provided is [interval, timeout].
+func WaitForResourceNotReady(ctx context.Context, t feature.T, namespace, name string, gvr schema.GroupVersionResource, timing ...time.Duration) error {
+	return WaitForResourceCondition(ctx, t, namespace, name, gvr, isNotReady(t, name), timing...)
+}
+
+// ConditionFunc is a function that determines whether a condition on a resource is satisfied.
+type ConditionFunc func(resource duckv1.KResource) bool
+
+// WaitForResourceCondition waits until the specified resource in the given namespace satisfies a given condition.
+// Timing is optional but if provided is [interval, timeout].
+func WaitForResourceCondition(ctx context.Context, t feature.T, namespace, name string, gvr schema.GroupVersionResource, condition ConditionFunc, timing ...time.Duration) error {
 	interval, timeout := PollTimings(ctx, timing)
 
-	lastMsg := ""
 	like := &duckv1.KResource{}
 	return wait.PollImmediate(interval, timeout, func() (bool, error) {
 		client := dynamicclient.Get(ctx)
@@ -103,7 +119,7 @@ func WaitForResourceReady(ctx context.Context, namespace, name string, gvr schem
 		us, err := client.Resource(gvr).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			if apierrors.IsNotFound(err) {
-				log.Println(namespace, name, "not found", err)
+				t.Log(namespace, name, "not found", err)
 				// keep polling
 				return false, nil
 			}
@@ -111,34 +127,40 @@ func WaitForResourceReady(ctx context.Context, namespace, name string, gvr schem
 		}
 		obj := like.DeepCopy()
 		if err = runtime.DefaultUnstructuredConverter.FromUnstructured(us.Object, obj); err != nil {
-			log.Fatalf("Error DefaultUnstructuree.Dynamiconverter. %v", err)
+			t.Fatalf("Error DefaultUnstructured.Dynamiconverter. %v", err)
 		}
 		obj.ResourceVersion = gvr.Version
 		obj.APIVersion = gvr.GroupVersion().String()
 
 		// First see if the resource has conditions.
 		if len(obj.Status.Conditions) == 0 {
+			t.Log("Resource has no conditions")
 			return false, nil // keep polling
 		}
 
-		// Ready type.
-		ready := obj.Status.GetCondition(apis.ConditionReady)
-		if ready != nil {
-			// Succeeded type.
-			ready = obj.Status.GetCondition(apis.ConditionSucceeded)
+		// Verify condition.
+		return condition(*obj), nil
+	})
+}
+
+func isReady(t feature.T, name string) ConditionFunc {
+	lastMsg := ""
+	return func(obj duckv1.KResource) bool {
+		if obj.Generation != obj.GetStatus().ObservedGeneration {
+			return false
 		}
-		// Test Ready or Succeeded.
+		ready := readyCondition(obj)
 		if ready != nil {
 			if !ready.IsTrue() {
-				msg := fmt.Sprintf("%s is not %s, %s: %s", name, ready.Type, ready.Reason, ready.Message)
+				msg := fmt.Sprintf("%s is not %s\n\nResource: %s\n", name, ready.Type, resource(obj))
 				if msg != lastMsg {
-					log.Println(msg)
+					t.Log(msg)
 					lastMsg = msg
 				}
 			}
 
-			log.Printf("%s is %s, %s: %s\n", name, ready.Type, ready.Reason, ready.Message)
-			return ready.IsTrue(), nil
+			t.Logf("%s is %s, %s: %s\n", name, ready.Type, ready.Reason, ready.Message)
+			return ready.IsTrue()
 		}
 
 		// Last resort, look at all conditions.
@@ -147,17 +169,53 @@ func WaitForResourceReady(ctx context.Context, namespace, name string, gvr schem
 		allReady := true
 		for _, c := range obj.Status.Conditions {
 			if !c.IsTrue() {
-				msg := fmt.Sprintf("%s is not %s, %s: %s", name, c.Type, c.Reason, c.Message)
+				msg := fmt.Sprintf("%s is not %s, %s: %s\n\nResource: %s\n", name, c.Type, c.Reason, c.Message, resource(obj))
 				if msg != lastMsg {
-					log.Println(msg)
+					t.Log(msg)
 					lastMsg = msg
 				}
 				allReady = false
 				break
 			}
 		}
-		return allReady, nil
-	})
+		return allReady
+	}
+}
+
+func isNotReady(t feature.T, name string) ConditionFunc {
+	lastMsg := ""
+	return func(obj duckv1.KResource) bool {
+		ready := readyCondition(obj)
+		if ready == nil {
+			msg := fmt.Sprintf("%s hasn't any of %s or %s conditions\n\nResource: %s\n", name, apis.ConditionReady, apis.ConditionSucceeded, resource(obj))
+			if msg != lastMsg {
+				t.Log(msg)
+				lastMsg = msg
+			}
+			return false
+		}
+		t.Logf("%s is %s, %s: %s\n\nResource: %s\n", name, ready.Type, ready.Reason, ready.Message, resource(obj))
+		return ready.IsFalse()
+	}
+}
+
+func resource(obj duckv1.KResource) string {
+	resource, err := json.MarshalIndent(obj, " ", " ")
+	if err != nil {
+		resource = []byte(err.Error())
+	}
+	return string(resource)
+}
+
+// readyCondition returns Ready or Succeeded condition.
+func readyCondition(obj duckv1.KResource) *apis.Condition {
+	// Ready type.
+	ready := obj.Status.GetCondition(apis.ConditionReady)
+	if ready != nil {
+		return ready
+	}
+	// Succeeded type.
+	return obj.Status.GetCondition(apis.ConditionSucceeded)
 }
 
 // WaitForServiceEndpointsOrFail polls the status of the specified Service

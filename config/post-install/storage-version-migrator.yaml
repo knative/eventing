@@ -15,15 +15,10 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  # Adding a prefix to avoid naming conflict with previous version's post-install jobs,
-  # we cannot use `generateName` here as it's not supported by `kubectl apply -f`
-  #
-  # If `ttlSecondsAfterFinished` feature gate becomes generally available in the future,
-  # we can rely on that and keep using the same Job name.
-  name: v0.23-storage-version-migration
+  generateName: storage-version-migration-eventing-
   namespace: knative-eventing
   labels:
-    app: "storage-version-migration"
+    app: "storage-version-migration-eventing"
     eventing.knative.dev/release: devel
 spec:
   ttlSecondsAfterFinished: 600
@@ -31,7 +26,7 @@ spec:
   template:
     metadata:
       labels:
-        app: "storage-version-migration"
+        app: "storage-version-migration-eventing"
         eventing.knative.dev/release: devel
       annotations:
         sidecar.istio.io/inject: "false"
@@ -42,4 +37,23 @@ spec:
         - name: migrate
           image: ko://knative.dev/eventing/vendor/knative.dev/pkg/apiextensions/storageversion/cmd/migrate
           args:
+            - "apiserversources.sources.knative.dev"
+            - "brokers.eventing.knative.dev"
+            - "channels.messaging.knative.dev"
+            - "containersources.sources.knative.dev"
+            - "eventtypes.eventing.knative.dev"
+            - "inmemorychannels.messaging.knative.dev"
+            - "parallels.flows.knative.dev"
             - "pingsources.sources.knative.dev"
+            - "sequences.flows.knative.dev"
+            - "sinkbindings.sources.knative.dev"
+            - "subscriptions.messaging.knative.dev"
+            - "triggers.eventing.knative.dev"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop:
+              - all
+

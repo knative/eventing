@@ -63,13 +63,14 @@ type Handler struct {
 	// reporter reports stats of status code and dispatch time
 	reporter StatsReporter
 
-	triggerLister eventinglisters.TriggerLister
-	logger        *zap.Logger
+	triggerLister      eventinglisters.TriggerLister
+	logger             *zap.Logger
+	ignoreResponseBody bool
 }
 
 // NewHandler creates a new Handler and its associated MessageReceiver. The caller is responsible for
 // Start()ing the returned Handler.
-func NewHandler(logger *zap.Logger, triggerLister eventinglisters.TriggerLister, reporter StatsReporter, port int) (*Handler, error) {
+func NewHandler(logger *zap.Logger, triggerLister eventinglisters.TriggerLister, reporter StatsReporter, port int, ignoreResponseBody bool) (*Handler, error) {
 	kncloudevents.ConfigureConnectionArgs(&kncloudevents.ConnectionArgs{
 		MaxIdleConns:        defaultMaxIdleConnections,
 		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
@@ -81,11 +82,12 @@ func NewHandler(logger *zap.Logger, triggerLister eventinglisters.TriggerLister,
 	}
 
 	return &Handler{
-		receiver:      kncloudevents.NewHTTPMessageReceiver(port),
-		sender:        sender,
-		reporter:      reporter,
-		triggerLister: triggerLister,
-		logger:        logger,
+		receiver:           kncloudevents.NewHTTPMessageReceiver(port),
+		sender:             sender,
+		reporter:           reporter,
+		triggerLister:      triggerLister,
+		logger:             logger,
+		ignoreResponseBody: ignoreResponseBody,
 	}, nil
 }
 
@@ -105,6 +107,7 @@ func (h *Handler) Start(ctx context.Context) error {
 // 5. send event to trigger's subscriber
 // 6. write the response
 func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
+	writer.Header().Set("Allow", "POST")
 
 	if request.Method != http.MethodPost {
 		writer.WriteHeader(http.StatusMethodNotAllowed)
@@ -150,7 +153,7 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 		// event wasn't sent by the Broker, so we can drop it.
 		h.logger.Warn("No TTL seen, dropping", zap.Any("triggerRef", triggerRef), zap.Any("event", event))
 		// Return a BadRequest error, so the upstream can decide how to handle it, e.g. sending
-		// the message to a DLQ.
+		// the message to a Dead Letter Sink.
 		writer.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -228,6 +231,10 @@ func (h *Handler) sendEvent(ctx context.Context, headers http.Header, target str
 	defer message.Finish(nil)
 
 	additionalHeaders := utils.PassThroughHeaders(headers)
+
+	// Following the spec https://github.com/knative/specs/blob/main/specs/eventing/data-plane.md#derived-reply-events
+	additionalHeaders.Set("prefer", "reply")
+
 	err = kncloudevents.WriteHTTPRequestWithAdditionalHeaders(ctx, message, req, additionalHeaders)
 	if err != nil {
 		return nil, fmt.Errorf("failed to write request: %w", err)
@@ -263,12 +270,13 @@ func (h *Handler) writeResponse(ctx context.Context, writer http.ResponseWriter,
 		body := make([]byte, 1)
 		n, _ := response.BodyReader.Read(body)
 		response.BodyReader.Close()
-		if n != 0 {
+		if n != 0 && !h.ignoreResponseBody {
 			// Note that we could just use StatusInternalServerError, but to distinguish
 			// between the failure cases, we use a different code here.
 			writer.WriteHeader(http.StatusBadGateway)
 			return http.StatusBadGateway, errors.New("received a non-empty response not recognized as CloudEvent. The response MUST be either empty or a valid CloudEvent")
 		}
+		proxyHeaders(resp.Header, writer) // Proxy original Response Headers for downstream use
 		h.logger.Debug("Response doesn't contain a CloudEvent, replying with an empty response", zap.Any("target", target))
 		writer.WriteHeader(resp.StatusCode)
 		return resp.StatusCode, nil
@@ -291,6 +299,9 @@ func (h *Handler) writeResponse(ctx context.Context, writer http.ResponseWriter,
 
 	eventResponse := binding.ToMessage(event)
 	defer eventResponse.Finish(nil)
+
+	// Proxy the original Response Headers for downstream use
+	proxyHeaders(resp.Header, writer)
 
 	if err := cehttp.WriteResponseWriter(ctx, eventResponse, resp.StatusCode, writer); err != nil {
 		return http.StatusInternalServerError, fmt.Errorf("failed to write response event: %w", err)
@@ -346,4 +357,13 @@ func triggerFilterAttribute(filter *eventingv1.TriggerFilter, attributeName stri
 		}
 	}
 	return attributeValue
+}
+
+// proxyHeaders adds the specified HTTP Headers to the ResponseWriter.
+func proxyHeaders(httpHeader http.Header, writer http.ResponseWriter) {
+	for headerKey, headerValues := range httpHeader {
+		for _, headerValue := range headerValues {
+			writer.Header().Add(headerKey, headerValue)
+		}
+	}
 }

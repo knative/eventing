@@ -15,6 +15,7 @@ package testing
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"k8s.io/apimachinery/pkg/types"
@@ -143,5 +144,28 @@ func WithChannelReadySubscriberAndGeneration(uid string, observedGeneration int6
 func WithChannelSubscriberStatuses(subscriberStatuses []eventingduckv1.SubscriberStatus) ChannelOption {
 	return func(c *eventingv1.Channel) {
 		c.Status.Subscribers = subscriberStatuses
+	}
+}
+
+func WithChannelStatusDLSURI(dlsURI *apis.URL) ChannelOption {
+	return func(c *eventingv1.Channel) {
+		c.Status.MarkDeadLetterSinkResolvedSucceeded(dlsURI)
+	}
+}
+
+func WithChannelDLSUnknown() ChannelOption {
+	return func(c *eventingv1.Channel) {
+		c.Status.MarkDeadLetterSinkNotConfigured()
+	}
+}
+
+func WithChannelDLSResolvedFailed() ChannelOption {
+	return func(c *eventingv1.Channel) {
+		c.Status.MarkDeadLetterSinkResolvedFailed(
+			"Unable to get the DeadLetterSink's URI",
+			fmt.Sprintf(`services "%s" not found`,
+				c.Spec.Delivery.DeadLetterSink.Ref.Name,
+			),
+		)
 	}
 }
