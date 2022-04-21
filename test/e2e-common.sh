@@ -255,6 +255,8 @@ function knative_teardown() {
   done
   kubectl delete --ignore-not-found=true namespace "${SYSTEM_NAMESPACE}"
   wait_until_object_does_not_exist namespaces "${SYSTEM_NAMESPACE}"
+  kubectl delete --ignore-not-found=true namespace 'knative-monitoring'
+  wait_until_object_does_not_exist namespaces 'knative-monitoring'
 }
 
 # Add function call to trap
