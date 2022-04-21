@@ -440,7 +440,7 @@ func TestReceiver(t *testing.T) {
 				func(ctx context.Context) context.Context {
 					return ctx
 				},
-			)
+				false)
 			if tc.expectNewToFail {
 				if err == nil {
 					t.Fatal("Expected New to fail, it didn't")
@@ -617,7 +617,8 @@ func TestReceiver_WithSubscriptionsAPI(t *testing.T) {
 					return feature.ToContext(context.TODO(), feature.Flags{
 						feature.NewTriggerFilters: feature.Enabled,
 					})
-				})
+				},
+				false)
 			if err != nil {
 				t.Fatal("Unable to create receiver:", err)
 			}
