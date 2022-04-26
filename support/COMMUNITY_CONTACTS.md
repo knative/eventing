@@ -87,18 +87,6 @@ ROSTER=$(cat support/ROSTER support/VOLUNTEERS)
 echo ${ROSTER} | sed 's/ /\n/g' | sort | uniq | sort -R
 ```
 
-- [antoineco](https://github.com/antoineco)
-- [lionelvillard](https://github.com/lionelvillard)
-- [matzew](https://github.com/matzew)
-- [lberk](https://github.com/lberk)
-- [pierDipi](https://github.com/pierDipi)
-- [aliok](https://github.com/aliok)
-- [aslom](https://github.com/aslom)
-- [devguyio](https://github.com/devguyio)
-- [benmoss](https://github.com/benmoss)
-- [odacremolbap](https://github.com/odacremolbap)
-- [gabo1208](https://github.com/gabo1208)
-
 # Schedule
 
 See [a machine-readable schedule here](support.rotation). The format is:
