@@ -37,9 +37,10 @@ To run a benchmark continuously, and make the result available on
 
 1.  Use `ko` to apply yaml files in the benchmark directory.
 
-    ```
-    ko apply -f test/performance/benchmarks/broker-imc/continuous
-    ```
+
+   ```
+   ko apply -f test/performance/benchmarks/broker-imc/200-broker-imc-continuous-load-setup.yaml
+   ```
 
 ### Run without Mako
 
@@ -54,7 +55,7 @@ To run a benchmark once, and use the result from `mako-stub` for plotting:
 1. Start the benchmarking job:
 
    ```
-   ko apply -f test/performance/benchmarks/broker-imc/200-broker-perf.yaml
+   ko apply -f test/performance/benchmarks/broker-imc/300-broker-imc-increasing-load-setup.yaml
    ```
 
 1. Wait until all the pods in namespace `perf-eventing` are completed.
@@ -93,8 +94,11 @@ combined plot script, you need to specify also latency upper bound, thpt lower
 and upper bound to show. For example:
 
 ```
-gnuplot -c test/performance/latency-and-thpt-plot.plg data.csv 0.005 480 520
+gnuplot -c test/performance/latency-and-thpt-plot.plg data.csv 0.5 0 1100
 ```
+
+> * `0.5` is the time in seconds, and it is the max allowed size for the y1 axis
+> * `0` and `1100` are the message throughput, and it they represent the min and max boundaries of the y2 axis
 
 ## Profiling
 

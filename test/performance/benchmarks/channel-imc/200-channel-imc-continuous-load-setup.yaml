@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-apiVersion: batch/v1beta1
+apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: broker-imc-sender-receiver
-  namespace: default
+  name: channel-imc-sender-receiver
+  namespace: perf-eventing
 spec:
   schedule: "0/15 * * * *"
   # History must be zero to ensure no failed pods stick around and block the next job
@@ -32,7 +32,7 @@ spec:
       template:
         metadata:
           labels:
-            role: broker-imc-receiver
+            role: channel-imc-consumer
         spec:
           serviceAccountName: perf-eventing
           restartPolicy: Never
@@ -41,12 +41,12 @@ spec:
               image: ko://knative.dev/eventing/test/test_images/performance
               args:
                 - "--roles=sender"
-                - "--sink=http://broker-ingress.knative-eventing.svc.cluster.local/perf-eventing/in-memory-test-broker"
-                - "--aggregator=broker-imc-aggregator:10000"
-                - "--pace=100:10,400:20,800:30,900:60,1000:60,1100:60,1200:60"
+                - "--aggregator=channel-imc-aggregator:10000"
+                - "--sink=http://channel-imc-kn-channel.perf-eventing.svc.cluster.local"
+                - "--pace=100:10,400:20,800:30,900:60,1000:60,1100:60,1200:60,1500:60"
               env:
                 - name: GOGC
-                value: "off"
+                  value: "off"
                 - name: POD_NAME
                   valueFrom:
                     fieldRef:
@@ -63,9 +63,11 @@ spec:
               image: ko://knative.dev/eventing/test/test_images/performance
               args:
                 - "--roles=receiver"
-                - "--aggregator=broker-imc-aggregator:10000"
-                - "--pace=100:10,400:20,800:30,900:60,1000:60,1100:60,1200:60"
+                - "--aggregator=channel-imc-aggregator:10000"
+                - "--pace=100:10,400:20,800:30,900:60,1000:60,1100:60,1200:60,1500:60"
               env:
+                - name: GOGC
+                  value: "off"
                 - name: POD_NAME
                   valueFrom:
                     fieldRef:
@@ -84,11 +86,11 @@ spec:
 
 ---
 
-apiVersion: batch/v1beta1
+apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: broker-imc-aggregator
-  namespace: default
+  name: channel-imc-aggregator
+  namespace: perf-eventing
 spec:
   schedule: "0/15 * * * *"
   # History must be zero to ensure no failed pods stick around and block the next job
@@ -104,7 +106,7 @@ spec:
       template:
         metadata:
           labels:
-            role: broker-imc-aggregator
+            role: channel-imc-aggregator
         spec:
           serviceAccountName: perf-eventing
           restartPolicy: Never
@@ -116,17 +118,6 @@ spec:
                 # set to the number of sender + receiver (same image that does both counts 2)
                 - "--expect-records=2"
                 - "--mako-tags=channel=imc"
-              env:
-                - name: GOGC
-                  value: "off"
-                - name: POD_NAME
-                  valueFrom:
-                    fieldRef:
-                      fieldPath: metadata.name
-                - name: POD_NAMESPACE
-                  valueFrom:
-                    fieldRef:
-                      fieldPath: metadata.namespace
               ports:
                 - name: grpc
                   containerPort: 10000
