@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	opencensusclient "github.com/cloudevents/sdk-go/observability/opencensus/v2/client"
@@ -55,6 +56,12 @@ const (
 	defaultMaxIdleConnections        = 1000
 	defaultMaxIdleConnectionsPerHost = 100
 )
+
+// HeaderProxyAllowList contains the headers that are proxied from the reply; other than the CloudEvents headers.
+// Other headers are not proxied because of security concerns.
+var HeaderProxyAllowList = map[string]struct{}{
+	strings.ToLower("Retry-After"): {},
+}
 
 // Handler parses Cloud Events, determines if they pass a filter, and sends them to a subscriber.
 type Handler struct {
@@ -435,8 +442,16 @@ func triggerFilterAttribute(filter *eventingv1.TriggerFilter, attributeName stri
 // proxyHeaders adds the specified HTTP Headers to the ResponseWriter.
 func proxyHeaders(httpHeader http.Header, writer http.ResponseWriter) {
 	for headerKey, headerValues := range httpHeader {
-		for _, headerValue := range headerValues {
-			writer.Header().Add(headerKey, headerValue)
+		// *Only* proxy some headers because of security reasons
+		if isInProxyHeaderAllowList(headerKey) {
+			for _, headerValue := range headerValues {
+				writer.Header().Add(headerKey, headerValue)
+			}
 		}
 	}
+}
+
+func isInProxyHeaderAllowList(headerKey string) bool {
+	_, exists := HeaderProxyAllowList[strings.ToLower(headerKey)]
+	return exists
 }
