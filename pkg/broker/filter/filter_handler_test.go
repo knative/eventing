@@ -70,11 +70,12 @@ type TriggerOption func(trigger *eventingv1.Trigger)
 func TestReceiver(t *testing.T) {
 	testCases := map[string]struct {
 		// input
-		triggers      []*eventingv1.Trigger
-		request       *http.Request
-		event         *cloudevents.Event
-		requestFails  bool
-		failureStatus int
+		triggers               []*eventingv1.Trigger
+		request                *http.Request
+		event                  *cloudevents.Event
+		requestFails           bool
+		failureStatus          int
+		additionalReplyHeaders http.Header
 
 		// expectations
 		expectedResponseEvent       *cloudevents.Event
@@ -382,17 +383,7 @@ func TestReceiver(t *testing.T) {
 			expectedStatus:            http.StatusAccepted,
 			expectedResponse:          makeEmptyResponse(202),
 		},
-		"Proxy CloudEvent expectedResponse headers": {
-			triggers: []*eventingv1.Trigger{
-				makeTrigger(withAttributesFilter(&eventingv1.TriggerFilter{})),
-			},
-			expectedDispatch:          true,
-			expectedEventCount:        true,
-			expectedEventDispatchTime: true,
-			expectedResponseEvent:     makeDifferentEvent(),
-			expectedResponseHeaders:   http.Header{"Test-Header": []string{"TestValue"}},
-		},
-		"Proxy empty non event expectedResponse headers": {
+		"Proxy allowed empty non event response headers": {
 			triggers: []*eventingv1.Trigger{
 				makeTrigger(withAttributesFilter(&eventingv1.TriggerFilter{})),
 			},
@@ -401,6 +392,18 @@ func TestReceiver(t *testing.T) {
 			expectedEventDispatchTime: true,
 			expectedStatus:            http.StatusTooManyRequests,
 			expectedResponse:          makeEmptyResponse(http.StatusTooManyRequests),
+			additionalReplyHeaders:    http.Header{"Retry-After": []string{"10"}},
+			expectedResponseHeaders:   http.Header{"Retry-After": []string{"10"}},
+		},
+		"Do not proxy disallowed response headers": {
+			triggers: []*eventingv1.Trigger{
+				makeTrigger(withAttributesFilter(&eventingv1.TriggerFilter{})),
+			},
+			expectedDispatch:          true,
+			expectedEventCount:        true,
+			expectedEventDispatchTime: true,
+			expectedResponseEvent:     makeDifferentEvent(),
+			additionalReplyHeaders:    http.Header{"Retry-After": []string{"10"}, "Test-Header": []string{"TestValue"}},
 			expectedResponseHeaders:   http.Header{"Retry-After": []string{"10"}},
 		},
 	}
@@ -408,13 +411,13 @@ func TestReceiver(t *testing.T) {
 		t.Run(n, func(t *testing.T) {
 
 			fh := fakeHandler{
-				failRequest:             tc.requestFails,
-				failStatus:              tc.failureStatus,
-				expectedResponseEvent:   tc.expectedResponseEvent,
-				expectedRequestHeaders:  tc.expectedHeaders,
-				t:                       t,
-				expectedResponse:        tc.expectedResponse,
-				expectedResponseHeaders: tc.expectedResponseHeaders,
+				failRequest:            tc.requestFails,
+				failStatus:             tc.failureStatus,
+				expectedResponseEvent:  tc.expectedResponseEvent,
+				expectedRequestHeaders: tc.expectedHeaders,
+				t:                      t,
+				expectedResponse:       tc.expectedResponse,
+				additionalReplyHeaders: tc.additionalReplyHeaders,
 			}
 			s := httptest.NewServer(&fh)
 			defer s.Close()
@@ -501,12 +504,12 @@ func TestReceiver(t *testing.T) {
 			event, err := binding.ToEvent(context.Background(), message)
 			if tc.expectedResponseEvent == nil {
 				if err == nil || event != nil {
-					t.Fatal("Unexpected expectedResponse event:", event)
+					t.Fatal("Unexpected response event:", event)
 				}
 				return
 			}
 			if err != nil || event == nil {
-				t.Fatalf("Expected expectedResponse event, actually nil")
+				t.Fatalf("Expected response event, actually nil")
 			}
 
 			// The TTL will be added again.
@@ -524,10 +527,10 @@ func TestReceiver(t *testing.T) {
 			}
 
 			if diff := cmp.Diff(expectedResponseEvent.Context.AsV1(), event.Context.AsV1()); diff != "" {
-				t.Error("Incorrect expectedResponse event context (-want +got):", diff)
+				t.Error("Incorrect response event context (-want +got):", diff)
 			}
 			if diff := cmp.Diff(expectedResponseEvent.Data(), event.Data()); diff != "" {
-				t.Error("Incorrect expectedResponse event data (-want +got):", diff)
+				t.Error("Incorrect response event data (-want +got):", diff)
 			}
 		})
 	}
@@ -652,7 +655,7 @@ func TestReceiver_WithSubscriptionsAPI(t *testing.T) {
 			message := cehttp.NewMessageFromHttpResponse(response)
 			event, err := binding.ToEvent(context.Background(), message)
 			if err == nil || event != nil {
-				t.Fatal("Unexpected expectedResponse event:", event)
+				t.Fatal("Unexpected response event:", event)
 			}
 		})
 	}
@@ -703,14 +706,15 @@ func (r *mockReporter) ReportEventProcessingTime(args *ReportArgs, d time.Durati
 type fakeHandler struct {
 	t *testing.T
 
-	// expectations
-	failRequest bool
-	failStatus  int
+	// input
+	failRequest            bool
+	failStatus             int
+	additionalReplyHeaders http.Header
 
-	expectedRequestHeaders  http.Header
-	expectedResponseEvent   *cloudevents.Event
-	expectedResponse        *http.Response
-	expectedResponseHeaders http.Header
+	// expectations
+	expectedRequestHeaders http.Header
+	expectedResponseEvent  *cloudevents.Event
+	expectedResponse       *http.Response
 
 	// results
 	requestReceived bool
@@ -747,7 +751,7 @@ func (h *fakeHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	if h.expectedResponseEvent != nil {
 		message := binding.ToMessage(h.expectedResponseEvent)
 		defer message.Finish(nil)
-		for k, v := range h.expectedResponseHeaders {
+		for k, v := range h.additionalReplyHeaders {
 			resp.Header().Set(k, v[0])
 		}
 		err := cehttp.WriteResponseWriter(context.Background(), message, http.StatusAccepted, resp)
@@ -759,7 +763,7 @@ func (h *fakeHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		for k, v := range h.expectedResponse.Header {
 			resp.Header().Set(k, v[0])
 		}
-		for k, v := range h.expectedResponseHeaders {
+		for k, v := range h.additionalReplyHeaders {
 			resp.Header().Add(k, v[0])
 		}
 		resp.WriteHeader(h.expectedResponse.StatusCode)
