@@ -71,6 +71,9 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, p *v1.Parallel) pkgrecon
 	//     2.2 create a Subscription to the filter Channel, subscribe the subscriber and send reply to
 	//         either the branch Reply. If not present, send reply to the global Reply. If not present, do not send reply.
 	// 3. Rinse and repeat step #2 above for each branch in the list
+	if p.Status.BranchStatuses == nil {
+		p.Status.BranchStatuses = make([]v1.ParallelBranchStatus, 0)
+	}
 
 	gvr, _ := meta.UnsafeGuessKindToResource(p.Spec.ChannelTemplate.GetObjectKind().GroupVersionKind())
 	channelResourceInterface := r.dynamicClientSet.Resource(gvr).Namespace(p.Namespace)
