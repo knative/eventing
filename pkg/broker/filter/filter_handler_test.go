@@ -69,21 +69,23 @@ type TriggerOption func(trigger *eventingv1.Trigger)
 
 func TestReceiver(t *testing.T) {
 	testCases := map[string]struct {
-		triggers                    []*eventingv1.Trigger
-		request                     *http.Request
-		event                       *cloudevents.Event
-		requestFails                bool
-		failureStatus               int
-		returnedEvent               *cloudevents.Event
-		expectNewToFail             bool
+		// input
+		triggers      []*eventingv1.Trigger
+		request       *http.Request
+		event         *cloudevents.Event
+		requestFails  bool
+		failureStatus int
+
+		// expectations
+		expectedResponseEvent       *cloudevents.Event
+		expectedResponse            *http.Response
 		expectedDispatch            bool
 		expectedStatus              int
 		expectedHeaders             http.Header
 		expectedEventCount          bool
 		expectedEventDispatchTime   bool
 		expectedEventProcessingTime bool
-		response                    *http.Response
-		responseHeaders             http.Header
+		expectedResponseHeaders     http.Header
 	}{
 		"Not POST": {
 			request:        httptest.NewRequest(http.MethodGet, validPath, nil),
@@ -231,7 +233,7 @@ func TestReceiver(t *testing.T) {
 			expectedDispatch:          true,
 			expectedEventCount:        true,
 			expectedEventDispatchTime: true,
-			returnedEvent:             makeDifferentEvent(),
+			expectedResponseEvent:     makeDifferentEvent(),
 		},
 		"Error From Trigger": {
 			triggers: []*eventingv1.Trigger{
@@ -282,7 +284,7 @@ func TestReceiver(t *testing.T) {
 			expectedDispatch:          true,
 			expectedEventCount:        true,
 			expectedEventDispatchTime: true,
-			returnedEvent:             makeDifferentEvent(),
+			expectedResponseEvent:     makeDifferentEvent(),
 		},
 		"Maintain `Prefer: reply` header when it is provided in the original request": {
 			triggers: []*eventingv1.Trigger{
@@ -307,7 +309,7 @@ func TestReceiver(t *testing.T) {
 			expectedDispatch:          true,
 			expectedEventCount:        true,
 			expectedEventDispatchTime: true,
-			returnedEvent:             makeDifferentEvent(),
+			expectedResponseEvent:     makeDifferentEvent(),
 		},
 		"Add `Prefer: reply` header when it isn't provided in the original request": {
 			triggers: []*eventingv1.Trigger{
@@ -328,9 +330,9 @@ func TestReceiver(t *testing.T) {
 			expectedDispatch:          true,
 			expectedEventCount:        true,
 			expectedEventDispatchTime: true,
-			returnedEvent:             makeDifferentEvent(),
+			expectedResponseEvent:     makeDifferentEvent(),
 		},
-		"Returned non empty non event response": {
+		"Returned non empty non event expectedResponse": {
 			triggers: []*eventingv1.Trigger{
 				makeTrigger(withAttributesFilter(&eventingv1.TriggerFilter{})),
 			},
@@ -338,7 +340,7 @@ func TestReceiver(t *testing.T) {
 			expectedEventCount:        true,
 			expectedEventDispatchTime: true,
 			expectedStatus:            http.StatusBadGateway,
-			response:                  makeNonEmptyResponse(),
+			expectedResponse:          makeNonEmptyResponse(),
 		},
 		"Returned malformed Cloud Event": {
 			triggers: []*eventingv1.Trigger{
@@ -348,7 +350,7 @@ func TestReceiver(t *testing.T) {
 			expectedEventCount:        true,
 			expectedEventDispatchTime: true,
 			expectedStatus:            http.StatusOK,
-			response:                  makeMalformedEventResponse(),
+			expectedResponse:          makeMalformedEventResponse(),
 		},
 		"Returned malformed structured Cloud Event": {
 			triggers: []*eventingv1.Trigger{
@@ -358,7 +360,7 @@ func TestReceiver(t *testing.T) {
 			expectedEventCount:        true,
 			expectedEventDispatchTime: true,
 			expectedStatus:            http.StatusBadGateway,
-			response:                  makeMalformedStructuredEventResponse(),
+			expectedResponse:          makeMalformedStructuredEventResponse(),
 		},
 		"Returned empty body 200": {
 			triggers: []*eventingv1.Trigger{
@@ -368,7 +370,7 @@ func TestReceiver(t *testing.T) {
 			expectedEventCount:        true,
 			expectedEventDispatchTime: true,
 			expectedStatus:            http.StatusOK,
-			response:                  makeEmptyResponse(200),
+			expectedResponse:          makeEmptyResponse(200),
 		},
 		"Returned empty body 202": {
 			triggers: []*eventingv1.Trigger{
@@ -378,19 +380,19 @@ func TestReceiver(t *testing.T) {
 			expectedEventCount:        true,
 			expectedEventDispatchTime: true,
 			expectedStatus:            http.StatusAccepted,
-			response:                  makeEmptyResponse(202),
+			expectedResponse:          makeEmptyResponse(202),
 		},
-		"Proxy CloudEvent response headers": {
+		"Proxy CloudEvent expectedResponse headers": {
 			triggers: []*eventingv1.Trigger{
 				makeTrigger(withAttributesFilter(&eventingv1.TriggerFilter{})),
 			},
 			expectedDispatch:          true,
 			expectedEventCount:        true,
 			expectedEventDispatchTime: true,
-			returnedEvent:             makeDifferentEvent(),
-			responseHeaders:           http.Header{"Test-Header": []string{"TestValue"}},
+			expectedResponseEvent:     makeDifferentEvent(),
+			expectedResponseHeaders:   http.Header{"Test-Header": []string{"TestValue"}},
 		},
-		"Proxy empty non event response headers": {
+		"Proxy empty non event expectedResponse headers": {
 			triggers: []*eventingv1.Trigger{
 				makeTrigger(withAttributesFilter(&eventingv1.TriggerFilter{})),
 			},
@@ -398,21 +400,21 @@ func TestReceiver(t *testing.T) {
 			expectedEventCount:        true,
 			expectedEventDispatchTime: true,
 			expectedStatus:            http.StatusTooManyRequests,
-			response:                  makeEmptyResponse(http.StatusTooManyRequests),
-			responseHeaders:           http.Header{"Retry-After": []string{"10"}},
+			expectedResponse:          makeEmptyResponse(http.StatusTooManyRequests),
+			expectedResponseHeaders:   http.Header{"Retry-After": []string{"10"}},
 		},
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
 
 			fh := fakeHandler{
-				failRequest:     tc.requestFails,
-				failStatus:      tc.failureStatus,
-				returnedEvent:   tc.returnedEvent,
-				headers:         tc.expectedHeaders,
-				t:               t,
-				response:        tc.response,
-				responseHeaders: tc.responseHeaders,
+				failRequest:             tc.requestFails,
+				failStatus:              tc.failureStatus,
+				expectedResponseEvent:   tc.expectedResponseEvent,
+				expectedRequestHeaders:  tc.expectedHeaders,
+				t:                       t,
+				expectedResponse:        tc.expectedResponse,
+				expectedResponseHeaders: tc.expectedResponseHeaders,
 			}
 			s := httptest.NewServer(&fh)
 			defer s.Close()
@@ -441,12 +443,7 @@ func TestReceiver(t *testing.T) {
 					return ctx
 				},
 			)
-			if tc.expectNewToFail {
-				if err == nil {
-					t.Fatal("Expected New to fail, it didn't")
-				}
-				return
-			} else if err != nil {
+			if err != nil {
 				t.Fatal("Unable to create receiver:", err)
 			}
 
@@ -472,7 +469,7 @@ func TestReceiver(t *testing.T) {
 			response := responseWriter.Result()
 
 			if tc.expectedStatus != http.StatusInternalServerError && tc.expectedStatus != http.StatusBadGateway {
-				for expectedHeaderKey, expectedHeaderValues := range tc.responseHeaders {
+				for expectedHeaderKey, expectedHeaderValues := range tc.expectedResponseHeaders {
 					if response.Header[expectedHeaderKey] == nil || response.Header[expectedHeaderKey][0] != expectedHeaderValues[0] {
 						t.Errorf("Response header proxy failed for header '%v'. Expected %v, Actual %v", expectedHeaderKey, expectedHeaderValues[0], response.Header[expectedHeaderKey])
 					}
@@ -494,26 +491,26 @@ func TestReceiver(t *testing.T) {
 			if tc.expectedEventProcessingTime != reporter.eventProcessingTimeReported {
 				t.Errorf("Incorrect event processing time reported metric. Expected %v, Actual %v", tc.expectedEventProcessingTime, reporter.eventProcessingTimeReported)
 			}
-			if tc.returnedEvent != nil {
-				if tc.returnedEvent.SpecVersion() != event.CloudEventsVersionV1 {
-					t.Errorf("Incorrect spec version. Expected %v, Actual %v", tc.returnedEvent.SpecVersion(), event.CloudEventsVersionV1)
+			if tc.expectedResponseEvent != nil {
+				if tc.expectedResponseEvent.SpecVersion() != event.CloudEventsVersionV1 {
+					t.Errorf("Incorrect spec version. Expected %v, Actual %v", tc.expectedResponseEvent.SpecVersion(), event.CloudEventsVersionV1)
 				}
 			}
 			// Compare the returned event.
 			message := cehttp.NewMessageFromHttpResponse(response)
 			event, err := binding.ToEvent(context.Background(), message)
-			if tc.returnedEvent == nil {
+			if tc.expectedResponseEvent == nil {
 				if err == nil || event != nil {
-					t.Fatal("Unexpected response event:", event)
+					t.Fatal("Unexpected expectedResponse event:", event)
 				}
 				return
 			}
 			if err != nil || event == nil {
-				t.Fatalf("Expected response event, actually nil")
+				t.Fatalf("Expected expectedResponse event, actually nil")
 			}
 
 			// The TTL will be added again.
-			expectedResponseEvent := addTTLToEvent(*tc.returnedEvent)
+			expectedResponseEvent := addTTLToEvent(*tc.expectedResponseEvent)
 
 			// cloudevents/sdk-go doesn't preserve the extension type, so get TTL and set it back again.
 			// https://github.com/cloudevents/sdk-go/blob/97abfeb3da0bed09e395bff2c5bcf35b6435cb5f/v2/types/value.go#L57
@@ -527,10 +524,10 @@ func TestReceiver(t *testing.T) {
 			}
 
 			if diff := cmp.Diff(expectedResponseEvent.Context.AsV1(), event.Context.AsV1()); diff != "" {
-				t.Error("Incorrect response event context (-want +got):", diff)
+				t.Error("Incorrect expectedResponse event context (-want +got):", diff)
 			}
 			if diff := cmp.Diff(expectedResponseEvent.Data(), event.Data()); diff != "" {
-				t.Error("Incorrect response event data (-want +got):", diff)
+				t.Error("Incorrect expectedResponse event data (-want +got):", diff)
 			}
 		})
 	}
@@ -655,7 +652,7 @@ func TestReceiver_WithSubscriptionsAPI(t *testing.T) {
 			message := cehttp.NewMessageFromHttpResponse(response)
 			event, err := binding.ToEvent(context.Background(), message)
 			if err == nil || event != nil {
-				t.Fatal("Unexpected response event:", event)
+				t.Fatal("Unexpected expectedResponse event:", event)
 			}
 		})
 	}
@@ -704,23 +701,28 @@ func (r *mockReporter) ReportEventProcessingTime(args *ReportArgs, d time.Durati
 }
 
 type fakeHandler struct {
-	failRequest     bool
-	failStatus      int
+	t *testing.T
+
+	// expectations
+	failRequest bool
+	failStatus  int
+
+	expectedRequestHeaders  http.Header
+	expectedResponseEvent   *cloudevents.Event
+	expectedResponse        *http.Response
+	expectedResponseHeaders http.Header
+
+	// results
 	requestReceived bool
-	headers         http.Header
-	returnedEvent   *cloudevents.Event
-	t               *testing.T
-	response        *http.Response
-	responseHeaders http.Header
 }
 
 func (h *fakeHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
-	if h.returnedEvent != nil && h.response != nil {
-		h.t.Errorf("Can not specify both returnedEvent and response.")
+	if h.expectedResponseEvent != nil && h.expectedResponse != nil {
+		h.t.Errorf("Can not specify both expectedResponseEvent and expectedResponse.")
 	}
 	h.requestReceived = true
 
-	for n, v := range h.headers {
+	for n, v := range h.expectedRequestHeaders {
 		if strings.Contains(strings.ToLower(n), strings.ToLower(broker.TTLAttribute)) {
 			h.t.Errorf("Broker TTL should not be seen by the subscriber: %s", n)
 		}
@@ -737,15 +739,15 @@ func (h *fakeHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		}
 		return
 	}
-	if h.returnedEvent == nil && h.response == nil {
+	if h.expectedResponseEvent == nil && h.expectedResponse == nil {
 		resp.WriteHeader(http.StatusAccepted)
 		return
 	}
 
-	if h.returnedEvent != nil {
-		message := binding.ToMessage(h.returnedEvent)
+	if h.expectedResponseEvent != nil {
+		message := binding.ToMessage(h.expectedResponseEvent)
 		defer message.Finish(nil)
-		for k, v := range h.responseHeaders {
+		for k, v := range h.expectedResponseHeaders {
 			resp.Header().Set(k, v[0])
 		}
 		err := cehttp.WriteResponseWriter(context.Background(), message, http.StatusAccepted, resp)
@@ -753,17 +755,17 @@ func (h *fakeHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 			h.t.Fatalf("Unable to write body: %v", err)
 		}
 	}
-	if h.response != nil {
-		for k, v := range h.response.Header {
+	if h.expectedResponse != nil {
+		for k, v := range h.expectedResponse.Header {
 			resp.Header().Set(k, v[0])
 		}
-		for k, v := range h.responseHeaders {
+		for k, v := range h.expectedResponseHeaders {
 			resp.Header().Add(k, v[0])
 		}
-		resp.WriteHeader(h.response.StatusCode)
-		if h.response.Body != nil {
-			defer h.response.Body.Close()
-			body, err := ioutil.ReadAll(h.response.Body)
+		resp.WriteHeader(h.expectedResponse.StatusCode)
+		if h.expectedResponse.Body != nil {
+			defer h.expectedResponse.Body.Close()
+			body, err := ioutil.ReadAll(h.expectedResponse.Body)
 			if err != nil {
 				h.t.Fatal("Unable to read body: ", err)
 			}
