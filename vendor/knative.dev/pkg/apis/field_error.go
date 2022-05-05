@@ -30,29 +30,28 @@ const CurrentField = ""
 
 // DiagnosticLevel is used to signal the severity of a particular diagnostic
 // in the form of a FieldError.
-type DiagnosticLevel string
+type DiagnosticLevel int
 
 const (
 	// ErrorLevel is used to signify fatal/blocking diagnostics, e.g. those
 	// that should block admission in a validating admission webhook.
-	ErrorLevel DiagnosticLevel = "Error"
+	ErrorLevel DiagnosticLevel = iota
 
 	// WarningLevel is used to signify information/non-blocking diagnostics,
 	// e.g. those that should be surfaced as warnings in a validating admission
 	// webhook.
-	WarningLevel DiagnosticLevel = "Warning"
+	WarningLevel
 )
 
-// Matches checks whether the provided diagnostic level matches this one,
-// including the special case where an empty DiagnosticLevel equals ErrorLevel.
-func (l DiagnosticLevel) Matches(r DiagnosticLevel) bool {
-	switch {
-	case l == ErrorLevel && r == "":
-		return true
-	case r == ErrorLevel && l == "":
-		return true
+func (dl DiagnosticLevel) String() string {
+	switch dl {
+	case ErrorLevel:
+		return "Error"
+	case WarningLevel:
+		return "Warning"
+
 	default:
-		return l == r
+		return fmt.Sprintf("<UNKNOWN: %d>", dl)
 	}
 }
 
@@ -175,7 +174,7 @@ func (fe *FieldError) Filter(l DiagnosticLevel) *FieldError {
 		return nil
 	}
 	var newErr *FieldError
-	if l.Matches(fe.Level) {
+	if l == fe.Level {
 		newErr = &FieldError{
 			Message: fe.Message,
 			Level:   fe.Level,
@@ -375,11 +374,7 @@ func merge(errs []*FieldError) []*FieldError {
 
 // key returns the key using the fields .Message and .Details.
 func key(err *FieldError) string {
-	l := err.Level
-	if l == "" {
-		l = ErrorLevel
-	}
-	return fmt.Sprintf("%s-%s-%s", l, err.Message, err.Details)
+	return fmt.Sprintf("%s-%s-%s", err.Level, err.Message, err.Details)
 }
 
 // Public helpers ---
