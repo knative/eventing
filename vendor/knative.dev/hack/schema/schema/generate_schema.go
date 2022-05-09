@@ -126,6 +126,15 @@ func generateSchema(t reflect.Type, history ...reflect.Type) JSONSchemaProps {
 	case reflect.Ptr:
 		return generateSchema(t.Elem(), history...)
 	case reflect.Slice:
+		// From: https://pkg.go.dev/encoding/json#Marshal
+		// Array and slice values encode as JSON arrays, except that []byte
+		// encodes as a base64-encoded string, and a nil slice encodes as the
+		// null JSON value.
+		if t.Elem().Kind() == reflect.Uint8 {
+			return JSONSchemaProps{
+				Type: "string",
+			}
+		}
 		s := generateSliceSchema(t)
 		return s
 	case reflect.String:
