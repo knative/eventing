@@ -58,7 +58,7 @@ type sender struct {
 	// totalRequests is the number of all the send event requests
 	totalRequests int
 	// unavailablePeriods is an array for non-zero retries for each event
-	unavailablePeriods []time.Duration
+	unavailablePeriods []event.UnavailablePeriod
 }
 
 func (s *sender) SendContinually() {
@@ -80,18 +80,23 @@ func (s *sender) SendContinually() {
 	}()
 
 	var start time.Time
+	var currentStep *event.Step
+	var err error
 	retry := 0
 	for {
 		select {
 		case <-shutdownCh:
 			// If there is ongoing event transition, we need to push to retries too.
 			if retry != 0 {
-				s.unavailablePeriods = append(s.unavailablePeriods, time.Since(start))
+				s.unavailablePeriods = append(s.unavailablePeriods, event.UnavailablePeriod{
+					Step:   currentStep,
+					Period: time.Since(start),
+				})
 			}
 			return
 		default:
 		}
-		err := s.sendStep()
+		currentStep, err = s.sendStep()
 		if err != nil {
 			if retry == 0 {
 				start = time.Now()
@@ -102,7 +107,10 @@ func (s *sender) SendContinually() {
 			retry++
 		} else {
 			if retry != 0 {
-				s.unavailablePeriods = append(s.unavailablePeriods, time.Since(start))
+				s.unavailablePeriods = append(s.unavailablePeriods, event.UnavailablePeriod{
+					Step:   currentStep,
+					Period: time.Since(start),
+				})
 				log.Warnf("Event sent after %v retries", retry)
 				retry = 0
 			}
@@ -206,7 +214,7 @@ func (h httpSender) SendEventWithContext(ctx context.Context, ce cloudevents.Eve
 	return result
 }
 
-func (s *sender) sendStep() error {
+func (s *sender) sendStep() (*event.Step, error) {
 	step := event.Step{Number: s.eventsSent + 1}
 	ce := NewCloudEvent(step, event.StepType)
 	ctx, span := PopulateSpanWithEvent(context.Background(), ce, Name)
@@ -218,10 +226,10 @@ func (s *sender) sendStep() error {
 	// Record every request regardless of the result
 	s.totalRequests++
 	if err != nil {
-		return err
+		return &step, err
 	}
 	s.eventsSent++
-	return nil
+	return &step, nil
 }
 
 func (s *sender) sendFinished() {

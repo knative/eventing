@@ -89,7 +89,12 @@ func TestUnavail(t *testing.T) {
 
 	// when
 	finishedStore.RegisterFinished(&Finished{
-		UnavailablePeriods: []time.Duration{10 * time.Second},
+		UnavailablePeriods: []UnavailablePeriod{
+			{
+				Step:   &Step{Number: 1},
+				Period: 10 * time.Second,
+			},
+		},
 	})
 
 	// then

@@ -33,11 +33,18 @@ type Step struct {
 	Number int
 }
 
+// UnavailablePeriod tracks for the given step event how
+// long it could not be sent.
+type UnavailablePeriod struct {
+	Step   *Step
+	Period time.Duration
+}
+
 // Finished is step call after verification finishes
 type Finished struct {
 	EventsSent         int
 	TotalRequests      int
-	UnavailablePeriods []time.Duration
+	UnavailablePeriods []UnavailablePeriod
 }
 
 // Type returns a type of a event
