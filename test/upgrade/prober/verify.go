@@ -71,9 +71,7 @@ func (p *prober) Verify() (eventErrs []error, eventsSent int) {
 		}
 		return report != nil && report.State != "active", nil
 	}); err != nil {
-		if err := p.exportTrace(p.getTraceForFinishedEvent(), "finished.json"); err != nil {
-			p.log.Warnf("Failed to export trace for Finished event: %v", err)
-		}
+		p.exportFinishedEventTrace()
 		p.client.T.Fatalf("Error fetching complete/inactive report: %v\nReport: %+v", err, report)
 	}
 	elapsed := time.Since(start)
@@ -87,19 +85,14 @@ func (p *prober) Verify() (eventErrs []error, eventsSent int) {
 		availRate, report.TotalRequests)
 	for i, t := range report.Thrown.Missing {
 		eventErrs = append(eventErrs, errors.New(t))
-		if i > exportTraceLimit {
-			continue
-		}
-		stepNo := p.getStepNoFromMsg(t)
-		if err := p.exportTrace(p.getTraceForStepEvent(stepNo), fmt.Sprintf("step-%s.json", stepNo)); err != nil {
-			p.log.Warnf("Failed to export trace for Step event #%s: %v", stepNo, err)
-		}
+		p.exportStepEventTrace(i, t)
 	}
 	for _, t := range report.Thrown.Unexpected {
 		eventErrs = append(eventErrs, errors.New(t))
 	}
-	for _, t := range report.Thrown.Unavailable {
+	for i, t := range report.Thrown.Unavailable {
 		eventErrs = append(eventErrs, errors.New(t))
+		p.exportStepEventTrace(i, t)
 	}
 	for i, t := range report.Thrown.Duplicated {
 		if p.config.OnDuplicate == Warn {
@@ -107,13 +100,7 @@ func (p *prober) Verify() (eventErrs []error, eventsSent int) {
 		} else if p.config.OnDuplicate == Error {
 			eventErrs = append(eventErrs, errors.New(t))
 		}
-		if i > exportTraceLimit {
-			continue
-		}
-		stepNo := p.getStepNoFromMsg(t)
-		if err := p.exportTrace(p.getTraceForStepEvent(stepNo), fmt.Sprintf("step-%s.json", stepNo)); err != nil {
-			p.log.Warnf("Failed to export trace for Step event #%s: %v", stepNo, err)
-		}
+		p.exportStepEventTrace(i, t)
 	}
 	return eventErrs, report.EventsSent
 }
@@ -121,6 +108,16 @@ func (p *prober) Verify() (eventErrs []error, eventsSent int) {
 // Finish terminates sender which sends finished event.
 func (p *prober) Finish() {
 	p.removeSender()
+}
+
+func (p *prober) exportStepEventTrace(i int, msg string) {
+	if i > exportTraceLimit {
+		return
+	}
+	stepNo := p.getStepNoFromMsg(msg)
+	if err := p.exportTrace(p.getTraceForStepEvent(stepNo), fmt.Sprintf("step-%s.json", stepNo)); err != nil {
+		p.log.Warnf("Failed to export trace for Step event #%s: %v", stepNo, err)
+	}
 }
 
 func (p *prober) getStepNoFromMsg(message string) string {
@@ -141,6 +138,12 @@ func (p *prober) getTraceForStepEvent(eventNo string) []byte {
 		p.log.Warn(err)
 	}
 	return trace
+}
+
+func (p *prober) exportFinishedEventTrace() {
+	if err := p.exportTrace(p.getTraceForFinishedEvent(), "finished.json"); err != nil {
+		p.log.Warnf("Failed to export trace for Finished event: %v", err)
+	}
 }
 
 func (p *prober) getTraceForFinishedEvent() []byte {
