@@ -171,6 +171,19 @@ func WithBrokerClassForBroker(brokerClass string) BrokerOption {
 	}
 }
 
+// WithCustomAnnotationForBroker returns a function that adds a custom
+// annotation to the given v1 Broker.
+func WithCustomAnnotationForBroker(annotationKey, annotationValue string) BrokerOption {
+	return func(b *eventingv1.Broker) {
+		annotations := b.GetAnnotations()
+		if annotations == nil {
+			annotations = make(map[string]string, 1)
+		}
+		annotations[annotationKey] = annotationValue
+		b.SetAnnotations(annotations)
+	}
+}
+
 // WithDeliveryForBroker returns a function that adds a Delivery for the given
 // v1 Broker.
 func WithDeliveryForBroker(delivery *eventingduckv1.DeliverySpec) BrokerOption {
