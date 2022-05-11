@@ -90,7 +90,7 @@ func WithWriteTimeout(duration time.Duration) HTTPMessageReceiverOption {
 	}
 }
 
-// WithReadTimeout sets the HTTP server's ReadTimeout. It covers the duration from reading hte entire request
+// WithReadTimeout sets the HTTP server's ReadTimeout. It covers the duration from reading the entire request
 // (Headers + Body)
 func WithReadTimeout(duration time.Duration) HTTPMessageReceiverOption {
 	return func(h *HTTPMessageReceiver) {
