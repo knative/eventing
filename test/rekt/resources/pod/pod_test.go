@@ -17,11 +17,15 @@ limitations under the License.
 package pod_test
 
 import (
+	"embed"
 	"os"
 
 	"knative.dev/eventing/test/rekt/resources/pod"
 	"knative.dev/reconciler-test/pkg/manifest"
 )
+
+//go:embed *.yaml
+var yaml embed.FS
 
 func Example_min() {
 	images := map[string]string{}
@@ -33,7 +37,7 @@ func Example_min() {
 		"labels":    map[string]string{"app": "bla"},
 	}
 
-	files, err := manifest.ExecuteLocalYAML(images, cfg)
+	files, err := manifest.ExecuteYAML(yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -67,7 +71,7 @@ func Example_withLabels() {
 
 	pod.WithLabels(map[string]string{"overwrite": "yes"})(cfg)
 
-	files, err := manifest.ExecuteLocalYAML(images, cfg)
+	files, err := manifest.ExecuteYAML(yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -101,7 +105,7 @@ func Example_withImage() {
 
 	pod.WithImage("myimage")(cfg)
 
-	files, err := manifest.ExecuteLocalYAML(images, cfg)
+	files, err := manifest.ExecuteYAML(yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -136,7 +140,7 @@ func Example_full() {
 	pod.WithLabels(map[string]string{"overwrite": "yes"})(cfg)
 	pod.WithImage("myimage")(cfg)
 
-	files, err := manifest.ExecuteLocalYAML(images, cfg)
+	files, err := manifest.ExecuteYAML(yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}

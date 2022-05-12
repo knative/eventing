@@ -17,10 +17,14 @@ limitations under the License.
 package svc_test
 
 import (
+	"embed"
 	"os"
 
 	"knative.dev/reconciler-test/pkg/manifest"
 )
+
+//go:embed *.yaml
+var yaml embed.FS
 
 func Example() {
 	images := map[string]string{}
@@ -31,7 +35,7 @@ func Example() {
 		"selectorValue": "baf",
 	}
 
-	files, err := manifest.ExecuteLocalYAML(images, cfg)
+	files, err := manifest.ExecuteYAML(yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}

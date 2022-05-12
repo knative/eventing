@@ -17,6 +17,7 @@ limitations under the License.
 package trigger_test
 
 import (
+	"embed"
 	"os"
 
 	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
@@ -27,6 +28,9 @@ import (
 	"knative.dev/reconciler-test/pkg/manifest"
 	"knative.dev/reconciler-test/resources/svc"
 )
+
+//go:embed *.yaml
+var yaml embed.FS
 
 // The following examples validate the processing of the With* helper methods
 // applied to config and go template parser.
@@ -46,7 +50,7 @@ func Example_min() {
 		},
 	}
 
-	files, err := manifest.ExecuteLocalYAML(images, cfg)
+	files, err := manifest.ExecuteYAML(yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -75,7 +79,7 @@ func Example_zero() {
 		"namespace": "bar",
 	}
 
-	files, err := manifest.ExecuteLocalYAML(images, cfg)
+	files, err := manifest.ExecuteYAML(yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -112,7 +116,7 @@ func Example_full() {
 		},
 	}
 
-	files, err := manifest.ExecuteLocalYAML(images, cfg)
+	files, err := manifest.ExecuteYAML(yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -153,7 +157,7 @@ func ExampleWithSubscriber() {
 		APIVersion: "subversion",
 	}, "/extra/path")(cfg)
 
-	files, err := manifest.ExecuteLocalYAML(images, cfg)
+	files, err := manifest.ExecuteYAML(yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -189,7 +193,7 @@ func ExampleWithFilter() {
 		"type": "z",
 	})(cfg)
 
-	files, err := manifest.ExecuteLocalYAML(images, cfg)
+	files, err := manifest.ExecuteYAML(yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -219,7 +223,7 @@ func ExampleWithDeadLetterSink() {
 
 	delivery.WithDeadLetterSink(svc.AsKReference("targetdlq"), "/uri/here")(cfg)
 
-	files, err := manifest.ExecuteLocalYAML(images, cfg)
+	files, err := manifest.ExecuteYAML(yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -254,7 +258,7 @@ func ExampleWithRetry() {
 	exp := duckv1.BackoffPolicyExponential
 	delivery.WithRetry(3, &exp, ptr.String("T0"))(cfg)
 
-	files, err := manifest.ExecuteLocalYAML(images, cfg)
+	files, err := manifest.ExecuteYAML(yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}
