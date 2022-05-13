@@ -17,6 +17,7 @@ limitations under the License.
 package subscription_test
 
 import (
+	"embed"
 	"os"
 
 	v1 "knative.dev/pkg/apis/duck/v1"
@@ -24,6 +25,9 @@ import (
 
 	"knative.dev/eventing/test/rekt/resources/subscription"
 )
+
+//go:embed *.yaml
+var yaml embed.FS
 
 // The following examples validate the processing of the With* helper methods
 // applied to config and go template parser.
@@ -43,7 +47,7 @@ func Example_min() {
 		},
 	}
 
-	files, err := manifest.ExecuteLocalYAML(images, cfg)
+	files, err := manifest.ExecuteYAML(yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -71,7 +75,7 @@ func Example_zero() {
 		"namespace": "bar",
 	}
 
-	files, err := manifest.ExecuteLocalYAML(images, cfg)
+	files, err := manifest.ExecuteYAML(yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -122,7 +126,7 @@ func Example_full() {
 		},
 	}
 
-	files, err := manifest.ExecuteLocalYAML(images, cfg)
+	files, err := manifest.ExecuteYAML(yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -175,7 +179,7 @@ func ExampleWithChannel() {
 		Name:       "chname",
 		APIVersion: "chversion",
 	})(cfg)
-	files, err := manifest.ExecuteLocalYAML(images, cfg)
+	files, err := manifest.ExecuteYAML(yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -206,7 +210,7 @@ func ExampleWithSubscriber() {
 		Name:       "subname",
 		APIVersion: "subversion",
 	}, "/extra/path")(cfg)
-	files, err := manifest.ExecuteLocalYAML(images, cfg)
+	files, err := manifest.ExecuteYAML(yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -241,7 +245,7 @@ func ExampleWithReply() {
 		APIVersion: "repversion",
 	}, "/extra/path")(cfg)
 
-	files, err := manifest.ExecuteLocalYAML(images, cfg)
+	files, err := manifest.ExecuteYAML(yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}

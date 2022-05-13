@@ -17,10 +17,14 @@ limitations under the License.
 package containersource_test
 
 import (
+	"embed"
 	"os"
 
 	"knative.dev/reconciler-test/pkg/manifest"
 )
+
+//go:embed *.yaml
+var yaml embed.FS
 
 func Example_min() {
 	images := map[string]string{}
@@ -29,7 +33,7 @@ func Example_min() {
 		"namespace": "bar",
 	}
 
-	files, err := manifest.ExecuteLocalYAML(images, cfg)
+	files, err := manifest.ExecuteYAML(yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -78,7 +82,7 @@ func Example_full() {
 		},
 	}
 
-	files, err := manifest.ExecuteLocalYAML(images, cfg)
+	files, err := manifest.ExecuteYAML(yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}

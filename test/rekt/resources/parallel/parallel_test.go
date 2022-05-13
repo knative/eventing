@@ -17,6 +17,7 @@ limitations under the License.
 package parallel_test
 
 import (
+	"embed"
 	"os"
 
 	v1 "knative.dev/pkg/apis/duck/v1"
@@ -24,6 +25,9 @@ import (
 
 	"knative.dev/eventing/test/rekt/resources/parallel"
 )
+
+//go:embed *.yaml
+var yaml embed.FS
 
 // The following examples validate the processing of the With* helper methods
 // applied to config and go template parser.
@@ -35,7 +39,7 @@ func Example_min() {
 		"namespace": "bar",
 	}
 
-	files, err := manifest.ExecuteLocalYAML(images, cfg)
+	files, err := manifest.ExecuteYAML(yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -133,7 +137,7 @@ func Example_fullDelivery() {
 		},
 	}
 
-	files, err := manifest.ExecuteLocalYAML(images, cfg)
+	files, err := manifest.ExecuteYAML(yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -286,7 +290,7 @@ func Example_full() {
 		},
 	}
 
-	files, err := manifest.ExecuteLocalYAML(images, cfg)
+	files, err := manifest.ExecuteYAML(yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -382,7 +386,7 @@ func Example_withSubscriberAt() {
 
 	parallel.WithSubscriberAt(2, nil, "http://full/path")(cfg)
 
-	files, err := manifest.ExecuteLocalYAML(images, cfg)
+	files, err := manifest.ExecuteYAML(yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -439,7 +443,7 @@ func Example_withFilterAt() {
 
 	parallel.WithFilterAt(2, nil, "http://full/path")(cfg)
 
-	files, err := manifest.ExecuteLocalYAML(images, cfg)
+	files, err := manifest.ExecuteYAML(yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -496,7 +500,7 @@ func Example_withReplyAt() {
 
 	parallel.WithReplyAt(2, nil, "http://full/path")(cfg)
 
-	files, err := manifest.ExecuteLocalYAML(images, cfg)
+	files, err := manifest.ExecuteYAML(yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -558,7 +562,7 @@ func Example_withFullAt() {
 		Namespace:  "bar",
 	}, "/extra/path")(cfg)
 
-	files, err := manifest.ExecuteLocalYAML(images, cfg)
+	files, err := manifest.ExecuteYAML(yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -609,7 +613,7 @@ func Example_withReply() {
 		Name:       "repname",
 	}, "/extra/path")(cfg)
 
-	files, err := manifest.ExecuteLocalYAML(images, cfg)
+	files, err := manifest.ExecuteYAML(yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}

@@ -28,6 +28,9 @@ import (
 	"knative.dev/eventing/test/rekt/resources/channel"
 )
 
+//go:embed *.yaml
+var yaml embed.FS
+
 // The following examples validate the processing of the With* helper methods
 // applied to config and go template parser.
 
@@ -38,7 +41,7 @@ func Example_min() {
 		"namespace": "bar",
 	}
 
-	files, err := manifest.ExecuteLocalYAML(images, cfg)
+	files, err := manifest.ExecuteYAML(yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -81,7 +84,7 @@ func Example_full() {
 		},
 	}
 
-	files, err := manifest.ExecuteLocalYAML(images, cfg)
+	files, err := manifest.ExecuteYAML(yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -112,9 +115,6 @@ func Example_full() {
 	//     backoffPolicy: exponential
 	//     backoffDelay: "2007-03-01T13:00:00Z/P1Y2M10DT2H30M"
 }
-
-//go:embed *.yaml
-var yaml embed.FS
 
 func Example_withTemplate() {
 

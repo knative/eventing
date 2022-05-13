@@ -17,6 +17,7 @@ limitations under the License.
 package broker_test
 
 import (
+	"embed"
 	"os"
 
 	eventingv1 "knative.dev/eventing/pkg/apis/duck/v1"
@@ -25,6 +26,9 @@ import (
 	"knative.dev/pkg/ptr"
 	"knative.dev/reconciler-test/pkg/manifest"
 )
+
+//go:embed *.yaml
+var yaml embed.FS
 
 // The following examples validate the processing of the With* helper methods
 // applied to config and go template parser.
@@ -37,7 +41,7 @@ func Example_min() {
 		"brokerName": "baz",
 	}
 
-	files, err := manifest.ExecuteLocalYAML(images, cfg)
+	files, err := manifest.ExecuteYAML(yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -78,7 +82,7 @@ func Example_full() {
 		},
 	}
 
-	files, err := manifest.ExecuteLocalYAML(images, cfg)
+	files, err := manifest.ExecuteYAML(yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -120,7 +124,7 @@ func ExampleWithBrokerClass() {
 	}
 	broker.WithBrokerClass("a-broker-class")(cfg)
 
-	files, err := manifest.ExecuteLocalYAML(images, cfg)
+	files, err := manifest.ExecuteYAML(yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -149,7 +153,7 @@ func ExampleWithDeadLetterSink() {
 		APIVersion: "deadapi",
 	}, "/extra/path")(cfg)
 
-	files, err := manifest.ExecuteLocalYAML(images, cfg)
+	files, err := manifest.ExecuteYAML(yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -180,7 +184,7 @@ func ExampleWithConfig() {
 	}
 	broker.WithConfig("my-funky-config")(cfg)
 
-	files, err := manifest.ExecuteLocalYAML(images, cfg)
+	files, err := manifest.ExecuteYAML(yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -209,7 +213,7 @@ func ExampleWithRetry() {
 	exp := eventingv1.BackoffPolicyExponential
 	broker.WithRetry(42, &exp, ptr.String("2007-03-01T13:00:00Z/P1Y2M10DT2H30M"))(cfg)
 
-	files, err := manifest.ExecuteLocalYAML(images, cfg)
+	files, err := manifest.ExecuteYAML(yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -236,7 +240,7 @@ func ExampleWithRetry_onlyCount() {
 	}
 	broker.WithRetry(42, nil, nil)(cfg)
 
-	files, err := manifest.ExecuteLocalYAML(images, cfg)
+	files, err := manifest.ExecuteYAML(yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}

@@ -17,10 +17,14 @@ limitations under the License.
 package eventlibrary_test
 
 import (
+	"embed"
 	"os"
 
 	"knative.dev/reconciler-test/pkg/manifest"
 )
+
+//go:embed *.yaml
+var yaml embed.FS
 
 func Example() {
 	images := map[string]string{
@@ -31,7 +35,7 @@ func Example() {
 		"namespace": "bar",
 	}
 
-	files, err := manifest.ExecuteLocalYAML(images, cfg)
+	files, err := manifest.ExecuteYAML(yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}

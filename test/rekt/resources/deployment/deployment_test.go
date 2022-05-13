@@ -17,10 +17,14 @@ limitations under the License.
 package deployment_test
 
 import (
+	"embed"
 	"os"
 
 	"knative.dev/reconciler-test/pkg/manifest"
 )
+
+//go:embed *.yaml
+var yaml embed.FS
 
 func Example() {
 	images := map[string]string{}
@@ -32,7 +36,7 @@ func Example() {
 		"port":      8080,
 	}
 
-	files, err := manifest.ExecuteLocalYAML(images, cfg)
+	files, err := manifest.ExecuteYAML(yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}
