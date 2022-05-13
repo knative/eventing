@@ -31,15 +31,16 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
-	"knative.dev/eventing/test/upgrade/prober/wathola/event"
-	"knative.dev/eventing/test/upgrade/prober/wathola/fetcher"
-	"knative.dev/eventing/test/upgrade/prober/wathola/receiver"
 	"knative.dev/pkg/system"
 	pkgTest "knative.dev/pkg/test"
 	"knative.dev/pkg/test/helpers"
 	"knative.dev/pkg/test/logging"
 	"knative.dev/pkg/test/prow"
 	"knative.dev/pkg/test/zipkin"
+
+	"knative.dev/eventing/test/upgrade/prober/wathola/event"
+	"knative.dev/eventing/test/upgrade/prober/wathola/fetcher"
+	"knative.dev/eventing/test/upgrade/prober/wathola/receiver"
 )
 
 const (
@@ -107,6 +108,8 @@ func (p *prober) Verify() (eventErrs []error, eventsSent int) {
 
 // Finish terminates sender which sends finished event.
 func (p *prober) Finish() {
+	// Save logs before deleting the sender deployment
+	p.exportLogs()
 	p.removeSender()
 }
 
