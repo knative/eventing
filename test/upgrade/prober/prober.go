@@ -16,12 +16,15 @@
 package prober
 
 import (
+	"path/filepath"
 	"time"
 
 	"go.uber.org/zap"
+	"knative.dev/pkg/test/prow"
+	pkgupgrade "knative.dev/pkg/test/upgrade"
+
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/resources"
-	pkgupgrade "knative.dev/pkg/test/upgrade"
 )
 
 var (
@@ -135,4 +138,11 @@ func (p *prober) remove() {
 		p.removeForwarder()
 	}
 	p.ensureNoError(p.client.Tracker.Clean(true))
+}
+
+func (p *prober) exportLogs() {
+	dir := filepath.Join(prow.GetLocalArtifactsDir(), "upgrade-test-namespace-logs")
+	if err := p.client.ExportLogs(dir); err != nil {
+		p.client.T.Logf("Failed to export logs in namespace %s: %v", p.client.Namespace, err)
+	}
 }

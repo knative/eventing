@@ -25,8 +25,9 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"knative.dev/eventing/test/upgrade/prober/wathola/sender"
 	pkgTest "knative.dev/pkg/test"
+
+	"knative.dev/eventing/test/upgrade/prober/wathola/sender"
 
 	testlib "knative.dev/eventing/test/lib"
 )
