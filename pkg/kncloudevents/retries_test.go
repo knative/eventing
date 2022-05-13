@@ -263,6 +263,16 @@ func TestRetryIfGreaterThan300(t *testing.T) {
 			result:   true,
 		},
 		{
+			name:     "Http StatusCode 408",
+			response: &http.Response{StatusCode: http.StatusRequestTimeout},
+			result:   true,
+		},
+		{
+			name:     "Http StatusCode 409",
+			response: &http.Response{StatusCode: http.StatusConflict},
+			result:   true,
+		},
+		{
 			name:     "Http StatusCode 429",
 			response: &http.Response{StatusCode: http.StatusTooManyRequests},
 			result:   true,
@@ -370,6 +380,16 @@ func TestSelectiveRetry(t *testing.T) {
 		{
 			name:     "Http StatusCode 404",
 			response: &http.Response{StatusCode: http.StatusNotFound},
+			result:   true,
+		},
+		{
+			name:     "Http StatusCode 408",
+			response: &http.Response{StatusCode: http.StatusRequestTimeout},
+			result:   true,
+		},
+		{
+			name:     "Http StatusCode 409",
+			response: &http.Response{StatusCode: http.StatusConflict},
 			result:   true,
 		},
 		{
