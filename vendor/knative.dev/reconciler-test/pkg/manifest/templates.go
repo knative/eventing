@@ -23,10 +23,8 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"path"
 	"path/filepath"
 	"regexp"
-	"runtime"
 	"sort"
 	"strings"
 	"text/template"
@@ -157,17 +155,6 @@ func templatesToTmp(files map[string]string, err error) (string, error) {
 // ExecuteYAML process the templates found in files named "*.yaml" and return the f.
 func ExecuteYAML(fsys fs.FS, images map[string]string, cfg map[string]interface{}) (map[string]string, error) {
 	return executeTemplatesFS(fsys, "yaml", images, cfg)
-}
-
-// ExecuteLocalYAML will look in the callers filesystem and process the
-// templates found in files named "*.yaml" and return the f.
-// Deprecated: Use ExecuteYAML instead.
-func ExecuteLocalYAML(images map[string]string, cfg map[string]interface{}) (map[string]string, error) {
-	pwd, _ := os.Getwd()
-	log.Println("PWD: ", pwd)
-	_, filename, _, _ := runtime.Caller(1)
-
-	return ExecuteTemplates(path.Dir(filename), "yaml", images, cfg)
 }
 
 func removeBlanks(in string) string {
