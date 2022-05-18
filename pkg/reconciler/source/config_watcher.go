@@ -18,8 +18,11 @@ package source
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -216,7 +219,21 @@ func maybeAppendEnvVar(envs []corev1.EnvVar, env corev1.EnvVar, cond bool) []cor
 // loggingConfigEnvVar returns an EnvVar containing the serialized logging
 // configuration from the ConfigWatcher.
 func (cw *ConfigWatcher) loggingConfigEnvVar() corev1.EnvVar {
-	cfg, err := logging.ConfigToJSON(cw.LoggingConfig())
+	logCfg := cw.LoggingConfig()
+	if logCfg == nil {
+		logCfg = &logging.Config{}
+	}
+
+	if lvl, hasLogLvl := logCfg.LoggingLevel[cw.component]; hasLogLvl {
+		newLogCfg, err := overrideLoggingLevel(logCfg, lvl)
+		if err != nil {
+			cw.logger.With(zap.Error(err)).Warnf("Failed to apply logging level %q to logging config", lvl)
+		} else {
+			logCfg = newLogCfg
+		}
+	}
+
+	cfg, err := logging.ConfigToJSON(logCfg)
 	if err != nil {
 		cw.logger.Warnw("Error while serializing logging config", zap.Error(err))
 	}
@@ -225,6 +242,25 @@ func (cw *ConfigWatcher) loggingConfigEnvVar() corev1.EnvVar {
 		Name:  EnvLoggingCfg,
 		Value: cfg,
 	}
+}
+
+// overrideLoggingLevel returns cfg with the given logging level applied.
+func overrideLoggingLevel(cfg *logging.Config, lvl zapcore.Level) (*logging.Config, error) {
+	tmpCfg := &zapConfig{}
+	if err := json.Unmarshal([]byte(cfg.LoggingConfig), tmpCfg); err != nil {
+		return nil, fmt.Errorf("deserializing logging config from ConfigMap: %w", err)
+	}
+
+	tmpCfg.Level = zap.NewAtomicLevelAt(lvl)
+
+	b, err := json.Marshal(tmpCfg)
+	if err != nil {
+		return nil, fmt.Errorf("serializing logging config with logging level applied: %w", err)
+	}
+
+	cfg.LoggingConfig = string(b)
+
+	return cfg, nil
 }
 
 // metricsConfigEnvVar returns an EnvVar containing the serialized metrics
@@ -268,4 +304,22 @@ func (g *EmptyVarsGenerator) ToEnvVars() []corev1.EnvVar {
 		{Name: EnvMetricsCfg},
 		{Name: EnvTracingCfg},
 	}
+}
+
+// zapConfig is a representation of a zap.Config that can be both unmarshaled
+// from JSON and marshaled to JSON again, unlike the zap.Config type which
+// contains func fields that can be unmarshaled but not marshaled. Those fields
+// are shadowed here to prevent marshaling errors.
+type zapConfig struct {
+	zap.Config
+
+	EncoderConfig struct {
+		zapcore.EncoderConfig
+
+		EncodeLevel    string `json:"levelEncoder" yaml:"levelEncoder"`
+		EncodeTime     string `json:"timeEncoder" yaml:"timeEncoder"`
+		EncodeDuration string `json:"durationEncoder" yaml:"durationEncoder"`
+		EncodeCaller   string `json:"callerEncoder" yaml:"callerEncoder"`
+		EncodeName     string `json:"nameEncoder" yaml:"nameEncoder"`
+	} `json:"encoderConfig" yaml:"encoderConfig"`
 }
