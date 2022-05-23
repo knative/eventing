@@ -35,6 +35,7 @@ import (
 )
 
 const testComponent = "test_component"
+const testComponentWithCustomLogLevel = "test_component_custom_loglevel"
 
 func TestNewConfigWatcher_defaults(t *testing.T) {
 	testCases := []struct {
@@ -136,6 +137,18 @@ func TestNewConfigWatcher_withOptions(t *testing.T) {
 	}
 }
 
+func TestLoggingConfigWithCustomLoggingLevel(t *testing.T) {
+	ctx := loggingtesting.TestContextWithLogger(t)
+	cw := WatchConfigurations(ctx, testComponentWithCustomLogLevel, configMapWatcherWithSampleData())
+
+	envs := cw.ToEnvVars()
+
+	require.Equal(t, EnvLoggingCfg, envs[0].Name, "first env var is logging config")
+
+	const expectLoggingContains = `"zap-logger-config":"{\"level\":\"debug\",`
+	assert.Contains(t, envs[0].Value, expectLoggingContains)
+}
+
 func TestEmptyVarsGenerator(t *testing.T) {
 	g := &EmptyVarsGenerator{}
 	envs := g.ToEnvVars()
@@ -195,6 +208,8 @@ func newTestConfigMap(name string, data map[string]string) *corev1.ConfigMap {
 func loggingConfigMapData() map[string]string {
 	return map[string]string{
 		"zap-logger-config": `{"level": "fatal"}`,
+
+		"loglevel." + testComponentWithCustomLogLevel: "debug",
 	}
 }
 func metricsConfigMapData() map[string]string {
