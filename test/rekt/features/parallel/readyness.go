@@ -61,3 +61,21 @@ func GoesReady(name string, cfg ...manifest.CfgFn) *feature.Feature {
 
 	return f
 }
+
+// GoesReadyWithoutFilters returns a feature testing if a Parallel becomes ready without filters
+func GoesReadyWithoutFilters(name string, cfg ...manifest.CfgFn) *feature.Feature {
+	f := feature.NewFeatureNamed("Parallel goes ready.")
+
+	// Subscriber
+	subscriber := feature.MakeRandomK8sName("subscriber")
+	f.Setup("install subscriber", svc.Install(subscriber, "app", "rekt"))
+	cfg = append(cfg, parallel.WithSubscriberAt(0, svc.AsKReference(subscriber), ""))
+
+	f.Setup("install a Parallel", parallel.Install(name, cfg...))
+
+	f.Requirement("Parallel is ready", parallel.IsReady(name))
+
+	f.Stable("Parallel")
+
+	return f
+}
