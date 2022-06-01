@@ -57,6 +57,8 @@ func NewFilterSubscription(branchNumber int, p *v1.Parallel) *messagingv1.Subscr
 			},
 		},
 	}
+	// if filter is not defined, use the branch-channel as the subscriber.
+	// if it is defined, use the branch-channel as the reply.
 	if p.Spec.Branches[branchNumber].Filter == nil {
 		r.Spec.Subscriber = &duckv1.Destination{
 			Ref: &duckv1.KReference{
