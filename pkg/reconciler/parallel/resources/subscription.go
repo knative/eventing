@@ -57,19 +57,30 @@ func NewFilterSubscription(branchNumber int, p *v1.Parallel) *messagingv1.Subscr
 			},
 		},
 	}
-	if p.Spec.Branches[branchNumber].Filter != nil {
+	// if filter is not defined, use the branch-channel as the subscriber.
+	// if it is defined, use the branch-channel as the reply.
+	if p.Spec.Branches[branchNumber].Filter == nil {
+		r.Spec.Subscriber = &duckv1.Destination{
+			Ref: &duckv1.KReference{
+				APIVersion: p.Spec.ChannelTemplate.APIVersion,
+				Kind:       p.Spec.ChannelTemplate.Kind,
+				Name:       ParallelBranchChannelName(p.Name, branchNumber),
+				Namespace:  p.Namespace,
+			},
+		}
+	} else {
 		r.Spec.Subscriber = &duckv1.Destination{
 			Ref: p.Spec.Branches[branchNumber].Filter.Ref,
 			URI: p.Spec.Branches[branchNumber].Filter.URI,
 		}
-	}
-	r.Spec.Reply = &duckv1.Destination{
-		Ref: &duckv1.KReference{
-			APIVersion: p.Spec.ChannelTemplate.APIVersion,
-			Kind:       p.Spec.ChannelTemplate.Kind,
-			Name:       ParallelBranchChannelName(p.Name, branchNumber),
-			Namespace:  p.Namespace,
-		},
+		r.Spec.Reply = &duckv1.Destination{
+			Ref: &duckv1.KReference{
+				APIVersion: p.Spec.ChannelTemplate.APIVersion,
+				Kind:       p.Spec.ChannelTemplate.Kind,
+				Name:       ParallelBranchChannelName(p.Name, branchNumber),
+				Namespace:  p.Namespace,
+			},
+		}
 	}
 	return r
 }
