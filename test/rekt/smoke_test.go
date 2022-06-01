@@ -202,6 +202,25 @@ func TestSmoke_ParallelDelivery(t *testing.T) {
 	}
 }
 
+// TestSmoke_Parallel
+func TestSmoke_Parallel_with_no_filter(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment()
+	t.Cleanup(env.Finish)
+
+	names := []string{
+		"customname",
+		"name-with-dash",
+		"name1with2numbers3",
+		"name63-0123456789012345678901234567890123456789012345678901234",
+	}
+
+	for _, name := range names {
+		env.Test(ctx, t, parallel.GoesReadyWithoutFilters(name))
+	}
+}
+
 // TestSmoke_Sequence
 func TestSmoke_Sequence(t *testing.T) {
 	t.Parallel()
