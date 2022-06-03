@@ -57,6 +57,12 @@ spec:
                 fieldRef:
                   apiVersion: v1
                   fieldPath: metadata.namespace
+            - name: NAMESPACE
+              value: ''
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.namespace
 
             # DO NOT MODIFY: The values below are being filled by the ping source controller
             # See 500-controller.yaml
