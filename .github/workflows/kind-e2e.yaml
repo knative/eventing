@@ -17,8 +17,9 @@ jobs:
       fail-fast: false # Keep running if one leg fails.
       matrix:
         k8s-version:
-        - v1.22.4
-        - v1.23.3
+        - v1.22.9
+        - v1.23.6
+        - v1.24.0
 
         test-suite:
         - ./test/rekt/...
@@ -28,14 +29,17 @@ jobs:
 
         # Map between K8s and KinD versions.
         # This is attempting to make it a bit clearer what's being tested.
-        # See: https://github.com/kubernetes-sigs/kind/releases/tag/v0.11.1
+        # See: https://github.com/kubernetes-sigs/kind/releases/tag/v0.14.0
         include:
-        - k8s-version: v1.22.4
-          kind-version: v0.11.1
-          kind-image-sha: sha256:ca3587e6e545a96c07bf82e2c46503d9ef86fc704f44c17577fca7bcabf5f978
-        - k8s-version: v1.23.3
-          kind-version: v0.11.1
-          kind-image-sha: sha256:0df8215895129c0d3221cda19847d1296c4f29ec93487339149333bd9d899e5a
+        - k8s-version: v1.22.9
+          kind-version: v0.14.0
+          kind-image-sha: sha256:8135260b959dfe320206eb36b3aeda9cffcb262f4b44cda6b33f7bb73f453105
+        - k8s-version: v1.23.6
+          kind-version: v0.14.0
+          kind-image-sha: sha256:b1fa224cc6c7ff32455e0b1fd9cbfd3d3bc87ecaa8fcb06961ed1afb3db0f9ae
+        - k8s-version: v1.24.0
+          kind-version: v0.14.0
+          kind-image-sha: sha256:0866296e693efe1fed79d5e6c7af8df71fc73ae45e3679af05342239cdc5bc8e
 
         # Add the flags we use for each of these test suites.
         - test-suite: ./test/e2e
