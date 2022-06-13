@@ -351,6 +351,7 @@ func (ac *Reconciler) reconcileMutatingWebhook(ctx context.Context, caCert []byt
 			return fmt.Errorf("missing service reference for webhook: %s", wh.Name)
 		}
 		cur.ClientConfig.Service.Path = ptr.String(ac.Path())
+		cur.ReinvocationPolicy = ptrReinvocationPolicyType(admissionregistrationv1.IfNeededReinvocationPolicy)
 	}
 
 	if ok := equality.Semantic.DeepEqual(configuredWebhook, current); !ok {
@@ -363,4 +364,8 @@ func (ac *Reconciler) reconcileMutatingWebhook(ctx context.Context, caCert []byt
 		logging.FromContext(ctx).Info("Webhook is valid")
 	}
 	return nil
+}
+
+func ptrReinvocationPolicyType(r admissionregistrationv1.ReinvocationPolicyType) *admissionregistrationv1.ReinvocationPolicyType {
+	return &r
 }
