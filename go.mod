@@ -37,16 +37,16 @@ require (
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	google.golang.org/grpc v1.42.0
 	google.golang.org/protobuf v1.27.1
-	k8s.io/api v0.23.5
-	k8s.io/apiextensions-apiserver v0.23.4
-	k8s.io/apimachinery v0.23.5
-	k8s.io/apiserver v0.23.4
-	k8s.io/client-go v0.23.5
+	k8s.io/api v0.23.8
+	k8s.io/apiextensions-apiserver v0.23.8
+	k8s.io/apimachinery v0.23.8
+	k8s.io/apiserver v0.23.8
+	k8s.io/client-go v0.23.8
 	k8s.io/utils v0.0.0-20220210201930-3a6ce19ff2f9
 	knative.dev/hack v0.0.0-20220610014127-dc6c287516dc
 	knative.dev/hack/schema v0.0.0-20220610014127-dc6c287516dc
-	knative.dev/pkg v0.0.0-20220610014025-7d607d643ee2
-	knative.dev/reconciler-test v0.0.0-20220610141926-64ffd15625ec
+	knative.dev/pkg v0.0.0-20220621173822-9c5a7317fa9d
+	knative.dev/reconciler-test v0.0.0-20220622130523-57e43ca43bda
 	sigs.k8s.io/yaml v1.3.0
 )
 
