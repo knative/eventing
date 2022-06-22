@@ -20,10 +20,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
-
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -32,9 +31,10 @@ import (
 	"github.com/wavesoftware/go-ensure"
 	"go.opencensus.io/plugin/ochttp"
 	"go.opencensus.io/trace"
+	"knative.dev/pkg/tracing/propagation/tracecontextb3"
+
 	"knative.dev/eventing/test/upgrade/prober/wathola/config"
 	"knative.dev/eventing/test/upgrade/prober/wathola/event"
-	"knative.dev/pkg/tracing/propagation/tracecontextb3"
 )
 
 const (
@@ -83,14 +83,16 @@ func (s *sender) SendContinually() {
 	var currentStep *event.Step
 	var err error
 	retry := 0
+	var lastErr error
 	for {
 		select {
 		case <-shutdownCh:
 			// If there is ongoing event transition, we need to push to retries too.
 			if retry != 0 {
 				s.unavailablePeriods = append(s.unavailablePeriods, event.UnavailablePeriod{
-					Step:   currentStep,
-					Period: time.Since(start),
+					Step:    currentStep,
+					Period:  time.Since(start),
+					LastErr: err.Error(),
 				})
 			}
 			return
@@ -101,15 +103,16 @@ func (s *sender) SendContinually() {
 			if retry == 0 {
 				start = time.Now()
 			}
-			log.Warnf("Could not send step event %v, retrying (%d)",
-				s.eventsSent, retry)
-			log.Debug("Error: ", err)
+			log.Warnf("Could not send step event %v, retrying (%d): %v",
+				s.eventsSent, retry, err)
 			retry++
+			lastErr = err
 		} else {
 			if retry != 0 {
 				s.unavailablePeriods = append(s.unavailablePeriods, event.UnavailablePeriod{
-					Step:   currentStep,
-					Period: time.Since(start),
+					Step:    currentStep,
+					Period:  time.Since(start),
+					LastErr: lastErr.Error(),
 				})
 				log.Warnf("Event sent after %v retries", retry)
 				retry = 0
