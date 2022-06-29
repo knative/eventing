@@ -57,12 +57,14 @@ func DataPlaneIngress(brokerName string) *feature.Feature {
 			brokerRejectsUnknownCEVersion).
 		ShouldNot("The Broker SHOULD NOT perform an upgrade of the produced event's CloudEvents version.",
 			brokerEventVersionNotUpgraded).
-		Should("It SHOULD support both Binary Content Mode and Structured Content Mode of the HTTP Protocol Binding for CloudEvents.",
-			todo).
+		Should("It SHOULD support Binary Content Mode of the HTTP Protocol Binding for CloudEvents.",
+			brokerAcceptsBinaryContentMode).
+		Should("It SHOULD support Structured Content Mode of the HTTP Protocol Binding for CloudEvents.",
+			brokerAcceptsStructuredContentMode).
 		Must("Brokers MUST reject all HTTP produce requests with a method other than POST responding with HTTP status code `405 Method Not Supported`.",
 			brokerRejectsGetRequest).
 		Must("The Broker MUST respond with a 200-level HTTP status code if a produce request is accepted.",
-			todo).
+			brokerAcceptResponseSuccess).
 		Must("If a Broker receives a produce request and is unable to parse a valid CloudEvent, then it MUST reject the request with HTTP status code `400 Bad Request`.",
 			brokerRejectsMalformedCE)
 	return f
@@ -188,6 +190,69 @@ func brokerAcceptsCEVersions(ctx context.Context, t feature.T) {
 	knconf.AcceptsCEVersions(ctx, t, broker.GVR(), name)
 }
 
+func brokerAcceptsBinaryContentMode(ctx context.Context, t feature.T) {
+	brokerName := state.GetStringOrFail(ctx, t, "brokerName")
+
+	contenttypes := []string{
+		"application/vnd.apache.thrift.binary",
+		"application/xml",
+		"application/json",
+	}
+	for _, contenttype := range contenttypes {
+		source := feature.MakeRandomK8sName("source")
+		eventshub.Install(source,
+			eventshub.StartSenderToResource(broker.GVR(), brokerName),
+			eventshub.InputHeader("ce-specversion", "1.0"),
+			eventshub.InputHeader("ce-type", "sometype"),
+			eventshub.InputHeader("ce-source", "200.request.sender.test.knative.dev"),
+			eventshub.InputHeader("ce-id", uuid.New().String()),
+			eventshub.InputHeader("content-type", contenttype),
+			eventshub.InputBody("{}"),
+			eventshub.InputMethod("POST"),
+		)(ctx, t)
+
+		store := eventshub.StoreFromContext(ctx, source)
+		events := knconf.Correlate(store.AssertAtLeast(t, 2, knconf.SentEventMatcher("")))
+		for _, e := range events {
+			if e.Response.StatusCode < 200 || e.Response.StatusCode > 299 {
+				t.Errorf("Expected statuscode 2XX for sequence %d got %d", e.Response.Sequence, e.Response.StatusCode)
+			}
+		}
+	}
+}
+
+func brokerAcceptsStructuredContentMode(ctx context.Context, t feature.T) {
+	brokerName := state.GetStringOrFail(ctx, t, "brokerName")
+
+	contenttype := "application/cloudevents+json"
+	bodycontent := `{
+    "specversion" : "1.0",
+    "type" : "sometype",
+    "source" : "json.request.sender.test.knative.dev",
+    "id" : "2222-4444-6666",
+    "time" : "2020-07-06T09:23:12Z",
+    "datacontenttype" : "application/json",
+    "data" : {
+        "message" : "helloworld"
+    }
+}`
+	source := feature.MakeRandomK8sName("source")
+	eventshub.Install(source,
+		eventshub.StartSenderToResource(broker.GVR(), brokerName),
+		eventshub.InputHeader("content-type", contenttype),
+		eventshub.InputBody(bodycontent),
+		eventshub.InputMethod("POST"),
+	)(ctx, t)
+
+	store := eventshub.StoreFromContext(ctx, source)
+	events := knconf.Correlate(store.AssertAtLeast(t, 2, knconf.SentEventMatcher("")))
+	for _, e := range events {
+		if e.Response.StatusCode < 200 || e.Response.StatusCode > 299 {
+			t.Errorf("Expected statuscode 2XX for sequence %d got %d", e.Response.Sequence, e.Response.StatusCode)
+		}
+	}
+}
+
 func brokerRejectsUnknownCEVersion(ctx context.Context, t feature.T) {
 	brokerName := state.GetStringOrFail(ctx, t, "brokerName")
 
@@ -218,6 +283,35 @@ func brokerRejectsUnknownCEVersion(ctx context.Context, t feature.T) {
 			// Make sure HTTP response code is 4XX
 			if e.Response.StatusCode < 400 || e.Response.StatusCode > 499 {
 				t.Errorf("Expected statuscode 4XX for sequence %d got %d", e.Response.Sequence, e.Response.StatusCode)
+			}
+		}
+	}
+}
+
+func brokerAcceptResponseSuccess(ctx context.Context, t feature.T) {
+	brokerName := state.GetStringOrFail(ctx, t, "brokerName")
+
+	uuids := map[string]string{
+		uuid.New().String(): "1.0",
+	}
+	for id, version := range uuids {
+		source := feature.MakeRandomK8sName("source")
+		eventshub.Install(source,
+			eventshub.StartSenderToResource(broker.GVR(), brokerName),
+			eventshub.InputHeader("ce-specversion", version),
+			eventshub.InputHeader("ce-type", "sometype"),
+			eventshub.InputHeader("ce-source", "200.request.sender.test.knative.dev"),
+			eventshub.InputHeader("ce-id", id),
+			eventshub.InputBody("{}"),
+			eventshub.InputMethod("POST"),
+		)(ctx, t)
+
+		store := eventshub.StoreFromContext(ctx, source)
+		events := knconf.Correlate(store.AssertAtLeast(t, 2, knconf.SentEventMatcher("")))
+		for _, e := range events {
+			// Make sure HTTP response code is 200
+			if e.Response.StatusCode < 200 || e.Response.StatusCode > 299 {
+				t.Errorf("Expected statuscode 200 for sequence %d got %d", e.Response.Sequence, e.Response.StatusCode)
 			}
 		}
 	}
