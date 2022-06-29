@@ -36,8 +36,9 @@ type Step struct {
 // UnavailablePeriod tracks for the given step event how
 // long it could not be sent.
 type UnavailablePeriod struct {
-	Step   *Step
-	Period time.Duration
+	Step    *Step
+	Period  time.Duration
+	LastErr string
 }
 
 // Finished is step call after verification finishes
