@@ -72,16 +72,15 @@ func WithLocalEndpointServiceName(s string) SpanMatcherOption {
 }
 
 func WithHTTPHostAndPath(host, path string) SpanMatcherOption {
-
 	return func(m *SpanMatcher) {
-		if m.Kind != nil {
-			if *m.Kind == model.Client {
-				m.Tags["http.url"] = regexp.MustCompile("^http://" + regexp.QuoteMeta(host) + HostSuffix + regexp.QuoteMeta(path) + "$")
-			} else if *m.Kind == model.Server {
-				m.Tags["http.host"] = regexp.MustCompile("^" + regexp.QuoteMeta(host) + HostSuffix + "$")
-				m.Tags["http.path"] = regexp.MustCompile("^" + regexp.QuoteMeta(path) + "$")
-			}
-		}
+		m.Tags["http.host"] = regexp.MustCompile("^" + regexp.QuoteMeta(host) + HostSuffix + "$")
+		m.Tags["http.path"] = regexp.MustCompile("^" + regexp.QuoteMeta(path) + "$")
+	}
+}
+
+func WithHTTPURL(host, path string) SpanMatcherOption {
+	return func(m *SpanMatcher) {
+		m.Tags["http.url"] = regexp.MustCompile("^http://" + regexp.QuoteMeta(host) + HostSuffix + regexp.QuoteMeta(path) + "$")
 	}
 }
 
@@ -110,13 +109,9 @@ func (m *SpanMatcher) MatchesSpan(span *model.SpanModel) error {
 	return nil
 }
 
-func MatchHTTPSpanWithCode(kind model.Kind, statusCode int, opts ...SpanMatcherOption) *SpanMatcher {
+func MatchSpan(kind model.Kind, opts ...SpanMatcherOption) *SpanMatcher {
 	m := &SpanMatcher{
 		Kind: &kind,
-		Tags: map[string]*regexp.Regexp{
-			"http.method":      regexp.MustCompile("^" + http.MethodPost + "$"),
-			"http.status_code": regexp.MustCompile("^" + strconv.Itoa(statusCode) + "$"),
-		},
 	}
 	for _, opt := range opts {
 		opt(m)
@@ -124,8 +119,21 @@ func MatchHTTPSpanWithCode(kind model.Kind, statusCode int, opts ...SpanMatcherO
 	return m
 }
 
+func MatchHTTPSpanWithCode(kind model.Kind, statusCode int, opts ...SpanMatcherOption) *SpanMatcher {
+	return MatchSpan(kind, WithCode(statusCode))
+}
+
+func WithCode(statusCode int) SpanMatcherOption {
+	return func(m *SpanMatcher) {
+		m.Tags = map[string]*regexp.Regexp{
+			"http.method":      regexp.MustCompile("^" + http.MethodPost + "$"),
+			"http.status_code": regexp.MustCompile("^" + strconv.Itoa(statusCode) + "$"),
+		}
+	}
+}
+
 func MatchHTTPSpanNoReply(kind model.Kind, opts ...SpanMatcherOption) *SpanMatcher {
-	return MatchHTTPSpanWithCode(kind, 202)
+	return MatchHTTPSpanWithCode(kind, 202, opts...)
 }
 
 func MatchHTTPSpanWithReply(kind model.Kind, opts ...SpanMatcherOption) *SpanMatcher {
