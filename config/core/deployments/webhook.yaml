@@ -120,7 +120,7 @@ spec:
               value: "webhook"
         livenessProbe:
           <<: *probe
-          initialDelaySeconds: 20
+          initialDelaySeconds: 120
 
       # Our webhook should gracefully terminate by lame ducking first, set this to a sufficiently
       # high value that we respect whatever value it has configured for the lame duck grace period.
