@@ -154,7 +154,7 @@ func setupChannelTracingWithReply(
 						// 4. Channel sends event to Mutator pod.
 						Span: tracinghelper.MatchHTTPSpanWithReply(
 							model.Client,
-							tracinghelper.WithHTTPHostAndPath(
+							tracinghelper.WithHTTPURL(
 								fmt.Sprintf("%s.%s.svc", mutatingPod.Name, client.Namespace),
 								"",
 							),
@@ -181,7 +181,7 @@ func setupChannelTracingWithReply(
 								// 7. Channel sends reply from Mutator Pod to the reply Channel.
 								Span: tracinghelper.MatchHTTPSpanNoReply(
 									model.Client,
-									tracinghelper.WithHTTPHostAndPath(
+									tracinghelper.WithHTTPURL(
 										fmt.Sprintf("%s-kn-channel.%s.svc", replyChannelName, client.Namespace),
 										"",
 									),
@@ -205,7 +205,7 @@ func setupChannelTracingWithReply(
 														// 10. Reply Channel sends event to the logging Pod.
 														Span: tracinghelper.MatchHTTPSpanNoReply(
 															model.Client,
-															tracinghelper.WithHTTPHostAndPath(
+															tracinghelper.WithHTTPURL(
 																fmt.Sprintf("%s.%s.svc", recordEventsPod.Name, client.Namespace),
 																"",
 															),
@@ -242,7 +242,7 @@ func setupChannelTracingWithReply(
 			// 1. Sending pod sends event to Channel (only if the sending pod generates a span).
 			Span: tracinghelper.MatchHTTPSpanNoReply(
 				model.Client,
-				tracinghelper.WithHTTPHostAndPath(
+				tracinghelper.WithHTTPURL(
 					fmt.Sprintf("%s-kn-channel.%s.svc", channelName, client.Namespace),
 					"",
 				),
