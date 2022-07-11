@@ -98,9 +98,7 @@ func NewFanoutMessageHandler(logger *zap.Logger, messageDispatcher channel.Messa
 		asyncHandler: config.AsyncHandler,
 	}
 	handler.subscriptions = make([]Subscription, len(config.Subscriptions))
-	for i := range config.Subscriptions {
-		handler.subscriptions[i] = config.Subscriptions[i]
-	}
+	copy(handler.subscriptions, config.Subscriptions)
 	// The receiver function needs to point back at the handler itself, so set it up after
 	// initialization.
 	receiver, err := channel.NewMessageReceiver(createMessageReceiverFunction(handler), logger, reporter)

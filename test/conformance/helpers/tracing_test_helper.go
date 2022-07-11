@@ -26,6 +26,7 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/pkg/system"
 	"knative.dev/pkg/test/zipkin"
 
 	tracinghelper "knative.dev/eventing/test/conformance/helpers/tracing"
@@ -61,7 +62,7 @@ func tracingTest(
 
 	// Do NOT call zipkin.CleanupZipkinTracingSetup. That will be called exactly once in
 	// TestMain.
-	tracinghelper.Setup(t, client)
+	zipkin.SetupZipkinTracingFromConfigTracingOrFail(context.Background(), t, client.Kube, system.Namespace())
 
 	// Start the event info store. Note this is done _before_ we setup the infrastructure, which
 	// sends the event.
