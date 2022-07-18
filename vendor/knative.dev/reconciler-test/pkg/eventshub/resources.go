@@ -21,6 +21,7 @@ import (
 	"embed"
 	"strings"
 
+	"knative.dev/pkg/logging"
 	"knative.dev/reconciler-test/pkg/environment"
 	eventshubrbac "knative.dev/reconciler-test/pkg/eventshub/rbac"
 	"knative.dev/reconciler-test/pkg/feature"
@@ -31,10 +32,6 @@ import (
 
 //go:embed *.yaml
 var templates embed.FS
-
-func init() {
-	environment.RegisterPackage(thisPackage)
-}
 
 // Install starts a new eventshub with the provided name
 // Note: this function expects that the Environment is configured with the
@@ -48,12 +45,17 @@ func init() {
 //   )
 func Install(name string, options ...EventsHubOption) feature.StepFn {
 	return func(ctx context.Context, t feature.T) {
-		namespace := environment.FromContext(ctx).Namespace()
+		if err := registerImage(ctx); err != nil {
+			t.Fatalf("Failed to install eventshub image: %v", err)
+		}
+		env := environment.FromContext(ctx)
+		namespace := env.Namespace()
+		log := logging.FromContext(ctx)
 
 		// Compute the user provided envs
 		envs := make(map[string]string)
 		if err := compose(options...)(ctx, envs); err != nil {
-			t.Fatalf("Error while computing environment variables for eventshub: %s", err)
+			log.Fatalf("Error while computing environment variables for eventshub: %s", err)
 		}
 
 		// eventshub needs tracing and logging config
@@ -62,7 +64,7 @@ func Install(name string, options ...EventsHubOption) feature.StepFn {
 
 		// Register the event info store to assert later the events published by the eventshub
 		eventListener := k8s.EventListenerFromContext(ctx)
-		registerEventsHubStore(eventListener, t, name, namespace)
+		registerEventsHubStore(ctx, eventListener, name, namespace)
 
 		// Install ServiceAccount, Role, RoleBinding
 		eventshubrbac.Install()(ctx, t)
@@ -76,11 +78,15 @@ func Install(name string, options ...EventsHubOption) feature.StepFn {
 			"image":         ImageFromContext(ctx),
 			"withReadiness": isReceiver,
 		}); err != nil {
-			t.Fatal(err)
+			log.Fatal(err)
 		}
 
+		podref, err := k8s.PodReference(namespace, name)
+		if err != nil {
+			log.Fatal(err)
+		}
 		k8s.WaitForPodRunningOrFail(ctx, t, name)
-		k8s.WaitForReadyOrDoneOrFail(ctx, t, k8s.PodReference(namespace, name))
+		k8s.WaitForReadyOrDoneOrFail(ctx, t, podref)
 
 		// If the eventhubs starts an event receiver, we need to wait for the service endpoint to be synced
 		if isReceiver {

@@ -34,10 +34,6 @@ import (
 //go:embed *.yaml
 var yaml embed.FS
 
-func init() {
-	environment.RegisterPackage(manifest.ImagesFromFS(yaml)...)
-}
-
 // Install
 func Install(name string) feature.StepFn {
 	cfg := map[string]interface{}{
@@ -45,6 +41,9 @@ func Install(name string) feature.StepFn {
 	}
 
 	return func(ctx context.Context, t feature.T) {
+		if err := registerImage(ctx); err != nil {
+			t.Fatal(err)
+		}
 		if _, err := manifest.InstallYamlFS(ctx, yaml, cfg); err != nil {
 			t.Fatal(err)
 		}
@@ -69,4 +68,11 @@ func PathFor(file string) string {
 // addressable.
 func AsKReference(name string) *duckv1.KReference {
 	return svc.AsKReference(name)
+}
+
+func registerImage(ctx context.Context) error {
+	im := manifest.ImagesFromFS(ctx, yaml)
+	reg := environment.RegisterPackage(im...)
+	_, err := reg(ctx, environment.FromContext(ctx))
+	return err
 }

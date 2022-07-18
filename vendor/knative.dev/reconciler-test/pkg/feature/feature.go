@@ -31,7 +31,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/injection/clients/dynamicclient"
-
 	"knative.dev/reconciler-test/pkg/state"
 )
 
@@ -45,6 +44,10 @@ type Feature struct {
 }
 
 func (f Feature) MarshalJSON() ([]byte, error) {
+	return f.marshalJSON(true)
+}
+
+func (f Feature) marshalJSON(pretty bool) ([]byte, error) {
 	in := struct {
 		Name  string                   `json:"name"`
 		Steps []Step                   `json:"steps"`
@@ -56,17 +59,23 @@ func (f Feature) MarshalJSON() ([]byte, error) {
 		State: f.State,
 		Refs:  f.refs,
 	}
-	return json.MarshalIndent(in, "", " ")
+	marshaler := json.MarshalIndent
+	if !pretty {
+		marshaler = func(in interface{}, _, _ string) ([]byte, error) {
+			return json.Marshal(in)
+		}
+	}
+	return marshaler(in, "", " ")
 }
 
 // DumpWith calls the provided log function with a nicely formatted string
 // that represents the Feature.
 func (f Feature) DumpWith(log func(args ...interface{})) {
-	b, err := f.MarshalJSON()
+	b, err := f.marshalJSON(false)
 	if err != nil {
-		log("Skipping feature logging due to error: " + err.Error())
+		log("Skipping feature logging due to error: ", err.Error())
 	}
-	log(string(b))
+	log("Feature state: ", string(b))
 }
 
 // NewFeatureNamed creates a new feature with the provided name

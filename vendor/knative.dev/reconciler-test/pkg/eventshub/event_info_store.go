@@ -28,6 +28,7 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"knative.dev/pkg/logging"
 
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/k8s"
@@ -62,14 +63,16 @@ func StoreFromContext(ctx context.Context, name string) *Store {
 	panic("no event store found in the context for the provided name " + name)
 }
 
-func registerEventsHubStore(eventListener *k8s.EventListener, t feature.T, podName string, podNamespace string) {
+func registerEventsHubStore(ctx context.Context, eventListener *k8s.EventListener, podName string, podNamespace string) {
 	store := &Store{
 		podName:      podName,
 		podNamespace: podNamespace,
 	}
 
 	numEventsAlreadyPresent := eventListener.AddHandler(podName, store)
-	t.Logf("Store added to the EventListener, which has already seen %v events", numEventsAlreadyPresent)
+	logging.FromContext(ctx).
+		Infof("Store added to the EventListener, which has already seen %v events",
+			numEventsAlreadyPresent)
 }
 
 func (ei *Store) getDebugInfo() string {

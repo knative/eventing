@@ -57,12 +57,6 @@ type Environment interface {
 	// FeatureState returns the requirement level for this environment.
 	FeatureState() feature.States
 
-	// Images returns back the name to container image mapping to be used with
-	// yaml template parsing.
-	// The map will be in the form `key`: `image` and `key` and the intention
-	// usage is to use this key to string substitute for image in test yaml.
-	Images() map[string]string
-
 	// TemplateConfig returns the base template config to use when processing
 	// yaml templates.
 	TemplateConfig(base map[string]interface{}) map[string]interface{}
@@ -81,4 +75,18 @@ type Environment interface {
 	// namespace will be deleted if it was created by the environment,
 	// References will be cleaned up if registered.
 	Finish()
+}
+
+// UnionOpts joins the given opts into a single opts function.
+func UnionOpts(opts ...EnvOpts) EnvOpts {
+	return func(ctx context.Context, env Environment) (context.Context, error) {
+		for _, opt := range opts {
+			var err error
+			ctx, err = opt(ctx, env)
+			if err != nil {
+				return ctx, err
+			}
+		}
+		return ctx, nil
+	}
 }

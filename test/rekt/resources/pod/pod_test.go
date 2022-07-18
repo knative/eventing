@@ -21,6 +21,7 @@ import (
 	"os"
 
 	"knative.dev/eventing/test/rekt/resources/pod"
+	testlog "knative.dev/reconciler-test/pkg/logging"
 	"knative.dev/reconciler-test/pkg/manifest"
 )
 
@@ -28,6 +29,7 @@ import (
 var yaml embed.FS
 
 func Example_min() {
+	ctx := testlog.NewContext()
 	images := map[string]string{}
 	cfg := map[string]interface{}{
 		"name":      "foo",
@@ -37,7 +39,7 @@ func Example_min() {
 		"labels":    map[string]string{"app": "bla"},
 	}
 
-	files, err := manifest.ExecuteYAML(yaml, images, cfg)
+	files, err := manifest.ExecuteYAML(ctx, yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -60,6 +62,7 @@ func Example_min() {
 }
 
 func Example_withLabels() {
+	ctx := testlog.NewContext()
 	images := map[string]string{}
 	cfg := map[string]interface{}{
 		"name":      "foo",
@@ -71,7 +74,7 @@ func Example_withLabels() {
 
 	pod.WithLabels(map[string]string{"overwrite": "yes"})(cfg)
 
-	files, err := manifest.ExecuteYAML(yaml, images, cfg)
+	files, err := manifest.ExecuteYAML(ctx, yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -94,6 +97,7 @@ func Example_withLabels() {
 }
 
 func Example_withImage() {
+	ctx := testlog.NewContext()
 	images := map[string]string{}
 	cfg := map[string]interface{}{
 		"name":      "foo",
@@ -105,7 +109,7 @@ func Example_withImage() {
 
 	pod.WithImage("myimage")(cfg)
 
-	files, err := manifest.ExecuteYAML(yaml, images, cfg)
+	files, err := manifest.ExecuteYAML(ctx, yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -128,6 +132,7 @@ func Example_withImage() {
 }
 
 func Example_full() {
+	ctx := testlog.NewContext()
 	images := map[string]string{}
 	cfg := map[string]interface{}{
 		"name":      "foo",
@@ -140,7 +145,7 @@ func Example_full() {
 	pod.WithLabels(map[string]string{"overwrite": "yes"})(cfg)
 	pod.WithImage("myimage")(cfg)
 
-	files, err := manifest.ExecuteYAML(yaml, images, cfg)
+	files, err := manifest.ExecuteYAML(ctx, yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}

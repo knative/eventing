@@ -25,6 +25,7 @@ import (
 	"knative.dev/eventing/test/rekt/resources/trigger"
 	v1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/ptr"
+	testlog "knative.dev/reconciler-test/pkg/logging"
 	"knative.dev/reconciler-test/pkg/manifest"
 	"knative.dev/reconciler-test/resources/svc"
 )
@@ -36,6 +37,7 @@ var yaml embed.FS
 // applied to config and go template parser.
 
 func Example_min() {
+	ctx := testlog.NewContext()
 	images := map[string]string{}
 	cfg := map[string]interface{}{
 		"name":       "foo",
@@ -50,7 +52,7 @@ func Example_min() {
 		},
 	}
 
-	files, err := manifest.ExecuteYAML(yaml, images, cfg)
+	files, err := manifest.ExecuteYAML(ctx, yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -73,13 +75,14 @@ func Example_min() {
 }
 
 func Example_zero() {
+	ctx := testlog.NewContext()
 	images := map[string]string{}
 	cfg := map[string]interface{}{
 		"name":      "foo",
 		"namespace": "bar",
 	}
 
-	files, err := manifest.ExecuteYAML(yaml, images, cfg)
+	files, err := manifest.ExecuteYAML(ctx, yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -95,6 +98,7 @@ func Example_zero() {
 }
 
 func Example_full() {
+	ctx := testlog.NewContext()
 	images := map[string]string{}
 	cfg := map[string]interface{}{
 		"name":       "foo",
@@ -116,7 +120,7 @@ func Example_full() {
 		},
 	}
 
-	files, err := manifest.ExecuteYAML(yaml, images, cfg)
+	files, err := manifest.ExecuteYAML(ctx, yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -144,6 +148,7 @@ func Example_full() {
 }
 
 func ExampleWithSubscriber() {
+	ctx := testlog.NewContext()
 	images := map[string]string{}
 	cfg := map[string]interface{}{
 		"name":       "foo",
@@ -157,7 +162,7 @@ func ExampleWithSubscriber() {
 		APIVersion: "subversion",
 	}, "/extra/path")(cfg)
 
-	files, err := manifest.ExecuteYAML(yaml, images, cfg)
+	files, err := manifest.ExecuteYAML(ctx, yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -181,6 +186,7 @@ func ExampleWithSubscriber() {
 }
 
 func ExampleWithFilter() {
+	ctx := testlog.NewContext()
 	images := map[string]string{}
 	cfg := map[string]interface{}{
 		"name":       "foo",
@@ -193,7 +199,7 @@ func ExampleWithFilter() {
 		"type": "z",
 	})(cfg)
 
-	files, err := manifest.ExecuteYAML(yaml, images, cfg)
+	files, err := manifest.ExecuteYAML(ctx, yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -214,6 +220,7 @@ func ExampleWithFilter() {
 }
 
 func ExampleWithDeadLetterSink() {
+	ctx := testlog.NewContext()
 	images := map[string]string{}
 	cfg := map[string]interface{}{
 		"name":       "foo",
@@ -223,7 +230,7 @@ func ExampleWithDeadLetterSink() {
 
 	delivery.WithDeadLetterSink(svc.AsKReference("targetdlq"), "/uri/here")(cfg)
 
-	files, err := manifest.ExecuteYAML(yaml, images, cfg)
+	files, err := manifest.ExecuteYAML(ctx, yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -248,6 +255,7 @@ func ExampleWithDeadLetterSink() {
 }
 
 func ExampleWithRetry() {
+	ctx := testlog.NewContext()
 	images := map[string]string{}
 	cfg := map[string]interface{}{
 		"name":       "foo",
@@ -258,7 +266,7 @@ func ExampleWithRetry() {
 	exp := duckv1.BackoffPolicyExponential
 	delivery.WithRetry(3, &exp, ptr.String("T0"))(cfg)
 
-	files, err := manifest.ExecuteYAML(yaml, images, cfg)
+	files, err := manifest.ExecuteYAML(ctx, yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}

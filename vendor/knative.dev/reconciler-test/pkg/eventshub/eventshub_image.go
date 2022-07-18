@@ -18,13 +18,10 @@ package eventshub
 
 import (
 	"context"
+	"path"
+	"reflect"
 
 	"knative.dev/reconciler-test/pkg/environment"
-)
-
-const (
-	thisPackage           = "knative.dev/reconciler-test/cmd/eventshub"
-	defaultEventshubImage = "ko://" + thisPackage
 )
 
 type eventshubImageKey struct{}
@@ -34,7 +31,7 @@ func ImageFromContext(ctx context.Context) string {
 	if e, ok := ctx.Value(eventshubImageKey{}).(string); ok {
 		return e
 	}
-	return defaultEventshubImage
+	return "ko://" + cmdPackage()
 }
 
 // WithCustomImage allows you to specify a custom eventshub image to be used when invoking eventshub.Install
@@ -42,4 +39,17 @@ func WithCustomImage(image string) environment.EnvOpts {
 	return func(ctx context.Context, env environment.Environment) (context.Context, error) {
 		return context.WithValue(ctx, eventshubImageKey{}, image), nil
 	}
+}
+
+func registerImage(ctx context.Context) error {
+	im := ImageFromContext(ctx)
+	reg := environment.RegisterPackage(im)
+	_, err := reg(ctx, environment.FromContext(ctx))
+	return err
+}
+
+func cmdPackage() string {
+	this := reflect.TypeOf(eventshubImageKey{}).PkgPath()
+	root := path.Dir(path.Dir(this))
+	return path.Join(root, "cmd", "eventshub")
 }

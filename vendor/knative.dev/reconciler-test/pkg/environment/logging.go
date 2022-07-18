@@ -17,7 +17,11 @@ limitations under the License.
 package environment
 
 import (
+	"context"
+
+	"go.uber.org/zap/zaptest"
 	"knative.dev/reconciler-test/pkg/feature"
+	testlog "knative.dev/reconciler-test/pkg/logging"
 )
 
 // loggingSteps returns a number of steps that logs environment-managed resources.
@@ -29,4 +33,11 @@ func (mr *MagicEnvironment) loggingSteps() []feature.Step {
 		T:    feature.Teardown,
 		Fn:   feature.LogReferences(mr.refs...),
 	}}
+}
+
+// WithTestLogger returns a context with test logger configured.
+func WithTestLogger(t zaptest.TestingT, opts ...zaptest.LoggerOption) EnvOpts {
+	return func(ctx context.Context, env Environment) (context.Context, error) {
+		return testlog.WithTestLogger(ctx, t, opts...), nil
+	}
 }

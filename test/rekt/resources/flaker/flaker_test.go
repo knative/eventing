@@ -20,6 +20,7 @@ import (
 	"embed"
 	"os"
 
+	testlog "knative.dev/reconciler-test/pkg/logging"
 	"knative.dev/reconciler-test/pkg/manifest"
 )
 
@@ -27,6 +28,7 @@ import (
 var yaml embed.FS
 
 func Example() {
+	ctx := testlog.NewContext()
 	images := map[string]string{
 		"ko://knative.dev/eventing/test/test_images/event-flaker": "gcr.io/knative-samples/helloworld-go",
 	}
@@ -36,7 +38,7 @@ func Example() {
 		"sink":      "uri://to/a/sink",
 	}
 
-	files, err := manifest.ExecuteYAML(yaml, images, cfg)
+	files, err := manifest.ExecuteYAML(ctx, yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}

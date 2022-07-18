@@ -19,8 +19,8 @@ package environment
 import (
 	"context"
 	"errors"
-	"fmt"
 	"regexp"
+	"sync"
 	"testing"
 	"time"
 
@@ -34,27 +34,31 @@ import (
 	"knative.dev/reconciler-test/pkg/state"
 )
 
-func NewGlobalEnvironment(ctx context.Context) GlobalEnvironment {
-	fmt.Printf("level %s, state %s, feature %s\n\n", l, s, *f)
-
+// NewGlobalEnvironment creates a new global environment based on a
+// context.Context, and optional initializers slice. The provided context is
+// expected to contain the configured Kube client already.
+func NewGlobalEnvironment(ctx context.Context, initializers ...func()) GlobalEnvironment {
 	return &MagicGlobalEnvironment{
-		c:                ctx,
-		instanceID:       uuid.New().String(),
 		RequirementLevel: *l,
 		FeatureState:     *s,
 		FeatureMatch:     regexp.MustCompile(*f),
+		c:                initializeImageStores(ctx),
+		instanceID:       uuid.New().String(),
+		initializers:     initializers,
 	}
 }
 
 type MagicGlobalEnvironment struct {
-	c context.Context
-	// instanceID represents this instance of the GlobalEnvironment. It is used
-	// to link runs together from a single global environment.
-	instanceID string
-
 	RequirementLevel feature.Levels
 	FeatureState     feature.States
 	FeatureMatch     *regexp.Regexp
+
+	c context.Context
+	// instanceID represents this instance of the GlobalEnvironment. It is used
+	// to link runs together from a single global environment.
+	instanceID       string
+	initializers     []func()
+	initializersOnce sync.Once
 }
 
 type MagicEnvironment struct {
@@ -63,7 +67,6 @@ type MagicEnvironment struct {
 	s            feature.States
 	featureMatch *regexp.Regexp
 
-	images           map[string]string
 	namespace        string
 	namespaceCreated bool
 	refs             []corev1.ObjectReference
@@ -90,9 +93,18 @@ func (mr *MagicEnvironment) References() []corev1.ObjectReference {
 func (mr *MagicEnvironment) Finish() {
 	// Delete the namespace after sending the Finished milestone event
 	// since emitters might use the namespace.
-	mr.milestones.Finished()
+	var result milestone.Result = unknownResult{}
+	if mr.managedT != nil {
+		result = mr.managedT
+	}
+	if mr.milestones != nil {
+		mr.milestones.Finished(result)
+	}
 	if err := mr.DeleteNamespaceIfNeeded(); err != nil {
-		mr.milestones.Exception(NamespaceDeleteErrorReason, "failed to delete namespace %q, %v", mr.namespace, err)
+		if mr.milestones != nil {
+			mr.milestones.Exception(NamespaceDeleteErrorReason,
+				"failed to delete namespace %q, %v", mr.namespace, err)
+		}
 		panic(err)
 	}
 }
@@ -104,9 +116,17 @@ func WithPollTimings(interval, timeout time.Duration) EnvOpts {
 	}
 }
 
-// Managed enables auto-lifecycle management of the environment. Including:
-//  - registers a t.Cleanup callback on env.Finish().
+// Managed enables auto-lifecycle management of the environment. Including
+// registration of following opts:
+//  - Cleanup,
+//  - WithTestLogger.
 func Managed(t feature.T) EnvOpts {
+	return UnionOpts(Cleanup(t), WithTestLogger(t))
+}
+
+// Cleanup is an environment option to register a cleanup that will call
+// Environment.Finish function at test end automatically.
+func Cleanup(t feature.T) EnvOpts {
 	return func(ctx context.Context, env Environment) (context.Context, error) {
 		if e, ok := env.(*MagicEnvironment); ok {
 			e.managedT = t
@@ -117,11 +137,6 @@ func Managed(t feature.T) EnvOpts {
 }
 
 func (mr *MagicGlobalEnvironment) Environment(opts ...EnvOpts) (context.Context, Environment) {
-	images, err := ProduceImages()
-	if err != nil {
-		panic(err)
-	}
-
 	namespace := feature.MakeK8sNamePrefix(feature.AppendRandomString("test"))
 
 	env := &MagicEnvironment{
@@ -130,17 +145,28 @@ func (mr *MagicGlobalEnvironment) Environment(opts ...EnvOpts) (context.Context,
 		s:            mr.FeatureState,
 		featureMatch: mr.FeatureMatch,
 
-		images:    images,
 		namespace: namespace,
 	}
 
 	ctx := ContextWith(mr.c, env)
 
 	for _, opt := range opts {
-		if ctx, err = opt(ctx, env); err != nil {
-			panic(err)
+		if nctx, err := opt(ctx, env); err != nil {
+			logging.FromContext(ctx).Fatal(err)
+		} else {
+			ctx = nctx
 		}
 	}
+	env.c = ctx
+
+	log := logging.FromContext(ctx)
+	log.Infof("Environment settings: level %s, state %s, feature %q",
+		env.l, env.s, env.featureMatch)
+	mr.initializersOnce.Do(func() {
+		for _, initializer := range mr.initializers {
+			initializer()
+		}
+	})
 
 	// It is possible to have milestones set in the options, check for nil in
 	// env first before attempting to pull one from the os environment.
@@ -148,14 +174,14 @@ func (mr *MagicGlobalEnvironment) Environment(opts ...EnvOpts) (context.Context,
 		eventEmitter, err := milestone.NewMilestoneEmitterFromEnv(mr.instanceID, namespace)
 		if err != nil {
 			// This is just an FYI error, don't block the test run.
-			logging.FromContext(mr.c).Error("failed to create the milestone event sender", zap.Error(err))
+			logging.FromContext(ctx).Error("failed to create the milestone event sender", zap.Error(err))
 		}
-		logEmitter := milestone.NewLogEmitter(ctx, namespace, env.managedT)
+		logEmitter := milestone.NewLogEmitter(ctx, namespace)
 		env.milestones = milestone.Compose(eventEmitter, logEmitter)
 	}
 
 	if err := env.CreateNamespaceIfNeeded(); err != nil {
-		panic(err)
+		logging.FromContext(ctx).Fatal(err)
 	}
 
 	env.milestones.Environment(map[string]string{
@@ -169,7 +195,13 @@ func (mr *MagicGlobalEnvironment) Environment(opts ...EnvOpts) (context.Context,
 }
 
 func (mr *MagicEnvironment) Images() map[string]string {
-	return mr.images
+	ctx := mr.c
+	if refs, err := ProduceImages(ctx); err != nil {
+		logging.FromContext(ctx).Fatal(err)
+		return nil
+	} else {
+		return refs
+	}
 }
 
 func (mr *MagicEnvironment) TemplateConfig(base map[string]interface{}) map[string]interface{} {
@@ -224,11 +256,12 @@ func (mr *MagicEnvironment) Prerequisite(ctx context.Context, t *testing.T, f *f
 func (mr *MagicEnvironment) Test(ctx context.Context, originalT *testing.T, f *feature.Feature) {
 	originalT.Helper() // Helper marks the calling function as a test helper function.
 
-	f.DumpWith(originalT.Log)
-	defer f.DumpWith(originalT.Log) // Log feature state at the end of the run
+	log := logging.FromContext(ctx)
+	f.DumpWith(log.Debug)
+	defer f.DumpWith(log.Debug) // Log feature state at the end of the run
 
 	if !mr.featureMatch.MatchString(f.Name) {
-		originalT.Logf("Skipping feature '%s' assertions because --feature=%s  doesn't match", f.Name, mr.featureMatch.String())
+		log.Warnf("Skipping feature '%s' assertions because --feature=%s  doesn't match", f.Name, mr.featureMatch.String())
 		return
 	}
 
@@ -309,6 +342,12 @@ func (mr *MagicEnvironment) Test(ctx context.Context, originalT *testing.T, f *f
 	if skipReason != "" {
 		originalT.Skipf("Skipping feature '%s' assertions because %s", f.Name, skipReason)
 	}
+}
+
+type unknownResult struct{}
+
+func (u unknownResult) Failed() bool {
+	return false
 }
 
 // TODO: this logic is strange and hard to follow.

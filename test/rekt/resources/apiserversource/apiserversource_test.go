@@ -21,6 +21,7 @@ import (
 	"os"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	testlog "knative.dev/reconciler-test/pkg/logging"
 
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 
@@ -37,13 +38,14 @@ var yaml embed.FS
 // applied to config and go template parser.
 
 func Example_min() {
+	ctx := testlog.NewContext()
 	images := map[string]string{}
 	cfg := map[string]interface{}{
 		"name":      "foo",
 		"namespace": "bar",
 	}
 
-	files, err := manifest.ExecuteYAML(yaml, images, cfg)
+	files, err := manifest.ExecuteYAML(ctx, yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -59,6 +61,7 @@ func Example_min() {
 }
 
 func Example_withServiceAccountName() {
+	ctx := testlog.NewContext()
 	images := map[string]string{}
 	cfg := map[string]interface{}{
 		"name":      "foo",
@@ -67,7 +70,7 @@ func Example_withServiceAccountName() {
 
 	apiserversource.WithServiceAccountName("src-sa")(cfg)
 
-	files, err := manifest.ExecuteYAML(yaml, images, cfg)
+	files, err := manifest.ExecuteYAML(ctx, yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -84,6 +87,7 @@ func Example_withServiceAccountName() {
 }
 
 func Example_withEventMode() {
+	ctx := testlog.NewContext()
 	images := map[string]string{}
 	cfg := map[string]interface{}{
 		"name":      "foo",
@@ -92,7 +96,7 @@ func Example_withEventMode() {
 
 	apiserversource.WithEventMode(v1.ReferenceMode)(cfg)
 
-	files, err := manifest.ExecuteYAML(yaml, images, cfg)
+	files, err := manifest.ExecuteYAML(ctx, yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -109,6 +113,7 @@ func Example_withEventMode() {
 }
 
 func Example_withSink() {
+	ctx := testlog.NewContext()
 	images := map[string]string{}
 	cfg := map[string]interface{}{
 		"name":      "foo",
@@ -123,7 +128,7 @@ func Example_withSink() {
 	}
 	apiserversource.WithSink(sinkRef, "uri/parts")(cfg)
 
-	files, err := manifest.ExecuteYAML(yaml, images, cfg)
+	files, err := manifest.ExecuteYAML(ctx, yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -146,6 +151,7 @@ func Example_withSink() {
 }
 
 func Example_withResources() {
+	ctx := testlog.NewContext()
 	images := map[string]string{}
 	cfg := map[string]interface{}{
 		"name":      "foo",
@@ -182,7 +188,7 @@ func Example_withResources() {
 
 	apiserversource.WithResources(res1, res2, res3)(cfg)
 
-	files, err := manifest.ExecuteYAML(yaml, images, cfg)
+	files, err := manifest.ExecuteYAML(ctx, yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -217,6 +223,7 @@ func Example_withResources() {
 }
 
 func Example_full() {
+	ctx := testlog.NewContext()
 	images := map[string]string{}
 	cfg := map[string]interface{}{
 		"name":      "foo",
@@ -263,7 +270,7 @@ func Example_full() {
 	apiserversource.WithSink(sinkRef, "uri/parts")(cfg)
 	apiserversource.WithResources(res1, res2, res3)(cfg)
 
-	files, err := manifest.ExecuteYAML(yaml, images, cfg)
+	files, err := manifest.ExecuteYAML(ctx, yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}

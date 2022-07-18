@@ -1,5 +1,5 @@
 /*
-Copyright 2020 The Knative Authors
+Copyright 2022 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,28 +14,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package images
+package manifest
 
 import (
-	"os"
-	"os/exec"
-	"strings"
+	"context"
+	"fmt"
+
+	"go.uber.org/zap"
+	"knative.dev/pkg/logging"
 )
 
-// Helper functions to run shell commands.
-
-func cmd(cmdLine string) *exec.Cmd {
-	cmdSplit := strings.Split(cmdLine, " ")
-	cmd := cmdSplit[0]
-	args := cmdSplit[1:]
-	c := exec.Command(cmd, args...)
-	c.Stderr = os.Stdout // Pipe the stderr in stdout
-	return c
-}
-
-func runCmd(cmdLine string) (string, error) {
-	cmd := cmd(cmdLine)
-
-	cmdOut, err := cmd.Output()
-	return string(cmdOut), err
+func loggingFrom(ctx context.Context, methodName string) *zap.SugaredLogger {
+	return logging.FromContext(ctx).With("method",
+		fmt.Sprintf("knative.dev/reconciler-test/pkg/manifest.%s", methodName))
 }

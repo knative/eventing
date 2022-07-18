@@ -379,9 +379,7 @@ func WaitForPodRunningOrFail(ctx context.Context, t feature.T, podName string) {
 		isRunning := podRunning(p)
 
 		if !isRunning {
-			t.Log("Pod %s/%s is not running, dumping the pod object we got:", ns, podName)
-			b, _ := json.MarshalIndent(p, "", " ")
-			t.Log(string(b))
+			t.Logf("Pod %s/%s is not running...", ns, podName)
 		}
 
 		return isRunning, nil
@@ -392,6 +390,10 @@ func WaitForPodRunningOrFail(ctx context.Context, t feature.T, podName string) {
 			sb.WriteString(err.Error())
 			sb.WriteString("\n")
 		} else {
+			sb.WriteString("Pod: ")
+			podJson, _ := json.MarshalIndent(p, "", "  ")
+			sb.WriteString(string(podJson))
+			sb.WriteString("\n")
 			for _, c := range p.Spec.Containers {
 				if b, err := PodLogs(ctx, podName, c.Name, environment.FromContext(ctx).Namespace()); err != nil {
 					sb.WriteString(err.Error())
