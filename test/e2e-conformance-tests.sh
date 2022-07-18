@@ -30,7 +30,10 @@ source "$(dirname "$0")/e2e-common.sh"
 
 # Script entry point.
 
-initialize $@ --skip-istio-addon
+initialize "$@" --skip-istio-addon
+
+# TODO(cardil): Write a kyn binary to replace namespace in YAML files, as tests
+#               are failing to properly remove created resources.
 
 echo "Running Conformance tests for: Multi Tenant Channel Based Broker (v1), Channel (v1), InMemoryChannel (v1) , ApiServerSource (v1), ContainerSource (v1) and PingSource (v1beta2)"
 go_test_e2e -timeout=30m -parallel=12 ./test/conformance \

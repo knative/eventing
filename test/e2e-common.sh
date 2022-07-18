@@ -145,24 +145,25 @@ function install_knative_eventing() {
   echo "Installing Knative Eventing from: ${1}"
   if [[ "$1" == "HEAD" ]]; then
     build_knative_from_source
-    local EVENTING_CORE_NAME="${TMP_DIR}/${EVENTING_CORE_YAML##*/}"
-    sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" \
-      "${EVENTING_CORE_YAML}" > "${EVENTING_CORE_NAME}"
-    kubectl apply \
-      -f "${EVENTING_CORE_NAME}" || return $?
-    UNINSTALL_LIST+=( "${EVENTING_CORE_NAME}" )
+    local TMP_EVENTING_CORE_YAML="${TMP_DIR}/${EVENTING_CORE_YAML##*/}"
+    kubectl apply --dry-run=client \
+      -n "${SYSTEM_NAMESPACE}" \
+      -f "${EVENTING_CORE_YAML}" > "${TMP_EVENTING_CORE_YAML}"
+    kubectl apply -f "${TMP_EVENTING_CORE_YAML}" || return $?
+    UNINSTALL_LIST+=( "${TMP_EVENTING_CORE_YAML}" )
 
-    kubectl patch horizontalpodautoscalers.autoscaling -n ${SYSTEM_NAMESPACE} eventing-webhook -p '{"spec": {"minReplicas": '${REPLICAS}'}}' || return 1
-
+    kubectl patch horizontalpodautoscalers.autoscaling \
+      -n "${SYSTEM_NAMESPACE}" eventing-webhook \
+      -p '{"spec": {"minReplicas": '${REPLICAS}'}}' || return $?
   else
     local EVENTING_RELEASE_YAML=${TMP_DIR}/"eventing-${LATEST_RELEASE_VERSION}.yaml"
     # Download the latest release of Knative Eventing.
     local url="https://github.com/knative/eventing/releases/download/${LATEST_RELEASE_VERSION}"
-    wget --retry-on-http-error=502 "${url}/eventing.yaml" -O "${EVENTING_RELEASE_YAML}" \
+    wget --retry-on-http-error=502 "${url}/eventing.yaml" | \
+      kubectl apply --dry-run=client \
+        -n "${SYSTEM_NAMESPACE}" \
+        -f - > "${EVENTING_RELEASE_YAML}" \
       || fail_test "Unable to download latest knative/eventing file."
-
-    # Replace the default system namespace with the test's system namespace.
-    sed -i "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" ${EVENTING_RELEASE_YAML}
 
     echo "Knative EVENTING YAML: ${EVENTING_RELEASE_YAML}"
 
@@ -171,8 +172,12 @@ function install_knative_eventing() {
   fi
 
   local TMP_CONFIG_TRACING_CONFIG="${TMP_DIR}/${CONFIG_TRACING_CONFIG##*/}"
-  sed "s/${KNATIVE_DEFAULT_NAMESPACE}/${SYSTEM_NAMESPACE}/g" \
-    "${CONFIG_TRACING_CONFIG}" > "${TMP_CONFIG_TRACING_CONFIG}"
+  kubectl apply --dry-run=client \
+    -n "${SYSTEM_NAMESPACE}" \
+    -f "${CONFIG_TRACING_CONFIG}" > "${TMP_CONFIG_TRACING_CONFIG}"
+  sed -i "s/${KNATIVE_DEFAULT_NAMESPACE}\.svc/${SYSTEM_NAMESPACE}.svc/g" \
+    "${TMP_CONFIG_TRACING_CONFIG}"
+
   echo "Setup config tracing for tracing tests, using YAML: ${TMP_CONFIG_TRACING_CONFIG}"
   kubectl apply -f "${TMP_CONFIG_TRACING_CONFIG}"
   UNINSTALL_LIST+=( "${TMP_CONFIG_TRACING_CONFIG}" )
@@ -210,14 +215,16 @@ function install_mt_broker() {
   else
     echo "use exist EVENTING_MT_CHANNEL_BROKER_YAML"
   fi
-  local EVENTING_MT_CHANNEL_BROKER_NAME=${TMP_DIR}/${EVENTING_MT_CHANNEL_BROKER_YAML##*/}
-  sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" ${EVENTING_MT_CHANNEL_BROKER_YAML} > ${EVENTING_MT_CHANNEL_BROKER_NAME}
+  local TMP_EVENTING_MT_CHANNEL_BROKER=${TMP_DIR}/${EVENTING_MT_CHANNEL_BROKER_YAML##*/}
+  kubectl apply --dry-run=client \
+    -n "${SYSTEM_NAMESPACE}" \
+    -f "${EVENTING_MT_CHANNEL_BROKER_YAML}" > "${TMP_EVENTING_MT_CHANNEL_BROKER}"
   kubectl apply \
-    -f "${EVENTING_MT_CHANNEL_BROKER_NAME}" || return 1
-  UNINSTALL_LIST+=( "${EVENTING_MT_CHANNEL_BROKER_NAME}" )
+    -f "${TMP_EVENTING_MT_CHANNEL_BROKER}" || return $?
+  UNINSTALL_LIST+=( "${TMP_EVENTING_MT_CHANNEL_BROKER}" )
   scale_controlplane mt-broker-controller
 
-  wait_until_pods_running ${SYSTEM_NAMESPACE} || fail_test "Knative Eventing with MT Broker did not come up"
+  wait_until_pods_running "${SYSTEM_NAMESPACE}" || fail_test "Knative Eventing with MT Broker did not come up"
 }
 
 function enable_sugar() {
