@@ -18,21 +18,24 @@ package manifest
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"io/fs"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
 	"text/template"
+
+	testlog "knative.dev/reconciler-test/pkg/logging"
 )
 
 // ExecuteTemplates executes a set of templates found at path, filtering on
 // suffix. Executed into memory and returned.
-func ExecuteTemplates(path, suffix string, images map[string]string, data map[string]interface{}) (map[string]string, error) {
+func ExecuteTemplates(ctx context.Context, path, suffix string, images map[string]string, data map[string]interface{}) (map[string]string, error) {
+	log := loggingFrom(ctx, "ExecuteTemplates")
 	files := make(map[string]string, 1)
 
 	err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
@@ -42,7 +45,7 @@ func ExecuteTemplates(path, suffix string, images map[string]string, data map[st
 		if strings.HasSuffix(info.Name(), suffix) {
 			t, err := template.ParseFiles(path)
 			if err != nil {
-				log.Print("parse: ", err)
+				log.Debug("parse: ", err)
 				return err
 			}
 			buffer := &bytes.Buffer{}
@@ -50,7 +53,7 @@ func ExecuteTemplates(path, suffix string, images map[string]string, data map[st
 			// Execute the template and save the result to the buffer.
 			err = t.Execute(buffer, data)
 			if err != nil {
-				log.Print("execute: ", err)
+				log.Debug("execute: ", err)
 				return err
 			}
 
@@ -73,7 +76,8 @@ func ExecuteTemplates(path, suffix string, images map[string]string, data map[st
 
 // executeTemplatesFS executes a set of templates in the given filesystem, filtering on
 // suffix. Executed into memory and returned.
-func executeTemplatesFS(fsys fs.FS, suffix string, images map[string]string, data map[string]interface{}) (map[string]string, error) {
+func executeTemplatesFS(ctx context.Context, fsys fs.FS, suffix string, images map[string]string, data map[string]interface{}) (map[string]string, error) {
+	log := loggingFrom(ctx, "executeTemplatesFS")
 	files := make(map[string]string, 1)
 
 	err := fs.WalkDir(fsys, ".", func(path string, info fs.DirEntry, err error) error {
@@ -83,7 +87,7 @@ func executeTemplatesFS(fsys fs.FS, suffix string, images map[string]string, dat
 		if strings.HasSuffix(info.Name(), suffix) {
 			t, err := template.ParseFS(fsys, path)
 			if err != nil {
-				log.Print("parse: ", err)
+				log.Debug("parse: ", err)
 				return err
 			}
 			buffer := &bytes.Buffer{}
@@ -91,7 +95,7 @@ func executeTemplatesFS(fsys fs.FS, suffix string, images map[string]string, dat
 			// Execute the template and save the result to the buffer.
 			err = t.Execute(buffer, data)
 			if err != nil {
-				log.Print("execute: ", err)
+				log.Debug("execute: ", err)
 				return err
 			}
 
@@ -117,21 +121,25 @@ func executeTemplatesFS(fsys fs.FS, suffix string, images map[string]string, dat
 // Returns the name of the temporary directory.
 // Deprecated: Use ParseTemplatesFS.
 func ParseTemplates(path string, images map[string]string, cfg map[string]interface{}) (string, error) {
-	return templatesToTmp(ExecuteTemplates(path, "yaml", images, cfg))
+	ctx := testlog.NewContext()
+	files, err := ExecuteTemplates(ctx, path, "yaml", images, cfg)
+	return templatesToTmp(ctx, files, err)
 }
 
 // ParseTemplatesFS walks through all the template yaml file in the given FS
 // and produces instantiated yaml file in a temporary directory.
 // Returns the name of the temporary directory.
-func ParseTemplatesFS(fsys fs.FS, images map[string]string, cfg map[string]interface{}) (string, error) {
-	return templatesToTmp(executeTemplatesFS(fsys, "yaml", images, cfg))
+func ParseTemplatesFS(ctx context.Context, fsys fs.FS, images map[string]string, cfg map[string]interface{}) (string, error) {
+	files, err := executeTemplatesFS(ctx, fsys, "yaml", images, cfg)
+	return templatesToTmp(ctx, files, err)
 }
 
-func templatesToTmp(files map[string]string, err error) (string, error) {
+func templatesToTmp(ctx context.Context, files map[string]string, err error) (string, error) {
 	if err != nil {
 		return "", err
 	}
 
+	log := loggingFrom(ctx, "templatesToTmp")
 	tmpDir, err := ioutil.TempDir("", "processed_yaml")
 	if err != nil {
 		panic(err)
@@ -148,13 +156,13 @@ func templatesToTmp(files map[string]string, err error) (string, error) {
 		_, _ = tmpFile.WriteString(contents)
 	}
 
-	log.Print("new files in ", tmpDir)
+	log.Debug("new files in ", tmpDir)
 	return tmpDir, nil
 }
 
 // ExecuteYAML process the templates found in files named "*.yaml" and return the f.
-func ExecuteYAML(fsys fs.FS, images map[string]string, cfg map[string]interface{}) (map[string]string, error) {
-	return executeTemplatesFS(fsys, "yaml", images, cfg)
+func ExecuteYAML(ctx context.Context, fsys fs.FS, images map[string]string, cfg map[string]interface{}) (map[string]string, error) {
+	return executeTemplatesFS(ctx, fsys, "yaml", images, cfg)
 }
 
 func removeBlanks(in string) string {

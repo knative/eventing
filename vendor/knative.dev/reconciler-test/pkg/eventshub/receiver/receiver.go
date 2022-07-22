@@ -49,6 +49,7 @@ type Receiver struct {
 	responseWaitTime    time.Duration
 	skipResponseCode    int
 	skipResponseHeaders map[string]string
+	skipResponseBody    string
 }
 
 type envConfig struct {
@@ -83,6 +84,9 @@ type envConfig struct {
 
 	// If events should be dropped, specify the HTTP response code here.
 	SkipResponseCode int `envconfig:"SKIP_RESPONSE_CODE" default:"409" required:"false"`
+
+	// If events should be dropped, specify the HTTP response body here.
+	SkipResponseBody string `envconfig:"SKIP_RESPONSE_BODY" default:"" required:"false"`
 
 	// If events should be dropped, specify additional HTTP Headers to return in response.
 	SkipResponseHeaders map[string]string `envconfig:"SKIP_RESPONSE_HEADERS" default:"" required:"false"`
@@ -130,6 +134,7 @@ func NewFromEnv(ctx context.Context, eventLogs *eventshub.EventLogs) *Receiver {
 		counter:             counter,
 		responseWaitTime:    responseWaitTime,
 		skipResponseCode:    env.SkipResponseCode,
+		skipResponseBody:    env.SkipResponseBody,
 		skipResponseHeaders: env.SkipResponseHeaders,
 	}
 }
@@ -227,6 +232,7 @@ func (o *Receiver) ServeHTTP(writer http.ResponseWriter, request *http.Request) 
 			writer.Header().Set(headerKey, headerValue)
 		}
 		writer.WriteHeader(o.skipResponseCode)
+		_, _ = writer.Write([]byte(o.skipResponseBody))
 	} else {
 		o.replyFunc(o.ctx, writer, eventInfo)
 	}

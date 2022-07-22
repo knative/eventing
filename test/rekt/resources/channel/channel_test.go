@@ -22,6 +22,7 @@ import (
 	"os"
 
 	"k8s.io/apimachinery/pkg/runtime"
+	testlog "knative.dev/reconciler-test/pkg/logging"
 	"knative.dev/reconciler-test/pkg/manifest"
 
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
@@ -35,13 +36,14 @@ var yaml embed.FS
 // applied to config and go template parser.
 
 func Example_min() {
+	ctx := testlog.NewContext()
 	images := map[string]string{}
 	cfg := map[string]interface{}{
 		"name":      "foo",
 		"namespace": "bar",
 	}
 
-	files, err := manifest.ExecuteYAML(yaml, images, cfg)
+	files, err := manifest.ExecuteYAML(ctx, yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -57,6 +59,7 @@ func Example_min() {
 }
 
 func Example_full() {
+	ctx := testlog.NewContext()
 	images := map[string]string{}
 	cfg := map[string]interface{}{
 		"name":      "foo",
@@ -84,7 +87,7 @@ func Example_full() {
 		},
 	}
 
-	files, err := manifest.ExecuteYAML(yaml, images, cfg)
+	files, err := manifest.ExecuteYAML(ctx, yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -117,7 +120,7 @@ func Example_full() {
 }
 
 func Example_withTemplate() {
-
+	ctx := testlog.NewContext()
 	spec := map[string]string{
 		"thing1": "value1",
 		"thing2": "value2",
@@ -142,7 +145,7 @@ func Example_withTemplate() {
 	})
 	withTemplate(cfg)
 
-	files, err := manifest.ExecuteYAML(yaml, images, cfg)
+	files, err := manifest.ExecuteYAML(ctx, yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}

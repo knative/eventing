@@ -20,7 +20,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -56,7 +55,7 @@ func GetOperationsResult(ctx context.Context, pod *corev1.Pod, result interface{
 }
 
 // PodReference will return a reference to the pod.
-func PodReference(namespace string, name string) corev1.ObjectReference {
+func PodReference(namespace string, name string) (corev1.ObjectReference, error) {
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name, Namespace: namespace,
@@ -65,17 +64,16 @@ func PodReference(namespace string, name string) corev1.ObjectReference {
 	scheme := runtime.NewScheme()
 	err := corev1.SchemeBuilder.AddToScheme(scheme)
 	if err != nil {
-		log.Fatal("unexpected error: ", errors.WithStack(err))
+		return corev1.ObjectReference{}, errors.WithStack(err)
 	}
 	kinds, _, err := scheme.ObjectKinds(pod)
 	if err != nil {
-		log.Fatal("unexpected error: ", errors.WithStack(err))
+		return corev1.ObjectReference{}, errors.WithStack(err)
 	}
 	if !(len(kinds) > 0) {
-		log.Fatal("unexpected error: ",
-			errors.New("want len(kinds) > 0"))
+		return corev1.ObjectReference{}, errors.New("want len(kinds) > 0")
 	}
 	kind := kinds[0]
 	pod.APIVersion, pod.Kind = kind.ToAPIVersionAndKind()
-	return kmeta.ObjectReference(pod)
+	return kmeta.ObjectReference(pod), nil
 }

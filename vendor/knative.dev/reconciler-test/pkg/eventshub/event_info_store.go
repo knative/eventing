@@ -28,6 +28,7 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"knative.dev/pkg/logging"
 
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/k8s"
@@ -62,14 +63,16 @@ func StoreFromContext(ctx context.Context, name string) *Store {
 	panic("no event store found in the context for the provided name " + name)
 }
 
-func registerEventsHubStore(eventListener *k8s.EventListener, t feature.T, podName string, podNamespace string) {
+func registerEventsHubStore(ctx context.Context, eventListener *k8s.EventListener, podName string, podNamespace string) {
 	store := &Store{
 		podName:      podName,
 		podNamespace: podNamespace,
 	}
 
 	numEventsAlreadyPresent := eventListener.AddHandler(podName, store)
-	t.Logf("Store added to the EventListener, which has already seen %v events", numEventsAlreadyPresent)
+	logging.FromContext(ctx).
+		Infof("Store added to the EventListener, which has already seen %v events",
+			numEventsAlreadyPresent)
 }
 
 func (ei *Store) getDebugInfo() string {
@@ -209,12 +212,13 @@ func (ei *Store) waitAtLeastNMatch(f EventInfoMatcher, min int) ([]EventInfo, er
 		count := len(allMatch)
 		if count < min {
 			internalErr = fmt.Errorf(
-				"FAIL MATCHING: saw %d/%d matching events.\n- Store-\n%s\n- Recent events -\n%s\n- Match errors -\n%s\n",
+				"FAIL MATCHING: saw %d/%d matching events.\n- Store-\n%s\n- Recent events -\n%s\n- Match errors -\n%s\nCollected events: %s",
 				count,
 				min,
 				ei.getDebugInfo(),
 				&sInfo,
 				formatErrors(matchErrs),
+				ei.dumpCollected(),
 			)
 			return false, nil
 		}
@@ -223,6 +227,15 @@ func (ei *Store) waitAtLeastNMatch(f EventInfoMatcher, min int) ([]EventInfo, er
 		return true, nil
 	})
 	return matchRet, internalErr
+}
+
+func (ei *Store) dumpCollected() string {
+	var sb strings.Builder
+	for _, e := range ei.Collected() {
+		sb.WriteString(e.String())
+		sb.WriteRune('\n')
+	}
+	return sb.String()
 }
 
 func formatErrors(errs []error) string {

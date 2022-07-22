@@ -22,6 +22,7 @@ import (
 
 	rbacv1 "k8s.io/api/rbac/v1"
 	"knative.dev/eventing/test/rekt/resources/account_role"
+	testlog "knative.dev/reconciler-test/pkg/logging"
 	"knative.dev/reconciler-test/pkg/manifest"
 )
 
@@ -29,6 +30,7 @@ import (
 var yaml embed.FS
 
 func Example() {
+	ctx := testlog.NewContext()
 	images := map[string]string{}
 	cfg := map[string]interface{}{
 		"name":        "foo",
@@ -37,7 +39,7 @@ func Example() {
 		"matchLabels": "whomp",
 	}
 
-	files, err := manifest.ExecuteYAML(yaml, images, cfg)
+	files, err := manifest.ExecuteYAML(ctx, yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -65,6 +67,7 @@ func Example() {
 }
 
 func Example_matchLabel() {
+	ctx := testlog.NewContext()
 	images := map[string]string{}
 	cfg := map[string]interface{}{
 		"name":       "foo",
@@ -73,7 +76,7 @@ func Example_matchLabel() {
 		"matchLabel": "whomp",
 	}
 
-	files, err := manifest.ExecuteYAML(yaml, images, cfg)
+	files, err := manifest.ExecuteYAML(ctx, yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -111,6 +114,7 @@ func Example_matchLabel() {
 }
 
 func Example_channelableManipulator() {
+	ctx := testlog.NewContext()
 	images := map[string]string{}
 	cfg := map[string]interface{}{
 		"name":      "foo",
@@ -119,7 +123,7 @@ func Example_channelableManipulator() {
 
 	account_role.AsChannelableManipulator(cfg)
 
-	files, err := manifest.ExecuteYAML(yaml, images, cfg)
+	files, err := manifest.ExecuteYAML(ctx, yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -157,6 +161,7 @@ func Example_channelableManipulator() {
 }
 
 func Example_addressableResolver() {
+	ctx := testlog.NewContext()
 	images := map[string]string{}
 	cfg := map[string]interface{}{
 		"name":      "foo",
@@ -165,7 +170,7 @@ func Example_addressableResolver() {
 
 	account_role.AsAddressableResolver(cfg)
 
-	files, err := manifest.ExecuteYAML(yaml, images, cfg)
+	files, err := manifest.ExecuteYAML(ctx, yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -203,6 +208,7 @@ func Example_addressableResolver() {
 }
 
 func Example_withRoleAndRules() {
+	ctx := testlog.NewContext()
 	images := map[string]string{}
 	cfg := map[string]interface{}{
 		"name":      "foo",
@@ -224,7 +230,7 @@ func Example_withRoleAndRules() {
 	account_role.WithRole("baz")(cfg)
 	account_role.WithRules(rule1, rule2)(cfg)
 
-	files, err := manifest.ExecuteYAML(yaml, images, cfg)
+	files, err := manifest.ExecuteYAML(ctx, yaml, images, cfg)
 	if err != nil {
 		panic(err)
 	}

@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 
+	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -27,7 +28,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/dynamic"
-	"k8s.io/klog"
+	"knative.dev/pkg/logging"
 )
 
 type Manifest interface {
@@ -53,18 +54,20 @@ type Manifest interface {
 
 type YamlManifest struct {
 	client    dynamic.Interface
+	log       *zap.SugaredLogger
 	resources []unstructured.Unstructured
 }
 
 var _ Manifest = &YamlManifest{}
 
-func NewYamlManifest(pathname string, recursive bool, client dynamic.Interface) (Manifest, error) {
-	klog.Info("Reading YAML filepath: ", pathname, " recursive: ", recursive)
+func NewYamlManifest(ctx context.Context, pathname string, recursive bool, client dynamic.Interface) (Manifest, error) {
+	log := logging.FromContext(ctx)
+	log.Debug("Reading YAML filepath: ", pathname, " recursive: ", recursive)
 	resources, err := Parse(pathname, recursive)
 	if err != nil {
 		return nil, err
 	}
-	return &YamlManifest{resources: resources, client: client}, nil
+	return &YamlManifest{resources: resources, client: client, log: log}, nil
 }
 
 func (f *YamlManifest) ApplyAll() error {
@@ -82,7 +85,7 @@ func (f *YamlManifest) Apply(spec *unstructured.Unstructured) error {
 		return err
 	}
 	if current == nil {
-		klog.Info("Creating type ", spec.GroupVersionKind(), " name ", spec.GetName())
+		f.log.Info("Creating type ", spec.GroupVersionKind(), " name ", spec.GetName())
 		gvr, _ := meta.UnsafeGuessKindToResource(spec.GroupVersionKind())
 		if _, err := f.client.Resource(gvr).Namespace(spec.GetNamespace()).Create(context.Background(), spec, v1.CreateOptions{}); err != nil {
 			return err
@@ -90,7 +93,7 @@ func (f *YamlManifest) Apply(spec *unstructured.Unstructured) error {
 	} else {
 		// Update existing one
 		if UpdateChanged(spec.UnstructuredContent(), current.UnstructuredContent()) {
-			klog.Info("Updating type ", spec.GroupVersionKind(), " name ", spec.GetName())
+			f.log.Info("Updating type ", spec.GroupVersionKind(), " name ", spec.GetName())
 
 			gvr, _ := meta.UnsafeGuessKindToResource(spec.GroupVersionKind())
 			if _, err = f.client.Resource(gvr).Namespace(current.GetNamespace()).Update(context.Background(), current, v1.UpdateOptions{}); err != nil {
@@ -121,7 +124,7 @@ func (f *YamlManifest) Delete(spec *unstructured.Unstructured) error {
 	if current == nil && err == nil {
 		return nil
 	}
-	klog.Info("Deleting type ", spec.GroupVersionKind(), " name ", spec.GetName())
+	f.log.Info("Deleting type ", spec.GroupVersionKind(), " name ", spec.GetName())
 	gvr, _ := meta.UnsafeGuessKindToResource(spec.GroupVersionKind())
 	if err := f.client.Resource(gvr).Namespace(spec.GetNamespace()).Delete(context.Background(), spec.GetName(), v1.DeleteOptions{}); err != nil {
 		// ignore GC race conditions triggered by owner references

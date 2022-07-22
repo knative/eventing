@@ -7,7 +7,6 @@ on:
 defaults:
   run:
     shell: bash
-    working-directory: ./src/knative.dev/eventing
 
 jobs:
 
@@ -50,8 +49,6 @@ jobs:
             -channels=messaging.knative.dev/v1:Channel,messaging.knative.dev/v1:InMemoryChannel
             -sources=sources.knative.dev/v1:ApiServerSource,sources.knative.dev/v1:ContainerSource,sources.knative.dev/v1beta2:PingSource
     env:
-      GOPATH: ${{ github.workspace }}
-      GO111MODULE: off
       KO_DOCKER_REPO: kind.local
       SYSTEM_NAMESPACE: knative-eventing
       # Use a semi-random cluster suffix, but somewhat predictable
@@ -79,8 +76,6 @@ jobs:
 
     - name: Check out code onto GOPATH
       uses: actions/checkout@v2
-      with:
-        path: ./src/knative.dev/eventing
 
     - name: Install KinD
       run: |
@@ -96,7 +91,6 @@ jobs:
         sudo mv kind /usr/local/bin
 
     - name: Create KinD Cluster
-      working-directory: ./src/knative.dev/eventing
       run: ./hack/create-kind-cluster.sh
 
     - name: Install Knative Eventing
@@ -104,10 +98,6 @@ jobs:
         set -o pipefail
 
         kubectl create namespace ${SYSTEM_NAMESPACE}
-
-        # Build and Publish our containers to the docker daemon (including test assets)
-        export GO111MODULE=on
-        export GOFLAGS=-mod=vendor
 
         export KO_FLAGS="--platform=linux/amd64"
         source ./test/e2e-common.sh
@@ -134,9 +124,6 @@ jobs:
 
     - name: Run e2e Tests
       run: |
-        export GO111MODULE=on
-        export GOFLAGS=-mod=vendor
-        export SYSTEM_NAMESPACE=knative-eventing
         export CLUSTER_DOMAIN=${CLUSTER_SUFFIX}
         # Run the tests tagged as e2e on the KinD cluster.
         go test -race -count=1 -parallel=12 -v -timeout=50m -tags=e2e \
