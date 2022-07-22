@@ -108,8 +108,6 @@ github.com/blendle/zapdriver v1.3.1/go.mod h1:mdXfREi6u5MArG4j9fewC+FGnXaBR+T4Ox
 github.com/bmizerany/perks v0.0.0-20141205001514-d9a9656a3a4b h1:AP/Y7sqYicnjGDfD5VcY4CIfh1hRXBUavxrvELjTiOE=
 github.com/bmizerany/perks v0.0.0-20141205001514-d9a9656a3a4b/go.mod h1:ac9efd0D1fsDb3EJvhqgXRbFx7bs2wqZ10HQPeU8U/Q=
 github.com/c2h5oh/datasize v0.0.0-20171227191756-4eba002a5eae/go.mod h1:S/7n9copUssQ56c7aAgHqftWO4LTf4xY6CGWt8Bc+3M=
-github.com/cardil/knative-reconciler-test v0.0.0-20220715181934-169264f8ba23 h1:KfEJMkn7OqyiwFG/7GSZ+Z83YphGjSkefAgDpMeS550=
-github.com/cardil/knative-reconciler-test v0.0.0-20220715181934-169264f8ba23/go.mod h1:r2nOuFVIVGea19xgyWatEIMfY2YiSVGecL0mK9uaAF4=
 github.com/census-instrumentation/opencensus-proto v0.2.1/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=
 github.com/census-instrumentation/opencensus-proto v0.3.0 h1:t/LhUZLVitR1Ow2YOnduCsavhwFUklBMoGVYUCqmCqk=
 github.com/census-instrumentation/opencensus-proto v0.3.0/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=
@@ -1239,14 +1237,14 @@ k8s.io/utils v0.0.0-20210802155522-efc7438f0176/go.mod h1:jPW/WVKK9YHAvNhRxK0md/
 k8s.io/utils v0.0.0-20211116205334-6203023598ed/go.mod h1:jPW/WVKK9YHAvNhRxK0md/EJ228hCsBRufyofKtW8HA=
 k8s.io/utils v0.0.0-20220210201930-3a6ce19ff2f9 h1:HNSDgDCrr/6Ly3WEGKZftiE7IY19Vz2GdbOCyI4qqhc=
 k8s.io/utils v0.0.0-20220210201930-3a6ce19ff2f9/go.mod h1:jPW/WVKK9YHAvNhRxK0md/EJ228hCsBRufyofKtW8HA=
-knative.dev/hack v0.0.0-20220629134730-e7d63651ce8f/go.mod h1:PHt8x8yX5Z9pPquBEfIj0X66f8iWkWfR0S/sarACJrI=
 knative.dev/hack v0.0.0-20220701014203-65c463ac8c98 h1:kAwcKZOwYU0QCGEwvZrgnLrynFCWnXetwR/+a4W9R70=
 knative.dev/hack v0.0.0-20220701014203-65c463ac8c98/go.mod h1:PHt8x8yX5Z9pPquBEfIj0X66f8iWkWfR0S/sarACJrI=
 knative.dev/hack/schema v0.0.0-20220701014203-65c463ac8c98 h1:nAdAbM+X5t39cKeChtIc4XTEWqcSUjsWlH5wOmwo6DM=
 knative.dev/hack/schema v0.0.0-20220701014203-65c463ac8c98/go.mod h1:ffjwmdcrH5vN3mPhO8RrF2KfNnbHeCE2C60A+2cv3U0=
-knative.dev/pkg v0.0.0-20220701013933-97eb1507655e/go.mod h1:94rzLJg0i5UOFeqtOTkVnDEmpHC93IaOeCo3ofUpTVw=
 knative.dev/pkg v0.0.0-20220705130606-e60d250dc637 h1:wvz8Y/b2Ubox0pbTLAbKags19UC72Ik+b/tIW2QP9/E=
 knative.dev/pkg v0.0.0-20220705130606-e60d250dc637/go.mod h1:MxsV3ZGdrH87zv4O9HtxzbNwmiKcGwEP7UdriLINSn0=
+knative.dev/reconciler-test v0.0.0-20220722111920-0cfde63b455a h1:pUIUS6bVVjmG6DuMYhMbdlABMqjoMggzoIKZ67bevG4=
+knative.dev/reconciler-test v0.0.0-20220722111920-0cfde63b455a/go.mod h1:Awq+u0SA8Cr6JAqef7JxGH1AQk73bllmugV83a60r+E=
 pgregory.net/rapid v0.3.3 h1:jCjBsY4ln4Atz78QoBWxUEvAHaFyNDQg9+WU62aCn1U=
 pgregory.net/rapid v0.3.3/go.mod h1:UYpPVyjFHzYBGHIxLFoupi8vwk6rXNzRY9OMvVxFIOU=
 rsc.io/binaryregexp v0.2.0/go.mod h1:qTv7/COck+e2FymRvadv62gMdZztPaShugOCi3I+8D8=

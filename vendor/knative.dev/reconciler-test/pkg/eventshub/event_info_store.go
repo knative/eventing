@@ -212,12 +212,13 @@ func (ei *Store) waitAtLeastNMatch(f EventInfoMatcher, min int) ([]EventInfo, er
 		count := len(allMatch)
 		if count < min {
 			internalErr = fmt.Errorf(
-				"FAIL MATCHING: saw %d/%d matching events.\n- Store-\n%s\n- Recent events -\n%s\n- Match errors -\n%s\n",
+				"FAIL MATCHING: saw %d/%d matching events.\n- Store-\n%s\n- Recent events -\n%s\n- Match errors -\n%s\nCollected events: %s",
 				count,
 				min,
 				ei.getDebugInfo(),
 				&sInfo,
 				formatErrors(matchErrs),
+				ei.dumpCollected(),
 			)
 			return false, nil
 		}
@@ -226,6 +227,15 @@ func (ei *Store) waitAtLeastNMatch(f EventInfoMatcher, min int) ([]EventInfo, er
 		return true, nil
 	})
 	return matchRet, internalErr
+}
+
+func (ei *Store) dumpCollected() string {
+	var sb strings.Builder
+	for _, e := range ei.Collected() {
+		sb.WriteString(e.String())
+		sb.WriteRune('\n')
+	}
+	return sb.String()
 }
 
 func formatErrors(errs []error) string {

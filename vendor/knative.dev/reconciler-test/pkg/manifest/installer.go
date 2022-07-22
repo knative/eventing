@@ -95,6 +95,7 @@ func InstallYamlFS(ctx context.Context, fsys fs.FS, base map[string]interface{})
 	return manifest, nil
 }
 
+// Deprecated: use InstallYamlFS instead.
 func InstallLocalYaml(ctx context.Context, base map[string]interface{}) (Manifest, error) {
 	log := loggingFrom(ctx, "InstallLocalYaml")
 	pwd, _ := os.Getwd()

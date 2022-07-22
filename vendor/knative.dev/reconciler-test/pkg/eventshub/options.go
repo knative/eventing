@@ -120,6 +120,11 @@ func DropEventsResponseCode(code int) EventsHubOption {
 	)
 }
 
+// DropEventsResponseBody will cause the receiver to reply with the specific body to the dropped events
+func DropEventsResponseBody(body string) EventsHubOption {
+	return envOption("SKIP_RESPONSE_BODY", body)
+}
+
 // DropEventsResponseHeaders will cause the receiver to reply with the specific headers to the dropped events
 func DropEventsResponseHeaders(headers map[string]string) EventsHubOption {
 	headerEnvConfigString := ""
