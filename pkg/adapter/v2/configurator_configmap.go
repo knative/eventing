@@ -18,7 +18,6 @@ package adapter
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"os"
 
@@ -231,10 +230,9 @@ func (c *tracingConfiguratorFromConfigMap) SetupTracing(ctx context.Context, cfg
 	logger := logging.FromContext(ctx)
 
 	cmw := ConfigWatcherFromContext(ctx)
-	service := fmt.Sprintf("%s.%s", cfg.InstanceName, NamespaceFromContext(ctx))
 
 	logger.Infof("Adding Watcher on ConfigMap %s for tracing", c.configMapName)
-	if err := tracing.SetupDynamicPublishing(logger, cmw, service, c.configMapName); err != nil {
+	if err := tracing.SetupDynamicPublishing(logger, cmw, "", c.configMapName); err != nil {
 		logger.Errorw("Error setting up trace publishing. Tracing configuration will be ignored.", zap.Error(err))
 	}
 }
