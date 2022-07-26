@@ -22,13 +22,15 @@ import (
 	"strings"
 	"time"
 
-	kncloudevents "knative.dev/eventing/pkg/adapter/v2"
-
 	cloudevents "github.com/cloudevents/sdk-go/v2"
+	ceobs "github.com/cloudevents/sdk-go/v2/observability"
+	"go.opentelemetry.io/otel/trace"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	kncloudevents "knative.dev/eventing/pkg/adapter/v2"
 	sources "knative.dev/eventing/pkg/apis/sources"
+	"knative.dev/eventing/pkg/observability"
 )
 
 const (
@@ -133,6 +135,11 @@ func makeEvent(source, apiServerSourceName, eventType string, obj *unstructured.
 		Name:          apiServerSourceName,
 		ResourceGroup: resourceGroup,
 	}
+
+	spanName := ceobs.ClientSpanName + " process"
+	ctx = observability.WithSpanData(ctx, spanName, int(trace.SpanKindProducer),
+		observability.K8sAttributes(apiServerSourceName, namespace, resourceGroup))
+
 	ctx = kncloudevents.ContextWithMetricTag(ctx, metricTag)
 	ctx = cloudevents.ContextWithRetriesExponentialBackoff(ctx, 50*time.Millisecond, 5)
 
