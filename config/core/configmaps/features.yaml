@@ -32,9 +32,9 @@ data:
   # For more details: https://github.com/knative/eventing/issues/5811
   delivery-retryafter: "disabled"
 
-  # ALPHA feature: The delivery-timeout allows you to use the Timeout field in DeliverySpec.
+  # BETA feature: The delivery-timeout allows you to use the Timeout field in DeliverySpec.
   # For more details: https://github.com/knative/eventing/issues/5148
-  delivery-timeout: "disabled"
+  delivery-timeout: "enabled"
 
   # ALPHA feature: The kreference-mapping allows you to map kreference onto templated URI
   # For more details: https://github.com/knative/eventing/issues/5593
