@@ -90,10 +90,9 @@ type SubscriptionSpec struct {
 	// etc.)
 	Channel duckv1.KReference `json:"channel"`
 
-	// Subscriber is reference to (optional) function for processing events.
+	// Subscriber is reference to function for processing events.
 	// Events from the Channel will be delivered here and replies are
 	// sent to a Destination as specified by the Reply.
-	// +optional
 	Subscriber *duckv1.Destination `json:"subscriber,omitempty"`
 
 	// Reply specifies (optionally) how to handle events returned from

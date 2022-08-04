@@ -3777,8 +3777,7 @@ knative.dev/pkg/apis/duck/v1.Destination
 </em>
 </td>
 <td>
-<em>(Optional)</em>
-<p>Subscriber is reference to (optional) function for processing events.
+<p>Subscriber is reference to function for processing events.
 Events from the Channel will be delivered here and replies are
 sent to a Destination as specified by the Reply.</p>
 </td>
@@ -4108,8 +4107,7 @@ knative.dev/pkg/apis/duck/v1.Destination
 </em>
 </td>
 <td>
-<em>(Optional)</em>
-<p>Subscriber is reference to (optional) function for processing events.
+<p>Subscriber is reference to function for processing events.
 Events from the Channel will be delivered here and replies are
 sent to a Destination as specified by the Reply.</p>
 </td>

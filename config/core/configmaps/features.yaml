@@ -40,9 +40,9 @@ data:
   # For more details: https://github.com/knative/eventing/issues/5593
   kreference-mapping: "disabled"
 
-  # ALPHA feature: The subscriber-strict flag force subscriptions to define a subscriber
+  # BETA feature: The subscriber-strict flag force subscriptions to define a subscriber
   # For more details: https://github.com/knative/eventing/issues/5756
-  strict-subscriber: "disabled"
+  strict-subscriber: "enabled"
 
   # ALPHA feature: The new-trigger-filters flag allows you to use the new `filters` field
   # in Trigger objects with its rich filtering capabilities.
