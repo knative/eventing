@@ -170,6 +170,22 @@ func TestStartListenReceiveEvent(t *testing.T) {
 
 }
 
+func TestWithWriteTimeout(t *testing.T) {
+	writeTimeout := time.Millisecond * 10
+
+	messageReceiver := NewHTTPMessageReceiver(0, WithWriteTimeout(writeTimeout))
+
+	assert.Equal(t, writeTimeout, messageReceiver.server.WriteTimeout)
+}
+
+func TestWithReadTimeout(t *testing.T) {
+	readTimeout := 30 * time.Second
+
+	messageReceiver := NewHTTPMessageReceiver(0, WithReadTimeout(readTimeout))
+
+	assert.Equal(t, readTimeout, messageReceiver.server.ReadTimeout)
+}
+
 type testEventParsingHandler struct {
 	t              *testing.T
 	ReceivedEvents chan *event.Event

@@ -78,6 +78,30 @@ func WithDrainQuietPeriod(duration time.Duration) HTTPMessageReceiverOption {
 	}
 }
 
+// WithWriteTimeout sets the HTTP server's WriteTimeout. It covers the time between end of reading
+// Request Header to end of writing response.
+func WithWriteTimeout(duration time.Duration) HTTPMessageReceiverOption {
+	return func(h *HTTPMessageReceiver) {
+		if h.server == nil {
+			h.server = &http.Server{}
+		}
+
+		h.server.WriteTimeout = duration
+	}
+}
+
+// WithReadTimeout sets the HTTP server's ReadTimeout. It covers the duration from reading the entire request
+// (Headers + Body)
+func WithReadTimeout(duration time.Duration) HTTPMessageReceiverOption {
+	return func(h *HTTPMessageReceiver) {
+		if h.server == nil {
+			h.server = &http.Server{}
+		}
+
+		h.server.ReadTimeout = duration
+	}
+}
+
 // Blocking
 func (recv *HTTPMessageReceiver) StartListen(ctx context.Context, handler http.Handler) error {
 	var err error
@@ -90,10 +114,11 @@ func (recv *HTTPMessageReceiver) StartListen(ctx context.Context, handler http.H
 		HealthCheck: recv.checker,
 		QuietPeriod: recv.drainQuietPeriod,
 	}
-	recv.server = &http.Server{
-		Addr:    recv.listener.Addr().String(),
-		Handler: drainer,
+	if recv.server == nil {
+		recv.server = &http.Server{}
 	}
+	recv.server.Addr = recv.listener.Addr().String()
+	recv.server.Handler = drainer
 
 	errChan := make(chan error, 1)
 	go func() {
