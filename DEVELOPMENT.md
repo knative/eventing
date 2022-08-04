@@ -29,7 +29,7 @@ Before submitting a PR, see also [contribution guidelines](./CONTRIBUTING.md).
 You must install these tools:
 
 1. [`go`](https://golang.org/doc/install): The language `Knative Eventing` is
-   developed with (version 1.17 or higher)
+   developed with (version 1.18 or higher)
 1. [`git`](https://help.github.com/articles/set-up-git/): For source control
 1. [`ko`](https://github.com/google/ko): For building and deploying container
    images to Kubernetes in a single command.
@@ -163,7 +163,8 @@ Depending on your needs you might want to install other
 
 ## Enable Sugar controller
 
-If you are running e2e tests that leverage the Sugar Controller, you will need to explicitly enable it.
+If you are running e2e tests that leverage the Sugar Controller, you will need
+to explicitly enable it.
 
 ```shell
 ko apply -f test/config/sugar.yaml
