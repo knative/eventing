@@ -25,64 +25,15 @@ import (
 	"testing"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
-
+	"k8s.io/apimachinery/pkg/util/uuid"
 	sourcesv1beta2 "knative.dev/eventing/pkg/apis/sources/v1beta2"
 	sugarresources "knative.dev/eventing/pkg/reconciler/sugar/resources"
-	"knative.dev/eventing/test/lib/recordevents"
-
-	. "github.com/cloudevents/sdk-go/v2/test"
-	"k8s.io/apimachinery/pkg/util/uuid"
-
-	duckv1 "knative.dev/pkg/apis/duck/v1"
-
+	rttestingv1beta2 "knative.dev/eventing/pkg/reconciler/testing/v1beta2"
 	"knative.dev/eventing/test/e2e/helpers"
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/resources"
-
-	rttestingv1beta2 "knative.dev/eventing/pkg/reconciler/testing/v1beta2"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
-
-func TestPingSourceV1Beta2(t *testing.T) {
-	const (
-		sourceName = "e2e-ping-source"
-		// Every 1 minute starting from now
-
-		recordEventPodName = "e2e-ping-source-logger-pod-v1beta2"
-	)
-
-	client := setup(t, true)
-	defer tearDown(client)
-
-	ctx := context.Background()
-
-	// create event logger pod and service
-	eventTracker, _ := recordevents.StartEventRecordOrFail(ctx, client, recordEventPodName)
-	// create cron job source
-	data := fmt.Sprintf(`{"msg":"TestPingSource %s"}`, uuid.NewUUID())
-	source := rttestingv1beta2.NewPingSource(
-		sourceName,
-		client.Namespace,
-		rttestingv1beta2.WithPingSourceSpec(sourcesv1beta2.PingSourceSpec{
-			ContentType: cloudevents.ApplicationJSON,
-			Data:        data,
-			SourceSpec: duckv1.SourceSpec{
-				Sink: duckv1.Destination{
-					Ref: resources.KnativeRefForService(recordEventPodName, client.Namespace),
-				},
-			},
-		}),
-	)
-	client.CreatePingSourceV1Beta2OrFail(source)
-
-	// wait for all test resources to be ready
-	client.WaitForAllTestResourcesReadyOrFail(ctx)
-
-	// verify the logger service receives the event and only once
-	eventTracker.AssertExact(1, recordevents.MatchEvent(
-		HasSource(sourcesv1beta2.PingSourceSource(client.Namespace, sourceName)),
-		HasData([]byte(data)),
-	))
-}
 
 func TestPingSourceV1Beta2EventTypes(t *testing.T) {
 	const (
