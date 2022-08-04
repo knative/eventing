@@ -152,33 +152,6 @@ func TestSmoke_ChannelImplWithSubscription(t *testing.T) {
 }
 
 /*
-TestChannelChainByUsingReplyAsSubscriber tests the following scenario:
-
-EventSource ---> (Channel ---> Subscription) x 10 ---> Sink
-
-It uses Subscription's spec.reply as spec.subscriber.
-
-This test should fail with https://github.com/knative/eventing/issues/5756 done.
-
-*/
-func TestChannelChainByUsingReplyAsSubscriber(t *testing.T) {
-	t.Parallel()
-
-	ctx, env := global.Environment(
-		knative.WithKnativeNamespace(system.Namespace()),
-		knative.WithLoggingConfig,
-		knative.WithTracingConfig,
-		k8s.WithEventListener,
-		environment.Managed(t),
-	)
-
-	createSubscriberFn := func(ref *duckv1.KReference, uri string) manifest.CfgFn {
-		return subscription.WithReply(ref, uri)
-	}
-	env.Test(ctx, t, channel.ChannelChain(10, createSubscriberFn))
-}
-
-/*
 TestChannelChain tests the following scenario:
 
 EventSource ---> (Channel ---> Subscription) x 10 ---> Sink
@@ -199,31 +172,6 @@ func TestChannelChain(t *testing.T) {
 		return subscription.WithSubscriber(ref, uri)
 	}
 	env.Test(ctx, t, channel.ChannelChain(10, createSubscriberFn))
-}
-
-/*
-TestChannelDeadLetterSinkByUsingReplyAsSubscriber tests if the events that cannot be delivered end up in
-the dead letter sink.
-
-It uses Subscription's spec.reply as spec.subscriber.
-
-This test should fail with https://github.com/knative/eventing/issues/5756 done.
-*/
-func TestChannelDeadLetterSinkByUsingReplyAsSubscriber(t *testing.T) {
-	t.Parallel()
-
-	ctx, env := global.Environment(
-		knative.WithKnativeNamespace(system.Namespace()),
-		knative.WithLoggingConfig,
-		knative.WithTracingConfig,
-		k8s.WithEventListener,
-		environment.Managed(t),
-	)
-
-	createSubscriberFn := func(ref *duckv1.KReference, uri string) manifest.CfgFn {
-		return subscription.WithReply(ref, uri)
-	}
-	env.Test(ctx, t, channel.DeadLetterSink(createSubscriberFn))
 }
 
 /*
