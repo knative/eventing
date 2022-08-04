@@ -33,14 +33,15 @@ import (
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
 
+	"knative.dev/pkg/network"
+
 	"knative.dev/eventing/pkg/apis/eventing"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
-	broker "knative.dev/eventing/pkg/broker"
+	"knative.dev/eventing/pkg/broker"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1"
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/tracing"
 	"knative.dev/eventing/pkg/utils"
-	"knative.dev/pkg/network"
 )
 
 const (
@@ -120,7 +121,7 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 		writer.WriteHeader(http.StatusNotFound)
 		return
 	}
-	nsBrokerName := strings.Split(request.RequestURI, "/")
+	nsBrokerName := strings.Split(strings.TrimSuffix(request.RequestURI, "/"), "/")
 	if len(nsBrokerName) != 3 {
 		h.Logger.Info("Malformed uri", zap.String("URI", request.RequestURI))
 		writer.WriteHeader(http.StatusBadRequest)

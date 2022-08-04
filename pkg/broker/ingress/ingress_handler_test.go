@@ -33,12 +33,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+
 	"knative.dev/eventing/pkg/apis/eventing"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
-	broker "knative.dev/eventing/pkg/broker"
+	"knative.dev/eventing/pkg/broker"
 	"knative.dev/eventing/pkg/kncloudevents"
 	reconcilertestingv1 "knative.dev/eventing/pkg/reconciler/testing/v1"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 const (
@@ -123,6 +124,22 @@ func TestHandler_ServeHTTP(t *testing.T) {
 			name:   "valid (happy path POST)",
 			method: nethttp.MethodPost,
 			uri:    "/ns/name",
+			body:   getValidEvent(),
+			expectedHeaders: nethttp.Header{
+				"Allow": []string{"PUT, OPTIONS"},
+			},
+			statusCode: senderResponseStatusCode,
+			handler:    handler(),
+			reporter:   &mockReporter{StatusCode: senderResponseStatusCode, EventDispatchTimeReported: true},
+			defaulter:  broker.TTLDefaulter(logger, 100),
+			brokers: []*eventingv1.Broker{
+				makeBroker("name", "ns"),
+			},
+		},
+		{
+			name:   "valid - ignore trailing slash (happy path POST)",
+			method: nethttp.MethodPost,
+			uri:    "/ns/name/",
 			body:   getValidEvent(),
 			expectedHeaders: nethttp.Header{
 				"Allow": []string{"PUT, OPTIONS"},
