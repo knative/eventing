@@ -106,9 +106,11 @@ func main() {
 	if err != nil {
 		log.Printf("Failed to read tracing config, using the no-op default: %v", err)
 	}
-	if err := tracing.SetupStaticPublishing(zap.L().Sugar(), "", conf); err != nil {
+	tracer, err := tracing.SetupPublishingWithStaticConfig(zap.L().Sugar(), "", conf)
+	if err != nil {
 		log.Fatalf("Failed to initialize tracing: %v", err)
 	}
+	defer tracer.Shutdown(context.Background())
 	c, err := client.NewClientHTTP([]http.Option{cloudevents.WithTarget(sink)}, nil)
 	if err != nil {
 		log.Fatalf("failed to create client: %s", err.Error())

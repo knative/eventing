@@ -100,11 +100,13 @@ func MainMessageAdapterWithContext(ctx context.Context, component string, ector 
 	}
 
 	// Retrieve tracing config
-	if err := env.SetupTracing(logger); err != nil {
+	tracer, err := env.SetupTracing(logger)
+	if err != nil {
 		// If tracing doesn't work, we will log an error, but allow the adapter
 		// to continue to start.
 		logger.Error("Error setting up trace publishing", zap.Error(err))
 	}
+	defer tracer.Shutdown(context.Background())
 
 	httpBindingsSender, err := kncloudevents.NewHTTPMessageSenderWithTarget(env.GetSink())
 	if err != nil {

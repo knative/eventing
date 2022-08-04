@@ -65,9 +65,6 @@ func (s *sender) SendContinually() {
 	var shutdownCh = make(chan struct{})
 	defer func() {
 		s.sendFinished()
-		// Give time to send tracing information.
-		// https://github.com/knative/pkg/issues/2475
-		time.Sleep(5 * time.Second)
 	}()
 
 	go func() {

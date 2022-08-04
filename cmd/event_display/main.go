@@ -75,9 +75,11 @@ func run(ctx context.Context) {
 	if err != nil {
 		log.Printf("Failed to read tracing config, using the no-op default: %v", err)
 	}
-	if err := tracing.SetupStaticPublishing(zap.L().Sugar(), "", conf); err != nil {
+	tracer, err := tracing.SetupPublishingWithStaticConfig(zap.L().Sugar(), "", conf)
+	if err != nil {
 		log.Fatalf("Failed to initialize tracing: %v", err)
 	}
+	defer tracer.Shutdown(context.Background())
 
 	if err := c.StartReceiver(ctx, display); err != nil {
 		log.Fatal("Error during receiver's runtime: ", err)

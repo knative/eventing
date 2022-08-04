@@ -31,6 +31,10 @@ func New() Sender {
 	}
 }
 
+func Shutdown() {
+	config.ShutdownTracing()
+}
+
 // NewEventID creates new event ID
 func NewEventID() string {
 	return randString(16)

@@ -63,7 +63,7 @@ func NewController(
 	endpointsInformer := endpointsinformer.Get(ctx)
 	configmapInformer := configmapinformer.Get(ctx)
 
-	if err := tracing.SetupDynamicPublishing(logger, cmw, "mt-broker-controller", tracingconfig.ConfigName); err != nil {
+	if _, err := tracing.SetupPublishingWithDynamicConfig(logger, cmw, "mt-broker-controller", tracingconfig.ConfigName); err != nil {
 		logger.Fatal("Error setting up trace publishing", zap.Error(err))
 	}
 

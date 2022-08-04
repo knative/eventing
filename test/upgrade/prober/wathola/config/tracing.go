@@ -17,17 +17,29 @@ limitations under the License.
 package config
 
 import (
+	"context"
+
 	"go.uber.org/zap"
 	"knative.dev/pkg/tracing"
 	tracingconfig "knative.dev/pkg/tracing/config"
 )
+
+var tracer tracing.Tracer
 
 func SetupTracing() {
 	config, err := tracingconfig.JSONToTracingConfig(Instance.TracingConfig)
 	if err != nil {
 		Log.Warn("Tracing configuration is invalid, using the no-op default", zap.Error(err))
 	}
-	if err = tracing.SetupStaticPublishing(Log, "", config); err != nil {
+	if tracer, err = tracing.SetupPublishingWithStaticConfig(Log, "", config); err != nil {
 		Log.Fatal("Error setting up trace publishing", zap.Error(err))
+	}
+}
+
+func ShutdownTracing() {
+	if tracer != nil {
+		if err := tracer.Shutdown(context.Background()); err != nil {
+			Log.Warn("Failed to shutdown tracing")
+		}
 	}
 }

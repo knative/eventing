@@ -22,4 +22,5 @@ var instance forwarder.Forwarder
 func main() {
 	instance = forwarder.New()
 	instance.Forward()
+	forwarder.Shutdown()
 }

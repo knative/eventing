@@ -78,7 +78,8 @@ func NewController(
 
 	// Setup trace publishing.
 	iw := cmw.(*configmapinformer.InformedWatcher)
-	if err := tracing.SetupDynamicPublishing(logger, iw, "imc-dispatcher", tracingconfig.ConfigName); err != nil {
+	tracer, err := tracing.SetupPublishingWithDynamicConfig(logger, iw, "imc-dispatcher", tracingconfig.ConfigName)
+	if err != nil {
 		logger.Panicw("Error setting up trace publishing", zap.Error(err))
 	}
 	var env envConfig
@@ -147,6 +148,7 @@ func NewController(
 		if err != nil {
 			logging.FromContext(ctx).Errorw("Failed stopping inMemoryDispatcher.", zap.Error(err))
 		}
+		tracer.Shutdown(context.Background())
 	}()
 
 	return impl
