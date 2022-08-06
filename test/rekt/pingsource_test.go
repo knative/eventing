@@ -2,7 +2,7 @@
 // +build e2e
 
 /*
-Copyright 2021 The Knative Authors
+Copyright 2020 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -70,4 +70,18 @@ func TestPingSourceWithCloudEventData(t *testing.T) {
 	)
 
 	env.Test(ctx, t, pingsource.SendsEventsWithCloudEventData())
+}
+
+func TestPingSourceWithEventTypes(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+	)
+
+	env.Test(ctx, t, pingsource.SendsEventsWithEventTypes())
 }
