@@ -547,7 +547,7 @@ func TestFilterSpecValidation(t *testing.T) {
 		filter: validTriggerFilter,
 		want:   &apis.FieldError{},
 	}, {
-		name: "exact filter contains more than one attribute",
+		name: "valid exact filter containing more than one attribute",
 		filters: []SubscriptionsAPIFilter{
 			{
 				Exact: map[string]string{
@@ -555,7 +555,7 @@ func TestFilterSpecValidation(t *testing.T) {
 					"anotherext": "xyz",
 				},
 			}},
-		want: apis.ErrGeneric("Multiple items found, can have only one key-value", "exact").ViaFieldIndex("filters", 0),
+		want: &apis.FieldError{},
 	}, {
 		name: "valid exact filter",
 		filters: []SubscriptionsAPIFilter{
@@ -566,7 +566,7 @@ func TestFilterSpecValidation(t *testing.T) {
 			}},
 		want: &apis.FieldError{},
 	}, {
-		name: "suffix filter contains more than one attribute",
+		name: "valid suffix filter containing more than one attribute",
 		filters: []SubscriptionsAPIFilter{
 			{
 				Suffix: map[string]string{
@@ -574,7 +574,7 @@ func TestFilterSpecValidation(t *testing.T) {
 					"anotherext": "xyz",
 				},
 			}},
-		want: apis.ErrGeneric("Multiple items found, can have only one key-value", "suffix").ViaFieldIndex("filters", 0),
+		want: &apis.FieldError{},
 	}, {
 		name: "suffix filter contains invalid attribute name",
 		filters: []SubscriptionsAPIFilter{
@@ -596,7 +596,7 @@ func TestFilterSpecValidation(t *testing.T) {
 			}},
 		want: &apis.FieldError{},
 	}, {
-		name: "prefix filter contains more than one attribute",
+		name: "valid prefix filter containing more than one attribute",
 		filters: []SubscriptionsAPIFilter{
 			{
 				Prefix: map[string]string{
@@ -604,7 +604,7 @@ func TestFilterSpecValidation(t *testing.T) {
 					"anotherext": "xyz",
 				},
 			}},
-		want: apis.ErrGeneric("Multiple items found, can have only one key-value", "prefix").ViaFieldIndex("filters", 0),
+		want: &apis.FieldError{},
 	}, {
 		name: "prefix filter contains invalid attribute name",
 		filters: []SubscriptionsAPIFilter{
