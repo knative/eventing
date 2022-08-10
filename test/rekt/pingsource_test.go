@@ -21,6 +21,7 @@ package rekt
 
 import (
 	"testing"
+	"time"
 
 	"knative.dev/eventing/test/rekt/features/pingsource"
 	"knative.dev/pkg/system"
@@ -70,4 +71,19 @@ func TestPingSourceWithCloudEventData(t *testing.T) {
 	)
 
 	env.Test(ctx, t, pingsource.SendsEventsWithCloudEventData())
+}
+
+func TestPingSourceWithEventTypes(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+		environment.WithPollTimings(5*time.Second, 2*time.Minute),
+	)
+
+	env.Test(ctx, t, pingsource.SendsEventsWithEventTypes())
 }

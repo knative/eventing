@@ -21,6 +21,7 @@ package rekt
 
 import (
 	"testing"
+	"time"
 
 	"knative.dev/pkg/system"
 	"knative.dev/reconciler-test/pkg/k8s"
@@ -72,6 +73,7 @@ func TestApiServerSourceDataPlane_SinkTypes(t *testing.T) {
 		knative.WithTracingConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
+		environment.WithPollTimings(5*time.Second, 2*time.Minute),
 	)
 
 	env.TestSet(ctx, t, apiserversourcefeatures.DataPlane_SinkTypes())

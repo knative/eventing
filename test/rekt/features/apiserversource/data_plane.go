@@ -25,10 +25,15 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"k8s.io/apimachinery/pkg/util/sets"
+	"knative.dev/eventing/pkg/apis/sources"
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/eventing/test/rekt/resources/account_role"
 	"knative.dev/eventing/test/rekt/resources/apiserversource"
+	"knative.dev/eventing/test/rekt/resources/broker"
+	"knative.dev/eventing/test/rekt/resources/eventtype"
 	"knative.dev/eventing/test/rekt/resources/pod"
+	"knative.dev/eventing/test/rekt/resources/trigger"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	eventasssert "knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
@@ -46,6 +51,7 @@ func DataPlane_SinkTypes() *feature.FeatureSet {
 		Features: []*feature.Feature{
 			SendsEventsWithSinkRef(),
 			SendsEventsWithSinkUri(),
+			SendsEventsWithEventTypes(),
 
 			// TODO: things to test:
 			// - check if we actually receive add, update and delete events
@@ -152,6 +158,63 @@ func SendsEventsWithSinkUri() *feature.Feature {
 	f.Stable("ApiServerSource as event source").
 		Must("delivers events on sink with URI",
 			eventasssert.OnStore(sink).MatchEvent(test.HasType("dev.knative.apiserver.resource.update")).AtLeast(1))
+
+	return f
+}
+
+// SendsEventsWithEventTypes tests apiserversource to a ready broker.
+func SendsEventsWithEventTypes() *feature.Feature {
+	source := feature.MakeRandomK8sName("source")
+	sink := feature.MakeRandomK8sName("sink")
+	via := feature.MakeRandomK8sName("via")
+
+	f := new(feature.Feature)
+
+	//Install the broker
+	brokerName := feature.MakeRandomK8sName("broker")
+	f.Setup("install broker", broker.Install(brokerName, broker.WithEnvConfig()...))
+	f.Requirement("broker is ready", broker.IsReady(brokerName))
+	f.Requirement("broker is addressable", broker.IsAddressable(brokerName))
+
+	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
+
+	// Point the Trigger subscriber to the sink svc.
+	cfg := []manifest.CfgFn{trigger.WithSubscriber(svc.AsKReference(sink), "")}
+
+	// Install the trigger
+	f.Setup("install trigger", trigger.Install(via, brokerName, cfg...))
+
+	f.Setup("trigger goes ready", trigger.IsReady(via))
+
+	sacmName := feature.MakeRandomK8sName("apiserversource")
+	f.Setup("Create Service Account for ApiServerSource with RBAC for v1.Event resources",
+		setupAccountAndRoleForPods(sacmName))
+
+	f.Setup("install apiserversource", func(ctx context.Context, t feature.T) {
+		brokeruri, err := broker.Address(ctx, brokerName)
+		if err != nil {
+			t.Error("failed to get address of broker", err)
+		}
+		cfg := []manifest.CfgFn{
+			apiserversource.WithServiceAccountName(sacmName),
+			apiserversource.WithEventMode(v1.ResourceMode),
+			apiserversource.WithSink(nil, brokeruri.String()),
+			apiserversource.WithResources(v1.APIVersionKindSelector{
+				APIVersion: "v1",
+				Kind:       "Event",
+			}),
+		}
+		apiserversource.Install(source, cfg...)(ctx, t)
+	})
+	f.Setup("ApiServerSource goes ready", apiserversource.IsReady(source))
+
+	expectedCeTypes := sets.NewString(sources.ApiServerSourceEventReferenceModeTypes...)
+
+	f.Stable("ApiServerSource as event source").
+		Must("delivers events on broker with URI",
+			eventasssert.OnStore(sink).MatchEvent(test.HasType("dev.knative.apiserver.resource.update")).AtLeast(1)).
+		Must("ApiServerSource test eventtypes match",
+			eventtype.WaitForEventType(eventtype.AssertPresent(expectedCeTypes)))
 
 	return f
 }
