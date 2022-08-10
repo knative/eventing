@@ -25,10 +25,13 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"k8s.io/apimachinery/pkg/util/sets"
+	"knative.dev/eventing/pkg/apis/sources"
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/eventing/test/rekt/resources/account_role"
 	"knative.dev/eventing/test/rekt/resources/apiserversource"
 	"knative.dev/eventing/test/rekt/resources/broker"
+	"knative.dev/eventing/test/rekt/resources/eventtype"
 	"knative.dev/eventing/test/rekt/resources/pod"
 	"knative.dev/eventing/test/rekt/resources/trigger"
 	"knative.dev/reconciler-test/pkg/eventshub"
@@ -205,9 +208,13 @@ func SendsEventsWithEventTypes() *feature.Feature {
 	})
 	f.Setup("ApiServerSource goes ready", apiserversource.IsReady(source))
 
+	expectedCeTypes := sets.NewString(sources.ApiServerSourceEventReferenceModeTypes...)
+
 	f.Stable("ApiServerSource as event source").
 		Must("delivers events on broker with URI",
-			eventasssert.OnStore(sink).MatchEvent(test.HasType("dev.knative.apiserver.resource.update")).AtLeast(1))
+			eventasssert.OnStore(sink).MatchEvent(test.HasType("dev.knative.apiserver.resource.update")).AtLeast(1)).
+		Must("ApiServerSource test eventtypes match",
+			eventtype.WaitForEventType(eventtype.AssertPresent(expectedCeTypes)))
 
 	return f
 }

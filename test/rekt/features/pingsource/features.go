@@ -20,7 +20,10 @@ import (
 	"context"
 
 	"github.com/cloudevents/sdk-go/v2/test"
+	"k8s.io/apimachinery/pkg/util/sets"
+	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/eventing/test/rekt/resources/broker"
+	"knative.dev/eventing/test/rekt/resources/eventtype"
 	"knative.dev/eventing/test/rekt/resources/pingsource"
 	"knative.dev/eventing/test/rekt/resources/trigger"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -135,10 +138,13 @@ func SendsEventsWithEventTypes() *feature.Feature {
 	})
 	f.Setup("PingSource goes ready", pingsource.IsReady(source))
 
+	expectedCeTypes := sets.NewString(sourcesv1.PingSourceEventType)
+
 	f.Stable("pingsource as event source").
 		Must("delivers events on broker with URI", assert.OnStore(sink).MatchEvent(
-			test.HasType("dev.knative.sources.ping"),
-		).AtLeast(1))
+			test.HasType("dev.knative.sources.ping")).AtLeast(1)).
+		Must("PingSource test eventtypes match", eventtype.WaitForEventType(
+			eventtype.AssertPresent(expectedCeTypes)))
 
 	return f
 }
