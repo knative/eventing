@@ -40,3 +40,4 @@ spec:
             value: heartbeats
           - name: POD_NAMESPACE
             value: {{ .namespace }}
+
