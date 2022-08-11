@@ -24,10 +24,6 @@ import (
 	"testing"
 
 	"k8s.io/utils/pointer"
-	_ "knative.dev/pkg/system/testing"
-
-	"knative.dev/reconciler-test/pkg/manifest"
-
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/test/rekt/features/apiserversource"
 	"knative.dev/eventing/test/rekt/features/broker"
@@ -35,13 +31,19 @@ import (
 	"knative.dev/eventing/test/rekt/features/parallel"
 	"knative.dev/eventing/test/rekt/features/pingsource"
 	"knative.dev/eventing/test/rekt/features/sequence"
+	"knative.dev/eventing/test/rekt/features/sinkbinding"
 	b "knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/eventing/test/rekt/resources/channel_impl"
 	"knative.dev/eventing/test/rekt/resources/delivery"
+	"knative.dev/eventing/test/rekt/resources/deployment"
+	presources "knative.dev/eventing/test/rekt/resources/parallel"
 	ps "knative.dev/eventing/test/rekt/resources/pingsource"
 	sresources "knative.dev/eventing/test/rekt/resources/sequence"
-
-	presources "knative.dev/eventing/test/rekt/resources/parallel"
+	sb "knative.dev/eventing/test/rekt/resources/sinkbinding"
+	_ "knative.dev/pkg/system/testing"
+	"knative.dev/reconciler-test/pkg/feature"
+	"knative.dev/reconciler-test/pkg/manifest"
+	"knative.dev/reconciler-test/resources/svc"
 )
 
 // TestSmoke_Broker
@@ -271,4 +273,33 @@ func TestSmoke_SequenceDelivery(t *testing.T) {
 func SpecDelivery(spec map[string]interface{}) {
 	linear := eventingduck.BackoffPolicyLinear
 	delivery.WithRetry(10, &linear, pointer.StringPtr("PT1S"))(spec)
+}
+
+// TestSmoke_SinkBinding
+func TestSmoke_SinkBinding(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment()
+	t.Cleanup(env.Finish)
+
+	names := []string{
+		"customname",
+		"name-with-dash",
+		"name1with2numbers3",
+		"name63-01234567890123456789012345678901234567890123456789012345",
+	}
+
+	for _, name := range names {
+		f := sinkbinding.GoesReady(name)
+
+		sink := feature.MakeRandomK8sName("sink")
+		f.Setup("install a service", svc.Install(sink, "app", "rekt"))
+
+		subject := feature.MakeRandomK8sName("subject")
+		f.Setup("install a deployment", deployment.Install(subject))
+
+		f.Setup("install a sinkbinding", sb.Install(name, svc.AsDestinationRef(sink), deployment.AsTrackerReference(subject)))
+
+		env.Test(ctx, t, f)
+	}
 }
