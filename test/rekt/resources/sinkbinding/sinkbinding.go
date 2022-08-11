@@ -96,7 +96,7 @@ func WithExtensions(extensions map[string]string) manifest.CfgFn {
 
 		if extensions != nil {
 			if _, set := ceOverrides["extensions"]; !set {
-				ceOverrides["ref"] = map[string]interface{}{}
+				ceOverrides["extensions"] = map[string]interface{}{}
 			}
 			ceExt := ceOverrides["extensions"].(map[string]interface{})
 			for k, v := range extensions {

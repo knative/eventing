@@ -35,3 +35,9 @@ spec:
           image: {{ .image }}
           ports:
             - containerPort: {{ .port }}
+          env:
+          - name: POD_NAME
+            value: heartbeats
+          - name: POD_NAMESPACE
+            value: {{ .namespace }}
+

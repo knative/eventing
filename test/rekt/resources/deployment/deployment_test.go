@@ -39,6 +39,7 @@ func Example() {
 	}
 
 	files, err := manifest.ExecuteYAML(ctx, yaml, images, cfg)
+
 	if err != nil {
 		panic(err)
 	}
@@ -64,4 +65,9 @@ func Example() {
 	//           image: gcr.io/knative-samples/helloworld-go
 	//           ports:
 	//             - containerPort: 8080
+	//           env:
+	//           - name: POD_NAME
+	//             value: heartbeats
+	//           - name: POD_NAMESPACE
+	//             value: bar
 }
