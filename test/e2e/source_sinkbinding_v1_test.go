@@ -29,7 +29,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 
 	. "github.com/cloudevents/sdk-go/v2/test"
-	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -41,90 +40,6 @@ import (
 
 	rttestingv1 "knative.dev/eventing/pkg/reconciler/testing/v1"
 )
-
-func TestSinkBindingV1Deployment(t *testing.T) {
-	const (
-		sinkBindingName = "e2e-sink-binding"
-		deploymentName  = "e2e-sink-binding-deployment"
-		// the heartbeats image is built from test_images/heartbeats
-		imageName = "heartbeats"
-
-		recordEventPodName = "e2e-sink-binding-recordevent-pod-v1beta1dep"
-	)
-
-	client := setup(t, true)
-	defer tearDown(client)
-
-	ctx := context.Background()
-
-	// create event logger pod and service
-	eventTracker, _ := recordevents.StartEventRecordOrFail(ctx, client, recordEventPodName)
-	extensionSecret := string(uuid.NewUUID())
-
-	// create sink binding
-	sinkBinding := rttestingv1.NewSinkBinding(
-		sinkBindingName,
-		client.Namespace,
-		rttestingv1.WithSink(duckv1.Destination{Ref: resources.KnativeRefForService(recordEventPodName, client.Namespace)}),
-		rttestingv1.WithSubject(tracker.Reference{
-			APIVersion: "apps/v1",
-			Kind:       "Deployment",
-			Namespace:  client.Namespace,
-			Name:       deploymentName,
-		}),
-		rttestingv1.WithCloudEventOverrides(duckv1.CloudEventOverrides{Extensions: map[string]string{
-			"sinkbinding": extensionSecret,
-		}}),
-	)
-	client.CreateSinkBindingV1OrFail(sinkBinding)
-
-	message := fmt.Sprintf("msg %s for TestSinkBindingDeployment", uuid.NewUUID())
-	client.CreateDeploymentOrFail(&appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: client.Namespace,
-			Name:      deploymentName,
-		},
-		Spec: appsv1.DeploymentSpec{
-			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"foo": "bar",
-				},
-			},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						"foo": "bar",
-					},
-				},
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{{
-						Name:            imageName,
-						Image:           pkgTest.ImagePath(imageName),
-						ImagePullPolicy: corev1.PullIfNotPresent,
-						Args:            []string{"--msg=" + message},
-						Env: []corev1.EnvVar{{
-							Name:  "POD_NAME",
-							Value: deploymentName,
-						}, {
-							Name:  "POD_NAMESPACE",
-							Value: client.Namespace,
-						}},
-					}},
-				},
-			},
-		},
-	})
-
-	// wait for all test resources to be ready
-	client.WaitForAllTestResourcesReadyOrFail(ctx)
-
-	// Look for events with expected data, and sinkbinding extension
-	eventTracker.AssertAtLeast(2, recordevents.MatchEvent(
-		recordevents.MatchHeartBeatsImageMessage(message),
-		HasSource(fmt.Sprintf("https://knative.dev/eventing/test/heartbeats/#%s/%s", client.Namespace, deploymentName)),
-		HasExtension("sinkbinding", extensionSecret),
-	))
-}
 
 func TestSinkBindingV1CronJob(t *testing.T) {
 	const (
