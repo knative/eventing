@@ -43,3 +43,18 @@ func TestSinkBindingV1Deployment(t *testing.T) {
 
 	env.Test(ctx, t, sinkbinding.SinkBindingV1Deployment())
 }
+
+func TestSinkBindingV1Job(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+	)
+	t.Cleanup(env.Finish)
+
+	env.Test(ctx, t, sinkbinding.SinkBindingV1Job())
+}
