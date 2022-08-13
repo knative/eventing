@@ -51,7 +51,7 @@ func SinkBindingV1Deployment() *feature.Feature {
 	f.Setup("install SinkBinding", sinkbinding.Install(sbinding, svc.AsDestinationRef(sink), deployment.AsTrackerReference(subject), cfg...))
 	f.Setup("SinkBinding goes ready", sinkbinding.IsReady(sbinding))
 
-	f.Stable("ApiServerSource as event source").
+	f.Stable("Create a deployment as sinkbinding's subject").
 		Must("delivers events",
 			eventasssert.OnStore(sink).MatchEvent(
 				test.HasExtension("sinkbinding", extensionSecret),
@@ -82,7 +82,7 @@ func SinkBindingV1Job() *feature.Feature {
 	f.Setup("install SinkBinding", sinkbinding.Install(sbinding, svc.AsDestinationRef(sink), job.AsTrackerReference(subject), cfg...))
 	f.Setup("SinkBinding goes ready", sinkbinding.IsReady(sbinding))
 
-	f.Stable("ApiServerSource as event source").
+	f.Stable("Create a job as sinkbinding's subject").
 		Must("delivers events",
 			eventasssert.OnStore(sink).MatchEvent(
 				test.HasExtension("sinkbinding", extensionSecret),
