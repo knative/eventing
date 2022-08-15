@@ -20,6 +20,7 @@ import (
 	"github.com/cloudevents/sdk-go/v2/test"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"knative.dev/eventing/test/rekt/resources/deployment"
+	"knative.dev/eventing/test/rekt/resources/job"
 	"knative.dev/eventing/test/rekt/resources/sinkbinding"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	eventasssert "knative.dev/reconciler-test/pkg/eventshub/assert"
@@ -50,7 +51,38 @@ func SinkBindingV1Deployment() *feature.Feature {
 	f.Setup("install SinkBinding", sinkbinding.Install(sbinding, svc.AsDestinationRef(sink), deployment.AsTrackerReference(subject), cfg...))
 	f.Setup("SinkBinding goes ready", sinkbinding.IsReady(sbinding))
 
-	f.Stable("ApiServerSource as event source").
+	f.Stable("Create a deployment as sinkbinding's subject").
+		Must("delivers events",
+			eventasssert.OnStore(sink).MatchEvent(
+				test.HasExtension("sinkbinding", extensionSecret),
+			).AtLeast(1))
+
+	return f
+}
+
+func SinkBindingV1Job() *feature.Feature {
+	sbinding := feature.MakeRandomK8sName("sinkbinding")
+	sink := feature.MakeRandomK8sName("sink")
+	subject := feature.MakeRandomK8sName("subject")
+	extensionSecret := string(uuid.NewUUID())
+
+	f := feature.NewFeatureNamed("SinkBinding goes ready")
+
+	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
+	f.Setup("install a Job", job.Install(subject))
+
+	extensions := map[string]string{
+		"sinkbinding": extensionSecret,
+	}
+
+	cfg := []manifest.CfgFn{
+		sinkbinding.WithExtensions(extensions),
+	}
+
+	f.Setup("install SinkBinding", sinkbinding.Install(sbinding, svc.AsDestinationRef(sink), job.AsTrackerReference(subject), cfg...))
+	f.Setup("SinkBinding goes ready", sinkbinding.IsReady(sbinding))
+
+	f.Stable("Create a job as sinkbinding's subject").
 		Must("delivers events",
 			eventasssert.OnStore(sink).MatchEvent(
 				test.HasExtension("sinkbinding", extensionSecret),
