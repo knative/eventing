@@ -140,9 +140,9 @@ func templatesToTmp(ctx context.Context, files map[string]string, err error) (st
 	}
 
 	log := loggingFrom(ctx, "templatesToTmp")
-	tmpDir, err := ioutil.TempDir("", "processed_yaml")
+	tmpDir, err := ioutil.TempDir("", "processed-yamls-")
 	if err != nil {
-		panic(err)
+		return "", err
 	}
 
 	for file, contents := range files {
@@ -151,12 +151,16 @@ func templatesToTmp(ctx context.Context, files map[string]string, err error) (st
 
 		tmpFile, err := ioutil.TempFile(tmpDir, name)
 		if err != nil {
-			panic(err)
+			return "", err
 		}
 		_, _ = tmpFile.WriteString(contents)
+		err = tmpFile.Close()
+		if err != nil {
+			return "", err
+		}
 	}
 
-	log.Debug("new files in ", tmpDir)
+	log.Debugf("%d new files in dir: %s", len(files), tmpDir)
 	return tmpDir, nil
 }
 

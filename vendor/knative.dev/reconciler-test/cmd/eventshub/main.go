@@ -40,10 +40,10 @@ func main() {
 		},
 		map[string]eventshub.EventGeneratorStarter{
 			eventshub.ReceiverEventGenerator: func(ctx context.Context, logs *eventshub.EventLogs) error {
-				return receiver.NewFromEnv(ctx, logs).Start(ctx, eventshub.WithTracing)
+				return receiver.NewFromEnv(ctx, logs).Start(ctx, eventshub.WithServerTracing)
 			},
 			eventshub.SenderEventGenerator: func(ctx context.Context, logs *eventshub.EventLogs) error {
-				return sender.Start(ctx, logs)
+				return sender.Start(ctx, logs, eventshub.WithClientTracing)
 			},
 		},
 	)

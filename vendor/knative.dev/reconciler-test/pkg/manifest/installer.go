@@ -21,30 +21,17 @@ import (
 	"context"
 	"encoding/json"
 	"io/fs"
-	"os"
-	"path"
-	"runtime"
 	"strings"
 
 	"k8s.io/client-go/util/retry"
 	"knative.dev/pkg/injection/clients/dynamicclient"
 	"knative.dev/pkg/logging"
-	testlog "knative.dev/reconciler-test/pkg/logging"
-
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"
 )
 
 // CfgFn is the function signature of configuration mutation options.
 type CfgFn func(map[string]interface{})
-
-// Deprecated: use InstallYamlFS instead.
-func InstallYaml(ctx context.Context, dir string, base map[string]interface{}) (Manifest, error) {
-	log := loggingFrom(ctx, "InstallYaml")
-	log.Warn("InstallYaml is deprecated and will be removed, " +
-		"use InstallYamlFS instead.")
-	return InstallYamlFS(ctx, os.DirFS(dir), base)
-}
 
 func InstallYamlFS(ctx context.Context, fsys fs.FS, base map[string]interface{}) (Manifest, error) {
 	env := environment.FromContext(ctx)
@@ -56,14 +43,14 @@ func InstallYamlFS(ctx context.Context, fsys fs.FS, base map[string]interface{})
 	f := feature.FromContext(ctx)
 	log := loggingFrom(ctx, "InstallYamlFS")
 
-	yamls, err := ParseTemplatesFS(ctx, fsys, images, cfg)
+	yamlsDir, err := ParseTemplatesFS(ctx, fsys, images, cfg)
 	if err != nil {
 		return nil, err
 	}
 
 	dynamicClient := dynamicclient.Get(ctx)
 
-	manifest, err := NewYamlManifest(ctx, yamls, false, dynamicClient)
+	manifest, err := NewYamlManifest(ctx, yamlsDir, false, dynamicClient)
 	if err != nil {
 		return nil, err
 	}
@@ -93,31 +80,6 @@ func InstallYamlFS(ctx context.Context, fsys fs.FS, base map[string]interface{})
 	}
 
 	return manifest, nil
-}
-
-// Deprecated: use InstallYamlFS instead.
-func InstallLocalYaml(ctx context.Context, base map[string]interface{}) (Manifest, error) {
-	log := loggingFrom(ctx, "InstallLocalYaml")
-	pwd, _ := os.Getwd()
-	log.Debug("PWD: ", pwd)
-	_, filename, _, _ := runtime.Caller(1)
-	log.Debug("FILENAME: ", filename)
-
-	return InstallYamlFS(ctx, os.DirFS(path.Dir(filename)), base)
-}
-
-// Deprecated: use ImagesFromFS instead.
-func ImagesLocalYaml() []string {
-	ctx := testlog.NewContext()
-	log := loggingFrom(ctx, "ImagesLocalYaml")
-	log.Warn("ImagesLocalYaml is deprecated and will be removed, " +
-		"use ImagesFromFS instead.")
-	pwd, _ := os.Getwd()
-	log.Debug("PWD: ", pwd)
-	_, filename, _, _ := runtime.Caller(1)
-	log.Debug("FILENAME: ", filename)
-
-	return ImagesFromFS(ctx, os.DirFS(path.Dir(filename)))
 }
 
 func ImagesFromFS(ctx context.Context, fsys fs.FS) []string {

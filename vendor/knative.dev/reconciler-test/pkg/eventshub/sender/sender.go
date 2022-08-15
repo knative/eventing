@@ -35,11 +35,9 @@ import (
 	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"github.com/cloudevents/sdk-go/v2/types"
 	"github.com/kelseyhightower/envconfig"
-	"go.opencensus.io/plugin/ochttp"
+	"go.opencensus.io/trace"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"knative.dev/pkg/logging"
-	"knative.dev/pkg/tracing/propagation/tracecontextb3"
-
 	"knative.dev/reconciler-test/pkg/eventshub"
 )
 
@@ -77,9 +75,6 @@ type generator struct {
 	// InputMethod to use when sending the http request
 	InputMethod string `envconfig:"INPUT_METHOD" default:"POST" required:"false"`
 
-	// Should tracing be added to events sent.
-	AddTracing bool `envconfig:"ADD_TRACING" default:"false" required:"false"`
-
 	// Should add extension 'sequence' identifying the sequence number.
 	AddSequence bool `envconfig:"ADD_SEQUENCE" default:"false" required:"false"`
 
@@ -95,6 +90,9 @@ type generator struct {
 	// The number of messages to attempt to send. -1 for inferred, 0 for unlimited.
 	MaxMessages int `envconfig:"MAX_MESSAGES" default:"-1" required:"false"`
 
+	// The current namespace.
+	SystemNamespace string `envconfig:"SYSTEM_NAMESPACE" required:"true"`
+
 	// --- Processed State ---
 
 	// baseEvent is parsed from InputEvent.
@@ -107,7 +105,9 @@ type generator struct {
 	eventQueue []conformanceevent.Event
 }
 
-func Start(ctx context.Context, logs *eventshub.EventLogs) error {
+type Option func(*nethttp.Client) error
+
+func Start(ctx context.Context, logs *eventshub.EventLogs, clientOpts ...Option) error {
 	var env generator
 	if err := envconfig.Process("", &env); err != nil {
 		return fmt.Errorf("failed to process env var. %w", err)
@@ -153,10 +153,10 @@ func Start(ctx context.Context, logs *eventshub.EventLogs) error {
 	}
 
 	httpClient := &nethttp.Client{}
-	if env.AddTracing {
-		httpClient.Transport = &ochttp.Transport{
-			Base:        nethttp.DefaultTransport,
-			Propagation: tracecontextb3.TraceContextEgress,
+
+	for _, opt := range clientOpts {
+		if err := opt(httpClient); err != nil {
+			return fmt.Errorf("unable to apply option: %w", err)
 		}
 	}
 
@@ -172,12 +172,26 @@ func Start(ctx context.Context, logs *eventshub.EventLogs) error {
 	ticker := time.NewTicker(period)
 	for {
 
+		ctx, span := trace.StartSpan(ctx, "eventshub-sender")
+
 		req, event, err := env.next(ctx)
 		if err != nil {
 			return err
 		}
 
+		eventString := "unknown"
+		if event != nil {
+			eventString = event.String()
+		}
+		span.AddAttributes(
+			trace.StringAttribute("namespace", env.SystemNamespace),
+			trace.StringAttribute("event", eventString),
+		)
+
 		res, err := httpClient.Do(req)
+
+		span.End()
+
 		// Publish sent event info
 		if err := logs.Vent(env.sentInfo(event, req, err)); err != nil {
 			return fmt.Errorf("cannot forward event info: %w", err)
@@ -373,6 +387,7 @@ func (g *generator) nextQueued(ctx context.Context) (*nethttp.Request, *cloudeve
 	if err != nil {
 		return nil, nil, err
 	}
+	req = req.WithContext(ctx)
 
 	event := eventToEvent(next)
 
@@ -406,7 +421,7 @@ func eventToEvent(conf conformanceevent.Event) *cloudevents.Event {
 }
 
 func (g *generator) nextGenerated(ctx context.Context) (*nethttp.Request, *cloudevents.Event, error) {
-	req, err := nethttp.NewRequest(g.InputMethod, g.Sink, nil)
+	req, err := nethttp.NewRequestWithContext(ctx, g.InputMethod, g.Sink, nil)
 	if err != nil {
 		logging.FromContext(ctx).Error("Cannot create the request: ", err)
 		return nil, nil, err

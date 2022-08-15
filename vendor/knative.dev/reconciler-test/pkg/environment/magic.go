@@ -28,7 +28,6 @@ import (
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"knative.dev/pkg/logging"
-
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/milestone"
 	"knative.dev/reconciler-test/pkg/state"
@@ -136,6 +135,15 @@ func Cleanup(t feature.T) EnvOpts {
 	}
 }
 
+func WithEmitter(emitter milestone.Emitter) EnvOpts {
+	return func(ctx context.Context, env Environment) (context.Context, error) {
+		if e, ok := env.(*MagicEnvironment); ok {
+			e.milestones = emitter
+		}
+		return ctx, nil
+	}
+}
+
 func (mr *MagicGlobalEnvironment) Environment(opts ...EnvOpts) (context.Context, Environment) {
 	namespace := feature.MakeK8sNamePrefix(feature.AppendRandomString("test"))
 
@@ -168,16 +176,18 @@ func (mr *MagicGlobalEnvironment) Environment(opts ...EnvOpts) (context.Context,
 		}
 	})
 
-	// It is possible to have milestones set in the options, check for nil in
-	// env first before attempting to pull one from the os environment.
+	eventEmitter, err := milestone.NewMilestoneEmitterFromEnv(mr.instanceID, namespace)
+	if err != nil {
+		// This is just an FYI error, don't block the test run.
+		logging.FromContext(ctx).Error("failed to create the milestone event sender", zap.Error(err))
+	}
+	logEmitter := milestone.NewLogEmitter(ctx, namespace)
+
 	if env.milestones == nil {
-		eventEmitter, err := milestone.NewMilestoneEmitterFromEnv(mr.instanceID, namespace)
-		if err != nil {
-			// This is just an FYI error, don't block the test run.
-			logging.FromContext(ctx).Error("failed to create the milestone event sender", zap.Error(err))
-		}
-		logEmitter := milestone.NewLogEmitter(ctx, namespace)
 		env.milestones = milestone.Compose(eventEmitter, logEmitter)
+	} else {
+		// Compose the emitters with those passed through opts.
+		env.milestones = milestone.Compose(env.milestones, eventEmitter, logEmitter)
 	}
 
 	if err := env.CreateNamespaceIfNeeded(); err != nil {
@@ -192,16 +202,6 @@ func (mr *MagicGlobalEnvironment) Environment(opts ...EnvOpts) (context.Context,
 	})
 
 	return ctx, env
-}
-
-func (mr *MagicEnvironment) Images() map[string]string {
-	ctx := mr.c
-	if refs, err := ProduceImages(ctx); err != nil {
-		logging.FromContext(ctx).Fatal(err)
-		return nil
-	} else {
-		return refs
-	}
 }
 
 func (mr *MagicEnvironment) TemplateConfig(base map[string]interface{}) map[string]interface{} {

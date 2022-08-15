@@ -62,7 +62,7 @@ var _ Manifest = &YamlManifest{}
 
 func NewYamlManifest(ctx context.Context, pathname string, recursive bool, client dynamic.Interface) (Manifest, error) {
 	log := logging.FromContext(ctx)
-	log.Debug("Reading YAML filepath: ", pathname, " recursive: ", recursive)
+	log.Debugf("Reading YAMLs from path: %s (recursive: %t)", pathname, recursive)
 	resources, err := Parse(pathname, recursive)
 	if err != nil {
 		return nil, err
