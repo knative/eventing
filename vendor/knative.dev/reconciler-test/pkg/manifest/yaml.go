@@ -58,12 +58,11 @@ func Parse(pathname string, recursive bool) ([]unstructured.Unstructured, error)
 // read contains logic to distinguish the type of record in pathname
 // (file, directory or url) and calls the appropriate function
 func read(pathname string, recursive bool) ([]unstructured.Unstructured, error) {
-	if isURL(pathname) {
-		return readURL(pathname)
-	}
-
 	info, err := os.Stat(pathname)
 	if err != nil {
+		if isURL(pathname) {
+			return readURL(pathname)
+		}
 		return nil, err
 	}
 

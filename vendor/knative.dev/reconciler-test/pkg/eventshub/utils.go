@@ -86,10 +86,19 @@ func ConfigureLogging(ctx context.Context, name string) context.Context {
 	return logging.WithLogger(ctx, l)
 }
 
-// WithTracing wraps the provided handler in a tracing handler
-func WithTracing(handler http.Handler) http.Handler {
+// WithServerTracing wraps the provided handler in a tracing handler
+func WithServerTracing(handler http.Handler) http.Handler {
 	return &ochttp.Handler{
 		Propagation: tracecontextb3.TraceContextEgress,
 		Handler:     handler,
 	}
+}
+
+// WithClientTracing enables exporting traces by the client's transport.
+func WithClientTracing(client *http.Client) error {
+	client.Transport = &ochttp.Transport{
+		Base:        http.DefaultTransport,
+		Propagation: tracecontextb3.TraceContextEgress,
+	}
+	return nil
 }

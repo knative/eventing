@@ -206,6 +206,7 @@ func InputMethod(method string) EventsHubOption {
 }
 
 // AddTracing adds tracing headers when sending events.
+// Deprecated: Exporting traces from the client/sender is enabled by default.
 var AddTracing = envOption("ADD_TRACING", "true")
 
 // AddSequence adds an extension named 'sequence' which contains the incremental number of sent events
