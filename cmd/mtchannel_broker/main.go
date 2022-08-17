@@ -20,6 +20,8 @@ import (
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
+	"context"
+
 	"knative.dev/pkg/injection/sharedmain"
 
 	"knative.dev/eventing/pkg/reconciler/broker"
@@ -38,4 +40,5 @@ func main() {
 
 		mttrigger.NewController,
 	)
+	broker.Tracer.Shutdown(context.Background())
 }
