@@ -18,7 +18,6 @@ metadata:
   namespace: knative-eventing
   name: knative-inmemorychannel-webhook
   labels:
-    eventing.knative.dev/release: devel
     app.kubernetes.io/version: devel
     app.kubernetes.io/name: knative-eventing
 rules:

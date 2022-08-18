@@ -17,7 +17,6 @@ kind: ClusterRole
 metadata:
   name: eventing-broker-filter
   labels:
-    eventing.knative.dev/release: devel
     app.kubernetes.io/version: devel
     app.kubernetes.io/name: knative-eventing
 rules:
@@ -46,7 +45,6 @@ kind: ClusterRole
 metadata:
   name: eventing-broker-ingress
   labels:
-    eventing.knative.dev/release: devel
     app.kubernetes.io/version: devel
     app.kubernetes.io/name: knative-eventing
 rules:
@@ -66,7 +64,6 @@ kind: ClusterRole
 metadata:
   name: eventing-config-reader
   labels:
-    eventing.knative.dev/release: devel
     app.kubernetes.io/version: devel
     app.kubernetes.io/name: knative-eventing
 rules:

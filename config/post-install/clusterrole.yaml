@@ -19,7 +19,6 @@ metadata:
   labels:
     app.kubernetes.io/version: devel
     app.kubernetes.io/name: knative-eventing
-    eventing.knative.dev/release: devel
 rules:
   # Storage version upgrader needs to be able to patch CRDs.
   - apiGroups:

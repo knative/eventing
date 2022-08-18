@@ -17,7 +17,6 @@ kind: CustomResourceDefinition
 metadata:
   name: brokers.eventing.knative.dev
   labels:
-    eventing.knative.dev/release: devel
     knative.dev/crd-install: "true"
     duck.knative.dev/addressable: "true"
     app.kubernetes.io/version: devel

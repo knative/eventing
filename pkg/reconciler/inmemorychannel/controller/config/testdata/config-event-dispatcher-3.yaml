@@ -18,7 +18,8 @@ metadata:
   name: config-imc-event-dispatcher
   namespace: knative-eventing
   labels:
-    eventing.knative.dev/release: devel
+    app.kubernetes.io/version: devel
+    app.kubernetes.io/name: knative-eventing
 data:
   # The ConfigMapFromTestFile helper method expects a key named "_example" and it's sample here.
   _example: |

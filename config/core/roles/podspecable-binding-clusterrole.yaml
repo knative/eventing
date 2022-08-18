@@ -18,7 +18,6 @@ kind: ClusterRole
 metadata:
   name: podspecable-binding
   labels:
-    eventing.knative.dev/release: devel
     app.kubernetes.io/version: devel
     app.kubernetes.io/name: knative-eventing
 aggregationRule:
@@ -34,7 +33,6 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: builtin-podspecable-binding
   labels:
-    eventing.knative.dev/release: devel
     duck.knative.dev/podspecable: "true"
     app.kubernetes.io/version: devel
     app.kubernetes.io/name: knative-eventing

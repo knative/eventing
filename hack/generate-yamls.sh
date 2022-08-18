@@ -71,7 +71,7 @@ fi
 readonly KO_YAML_FLAGS="${KO_YAML_FLAGS} ${KO_FLAGS}"
 
 if [[ -n "${TAG:-}" ]]; then
-  LABEL_YAML_CMD=(sed -e "s|eventing.knative.dev/release: devel|eventing.knative.dev/release: \"${TAG}\"|" -e "s|app.kubernetes.io/version: devel|app.kubernetes.io/version: \"${TAG:1}\"|")
+  LABEL_YAML_CMD=(sed -e "s|app.kubernetes.io/version: devel|app.kubernetes.io/version: \"${TAG:1}\"|")
 else
   LABEL_YAML_CMD=(cat)
 fi

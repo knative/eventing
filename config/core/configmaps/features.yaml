@@ -18,7 +18,6 @@ metadata:
   name: config-features
   namespace: knative-eventing
   labels:
-    eventing.knative.dev/release: devel
     knative.dev/config-propagation: original
     knative.dev/config-category: eventing
     app.kubernetes.io/version: devel

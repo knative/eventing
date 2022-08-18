@@ -18,7 +18,8 @@ metadata:
   name: config-ping-defaults
   namespace: knative-eventing
   labels:
-    eventing.knative.dev/release: devel
+    app.kubernetes.io/name: knative-eventing
+    app.kubernetes.io/version: devel
   annotations:
     knative.dev/example-checksum: "9185c153"
     app.kubernetes.io/version: devel

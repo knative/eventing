@@ -17,7 +17,6 @@ kind: ClusterRole
 metadata:
   name: imc-channelable-manipulator
   labels:
-    eventing.knative.dev/release: devel
     duck.knative.dev/channelable: "true"
     app.kubernetes.io/version: devel
     app.kubernetes.io/name: knative-eventing

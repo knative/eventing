@@ -18,7 +18,8 @@ metadata:
   name: chaosduck
   namespace: knative-eventing
   labels:
-    eventing.knative.dev/release: devel
+    app.kubernetes.io/version: devel
+    app.kubernetes.io/name: knative-eventing
 
 ---
 kind: Role
@@ -27,7 +28,8 @@ metadata:
   name: chaosduck
   namespace: knative-eventing
   labels:
-    eventing.knative.dev/release: devel
+    app.kubernetes.io/version: devel
+    app.kubernetes.io/name: knative-eventing
 rules:
   - apiGroups: [""]
     resources: ["pods"]
@@ -43,7 +45,8 @@ metadata:
   name: chaosduck
   namespace: knative-eventing
   labels:
-    eventing.knative.dev/release: devel
+    app.kubernetes.io/version: devel
+    app.kubernetes.io/name: knative-eventing
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -60,7 +63,8 @@ metadata:
   name: chaosduck
   namespace: knative-eventing
   labels:
-    eventing.knative.dev/release: devel
+    app.kubernetes.io/version: devel
+    app.kubernetes.io/name: knative-eventing
 spec:
   selector:
     matchLabels:
