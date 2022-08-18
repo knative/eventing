@@ -29,7 +29,6 @@ webhooks:
   failurePolicy: Ignore
   name: config.webhook.eventing.knative.dev
   namespaceSelector:
-    matchExpressions:
-    - key: eventing.knative.dev/release
-      operator: Exists
+    matchLabels:
+      app.kubernetes.io/name: knative-eventing
   timeoutSeconds: 10
