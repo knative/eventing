@@ -15,11 +15,14 @@
 
 package main
 
-import "knative.dev/eventing/test/upgrade/prober/wathola/receiver"
+import (
+	"knative.dev/eventing/test/upgrade/prober/wathola/receiver"
+)
 
 var instance receiver.Receiver
 
 func main() {
 	instance = receiver.New()
 	instance.Receive()
+	receiver.Shutdown()
 }

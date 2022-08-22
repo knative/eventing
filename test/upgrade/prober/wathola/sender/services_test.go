@@ -64,7 +64,7 @@ func TestTracePropagation(t *testing.T) {
 	oct := tracing.NewOpenCensusTracer(co)
 	t.Cleanup(func() {
 		reporter.Close()
-		oct.Finish()
+		oct.Shutdown(context.Background())
 	})
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{

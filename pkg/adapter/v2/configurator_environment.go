@@ -23,6 +23,7 @@ import (
 	"net/http"
 
 	"go.uber.org/zap"
+	"knative.dev/pkg/tracing"
 
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
@@ -90,13 +91,15 @@ func NewTracingConfiguratorFromEnvironment(env EnvConfigAccessor) TracingConfigu
 }
 
 // SetupTracing based on environment variables.
-func (c *tracingConfiguratorFromEnvironment) SetupTracing(ctx context.Context, _ *TracingConfiguration) {
+func (c *tracingConfiguratorFromEnvironment) SetupTracing(ctx context.Context, _ *TracingConfiguration) tracing.Tracer {
 	logger := logging.FromContext(ctx)
-	if err := c.env.SetupTracing(logger); err != nil {
+	tracer, err := c.env.SetupTracing(logger)
+	if err != nil {
 		// If tracing doesn't work, we will log an error, but allow the adapter
 		// to continue to start.
 		logger.Errorw("Error setting up trace publishing", zap.Error(err))
 	}
+	return tracer
 }
 
 // cloudEventsStatusReporterConfiguratorFromEnvironment configures

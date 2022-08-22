@@ -50,6 +50,10 @@ func New() Receiver {
 	return r
 }
 
+func Shutdown() {
+	config.ShutdownTracing()
+}
+
 func (r receiver) Receive() {
 	port := config.Instance.Receiver.Port
 	client.Receive(port, Canceling, r.receiveEvent, r.reportMiddleware)

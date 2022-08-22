@@ -57,13 +57,13 @@ const (
 )
 
 // ConfigureTracing can be used in test-images to configure tracing.
-func ConfigureTracing(logger *zap.SugaredLogger, serviceName string) error {
+func ConfigureTracing(logger *zap.SugaredLogger, serviceName string) (tracing.Tracer, error) {
 	tracingEnv := os.Getenv(ConfigTracingEnv)
 	conf, err := config.JSONToTracingConfig(tracingEnv)
 	if err != nil {
 		logger.Warn("Error while trying to read the tracing config, using NoopConfig: ", err)
 	}
-	return tracing.SetupStaticPublishing(logger, serviceName, conf)
+	return tracing.SetupPublishingWithStaticConfig(logger, serviceName, conf)
 }
 
 // ConfigureLogging can be used in test-images to configure logging.

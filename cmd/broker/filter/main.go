@@ -112,7 +112,8 @@ func main() {
 	}
 
 	bin := fmt.Sprintf("%s.%s", names.BrokerFilterName, system.Namespace())
-	if err = tracing.SetupDynamicPublishing(sl, configMapWatcher, bin, tracingconfig.ConfigName); err != nil {
+	tracer, err := tracing.SetupPublishingWithDynamicConfig(sl, configMapWatcher, bin, tracingconfig.ConfigName)
+	if err != nil {
 		logger.Fatal("Error setting up trace publishing", zap.Error(err))
 	}
 
@@ -143,6 +144,7 @@ func main() {
 	if err != nil {
 		logger.Fatal("handler.Start() returned an error", zap.Error(err))
 	}
+	tracer.Shutdown(context.Background())
 	logger.Info("Exiting...")
 }
 

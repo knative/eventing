@@ -116,7 +116,7 @@ type EnvConfigAccessor interface {
 	// Get the parsed logger.
 	GetLogger() *zap.SugaredLogger
 
-	SetupTracing(*zap.SugaredLogger) error
+	SetupTracing(*zap.SugaredLogger) (tracing.Tracer, error)
 
 	GetCloudEventOverrides() (*duckv1.CloudEventOverrides, error)
 
@@ -179,12 +179,12 @@ func (e *EnvConfig) GetSinktimeout() int {
 	return -1
 }
 
-func (e *EnvConfig) SetupTracing(logger *zap.SugaredLogger) error {
+func (e *EnvConfig) SetupTracing(logger *zap.SugaredLogger) (tracing.Tracer, error) {
 	config, err := tracingconfig.JSONToTracingConfig(e.TracingConfigJson)
 	if err != nil {
 		logger.Warn("Tracing configuration is invalid, using the no-op default", zap.Error(err))
 	}
-	return tracing.SetupStaticPublishing(logger, "", config)
+	return tracing.SetupPublishingWithStaticConfig(logger, "", config)
 }
 
 func (e *EnvConfig) GetCloudEventOverrides() (*duckv1.CloudEventOverrides, error) {

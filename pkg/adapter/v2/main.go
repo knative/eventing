@@ -29,6 +29,7 @@ import (
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/kelseyhightower/envconfig"
 	"go.uber.org/zap"
+	"knative.dev/pkg/tracing"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -79,7 +80,7 @@ type TracingConfiguration struct {
 
 // TracingConfigurator configures the tracing settings for an adapter.
 type TracingConfigurator interface {
-	SetupTracing(ctx context.Context, cfg *TracingConfiguration)
+	SetupTracing(ctx context.Context, cfg *TracingConfiguration) tracing.Tracer
 }
 
 // ObservabilityConfigurator groups the observability related methods
@@ -203,7 +204,8 @@ func MainWithInformers(ctx context.Context, component string, env EnvConfigAcces
 		}()
 	}
 
-	configurator.SetupTracing(ctx, &TracingConfiguration{InstanceName: env.GetName()})
+	tracer := configurator.SetupTracing(ctx, &TracingConfiguration{InstanceName: env.GetName()})
+	defer tracer.Shutdown(context.Background())
 
 	crStatusEventClient := configurator.CreateCloudEventsStatusReporter(ctx)
 

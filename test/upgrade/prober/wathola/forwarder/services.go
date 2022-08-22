@@ -47,6 +47,10 @@ func New() Forwarder {
 	return f
 }
 
+func Shutdown() {
+	config.ShutdownTracing()
+}
+
 func (f *forwarder) Forward() {
 	port := config.Instance.Forwarder.Port
 	client.Receive(port, Canceling, f.forwardEvent)

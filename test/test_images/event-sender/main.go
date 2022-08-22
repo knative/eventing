@@ -31,6 +31,7 @@ import (
 	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"go.opencensus.io/plugin/ochttp"
 	"go.uber.org/zap"
+	"knative.dev/pkg/tracing"
 	"knative.dev/pkg/tracing/propagation/tracecontextb3"
 
 	"knative.dev/eventing/test/lib/sender"
@@ -111,12 +112,14 @@ func main() {
 	}
 
 	var c cloudevents.Client
+	var tracer tracing.Tracer
 	if addTracing {
 		log.Println("Adding tracing")
 		logger, _ := zap.NewDevelopment()
-		if err := test_images.ConfigureTracing(logger.Sugar(), ""); err != nil {
+		if tracer, err = test_images.ConfigureTracing(logger.Sugar(), ""); err != nil {
 			log.Fatalf("Unable to setup trace publishing: %v", err)
 		}
+		defer tracer.Shutdown(context.Background())
 		c, err = cloudevents.NewClient(t, client.WithObservabilityService(obsclient.New()))
 	} else {
 		c, err = cloudevents.NewClient(t)

@@ -51,6 +51,8 @@ const (
 	BrokerConditionAddressable    apis.ConditionType = "Addressable"
 )
 
+var Tracer tracing.Tracer
+
 // NewController initializes the controller and is called by the generated code
 // Registers event handlers to enqueue events
 func NewController(
@@ -63,7 +65,8 @@ func NewController(
 	endpointsInformer := endpointsinformer.Get(ctx)
 	configmapInformer := configmapinformer.Get(ctx)
 
-	if err := tracing.SetupDynamicPublishing(logger, cmw, "mt-broker-controller", tracingconfig.ConfigName); err != nil {
+	var err error
+	if Tracer, err = tracing.SetupPublishingWithDynamicConfig(logger, cmw, "mt-broker-controller", tracingconfig.ConfigName); err != nil {
 		logger.Fatal("Error setting up trace publishing", zap.Error(err))
 	}
 

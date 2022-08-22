@@ -227,16 +227,18 @@ func NewTracingConfiguratorFromConfigMap(opts ...TracingConfiguratorFromConfigMa
 
 // SetupTracing based on the component's ConfigMap.
 // A Watcher is set to update the configuration dynamically.
-func (c *tracingConfiguratorFromConfigMap) SetupTracing(ctx context.Context, cfg *TracingConfiguration) {
+func (c *tracingConfiguratorFromConfigMap) SetupTracing(ctx context.Context, cfg *TracingConfiguration) tracing.Tracer {
 	logger := logging.FromContext(ctx)
 
 	cmw := ConfigWatcherFromContext(ctx)
 	service := fmt.Sprintf("%s.%s", cfg.InstanceName, NamespaceFromContext(ctx))
 
 	logger.Infof("Adding Watcher on ConfigMap %s for tracing", c.configMapName)
-	if err := tracing.SetupDynamicPublishing(logger, cmw, service, c.configMapName); err != nil {
+	tracer, err := tracing.SetupPublishingWithDynamicConfig(logger, cmw, service, c.configMapName)
+	if err != nil {
 		logger.Errorw("Error setting up trace publishing. Tracing configuration will be ignored.", zap.Error(err))
 	}
+	return tracer
 }
 
 // cloudEventsStatusReporterConfiguratorFromConfigMap dynamically configures
