@@ -33,14 +33,6 @@ type EndpointSupporter interface {
 	Supports(endpoint interface{}) bool
 }
 
-// EventSender will be used to send events to configured endpoint.
-// Deprecated. Use EventSenderWithContext.
-type EventSender interface {
-	EndpointSupporter
-	// SendEvent will send event to given endpoint.
-	SendEvent(ce cloudevents.Event, endpoint interface{}) error
-}
-
 // EventSenderWithContext will be used to send events to configured endpoint, passing a context.
 type EventSenderWithContext interface {
 	EndpointSupporter
