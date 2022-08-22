@@ -180,17 +180,11 @@ func (p *prober) compileTemplate(templateName string, endpoint interface{}, trac
 	var buff bytes.Buffer
 	data := struct {
 		*Config
-		// Deprecated: use ForwarderTarget
-		Namespace string
-		// Deprecated: use Endpoint
-		BrokerURL       string
 		Endpoint        interface{}
 		TracingConfig   string
 		ForwarderTarget string
 	}{
 		p.config,
-		p.client.Namespace,
-		fmt.Sprintf("%v", endpoint),
 		endpoint,
 		tracingConfig,
 		fmt.Sprintf(forwarderTargetFmt, p.client.Namespace),
