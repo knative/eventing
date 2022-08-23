@@ -107,7 +107,7 @@ export GITHUB_TOKEN=""
 # Convenience function to run the hub tool.
 # Parameters: $1..$n - arguments to hub.
 function hub_tool() {
-  gorun github.com/github/hub@v2.14.2 "$@"
+  go_run github.com/github/hub@v2.14.2 "$@"
 }
 
 # Shortcut to "git push" that handles authentication.
