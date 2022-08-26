@@ -38,6 +38,7 @@ import (
 	"knative.dev/eventing/test/rekt/resources/pingsource"
 	"knative.dev/eventing/test/rekt/resources/source"
 	"knative.dev/eventing/test/rekt/resources/subscription"
+	eventasssert "knative.dev/reconciler-test/pkg/eventshub/assert"
 )
 
 func ChannelChain(length int, createSubscriberFn func(ref *duckv1.KReference, uri string) manifest.CfgFn) *feature.Feature {
@@ -272,6 +273,55 @@ func SingleEventWithEncoding(encoding binding.Encoding) *feature.Feature {
 	f.Requirement("receiver is finished", prober.ReceiverDone("source", "sink"))
 
 	f.Assert("sink receives events", prober.AssertReceivedAll("source", "sink"))
+
+	return f
+}
+
+func ChannelPreferHeaderCheck(createSubscriberFn func(ref *duckv1.KReference, uri string) manifest.CfgFn) *feature.Feature {
+	f := feature.NewFeatureNamed("Channel PreferHeader Check")
+
+	channelName := feature.MakeRandomK8sName("channel")
+	sub := feature.MakeRandomK8sName("subscription")
+	source := feature.MakeRandomK8sName("source")
+	sink := feature.MakeRandomK8sName("sink")
+
+	eventSource := "source1"
+	eventType := "type1"
+	eventBody := `{"msg":"test msg"}`
+	event := cloudevents.NewEvent()
+	event.SetID(feature.MakeRandomK8sName("test"))
+	event.SetType(eventType)
+	event.SetSource(eventSource)
+
+	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
+	f.Setup("install channel", channel.Install(channelName,
+		channel.WithTemplate(),
+	))
+	f.Setup("install subscription", subscription.Install(sub,
+		subscription.WithChannel(channel.AsRef(channelName)),
+		createSubscriberFn(svc.AsKReference(sink), ""),
+	))
+
+	f.Setup("subscription is ready", subscription.IsReady(sub))
+	f.Setup("channel is ready", channel.IsReady(channelName))
+
+	f.Setup("install source", func(ctx context.Context, t feature.T) {
+		u, err := channel.Address(ctx, channelName)
+		if err != nil || u == nil {
+			t.Error("failed to get the address of the broker", channelName, err)
+		}
+		if err := event.SetData(cloudevents.ApplicationJSON, []byte(eventBody)); err != nil {
+
+			t.Error("Cannot set the payload of the event", err)
+		}
+		eventshub.Install(source, eventshub.StartSenderURL(u.String()), eventshub.InputEvent(event))(ctx, t)
+	})
+
+	f.Stable("test message without explicit prefer header should have the header").
+		Must("delivers events",
+			eventasssert.OnStore(sink).Match(
+				eventasssert.HasAdditionalHeader("Prefer", "reply"),
+			).AtLeast(1))
 
 	return f
 }
