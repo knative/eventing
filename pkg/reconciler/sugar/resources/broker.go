@@ -18,7 +18,6 @@ package resources
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/eventing/pkg/apis/eventing"
 	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
 )
 
@@ -29,10 +28,9 @@ const (
 func MakeBroker(namespace, name string) *v1.Broker {
 	return &v1.Broker{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace:   namespace,
-			Name:        name,
-			Labels:      Labels(),
-			Annotations: map[string]string{eventing.BrokerClassKey: eventing.MTChannelBrokerClassValue},
+			Namespace: namespace,
+			Name:      name,
+			Labels:    Labels(),
 		},
 	}
 }
