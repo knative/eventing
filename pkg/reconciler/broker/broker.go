@@ -209,7 +209,7 @@ func (r *Reconciler) getChannelTemplate(ctx context.Context, b *eventingv1.Broke
 	var template *messagingv1.ChannelTemplateSpec
 
 	if b.Spec.Config != nil {
-		if b.Spec.Config.Kind == "ConfigMap" && b.Spec.Config.APIVersion == "v1" {
+		if b.Spec.Config.Kind == "ConfigMap" {
 			if b.Spec.Config.Namespace == "" || b.Spec.Config.Name == "" {
 				logging.FromContext(ctx).Errorw("Broker.Spec.Config name and namespace are required",
 					zap.String("namespace", b.Namespace), zap.String("name", b.Name))
