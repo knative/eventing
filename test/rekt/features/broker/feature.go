@@ -20,6 +20,7 @@ import (
 	"context"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
+	"github.com/google/uuid"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	eventasssert "knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
@@ -41,7 +42,7 @@ func BrokerPreferHeaderCheck() *feature.Feature {
 	eventType := "type1"
 	eventBody := `{"msg":"test msg"}`
 	event := cloudevents.NewEvent()
-	event.SetID(feature.MakeRandomK8sName("test"))
+	event.SetID(uuid.New().String())
 	event.SetType(eventType)
 	event.SetSource(eventSource)
 

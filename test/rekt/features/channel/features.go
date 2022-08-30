@@ -23,6 +23,7 @@ import (
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"
 	"github.com/cloudevents/sdk-go/v2/test"
+	"github.com/google/uuid"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/eventshub/assert"
@@ -289,7 +290,7 @@ func ChannelPreferHeaderCheck(createSubscriberFn func(ref *duckv1.KReference, ur
 	eventType := "type1"
 	eventBody := `{"msg":"test msg"}`
 	event := cloudevents.NewEvent()
-	event.SetID(feature.MakeRandomK8sName("test"))
+	event.SetID(uuid.New().String())
 	event.SetType(eventType)
 	event.SetSource(eventSource)
 
