@@ -66,3 +66,16 @@ func TestMultiTriggerTopology(t *testing.T) {
 	// Test that a bad Trigger doesn't affect sending messages to a valid one
 	env.Test(ctx, t, trigger.BadTriggerDoesNotAffectOkTrigger())
 }
+
+func TestTriggerDependencyAnnotation(t *testing.T) {
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+	)
+
+	// Test that a bad Trigger doesn't affect sending messages to a valid one
+	env.Test(ctx, t, trigger.TriggerDependencyAnnotation())
+}

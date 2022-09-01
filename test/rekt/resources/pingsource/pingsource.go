@@ -82,3 +82,12 @@ func WithDataBase64(contentType, dataBase64 string) manifest.CfgFn {
 		}
 	}
 }
+
+//WithSchedule add the schedule config to a Pingsource spec.
+func WithSchedule(schedule string) manifest.CfgFn {
+	return func(cfg map[string]interface{}) {
+		if schedule != "" {
+			cfg["schedule"] = schedule
+		}
+	}
+}

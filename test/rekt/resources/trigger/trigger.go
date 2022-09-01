@@ -79,13 +79,43 @@ func WithSubscriber(ref *duckv1.KReference, uri string) manifest.CfgFn {
 	}
 }
 
-// WithAnnotation adds an annotation to the trigger
-func WithAnnotation(key string, value string) manifest.CfgFn {
+// WithAnnotations adds annotations to the trigger
+func WithAnnotations(annotations map[string]interface{}) manifest.CfgFn {
 	return func(cfg map[string]interface{}) {
-		if _, set := cfg["annotations"]; !set {
-			cfg["annotations"] = map[string]interface{}{}
+		if _, set := cfg["ceOverrides"]; !set {
+			cfg["ceOverrides"] = map[string]interface{}{}
 		}
-		(cfg["annotations"].(map[string]interface{}))[key] = value
+		ceOverrides := cfg["ceOverrides"].(map[string]interface{})
+
+		if annotations != nil {
+			if _, set := ceOverrides["annotations"]; !set {
+				ceOverrides["annotations"] = map[string]interface{}{}
+			}
+			ceExt := ceOverrides["annotations"].(map[string]interface{})
+			for k, v := range annotations {
+				ceExt[k] = v
+			}
+		}
+	}
+}
+
+// WithExtensions adds the ceOverrides related config to a ContainerSource spec.
+func WithExtensions(extensions map[string]interface{}) manifest.CfgFn {
+	return func(cfg map[string]interface{}) {
+		if _, set := cfg["ceOverrides"]; !set {
+			cfg["ceOverrides"] = map[string]interface{}{}
+		}
+		ceOverrides := cfg["ceOverrides"].(map[string]interface{})
+
+		if extensions != nil {
+			if _, set := ceOverrides["extensions"]; !set {
+				ceOverrides["extensions"] = map[string]interface{}{}
+			}
+			ceExt := ceOverrides["extensions"].(map[string]interface{})
+			for k, v := range extensions {
+				ceExt[k] = v
+			}
+		}
 	}
 }
 
