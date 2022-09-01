@@ -1,5 +1,5 @@
 /*
-Copyright 2021 The Knative Authors
+Copyright 2022 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -49,7 +49,7 @@ func TriggerDependencyAnnotation() *feature.Feature {
 		"knative.dev/dependency": dependencyAnnotation,
 	}
 
-	// Point the Trigger subscriber to the sink svc and the dependency to annotation.
+	// Add the annotation to trigger and point the Trigger subscriber to the sink svc.
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 	cfg := []manifest.CfgFn{
 		trigger.WithSubscriber(svc.AsKReference(sink), ""),
