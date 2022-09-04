@@ -22,6 +22,7 @@ import (
 
 	"github.com/cloudevents/sdk-go/v2/test"
 	"k8s.io/apimachinery/pkg/util/uuid"
+
 	"knative.dev/eventing/test/rekt/resources/containersource"
 	"knative.dev/eventing/test/rekt/resources/pingsource"
 	"knative.dev/reconciler-test/pkg/eventshub"
@@ -119,4 +120,3 @@ func SendsEventsWithArgs() *feature.Feature {
 
 	return f
 }
-

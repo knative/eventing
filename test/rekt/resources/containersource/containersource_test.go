@@ -126,4 +126,3 @@ func Example_full() {
 	//         - name: POD_NAMESPACE
 	//           value: bar
 }
-
