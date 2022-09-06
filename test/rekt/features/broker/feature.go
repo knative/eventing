@@ -17,8 +17,6 @@ limitations under the License.
 package broker
 
 import (
-	"context"
-
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/google/uuid"
 	"knative.dev/reconciler-test/pkg/eventshub"
@@ -45,6 +43,7 @@ func BrokerPreferHeaderCheck() *feature.Feature {
 	event.SetID(uuid.New().String())
 	event.SetType(eventType)
 	event.SetSource(eventSource)
+	event.SetData(cloudevents.ApplicationJSON, []byte(eventBody))
 
 	//Install the broker
 	brokerName := feature.MakeRandomK8sName("broker")
@@ -59,20 +58,13 @@ func BrokerPreferHeaderCheck() *feature.Feature {
 
 	// Install the trigger
 	f.Setup("install trigger", trigger.Install(via, brokerName, cfg...))
-
 	f.Setup("trigger goes ready", trigger.IsReady(via))
 
-	f.Setup("install source", func(ctx context.Context, t feature.T) {
-		u, err := broker.Address(ctx, brokerName)
-		if err != nil || u == nil {
-			t.Error("failed to get the address of the broker", brokerName, err)
-		}
-		if err := event.SetData(cloudevents.ApplicationJSON, []byte(eventBody)); err != nil {
-
-			t.Error("Cannot set the payload of the event", err)
-		}
-		eventshub.Install(source, eventshub.StartSenderURL(u.String()), eventshub.InputEvent(event))(ctx, t)
-	})
+	f.Requirement("install source", eventshub.Install(
+		source,
+		eventshub.StartSenderToResource(broker.GVR(), brokerName),
+		eventshub.InputEvent(event),
+	))
 
 	f.Stable("test message without explicit prefer header should have the header").
 		Must("delivers events",

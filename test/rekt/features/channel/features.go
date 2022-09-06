@@ -293,6 +293,7 @@ func ChannelPreferHeaderCheck(createSubscriberFn func(ref *duckv1.KReference, ur
 	event.SetID(uuid.New().String())
 	event.SetType(eventType)
 	event.SetSource(eventSource)
+	event.SetData(cloudevents.ApplicationJSON, []byte(eventBody))
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 	f.Setup("install channel", channel.Install(channelName,
@@ -306,17 +307,11 @@ func ChannelPreferHeaderCheck(createSubscriberFn func(ref *duckv1.KReference, ur
 	f.Setup("subscription is ready", subscription.IsReady(sub))
 	f.Setup("channel is ready", channel.IsReady(channelName))
 
-	f.Setup("install source", func(ctx context.Context, t feature.T) {
-		u, err := channel.Address(ctx, channelName)
-		if err != nil || u == nil {
-			t.Error("failed to get the address of the broker", channelName, err)
-		}
-		if err := event.SetData(cloudevents.ApplicationJSON, []byte(eventBody)); err != nil {
-
-			t.Error("Cannot set the payload of the event", err)
-		}
-		eventshub.Install(source, eventshub.StartSenderURL(u.String()), eventshub.InputEvent(event))(ctx, t)
-	})
+	f.Requirement("install source", eventshub.Install(
+		source,
+		eventshub.StartSenderToResource(channel.GVR(), channelName),
+		eventshub.InputEvent(event),
+	))
 
 	f.Stable("test message without explicit prefer header should have the header").
 		Must("delivers events",
