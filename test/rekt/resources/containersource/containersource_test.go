@@ -33,6 +33,7 @@ func Example_min() {
 	cfg := map[string]interface{}{
 		"name":      "foo",
 		"namespace": "bar",
+		"args":      "--period=1",
 	}
 
 	files, err := manifest.ExecuteYAML(ctx, yaml, images, cfg)
@@ -54,6 +55,7 @@ func Example_min() {
 	//       containers:
 	//       - name: heartbeats
 	//         image: ko://knative.dev/eventing/test/test_images/heartbeats
+	//         imagePullPolicy: IfNotPresent
 	//         args:
 	//         - --period=1
 	//         env:
@@ -69,6 +71,7 @@ func Example_full() {
 	cfg := map[string]interface{}{
 		"name":      "foo",
 		"namespace": "bar",
+		"args":      "--period=1",
 		"ceOverrides": map[string]interface{}{
 			"extensions": map[string]string{
 				"ext1": "val1",
@@ -114,6 +117,7 @@ func Example_full() {
 	//       containers:
 	//       - name: heartbeats
 	//         image: ko://knative.dev/eventing/test/test_images/heartbeats
+	//         imagePullPolicy: IfNotPresent
 	//         args:
 	//         - --period=1
 	//         env:

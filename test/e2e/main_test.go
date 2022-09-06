@@ -27,8 +27,6 @@ import (
 	"knative.dev/pkg/system"
 )
 
-var setup = testlib.Setup
-var tearDown = testlib.TearDown
 var channelTestRunner testlib.ComponentsTestRunner
 var brokerClass string
 
