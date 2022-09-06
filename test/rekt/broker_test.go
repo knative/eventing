@@ -119,3 +119,18 @@ func TestBrokerDefaultDelivery(t *testing.T) {
 
 	env.Test(ctx, t, broker.DefaultDeliverySpec())
 }
+
+//TestBrokerPreferHeaderCheck test if the test message without explicit prefer header
+//should have it after fanout.
+func TestBrokerPreferHeaderCheck(t *testing.T) {
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+		environment.WithPollTimings(5*time.Second, 4*time.Minute),
+	)
+
+	env.Test(ctx, t, broker.BrokerPreferHeaderCheck())
+}

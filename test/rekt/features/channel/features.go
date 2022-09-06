@@ -23,6 +23,7 @@ import (
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"
 	"github.com/cloudevents/sdk-go/v2/test"
+	"github.com/google/uuid"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/eventshub/assert"
@@ -38,6 +39,7 @@ import (
 	"knative.dev/eventing/test/rekt/resources/pingsource"
 	"knative.dev/eventing/test/rekt/resources/source"
 	"knative.dev/eventing/test/rekt/resources/subscription"
+	eventasssert "knative.dev/reconciler-test/pkg/eventshub/assert"
 )
 
 func ChannelChain(length int, createSubscriberFn func(ref *duckv1.KReference, uri string) manifest.CfgFn) *feature.Feature {
@@ -272,6 +274,50 @@ func SingleEventWithEncoding(encoding binding.Encoding) *feature.Feature {
 	f.Requirement("receiver is finished", prober.ReceiverDone("source", "sink"))
 
 	f.Assert("sink receives events", prober.AssertReceivedAll("source", "sink"))
+
+	return f
+}
+
+func ChannelPreferHeaderCheck(createSubscriberFn func(ref *duckv1.KReference, uri string) manifest.CfgFn) *feature.Feature {
+	f := feature.NewFeatureNamed("Channel PreferHeader Check")
+
+	channelName := feature.MakeRandomK8sName("channel")
+	sub := feature.MakeRandomK8sName("subscription")
+	source := feature.MakeRandomK8sName("source")
+	sink := feature.MakeRandomK8sName("sink")
+
+	eventSource := "source1"
+	eventType := "type1"
+	eventBody := `{"msg":"test msg"}`
+	event := cloudevents.NewEvent()
+	event.SetID(uuid.New().String())
+	event.SetType(eventType)
+	event.SetSource(eventSource)
+	event.SetData(cloudevents.ApplicationJSON, []byte(eventBody))
+
+	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
+	f.Setup("install channel", channel.Install(channelName,
+		channel.WithTemplate(),
+	))
+	f.Setup("install subscription", subscription.Install(sub,
+		subscription.WithChannel(channel.AsRef(channelName)),
+		createSubscriberFn(svc.AsKReference(sink), ""),
+	))
+
+	f.Setup("subscription is ready", subscription.IsReady(sub))
+	f.Setup("channel is ready", channel.IsReady(channelName))
+
+	f.Requirement("install source", eventshub.Install(
+		source,
+		eventshub.StartSenderToResource(channel.GVR(), channelName),
+		eventshub.InputEvent(event),
+	))
+
+	f.Stable("test message without explicit prefer header should have the header").
+		Must("delivers events",
+			eventasssert.OnStore(sink).Match(
+				eventasssert.HasAdditionalHeader("Prefer", "reply"),
+			).AtLeast(1))
 
 	return f
 }
