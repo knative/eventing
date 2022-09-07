@@ -25,9 +25,11 @@ import (
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"
 	bindingshttp "github.com/cloudevents/sdk-go/v2/protocol/http"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
 	"knative.dev/pkg/apis"
+	"knative.dev/pkg/ptr"
 
 	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/channel/fanout"
@@ -118,6 +120,7 @@ func TestServeHTTPMessageHandler(t *testing.T) {
 	testCases := map[string]struct {
 		name               string
 		config             Config
+		eventID            *string
 		respStatusCode     int
 		key                string
 		expectedStatusCode int
@@ -152,6 +155,41 @@ func TestServeHTTPMessageHandler(t *testing.T) {
 			respStatusCode:     http.StatusInternalServerError,
 			key:                "first-channel.default",
 			expectedStatusCode: http.StatusInternalServerError,
+		},
+		"invalid event": {
+			config: Config{
+				ChannelConfigs: []ChannelConfig{
+					{
+
+						Namespace: "ns",
+						Name:      "name",
+						HostName:  "first-channel.default",
+						FanoutConfig: fanout.Config{
+							Subscriptions: []fanout.Subscription{
+								{
+									Reply: apis.HTTP("first-to-domain").URL(),
+								},
+							},
+						},
+					},
+					{
+						Namespace: "default",
+						Name:      "second-channel",
+						HostName:  "second-channel.default",
+						FanoutConfig: fanout.Config{
+							Subscriptions: []fanout.Subscription{
+								{
+									Subscriber: replaceDomain,
+								},
+							},
+						},
+					},
+				},
+			},
+			eventID:            ptr.String(""), // invalid id
+			respStatusCode:     http.StatusOK,
+			key:                "second-channel.default",
+			expectedStatusCode: http.StatusBadRequest,
 		},
 		"choose channel": {
 			config: Config{
@@ -206,6 +244,13 @@ func TestServeHTTPMessageHandler(t *testing.T) {
 			ctx := context.Background()
 
 			event := cloudevents.NewEvent(cloudevents.VersionV1)
+
+			id := uuid.New().String()
+			if tc.eventID != nil {
+				id = *tc.eventID
+			}
+
+			event.SetID(id)
 			event.SetType("testtype")
 			event.SetSource("testsource")
 			event.SetData(cloudevents.ApplicationJSON, "{}")

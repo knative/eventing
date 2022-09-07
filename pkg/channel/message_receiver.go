@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/cloudevents/sdk-go/v2/binding"
+	"github.com/cloudevents/sdk-go/v2/binding/buffering"
 	"github.com/cloudevents/sdk-go/v2/protocol/http"
 	"go.uber.org/zap"
 
@@ -185,7 +186,31 @@ func (r *MessageReceiver) ServeHTTP(response nethttp.ResponseWriter, request *ne
 		r.reporter.ReportEventCount(&args, nethttp.StatusBadRequest)
 		return
 	}
-	err = r.receiverFunc(request.Context(), channel, message, []binding.Transformer{}, utils.PassThroughHeaders(request.Header))
+
+	bufferedMessage, err := buffering.CopyMessage(request.Context(), message)
+	if err != nil {
+		r.logger.Warn("Cannot buffer cloudevent message", zap.Error(err))
+		response.WriteHeader(nethttp.StatusBadRequest)
+		_ = r.reporter.ReportEventCount(&args, nethttp.StatusBadRequest)
+		return
+	}
+
+	event, err := binding.ToEvent(request.Context(), bufferedMessage)
+	if err != nil {
+		r.logger.Warn("failed to extract event from request", zap.Error(err))
+		response.WriteHeader(nethttp.StatusBadRequest)
+		_ = r.reporter.ReportEventCount(&args, nethttp.StatusBadRequest)
+		return
+	}
+
+	// run validation for the extracted event
+	if err := event.Validate(); err != nil {
+		r.logger.Warn("failed to validate extracted event", zap.Error(err))
+		response.WriteHeader(nethttp.StatusBadRequest)
+		return
+	}
+
+	err = r.receiverFunc(request.Context(), channel, bufferedMessage, []binding.Transformer{}, utils.PassThroughHeaders(request.Header))
 	if err != nil {
 		if _, ok := err.(*UnknownChannelError); ok {
 			response.WriteHeader(nethttp.StatusNotFound)
