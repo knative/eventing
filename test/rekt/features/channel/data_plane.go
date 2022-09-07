@@ -21,15 +21,18 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/google/uuid"
 	"k8s.io/apimachinery/pkg/util/wait"
-	v1 "knative.dev/eventing/pkg/apis/duck/v1"
-	"knative.dev/eventing/test/rekt/features/knconf"
-	"knative.dev/eventing/test/rekt/resources/channel_impl"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/ptr"
 	"knative.dev/reconciler-test/pkg/environment"
+	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/state"
+
+	v1 "knative.dev/eventing/pkg/apis/duck/v1"
+	"knative.dev/eventing/test/rekt/features/knconf"
+	"knative.dev/eventing/test/rekt/resources/channel_impl"
 )
 
 func DataPlaneConformance(channelName string) *feature.FeatureSet {
@@ -65,7 +68,7 @@ func DataPlaneChannel(channelName string) *feature.Feature {
 		// (e.g. expose a gRPC endpoint to accept events)
 
 	f.Stable("Generic").
-		Must("If a Channel receives an event queueing request and is unable to parse a valid CloudEvent, then it MUST reject the request.", todo)
+		Must("If a Channel receives an event queueing request and is unable to parse a valid CloudEvent, then it MUST reject the request.", channelRejectsMalformedCE)
 
 	f.Stable("HTTP").
 		Must("Channels MUST reject all HTTP event queueing requests with a method other than POST responding with HTTP status code 405 Method Not Supported.", todo).
@@ -100,6 +103,50 @@ func DataPlaneChannel(channelName string) *feature.Feature {
 		// messaging.message_id: the event ID
 
 	return f
+}
+
+func channelRejectsMalformedCE(ctx context.Context, t feature.T) {
+	channelName := state.GetStringOrFail(ctx, t, ChannelableNameKey)
+
+	headers := map[string]string{
+		"ce-specversion": "1.0",
+		"ce-type":        "sometype",
+		"ce-source":      "conformancetest.request.sender.test.knative.dev",
+		"ce-id":          uuid.New().String(),
+	}
+
+	for k := range headers {
+		// Add all but the one key we want to omit.
+
+		var options []eventshub.EventsHubOption
+		for k2, v2 := range headers {
+			if k != k2 {
+				options = append(options, eventshub.InputHeader(k2, v2))
+				t.Logf("Adding Header Value: %q => %q", k2, v2)
+			}
+		}
+		options = append(options, eventshub.StartSenderToResource(channel_impl.GVR(), channelName))
+		options = append(options, eventshub.InputBody("{}"))
+		// We need to use a different source name, otherwise, it will try to update
+		// the pod, which is immutable.
+		source := feature.MakeRandomK8sName("source")
+		eventshub.Install(source, options...)(ctx, t)
+
+		store := eventshub.StoreFromContext(ctx, source)
+		// We are looking for two events, one of them is the sent event and the other
+		// is Response, so correlate them first. We want to make sure the event was sent and that the
+		// response was what was expected.
+		// Note: We pass in "" for the match ID because when we construct the headers manually
+		// above, they do not get stuff into the sent/response SentId fields.
+		events := knconf.Correlate(store.AssertAtLeast(t, 2, knconf.SentEventMatcher("")))
+		for _, e := range events {
+			// Make sure HTTP response code is 4XX
+			if e.Response.StatusCode < 400 || e.Response.StatusCode > 499 {
+				t.Errorf("Expected statuscode 4XX with missing required field %q for sequence %d got %d", k, e.Response.Sequence, e.Response.StatusCode)
+				t.Logf("Sent event was: %s\nresponse: %s\n", e.Sent.String(), e.Response.String())
+			}
+		}
+	}
 }
 
 func channelAcceptsCEVersions(ctx context.Context, t feature.T) {
