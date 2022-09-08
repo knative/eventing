@@ -32,6 +32,7 @@ import (
 	"knative.dev/pkg/ptr"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"
+	"knative.dev/reconciler-test/pkg/manifest"
 	"knative.dev/reconciler-test/pkg/state"
 	"knative.dev/reconciler-test/resources/svc"
 
@@ -47,22 +48,22 @@ import (
 	triggerresources "knative.dev/eventing/test/rekt/resources/trigger"
 )
 
-func ControlPlaneConformance(brokerName string) *feature.FeatureSet {
+func ControlPlaneConformance(brokerName string, brokerOpts ...manifest.CfgFn) *feature.FeatureSet {
 	fs := &feature.FeatureSet{
 		Name: "Knative Broker Specification - Control Plane",
 		Features: []*feature.Feature{
-			ControlPlaneBroker(brokerName),
+			ControlPlaneBroker(brokerName, brokerOpts...),
 			ControlPlaneTrigger_GivenBroker(brokerName),
 			ControlPlaneTrigger_GivenBrokerTriggerReady(brokerName),
-			ControlPlaneTrigger_WithBrokerLifecycle(),
+			ControlPlaneTrigger_WithBrokerLifecycle(brokerOpts...),
 			ControlPlaneTrigger_WithValidFilters(brokerName),
 			ControlPlaneTrigger_WithInvalidFilters(brokerName),
 		},
 	}
 
 	// Add each feature of event routing and Delivery tests as a new feature
-	addControlPlaneEventRouting(fs)
-	addControlPlaneDelivery(fs)
+	addControlPlaneEventRouting(fs, brokerOpts...)
+	addControlPlaneDelivery(fs, brokerOpts...)
 	// TODO: This is not a control plane test, or at best it is a blend with data plane.
 	// Must("Events that pass the attributes filter MUST include context or extension attributes that match all key-value pairs exactly.", todo)
 
@@ -75,7 +76,7 @@ func setBrokerName(name string) feature.StepFn {
 	}
 }
 
-func ControlPlaneBroker(brokerName string) *feature.Feature {
+func ControlPlaneBroker(brokerName string, brokerOpts ...manifest.CfgFn) *feature.Feature {
 	f := feature.NewFeatureNamed("Broker")
 	bName := feature.MakeRandomK8sName("broker")
 	sink := feature.MakeRandomK8sName("sink")
@@ -83,7 +84,8 @@ func ControlPlaneBroker(brokerName string) *feature.Feature {
 	f.Setup("Set Broker Name", setBrokerName(bName))
 
 	f.Setup("install a service", svc.Install(sink, "app", "rekt"))
-	brokerOpts := append(brokerresources.WithEnvConfig(), delivery.WithDeadLetterSink(svc.AsKReference(sink), ""))
+	brokerOpts = append(brokerOpts, brokerresources.WithEnvConfig()...)
+	brokerOpts = append(brokerOpts, delivery.WithDeadLetterSink(svc.AsKReference(sink), ""))
 	f.Setup("update broker", broker.Install(bName, brokerOpts...))
 	f.Setup("broker goes ready", broker.IsReady(bName))
 
@@ -151,7 +153,7 @@ func ControlPlaneTrigger_GivenBrokerTriggerReady(brokerName string) *feature.Fea
 	return f
 }
 
-func ControlPlaneTrigger_WithBrokerLifecycle() *feature.Feature {
+func ControlPlaneTrigger_WithBrokerLifecycle(brokerOpts ...manifest.CfgFn) *feature.Feature {
 	f := feature.NewFeatureNamed("Trigger, With Broker Lifecycle")
 
 	subscriberName := feature.MakeRandomK8sName("sub")
@@ -166,12 +168,14 @@ func ControlPlaneTrigger_WithBrokerLifecycle() *feature.Feature {
 
 	f.Setup("Set Trigger Name", triggerfeatures.SetTriggerName(triggerName))
 
+	brokerOpts = append(brokerOpts, brokerresources.WithEnvConfig()...)
+
 	f.Stable("Conformance").
 		May("A Trigger MAY be created before its assigned Broker exists.",
 			triggerHasOneBroker).
 		Should("A Trigger SHOULD progress to Ready when its assigned Broker exists and is Ready.",
 			func(ctx context.Context, t feature.T) {
-				brokerresources.Install(brokerName, brokerresources.WithEnvConfig()...)(ctx, t) // Default broker from Env.
+				brokerresources.Install(brokerName, brokerOpts...)(ctx, t) // Default broker from Env.
 				brokerresources.IsReady(brokerName)(ctx, t)
 				triggerresources.IsReady(triggerName)(ctx, t)
 			})
@@ -288,7 +292,7 @@ func ControlPlaneTrigger_WithInvalidFilters(brokerName string) *feature.Feature 
 	return f
 }
 
-func addControlPlaneDelivery(fs *feature.FeatureSet) {
+func addControlPlaneDelivery(fs *feature.FeatureSet, brokerOpts ...manifest.CfgFn) {
 	for i, tt := range []struct {
 		name     string
 		brokerDS *v1.DeliverySpec
@@ -362,7 +366,7 @@ func addControlPlaneDelivery(fs *feature.FeatureSet) {
 			delivery:  tt.t2DS,
 			failCount: tt.t2FailCount,
 		}}
-		prober := createBrokerTriggerTopology(f, brokerName, tt.brokerDS, cfg)
+		prober := createBrokerTriggerTopology(f, brokerName, tt.brokerDS, cfg, brokerOpts...)
 
 		// Send an event into the matrix and hope for the best
 		prober.SenderFullEvents(1)
@@ -394,7 +398,7 @@ func addControlPlaneDelivery(fs *feature.FeatureSet) {
 	}
 }
 
-func addControlPlaneEventRouting(fs *feature.FeatureSet) {
+func addControlPlaneEventRouting(fs *feature.FeatureSet, brokerOpts ...manifest.CfgFn) {
 
 	fullEvent := cetest.FullEvent()
 	replyEvent := cetest.FullEvent()
@@ -505,7 +509,7 @@ func addControlPlaneEventRouting(fs *feature.FeatureSet) {
 		brokerName := fmt.Sprintf("routing-test-%d", i)
 		f := feature.NewFeatureNamed(fmt.Sprintf("Event Routing Spec - %s", brokerName))
 		f.Setup("Set Broker Name", setBrokerName(brokerName))
-		prober := createBrokerTriggerTopology(f, brokerName, nil, tt.config)
+		prober := createBrokerTriggerTopology(f, brokerName, nil, tt.config, brokerOpts...)
 
 		// Send an event into the matrix and hope for the best
 		// TODO: We need to do some work to get the event types into the Prober.
