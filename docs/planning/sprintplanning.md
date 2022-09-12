@@ -1,10 +1,8 @@
 # Knative Eventing sprint planning
 
 This document summarizes project planning mechanics for Knative Eventing
-releases. Knative Eventing release is planned every six weeks or 6th Tuesday,
-with 0.5 planned on April 2, 2019 as reference. Current proposal is to align
-sprint with the release cycle of 6 weeks. Eventually this may change as we learn
-from the process.
+releases. Knative Eventing release is planned every three months, same as whole
+Knative project, see [release schedule](https://github.com/knative/community/blob/main/mechanics/RELEASE-SCHEDULE.md).
 
 ## How to manage Bugs?
 
@@ -73,7 +71,7 @@ from the process.
 
 ## Organizing with Github Milestone
 
-- A new milestone is created in Github for each 6 weeks release cycle.
+- A new milestone is created in Github for each 3 months release cycle.
 - All features and bugs that are planned for the release cycle are assigned to
   the milestone for tracking the progress of the release.
 
@@ -87,5 +85,3 @@ from the process.
 - Decide estimation technique (story points on fibonacci, t-shirt size etc) - We
   will get to this later if the team feels it is needed.
 - How to automate project boards with Prow and issue labels?
-- If the above process works for next couple of releases and team likes it then
-  we move to a 2 week sprint model rather than 6 weeks.
