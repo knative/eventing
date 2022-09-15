@@ -43,9 +43,11 @@ func Start(eventLogFactories map[string]EventLogFactory, eventGeneratorFactories
 	ctx, _ := injection.EnableInjectionOrDie(nil, nil)
 	ctx = ConfigureLogging(ctx, "eventshub")
 
-	if err := ConfigureTracing(logging.FromContext(ctx), ""); err != nil {
+	tracer, err := ConfigureTracing(logging.FromContext(ctx), "")
+	if err != nil {
 		logging.FromContext(ctx).Fatal("Unable to setup trace publishing", err)
 	}
+	defer tracer.Shutdown(context.Background())
 
 	var env envConfig
 	if err := envconfig.Process("", &env); err != nil {
@@ -54,7 +56,7 @@ func Start(eventLogFactories map[string]EventLogFactory, eventGeneratorFactories
 	logging.FromContext(ctx).Infof("Events Hub environment configuration: %+v", env)
 
 	eventLogs := createEventLogs(ctx, eventLogFactories, env.EventLogs)
-	err := startEventGenerators(ctx, eventGeneratorFactories, env.EventGenerators, eventLogs)
+	err = startEventGenerators(ctx, eventGeneratorFactories, env.EventGenerators, eventLogs)
 
 	if err != nil {
 		logging.FromContext(ctx).Fatal("Error during start: ", err)

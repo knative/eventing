@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"strings"
@@ -223,7 +222,7 @@ func (g *GCSClient) ReadObject(ctx context.Context, bucketName, objPath string) 
 		return contents, err
 	}
 	defer f.Close()
-	return ioutil.ReadAll(f)
+	return io.ReadAll(f)
 }
 
 // NewReader creates a new Reader of a gcs file.

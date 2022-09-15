@@ -75,6 +75,10 @@ type MagicEnvironment struct {
 
 	// managedT is used for test-scoped logging, if configured.
 	managedT feature.T
+
+	// imagePullSecretNamespace/imagePullSecretName: An optional secret to add to service account of new namespaces
+	imagePullSecretName      string
+	imagePullSecretNamespace string
 }
 
 const (
@@ -153,7 +157,9 @@ func (mr *MagicGlobalEnvironment) Environment(opts ...EnvOpts) (context.Context,
 		s:            mr.FeatureState,
 		featureMatch: mr.FeatureMatch,
 
-		namespace: namespace,
+		namespace:                namespace,
+		imagePullSecretName:      "kn-test-image-pull-secret",
+		imagePullSecretNamespace: "default",
 	}
 
 	ctx := ContextWith(mr.c, env)
@@ -233,6 +239,21 @@ func InNamespace(namespace string) EnvOpts {
 			return ctx, errors.New("InNamespace: not a magic env")
 		}
 		mr.namespace = namespace
+		return ctx, nil
+	}
+}
+
+// WithImagePullSecret takes namespace and name of a Secret to be added to ServiceAccounts
+// of newly created namespaces. This is useful if tests refer to private registries that require
+// authentication.
+func WithImagePullSecret(namespace string, name string) EnvOpts {
+	return func(ctx context.Context, env Environment) (context.Context, error) {
+		mr, ok := env.(*MagicEnvironment)
+		if !ok {
+			return ctx, errors.New("WithImagePullSecret: not a magic env")
+		}
+		mr.imagePullSecretNamespace = namespace
+		mr.imagePullSecretName = name
 		return ctx, nil
 	}
 }
