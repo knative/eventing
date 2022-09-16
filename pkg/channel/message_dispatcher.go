@@ -233,17 +233,18 @@ func (d *MessageDispatcherImpl) executeRequest(ctx context.Context,
 	}
 	execInfo.Time = dispatchTime
 
+	// Read response body into execInfo
+	body := make([]byte, attributes.KnativeErrorDataExtensionMaxLength)
+	readLen, err := response.Body.Read(body)
+	if err != nil && err != io.EOF {
+		d.logger.Error("failed to read response body into DispatchExecutionInfo", zap.Error(err))
+		execInfo.ResponseBody = []byte(fmt.Sprintf("dispatch error: %s", err.Error()))
+	} else {
+		execInfo.ResponseBody = body[:readLen]
+	}
+	_ = response.Body.Close()
+
 	if isFailure(response.StatusCode) {
-		// Read response body into execInfo for failures
-		body := make([]byte, attributes.KnativeErrorDataExtensionMaxLength)
-		readLen, err := response.Body.Read(body)
-		if err != nil && err != io.EOF {
-			d.logger.Error("failed to read response body into DispatchExecutionInfo", zap.Error(err))
-			execInfo.ResponseBody = []byte(fmt.Sprintf("dispatch error: %s", err.Error()))
-		} else {
-			execInfo.ResponseBody = body[:readLen]
-		}
-		_ = response.Body.Close()
 		// Reject non-successful responses.
 		return ctx, nil, nil, &execInfo, fmt.Errorf("unexpected HTTP response, expected 2xx, got %d", response.StatusCode)
 	}
