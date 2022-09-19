@@ -35,6 +35,7 @@ import (
 // BrokerCreator creates a broker and returns its broker name.
 type BrokerCreatorWithRetries func(client *testlib.Client, numRetries int32) string
 
+// Deprecated, use reconciler-test based tests.
 func BrokerRedelivery(ctx context.Context, t *testing.T, creator BrokerCreatorWithRetries) {
 
 	numRetries := int32(5)
