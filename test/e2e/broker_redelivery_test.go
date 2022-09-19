@@ -61,6 +61,7 @@ func ChannelBasedBrokerCreator(channel metav1.TypeMeta, brokerClass string) help
 	}
 }
 
+// Deprecated, use reconciler-test based tests.
 func TestBrokerRedelivery(t *testing.T) {
 
 	channelTestRunner.RunTests(t, testlib.FeatureRedelivery, func(t *testing.T, component metav1.TypeMeta) {

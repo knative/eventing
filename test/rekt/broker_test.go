@@ -120,8 +120,8 @@ func TestBrokerDefaultDelivery(t *testing.T) {
 	env.Test(ctx, t, broker.DefaultDeliverySpec())
 }
 
-//TestBrokerPreferHeaderCheck test if the test message without explicit prefer header
-//should have it after fanout.
+// TestBrokerPreferHeaderCheck test if the test message without explicit prefer header
+// should have it after fanout.
 func TestBrokerPreferHeaderCheck(t *testing.T) {
 	ctx, env := global.Environment(
 		knative.WithKnativeNamespace(system.Namespace()),
@@ -133,4 +133,21 @@ func TestBrokerPreferHeaderCheck(t *testing.T) {
 	)
 
 	env.Test(ctx, t, broker.BrokerPreferHeaderCheck())
+}
+
+// TestBrokerRedelivery test Broker reply with a bad status code respectively
+// following the fibonacci sequence and Drop first N events
+func TestBrokerRedelivery(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+		environment.WithPollTimings(5*time.Second, 4*time.Minute),
+	)
+
+	env.TestSet(ctx, t, broker.BrokerRedelivery())
 }
