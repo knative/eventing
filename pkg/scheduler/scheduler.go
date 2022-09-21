@@ -17,16 +17,10 @@ limitations under the License.
 package scheduler
 
 import (
-	"errors"
-
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
-)
-
-var (
-	ErrNotEnoughReplicas = errors.New("scheduling failed (not enough pod replicas)")
 )
 
 type SchedulerPolicyType string

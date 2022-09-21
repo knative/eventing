@@ -233,7 +233,7 @@ func (s *StatefulSetScheduler) scheduleVPod(vpod scheduler.VPod) ([]duckv1alpha1
 
 	if left > 0 {
 		// Give time for the autoscaler to do its job
-		logger.Info("scheduling failed (not enough pod replicas)", zap.Any("placement", placements), zap.Int32("left", left))
+		logger.Info("not enough pod replicas to schedule. Awaiting autoscaler", zap.Any("placement", placements), zap.Int32("left", left))
 
 		s.pending[vpod.GetKey()] = left
 
@@ -244,12 +244,12 @@ func (s *StatefulSetScheduler) scheduleVPod(vpod scheduler.VPod) ([]duckv1alpha1
 
 		if state.SchedPolicy != nil {
 			logger.Info("reverting to previous placements")
-			s.reservePlacements(vpod, existingPlacements) //rebalancing doesn't care about new placements since all vreps will be re-placed
-			delete(s.pending, vpod.GetKey())              //rebalancing doesn't care about pending since all vreps will be re-placed
-			return existingPlacements, scheduler.ErrNotEnoughReplicas
+			s.reservePlacements(vpod, existingPlacements)                          //rebalancing doesn't care about new placements since all vreps will be re-placed
+			delete(s.pending, vpod.GetKey())                                       //rebalancing doesn't care about pending since all vreps will be re-placed
+			return existingPlacements, controller.NewRequeueAfter(5 * time.Second) //requeue to wait for the autoscaler to do its job
 		}
 
-		return placements, scheduler.ErrNotEnoughReplicas
+		return placements, controller.NewRequeueAfter(5 * time.Second) //requeue to wait for the autoscaler to do its job
 	}
 
 	logger.Infow("scheduling successful", zap.Any("placement", placements))
