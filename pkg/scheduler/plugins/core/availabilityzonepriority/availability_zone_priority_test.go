@@ -100,7 +100,7 @@ func TestScore(t *testing.T) {
 			replicas: 1,
 			podID:    0,
 			expected: state.NewStatus(state.Success),
-			expScore: math.MaxUint64 - 12,
+			expScore: math.MaxUint64 - 18,
 			args:     "{\"MaxSkew\": 2}",
 		},
 		{
@@ -119,7 +119,7 @@ func TestScore(t *testing.T) {
 			replicas: 1,
 			podID:    0,
 			expected: state.NewStatus(state.Success),
-			expScore: math.MaxUint64 - 12,
+			expScore: math.MaxUint64 - 18,
 			args:     "{\"MaxSkew\": 2}",
 		},
 		{
@@ -135,7 +135,7 @@ func TestScore(t *testing.T) {
 			replicas: 2,
 			podID:    1,
 			expected: state.NewStatus(state.Success),
-			expScore: math.MaxUint64 - 4,
+			expScore: math.MaxUint64 - 10,
 			args:     "{\"MaxSkew\": 2}",
 		},
 		{
@@ -151,7 +151,7 @@ func TestScore(t *testing.T) {
 			replicas: 3,
 			podID:    1,
 			expected: state.NewStatus(state.Success),
-			expScore: math.MaxUint64 - 2,
+			expScore: math.MaxUint64 - 7,
 			args:     "{\"MaxSkew\": 2}",
 		},
 		{
@@ -167,7 +167,29 @@ func TestScore(t *testing.T) {
 			replicas: 5,
 			podID:    0,
 			expected: state.NewStatus(state.Success),
-			expScore: math.MaxUint64 - 11,
+			expScore: math.MaxUint64 - 20,
+			args:     "{\"MaxSkew\": 2}",
+		},
+		{
+			name: "one vpod, seven nodes/pods, unknown zone",
+			vpod: types.NamespacedName{Name: vpodName + "-0", Namespace: vpodNamespace + "-0"},
+			state: &state.State{
+				StatefulSetName: sfsName,
+				Replicas:        7,
+				ZoneSpread: map[types.NamespacedName]map[string]int32{
+					{Name: vpodName + "-0", Namespace: vpodNamespace + "-0"}: {
+						"zone0": 8,
+						"zone1": 4,
+						"zone2": 3,
+					},
+				},
+				SchedulablePods: []int32{0, 1, 2, 3, 4, 5}, //Pod 6 in unknown zone not included in schedulable pods
+				NumZones:        4,                         //Includes unknown zone
+			},
+			replicas: 7,
+			podID:    6,
+			expected: state.NewStatus(state.Success), //Not failing the plugin
+			expScore: math.MaxUint64 - 12,
 			args:     "{\"MaxSkew\": 2}",
 		},
 	}
@@ -194,6 +216,12 @@ func TestScore(t *testing.T) {
 					nodelist = append(nodelist, node)
 				}
 			}
+			nodeName := "node" + fmt.Sprint(numNodes) //Node in unknown zone
+			node, err := kubeclient.Get(ctx).CoreV1().Nodes().Create(ctx, tscheduler.MakeNodeNoLabel(nodeName), metav1.CreateOptions{})
+			if err != nil {
+				t.Fatal("unexpected error", err)
+			}
+			nodelist = append(nodelist, node)
 
 			for i := int32(0); i < tc.replicas; i++ {
 				nodeName := "node" + fmt.Sprint(i)
@@ -209,10 +237,11 @@ func TestScore(t *testing.T) {
 			for i := 0; i < len(nodelist); i++ {
 				node := nodelist[i]
 				zoneName, ok := node.GetLabels()[scheduler.ZoneLabel]
-				if !ok {
-					continue //ignore node that doesn't have zone info (maybe a test setup or control node)
+				if ok && zoneName != "" {
+					nodeToZoneMap[node.Name] = zoneName
+				} else {
+					nodeToZoneMap[node.Name] = scheduler.UnknownZone
 				}
-				nodeToZoneMap[node.Name] = zoneName
 			}
 
 			lsp := listers.NewListers(podlist)
