@@ -39,9 +39,8 @@ var _ state.ScorePlugin = &AvailabilityZonePriority{}
 const Name = state.AvailabilityZonePriority
 
 const (
-	ErrReasonInvalidArg    = "invalid arguments"
-	ErrReasonNoResource    = "zone does not exist"
-	ErrReasonNotEnoughPods = "pods not enough to satisfy zone availability"
+	ErrReasonInvalidArg = "invalid arguments"
+	ErrReasonNoResource = "zone does not exist"
 )
 
 func init() {
@@ -76,11 +75,6 @@ func (pl *AvailabilityZonePriority) Score(ctx context.Context, args interface{},
 		zoneMap := make(map[string]struct{})
 		for _, zoneName := range states.NodeToZoneMap {
 			zoneMap[zoneName] = struct{}{}
-		}
-
-		//Need to check if there is at least one pod in every zone to satisfy HA
-		if !state.SatisfyZoneAvailability(states.SchedulablePods, states) {
-			return 0, state.NewStatus(state.Unschedulable, ErrReasonNotEnoughPods)
 		}
 
 		zoneName, _, err := states.GetPodInfo(state.PodNameFromOrdinal(states.StatefulSetName, podID))

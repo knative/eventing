@@ -28,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	kubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/apps/v1/statefulset/fake"
+	"knative.dev/pkg/controller"
 
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	listers "knative.dev/eventing/pkg/reconciler/testing/v1"
@@ -68,7 +69,7 @@ func TestStatefulsetScheduler(t *testing.T) {
 			name:                "no replicas, 1 vreplicas, fail.",
 			vreplicas:           1,
 			replicas:            int32(0),
-			err:                 scheduler.ErrNotEnoughReplicas,
+			err:                 controller.NewRequeueAfter(5 * time.Second),
 			expected:            []duckv1alpha1.Placement{},
 			schedulerPolicyType: scheduler.MAXFILLUP,
 		},
@@ -90,7 +91,7 @@ func TestStatefulsetScheduler(t *testing.T) {
 			name:                "one replica, 15 vreplicas, unschedulable",
 			vreplicas:           15,
 			replicas:            int32(1),
-			err:                 scheduler.ErrNotEnoughReplicas,
+			err:                 controller.NewRequeueAfter(5 * time.Second),
 			expected:            []duckv1alpha1.Placement{{PodName: "statefulset-name-0", VReplicas: 10}},
 			schedulerPolicyType: scheduler.MAXFILLUP,
 		},
@@ -164,7 +165,7 @@ func TestStatefulsetScheduler(t *testing.T) {
 			name:      "no replicas, 1 vreplicas, fail with Predicates and Priorities",
 			vreplicas: 1,
 			replicas:  int32(0),
-			err:       scheduler.ErrNotEnoughReplicas,
+			err:       controller.NewRequeueAfter(5 * time.Second),
 			expected:  nil,
 			schedulerPolicy: &scheduler.SchedulerPolicy{
 				Predicates: []scheduler.PredicatePolicy{
@@ -207,7 +208,7 @@ func TestStatefulsetScheduler(t *testing.T) {
 			name:      "one replica, 15 vreplicas, unschedulable with Predicates and Priorities",
 			vreplicas: 15,
 			replicas:  int32(1),
-			err:       scheduler.ErrNotEnoughReplicas,
+			err:       controller.NewRequeueAfter(5 * time.Second),
 			expected:  nil,
 			schedulerPolicy: &scheduler.SchedulerPolicy{
 				Predicates: []scheduler.PredicatePolicy{
@@ -313,7 +314,7 @@ func TestStatefulsetScheduler(t *testing.T) {
 			name:      "no replicas, 1 vreplicas, fail with two Predicates and two Priorities",
 			vreplicas: 1,
 			replicas:  int32(0),
-			err:       scheduler.ErrNotEnoughReplicas,
+			err:       controller.NewRequeueAfter(5 * time.Second),
 			expected:  nil,
 			schedulerPolicy: &scheduler.SchedulerPolicy{
 				Predicates: []scheduler.PredicatePolicy{
@@ -366,7 +367,7 @@ func TestStatefulsetScheduler(t *testing.T) {
 			name:      "one replica, 15 vreplicas, with two Predicates and two Priorities (HA)",
 			vreplicas: 15,
 			replicas:  int32(1),
-			err:       scheduler.ErrNotEnoughReplicas,
+			err:       controller.NewRequeueAfter(5 * time.Second),
 			expected:  nil,
 			schedulerPolicy: &scheduler.SchedulerPolicy{
 				Predicates: []scheduler.PredicatePolicy{
@@ -673,6 +674,36 @@ func TestStatefulsetScheduler(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:      "six replicas, one vreplica, with Zone Priority (HA)",
+			vreplicas: 1,
+			replicas:  int32(6),                                                                //Includes pod/node in unknown zone
+			expected:  []duckv1alpha1.Placement{{PodName: "statefulset-name-0", VReplicas: 1}}, //Not failing the plugin
+			schedulerPolicy: &scheduler.SchedulerPolicy{
+				Predicates: []scheduler.PredicatePolicy{
+					{Name: "PodFitsResources"},
+				},
+				Priorities: []scheduler.PriorityPolicy{
+					{Name: "AvailabilityZonePriority", Weight: 10, Args: "{\"MaxSkew\": 2}"},
+					{Name: "LowestOrdinalPriority", Weight: 5},
+				},
+			},
+		},
+		{
+			name:      "six replicas, one vreplica, with Node Priority (HA)",
+			vreplicas: 1,
+			replicas:  int32(6),                                                                //Includes pod/node in unknown zone
+			expected:  []duckv1alpha1.Placement{{PodName: "statefulset-name-0", VReplicas: 1}}, //Not failing the plugin
+			schedulerPolicy: &scheduler.SchedulerPolicy{
+				Predicates: []scheduler.PredicatePolicy{
+					{Name: "PodFitsResources"},
+				},
+				Priorities: []scheduler.PriorityPolicy{
+					{Name: "AvailabilityNodePriority", Weight: 10, Args: "{\"MaxSkew\": 2}"},
+					{Name: "LowestOrdinalPriority", Weight: 5},
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -693,6 +724,13 @@ func TestStatefulsetScheduler(t *testing.T) {
 					nodelist = append(nodelist, node)
 				}
 			}
+			nodeName := "node" + fmt.Sprint(numNodes) //Node in unknown zone
+			node, err := kubeclient.Get(ctx).CoreV1().Nodes().Create(ctx, tscheduler.MakeNodeNoLabel(nodeName), metav1.CreateOptions{})
+			if err != nil {
+				t.Fatal("unexpected error", err)
+			}
+			nodelist = append(nodelist, node)
+
 			for i := int32(0); i < tc.replicas; i++ {
 				nodeName := "node" + fmt.Sprint(i)
 				podName := sfsName + "-" + fmt.Sprint(i)
@@ -703,7 +741,7 @@ func TestStatefulsetScheduler(t *testing.T) {
 				podlist = append(podlist, pod)
 			}
 
-			_, err := kubeclient.Get(ctx).AppsV1().StatefulSets(testNs).Create(ctx, tscheduler.MakeStatefulset(testNs, sfsName, tc.replicas), metav1.CreateOptions{})
+			_, err = kubeclient.Get(ctx).AppsV1().StatefulSets(testNs).Create(ctx, tscheduler.MakeStatefulset(testNs, sfsName, tc.replicas), metav1.CreateOptions{})
 			if err != nil {
 				t.Fatal("unexpected error", err)
 			}
