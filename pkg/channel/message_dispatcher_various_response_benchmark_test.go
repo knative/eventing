@@ -71,7 +71,7 @@ func BenchmarkDispatcher_dispatch_ok_response_null(b *testing.B) {
 	benchmarkMessageDispatcher(*fmh, b)
 }
 
-func BenchmarkDispatcher_dispatch_fail_response_null(b *testing.B) {
+func BenchmarkDispatcher_dispatch_fail_response_not_null(b *testing.B) {
 	fmh := newSampleResponseStatusInternalServerErrorAndNotNull()
 	benchmarkMessageDispatcher(*fmh, b)
 }
@@ -129,7 +129,7 @@ func newSampleResponseAcceptedAndNull() *fakeMessageHandler {
 		"abc": `"ce-abc-value"`,
 	}
 	fakeResponse := &http.Response{
-		StatusCode: http.StatusInternalServerError,
+		StatusCode: http.StatusAccepted,
 		Body:       ioutil.NopCloser(bytes.NewBufferString("")),
 	}
 	fmh := NewFakeMessageHandler(true, false, eventExtensions, header, body, fakeResponse, nil)
