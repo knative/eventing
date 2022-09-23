@@ -21,7 +21,7 @@ import (
 	"fmt"
 
 	appsv1 "k8s.io/api/apps/v1"
-	batchv1beta1 "k8s.io/api/batch/v1beta1"
+	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -473,7 +473,7 @@ func (c *Client) CreateDeploymentOrFail(deploy *appsv1.Deployment, options ...fu
 }
 
 // CreateCronJobOrFail will create a CronJob or fail the test if there is an error.
-func (c *Client) CreateCronJobOrFail(cronjob *batchv1beta1.CronJob, options ...func(*batchv1beta1.CronJob, *Client) error) {
+func (c *Client) CreateCronJobOrFail(cronjob *batchv1.CronJob, options ...func(*batchv1.CronJob, *Client) error) {
 	// set namespace for the cronjob in case it's empty
 	namespace := c.Namespace
 	cronjob.Namespace = namespace
@@ -487,7 +487,7 @@ func (c *Client) CreateCronJobOrFail(cronjob *batchv1beta1.CronJob, options ...f
 	c.applyAdditionalEnv(&cronjob.Spec.JobTemplate.Spec.Template.Spec)
 
 	c.T.Logf("Creating cronjob %+v", cronjob)
-	if _, err := c.Kube.BatchV1beta1().CronJobs(cronjob.Namespace).Create(context.Background(), cronjob, metav1.CreateOptions{}); err != nil {
+	if _, err := c.Kube.BatchV1().CronJobs(cronjob.Namespace).Create(context.Background(), cronjob, metav1.CreateOptions{}); err != nil {
 		c.T.Fatalf("Failed to create cronjob %q: %v", cronjob.Name, err)
 	}
 	c.Tracker.Add("batch", "v1beta1", "cronjobs", namespace, cronjob.Name)
