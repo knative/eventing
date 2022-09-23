@@ -95,6 +95,8 @@ func (f *finishedStore) RegisterFinished(finished *Finished) {
 		f.errors.throwDuplicated(
 			"finish event should be received only once, received %d",
 			f.received+1)
+		// We don't want to record all failures again.
+		return
 	}
 	f.received++
 	f.eventsSent = finished.EventsSent
