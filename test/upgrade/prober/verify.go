@@ -102,7 +102,7 @@ func (p *prober) Verify() (eventErrs []error, eventsSent int) {
 		} else if p.config.OnDuplicate == Error {
 			eventErrs = append(eventErrs, errors.New(t))
 		}
-		if strings.HasPrefix(t, "finish event") {
+		if strings.HasPrefix(t, event.FinishedEventPrefix) {
 			p.exportFinishedEventTrace()
 		} else {
 			p.exportStepEventTrace(i, t)
