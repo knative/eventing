@@ -23,6 +23,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"time"
 
 	"go.uber.org/zap"
@@ -101,7 +102,11 @@ func (p *prober) Verify() (eventErrs []error, eventsSent int) {
 		} else if p.config.OnDuplicate == Error {
 			eventErrs = append(eventErrs, errors.New(t))
 		}
-		p.exportStepEventTrace(i, t)
+		if strings.HasPrefix(t, event.FinishedEventPrefix) {
+			p.exportFinishedEventTrace()
+		} else {
+			p.exportStepEventTrace(i, t)
+		}
 	}
 	return eventErrs, report.EventsSent
 }
@@ -117,19 +122,23 @@ func (p *prober) exportStepEventTrace(i int, msg string) {
 	if i > exportTraceLimit {
 		return
 	}
-	stepNo := p.getStepNoFromMsg(msg)
+	stepNo, err := p.getStepNoFromMsg(msg)
+	if err != nil {
+		p.log.Warnf("Unable to get step number: %v", err)
+		return
+	}
 	if err := p.exportTrace(p.getTraceForStepEvent(stepNo), fmt.Sprintf("step-%s.json", stepNo)); err != nil {
 		p.log.Warnf("Failed to export trace for Step event #%s: %v", stepNo, err)
 	}
 }
 
-func (p *prober) getStepNoFromMsg(message string) string {
+func (p *prober) getStepNoFromMsg(message string) (string, error) {
 	r, _ := regexp.Compile(stepEventMsgPattern)
 	matches := r.FindStringSubmatch(message)
 	if len(matches) != 2 {
-		p.log.Warnf("message does not match pattern %s: %s", stepEventMsgPattern, message)
+		return "", fmt.Errorf("message does not match pattern %s: %s", stepEventMsgPattern, message)
 	}
-	return matches[1]
+	return matches[1], nil
 }
 
 func (p *prober) getTraceForStepEvent(eventNo string) []byte {
