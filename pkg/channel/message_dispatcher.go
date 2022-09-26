@@ -17,6 +17,7 @@ limitations under the License.
 package channel
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -233,9 +234,10 @@ func (d *MessageDispatcherImpl) executeRequest(ctx context.Context,
 	}
 	execInfo.Time = dispatchTime
 
+	body := make([]byte, attributes.KnativeErrorDataExtensionMaxLength)
+
 	if isFailure(response.StatusCode) {
 		// Read response body into execInfo for failures
-		body := make([]byte, attributes.KnativeErrorDataExtensionMaxLength)
 		readLen, err := response.Body.Read(body)
 		if err != nil && err != io.EOF {
 			d.logger.Error("failed to read response body into DispatchExecutionInfo", zap.Error(err))
@@ -247,9 +249,21 @@ func (d *MessageDispatcherImpl) executeRequest(ctx context.Context,
 		// Reject non-successful responses.
 		return ctx, nil, nil, &execInfo, fmt.Errorf("unexpected HTTP response, expected 2xx, got %d", response.StatusCode)
 	}
-	responseMessage := http.NewMessageFromHttpResponse(response)
+
+	var responseMessageBody []byte
+	// Read response body into responseMessage for message accepted
+	readLen, err := response.Body.Read(body)
+	if err != nil && err != io.EOF {
+		d.logger.Error("failed to read response body into cloudevents' Message", zap.Error(err))
+		responseMessageBody = []byte(fmt.Sprintf("Failed to read response body: %s", err.Error()))
+	} else {
+		responseMessageBody = body[:readLen]
+	}
+	responseMessage := http.NewMessage(response.Header, io.NopCloser(bytes.NewReader(responseMessageBody)))
+
 	if responseMessage.ReadEncoding() == binding.EncodingUnknown {
 		_ = response.Body.Close()
+		_ = responseMessage.BodyReader.Close()
 		d.logger.Debug("Response is a non event, discarding it", zap.Int("status_code", response.StatusCode))
 		return ctx, nil, nil, &execInfo, nil
 	}
