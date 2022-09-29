@@ -5,9 +5,9 @@ go 1.18
 require (
 	github.com/ahmetb/gen-crd-api-reference-docs v0.3.1-0.20210420163308-c1402a70e2f1
 	github.com/cloudevents/conformance v0.2.0
-	github.com/cloudevents/sdk-go/observability/opencensus/v2 v2.4.1
-	github.com/cloudevents/sdk-go/sql/v2 v2.8.0
-	github.com/cloudevents/sdk-go/v2 v2.10.1
+	github.com/cloudevents/sdk-go/observability/opencensus/v2 v2.12.0
+	github.com/cloudevents/sdk-go/sql/v2 v2.12.0
+	github.com/cloudevents/sdk-go/v2 v2.12.0
 	github.com/golang/protobuf v1.5.2
 	github.com/google/go-cmp v0.5.6
 	github.com/google/gofuzz v1.2.0
