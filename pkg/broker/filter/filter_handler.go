@@ -368,30 +368,24 @@ func materializeSubscriptionsAPIFilter(ctx context.Context, filter eventingv1.Su
 	switch {
 	case len(filter.Exact) > 0:
 		// The webhook validates that this map has only a single key:value pair.
-		for attribute, value := range filter.Exact {
-			materializedFilter, err = subscriptionsapi.NewExactFilter(attribute, value)
-			if err != nil {
-				logging.FromContext(ctx).Debugw("Invalid exact expression", zap.String("attribute", attribute), zap.String("value", value), zap.Error(err))
-				return nil
-			}
+		materializedFilter, err = subscriptionsapi.NewExactFilter(filter.Exact)
+		if err != nil {
+			logging.FromContext(ctx).Debugw("Invalid exact expression", zap.Any("filters", filter.Exact), zap.Error(err))
+			return nil
 		}
 	case len(filter.Prefix) > 0:
 		// The webhook validates that this map has only a single key:value pair.
-		for attribute, prefix := range filter.Prefix {
-			materializedFilter, err = subscriptionsapi.NewPrefixFilter(attribute, prefix)
-			if err != nil {
-				logging.FromContext(ctx).Debugw("Invalid prefix expression", zap.String("attribute", attribute), zap.String("prefix", prefix), zap.Error(err))
-				return nil
-			}
+		materializedFilter, err = subscriptionsapi.NewPrefixFilter(filter.Prefix)
+		if err != nil {
+			logging.FromContext(ctx).Debugw("Invalid prefix expression", zap.Any("filters", filter.Exact), zap.Error(err))
+			return nil
 		}
 	case len(filter.Suffix) > 0:
 		// The webhook validates that this map has only a single key:value pair.
-		for attribute, suffix := range filter.Suffix {
-			materializedFilter, err = subscriptionsapi.NewSuffixFilter(attribute, suffix)
-			if err != nil {
-				logging.FromContext(ctx).Debugw("Invalid suffix expression", zap.String("attribute", attribute), zap.String("suffix", suffix), zap.Error(err))
-				return nil
-			}
+		materializedFilter, err = subscriptionsapi.NewSuffixFilter(filter.Suffix)
+		if err != nil {
+			logging.FromContext(ctx).Debugw("Invalid suffix expression", zap.Any("filters", filter.Exact), zap.Error(err))
+			return nil
 		}
 	case len(filter.All) > 0:
 		materializedFilter = subscriptionsapi.NewAllFilter(materializeFiltersList(ctx, filter.All)...)

@@ -30,37 +30,43 @@ import (
 )
 
 type prefixFilter struct {
-	attribute, prefix string
+	filters map[string]string
 }
 
 // NewPrefixFilter returns an event filter which passes if the value of the context
 // attribute in the CloudEvent is prefixed with prefix.
-func NewPrefixFilter(attribute, prefix string) (eventfilter.Filter, error) {
-	if attribute == "" || prefix == "" {
-		return nil, fmt.Errorf("invalid arguments, attribute and prefix can't be empty")
+func NewPrefixFilter(filters map[string]string) (eventfilter.Filter, error) {
+	for attribute, value := range filters {
+		if attribute == "" || value == "" {
+			return nil, fmt.Errorf("invalid arguments, attribute and prefix can't be empty")
+		}
 	}
 	return &prefixFilter{
-		attribute: attribute,
-		prefix:    prefix,
+		filters: filters,
 	}, nil
 }
 
 func (filter *prefixFilter) Filter(ctx context.Context, event cloudevents.Event) eventfilter.FilterResult {
-	if filter == nil || filter.attribute == "" || filter.prefix == "" {
+	if filter == nil {
 		return eventfilter.NoFilter
 	}
+	for attribute, value := range filter.filters {
+		if attribute == "" || value == "" {
+			return eventfilter.NoFilter
+		}
+	}
 	logger := logging.FromContext(ctx)
-	logger.Debugw("Performing a prefix match ", zap.String("attribute", filter.attribute), zap.String("prefix", filter.prefix),
-		zap.Any("event", event))
-	value, ok := attributes.LookupAttribute(event, filter.attribute)
-	if !ok {
-		logger.Debugw("Couldn't find attribute in event. Prefix match failed.", zap.String("attribute", filter.attribute), zap.String("prefix", filter.prefix),
-			zap.Any("event", event))
-		return eventfilter.FailFilter
+	logger.Debugw("Performing a prefix match ", zap.Any("filters", filter.filters), zap.Any("event", event))
+	for k, v := range filter.filters {
+		value, ok := attributes.LookupAttribute(event, k)
+		if !ok {
+			logger.Debugw("Couldn't find attribute in event. Prefix match failed.", zap.String("attribute", k), zap.String("prefix", v),
+				zap.Any("event", event))
+			return eventfilter.FailFilter
+		}
+		if !strings.HasPrefix(fmt.Sprintf("%v", value), v) {
+			return eventfilter.FailFilter
+		}
 	}
-
-	if strings.HasPrefix(fmt.Sprintf("%v", value), filter.prefix) {
-		return eventfilter.PassFilter
-	}
-	return eventfilter.FailFilter
+	return eventfilter.PassFilter
 }

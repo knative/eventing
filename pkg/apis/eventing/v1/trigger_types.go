@@ -139,32 +139,32 @@ type SubscriptionsAPIFilter struct {
 	// +optional
 	Not *SubscriptionsAPIFilter `json:"not,omitempty"`
 
-	// Exact evaluates to true if the value of the matching CloudEvents
-	// attribute matches exactly the String value specified (case-sensitive).
-	// Exact must contain exactly one property, where the key is the name of the
-	// CloudEvents attribute to be matched, and its value is the String value to
-	// use in the comparison. The attribute name and value specified in the filter
-	// expression cannot be empty strings.
+	// Exact evaluates to true if the values of the matching CloudEvents attributes MUST
+	// all exactly match with the associated value String specified (case-sensitive).
+	// The keys are the names of the CloudEvents attributes to be matched,
+	// and their values are the String values to use in the comparison.
+	// The attribute name and value specified in the filter express MUST NOT be
+	// empty strings.
 	//
 	// +optional
 	Exact map[string]string `json:"exact,omitempty"`
 
-	// Prefix evaluates to true if the value of the matching CloudEvents
-	// attribute starts with the String value specified (case-sensitive). Prefix
-	// must contain exactly one property, where the key is the name of the
-	// CloudEvents attribute to be matched, and its value is the String value to
-	// use in the comparison. The attribute name and value specified in the filter
-	// expression cannot be empty strings.
+	// Prefix evaluates to true if the values of the matching CloudEvents attributes MUST
+	// all start with the associated value String specified (case sensitive).
+	// The keys are the names of the CloudEvents attributes to be matched,
+	// and their values are the String values to use in the comparison.
+	// The attribute name and value specified in the filter express MUST NOT be
+	// empty strings.
 	//
 	// +optional
 	Prefix map[string]string `json:"prefix,omitempty"`
 
-	// Suffix evaluates to true if the value of the matching CloudEvents
-	// attribute ends with the String value specified (case-sensitive). Suffix
-	// must contain exactly one property, where the key is the name of the
-	// CloudEvents attribute to be matched, and its value is the String value to
-	// use in the comparison. The attribute name and value specified in the filter
-	// expression cannot be empty strings.
+	// Suffix evaluates to true if the values of the matching CloudEvents attributes MUST
+	// all end with the associated value String specified (case sensitive).
+	// The keys are the names of the CloudEvents attributes to be matched,
+	// and their values are the String values to use in the comparison.
+	// The attribute name and value specified in the filter express MUST NOT be
+	// empty strings.
 	//
 	// +optional
 	Suffix map[string]string `json:"suffix,omitempty"`
