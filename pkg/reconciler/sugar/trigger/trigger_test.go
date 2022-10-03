@@ -23,12 +23,14 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	clientgotesting "k8s.io/client-go/testing"
 	"knative.dev/eventing/pkg/apis/config"
 	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	sugarconfig "knative.dev/eventing/pkg/apis/sugar"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/trigger"
 	"knative.dev/eventing/pkg/reconciler/sugar/resources"
+	"knative.dev/pkg/apis"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	logtesting "knative.dev/pkg/logging/testing"
@@ -83,6 +85,22 @@ func TestEnabled(t *testing.T) {
 	// Objects
 	broker := resources.MakeBroker(testNS, resources.DefaultBrokerName)
 
+	// Reactors
+	defaultFunc := func(action clientgotesting.Action) (handled bool, ret runtime.Object, err error) {
+		if verb := action.GetVerb(); verb != "create" {
+			return false, nil, nil
+		}
+
+		got := action.(clientgotesting.CreateAction).GetObject()
+		obj, ok := got.(apis.Defaultable)
+		if !ok {
+			return false, nil, nil
+		}
+
+		obj.SetDefaults(ctx)
+		return false, got, nil
+	}
+
 	table := TableTest{{
 		Name: "bad workqueue key",
 		// Make sure Reconcile handles bad keys.
@@ -105,6 +123,9 @@ func TestEnabled(t *testing.T) {
 		WantCreates: []runtime.Object{
 			broker,
 		},
+		WithReactors: []clientgotesting.ReactionFunc{
+			defaultFunc,
+		},
 		Ctx: context.WithValue(ctx, sugarConfigContextKey,
 			&metav1.LabelSelector{}),
 	}, {
@@ -120,6 +141,9 @@ func TestEnabled(t *testing.T) {
 		},
 		WantCreates: []runtime.Object{
 			broker,
+		},
+		WithReactors: []clientgotesting.ReactionFunc{
+			defaultFunc,
 		},
 		Ctx: context.WithValue(ctx, sugarConfigContextKey,
 			&metav1.LabelSelector{
@@ -141,6 +165,9 @@ func TestEnabled(t *testing.T) {
 		},
 		WantCreates: []runtime.Object{
 			broker,
+		},
+		WithReactors: []clientgotesting.ReactionFunc{
+			defaultFunc,
 		},
 		Ctx: context.WithValue(ctx, sugarConfigContextKey,
 			&metav1.LabelSelector{

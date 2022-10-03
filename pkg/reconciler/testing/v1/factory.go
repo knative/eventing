@@ -99,12 +99,6 @@ func MakeFactory(ctor Ctor, unstructured bool, logger *zap.SugaredLogger) Factor
 			la.Promote(reconciler.UniversalBucket(), func(reconciler.Bucket, types.NamespacedName) {})
 		}
 
-		for _, reactor := range r.WithReactors {
-			kubeClient.PrependReactor("*", "*", reactor)
-			client.PrependReactor("*", "*", reactor)
-			dynamicClient.PrependReactor("*", "*", reactor)
-		}
-
 		// Validate all Create operations through the eventing client.
 		client.PrependReactor("create", "*", func(action ktesting.Action) (handled bool, ret runtime.Object, err error) {
 			return ValidateCreates(ctx, action)
@@ -112,6 +106,12 @@ func MakeFactory(ctor Ctor, unstructured bool, logger *zap.SugaredLogger) Factor
 		client.PrependReactor("update", "*", func(action ktesting.Action) (handled bool, ret runtime.Object, err error) {
 			return ValidateUpdates(ctx, action)
 		})
+
+		for _, reactor := range r.WithReactors {
+			kubeClient.PrependReactor("*", "*", reactor)
+			client.PrependReactor("*", "*", reactor)
+			dynamicClient.PrependReactor("*", "*", reactor)
+		}
 
 		actionRecorderList := ActionRecorderList{dynamicClient, client, kubeClient}
 		eventList := EventList{Recorder: eventRecorder}
