@@ -30,7 +30,7 @@ github.com/PuerkitoBio/urlesc
 ## explicit; go 1.15
 github.com/ahmetb/gen-crd-api-reference-docs
 github.com/ahmetb/gen-crd-api-reference-docs/template
-# github.com/antlr/antlr4/runtime/Go/antlr v0.0.0-20211221011931-643d94fcab96
+# github.com/antlr/antlr4/runtime/Go/antlr v1.4.10
 ## explicit; go 1.16
 github.com/antlr/antlr4/runtime/Go/antlr
 # github.com/benbjohnson/clock v1.1.0
@@ -64,7 +64,7 @@ github.com/cloudevents/conformance/pkg/http
 ## explicit; go 1.17
 github.com/cloudevents/sdk-go/observability/opencensus/v2/client
 github.com/cloudevents/sdk-go/observability/opencensus/v2/http
-# github.com/cloudevents/sdk-go/sql/v2 v2.12.0
+# github.com/cloudevents/sdk-go/sql/v2 v2.0.0-20220930150014-52b12276cc4a
 ## explicit; go 1.17
 github.com/cloudevents/sdk-go/sql/v2
 github.com/cloudevents/sdk-go/sql/v2/expression
