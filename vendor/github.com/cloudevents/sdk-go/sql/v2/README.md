@@ -23,7 +23,7 @@ res, err := expression.Evaluate(event)
 To regenerate the parser, make sure you have [ANTLR4 installed](https://github.com/antlr/antlr4/blob/master/doc/getting-started.md) and then run:
 
 ```shell
-antlr4 -Dlanguage=Go -package gen -o gen -visitor -no-listener CESQLParser.g4
+antlr4 -v 4.10.1 -Dlanguage=Go -package gen -o gen -visitor -no-listener CESQLParser.g4
 ```
 
 Then you need to run this sed command as a workaround until this ANTLR [issue](https://github.com/antlr/antlr4/issues/2433) is resolved. Without this, building for 32bit platforms will throw an int overflow error: 
