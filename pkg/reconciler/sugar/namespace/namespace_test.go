@@ -29,7 +29,6 @@ import (
 	sugarconfig "knative.dev/eventing/pkg/apis/sugar"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/reconciler/sugar/resources"
-	"knative.dev/pkg/apis"
 	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 	namespacereconciler "knative.dev/pkg/client/injection/kube/reconciler/core/v1/namespace"
 	"knative.dev/pkg/configmap"
@@ -84,22 +83,6 @@ func TestEnabled(t *testing.T) {
 	// Objects
 	broker := resources.MakeBroker(testNS, resources.DefaultBrokerName)
 
-	// Reactors
-	defaultFunc := func(action clientgotesting.Action) (handled bool, ret runtime.Object, err error) {
-		if verb := action.GetVerb(); verb != "create" {
-			return false, nil, nil
-		}
-
-		got := action.(clientgotesting.CreateAction).GetObject()
-		obj, ok := got.(apis.Defaultable)
-		if !ok {
-			return false, nil, nil
-		}
-
-		obj.SetDefaults(ctx)
-		return false, got, nil
-	}
-
 	table := TableTest{{
 		Name: "bad workqueue key",
 		// Make sure Reconcile handles bad keys.
@@ -123,7 +106,7 @@ func TestEnabled(t *testing.T) {
 			broker,
 		},
 		WithReactors: []clientgotesting.ReactionFunc{
-			defaultFunc,
+			DefaultingReactor(ctx),
 		},
 		Ctx: context.WithValue(ctx, sugarConfigContextKey,
 			&metav1.LabelSelector{}),
@@ -145,7 +128,7 @@ func TestEnabled(t *testing.T) {
 			broker,
 		},
 		WithReactors: []clientgotesting.ReactionFunc{
-			defaultFunc,
+			DefaultingReactor(ctx),
 		},
 		Ctx: context.WithValue(ctx, sugarConfigContextKey,
 			&metav1.LabelSelector{
@@ -172,7 +155,7 @@ func TestEnabled(t *testing.T) {
 			broker,
 		},
 		WithReactors: []clientgotesting.ReactionFunc{
-			defaultFunc,
+			DefaultingReactor(ctx),
 		},
 		Ctx: context.WithValue(ctx, sugarConfigContextKey,
 			&metav1.LabelSelector{
