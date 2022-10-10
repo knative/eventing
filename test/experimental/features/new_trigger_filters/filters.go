@@ -111,8 +111,7 @@ func snippetFor(key string) string {
 	return fmt.Sprintf(`
     - %s:
         type: %%s
-    - %s:
-        source: %%s`, key, key)
+        source: %%s`, key)
 }
 
 // WithNewFilters adds a filter config to a Trigger spec using the new filters API.

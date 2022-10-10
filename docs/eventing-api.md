@@ -2047,12 +2047,12 @@ map[string]string
 </td>
 <td>
 <em>(Optional)</em>
-<p>Exact evaluates to true if the value of the matching CloudEvents
-attribute matches exactly the String value specified (case-sensitive).
-Exact must contain exactly one property, where the key is the name of the
-CloudEvents attribute to be matched, and its value is the String value to
-use in the comparison. The attribute name and value specified in the filter
-expression cannot be empty strings.</p>
+<p>Exact evaluates to true if the values of the matching CloudEvents attributes MUST
+all exactly match with the associated value String specified (case-sensitive).
+The keys are the names of the CloudEvents attributes to be matched,
+and their values are the String values to use in the comparison.
+The attribute name and value specified in the filter express MUST NOT be
+empty strings.</p>
 </td>
 </tr>
 <tr>
@@ -2064,12 +2064,12 @@ map[string]string
 </td>
 <td>
 <em>(Optional)</em>
-<p>Prefix evaluates to true if the value of the matching CloudEvents
-attribute starts with the String value specified (case-sensitive). Prefix
-must contain exactly one property, where the key is the name of the
-CloudEvents attribute to be matched, and its value is the String value to
-use in the comparison. The attribute name and value specified in the filter
-expression cannot be empty strings.</p>
+<p>Prefix evaluates to true if the values of the matching CloudEvents attributes MUST
+all start with the associated value String specified (case sensitive).
+The keys are the names of the CloudEvents attributes to be matched,
+and their values are the String values to use in the comparison.
+The attribute name and value specified in the filter express MUST NOT be
+empty strings.</p>
 </td>
 </tr>
 <tr>
@@ -2081,12 +2081,12 @@ map[string]string
 </td>
 <td>
 <em>(Optional)</em>
-<p>Suffix evaluates to true if the value of the matching CloudEvents
-attribute ends with the String value specified (case-sensitive). Suffix
-must contain exactly one property, where the key is the name of the
-CloudEvents attribute to be matched, and its value is the String value to
-use in the comparison. The attribute name and value specified in the filter
-expression cannot be empty strings.</p>
+<p>Suffix evaluates to true if the values of the matching CloudEvents attributes MUST
+all end with the associated value String specified (case sensitive).
+The keys are the names of the CloudEvents attributes to be matched,
+and their values are the String values to use in the comparison.
+The attribute name and value specified in the filter express MUST NOT be
+empty strings.</p>
 </td>
 </tr>
 <tr>
