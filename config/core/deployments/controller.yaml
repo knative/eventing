@@ -98,8 +98,27 @@ spec:
             drop:
             - all
 
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: probes
+            scheme: HTTP
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /readiness
+            port: probes
+            scheme: HTTP
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          timeoutSeconds: 5
+
         ports:
         - name: metrics
           containerPort: 9090
         - name: profiling
           containerPort: 8008
+        - name: probes
+          containerPort: 8080
