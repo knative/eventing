@@ -52,7 +52,7 @@ func Read(configFile string) error {
 		return err
 	}
 	d := toml.NewDecoder(r)
-	d.SetStrict(true)
+	d.DisallowUnknownFields()
 	err = d.Decode(Instance)
 	return err
 }
