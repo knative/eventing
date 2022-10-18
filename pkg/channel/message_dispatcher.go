@@ -19,6 +19,7 @@ package channel
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"fmt"
 	"io"
 	nethttp "net/http"
@@ -295,7 +296,18 @@ func (d *MessageDispatcherImpl) dispatchExecutionInfoTransformers(destination *u
 	// and cause HTTP requests to fail if not removed.
 	// https://pkg.go.dev/golang.org/x/net/http/httpguts#ValidHeaderFieldValue
 	httpBody := sanitizeHTTPBody(dispatchExecutionInfo.ResponseBody)
-	return attributes.KnativeErrorTransformers(*destination, dispatchExecutionInfo.ResponseCode, httpBody)
+
+	// Encodes response body as base64 for the resulting length.
+	bodyLen := len(httpBody)
+	encodedLen := base64.StdEncoding.EncodedLen(bodyLen)
+
+	if encodedLen > attributes.KnativeErrorDataExtensionMaxLength {
+		encodedLen = attributes.KnativeErrorDataExtensionMaxLength
+	}
+	encodedBuf := make([]byte, encodedLen)
+	base64.StdEncoding.Encode(encodedBuf, []byte(httpBody))
+
+	return attributes.KnativeErrorTransformers(*destination, dispatchExecutionInfo.ResponseCode, string(encodedBuf[:encodedLen]))
 }
 
 func sanitizeHTTPBody(body []byte) string {
