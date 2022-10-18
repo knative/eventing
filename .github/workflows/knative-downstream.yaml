@@ -63,8 +63,9 @@ jobs:
       with:
         repository: ${{ matrix.org }}/${{ matrix.repo }}
         path: ./src/knative.dev/${{ matrix.repo }}
-    - name: Test Downstream
-      uses: knative-sandbox/actions-downstream-test@v1
+    - name: Test downstream
+      uses: knative/actions/go/downstream-test@main
       with:
-        upstream-module: knative.dev/${{ github.event.repository.name }}
-        downstream-module: knative.dev/${{ matrix.repo }}
+        upstream-path: ./src/knative.dev/${{ github.event.repository.name }}
+        downstream-path: ./src/knative.dev/${{ matrix.repo }}
+
