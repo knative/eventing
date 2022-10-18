@@ -336,7 +336,7 @@ func ChannelSubscriptionReturnedErrorData(createSubscriberFn func(ref *duckv1.KR
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 
 	errorData := "<!doctype html>\n<html>\n<head>\n    <title>Error Page(tm)</title>\n</head>\n<body>\n<p>Quoth the server, 404!\n</body></html>"
-	sanitizeData := sanitizeHTTPBody([]byte(errorData))
+	sanitizeBodyData := sanitizeHTTPBody([]byte(errorData))
 	f.Setup("install failing receiver", eventshub.Install(failer,
 		eventshub.StartReceiver,
 		eventshub.DropFirstN(1),
@@ -371,7 +371,7 @@ func ChannelSubscriptionReturnedErrorData(createSubscriberFn func(ref *duckv1.KR
 			return test.HasExtension("knativeerrorcode", "422")
 		},
 		func(ctx context.Context) test.EventMatcher {
-			return test.HasExtension("knativeerrordata", base64.StdEncoding.EncodeToString([]byte(sanitizeData)))
+			return test.HasExtension("knativeerrordata", base64.StdEncoding.EncodeToString([]byte(sanitizeBodyData)))
 		},
 	))
 
@@ -407,15 +407,6 @@ func sanitizeHTTPBody(body []byte) string {
 	return string(sanitizedResponse)
 }
 
-func hasControlChars(data []byte) bool {
-	for _, v := range data {
-		if isControl(v) {
-			return true
-		}
-	}
-	return false
-}
-
 func isControl(c byte) bool {
 	// US ASCII codes range for printable graphic characters and a space.
 	// http://www.columbia.edu/kermit/ascii.html
@@ -425,3 +416,11 @@ func isControl(c byte) bool {
 	return int(c) < asciiUnitSeparator || int(c) > asciiRubout
 }
 
+func hasControlChars(data []byte) bool {
+	for _, v := range data {
+		if isControl(v) {
+			return true
+		}
+	}
+	return false
+}
