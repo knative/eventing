@@ -19,6 +19,7 @@ package channel
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -415,7 +416,7 @@ func TestDispatchMessage(t *testing.T) {
 					"traceparent":         {"ignored-value-header"},
 					"ce-abc":              {`"ce-abc-value"`},
 					"ce-knativeerrorcode": {strconv.Itoa(http.StatusBadRequest)},
-					"ce-knativeerrordata": {"destination-response"},
+					"ce-knativeerrordata": {base64.StdEncoding.EncodeToString([]byte("destination-response"))},
 					"ce-id":               {"ignored-value-header"},
 					"ce-time":             {"2002-10-02T15:00:00Z"},
 					"ce-source":           {testCeSource},
@@ -484,7 +485,7 @@ func TestDispatchMessage(t *testing.T) {
 					"ce-abc":              {`"ce-abc-value"`},
 					"ce-id":               {"ignored-value-header"},
 					"ce-knativeerrorcode": {strconv.Itoa(http.StatusBadRequest)},
-					"ce-knativeerrordata": {"destination-response"},
+					"ce-knativeerrordata": {base64.StdEncoding.EncodeToString([]byte("destination-response"))},
 					"ce-time":             {"2002-10-02T15:00:00Z"},
 					"ce-source":           {testCeSource},
 					"ce-type":             {testCeType},
@@ -540,7 +541,7 @@ func TestDispatchMessage(t *testing.T) {
 					"ce-abc":              {`"ce-abc-value"`},
 					"ce-id":               {"ignored-value-header"},
 					"ce-knativeerrorcode": {strconv.Itoa(http.StatusBadRequest)},
-					"ce-knativeerrordata": {"destination-response"},
+					"ce-knativeerrordata": {base64.StdEncoding.EncodeToString([]byte("destination-response"))},
 					"ce-time":             {"2002-10-02T15:00:00Z"},
 					"ce-source":           {testCeSource},
 					"ce-type":             {testCeType},
@@ -611,7 +612,7 @@ func TestDispatchMessage(t *testing.T) {
 					"ce-abc":              {`"ce-abc-value"`},
 					"ce-id":               {"ignored-value-header"},
 					"ce-knativeerrorcode": {strconv.Itoa(http.StatusBadRequest)},
-					"ce-knativeerrordata": {"reply-response"},
+					"ce-knativeerrordata": {base64.StdEncoding.EncodeToString([]byte("reply-response"))},
 					"ce-time":             {"2002-10-02T15:00:00Z"},
 					"ce-source":           {testCeSource},
 					"ce-type":             {testCeType},
@@ -693,7 +694,7 @@ func TestDispatchMessage(t *testing.T) {
 					"traceparent":         {"ignored-value-header"},
 					"ce-abc":              {`"ce-abc-value"`},
 					"ce-knativeerrorcode": {strconv.Itoa(http.StatusBadRequest)},
-					"ce-knativeerrordata": {"destination multi-line response"},
+					"ce-knativeerrordata": {base64.StdEncoding.EncodeToString([]byte("destination multi-line response"))},
 					"ce-id":               {"ignored-value-header"},
 					"ce-time":             {"2002-10-02T15:00:00Z"},
 					"ce-source":           {testCeSource},

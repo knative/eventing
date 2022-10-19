@@ -18,6 +18,7 @@ package channel
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
@@ -320,4 +321,106 @@ func ChannelPreferHeaderCheck(createSubscriberFn func(ref *duckv1.KReference, ur
 			).AtLeast(1))
 
 	return f
+}
+
+func ChannelSubscriptionReturnedErrorData(createSubscriberFn func(ref *duckv1.KReference, uri string) manifest.CfgFn) *feature.Feature {
+	f := feature.NewFeature()
+	sink := feature.MakeRandomK8sName("sink")
+
+	sourceName := feature.MakeRandomK8sName("source")
+	failer := feature.MakeRandomK8sName("failerWitdata")
+	channelName := feature.MakeRandomK8sName("channel")
+
+	ev := test.FullEvent()
+
+	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
+
+	errorData := "<!doctype html>\n<html>\n<head>\n    <title>Error Page(tm)</title>\n</head>\n<body>\n<p>Quoth the server, 404!\n</body></html>"
+	sanitizeBodyData := sanitizeHTTPBody([]byte(errorData))
+	f.Setup("install failing receiver", eventshub.Install(failer,
+		eventshub.StartReceiver,
+		eventshub.DropFirstN(1),
+		eventshub.DropEventsResponseCode(422),
+		eventshub.DropEventsResponseBody(errorData),
+	))
+	f.Setup("install channel", channel_impl.Install(channelName, delivery.WithDeadLetterSink(svc.AsKReference(sink), "")))
+
+	f.Setup("install subscription", subscription.Install(feature.MakeRandomK8sName("subscription"),
+		subscription.WithChannel(channel_impl.AsRef(channelName)),
+		createSubscriberFn(svc.AsKReference(failer), ""),
+	))
+
+	f.Requirement("install source", eventshub.Install(
+		sourceName,
+		eventshub.StartSenderToResource(channel_impl.GVR(), channelName),
+		eventshub.InputEvent(ev),
+	))
+
+	f.Setup("channel is ready", channel_impl.IsReady(channelName))
+	f.Setup("channel is addressable", channel_impl.IsAddressable(channelName))
+
+	f.Requirement("Channel has dead letter sink uri", channel_impl.HasDeadLetterSinkURI(channelName, channel_impl.GVR()))
+
+	f.Assert("Receives dls extensions with errordata Base64encoding", assertEnhancedWithKnativeErrorExtensions(
+		sink,
+		func(ctx context.Context) test.EventMatcher {
+			failerAddress, _ := svc.Address(ctx, failer)
+			return test.HasExtension("knativeerrordest", failerAddress.String())
+		},
+		func(ctx context.Context) test.EventMatcher {
+			return test.HasExtension("knativeerrorcode", "422")
+		},
+		func(ctx context.Context) test.EventMatcher {
+			return test.HasExtension("knativeerrordata", base64.StdEncoding.EncodeToString([]byte(sanitizeBodyData)))
+		},
+	))
+
+	return f
+}
+
+func assertEnhancedWithKnativeErrorExtensions(sinkName string, matcherfns ...func(ctx context.Context) test.EventMatcher) feature.StepFn {
+	return func(ctx context.Context, t feature.T) {
+		matchers := make([]test.EventMatcher, len(matcherfns))
+		for i, fn := range matcherfns {
+			matchers[i] = fn(ctx)
+		}
+		_ = eventshub.StoreFromContext(ctx, sinkName).AssertExact(
+			t,
+			1,
+			assert.MatchKind(eventshub.EventReceived),
+			assert.MatchEvent(matchers...),
+		)
+	}
+}
+
+func sanitizeHTTPBody(body []byte) string {
+	if !hasControlChars(body) {
+		return string(body)
+	}
+
+	sanitizedResponse := make([]byte, 0, len(body))
+	for _, v := range body {
+		if !isControl(v) {
+			sanitizedResponse = append(sanitizedResponse, v)
+		}
+	}
+	return string(sanitizedResponse)
+}
+
+func isControl(c byte) bool {
+	// US ASCII codes range for printable graphic characters and a space.
+	// http://www.columbia.edu/kermit/ascii.html
+	const asciiUnitSeparator = 31
+	const asciiRubout = 127
+
+	return int(c) < asciiUnitSeparator || int(c) > asciiRubout
+}
+
+func hasControlChars(data []byte) bool {
+	for _, v := range data {
+		if isControl(v) {
+			return true
+		}
+	}
+	return false
 }
