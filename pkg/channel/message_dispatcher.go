@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
 	nethttp "net/http"
@@ -44,6 +45,11 @@ const (
 	NoDuration = -1
 	NoResponse = -1
 )
+
+type ErrExtensionInfo struct {
+	ErrDestination  *url.URL `json:"errdestination"`
+	ErrResponseBody []byte   `json:"errresponsebody"`
+}
 
 type MessageDispatcher interface {
 	// DispatchMessage dispatches an event to a destination over HTTP.
@@ -237,7 +243,7 @@ func (d *MessageDispatcherImpl) executeRequest(ctx context.Context,
 
 	body := make([]byte, attributes.KnativeErrorDataExtensionMaxLength)
 
-	if isFailure(response.StatusCode) {
+	if IsFailure(response.StatusCode) {
 		// Read response body into execInfo for failures
 		readLen, err := response.Body.Read(body)
 		if err != nil && err != io.EOF {
@@ -291,16 +297,28 @@ func (d *MessageDispatcherImpl) dispatchExecutionInfoTransformers(destination *u
 	if destination == nil {
 		destination = &url.URL{}
 	}
+
+	httpResponseBody := dispatchExecutionInfo.ResponseBody
+	if destination.Host == "broker-filter.knative-eventing.svc.cluster.local" {
+		var errExtensionInfo ErrExtensionInfo
+
+		err := json.Unmarshal(dispatchExecutionInfo.ResponseBody, &errExtensionInfo)
+		if err != nil {
+			d.logger.Debug("Unmarshal dispatchExecutionInfo ResponseBody failed", zap.Error(err))
+		}
+		destination = errExtensionInfo.ErrDestination
+		httpResponseBody = errExtensionInfo.ErrResponseBody
+	}
+
 	destination = d.sanitizeURL(destination)
 	// Unprintable control characters are not allowed in header values
 	// and cause HTTP requests to fail if not removed.
 	// https://pkg.go.dev/golang.org/x/net/http/httpguts#ValidHeaderFieldValue
-	httpBody := sanitizeHTTPBody(dispatchExecutionInfo.ResponseBody)
+	httpBody := sanitizeHTTPBody(httpResponseBody)
 
 	// Encodes response body as base64 for the resulting length.
 	bodyLen := len(httpBody)
 	encodedLen := base64.StdEncoding.EncodedLen(bodyLen)
-
 	if encodedLen > attributes.KnativeErrorDataExtensionMaxLength {
 		encodedLen = attributes.KnativeErrorDataExtensionMaxLength
 	}
@@ -342,8 +360,8 @@ func isControl(c byte) bool {
 	return int(c) < asciiUnitSeparator || int(c) > asciiRubout
 }
 
-// isFailure returns true if the status code is not a successful HTTP status.
-func isFailure(statusCode int) bool {
+// IsFailure returns true if the status code is not a successful HTTP status.
+func IsFailure(statusCode int) bool {
 	return statusCode < nethttp.StatusOK /* 200 */ ||
 		statusCode >= nethttp.StatusMultipleChoices /* 300 */
 }
