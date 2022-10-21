@@ -151,3 +151,17 @@ func TestBrokerRedelivery(t *testing.T) {
 
 	env.TestSet(ctx, t, broker.BrokerRedelivery())
 }
+
+func TestBrokerDeadLetterSinkExtensions(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+	)
+
+	env.TestSet(ctx, t, broker.BrokerDeadLetterSinkExtensions())
+}
