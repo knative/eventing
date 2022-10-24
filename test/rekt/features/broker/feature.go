@@ -377,7 +377,7 @@ func brokerSubscriberErrorWithdata() *feature.Feature {
 		eventshub.InputEvent(event),
 	))
 
-	f.Assert("Receives dls extensions without errordata", assertEnhancedWithKnativeErrorExtensions(
+	f.Assert("Receives dls extensions with errordata", assertEnhancedWithKnativeErrorExtensions(
 		sink,
 		func(ctx context.Context) test.EventMatcher {
 			failerAddress, _ := svc.Address(ctx, failer)

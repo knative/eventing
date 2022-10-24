@@ -392,8 +392,6 @@ func TestReceiver(t *testing.T) {
 			expectedEventDispatchTime: true,
 			expectedStatus:            http.StatusTooManyRequests,
 			expectedResponse:          makeEmptyResponse(http.StatusTooManyRequests),
-			// additionalReplyHeaders:    http.Header{"Retry-After": []string{"10"}},
-			// expectedResponseHeaders:   http.Header{"Retry-After": []string{"10"}},
 		},
 		"Do not proxy disallowed response headers": {
 			triggers: []*eventingv1.Trigger{
@@ -906,4 +904,3 @@ func makeEmptyResponse(status int) *http.Response {
 	}
 	return r
 }
-
