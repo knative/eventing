@@ -25,6 +25,7 @@ import (
 	"io"
 	nethttp "net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
@@ -299,7 +300,7 @@ func (d *MessageDispatcherImpl) dispatchExecutionInfoTransformers(destination *u
 	}
 
 	httpResponseBody := dispatchExecutionInfo.ResponseBody
-	if destination.Host == "broker-filter.knative-eventing.svc.cluster.local" {
+	if strings.Contains(destination.Host, "broker-filter") {
 		var errExtensionInfo ErrExtensionInfo
 
 		err := json.Unmarshal(dispatchExecutionInfo.ResponseBody, &errExtensionInfo)

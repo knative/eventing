@@ -222,7 +222,7 @@ func brokerSubscriberUnreachable() *feature.Feature {
 
 	source := feature.MakeRandomK8sName("source")
 	sink := feature.MakeRandomK8sName("sink")
-	via := feature.MakeRandomK8sName("via")
+	triggerName := feature.MakeRandomK8sName("triggerName")
 
 	eventSource := "source1"
 	eventType := "type1"
@@ -241,15 +241,14 @@ func brokerSubscriberUnreachable() *feature.Feature {
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 
-	// Point the Trigger subscriber to the sink svc.
-	cfg := []manifest.CfgFn{
+	// Install the trigger and Point the Trigger subscriber to the sink svc.
+	f.Setup("install trigger", trigger.Install(
+		triggerName,
+		brokerName,
 		trigger.WithSubscriber(nil, "http://fake.svc.cluster.local"),
 		trigger.WithDeadLetterSink(svc.AsKReference(sink), ""),
-	}
-
-	// Install the trigger
-	f.Setup("install trigger", trigger.Install(via, brokerName, cfg...))
-	f.Setup("trigger goes ready", trigger.IsReady(via))
+	))
+	f.Setup("trigger goes ready", trigger.IsReady(triggerName))
 
 	f.Requirement("install source", eventshub.Install(
 		source,
@@ -273,7 +272,7 @@ func brokerSubscriberErrorNodata() *feature.Feature {
 	source := feature.MakeRandomK8sName("source")
 	sink := feature.MakeRandomK8sName("sink")
 	failer := feature.MakeRandomK8sName("failer")
-	via := feature.MakeRandomK8sName("via")
+	triggerName := feature.MakeRandomK8sName("triggerName")
 
 	eventSource := "source1"
 	eventType := "type1"
@@ -298,15 +297,14 @@ func brokerSubscriberErrorNodata() *feature.Feature {
 		eventshub.DropEventsResponseCode(422),
 	))
 
-	// Point the Trigger subscriber to the sink svc.
-	cfg := []manifest.CfgFn{
+	// Install the trigger and Point the Trigger subscriber to the sink svc.
+	f.Setup("install trigger", trigger.Install(
+		triggerName,
+		brokerName,
 		trigger.WithSubscriber(svc.AsKReference(failer), ""),
 		trigger.WithDeadLetterSink(svc.AsKReference(sink), ""),
-	}
-
-	// Install the trigger
-	f.Setup("install trigger", trigger.Install(via, brokerName, cfg...))
-	f.Setup("trigger goes ready", trigger.IsReady(via))
+	))
+	f.Setup("trigger goes ready", trigger.IsReady(triggerName))
 
 	f.Requirement("install source", eventshub.Install(
 		source,
@@ -334,7 +332,7 @@ func brokerSubscriberErrorWithdata() *feature.Feature {
 	source := feature.MakeRandomK8sName("source")
 	sink := feature.MakeRandomK8sName("sink")
 	failer := feature.MakeRandomK8sName("failer")
-	via := feature.MakeRandomK8sName("via")
+	triggerName := feature.MakeRandomK8sName("triggerName")
 
 	eventSource := "source1"
 	eventType := "type1"
@@ -361,15 +359,14 @@ func brokerSubscriberErrorWithdata() *feature.Feature {
 		eventshub.DropEventsResponseBody(errorData),
 	))
 
-	// Point the Trigger subscriber to the sink svc.
-	cfg := []manifest.CfgFn{
+	// Install the trigger and Point the Trigger subscriber to the sink svc.
+	f.Setup("install trigger", trigger.Install(
+		triggerName,
+		brokerName,
 		trigger.WithSubscriber(svc.AsKReference(failer), ""),
 		trigger.WithDeadLetterSink(svc.AsKReference(sink), ""),
-	}
-
-	// Install the trigger
-	f.Setup("install trigger", trigger.Install(via, brokerName, cfg...))
-	f.Setup("trigger goes ready", trigger.IsReady(via))
+	))
+	f.Setup("trigger goes ready", trigger.IsReady(triggerName))
 
 	f.Requirement("install source", eventshub.Install(
 		source,

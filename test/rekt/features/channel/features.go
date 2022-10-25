@@ -365,7 +365,8 @@ func channelSubscriberUnreachable(createSubscriberFn func(ref *duckv1.KReference
 	f.Requirement("Channel has dead letter sink uri", channel_impl.HasDeadLetterSinkURI(channelName, channel_impl.GVR()))
 
 	f.Assert("Receives dls extensions when subscriber is unreachable", eventasssert.OnStore(sink).
-		MatchEvent(test.HasExtension("knativeerrordest", "http://fake.svc.cluster.local")).
+		MatchEvent(
+			test.HasExtension("knativeerrordest", "http://fake.svc.cluster.local")).
 		AtLeast(1),
 	)
 
