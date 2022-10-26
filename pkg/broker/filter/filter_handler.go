@@ -39,7 +39,6 @@ import (
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/pkg/apis/feature"
 	broker "knative.dev/eventing/pkg/broker"
-	"knative.dev/eventing/pkg/channel"
 	channelAttributes "knative.dev/eventing/pkg/channel/attributes"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1"
 	"knative.dev/eventing/pkg/eventfilter"
@@ -232,7 +231,7 @@ func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers 
 
 		writer.WriteHeader(dispatchInfo.ResponseCode)
 
-		errExtensionInfo := channel.ErrExtensionInfo{
+		errExtensionInfo := broker.ErrExtensionInfo{
 			ErrDestination:  target,
 			ErrResponseBody: dispatchInfo.ResponseBody,
 		}
@@ -298,13 +297,15 @@ func (h *Handler) sendEvent(ctx context.Context, headers http.Header, target *ur
 
 	_ = h.reporter.ReportEventDispatchTime(reporterArgs, sc, dispatchTime)
 
-	if channel.IsFailure(resp.StatusCode) {
+	if resp.StatusCode < http.StatusOK /* 200 */ ||
+		resp.StatusCode >= http.StatusMultipleChoices /* 300 */ {
+
 		// Read response body into dispatchInfo for failures
 		body := make([]byte, channelAttributes.KnativeErrorDataExtensionMaxLength)
 
 		readLen, readErr := resp.Body.Read(body)
 		if readErr != nil && readErr != io.EOF {
-			h.logger.Error("failed to read response body into DispatchExecutionInfo", zap.Error(readErr))
+			h.logger.Error("failed to read response body into DispatchInfo", zap.Error(readErr))
 			dispatchInfo.ResponseBody = []byte(fmt.Sprintf("dispatch error: %s", readErr.Error()))
 		} else {
 			dispatchInfo.ResponseBody = body[:readLen]

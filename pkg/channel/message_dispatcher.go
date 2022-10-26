@@ -35,6 +35,7 @@ import (
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/util/sets"
 
+	"knative.dev/eventing/pkg/broker"
 	"knative.dev/eventing/pkg/channel/attributes"
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/tracing"
@@ -46,11 +47,6 @@ const (
 	NoDuration = -1
 	NoResponse = -1
 )
-
-type ErrExtensionInfo struct {
-	ErrDestination  *url.URL `json:"errdestination"`
-	ErrResponseBody []byte   `json:"errresponsebody"`
-}
 
 type MessageDispatcher interface {
 	// DispatchMessage dispatches an event to a destination over HTTP.
@@ -301,7 +297,7 @@ func (d *MessageDispatcherImpl) dispatchExecutionInfoTransformers(destination *u
 
 	httpResponseBody := dispatchExecutionInfo.ResponseBody
 	if strings.Contains(destination.Host, "broker-filter") {
-		var errExtensionInfo ErrExtensionInfo
+		var errExtensionInfo broker.ErrExtensionInfo
 
 		err := json.Unmarshal(dispatchExecutionInfo.ResponseBody, &errExtensionInfo)
 		if err != nil {
