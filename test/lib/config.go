@@ -19,7 +19,6 @@ package lib
 import (
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"knative.dev/eventing/test/lib/resources"
@@ -64,20 +63,6 @@ var SourceFeatureMap = map[metav1.TypeMeta][]Feature{
 
 var BrokerFeatureMap = map[metav1.TypeMeta][]Feature{
 	*BrokerTypeMeta: {FeatureBasic},
-}
-
-var runAsNonRoot = true
-var allowPrivilegeEscalation = false
-
-var DefaultPodSecurityContext = corev1.PodSecurityContext{
-	RunAsNonRoot: &runAsNonRoot,
-}
-
-var DefaultContainerSecurityContext = corev1.SecurityContext{
-	AllowPrivilegeEscalation: &allowPrivilegeEscalation,
-	Capabilities: &corev1.Capabilities{
-		Drop: []corev1.Capability{"ALL"},
-	},
 }
 
 // Feature is the feature supported by the channel.

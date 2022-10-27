@@ -23,7 +23,7 @@ import (
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	testlib "knative.dev/eventing/test/lib"
+	"knative.dev/eventing/test/lib/resources"
 	pkgTest "knative.dev/pkg/test"
 )
 
@@ -112,11 +112,11 @@ func EventSenderPod(imageName string, name string, sink string, event cloudevent
 				Image:           pkgTest.ImagePath(imageName),
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Args:            args,
-				SecurityContext: &testlib.DefaultContainerSecurityContext,
+				SecurityContext: &resources.DefaultContainerSecurityContext,
 			}},
 			// Never restart the event sender Pod.
 			RestartPolicy:   corev1.RestartPolicyNever,
-			SecurityContext: &testlib.DefaultPodSecurityContext,
+			SecurityContext: &resources.DefaultPodSecurityContext,
 		},
 	}
 

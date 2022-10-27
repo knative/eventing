@@ -25,6 +25,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"knative.dev/eventing/test/lib/resources"
 	pkgTest "knative.dev/pkg/test"
 
 	"knative.dev/eventing/test/upgrade/prober/wathola/sender"
@@ -73,10 +74,10 @@ func (p *prober) deploySender() {
 							ReadOnly:  true,
 							MountPath: p.config.ConfigMountPoint,
 						}},
-						SecurityContext: &testlib.DefaultContainerSecurityContext,
+						SecurityContext: &resources.DefaultContainerSecurityContext,
 					}},
 					TerminationGracePeriodSeconds: &gracePeriodSeconds,
-					SecurityContext:               &testlib.DefaultPodSecurityContext,
+					SecurityContext:               &resources.DefaultPodSecurityContext,
 				},
 			},
 		},
