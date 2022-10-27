@@ -21,6 +21,7 @@ package resources
 import (
 	"fmt"
 
+	testlib "knative.dev/eventing/test/lib"
 	v1 "knative.dev/pkg/apis/duck/v1"
 
 	corev1 "k8s.io/api/core/v1"
@@ -48,8 +49,10 @@ func HelloWorldPod(name string, options ...PodOption) *corev1.Pod {
 				Name:            imageName,
 				Image:           pkgTest.ImagePath(imageName),
 				ImagePullPolicy: corev1.PullIfNotPresent,
+				SecurityContext: &testlib.DefaultContainerSecurityContext,
 			}},
-			RestartPolicy: corev1.RestartPolicyAlways,
+			RestartPolicy:   corev1.RestartPolicyAlways,
+			SecurityContext: &testlib.DefaultPodSecurityContext,
 		},
 	}
 	for _, option := range options {

@@ -112,9 +112,11 @@ func recordEventsPod(imageName string, name string, serviceAccountName string, r
 						ContainerPort: EventRecordReceivePort,
 					},
 				},
+				SecurityContext: &testlib.DefaultContainerSecurityContext,
 			}},
 			ServiceAccountName: serviceAccountName,
 			RestartPolicy:      corev1.RestartPolicyAlways,
+			SecurityContext:    &testlib.DefaultPodSecurityContext,
 		},
 	}
 	if readinessProbe {
