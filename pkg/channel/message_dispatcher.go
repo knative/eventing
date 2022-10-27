@@ -240,7 +240,7 @@ func (d *MessageDispatcherImpl) executeRequest(ctx context.Context,
 
 	body := make([]byte, attributes.KnativeErrorDataExtensionMaxLength)
 
-	if IsFailure(response.StatusCode) {
+	if isFailure(response.StatusCode) {
 		// Read response body into execInfo for failures
 		readLen, err := response.Body.Read(body)
 		if err != nil && err != io.EOF {
@@ -357,8 +357,8 @@ func isControl(c byte) bool {
 	return int(c) < asciiUnitSeparator || int(c) > asciiRubout
 }
 
-// IsFailure returns true if the status code is not a successful HTTP status.
-func IsFailure(statusCode int) bool {
+// isFailure returns true if the status code is not a successful HTTP status.
+func isFailure(statusCode int) bool {
 	return statusCode < nethttp.StatusOK /* 200 */ ||
 		statusCode >= nethttp.StatusMultipleChoices /* 300 */
 }
