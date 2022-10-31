@@ -11,6 +11,9 @@ import (
 
 var DefaultPodSecurityContext = corev1.PodSecurityContext{
 	RunAsNonRoot: ptr.Bool(true),
+	SeccompProfile: &corev1.SeccompProfile{
+		Type: corev1.SeccompProfileTypeRuntimeDefault,
+	},
 }
 
 var DefaultContainerSecurityContext = corev1.SecurityContext{
