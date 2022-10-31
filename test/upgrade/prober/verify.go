@@ -32,7 +32,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
-	"knative.dev/eventing/test/lib/resources"
 	"knative.dev/pkg/system"
 	pkgTest "knative.dev/pkg/test"
 	"knative.dev/pkg/test/helpers"
@@ -281,9 +280,7 @@ func (p *prober) deployFetcher() *batchv1.Job {
 							ReadOnly:  true,
 							MountPath: p.config.ConfigMountPoint,
 						}},
-						SecurityContext: &resources.DefaultContainerSecurityContext,
 					}},
-					SecurityContext: &resources.DefaultPodSecurityContext,
 				},
 			},
 		},

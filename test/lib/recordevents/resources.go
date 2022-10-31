@@ -25,7 +25,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/uuid"
-	"knative.dev/eventing/test/lib/resources"
 	pkgtest "knative.dev/pkg/test"
 
 	testlib "knative.dev/eventing/test/lib"
@@ -113,11 +112,9 @@ func recordEventsPod(imageName string, name string, serviceAccountName string, r
 						ContainerPort: EventRecordReceivePort,
 					},
 				},
-				SecurityContext: &resources.DefaultContainerSecurityContext,
 			}},
 			ServiceAccountName: serviceAccountName,
 			RestartPolicy:      corev1.RestartPolicyAlways,
-			SecurityContext:    &resources.DefaultPodSecurityContext,
 		},
 	}
 	if readinessProbe {

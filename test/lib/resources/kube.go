@@ -48,10 +48,8 @@ func HelloWorldPod(name string, options ...PodOption) *corev1.Pod {
 				Name:            imageName,
 				Image:           pkgTest.ImagePath(imageName),
 				ImagePullPolicy: corev1.PullIfNotPresent,
-				SecurityContext: &DefaultContainerSecurityContext,
 			}},
-			RestartPolicy:   corev1.RestartPolicyAlways,
-			SecurityContext: &DefaultPodSecurityContext,
+			RestartPolicy: corev1.RestartPolicyAlways,
 		},
 	}
 	for _, option := range options {

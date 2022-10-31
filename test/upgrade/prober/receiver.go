@@ -22,7 +22,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"knative.dev/eventing/test/lib/resources"
 	pkgTest "knative.dev/pkg/test"
 
 	testlib "knative.dev/eventing/test/lib"
@@ -122,9 +121,7 @@ func (p *prober) createReceiverDeployment() *appsv1.Deployment {
 								},
 							},
 						},
-						SecurityContext: &resources.DefaultContainerSecurityContext,
 					}},
-					SecurityContext: &resources.DefaultPodSecurityContext,
 				},
 			},
 		},

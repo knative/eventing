@@ -32,6 +32,7 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/reconciler"
 	pkgtest "knative.dev/pkg/test"
+	pkgsecurity "knative.dev/pkg/test/security"
 
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	flowsv1 "knative.dev/eventing/pkg/apis/flows/v1"
@@ -427,6 +428,8 @@ func (c *Client) CreatePodOrFail(pod *corev1.Pod, options ...func(*corev1.Pod, *
 			c.T.Fatalf("Failed to configure pod %q: %v", pod.Name, err)
 		}
 	}
+
+	pkgsecurity.AllowRestrictedPodSecurityStandard(context.Background(), c.Kube, pod)
 
 	c.applyAdditionalEnv(&pod.Spec)
 

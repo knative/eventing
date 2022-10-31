@@ -17,7 +17,6 @@ limitations under the License.
 package resources
 
 import (
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -52,20 +51,6 @@ var (
 		APIVersion: KServicesGVR.GroupVersion().String(),
 	}
 )
-
-var runAsNonRoot = true
-var allowPrivilegeEscalation = false
-
-var DefaultPodSecurityContext = corev1.PodSecurityContext{
-	RunAsNonRoot: &runAsNonRoot,
-}
-
-var DefaultContainerSecurityContext = corev1.SecurityContext{
-	AllowPrivilegeEscalation: &allowPrivilegeEscalation,
-	Capabilities: &corev1.Capabilities{
-		Drop: []corev1.Capability{"ALL"},
-	},
-}
 
 // Kind for core Kubernetes resources.
 const (
