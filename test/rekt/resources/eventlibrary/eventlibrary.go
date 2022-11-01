@@ -40,6 +40,8 @@ func Install(name string) feature.StepFn {
 		"name": name,
 	}
 
+	k8s.WithDefaultPodSecurityContext(cfg)
+
 	return func(ctx context.Context, t feature.T) {
 		if err := registerImage(ctx); err != nil {
 			t.Fatal(err)
