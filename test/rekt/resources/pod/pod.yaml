@@ -22,8 +22,31 @@ metadata:
     {{ $key }}: {{ $value }}
     {{ end }}
 spec:
+  {{ if .podSecurityContext }}
+  securityContext:
+    runAsNonRoot: {{ .podSecurityContext.runAsNonRoot }}
+    seccompProfile:
+      type: {{ .podSecurityContext.seccompProfile.type }}
+  {{ end }}
   containers:
     - name: user-container
       image: {{ .image }}
       ports:
         - containerPort: {{ .port }}
+      {{ if .containerSecurityContext }}
+      securityContext:
+        capabilities:
+          {{ if .containerSecurityContext.capabilities.drop }}
+          drop:
+            {{ range $_, $value := .containerSecurityContext.capabilities.drop }}
+            - {{ $value }}
+            {{ end }}
+          {{ end }}
+          {{ if .containerSecurityContext.capabilities.add }}
+          add:
+            {{ range $_, $value := .containerSecurityContext.capabilities.add }}
+            - {{ $value }}
+            {{ end }}
+          {{ end }}
+        allowPrivilegeEscalation: {{ .containerSecurityContext.allowPrivilegeEscalation }}
+      {{ end }}

@@ -20,11 +20,34 @@ metadata:
   labels:
     app: flaker-{{ .name }}
 spec:
+  {{ if .podSecurityContext }}
+  securityContext:
+    runAsNonRoot: {{ .podSecurityContext.runAsNonRoot }}
+    seccompProfile:
+      type: {{ .podSecurityContext.seccompProfile.type }}
+  {{ end }}
   restartPolicy: "Never"
   containers:
     - name: flaker
       image: ko://knative.dev/eventing/test/test_images/event-flaker
       imagePullPolicy: "IfNotPresent"
+      {{ if .containerSecurityContext }}
+      securityContext:
+        capabilities:
+          {{ if .containerSecurityContext.capabilities.drop }}
+          drop:
+            {{ range $_, $value := .containerSecurityContext.capabilities.drop }}
+            - {{ $value }}
+            {{ end }}
+          {{ end }}
+          {{ if .containerSecurityContext.capabilities.add }}
+          add:
+            {{ range $_, $value := .containerSecurityContext.capabilities.add }}
+            - {{ $value }}
+            {{ end }}
+          {{ end }}
+        allowPrivilegeEscalation: {{ .containerSecurityContext.allowPrivilegeEscalation }}
+      {{ end }}
       env:
         - name: "K_SINK"
           value: "{{ .sink }}"
