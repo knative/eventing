@@ -21,7 +21,6 @@ import (
 	"embed"
 
 	"knative.dev/reconciler-test/pkg/feature"
-	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/manifest"
 )
 
@@ -42,9 +41,8 @@ func Install(name string, opts ...manifest.CfgFn) feature.StepFn {
 		fn(cfg)
 	}
 
-	k8s.WithDefaultPodSecurityContext(cfg)
-
 	return func(ctx context.Context, t feature.T) {
+		manifest.PodSecurityCfgFn(ctx, t)(cfg)
 		if _, err := manifest.InstallYamlFS(ctx, yaml, cfg); err != nil {
 			t.Fatal(err)
 		}
