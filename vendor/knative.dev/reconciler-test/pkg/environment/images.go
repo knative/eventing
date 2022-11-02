@@ -23,6 +23,7 @@ import (
 	"sync"
 
 	"knative.dev/pkg/logging"
+
 	"knative.dev/reconciler-test/pkg/images/ko"
 )
 
@@ -90,7 +91,7 @@ func ProduceImages(ctx context.Context) (map[string]string, error) {
 		}
 		store.refs[koPack] = strings.TrimSpace(image)
 	}
-	return store.refs, nil
+	return store.copyRefs(), nil
 }
 
 func initializeImageStores(ctx context.Context) context.Context {
@@ -160,4 +161,12 @@ func (k imageStoreKey) get(ctx context.Context) *imageStore {
 
 type imageStore struct {
 	refs map[string]string
+}
+
+func (is imageStore) copyRefs() map[string]string {
+	refs := make(map[string]string, len(is.refs))
+	for k, v := range is.refs {
+		refs[k] = v
+	}
+	return refs
 }
