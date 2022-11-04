@@ -50,7 +50,9 @@ func ChannelTracingTestHelperWithChannelTestRunner(
 
 // setupChannelTracing is the general setup for TestChannelTracing. It creates the following:
 // SendEvents (Pod) -> Channel -> Subscription -> K8s Service -> Mutate (Pod)
-//                                                                   v
+//
+//	v
+//
 // LogEvents (Pod) <- K8s Service <- Subscription  <- Channel <- (Reply) Subscription
 // It returns the expected trace tree and a match function that is expected to be sent
 // by the SendEvents Pod and should be present in the RecordEvents list of events.

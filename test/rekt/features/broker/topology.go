@@ -42,20 +42,19 @@ type triggerCfg struct {
 	reply     *conformanceevent.Event
 }
 
-//
 // createBrokerTriggerDeliveryTopology creates a topology that allows us to test the various
 // delivery configurations.
 //
 // source ---> [broker (brokerDS)] --+--[trigger0 (ds, filter)]--> "t0" + (optional reply)
-//                         |         |              |
-//                         |         |              +--> "t0dlq" (optional)
-//                         |        ...
-//                         |         +-[trigger{n} (ds, filter)]--> "t{n}" + (optional reply)
-//                         |                       |
-//                         |                       +--> "t{n}dlq" (optional)
-//                         |
-//                         +--[DLQ]--> "dlq" (optional)
 //
+//	|         |              |
+//	|         |              +--> "t0dlq" (optional)
+//	|        ...
+//	|         +-[trigger{n} (ds, filter)]--> "t{n}" + (optional reply)
+//	|                       |
+//	|                       +--> "t{n}dlq" (optional)
+//	|
+//	+--[DLQ]--> "dlq" (optional)
 func createBrokerTriggerTopology(f *feature.Feature, brokerName string, brokerDS *v1.DeliverySpec, triggers []triggerCfg, brokerOpts ...manifest.CfgFn) *eventshub.EventProber {
 	prober := eventshub.NewProber()
 
