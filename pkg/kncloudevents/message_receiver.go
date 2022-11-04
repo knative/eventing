@@ -83,7 +83,7 @@ func WithDrainQuietPeriod(duration time.Duration) HTTPMessageReceiverOption {
 func WithWriteTimeout(duration time.Duration) HTTPMessageReceiverOption {
 	return func(h *HTTPMessageReceiver) {
 		if h.server == nil {
-			h.server = &http.Server{}
+			h.server = newServer()
 		}
 
 		h.server.WriteTimeout = duration
@@ -95,7 +95,7 @@ func WithWriteTimeout(duration time.Duration) HTTPMessageReceiverOption {
 func WithReadTimeout(duration time.Duration) HTTPMessageReceiverOption {
 	return func(h *HTTPMessageReceiver) {
 		if h.server == nil {
-			h.server = &http.Server{}
+			h.server = newServer()
 		}
 
 		h.server.ReadTimeout = duration
@@ -160,5 +160,11 @@ func CreateHandler(handler http.Handler) http.Handler {
 	return &ochttp.Handler{
 		Propagation: tracecontextb3.TraceContextEgress,
 		Handler:     handler,
+	}
+}
+
+func newServer() *http.Server {
+	return &http.Server{
+		ReadTimeout: 10 * time.Second,
 	}
 }
