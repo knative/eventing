@@ -79,12 +79,12 @@ func BrokerDataPlaneNamespaceSetupOption(ctx context.Context, namespace string) 
 	}
 }
 
-//At ingress
-//Supports CE 0.3 or CE 1.0 via HTTP
-//Supports structured or Binary mode
-//Respond with 2xx on good CE
-//Respond with 400 on bad CE
-//Reject non-POST, non-OPTIONS requests to publish URI (beyond spec?!)
+// At ingress
+// Supports CE 0.3 or CE 1.0 via HTTP
+// Supports structured or Binary mode
+// Respond with 2xx on good CE
+// Respond with 400 on bad CE
+// Reject non-POST, non-OPTIONS requests to publish URI (beyond spec?!)
 func BrokerIngressDataPlaneTestHelper(
 	ctx context.Context,
 	t *testing.T,
@@ -250,14 +250,14 @@ func BrokerIngressDataPlaneTestHelper(
 	})
 }
 
-//At consumer
-//No upgrade of version
-//Attributes received should be the same as produced (attributes may be added)
-//Events are filtered
-//Events are delivered to multiple subscribers
-//Deliveries succeed at least once
-//Replies are accepted and delivered
-//Replies that are unsuccessfully forwarded cause initial message to be redelivered (Very difficult to test, can be ignored)
+// At consumer
+// No upgrade of version
+// Attributes received should be the same as produced (attributes may be added)
+// Events are filtered
+// Events are delivered to multiple subscribers
+// Deliveries succeed at least once
+// Replies are accepted and delivered
+// Replies that are unsuccessfully forwarded cause initial message to be redelivered (Very difficult to test, can be ignored)
 func BrokerConsumerDataPlaneTestHelper(
 	ctx context.Context,
 	t *testing.T,
