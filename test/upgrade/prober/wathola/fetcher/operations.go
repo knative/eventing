@@ -18,7 +18,7 @@ package fetcher
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -26,6 +26,7 @@ import (
 	"github.com/wavesoftware/go-ensure"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+
 	"knative.dev/eventing/test/upgrade/prober/wathola/config"
 	"knative.dev/eventing/test/upgrade/prober/wathola/receiver"
 )
@@ -71,7 +72,7 @@ func (f *fetcher) fetchReport() error {
 	if err != nil {
 		return err
 	}
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	_ = resp.Body.Close()
 	if err != nil {
 		return err
