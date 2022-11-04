@@ -18,13 +18,14 @@ package main
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
 	"knative.dev/eventing/test/upgrade/prober/wathola/config"
 	"knative.dev/eventing/test/upgrade/prober/wathola/fetcher"
 	"knative.dev/eventing/test/upgrade/prober/wathola/receiver"
@@ -65,7 +66,7 @@ func TestFetcherMain(t *testing.T) {
 		main()
 
 		_ = w.Close()
-		out, _ := ioutil.ReadAll(r)
+		out, _ := io.ReadAll(r)
 		os.Stdout = rescueStdout
 		return out
 	}()
