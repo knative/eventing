@@ -75,9 +75,9 @@ func SourceToSink(brokerName string) *feature.Feature {
 // to a Ready Broker, forward unsent events to it's Broker's DLQ
 //
 // source ---> broker<Via> --[trigger]--> bad uri
-//                |
-//                +--[DLQ]--> dlq
 //
+//	|
+//	+--[DLQ]--> dlq
 func SourceToSinkWithDLQ() *feature.Feature {
 	f := feature.NewFeature()
 
@@ -125,9 +125,9 @@ func SourceToSinkWithDLQ() *feature.Feature {
 // SourceToSinkWithFlakyDLQ tests to see if a Ready Broker acts as middleware.
 //
 // source ---> broker --[trigger]--> flake 1/3 --> recorder
-//                  |
-//                  +--[DLQ]--> recorder
 //
+//	|
+//	+--[DLQ]--> recorder
 func SourceToSinkWithFlakyDLQ(brokerName string) *feature.Feature {
 	source := feature.MakeRandomK8sName("source")
 	sink := feature.MakeRandomK8sName("sink")

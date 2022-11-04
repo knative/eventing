@@ -30,11 +30,15 @@ import (
 
 // hostSuffix is an optional suffix that might appear at the end of hostnames.
 // We supplement matches with this to allow matches for:
-//    foo.bar
+//
+//	foo.bar
+//
 // to match all of:
-//    foo.bar
-//    foo.bar.svc
-//    foo.bar.svc.cluster.local
+//
+//	foo.bar
+//	foo.bar.svc
+//	foo.bar.svc.cluster.local
+//
 // It's hardly perfect, but requires the suffix to start with the delimiter '.'
 // and then match anything prior to the path starting, e.g. '/'
 const HostSuffix = "[.][^/]+"

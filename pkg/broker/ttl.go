@@ -55,9 +55,10 @@ func DeleteTTL(ctx cloudevents.EventContext) error {
 
 // TTLDefaulter returns a cloudevents event defaulter that will manage the TTL
 // for events with the following rules:
-//   If TTL is not found, it will set it to the default passed in.
-//   If TTL is <= 0, it will remain 0.
-//   If TTL is > 1, it will be reduced by one.
+//
+//	If TTL is not found, it will set it to the default passed in.
+//	If TTL is <= 0, it will remain 0.
+//	If TTL is > 1, it will be reduced by one.
 func TTLDefaulter(logger *zap.Logger, defaultTTL int32) client.EventDefaulter {
 	return func(ctx context.Context, event cloudevents.Event) cloudevents.Event {
 		// Get the current or default TTL from the event.
