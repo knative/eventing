@@ -2146,7 +2146,7 @@ string values are supported.</p>
 <p>
 <p>TriggerFilterAttributes is a map of context attribute names to values for
 filtering by equality. Only exact matches will pass the filter. You can use
-the value &ldquo; to indicate all strings match.</p>
+the value ” to indicate all strings match.</p>
 </p>
 <h3 id="eventing.knative.dev/v1.TriggerSpec">TriggerSpec
 </h3>
