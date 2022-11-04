@@ -22,7 +22,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"io"
 	nethttp "net/http"
 	"strconv"
 	"strings"
@@ -161,7 +161,7 @@ func Start(ctx context.Context, logs *recordevents.EventLogs) error {
 		}
 
 		if env.InputBody != "" {
-			req.Body = ioutil.NopCloser(bytes.NewReader([]byte(env.InputBody)))
+			req.Body = io.NopCloser(bytes.NewReader([]byte(env.InputBody)))
 		}
 
 		res, err := httpClient.Do(req)
@@ -218,7 +218,7 @@ func Start(ctx context.Context, logs *recordevents.EventLogs) error {
 				StatusCode:  res.StatusCode,
 			}
 			if responseMessage.ReadEncoding() == binding.EncodingUnknown {
-				body, err := ioutil.ReadAll(res.Body)
+				body, err := io.ReadAll(res.Body)
 
 				if err != nil {
 					responseInfo.Error = err.Error()

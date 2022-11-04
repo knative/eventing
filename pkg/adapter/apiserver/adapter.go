@@ -30,6 +30,7 @@ import (
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/tools/cache"
+
 	"knative.dev/eventing/pkg/adapter/v2"
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 )
@@ -120,7 +121,10 @@ func (a *apiServerAdapter) start(ctx context.Context, stopCh <-chan struct{}) er
 	}
 
 	srv := &http.Server{
-		Addr: ":8080",
+		Addr:              ":8080",
+		// Configure read header timeout to overcome potential Slowloris Attack because ReadHeaderTimeout is not
+		// configured in the http.Server.
+		ReadHeaderTimeout: 10 * time.Second,
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
 		}),
