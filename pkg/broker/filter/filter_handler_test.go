@@ -20,7 +20,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -769,7 +769,7 @@ func (h *fakeHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		resp.WriteHeader(h.expectedResponse.StatusCode)
 		if h.expectedResponse.Body != nil {
 			defer h.expectedResponse.Body.Close()
-			body, err := ioutil.ReadAll(h.expectedResponse.Body)
+			body, err := io.ReadAll(h.expectedResponse.Body)
 			if err != nil {
 				h.t.Fatal("Unable to read body: ", err)
 			}
@@ -858,7 +858,7 @@ func makeNonEmptyResponse() *http.Response {
 		Proto:      "HTTP/1.1",
 		ProtoMajor: 1,
 		ProtoMinor: 1,
-		Body:       ioutil.NopCloser(bytes.NewBufferString(invalidEvent)),
+		Body:       io.NopCloser(bytes.NewBufferString(invalidEvent)),
 		Header:     make(http.Header),
 	}
 	r.Header.Set("Content-Type", "garbage")
@@ -886,7 +886,7 @@ func makeMalformedStructuredEventResponse() *http.Response {
 		Proto:      "HTTP/1.1",
 		ProtoMajor: 1,
 		ProtoMinor: 1,
-		Body:       ioutil.NopCloser(bytes.NewReader([]byte("{}"))),
+		Body:       io.NopCloser(bytes.NewReader([]byte("{}"))),
 		Header:     make(http.Header),
 	}
 	r.Header.Set("Content-Type", cloudevents.ApplicationCloudEventsJSON)
