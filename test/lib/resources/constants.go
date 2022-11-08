@@ -80,7 +80,7 @@ const (
 	FlowsParallelKind string = "Parallel"
 )
 
-//Kind for sources resources that exist in Eventing core
+// Kind for sources resources that exist in Eventing core
 const (
 	ApiServerSourceKind string = "ApiServerSource"
 	PingSourceKind      string = "PingSource"

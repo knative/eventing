@@ -58,16 +58,15 @@ func (s *subCfg) dlqName() string {
 // createChannelTopology creates a channel and {n} subscriptions with recorders
 // attached to each endpoint.
 //
-//  source --> [channel (chDS)] --+--[sub1 (sub1DS)]--> sub1sub (optional) --> sub1reply (optional)
-//                        |       |            |
-//                        |       |            +-->sub1dlq (optional)
-//                        |      ...
-//                        |       +-[sub{n} (sub{n}DS)]--> sub{n}sub (optional)--> sub{n}reply (optional)
-//                        |                   |
-//                        |                   +-->sub{n}dlq (optional)
-//                        |
-//                        +--[DLQ]--> chdlq (optional)
-//
+//	source --> [channel (chDS)] --+--[sub1 (sub1DS)]--> sub1sub (optional) --> sub1reply (optional)
+//	                      |       |            |
+//	                      |       |            +-->sub1dlq (optional)
+//	                      |      ...
+//	                      |       +-[sub{n} (sub{n}DS)]--> sub{n}sub (optional)--> sub{n}reply (optional)
+//	                      |                   |
+//	                      |                   +-->sub{n}dlq (optional)
+//	                      |
+//	                      +--[DLQ]--> chdlq (optional)
 func createChannelTopology(f *feature.Feature, chName string, chDS *v1.DeliverySpec, subs []subCfg) *eventshub.EventProber {
 	prober := eventshub.NewProber()
 	// Install the receivers.

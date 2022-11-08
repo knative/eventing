@@ -17,8 +17,6 @@ package config
 
 import (
 	"fmt"
-
-	"io/ioutil"
 	"os"
 	"path"
 	"testing"
@@ -141,7 +139,7 @@ func withConfigContents(t *testing.T, content string, fn func()) {
 	t.Helper()
 	configFile := ensureConfigFileNotPresent(t)
 	data := []byte(content)
-	assert.NoError(t, ioutil.WriteFile(configFile, data, 0644))
+	assert.NoError(t, os.WriteFile(configFile, data, 0644))
 	defer func() { assert.NoError(t, os.RemoveAll(configFile)) }()
 	fn()
 }

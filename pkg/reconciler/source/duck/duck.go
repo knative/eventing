@@ -105,7 +105,8 @@ func (r *Reconciler) reconcile(ctx context.Context, source *duckv1.Source) error
 }
 
 // TODO revisit most of this logic once we get rid of Broker and maybe some other bits.
-//  https://github.com/knative/eventing/issues/2750.
+//
+//	https://github.com/knative/eventing/issues/2750.
 func (r *Reconciler) reconcileEventTypes(ctx context.Context, src *duckv1.Source) error {
 	current, err := r.getEventTypes(ctx, src)
 	if err != nil {
