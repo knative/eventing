@@ -19,7 +19,7 @@ package channel_test
 import (
 	"bytes"
 	"context"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -90,7 +90,7 @@ func newSampleResponseAcceptedAndNotNull() *fakeMessageHandler {
 	}
 	fakeResponse := &http.Response{
 		StatusCode: http.StatusAccepted,
-		Body:       ioutil.NopCloser(bytes.NewBufferString(uuid.NewString())),
+		Body:       io.NopCloser(bytes.NewBufferString(uuid.NewString())),
 	}
 	fmh := NewFakeMessageHandler(true, false, eventExtensions, header, body, fakeResponse, nil)
 	return fmh
@@ -110,7 +110,7 @@ func newSampleResponseStatusInternalServerErrorAndNotNull() *fakeMessageHandler 
 	}
 	fakeResponse := &http.Response{
 		StatusCode: http.StatusInternalServerError,
-		Body:       ioutil.NopCloser(bytes.NewBufferString(uuid.NewString())),
+		Body:       io.NopCloser(bytes.NewBufferString(uuid.NewString())),
 	}
 	fmh := NewFakeMessageHandler(true, false, eventExtensions, header, body, fakeResponse, nil)
 	return fmh
@@ -130,7 +130,7 @@ func newSampleResponseAcceptedAndNull() *fakeMessageHandler {
 	}
 	fakeResponse := &http.Response{
 		StatusCode: http.StatusAccepted,
-		Body:       ioutil.NopCloser(bytes.NewBufferString("")),
+		Body:       io.NopCloser(bytes.NewBufferString("")),
 	}
 	fmh := NewFakeMessageHandler(true, false, eventExtensions, header, body, fakeResponse, nil)
 	return fmh
@@ -219,7 +219,7 @@ func (f *fakeHttpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	// Make a copy of the request.
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
 
 		f.b.Error("Failed to read the request body")

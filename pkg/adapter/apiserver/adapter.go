@@ -121,7 +121,7 @@ func (a *apiServerAdapter) start(ctx context.Context, stopCh <-chan struct{}) er
 	}
 
 	srv := &http.Server{
-		Addr:              ":8080",
+		Addr: ":8080",
 		// Configure read header timeout to overcome potential Slowloris Attack because ReadHeaderTimeout is not
 		// configured in the http.Server.
 		ReadHeaderTimeout: 10 * time.Second,

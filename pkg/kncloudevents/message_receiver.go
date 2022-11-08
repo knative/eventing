@@ -115,7 +115,7 @@ func (recv *HTTPMessageReceiver) StartListen(ctx context.Context, handler http.H
 		QuietPeriod: recv.drainQuietPeriod,
 	}
 	if recv.server == nil {
-		recv.server = &http.Server{}
+		recv.server = newServer()
 	}
 	recv.server.Addr = recv.listener.Addr().String()
 	recv.server.Handler = drainer
