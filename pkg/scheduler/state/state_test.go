@@ -47,6 +47,7 @@ func TestStateBuilder(t *testing.T) {
 	testCases := []struct {
 		name                string
 		replicas            int32
+		pendingReplicas     int32
 		vpods               [][]duckv1alpha1.Placement
 		expected            State
 		freec               int32
@@ -142,6 +143,55 @@ func TestStateBuilder(t *testing.T) {
 				},
 			},
 			freec:               int32(18),
+			schedulerPolicyType: scheduler.MAXFILLUP,
+			nodes:               []*v1.Node{tscheduler.MakeNode("node-0", "zone-0"), tscheduler.MakeNode("node-1", "zone-1"), tscheduler.MakeNode("node-2", "zone-2")},
+		},
+		{
+			name:            "many vpods, unschedulable pending pods (statefulset-name-0)",
+			replicas:        int32(3),
+			pendingReplicas: int32(1),
+			vpods: [][]duckv1alpha1.Placement{
+				{{PodName: "statefulset-name-0", VReplicas: 1}, {PodName: "statefulset-name-2", VReplicas: 5}},
+				{{PodName: "statefulset-name-1", VReplicas: 2}},
+				{{PodName: "statefulset-name-1", VReplicas: 3}, {PodName: "statefulset-name-0", VReplicas: 1}},
+			},
+			expected: State{Capacity: 10, FreeCap: []int32{int32(8), int32(5), int32(5)}, SchedulablePods: []int32{int32(1), int32(2)}, LastOrdinal: 2, Replicas: 3, NumNodes: 3, NumZones: 3, SchedulerPolicy: scheduler.MAXFILLUP, SchedPolicy: &scheduler.SchedulerPolicy{}, DeschedPolicy: &scheduler.SchedulerPolicy{}, StatefulSetName: sfsName,
+				NodeToZoneMap: map[string]string{"node-0": "zone-0", "node-1": "zone-1", "node-2": "zone-2"},
+				PodSpread: map[types.NamespacedName]map[string]int32{
+					{Name: vpodName + "-0", Namespace: vpodNs + "-0"}: {
+						"statefulset-name-2": 5,
+					},
+					{Name: vpodName + "-1", Namespace: vpodNs + "-1"}: {
+						"statefulset-name-1": 2,
+					},
+					{Name: vpodName + "-2", Namespace: vpodNs + "-2"}: {
+						"statefulset-name-1": 3,
+					},
+				},
+				NodeSpread: map[types.NamespacedName]map[string]int32{
+					{Name: vpodName + "-0", Namespace: vpodNs + "-0"}: {
+						"node-2": 5,
+					},
+					{Name: vpodName + "-1", Namespace: vpodNs + "-1"}: {
+						"node-1": 2,
+					},
+					{Name: vpodName + "-2", Namespace: vpodNs + "-2"}: {
+						"node-1": 3,
+					},
+				},
+				ZoneSpread: map[types.NamespacedName]map[string]int32{
+					{Name: vpodName + "-0", Namespace: vpodNs + "-0"}: {
+						"zone-2": 5,
+					},
+					{Name: vpodName + "-1", Namespace: vpodNs + "-1"}: {
+						"zone-1": 2,
+					},
+					{Name: vpodName + "-2", Namespace: vpodNs + "-2"}: {
+						"zone-1": 3,
+					},
+				},
+			},
+			freec:               int32(10),
 			schedulerPolicyType: scheduler.MAXFILLUP,
 			nodes:               []*v1.Node{tscheduler.MakeNode("node-0", "zone-0"), tscheduler.MakeNode("node-1", "zone-1"), tscheduler.MakeNode("node-2", "zone-2")},
 		},
@@ -461,6 +511,10 @@ func TestStateBuilder(t *testing.T) {
 			nodelist := make([]runtime.Object, 0, len(tc.nodes))
 			podlist := make([]runtime.Object, 0, tc.replicas)
 
+			if tc.pendingReplicas > tc.replicas {
+				t.Fatalf("Inconsistent test configuration pending replicas %d greater than replicas %d", tc.pendingReplicas, tc.replicas)
+			}
+
 			for i, placements := range tc.vpods {
 				vpodName := fmt.Sprint(vpodName+"-", i)
 				vpodNamespace := fmt.Sprint(vpodNs+"-", i)
@@ -485,10 +539,17 @@ func TestStateBuilder(t *testing.T) {
 				nodelist = append(nodelist, node)
 			}
 
-			for i := int32(0); i < tc.replicas; i++ {
-				nodeName := "node-" + fmt.Sprint(i)
-				podName := sfsName + "-" + fmt.Sprint(i)
-				pod, err := kubeclient.Get(ctx).CoreV1().Pods(testNs).Create(ctx, tscheduler.MakePod(testNs, podName, nodeName), metav1.CreateOptions{})
+			for i := tc.replicas - 1; i >= 0; i-- {
+				var pod *v1.Pod
+				var err error
+				if i < tc.pendingReplicas {
+					podName := sfsName + "-" + fmt.Sprint(i)
+					pod, err = kubeclient.Get(ctx).CoreV1().Pods(testNs).Create(ctx, tscheduler.MakePod(testNs, podName, ""), metav1.CreateOptions{})
+				} else {
+					nodeName := "node-" + fmt.Sprint(i)
+					podName := sfsName + "-" + fmt.Sprint(i)
+					pod, err = kubeclient.Get(ctx).CoreV1().Pods(testNs).Create(ctx, tscheduler.MakePod(testNs, podName, nodeName), metav1.CreateOptions{})
+				}
 				if err != nil {
 					t.Fatal("unexpected error", err)
 				}
