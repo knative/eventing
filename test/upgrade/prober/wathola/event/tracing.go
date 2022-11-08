@@ -19,7 +19,7 @@ package event
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	"github.com/openzipkin/zipkin-go/model"
@@ -65,7 +65,7 @@ func SendTraceQuery(endpoint string, annotationQuery string) ([][]model.SpanMode
 	}
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return empty, err
 	}

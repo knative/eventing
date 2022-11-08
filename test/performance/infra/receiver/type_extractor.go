@@ -22,7 +22,9 @@ import cloudevents "github.com/cloudevents/sdk-go/v2"
 type TypeExtractor func(event cloudevents.Event) string
 
 // EventTypeExtractor uses
-//  event.Type()
+//
+//	event.Type()
+//
 // to extract the event type
 func EventTypeExtractor(event cloudevents.Event) string {
 	return event.Type()

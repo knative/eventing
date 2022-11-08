@@ -33,9 +33,9 @@ import (
 // failing events to it's DLS.
 //
 // source ---> broker --[trigger]--> bad uri
-//                          |
-//                          +--[DLS]--> sink
 //
+//	|
+//	+--[DLS]--> sink
 func SourceToTriggerSinkWithDLS() *feature.Feature {
 	f := feature.NewFeatureNamed("Trigger with DLS")
 
@@ -87,9 +87,9 @@ func SourceToTriggerSinkWithDLS() *feature.Feature {
 // failing events to it's DLS even when it's corresponding Ready Broker also have a DLS defined.
 //
 // source ---> broker --[trigger]--> bad uri
-//               |          |
-//               +--[DLS]   +--[DLS]--> sink
 //
+//	|          |
+//	+--[DLS]   +--[DLS]--> sink
 func SourceToTriggerSinkWithDLSDontUseBrokers() *feature.Feature {
 	f := feature.NewFeatureNamed("When Trigger DLS is defined, Broker DLS is ignored")
 
@@ -147,11 +147,11 @@ func SourceToTriggerSinkWithDLSDontUseBrokers() *feature.Feature {
 }
 
 // source ---> broker +--[trigger<via1>]--> bad uri
-//                |   |
-//                |   +--[trigger<vai2>]--> sink
-//                |
-//                +--[DLQ]--> dlq
 //
+//	|   |
+//	|   +--[trigger<vai2>]--> sink
+//	|
+//	+--[DLQ]--> dlq
 func BadTriggerDoesNotAffectOkTrigger() *feature.Feature {
 	f := feature.NewFeatureNamed("Bad Trigger does not affect good Trigger")
 

@@ -18,7 +18,7 @@ package kncloudevents
 
 import (
 	"context"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -52,7 +52,7 @@ func TestWriteHTTPRequestWithAdditionalHeadersWritesIntoRequest(t *testing.T) {
 	assert.Equal(t, []string{ceSource}, request.Header["Ce-Source"])
 	assert.Equal(t, []string{ceType}, request.Header["Ce-Type"])
 	assert.Equal(t, []string{cloudevents.TextPlain}, request.Header["Content-Type"])
-	gotPayload, err := ioutil.ReadAll(request.Body)
+	gotPayload, err := io.ReadAll(request.Body)
 	assert.NoError(t, err)
 	assert.Equal(t, []byte(ceData), gotPayload)
 
