@@ -1,0 +1,7 @@
+# Additional approvers for this component
+approvers:
+- technical-oversight-committee
+- eventing-writers
+- knative-release-leads
+- aavarghese
+
