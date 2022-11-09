@@ -229,8 +229,7 @@ func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers 
 	if responseErr.err != nil {
 		h.logger.Error("failed to send event", zap.Error(responseErr.err))
 		// If error not because of the response, it should respond with http.StatusInternalServerError
-		errCode := responseErr.ResponseCode
-		if errCode == NoResponse || errCode == http.StatusInternalServerError {
+		if responseErr.ResponseCode == NoResponse {
 			writer.WriteHeader(http.StatusInternalServerError)
 			_ = h.reporter.ReportEventCount(reportArgs, http.StatusInternalServerError)
 			return
