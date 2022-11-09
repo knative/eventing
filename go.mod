@@ -44,10 +44,10 @@ require (
 	k8s.io/apiserver v0.25.2
 	k8s.io/client-go v0.25.2
 	k8s.io/utils v0.0.0-20220728103510-ee6ede2d64ed
-	knative.dev/hack v0.0.0-20221101141106-4b6bd86dae9d
-	knative.dev/hack/schema v0.0.0-20221101141106-4b6bd86dae9d
-	knative.dev/pkg v0.0.0-20221101143811-8fa1a3f55bf5
-	knative.dev/reconciler-test v0.0.0-20221028112508-07a0279f6a51
+	knative.dev/hack v0.0.0-20221104013908-8f3c7050408b
+	knative.dev/hack/schema v0.0.0-20221104013908-8f3c7050408b
+	knative.dev/pkg v0.0.0-20221107171117-0243d641354d
+	knative.dev/reconciler-test v0.0.0-20221108073117-5600f5301d87
 	sigs.k8s.io/yaml v1.3.0
 )
 

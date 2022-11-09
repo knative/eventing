@@ -1232,17 +1232,17 @@ k8s.io/utils/net
 k8s.io/utils/pointer
 k8s.io/utils/strings/slices
 k8s.io/utils/trace
-# knative.dev/hack v0.0.0-20221101141106-4b6bd86dae9d
+# knative.dev/hack v0.0.0-20221104013908-8f3c7050408b
 ## explicit; go 1.18
 knative.dev/hack
 knative.dev/hack/shell
-# knative.dev/hack/schema v0.0.0-20221101141106-4b6bd86dae9d
+# knative.dev/hack/schema v0.0.0-20221104013908-8f3c7050408b
 ## explicit; go 1.18
 knative.dev/hack/schema/commands
 knative.dev/hack/schema/docs
 knative.dev/hack/schema/registry
 knative.dev/hack/schema/schema
-# knative.dev/pkg v0.0.0-20221101143811-8fa1a3f55bf5
+# knative.dev/pkg v0.0.0-20221107171117-0243d641354d
 ## explicit; go 1.18
 knative.dev/pkg/apiextensions/storageversion
 knative.dev/pkg/apiextensions/storageversion/cmd/migrate
@@ -1353,6 +1353,7 @@ knative.dev/pkg/test/mako/stub-sidecar
 knative.dev/pkg/test/migrate
 knative.dev/pkg/test/monitoring
 knative.dev/pkg/test/prow
+knative.dev/pkg/test/security
 knative.dev/pkg/test/slackutil
 knative.dev/pkg/test/spoof
 knative.dev/pkg/test/upgrade
@@ -1375,7 +1376,7 @@ knative.dev/pkg/webhook/resourcesemantics
 knative.dev/pkg/webhook/resourcesemantics/conversion
 knative.dev/pkg/webhook/resourcesemantics/defaulting
 knative.dev/pkg/webhook/resourcesemantics/validation
-# knative.dev/reconciler-test v0.0.0-20221028112508-07a0279f6a51
+# knative.dev/reconciler-test v0.0.0-20221108073117-5600f5301d87
 ## explicit; go 1.18
 knative.dev/reconciler-test/cmd/eventshub
 knative.dev/reconciler-test/pkg/environment
