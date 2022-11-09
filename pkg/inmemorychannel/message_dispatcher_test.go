@@ -44,6 +44,7 @@ import (
 	"knative.dev/eventing/pkg/kncloudevents"
 
 	logtesting "knative.dev/pkg/logging/testing"
+	_ "knative.dev/pkg/system/testing"
 )
 
 func TestNewMessageDispatcher(t *testing.T) {
