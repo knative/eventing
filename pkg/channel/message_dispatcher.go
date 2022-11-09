@@ -25,7 +25,6 @@ import (
 	"io"
 	nethttp "net/http"
 	"net/url"
-	"strings"
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
@@ -40,6 +39,8 @@ import (
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/tracing"
 	"knative.dev/eventing/pkg/utils"
+	"knative.dev/pkg/network"
+	"knative.dev/pkg/system"
 )
 
 const (
@@ -296,12 +297,14 @@ func (d *MessageDispatcherImpl) dispatchExecutionInfoTransformers(destination *u
 	}
 
 	httpResponseBody := dispatchExecutionInfo.ResponseBody
-	if strings.Contains(destination.Host, "broker-filter") {
+	if destination.Host == network.GetServiceHostname("broker-filter", system.Namespace()) {
+
 		var errExtensionInfo broker.ErrExtensionInfo
 
 		err := json.Unmarshal(dispatchExecutionInfo.ResponseBody, &errExtensionInfo)
 		if err != nil {
 			d.logger.Debug("Unmarshal dispatchExecutionInfo ResponseBody failed", zap.Error(err))
+			return nil
 		}
 		destination = errExtensionInfo.ErrDestination
 		httpResponseBody = errExtensionInfo.ErrResponseBody
