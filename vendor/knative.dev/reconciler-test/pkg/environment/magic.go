@@ -121,8 +121,8 @@ func WithPollTimings(interval, timeout time.Duration) EnvOpts {
 
 // Managed enables auto-lifecycle management of the environment. Including
 // registration of following opts:
-//  - Cleanup,
-//  - WithTestLogger.
+//   - Cleanup,
+//   - WithTestLogger.
 func Managed(t feature.T) EnvOpts {
 	return UnionOpts(Cleanup(t), WithTestLogger(t))
 }
