@@ -373,7 +373,11 @@ func withReserved(key types.NamespacedName, podName string, committed int32, res
 func isPodUnschedulable(pod *v1.Pod) bool {
 	annotVal, ok := pod.ObjectMeta.Annotations[scheduler.PodAnnotationKey]
 	unschedulable, err := strconv.ParseBool(annotVal)
-	return (ok && err == nil && unschedulable) || pod.Spec.NodeName == ""
+
+	isMarkedUnschedulable := ok && err == nil && unschedulable
+	isPending := pod.Spec.NodeName == ""
+
+	return isMarkedUnschedulable || isPending
 }
 
 func isNodeUnschedulable(node *v1.Node) bool {
