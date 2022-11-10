@@ -65,15 +65,16 @@ const (
 	NoResponse = -1
 )
 
+type ErrHander struct {
+	ResponseCode int
+	ResponseBody []byte
+	err          error
+}
+
 // HeaderProxyAllowList contains the headers that are proxied from the reply; other than the CloudEvents headers.
 // Other headers are not proxied because of security concerns.
 var HeaderProxyAllowList = map[string]struct{}{
 	strings.ToLower("Retry-After"): {},
-}
-
-type ResponseErr struct {
-	ResponseCode int
-	err          error
 }
 
 // Handler parses Cloud Events, determines if they pass a filter, and sends them to a subscriber.
@@ -230,6 +231,7 @@ func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers 
 		h.logger.Error("failed to send event", zap.Error(responseErr.err))
 		// If error not because of the response, it should respond with http.StatusInternalServerError
 		if responseErr.ResponseCode == NoResponse {
+
 			writer.WriteHeader(http.StatusInternalServerError)
 			_ = h.reporter.ReportEventCount(reportArgs, http.StatusInternalServerError)
 			return
@@ -237,16 +239,9 @@ func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers 
 
 		writer.WriteHeader(responseErr.ResponseCode)
 		// Read Response body
-		body := make([]byte, channelAttributes.KnativeErrorDataExtensionMaxLength)
-		readLen, readErr := response.Body.Read(body)
-		if readErr != nil && readErr != io.EOF {
-			h.logger.Error("failed to read response body ", zap.Error(readErr))
-			return
-		}
-
 		errExtensionInfo := broker.ErrExtensionInfo{
 			ErrDestination:  target,
-			ErrResponseBody: body[:readLen],
+			ErrResponseBody: responseErr.ResponseBody,
 		}
 		errExtensionBytes, msErr := json.Marshal(errExtensionInfo)
 		if msErr != nil {
@@ -254,8 +249,8 @@ func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers 
 			return
 		}
 		_, _ = writer.Write(errExtensionBytes)
-
 		_ = h.reporter.ReportEventCount(reportArgs, responseErr.ResponseCode)
+
 		return
 	}
 
@@ -269,8 +264,8 @@ func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers 
 	_ = h.reporter.ReportEventCount(reportArgs, statusCode)
 }
 
-func (h *Handler) sendEvent(ctx context.Context, headers http.Header, target *url.URL, event *cloudevents.Event, reporterArgs *ReportArgs) (*http.Response, ResponseErr) {
-	responseErr := ResponseErr{
+func (h *Handler) sendEvent(ctx context.Context, headers http.Header, target *url.URL, event *cloudevents.Event, reporterArgs *ReportArgs) (*http.Response, ErrHander) {
+	responseErr := ErrHander{
 		ResponseCode: NoResponse,
 	}
 
@@ -300,6 +295,7 @@ func (h *Handler) sendEvent(ctx context.Context, headers http.Header, target *ur
 	dispatchTime := time.Since(start)
 	if err != nil {
 		responseErr.ResponseCode = http.StatusInternalServerError
+		responseErr.ResponseBody = []byte(fmt.Sprintf("dispatch error: %s", err.Error()))
 		responseErr.err = fmt.Errorf("failed to dispatch message: %w", err)
 		return resp, responseErr
 	}
@@ -307,14 +303,25 @@ func (h *Handler) sendEvent(ctx context.Context, headers http.Header, target *ur
 	sc := 0
 	if resp != nil {
 		sc = resp.StatusCode
+		responseErr.ResponseCode = sc
 	}
 
 	_ = h.reporter.ReportEventDispatchTime(reporterArgs, sc, dispatchTime)
 
 	if resp.StatusCode < http.StatusOK ||
 		resp.StatusCode >= http.StatusMultipleChoices {
+		// Read response body into errHandler for failures
+		body := make([]byte, channelAttributes.KnativeErrorDataExtensionMaxLength)
 
-		responseErr.ResponseCode = resp.StatusCode
+		readLen, readErr := resp.Body.Read(body)
+		if readErr != nil && readErr != io.EOF {
+			h.logger.Error("failed to read response body into DispatchExecutionInfo", zap.Error(readErr))
+			responseErr.ResponseBody = []byte(fmt.Sprintf("dispatch error: %s", readErr.Error()))
+		} else {
+			responseErr.ResponseBody = body[:readLen]
+		}
+		responseErr.err = fmt.Errorf("unexpected HTTP response, expected 2xx, got %d", resp.StatusCode)
+
 		// Reject non-successful responses.
 		return resp, responseErr
 	}
