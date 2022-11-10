@@ -247,12 +247,12 @@ func (s *StatefulSetScheduler) scheduleVPod(vpod scheduler.VPod) ([]duckv1alpha1
 
 		if state.SchedPolicy != nil {
 			logger.Info("reverting to previous placements")
-			s.reservePlacements(vpod, existingPlacements)              // rebalancing doesn't care about new placements since all vreps will be re-placed
-			delete(s.pending, vpod.GetKey())                           // rebalancing doesn't care about pending since all vreps will be re-placed
-			return existingPlacements, s.newNotEnoughPodReplicas(left) // requeue to wait for the autoscaler to do its job
+			s.reservePlacements(vpod, existingPlacements)           // rebalancing doesn't care about new placements since all vreps will be re-placed
+			delete(s.pending, vpod.GetKey())                        // rebalancing doesn't care about pending since all vreps will be re-placed
+			return existingPlacements, s.notEnoughPodReplicas(left) // requeue to wait for the autoscaler to do its job
 		}
 
-		return placements, s.newNotEnoughPodReplicas(left)
+		return placements, s.notEnoughPodReplicas(left)
 	}
 
 	logger.Infow("scheduling successful", zap.Any("placement", placements))
@@ -714,7 +714,7 @@ func (s *StatefulSetScheduler) makeZeroPlacements(vpod scheduler.VPod, placement
 // newNotEnoughPodReplicas returns an error explaining what is the problem, what are the actions we're taking
 // to try to fix it (retry), wrapping a controller.requeueKeyError which signals to ReconcileKind to requeue the
 // object after a given delay.
-func (s *StatefulSetScheduler) newNotEnoughPodReplicas(left int32) error {
+func (s *StatefulSetScheduler) notEnoughPodReplicas(left int32) error {
 	// Wrap controller.requeueKeyError error to wait for the autoscaler to do its job.
 	return fmt.Errorf("insufficient running pods replicas for StatefulSet %s/%s to schedule resource replicas (left: %d): retry %w",
 		s.statefulSetNamespace, s.statefulSetName,
