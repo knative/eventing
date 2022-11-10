@@ -281,8 +281,8 @@ func TestStructuredEventForChannel(t *testing.T) {
 	env.Test(ctx, t, channel.SingleEventWithEncoding(binding.EncodingStructured))
 }
 
-//TestChannelPreferHeaderCheck test if the test message without explicit prefer header
-//should have it after fanout.
+// TestChannelPreferHeaderCheck test if the test message without explicit prefer header
+// should have it after fanout.
 func TestChannelPreferHeaderCheck(t *testing.T) {
 	t.Parallel()
 
