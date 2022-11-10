@@ -136,11 +136,14 @@ func WithPhysicalChannelSpec(physicalChannelSpec *runtime.RawExtension) Physical
 // apiVersion: messaging.knative.dev/v1
 // kind: InMemoryChannel
 // metadata:
-//   name: "hello"
-//   namespace: "world"
+//
+//	name: "hello"
+//	namespace: "world"
+//
 // spec:
-//   delivery:
-//     retry: 3
+//
+//	delivery:
+//	  retry: 3
 func NewPhysicalChannel(typeMeta metav1.TypeMeta, objMeta metav1.ObjectMeta, opts ...PhysicalChannelOption) (*unstructured.Unstructured, error) {
 	// Set the name of the resource we're creating as well as the namespace, etc.
 	template := channelTemplateSpecInternal{

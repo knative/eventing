@@ -34,11 +34,11 @@ var clusterRoleLabel = map[string]string{
 }
 
 /*
-	The test checks for the following in this order:
-	1. Find cluster roles that match these criteria -
-		a. Has label duck.knative.dev/source: "true",
-		b. Has the eventing source in Resources for a Policy Rule, and
-		c. Has all the expected verbs (get, list, watch)
+The test checks for the following in this order:
+ 1. Find cluster roles that match these criteria -
+    a. Has label duck.knative.dev/source: "true",
+    b. Has the eventing source in Resources for a Policy Rule, and
+    c. Has all the expected verbs (get, list, watch)
 */
 func SourceCRDRBACTestHelperWithComponentsTestRunner(
 	t *testing.T,
