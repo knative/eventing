@@ -28,6 +28,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
 	clientappsv1 "k8s.io/client-go/kubernetes/typed/apps/v1"
 	corev1 "k8s.io/client-go/listers/core/v1"
@@ -180,7 +181,7 @@ func (s *stateBuilder) State(reserved map[types.NamespacedName]map[string]int32)
 	}
 
 	free := make([]int32, 0)
-	schedulablePods := make([]int32, 0)
+	schedulablePods := sets.NewInt32()
 	last := int32(-1)
 
 	// keep track of (vpod key, podname) pairs with existing placements
@@ -224,6 +225,10 @@ func (s *stateBuilder) State(reserved map[types.NamespacedName]map[string]int32)
 		})
 
 		if pod != nil {
+			if isPodUnschedulable(pod) {
+				// Pod is marked for eviction - CANNOT SCHEDULE VREPS on this pod.
+				continue
+			}
 
 			node, err := s.nodeLister.Get(pod.Spec.NodeName)
 			if err != nil {
@@ -234,14 +239,10 @@ func (s *stateBuilder) State(reserved map[types.NamespacedName]map[string]int32)
 				// Node is marked as Unschedulable - CANNOT SCHEDULE VREPS on a pod running on this node.
 				continue
 			}
-			if isPodUnschedulable(pod) {
-				// Pod is marked for eviction - CANNOT SCHEDULE VREPS on this pod.
-				continue
-			}
 
 			// Pod has no annotation or not annotated as unschedulable and
 			// not on an unschedulable node, so add to feasible
-			schedulablePods = append(schedulablePods, podId)
+			schedulablePods.Insert(podId)
 		}
 	}
 
@@ -271,7 +272,7 @@ func (s *stateBuilder) State(reserved map[types.NamespacedName]map[string]int32)
 				return err == nil, nil
 			})
 
-			if pod != nil {
+			if pod != nil && schedulablePods.Has(OrdinalFromPodName(pod.GetName())) {
 				nodeName := pod.Spec.NodeName       //node name for this pod
 				zoneName := nodeToZoneMap[nodeName] //zone name for this pod
 				podSpread[vpod.GetKey()][podName] = podSpread[vpod.GetKey()][podName] + vreplicas
@@ -296,7 +297,7 @@ func (s *stateBuilder) State(reserved map[types.NamespacedName]map[string]int32)
 					return err == nil, nil
 				})
 
-				if pod != nil {
+				if pod != nil && schedulablePods.Has(OrdinalFromPodName(pod.GetName())) {
 					nodeName := pod.Spec.NodeName       //node name for this pod
 					zoneName := nodeToZoneMap[nodeName] //zone name for this pod
 					podSpread[key][podName] = podSpread[key][podName] + rvreplicas
@@ -310,7 +311,7 @@ func (s *stateBuilder) State(reserved map[types.NamespacedName]map[string]int32)
 	}
 
 	s.logger.Infow("cluster state info", zap.String("NumPods", fmt.Sprint(scale.Spec.Replicas)), zap.String("NumZones", fmt.Sprint(len(zoneMap))), zap.String("NumNodes", fmt.Sprint(len(nodeToZoneMap))), zap.String("Schedulable", fmt.Sprint(schedulablePods)))
-	return &State{FreeCap: free, SchedulablePods: schedulablePods, LastOrdinal: last, Capacity: s.capacity, Replicas: scale.Spec.Replicas, NumZones: int32(len(zoneMap)), NumNodes: int32(len(nodeToZoneMap)),
+	return &State{FreeCap: free, SchedulablePods: schedulablePods.List(), LastOrdinal: last, Capacity: s.capacity, Replicas: scale.Spec.Replicas, NumZones: int32(len(zoneMap)), NumNodes: int32(len(nodeToZoneMap)),
 		SchedulerPolicy: s.schedulerPolicy, SchedPolicy: s.schedPolicy, DeschedPolicy: s.deschedPolicy, NodeToZoneMap: nodeToZoneMap, StatefulSetName: s.statefulSetName, PodLister: s.podLister,
 		PodSpread: podSpread, NodeSpread: nodeSpread, ZoneSpread: zoneSpread}, nil
 }
@@ -371,8 +372,12 @@ func withReserved(key types.NamespacedName, podName string, committed int32, res
 
 func isPodUnschedulable(pod *v1.Pod) bool {
 	annotVal, ok := pod.ObjectMeta.Annotations[scheduler.PodAnnotationKey]
-	unschedulable, val := strconv.ParseBool(annotVal)
-	return ok && val == nil && unschedulable
+	unschedulable, err := strconv.ParseBool(annotVal)
+
+	isMarkedUnschedulable := ok && err == nil && unschedulable
+	isPending := pod.Spec.NodeName == ""
+
+	return isMarkedUnschedulable || isPending
 }
 
 func isNodeUnschedulable(node *v1.Node) bool {

@@ -38,11 +38,12 @@ import (
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
 
+	podinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/pod"
+
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/scheduler"
 	"knative.dev/eventing/pkg/scheduler/factory"
 	st "knative.dev/eventing/pkg/scheduler/state"
-	podinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/pod"
 
 	_ "knative.dev/eventing/pkg/scheduler/plugins/core/availabilitynodepriority"
 	_ "knative.dev/eventing/pkg/scheduler/plugins/core/availabilityzonepriority"
@@ -81,15 +82,16 @@ func NewScheduler(ctx context.Context,
 
 // StatefulSetScheduler is a scheduler placing VPod into statefulset-managed set of pods
 type StatefulSetScheduler struct {
-	ctx               context.Context
-	logger            *zap.SugaredLogger
-	statefulSetName   string
-	statefulSetClient clientappsv1.StatefulSetInterface
-	podLister         corev1listers.PodNamespaceLister
-	vpodLister        scheduler.VPodLister
-	lock              sync.Locker
-	stateAccessor     st.StateAccessor
-	autoscaler        Autoscaler
+	ctx                  context.Context
+	logger               *zap.SugaredLogger
+	statefulSetName      string
+	statefulSetNamespace string
+	statefulSetClient    clientappsv1.StatefulSetInterface
+	podLister            corev1listers.PodNamespaceLister
+	vpodLister           scheduler.VPodLister
+	lock                 sync.Locker
+	stateAccessor        st.StateAccessor
+	autoscaler           Autoscaler
 
 	// replicas is the (cached) number of statefulset replicas.
 	replicas int32
@@ -111,17 +113,18 @@ func NewStatefulSetScheduler(ctx context.Context,
 	autoscaler Autoscaler, podlister corev1listers.PodNamespaceLister) scheduler.Scheduler {
 
 	scheduler := &StatefulSetScheduler{
-		ctx:               ctx,
-		logger:            logging.FromContext(ctx),
-		statefulSetName:   name,
-		statefulSetClient: kubeclient.Get(ctx).AppsV1().StatefulSets(namespace),
-		podLister:         podlister,
-		vpodLister:        lister,
-		pending:           make(map[types.NamespacedName]int32),
-		lock:              new(sync.Mutex),
-		stateAccessor:     stateAccessor,
-		reserved:          make(map[types.NamespacedName]map[string]int32),
-		autoscaler:        autoscaler,
+		ctx:                  ctx,
+		logger:               logging.FromContext(ctx),
+		statefulSetNamespace: namespace,
+		statefulSetName:      name,
+		statefulSetClient:    kubeclient.Get(ctx).AppsV1().StatefulSets(namespace),
+		podLister:            podlister,
+		vpodLister:           lister,
+		pending:              make(map[types.NamespacedName]int32),
+		lock:                 new(sync.Mutex),
+		stateAccessor:        stateAccessor,
+		reserved:             make(map[types.NamespacedName]map[string]int32),
+		autoscaler:           autoscaler,
 	}
 
 	// Monitor our statefulset
@@ -244,12 +247,12 @@ func (s *StatefulSetScheduler) scheduleVPod(vpod scheduler.VPod) ([]duckv1alpha1
 
 		if state.SchedPolicy != nil {
 			logger.Info("reverting to previous placements")
-			s.reservePlacements(vpod, existingPlacements)                          //rebalancing doesn't care about new placements since all vreps will be re-placed
-			delete(s.pending, vpod.GetKey())                                       //rebalancing doesn't care about pending since all vreps will be re-placed
-			return existingPlacements, controller.NewRequeueAfter(5 * time.Second) //requeue to wait for the autoscaler to do its job
+			s.reservePlacements(vpod, existingPlacements)           // rebalancing doesn't care about new placements since all vreps will be re-placed
+			delete(s.pending, vpod.GetKey())                        // rebalancing doesn't care about pending since all vreps will be re-placed
+			return existingPlacements, s.notEnoughPodReplicas(left) // requeue to wait for the autoscaler to do its job
 		}
 
-		return placements, controller.NewRequeueAfter(5 * time.Second) //requeue to wait for the autoscaler to do its job
+		return placements, s.notEnoughPodReplicas(left)
 	}
 
 	logger.Infow("scheduling successful", zap.Any("placement", placements))
@@ -706,4 +709,16 @@ func (s *StatefulSetScheduler) makeZeroPlacements(vpod scheduler.VPod, placement
 	// This is necessary to make sure State() zeroes out initial pod/node/zone spread and
 	// free capacity when there are existing placements for a vpod
 	s.reservePlacements(vpod, newPlacements)
+}
+
+// newNotEnoughPodReplicas returns an error explaining what is the problem, what are the actions we're taking
+// to try to fix it (retry), wrapping a controller.requeueKeyError which signals to ReconcileKind to requeue the
+// object after a given delay.
+func (s *StatefulSetScheduler) notEnoughPodReplicas(left int32) error {
+	// Wrap controller.requeueKeyError error to wait for the autoscaler to do its job.
+	return fmt.Errorf("insufficient running pods replicas for StatefulSet %s/%s to schedule resource replicas (left: %d): retry %w",
+		s.statefulSetNamespace, s.statefulSetName,
+		left,
+		controller.NewRequeueAfter(5*time.Second),
+	)
 }
