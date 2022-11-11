@@ -67,7 +67,7 @@ const (
 )
 
 // ErrHandler handle the different errors of filter dispatch process
-type ErrHander struct {
+type ErrHandler struct {
 	ResponseCode int
 	ResponseBody []byte
 	err          error
@@ -239,6 +239,7 @@ func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers 
 			return
 		}
 
+		proxyHeaders(response.Header, writer)
 		writer.WriteHeader(responseErr.ResponseCode)
 		// Read Response body to responseErr
 		errExtensionInfo := broker.ErrExtensionInfo{
@@ -266,8 +267,8 @@ func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers 
 	_ = h.reporter.ReportEventCount(reportArgs, statusCode)
 }
 
-func (h *Handler) sendEvent(ctx context.Context, headers http.Header, target *url.URL, event *cloudevents.Event, reporterArgs *ReportArgs) (*http.Response, ErrHander) {
-	responseErr := ErrHander{
+func (h *Handler) sendEvent(ctx context.Context, headers http.Header, target *url.URL, event *cloudevents.Event, reporterArgs *ReportArgs) (*http.Response, ErrHandler) {
+	responseErr := ErrHandler{
 		ResponseCode: NoResponse,
 	}
 
