@@ -62,9 +62,11 @@ const (
 )
 
 const (
+	// NoResponse signals the step that send event to trigger's subscriber hasn't started
 	NoResponse = -1
 )
 
+// ErrHandler handle the different errors of filter dispatch process
 type ErrHander struct {
 	ResponseCode int
 	ResponseBody []byte
@@ -229,7 +231,7 @@ func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers 
 
 	if responseErr.err != nil {
 		h.logger.Error("failed to send event", zap.Error(responseErr.err))
-		// If error not because of the response, it should respond with http.StatusInternalServerError
+		// If error is not because of the response, it should respond with http.StatusInternalServerError
 		if responseErr.ResponseCode == NoResponse {
 
 			writer.WriteHeader(http.StatusInternalServerError)
@@ -238,7 +240,7 @@ func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers 
 		}
 
 		writer.WriteHeader(responseErr.ResponseCode)
-		// Read Response body
+		// Read Response body to responseErr
 		errExtensionInfo := broker.ErrExtensionInfo{
 			ErrDestination:  target,
 			ErrResponseBody: responseErr.ResponseBody,
