@@ -19,7 +19,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path"
 	"runtime"
 	"text/template"
@@ -27,13 +27,14 @@ import (
 
 	"github.com/kelseyhightower/envconfig"
 	"github.com/pkg/errors"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+	pkgTest "knative.dev/pkg/test"
+	pkgupgrade "knative.dev/pkg/test/upgrade"
+
 	"knative.dev/eventing/test/lib/resources"
 	"knative.dev/eventing/test/upgrade/prober/sut"
 	"knative.dev/eventing/test/upgrade/prober/wathola/forwarder"
 	"knative.dev/eventing/test/upgrade/prober/wathola/receiver"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
-	pkgTest "knative.dev/pkg/test"
-	pkgupgrade "knative.dev/pkg/test/upgrade"
 )
 
 const (
@@ -173,7 +174,7 @@ func (p *prober) deployConfigToml(endpoint interface{}) {
 func (p *prober) compileTemplate(templateName string, endpoint interface{}, tracingConfig string) string {
 	_, filename, _, _ := runtime.Caller(0)
 	templateFilepath := path.Join(path.Dir(filename), templateName)
-	templateBytes, err := ioutil.ReadFile(templateFilepath)
+	templateBytes, err := os.ReadFile(templateFilepath)
 	p.ensureNoError(err)
 	tmpl, err := template.New(templateName).Parse(string(templateBytes))
 	p.ensureNoError(err)

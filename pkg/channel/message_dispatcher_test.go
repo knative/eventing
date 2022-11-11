@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"context"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -168,7 +167,7 @@ func TestDispatchMessage(t *testing.T) {
 			},
 			fakeResponse: &http.Response{
 				StatusCode: http.StatusNotFound,
-				Body:       ioutil.NopCloser(bytes.NewBufferString("destination-response")),
+				Body:       io.NopCloser(bytes.NewBufferString("destination-response")),
 			},
 			expectedErr:  true,
 			lastReceiver: "destination",
@@ -233,7 +232,7 @@ func TestDispatchMessage(t *testing.T) {
 			},
 			fakeResponse: &http.Response{
 				StatusCode: http.StatusNotFound,
-				Body:       ioutil.NopCloser(bytes.NewBufferString("destination-response")),
+				Body:       io.NopCloser(bytes.NewBufferString("destination-response")),
 			},
 			expectedErr: true,
 		},
@@ -269,7 +268,7 @@ func TestDispatchMessage(t *testing.T) {
 			},
 			fakeResponse: &http.Response{
 				StatusCode: http.StatusInternalServerError,
-				Body:       ioutil.NopCloser(bytes.NewBufferString("destination-response")),
+				Body:       io.NopCloser(bytes.NewBufferString("destination-response")),
 			},
 			expectedErr:  true,
 			lastReceiver: "reply",
@@ -312,7 +311,7 @@ func TestDispatchMessage(t *testing.T) {
 					"knative-1":          {"new-knative-1-value"},
 					"ce-abc":             {`"new-ce-abc-value"`},
 				},
-				Body: ioutil.NopCloser(bytes.NewBufferString("")),
+				Body: io.NopCloser(bytes.NewBufferString("")),
 			},
 			lastReceiver: "reply",
 		},
@@ -359,7 +358,7 @@ func TestDispatchMessage(t *testing.T) {
 					"ce-type":            {testCeType},
 					"ce-specversion":     {cloudevents.VersionV1},
 				},
-				Body: ioutil.NopCloser(bytes.NewBufferString("destination-response")),
+				Body: io.NopCloser(bytes.NewBufferString("destination-response")),
 			},
 			expectedReplyRequest: &requestValidation{
 				Headers: map[string][]string{
@@ -426,7 +425,7 @@ func TestDispatchMessage(t *testing.T) {
 			},
 			fakeResponse: &http.Response{
 				StatusCode: http.StatusBadRequest,
-				Body:       ioutil.NopCloser(bytes.NewBufferString("destination-response")),
+				Body:       io.NopCloser(bytes.NewBufferString("destination-response")),
 			},
 			fakeDeadLetterResponse: &http.Response{
 				StatusCode: http.StatusAccepted,
@@ -441,7 +440,7 @@ func TestDispatchMessage(t *testing.T) {
 					"ce-type":            {testCeType},
 					"ce-specversion":     {cloudevents.VersionV1},
 				},
-				Body: ioutil.NopCloser(bytes.NewBufferString("deadlettersink-response")),
+				Body: io.NopCloser(bytes.NewBufferString("deadlettersink-response")),
 			},
 			lastReceiver: "deadLetter",
 		},
@@ -494,11 +493,11 @@ func TestDispatchMessage(t *testing.T) {
 			},
 			fakeResponse: &http.Response{
 				StatusCode: http.StatusBadRequest,
-				Body:       ioutil.NopCloser(bytes.NewBufferString("destination-response")),
+				Body:       io.NopCloser(bytes.NewBufferString("destination-response")),
 			},
 			fakeDeadLetterResponse: &http.Response{
 				StatusCode: http.StatusAccepted,
-				Body:       ioutil.NopCloser(bytes.NewBufferString("deadlettersink-response")),
+				Body:       io.NopCloser(bytes.NewBufferString("deadlettersink-response")),
 			},
 			lastReceiver: "deadLetter",
 		},
@@ -550,11 +549,11 @@ func TestDispatchMessage(t *testing.T) {
 			},
 			fakeReplyResponse: &http.Response{
 				StatusCode: http.StatusBadRequest,
-				Body:       ioutil.NopCloser(bytes.NewBufferString("destination-response")),
+				Body:       io.NopCloser(bytes.NewBufferString("destination-response")),
 			},
 			fakeDeadLetterResponse: &http.Response{
 				StatusCode: http.StatusAccepted,
-				Body:       ioutil.NopCloser(bytes.NewBufferString("deadlettersink-response")),
+				Body:       io.NopCloser(bytes.NewBufferString("deadlettersink-response")),
 			},
 			lastReceiver: "deadLetter",
 		},
@@ -632,11 +631,11 @@ func TestDispatchMessage(t *testing.T) {
 					"ce-type":            {testCeType},
 					"ce-specversion":     {cloudevents.VersionV1},
 				},
-				Body: ioutil.NopCloser(bytes.NewBufferString("destination-response")),
+				Body: io.NopCloser(bytes.NewBufferString("destination-response")),
 			},
 			fakeReplyResponse: &http.Response{
 				StatusCode: http.StatusBadRequest,
-				Body:       ioutil.NopCloser(bytes.NewBufferString("reply-response")),
+				Body:       io.NopCloser(bytes.NewBufferString("reply-response")),
 			},
 			fakeDeadLetterResponse: &http.Response{
 				StatusCode: http.StatusAccepted,
@@ -651,7 +650,7 @@ func TestDispatchMessage(t *testing.T) {
 					"ce-type":            {testCeType},
 					"ce-specversion":     {cloudevents.VersionV1},
 				},
-				Body: ioutil.NopCloser(bytes.NewBufferString("deadlettersink-response")),
+				Body: io.NopCloser(bytes.NewBufferString("deadlettersink-response")),
 			},
 			lastReceiver: "deadLetter",
 		},
@@ -704,7 +703,7 @@ func TestDispatchMessage(t *testing.T) {
 			},
 			fakeResponse: &http.Response{
 				StatusCode: http.StatusBadRequest,
-				Body:       ioutil.NopCloser(bytes.NewBufferString("destination\n multi-line\n response")),
+				Body:       io.NopCloser(bytes.NewBufferString("destination\n multi-line\n response")),
 			},
 			fakeDeadLetterResponse: &http.Response{
 				StatusCode: http.StatusAccepted,
@@ -719,7 +718,7 @@ func TestDispatchMessage(t *testing.T) {
 					"ce-type":            {testCeType},
 					"ce-specversion":     {cloudevents.VersionV1},
 				},
-				Body: ioutil.NopCloser(bytes.NewBufferString("deadlettersink-response")),
+				Body: io.NopCloser(bytes.NewBufferString("deadlettersink-response")),
 			},
 			lastReceiver: "deadLetter",
 		},
@@ -883,7 +882,7 @@ func (f *fakeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	// Make a copy of the request.
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		f.t.Error("Failed to read the request body")
 	}

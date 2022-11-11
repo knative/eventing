@@ -177,7 +177,7 @@ type SubscriptionsAPIFilter struct {
 
 // TriggerFilterAttributes is a map of context attribute names to values for
 // filtering by equality. Only exact matches will pass the filter. You can use
-// the value '' to indicate all strings match.
+// the value ” to indicate all strings match.
 type TriggerFilterAttributes map[string]string
 
 // TriggerStatus represents the current state of a Trigger.

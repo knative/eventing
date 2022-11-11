@@ -139,7 +139,8 @@ func RetryIfGreaterThan300(_ context.Context, response *http.Response, err error
 // SelectiveRetry is an alternative function to determine whether to retry based on response
 //
 // Note - Returning true indicates a retry should occur.  Returning an error will result in that
-//        error being returned instead of any errors from the Request.
+//
+//	error being returned instead of any errors from the Request.
 //
 // A retry is triggered for:
 // * nil responses

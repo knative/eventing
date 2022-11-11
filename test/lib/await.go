@@ -17,7 +17,7 @@ package lib
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"time"
 
@@ -72,7 +72,7 @@ func WaitForReadiness(port int, log *zap.SugaredLogger) error {
 		defer func() {
 			_ = resp.Body.Close()
 		}()
-		body, err := ioutil.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
 		if err != nil {
 			return false, err
 		}

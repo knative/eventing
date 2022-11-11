@@ -33,7 +33,7 @@ import (
 // SourceStatusTestHelperWithComponentsTestRunner runs the Source status
 // conformance tests for all sources in the ComponentsTestRunner. This test
 // needs an already created instance of each source which should be initialized
-//via ComponentsTestRunner.AddComponentSetupClientOption.
+// via ComponentsTestRunner.AddComponentSetupClientOption.
 //
 // Note: The source object name must be the lower case Kind name (e.g.
 // apiserversource for the Kind: ApiServerSource source)
