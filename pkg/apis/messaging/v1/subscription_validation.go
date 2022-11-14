@@ -19,8 +19,6 @@ package v1
 import (
 	"context"
 
-	"knative.dev/eventing/pkg/apis/feature"
-
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"knative.dev/pkg/apis"
@@ -50,31 +48,18 @@ func (ss *SubscriptionSpec) Validate(ctx context.Context) *apis.FieldError {
 		errs = errs.Also(fe.ViaField("channel"))
 	}
 
-	missingSubscriber := isDestinationNilOrEmpty(ss.Subscriber)
-	missingReply := isDestinationNilOrEmpty(ss.Reply)
-
-	// Check if StrictSubscriber flag is enabled, if so we follow the spec and check for a valid reference to a subscriber
-	if missingSubscriber && feature.FromContext(ctx).IsEnabled(feature.StrictSubscriber) {
+	// Check if we follow the spec and have a valid reference to a subscriber
+	if isDestinationNilOrEmpty(ss.Subscriber) {
 		fe := apis.ErrMissingField("subscriber")
 		fe.Details = "the Subscription must reference a subscriber"
 		errs = errs.Also(fe)
-
-	} else { // if the flag is not set, we use pre 0.26 behavior
-		if missingSubscriber && missingReply {
-			fe := apis.ErrMissingField("reply", "subscriber")
-			fe.Details = "the Subscription must reference at least one of (reply or a subscriber)"
-			errs = errs.Also(fe)
-		}
-
-	}
-
-	if !missingSubscriber {
+	} else {
 		if fe := ss.Subscriber.Validate(ctx); fe != nil {
 			errs = errs.Also(fe.ViaField("subscriber"))
 		}
 	}
 
-	if !missingReply {
+	if !isDestinationNilOrEmpty(ss.Reply) {
 		if fe := ss.Reply.Validate(ctx); fe != nil {
 			errs = errs.Also(fe.ViaField("reply"))
 		}

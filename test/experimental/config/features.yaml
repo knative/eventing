@@ -25,5 +25,4 @@ data:
   kreference-group: "enabled"
   delivery-retryafter: "enabled"
   delivery-timeout: "enabled"
-  strict-subscriber: "enabled"
   new-trigger-filters: "enabled"
