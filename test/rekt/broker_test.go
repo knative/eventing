@@ -161,6 +161,7 @@ func TestBrokerDeadLetterSinkExtensions(t *testing.T) {
 		knative.WithTracingConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
+		environment.WithPollTimings(5*time.Second, 4*time.Minute),
 	)
 
 	env.TestSet(ctx, t, broker.BrokerDeadLetterSinkExtensions())
