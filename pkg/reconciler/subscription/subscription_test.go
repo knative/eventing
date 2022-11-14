@@ -1007,50 +1007,6 @@ func TestAllCases(t *testing.T) {
 				patchFinalizers(testNS, subscriptionName),
 			},
 		}, {
-			Name: "v1 imc+reply - not deprecated",
-			Objects: []runtime.Object{
-				NewSubscription(subscriptionName, testNS,
-					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(imcV1GVK, channelName),
-					WithSubscriptionReply(imcV1GVK, replyName, testNS),
-				),
-				NewInMemoryChannel(channelName, testNS,
-					WithInitInMemoryChannelConditions,
-					WithInMemoryChannelAddress(channelDNS),
-					WithInMemoryChannelReadySubscriber(subscriptionUID),
-				),
-				NewInMemoryChannel(replyName, testNS,
-					WithInitInMemoryChannelConditions,
-					WithInMemoryChannelAddress(replyDNS),
-				),
-			},
-			Key:     testNS + "/" + subscriptionName,
-			WantErr: false,
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", subscriptionName),
-				Eventf(corev1.EventTypeNormal, "SubscriberSync", "Subscription was synchronized to channel %q", channelName),
-			},
-			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewSubscription(subscriptionName, testNS,
-					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(imcV1GVK, channelName),
-					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
-					WithSubscriptionReply(imcV1GVK, replyName, testNS),
-					// The first reconciliation will initialize the status conditions.
-					WithInitSubscriptionConditions,
-					MarkReferencesResolved,
-					MarkAddedToChannel,
-					WithSubscriptionPhysicalSubscriptionReply(replyURI),
-					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
-				),
-			}},
-			WantPatches: []clientgotesting.PatchActionImpl{
-				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
-					{UID: subscriptionUID, ReplyURI: replyURI, SubscriberURI: subscriberURI},
-				}),
-				patchFinalizers(testNS, subscriptionName),
-			},
-		}, {
 			Name: "v1 imc+subscriber+reply",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
