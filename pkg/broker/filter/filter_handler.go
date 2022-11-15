@@ -68,6 +68,7 @@ const (
 
 // ErrHandler handle the different errors of filter dispatch process
 type ErrHandler struct {
+	sendErr      bool
 	ResponseCode int
 	ResponseBody []byte
 	err          error
@@ -238,9 +239,12 @@ func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers 
 			_ = h.reporter.ReportEventCount(reportArgs, http.StatusInternalServerError)
 			return
 		}
-
-		proxyHeaders(response.Header, writer)
+		// If send err is not nil, it don't need to adds the specified HTTP Headers to the ResponseWriter
+		if !responseErr.sendErr {
+			proxyHeaders(response.Header, writer)
+		}
 		writer.WriteHeader(responseErr.ResponseCode)
+
 		// Read Response body to responseErr
 		errExtensionInfo := broker.ErrExtensionInfo{
 			ErrDestination:  target,
@@ -269,6 +273,7 @@ func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers 
 
 func (h *Handler) sendEvent(ctx context.Context, headers http.Header, target *url.URL, event *cloudevents.Event, reporterArgs *ReportArgs) (*http.Response, ErrHandler) {
 	responseErr := ErrHandler{
+		sendErr:      false,
 		ResponseCode: NoResponse,
 	}
 
@@ -297,6 +302,7 @@ func (h *Handler) sendEvent(ctx context.Context, headers http.Header, target *ur
 	resp, err := h.sender.Send(req)
 	dispatchTime := time.Since(start)
 	if err != nil {
+		responseErr.sendErr = true
 		responseErr.ResponseCode = http.StatusInternalServerError
 		responseErr.ResponseBody = []byte(fmt.Sprintf("dispatch error: %s", err.Error()))
 		responseErr.err = fmt.Errorf("failed to dispatch message: %w", err)
