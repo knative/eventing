@@ -301,7 +301,7 @@ func TestChannelPreferHeaderCheck(t *testing.T) {
 	env.Test(ctx, t, channel.ChannelPreferHeaderCheck(createSubscriberFn))
 }
 
-func TestChannelSubscriptionReturnedErrorData(t *testing.T) {
+func TestChannelDeadLetterSinkExtensions(t *testing.T) {
 	t.Parallel()
 
 	ctx, env := global.Environment(
@@ -316,5 +316,5 @@ func TestChannelSubscriptionReturnedErrorData(t *testing.T) {
 		return subscription.WithSubscriber(ref, uri)
 	}
 
-	env.Test(ctx, t, channel.ChannelSubscriptionReturnedErrorData(createSubscriberFn))
+	env.TestSet(ctx, t, channel.ChannelDeadLetterSinkExtensions(createSubscriberFn))
 }

@@ -323,7 +323,106 @@ func ChannelPreferHeaderCheck(createSubscriberFn func(ref *duckv1.KReference, ur
 	return f
 }
 
-func ChannelSubscriptionReturnedErrorData(createSubscriberFn func(ref *duckv1.KReference, uri string) manifest.CfgFn) *feature.Feature {
+func ChannelDeadLetterSinkExtensions(createSubscriberFn func(ref *duckv1.KReference, uri string) manifest.CfgFn) *feature.FeatureSet {
+	fs := &feature.FeatureSet{
+		Name: "Knative Channel - DeadLetterSink - with Extensions",
+		Features: []*feature.Feature{
+			channelSubscriberUnreachable(createSubscriberFn),
+			channelSubscriberReturnedErrorNoData(createSubscriberFn),
+			channelSubscriberReturnedErrorWithData(createSubscriberFn),
+		},
+	}
+	return fs
+}
+
+func channelSubscriberUnreachable(createSubscriberFn func(ref *duckv1.KReference, uri string) manifest.CfgFn) *feature.Feature {
+	f := feature.NewFeature()
+	sink := feature.MakeRandomK8sName("sink")
+
+	sourceName := feature.MakeRandomK8sName("source")
+	channelName := feature.MakeRandomK8sName("channel")
+
+	ev := test.FullEvent()
+
+	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
+
+	f.Setup("install channel", channel_impl.Install(channelName, delivery.WithDeadLetterSink(svc.AsKReference(sink), "")))
+
+	f.Setup("install subscription", subscription.Install(feature.MakeRandomK8sName("subscription"),
+		subscription.WithChannel(channel_impl.AsRef(channelName)),
+		createSubscriberFn(nil, "http://fake.svc.cluster.local"),
+	))
+
+	f.Requirement("install source", eventshub.Install(
+		sourceName,
+		eventshub.StartSenderToResource(channel_impl.GVR(), channelName),
+		eventshub.InputEvent(ev),
+	))
+
+	f.Setup("channel is ready", channel_impl.IsReady(channelName))
+	f.Setup("channel is addressable", channel_impl.IsAddressable(channelName))
+
+	f.Requirement("Channel has dead letter sink uri", channel_impl.HasDeadLetterSinkURI(channelName, channel_impl.GVR()))
+
+	f.Assert("Receives dls extensions when subscriber is unreachable", eventasssert.OnStore(sink).
+		MatchEvent(
+			test.HasExtension("knativeerrordest", "http://fake.svc.cluster.local")).
+		AtLeast(1),
+	)
+
+	return f
+}
+
+func channelSubscriberReturnedErrorNoData(createSubscriberFn func(ref *duckv1.KReference, uri string) manifest.CfgFn) *feature.Feature {
+	f := feature.NewFeature()
+	sink := feature.MakeRandomK8sName("sink")
+
+	sourceName := feature.MakeRandomK8sName("source")
+	failer := feature.MakeRandomK8sName("failerWitdata")
+	channelName := feature.MakeRandomK8sName("channel")
+
+	ev := test.FullEvent()
+
+	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
+
+	f.Setup("install failing receiver", eventshub.Install(failer,
+		eventshub.StartReceiver,
+		eventshub.DropFirstN(1),
+		eventshub.DropEventsResponseCode(422),
+	))
+	f.Setup("install channel", channel_impl.Install(channelName, delivery.WithDeadLetterSink(svc.AsKReference(sink), "")))
+
+	f.Setup("install subscription", subscription.Install(feature.MakeRandomK8sName("subscription"),
+		subscription.WithChannel(channel_impl.AsRef(channelName)),
+		createSubscriberFn(svc.AsKReference(failer), ""),
+	))
+
+	f.Requirement("install source", eventshub.Install(
+		sourceName,
+		eventshub.StartSenderToResource(channel_impl.GVR(), channelName),
+		eventshub.InputEvent(ev),
+	))
+
+	f.Setup("channel is ready", channel_impl.IsReady(channelName))
+	f.Setup("channel is addressable", channel_impl.IsAddressable(channelName))
+
+	f.Requirement("Channel has dead letter sink uri", channel_impl.HasDeadLetterSinkURI(channelName, channel_impl.GVR()))
+
+	f.Assert("Receives dls extensions without errordata", assertEnhancedWithKnativeErrorExtensions(
+		sink,
+		func(ctx context.Context) test.EventMatcher {
+			failerAddress, _ := svc.Address(ctx, failer)
+			return test.HasExtension("knativeerrordest", failerAddress.String())
+		},
+		func(ctx context.Context) test.EventMatcher {
+			return test.HasExtension("knativeerrorcode", "422")
+		},
+	))
+
+	return f
+}
+
+func channelSubscriberReturnedErrorWithData(createSubscriberFn func(ref *duckv1.KReference, uri string) manifest.CfgFn) *feature.Feature {
 	f := feature.NewFeature()
 	sink := feature.MakeRandomK8sName("sink")
 

@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
 	nethttp "net/http"
@@ -33,10 +34,13 @@ import (
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/util/sets"
 
+	"knative.dev/eventing/pkg/broker"
 	"knative.dev/eventing/pkg/channel/attributes"
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/tracing"
 	"knative.dev/eventing/pkg/utils"
+	"knative.dev/pkg/network"
+	"knative.dev/pkg/system"
 )
 
 const (
@@ -291,16 +295,30 @@ func (d *MessageDispatcherImpl) dispatchExecutionInfoTransformers(destination *u
 	if destination == nil {
 		destination = &url.URL{}
 	}
+
+	httpResponseBody := dispatchExecutionInfo.ResponseBody
+	if destination.Host == network.GetServiceHostname("broker-filter", system.Namespace()) {
+
+		var errExtensionInfo broker.ErrExtensionInfo
+
+		err := json.Unmarshal(dispatchExecutionInfo.ResponseBody, &errExtensionInfo)
+		if err != nil {
+			d.logger.Debug("Unmarshal dispatchExecutionInfo ResponseBody failed", zap.Error(err))
+			return nil
+		}
+		destination = errExtensionInfo.ErrDestination
+		httpResponseBody = errExtensionInfo.ErrResponseBody
+	}
+
 	destination = d.sanitizeURL(destination)
 	// Unprintable control characters are not allowed in header values
 	// and cause HTTP requests to fail if not removed.
 	// https://pkg.go.dev/golang.org/x/net/http/httpguts#ValidHeaderFieldValue
-	httpBody := sanitizeHTTPBody(dispatchExecutionInfo.ResponseBody)
+	httpBody := sanitizeHTTPBody(httpResponseBody)
 
 	// Encodes response body as base64 for the resulting length.
 	bodyLen := len(httpBody)
 	encodedLen := base64.StdEncoding.EncodedLen(bodyLen)
-
 	if encodedLen > attributes.KnativeErrorDataExtensionMaxLength {
 		encodedLen = attributes.KnativeErrorDataExtensionMaxLength
 	}
