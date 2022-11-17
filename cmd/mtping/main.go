@@ -24,7 +24,8 @@ import (
 )
 
 const (
-	component = "pingsource-mt-adapter"
+	component     = "pingsource-mt-adapter"
+	metricsPrefix = "pingsource"
 )
 
 func main() {
@@ -45,7 +46,9 @@ func main() {
 	ctx = adapter.WithConfigWatcherEnabled(ctx)
 	ctx = adapter.WithConfiguratorOptions(ctx, []adapter.ConfiguratorOption{
 		adapter.WithLoggerConfigurator(adapter.NewLoggerConfiguratorFromConfigMap(component)),
-		adapter.WithMetricsExporterConfigurator(adapter.NewMetricsExporterConfiguratorFromConfigMap(component)),
+		adapter.WithMetricsExporterConfigurator(adapter.NewMetricsExporterConfiguratorFromConfigMap(metricsPrefix,
+			adapter.WithMetricsExporterConfiguratorMetricsPort(9090),
+		)),
 		adapter.WithTracingConfigurator(adapter.NewTracingConfiguratorFromConfigMap()),
 		adapter.WithProfilerConfigurator(adapter.NewProfilerConfiguratorFromConfigMap()),
 		adapter.WithCloudEventsStatusReporterConfigurator(adapter.NewCloudEventsReporterConfiguratorFromConfigMap()),

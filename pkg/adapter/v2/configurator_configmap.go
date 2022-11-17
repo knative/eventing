@@ -23,7 +23,6 @@ import (
 	"os"
 
 	"go.uber.org/zap"
-
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/logging/logkey"
 	"knative.dev/pkg/metrics"
@@ -106,9 +105,6 @@ func (c *loggerConfiguratorFromConfigMap) CreateLogger(ctx context.Context) *zap
 
 	cmw := ConfigWatcherFromContext(ctx)
 	cmw.Watch(c.configMapName, logging.UpdateLevelFromConfigMap(logger, atomicLevel, c.component))
-	if err := cmw.Start(ctx.Done()); err != nil {
-		logger.Fatalw("Failed to start configuration manager", zap.Error(err))
-	}
 
 	return logger
 }
@@ -132,6 +128,7 @@ type metricsExporterConfiguratorFromConfigMap struct {
 	component     string
 	configMapName string
 	metricsDomain string
+	metricsPort   int
 }
 
 // MetricsExporterConfiguratorFromConfigMapOption for teawking the metrics exporter configurator.
@@ -151,11 +148,19 @@ func WithMetricsExporterConfiguratorMetricsDomain(domain string) MetricsExporter
 	}
 }
 
+// WithMetricsExporterConfiguratorMetricsPort sets the metrics exporter port for the metrics exporter configuration.
+func WithMetricsExporterConfiguratorMetricsPort(port int) MetricsExporterConfiguratorFromConfigMapOption {
+	return func(c *metricsExporterConfiguratorFromConfigMap) {
+		c.metricsPort = port
+	}
+}
+
 // NewMetricsExporterConfiguratorFromConfigMap returns a ConfigMap based metrics exporter configurator.
 func NewMetricsExporterConfiguratorFromConfigMap(component string, opts ...MetricsExporterConfiguratorFromConfigMapOption) MetricsExporterConfigurator {
 	c := &metricsExporterConfiguratorFromConfigMap{
 		component:     component,
 		configMapName: metrics.ConfigMapName(),
+		metricsPort:   defaultMetricsPort,
 	}
 
 	// metricDomainDefaulter is an AdapterDynamicconfig option that
@@ -185,7 +190,7 @@ func (c *metricsExporterConfiguratorFromConfigMap) SetupMetricsExporter(ctx cont
 	updateMetricsFunc, err := metrics.UpdateExporterFromConfigMapWithOpts(ctx, metrics.ExporterOptions{
 		Domain:         c.metricsDomain,
 		Component:      c.component,
-		PrometheusPort: defaultMetricsPort,
+		PrometheusPort: c.metricsPort,
 		Secrets:        SecretFetcher(ctx),
 	}, logger)
 	if err != nil {
