@@ -155,7 +155,7 @@ func (r *Reconciler) reconcileReceiveAdapter(ctx context.Context, source *source
 		c.Env = expected
 
 		if zero(d.Spec.Replicas) {
-			d.Spec.Replicas = pointer.Int32Ptr(1)
+			d.Spec.Replicas = pointer.Int32(1)
 		}
 
 		if d, err = r.kubeClientSet.AppsV1().Deployments(system.Namespace()).Update(ctx, d, metav1.UpdateOptions{}); err != nil {

@@ -272,7 +272,7 @@ func TestSmoke_SequenceDelivery(t *testing.T) {
 
 func SpecDelivery(spec map[string]interface{}) {
 	linear := eventingduck.BackoffPolicyLinear
-	delivery.WithRetry(10, &linear, pointer.StringPtr("PT1S"))(spec)
+	delivery.WithRetry(10, &linear, pointer.String("PT1S"))(spec)
 }
 
 // TestSmoke_SinkBinding

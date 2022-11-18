@@ -494,9 +494,9 @@ func TestRetriesOnNetworkErrors(t *testing.T) {
 	}()
 
 	r, err := RetryConfigFromDeliverySpec(v1.DeliverySpec{
-		Retry:         pointer.Int32Ptr(n),
+		Retry:         pointer.Int32(n),
 		BackoffPolicy: &linear,
-		BackoffDelay:  pointer.StringPtr("PT0.1S"),
+		BackoffDelay:  pointer.String("PT0.1S"),
 	})
 	assert.Nil(t, err)
 

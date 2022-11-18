@@ -138,10 +138,10 @@ func installRetryAfterSubscription(channelName, subscriptionName, sinkName strin
 					},
 				},
 				Delivery: &eventingduckv1.DeliverySpec{
-					Retry:         pointer.Int32Ptr(retryAttempts),
+					Retry:         pointer.Int32(retryAttempts),
 					BackoffPolicy: &backoffPolicy,
-					BackoffDelay:  pointer.StringPtr("PT0.5S"),
-					RetryAfterMax: pointer.StringPtr("PT30S"),
+					BackoffDelay:  pointer.String("PT0.5S"),
+					RetryAfterMax: pointer.String("PT30S"),
 				},
 			},
 		}

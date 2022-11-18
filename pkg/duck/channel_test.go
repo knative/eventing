@@ -60,7 +60,7 @@ func TestNewPhysicalChannel(t *testing.T) {
 	}
 	labels := map[string]string{"hello": "world"}
 	channelableSpec := eventingduckv1.ChannelableSpec{
-		Delivery: &eventingduckv1.DeliverySpec{Retry: pointer.Int32Ptr(3)},
+		Delivery: &eventingduckv1.DeliverySpec{Retry: pointer.Int32(3)},
 	}
 	physicalChannelSpec := runtime.RawExtension{
 		Raw: []byte("{\"myCoolParameter\":\"i'm cool\"}"),

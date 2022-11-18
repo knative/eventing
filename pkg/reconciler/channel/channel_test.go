@@ -55,7 +55,7 @@ var (
 	backingChannelHostname = network.GetServiceHostname("foo", "bar")
 
 	deliverySpec = &eventingduckv1.DeliverySpec{
-		Retry: pointer.Int32Ptr(10),
+		Retry: pointer.Int32(10),
 	}
 )
 
