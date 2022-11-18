@@ -431,30 +431,30 @@ func TestRetryConfigFromDeliverySpecCheckRetry(t *testing.T) {
 	}{{
 		name: "full delivery",
 		spec: v1.DeliverySpec{
-			Retry:         pointer.Int32Ptr(10),
+			Retry:         pointer.Int32(10),
 			BackoffPolicy: &linear,
-			BackoffDelay:  pointer.StringPtr("PT1S"),
-			Timeout:       pointer.StringPtr("PT10S"),
+			BackoffDelay:  pointer.String("PT1S"),
+			Timeout:       pointer.String("PT10S"),
 		},
 	}, {
 		name: "only retry",
 		spec: v1.DeliverySpec{
-			Retry:         pointer.Int32Ptr(10),
+			Retry:         pointer.Int32(10),
 			BackoffPolicy: &linear,
 		},
 	}, {
 		name: "delay not ISO8601",
 		spec: v1.DeliverySpec{
-			Retry:         pointer.Int32Ptr(10),
-			BackoffDelay:  pointer.StringPtr("PP1"),
+			Retry:         pointer.Int32(10),
+			BackoffDelay:  pointer.String("PP1"),
 			BackoffPolicy: &linear,
 		},
 		wantErr: true,
 	}, {
 		name: "timeout not ISO8601",
 		spec: v1.DeliverySpec{
-			Retry:   pointer.Int32Ptr(10),
-			Timeout: pointer.StringPtr("PP1"),
+			Retry:   pointer.Int32(10),
+			Timeout: pointer.String("PP1"),
 		},
 		wantErr: true,
 	}}

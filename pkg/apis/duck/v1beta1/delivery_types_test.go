@@ -76,16 +76,16 @@ func TestDeliverySpecValidation(t *testing.T) {
 		}(),
 	}, {
 		name: "negative retry",
-		spec: &DeliverySpec{Retry: pointer.Int32Ptr(-1)},
+		spec: &DeliverySpec{Retry: pointer.Int32(-1)},
 		want: func() *apis.FieldError {
 			return apis.ErrInvalidValue("-1", "retry")
 		}(),
 	}, {
 		name: "valid retry 0",
-		spec: &DeliverySpec{Retry: pointer.Int32Ptr(0)},
+		spec: &DeliverySpec{Retry: pointer.Int32(0)},
 	}, {
 		name: "valid retry 1",
-		spec: &DeliverySpec{Retry: pointer.Int32Ptr(1)},
+		spec: &DeliverySpec{Retry: pointer.Int32(1)},
 	}}
 
 	for _, test := range tests {
