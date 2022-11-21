@@ -142,7 +142,7 @@ func TestGetBrokerClass(t *testing.T) {
 }
 
 func TestDefaultsConfiguration(t *testing.T) {
-	brokerClassSpec := make(map[string]*BrokerConfigSpec)
+	brokerClasses := make(map[string]*BrokerConfigSpec)
 	brokerSpec1 := &BrokerSpec{
 		Config: &duckv1.KReference{
 			Kind:       "ConfigMap",
@@ -167,8 +167,8 @@ func TestDefaultsConfiguration(t *testing.T) {
 	brokerConfigSpec2 := &BrokerConfigSpec{
 		Spec: brokerSpec2,
 	}
-	brokerClassSpec["MTChannelBasedBroker"] = brokerConfigSpec1
-	brokerClassSpec["KafkaBroker"] = brokerConfigSpec2
+	brokerClasses["MTChannelBasedBroker"] = brokerConfigSpec1
+	brokerClasses["KafkaBroker"] = brokerConfigSpec2
 
 	configTests := []struct {
 		name         string
@@ -472,7 +472,7 @@ func TestDefaultsConfiguration(t *testing.T) {
 			},
 		},
 	}, {
-		name:    "only clusterdefault specified values add brokerClassSpec",
+		name:    "only clusterdefault specified values add brokerClasses",
 		wantErr: false,
 		wantDefaults: &Defaults{
 			ClusterDefault: &ClassAndBrokerConfig{
@@ -486,7 +486,7 @@ func TestDefaultsConfiguration(t *testing.T) {
 					},
 					Delivery: nil,
 				},
-				BrokerClassSpec: brokerClassSpec,
+				BrokerClasses: brokerClasses,
 			},
 		},
 		config: &corev1.ConfigMap{
@@ -502,7 +502,7 @@ func TestDefaultsConfiguration(t *testing.T) {
         kind: ConfigMap
         name: somename
         namespace: knative-eventing
-        brokerClassSpec:
+        brokerClasses:
           MTChannelBasedBroker:
             spec:
               config:

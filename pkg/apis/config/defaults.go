@@ -85,10 +85,9 @@ type Defaults struct {
 type ClassAndBrokerConfig struct {
 	BrokerClass   string `json:"brokerClass,omitempty"`
 	*BrokerConfig `json:",inline"`
-	// BrokerClassSpec set the multiple configurations of different brokerClass.
-	// Different brokerClass use corresponding brokerConfig for all the namespaces that
-	// are not in NamespaceDefaultBrokerConfigs.
-	BrokerClassSpec map[string]*BrokerConfigSpec `json:"brokerClassSpec,omitempty"`
+	// BrokerClasses set the multiple configurations of different brokerClass.
+	// Different brokerClass use corresponding brokerConfig for all the namespaces.
+	BrokerClasses map[string]*BrokerConfigSpec `json:"brokerClasses,omitempty"`
 }
 
 // BrokerConfigSpec contains concrete spec for broker.
@@ -119,31 +118,25 @@ func (d *Defaults) GetBrokerConfig(ns string) (*BrokerConfig, error) {
 	if d == nil {
 		return nil, errors.New("Defaults are nil")
 	}
-
 	value, present := d.NamespaceDefaultsConfig[ns]
+	// get namespace default config
 	if present && value.BrokerConfig != nil {
 		return value.BrokerConfig, nil
 	}
-	if present && value.BrokerClass != "" {
-		bCSpec := getBrokerClassSpec(d)
-		bConfig := matchBrokerSpec(value.BrokerClass, bCSpec)
-		if bConfig != nil {
-			return bConfig, nil
-		}
+	ndConfig := getClassConfig(d, value)
+	if ndConfig != nil {
+		return ndConfig, nil
 	}
 
-	if d.ClusterDefault != nil {
-		if d.ClusterDefault.BrokerClass != "" {
-			bCSpec := getBrokerClassSpec(d)
-			bConfig := matchBrokerSpec(d.ClusterDefault.BrokerClass, bCSpec)
-			if bConfig != nil {
-				return bConfig, nil
-			}
-		}
-		if d.ClusterDefault.BrokerConfig != nil {
-			return d.ClusterDefault.BrokerConfig, nil
-		}
+	// get cluster default config
+	cdConfig := getClassConfig(d, d.ClusterDefault)
+	if cdConfig != nil {
+		return cdConfig, nil
 	}
+	if d.ClusterDefault != nil && d.ClusterDefault.BrokerConfig != nil {
+		return d.ClusterDefault.BrokerConfig, nil
+	}
+
 	return nil, errors.New("Defaults for Broker Configurations have not been set up.")
 }
 
@@ -164,24 +157,36 @@ func (d *Defaults) GetBrokerClass(ns string) (string, error) {
 	return "", errors.New("Defaults for Broker Configurations have not been set up.")
 }
 
-// getBrokerClassSpec get the configurations of multiple brokerClass
-func getBrokerClassSpec(d *Defaults) map[string]*BrokerConfigSpec {
-	if d.ClusterDefault != nil && d.ClusterDefault.BrokerClassSpec != nil {
-		return d.ClusterDefault.BrokerClassSpec
+// getClassConfig get the corresponding class Config in multiple classes
+func getClassConfig(d *Defaults, cb *ClassAndBrokerConfig) *BrokerConfig {
+	if cb == nil || cb.BrokerClass == "" {
+		return nil
+	}
+	if bCSpec := getBrokerClasses(d); bCSpec != nil {
+		bConfig := matchBrokerClass(cb.BrokerClass, bCSpec)
+		if bConfig != nil {
+			return bConfig
+		}
 	}
 	return nil
 }
 
-// matchBrokerSpec find the corresponding brokerConfig for a given brokerClass
-func matchBrokerSpec(brokerClass string, brokerClassSpec map[string]*BrokerConfigSpec) *BrokerConfig {
-	if brokerClassSpec != nil {
-		for bClass, bCSpec := range brokerClassSpec {
-			if bClass == brokerClass {
-				var bConfig BrokerConfig
-				bConfig.KReference = bCSpec.Spec.Config
-				bConfig.Delivery = bCSpec.Spec.Delivery
-				return &bConfig
-			}
+// getBrokerClasses get the configurations of multiple brokerClass
+func getBrokerClasses(d *Defaults) map[string]*BrokerConfigSpec {
+	if d.ClusterDefault != nil && d.ClusterDefault.BrokerClasses != nil {
+		return d.ClusterDefault.BrokerClasses
+	}
+	return nil
+}
+
+// matchBrokerClass find the corresponding brokerConfig for a given brokerClass
+func matchBrokerClass(brokerClass string, brokerClasses map[string]*BrokerConfigSpec) *BrokerConfig {
+	for bClass, bCSpec := range brokerClasses {
+		if bClass == brokerClass {
+			var bConfig BrokerConfig
+			bConfig.KReference = bCSpec.Spec.Config
+			bConfig.Delivery = bCSpec.Spec.Delivery
+			return &bConfig
 		}
 	}
 	return nil

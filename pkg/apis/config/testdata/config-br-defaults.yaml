@@ -44,7 +44,7 @@ data:
               namespace: knative-eventing
           backoffPolicy: exponential
           backoffDelay: 3s
-        brokerClassSpec:
+        brokerClasses:
           MTChannelBasedBroker:
             spec:
               delivery:
@@ -101,3 +101,4 @@ data:
           brokerClass: KafkaBroker
         some-namespace-three:
           brokerClass: KafkaBroker
+          
