@@ -1943,17 +1943,20 @@ knative.dev/pkg/apis/duck/v1.Status
 </tr>
 <tr>
 <td>
-<code>address</code><br/>
+<code>AddressStatus</code><br/>
 <em>
-<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#Addressable">
-knative.dev/pkg/apis/duck/v1.Addressable
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#AddressStatus">
+knative.dev/pkg/apis/duck/v1.AddressStatus
 </a>
 </em>
 </td>
 <td>
+<p>
+(Members of <code>AddressStatus</code> are embedded into this type.)
+</p>
 <em>(Optional)</em>
-<p>Broker is Addressable. It exposes the endpoint as an URI to get events
-delivered into the Broker mesh.</p>
+<p>AddressStatus is the part where the Broker fulfills the Addressable contract.
+It exposes the endpoint as an URI to get events delivered into the Broker mesh.</p>
 </td>
 </tr>
 <tr>

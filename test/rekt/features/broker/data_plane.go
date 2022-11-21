@@ -82,7 +82,7 @@ func DataPlaneAddressability(brokerName string) *feature.Feature {
 	f.Stable("Conformance").Should("A Broker SHOULD expose either an HTTP or HTTPS endpoint as ingress. It MAY expose both.",
 		func(ctx context.Context, t feature.T) {
 			b := getBroker(ctx, t)
-			addr := b.Status.Address.URL
+			addr := b.Status.AddressStatus.Address.URL
 			if addr == nil {
 				addr = new(apis.URL)
 			}
