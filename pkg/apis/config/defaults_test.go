@@ -46,8 +46,11 @@ func TestGetBrokerConfig(t *testing.T) {
 	if err != nil {
 		t.Error("GetBrokerConfig Failed =", err)
 	}
-	if c.Name != "somename" {
-		t.Error("GetBrokerConfig Failed, wanted somename, got:", c.Name)
+	if c.Name != "mt-test" {
+		t.Error("GetBrokerConfig Failed, wanted mt-test, got:", c.Name)
+	}
+	if c.Delivery.DeadLetterSink.Ref.Name != "mt-handle-error" {
+		t.Error("GetBrokerConfig Failed, wanted mt-handle-error, got:", c.Delivery.DeadLetterSink.Ref.Name)
 	}
 	c, err = defaults.GetBrokerConfig("some-namespace")
 	if err != nil {
@@ -55,6 +58,28 @@ func TestGetBrokerConfig(t *testing.T) {
 	}
 	if c.Name != "someothername" {
 		t.Error("GetBrokerConfig Failed, wanted someothername, got:", c.Name)
+	}
+	// Test GetBrokerConfig in different namespace
+	c, err = defaults.GetBrokerConfig("some-namespace-two")
+	if err != nil {
+		t.Error("GetBrokerConfig Failed =", err)
+	}
+	if c.Name != "kafka-test" {
+		t.Error("GetBrokerConfig Failed, wanted kafka-test, got:", c.Name)
+	}
+	if c.Delivery.DeadLetterSink.Ref.Name != "kafka-handle-error" {
+		t.Error("GetBrokerConfig Failed, wanted kafka-handle-error, got:", c.Delivery.DeadLetterSink.Ref.Name)
+	}
+
+	c, err = defaults.GetBrokerConfig("some-namespace-three")
+	if err != nil {
+		t.Error("GetBrokerConfig Failed =", err)
+	}
+	if c.Name != "kafka-test" {
+		t.Error("GetBrokerConfig Failed, wanted kafka-test, got:", c.Name)
+	}
+	if c.Delivery.DeadLetterSink.Ref.Name != "kafka-handle-error" {
+		t.Error("GetBrokerConfig Failed, wanted kafka-handle-error, got:", c.Delivery.DeadLetterSink.Ref.Name)
 	}
 
 	// Nil and empty tests
@@ -117,6 +142,34 @@ func TestGetBrokerClass(t *testing.T) {
 }
 
 func TestDefaultsConfiguration(t *testing.T) {
+	brokerClassSpec := make(map[string]*BrokerConfigSpec)
+	brokerSpec1 := &BrokerSpec{
+		Config: &duckv1.KReference{
+			Kind:       "ConfigMap",
+			APIVersion: "v1",
+			Namespace:  "knative-eventing",
+			Name:       "mt-test",
+		},
+		Delivery: nil,
+	}
+	brokerConfigSpec1 := &BrokerConfigSpec{
+		Spec: brokerSpec1,
+	}
+	brokerSpec2 := &BrokerSpec{
+		Config: &duckv1.KReference{
+			Kind:       "ConfigMap",
+			APIVersion: "v1",
+			Namespace:  "knative-eventing",
+			Name:       "kafka-test",
+		},
+		Delivery: nil,
+	}
+	brokerConfigSpec2 := &BrokerConfigSpec{
+		Spec: brokerSpec2,
+	}
+	brokerClassSpec["MTChannelBasedBroker"] = brokerConfigSpec1
+	brokerClassSpec["KafkaBroker"] = brokerConfigSpec2
+
 	configTests := []struct {
 		name         string
 		wantErr      bool
@@ -415,6 +468,55 @@ func TestDefaultsConfiguration(t *testing.T) {
           kind: ConfigMap
           name: someothernametoo
           namespace: someothernamespacetoo
+`,
+			},
+		},
+	}, {
+		name:    "only clusterdefault specified values add brokerClassSpec",
+		wantErr: false,
+		wantDefaults: &Defaults{
+			ClusterDefault: &ClassAndBrokerConfig{
+				BrokerClass: "clusterbrokerclass",
+				BrokerConfig: &BrokerConfig{
+					KReference: &duckv1.KReference{
+						Kind:       "ConfigMap",
+						APIVersion: "v1",
+						Namespace:  "knative-eventing",
+						Name:       "somename",
+					},
+					Delivery: nil,
+				},
+				BrokerClassSpec: brokerClassSpec,
+			},
+		},
+		config: &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: system.Namespace(),
+				Name:      DefaultsConfigName,
+			},
+			Data: map[string]string{
+				"default-br-config": `
+      clusterDefault:
+        brokerClass: clusterbrokerclass
+        apiVersion: v1
+        kind: ConfigMap
+        name: somename
+        namespace: knative-eventing
+        brokerClassSpec:
+          MTChannelBasedBroker:
+            spec:
+              config:
+                apiVersion: v1
+                kind: ConfigMap
+                name: mt-test
+                namespace: knative-eventing
+          KafkaBroker:
+            spec:
+              config:
+                apiVersion: v1
+                kind: ConfigMap
+                name: kafka-test
+                namespace: knative-eventing
 `,
 			},
 		},

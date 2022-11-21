@@ -40,10 +40,45 @@ data:
             ref:
               apiVersion: serving.knative.dev/v1
               kind: Service
-              name: handle-error
+              name: cluster-handle-error
               namespace: knative-eventing
           backoffPolicy: exponential
           backoffDelay: 3s
+        brokerClassSpec:
+          MTChannelBasedBroker:
+            spec:
+              delivery:
+                retry: 3
+                deadLetterSink:
+                  ref:
+                    apiVersion: serving.knative.dev/v1
+                    kind: Service
+                    name: mt-handle-error
+                    namespace: knative-eventing
+                backoffPolicy: exponential
+                backoffDelay: 3s
+              config:
+                apiVersion: v1
+                kind: ConfigMap
+                name: mt-test
+                namespace: knative-eventing
+          KafkaBroker:
+            spec:
+              delivery:
+                retry: 3
+                deadLetterSink:
+                  ref:
+                    apiVersion: serving.knative.
+                    kind: Service
+                    name: kafka-handle-error
+                    namespace: knative-eventing
+                backoffPolicy: exponential
+                backoffDelay: 3s
+              config:
+                apiVersion: v1
+                kind: ConfigMap
+                name: kafka-test
+                namespace: knative-eventing
 
       namespaceDefaults:
         some-namespace:
@@ -62,3 +97,7 @@ data:
                 namespace: someothernamespace
             backoffPolicy: linear
             backoffDelay: 5s
+        some-namespace-two:
+          brokerClass: KafkaBroker
+        some-namespace-three:
+          brokerClass: KafkaBroker
