@@ -101,4 +101,3 @@ data:
           brokerClass: KafkaBroker
         some-namespace-three:
           brokerClass: KafkaBroker
-          
