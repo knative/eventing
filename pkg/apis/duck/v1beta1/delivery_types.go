@@ -22,7 +22,7 @@ import (
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
-	"github.com/rickb777/date/period"
+	"knative.dev/eventing/pkg/isoduration"
 )
 
 // DeliverySpec contains the delivery options for event senders,
@@ -74,9 +74,9 @@ func (ds *DeliverySpec) Validate(ctx context.Context) *apis.FieldError {
 	}
 
 	if ds.Timeout != nil {
-		_, te := period.Parse(*ds.Timeout)
+		_, te := isoduration.Parse(*ds.Timeout, isoduration.IsPositive)
 		if te != nil {
-			errs = errs.Also(apis.ErrInvalidValue(*ds.Timeout, "timeout"))
+			errs = errs.Also(apis.ErrInvalidValue(*ds.Timeout, "timeout", te.Error()))
 		}
 	}
 
@@ -90,9 +90,9 @@ func (ds *DeliverySpec) Validate(ctx context.Context) *apis.FieldError {
 	}
 
 	if ds.BackoffDelay != nil {
-		_, te := period.Parse(*ds.BackoffDelay)
+		_, te := isoduration.Parse(*ds.BackoffDelay, isoduration.IsPositive)
 		if te != nil {
-			errs = errs.Also(apis.ErrInvalidValue(*ds.BackoffDelay, "backoffDelay"))
+			errs = errs.Also(apis.ErrInvalidValue(*ds.BackoffDelay, "backoffDelay", te.Error()))
 		}
 	}
 	return errs

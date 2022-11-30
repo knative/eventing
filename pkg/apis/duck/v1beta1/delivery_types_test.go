@@ -42,7 +42,7 @@ func TestDeliverySpecValidation(t *testing.T) {
 		name: "invalid time format",
 		spec: &DeliverySpec{BackoffDelay: &invalidString},
 		want: func() *apis.FieldError {
-			return apis.ErrInvalidValue(invalidString, "backoffDelay")
+			return apis.ErrInvalidValue(invalidString, "backoffDelay", "failed to parse ISO 8601 duration invalid time: unexpected input")
 		}(),
 	}, {
 		name: "invalid deadLetterSink",
@@ -58,7 +58,7 @@ func TestDeliverySpecValidation(t *testing.T) {
 		name: "invalid timeout",
 		spec: &DeliverySpec{Timeout: &invalidDuration},
 		want: func() *apis.FieldError {
-			return apis.ErrInvalidValue(invalidDuration, "timeout")
+			return apis.ErrInvalidValue(invalidDuration, "timeout", "failed to parse ISO 8601 duration 1985-04-12T23:20:50.52Z: unexpected input")
 		}(),
 	}, {
 		name: "valid backoffPolicy",
@@ -72,7 +72,7 @@ func TestDeliverySpecValidation(t *testing.T) {
 		name: "invalid backoffDelay",
 		spec: &DeliverySpec{BackoffDelay: &invalidDuration},
 		want: func() *apis.FieldError {
-			return apis.ErrInvalidValue(invalidDuration, "backoffDelay")
+			return apis.ErrInvalidValue(invalidDuration, "backoffDelay", "failed to parse ISO 8601 duration 1985-04-12T23:20:50.52Z: unexpected input")
 		}(),
 	}, {
 		name: "negative retry",

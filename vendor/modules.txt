@@ -359,12 +359,6 @@ github.com/prometheus/procfs/internal/util
 ## explicit; go 1.13
 github.com/prometheus/statsd_exporter/pkg/mapper
 github.com/prometheus/statsd_exporter/pkg/mapper/fsm
-# github.com/rickb777/date v1.13.0
-## explicit; go 1.14
-github.com/rickb777/date/period
-# github.com/rickb777/plural v1.2.1
-## explicit; go 1.14
-github.com/rickb777/plural
 # github.com/robfig/cron/v3 v3.0.1
 ## explicit; go 1.12
 github.com/robfig/cron/v3
@@ -374,6 +368,9 @@ github.com/rogpeppe/fastuuid
 # github.com/russross/blackfriday/v2 v2.1.0
 ## explicit
 github.com/russross/blackfriday/v2
+# github.com/sosodev/duration v1.0.1
+## explicit; go 1.17
+github.com/sosodev/duration
 # github.com/spf13/cobra v1.4.0
 ## explicit; go 1.15
 github.com/spf13/cobra

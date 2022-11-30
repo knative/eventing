@@ -70,14 +70,14 @@ func TestDeliverySpecValidation(t *testing.T) {
 		spec: &DeliverySpec{Timeout: &invalidDuration},
 		ctx:  deliveryTimeoutEnabledCtx,
 		want: func() *apis.FieldError {
-			return apis.ErrInvalidValue(invalidDuration, "timeout")
+			return apis.ErrInvalidValue(invalidDuration, "timeout", "failed to parse ISO 8601 duration 1985-04-12T23:20:50.52Z: unexpected input")
 		}(),
 	}, {
 		name: "zero timeout",
 		spec: &DeliverySpec{Timeout: pointer.String("PT0S")},
 		ctx:  deliveryTimeoutEnabledCtx,
 		want: func() *apis.FieldError {
-			return apis.ErrInvalidValue("PT0S", "timeout")
+			return apis.ErrInvalidValue("PT0S", "timeout", "duration must be positive, got 0s")
 		}(),
 	}, {
 		name: "disabled timeout",
@@ -90,6 +90,10 @@ func TestDeliverySpecValidation(t *testing.T) {
 	}, {
 		name: "valid backoffDelay",
 		spec: &DeliverySpec{BackoffDelay: &validDuration},
+		want: nil,
+	}, {
+		name: "valid backoffDelay 10ms",
+		spec: &DeliverySpec{BackoffDelay: pointer.String("PT0.01S")},
 		want: nil,
 	}, {
 		name: "invalid backoffDelay",
@@ -126,14 +130,14 @@ func TestDeliverySpecValidation(t *testing.T) {
 		ctx:  deliveryRetryAfterEnabledCtx,
 		spec: &DeliverySpec{RetryAfterMax: pointer.String("")},
 		want: func() *apis.FieldError {
-			return apis.ErrInvalidValue("", "retryAfterMax")
+			return apis.ErrInvalidValue("", "retryAfterMax", "empty string as duration")
 		}(),
 	}, {
 		name: "invalid retryAfterMax",
 		ctx:  deliveryRetryAfterEnabledCtx,
 		spec: &DeliverySpec{RetryAfterMax: &invalidDuration},
 		want: func() *apis.FieldError {
-			return apis.ErrInvalidValue(invalidDuration, "retryAfterMax")
+			return apis.ErrInvalidValue(invalidDuration, "retryAfterMax", "failed to parse ISO 8601 duration 1985-04-12T23:20:50.52Z: unexpected input")
 		}(),
 	}, {
 		name: "disabled feature with retryAfterMax",

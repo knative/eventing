@@ -23,9 +23,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/rickb777/date/period"
-
 	v1 "knative.dev/eventing/pkg/apis/duck/v1"
+	"knative.dev/eventing/pkg/isoduration"
 )
 
 var noRetries = RetryConfig{
@@ -93,12 +92,11 @@ func RetryConfigFromDeliverySpec(spec v1.DeliverySpec) (RetryConfig, error) {
 
 	if spec.BackoffPolicy != nil && spec.BackoffDelay != nil {
 
-		delay, err := period.Parse(*spec.BackoffDelay)
+		delayDuration, err := isoduration.Parse(*spec.BackoffDelay)
 		if err != nil {
 			return retryConfig, fmt.Errorf("failed to parse Spec.BackoffDelay: %w", err)
 		}
 
-		delayDuration, _ := delay.Duration()
 		switch *spec.BackoffPolicy {
 		case v1.BackoffPolicyExponential:
 			retryConfig.Backoff = func(attemptNum int, resp *http.Response) time.Duration {
@@ -112,19 +110,18 @@ func RetryConfigFromDeliverySpec(spec v1.DeliverySpec) (RetryConfig, error) {
 	}
 
 	if spec.Timeout != nil {
-		timeout, err := period.Parse(*spec.Timeout)
+		timeout, err := isoduration.Parse(*spec.RetryAfterMax)
 		if err != nil {
 			return retryConfig, fmt.Errorf("failed to parse Spec.Timeout: %w", err)
 		}
-		retryConfig.RequestTimeout, _ = timeout.Duration()
+		retryConfig.RequestTimeout = timeout
 	}
 
 	if spec.RetryAfterMax != nil {
-		maxPeriod, err := period.Parse(*spec.RetryAfterMax)
+		maxDuration, err := isoduration.Parse(*spec.RetryAfterMax)
 		if err != nil { // Should never happen based on DeliverySpec validation
 			return retryConfig, fmt.Errorf("failed to parse Spec.RetryAfterMax: %w", err)
 		}
-		maxDuration, _ := maxPeriod.Duration()
 		retryConfig.RetryAfterMaxDuration = &maxDuration
 	}
 

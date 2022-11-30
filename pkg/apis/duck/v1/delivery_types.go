@@ -19,11 +19,11 @@ package v1
 import (
 	"context"
 
-	"github.com/rickb777/date/period"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
 	"knative.dev/eventing/pkg/apis/feature"
+	"knative.dev/eventing/pkg/isoduration"
 )
 
 // DeliverySpec contains the delivery options for event senders,
@@ -98,9 +98,8 @@ func (ds *DeliverySpec) Validate(ctx context.Context) *apis.FieldError {
 
 	if ds.Timeout != nil {
 		if feature.FromContext(ctx).IsEnabled(feature.DeliveryTimeout) {
-			t, te := period.Parse(*ds.Timeout)
-			if te != nil || t.IsZero() {
-				errs = errs.Also(apis.ErrInvalidValue(*ds.Timeout, "timeout"))
+			if _, te := isoduration.Parse(*ds.Timeout, isoduration.IsPositive); te != nil {
+				errs = errs.Also(apis.ErrInvalidValue(*ds.Timeout, "timeout", te.Error()))
 			}
 		} else {
 			errs = errs.Also(apis.ErrDisallowedFields("timeout"))
@@ -117,17 +116,15 @@ func (ds *DeliverySpec) Validate(ctx context.Context) *apis.FieldError {
 	}
 
 	if ds.BackoffDelay != nil {
-		_, te := period.Parse(*ds.BackoffDelay)
-		if te != nil {
+		if _, te := isoduration.Parse(*ds.BackoffDelay, isoduration.IsPositive); te != nil {
 			errs = errs.Also(apis.ErrInvalidValue(*ds.BackoffDelay, "backoffDelay"))
 		}
 	}
 
 	if ds.RetryAfterMax != nil {
 		if feature.FromContext(ctx).IsEnabled(feature.DeliveryRetryAfter) {
-			p, me := period.Parse(*ds.RetryAfterMax)
-			if me != nil || p.IsNegative() {
-				errs = errs.Also(apis.ErrInvalidValue(*ds.RetryAfterMax, "retryAfterMax"))
+			if _, me := isoduration.Parse(*ds.RetryAfterMax, isoduration.IsNonNegative); me != nil {
+				errs = errs.Also(apis.ErrInvalidValue(*ds.RetryAfterMax, "retryAfterMax", me.Error()))
 			}
 		} else {
 			errs = errs.Also(apis.ErrDisallowedFields("retryAfterMax"))

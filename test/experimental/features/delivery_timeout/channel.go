@@ -21,19 +21,20 @@ import (
 	"time"
 
 	cetest "github.com/cloudevents/sdk-go/v2/test"
-	"github.com/rickb777/date/period"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
-	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
-	eventingclient "knative.dev/eventing/pkg/client/injection/client"
-	"knative.dev/eventing/test/rekt/resources/channel"
-	"knative.dev/eventing/test/rekt/resources/subscription"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
+
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
+	eventingclient "knative.dev/eventing/pkg/client/injection/client"
+	"knative.dev/eventing/pkg/isoduration"
+	"knative.dev/eventing/test/rekt/resources/channel"
+	"knative.dev/eventing/test/rekt/resources/subscription"
 )
 
 // ChannelToSink tests a scenario where the flow is source -> channel -> sink (timeout) -- fallback to -> dead letter sink
@@ -42,8 +43,7 @@ func ChannelToSink() *feature.Feature {
 
 	timeout := 6 * time.Second
 	// Clocks are funny, let's add 1 second to take in account eventual clock skews
-	timeoutPeriod, _ := period.NewOf(timeout - time.Second)
-	timeoutString := timeoutPeriod.String()
+	timeoutString := isoduration.ToString(timeout - time.Second)
 
 	channelAPIVersion, imcKind := channel.GVK().ToAPIVersionAndKind()
 

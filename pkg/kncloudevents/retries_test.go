@@ -23,12 +23,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/rickb777/date/period"
 	"github.com/stretchr/testify/assert"
 	"k8s.io/utils/pointer"
 	"knative.dev/pkg/ptr"
 
 	v1 "knative.dev/eventing/pkg/apis/duck/v1"
+	"knative.dev/eventing/pkg/isoduration"
 )
 
 // Test The NoRetries() Functionality
@@ -157,14 +157,12 @@ func TestRetryConfigFromDeliverySpec(t *testing.T) {
 			if err == nil {
 				assert.Equal(t, retry, retryConfig.RetryMax)
 				if tc.timeout != nil && *tc.timeout != "" {
-					expectedTimeoutPeriod, _ := period.Parse(*tc.timeout)
-					expectedTimeoutDuration, _ := expectedTimeoutPeriod.Duration()
+					expectedTimeoutDuration, _ := isoduration.Parse(*tc.timeout)
 					assert.Equal(t, expectedTimeoutDuration, retryConfig.RequestTimeout)
 				}
 
 				if tc.retryAfterMax != nil && *tc.retryAfterMax != "" {
-					expectedMaxPeriod, _ := period.Parse(*tc.retryAfterMax)
-					expectedMaxDuration, _ := expectedMaxPeriod.Duration()
+					expectedMaxDuration, _ := isoduration.Parse(*tc.retryAfterMax)
 					assert.Equal(t, expectedMaxDuration, *retryConfig.RetryAfterMaxDuration)
 				} else {
 					assert.Nil(t, retryConfig.RetryAfterMaxDuration)
