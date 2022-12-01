@@ -234,6 +234,12 @@ func MainWithInformers(ctx context.Context, component string, env EnvConfigAcces
 		ctx = leaderelection.WithStandardLeaderElectorBuilder(ctx, kubeclient.Get(ctx), *leConfig)
 	}
 
+	if cmw := ConfigWatcherFromContext(ctx); cmw != nil {
+		if err := cmw.Start(ctx.Done()); err != nil {
+			logger.Fatalw("Failed to start configuration manager", zap.Error(err))
+		}
+	}
+
 	wg := sync.WaitGroup{}
 
 	// Create and start controller is needed
