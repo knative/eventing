@@ -29,11 +29,14 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes/scheme"
+	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/pkg/apis/duck"
+	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/injection/clients/dynamicclient"
@@ -82,9 +85,8 @@ func NewController(
 		Get: func(namespace string, name string) (psbinding.Bindable, error) {
 			return sbInformer.Lister().SinkBindings(namespace).Get(name)
 		},
-		DynamicClient: dc,
-		Recorder: record.NewBroadcaster().NewRecorder(
-			scheme.Scheme, corev1.EventSource{Component: controllerAgentName}),
+		DynamicClient:   dc,
+		Recorder:        createRecorder(ctx, controllerAgentName),
 		NamespaceLister: namespaceInformer.Lister(),
 	}
 	impl := controller.NewContext(ctx, c, controller.ControllerOptions{
@@ -162,7 +164,7 @@ func (s *SinkBindingSubResourcesReconciler) Reconcile(ctx context.Context, b psb
 	uri, err := s.res.URIFromDestinationV1(ctx, sb.Spec.Sink, sb)
 	if err != nil {
 		logging.FromContext(ctx).Errorf("Failed to get URI from Destination: %w", err)
-		sb.Status.MarkBindingUnavailable("NoURI", "URI could not be extracted from destination ")
+		sb.Status.MarkBindingUnavailable("NoURI", "URI could not be extracted from destination")
 		return err
 	}
 	sb.Status.MarkSink(uri)
@@ -172,4 +174,29 @@ func (s *SinkBindingSubResourcesReconciler) Reconcile(ctx context.Context, b psb
 // I'm just here so I won't get fined
 func (*SinkBindingSubResourcesReconciler) ReconcileDeletion(ctx context.Context, b psbinding.Bindable) error {
 	return nil
+}
+
+func createRecorder(ctx context.Context, agentName string) record.EventRecorder {
+	logger := logging.FromContext(ctx)
+
+	recorder := controller.GetEventRecorder(ctx)
+	if recorder == nil {
+		// Create event broadcaster
+		logger.Debug("Creating event broadcaster")
+		eventBroadcaster := record.NewBroadcaster()
+		watches := []watch.Interface{
+			eventBroadcaster.StartLogging(logger.Named("event-broadcaster").Infof),
+			eventBroadcaster.StartRecordingToSink(
+				&typedcorev1.EventSinkImpl{Interface: kubeclient.Get(ctx).CoreV1().Events("")}),
+		}
+		recorder = eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: agentName})
+		go func() {
+			<-ctx.Done()
+			for _, w := range watches {
+				w.Stop()
+			}
+		}()
+	}
+
+	return recorder
 }
