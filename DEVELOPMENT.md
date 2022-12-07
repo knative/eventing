@@ -136,10 +136,8 @@ kubectl -n knative-eventing logs $(kubectl -n knative-eventing get pods -l app=e
 
 ## Install Channels
 
-Install the
-[In-Memory-Channel](https://github.com/knative/eventing/tree/main/config/channels/in-memory-channel)
-since this is the
-[default channel](https://github.com/knative/docs/blob/main/docs/eventing/channels/default-channels.md).
+Install the [In-Memory-Channel](https://github.com/knative/eventing/blob/main/config/channels/in-memory-channel)
+since this is the default channel.
 
 ```shell
 ko apply -f config/channels/in-memory-channel/
@@ -245,7 +243,7 @@ paragraphs.
 
 When the container is running, run:
 
-```
+```sh
 kubectl sniff <POD_NAME> -n knative-eventing -o out.dump
 ```
 
@@ -254,14 +252,14 @@ example `imc-dispatcher-85797b44c8-gllnx`. This command will dump the `tcpdump`
 output with all the sniffed packets to `out.dump`. Then, you can open this file
 with Wireshark using:
 
-```
+```sh
 wireshark out.dump
 ```
 
 If you run `kubectl sniff` without the output file name, it will open directly
 Wireshark:
 
-```
+```sh
 kubectl sniff <POD_NAME> -n knative-eventing
 ```
 
@@ -285,7 +283,7 @@ Kubernetes.
 - Run following command to swap the controller with the controller that we will
   start later.
 
-```
+```sh
 telepresence --namespace knative-eventing --swap-deployment eventing-controller --env-json eventing-controller-local-env.json
 ```
 
@@ -294,7 +292,7 @@ to pass `--expose` parameter.
 
 For example:
 
-```
+```sh
 telepresence --swap-deployment kafka-controller-manager --namespace knative-eventing --env-json kafka-controller-manager.json --expose 8443
 ```
 
@@ -304,7 +302,7 @@ proxy.
 It will also create a `eventing-controller-local-env.json` file which we will
 use later on. Content of this `envfile` looks like this:
 
-```
+```json
 {
     "CONFIG_LOGGING_NAME": "config-logging",
     "EVENTING_WEBHOOK_PORT": "tcp://10.105.47.10:443",
