@@ -8,22 +8,22 @@
 
 1. Install Knative eventing and components used in the performance test, such as
    MT broker, by following the steps in
-   https://github.com/knative/eventing/blob/main/DEVELOPMENT.md.
+   <https://github.com/knative/eventing/blob/main/DEVELOPMENT.md>.
 
 1. Create a ConfigMap called `config-mako` in your chosen namespace containing
    the Mako config file.
 
-```
+```sh
 kubectl create configmap -n perf-eventing config-mako --from-file=test/performance/benchmarks/<benchmark>/dev.config
 ```
 
 1. Optionally edit the ConfigMap to set additional keys.
 
-   ```
+   ```sh
    kubectl edit configmap -n perf-eventing config-mako
    ```
 
-[`NewConfigFromMap`](https://github.com/knative/pkg/blob/main/test/mako/config.go#L41)
+[`NewConfigFromMap`](https://github.com/knative/pkg/blob/main/test/mako/config/configmap.go#L53)
 determines the valid keys in this ConfigMap. Current keys are:
 
 - `environment`: Select a Mako config file in the ConfigMap. E.g.
@@ -35,10 +35,9 @@ determines the valid keys in this ConfigMap. Current keys are:
 To run a benchmark continuously, and make the result available on
 [Mako](https://mako.dev/project?name=Knative):
 
-1.  Use `ko` to apply yaml files in the benchmark directory.
+1. Use `ko` to apply yaml files in the benchmark directory.
 
-
-   ```
+   ```sh
    ko apply -f test/performance/benchmarks/broker-imc/200-broker-imc-continuous-load-setup.yaml
    ```
 
@@ -48,13 +47,13 @@ To run a benchmark once, and use the result from `mako-stub` for plotting:
 
 1. Install the eventing resources for attacking:
 
-   ```
+   ```sh
    ko apply -f test/performance/benchmarks/broker-imc/100-broker-perf-setup.yaml
    ```
 
 1. Start the benchmarking job:
 
-   ```
+   ```sh
    ko apply -f test/performance/benchmarks/broker-imc/300-broker-imc-increasing-load-setup.yaml
    ```
 
@@ -64,7 +63,7 @@ To run a benchmark once, and use the result from `mako-stub` for plotting:
    [knative/pkg](https://github.com/knative/pkg/blob/main/test/mako/stub-sidecar/read_results.sh)
    where `pod_name` is the name of the aggregator pod:
 
-   ```
+   ```sh
    bash "$GOPATH/src/knative.dev/eventing/vendor/knative.dev/pkg/test/mako/stub-sidecar/read_results.sh" "$pod_name" perf-eventing ${mako_port:-10001} ${timeout:-120} ${retries:-100} ${retries_interval:-10} "$output_file"
    ```
 
@@ -93,12 +92,12 @@ To use them, you need to pass as first parameter the csv. If you want to use the
 combined plot script, you need to specify also latency upper bound, thpt lower
 and upper bound to show. For example:
 
-```
+```sh
 gnuplot -c test/performance/latency-and-thpt-plot.plg data.csv 0.5 0 1100
 ```
 
-> * `0.5` is the time in seconds, and it is the max allowed size for the y1 axis
-> * `0` and `1100` are the message throughput, and it they represent the min and max boundaries of the y2 axis
+> - `0.5` is the time in seconds, and it is the max allowed size for the y1 axis
+> - `0` and `1100` are the message throughput, and it they represent the min and max boundaries of the y2 axis
 
 ## Profiling
 
