@@ -68,7 +68,7 @@ spec:
   filter:
     expression: >
       ce.type == "com.github.pull.create" &&
-      ce.source == "https://knative.dev/eventing/pulls/123"
+      ce.source == "https://github.com/knative/eventing/pulls/123"
 ```
 <!-- prettier-ignore-end -->
 
@@ -438,7 +438,7 @@ should evaluate the expression.
 Some CloudEvents transports (such as the HTTP binary content mode) may be unable
 to differentiate numeric and string values for top-level or nested extension
 attributes. This is still being discussed by the CloudEvents working group (see
-https://github.com/cloudevents/spec/pull/413).
+<https://github.com/cloudevents/spec/pull/413)>.
 
 Until this is resolved, the type of numeric values parsed in CloudEvents
 extensions may be unpredictable.
@@ -492,7 +492,7 @@ been judged less suitable for Trigger filtering than CEL.
 
 #### Rego
 
-[Rego](https://www.openpolicyagent.org/docs/v0.10.7/language-reference/) is
+[Rego](https://www.openpolicyagent.org/docs/latest/policy-language/) is
 already as a policy expression language by
 [Open Policy Agent](https://www.openpolicyagent.org/). It could be an attractive
 choice, but
