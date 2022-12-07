@@ -1,6 +1,6 @@
 # Knative Eventing Multi-Tenant Scheduler with High-Availability
 
-An eventing source instance (for example, [KafkaSource](https://github.com/knative-sandbox/eventing-kafka/tree/main/pkg/source), [RedisStreamSource](https://github.com/knative-sandbox/eventing-redis/tree/main/source), etc) gets materialized as a virtual pod (**vpod**) and can be scaled up and down by increasing or decreasing the number of virtual pod replicas (**vreplicas**).  A vreplica corresponds to a resource in the source that can replicated for maximum distributed processing (for example, number of consumers running in a consumer group).
+An eventing source instance (for example, [KafkaSource](https://github.com/knative-sandbox/eventing-kafka/tree/main/pkg/source), [RedisStreamSource](https://github.com/knative-sandbox/eventing-redis/tree/main/pkg/source), etc) gets materialized as a virtual pod (**vpod**) and can be scaled up and down by increasing or decreasing the number of virtual pod replicas (**vreplicas**).  A vreplica corresponds to a resource in the source that can replicated for maximum distributed processing (for example, number of consumers running in a consumer group).
 
 The vpod multi-tenant [scheduler](#1scheduler) is responsible for placing vreplicas onto real Kubernetes pods. Each pod is limited in capacity and can hold a maximum number of vreplicas. The scheduler takes a list of (source, # of vreplicas) tuples and computes a set of Placements. Placement info are added to the source status.
 
@@ -240,7 +240,7 @@ See node failure scenarios above for what happens to vreplica placements.
 * https://kubernetes.io/docs/concepts/scheduling-eviction/scheduling-framework/
 * https://github.com/kubernetes-sigs/descheduler
 * https://kubernetes.io/docs/reference/scheduling/policies/
-* https://kubernetes.io/docs/reference/config-api/kube-scheduler-policy-config.v1
+* https://kubernetes.io/docs/reference/config-api/kube-scheduler-config.v1/
 * https://github.com/virtual-kubelet/virtual-kubelet#how-it-works
 * https://github.com/kubernetes/enhancements/tree/master/keps/sig-scheduling/624-scheduling-framework
 * https://medium.com/tailwinds-navigator/kubernetes-tip-how-statefulsets-behave-differently-than-deployments-when-node-fails-d29e36bca7d5
@@ -253,4 +253,4 @@ To learn more about Knative, please visit the
 [/docs](https://github.com/knative/docs) repository.
 
 This repo falls under the
-[Knative Code of Conduct](https://github.com/knative/community/blob/master/CODE-OF-CONDUCT.md)
+[Knative Code of Conduct](https://github.com/knative/community/blob/main/CODE-OF-CONDUCT.md)
