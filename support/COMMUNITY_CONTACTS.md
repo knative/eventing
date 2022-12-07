@@ -32,7 +32,7 @@ community contact's duty (subject to change) is as followed:
 ### Monday
 
 - Check 'Eventing Triage' Peribolos group
-  https://github.com/knative/community/blob/main/peribolos/knative.yaml and send
+  <https://github.com/knative/community/blob/main/peribolos/knative.yaml> and send
   a PR to add yourself if you aren't already in there.
 - Check the
   [Eventing test grid](https://testgrid.k8s.io/r/knative-own-testgrid/eventing)
@@ -97,5 +97,5 @@ See [a machine-readable schedule here](support.rotation). The format is:
 RFC3339-date  |  username
 ```
 
-You can see the current oncall at https://knative.party/ (which reads the
+You can see the current oncall at <https://knative.party/> (which reads the
 machine-readable file).
