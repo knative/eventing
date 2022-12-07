@@ -40,11 +40,9 @@ change has no user-visible impact, no release note is needed.
 
 ```
 
-
 **Docs**
 
 <!--
 :book: If this change has user-visible impact, link to an issue or PR in
-https://github.com/knative/docs.
+<https://github.com/knative/docs>.
 -->
-
