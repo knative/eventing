@@ -68,4 +68,3 @@ additional repos in the release process.
 ## Source documents
 
 [Proposal by Mark Fisher](https://docs.google.com/document/d/1w5Bd5kEiiMk7i7X0EUdy6PFbWUpwGTwep8I0N52esyM/edit#)
-[Decision by eventing approvers](https://docs.google.com/spreadsheets/d/16aOhfRnkaGcQIOR5kiumld-GmrgGBIm9fppvAXx3mgc/edit?)
