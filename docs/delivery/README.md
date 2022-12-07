@@ -9,8 +9,8 @@ Each specification for _Sources_ and _Channels_ define some more fine-grained
 delivery mechanism around their data plane. For details consult the respective
 specifications.
 
-- [Source Delivery](https://github.com/knative/specs/blob/main/specs/eventing/sources.md#source-event-delivery)
-- [Channel Delivery](https://github.com/knative/specs/blob/main/specs/eventing/channel.md#data-plane)
+- [Source Delivery](https://github.com/knative/specs/blob/main/specs/eventing/data-plane.md#event-delivery)
+- [Channel Delivery](https://github.com/knative/specs/blob/main/specs/eventing/control-plane.md#channel-lifecycle)
 
 ## Problem
 
@@ -27,9 +27,9 @@ these situations.
   - to broker/triggers.
 - Be able to identify events that could not be delivered (Observability)
 - Be able to leverage existing error handling mechanisms provided by the
-  underlying platform (eg. RabbitMQ dead letter exchange, Amazon SQS dead letter
+  underlying platform (e.g. RabbitMQ dead letter exchange, Amazon SQS dead letter
   queue, Azure Service Bus dead letter queue, etc...).
-- Be able to redirect of error'ed events from a channel.
+- Be able to redirect events that encountered an error from a channel.
 
 ### Out of Scope
 
@@ -77,7 +77,6 @@ implementations and brokers.
 The minimal delivery specification looks like this:
 
 ```go
-
 // DeliverySpec contains the delivery options for event senders,
 // such as channelable and source.
 type DeliverySpec struct {
@@ -123,11 +122,10 @@ capabilities and are free to add more delivery options.
 
 ### Exposing underlying DLC
 
-Channel implementation supporting dead letter channel should resolve it to a URI in
-their status.
+Channel implementation supporting dead letter channel should resolve it to a URI
+in their status.
 
 ```go
-
 // DeliveryStatus contains the Status of an object supporting delivery options.
 type DeliveryStatus struct {
 	// DeadLetterChannel is a KReference that is the reference to the native, platform specific channel
@@ -140,7 +138,7 @@ type DeliveryStatus struct {
 ### Error events
 
 The error event is the original events annotated with various CloudEvents
-attributes, eg. to be able to tell why the event could not be delivered.
+attributes, e.g. to be able to tell why the event could not be delivered.
 
 Note that multiple copies of the same event can be sent to the error sink due to
 multiple subscription failures.
