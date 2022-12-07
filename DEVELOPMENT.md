@@ -140,7 +140,7 @@ Install the [In-Memory-Channel](https://github.com/knative/eventing/blob/main/co
 since this is the default channel.
 
 ```shell
-ko apply -f config/channels/in-memory-channel/
+ko apply -Rf config/channels/in-memory-channel/
 ```
 
 Depending on your needs you might want to install other

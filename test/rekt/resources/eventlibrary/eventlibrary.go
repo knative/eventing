@@ -44,6 +44,7 @@ func Install(name string) feature.StepFn {
 		if err := registerImage(ctx); err != nil {
 			t.Fatal(err)
 		}
+		manifest.PodSecurityCfgFn(ctx, t)(cfg)
 		if _, err := manifest.InstallYamlFS(ctx, yaml, cfg); err != nil {
 			t.Fatal(err)
 		}

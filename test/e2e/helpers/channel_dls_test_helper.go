@@ -141,7 +141,7 @@ func ChannelDeadLetterSinkDefaultTestHelper(
 						DeadLetterSink: &duckv1.Destination{
 							Ref: resources.KnativeRefForService(recordEventsPodName, client.Namespace),
 						},
-						Retry: pointer.Int32Ptr(10),
+						Retry: pointer.Int32(10),
 					},
 				},
 			},

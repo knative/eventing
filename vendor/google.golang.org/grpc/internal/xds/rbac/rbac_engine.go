@@ -39,8 +39,6 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-const logLevel = 2
-
 var logger = grpclog.Component("rbac")
 
 var getConnection = transport.GetConnection
@@ -65,6 +63,16 @@ func NewChainEngine(policies []*v3rbacpb.RBAC) (*ChainEngine, error) {
 	return &ChainEngine{chainedEngines: engines}, nil
 }
 
+func (cre *ChainEngine) logRequestDetails(rpcData *rpcData) {
+	if logger.V(2) {
+		logger.Infof("checking request: url path=%s", rpcData.fullMethod)
+		if len(rpcData.certs) > 0 {
+			cert := rpcData.certs[0]
+			logger.Infof("uri sans=%q, dns sans=%q, subject=%v", cert.URIs, cert.DNSNames, cert.Subject)
+		}
+	}
+}
+
 // IsAuthorized determines if an incoming RPC is authorized based on the chain of RBAC
 // engines and their associated actions.
 //
@@ -79,14 +87,16 @@ func (cre *ChainEngine) IsAuthorized(ctx context.Context) error {
 	}
 	for _, engine := range cre.chainedEngines {
 		matchingPolicyName, ok := engine.findMatchingPolicy(rpcData)
-		if logger.V(logLevel) && ok {
+		if logger.V(2) && ok {
 			logger.Infof("incoming RPC matched to policy %v in engine with action %v", matchingPolicyName, engine.action)
 		}
 
 		switch {
 		case engine.action == v3rbacpb.RBAC_ALLOW && !ok:
+			cre.logRequestDetails(rpcData)
 			return status.Errorf(codes.PermissionDenied, "incoming RPC did not match an allow policy")
 		case engine.action == v3rbacpb.RBAC_DENY && ok:
+			cre.logRequestDetails(rpcData)
 			return status.Errorf(codes.PermissionDenied, "incoming RPC matched a deny policy %q", matchingPolicyName)
 		}
 		// Every policy in the engine list must be queried. Thus, iterate to the
@@ -108,13 +118,13 @@ type engine struct {
 // newEngine creates an RBAC Engine based on the contents of policy. Returns a
 // non-nil error if the policy is invalid.
 func newEngine(config *v3rbacpb.RBAC) (*engine, error) {
-	a := *config.Action.Enum()
+	a := config.GetAction()
 	if a != v3rbacpb.RBAC_ALLOW && a != v3rbacpb.RBAC_DENY {
 		return nil, fmt.Errorf("unsupported action %s", config.Action)
 	}
 
-	policies := make(map[string]*policyMatcher, len(config.Policies))
-	for name, policy := range config.Policies {
+	policies := make(map[string]*policyMatcher, len(config.GetPolicies()))
+	for name, policy := range config.GetPolicies() {
 		matcher, err := newPolicyMatcher(policy)
 		if err != nil {
 			return nil, err

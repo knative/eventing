@@ -77,7 +77,6 @@ func NewMilestoneEmitterFromEnv(instance, namespace string) (Emitter, error) {
 }
 
 // NewMilestoneEmitter will convert target uri to a milestone event sender and return it.
-//
 func NewMilestoneEmitter(instance, namespace, uri string) (Emitter, error) {
 	target, err := apis.ParseURL(uri)
 	if err != nil {

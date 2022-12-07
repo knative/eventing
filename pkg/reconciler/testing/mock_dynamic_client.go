@@ -53,6 +53,8 @@ type MockDynamicGet func(ctx *MockDynamicContext, name string, options metav1.Ge
 type MockDynamicList func(ctx *MockDynamicContext, opts metav1.ListOptions) (MockHandled, *unstructured.UnstructuredList, error)
 type MockDynamicWatch func(ctx *MockDynamicContext, opts metav1.ListOptions) (MockHandled, watch.Interface, error)
 type MockDynamicPatch func(ctx *MockDynamicContext, name string, pt types.PatchType, data []byte, options metav1.PatchOptions, subresources ...string) (MockHandled, *unstructured.Unstructured, error)
+type MockDynamicApply func(ctx *MockDynamicContext, name string, obj *unstructured.Unstructured, options metav1.ApplyOptions, subresources ...string) (MockHandled, *unstructured.Unstructured, error)
+type MockDynamicApplyStatus func(ctx *MockDynamicContext, name string, obj *unstructured.Unstructured, options metav1.ApplyOptions) (MockHandled, *unstructured.Unstructured, error)
 
 type MockDynamicInterface struct {
 	innerInterface dynamic.Interface
@@ -123,6 +125,8 @@ type DynamicMocks struct {
 	MockLists             []MockDynamicList
 	MockWatches           []MockDynamicWatch
 	MockPatches           []MockDynamicPatch
+	MockApply             []MockDynamicApply
+	MockApplyStatus       []MockDynamicApplyStatus
 }
 
 func (m *mockDynamicResourceInterface) Namespace(ns string) dynamic.ResourceInterface {
@@ -265,4 +269,30 @@ func (m *mockDynamicResourceInterface) Patch(ctx context.Context, name string, p
 		}
 	}
 	return m.ctx.InnerInterface.Patch(ctx, name, pt, data, options, subresources...)
+}
+
+func (m *mockDynamicResourceInterface) Apply(ctx context.Context, name string, obj *unstructured.Unstructured, options metav1.ApplyOptions, subresources ...string) (*unstructured.Unstructured, error) {
+	for i, mockApply := range m.mocks.MockApply {
+		handled, u, err := mockApply(m.ctx, name, obj, options, subresources...)
+		if handled == Handled {
+			if len(m.mocks.MockApply) > 1 {
+				m.mocks.MockApply = append(m.mocks.MockApply[:i], m.mocks.MockApply[i+1:]...)
+			}
+			return u, err
+		}
+	}
+	return m.ctx.InnerInterface.Apply(ctx, name, obj, options, subresources...)
+}
+
+func (m *mockDynamicResourceInterface) ApplyStatus(ctx context.Context, name string, obj *unstructured.Unstructured, options metav1.ApplyOptions) (*unstructured.Unstructured, error) {
+	for i, mockApplyStatus := range m.mocks.MockApplyStatus {
+		handled, u, err := mockApplyStatus(m.ctx, name, obj, options)
+		if handled == Handled {
+			if len(m.mocks.MockApplyStatus) > 1 {
+				m.mocks.MockApplyStatus = append(m.mocks.MockApplyStatus[:i], m.mocks.MockApplyStatus[i+1:]...)
+			}
+			return u, err
+		}
+	}
+	return m.ctx.InnerInterface.ApplyStatus(ctx, name, obj, options)
 }

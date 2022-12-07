@@ -23,6 +23,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	clientgotesting "k8s.io/client-go/testing"
+	"knative.dev/eventing/pkg/apis/config"
 	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	sugarconfig "knative.dev/eventing/pkg/apis/sugar"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
@@ -64,6 +66,17 @@ func (t *testConfigStore) ToContext(ctx context.Context) context.Context {
 }
 
 func TestEnabled(t *testing.T) {
+	// Context with DefaultConfig
+	c := config.Config{
+		Defaults: &config.Defaults{
+			ClusterDefault: &config.ClassAndBrokerConfig{
+				BrokerClass: "AValidBrokerClass",
+			},
+		},
+	}
+
+	ctx := config.ToContext(context.Background(), &c)
+
 	// Events
 	brokerEvent := Eventf(corev1.EventTypeNormal, "BrokerCreated", "Default eventing.knative.dev Broker created.")
 
@@ -92,7 +105,10 @@ func TestEnabled(t *testing.T) {
 		WantCreates: []runtime.Object{
 			broker,
 		},
-		Ctx: context.WithValue(context.Background(), sugarConfigContextKey,
+		WithReactors: []clientgotesting.ReactionFunc{
+			DefaultingReactor(ctx),
+		},
+		Ctx: context.WithValue(ctx, sugarConfigContextKey,
 			&metav1.LabelSelector{}),
 	}, {
 		Name: "Labelled namespace with expected `key` and `value`",
@@ -111,7 +127,10 @@ func TestEnabled(t *testing.T) {
 		WantCreates: []runtime.Object{
 			broker,
 		},
-		Ctx: context.WithValue(context.Background(), sugarConfigContextKey,
+		WithReactors: []clientgotesting.ReactionFunc{
+			DefaultingReactor(ctx),
+		},
+		Ctx: context.WithValue(ctx, sugarConfigContextKey,
 			&metav1.LabelSelector{
 				MatchExpressions: []metav1.LabelSelectorRequirement{{
 					Key:      SomeLabelKey,
@@ -135,7 +154,10 @@ func TestEnabled(t *testing.T) {
 		WantCreates: []runtime.Object{
 			broker,
 		},
-		Ctx: context.WithValue(context.Background(), sugarConfigContextKey,
+		WithReactors: []clientgotesting.ReactionFunc{
+			DefaultingReactor(ctx),
+		},
+		Ctx: context.WithValue(ctx, sugarConfigContextKey,
 			&metav1.LabelSelector{
 				MatchExpressions: []metav1.LabelSelectorRequirement{{
 					Key:      LegacyInjectionLabelKey,
@@ -150,7 +172,7 @@ func TestEnabled(t *testing.T) {
 			),
 		},
 		Key: testNS,
-		Ctx: context.WithValue(context.Background(), sugarConfigContextKey,
+		Ctx: context.WithValue(ctx, sugarConfigContextKey,
 			&metav1.LabelSelector{}),
 	}, {
 		Name: "Namespace enabled, broker exists",
@@ -161,7 +183,7 @@ func TestEnabled(t *testing.T) {
 		Key:                     testNS,
 		SkipNamespaceValidation: true,
 		WantErr:                 false,
-		Ctx: context.WithValue(context.Background(), sugarConfigContextKey,
+		Ctx: context.WithValue(ctx, sugarConfigContextKey,
 			&metav1.LabelSelector{}),
 	}, {
 		Name: "Namespace enabled, broker exists with no label",
@@ -177,7 +199,7 @@ func TestEnabled(t *testing.T) {
 		Key:                     testNS,
 		SkipNamespaceValidation: true,
 		WantErr:                 false,
-		Ctx: context.WithValue(context.Background(), sugarConfigContextKey,
+		Ctx: context.WithValue(ctx, sugarConfigContextKey,
 			&metav1.LabelSelector{}),
 	},
 	}

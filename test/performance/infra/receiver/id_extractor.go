@@ -22,7 +22,9 @@ import cloudevents "github.com/cloudevents/sdk-go/v2"
 type IdExtractor func(event cloudevents.Event) string
 
 // EventIdExtractor uses
-//  event.ID()
+//
+//	event.ID()
+//
 // to extract the event id
 func EventIdExtractor(event cloudevents.Event) string {
 	return event.ID()

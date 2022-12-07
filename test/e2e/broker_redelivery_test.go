@@ -52,7 +52,7 @@ func ChannelBasedBrokerCreator(channel metav1.TypeMeta, brokerClass string) help
 				broker.Spec.Delivery = &eventingduckv1.DeliverySpec{
 					Retry:         &numRetries,
 					BackoffPolicy: &backoff,
-					BackoffDelay:  pointer.StringPtr("PT1S"),
+					BackoffDelay:  pointer.String("PT1S"),
 				}
 			},
 		)

@@ -23,6 +23,8 @@ import (
 	"knative.dev/eventing/test/upgrade/prober/wathola/config"
 )
 
+const FinishedEventPrefix = "finish event"
+
 var mutex = sync.RWMutex{}
 var lastProgressReport = time.Now()
 
@@ -93,8 +95,10 @@ func (s *stepStore) Count() int {
 func (f *finishedStore) RegisterFinished(finished *Finished) {
 	if f.received > 0 {
 		f.errors.throwDuplicated(
-			"finish event should be received only once, received %d",
-			f.received+1)
+			"%s should be received only once, received %d",
+			FinishedEventPrefix, f.received+1)
+		// We don't want to record all failures again.
+		return
 	}
 	f.received++
 	f.eventsSent = finished.EventsSent

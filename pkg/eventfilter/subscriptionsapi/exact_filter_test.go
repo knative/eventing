@@ -65,7 +65,64 @@ func TestExactMatchFilter(t *testing.T) {
 			if e == nil {
 				e = makeEvent()
 			}
-			f, err := NewExactFilter(tt.attribute, tt.value)
+			f, err := NewExactFilter(map[string]string{
+				tt.attribute: tt.value,
+			})
+			if err != nil {
+				t.Errorf("error while creating exact filter %v", err)
+			} else {
+				if got := f.Filter(context.TODO(), *e); got != tt.want {
+					t.Errorf("Filter() = %v, want %v", got, tt.want)
+				}
+			}
+		})
+	}
+}
+
+func TestMultipleExactMatchFilters(t *testing.T) {
+	tests := map[string]struct {
+		attributes []string
+		values     []string
+		event      *cloudevents.Event
+		want       eventfilter.FilterResult
+	}{
+		"Wrong type and source": {
+			attributes: []string{"type", "source"},
+			values:     []string{"some-other-type", "some-other-source"},
+			want:       eventfilter.FailFilter,
+		},
+		"Match type and wrong source": {
+			attributes: []string{"type", "source"},
+			values:     []string{eventType, "some-other-source"},
+			want:       eventfilter.FailFilter,
+		},
+		"Match type and match source": {
+			attributes: []string{"type", "source"},
+			values:     []string{eventType, eventSource},
+			want:       eventfilter.PassFilter,
+		},
+		"Match type and miss extension": {
+			attributes: []string{"type", extensionName},
+			values:     []string{eventType, extensionValue},
+			want:       eventfilter.FailFilter,
+		},
+		"Match type and match extension": {
+			attributes: []string{"type", extensionName},
+			values:     []string{eventType, extensionValue},
+			event:      makeEventWithExtension(extensionName, extensionValue),
+			want:       eventfilter.PassFilter,
+		},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			e := tt.event
+			if e == nil {
+				e = makeEvent()
+			}
+			f, err := NewExactFilter(map[string]string{
+				tt.attributes[0]: tt.values[0],
+				tt.attributes[1]: tt.values[1],
+			})
 			if err != nil {
 				t.Errorf("error while creating exact filter %v", err)
 			} else {

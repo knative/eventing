@@ -36,14 +36,15 @@ import (
 	"google.golang.org/grpc/resolver"
 	"google.golang.org/grpc/xds/csds"
 
-	_ "google.golang.org/grpc/credentials/tls/certprovider/pemfile" // Register the file watcher certificate provider plugin.
-	_ "google.golang.org/grpc/xds/internal/balancer"                // Register the balancers.
-	_ "google.golang.org/grpc/xds/internal/httpfilter/fault"        // Register the fault injection filter.
-	_ "google.golang.org/grpc/xds/internal/httpfilter/rbac"         // Register the RBAC filter.
-	_ "google.golang.org/grpc/xds/internal/httpfilter/router"       // Register the router filter.
-	xdsresolver "google.golang.org/grpc/xds/internal/resolver"      // Register the xds_resolver.
-	_ "google.golang.org/grpc/xds/internal/xdsclient/v2"            // Register the v2 xDS API client.
-	_ "google.golang.org/grpc/xds/internal/xdsclient/v3"            // Register the v3 xDS API client.
+	_ "google.golang.org/grpc/credentials/tls/certprovider/pemfile"         // Register the file watcher certificate provider plugin.
+	_ "google.golang.org/grpc/xds/internal/balancer"                        // Register the balancers.
+	_ "google.golang.org/grpc/xds/internal/clusterspecifier/rls"            // Register the RLS cluster specifier plugin. Note that this does not register the RLS LB policy.
+	_ "google.golang.org/grpc/xds/internal/httpfilter/fault"                // Register the fault injection filter.
+	_ "google.golang.org/grpc/xds/internal/httpfilter/rbac"                 // Register the RBAC filter.
+	_ "google.golang.org/grpc/xds/internal/httpfilter/router"               // Register the router filter.
+	xdsresolver "google.golang.org/grpc/xds/internal/resolver"              // Register the xds_resolver.
+	_ "google.golang.org/grpc/xds/internal/xdsclient/controller/version/v2" // Register the v2 xDS API client.
+	_ "google.golang.org/grpc/xds/internal/xdsclient/controller/version/v3" // Register the v3 xDS API client.
 )
 
 func init() {
@@ -90,5 +91,5 @@ func init() {
 // Notice: This API is EXPERIMENTAL and may be changed or removed in a
 // later release.
 func NewXDSResolverWithConfigForTesting(bootstrapConfig []byte) (resolver.Builder, error) {
-	return xdsresolver.NewBuilder(bootstrapConfig)
+	return xdsresolver.NewBuilderForTesting(bootstrapConfig)
 }

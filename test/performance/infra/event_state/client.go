@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 const publishTimeout = 1 * time.Minute
@@ -33,7 +34,7 @@ type AggregatorClient struct {
 
 func NewAggregatorClient(aggregAddr string) (*AggregatorClient, error) {
 	// create a connection to the aggregator
-	conn, err := grpc.Dial(aggregAddr, grpc.WithInsecure())
+	conn, err := grpc.Dial(aggregAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, fmt.Errorf("Failed to connect to the aggregator: %v", err)
 	}

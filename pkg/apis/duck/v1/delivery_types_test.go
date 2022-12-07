@@ -74,7 +74,7 @@ func TestDeliverySpecValidation(t *testing.T) {
 		}(),
 	}, {
 		name: "zero timeout",
-		spec: &DeliverySpec{Timeout: pointer.StringPtr("PT0S")},
+		spec: &DeliverySpec{Timeout: pointer.String("PT0S")},
 		ctx:  deliveryTimeoutEnabledCtx,
 		want: func() *apis.FieldError {
 			return apis.ErrInvalidValue("PT0S", "timeout")
@@ -99,17 +99,17 @@ func TestDeliverySpecValidation(t *testing.T) {
 		}(),
 	}, {
 		name: "negative retry",
-		spec: &DeliverySpec{Retry: pointer.Int32Ptr(-1)},
+		spec: &DeliverySpec{Retry: pointer.Int32(-1)},
 		want: func() *apis.FieldError {
 			return apis.ErrInvalidValue("-1", "retry")
 		}(),
 	}, {
 		name: "valid retry 0",
-		spec: &DeliverySpec{Retry: pointer.Int32Ptr(0)},
+		spec: &DeliverySpec{Retry: pointer.Int32(0)},
 		want: nil,
 	}, {
 		name: "valid retry 1",
-		spec: &DeliverySpec{Retry: pointer.Int32Ptr(1)},
+		spec: &DeliverySpec{Retry: pointer.Int32(1)},
 		want: nil,
 	}, {
 		name: "valid retryAfterMax",
@@ -119,12 +119,12 @@ func TestDeliverySpecValidation(t *testing.T) {
 	}, {
 		name: "zero retryAfterMax",
 		ctx:  deliveryRetryAfterEnabledCtx,
-		spec: &DeliverySpec{RetryAfterMax: pointer.StringPtr("PT0S")},
+		spec: &DeliverySpec{RetryAfterMax: pointer.String("PT0S")},
 		want: nil,
 	}, {
 		name: "empty retryAfterMax",
 		ctx:  deliveryRetryAfterEnabledCtx,
-		spec: &DeliverySpec{RetryAfterMax: pointer.StringPtr("")},
+		spec: &DeliverySpec{RetryAfterMax: pointer.String("")},
 		want: func() *apis.FieldError {
 			return apis.ErrInvalidValue("", "retryAfterMax")
 		}(),

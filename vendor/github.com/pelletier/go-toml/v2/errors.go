@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/pelletier/go-toml/v2/internal/unsafe"
+	"github.com/pelletier/go-toml/v2/internal/danger"
 )
 
 // DecodeError represents an error encountered during the parsing or decoding
@@ -27,7 +27,7 @@ type DecodeError struct {
 // corresponding field in the target value. It contains all the missing fields
 // in Errors.
 //
-// Emitted by Decoder when SetStrict(true) was called.
+// Emitted by Decoder when DisallowUnknownFields() was called.
 type StrictMissingError struct {
 	// One error per field that could not be found.
 	Errors []DecodeError
@@ -103,9 +103,10 @@ func (e *DecodeError) Key() Key {
 //
 // The function copies all bytes used in DecodeError, so that document and
 // highlight can be freely deallocated.
+//
 //nolint:funlen
 func wrapDecodeError(document []byte, de *decodeError) *DecodeError {
-	offset := unsafe.SubsliceOffset(document, de.highlight)
+	offset := danger.SubsliceOffset(document, de.highlight)
 
 	errMessage := de.Error()
 	errLine, errColumn := positionAtEnd(document[:offset])
@@ -116,6 +117,7 @@ func wrapDecodeError(document []byte, de *decodeError) *DecodeError {
 	maxLine := errLine + len(after) - 1
 	lineColumnWidth := len(strconv.Itoa(maxLine))
 
+	// Write the lines of context strictly before the error.
 	for i := len(before) - 1; i > 0; i-- {
 		line := errLine - i
 		buf.WriteString(formatLineNumber(line, lineColumnWidth))
@@ -128,6 +130,8 @@ func wrapDecodeError(document []byte, de *decodeError) *DecodeError {
 
 		buf.WriteRune('\n')
 	}
+
+	// Write the document line that contains the error.
 
 	buf.WriteString(formatLineNumber(errLine, lineColumnWidth))
 	buf.WriteString("| ")
@@ -143,6 +147,10 @@ func wrapDecodeError(document []byte, de *decodeError) *DecodeError {
 	}
 
 	buf.WriteRune('\n')
+
+	// Write the line with the error message itself (so it does not have a line
+	// number).
+
 	buf.WriteString(strings.Repeat(" ", lineColumnWidth))
 	buf.WriteString("| ")
 
@@ -156,6 +164,8 @@ func wrapDecodeError(document []byte, de *decodeError) *DecodeError {
 		buf.WriteString(" ")
 		buf.WriteString(errMessage)
 	}
+
+	// Write the lines of context strictly after the error.
 
 	for i := 1; i < len(after); i++ {
 		buf.WriteRune('\n')
@@ -230,7 +240,7 @@ forward:
 			rest = rest[o+1:]
 			o = 0
 
-		case o == len(rest)-1 && o > 0:
+		case o == len(rest)-1:
 			// add last line only if it's non-empty
 			afterLines = append(afterLines, rest)
 

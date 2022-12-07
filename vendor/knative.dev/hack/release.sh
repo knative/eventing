@@ -98,12 +98,15 @@ RELEASE_NOTES=""
 RELEASE_BRANCH=""
 RELEASE_GCS_BUCKET="knative-nightly/${REPO_NAME}"
 RELEASE_DIR=""
-KO_FLAGS="-P --platform=all --image-refs=imagerefs.txt"
+KO_FLAGS="-P --platform=all"
 VALIDATION_TESTS="./test/presubmit-tests.sh"
 ARTIFACTS_TO_PUBLISH=""
 FROM_NIGHTLY_RELEASE=""
 FROM_NIGHTLY_RELEASE_GCS=""
 SIGNING_IDENTITY=""
+APPLE_CODESIGN_KEY=""
+APPLE_NOTARY_API_KEY=""
+APPLE_CODESIGN_PASSWORD_FILE=""
 export KO_DOCKER_REPO="gcr.io/knative-nightly"
 # Build stripped binary to reduce size
 export GOFLAGS="-ldflags=-s -ldflags=-w"
@@ -309,30 +312,63 @@ function build_from_source() {
   sign_release || abort "error signing the release"
 }
 
+function get_images_in_yamls() {
+  rm -rf imagerefs.txt
+  echo "Assembling a list of image refences to sign"
+  for file in $@; do
+    [[ "${file##*.}" != "yaml" ]] && continue
+    echo "Inspecting ${file}"
+    for image in $(grep -oh "\S*${KO_DOCKER_REPO}\S*" "${file}"); do
+      echo $image >> imagerefs.txt
+    done
+  done
+  sort -uo imagerefs.txt imagerefs.txt # Remove duplicate entries
+}
+
 # Build a release from source.
 function sign_release() {
-  if [ -z "${SIGN_IMAGES:-}" ]; then # Temporary Feature Gate
+  get_images_in_yamls "${ARTIFACTS_TO_PUBLISH}"
+  if (( ! IS_PROW )); then # This function can't be run by devs on their laptops
     return 0
   fi
+
+  # Notarizing mac binaries needs to be done before cosign as it changes the checksum values
+  # of the darwin binaries
+ if [ -n "${APPLE_CODESIGN_KEY}" ] && [ -n "${APPLE_CODESIGN_PASSWORD_FILE}" ] && [ -n "${APPLE_NOTARY_API_KEY}" ]; then
+    banner "Notarizing macOS Binaries for the release"
+    FILES=$(find -- * -type f -name "*darwin*")
+    for file in $FILES; do
+      rcodesign sign "${file}" --p12-file="${APPLE_CODESIGN_KEY}" \
+        --code-signature-flags=runtime \
+        --p12-password-file="${APPLE_CODESIGN_PASSWORD_FILE}"
+    done
+    zip files.zip ${FILES}
+    rcodesign notary-submit files.zip --api-key-path="${APPLE_NOTARY_API_KEY}" --wait
+    sha256sum ${ARTIFACTS_TO_PUBLISH//checksums.txt/} > checksums.txt
+    echo "🧮     Post Notarization Checksum:"
+    cat checksums.txt
+  fi
+
+  ID_TOKEN=$(gcloud auth print-identity-token --audiences=sigstore \
+    --include-email \
+    --impersonate-service-account="${SIGNING_IDENTITY}")
+  echo "Signing Images with the identity ${SIGNING_IDENTITY}"
   ## Sign the images with cosign
-  ## For now, check if ko has created imagerefs.txt file. In the future, missing image refs will break
-  ## the release for all jobs that publish images.
   if [[ -f "imagerefs.txt" ]]; then
-      echo "Signing Images with the identity ${SIGNING_IDENTITY}"
-      COSIGN_EXPERIMENTAL=1 cosign sign $(cat imagerefs.txt) --recursive --identity-token="$(
-        gcloud auth print-identity-token --audiences=sigstore \
-        --include-email \
-        --impersonate-service-account="${SIGNING_IDENTITY}")"
+      COSIGN_EXPERIMENTAL=1 cosign sign $(cat imagerefs.txt) --recursive --identity-token="${ID_TOKEN}"
+      if  [ -n "${ATTEST_IMAGES:-}" ]; then # Temporary Feature Gate
+        provenance-generator --clone-log=/logs/clone.json \
+          --image-refs=imagerefs.txt --output=attestation.json
+        COSIGN_EXPERIMENTAL=1 cosign attest $(cat imagerefs.txt) --recursive --identity-token="${ID_TOKEN}" \
+          --predicate=attestation.json --type=slsaprovenance
+      fi
   fi
 
   ## Check if there is checksums.txt file. If so, sign the checksum file
   if [[ -f "checksums.txt" ]]; then
       echo "Signing Images with the identity ${SIGNING_IDENTITY}"
-      COSIGN_EXPERIMENTAL=1 cosign sign-blob checksums.txt --output-signature checksums.txt.sig --identity-token="$(
-        gcloud auth print-identity-token --audiences=sigstore \
-        --include-email \
-        --impersonate-service-account="${SIGNING_IDENTITY}")"
-      ARTIFACTS_TO_PUBLISH="${ARTIFACTS_TO_PUBLISH} checksums.txt.sig"
+      COSIGN_EXPERIMENTAL=1 cosign sign-blob checksums.txt --output-signature=checksums.txt.sig --output-certificate=checksums.txt.pem --identity-token="${ID_TOKEN}"
+      ARTIFACTS_TO_PUBLISH="${ARTIFACTS_TO_PUBLISH} checksums.txt.sig checksums.txt.pem"
   fi
 }
 
@@ -437,6 +473,15 @@ function parse_flags() {
           --from-nightly)
             [[ $1 =~ ^v[0-9]+-[0-9a-f]+$ ]] || abort "nightly tag must be 'vYYYYMMDD-commithash'"
             FROM_NIGHTLY_RELEASE=$1
+            ;;
+          --apple-codesign-key)
+            APPLE_CODESIGN_KEY=$1
+            ;;
+          --apple-codesign-password-file)
+            APPLE_CODESIGN_PASSWORD_FILE=$1
+            ;;
+          --apple-notary-api-key)
+            APPLE_NOTARY_API_KEY=$1
             ;;
           *) abort "unknown option ${parameter}" ;;
         esac

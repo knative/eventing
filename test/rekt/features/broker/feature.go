@@ -17,6 +17,9 @@ limitations under the License.
 package broker
 
 import (
+	"context"
+	"encoding/base64"
+
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/test"
 	"github.com/google/uuid"
@@ -199,4 +202,206 @@ func brokerRedeliveryDropN(retryNum int32, dropNum uint) *feature.Feature {
 			).AtLeast(1))
 
 	return f
+}
+
+func BrokerDeadLetterSinkExtensions() *feature.FeatureSet {
+	fs := &feature.FeatureSet{
+		Name: "Knative Broker - DeadLetterSink - with Extensions",
+
+		Features: []*feature.Feature{
+			brokerSubscriberUnreachable(),
+			brokerSubscriberErrorNodata(),
+			brokerSubscriberErrorWithdata(),
+		},
+	}
+	return fs
+}
+
+func brokerSubscriberUnreachable() *feature.Feature {
+	f := feature.NewFeatureNamed("Broker Subscriber Unreachable")
+
+	source := feature.MakeRandomK8sName("source")
+	sink := feature.MakeRandomK8sName("sink")
+	triggerName := feature.MakeRandomK8sName("triggerName")
+
+	eventSource := "source1"
+	eventType := "type1"
+	eventBody := `{"msg":"test msg"}`
+	event := cloudevents.NewEvent()
+	event.SetID(uuid.New().String())
+	event.SetType(eventType)
+	event.SetSource(eventSource)
+	event.SetData(cloudevents.ApplicationJSON, []byte(eventBody))
+
+	//Install the broker
+	brokerName := feature.MakeRandomK8sName("broker")
+	f.Setup("install broker", broker.Install(brokerName, broker.WithEnvConfig()...))
+	f.Requirement("broker is ready", broker.IsReady(brokerName))
+	f.Requirement("broker is addressable", broker.IsAddressable(brokerName))
+
+	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
+
+	// Install the trigger and Point the Trigger subscriber to the sink svc.
+	f.Setup("install trigger", trigger.Install(
+		triggerName,
+		brokerName,
+		trigger.WithSubscriber(nil, "http://fake.svc.cluster.local"),
+		trigger.WithDeadLetterSink(svc.AsKReference(sink), ""),
+	))
+	f.Setup("trigger goes ready", trigger.IsReady(triggerName))
+
+	f.Requirement("install source", eventshub.Install(
+		source,
+		eventshub.StartSenderToResource(broker.GVR(), brokerName),
+		eventshub.InputEvent(event),
+	))
+
+	f.Assert("Receives dls extensions when subscriber is unreachable",
+		eventasssert.OnStore(sink).
+			MatchEvent(
+				test.HasExtension("knativeerrordest", "http://fake.svc.cluster.local"),
+			).
+			AtLeast(1),
+	)
+	return f
+}
+
+func brokerSubscriberErrorNodata() *feature.Feature {
+	f := feature.NewFeatureNamed("Broker Subscriber Error Nodata")
+
+	source := feature.MakeRandomK8sName("source")
+	sink := feature.MakeRandomK8sName("sink")
+	failer := feature.MakeRandomK8sName("failer")
+	triggerName := feature.MakeRandomK8sName("triggerName")
+
+	eventSource := "source1"
+	eventType := "type1"
+	eventBody := `{"msg":"test msg"}`
+	event := cloudevents.NewEvent()
+	event.SetID(uuid.New().String())
+	event.SetType(eventType)
+	event.SetSource(eventSource)
+	event.SetData(cloudevents.ApplicationJSON, []byte(eventBody))
+
+	//Install the broker
+	brokerName := feature.MakeRandomK8sName("broker")
+	f.Setup("install broker", broker.Install(brokerName, broker.WithEnvConfig()...))
+	f.Requirement("broker is ready", broker.IsReady(brokerName))
+	f.Requirement("broker is addressable", broker.IsAddressable(brokerName))
+
+	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
+
+	f.Setup("install failing receiver", eventshub.Install(failer,
+		eventshub.StartReceiver,
+		eventshub.DropFirstN(1),
+		eventshub.DropEventsResponseCode(422),
+	))
+
+	// Install the trigger and Point the Trigger subscriber to the sink svc.
+	f.Setup("install trigger", trigger.Install(
+		triggerName,
+		brokerName,
+		trigger.WithSubscriber(svc.AsKReference(failer), ""),
+		trigger.WithDeadLetterSink(svc.AsKReference(sink), ""),
+	))
+	f.Setup("trigger goes ready", trigger.IsReady(triggerName))
+
+	f.Requirement("install source", eventshub.Install(
+		source,
+		eventshub.StartSenderToResource(broker.GVR(), brokerName),
+		eventshub.InputEvent(event),
+	))
+
+	f.Assert("Receives dls extensions without errordata", assertEnhancedWithKnativeErrorExtensions(
+		sink,
+		func(ctx context.Context) test.EventMatcher {
+			failerAddress, _ := svc.Address(ctx, failer)
+			return test.HasExtension("knativeerrordest", failerAddress.String())
+		},
+		func(ctx context.Context) test.EventMatcher {
+			return test.HasExtension("knativeerrorcode", "422")
+		},
+	))
+
+	return f
+}
+
+func brokerSubscriberErrorWithdata() *feature.Feature {
+	f := feature.NewFeatureNamed("Broker Subscriber Error With data encoded")
+
+	source := feature.MakeRandomK8sName("source")
+	sink := feature.MakeRandomK8sName("sink")
+	failer := feature.MakeRandomK8sName("failer")
+	triggerName := feature.MakeRandomK8sName("triggerName")
+
+	eventSource := "source1"
+	eventType := "type1"
+	eventBody := `{"msg":"test msg"}`
+	event := cloudevents.NewEvent()
+	event.SetID(uuid.New().String())
+	event.SetType(eventType)
+	event.SetSource(eventSource)
+	event.SetData(cloudevents.ApplicationJSON, []byte(eventBody))
+
+	//Install the broker
+	brokerName := feature.MakeRandomK8sName("broker")
+	f.Setup("install broker", broker.Install(brokerName, broker.WithEnvConfig()...))
+	f.Requirement("broker is ready", broker.IsReady(brokerName))
+	f.Requirement("broker is addressable", broker.IsAddressable(brokerName))
+
+	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
+
+	errorData := `{ "message": "catastrophic failure" }`
+	f.Setup("install failing receiver", eventshub.Install(failer,
+		eventshub.StartReceiver,
+		eventshub.DropFirstN(1),
+		eventshub.DropEventsResponseCode(422),
+		eventshub.DropEventsResponseBody(errorData),
+	))
+
+	// Install the trigger and Point the Trigger subscriber to the sink svc.
+	f.Setup("install trigger", trigger.Install(
+		triggerName,
+		brokerName,
+		trigger.WithSubscriber(svc.AsKReference(failer), ""),
+		trigger.WithDeadLetterSink(svc.AsKReference(sink), ""),
+	))
+	f.Setup("trigger goes ready", trigger.IsReady(triggerName))
+
+	f.Requirement("install source", eventshub.Install(
+		source,
+		eventshub.StartSenderToResource(broker.GVR(), brokerName),
+		eventshub.InputEvent(event),
+	))
+
+	f.Assert("Receives dls extensions with errordata", assertEnhancedWithKnativeErrorExtensions(
+		sink,
+		func(ctx context.Context) test.EventMatcher {
+			failerAddress, _ := svc.Address(ctx, failer)
+			return test.HasExtension("knativeerrordest", failerAddress.String())
+		},
+		func(ctx context.Context) test.EventMatcher {
+			return test.HasExtension("knativeerrorcode", "422")
+		},
+		func(ctx context.Context) test.EventMatcher {
+			return test.HasExtension("knativeerrordata", base64.StdEncoding.EncodeToString([]byte(errorData)))
+		},
+	))
+
+	return f
+}
+
+func assertEnhancedWithKnativeErrorExtensions(sinkName string, matcherfns ...func(ctx context.Context) test.EventMatcher) feature.StepFn {
+	return func(ctx context.Context, t feature.T) {
+		matchers := make([]test.EventMatcher, len(matcherfns))
+		for i, fn := range matcherfns {
+			matchers[i] = fn(ctx)
+		}
+		_ = eventshub.StoreFromContext(ctx, sinkName).AssertExact(
+			t,
+			1,
+			eventasssert.MatchKind(eventshub.EventReceived),
+			eventasssert.MatchEvent(matchers...),
+		)
+	}
 }

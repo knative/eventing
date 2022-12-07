@@ -155,7 +155,6 @@ func TestSmoke_ChannelImplWithSubscription(t *testing.T) {
 TestChannelChain tests the following scenario:
 
 EventSource ---> (Channel ---> Subscription) x 10 ---> Sink
-
 */
 func TestChannelChain(t *testing.T) {
 	t.Parallel()
@@ -220,13 +219,15 @@ func TestGenericChannelDeadLetterSink(t *testing.T) {
 /*
 TestEventTransformationForSubscription tests the following scenario:
 
-             1            2                 5            6                  7
+	1            2                 5            6                  7
+
 EventSource ---> Channel ---> Subscription ---> Channel ---> Subscription ----> Service(Logger)
-                                   |  ^
-                                 3 |  | 4
-                                   |  |
-                                   |  ---------
-                                   -----------> Service(Transformation)
+
+	  |  ^
+	3 |  | 4
+	  |  |
+	  |  ---------
+	  -----------> Service(Transformation)
 */
 func TestEventTransformationForSubscriptionV1(t *testing.T) {
 	t.Parallel()
@@ -246,7 +247,6 @@ func TestEventTransformationForSubscriptionV1(t *testing.T) {
 TestBinaryEventForChannel tests the following scenario:
 
 EventSource (binary-encoded messages) ---> Channel ---> Subscription ---> Service(Logger)
-
 */
 func TestBinaryEventForChannel(t *testing.T) {
 	t.Parallel()
@@ -266,7 +266,6 @@ func TestBinaryEventForChannel(t *testing.T) {
 TestStructuredEventForChannel tests the following scenario:
 
 EventSource (structured-encoded messages) ---> Channel ---> Subscription ---> Service(Logger)
-
 */
 func TestStructuredEventForChannel(t *testing.T) {
 	t.Parallel()
@@ -282,8 +281,8 @@ func TestStructuredEventForChannel(t *testing.T) {
 	env.Test(ctx, t, channel.SingleEventWithEncoding(binding.EncodingStructured))
 }
 
-//TestChannelPreferHeaderCheck test if the test message without explicit prefer header
-//should have it after fanout.
+// TestChannelPreferHeaderCheck test if the test message without explicit prefer header
+// should have it after fanout.
 func TestChannelPreferHeaderCheck(t *testing.T) {
 	t.Parallel()
 
@@ -300,4 +299,22 @@ func TestChannelPreferHeaderCheck(t *testing.T) {
 	}
 
 	env.Test(ctx, t, channel.ChannelPreferHeaderCheck(createSubscriberFn))
+}
+
+func TestChannelDeadLetterSinkExtensions(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+	)
+
+	createSubscriberFn := func(ref *duckv1.KReference, uri string) manifest.CfgFn {
+		return subscription.WithSubscriber(ref, uri)
+	}
+
+	env.TestSet(ctx, t, channel.ChannelDeadLetterSinkExtensions(createSubscriberFn))
 }

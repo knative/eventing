@@ -26,6 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"knative.dev/pkg/kmeta"
+	pkgsecurity "knative.dev/pkg/test/security"
 )
 
 func GetFirstTerminationMessage(pod *corev1.Pod) string {
@@ -76,4 +77,36 @@ func PodReference(namespace string, name string) (corev1.ObjectReference, error)
 	kind := kinds[0]
 	pod.APIVersion, pod.Kind = kind.ToAPIVersionAndKind()
 	return kmeta.ObjectReference(pod), nil
+}
+
+func WithDefaultPodSecurityContext(cfg map[string]interface{}) {
+	if _, set := cfg["podSecurityContext"]; !set {
+		cfg["podSecurityContext"] = map[string]interface{}{}
+	}
+	podSecurityContext := cfg["podSecurityContext"].(map[string]interface{})
+	podSecurityContext["runAsNonRoot"] = pkgsecurity.DefaultPodSecurityContext.RunAsNonRoot
+	podSecurityContext["seccompProfile"] = map[string]interface{}{}
+	seccompProfile := podSecurityContext["seccompProfile"].(map[string]interface{})
+	seccompProfile["type"] = pkgsecurity.DefaultPodSecurityContext.SeccompProfile.Type
+
+	if _, set := cfg["containerSecurityContext"]; !set {
+		cfg["containerSecurityContext"] = map[string]interface{}{}
+	}
+	containerSecurityContext := cfg["containerSecurityContext"].(map[string]interface{})
+	containerSecurityContext["allowPrivilegeEscalation"] =
+		pkgsecurity.DefaultContainerSecurityContext.AllowPrivilegeEscalation
+	containerSecurityContext["capabilities"] = map[string]interface{}{}
+	capabilities := containerSecurityContext["capabilities"].(map[string]interface{})
+	if len(pkgsecurity.DefaultContainerSecurityContext.Capabilities.Drop) != 0 {
+		capabilities["drop"] = []string{}
+		for _, drop := range pkgsecurity.DefaultContainerSecurityContext.Capabilities.Drop {
+			capabilities["drop"] = append(capabilities["drop"].([]string), string(drop))
+		}
+	}
+	if len(pkgsecurity.DefaultContainerSecurityContext.Capabilities.Add) != 0 {
+		capabilities["add"] = []string{}
+		for _, drop := range pkgsecurity.DefaultContainerSecurityContext.Capabilities.Drop {
+			capabilities["add"] = append(capabilities["add"].([]string), string(drop))
+		}
+	}
 }

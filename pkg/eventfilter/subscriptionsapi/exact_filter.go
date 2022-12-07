@@ -30,30 +30,35 @@ import (
 )
 
 type exactFilter struct {
-	attribute, value string
-	attrsFilter      eventfilter.Filter
+	filters     map[string]string
+	attrsFilter eventfilter.Filter
 }
 
 // NewExactFilter returns an event filter which passes if value exactly matches the value of the context
 // attribute in the CloudEvent.
-func NewExactFilter(attribute, value string) (eventfilter.Filter, error) {
-	if attribute == "" || value == "" {
-		return nil, fmt.Errorf("invalid arguments, attribute and value can't be empty")
+func NewExactFilter(filters map[string]string) (eventfilter.Filter, error) {
+	for attribute, value := range filters {
+		if attribute == "" || value == "" {
+			return nil, fmt.Errorf("invalid arguments, attribute and value can't be empty")
+		}
 	}
 	return &exactFilter{
-		attribute: attribute,
-		value:     value,
+		filters: filters,
 		// we're creating this filter to leverage the same filter logic of the existing attributes filter
-		attrsFilter: attributes.NewAttributesFilter(map[string]string{attribute: value}),
+		attrsFilter: attributes.NewAttributesFilter(filters),
 	}, nil
 }
 
 func (filter *exactFilter) Filter(ctx context.Context, event cloudevents.Event) eventfilter.FilterResult {
-	if filter == nil || filter.attribute == "" || filter.value == "" {
+	if filter.filters == nil {
 		return eventfilter.NoFilter
 	}
+	for attribute, value := range filter.filters {
+		if attribute == "" || value == "" {
+			return eventfilter.NoFilter
+		}
+	}
 	logger := logging.FromContext(ctx)
-	logger.Debugw("Performing an exact match ", zap.String("attribute", filter.attribute), zap.String("value", filter.value),
-		zap.Any("event", event))
+	logger.Debugw("Performing an exact match ", zap.Any("filters", filter.filters), zap.Any("event", event))
 	return filter.attrsFilter.Filter(ctx, event)
 }

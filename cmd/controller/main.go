@@ -20,7 +20,14 @@ import (
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
+	"errors"
+	"log"
+	"net/http"
+	"os"
+	"time"
+
 	"knative.dev/pkg/injection/sharedmain"
+	"knative.dev/pkg/signals"
 
 	"knative.dev/eventing/pkg/reconciler/apiserversource"
 	"knative.dev/eventing/pkg/reconciler/channel"
@@ -36,7 +43,37 @@ import (
 )
 
 func main() {
-	sharedmain.Main("controller",
+
+	ctx := signals.NewContext()
+
+	port := os.Getenv("PROBES_PORT")
+	if port == "" {
+		port = "8080"
+	}
+
+	// sets up liveness and readiness probes.
+	server := http.Server{
+		ReadTimeout: 5 * time.Second,
+		Handler:     http.HandlerFunc(handler),
+		Addr:        ":" + port,
+	}
+
+	go func() {
+
+		go func() {
+			<-ctx.Done()
+			_ = server.Shutdown(ctx)
+		}()
+
+		// start the web server on port and accept requests
+		log.Printf("Readiness and health check server listening on port %s", port)
+
+		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatal(err)
+		}
+	}()
+
+	sharedmain.MainWithContext(ctx, "controller",
 		// Messaging
 		channel.NewController,
 		subscription.NewController,
@@ -59,4 +96,8 @@ func main() {
 		sugarnamespace.NewController,
 		sugartrigger.NewController,
 	)
+}
+
+func handler(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
 }

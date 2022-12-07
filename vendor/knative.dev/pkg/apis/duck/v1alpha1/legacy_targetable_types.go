@@ -33,7 +33,7 @@ import (
 // under Status rather than strings.
 // This is to support existing resources until they migrate.
 //
-// Do not use this for anything new, use Addressable
+// # Do not use this for anything new, use Addressable
 //
 // LegacyTargetable is the old schema for the addressable portion
 // of the payload
