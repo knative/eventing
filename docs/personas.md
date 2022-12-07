@@ -2,7 +2,7 @@
 
 <!-- prettier-ignore -->
 When discussing user actions, it is often helpful to
-[define specific user roles](<https://en.wikipedia.org/wiki/Persona_\(user_experience\)>)
+[define specific user roles](<https://en.wikipedia.org/wiki/Persona_(user_experience)>)
 who might want to do the action.
 
 ## Knative Events
@@ -54,9 +54,8 @@ User stories:
 
 - Install new CRDs (Sources, Broker Implementations)
 - Upgrade Knative Eventing
-- Upgrade Broker's backing infrastructure (eg. Kafka or RabbitMQ)
+- Upgrade Broker's backing infrastructure (e.g. Kafka or RabbitMQ)
 - Grant access to developers
-
 
 ## Contributors
 
