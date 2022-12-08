@@ -79,17 +79,6 @@ func WithSubscriber(ref *duckv1.KReference, uri string) manifest.CfgFn {
 	}
 }
 
-// Deprecated
-// WithAnnotation adds an annotation to the trigger
-func WithAnnotation(key string, value string) manifest.CfgFn {
-	return func(cfg map[string]interface{}) {
-		if _, set := cfg["annotations"]; !set {
-			cfg["annotations"] = map[string]interface{}{}
-		}
-		(cfg["annotations"].(map[string]interface{}))[key] = value
-	}
-}
-
 // WithAnnotations adds annotations to the trigger
 func WithAnnotations(annotations map[string]interface{}) manifest.CfgFn {
 	return func(cfg map[string]interface{}) {
