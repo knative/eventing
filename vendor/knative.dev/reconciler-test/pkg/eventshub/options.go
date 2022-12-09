@@ -89,6 +89,17 @@ func ReplyWithTransformedEvent(replyEventType string, replyEventSource string, r
 	)
 }
 
+// ReplyWithFilterEvent is an option to let eventshub simulate the Filter to reply with the filtered event
+// Set isReply true is to open Filter
+func ReplyWithFilterEvent(isReply string, replyEventType string, replyEventSource string, replyEventData string) EventsHubOption {
+	return compose(
+		envOption("REPLY", isReply),
+		envOptionalOpt("REPLY_EVENT_TYPE", replyEventType),
+		envOptionalOpt("REPLY_EVENT_SOURCE", replyEventSource),
+		envOptionalOpt("REPLY_EVENT_DATA", replyEventData),
+	)
+}
+
 // ReplyWithAppendedData is an option to let the eventshub reply with the transformed event with appended data
 func ReplyWithAppendedData(appendData string) EventsHubOption {
 	return compose(
