@@ -1,5 +1,6 @@
 module knative.dev/eventing
 
+// Needs at least go 1.18.9 for CVE-2022-41717
 go 1.18
 
 require (
