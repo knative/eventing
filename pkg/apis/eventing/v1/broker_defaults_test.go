@@ -127,9 +127,9 @@ var (
 									APIVersion: "serving.knative.dev/v1",
 								},
 							},
-							Retry:         pointer.Int32Ptr(5),
-							BackoffPolicy: (*eventingduckv1.BackoffPolicyType)(pointer.StringPtr("exponential")),
-							BackoffDelay:  pointer.StringPtr("5s"),
+							Retry:         pointer.Int32(5),
+							BackoffPolicy: (*eventingduckv1.BackoffPolicyType)(pointer.String("exponential")),
+							BackoffDelay:  pointer.String("5s"),
 						},
 					},
 				},
@@ -531,7 +531,7 @@ func TestBrokerSetDefaults(t *testing.T) {
 				},
 			},
 		},
-		"no config, uses namespace broker class and config": {
+		"no config, uses namespace4's broker class and config": {
 			initial: Broker{
 				ObjectMeta: metav1.ObjectMeta{Namespace: "mynamespace4"},
 			},
@@ -558,14 +558,14 @@ func TestBrokerSetDefaults(t *testing.T) {
 								APIVersion: "serving.knative.dev/v1",
 							},
 						},
-						Retry:         pointer.Int32Ptr(5),
-						BackoffPolicy: (*eventingduckv1.BackoffPolicyType)(pointer.StringPtr("exponential")),
-						BackoffDelay:  pointer.StringPtr("5s"),
+						Retry:         pointer.Int32(5),
+						BackoffPolicy: (*eventingduckv1.BackoffPolicyType)(pointer.String("exponential")),
+						BackoffDelay:  pointer.String("5s"),
 					},
 				},
 			},
 		},
-		"no config,  uses mynamespace2's broker class and corresponding config, cluster class": {
+		"no config,  uses mynamespace5's broker class and corresponding config, cluster class": {
 			initial: Broker{
 				ObjectMeta: metav1.ObjectMeta{Namespace: "mynamespace5"},
 			},
@@ -587,7 +587,7 @@ func TestBrokerSetDefaults(t *testing.T) {
 				},
 			},
 		},
-		"no config, uses mynamespace3's broker class and corresponding config, cluster class": {
+		"no config, uses mynamespace6's broker class and corresponding config, cluster class": {
 			initial: Broker{
 				ObjectMeta: metav1.ObjectMeta{Namespace: "mynamespace6"},
 			},
@@ -614,9 +614,9 @@ func TestBrokerSetDefaults(t *testing.T) {
 								APIVersion: "serving.knative.dev/v1",
 							},
 						},
-						Retry:         pointer.Int32Ptr(5),
-						BackoffPolicy: (*eventingduckv1.BackoffPolicyType)(pointer.StringPtr("exponential")),
-						BackoffDelay:  pointer.StringPtr("5s"),
+						Retry:         pointer.Int32(5),
+						BackoffPolicy: (*eventingduckv1.BackoffPolicyType)(pointer.String("exponential")),
+						BackoffDelay:  pointer.String("5s"),
 					},
 				},
 			},
