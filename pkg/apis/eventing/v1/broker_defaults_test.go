@@ -109,6 +109,36 @@ var (
 						},
 					},
 				},
+				"mynamespace4": {
+					BrokerClass: "KafkaBroker",
+					BrokerConfig: &config.BrokerConfig{
+						KReference: &duckv1.KReference{
+							APIVersion: "v1",
+							Kind:       "ConfigMap",
+							Namespace:  "knative-eventing",
+							Name:       "kafka-channel",
+						},
+						Delivery: &eventingduckv1.DeliverySpec{
+							DeadLetterSink: &duckv1.Destination{
+								Ref: &duckv1.KReference{
+									Kind:       "Service",
+									Namespace:  "default",
+									Name:       "handle-error",
+									APIVersion: "serving.knative.dev/v1",
+								},
+							},
+							Retry:         pointer.Int32Ptr(5),
+							BackoffPolicy: (*eventingduckv1.BackoffPolicyType)(pointer.StringPtr("exponential")),
+							BackoffDelay:  pointer.StringPtr("5s"),
+						},
+					},
+				},
+				"mynamespace5": {
+					BrokerClass: "RabbitmqBroker",
+				},
+				"mynamespace6": {
+					BrokerClass: "KafkaBroker",
+				},
 			},
 			ClusterDefault: &config.ClassAndBrokerConfig{
 				BrokerClass: eventing.MTChannelBrokerClassValue,
@@ -139,6 +169,46 @@ var (
 )
 
 func TestBrokerSetDefaults(t *testing.T) {
+	brokerClasses := make(map[string]*config.BrokerConfigSpec)
+	brokerSpec1 := &config.BrokerSpec{
+		Config: &duckv1.KReference{
+			Kind:       "ConfigMap",
+			APIVersion: "v1",
+			Namespace:  "knative-eventing",
+			Name:       "kafka-test",
+		},
+		Delivery: &eventingduckv1.DeliverySpec{
+			DeadLetterSink: &duckv1.Destination{
+				Ref: &duckv1.KReference{
+					Kind:       "Service",
+					Namespace:  "default",
+					Name:       "kafka-error",
+					APIVersion: "serving.knative.dev/v1",
+				},
+			},
+			Retry:         pointer.Int32Ptr(5),
+			BackoffPolicy: (*eventingduckv1.BackoffPolicyType)(pointer.StringPtr("exponential")),
+			BackoffDelay:  pointer.StringPtr("5s"),
+		},
+	}
+	brokerConfigSpec1 := &config.BrokerConfigSpec{
+		Spec: brokerSpec1,
+	}
+	brokerSpec2 := &config.BrokerSpec{
+		Config: &duckv1.KReference{
+			Kind:       "ConfigMap",
+			APIVersion: "v1",
+			Namespace:  "knative-eventing",
+			Name:       "rabbitmq-test",
+		},
+		Delivery: nil,
+	}
+	brokerConfigSpec2 := &config.BrokerConfigSpec{
+		Spec: brokerSpec2,
+	}
+	brokerClasses["KafkaBroker"] = brokerConfigSpec1
+	brokerClasses["RabbitmqBroker"] = brokerConfigSpec2
+	defaultConfig.Defaults.ClusterDefault.BrokerClasses = brokerClasses
 	testCases := map[string]struct {
 		initial  Broker
 		expected Broker
@@ -456,6 +526,96 @@ func TestBrokerSetDefaults(t *testing.T) {
 						},
 						Retry:         pointer.Int32Ptr(5),
 						BackoffPolicy: (*eventingduckv1.BackoffPolicyType)(pointer.StringPtr("linear")),
+						BackoffDelay:  pointer.StringPtr("5s"),
+					},
+				},
+			},
+		},
+		"no config, uses namespace broker class and config": {
+			initial: Broker{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "mynamespace4"},
+			},
+			expected: Broker{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "mynamespace4",
+					Annotations: map[string]string{
+						eventing.BrokerClassKey: "KafkaBroker",
+					},
+				},
+				Spec: BrokerSpec{
+					Config: &duckv1.KReference{
+						APIVersion: "v1",
+						Kind:       "ConfigMap",
+						Namespace:  "knative-eventing",
+						Name:       "kafka-channel",
+					},
+					Delivery: &eventingduckv1.DeliverySpec{
+						DeadLetterSink: &duckv1.Destination{
+							Ref: &duckv1.KReference{
+								Kind:       "Service",
+								Namespace:  "default",
+								Name:       "handle-error",
+								APIVersion: "serving.knative.dev/v1",
+							},
+						},
+						Retry:         pointer.Int32Ptr(5),
+						BackoffPolicy: (*eventingduckv1.BackoffPolicyType)(pointer.StringPtr("exponential")),
+						BackoffDelay:  pointer.StringPtr("5s"),
+					},
+				},
+			},
+		},
+		"no config,  uses mynamespace2's broker class and corresponding config, cluster class": {
+			initial: Broker{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "mynamespace5"},
+			},
+			expected: Broker{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "mynamespace5",
+					Annotations: map[string]string{
+						eventing.BrokerClassKey: "RabbitmqBroker",
+					},
+				},
+				Spec: BrokerSpec{
+					Config: &duckv1.KReference{
+						Kind:       "ConfigMap",
+						APIVersion: "v1",
+						Namespace:  "knative-eventing",
+						Name:       "rabbitmq-test",
+					},
+					Delivery: nil,
+				},
+			},
+		},
+		"no config, uses mynamespace3's broker class and corresponding config, cluster class": {
+			initial: Broker{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "mynamespace6"},
+			},
+			expected: Broker{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "mynamespace6",
+					Annotations: map[string]string{
+						eventing.BrokerClassKey: "KafkaBroker",
+					},
+				},
+				Spec: BrokerSpec{
+					Config: &duckv1.KReference{
+						Kind:       "ConfigMap",
+						APIVersion: "v1",
+						Namespace:  "knative-eventing",
+						Name:       "kafka-test",
+					},
+					Delivery: &eventingduckv1.DeliverySpec{
+						DeadLetterSink: &duckv1.Destination{
+							Ref: &duckv1.KReference{
+								Kind:       "Service",
+								Namespace:  "default",
+								Name:       "kafka-error",
+								APIVersion: "serving.knative.dev/v1",
+							},
+						},
+						Retry:         pointer.Int32Ptr(5),
+						BackoffPolicy: (*eventingduckv1.BackoffPolicyType)(pointer.StringPtr("exponential")),
 						BackoffDelay:  pointer.StringPtr("5s"),
 					},
 				},

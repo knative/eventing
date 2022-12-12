@@ -181,13 +181,11 @@ func getBrokerClasses(d *Defaults) map[string]*BrokerConfigSpec {
 
 // matchBrokerClass find the corresponding brokerConfig for a given brokerClass
 func matchBrokerClass(brokerClass string, brokerClasses map[string]*BrokerConfigSpec) *BrokerConfig {
-	for bClass, bCSpec := range brokerClasses {
-		if bClass == brokerClass {
-			var bConfig BrokerConfig
-			bConfig.KReference = bCSpec.Spec.Config
-			bConfig.Delivery = bCSpec.Spec.Delivery
-			return &bConfig
-		}
+	var bConfig BrokerConfig
+	if bCSpec, ok := brokerClasses[brokerClass]; ok {
+		bConfig.KReference = bCSpec.Spec.Config
+		bConfig.Delivery = bCSpec.Spec.Delivery
+		return &bConfig
 	}
 	return nil
 }
