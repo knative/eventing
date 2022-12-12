@@ -186,9 +186,9 @@ func TestBrokerSetDefaults(t *testing.T) {
 					APIVersion: "serving.knative.dev/v1",
 				},
 			},
-			Retry:         pointer.Int32Ptr(5),
-			BackoffPolicy: (*eventingduckv1.BackoffPolicyType)(pointer.StringPtr("exponential")),
-			BackoffDelay:  pointer.StringPtr("5s"),
+			Retry:         pointer.Int32(5),
+			BackoffPolicy: (*eventingduckv1.BackoffPolicyType)(pointer.String("exponential")),
+			BackoffDelay:  pointer.String("5s"),
 		},
 	}
 	brokerConfigSpec1 := &config.BrokerConfigSpec{
