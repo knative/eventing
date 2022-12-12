@@ -71,9 +71,9 @@ func ParallelWithTwoBranches() *feature.Feature {
 	f.Setup("install subscriber1", eventshub.Install(subscriber1, eventshub.ReplyWithAppendedData("appended data"), eventshub.StartReceiver))
 	f.Setup("install subscriber2", eventshub.Install(subscriber2, eventshub.ReplyWithAppendedData("appended data"), eventshub.StartReceiver))
 	// Construct branch1 has valid filter but branch2 filter is invalid
-	f.Setup("install filter1", eventshub.Install(filter1, eventshub.ReplyWithFilterEvent("true", event.Type(), eventSource, eventBody), eventshub.StartReceiver))
-	f.Setup("install filter2", eventshub.Install(filter2, eventshub.ReplyWithFilterEvent("false", "", "", ""), eventshub.StartReceiver))
-
+	// filter1 simulate the Filter to reply with the filtered event. filter2 has no reply
+	f.Setup("install filter1", eventshub.Install(filter1, eventshub.ReplyWithTransformedEvent(event.Type(), eventSource, eventBody), eventshub.StartReceiver))
+	f.Setup("install filter2", eventshub.Install(filter2, eventshub.StartReceiver))
 	cfg = append(cfg,
 		parallel.WithSubscriberAt(branch1Num, svc.AsKReference(subscriber1), ""),
 		parallel.WithSubscriberAt(branch2Num, svc.AsKReference(subscriber2), ""),
