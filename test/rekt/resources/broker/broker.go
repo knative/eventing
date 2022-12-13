@@ -77,6 +77,15 @@ func WithBrokerClass(class string) manifest.CfgFn {
 	}
 }
 
+// WithAnnotations adds annotations to the broker
+func WithAnnotations(annotations map[string]interface{}) manifest.CfgFn {
+	return func(cfg map[string]interface{}) {
+		if annotations != nil {
+			cfg["annotations"] = annotations
+		}
+	}
+}
+
 func WithBrokerTemplateFiles(dir string) manifest.CfgFn {
 	return func(cfg map[string]interface{}) {
 		cfg["__brokerTemplateDir"] = dir
