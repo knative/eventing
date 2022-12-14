@@ -100,15 +100,27 @@ func (a *cronJobsRunner) AddSchedule(source *sourcesv1.PingSource) cron.EntryID 
 
 	ctx = observability.WithSpanData(ctx, spanName, int(trace.SpanKindProducer),
 		observability.K8sAttributes(source.Name, source.Namespace, sourcesv1.Resource("pingsource").String()))
+	if source.Spec.Date == "" {
+		schedule := source.Spec.Schedule
+		if source.Spec.Timezone != "" {
+			schedule = "CRON_TZ=" + source.Spec.Timezone + " " + schedule
+		}
 
-	schedule := source.Spec.Schedule
-	if source.Spec.Timezone != "" {
-		schedule = "CRON_TZ=" + source.Spec.Timezone + " " + schedule
+		ctx = kncloudevents.ContextWithMetricTag(ctx, metricTag)
+		id, _ := a.cron.AddFunc(schedule, a.cronTick(ctx, event))
+		return id
+	} else {
+		dateString := source.Spec.Date
+		date, err := time.Parse("2006-01-02 15:04:05", dateString)
+		if err != nil {
+			a.Logger.Error("failed to parse Date of source spec: ", zap.Error(err))
+		}
+
+		duration := date.Sub(time.Now())
+		time.AfterFunc(duration, a.cronTick(ctx, event))
+		return -1
 	}
 
-	ctx = kncloudevents.ContextWithMetricTag(ctx, metricTag)
-	id, _ := a.cron.AddFunc(schedule, a.cronTick(ctx, event))
-	return id
 }
 
 func (a *cronJobsRunner) RemoveSchedule(id cron.EntryID) {
@@ -135,7 +147,6 @@ func (a *cronJobsRunner) cronTick(ctx context.Context, event cloudevents.Event) 
 		defer a.Logger.Debug("Finished sending cloudevent id: ", event.ID())
 		target := cecontext.TargetFrom(ctx).String()
 		source := event.Context.GetSource()
-
 		// Provide a delay so not all ping fired instantaneously distribute load on resources.
 		time.Sleep(time.Duration(rand.Intn(500)) * time.Millisecond) //nolint:gosec // Cryptographic randomness not necessary here.
 

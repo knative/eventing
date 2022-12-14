@@ -108,9 +108,11 @@ func (a *mtpingAdapter) Update(ctx context.Context, source *sourcesv1.PingSource
 
 	id = a.runner.AddSchedule(source)
 
-	a.entryidMu.Lock()
-	a.entryids[key] = id
-	a.entryidMu.Unlock()
+	if id != -1 {
+		a.entryidMu.Lock()
+		a.entryids[key] = id
+		a.entryidMu.Unlock()
+	}
 }
 
 func (a *mtpingAdapter) Remove(source *sourcesv1.PingSource) {
