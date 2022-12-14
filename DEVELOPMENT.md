@@ -213,9 +213,9 @@ ko delete -f config/
 
 To access Telemetry see:
 
-- [Accessing Metrics](https://www.knative.dev/docs/serving/accessing-metrics/)
-- [Accessing Logs](https://www.knative.dev/docs/serving/accessing-logs/)
-- [Accessing Traces](https://www.knative.dev/docs/serving/accessing-traces/)
+- [Accessing Metrics](https://knative.dev/docs/eventing/observability/metrics/collecting-metrics/)
+- [Accessing Logs](https://knative.dev/docs/eventing/observability/logging/collecting-logs/)
+- [Accessing Traces](https://www.knative.dev/docs/eventing/accessing-traces/)
 
 ## Packet sniffing
 
