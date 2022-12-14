@@ -102,7 +102,7 @@ func (b *BrokerAndTriggers) fetchURL(ctx Context) *apis.URL {
 	if err != nil {
 		ctx.T.Fatal(err)
 	}
-	url := broker.Status.Address.URL
+	url := broker.Status.AddressStatus.Address.URL
 	ctx.Log.Debugf("\"%s\" broker URL for ns %s is %v",
 		b.Name, namespace, url)
 	return url

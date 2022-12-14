@@ -583,7 +583,7 @@ func readyBrokerIsAddressable(ctx context.Context, t feature.T) {
 	broker := getBroker(ctx, t)
 
 	if broker.IsReady() {
-		if broker.Status.Address.URL == nil {
+		if broker.Status.AddressStatus.Address == nil || broker.Status.AddressStatus.Address.URL == nil {
 			t.Errorf("broker is not addressable")
 		}
 		// Success!
