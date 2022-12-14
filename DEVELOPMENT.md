@@ -265,7 +265,7 @@ Wireshark:
 kubectl sniff <POD_NAME> -n knative-eventing
 ```
 
-## Debugging Knative controllers and friends locally with Intellij Idea
+## Debugging Knative controllers and friends locally
 
 [Telepresence](https://www.telepresence.io/) can be leveraged to debug Knative
 controllers, webhooks and similar components.
@@ -275,48 +275,66 @@ Kubernetes service calls get redirected to the process on your local. Similarly
 the calls on the local process goes to actual services that are running in
 Kubernetes.
 
-- Install Telepresence
+### Prerequisites
 
+- Install Telepresence v2 (see the [installation instructions](https://www.getambassador.io/docs/telepresence/latest/install/) for details).
 - Deploy Knative Eventing on your Kubernetes cluster.
 
-- Install [EnvFile plugin](https://plugins.jetbrains.com/plugin/7861-envfile) to
-  your Intellij
+### Connect Telepresence and intercept the controller
 
-- Run following command to swap the controller with the controller that we will
-  start later.
+As a first step Telepresence needs to your Kubernetes cluster:
 
 ```
-telepresence --namespace knative-eventing --swap-deployment eventing-controller --env-json eventing-controller-local-env.json
+telepresence connect
 ```
 
-For debugging applications that receive traffic, such as webhooks, you also need
-to pass `--expose` parameter.
-
-For example:
+_Hint: If this is your first time Telepresence connects to your cluster, you
+need to install the traffic manager too_
 
 ```
-telepresence --swap-deployment kafka-controller-manager --namespace knative-eventing --env-json kafka-controller-manager.json --expose 8443
+telepresence helm install
+```
+
+As Telepresence v2 [needs a
+service](https://www.getambassador.io/docs/telepresence/latest/howtos/intercepts/#intercept-a-service-in-your-own-environment)
+in front of your planned intercepted component (e.g. the controller), you need
+to add a Kubernetes service for your component. E.g.:
+
+```
+kubectl -n knative-eventing expose deploy/eventing-controller
+```
+
+Afterwards you can run the following command to swap the controller with the
+local controller that we will start later.
+
+```
+telepresence intercept eventing-controller --namespace knative-eventing --port 8080:8080 --env-file ./eventing-controller.env
 ```
 
 This will replace the `eventing-controller` deployment on the cluster with a
 proxy.
 
-It will also create a `eventing-controller-local-env.json` file which we will
-use later on. Content of this `envfile` looks like this:
+It will also create a `eventing-controller.env` file which we will use later on.
+The content of this `envfile` looks like this:
 
 ```
-{
-    "CONFIG_LOGGING_NAME": "config-logging",
-    "EVENTING_WEBHOOK_PORT": "tcp://10.105.47.10:443",
-    "EVENTING_WEBHOOK_PORT_443_TCP": "tcp://10.105.47.10:443",
-    "EVENTING_WEBHOOK_PORT_443_TCP_ADDR": "10.105.47.10",
-    ...
-}
+CONFIG_LOGGING_NAME=config-logging
+CONFIG_OBSERVABILITY_NAME=config-observability
+METRICS_DOMAIN=knative.dev/eventing
+POD_NAME=eventing-controller-78b599dbb7-8kkql
+SYSTEM_NAMESPACE=knative-eventing
+...
 ```
 
-We need to pass these environment variables when we are starting our controller.
+We need to pass these environment variables later when we are starting our
+controller locally.
 
-- Create a run configuration in Intellij for `cmd/controller/main.go`:
+### Debug with IntelliJ IDEA
+
+- Install the [EnvFile
+  plugin](https://plugins.jetbrains.com/plugin/7861-envfile) in IntelliJ IDEA
+
+- Create a run configuration in IntelliJ IDEA for `cmd/controller/main.go`:
 
 ![Imgur](http://i.imgur.com/M6F3XA2.png)
 
@@ -327,10 +345,79 @@ We need to pass these environment variables when we are starting our controller.
 Now, use the run configuration and start the local controller in debug mode. You
 will see that the execution will pause in your breakpoints.
 
-- Clean up is easy. Just kill your local controller process and then hit
-  `Ctrl+C` on the terminal windows that you ran Telepresence initially.
-  Telepresence will delete the proxy. It will also revert the deployment on the
-  cluster back to its original state.
+### Debug with VSCode
+
+Alternatively you can use VSCode, to debug the controller.
+
+- Create a debug configuration in VSCode. Add the following configuration to
+  your `.vscode/launch.json`:
+
+```
+{
+    "configurations": [
+        ...
+        {
+            "name": "Launch Eventing Controller",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/cmd/controller/main.go",
+            "envFile": "${workspaceFolder}/eventing-controller.env",
+            "preLaunchTask": "intercept-eventing-controller",
+            "postDebugTask": "quit-telepresence",
+        }
+    ]
+}
+```
+
+- Debug your application as usual in VSCode
+
+_Hint: You can also add the telepresence interception as a preLaunchTask, so you
+don't have to start it every time befor you debug manually. To do so, do the
+following steps_
+
+1. Add the following tasks to your `.vscode/tasks.json`:
+   ```
+   {
+       "version": "2.0.0",
+       "tasks": [
+           ...
+           {
+               "label": "intercept-eventing-controller",
+               "type": "shell",
+               "command": "telepresence quit; telepresence intercept eventing-controller --namespace knative-eventing --port 8080:8080 --env-file ${workspaceFolder}/eventing-controller.env",
+           },
+           {
+               "label": "quit-telepresence",
+               "type": "shell",
+               "command": "telepresence quit"
+           }
+       ]
+   }
+   ```
+2. Reference the tasks in your launch configuration (`.vscode/launch.json`):
+   ```
+   {
+       "configurations": [
+           ...
+           {
+               "name": "Launch Eventing Controller",
+               ...
+               "preLaunchTask": "intercept-eventing-controller",
+               "postDebugTask": "quit-telepresence",
+           }
+       ]
+   }
+   ```
+
+### Cleanup
+
+To remove the proxy and revert the deployment on the cluster back to its
+original state again, run:
+
+```
+telepresence quit
+```
 
 **Notes**:
 
