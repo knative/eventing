@@ -17,7 +17,10 @@ limitations under the License.
 package v1
 
 import (
+	"time"
+
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
@@ -93,13 +96,20 @@ func (ss *SequenceStatus) PropagateSubscriptionStatuses(subscriptions []*messagi
 				Namespace:  s.Namespace,
 			},
 		}
-		readyCondition := s.Status.GetCondition(messagingv1.SubscriptionConditionReady)
-		if readyCondition != nil {
+
+		if readyCondition := s.Status.GetCondition(messagingv1.SubscriptionConditionReady); readyCondition != nil {
 			ss.SubscriptionStatuses[i].ReadyCondition = *readyCondition
-			if readyCondition.Status != corev1.ConditionTrue {
+			if !readyCondition.IsTrue() {
 				allReady = false
 			}
 		} else {
+			ss.SubscriptionStatuses[i].ReadyCondition = apis.Condition{
+				Type:               apis.ConditionReady,
+				Status:             corev1.ConditionUnknown,
+				Reason:             "NoReady",
+				Message:            "Subscription does not have Ready condition",
+				LastTransitionTime: apis.VolatileTime{Inner: metav1.NewTime(time.Now())},
+			}
 			allReady = false
 		}
 
@@ -142,7 +152,13 @@ func (ss *SequenceStatus) PropagateChannelStatuses(channels []*eventingduckv1.Ch
 				allReady = false
 			}
 		} else {
-			ss.ChannelStatuses[i].ReadyCondition = apis.Condition{Type: apis.ConditionReady, Status: corev1.ConditionUnknown, Reason: "NoReady", Message: "Channel does not have Ready condition"}
+			ss.ChannelStatuses[i].ReadyCondition = apis.Condition{
+				Type:               apis.ConditionReady,
+				Status:             corev1.ConditionUnknown,
+				Reason:             "NoReady",
+				Message:            "Channel does not have Ready condition",
+				LastTransitionTime: apis.VolatileTime{Inner: metav1.NewTime(time.Now())},
+			}
 			allReady = false
 		}
 	}
