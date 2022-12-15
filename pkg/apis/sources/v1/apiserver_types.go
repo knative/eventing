@@ -80,6 +80,11 @@ type ApiServerSourceSpec struct {
 	// source. Defaults to default if not set.
 	// +optional
 	ServiceAccountName string `json:"serviceAccountName,omitempty"`
+
+	// NamespaceSelector is a label selector to capture the namespaces that
+	// should be watched by the source.
+	// +optional
+	NamespaceSelector *metav1.LabelSelector `json:"namespaceSelector,omitempty"`
 }
 
 // ApiServerSourceStatus defines the observed state of ApiServerSource

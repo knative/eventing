@@ -4410,6 +4410,21 @@ string
 source. Defaults to default if not set.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>namespaceSelector</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#labelselector-v1-meta">
+Kubernetes meta/v1.LabelSelector
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>NamespaceSelector is a label selector to capture the namespaces that
+should be watched by the source.</p>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -5000,6 +5015,21 @@ string
 <em>(Optional)</em>
 <p>ServiceAccountName is the name of the ServiceAccount to use to run this
 source. Defaults to default if not set.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>namespaceSelector</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#labelselector-v1-meta">
+Kubernetes meta/v1.LabelSelector
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>NamespaceSelector is a label selector to capture the namespaces that
+should be watched by the source.</p>
 </td>
 </tr>
 </tbody>
