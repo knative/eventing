@@ -110,7 +110,6 @@ var (
 					},
 				},
 				"mynamespace4": {
-					BrokerClass: "KafkaBroker",
 					BrokerConfig: &config.BrokerConfig{
 						KReference: &duckv1.KReference{
 							APIVersion: "v1",
@@ -169,47 +168,8 @@ var (
 )
 
 func TestBrokerSetDefaults(t *testing.T) {
-	brokerClasses := make(map[string]*config.BrokerConfigSpec)
-	brokerSpec1 := &config.BrokerSpec{
-		Config: &duckv1.KReference{
-			Kind:       "ConfigMap",
-			APIVersion: "v1",
-			Namespace:  "knative-eventing",
-			Name:       "kafka-test",
-		},
-		Delivery: &eventingduckv1.DeliverySpec{
-			DeadLetterSink: &duckv1.Destination{
-				Ref: &duckv1.KReference{
-					Kind:       "Service",
-					Namespace:  "default",
-					Name:       "kafka-error",
-					APIVersion: "serving.knative.dev/v1",
-				},
-			},
-			Retry:         pointer.Int32(5),
-			BackoffPolicy: (*eventingduckv1.BackoffPolicyType)(pointer.String("exponential")),
-			BackoffDelay:  pointer.String("5s"),
-		},
-	}
-	brokerConfigSpec1 := &config.BrokerConfigSpec{
-		Spec: brokerSpec1,
-	}
-	brokerSpec2 := &config.BrokerSpec{
-		Config: &duckv1.KReference{
-			Kind:       "ConfigMap",
-			APIVersion: "v1",
-			Namespace:  "knative-eventing",
-			Name:       "rabbitmq-test",
-		},
-		Delivery: nil,
-	}
-	brokerConfigSpec2 := &config.BrokerConfigSpec{
-		Spec: brokerSpec2,
-	}
-	brokerClasses["KafkaBroker"] = brokerConfigSpec1
-	brokerClasses["RabbitmqBroker"] = brokerConfigSpec2
-	defaultConfig.Defaults.ClusterDefault.BrokerClasses = brokerClasses
-	testCases := map[string]struct {
+	// testCases1 is the original testcases
+	testCases1 := map[string]struct {
 		initial  Broker
 		expected Broker
 	}{
@@ -531,7 +491,89 @@ func TestBrokerSetDefaults(t *testing.T) {
 				},
 			},
 		},
-		"no config, uses namespace4's broker class and config": {
+	}
+	for n, tc := range testCases1 {
+		t.Run(n, func(t *testing.T) {
+			tc.initial.SetDefaults(config.ToContext(context.Background(), defaultConfig))
+			if diff := cmp.Diff(tc.expected, tc.initial); diff != "" {
+				t.Fatal("Unexpected defaults (-want, +got):", diff)
+			}
+		})
+	}
+
+	// Add cluster-level multi-class-based configs to defaultConfig
+	brokerClasses := make(map[string]*config.BrokerConfigSpec)
+	brokerSpec1 := &config.BrokerSpec{
+		Config: &duckv1.KReference{
+			Kind:       "ConfigMap",
+			APIVersion: "v1",
+			Namespace:  "knative-eventing",
+			Name:       "mt-test",
+		},
+		Delivery: &eventingduckv1.DeliverySpec{
+			DeadLetterSink: &duckv1.Destination{
+				Ref: &duckv1.KReference{
+					Kind:       "Service",
+					Namespace:  "default",
+					Name:       "mt-error",
+					APIVersion: "serving.knative.dev/v1",
+				},
+			},
+			Retry:         pointer.Int32(5),
+			BackoffPolicy: (*eventingduckv1.BackoffPolicyType)(pointer.String("exponential")),
+			BackoffDelay:  pointer.String("5s"),
+		},
+	}
+	brokerConfigSpec1 := &config.BrokerConfigSpec{
+		Spec: brokerSpec1,
+	}
+	brokerSpec2 := &config.BrokerSpec{
+		Config: &duckv1.KReference{
+			Kind:       "ConfigMap",
+			APIVersion: "v1",
+			Namespace:  "knative-eventing",
+			Name:       "kafka-test",
+		},
+		Delivery: &eventingduckv1.DeliverySpec{
+			DeadLetterSink: &duckv1.Destination{
+				Ref: &duckv1.KReference{
+					Kind:       "Service",
+					Namespace:  "default",
+					Name:       "kafka-error",
+					APIVersion: "serving.knative.dev/v1",
+				},
+			},
+			Retry:         pointer.Int32(5),
+			BackoffPolicy: (*eventingduckv1.BackoffPolicyType)(pointer.String("exponential")),
+			BackoffDelay:  pointer.String("5s"),
+		},
+	}
+	brokerConfigSpec2 := &config.BrokerConfigSpec{
+		Spec: brokerSpec2,
+	}
+	brokerSpec3 := &config.BrokerSpec{
+		Config: &duckv1.KReference{
+			Kind:       "ConfigMap",
+			APIVersion: "v1",
+			Namespace:  "knative-eventing",
+			Name:       "rabbitmq-test",
+		},
+		Delivery: nil,
+	}
+	brokerConfigSpec3 := &config.BrokerConfigSpec{
+		Spec: brokerSpec3,
+	}
+	brokerClasses["MTChannelBasedBroker"] = brokerConfigSpec1
+	brokerClasses["KafkaBroker"] = brokerConfigSpec2
+	brokerClasses["RabbitmqBroker"] = brokerConfigSpec3
+	defaultConfig.Defaults.ClusterDefault.BrokerClasses = brokerClasses
+
+	// After adding cluster-level multi-class-based configs to defaultConfig(BrokerClasses)
+	testCases2 := map[string]struct {
+		initial  Broker
+		expected Broker
+	}{
+		"no config, uses clusterDefault broker class and namespace4's broker config": {
 			initial: Broker{
 				ObjectMeta: metav1.ObjectMeta{Namespace: "mynamespace4"},
 			},
@@ -539,7 +581,7 @@ func TestBrokerSetDefaults(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "mynamespace4",
 					Annotations: map[string]string{
-						eventing.BrokerClassKey: "KafkaBroker",
+						eventing.BrokerClassKey: eventing.MTChannelBrokerClassValue,
 					},
 				},
 				Spec: BrokerSpec{
@@ -621,8 +663,42 @@ func TestBrokerSetDefaults(t *testing.T) {
 				},
 			},
 		},
+		"no config, missing namespace, uses clusterDefault broker class and corresponding config ": {
+			initial: Broker{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "mynamespace-random"},
+			},
+			expected: Broker{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "mynamespace-random",
+					Annotations: map[string]string{
+						eventing.BrokerClassKey: eventing.MTChannelBrokerClassValue,
+					},
+				},
+				Spec: BrokerSpec{
+					Config: &duckv1.KReference{
+						Kind:       "ConfigMap",
+						APIVersion: "v1",
+						Namespace:  "knative-eventing",
+						Name:       "mt-test",
+					},
+					Delivery: &eventingduckv1.DeliverySpec{
+						DeadLetterSink: &duckv1.Destination{
+							Ref: &duckv1.KReference{
+								Kind:       "Service",
+								Namespace:  "default",
+								Name:       "mt-error",
+								APIVersion: "serving.knative.dev/v1",
+							},
+						},
+						Retry:         pointer.Int32(5),
+						BackoffPolicy: (*eventingduckv1.BackoffPolicyType)(pointer.String("exponential")),
+						BackoffDelay:  pointer.String("5s"),
+					},
+				},
+			},
+		},
 	}
-	for n, tc := range testCases {
+	for n, tc := range testCases2 {
 		t.Run(n, func(t *testing.T) {
 			tc.initial.SetDefaults(config.ToContext(context.Background(), defaultConfig))
 			if diff := cmp.Diff(tc.expected, tc.initial); diff != "" {
@@ -630,4 +706,5 @@ func TestBrokerSetDefaults(t *testing.T) {
 			}
 		})
 	}
+
 }
