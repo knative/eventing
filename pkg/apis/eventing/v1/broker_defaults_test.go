@@ -503,7 +503,7 @@ func TestBrokerSetDefaults(t *testing.T) {
 
 	// Add cluster-level multi-class-based configs to defaultConfig
 	brokerClasses := make(map[string]*config.BrokerConfigSpec)
-	brokerSpec1 := &config.BrokerSpec{
+	brokerSpecMTChannelBasedBroker := &config.BrokerSpec{
 		Config: &duckv1.KReference{
 			Kind:       "ConfigMap",
 			APIVersion: "v1",
@@ -524,10 +524,7 @@ func TestBrokerSetDefaults(t *testing.T) {
 			BackoffDelay:  pointer.String("5s"),
 		},
 	}
-	brokerConfigSpec1 := &config.BrokerConfigSpec{
-		Spec: brokerSpec1,
-	}
-	brokerSpec2 := &config.BrokerSpec{
+	brokerSpecKafkaBroker := &config.BrokerSpec{
 		Config: &duckv1.KReference{
 			Kind:       "ConfigMap",
 			APIVersion: "v1",
@@ -548,10 +545,7 @@ func TestBrokerSetDefaults(t *testing.T) {
 			BackoffDelay:  pointer.String("5s"),
 		},
 	}
-	brokerConfigSpec2 := &config.BrokerConfigSpec{
-		Spec: brokerSpec2,
-	}
-	brokerSpec3 := &config.BrokerSpec{
+	brokerSpecRabbitmqBroker := &config.BrokerSpec{
 		Config: &duckv1.KReference{
 			Kind:       "ConfigMap",
 			APIVersion: "v1",
@@ -560,12 +554,18 @@ func TestBrokerSetDefaults(t *testing.T) {
 		},
 		Delivery: nil,
 	}
-	brokerConfigSpec3 := &config.BrokerConfigSpec{
-		Spec: brokerSpec3,
+	brokerConfigSpecMTCBroker := &config.BrokerConfigSpec{
+		Spec: brokerSpecMTChannelBasedBroker,
 	}
-	brokerClasses["MTChannelBasedBroker"] = brokerConfigSpec1
-	brokerClasses["KafkaBroker"] = brokerConfigSpec2
-	brokerClasses["RabbitmqBroker"] = brokerConfigSpec3
+	brokerConfigSpecKafkaBroker := &config.BrokerConfigSpec{
+		Spec: brokerSpecKafkaBroker,
+	}
+	brokerConfigSpecRabbitmqBroker := &config.BrokerConfigSpec{
+		Spec: brokerSpecRabbitmqBroker,
+	}
+	brokerClasses["MTChannelBasedBroker"] = brokerConfigSpecMTCBroker
+	brokerClasses["KafkaBroker"] = brokerConfigSpecKafkaBroker
+	brokerClasses["RabbitmqBroker"] = brokerConfigSpecRabbitmqBroker
 	defaultConfig.Defaults.ClusterDefault.BrokerClasses = brokerClasses
 
 	// After adding cluster-level multi-class-based configs to defaultConfig(BrokerClasses)
