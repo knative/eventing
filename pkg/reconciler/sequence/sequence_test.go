@@ -213,6 +213,12 @@ func TestAllCases(t *testing.T) {
 							Name:       resources.SequenceSubscriptionName(sequenceName, 0),
 							Namespace:  testNS,
 						},
+						ReadyCondition: apis.Condition{
+							Type:    apis.ConditionReady,
+							Status:  corev1.ConditionUnknown,
+							Reason:  "NoReady",
+							Message: "Subscription does not have Ready condition",
+						},
 					},
 				})),
 		}},
@@ -447,6 +453,12 @@ func TestAllCases(t *testing.T) {
 							Name:       resources.SequenceSubscriptionName(sequenceName, 0),
 							Namespace:  testNS,
 						},
+						ReadyCondition: apis.Condition{
+							Type:    apis.ConditionReady,
+							Status:  corev1.ConditionUnknown,
+							Reason:  "NoReady",
+							Message: "Subscription does not have Ready condition",
+						},
 					},
 				})),
 		}},
@@ -549,6 +561,12 @@ func TestAllCases(t *testing.T) {
 							Name:       resources.SequenceSubscriptionName(sequenceName, 0),
 							Namespace:  testNS,
 						},
+						ReadyCondition: apis.Condition{
+							Type:    apis.ConditionReady,
+							Status:  corev1.ConditionUnknown,
+							Reason:  "NoReady",
+							Message: "Subscription does not have Ready condition",
+						},
 					},
 					{
 						Subscription: corev1.ObjectReference{
@@ -557,6 +575,12 @@ func TestAllCases(t *testing.T) {
 							Name:       resources.SequenceSubscriptionName(sequenceName, 1),
 							Namespace:  testNS,
 						},
+						ReadyCondition: apis.Condition{
+							Type:    apis.ConditionReady,
+							Status:  corev1.ConditionUnknown,
+							Reason:  "NoReady",
+							Message: "Subscription does not have Ready condition",
+						},
 					},
 					{
 						Subscription: corev1.ObjectReference{
@@ -564,6 +588,12 @@ func TestAllCases(t *testing.T) {
 							Kind:       "Subscription",
 							Name:       resources.SequenceSubscriptionName(sequenceName, 2),
 							Namespace:  testNS,
+						},
+						ReadyCondition: apis.Condition{
+							Type:    apis.ConditionReady,
+							Status:  corev1.ConditionUnknown,
+							Reason:  "NoReady",
+							Message: "Subscription does not have Ready condition",
 						},
 					},
 				})),
@@ -667,6 +697,12 @@ func TestAllCases(t *testing.T) {
 							Name:       resources.SequenceSubscriptionName(sequenceName, 0),
 							Namespace:  testNS,
 						},
+						ReadyCondition: apis.Condition{
+							Type:    apis.ConditionReady,
+							Status:  corev1.ConditionUnknown,
+							Reason:  "NoReady",
+							Message: "Subscription does not have Ready condition",
+						},
 					},
 					{
 						Subscription: corev1.ObjectReference{
@@ -675,6 +711,12 @@ func TestAllCases(t *testing.T) {
 							Name:       resources.SequenceSubscriptionName(sequenceName, 1),
 							Namespace:  testNS,
 						},
+						ReadyCondition: apis.Condition{
+							Type:    apis.ConditionReady,
+							Status:  corev1.ConditionUnknown,
+							Reason:  "NoReady",
+							Message: "Subscription does not have Ready condition",
+						},
 					},
 					{
 						Subscription: corev1.ObjectReference{
@@ -682,6 +724,12 @@ func TestAllCases(t *testing.T) {
 							Kind:       "Subscription",
 							Name:       resources.SequenceSubscriptionName(sequenceName, 2),
 							Namespace:  testNS,
+						},
+						ReadyCondition: apis.Condition{
+							Type:    apis.ConditionReady,
+							Status:  corev1.ConditionUnknown,
+							Reason:  "NoReady",
+							Message: "Subscription does not have Ready condition",
 						},
 					},
 				})),
@@ -788,6 +836,12 @@ func TestAllCases(t *testing.T) {
 							Name:       resources.SequenceSubscriptionName(sequenceName, 0),
 							Namespace:  testNS,
 						},
+						ReadyCondition: apis.Condition{
+							Type:    apis.ConditionReady,
+							Status:  corev1.ConditionUnknown,
+							Reason:  "NoReady",
+							Message: "Subscription does not have Ready condition",
+						},
 					},
 					{
 						Subscription: corev1.ObjectReference{
@@ -796,6 +850,12 @@ func TestAllCases(t *testing.T) {
 							Name:       resources.SequenceSubscriptionName(sequenceName, 1),
 							Namespace:  testNS,
 						},
+						ReadyCondition: apis.Condition{
+							Type:    apis.ConditionReady,
+							Status:  corev1.ConditionUnknown,
+							Reason:  "NoReady",
+							Message: "Subscription does not have Ready condition",
+						},
 					},
 					{
 						Subscription: corev1.ObjectReference{
@@ -803,6 +863,12 @@ func TestAllCases(t *testing.T) {
 							Kind:       "Subscription",
 							Name:       resources.SequenceSubscriptionName(sequenceName, 2),
 							Namespace:  testNS,
+						},
+						ReadyCondition: apis.Condition{
+							Type:    apis.ConditionReady,
+							Status:  corev1.ConditionUnknown,
+							Reason:  "NoReady",
+							Message: "Subscription does not have Ready condition",
 						},
 					},
 				})),
@@ -864,6 +930,12 @@ func TestAllCases(t *testing.T) {
 							Kind:       "Subscription",
 							Name:       resources.SequenceSubscriptionName(sequenceName, 0),
 							Namespace:  testNS,
+						},
+						ReadyCondition: apis.Condition{
+							Type:    apis.ConditionReady,
+							Status:  corev1.ConditionUnknown,
+							Reason:  "NoReady",
+							Message: "Subscription does not have Ready condition",
 						},
 					},
 				})),
@@ -967,6 +1039,12 @@ func TestAllCases(t *testing.T) {
 							Name:       resources.SequenceSubscriptionName(sequenceName, 0),
 							Namespace:  testNS,
 						},
+						ReadyCondition: apis.Condition{
+							Type:    apis.ConditionReady,
+							Status:  corev1.ConditionUnknown,
+							Reason:  "NoReady",
+							Message: "Subscription does not have Ready condition",
+						},
 					},
 					{
 						Subscription: corev1.ObjectReference{
@@ -974,6 +1052,12 @@ func TestAllCases(t *testing.T) {
 							Kind:       "Subscription",
 							Name:       resources.SequenceSubscriptionName(sequenceName, 1),
 							Namespace:  testNS,
+						},
+						ReadyCondition: apis.Condition{
+							Type:    apis.ConditionReady,
+							Status:  corev1.ConditionUnknown,
+							Reason:  "NoReady",
+							Message: "Subscription does not have Ready condition",
 						},
 					},
 				})),
@@ -1084,6 +1168,12 @@ func TestAllCases(t *testing.T) {
 							Name:       resources.SequenceSubscriptionName(sequenceName, 0),
 							Namespace:  testNS,
 						},
+						ReadyCondition: apis.Condition{
+							Type:    apis.ConditionReady,
+							Status:  corev1.ConditionUnknown,
+							Reason:  "NoReady",
+							Message: "Subscription does not have Ready condition",
+						},
 					},
 					{
 						Subscription: corev1.ObjectReference{
@@ -1091,6 +1181,12 @@ func TestAllCases(t *testing.T) {
 							Kind:       "Subscription",
 							Name:       resources.SequenceSubscriptionName(sequenceName, 1),
 							Namespace:  testNS,
+						},
+						ReadyCondition: apis.Condition{
+							Type:    apis.ConditionReady,
+							Status:  corev1.ConditionUnknown,
+							Reason:  "NoReady",
+							Message: "Subscription does not have Ready condition",
 						},
 					},
 				})),
@@ -1195,6 +1291,12 @@ func TestAllCases(t *testing.T) {
 							Name:       resources.SequenceSubscriptionName(sequenceName, 0),
 							Namespace:  testNS,
 						},
+						ReadyCondition: apis.Condition{
+							Type:    apis.ConditionReady,
+							Status:  corev1.ConditionUnknown,
+							Reason:  "NoReady",
+							Message: "Subscription does not have Ready condition",
+						},
 					},
 					{
 						Subscription: corev1.ObjectReference{
@@ -1202,6 +1304,12 @@ func TestAllCases(t *testing.T) {
 							Kind:       "Subscription",
 							Name:       resources.SequenceSubscriptionName(sequenceName, 1),
 							Namespace:  testNS,
+						},
+						ReadyCondition: apis.Condition{
+							Type:    apis.ConditionReady,
+							Status:  corev1.ConditionUnknown,
+							Reason:  "NoReady",
+							Message: "Subscription does not have Ready condition",
 						},
 					},
 				})),
