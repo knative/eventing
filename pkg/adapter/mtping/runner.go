@@ -46,7 +46,12 @@ type CronJobRunner interface {
 	RemoveSchedule(id cron.EntryID)
 }
 
+type Finalsalary func(int, int) int
+type Finalsa func(d time.Duration, f func()) *time.Timer
+
+// type Final time.AfterFunc(d Duration, f func()) *time.Timer
 type cronJobsRunner struct {
+	F Finalsa
 	// The cron job runner
 	cron cron.Cron
 
@@ -100,13 +105,14 @@ func (a *cronJobsRunner) AddSchedule(source *sourcesv1.PingSource) cron.EntryID 
 
 	ctx = observability.WithSpanData(ctx, spanName, int(trace.SpanKindProducer),
 		observability.K8sAttributes(source.Name, source.Namespace, sourcesv1.Resource("pingsource").String()))
+	ctx = kncloudevents.ContextWithMetricTag(ctx, metricTag)
 	if source.Spec.Date == "" {
 		schedule := source.Spec.Schedule
 		if source.Spec.Timezone != "" {
 			schedule = "CRON_TZ=" + source.Spec.Timezone + " " + schedule
 		}
 
-		ctx = kncloudevents.ContextWithMetricTag(ctx, metricTag)
+		// ctx = kncloudevents.ContextWithMetricTag(ctx, metricTag)
 		id, _ := a.cron.AddFunc(schedule, a.cronTick(ctx, event))
 		return id
 	} else {
@@ -115,9 +121,14 @@ func (a *cronJobsRunner) AddSchedule(source *sourcesv1.PingSource) cron.EntryID 
 		if err != nil {
 			a.Logger.Error("failed to parse Date of source spec: ", zap.Error(err))
 		}
-
-		duration := date.Sub(time.Now())
+		a.Logger.Debug(dateString)
+		duration := time.Until(date)
+		if duration < 0 {
+			a.Logger.Error("Date does not Exist")
+			return -1
+		}
 		time.AfterFunc(duration, a.cronTick(ctx, event))
+		// a.F(duration, a.cronTick(ctx, event))
 		return -1
 	}
 
@@ -146,6 +157,7 @@ func (a *cronJobsRunner) cronTick(ctx context.Context, event cloudevents.Event) 
 		event.SetID(uuid.New().String()) // provide an ID here so we can track it with logging
 		defer a.Logger.Debug("Finished sending cloudevent id: ", event.ID())
 		target := cecontext.TargetFrom(ctx).String()
+		a.Logger.Debug("cronTick triggered")
 		source := event.Context.GetSource()
 		// Provide a delay so not all ping fired instantaneously distribute load on resources.
 		time.Sleep(time.Duration(rand.Intn(500)) * time.Millisecond) //nolint:gosec // Cryptographic randomness not necessary here.

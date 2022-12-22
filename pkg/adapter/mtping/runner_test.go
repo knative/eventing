@@ -79,7 +79,7 @@ func TestAddRunRemoveSchedules(t *testing.T) {
 					},
 				},
 			},
-			wantData:        []byte(sampleData),
+			wantData:        []byte(""),
 			wantContentType: cloudevents.TextPlain,
 		}, "TestAddRunRemoveScheduleWithExtensionOverride": {
 			src: &sourcesv1.PingSource{
@@ -222,6 +222,97 @@ func TestAddRunRemoveSchedules(t *testing.T) {
 		})
 	}
 }
+func TestOneOffSchedules(t *testing.T) {
+	testCases := map[string]struct {
+		src             *sourcesv1.PingSource
+		wantContentType string
+		wantData        []byte
+	}{
+		// }{
+		// 	"TestAddRunRemoveSchedule": {
+		// 		src: &sourcesv1.PingSource{
+		// 			ObjectMeta: metav1.ObjectMeta{
+		// 				Name:      "test-name",
+		// 				Namespace: "test-ns",
+		// 			},
+		// 			Spec: sourcesv1.PingSourceSpec{
+		// 				SourceSpec: duckv1.SourceSpec{
+		// 					CloudEventOverrides: &duckv1.CloudEventOverrides{},
+		// 				},
+		// 				// Schedule:    "* * * * ?",
+		// 				ContentType: cloudevents.TextPlain,
+		// 				Data:        sampleData,
+		// 				Date:        "2022-12-15 07:47:11",
+		// 				// time.Now().Format("2006-01-02 15:04:05")
+		// 			},
+		// 			Status: sourcesv1.PingSourceStatus{
+		// 				SourceStatus: duckv1.SourceStatus{
+		// 					SinkURI: &apis.URL{Path: "a sink"},
+		// 				},
+		// 			},
+		// 		},
+		// 		wantData:        []byte(sampleData),
+		// 		wantContentType: cloudevents.TextPlain,
+		// 	},
+		"TestAddRunRchedule": {
+			src: &sourcesv1.PingSource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-name",
+					Namespace: "test-ns",
+				},
+				Spec: sourcesv1.PingSourceSpec{
+					SourceSpec: duckv1.SourceSpec{
+						CloudEventOverrides: &duckv1.CloudEventOverrides{},
+					},
+					// Schedule:    "* * * * ?",
+					ContentType: cloudevents.TextPlain,
+					Data:        sampleData,
+					// time.After()
+
+					Date: (time.Now().Add(1 * time.Second)).Format("2006-01-02 15:04:05"),
+				},
+				Status: sourcesv1.PingSourceStatus{
+					SourceStatus: duckv1.SourceStatus{
+						SinkURI: &apis.URL{Path: "a sink"},
+					},
+				},
+			},
+			wantData:        []byte(sampleData),
+			wantContentType: cloudevents.TextPlain,
+		},
+	}
+
+	for n, tc := range testCases {
+		t.Run(n, func(t *testing.T) {
+			ctx, _ := rectesting.SetupFakeContext(t)
+			logger := logging.FromContext(ctx)
+			ce := adaptertesting.NewTestClient()
+
+			runner := NewCronJobsRunner(ce, kubeclient.Get(ctx), logger)
+			entryId := runner.AddSchedule(tc.src)
+			if entryId != -1 {
+				t.Error("Date set failed")
+			}
+			time.Sleep(3 * time.Second)
+			// entry := runner.cron.Entry(entryId)
+			// if entry.ID != entryId {
+			// 	t.Error("Entry has not been added")
+			// }
+
+			// entry.Job.Run()
+
+			validateSent(t, ce, tc.wantData, tc.wantContentType, tc.src.Spec.CloudEventOverrides.Extensions)
+
+			// runner.RemoveSchedule(entryId)
+
+			// entry = runner.cron.Entry(entryId)
+			// if entry.ID == entryId {
+			// 	t.Error("Entry has not been removed")
+			// }
+		})
+	}
+
+}
 
 func TestStartStopCron(t *testing.T) {
 	ctx, _ := rectesting.SetupFakeContext(t)
@@ -276,6 +367,8 @@ func TestStartStopCronDelayWait(t *testing.T) {
 					Schedule:    "* * * * *",
 					ContentType: cloudevents.TextPlain,
 					Data:        "some delayed data",
+					// Date:        "2022-12-15 06:09:11",
+					// Date: "",
 				},
 				Status: sourcesv1.PingSourceStatus{
 					SourceStatus: duckv1.SourceStatus{
