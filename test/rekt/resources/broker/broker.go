@@ -103,6 +103,13 @@ func WithConfig(name string) manifest.CfgFn {
 	}
 }
 
+// WithConfigNamespace adds the specified config map namespace to the Broker spec.
+func WithConfigNamespace(namespace string) manifest.CfgFn {
+	return func(cfg map[string]interface{}) {
+		cfg["configNamespace"] = namespace
+	}
+}
+
 // WithDeadLetterSink adds the dead letter sink related config to a Broker spec.
 var WithDeadLetterSink = delivery.WithDeadLetterSink
 

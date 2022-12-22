@@ -32,7 +32,11 @@ spec:
   {{ if .config }}
   config:
     kind: {{ .config.kind }}
+    {{ if .configNamespace }}
+    namespace: {{ .configNamespace }}
+    {{ else }}
     namespace: {{ .namespace }}
+    {{ end }}
     name: {{ .config.name }}
     apiVersion: {{ .config.apiVersion }}
   {{ end }}
