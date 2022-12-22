@@ -228,33 +228,7 @@ func TestOneOffSchedules(t *testing.T) {
 		wantContentType string
 		wantData        []byte
 	}{
-		// }{
-		// 	"TestAddRunRemoveSchedule": {
-		// 		src: &sourcesv1.PingSource{
-		// 			ObjectMeta: metav1.ObjectMeta{
-		// 				Name:      "test-name",
-		// 				Namespace: "test-ns",
-		// 			},
-		// 			Spec: sourcesv1.PingSourceSpec{
-		// 				SourceSpec: duckv1.SourceSpec{
-		// 					CloudEventOverrides: &duckv1.CloudEventOverrides{},
-		// 				},
-		// 				// Schedule:    "* * * * ?",
-		// 				ContentType: cloudevents.TextPlain,
-		// 				Data:        sampleData,
-		// 				Date:        "2022-12-15 07:47:11",
-		// 				// time.Now().Format("2006-01-02 15:04:05")
-		// 			},
-		// 			Status: sourcesv1.PingSourceStatus{
-		// 				SourceStatus: duckv1.SourceStatus{
-		// 					SinkURI: &apis.URL{Path: "a sink"},
-		// 				},
-		// 			},
-		// 		},
-		// 		wantData:        []byte(sampleData),
-		// 		wantContentType: cloudevents.TextPlain,
-		// 	},
-		"TestAddRunRchedule": {
+		"TestAddOneOffDate": {
 			src: &sourcesv1.PingSource{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-name",
@@ -264,12 +238,10 @@ func TestOneOffSchedules(t *testing.T) {
 					SourceSpec: duckv1.SourceSpec{
 						CloudEventOverrides: &duckv1.CloudEventOverrides{},
 					},
-					// Schedule:    "* * * * ?",
+					Schedule:    "* * * * ?",
 					ContentType: cloudevents.TextPlain,
 					Data:        sampleData,
-					// time.After()
-
-					Date: (time.Now().Add(1 * time.Second)).Format("2006-01-02 15:04:05"),
+					Date:        (time.Now().Add(1 * time.Second)).Format("2006-01-02 15:04:05"),
 				},
 				Status: sourcesv1.PingSourceStatus{
 					SourceStatus: duckv1.SourceStatus{
@@ -293,22 +265,10 @@ func TestOneOffSchedules(t *testing.T) {
 			if entryId != -1 {
 				t.Error("Date set failed")
 			}
-			time.Sleep(3 * time.Second)
-			// entry := runner.cron.Entry(entryId)
-			// if entry.ID != entryId {
-			// 	t.Error("Entry has not been added")
-			// }
-
-			// entry.Job.Run()
+			time.Sleep(2 * time.Second)
 
 			validateSent(t, ce, tc.wantData, tc.wantContentType, tc.src.Spec.CloudEventOverrides.Extensions)
 
-			// runner.RemoveSchedule(entryId)
-
-			// entry = runner.cron.Entry(entryId)
-			// if entry.ID == entryId {
-			// 	t.Error("Entry has not been removed")
-			// }
 		})
 	}
 

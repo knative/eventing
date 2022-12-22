@@ -91,3 +91,12 @@ func WithSchedule(schedule string) manifest.CfgFn {
 		}
 	}
 }
+
+// WithDate add the specific date to a Pingsource spec to trigger oneOffs event.
+func WithDate(date string) manifest.CfgFn {
+	return func(cfg map[string]interface{}) {
+		if date != "" {
+			cfg["date"] = date
+		}
+	}
+}

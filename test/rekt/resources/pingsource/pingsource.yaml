@@ -30,6 +30,9 @@ spec:
   {{ if .dataBase64 }}
   dataBase64: '{{ .dataBase64 }}'
   {{ end }}
+  {{ if .date }}
+  date: '{{ .date }}'
+  {{ end }}
   {{if .sink }}
   sink:
     {{ if .sink.ref }}

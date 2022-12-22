@@ -18,6 +18,7 @@ package pingsource
 
 import (
 	"context"
+	"time"
 
 	"github.com/cloudevents/sdk-go/v2/test"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -145,6 +146,35 @@ func SendsEventsWithEventTypes() *feature.Feature {
 			test.HasType("dev.knative.sources.ping")).AtLeast(1)).
 		Must("PingSource test eventtypes match", eventtype.WaitForEventType(
 			eventtype.AssertPresent(expectedCeTypes)))
+
+	return f
+}
+
+func SendsOneOffsEvent() *feature.Feature {
+	source := feature.MakeRandomK8sName("pingsource")
+	sink := feature.MakeRandomK8sName("sink")
+	f := feature.NewFeature()
+
+	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
+
+	cfg := []manifest.CfgFn{
+		pingsource.WithDataBase64("text/plain", "aGVsbG8sIHdvcmxkIQ=="),
+		pingsource.WithSink(&duckv1.KReference{
+			Kind:       "Service",
+			Name:       sink,
+			APIVersion: "v1",
+		}, ""),
+		pingsource.WithSchedule(""),
+		pingsource.WithDate((time.Now().Add(1 * time.Second)).Format("2006-01-02 15:04:05")),
+	}
+	f.Setup("install pingsource", pingsource.Install(source, cfg...))
+
+	f.Requirement("pingsource goes ready", pingsource.IsReady(source))
+
+	f.Stable("pingsource as event source").
+		Must("delivers events", assert.OnStore(sink).MatchEvent(
+			test.HasType("dev.knative.sources.ping"),
+		).AtLeast(1))
 
 	return f
 }
