@@ -103,7 +103,7 @@ func WithConfig(name string) manifest.CfgFn {
 	}
 }
 
-// WithConfigNamespace adds the specified config map to the Broker spec.
+// WithConfigNamespace adds the specified config map namespace to the Broker spec.
 func WithConfigNamespace(namespace string) manifest.CfgFn {
 	return func(cfg map[string]interface{}) {
 		cfg["configNamespace"] = namespace
