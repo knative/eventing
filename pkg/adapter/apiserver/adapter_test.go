@@ -45,7 +45,7 @@ func TestAdapter_StartRef(t *testing.T) {
 	ce := adaptertest.NewTestClient()
 
 	config := Config{
-		Namespace: "default",
+		Namespaces: []string{"default"},
 		Resources: []ResourceWatch{{
 			GVR: schema.GroupVersionResource{
 				Version:  "v1",
@@ -93,7 +93,7 @@ func TestAdapter_StartResource(t *testing.T) {
 	ce := adaptertest.NewTestClient()
 
 	config := Config{
-		Namespace: "default",
+		Namespaces: []string{"default"},
 		Resources: []ResourceWatch{{
 			GVR: schema.GroupVersionResource{
 				Version:  "v1",
@@ -140,7 +140,7 @@ func TestAdapter_StartNonNamespacedResource(t *testing.T) {
 	ce := adaptertest.NewTestClient()
 
 	config := Config{
-		Namespace: "default",
+		Namespaces: []string{"default"},
 		Resources: []ResourceWatch{{
 			GVR: schema.GroupVersionResource{
 				Version:  "v1",

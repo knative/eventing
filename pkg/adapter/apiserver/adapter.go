@@ -98,7 +98,8 @@ func (a *apiServerAdapter) start(ctx context.Context, stopCh <-chan struct{}) er
 
 				var res dynamic.ResourceInterface
 				if apires.Namespaced {
-					res = a.k8s.Resource(configRes.GVR).Namespace(a.config.Namespace)
+					// TODO: update to cycle through namespaces
+					res = a.k8s.Resource(configRes.GVR).Namespace(a.config.Namespaces[0])
 				} else {
 					res = a.k8s.Resource(configRes.GVR)
 				}

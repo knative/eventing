@@ -98,13 +98,20 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1.ApiServerSour
 	}
 	source.Status.MarkSink(sinkURI)
 
+	// resolve namespaces to watch
+	namespaces, err := r.namespacesFromSelector(ctx, source)
+	if err != nil {
+		logging.FromContext(ctx).Errorw("cannot retrieve namespaces to watch", zap.Error(err))
+		return err
+	}
+
 	err = r.runAccessCheck(ctx, source)
 	if err != nil {
 		logging.FromContext(ctx).Errorw("Not enough permission", zap.Error(err))
 		return err
 	}
 
-	ra, err := r.createReceiveAdapter(ctx, source, sinkURI.String())
+	ra, err := r.createReceiveAdapter(ctx, source, sinkURI.String(), namespaces)
 	if err != nil {
 		logging.FromContext(ctx).Errorw("Unable to create the receive adapter", zap.Error(err))
 		return err
@@ -121,18 +128,41 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1.ApiServerSour
 	return nil
 }
 
-func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1.ApiServerSource, sinkURI string) (*appsv1.Deployment, error) {
+func (r *Reconciler) namespacesFromSelector(ctx context.Context, src *v1.ApiServerSource) ([]string, error) {
+	if src.Spec.NamespaceSelector == nil {
+		return []string{src.Namespace}, nil
+	}
+
+	selector, err := metav1.LabelSelectorAsSelector(src.Spec.NamespaceSelector)
+	if err != nil {
+		return nil, err
+	}
+
+	namespaces, err := r.kubeClientSet.CoreV1().Namespaces().List(ctx, metav1.ListOptions{LabelSelector: selector.String()})
+	if err != nil {
+		return nil, err
+	}
+
+	nsString := make([]string, 0, len(namespaces.Items))
+	for _, ns := range namespaces.Items {
+		nsString = append(nsString, ns.Name)
+	}
+	return nsString, nil
+}
+
+func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1.ApiServerSource, sinkURI string, namespaces []string) (*appsv1.Deployment, error) {
 	// TODO: missing.
 	// if err := checkResourcesStatus(src); err != nil {
 	// 	return nil, err
 	// }
 
 	adapterArgs := resources.ReceiveAdapterArgs{
-		Image:   r.receiveAdapterImage,
-		Source:  src,
-		Labels:  resources.Labels(src.Name),
-		SinkURI: sinkURI,
-		Configs: r.configs,
+		Image:      r.receiveAdapterImage,
+		Source:     src,
+		Labels:     resources.Labels(src.Name),
+		SinkURI:    sinkURI,
+		Configs:    r.configs,
+		Namespaces: namespaces,
 	}
 	expected, err := resources.MakeReceiveAdapter(&adapterArgs)
 	if err != nil {
@@ -199,6 +229,8 @@ func (r *Reconciler) runAccessCheck(ctx context.Context, src *v1.ApiServerSource
 	// Collect all missing permissions.
 	missing := ""
 	sep := ""
+
+	// TODO: update to cycle through namespaces
 
 	for _, res := range src.Spec.Resources {
 		gv, err := schema.ParseGroupVersion(res.APIVersion)

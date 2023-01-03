@@ -136,3 +136,9 @@ func WithApiServerSourceObjectMetaGeneration(generation int64) ApiServerSourceOp
 		c.ObjectMeta.Generation = generation
 	}
 }
+
+func WithApiServerSourceNamespaceSelector(nsSelector metav1.LabelSelector) ApiServerSourceOption {
+	return func(c *v1.ApiServerSource) {
+		c.Spec.NamespaceSelector = &nsSelector
+	}
+}

@@ -31,9 +31,9 @@ type ResourceWatch struct {
 }
 
 type Config struct {
-	// Namespace specifies the namespace that Resources[] exist.
+	// Namespaces specifies the namespace that Resources[] exist.
 	// +required
-	Namespace string `json:"namespace"`
+	Namespaces []string `json:"namespaces"`
 
 	// Resource is the resource this source will track and send related
 	// lifecycle events from the Kubernetes ApiServer.
