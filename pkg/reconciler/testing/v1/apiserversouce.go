@@ -142,3 +142,9 @@ func WithApiServerSourceNamespaceSelector(nsSelector metav1.LabelSelector) ApiSe
 		c.Spec.NamespaceSelector = &nsSelector
 	}
 }
+
+func WithApiServerSourceStatusNamespaces(namespaces []string) ApiServerSourceOption {
+	return func(c *v1.ApiServerSource) {
+		c.Status.Namespaces = namespaces
+	}
+}

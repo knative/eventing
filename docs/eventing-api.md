@@ -5072,6 +5072,17 @@ state.
 Source.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>namespaces</code><br/>
+<em>
+[]string
+</em>
+</td>
+<td>
+<p>Namespaces show the namespaces currently watched by the ApiServerSource</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="sources.knative.dev/v1.ContainerSourceSpec">ContainerSourceSpec

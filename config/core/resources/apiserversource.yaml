@@ -216,6 +216,11 @@ spec:
               sinkUri:
                 description: SinkURI is the current active sink URI that has been configured for the Source.
                 type: string
+              namespaces:
+                description: Namespaces show the namespaces currently watched by the ApiServerSource
+                type: array
+                items:
+                  type: string
     additionalPrinterColumns:
     - name: Sink
       type: string

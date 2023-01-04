@@ -104,6 +104,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1.ApiServerSour
 		logging.FromContext(ctx).Errorw("cannot retrieve namespaces to watch", zap.Error(err))
 		return err
 	}
+	source.Status.Namespaces = namespaces
 
 	err = r.runAccessCheck(ctx, source, namespaces)
 	if err != nil {

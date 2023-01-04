@@ -127,6 +127,7 @@ func TestReconcile(t *testing.T) {
 				rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
 				rttestingv1.WithApiServerSourceSink(sinkURI),
 				rttestingv1.WithApiServerSourceNoSufficientPermissions,
+				rttestingv1.WithApiServerSourceStatusNamespaces([]string{testNS}),
 			),
 		}},
 		WantCreates: []runtime.Object{
@@ -179,6 +180,7 @@ func TestReconcile(t *testing.T) {
 				rttestingv1.WithApiServerSourceSufficientPermissions,
 				rttestingv1.WithApiServerSourceReferenceModeEventTypes(source),
 				rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
+				rttestingv1.WithApiServerSourceStatusNamespaces([]string{testNS}),
 			),
 		}},
 		WantCreates: []runtime.Object{
@@ -232,6 +234,7 @@ func TestReconcile(t *testing.T) {
 				rttestingv1.WithApiServerSourceReferenceModeEventTypes(source),
 				rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
 				rttestingv1.WithApiServerSourceNamespaceSelector(metav1.LabelSelector{MatchLabels: map[string]string{"target": "yes"}}),
+				rttestingv1.WithApiServerSourceStatusNamespaces([]string{"test-a", "test-b"}),
 			),
 		}},
 		WantCreates: []runtime.Object{
@@ -291,6 +294,7 @@ func TestReconcile(t *testing.T) {
 				rttestingv1.WithApiServerSourceSufficientPermissions,
 				rttestingv1.WithApiServerSourceResourceModeEventTypes(source),
 				rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
+				rttestingv1.WithApiServerSourceStatusNamespaces([]string{testNS}),
 			),
 		}},
 		WantCreates: []runtime.Object{
@@ -339,6 +343,7 @@ func TestReconcile(t *testing.T) {
 				rttestingv1.WithApiServerSourceSufficientPermissions,
 				rttestingv1.WithApiServerSourceReferenceModeEventTypes(source),
 				rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
+				rttestingv1.WithApiServerSourceStatusNamespaces([]string{testNS}),
 			),
 		}},
 		WantCreates: []runtime.Object{
@@ -430,6 +435,7 @@ func TestReconcile(t *testing.T) {
 				rttestingv1.WithApiServerSourceSink(sinkURI),
 				rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
 				rttestingv1.WithApiServerSourceSufficientPermissions,
+				rttestingv1.WithApiServerSourceStatusNamespaces([]string{testNS}),
 			),
 		}},
 		WantCreates: []runtime.Object{
@@ -493,6 +499,7 @@ func TestReconcile(t *testing.T) {
 				rttestingv1.WithApiServerSourceSufficientPermissions,
 				rttestingv1.WithApiServerSourceReferenceModeEventTypes(source),
 				rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
+				rttestingv1.WithApiServerSourceStatusNamespaces([]string{testNS}),
 			),
 		}},
 		WantCreates: []runtime.Object{
@@ -544,6 +551,7 @@ func TestReconcile(t *testing.T) {
 				rttestingv1.WithApiServerSourceReferenceModeEventTypes(source),
 				rttestingv1.WithApiServerSourceDeploymentUnavailable,
 				rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
+				rttestingv1.WithApiServerSourceStatusNamespaces([]string{testNS}),
 			),
 		}},
 		WantUpdates: []clientgotesting.UpdateActionImpl{{
@@ -604,6 +612,7 @@ func TestReconcile(t *testing.T) {
 				rttestingv1.WithApiServerSourceSufficientPermissions,
 				rttestingv1.WithApiServerSourceReferenceModeEventTypes(source),
 				rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
+				rttestingv1.WithApiServerSourceStatusNamespaces([]string{testNS}),
 			),
 		}},
 		WantUpdates: []clientgotesting.UpdateActionImpl{{
@@ -658,6 +667,7 @@ func TestReconcile(t *testing.T) {
 				rttestingv1.WithApiServerSourceSufficientPermissions,
 				rttestingv1.WithApiServerSourceReferenceModeEventTypes(source),
 				rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
+				rttestingv1.WithApiServerSourceStatusNamespaces([]string{testNS}),
 			),
 		}},
 		WantUpdates: []clientgotesting.UpdateActionImpl{{
@@ -709,6 +719,7 @@ func TestReconcile(t *testing.T) {
 				rttestingv1.WithApiServerSourceSufficientPermissions,
 				rttestingv1.WithApiServerSourceReferenceModeEventTypes(source),
 				rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
+				rttestingv1.WithApiServerSourceStatusNamespaces([]string{testNS}),
 			),
 		}},
 		WantCreates: []runtime.Object{

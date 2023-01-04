@@ -97,6 +97,9 @@ type ApiServerSourceStatus struct {
 	// * SinkURI - the current active sink URI that has been configured for the
 	//   Source.
 	duckv1.SourceStatus `json:",inline"`
+
+	// Namespaces show the namespaces currently watched by the ApiServerSource
+	Namespaces []string `json:"namespaces"`
 }
 
 // APIVersionKind is an APIVersion and Kind tuple.

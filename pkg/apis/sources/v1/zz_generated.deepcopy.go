@@ -162,6 +162,11 @@ func (in *ApiServerSourceSpec) DeepCopy() *ApiServerSourceSpec {
 func (in *ApiServerSourceStatus) DeepCopyInto(out *ApiServerSourceStatus) {
 	*out = *in
 	in.SourceStatus.DeepCopyInto(&out.SourceStatus)
+	if in.Namespaces != nil {
+		in, out := &in.Namespaces, &out.Namespaces
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 
