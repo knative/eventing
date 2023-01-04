@@ -105,7 +105,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1.ApiServerSour
 		return err
 	}
 
-	err = r.runAccessCheck(ctx, source)
+	err = r.runAccessCheck(ctx, source, namespaces)
 	if err != nil {
 		logging.FromContext(ctx).Errorw("Not enough permission", zap.Error(err))
 		return err
@@ -210,17 +210,10 @@ func (r *Reconciler) podSpecChanged(oldPodSpec corev1.PodSpec, newPodSpec corev1
 	return false
 }
 
-func (r *Reconciler) runAccessCheck(ctx context.Context, src *v1.ApiServerSource) error {
+func (r *Reconciler) runAccessCheck(ctx context.Context, src *v1.ApiServerSource, namespaces []string) error {
 	if src.Spec.Resources == nil || len(src.Spec.Resources) == 0 {
 		src.Status.MarkSufficientPermissions()
 		return nil
-	}
-
-	user := "system:serviceaccount:" + src.Namespace + ":"
-	if src.Spec.ServiceAccountName == "" {
-		user += "default"
-	} else {
-		user += src.Spec.ServiceAccountName
 	}
 
 	verbs := []string{"get", "list", "watch"}
@@ -230,42 +223,49 @@ func (r *Reconciler) runAccessCheck(ctx context.Context, src *v1.ApiServerSource
 	missing := ""
 	sep := ""
 
-	// TODO: update to cycle through namespaces
+	user := "system:serviceaccount:" + src.Namespace + ":"
+	if src.Spec.ServiceAccountName == "" {
+		user += "default"
+	} else {
+		user += src.Spec.ServiceAccountName
+	}
 
-	for _, res := range src.Spec.Resources {
-		gv, err := schema.ParseGroupVersion(res.APIVersion)
-		if err != nil {
-			return err
-		}
-		gvr, _ := meta.UnsafeGuessKindToResource(schema.GroupVersionKind{Kind: res.Kind, Group: gv.Group, Version: gv.Version}) // TODO: Test for nil Kind.
-		missingVerbs := ""
-		sep1 := ""
-		for _, verb := range verbs {
-			sar := &authorizationv1.SubjectAccessReview{
-				Spec: authorizationv1.SubjectAccessReviewSpec{
-					ResourceAttributes: &authorizationv1.ResourceAttributes{
-						Namespace: src.Namespace,
-						Verb:      verb,
-						Group:     gv.Group,
-						Resource:  gvr.Resource,
-					},
-					User: user,
-				},
-			}
-
-			response, err := r.kubeClientSet.AuthorizationV1().SubjectAccessReviews().Create(ctx, sar, metav1.CreateOptions{})
+	for _, ns := range namespaces {
+		for _, res := range src.Spec.Resources {
+			gv, err := schema.ParseGroupVersion(res.APIVersion)
 			if err != nil {
 				return err
 			}
+			gvr, _ := meta.UnsafeGuessKindToResource(schema.GroupVersionKind{Kind: res.Kind, Group: gv.Group, Version: gv.Version}) // TODO: Test for nil Kind.
+			missingVerbs := ""
+			sep1 := ""
+			for _, verb := range verbs {
+				sar := &authorizationv1.SubjectAccessReview{
+					Spec: authorizationv1.SubjectAccessReviewSpec{
+						ResourceAttributes: &authorizationv1.ResourceAttributes{
+							Namespace: ns,
+							Verb:      verb,
+							Group:     gv.Group,
+							Resource:  gvr.Resource,
+						},
+						User: user,
+					},
+				}
 
-			if !response.Status.Allowed {
-				missingVerbs += sep1 + verb
-				sep1 = ", "
+				response, err := r.kubeClientSet.AuthorizationV1().SubjectAccessReviews().Create(ctx, sar, metav1.CreateOptions{})
+				if err != nil {
+					return err
+				}
+
+				if !response.Status.Allowed {
+					missingVerbs += sep1 + verb
+					sep1 = ", "
+				}
 			}
-		}
-		if missingVerbs != "" {
-			missing += sep + missingVerbs + ` resource "` + gvr.Resource + `" in API group "` + gv.Group + `"`
-			sep = ", "
+			if missingVerbs != "" {
+				missing += sep + missingVerbs + ` resource "` + gvr.Resource + `" in API group "` + gv.Group + `"`
+				sep = ", "
+			}
 		}
 	}
 	if missing == "" {
@@ -274,7 +274,7 @@ func (r *Reconciler) runAccessCheck(ctx context.Context, src *v1.ApiServerSource
 	}
 
 	src.Status.MarkNoSufficientPermissions(lastReason, "User %s cannot %s", user, missing)
-	return fmt.Errorf("Insufficient permission: user %s cannot %s", user, missing)
+	return fmt.Errorf("insufficient permissions: User %s cannot %s", user, missing)
 
 }
 

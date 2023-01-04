@@ -31,7 +31,7 @@ type ResourceWatch struct {
 }
 
 type Config struct {
-	// Namespaces specifies the namespace that Resources[] exist.
+	// Namespaces specifies the namespaces where Resources[] exist.
 	// +required
 	Namespaces []string `json:"namespaces"`
 

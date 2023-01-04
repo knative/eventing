@@ -95,22 +95,25 @@ func (a *apiServerAdapter) start(ctx context.Context, stopCh <-chan struct{}) er
 		exists := false
 		for _, apires := range resources.APIResources {
 			if apires.Name == configRes.GVR.Resource {
-
-				var res dynamic.ResourceInterface
+				var resources []dynamic.ResourceInterface
 				if apires.Namespaced {
-					// TODO: update to cycle through namespaces
-					res = a.k8s.Resource(configRes.GVR).Namespace(a.config.Namespaces[0])
+					for _, ns := range a.config.Namespaces {
+						resources = append(resources, a.k8s.Resource(configRes.GVR).Namespace(ns))
+					}
 				} else {
-					res = a.k8s.Resource(configRes.GVR)
+					resources = append(resources, a.k8s.Resource(configRes.GVR))
 				}
 
-				lw := &cache.ListWatch{
-					ListFunc:  asUnstructuredLister(ctx, res.List, configRes.LabelSelector),
-					WatchFunc: asUnstructuredWatcher(ctx, res.Watch, configRes.LabelSelector),
+				for _, res := range resources {
+					lw := &cache.ListWatch{
+						ListFunc:  asUnstructuredLister(ctx, res.List, configRes.LabelSelector),
+						WatchFunc: asUnstructuredWatcher(ctx, res.Watch, configRes.LabelSelector),
+					}
+
+					reflector := cache.NewReflector(lw, &unstructured.Unstructured{}, delegate, resyncPeriod)
+					go reflector.Run(stop)
 				}
 
-				reflector := cache.NewReflector(lw, &unstructured.Unstructured{}, delegate, resyncPeriod)
-				go reflector.Run(stop)
 				exists = true
 				break
 			}

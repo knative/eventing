@@ -136,7 +136,7 @@ func TestReconcile(t *testing.T) {
 		},
 		WantErr: true,
 		WantEvents: []string{
-			Eventf(corev1.EventTypeWarning, "InternalError", `Insufficient permission: user system:serviceaccount:testnamespace:default cannot get, list, watch resource "namespaces" in API group ""`),
+			Eventf(corev1.EventTypeWarning, "InternalError", `insufficient permissions: User system:serviceaccount:testnamespace:default cannot get, list, watch resource "namespaces" in API group ""`),
 		},
 		WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor(false)},
 		SkipNamespaceValidation: true, // SubjectAccessReview objects are cluster-scoped.
@@ -235,9 +235,12 @@ func TestReconcile(t *testing.T) {
 			),
 		}},
 		WantCreates: []runtime.Object{
-			makeSubjectAccessReview("namespaces", "get", "default"),
-			makeSubjectAccessReview("namespaces", "list", "default"),
-			makeSubjectAccessReview("namespaces", "watch", "default"),
+			makeNamespacedSubjectAccessReview("namespaces", "get", "default", "test-a"),
+			makeNamespacedSubjectAccessReview("namespaces", "list", "default", "test-a"),
+			makeNamespacedSubjectAccessReview("namespaces", "watch", "default", "test-a"),
+			makeNamespacedSubjectAccessReview("namespaces", "get", "default", "test-b"),
+			makeNamespacedSubjectAccessReview("namespaces", "list", "default", "test-b"),
+			makeNamespacedSubjectAccessReview("namespaces", "watch", "default", "test-b"),
 		},
 		WantUpdates: []clientgotesting.UpdateActionImpl{{
 			Object: makeAvailableReceiveAdapterWithNamespaces(t, []string{"test-a", "test-b"}),
@@ -903,11 +906,11 @@ func makeReceiveAdapterWithDifferentContainerCount(t *testing.T) *appsv1.Deploym
 	return ra
 }
 
-func makeSubjectAccessReview(resource, verb, sa string) *authorizationv1.SubjectAccessReview {
+func makeNamespacedSubjectAccessReview(resource, verb, sa, ns string) *authorizationv1.SubjectAccessReview {
 	return &authorizationv1.SubjectAccessReview{
 		Spec: authorizationv1.SubjectAccessReviewSpec{
 			ResourceAttributes: &authorizationv1.ResourceAttributes{
-				Namespace: testNS,
+				Namespace: ns,
 				Verb:      verb,
 				Group:     "",
 				Resource:  resource,
@@ -915,6 +918,10 @@ func makeSubjectAccessReview(resource, verb, sa string) *authorizationv1.Subject
 			User: "system:serviceaccount:" + testNS + ":" + sa,
 		},
 	}
+}
+
+func makeSubjectAccessReview(resource, verb, sa string) *authorizationv1.SubjectAccessReview {
+	return makeNamespacedSubjectAccessReview(resource, verb, sa, testNS)
 }
 
 func subjectAccessReviewCreateReactor(allowed bool) clientgotesting.ReactionFunc {
