@@ -31,6 +31,7 @@ import (
 
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	deploymentinformer "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment"
+	"knative.dev/pkg/client/injection/kube/informers/core/v1/namespace"
 
 	apiserversourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1/apiserversource"
 	apiserversourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1/apiserversource"
@@ -52,6 +53,7 @@ func NewController(
 
 	deploymentInformer := deploymentinformer.Get(ctx)
 	apiServerSourceInformer := apiserversourceinformer.Get(ctx)
+	namespaceInformer := namespace.Get(ctx)
 
 	r := &Reconciler{
 		kubeClientSet: kubeclient.Get(ctx),
@@ -74,6 +76,17 @@ func NewController(
 	deploymentInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.FilterController(&v1.ApiServerSource{}),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
+	})
+
+	cb := func(obj interface{}) {
+		logging.FromContext(ctx).Info("Global resync of APIServerSources due to namespaces changing.")
+		impl.GlobalResync(apiServerSourceInformer.Informer())
+	}
+
+	namespaceInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    cb,
+		UpdateFunc: func(oldObj, newObj interface{}) { cb(oldObj) },
+		DeleteFunc: cb,
 	})
 
 	return impl
