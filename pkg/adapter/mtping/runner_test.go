@@ -79,7 +79,7 @@ func TestAddRunRemoveSchedules(t *testing.T) {
 					},
 				},
 			},
-			wantData:        []byte(""),
+			wantData:        []byte(sampleData),
 			wantContentType: cloudevents.TextPlain,
 		}, "TestAddRunRemoveScheduleWithExtensionOverride": {
 			src: &sourcesv1.PingSource{
@@ -327,8 +327,6 @@ func TestStartStopCronDelayWait(t *testing.T) {
 					Schedule:    "* * * * *",
 					ContentType: cloudevents.TextPlain,
 					Data:        "some delayed data",
-					// Date:        "2022-12-15 06:09:11",
-					// Date: "",
 				},
 				Status: sourcesv1.PingSourceStatus{
 					SourceStatus: duckv1.SourceStatus{

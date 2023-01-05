@@ -164,8 +164,7 @@ func SendsOneOffsEvent() *feature.Feature {
 			Name:       sink,
 			APIVersion: "v1",
 		}, ""),
-		pingsource.WithSchedule(""),
-		pingsource.WithDate((time.Now().Add(1 * time.Second)).Format("2006-01-02 15:04:05")),
+		pingsource.WithDate((time.Now().Add(1 * time.Minute)).Format("2006-01-02 15:04:05")),
 	}
 	f.Setup("install pingsource", pingsource.Install(source, cfg...))
 

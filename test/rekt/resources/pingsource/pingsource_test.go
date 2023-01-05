@@ -61,6 +61,7 @@ func Example_full() {
 		"name":        "foo",
 		"namespace":   "bar",
 		"schedule":    "*/1 * * * *",
+		"date":        "2023-01-04 08:55:26",
 		"contentType": "application/json",
 		"data":        `{"message": "Hello world!"}`,
 		"sink": map[string]interface{}{
@@ -90,6 +91,7 @@ func Example_full() {
 	//   schedule: '*/1 * * * *'
 	//   contentType: 'application/json'
 	//   data: '{"message": "Hello world!"}'
+	//   date: '2023-01-04 08:55:26'
 	//   sink:
 	//     ref:
 	//       kind: sinkkind
@@ -108,6 +110,7 @@ func Example_fullbase64() {
 		"schedule":    "*/1 * * * *",
 		"contentType": "application/json",
 		"dataBase64":  "aabbccddeeff",
+		"date":        "2023-01-04 08:55:26",
 		"sink": map[string]interface{}{
 			"ref": map[string]string{
 				"kind":       "sinkkind",
@@ -135,6 +138,7 @@ func Example_fullbase64() {
 	//   schedule: '*/1 * * * *'
 	//   contentType: 'application/json'
 	//   dataBase64: 'aabbccddeeff'
+	//   date: '2023-01-04 08:55:26'
 	//   sink:
 	//     ref:
 	//       kind: sinkkind

@@ -82,8 +82,8 @@ type PingSourceSpec struct {
 	// +optional
 	DataBase64 string `json:"dataBase64,omitempty"`
 
-	// Date is the string config to support once for firing events
-	// Date is the specific time to trigger events
+	// Date is the string of specific date time to trigger events once for firing events. Default is empty.
+	// Mutually exclusive with Schedule.
 	// +optional
 	Date string `json:"date,omitempty"`
 }

@@ -46,7 +46,6 @@ type CronJobRunner interface {
 	RemoveSchedule(id cron.EntryID)
 }
 
-// type Final time.AfterFunc(d Duration, f func()) *time.Timer
 type cronJobsRunner struct {
 	// The cron job runner
 	cron cron.Cron
@@ -103,30 +102,32 @@ func (a *cronJobsRunner) AddSchedule(source *sourcesv1.PingSource) cron.EntryID 
 		observability.K8sAttributes(source.Name, source.Namespace, sourcesv1.Resource("pingsource").String()))
 
 	ctx = kncloudevents.ContextWithMetricTag(ctx, metricTag)
+	// If Date is not set, we use Schedule to trigger cron job.
 	if source.Spec.Date == "" {
 		schedule := source.Spec.Schedule
 		if source.Spec.Timezone != "" {
 			schedule = "CRON_TZ=" + source.Spec.Timezone + " " + schedule
 		}
-
 		id, _ := a.cron.AddFunc(schedule, a.cronTick(ctx, event))
 		return id
+
 	} else {
+		// Date is specified to fire events only once.
 		dateString := source.Spec.Date
 		date, err := time.Parse("2006-01-02 15:04:05", dateString)
 		if err != nil {
 			a.Logger.Error("failed to parse Date of source spec: ", zap.Error(err))
 		}
-		a.Logger.Debug(dateString)
 		duration := time.Until(date)
+		// The Date time is set before time.Now
 		if duration < 0 {
 			a.Logger.Error("Date does not Exist")
 			return -1
 		}
+
 		time.AfterFunc(duration, a.cronTick(ctx, event))
 		return -1
 	}
-
 }
 
 func (a *cronJobsRunner) RemoveSchedule(id cron.EntryID) {
