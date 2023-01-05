@@ -78,15 +78,15 @@ func NewController(
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 
-	cb := func(obj interface{}) {
+	cb := func() {
 		logging.FromContext(ctx).Info("Global resync of APIServerSources due to namespaces changing.")
 		impl.GlobalResync(apiServerSourceInformer.Informer())
 	}
 
 	namespaceInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    cb,
-		UpdateFunc: func(oldObj, newObj interface{}) { cb(oldObj) },
-		DeleteFunc: cb,
+		AddFunc:    func(obj interface{}) { cb() },
+		UpdateFunc: func(oldObj, newObj interface{}) { cb() },
+		DeleteFunc: func(obj interface{}) { cb() },
 	})
 
 	return impl
