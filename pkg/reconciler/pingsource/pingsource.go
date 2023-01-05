@@ -178,7 +178,7 @@ func needsUpdating(ctx context.Context, oldDeploymentSpec *appsv1.DeploymentSpec
 		return false, nil
 	}
 
-	return zero(oldDeploymentSpec.Replicas) || !equality.Semantic.DeepEqual(container.Env, newEnvVars), container
+	return zero(oldDeploymentSpec.Replicas) || !equality.Semantic.DeepDerivative(newEnvVars, container.Env), container
 }
 
 func findContainer(podSpec *corev1.PodSpec, name string) *corev1.Container {

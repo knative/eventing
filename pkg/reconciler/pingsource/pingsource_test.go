@@ -51,10 +51,11 @@ import (
 	"knative.dev/eventing/pkg/reconciler/pingsource/resources"
 	reconcilersource "knative.dev/eventing/pkg/reconciler/source"
 
-	. "knative.dev/eventing/pkg/reconciler/testing"
-	rtv1 "knative.dev/eventing/pkg/reconciler/testing/v1"
 	_ "knative.dev/pkg/client/injection/ducks/duck/v1beta1/addressable/fake"
 	. "knative.dev/pkg/reconciler/testing"
+
+	. "knative.dev/eventing/pkg/reconciler/testing"
+	rtv1 "knative.dev/eventing/pkg/reconciler/testing/v1"
 )
 
 var (
@@ -219,6 +220,48 @@ func TestAllCases(t *testing.T) {
 					// Status Update:
 					rtv1.WithInitPingSourceConditions,
 					rtv1.WithPingSourceSink(sinkURI),
+					rtv1.WithPingSourceStatusObservedGeneration(generation),
+				),
+			}},
+		}, {
+			Name: "no deployment update due to additional env variable",
+			Objects: []runtime.Object{
+				rtv1.NewPingSource(sourceName, testNS,
+					rtv1.WithPingSourceSpec(sourcesv1.PingSourceSpec{
+						Schedule:    testSchedule,
+						ContentType: testContentType,
+						Data:        testData,
+						SourceSpec: duckv1.SourceSpec{
+							Sink: sinkDest,
+						},
+					}),
+					rtv1.WithPingSource(sourceUID),
+					rtv1.WithPingSourceObjectMetaGeneration(generation),
+				),
+				rtv1.NewChannel(sinkName, testNS,
+					rtv1.WithInitChannelConditions,
+					rtv1.WithChannelAddress(sinkDNS),
+				),
+				makeAvailableMTAdapter(WithContainerEnv("KUBERNETES_MIN_VERSION", "v1.0.0")),
+			},
+			Key: testNS + "/" + sourceName,
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: rtv1.NewPingSource(sourceName, testNS,
+					rtv1.WithPingSourceSpec(sourcesv1.PingSourceSpec{
+						Schedule:    testSchedule,
+						ContentType: testContentType,
+						Data:        testData,
+						SourceSpec: duckv1.SourceSpec{
+							Sink: sinkDest,
+						},
+					}),
+					rtv1.WithPingSource(sourceUID),
+					rtv1.WithPingSourceObjectMetaGeneration(generation),
+					// Status Update:
+					rtv1.WithInitPingSourceConditions,
+					rtv1.WithPingSourceDeployed,
+					rtv1.WithPingSourceSink(sinkURI),
+					rtv1.WithPingSourceCloudEventAttributes,
 					rtv1.WithPingSourceStatusObservedGeneration(generation),
 				),
 			}},
@@ -398,9 +441,11 @@ func MakeMTAdapter() *appsv1.Deployment {
 
 }
 
-func makeAvailableMTAdapter() *appsv1.Deployment {
+func makeAvailableMTAdapter(options ...DeploymentOption) *appsv1.Deployment {
 	ma := MakeMTAdapter()
-	WithDeploymentAvailable()(ma)
+	for _, opt := range append(options, WithDeploymentAvailable()) {
+		opt(ma)
+	}
 	return ma
 }
 
@@ -410,5 +455,4 @@ func makeAvailableMTAdapterWithDifferentEnv() *appsv1.Deployment {
 	os.Unsetenv("K_SINK_TIMEOUT")
 	WithDeploymentAvailable()(ma)
 	return ma
-
 }

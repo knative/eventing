@@ -96,3 +96,12 @@ func WithDeploymentAvailable() DeploymentOption {
 		}
 	}
 }
+
+func WithContainerEnv(name, value string) DeploymentOption {
+	return func(deployment *appsv1.Deployment) {
+		deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{
+			Name:  name,
+			Value: value,
+		})
+	}
+}
