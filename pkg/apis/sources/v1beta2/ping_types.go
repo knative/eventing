@@ -81,6 +81,11 @@ type PingSourceSpec struct {
 	// Mutually exclusive with Data.
 	// +optional
 	DataBase64 string `json:"dataBase64,omitempty"`
+
+	// Date is the string of specific date time to fire events only once. Default is empty.
+	// Mutually exclusive with Schedule.
+	// +optional
+	Date string `json:"date,omitempty"`
 }
 
 // PingSourceStatus defines the observed state of PingSource.

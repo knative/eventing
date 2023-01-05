@@ -4681,7 +4681,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>Date is the string of specific date time to trigger events once for firing events. Default is empty.
+<p>Date is the string of specific date time to fire events only once. Default is empty.
 Mutually exclusive with Schedule.</p>
 </td>
 </tr>
@@ -5254,7 +5254,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>Date is the string of specific date time to trigger events once for firing events. Default is empty.
+<p>Date is the string of specific date time to fire events only once. Default is empty.
 Mutually exclusive with Schedule.</p>
 </td>
 </tr>
@@ -5546,6 +5546,19 @@ string
 Mutually exclusive with Data.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>date</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Date is the string of specific date time to fire events only once. Default is empty.
+Mutually exclusive with Schedule.</p>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -5661,6 +5674,19 @@ string
 <em>(Optional)</em>
 <p>DataBase64 is the base64-encoded string of the actual event&rsquo;s body posted to the sink. Default is empty.
 Mutually exclusive with Data.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>date</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Date is the string of specific date time to fire events only once. Default is empty.
+Mutually exclusive with Schedule.</p>
 </td>
 </tr>
 </tbody>
