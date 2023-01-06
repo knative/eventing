@@ -166,3 +166,18 @@ func TestBrokerDeadLetterSinkExtensions(t *testing.T) {
 
 	env.TestSet(ctx, t, broker.BrokerDeadLetterSinkExtensions())
 }
+
+func TestBrokerDeliverLongMessage(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+		environment.WithPollTimings(5*time.Second, 4*time.Minute),
+	)
+
+	env.TestSet(ctx, t, broker.BrokerDeliverLongMessage())
+}
