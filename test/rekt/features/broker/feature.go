@@ -17,6 +17,8 @@ limitations under the License.
 package broker
 
 import (
+	"strings"
+
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/test"
 	"github.com/google/uuid"
@@ -198,5 +200,62 @@ func brokerRedeliveryDropN(retryNum int32, dropNum uint) *feature.Feature {
 				),
 			).AtLeast(1))
 
+	return f
+}
+
+func BrokerDeliverLongMessage() *feature.FeatureSet {
+	fs := &feature.FeatureSet{
+		Name: "Knative Broker - DeadLetterSink - with Extensions",
+
+		Features: []*feature.Feature{
+			brokerSubscriberLongMessage(),
+		},
+	}
+	return fs
+}
+
+func brokerSubscriberLongMessage() *feature.Feature {
+	f := feature.NewFeatureNamed("Broker Subscriber with long data message")
+
+	source := feature.MakeRandomK8sName("source")
+	sink := feature.MakeRandomK8sName("sink")
+	triggerName := feature.MakeRandomK8sName("triggerName")
+
+	eventSource := "source1"
+	eventType := "type1"
+	eventBody := strings.Repeat("X", 36864)
+	event := cloudevents.NewEvent()
+	event.SetID(uuid.New().String())
+	event.SetType(eventType)
+	event.SetSource(eventSource)
+	event.SetData(cloudevents.TextPlain, []byte(eventBody))
+
+	//Install the broker
+	brokerName := feature.MakeRandomK8sName("broker")
+	f.Setup("install broker", broker.Install(brokerName, broker.WithEnvConfig()...))
+	f.Requirement("broker is ready", broker.IsReady(brokerName))
+	f.Requirement("broker is addressable", broker.IsAddressable(brokerName))
+
+	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
+
+	// Install the trigger and Point the Trigger subscriber to the sink svc.
+	f.Setup("install trigger", trigger.Install(
+		triggerName,
+		brokerName,
+		trigger.WithSubscriber(svc.AsKReference(sink), ""),
+	))
+	f.Setup("trigger goes ready", trigger.IsReady(triggerName))
+
+	f.Requirement("install source", eventshub.Install(
+		source,
+		eventshub.StartSenderToResource(broker.GVR(), brokerName),
+		eventshub.InputEvent(event),
+	))
+
+	f.Assert("receive long event on sink exactly once",
+		eventasssert.OnStore(sink).
+			MatchEvent(test.HasData([]byte(eventBody))).
+			Exact(1),
+	)
 	return f
 }
