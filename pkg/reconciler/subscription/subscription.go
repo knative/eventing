@@ -196,8 +196,8 @@ func (r *Reconciler) resolveSubscriber(ctx context.Context, subscription *v1.Sub
 	// Resolve Subscriber.
 	subscriber := subscription.Spec.Subscriber.DeepCopy()
 	if !isNilOrEmptyDestination(subscriber) {
-		// Populate the namespace for the subscriber since it is in the namespace
-		if subscriber.Ref != nil {
+		// Populate the namespace for the subscriber if required
+		if subscriber.Ref != nil && subscriber.Ref.Namespace == "" {
 			subscriber.Ref.Namespace = subscription.Namespace
 		}
 
@@ -238,8 +238,8 @@ func (r *Reconciler) resolveReply(ctx context.Context, subscription *v1.Subscrip
 	// Resolve Reply.
 	reply := subscription.Spec.Reply.DeepCopy()
 	if !isNilOrEmptyDestination(reply) {
-		// Populate the namespace for the subscriber since it is in the namespace
-		if reply.Ref != nil {
+		// Populate the namespace for the subscriber if required
+		if reply.Ref != nil && reply.Ref.Namespace == "" {
 			reply.Ref.Namespace = subscription.Namespace
 		}
 		replyURI, err := r.destinationResolver.URIFromDestinationV1(ctx, *reply, subscription)
