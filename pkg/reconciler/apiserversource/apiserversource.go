@@ -32,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
 
+	clientv1 "k8s.io/client-go/listers/core/v1"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
@@ -67,7 +68,8 @@ type Reconciler struct {
 	ceSource     string
 	sinkResolver *resolver.URIResolver
 
-	configs reconcilersource.ConfigAccessor
+	configs         reconcilersource.ConfigAccessor
+	namespaceLister clientv1.NamespaceLister
 }
 
 var _ apiserversourcereconciler.Interface = (*Reconciler)(nil)
@@ -139,13 +141,13 @@ func (r *Reconciler) namespacesFromSelector(ctx context.Context, src *v1.ApiServ
 		return nil, err
 	}
 
-	namespaces, err := r.kubeClientSet.CoreV1().Namespaces().List(ctx, metav1.ListOptions{LabelSelector: selector.String()})
+	namespaces, err := r.namespaceLister.List(selector)
 	if err != nil {
 		return nil, err
 	}
 
-	nsString := make([]string, 0, len(namespaces.Items))
-	for _, ns := range namespaces.Items {
+	nsString := make([]string, 0, len(namespaces))
+	for _, ns := range namespaces {
 		nsString = append(nsString, ns.Name)
 	}
 	return nsString, nil
@@ -217,13 +219,6 @@ func (r *Reconciler) runAccessCheck(ctx context.Context, src *v1.ApiServerSource
 		return nil
 	}
 
-	verbs := []string{"get", "list", "watch"}
-	lastReason := ""
-
-	// Collect all missing permissions.
-	missing := ""
-	sep := ""
-
 	user := "system:serviceaccount:" + src.Namespace + ":"
 	if src.Spec.ServiceAccountName == "" {
 		user += "default"
@@ -231,13 +226,21 @@ func (r *Reconciler) runAccessCheck(ctx context.Context, src *v1.ApiServerSource
 		user += src.Spec.ServiceAccountName
 	}
 
-	for _, ns := range namespaces {
-		for _, res := range src.Spec.Resources {
-			gv, err := schema.ParseGroupVersion(res.APIVersion)
-			if err != nil {
-				return err
-			}
-			gvr, _ := meta.UnsafeGuessKindToResource(schema.GroupVersionKind{Kind: res.Kind, Group: gv.Group, Version: gv.Version}) // TODO: Test for nil Kind.
+	verbs := []string{"get", "list", "watch"}
+	lastReason := ""
+
+	// Collect all missing permissions.
+	missing := ""
+	sep := ""
+
+	for _, res := range src.Spec.Resources {
+		gv, err := schema.ParseGroupVersion(res.APIVersion)
+		if err != nil {
+			return err
+		}
+		gvr, _ := meta.UnsafeGuessKindToResource(schema.GroupVersionKind{Kind: res.Kind, Group: gv.Group, Version: gv.Version}) // TODO: Test for nil Kind.
+
+		for _, ns := range namespaces {
 			missingVerbs := ""
 			sep1 := ""
 			for _, verb := range verbs {
@@ -263,8 +266,9 @@ func (r *Reconciler) runAccessCheck(ctx context.Context, src *v1.ApiServerSource
 					sep1 = ", "
 				}
 			}
+
 			if missingVerbs != "" {
-				missing += sep + missingVerbs + ` resource "` + gvr.Resource + `" in API group "` + gv.Group + `"`
+				missing += sep + missingVerbs + ` resource "` + gvr.Resource + `" in API group "` + gv.Group + `" in Namespace "` + ns + `"`
 				sep = ", "
 			}
 		}

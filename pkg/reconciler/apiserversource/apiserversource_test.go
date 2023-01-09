@@ -137,7 +137,7 @@ func TestReconcile(t *testing.T) {
 		},
 		WantErr: true,
 		WantEvents: []string{
-			Eventf(corev1.EventTypeWarning, "InternalError", `insufficient permissions: User system:serviceaccount:testnamespace:default cannot get, list, watch resource "namespaces" in API group ""`),
+			Eventf(corev1.EventTypeWarning, "InternalError", `insufficient permissions: User system:serviceaccount:testnamespace:default cannot get, list, watch resource "namespaces" in API group "" in Namespace "testnamespace"`),
 		},
 		WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor(false)},
 		SkipNamespaceValidation: true, // SubjectAccessReview objects are cluster-scoped.
@@ -740,6 +740,7 @@ func TestReconcile(t *testing.T) {
 			receiveAdapterImage: image,
 			sinkResolver:        resolver.NewURIResolverFromTracker(ctx, tracker.New(func(types.NamespacedName) {}, 0)),
 			configs:             &reconcilersource.EmptyVarsGenerator{},
+			namespaceLister:     listers.GetNamespaceLister(),
 		}
 		return apiserversource.NewReconciler(ctx, logger,
 			fakeeventingclient.Get(ctx), listers.GetApiServerSourceLister(),

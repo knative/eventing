@@ -56,9 +56,10 @@ func NewController(
 	namespaceInformer := namespace.Get(ctx)
 
 	r := &Reconciler{
-		kubeClientSet: kubeclient.Get(ctx),
-		ceSource:      GetCfgHost(ctx),
-		configs:       reconcilersource.WatchConfigurations(ctx, component, cmw),
+		kubeClientSet:   kubeclient.Get(ctx),
+		ceSource:        GetCfgHost(ctx),
+		configs:         reconcilersource.WatchConfigurations(ctx, component, cmw),
+		namespaceLister: namespaceInformer.Lister(),
 	}
 
 	env := &envConfig{}
