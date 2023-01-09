@@ -101,7 +101,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1.ApiServerSour
 	source.Status.MarkSink(sinkURI)
 
 	// resolve namespaces to watch
-	namespaces, err := r.namespacesFromSelector(ctx, source)
+	namespaces, err := r.namespacesFromSelector(source)
 	if err != nil {
 		logging.FromContext(ctx).Errorw("cannot retrieve namespaces to watch", zap.Error(err))
 		return err
@@ -131,7 +131,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1.ApiServerSour
 	return nil
 }
 
-func (r *Reconciler) namespacesFromSelector(ctx context.Context, src *v1.ApiServerSource) ([]string, error) {
+func (r *Reconciler) namespacesFromSelector(src *v1.ApiServerSource) ([]string, error) {
 	if src.Spec.NamespaceSelector == nil {
 		return []string{src.Namespace}, nil
 	}
