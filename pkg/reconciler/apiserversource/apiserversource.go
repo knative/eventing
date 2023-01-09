@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sort"
 
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
@@ -150,6 +151,7 @@ func (r *Reconciler) namespacesFromSelector(src *v1.ApiServerSource) ([]string, 
 	for _, ns := range namespaces {
 		nsString = append(nsString, ns.Name)
 	}
+	sort.Strings(nsString)
 	return nsString, nil
 }
 
