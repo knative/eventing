@@ -54,6 +54,32 @@ func TestSubscriptionDefaults(t *testing.T) {
 			},
 		},
 		{
+			name: "subscription.spec.subscriber empty",
+			given: &Subscription{
+				Spec: SubscriptionSpec{
+					Subscriber: &duckv1.Destination{},
+				},
+			},
+			want: &Subscription{
+				Spec: SubscriptionSpec{
+					Subscriber: &duckv1.Destination{},
+				},
+			},
+		},
+		{
+			name: "subscription.spec.reply empty",
+			given: &Subscription{
+				Spec: SubscriptionSpec{
+					Reply: &duckv1.Destination{},
+				},
+			},
+			want: &Subscription{
+				Spec: SubscriptionSpec{
+					Reply: &duckv1.Destination{},
+				},
+			},
+		},
+		{
 			name: "subscription.spec.delivery empty",
 			given: &Subscription{
 				Spec: SubscriptionSpec{
@@ -63,6 +89,74 @@ func TestSubscriptionDefaults(t *testing.T) {
 			want: &Subscription{
 				Spec: SubscriptionSpec{
 					Delivery: &eventingduckv1.DeliverySpec{},
+				},
+			},
+		},
+		{
+			name: "subscription.spec.subscriber.ref.namespace empty",
+			given: &Subscription{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "custom",
+					Name:      "s",
+				},
+				Spec: SubscriptionSpec{
+					Subscriber: &duckv1.Destination{
+						Ref: &duckv1.KReference{
+							Kind:       "Service",
+							Name:       "svc",
+							APIVersion: "v1",
+						},
+					},
+				},
+			},
+			want: &Subscription{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "custom",
+					Name:      "s",
+				},
+				Spec: SubscriptionSpec{
+					Subscriber: &duckv1.Destination{
+						Ref: &duckv1.KReference{
+							Kind:       "Service",
+							Name:       "svc",
+							APIVersion: "v1",
+							Namespace:  "custom",
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "subscription.spec.reply.ref.namespace empty",
+			given: &Subscription{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "custom",
+					Name:      "s",
+				},
+				Spec: SubscriptionSpec{
+					Reply: &duckv1.Destination{
+						Ref: &duckv1.KReference{
+							Kind:       "Service",
+							Name:       "svc",
+							APIVersion: "v1",
+						},
+					},
+				},
+			},
+			want: &Subscription{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "custom",
+					Name:      "s",
+				},
+				Spec: SubscriptionSpec{
+					Reply: &duckv1.Destination{
+						Ref: &duckv1.KReference{
+							Kind:       "Service",
+							Name:       "svc",
+							APIVersion: "v1",
+							Namespace:  "custom",
+						},
+					},
 				},
 			},
 		},

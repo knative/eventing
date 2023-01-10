@@ -34,5 +34,14 @@ func (ss *SubscriptionSpec) SetDefaults(ctx context.Context) {
 	if ss == nil {
 		return
 	}
+
+	if ss.Subscriber != nil {
+		ss.Subscriber.SetDefaults(ctx)
+	}
+
+	if ss.Reply != nil {
+		ss.Reply.SetDefaults(ctx)
+	}
+
 	ss.Delivery.SetDefaults(ctx)
 }
