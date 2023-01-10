@@ -277,7 +277,7 @@ func (v *expressionVisitor) VisitStringLiteral(ctx *gen.StringLiteralContext) in
 }
 
 func (v *expressionVisitor) VisitIntegerLiteral(ctx *gen.IntegerLiteralContext) interface{} {
-	val, err := strconv.Atoi(ctx.GetText())
+	val, err := strconv.ParseInt(ctx.GetText(), 10, 32)
 	if err != nil {
 		v.parsingErrors = append(v.parsingErrors, err)
 	}

@@ -34,7 +34,7 @@ func Cast(val interface{}, target cesql.Type) (interface{}, error) {
 	case cesql.IntegerType:
 		switch val.(type) {
 		case string:
-			v, err := strconv.Atoi(val.(string))
+			v, err := strconv.ParseInt(val.(string), 10, 32)
 			if err != nil {
 				err = fmt.Errorf("cannot cast from String to Integer: %w", err)
 			}
