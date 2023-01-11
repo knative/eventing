@@ -96,7 +96,7 @@ func (a *apiServerAdapter) start(ctx context.Context, stopCh <-chan struct{}) er
 		for _, apires := range resources.APIResources {
 			if apires.Name == configRes.GVR.Resource {
 				var resources []dynamic.ResourceInterface
-				if apires.Namespaced && len(a.config.Namespaces) > 0 {
+				if apires.Namespaced && !a.config.AllNamespaces {
 					for _, ns := range a.config.Namespaces {
 						resources = append(resources, a.k8s.Resource(configRes.GVR).Namespace(ns))
 					}

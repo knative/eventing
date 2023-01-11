@@ -115,12 +115,12 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1.ApiServerSour
 		return err
 	}
 
+	allNamespaces := false
 	// An empty selector targets all namespaces.
-	// Setting namespaces to an empty slice indicates to the receiver adapter to target all namespaces
 	if isEmptySelector(source.Spec.NamespaceSelector) {
-		namespaces = []string{}
+		allNamespaces = true
 	}
-	ra, err := r.createReceiveAdapter(ctx, source, sinkURI.String(), namespaces)
+	ra, err := r.createReceiveAdapter(ctx, source, sinkURI.String(), namespaces, allNamespaces)
 	if err != nil {
 		logging.FromContext(ctx).Errorw("Unable to create the receive adapter", zap.Error(err))
 		return err
@@ -172,19 +172,20 @@ func isEmptySelector(selector *metav1.LabelSelector) bool {
 	return false
 }
 
-func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1.ApiServerSource, sinkURI string, namespaces []string) (*appsv1.Deployment, error) {
+func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1.ApiServerSource, sinkURI string, namespaces []string, allNamespaces bool) (*appsv1.Deployment, error) {
 	// TODO: missing.
 	// if err := checkResourcesStatus(src); err != nil {
 	// 	return nil, err
 	// }
 
 	adapterArgs := resources.ReceiveAdapterArgs{
-		Image:      r.receiveAdapterImage,
-		Source:     src,
-		Labels:     resources.Labels(src.Name),
-		SinkURI:    sinkURI,
-		Configs:    r.configs,
-		Namespaces: namespaces,
+		Image:         r.receiveAdapterImage,
+		Source:        src,
+		Labels:        resources.Labels(src.Name),
+		SinkURI:       sinkURI,
+		Configs:       r.configs,
+		Namespaces:    namespaces,
+		AllNamespaces: allNamespaces,
 	}
 	expected, err := resources.MakeReceiveAdapter(&adapterArgs)
 	if err != nil {

@@ -32,9 +32,12 @@ type ResourceWatch struct {
 
 type Config struct {
 	// Namespaces specifies the namespaces where Resources[] exist.
-	// An empty slice means all namespaces
 	// +required
 	Namespaces []string `json:"namespaces"`
+
+	// AllNamespaces indicates whether this source is watching all
+	// existing namespaces
+	AllNamespaces bool `json:"allNamespaces"`
 
 	// Resource is the resource this source will track and send related
 	// lifecycle events from the Kubernetes ApiServer.

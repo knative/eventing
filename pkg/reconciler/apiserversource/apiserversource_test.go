@@ -246,7 +246,7 @@ func TestReconcile(t *testing.T) {
 			makeNamespacedSubjectAccessReview("namespaces", "watch", "default", "test-b"),
 		},
 		WantUpdates: []clientgotesting.UpdateActionImpl{{
-			Object: makeAvailableReceiveAdapterWithNamespaces(t, []string{"test-a", "test-b"}),
+			Object: makeAvailableReceiveAdapterWithNamespaces(t, []string{"test-a", "test-b"}, false),
 		}},
 		WantEvents: []string{
 			Eventf(corev1.EventTypeNormal, "ApiServerSourceDeploymentUpdated", `Deployment "apiserversource-test-apiserver-source-1234" updated`),
@@ -312,7 +312,7 @@ func TestReconcile(t *testing.T) {
 			makeNamespacedSubjectAccessReview("namespaces", "watch", "default", "test-c"),
 		},
 		WantUpdates: []clientgotesting.UpdateActionImpl{{
-			Object: makeAvailableReceiveAdapterWithNamespaces(t, []string{}),
+			Object: makeAvailableReceiveAdapterWithNamespaces(t, []string{"test-a", "test-b", "test-c"}, true),
 		}},
 		WantEvents: []string{
 			Eventf(corev1.EventTypeNormal, "ApiServerSourceDeploymentUpdated", `Deployment "apiserversource-test-apiserver-source-1234" updated`),
@@ -929,7 +929,7 @@ func makeAvailableReceiveAdapterWithEventMode(t *testing.T, eventMode string) *a
 	return ra
 }
 
-func makeAvailableReceiveAdapterWithNamespaces(t *testing.T, namespaces []string) *appsv1.Deployment {
+func makeAvailableReceiveAdapterWithNamespaces(t *testing.T, namespaces []string, allNamespaces bool) *appsv1.Deployment {
 	t.Helper()
 
 	src := rttestingv1.NewApiServerSource(sourceName, testNS,
@@ -948,12 +948,13 @@ func makeAvailableReceiveAdapterWithNamespaces(t *testing.T, namespaces []string
 	)
 
 	args := resources.ReceiveAdapterArgs{
-		Image:      image,
-		Source:     src,
-		Labels:     resources.Labels(sourceName),
-		SinkURI:    sinkURI.String(),
-		Configs:    &reconcilersource.EmptyVarsGenerator{},
-		Namespaces: namespaces,
+		Image:         image,
+		Source:        src,
+		Labels:        resources.Labels(sourceName),
+		SinkURI:       sinkURI.String(),
+		Configs:       &reconcilersource.EmptyVarsGenerator{},
+		Namespaces:    namespaces,
+		AllNamespaces: allNamespaces,
 	}
 
 	ra, err := resources.MakeReceiveAdapter(&args)
