@@ -115,6 +115,11 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1.ApiServerSour
 		return err
 	}
 
+	// An empty selector targets all namespaces.
+	// Setting namespaces to an empty slice indicates to the receiver adapter to target all namespaces
+	if isEmptySelector(source.Spec.NamespaceSelector) {
+		namespaces = []string{}
+	}
 	ra, err := r.createReceiveAdapter(ctx, source, sinkURI.String(), namespaces)
 	if err != nil {
 		logging.FromContext(ctx).Errorw("Unable to create the receive adapter", zap.Error(err))
@@ -153,6 +158,18 @@ func (r *Reconciler) namespacesFromSelector(src *v1.ApiServerSource) ([]string, 
 	}
 	sort.Strings(nsString)
 	return nsString, nil
+}
+
+func isEmptySelector(selector *metav1.LabelSelector) bool {
+	if selector == nil {
+		return false
+	}
+
+	if len(selector.MatchLabels) == 0 && len(selector.MatchExpressions) == 0 {
+		return true
+	}
+
+	return false
 }
 
 func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1.ApiServerSource, sinkURI string, namespaces []string) (*appsv1.Deployment, error) {
