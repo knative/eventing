@@ -91,8 +91,8 @@ func BrokerChannelFlowWithTransformation(createSubscriberFn func(ref *eventingdu
 	//Install the broker
 	brokerName := feature.MakeRandomK8sName("broker")
 	f.Setup("install broker", broker.Install(brokerName, broker.WithEnvConfig()...))
-	f.Requirement("broker is ready", broker.IsReady(brokerName))
-	f.Requirement("broker is addressable", broker.IsAddressable(brokerName))
+	f.Setup("broker is ready", broker.IsReady(brokerName))
+	f.Setup("broker is addressable", broker.IsAddressable(brokerName))
 
 	f.Setup("install sink1", eventshub.Install(sink1,
 		eventshub.ReplyWithTransformedEvent(transformedEventType, transformedEventSource, transformedBody),
@@ -171,6 +171,10 @@ func BrokerChannelFlowWithTransformation(createSubscriberFn func(ref *eventingdu
 		test.HasType(transformedEventType),
 		test.HasData([]byte(transformedBody)),
 	)
+
+	f.Stable("(Trigger1 point to) sink1 has all the events").
+		Must("delivers original events",
+			eventasssert.OnStore(sink1).Match(eventMatcher).AtLeast(1))
 
 	f.Stable("(Trigger2 point to) sink2 has all the events").
 		Must("delivers original events",
