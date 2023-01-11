@@ -16,7 +16,11 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: {{ .name }}
+  {{ if .overriddenNamespace }}
+  namespace: {{ .overriddenNamespace }}
+  {{ else }}
   namespace: {{ .namespace }}
+  {{ end }}
   labels:
     {{ range $key, $value := .labels }}
     {{ $key }}: {{ $value }}

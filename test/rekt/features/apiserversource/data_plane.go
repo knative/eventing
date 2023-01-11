@@ -38,6 +38,7 @@ import (
 	"knative.dev/eventing/test/rekt/resources/apiserversource"
 	"knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/eventing/test/rekt/resources/eventtype"
+	"knative.dev/eventing/test/rekt/resources/namespace"
 	"knative.dev/eventing/test/rekt/resources/pod"
 	"knative.dev/eventing/test/rekt/resources/trigger"
 )
@@ -342,6 +343,84 @@ func SendsEventsForAllResources() *feature.Feature {
 				test.DataContains(fmt.Sprintf(`"name":"%s"`, examplePodName)),
 			).AtLeast(1))
 
+	return f
+}
+
+func SendsEventsForAllResourcesWithNamespaceSelector() *feature.Feature {
+	source := feature.MakeRandomK8sName("apiserversource")
+	sink := feature.MakeRandomK8sName("sink")
+	f := feature.NewFeatureNamed("Send events for all resources within select namespaces")
+
+	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
+
+	sacmName := feature.MakeRandomK8sName("apiserversource")
+	f.Setup("Create Service Account for ApiServerSource with RBAC for v1.Pod resources",
+		setupAccountAndRoleForPods(sacmName))
+
+	testNS1 := feature.MakeRandomK8sName("source-namespace")
+	testNS2 := feature.MakeRandomK8sName("source-namespace")
+	testNS3 := feature.MakeRandomK8sName("source-namespace")
+
+	// create two new namespaces with matching selector
+	f.Setup("create test-a namespace with matching selector", namespace.Install(testNS1, namespace.WithLabels(map[string]string{"env": "development"})))
+	f.Setup("create test-a namespace with matching selector", namespace.Install(testNS2, namespace.WithLabels(map[string]string{"env": "development"})))
+
+	// create one new namespace that doesn't match selector
+	f.Setup("create test-a namespace with matching selector", namespace.Install(testNS3, namespace.WithLabels(map[string]string{"env": "production"})))
+
+	cfg := []manifest.CfgFn{
+		apiserversource.WithServiceAccountName(sacmName),
+		apiserversource.WithEventMode("Reference"),
+		apiserversource.WithSink(svc.AsKReference(sink), ""),
+		apiserversource.WithResources(v1.APIVersionKindSelector{
+			APIVersion: "v1",
+			Kind:       "Pod",
+		}),
+		apiserversource.WithNamespaceSelector(&metav1.LabelSelector{
+			MatchLabels: map[string]string{"env": "development"},
+		}),
+	}
+
+	f.Setup("install ApiServerSource", apiserversource.Install(source, cfg...))
+	f.Setup("ApiServerSource goes ready", apiserversource.IsReady(source))
+
+	pod1 := feature.MakeRandomK8sName("example")
+	pod2 := feature.MakeRandomK8sName("example")
+	pod3 := feature.MakeRandomK8sName("example")
+	f.Requirement("install example pod 1",
+		pod.Install(pod1, pod.WithImage(exampleImage), pod.WithOverriddenNamespace(testNS1)),
+	)
+	f.Requirement("install example pod 2",
+		pod.Install(pod2, pod.WithImage(exampleImage), pod.WithOverriddenNamespace(testNS2)),
+	)
+	f.Requirement("install example pod 3",
+		pod.Install(pod3, pod.WithImage(exampleImage), pod.WithOverriddenNamespace(testNS3)),
+	)
+
+	f.Stable("ApiServerSource as event source").
+		Must("delivers events from matching namespace",
+			eventasssert.OnStore(sink).MatchEvent(
+				test.HasType("dev.knative.apiserver.ref.add"),
+				test.DataContains(`"kind":"Pod"`),
+				test.DataContains(fmt.Sprintf(`"name":"%s"`, pod1)),
+			).Exact(1))
+	f.Stable("ApiServerSource as event source").
+		Must("delivers events from matching namespace",
+			eventasssert.OnStore(sink).MatchEvent(
+				test.HasType("dev.knative.apiserver.ref.add"),
+				test.DataContains(`"kind":"Pod"`),
+				test.DataContains(fmt.Sprintf(`"name":"%s"`, pod2)),
+			).Exact(1))
+	f.Stable("ApiServerSource as event source").
+		MustNot("must not deliver events from non-matching namespace",
+			eventasssert.OnStore(sink).MatchEvent(
+				test.HasType("dev.knative.apiserver.ref.add"),
+				test.DataContains(`"kind":"Pod"`),
+				test.DataContains(fmt.Sprintf(`"name":"%s"`, pod3)),
+			).Not())
+
+	// Delete resources including temporary namespaces
+	f.Teardown("Deleting resources", f.DeleteResources)
 	return f
 }
 

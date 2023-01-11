@@ -24,6 +24,26 @@ spec:
   {{ if .mode }}
   mode: {{ .mode }}
   {{ end }}
+  {{ if .namespaceSelector }}
+  namespaceSelector:
+    {{ if .namespaceSelector.matchLabels }}
+    matchLabels:
+      {{ range $key, $value := .namespaceSelector.matchLabels }}
+      {{ $key }}: {{ $value }}
+      {{ end }}
+    {{ end }}
+    {{ if .namespaceSelector.matchExpressions }}
+    matchExpressions:
+      {{ range $_, $expr := .namespaceSelector.matchExpressions }}
+      - key: {{ $expr.key }}
+        operator: {{ $expr.operator }}
+        values:
+          {{ range $_, $exprValue := $expr.values }}
+          - {{ $exprValue }}
+          {{ end }}
+      {{ end }}
+    {{ end }}
+  {{ end }}
   {{ if .resources }}
   resources:
     {{ range $_, $resource := .resources }}
