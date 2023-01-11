@@ -51,6 +51,7 @@ Trigger1 filters the orignal event and transforms it to a new event,
 Trigger2 logs all events,
 Trigger3 filters the transformed event and sends it to Channel.
 */
+// Deprecated, use reconciler-test based tests.
 func BrokerChannelFlowWithTransformation(
 	ctx context.Context,
 	t *testing.T,
