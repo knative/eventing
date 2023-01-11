@@ -115,11 +115,8 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1.ApiServerSour
 		return err
 	}
 
-	allNamespaces := false
 	// An empty selector targets all namespaces.
-	if isEmptySelector(source.Spec.NamespaceSelector) {
-		allNamespaces = true
-	}
+	allNamespaces := isEmptySelector(source.Spec.NamespaceSelector)
 	ra, err := r.createReceiveAdapter(ctx, source, sinkURI.String(), namespaces, allNamespaces)
 	if err != nil {
 		logging.FromContext(ctx).Errorw("Unable to create the receive adapter", zap.Error(err))
