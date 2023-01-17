@@ -21,16 +21,16 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	"knative.dev/eventing/test/rekt/resources/broker"
-	"knative.dev/eventing/test/rekt/resources/delivery"
-	"knative.dev/eventing/test/rekt/resources/eventlibrary"
-	"knative.dev/eventing/test/rekt/resources/flaker"
-	"knative.dev/eventing/test/rekt/resources/trigger"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
 	"knative.dev/reconciler-test/resources/svc"
+
+	"knative.dev/eventing/test/rekt/resources/broker"
+	"knative.dev/eventing/test/rekt/resources/delivery"
+	"knative.dev/eventing/test/rekt/resources/flaker"
+	"knative.dev/eventing/test/rekt/resources/trigger"
 
 	. "github.com/cloudevents/sdk-go/v2/test"
 	. "knative.dev/reconciler-test/pkg/eventshub/assert"
@@ -81,43 +81,31 @@ func SourceToSink(brokerName string) *feature.Feature {
 func SourceToSinkWithDLQ() *feature.Feature {
 	f := feature.NewFeature()
 
-	prober := eventshub.NewProber()
 	brokerName := feature.MakeRandomK8sName("broker")
-	dlq := feature.MakeRandomK8sName("dlq")
-	via := feature.MakeRandomK8sName("via")
+	dls := feature.MakeRandomK8sName("dls")
+	triggerName := feature.MakeRandomK8sName("trigger")
 	source := feature.MakeRandomK8sName("source")
 
-	lib := feature.MakeRandomK8sName("lib")
-	f.Setup("install events", eventlibrary.Install(lib))
-	f.Setup("event cache is ready", eventlibrary.IsReady(lib))
-	f.Setup("use events cache", prober.SenderEventsFromSVC(lib, "events/three.ce"))
-	if err := prober.ExpectYAMLEvents(eventlibrary.PathFor("events/three.ce")); err != nil {
-		panic(fmt.Errorf("can not find event files: %s", err))
-	}
+	f.Setup("install dead letter sink service", eventshub.Install(dls, eventshub.StartReceiver))
 
-	f.Setup("install dlq", prober.ReceiverInstall(dlq))
-
-	brokerConfig := append(broker.WithEnvConfig(), delivery.WithDeadLetterSink(prober.AsKReference(dlq), ""))
+	brokerConfig := append(broker.WithEnvConfig(), delivery.WithDeadLetterSink(svc.AsKReference(dls), ""))
 	f.Setup("install broker", broker.Install(brokerName, brokerConfig...))
-	// Block till broker is ready
 	f.Setup("Broker is ready", broker.IsReady(brokerName))
-	prober.SetTargetResource(broker.GVR(), brokerName)
+	f.Setup("install trigger", trigger.Install(triggerName, brokerName, trigger.WithSubscriber(nil, "bad://uri")))
+	f.Setup("trigger is ready", trigger.IsReady(triggerName))
 
-	f.Setup("install trigger", trigger.Install(via, brokerName, trigger.WithSubscriber(nil, "bad://uri")))
-	// Trigger is ready.
-	f.Setup("trigger goes ready", trigger.IsReady(via))
+	ce := FullEvent()
+	ce.SetID(uuid.New().String())
 
 	// Install events after data plane is ready.
-	f.Setup("install source", prober.SenderInstall(source))
-
-	// After we have finished sending.
-	f.Requirement("sender is finished", prober.SenderDone(source))
-	f.Requirement("receiver is finished", prober.ReceiverDone(source, dlq))
+	f.Requirement("install source", eventshub.Install(source,
+		eventshub.StartSenderToResource(broker.GVR(), source),
+		eventshub.InputEvent(ce),
+	))
 
 	// Assert events ended up where we expected.
-	f.Stable("broker with DLQ").
-		Must("accepted all events", prober.AssertSentAll(source)).
-		Must("deliver event to DLQ", prober.AssertReceivedAll(source, dlq))
+	f.Stable("broker with DLS").
+		Must("deliver event to DLQ", OnStore(dls).MatchEvent(HasId(ce.ID())).AtLeast(1))
 
 	return f
 }
