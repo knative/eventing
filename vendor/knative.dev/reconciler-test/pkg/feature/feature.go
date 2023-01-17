@@ -31,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/injection/clients/dynamicclient"
+
 	"knative.dev/reconciler-test/pkg/state"
 )
 
@@ -116,6 +117,13 @@ type Step struct {
 	L    Levels `json:"levels"`
 	T    Timing `json:"timing"`
 	Fn   StepFn `json:"-"`
+}
+
+type Steps []Step
+
+func (ss Steps) String() string {
+	bytes, _ := json.MarshalIndent(ss, "", "  ")
+	return string(bytes)
 }
 
 // TestName returns the constructed test name based on the timing, step, state,

@@ -2,21 +2,19 @@ package environment
 
 import (
 	"context"
-	"sync"
 	"testing"
 
 	"knative.dev/reconciler-test/pkg/feature"
 )
 
 func categorizeSteps(steps []feature.Step) map[feature.Timing][]feature.Step {
-	res := make(map[feature.Timing][]feature.Step, 4)
+	stepsByTiming := make(map[feature.Timing][]feature.Step, 4)
 
-	res[feature.Setup] = filterStepTimings(steps, feature.Setup)
-	res[feature.Requirement] = filterStepTimings(steps, feature.Requirement)
-	res[feature.Assert] = filterStepTimings(steps, feature.Assert)
-	res[feature.Teardown] = filterStepTimings(steps, feature.Teardown)
+	for _, timing := range feature.Timings() {
+		stepsByTiming[timing] = filterStepTimings(steps, timing)
+	}
 
-	return res
+	return stepsByTiming
 }
 
 func filterStepTimings(steps []feature.Step, timing feature.Timing) []feature.Step {
@@ -29,56 +27,42 @@ func filterStepTimings(steps []feature.Step, timing feature.Timing) []feature.St
 	return res
 }
 
-// executeWithSkippingT executes the step in a sub test wrapping t in order to never fail the subtest
-// This blocks until the test completes.
-func (mr *MagicEnvironment) executeWithSkippingT(ctx context.Context, originalT *testing.T, f *feature.Feature, s *feature.Step) feature.T {
-	originalT.Helper()
-	return mr.executeStep(ctx, originalT, f, s, createSkippingT)
+func (mr *MagicEnvironment) executeOptional(ctx context.Context, t *testing.T, f *feature.Feature, s *feature.Step) {
+	t.Helper()
+	mr.executeStep(ctx, t, f, s, createSkippingT)
 }
 
-// executeWithoutWrappingT executes the step in a sub test without wrapping t.
-// This blocks until the test completes.
-func (mr *MagicEnvironment) executeWithoutWrappingT(ctx context.Context, originalT *testing.T, f *feature.Feature, s *feature.Step) feature.T {
-	originalT.Helper()
-	return mr.executeStep(ctx, originalT, f, s, func(t *testing.T) feature.T {
-		return t
-	})
+// execute executes the step in a sub test without wrapping t.
+func (mr *MagicEnvironment) execute(ctx context.Context, t *testing.T, f *feature.Feature, s *feature.Step) {
+	t.Helper()
+	mr.executeStep(ctx, t, f, s, func(t *testing.T) feature.T { return t })
 }
 
-func (mr *MagicEnvironment) executeStep(ctx context.Context, originalT *testing.T, f *feature.Feature, s *feature.Step, tDecorator func(t *testing.T) feature.T) feature.T {
-	originalT.Helper()
+func (mr *MagicEnvironment) executeStep(ctx context.Context, t *testing.T, f *feature.Feature, s *feature.Step, tDecorator func(t *testing.T) feature.T) {
+	t.Helper()
 
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
-
-	var internalT feature.T
-	originalT.Run(f.Name+"/"+s.T.String()+"/"+s.TestName(), func(st *testing.T) {
-		st.Helper()
-		internalT = tDecorator(st)
+	t.Run(s.Name, func(t *testing.T) {
+		t.Parallel()
+		t.Helper()
+		ft := tDecorator(t)
+		t.Cleanup(func() {
+			mr.milestones.StepFinished(f.Name, s, ft)
+		})
 
 		// Create a cancel tied to this step
 		internalCtx, internalCancelFn := context.WithCancel(ctx)
 
 		defer func() {
 			if r := recover(); r != nil {
-				internalT.Errorf("Panic happened: '%v'", r)
+				ft.Errorf("Panic happened: '%v'", r)
 			}
 			// Close the context as soon as possible (this defer is invoked before the Cleanup)
 			internalCancelFn()
 		}()
 
-		mr.milestones.StepStarted(f.Name, s, internalT)
-		internalT.Cleanup(func() {
-			mr.milestones.StepFinished(f.Name, s, internalT)
-			wg.Done() // Make sure wg.Done() is invoked at the very end of the execution
-		})
+		mr.milestones.StepStarted(f.Name, s, ft)
 
 		// Perform step.
-		s.Fn(internalCtx, internalT)
+		s.Fn(internalCtx, ft)
 	})
-
-	// Wait for the test to execute before spawning the next one
-	wg.Wait()
-
-	return internalT
 }
