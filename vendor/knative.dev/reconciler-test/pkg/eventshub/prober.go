@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"sync"
 	"time"
 
 	conformanceevent "github.com/cloudevents/conformance/pkg/event"
@@ -43,8 +44,11 @@ func NewProber() *EventProber {
 }
 
 type EventProber struct {
-	target          target
-	shortNameToName map[string]string
+	target target
+
+	shortNameToName   map[string]string
+	shortNameToNameMu sync.RWMutex
+
 	ids             []string
 	senderOptions   []EventsHubOption
 	receiverOptions []EventsHubOption
@@ -116,7 +120,8 @@ func (p *EventProber) ReceiversHaveResponseDelay(delay time.Duration) {
 // ReceiverInstall installs an eventshub receiver into the test env.
 func (p *EventProber) ReceiverInstall(prefix string, opts ...EventsHubOption) feature.StepFn {
 	name := feature.MakeRandomK8sName(prefix)
-	p.shortNameToName[prefix] = name
+	p.setShortNameToName(prefix, name)
+
 	opts = append(p.receiverOptions, opts...)
 	opts = append(opts, StartReceiver)
 	return Install(name, opts...)
@@ -125,7 +130,8 @@ func (p *EventProber) ReceiverInstall(prefix string, opts ...EventsHubOption) fe
 // SenderInstall installs an eventshub sender resource into the test env.
 func (p *EventProber) SenderInstall(prefix string, opts ...EventsHubOption) feature.StepFn {
 	name := feature.MakeRandomK8sName(prefix)
-	p.shortNameToName[prefix] = name
+	p.setShortNameToName(prefix, name)
+
 	return func(ctx context.Context, t feature.T) {
 		opts := append(opts, p.senderOptions...)
 		if len(p.target.uri) > 0 {
@@ -137,6 +143,8 @@ func (p *EventProber) SenderInstall(prefix string, opts ...EventsHubOption) feat
 		}
 		// Install into the env.
 		Install(name, opts...)(ctx, t)
+
+		p.SenderDone(prefix)(ctx, t)
 	}
 }
 
@@ -147,7 +155,7 @@ func (p *EventProber) SenderDone(prefix string) feature.StepFn {
 		var events []EventInfoCombined
 		err := wait.PollImmediate(interval, timeout, func() (bool, error) {
 			events = p.SentBy(ctx, prefix)
-			t.Log(p.shortNameToName[prefix], "has sent", len(events))
+			t.Log(p.getNameFromPrefix(prefix), "has sent", len(events))
 			if len(events) == len(p.ids) {
 				return true, nil
 			}
@@ -174,13 +182,13 @@ func (p *EventProber) ReceiverDone(from, to string) feature.StepFn {
 		)
 		err := wait.PollImmediate(interval, timeout, func() (bool, error) {
 			sent = p.SentBy(ctx, from)
-			t.Log(p.shortNameToName[from], "has sent", len(sent))
+			t.Log(p.getNameFromPrefix(from), "has sent", len(sent))
 
 			received = p.ReceivedBy(ctx, to)
-			t.Log(p.shortNameToName[to], "has received", len(received))
+			t.Log(p.getNameFromPrefix(to), "has received", len(received))
 
 			rejected = p.RejectedBy(ctx, to)
-			t.Log(p.shortNameToName[to], "has rejected", len(rejected))
+			t.Log(p.getNameFromPrefix(to), "has rejected", len(rejected))
 
 			if len(sent) == len(received)+len(rejected) {
 				return true, nil
@@ -220,7 +228,7 @@ func CorrelateSent(origin string, in []EventInfo) []EventInfoCombined {
 
 // SentBy returns events sent by the named sender.
 func (p *EventProber) SentBy(ctx context.Context, prefix string) []EventInfoCombined {
-	name := p.shortNameToName[prefix]
+	name := p.getNameFromPrefix(prefix)
 	store := StoreFromContext(ctx, name)
 
 	return CorrelateSent(name, store.Collected())
@@ -228,7 +236,7 @@ func (p *EventProber) SentBy(ctx context.Context, prefix string) []EventInfoComb
 
 // ReceivedBy returns events received by the named receiver.
 func (p *EventProber) ReceivedBy(ctx context.Context, prefix string) []EventInfo {
-	name := p.shortNameToName[prefix]
+	name := p.getNameFromPrefix(prefix)
 	store := StoreFromContext(ctx, name)
 
 	events, _, _, _ := store.Find(func(info EventInfo) error {
@@ -258,7 +266,7 @@ func (p *EventProber) RejectedBy(ctx context.Context, prefix string) []EventInfo
 
 // ReceivedOrRejectedBy returns events received or rejected by the named receiver.
 func (p *EventProber) ReceivedOrRejectedBy(ctx context.Context, prefix string) []EventInfo {
-	name := p.shortNameToName[prefix]
+	name := p.getNameFromPrefix(prefix)
 	store := StoreFromContext(ctx, name)
 
 	events, _, _, _ := store.Find(func(info EventInfo) error {
@@ -351,12 +359,14 @@ func (p *EventProber) SenderMinEvents(count int) {
 
 // AsKReference returns the short-named component as a KReference.
 func (p *EventProber) AsKReference(prefix string) *duckv1.KReference {
-	return svc.AsKReference(p.shortNameToName[prefix])
+	return svc.AsKReference(p.getNameFromPrefix(prefix))
 }
 
 // AssertSentAll tests that `fromPrefix` sent all known events known to the prober.
 func (p *EventProber) AssertSentAll(fromPrefix string) feature.StepFn {
 	return func(ctx context.Context, t feature.T) {
+		p.SenderDone(fromPrefix)(ctx, t)
+
 		events := p.SentBy(ctx, fromPrefix)
 		if len(p.ids) != len(events) {
 			t.Errorf("expected %q to have sent %d events, actually sent %d",
@@ -383,6 +393,8 @@ func (p *EventProber) AssertSentAll(fromPrefix string) feature.StepFn {
 // AssertReceivedAll tests that all events sent by `fromPrefix` were received by `toPrefix`.
 func (p *EventProber) AssertReceivedAll(fromPrefix, toPrefix string) feature.StepFn {
 	return func(ctx context.Context, t feature.T) {
+		p.ReceiverDone(fromPrefix, toPrefix)(ctx, t)
+
 		sent := p.SentBy(ctx, fromPrefix)
 		ids := make([]string, len(sent))
 		for i, s := range sent {
@@ -412,6 +424,8 @@ func (p *EventProber) AssertReceivedAll(fromPrefix, toPrefix string) feature.Ste
 // AssertReceivedAll tests that all events sent by `fromPrefix` were received by `toPrefix`.
 func (p *EventProber) AssertReceivedOrRejectedAll(fromPrefix, toPrefix string) feature.StepFn {
 	return func(ctx context.Context, t feature.T) {
+		p.ReceiverDone(fromPrefix, toPrefix)(ctx, t)
+
 		sent := p.SentBy(ctx, fromPrefix)
 		ids := make([]string, len(sent))
 		for i, s := range sent {
@@ -458,11 +472,24 @@ func combine(ei []EventInfo) []EventInfoCombined {
 // AssertReceivedNone tests that no events sent by `fromPrefix` were received by `toPrefix`.
 func (p *EventProber) AssertReceivedNone(fromPrefix, toPrefix string) feature.StepFn {
 	return func(ctx context.Context, t feature.T) {
-
 		events := p.ReceivedBy(ctx, toPrefix)
 		if len(events) > 0 {
 			t.Errorf("expected %q to not have received any events from %s, actually received %d",
 				toPrefix, fromPrefix, len(events))
 		}
 	}
+}
+
+func (p *EventProber) setShortNameToName(k, v string) {
+	p.shortNameToNameMu.Lock()
+	defer p.shortNameToNameMu.Unlock()
+
+	p.shortNameToName[k] = v
+}
+
+func (p *EventProber) getNameFromPrefix(prefix string) string {
+	p.shortNameToNameMu.RLock()
+	defer p.shortNameToNameMu.RUnlock()
+
+	return p.shortNameToName[prefix]
 }
