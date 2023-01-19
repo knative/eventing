@@ -250,6 +250,12 @@ func MarkNotAddedToChannel(reason, msg string) SubscriptionOption {
 	}
 }
 
+func MarkChannelFailed(reason, msg string) SubscriptionOption {
+	return func(s *v1.Subscription) {
+		s.Status.MarkChannelFailed(reason, msg)
+	}
+}
+
 func MarkReferencesResolved(s *v1.Subscription) {
 	s.Status.MarkReferencesResolved()
 }
