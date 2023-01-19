@@ -142,7 +142,7 @@ func Example_withNamespace() {
 		"labels":    map[string]string{"app": "bla"},
 	}
 
-	pod.WithOverriddenNamespace("new-namespace")(cfg)
+	pod.WithNamespace("new-namespace")(cfg)
 
 	files, err := manifest.ExecuteYAML(ctx, yaml, images, cfg)
 	if err != nil {
