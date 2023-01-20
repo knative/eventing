@@ -23,6 +23,7 @@ import (
 	"runtime"
 	"strings"
 	"time"
+	"sync"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -41,6 +42,7 @@ type Feature struct {
 	Steps []Step
 	State state.Store
 	// Contains all the resources created as part of this Feature.
+	refsMu sync.Mutex
 	refs []corev1.ObjectReference
 }
 
@@ -140,13 +142,21 @@ func (s *Step) TestName() string {
 // Reference adds references to keep track of for example, for cleaning things
 // after a Feature completes.
 func (f *Feature) Reference(ref ...corev1.ObjectReference) {
+	f.refsMu.Lock()
+	defer f.refsMu.Unlock()
+	
 	f.refs = append(f.refs, ref...)
 }
 
 // References returns all known resources to the Feature registered via
 // `Reference`.
 func (f *Feature) References() []corev1.ObjectReference {
-	return f.refs
+	f.refsMu.Lock()
+	defer f.refsMu.Unlock()
+	
+	r := make([]corev1.ObjectReference, len(f.refs))
+	copy(r, f.refs)
+	return r
 }
 
 // DeleteResources delete all known resources to the Feature registered
@@ -216,6 +226,9 @@ func (f *Feature) DeleteResources(ctx context.Context, t T) {
 		t.Fatalf("failed to wait for resources to be deleted: %v", err)
 	}
 
+	f.refsMu.Lock()
+	defer f.refsMu.Unlock()
+	
 	f.refs = refFailedDeletion
 }
 
