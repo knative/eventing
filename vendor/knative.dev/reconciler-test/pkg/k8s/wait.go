@@ -250,6 +250,10 @@ func WaitForServiceEndpoints(ctx context.Context, t feature.T, name string, numb
 	services := kubeclient.Get(ctx).CoreV1().Services(ns)
 	if err := wait.PollImmediate(interval, timeout, func() (bool, error) {
 		svc, err := services.Get(ctx, name, metav1.GetOptions{})
+		if apierrors.IsNotFound(err) {
+			t.Log(name, "not found", err)
+			return false, nil
+		}
 		if err != nil {
 			return false, err
 		}
@@ -373,6 +377,11 @@ func WaitForPodRunningOrFail(ctx context.Context, t feature.T, podName string) {
 	interval, timeout := PollTimings(ctx, nil)
 	err := wait.PollImmediate(interval, timeout, func() (bool, error) {
 		p, err := p.Get(ctx, podName, metav1.GetOptions{})
+		if apierrors.IsNotFound(err) {
+			t.Log(podName, "not found", err)
+			// keep polling
+			return false, nil
+		}
 		if err != nil {
 			return true, err
 		}
