@@ -123,6 +123,7 @@ func makeEvent(source, apiServerSourceName, eventType string, obj *unstructured.
 	event.SetSubject(subject)
 	// We copy the resource kind, name and namespace as extensions so that triggers can do the filter based on these attributes
 	event.SetExtension("kind", kind)
+	event.SetExtension("apiversion", obj.GetAPIVersion())
 	event.SetExtension("name", resourceName)
 	event.SetExtension("namespace", namespace)
 	if err := event.SetData(cloudevents.ApplicationJSON, data); err != nil {
