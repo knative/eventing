@@ -165,6 +165,12 @@ func (p *EventProber) SenderDone(prefix string) feature.StepFn {
 		interval, timeout := environment.PollTimingsFromContext(ctx)
 		var events []EventInfoCombined
 		err := wait.PollImmediate(interval, timeout, func() (bool, error) {
+			defer func() {
+				if err := recover(); err != nil {
+					t.Log(err)
+				}
+			}()
+			
 			expected := p.getIdsCopy()
 			events = p.SentBy(ctx, prefix)
 			t.Log(p.getNameFromPrefix(prefix), "has sent", len(events), "expected", len(expected))
@@ -193,6 +199,11 @@ func (p *EventProber) ReceiverDone(from, to string) feature.StepFn {
 			rejected []EventInfo
 		)
 		err := wait.PollImmediate(interval, timeout, func() (bool, error) {
+			defer func() {
+				if err := recover(); err != nil {
+					t.Log(err)
+				}
+			}()
 			sent = p.SentBy(ctx, from)
 			t.Log(p.getNameFromPrefix(from), "has sent", len(sent))
 
