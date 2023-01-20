@@ -21,7 +21,6 @@ import (
 	"embed"
 	"strings"
 
-	"github.com/pkg/errors"
 	"knative.dev/pkg/logging"
 	"knative.dev/reconciler-test/pkg/environment"
 	eventshubrbac "knative.dev/reconciler-test/pkg/eventshub/rbac"
@@ -56,7 +55,7 @@ func Install(name string, options ...EventsHubOption) feature.StepFn {
 		// Compute the user provided envs
 		envs := make(map[string]string)
 		if err := compose(options...)(ctx, envs); err != nil {
-			log.Fatalf("Error while computing environment variables for eventshub: %s", errors.WithStack(err))
+			log.Fatalf("Error while computing environment variables for eventshub: %s", err)
 		}
 
 		// eventshub needs tracing and logging config
