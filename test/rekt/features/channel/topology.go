@@ -20,24 +20,26 @@ import (
 	"fmt"
 	"strconv"
 
+	"knative.dev/reconciler-test/pkg/eventshub"
+	"knative.dev/reconciler-test/pkg/feature"
+	"knative.dev/reconciler-test/pkg/manifest"
+
 	v1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/test/rekt/features/knconf"
 	"knative.dev/eventing/test/rekt/resources/channel_impl"
 	"knative.dev/eventing/test/rekt/resources/delivery"
 	"knative.dev/eventing/test/rekt/resources/subscription"
-	"knative.dev/reconciler-test/pkg/eventshub"
-	"knative.dev/reconciler-test/pkg/feature"
-	"knative.dev/reconciler-test/pkg/manifest"
 )
 
 type subCfg struct {
-	prefix         string
-	hasSub         bool
-	subFailCount   uint
-	subReplies     bool
-	hasReply       bool
-	replyFailCount uint
-	delivery       *v1.DeliverySpec
+	prefix            string
+	hasSub            bool
+	subFailCount      uint
+	subReplies        bool
+	hasReply          bool
+	replyFailCount    uint
+	delivery          *v1.DeliverySpec
+	subFailStatusCode int
 }
 
 func (s *subCfg) subName() string {

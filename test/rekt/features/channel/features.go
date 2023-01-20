@@ -32,15 +32,15 @@ import (
 	"knative.dev/reconciler-test/pkg/manifest"
 	"knative.dev/reconciler-test/resources/svc"
 
+	eventasssert "knative.dev/reconciler-test/pkg/eventshub/assert"
+
 	"knative.dev/eventing/test/rekt/resources/channel"
 	"knative.dev/eventing/test/rekt/resources/channel_impl"
 	"knative.dev/eventing/test/rekt/resources/containersource"
 	"knative.dev/eventing/test/rekt/resources/delivery"
-	"knative.dev/eventing/test/rekt/resources/eventlibrary"
 	"knative.dev/eventing/test/rekt/resources/pingsource"
 	"knative.dev/eventing/test/rekt/resources/source"
 	"knative.dev/eventing/test/rekt/resources/subscription"
-	eventasssert "knative.dev/reconciler-test/pkg/eventshub/assert"
 )
 
 func ChannelChain(length int, createSubscriberFn func(ref *duckv1.KReference, uri string) manifest.CfgFn) *feature.Feature {
@@ -193,21 +193,13 @@ func AsDeadLetterSink(createSubscriberFn func(ref *duckv1.KReference, uri string
 
 func EventTransformation() *feature.Feature {
 	f := feature.NewFeature()
-	lib := feature.MakeRandomK8sName("lib")
 	channel1 := feature.MakeRandomK8sName("channel 1")
 	channel2 := feature.MakeRandomK8sName("channel 2")
 	subscription1 := feature.MakeRandomK8sName("subscription 1")
 	subscription2 := feature.MakeRandomK8sName("subscription 2")
 	prober := eventshub.NewProber()
 	prober.SetTargetResource(channel_impl.GVR(), channel1)
-
-	f.Setup("install events", eventlibrary.Install(lib))
-	f.Setup("use events cache", prober.SenderEventsFromSVC(lib, "events/three.ce"))
-	f.Setup("register event expectation", func(ctx context.Context, t feature.T) {
-		if err := prober.ExpectYAMLEvents(eventlibrary.PathFor("events/three.ce")); err != nil {
-			t.Fatalf("can not find event files: %v", err)
-		}
-	})
+	prober.SenderFullEvents(3)
 
 	f.Setup("install sink", prober.ReceiverInstall("sink"))
 	f.Setup("install transform service", prober.ReceiverInstall("transform", eventshub.ReplyWithTransformedEvent("transformed", "transformer", "")))
@@ -227,7 +219,6 @@ func EventTransformation() *feature.Feature {
 	f.Setup("channel 1 is ready", channel_impl.IsReady(channel1))
 	f.Setup("channel 2 is ready", channel_impl.IsReady(channel2))
 	f.Setup("install source", prober.SenderInstall("source"))
-	f.Setup("event library is ready", eventlibrary.IsReady(lib))
 
 	f.Requirement("sender is finished", prober.SenderDone("source"))
 	f.Requirement("receiver is finished", prober.ReceiverDone("source", "sink"))
