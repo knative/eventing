@@ -131,10 +131,10 @@ func (p *EventProber) ReceiversHaveResponseDelay(delay time.Duration) {
 func (p *EventProber) ReceiverInstall(prefix string, opts ...EventsHubOption) feature.StepFn {
 	name := feature.MakeRandomK8sName(prefix)
 	p.setShortNameToName(prefix, name)
-	p.appendReceiverOptions(opts...)
-	p.appendReceiverOptions(StartReceiver)
+	opts = append(opts, p.getReceiverOptions()...)
+	opts = append(opts, StartReceiver)
 
-	return Install(name, p.getReceiverOptions()...)
+	return Install(name, opts...)
 }
 
 // SenderInstall installs an eventshub sender resource into the test env.
