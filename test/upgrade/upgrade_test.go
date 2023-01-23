@@ -20,11 +20,11 @@ limitations under the License.
 package upgrade
 
 import (
-	"system"
 	"testing"
 
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/upgrade/installation"
+	"knative.dev/pkg/system"
 	pkgupgrade "knative.dev/pkg/test/upgrade"
 )
 
