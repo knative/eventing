@@ -20,13 +20,19 @@ limitations under the License.
 package upgrade
 
 import (
+	"system"
 	"testing"
 
+	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/upgrade/installation"
 	pkgupgrade "knative.dev/pkg/test/upgrade"
 )
 
 func TestEventingUpgrades(t *testing.T) {
+	canceler := testlib.ExportLogStreamOnError(t, testlib.SystemLogsDir, system.Namespace(),
+		"imc-dispatcher", "imc-controller")
+	defer canceler()
+
 	suite := pkgupgrade.Suite{
 		Tests: pkgupgrade.Tests{
 			PreUpgrade: []pkgupgrade.Operation{
