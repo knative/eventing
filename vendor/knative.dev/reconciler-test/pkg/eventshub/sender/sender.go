@@ -36,8 +36,10 @@ import (
 	"github.com/cloudevents/sdk-go/v2/types"
 	"github.com/kelseyhightower/envconfig"
 	"go.opencensus.io/trace"
+	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"knative.dev/pkg/logging"
+
 	"knative.dev/reconciler-test/pkg/eventshub"
 )
 
@@ -144,6 +146,7 @@ func Start(ctx context.Context, logs *eventshub.EventLogs, clientOpts ...Option)
 			}
 
 			if _, err := nethttp.DefaultClient.Do(req); err != nil {
+				logging.FromContext(ctx).Error(zap.Error(err))
 				return false, nil
 			}
 			return true, nil

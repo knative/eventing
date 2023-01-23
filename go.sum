@@ -400,6 +400,8 @@ github.com/pelletier/go-toml/v2 v2.0.5 h1:ipoSadvV8oGUjnUbMub59IDPPwfxF694nG/jwb
 github.com/pelletier/go-toml/v2 v2.0.5/go.mod h1:OMHamSCAODeSsVrwwvcJOaoN0LIUIaFVNZzmWyNfXas=
 github.com/phayes/freeport v0.0.0-20180830031419-95f893ade6f2 h1:JhzVVoYvbOACxoUmOs6V/G4D5nPVUW73rKvXxP4XUJc=
 github.com/phayes/freeport v0.0.0-20180830031419-95f893ade6f2/go.mod h1:iIss55rKnNBTvrwdmkUpLnDpZoAHvWaiq5+iMmen4AE=
+github.com/pierdipi/reconciler-test v0.0.0-20230123090117-25d4e4f774ef h1:PkB+rSQsNgkoAjEl9/PveIM6DENDxucfE9je98jrRYA=
+github.com/pierdipi/reconciler-test v0.0.0-20230123090117-25d4e4f774ef/go.mod h1:ZPUBldkrSIOe0c57sDcnuM4bzQy16iTtvMV59nMPpfs=
 github.com/pierrec/lz4 v1.0.2-0.20190131084431-473cd7ce01a1/go.mod h1:3/3N9NVKO0jef7pBehbT1qWhCMrIgbYNnFAZCqQ5LRc=
 github.com/pierrec/lz4 v2.6.1+incompatible/go.mod h1:pdkljMzZIN41W+lC3N2tnIh5sFi+IEE17M5jbnwPHcY=
 github.com/pkg/errors v0.8.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
@@ -1004,10 +1006,8 @@ knative.dev/hack v0.0.0-20230113013652-c7cfcb062de9 h1:CDa7s9KspEZqPhk7cN68ZypRL
 knative.dev/hack v0.0.0-20230113013652-c7cfcb062de9/go.mod h1:yk2OjGDsbEnQjfxdm0/HJKS2WqTLEFg/N6nUs6Rqx3Q=
 knative.dev/hack/schema v0.0.0-20230113013652-c7cfcb062de9 h1:89vI4RV1PGCWlaC60uBnEyHEuXMCVnvhXXv+AnIezow=
 knative.dev/hack/schema v0.0.0-20230113013652-c7cfcb062de9/go.mod h1:GeIb+PLd5mllawcpHEGF5J5fYTQrvgEO5liao8lUKUs=
-knative.dev/pkg v0.0.0-20230116014407-876c59d03903 h1:lJA2FQ8g9V/BlcQxpbz1YpS+Ter5nV4hDbe8KajD+dI=
-knative.dev/pkg v0.0.0-20230116014407-876c59d03903/go.mod h1:iSUj1sKTDQUFZMCy8pTfqlSqL9fhXV43aW6ZfeEacgA=
-knative.dev/reconciler-test v0.0.0-20230116142954-b070b1789a78 h1:IZS8SMTxbGYKTUtUgxjfDJpDq1up/j6iydDgdhjokdE=
-knative.dev/reconciler-test v0.0.0-20230116142954-b070b1789a78/go.mod h1:we240hU3xe+jg1KSTydJ19ORHrPPplyVNf/hcbI6eSU=
+knative.dev/pkg v0.0.0-20230117181655-247510c00e9d h1:pjKDcvHoMib8nRp56eISRmMj/pFMzJljnzvMvGCIReI=
+knative.dev/pkg v0.0.0-20230117181655-247510c00e9d/go.mod h1:VO/fcEsq43seuONRQxZyftWHjpMabYzRHDtpSEQ/eoQ=
 pgregory.net/rapid v0.3.3 h1:jCjBsY4ln4Atz78QoBWxUEvAHaFyNDQg9+WU62aCn1U=
 pgregory.net/rapid v0.3.3/go.mod h1:UYpPVyjFHzYBGHIxLFoupi8vwk6rXNzRY9OMvVxFIOU=
 rsc.io/binaryregexp v0.2.0/go.mod h1:qTv7/COck+e2FymRvadv62gMdZztPaShugOCi3I+8D8=

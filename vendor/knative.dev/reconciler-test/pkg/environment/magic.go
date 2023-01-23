@@ -70,6 +70,7 @@ type MagicEnvironment struct {
 	namespace        string
 	namespaceCreated bool
 	refs             []corev1.ObjectReference
+	refsMu           sync.Mutex
 
 	// milestones sends milestone events, if configured.
 	milestones milestone.Emitter
@@ -87,11 +88,19 @@ const (
 )
 
 func (mr *MagicEnvironment) Reference(ref ...corev1.ObjectReference) {
+	mr.refsMu.Lock()
+	defer mr.refsMu.Unlock()
+
 	mr.refs = append(mr.refs, ref...)
 }
 
 func (mr *MagicEnvironment) References() []corev1.ObjectReference {
-	return mr.refs
+	mr.refsMu.Lock()
+	defer mr.refsMu.Unlock()
+
+	r := make([]corev1.ObjectReference, len(mr.refs))
+	copy(r, mr.refs)
+	return r
 }
 
 func (mr *MagicEnvironment) Finish() {
@@ -216,7 +225,9 @@ func (mr *MagicEnvironment) TemplateConfig(base map[string]interface{}) map[stri
 	for k, v := range base {
 		cfg[k] = v
 	}
-	cfg["namespace"] = mr.namespace
+	if _, ok := cfg["namespace"]; !ok {
+		cfg["namespace"] = mr.namespace
+	}
 	return cfg
 }
 
