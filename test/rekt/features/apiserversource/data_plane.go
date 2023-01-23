@@ -26,6 +26,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/apimachinery/pkg/util/sets"
+	"knative.dev/reconciler-test/pkg/eventshub"
+	eventasssert "knative.dev/reconciler-test/pkg/eventshub/assert"
+	"knative.dev/reconciler-test/pkg/feature"
+	"knative.dev/reconciler-test/pkg/manifest"
+	"knative.dev/reconciler-test/resources/svc"
+
 	"knative.dev/eventing/pkg/apis/sources"
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/eventing/test/rekt/resources/account_role"
@@ -34,11 +40,6 @@ import (
 	"knative.dev/eventing/test/rekt/resources/eventtype"
 	"knative.dev/eventing/test/rekt/resources/pod"
 	"knative.dev/eventing/test/rekt/resources/trigger"
-	"knative.dev/reconciler-test/pkg/eventshub"
-	eventasssert "knative.dev/reconciler-test/pkg/eventshub/assert"
-	"knative.dev/reconciler-test/pkg/feature"
-	"knative.dev/reconciler-test/pkg/manifest"
-	"knative.dev/reconciler-test/resources/svc"
 )
 
 const (
@@ -190,7 +191,7 @@ func SendsEventsWithEventTypes() *feature.Feature {
 	f.Setup("Create Service Account for ApiServerSource with RBAC for v1.Event resources",
 		setupAccountAndRoleForPods(sacmName))
 
-	f.Setup("install apiserversource", func(ctx context.Context, t feature.T) {
+	f.Requirement("install apiserversource", func(ctx context.Context, t feature.T) {
 		brokeruri, err := broker.Address(ctx, brokerName)
 		if err != nil {
 			t.Error("failed to get address of broker", err)
@@ -206,7 +207,7 @@ func SendsEventsWithEventTypes() *feature.Feature {
 		}
 		apiserversource.Install(source, cfg...)(ctx, t)
 	})
-	f.Setup("ApiServerSource goes ready", apiserversource.IsReady(source))
+	f.Requirement("ApiServerSource goes ready", apiserversource.IsReady(source))
 
 	expectedCeTypes := sets.NewString(sources.ApiServerSourceEventReferenceModeTypes...)
 
