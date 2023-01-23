@@ -260,10 +260,8 @@ func SingleEventWithEncoding(encoding binding.Encoding) *feature.Feature {
 
 	f.Setup("subscription is ready", subscription.IsReady(sub))
 	f.Setup("channel is ready", channel_impl.IsReady(channel))
-	f.Setup("install source", prober.SenderInstall("source", eventshub.InputEventWithEncoding(event, encoding)))
 
-	f.Requirement("sender is finished", prober.SenderDone("source"))
-	f.Requirement("receiver is finished", prober.ReceiverDone("source", "sink"))
+	f.Requirement("install source", prober.SenderInstall("source", eventshub.InputEventWithEncoding(event, encoding)))
 
 	f.Assert("sink receives events", prober.AssertReceivedAll("source", "sink"))
 

@@ -56,13 +56,10 @@ func SourceToSink(brokerName string) *feature.Feature {
 
 	f.Setup("trigger goes ready", trigger.IsReady(via))
 
-	f.Setup("install source", func(ctx context.Context, t feature.T) {
-		u, err := broker.Address(ctx, brokerName)
-		if err != nil || u == nil {
-			t.Error("failed to get the address of the broker", brokerName, err)
-		}
-		eventshub.Install(source, eventshub.StartSenderURL(u.String()), eventshub.InputEvent(event))(ctx, t)
-	})
+	f.Requirement("install source", eventshub.Install(source,
+		eventshub.StartSenderToResource(broker.GVR(), brokerName),
+		eventshub.InputEvent(event),
+	))
 
 	f.Stable("broker as middleware").
 		Must("deliver an event",

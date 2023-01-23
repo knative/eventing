@@ -116,10 +116,7 @@ func SourceToTriggerSinkWithDLSDontUseBrokers() *feature.Feature {
 	f.Setup("trigger goes ready", trigger.IsReady(triggerName))
 
 	// Install events after topology is ready.
-	f.Setup("install source", prober.SenderInstall("source"))
-
-	// After we have finished sending.
-	f.Requirement("sender is finished", prober.SenderDone("source"))
+	f.Requirement("install source", prober.SenderInstall("source"))
 
 	// Assert events ended up where we expected.
 	f.Stable("trigger with a valid DLS ref").
@@ -169,11 +166,6 @@ func BadTriggerDoesNotAffectOkTrigger() *feature.Feature {
 
 	// Install events after data plane is ready.
 	f.Requirement("install source", prober.SenderInstall(source))
-
-	// After we have finished sending.
-	f.Requirement("sender is finished", prober.SenderDone(source))
-	f.Requirement("receiver 1 is finished", prober.ReceiverDone(source, dlq))
-	f.Requirement("receiver 2 is finished", prober.ReceiverDone(source, sink))
 
 	// Assert events ended up where we expected.
 	f.Stable("broker with DLQ").
