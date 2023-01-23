@@ -19,14 +19,17 @@ package channel_impl
 import (
 	"context"
 	"embed"
+	"encoding/json"
 	"log"
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/injection/clients/dynamicclient"
@@ -108,21 +111,35 @@ func IsAddressable(name string, timing ...time.Duration) feature.StepFn {
 func HasDeadLetterSinkURI(name string, gvr schema.GroupVersionResource) feature.StepFn {
 	return func(ctx context.Context, t feature.T) {
 		ns := environment.FromContext(ctx).Namespace()
-		ch, err := dynamicclient.Get(ctx).
-			Resource(gvr).
-			Namespace(ns).
-			Get(ctx, name, metav1.GetOptions{})
+		interval, timeout := environment.PollTimingsFromContext(ctx)
+		var lastState *eventingduck.Channelable
+		err := wait.Poll(interval, timeout, func() (done bool, err error) {
+			ch, err := dynamicclient.Get(ctx).
+				Resource(gvr).
+				Namespace(ns).
+				Get(ctx, name, metav1.GetOptions{})
+			if apierrors.IsNotFound(err) {
+				return false, nil
+			}
+			if err != nil {
+				t.Fatalf("failed to get %s/%s channel: %v", ns, name, err)
+			}
+
+			channelable := &eventingduck.Channelable{}
+			if err := runtime.DefaultUnstructuredConverter.FromUnstructured(ch.UnstructuredContent(), channelable); err != nil {
+				t.Fatal(err)
+			}
+			lastState = channelable
+
+			if channelable.Status.DeadLetterSinkURI.String() == "" {
+				return false, nil
+			}
+
+			return true, nil
+		})
 		if err != nil {
-			t.Fatalf("failed to get %s/%s channel: %v", ns, name, err)
-		}
-
-		channelable := &eventingduck.Channelable{}
-		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(ch.UnstructuredContent(), channelable); err != nil {
-			t.Fatal(err)
-		}
-
-		if channelable.Status.DeadLetterSinkURI.String() == "" {
-			t.Fatalf("channel %s/%s has no dead letter sink uri in the status", ns, name)
+			bytes, _ := json.MarshalIndent(lastState, "", "  ")
+			t.Errorf("failed to verify channel has dead letter sink: %w, last state:\n%s", err, string(bytes))
 		}
 	}
 }

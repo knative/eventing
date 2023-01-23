@@ -18,6 +18,7 @@ package channel
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
@@ -110,6 +111,9 @@ func ControlPlaneChannel(channelName string) *feature.Feature {
 	f.Setup("install a service", svc.Install(sink, "app", "rekt"))
 	f.Setup("update Channel", channel_impl.Install(cName, delivery.WithDeadLetterSink(svc.AsKReference(sink), "")))
 	f.Setup("Channel goes ready", channel_impl.IsReady(cName))
+	f.Setup("Channel is addressable", channel_impl.IsAddressable(cName))
+
+	f.Requirement("Channel has dead letter sink URI in status", channel_impl.HasDeadLetterSinkURI(cName, channel_impl.GVR()))
 
 	f.Stable("Channel Status").
 		Must("When the channel instance is ready to receive events status.address.url MUST be populated. "+
@@ -256,7 +260,8 @@ func readyChannelWithDLSHaveStatusUpdated(ctx context.Context, t feature.T) {
 	// Confirm the channel is ready, and has the status.deadLetterSinkURI set.
 	if c := ch.Status.GetCondition(apis.ConditionReady); c.IsTrue() {
 		if ch.Status.DeadLetterSinkURI == nil {
-			t.Errorf("channel DLS not resolved but resource reported ready")
+			bytes, _ := json.MarshalIndent(ch, "", " ")
+			t.Errorf("channel DLS not resolved but resource reported ready, state:\n%s", string(bytes))
 		}
 		// Success!
 	} else {

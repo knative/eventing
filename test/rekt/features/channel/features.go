@@ -89,19 +89,20 @@ func DeadLetterSink(createSubscriberFn func(ref *duckv1.KReference, uri string) 
 	failer := feature.MakeK8sNamePrefix("failer")
 	cs := feature.MakeRandomK8sName("containersource")
 	name := feature.MakeRandomK8sName("channel")
+	sub := feature.MakeRandomK8sName("subscription")
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 	f.Setup("install failing receiver", eventshub.Install(failer, eventshub.StartReceiver, eventshub.DropFirstN(1)))
 	f.Setup("install channel", channel_impl.Install(name, delivery.WithDeadLetterSink(svc.AsKReference(sink), "")))
-	f.Setup("install containersource", containersource.Install(cs, source.WithSink(channel_impl.AsRef(name), "")))
-	f.Setup("install subscription", subscription.Install(feature.MakeRandomK8sName("subscription"),
+	f.Setup("install subscription", subscription.Install(sub,
 		subscription.WithChannel(channel_impl.AsRef(name)),
 		createSubscriberFn(svc.AsKReference(failer), ""),
 	))
-
 	f.Setup("channel is ready", channel_impl.IsReady(name))
-	f.Setup("containersource is ready", containersource.IsReady(cs))
+	f.Setup("subscription is ready", subscription.IsReady(sub))
 
+	f.Requirement("install containersource", containersource.Install(cs, source.WithSink(channel_impl.AsRef(name), "")))
+	f.Requirement("containersource is ready", containersource.IsReady(cs))
 	f.Requirement("Channel has dead letter sink uri", channel_impl.HasDeadLetterSinkURI(name, channel_impl.GVR()))
 
 	f.Assert("dls receives events", assert.OnStore(sink).
@@ -118,6 +119,7 @@ func DeadLetterSinkGenericChannel(createSubscriberFn func(ref *duckv1.KReference
 	failer := feature.MakeK8sNamePrefix("failer")
 	cs := feature.MakeRandomK8sName("containersource")
 	name := feature.MakeRandomK8sName("channel")
+	sub := feature.MakeRandomK8sName("subscription")
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 	f.Setup("install failing receiver", eventshub.Install(failer, eventshub.StartReceiver, eventshub.DropFirstN(1)))
@@ -125,15 +127,15 @@ func DeadLetterSinkGenericChannel(createSubscriberFn func(ref *duckv1.KReference
 		channel.WithTemplate(),
 		delivery.WithDeadLetterSink(svc.AsKReference(sink), "")),
 	)
-	f.Setup("install containersource", containersource.Install(cs, source.WithSink(channel.AsRef(name), "")))
-	f.Setup("install subscription", subscription.Install(feature.MakeRandomK8sName("subscription"),
+	f.Setup("install subscription", subscription.Install(sub,
 		subscription.WithChannel(channel.AsRef(name)),
 		createSubscriberFn(svc.AsKReference(failer), ""),
 	))
-
 	f.Setup("channel is ready", channel.IsReady(name))
-	f.Setup("containersource is ready", containersource.IsReady(cs))
+	f.Setup("subscription is ready", subscription.IsReady(sub))
 
+	f.Requirement("install containersource", containersource.Install(cs, source.WithSink(channel.AsRef(name), "")))
+	f.Requirement("containersource is ready", containersource.IsReady(cs))
 	f.Requirement("Channel has dead letter sink uri", channel_impl.HasDeadLetterSinkURI(name, channel.GVR()))
 
 	f.Assert("dls receives events", assert.OnStore(sink).
