@@ -37,6 +37,7 @@ import (
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/injection/clients/dynamicclient"
 	"knative.dev/pkg/kmeta"
+
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"
 )
@@ -250,11 +251,12 @@ func WaitForServiceEndpoints(ctx context.Context, t feature.T, name string, numb
 	services := kubeclient.Get(ctx).CoreV1().Services(ns)
 	if err := wait.PollImmediate(interval, timeout, func() (bool, error) {
 		svc, err := services.Get(ctx, name, metav1.GetOptions{})
-		if apierrors.IsNotFound(err) {
-			t.Log(name, "not found", err)
-			return false, nil
-		}
 		if err != nil {
+			if apierrors.IsNotFound(err) {
+				t.Log("service", "namespace", ns, "name", name, err)
+				// keep polling
+				return false, nil
+			}
 			return false, err
 		}
 		ip := svc.Spec.ClusterIP
@@ -377,12 +379,12 @@ func WaitForPodRunningOrFail(ctx context.Context, t feature.T, podName string) {
 	interval, timeout := PollTimings(ctx, nil)
 	err := wait.PollImmediate(interval, timeout, func() (bool, error) {
 		p, err := p.Get(ctx, podName, metav1.GetOptions{})
-		if apierrors.IsNotFound(err) {
-			t.Log(podName, "not found", err)
-			// keep polling
-			return false, nil
-		}
 		if err != nil {
+			if apierrors.IsNotFound(err) {
+				t.Log("pod", "namespace", ns, "name", podName, err)
+				// keep polling
+				return false, nil
+			}
 			return true, err
 		}
 		isRunning := podRunning(p)

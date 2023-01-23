@@ -42,7 +42,6 @@ func (mr *MagicEnvironment) executeStep(ctx context.Context, t *testing.T, f *fe
 	t.Helper()
 
 	t.Run(s.Name, func(t *testing.T) {
-		t.Parallel()
 		t.Helper()
 		ft := tDecorator(t)
 		t.Cleanup(func() {

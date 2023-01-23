@@ -142,3 +142,5 @@ replace (
 	github.com/miekg/dns v1.0.14 => github.com/miekg/dns v1.1.25
 	github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.11.1
 )
+
+replace knative.dev/reconciler-test => github.com/pierdipi/reconciler-test v0.0.0-20230123090117-25d4e4f774ef

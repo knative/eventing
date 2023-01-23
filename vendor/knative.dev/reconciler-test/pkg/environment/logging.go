@@ -20,12 +20,16 @@ import (
 	"context"
 
 	"go.uber.org/zap/zaptest"
+
 	"knative.dev/reconciler-test/pkg/feature"
 	testlog "knative.dev/reconciler-test/pkg/logging"
 )
 
 // loggingSteps returns a number of steps that logs environment-managed resources.
 func (mr *MagicEnvironment) loggingSteps() []feature.Step {
+	mr.refsMu.Lock()
+	defer mr.refsMu.Unlock()
+
 	return []feature.Step{{
 		Name: "Log references",
 		S:    feature.Any,
