@@ -17,16 +17,21 @@ limitations under the License.
 package lib
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
+	"sync"
+	"testing"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	pkgtest "knative.dev/pkg/test"
 	"knative.dev/pkg/test/helpers"
+	"knative.dev/pkg/test/logstream/v2"
 	"knative.dev/pkg/test/prow"
 )
 
@@ -94,4 +99,93 @@ func ExportLogs(systemLogsDir, systemNamespace string) {
 			log.Printf("Error in exporting logs: %v", err)
 		}
 	}
+}
+
+// ExportLogStreamOnError starts a log stream from the given namespace
+// for pods specified via podPrefixes. The log strema is stopped and
+// logs exported upon calling the returned Canceler.
+func ExportLogStreamOnError(t *testing.T, logDir, namespace string, podPrefixes ...string) logstream.Canceler {
+	config, err := pkgtest.Flags.GetRESTConfig()
+	if err != nil {
+		t.Fatalf("Failed to create REST config: %v\n", err)
+	}
+
+	kubeClient, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		t.Fatalf("Failed to create kube client: %v\n", err)
+	}
+
+	buf := threadSafeBuffer{}
+	callback := func(s string, params ...interface{}) {
+		buf.Write([]byte(fmt.Sprintf(s, params...) + "\n"))
+	}
+
+	sysStream := logstream.New(context.Background(), kubeClient,
+		logstream.WithNamespaces(namespace),
+		logstream.WithLineFiltering(false),
+		logstream.WithPodPrefixes(podPrefixes...))
+	canceler, err := sysStream.StartStream("unfiltered-logs", callback)
+	if err != nil {
+		t.Fatal("Unable to stream logs from namespace", err)
+	}
+
+	return func() {
+		canceler()
+
+		if !t.Failed() {
+			return
+		}
+
+		// Maps pod name prefix to its logs.
+		logs := make(map[string]string)
+		if len(podPrefixes) == 0 {
+			logs["all-in-one"] = buf.String()
+		} else {
+			// Divide logs by podPrefix so that logs for each pod are stored in a separate file.
+			for _, podPrefix := range podPrefixes {
+				for _, line := range strings.Split(buf.String(), "\n") {
+					if strings.Contains(line, podPrefix) {
+						logs[podPrefix] = logs[podPrefix] + line + "\n"
+					}
+				}
+			}
+		}
+
+		dir := filepath.Join(prow.GetLocalArtifactsDir(), logDir)
+		if err := helpers.CreateDir(dir); err != nil {
+			t.Errorf("Error creating directory %q: %v", dir, err)
+		}
+
+		var errs []error
+		for podPrefix, log := range logs {
+			path := filepath.Join(dir, fmt.Sprintf("%s.log", podPrefix))
+			f, err := os.Create(path)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("error creating file %q: %w", path, err))
+				continue
+			}
+			_, err = f.Write([]byte(log))
+			if err != nil {
+				errs = append(errs, fmt.Errorf("error writing logs into file %q: %w", path, err))
+			}
+			_ = f.Close()
+		}
+
+		if len(errs) > 0 {
+			t.Errorf("Failed to write logs: %v", helpers.CombineErrors(errs))
+		}
+	}
+}
+
+// threadSafeBuffer avoids race conditions on bytes.Buffer.
+// See: https://stackoverflow.com/a/36226525/844449
+type threadSafeBuffer struct {
+	bytes.Buffer
+	sync.Mutex
+}
+
+func (b *threadSafeBuffer) Write(p []byte) (n int, err error) {
+	b.Mutex.Lock()
+	defer b.Mutex.Unlock()
+	return b.Buffer.Write(p)
 }
