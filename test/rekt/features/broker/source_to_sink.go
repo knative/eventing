@@ -99,7 +99,7 @@ func SourceToSinkWithDLQ() *feature.Feature {
 
 	// Install events after data plane is ready.
 	f.Requirement("install source", eventshub.Install(source,
-		eventshub.StartSenderToResource(broker.GVR(), source),
+		eventshub.StartSenderToResource(broker.GVR(), brokerName),
 		eventshub.InputEvent(ce),
 	))
 
