@@ -29,8 +29,16 @@ import (
 )
 
 func TestEventingUpgrades(t *testing.T) {
-	canceler := testlib.ExportLogStreamOnError(t, testlib.SystemLogsDir, system.Namespace(),
-		"imc-dispatcher", "imc-controller")
+	labels := []string{
+		"eventing-controller",
+		"eventing-webhook",
+		"imc-controller",
+		"imc-dispatcher",
+		"mt-broker-controller",
+		"mt-broker-ingress",
+		"mt-broker-filter",
+	}
+	canceler := testlib.ExportLogStreamOnError(t, testlib.SystemLogsDir, system.Namespace(), labels...)
 	defer canceler()
 
 	suite := pkgupgrade.Suite{
