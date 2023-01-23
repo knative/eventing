@@ -271,6 +271,11 @@ func WaitForServiceEndpoints(ctx context.Context, t feature.T, name string, numb
 	if err := wait.PollImmediate(interval, timeout, func() (bool, error) {
 		endpoint, err := endpoints.Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
+			if apierrors.IsNotFound(err) {
+				t.Log("endpoint", "namespace", ns, "name", name, err)
+				// keep polling
+				return false, nil
+			}
 			return false, err
 		}
 		num := countEndpointsNum(endpoint)

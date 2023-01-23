@@ -131,7 +131,7 @@ func (p *EventProber) ReceiversHaveResponseDelay(delay time.Duration) {
 func (p *EventProber) ReceiverInstall(prefix string, opts ...EventsHubOption) feature.StepFn {
 	name := feature.MakeRandomK8sName(prefix)
 	p.setShortNameToName(prefix, name)
-	opts = append(opts, p.getReceiverOptions()...)
+	opts = append(p.getReceiverOptions(), opts...)
 	opts = append(opts, StartReceiver)
 
 	return Install(name, opts...)
