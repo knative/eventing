@@ -357,16 +357,16 @@ func SendsEventsForAllResourcesWithNamespaceSelector() *feature.Feature {
 	f.Setup("Create Service Account for ApiServerSource with RBAC for v1.Pod resources",
 		setupAccountAndRoleForPods(sacmName))
 
-	testNS1 := feature.MakeRandomK8sName("source-namespace")
-	testNS2 := feature.MakeRandomK8sName("source-namespace")
-	testNS3 := feature.MakeRandomK8sName("source-namespace")
+	testNS1 := feature.MakeRandomK8sName("source-namespace-1")
+	testNS2 := feature.MakeRandomK8sName("source-namespace-2")
+	testNS3 := feature.MakeRandomK8sName("source-namespace-3")
 
 	// create two new namespaces with matching selector
-	f.Setup("create test-a namespace with matching selector", namespace.Install(testNS1, namespace.WithLabels(map[string]string{"env": "development"})))
-	f.Setup("create test-a namespace with matching selector", namespace.Install(testNS2, namespace.WithLabels(map[string]string{"env": "development"})))
+	f.Setup("create a namespace with matching label", namespace.Install(testNS1, namespace.WithLabels(map[string]string{"env": "development"})))
+	f.Setup("create a namespace with matching label", namespace.Install(testNS2, namespace.WithLabels(map[string]string{"env": "development"})))
 
 	// create one new namespace that doesn't match selector
-	f.Setup("create test-a namespace with matching selector", namespace.Install(testNS3, namespace.WithLabels(map[string]string{"env": "production"})))
+	f.Setup("create a namespace without matching label", namespace.Install(testNS3, namespace.WithLabels(map[string]string{"env": "production"})))
 
 	cfg := []manifest.CfgFn{
 		apiserversource.WithServiceAccountName(sacmName),
@@ -384,9 +384,9 @@ func SendsEventsForAllResourcesWithNamespaceSelector() *feature.Feature {
 	f.Setup("install ApiServerSource", apiserversource.Install(source, cfg...))
 	f.Setup("ApiServerSource goes ready", apiserversource.IsReady(source))
 
-	pod1 := feature.MakeRandomK8sName("example")
-	pod2 := feature.MakeRandomK8sName("example")
-	pod3 := feature.MakeRandomK8sName("example")
+	pod1 := feature.MakeRandomK8sName("example-pod-1")
+	pod2 := feature.MakeRandomK8sName("example-pod-2")
+	pod3 := feature.MakeRandomK8sName("example-pod-3")
 	f.Requirement("install example pod 1",
 		pod.Install(pod1, pod.WithImage(exampleImage), pod.WithNamespace(testNS1)),
 	)
@@ -437,12 +437,12 @@ func SendsEventsForAllResourcesWithEmptyNamespaceSelector() *feature.Feature {
 	f.Setup("Create Service Account for ApiServerSource with RBAC for v1.Pod resources",
 		setupAccountAndRoleForPods(sacmName))
 
-	testNS1 := feature.MakeRandomK8sName("source-namespace")
-	testNS2 := feature.MakeRandomK8sName("source-namespace")
+	testNS1 := feature.MakeRandomK8sName("source-namespace-1")
+	testNS2 := feature.MakeRandomK8sName("source-namespace-2")
 
 	// create two new namespaces
-	f.Setup("create test-a namespace with matching selector", namespace.Install(testNS1))
-	f.Setup("create test-a namespace with matching selector", namespace.Install(testNS2))
+	f.Setup("create a namespace", namespace.Install(testNS1))
+	f.Setup("create a namespace", namespace.Install(testNS2))
 
 	cfg := []manifest.CfgFn{
 		apiserversource.WithServiceAccountName(sacmName),
@@ -461,8 +461,8 @@ func SendsEventsForAllResourcesWithEmptyNamespaceSelector() *feature.Feature {
 	f.Setup("install ApiServerSource", apiserversource.Install(source, cfg...))
 	f.Setup("ApiServerSource goes ready", apiserversource.IsReady(source))
 
-	pod1 := feature.MakeRandomK8sName("example")
-	pod2 := feature.MakeRandomK8sName("example")
+	pod1 := feature.MakeRandomK8sName("example-pod-1")
+	pod2 := feature.MakeRandomK8sName("example-pod-2")
 
 	f.Requirement("install example pod 1",
 		pod.Install(pod1, pod.WithImage(exampleImage), pod.WithNamespace(testNS1)),
