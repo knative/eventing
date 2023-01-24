@@ -19,6 +19,7 @@ package broker
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"knative.dev/reconciler-test/pkg/environment"
@@ -56,13 +57,10 @@ func SourceToSink(brokerName string) *feature.Feature {
 
 	f.Setup("trigger goes ready", trigger.IsReady(via))
 
-	f.Setup("install source", func(ctx context.Context, t feature.T) {
-		u, err := broker.Address(ctx, brokerName)
-		if err != nil || u == nil {
-			t.Error("failed to get the address of the broker", brokerName, err)
-		}
-		eventshub.Install(source, eventshub.StartSenderURL(u.String()), eventshub.InputEvent(event))(ctx, t)
-	})
+	f.Requirement("install source", eventshub.Install(source,
+		eventshub.StartSenderToResource(broker.GVR(), brokerName),
+		eventshub.InputEvent(event),
+	))
 
 	f.Stable("broker as middleware").
 		Must("deliver an event",
@@ -97,9 +95,9 @@ func SourceToSinkWithDLQ() *feature.Feature {
 	ce := FullEvent()
 	ce.SetID(uuid.New().String())
 
-	// Install events after data plane is ready.
+	// Send events after data plane is ready.
 	f.Requirement("install source", eventshub.Install(source,
-		eventshub.StartSenderToResource(broker.GVR(), source),
+		eventshub.StartSenderToResource(broker.GVR(), brokerName),
 		eventshub.InputEvent(ce),
 	))
 
@@ -123,15 +121,7 @@ func SourceToSinkWithFlakyDLQ(brokerName string) *feature.Feature {
 	dlq := feature.MakeRandomK8sName("dlq")
 	via := feature.MakeRandomK8sName("via")
 
-	uuids := []string{
-		uuid.New().String(),
-		uuid.New().String(),
-		uuid.New().String(),
-	}
-
-	f := feature.NewFeature()
-
-	//
+	f := feature.NewFeatureNamed("Source to sink with flaky DLS")
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 
@@ -142,39 +132,25 @@ func SourceToSinkWithFlakyDLQ(brokerName string) *feature.Feature {
 	})
 
 	f.Setup("install dlq", eventshub.Install(dlq, eventshub.StartReceiver))
-
+	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver, eventshub.DropFirstN(2)))
 	f.Setup("update broker with DLQ", broker.Install(brokerName, broker.WithDeadLetterSink(svc.AsKReference(dlq), "")))
-
-	// Point the Trigger subscriber to the sink svc.
-	cfg := []manifest.CfgFn{trigger.WithSubscriber(flaker.AsRef(flake), "")}
-
-	// Install the trigger
-	f.Setup("install trigger", trigger.Install(via, brokerName, cfg...))
-
+	f.Setup("install trigger", trigger.Install(via, brokerName, trigger.WithSubscriber(svc.AsKReference(sink), "")))
 	f.Setup("trigger goes ready", trigger.IsReady(via))
+	f.Setup("broker goes ready", broker.IsReady(via))
 
-	f.Setup("install source", func(ctx context.Context, t feature.T) {
-		u, err := broker.Address(ctx, brokerName)
-		if err != nil || u == nil {
-			t.Error("failed to get the address of the broker", brokerName, err)
-		}
+	f.Requirement("install source", eventshub.Install(source,
+		eventshub.StartSenderToResource(broker.GVR(), brokerName),
+		eventshub.SendMultipleEvents(3, time.Millisecond),
+		eventshub.EnableIncrementalId,
+	))
 
-		opts := []eventshub.EventsHubOption{eventshub.StartSenderURL(u.String())}
-		for _, id := range uuids {
-			event := FullEvent()
-			event.SetID(id)
-			opts = append(opts, eventshub.InputEvent(event))
-		}
-		eventshub.Install(source, opts...)(ctx, t)
-	})
-
-	f.Stable("broker with DQL").
+	f.Stable("broker with DLS").
 		Must("deliver event flaky sent to DLQ event[0]",
-			OnStore(dlq).MatchEvent(HasId(uuids[0])).Exact(1)).
+			OnStore(dlq).MatchEvent(HasId("1")).Exact(1)).
 		Must("deliver event flaky sent to DLQ event[1]",
-			OnStore(dlq).MatchEvent(HasId(uuids[1])).Exact(1)).
+			OnStore(dlq).MatchEvent(HasId("2")).Exact(1)).
 		Must("deliver event sink receiver got event[2]",
-			OnStore(sink).MatchEvent(HasId(uuids[2])).Exact(1))
+			OnStore(sink).MatchEvent(HasId("3")).Exact(1))
 
 	return f
 }

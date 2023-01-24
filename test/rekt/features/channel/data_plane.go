@@ -235,8 +235,7 @@ func addControlPlaneDelivery(fs *feature.FeatureSet) {
 
 		// Send an event into the matrix and hope for the best
 		prober.SenderFullEvents(1)
-		f.Setup("install source", prober.SenderInstall("source"))
-		f.Requirement("sender is finished", prober.SenderDone("source"))
+		f.Requirement("install source", prober.SenderInstall("source"))
 
 		// All events have been sent, time to look at the specs and confirm we got them.
 		expected := createExpectedEventPatterns(tt.chDS, tt.subs)

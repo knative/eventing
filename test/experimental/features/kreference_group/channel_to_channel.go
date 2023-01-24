@@ -22,15 +22,16 @@ import (
 	cetest "github.com/cloudevents/sdk-go/v2/test"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
-	eventingclient "knative.dev/eventing/pkg/client/injection/client"
-	"knative.dev/eventing/test/rekt/resources/channel"
-	"knative.dev/eventing/test/rekt/resources/subscription"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
+
+	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
+	eventingclient "knative.dev/eventing/pkg/client/injection/client"
+	"knative.dev/eventing/test/rekt/resources/channel"
+	"knative.dev/eventing/test/rekt/resources/subscription"
 )
 
 // ChannelToChannel tests a scenario where the flow is source -> A -> B -> sink
@@ -116,7 +117,7 @@ func ChannelToChannel() *feature.Feature {
 	f.Setup("subscription A -> B is ready", subscription.IsReady(subAToBName))
 	f.Setup("subscription B -> Sink is ready", subscription.IsReady(subBToSinkName))
 
-	f.Setup("install source", eventshub.Install(
+	f.Requirement("install source", eventshub.Install(
 		sourceName,
 		eventshub.StartSenderToResource(channelGVR, channelAName),
 		eventshub.InputEvent(ev),

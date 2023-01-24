@@ -18,14 +18,12 @@ package trigger
 
 import (
 	"context"
-	"fmt"
 
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/feature"
 
 	"knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/eventing/test/rekt/resources/delivery"
-	"knative.dev/eventing/test/rekt/resources/eventlibrary"
 	"knative.dev/eventing/test/rekt/resources/trigger"
 )
 
@@ -45,14 +43,7 @@ func SourceToTriggerSinkWithDLS() *feature.Feature {
 
 	prober := eventshub.NewProber()
 	prober.SetTargetResource(broker.GVR(), brokerName)
-
-	lib := feature.MakeRandomK8sName("lib")
-	f.Setup("install events", eventlibrary.Install(lib))
-	f.Setup("event cache is ready", eventlibrary.IsReady(lib))
-	f.Setup("use events cache", prober.SenderEventsFromSVC(lib, "events/three.ce"))
-	if err := prober.ExpectYAMLEvents(eventlibrary.PathFor("events/three.ce")); err != nil {
-		panic(fmt.Errorf("can not find event files: %s", err))
-	}
+	prober.SenderFullEvents(3)
 
 	f.Setup("install broker", broker.Install(brokerName, broker.WithEnvConfig()...))
 
@@ -70,10 +61,7 @@ func SourceToTriggerSinkWithDLS() *feature.Feature {
 	f.Setup("trigger goes ready", trigger.IsReady(triggerName))
 
 	// Install sender.
-	f.Setup("install source", prober.SenderInstall("source"))
-
-	// After we have finished sending.
-	f.Requirement("sender is finished", prober.SenderDone("source"))
+	f.Requirement("install source", prober.SenderInstall("source"))
 
 	// Assert events ended up where we expected.
 	f.Stable("trigger with DLS").
@@ -100,14 +88,7 @@ func SourceToTriggerSinkWithDLSDontUseBrokers() *feature.Feature {
 
 	prober := eventshub.NewProber()
 	prober.SetTargetResource(broker.GVR(), brokerName)
-
-	lib := feature.MakeRandomK8sName("lib")
-	f.Setup("install events", eventlibrary.Install(lib))
-	f.Setup("event cache is ready", eventlibrary.IsReady(lib))
-	f.Setup("use events cache", prober.SenderEventsFromSVC(lib, "events/three.ce"))
-	if err := prober.ExpectYAMLEvents(eventlibrary.PathFor("events/three.ce")); err != nil {
-		panic(fmt.Errorf("can not find event files: %s", err))
-	}
+	prober.SenderFullEvents(3)
 
 	// Setup Probes
 	f.Setup("install trigger recorder", prober.ReceiverInstall(triggerSinkName))
@@ -132,10 +113,7 @@ func SourceToTriggerSinkWithDLSDontUseBrokers() *feature.Feature {
 	f.Setup("trigger goes ready", trigger.IsReady(triggerName))
 
 	// Install events after topology is ready.
-	f.Setup("install source", prober.SenderInstall("source"))
-
-	// After we have finished sending.
-	f.Requirement("sender is finished", prober.SenderDone("source"))
+	f.Requirement("install source", prober.SenderInstall("source"))
 
 	// Assert events ended up where we expected.
 	f.Stable("trigger with a valid DLS ref").
@@ -163,13 +141,7 @@ func BadTriggerDoesNotAffectOkTrigger() *feature.Feature {
 	sink := feature.MakeRandomK8sName("sink")
 	source := feature.MakeRandomK8sName("source")
 
-	lib := feature.MakeRandomK8sName("lib")
-	f.Setup("install events", eventlibrary.Install(lib))
-	f.Setup("event cache is ready", eventlibrary.IsReady(lib))
-	f.Setup("use events cache", prober.SenderEventsFromSVC(lib, "events/three.ce"))
-	if err := prober.ExpectYAMLEvents(eventlibrary.PathFor("events/three.ce")); err != nil {
-		panic(fmt.Errorf("can not find event files: %s", err))
-	}
+	prober.SenderFullEvents(3)
 
 	// Setup Probes
 	f.Setup("install dlq", prober.ReceiverInstall(dlq))
@@ -191,11 +163,6 @@ func BadTriggerDoesNotAffectOkTrigger() *feature.Feature {
 
 	// Install events after data plane is ready.
 	f.Requirement("install source", prober.SenderInstall(source))
-
-	// After we have finished sending.
-	f.Requirement("sender is finished", prober.SenderDone(source))
-	f.Requirement("receiver 1 is finished", prober.ReceiverDone(source, dlq))
-	f.Requirement("receiver 2 is finished", prober.ReceiverDone(source, sink))
 
 	// Assert events ended up where we expected.
 	f.Stable("broker with DLQ").
