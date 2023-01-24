@@ -61,10 +61,7 @@ func SourceToTriggerSinkWithDLS() *feature.Feature {
 	f.Setup("trigger goes ready", trigger.IsReady(triggerName))
 
 	// Install sender.
-	f.Setup("install source", prober.SenderInstall("source"))
-
-	// After we have finished sending.
-	f.Requirement("sender is finished", prober.SenderDone("source"))
+	f.Requirement("install source", prober.SenderInstall("source"))
 
 	// Assert events ended up where we expected.
 	f.Stable("trigger with DLS").
