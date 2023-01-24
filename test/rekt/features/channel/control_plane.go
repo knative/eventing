@@ -90,9 +90,9 @@ func ControlPlaneChannel(channelName string) *feature.Feature {
 			"Each channel CRD MUST have a status subresource which contains [subscribers (as an array)]. "+
 			"The ready field of the subscriber identified by its uid MUST be set to True when the subscription is ready to be processed.",
 			channelAllowsSubscribersAndStatus)
-		// Special note for Channel tests: The array of subscribers MUST NOT be
-		// set directly on the generic Channel custom object, but rather
-		// appended to the backing channel by the subscription itself.
+	// Special note for Channel tests: The array of subscribers MUST NOT be
+	// set directly on the generic Channel custom object, but rather
+	// appended to the backing channel by the subscription itself.
 
 	f.Stable("Status Requirements").
 		Must("observedGeneration MUST be populated if present",
@@ -105,8 +105,6 @@ func ControlPlaneChannel(channelName string) *feature.Feature {
 
 	cName := feature.MakeRandomK8sName("channel")
 	sink := feature.MakeRandomK8sName("sink")
-
-	f.Setup("Set Channel Name", setChannelableName(cName))
 
 	f.Setup("install a service", svc.Install(sink, "app", "rekt"))
 	f.Setup("update Channel", channel_impl.Install(cName, delivery.WithDeadLetterSink(svc.AsKReference(sink), "")))
@@ -121,7 +119,7 @@ func ControlPlaneChannel(channelName string) *feature.Feature {
 			"When the Channel instance is ready to receive events status.address.url status.addressable MUST be set to True",
 			readyChannelIsAddressable).
 		Should("Set the Channel status.deadLetterSinkURI if there is a valid spec.delivery.deadLetterSink defined",
-			readyChannelWithDLSHaveStatusUpdated)
+			readyChannelWithDLSHaveStatusUpdated(cName))
 
 	return f
 }
@@ -254,17 +252,19 @@ func readyChannelIsAddressable(ctx context.Context, t feature.T) {
 	}
 }
 
-func readyChannelWithDLSHaveStatusUpdated(ctx context.Context, t feature.T) {
-	ch := getChannelable(ctx, t)
+func readyChannelWithDLSHaveStatusUpdated(name string) feature.StepFn {
+	return func(ctx context.Context, t feature.T) {
+		ch := getChannelableFromName(name, ctx, t)
 
-	// Confirm the channel is ready, and has the status.deadLetterSinkURI set.
-	if c := ch.Status.GetCondition(apis.ConditionReady); c.IsTrue() {
-		if ch.Status.DeadLetterSinkURI == nil {
-			bytes, _ := json.MarshalIndent(ch, "", " ")
-			t.Errorf("channel DLS not resolved but resource reported ready, state:\n%s", string(bytes))
+		// Confirm the channel is ready, and has the status.deadLetterSinkURI set.
+		if c := ch.Status.GetCondition(apis.ConditionReady); c.IsTrue() {
+			if ch.Status.DeadLetterSinkURI == nil {
+				bytes, _ := json.MarshalIndent(ch, "", " ")
+				t.Errorf("channel DLS not resolved but resource reported ready, state:\n%s", string(bytes))
+			}
+			// Success!
+		} else {
+			t.Errorf("channel was not ready, reason: %s", ch.Status.GetCondition(apis.ConditionReady).Reason)
 		}
-		// Success!
-	} else {
-		t.Errorf("channel was not ready, reason: %s", ch.Status.GetCondition(apis.ConditionReady).Reason)
 	}
 }
