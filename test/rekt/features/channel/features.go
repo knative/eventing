@@ -222,7 +222,6 @@ func EventTransformation() *feature.Feature {
 	f.Setup("channel 2 is ready", channel_impl.IsReady(channel2))
 
 	f.Requirement("install source", prober.SenderInstall("source"))
-	f.Requirement("receiver is finished", prober.ReceiverDone("source", "sink"))
 
 	f.Assert("sink receives events", prober.AssertReceivedAll("source", "sink"))
 	f.Assert("events have passed through transform service", func(ctx context.Context, t feature.T) {
