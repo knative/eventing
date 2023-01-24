@@ -34,6 +34,7 @@ import (
 
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"
+	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/resources/svc"
 )
 
@@ -44,14 +45,20 @@ func NewProber() *EventProber {
 }
 
 type EventProber struct {
-	target target
+	target   target
+	targetMu sync.Mutex
 
 	shortNameToName   map[string]string
-	shortNameToNameMu sync.RWMutex
+	shortNameToNameMu sync.Mutex
 
-	ids             []string
+	ids   []string
+	idsMu sync.Mutex
+
 	senderOptions   []EventsHubOption
-	receiverOptions []EventsHubOption
+	senderOptionsMu sync.Mutex
+
+	receiverOptions   []EventsHubOption
+	receiverOptionsMu sync.Mutex
 }
 
 type target struct {
@@ -68,6 +75,9 @@ type EventInfoCombined struct {
 
 // SetTargetResource configures the senders target as a GVR and name, used when sender is installed.
 func (p *EventProber) SetTargetResource(targetGVR schema.GroupVersionResource, targetName string) {
+	p.targetMu.Lock()
+	defer p.targetMu.Unlock()
+
 	p.target = target{
 		gvr:  targetGVR,
 		name: targetName,
@@ -87,15 +97,15 @@ func (p *EventProber) SetTargetKRef(ref *duckv1.KReference) error {
 		Kind:    ref.Kind,
 	}
 	gvr, _ := meta.UnsafeGuessKindToResource(gvk)
-	p.target = target{
-		gvr:  gvr,
-		name: ref.Name,
-	}
+	p.SetTargetResource(gvr, ref.Name)
 	return nil
 }
 
 // SetTargetURI configures the senders target as a URI, used when sender is installed.
 func (p *EventProber) SetTargetURI(targetURI string) {
+	p.targetMu.Lock()
+	defer p.targetMu.Unlock()
+
 	p.target = target{
 		uri: targetURI,
 	}
@@ -103,27 +113,27 @@ func (p *EventProber) SetTargetURI(targetURI string) {
 
 // ReceiversRejectFirstN adds DropFirstN to the default config for new receivers.
 func (p *EventProber) ReceiversRejectFirstN(n uint) {
-	p.receiverOptions = append(p.receiverOptions, DropFirstN(n))
+	p.appendReceiverOptions(DropFirstN(n))
 }
 
 // ReceiversRejectResponseCode adds DropEventsResponseCode to the default config for new receivers.
 func (p *EventProber) ReceiversRejectResponseCode(code int) {
-	p.receiverOptions = append(p.receiverOptions, DropEventsResponseCode(code))
+	p.appendReceiverOptions(DropEventsResponseCode(code))
 }
 
 // ReceiversHaveResponseDelay adds ResponseWaitTime to the default config for
 // new receivers.
 func (p *EventProber) ReceiversHaveResponseDelay(delay time.Duration) {
-	p.receiverOptions = append(p.receiverOptions, ResponseWaitTime(delay))
+	p.appendReceiverOptions(ResponseWaitTime(delay))
 }
 
 // ReceiverInstall installs an eventshub receiver into the test env.
 func (p *EventProber) ReceiverInstall(prefix string, opts ...EventsHubOption) feature.StepFn {
 	name := feature.MakeRandomK8sName(prefix)
 	p.setShortNameToName(prefix, name)
-
-	opts = append(p.receiverOptions, opts...)
+	opts = append(p.getReceiverOptions(), opts...)
 	opts = append(opts, StartReceiver)
+
 	return Install(name, opts...)
 }
 
@@ -133,11 +143,12 @@ func (p *EventProber) SenderInstall(prefix string, opts ...EventsHubOption) feat
 	p.setShortNameToName(prefix, name)
 
 	return func(ctx context.Context, t feature.T) {
-		opts := append(opts, p.senderOptions...)
-		if len(p.target.uri) > 0 {
-			opts = append(opts, StartSenderURL(p.target.uri))
-		} else if !p.target.gvr.Empty() {
-			opts = append(opts, StartSenderToResource(p.target.gvr, p.target.name))
+		opts := append(opts, p.getSenderOptions()...)
+		if len(p.getTarget().uri) > 0 {
+			opts = append(opts, StartSenderURL(p.getTarget().uri))
+		} else if !p.getTarget().gvr.Empty() {
+			k8s.IsAddressable(p.getTarget().gvr, p.getTarget().name)(ctx, t)
+			opts = append(opts, StartSenderToResource(p.getTarget().gvr, p.getTarget().name))
 		} else {
 			t.Fatal("no target is configured for event loop")
 		}
@@ -154,9 +165,10 @@ func (p *EventProber) SenderDone(prefix string) feature.StepFn {
 		interval, timeout := environment.PollTimingsFromContext(ctx)
 		var events []EventInfoCombined
 		err := wait.PollImmediate(interval, timeout, func() (bool, error) {
+			expected := p.getIdsCopy()
 			events = p.SentBy(ctx, prefix)
-			t.Log(p.getNameFromPrefix(prefix), "has sent", len(events))
-			if len(events) == len(p.ids) {
+			t.Log(p.getNameFromPrefix(prefix), "has sent", len(events), "expected", len(expected))
+			if len(events) == len(expected) {
 				return true, nil
 			}
 			return false, nil
@@ -289,19 +301,19 @@ func (p *EventProber) ExpectYAMLEvents(path string) error {
 		return fmt.Errorf("failed to load events from %q", path)
 	}
 	for _, event := range events {
-		p.ids = append(p.ids, event.Attributes.ID)
+		p.appendIds(event.Attributes.ID)
 	}
 	return nil
 }
 
 // ExpectEvents registers event IDs into the prober.
 func (p *EventProber) ExpectEvents(ids []string) {
-	p.ids = append(p.ids, ids...)
+	p.appendIds(ids...)
 }
 
 // SenderEventsFromURI configures a sender to send a url/yaml based events.
 func (p *EventProber) SenderEventsFromURI(uri string) {
-	p.senderOptions = append(p.senderOptions, InputYAML(uri))
+	p.appendSenderOptions(InputYAML(uri))
 }
 
 // SenderEventsFromSVC configures a sender to send a yaml based events fetched
@@ -314,7 +326,7 @@ func (p *EventProber) SenderEventsFromSVC(svcName, path string) feature.StepFn {
 			t.Error(err)
 		}
 		u.Path = path
-		p.senderOptions = append(p.senderOptions, InputYAML(u.String()))
+		p.appendSenderOptions(InputYAML(u.String()))
 	}
 }
 
@@ -326,14 +338,16 @@ func (p *EventProber) SenderFullEvents(count int) {
 	if count == 1 {
 		id := uuid.New().String()
 		event.SetID(id)
-		p.ids = []string{id}
-		p.senderOptions = append(p.senderOptions, InputEvent(event))
+		p.appendIds(id)
+		p.appendSenderOptions(InputEvent(event))
 	} else {
-		p.senderOptions = append(p.senderOptions,
-			InputEvent(event), SendMultipleEvents(count, 10*time.Millisecond), EnableIncrementalId) // TODO: make configurable.
-		p.ids = []string{}
+		p.appendSenderOptions(
+			InputEvent(event),
+			SendMultipleEvents(count, 10*time.Millisecond),
+			EnableIncrementalId,
+		)
 		for i := 1; i <= count; i++ {
-			p.ids = append(p.ids, strconv.Itoa(i))
+			p.appendIds(strconv.Itoa(i))
 		}
 	}
 }
@@ -346,13 +360,12 @@ func (p *EventProber) SenderMinEvents(count int) {
 	if count == 1 {
 		id := uuid.New().String()
 		event.SetID(id)
-		p.ids = []string{id}
-		p.senderOptions = append(p.senderOptions, InputEvent(event))
+		p.appendIds(id)
+		p.appendSenderOptions(InputEvent(event))
 	} else {
-		p.senderOptions = append(p.senderOptions, InputEvent(event), SendMultipleEvents(count, 10*time.Millisecond)) // TODO: make configurable.
-		p.ids = []string{}
+		p.appendSenderOptions(InputEvent(event), SendMultipleEvents(count, 10*time.Millisecond))
 		for i := 1; i <= count; i++ {
-			p.ids = append(p.ids, strconv.Itoa(i))
+			p.appendIds(strconv.Itoa(i))
 		}
 	}
 }
@@ -368,11 +381,12 @@ func (p *EventProber) AssertSentAll(fromPrefix string) feature.StepFn {
 		p.SenderDone(fromPrefix)(ctx, t)
 
 		events := p.SentBy(ctx, fromPrefix)
-		if len(p.ids) != len(events) {
+		expected := p.getIdsCopy()
+		if len(expected) != len(events) {
 			t.Errorf("expected %q to have sent %d events, actually sent %d",
-				fromPrefix, len(p.ids), len(events))
+				fromPrefix, len(expected), len(events))
 		}
-		for _, id := range p.ids {
+		for _, id := range expected {
 			found := false
 			for _, event := range events {
 				if id == event.Sent.SentId {
@@ -488,8 +502,68 @@ func (p *EventProber) setShortNameToName(k, v string) {
 }
 
 func (p *EventProber) getNameFromPrefix(prefix string) string {
-	p.shortNameToNameMu.RLock()
-	defer p.shortNameToNameMu.RUnlock()
+	p.shortNameToNameMu.Lock()
+	defer p.shortNameToNameMu.Unlock()
 
 	return p.shortNameToName[prefix]
+}
+
+func (p *EventProber) getSenderOptions() []EventsHubOption {
+	p.senderOptionsMu.Lock()
+	defer p.senderOptionsMu.Unlock()
+
+	return p.senderOptions
+}
+
+func (p *EventProber) getReceiverOptions() []EventsHubOption {
+	p.receiverOptionsMu.Lock()
+	defer p.receiverOptionsMu.Unlock()
+
+	return p.receiverOptions
+}
+
+func (p *EventProber) appendReceiverOptions(opt ...EventsHubOption) {
+	p.receiverOptionsMu.Lock()
+	defer p.receiverOptionsMu.Unlock()
+
+	p.receiverOptions = append(p.receiverOptions, opt...)
+}
+
+func (p *EventProber) appendSenderOptions(opt ...EventsHubOption) {
+	p.senderOptionsMu.Lock()
+	defer p.senderOptionsMu.Unlock()
+
+	p.senderOptions = append(p.senderOptions, opt...)
+}
+
+func (p *EventProber) appendIds(ids ...string) {
+	p.idsMu.Lock()
+	defer p.idsMu.Unlock()
+
+	p.ids = append(p.ids, ids...)
+}
+
+func (p *EventProber) getIdsCopy() []string {
+	p.idsMu.Lock()
+	defer p.idsMu.Unlock()
+
+	ids := make([]string, len(p.ids))
+	copy(ids, p.ids)
+	return ids
+}
+
+func (p *EventProber) getTarget() target {
+	p.targetMu.Lock()
+	defer p.targetMu.Unlock()
+
+	return p.target
+}
+
+func (p *EventProber) DumpState(ctx context.Context, t feature.T) {
+	p.shortNameToNameMu.Lock()
+	defer p.shortNameToNameMu.Unlock()
+
+	for k, v := range p.shortNameToName {
+		t.Logf("collected for %s (%s)\n", v, k, StoreFromContext(ctx, v).dumpCollected())
+	}
 }

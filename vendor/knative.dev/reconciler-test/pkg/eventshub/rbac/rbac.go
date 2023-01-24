@@ -20,6 +20,8 @@ import (
 	"context"
 	"embed"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
 )
@@ -31,7 +33,7 @@ var templates embed.FS
 // The resources are named according to the current namespace defined in the environment.
 func Install() feature.StepFn {
 	return func(ctx context.Context, t feature.T) {
-		if _, err := manifest.InstallYamlFS(ctx, templates, map[string]interface{}{}); err != nil {
+		if _, err := manifest.InstallYamlFS(ctx, templates, map[string]interface{}{}); err != nil && !apierrors.IsAlreadyExists(err) {
 			t.Fatal(err)
 		}
 	}
