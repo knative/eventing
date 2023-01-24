@@ -174,17 +174,10 @@ func SendsEventsWithEventTypes() *feature.Feature {
 	//Install the broker
 	brokerName := feature.MakeRandomK8sName("broker")
 	f.Setup("install broker", broker.Install(brokerName, broker.WithEnvConfig()...))
-	f.Requirement("broker is ready", broker.IsReady(brokerName))
-	f.Requirement("broker is addressable", broker.IsAddressable(brokerName))
-
+	f.Setup("broker is ready", broker.IsReady(brokerName))
+	f.Setup("broker is addressable", broker.IsAddressable(brokerName))
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
-
-	// Point the Trigger subscriber to the sink svc.
-	cfg := []manifest.CfgFn{trigger.WithSubscriber(svc.AsKReference(sink), "")}
-
-	// Install the trigger
-	f.Setup("install trigger", trigger.Install(via, brokerName, cfg...))
-
+	f.Setup("install trigger", trigger.Install(via, brokerName, trigger.WithSubscriber(svc.AsKReference(sink), "")))
 	f.Setup("trigger goes ready", trigger.IsReady(via))
 
 	sacmName := feature.MakeRandomK8sName("apiserversource")

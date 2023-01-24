@@ -21,17 +21,17 @@ import (
 
 	"github.com/cloudevents/sdk-go/v2/test"
 	"k8s.io/apimachinery/pkg/util/sets"
-	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
-	"knative.dev/eventing/test/rekt/resources/broker"
-	"knative.dev/eventing/test/rekt/resources/eventtype"
-	"knative.dev/eventing/test/rekt/resources/pingsource"
-	"knative.dev/eventing/test/rekt/resources/trigger"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
 	"knative.dev/reconciler-test/resources/svc"
+
+	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
+	"knative.dev/eventing/test/rekt/resources/broker"
+	"knative.dev/eventing/test/rekt/resources/eventtype"
+	"knative.dev/eventing/test/rekt/resources/pingsource"
+	"knative.dev/eventing/test/rekt/resources/trigger"
 )
 
 func SendsEventsWithSinkRef() *feature.Feature {
@@ -41,7 +41,7 @@ func SendsEventsWithSinkRef() *feature.Feature {
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 
-	f.Setup("install pingsource", pingsource.Install(source, pingsource.WithSink(svc.AsKReference(sink), "")))
+	f.Requirement("install pingsource", pingsource.Install(source, pingsource.WithSink(svc.AsKReference(sink), "")))
 	f.Requirement("pingsource goes ready", pingsource.IsReady(source))
 
 	f.Stable("pingsource as event source").
@@ -58,13 +58,7 @@ func SendsEventsWithSinkURI() *feature.Feature {
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 
-	f.Setup("install pingsource", func(ctx context.Context, t feature.T) {
-		uri, err := svc.Address(ctx, sink)
-		if err != nil {
-			t.Error("failed to get address of sink", err)
-		}
-		pingsource.Install(source, pingsource.WithSink(nil, uri.String()))(ctx, t)
-	})
+	f.Requirement("install pingsource", pingsource.Install(source, pingsource.WithSink(svc.AsKReference(sink), "")))
 	f.Requirement("pingsource goes ready", pingsource.IsReady(source))
 
 	f.Stable("pingsource as event source").
@@ -81,16 +75,10 @@ func SendsEventsWithCloudEventData() *feature.Feature {
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 
-	cfg := []manifest.CfgFn{
+	f.Requirement("install pingsource", pingsource.Install(source,
 		pingsource.WithDataBase64("text/plain", "aGVsbG8sIHdvcmxkIQ=="),
-		pingsource.WithSink(&duckv1.KReference{
-			Kind:       "Service",
-			Name:       sink,
-			APIVersion: "v1",
-		}, ""),
-	}
-	f.Setup("install pingsource", pingsource.Install(source, cfg...))
-
+		pingsource.WithSink(svc.AsKReference(sink), ""),
+	))
 	f.Requirement("pingsource goes ready", pingsource.IsReady(source))
 
 	f.Stable("pingsource as event source").
@@ -112,20 +100,13 @@ func SendsEventsWithEventTypes() *feature.Feature {
 	//Install the broker
 	brokerName := feature.MakeRandomK8sName("broker")
 	f.Setup("install broker", broker.Install(brokerName, broker.WithEnvConfig()...))
-	f.Requirement("broker is ready", broker.IsReady(brokerName))
-	f.Requirement("broker is addressable", broker.IsAddressable(brokerName))
-
+	f.Setup("broker is ready", broker.IsReady(brokerName))
+	f.Setup("broker is addressable", broker.IsAddressable(brokerName))
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
-
-	// Point the Trigger subscriber to the sink svc.
-	cfg := []manifest.CfgFn{trigger.WithSubscriber(svc.AsKReference(sink), "")}
-
-	// Install the trigger
-	f.Setup("install trigger", trigger.Install(via, brokerName, cfg...))
-
+	f.Setup("install trigger", trigger.Install(via, brokerName, trigger.WithSubscriber(svc.AsKReference(sink), "")))
 	f.Setup("trigger goes ready", trigger.IsReady(via))
 
-	f.Setup("install pingsource", func(ctx context.Context, t feature.T) {
+	f.Requirement("install pingsource", func(ctx context.Context, t feature.T) {
 		brokeruri, err := broker.Address(ctx, brokerName)
 		if err != nil {
 			t.Error("failed to get address of broker", err)
@@ -136,7 +117,7 @@ func SendsEventsWithEventTypes() *feature.Feature {
 		}
 		pingsource.Install(source, cfg...)(ctx, t)
 	})
-	f.Setup("PingSource goes ready", pingsource.IsReady(source))
+	f.Requirement("PingSource goes ready", pingsource.IsReady(source))
 
 	expectedCeTypes := sets.NewString(sourcesv1.PingSourceEventType)
 
