@@ -102,7 +102,7 @@ func SendsEventsWithSinkRef() *feature.Feature {
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 
 	sacmName := feature.MakeRandomK8sName("apiserversource")
-	f.Setup("Create Service Account for ApiServerSource with RBAC for v1.Event resources",
+	f.Requirement("Create Service Account for ApiServerSource with RBAC for v1.Event resources",
 		setupAccountAndRoleForPods(sacmName))
 
 	cfg := []manifest.CfgFn{
@@ -115,8 +115,8 @@ func SendsEventsWithSinkRef() *feature.Feature {
 		}),
 	}
 
-	f.Setup("install ApiServerSource", apiserversource.Install(source, cfg...))
-	f.Setup("ApiServerSource goes ready", apiserversource.IsReady(source))
+	f.Requirement("install ApiServerSource", apiserversource.Install(source, cfg...))
+	f.Requirement("ApiServerSource goes ready", apiserversource.IsReady(source))
 
 	f.Stable("ApiServerSource as event source").
 		Must("delivers events on sink with ref",
@@ -136,7 +136,7 @@ func SendsEventsWithSinkUri() *feature.Feature {
 	f.Setup("Create Service Account for ApiServerSource with RBAC for v1.Event resources",
 		setupAccountAndRoleForPods(sacmName))
 
-	f.Setup("install ApiServerSource", func(ctx context.Context, t feature.T) {
+	f.Requirement("install ApiServerSource", func(ctx context.Context, t feature.T) {
 		sinkuri, err := svc.Address(ctx, sink)
 		if err != nil || sinkuri == nil {
 			t.Error("failed to get the address of the sink service", sink, err)
@@ -154,7 +154,7 @@ func SendsEventsWithSinkUri() *feature.Feature {
 
 		apiserversource.Install(source, cfg...)(ctx, t)
 	})
-	f.Setup("ApiServerSource goes ready", apiserversource.IsReady(source))
+	f.Requirement("ApiServerSource goes ready", apiserversource.IsReady(source))
 
 	f.Stable("ApiServerSource as event source").
 		Must("delivers events on sink with URI",
@@ -524,7 +524,7 @@ func SendsEventsWithRetries() *feature.Feature {
 	f.Setup("Create Service Account for ApiServerSource with RBAC for v1.Pod resources",
 		setupAccountAndRoleForPods(sacmName))
 
-	f.Setup("install ApiServerSource", func(ctx context.Context, t feature.T) {
+	f.Requirement("install ApiServerSource", func(ctx context.Context, t feature.T) {
 		sinkuri, err := svc.Address(ctx, sink)
 		if err != nil || sinkuri == nil {
 			t.Fatal("failed to get the address of the sink service", sink, err)
@@ -542,14 +542,14 @@ func SendsEventsWithRetries() *feature.Feature {
 		}
 		apiserversource.Install(source, cfg...)(ctx, t)
 	})
-	f.Setup("ApiServerSource goes ready", apiserversource.IsReady(source))
+	f.Requirement("ApiServerSource goes ready", apiserversource.IsReady(source))
 
 	examplePodName := feature.MakeRandomK8sName("example")
 
 	// create a pod so that ApiServerSource delivers an event to its sink
 	// event body is similar to this:
 	// {"kind":"Pod","namespace":"test-wmbcixlv","name":"example-axvlzbvc","apiVersion":"v1"}
-	f.Requirement("install example pod",
+	f.Assert("install example pod",
 		pod.Install(examplePodName,
 			pod.WithImage(exampleImage),
 			pod.WithLabels(map[string]string{"e2e": "testing"})),
