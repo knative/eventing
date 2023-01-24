@@ -220,9 +220,8 @@ func EventTransformation() *feature.Feature {
 	f.Setup("subscription 2 is ready", subscription.IsReady(subscription2))
 	f.Setup("channel 1 is ready", channel_impl.IsReady(channel1))
 	f.Setup("channel 2 is ready", channel_impl.IsReady(channel2))
-	f.Setup("install source", prober.SenderInstall("source"))
 
-	f.Requirement("sender is finished", prober.SenderDone("source"))
+	f.Requirement("install source", prober.SenderInstall("source"))
 	f.Requirement("receiver is finished", prober.ReceiverDone("source", "sink"))
 
 	f.Assert("sink receives events", prober.AssertReceivedAll("source", "sink"))
