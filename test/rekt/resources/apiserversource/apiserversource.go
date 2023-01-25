@@ -120,6 +120,13 @@ func WithResources(resources ...v1.APIVersionKindSelector) manifest.CfgFn {
 	}
 }
 
+// WithNamespaceSelector adds a namespace selector to an ApiServerSource spec.
+func WithNamespaceSelector(selector *metav1.LabelSelector) manifest.CfgFn {
+	return func(cfg map[string]interface{}) {
+		cfg["namespaceSelector"] = labelSelectorToStringMap(selector)
+	}
+}
+
 func labelSelectorToStringMap(selector *metav1.LabelSelector) map[string]interface{} {
 	if selector == nil {
 		return nil

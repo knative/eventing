@@ -111,7 +111,7 @@ func WithApiServerSourceSufficientPermissions(s *v1.ApiServerSource) {
 }
 
 func WithApiServerSourceNoSufficientPermissions(s *v1.ApiServerSource) {
-	s.Status.MarkNoSufficientPermissions("", `User system:serviceaccount:testnamespace:default cannot get, list, watch resource "namespaces" in API group ""`)
+	s.Status.MarkNoSufficientPermissions("", `User system:serviceaccount:testnamespace:default cannot get, list, watch resource "namespaces" in API group "" in Namespace "testnamespace"`)
 }
 
 func WithApiServerSourceDeleted(c *v1.ApiServerSource) {
@@ -134,5 +134,17 @@ func WithApiServerSourceStatusObservedGeneration(generation int64) ApiServerSour
 func WithApiServerSourceObjectMetaGeneration(generation int64) ApiServerSourceOption {
 	return func(c *v1.ApiServerSource) {
 		c.ObjectMeta.Generation = generation
+	}
+}
+
+func WithApiServerSourceNamespaceSelector(nsSelector metav1.LabelSelector) ApiServerSourceOption {
+	return func(c *v1.ApiServerSource) {
+		c.Spec.NamespaceSelector = &nsSelector
+	}
+}
+
+func WithApiServerSourceStatusNamespaces(namespaces []string) ApiServerSourceOption {
+	return func(c *v1.ApiServerSource) {
+		c.Status.Namespaces = namespaces
 	}
 }

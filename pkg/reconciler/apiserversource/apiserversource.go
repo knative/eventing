@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sort"
 
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
@@ -32,6 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
 
+	clientv1 "k8s.io/client-go/listers/core/v1"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
@@ -67,7 +69,8 @@ type Reconciler struct {
 	ceSource     string
 	sinkResolver *resolver.URIResolver
 
-	configs reconcilersource.ConfigAccessor
+	configs         reconcilersource.ConfigAccessor
+	namespaceLister clientv1.NamespaceLister
 }
 
 var _ apiserversourcereconciler.Interface = (*Reconciler)(nil)
@@ -98,13 +101,23 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1.ApiServerSour
 	}
 	source.Status.MarkSink(sinkURI)
 
-	err = r.runAccessCheck(ctx, source)
+	// resolve namespaces to watch
+	namespaces, err := r.namespacesFromSelector(source)
+	if err != nil {
+		logging.FromContext(ctx).Errorw("cannot retrieve namespaces to watch", zap.Error(err))
+		return err
+	}
+	source.Status.Namespaces = namespaces
+
+	err = r.runAccessCheck(ctx, source, namespaces)
 	if err != nil {
 		logging.FromContext(ctx).Errorw("Not enough permission", zap.Error(err))
 		return err
 	}
 
-	ra, err := r.createReceiveAdapter(ctx, source, sinkURI.String())
+	// An empty selector targets all namespaces.
+	allNamespaces := isEmptySelector(source.Spec.NamespaceSelector)
+	ra, err := r.createReceiveAdapter(ctx, source, sinkURI.String(), namespaces, allNamespaces)
 	if err != nil {
 		logging.FromContext(ctx).Errorw("Unable to create the receive adapter", zap.Error(err))
 		return err
@@ -121,18 +134,55 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1.ApiServerSour
 	return nil
 }
 
-func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1.ApiServerSource, sinkURI string) (*appsv1.Deployment, error) {
+func (r *Reconciler) namespacesFromSelector(src *v1.ApiServerSource) ([]string, error) {
+	if src.Spec.NamespaceSelector == nil {
+		return []string{src.Namespace}, nil
+	}
+
+	selector, err := metav1.LabelSelectorAsSelector(src.Spec.NamespaceSelector)
+	if err != nil {
+		return nil, err
+	}
+
+	namespaces, err := r.namespaceLister.List(selector)
+	if err != nil {
+		return nil, err
+	}
+
+	nsString := make([]string, 0, len(namespaces))
+	for _, ns := range namespaces {
+		nsString = append(nsString, ns.Name)
+	}
+	sort.Strings(nsString)
+	return nsString, nil
+}
+
+func isEmptySelector(selector *metav1.LabelSelector) bool {
+	if selector == nil {
+		return false
+	}
+
+	if len(selector.MatchLabels) == 0 && len(selector.MatchExpressions) == 0 {
+		return true
+	}
+
+	return false
+}
+
+func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1.ApiServerSource, sinkURI string, namespaces []string, allNamespaces bool) (*appsv1.Deployment, error) {
 	// TODO: missing.
 	// if err := checkResourcesStatus(src); err != nil {
 	// 	return nil, err
 	// }
 
 	adapterArgs := resources.ReceiveAdapterArgs{
-		Image:   r.receiveAdapterImage,
-		Source:  src,
-		Labels:  resources.Labels(src.Name),
-		SinkURI: sinkURI,
-		Configs: r.configs,
+		Image:         r.receiveAdapterImage,
+		Source:        src,
+		Labels:        resources.Labels(src.Name),
+		SinkURI:       sinkURI,
+		Configs:       r.configs,
+		Namespaces:    namespaces,
+		AllNamespaces: allNamespaces,
 	}
 	expected, err := resources.MakeReceiveAdapter(&adapterArgs)
 	if err != nil {
@@ -180,7 +230,7 @@ func (r *Reconciler) podSpecChanged(oldPodSpec corev1.PodSpec, newPodSpec corev1
 	return false
 }
 
-func (r *Reconciler) runAccessCheck(ctx context.Context, src *v1.ApiServerSource) error {
+func (r *Reconciler) runAccessCheck(ctx context.Context, src *v1.ApiServerSource, namespaces []string) error {
 	if src.Spec.Resources == nil || len(src.Spec.Resources) == 0 {
 		src.Status.MarkSufficientPermissions()
 		return nil
@@ -206,34 +256,38 @@ func (r *Reconciler) runAccessCheck(ctx context.Context, src *v1.ApiServerSource
 			return err
 		}
 		gvr, _ := meta.UnsafeGuessKindToResource(schema.GroupVersionKind{Kind: res.Kind, Group: gv.Group, Version: gv.Version}) // TODO: Test for nil Kind.
-		missingVerbs := ""
-		sep1 := ""
-		for _, verb := range verbs {
-			sar := &authorizationv1.SubjectAccessReview{
-				Spec: authorizationv1.SubjectAccessReviewSpec{
-					ResourceAttributes: &authorizationv1.ResourceAttributes{
-						Namespace: src.Namespace,
-						Verb:      verb,
-						Group:     gv.Group,
-						Resource:  gvr.Resource,
+
+		for _, ns := range namespaces {
+			missingVerbs := ""
+			sep1 := ""
+			for _, verb := range verbs {
+				sar := &authorizationv1.SubjectAccessReview{
+					Spec: authorizationv1.SubjectAccessReviewSpec{
+						ResourceAttributes: &authorizationv1.ResourceAttributes{
+							Namespace: ns,
+							Verb:      verb,
+							Group:     gv.Group,
+							Resource:  gvr.Resource,
+						},
+						User: user,
 					},
-					User: user,
-				},
+				}
+
+				response, err := r.kubeClientSet.AuthorizationV1().SubjectAccessReviews().Create(ctx, sar, metav1.CreateOptions{})
+				if err != nil {
+					return err
+				}
+
+				if !response.Status.Allowed {
+					missingVerbs += sep1 + verb
+					sep1 = ", "
+				}
 			}
 
-			response, err := r.kubeClientSet.AuthorizationV1().SubjectAccessReviews().Create(ctx, sar, metav1.CreateOptions{})
-			if err != nil {
-				return err
+			if missingVerbs != "" {
+				missing += sep + missingVerbs + ` resource "` + gvr.Resource + `" in API group "` + gv.Group + `" in Namespace "` + ns + `"`
+				sep = ", "
 			}
-
-			if !response.Status.Allowed {
-				missingVerbs += sep1 + verb
-				sep1 = ", "
-			}
-		}
-		if missingVerbs != "" {
-			missing += sep + missingVerbs + ` resource "` + gvr.Resource + `" in API group "` + gv.Group + `"`
-			sep = ", "
 		}
 	}
 	if missing == "" {
@@ -242,7 +296,7 @@ func (r *Reconciler) runAccessCheck(ctx context.Context, src *v1.ApiServerSource
 	}
 
 	src.Status.MarkNoSufficientPermissions(lastReason, "User %s cannot %s", user, missing)
-	return fmt.Errorf("Insufficient permission: user %s cannot %s", user, missing)
+	return fmt.Errorf("insufficient permissions: User %s cannot %s", user, missing)
 
 }
 

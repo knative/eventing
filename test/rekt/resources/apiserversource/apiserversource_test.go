@@ -222,6 +222,78 @@ func Example_withResources() {
 	//               - b
 }
 
+func Example_withNamespaceSelector() {
+	ctx := testlog.NewContext()
+	images := map[string]string{}
+	cfg := map[string]interface{}{
+		"name":      "foo",
+		"namespace": "bar",
+	}
+
+	apiserversource.WithNamespaceSelector(&metav1.LabelSelector{
+		MatchLabels: map[string]string{"env": "development"},
+		MatchExpressions: []metav1.LabelSelectorRequirement{{
+			Key:      "daf",
+			Operator: "uk",
+			Values:   []string{"a", "b"},
+		}},
+	})(cfg)
+
+	files, err := manifest.ExecuteYAML(ctx, yaml, images, cfg)
+	if err != nil {
+		panic(err)
+	}
+
+	manifest.OutputYAML(os.Stdout, files)
+	// Output:
+	// apiVersion: sources.knative.dev/v1
+	// kind: ApiServerSource
+	// metadata:
+	//   name: foo
+	//   namespace: bar
+	// spec:
+	//   namespaceSelector:
+	//     matchLabels:
+	//       env: development
+	//     matchExpressions:
+	//       - key: daf
+	//         operator: uk
+	//         values:
+	//           - a
+	//           - b
+}
+
+func Example_withEmptyNamespaceSelector() {
+	ctx := testlog.NewContext()
+	images := map[string]string{}
+	cfg := map[string]interface{}{
+		"name":      "foo",
+		"namespace": "bar",
+	}
+
+	apiserversource.WithNamespaceSelector(&metav1.LabelSelector{
+		MatchLabels:      map[string]string{},
+		MatchExpressions: []metav1.LabelSelectorRequirement{},
+	})(cfg)
+
+	files, err := manifest.ExecuteYAML(ctx, yaml, images, cfg)
+	if err != nil {
+		panic(err)
+	}
+
+	manifest.OutputYAML(os.Stdout, files)
+	// Output:
+	// apiVersion: sources.knative.dev/v1
+	// kind: ApiServerSource
+	// metadata:
+	//   name: foo
+	//   namespace: bar
+	// spec:
+	//   namespaceSelector:
+	//     matchLabels:
+	//     matchExpressions:
+}
+
 func Example_full() {
 	ctx := testlog.NewContext()
 	images := map[string]string{}

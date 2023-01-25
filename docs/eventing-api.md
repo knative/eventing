@@ -4410,6 +4410,21 @@ string
 source. Defaults to default if not set.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>namespaceSelector</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#labelselector-v1-meta">
+Kubernetes meta/v1.LabelSelector
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>NamespaceSelector is a label selector to capture the namespaces that
+should be watched by the source.</p>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -5002,6 +5017,21 @@ string
 source. Defaults to default if not set.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>namespaceSelector</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#labelselector-v1-meta">
+Kubernetes meta/v1.LabelSelector
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>NamespaceSelector is a label selector to capture the namespaces that
+should be watched by the source.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="sources.knative.dev/v1.ApiServerSourceStatus">ApiServerSourceStatus
@@ -5040,6 +5070,17 @@ processed by the controller.
 state.
 * SinkURI - the current active sink URI that has been configured for the
 Source.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>namespaces</code><br/>
+<em>
+[]string
+</em>
+</td>
+<td>
+<p>Namespaces show the namespaces currently watched by the ApiServerSource</p>
 </td>
 </tr>
 </tbody>
