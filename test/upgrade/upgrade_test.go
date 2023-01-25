@@ -22,11 +22,25 @@ package upgrade
 import (
 	"testing"
 
+	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/upgrade/installation"
+	"knative.dev/pkg/system"
 	pkgupgrade "knative.dev/pkg/test/upgrade"
 )
 
 func TestEventingUpgrades(t *testing.T) {
+	labels := []string{
+		"eventing-controller",
+		"eventing-webhook",
+		"imc-controller",
+		"imc-dispatcher",
+		"mt-broker-controller",
+		"mt-broker-ingress",
+		"mt-broker-filter",
+	}
+	canceler := testlib.ExportLogStreamOnError(t, testlib.SystemLogsDir, system.Namespace(), labels...)
+	defer canceler()
+
 	suite := pkgupgrade.Suite{
 		Tests: pkgupgrade.Tests{
 			PreUpgrade: []pkgupgrade.Operation{
