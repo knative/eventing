@@ -173,7 +173,7 @@ func (s *StatefulSetScheduler) scheduleVPod(vpod scheduler.VPod) ([]duckv1alpha1
 	// Quite an expensive operation but safe and simple.
 	state, err := s.stateAccessor.State(s.reserved)
 	if err != nil {
-		logger.Info("error while refreshing scheduler state (will retry)", zap.Error(err))
+		logger.Debug("error while refreshing scheduler state (will retry)", zap.Error(err))
 		return nil, err
 	}
 
