@@ -66,8 +66,19 @@ func CopySecret(corev1Input clientcorev1.CoreV1Interface, srcNS string, srcSecre
 		return nil, fmt.Errorf("error copying the Secret: %s", err)
 	}
 
-	_, err = tgtNamespaceSvcAcct.Patch(context.Background(), svcAccount, types.StrategicMergePatchType,
-		[]byte(`{"imagePullSecrets":[{"name":"`+srcSecretName+`"}]}`), metav1.PatchOptions{})
+	tgtSvcAccount, err := tgtNamespaceSvcAcct.Get(context.Background(), svcAccount, metav1.GetOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("error getting service account %s", svcAccount)
+	}
+
+	// Prevent overwriting existing imagePullSecrets
+	if len(tgtSvcAccount.ImagePullSecrets) == 0 {
+		_, err = tgtNamespaceSvcAcct.Patch(context.Background(), svcAccount, types.StrategicMergePatchType,
+			[]byte(`{"imagePullSecrets":[{"name":"`+srcSecretName+`"}]}`), metav1.PatchOptions{})
+	} else {
+		_, err = tgtNamespaceSvcAcct.Patch(context.Background(), svcAccount, types.JSONPatchType,
+			[]byte(`[{"op":"add","path":"/imagePullSecrets/-","value":{"name": "`+srcSecretName+`"}}]`), metav1.PatchOptions{})
+	}
 	if err != nil {
 		return nil, fmt.Errorf("patch failed on NS/SA (%s/%s): %s",
 			tgtNS, srcSecretName, err)
