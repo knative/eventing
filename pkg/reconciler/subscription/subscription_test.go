@@ -19,9 +19,10 @@ package subscription
 import (
 	"context"
 	"fmt"
+	"testing"
+
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"knative.dev/eventing/pkg/apis/messaging"
-	"testing"
 
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
