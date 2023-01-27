@@ -72,16 +72,15 @@ func CopySecret(corev1Input clientcorev1.CoreV1Interface, srcNS string, srcSecre
 	}
 
 	// Prevent overwriting existing imagePullSecrets
+	patch := `[{"op":"add","path":"/imagePullSecrets/-","value":{"name":"` + srcSecretName + `"}}]`
 	if len(tgtSvcAccount.ImagePullSecrets) == 0 {
-		_, err = tgtNamespaceSvcAcct.Patch(context.Background(), svcAccount, types.StrategicMergePatchType,
-			[]byte(`{"imagePullSecrets":[{"name":"`+srcSecretName+`"}]}`), metav1.PatchOptions{})
-	} else {
-		_, err = tgtNamespaceSvcAcct.Patch(context.Background(), svcAccount, types.JSONPatchType,
-			[]byte(`[{"op":"add","path":"/imagePullSecrets/-","value":{"name": "`+srcSecretName+`"}}]`), metav1.PatchOptions{})
+		patch = `[{"op":"add","path":"/imagePullSecrets","value":[{"name":"` + srcSecretName + `"}]}]`
 	}
+	_, err = tgtNamespaceSvcAcct.Patch(context.Background(), svcAccount, types.JSONPatchType,
+		[]byte(patch), metav1.PatchOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("patch failed on NS/SA (%s/%s): %s",
-			tgtNS, srcSecretName, err)
+			tgtNS, svcAccount, err)
 	}
 	return newSecret, nil
 }
