@@ -68,9 +68,14 @@ func CopySecret(corev1Input clientcorev1.CoreV1Interface, srcNS string, srcSecre
 
 	tgtSvcAccount, err := tgtNamespaceSvcAcct.Get(context.Background(), svcAccount, metav1.GetOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("error getting service account %s", svcAccount)
+		return nil, fmt.Errorf("error getting service account %s: %w", svcAccount, err)
 	}
 
+	for _, secret := range tgtSvcAccount.ImagePullSecrets {
+		if secret.Name == srcSecretName {
+			return newSecret, nil
+		}
+	}
 	// Prevent overwriting existing imagePullSecrets
 	patch := `[{"op":"add","path":"/imagePullSecrets/-","value":{"name":"` + srcSecretName + `"}}]`
 	if len(tgtSvcAccount.ImagePullSecrets) == 0 {
@@ -79,7 +84,7 @@ func CopySecret(corev1Input clientcorev1.CoreV1Interface, srcNS string, srcSecre
 	_, err = tgtNamespaceSvcAcct.Patch(context.Background(), svcAccount, types.JSONPatchType,
 		[]byte(patch), metav1.PatchOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("patch failed on NS/SA (%s/%s): %s",
+		return nil, fmt.Errorf("patch failed on NS/SA (%s/%s): %w",
 			tgtNS, svcAccount, err)
 	}
 	return newSecret, nil
