@@ -98,7 +98,7 @@ func (cs *PingSourceSpec) Validate(ctx context.Context) *apis.FieldError {
 	if cs.Date != "" {
 		_, err := time.Parse(defaultDateLayout, cs.Date)
 		if err != nil {
-			fe := apis.ErrInvalidValue(fmt.Sprintf("failed to parse Date of source spec"), "date")
+			fe := apis.ErrInvalidValue(err, "date", "failed to parse Date of source spec")
 			errs = errs.Also(fe)
 		}
 	}

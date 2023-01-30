@@ -260,6 +260,7 @@ func TestAllCases(t *testing.T) {
 					// Status Update:
 					rtv1.WithInitPingSourceConditions,
 					rtv1.WithPingSourceDeployed,
+					rtv1.WithPingSourceUnexpired,
 					rtv1.WithPingSourceSink(sinkURI),
 					rtv1.WithPingSourceCloudEventAttributes,
 					rtv1.WithPingSourceStatusObservedGeneration(generation),
