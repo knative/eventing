@@ -4681,8 +4681,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>Date is the string of specific date time to fire events only once. Default is empty.
-Mutually exclusive with Schedule.</p>
+<p>Date is the string of specific date time to fire events only once. Default is empty.</p>
 </td>
 </tr>
 </table>
@@ -5254,8 +5253,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>Date is the string of specific date time to fire events only once. Default is empty.
-Mutually exclusive with Schedule.</p>
+<p>Date is the string of specific date time to fire events only once. Default is empty.</p>
 </td>
 </tr>
 </tbody>
@@ -5555,8 +5553,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>Date is the string of specific date time to fire events only once. Default is empty.
-Mutually exclusive with Schedule.</p>
+<p>Date is the string of specific date time to fire events only once. Default is empty.</p>
 </td>
 </tr>
 </table>
@@ -5685,8 +5682,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>Date is the string of specific date time to fire events only once. Default is empty.
-Mutually exclusive with Schedule.</p>
+<p>Date is the string of specific date time to fire events only once. Default is empty.</p>
 </td>
 </tr>
 </tbody>

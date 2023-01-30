@@ -29,6 +29,7 @@ import (
 	"github.com/robfig/cron/v3"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
+
 	"k8s.io/client-go/kubernetes"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/record"
@@ -39,14 +40,21 @@ import (
 	"knative.dev/eventing/pkg/observability"
 )
 
+const (
+	defaultDateLayout = "2006-01-02T15:04:05.000Z"
+)
+
 type CronJobRunner interface {
 	Start(stopCh <-chan struct{})
 	Stop()
-	AddSchedule(source *sourcesv1.PingSource) cron.EntryID
+	AddSchedule(source *sourcesv1.PingSource) (*time.Timer, cron.EntryID)
 	RemoveSchedule(id cron.EntryID)
 }
 
 type cronJobsRunner struct {
+	// The one-off job runner
+	timer *time.Timer
+
 	// The cron job runner
 	cron cron.Cron
 
@@ -73,7 +81,7 @@ func NewCronJobsRunner(ceClient cloudevents.Client, kubeClient kubernetes.Interf
 	}
 }
 
-func (a *cronJobsRunner) AddSchedule(source *sourcesv1.PingSource) cron.EntryID {
+func (a *cronJobsRunner) AddSchedule(source *sourcesv1.PingSource) (*time.Timer, cron.EntryID) {
 	event, err := makeEvent(source)
 	if err != nil {
 		a.Logger.Error("failed to makeEvent: ", zap.Error(err))
@@ -109,24 +117,18 @@ func (a *cronJobsRunner) AddSchedule(source *sourcesv1.PingSource) cron.EntryID 
 			schedule = "CRON_TZ=" + source.Spec.Timezone + " " + schedule
 		}
 		id, _ := a.cron.AddFunc(schedule, a.cronTick(ctx, event))
-		return id
+		return nil, id
 
 	} else {
 		// Date is specified to fire events only once.
 		dateString := source.Spec.Date
-		date, err := time.Parse("2006-01-02 15:04:05", dateString)
-		if err != nil {
-			a.Logger.Error("failed to parse Date of source spec: ", zap.Error(err))
-		}
-		duration := time.Until(date)
-		// The Date time is set before time.Now
-		if duration < 0 {
-			a.Logger.Error("Date does not Exist")
-			return -1
-		}
+		date, _ := time.Parse(defaultDateLayout, dateString)
 
-		time.AfterFunc(duration, a.cronTick(ctx, event))
-		return -1
+		// The Date time is set before time.Now
+		duration := time.Until(date)
+
+		a.timer = time.AfterFunc(duration, a.cronTick(ctx, event))
+		return a.timer, -1
 	}
 }
 
@@ -141,6 +143,10 @@ func (a *cronJobsRunner) Start(stopCh <-chan struct{}) {
 
 func (a *cronJobsRunner) Stop() {
 	ctx := a.cron.Stop() // no more ticks
+	if a.timer != nil {
+		// no more timer job
+		a.timer.Stop()
+	}
 	if ctx != nil {
 		// Wait for all jobs to be done.
 		<-ctx.Done()

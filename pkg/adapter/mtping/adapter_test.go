@@ -96,7 +96,7 @@ type testRunner struct {
 	CronJobRunner
 }
 
-func (*testRunner) AddSchedule(*sourcesv1.PingSource) cron.EntryID {
-	return cron.EntryID(1)
+func (*testRunner) AddSchedule(*sourcesv1.PingSource) (*time.Timer, cron.EntryID) {
+	return nil, cron.EntryID(1)
 }
 func (*testRunner) RemoveSchedule(cron.EntryID) {}

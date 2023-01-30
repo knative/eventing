@@ -21,7 +21,9 @@ import (
 	"time"
 
 	"github.com/cloudevents/sdk-go/v2/test"
+
 	"k8s.io/apimachinery/pkg/util/sets"
+
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/eventing/test/rekt/resources/eventtype"
@@ -164,7 +166,7 @@ func SendsOneOffsEvent() *feature.Feature {
 			Name:       sink,
 			APIVersion: "v1",
 		}, ""),
-		pingsource.WithDate((time.Now().Add(1 * time.Minute)).Format("2006-01-02 15:04:05")),
+		pingsource.WithDate((time.Now().Add(1 * time.Minute)).Format("2006-01-02T15:04:05.000Z")),
 	}
 	f.Setup("install pingsource", pingsource.Install(source, cfg...))
 

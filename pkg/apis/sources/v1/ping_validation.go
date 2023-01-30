@@ -23,6 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 
@@ -94,6 +95,14 @@ func (cs *PingSourceSpec) Validate(ctx context.Context) *apis.FieldError {
 			}
 		}
 	}
+	if cs.Date != "" {
+		_, err := time.Parse(defaultDateLayout, cs.Date)
+		if err != nil {
+			fe := apis.ErrInvalidValue(fmt.Sprintf("failed to parse Date of source spec"), "date")
+			errs = errs.Also(fe)
+		}
+	}
+
 	errs = errs.Also(cs.SourceSpec.Validate(ctx))
 	return errs
 }

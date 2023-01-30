@@ -75,8 +75,7 @@ spec:
                 description: 'Schedule is the cron schedule. Defaults to `* * * * *`.'
                 type: string
               date:
-                description: 'Date is the string of specific date time to fire events only once. Default is empty.
-                        Mutually exclusive with `schedule`.'
+                description: 'Date is the string of specific date time to fire events only once. Default is empty.'
                 type: string
               sink:
                 description: 'Sink is a reference to an object that will resolve to

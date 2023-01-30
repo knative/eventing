@@ -202,7 +202,7 @@ func TestAddRunRemoveSchedules(t *testing.T) {
 			ce := adaptertesting.NewTestClient()
 
 			runner := NewCronJobsRunner(ce, kubeclient.Get(ctx), logger)
-			entryId := runner.AddSchedule(tc.src)
+			_, entryId := runner.AddSchedule(tc.src)
 
 			entry := runner.cron.Entry(entryId)
 			if entry.ID != entryId {
@@ -241,7 +241,7 @@ func TestOneOffSchedules(t *testing.T) {
 					Schedule:    "* * * * ?",
 					ContentType: cloudevents.TextPlain,
 					Data:        sampleData,
-					Date:        (time.Now().Add(1 * time.Second)).Format("2006-01-02 15:04:05"),
+					Date:        (time.Now().Add(1 * time.Second)).Format("2006-01-02T15:04:05.000Z"),
 				},
 				Status: sourcesv1.PingSourceStatus{
 					SourceStatus: duckv1.SourceStatus{
@@ -261,11 +261,14 @@ func TestOneOffSchedules(t *testing.T) {
 			ce := adaptertesting.NewTestClient()
 
 			runner := NewCronJobsRunner(ce, kubeclient.Get(ctx), logger)
-			entryId := runner.AddSchedule(tc.src)
+			_, entryId := runner.AddSchedule(tc.src)
 			if entryId != -1 {
 				t.Error("Date set failed")
 			}
+
 			time.Sleep(2 * time.Second)
+
+			runner.timer.Stop()
 
 			validateSent(t, ce, tc.wantData, tc.wantContentType, tc.src.Spec.CloudEventOverrides.Extensions)
 

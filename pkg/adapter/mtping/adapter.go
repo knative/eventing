@@ -106,7 +106,7 @@ func (a *mtpingAdapter) Update(ctx context.Context, source *sourcesv1.PingSource
 		a.runner.RemoveSchedule(id)
 	}
 
-	id = a.runner.AddSchedule(source)
+	_, id = a.runner.AddSchedule(source)
 
 	if id != -1 {
 		a.entryidMu.Lock()
