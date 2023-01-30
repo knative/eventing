@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"go.uber.org/zap"
 
@@ -50,6 +51,8 @@ import (
 const (
 	// Name of the corev1.Events emitted from the reconciliation process
 	pingSourceDeploymentUpdated = "PingSourceDeploymentUpdated"
+	// Layout of the configured date from the one-off Pingsource
+	defaultDateLayout = "2006-01-02T15:04:05-0700"
 
 	component     = "pingsource"
 	mtadapterName = "pingsource-mt-adapter"
@@ -114,6 +117,12 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *sourcesv1.PingSo
 	}
 	source.Status.PropagateDeploymentAvailability(d)
 
+	err = r.runExpiredCheck(source)
+	if err != nil {
+		logging.FromContext(ctx).Errorw("Expired time configured", zap.Error(err))
+		return err
+	}
+
 	// Tell tracker to reconcile this PingSource whenever the deployment changes
 	err = r.tracker.TrackReference(tracker.Reference{
 		APIVersion: "apps/v1",
@@ -167,6 +176,26 @@ func (r *Reconciler) reconcileReceiveAdapter(ctx context.Context, source *source
 		logging.FromContext(ctx).Debugw("Reusing existing cluster-scoped deployment", zap.Any("deployment", d))
 	}
 	return d, nil
+}
+
+func (r *Reconciler) runExpiredCheck(source *sourcesv1.PingSource) error {
+	if source.Spec.Date == "" {
+		source.Status.MarkUnExpired()
+		return nil
+	}
+
+	dateTime := source.Spec.Date
+	date, _ := time.Parse(defaultDateLayout, dateTime)
+
+	// The Date time is set before current time
+	duration := time.Until(date)
+	if duration >= 0 {
+		source.Status.MarkUnExpired()
+		return nil
+	}
+
+	source.Status.MarkExpired("Expired date configured", "")
+	return pkgreconciler.NewEvent(corev1.EventTypeWarning, "Expired date configured", "")
 }
 
 func needsUpdating(ctx context.Context, oldDeploymentSpec *appsv1.DeploymentSpec, newEnvVars []corev1.EnvVar) (bool, *corev1.Container) {

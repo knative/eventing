@@ -72,6 +72,14 @@ func WithPingSourceDeployed(s *v1.PingSource) {
 	s.Status.PropagateDeploymentAvailability(testing.NewDeployment("any", "any", testing.WithDeploymentAvailable()))
 }
 
+func WithPingSourceUnexpired(s *v1.PingSource) {
+	s.Status.MarkUnExpired()
+}
+
+func WithPingSourceExpired(s *v1.PingSource) {
+	s.Status.MarkExpired("Expired date configured", "")
+}
+
 func WithPingSourceCloudEventAttributes(s *v1.PingSource) {
 	s.Status.CloudEventAttributes = []duckv1.CloudEventAttributes{{
 		Type:   v1.PingSourceEventType,
