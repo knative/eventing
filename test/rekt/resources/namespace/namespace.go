@@ -1,11 +1,11 @@
 /*
-Copyright 2021 The Knative Authors
+Copyright 2023 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,27 +14,40 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package eventshub
+package namespace
 
 import (
 	"context"
 	"embed"
-
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
 )
 
 //go:embed *.yaml
-var templates embed.FS
+var yaml embed.FS
 
-// Install creates the necessary ServiceAccount, Role, RoleBinding for the eventshub.
-// The resources are named according to the current namespace defined in the environment.
-func Install() feature.StepFn {
+func Install(name string, opts ...manifest.CfgFn) feature.StepFn {
+	cfg := map[string]interface{}{
+		"name": name,
+	}
+
+	for _, fn := range opts {
+		fn(cfg)
+	}
+
 	return func(ctx context.Context, t feature.T) {
-		if _, err := manifest.InstallYamlFS(ctx, templates, map[string]interface{}{}); err != nil && !apierrors.IsAlreadyExists(err) {
+		if _, err := manifest.InstallYamlFS(ctx, yaml, cfg); err != nil {
 			t.Fatal(err)
+		}
+	}
+}
+
+// WithLabels sets the given labels on the Namespace.
+func WithLabels(labels map[string]string) manifest.CfgFn {
+	return func(cfg map[string]interface{}) {
+		if labels != nil {
+			cfg["labels"] = labels
 		}
 	}
 }

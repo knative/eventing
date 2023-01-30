@@ -144,6 +144,34 @@ func ExampleWithBrokerClass() {
 	// spec:
 }
 
+func ExampleWithAnnotations() {
+	ctx := testlog.NewContext()
+	images := map[string]string{}
+	cfg := map[string]interface{}{
+		"name":      "foo",
+		"namespace": "bar",
+	}
+	broker.WithAnnotations(map[string]interface{}{
+		"eventing.knative.dev/foo": "bar",
+	})(cfg)
+
+	files, err := manifest.ExecuteYAML(ctx, yaml, images, cfg)
+	if err != nil {
+		panic(err)
+	}
+
+	manifest.OutputYAML(os.Stdout, files)
+	// Output:
+	// apiVersion: eventing.knative.dev/v1
+	// kind: Broker
+	// metadata:
+	//   name: foo
+	//   namespace: bar
+	//   annotations:
+	//     eventing.knative.dev/foo: bar
+	// spec:
+}
+
 func ExampleWithDeadLetterSink() {
 	ctx := testlog.NewContext()
 	images := map[string]string{}
@@ -205,6 +233,37 @@ func ExampleWithConfig() {
 	//   config:
 	//     kind: ConfigMap
 	//     namespace: bar
+	//     name: my-funky-config
+	//     apiVersion: v1
+}
+
+func ExampleWithConfigNamespace() {
+	ctx := testlog.NewContext()
+	images := map[string]string{}
+	cfg := map[string]interface{}{
+		"name":      "foo",
+		"namespace": "bar",
+	}
+
+	broker.WithConfigNamespace("knative-eventing")(cfg)
+	broker.WithConfig("my-funky-config")(cfg)
+
+	files, err := manifest.ExecuteYAML(ctx, yaml, images, cfg)
+	if err != nil {
+		panic(err)
+	}
+
+	manifest.OutputYAML(os.Stdout, files)
+	// Output:
+	// apiVersion: eventing.knative.dev/v1
+	// kind: Broker
+	// metadata:
+	//   name: foo
+	//   namespace: bar
+	// spec:
+	//   config:
+	//     kind: ConfigMap
+	//     namespace: knative-eventing
 	//     name: my-funky-config
 	//     apiVersion: v1
 }

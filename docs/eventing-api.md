@@ -1943,17 +1943,20 @@ knative.dev/pkg/apis/duck/v1.Status
 </tr>
 <tr>
 <td>
-<code>address</code><br/>
+<code>AddressStatus</code><br/>
 <em>
-<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#Addressable">
-knative.dev/pkg/apis/duck/v1.Addressable
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#AddressStatus">
+knative.dev/pkg/apis/duck/v1.AddressStatus
 </a>
 </em>
 </td>
 <td>
+<p>
+(Members of <code>AddressStatus</code> are embedded into this type.)
+</p>
 <em>(Optional)</em>
-<p>Broker is Addressable. It exposes the endpoint as an URI to get events
-delivered into the Broker mesh.</p>
+<p>AddressStatus is the part where the Broker fulfills the Addressable contract.
+It exposes the endpoint as an URI to get events delivered into the Broker mesh.</p>
 </td>
 </tr>
 <tr>
@@ -4407,6 +4410,21 @@ string
 source. Defaults to default if not set.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>namespaceSelector</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#labelselector-v1-meta">
+Kubernetes meta/v1.LabelSelector
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>NamespaceSelector is a label selector to capture the namespaces that
+should be watched by the source.</p>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -5011,6 +5029,21 @@ string
 source. Defaults to default if not set.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>namespaceSelector</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#labelselector-v1-meta">
+Kubernetes meta/v1.LabelSelector
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>NamespaceSelector is a label selector to capture the namespaces that
+should be watched by the source.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="sources.knative.dev/v1.ApiServerSourceStatus">ApiServerSourceStatus
@@ -5049,6 +5082,17 @@ processed by the controller.
 state.
 * SinkURI - the current active sink URI that has been configured for the
 Source.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>namespaces</code><br/>
+<em>
+[]string
+</em>
+</td>
+<td>
+<p>Namespaces show the namespaces currently watched by the ApiServerSource</p>
 </td>
 </tr>
 </tbody>

@@ -20,14 +20,15 @@ import (
 	"context"
 
 	"github.com/cloudevents/sdk-go/v2/test"
-	"knative.dev/eventing/test/rekt/resources/broker"
-	"knative.dev/eventing/test/rekt/resources/pingsource"
-	"knative.dev/eventing/test/rekt/resources/trigger"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
 	"knative.dev/reconciler-test/resources/svc"
+
+	"knative.dev/eventing/test/rekt/resources/broker"
+	"knative.dev/eventing/test/rekt/resources/pingsource"
+	"knative.dev/eventing/test/rekt/resources/trigger"
 )
 
 // This test is for avoiding regressions on the trigger dependency annotation functionality.
@@ -40,8 +41,8 @@ func TriggerDependencyAnnotation() *feature.Feature {
 	//Install the broker
 	brokerName := feature.MakeRandomK8sName("broker")
 	f.Setup("install broker", broker.Install(brokerName, broker.WithEnvConfig()...))
-	f.Requirement("broker is ready", broker.IsReady(brokerName))
-	f.Requirement("broker is addressable", broker.IsAddressable(brokerName))
+	f.Setup("broker is ready", broker.IsReady(brokerName))
+	f.Setup("broker is addressable", broker.IsAddressable(brokerName))
 
 	psourcename := "test-ping-source-annotation"
 	dependencyAnnotation := `{"kind":"PingSource","name":"test-ping-source-annotation","apiVersion":"sources.knative.dev/v1"}`
@@ -61,7 +62,7 @@ func TriggerDependencyAnnotation() *feature.Feature {
 
 	f.Setup("trigger goes ready", trigger.IsReady(triggerName))
 
-	f.Setup("install pingsource", func(ctx context.Context, t feature.T) {
+	f.Requirement("install pingsource", func(ctx context.Context, t feature.T) {
 		brokeruri, err := broker.Address(ctx, brokerName)
 		if err != nil {
 			t.Error("failed to get address of broker", err)
@@ -73,7 +74,7 @@ func TriggerDependencyAnnotation() *feature.Feature {
 		}
 		pingsource.Install(psourcename, cfg...)(ctx, t)
 	})
-	f.Setup("PingSource goes ready", pingsource.IsReady(psourcename))
+	f.Requirement("PingSource goes ready", pingsource.IsReady(psourcename))
 
 	f.Stable("pingsource as event source to test trigger with annotations").
 		Must("delivers events on broker with URI", assert.OnStore(sink).MatchEvent(

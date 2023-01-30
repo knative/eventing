@@ -37,15 +37,11 @@ aliases:
   - snneji
   eventing-reviewers:
   - aslom
-  - tayarani
-  - tommyreddad
   eventing-triage:
-  - akashrv
   - lberk
   eventing-wg-leads:
   - pierDipi
   eventing-writers:
-  - akashrv
   - aliok
   - lberk
   - lionelvillard
@@ -78,12 +74,11 @@ aliases:
   - kvmware
   - lance
   - mchmarny
-  - pmorie
+  - nainaz
   - psschwei
+  - salaboy
   - smoser-ibm
-  - thisisnotapril
   - upodroid
-  - vaikas
   - zroubalik
   knative-release-leads:
   - evankanderson
@@ -98,10 +93,8 @@ aliases:
   - JRBANCEL
   - ZhiminXiang
   - andrew-su
-  - arturenault
   - carlisia
   - nak3
-  - shashwathi
   - tcnghia
   - vagababov
   - yanweiguo
@@ -116,7 +109,6 @@ aliases:
   - jcrossley3
   - matzew
   - maximilien
-  - trshafer
   operations-wg-leads:
   - houshengbo
   operations-writers:
@@ -126,7 +118,6 @@ aliases:
   - jcrossley3
   - matzew
   - maximilien
-  - trshafer
   pkg-configmap-reviewers:
   - dprotaso
   - mattmoor
@@ -140,7 +131,6 @@ aliases:
   - mattmoor
   - tcnghia
   - vagababov
-  - whaught
   pkg-controller-writers:
   - dprotaso
   - mattmoor
@@ -150,7 +140,6 @@ aliases:
   - kvmware
   - upodroid
   productivity-reviewers:
-  - albertomilan
   - evankanderson
   - mgencur
   - shinigambit
@@ -177,10 +166,8 @@ aliases:
   - carlisia
   - julz
   - nader-ziada
-  - nealhu
   - psschwei
   - skonto
-  - whaught
   serving-wg-leads:
   - dprotaso
   - psschwei
@@ -194,9 +181,8 @@ aliases:
   - csantanapr
   - itsmurugappan
   - lance
-  - pmorie
-  - thisisnotapril
-  - vaikas
+  - nainaz
+  - salaboy
   technical-oversight-committee:
   - dprotaso
   - dsimansk

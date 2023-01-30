@@ -49,7 +49,6 @@ const (
 	jobWaitInterval     = time.Second
 	jobWaitTimeout      = 10 * time.Minute
 	stepEventMsgPattern = "event #([0-9]+).*"
-	exportTraceLimit    = 100
 )
 
 // Verify will verify prober state after finished has been sent.
@@ -98,7 +97,8 @@ func (p *prober) Verify() (eventErrs []error, eventsSent int) {
 	}
 	for i, t := range report.Thrown.Duplicated {
 		if p.config.OnDuplicate == Warn {
-			p.log.Warn("Duplicate events: ", t)
+			// Print at info level to prevent excessive stacktraces.
+			p.log.Info("WARNING: Duplicate:", t)
 		} else if p.config.OnDuplicate == Error {
 			eventErrs = append(eventErrs, errors.New(t))
 		}
@@ -119,7 +119,7 @@ func (p *prober) Finish() {
 }
 
 func (p *prober) exportStepEventTrace(i int, msg string) {
-	if i > exportTraceLimit {
+	if i > p.config.TraceExportLimit {
 		return
 	}
 	stepNo, err := p.getStepNoFromMsg(msg)
@@ -142,7 +142,7 @@ func (p *prober) getStepNoFromMsg(message string) (string, error) {
 }
 
 func (p *prober) getTraceForStepEvent(eventNo string) []byte {
-	p.log.Infof("Fetching trace for Step event #%s", eventNo)
+	p.log.Debugf("Fetching trace for Step event #%s", eventNo)
 	query := fmt.Sprintf("step=%s and cloudevents.type=%s and target=%s",
 		eventNo, event.StepType, fmt.Sprintf(forwarderTargetFmt, p.client.Namespace))
 	trace, err := event.FindTrace(query)

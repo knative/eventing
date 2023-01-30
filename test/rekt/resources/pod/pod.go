@@ -66,3 +66,12 @@ func WithImage(image string) manifest.CfgFn {
 		}
 	}
 }
+
+// WithOverriddenNamespace will modify the namespace of the pod from the specs to the provided one
+func WithNamespace(ns string) manifest.CfgFn {
+	return func(cfg map[string]interface{}) {
+		if ns != "" {
+			cfg["namespace"] = ns
+		}
+	}
+}

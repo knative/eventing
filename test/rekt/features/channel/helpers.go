@@ -29,10 +29,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
-	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
-	messagingclientsetv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/messaging/v1"
-	eventingclient "knative.dev/eventing/pkg/client/injection/client"
-	"knative.dev/eventing/test/rekt/resources/channel_impl"
 	"knative.dev/pkg/apis/duck"
 	apiextensionsclient "knative.dev/pkg/client/injection/apiextensions/client"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
@@ -40,6 +36,11 @@ import (
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/state"
+
+	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	messagingclientsetv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/messaging/v1"
+	eventingclient "knative.dev/eventing/pkg/client/injection/client"
+	"knative.dev/eventing/test/rekt/resources/channel_impl"
 )
 
 func todo(ctx context.Context, t feature.T) {
@@ -74,8 +75,12 @@ func setChannelableName(name string) feature.StepFn {
 }
 
 func getChannelable(ctx context.Context, t feature.T) *duckv1.Channelable {
-	c := Client(ctx)
 	name := state.GetStringOrFail(ctx, t, ChannelableNameKey)
+	return getChannelableFromName(name, ctx, t)
+}
+
+func getChannelableFromName(name string, ctx context.Context, t feature.T) *duckv1.Channelable {
+	c := Client(ctx)
 
 	obj, err := c.ChannelImpl.Get(ctx, name, metav1.GetOptions{})
 	if err != nil {

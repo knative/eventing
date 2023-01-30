@@ -25,6 +25,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	authorizationv1 "k8s.io/api/authorization/v1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	clientgotesting "k8s.io/client-go/testing"
@@ -126,6 +127,7 @@ func TestReconcile(t *testing.T) {
 				rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
 				rttestingv1.WithApiServerSourceSink(sinkURI),
 				rttestingv1.WithApiServerSourceNoSufficientPermissions,
+				rttestingv1.WithApiServerSourceStatusNamespaces([]string{testNS}),
 			),
 		}},
 		WantCreates: []runtime.Object{
@@ -135,7 +137,7 @@ func TestReconcile(t *testing.T) {
 		},
 		WantErr: true,
 		WantEvents: []string{
-			Eventf(corev1.EventTypeWarning, "InternalError", `Insufficient permission: user system:serviceaccount:testnamespace:default cannot get, list, watch resource "namespaces" in API group ""`),
+			Eventf(corev1.EventTypeWarning, "InternalError", `insufficient permissions: User system:serviceaccount:testnamespace:default cannot get, list, watch resource "namespaces" in API group "" in Namespace "testnamespace"`),
 		},
 		WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor(false)},
 		SkipNamespaceValidation: true, // SubjectAccessReview objects are cluster-scoped.
@@ -178,12 +180,142 @@ func TestReconcile(t *testing.T) {
 				rttestingv1.WithApiServerSourceSufficientPermissions,
 				rttestingv1.WithApiServerSourceReferenceModeEventTypes(source),
 				rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
+				rttestingv1.WithApiServerSourceStatusNamespaces([]string{testNS}),
 			),
 		}},
 		WantCreates: []runtime.Object{
 			makeSubjectAccessReview("namespaces", "get", "default"),
 			makeSubjectAccessReview("namespaces", "list", "default"),
 			makeSubjectAccessReview("namespaces", "watch", "default"),
+		},
+		WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor(true)},
+		SkipNamespaceValidation: true, // SubjectAccessReview objects are cluster-scoped.
+	}, {
+		Name: "valid with namespace selector",
+		Objects: []runtime.Object{
+			rttestingv1.NewApiServerSource(sourceName, testNS,
+				rttestingv1.WithApiServerSourceSpec(sourcesv1.ApiServerSourceSpec{
+					Resources: []sourcesv1.APIVersionKindSelector{{
+						APIVersion: "v1",
+						Kind:       "Namespace",
+					}},
+					SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
+				}),
+				rttestingv1.WithApiServerSourceUID(sourceUID),
+				rttestingv1.WithApiServerSourceObjectMetaGeneration(generation),
+				rttestingv1.WithApiServerSourceNamespaceSelector(metav1.LabelSelector{MatchLabels: map[string]string{"target": "yes"}}),
+			),
+			rttestingv1.NewChannel(sinkName, testNS,
+				rttestingv1.WithInitChannelConditions,
+				rttestingv1.WithChannelAddress(sinkDNS),
+			),
+			makeAvailableReceiveAdapter(t),
+			rttesting.NewNamespace("test-a", rttesting.WithNamespaceLabeled(map[string]string{"target": "yes"})),
+			rttesting.NewNamespace("test-b", rttesting.WithNamespaceLabeled(map[string]string{"target": "yes"})),
+			rttesting.NewNamespace("test-c", rttesting.WithNamespaceLabeled(map[string]string{"target": "no"})),
+		},
+		Key: testNS + "/" + sourceName,
+		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: rttestingv1.NewApiServerSource(sourceName, testNS,
+				rttestingv1.WithApiServerSourceSpec(sourcesv1.ApiServerSourceSpec{
+					Resources: []sourcesv1.APIVersionKindSelector{{
+						APIVersion: "v1",
+						Kind:       "Namespace",
+					}},
+					SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
+				}),
+				rttestingv1.WithApiServerSourceUID(sourceUID),
+				rttestingv1.WithApiServerSourceObjectMetaGeneration(generation),
+				// Status Update:
+				rttestingv1.WithInitApiServerSourceConditions,
+				rttestingv1.WithApiServerSourceDeployed,
+				rttestingv1.WithApiServerSourceSink(sinkURI),
+				rttestingv1.WithApiServerSourceSufficientPermissions,
+				rttestingv1.WithApiServerSourceReferenceModeEventTypes(source),
+				rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
+				rttestingv1.WithApiServerSourceNamespaceSelector(metav1.LabelSelector{MatchLabels: map[string]string{"target": "yes"}}),
+				rttestingv1.WithApiServerSourceStatusNamespaces([]string{"test-a", "test-b"}),
+			),
+		}},
+		WantCreates: []runtime.Object{
+			makeNamespacedSubjectAccessReview("namespaces", "get", "default", "test-a"),
+			makeNamespacedSubjectAccessReview("namespaces", "list", "default", "test-a"),
+			makeNamespacedSubjectAccessReview("namespaces", "watch", "default", "test-a"),
+			makeNamespacedSubjectAccessReview("namespaces", "get", "default", "test-b"),
+			makeNamespacedSubjectAccessReview("namespaces", "list", "default", "test-b"),
+			makeNamespacedSubjectAccessReview("namespaces", "watch", "default", "test-b"),
+		},
+		WantUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: makeAvailableReceiveAdapterWithNamespaces(t, []string{"test-a", "test-b"}, false),
+		}},
+		WantEvents: []string{
+			Eventf(corev1.EventTypeNormal, "ApiServerSourceDeploymentUpdated", `Deployment "apiserversource-test-apiserver-source-1234" updated`),
+		},
+		WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor(true)},
+		SkipNamespaceValidation: true, // SubjectAccessReview objects are cluster-scoped.
+	}, {
+		Name: "valid with an empty namespace selector",
+		Objects: []runtime.Object{
+			rttestingv1.NewApiServerSource(sourceName, testNS,
+				rttestingv1.WithApiServerSourceSpec(sourcesv1.ApiServerSourceSpec{
+					Resources: []sourcesv1.APIVersionKindSelector{{
+						APIVersion: "v1",
+						Kind:       "Namespace",
+					}},
+					SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
+				}),
+				rttestingv1.WithApiServerSourceUID(sourceUID),
+				rttestingv1.WithApiServerSourceObjectMetaGeneration(generation),
+				rttestingv1.WithApiServerSourceNamespaceSelector(metav1.LabelSelector{}),
+			),
+			rttestingv1.NewChannel(sinkName, testNS,
+				rttestingv1.WithInitChannelConditions,
+				rttestingv1.WithChannelAddress(sinkDNS),
+			),
+			makeAvailableReceiveAdapter(t),
+			rttesting.NewNamespace("test-a"),
+			rttesting.NewNamespace("test-b"),
+			rttesting.NewNamespace("test-c"),
+		},
+		Key: testNS + "/" + sourceName,
+		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: rttestingv1.NewApiServerSource(sourceName, testNS,
+				rttestingv1.WithApiServerSourceSpec(sourcesv1.ApiServerSourceSpec{
+					Resources: []sourcesv1.APIVersionKindSelector{{
+						APIVersion: "v1",
+						Kind:       "Namespace",
+					}},
+					SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
+				}),
+				rttestingv1.WithApiServerSourceUID(sourceUID),
+				rttestingv1.WithApiServerSourceObjectMetaGeneration(generation),
+				// Status Update:
+				rttestingv1.WithInitApiServerSourceConditions,
+				rttestingv1.WithApiServerSourceDeployed,
+				rttestingv1.WithApiServerSourceSink(sinkURI),
+				rttestingv1.WithApiServerSourceSufficientPermissions,
+				rttestingv1.WithApiServerSourceReferenceModeEventTypes(source),
+				rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
+				rttestingv1.WithApiServerSourceNamespaceSelector(metav1.LabelSelector{}),
+				rttestingv1.WithApiServerSourceStatusNamespaces([]string{"test-a", "test-b", "test-c"}),
+			),
+		}},
+		WantCreates: []runtime.Object{
+			makeNamespacedSubjectAccessReview("namespaces", "get", "default", "test-a"),
+			makeNamespacedSubjectAccessReview("namespaces", "list", "default", "test-a"),
+			makeNamespacedSubjectAccessReview("namespaces", "watch", "default", "test-a"),
+			makeNamespacedSubjectAccessReview("namespaces", "get", "default", "test-b"),
+			makeNamespacedSubjectAccessReview("namespaces", "list", "default", "test-b"),
+			makeNamespacedSubjectAccessReview("namespaces", "watch", "default", "test-b"),
+			makeNamespacedSubjectAccessReview("namespaces", "get", "default", "test-c"),
+			makeNamespacedSubjectAccessReview("namespaces", "list", "default", "test-c"),
+			makeNamespacedSubjectAccessReview("namespaces", "watch", "default", "test-c"),
+		},
+		WantUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: makeAvailableReceiveAdapterWithNamespaces(t, []string{"test-a", "test-b", "test-c"}, true),
+		}},
+		WantEvents: []string{
+			Eventf(corev1.EventTypeNormal, "ApiServerSourceDeploymentUpdated", `Deployment "apiserversource-test-apiserver-source-1234" updated`),
 		},
 		WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor(true)},
 		SkipNamespaceValidation: true, // SubjectAccessReview objects are cluster-scoped.
@@ -228,6 +360,7 @@ func TestReconcile(t *testing.T) {
 				rttestingv1.WithApiServerSourceSufficientPermissions,
 				rttestingv1.WithApiServerSourceResourceModeEventTypes(source),
 				rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
+				rttestingv1.WithApiServerSourceStatusNamespaces([]string{testNS}),
 			),
 		}},
 		WantCreates: []runtime.Object{
@@ -276,6 +409,7 @@ func TestReconcile(t *testing.T) {
 				rttestingv1.WithApiServerSourceSufficientPermissions,
 				rttestingv1.WithApiServerSourceReferenceModeEventTypes(source),
 				rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
+				rttestingv1.WithApiServerSourceStatusNamespaces([]string{testNS}),
 			),
 		}},
 		WantCreates: []runtime.Object{
@@ -367,6 +501,7 @@ func TestReconcile(t *testing.T) {
 				rttestingv1.WithApiServerSourceSink(sinkURI),
 				rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
 				rttestingv1.WithApiServerSourceSufficientPermissions,
+				rttestingv1.WithApiServerSourceStatusNamespaces([]string{testNS}),
 			),
 		}},
 		WantCreates: []runtime.Object{
@@ -430,6 +565,7 @@ func TestReconcile(t *testing.T) {
 				rttestingv1.WithApiServerSourceSufficientPermissions,
 				rttestingv1.WithApiServerSourceReferenceModeEventTypes(source),
 				rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
+				rttestingv1.WithApiServerSourceStatusNamespaces([]string{testNS}),
 			),
 		}},
 		WantCreates: []runtime.Object{
@@ -481,6 +617,7 @@ func TestReconcile(t *testing.T) {
 				rttestingv1.WithApiServerSourceReferenceModeEventTypes(source),
 				rttestingv1.WithApiServerSourceDeploymentUnavailable,
 				rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
+				rttestingv1.WithApiServerSourceStatusNamespaces([]string{testNS}),
 			),
 		}},
 		WantUpdates: []clientgotesting.UpdateActionImpl{{
@@ -541,6 +678,7 @@ func TestReconcile(t *testing.T) {
 				rttestingv1.WithApiServerSourceSufficientPermissions,
 				rttestingv1.WithApiServerSourceReferenceModeEventTypes(source),
 				rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
+				rttestingv1.WithApiServerSourceStatusNamespaces([]string{testNS}),
 			),
 		}},
 		WantUpdates: []clientgotesting.UpdateActionImpl{{
@@ -595,6 +733,7 @@ func TestReconcile(t *testing.T) {
 				rttestingv1.WithApiServerSourceSufficientPermissions,
 				rttestingv1.WithApiServerSourceReferenceModeEventTypes(source),
 				rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
+				rttestingv1.WithApiServerSourceStatusNamespaces([]string{testNS}),
 			),
 		}},
 		WantUpdates: []clientgotesting.UpdateActionImpl{{
@@ -646,6 +785,7 @@ func TestReconcile(t *testing.T) {
 				rttestingv1.WithApiServerSourceSufficientPermissions,
 				rttestingv1.WithApiServerSourceReferenceModeEventTypes(source),
 				rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
+				rttestingv1.WithApiServerSourceStatusNamespaces([]string{testNS}),
 			),
 		}},
 		WantCreates: []runtime.Object{
@@ -666,6 +806,7 @@ func TestReconcile(t *testing.T) {
 			receiveAdapterImage: image,
 			sinkResolver:        resolver.NewURIResolverFromTracker(ctx, tracker.New(func(types.NamespacedName) {}, 0)),
 			configs:             &reconcilersource.EmptyVarsGenerator{},
+			namespaceLister:     listers.GetNamespaceLister(),
 		}
 		return apiserversource.NewReconciler(ctx, logger,
 			fakeeventingclient.Get(ctx), listers.GetApiServerSourceLister(),
@@ -699,11 +840,12 @@ func makeReceiveAdapterWithName(t *testing.T, sourceName string) *appsv1.Deploym
 	)
 
 	args := resources.ReceiveAdapterArgs{
-		Image:   image,
-		Source:  src,
-		Labels:  resources.Labels(sourceName),
-		SinkURI: sinkURI.String(),
-		Configs: &reconcilersource.EmptyVarsGenerator{},
+		Image:      image,
+		Source:     src,
+		Labels:     resources.Labels(sourceName),
+		SinkURI:    sinkURI.String(),
+		Configs:    &reconcilersource.EmptyVarsGenerator{},
+		Namespaces: []string{testNS},
 	}
 
 	ra, err := resources.MakeReceiveAdapter(&args)
@@ -737,11 +879,12 @@ func makeAvailableReceiveAdapterWithTargetURI(t *testing.T) *appsv1.Deployment {
 	)
 
 	args := resources.ReceiveAdapterArgs{
-		Image:   image,
-		Source:  src,
-		Labels:  resources.Labels(sourceName),
-		SinkURI: sinkTargetURI.String(),
-		Configs: &reconcilersource.EmptyVarsGenerator{},
+		Image:      image,
+		Source:     src,
+		Labels:     resources.Labels(sourceName),
+		SinkURI:    sinkTargetURI.String(),
+		Configs:    &reconcilersource.EmptyVarsGenerator{},
+		Namespaces: []string{testNS},
 	}
 
 	ra, err := resources.MakeReceiveAdapter(&args)
@@ -771,11 +914,47 @@ func makeAvailableReceiveAdapterWithEventMode(t *testing.T, eventMode string) *a
 	)
 
 	args := resources.ReceiveAdapterArgs{
-		Image:   image,
-		Source:  src,
-		Labels:  resources.Labels(sourceName),
-		SinkURI: sinkURI.String(),
-		Configs: &reconcilersource.EmptyVarsGenerator{},
+		Image:      image,
+		Source:     src,
+		Labels:     resources.Labels(sourceName),
+		SinkURI:    sinkURI.String(),
+		Configs:    &reconcilersource.EmptyVarsGenerator{},
+		Namespaces: []string{testNS},
+	}
+
+	ra, err := resources.MakeReceiveAdapter(&args)
+	require.NoError(t, err)
+
+	rttesting.WithDeploymentAvailable()(ra)
+	return ra
+}
+
+func makeAvailableReceiveAdapterWithNamespaces(t *testing.T, namespaces []string, allNamespaces bool) *appsv1.Deployment {
+	t.Helper()
+
+	src := rttestingv1.NewApiServerSource(sourceName, testNS,
+		rttestingv1.WithApiServerSourceSpec(sourcesv1.ApiServerSourceSpec{
+			Resources: []sourcesv1.APIVersionKindSelector{{
+				APIVersion: "v1",
+				Kind:       "Namespace",
+			}},
+			SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
+		}),
+		rttestingv1.WithApiServerSourceUID(sourceUID),
+		// Status Update:
+		rttestingv1.WithInitApiServerSourceConditions,
+		rttestingv1.WithApiServerSourceDeployed,
+		rttestingv1.WithApiServerSourceSink(sinkURI),
+	)
+
+	args := resources.ReceiveAdapterArgs{
+		Image:         image,
+		Source:        src,
+		Labels:        resources.Labels(sourceName),
+		SinkURI:       sinkURI.String(),
+		Configs:       &reconcilersource.EmptyVarsGenerator{},
+		Namespaces:    namespaces,
+		AllNamespaces: allNamespaces,
 	}
 
 	ra, err := resources.MakeReceiveAdapter(&args)
@@ -806,11 +985,11 @@ func makeReceiveAdapterWithDifferentContainerCount(t *testing.T) *appsv1.Deploym
 	return ra
 }
 
-func makeSubjectAccessReview(resource, verb, sa string) *authorizationv1.SubjectAccessReview {
+func makeNamespacedSubjectAccessReview(resource, verb, sa, ns string) *authorizationv1.SubjectAccessReview {
 	return &authorizationv1.SubjectAccessReview{
 		Spec: authorizationv1.SubjectAccessReviewSpec{
 			ResourceAttributes: &authorizationv1.ResourceAttributes{
-				Namespace: testNS,
+				Namespace: ns,
 				Verb:      verb,
 				Group:     "",
 				Resource:  resource,
@@ -818,6 +997,10 @@ func makeSubjectAccessReview(resource, verb, sa string) *authorizationv1.Subject
 			User: "system:serviceaccount:" + testNS + ":" + sa,
 		},
 	}
+}
+
+func makeSubjectAccessReview(resource, verb, sa string) *authorizationv1.SubjectAccessReview {
+	return makeNamespacedSubjectAccessReview(resource, verb, sa, testNS)
 }
 
 func subjectAccessReviewCreateReactor(allowed bool) clientgotesting.ReactionFunc {

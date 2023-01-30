@@ -17,15 +17,26 @@ kind: Broker
 metadata:
   name: {{ .name }}
   namespace: {{ .namespace }}
-  {{ if .brokerClass }}
+  {{ if or .brokerClass .annotations }}
   annotations:
+  {{ if .brokerClass }}
     eventing.knative.dev/broker.class: {{ .brokerClass }}
+  {{ end }}
+  {{ if .annotations }}
+    {{ range $key, $value := .annotations }}
+    {{ $key }}: {{ $value }}
+    {{ end }}
+  {{ end }}
   {{ end }}
 spec:
   {{ if .config }}
   config:
     kind: {{ .config.kind }}
+    {{ if .configNamespace }}
+    namespace: {{ .configNamespace }}
+    {{ else }}
     namespace: {{ .namespace }}
+    {{ end }}
     name: {{ .config.name }}
     apiVersion: {{ .config.apiVersion }}
   {{ end }}

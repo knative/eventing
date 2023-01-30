@@ -22,12 +22,25 @@ package upgrade
 import (
 	"testing"
 
-	"go.uber.org/zap"
+	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/upgrade/installation"
+	"knative.dev/pkg/system"
 	pkgupgrade "knative.dev/pkg/test/upgrade"
 )
 
 func TestEventingUpgrades(t *testing.T) {
+	labels := []string{
+		"eventing-controller",
+		"eventing-webhook",
+		"imc-controller",
+		"imc-dispatcher",
+		"mt-broker-controller",
+		"mt-broker-ingress",
+		"mt-broker-filter",
+	}
+	canceler := testlib.ExportLogStreamOnError(t, testlib.SystemLogsDir, system.Namespace(), labels...)
+	defer canceler()
+
 	suite := pkgupgrade.Suite{
 		Tests: pkgupgrade.Tests{
 			PreUpgrade: []pkgupgrade.Operation{
@@ -53,16 +66,7 @@ func TestEventingUpgrades(t *testing.T) {
 			},
 		},
 	}
-	c := newUpgradeConfig(t)
-	suite.Execute(c)
-}
-
-func newUpgradeConfig(t *testing.T) pkgupgrade.Configuration {
-	log, err := zap.NewDevelopment()
-	if err != nil {
-		t.Fatal(err)
-	}
-	return pkgupgrade.Configuration{T: t, Log: log}
+	suite.Execute(pkgupgrade.Configuration{T: t})
 }
 
 func TestMain(m *testing.M) {

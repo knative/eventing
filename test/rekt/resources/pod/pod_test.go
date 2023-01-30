@@ -131,6 +131,41 @@ func Example_withImage() {
 	//         - containerPort: 8080
 }
 
+func Example_withNamespace() {
+	ctx := testlog.NewContext()
+	images := map[string]string{}
+	cfg := map[string]interface{}{
+		"name":      "foo",
+		"namespace": "bar",
+		"image":     "baz",
+		"port":      "8080",
+		"labels":    map[string]string{"app": "bla"},
+	}
+
+	pod.WithNamespace("new-namespace")(cfg)
+
+	files, err := manifest.ExecuteYAML(ctx, yaml, images, cfg)
+	if err != nil {
+		panic(err)
+	}
+
+	manifest.OutputYAML(os.Stdout, files)
+	// Output:
+	// apiVersion: v1
+	// kind: Pod
+	// metadata:
+	//   name: foo
+	//   namespace: new-namespace
+	//   labels:
+	//     app: bla
+	// spec:
+	//   containers:
+	//     - name: user-container
+	//       image: baz
+	//       ports:
+	//         - containerPort: 8080
+}
+
 func Example_full() {
 	ctx := testlog.NewContext()
 	images := map[string]string{}

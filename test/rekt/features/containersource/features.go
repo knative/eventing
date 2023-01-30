@@ -17,18 +17,18 @@ limitations under the License.
 package containersource
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/cloudevents/sdk-go/v2/test"
 	"k8s.io/apimachinery/pkg/util/uuid"
 
-	"knative.dev/eventing/test/rekt/resources/containersource"
-	"knative.dev/eventing/test/rekt/resources/pingsource"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/resources/svc"
+
+	"knative.dev/eventing/test/rekt/resources/containersource"
+	"knative.dev/eventing/test/rekt/resources/pingsource"
 )
 
 func SendsEventsWithSinkRef() *feature.Feature {
@@ -38,7 +38,7 @@ func SendsEventsWithSinkRef() *feature.Feature {
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 
-	f.Setup("install containersource", containersource.Install(source, pingsource.WithSink(svc.AsKReference(sink), "")))
+	f.Requirement("install containersource", containersource.Install(source, pingsource.WithSink(svc.AsKReference(sink), "")))
 	f.Requirement("containersource goes ready", containersource.IsReady(source))
 
 	f.Stable("containersource as event source").
@@ -55,13 +55,7 @@ func SendsEventsWithSinkURI() *feature.Feature {
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 
-	f.Setup("install containersource", func(ctx context.Context, t feature.T) {
-		uri, err := svc.Address(ctx, sink)
-		if err != nil {
-			t.Error("failed to get address of sink", err)
-		}
-		containersource.Install(source, pingsource.WithSink(nil, uri.String()))(ctx, t)
-	})
+	f.Requirement("install containersource", containersource.Install(source, containersource.WithSink(svc.AsKReference(sink), "")))
 	f.Requirement("containersource goes ready", containersource.IsReady(source))
 
 	f.Stable("containersource as event source").
@@ -81,7 +75,7 @@ func SendsEventsWithCloudEventOverrides() *feature.Feature {
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 
-	f.Setup("install containersource", containersource.Install(source,
+	f.Requirement("install containersource", containersource.Install(source,
 		pingsource.WithSink(svc.AsKReference(sink), ""),
 		containersource.WithExtensions(extensions),
 	))
@@ -106,7 +100,7 @@ func SendsEventsWithArgs() *feature.Feature {
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 
-	f.Setup("install containersource", containersource.Install(source,
+	f.Requirement("install containersource", containersource.Install(source,
 		containersource.WithSink(svc.AsKReference(sink), ""),
 		containersource.WithArgs(args),
 	))

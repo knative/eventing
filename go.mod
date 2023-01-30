@@ -5,9 +5,9 @@ go 1.18
 require (
 	github.com/ahmetb/gen-crd-api-reference-docs v0.3.1-0.20210420163308-c1402a70e2f1
 	github.com/cloudevents/conformance v0.2.0
-	github.com/cloudevents/sdk-go/observability/opencensus/v2 v2.12.0
-	github.com/cloudevents/sdk-go/sql/v2 v2.0.0-20220930150014-52b12276cc4a
-	github.com/cloudevents/sdk-go/v2 v2.12.0
+	github.com/cloudevents/sdk-go/observability/opencensus/v2 v2.13.0
+	github.com/cloudevents/sdk-go/sql/v2 v2.13.0
+	github.com/cloudevents/sdk-go/v2 v2.13.0
 	github.com/golang/protobuf v1.5.2
 	github.com/google/go-cmp v0.5.8
 	github.com/google/gofuzz v1.2.0
@@ -44,10 +44,10 @@ require (
 	k8s.io/apiserver v0.25.4
 	k8s.io/client-go v0.25.4
 	k8s.io/utils v0.0.0-20221108210102-8e77b1f39fe2
-	knative.dev/hack v0.0.0-20221115211737-de2ff401a852
-	knative.dev/hack/schema v0.0.0-20221115211737-de2ff401a852
-	knative.dev/pkg v0.0.0-20221116135639-bd66b9bfe4a1
-	knative.dev/reconciler-test v0.0.0-20221116134639-8ddc2b3d5b3a
+	knative.dev/hack v0.0.0-20230113013652-c7cfcb062de9
+	knative.dev/hack/schema v0.0.0-20230113013652-c7cfcb062de9
+	knative.dev/pkg v0.0.0-20230117181655-247510c00e9d
+	knative.dev/reconciler-test v0.0.0-20230123181139-476a442e3644
 	sigs.k8s.io/yaml v1.3.0
 )
 

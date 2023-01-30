@@ -88,10 +88,10 @@ type BrokerStatus struct {
 	// * Conditions - the latest available observations of a resource's current state.
 	duckv1.Status `json:",inline"`
 
-	// Broker is Addressable. It exposes the endpoint as an URI to get events
-	// delivered into the Broker mesh.
+	// AddressStatus is the part where the Broker fulfills the Addressable contract.
+	// It exposes the endpoint as an URI to get events delivered into the Broker mesh.
 	// +optional
-	Address duckv1.Addressable `json:"address,omitempty"`
+	duckv1.AddressStatus `json:",inline"`
 
 	// DeliveryStatus contains a resolved URL to the dead letter sink address, and any other
 	// resolved delivery options.

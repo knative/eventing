@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -31,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/injection/clients/dynamicclient"
+
 	"knative.dev/reconciler-test/pkg/state"
 )
 
@@ -40,14 +42,18 @@ type Feature struct {
 	Steps []Step
 	State state.Store
 	// Contains all the resources created as part of this Feature.
-	refs []corev1.ObjectReference
+	refs   []corev1.ObjectReference
+	refsMu sync.Mutex
 }
 
-func (f Feature) MarshalJSON() ([]byte, error) {
+func (f *Feature) MarshalJSON() ([]byte, error) {
 	return f.marshalJSON(true)
 }
 
-func (f Feature) marshalJSON(pretty bool) ([]byte, error) {
+func (f *Feature) marshalJSON(pretty bool) ([]byte, error) {
+	f.refsMu.Lock()
+	defer f.refsMu.Unlock()
+
 	in := struct {
 		Name  string                   `json:"name"`
 		Steps []Step                   `json:"steps"`
@@ -70,7 +76,7 @@ func (f Feature) marshalJSON(pretty bool) ([]byte, error) {
 
 // DumpWith calls the provided log function with a nicely formatted string
 // that represents the Feature.
-func (f Feature) DumpWith(log func(args ...interface{})) {
+func (f *Feature) DumpWith(log func(args ...interface{})) {
 	b, err := f.marshalJSON(false)
 	if err != nil {
 		log("Skipping feature logging due to error: ", err.Error())
@@ -118,6 +124,13 @@ type Step struct {
 	Fn   StepFn `json:"-"`
 }
 
+type Steps []Step
+
+func (ss Steps) String() string {
+	bytes, _ := json.MarshalIndent(ss, "", "  ")
+	return string(bytes)
+}
+
 // TestName returns the constructed test name based on the timing, step, state,
 // level, and the Name provided in the step.
 func (s *Step) TestName() string {
@@ -132,13 +145,21 @@ func (s *Step) TestName() string {
 // Reference adds references to keep track of for example, for cleaning things
 // after a Feature completes.
 func (f *Feature) Reference(ref ...corev1.ObjectReference) {
+	f.refsMu.Lock()
+	defer f.refsMu.Unlock()
+
 	f.refs = append(f.refs, ref...)
 }
 
 // References returns all known resources to the Feature registered via
 // `Reference`.
 func (f *Feature) References() []corev1.ObjectReference {
-	return f.refs
+	f.refsMu.Lock()
+	defer f.refsMu.Unlock()
+
+	r := make([]corev1.ObjectReference, len(f.refs))
+	copy(r, f.refs)
+	return r
 }
 
 // DeleteResources delete all known resources to the Feature registered
@@ -207,6 +228,9 @@ func (f *Feature) DeleteResources(ctx context.Context, t T) {
 		LogReferences(refFailedDeletion...)(ctx, t)
 		t.Fatalf("failed to wait for resources to be deleted: %v", err)
 	}
+
+	f.refsMu.Lock()
+	defer f.refsMu.Unlock()
 
 	f.refs = refFailedDeletion
 }

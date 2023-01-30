@@ -22,6 +22,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes/scheme"
 	"knative.dev/eventing/pkg/apis/feature"
 
 	"knative.dev/pkg/configmap"
@@ -53,7 +54,13 @@ import (
 	sourcesv1beta2 "knative.dev/eventing/pkg/apis/sources/v1beta2"
 	sugar "knative.dev/eventing/pkg/apis/sugar"
 	"knative.dev/eventing/pkg/reconciler/sinkbinding"
+
+	versionedscheme "knative.dev/eventing/pkg/client/clientset/versioned/scheme"
 )
+
+func init() {
+	versionedscheme.AddToScheme(scheme.Scheme)
+}
 
 var ourTypes = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
 	// For group eventing.knative.dev.
