@@ -44,6 +44,7 @@ EventSource ---> Broker ---> Trigger1 -------> Service(Transformation)
 
 Note: the number denotes the sequence of the event that flows in this test case.
 */
+// Deprecated, use reconciler-test based tests.
 func EventTransformationForTriggerTestHelper(
 	ctx context.Context,
 	t *testing.T,
