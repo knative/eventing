@@ -23,20 +23,19 @@ import (
 	"testing"
 	"time"
 
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/system"
 	_ "knative.dev/pkg/system/testing"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/knative"
-	"knative.dev/reconciler-test/pkg/manifest"
 
 	"knative.dev/eventing/test/rekt/features/broker"
 	b "knative.dev/eventing/test/rekt/resources/broker"
-	"knative.dev/eventing/test/rekt/resources/subscription"
 )
 
-func TestBrokerChannelFlowWithTransformation(t *testing.T) {
+// TestBrokerWorkFlowWithTransformation test broker transformation respectively follow
+// channel flow and trigger event flow.
+func TestBrokerWorkFlowWithTransformation(t *testing.T) {
 	t.Parallel()
 
 	ctx, env := global.Environment(
@@ -48,10 +47,7 @@ func TestBrokerChannelFlowWithTransformation(t *testing.T) {
 		environment.WithPollTimings(5*time.Second, 4*time.Minute),
 	)
 
-	createSubscriberFn := func(ref *duckv1.KReference, uri string) manifest.CfgFn {
-		return subscription.WithSubscriber(ref, uri)
-	}
-	env.Test(ctx, t, broker.BrokerChannelFlowWithTransformation(createSubscriberFn))
+	env.TestSet(ctx, t, broker.BrokerWorkFlowWithTransformation())
 }
 
 func TestBrokerAsMiddleware(t *testing.T) {
