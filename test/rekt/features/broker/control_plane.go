@@ -515,8 +515,8 @@ func addControlPlaneEventRouting(fs *feature.FeatureSet, brokerOpts ...manifest.
 		// All the events generated are currently hardcoded into the com.example.FullEvent
 		// so once prober supports more configuration, wire it up here.
 		prober.SenderFullEvents(1)
-		f.Setup("install source", prober.SenderInstall("source"))
-		f.Requirement("sender is finished", prober.SenderDone("source"))
+
+		f.Requirement("install source", prober.SenderInstall("source"))
 
 		// All events have been sent, time to look at the specs and confirm we got them.
 		expectedEvents := createExpectedEventRoutingMap(tt.config, tt.inEvents)
