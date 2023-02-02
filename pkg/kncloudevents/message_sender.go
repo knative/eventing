@@ -34,12 +34,6 @@ type HTTPMessageSender struct {
 	Target string
 }
 
-// Deprecated: Don't use this anymore, now it has the same effect of NewHTTPMessageSenderWithTarget
-// If you need to modify the connection args, use ConfigureConnectionArgs sparingly.
-func NewHTTPMessageSender(ca *ConnectionArgs, target string) (*HTTPMessageSender, error) {
-	return NewHTTPMessageSenderWithTarget(target)
-}
-
 func NewHTTPMessageSenderWithTarget(target string) (*HTTPMessageSender, error) {
 	return &HTTPMessageSender{Client: getClient(), Target: target}, nil
 }
