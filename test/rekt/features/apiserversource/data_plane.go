@@ -252,6 +252,7 @@ func SendsEventsWithObjectReferencePayload() *feature.Feature {
 		Must("delivers events",
 			eventasssert.OnStore(sink).MatchEvent(
 				test.HasType("dev.knative.apiserver.ref.add"),
+				test.HasExtensions(map[string]interface{}{"apiversion": "v1"}),
 				test.DataContains(`"kind":"Pod"`),
 				test.DataContains(fmt.Sprintf(`"name":"%s"`, examplePodName)),
 			).AtLeast(1))
@@ -296,6 +297,7 @@ func SendsEventsWithResourceEventPayload() *feature.Feature {
 		Must("delivers events",
 			eventasssert.OnStore(sink).MatchEvent(
 				test.HasType("dev.knative.apiserver.resource.add"),
+				test.HasExtensions(map[string]interface{}{"apiversion": "v1"}),
 				test.DataContains(`"kind":"Pod"`),
 				test.DataContains(fmt.Sprintf(`"name":"%s"`, examplePodName)),
 			).AtLeast(1))
