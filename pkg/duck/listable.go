@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"sync"
-	"time"
 
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -28,7 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/pkg/apis/duck"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -56,12 +54,6 @@ type ListableTracker interface {
 
 type Track func(corev1.ObjectReference) error
 type TrackKReference func(duckv1.KReference) error
-
-// NewListableTracker creates a new ListableTracker, backed by a TypedInformerFactory.
-// Deprecated: use NewListableTrackerFromTracker instead.
-func NewListableTracker(ctx context.Context, getter func(context.Context) duck.InformerFactory, callback func(types.NamespacedName), lease time.Duration) ListableTracker {
-	return NewListableTrackerFromTracker(ctx, getter, tracker.New(callback, lease))
-}
 
 // NewListableTrackerFromTracker creates a new ListableTracker, backed by a TypedInformerFactory.
 func NewListableTrackerFromTracker(ctx context.Context, getter func(context.Context) duck.InformerFactory, t tracker.Interface) ListableTracker {
