@@ -282,22 +282,6 @@ DeliveryStatus
 resolved delivery options.</p>
 </td>
 </tr>
-<tr>
-<td>
-<code>deadLetterChannel</code><br/>
-<em>
-<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#KReference">
-knative.dev/pkg/apis/duck/v1.KReference
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>DeadLetterChannel is a KReference and is set by the channel when it supports native error handling via a channel
-Failed messages are delivered here.
-Deprecated in favor of DeliveryStatus, to be removed September 2022.</p>
-</td>
-</tr>
 </tbody>
 </table>
 <h3 id="duck.knative.dev/v1.DeliverySpec">DeliverySpec
