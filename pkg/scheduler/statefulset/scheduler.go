@@ -177,9 +177,19 @@ func (s *StatefulSetScheduler) scheduleVPod(vpod scheduler.VPod) ([]duckv1alpha1
 		return nil, err
 	}
 
-	placements := vpod.GetPlacements()
-	existingPlacements := placements
+	existingPlacements := vpod.GetPlacements()
 	var left int32
+
+	// Remove unschedulable pods from placements
+	var placements []duckv1alpha1.Placement
+	if len(existingPlacements) > 0 {
+		placements = make([]duckv1alpha1.Placement, 0, len(existingPlacements))
+		for _, p := range existingPlacements {
+			if state.IsSchedulablePod(st.OrdinalFromPodName(p.PodName)) {
+				placements = append(placements, *p.DeepCopy())
+			}
+		}
+	}
 
 	// The scheduler when policy type is
 	// Policy: MAXFILLUP (SchedulerPolicyType == MAXFILLUP)
