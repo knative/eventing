@@ -18,11 +18,9 @@ package subscription
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"testing"
-
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"knative.dev/eventing/pkg/apis/messaging"
 
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -905,18 +903,14 @@ func TestAllCases(t *testing.T) {
 					WithInitSubscriptionConditions,
 					MarkReferencesResolved,
 					MarkAddedToChannel,
+
 					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
 				),
 			}},
-			WantUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: makeUnstructuredChannelable(imcV1GVK, []eventingduck.SubscriberSpec{
-					{
-						UID:           subscriptionUID,
-						SubscriberURI: subscriberURI,
-					},
-				}, nil),
-			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
+				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
+					{UID: subscriptionUID, SubscriberURI: subscriberURI},
+				}),
 				patchFinalizers(testNS, subscriptionName),
 			},
 		}, {
@@ -999,19 +993,10 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionDeadLetterSinkURI(dlsURI),
 				),
 			}},
-			WantUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: makeUnstructuredChannelable(imcV1GVK, []eventingduck.SubscriberSpec{
-					{
-						UID:           subscriptionUID,
-						SubscriberURI: subscriberURI,
-						Delivery: &eventingduck.DeliverySpec{
-							DeadLetterSink: &duckv1.Destination{
-								URI: dlsURI,
-							},
-						}},
-				}, nil),
-			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
+				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
+					{UID: subscriptionUID, SubscriberURI: subscriberURI, Delivery: &eventingduck.DeliverySpec{DeadLetterSink: &duckv1.Destination{URI: apis.HTTP("dls.mynamespace.svc.cluster.local")}}},
+				}),
 				patchFinalizers(testNS, subscriptionName),
 			},
 		}, {
@@ -1058,15 +1043,10 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
 				),
 			}},
-			WantUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: makeUnstructuredChannelable(imcV1GVK, []eventingduck.SubscriberSpec{
-					{
-						UID:           subscriptionUID,
-						SubscriberURI: subscriberURI,
-					},
-				}, nil),
-			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
+				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
+					{UID: subscriptionUID, SubscriberURI: subscriberURI},
+				}),
 				patchFinalizers(testNS, subscriptionName),
 			},
 		}, {
@@ -1152,16 +1132,10 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
 				),
 			}},
-			WantUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: makeUnstructuredChannelable(imcV1GVK, []eventingduck.SubscriberSpec{
-					{
-						UID:           subscriptionUID,
-						SubscriberURI: subscriberURI,
-						ReplyURI:      replyURI,
-					},
-				}, nil),
-			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
+				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
+					{UID: subscriptionUID, ReplyURI: replyURI, SubscriberURI: subscriberURI},
+				}),
 				patchFinalizers(testNS, subscriptionName),
 			},
 		}, {
@@ -1206,16 +1180,10 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionPhysicalSubscriptionReply(replyURI),
 				),
 			}},
-			WantUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: makeUnstructuredChannelable(imcV1GVK, []eventingduck.SubscriberSpec{
-					{
-						UID:           subscriptionUID,
-						SubscriberURI: subscriberURI,
-						ReplyURI:      replyURI,
-					},
-				}, nil),
-			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
+				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
+					{UID: subscriptionUID, SubscriberURI: subscriberURI, ReplyURI: replyURI},
+				}),
 				patchFinalizers(testNS, subscriptionName),
 			},
 		}, {
@@ -1261,15 +1229,11 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionStatusObservedGeneration(subscriptionGeneration),
 				),
 			}},
-			WantUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: makeUnstructuredChannelable(imcV1GVK, []eventingduck.SubscriberSpec{
-					{
-						UID:           subscriptionUID,
-						SubscriberURI: subscriberURI,
-						Generation:    subscriptionGeneration,
-					},
-				}, nil),
-			}},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
+					{UID: subscriptionUID, Generation: subscriptionGeneration, SubscriberURI: subscriberURI},
+				}),
+			},
 		}, {
 			Name: "v1 imc+subscriber as service",
 			Objects: []runtime.Object{
@@ -1303,15 +1267,10 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI),
 				),
 			}},
-			WantUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: makeUnstructuredChannelable(imcV1GVK, []eventingduck.SubscriberSpec{
-					{
-						UID:           subscriptionUID,
-						SubscriberURI: serviceURI,
-					},
-				}, nil),
-			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
+				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
+					{UID: subscriptionUID, SubscriberURI: serviceURI},
+				}),
 				patchFinalizers(testNS, subscriptionName),
 			},
 		}, {
@@ -1357,15 +1316,10 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI),
 				),
 			}},
-			WantUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: makeUnstructuredChannelable(imcV1GVK, []eventingduck.SubscriberSpec{
-					{
-						UID:           "a-" + subscriptionUID,
-						SubscriberURI: serviceURI,
-					},
-				}, nil),
-			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
+				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
+					{UID: "a-" + subscriptionUID, SubscriberURI: serviceURI},
+				}),
 				patchFinalizers(testNS, "a-"+subscriptionName),
 			},
 		}, {
@@ -1421,20 +1375,10 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionDeadLetterSinkURI(dlsURI),
 				),
 			}},
-			WantUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: makeUnstructuredChannelable(imcV1GVK, []eventingduck.SubscriberSpec{
-					{
-						UID:           "a-" + subscriptionUID,
-						SubscriberURI: serviceURI,
-						Delivery: &eventingduck.DeliverySpec{
-							DeadLetterSink: &duckv1.Destination{
-								URI: apis.HTTP("dls.mynamespace.svc.cluster.local"),
-							},
-						},
-					},
-				}, nil),
-			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
+				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
+					{UID: "a-" + subscriptionUID, SubscriberURI: serviceURI, Delivery: &eventingduck.DeliverySpec{DeadLetterSink: &duckv1.Destination{URI: apis.HTTP("dls.mynamespace.svc.cluster.local")}}},
+				}),
 				patchFinalizers(testNS, "a-"+subscriptionName),
 			},
 		},
@@ -1503,8 +1447,8 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionDeadLetterSinkURI(dlsURI),
 				),
 			}},
-			WantUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: makeUnstructuredChannelable(imcV1GVK, []eventingduck.SubscriberSpec{
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
 					{
 						UID:           "a-" + subscriptionUID,
 						SubscriberURI: serviceURI,
@@ -1517,9 +1461,7 @@ func TestAllCases(t *testing.T) {
 							BackoffDelay:  pointer.String("PT1S"),
 						},
 					},
-				}, nil),
-			}},
-			WantPatches: []clientgotesting.PatchActionImpl{
+				}),
 				patchFinalizers(testNS, "a-"+subscriptionName),
 			},
 		},
@@ -1575,8 +1517,8 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionDeadLetterSinkURI(dlcURI),
 				),
 			}},
-			WantUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: makeUnstructuredChannelable(imcV1GVK, []eventingduck.SubscriberSpec{
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
 					{
 						UID:           "a-" + subscriptionUID,
 						SubscriberURI: serviceURI,
@@ -1589,21 +1531,7 @@ func TestAllCases(t *testing.T) {
 							BackoffDelay:  pointer.String("PT1S"),
 						},
 					},
-				}, &eventingduck.DeliverySpec{
-					DeadLetterSink: &duckv1.Destination{
-						Ref: &duckv1.KReference{
-							APIVersion: subscriberGVK.Group + "/" + subscriberGVK.Version,
-							Kind:       subscriberGVK.Kind,
-							Name:       dlcName,
-							Namespace:  testNS,
-						},
-					},
-					Retry:         pointer.Int32(10),
-					BackoffPolicy: &linear,
-					BackoffDelay:  pointer.String("PT1S"),
 				}),
-			}},
-			WantPatches: []clientgotesting.PatchActionImpl{
 				patchFinalizers(testNS, "a-"+subscriptionName),
 			},
 		},
@@ -1653,8 +1581,8 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI),
 				),
 			}},
-			WantUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: makeUnstructuredChannelable(imcV1GVK, []eventingduck.SubscriberSpec{
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
 					{
 						UID:           "a-" + subscriptionUID,
 						SubscriberURI: serviceURI,
@@ -1663,12 +1591,7 @@ func TestAllCases(t *testing.T) {
 							RetryAfterMax: pointer.String("PT2S"),
 						},
 					},
-				}, &eventingduck.DeliverySpec{
-					Timeout:       pointer.String("PT1S"),
-					RetryAfterMax: pointer.String("PT2S"),
 				}),
-			}},
-			WantPatches: []clientgotesting.PatchActionImpl{
 				patchFinalizers(testNS, "a-"+subscriptionName),
 			},
 		},
@@ -1709,15 +1632,13 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI),
 				),
 			}},
-			WantUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: makeUnstructuredChannelable(imcV1GVK, []eventingduck.SubscriberSpec{
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
 					{
 						UID:           "a-" + subscriptionUID,
 						SubscriberURI: serviceURI,
 					},
-				}, nil),
-			}},
-			WantPatches: []clientgotesting.PatchActionImpl{
+				}),
 				patchFinalizers(testNS, "a-"+subscriptionName),
 			},
 		},
@@ -1853,8 +1774,8 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionDeadLetterSinkURI(dlsURI),
 				),
 			}},
-			WantUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: makeUnstructuredChannelable(imcV1GVK, []eventingduck.SubscriberSpec{
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
 					{
 						UID:           "a-" + subscriptionUID,
 						SubscriberURI: serviceURI,
@@ -1867,21 +1788,7 @@ func TestAllCases(t *testing.T) {
 							BackoffDelay:  pointer.String("PT1S"),
 						},
 					},
-				}, &eventingduck.DeliverySpec{
-					DeadLetterSink: &duckv1.Destination{
-						Ref: &duckv1.KReference{
-							APIVersion: subscriberGVK.Group + "/" + subscriberGVK.Version,
-							Kind:       subscriberGVK.Kind,
-							Name:       dlc2Name,
-							Namespace:  testNS,
-						},
-					},
-					Retry:         pointer.Int32(20),
-					BackoffPolicy: &linear,
-					BackoffDelay:  pointer.String("PT10S"),
 				}),
-			}},
-			WantPatches: []clientgotesting.PatchActionImpl{
 				patchFinalizers(testNS, "a-"+subscriptionName),
 			},
 		},
@@ -1941,8 +1848,8 @@ func TestAllCases(t *testing.T) {
 					}),
 				),
 			}},
-			WantUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: makeUnstructuredChannelable(imcV1GVK, []eventingduck.SubscriberSpec{
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
 					{
 						UID:           "a-" + subscriptionUID,
 						SubscriberURI: serviceURI,
@@ -1951,12 +1858,7 @@ func TestAllCases(t *testing.T) {
 							RetryAfterMax: pointer.String("PT2S"),
 						},
 					},
-				}, &eventingduck.DeliverySpec{
-					Timeout:       pointer.String("PT10S"),
-					RetryAfterMax: pointer.String("PT20S"),
 				}),
-			}},
-			WantPatches: []clientgotesting.PatchActionImpl{
 				patchFinalizers(testNS, "a-"+subscriptionName),
 			},
 		},
@@ -1990,14 +1892,12 @@ func TestAllCases(t *testing.T) {
 				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", subscriptionName),
 				Eventf(corev1.EventTypeNormal, "SubscriberRemoved", "Subscription was removed from channel \"origin\""),
 			},
-			WantUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: makeUnstructuredChannelable(imcV1GVK, nil, nil),
-			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
+				patchSubscribers(testNS, channelName, nil),
 				patchRemoveFinalizers(testNS, subscriptionName),
 			},
 		}, {
-			Name: "subscription not deleted - channel update fails",
+			Name: "subscription not deleted - channel patch fails",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
@@ -2023,10 +1923,10 @@ func TestAllCases(t *testing.T) {
 			},
 			Key: testNS + "/" + subscriptionName,
 			WithReactors: []clientgotesting.ReactionFunc{
-				InduceFailure("update", "inmemorychannels"),
+				InduceFailure("patch", "inmemorychannels"),
 			},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "PhysicalChannelSyncFailed", fmt.Sprintf("Failed to synchronize to channel %q: %s: %s", channelName, "failed to update channel testnamespace/origin", "inducing failure for update inmemorychannels")),
+				Eventf(corev1.EventTypeWarning, "PhysicalChannelSyncFailed", fmt.Sprintf("Failed to synchronize to channel %q: %s", channelName, "inducing failure for patch inmemorychannels")),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
@@ -2034,16 +1934,16 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionChannel(imcV1GVK, channelName),
 					WithInitSubscriptionConditions,
 					MarkSubscriptionReady,
-					MarkChannelFailed("PhysicalChannelSyncFailed", "Failed to sync physical Channel: failed to update channel testnamespace/origin: inducing failure for update inmemorychannels"),
+					MarkNotAddedToChannel("PhysicalChannelSyncFailed", "Failed to sync physical Channel: inducing failure for patch inmemorychannels"),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 					WithSubscriptionFinalizers(finalizerName),
 					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI),
 					WithSubscriptionDeleted,
 				),
 			}},
-			WantUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: makeUnstructuredChannelable(imcV1GVK, nil, nil),
-			}},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchSubscribers(testNS, channelName, nil),
+			},
 		}, {
 			Name: "subscription deleted - channel does not exist",
 			Objects: []runtime.Object{
@@ -2071,6 +1971,7 @@ func TestAllCases(t *testing.T) {
 			},
 		},
 	}
+
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		ctx = channelable.WithDuck(ctx)
@@ -2096,6 +1997,36 @@ func WithSubscriptionDeliverySpec(d *eventingduck.DeliverySpec) SubscriptionOpti
 	}
 }
 
+func patchSubscribers(namespace, name string, subscribers []eventingduck.SubscriberSpec) clientgotesting.PatchActionImpl {
+	action := clientgotesting.PatchActionImpl{}
+	action.Name = name
+	action.Namespace = namespace
+
+	var spec string
+	if subscribers != nil {
+		b, err := json.Marshal(subscribers)
+		if err != nil {
+			return action
+		}
+		ss := make([]map[string]interface{}, 0)
+		err = json.Unmarshal(b, &ss)
+		if err != nil {
+			return action
+		}
+		subs, err := json.Marshal(ss)
+		if err != nil {
+			return action
+		}
+		spec = fmt.Sprintf(`{"subscribers":%s}`, subs)
+	} else {
+		spec = `{"subscribers":null}`
+	}
+
+	patch := `{"spec":` + spec + `}`
+	action.Patch = []byte(patch)
+	return action
+}
+
 func patchFinalizers(namespace, name string) clientgotesting.PatchActionImpl {
 	action := clientgotesting.PatchActionImpl{}
 	action.Name = name
@@ -2112,30 +2043,4 @@ func patchRemoveFinalizers(namespace, name string) clientgotesting.PatchActionIm
 	patch := `{"metadata":{"finalizers":[],"resourceVersion":""}}`
 	action.Patch = []byte(patch)
 	return action
-}
-
-func makeUnstructuredChannelable(gvk metav1.GroupVersionKind, subscribers []eventingduck.SubscriberSpec, delivery *eventingduck.DeliverySpec) *unstructured.Unstructured {
-	ch := &eventingduck.Channelable{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       gvk.Kind,
-			APIVersion: fmt.Sprintf("%s/%s", gvk.Group, gvk.Version),
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        channelName,
-			Namespace:   testNS,
-			Annotations: map[string]string{messaging.SubscribableDuckVersionAnnotation: "v1"},
-		},
-		Spec: eventingduck.ChannelableSpec{
-			SubscribableSpec: eventingduck.SubscribableSpec{
-				Subscribers: subscribers,
-			},
-			Delivery: delivery,
-		},
-		Status: eventingduck.ChannelableStatus{},
-	}
-	uo, err := runtime.DefaultUnstructuredConverter.ToUnstructured(ch)
-	if err != nil {
-		return nil
-	}
-	return &unstructured.Unstructured{Object: uo}
 }
