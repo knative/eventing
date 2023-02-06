@@ -88,6 +88,32 @@ func TestStatefulsetScheduler(t *testing.T) {
 			schedulerPolicyType: scheduler.MAXFILLUP,
 		},
 		{
+			name:      "one replica, 8 vreplicas, already scheduled on unschedulable pod, add replicas",
+			vreplicas: 8,
+			replicas:  int32(1),
+			placements: []duckv1alpha1.Placement{
+				{PodName: "statefulset-name-0", VReplicas: 3},
+				{PodName: "statefulset-name-2", VReplicas: 5},
+			},
+			expected: []duckv1alpha1.Placement{
+				{PodName: "statefulset-name-0", VReplicas: 8},
+			},
+			schedulerPolicyType: scheduler.MAXFILLUP,
+		},
+		{
+			name:      "one replica, 1 vreplicas, already scheduled on unschedulable pod, remove replicas",
+			vreplicas: 1,
+			replicas:  int32(1),
+			placements: []duckv1alpha1.Placement{
+				{PodName: "statefulset-name-0", VReplicas: 3},
+				{PodName: "statefulset-name-2", VReplicas: 5},
+			},
+			expected: []duckv1alpha1.Placement{
+				{PodName: "statefulset-name-0", VReplicas: 1},
+			},
+			schedulerPolicyType: scheduler.MAXFILLUP,
+		},
+		{
 			name:                "one replica, 15 vreplicas, unschedulable",
 			vreplicas:           15,
 			replicas:            int32(1),
