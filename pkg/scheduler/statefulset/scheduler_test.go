@@ -774,7 +774,12 @@ func TestStatefulsetScheduler(t *testing.T) {
 			lsp := listers.NewListers(podlist)
 			lsn := listers.NewListers(nodelist)
 			sa := state.NewStateBuilder(ctx, testNs, sfsName, vpodClient.List, 10, tc.schedulerPolicyType, tc.schedulerPolicy, tc.deschedulerPolicy, lsp.GetPodLister().Pods(testNs), lsn.GetNodeLister())
-			s := NewStatefulSetScheduler(ctx, testNs, sfsName, vpodClient.List, sa, nil, lsp.GetPodLister().Pods(testNs)).(*StatefulSetScheduler)
+			cfg := &Config{
+				StatefulSetNamespace: testNs,
+				StatefulSetName:      sfsName,
+				VPodLister:           vpodClient.List,
+			}
+			s := newStatefulSetScheduler(ctx, cfg, sa, nil, lsp.GetPodLister().Pods(testNs)).(*StatefulSetScheduler)
 			if tc.pending != nil {
 				s.pending = tc.pending
 			}
@@ -867,7 +872,12 @@ func TestReservePlacements(t *testing.T) {
 			vpodClient := tscheduler.NewVPodClient()
 			vpodClient.Append(tc.vpod)
 
-			s := NewStatefulSetScheduler(ctx, testNs, sfsName, vpodClient.List, nil, nil, nil).(*StatefulSetScheduler)
+			cfg := &Config{
+				StatefulSetNamespace: testNs,
+				StatefulSetName:      sfsName,
+				VPodLister:           vpodClient.List,
+			}
+			s := newStatefulSetScheduler(ctx, cfg, nil, nil, nil).(*StatefulSetScheduler)
 			s.reservePlacements(tc.vpod, tc.vpod.GetPlacements()) //initial reserve
 
 			s.reservePlacements(tc.vpod, tc.placements) //new reserve
