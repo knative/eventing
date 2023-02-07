@@ -154,6 +154,10 @@ spec:
     - name: Reason
       type: string
       jsonPath: ".status.conditions[?(@.type==\"Ready\")].reason"
+    - name: Class
+      type: string
+      priority: 1
+      jsonPath: '.metadata.annotations.eventing\.knative\.dev/broker\.class'
   names:
     kind: Broker
     plural: brokers
