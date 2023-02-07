@@ -50,28 +50,28 @@ const (
 // Policy describes a struct of a policy resource.
 type SchedulerPolicy struct {
 	// Holds the information to configure the fit predicate functions.
-	Predicates []PredicatePolicy
+	Predicates []PredicatePolicy `json:"predicates"`
 	// Holds the information to configure the priority functions.
-	Priorities []PriorityPolicy
+	Priorities []PriorityPolicy `json:"priorities"`
 }
 
 // PredicatePolicy describes a struct of a predicate policy.
 type PredicatePolicy struct {
 	// Identifier of the predicate policy
-	Name string
+	Name string `json:"name"`
 	// Holds the parameters to configure the given predicate
-	Args interface{}
+	Args interface{} `json:"args"`
 }
 
 // PriorityPolicy describes a struct of a priority policy.
 type PriorityPolicy struct {
 	// Identifier of the priority policy
-	Name string
+	Name string `json:"name"`
 	// The numeric multiplier for the pod scores that the priority function generates
 	// The weight should be a positive integer
-	Weight uint64
+	Weight uint64 `json:"weight"`
 	// Holds the parameters to configure the given priority function
-	Args interface{}
+	Args interface{} `json:"args"`
 }
 
 // VPodLister is the function signature for returning a list of VPods
