@@ -135,6 +135,15 @@ func (s *State) GetPodInfo(podName string) (zoneName string, nodeName string, er
 	return zoneName, nodeName, nil
 }
 
+func (s *State) IsSchedulablePod(ordinal int32) bool {
+	for _, x := range s.SchedulablePods {
+		if x == ordinal {
+			return true
+		}
+	}
+	return false
+}
+
 // stateBuilder reconstruct the state from scratch, by listing vpods
 type stateBuilder struct {
 	ctx               context.Context
