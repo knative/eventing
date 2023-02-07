@@ -147,6 +147,11 @@ func IsReady(name string, timing ...time.Duration) feature.StepFn {
 	return k8s.IsReady(GVR(), name, timing...)
 }
 
+// IsNotReady tests to see if a Broker becomes NotReady within the time given.
+func IsNotReady(name string, timing ...time.Duration) feature.StepFn {
+	return k8s.IsNotReady(GVR(), name, timing...)
+}
+
 // IsAddressable tests to see if a Broker becomes addressable within the  time
 // given.
 func IsAddressable(name string, timings ...time.Duration) feature.StepFn {
