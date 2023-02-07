@@ -167,7 +167,7 @@ func (s *StatefulSetScheduler) Schedule(vpod scheduler.VPod) ([]duckv1alpha1.Pla
 
 func (s *StatefulSetScheduler) scheduleVPod(vpod scheduler.VPod) ([]duckv1alpha1.Placement, error) {
 	logger := s.logger.With("key", vpod.GetKey())
-	logger.Info("scheduling")
+	logger.Infow("scheduling", zap.Any("pending", toJSONable(s.pending)))
 
 	// Get the current placements state
 	// Quite an expensive operation but safe and simple.
@@ -269,6 +269,14 @@ func (s *StatefulSetScheduler) scheduleVPod(vpod scheduler.VPod) ([]duckv1alpha1
 	delete(s.pending, vpod.GetKey())
 
 	return placements, nil
+}
+
+func toJSONable(pending map[types.NamespacedName]int32) map[string]int32 {
+	r := make(map[string]int32, len(pending))
+	for k, v := range pending {
+		r[k.String()] = v
+	}
+	return r
 }
 
 func (s *StatefulSetScheduler) rebalanceReplicasWithPolicy(vpod scheduler.VPod, diff int32, placements []duckv1alpha1.Placement) ([]duckv1alpha1.Placement, int32) {
