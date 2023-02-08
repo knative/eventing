@@ -127,7 +127,14 @@ func (a *cronJobsRunner) AddSchedule(source *sourcesv1.PingSource) (*time.Timer,
 		// The Date time is set before time.Now
 		duration := time.Until(date)
 
+		// If the scheduled time is earlier than the current time, fire events at least once.
+		if duration < 0 {
+			duration = 0 * time.Second
+		}
+
 		a.timer = time.AfterFunc(duration, a.cronTick(ctx, event))
+		source.Status.MarkCompleted()
+
 		return a.timer, -1
 	}
 }

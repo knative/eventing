@@ -20,7 +20,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"time"
 
 	"go.uber.org/zap"
 
@@ -117,11 +116,9 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *sourcesv1.PingSo
 	}
 	source.Status.PropagateDeploymentAvailability(d)
 
-	err = r.runExpiredCheck(source)
-	if err != nil {
-		logging.FromContext(ctx).Errorw("Expired time configured", zap.Error(err))
-		return err
-	}
+	// Only one-off PingSource has this status
+	// Make sure the one-off Pingsource not fire events
+	source.Status.MarkUnCompleted("NotCompleted", "only one-off PingSource has this status.")
 
 	// Tell tracker to reconcile this PingSource whenever the deployment changes
 	err = r.tracker.TrackReference(tracker.Reference{
@@ -154,6 +151,7 @@ func (r *Reconciler) reconcileReceiveAdapter(ctx context.Context, source *source
 	expected := resources.MakeReceiveAdapterEnvVar(args)
 
 	d, err := r.kubeClientSet.AppsV1().Deployments(system.Namespace()).Get(ctx, mtadapterName, metav1.GetOptions{})
+
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			logging.FromContext(ctx).Errorw("PingSource adapter deployment doesn't exist", zap.Error(err))
@@ -176,26 +174,6 @@ func (r *Reconciler) reconcileReceiveAdapter(ctx context.Context, source *source
 		logging.FromContext(ctx).Debugw("Reusing existing cluster-scoped deployment", zap.Any("deployment", d))
 	}
 	return d, nil
-}
-
-func (r *Reconciler) runExpiredCheck(source *sourcesv1.PingSource) error {
-	if source.Spec.Date == "" {
-		source.Status.MarkUnExpired()
-		return nil
-	}
-
-	dateTime := source.Spec.Date
-	date, _ := time.Parse(defaultDateLayout, dateTime)
-
-	// The Date time is set before current time
-	duration := time.Until(date)
-	if duration >= 0 {
-		source.Status.MarkUnExpired()
-		return nil
-	}
-
-	source.Status.MarkExpired("Expired date configured", "")
-	return pkgreconciler.NewEvent(corev1.EventTypeWarning, "Expired date configured", "")
 }
 
 func needsUpdating(ctx context.Context, oldDeploymentSpec *appsv1.DeploymentSpec, newEnvVars []corev1.EnvVar) (bool, *corev1.Container) {

@@ -72,12 +72,8 @@ func WithPingSourceDeployed(s *v1.PingSource) {
 	s.Status.PropagateDeploymentAvailability(testing.NewDeployment("any", "any", testing.WithDeploymentAvailable()))
 }
 
-func WithPingSourceUnexpired(s *v1.PingSource) {
-	s.Status.MarkUnExpired()
-}
-
-func WithPingSourceExpired(s *v1.PingSource) {
-	s.Status.MarkExpired("Expired date configured", "")
+func WithPingSourceUnCompleted(s *v1.PingSource) {
+	s.Status.MarkUnCompleted("NotCompleted", "only one-off PingSource has this status.")
 }
 
 func WithPingSourceCloudEventAttributes(s *v1.PingSource) {

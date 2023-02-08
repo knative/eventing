@@ -150,7 +150,7 @@ func SendsOneOffsEvent() *feature.Feature {
 	f.Stable("OneOff PingSource as event source").
 		Must("delivers events", assert.OnStore(sink).MatchEvent(
 			test.HasType("dev.knative.sources.ping"),
-		).AtLeast(1))
+		).Exact(1))
 
 	return f
 }

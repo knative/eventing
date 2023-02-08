@@ -259,8 +259,8 @@ func TestAllCases(t *testing.T) {
 					rtv1.WithPingSourceObjectMetaGeneration(generation),
 					// Status Update:
 					rtv1.WithInitPingSourceConditions,
+					rtv1.WithPingSourceUnCompleted,
 					rtv1.WithPingSourceDeployed,
-					rtv1.WithPingSourceUnexpired,
 					rtv1.WithPingSourceSink(sinkURI),
 					rtv1.WithPingSourceCloudEventAttributes,
 					rtv1.WithPingSourceStatusObservedGeneration(generation),
@@ -305,7 +305,7 @@ func TestAllCases(t *testing.T) {
 					rtv1.WithPingSourceObjectMetaGeneration(generation),
 					// Status Update:
 					rtv1.WithInitPingSourceConditions,
-					rtv1.WithPingSourceUnexpired,
+					rtv1.WithPingSourceUnCompleted,
 					rtv1.WithPingSourceDeployed,
 					rtv1.WithPingSourceSink(sinkURI),
 					rtv1.WithPingSourceCloudEventAttributes,
@@ -315,53 +315,6 @@ func TestAllCases(t *testing.T) {
 			WantUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: makeAvailableMTAdapter(),
 			}},
-		}, {
-			Name: "Date expired",
-			Objects: []runtime.Object{
-				rtv1.NewPingSource(sourceName, testNS,
-					rtv1.WithPingSourceSpec(sourcesv1.PingSourceSpec{
-						Schedule:    testSchedule,
-						ContentType: testContentType,
-						Data:        testData,
-						Date:        "2006-01-02T15:04:05.000Z",
-						SourceSpec: duckv1.SourceSpec{
-							Sink: sinkDest,
-						},
-					}),
-					rtv1.WithPingSource(sourceUID),
-					rtv1.WithPingSourceObjectMetaGeneration(generation),
-				),
-				rtv1.NewChannel(sinkName, testNS,
-					rtv1.WithInitChannelConditions,
-					rtv1.WithChannelAddress(sinkDNS),
-				),
-				makeAvailableMTAdapter(),
-			},
-			Key: testNS + "/" + sourceName,
-			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: rtv1.NewPingSource(sourceName, testNS,
-					rtv1.WithPingSourceSpec(sourcesv1.PingSourceSpec{
-						Schedule:    testSchedule,
-						ContentType: testContentType,
-						Data:        testData,
-						Date:        "2006-01-02T15:04:05.000Z",
-						SourceSpec: duckv1.SourceSpec{
-							Sink: sinkDest,
-						},
-					}),
-					rtv1.WithPingSource(sourceUID),
-					rtv1.WithPingSourceObjectMetaGeneration(generation),
-					// Status Update:
-					rtv1.WithInitPingSourceConditions,
-					rtv1.WithPingSourceExpired,
-					rtv1.WithPingSourceDeployed,
-					rtv1.WithPingSourceSink(sinkURI),
-					rtv1.WithPingSourceStatusObservedGeneration(generation),
-				),
-			}},
-			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "Expired date configured", ""),
-			},
 		}, {
 			Name: "valid",
 			Objects: []runtime.Object{
@@ -398,7 +351,7 @@ func TestAllCases(t *testing.T) {
 					rtv1.WithPingSourceObjectMetaGeneration(generation),
 					// Status Update:
 					rtv1.WithInitPingSourceConditions,
-					rtv1.WithPingSourceUnexpired,
+					rtv1.WithPingSourceUnCompleted,
 					rtv1.WithPingSourceDeployed,
 					rtv1.WithPingSourceSink(sinkURI),
 					rtv1.WithPingSourceCloudEventAttributes,
@@ -442,7 +395,7 @@ func TestAllCases(t *testing.T) {
 					rtv1.WithPingSourceObjectMetaGeneration(generation),
 					// Status Update:
 					rtv1.WithInitPingSourceConditions,
-					rtv1.WithPingSourceUnexpired,
+					rtv1.WithPingSourceUnCompleted,
 					rtv1.WithPingSourceDeployed,
 					rtv1.WithPingSourceSink(sinkURI),
 					rtv1.WithPingSourceCloudEventAttributes,

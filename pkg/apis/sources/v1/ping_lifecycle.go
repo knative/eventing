@@ -35,8 +35,8 @@ const (
 	// PingSourceConditionDeployed has status True when the PingSource has had it's receive adapter deployment created.
 	PingSourceConditionDeployed apis.ConditionType = "Deployed"
 
-	// PingSourceConditionUnExpired has status True when the one-off PingSource has been configured with an unexpired date.
-	PingSourceConditionUnExpired apis.ConditionType = "UnExpired"
+	// PingSourceConditionCompleted has status True when the one-off PingSource has been configured finished.
+	PingSourceConditionCompleted apis.ConditionType = "Completed"
 )
 
 var PingSourceCondSet = apis.NewLivingConditionSet(
@@ -124,12 +124,12 @@ func (s *PingSourceStatus) PropagateDeploymentAvailability(d *appsv1.Deployment)
 	}
 }
 
-// MarkUnExpired sets the condition that the source has been configured with an unexpired date.
-func (s *PingSourceStatus) MarkUnExpired() {
-	PingSourceCondSet.Manage(s).MarkTrue(PingSourceConditionUnExpired)
+// MarkCompleted sets the condition that the source has been configured finished.
+func (s *PingSourceStatus) MarkCompleted() {
+	PingSourceCondSet.Manage(s).MarkTrue(PingSourceConditionCompleted)
 }
 
-// MarkExpired sets the condition that the source has been configured with an expired date.
-func (s *PingSourceStatus) MarkExpired(reason, messageFormat string, messageA ...interface{}) {
-	PingSourceCondSet.Manage(s).MarkFalse(PingSourceConditionUnExpired, reason, messageFormat, messageA...)
+// MarkUnCompleted sets the condition that the source has not been configured yet.
+func (s *PingSourceStatus) MarkUnCompleted(reason, messageFormat string, messageA ...interface{}) {
+	PingSourceCondSet.Manage(s).MarkFalse(PingSourceConditionCompleted, reason, messageFormat, messageA...)
 }
