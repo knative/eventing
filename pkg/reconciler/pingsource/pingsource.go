@@ -50,8 +50,6 @@ import (
 const (
 	// Name of the corev1.Events emitted from the reconciliation process
 	pingSourceDeploymentUpdated = "PingSourceDeploymentUpdated"
-	// Layout of the configured date from the one-off Pingsource
-	defaultDateLayout = "2006-01-02T15:04:05-0700"
 
 	component     = "pingsource"
 	mtadapterName = "pingsource-mt-adapter"
