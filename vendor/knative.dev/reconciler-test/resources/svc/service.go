@@ -17,66 +17,31 @@ limitations under the License.
 package svc
 
 import (
-	"context"
-	"embed"
-
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"knative.dev/pkg/apis"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
-	"knative.dev/pkg/tracker"
-
 	"knative.dev/reconciler-test/pkg/feature"
-	"knative.dev/reconciler-test/pkg/k8s"
-	"knative.dev/reconciler-test/pkg/manifest"
+	"knative.dev/reconciler-test/pkg/resources/service"
 )
 
-//go:embed *.yaml
-var templates embed.FS
-
-func GVR() schema.GroupVersionResource {
-	return schema.GroupVersionResource{Group: "", Version: "v1", Resource: "services"}
-}
+// Deprecated: use knative.dev/reconciler-test/pkg/resources/service.GVR
+var GVR = service.GVR
 
 // Install will create a Service resource mapping :80 to :8080 on the provided
 // selector for pods.
+// Deprecated: use knative.dev/reconciler-test/pkg/resources/service.Install
 func Install(name, selectorKey, selectorValue string) feature.StepFn {
-	cfg := map[string]interface{}{
-		"name":          name,
-		"selectorKey":   selectorKey,
-		"selectorValue": selectorValue,
-	}
-
-	return func(ctx context.Context, t feature.T) {
-		if _, err := manifest.InstallYamlFS(ctx, templates, cfg); err != nil {
-			t.Fatal(err)
-		}
-	}
+	return service.Install(name, service.WithSelectors(map[string]string{
+		selectorKey: selectorValue,
+	}))
 }
 
 // AsKReference returns a KReference for a Service without namespace.
-func AsKReference(name string) *duckv1.KReference {
-	return &duckv1.KReference{
-		Kind:       "Service",
-		Name:       name,
-		APIVersion: "v1",
-	}
-}
+// Deprecated: use knative.dev/reconciler-test/pkg/resources/service.AsKReference
+var AsKReference = service.AsKReference
 
-func AsTrackerReference(name string) *tracker.Reference {
-	return &tracker.Reference{
-		Kind:       "Service",
-		Name:       name,
-		APIVersion: "v1",
-	}
-}
+// Deprecated: use knative.dev/reconciler-test/pkg/resources/service.AsTrackerReference
+var AsTrackerReference = service.AsTrackerReference
 
-func AsDestinationRef(name string) *duckv1.Destination {
-	return &duckv1.Destination{
-		Ref: AsKReference(name),
-	}
-}
+// Deprecated: use knative.dev/reconciler-test/pkg/resources/service.AsDestinationRef
+var AsDestinationRef = service.AsDestinationRef
 
-// Address
-func Address(ctx context.Context, name string) (*apis.URL, error) {
-	return k8s.Address(ctx, GVR(), name)
-}
+// Deprecated: use knative.dev/reconciler-test/pkg/resources/service.Address
+var Address = service.Address
