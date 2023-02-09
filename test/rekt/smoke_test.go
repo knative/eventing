@@ -43,7 +43,7 @@ import (
 	_ "knative.dev/pkg/system/testing"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
-	"knative.dev/reconciler-test/resources/svc"
+	"knative.dev/reconciler-test/pkg/resources/service"
 )
 
 // TestSmoke_Broker
@@ -293,12 +293,13 @@ func TestSmoke_SinkBinding(t *testing.T) {
 		f := sinkbinding.GoesReady(name)
 
 		sink := feature.MakeRandomK8sName("sink")
-		f.Setup("install a service", svc.Install(sink, "app", "rekt"))
+		f.Setup("install a service", service.Install(sink,
+			service.WithSelectors(map[string]string{"app": "rekt"})))
 
 		subject := feature.MakeRandomK8sName("subject")
 		f.Setup("install a deployment", deployment.Install(subject))
 
-		f.Setup("install a sinkbinding", sb.Install(name, svc.AsDestinationRef(sink), deployment.AsTrackerReference(subject)))
+		f.Setup("install a sinkbinding", sb.Install(name, service.AsDestinationRef(sink), deployment.AsTrackerReference(subject)))
 
 		env.Test(ctx, t, f)
 	}

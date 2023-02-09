@@ -25,7 +25,7 @@ import (
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
-	"knative.dev/reconciler-test/resources/svc"
+	"knative.dev/reconciler-test/pkg/resources/service"
 
 	"knative.dev/eventing/test/rekt/resources/containersource"
 	"knative.dev/eventing/test/rekt/resources/pingsource"
@@ -38,7 +38,7 @@ func SendsEventsWithSinkRef() *feature.Feature {
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 
-	f.Requirement("install containersource", containersource.Install(source, pingsource.WithSink(svc.AsKReference(sink), "")))
+	f.Requirement("install containersource", containersource.Install(source, pingsource.WithSink(service.AsKReference(sink), "")))
 	f.Requirement("containersource goes ready", containersource.IsReady(source))
 
 	f.Stable("containersource as event source").
@@ -55,7 +55,7 @@ func SendsEventsWithSinkURI() *feature.Feature {
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 
-	f.Requirement("install containersource", containersource.Install(source, containersource.WithSink(svc.AsKReference(sink), "")))
+	f.Requirement("install containersource", containersource.Install(source, containersource.WithSink(service.AsKReference(sink), "")))
 	f.Requirement("containersource goes ready", containersource.IsReady(source))
 
 	f.Stable("containersource as event source").
@@ -76,7 +76,7 @@ func SendsEventsWithCloudEventOverrides() *feature.Feature {
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 
 	f.Requirement("install containersource", containersource.Install(source,
-		pingsource.WithSink(svc.AsKReference(sink), ""),
+		pingsource.WithSink(service.AsKReference(sink), ""),
 		containersource.WithExtensions(extensions),
 	))
 	f.Requirement("containersource goes ready", containersource.IsReady(source))
@@ -101,7 +101,7 @@ func SendsEventsWithArgs() *feature.Feature {
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 
 	f.Requirement("install containersource", containersource.Install(source,
-		containersource.WithSink(svc.AsKReference(sink), ""),
+		containersource.WithSink(service.AsKReference(sink), ""),
 		containersource.WithArgs(args),
 	))
 	f.Requirement("containersource goes ready", containersource.IsReady(source))

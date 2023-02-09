@@ -21,7 +21,7 @@ import (
 
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
-	"knative.dev/reconciler-test/resources/svc"
+	"knative.dev/reconciler-test/pkg/resources/service"
 
 	"knative.dev/eventing/test/rekt/resources/sequence"
 )
@@ -32,15 +32,17 @@ func GoesReady(name string, cfg ...manifest.CfgFn) *feature.Feature {
 
 	{
 		reply := feature.MakeRandomK8sName("reply")
-		f.Setup("install a reply service", svc.Install(reply, "app", "rekt"))
-		cfg = append(cfg, sequence.WithReply(svc.AsKReference(reply), ""))
+		f.Setup("install a reply service", service.Install(reply,
+			service.WithSelectors(map[string]string{"app": "rekt"})))
+		cfg = append(cfg, sequence.WithReply(service.AsKReference(reply), ""))
 	}
 
 	for i := 0; i < 3; i++ {
 		// step
 		step := feature.MakeRandomK8sName("step" + strconv.Itoa(i))
-		f.Setup("install step "+strconv.Itoa(i), svc.Install(step, "app", "rekt"))
-		cfg = append(cfg, sequence.WithStep(svc.AsKReference(step), ""))
+		f.Setup("install step "+strconv.Itoa(i), service.Install(step,
+			service.WithSelectors(map[string]string{"app": "rekt"})))
+		cfg = append(cfg, sequence.WithStep(service.AsKReference(step), ""))
 	}
 
 	f.Setup("install a Sequence", sequence.Install(name, cfg...))

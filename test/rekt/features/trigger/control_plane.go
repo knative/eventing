@@ -24,7 +24,7 @@ import (
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	triggerresources "knative.dev/eventing/test/rekt/resources/trigger"
 	"knative.dev/reconciler-test/pkg/feature"
-	"knative.dev/reconciler-test/resources/svc"
+	"knative.dev/reconciler-test/pkg/resources/service"
 )
 
 func Defaulting() *feature.FeatureSet {
@@ -44,7 +44,7 @@ func Defaulting_Filter() *feature.Feature {
 
 	resourceName := feature.MakeRandomK8sName("trigger")
 
-	withSubscriber := triggerresources.WithSubscriber(svc.AsKReference("sub"), "")
+	withSubscriber := triggerresources.WithSubscriber(service.AsKReference("sub"), "")
 
 	f.Setup("Set Trigger name", SetTriggerName(resourceName))
 	f.Setup("Create a Trigger with empty spec.filter",
@@ -61,7 +61,7 @@ func Defaulting_SubscriberNamespace() *feature.Feature {
 
 	resourceName := feature.MakeRandomK8sName("trigger")
 
-	withSubscriber := triggerresources.WithSubscriber(svc.AsKReference("sub"), "")
+	withSubscriber := triggerresources.WithSubscriber(service.AsKReference("sub"), "")
 
 	f.Setup("Set Trigger name", SetTriggerName(resourceName))
 	f.Setup("Create a Trigger with empty subscriber namespace",

@@ -21,7 +21,7 @@ import (
 
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
-	"knative.dev/reconciler-test/resources/svc"
+	"knative.dev/reconciler-test/pkg/resources/service"
 
 	"knative.dev/eventing/test/rekt/resources/parallel"
 )
@@ -32,25 +32,29 @@ func GoesReady(name string, cfg ...manifest.CfgFn) *feature.Feature {
 
 	{
 		reply := feature.MakeRandomK8sName("reply")
-		f.Setup("install a reply service", svc.Install(reply, "app", "rekt"))
-		cfg = append(cfg, parallel.WithReply(svc.AsKReference(reply), ""))
+		f.Setup("install a reply service", service.Install(reply,
+			service.WithSelectors(map[string]string{"app": "rekt"})))
+		cfg = append(cfg, parallel.WithReply(service.AsKReference(reply), ""))
 	}
 
 	for i := 0; i < 3; i++ {
 		// Filter
 		filter := feature.MakeRandomK8sName("subscriber" + strconv.Itoa(i))
-		f.Setup("install filter "+strconv.Itoa(i), svc.Install(filter, "app", "rekt"))
-		cfg = append(cfg, parallel.WithFilterAt(i, svc.AsKReference(filter), ""))
+		f.Setup("install filter "+strconv.Itoa(i), service.Install(filter,
+			service.WithSelectors(map[string]string{"app": "rekt"})))
+		cfg = append(cfg, parallel.WithFilterAt(i, service.AsKReference(filter), ""))
 
 		// Subscriber
 		subscriber := feature.MakeRandomK8sName("subscriber" + strconv.Itoa(i))
-		f.Setup("install subscriber "+strconv.Itoa(i), svc.Install(subscriber, "app", "rekt"))
-		cfg = append(cfg, parallel.WithSubscriberAt(i, svc.AsKReference(subscriber), ""))
+		f.Setup("install subscriber "+strconv.Itoa(i), service.Install(subscriber,
+			service.WithSelectors(map[string]string{"app": "rekt"})))
+		cfg = append(cfg, parallel.WithSubscriberAt(i, service.AsKReference(subscriber), ""))
 
 		// Reply
 		reply := feature.MakeRandomK8sName("reply" + strconv.Itoa(i))
-		f.Setup("install reply "+strconv.Itoa(i), svc.Install(reply, "app", "rekt"))
-		cfg = append(cfg, parallel.WithReplyAt(i, svc.AsKReference(reply), ""))
+		f.Setup("install reply "+strconv.Itoa(i), service.Install(reply,
+			service.WithSelectors(map[string]string{"app": "rekt"})))
+		cfg = append(cfg, parallel.WithReplyAt(i, service.AsKReference(reply), ""))
 	}
 
 	f.Setup("install a Parallel", parallel.Install(name, cfg...))
@@ -68,8 +72,9 @@ func GoesReadyWithoutFilters(name string, cfg ...manifest.CfgFn) *feature.Featur
 
 	// Subscriber
 	subscriber := feature.MakeRandomK8sName("subscriber")
-	f.Setup("install subscriber", svc.Install(subscriber, "app", "rekt"))
-	cfg = append(cfg, parallel.WithSubscriberAt(0, svc.AsKReference(subscriber), ""))
+	f.Setup("install subscriber", service.Install(subscriber,
+		service.WithSelectors(map[string]string{"app": "rekt"})))
+	cfg = append(cfg, parallel.WithSubscriberAt(0, service.AsKReference(subscriber), ""))
 
 	f.Setup("install a Parallel", parallel.Install(name, cfg...))
 

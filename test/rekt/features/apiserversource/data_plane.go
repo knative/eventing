@@ -30,7 +30,7 @@ import (
 	eventasssert "knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
-	"knative.dev/reconciler-test/resources/svc"
+	"knative.dev/reconciler-test/pkg/resources/service"
 
 	"knative.dev/eventing/pkg/apis/sources"
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
@@ -110,7 +110,7 @@ func SendsEventsWithSinkRef() *feature.Feature {
 	cfg := []manifest.CfgFn{
 		apiserversource.WithServiceAccountName(sacmName),
 		apiserversource.WithEventMode(v1.ResourceMode),
-		apiserversource.WithSink(svc.AsKReference(sink), ""),
+		apiserversource.WithSink(service.AsKReference(sink), ""),
 		apiserversource.WithResources(v1.APIVersionKindSelector{
 			APIVersion: "v1",
 			Kind:       "Event",
@@ -139,7 +139,7 @@ func SendsEventsWithSinkUri() *feature.Feature {
 		setupAccountAndRoleForPods(sacmName))
 
 	f.Requirement("install ApiServerSource", func(ctx context.Context, t feature.T) {
-		sinkuri, err := svc.Address(ctx, sink)
+		sinkuri, err := service.Address(ctx, sink)
 		if err != nil || sinkuri == nil {
 			t.Error("failed to get the address of the sink service", sink, err)
 		}
@@ -179,7 +179,7 @@ func SendsEventsWithEventTypes() *feature.Feature {
 	f.Setup("broker is ready", broker.IsReady(brokerName))
 	f.Setup("broker is addressable", broker.IsAddressable(brokerName))
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
-	f.Setup("install trigger", trigger.Install(via, brokerName, trigger.WithSubscriber(svc.AsKReference(sink), "")))
+	f.Setup("install trigger", trigger.Install(via, brokerName, trigger.WithSubscriber(service.AsKReference(sink), "")))
 	f.Setup("trigger goes ready", trigger.IsReady(via))
 
 	sacmName := feature.MakeRandomK8sName("apiserversource")
@@ -229,7 +229,7 @@ func SendsEventsWithObjectReferencePayload() *feature.Feature {
 	cfg := []manifest.CfgFn{
 		apiserversource.WithServiceAccountName(sacmName),
 		apiserversource.WithEventMode(v1.ReferenceMode),
-		apiserversource.WithSink(svc.AsKReference(sink), ""),
+		apiserversource.WithSink(service.AsKReference(sink), ""),
 		apiserversource.WithResources(v1.APIVersionKindSelector{
 			APIVersion: "v1",
 			Kind:       "Pod",
@@ -273,7 +273,7 @@ func SendsEventsWithResourceEventPayload() *feature.Feature {
 	cfg := []manifest.CfgFn{
 		apiserversource.WithServiceAccountName(sacmName),
 		apiserversource.WithEventMode(v1.ResourceMode),
-		apiserversource.WithSink(svc.AsKReference(sink), ""),
+		apiserversource.WithSink(service.AsKReference(sink), ""),
 		apiserversource.WithResources(v1.APIVersionKindSelector{
 			APIVersion: "v1",
 			Kind:       "Pod",
@@ -317,7 +317,7 @@ func SendsEventsForAllResources() *feature.Feature {
 	cfg := []manifest.CfgFn{
 		apiserversource.WithServiceAccountName(sacmName),
 		apiserversource.WithEventMode("Reference"),
-		apiserversource.WithSink(svc.AsKReference(sink), ""),
+		apiserversource.WithSink(service.AsKReference(sink), ""),
 		apiserversource.WithResources(v1.APIVersionKindSelector{
 			APIVersion: "v1",
 			Kind:       "Pod",
@@ -372,7 +372,7 @@ func SendsEventsForAllResourcesWithNamespaceSelector() *feature.Feature {
 	cfg := []manifest.CfgFn{
 		apiserversource.WithServiceAccountName(sacmName),
 		apiserversource.WithEventMode("Reference"),
-		apiserversource.WithSink(svc.AsKReference(sink), ""),
+		apiserversource.WithSink(service.AsKReference(sink), ""),
 		apiserversource.WithResources(v1.APIVersionKindSelector{
 			APIVersion: "v1",
 			Kind:       "Pod",
@@ -448,7 +448,7 @@ func SendsEventsForAllResourcesWithEmptyNamespaceSelector() *feature.Feature {
 	cfg := []manifest.CfgFn{
 		apiserversource.WithServiceAccountName(sacmName),
 		apiserversource.WithEventMode("Reference"),
-		apiserversource.WithSink(svc.AsKReference(sink), ""),
+		apiserversource.WithSink(service.AsKReference(sink), ""),
 		apiserversource.WithResources(v1.APIVersionKindSelector{
 			APIVersion: "sources.knative.dev/v1",
 			Kind:       "PingSource",
@@ -506,7 +506,7 @@ func SendsEventsForLabelMatchingResources() *feature.Feature {
 	cfg := []manifest.CfgFn{
 		apiserversource.WithServiceAccountName(sacmName),
 		apiserversource.WithEventMode("Reference"),
-		apiserversource.WithSink(svc.AsKReference(sink), ""),
+		apiserversource.WithSink(service.AsKReference(sink), ""),
 		apiserversource.WithResources(v1.APIVersionKindSelector{
 			APIVersion:    "v1",
 			Kind:          "Pod",
@@ -601,7 +601,7 @@ func SendEventsForLabelExpressionMatchingResources() *feature.Feature {
 	cfg := []manifest.CfgFn{
 		apiserversource.WithServiceAccountName(sacmName),
 		apiserversource.WithEventMode("Reference"),
-		apiserversource.WithSink(svc.AsKReference(sink), ""),
+		apiserversource.WithSink(service.AsKReference(sink), ""),
 		apiserversource.WithResources(v1.APIVersionKindSelector{
 			APIVersion:    "v1",
 			Kind:          "Pod",
@@ -683,7 +683,7 @@ func SendsEventsWithRetries() *feature.Feature {
 		setupAccountAndRoleForPods(sacmName))
 
 	f.Requirement("install ApiServerSource", func(ctx context.Context, t feature.T) {
-		sinkuri, err := svc.Address(ctx, sink)
+		sinkuri, err := service.Address(ctx, sink)
 		if err != nil || sinkuri == nil {
 			t.Fatal("failed to get the address of the sink service", sink, err)
 		}

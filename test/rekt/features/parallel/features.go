@@ -28,7 +28,7 @@ import (
 	eventasssert "knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
-	"knative.dev/reconciler-test/resources/svc"
+	"knative.dev/reconciler-test/pkg/resources/service"
 )
 
 func ParallelWithTwoBranches() *feature.Feature {
@@ -55,7 +55,7 @@ func ParallelWithTwoBranches() *feature.Feature {
 		},
 	}
 	cfg := []manifest.CfgFn{
-		parallel.WithReply(svc.AsKReference(sink), ""),
+		parallel.WithReply(service.AsKReference(sink), ""),
 		parallel.WithChannelTemplate(channelTemplate),
 	}
 
@@ -75,10 +75,10 @@ func ParallelWithTwoBranches() *feature.Feature {
 	f.Setup("install filter1", eventshub.Install(filter1, eventshub.ReplyWithTransformedEvent(event.Type(), eventSource, eventBody), eventshub.StartReceiver))
 	f.Setup("install filter2", eventshub.Install(filter2, eventshub.StartReceiver))
 	cfg = append(cfg,
-		parallel.WithSubscriberAt(branch1Num, svc.AsKReference(subscriber1), ""),
-		parallel.WithSubscriberAt(branch2Num, svc.AsKReference(subscriber2), ""),
-		parallel.WithFilterAt(branch1Num, svc.AsKReference(filter1), ""),
-		parallel.WithFilterAt(branch2Num, svc.AsKReference(filter2), ""),
+		parallel.WithSubscriberAt(branch1Num, service.AsKReference(subscriber1), ""),
+		parallel.WithSubscriberAt(branch2Num, service.AsKReference(subscriber2), ""),
+		parallel.WithFilterAt(branch1Num, service.AsKReference(filter1), ""),
+		parallel.WithFilterAt(branch2Num, service.AsKReference(filter2), ""),
 		parallel.WithReplyAt(branch1Num, nil, ""),
 		parallel.WithReplyAt(branch2Num, nil, ""),
 	)

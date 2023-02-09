@@ -25,7 +25,7 @@ import (
 	"knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
-	"knative.dev/reconciler-test/resources/svc"
+	"knative.dev/reconciler-test/pkg/resources/service"
 
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/eventing/test/rekt/resources/broker"
@@ -41,7 +41,7 @@ func SendsEventsWithSinkRef() *feature.Feature {
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 
-	f.Requirement("install pingsource", pingsource.Install(source, pingsource.WithSink(svc.AsKReference(sink), "")))
+	f.Requirement("install pingsource", pingsource.Install(source, pingsource.WithSink(service.AsKReference(sink), "")))
 	f.Requirement("pingsource goes ready", pingsource.IsReady(source))
 
 	f.Stable("pingsource as event source").
@@ -58,7 +58,7 @@ func SendsEventsWithSinkURI() *feature.Feature {
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 
-	f.Requirement("install pingsource", pingsource.Install(source, pingsource.WithSink(svc.AsKReference(sink), "")))
+	f.Requirement("install pingsource", pingsource.Install(source, pingsource.WithSink(service.AsKReference(sink), "")))
 	f.Requirement("pingsource goes ready", pingsource.IsReady(source))
 
 	f.Stable("pingsource as event source").
@@ -77,7 +77,7 @@ func SendsEventsWithCloudEventData() *feature.Feature {
 
 	f.Requirement("install pingsource", pingsource.Install(source,
 		pingsource.WithDataBase64("text/plain", "aGVsbG8sIHdvcmxkIQ=="),
-		pingsource.WithSink(svc.AsKReference(sink), ""),
+		pingsource.WithSink(service.AsKReference(sink), ""),
 	))
 	f.Requirement("pingsource goes ready", pingsource.IsReady(source))
 
@@ -103,7 +103,7 @@ func SendsEventsWithEventTypes() *feature.Feature {
 	f.Setup("broker is ready", broker.IsReady(brokerName))
 	f.Setup("broker is addressable", broker.IsAddressable(brokerName))
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
-	f.Setup("install trigger", trigger.Install(via, brokerName, trigger.WithSubscriber(svc.AsKReference(sink), "")))
+	f.Setup("install trigger", trigger.Install(via, brokerName, trigger.WithSubscriber(service.AsKReference(sink), "")))
 	f.Setup("trigger goes ready", trigger.IsReady(via))
 
 	f.Requirement("install pingsource", func(ctx context.Context, t feature.T) {

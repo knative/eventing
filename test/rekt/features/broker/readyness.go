@@ -21,7 +21,7 @@ import (
 
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
-	"knative.dev/reconciler-test/resources/svc"
+	"knative.dev/reconciler-test/pkg/resources/service"
 
 	"knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/eventing/test/rekt/resources/trigger"
@@ -34,9 +34,10 @@ func TriggerGoesReady(name, brokerName string, cfg ...manifest.CfgFn) *feature.F
 
 	// The test needs a subscriber.
 	sub := feature.MakeRandomK8sName("sub")
-	f.Setup("install a service", svc.Install(sub, "app", "rekt"))
+	f.Setup("install a service", service.Install(sub,
+		service.WithSelectors(map[string]string{"app": "rekt"})))
 	// Append user-provided cfg to the end, in case they are providing their own subscriber.
-	cfg = append([]manifest.CfgFn{trigger.WithSubscriber(svc.AsKReference(sub), "")}, cfg...)
+	cfg = append([]manifest.CfgFn{trigger.WithSubscriber(service.AsKReference(sub), "")}, cfg...)
 
 	// Install the trigger
 	f.Setup(fmt.Sprintf("install trigger %q", name), trigger.Install(name, brokerName, cfg...))
