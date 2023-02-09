@@ -38,6 +38,22 @@ import (
 // WaitUntilJobDone waits until a job has finished.
 // Timing is optional but if provided is [interval, timeout].
 func WaitUntilJobDone(ctx context.Context, t feature.T, name string, timing ...time.Duration) error {
+	return WaitForJobCondition(ctx, t, name, IsJobComplete, timing...)
+}
+
+// WaitUntilJobSucceeded waits until a job has succeeded.
+// Timing is optional but if provided is [interval, timeout].
+func WaitUntilJobSucceeded(ctx context.Context, t feature.T, name string, timing ...time.Duration) error {
+	return WaitForJobCondition(ctx, t, name, IsJobSucceeded, timing...)
+}
+
+// WaitUntilJobFailed waits until a job has failed.
+// Timing is optional but if provided is [interval, timeout].
+func WaitUntilJobFailed(ctx context.Context, t feature.T, name string, timing ...time.Duration) error {
+	return WaitForJobCondition(ctx, t, name, IsJobFailed, timing...)
+}
+
+func WaitForJobCondition(ctx context.Context, t feature.T, name string, isConditionFunc func(job *batchv1.Job) bool, timing ...time.Duration) error {
 	interval, timeout := PollTimings(ctx, timing)
 	namespace := environment.FromContext(ctx).Namespace()
 	kube := kubeclient.Get(ctx)
@@ -53,15 +69,16 @@ func WaitUntilJobDone(ctx context.Context, t feature.T, name string, timing ...t
 			}
 			return false, err
 		}
-		complete := IsJobComplete(job)
-		if !complete {
+
+		conditionIsTrue := isConditionFunc(job)
+		if !conditionIsTrue {
 			status, err := json.Marshal(job.Status)
 			if err != nil {
 				return false, err
 			}
 			t.Logf("%s/%s job status %s", namespace, name, status)
 		}
-		return complete, nil
+		return conditionIsTrue, nil
 	})
 	if err != nil {
 		return err
