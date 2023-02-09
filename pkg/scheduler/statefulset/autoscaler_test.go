@@ -30,9 +30,10 @@ import (
 	v1 "k8s.io/client-go/listers/core/v1"
 	gtesting "k8s.io/client-go/testing"
 
-	listers "knative.dev/eventing/pkg/reconciler/testing/v1"
 	kubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/apps/v1/statefulset/fake"
+
+	listers "knative.dev/eventing/pkg/reconciler/testing/v1"
 
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/scheduler"
@@ -377,7 +378,15 @@ func TestAutoscaler(t *testing.T) {
 				return nil
 			}
 
-			autoscaler := NewAutoscaler(ctx, testNs, sfsName, vpodClient.List, stateAccessor, noopEvictor, 10*time.Second, int32(10)).(*autoscaler)
+			cfg := &Config{
+				StatefulSetNamespace: testNs,
+				StatefulSetName:      sfsName,
+				VPodLister:           vpodClient.List,
+				Evictor:              noopEvictor,
+				RefreshPeriod:        10 * time.Second,
+				PodCapacity:          10,
+			}
+			autoscaler := newAutoscaler(ctx, cfg, stateAccessor).(*autoscaler)
 
 			for _, vpod := range tc.vpods {
 				vpodClient.Append(vpod)
@@ -425,7 +434,15 @@ func TestAutoscalerScaleDownToZero(t *testing.T) {
 		return nil
 	}
 
-	autoscaler := NewAutoscaler(ctx, testNs, sfsName, vpodClient.List, stateAccessor, noopEvictor, 2*time.Second, int32(10)).(*autoscaler)
+	cfg := &Config{
+		StatefulSetNamespace: testNs,
+		StatefulSetName:      sfsName,
+		VPodLister:           vpodClient.List,
+		Evictor:              noopEvictor,
+		RefreshPeriod:        2 * time.Second,
+		PodCapacity:          10,
+	}
+	autoscaler := newAutoscaler(ctx, cfg, stateAccessor).(*autoscaler)
 
 	done := make(chan bool)
 	go func() {
@@ -846,7 +863,15 @@ func TestCompactor(t *testing.T) {
 				return nil
 			}
 
-			autoscaler := NewAutoscaler(ctx, testNs, sfsName, vpodClient.List, stateAccessor, recordEviction, 10*time.Second, int32(10)).(*autoscaler)
+			cfg := &Config{
+				StatefulSetNamespace: testNs,
+				StatefulSetName:      sfsName,
+				VPodLister:           vpodClient.List,
+				Evictor:              recordEviction,
+				RefreshPeriod:        10 * time.Second,
+				PodCapacity:          10,
+			}
+			autoscaler := newAutoscaler(ctx, cfg, stateAccessor).(*autoscaler)
 
 			for _, vpod := range tc.vpods {
 				vpodClient.Append(vpod)

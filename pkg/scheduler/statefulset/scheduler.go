@@ -57,7 +57,40 @@ import (
 	_ "knative.dev/eventing/pkg/scheduler/plugins/kafka/nomaxresourcecount"
 )
 
+type Config struct {
+	StatefulSetNamespace string `json:"statefulSetNamespace"`
+	StatefulSetName      string `json:"statefulSetName"`
+
+	// PodCapacity max capacity for each StatefulSet's pod.
+	PodCapacity int32 `json:"podCapacity"`
+	// Autoscaler refresh period
+	RefreshPeriod time.Duration `json:"refreshPeriod"`
+
+	SchedulerPolicy scheduler.SchedulerPolicyType `json:"schedulerPolicy"`
+	SchedPolicy     *scheduler.SchedulerPolicy    `json:"schedPolicy"`
+	DeschedPolicy   *scheduler.SchedulerPolicy    `json:"deschedPolicy"`
+
+	Evictor scheduler.Evictor `json:"-"`
+
+	VPodLister scheduler.VPodLister     `json:"-"`
+	NodeLister corev1listers.NodeLister `json:"-"`
+}
+
+func New(ctx context.Context, cfg *Config) (scheduler.Scheduler, error) {
+
+	podInformer := podinformer.Get(ctx)
+	podLister := podInformer.Lister().Pods(cfg.StatefulSetNamespace)
+
+	stateAccessor := st.NewStateBuilder(ctx, cfg.StatefulSetNamespace, cfg.StatefulSetName, cfg.VPodLister, cfg.PodCapacity, cfg.SchedulerPolicy, cfg.SchedPolicy, cfg.DeschedPolicy, podLister, cfg.NodeLister)
+	autoscaler := newAutoscaler(ctx, cfg, stateAccessor)
+
+	go autoscaler.Start(ctx)
+
+	return newStatefulSetScheduler(ctx, cfg, stateAccessor, autoscaler, podLister), nil
+}
+
 // NewScheduler creates a new scheduler with pod autoscaling enabled.
+// Deprecated: Use New
 func NewScheduler(ctx context.Context,
 	namespace, name string,
 	lister scheduler.VPodLister,
@@ -69,15 +102,21 @@ func NewScheduler(ctx context.Context,
 	schedPolicy *scheduler.SchedulerPolicy,
 	deschedPolicy *scheduler.SchedulerPolicy) scheduler.Scheduler {
 
-	podInformer := podinformer.Get(ctx)
-	podLister := podInformer.Lister().Pods(namespace)
+	cfg := &Config{
+		StatefulSetNamespace: namespace,
+		StatefulSetName:      name,
+		PodCapacity:          capacity,
+		RefreshPeriod:        refreshPeriod,
+		SchedulerPolicy:      schedulerPolicy,
+		SchedPolicy:          schedPolicy,
+		DeschedPolicy:        deschedPolicy,
+		Evictor:              evictor,
+		VPodLister:           lister,
+		NodeLister:           nodeLister,
+	}
 
-	stateAccessor := st.NewStateBuilder(ctx, namespace, name, lister, capacity, schedulerPolicy, schedPolicy, deschedPolicy, podLister, nodeLister)
-	autoscaler := NewAutoscaler(ctx, namespace, name, lister, stateAccessor, evictor, refreshPeriod, capacity)
-
-	go autoscaler.Start(ctx)
-
-	return NewStatefulSetScheduler(ctx, namespace, name, lister, stateAccessor, autoscaler, podLister)
+	s, _ := New(ctx, cfg)
+	return s
 }
 
 // StatefulSetScheduler is a scheduler placing VPod into statefulset-managed set of pods
@@ -106,20 +145,20 @@ type StatefulSetScheduler struct {
 	reserved map[types.NamespacedName]map[string]int32
 }
 
-func NewStatefulSetScheduler(ctx context.Context,
-	namespace, name string,
-	lister scheduler.VPodLister,
+func newStatefulSetScheduler(ctx context.Context,
+	cfg *Config,
 	stateAccessor st.StateAccessor,
-	autoscaler Autoscaler, podlister corev1listers.PodNamespaceLister) scheduler.Scheduler {
+	autoscaler Autoscaler,
+	podlister corev1listers.PodNamespaceLister) scheduler.Scheduler {
 
 	scheduler := &StatefulSetScheduler{
 		ctx:                  ctx,
 		logger:               logging.FromContext(ctx),
-		statefulSetNamespace: namespace,
-		statefulSetName:      name,
-		statefulSetClient:    kubeclient.Get(ctx).AppsV1().StatefulSets(namespace),
+		statefulSetNamespace: cfg.StatefulSetNamespace,
+		statefulSetName:      cfg.StatefulSetName,
+		statefulSetClient:    kubeclient.Get(ctx).AppsV1().StatefulSets(cfg.StatefulSetNamespace),
 		podLister:            podlister,
-		vpodLister:           lister,
+		vpodLister:           cfg.VPodLister,
 		pending:              make(map[types.NamespacedName]int32),
 		lock:                 new(sync.Mutex),
 		stateAccessor:        stateAccessor,
@@ -130,7 +169,7 @@ func NewStatefulSetScheduler(ctx context.Context,
 	// Monitor our statefulset
 	statefulsetInformer := statefulsetinformer.Get(ctx)
 	statefulsetInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.FilterWithNameAndNamespace(namespace, name),
+		FilterFunc: controller.FilterWithNameAndNamespace(cfg.StatefulSetNamespace, cfg.StatefulSetName),
 		Handler:    controller.HandleAll(scheduler.updateStatefulset),
 	})
 
