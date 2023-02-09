@@ -25,7 +25,7 @@ import (
 	. "knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
-	"knative.dev/reconciler-test/resources/svc"
+	"knative.dev/reconciler-test/pkg/resources/service"
 
 	"knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/eventing/test/rekt/resources/trigger"
@@ -72,7 +72,7 @@ func FiltersFeatureSet(brokerName string) *feature.FeatureSet {
 
 		// Set the Trigger subscriber.
 		cfg := []manifest.CfgFn{
-			trigger.WithSubscriber(svc.AsKReference(subscriber), ""),
+			trigger.WithSubscriber(service.AsKReference(subscriber), ""),
 			WithNewFilters(fs.filters),
 		}
 

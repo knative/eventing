@@ -30,7 +30,7 @@ import (
 	"knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
-	"knative.dev/reconciler-test/resources/svc"
+	"knative.dev/reconciler-test/pkg/resources/service"
 
 	eventasssert "knative.dev/reconciler-test/pkg/eventshub/assert"
 
@@ -67,7 +67,7 @@ func ChannelChain(length int, createSubscriberFn func(ref *duckv1.KReference, ur
 			// install the final connection to the sink
 			f.Setup("install sink subscription", subscription.Install(sub,
 				subscription.WithChannel(channel_impl.AsRef(channels[i])),
-				createSubscriberFn(svc.AsKReference(sink), ""),
+				createSubscriberFn(service.AsKReference(sink), ""),
 			))
 		} else {
 			f.Setup("install subscription", subscription.Install(sub,
@@ -93,10 +93,10 @@ func DeadLetterSink(createSubscriberFn func(ref *duckv1.KReference, uri string) 
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 	f.Setup("install failing receiver", eventshub.Install(failer, eventshub.StartReceiver, eventshub.DropFirstN(1)))
-	f.Setup("install channel", channel_impl.Install(name, delivery.WithDeadLetterSink(svc.AsKReference(sink), "")))
+	f.Setup("install channel", channel_impl.Install(name, delivery.WithDeadLetterSink(service.AsKReference(sink), "")))
 	f.Setup("install subscription", subscription.Install(sub,
 		subscription.WithChannel(channel_impl.AsRef(name)),
-		createSubscriberFn(svc.AsKReference(failer), ""),
+		createSubscriberFn(service.AsKReference(failer), ""),
 	))
 	f.Setup("channel is ready", channel_impl.IsReady(name))
 	f.Setup("subscription is ready", subscription.IsReady(sub))
@@ -125,11 +125,11 @@ func DeadLetterSinkGenericChannel(createSubscriberFn func(ref *duckv1.KReference
 	f.Setup("install failing receiver", eventshub.Install(failer, eventshub.StartReceiver, eventshub.DropFirstN(1)))
 	f.Setup("install channel", channel.Install(name,
 		channel.WithTemplate(),
-		delivery.WithDeadLetterSink(svc.AsKReference(sink), "")),
+		delivery.WithDeadLetterSink(service.AsKReference(sink), "")),
 	)
 	f.Setup("install subscription", subscription.Install(sub,
 		subscription.WithChannel(channel.AsRef(name)),
-		createSubscriberFn(svc.AsKReference(failer), ""),
+		createSubscriberFn(service.AsKReference(failer), ""),
 	))
 	f.Setup("channel is ready", channel.IsReady(name))
 	f.Setup("subscription is ready", subscription.IsReady(sub))
@@ -165,7 +165,7 @@ func AsDeadLetterSink(createSubscriberFn func(ref *duckv1.KReference, uri string
 	)
 	f.Setup("install subscription", subscription.Install(feature.MakeRandomK8sName("subscription"),
 		subscription.WithChannel(channel.AsRef(name)),
-		createSubscriberFn(svc.AsKReference(failer), ""),
+		createSubscriberFn(service.AsKReference(failer), ""),
 	))
 
 	f.Setup("install DLS channel", channel.Install(dls,
@@ -173,7 +173,7 @@ func AsDeadLetterSink(createSubscriberFn func(ref *duckv1.KReference, uri string
 	))
 	f.Setup("install DLS subscription", subscription.Install(feature.MakeRandomK8sName("dls-subscription"),
 		subscription.WithChannel(channel.AsRef(dls)),
-		createSubscriberFn(svc.AsKReference(sink), ""),
+		createSubscriberFn(service.AsKReference(sink), ""),
 	))
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
@@ -291,7 +291,7 @@ func ChannelPreferHeaderCheck(createSubscriberFn func(ref *duckv1.KReference, ur
 	))
 	f.Setup("install subscription", subscription.Install(sub,
 		subscription.WithChannel(channel.AsRef(channelName)),
-		createSubscriberFn(svc.AsKReference(sink), ""),
+		createSubscriberFn(service.AsKReference(sink), ""),
 	))
 
 	f.Setup("subscription is ready", subscription.IsReady(sub))
@@ -336,7 +336,7 @@ func channelSubscriberUnreachable(createSubscriberFn func(ref *duckv1.KReference
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 
-	f.Setup("install channel", channel_impl.Install(channelName, delivery.WithDeadLetterSink(svc.AsKReference(sink), "")))
+	f.Setup("install channel", channel_impl.Install(channelName, delivery.WithDeadLetterSink(service.AsKReference(sink), "")))
 
 	f.Setup("install subscription", subscription.Install(sub,
 		subscription.WithChannel(channel_impl.AsRef(channelName)),
@@ -381,11 +381,11 @@ func channelSubscriberReturnedErrorNoData(createSubscriberFn func(ref *duckv1.KR
 		eventshub.DropFirstN(1),
 		eventshub.DropEventsResponseCode(422),
 	))
-	f.Setup("install channel", channel_impl.Install(channelName, delivery.WithDeadLetterSink(svc.AsKReference(sink), "")))
+	f.Setup("install channel", channel_impl.Install(channelName, delivery.WithDeadLetterSink(service.AsKReference(sink), "")))
 
 	f.Setup("install subscription", subscription.Install(sub,
 		subscription.WithChannel(channel_impl.AsRef(channelName)),
-		createSubscriberFn(svc.AsKReference(failer), ""),
+		createSubscriberFn(service.AsKReference(failer), ""),
 	))
 	f.Setup("channel is ready", channel_impl.IsReady(channelName))
 	f.Setup("channel is addressable", channel_impl.IsAddressable(channelName))
@@ -402,7 +402,7 @@ func channelSubscriberReturnedErrorNoData(createSubscriberFn func(ref *duckv1.KR
 	f.Assert("Receives dls extensions without errordata", assertEnhancedWithKnativeErrorExtensions(
 		sink,
 		func(ctx context.Context) test.EventMatcher {
-			failerAddress, _ := svc.Address(ctx, failer)
+			failerAddress, _ := service.Address(ctx, failer)
 			return test.HasExtension("knativeerrordest", failerAddress.String())
 		},
 		func(ctx context.Context) test.EventMatcher {
@@ -434,10 +434,10 @@ func channelSubscriberReturnedErrorWithData(createSubscriberFn func(ref *duckv1.
 		eventshub.DropEventsResponseCode(422),
 		eventshub.DropEventsResponseBody(errorData),
 	))
-	f.Setup("install channel", channel_impl.Install(channelName, delivery.WithDeadLetterSink(svc.AsKReference(sink), "")))
+	f.Setup("install channel", channel_impl.Install(channelName, delivery.WithDeadLetterSink(service.AsKReference(sink), "")))
 	f.Setup("install subscription", subscription.Install(sub,
 		subscription.WithChannel(channel_impl.AsRef(channelName)),
-		createSubscriberFn(svc.AsKReference(failer), ""),
+		createSubscriberFn(service.AsKReference(failer), ""),
 	))
 	f.Setup("channel is ready", channel_impl.IsReady(channelName))
 	f.Setup("channel is addressable", channel_impl.IsAddressable(channelName))
@@ -454,7 +454,7 @@ func channelSubscriberReturnedErrorWithData(createSubscriberFn func(ref *duckv1.
 	f.Assert("Receives dls extensions with errordata Base64encoding", assertEnhancedWithKnativeErrorExtensions(
 		sink,
 		func(ctx context.Context) test.EventMatcher {
-			failerAddress, _ := svc.Address(ctx, failer)
+			failerAddress, _ := service.Address(ctx, failer)
 			return test.HasExtension("knativeerrordest", failerAddress.String())
 		},
 		func(ctx context.Context) test.EventMatcher {

@@ -27,7 +27,7 @@ import (
 	"knative.dev/pkg/ptr"
 	testlog "knative.dev/reconciler-test/pkg/logging"
 	"knative.dev/reconciler-test/pkg/manifest"
-	"knative.dev/reconciler-test/resources/svc"
+	"knative.dev/reconciler-test/pkg/resources/service"
 )
 
 //go:embed *.yaml
@@ -228,7 +228,7 @@ func ExampleWithDeadLetterSink() {
 		"brokerName": "baz",
 	}
 
-	delivery.WithDeadLetterSink(svc.AsKReference("targetdlq"), "/uri/here")(cfg)
+	delivery.WithDeadLetterSink(service.AsKReference("targetdlq"), "/uri/here")(cfg)
 
 	files, err := manifest.ExecuteYAML(ctx, yaml, images, cfg)
 	if err != nil {

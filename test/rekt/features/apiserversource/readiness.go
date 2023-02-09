@@ -24,7 +24,7 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
-	"knative.dev/reconciler-test/resources/svc"
+	"knative.dev/reconciler-test/pkg/resources/service"
 )
 
 // GoesReady returns a feature testing if an ApiServerSource becomes ready.
@@ -43,7 +43,8 @@ func Install(name string, cfg ...manifest.CfgFn) *feature.Feature {
 	f := feature.NewFeatureNamed("ApiServerSource is installed.")
 
 	sink := feature.MakeRandomK8sName("sink")
-	f.Setup("install a service", svc.Install(sink, "app", "rekt"))
+	f.Setup("install a service", service.Install(sink,
+		service.WithSelectors(map[string]string{"app": "rekt"})))
 
 	sacmName := feature.MakeRandomK8sName("apiserversource")
 	f.Setup("Create Service Account for ApiServerSource",

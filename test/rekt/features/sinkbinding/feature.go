@@ -23,7 +23,7 @@ import (
 	eventasssert "knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
-	"knative.dev/reconciler-test/resources/svc"
+	"knative.dev/reconciler-test/pkg/resources/service"
 
 	"knative.dev/eventing/test/rekt/resources/deployment"
 	"knative.dev/eventing/test/rekt/resources/job"
@@ -49,7 +49,7 @@ func SinkBindingV1Deployment() *feature.Feature {
 		sinkbinding.WithExtensions(extensions),
 	}
 
-	f.Requirement("install SinkBinding", sinkbinding.Install(sbinding, svc.AsDestinationRef(sink), deployment.AsTrackerReference(subject), cfg...))
+	f.Requirement("install SinkBinding", sinkbinding.Install(sbinding, service.AsDestinationRef(sink), deployment.AsTrackerReference(subject), cfg...))
 	f.Requirement("SinkBinding goes ready", sinkbinding.IsReady(sbinding))
 
 	f.Stable("Create a deployment as sinkbinding's subject").
@@ -80,7 +80,7 @@ func SinkBindingV1Job() *feature.Feature {
 		sinkbinding.WithExtensions(extensions),
 	}
 
-	f.Setup("install SinkBinding", sinkbinding.Install(sbinding, svc.AsDestinationRef(sink), job.AsTrackerReference(subject), cfg...))
+	f.Setup("install SinkBinding", sinkbinding.Install(sbinding, service.AsDestinationRef(sink), job.AsTrackerReference(subject), cfg...))
 	f.Setup("SinkBinding goes ready", sinkbinding.IsReady(sbinding))
 
 	f.Stable("Create a job as sinkbinding's subject").

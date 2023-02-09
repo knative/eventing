@@ -33,8 +33,8 @@ import (
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
+	"knative.dev/reconciler-test/pkg/resources/service"
 	"knative.dev/reconciler-test/pkg/state"
-	"knative.dev/reconciler-test/resources/svc"
 
 	v1 "knative.dev/eventing/pkg/apis/duck/v1"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
@@ -83,9 +83,10 @@ func ControlPlaneBroker(brokerName string, brokerOpts ...manifest.CfgFn) *featur
 
 	f.Setup("Set Broker Name", setBrokerName(bName))
 
-	f.Setup("install a service", svc.Install(sink, "app", "rekt"))
+	f.Setup("install a service", service.Install(sink,
+		service.WithSelectors(map[string]string{"app": "rekt"})))
 	brokerOpts = append(brokerOpts, brokerresources.WithEnvConfig()...)
-	brokerOpts = append(brokerOpts, delivery.WithDeadLetterSink(svc.AsKReference(sink), ""))
+	brokerOpts = append(brokerOpts, delivery.WithDeadLetterSink(service.AsKReference(sink), ""))
 	f.Setup("update broker", broker.Install(bName, brokerOpts...))
 	f.Setup("broker goes ready", broker.IsReady(bName))
 
@@ -108,11 +109,12 @@ func ControlPlaneTrigger_GivenBroker(brokerName string) *feature.Feature {
 	f.Setup("Set Broker Name", setBrokerName(brokerName))
 
 	subscriberName := feature.MakeRandomK8sName("sub")
-	f.Setup("Install Subscriber", svc.Install(subscriberName, "bad", "svc"))
+	f.Setup("Install Subscriber", service.Install(subscriberName,
+		service.WithSelectors(map[string]string{"bad": "svc"})))
 
 	triggerName := feature.MakeRandomK8sName("trigger")
 	f.Setup("Create a Trigger", triggerresources.Install(triggerName, brokerName,
-		triggerresources.WithSubscriber(svc.AsKReference(subscriberName), ""),
+		triggerresources.WithSubscriber(service.AsKReference(subscriberName), ""),
 	))
 
 	f.Setup("Set Trigger Name", triggerfeatures.SetTriggerName(triggerName))
@@ -135,11 +137,12 @@ func ControlPlaneTrigger_GivenBrokerTriggerReady(brokerName string) *feature.Fea
 	f.Setup("Set Broker Name", setBrokerName(brokerName))
 
 	subscriberName := feature.MakeRandomK8sName("sub")
-	f.Setup("Install Subscriber", svc.Install(subscriberName, "bad", "svc"))
+	f.Setup("Install Subscriber", service.Install(subscriberName,
+		service.WithSelectors(map[string]string{"bad": "svc"})))
 
 	triggerName := feature.MakeRandomK8sName("trigger")
 	f.Setup("Create a Trigger", triggerresources.Install(triggerName, brokerName,
-		triggerresources.WithSubscriber(svc.AsKReference(subscriberName), ""),
+		triggerresources.WithSubscriber(service.AsKReference(subscriberName), ""),
 	))
 
 	f.Setup("Set Trigger Name", triggerfeatures.SetTriggerName(triggerName))
@@ -157,13 +160,14 @@ func ControlPlaneTrigger_WithBrokerLifecycle(brokerOpts ...manifest.CfgFn) *feat
 	f := feature.NewFeatureNamed("Trigger, With Broker Lifecycle")
 
 	subscriberName := feature.MakeRandomK8sName("sub")
-	f.Setup("Install Subscriber", svc.Install(subscriberName, "bad", "svc"))
+	f.Setup("Install Subscriber", service.Install(subscriberName,
+		service.WithSelectors(map[string]string{"bad": "svc"})))
 
 	brokerName := feature.MakeRandomK8sName("broker")
 
 	triggerName := feature.MakeRandomK8sName("trigger")
 	f.Setup("Create a Trigger", triggerresources.Install(triggerName, brokerName,
-		triggerresources.WithSubscriber(svc.AsKReference(subscriberName), ""),
+		triggerresources.WithSubscriber(service.AsKReference(subscriberName), ""),
 	))
 
 	f.Setup("Set Trigger Name", triggerfeatures.SetTriggerName(triggerName))
@@ -187,7 +191,8 @@ func ControlPlaneTrigger_WithValidFilters(brokerName string) *feature.Feature {
 	f.Setup("Set Broker Name", setBrokerName(brokerName))
 
 	subscriberName := feature.MakeRandomK8sName("sub")
-	f.Setup("Install Subscriber", svc.Install(subscriberName, "bad", "svc"))
+	f.Setup("Install Subscriber", service.Install(subscriberName,
+		service.WithSelectors(map[string]string{"bad": "svc"})))
 
 	// CloudEvents attribute names MUST consist of lower-case letters ('a' to 'z') or digits ('0' to '9') from the ASCII character set. Attribute names SHOULD be descriptive and terse and SHOULD NOT exceed 20 characters in length.
 	filters := map[string]string{
@@ -206,7 +211,7 @@ func ControlPlaneTrigger_WithValidFilters(brokerName string) *feature.Feature {
 
 	triggerName := feature.MakeRandomK8sName("trigger")
 	f.Setup("Create a Trigger", triggerresources.Install(triggerName, brokerName,
-		triggerresources.WithSubscriber(svc.AsKReference(subscriberName), ""),
+		triggerresources.WithSubscriber(service.AsKReference(subscriberName), ""),
 		triggerresources.WithFilter(filters),
 	))
 
@@ -237,7 +242,8 @@ func ControlPlaneTrigger_WithInvalidFilters(brokerName string) *feature.Feature 
 	f.Setup("Set Broker Name", setBrokerName(brokerName))
 
 	subscriberName := feature.MakeRandomK8sName("sub")
-	f.Setup("Install Subscriber", svc.Install(subscriberName, "bad", "svc"))
+	f.Setup("Install Subscriber", service.Install(subscriberName,
+		service.WithSelectors(map[string]string{"bad": "svc"})))
 
 	// CloudEvents attribute names MUST consist of lower-case letters ('a' to 'z') or digits ('0' to '9') from the ASCII character set. Attribute names SHOULD be descriptive and terse and SHOULD NOT exceed 20 characters in length.
 	filters := map[string]string{
@@ -255,7 +261,7 @@ func ControlPlaneTrigger_WithInvalidFilters(brokerName string) *feature.Feature 
 
 	triggerName := feature.MakeRandomK8sName("trigger")
 	f.Setup("Create a Trigger", triggerresources.Install(triggerName, brokerName,
-		triggerresources.WithSubscriber(svc.AsKReference(subscriberName), ""),
+		triggerresources.WithSubscriber(service.AsKReference(subscriberName), ""),
 	))
 
 	f.Setup("Set Trigger Name", triggerfeatures.SetTriggerName(triggerName))

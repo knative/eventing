@@ -27,7 +27,7 @@ import (
 	"knative.dev/pkg/apis/duck"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"
-	"knative.dev/reconciler-test/resources/svc"
+	"knative.dev/reconciler-test/pkg/resources/service"
 
 	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/apis/messaging"
@@ -106,8 +106,9 @@ func ControlPlaneChannel(channelName string) *feature.Feature {
 	cName := feature.MakeRandomK8sName("channel")
 	sink := feature.MakeRandomK8sName("sink")
 
-	f.Setup("install a service", svc.Install(sink, "app", "rekt"))
-	f.Setup("update Channel", channel_impl.Install(cName, delivery.WithDeadLetterSink(svc.AsKReference(sink), "")))
+	f.Setup("install a service", service.Install(sink,
+		service.WithSelectors(map[string]string{"app": "rekt"})))
+	f.Setup("update Channel", channel_impl.Install(cName, delivery.WithDeadLetterSink(service.AsKReference(sink), "")))
 	f.Setup("Channel goes ready", channel_impl.IsReady(cName))
 	f.Setup("Channel is addressable", channel_impl.IsAddressable(cName))
 

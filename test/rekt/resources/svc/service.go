@@ -27,7 +27,7 @@ import (
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/manifest"
-	"knative.dev/reconciler-test/resources/svc"
+	"knative.dev/reconciler-test/pkg/resources/service"
 )
 
 //go:embed *.yaml
@@ -84,5 +84,5 @@ func AsDestinationRef(name string) *duckv1.Destination {
 // Address
 // Deprecated, use reconciler-test/resources/svc
 func Address(ctx context.Context, name string) (*apis.URL, error) {
-	return k8s.Address(ctx, svc.GVR(), name)
+	return k8s.Address(ctx, service.GVR(), name)
 }

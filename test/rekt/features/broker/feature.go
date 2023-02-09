@@ -39,7 +39,7 @@ import (
 	eventasssert "knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
-	"knative.dev/reconciler-test/resources/svc"
+	"knative.dev/reconciler-test/pkg/resources/service"
 )
 
 func BrokerWorkFlowWithTransformation() *feature.FeatureSet {
@@ -136,7 +136,7 @@ func brokerChannelFlowWithTransformation(createSubscriberFn func(ref *v1.KRefere
 		trigger1,
 		brokerName,
 		trigger.WithFilter(filter1),
-		trigger.WithSubscriber(svc.AsKReference(sink1), ""),
+		trigger.WithSubscriber(service.AsKReference(sink1), ""),
 	))
 	f.Setup("trigger1 goes ready", trigger.IsReady(trigger1))
 	// Install the trigger2 point to Broker to filter all the events
@@ -144,7 +144,7 @@ func brokerChannelFlowWithTransformation(createSubscriberFn func(ref *v1.KRefere
 		trigger2,
 		brokerName,
 		trigger.WithFilter(filter2),
-		trigger.WithSubscriber(svc.AsKReference(sink2), ""),
+		trigger.WithSubscriber(service.AsKReference(sink2), ""),
 	))
 	f.Setup("trigger2 goes ready", trigger.IsReady(trigger2))
 
@@ -156,7 +156,7 @@ func brokerChannelFlowWithTransformation(createSubscriberFn func(ref *v1.KRefere
 	sub := feature.MakeRandomK8sName("subscription")
 	f.Setup("install subscription", subscription.Install(sub,
 		subscription.WithChannel(channel.AsRef(channelName)),
-		createSubscriberFn(svc.AsKReference(sink3), ""),
+		createSubscriberFn(service.AsKReference(sink3), ""),
 	))
 	f.Setup("subscription is ready", subscription.IsReady(sub))
 	f.Setup("channel is ready", channel.IsReady(channelName))
@@ -276,7 +276,7 @@ func brokerEventTransformationForTrigger() *feature.Feature {
 		trigger1,
 		brokerName,
 		trigger.WithFilter(filter1),
-		trigger.WithSubscriber(svc.AsKReference(sink1), ""),
+		trigger.WithSubscriber(service.AsKReference(sink1), ""),
 	))
 	f.Setup("trigger1 goes ready", trigger.IsReady(trigger1))
 	// Install the trigger2 point to Broker to filter all the events
@@ -284,7 +284,7 @@ func brokerEventTransformationForTrigger() *feature.Feature {
 		trigger2,
 		brokerName,
 		trigger.WithFilter(filter2),
-		trigger.WithSubscriber(svc.AsKReference(sink2), ""),
+		trigger.WithSubscriber(service.AsKReference(sink2), ""),
 	))
 	f.Setup("trigger2 goes ready", trigger.IsReady(trigger2))
 
@@ -342,7 +342,7 @@ func BrokerPreferHeaderCheck() *feature.Feature {
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 
 	// Point the Trigger subscriber to the sink svc.
-	cfg := []manifest.CfgFn{trigger.WithSubscriber(svc.AsKReference(sink), "")}
+	cfg := []manifest.CfgFn{trigger.WithSubscriber(service.AsKReference(sink), "")}
 
 	// Install the trigger
 	f.Setup("install trigger", trigger.Install(via, brokerName, cfg...))
@@ -403,7 +403,7 @@ func brokerRedeliveryFibonacci(retryNum int32) *feature.Feature {
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 
 	// Point the Trigger subscriber to the sink svc.
-	cfg := []manifest.CfgFn{trigger.WithSubscriber(svc.AsKReference(sink), "")}
+	cfg := []manifest.CfgFn{trigger.WithSubscriber(service.AsKReference(sink), "")}
 
 	// Install the trigger
 	f.Setup("install trigger", trigger.Install(via, brokerName, cfg...))
@@ -458,7 +458,7 @@ func brokerRedeliveryDropN(retryNum int32, dropNum uint) *feature.Feature {
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 
 	// Point the Trigger subscriber to the sink svc.
-	cfg := []manifest.CfgFn{trigger.WithSubscriber(svc.AsKReference(sink), "")}
+	cfg := []manifest.CfgFn{trigger.WithSubscriber(service.AsKReference(sink), "")}
 
 	// Install the trigger
 	f.Setup("install trigger", trigger.Install(via, brokerName, cfg...))
@@ -527,7 +527,7 @@ func brokerSubscriberUnreachable() *feature.Feature {
 		triggerName,
 		brokerName,
 		trigger.WithSubscriber(nil, "http://fake.svc.cluster.local"),
-		trigger.WithDeadLetterSink(svc.AsKReference(sink), ""),
+		trigger.WithDeadLetterSink(service.AsKReference(sink), ""),
 	))
 	f.Setup("trigger goes ready", trigger.IsReady(triggerName))
 
@@ -582,8 +582,8 @@ func brokerSubscriberErrorNodata() *feature.Feature {
 	f.Setup("install trigger", trigger.Install(
 		triggerName,
 		brokerName,
-		trigger.WithSubscriber(svc.AsKReference(failer), ""),
-		trigger.WithDeadLetterSink(svc.AsKReference(sink), ""),
+		trigger.WithSubscriber(service.AsKReference(failer), ""),
+		trigger.WithDeadLetterSink(service.AsKReference(sink), ""),
 	))
 	f.Setup("trigger goes ready", trigger.IsReady(triggerName))
 
@@ -596,7 +596,7 @@ func brokerSubscriberErrorNodata() *feature.Feature {
 	f.Assert("Receives dls extensions without errordata", assertEnhancedWithKnativeErrorExtensions(
 		sink,
 		func(ctx context.Context) test.EventMatcher {
-			failerAddress, _ := svc.Address(ctx, failer)
+			failerAddress, _ := service.Address(ctx, failer)
 			return test.HasExtension("knativeerrordest", failerAddress.String())
 		},
 		func(ctx context.Context) test.EventMatcher {
@@ -644,8 +644,8 @@ func brokerSubscriberErrorWithdata() *feature.Feature {
 	f.Setup("install trigger", trigger.Install(
 		triggerName,
 		brokerName,
-		trigger.WithSubscriber(svc.AsKReference(failer), ""),
-		trigger.WithDeadLetterSink(svc.AsKReference(sink), ""),
+		trigger.WithSubscriber(service.AsKReference(failer), ""),
+		trigger.WithDeadLetterSink(service.AsKReference(sink), ""),
 	))
 	f.Setup("trigger goes ready", trigger.IsReady(triggerName))
 
@@ -658,7 +658,7 @@ func brokerSubscriberErrorWithdata() *feature.Feature {
 	f.Assert("Receives dls extensions with errordata", assertEnhancedWithKnativeErrorExtensions(
 		sink,
 		func(ctx context.Context) test.EventMatcher {
-			failerAddress, _ := svc.Address(ctx, failer)
+			failerAddress, _ := service.Address(ctx, failer)
 			return test.HasExtension("knativeerrordest", failerAddress.String())
 		},
 		func(ctx context.Context) test.EventMatcher {
@@ -726,7 +726,7 @@ func brokerSubscriberLongMessage() *feature.Feature {
 	f.Setup("install trigger", trigger.Install(
 		triggerName,
 		brokerName,
-		trigger.WithSubscriber(svc.AsKReference(sink), ""),
+		trigger.WithSubscriber(service.AsKReference(sink), ""),
 	))
 	f.Setup("trigger goes ready", trigger.IsReady(triggerName))
 

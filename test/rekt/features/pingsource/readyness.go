@@ -21,7 +21,7 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
-	"knative.dev/reconciler-test/resources/svc"
+	"knative.dev/reconciler-test/pkg/resources/service"
 )
 
 // PingSourceGoesReady returns a feature testing if a pingsource becomes ready.
@@ -29,7 +29,8 @@ func PingSourceGoesReady(name string, cfg ...manifest.CfgFn) *feature.Feature {
 	f := feature.NewFeatureNamed("PingSource goes ready.")
 
 	sink := feature.MakeRandomK8sName("sink")
-	f.Setup("install a service", svc.Install(sink, "app", "rekt"))
+	f.Setup("install a service", service.Install(sink,
+		service.WithSelectors(map[string]string{"app": "rekt"})))
 
 	cfg = append(cfg, pingsource.WithSink(&duckv1.KReference{
 		Kind:       "Service",

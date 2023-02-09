@@ -24,7 +24,7 @@ import (
 	"knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
-	"knative.dev/reconciler-test/resources/svc"
+	"knative.dev/reconciler-test/pkg/resources/service"
 
 	"knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/eventing/test/rekt/resources/pingsource"
@@ -53,7 +53,7 @@ func TriggerDependencyAnnotation() *feature.Feature {
 	// Add the annotation to trigger and point the Trigger subscriber to the sink svc.
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 	cfg := []manifest.CfgFn{
-		trigger.WithSubscriber(svc.AsKReference(sink), ""),
+		trigger.WithSubscriber(service.AsKReference(sink), ""),
 		trigger.WithAnnotations(annotations),
 	}
 
