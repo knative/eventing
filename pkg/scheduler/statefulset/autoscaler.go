@@ -28,10 +28,11 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	clientappsv1 "k8s.io/client-go/kubernetes/typed/apps/v1"
 
-	"knative.dev/eventing/pkg/scheduler"
-	st "knative.dev/eventing/pkg/scheduler/state"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/logging"
+
+	"knative.dev/eventing/pkg/scheduler"
+	st "knative.dev/eventing/pkg/scheduler/state"
 )
 
 type Autoscaler interface {
@@ -60,24 +61,17 @@ type autoscaler struct {
 	lock          sync.Locker
 }
 
-func NewAutoscaler(ctx context.Context,
-	namespace, name string,
-	lister scheduler.VPodLister,
-	stateAccessor st.StateAccessor,
-	evictor scheduler.Evictor,
-	refreshPeriod time.Duration,
-	capacity int32) Autoscaler {
-
+func newAutoscaler(ctx context.Context, cfg *Config, stateAccessor st.StateAccessor) Autoscaler {
 	return &autoscaler{
 		logger:            logging.FromContext(ctx),
-		statefulSetClient: kubeclient.Get(ctx).AppsV1().StatefulSets(namespace),
-		statefulSetName:   name,
-		vpodLister:        lister,
+		statefulSetClient: kubeclient.Get(ctx).AppsV1().StatefulSets(cfg.StatefulSetNamespace),
+		statefulSetName:   cfg.StatefulSetName,
+		vpodLister:        cfg.VPodLister,
 		stateAccessor:     stateAccessor,
-		evictor:           evictor,
+		evictor:           cfg.Evictor,
 		trigger:           make(chan int32, 1),
-		capacity:          capacity,
-		refreshPeriod:     refreshPeriod,
+		capacity:          cfg.PodCapacity,
+		refreshPeriod:     cfg.RefreshPeriod,
 		lock:              new(sync.Mutex),
 	}
 }
