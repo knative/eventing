@@ -1399,6 +1399,7 @@ knative.dev/reconciler-test/pkg/knative
 knative.dev/reconciler-test/pkg/logging
 knative.dev/reconciler-test/pkg/manifest
 knative.dev/reconciler-test/pkg/milestone
+knative.dev/reconciler-test/pkg/resources/deployment
 knative.dev/reconciler-test/pkg/resources/pod
 knative.dev/reconciler-test/pkg/resources/service
 knative.dev/reconciler-test/pkg/state

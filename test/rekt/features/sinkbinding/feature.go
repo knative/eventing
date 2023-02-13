@@ -17,20 +17,27 @@ limitations under the License.
 package sinkbinding
 
 import (
+	"context"
+
 	"github.com/cloudevents/sdk-go/v2/test"
 	"k8s.io/apimachinery/pkg/util/uuid"
+	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	eventasssert "knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
+	"knative.dev/reconciler-test/pkg/resources/deployment"
 	"knative.dev/reconciler-test/pkg/resources/service"
 
-	"knative.dev/eventing/test/rekt/resources/deployment"
 	"knative.dev/eventing/test/rekt/resources/job"
 	"knative.dev/eventing/test/rekt/resources/sinkbinding"
 )
 
-func SinkBindingV1Deployment() *feature.Feature {
+const (
+	heartbeatsImage = "ko://knative.dev/eventing/test/test_images/heartbeats"
+)
+
+func SinkBindingV1Deployment(ctx context.Context) *feature.Feature {
 	sbinding := feature.MakeRandomK8sName("sinkbinding")
 	sink := feature.MakeRandomK8sName("sink")
 	subject := feature.MakeRandomK8sName("subject")
@@ -38,8 +45,13 @@ func SinkBindingV1Deployment() *feature.Feature {
 
 	f := feature.NewFeatureNamed("SinkBinding V1 Deployment test")
 
+	env := environment.FromContext(ctx)
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
-	f.Setup("install a deployment", deployment.Install(subject))
+	f.Setup("install a deployment", deployment.Install(subject, heartbeatsImage,
+		deployment.WithEnvs(map[string]string{
+			"POD_NAME":      "heartbeats",
+			"POD_NAMESPACE": env.Namespace(),
+		})))
 
 	extensions := map[string]string{
 		"sinkbinding": extensionSecret,

@@ -1,0 +1,92 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .name }}
+  namespace: {{ .namespace }}
+  {{ if .annotations }}
+  annotations:
+    {{ range $key, $value := .annotations }}
+    {{ $key }}: "{{ $value }}"
+    {{ end }}
+  {{ end }}
+  {{ if .labels }}
+  labels:
+    {{ range $key, $value := .labels }}
+    {{ $key }}: {{ $value }}
+    {{ end }}
+  {{ end }}
+spec:
+  {{ if .replicas }}
+  replicas: {{ .replicas }}
+  {{ end }}
+  selector:
+    matchLabels:
+      {{ range $key, $value := .selectors }}
+      {{ $key }}: {{ $value }}
+      {{ end }}
+  template:
+    metadata:
+      {{ if .podannotations }}
+      annotations:
+        {{ range $key, $value := .podannotations }}
+        {{ $key }}: "{{ $value }}"
+        {{ end }}
+      {{ end }}
+      labels:
+        {{ range $key, $value := .selectors }}
+        {{ $key }}: {{ $value }}
+        {{ end }}
+    spec:
+      {{ if .podSecurityContext }}
+      securityContext:
+        runAsNonRoot: {{ .podSecurityContext.runAsNonRoot }}
+        seccompProfile:
+          type: {{ .podSecurityContext.seccompProfile.type }}
+      {{ end }}
+      containers:
+      - name: user-container
+        image: {{ .image }}
+        {{ if .command }}
+        command:
+        {{ range .command }}
+        - {{ printf "%q" . }}
+        {{ end }}
+        {{ end }}
+        {{ if .args }}
+        args:
+        {{ range .args }}
+        - {{ printf "%q" . }}
+        {{ end }}
+        {{ end }}
+        {{ if .port }}
+        ports:
+        - containerPort: {{ .port }}
+        {{ end }}
+        {{ if .envs }}
+        env:
+        {{ range $key, $value := .envs }}
+        - name: {{ printf "%q" $key }}
+          value: {{ printf "%q" $value }}
+        {{ end }}
+        {{ end }}
+        {{ if .containerSecurityContext }}
+        securityContext:
+          capabilities:
+            {{ if .containerSecurityContext.capabilities.drop }}
+            drop:
+            {{ range $_, $value := .containerSecurityContext.capabilities.drop }}
+            - {{ $value }}
+            {{ end }}
+            {{ end }}
+            {{ if .containerSecurityContext.capabilities.add }}
+            add:
+            {{ range $_, $value := .containerSecurityContext.capabilities.add }}
+            - {{ $value }}
+            {{ end }}
+            {{ end }}
+          allowPrivilegeEscalation: {{ .containerSecurityContext.allowPrivilegeEscalation }}
+        {{ end }}
+        {{ if .imagePullPolicy }}
+        imagePullPolicy: {{ .imagePullPolicy }}
+        {{ end }}
+
