@@ -17,61 +17,23 @@ limitations under the License.
 package pod
 
 import (
-	"context"
-	"embed"
-
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
+	"knative.dev/reconciler-test/pkg/resources/pod"
 )
-
-//go:embed *.yaml
-var yaml embed.FS
 
 // Install will create a Pod with defaults that can be overwritten by
 // the With* methods.
+// Deprecated, use knative.dev/reconciler-test/pkg/resources/pod.Install
 func Install(name string, opts ...manifest.CfgFn) feature.StepFn {
-	cfg := map[string]interface{}{
-		"name":   name,
-		"labels": map[string]string{"app": name},         // default
-		"image":  "gcr.io/knative-samples/helloworld-go", // default
-		"port":   8080,                                   // default
-	}
 
-	for _, fn := range opts {
-		fn(cfg)
-	}
-
-	return func(ctx context.Context, t feature.T) {
-		manifest.PodSecurityCfgFn(ctx, t)(cfg)
-		if _, err := manifest.InstallYamlFS(ctx, yaml, cfg); err != nil {
-			t.Fatal(err)
-		}
-	}
+	return pod.Install(name, "gcr.io/knative-samples/helloworld-go",
+		pod.WithLabels(map[string]string{"app": name}),
+		pod.WithPort(8080))
 }
 
-// WithLabels sets the given labels on the Pod.
-func WithLabels(labels map[string]string) manifest.CfgFn {
-	return func(cfg map[string]interface{}) {
-		if labels != nil {
-			cfg["labels"] = labels
-		}
-	}
-}
+// Deprecated, use knative.dev/reconciler-test/pkg/resources/pod.WithLabels
+var WithLabels = pod.WithLabels
 
-// WithImage sets the given image on the Pod spec.
-func WithImage(image string) manifest.CfgFn {
-	return func(cfg map[string]interface{}) {
-		if image != "" {
-			cfg["image"] = image
-		}
-	}
-}
-
-// WithOverriddenNamespace will modify the namespace of the pod from the specs to the provided one
-func WithNamespace(ns string) manifest.CfgFn {
-	return func(cfg map[string]interface{}) {
-		if ns != "" {
-			cfg["namespace"] = ns
-		}
-	}
-}
+// Deprecated, use knative.dev/reconciler-test/pkg/resources/pod.WithNamespace
+var WithNamespace = pod.WithNamespace

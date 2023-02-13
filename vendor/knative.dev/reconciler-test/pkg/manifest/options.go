@@ -39,3 +39,21 @@ func PodSecurityCfgFn(ctx context.Context, t feature.T) CfgFn {
 	}
 	return func(map[string]interface{}) {}
 }
+
+// WithAnnotations returns a function for configuring annototations of the resource
+func WithAnnotations(annotations map[string]interface{}) CfgFn {
+	return func(cfg map[string]interface{}) {
+		if annotations != nil {
+			cfg["annotations"] = annotations
+		}
+	}
+}
+
+// WithLabels returns a function for configuring labels of the resource
+func WithLabels(labels map[string]string) CfgFn {
+	return func(cfg map[string]interface{}) {
+		if labels != nil {
+			cfg["labels"] = labels
+		}
+	}
+}
