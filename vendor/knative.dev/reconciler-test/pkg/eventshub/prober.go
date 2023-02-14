@@ -35,7 +35,7 @@ import (
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/k8s"
-	"knative.dev/reconciler-test/resources/svc"
+	"knative.dev/reconciler-test/pkg/resources/service"
 )
 
 func NewProber() *EventProber {
@@ -321,7 +321,7 @@ func (p *EventProber) SenderEventsFromURI(uri string) {
 // env.Namespace(), based on context from the StepFn.
 func (p *EventProber) SenderEventsFromSVC(svcName, path string) feature.StepFn {
 	return func(ctx context.Context, t feature.T) {
-		u, err := svc.Address(ctx, svcName)
+		u, err := service.Address(ctx, svcName)
 		if err != nil {
 			t.Error(err)
 		}
@@ -372,7 +372,7 @@ func (p *EventProber) SenderMinEvents(count int) {
 
 // AsKReference returns the short-named component as a KReference.
 func (p *EventProber) AsKReference(prefix string) *duckv1.KReference {
-	return svc.AsKReference(p.getNameFromPrefix(prefix))
+	return service.AsKReference(p.getNameFromPrefix(prefix))
 }
 
 // AssertSentAll tests that `fromPrefix` sent all known events known to the prober.

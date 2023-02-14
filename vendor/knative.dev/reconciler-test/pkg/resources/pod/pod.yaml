@@ -1,0 +1,84 @@
+# Copyright 2021 The Knative Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ .name }}
+  namespace: {{ .namespace }}
+  {{ if .annotations }}
+  annotations:
+    {{ range $key, $value := .annotations }}
+    {{ $key }}: "{{ $value }}"
+    {{ end }}
+  {{ end }}
+  {{ if .labels }}
+  labels:
+    {{ range $key, $value := .labels }}
+    {{ $key }}: {{ $value }}
+    {{ end }}
+  {{ end }}
+spec:
+  {{ if .podSecurityContext }}
+  securityContext:
+    runAsNonRoot: {{ .podSecurityContext.runAsNonRoot }}
+    seccompProfile:
+      type: {{ .podSecurityContext.seccompProfile.type }}
+  {{ end }}
+  containers:
+  - name: user-container
+    image: {{ .image }}
+    {{ if .command }}
+    command:
+    {{ range .command }}
+    - {{ printf "%q" . }}
+    {{ end }}
+    {{ end }}
+    {{ if .args }}
+    args:
+    {{ range .args }}
+    - {{ printf "%q" . }}
+    {{ end }}
+    {{ end }}
+    {{ if .port }}
+    ports:
+    - containerPort: {{ .port }}
+    {{ end }}
+    {{ if .envs }}
+    env:
+    {{ range $key, $value := .envs }}
+    - name: {{ printf "%q" $key }}
+      value: {{ printf "%q" $value }}
+    {{ end }}
+    {{ end }}
+    {{ if .imagePullPolicy }}
+    imagePullPolicy: {{ .imagePullPolicy }}
+    {{ end }}
+    {{ if .containerSecurityContext }}
+    securityContext:
+      capabilities:
+        {{ if .containerSecurityContext.capabilities.drop }}
+        drop:
+          {{ range $_, $value := .containerSecurityContext.capabilities.drop }}
+          - {{ $value }}
+          {{ end }}
+        {{ end }}
+        {{ if .containerSecurityContext.capabilities.add }}
+        add:
+          {{ range $_, $value := .containerSecurityContext.capabilities.add }}
+          - {{ $value }}
+          {{ end }}
+        {{ end }}
+      allowPrivilegeEscalation: {{ .containerSecurityContext.allowPrivilegeEscalation }}
+    {{ end }}
