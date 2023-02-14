@@ -21,6 +21,8 @@ import (
 	"knative.dev/pkg/injection"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/signals"
+
+	"knative.dev/reconciler-test/pkg/images/file"
 	testlog "knative.dev/reconciler-test/pkg/logging"
 )
 
@@ -61,6 +63,10 @@ func NewStandardGlobalEnvironment(opts ...ConfigurationOption) GlobalEnvironment
 	// framework as well as any additional flags included in the integration.
 	if err := config.Flags.Parse(ctx); err != nil {
 		logging.FromContext(ctx).Fatal(err)
+	}
+
+	if ipFilePath != nil && *ipFilePath != "" {
+		ctx = withImageProducer(ctx, file.ImageProducer(*ipFilePath))
 	}
 
 	// EnableInjectionOrDie will enable client injection, this is used by the
