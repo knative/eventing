@@ -17,12 +17,9 @@ limitations under the License.
 package broker
 
 import (
-	"context"
-	"fmt"
 	"time"
 
 	"github.com/google/uuid"
-	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
@@ -30,7 +27,6 @@ import (
 
 	"knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/eventing/test/rekt/resources/delivery"
-	"knative.dev/eventing/test/rekt/resources/flaker"
 	"knative.dev/eventing/test/rekt/resources/trigger"
 
 	. "github.com/cloudevents/sdk-go/v2/test"
@@ -117,19 +113,12 @@ func SourceToSinkWithDLQ() *feature.Feature {
 func SourceToSinkWithFlakyDLQ(brokerName string) *feature.Feature {
 	source := feature.MakeRandomK8sName("source")
 	sink := feature.MakeRandomK8sName("sink")
-	flake := feature.MakeRandomK8sName("flake")
 	dlq := feature.MakeRandomK8sName("dlq")
 	via := feature.MakeRandomK8sName("via")
 
 	f := feature.NewFeatureNamed("Source to sink with flaky DLS")
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
-
-	f.Setup("install flake", func(ctx context.Context, t feature.T) {
-		env := environment.FromContext(ctx)
-		u := fmt.Sprintf("%s.%s.svc.cluster.local", sink, env.Namespace()) // HACK HACK HACK, could replace with SinkBinding.
-		flaker.Install(flake, u)(ctx, t)
-	})
 
 	f.Setup("install dlq", eventshub.Install(dlq, eventshub.StartReceiver))
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver, eventshub.DropFirstN(2)))
