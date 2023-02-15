@@ -21,13 +21,10 @@ package sources
 import (
 	internalinterfaces "knative.dev/eventing/pkg/client/informers/externalversions/internalinterfaces"
 	v1 "knative.dev/eventing/pkg/client/informers/externalversions/sources/v1"
-	v1beta2 "knative.dev/eventing/pkg/client/informers/externalversions/sources/v1beta2"
 )
 
 // Interface provides access to each of this group's versions.
 type Interface interface {
-	// V1beta2 provides access to shared informers for resources in V1beta2.
-	V1beta2() v1beta2.Interface
 	// V1 provides access to shared informers for resources in V1.
 	V1() v1.Interface
 }
@@ -41,11 +38,6 @@ type group struct {
 // New returns a new Interface.
 func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakListOptions internalinterfaces.TweakListOptionsFunc) Interface {
 	return &group{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
-}
-
-// V1beta2 returns a new v1beta2.Interface.
-func (g *group) V1beta2() v1beta2.Interface {
-	return v1beta2.New(g.factory, g.namespace, g.tweakListOptions)
 }
 
 // V1 returns a new v1.Interface.

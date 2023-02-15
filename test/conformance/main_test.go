@@ -27,10 +27,11 @@ import (
 
 	"knative.dev/pkg/system"
 
+	"knative.dev/pkg/test/zipkin"
+
 	"knative.dev/eventing/test"
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/setupclientoptions"
-	"knative.dev/pkg/test/zipkin"
 )
 
 const (
@@ -92,7 +93,7 @@ func addSourcesInitializers() {
 	)
 	sourcesTestRunner.AddComponentSetupClientOption(
 		testlib.PingSourceTypeMeta,
-		setupclientoptions.PingSourceV1B2ClientSetupOption(
+		setupclientoptions.PingSourceV1ClientSetupOption(
 			ctx, pingSrcName, recordEventsPingPodName),
 	)
 }

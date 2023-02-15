@@ -32,10 +32,9 @@ metadata:
 spec:
   group: sources.knative.dev
   versions:
-  - &version
-    name: v1beta2
+  - name: v1
     served: true
-    storage: false
+    storage: true
     subresources:
       status: {}
     schema:
@@ -195,11 +194,6 @@ spec:
     - name: Reason
       type: string
       jsonPath: ".status.conditions[?(@.type=='Ready')].reason"
-  - <<: *version
-    name: v1
-    served: true
-    storage: true
-    # v1 schema is identical to the v1beta2 schema
   names:
     categories:
     - all

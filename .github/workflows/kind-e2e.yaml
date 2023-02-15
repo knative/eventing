@@ -38,12 +38,12 @@ jobs:
           extra-test-flags: >
             -brokerclass=MTChannelBasedBroker
             -channels=messaging.knative.dev/v1:Channel,messaging.knative.dev/v1:InMemoryChannel
-            -sources=sources.knative.dev/v1:ApiServerSource,sources.knative.dev/v1:ContainerSource,sources.knative.dev/v1beta2:PingSource
+            -sources=sources.knative.dev/v1:ApiServerSource,sources.knative.dev/v1:ContainerSource,sources.knative.dev/v1:PingSource
         - test-suite: ./test/conformance
           extra-test-flags: >
             -brokers=eventing.knative.dev/v1:MTChannelBasedBroker
             -channels=messaging.knative.dev/v1:Channel,messaging.knative.dev/v1:InMemoryChannel
-            -sources=sources.knative.dev/v1:ApiServerSource,sources.knative.dev/v1:ContainerSource,sources.knative.dev/v1beta2:PingSource
+            -sources=sources.knative.dev/v1:ApiServerSource,sources.knative.dev/v1:ContainerSource,sources.knative.dev/v1:PingSource
     env:
       KO_DOCKER_REPO: kind.local
       SYSTEM_NAMESPACE: knative-eventing

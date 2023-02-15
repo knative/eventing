@@ -38,14 +38,12 @@ import (
 	flowsv1 "knative.dev/eventing/pkg/apis/flows/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
-	v1beta2 "knative.dev/eventing/pkg/apis/sources/v1beta2"
 	versioned "knative.dev/eventing/pkg/client/clientset/versioned"
 	typedeventingv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/eventing/v1"
 	typedeventingv1beta1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/eventing/v1beta1"
 	typedflowsv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/flows/v1"
 	typedmessagingv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/messaging/v1"
 	typedsourcesv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/sources/v1"
-	typedsourcesv1beta2 "knative.dev/eventing/pkg/client/clientset/versioned/typed/sources/v1beta2"
 	injection "knative.dev/pkg/injection"
 	dynamicclient "knative.dev/pkg/injection/clients/dynamicclient"
 	logging "knative.dev/pkg/logging"
@@ -1211,152 +1209,6 @@ func (w *wrapMessagingV1SubscriptionImpl) UpdateStatus(ctx context.Context, in *
 }
 
 func (w *wrapMessagingV1SubscriptionImpl) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
-	return nil, errors.New("NYI: Watch")
-}
-
-// SourcesV1beta2 retrieves the SourcesV1beta2Client
-func (w *wrapClient) SourcesV1beta2() typedsourcesv1beta2.SourcesV1beta2Interface {
-	return &wrapSourcesV1beta2{
-		dyn: w.dyn,
-	}
-}
-
-type wrapSourcesV1beta2 struct {
-	dyn dynamic.Interface
-}
-
-func (w *wrapSourcesV1beta2) RESTClient() rest.Interface {
-	panic("RESTClient called on dynamic client!")
-}
-
-func (w *wrapSourcesV1beta2) PingSources(namespace string) typedsourcesv1beta2.PingSourceInterface {
-	return &wrapSourcesV1beta2PingSourceImpl{
-		dyn: w.dyn.Resource(schema.GroupVersionResource{
-			Group:    "sources.knative.dev",
-			Version:  "v1beta2",
-			Resource: "pingsources",
-		}),
-
-		namespace: namespace,
-	}
-}
-
-type wrapSourcesV1beta2PingSourceImpl struct {
-	dyn dynamic.NamespaceableResourceInterface
-
-	namespace string
-}
-
-var _ typedsourcesv1beta2.PingSourceInterface = (*wrapSourcesV1beta2PingSourceImpl)(nil)
-
-func (w *wrapSourcesV1beta2PingSourceImpl) Create(ctx context.Context, in *v1beta2.PingSource, opts v1.CreateOptions) (*v1beta2.PingSource, error) {
-	in.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   "sources.knative.dev",
-		Version: "v1beta2",
-		Kind:    "PingSource",
-	})
-	uo := &unstructured.Unstructured{}
-	if err := convert(in, uo); err != nil {
-		return nil, err
-	}
-	uo, err := w.dyn.Namespace(w.namespace).Create(ctx, uo, opts)
-	if err != nil {
-		return nil, err
-	}
-	out := &v1beta2.PingSource{}
-	if err := convert(uo, out); err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (w *wrapSourcesV1beta2PingSourceImpl) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
-	return w.dyn.Namespace(w.namespace).Delete(ctx, name, opts)
-}
-
-func (w *wrapSourcesV1beta2PingSourceImpl) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	return w.dyn.Namespace(w.namespace).DeleteCollection(ctx, opts, listOpts)
-}
-
-func (w *wrapSourcesV1beta2PingSourceImpl) Get(ctx context.Context, name string, opts v1.GetOptions) (*v1beta2.PingSource, error) {
-	uo, err := w.dyn.Namespace(w.namespace).Get(ctx, name, opts)
-	if err != nil {
-		return nil, err
-	}
-	out := &v1beta2.PingSource{}
-	if err := convert(uo, out); err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (w *wrapSourcesV1beta2PingSourceImpl) List(ctx context.Context, opts v1.ListOptions) (*v1beta2.PingSourceList, error) {
-	uo, err := w.dyn.Namespace(w.namespace).List(ctx, opts)
-	if err != nil {
-		return nil, err
-	}
-	out := &v1beta2.PingSourceList{}
-	if err := convert(uo, out); err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (w *wrapSourcesV1beta2PingSourceImpl) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta2.PingSource, err error) {
-	uo, err := w.dyn.Namespace(w.namespace).Patch(ctx, name, pt, data, opts)
-	if err != nil {
-		return nil, err
-	}
-	out := &v1beta2.PingSource{}
-	if err := convert(uo, out); err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (w *wrapSourcesV1beta2PingSourceImpl) Update(ctx context.Context, in *v1beta2.PingSource, opts v1.UpdateOptions) (*v1beta2.PingSource, error) {
-	in.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   "sources.knative.dev",
-		Version: "v1beta2",
-		Kind:    "PingSource",
-	})
-	uo := &unstructured.Unstructured{}
-	if err := convert(in, uo); err != nil {
-		return nil, err
-	}
-	uo, err := w.dyn.Namespace(w.namespace).Update(ctx, uo, opts)
-	if err != nil {
-		return nil, err
-	}
-	out := &v1beta2.PingSource{}
-	if err := convert(uo, out); err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (w *wrapSourcesV1beta2PingSourceImpl) UpdateStatus(ctx context.Context, in *v1beta2.PingSource, opts v1.UpdateOptions) (*v1beta2.PingSource, error) {
-	in.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   "sources.knative.dev",
-		Version: "v1beta2",
-		Kind:    "PingSource",
-	})
-	uo := &unstructured.Unstructured{}
-	if err := convert(in, uo); err != nil {
-		return nil, err
-	}
-	uo, err := w.dyn.Namespace(w.namespace).UpdateStatus(ctx, uo, opts)
-	if err != nil {
-		return nil, err
-	}
-	out := &v1beta2.PingSource{}
-	if err := convert(uo, out); err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (w *wrapSourcesV1beta2PingSourceImpl) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return nil, errors.New("NYI: Watch")
 }
 

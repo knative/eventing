@@ -22,14 +22,13 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"k8s.io/apimachinery/pkg/util/uuid"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
-	sourcesv1beta2 "knative.dev/eventing/pkg/apis/sources/v1beta2"
 	eventingtestingv1 "knative.dev/eventing/pkg/reconciler/testing/v1"
-	eventingtestingv1beta2 "knative.dev/eventing/pkg/reconciler/testing/v1beta2"
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 // ApiServerSourceV1ClientSetupOption returns a ClientSetupOption that can be used
@@ -65,10 +64,10 @@ func ApiServerSourceV1ClientSetupOption(ctx context.Context, name string, mode s
 	}
 }
 
-// PingSourceV1B2ClientSetupOption returns a ClientSetupOption that can be used
+// PingSourceV1ClientSetupOption returns a ClientSetupOption that can be used
 // to create a new PingSource. It creates a RecordEvents pod and a
 // PingSource object with the RecordEvent pod as its sink.
-func PingSourceV1B2ClientSetupOption(ctx context.Context, name string, recordEventsPodName string) testlib.SetupClientOption {
+func PingSourceV1ClientSetupOption(ctx context.Context, name string, recordEventsPodName string) testlib.SetupClientOption {
 	return func(client *testlib.Client) {
 
 		// create event logger pod and service
@@ -76,10 +75,10 @@ func PingSourceV1B2ClientSetupOption(ctx context.Context, name string, recordEve
 
 		// create cron job source
 		data := fmt.Sprintf(`{"msg":"TestPingSource %s"}`, uuid.NewUUID())
-		source := eventingtestingv1beta2.NewPingSource(
+		source := eventingtestingv1.NewPingSource(
 			name,
 			client.Namespace,
-			eventingtestingv1beta2.WithPingSourceSpec(sourcesv1beta2.PingSourceSpec{
+			eventingtestingv1.WithPingSourceSpec(sourcesv1.PingSourceSpec{
 				ContentType: cloudevents.ApplicationJSON,
 				Data:        data,
 				SourceSpec: duckv1.SourceSpec{
@@ -89,7 +88,7 @@ func PingSourceV1B2ClientSetupOption(ctx context.Context, name string, recordEve
 				},
 			}),
 		)
-		client.CreatePingSourceV1Beta2OrFail(source)
+		client.CreatePingSourceV1OrFail(source)
 
 		// wait for all test resources to be ready
 		client.WaitForAllTestResourcesReadyOrFail(ctx)

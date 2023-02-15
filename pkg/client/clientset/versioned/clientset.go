@@ -30,7 +30,6 @@ import (
 	flowsv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/flows/v1"
 	messagingv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/messaging/v1"
 	sourcesv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/sources/v1"
-	sourcesv1beta2 "knative.dev/eventing/pkg/client/clientset/versioned/typed/sources/v1beta2"
 )
 
 type Interface interface {
@@ -39,7 +38,6 @@ type Interface interface {
 	EventingV1() eventingv1.EventingV1Interface
 	FlowsV1() flowsv1.FlowsV1Interface
 	MessagingV1() messagingv1.MessagingV1Interface
-	SourcesV1beta2() sourcesv1beta2.SourcesV1beta2Interface
 	SourcesV1() sourcesv1.SourcesV1Interface
 }
 
@@ -51,7 +49,6 @@ type Clientset struct {
 	eventingV1      *eventingv1.EventingV1Client
 	flowsV1         *flowsv1.FlowsV1Client
 	messagingV1     *messagingv1.MessagingV1Client
-	sourcesV1beta2  *sourcesv1beta2.SourcesV1beta2Client
 	sourcesV1       *sourcesv1.SourcesV1Client
 }
 
@@ -73,11 +70,6 @@ func (c *Clientset) FlowsV1() flowsv1.FlowsV1Interface {
 // MessagingV1 retrieves the MessagingV1Client
 func (c *Clientset) MessagingV1() messagingv1.MessagingV1Interface {
 	return c.messagingV1
-}
-
-// SourcesV1beta2 retrieves the SourcesV1beta2Client
-func (c *Clientset) SourcesV1beta2() sourcesv1beta2.SourcesV1beta2Interface {
-	return c.sourcesV1beta2
 }
 
 // SourcesV1 retrieves the SourcesV1Client
@@ -145,10 +137,6 @@ func NewForConfigAndClient(c *rest.Config, httpClient *http.Client) (*Clientset,
 	if err != nil {
 		return nil, err
 	}
-	cs.sourcesV1beta2, err = sourcesv1beta2.NewForConfigAndClient(&configShallowCopy, httpClient)
-	if err != nil {
-		return nil, err
-	}
 	cs.sourcesV1, err = sourcesv1.NewForConfigAndClient(&configShallowCopy, httpClient)
 	if err != nil {
 		return nil, err
@@ -178,7 +166,6 @@ func New(c rest.Interface) *Clientset {
 	cs.eventingV1 = eventingv1.New(c)
 	cs.flowsV1 = flowsv1.New(c)
 	cs.messagingV1 = messagingv1.New(c)
-	cs.sourcesV1beta2 = sourcesv1beta2.New(c)
 	cs.sourcesV1 = sourcesv1.New(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClient(c)

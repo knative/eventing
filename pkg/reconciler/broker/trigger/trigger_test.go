@@ -47,7 +47,7 @@ import (
 	"knative.dev/eventing/pkg/apis/eventing"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
-	"knative.dev/eventing/pkg/apis/sources/v1beta2"
+	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
 	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/trigger"
@@ -59,7 +59,6 @@ import (
 
 	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/trigger/fake"
 	. "knative.dev/eventing/pkg/reconciler/testing/v1"
-	rtv1beta2 "knative.dev/eventing/pkg/reconciler/testing/v1beta2"
 )
 
 const (
@@ -90,7 +89,7 @@ const (
 	testContentType             = cloudevents.TextPlain
 	testData                    = "data"
 	sinkName                    = "testsink"
-	dependencyAnnotation        = `{"kind":"PingSource","name":"test-ping-source","apiVersion":"sources.knative.dev/v1beta2"}`
+	dependencyAnnotation        = `{"kind":"PingSource","name":"test-ping-source","apiVersion":"sources.knative.dev/v1"}`
 	subscriberURIReference      = "foo"
 	subscriberResolvedTargetURI = "http://example.com/subscriber/foo"
 
@@ -1450,27 +1449,27 @@ func makeFalseStatusSubscription() *messagingv1.Subscription {
 	return s
 }
 
-func makeFalseStatusPingSource() *v1beta2.PingSource {
-	return rtv1beta2.NewPingSource(pingSourceName, testNS, rtv1beta2.WithPingSourceSinkNotFound)
+func makeFalseStatusPingSource() *sourcesv1.PingSource {
+	return NewPingSource(pingSourceName, testNS, WithPingSourceSinkNotFound)
 }
 
-func makeUnknownStatusCronJobSource() *v1beta2.PingSource {
-	cjs := rtv1beta2.NewPingSource(pingSourceName, testNS)
+func makeUnknownStatusCronJobSource() *sourcesv1.PingSource {
+	cjs := NewPingSource(pingSourceName, testNS)
 	cjs.Status.InitializeConditions()
 	return cjs
 }
 
-func makeGenerationNotEqualPingSource() *v1beta2.PingSource {
+func makeGenerationNotEqualPingSource() *sourcesv1.PingSource {
 	c := makeFalseStatusPingSource()
 	c.Generation = currentGeneration
 	c.Status.ObservedGeneration = outdatedGeneration
 	return c
 }
 
-func makeReadyPingSource() *v1beta2.PingSource {
+func makeReadyPingSource() *sourcesv1.PingSource {
 	u, _ := apis.ParseURL(sinkURI)
-	return rtv1beta2.NewPingSource(pingSourceName, testNS,
-		rtv1beta2.WithPingSourceSpec(v1beta2.PingSourceSpec{
+	return NewPingSource(pingSourceName, testNS,
+		WithPingSourceSpec(sourcesv1.PingSourceSpec{
 			Schedule:    testSchedule,
 			ContentType: testContentType,
 			Data:        testData,
@@ -1478,10 +1477,10 @@ func makeReadyPingSource() *v1beta2.PingSource {
 				Sink: brokerDestv1,
 			},
 		}),
-		rtv1beta2.WithInitPingSourceConditions,
-		rtv1beta2.WithPingSourceDeployed,
-		rtv1beta2.WithPingSourceCloudEventAttributes,
-		rtv1beta2.WithPingSourceSink(u),
+		WithInitPingSourceConditions,
+		WithPingSourceDeployed,
+		WithPingSourceCloudEventAttributes,
+		WithPingSourceSink(u),
 	)
 }
 func makeSubscriberKubernetesServiceAsUnstructured() *unstructured.Unstructured {

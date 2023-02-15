@@ -38,7 +38,6 @@ import (
 	flowsv1 "knative.dev/eventing/pkg/apis/flows/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
-	sourcesv1beta2 "knative.dev/eventing/pkg/apis/sources/v1beta2"
 	"knative.dev/eventing/pkg/utils"
 	"knative.dev/eventing/test/lib/duck"
 	"knative.dev/eventing/test/lib/resources"
@@ -354,23 +353,6 @@ func (c *Client) CreateContainerSourceV1OrFail(containerSource *sourcesv1.Contai
 		c.T.Fatalf("Failed to create containersource %q: %v", containerSource.Name, err)
 	}
 	c.Tracker.AddObj(containerSource)
-}
-
-// CreatePingSourceV1Beta2OrFail will create a PingSource
-func (c *Client) CreatePingSourceV1Beta2OrFail(pingSource *sourcesv1beta2.PingSource) {
-	c.T.Logf("Creating pingsource %+v", pingSource)
-	pingInterface := c.Eventing.SourcesV1beta2().PingSources(c.Namespace)
-	err := c.RetryWebhookErrors(func(attempts int) (err error) {
-		_, e := pingInterface.Create(context.Background(), pingSource, metav1.CreateOptions{})
-		if e != nil {
-			c.T.Logf("Failed to create pingsource %q: %v", pingSource.Name, e)
-		}
-		return e
-	})
-	if err != nil && !errors.IsAlreadyExists(err) {
-		c.T.Fatalf("Failed to create pingsource %q: %v", pingSource.Name, err)
-	}
-	c.Tracker.AddObj(pingSource)
 }
 
 // CreatePingSourceV1OrFail will create a PingSource

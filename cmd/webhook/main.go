@@ -23,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
+
 	"knative.dev/eventing/pkg/apis/feature"
 
 	"knative.dev/pkg/configmap"
@@ -48,10 +49,8 @@ import (
 	flowsv1 "knative.dev/eventing/pkg/apis/flows/v1"
 	channeldefaultconfig "knative.dev/eventing/pkg/apis/messaging/config"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
-	"knative.dev/eventing/pkg/apis/sources"
 	pingdefaultconfig "knative.dev/eventing/pkg/apis/sources/config"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
-	sourcesv1beta2 "knative.dev/eventing/pkg/apis/sources/v1beta2"
 	sugar "knative.dev/eventing/pkg/apis/sugar"
 	"knative.dev/eventing/pkg/reconciler/sinkbinding"
 
@@ -76,8 +75,6 @@ var ourTypes = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
 	messagingv1.SchemeGroupVersion.WithKind("Subscription"): &messagingv1.Subscription{},
 
 	// For group sources.knative.dev.
-	// v1beta2
-	sourcesv1beta2.SchemeGroupVersion.WithKind("PingSource"): &sourcesv1beta2.PingSource{},
 	// v1
 	sourcesv1.SchemeGroupVersion.WithKind("ApiServerSource"): &sourcesv1.ApiServerSource{},
 	sourcesv1.SchemeGroupVersion.WithKind("PingSource"):      &sourcesv1.PingSource{},
@@ -226,27 +223,12 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 		return featureStore.ToContext(channelStore.ToContext(store.ToContext(ctx)))
 	}
 
-	var (
-		sourcesv1beta2_ = sourcesv1beta2.SchemeGroupVersion.Version
-		sourcesv1_      = sourcesv1.SchemeGroupVersion.Version
-	)
-
 	return conversion.NewConversionController(ctx,
 		// The path on which to serve the webhook
 		"/resource-conversion",
 
 		// Specify the types of custom resource definitions that should be converted
-		map[schema.GroupKind]conversion.GroupKindConversion{
-			// Sources
-			sourcesv1.Kind("PingSource"): {
-				DefinitionName: sources.PingSourceResource.String(),
-				HubVersion:     sourcesv1beta2_,
-				Zygotes: map[string]conversion.ConvertibleObject{
-					sourcesv1beta2_: &sourcesv1beta2.PingSource{},
-					sourcesv1_:      &sourcesv1.PingSource{},
-				},
-			},
-		},
+		map[schema.GroupKind]conversion.GroupKindConversion{},
 
 		// A function that infuses the context passed to ConvertTo/ConvertFrom/SetDefaults with custom metadata.
 		ctxFunc,

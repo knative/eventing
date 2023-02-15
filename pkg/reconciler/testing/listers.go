@@ -29,12 +29,11 @@ import (
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	rbacv1listers "k8s.io/client-go/listers/rbac/v1"
 	"k8s.io/client-go/tools/cache"
-	sourcesv1beta2 "knative.dev/eventing/pkg/apis/sources/v1beta2"
-	fakeeventingclientset "knative.dev/eventing/pkg/client/clientset/versioned/fake"
-	sourcev1beta2listers "knative.dev/eventing/pkg/client/listers/sources/v1beta2"
-	testscheme "knative.dev/eventing/pkg/reconciler/testing/scheme"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/reconciler/testing"
+
+	fakeeventingclientset "knative.dev/eventing/pkg/client/clientset/versioned/fake"
+	testscheme "knative.dev/eventing/pkg/reconciler/testing/scheme"
 )
 
 var clientSetSchemes = []func(*runtime.Scheme) error{
@@ -100,10 +99,6 @@ func (l *Listers) GetAllObjects() []runtime.Object {
 	all = append(all, l.GetEventingObjects()...)
 	all = append(all, l.GetKubeObjects()...)
 	return all
-}
-
-func (l *Listers) GetPingSourceV1beta2Lister() sourcev1beta2listers.PingSourceLister {
-	return sourcev1beta2listers.NewPingSourceLister(l.indexerFor(&sourcesv1beta2.PingSource{}))
 }
 
 func (l *Listers) GetDeploymentLister() appsv1listers.DeploymentLister {
