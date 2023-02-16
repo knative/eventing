@@ -21,6 +21,7 @@ import (
 
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	pkgsecurity "knative.dev/pkg/test/security"
+
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/k8s"
@@ -43,8 +44,31 @@ func PodSecurityCfgFn(ctx context.Context, t feature.T) CfgFn {
 // WithAnnotations returns a function for configuring annototations of the resource
 func WithAnnotations(annotations map[string]interface{}) CfgFn {
 	return func(cfg map[string]interface{}) {
-		if annotations != nil {
-			cfg["annotations"] = annotations
+		if original, ok := cfg["annotations"]; ok {
+			appendToOriginal(original, annotations)
+			return
+		}
+		cfg["annotations"] = annotations
+	}
+}
+
+// WithPodAnnotations appends pod annotations (usually used by types where pod template is embedded)
+func WithPodAnnotations(additional map[string]interface{}) CfgFn {
+	return func(cfg map[string]interface{}) {
+		if ann, ok := cfg["podannotations"]; ok {
+			appendToOriginal(ann, additional)
+			return
+		}
+		cfg["podannotations"] = additional
+	}
+}
+
+func appendToOriginal(original interface{}, additional map[string]interface{}) {
+	annotations := original.(map[string]interface{})
+	for k, v := range additional {
+		// Only add the unspecified ones
+		if _, ok := annotations[k]; !ok {
+			annotations[k] = v
 		}
 	}
 }
@@ -56,4 +80,14 @@ func WithLabels(labels map[string]string) CfgFn {
 			cfg["labels"] = labels
 		}
 	}
+}
+
+func WithIstioPodAnnotations(cfg map[string]interface{}) {
+	podAnnotations := map[string]interface{}{
+		"sidecar.istio.io/inject":                "true",
+		"sidecar.istio.io/rewriteAppHTTPProbers": "true",
+	}
+
+	WithAnnotations(podAnnotations)(cfg)
+	WithPodAnnotations(podAnnotations)(cfg)
 }
