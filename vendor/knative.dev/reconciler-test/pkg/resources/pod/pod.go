@@ -42,7 +42,12 @@ func Install(name string, image string, opts ...manifest.CfgFn) feature.StepFn {
 			t.Fatal(err)
 		}
 
+		if ic := environment.GetIstioConfig(ctx); ic.Enabled {
+			manifest.WithIstioPodAnnotations(cfg)
+		}
+
 		manifest.PodSecurityCfgFn(ctx, t)(cfg)
+
 		if _, err := manifest.InstallYamlFS(ctx, yaml, cfg); err != nil {
 			t.Fatal(err)
 		}

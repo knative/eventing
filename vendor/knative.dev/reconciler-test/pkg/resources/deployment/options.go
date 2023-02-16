@@ -18,11 +18,15 @@ package deployment
 
 import (
 	corev1 "k8s.io/api/core/v1"
+
 	"knative.dev/reconciler-test/pkg/manifest"
 )
 
-var WithAnnotations = manifest.WithAnnotations
-var WithLabels = manifest.WithLabels
+var (
+	WithAnnotations    = manifest.WithAnnotations
+	WithLabels         = manifest.WithLabels
+	WithPodAnnotations = manifest.WithPodAnnotations
+)
 
 func WithSelectors(selectors map[string]string) manifest.CfgFn {
 	return func(cfg map[string]interface{}) {
@@ -55,14 +59,6 @@ func WithArgs(args []string) manifest.CfgFn {
 func WithImagePullPolicy(ipp corev1.PullPolicy) manifest.CfgFn {
 	return func(cfg map[string]interface{}) {
 		cfg["imagePullPolicy"] = ipp
-	}
-}
-
-func WithPodAnnotations(annotations map[string]interface{}) manifest.CfgFn {
-	return func(cfg map[string]interface{}) {
-		if annotations != nil {
-			cfg["podannotations"] = annotations
-		}
 	}
 }
 

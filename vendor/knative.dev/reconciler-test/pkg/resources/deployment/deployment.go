@@ -22,6 +22,7 @@ import (
 
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/tracker"
+
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
@@ -46,7 +47,12 @@ func Install(name string, image string, options ...manifest.CfgFn) feature.StepF
 			t.Fatal(err)
 		}
 
+		if ic := environment.GetIstioConfig(ctx); ic.Enabled {
+			manifest.WithIstioPodAnnotations(cfg)
+		}
+
 		manifest.PodSecurityCfgFn(ctx, t)(cfg)
+
 		if _, err := manifest.InstallYamlFS(ctx, yaml, cfg); err != nil {
 			t.Fatal(err)
 		}
