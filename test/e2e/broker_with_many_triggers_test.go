@@ -36,6 +36,7 @@ func DefaultBrokerCreator(_ *testlib.Client, _ string) string {
 	return sugarresources.DefaultBrokerName
 }
 
+// Deprecated, use reconciler-test based tests.
 func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 	helpers.TestBrokerWithManyTriggers(context.Background(), t, DefaultBrokerCreator, true)
 }

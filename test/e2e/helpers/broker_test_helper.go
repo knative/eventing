@@ -95,6 +95,7 @@ func (tc eventTestCase) ToEventMatcher() cetest.EventMatcher {
 // TestBrokerWithManyTriggers will wait for the broker to become ready.
 type BrokerCreator func(client *testlib.Client, version string) string
 
+// Deprecated, use reconciler-test based tests.
 // ChannelBasedBrokerCreator creates a BrokerCreator that creates a broker based on the channel parameter.
 func ChannelBasedBrokerCreator(channel metav1.TypeMeta, brokerClass string) BrokerCreator {
 	return func(client *testlib.Client, version string) string {
