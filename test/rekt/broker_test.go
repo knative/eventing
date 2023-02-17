@@ -33,6 +33,21 @@ import (
 	b "knative.dev/eventing/test/rekt/resources/broker"
 )
 
+func TestBrokerWithManyTriggers(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+		environment.WithPollTimings(5*time.Second, 4*time.Minute),
+	)
+
+	env.Test(ctx, t, broker.BrokerWithManyTriggers())
+}
+
 // TestBrokerWorkFlowWithTransformation test broker transformation respectively follow
 // channel flow and trigger event flow.
 func TestBrokerWorkFlowWithTransformation(t *testing.T) {

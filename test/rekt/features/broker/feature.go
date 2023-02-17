@@ -19,10 +19,11 @@ package broker
 import (
 	"context"
 	"encoding/base64"
+	"fmt"
 	"strings"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
-
+	"github.com/cloudevents/sdk-go/v2/binding/spec"
 	"github.com/cloudevents/sdk-go/v2/test"
 	"github.com/google/uuid"
 
@@ -32,6 +33,7 @@ import (
 	"knative.dev/eventing/test/rekt/resources/channel"
 	"knative.dev/eventing/test/rekt/resources/subscription"
 	"knative.dev/eventing/test/rekt/resources/trigger"
+
 	v1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/ptr"
 
@@ -41,6 +43,159 @@ import (
 	"knative.dev/reconciler-test/pkg/manifest"
 	"knative.dev/reconciler-test/pkg/resources/service"
 )
+
+func BrokerWithManyTriggers() *feature.Feature {
+	f := feature.NewFeatureNamed("broker With Many Triggers")
+
+	// Construct different type, source and extensions of events
+	any := eventingv1.TriggerAnyFilter
+	eventType1 := "type1"
+	eventType2 := "type2"
+	eventSource1 := "http://source1.com"
+	eventSource2 := "http://source2.com"
+	// Be careful with the length of extension name and values,
+	// we use extension name and value as a part of the name of resources like subscriber and trigger,
+	// the maximum characters allowed of resource name is 63
+	extensionName1 := "extname1"
+	extensionValue1 := "extval1"
+	extensionName2 := "extname2"
+	extensionValue2 := "extvalue2"
+	nonMatchingExtensionName := "nonmatchingextname"
+	nonMatchingExtensionValue := "nonmatchingextval"
+
+	tests := []struct {
+		name string
+		// These are the event context attributes and extension attributes that will be send.
+		eventsToSend []eventTestCase
+		// These are the event context attributes and extension attributes that triggers will listen to,
+		// to set in the subscriber and services pod
+		// The attributes in these test cases will be used as assertions on the receivers
+		eventFilters []eventTestCase
+	}{
+		{
+			name: "test default broker with many attribute triggers",
+			eventsToSend: []eventTestCase{
+				{Type: eventType1, Source: eventSource1},
+				{Type: eventType1, Source: eventSource2},
+				{Type: eventType2, Source: eventSource1},
+				{Type: eventType2, Source: eventSource2},
+			},
+			eventFilters: []eventTestCase{
+				{Type: any, Source: any},
+				{Type: eventType1, Source: any},
+				{Type: any, Source: eventSource1},
+				{Type: eventType1, Source: eventSource1},
+			},
+		},
+		{
+			name: "test default broker with many attribute and extension triggers",
+			eventsToSend: []eventTestCase{
+				{Type: eventType1, Source: eventSource1, Extensions: map[string]interface{}{extensionName1: extensionValue1}},
+				{Type: eventType1, Source: eventSource1, Extensions: map[string]interface{}{extensionName1: extensionValue1, extensionName2: extensionValue2}},
+				{Type: eventType1, Source: eventSource1, Extensions: map[string]interface{}{extensionName2: extensionValue2}},
+				{Type: eventType1, Source: eventSource2, Extensions: map[string]interface{}{extensionName1: extensionValue1}},
+				{Type: eventType2, Source: eventSource1, Extensions: map[string]interface{}{extensionName1: nonMatchingExtensionValue}},
+				{Type: eventType2, Source: eventSource2, Extensions: map[string]interface{}{nonMatchingExtensionName: extensionValue1}},
+				{Type: eventType2, Source: eventSource2, Extensions: map[string]interface{}{extensionName1: extensionValue1, extensionName2: extensionValue2}},
+				{Type: eventType2, Source: eventSource2, Extensions: map[string]interface{}{extensionName1: extensionValue1, nonMatchingExtensionName: extensionValue2}},
+			},
+			eventFilters: []eventTestCase{
+				{Type: any, Source: any, Extensions: map[string]interface{}{extensionName1: extensionValue1}},
+				{Type: any, Source: any, Extensions: map[string]interface{}{extensionName1: extensionValue1, extensionName2: extensionValue2}},
+				{Type: any, Source: any, Extensions: map[string]interface{}{extensionName2: extensionValue2}},
+				{Type: eventType1, Source: any, Extensions: map[string]interface{}{extensionName1: extensionValue1}},
+				{Type: any, Source: any, Extensions: map[string]interface{}{extensionName1: any}},
+				{Type: any, Source: eventSource1, Extensions: map[string]interface{}{extensionName1: extensionValue1}},
+				{Type: any, Source: eventSource1, Extensions: map[string]interface{}{extensionName1: extensionValue1, extensionName2: extensionValue2}},
+				{Type: any, Source: eventSource2, Extensions: map[string]interface{}{extensionName1: extensionValue1, extensionName2: extensionValue1}},
+			},
+		},
+	}
+	// Map to save the expected matchers per dumper so that we can verify the delivery.
+	expectedMatchers := make(map[string][]eventshub.EventInfoMatcher)
+
+	// Create the broker
+	brokerName := feature.MakeRandomK8sName("broker")
+	f.Setup("install broker", broker.Install(brokerName, broker.WithEnvConfig()...))
+	f.Requirement("broker is ready", broker.IsReady(brokerName))
+	f.Requirement("broker is addressable", broker.IsAddressable(brokerName))
+
+	for testIndex, testcase := range tests {
+
+		for filterIndex, eventFilter := range testcase.eventFilters {
+			sink := "dumper-" + fmt.Sprint(testIndex) + fmt.Sprint(filterIndex)
+			f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
+			filter := eventingv1.TriggerFilterAttributes{
+				"type":   eventFilter.Type,
+				"source": eventFilter.Source,
+			}
+
+			// Point the Trigger subscriber to the sink svc.
+			cfg := []manifest.CfgFn{
+				trigger.WithSubscriber(service.AsKReference(sink), ""),
+				trigger.WithFilter(filter),
+				trigger.WithExtensions(eventFilter.Extensions),
+			}
+
+			// Install the trigger
+			via := feature.MakeRandomK8sName("via")
+			f.Setup("install trigger", trigger.Install(via, brokerName, cfg...))
+			f.Setup("trigger goes ready", trigger.IsReady(via))
+		}
+
+		for _, event := range testcase.eventsToSend {
+			eventToSend := cloudevents.NewEvent()
+			eventToSend.SetID(uuid.New().String())
+			eventToSend.SetType(event.Type)
+			eventToSend.SetSource(event.Source)
+			for k, v := range event.Extensions {
+				eventToSend.SetExtension(k, v)
+			}
+			data := fmt.Sprintf(`{"msg":"%s"}`, uuid.New())
+			eventToSend.SetData(cloudevents.ApplicationJSON, []byte(data))
+
+			source := feature.MakeRandomK8sName("source")
+			f.Requirement("install source", eventshub.Install(
+				source,
+				eventshub.StartSenderToResource(broker.GVR(), brokerName),
+				eventshub.InputEvent(eventToSend),
+			))
+
+			// Sent event matcher
+			sentEventMatcher := test.AllOf(
+				test.HasId(eventToSend.ID()),
+				event.toEventMatcher(),
+			)
+
+			// Check on every dumper whether we should expect this event or not
+			for filterIndex, eventFilter := range testcase.eventFilters {
+				sink := "dumper-" + fmt.Sprint(testIndex) + fmt.Sprint(filterIndex)
+
+				if eventFilter.toEventMatcher()(eventToSend) == nil {
+					// This filter should match this event
+					expectedMatchers[sink] = append(
+						expectedMatchers[sink],
+						eventasssert.MatchEvent(sentEventMatcher),
+					)
+				}
+			}
+		}
+
+		// Let's check that all expected matchers are fulfilled
+		for sink, matchers := range expectedMatchers {
+			for _, matcher := range matchers {
+				// One match per event is enough
+				f.Stable("test message without explicit prefer header should have the header").
+					Must("delivers events",
+						eventasssert.OnStore(sink).Match(
+							matcher,
+						).AtLeast(1))
+			}
+		}
+	}
+
+	return f
+}
 
 func BrokerWorkFlowWithTransformation() *feature.FeatureSet {
 	createSubscriberFn := func(ref *v1.KReference, uri string) manifest.CfgFn {
@@ -742,4 +897,36 @@ func brokerSubscriberLongMessage() *feature.Feature {
 			Exact(1),
 	)
 	return f
+}
+
+type eventTestCase struct {
+	Type       string
+	Source     string
+	Extensions map[string]interface{}
+}
+
+// toEventMatcher converts the test case to the event matcher
+func (tc eventTestCase) toEventMatcher() test.EventMatcher {
+	var matchers []test.EventMatcher
+	if tc.Type == eventingv1.TriggerAnyFilter {
+		matchers = append(matchers, test.ContainsAttributes(spec.Type))
+	} else {
+		matchers = append(matchers, test.HasType(tc.Type))
+	}
+
+	if tc.Source == eventingv1.TriggerAnyFilter {
+		matchers = append(matchers, test.ContainsAttributes(spec.Source))
+	} else {
+		matchers = append(matchers, test.HasSource(tc.Source))
+	}
+
+	for k, v := range tc.Extensions {
+		if v == eventingv1.TriggerAnyFilter {
+			matchers = append(matchers, test.ContainsExtensions(k))
+		} else {
+			matchers = append(matchers, test.HasExtension(k, v))
+		}
+	}
+
+	return test.AllOf(matchers...)
 }
