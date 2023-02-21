@@ -23,6 +23,8 @@ import (
 	"testing"
 	"time"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/pkg/system"
 	_ "knative.dev/pkg/system/testing"
 	"knative.dev/reconciler-test/pkg/environment"
@@ -30,6 +32,7 @@ import (
 	"knative.dev/reconciler-test/pkg/knative"
 
 	"knative.dev/eventing/test/rekt/features/broker"
+	"knative.dev/eventing/test/rekt/features/workloads"
 	b "knative.dev/eventing/test/rekt/resources/broker"
 )
 
@@ -197,4 +200,45 @@ func TestBrokerDeliverLongMessage(t *testing.T) {
 	)
 
 	env.TestSet(ctx, t, broker.BrokerDeliverLongMessage())
+}
+
+func TestBrokerDataPlaneLabels(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+	)
+
+	env.Test(ctx, t, workloads.Selector(workloads.Workload{
+		GVR: schema.GroupVersionResource{
+			Version:  "v1",
+			Resource: "pods",
+		},
+		PartialName: "mt-broker-filter",
+		Namespace:   system.Namespace(),
+		Selector: metav1.LabelSelector{
+			MatchLabels: map[string]string{
+				"app.kubernetes.io/name":      "knative-eventing",
+				"app.kubernetes.io/component": "broker-filter",
+			},
+		},
+	}))
+	env.Test(ctx, t, workloads.Selector(workloads.Workload{
+		GVR: schema.GroupVersionResource{
+			Version:  "v1",
+			Resource: "pods",
+		},
+		PartialName: "mt-broker-ingress",
+		Namespace:   system.Namespace(),
+		Selector: metav1.LabelSelector{
+			MatchLabels: map[string]string{
+				"app.kubernetes.io/name":      "knative-eventing",
+				"app.kubernetes.io/component": "broker-ingress",
+			},
+		},
+	}))
 }

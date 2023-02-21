@@ -23,11 +23,15 @@ import (
 	"testing"
 	"time"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/pkg/system"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/knative"
 
 	apiserversourcefeatures "knative.dev/eventing/test/rekt/features/apiserversource"
+	"knative.dev/eventing/test/rekt/features/workloads"
+
 	_ "knative.dev/pkg/system/testing"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"
@@ -119,6 +123,40 @@ func TestApiServerSourceDataPlane_EventsRetries(t *testing.T) {
 	)
 
 	env.Test(ctx, t, apiserversourcefeatures.SendsEventsWithRetries())
+}
+
+func TestApiServerSourceDataPlaneLabels(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+	)
+
+	// Keep the name of the source short otherwise partial name match won't work because
+	// the api apiserversource reconciler logic uses prefix, name and UUID to generate a name,
+	// and it cuts the name if all of that is too long.
+	srcname := feature.MakeRandomK8sName("src")
+
+	env.Prerequisite(ctx, t, apiserversourcefeatures.Install(srcname))
+	env.Prerequisite(ctx, t, apiserversourcefeatures.GoesReady(srcname))
+
+	env.Test(ctx, t, workloads.Selector(workloads.Workload{
+		GVR: schema.GroupVersionResource{
+			Version:  "v1",
+			Resource: "pods",
+		},
+		PartialName: srcname,
+		Selector: metav1.LabelSelector{
+			MatchLabels: map[string]string{
+				"app.kubernetes.io/name":      "knative-eventing",
+				"app.kubernetes.io/component": "apiserversource-adapter",
+			},
+		},
+	}))
 }
 
 func TestApiServerSourceDataPlane_MultipleNamespaces(t *testing.T) {

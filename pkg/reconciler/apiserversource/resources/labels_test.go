@@ -31,6 +31,8 @@ func TestLabels(t *testing.T) {
 	want := map[string]string{
 		"eventing.knative.dev/source":     controllerAgentName,
 		"eventing.knative.dev/sourceName": name,
+		"app.kubernetes.io/name":          "knative-eventing",
+		"app.kubernetes.io/component":     "apiserversource-adapter",
 	}
 
 	got := Labels(name)

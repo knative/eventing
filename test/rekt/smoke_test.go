@@ -24,6 +24,11 @@ import (
 	"testing"
 
 	"k8s.io/utils/pointer"
+	_ "knative.dev/pkg/system/testing"
+	"knative.dev/reconciler-test/pkg/feature"
+	"knative.dev/reconciler-test/pkg/manifest"
+	"knative.dev/reconciler-test/pkg/resources/service"
+
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/test/rekt/features/apiserversource"
 	"knative.dev/eventing/test/rekt/features/broker"
@@ -40,10 +45,6 @@ import (
 	ps "knative.dev/eventing/test/rekt/resources/pingsource"
 	sresources "knative.dev/eventing/test/rekt/resources/sequence"
 	sb "knative.dev/eventing/test/rekt/resources/sinkbinding"
-	_ "knative.dev/pkg/system/testing"
-	"knative.dev/reconciler-test/pkg/feature"
-	"knative.dev/reconciler-test/pkg/manifest"
-	"knative.dev/reconciler-test/pkg/resources/service"
 )
 
 // TestSmoke_Broker
@@ -117,7 +118,7 @@ func TestSmoke_PingSource(t *testing.T) {
 			if len(n) >= 64 {
 				n = n[:63] // 63 is the max length.
 			}
-			env.Test(ctx, t, pingsource.PingSourceGoesReady(n, cfg...))
+			env.Test(ctx, t, pingsource.GoesReady(n, cfg...))
 		}
 	}
 }
