@@ -103,6 +103,17 @@ func WithConfig(name string) manifest.CfgFn {
 	}
 }
 
+// WithConfig adds the specified config map to the Broker spec.
+func WithChannelTemplateConfig(name string, channel *metav1.TypeMeta) manifest.CfgFn {
+	return func(templateData map[string]interface{}) {
+		cfg := make(map[string]interface{})
+		cfg["kind"] = channel.Kind
+		cfg["apiVersion"] = channel.APIVersion
+		cfg["name"] = name
+		templateData["config"] = cfg
+	}
+}
+
 // WithConfigNamespace adds the specified config map namespace to the Broker spec.
 func WithConfigNamespace(namespace string) manifest.CfgFn {
 	return func(cfg map[string]interface{}) {

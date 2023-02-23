@@ -63,14 +63,29 @@ func BrokerWithManyTriggers() *feature.Feature {
 	nonMatchingExtensionName := "nonmatchingextname"
 	nonMatchingExtensionValue := "nonmatchingextval"
 
+	eventFilters1 := make(map[string]eventTestCase)
+	eventFilters1["dumper-"+"1"] = neweventTestCase(any, any)
+	eventFilters1["dumper-"+"12"] = neweventTestCase(eventType1, any)
+	eventFilters1["dumper-"+"123"] = neweventTestCase(any, eventSource1)
+	eventFilters1["dumper-"+"1234"] = neweventTestCase(eventType1, eventSource1)
+
+	eventFilters2 := make(map[string]eventTestCase)
+	eventFilters2["dumper-"+"12345"] = neweventTestCaseWithExtensions(any, any, map[string]interface{}{extensionName1: extensionValue1})
+	eventFilters2["dumper-"+"123456"] = neweventTestCaseWithExtensions(any, any, map[string]interface{}{extensionName1: extensionValue1, extensionName2: extensionValue2})
+	eventFilters2["dumper-"+"1234567"] = neweventTestCaseWithExtensions(any, any, map[string]interface{}{extensionName2: extensionValue2})
+	eventFilters2["dumper-"+"654321"] = neweventTestCaseWithExtensions(eventType1, any, map[string]interface{}{extensionName1: extensionValue1})
+	eventFilters2["dumper-"+"54321"] = neweventTestCaseWithExtensions(any, any, map[string]interface{}{extensionName1: any})
+	eventFilters2["dumper-"+"4321"] = neweventTestCaseWithExtensions(any, eventSource1, map[string]interface{}{extensionName1: extensionValue1})
+	eventFilters2["dumper-"+"321"] = neweventTestCaseWithExtensions(any, eventSource1, map[string]interface{}{extensionName1: extensionValue1, extensionName2: extensionValue2})
+	eventFilters2["dumper-"+"21"] = neweventTestCaseWithExtensions(any, eventSource2, map[string]interface{}{extensionName1: extensionValue1, extensionName2: extensionValue1})
+
 	tests := []struct {
 		name string
 		// These are the event context attributes and extension attributes that will be send.
 		eventsToSend []eventTestCase
-		// These are the event context attributes and extension attributes that triggers will listen to,
-		// to set in the subscriber and services pod
-		// The attributes in these test cases will be used as assertions on the receivers
-		eventFilters []eventTestCase
+		// These are the event context attributes and extension attributes that triggers will listen to
+		// This map is to configure sink and corresponding filter to construct trigger
+		eventFilters map[string]eventTestCase
 	}{
 		{
 			name: "test default broker with many attribute triggers",
@@ -80,12 +95,7 @@ func BrokerWithManyTriggers() *feature.Feature {
 				{Type: eventType2, Source: eventSource1},
 				{Type: eventType2, Source: eventSource2},
 			},
-			eventFilters: []eventTestCase{
-				{Type: any, Source: any},
-				{Type: eventType1, Source: any},
-				{Type: any, Source: eventSource1},
-				{Type: eventType1, Source: eventSource1},
-			},
+			eventFilters: eventFilters1,
 		},
 		{
 			name: "test default broker with many attribute and extension triggers",
@@ -99,31 +109,22 @@ func BrokerWithManyTriggers() *feature.Feature {
 				{Type: eventType2, Source: eventSource2, Extensions: map[string]interface{}{extensionName1: extensionValue1, extensionName2: extensionValue2}},
 				{Type: eventType2, Source: eventSource2, Extensions: map[string]interface{}{extensionName1: extensionValue1, nonMatchingExtensionName: extensionValue2}},
 			},
-			eventFilters: []eventTestCase{
-				{Type: any, Source: any, Extensions: map[string]interface{}{extensionName1: extensionValue1}},
-				{Type: any, Source: any, Extensions: map[string]interface{}{extensionName1: extensionValue1, extensionName2: extensionValue2}},
-				{Type: any, Source: any, Extensions: map[string]interface{}{extensionName2: extensionValue2}},
-				{Type: eventType1, Source: any, Extensions: map[string]interface{}{extensionName1: extensionValue1}},
-				{Type: any, Source: any, Extensions: map[string]interface{}{extensionName1: any}},
-				{Type: any, Source: eventSource1, Extensions: map[string]interface{}{extensionName1: extensionValue1}},
-				{Type: any, Source: eventSource1, Extensions: map[string]interface{}{extensionName1: extensionValue1, extensionName2: extensionValue2}},
-				{Type: any, Source: eventSource2, Extensions: map[string]interface{}{extensionName1: extensionValue1, extensionName2: extensionValue1}},
-			},
+			eventFilters: eventFilters2,
 		},
 	}
+
 	// Map to save the expected matchers per dumper so that we can verify the delivery.
-	expectedMatchers := make(map[string][]eventshub.EventInfoMatcher)
+	// matcherBySink is to verify the sink and corresponding matcher
+	matcherBySink := make(map[string][]eventshub.EventInfoMatcher)
 
 	// Create the broker
 	brokerName := feature.MakeRandomK8sName("broker")
 	f.Setup("install broker", broker.Install(brokerName, broker.WithEnvConfig()...))
-	f.Requirement("broker is ready", broker.IsReady(brokerName))
-	f.Requirement("broker is addressable", broker.IsAddressable(brokerName))
+	f.Setup("broker is ready", broker.IsReady(brokerName))
+	f.Setup("broker is addressable", broker.IsAddressable(brokerName))
 
-	for testIndex, testcase := range tests {
-
-		for filterIndex, eventFilter := range testcase.eventFilters {
-			sink := "dumper-" + fmt.Sprint(testIndex) + fmt.Sprint(filterIndex)
+	for _, testcase := range tests {
+		for sink, eventFilter := range testcase.eventFilters {
 			f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 			filter := eventingv1.TriggerFilterAttributes{
 				"type":   eventFilter.Type,
@@ -168,13 +169,12 @@ func BrokerWithManyTriggers() *feature.Feature {
 			)
 
 			// Check on every dumper whether we should expect this event or not
-			for filterIndex, eventFilter := range testcase.eventFilters {
-				sink := "dumper-" + fmt.Sprint(testIndex) + fmt.Sprint(filterIndex)
+			for sink, eventFilter := range testcase.eventFilters {
 
 				if eventFilter.toEventMatcher()(eventToSend) == nil {
 					// This filter should match this event
-					expectedMatchers[sink] = append(
-						expectedMatchers[sink],
+					matcherBySink[sink] = append(
+						matcherBySink[sink],
 						eventasssert.MatchEvent(sentEventMatcher),
 					)
 				}
@@ -182,7 +182,7 @@ func BrokerWithManyTriggers() *feature.Feature {
 		}
 
 		// Let's check that all expected matchers are fulfilled
-		for sink, matchers := range expectedMatchers {
+		for sink, matchers := range matcherBySink {
 			for _, matcher := range matchers {
 				// One match per event is enough
 				f.Stable("test message without explicit prefer header should have the header").
@@ -903,6 +903,14 @@ type eventTestCase struct {
 	Type       string
 	Source     string
 	Extensions map[string]interface{}
+}
+
+func neweventTestCase(tp, source string) eventTestCase {
+	return eventTestCase{Type: tp, Source: source}
+}
+
+func neweventTestCaseWithExtensions(tp string, source string, extensions map[string]interface{}) eventTestCase {
+	return eventTestCase{Type: tp, Source: source, Extensions: extensions}
 }
 
 // toEventMatcher converts the test case to the event matcher
