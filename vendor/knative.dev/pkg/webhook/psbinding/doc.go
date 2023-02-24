@@ -17,11 +17,11 @@ limitations under the License.
 // Package psbinding provides facilities to make authoring Bindings that
 // work with "Pod Spec"-able subjects easier.  There are two key components
 //  1. The AdmissionController, which lives in psbinding.go (controller.go)
-//    sets it up.
+//     sets it up.
 //  2. The BaseReconciler, which lives in reconciler.go and can either be
-//    used directly as a Reconciler, or it can be wrapped as a base
-//    implementation for a customized reconciler that wants to take advantage
-//    of its facilities (e.g. for updating status and manipulating finalizers).
+//     used directly as a Reconciler, or it can be wrapped as a base
+//     implementation for a customized reconciler that wants to take advantage
+//     of its facilities (e.g. for updating status and manipulating finalizers).
 //
 // The core concept to consuming psbinding is the Bindable interface.  By
 // implementing Bindable on your binding resource, you enable the BaseReconciler
@@ -31,7 +31,9 @@ limitations under the License.
 // "mutation" methods carry the business logic for the "Pod Spec"-able binding.
 //
 // The mutation methods have the signature:
-//    func(context.Context, *v1alpha1.WithPod)
+//
+//	func(context.Context, *v1alpha1.WithPod)
+//
 // These methods are called to have the Binding perform its mutation on the
 // supplied WithPod (our "Pod Spec"-able wrapper type).  However, in some
 // cases the binding may need additional context.  Similar to apis.Validatable
