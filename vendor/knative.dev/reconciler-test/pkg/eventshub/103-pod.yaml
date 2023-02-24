@@ -19,6 +19,12 @@ metadata:
   namespace: {{ .namespace }}
   labels:
     app: eventshub-{{ .name }}
+  {{ if .annotations }}
+  annotations:
+    {{ range $key, $value := .annotations }}
+      {{ $key }}: "{{ $value }}"
+      {{ end }}
+  {{ end }}
 spec:
   serviceAccountName: "{{ .namespace }}"
   restartPolicy: "Never"
