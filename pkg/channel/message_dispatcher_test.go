@@ -723,6 +723,69 @@ func TestDispatchMessage(t *testing.T) {
 			},
 			lastReceiver: "deadLetter",
 		},
+		"no restriction on message response size": {
+			sendToDestination: true,
+			sendToReply:       true,
+			hasDeadLetterSink: false,
+			header: map[string][]string{
+				// do-not-forward should not get forwarded.
+				"do-not-forward": {"header"},
+				"x-request-id":   {"id123"},
+				"knative-1":      {"knative-1-value"},
+				"knative-2":      {"knative-2-value"},
+			},
+			body: "destination",
+			eventExtensions: map[string]string{
+				"abc": `"ce-abc-value"`,
+			},
+			expectedDestRequest: &requestValidation{
+				Headers: map[string][]string{
+					"x-request-id":   {"id123"},
+					"knative-1":      {"knative-1-value"},
+					"knative-2":      {"knative-2-value"},
+					"prefer":         {"reply"},
+					"traceparent":    {"ignored-value-header"},
+					"ce-abc":         {`"ce-abc-value"`},
+					"ce-id":          {"ignored-value-header"},
+					"ce-time":        {"2002-10-02T15:00:00Z"},
+					"ce-source":      {testCeSource},
+					"ce-type":        {testCeType},
+					"ce-specversion": {cloudevents.VersionV1},
+				},
+				Body: `"destination"`,
+			},
+			expectedReplyRequest: &requestValidation{
+				Headers: map[string][]string{
+					"x-request-id":   {"id123"},
+					"knative-1":      {"knative-1-value"},
+					"traceparent":    {"ignored-value-header"},
+					"ce-abc":         {`"ce-abc-value"`},
+					"ce-id":          {"ignored-value-header"},
+					"ce-time":        {"2002-10-02T15:00:00Z"},
+					"ce-source":      {testCeSource},
+					"ce-type":        {testCeType},
+					"ce-specversion": {cloudevents.VersionV1},
+				},
+				Body: strings.Repeat("a", 2000),
+			},
+			fakeResponse: &http.Response{
+				StatusCode: http.StatusAccepted,
+				Header: map[string][]string{
+					"do-not-passthrough": {"no"},
+					"x-request-id":       {"id123"},
+					"knative-1":          {"knative-1-value"},
+					"ce-abc":             {`"ce-abc-value"`},
+					"ce-id":              {"ignored-value-header"},
+					"ce-time":            {"2002-10-02T15:00:00Z"},
+					"ce-source":          {testCeSource},
+					"ce-type":            {testCeType},
+					"ce-specversion":     {cloudevents.VersionV1},
+				},
+				Body: io.NopCloser(bytes.NewBufferString(strings.Repeat("a", 2000))),
+			},
+
+			lastReceiver: "reply",
+		},
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {

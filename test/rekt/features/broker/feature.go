@@ -743,3 +743,96 @@ func brokerSubscriberLongMessage() *feature.Feature {
 	)
 	return f
 }
+
+/*
+Following test sends an event to the first sink, Sink1, which will send a long response destined to Sink2.
+The test will assert that the long response is received by Sink2
+
+EventSource ---> Broker ---> Trigger1 ---> Sink1(Transformation) ---> Trigger2 --> Sink2
+*/
+
+func BrokerDeliverLongResponseMessage() *feature.FeatureSet {
+	fs := &feature.FeatureSet{
+		Name: "Knative Broker - Long Response Message",
+
+		Features: []*feature.Feature{
+			brokerSubscriberLongResponseMessage(),
+		},
+	}
+	return fs
+}
+
+func brokerSubscriberLongResponseMessage() *feature.Feature {
+	f := feature.NewFeatureNamed("Broker, chain of Triggers, long response message from first subscriber")
+
+	source := feature.MakeRandomK8sName("source")
+	sink1 := feature.MakeRandomK8sName("sink1")
+	sink2 := feature.MakeRandomK8sName("sink2")
+	trigger1 := feature.MakeRandomK8sName("trigger1")
+	trigger2 := feature.MakeRandomK8sName("trigger2")
+
+	eventSource1 := "source1"
+	eventSource2 := "source2"
+	eventType1 := "type1"
+	eventType2 := "type2"
+	eventBody := `{"msg":"eventBody"}`
+	transformedEventBody := `{"msg":"` + strings.Repeat("X", 36000) + `"}`
+	event := cloudevents.NewEvent()
+	event.SetID(uuid.New().String())
+	event.SetType(eventType1)
+	event.SetSource(eventSource1)
+	event.SetData(cloudevents.TextPlain, []byte(eventBody))
+
+	//Install the broker
+	brokerName := feature.MakeRandomK8sName("broker")
+	f.Setup("install broker", broker.Install(brokerName, broker.WithEnvConfig()...))
+	f.Requirement("broker is ready", broker.IsReady(brokerName))
+	f.Requirement("broker is addressable", broker.IsAddressable(brokerName))
+
+	// Sink1 will transform the event so it can be filtered by Trigger2
+	f.Setup("install sink1", eventshub.Install(
+		sink1,
+		eventshub.ReplyWithTransformedEvent(eventType2, eventSource2, transformedEventBody),
+		eventshub.StartReceiver,
+	))
+
+	f.Setup("install sink2", eventshub.Install(sink2, eventshub.StartReceiver))
+
+	// Install the Triggers with appropriate Sinks and filters
+	f.Setup("install trigger1", trigger.Install(
+		trigger1,
+		brokerName,
+		trigger.WithSubscriber(service.AsKReference(sink1), ""),
+		trigger.WithFilter(map[string]string{"type": eventType1, "source": eventSource1}),
+	))
+	f.Setup("trigger1 goes ready", trigger.IsReady(trigger1))
+
+	f.Setup("install trigger2", trigger.Install(
+		trigger2,
+		brokerName,
+		trigger.WithSubscriber(service.AsKReference(sink2), ""),
+		trigger.WithFilter(map[string]string{"type": eventType2, "source": eventSource2}),
+	))
+	f.Setup("trigger2 goes ready", trigger.IsReady(trigger2))
+
+	// Install the Source
+	f.Requirement("install source", eventshub.Install(
+		source,
+		eventshub.StartSenderToResource(broker.GVR(), brokerName),
+		eventshub.InputEvent(event),
+	))
+
+	f.Assert("receive long event on sink1 exactly once",
+		eventasssert.OnStore(sink1).
+			MatchEvent(test.HasData([]byte(eventBody))).
+			Exact(1),
+	)
+
+	f.Assert("receive long event on sink2 exactly once",
+		eventasssert.OnStore(sink2).
+			MatchEvent(test.HasData([]byte(transformedEventBody))).
+			Exact(1),
+	)
+
+	return f
+}
