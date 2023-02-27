@@ -131,3 +131,6 @@ func EventTransformationForTriggerTestHelper(
 		HasData([]byte(eventBody)),
 	))
 }
+
+// BrokerCreator creates a broker and returns its broker name.
+type BrokerCreator func(client *testlib.Client, version string) string
