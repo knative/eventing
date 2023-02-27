@@ -64,20 +64,20 @@ func BrokerWithManyTriggers() *feature.Feature {
 	nonMatchingExtensionValue := "nonmatchingextval"
 
 	eventFilters1 := make(map[string]eventTestCase)
-	eventFilters1["dumper-"+"1"] = neweventTestCase(any, any)
-	eventFilters1["dumper-"+"12"] = neweventTestCase(eventType1, any)
-	eventFilters1["dumper-"+"123"] = neweventTestCase(any, eventSource1)
-	eventFilters1["dumper-"+"1234"] = neweventTestCase(eventType1, eventSource1)
+	eventFilters1["dumper-1"] = neweventTestCase(any, any)
+	eventFilters1["dumper-12"] = neweventTestCase(eventType1, any)
+	eventFilters1["dumper-123"] = neweventTestCase(any, eventSource1)
+	eventFilters1["dumper-1234"] = neweventTestCase(eventType1, eventSource1)
 
 	eventFilters2 := make(map[string]eventTestCase)
-	eventFilters2["dumper-"+"12345"] = neweventTestCaseWithExtensions(any, any, map[string]interface{}{extensionName1: extensionValue1})
-	eventFilters2["dumper-"+"123456"] = neweventTestCaseWithExtensions(any, any, map[string]interface{}{extensionName1: extensionValue1, extensionName2: extensionValue2})
-	eventFilters2["dumper-"+"1234567"] = neweventTestCaseWithExtensions(any, any, map[string]interface{}{extensionName2: extensionValue2})
-	eventFilters2["dumper-"+"654321"] = neweventTestCaseWithExtensions(eventType1, any, map[string]interface{}{extensionName1: extensionValue1})
-	eventFilters2["dumper-"+"54321"] = neweventTestCaseWithExtensions(any, any, map[string]interface{}{extensionName1: any})
-	eventFilters2["dumper-"+"4321"] = neweventTestCaseWithExtensions(any, eventSource1, map[string]interface{}{extensionName1: extensionValue1})
-	eventFilters2["dumper-"+"321"] = neweventTestCaseWithExtensions(any, eventSource1, map[string]interface{}{extensionName1: extensionValue1, extensionName2: extensionValue2})
-	eventFilters2["dumper-"+"21"] = neweventTestCaseWithExtensions(any, eventSource2, map[string]interface{}{extensionName1: extensionValue1, extensionName2: extensionValue1})
+	eventFilters2["dumper-12345"] = neweventTestCaseWithExtensions(any, any, map[string]interface{}{extensionName1: extensionValue1})
+	eventFilters2["dumper-123456"] = neweventTestCaseWithExtensions(any, any, map[string]interface{}{extensionName1: extensionValue1, extensionName2: extensionValue2})
+	eventFilters2["dumper-1234567"] = neweventTestCaseWithExtensions(any, any, map[string]interface{}{extensionName2: extensionValue2})
+	eventFilters2["dumper-654321"] = neweventTestCaseWithExtensions(eventType1, any, map[string]interface{}{extensionName1: extensionValue1})
+	eventFilters2["dumper-54321"] = neweventTestCaseWithExtensions(any, any, map[string]interface{}{extensionName1: any})
+	eventFilters2["dumper-4321"] = neweventTestCaseWithExtensions(any, eventSource1, map[string]interface{}{extensionName1: extensionValue1})
+	eventFilters2["dumper-321"] = neweventTestCaseWithExtensions(any, eventSource1, map[string]interface{}{extensionName1: extensionValue1, extensionName2: extensionValue2})
+	eventFilters2["dumper-21"] = neweventTestCaseWithExtensions(any, eventSource2, map[string]interface{}{extensionName1: extensionValue1, extensionName2: extensionValue1})
 
 	tests := []struct {
 		name string
