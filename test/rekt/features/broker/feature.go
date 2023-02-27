@@ -318,7 +318,7 @@ func brokerSubscriberLongResponseMessage() *feature.Feature {
 	f.Setup("install trigger1", trigger.Install(
 		trigger1,
 		brokerName,
-		trigger.WithSubscriber(service.AsKReference(sink1), ""),
+		trigger.WithSubscriber(svc.AsKReference(sink1), ""),
 		trigger.WithFilter(map[string]string{"type": eventType1, "source": eventSource1}),
 	))
 	f.Setup("trigger1 goes ready", trigger.IsReady(trigger1))
@@ -326,7 +326,7 @@ func brokerSubscriberLongResponseMessage() *feature.Feature {
 	f.Setup("install trigger2", trigger.Install(
 		trigger2,
 		brokerName,
-		trigger.WithSubscriber(service.AsKReference(sink2), ""),
+		trigger.WithSubscriber(svc.AsKReference(sink2), ""),
 		trigger.WithFilter(map[string]string{"type": eventType2, "source": eventSource2}),
 	))
 	f.Setup("trigger2 goes ready", trigger.IsReady(trigger2))
