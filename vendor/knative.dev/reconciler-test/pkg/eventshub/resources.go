@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"knative.dev/pkg/logging"
+
 	"knative.dev/reconciler-test/pkg/environment"
 	eventshubrbac "knative.dev/reconciler-test/pkg/eventshub/rbac"
 	"knative.dev/reconciler-test/pkg/feature"
@@ -76,6 +77,10 @@ func Install(name string, options ...EventsHubOption) feature.StepFn {
 			"envs":          envs,
 			"image":         ImageFromContext(ctx),
 			"withReadiness": isReceiver,
+		}
+
+		if ic := environment.GetIstioConfig(ctx); ic.Enabled {
+			manifest.WithIstioPodAnnotations(cfg)
 		}
 
 		manifest.PodSecurityCfgFn(ctx, t)(cfg)
