@@ -40,7 +40,17 @@ func (mr *MagicEnvironment) CreateNamespaceIfNeeded() error {
 
 		// Namespace was not found, try to create it.
 
-		nsSpec := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: mr.namespace}}
+		nsSpec := &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        mr.namespace,
+				Annotations: map[string]string{},
+			},
+		}
+
+		if cfg := GetIstioConfig(mr.c); cfg.Enabled {
+			withIstioNamespaceLabel(nsSpec)
+		}
+
 		_, err = c.CoreV1().Namespaces().Create(context.Background(), nsSpec, metav1.CreateOptions{})
 
 		if err != nil {

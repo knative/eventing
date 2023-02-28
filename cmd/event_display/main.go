@@ -17,11 +17,16 @@ limitations under the License.
 package main
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
+	"strconv"
 
 	"github.com/cloudevents/sdk-go/observability/opencensus/v2/client"
 	cloudevents "github.com/cloudevents/sdk-go/v2"
@@ -65,8 +70,17 @@ func main() {
 }
 
 func run(ctx context.Context) {
+
+	requestLoggingEnabled, _ := strconv.ParseBool(os.Getenv("REQUEST_LOGGING_ENABLED"))
+	if requestLoggingEnabled {
+		log.Println("Request logging enabled, request logging is not recommended for production since it might log sensitive information")
+	}
+
 	c, err := client.NewClientHTTP(
-		[]cehttp.Option{cehttp.WithMiddleware(healthzMiddleware)}, nil,
+		[]cehttp.Option{
+			cehttp.WithMiddleware(healthzMiddleware),
+			cehttp.WithMiddleware(requestLoggingMiddleware(requestLoggingEnabled)),
+		}, nil,
 	)
 	if err != nil {
 		log.Fatal("Failed to create client: ", err)
@@ -98,4 +112,66 @@ func healthzMiddleware(next http.Handler) http.Handler {
 			next.ServeHTTP(w, req)
 		}
 	})
+}
+
+// requestLoggingMiddleware is a cehttp.Middleware which logs incoming requests.
+func requestLoggingMiddleware(enabled bool) func(next http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			if enabled {
+				logRequest(req)
+			}
+			next.ServeHTTP(w, req)
+		})
+	}
+}
+
+type LoggableRequest struct {
+	Method           string      `json:"method,omitempty"`
+	URL              *url.URL    `json:"URL,omitempty"`
+	Proto            string      `json:"proto,omitempty"`
+	ProtoMajor       int         `json:"protoMajor,omitempty"`
+	ProtoMinor       int         `json:"protoMinor,omitempty"`
+	Header           http.Header `json:"headers,omitempty"`
+	Body             string      `json:"body,omitempty"`
+	ContentLength    int64       `json:"contentLength,omitempty"`
+	TransferEncoding []string    `json:"transferEncoding,omitempty"`
+	Host             string      `json:"host,omitempty"`
+	Trailer          http.Header `json:"trailer,omitempty"`
+	RemoteAddr       string      `json:"remoteAddr"`
+	RequestURI       string      `json:"requestURI"`
+}
+
+func logRequest(req *http.Request) {
+	b, err := json.MarshalIndent(toReq(req), "", "  ")
+	if err != nil {
+		log.Println("failed to marshal request", err)
+	}
+
+	log.Println(string(b))
+}
+
+func toReq(req *http.Request) LoggableRequest {
+	body, err := io.ReadAll(req.Body)
+	if err != nil {
+		log.Println("failed to read request body")
+	}
+	_ = req.Body.Close()
+	// Replace the body with a new reader after reading from the original
+	req.Body = io.NopCloser(bytes.NewBuffer(body))
+	return LoggableRequest{
+		Method:           req.Method,
+		URL:              req.URL,
+		Proto:            req.Proto,
+		ProtoMajor:       req.ProtoMajor,
+		ProtoMinor:       req.ProtoMinor,
+		Header:           req.Header,
+		Body:             string(body),
+		ContentLength:    req.ContentLength,
+		TransferEncoding: req.TransferEncoding,
+		Host:             req.Host,
+		Trailer:          req.Trailer,
+		RemoteAddr:       req.RemoteAddr,
+		RequestURI:       req.RequestURI,
+	}
 }

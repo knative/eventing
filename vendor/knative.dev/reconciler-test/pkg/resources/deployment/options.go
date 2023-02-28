@@ -14,15 +14,19 @@
  * limitations under the License.
  */
 
-package service
+package deployment
 
 import (
 	corev1 "k8s.io/api/core/v1"
+
 	"knative.dev/reconciler-test/pkg/manifest"
 )
 
-var WithAnnotations = manifest.WithAnnotations
-var WithLabels = manifest.WithLabels
+var (
+	WithAnnotations    = manifest.WithAnnotations
+	WithLabels         = manifest.WithLabels
+	WithPodAnnotations = manifest.WithPodAnnotations
+)
 
 func WithSelectors(selectors map[string]string) manifest.CfgFn {
 	return func(cfg map[string]interface{}) {
@@ -32,22 +36,40 @@ func WithSelectors(selectors map[string]string) manifest.CfgFn {
 	}
 }
 
-func WithPorts(ports []corev1.ServicePort) manifest.CfgFn {
+func WithEnvs(envs map[string]string) manifest.CfgFn {
 	return func(cfg map[string]interface{}) {
-		if ports != nil {
-			cfg["ports"] = ports
+		if envs != nil {
+			cfg["envs"] = envs
 		}
 	}
 }
 
-func WithType(serviceType corev1.ServiceType) manifest.CfgFn {
+func WithCommand(cmd []string) manifest.CfgFn {
 	return func(cfg map[string]interface{}) {
-		cfg["type"] = serviceType
+		cfg["command"] = cmd
 	}
 }
 
-func WithExternalName(externalName string) manifest.CfgFn {
+func WithArgs(args []string) manifest.CfgFn {
 	return func(cfg map[string]interface{}) {
-		cfg["externalName"] = externalName
+		cfg["args"] = args
+	}
+}
+
+func WithImagePullPolicy(ipp corev1.PullPolicy) manifest.CfgFn {
+	return func(cfg map[string]interface{}) {
+		cfg["imagePullPolicy"] = ipp
+	}
+}
+
+func WithReplicas(replicas int) manifest.CfgFn {
+	return func(cfg map[string]interface{}) {
+		cfg["replicas"] = replicas
+	}
+}
+
+func WithPort(port int) manifest.CfgFn {
+	return func(cfg map[string]interface{}) {
+		cfg["port"] = port
 	}
 }

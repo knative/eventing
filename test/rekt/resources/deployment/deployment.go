@@ -18,47 +18,34 @@ package deployment
 
 import (
 	"context"
-	"embed"
 
-	duckv1 "knative.dev/pkg/apis/duck/v1"
-	"knative.dev/pkg/tracker"
+	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"
-	"knative.dev/reconciler-test/pkg/manifest"
+	"knative.dev/reconciler-test/pkg/resources/deployment"
 )
-
-//go:embed *.yaml
-var yaml embed.FS
 
 // Install will create a Deployment with defaults that can be overwritten by
 // the With* methods.
+// Deprecated, use knative.dev/reconciler-test/pkg/resources/deployment.Install
 func Install(name string) feature.StepFn {
-	cfg := map[string]interface{}{
-		"name":      name,
-		"selectors": map[string]string{"app": name},                               // default
-		"image":     "gcr.io/knative-nightly/knative.dev/eventing/cmd/heartbeats", // default
-		"port":      8080,                                                         // default
-	}
+	image := "ko://knative.dev/eventing/test/test_images/heartbeats"
 
 	return func(ctx context.Context, t feature.T) {
-		if _, err := manifest.InstallYamlFS(ctx, yaml, cfg); err != nil {
-			t.Fatal(err)
-		}
+		env := environment.FromContext(ctx)
+
+		deployment.Install(name, image,
+			deployment.WithSelectors(map[string]string{"app": name}),
+			deployment.WithEnvs(map[string]string{
+				"POD_NAME":      "heartbeats",
+				"POD_NAMESPACE": env.Namespace(),
+			}),
+			deployment.WithPort(8080))(ctx, t)
 	}
 }
 
 // AsRef returns a KRef for a Deployment without namespace.
-func AsRef(name string) *duckv1.KReference {
-	return &duckv1.KReference{
-		Kind:       "Deployment",
-		APIVersion: "apps/v1",
-		Name:       name,
-	}
-}
+// Deprecated, use knative.dev/reconciler-test/pkg/resources/deployment.AsRef
+var AsRef = deployment.AsRef
 
-func AsTrackerReference(name string) *tracker.Reference {
-	return &tracker.Reference{
-		Kind:       "Deployment",
-		APIVersion: "apps/v1",
-		Name:       name,
-	}
-}
+// Deprecated, use knative.dev/reconciler-test/pkg/resources/deployment.AsTrackerReference
+var AsTrackerReference = deployment.AsTrackerReference

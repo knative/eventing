@@ -135,7 +135,7 @@ func TestBrokerConformance(t *testing.T) {
 
 	// Install and wait for a Ready Broker.
 	env.Prerequisite(ctx, t, broker.GoesReady("default", b.WithEnvConfig()...))
-	env.TestSet(ctx, t, broker.ControlPlaneConformance("default"))
+	env.TestSet(ctx, t, broker.ControlPlaneConformance("default", b.WithEnvConfig()...))
 	env.TestSet(ctx, t, broker.DataPlaneConformance("default"))
 }
 
@@ -212,4 +212,19 @@ func TestBrokerDeliverLongMessage(t *testing.T) {
 	)
 
 	env.TestSet(ctx, t, broker.BrokerDeliverLongMessage())
+}
+
+func TestBrokerDeliverLongResponseMessage(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+		environment.WithPollTimings(5*time.Second, 4*time.Minute),
+	)
+
+	env.TestSet(ctx, t, broker.BrokerDeliverLongResponseMessage())
 }

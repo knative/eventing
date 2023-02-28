@@ -58,9 +58,6 @@ func (p *prober) Verify() (eventErrs []error, eventsSent int) {
 	if err := zipkin.SetupZipkinTracingFromConfigTracing(p.config.Ctx,
 		p.client.Kube, p.client.T.Logf, system.Namespace()); err != nil {
 		p.log.Warnf("Failed to setup Zipkin tracing. Traces for events won't be available.")
-	} else {
-		// Required for proper cleanup.
-		zipkin.ZipkinTracingEnabled = true
 	}
 	p.log.Info("Waiting for complete report from receiver...")
 	start := time.Now()

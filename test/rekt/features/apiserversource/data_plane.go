@@ -40,8 +40,8 @@ import (
 	"knative.dev/eventing/test/rekt/resources/eventtype"
 	"knative.dev/eventing/test/rekt/resources/namespace"
 	"knative.dev/eventing/test/rekt/resources/pingsource"
-	"knative.dev/eventing/test/rekt/resources/pod"
 	"knative.dev/eventing/test/rekt/resources/trigger"
+	"knative.dev/reconciler-test/pkg/resources/pod"
 )
 
 const (
@@ -244,9 +244,7 @@ func SendsEventsWithObjectReferencePayload() *feature.Feature {
 	// create a pod so that ApiServerSource delivers an event to its sink
 	// event body is similar to this:
 	// {"kind":"Pod","namespace":"test-wmbcixlv","name":"example-axvlzbvc","apiVersion":"v1"}
-	f.Requirement("install example pod",
-		pod.Install(examplePodName, pod.WithImage(exampleImage)),
-	)
+	f.Requirement("install example pod", pod.Install(examplePodName, exampleImage))
 
 	f.Stable("ApiServerSource as event source").
 		Must("delivers events",
@@ -289,9 +287,7 @@ func SendsEventsWithResourceEventPayload() *feature.Feature {
 	// create a pod so that ApiServerSource delivers an event to its sink
 	// event body is similar to this:
 	// {"kind":"Pod","namespace":"test-wmbcixlv","name":"example-axvlzbvc","apiVersion":"v1"}
-	f.Requirement("install example pod",
-		pod.Install(examplePodName, pod.WithImage(exampleImage)),
-	)
+	f.Requirement("install example pod", pod.Install(examplePodName, exampleImage))
 
 	f.Stable("ApiServerSource as event source").
 		Must("delivers events",
@@ -334,9 +330,7 @@ func SendsEventsForAllResources() *feature.Feature {
 	// create a pod so that ApiServerSource delivers an event to its sink
 	// event body is similar to this:
 	// {"kind":"Pod","namespace":"test-wmbcixlv","name":"example-axvlzbvc","apiVersion":"v1"}
-	f.Requirement("install example pod",
-		pod.Install(examplePodName, pod.WithImage(exampleImage)),
-	)
+	f.Requirement("install example pod", pod.Install(examplePodName, exampleImage))
 
 	f.Stable("ApiServerSource as event source").
 		Must("delivers events",
@@ -390,15 +384,12 @@ func SendsEventsForAllResourcesWithNamespaceSelector() *feature.Feature {
 	pod1 := feature.MakeRandomK8sName("example-pod-1")
 	pod2 := feature.MakeRandomK8sName("example-pod-2")
 	pod3 := feature.MakeRandomK8sName("example-pod-3")
-	f.Requirement("install example pod 1",
-		pod.Install(pod1, pod.WithImage(exampleImage), pod.WithNamespace(testNS1)),
-	)
-	f.Requirement("install example pod 2",
-		pod.Install(pod2, pod.WithImage(exampleImage), pod.WithNamespace(testNS2)),
-	)
-	f.Requirement("install example pod 3",
-		pod.Install(pod3, pod.WithImage(exampleImage), pod.WithNamespace(testNS3)),
-	)
+	f.Requirement("install example pod 1", pod.Install(pod1, exampleImage,
+		pod.WithNamespace(testNS1)))
+	f.Requirement("install example pod 2", pod.Install(pod2, exampleImage,
+		pod.WithNamespace(testNS2)))
+	f.Requirement("install example pod 3", pod.Install(pod3, exampleImage,
+		pod.WithNamespace(testNS3)))
 
 	f.Stable("ApiServerSource as event source").
 		Must("delivers events from matching namespace",
@@ -525,8 +516,7 @@ func SendsEventsForLabelMatchingResources() *feature.Feature {
 	// event body is similar to this:
 	// {"kind":"Pod","namespace":"test-wmbcixlv","name":"example-axvlzbvc","apiVersion":"v1"}
 	f.Requirement("install example pod",
-		pod.Install(examplePodName,
-			pod.WithImage(exampleImage),
+		pod.Install(examplePodName, exampleImage,
 			pod.WithLabels(map[string]string{"e2e": "testing"})),
 	)
 
@@ -620,8 +610,7 @@ func SendEventsForLabelExpressionMatchingResources() *feature.Feature {
 	// event body is similar to this:
 	// {"kind":"Pod","namespace":"test-wmbcixlv","name":"example-axvlzbvc","apiVersion":"v1"}
 	f.Requirement("install example pod",
-		pod.Install(examplePodName,
-			pod.WithImage(exampleImage),
+		pod.Install(examplePodName, exampleImage,
 			pod.WithLabels(map[string]string{"e2e": "testing"})),
 	)
 
@@ -710,8 +699,7 @@ func SendsEventsWithRetries() *feature.Feature {
 	// event body is similar to this:
 	// {"kind":"Pod","namespace":"test-wmbcixlv","name":"example-axvlzbvc","apiVersion":"v1"}
 	f.Assert("install example pod",
-		pod.Install(examplePodName,
-			pod.WithImage(exampleImage),
+		pod.Install(examplePodName, exampleImage,
 			pod.WithLabels(map[string]string{"e2e": "testing"})),
 	)
 

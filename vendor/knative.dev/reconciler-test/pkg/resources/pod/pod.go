@@ -14,13 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package flaker
+package pod
 
 import (
 	"context"
 	"embed"
 
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
@@ -29,36 +28,34 @@ import (
 //go:embed *.yaml
 var yaml embed.FS
 
-// Install
-func Install(name, sink string) feature.StepFn {
+func Install(name string, image string, opts ...manifest.CfgFn) feature.StepFn {
 	cfg := map[string]interface{}{
 		"name": name,
-		"sink": sink,
+	}
+
+	for _, fn := range opts {
+		fn(cfg)
 	}
 
 	return func(ctx context.Context, t feature.T) {
-		if err := registerImage(ctx); err != nil {
+		if err := registerImage(ctx, image); err != nil {
 			t.Fatal(err)
 		}
+
+		if ic := environment.GetIstioConfig(ctx); ic.Enabled {
+			manifest.WithIstioPodAnnotations(cfg)
+		}
+
 		manifest.PodSecurityCfgFn(ctx, t)(cfg)
+
 		if _, err := manifest.InstallYamlFS(ctx, yaml, cfg); err != nil {
 			t.Fatal(err)
 		}
 	}
 }
 
-// AsRef returns a KRef for a Service without namespace.
-func AsRef(name string) *duckv1.KReference {
-	return &duckv1.KReference{
-		Kind:       "Service",
-		APIVersion: "v1",
-		Name:       name,
-	}
-}
-
-func registerImage(ctx context.Context) error {
-	im := manifest.ImagesFromFS(ctx, yaml)
-	reg := environment.RegisterPackage(im...)
+func registerImage(ctx context.Context, image string) error {
+	reg := environment.RegisterPackage(image)
 	_, err := reg(ctx, environment.FromContext(ctx))
 	return err
 }
