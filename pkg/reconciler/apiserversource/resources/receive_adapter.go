@@ -103,6 +103,13 @@ func MakeReceiveAdapter(args *ReceiveAdapterArgs) (*appsv1.Deployment, error) {
 									},
 								},
 							},
+							SecurityContext: &corev1.SecurityContext{
+								AllowPrivilegeEscalation: ptr.Bool(false),
+								ReadOnlyRootFilesystem:   ptr.Bool(true),
+								RunAsNonRoot:             ptr.Bool(true),
+								Capabilities:             &corev1.Capabilities{Drop: []corev1.Capability{"ALL"}},
+								SeccompProfile:           &corev1.SeccompProfile{Type: corev1.SeccompProfileTypeRuntimeDefault},
+							},
 						},
 					},
 				},
