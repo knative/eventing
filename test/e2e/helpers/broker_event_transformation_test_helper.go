@@ -17,11 +17,13 @@ package helpers
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	. "github.com/cloudevents/sdk-go/v2/test"
 	"github.com/google/uuid"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
@@ -130,4 +132,29 @@ func EventTransformationForTriggerTestHelper(
 		HasType(eventType),
 		HasData([]byte(eventBody)),
 	))
+}
+
+// BrokerCreator creates a broker and returns its broker name.
+type BrokerCreator func(client *testlib.Client, version string) string
+
+// ChannelBasedBrokerCreator creates a BrokerCreator that creates a broker based on the channel parameter.
+func ChannelBasedBrokerCreator(channel metav1.TypeMeta, brokerClass string) BrokerCreator {
+	return func(client *testlib.Client, version string) string {
+		brokerName := strings.ToLower(channel.Kind)
+
+		// create a ConfigMap used by the broker.
+		config := client.CreateBrokerConfigMapOrFail("config-"+brokerName, &channel)
+
+		switch version {
+		case "v1":
+			client.CreateBrokerOrFail(brokerName,
+				resources.WithBrokerClassForBroker(brokerClass),
+				resources.WithConfigForBroker(config),
+			)
+		default:
+			panic("unknown version: " + version)
+		}
+
+		return brokerName
+	}
 }
