@@ -102,7 +102,7 @@ func TestMakeReceiveAdapters(t *testing.T) {
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						"sidecar.istio.io/inject": "false",
+						"sidecar.istio.io/inject": "true",
 					},
 					Labels: map[string]string{
 						"test-key1": "test-value1",
