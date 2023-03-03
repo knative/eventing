@@ -77,7 +77,7 @@ func MakeReceiveAdapter(args *ReceiveAdapterArgs) (*appsv1.Deployment, error) {
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						"sidecar.istio.io/inject": "false", // needs to talk to the api server.
+						"sidecar.istio.io/inject": "true",
 					},
 					Labels: args.Labels,
 				},
