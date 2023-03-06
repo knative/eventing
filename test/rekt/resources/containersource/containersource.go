@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
+
 	"knative.dev/eventing/test/rekt/resources/source"
 
 	"knative.dev/reconciler-test/pkg/environment"
@@ -52,6 +53,10 @@ func Install(name string, opts ...manifest.CfgFn) feature.StepFn {
 	}
 
 	return func(ctx context.Context, t feature.T) {
+		if ic := environment.GetIstioConfig(ctx); ic.Enabled {
+			manifest.WithIstioPodAnnotations(cfg)
+		}
+
 		if err := registerImage(ctx); err != nil {
 			t.Fatal(err)
 		}
