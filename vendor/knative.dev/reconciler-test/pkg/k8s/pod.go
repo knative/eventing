@@ -21,11 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"knative.dev/pkg/kmeta"
 	pkgsecurity "knative.dev/pkg/test/security"
 )
 
@@ -53,30 +49,6 @@ func GetOperationsResult(ctx context.Context, pod *corev1.Pod, result interface{
 		return fmt.Errorf("failed to unmarshal terminationmessage: %q : %q", terminationMessage, err)
 	}
 	return nil
-}
-
-// PodReference will return a reference to the pod.
-func PodReference(namespace string, name string) (corev1.ObjectReference, error) {
-	pod := &corev1.Pod{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name, Namespace: namespace,
-		},
-	}
-	scheme := runtime.NewScheme()
-	err := corev1.SchemeBuilder.AddToScheme(scheme)
-	if err != nil {
-		return corev1.ObjectReference{}, errors.WithStack(err)
-	}
-	kinds, _, err := scheme.ObjectKinds(pod)
-	if err != nil {
-		return corev1.ObjectReference{}, errors.WithStack(err)
-	}
-	if !(len(kinds) > 0) {
-		return corev1.ObjectReference{}, errors.New("want len(kinds) > 0")
-	}
-	kind := kinds[0]
-	pod.APIVersion, pod.Kind = kind.ToAPIVersionAndKind()
-	return kmeta.ObjectReference(pod), nil
 }
 
 func WithDefaultPodSecurityContext(cfg map[string]interface{}) {
