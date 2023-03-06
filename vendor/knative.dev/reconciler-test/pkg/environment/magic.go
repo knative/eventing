@@ -45,6 +45,7 @@ func NewGlobalEnvironment(ctx context.Context, initializers ...func()) GlobalEnv
 		c:                initializeImageStores(ctx),
 		instanceID:       uuid.New().String(),
 		initializers:     initializers,
+		teardownOnFail:   *teardownOnFail,
 	}
 }
 
@@ -59,6 +60,7 @@ type MagicGlobalEnvironment struct {
 	instanceID       string
 	initializers     []func()
 	initializersOnce sync.Once
+	teardownOnFail   bool
 }
 
 type MagicEnvironment struct {
@@ -81,11 +83,28 @@ type MagicEnvironment struct {
 	// imagePullSecretNamespace/imagePullSecretName: An optional secret to add to service account of new namespaces
 	imagePullSecretName      string
 	imagePullSecretNamespace string
+
+	teardownOnFail bool
 }
+
+var (
+	_ Environment = &MagicEnvironment{}
+)
 
 const (
 	NamespaceDeleteErrorReason = "NamespaceDeleteError"
 )
+
+type parallelKey struct{}
+
+func withParallel(ctx context.Context) context.Context {
+	return context.WithValue(ctx, parallelKey{}, true)
+}
+
+func isParallel(ctx context.Context) bool {
+	v := ctx.Value(parallelKey{})
+	return v != nil && v.(bool)
+}
 
 func (mr *MagicEnvironment) Reference(ref ...corev1.ObjectReference) {
 	mr.refsMu.Lock()
@@ -113,7 +132,7 @@ func (mr *MagicEnvironment) Finish() {
 	if mr.milestones != nil {
 		mr.milestones.Finished(result)
 	}
-	if err := mr.DeleteNamespaceIfNeeded(); err != nil {
+	if err := mr.DeleteNamespaceIfNeeded(result); err != nil {
 		if mr.milestones != nil {
 			mr.milestones.Exception(NamespaceDeleteErrorReason,
 				"failed to delete namespace %q, %v", mr.namespace, err)
@@ -162,10 +181,11 @@ func (mr *MagicGlobalEnvironment) Environment(opts ...EnvOpts) (context.Context,
 	namespace := feature.MakeK8sNamePrefix(feature.AppendRandomString("test"))
 
 	env := &MagicEnvironment{
-		c:            mr.c,
-		l:            mr.RequirementLevel,
-		s:            mr.FeatureState,
-		featureMatch: mr.FeatureMatch,
+		c:              mr.c,
+		l:              mr.RequirementLevel,
+		s:              mr.FeatureState,
+		featureMatch:   mr.FeatureMatch,
+		teardownOnFail: mr.teardownOnFail,
 
 		namespace:                namespace,
 		imagePullSecretName:      "kn-test-image-pull-secret",
@@ -287,6 +307,21 @@ func (mr *MagicEnvironment) Prerequisite(ctx context.Context, t *testing.T, f *f
 // Test will create a new store.KVStore and set it on the feature and then
 // apply it to the Context.
 func (mr *MagicEnvironment) Test(ctx context.Context, originalT *testing.T, f *feature.Feature) {
+	mr.test(ctx, originalT, f)
+}
+
+// ParallelTest implements Environment.ParallelTest.
+// It is similar to Test with the addition of running the feature in parallel
+func (mr *MagicEnvironment) ParallelTest(ctx context.Context, originalT *testing.T, f *feature.Feature) {
+	mr.test(withParallel(ctx), originalT, f)
+}
+
+// Test implements Environment.Test.
+// In the MagicEnvironment implementation, the Store that is inside of the
+// Feature will be assigned to the context. If no Store is set on Feature,
+// Test will create a new store.KVStore and set it on the feature and then
+// apply it to the Context.
+func (mr *MagicEnvironment) test(ctx context.Context, originalT *testing.T, f *feature.Feature) {
 	originalT.Helper() // Helper marks the calling function as a test helper function.
 
 	log := logging.FromContext(ctx)
@@ -319,17 +354,24 @@ func (mr *MagicEnvironment) Test(ctx context.Context, originalT *testing.T, f *f
 
 	originalT.Run(f.Name, func(t *testing.T) {
 
+		if isParallel(ctx) {
+			t.Parallel()
+		}
+
 		for _, timing := range feature.Timings() {
 			steps := feature.Steps(stepsByTiming[timing])
 
 			// Special case for teardown timing
 			if timing == feature.Teardown {
-				// Prepend logging steps to the teardown phase when a previous timing failed.
 				if skip {
-					steps = append(mr.loggingSteps(), steps...)
+					if mr.teardownOnFail {
+						// Prepend logging steps to the teardown phase when a previous timing failed.
+						steps = append(mr.loggingSteps(), steps...)
+					} else {
+						// When not doing teardown only execute logging steps.
+						steps = mr.loggingSteps()
+					}
 				}
-
-				// Teardown steps are executed always, no matter their level and state
 				skip = false
 			}
 
@@ -375,6 +417,15 @@ func (mr *MagicEnvironment) shouldFail(s *feature.Step) bool {
 
 // TestSet implements Environment.TestSet
 func (mr *MagicEnvironment) TestSet(ctx context.Context, t *testing.T, fs *feature.FeatureSet) {
+	mr.testSet(ctx, t, fs)
+}
+
+// ParallelTestSet implements Environment.ParallelTestSet
+func (mr *MagicEnvironment) ParallelTestSet(ctx context.Context, t *testing.T, fs *feature.FeatureSet) {
+	mr.testSet(withParallel(ctx), t, fs)
+}
+
+func (mr *MagicEnvironment) testSet(ctx context.Context, t *testing.T, fs *feature.FeatureSet) {
 	t.Helper() // Helper marks the calling function as a test helper function
 
 	mr.milestones.TestSetStarted(fs.Name, t)

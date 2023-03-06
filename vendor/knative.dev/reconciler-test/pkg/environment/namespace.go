@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
+	"knative.dev/reconciler-test/pkg/milestone"
 )
 
 // CreateNamespaceIfNeeded creates a new namespace if it does not exist.
@@ -108,24 +109,26 @@ func (mr *MagicEnvironment) CreateNamespaceIfNeeded() error {
 	return nil
 }
 
-func (mr *MagicEnvironment) DeleteNamespaceIfNeeded() error {
-	if mr.namespaceCreated {
-		c := kubeclient.Get(mr.c)
-
-		_, err := c.CoreV1().Namespaces().Get(context.Background(), mr.namespace, metav1.GetOptions{})
-		if apierrors.IsNotFound(err) {
-			mr.namespaceCreated = false
-			return nil
-		} else if err != nil {
-			return err
-		}
-
-		if err := c.CoreV1().Namespaces().Delete(context.Background(), mr.namespace, metav1.DeleteOptions{}); err != nil {
-			return err
-		}
-		mr.namespaceCreated = false
-		mr.milestones.NamespaceDeleted(mr.namespace)
+func (mr *MagicEnvironment) DeleteNamespaceIfNeeded(result milestone.Result) error {
+	if (result.Failed() && !mr.teardownOnFail) || !mr.namespaceCreated {
+		return nil
 	}
+
+	c := kubeclient.Get(mr.c)
+
+	_, err := c.CoreV1().Namespaces().Get(context.Background(), mr.namespace, metav1.GetOptions{})
+	if apierrors.IsNotFound(err) {
+		mr.namespaceCreated = false
+		return nil
+	} else if err != nil {
+		return err
+	}
+
+	if err := c.CoreV1().Namespaces().Delete(context.Background(), mr.namespace, metav1.DeleteOptions{}); err != nil {
+		return err
+	}
+	mr.namespaceCreated = false
+	mr.milestones.NamespaceDeleted(mr.namespace)
 
 	return nil
 }

@@ -386,8 +386,14 @@ func WaitForServiceReady(ctx context.Context, t feature.T, name string, readines
 	return nil
 }
 
-// WaitForPodRunningOrFail waits for the given pod to be in running state.
-func WaitForPodRunningOrFail(ctx context.Context, t feature.T, podName string) {
+var (
+	// WaitForPodRunningOrFail waits for pods to be ready.
+	// Deprecated, use WaitForPodReadyOrSucceededOrFail
+	WaitForPodRunningOrFail = WaitForPodReadyOrSucceededOrFail
+)
+
+// WaitForPodReadyOrSucceededOrFail waits for the given pod to be in running state.
+func WaitForPodReadyOrSucceededOrFail(ctx context.Context, t feature.T, podName string) {
 	ns := environment.FromContext(ctx).Namespace()
 	podClient := kubeclient.Get(ctx).CoreV1().Pods(ns)
 	p := podClient
@@ -402,13 +408,11 @@ func WaitForPodRunningOrFail(ctx context.Context, t feature.T, podName string) {
 			}
 			return true, err
 		}
-		isRunning := podRunning(p)
-
-		if !isRunning {
+		isReady := podReadyOrSucceeded(p)
+		if !isReady {
 			t.Logf("Pod %s/%s is not running...", ns, podName)
 		}
-
-		return isRunning, nil
+		return isReady, nil
 	})
 	if err != nil {
 		sb := strings.Builder{}
@@ -491,7 +495,24 @@ func countEndpointsNum(e *corev1.Endpoints) int {
 	return num
 }
 
-// podRunning will check the status conditions of the pod and return true if it's Running.
-func podRunning(pod *corev1.Pod) bool {
-	return pod.Status.Phase == corev1.PodRunning || pod.Status.Phase == corev1.PodSucceeded
+// podReadyOrSucceeded will check the status conditions of the pod and return true if it's Running.
+func podReadyOrSucceeded(pod *corev1.Pod) bool {
+	// Some pods might terminate before we actually check for them to be running, this is fine
+	// for rekt tests pods.
+	if pod.Status.Phase == corev1.PodSucceeded {
+		return true
+	}
+	// Pods that are not in running phase are not ready
+	if pod.Status.Phase != corev1.PodRunning {
+		return false
+	}
+
+	// Pods in running phase is not enough to check for pod readiness, so check
+	// the ready condition.
+	for _, c := range pod.Status.Conditions {
+		if c.Type == corev1.PodReady && c.Status == corev1.ConditionTrue {
+			return true
+		}
+	}
+	return false
 }
