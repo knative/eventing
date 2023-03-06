@@ -45,8 +45,16 @@ type Environment interface {
 	// Test will execute the feature test using the given Context and T.
 	Test(ctx context.Context, t *testing.T, f *feature.Feature)
 
+	// ParallelTest will execute the feature test using the given Context and T in parallel with
+	// other parallel features.
+	ParallelTest(ctx context.Context, t *testing.T, f *feature.Feature)
+
 	// TestSet will execute the feature set using the given Context and T.
 	TestSet(ctx context.Context, t *testing.T, fs *feature.FeatureSet)
+
+	// ParallelTestSet will execute the feature set using the given Context and T with each feature
+	// running in parallel with other parallel features.
+	ParallelTestSet(ctx context.Context, t *testing.T, f *feature.FeatureSet)
 
 	// Namespace returns the namespace of this environment.
 	Namespace() string

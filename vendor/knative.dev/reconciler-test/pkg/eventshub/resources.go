@@ -90,12 +90,7 @@ func Install(name string, options ...EventsHubOption) feature.StepFn {
 			log.Fatal(err)
 		}
 
-		podref, err := k8s.PodReference(namespace, name)
-		if err != nil {
-			log.Fatal(err)
-		}
-		k8s.WaitForPodRunningOrFail(ctx, t, name)
-		k8s.WaitForReadyOrDoneOrFail(ctx, t, podref)
+		k8s.WaitForPodReadyOrSucceededOrFail(ctx, t, name)
 
 		// If the eventhubs starts an event receiver, we need to wait for the service endpoint to be synced
 		if isReceiver {
