@@ -26,8 +26,23 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
+
 	"knative.dev/reconciler-test/pkg/milestone"
 )
+
+type namespaceKey struct{}
+
+func withNamespace(ctx context.Context, namespace string) context.Context {
+	return context.WithValue(ctx, namespaceKey{}, namespace)
+}
+
+func getNamespace(ctx context.Context) string {
+	ns := ctx.Value(namespaceKey{})
+	if ns == nil {
+		return ""
+	}
+	return ns.(string)
+}
 
 // CreateNamespaceIfNeeded creates a new namespace if it does not exist.
 func (mr *MagicEnvironment) CreateNamespaceIfNeeded() error {
