@@ -94,15 +94,27 @@ func NewFeatureNamed(name string) *Feature {
 // NewFeature creates a new feature with name taken from the caller name
 func NewFeature() *Feature {
 	f := new(Feature)
+	f.Name = nameFromCaller( /* skip */ 1)
+	return f
+}
 
-	pc, _, _, _ := runtime.Caller(1)
+type Option func(f *Feature) error
+
+func WithName(name string) Option {
+	return func(f *Feature) error {
+		f.Name = name
+		return nil
+	}
+}
+
+func nameFromCaller(skip int) string {
+	pc, _, _, _ := runtime.Caller(skip + 1)
 	caller := runtime.FuncForPC(pc)
 	if caller != nil {
 		splitted := strings.Split(caller.Name(), ".")
-		f.Name = splitted[len(splitted)-1]
+		return splitted[len(splitted)-1]
 	}
-
-	return f
+	return ""
 }
 
 // FeatureSet is a list of features and feature set name.
@@ -113,6 +125,24 @@ type FeatureSet struct {
 
 // StepFn is the function signature for steps.
 type StepFn func(ctx context.Context, t T)
+
+// AsFeature transforms a step function into a feature running the step function at the Setup phase.
+func (sf StepFn) AsFeature(options ...Option) *Feature {
+	// Default feature configs.
+	options = append(options, WithName(nameFromCaller(1)))
+
+	f := NewFeature()
+
+	for _, opt := range options {
+		if err := opt(f); err != nil {
+			panic(err)
+		}
+	}
+
+	f.Setup("StepFn", sf)
+
+	return f
+}
 
 // Step is a structure to hold the step function, step name and state, level and
 // timing configuration.
