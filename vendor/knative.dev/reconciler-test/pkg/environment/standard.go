@@ -70,6 +70,10 @@ func NewStandardGlobalEnvironment(opts ...ConfigurationOption) GlobalEnvironment
 		ctx = withImageProducer(ctx, file.ImageProducer(*ipFilePath))
 	}
 
+	if testNamespace != nil && *testNamespace != "" {
+		ctx = withNamespace(ctx, *testNamespace)
+	}
+
 	// EnableInjectionOrDie will enable client injection, this is used by the
 	// testing framework for namespace management, and could be leveraged by
 	// features to pull Kubernetes clients or the test environment out of the

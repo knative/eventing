@@ -30,6 +30,8 @@ var (
 	l = new(feature.Levels)
 	f = new(string)
 
+	testNamespace = new(string)
+
 	ipFilePath     = new(string)
 	teardownOnFail = new(bool)
 )
@@ -59,6 +61,7 @@ func InitFlags(fs *flag.FlagSet) {
 	fs.StringVar(f, "feature", "", "run only Features matching `regexp`")
 
 	fs.StringVar(ipFilePath, "images.producer.file", "", "file path for file-based image producer")
+	fs.StringVar(testNamespace, "environment.namespace", "", "Test namespace")
 
 	fs.BoolVar(teardownOnFail, "teardown.on.fail", false, "Set this flag to do teardown even if test fails.")
 }
