@@ -178,7 +178,7 @@ func WithEmitter(emitter milestone.Emitter) EnvOpts {
 }
 
 func (mr *MagicGlobalEnvironment) Environment(opts ...EnvOpts) (context.Context, Environment) {
-	namespace := feature.MakeK8sNamePrefix(feature.AppendRandomString("test"))
+	opts = append([]EnvOpts{inNamespace()}, opts...)
 
 	env := &MagicEnvironment{
 		c:              mr.c,
@@ -187,7 +187,6 @@ func (mr *MagicGlobalEnvironment) Environment(opts ...EnvOpts) (context.Context,
 		featureMatch:   mr.FeatureMatch,
 		teardownOnFail: mr.teardownOnFail,
 
-		namespace:                namespace,
 		imagePullSecretName:      "kn-test-image-pull-secret",
 		imagePullSecretNamespace: "default",
 	}
@@ -212,12 +211,12 @@ func (mr *MagicGlobalEnvironment) Environment(opts ...EnvOpts) (context.Context,
 		}
 	})
 
-	eventEmitter, err := milestone.NewMilestoneEmitterFromEnv(mr.instanceID, namespace)
+	eventEmitter, err := milestone.NewMilestoneEmitterFromEnv(mr.instanceID, env.namespace)
 	if err != nil {
 		// This is just an FYI error, don't block the test run.
 		logging.FromContext(ctx).Error("failed to create the milestone event sender", zap.Error(err))
 	}
-	logEmitter := milestone.NewLogEmitter(ctx, namespace)
+	logEmitter := milestone.NewLogEmitter(ctx, env.namespace)
 
 	if env.milestones == nil {
 		env.milestones = milestone.Compose(eventEmitter, logEmitter)
@@ -238,6 +237,16 @@ func (mr *MagicGlobalEnvironment) Environment(opts ...EnvOpts) (context.Context,
 	})
 
 	return ctx, env
+}
+
+func inNamespace() EnvOpts {
+	return func(ctx context.Context, env Environment) (context.Context, error) {
+		ns := getNamespace(ctx)
+		if ns == "" {
+			ns = feature.MakeK8sNamePrefix(feature.AppendRandomString("test"))
+		}
+		return InNamespace(ns)(ctx, env)
+	}
 }
 
 func (mr *MagicEnvironment) TemplateConfig(base map[string]interface{}) map[string]interface{} {
