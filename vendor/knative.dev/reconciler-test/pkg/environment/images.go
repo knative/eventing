@@ -18,6 +18,7 @@ package environment
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -95,6 +96,11 @@ func ProduceImages(ctx context.Context) (map[string]string, error) {
 			continue
 		}
 		image, err := ip(ctx, pack)
+		if errors.Is(err, ko.ErrKoPublishFailed) {
+			logging.FromContext(ctx).Warnw("Ko publish failed, using image directly", "error", err, "image", pack)
+			image = pack
+			err = nil
+		}
 		if err != nil {
 			return nil, err
 		}
