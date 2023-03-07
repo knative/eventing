@@ -100,7 +100,9 @@ func ControlPlaneBroker(brokerName string, brokerOpts ...manifest.CfgFn) *featur
 		Should("The class of a Broker object SHOULD be immutable.",
 			brokerClassIsImmutable).
 		Should("Set the Broker status.deadLetterSinkURI if there is a valid spec.delivery.deadLetterSink defined",
-			BrokerStatusDLSURISet)
+			BrokerStatusDLSURISet).
+		Should("Broker config SHOULD be immutable.",
+			brokerConfigIsImmutable)
 	return f
 }
 
@@ -624,6 +626,23 @@ func brokerClassIsImmutable(ctx context.Context, t feature.T) {
 		t.Log("broker class is immutable")
 	} else {
 		t.Errorf("broker class is mutable")
+	}
+}
+
+func brokerConfigIsImmutable(ctx context.Context, t feature.T) {
+	broker := getBroker(ctx, t)
+
+	broker.Spec = eventingv1.BrokerSpec{
+		Config: &duckv1.KReference{
+			Kind:       "kind",
+			Namespace:  "namespace",
+			Name:       "name",
+			APIVersion: "apiversion",
+		},
+	}
+
+	if _, err := Client(ctx).Brokers.Update(ctx, broker, metav1.UpdateOptions{}); err == nil {
+		t.Errorf("broker.spec.config is mutable")
 	}
 }
 
