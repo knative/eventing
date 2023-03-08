@@ -43,7 +43,7 @@ spec:
     metadata:
       annotations:
         {{ range $key, $value := .podannotations }}
-        {{ $key }}: {{ $value }}
+        {{ $key }}: "{{ $value }}"
         {{ end }}
     {{ end }}
     spec:
