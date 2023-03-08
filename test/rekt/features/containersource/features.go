@@ -21,6 +21,7 @@ import (
 
 	"github.com/cloudevents/sdk-go/v2/test"
 	"k8s.io/apimachinery/pkg/util/uuid"
+	"knative.dev/reconciler-test/pkg/manifest"
 
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/eventshub/assert"
@@ -78,6 +79,9 @@ func SendsEventsWithCloudEventOverrides() *feature.Feature {
 	f.Requirement("install containersource", containersource.Install(source,
 		pingsource.WithSink(service.AsKReference(sink), ""),
 		containersource.WithExtensions(extensions),
+		manifest.WithPodAnnotations(map[string]interface{}{
+			"foo": true,
+		}),
 	))
 	f.Requirement("containersource goes ready", containersource.IsReady(source))
 
