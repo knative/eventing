@@ -18,18 +18,21 @@ package sinkbinding
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/cloudevents/sdk-go/v2/test"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
+	"knative.dev/pkg/tracker"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	eventasssert "knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
+	"knative.dev/reconciler-test/pkg/resources/cronjob"
 	"knative.dev/reconciler-test/pkg/resources/deployment"
 	"knative.dev/reconciler-test/pkg/resources/service"
 
-	"knative.dev/eventing/test/rekt/resources/job"
 	"knative.dev/eventing/test/rekt/resources/sinkbinding"
 )
 
@@ -73,7 +76,7 @@ func SinkBindingV1Deployment(ctx context.Context) *feature.Feature {
 	return f
 }
 
-func SinkBindingV1Job() *feature.Feature {
+func SinkBindingV1Job(ctx context.Context) *feature.Feature {
 	sbinding := feature.MakeRandomK8sName("sinkbinding")
 	sink := feature.MakeRandomK8sName("sink")
 	subject := feature.MakeRandomK8sName("subject")
@@ -82,7 +85,14 @@ func SinkBindingV1Job() *feature.Feature {
 	f := feature.NewFeatureNamed("SinkBinding goes ready")
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
-	f.Setup("install a Job", job.Install(subject))
+	f.Setup("install a Job", cronjob.Install(subject, heartbeatsImage,
+		cronjob.WitEnvs(map[string]string{
+			"POD_NAME":      "heartbeats",
+			"POD_NAMESPACE": environment.FromContext(ctx).Namespace(),
+			"K_SINK":        fmt.Sprintf("%s://%s.%s.svc", "http", sink, environment.FromContext(ctx).Namespace()),
+			"ONE_SHOT":      "true",
+		}),
+	))
 
 	extensions := map[string]string{
 		"sinkbinding": extensionSecret,
@@ -92,7 +102,11 @@ func SinkBindingV1Job() *feature.Feature {
 		sinkbinding.WithExtensions(extensions),
 	}
 
-	f.Setup("install SinkBinding", sinkbinding.Install(sbinding, service.AsDestinationRef(sink), job.AsTrackerReference(subject), cfg...))
+	f.Setup("install SinkBinding", sinkbinding.Install(sbinding,
+		service.AsDestinationRef(sink),
+		AsTrackerReference(subject),
+		cfg...,
+	))
 	f.Setup("SinkBinding goes ready", sinkbinding.IsReady(sbinding))
 
 	f.Stable("Create a job as sinkbinding's subject").
@@ -102,4 +116,17 @@ func SinkBindingV1Job() *feature.Feature {
 			).AtLeast(1))
 
 	return f
+}
+
+// AsTrackerReference returns a tracker.Reference for a Job without namespace.
+func AsTrackerReference(name string) *tracker.Reference {
+	return &tracker.Reference{
+		Kind:       "Job",
+		APIVersion: "batch/v1",
+		Selector: &metav1.LabelSelector{
+			MatchLabels: map[string]string{
+				"app": name,
+			},
+		},
+	}
 }

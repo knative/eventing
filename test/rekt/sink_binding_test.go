@@ -22,11 +22,12 @@ package rekt
 import (
 	"testing"
 
-	"knative.dev/eventing/test/rekt/features/sinkbinding"
 	"knative.dev/pkg/system"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/knative"
+
+	"knative.dev/eventing/test/rekt/features/sinkbinding"
 )
 
 func TestSinkBindingV1Deployment(t *testing.T) {
@@ -56,5 +57,5 @@ func TestSinkBindingV1Job(t *testing.T) {
 	)
 	t.Cleanup(env.Finish)
 
-	env.Test(ctx, t, sinkbinding.SinkBindingV1Job())
+	env.Test(ctx, t, sinkbinding.SinkBindingV1Job(ctx))
 }
