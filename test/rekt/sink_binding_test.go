@@ -42,7 +42,7 @@ func TestSinkBindingV1Deployment(t *testing.T) {
 	)
 	t.Cleanup(env.Finish)
 
-	env.Test(ctx, t, sinkbinding.SinkBindingV1Deployment(ctx))
+	env.ParallelTest(ctx, t, sinkbinding.SinkBindingV1Deployment(ctx))
 }
 
 func TestSinkBindingV1Job(t *testing.T) {
@@ -57,5 +57,5 @@ func TestSinkBindingV1Job(t *testing.T) {
 	)
 	t.Cleanup(env.Finish)
 
-	env.Test(ctx, t, sinkbinding.SinkBindingV1Job(ctx))
+	env.ParallelTest(ctx, t, sinkbinding.SinkBindingV1Job(ctx))
 }

@@ -22,11 +22,12 @@ package rekt
 import (
 	"testing"
 
-	"knative.dev/eventing/test/rekt/features/containersource"
 	"knative.dev/pkg/system"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/knative"
+
+	"knative.dev/eventing/test/rekt/features/containersource"
 )
 
 func TestContainerSourceWithSinkRef(t *testing.T) {
@@ -41,7 +42,7 @@ func TestContainerSourceWithSinkRef(t *testing.T) {
 	)
 	t.Cleanup(env.Finish)
 
-	env.Test(ctx, t, containersource.SendsEventsWithSinkRef())
+	env.ParallelTest(ctx, t, containersource.SendsEventsWithSinkRef())
 }
 
 func TestContainerSourceWithSinkURI(t *testing.T) {
@@ -55,7 +56,7 @@ func TestContainerSourceWithSinkURI(t *testing.T) {
 		environment.Managed(t),
 	)
 
-	env.Test(ctx, t, containersource.SendsEventsWithSinkURI())
+	env.ParallelTest(ctx, t, containersource.SendsEventsWithSinkURI())
 }
 
 func TestContainerSourceWithCloudEventOverrides(t *testing.T) {
@@ -69,7 +70,7 @@ func TestContainerSourceWithCloudEventOverrides(t *testing.T) {
 		environment.Managed(t),
 	)
 
-	env.Test(ctx, t, containersource.SendsEventsWithCloudEventOverrides())
+	env.ParallelTest(ctx, t, containersource.SendsEventsWithCloudEventOverrides())
 }
 
 func TestContainerSourceWithArgs(t *testing.T) {
@@ -83,5 +84,5 @@ func TestContainerSourceWithArgs(t *testing.T) {
 		environment.Managed(t),
 	)
 
-	env.Test(ctx, t, containersource.SendsEventsWithArgs())
+	env.ParallelTest(ctx, t, containersource.SendsEventsWithArgs())
 }

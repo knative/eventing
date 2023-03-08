@@ -86,6 +86,8 @@ func TestBrokerAsMiddleware(t *testing.T) {
 
 // TestBrokerDLQ
 func TestBrokerWithDLQ(t *testing.T) {
+	t.Parallel()
+
 	ctx, env := global.Environment(
 		knative.WithKnativeNamespace(system.Namespace()),
 		knative.WithLoggingConfig,
@@ -124,6 +126,8 @@ func TestBrokerWithFlakyDLQ(t *testing.T) {
 
 // TestBrokerConformance
 func TestBrokerConformance(t *testing.T) {
+	t.Parallel()
+
 	ctx, env := global.Environment(
 		knative.WithKnativeNamespace(system.Namespace()),
 		knative.WithLoggingConfig,
@@ -135,11 +139,13 @@ func TestBrokerConformance(t *testing.T) {
 
 	// Install and wait for a Ready Broker.
 	env.Prerequisite(ctx, t, broker.GoesReady("default", b.WithEnvConfig()...))
-	env.TestSet(ctx, t, broker.ControlPlaneConformance("default", b.WithEnvConfig()...))
-	env.TestSet(ctx, t, broker.DataPlaneConformance("default"))
+	env.ParallelTestSet(ctx, t, broker.ControlPlaneConformance("default", b.WithEnvConfig()...))
+	env.ParallelTestSet(ctx, t, broker.DataPlaneConformance("default"))
 }
 
 func TestBrokerDefaultDelivery(t *testing.T) {
+	t.Parallel()
+
 	ctx, env := global.Environment(
 		knative.WithKnativeNamespace(system.Namespace()),
 		knative.WithLoggingConfig,
@@ -149,7 +155,7 @@ func TestBrokerDefaultDelivery(t *testing.T) {
 		environment.WithPollTimings(5*time.Second, 4*time.Minute),
 	)
 
-	env.Test(ctx, t, broker.DefaultDeliverySpec())
+	env.ParallelTest(ctx, t, broker.DefaultDeliverySpec())
 }
 
 // TestBrokerPreferHeaderCheck test if the test message without explicit prefer header
@@ -164,7 +170,7 @@ func TestBrokerPreferHeaderCheck(t *testing.T) {
 		environment.WithPollTimings(5*time.Second, 4*time.Minute),
 	)
 
-	env.Test(ctx, t, broker.BrokerPreferHeaderCheck())
+	env.ParallelTest(ctx, t, broker.BrokerPreferHeaderCheck())
 }
 
 // TestBrokerRedelivery test Broker reply with a bad status code respectively
@@ -181,7 +187,7 @@ func TestBrokerRedelivery(t *testing.T) {
 		environment.WithPollTimings(5*time.Second, 4*time.Minute),
 	)
 
-	env.TestSet(ctx, t, broker.BrokerRedelivery())
+	env.ParallelTestSet(ctx, t, broker.BrokerRedelivery())
 }
 
 func TestBrokerDeadLetterSinkExtensions(t *testing.T) {
@@ -196,7 +202,7 @@ func TestBrokerDeadLetterSinkExtensions(t *testing.T) {
 		environment.WithPollTimings(5*time.Second, 4*time.Minute),
 	)
 
-	env.TestSet(ctx, t, broker.BrokerDeadLetterSinkExtensions())
+	env.ParallelTestSet(ctx, t, broker.BrokerDeadLetterSinkExtensions())
 }
 
 func TestBrokerDeliverLongMessage(t *testing.T) {
@@ -211,7 +217,7 @@ func TestBrokerDeliverLongMessage(t *testing.T) {
 		environment.WithPollTimings(5*time.Second, 4*time.Minute),
 	)
 
-	env.TestSet(ctx, t, broker.BrokerDeliverLongMessage())
+	env.ParallelTestSet(ctx, t, broker.BrokerDeliverLongMessage())
 }
 
 func TestBrokerDeliverLongResponseMessage(t *testing.T) {
@@ -226,5 +232,5 @@ func TestBrokerDeliverLongResponseMessage(t *testing.T) {
 		environment.WithPollTimings(5*time.Second, 4*time.Minute),
 	)
 
-	env.TestSet(ctx, t, broker.BrokerDeliverLongResponseMessage())
+	env.ParallelTestSet(ctx, t, broker.BrokerDeliverLongResponseMessage())
 }

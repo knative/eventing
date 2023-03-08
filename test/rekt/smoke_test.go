@@ -24,6 +24,11 @@ import (
 	"testing"
 
 	"k8s.io/utils/pointer"
+	_ "knative.dev/pkg/system/testing"
+	"knative.dev/reconciler-test/pkg/feature"
+	"knative.dev/reconciler-test/pkg/manifest"
+	"knative.dev/reconciler-test/pkg/resources/service"
+
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/test/rekt/features/apiserversource"
 	"knative.dev/eventing/test/rekt/features/broker"
@@ -40,10 +45,6 @@ import (
 	ps "knative.dev/eventing/test/rekt/resources/pingsource"
 	sresources "knative.dev/eventing/test/rekt/resources/sequence"
 	sb "knative.dev/eventing/test/rekt/resources/sinkbinding"
-	_ "knative.dev/pkg/system/testing"
-	"knative.dev/reconciler-test/pkg/feature"
-	"knative.dev/reconciler-test/pkg/manifest"
-	"knative.dev/reconciler-test/pkg/resources/service"
 )
 
 // TestSmoke_Broker
@@ -62,7 +63,7 @@ func TestSmoke_Broker(t *testing.T) {
 	}
 
 	for _, name := range names {
-		env.Test(ctx, t, broker.GoesReady(name, b.WithEnvConfig()...))
+		env.ParallelTest(ctx, t, broker.GoesReady(name, b.WithEnvConfig()...))
 	}
 }
 
@@ -85,7 +86,7 @@ func TestSmoke_Trigger(t *testing.T) {
 	env.Prerequisite(ctx, t, broker.GoesReady(brokerName, b.WithEnvConfig()...))
 
 	for _, name := range names {
-		env.Test(ctx, t, broker.TriggerGoesReady(name, brokerName))
+		env.ParallelTest(ctx, t, broker.TriggerGoesReady(name, brokerName))
 	}
 }
 
@@ -117,7 +118,7 @@ func TestSmoke_PingSource(t *testing.T) {
 			if len(n) >= 64 {
 				n = n[:63] // 63 is the max length.
 			}
-			env.Test(ctx, t, pingsource.PingSourceGoesReady(n, cfg...))
+			env.ParallelTest(ctx, t, pingsource.PingSourceGoesReady(n, cfg...))
 		}
 	}
 }
@@ -137,7 +138,7 @@ func TestSmoke_ContainerSource(t *testing.T) {
 	}
 
 	for _, name := range names {
-		env.Test(ctx, t, containersource.GoesReady(name))
+		env.ParallelTest(ctx, t, containersource.GoesReady(name))
 	}
 }
 
@@ -176,7 +177,7 @@ func TestSmoke_Parallel(t *testing.T) {
 	}
 
 	for _, name := range names {
-		env.Test(ctx, t, parallel.GoesReady(name))
+		env.ParallelTest(ctx, t, parallel.GoesReady(name))
 	}
 }
 
@@ -200,7 +201,7 @@ func TestSmoke_ParallelDelivery(t *testing.T) {
 			Spec:     map[string]interface{}{},
 		}
 		SpecDelivery(template.Spec)
-		env.Test(ctx, t, parallel.GoesReady(name, presources.WithChannelTemplate(template)))
+		env.ParallelTest(ctx, t, parallel.GoesReady(name, presources.WithChannelTemplate(template)))
 	}
 }
 
@@ -219,7 +220,7 @@ func TestSmoke_Parallel_with_no_filter(t *testing.T) {
 	}
 
 	for _, name := range names {
-		env.Test(ctx, t, parallel.GoesReadyWithoutFilters(name))
+		env.ParallelTest(ctx, t, parallel.GoesReadyWithoutFilters(name))
 	}
 }
 
@@ -242,7 +243,7 @@ func TestSmoke_Sequence(t *testing.T) {
 			TypeMeta: channel_impl.TypeMeta(),
 			Spec:     map[string]interface{}{},
 		}
-		env.Test(ctx, t, sequence.GoesReady(name, sresources.WithChannelTemplate(template)))
+		env.ParallelTest(ctx, t, sequence.GoesReady(name, sresources.WithChannelTemplate(template)))
 	}
 }
 
@@ -266,7 +267,7 @@ func TestSmoke_SequenceDelivery(t *testing.T) {
 			Spec:     map[string]interface{}{},
 		}
 		SpecDelivery(template.Spec)
-		env.Test(ctx, t, sequence.GoesReady(name, sresources.WithChannelTemplate(template)))
+		env.ParallelTest(ctx, t, sequence.GoesReady(name, sresources.WithChannelTemplate(template)))
 	}
 }
 
@@ -301,6 +302,6 @@ func TestSmoke_SinkBinding(t *testing.T) {
 
 		f.Setup("install a sinkbinding", sb.Install(name, service.AsDestinationRef(sink), deployment.AsTrackerReference(subject)))
 
-		env.Test(ctx, t, f)
+		env.ParallelTest(ctx, t, f)
 	}
 }

@@ -27,10 +27,11 @@ import (
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/knative"
 
-	apiserversourcefeatures "knative.dev/eventing/test/rekt/features/apiserversource"
 	_ "knative.dev/pkg/system/testing"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"
+
+	apiserversourcefeatures "knative.dev/eventing/test/rekt/features/apiserversource"
 )
 
 // TestApiServerSourceValidationWebhookConfigurationOnCreate tests if the webhook
@@ -76,7 +77,7 @@ func TestApiServerSourceDataPlane_SinkTypes(t *testing.T) {
 		environment.WithPollTimings(5*time.Second, 2*time.Minute),
 	)
 
-	env.TestSet(ctx, t, apiserversourcefeatures.DataPlane_SinkTypes())
+	env.ParallelTestSet(ctx, t, apiserversourcefeatures.DataPlane_SinkTypes())
 }
 
 func TestApiServerSourceDataPlane_EventModes(t *testing.T) {
@@ -90,7 +91,7 @@ func TestApiServerSourceDataPlane_EventModes(t *testing.T) {
 		environment.Managed(t),
 	)
 
-	env.TestSet(ctx, t, apiserversourcefeatures.DataPlane_EventModes())
+	env.ParallelTestSet(ctx, t, apiserversourcefeatures.DataPlane_EventModes())
 }
 
 func TestApiServerSourceDataPlane_ResourceMatching(t *testing.T) {
@@ -104,7 +105,7 @@ func TestApiServerSourceDataPlane_ResourceMatching(t *testing.T) {
 		environment.Managed(t),
 	)
 
-	env.TestSet(ctx, t, apiserversourcefeatures.DataPlane_ResourceMatching())
+	env.ParallelTestSet(ctx, t, apiserversourcefeatures.DataPlane_ResourceMatching())
 }
 
 func TestApiServerSourceDataPlane_EventsRetries(t *testing.T) {
@@ -118,7 +119,7 @@ func TestApiServerSourceDataPlane_EventsRetries(t *testing.T) {
 		environment.Managed(t),
 	)
 
-	env.Test(ctx, t, apiserversourcefeatures.SendsEventsWithRetries())
+	env.ParallelTest(ctx, t, apiserversourcefeatures.SendsEventsWithRetries())
 }
 
 func TestApiServerSourceDataPlane_MultipleNamespaces(t *testing.T) {
@@ -132,7 +133,7 @@ func TestApiServerSourceDataPlane_MultipleNamespaces(t *testing.T) {
 		environment.Managed(t),
 	)
 
-	env.Test(ctx, t, apiserversourcefeatures.SendsEventsForAllResourcesWithNamespaceSelector())
+	env.ParallelTest(ctx, t, apiserversourcefeatures.SendsEventsForAllResourcesWithNamespaceSelector())
 }
 
 func TestApiServerSourceDataPlane_MultipleNamespacesEmptySelector(t *testing.T) {
@@ -146,5 +147,5 @@ func TestApiServerSourceDataPlane_MultipleNamespacesEmptySelector(t *testing.T) 
 		environment.Managed(t),
 	)
 
-	env.Test(ctx, t, apiserversourcefeatures.SendsEventsForAllResourcesWithEmptyNamespaceSelector())
+	env.ParallelTest(ctx, t, apiserversourcefeatures.SendsEventsForAllResourcesWithEmptyNamespaceSelector())
 }

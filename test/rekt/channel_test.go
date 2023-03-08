@@ -39,6 +39,8 @@ import (
 
 // TestChannelConformance
 func TestChannelConformance(t *testing.T) {
+	t.Parallel()
+
 	ctx, env := global.Environment(
 		knative.WithKnativeNamespace(system.Namespace()),
 		knative.WithLoggingConfig,
@@ -52,8 +54,8 @@ func TestChannelConformance(t *testing.T) {
 	// Install and wait for a Ready Channel.
 	env.Prerequisite(ctx, t, channel.ImplGoesReady(channelName))
 
-	env.TestSet(ctx, t, channel.ControlPlaneConformance(channelName))
-	env.TestSet(ctx, t, channel.DataPlaneConformance(channelName))
+	env.ParallelTestSet(ctx, t, channel.ControlPlaneConformance(channelName))
+	env.ParallelTestSet(ctx, t, channel.DataPlaneConformance(channelName))
 }
 
 // TestSmoke_Channel
@@ -71,7 +73,7 @@ func TestSmoke_Channel(t *testing.T) {
 	}
 
 	for _, name := range names {
-		env.Test(ctx, t, channel.GoesReady(name))
+		env.ParallelTest(ctx, t, channel.GoesReady(name))
 	}
 }
 
@@ -90,7 +92,7 @@ func TestSmoke_ChannelImpl(t *testing.T) {
 	}
 
 	for _, name := range names {
-		env.Test(ctx, t, channel.ImplGoesReady(name))
+		env.ParallelTest(ctx, t, channel.ImplGoesReady(name))
 	}
 
 }
@@ -116,7 +118,7 @@ func TestSmoke_ChannelWithSubscription(t *testing.T) {
 	}
 
 	for _, name := range names {
-		env.Test(ctx, t, channel.SubscriptionGoesReady(name,
+		env.ParallelTest(ctx, t, channel.SubscriptionGoesReady(name,
 			subscription.WithChannel(chRef),
 			subscription.WithSubscriber(nil, "http://example.com")),
 		)
@@ -144,7 +146,7 @@ func TestSmoke_ChannelImplWithSubscription(t *testing.T) {
 	}
 
 	for _, name := range names {
-		env.Test(ctx, t, channel.SubscriptionGoesReady(name,
+		env.ParallelTest(ctx, t, channel.SubscriptionGoesReady(name,
 			subscription.WithChannel(chRef),
 			subscription.WithSubscriber(nil, "http://example.com")),
 		)
@@ -170,7 +172,7 @@ func TestChannelChain(t *testing.T) {
 	createSubscriberFn := func(ref *duckv1.KReference, uri string) manifest.CfgFn {
 		return subscription.WithSubscriber(ref, uri)
 	}
-	env.Test(ctx, t, channel.ChannelChain(10, createSubscriberFn))
+	env.ParallelTest(ctx, t, channel.ChannelChain(10, createSubscriberFn))
 }
 
 /*
@@ -193,7 +195,7 @@ func TestChannelDeadLetterSink(t *testing.T) {
 	createSubscriberFn := func(ref *duckv1.KReference, uri string) manifest.CfgFn {
 		return subscription.WithSubscriber(ref, uri)
 	}
-	env.Test(ctx, t, channel.DeadLetterSink(createSubscriberFn))
+	env.ParallelTest(ctx, t, channel.DeadLetterSink(createSubscriberFn))
 }
 
 // TestGenericChannelDeadLetterSink tests if the events that cannot be delivered end up in
@@ -212,8 +214,8 @@ func TestGenericChannelDeadLetterSink(t *testing.T) {
 	createSubscriberFn := func(ref *duckv1.KReference, uri string) manifest.CfgFn {
 		return subscription.WithSubscriber(ref, uri)
 	}
-	env.Test(ctx, t, channel.DeadLetterSinkGenericChannel(createSubscriberFn))
-	env.Test(ctx, t, channel.AsDeadLetterSink(createSubscriberFn))
+	env.ParallelTest(ctx, t, channel.DeadLetterSinkGenericChannel(createSubscriberFn))
+	env.ParallelTest(ctx, t, channel.AsDeadLetterSink(createSubscriberFn))
 }
 
 /*
@@ -240,7 +242,7 @@ func TestEventTransformationForSubscriptionV1(t *testing.T) {
 		environment.Managed(t),
 	)
 
-	env.Test(ctx, t, channel.EventTransformation())
+	env.ParallelTest(ctx, t, channel.EventTransformation())
 }
 
 /*
@@ -259,7 +261,7 @@ func TestBinaryEventForChannel(t *testing.T) {
 		environment.Managed(t),
 	)
 
-	env.Test(ctx, t, channel.SingleEventWithEncoding(binding.EncodingBinary))
+	env.ParallelTest(ctx, t, channel.SingleEventWithEncoding(binding.EncodingBinary))
 }
 
 /*
@@ -278,7 +280,7 @@ func TestStructuredEventForChannel(t *testing.T) {
 		environment.Managed(t),
 	)
 
-	env.Test(ctx, t, channel.SingleEventWithEncoding(binding.EncodingStructured))
+	env.ParallelTest(ctx, t, channel.SingleEventWithEncoding(binding.EncodingStructured))
 }
 
 // TestChannelPreferHeaderCheck test if the test message without explicit prefer header
@@ -298,7 +300,7 @@ func TestChannelPreferHeaderCheck(t *testing.T) {
 		return subscription.WithSubscriber(ref, uri)
 	}
 
-	env.Test(ctx, t, channel.ChannelPreferHeaderCheck(createSubscriberFn))
+	env.ParallelTest(ctx, t, channel.ChannelPreferHeaderCheck(createSubscriberFn))
 }
 
 func TestChannelDeadLetterSinkExtensions(t *testing.T) {
@@ -316,5 +318,5 @@ func TestChannelDeadLetterSinkExtensions(t *testing.T) {
 		return subscription.WithSubscriber(ref, uri)
 	}
 
-	env.TestSet(ctx, t, channel.ChannelDeadLetterSinkExtensions(createSubscriberFn))
+	env.ParallelTestSet(ctx, t, channel.ChannelDeadLetterSinkExtensions(createSubscriberFn))
 }

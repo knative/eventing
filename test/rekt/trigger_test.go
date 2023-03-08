@@ -42,6 +42,8 @@ func TestTriggerDefaulting(t *testing.T) {
 }
 
 func TestTriggerWithDLS(t *testing.T) {
+	t.Parallel()
+
 	ctx, env := global.Environment(
 		knative.WithKnativeNamespace(system.Namespace()),
 		knative.WithLoggingConfig,
@@ -50,11 +52,13 @@ func TestTriggerWithDLS(t *testing.T) {
 		environment.Managed(t),
 	)
 
-	env.Test(ctx, t, trigger.SourceToTriggerSinkWithDLS())
-	env.Test(ctx, t, trigger.SourceToTriggerSinkWithDLSDontUseBrokers())
+	env.ParallelTest(ctx, t, trigger.SourceToTriggerSinkWithDLS())
+	env.ParallelTest(ctx, t, trigger.SourceToTriggerSinkWithDLSDontUseBrokers())
 }
 
 func TestMultiTriggerTopology(t *testing.T) {
+	t.Parallel()
+
 	ctx, env := global.Environment(
 		knative.WithKnativeNamespace(system.Namespace()),
 		knative.WithLoggingConfig,
@@ -64,10 +68,12 @@ func TestMultiTriggerTopology(t *testing.T) {
 	)
 
 	// Test that a bad Trigger doesn't affect sending messages to a valid one
-	env.Test(ctx, t, trigger.BadTriggerDoesNotAffectOkTrigger())
+	env.ParallelTest(ctx, t, trigger.BadTriggerDoesNotAffectOkTrigger())
 }
 
 func TestTriggerDependencyAnnotation(t *testing.T) {
+	t.Parallel()
+
 	ctx, env := global.Environment(
 		knative.WithKnativeNamespace(system.Namespace()),
 		knative.WithLoggingConfig,
@@ -77,5 +83,5 @@ func TestTriggerDependencyAnnotation(t *testing.T) {
 	)
 
 	// Test that a bad Trigger doesn't affect sending messages to a valid one
-	env.Test(ctx, t, trigger.TriggerDependencyAnnotation())
+	env.ParallelTest(ctx, t, trigger.TriggerDependencyAnnotation())
 }

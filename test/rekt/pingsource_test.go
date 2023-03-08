@@ -23,11 +23,12 @@ import (
 	"testing"
 	"time"
 
-	"knative.dev/eventing/test/rekt/features/pingsource"
 	"knative.dev/pkg/system"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/knative"
+
+	"knative.dev/eventing/test/rekt/features/pingsource"
 )
 
 func TestPingSourceWithSinkRef(t *testing.T) {
@@ -42,7 +43,7 @@ func TestPingSourceWithSinkRef(t *testing.T) {
 	)
 	t.Cleanup(env.Finish)
 
-	env.Test(ctx, t, pingsource.SendsEventsWithSinkRef())
+	env.ParallelTest(ctx, t, pingsource.SendsEventsWithSinkRef())
 }
 
 func TestPingSourceWithSinkURI(t *testing.T) {
@@ -56,7 +57,7 @@ func TestPingSourceWithSinkURI(t *testing.T) {
 		environment.Managed(t),
 	)
 
-	env.Test(ctx, t, pingsource.SendsEventsWithSinkURI())
+	env.ParallelTest(ctx, t, pingsource.SendsEventsWithSinkURI())
 }
 
 func TestPingSourceWithCloudEventData(t *testing.T) {
@@ -70,7 +71,7 @@ func TestPingSourceWithCloudEventData(t *testing.T) {
 		environment.Managed(t),
 	)
 
-	env.Test(ctx, t, pingsource.SendsEventsWithCloudEventData())
+	env.ParallelTest(ctx, t, pingsource.SendsEventsWithCloudEventData())
 }
 
 func TestPingSourceWithEventTypes(t *testing.T) {
@@ -85,5 +86,5 @@ func TestPingSourceWithEventTypes(t *testing.T) {
 		environment.WithPollTimings(5*time.Second, 2*time.Minute),
 	)
 
-	env.Test(ctx, t, pingsource.SendsEventsWithEventTypes())
+	env.ParallelTest(ctx, t, pingsource.SendsEventsWithEventTypes())
 }

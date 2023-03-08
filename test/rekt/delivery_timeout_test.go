@@ -49,6 +49,8 @@ func TestDeliveryTimeout(t *testing.T) {
 }
 
 func TestBrokerTriggerWithDeliveryTimeout(t *testing.T) {
+	t.Parallel()
+
 	ctx, env := global.Environment(
 		knative.WithKnativeNamespace(system.Namespace()),
 		knative.WithLoggingConfig,

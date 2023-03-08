@@ -22,11 +22,12 @@ package rekt
 import (
 	"testing"
 
-	"knative.dev/eventing/test/rekt/features/parallel"
 	"knative.dev/pkg/system"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/knative"
+
+	"knative.dev/eventing/test/rekt/features/parallel"
 )
 
 func TestParallel(t *testing.T) {
@@ -41,5 +42,5 @@ func TestParallel(t *testing.T) {
 	)
 	t.Cleanup(env.Finish)
 
-	env.Test(ctx, t, parallel.ParallelWithTwoBranches())
+	env.ParallelTest(ctx, t, parallel.ParallelWithTwoBranches())
 }
