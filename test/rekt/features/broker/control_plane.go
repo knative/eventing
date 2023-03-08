@@ -100,7 +100,7 @@ func ControlPlaneBroker(brokerName string, brokerOpts ...manifest.CfgFn) *featur
 			brokerClassIsImmutable).
 		Should("Set the Broker status.deadLetterSinkURI if there is a valid spec.delivery.deadLetterSink defined",
 			BrokerStatusDLSURISet).
-		Should("Broker config SHOULD be immutable.",
+		Must("Broker config MUST be immutable.",
 			brokerConfigIsImmutable)
 	return f
 }
@@ -581,6 +581,19 @@ func getBroker(ctx context.Context, t feature.T) *eventingv1.Broker {
 	return broker
 }
 
+func copyBroker(ctx context.Context, srcBroker *eventingv1.Broker, toName string) (*eventingv1.Broker, error) {
+	broker := &eventingv1.Broker{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        toName,
+			Labels:      srcBroker.Labels,
+			Annotations: srcBroker.Annotations,
+		},
+		Spec: srcBroker.Spec,
+	}
+
+	return Client(ctx).Brokers.Create(ctx, broker, metav1.CreateOptions{})
+}
+
 func readyBrokerHasIngressAvailable(ctx context.Context, t feature.T) {
 	// TODO: I am not sure how to test this from the outside.
 }
@@ -631,7 +644,13 @@ func brokerClassIsImmutable(ctx context.Context, t feature.T) {
 func brokerConfigIsImmutable(ctx context.Context, t feature.T) {
 	broker := getBroker(ctx, t)
 
-	broker.Spec = eventingv1.BrokerSpec{
+	brokerCopyName := feature.MakeRandomK8sName("broker-copy")
+	brokerCopy, err := copyBroker(ctx, broker, brokerCopyName)
+	if err != nil {
+		t.Errorf("could not create broker copy to test immutability: %v", err)
+	}
+
+	brokerCopy.Spec = eventingv1.BrokerSpec{
 		Config: &duckv1.KReference{
 			Kind:       "kind",
 			Namespace:  "namespace",
@@ -640,7 +659,7 @@ func brokerConfigIsImmutable(ctx context.Context, t feature.T) {
 		},
 	}
 
-	if _, err := Client(ctx).Brokers.Update(ctx, broker, metav1.UpdateOptions{}); err == nil {
+	if _, err := Client(ctx).Brokers.Update(ctx, brokerCopy, metav1.UpdateOptions{}); err == nil {
 		t.Errorf("broker.spec.config is mutable")
 	}
 }
