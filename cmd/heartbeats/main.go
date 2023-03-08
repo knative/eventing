@@ -19,11 +19,14 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"strconv"
+	"syscall"
 	"time"
 
 	"go.uber.org/zap"
@@ -33,7 +36,7 @@ import (
 
 	"github.com/cloudevents/sdk-go/observability/opencensus/v2/client"
 	cloudevents "github.com/cloudevents/sdk-go/v2"
-	"github.com/cloudevents/sdk-go/v2/protocol/http"
+	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"github.com/kelseyhightower/envconfig"
 )
 
@@ -81,6 +84,8 @@ type envConfig struct {
 func main() {
 	flag.Parse()
 
+	defer maybeQuitIstioProxy()
+
 	var env envConfig
 	if err := envconfig.Process("", &env); err != nil {
 		log.Printf("[ERROR] Failed to process env var: %s", err)
@@ -111,7 +116,7 @@ func main() {
 		log.Fatalf("Failed to initialize tracing: %v", err)
 	}
 	defer tracer.Shutdown(context.Background())
-	c, err := client.NewClientHTTP([]http.Option{cloudevents.WithTarget(sink)}, nil)
+	c, err := client.NewClientHTTP([]cehttp.Option{cloudevents.WithTarget(sink)}, nil)
 	if err != nil {
 		log.Fatalf("failed to create client: %s", err.Error())
 	}
@@ -172,5 +177,13 @@ func main() {
 
 		// Wait for next tick
 		<-ticker.C
+	}
+}
+
+// maybeQuitIstioProxy shuts down Istio's proxy when available.
+func maybeQuitIstioProxy() {
+	_, err := http.DefaultClient.Get("http://localhost:15020/quitquitquit")
+	if err != nil && !errors.Is(err, syscall.ECONNREFUSED) {
+		log.Println("[Ignore this warning if Istio proxy is not used on this pod]", err)
 	}
 }
