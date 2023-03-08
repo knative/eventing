@@ -588,7 +588,7 @@ func copyBroker(ctx context.Context, srcBroker *eventingv1.Broker, toName string
 			Labels:      srcBroker.Labels,
 			Annotations: srcBroker.Annotations,
 		},
-		Spec: srcBroker.Spec,
+		Spec: *srcBroker.Spec.DeepCopy(),
 	}
 
 	return Client(ctx).Brokers.Create(ctx, broker, metav1.CreateOptions{})
