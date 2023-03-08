@@ -96,7 +96,7 @@ func ControlPlaneBroker(brokerName string, brokerOpts ...manifest.CfgFn) *featur
 			readyBrokerHasIngressAvailable).
 		Should("While a Broker is Ready, it SHOULD be a valid Addressable and its `status.address.url` field SHOULD indicate the address of its ingress.",
 			readyBrokerIsAddressable).
-		Should("The class of a Broker object SHOULD be immutable.",
+		Must("The class of a Broker object MUST be immutable.",
 			brokerClassIsImmutable).
 		Should("Set the Broker status.deadLetterSinkURI if there is a valid spec.delivery.deadLetterSink defined",
 			BrokerStatusDLSURISet).
