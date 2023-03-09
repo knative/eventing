@@ -17,7 +17,6 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: knative-eventing-namespaced-admin
   labels:
-    eventing.knative.dev/release: devel
     rbac.authorization.k8s.io/aggregate-to-admin: "true"
     app.kubernetes.io/version: devel
     app.kubernetes.io/name: knative-eventing
@@ -31,7 +30,6 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: knative-messaging-namespaced-admin
   labels:
-    eventing.knative.dev/release: devel
     rbac.authorization.k8s.io/aggregate-to-admin: "true"
     app.kubernetes.io/version: devel
     app.kubernetes.io/name: knative-eventing
@@ -45,7 +43,6 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: knative-flows-namespaced-admin
   labels:
-    eventing.knative.dev/release: devel
     rbac.authorization.k8s.io/aggregate-to-admin: "true"
     app.kubernetes.io/version: devel
     app.kubernetes.io/name: knative-eventing
@@ -59,7 +56,6 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: knative-sources-namespaced-admin
   labels:
-    eventing.knative.dev/release: devel
     rbac.authorization.k8s.io/aggregate-to-admin: "true"
     app.kubernetes.io/version: devel
     app.kubernetes.io/name: knative-eventing
@@ -73,7 +69,6 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: knative-bindings-namespaced-admin
   labels:
-    eventing.knative.dev/release: devel
     rbac.authorization.k8s.io/aggregate-to-admin: "true"
     app.kubernetes.io/version: devel
     app.kubernetes.io/name: knative-eventing
@@ -87,8 +82,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: knative-eventing-namespaced-edit
   labels:
-    rbac.authorization.k8s.io/aggregate-to-edit: "true"
-    eventing.knative.dev/release: devel
+    rbac.authorization.k8s.io/aggregate-to-view: "true"
     app.kubernetes.io/version: devel
     app.kubernetes.io/name: knative-eventing
 rules:
@@ -102,7 +96,6 @@ metadata:
   name: knative-eventing-namespaced-view
   labels:
     rbac.authorization.k8s.io/aggregate-to-view: "true"
-    eventing.knative.dev/release: devel
     app.kubernetes.io/version: devel
     app.kubernetes.io/name: knative-eventing
 rules:

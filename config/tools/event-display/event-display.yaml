@@ -18,7 +18,6 @@ kind: Service
 metadata:
   name: event-display
   labels:
-    eventing.knative.dev/release: devel
 spec:
   template:
     spec:
