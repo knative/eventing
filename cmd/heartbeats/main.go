@@ -17,7 +17,6 @@ limitations under the License.
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -31,6 +30,7 @@ import (
 
 	"go.uber.org/zap"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/signals"
 	"knative.dev/pkg/tracing"
 	"knative.dev/pkg/tracing/config"
 
@@ -84,6 +84,9 @@ type envConfig struct {
 func main() {
 	flag.Parse()
 
+	ctx := signals.NewContext()
+	ctx = cloudevents.ContextWithRetriesExponentialBackoff(ctx, 20*time.Millisecond, 10)
+
 	defer maybeQuitIstioProxy()
 
 	var env envConfig
@@ -115,7 +118,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to initialize tracing: %v", err)
 	}
-	defer tracer.Shutdown(context.Background())
+	defer tracer.Shutdown(ctx)
 	c, err := client.NewClientHTTP([]cehttp.Option{cloudevents.WithTarget(sink)}, nil)
 	if err != nil {
 		log.Fatalf("failed to create client: %s", err.Error())
@@ -167,7 +170,7 @@ func main() {
 		}
 
 		log.Printf("sending cloudevent to %s", sink)
-		if res := c.Send(context.Background(), event); !cloudevents.IsACK(res) {
+		if res := c.Send(ctx, event); !cloudevents.IsACK(res) {
 			log.Printf("failed to send cloudevent: %v", res)
 		}
 
