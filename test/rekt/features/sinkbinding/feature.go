@@ -18,7 +18,6 @@ package sinkbinding
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/cloudevents/sdk-go/v2/test"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -89,7 +88,6 @@ func SinkBindingV1Job(ctx context.Context) *feature.Feature {
 		cronjob.WitEnvs(map[string]string{
 			"POD_NAME":      "heartbeats",
 			"POD_NAMESPACE": environment.FromContext(ctx).Namespace(),
-			"K_SINK":        fmt.Sprintf("%s://%s.%s.svc", "http", sink, environment.FromContext(ctx).Namespace()),
 			"ONE_SHOT":      "true",
 		}),
 	))
