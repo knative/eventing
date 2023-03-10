@@ -39,7 +39,7 @@ The `mt-broker-controller` is kind of the heart of the MTChannelBasedBroker cont
 
 As we are using `InMemoryChannel` as the backing channel for the broker throughout this document, the channel specific controllers will be related to that implementation.
 
-These controllers (`imc-controller` in our diagram) watch for channel resources created by the `mt-broker-controller` in step 3 (e.g. `InMemoryChannel`) and updates the address in the status pointing to the real endpoint of the channel (a service backed by the `imc-dispatcher` and not via the `mt-broker-ingress`).
+These controllers (`imc-controller` in our diagram) watch for channel resources created by the `mt-broker-controller` in step 3 (e.g. `InMemoryChannel`) and update the address in the status pointing to the real endpoint of the channel (a service backed by the `imc-dispatcher` and not via the `mt-broker-ingress`).
 
 ## Data Plane Components
 
