@@ -36,7 +36,7 @@ import (
 )
 
 const (
-	heartbeatsImage = "ko://knative.dev/eventing/test/test_images/heartbeats"
+	heartbeatsImage = "ko://knative.dev/eventing/cmd/heartbeats"
 )
 
 func SinkBindingV1Deployment(ctx context.Context) *feature.Feature {

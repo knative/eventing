@@ -28,7 +28,7 @@ import (
 // the With* methods.
 // Deprecated, use knative.dev/reconciler-test/pkg/resources/deployment.Install
 func Install(name string) feature.StepFn {
-	image := "ko://knative.dev/eventing/test/test_images/heartbeats"
+	image := "ko://knative.dev/eventing/cmd/heartbeats"
 
 	return func(ctx context.Context, t feature.T) {
 		env := environment.FromContext(ctx)
