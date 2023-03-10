@@ -43,6 +43,7 @@ import (
 type Heartbeat struct {
 	Sequence int    `json:"id"`
 	Label    string `json:"label"`
+	Msg      string `json:"msg,omitempty"`
 }
 
 var (
@@ -51,6 +52,7 @@ var (
 	sink        string
 	label       string
 	periodStr   string
+	msg         string
 )
 
 func init() {
@@ -59,6 +61,7 @@ func init() {
 	flag.StringVar(&sink, "sink", "", "the host url to heartbeat to")
 	flag.StringVar(&label, "label", "", "a special label")
 	flag.StringVar(&periodStr, "period", "5s", "the duration between heartbeats. Supported formats: Go (https://pkg.go.dev/time#ParseDuration), integers (interpreted as seconds)")
+	flag.StringVar(&msg, "msg", "", "message content in data.msg")
 }
 
 type envConfig struct {
@@ -147,6 +150,7 @@ func main() {
 	hb := &Heartbeat{
 		Sequence: 0,
 		Label:    label,
+		Msg:      msg,
 	}
 	ticker := time.NewTicker(period)
 	for {
@@ -166,7 +170,7 @@ func main() {
 		}
 
 		if err := event.SetData(cloudevents.ApplicationJSON, hb); err != nil {
-			log.Printf("failed to set cloudevents data: %s", err.Error())
+			log.Printf("failed to set cloudevents msg: %s", err.Error())
 		}
 
 		log.Printf("sending cloudevent to %s", sink)
