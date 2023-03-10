@@ -23,7 +23,7 @@ kubectl create configmap -n perf-eventing config-mako --from-file=test/performan
    kubectl edit configmap -n perf-eventing config-mako
    ```
 
-[`NewConfigFromMap`](https://github.com/knative/pkg/blob/main/test/mako/config.go#L41)
+[`NewConfigFromMap`](https://github.com/knative/pkg/blob/main/test/mako/config/configmap.go#L53)
 determines the valid keys in this ConfigMap. Current keys are:
 
 - `environment`: Select a Mako config file in the ConfigMap. E.g.
