@@ -49,7 +49,7 @@ spec:
     spec:
       containers:
       - name: heartbeats
-        image: ko://knative.dev/eventing/test/test_images/heartbeats
+        image: ko://knative.dev/eventing/cmd/heartbeats
         imagePullPolicy: IfNotPresent
         args:
         - {{ .args }}

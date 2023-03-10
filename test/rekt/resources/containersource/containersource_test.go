@@ -54,7 +54,7 @@ func Example_min() {
 	//     spec:
 	//       containers:
 	//       - name: heartbeats
-	//         image: ko://knative.dev/eventing/test/test_images/heartbeats
+	//         image: ko://knative.dev/eventing/cmd/heartbeats
 	//         imagePullPolicy: IfNotPresent
 	//         args:
 	//         - --period=1
@@ -116,7 +116,7 @@ func Example_full() {
 	//     spec:
 	//       containers:
 	//       - name: heartbeats
-	//         image: ko://knative.dev/eventing/test/test_images/heartbeats
+	//         image: ko://knative.dev/eventing/cmd/heartbeats
 	//         imagePullPolicy: IfNotPresent
 	//         args:
 	//         - --period=1
