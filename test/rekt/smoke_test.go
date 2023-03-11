@@ -46,6 +46,10 @@ import (
 	"knative.dev/reconciler-test/pkg/resources/service"
 )
 
+const (
+	heartbeatsImage = "ko://knative.dev/eventing/test/test_images/heartbeats"
+)
+
 // TestSmoke_Broker
 func TestSmoke_Broker(t *testing.T) {
 	t.Parallel()
