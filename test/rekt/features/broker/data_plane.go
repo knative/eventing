@@ -19,12 +19,17 @@ package broker
 import (
 	"context"
 
+	. "github.com/cloudevents/sdk-go/v2/test"
 	"github.com/google/uuid"
 	"knative.dev/eventing/test/rekt/features/knconf"
 	"knative.dev/eventing/test/rekt/resources/broker"
+	"knative.dev/eventing/test/rekt/resources/trigger"
 	"knative.dev/pkg/apis"
 	"knative.dev/reconciler-test/pkg/eventshub"
+	. "knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
+	"knative.dev/reconciler-test/pkg/manifest"
+	"knative.dev/reconciler-test/pkg/resources/service"
 	"knative.dev/reconciler-test/pkg/state"
 )
 
@@ -106,11 +111,11 @@ func addDataPlaneDelivery(brokerName string, fs *feature.FeatureSet) {
 
 	f.Stable("Conformance").
 		Must("Delivered events MUST conform to the CloudEvents specification.",
-			todo).
+			deliveredCESpecs).
 		Should("All CloudEvent attributes set by the producer, including the data and specversion attributes, SHOULD be received at the subscriber identical to how they were received by the Broker.",
-			todo).
+			recievedCEAttributes).
 		Should("The Broker SHOULD support delivering events via Binary Content Mode or Structured Content Mode of the HTTP Protocol Binding for CloudEvents.",
-			todo).
+			brokerAcceptsBinaryandStructuredContentMode).
 		Should("Events accepted by the Broker SHOULD be delivered at least once to all subscribers of all Triggers*.",
 			todo).
 		//*
@@ -406,4 +411,123 @@ func brokerEventVersionNotUpgraded(ctx context.Context, t feature.T) {
 	// brokerName := state.GetStringOrFail(ctx, t, "brokerName")
 
 	// Create a trigger,
+}
+
+func deliveredCESpecs(ctx context.Context, t feature.T) {
+	brokerName := state.GetStringOrFail(ctx, t, "brokerName")
+
+	uuids := map[string]string{
+		uuid.New().String(): "1.0",
+		uuid.New().String(): "0.3",
+	}
+
+	for id, version := range uuids {
+		source := feature.MakeRandomK8sName("source")
+		sink := feature.MakeRandomK8sName("sink")
+		triggerName := feature.MakeRandomK8sName("trigger")
+		event := FullEvent()
+		event.SetID(id)
+		event.SetSpecVersion(version)
+
+		// Creating sink
+		eventshub.Install(sink, eventshub.StartReceiver)(ctx, t)
+
+		// Point the Trigger subscriber to the sink svc.
+		cfg := []manifest.CfgFn{trigger.WithSubscriber(service.AsKReference(sink), "")}
+
+		// Creating trigger
+		trigger.Install(triggerName, brokerName, cfg...)
+
+		eventshub.Install(source,
+			eventshub.StartSenderToResource(broker.GVR(), brokerName),
+			eventshub.InputEvent(event),
+		)
+
+		OnStore(sink).MatchEvent(HasId(event.ID()), HasSpecVersion(version)).Exact(1)
+	}
+}
+
+func recievedCEAttributes(ctx context.Context, t feature.T) {
+	brokerName := state.GetStringOrFail(ctx, t, "brokerName")
+
+	source := feature.MakeRandomK8sName("source")
+	sink := feature.MakeRandomK8sName("sink")
+	triggerName := feature.MakeRandomK8sName("trigger")
+	event := FullEvent()
+
+	// Creating sink
+	eventshub.Install(sink, eventshub.StartReceiver)(ctx, t)
+
+	// Point the Trigger subscriber to the sink svc.
+	cfg := []manifest.CfgFn{trigger.WithSubscriber(service.AsKReference(sink), "")}
+
+	// Creating trigger
+	trigger.Install(triggerName, brokerName, cfg...)
+
+	eventshub.Install(source,
+		eventshub.StartSenderToResource(broker.GVR(), brokerName),
+		eventshub.InputEvent(event),
+	)
+
+	OnStore(sink).MatchEvent(HasId(event.ID()), HasData(event.Data()), HasExactlyAttributesEqualTo(event.Context)).Exact(1)
+}
+
+func brokerAcceptsBinaryandStructuredContentMode(ctx context.Context, t feature.T) {
+	brokerName := state.GetStringOrFail(ctx, t, "brokerName")
+
+	contenttypes := []string{
+		"application/vnd.apache.thrift.binary",
+		"application/xml",
+		"application/json",
+	}
+	for _, contenttype := range contenttypes {
+		source := feature.MakeRandomK8sName("source")
+		eventshub.Install(source,
+			eventshub.StartSenderToResource(broker.GVR(), brokerName),
+			eventshub.InputHeader("ce-specversion", "1.0"),
+			eventshub.InputHeader("ce-type", "sometype"),
+			eventshub.InputHeader("ce-source", "200.request.sender.test.knative.dev"),
+			eventshub.InputHeader("ce-id", uuid.New().String()),
+			eventshub.InputHeader("content-type", contenttype),
+			eventshub.InputBody("{}"),
+			eventshub.InputMethod("POST"),
+		)(ctx, t)
+
+		store := eventshub.StoreFromContext(ctx, source)
+		events := knconf.Correlate(store.AssertAtLeast(t, 2, knconf.SentEventMatcher("")))
+		for _, e := range events {
+			if e.Response.StatusCode < 200 || e.Response.StatusCode > 299 {
+				t.Errorf("Expected statuscode 2XX for sequence %d got %d", e.Response.Sequence, e.Response.StatusCode)
+			}
+		}
+	}
+
+	contenttype := "application/cloudevents+json"
+	bodycontent := `{
+    "specversion" : "1.0",
+    "type" : "sometype",
+    "source" : "json.request.sender.test.knative.dev",
+    "id" : "2222-4444-6666",
+    "time" : "2020-07-06T09:23:12Z",
+    "datacontenttype" : "application/json",
+    "data" : {
+        "message" : "helloworld"
+    }
+	}`
+
+	source := feature.MakeRandomK8sName("source")
+	eventshub.Install(source,
+		eventshub.StartSenderToResource(broker.GVR(), brokerName),
+		eventshub.InputHeader("content-type", contenttype),
+		eventshub.InputBody(bodycontent),
+		eventshub.InputMethod("POST"),
+	)(ctx, t)
+
+	store := eventshub.StoreFromContext(ctx, source)
+	events := knconf.Correlate(store.AssertAtLeast(t, 2, knconf.SentEventMatcher("")))
+	for _, e := range events {
+		if e.Response.StatusCode < 200 || e.Response.StatusCode > 299 {
+			t.Errorf("Expected statuscode 2XX for sequence %d got %d", e.Response.Sequence, e.Response.StatusCode)
+		}
+	}
 }
