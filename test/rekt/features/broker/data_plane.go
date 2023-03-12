@@ -133,9 +133,9 @@ func addDataPlaneDelivery(brokerName string, fs *feature.FeatureSet) {
 		May("The Broker MAY forward these events to an alternate endpoint or storage mechanism such as a dead letter queue.",
 			icebox).
 		May("If no ready Trigger would match an accepted event, the Broker MAY drop that event without notifying the producer.",
-			todo).
+			noTriggersAvailible).
 		May("If multiple Triggers reference the same subscriber, the subscriber MAY be expected to acknowledge successful delivery of an event multiple times.",
-			todo).
+			multipleTriggerSameSink).
 		Should("Events contained in delivery responses SHOULD be published to the Broker ingress and processed as if the event had been produced to the Broker's addressable endpoint.",
 			todo).
 		Should("Events contained in delivery responses that are malformed SHOULD be treated as if the event delivery had failed.",
@@ -571,4 +571,53 @@ func allSubscribersRecieveCE(ctx context.Context, t feature.T) {
 	OnStore(sink2).MatchEvent(HasId(event.ID())).Exact(1)
 	OnStore(sink3).MatchEvent(HasId(event.ID())).Exact(1)
 	OnStore(sink4).MatchEvent(HasId(event.ID())).Exact(1)
+}
+
+func multipleTriggerSameSink(ctx context.Context, t feature.T) {
+	brokerName := state.GetStringOrFail(ctx, t, "brokerName")
+
+	source := feature.MakeRandomK8sName("source")
+	sink := feature.MakeRandomK8sName("sink")
+	triggerName1 := feature.MakeRandomK8sName("trigger1")
+	triggerName2 := feature.MakeRandomK8sName("trigger2")
+	event := FullEvent()
+
+	// Creating sink
+	eventshub.Install(sink, eventshub.StartReceiver)(ctx, t)
+
+	// Point the Trigger subscriber to the sink svc.
+	cfg := []manifest.CfgFn{trigger.WithSubscriber(service.AsKReference(sink), "")}
+
+	// Creating trigger
+	trigger.Install(triggerName1, brokerName, cfg...)
+	trigger.Install(triggerName2, brokerName, cfg...)
+
+	eventshub.Install(source,
+		eventshub.StartSenderToResource(broker.GVR(), brokerName),
+		eventshub.InputEvent(event),
+	)
+
+	// Since there are two triggers, there should be exactly two events
+	OnStore(sink).MatchEvent(HasId(event.ID())).Exact(2)
+}
+
+func noTriggersAvailible(ctx context.Context, t feature.T) {
+	brokerName := state.GetStringOrFail(ctx, t, "brokerName")
+
+	source := feature.MakeRandomK8sName("source")
+	sink := feature.MakeRandomK8sName("sink")
+	event := FullEvent()
+
+	// Creating sink
+	eventshub.Install(sink, eventshub.StartReceiver)(ctx, t)
+
+	eventshub.Install(source,
+		eventshub.StartSenderToResource(broker.GVR(), brokerName),
+		eventshub.InputEvent(event),
+	)
+
+	// Since there are no triggers, there should be no events
+	OnStore(sink).Exact(0)
+
+	// TODO: Check if source is otified or not
 }
