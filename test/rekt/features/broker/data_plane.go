@@ -117,7 +117,7 @@ func addDataPlaneDelivery(brokerName string, fs *feature.FeatureSet) {
 		Should("The Broker SHOULD support delivering events via Binary Content Mode or Structured Content Mode of the HTTP Protocol Binding for CloudEvents.",
 			brokerAcceptsBinaryandStructuredContentMode).
 		Should("Events accepted by the Broker SHOULD be delivered at least once to all subscribers of all Triggers*.",
-			todo).
+			allSubscribersRecieveCE).
 		//*
 		//1. are Ready when the produce request was received,
 		//1. specify filters that match the event, and
@@ -530,4 +530,45 @@ func brokerAcceptsBinaryandStructuredContentMode(ctx context.Context, t feature.
 			t.Errorf("Expected statuscode 2XX for sequence %d got %d", e.Response.Sequence, e.Response.StatusCode)
 		}
 	}
+}
+
+func allSubscribersRecieveCE(ctx context.Context, t feature.T) {
+	brokerName := state.GetStringOrFail(ctx, t, "brokerName")
+
+	source := feature.MakeRandomK8sName("source")
+
+	sink1 := feature.MakeRandomK8sName("sink1")
+	sink2 := feature.MakeRandomK8sName("sink2")
+	sink3 := feature.MakeRandomK8sName("sink3")
+	sink4 := feature.MakeRandomK8sName("sink4")
+
+	triggerName1 := feature.MakeRandomK8sName("trigger1")
+	triggerName2 := feature.MakeRandomK8sName("trigger2")
+	triggerName3 := feature.MakeRandomK8sName("trigger3")
+	triggerName4 := feature.MakeRandomK8sName("trigger4")
+
+	// Creating event
+	event := FullEvent()
+
+	// Creating sink
+	eventshub.Install(sink1, eventshub.StartReceiver)(ctx, t)
+	eventshub.Install(sink2, eventshub.StartReceiver)(ctx, t)
+	eventshub.Install(sink3, eventshub.StartReceiver)(ctx, t)
+	eventshub.Install(sink4, eventshub.StartReceiver)(ctx, t)
+
+	// Creating trigger
+	trigger.Install(triggerName1, brokerName, trigger.WithSubscriber(service.AsKReference(sink1), ""))
+	trigger.Install(triggerName2, brokerName, trigger.WithSubscriber(service.AsKReference(sink2), ""))
+	trigger.Install(triggerName3, brokerName, trigger.WithSubscriber(service.AsKReference(sink3), ""))
+	trigger.Install(triggerName4, brokerName, trigger.WithSubscriber(service.AsKReference(sink4), ""))
+
+	eventshub.Install(source,
+		eventshub.StartSenderToResource(broker.GVR(), brokerName),
+		eventshub.InputEvent(event),
+	)
+
+	OnStore(sink1).MatchEvent(HasId(event.ID())).Exact(1)
+	OnStore(sink2).MatchEvent(HasId(event.ID())).Exact(1)
+	OnStore(sink3).MatchEvent(HasId(event.ID())).Exact(1)
+	OnStore(sink4).MatchEvent(HasId(event.ID())).Exact(1)
 }
