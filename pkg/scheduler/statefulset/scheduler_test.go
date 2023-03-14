@@ -17,11 +17,14 @@ limitations under the License.
 package statefulset
 
 import (
+	"context"
 	"fmt"
 	"reflect"
+	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -29,6 +32,7 @@ import (
 	kubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/apps/v1/statefulset/fake"
 	"knative.dev/pkg/controller"
+	"knative.dev/pkg/reconciler"
 
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	listers "knative.dev/eventing/pkg/reconciler/testing/v1"
@@ -779,7 +783,7 @@ func TestStatefulsetScheduler(t *testing.T) {
 				StatefulSetName:      sfsName,
 				VPodLister:           vpodClient.List,
 			}
-			s := newStatefulSetScheduler(ctx, cfg, sa, nil, lsp.GetPodLister().Pods(testNs)).(*StatefulSetScheduler)
+			s := newStatefulSetScheduler(ctx, cfg, sa, nil, lsp.GetPodLister().Pods(testNs))
 			if tc.pending != nil {
 				s.pending = tc.pending
 			}
@@ -877,13 +881,49 @@ func TestReservePlacements(t *testing.T) {
 				StatefulSetName:      sfsName,
 				VPodLister:           vpodClient.List,
 			}
-			s := newStatefulSetScheduler(ctx, cfg, nil, nil, nil).(*StatefulSetScheduler)
+			fa := newFakeAutoscaler()
+			s := newStatefulSetScheduler(ctx, cfg, nil, fa, nil)
+			_ = s.Promote(reconciler.UniversalBucket(), func(bucket reconciler.Bucket, name types.NamespacedName) {})
+
 			s.reservePlacements(tc.vpod, tc.vpod.GetPlacements()) //initial reserve
 
 			s.reservePlacements(tc.vpod, tc.placements) //new reserve
 			if !reflect.DeepEqual(s.reserved[tc.vpod.GetKey()], tc.reserved) {
 				t.Errorf("got %v, want %v", s.reserved[tc.vpod.GetKey()], tc.reserved)
 			}
+
+			assert.Equal(t, true, fa.isLeader.Load())
+
+			s.Demote(reconciler.UniversalBucket())
+			assert.Equal(t, false, fa.isLeader.Load())
 		})
 	}
 }
+
+type fakeAutoscaler struct {
+	isLeader atomic.Bool
+}
+
+func (f *fakeAutoscaler) Start(ctx context.Context) {
+}
+
+func (f *fakeAutoscaler) Autoscale(ctx context.Context, attemptScaleDown bool, pending int32) {
+}
+
+func newFakeAutoscaler() *fakeAutoscaler {
+	return &fakeAutoscaler{
+		isLeader: atomic.Bool{},
+	}
+}
+
+func (f *fakeAutoscaler) Promote(b reconciler.Bucket, enq func(reconciler.Bucket, types.NamespacedName)) error {
+	f.isLeader.Store(true)
+	return nil
+}
+
+func (f *fakeAutoscaler) Demote(bucket reconciler.Bucket) {
+	f.isLeader.Store(false)
+}
+
+var _ reconciler.LeaderAware = &fakeAutoscaler{}
+var _ Autoscaler = &fakeAutoscaler{}
