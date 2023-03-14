@@ -1,0 +1,86 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ .name }}
+  namespace: {{ .namespace }}
+  {{ if .annotations }}
+  annotations:
+    {{ range $key, $value := .annotations }}
+    {{ $key }}: "{{ $value }}"
+    {{ end }}
+  {{ end }}
+  {{ if .labels }}
+  labels:
+    {{ range $key, $value := .labels }}
+    {{ $key }}: {{ $value }}
+    {{ end }}
+  {{ end }}
+spec:
+  schedule: "* * * * *"
+  jobTemplate:
+    metadata:
+      labels:
+        app: {{ .name }}
+    spec:
+      {{ if .backoffLimit }}
+      backoffLimit: {{ .backoffLimit }}
+      {{ end }}
+      {{ if .ttlSecondsAfterFinished }}
+      ttlSecondsAfterFinished: {{ .ttlSecondsAfterFinished }}
+      {{ end }}
+      template:
+        {{ if or .podannotations .podlabels }}
+        metadata:
+          {{ if .podannotations }}
+          annotations:
+            {{ range $key, $value := .podannotations }}
+            {{ $key }}: "{{ $value }}"
+            {{ end }}
+          {{ end }}
+          {{ if .podlabels }}
+          labels:
+            {{ range $key, $value := .podlabels }}
+            {{ $key }}: {{ $value }}
+            {{ end }}
+          {{ end }}
+        {{ end }}
+        spec:
+          {{ if .podSecurityContext }}
+          securityContext:
+            runAsNonRoot: {{ .podSecurityContext.runAsNonRoot }}
+            seccompProfile:
+              type: {{ .podSecurityContext.seccompProfile.type }}
+          {{ end }}
+          {{ if .restartPolicy }}
+          restartPolicy: {{ .restartPolicy }}
+          {{ end }}
+          containers:
+            - name: user-container
+              image: {{ .image }}
+              {{ if .envs }}
+              env:
+              {{ range $key, $value := .envs }}
+              - name: {{ printf "%q" $key }}
+                value: {{ printf "%q" $value }}
+              {{ end }}
+              {{ end }}
+              {{ if .containerSecurityContext }}
+              securityContext:
+                capabilities:
+                  {{ if .containerSecurityContext.capabilities.drop }}
+                  drop:
+                  {{ range $_, $value := .containerSecurityContext.capabilities.drop }}
+                  - {{ $value }}
+                  {{ end }}
+                  {{ end }}
+                  {{ if .containerSecurityContext.capabilities.add }}
+                  add:
+                  {{ range $_, $value := .containerSecurityContext.capabilities.add }}
+                  - {{ $value }}
+                  {{ end }}
+                  {{ end }}
+                allowPrivilegeEscalation: {{ .containerSecurityContext.allowPrivilegeEscalation }}
+              {{ end }}
+              {{ if .imagePullPolicy }}
+              imagePullPolicy: {{ .imagePullPolicy }}
+              {{ end }}

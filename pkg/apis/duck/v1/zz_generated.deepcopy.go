@@ -117,11 +117,6 @@ func (in *ChannelableStatus) DeepCopyInto(out *ChannelableStatus) {
 	in.AddressStatus.DeepCopyInto(&out.AddressStatus)
 	in.SubscribableStatus.DeepCopyInto(&out.SubscribableStatus)
 	in.DeliveryStatus.DeepCopyInto(&out.DeliveryStatus)
-	if in.DeadLetterChannel != nil {
-		in, out := &in.DeadLetterChannel, &out.DeadLetterChannel
-		*out = new(duckv1.KReference)
-		**out = **in
-	}
 	return
 }
 

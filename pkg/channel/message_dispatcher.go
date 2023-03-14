@@ -239,16 +239,16 @@ func (d *MessageDispatcherImpl) executeRequest(ctx context.Context,
 	}
 	execInfo.Time = dispatchTime
 
-	body := make([]byte, attributes.KnativeErrorDataExtensionMaxLength)
+	body := new(bytes.Buffer)
+	_, readErr := body.ReadFrom(response.Body)
 
 	if isFailure(response.StatusCode) {
 		// Read response body into execInfo for failures
-		readLen, err := response.Body.Read(body)
-		if err != nil && err != io.EOF {
-			d.logger.Error("failed to read response body into DispatchExecutionInfo", zap.Error(err))
+		if readErr != nil && readErr != io.EOF {
+			d.logger.Error("failed to read response body", zap.Error(err))
 			execInfo.ResponseBody = []byte(fmt.Sprintf("dispatch error: %s", err.Error()))
 		} else {
-			execInfo.ResponseBody = body[:readLen]
+			execInfo.ResponseBody = body.Bytes()
 		}
 		_ = response.Body.Close()
 		// Reject non-successful responses.
@@ -256,13 +256,11 @@ func (d *MessageDispatcherImpl) executeRequest(ctx context.Context,
 	}
 
 	var responseMessageBody []byte
-	// Read response body into responseMessage for message accepted
-	readLen, err := response.Body.Read(body)
-	if err != nil && err != io.EOF {
-		d.logger.Error("failed to read response body into cloudevents' Message", zap.Error(err))
+	if readErr != nil && readErr != io.EOF {
+		d.logger.Error("failed to read response body", zap.Error(err))
 		responseMessageBody = []byte(fmt.Sprintf("Failed to read response body: %s", err.Error()))
 	} else {
-		responseMessageBody = body[:readLen]
+		responseMessageBody = body.Bytes()
 	}
 	responseMessage := http.NewMessage(response.Header, io.NopCloser(bytes.NewReader(responseMessageBody)))
 

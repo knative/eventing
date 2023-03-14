@@ -20,19 +20,32 @@ import (
 	"context"
 	"math"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"go.uber.org/zap"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	clientappsv1 "k8s.io/client-go/kubernetes/typed/apps/v1"
+	"knative.dev/pkg/reconciler"
 
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/logging"
 
 	"knative.dev/eventing/pkg/scheduler"
 	st "knative.dev/eventing/pkg/scheduler/state"
+)
+
+var (
+	// ephemeralLeaderElectionObject is the key used to check whether a given autoscaler instance
+	// is leader or not.
+	// This is an ephemeral key and must be kept stable and unmodified across releases.
+	ephemeralLeaderElectionObject = types.NamespacedName{
+		Namespace: "knative-eventing",
+		Name:      "autoscaler-ephemeral",
+	}
 )
 
 type Autoscaler interface {
@@ -59,9 +72,35 @@ type autoscaler struct {
 	// refreshPeriod is how often the autoscaler tries to scale down the statefulset
 	refreshPeriod time.Duration
 	lock          sync.Locker
+
+	// isLeader signals whether a given autoscaler instance is leader or not.
+	// The autoscaler is considered the leader when ephemeralLeaderElectionObject is in a
+	// bucket where we've been promoted.
+	isLeader atomic.Bool
 }
 
-func newAutoscaler(ctx context.Context, cfg *Config, stateAccessor st.StateAccessor) Autoscaler {
+var (
+	_ reconciler.LeaderAware = &autoscaler{}
+)
+
+// Promote implements reconciler.LeaderAware.
+func (a *autoscaler) Promote(b reconciler.Bucket, _ func(reconciler.Bucket, types.NamespacedName)) error {
+	if b.Has(ephemeralLeaderElectionObject) {
+		// The promoted bucket has the ephemeralLeaderElectionObject, so we are leader.
+		a.isLeader.Store(true)
+	}
+	return nil
+}
+
+// Demote implements reconciler.LeaderAware.
+func (a *autoscaler) Demote(b reconciler.Bucket) {
+	if b.Has(ephemeralLeaderElectionObject) {
+		// The demoted bucket has the ephemeralLeaderElectionObject, so we are not leader anymore.
+		a.isLeader.Store(false)
+	}
+}
+
+func newAutoscaler(ctx context.Context, cfg *Config, stateAccessor st.StateAccessor) *autoscaler {
 	return &autoscaler{
 		logger:            logging.FromContext(ctx),
 		statefulSetClient: kubeclient.Get(ctx).AppsV1().StatefulSets(cfg.StatefulSetNamespace),
@@ -73,6 +112,7 @@ func newAutoscaler(ctx context.Context, cfg *Config, stateAccessor st.StateAcces
 		capacity:          cfg.PodCapacity,
 		refreshPeriod:     cfg.RefreshPeriod,
 		lock:              new(sync.Mutex),
+		isLeader:          atomic.Bool{},
 	}
 }
 
@@ -111,6 +151,9 @@ func (a *autoscaler) syncAutoscale(ctx context.Context, attemptScaleDown bool, p
 }
 
 func (a *autoscaler) doautoscale(ctx context.Context, attemptScaleDown bool, pending int32) error {
+	if !a.isLeader.Load() {
+		return nil
+	}
 	state, err := a.stateAccessor.State(nil)
 	if err != nil {
 		a.logger.Info("error while refreshing scheduler state (will retry)", zap.Error(err))

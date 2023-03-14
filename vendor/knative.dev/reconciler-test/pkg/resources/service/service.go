@@ -44,19 +44,17 @@ func GVR() schema.GroupVersionResource {
 func Install(name string, opts ...manifest.CfgFn) feature.StepFn {
 	cfg := map[string]interface{}{
 		"name": name,
+		"ports": []corev1.ServicePort{{
+			// use the 80:8080 ports by default to be compatible with deprecated
+			// resources/svc package
+			Name:       "http",
+			Port:       80,
+			TargetPort: intstr.FromInt(8080),
+		}},
 	}
 
 	for _, fn := range opts {
 		fn(cfg)
-	}
-
-	if _, ok := cfg["ports"]; !ok {
-		// no ports are provided, so use the default 80:8080 ones
-		// to be compatible with deprecated resources/svc package
-		cfg["ports"] = []corev1.ServicePort{{
-			Port:       80,
-			TargetPort: intstr.FromInt(8080),
-		}}
 	}
 
 	return func(ctx context.Context, t feature.T) {

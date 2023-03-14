@@ -19,10 +19,11 @@ package broker
 import (
 	"context"
 	"encoding/base64"
+	"fmt"
 	"strings"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
-
+	"github.com/cloudevents/sdk-go/v2/binding/spec"
 	"github.com/cloudevents/sdk-go/v2/test"
 	"github.com/google/uuid"
 
@@ -32,6 +33,7 @@ import (
 	"knative.dev/eventing/test/rekt/resources/channel"
 	"knative.dev/eventing/test/rekt/resources/subscription"
 	"knative.dev/eventing/test/rekt/resources/trigger"
+
 	v1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/ptr"
 
@@ -41,6 +43,159 @@ import (
 	"knative.dev/reconciler-test/pkg/manifest"
 	"knative.dev/reconciler-test/pkg/resources/service"
 )
+
+func BrokerWithManyTriggers() *feature.Feature {
+	f := feature.NewFeatureNamed("broker With Many Triggers")
+
+	// Construct different type, source and extensions of events
+	any := eventingv1.TriggerAnyFilter
+	eventType1 := "type1"
+	eventType2 := "type2"
+	eventSource1 := "http://source1.com"
+	eventSource2 := "http://source2.com"
+	// Be careful with the length of extension name and values,
+	// we use extension name and value as a part of the name of resources like subscriber and trigger,
+	// the maximum characters allowed of resource name is 63
+	extensionName1 := "extname1"
+	extensionValue1 := "extval1"
+	extensionName2 := "extname2"
+	extensionValue2 := "extvalue2"
+	nonMatchingExtensionName := "nonmatchingextname"
+	nonMatchingExtensionValue := "nonmatchingextval"
+
+	eventFilters1 := make(map[string]eventTestCase)
+	eventFilters1["dumper-1"] = neweventTestCase(any, any)
+	eventFilters1["dumper-12"] = neweventTestCase(eventType1, any)
+	eventFilters1["dumper-123"] = neweventTestCase(any, eventSource1)
+	eventFilters1["dumper-1234"] = neweventTestCase(eventType1, eventSource1)
+
+	eventFilters2 := make(map[string]eventTestCase)
+	eventFilters2["dumper-12345"] = neweventTestCaseWithExtensions(any, any, map[string]interface{}{extensionName1: extensionValue1})
+	eventFilters2["dumper-123456"] = neweventTestCaseWithExtensions(any, any, map[string]interface{}{extensionName1: extensionValue1, extensionName2: extensionValue2})
+	eventFilters2["dumper-1234567"] = neweventTestCaseWithExtensions(any, any, map[string]interface{}{extensionName2: extensionValue2})
+	eventFilters2["dumper-654321"] = neweventTestCaseWithExtensions(eventType1, any, map[string]interface{}{extensionName1: extensionValue1})
+	eventFilters2["dumper-54321"] = neweventTestCaseWithExtensions(any, any, map[string]interface{}{extensionName1: any})
+	eventFilters2["dumper-4321"] = neweventTestCaseWithExtensions(any, eventSource1, map[string]interface{}{extensionName1: extensionValue1})
+	eventFilters2["dumper-321"] = neweventTestCaseWithExtensions(any, eventSource1, map[string]interface{}{extensionName1: extensionValue1, extensionName2: extensionValue2})
+	eventFilters2["dumper-21"] = neweventTestCaseWithExtensions(any, eventSource2, map[string]interface{}{extensionName1: extensionValue1, extensionName2: extensionValue1})
+
+	tests := []struct {
+		name string
+		// These are the event context attributes and extension attributes that will be send.
+		eventsToSend []eventTestCase
+		// These are the event context attributes and extension attributes that triggers will listen to
+		// This map is to configure sink and corresponding filter to construct trigger
+		eventFilters map[string]eventTestCase
+	}{
+		{
+			name: "test default broker with many attribute triggers",
+			eventsToSend: []eventTestCase{
+				{Type: eventType1, Source: eventSource1},
+				{Type: eventType1, Source: eventSource2},
+				{Type: eventType2, Source: eventSource1},
+				{Type: eventType2, Source: eventSource2},
+			},
+			eventFilters: eventFilters1,
+		},
+		{
+			name: "test default broker with many attribute and extension triggers",
+			eventsToSend: []eventTestCase{
+				{Type: eventType1, Source: eventSource1, Extensions: map[string]interface{}{extensionName1: extensionValue1}},
+				{Type: eventType1, Source: eventSource1, Extensions: map[string]interface{}{extensionName1: extensionValue1, extensionName2: extensionValue2}},
+				{Type: eventType1, Source: eventSource1, Extensions: map[string]interface{}{extensionName2: extensionValue2}},
+				{Type: eventType1, Source: eventSource2, Extensions: map[string]interface{}{extensionName1: extensionValue1}},
+				{Type: eventType2, Source: eventSource1, Extensions: map[string]interface{}{extensionName1: nonMatchingExtensionValue}},
+				{Type: eventType2, Source: eventSource2, Extensions: map[string]interface{}{nonMatchingExtensionName: extensionValue1}},
+				{Type: eventType2, Source: eventSource2, Extensions: map[string]interface{}{extensionName1: extensionValue1, extensionName2: extensionValue2}},
+				{Type: eventType2, Source: eventSource2, Extensions: map[string]interface{}{extensionName1: extensionValue1, nonMatchingExtensionName: extensionValue2}},
+			},
+			eventFilters: eventFilters2,
+		},
+	}
+
+	// Map to save the expected matchers per dumper so that we can verify the delivery.
+	// matcherBySink is to verify the sink and corresponding matcher
+	matcherBySink := make(map[string][]eventshub.EventInfoMatcher)
+
+	// Create the broker
+	brokerName := feature.MakeRandomK8sName("broker")
+	f.Setup("install broker", broker.Install(brokerName, broker.WithEnvConfig()...))
+	f.Setup("broker is ready", broker.IsReady(brokerName))
+	f.Setup("broker is addressable", broker.IsAddressable(brokerName))
+
+	for _, testcase := range tests {
+		for sink, eventFilter := range testcase.eventFilters {
+			f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
+			filter := eventingv1.TriggerFilterAttributes{
+				"type":   eventFilter.Type,
+				"source": eventFilter.Source,
+			}
+
+			// Point the Trigger subscriber to the sink svc.
+			cfg := []manifest.CfgFn{
+				trigger.WithSubscriber(service.AsKReference(sink), ""),
+				trigger.WithFilter(filter),
+				trigger.WithExtensions(eventFilter.Extensions),
+			}
+
+			// Install the trigger
+			via := feature.MakeRandomK8sName("via")
+			f.Setup("install trigger", trigger.Install(via, brokerName, cfg...))
+			f.Setup("trigger goes ready", trigger.IsReady(via))
+		}
+
+		for _, event := range testcase.eventsToSend {
+			eventToSend := cloudevents.NewEvent()
+			eventToSend.SetID(uuid.New().String())
+			eventToSend.SetType(event.Type)
+			eventToSend.SetSource(event.Source)
+			for k, v := range event.Extensions {
+				eventToSend.SetExtension(k, v)
+			}
+			data := fmt.Sprintf(`{"msg":"%s"}`, uuid.New())
+			eventToSend.SetData(cloudevents.ApplicationJSON, []byte(data))
+
+			source := feature.MakeRandomK8sName("source")
+			f.Requirement("install source", eventshub.Install(
+				source,
+				eventshub.StartSenderToResource(broker.GVR(), brokerName),
+				eventshub.InputEvent(eventToSend),
+			))
+
+			// Sent event matcher
+			sentEventMatcher := test.AllOf(
+				test.HasId(eventToSend.ID()),
+				event.toEventMatcher(),
+			)
+
+			// Check on every dumper whether we should expect this event or not
+			for sink, eventFilter := range testcase.eventFilters {
+
+				if eventFilter.toEventMatcher()(eventToSend) == nil {
+					// This filter should match this event
+					matcherBySink[sink] = append(
+						matcherBySink[sink],
+						eventasssert.MatchEvent(sentEventMatcher),
+					)
+				}
+			}
+		}
+
+		// Let's check that all expected matchers are fulfilled
+		for sink, matchers := range matcherBySink {
+			for _, matcher := range matchers {
+				// One match per event is enough
+				f.Stable("test message without explicit prefer header should have the header").
+					Must("delivers events",
+						eventasssert.OnStore(sink).Match(
+							matcher,
+						).AtLeast(1))
+			}
+		}
+	}
+
+	return f
+}
 
 func BrokerWorkFlowWithTransformation() *feature.FeatureSet {
 	createSubscriberFn := func(ref *v1.KReference, uri string) manifest.CfgFn {
@@ -742,4 +897,136 @@ func brokerSubscriberLongMessage() *feature.Feature {
 			Exact(1),
 	)
 	return f
+}
+
+/*
+Following test sends an event to the first sink, Sink1, which will send a long response destined to Sink2.
+The test will assert that the long response is received by Sink2
+EventSource ---> Broker ---> Trigger1 ---> Sink1(Transformation) ---> Trigger2 --> Sink2
+*/
+
+func BrokerDeliverLongResponseMessage() *feature.FeatureSet {
+	fs := &feature.FeatureSet{
+		Name: "Knative Broker - Long Response Message",
+
+		Features: []*feature.Feature{
+			brokerSubscriberLongResponseMessage(),
+		},
+	}
+	return fs
+}
+
+func brokerSubscriberLongResponseMessage() *feature.Feature {
+	f := feature.NewFeatureNamed("Broker, chain of Triggers, long response message from first subscriber")
+
+	source := feature.MakeRandomK8sName("source")
+	sink1 := feature.MakeRandomK8sName("sink1")
+	sink2 := feature.MakeRandomK8sName("sink2")
+	trigger1 := feature.MakeRandomK8sName("trigger1")
+	trigger2 := feature.MakeRandomK8sName("trigger2")
+
+	eventSource1 := "source1"
+	eventSource2 := "source2"
+	eventType1 := "type1"
+	eventType2 := "type2"
+	eventBody := `{"msg":"eventBody"}`
+	transformedEventBody := `{"msg":"` + strings.Repeat("X", 36000) + `"}`
+	event := cloudevents.NewEvent()
+	event.SetID(uuid.New().String())
+	event.SetType(eventType1)
+	event.SetSource(eventSource1)
+	event.SetData(cloudevents.TextPlain, []byte(eventBody))
+
+	//Install the broker
+	brokerName := feature.MakeRandomK8sName("broker")
+	f.Setup("install broker", broker.Install(brokerName, broker.WithEnvConfig()...))
+	f.Requirement("broker is ready", broker.IsReady(brokerName))
+	f.Requirement("broker is addressable", broker.IsAddressable(brokerName))
+
+	// Sink1 will transform the event so it can be filtered by Trigger2
+	f.Setup("install sink1", eventshub.Install(
+		sink1,
+		eventshub.ReplyWithTransformedEvent(eventType2, eventSource2, transformedEventBody),
+		eventshub.StartReceiver,
+	))
+
+	f.Setup("install sink2", eventshub.Install(sink2, eventshub.StartReceiver))
+
+	// Install the Triggers with appropriate Sinks and filters
+	f.Setup("install trigger1", trigger.Install(
+		trigger1,
+		brokerName,
+		trigger.WithSubscriber(service.AsKReference(sink1), ""),
+		trigger.WithFilter(map[string]string{"type": eventType1, "source": eventSource1}),
+	))
+	f.Setup("trigger1 goes ready", trigger.IsReady(trigger1))
+
+	f.Setup("install trigger2", trigger.Install(
+		trigger2,
+		brokerName,
+		trigger.WithSubscriber(service.AsKReference(sink2), ""),
+		trigger.WithFilter(map[string]string{"type": eventType2, "source": eventSource2}),
+	))
+	f.Setup("trigger2 goes ready", trigger.IsReady(trigger2))
+
+	// Install the Source
+	f.Requirement("install source", eventshub.Install(
+		source,
+		eventshub.StartSenderToResource(broker.GVR(), brokerName),
+		eventshub.InputEvent(event),
+	))
+
+	f.Assert("receive long event on sink1 exactly once",
+		eventasssert.OnStore(sink1).
+			MatchEvent(test.HasData([]byte(eventBody))).
+			Exact(1),
+	)
+
+	f.Assert("receive long event on sink2 exactly once",
+		eventasssert.OnStore(sink2).
+			MatchEvent(test.HasData([]byte(transformedEventBody))).
+			Exact(1),
+	)
+
+	return f
+}
+
+type eventTestCase struct {
+	Type       string
+	Source     string
+	Extensions map[string]interface{}
+}
+
+func neweventTestCase(tp, source string) eventTestCase {
+	return eventTestCase{Type: tp, Source: source}
+}
+
+func neweventTestCaseWithExtensions(tp string, source string, extensions map[string]interface{}) eventTestCase {
+	return eventTestCase{Type: tp, Source: source, Extensions: extensions}
+}
+
+// toEventMatcher converts the test case to the event matcher
+func (tc eventTestCase) toEventMatcher() test.EventMatcher {
+	var matchers []test.EventMatcher
+	if tc.Type == eventingv1.TriggerAnyFilter {
+		matchers = append(matchers, test.ContainsAttributes(spec.Type))
+	} else {
+		matchers = append(matchers, test.HasType(tc.Type))
+	}
+
+	if tc.Source == eventingv1.TriggerAnyFilter {
+		matchers = append(matchers, test.ContainsAttributes(spec.Source))
+	} else {
+		matchers = append(matchers, test.HasSource(tc.Source))
+	}
+
+	for k, v := range tc.Extensions {
+		if v == eventingv1.TriggerAnyFilter {
+			matchers = append(matchers, test.ContainsExtensions(k))
+		} else {
+			matchers = append(matchers, test.HasExtension(k, v))
+		}
+	}
+
+	return test.AllOf(matchers...)
 }

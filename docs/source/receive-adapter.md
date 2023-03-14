@@ -72,7 +72,7 @@ compare to their multi-resources equivalent (see below).
 The receive adapter library automatically configures the CloudEvent client with
 the target defined in the `K_SINK` environment variable when defined, in
 conformance with the
-[SinkBinding runtime contract](https://github.com/knative/specs/blob/main/specs/eventing/sources.md#sinkbinding).
+[SinkBinding runtime contract](https://github.com/knative/eventing/blob/main/docs/spec/sources.md#container-runtime-contract).
 
 ### Multiple resources
 

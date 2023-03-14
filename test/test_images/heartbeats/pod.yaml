@@ -1,9 +1,0 @@
-apiVersion: v1
-kind: Pod
-metadata:
-  name: heartbeats
-spec:
-  containers:
-    - name: heartbeats
-      image: ko://knative.dev/eventing/test/test_images/heartbeats
-

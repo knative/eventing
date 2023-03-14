@@ -102,7 +102,7 @@ func TestMakeReceiveAdapters(t *testing.T) {
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						"sidecar.istio.io/inject": "false",
+						"sidecar.istio.io/inject": "true",
 					},
 					Labels: map[string]string{
 						"test-key1": "test-value1",
@@ -163,6 +163,13 @@ func TestMakeReceiveAdapters(t *testing.T) {
 										Port: intstr.FromString("health"),
 									},
 								},
+							},
+							SecurityContext: &corev1.SecurityContext{
+								AllowPrivilegeEscalation: ptr.Bool(false),
+								ReadOnlyRootFilesystem:   ptr.Bool(true),
+								RunAsNonRoot:             ptr.Bool(true),
+								Capabilities:             &corev1.Capabilities{Drop: []corev1.Capability{"ALL"}},
+								SeccompProfile:           &corev1.SeccompProfile{Type: corev1.SeccompProfileTypeRuntimeDefault},
 							},
 						},
 					},

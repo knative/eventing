@@ -17,29 +17,33 @@ limitations under the License.
 package main
 
 import (
-	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"strconv"
+	"syscall"
 	"time"
 
 	"go.uber.org/zap"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/signals"
 	"knative.dev/pkg/tracing"
 	"knative.dev/pkg/tracing/config"
 
 	"github.com/cloudevents/sdk-go/observability/opencensus/v2/client"
 	cloudevents "github.com/cloudevents/sdk-go/v2"
-	"github.com/cloudevents/sdk-go/v2/protocol/http"
+	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"github.com/kelseyhightower/envconfig"
 )
 
 type Heartbeat struct {
 	Sequence int    `json:"id"`
 	Label    string `json:"label"`
+	Msg      string `json:"msg,omitempty"`
 }
 
 var (
@@ -48,6 +52,7 @@ var (
 	sink        string
 	label       string
 	periodStr   string
+	msg         string
 )
 
 func init() {
@@ -56,6 +61,7 @@ func init() {
 	flag.StringVar(&sink, "sink", "", "the host url to heartbeat to")
 	flag.StringVar(&label, "label", "", "a special label")
 	flag.StringVar(&periodStr, "period", "5s", "the duration between heartbeats. Supported formats: Go (https://pkg.go.dev/time#ParseDuration), integers (interpreted as seconds)")
+	flag.StringVar(&msg, "msg", "", "message content in data.msg")
 }
 
 type envConfig struct {
@@ -80,6 +86,11 @@ type envConfig struct {
 
 func main() {
 	flag.Parse()
+
+	ctx := signals.NewContext()
+	ctx = cloudevents.ContextWithRetriesExponentialBackoff(ctx, 20*time.Millisecond, 10)
+
+	defer maybeQuitIstioProxy()
 
 	var env envConfig
 	if err := envconfig.Process("", &env); err != nil {
@@ -110,8 +121,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to initialize tracing: %v", err)
 	}
-	defer tracer.Shutdown(context.Background())
-	c, err := client.NewClientHTTP([]http.Option{cloudevents.WithTarget(sink)}, nil)
+	defer tracer.Shutdown(ctx)
+	c, err := client.NewClientHTTP([]cehttp.Option{cloudevents.WithTarget(sink)}, nil)
 	if err != nil {
 		log.Fatalf("failed to create client: %s", err.Error())
 	}
@@ -139,6 +150,7 @@ func main() {
 	hb := &Heartbeat{
 		Sequence: 0,
 		Label:    label,
+		Msg:      msg,
 	}
 	ticker := time.NewTicker(period)
 	for {
@@ -158,11 +170,11 @@ func main() {
 		}
 
 		if err := event.SetData(cloudevents.ApplicationJSON, hb); err != nil {
-			log.Printf("failed to set cloudevents data: %s", err.Error())
+			log.Printf("failed to set cloudevents msg: %s", err.Error())
 		}
 
 		log.Printf("sending cloudevent to %s", sink)
-		if res := c.Send(context.Background(), event); !cloudevents.IsACK(res) {
+		if res := c.Send(ctx, event); !cloudevents.IsACK(res) {
 			log.Printf("failed to send cloudevent: %v", res)
 		}
 
@@ -172,5 +184,13 @@ func main() {
 
 		// Wait for next tick
 		<-ticker.C
+	}
+}
+
+// maybeQuitIstioProxy shuts down Istio's proxy when available.
+func maybeQuitIstioProxy() {
+	_, err := http.DefaultClient.Get("http://localhost:15020/quitquitquit")
+	if err != nil && !errors.Is(err, syscall.ECONNREFUSED) {
+		log.Println("[Ignore this warning if Istio proxy is not used on this pod]", err)
 	}
 }

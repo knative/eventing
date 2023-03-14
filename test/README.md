@@ -136,7 +136,7 @@ build and push the test images used by the e2e tests. It requires:
   to be set
 - You to be
   [authenticated with your `KO_DOCKER_REPO`](https://github.com/knative/serving/blob/main/DEVELOPMENT.md#environment-setup)
-- [`docker`](https://docs.docker.com/install/) to be installed
+- [`docker`](https://docs.docker.com/get-docker/) to be installed
 
 `PLATFORM` environment variable is optional. If it is specified, test images
 will be built for specific hardware architecture, according to its value (for

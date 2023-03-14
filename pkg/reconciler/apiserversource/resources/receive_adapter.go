@@ -77,7 +77,7 @@ func MakeReceiveAdapter(args *ReceiveAdapterArgs) (*appsv1.Deployment, error) {
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						"sidecar.istio.io/inject": "false", // needs to talk to the api server.
+						"sidecar.istio.io/inject": "true",
 					},
 					Labels: args.Labels,
 				},
@@ -102,6 +102,13 @@ func MakeReceiveAdapter(args *ReceiveAdapterArgs) (*appsv1.Deployment, error) {
 										Port: intstr.FromString("health"),
 									},
 								},
+							},
+							SecurityContext: &corev1.SecurityContext{
+								AllowPrivilegeEscalation: ptr.Bool(false),
+								ReadOnlyRootFilesystem:   ptr.Bool(true),
+								RunAsNonRoot:             ptr.Bool(true),
+								Capabilities:             &corev1.Capabilities{Drop: []corev1.Capability{"ALL"}},
+								SeccompProfile:           &corev1.SeccompProfile{Type: corev1.SeccompProfileTypeRuntimeDefault},
 							},
 						},
 					},

@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"testing"
 	"time"
@@ -82,5 +83,28 @@ func waitForClient(ctx context.Context) error {
 		case <-ctx.Done():
 			return fmt.Errorf("context cancelled: %s. The last HTTP error was: %s", ctx.Err(), httpErr)
 		}
+	}
+}
+
+func TestLogRequest(t *testing.T) {
+	bodyContent := "hello"
+	buffer := bytes.NewBuffer(nil)
+	buffer.WriteString(bodyContent)
+	req, err := http.NewRequest("POST", "https://localhost", buffer)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req.Header.Add("content-type", "application/json")
+
+	logRequest(req)
+
+	body, err := io.ReadAll(req.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if string(body) != bodyContent {
+		t.Fatal("got", string(body), "want", bodyContent)
 	}
 }
