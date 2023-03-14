@@ -32,6 +32,7 @@ import (
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/utils/integer"
+	"knative.dev/pkg/reconciler"
 
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	statefulsetinformer "knative.dev/pkg/client/injection/kube/informers/apps/v1/statefulset"
@@ -145,11 +146,31 @@ type StatefulSetScheduler struct {
 	reserved map[types.NamespacedName]map[string]int32
 }
 
+var (
+	_ reconciler.LeaderAware = &StatefulSetScheduler{}
+	_ scheduler.Scheduler    = &StatefulSetScheduler{}
+)
+
+// Promote implements reconciler.LeaderAware.
+func (s *StatefulSetScheduler) Promote(b reconciler.Bucket, enq func(reconciler.Bucket, types.NamespacedName)) error {
+	if v, ok := s.autoscaler.(reconciler.LeaderAware); ok {
+		return v.Promote(b, enq)
+	}
+	return nil
+}
+
+// Demote implements reconciler.LeaderAware.
+func (s *StatefulSetScheduler) Demote(b reconciler.Bucket) {
+	if v, ok := s.autoscaler.(reconciler.LeaderAware); ok {
+		v.Demote(b)
+	}
+}
+
 func newStatefulSetScheduler(ctx context.Context,
 	cfg *Config,
 	stateAccessor st.StateAccessor,
 	autoscaler Autoscaler,
-	podlister corev1listers.PodNamespaceLister) scheduler.Scheduler {
+	podlister corev1listers.PodNamespaceLister) *StatefulSetScheduler {
 
 	scheduler := &StatefulSetScheduler{
 		ctx:                  ctx,
