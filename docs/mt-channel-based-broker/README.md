@@ -2,7 +2,7 @@
 
 This document gives a rough overview over the Multi-tenant channel-based broker (MTChannelBasedBroker) architecture.
 
-It is possible to use MTChannelBasedBroker with [any channel implementation](https://knative.dev/docs/eventing/channels/channels-crds/). For demonstration purposes, MTChannelBasedBroker is used with an [InMemoryChannel](https://github.com/knative/eventing/blob/release-1.9/config/channels/in-memory-channel/README.md) in the diagram and throughout the document.
+It is possible to use MTChannelBasedBroker with [any channel implementation](https://knative.dev/docs/eventing/channels/channels-crds/). For demonstration purposes, MTChannelBasedBroker is used with an [InMemoryChannel](../../config/channels/in-memory-channel/README.md) in the diagram and throughout the document.
 
 ![Alt text here](mt-channel-broker.png)
 
