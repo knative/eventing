@@ -35,7 +35,6 @@ import (
 	b "knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/eventing/test/rekt/resources/channel_impl"
 	"knative.dev/eventing/test/rekt/resources/delivery"
-	"knative.dev/eventing/test/rekt/resources/deployment"
 	presources "knative.dev/eventing/test/rekt/resources/parallel"
 	ps "knative.dev/eventing/test/rekt/resources/pingsource"
 	sresources "knative.dev/eventing/test/rekt/resources/sequence"
@@ -43,7 +42,12 @@ import (
 	_ "knative.dev/pkg/system/testing"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
+	"knative.dev/reconciler-test/pkg/resources/deployment"
 	"knative.dev/reconciler-test/pkg/resources/service"
+)
+
+const (
+	heartbeatsImage = "ko://knative.dev/eventing/cmd/heartbeats"
 )
 
 // TestSmoke_Broker
@@ -297,7 +301,11 @@ func TestSmoke_SinkBinding(t *testing.T) {
 			service.WithSelectors(map[string]string{"app": "rekt"})))
 
 		subject := feature.MakeRandomK8sName("subject")
-		f.Setup("install a deployment", deployment.Install(subject))
+		f.Setup("install a deployment", deployment.Install(subject, heartbeatsImage,
+			deployment.WithEnvs(map[string]string{
+				"POD_NAME":      "heartbeats",
+				"POD_NAMESPACE": env.Namespace(),
+			})))
 
 		f.Setup("install a sinkbinding", sb.Install(name, service.AsDestinationRef(sink), deployment.AsTrackerReference(subject)))
 
