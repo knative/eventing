@@ -14,7 +14,7 @@ In the following the control plane components and their responsibilities are des
 
 The `mt-broker-controller` is kind of the heart of the MTChannelBasedBroker control plane and has the following responsibilities:
 
-* Watches for new `Broker` resources with the `eventing.kantive.dev/broker.class: MTChannelBasedBroker` annotation (step 2 in the diagram) and creates a new _concrete_ channel resource (step 3 in the diagram) depending on the `channel-template-spec` from the configmap referenced in the `config-br-defaults` configmap (by default this points to `config-br-default-channel`). 
+* Watches for new `Broker` resources with the `eventing.kantive.dev/broker.class: MTChannelBasedBroker` annotation (step 2 in the diagram) and creates a new _concrete_ channel resource (step 3 in the diagram) depending on the `channel-template-spec` from the configmap referenced in the `config-br-defaults` configmap (by default this points to `config-br-default-channel`).
 
   Be aware that in case the default `brokerClass` in `config-br-defaults` is not set to `MTChannelBasedBroker`, the referenced configmap still must contain a `channel-template-spec`. Otherwise the user needs to define the corresponding config on the broker resource directly when using the `MTChannelBasedBroker` broker class, e.g.:
 
@@ -43,7 +43,7 @@ These controllers (`imc-controller` in our diagram) watch for channel resources 
 
 ## Data Plane Components
 
-In the following the data plane components of the MTChannelBasedBroker and their responsibilies are described.
+In the following the data plane components of the MTChannelBasedBroker and their responsibilities are described.
 
 ### mt-broker-ingress
 
@@ -55,7 +55,7 @@ The `mt-broker-filter` takes requests and filters them according to the trigger 
 
 ### Channel specific data plane components
 
-The channel specific data plane components are responsible for delivering events to the Subscribers. 
+The channel specific data plane components are responsible for delivering events to the Subscribers.
 
 The `imc-dispatcher` is the component, which receives new events and sends them directly to the `mt-broker-filter` to apply filtering and to send them to the Subscribers. As it watches for new Subscriptions of its channel type (`kind: InMemoryChannel`), it is aware of the Subscribers.
 
