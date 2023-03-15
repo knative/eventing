@@ -31,7 +31,7 @@ spec:
   template:
     metadata:
       labels:
-        <<: *
+        <<: *labels
         app.kubernetes.io/component: pingsource-mt-adapter
         app.kubernetes.io/version: devel
         app.kubernetes.io/name: knative-eventing
