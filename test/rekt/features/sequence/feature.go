@@ -22,8 +22,8 @@ import (
 
 	"github.com/cloudevents/sdk-go/v2/test"
 	"github.com/google/uuid"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"knative.dev/eventing/test/rekt/resources/channel_template"
 	"knative.dev/eventing/test/rekt/resources/pingsource"
 	"knative.dev/eventing/test/rekt/resources/sequence"
 
@@ -48,12 +48,7 @@ func SequenceTest() *feature.Feature {
 	msgAppender2 := "-step2"
 	msgAppender3 := "-step3"
 
-	channelTemplate := sequence.ChannelTemplate{
-		TypeMeta: v1.TypeMeta{
-			APIVersion: "messaging.knative.dev/v1",
-			Kind:       "InMemoryChannel",
-		},
-	}
+	channelTemplate := channel_template.ImmemoryChannelTemplate()
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 	// Construct steps with appended data
