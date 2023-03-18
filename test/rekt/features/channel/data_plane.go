@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/cloudevents/sdk-go/v2/test"
 	"github.com/google/uuid"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"knative.dev/pkg/apis"
@@ -28,12 +29,15 @@ import (
 	"knative.dev/pkg/ptr"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/eventshub"
+	"knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
+	"knative.dev/reconciler-test/pkg/resources/service"
 	"knative.dev/reconciler-test/pkg/state"
 
 	v1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/test/rekt/features/knconf"
 	"knative.dev/eventing/test/rekt/resources/channel_impl"
+	"knative.dev/eventing/test/rekt/resources/subscription"
 )
 
 func DataPlaneConformance(channelName string) *feature.FeatureSet {
@@ -60,7 +64,7 @@ func DataPlaneChannel(channelName string) *feature.Feature {
 		Must("Every Channel MUST expose either an HTTP or HTTPS endpoint.", shouldExposeHTTPorHTTPS).
 		Must("The endpoint(s) MUST conform to 0.3 or 1.0 CloudEvents specification.",
 			channelAcceptsCEVersions).
-		MustNot("The Channel MUST NOT perform an upgrade of the passed in version. It MUST emit the event with the same version.", todo).
+		MustNot("The Channel MUST NOT perform an upgrade of the passed in version. It MUST emit the event with the same version.", channelableEventVersionNotUpgraded).
 		Must("It MUST support both Binary Content Mode and Structured Content Mode of the HTTP Protocol Binding for CloudEvents.", shouldSupportBinaryAndStructuredContentMode).
 		May("When dispatching the event, the channel MAY use a different HTTP Message mode of the one used by the event.", dispachModeDifferentFromRecieved).
 		// For example, It MAY receive an event in Structured Content Mode and dispatch in Binary Content Mode.
@@ -260,6 +264,31 @@ func dispachModeDifferentFromRecieved(ctx context.Context, t feature.T) {
 			t.Errorf("Expected statuscode 2XX for sequence %d got %d", e.Response.Sequence, e.Response.StatusCode)
 		}
 	}
+}
+
+func channelableEventVersionNotUpgraded(ctx context.Context, t feature.T) {
+	channelName := state.GetStringOrFail(ctx, t, ChannelableNameKey)
+
+	source := feature.MakeRandomK8sName("source")
+	sink := feature.MakeRandomK8sName("sink")
+	sub := feature.MakeRandomK8sName("subscription")
+
+	event := test.FullEvent()
+	event.SetSpecVersion("0.3")
+
+	// Creating sink
+	eventshub.Install(sink, eventshub.StartReceiver)(ctx, t)
+
+	subscription.Install(sub,
+		subscription.WithChannel(channel_impl.AsRef(channelName)),
+		subscription.WithSubscriber(service.AsKReference(sink), ""),
+	)
+
+	eventshub.Install(source, eventshub.StartSenderToResource(channel_impl.GVR(), channelName), eventshub.InputEvent(event))
+
+	assert.OnStore(sink).
+		MatchEvent(test.HasId(event.ID()), test.HasSpecVersion("0.3")).
+		AtLeast(1)
 }
 
 func addControlPlaneDelivery(fs *feature.FeatureSet) {
