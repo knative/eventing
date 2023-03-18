@@ -23,6 +23,7 @@ import (
 
 	"github.com/google/uuid"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/ptr"
 	"knative.dev/reconciler-test/pkg/environment"
@@ -56,11 +57,11 @@ func DataPlaneChannel(channelName string) *feature.Feature {
 	f.Requirement("Channel is Ready", channel_impl.IsReady(channelName))
 
 	f.Stable("Input").
-		Must("Every Channel MUST expose either an HTTP or HTTPS endpoint.", todo).
+		Must("Every Channel MUST expose either an HTTP or HTTPS endpoint.", shouldExposeHTTPorHTTPS).
 		Must("The endpoint(s) MUST conform to 0.3 or 1.0 CloudEvents specification.",
 			channelAcceptsCEVersions).
 		MustNot("The Channel MUST NOT perform an upgrade of the passed in version. It MUST emit the event with the same version.", todo).
-		Must("It MUST support both Binary Content Mode and Structured Content Mode of the HTTP Protocol Binding for CloudEvents.", todo).
+		Must("It MUST support both Binary Content Mode and Structured Content Mode of the HTTP Protocol Binding for CloudEvents.", shouldSupportBinaryAndStructuredContentMode).
 		May("When dispatching the event, the channel MAY use a different HTTP Message mode of the one used by the event.", todo).
 		// For example, It MAY receive an event in Structured Content Mode and dispatch in Binary Content Mode.
 		May("The HTTP(S) endpoint MAY be on any port, not just the standard 80 and 443.", todo).
@@ -103,6 +104,17 @@ func DataPlaneChannel(channelName string) *feature.Feature {
 		// messaging.message_id: the event ID
 
 	return f
+}
+
+func shouldExposeHTTPorHTTPS(ctx context.Context, t feature.T) {
+	c := getChannelable(ctx, t)
+	addr := c.Status.AddressStatus.Address.URL
+	if addr == nil {
+		addr = new(apis.URL)
+	}
+	if addr.Scheme != "http" && addr.Scheme != "https" {
+		t.Fatalf("expected channel scheme to be HTTP or HTTPS, found: %s", addr.Scheme)
+	}
 }
 
 func channelRejectsMalformedCE(ctx context.Context, t feature.T) {
@@ -152,6 +164,67 @@ func channelRejectsMalformedCE(ctx context.Context, t feature.T) {
 func channelAcceptsCEVersions(ctx context.Context, t feature.T) {
 	name := state.GetStringOrFail(ctx, t, ChannelableNameKey)
 	knconf.AcceptsCEVersions(ctx, t, channel_impl.GVR(), name)
+}
+
+func shouldSupportBinaryAndStructuredContentMode(ctx context.Context, t feature.T) {
+	channelName := state.GetStringOrFail(ctx, t, ChannelableNameKey)
+
+	binarycontenttypes := []string{
+		"application/vnd.apache.thrift.binary",
+		"application/xml",
+		"application/json",
+	}
+
+	for _, contenttype := range binarycontenttypes {
+		source1 := feature.MakeRandomK8sName("source")
+		eventshub.Install(source1,
+			eventshub.StartSenderToResource(channel_impl.GVR(), channelName),
+			eventshub.InputHeader("ce-specversion", "1.0"),
+			eventshub.InputHeader("ce-type", "sometype"),
+			eventshub.InputHeader("ce-source", "200.request.sender.test.knative.dev"),
+			eventshub.InputHeader("ce-id", uuid.New().String()),
+			eventshub.InputHeader("content-type", contenttype),
+			eventshub.InputBody("{}"),
+			eventshub.InputMethod("POST"),
+		)(ctx, t)
+
+		store := eventshub.StoreFromContext(ctx, source1)
+		events := knconf.Correlate(store.AssertAtLeast(t, 2, knconf.SentEventMatcher("")))
+		for _, e := range events {
+			if e.Response.StatusCode < 200 || e.Response.StatusCode > 299 {
+				t.Errorf("Expected statuscode 2XX for sequence %d got %d", e.Response.Sequence, e.Response.StatusCode)
+			}
+		}
+	}
+
+	structuredcontenttype := "application/cloudevents+json"
+	bodycontent := `{
+    "specversion" : "1.0",
+    "type" : "sometype",
+    "source" : "json.request.sender.test.knative.dev",
+    "id" : "2222-4444-6666",
+    "time" : "2020-07-06T09:23:12Z",
+    "datacontenttype" : "application/json",
+    "data" : {
+        "message" : "helloworld"
+    }
+}`
+
+	source2 := feature.MakeRandomK8sName("source2")
+	eventshub.Install(source2,
+		eventshub.StartSenderToResource(channel_impl.GVR(), channelName),
+		eventshub.InputHeader("content-type", structuredcontenttype),
+		eventshub.InputBody(bodycontent),
+		eventshub.InputMethod("POST"),
+	)(ctx, t)
+
+	store := eventshub.StoreFromContext(ctx, source2)
+	events := knconf.Correlate(store.AssertAtLeast(t, 2, knconf.SentEventMatcher("")))
+	for _, e := range events {
+		if e.Response.StatusCode < 200 || e.Response.StatusCode > 299 {
+			t.Errorf("Expected statuscode 2XX for sequence %d got %d", e.Response.Sequence, e.Response.StatusCode)
+		}
+	}
 }
 
 func addControlPlaneDelivery(fs *feature.FeatureSet) {
