@@ -62,7 +62,7 @@ func DataPlaneChannel(channelName string) *feature.Feature {
 			channelAcceptsCEVersions).
 		MustNot("The Channel MUST NOT perform an upgrade of the passed in version. It MUST emit the event with the same version.", todo).
 		Must("It MUST support both Binary Content Mode and Structured Content Mode of the HTTP Protocol Binding for CloudEvents.", shouldSupportBinaryAndStructuredContentMode).
-		May("When dispatching the event, the channel MAY use a different HTTP Message mode of the one used by the event.", todo).
+		May("When dispatching the event, the channel MAY use a different HTTP Message mode of the one used by the event.", dispachModeDifferentFromRecieved).
 		// For example, It MAY receive an event in Structured Content Mode and dispatch in Binary Content Mode.
 		May("The HTTP(S) endpoint MAY be on any port, not just the standard 80 and 443.", todo).
 		May("Channels MAY expose other, non-HTTP endpoints in addition to HTTP at their discretion.", todo)
@@ -198,6 +198,41 @@ func shouldSupportBinaryAndStructuredContentMode(ctx context.Context, t feature.
 	}
 
 	structuredcontenttype := "application/cloudevents+json"
+	bodycontent := `{
+    "specversion" : "1.0",
+    "type" : "sometype",
+    "source" : "json.request.sender.test.knative.dev",
+    "id" : "2222-4444-6666",
+    "time" : "2020-07-06T09:23:12Z",
+    "datacontenttype" : "application/json",
+    "data" : {
+        "message" : "helloworld"
+    }
+}`
+
+	source2 := feature.MakeRandomK8sName("source2")
+	eventshub.Install(source2,
+		eventshub.StartSenderToResource(channel_impl.GVR(), channelName),
+		eventshub.InputHeader("content-type", structuredcontenttype),
+		eventshub.InputBody(bodycontent),
+		eventshub.InputMethod("POST"),
+	)(ctx, t)
+
+	store := eventshub.StoreFromContext(ctx, source2)
+	events := knconf.Correlate(store.AssertAtLeast(t, 2, knconf.SentEventMatcher("")))
+	for _, e := range events {
+		if e.Response.StatusCode < 200 || e.Response.StatusCode > 299 {
+			t.Errorf("Expected statuscode 2XX for sequence %d got %d", e.Response.Sequence, e.Response.StatusCode)
+		}
+	}
+}
+
+func dispachModeDifferentFromRecieved(ctx context.Context, t feature.T) {
+	channelName := state.GetStringOrFail(ctx, t, ChannelableNameKey)
+
+	// Content type is binary
+	structuredcontenttype := "application/vnd.apache.thrift.binary"
+	// recieved content is structured
 	bodycontent := `{
     "specversion" : "1.0",
     "type" : "sometype",
