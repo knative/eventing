@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/cloudevents/sdk-go/v2/test"
 	"github.com/google/uuid"
 	"k8s.io/apimachinery/pkg/util/wait"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -28,11 +29,13 @@ import (
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/feature"
+	"knative.dev/reconciler-test/pkg/resources/service"
 	"knative.dev/reconciler-test/pkg/state"
 
 	v1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/test/rekt/features/knconf"
 	"knative.dev/eventing/test/rekt/resources/channel_impl"
+	"knative.dev/eventing/test/rekt/resources/subscription"
 )
 
 func DataPlaneConformance(channelName string) *feature.FeatureSet {
@@ -71,12 +74,12 @@ func DataPlaneChannel(channelName string) *feature.Feature {
 		Must("If a Channel receives an event queueing request and is unable to parse a valid CloudEvent, then it MUST reject the request.", channelRejectsMalformedCE)
 
 	f.Stable("HTTP").
-		Must("Channels MUST reject all HTTP event queueing requests with a method other than POST responding with HTTP status code 405 Method Not Supported.", todo).
+		Must("Channels MUST reject all HTTP event queueing requests with a method other than POST responding with HTTP status code 405 Method Not Supported.", inputMethodNotPost).
 		Must("The HTTP event queueing request's URL MUST correspond to a single, unique Channel at any given moment in time.", todo).
 		May("This MAY be done via the host, path, query string, or any combination of these.", todo).
-		Must("If a Channel receives a request that does not correspond to a known channel, then it MUST respond with a 404 Not Found.", todo).
-		Must("The Channel MUST respond with 202 Accepted if the event queueing request is accepted by the server.", todo).
-		Must("If a Channel receives an event queueing request and is unable to parse a valid CloudEvent, then it MUST respond with 400 Bad Request.", todo)
+		Must("If a Channel receives a request that does not correspond to a known channel, then it MUST respond with a 404 Not Found.", noCorrespondingChannelFound).
+		Must("The Channel MUST respond with 202 Accepted if the event queueing request is accepted by the server.", requestAcceptedByServer).
+		Must("If a Channel receives an event queueing request and is unable to parse a valid CloudEvent, then it MUST respond with 400 Bad Request.", channelableInvalidCE)
 
 	f.Stable("Output").
 		Must("Channels MUST output CloudEvents.", todo).
@@ -152,6 +155,115 @@ func channelRejectsMalformedCE(ctx context.Context, t feature.T) {
 func channelAcceptsCEVersions(ctx context.Context, t feature.T) {
 	name := state.GetStringOrFail(ctx, t, ChannelableNameKey)
 	knconf.AcceptsCEVersions(ctx, t, channel_impl.GVR(), name)
+}
+
+func inputMethodNotPost(ctx context.Context, t feature.T) {
+	channelName := state.GetStringOrFail(ctx, t, ChannelableNameKey)
+
+	structuredcontenttype := "application/cloudevents+json"
+	bodycontent := `{
+    "specversion" : "1.0",
+    "type" : "sometype",
+    "source" : "json.request.sender.test.knative.dev",
+    "id" : "2222-4444-6666",
+    "time" : "2020-07-06T09:23:12Z",
+    "datacontenttype" : "application/json",
+    "data" : {
+        "message" : "helloworld"
+    }
+}`
+
+	source := feature.MakeRandomK8sName("source")
+
+	eventshub.Install(source,
+		eventshub.StartSenderToResource(channel_impl.GVR(), channelName),
+		eventshub.InputHeader("content-type", structuredcontenttype),
+		eventshub.InputBody(bodycontent),
+		eventshub.InputMethod("GET"),
+	)(ctx, t)
+
+	store := eventshub.StoreFromContext(ctx, source)
+	events := knconf.Correlate(store.AssertAtLeast(t, 2, knconf.SentEventMatcher("")))
+	for _, e := range events {
+		if e.Response.StatusCode == 405 {
+			t.Errorf("Expected statuscode 405 for sequence %d got %d", e.Response.Sequence, e.Response.StatusCode)
+		}
+	}
+}
+
+func channelableInvalidCE(ctx context.Context, t feature.T) {
+	channelName := state.GetStringOrFail(ctx, t, ChannelableNameKey)
+
+	structuredcontenttype := ""
+	bodycontent := `{}`
+
+	source := feature.MakeRandomK8sName("source")
+	eventshub.Install(source,
+		eventshub.StartSenderToResource(channel_impl.GVR(), channelName),
+		eventshub.InputHeader("content-type", structuredcontenttype),
+		eventshub.InputBody(bodycontent),
+		eventshub.InputMethod("POST"),
+	)(ctx, t)
+
+	store := eventshub.StoreFromContext(ctx, source)
+	events := knconf.Correlate(store.AssertAtLeast(t, 2, knconf.SentEventMatcher("")))
+	for _, e := range events {
+		if e.Response.StatusCode == 400 {
+			t.Errorf("Expected statuscode 400 for sequence %d got %d", e.Response.Sequence, e.Response.StatusCode)
+		}
+	}
+}
+
+func requestAcceptedByServer(ctx context.Context, t feature.T) {
+	channelName := state.GetStringOrFail(ctx, t, ChannelableNameKey)
+
+	event := test.FullEvent()
+
+	source := feature.MakeRandomK8sName("source")
+	sink := feature.MakeRandomK8sName("sink")
+	sub := feature.MakeRandomK8sName("subscription")
+
+	eventshub.Install(sink, eventshub.StartReceiver)(ctx, t)
+
+	subscription.Install(sub,
+		subscription.WithChannel(channel_impl.AsRef(channelName)),
+		subscription.WithSubscriber(service.AsKReference(sink), ""),
+	)
+
+	eventshub.Install(source,
+		eventshub.StartSenderToResource(channel_impl.GVR(), channelName),
+		eventshub.InputEvent(event),
+	)(ctx, t)
+
+	store := eventshub.StoreFromContext(ctx, source)
+	events := knconf.Correlate(store.AssertAtLeast(t, 2, knconf.SentEventMatcher("")))
+	for _, e := range events {
+		// If the event is not originating from the CE source then it must have originated from the channel
+		if e.Sent.Event.Source() != event.Source() && e.Response.StatusCode != 202 {
+			t.Errorf("Expected statuscode 202 for sequence %d got %d", e.Response.Sequence, e.Response.StatusCode)
+		}
+	}
+}
+
+func noCorrespondingChannelFound(ctx context.Context, t feature.T) {
+	channelName := state.GetStringOrFail(ctx, t, ChannelableNameKey)
+
+	event := test.FullEvent()
+
+	source := feature.MakeRandomK8sName("source")
+
+	eventshub.Install(source,
+		eventshub.StartSenderToResource(channel_impl.GVR(), channelName),
+		eventshub.InputEvent(event),
+	)(ctx, t)
+	store := eventshub.StoreFromContext(ctx, source)
+	events := knconf.Correlate(store.AssertAtLeast(t, 2, knconf.SentEventMatcher("")))
+	for _, e := range events {
+		// There is no sink or subscriptions, so the we should get a 404
+		if e.Response.StatusCode < 400 || e.Response.StatusCode > 499 {
+			t.Errorf("Expected statuscode 4XX for sequence %d got %d", e.Response.Sequence, e.Response.StatusCode)
+		}
+	}
 }
 
 func addControlPlaneDelivery(fs *feature.FeatureSet) {
