@@ -21,18 +21,22 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/cloudevents/sdk-go/v2/test"
 	"github.com/google/uuid"
 	"k8s.io/apimachinery/pkg/util/wait"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/ptr"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/eventshub"
+	"knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
+	"knative.dev/reconciler-test/pkg/resources/service"
 	"knative.dev/reconciler-test/pkg/state"
 
 	v1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/test/rekt/features/knconf"
 	"knative.dev/eventing/test/rekt/resources/channel_impl"
+	"knative.dev/eventing/test/rekt/resources/subscription"
 )
 
 func DataPlaneConformance(channelName string) *feature.FeatureSet {
@@ -79,12 +83,12 @@ func DataPlaneChannel(channelName string) *feature.Feature {
 		Must("If a Channel receives an event queueing request and is unable to parse a valid CloudEvent, then it MUST respond with 400 Bad Request.", todo)
 
 	f.Stable("Output").
-		Must("Channels MUST output CloudEvents.", todo).
-		Must("The output MUST match the CloudEvent version of the Input.", todo).
-		MustNot("Channels MUST NOT alter an event that goes through them.", todo).
-		Must("All CloudEvent attributes, including the data attribute, MUST be received at the subscriber identical to how they were received by the Channel.", todo).
-		Should("Every Channel SHOULD support sending events via Binary Content Mode or Structured Content Mode of the HTTP Protocol Binding for CloudEvents.", todo).
-		Must("Channels MUST send events to all subscribers which are marked with a status of ready: True in the channel's status.subscribers.", todo).
+		Must("Channels MUST output CloudEvents.", channelableOutputCE).
+		Must("The output MUST match the CloudEvent version of the Input.", channelableOutputCEwithSameVersion).
+		MustNot("Channels MUST NOT alter an event that goes through them.", channelableDoesntAlterEvents).
+		Must("All CloudEvent attributes, including the data attribute, MUST be received at the subscriber identical to how they were received by the Channel.", channelabledoesntChangeCEAttributes).
+		// Should("Every Channel SHOULD support sending events via Binary Content Mode or Structured Content Mode of the HTTP Protocol Binding for CloudEvents.", todo).
+		Must("Channels MUST send events to all subscribers which are marked with a status of ready: True in the channel's status.subscribers.", channelableDeliversToAllSubscribers).
 		Must("The events MUST be sent to the subscriberURI field of spec.subscribers.", todo)
 		// Each channel implementation will have its own quality of service guarantees (e.g. at least once, at most once, etc) which SHOULD be documented.
 
@@ -152,6 +156,141 @@ func channelRejectsMalformedCE(ctx context.Context, t feature.T) {
 func channelAcceptsCEVersions(ctx context.Context, t feature.T) {
 	name := state.GetStringOrFail(ctx, t, ChannelableNameKey)
 	knconf.AcceptsCEVersions(ctx, t, channel_impl.GVR(), name)
+}
+
+func channelableOutputCE(ctx context.Context, t feature.T) {
+	channelName := state.GetStringOrFail(ctx, t, ChannelableNameKey)
+	knconf.AcceptsCEVersions(ctx, t, channel_impl.GVR(), channelName)
+
+	source := feature.MakeRandomK8sName("source")
+	sink := feature.MakeRandomK8sName("sink")
+	sub := feature.MakeRandomK8sName("subscription")
+
+	event := test.FullEvent()
+
+	// Creating sink
+	eventshub.Install(sink, eventshub.StartReceiver)(ctx, t)
+
+	subscription.Install(sub,
+		subscription.WithChannel(channel_impl.AsRef(channelName)),
+		subscription.WithSubscriber(service.AsKReference(sink), ""),
+	)
+
+	eventshub.Install(source, eventshub.StartSenderToResource(channel_impl.GVR(), channelName), eventshub.InputEvent(event))
+
+	assert.OnStore(sink).
+		MatchEvent(test.HasId(event.ID()), test.HasExactlyAttributesEqualTo(event.Context)).
+		AtLeast(1)
+}
+
+func channelableOutputCEwithSameVersion(ctx context.Context, t feature.T) {
+	channelName := state.GetStringOrFail(ctx, t, ChannelableNameKey)
+	knconf.AcceptsCEVersions(ctx, t, channel_impl.GVR(), channelName)
+
+	source := feature.MakeRandomK8sName("source")
+	sink := feature.MakeRandomK8sName("sink")
+	sub := feature.MakeRandomK8sName("subscription")
+
+	event := test.FullEvent()
+	event.SetSpecVersion("0.3")
+
+	// Creating sink
+	eventshub.Install(sink, eventshub.StartReceiver)(ctx, t)
+
+	subscription.Install(sub,
+		subscription.WithChannel(channel_impl.AsRef(channelName)),
+		subscription.WithSubscriber(service.AsKReference(sink), ""),
+	)
+
+	eventshub.Install(source, eventshub.StartSenderToResource(channel_impl.GVR(), channelName), eventshub.InputEvent(event))
+
+	assert.OnStore(sink).
+		MatchEvent(test.HasId(event.ID()), test.HasSpecVersion("0.3")).
+		AtLeast(1)
+}
+
+func channelabledoesntChangeCEAttributes(ctx context.Context, t feature.T) {
+	channelName := state.GetStringOrFail(ctx, t, ChannelableNameKey)
+	knconf.AcceptsCEVersions(ctx, t, channel_impl.GVR(), channelName)
+
+	source := feature.MakeRandomK8sName("source")
+	sink := feature.MakeRandomK8sName("sink")
+	sub := feature.MakeRandomK8sName("subscription")
+
+	event := test.FullEvent()
+	event.SetSpecVersion("0.3")
+
+	// Creating sink
+	eventshub.Install(sink, eventshub.StartReceiver)(ctx, t)
+
+	subscription.Install(sub,
+		subscription.WithChannel(channel_impl.AsRef(channelName)),
+		subscription.WithSubscriber(service.AsKReference(sink), ""),
+	)
+
+	eventshub.Install(source, eventshub.StartSenderToResource(channel_impl.GVR(), channelName), eventshub.InputEvent(event))
+
+	assert.OnStore(sink).
+		MatchEvent(test.HasId(event.ID()), test.HasData(event.Data()), test.HasType(event.Type()), test.HasSource(event.Source()), test.HasExactlyAttributesEqualTo(event.Context)).
+		AtLeast(1)
+}
+
+func channelableDoesntAlterEvents(ctx context.Context, t feature.T) {
+	channelName := state.GetStringOrFail(ctx, t, ChannelableNameKey)
+	knconf.AcceptsCEVersions(ctx, t, channel_impl.GVR(), channelName)
+
+	source := feature.MakeRandomK8sName("source")
+	sink := feature.MakeRandomK8sName("sink")
+	sub := feature.MakeRandomK8sName("subscription")
+
+	event := test.FullEvent()
+	event.SetSpecVersion("0.3")
+
+	// Creating sink
+	eventshub.Install(sink, eventshub.StartReceiver)(ctx, t)
+
+	subscription.Install(sub,
+		subscription.WithChannel(channel_impl.AsRef(channelName)),
+		subscription.WithSubscriber(service.AsKReference(sink), ""),
+	)
+
+	eventshub.Install(source, eventshub.StartSenderToResource(channel_impl.GVR(), channelName), eventshub.InputEvent(event))
+
+	assert.OnStore(sink).
+		MatchEvent(test.HasId(event.ID()), test.HasData(event.Data()), test.HasType(event.Type()), test.HasSource(event.Source())).
+		AtLeast(1)
+}
+
+func channelableDeliversToAllSubscribers(ctx context.Context, t feature.T) {
+	channelName := state.GetStringOrFail(ctx, t, ChannelableNameKey)
+	knconf.AcceptsCEVersions(ctx, t, channel_impl.GVR(), channelName)
+
+	source := feature.MakeRandomK8sName("source")
+	sink1 := feature.MakeRandomK8sName("sink1")
+	sink2 := feature.MakeRandomK8sName("sink2")
+	sub := feature.MakeRandomK8sName("subscription")
+
+	event := test.FullEvent()
+	event.SetSpecVersion("0.3")
+
+	// Creating sink
+	eventshub.Install(sink1, eventshub.StartReceiver)(ctx, t)
+	eventshub.Install(sink2, eventshub.StartReceiver)(ctx, t)
+
+	subscription.Install(sub,
+		subscription.WithChannel(channel_impl.AsRef(channelName)),
+		subscription.WithSubscriber(service.AsKReference(sink1), ""),
+		subscription.WithSubscriber(service.AsKReference(sink2), ""),
+	)
+
+	eventshub.Install(source, eventshub.StartSenderToResource(channel_impl.GVR(), channelName), eventshub.InputEvent(event))
+
+	assert.OnStore(sink1).
+		MatchEvent(test.HasId(event.ID()), test.HasData(event.Data()), test.HasType(event.Type()), test.HasSource(event.Source()), test.HasExactlyAttributesEqualTo(event.Context)).
+		AtLeast(1)
+	assert.OnStore(sink2).
+		MatchEvent(test.HasId(event.ID()), test.HasData(event.Data()), test.HasType(event.Type()), test.HasSource(event.Source()), test.HasExactlyAttributesEqualTo(event.Context)).
+		AtLeast(1)
 }
 
 func addControlPlaneDelivery(fs *feature.FeatureSet) {
