@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	"knative.dev/eventing/test/rekt/features/sequence"
+	"knative.dev/eventing/test/rekt/resources/channel_template"
 	"knative.dev/pkg/system"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/k8s"
@@ -41,5 +42,5 @@ func TestSequence(t *testing.T) {
 	)
 	t.Cleanup(env.Finish)
 
-	env.Test(ctx, t, sequence.SequenceTest())
+	env.Test(ctx, t, sequence.SequenceTest(channel_template.ImmemoryChannelTemplate()))
 }

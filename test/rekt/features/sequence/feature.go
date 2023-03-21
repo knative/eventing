@@ -34,7 +34,7 @@ import (
 	"knative.dev/reconciler-test/pkg/resources/service"
 )
 
-func SequenceTest() *feature.Feature {
+func SequenceTest(channelTemplate channel_template.ChannelTemplate) *feature.Feature {
 	f := feature.NewFeatureNamed("Sequence test.")
 
 	sequenceName := feature.MakeRandomK8sName("sequence")
@@ -47,8 +47,6 @@ func SequenceTest() *feature.Feature {
 	msgAppender1 := "-step1"
 	msgAppender2 := "-step2"
 	msgAppender3 := "-step3"
-
-	channelTemplate := channel_template.ImmemoryChannelTemplate()
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 	// Construct steps with appended data
