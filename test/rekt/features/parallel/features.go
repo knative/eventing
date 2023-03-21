@@ -21,9 +21,10 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/test"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"knative.dev/eventing/test/rekt/resources/channel_template"
 	"knative.dev/eventing/test/rekt/resources/parallel"
+
 	"knative.dev/reconciler-test/pkg/eventshub"
 	eventasssert "knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
@@ -48,12 +49,8 @@ func ParallelWithTwoBranches() *feature.Feature {
 	eventBody := `{"msg":"test msg"}`
 	event.SetData(cloudevents.ApplicationJSON, []byte(eventBody))
 
-	channelTemplate := parallel.ChannelTemplate{
-		TypeMeta: v1.TypeMeta{
-			APIVersion: "messaging.knative.dev/v1",
-			Kind:       "InMemoryChannel",
-		},
-	}
+	channelTemplate := channel_template.ImmemoryChannelTemplate()
+
 	cfg := []manifest.CfgFn{
 		parallel.WithReply(service.AsKReference(sink), ""),
 		parallel.WithChannelTemplate(channelTemplate),

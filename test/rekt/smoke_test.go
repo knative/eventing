@@ -34,6 +34,7 @@ import (
 	"knative.dev/eventing/test/rekt/features/sinkbinding"
 	b "knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/eventing/test/rekt/resources/channel_impl"
+	"knative.dev/eventing/test/rekt/resources/channel_template"
 	"knative.dev/eventing/test/rekt/resources/delivery"
 	"knative.dev/eventing/test/rekt/resources/deployment"
 	presources "knative.dev/eventing/test/rekt/resources/parallel"
@@ -195,7 +196,7 @@ func TestSmoke_ParallelDelivery(t *testing.T) {
 	}
 
 	for _, name := range names {
-		template := presources.ChannelTemplate{
+		template := channel_template.ChannelTemplate{
 			TypeMeta: channel_impl.TypeMeta(),
 			Spec:     map[string]interface{}{},
 		}
@@ -238,7 +239,7 @@ func TestSmoke_Sequence(t *testing.T) {
 	}
 
 	for _, name := range names {
-		template := sresources.ChannelTemplate{
+		template := channel_template.ChannelTemplate{
 			TypeMeta: channel_impl.TypeMeta(),
 			Spec:     map[string]interface{}{},
 		}
@@ -261,7 +262,7 @@ func TestSmoke_SequenceDelivery(t *testing.T) {
 	}
 
 	for _, name := range names {
-		template := sresources.ChannelTemplate{
+		template := channel_template.ChannelTemplate{
 			TypeMeta: channel_impl.TypeMeta(),
 			Spec:     map[string]interface{}{},
 		}
