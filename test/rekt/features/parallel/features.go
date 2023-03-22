@@ -32,7 +32,7 @@ import (
 	"knative.dev/reconciler-test/pkg/resources/service"
 )
 
-func ParallelWithTwoBranches() *feature.Feature {
+func ParallelWithTwoBranches(channelTemplate channel_template.ChannelTemplate) *feature.Feature {
 	f := feature.NewFeatureNamed("Parallel test.")
 
 	parallelName := feature.MakeRandomK8sName("parallel1")
@@ -48,8 +48,6 @@ func ParallelWithTwoBranches() *feature.Feature {
 	event.SetSource(eventSource)
 	eventBody := `{"msg":"test msg"}`
 	event.SetData(cloudevents.ApplicationJSON, []byte(eventBody))
-
-	channelTemplate := channel_template.ImmemoryChannelTemplate()
 
 	cfg := []manifest.CfgFn{
 		parallel.WithReply(service.AsKReference(sink), ""),
