@@ -18,7 +18,6 @@ kind: ClusterRole
 metadata:
   name: addressable-resolver
   labels:
-    eventing.knative.dev/release: devel
     app.kubernetes.io/version: devel
     app.kubernetes.io/name: knative-eventing
 aggregationRule:
@@ -34,7 +33,6 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: service-addressable-resolver
   labels:
-    eventing.knative.dev/release: devel
     duck.knative.dev/addressable: "true"
     app.kubernetes.io/version: devel
     app.kubernetes.io/name: knative-eventing
@@ -56,7 +54,6 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: serving-addressable-resolver
   labels:
-    eventing.knative.dev/release: devel
     duck.knative.dev/addressable: "true"
     app.kubernetes.io/version: devel
     app.kubernetes.io/name: knative-eventing
@@ -81,7 +78,6 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: channel-addressable-resolver
   labels:
-    eventing.knative.dev/release: devel
     duck.knative.dev/addressable: "true"
     app.kubernetes.io/version: devel
     app.kubernetes.io/name: knative-eventing
@@ -110,7 +106,6 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: broker-addressable-resolver
   labels:
-    eventing.knative.dev/release: devel
     duck.knative.dev/addressable: "true"
     app.kubernetes.io/version: devel
     app.kubernetes.io/name: knative-eventing
@@ -133,7 +128,6 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: flows-addressable-resolver
   labels:
-    eventing.knative.dev/release: devel
     duck.knative.dev/addressable: "true"
     app.kubernetes.io/version: devel
     app.kubernetes.io/name: knative-eventing

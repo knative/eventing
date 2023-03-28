@@ -18,7 +18,6 @@ metadata:
   name: default-ch-webhook
   namespace: knative-eventing
   labels:
-    eventing.knative.dev/release: devel
 
 data:
   _example: |

@@ -17,7 +17,6 @@ kind: ValidatingWebhookConfiguration
 metadata:
   name: config.webhook.eventing.knative.dev
   labels:
-    eventing.knative.dev/release: devel
     app.kubernetes.io/version: devel
     app.kubernetes.io/name: knative-eventing
 webhooks:
@@ -31,6 +30,4 @@ webhooks:
   name: config.webhook.eventing.knative.dev
   namespaceSelector:
     matchExpressions:
-    - key: eventing.knative.dev/release
-      operator: Exists
   timeoutSeconds: 10

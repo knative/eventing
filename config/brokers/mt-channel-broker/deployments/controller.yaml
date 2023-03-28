@@ -18,7 +18,6 @@ metadata:
   name: mt-broker-controller
   namespace: knative-eventing
   labels:
-    eventing.knative.dev/release: devel
     app.kubernetes.io/component: mt-broker-controller
     app.kubernetes.io/version: devel
     app.kubernetes.io/name: knative-eventing
@@ -30,7 +29,6 @@ spec:
     metadata:
       labels:
         app: mt-broker-controller
-        eventing.knative.dev/release: devel
         app.kubernetes.io/component: broker-controller
         app.kubernetes.io/version: devel
         app.kubernetes.io/name: knative-eventing

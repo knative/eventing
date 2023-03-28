@@ -18,7 +18,6 @@ metadata:
   name: config-ping-defaults
   namespace: knative-eventing
   labels:
-    eventing.knative.dev/release: devel
 data:
   _example: |
     ################################

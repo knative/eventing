@@ -18,7 +18,6 @@ metadata:
   name: imc-controller
   namespace: knative-eventing
   labels:
-    eventing.knative.dev/release: devel
     knative.dev/high-availability: "true"
     app.kubernetes.io/component: imc-controller
     app.kubernetes.io/version: devel
@@ -114,7 +113,6 @@ metadata:
     app.kubernetes.io/component: imc-controller
     app.kubernetes.io/version: devel
     app.kubernetes.io/name: knative-eventing
-    eventing.knative.dev/release: devel
   name: inmemorychannel-webhook
   namespace: knative-eventing
 spec:
