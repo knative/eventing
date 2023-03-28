@@ -18,7 +18,6 @@ metadata:
   name: eventing-webhook
   namespace: knative-eventing
   labels:
-    eventing.knative.dev/release: devel
     app.kubernetes.io/component: eventing-webhook
     app.kubernetes.io/version: devel
     app.kubernetes.io/name: knative-eventing
@@ -44,7 +43,6 @@ metadata:
   name: eventing-webhook
   namespace: knative-eventing
   labels:
-    eventing.knative.dev/release: devel
     app.kubernetes.io/component: eventing-webhook
     app.kubernetes.io/version: devel
     app.kubernetes.io/name: knative-eventing

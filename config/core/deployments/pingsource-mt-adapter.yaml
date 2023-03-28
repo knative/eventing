@@ -18,7 +18,6 @@ metadata:
   name: pingsource-mt-adapter
   namespace: knative-eventing
   labels:
-    eventing.knative.dev/release: devel
     app.kubernetes.io/component: pingsource-mt-adapter
     app.kubernetes.io/version: devel
     app.kubernetes.io/name: knative-eventing
@@ -33,7 +32,6 @@ spec:
     metadata:
       labels:
         <<: *labels
-        eventing.knative.dev/release: devel
         app.kubernetes.io/component: pingsource-mt-adapter
         app.kubernetes.io/version: devel
         app.kubernetes.io/name: knative-eventing

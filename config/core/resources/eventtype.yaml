@@ -16,7 +16,6 @@ kind: CustomResourceDefinition
 metadata:
   name: eventtypes.eventing.knative.dev
   labels:
-    eventing.knative.dev/release: devel
     knative.dev/crd-install: "true"
     app.kubernetes.io/version: devel
     app.kubernetes.io/name: knative-eventing

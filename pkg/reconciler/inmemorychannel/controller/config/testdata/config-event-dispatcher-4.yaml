@@ -18,7 +18,6 @@ metadata:
   name: config-imc-event-dispatcher
   namespace: knative-eventing
   labels:
-    eventing.knative.dev/release: devel
 data:
   # The ConfigMapFromTestFile helper method expects a key named "_example" and it's sample here.
   _example: |

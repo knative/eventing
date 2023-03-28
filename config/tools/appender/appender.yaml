@@ -18,7 +18,6 @@ kind: Service
 metadata:
   name: appender
   labels:
-    eventing.knative.dev/release: devel
 spec:
   template:
     spec:
