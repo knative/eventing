@@ -2,7 +2,7 @@
 // +build e2e
 
 /*
-Copyright 2022 The Knative Authors
+Copyright 2023 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ package rekt
 import (
 	"testing"
 
-	"knative.dev/eventing/test/rekt/features/parallel"
+	"knative.dev/eventing/test/rekt/features/sequence"
 	"knative.dev/eventing/test/rekt/resources/channel_template"
 	"knative.dev/pkg/system"
 	"knative.dev/reconciler-test/pkg/environment"
@@ -30,7 +30,7 @@ import (
 	"knative.dev/reconciler-test/pkg/knative"
 )
 
-func TestParallel(t *testing.T) {
+func TestSequence(t *testing.T) {
 	t.Parallel()
 
 	ctx, env := global.Environment(
@@ -42,5 +42,5 @@ func TestParallel(t *testing.T) {
 	)
 	t.Cleanup(env.Finish)
 
-	env.Test(ctx, t, parallel.ParallelWithTwoBranches(channel_template.ImmemoryChannelTemplate()))
+	env.Test(ctx, t, sequence.SequenceTest(channel_template.ImmemoryChannelTemplate()))
 }
