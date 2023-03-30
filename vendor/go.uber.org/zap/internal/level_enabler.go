@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Uber Technologies, Inc.
+// Copyright (c) 2022 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,27 +18,18 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package zaptest
+package internal
 
-import "go.uber.org/zap/internal/ztest"
+import "go.uber.org/zap/zapcore"
 
-type (
-	// A Syncer is a spy for the Sync portion of zapcore.WriteSyncer.
-	Syncer = ztest.Syncer
+// LeveledEnabler is an interface satisfied by LevelEnablers that are able to
+// report their own level.
+//
+// This interface is defined to use more conveniently in tests and non-zapcore
+// packages.
+// This cannot be imported from zapcore because of the cyclic dependency.
+type LeveledEnabler interface {
+	zapcore.LevelEnabler
 
-	// A Discarder sends all writes to io.Discard.
-	Discarder = ztest.Discarder
-
-	// FailWriter is a WriteSyncer that always returns an error on writes.
-	FailWriter = ztest.FailWriter
-
-	// ShortWriter is a WriteSyncer whose write method never returns an error,
-	// but always reports that it wrote one byte less than the input slice's
-	// length (thus, a "short write").
-	ShortWriter = ztest.ShortWriter
-
-	// Buffer is an implementation of zapcore.WriteSyncer that sends all writes to
-	// a bytes.Buffer. It has convenience methods to split the accumulated buffer
-	// on newlines.
-	Buffer = ztest.Buffer
-)
+	Level() zapcore.Level
+}
