@@ -83,7 +83,7 @@ func RetryConfigFromDeliverySpec(spec v1.DeliverySpec) (RetryConfig, error) {
 
 	retryConfig := NoRetries()
 
-	retryConfig.CheckRetry = RetryIfGreaterThan300
+	retryConfig.CheckRetry = SelectiveRetry
 
 	if spec.Retry != nil {
 		retryConfig.RetryMax = int(*spec.Retry)
