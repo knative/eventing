@@ -34,6 +34,10 @@ const (
 	// Allowed neither explicitly disables or enables a behavior.
 	// eg. allow a client to control behavior with an annotation or allow a new value through validation.
 	Allowed Flag = "Allowed"
+	// Strict for not accept eventsto non-HTTPS endpoint and advertise HTTPS endpoints.
+	Strict Flag = "Strict"
+	// Permissive for accept, perfer to send events and advertise both HTTP and HTTPS endpoint.
+	Permissive Flag = "Permissive"
 )
 
 // Flags is a map containing all the enabled/disabled flags for the experimental features.
@@ -48,6 +52,16 @@ func (e Flags) IsEnabled(featureName string) bool {
 // IsAllowed returns true if the feature is enabled or allowed
 func (e Flags) IsAllowed(featureName string) bool {
 	return e.IsEnabled(featureName) || (e != nil && e[featureName] == Allowed)
+}
+
+// IsPermissiveTransportEncryption return true if the feature is Permissive
+func (e Flags) IsPermissiveTransportEncryption(featureName string) bool {
+	return e != nil && e[featureName] == Permissive
+}
+
+// IsStrictTransportEncryption return true if the feature is Strict
+func (e Flags) IsStrictTransportEncryption(featureName string) bool {
+	return e != nil && e[featureName] == Strict
 }
 
 // NewFlagsConfigFromMap creates a Flags from the supplied Map
@@ -66,6 +80,10 @@ func NewFlagsConfigFromMap(data map[string]string) (Flags, error) {
 			flags[sanitizedKey] = Disabled
 		} else if strings.EqualFold(v, string(Enabled)) {
 			flags[sanitizedKey] = Enabled
+		} else if strings.EqualFold(v, string(Permissive)) {
+			flags[sanitizedKey] = Permissive
+		} else if strings.EqualFold(v, string(Strict)) {
+			flags[sanitizedKey] = Strict
 		} else {
 			return Flags{}, fmt.Errorf("cannot parse the boolean flag '%s' = '%s'. Allowed values: [true, false]", k, v)
 		}
