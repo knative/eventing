@@ -33,6 +33,13 @@ func (in *AddressStatus) DeepCopyInto(out *AddressStatus) {
 		*out = new(Addressable)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.Addresses != nil {
+		in, out := &in.Addresses, &out.Addresses
+		*out = make([]Addressable, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	return
 }
 
