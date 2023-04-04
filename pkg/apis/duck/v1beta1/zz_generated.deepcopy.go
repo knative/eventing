@@ -119,7 +119,7 @@ func (in *ChannelableStatus) DeepCopyInto(out *ChannelableStatus) {
 	if in.DeadLetterChannel != nil {
 		in, out := &in.DeadLetterChannel, &out.DeadLetterChannel
 		*out = new(v1.KReference)
-		**out = **in
+		(*in).DeepCopyInto(*out)
 	}
 	return
 }
@@ -181,7 +181,7 @@ func (in *DeliveryStatus) DeepCopyInto(out *DeliveryStatus) {
 	if in.DeadLetterChannel != nil {
 		in, out := &in.DeadLetterChannel, &out.DeadLetterChannel
 		*out = new(v1.KReference)
-		**out = **in
+		(*in).DeepCopyInto(*out)
 	}
 	return
 }

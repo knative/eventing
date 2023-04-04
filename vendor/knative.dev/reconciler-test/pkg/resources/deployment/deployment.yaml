@@ -12,7 +12,7 @@ metadata:
   {{ if .labels }}
   labels:
     {{ range $key, $value := .labels }}
-    {{ $key }}: {{ $value }}
+    {{ $key }}: "{{ $value }}"
     {{ end }}
   {{ end }}
 spec:
@@ -22,7 +22,7 @@ spec:
   selector:
     matchLabels:
       {{ range $key, $value := .selectors }}
-      {{ $key }}: {{ $value }}
+      {{ $key }}: "{{ $value }}"
       {{ end }}
   template:
     metadata:
@@ -34,7 +34,7 @@ spec:
       {{ end }}
       labels:
         {{ range $key, $value := .selectors }}
-        {{ $key }}: {{ $value }}
+        {{ $key }}: "{{ $value }}"
         {{ end }}
     spec:
       {{ if .podSecurityContext }}
