@@ -12,15 +12,19 @@ metadata:
   {{ if .labels }}
   labels:
     {{ range $key, $value := .labels }}
-    {{ $key }}: {{ $value }}
+    {{ $key }}: "{{ $value }}"
     {{ end }}
   {{ end }}
 spec:
   schedule: "* * * * *"
   jobTemplate:
     metadata:
+      {{ if .labels }}
       labels:
-        app: {{ .name }}
+        {{ range $key, $value := .labels }}
+        {{ $key }}: "{{ $value }}"
+        {{ end }}
+      {{ end }}
     spec:
       {{ if .backoffLimit }}
       backoffLimit: {{ .backoffLimit }}

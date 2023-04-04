@@ -73,7 +73,7 @@ func TestIsChannelEmpty(t *testing.T) {
 			Kind:       "Channel",
 		}
 		if isChannelEmpty(r) {
-			t.Errorf("%s: isChannelEmpty(%s) should be false", name, r)
+			t.Errorf("%s: isChannelEmpty(%+v) should be false", name, r)
 		}
 	})
 
@@ -81,7 +81,7 @@ func TestIsChannelEmpty(t *testing.T) {
 	t.Run(name, func(t *testing.T) {
 		r := duckv1.KReference{}
 		if !isChannelEmpty(r) {
-			t.Errorf("%s: isChannelEmpty(%s) should be true", name, r)
+			t.Errorf("%s: isChannelEmpty(%+v) should be true", name, r)
 		}
 	})
 }

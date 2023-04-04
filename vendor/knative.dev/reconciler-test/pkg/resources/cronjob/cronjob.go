@@ -40,6 +40,9 @@ func Install(name string, image string, options ...manifest.CfgFn) feature.StepF
 	cfg := map[string]interface{}{
 		"name":  name,
 		"image": image,
+		"labels": map[string]string{
+			"app": name,
+		},
 	}
 
 	defaultOptions := []manifest.CfgFn{
