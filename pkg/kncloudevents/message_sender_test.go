@@ -179,7 +179,7 @@ func TestHTTPMessageSenderSendWithRetriesWithSingleRequestTimeout(t *testing.T) 
 	}
 	config := &RetryConfig{
 		RetryMax:   5,
-		CheckRetry: RetryIfGreaterThan300,
+		CheckRetry: SelectiveRetry,
 		Backoff: func(attemptNum int, resp *http.Response) time.Duration {
 			return time.Millisecond
 		},
