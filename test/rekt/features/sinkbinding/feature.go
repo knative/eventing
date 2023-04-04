@@ -85,6 +85,10 @@ func SinkBindingV1Job(ctx context.Context) *feature.Feature {
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 	f.Setup("install a Job", cronjob.Install(subject, heartbeatsImage,
+		cronjob.WithLabels(map[string]string{
+			"app":                          subject,
+			"bindings.knative.dev/include": "true",
+		}),
 		cronjob.WitEnvs(map[string]string{
 			"POD_NAME":      "heartbeats",
 			"POD_NAMESPACE": environment.FromContext(ctx).Namespace(),
