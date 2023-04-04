@@ -32,7 +32,7 @@ func (in *BrokerConfig) DeepCopyInto(out *BrokerConfig) {
 	if in.KReference != nil {
 		in, out := &in.KReference, &out.KReference
 		*out = new(v1.KReference)
-		**out = **in
+		(*in).DeepCopyInto(*out)
 	}
 	if in.Delivery != nil {
 		in, out := &in.Delivery, &out.Delivery

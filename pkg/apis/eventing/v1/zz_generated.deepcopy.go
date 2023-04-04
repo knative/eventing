@@ -95,7 +95,7 @@ func (in *BrokerSpec) DeepCopyInto(out *BrokerSpec) {
 	if in.Config != nil {
 		in, out := &in.Config, &out.Config
 		*out = new(duckv1.KReference)
-		**out = **in
+		(*in).DeepCopyInto(*out)
 	}
 	if in.Delivery != nil {
 		in, out := &in.Delivery, &out.Delivery
