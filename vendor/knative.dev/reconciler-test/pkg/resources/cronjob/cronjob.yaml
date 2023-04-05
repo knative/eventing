@@ -44,7 +44,7 @@ spec:
           {{ if .podlabels }}
           labels:
             {{ range $key, $value := .podlabels }}
-            {{ $key }}: {{ $value }}
+            {{ $key }}: "{{ $value }}"
             {{ end }}
           {{ end }}
         {{ end }}
