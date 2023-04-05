@@ -61,14 +61,14 @@ func (e Flags) IsAllowed(featureName string) bool {
 	return e.IsEnabled(featureName) || (e != nil && e[featureName] == Allowed)
 }
 
-// IsPermissiveTransportEncryption return true if the feature is Permissive
-func (e Flags) IsPermissiveTransportEncryption(featureName string) bool {
-	return e != nil && e[featureName] == Permissive
+// IsPermissiveTransportEncryption returns true if the TransportEncryption feature is in Permissive mode.
+func (e Flags) IsPermissiveTransportEncryption() bool {
+	return e != nil && e[TransportEncryption] == Permissive
 }
 
-// IsStrictTransportEncryption return true if the feature is Strict
-func (e Flags) IsStrictTransportEncryption(featureName string) bool {
-	return e != nil && e[featureName] == Strict
+// IsStrictTransportEncryption returns true if the TransportEncryption feature is in Strict mode.
+func (e Flags) IsStrictTransportEncryption() bool {
+	return e != nil && e[TransportEncryption] == Strict
 }
 
 // NewFlagsConfigFromMap creates a Flags from the supplied Map
