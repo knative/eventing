@@ -65,6 +65,11 @@ type EnvConfig struct {
 	// Sink is the URI messages will be sent.
 	Sink string `envconfig:"K_SINK"`
 
+	// CACerts are the Certification Authority (CA) certificates in PEM format
+	// according to https://www.rfc-editor.org/rfc/rfc7468.
+	// +optional
+	CACerts *string `envconfig:"K_CA_CERTS"`
+
 	// CEOverrides are the CloudEvents overrides to be applied to the outbound event.
 	CEOverrides string `envconfig:"K_CE_OVERRIDES"`
 
@@ -103,6 +108,9 @@ type EnvConfigAccessor interface {
 
 	// Get the URI where messages will be forwarded to.
 	GetSink() string
+
+	// GetCACerts gets the CACerts of the Sink.
+	GetCACerts() *string
 
 	// Get the namespace of the adapter.
 	GetNamespace() string
@@ -161,6 +169,10 @@ func (e *EnvConfig) GetLogger() *zap.SugaredLogger {
 
 func (e *EnvConfig) GetSink() string {
 	return e.Sink
+}
+
+func (e *EnvConfig) GetCACerts() *string {
+	return e.CACerts
 }
 
 func (e *EnvConfig) GetNamespace() string {

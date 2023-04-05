@@ -26,9 +26,16 @@ import (
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	v2client "github.com/cloudevents/sdk-go/v2/client"
 	"github.com/cloudevents/sdk-go/v2/protocol/http"
-	"knative.dev/eventing/pkg/adapter/v2/test"
-	"knative.dev/eventing/pkg/metrics/source"
+	cetest "github.com/cloudevents/sdk-go/v2/test"
+	"github.com/stretchr/testify/assert"
+	"k8s.io/utils/pointer"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+
+	. "knative.dev/pkg/reconciler/testing"
+
+	"knative.dev/eventing/pkg/adapter/v2/test"
+	"knative.dev/eventing/pkg/eventingtls/eventingtlstesting"
+	"knative.dev/eventing/pkg/metrics/source"
 )
 
 type mockReporter struct {
@@ -288,6 +295,68 @@ func TestNewCloudEventsClient_request(t *testing.T) {
 				validateMetric(t, got.reporter, 1, tc.wantRetryCount)
 			} else {
 				validateNotSent(t, innerClient)
+			}
+		})
+	}
+}
+
+func TestTLS(t *testing.T) {
+
+	ctx, _ := SetupFakeContext(t)
+	ctx = cloudevents.ContextWithRetriesExponentialBackoff(ctx, 20*time.Millisecond, 5)
+	ctx, cancel := context.WithCancel(ctx)
+	t.Cleanup(cancel)
+
+	ca := eventingtlstesting.StartServer(ctx, t, 8333)
+
+	event := cetest.MinEvent()
+
+	tt := []struct {
+		name    string
+		sink    string
+		caCerts *string
+		wantErr bool
+	}{
+		{
+			name:    "https sink URL, no CA certs fail",
+			sink:    "https://localhost:8333",
+			wantErr: true,
+		},
+		{
+			name:    "https sink URL with ca certs",
+			sink:    "https://localhost:8333",
+			caCerts: pointer.String(ca),
+		},
+		{
+			name:    "http sink URL with ca certs",
+			sink:    "http://localhost:8333",
+			caCerts: pointer.String(ca),
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			reporter, err := source.NewStatsReporter()
+			assert.Nil(t, err)
+
+			c, err := NewCloudEventsClientCRStatus(
+				&EnvConfig{
+					Sink:    tc.sink,
+					CACerts: tc.caCerts,
+				},
+				reporter,
+				nil,
+			)
+			assert.Nil(t, err)
+
+			result := c.Send(ctx, event)
+			if tc.wantErr {
+				if cloudevents.IsACK(result) {
+					t.Fatalf("wantErr %v, got %v IsACK %v", tc.wantErr, result, cloudevents.IsACK(result))
+				}
+			} else if cloudevents.IsNACK(result) || cloudevents.IsUndelivered(result) {
+				t.Fatalf("wantErr %v, got %v IsACK %v", tc.wantErr, result, cloudevents.IsACK(result))
 			}
 		})
 	}
