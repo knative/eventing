@@ -39,7 +39,11 @@ const (
 	// - Addressables must not accept events to non-HTTPS endpoints
 	// - Addressables must only advertise HTTPS endpoints
 	Strict Flag = "Strict"
-	// Permissive for accept, perfer to send events and advertise both HTTP and HTTPS endpoint.
+	// Permissive is only applicable to the TransportEncryption feature.
+	// The following applies:
+	// - Addressables should accept events at both HTTP and HTTPS endpoints
+	// - Addressables should advertise both HTTP and HTTPS endpoints
+	// - Producers should prefer to send events to HTTPS endpoints, if available
 	Permissive Flag = "Permissive"
 )
 
