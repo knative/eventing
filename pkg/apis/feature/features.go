@@ -34,7 +34,10 @@ const (
 	// Allowed neither explicitly disables or enables a behavior.
 	// eg. allow a client to control behavior with an annotation or allow a new value through validation.
 	Allowed Flag = "Allowed"
-	// Strict for not accept eventsto non-HTTPS endpoint and advertise HTTPS endpoints.
+	// Strict is only applicable to the TransportEncryption feature.
+	// The following applies:
+	// - Addressables must not accept events to non-HTTPS endpoints
+	// - Addressables must only advertise HTTPS endpoints
 	Strict Flag = "Strict"
 	// Permissive for accept, perfer to send events and advertise both HTTP and HTTPS endpoint.
 	Permissive Flag = "Permissive"
