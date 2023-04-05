@@ -26,14 +26,14 @@ metadata:
   {{ if .labels }}
   labels:
     {{ range $key, $value := .labels }}
-    {{ $key }}: {{ $value }}
+    {{ $key }}: "{{ $value }}"
     {{ end }}
   {{ end }}
 spec:
   {{ if .selectors }}
   selector:
     {{ range $key, $value := .selectors }}
-    {{ $key }}: {{ $value }}
+    {{ $key }}: "{{ $value }}"
     {{ end }}
   {{ end }}
   ports:

@@ -12,7 +12,7 @@ metadata:
   {{ if .labels }}
   labels:
     {{ range $key, $value := .labels }}
-    {{ $key }}: {{ $value }}
+    {{ $key }}: "{{ $value }}"
     {{ end }}
   {{ end }}
 spec:
@@ -34,7 +34,7 @@ spec:
       {{ if .podlabels }}
       labels:
         {{ range $key, $value := .podlabels }}
-        {{ $key }}: {{ $value }}
+        {{ $key }}: "{{ $value }}"
         {{ end }}
       {{ end }}
     {{ end }}
