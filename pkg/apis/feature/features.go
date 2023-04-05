@@ -34,6 +34,17 @@ const (
 	// Allowed neither explicitly disables or enables a behavior.
 	// eg. allow a client to control behavior with an annotation or allow a new value through validation.
 	Allowed Flag = "Allowed"
+	// Strict is only applicable to the TransportEncryption feature.
+	// The following applies:
+	// - Addressables must not accept events to non-HTTPS endpoints
+	// - Addressables must only advertise HTTPS endpoints
+	Strict Flag = "Strict"
+	// Permissive is only applicable to the TransportEncryption feature.
+	// The following applies:
+	// - Addressables should accept events at both HTTP and HTTPS endpoints
+	// - Addressables should advertise both HTTP and HTTPS endpoints
+	// - Producers should prefer to send events to HTTPS endpoints, if available
+	Permissive Flag = "Permissive"
 )
 
 // Flags is a map containing all the enabled/disabled flags for the experimental features.
@@ -48,6 +59,16 @@ func (e Flags) IsEnabled(featureName string) bool {
 // IsAllowed returns true if the feature is enabled or allowed
 func (e Flags) IsAllowed(featureName string) bool {
 	return e.IsEnabled(featureName) || (e != nil && e[featureName] == Allowed)
+}
+
+// IsPermissiveTransportEncryption returns true if the TransportEncryption feature is in Permissive mode.
+func (e Flags) IsPermissiveTransportEncryption() bool {
+	return e != nil && e[TransportEncryption] == Permissive
+}
+
+// IsStrictTransportEncryption returns true if the TransportEncryption feature is in Strict mode.
+func (e Flags) IsStrictTransportEncryption() bool {
+	return e != nil && e[TransportEncryption] == Strict
 }
 
 // NewFlagsConfigFromMap creates a Flags from the supplied Map
@@ -66,6 +87,10 @@ func NewFlagsConfigFromMap(data map[string]string) (Flags, error) {
 			flags[sanitizedKey] = Disabled
 		} else if strings.EqualFold(v, string(Enabled)) {
 			flags[sanitizedKey] = Enabled
+		} else if strings.EqualFold(v, string(Permissive)) {
+			flags[sanitizedKey] = Permissive
+		} else if strings.EqualFold(v, string(Strict)) {
+			flags[sanitizedKey] = Strict
 		} else {
 			return Flags{}, fmt.Errorf("cannot parse the boolean flag '%s' = '%s'. Allowed values: [true, false]", k, v)
 		}
