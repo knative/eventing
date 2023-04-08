@@ -20,4 +20,6 @@ set -o pipefail
 
 source $(dirname "$0")/../vendor/knative.dev/hack/library.sh
 
+$(dirname $0)/update-istio.sh
+
 go_update_deps "$@"

@@ -82,6 +82,8 @@ function knative_setup() {
   enable_sugar || fail_test "Could not enable Sugar Controller Injection"
 
   unleash_duck || fail_test "Could not unleash the chaos duck"
+
+  install_cert_manager || fail_test "Could not install Cert Manager"
 }
 
 function scale_controlplane() {
@@ -371,4 +373,15 @@ function wait_for_file() {
     ((timeout--))
   done
   return 0
+}
+
+function install_cert_manager(){
+  url="$(curl -s https://api.github.com/repos/cert-manager/cert-manager/releases/latest | jq '.assets[] | select(.name|match("cert-manager.yaml$")) | .browser_download_url')"
+
+  kubectl apply \
+    -f "${url}" || return 1
+  
+  scale_controlplane cert-manager cert-manager-cainjector cert-manager-webhook
+
+  wait_until_pods_running ${SYSTEM_NAMESPACE} || fail_test "Failed to install cert manager"
 }
