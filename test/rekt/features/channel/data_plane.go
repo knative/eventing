@@ -234,9 +234,7 @@ func shouldSupportBinaryAndStructuredContentMode(ctx context.Context, t feature.
 func dispachModeDifferentFromRecieved(ctx context.Context, t feature.T) {
 	channelName := state.GetStringOrFail(ctx, t, ChannelableNameKey)
 
-	// Content type is binary
-	structuredcontenttype := "application/vnd.apache.thrift.binary"
-	// recieved content is structured
+	structuredcontenttype := "application/cloudevents+json"
 	bodycontent := `{
     "specversion" : "1.0",
     "type" : "sometype",
@@ -249,15 +247,25 @@ func dispachModeDifferentFromRecieved(ctx context.Context, t feature.T) {
     }
 }`
 
-	source2 := feature.MakeRandomK8sName("source2")
-	eventshub.Install(source2,
+	source := feature.MakeRandomK8sName("source")
+	sink := feature.MakeRandomK8sName("sink")
+	sub := feature.MakeRandomK8sName("subscription")
+
+	eventshub.Install(sink, eventshub.StartReceiver)(ctx, t)
+
+	subscription.Install(sub,
+		subscription.WithChannel(channel_impl.AsRef(channelName)),
+		subscription.WithSubscriber(service.AsKReference(sink), ""),
+	)
+
+	eventshub.Install(source,
 		eventshub.StartSenderToResource(channel_impl.GVR(), channelName),
 		eventshub.InputHeader("content-type", structuredcontenttype),
 		eventshub.InputBody(bodycontent),
 		eventshub.InputMethod("POST"),
 	)(ctx, t)
 
-	store := eventshub.StoreFromContext(ctx, source2)
+	store := eventshub.StoreFromContext(ctx, source)
 	events := knconf.Correlate(store.AssertAtLeast(t, 2, knconf.SentEventMatcher("")))
 	for _, e := range events {
 		if e.Response.StatusCode < 200 || e.Response.StatusCode > 299 {
