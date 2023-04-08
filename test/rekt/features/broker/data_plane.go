@@ -436,14 +436,15 @@ func recievedCEAttributes(ctx context.Context, t feature.T) {
 	cfg := []manifest.CfgFn{trigger.WithSubscriber(service.AsKReference(sink), "")}
 
 	// Creating trigger
-	trigger.Install(triggerName, brokerName, cfg...)
+	trigger.Install(triggerName, brokerName, cfg...)(ctx, t)
 
 	eventshub.Install(source,
 		eventshub.StartSenderToResource(broker.GVR(), brokerName),
 		eventshub.InputEvent(event),
-	)
+	)(ctx, t)
 
-	assert.OnStore(sink).MatchEvent(test.HasId(event.ID()), test.HasData(event.Data()), test.HasExactlyAttributesEqualTo(event.Context)).Exact(1)
+	assert.OnStore(sink).MatchEvent(test.HasId(event.ID()),
+		test.HasData(event.Data()), test.HasExactlyAttributesEqualTo(event.Context)).Exact(1)(ctx, t)
 }
 
 func brokerAcceptsBinaryandStructuredContentMode(ctx context.Context, t feature.T) {
@@ -476,20 +477,20 @@ func allSubscribersRecieveCE(ctx context.Context, t feature.T) {
 	eventshub.Install(sink4, eventshub.StartReceiver)(ctx, t)
 
 	// Creating trigger
-	trigger.Install(triggerName1, brokerName, trigger.WithSubscriber(service.AsKReference(sink1), ""))
-	trigger.Install(triggerName2, brokerName, trigger.WithSubscriber(service.AsKReference(sink2), ""))
-	trigger.Install(triggerName3, brokerName, trigger.WithSubscriber(service.AsKReference(sink3), ""))
-	trigger.Install(triggerName4, brokerName, trigger.WithSubscriber(service.AsKReference(sink4), ""))
+	trigger.Install(triggerName1, brokerName, trigger.WithSubscriber(service.AsKReference(sink1), ""))(ctx, t)
+	trigger.Install(triggerName2, brokerName, trigger.WithSubscriber(service.AsKReference(sink2), ""))(ctx, t)
+	trigger.Install(triggerName3, brokerName, trigger.WithSubscriber(service.AsKReference(sink3), ""))(ctx, t)
+	trigger.Install(triggerName4, brokerName, trigger.WithSubscriber(service.AsKReference(sink4), ""))(ctx, t)
 
 	eventshub.Install(source,
 		eventshub.StartSenderToResource(broker.GVR(), brokerName),
 		eventshub.InputEvent(event),
-	)
+	)(ctx, t)
 
-	assert.OnStore(sink1).MatchEvent(test.HasId(event.ID())).Exact(1)
-	assert.OnStore(sink2).MatchEvent(test.HasId(event.ID())).Exact(1)
-	assert.OnStore(sink3).MatchEvent(test.HasId(event.ID())).Exact(1)
-	assert.OnStore(sink4).MatchEvent(test.HasId(event.ID())).Exact(1)
+	assert.OnStore(sink1).MatchEvent(test.HasId(event.ID())).Exact(1)(ctx, t)
+	assert.OnStore(sink2).MatchEvent(test.HasId(event.ID())).Exact(1)(ctx, t)
+	assert.OnStore(sink3).MatchEvent(test.HasId(event.ID())).Exact(1)(ctx, t)
+	assert.OnStore(sink4).MatchEvent(test.HasId(event.ID())).Exact(1)(ctx, t)
 }
 
 func multipleTriggerSameSink(ctx context.Context, t feature.T) {
@@ -508,16 +509,16 @@ func multipleTriggerSameSink(ctx context.Context, t feature.T) {
 	cfg := []manifest.CfgFn{trigger.WithSubscriber(service.AsKReference(sink), "")}
 
 	// Creating trigger
-	trigger.Install(triggerName1, brokerName, cfg...)
-	trigger.Install(triggerName2, brokerName, cfg...)
+	trigger.Install(triggerName1, brokerName, cfg...)(ctx, t)
+	trigger.Install(triggerName2, brokerName, cfg...)(ctx, t)
 
 	eventshub.Install(source,
 		eventshub.StartSenderToResource(broker.GVR(), brokerName),
 		eventshub.InputEvent(event),
-	)
+	)(ctx, t)
 
 	// Since there are two triggers, there should be exactly two events
-	assert.OnStore(sink).MatchEvent(test.HasId(event.ID())).Exact(2)
+	assert.OnStore(sink).MatchEvent(test.HasId(event.ID())).Exact(2)(ctx, t)
 }
 
 func triggerBecameReadyLater(ctx context.Context, t feature.T) {
@@ -528,22 +529,22 @@ func triggerBecameReadyLater(ctx context.Context, t feature.T) {
 	triggerName := feature.MakeRandomK8sName("trigger")
 	event := test.FullEvent()
 
-	eventshub.Install(sink, eventshub.StartReceiver)
+	eventshub.Install(sink, eventshub.StartReceiver)(ctx, t)
 
 	// Point the Trigger subscriber to the sink svc.
 	cfg := []manifest.CfgFn{trigger.WithSubscriber(service.AsKReference(sink), "")}
 
 	// Install the trigger
-	trigger.Install(triggerName, brokerName, cfg...)
+	trigger.Install(triggerName, brokerName, cfg...)(ctx, t)
 
 	eventshub.Install(source,
 		eventshub.StartSenderToResource(broker.GVR(), brokerName),
 		eventshub.InputEvent(event),
-	)
+	)(ctx, t)
 
-	trigger.IsReady(triggerName)
+	trigger.IsReady(triggerName)(ctx, t)
 
-	assert.OnStore(sink).MatchEvent(test.HasId(event.ID())).Exact(1)
+	assert.OnStore(sink).MatchEvent(test.HasId(event.ID())).Exact(1)(ctx, t)
 }
 
 func eventEnqueuedLater(ctx context.Context, t feature.T) {
@@ -555,28 +556,28 @@ func eventEnqueuedLater(ctx context.Context, t feature.T) {
 	event1 := test.FullEvent()
 	event2 := test.FullEvent()
 
-	eventshub.Install(sink, eventshub.StartReceiver)
+	eventshub.Install(sink, eventshub.StartReceiver)(ctx, t)
 
 	// Point the Trigger subscriber to the sink svc.
 	cfg := []manifest.CfgFn{trigger.WithSubscriber(service.AsKReference(sink), "")}
 
 	// Install the trigger
-	trigger.Install(triggerName, brokerName, cfg...)
+	trigger.Install(triggerName, brokerName, cfg...)(ctx, t)
 
-	trigger.IsReady(triggerName)
+	trigger.IsReady(triggerName)(ctx, t)
 
 	eventshub.Install(source,
 		eventshub.StartSenderToResource(broker.GVR(), brokerName),
 		eventshub.InputEvent(event1),
-	)
+	)(ctx, t)
 
 	eventshub.Install(source,
 		eventshub.InputEvent(event2),
-	)
+	)(ctx, t)
 
-	assert.OnStore(sink).MatchEvent(test.HasId(event1.ID())).Exact(1)
+	assert.OnStore(sink).MatchEvent(test.HasId(event1.ID())).Exact(1)(ctx, t)
 
-	assert.OnStore(sink).MatchEvent(test.HasId(event2.ID())).Exact(1)
+	assert.OnStore(sink).MatchEvent(test.HasId(event2.ID())).Exact(1)(ctx, t)
 }
 
 func noTriggersAvailible(ctx context.Context, t feature.T) {
@@ -592,10 +593,10 @@ func noTriggersAvailible(ctx context.Context, t feature.T) {
 	eventshub.Install(source,
 		eventshub.StartSenderToResource(broker.GVR(), brokerName),
 		eventshub.InputEvent(event),
-	)
+	)(ctx, t)
 
 	// Since there are no triggers, there should be no events
-	assert.OnStore(sink).Exact(0)
+	assert.OnStore(sink).Exact(0)(ctx, t)
 
 	// TODO: Check if source is notified or not
 }
@@ -629,9 +630,9 @@ func replyEventDeliveredToSource(ctx context.Context, t feature.T) {
 
 	eventshub.Install(sink1,
 		eventshub.ReplyWithTransformedEvent(replyEventType, replyEventSource, replyBody),
-		eventshub.StartReceiver)
+		eventshub.StartReceiver)(ctx, t)
 
-	eventshub.Install(sink2, eventshub.StartReceiver)
+	eventshub.Install(sink2, eventshub.StartReceiver)(ctx, t)
 
 	// filter1 filters the original events
 	filter1 := eventingv1.TriggerFilterAttributes{
@@ -649,20 +650,20 @@ func replyEventDeliveredToSource(ctx context.Context, t feature.T) {
 		brokerName,
 		trigger.WithFilter(filter1),
 		trigger.WithSubscriber(service.AsKReference(sink1), ""),
-	)
+	)(ctx, t)
 
 	trigger.Install(
 		trigger2,
 		brokerName,
 		trigger.WithFilter(filter2),
 		trigger.WithSubscriber(service.AsKReference(sink2), ""),
-	)
+	)(ctx, t)
 
 	eventshub.Install(
 		source,
 		eventshub.StartSenderToResource(broker.GVR(), brokerName),
 		eventshub.InputEvent(eventToSend),
-	)
+	)(ctx, t)
 
 	eventMatcher := eventasssert.MatchEvent(
 		test.HasSource(eventSource),
@@ -675,9 +676,9 @@ func replyEventDeliveredToSource(ctx context.Context, t feature.T) {
 		test.HasData([]byte(replyBody)),
 	)
 
-	eventasssert.OnStore(sink2).Match(transformEventMatcher).AtLeast(1)
-	eventasssert.OnStore(sink1).Match(eventMatcher).AtLeast(1)
-	eventasssert.OnStore(sink2).Match(eventMatcher).Not()
+	eventasssert.OnStore(sink2).Match(transformEventMatcher).AtLeast(1)(ctx, t)
+	eventasssert.OnStore(sink1).Match(eventMatcher).AtLeast(1)(ctx, t)
+	eventasssert.OnStore(sink2).Match(eventMatcher).Not()(ctx, t)
 }
 
 func replyEventNotAccepted(ctx context.Context, t feature.T) {
@@ -709,9 +710,9 @@ func replyEventNotAccepted(ctx context.Context, t feature.T) {
 
 	eventshub.Install(sink1,
 		eventshub.ReplyWithTransformedEvent(malformedReplyEventType, malformedReplyEventSource, malformedReplyBody),
-		eventshub.StartReceiver)
+		eventshub.StartReceiver)(ctx, t)
 
-	eventshub.Install(sink2, eventshub.StartReceiver)
+	eventshub.Install(sink2, eventshub.StartReceiver)(ctx, t)
 
 	// filter1 filters the original events
 	filter1 := eventingv1.TriggerFilterAttributes{
@@ -724,19 +725,19 @@ func replyEventNotAccepted(ctx context.Context, t feature.T) {
 		brokerName,
 		trigger.WithFilter(filter1),
 		trigger.WithSubscriber(service.AsKReference(sink1), ""),
-	)
+	)(ctx, t)
 
 	trigger.Install(
 		trigger2,
 		brokerName,
 		trigger.WithSubscriber(service.AsKReference(sink2), ""),
-	)
+	)(ctx, t)
 
 	eventshub.Install(
 		source,
 		eventshub.StartSenderToResource(broker.GVR(), brokerName),
 		eventshub.InputEvent(eventToSend),
-	)
+	)(ctx, t)
 
 	transformEventMatcher := eventasssert.MatchEvent(
 		test.HasSource(malformedReplyEventSource),
@@ -752,9 +753,9 @@ func replyEventNotAccepted(ctx context.Context, t feature.T) {
 		test.IsInvalid(),
 	)
 
-	eventasssert.OnStore(sink2).Match(transformEventMatcher).AtLeast(1)
+	eventasssert.OnStore(sink2).Match(transformEventMatcher).AtLeast(1)(ctx, t)
 
 	// Since the reply event was invalid, there should be atleast 2 events
-	eventasssert.OnStore(sink1).Match(eventMatcher).AtLeast(2)
-	eventasssert.OnStore(sink2).Match(eventMatcher).Not()
+	eventasssert.OnStore(sink1).Match(eventMatcher).AtLeast(2)(ctx, t)
+	eventasssert.OnStore(sink2).Match(eventMatcher).Not()(ctx, t)
 }
