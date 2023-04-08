@@ -417,36 +417,8 @@ func brokerEventVersionNotUpgraded(ctx context.Context, t feature.T) {
 
 func deliveredCESpecs(ctx context.Context, t feature.T) {
 	brokerName := state.GetStringOrFail(ctx, t, "brokerName")
-
-	uuids := map[string]string{
-		uuid.New().String(): "1.0",
-		uuid.New().String(): "0.3",
-	}
-
-	for id, version := range uuids {
-		source := feature.MakeRandomK8sName("source")
-		sink := feature.MakeRandomK8sName("sink")
-		triggerName := feature.MakeRandomK8sName("trigger")
-		event := test.FullEvent()
-		event.SetID(id)
-		event.SetSpecVersion(version)
-
-		// Creating sink
-		eventshub.Install(sink, eventshub.StartReceiver)(ctx, t)
-
-		// Point the Trigger subscriber to the sink svc.
-		cfg := []manifest.CfgFn{trigger.WithSubscriber(service.AsKReference(sink), "")}
-
-		// Creating trigger
-		trigger.Install(triggerName, brokerName, cfg...)
-
-		eventshub.Install(source,
-			eventshub.StartSenderToResource(broker.GVR(), brokerName),
-			eventshub.InputEvent(event),
-		)
-
-		assert.OnStore(sink).MatchEvent(test.HasId(event.ID()), test.HasSpecVersion(version)).Exact(1)
-	}
+	knconf.AcceptsCEVersions(ctx, t, broker.GVR(), brokerName)
+	knconf.RejectsWrongCEVersions(ctx, t, broker.GVR(), brokerName)
 }
 
 func recievedCEAttributes(ctx context.Context, t feature.T) {
@@ -475,63 +447,8 @@ func recievedCEAttributes(ctx context.Context, t feature.T) {
 }
 
 func brokerAcceptsBinaryandStructuredContentMode(ctx context.Context, t feature.T) {
-	brokerName := state.GetStringOrFail(ctx, t, "brokerName")
-
-	contenttypes := []string{
-		"application/vnd.apache.thrift.binary",
-		"application/xml",
-		"application/json",
-	}
-	for _, contenttype := range contenttypes {
-		source := feature.MakeRandomK8sName("source")
-		eventshub.Install(source,
-			eventshub.StartSenderToResource(broker.GVR(), brokerName),
-			eventshub.InputHeader("ce-specversion", "1.0"),
-			eventshub.InputHeader("ce-type", "sometype"),
-			eventshub.InputHeader("ce-source", "200.request.sender.test.knative.dev"),
-			eventshub.InputHeader("ce-id", uuid.New().String()),
-			eventshub.InputHeader("content-type", contenttype),
-			eventshub.InputBody("{}"),
-			eventshub.InputMethod("POST"),
-		)(ctx, t)
-
-		store := eventshub.StoreFromContext(ctx, source)
-		events := knconf.Correlate(store.AssertAtLeast(t, 2, knconf.SentEventMatcher("")))
-		for _, e := range events {
-			if e.Response.StatusCode < 200 || e.Response.StatusCode > 299 {
-				t.Errorf("Expected statuscode 2XX for sequence %d got %d", e.Response.Sequence, e.Response.StatusCode)
-			}
-		}
-	}
-
-	contenttype := "application/cloudevents+json"
-	bodycontent := `{
-    "specversion" : "1.0",
-    "type" : "sometype",
-    "source" : "json.request.sender.test.knative.dev",
-    "id" : "2222-4444-6666",
-    "time" : "2020-07-06T09:23:12Z",
-    "datacontenttype" : "application/json",
-    "data" : {
-        "message" : "helloworld"
-    }
-	}`
-
-	source := feature.MakeRandomK8sName("source")
-	eventshub.Install(source,
-		eventshub.StartSenderToResource(broker.GVR(), brokerName),
-		eventshub.InputHeader("content-type", contenttype),
-		eventshub.InputBody(bodycontent),
-		eventshub.InputMethod("POST"),
-	)(ctx, t)
-
-	store := eventshub.StoreFromContext(ctx, source)
-	events := knconf.Correlate(store.AssertAtLeast(t, 2, knconf.SentEventMatcher("")))
-	for _, e := range events {
-		if e.Response.StatusCode < 200 || e.Response.StatusCode > 299 {
-			t.Errorf("Expected statuscode 2XX for sequence %d got %d", e.Response.Sequence, e.Response.StatusCode)
-		}
-	}
+	brokerAcceptsBinaryContentMode(ctx, t)
+	brokerAcceptsStructuredContentMode(ctx, t)
 }
 
 func allSubscribersRecieveCE(ctx context.Context, t feature.T) {
@@ -611,26 +528,22 @@ func triggerBecameReadyLater(ctx context.Context, t feature.T) {
 	triggerName := feature.MakeRandomK8sName("trigger")
 	event := test.FullEvent()
 
-	f := new(feature.Feature)
-
-	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
+	eventshub.Install(sink, eventshub.StartReceiver)
 
 	// Point the Trigger subscriber to the sink svc.
 	cfg := []manifest.CfgFn{trigger.WithSubscriber(service.AsKReference(sink), "")}
 
 	// Install the trigger
-	f.Setup("install trigger", trigger.Install(triggerName, brokerName, cfg...))
+	trigger.Install(triggerName, brokerName, cfg...)
 
-	f.Setup("install source", eventshub.Install(source,
+	eventshub.Install(source,
 		eventshub.StartSenderToResource(broker.GVR(), brokerName),
 		eventshub.InputEvent(event),
-	))
+	)
 
-	f.Requirement("trigger goes ready", trigger.IsReady(triggerName))
+	trigger.IsReady(triggerName)
 
-	f.Stable("broker as middleware").
-		Must("deliver an event",
-			assert.OnStore(sink).MatchEvent(test.HasId(event.ID())).Exact(1))
+	assert.OnStore(sink).MatchEvent(test.HasId(event.ID())).Exact(1)
 }
 
 func eventEnqueuedLater(ctx context.Context, t feature.T) {
@@ -642,34 +555,28 @@ func eventEnqueuedLater(ctx context.Context, t feature.T) {
 	event1 := test.FullEvent()
 	event2 := test.FullEvent()
 
-	f := new(feature.Feature)
-
-	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
+	eventshub.Install(sink, eventshub.StartReceiver)
 
 	// Point the Trigger subscriber to the sink svc.
 	cfg := []manifest.CfgFn{trigger.WithSubscriber(service.AsKReference(sink), "")}
 
 	// Install the trigger
-	f.Setup("install trigger", trigger.Install(triggerName, brokerName, cfg...))
+	trigger.Install(triggerName, brokerName, cfg...)
 
-	f.Requirement("trigger goes ready", trigger.IsReady(triggerName))
+	trigger.IsReady(triggerName)
 
-	f.Setup("install source", eventshub.Install(source,
+	eventshub.Install(source,
 		eventshub.StartSenderToResource(broker.GVR(), brokerName),
 		eventshub.InputEvent(event1),
-	))
+	)
 
-	f.Setup("added another event between acceptance from a producer and delivery to a subscriber", eventshub.Install(source,
+	eventshub.Install(source,
 		eventshub.InputEvent(event2),
-	))
+	)
 
-	f.Stable("broker as middleware").
-		Must("deliver an event",
-			assert.OnStore(sink).MatchEvent(test.HasId(event1.ID())).Exact(1))
+	assert.OnStore(sink).MatchEvent(test.HasId(event1.ID())).Exact(1)
 
-	f.Stable("broker as middleware").
-		May("deliver an event",
-			assert.OnStore(sink).MatchEvent(test.HasId(event2.ID())).Exact(1))
+	assert.OnStore(sink).MatchEvent(test.HasId(event2.ID())).Exact(1)
 }
 
 func noTriggersAvailible(ctx context.Context, t feature.T) {
