@@ -228,7 +228,7 @@ func requestAcceptedByServer(ctx context.Context, t feature.T) {
 	subscription.Install(sub,
 		subscription.WithChannel(channel_impl.AsRef(channelName)),
 		subscription.WithSubscriber(service.AsKReference(sink), ""),
-	)
+	)(ctx, t)
 
 	eventshub.Install(source,
 		eventshub.StartSenderToResource(channel_impl.GVR(), channelName),
