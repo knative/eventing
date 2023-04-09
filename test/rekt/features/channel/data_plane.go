@@ -174,13 +174,13 @@ func channelableOutputCE(ctx context.Context, t feature.T) {
 	subscription.Install(sub,
 		subscription.WithChannel(channel_impl.AsRef(channelName)),
 		subscription.WithSubscriber(service.AsKReference(sink), ""),
-	)
+	)(ctx, t)
 
-	eventshub.Install(source, eventshub.StartSenderToResource(channel_impl.GVR(), channelName), eventshub.InputEvent(event))
+	eventshub.Install(source, eventshub.StartSenderToResource(channel_impl.GVR(), channelName), eventshub.InputEvent(event))(ctx, t)
 
 	assert.OnStore(sink).
 		MatchEvent(test.HasId(event.ID()), test.HasExactlyAttributesEqualTo(event.Context)).
-		AtLeast(1)
+		AtLeast(1)(ctx, t)
 }
 
 func channelableOutputCEwithSameVersion(ctx context.Context, t feature.T) {
@@ -200,13 +200,13 @@ func channelableOutputCEwithSameVersion(ctx context.Context, t feature.T) {
 	subscription.Install(sub,
 		subscription.WithChannel(channel_impl.AsRef(channelName)),
 		subscription.WithSubscriber(service.AsKReference(sink), ""),
-	)
+	)(ctx, t)
 
-	eventshub.Install(source, eventshub.StartSenderToResource(channel_impl.GVR(), channelName), eventshub.InputEvent(event))
+	eventshub.Install(source, eventshub.StartSenderToResource(channel_impl.GVR(), channelName), eventshub.InputEvent(event))(ctx, t)
 
 	assert.OnStore(sink).
 		MatchEvent(test.HasId(event.ID()), test.HasSpecVersion("0.3")).
-		AtLeast(1)
+		AtLeast(1)(ctx, t)
 }
 
 func channelabledoesntChangeCEAttributes(ctx context.Context, t feature.T) {
@@ -226,13 +226,13 @@ func channelabledoesntChangeCEAttributes(ctx context.Context, t feature.T) {
 	subscription.Install(sub,
 		subscription.WithChannel(channel_impl.AsRef(channelName)),
 		subscription.WithSubscriber(service.AsKReference(sink), ""),
-	)
+	)(ctx, t)
 
-	eventshub.Install(source, eventshub.StartSenderToResource(channel_impl.GVR(), channelName), eventshub.InputEvent(event))
+	eventshub.Install(source, eventshub.StartSenderToResource(channel_impl.GVR(), channelName), eventshub.InputEvent(event))(ctx, t)
 
 	assert.OnStore(sink).
 		MatchEvent(test.HasId(event.ID()), test.HasData(event.Data()), test.HasType(event.Type()), test.HasSource(event.Source()), test.HasExactlyAttributesEqualTo(event.Context)).
-		AtLeast(1)
+		AtLeast(1)(ctx, t)
 }
 
 func channelableDoesntAlterEvents(ctx context.Context, t feature.T) {
@@ -252,13 +252,13 @@ func channelableDoesntAlterEvents(ctx context.Context, t feature.T) {
 	subscription.Install(sub,
 		subscription.WithChannel(channel_impl.AsRef(channelName)),
 		subscription.WithSubscriber(service.AsKReference(sink), ""),
-	)
+	)(ctx, t)
 
-	eventshub.Install(source, eventshub.StartSenderToResource(channel_impl.GVR(), channelName), eventshub.InputEvent(event))
+	eventshub.Install(source, eventshub.StartSenderToResource(channel_impl.GVR(), channelName), eventshub.InputEvent(event))(ctx, t)
 
 	assert.OnStore(sink).
 		MatchEvent(test.HasId(event.ID()), test.HasData(event.Data()), test.HasType(event.Type()), test.HasSource(event.Source())).
-		AtLeast(1)
+		AtLeast(1)(ctx, t)
 }
 
 func channelableDeliversToAllSubscribers(ctx context.Context, t feature.T) {
@@ -281,16 +281,16 @@ func channelableDeliversToAllSubscribers(ctx context.Context, t feature.T) {
 		subscription.WithChannel(channel_impl.AsRef(channelName)),
 		subscription.WithSubscriber(service.AsKReference(sink1), ""),
 		subscription.WithSubscriber(service.AsKReference(sink2), ""),
-	)
+	)(ctx, t)
 
-	eventshub.Install(source, eventshub.StartSenderToResource(channel_impl.GVR(), channelName), eventshub.InputEvent(event))
+	eventshub.Install(source, eventshub.StartSenderToResource(channel_impl.GVR(), channelName), eventshub.InputEvent(event))(ctx, t)
 
 	assert.OnStore(sink1).
 		MatchEvent(test.HasId(event.ID()), test.HasData(event.Data()), test.HasType(event.Type()), test.HasSource(event.Source()), test.HasExactlyAttributesEqualTo(event.Context)).
-		AtLeast(1)
+		AtLeast(1)(ctx, t)
 	assert.OnStore(sink2).
 		MatchEvent(test.HasId(event.ID()), test.HasData(event.Data()), test.HasType(event.Type()), test.HasSource(event.Source()), test.HasExactlyAttributesEqualTo(event.Context)).
-		AtLeast(1)
+		AtLeast(1)(ctx, t)
 }
 
 func addControlPlaneDelivery(fs *feature.FeatureSet) {
