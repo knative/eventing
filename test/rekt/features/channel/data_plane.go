@@ -256,7 +256,7 @@ func dispachModeDifferentFromRecieved(ctx context.Context, t feature.T) {
 	subscription.Install(sub,
 		subscription.WithChannel(channel_impl.AsRef(channelName)),
 		subscription.WithSubscriber(service.AsKReference(sink), ""),
-	)
+	)(ctx, t)
 
 	eventshub.Install(source,
 		eventshub.StartSenderToResource(channel_impl.GVR(), channelName),
@@ -290,13 +290,13 @@ func channelableEventVersionNotUpgraded(ctx context.Context, t feature.T) {
 	subscription.Install(sub,
 		subscription.WithChannel(channel_impl.AsRef(channelName)),
 		subscription.WithSubscriber(service.AsKReference(sink), ""),
-	)
+	)(ctx, t)
 
-	eventshub.Install(source, eventshub.StartSenderToResource(channel_impl.GVR(), channelName), eventshub.InputEvent(event))
+	eventshub.Install(source, eventshub.StartSenderToResource(channel_impl.GVR(), channelName), eventshub.InputEvent(event))(ctx, t)
 
 	assert.OnStore(sink).
 		MatchEvent(test.HasId(event.ID()), test.HasSpecVersion("0.3")).
-		AtLeast(1)
+		AtLeast(1)(ctx, t)
 }
 
 func addControlPlaneDelivery(fs *feature.FeatureSet) {
