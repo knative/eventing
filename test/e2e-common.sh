@@ -65,6 +65,9 @@ export SYSTEM_NAMESPACE
 SYSTEM_NAMESPACE="${SYSTEM_NAMESPACE:-"knative-eventing-"$(head -c 128 < \
   /dev/urandom | LC_CTYPE=C tr -dc 'a-z0-9' | fold -w 10 | head -n 1)}"
 
+export CERT_MANAGER_NAMESPACE
+CERT_MANAGER_NAMESPACE="cert-manager"
+
 # Latest release. If user does not supply this as a flag, the latest
 # tagged release on the current branch will be used.
 readonly LATEST_RELEASE_VERSION=$(latest_version)
@@ -376,12 +379,14 @@ function wait_for_file() {
 }
 
 function install_cert_manager(){
-  url="$(curl -s https://api.github.com/repos/cert-manager/cert-manager/releases/latest | jq '.assets[] | select(.name|match("cert-manager.yaml$")) | .browser_download_url')"
+  if [ ! -d "third_party/cert-manager" ] 
+then
+    echo "Cert-manager install files not found. Run hack/update-deps.sh" 
+    return 1
+fi
 
-  kubectl apply \
-    -f "${url}" || return 1
-  
-  scale_controlplane cert-manager cert-manager-cainjector cert-manager-webhook
+  kubectl apply -f third_party/cert-manager/01-cert-manager.crds.yaml
+  kubectl apply -f third_party/cert-manager/02-cert-manager.yaml
 
-  wait_until_pods_running ${SYSTEM_NAMESPACE} || fail_test "Failed to install cert manager"
+  wait_until_pods_running CERT_MANAGER_NAMESPACE || fail_test "Failed to install cert manager"
 }

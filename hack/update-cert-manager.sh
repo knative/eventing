@@ -2,9 +2,12 @@
 
 set -euo pipefail
 
-function update_certmanager() {
-  echo "Updating Cert Manager"
-  kubectl apply -f "$(curl -s https://api.github.com/repos/cert-manager/cert-manager/releases/latest | jq '.assets[] | select(.name|match("cert-manager.yaml$")) | .browser_download_url')"
+function update_cert_manager() {
+  version="$1"
+  echo "Updating Cert Manager to version $version"
+  mkdir -p third_party/cert-manager
+  curl -L https://github.com/cert-manager/cert-manager/releases/download/$version/cert-manager.yaml > third_party/cert-manager/01-cert-manager.crds.yaml
+  curl -L https://github.com/cert-manager/cert-manager/releases/download/$version/cert-manager.yaml > third_party/cert-manager/02-cert-manager.yaml
 }
 
-update_certmanager 
+update_certmanager "v1.11.1"
