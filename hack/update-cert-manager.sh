@@ -10,4 +10,4 @@ function update_cert_manager() {
   curl -L https://github.com/cert-manager/cert-manager/releases/download/$version/cert-manager.yaml > third_party/cert-manager/02-cert-manager.yaml
 }
 
-update_certmanager "v1.11.1"
+update_cert_manager "v1.11.1"
