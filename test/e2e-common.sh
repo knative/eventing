@@ -65,8 +65,8 @@ export SYSTEM_NAMESPACE
 SYSTEM_NAMESPACE="${SYSTEM_NAMESPACE:-"knative-eventing-"$(head -c 128 < \
   /dev/urandom | LC_CTYPE=C tr -dc 'a-z0-9' | fold -w 10 | head -n 1)}"
 
-export CERT_MANAGER_NAMESPACE
 CERT_MANAGER_NAMESPACE="cert-manager"
+export CERT_MANAGER_NAMESPACE
 
 # Latest release. If user does not supply this as a flag, the latest
 # tagged release on the current branch will be used.
@@ -379,12 +379,6 @@ function wait_for_file() {
 }
 
 function install_cert_manager(){
-  if [ ! -d "third_party/cert-manager" ] 
-then
-    echo "Cert-manager install files not found. Run hack/update-deps.sh" 
-    return 1
-fi
-
   kubectl apply -f third_party/cert-manager/01-cert-manager.crds.yaml
   kubectl apply -f third_party/cert-manager/02-cert-manager.yaml
 
