@@ -65,6 +65,9 @@ export SYSTEM_NAMESPACE
 SYSTEM_NAMESPACE="${SYSTEM_NAMESPACE:-"knative-eventing-"$(head -c 128 < \
   /dev/urandom | LC_CTYPE=C tr -dc 'a-z0-9' | fold -w 10 | head -n 1)}"
 
+CERT_MANAGER_NAMESPACE="cert-manager"
+export CERT_MANAGER_NAMESPACE
+
 # Latest release. If user does not supply this as a flag, the latest
 # tagged release on the current branch will be used.
 readonly LATEST_RELEASE_VERSION=$(latest_version)
@@ -82,6 +85,8 @@ function knative_setup() {
   enable_sugar || fail_test "Could not enable Sugar Controller Injection"
 
   unleash_duck || fail_test "Could not unleash the chaos duck"
+
+  install_cert_manager || fail_test "Could not install Cert Manager"
 }
 
 function scale_controlplane() {
@@ -371,4 +376,11 @@ function wait_for_file() {
     ((timeout--))
   done
   return 0
+}
+
+function install_cert_manager() {
+  kubectl apply -f third_party/cert-manager/01-cert-manager.crds.yaml
+  kubectl apply -f third_party/cert-manager/02-cert-manager.yaml
+
+  wait_until_pods_running "$CERT_MANAGER_NAMESPACE" || fail_test "Failed to install cert manager"
 }
