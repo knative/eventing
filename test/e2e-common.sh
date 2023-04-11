@@ -382,5 +382,5 @@ function install_cert_manager(){
   kubectl apply -f third_party/cert-manager/01-cert-manager.crds.yaml
   kubectl apply -f third_party/cert-manager/02-cert-manager.yaml
 
-  wait_until_pods_running CERT_MANAGER_NAMESPACE || fail_test "Failed to install cert manager"
+  wait_until_pods_running "$CERT_MANAGER_NAMESPACE" || fail_test "Failed to install cert manager"
 }
