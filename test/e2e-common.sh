@@ -378,7 +378,7 @@ function wait_for_file() {
   return 0
 }
 
-function install_cert_manager(){
+function install_cert_manager() {
   kubectl apply -f third_party/cert-manager/01-cert-manager.crds.yaml
   kubectl apply -f third_party/cert-manager/02-cert-manager.yaml
 
