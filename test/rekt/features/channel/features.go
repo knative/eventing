@@ -38,7 +38,6 @@ import (
 	"knative.dev/eventing/test/rekt/resources/channel_impl"
 	"knative.dev/eventing/test/rekt/resources/containersource"
 	"knative.dev/eventing/test/rekt/resources/delivery"
-	"knative.dev/eventing/test/rekt/resources/pingsource"
 	"knative.dev/eventing/test/rekt/resources/source"
 	"knative.dev/eventing/test/rekt/resources/subscription"
 )
@@ -53,12 +52,10 @@ func ChannelChain(length int, createSubscriberFn func(ref *duckv1.KReference, ur
 		name := feature.MakeRandomK8sName(fmt.Sprintf("channel-%04d", i))
 		channels = append(channels, name)
 		f.Setup("install channel", channel_impl.Install(name))
-		f.Requirement("channel is ready", channel_impl.IsReady(name))
+		f.Setup("channel is ready", channel_impl.IsReady(name))
 	}
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
-	// attach the first channel to the source
-	f.Setup("install containersource", containersource.Install(cs, pingsource.WithSink(channel_impl.AsRef(channels[0]), "")))
 
 	// use the rest for the chain
 	for i := 0; i < length; i++ {
@@ -75,7 +72,12 @@ func ChannelChain(length int, createSubscriberFn func(ref *duckv1.KReference, ur
 				createSubscriberFn(channel_impl.AsRef(channels[i+1]), ""),
 			))
 		}
+
+		f.Setup("subscription is ready", subscription.IsReady(sub))
 	}
+
+	// attach the first channel to the source
+	f.Requirement("install containersource", containersource.Install(cs, containersource.WithSink(channel_impl.AsRef(channels[0]), "")))
 	f.Requirement("containersource goes ready", containersource.IsReady(cs))
 
 	f.Assert("chained channels relay events", assert.OnStore(sink).MatchEvent(test.HasType("dev.knative.eventing.samples.heartbeat")).AtLeast(1))
