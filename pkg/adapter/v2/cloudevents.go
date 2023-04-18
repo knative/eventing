@@ -30,7 +30,6 @@ import (
 	"github.com/cloudevents/sdk-go/v2/event"
 	"github.com/cloudevents/sdk-go/v2/protocol"
 	"github.com/cloudevents/sdk-go/v2/protocol/http"
-	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"go.opencensus.io/plugin/ochttp"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/tracing/propagation/tracecontextb3"
@@ -105,7 +104,7 @@ func newCloudEventsClientCRStatus(env EnvConfigAccessor, ceOverrides *duckv1.Clo
 				return nil, err
 			}
 
-			pOpts = append(pOpts, cehttp.WithRoundTripper(&ochttp.Transport{
+			pOpts = append(pOpts, http.WithRoundTripper(&ochttp.Transport{
 				Base:        transport,
 				Propagation: tracecontextb3.TraceContextEgress,
 			}))
