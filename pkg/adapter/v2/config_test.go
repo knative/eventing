@@ -19,7 +19,6 @@ package adapter
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"testing"
 	"time"
 
@@ -36,25 +35,14 @@ type myEnvConfig struct {
 }
 
 func TestEnvConfig(t *testing.T) {
-	os.Setenv("K_SINK", "http://sink")
-	os.Setenv("NAMESPACE", "ns")
-	os.Setenv("K_METRICS_CONFIG", "metrics")
-	os.Setenv("K_LOGGING_CONFIG", "logging")
-	os.Setenv("K_TRACING_CONFIG", "tracing")
-	os.Setenv("K_LEADER_ELECTION_CONFIG", "leaderelection")
-	os.Setenv("K_SINK_TIMEOUT", "999")
-	os.Setenv("MODE", "mymode") // note: custom to this test impl
-
-	defer func() {
-		os.Unsetenv("K_SINK")
-		os.Unsetenv("NAMESPACE")
-		os.Unsetenv("K_METRICS_CONFIG")
-		os.Unsetenv("K_LOGGING_CONFIG")
-		os.Unsetenv("K_TRACING_CONFIG")
-		os.Unsetenv("K_LEADER_ELECTION_CONFIG")
-		os.Unsetenv("MODE")
-		os.Unsetenv("K_SINK_TIMEOUT")
-	}()
+	t.Setenv("K_SINK", "http://sink")
+	t.Setenv("NAMESPACE", "ns")
+	t.Setenv("K_METRICS_CONFIG", "metrics")
+	t.Setenv("K_LOGGING_CONFIG", "logging")
+	t.Setenv("K_TRACING_CONFIG", "tracing")
+	t.Setenv("K_LEADER_ELECTION_CONFIG", "leaderelection")
+	t.Setenv("K_SINK_TIMEOUT", "999")
+	t.Setenv("MODE", "mymode") // note: custom to this test impl
 
 	var env myEnvConfig
 	err := envconfig.Process("", &env)
@@ -81,13 +69,14 @@ func TestEnvConfig(t *testing.T) {
 	if env.EnvSinkTimeout != "999" {
 		t.Error("Expected env.EnvSinkTimeout to be 999, got:", env.EnvSinkTimeout)
 	}
+
+	if env.CACerts != nil {
+		t.Error("Expected CACerts to be nil")
+	}
 }
 
 func TestEmptySinkTimeout(t *testing.T) {
-	os.Setenv("K_SINK_TIMEOUT", "")
-	defer func() {
-		os.Unsetenv("K_SINK_TIMEOUT")
-	}()
+	t.Setenv("K_SINK_TIMEOUT", "")
 
 	var env myEnvConfig
 	err := envconfig.Process("", &env)
@@ -117,10 +106,7 @@ func TestGetName(t *testing.T) {
 func TestGetName_Override(t *testing.T) {
 	want := "custom-name"
 
-	os.Setenv("NAME", want)
-	defer func() {
-		os.Unsetenv("NAME")
-	}()
+	t.Setenv("NAME", want)
 
 	var env myEnvConfig
 	err := envconfig.Process("", &env)
@@ -150,10 +136,7 @@ func TestGetNamespace(t *testing.T) {
 func TestGetNamespace_Override(t *testing.T) {
 	want := "custom-namespace"
 
-	os.Setenv("NAMESPACE", want)
-	defer func() {
-		os.Unsetenv("NAMESPACE")
-	}()
+	t.Setenv("NAMESPACE", want)
 
 	var env myEnvConfig
 	err := envconfig.Process("", &env)
@@ -171,10 +154,7 @@ func TestGetCloudEventOverrides(t *testing.T) {
 	want.Extensions = map[string]string{"quack": "attack"}
 	wantJson, _ := json.Marshal(want)
 
-	os.Setenv("K_CE_OVERRIDES", string(wantJson))
-	defer func() {
-		os.Unsetenv("K_CE_OVERRIDES")
-	}()
+	t.Setenv("K_CE_OVERRIDES", string(wantJson))
 
 	var env myEnvConfig
 	err := envconfig.Process("", &env)
@@ -190,10 +170,7 @@ func TestGetCloudEventOverrides(t *testing.T) {
 }
 
 func TestGetCloudEventOverrides_BadJson(t *testing.T) {
-	os.Setenv("K_CE_OVERRIDES", "quack attack")
-	defer func() {
-		os.Unsetenv("K_CE_OVERRIDES")
-	}()
+	t.Setenv("K_CE_OVERRIDES", "quack attack")
 
 	var env myEnvConfig
 	err := envconfig.Process("", &env)
@@ -207,10 +184,7 @@ func TestGetCloudEventOverrides_BadJson(t *testing.T) {
 }
 
 func TestGetLeaderElectionConfig(t *testing.T) {
-	os.Setenv("K_COMPONENT", "Gotham")
-	defer func() {
-		os.Unsetenv("K_COMPONENT")
-	}()
+	t.Setenv("K_COMPONENT", "Gotham")
 
 	want := new(kle.ComponentConfig)
 	want.Buckets = 2
@@ -224,10 +198,7 @@ func TestGetLeaderElectionConfig(t *testing.T) {
 
 	fmt.Println(wantJson)
 
-	os.Setenv("K_LEADER_ELECTION_CONFIG", wantJson)
-	defer func() {
-		os.Unsetenv("K_LEADER_ELECTION_CONFIG")
-	}()
+	t.Setenv("K_LEADER_ELECTION_CONFIG", wantJson)
 
 	var env myEnvConfig
 	err := envconfig.Process("", &env)
@@ -239,5 +210,33 @@ func TestGetLeaderElectionConfig(t *testing.T) {
 		t.Error("Expected no error:", err)
 	} else if diff := cmp.Diff(want, got); diff != "" {
 		t.Errorf("GetLeaderElectionConfig (-want, +got) = %v", diff)
+	}
+}
+
+func TestCACerts(t *testing.T) {
+	tt := []struct {
+		value string
+	}{
+		{value: "foo"},
+		{value: ""},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.value, func(t *testing.T) {
+			t.Setenv("K_CA_CERTS", tc.value)
+
+			var env myEnvConfig
+			err := envconfig.Process("", &env)
+			if err != nil {
+				t.Error("Expected no error:", err)
+			}
+
+			if env.CACerts == nil {
+				t.Error("Expected CACerts to be non nil")
+			}
+			if *env.CACerts != tc.value {
+				t.Errorf("Expected CACerts to be %v, got %v", tc.value, *env.CACerts)
+			}
+		})
 	}
 }
