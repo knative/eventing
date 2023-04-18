@@ -31,11 +31,11 @@ import (
 	"github.com/cloudevents/sdk-go/v2/protocol"
 	"github.com/cloudevents/sdk-go/v2/protocol/http"
 	"go.opencensus.io/plugin/ochttp"
-
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/tracing/propagation/tracecontextb3"
 
 	"knative.dev/eventing/pkg/adapter/v2/util/crstatusevent"
+	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/metrics/source"
 	obsclient "knative.dev/eventing/pkg/observability/client"
 )
@@ -92,8 +92,25 @@ func newCloudEventsClientCRStatus(env EnvConfigAccessor, ceOverrides *duckv1.Clo
 		if sinkWait := env.GetSinktimeout(); sinkWait > 0 {
 			pOpts = append(pOpts, setTimeOut(time.Duration(sinkWait)*time.Second))
 		}
-		var err error
+		if caCerts := env.GetCACerts(); (caCerts != nil && *caCerts != "") && eventingtls.IsHttpsSink(env.GetSink()) {
+			var err error
+
+			clientConfig := eventingtls.NewDefaultClientConfig()
+			clientConfig.CACerts = caCerts
+
+			transport := nethttp.DefaultTransport.(*nethttp.Transport).Clone()
+			transport.TLSClientConfig, err = eventingtls.GetTLSClientConfig(clientConfig)
+			if err != nil {
+				return nil, err
+			}
+
+			pOpts = append(pOpts, http.WithRoundTripper(&ochttp.Transport{
+				Base:        transport,
+				Propagation: tracecontextb3.TraceContextEgress,
+			}))
+		}
 		if ceOverrides == nil {
+			var err error
 			ceOverrides, err = env.GetCloudEventOverrides()
 			if err != nil {
 				return nil, err
