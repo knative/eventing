@@ -184,10 +184,6 @@ func certPool(caCerts *string) (*x509.CertPool, error) {
 		return nil, err
 	}
 
-	// Clone the pool before appending other certs or returning since we don't want to add user
-	// provided CA certs for different resources to the system pool or to any other "global" pool.
-	p = p.Clone()
-
 	if caCerts == nil || *caCerts == "" {
 		return p, nil
 	}
