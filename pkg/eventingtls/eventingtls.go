@@ -99,6 +99,7 @@ func GetCertificateFromSecret(ctx context.Context, informer coreinformersv1.Secr
 
 		certificate, err := tls.X509KeyPair(crt, key)
 		if err != nil {
+			logger.Error("Failed to create x.509 key pair", zap.Error(err))
 			return
 		}
 
