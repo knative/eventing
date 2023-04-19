@@ -47,6 +47,7 @@ import (
 
 func TestMessageReceiver_ServeHTTP(t *testing.T) {
 	testCases := map[string]struct {
+		tls               bool
 		method            string
 		host              string
 		path              string
@@ -56,6 +57,7 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 		responseValidator func(r httptest.ResponseRecorder) error
 	}{
 		"malformed path": {
+			tls:      true,
 			path:     "/something",
 			expected: nethttp.StatusInternalServerError,
 		},
@@ -80,6 +82,7 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 			expected: nethttp.StatusInternalServerError,
 		},
 		"path based routing ok": {
+			tls:  true,
 			path: "/new-namespace/new-channel",
 			host: "test-name.test-namespace.svc." + network.GetClusterDomainName(),
 			receiverFunc: func(ctx context.Context, r ChannelReference, m binding.Message, transformers []binding.Transformer, additionalHeaders nethttp.Header) error {
@@ -176,7 +179,12 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			req := httptest.NewRequest(tc.method, "http://"+tc.host+tc.path, nil)
+			protocol := "http"
+			if tc.tls {
+				protocol = "https"
+			}
+
+			req := httptest.NewRequest(tc.method, protocol+"://"+tc.host+tc.path, nil)
 			reqCtx, _ := trace.StartSpan(context.TODO(), "bla")
 			req = req.WithContext(reqCtx)
 			req.Host = tc.host

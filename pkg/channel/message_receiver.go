@@ -30,6 +30,7 @@ import (
 
 	"knative.dev/pkg/network"
 
+	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/utils"
 )
@@ -58,6 +59,7 @@ type MessageReceiver struct {
 	receiverFunc         UnbufferedMessageReceiverFunc
 	logger               *zap.Logger
 	hostToChannelFunc    ResolveChannelFromHostFunc
+	pathToChannelFunc    ResolveChannelFromPathFunc
 	reporter             StatsReporter
 }
 
@@ -75,10 +77,23 @@ type MessageReceiverOptions func(*MessageReceiver) error
 type ResolveChannelFromHostFunc func(string) (ChannelReference, error)
 
 // ResolveMessageChannelFromHostHeader is a ReceiverOption for NewMessageReceiver which enables the caller to overwrite the
-// default behaviour defined by ParseChannel function.
+// default behaviour defined by ParseChannelFromHost function.
 func ResolveMessageChannelFromHostHeader(hostToChannelFunc ResolveChannelFromHostFunc) MessageReceiverOptions {
 	return func(r *MessageReceiver) error {
 		r.hostToChannelFunc = hostToChannelFunc
+		return nil
+	}
+}
+
+// ResolveChannelFromPathFunc function enables EventReceiver to get the Channel Reference from incoming request's path
+// before calling receiverFunc.
+type ResolveChannelFromPathFunc func(string) (ChannelReference, error)
+
+// ResolveMessageChannelFromPathHeader is a ReceiverOption for NewMessageReceiver which enables the caller to overwrite the
+// default behaviour defined by ParseChannelFromPath function.
+func ResolveMessageChannelFromPathHeader(PathToChannelFunc ResolveChannelFromPathFunc) MessageReceiverOptions {
+	return func(r *MessageReceiver) error {
+		r.pathToChannelFunc = PathToChannelFunc
 		return nil
 	}
 }
@@ -90,7 +105,8 @@ func NewMessageReceiver(receiverFunc UnbufferedMessageReceiverFunc, logger *zap.
 	receiver := &MessageReceiver{
 		httpBindingsReceiver: bindingsReceiver,
 		receiverFunc:         receiverFunc,
-		hostToChannelFunc:    ResolveChannelFromHostFunc(ParseChannel),
+		hostToChannelFunc:    ResolveChannelFromHostFunc(ParseChannelFromHost),
+		pathToChannelFunc:    ResolveChannelFromPathFunc(ParseChannelFromPath),
 		logger:               logger,
 		reporter:             reporter,
 	}
@@ -153,11 +169,23 @@ func (r *MessageReceiver) ServeHTTP(response nethttp.ResponseWriter, request *ne
 	//   404 - the request was for an unknown channel
 	//   500 - an error occurred processing the request
 	args := ReportArgs{}
+	var channel ChannelReference
+	var err error
 
-	channel, err := r.hostToChannelFunc(request.URL.String())
+	if eventingtls.IsHttpsSink(request.URL.String()) {
+		channel, err = r.pathToChannelFunc(request.URL.Path)
+	} else {
+		channel, err = r.hostToChannelFunc(request.Host)
+	}
+
 	if err != nil {
-		r.logger.Info("Could not extract channel", zap.Error(err))
-		response.WriteHeader(nethttp.StatusInternalServerError)
+		if _, ok := err.(UnknownHostError); ok {
+			response.WriteHeader(nethttp.StatusNotFound)
+			r.logger.Info(err.Error())
+		} else {
+			r.logger.Info("Could not extract channel", zap.Error(err))
+			response.WriteHeader(nethttp.StatusInternalServerError)
+		}
 		ReportEventCountMetricsForDispatchError(err, r.reporter, &args)
 		return
 	}
