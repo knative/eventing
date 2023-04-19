@@ -56,7 +56,11 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 		receiverFunc      UnbufferedMessageReceiverFunc
 		responseValidator func(r httptest.ResponseRecorder) error
 	}{
-		"malformed path": {
+		"non TLS with non '/' path": {
+			path:     "/something",
+			expected: nethttp.StatusNotFound,
+		},
+		"TLS with malformed path": {
 			tls:      true,
 			path:     "/something",
 			expected: nethttp.StatusInternalServerError,

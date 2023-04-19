@@ -74,6 +74,7 @@ type MessageReceiverOptions func(*MessageReceiver) error
 
 // ResolveChannelFromHostFunc function enables EventReceiver to get the Channel Reference from incoming request HostHeader
 // before calling receiverFunc.
+// Returns UnknownHostError if the channel is not found, otherwise returns a generic error.
 type ResolveChannelFromHostFunc func(string) (ChannelReference, error)
 
 // ResolveMessageChannelFromHostHeader is a ReceiverOption for NewMessageReceiver which enables the caller to overwrite the
@@ -172,9 +173,14 @@ func (r *MessageReceiver) ServeHTTP(response nethttp.ResponseWriter, request *ne
 	var channel ChannelReference
 	var err error
 
+	// If TLS, use path to determine channel.
 	if eventingtls.IsHttpsSink(request.URL.String()) {
 		channel, err = r.pathToChannelFunc(request.URL.Path)
 	} else {
+		if request.URL.Path != "/" {
+			response.WriteHeader(nethttp.StatusNotFound)
+			return
+		}
 		channel, err = r.hostToChannelFunc(request.Host)
 	}
 
