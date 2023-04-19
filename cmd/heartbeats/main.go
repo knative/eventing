@@ -140,7 +140,7 @@ func main() {
 	}
 
 	if eventSource == "" {
-		eventSource = fmt.Sprintf("https://knative.dev/eventing-contrib/cmd/heartbeats/#%s/%s", env.Namespace, env.Name)
+		eventSource = fmt.Sprintf("https://knative.dev/eventing/cmd/heartbeats/#%s/%s", env.Namespace, env.Name)
 		log.Printf("Heartbeats Source: %s", eventSource)
 	}
 

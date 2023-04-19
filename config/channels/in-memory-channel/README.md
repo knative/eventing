@@ -216,7 +216,7 @@ event-display-5d859f98d7-b79d7 display Validation: valid
 event-display-5d859f98d7-b79d7 display Context Attributes,
 event-display-5d859f98d7-b79d7 display   specversion: 1.0
 event-display-5d859f98d7-b79d7 display   type: dev.knative.eventing.samples.heartbeat
-event-display-5d859f98d7-b79d7 display   source: https://knative.dev/eventing-contrib/cmd/heartbeats/#default/heartbeats
+event-display-5d859f98d7-b79d7 display   source: https://knative.dev/eventing/cmd/heartbeats/#default/heartbeats
 event-display-5d859f98d7-b79d7 display   id: a6a36488-028f-4fd0-9c2c-31afc389ef73
 event-display-5d859f98d7-b79d7 display   time: 2021-05-05T19:26:15.452991106Z
 event-display-5d859f98d7-b79d7 display   datacontenttype: application/json

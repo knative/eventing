@@ -45,7 +45,7 @@ Validation: valid
 Context Attributes,
   specversion: 1.0
   type: dev.knative.eventing.samples.heartbeat
-  source: https://knative.dev/eventing-contrib/cmd/heartbeats/#event-test/mypod
+  source: https://knative.dev/eventing/cmd/heartbeats/#event-test/mypod
   id: 2b72d7bf-c38f-4a98-a433-608fbcdd2596
   time: 2019-10-18T15:23:20.809775386Z
   contenttype: application/json
