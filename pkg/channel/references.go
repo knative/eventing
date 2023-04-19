@@ -18,6 +18,7 @@ package channel
 
 import (
 	"fmt"
+	"net/url"
 	"strings"
 )
 
@@ -32,15 +33,35 @@ func (r *ChannelReference) String() string {
 	return fmt.Sprintf("%s/%s", r.Namespace, r.Name)
 }
 
-// ParseChannel converts the channel's hostname into a channel
-// reference.
-func ParseChannel(host string) (ChannelReference, error) {
-	chunks := strings.Split(host, ".")
-	if len(chunks) < 2 {
-		return ChannelReference{}, fmt.Errorf("bad host format %q", host)
+// ParseChannel determines a Channel reference from a URL
+func ParseChannel(rawURL string) (ChannelReference, error) {
+	url, err := url.Parse(rawURL)
+	if err != nil {
+		return ChannelReference{}, fmt.Errorf("bad url: %s", rawURL)
 	}
+
+	path := url.Path
+	if path == "/" {
+		// host based routing
+		host := url.Host
+		chunks := strings.Split(host, ".")
+		if len(chunks) < 2 {
+			return ChannelReference{}, fmt.Errorf("bad host format %q", host)
+		}
+		return ChannelReference{
+			Name:      chunks[0],
+			Namespace: chunks[1],
+		}, nil
+	}
+
+	// path based routing
+	splitPath := strings.Split(strings.TrimSuffix(path, "/"), "/")
+	if len(splitPath) != 3 {
+		return ChannelReference{}, fmt.Errorf("bad path format %s", path)
+	}
+
 	return ChannelReference{
-		Name:      chunks[0],
-		Namespace: chunks[1],
+		Namespace: splitPath[1],
+		Name:      splitPath[2],
 	}, nil
 }

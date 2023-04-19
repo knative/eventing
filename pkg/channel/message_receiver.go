@@ -72,7 +72,6 @@ type MessageReceiverOptions func(*MessageReceiver) error
 
 // ResolveChannelFromHostFunc function enables EventReceiver to get the Channel Reference from incoming request HostHeader
 // before calling receiverFunc.
-// Returns UnknownHostError if the channel is not found, otherwise returns a generic error.
 type ResolveChannelFromHostFunc func(string) (ChannelReference, error)
 
 // ResolveMessageChannelFromHostHeader is a ReceiverOption for NewMessageReceiver which enables the caller to overwrite the
@@ -149,29 +148,16 @@ func (r *MessageReceiver) ServeHTTP(response nethttp.ResponseWriter, request *ne
 		return
 	}
 
-	// tctx.URI is actually the path...
-	if request.URL.Path != "/" {
-		response.WriteHeader(nethttp.StatusNotFound)
-		return
-	}
-
-	args := ReportArgs{}
-
 	// The response status codes:
 	//   202 - the event was sent to subscribers
 	//   404 - the request was for an unknown channel
 	//   500 - an error occurred processing the request
-	host := request.Host
-	r.logger.Debug("Received request", zap.String("host", host))
-	channel, err := r.hostToChannelFunc(host)
+	args := ReportArgs{}
+
+	channel, err := r.hostToChannelFunc(request.URL.String())
 	if err != nil {
-		if _, ok := err.(UnknownHostError); ok {
-			response.WriteHeader(nethttp.StatusNotFound)
-			r.logger.Info(err.Error())
-		} else {
-			r.logger.Info("Could not extract channel", zap.Error(err))
-			response.WriteHeader(nethttp.StatusInternalServerError)
-		}
+		r.logger.Info("Could not extract channel", zap.Error(err))
+		response.WriteHeader(nethttp.StatusInternalServerError)
 		ReportEventCountMetricsForDispatchError(err, r.reporter, &args)
 		return
 	}

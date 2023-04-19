@@ -55,9 +55,9 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 		receiverFunc      UnbufferedMessageReceiverFunc
 		responseValidator func(r httptest.ResponseRecorder) error
 	}{
-		"non '/' path": {
+		"malformed path": {
 			path:     "/something",
-			expected: nethttp.StatusNotFound,
+			expected: nethttp.StatusInternalServerError,
 		},
 		"not a POST": {
 			method:   nethttp.MethodGet,
@@ -78,6 +78,17 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 				return errors.New("test induced receiver function error")
 			},
 			expected: nethttp.StatusInternalServerError,
+		},
+		"path based routing ok": {
+			path: "/new-namespace/new-channel",
+			host: "test-name.test-namespace.svc." + network.GetClusterDomainName(),
+			receiverFunc: func(ctx context.Context, r ChannelReference, m binding.Message, transformers []binding.Transformer, additionalHeaders nethttp.Header) error {
+				if r.Namespace != "new-namespace" || r.Name != "new-channel" {
+					return fmt.Errorf("bad channel reference %v", r)
+				}
+				return nil
+			},
+			expected: nethttp.StatusAccepted,
 		},
 		"headers and body pass through": {
 			// The header, body, and host values set here are verified in the receiverFunc. Altering
