@@ -152,21 +152,6 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1.InMemoryChannel)
 
 	imc.Status.MarkEndpointsTrue()
 
-	// Getting the secret fr
-	secret, err := r.secretLister.Secrets(r.systemNamespace).Get(secretName)
-	if err != nil {
-		logging.FromContext(ctx).Error("Secret not found")
-		return err
-	}
-	secretData := secret.Data[secretKey]
-
-	transportEncryptionFlags := feature.FromContext(ctx)
-	if transportEncryptionFlags.IsPermissiveTransportEncryption() {
-		// todo
-	} else if transportEncryptionFlags.IsStrictTransportEncryption() {
-		// todo
-	}
-
 	// Reconcile the k8s service representing the actual Channel. It points to the Dispatcher service via
 	// ExternalName
 	svc, err := r.reconcileChannelService(ctx, dispatcherNamespace, imc)
@@ -188,6 +173,23 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1.InMemoryChannel)
 		imc.Status.MarkDeadLetterSinkResolvedSucceeded(deadLetterSinkUri)
 	} else {
 		imc.Status.MarkDeadLetterSinkNotConfigured()
+	}
+
+	// Getting the secret called "imc-dispatcher-tls" from system namespace
+	secret, err := r.secretLister.Secrets(r.systemNamespace).Get(secretName)
+	if err != nil {
+		logging.FromContext(ctx).Error("Secret not found")
+		return err
+	}
+	secretData := secret.Data[secretKey]
+
+	transportEncryptionFlags := feature.FromContext(ctx)
+	if transportEncryptionFlags.IsPermissiveTransportEncryption() {
+		// todo
+	} else if transportEncryptionFlags.IsStrictTransportEncryption() {
+		// todo
+		// update setaddress to take CACert as an argument
+		imc.Status.SetAddress(apis.HTTPS(fmt.Sprintf("%s/%s/%s", network.GetServiceHostname(svc.Name, svc.Namespace), imc.Namespace, imc.Name)))
 	}
 
 	// Ok, so now the Dispatcher Deployment & Service have been created, we're golden since the
