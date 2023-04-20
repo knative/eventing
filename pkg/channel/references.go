@@ -36,7 +36,7 @@ func (r *ChannelReference) String() string {
 func ParseChannelFromHost(host string) (ChannelReference, error) {
 	chunks := strings.Split(host, ".")
 	if len(chunks) < 2 {
-		return ChannelReference{}, fmt.Errorf("bad host format %q", host)
+		return ChannelReference{}, BadRequestError(fmt.Sprintf("bad host format %q", host))
 	}
 	return ChannelReference{
 		Name:      chunks[0],
@@ -48,7 +48,7 @@ func ParseChannelFromHost(host string) (ChannelReference, error) {
 func ParseChannelFromPath(path string) (ChannelReference, error) {
 	splitPath := strings.Split(strings.TrimSuffix(path, "/"), "/")
 	if len(splitPath) != 3 {
-		return ChannelReference{}, fmt.Errorf("bad path format %s", path)
+		return ChannelReference{}, BadRequestError(fmt.Sprintf("bad path format %s", path))
 	}
 
 	return ChannelReference{

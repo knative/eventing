@@ -47,7 +47,6 @@ import (
 
 func TestMessageReceiver_ServeHTTP(t *testing.T) {
 	testCases := map[string]struct {
-		tls               bool
 		method            string
 		host              string
 		path              string
@@ -55,15 +54,16 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 		expected          int
 		receiverFunc      UnbufferedMessageReceiverFunc
 		responseValidator func(r httptest.ResponseRecorder) error
+		opts              []MessageReceiverOptions
 	}{
-		"non TLS with non '/' path": {
+		"host based channel reference with non '/' path": {
 			path:     "/something",
-			expected: nethttp.StatusNotFound,
+			expected: nethttp.StatusBadRequest,
 		},
-		"TLS with malformed path": {
-			tls:      true,
+		"path based channel reference with malformed path": {
 			path:     "/something",
-			expected: nethttp.StatusInternalServerError,
+			expected: nethttp.StatusBadRequest,
+			opts:     []MessageReceiverOptions{ResolveMessageChannelFromPath(ParseChannelFromPath)},
 		},
 		"not a POST": {
 			method:   nethttp.MethodGet,
@@ -71,7 +71,7 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 		},
 		"invalid host name": {
 			host:     "no-dot",
-			expected: nethttp.StatusInternalServerError,
+			expected: nethttp.StatusBadRequest,
 		},
 		"unknown channel error": {
 			receiverFunc: func(_ context.Context, c ChannelReference, _ binding.Message, _ []binding.Transformer, _ nethttp.Header) error {
@@ -85,8 +85,7 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 			},
 			expected: nethttp.StatusInternalServerError,
 		},
-		"path based routing ok": {
-			tls:  true,
+		"path based channel reference": {
 			path: "/new-namespace/new-channel",
 			host: "test-name.test-namespace.svc." + network.GetClusterDomainName(),
 			receiverFunc: func(ctx context.Context, r ChannelReference, m binding.Message, transformers []binding.Transformer, additionalHeaders nethttp.Header) error {
@@ -96,6 +95,7 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 				return nil
 			},
 			expected: nethttp.StatusAccepted,
+			opts:     []MessageReceiverOptions{ResolveMessageChannelFromPath(ParseChannelFromPath)},
 		},
 		"headers and body pass through": {
 			// The header, body, and host values set here are verified in the receiverFunc. Altering
@@ -172,7 +172,7 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 			}
 
 			f := tc.receiverFunc
-			r, err := NewMessageReceiver(f, zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())), reporter)
+			r, err := NewMessageReceiver(f, zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())), reporter, tc.opts...)
 			if err != nil {
 				t.Fatalf("Error creating new event receiver. Error:%s", err)
 			}
@@ -182,13 +182,7 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-
-			protocol := "http"
-			if tc.tls {
-				protocol = "https"
-			}
-
-			req := httptest.NewRequest(tc.method, protocol+"://"+tc.host+tc.path, nil)
+			req := httptest.NewRequest(tc.method, "http://"+tc.host+tc.path, nil)
 			reqCtx, _ := trace.StartSpan(context.TODO(), "bla")
 			req = req.WithContext(reqCtx)
 			req.Host = tc.host
