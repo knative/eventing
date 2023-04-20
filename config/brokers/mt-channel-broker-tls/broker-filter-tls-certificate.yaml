@@ -1,15 +1,15 @@
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: mt-broker-ingress-server-tls
+  name: mt-broker-filter-server-tls
   namespace: knative-eventing
 spec:
   # Secret names are always required.
-  secretName: mt-broker-ingress-server-tls
+  secretName: mt-broker-filter-server-tls
 
   secretTemplate:
     labels:
-      app.kubernetes.io/component: broker-ingress
+      app.kubernetes.io/component: broker-filter
       app.kubernetes.io/name: knative-eventing
 
   duration: 2160h # 90d
@@ -24,7 +24,7 @@ spec:
     size: 2048
 
   dnsNames:
-    - broker-ingress.knative-eventing.svc
+    - broker-filter.knative-eventing.svc.cluster.local
 
   issuerRef:
     name: selfsigned-issuer

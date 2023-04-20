@@ -24,7 +24,7 @@ spec:
     size: 2048
 
   dnsNames:
-    - imc-dispatchermt.knative-eventing.svc
+    - imc-dispatcher.knative-eventing.svc.cluster.local
 
   issuerRef:
     name: selfsigned-issuer
