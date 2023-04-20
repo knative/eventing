@@ -38,6 +38,7 @@ import (
 	pkgreconciler "knative.dev/pkg/reconciler"
 
 	"knative.dev/eventing/pkg/apis/eventing"
+	"knative.dev/eventing/pkg/apis/feature"
 	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	inmemorychannelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/inmemorychannel"
 	"knative.dev/eventing/pkg/reconciler/inmemorychannel/controller/config"
@@ -52,6 +53,8 @@ const (
 	dispatcherRoleBindingCreated    = "DispatcherRoleBindingCreated"
 	dispatcherDeploymentCreated     = "DispatcherDeploymentCreated"
 	dispatcherServiceCreated        = "DispatcherServiceCreated"
+	secretName                      = "imc-dispatcher-tls"
+	secretKey                       = "ca.crt"
 )
 
 func newDeploymentWarn(err error) pkgreconciler.Event {
@@ -79,6 +82,7 @@ type Reconciler struct {
 	serviceLister        corev1listers.ServiceLister
 	endpointsLister      corev1listers.EndpointsLister
 	serviceAccountLister corev1listers.ServiceAccountLister
+	secretLister         corev1listers.SecretLister
 	roleBindingLister    rbacv1listers.RoleBindingLister
 
 	eventDispatcherConfigStore *config.EventDispatcherConfigStore
@@ -97,7 +101,6 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1.InMemoryChannel)
 	// 2. Dispatcher k8s Service for it's existence.
 	// 3. Dispatcher endpoints to ensure that there's something backing the Service.
 	// 4. k8s service representing the channel that will use ExternalName to point to the Dispatcher k8s service
-
 	scope, ok := imc.Annotations[eventing.ScopeAnnotationKey]
 	if !ok {
 		scope = eventing.ScopeCluster
@@ -149,6 +152,21 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1.InMemoryChannel)
 
 	imc.Status.MarkEndpointsTrue()
 
+	// Getting the secret fr
+	secret, err := r.secretLister.Secrets(r.systemNamespace).Get(secretName)
+	if err != nil {
+		logging.FromContext(ctx).Error("Secret not found")
+		return err
+	}
+	secretData := secret.Data[secretKey]
+
+	transportEncryptionFlags := feature.FromContext(ctx)
+	if transportEncryptionFlags.IsPermissiveTransportEncryption() {
+		// todo
+	} else if transportEncryptionFlags.IsStrictTransportEncryption() {
+		// todo
+	}
+
 	// Reconcile the k8s service representing the actual Channel. It points to the Dispatcher service via
 	// ExternalName
 	svc, err := r.reconcileChannelService(ctx, dispatcherNamespace, imc)
@@ -159,7 +177,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1.InMemoryChannel)
 	imc.Status.MarkChannelServiceTrue()
 	imc.Status.SetAddress(apis.HTTP(network.GetServiceHostname(svc.Name, svc.Namespace)))
 
-	// If a DeadLetterSink is defined in Spec.Delivery then whe resolve its URI and update the stauts
+	// If a DeadLetterSink is defined in Spec.Delivery then whe resolve its URI and update the status
 	if imc.Spec.Delivery != nil && imc.Spec.Delivery.DeadLetterSink != nil {
 		deadLetterSinkUri, err := r.uriResolver.URIFromDestinationV1(ctx, *imc.Spec.Delivery.DeadLetterSink, imc)
 		if err != nil {
