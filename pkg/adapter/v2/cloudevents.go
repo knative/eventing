@@ -65,34 +65,74 @@ func NewCloudEventsClient(target string, ceOverrides *duckv1.CloudEventOverrides
 	if len(target) > 0 {
 		opts = append(opts, cloudevents.WithTarget(target))
 	}
-	return newCloudEventsClientCRStatus(nil, ceOverrides, reporter, nil, opts...)
+	return NewClient(ClientConfig{
+		CeOverrides: ceOverrides,
+		Reporter:    reporter,
+		Options:     opts,
+	})
 }
 
 // NewCloudEventsClientWithOptions returns a client created with provided options
 func NewCloudEventsClientWithOptions(ceOverrides *duckv1.CloudEventOverrides, reporter source.StatsReporter, opts ...http.Option) (cloudevents.Client, error) {
-	return newCloudEventsClientCRStatus(nil, ceOverrides, reporter, nil, opts...)
+	return NewClient(ClientConfig{
+		CeOverrides: ceOverrides,
+		Reporter:    reporter,
+		Options:     opts,
+	})
 }
 
 // NewCloudEventsClientCRStatus returns a client CR status
 func NewCloudEventsClientCRStatus(env EnvConfigAccessor, reporter source.StatsReporter, crStatusEventClient *crstatusevent.CRStatusEventClient) (cloudevents.Client, error) {
-	return newCloudEventsClientCRStatus(env, nil, reporter, crStatusEventClient)
+	return NewClient(ClientConfig{
+		Env:                 env,
+		Reporter:            reporter,
+		CrStatusEventClient: crStatusEventClient,
+	})
 }
-func newCloudEventsClientCRStatus(env EnvConfigAccessor, ceOverrides *duckv1.CloudEventOverrides, reporter source.StatsReporter,
-	crStatusEventClient *crstatusevent.CRStatusEventClient, opts ...http.Option) (cloudevents.Client, error) {
+
+type ClientConfig struct {
+	Env                 EnvConfigAccessor
+	CeOverrides         *duckv1.CloudEventOverrides
+	Reporter            source.StatsReporter
+	CrStatusEventClient *crstatusevent.CRStatusEventClient
+	Options             []http.Option
+
+	Client cloudevents.Client
+}
+
+type clientConfigKey struct{}
+
+func withClientConfig(ctx context.Context, r ClientConfig) context.Context {
+	return context.WithValue(ctx, clientConfigKey{}, r)
+}
+
+func GetClientConfig(ctx context.Context) ClientConfig {
+	val := ctx.Value(clientConfigKey{})
+	if val == nil {
+		return ClientConfig{}
+	}
+	return val.(ClientConfig)
+}
+
+func NewClient(cfg ClientConfig) (cloudevents.Client, error) {
+	if cfg.Client != nil {
+		return cfg.Client, nil
+	}
 
 	pOpts := make([]http.Option, 0)
 	pOpts = append(pOpts, cloudevents.WithRoundTripper(&ochttp.Transport{
 		Propagation: tracecontextb3.TraceContextEgress,
 	}))
 
-	if env != nil {
-		if target := env.GetSink(); len(target) > 0 {
+	ceOverrides := cfg.CeOverrides
+	if cfg.Env != nil {
+		if target := cfg.Env.GetSink(); len(target) > 0 {
 			pOpts = append(pOpts, cloudevents.WithTarget(target))
 		}
-		if sinkWait := env.GetSinktimeout(); sinkWait > 0 {
+		if sinkWait := cfg.Env.GetSinktimeout(); sinkWait > 0 {
 			pOpts = append(pOpts, setTimeOut(time.Duration(sinkWait)*time.Second))
 		}
-		if caCerts := env.GetCACerts(); (caCerts != nil && *caCerts != "") && eventingtls.IsHttpsSink(env.GetSink()) {
+		if caCerts := cfg.Env.GetCACerts(); (caCerts != nil && *caCerts != "") && eventingtls.IsHttpsSink(cfg.Env.GetSink()) {
 			var err error
 
 			clientConfig := eventingtls.NewDefaultClientConfig()
@@ -111,7 +151,7 @@ func newCloudEventsClientCRStatus(env EnvConfigAccessor, ceOverrides *duckv1.Clo
 		}
 		if ceOverrides == nil {
 			var err error
-			ceOverrides, err = env.GetCloudEventOverrides()
+			ceOverrides, err = cfg.Env.GetCloudEventOverrides()
 			if err != nil {
 				return nil, err
 			}
@@ -119,12 +159,12 @@ func newCloudEventsClientCRStatus(env EnvConfigAccessor, ceOverrides *duckv1.Clo
 	}
 
 	// Make sure that explicitly set options have priority
-	opts = append(pOpts, opts...)
+	opts := append(pOpts, cfg.Options...)
 
 	ceClient, err := newClientHTTPObserved(opts, nil)
 
-	if crStatusEventClient == nil {
-		crStatusEventClient = crstatusevent.GetDefaultClient()
+	if cfg.CrStatusEventClient == nil {
+		cfg.CrStatusEventClient = crstatusevent.GetDefaultClient()
 	}
 	if err != nil {
 		return nil, err
@@ -132,8 +172,8 @@ func newCloudEventsClientCRStatus(env EnvConfigAccessor, ceOverrides *duckv1.Clo
 	return &client{
 		ceClient:            ceClient,
 		ceOverrides:         ceOverrides,
-		reporter:            reporter,
-		crStatusEventClient: crStatusEventClient,
+		reporter:            cfg.Reporter,
+		crStatusEventClient: cfg.CrStatusEventClient,
 	}, nil
 }
 

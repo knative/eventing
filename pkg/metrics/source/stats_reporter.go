@@ -20,8 +20,9 @@ import (
 	"context"
 
 	"go.opencensus.io/stats/view"
-	eventingmetrics "knative.dev/eventing/pkg/metrics"
 	"knative.dev/pkg/metrics"
+
+	eventingmetrics "knative.dev/eventing/pkg/metrics"
 
 	"go.opencensus.io/stats"
 	"go.opencensus.io/tag"

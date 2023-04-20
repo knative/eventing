@@ -214,7 +214,14 @@ func MainWithInformers(ctx context.Context, component string, env EnvConfigAcces
 		logger.Errorw("Error building statsreporter", zap.Error(err))
 	}
 
-	eventsClient, err := NewCloudEventsClientCRStatus(env, reporter, crStatusEventClient)
+	clientConfig := ClientConfig{
+		Env:                 env,
+		Reporter:            reporter,
+		CrStatusEventClient: crStatusEventClient,
+	}
+	ctx = withClientConfig(ctx, clientConfig)
+
+	eventsClient, err := NewClient(clientConfig)
 	if err != nil {
 		logger.Fatalw("Error building cloud event client", zap.Error(err))
 	}
