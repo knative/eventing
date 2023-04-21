@@ -50,6 +50,7 @@ rm -fr ${YAML_OUTPUT_DIR}/*.yaml
 # Generated Knative component YAML files
 readonly EVENTING_CORE_YAML=${YAML_OUTPUT_DIR}/"eventing-core.yaml"
 readonly EVENTING_CRDS_YAML=${YAML_OUTPUT_DIR}/"eventing-crds.yaml"
+readonly EVENTING_TLS_YAML=${YAML_OUTPUT_DIR}/"eventing-tls-networking.yaml"
 readonly EVENTING_MT_CHANNEL_BROKER_YAML=${YAML_OUTPUT_DIR}/"mt-channel-broker.yaml"
 readonly EVENTING_IN_MEMORY_CHANNEL_YAML=${YAML_OUTPUT_DIR}/"in-memory-channel.yaml"
 readonly EVENTING_YAML=${YAML_OUTPUT_DIR}"/eventing.yaml"
@@ -95,7 +96,13 @@ ko resolve ${KO_YAML_FLAGS} -f config/brokers/mt-channel-broker/ | "${LABEL_YAML
 # Create in memory channel yaml
 ko resolve ${KO_YAML_FLAGS} -Rf config/channels/in-memory-channel/ | "${LABEL_YAML_CMD[@]}" > "${EVENTING_IN_MEMORY_CHANNEL_YAML}"
 
-all_yamls=(${EVENTING_CORE_YAML} ${EVENTING_CRDS_YAML} ${EVENTING_MT_CHANNEL_BROKER_YAML} ${EVENTING_IN_MEMORY_CHANNEL_YAML} ${EVENTING_YAML})
+# Create eventing TLS yaml
+ko resolve ${KO_YAML_FLAGS} -Rf config/tls/ \
+  -Rf config/channels/in-memory-channel-tls/ \
+  -Rf config/brokers/mt-channel-broker-tls/ \
+  | "${LABEL_YAML_CMD[@]}" > "${EVENTING_TLS_YAML}"
+
+all_yamls=(${EVENTING_CORE_YAML} ${EVENTING_CRDS_YAML} ${EVENTING_MT_CHANNEL_BROKER_YAML} ${EVENTING_IN_MEMORY_CHANNEL_YAML} ${EVENTING_YAML} ${EVENTING_TLS_YAML})
 
 # Create the tools
 for tool in ${TOOLS[@]}; do
