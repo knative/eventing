@@ -218,7 +218,7 @@ func (r *Reconciler) resolveSubscriber(ctx context.Context, subscription *v1.Sub
 			logging.FromContext(ctx).Debugw("Group resolved", zap.Any("spec.subscriber.ref", subscriber.Ref))
 		}
 
-		subscriberURI, err := r.destinationResolver.URIFromDestinationV1(ctx, *subscriber, subscription)
+		subscriberAddr, err := r.destinationResolver.AddressableFromDestinationV1(ctx, *subscriber, subscription)
 		if err != nil {
 			logging.FromContext(ctx).Warnw("Failed to resolve Subscriber",
 				zap.Error(err),
@@ -226,6 +226,7 @@ func (r *Reconciler) resolveSubscriber(ctx context.Context, subscription *v1.Sub
 			subscription.Status.MarkReferencesNotResolved(subscriberResolveFailed, "Failed to resolve spec.subscriber: %v", err)
 			return pkgreconciler.NewEvent(corev1.EventTypeWarning, subscriberResolveFailed, "Failed to resolve spec.subscriber: %w", err)
 		}
+		subscriberURI := subscriberAddr.URL
 		// If there is a change in resolved URI, log it.
 		if subscription.Status.PhysicalSubscription.SubscriberURI == nil || subscription.Status.PhysicalSubscription.SubscriberURI.String() != subscriberURI.String() {
 			logging.FromContext(ctx).Debugw("Resolved Subscriber", zap.String("subscriberURI", subscriberURI.String()))
@@ -247,7 +248,7 @@ func (r *Reconciler) resolveReply(ctx context.Context, subscription *v1.Subscrip
 		// compatibility for subscriptions with reply.ref.namespace = "".
 		reply.SetDefaults(ctx)
 
-		replyURI, err := r.destinationResolver.URIFromDestinationV1(ctx, *reply, subscription)
+		replyAddr, err := r.destinationResolver.AddressableFromDestinationV1(ctx, *reply, subscription)
 		if err != nil {
 			logging.FromContext(ctx).Warnw("Failed to resolve reply",
 				zap.Error(err),
@@ -255,6 +256,7 @@ func (r *Reconciler) resolveReply(ctx context.Context, subscription *v1.Subscrip
 			subscription.Status.MarkReferencesNotResolved(replyResolveFailed, "Failed to resolve spec.reply: %v", err)
 			return pkgreconciler.NewEvent(corev1.EventTypeWarning, replyResolveFailed, "Failed to resolve spec.reply: %w", err)
 		}
+		replyURI := replyAddr.URL
 		// If there is a change in resolved URI, log it.
 		if subscription.Status.PhysicalSubscription.ReplyURI == nil || subscription.Status.PhysicalSubscription.ReplyURI.String() != replyURI.String() {
 			logging.FromContext(ctx).Debugw("Resolved reply", zap.String("replyURI", replyURI.String()))
@@ -269,7 +271,7 @@ func (r *Reconciler) resolveReply(ctx context.Context, subscription *v1.Subscrip
 func (r *Reconciler) resolveDeadLetterSink(ctx context.Context, subscription *v1.Subscription, channel *eventingduckv1.Channelable) pkgreconciler.Event {
 	// resolve the Subscription's dls first, fall back to the Channels's
 	if subscription.Spec.Delivery != nil && subscription.Spec.Delivery.DeadLetterSink != nil {
-		deadLetterSinkURI, err := r.destinationResolver.URIFromDestinationV1(ctx, *subscription.Spec.Delivery.DeadLetterSink, subscription)
+		deadLetterSinkAddr, err := r.destinationResolver.AddressableFromDestinationV1(ctx, *subscription.Spec.Delivery.DeadLetterSink, subscription)
 		if err != nil {
 			subscription.Status.PhysicalSubscription.DeadLetterSinkURI = nil
 			logging.FromContext(ctx).Warnw("Failed to resolve spec.delivery.deadLetterSink",
@@ -278,6 +280,7 @@ func (r *Reconciler) resolveDeadLetterSink(ctx context.Context, subscription *v1
 			subscription.Status.MarkReferencesNotResolved(deadLetterSinkResolveFailed, "Failed to resolve spec.delivery.deadLetterSink: %v", err)
 			return pkgreconciler.NewEvent(corev1.EventTypeWarning, deadLetterSinkResolveFailed, "Failed to resolve spec.delivery.deadLetterSink: %w", err)
 		}
+		deadLetterSinkURI := deadLetterSinkAddr.URL
 
 		logging.FromContext(ctx).Debugw("Resolved deadLetterSink", zap.String("deadLetterSinkURI", deadLetterSinkURI.String()))
 		subscription.Status.PhysicalSubscription.DeadLetterSinkURI = deadLetterSinkURI

@@ -161,12 +161,13 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1.InMemoryChannel)
 
 	// If a DeadLetterSink is defined in Spec.Delivery then whe resolve its URI and update the stauts
 	if imc.Spec.Delivery != nil && imc.Spec.Delivery.DeadLetterSink != nil {
-		deadLetterSinkUri, err := r.uriResolver.URIFromDestinationV1(ctx, *imc.Spec.Delivery.DeadLetterSink, imc)
+		deadLetterSinkAddr, err := r.uriResolver.AddressableFromDestinationV1(ctx, *imc.Spec.Delivery.DeadLetterSink, imc)
 		if err != nil {
 			logging.FromContext(ctx).Errorw("Unable to get the DeadLetterSink's URI", zap.Error(err))
 			imc.Status.MarkDeadLetterSinkResolvedFailed("Unable to get the DeadLetterSink's URI", "%v", err)
 			return fmt.Errorf("Failed to resolve Dead Letter Sink URI: %v", err)
 		}
+		deadLetterSinkUri := deadLetterSinkAddr.URL
 		imc.Status.MarkDeadLetterSinkResolvedSucceeded(deadLetterSinkUri)
 	} else {
 		imc.Status.MarkDeadLetterSinkNotConfigured()
