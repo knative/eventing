@@ -459,6 +459,7 @@ func TestAllCases(t *testing.T) {
 			deploymentLister: listers.GetDeploymentLister(),
 			serviceLister:    listers.GetServiceLister(),
 			endpointsLister:  listers.GetEndpointsLister(),
+			secretLister:     listers.GetSecretLister(),
 			uriResolver:      resolver.NewURIResolverFromTracker(ctx, tracker.New(func(types.NamespacedName) {}, 0)),
 		}
 		return inmemorychannel.NewReconciler(ctx, logger,
@@ -561,6 +562,7 @@ func TestInNamespace(t *testing.T) {
 			endpointsLister:            listers.GetEndpointsLister(),
 			serviceAccountLister:       listers.GetServiceAccountLister(),
 			roleBindingLister:          listers.GetRoleBindingLister(),
+			secretLister:               listers.GetSecretLister(),
 			eventDispatcherConfigStore: eventDispatcherConfigStore,
 			uriResolver:                resolver.NewURIResolverFromTracker(ctx, tracker.New(func(types.NamespacedName) {}, 0)),
 		}

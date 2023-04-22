@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/utils/pointer"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/network"
 
@@ -35,6 +36,7 @@ import (
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	rbacv1listers "k8s.io/client-go/listers/rbac/v1"
 	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	pkgreconciler "knative.dev/pkg/reconciler"
 
 	"knative.dev/eventing/pkg/apis/eventing"
@@ -160,7 +162,6 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1.InMemoryChannel)
 		return err
 	}
 	imc.Status.MarkChannelServiceTrue()
-	imc.Status.SetAddress(apis.HTTP(network.GetServiceHostname(svc.Name, svc.Namespace)))
 
 	// If a DeadLetterSink is defined in Spec.Delivery then whe resolve its URI and update the status
 	if imc.Spec.Delivery != nil && imc.Spec.Delivery.DeadLetterSink != nil {
@@ -181,15 +182,41 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1.InMemoryChannel)
 		logging.FromContext(ctx).Error("Secret not found")
 		return err
 	}
-	secretData := secret.Data[secretKey]
+	secretData := string(secret.Data[secretKey])
+
+	// https address uses path-based routing
+	httpsAddress := duckv1.Addressable{
+		Name:    pointer.String("https"),
+		URL:     apis.HTTPS(fmt.Sprintf("%s.%s.svc.%s", dispatcherName, r.systemNamespace, network.GetClusterDomainName())),
+		CACerts: pointer.String(secretData),
+	}
+	httpsAddress.URL.Path = fmt.Sprintf("/%s/%s", imc.Namespace, imc.Name)
+
+	// http address uses host-based routing
+	httpAddress := duckv1.Addressable{
+		Name: pointer.String("http"),
+		URL:  apis.HTTP(network.GetServiceHostname(svc.Name, svc.Namespace)),
+	}
+	httpsAddress.URL.Path = fmt.Sprintf("/%s/%s", imc.Namespace, imc.Name)
 
 	transportEncryptionFlags := feature.FromContext(ctx)
 	if transportEncryptionFlags.IsPermissiveTransportEncryption() {
-		// todo
+		// Permissive mode:
+		// - status.address http address with host-based routing
+		// - status.addresses:
+		//   - https address with path-based routing
+		//   - http address with host-based routing
+		imc.Status.Addresses = []duckv1.Addressable{httpsAddress, httpAddress}
+		imc.Status.Address = &httpAddress
 	} else if transportEncryptionFlags.IsStrictTransportEncryption() {
-		// todo
-		// update setaddress to take CACert as an argument
-		imc.Status.SetAddress(apis.HTTPS(fmt.Sprintf("%s/%s/%s", network.GetServiceHostname(svc.Name, svc.Namespace), imc.Namespace, imc.Name)))
+		// Strict mode: (only https addresses)
+		// - status.address https address with path-based routing
+		// - status.addresses:
+		//   - https address with path-based routing
+		imc.Status.Addresses = []duckv1.Addressable{httpsAddress}
+		imc.Status.Address = &httpAddress
+	} else {
+		imc.Status.Address = &httpAddress
 	}
 
 	// Ok, so now the Dispatcher Deployment & Service have been created, we're golden since the
