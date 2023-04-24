@@ -46,8 +46,8 @@ require (
 	k8s.io/utils v0.0.0-20221108210102-8e77b1f39fe2
 	knative.dev/hack v0.0.0-20230417170854-f591fea109b3
 	knative.dev/hack/schema v0.0.0-20230417170854-f591fea109b3
-	knative.dev/pkg v0.0.0-20230414154551-53f04b373cc9
-	knative.dev/reconciler-test v0.0.0-20230413132853-06956b6259d6
+	knative.dev/pkg v0.0.0-20230418073056-dfad48eaa5d0
+	knative.dev/reconciler-test v0.0.0-20230420091239-6c21623d2555
 	sigs.k8s.io/yaml v1.3.0
 )
 
