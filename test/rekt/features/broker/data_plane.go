@@ -30,7 +30,7 @@ import (
 	"knative.dev/pkg/apis"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/eventshub/assert"
-	eventasssert "knative.dev/reconciler-test/pkg/eventshub/assert"
+	eventassert "knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
 	"knative.dev/reconciler-test/pkg/resources/service"
@@ -137,7 +137,7 @@ func addDataPlaneDelivery(brokerName string, fs *feature.FeatureSet) {
 		May("The Broker MAY forward these events to an alternate endpoint or storage mechanism such as a dead letter queue.",
 			icebox).
 		May("If no ready Trigger would match an accepted event, the Broker MAY drop that event without notifying the producer.",
-			noTriggersAvailible).
+			noTriggersAvailable).
 		May("If multiple Triggers reference the same subscriber, the subscriber MAY be expected to acknowledge successful delivery of an event multiple times.",
 			multipleTriggerSameSink).
 		Should("Events contained in delivery responses SHOULD be published to the Broker ingress and processed as if the event had been produced to the Broker's addressable endpoint.",
@@ -580,7 +580,7 @@ func eventEnqueuedLater(ctx context.Context, t feature.T) {
 	assert.OnStore(sink).MatchEvent(test.HasId(event2.ID())).Exact(1)(ctx, t)
 }
 
-func noTriggersAvailible(ctx context.Context, t feature.T) {
+func noTriggersAvailable(ctx context.Context, t feature.T) {
 	brokerName := state.GetStringOrFail(ctx, t, "brokerName")
 
 	source := feature.MakeRandomK8sName("source")
@@ -665,20 +665,20 @@ func replyEventDeliveredToSource(ctx context.Context, t feature.T) {
 		eventshub.InputEvent(eventToSend),
 	)(ctx, t)
 
-	eventMatcher := eventasssert.MatchEvent(
+	eventMatcher := eventassert.MatchEvent(
 		test.HasSource(eventSource),
 		test.HasType(eventType),
 		test.HasData([]byte(eventBody)),
 	)
-	transformEventMatcher := eventasssert.MatchEvent(
+	transformEventMatcher := eventassert.MatchEvent(
 		test.HasSource(replyEventSource),
 		test.HasType(replyEventType),
 		test.HasData([]byte(replyBody)),
 	)
 
-	eventasssert.OnStore(sink2).Match(transformEventMatcher).AtLeast(1)(ctx, t)
-	eventasssert.OnStore(sink1).Match(eventMatcher).AtLeast(1)(ctx, t)
-	eventasssert.OnStore(sink2).Match(eventMatcher).Not()(ctx, t)
+	eventassert.OnStore(sink2).Match(transformEventMatcher).AtLeast(1)(ctx, t)
+	eventassert.OnStore(sink1).Match(eventMatcher).AtLeast(1)(ctx, t)
+	eventassert.OnStore(sink2).Match(eventMatcher).Not()(ctx, t)
 }
 
 func replyEventNotAccepted(ctx context.Context, t feature.T) {
@@ -739,23 +739,23 @@ func replyEventNotAccepted(ctx context.Context, t feature.T) {
 		eventshub.InputEvent(eventToSend),
 	)(ctx, t)
 
-	transformEventMatcher := eventasssert.MatchEvent(
+	transformEventMatcher := eventassert.MatchEvent(
 		test.HasSource(malformedReplyEventSource),
 		test.HasType(malformedReplyEventType),
 		test.HasData([]byte(malformedReplyBody)),
 		test.IsInvalid(),
 	)
 
-	eventMatcher := eventasssert.MatchEvent(
+	eventMatcher := eventassert.MatchEvent(
 		test.HasSource(eventSource),
 		test.HasType(eventType),
 		test.HasData([]byte(eventBody)),
 		test.IsInvalid(),
 	)
 
-	eventasssert.OnStore(sink2).Match(transformEventMatcher).AtLeast(1)(ctx, t)
+	eventassert.OnStore(sink2).Match(transformEventMatcher).AtLeast(1)(ctx, t)
 
 	// Since the reply event was invalid, there should be atleast 2 events
-	eventasssert.OnStore(sink1).Match(eventMatcher).AtLeast(2)(ctx, t)
-	eventasssert.OnStore(sink2).Match(eventMatcher).Not()(ctx, t)
+	eventassert.OnStore(sink1).Match(eventMatcher).AtLeast(2)(ctx, t)
+	eventassert.OnStore(sink2).Match(eventMatcher).Not()(ctx, t)
 }
