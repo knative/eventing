@@ -18,6 +18,7 @@ package main
 
 import (
 	"context"
+	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"os"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -66,6 +67,8 @@ func init() {
 
 var ourTypes = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
 	// For group eventing.knative.dev.
+	// v1alpha1
+	eventingv1alpha1.SchemeGroupVersion.WithKind("EventTypeDefinition"): &eventingv1alpha1.EventTypeDefinition{},
 	// v1beta1
 	eventingv1beta1.SchemeGroupVersion.WithKind("EventType"): &eventingv1beta1.EventType{},
 	// v1beta2

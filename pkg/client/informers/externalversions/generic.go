@@ -24,6 +24,7 @@ import (
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
 	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	v1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	v1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	v1beta2 "knative.dev/eventing/pkg/apis/eventing/v1beta2"
 	flowsv1 "knative.dev/eventing/pkg/apis/flows/v1"
@@ -63,6 +64,10 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Eventing().V1().Brokers().Informer()}, nil
 	case v1.SchemeGroupVersion.WithResource("triggers"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Eventing().V1().Triggers().Informer()}, nil
+
+		// Group=eventing.knative.dev, Version=v1alpha1
+	case v1alpha1.SchemeGroupVersion.WithResource("eventtypedefinitions"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Eventing().V1alpha1().EventTypeDefinitions().Informer()}, nil
 
 		// Group=eventing.knative.dev, Version=v1beta1
 	case v1beta1.SchemeGroupVersion.WithResource("eventtypes"):

@@ -13,6 +13,9 @@
 <a href="#eventing.knative.dev%2fv1">eventing.knative.dev/v1</a>
 </li>
 <li>
+<a href="#eventing.knative.dev%2fv1alpha1">eventing.knative.dev/v1alpha1</a>
+</li>
+<li>
 <a href="#eventing.knative.dev%2fv1beta1">eventing.knative.dev/v1beta1</a>
 </li>
 <li>
@@ -2349,6 +2352,335 @@ DeliveryStatus
 </p>
 <p>DeliveryStatus contains a resolved URL to the dead letter sink address, and any other
 resolved delivery options.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<hr/>
+<h2 id="eventing.knative.dev/v1alpha1">eventing.knative.dev/v1alpha1</h2>
+<p>
+<p>Package v1alpha1 is the v1alpha1 version of the API.</p>
+</p>
+Resource Types:
+<ul><li>
+<a href="#eventing.knative.dev/v1alpha1.EventTypeDefinition">EventTypeDefinition</a>
+</li></ul>
+<h3 id="eventing.knative.dev/v1alpha1.EventTypeDefinition">EventTypeDefinition
+</h3>
+<p>
+<p>EventTypeDefinition represents a classification</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>apiVersion</code><br/>
+string</td>
+<td>
+<code>
+eventing.knative.dev/v1alpha1
+</code>
+</td>
+</tr>
+<tr>
+<td>
+<code>kind</code><br/>
+string
+</td>
+<td><code>EventTypeDefinition</code></td>
+</tr>
+<tr>
+<td>
+<code>metadata</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#objectmeta-v1-meta">
+Kubernetes meta/v1.ObjectMeta
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+Refer to the Kubernetes API documentation for the fields of the
+<code>metadata</code> field.
+</td>
+</tr>
+<tr>
+<td>
+<code>spec</code><br/>
+<em>
+<a href="#eventing.knative.dev/v1alpha1.EventTypeDefinitionSpec">
+EventTypeDefinitionSpec
+</a>
+</em>
+</td>
+<td>
+<p>Spec defines the desired state of the EventTypeDefinition.</p>
+<br/>
+<br/>
+<table>
+<tr>
+<td>
+<code>schemaUrl</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis#URL">
+knative.dev/pkg/apis.URL
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SchemaURL is a URI, it represents the payload schemaurl.
+It may be a JSON schema, a protobuf schema, etc. It is optional.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>format</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Describes the format of the events, but for us it is generally only CE&hellip;?</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>group</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>The group where the EventTypeDefinition is defined.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>metadata</code><br/>
+<em>
+<a href="#eventing.knative.dev/v1alpha1.EventTypeDefinitionMetadata">
+EventTypeDefinitionMetadata
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>metadata</code> are embedded into this type.)
+</p>
+<p>Event metadata, such as attributes, extensions from CloudEvents spec.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>description</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Description is an optional field used to describe the EventType, in any meaningful way.</p>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="eventing.knative.dev/v1alpha1.EventTypeDefinitionAttribute">EventTypeDefinitionAttribute
+</h3>
+<p>
+(<em>Appears on:</em><a href="#eventing.knative.dev/v1alpha1.EventTypeDefinitionMetadata">EventTypeDefinitionMetadata</a>)
+</p>
+<p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>name</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<code>required</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<code>value</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="eventing.knative.dev/v1alpha1.EventTypeDefinitionMetadata">EventTypeDefinitionMetadata
+</h3>
+<p>
+(<em>Appears on:</em><a href="#eventing.knative.dev/v1alpha1.EventTypeDefinitionSpec">EventTypeDefinitionSpec</a>)
+</p>
+<p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>attributes</code><br/>
+<em>
+<a href="#eventing.knative.dev/v1alpha1.EventTypeDefinitionAttribute">
+[]EventTypeDefinitionAttribute
+</a>
+</em>
+</td>
+<td>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="eventing.knative.dev/v1alpha1.EventTypeDefinitionSpec">EventTypeDefinitionSpec
+</h3>
+<p>
+(<em>Appears on:</em><a href="#eventing.knative.dev/v1alpha1.EventTypeDefinition">EventTypeDefinition</a>)
+</p>
+<p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>schemaUrl</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis#URL">
+knative.dev/pkg/apis.URL
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SchemaURL is a URI, it represents the payload schemaurl.
+It may be a JSON schema, a protobuf schema, etc. It is optional.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>format</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Describes the format of the events, but for us it is generally only CE&hellip;?</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>group</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>The group where the EventTypeDefinition is defined.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>metadata</code><br/>
+<em>
+<a href="#eventing.knative.dev/v1alpha1.EventTypeDefinitionMetadata">
+EventTypeDefinitionMetadata
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>metadata</code> are embedded into this type.)
+</p>
+<p>Event metadata, such as attributes, extensions from CloudEvents spec.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>description</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Description is an optional field used to describe the EventType, in any meaningful way.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="eventing.knative.dev/v1alpha1.EventTypeDefinitionStatus">EventTypeDefinitionStatus
+</h3>
+<p>
+<p>EventTypeDefinitionStatus represents the current state of a EventType.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>Status</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#Status">
+knative.dev/pkg/apis/duck/v1.Status
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>Status</code> are embedded into this type.)
+</p>
+<p>inherits duck/v1 Status, which currently provides:
+* ObservedGeneration - the &lsquo;Generation&rsquo; of the Service that was last processed by the controller.
+* Conditions - the latest available observations of a resource&rsquo;s current state.</p>
 </td>
 </tr>
 </tbody>

@@ -72,6 +72,8 @@ rules:
       - "triggers/status"
       - "eventtypes"
       - "eventtypes/status"
+      - "eventtypedefinitions"
+      - "eventtypedefinitions/status"
     verbs: *everything
 
   # Eventing resources and finalizers we care about.
