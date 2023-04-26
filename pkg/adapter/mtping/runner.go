@@ -139,7 +139,7 @@ func (a *cronJobsRunner) Stop() {
 	}
 }
 
-func (a *cronJobsRunner) cronTick(ctx context.Context, client cloudevents.Client, event cloudevents.Event) func() {
+func (a *cronJobsRunner) cronTick(ctx context.Context, client adapter.Client, event cloudevents.Event) func() {
 	return func() {
 		event := event.Clone()
 		event.SetID(uuid.New().String()) // provide an ID here so we can track it with logging
@@ -157,6 +157,8 @@ func (a *cronJobsRunner) cronTick(ctx context.Context, client cloudevents.Client
 			a.Logger.Error("failed to send cloudevent result: ", zap.Any("result", result),
 				zap.String("source", source), zap.String("target", target), zap.String("id", event.ID()))
 		}
+
+		client.CloseIdleConnections()
 	}
 }
 
@@ -186,7 +188,7 @@ func makeEvent(source *sourcesv1.PingSource) (cloudevents.Event, error) {
 	return event, nil
 }
 
-func (a *cronJobsRunner) newPingSourceClient(source *sourcesv1.PingSource) (cloudevents.Client, error) {
+func (a *cronJobsRunner) newPingSourceClient(source *sourcesv1.PingSource) (adapter.Client, error) {
 	var env adapter.EnvConfig
 	if a.clientConfig.Env != nil {
 		env = adapter.EnvConfig{
