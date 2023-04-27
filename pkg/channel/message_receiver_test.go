@@ -54,10 +54,16 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 		expected          int
 		receiverFunc      UnbufferedMessageReceiverFunc
 		responseValidator func(r httptest.ResponseRecorder) error
+		opts              []MessageReceiverOptions
 	}{
-		"non '/' path": {
+		"host based channel reference with non '/' path": {
 			path:     "/something",
-			expected: nethttp.StatusNotFound,
+			expected: nethttp.StatusBadRequest,
+		},
+		"path based channel reference with malformed path": {
+			path:     "/something",
+			expected: nethttp.StatusBadRequest,
+			opts:     []MessageReceiverOptions{ResolveMessageChannelFromPath(ParseChannelFromPath)},
 		},
 		"not a POST": {
 			method:   nethttp.MethodGet,
@@ -65,7 +71,7 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 		},
 		"invalid host name": {
 			host:     "no-dot",
-			expected: nethttp.StatusInternalServerError,
+			expected: nethttp.StatusBadRequest,
 		},
 		"unknown channel error": {
 			receiverFunc: func(_ context.Context, c ChannelReference, _ binding.Message, _ []binding.Transformer, _ nethttp.Header) error {
@@ -78,6 +84,18 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 				return errors.New("test induced receiver function error")
 			},
 			expected: nethttp.StatusInternalServerError,
+		},
+		"path based channel reference": {
+			path: "/new-namespace/new-channel",
+			host: "test-name.test-namespace.svc." + network.GetClusterDomainName(),
+			receiverFunc: func(ctx context.Context, r ChannelReference, m binding.Message, transformers []binding.Transformer, additionalHeaders nethttp.Header) error {
+				if r.Namespace != "new-namespace" || r.Name != "new-channel" {
+					return fmt.Errorf("bad channel reference %v", r)
+				}
+				return nil
+			},
+			expected: nethttp.StatusAccepted,
+			opts:     []MessageReceiverOptions{ResolveMessageChannelFromPath(ParseChannelFromPath)},
 		},
 		"headers and body pass through": {
 			// The header, body, and host values set here are verified in the receiverFunc. Altering
@@ -154,7 +172,7 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 			}
 
 			f := tc.receiverFunc
-			r, err := NewMessageReceiver(f, zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())), reporter)
+			r, err := NewMessageReceiver(f, zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())), reporter, tc.opts...)
 			if err != nil {
 				t.Fatalf("Error creating new event receiver. Error:%s", err)
 			}
@@ -164,7 +182,6 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-
 			req := httptest.NewRequest(tc.method, "http://"+tc.host+tc.path, nil)
 			reqCtx, _ := trace.StartSpan(context.TODO(), "bla")
 			req = req.WithContext(reqCtx)

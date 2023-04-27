@@ -32,15 +32,27 @@ func (r *ChannelReference) String() string {
 	return fmt.Sprintf("%s/%s", r.Namespace, r.Name)
 }
 
-// ParseChannel converts the channel's hostname into a channel
-// reference.
-func ParseChannel(host string) (ChannelReference, error) {
+// ParseChannelFromHost determines a Channel reference from a host
+func ParseChannelFromHost(host string) (ChannelReference, error) {
 	chunks := strings.Split(host, ".")
 	if len(chunks) < 2 {
-		return ChannelReference{}, fmt.Errorf("bad host format %q", host)
+		return ChannelReference{}, BadRequestError(fmt.Sprintf("bad host format %q", host))
 	}
 	return ChannelReference{
 		Name:      chunks[0],
 		Namespace: chunks[1],
+	}, nil
+}
+
+// ParseChannelFromPath determines a Channel reference from a URL path
+func ParseChannelFromPath(path string) (ChannelReference, error) {
+	splitPath := strings.Split(strings.TrimSuffix(path, "/"), "/")
+	if len(splitPath) != 3 {
+		return ChannelReference{}, BadRequestError(fmt.Sprintf("bad path format %s", path))
+	}
+
+	return ChannelReference{
+		Namespace: splitPath[1],
+		Name:      splitPath[2],
 	}, nil
 }

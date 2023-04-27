@@ -51,6 +51,12 @@ func (e UnknownHostError) Error() string {
 	return "cannot map host to channel: " + string(e)
 }
 
+type BadRequestError string
+
+func (e BadRequestError) Error() string {
+	return "malformed request: " + string(e)
+}
+
 // MessageReceiver starts a server to receive new events for the channel dispatcher. The new
 // event is emitted via the receiver function.
 type MessageReceiver struct {
@@ -58,6 +64,7 @@ type MessageReceiver struct {
 	receiverFunc         UnbufferedMessageReceiverFunc
 	logger               *zap.Logger
 	hostToChannelFunc    ResolveChannelFromHostFunc
+	pathToChannelFunc    ResolveChannelFromPathFunc
 	reporter             StatsReporter
 }
 
@@ -76,10 +83,23 @@ type MessageReceiverOptions func(*MessageReceiver) error
 type ResolveChannelFromHostFunc func(string) (ChannelReference, error)
 
 // ResolveMessageChannelFromHostHeader is a ReceiverOption for NewMessageReceiver which enables the caller to overwrite the
-// default behaviour defined by ParseChannel function.
+// default behaviour defined by ParseChannelFromHost function.
 func ResolveMessageChannelFromHostHeader(hostToChannelFunc ResolveChannelFromHostFunc) MessageReceiverOptions {
 	return func(r *MessageReceiver) error {
 		r.hostToChannelFunc = hostToChannelFunc
+		return nil
+	}
+}
+
+// ResolveChannelFromPathFunc function enables EventReceiver to get the Channel Reference from incoming request's path
+// before calling receiverFunc.
+type ResolveChannelFromPathFunc func(string) (ChannelReference, error)
+
+// ResolveMessageChannelFromPath is a ReceiverOption for NewMessageReceiver which enables the caller to overwrite the
+// default behaviour defined by ParseChannelFromPath function.
+func ResolveMessageChannelFromPath(PathToChannelFunc ResolveChannelFromPathFunc) MessageReceiverOptions {
+	return func(r *MessageReceiver) error {
+		r.pathToChannelFunc = PathToChannelFunc
 		return nil
 	}
 }
@@ -91,7 +111,7 @@ func NewMessageReceiver(receiverFunc UnbufferedMessageReceiverFunc, logger *zap.
 	receiver := &MessageReceiver{
 		httpBindingsReceiver: bindingsReceiver,
 		receiverFunc:         receiverFunc,
-		hostToChannelFunc:    ResolveChannelFromHostFunc(ParseChannel),
+		hostToChannelFunc:    ResolveChannelFromHostFunc(ParseChannelFromHost),
 		logger:               logger,
 		reporter:             reporter,
 	}
@@ -149,29 +169,37 @@ func (r *MessageReceiver) ServeHTTP(response nethttp.ResponseWriter, request *ne
 		return
 	}
 
-	// tctx.URI is actually the path...
-	if request.URL.Path != "/" {
-		response.WriteHeader(nethttp.StatusNotFound)
-		return
-	}
-
-	args := ReportArgs{}
-
 	// The response status codes:
 	//   202 - the event was sent to subscribers
+	//   400 - the request was malformed
 	//   404 - the request was for an unknown channel
 	//   500 - an error occurred processing the request
-	host := request.Host
-	r.logger.Debug("Received request", zap.String("host", host))
-	channel, err := r.hostToChannelFunc(host)
+	args := ReportArgs{}
+	var channel ChannelReference
+	var err error
+
+	// prefer using pathToChannelFunc if available
+	if r.pathToChannelFunc != nil {
+		channel, err = r.pathToChannelFunc(request.URL.Path)
+	} else {
+		if request.URL.Path != "/" {
+			response.WriteHeader(nethttp.StatusBadRequest)
+			return
+		}
+		channel, err = r.hostToChannelFunc(request.Host)
+	}
+
 	if err != nil {
-		if _, ok := err.(UnknownHostError); ok {
+		switch err.(type) {
+		case UnknownHostError:
 			response.WriteHeader(nethttp.StatusNotFound)
-			r.logger.Info(err.Error())
-		} else {
-			r.logger.Info("Could not extract channel", zap.Error(err))
+		case BadRequestError:
+			response.WriteHeader(nethttp.StatusBadRequest)
+		default:
 			response.WriteHeader(nethttp.StatusInternalServerError)
 		}
+
+		r.logger.Info("Could not extract channel", zap.Error(err))
 		ReportEventCountMetricsForDispatchError(err, r.reporter, &args)
 		return
 	}
@@ -224,9 +252,12 @@ func (r *MessageReceiver) ServeHTTP(response nethttp.ResponseWriter, request *ne
 }
 
 func ReportEventCountMetricsForDispatchError(err error, reporter StatsReporter, args *ReportArgs) {
-	if _, ok := err.(*UnknownChannelError); ok {
+	switch err.(type) {
+	case *UnknownChannelError:
 		_ = reporter.ReportEventCount(args, nethttp.StatusNotFound)
-	} else {
+	case BadRequestError:
+		_ = reporter.ReportEventCount(args, nethttp.StatusBadRequest)
+	default:
 		_ = reporter.ReportEventCount(args, nethttp.StatusInternalServerError)
 	}
 }

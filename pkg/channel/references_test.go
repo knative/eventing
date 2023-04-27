@@ -40,15 +40,91 @@ func TestChannelReference_String(t *testing.T) {
 	}
 }
 
-func TestParseChannel(t *testing.T) {
-	c, err := ParseChannel("test-channel.test-namespace.svc.")
-	if err != nil {
-		t.Error("Unexpected error:", err)
+func TestParseChannelFromHost(t *testing.T) {
+	testCases := map[string]struct {
+		host               string
+		wantErr            bool
+		expectedChannelRef ChannelReference
+	}{
+		"host based": {
+			host:    "test-channel.test-namespace.svc.cluster.local",
+			wantErr: false,
+			expectedChannelRef: ChannelReference{
+				Namespace: "test-namespace",
+				Name:      "test-channel",
+			},
+		},
+		"bad host format should return error": {
+			host:    "test-channel",
+			wantErr: true,
+		},
 	}
-	if c.Name != "test-channel" {
-		t.Errorf("Expected Name: test-channel. Got: %q", c.Name)
+
+	for n, tc := range testCases {
+		t.Run(n, func(t *testing.T) {
+			c, err := ParseChannelFromHost(tc.host)
+			if tc.wantErr {
+				if err == nil {
+					t.Fatal("expected error but didn't get one")
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("unexpected error: %s", err)
+				}
+			}
+
+			if tc.expectedChannelRef.Namespace != c.Namespace {
+				t.Fatalf("expected Channel Namespace %s doesn't match actual Namespace %s", tc.expectedChannelRef.Namespace, c.Namespace)
+			}
+
+			if tc.expectedChannelRef.Name != c.Name {
+				t.Fatalf("expected Channel Name %s doesn't match actual Name %s", tc.expectedChannelRef.Name, c.Name)
+			}
+		})
 	}
-	if c.Namespace != "test-namespace" {
-		t.Errorf("Expected Name: test-namespace. Got: %q", c.Namespace)
+}
+
+func TestParseChannelFromPath(t *testing.T) {
+	testCases := map[string]struct {
+		path               string
+		wantErr            bool
+		expectedChannelRef ChannelReference
+	}{
+		"path based": {
+			path:    "/new-namespace/new-channel/",
+			wantErr: false,
+			expectedChannelRef: ChannelReference{
+				Namespace: "new-namespace",
+				Name:      "new-channel",
+			},
+		},
+
+		"bad path format should return error": {
+			path:    "/something/",
+			wantErr: true,
+		},
+	}
+
+	for n, tc := range testCases {
+		t.Run(n, func(t *testing.T) {
+			c, err := ParseChannelFromPath(tc.path)
+			if tc.wantErr {
+				if err == nil {
+					t.Fatal("expected error but didn't get one")
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("unexpected error: %s", err)
+				}
+			}
+
+			if tc.expectedChannelRef.Namespace != c.Namespace {
+				t.Fatalf("expected Channel Namespace %s doesn't match actual Namespace %s", tc.expectedChannelRef.Namespace, c.Namespace)
+			}
+
+			if tc.expectedChannelRef.Name != c.Name {
+				t.Fatalf("expected Channel Name %s doesn't match actual Name %s", tc.expectedChannelRef.Name, c.Name)
+			}
+		})
 	}
 }
