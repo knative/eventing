@@ -149,6 +149,13 @@ func WithInMemoryChannelAddress(a string) InMemoryChannelOption {
 	}
 }
 
+func WithInMemoryChannelAddresses(addresses []duckv1.Addressable) InMemoryChannelOption {
+	return func(imc *v1.InMemoryChannel) {
+		imc.Status.Addresses = addresses
+		imc.GetConditionSet().Manage(imc.GetStatus()).MarkTrue(v1.InMemoryChannelConditionAddressable)
+	}
+}
+
 func WithInMemoryChannelReady(host string) InMemoryChannelOption {
 	return func(imc *v1.InMemoryChannel) {
 		imc.Status.SetAddress(&apis.URL{
