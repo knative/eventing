@@ -39,14 +39,15 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	pkgreconciler "knative.dev/pkg/reconciler"
 
+	"knative.dev/pkg/logging"
+	"knative.dev/pkg/resolver"
+
 	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/feature"
 	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	inmemorychannelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/inmemorychannel"
 	"knative.dev/eventing/pkg/reconciler/inmemorychannel/controller/config"
 	"knative.dev/eventing/pkg/reconciler/inmemorychannel/controller/resources"
-	"knative.dev/pkg/logging"
-	"knative.dev/pkg/resolver"
 )
 
 const (
@@ -176,31 +177,15 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1.InMemoryChannel)
 		imc.Status.MarkDeadLetterSinkNotConfigured()
 	}
 
-	// Getting the secret called "imc-dispatcher-tls" from system namespace
-	secret, err := r.secretLister.Secrets(r.systemNamespace).Get(secretName)
-	if err != nil {
-		logging.FromContext(ctx).Error("Secret not found")
-		return err
-	}
-	secretData := string(secret.Data[secretKey])
-
-	// https address uses path-based routing
-	httpsAddress := duckv1.Addressable{
-		Name:    pointer.String("https"),
-		URL:     apis.HTTPS(fmt.Sprintf("%s.%s.svc.%s", dispatcherName, r.systemNamespace, network.GetClusterDomainName())),
-		CACerts: pointer.String(secretData),
-	}
-	httpsAddress.URL.Path = fmt.Sprintf("/%s/%s", imc.Namespace, imc.Name)
-
-	// http address uses host-based routing
-	httpAddress := duckv1.Addressable{
-		Name: pointer.String("http"),
-		URL:  apis.HTTP(network.GetServiceHostname(svc.Name, svc.Namespace)),
-	}
-	httpsAddress.URL.Path = fmt.Sprintf("/%s/%s", imc.Namespace, imc.Name)
-
 	transportEncryptionFlags := feature.FromContext(ctx)
 	if transportEncryptionFlags.IsPermissiveTransportEncryption() {
+		caCerts, err := r.getCaCerts()
+		if err != nil {
+			return err
+		}
+
+		httpAddress := r.httpAddress(svc)
+		httpsAddress := r.httpsAddress(caCerts, imc)
 		// Permissive mode:
 		// - status.address http address with host-based routing
 		// - status.addresses:
@@ -213,16 +198,58 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1.InMemoryChannel)
 		// - status.address https address with path-based routing
 		// - status.addresses:
 		//   - https address with path-based routing
+		caCerts, err := r.getCaCerts()
+		if err != nil {
+			return err
+		}
+
+		httpsAddress := r.httpsAddress(caCerts, imc)
 		imc.Status.Addresses = []duckv1.Addressable{httpsAddress}
-		imc.Status.Address = &httpAddress
+		imc.Status.Address = &httpsAddress
 	} else {
+		httpAddress := r.httpAddress(svc)
 		imc.Status.Address = &httpAddress
 	}
+
+	imc.GetConditionSet().Manage(imc.GetStatus()).MarkTrue(v1.InMemoryChannelConditionAddressable)
 
 	// Ok, so now the Dispatcher Deployment & Service have been created, we're golden since the
 	// dispatcher watches the Channel and where it needs to dispatch events to.
 	logging.FromContext(ctx).Debugw("Reconciled InMemoryChannel", zap.Any("InMemoryChannel", imc))
 	return nil
+}
+
+func (r *Reconciler) getCaCerts() (string, error) {
+	// Getting the secret called "imc-dispatcher-tls" from system namespace
+	secret, err := r.secretLister.Secrets(r.systemNamespace).Get(secretName)
+	if err != nil {
+		return "", fmt.Errorf("failed to get CA certs from %s/%s: %w", r.systemNamespace, secretName, err)
+	}
+	caCerts, ok := secret.Data[secretKey]
+	if !ok {
+		return "", fmt.Errorf("failed to get CA certs from %s/%s: missing %s key", r.systemNamespace, secretName, secretKey)
+	}
+	return string(caCerts), nil
+}
+
+func (r *Reconciler) httpAddress(svc *corev1.Service) duckv1.Addressable {
+	// http address uses host-based routing
+	httpAddress := duckv1.Addressable{
+		Name: pointer.String("http"),
+		URL:  apis.HTTP(network.GetServiceHostname(svc.Name, svc.Namespace)),
+	}
+	return httpAddress
+}
+
+func (r *Reconciler) httpsAddress(caCerts string, imc *v1.InMemoryChannel) duckv1.Addressable {
+	// https address uses path-based routing
+	httpsAddress := duckv1.Addressable{
+		Name:    pointer.String("https"),
+		URL:     apis.HTTPS(fmt.Sprintf("%s.%s.svc.%s", dispatcherName, r.systemNamespace, network.GetClusterDomainName())),
+		CACerts: pointer.String(caCerts),
+	}
+	httpsAddress.URL.Path = fmt.Sprintf("/%s/%s", imc.Namespace, imc.Name)
+	return httpsAddress
 }
 
 func (r *Reconciler) reconcileDispatcher(ctx context.Context, scope, dispatcherNamespace string, imc *v1.InMemoryChannel) (*appsv1.Deployment, error) {

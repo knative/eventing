@@ -24,18 +24,18 @@ import (
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/pointer"
 
-	secretinformer "knative.dev/pkg/injection/clients/namespacedkube/informers/core/v1/secret/fake"
-	"knative.dev/pkg/system"
 	"knative.dev/pkg/tracker"
-
-	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
-	"knative.dev/eventing/pkg/kncloudevents"
-	"knative.dev/eventing/pkg/reconciler/inmemorychannel/controller/config"
 
 	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 	"knative.dev/pkg/network"
 	"knative.dev/pkg/resolver"
+
+	"knative.dev/eventing/pkg/apis/feature"
+	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
+	"knative.dev/eventing/pkg/kncloudevents"
+	"knative.dev/eventing/pkg/reconciler/inmemorychannel/controller/config"
 
 	"knative.dev/eventing/pkg/apis/eventing"
 
@@ -280,7 +280,6 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelServiceReady(),
 					WithInMemoryChannelEndpointsReady(),
 					WithInMemoryChannelChannelServiceReady(),
-					WithInMemoryChannelAddress(channelServiceAddress),
 					WithDeadLetterSink(imcDest.Ref, ""),
 					WithInMemoryChannelDLSResolvedFailed(),
 				),
@@ -449,13 +448,67 @@ func TestAllCases(t *testing.T) {
 			WantEvents: []string{
 				Eventf(corev1.EventTypeWarning, "InternalError", "inducing failure for create services"),
 			},
-		}, {},
+		}, {
+			Name: "TLS permissive",
+			Key:  imcKey,
+			Objects: []runtime.Object{
+				makeDLSServiceAsUnstructured(),
+				makeReadyDeployment(),
+				makeService(),
+				makeTLSSecret(),
+				makeReadyEndpoints(),
+				NewInMemoryChannel(imcName, testNS,
+					WithDeadLetterSink(imcDest.Ref, ""),
+					WithInMemoryChannelGeneration(imcGeneration),
+				),
+			},
+			WantErr: false,
+			WantCreates: []runtime.Object{
+				makeChannelService(NewInMemoryChannel(imcName, testNS)),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewInMemoryChannel(imcName, testNS,
+					WithInitInMemoryChannelConditions,
+					WithInMemoryChannelDeploymentReady(),
+					WithInMemoryChannelGeneration(imcGeneration),
+					WithInMemoryChannelStatusObservedGeneration(imcGeneration),
+					WithInMemoryChannelServiceReady(),
+					WithInMemoryChannelEndpointsReady(),
+					WithInMemoryChannelChannelServiceReady(),
+					WithInMemoryChannelAddress(channelServiceAddress),
+					WithInMemoryChannelAddresses([]duckv1.Addressable{
+						{
+							Name:    pointer.String("https"),
+							URL:     httpsURL(imcName, testNS),
+							CACerts: pointer.String(testCaCerts),
+						},
+						{
+							Name: pointer.String("http"),
+							URL:  apis.HTTP(channelServiceAddress),
+						},
+					}),
+					WithDeadLetterSink(imcDest.Ref, ""),
+					WithInMemoryChannelStatusDLSURI(dlsURI),
+				),
+			}},
+			Ctx: feature.ToContext(context.Background(), feature.Flags{
+				feature.TransportEncryption: feature.Permissive,
+			}),
+		},
 	}
 
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		ctx = v1addr.WithDuck(ctx)
-		_ = secretinformer.Get(ctx).Informer().GetStore().Add(makeTLSSecret())
+
+		cm, err := listers.GetConfigMapLister().ConfigMaps(testNS).Get("config-features")
+		if err == nil {
+			flags, err := feature.NewFlagsConfigFromConfigMap(cm)
+			if err != nil {
+				panic(err)
+			}
+			ctx = feature.ToContext(ctx, flags)
+		}
 
 		r := &Reconciler{
 			kubeClientSet:    fakekubeclient.Get(ctx),
@@ -473,6 +526,14 @@ func TestAllCases(t *testing.T) {
 		false,
 		logger,
 	))
+}
+
+func httpsURL(name string, ns string) *apis.URL {
+	u, err := apis.ParseURL(fmt.Sprintf("https://imc-dispatcher.%s.svc.cluster.local/%s/%s", testNS, ns, name))
+	if err != nil {
+		panic(err)
+	}
+	return u
 }
 
 func TestInNamespace(t *testing.T) {
@@ -557,7 +618,6 @@ func TestInNamespace(t *testing.T) {
 		eventDispatcherConfigStore := config.NewEventDispatcherConfigStore(logger)
 		eventDispatcherConfigStore.WatchConfigs(cmw)
 		ctx = v1addr.WithDuck(ctx)
-		_ = secretinformer.Get(ctx).Informer().GetStore().Add(makeTLSSecret())
 
 		r := &Reconciler{
 			kubeClientSet:              fakekubeclient.Get(ctx),
@@ -755,14 +815,8 @@ func makeDLSServiceAsUnstructured() *unstructured.Unstructured {
 	}
 }
 
-func makeTLSSecret() *corev1.Secret {
-	return &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: system.Namespace(),
-			Name:      "imc-dispatcher-tls",
-		},
-		Data: map[string][]byte{
-			"ca.crt": []byte(`
+const (
+	testCaCerts = `
 -----BEGIN CERTIFICATE-----
 MIIDmjCCAoKgAwIBAgIUYzA4bTMXevuk3pl2Mn8hpCYL2C0wDQYJKoZIhvcNAQEL
 BQAwLzELMAkGA1UEBhMCVVMxIDAeBgNVBAMMF0tuYXRpdmUtRXhhbXBsZS1Sb290
@@ -785,7 +839,17 @@ efbMkNjmDuZOMK+wqanqr5YV6zMPzkQK7DspfRgasMAQmugQu7r2MZpXg8Ilhro1
 s/wImGnMVk5RzpBVrq2VB9SkX/ThTVYEC/Sd9BQM364MCR+TA1l8/ptaLFLuwyw8
 O2dgzikq8iSy1BlRsVw=
 -----END CERTIFICATE-----
-`),
+`
+)
+
+func makeTLSSecret() *corev1.Secret {
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: testNS,
+			Name:      "imc-dispatcher-tls",
+		},
+		Data: map[string][]byte{
+			"ca.crt": []byte(testCaCerts),
 		},
 		Type: corev1.SecretTypeTLS,
 	}
