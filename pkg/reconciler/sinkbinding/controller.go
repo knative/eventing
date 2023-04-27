@@ -161,12 +161,13 @@ func (s *SinkBindingSubResourcesReconciler) Reconcile(ctx context.Context, b psb
 			Name:       sb.Spec.Sink.Ref.Name,
 		}, b)
 	}
-	uri, err := s.res.URIFromDestinationV1(ctx, sb.Spec.Sink, sb)
+	addr, err := s.res.AddressableFromDestinationV1(ctx, sb.Spec.Sink, sb)
 	if err != nil {
 		logging.FromContext(ctx).Errorf("Failed to get URI from Destination: %w", err)
 		sb.Status.MarkBindingUnavailable("NoURI", "URI could not be extracted from destination")
 		return err
 	}
+	uri := addr.URL
 	sb.Status.MarkSink(uri)
 	return nil
 }

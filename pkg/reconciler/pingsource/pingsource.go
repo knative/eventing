@@ -99,11 +99,12 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *sourcesv1.PingSo
 		}
 	}
 
-	sinkURI, err := r.sinkResolver.URIFromDestinationV1(ctx, *dest, source)
+	sinkAddr, err := r.sinkResolver.AddressableFromDestinationV1(ctx, *dest, source)
 	if err != nil {
 		source.Status.MarkNoSink("NotFound", "")
 		return newWarningSinkNotFound(dest)
 	}
+	sinkURI := sinkAddr.URL
 	source.Status.MarkSink(sinkURI)
 
 	// Make sure the global mt receive adapter is running

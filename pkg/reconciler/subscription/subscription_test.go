@@ -751,7 +751,7 @@ func TestAllCases(t *testing.T) {
 			Key: testNS + "/" + subscriptionName,
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", subscriptionName),
-				Eventf(corev1.EventTypeWarning, "SubscriberResolveFailed", "Failed to resolve spec.subscriber: address not set for &ObjectReference{Kind:Subscriber,Namespace:testnamespace,Name:subscriber,UID:,APIVersion:messaging.knative.dev/v1,ResourceVersion:,FieldPath:,}"),
+				Eventf(corev1.EventTypeWarning, "SubscriberResolveFailed", "Failed to resolve spec.subscriber: address not set for Kind = Subscriber, Namespace = testnamespace, Name = subscriber, APIVersion = messaging.knative.dev/v1, Group = , Address = "),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
@@ -760,7 +760,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
-					WithSubscriptionReferencesNotResolved(subscriberResolveFailed, "Failed to resolve spec.subscriber: address not set for &ObjectReference{Kind:Subscriber,Namespace:testnamespace,Name:subscriber,UID:,APIVersion:messaging.knative.dev/v1,ResourceVersion:,FieldPath:,}"),
+					WithSubscriptionReferencesNotResolved(subscriberResolveFailed, "Failed to resolve spec.subscriber: address not set for Kind = Subscriber, Namespace = testnamespace, Name = subscriber, APIVersion = messaging.knative.dev/v1, Group = , Address = "),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
@@ -854,7 +854,7 @@ func TestAllCases(t *testing.T) {
 			Key: testNS + "/" + subscriptionName,
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", subscriptionName),
-				Eventf(corev1.EventTypeWarning, replyResolveFailed, "Failed to resolve spec.reply: address not set for &ObjectReference{Kind:Trigger,Namespace:testnamespace,Name:reply,UID:,APIVersion:eventing.knative.dev/v1,ResourceVersion:,FieldPath:,}"),
+				Eventf(corev1.EventTypeWarning, replyResolveFailed, "Failed to resolve spec.reply: address not set for Kind = Trigger, Namespace = testnamespace, Name = reply, APIVersion = eventing.knative.dev/v1, Group = , Address = "),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
@@ -865,7 +865,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionReply(nonAddressableGVK, replyName, testNS),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
-					WithSubscriptionReferencesNotResolved(replyResolveFailed, "Failed to resolve spec.reply: address not set for &ObjectReference{Kind:Trigger,Namespace:testnamespace,Name:reply,UID:,APIVersion:eventing.knative.dev/v1,ResourceVersion:,FieldPath:,}"),
+					WithSubscriptionReferencesNotResolved(replyResolveFailed, "Failed to resolve spec.reply: address not set for Kind = Trigger, Namespace = testnamespace, Name = reply, APIVersion = eventing.knative.dev/v1, Group = , Address = "),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{

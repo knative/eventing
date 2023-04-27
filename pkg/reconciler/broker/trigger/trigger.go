@@ -115,13 +115,14 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, t *eventingv1.Trigger) p
 		t.Spec.Subscriber.Ref.Namespace = t.GetNamespace()
 	}
 
-	subscriberURI, err := r.uriResolver.URIFromDestinationV1(ctx, t.Spec.Subscriber, b)
+	subscriberAddr, err := r.uriResolver.AddressableFromDestinationV1(ctx, t.Spec.Subscriber, b)
 	if err != nil {
 		logging.FromContext(ctx).Errorw("Unable to get the Subscriber's URI", zap.Error(err))
 		t.Status.MarkSubscriberResolvedFailed("Unable to get the Subscriber's URI", "%v", err)
 		t.Status.SubscriberURI = nil
 		return err
 	}
+	subscriberURI := subscriberAddr.URL
 	t.Status.SubscriberURI = subscriberURI
 	t.Status.MarkSubscriberResolvedSucceeded()
 
@@ -147,13 +148,14 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, t *eventingv1.Trigger) p
 func (r *Reconciler) resolveDeadLetterSink(ctx context.Context, b *eventingv1.Broker, t *eventingv1.Trigger) error {
 	// resolve the trigger's dls first, fall back to the broker's
 	if t.Spec.Delivery != nil && t.Spec.Delivery.DeadLetterSink != nil {
-		deadLetterSinkURI, err := r.uriResolver.URIFromDestinationV1(ctx, *t.Spec.Delivery.DeadLetterSink, t)
+		deadLetterSinkAddr, err := r.uriResolver.AddressableFromDestinationV1(ctx, *t.Spec.Delivery.DeadLetterSink, t)
 		if err != nil {
 			t.Status.DeadLetterSinkURI = nil
 			logging.FromContext(ctx).Errorw("Unable to get the dead letter sink's URI", zap.Error(err))
 			t.Status.MarkDeadLetterSinkResolvedFailed("Unable to get the dead letter sink's URI", "%v", err)
 			return err
 		}
+		deadLetterSinkURI := deadLetterSinkAddr.URL
 
 		t.Status.DeadLetterSinkURI = deadLetterSinkURI
 		t.Status.MarkDeadLetterSinkResolvedSucceeded()

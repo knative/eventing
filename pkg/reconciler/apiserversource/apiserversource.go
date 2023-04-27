@@ -94,11 +94,12 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1.ApiServerSour
 		}
 	}
 
-	sinkURI, err := r.sinkResolver.URIFromDestinationV1(ctx, *dest, source)
+	sinkAddr, err := r.sinkResolver.AddressableFromDestinationV1(ctx, *dest, source)
 	if err != nil {
 		source.Status.MarkNoSink("NotFound", "")
 		return newWarningSinkNotFound(dest)
 	}
+	sinkURI := sinkAddr.URL
 	source.Status.MarkSink(sinkURI)
 
 	// resolve namespaces to watch
