@@ -27,6 +27,7 @@ import (
 	flowcontrol "k8s.io/client-go/util/flowcontrol"
 	eventingv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/eventing/v1"
 	eventingv1beta1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/eventing/v1beta1"
+	eventingv1beta2 "knative.dev/eventing/pkg/client/clientset/versioned/typed/eventing/v1beta2"
 	flowsv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/flows/v1"
 	messagingv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/messaging/v1"
 	sourcesv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/sources/v1"
@@ -36,6 +37,7 @@ import (
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
 	EventingV1beta1() eventingv1beta1.EventingV1beta1Interface
+	EventingV1beta2() eventingv1beta2.EventingV1beta2Interface
 	EventingV1() eventingv1.EventingV1Interface
 	FlowsV1() flowsv1.FlowsV1Interface
 	MessagingV1() messagingv1.MessagingV1Interface
@@ -48,6 +50,7 @@ type Interface interface {
 type Clientset struct {
 	*discovery.DiscoveryClient
 	eventingV1beta1 *eventingv1beta1.EventingV1beta1Client
+	eventingV1beta2 *eventingv1beta2.EventingV1beta2Client
 	eventingV1      *eventingv1.EventingV1Client
 	flowsV1         *flowsv1.FlowsV1Client
 	messagingV1     *messagingv1.MessagingV1Client
@@ -58,6 +61,11 @@ type Clientset struct {
 // EventingV1beta1 retrieves the EventingV1beta1Client
 func (c *Clientset) EventingV1beta1() eventingv1beta1.EventingV1beta1Interface {
 	return c.eventingV1beta1
+}
+
+// EventingV1beta2 retrieves the EventingV1beta2Client
+func (c *Clientset) EventingV1beta2() eventingv1beta2.EventingV1beta2Interface {
+	return c.eventingV1beta2
 }
 
 // EventingV1 retrieves the EventingV1Client
@@ -133,6 +141,10 @@ func NewForConfigAndClient(c *rest.Config, httpClient *http.Client) (*Clientset,
 	if err != nil {
 		return nil, err
 	}
+	cs.eventingV1beta2, err = eventingv1beta2.NewForConfigAndClient(&configShallowCopy, httpClient)
+	if err != nil {
+		return nil, err
+	}
 	cs.eventingV1, err = eventingv1.NewForConfigAndClient(&configShallowCopy, httpClient)
 	if err != nil {
 		return nil, err
@@ -175,6 +187,7 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 func New(c rest.Interface) *Clientset {
 	var cs Clientset
 	cs.eventingV1beta1 = eventingv1beta1.New(c)
+	cs.eventingV1beta2 = eventingv1beta2.New(c)
 	cs.eventingV1 = eventingv1.New(c)
 	cs.flowsV1 = flowsv1.New(c)
 	cs.messagingV1 = messagingv1.New(c)

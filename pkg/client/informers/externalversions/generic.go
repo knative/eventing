@@ -25,10 +25,11 @@ import (
 	cache "k8s.io/client-go/tools/cache"
 	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	v1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
+	v1beta2 "knative.dev/eventing/pkg/apis/eventing/v1beta2"
 	flowsv1 "knative.dev/eventing/pkg/apis/flows/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
-	v1beta2 "knative.dev/eventing/pkg/apis/sources/v1beta2"
+	sourcesv1beta2 "knative.dev/eventing/pkg/apis/sources/v1beta2"
 )
 
 // GenericInformer is type of SharedIndexInformer which will locate and delegate to other
@@ -67,6 +68,10 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 	case v1beta1.SchemeGroupVersion.WithResource("eventtypes"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Eventing().V1beta1().EventTypes().Informer()}, nil
 
+		// Group=eventing.knative.dev, Version=v1beta2
+	case v1beta2.SchemeGroupVersion.WithResource("eventtypes"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Eventing().V1beta2().EventTypes().Informer()}, nil
+
 		// Group=flows.knative.dev, Version=v1
 	case flowsv1.SchemeGroupVersion.WithResource("parallels"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Flows().V1().Parallels().Informer()}, nil
@@ -92,7 +97,7 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Sources().V1().SinkBindings().Informer()}, nil
 
 		// Group=sources.knative.dev, Version=v1beta2
-	case v1beta2.SchemeGroupVersion.WithResource("pingsources"):
+	case sourcesv1beta2.SchemeGroupVersion.WithResource("pingsources"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Sources().V1beta2().PingSources().Informer()}, nil
 
 	}
