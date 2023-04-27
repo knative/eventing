@@ -495,6 +495,53 @@ func TestAllCases(t *testing.T) {
 				feature.TransportEncryption: feature.Permissive,
 			}),
 		},
+		{
+			Name: "TLS strict",
+			Key:  imcKey,
+			Objects: []runtime.Object{
+				makeDLSServiceAsUnstructured(),
+				makeReadyDeployment(),
+				makeService(),
+				makeTLSSecret(),
+				makeReadyEndpoints(),
+				NewInMemoryChannel(imcName, testNS,
+					WithDeadLetterSink(imcDest.Ref, ""),
+					WithInMemoryChannelGeneration(imcGeneration),
+				),
+			},
+			WantErr: false,
+			WantCreates: []runtime.Object{
+				makeChannelService(NewInMemoryChannel(imcName, testNS)),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewInMemoryChannel(imcName, testNS,
+					WithInitInMemoryChannelConditions,
+					WithInMemoryChannelDeploymentReady(),
+					WithInMemoryChannelGeneration(imcGeneration),
+					WithInMemoryChannelStatusObservedGeneration(imcGeneration),
+					WithInMemoryChannelServiceReady(),
+					WithInMemoryChannelEndpointsReady(),
+					WithInMemoryChannelChannelServiceReady(),
+					WithInMemoryChannelAddressHTTPS(duckv1.Addressable{
+						Name:    pointer.String("https"),
+						URL:     httpsURL(imcName, testNS),
+						CACerts: pointer.String(testCaCerts),
+					}),
+					WithInMemoryChannelAddresses([]duckv1.Addressable{
+						{
+							Name:    pointer.String("https"),
+							URL:     httpsURL(imcName, testNS),
+							CACerts: pointer.String(testCaCerts),
+						},
+					}),
+					WithDeadLetterSink(imcDest.Ref, ""),
+					WithInMemoryChannelStatusDLSURI(dlsURI),
+				),
+			}},
+			Ctx: feature.ToContext(context.Background(), feature.Flags{
+				feature.TransportEncryption: feature.Strict,
+			}),
+		},
 	}
 
 	logger := logtesting.TestLogger(t)
