@@ -37,8 +37,11 @@ import (
 	_ "knative.dev/pkg/system/testing"
 )
 
-const (
-	testCaCerts = `
+func TestMakeReceiveAdapters(t *testing.T) {
+	name := "source-name"
+	one := int32(1)
+	trueValue := true
+	testCert := `
 -----BEGIN CERTIFICATE-----
 MIIDmjCCAoKgAwIBAgIUYzA4bTMXevuk3pl2Mn8hpCYL2C0wDQYJKoZIhvcNAQEL
 BQAwLzELMAkGA1UEBhMCVVMxIDAeBgNVBAMMF0tuYXRpdmUtRXhhbXBsZS1Sb290
@@ -62,13 +65,6 @@ s/wImGnMVk5RzpBVrq2VB9SkX/ThTVYEC/Sd9BQM364MCR+TA1l8/ptaLFLuwyw8
 O2dgzikq8iSy1BlRsVw=
 -----END CERTIFICATE-----
 `
-)
-
-func TestMakeReceiveAdapters(t *testing.T) {
-	testCert := testCaCerts
-	name := "source-name"
-	one := int32(1)
-	trueValue := true
 
 	src := &v1.ApiServerSource{
 		ObjectMeta: metav1.ObjectMeta{
@@ -175,7 +171,7 @@ func TestMakeReceiveAdapters(t *testing.T) {
 									Value: "knative.dev/eventing",
 								}, {
 									Name:  "K_CA_CERTS",
-									Value: testCaCerts,
+									Value: testCert,
 								}, {
 									Name:  source.EnvLoggingCfg,
 									Value: "",
