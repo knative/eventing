@@ -35,13 +35,15 @@ import (
 	rest "k8s.io/client-go/rest"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	v1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
+	v1beta2 "knative.dev/eventing/pkg/apis/eventing/v1beta2"
 	flowsv1 "knative.dev/eventing/pkg/apis/flows/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
-	v1beta2 "knative.dev/eventing/pkg/apis/sources/v1beta2"
+	sourcesv1beta2 "knative.dev/eventing/pkg/apis/sources/v1beta2"
 	versioned "knative.dev/eventing/pkg/client/clientset/versioned"
 	typedeventingv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/eventing/v1"
 	typedeventingv1beta1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/eventing/v1beta1"
+	typedeventingv1beta2 "knative.dev/eventing/pkg/client/clientset/versioned/typed/eventing/v1beta2"
 	typedflowsv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/flows/v1"
 	typedmessagingv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/messaging/v1"
 	typedsourcesv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/sources/v1"
@@ -249,6 +251,152 @@ func (w *wrapEventingV1beta1EventTypeImpl) UpdateStatus(ctx context.Context, in 
 }
 
 func (w *wrapEventingV1beta1EventTypeImpl) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
+	return nil, errors.New("NYI: Watch")
+}
+
+// EventingV1beta2 retrieves the EventingV1beta2Client
+func (w *wrapClient) EventingV1beta2() typedeventingv1beta2.EventingV1beta2Interface {
+	return &wrapEventingV1beta2{
+		dyn: w.dyn,
+	}
+}
+
+type wrapEventingV1beta2 struct {
+	dyn dynamic.Interface
+}
+
+func (w *wrapEventingV1beta2) RESTClient() rest.Interface {
+	panic("RESTClient called on dynamic client!")
+}
+
+func (w *wrapEventingV1beta2) EventTypes(namespace string) typedeventingv1beta2.EventTypeInterface {
+	return &wrapEventingV1beta2EventTypeImpl{
+		dyn: w.dyn.Resource(schema.GroupVersionResource{
+			Group:    "eventing.knative.dev",
+			Version:  "v1beta2",
+			Resource: "eventtypes",
+		}),
+
+		namespace: namespace,
+	}
+}
+
+type wrapEventingV1beta2EventTypeImpl struct {
+	dyn dynamic.NamespaceableResourceInterface
+
+	namespace string
+}
+
+var _ typedeventingv1beta2.EventTypeInterface = (*wrapEventingV1beta2EventTypeImpl)(nil)
+
+func (w *wrapEventingV1beta2EventTypeImpl) Create(ctx context.Context, in *v1beta2.EventType, opts v1.CreateOptions) (*v1beta2.EventType, error) {
+	in.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   "eventing.knative.dev",
+		Version: "v1beta2",
+		Kind:    "EventType",
+	})
+	uo := &unstructured.Unstructured{}
+	if err := convert(in, uo); err != nil {
+		return nil, err
+	}
+	uo, err := w.dyn.Namespace(w.namespace).Create(ctx, uo, opts)
+	if err != nil {
+		return nil, err
+	}
+	out := &v1beta2.EventType{}
+	if err := convert(uo, out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (w *wrapEventingV1beta2EventTypeImpl) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
+	return w.dyn.Namespace(w.namespace).Delete(ctx, name, opts)
+}
+
+func (w *wrapEventingV1beta2EventTypeImpl) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+	return w.dyn.Namespace(w.namespace).DeleteCollection(ctx, opts, listOpts)
+}
+
+func (w *wrapEventingV1beta2EventTypeImpl) Get(ctx context.Context, name string, opts v1.GetOptions) (*v1beta2.EventType, error) {
+	uo, err := w.dyn.Namespace(w.namespace).Get(ctx, name, opts)
+	if err != nil {
+		return nil, err
+	}
+	out := &v1beta2.EventType{}
+	if err := convert(uo, out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (w *wrapEventingV1beta2EventTypeImpl) List(ctx context.Context, opts v1.ListOptions) (*v1beta2.EventTypeList, error) {
+	uo, err := w.dyn.Namespace(w.namespace).List(ctx, opts)
+	if err != nil {
+		return nil, err
+	}
+	out := &v1beta2.EventTypeList{}
+	if err := convert(uo, out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (w *wrapEventingV1beta2EventTypeImpl) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta2.EventType, err error) {
+	uo, err := w.dyn.Namespace(w.namespace).Patch(ctx, name, pt, data, opts)
+	if err != nil {
+		return nil, err
+	}
+	out := &v1beta2.EventType{}
+	if err := convert(uo, out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (w *wrapEventingV1beta2EventTypeImpl) Update(ctx context.Context, in *v1beta2.EventType, opts v1.UpdateOptions) (*v1beta2.EventType, error) {
+	in.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   "eventing.knative.dev",
+		Version: "v1beta2",
+		Kind:    "EventType",
+	})
+	uo := &unstructured.Unstructured{}
+	if err := convert(in, uo); err != nil {
+		return nil, err
+	}
+	uo, err := w.dyn.Namespace(w.namespace).Update(ctx, uo, opts)
+	if err != nil {
+		return nil, err
+	}
+	out := &v1beta2.EventType{}
+	if err := convert(uo, out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (w *wrapEventingV1beta2EventTypeImpl) UpdateStatus(ctx context.Context, in *v1beta2.EventType, opts v1.UpdateOptions) (*v1beta2.EventType, error) {
+	in.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   "eventing.knative.dev",
+		Version: "v1beta2",
+		Kind:    "EventType",
+	})
+	uo := &unstructured.Unstructured{}
+	if err := convert(in, uo); err != nil {
+		return nil, err
+	}
+	uo, err := w.dyn.Namespace(w.namespace).UpdateStatus(ctx, uo, opts)
+	if err != nil {
+		return nil, err
+	}
+	out := &v1beta2.EventType{}
+	if err := convert(uo, out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (w *wrapEventingV1beta2EventTypeImpl) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return nil, errors.New("NYI: Watch")
 }
 
@@ -1249,7 +1397,7 @@ type wrapSourcesV1beta2PingSourceImpl struct {
 
 var _ typedsourcesv1beta2.PingSourceInterface = (*wrapSourcesV1beta2PingSourceImpl)(nil)
 
-func (w *wrapSourcesV1beta2PingSourceImpl) Create(ctx context.Context, in *v1beta2.PingSource, opts v1.CreateOptions) (*v1beta2.PingSource, error) {
+func (w *wrapSourcesV1beta2PingSourceImpl) Create(ctx context.Context, in *sourcesv1beta2.PingSource, opts v1.CreateOptions) (*sourcesv1beta2.PingSource, error) {
 	in.SetGroupVersionKind(schema.GroupVersionKind{
 		Group:   "sources.knative.dev",
 		Version: "v1beta2",
@@ -1263,7 +1411,7 @@ func (w *wrapSourcesV1beta2PingSourceImpl) Create(ctx context.Context, in *v1bet
 	if err != nil {
 		return nil, err
 	}
-	out := &v1beta2.PingSource{}
+	out := &sourcesv1beta2.PingSource{}
 	if err := convert(uo, out); err != nil {
 		return nil, err
 	}
@@ -1278,43 +1426,43 @@ func (w *wrapSourcesV1beta2PingSourceImpl) DeleteCollection(ctx context.Context,
 	return w.dyn.Namespace(w.namespace).DeleteCollection(ctx, opts, listOpts)
 }
 
-func (w *wrapSourcesV1beta2PingSourceImpl) Get(ctx context.Context, name string, opts v1.GetOptions) (*v1beta2.PingSource, error) {
+func (w *wrapSourcesV1beta2PingSourceImpl) Get(ctx context.Context, name string, opts v1.GetOptions) (*sourcesv1beta2.PingSource, error) {
 	uo, err := w.dyn.Namespace(w.namespace).Get(ctx, name, opts)
 	if err != nil {
 		return nil, err
 	}
-	out := &v1beta2.PingSource{}
+	out := &sourcesv1beta2.PingSource{}
 	if err := convert(uo, out); err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (w *wrapSourcesV1beta2PingSourceImpl) List(ctx context.Context, opts v1.ListOptions) (*v1beta2.PingSourceList, error) {
+func (w *wrapSourcesV1beta2PingSourceImpl) List(ctx context.Context, opts v1.ListOptions) (*sourcesv1beta2.PingSourceList, error) {
 	uo, err := w.dyn.Namespace(w.namespace).List(ctx, opts)
 	if err != nil {
 		return nil, err
 	}
-	out := &v1beta2.PingSourceList{}
+	out := &sourcesv1beta2.PingSourceList{}
 	if err := convert(uo, out); err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (w *wrapSourcesV1beta2PingSourceImpl) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta2.PingSource, err error) {
+func (w *wrapSourcesV1beta2PingSourceImpl) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *sourcesv1beta2.PingSource, err error) {
 	uo, err := w.dyn.Namespace(w.namespace).Patch(ctx, name, pt, data, opts)
 	if err != nil {
 		return nil, err
 	}
-	out := &v1beta2.PingSource{}
+	out := &sourcesv1beta2.PingSource{}
 	if err := convert(uo, out); err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (w *wrapSourcesV1beta2PingSourceImpl) Update(ctx context.Context, in *v1beta2.PingSource, opts v1.UpdateOptions) (*v1beta2.PingSource, error) {
+func (w *wrapSourcesV1beta2PingSourceImpl) Update(ctx context.Context, in *sourcesv1beta2.PingSource, opts v1.UpdateOptions) (*sourcesv1beta2.PingSource, error) {
 	in.SetGroupVersionKind(schema.GroupVersionKind{
 		Group:   "sources.knative.dev",
 		Version: "v1beta2",
@@ -1328,14 +1476,14 @@ func (w *wrapSourcesV1beta2PingSourceImpl) Update(ctx context.Context, in *v1bet
 	if err != nil {
 		return nil, err
 	}
-	out := &v1beta2.PingSource{}
+	out := &sourcesv1beta2.PingSource{}
 	if err := convert(uo, out); err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (w *wrapSourcesV1beta2PingSourceImpl) UpdateStatus(ctx context.Context, in *v1beta2.PingSource, opts v1.UpdateOptions) (*v1beta2.PingSource, error) {
+func (w *wrapSourcesV1beta2PingSourceImpl) UpdateStatus(ctx context.Context, in *sourcesv1beta2.PingSource, opts v1.UpdateOptions) (*sourcesv1beta2.PingSource, error) {
 	in.SetGroupVersionKind(schema.GroupVersionKind{
 		Group:   "sources.knative.dev",
 		Version: "v1beta2",
@@ -1349,7 +1497,7 @@ func (w *wrapSourcesV1beta2PingSourceImpl) UpdateStatus(ctx context.Context, in 
 	if err != nil {
 		return nil, err
 	}
-	out := &v1beta2.PingSource{}
+	out := &sourcesv1beta2.PingSource{}
 	if err := convert(uo, out); err != nil {
 		return nil, err
 	}
