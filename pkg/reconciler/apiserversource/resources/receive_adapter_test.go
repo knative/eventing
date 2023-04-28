@@ -240,9 +240,8 @@ func TestMakeReceiveAdapters(t *testing.T) {
 					"test-key1": "test-value1",
 					"test-key2": "test-value2",
 				},
-				SinkURI: "sink-uri",
-				CACerts: testCaCerts,
-
+				SinkURI:    "sink-uri",
+				CACerts:    testCaCerts,
 				Configs:    &source.EmptyVarsGenerator{},
 				Namespaces: []string{"source-namespace"},
 			})
