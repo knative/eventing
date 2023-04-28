@@ -21,7 +21,6 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -66,6 +65,7 @@ O2dgzikq8iSy1BlRsVw=
 )
 
 func TestMakeReceiveAdapters(t *testing.T) {
+	testCert := testCaCerts
 	name := "source-name"
 	one := int32(1)
 	trueValue := true
@@ -154,10 +154,6 @@ func TestMakeReceiveAdapters(t *testing.T) {
 								{
 									Name:  "K_SINK",
 									Value: "sink-uri",
-								},
-								{
-									Name:  "K_CA_CERTS",
-									Value: testCaCerts,
 								}, {
 									Name:  "K_SOURCE_CONFIG",
 									Value: `{"namespaces":["source-namespace"],"allNamespaces":false,"resources":[{"gvr":{"Group":"","Version":"","Resource":"namespaces"}},{"gvr":{"Group":"batch","Version":"v1","Resource":"jobs"}},{"gvr":{"Group":"","Version":"","Resource":"pods"},"selector":"test-key1=test-value1"}],"owner":{"apiVersion":"custom/v1","kind":"Parent"},"mode":"Resource"}`,
@@ -177,6 +173,9 @@ func TestMakeReceiveAdapters(t *testing.T) {
 								}, {
 									Name:  "METRICS_DOMAIN",
 									Value: "knative.dev/eventing",
+								}, {
+									Name:  "K_CA_CERTS",
+									Value: testCaCerts,
 								}, {
 									Name:  source.EnvLoggingCfg,
 									Value: "",
@@ -232,7 +231,6 @@ func TestMakeReceiveAdapters(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-
 			got, _ := MakeReceiveAdapter(&ReceiveAdapterArgs{
 				Image:  "test-image",
 				Source: tc.src,
@@ -241,7 +239,7 @@ func TestMakeReceiveAdapters(t *testing.T) {
 					"test-key2": "test-value2",
 				},
 				SinkURI:    "sink-uri",
-				CACerts:    testCaCerts,
+				CACerts:    &testCert,
 				Configs:    &source.EmptyVarsGenerator{},
 				Namespaces: []string{"source-namespace"},
 			})
