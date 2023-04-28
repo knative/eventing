@@ -45,6 +45,7 @@ type ReceiveAdapterArgs struct {
 	Source        *v1.ApiServerSource
 	Labels        map[string]string
 	SinkURI       string
+	CACerts       string
 	Configs       reconcilersource.ConfigAccessor
 	Namespaces    []string
 	AllNamespaces bool
@@ -152,6 +153,9 @@ func makeEnv(args *ReceiveAdapterArgs) ([]corev1.EnvVar, error) {
 	envs := []corev1.EnvVar{{
 		Name:  adapter.EnvConfigSink,
 		Value: args.SinkURI,
+	}, {
+		Name:  adapter.EnvConfigCACert,
+		Value: args.CACerts,
 	}, {
 		Name:  "K_SOURCE_CONFIG",
 		Value: config,
