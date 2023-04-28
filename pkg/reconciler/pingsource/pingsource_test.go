@@ -75,8 +75,13 @@ var (
 			APIVersion: "messaging.knative.dev/v1",
 		},
 	}
-	sinkDNS = "sink.mynamespace.svc." + network.GetClusterDomainName()
-	sinkURI = apis.HTTP(sinkDNS)
+	sinkDNS         = "sink.mynamespace.svc." + network.GetClusterDomainName()
+	sinkURI         = apis.HTTP(sinkDNS)
+	sinkURL         = apis.HTTP(sinkDNS)
+	sinkAddressable = &duckv1.Addressable{
+		Name: &sinkURL.Scheme,
+		URL:  sinkURL,
+	}
 )
 
 const (
@@ -197,7 +202,7 @@ func TestAllCases(t *testing.T) {
 				),
 				rtv1.NewChannel(sinkName, testNS,
 					rtv1.WithInitChannelConditions,
-					rtv1.WithChannelAddress(sinkDNS),
+					rtv1.WithChannelAddress(sinkAddressable),
 				),
 			},
 			Key: testNS + "/" + sourceName,
@@ -240,7 +245,7 @@ func TestAllCases(t *testing.T) {
 				),
 				rtv1.NewChannel(sinkName, testNS,
 					rtv1.WithInitChannelConditions,
-					rtv1.WithChannelAddress(sinkDNS),
+					rtv1.WithChannelAddress(sinkAddressable),
 				),
 				makeAvailableMTAdapter(WithContainerEnv("KUBERNETES_MIN_VERSION", "v1.0.0")),
 			},
@@ -282,7 +287,7 @@ func TestAllCases(t *testing.T) {
 				),
 				rtv1.NewChannel(sinkName, testNS,
 					rtv1.WithInitChannelConditions,
-					rtv1.WithChannelAddress(sinkDNS),
+					rtv1.WithChannelAddress(sinkAddressable),
 				),
 				makeAvailableMTAdapterWithDifferentEnv(),
 			},
@@ -330,7 +335,7 @@ func TestAllCases(t *testing.T) {
 				),
 				rtv1.NewChannel(sinkName, testNS,
 					rtv1.WithInitChannelConditions,
-					rtv1.WithChannelAddress(sinkDNS),
+					rtv1.WithChannelAddress(sinkAddressable),
 				),
 				makeAvailableMTAdapter(),
 			},
@@ -372,7 +377,7 @@ func TestAllCases(t *testing.T) {
 				),
 				rtv1.NewChannel(sinkName, testNS,
 					rtv1.WithInitChannelConditions,
-					rtv1.WithChannelAddress(sinkDNS),
+					rtv1.WithChannelAddress(sinkAddressable),
 				),
 				makeAvailableMTAdapter(),
 			},

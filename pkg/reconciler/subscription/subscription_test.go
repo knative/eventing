@@ -130,6 +130,11 @@ var (
 		Namespace:  testNS,
 		Name:       channelName,
 	}
+	sinkURL         = apis.HTTP("example.com")
+	sinkAddressable = &duckv1.Addressable{
+		Name: &sinkURL.Scheme,
+		URL:  sinkURL,
+	}
 )
 
 func TestAllCases(t *testing.T) {
@@ -1014,7 +1019,7 @@ func TestAllCases(t *testing.T) {
 					WithInitChannelConditions,
 					WithBackingChannelObjRef(&imcV1KRef),
 					WithBackingChannelReady,
-					WithChannelAddress("example.com"),
+					WithChannelAddress(sinkAddressable),
 					WithChannelDLSUnknown(),
 				),
 				NewInMemoryChannel(channelName, testNS,
