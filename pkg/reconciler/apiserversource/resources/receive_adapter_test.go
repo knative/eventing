@@ -231,6 +231,7 @@ func TestMakeReceiveAdapters(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
+
 			got, _ := MakeReceiveAdapter(&ReceiveAdapterArgs{
 				Image:  "test-image",
 				Source: tc.src,
