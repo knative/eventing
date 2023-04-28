@@ -56,9 +56,9 @@ func NewEnvConfig() adapter.EnvConfigAccessor {
 	return &adapter.EnvConfig{}
 }
 
-func NewAdapter(ctx context.Context, _ adapter.EnvConfigAccessor, ceClient cloudevents.Client) adapter.Adapter {
+func NewAdapter(ctx context.Context, env adapter.EnvConfigAccessor, ceClient cloudevents.Client) adapter.Adapter {
 	logger := logging.FromContext(ctx)
-	runner := NewCronJobsRunner(ceClient, kubeclient.Get(ctx), logging.FromContext(ctx))
+	runner := NewCronJobsRunner(adapter.GetClientConfig(ctx), kubeclient.Get(ctx), logging.FromContext(ctx))
 
 	return &mtpingAdapter{
 		logger:    logger,

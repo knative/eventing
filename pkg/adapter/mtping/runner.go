@@ -33,6 +33,7 @@ import (
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/record"
 
+	"knative.dev/eventing/pkg/adapter/v2"
 	kncloudevents "knative.dev/eventing/pkg/adapter/v2"
 	"knative.dev/eventing/pkg/adapter/v2/util/crstatusevent"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
@@ -50,26 +51,25 @@ type cronJobsRunner struct {
 	// The cron job runner
 	cron cron.Cron
 
-	// client sends cloudevents.
-	Client cloudevents.Client
-
 	// Where to send logs
 	Logger *zap.SugaredLogger
 
 	// kubeClient for sending k8s events
 	kubeClient kubernetes.Interface
+
+	clientConfig kncloudevents.ClientConfig
 }
 
 const (
 	resourceGroup = "pingsources.sources.knative.dev"
 )
 
-func NewCronJobsRunner(ceClient cloudevents.Client, kubeClient kubernetes.Interface, logger *zap.SugaredLogger, opts ...cron.Option) *cronJobsRunner {
+func NewCronJobsRunner(cfg adapter.ClientConfig, kubeClient kubernetes.Interface, logger *zap.SugaredLogger, opts ...cron.Option) *cronJobsRunner {
 	return &cronJobsRunner{
-		cron:       *cron.New(opts...),
-		Client:     ceClient,
-		Logger:     logger,
-		kubeClient: kubeClient,
+		cron:         *cron.New(opts...),
+		Logger:       logger,
+		kubeClient:   kubeClient,
+		clientConfig: cfg,
 	}
 }
 
@@ -107,7 +107,18 @@ func (a *cronJobsRunner) AddSchedule(source *sourcesv1.PingSource) cron.EntryID 
 	}
 
 	ctx = kncloudevents.ContextWithMetricTag(ctx, metricTag)
-	id, _ := a.cron.AddFunc(schedule, a.cronTick(ctx, event))
+
+	client, err := a.newPingSourceClient(source)
+	if err != nil {
+		a.Logger.Desugar().Error("Failed to create client",
+			zap.String("name", source.GetName()),
+			zap.String("namespace", source.GetNamespace()),
+			zap.Error(err),
+		)
+		return -1
+	}
+
+	id, _ := a.cron.AddFunc(schedule, a.cronTick(ctx, client, event))
 	return id
 }
 
@@ -128,7 +139,7 @@ func (a *cronJobsRunner) Stop() {
 	}
 }
 
-func (a *cronJobsRunner) cronTick(ctx context.Context, event cloudevents.Event) func() {
+func (a *cronJobsRunner) cronTick(ctx context.Context, client adapter.Client, event cloudevents.Event) func() {
 	return func() {
 		event := event.Clone()
 		event.SetID(uuid.New().String()) // provide an ID here so we can track it with logging
@@ -141,11 +152,13 @@ func (a *cronJobsRunner) cronTick(ctx context.Context, event cloudevents.Event) 
 
 		a.Logger.Debugf("sending cloudevent id: %s, source: %s, target: %s", event.ID(), source, target)
 
-		if result := a.Client.Send(ctx, event); !cloudevents.IsACK(result) {
+		if result := client.Send(ctx, event); !cloudevents.IsACK(result) {
 			// Exhausted number of retries. Event is lost.
 			a.Logger.Error("failed to send cloudevent result: ", zap.Any("result", result),
 				zap.String("source", source), zap.String("target", target), zap.String("id", event.ID()))
 		}
+
+		client.CloseIdleConnections()
 	}
 }
 
@@ -173,4 +186,29 @@ func makeEvent(source *sourcesv1.PingSource) (cloudevents.Event, error) {
 	}
 
 	return event, nil
+}
+
+func (a *cronJobsRunner) newPingSourceClient(source *sourcesv1.PingSource) (adapter.Client, error) {
+	var env adapter.EnvConfig
+	if a.clientConfig.Env != nil {
+		env = adapter.EnvConfig{
+			Namespace:      a.clientConfig.Env.GetNamespace(),
+			Name:           a.clientConfig.Env.GetName(),
+			EnvSinkTimeout: fmt.Sprintf("%d", a.clientConfig.Env.GetSinktimeout()),
+		}
+	}
+
+	env.Sink = source.Status.SinkURI.String()
+	env.CACerts = nil // TODO CA Certs from source status
+
+	cfg := adapter.ClientConfig{
+		Env:                 &env,
+		CeOverrides:         source.Spec.CloudEventOverrides,
+		Reporter:            a.clientConfig.Reporter,
+		CrStatusEventClient: a.clientConfig.CrStatusEventClient,
+		Options:             a.clientConfig.Options,
+		Client:              a.clientConfig.Client,
+	}
+
+	return adapter.NewClient(cfg)
 }

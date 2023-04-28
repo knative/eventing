@@ -35,6 +35,7 @@ import (
 	"knative.dev/pkg/logging"
 	rectesting "knative.dev/pkg/reconciler/testing"
 
+	"knative.dev/eventing/pkg/adapter/v2"
 	adaptertesting "knative.dev/eventing/pkg/adapter/v2/test"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 )
@@ -201,7 +202,7 @@ func TestAddRunRemoveSchedules(t *testing.T) {
 			logger := logging.FromContext(ctx)
 			ce := adaptertesting.NewTestClient()
 
-			runner := NewCronJobsRunner(ce, kubeclient.Get(ctx), logger)
+			runner := NewCronJobsRunner(adapter.ClientConfig{Client: ce}, kubeclient.Get(ctx), logger)
 			entryId := runner.AddSchedule(tc.src)
 
 			entry := runner.cron.Entry(entryId)
@@ -228,7 +229,7 @@ func TestStartStopCron(t *testing.T) {
 	logger := logging.FromContext(ctx)
 	ce := adaptertesting.NewTestClient()
 
-	runner := NewCronJobsRunner(ce, kubeclient.Get(ctx), logger)
+	runner := NewCronJobsRunner(adapter.ClientConfig{Client: ce}, kubeclient.Get(ctx), logger)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	wctx, wcancel := context.WithCancel(context.Background())
@@ -257,7 +258,7 @@ func TestStartStopCronDelayWait(t *testing.T) {
 	logger := logging.FromContext(ctx)
 	ce := adaptertesting.NewTestClientWithDelay(time.Second * 5)
 
-	runner := NewCronJobsRunner(ce, kubeclient.Get(ctx), logger)
+	runner := NewCronJobsRunner(adapter.ClientConfig{Client: ce}, kubeclient.Get(ctx), logger)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
