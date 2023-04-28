@@ -98,10 +98,11 @@ func (imcs *InMemoryChannelStatus) InitializeConditions() {
 }
 
 func (imcs *InMemoryChannelStatus) SetAddress(url *apis.URL) {
-	imcs.Address = &v1.Addressable{Name: pointer.String(url.Scheme), URL: url}
 	if url != nil {
+		imcs.Address = &v1.Addressable{Name: pointer.String(url.Scheme), URL: url}
 		imcCondSet.Manage(imcs).MarkTrue(InMemoryChannelConditionAddressable)
 	} else {
+		imcs.Address = &v1.Addressable{URL: url}
 		imcCondSet.Manage(imcs).MarkFalse(InMemoryChannelConditionAddressable, "emptyHostname", "hostname is the empty string")
 	}
 }
