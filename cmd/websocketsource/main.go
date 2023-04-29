@@ -21,9 +21,11 @@ import (
 	"flag"
 	"log"
 	"os"
+	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
-	"github.com/gorilla/websocket"
+	"github.com/gobwas/ws"
+	"knative.dev/pkg/websocket"
 )
 
 var (
@@ -65,12 +67,19 @@ func main() {
 		log.Fatalf("Failed to create a http cloudevent client: %s", err.Error())
 	}
 
-	ws, _, err := websocket.DefaultDialer.Dial(source, nil)
+	dialer := ws.Dialer{
+		Timeout: 45 * time.Second,
+	}
+	ctx := context.Background()
+
+	conn, _, _, err := dialer.Dial(ctx, source)
+	ws := websocket.NewNetConnExtension(conn)
+
 	if err != nil {
 		log.Fatal("error connecting:", err)
 	}
 
-	ctx := cloudevents.ContextWithTarget(context.Background(), sink)
+	ctx = cloudevents.ContextWithTarget(context.Background(), sink)
 
 	for {
 		_, message, err := ws.ReadMessage()
