@@ -25,7 +25,7 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/gobwas/ws"
-	"knative.dev/pkg/websocket"
+	"knative.dev/eventing/pkg/utils"
 )
 
 var (
@@ -73,7 +73,6 @@ func main() {
 	ctx := context.Background()
 
 	conn, _, _, err := dialer.Dial(ctx, source)
-	ws := websocket.NewNetConnExtension(conn)
 
 	if err != nil {
 		log.Fatal("error connecting:", err)
@@ -82,7 +81,7 @@ func main() {
 	ctx = cloudevents.ContextWithTarget(context.Background(), sink)
 
 	for {
-		_, message, err := ws.ReadMessage()
+		_, message, err := utils.ReadMessage(conn)
 		if err != nil {
 			// TODO(markusthoemmes): Handle failures and reconnect
 			log.Println("error while reading message:", err)

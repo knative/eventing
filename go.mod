@@ -44,10 +44,10 @@ require (
 	k8s.io/apiserver v0.25.4
 	k8s.io/client-go v0.25.4
 	k8s.io/utils v0.0.0-20221108210102-8e77b1f39fe2
-	knative.dev/hack v0.0.0-20230428013635-6e4569cc679d
-	knative.dev/hack/schema v0.0.0-20230428013635-6e4569cc679d
-	knative.dev/pkg v0.0.0-20230428013435-aacec7fd7a8e
-	knative.dev/reconciler-test v0.0.0-20230428013536-3c01fe1a8849
+	knative.dev/hack v0.0.0-20230501013555-7d81248b4638
+	knative.dev/hack/schema v0.0.0-20230501013555-7d81248b4638
+	knative.dev/pkg v0.0.0-20230501013355-904966742b58
+	knative.dev/reconciler-test v0.0.0-20230501013554-1d362623689a
 	sigs.k8s.io/yaml v1.3.0
 )
 
@@ -143,5 +143,3 @@ replace (
 	github.com/dgrijalva/jwt-go => github.com/form3tech-oss/jwt-go v0.0.0-20210511163231-5b2d2b5f6c34
 	github.com/miekg/dns v1.0.14 => github.com/miekg/dns v1.1.25
 )
-
-replace knative.dev/pkg => ../pkg
