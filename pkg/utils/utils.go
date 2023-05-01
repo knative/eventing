@@ -17,13 +17,9 @@ limitations under the License.
 package utils
 
 import (
-	"io"
-	"net"
 	"regexp"
 	"strings"
 
-	"github.com/gobwas/ws"
-	"github.com/gobwas/ws/wsutil"
 	"k8s.io/apimachinery/pkg/util/validation"
 
 	corev1 "k8s.io/api/core/v1"
@@ -94,16 +90,4 @@ func GenerateFixedName(owner metav1.Object, prefix string) string {
 
 	// A dot must be followed by [a-z0-9] to be DNS1123 compliant. Make sure we are not joining a dot and a dash.
 	return strings.TrimSuffix(prefix, ".") + uid
-}
-
-func ReadMessage(conn net.Conn) (messageType ws.OpCode, p []byte, err error) {
-	var r io.Reader
-	var header ws.Header
-	header, r, err = wsutil.NextReader(conn, ws.StateServerSide)
-	messageType = header.OpCode
-	if err != nil {
-		return messageType, nil, err
-	}
-	p, err = io.ReadAll(r)
-	return messageType, p, err
 }

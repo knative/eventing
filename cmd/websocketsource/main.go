@@ -25,7 +25,7 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/gobwas/ws"
-	"knative.dev/eventing/pkg/utils"
+	"github.com/gobwas/ws/wsutil"
 )
 
 var (
@@ -81,19 +81,22 @@ func main() {
 	ctx = cloudevents.ContextWithTarget(context.Background(), sink)
 
 	for {
-		_, message, err := utils.ReadMessage(conn)
+		var messages []wsutil.Message
+		messages, err = wsutil.ReadMessage(conn, ws.StateClientSide, messages)
 		if err != nil {
 			// TODO(markusthoemmes): Handle failures and reconnect
 			log.Println("error while reading message:", err)
 			return
 		}
-
-		event := cloudevents.NewEvent(cloudevents.VersionV1)
-		event.SetType(eventType)
-		event.SetSource(eventSource)
-		_ = event.SetData(cloudevents.ApplicationJSON, message)
-		if result := ce.Send(ctx, event); !cloudevents.IsACK(result) {
-			log.Printf("sending event to channel failed: %v", result)
+		for _, m := range messages {
+			message := m.Payload
+			event := cloudevents.NewEvent(cloudevents.VersionV1)
+			event.SetType(eventType)
+			event.SetSource(eventSource)
+			_ = event.SetData(cloudevents.ApplicationJSON, message)
+			if result := ce.Send(ctx, event); !cloudevents.IsACK(result) {
+				log.Printf("sending event to channel failed: %v", result)
+			}
 		}
 	}
 }
