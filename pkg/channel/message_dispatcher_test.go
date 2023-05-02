@@ -693,7 +693,7 @@ func TestDispatchMessage(t *testing.T) {
 					"traceparent":         {"ignored-value-header"},
 					"ce-abc":              {`"ce-abc-value"`},
 					"ce-knativeerrorcode": {strconv.Itoa(http.StatusBadRequest)},
-					"ce-knativeerrordata": {base64.StdEncoding.EncodeToString([]byte("destination multi-line response"))},
+					"ce-knativeerrordata": {base64.StdEncoding.EncodeToString([]byte("destination\n multi-line\n response"))},
 					"ce-id":               {"ignored-value-header"},
 					"ce-time":             {"2002-10-02T15:00:00Z"},
 					"ce-source":           {testCeSource},
