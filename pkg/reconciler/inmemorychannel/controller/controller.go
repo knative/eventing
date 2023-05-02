@@ -119,6 +119,10 @@ func NewController(
 		FilterFunc: controller.FilterWithName(dispatcherName),
 		Handler:    controller.HandleAll(grCh),
 	})
+	secretInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: controller.FilterWithName(dispatcherName),
+		Handler:    controller.HandleAll(grCh),
+	})
 
 	// Setup the watch on the config map of dispatcher config
 	configStore := config.NewEventDispatcherConfigStore(logging.FromContext(ctx))
