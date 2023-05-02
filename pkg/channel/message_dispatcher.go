@@ -34,13 +34,14 @@ import (
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/util/sets"
 
+	"knative.dev/pkg/network"
+	"knative.dev/pkg/system"
+
 	"knative.dev/eventing/pkg/broker"
 	"knative.dev/eventing/pkg/channel/attributes"
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/tracing"
 	"knative.dev/eventing/pkg/utils"
-	"knative.dev/pkg/network"
-	"knative.dev/pkg/system"
 )
 
 const (
@@ -309,53 +310,17 @@ func (d *MessageDispatcherImpl) dispatchExecutionInfoTransformers(destination *u
 	}
 
 	destination = d.sanitizeURL(destination)
-	// Unprintable control characters are not allowed in header values
-	// and cause HTTP requests to fail if not removed.
-	// https://pkg.go.dev/golang.org/x/net/http/httpguts#ValidHeaderFieldValue
-	httpBody := sanitizeHTTPBody(httpResponseBody)
 
 	// Encodes response body as base64 for the resulting length.
-	bodyLen := len(httpBody)
+	bodyLen := len(httpResponseBody)
 	encodedLen := base64.StdEncoding.EncodedLen(bodyLen)
 	if encodedLen > attributes.KnativeErrorDataExtensionMaxLength {
 		encodedLen = attributes.KnativeErrorDataExtensionMaxLength
 	}
 	encodedBuf := make([]byte, encodedLen)
-	base64.StdEncoding.Encode(encodedBuf, []byte(httpBody))
+	base64.StdEncoding.Encode(encodedBuf, httpResponseBody)
 
 	return attributes.KnativeErrorTransformers(*destination, dispatchExecutionInfo.ResponseCode, string(encodedBuf[:encodedLen]))
-}
-
-func sanitizeHTTPBody(body []byte) string {
-	if !hasControlChars(body) {
-		return string(body)
-	}
-
-	sanitizedResponse := make([]byte, 0, len(body))
-	for _, v := range body {
-		if !isControl(v) {
-			sanitizedResponse = append(sanitizedResponse, v)
-		}
-	}
-	return string(sanitizedResponse)
-}
-
-func hasControlChars(data []byte) bool {
-	for _, v := range data {
-		if isControl(v) {
-			return true
-		}
-	}
-	return false
-}
-
-func isControl(c byte) bool {
-	// US ASCII codes range for printable graphic characters and a space.
-	// http://www.columbia.edu/kermit/ascii.html
-	const asciiUnitSeparator = 31
-	const asciiRubout = 127
-
-	return int(c) < asciiUnitSeparator || int(c) > asciiRubout
 }
 
 // isFailure returns true if the status code is not a successful HTTP status.

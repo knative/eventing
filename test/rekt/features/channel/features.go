@@ -429,7 +429,6 @@ func channelSubscriberReturnedErrorWithData(createSubscriberFn func(ref *duckv1.
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 
 	errorData := "<!doctype html>\n<html>\n<head>\n    <title>Error Page(tm)</title>\n</head>\n<body>\n<p>Quoth the server, 404!\n</body></html>"
-	sanitizeBodyData := sanitizeHTTPBody([]byte(errorData))
 	f.Setup("install failing receiver", eventshub.Install(failer,
 		eventshub.StartReceiver,
 		eventshub.DropFirstN(1),
@@ -463,7 +462,7 @@ func channelSubscriberReturnedErrorWithData(createSubscriberFn func(ref *duckv1.
 			return test.HasExtension("knativeerrorcode", "422")
 		},
 		func(ctx context.Context) test.EventMatcher {
-			return test.HasExtension("knativeerrordata", base64.StdEncoding.EncodeToString([]byte(sanitizeBodyData)))
+			return test.HasExtension("knativeerrordata", base64.StdEncoding.EncodeToString([]byte(errorData)))
 		},
 	))
 
@@ -483,36 +482,4 @@ func assertEnhancedWithKnativeErrorExtensions(sinkName string, matcherfns ...fun
 			assert.MatchEvent(matchers...),
 		)
 	}
-}
-
-func sanitizeHTTPBody(body []byte) string {
-	if !hasControlChars(body) {
-		return string(body)
-	}
-
-	sanitizedResponse := make([]byte, 0, len(body))
-	for _, v := range body {
-		if !isControl(v) {
-			sanitizedResponse = append(sanitizedResponse, v)
-		}
-	}
-	return string(sanitizedResponse)
-}
-
-func isControl(c byte) bool {
-	// US ASCII codes range for printable graphic characters and a space.
-	// http://www.columbia.edu/kermit/ascii.html
-	const asciiUnitSeparator = 31
-	const asciiRubout = 127
-
-	return int(c) < asciiUnitSeparator || int(c) > asciiRubout
-}
-
-func hasControlChars(data []byte) bool {
-	for _, v := range data {
-		if isControl(v) {
-			return true
-		}
-	}
-	return false
 }
