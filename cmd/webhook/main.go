@@ -68,6 +68,7 @@ var ourTypes = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
 	// For group eventing.knative.dev.
 	// v1beta1
 	eventingv1beta1.SchemeGroupVersion.WithKind("EventType"): &eventingv1beta1.EventType{},
+	// v1beta2
 	eventingv1beta2.SchemeGroupVersion.WithKind("EventType"): &eventingv1beta2.EventType{},
 	// v1
 	eventingv1.SchemeGroupVersion.WithKind("Broker"):  &eventingv1.Broker{},
