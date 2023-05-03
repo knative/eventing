@@ -43,6 +43,7 @@ import (
 
 // TODO: this should be passed in on the env.
 const dispatcherName = "imc-dispatcher"
+const secretName = "imc-dispatcher-tls"
 
 type envConfig struct {
 	Image string `envconfig:"DISPATCHER_IMAGE" required:"true"`
@@ -120,7 +121,7 @@ func NewController(
 		Handler:    controller.HandleAll(grCh),
 	})
 	secretInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.FilterWithName(dispatcherName),
+		FilterFunc: controller.FilterWithName(secretName),
 		Handler:    controller.HandleAll(grCh),
 	})
 
