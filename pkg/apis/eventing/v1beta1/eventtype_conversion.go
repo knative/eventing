@@ -18,17 +18,55 @@ package v1beta1
 
 import (
 	"context"
-	"fmt"
+
+	"knative.dev/eventing/pkg/apis/eventing/v1beta2"
 
 	"knative.dev/pkg/apis"
 )
 
 // ConvertTo implements apis.Convertible
-func (source *EventType) ConvertTo(ctx context.Context, to apis.Convertible) error {
-	return fmt.Errorf("v1beta1 is the highest known version, got: %T", to)
+func (source *EventType) ConvertTo(ctx context.Context, obj apis.Convertible) error {
+	switch sink := obj.(type) {
+	case *v1beta2.EventType:
+		sink.ObjectMeta = source.ObjectMeta
+		sink.Status = v1beta2.EventTypeStatus{
+			Status: source.Status.Status,
+		}
+		sink.Spec = v1beta2.EventTypeSpec{
+			Type:        source.Spec.Type,
+			Source:      source.Spec.Source,
+			Schema:      source.Spec.Schema,
+			SchemaData:  source.Spec.SchemaData,
+			Broker:      source.Spec.Broker,
+			Description: source.Spec.Description,
+		}
+
+		return nil
+	default:
+		return apis.ConvertToViaProxy(ctx, source, &v1beta2.EventType{}, sink)
+	}
 }
 
 // ConvertFrom implements apis.Convertible
-func (sink *EventType) ConvertFrom(ctx context.Context, from apis.Convertible) error {
-	return fmt.Errorf("v1beta1 is the highest known version, got: %T", from)
+func (sink *EventType) ConvertFrom(ctx context.Context, obj apis.Convertible) error {
+	switch source := obj.(type) {
+	case *v1beta2.EventType:
+		sink.ObjectMeta = source.ObjectMeta
+		sink.Status = EventTypeStatus{
+			Status: source.Status.Status,
+		}
+
+		sink.Spec = EventTypeSpec{
+			Type:        source.Spec.Type,
+			Source:      source.Spec.Source,
+			Schema:      source.Spec.Schema,
+			SchemaData:  source.Spec.SchemaData,
+			Broker:      source.Spec.Broker,
+			Description: source.Spec.Description,
+		}
+
+		return nil
+	default:
+		return apis.ConvertFromViaProxy(ctx, source, &v1beta2.EventType{}, sink)
+	}
 }
