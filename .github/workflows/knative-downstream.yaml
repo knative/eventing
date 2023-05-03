@@ -38,8 +38,6 @@ jobs:
             org: knative-sandbox
           - repo: eventing-kafka-broker
             org: knative-sandbox
-          - repo: eventing-natss
-            org: knative-sandbox
           - repo: eventing-rabbitmq
             org: knative-sandbox
 
