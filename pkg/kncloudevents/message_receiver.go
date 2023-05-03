@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"sync"
 	"time"
 
 	"go.opencensus.io/plugin/ochttp"
@@ -41,6 +42,8 @@ type HTTPMessageReceiver struct {
 
 	checker          http.HandlerFunc
 	drainQuietPeriod time.Duration
+	drainer          *handlers.Drainer
+	handlerMutex     sync.Mutex
 
 	// Used to signal when receiver is listening
 	Ready chan interface{}
@@ -51,7 +54,8 @@ type HTTPMessageReceiverOption func(*HTTPMessageReceiver)
 
 func NewHTTPMessageReceiver(port int, o ...HTTPMessageReceiverOption) *HTTPMessageReceiver {
 	h := &HTTPMessageReceiver{
-		port: port,
+		port:         port,
+		handlerMutex: sync.Mutex{},
 	}
 
 	h.Ready = make(chan interface{})
@@ -114,13 +118,11 @@ func WithReadTimeout(duration time.Duration) HTTPMessageReceiverOption {
 	}
 }
 
-// Blocking
-func (recv *HTTPMessageReceiver) StartListen(ctx context.Context, handler http.Handler) error {
-	var err error
-	if recv.listener, err = net.Listen("tcp", fmt.Sprintf(":%d", recv.port)); err != nil {
-		return err
-	}
-
+// Update handler updates the given handler for the receiver.
+// It also wraps the handler inside of a drainer.
+func (recv *HTTPMessageReceiver) UpdateHandler(handler http.Handler) {
+	recv.handlerMutex.Lock()
+	defer recv.handlerMutex.Unlock()
 	drainer := &handlers.Drainer{
 		Inner:       CreateHandler(handler),
 		HealthCheck: recv.checker,
@@ -129,8 +131,34 @@ func (recv *HTTPMessageReceiver) StartListen(ctx context.Context, handler http.H
 	if recv.server == nil {
 		recv.server = newServer()
 	}
-	recv.server.Addr = recv.listener.Addr().String()
+
 	recv.server.Handler = drainer
+	recv.drainer = drainer
+}
+
+func (recv *HTTPMessageReceiver) GetDrain() *handlers.Drainer {
+	recv.handlerMutex.Lock()
+	defer recv.handlerMutex.Unlock()
+	return recv.drainer
+}
+
+func (recv *HTTPMessageReceiver) GetAddr() string {
+	if recv.server != nil {
+		return recv.server.Addr
+	}
+
+	return ""
+}
+
+// Blocking
+func (recv *HTTPMessageReceiver) StartListen(ctx context.Context, handler http.Handler) error {
+	var err error
+	if recv.listener, err = net.Listen("tcp", fmt.Sprintf(":%d", recv.port)); err != nil {
+		return err
+	}
+
+	recv.UpdateHandler(handler)
+	recv.server.Addr = recv.listener.Addr().String()
 
 	errChan := make(chan error, 1)
 	go func() {
@@ -147,7 +175,8 @@ func (recv *HTTPMessageReceiver) StartListen(ctx context.Context, handler http.H
 	case <-ctx.Done():
 		// As we start to shutdown, disable keep-alives to avoid clients hanging onto connections.
 		recv.server.SetKeepAlivesEnabled(false)
-		drainer.Drain()
+		drain := recv.GetDrain()
+		drain.Drain()
 		ctx, cancel := context.WithTimeout(context.Background(), getShutdownTimeout(ctx))
 		defer cancel()
 		err := recv.server.Shutdown(ctx)
