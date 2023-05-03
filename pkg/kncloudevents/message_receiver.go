@@ -123,6 +123,12 @@ func WithReadTimeout(duration time.Duration) HTTPMessageReceiverOption {
 func (recv *HTTPMessageReceiver) UpdateHandler(handler http.Handler) {
 	recv.handlerMutex.Lock()
 	defer recv.handlerMutex.Unlock()
+
+	// wait for any in-flight requests to finish
+	if recv.drainer != nil {
+		recv.drainer.Drain()
+	}
+
 	drainer := &handlers.Drainer{
 		Inner:       CreateHandler(handler),
 		HealthCheck: recv.checker,

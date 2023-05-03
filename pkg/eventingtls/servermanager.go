@@ -28,8 +28,6 @@ import (
 	"knative.dev/pkg/logging"
 )
 
-// TODO: write tests
-
 // ServerManager is intended to be used to manage HTTP and HTTPS servers for a component.
 // It relies on the `transport-encryption` feature flag to determine which server(s) should be accepting requests.
 // If a server shouldn't be accepting requests, ServerManager will update that server's handler to respond with a 404
