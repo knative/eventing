@@ -121,9 +121,9 @@ func WithChannelNoAddress() ChannelOption {
 	}
 }
 
-func WithChannelAddress(hostname string) ChannelOption {
+func WithChannelAddress(addr *duckv1.Addressable) ChannelOption {
 	return func(c *eventingv1.Channel) {
-		c.Status.SetAddress(&duckv1.Addressable{URL: apis.HTTP(hostname)})
+		c.Status.SetAddress(addr)
 	}
 }
 

@@ -24,16 +24,18 @@ import (
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/pointer"
 
 	"knative.dev/pkg/tracker"
-
-	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
-	"knative.dev/eventing/pkg/kncloudevents"
-	"knative.dev/eventing/pkg/reconciler/inmemorychannel/controller/config"
 
 	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 	"knative.dev/pkg/network"
 	"knative.dev/pkg/resolver"
+
+	"knative.dev/eventing/pkg/apis/feature"
+	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
+	"knative.dev/eventing/pkg/kncloudevents"
+	"knative.dev/eventing/pkg/reconciler/inmemorychannel/controller/config"
 
 	"knative.dev/eventing/pkg/apis/eventing"
 
@@ -278,7 +280,6 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelServiceReady(),
 					WithInMemoryChannelEndpointsReady(),
 					WithInMemoryChannelChannelServiceReady(),
-					WithInMemoryChannelAddress(channelServiceAddress),
 					WithDeadLetterSink(imcDest.Ref, ""),
 					WithInMemoryChannelDLSResolvedFailed(),
 				),
@@ -447,18 +448,122 @@ func TestAllCases(t *testing.T) {
 			WantEvents: []string{
 				Eventf(corev1.EventTypeWarning, "InternalError", "inducing failure for create services"),
 			},
-		}, {},
+		}, {
+			Name: "TLS permissive",
+			Key:  imcKey,
+			Objects: []runtime.Object{
+				makeDLSServiceAsUnstructured(),
+				makeReadyDeployment(),
+				makeService(),
+				makeTLSSecret(),
+				makeReadyEndpoints(),
+				NewInMemoryChannel(imcName, testNS,
+					WithDeadLetterSink(imcDest.Ref, ""),
+					WithInMemoryChannelGeneration(imcGeneration),
+				),
+			},
+			WantErr: false,
+			WantCreates: []runtime.Object{
+				makeChannelService(NewInMemoryChannel(imcName, testNS)),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewInMemoryChannel(imcName, testNS,
+					WithInitInMemoryChannelConditions,
+					WithInMemoryChannelDeploymentReady(),
+					WithInMemoryChannelGeneration(imcGeneration),
+					WithInMemoryChannelStatusObservedGeneration(imcGeneration),
+					WithInMemoryChannelServiceReady(),
+					WithInMemoryChannelEndpointsReady(),
+					WithInMemoryChannelChannelServiceReady(),
+					WithInMemoryChannelAddress(channelServiceAddress),
+					WithInMemoryChannelAddresses([]duckv1.Addressable{
+						{
+							Name:    pointer.String("https"),
+							URL:     httpsURL(imcName, testNS),
+							CACerts: pointer.String(testCaCerts),
+						},
+						{
+							Name: pointer.String("http"),
+							URL:  apis.HTTP(channelServiceAddress),
+						},
+					}),
+					WithDeadLetterSink(imcDest.Ref, ""),
+					WithInMemoryChannelStatusDLSURI(dlsURI),
+				),
+			}},
+			Ctx: feature.ToContext(context.Background(), feature.Flags{
+				feature.TransportEncryption: feature.Permissive,
+			}),
+		},
+		{
+			Name: "TLS strict",
+			Key:  imcKey,
+			Objects: []runtime.Object{
+				makeDLSServiceAsUnstructured(),
+				makeReadyDeployment(),
+				makeService(),
+				makeTLSSecret(),
+				makeReadyEndpoints(),
+				NewInMemoryChannel(imcName, testNS,
+					WithDeadLetterSink(imcDest.Ref, ""),
+					WithInMemoryChannelGeneration(imcGeneration),
+				),
+			},
+			WantErr: false,
+			WantCreates: []runtime.Object{
+				makeChannelService(NewInMemoryChannel(imcName, testNS)),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewInMemoryChannel(imcName, testNS,
+					WithInitInMemoryChannelConditions,
+					WithInMemoryChannelDeploymentReady(),
+					WithInMemoryChannelGeneration(imcGeneration),
+					WithInMemoryChannelStatusObservedGeneration(imcGeneration),
+					WithInMemoryChannelServiceReady(),
+					WithInMemoryChannelEndpointsReady(),
+					WithInMemoryChannelChannelServiceReady(),
+					WithInMemoryChannelAddressHTTPS(duckv1.Addressable{
+						Name:    pointer.String("https"),
+						URL:     httpsURL(imcName, testNS),
+						CACerts: pointer.String(testCaCerts),
+					}),
+					WithInMemoryChannelAddresses([]duckv1.Addressable{
+						{
+							Name:    pointer.String("https"),
+							URL:     httpsURL(imcName, testNS),
+							CACerts: pointer.String(testCaCerts),
+						},
+					}),
+					WithDeadLetterSink(imcDest.Ref, ""),
+					WithInMemoryChannelStatusDLSURI(dlsURI),
+				),
+			}},
+			Ctx: feature.ToContext(context.Background(), feature.Flags{
+				feature.TransportEncryption: feature.Strict,
+			}),
+		},
 	}
 
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		ctx = v1addr.WithDuck(ctx)
+
+		cm, err := listers.GetConfigMapLister().ConfigMaps(testNS).Get("config-features")
+		if err == nil {
+			flags, err := feature.NewFlagsConfigFromConfigMap(cm)
+			if err != nil {
+				panic(err)
+			}
+			ctx = feature.ToContext(ctx, flags)
+		}
+
 		r := &Reconciler{
 			kubeClientSet:    fakekubeclient.Get(ctx),
 			systemNamespace:  testNS,
 			deploymentLister: listers.GetDeploymentLister(),
 			serviceLister:    listers.GetServiceLister(),
 			endpointsLister:  listers.GetEndpointsLister(),
+			secretLister:     listers.GetSecretLister(),
 			uriResolver:      resolver.NewURIResolverFromTracker(ctx, tracker.New(func(types.NamespacedName) {}, 0)),
 		}
 		return inmemorychannel.NewReconciler(ctx, logger,
@@ -468,6 +573,14 @@ func TestAllCases(t *testing.T) {
 		false,
 		logger,
 	))
+}
+
+func httpsURL(name string, ns string) *apis.URL {
+	u, err := apis.ParseURL(fmt.Sprintf("https://imc-dispatcher.%s.svc.cluster.local/%s/%s", testNS, ns, name))
+	if err != nil {
+		panic(err)
+	}
+	return u
 }
 
 func TestInNamespace(t *testing.T) {
@@ -552,6 +665,7 @@ func TestInNamespace(t *testing.T) {
 		eventDispatcherConfigStore := config.NewEventDispatcherConfigStore(logger)
 		eventDispatcherConfigStore.WatchConfigs(cmw)
 		ctx = v1addr.WithDuck(ctx)
+
 		r := &Reconciler{
 			kubeClientSet:              fakekubeclient.Get(ctx),
 			dispatcherImage:            imageName,
@@ -561,6 +675,7 @@ func TestInNamespace(t *testing.T) {
 			endpointsLister:            listers.GetEndpointsLister(),
 			serviceAccountLister:       listers.GetServiceAccountLister(),
 			roleBindingLister:          listers.GetRoleBindingLister(),
+			secretLister:               listers.GetSecretLister(),
 			eventDispatcherConfigStore: eventDispatcherConfigStore,
 			uriResolver:                resolver.NewURIResolverFromTracker(ctx, tracker.New(func(types.NamespacedName) {}, 0)),
 		}
@@ -744,5 +859,45 @@ func makeDLSServiceAsUnstructured() *unstructured.Unstructured {
 				"name":      dlsName,
 			},
 		},
+	}
+}
+
+const (
+	testCaCerts = `
+-----BEGIN CERTIFICATE-----
+MIIDmjCCAoKgAwIBAgIUYzA4bTMXevuk3pl2Mn8hpCYL2C0wDQYJKoZIhvcNAQEL
+BQAwLzELMAkGA1UEBhMCVVMxIDAeBgNVBAMMF0tuYXRpdmUtRXhhbXBsZS1Sb290
+LUNBMB4XDTIzMDQwNTEzMTUyNFoXDTI2MDEyMzEzMTUyNFowbTELMAkGA1UEBhMC
+VVMxEjAQBgNVBAgMCVlvdXJTdGF0ZTERMA8GA1UEBwwIWW91ckNpdHkxHTAbBgNV
+BAoMFEV4YW1wbGUtQ2VydGlmaWNhdGVzMRgwFgYDVQQDDA9sb2NhbGhvc3QubG9j
+YWwwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQC5teo+En6U5nhqn7Sc
+uanqswUmPlgs9j/8l21Rhb4T+ezlYKGQGhbJyFFMuiCE1Rjn8bpCwi7Nnv12Y2nz
+FhEv2Jx0yL3Tqx0Q593myqKDq7326EtbO7wmDT0XD03twH5i9XZ0L0ihPWn1mjUy
+WxhnHhoFpXrsnQECJorZY6aTrFbGVYelIaj5AriwiqyL0fET8pueI2GwLjgWHFSH
+X8XsGAlcLUhkQG0Z+VO9usy4M1Wpt+cL6cnTiQ+sRmZ6uvaj8fKOT1Slk/oUeAi4
+WqFkChGzGzLik0QrhKGTdw3uUvI1F2sdQj0GYzXaWqRz+tP9qnXdzk1GrszKKSlm
+WBTLAgMBAAGjcDBuMB8GA1UdIwQYMBaAFJJcCftus4vj98N0zQQautsjEu82MAkG
+A1UdEwQCMAAwCwYDVR0PBAQDAgTwMBQGA1UdEQQNMAuCCWxvY2FsaG9zdDAdBgNV
+HQ4EFgQUnu/3vqA3VEzm128x/hLyZzR9JlgwDQYJKoZIhvcNAQELBQADggEBAFc+
+1cKt/CNjHXUsirgEhry2Mm96R6Yxuq//mP2+SEjdab+FaXPZkjHx118u3PPX5uTh
+gTT7rMfka6J5xzzQNqJbRMgNpdEFH1bbc11aYuhi0khOAe0cpQDtktyuDJQMMv3/
+3wu6rLr6fmENo0gdcyUY9EiYrglWGtdXhlo4ySRY8UZkUScG2upvyOhHTxVCAjhP
+efbMkNjmDuZOMK+wqanqr5YV6zMPzkQK7DspfRgasMAQmugQu7r2MZpXg8Ilhro1
+s/wImGnMVk5RzpBVrq2VB9SkX/ThTVYEC/Sd9BQM364MCR+TA1l8/ptaLFLuwyw8
+O2dgzikq8iSy1BlRsVw=
+-----END CERTIFICATE-----
+`
+)
+
+func makeTLSSecret() *corev1.Secret {
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: testNS,
+			Name:      "imc-dispatcher-tls",
+		},
+		Data: map[string][]byte{
+			"ca.crt": []byte(testCaCerts),
+		},
+		Type: corev1.SecretTypeTLS,
 	}
 }

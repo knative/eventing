@@ -20,6 +20,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/utils/pointer"
 	"knative.dev/pkg/apis"
 	v1 "knative.dev/pkg/apis/duck/v1"
 )
@@ -99,6 +100,7 @@ func (imcs *InMemoryChannelStatus) InitializeConditions() {
 func (imcs *InMemoryChannelStatus) SetAddress(url *apis.URL) {
 	imcs.Address = &v1.Addressable{URL: url}
 	if url != nil {
+		imcs.Address.Name = pointer.String(url.Scheme)
 		imcCondSet.Manage(imcs).MarkTrue(InMemoryChannelConditionAddressable)
 	} else {
 		imcCondSet.Manage(imcs).MarkFalse(InMemoryChannelConditionAddressable, "emptyHostname", "hostname is the empty string")

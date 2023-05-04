@@ -38,6 +38,7 @@ import (
 	"knative.dev/pkg/client/injection/kube/informers/core/v1/service"
 	"knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount"
 	"knative.dev/pkg/client/injection/kube/informers/rbac/v1/rolebinding"
+	secretinformer "knative.dev/pkg/injection/clients/namespacedkube/informers/core/v1/secret"
 )
 
 // TODO: this should be passed in on the env.
@@ -60,6 +61,7 @@ func NewController(
 	endpointsInformer := endpoints.Get(ctx)
 	serviceAccountInformer := serviceaccount.Get(ctx)
 	roleBindingInformer := rolebinding.Get(ctx)
+	secretInformer := secretinformer.Get(ctx)
 
 	r := &Reconciler{
 		kubeClientSet:        kubeclient.Get(ctx),
@@ -69,6 +71,7 @@ func NewController(
 		endpointsLister:      endpointsInformer.Lister(),
 		serviceAccountLister: serviceAccountInformer.Lister(),
 		roleBindingLister:    roleBindingInformer.Lister(),
+		secretLister:         secretInformer.Lister(),
 	}
 
 	env := &envConfig{}
@@ -114,6 +117,10 @@ func NewController(
 	})
 	roleBindingInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.FilterWithName(dispatcherName),
+		Handler:    controller.HandleAll(grCh),
+	})
+	secretInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: controller.FilterWithName(dispatcherTLSSecretName),
 		Handler:    controller.HandleAll(grCh),
 	})
 

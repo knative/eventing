@@ -57,6 +57,13 @@ var (
 	deliverySpec = &eventingduckv1.DeliverySpec{
 		Retry: pointer.Int32(10),
 	}
+
+	backingChannelURL = apis.HTTP(backingChannelHostname)
+
+	backingChannelAddressable = &duckv1.Addressable{
+		Name: &backingChannelURL.Scheme,
+		URL:  backingChannelURL,
+	}
 )
 
 func TestReconcile(t *testing.T) {
@@ -140,7 +147,7 @@ func TestReconcile(t *testing.T) {
 				WithBackingChannelObjRef(backingChannelObjRef()),
 				WithBackingChannelReady,
 				WithChannelDLSUnknown(),
-				WithChannelAddress(backingChannelHostname)),
+				WithChannelAddress(backingChannelAddressable)),
 		}},
 	}, {
 		Name: "Already reconciled",
@@ -151,7 +158,7 @@ func TestReconcile(t *testing.T) {
 				WithInitChannelConditions,
 				WithBackingChannelObjRef(backingChannelObjRef()),
 				WithBackingChannelReady,
-				WithChannelAddress(backingChannelHostname),
+				WithChannelAddress(backingChannelAddressable),
 				WithChannelDLSUnknown()),
 			NewInMemoryChannel(channelName, testNS,
 				WithInitInMemoryChannelConditions,
@@ -172,7 +179,7 @@ func TestReconcile(t *testing.T) {
 				WithInitChannelConditions,
 				WithBackingChannelObjRef(backingChannelObjRef()),
 				WithBackingChannelReady,
-				WithChannelAddress(backingChannelHostname)),
+				WithChannelAddress(backingChannelAddressable)),
 		},
 		WantCreates: []runtime.Object{
 			createChannel(testNS, channelName, false),
@@ -196,7 +203,7 @@ func TestReconcile(t *testing.T) {
 				WithBackingChannelObjRef(backingChannelObjRef()),
 				WithBackingChannelReady,
 				WithChannelDelivery(deliverySpec),
-				WithChannelAddress(backingChannelHostname)),
+				WithChannelAddress(backingChannelAddressable)),
 		},
 		WantCreates: []runtime.Object{
 			&unstructured.Unstructured{
@@ -245,7 +252,7 @@ func TestReconcile(t *testing.T) {
 				WithInitChannelConditions,
 				WithBackingChannelObjRef(backingChannelObjRef()),
 				WithBackingChannelReady,
-				WithChannelAddress(backingChannelHostname),
+				WithChannelAddress(backingChannelAddressable),
 				WithChannelGeneration(42)),
 			NewInMemoryChannel(channelName, testNS,
 				WithInitInMemoryChannelConditions,
@@ -264,7 +271,7 @@ func TestReconcile(t *testing.T) {
 				WithBackingChannelObjRef(backingChannelObjRef()),
 				WithChannelDLSUnknown(),
 				WithBackingChannelReady,
-				WithChannelAddress(backingChannelHostname),
+				WithChannelAddress(backingChannelAddressable),
 				WithChannelGeneration(42),
 				// Updates
 				WithChannelObservedGeneration(42)),
@@ -278,7 +285,7 @@ func TestReconcile(t *testing.T) {
 				WithInitChannelConditions,
 				WithBackingChannelObjRef(backingChannelObjRef()),
 				WithBackingChannelReady,
-				WithChannelAddress(backingChannelHostname)),
+				WithChannelAddress(backingChannelAddressable)),
 			NewInMemoryChannel(channelName, testNS,
 				WithInitInMemoryChannelConditions,
 				WithInMemoryChannelDuckAnnotationV1Beta1,
@@ -297,7 +304,7 @@ func TestReconcile(t *testing.T) {
 				WithInitChannelConditions,
 				WithBackingChannelObjRef(backingChannelObjRef()),
 				WithBackingChannelReady,
-				WithChannelAddress(backingChannelHostname),
+				WithChannelAddress(backingChannelAddressable),
 				WithChannelSubscriberStatuses(subscriberStatuses()),
 				WithChannelDLSUnknown()),
 		}},

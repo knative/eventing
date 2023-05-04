@@ -23,6 +23,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/pointer"
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -398,6 +399,7 @@ func TestInMemoryChannelStatus_SetAddressable(t *testing.T) {
 				ChannelableStatus: eventingduckv1.ChannelableStatus{
 					AddressStatus: duckv1.AddressStatus{
 						Address: &duckv1.Addressable{
+							Name: pointer.String("http"),
 							URL: &apis.URL{
 								Scheme: "http",
 								Host:   "test-domain",

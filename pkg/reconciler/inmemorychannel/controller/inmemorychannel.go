@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/utils/pointer"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/network"
 
@@ -35,15 +36,18 @@ import (
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	rbacv1listers "k8s.io/client-go/listers/rbac/v1"
 	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	pkgreconciler "knative.dev/pkg/reconciler"
 
+	"knative.dev/pkg/logging"
+	"knative.dev/pkg/resolver"
+
 	"knative.dev/eventing/pkg/apis/eventing"
+	"knative.dev/eventing/pkg/apis/feature"
 	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	inmemorychannelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/inmemorychannel"
 	"knative.dev/eventing/pkg/reconciler/inmemorychannel/controller/config"
 	"knative.dev/eventing/pkg/reconciler/inmemorychannel/controller/resources"
-	"knative.dev/pkg/logging"
-	"knative.dev/pkg/resolver"
 )
 
 const (
@@ -52,6 +56,8 @@ const (
 	dispatcherRoleBindingCreated    = "DispatcherRoleBindingCreated"
 	dispatcherDeploymentCreated     = "DispatcherDeploymentCreated"
 	dispatcherServiceCreated        = "DispatcherServiceCreated"
+	dispatcherTLSSecretName         = "imc-dispatcher-tls"
+	caCertsSecretKey                = "ca.crt"
 )
 
 func newDeploymentWarn(err error) pkgreconciler.Event {
@@ -79,6 +85,7 @@ type Reconciler struct {
 	serviceLister        corev1listers.ServiceLister
 	endpointsLister      corev1listers.EndpointsLister
 	serviceAccountLister corev1listers.ServiceAccountLister
+	secretLister         corev1listers.SecretLister
 	roleBindingLister    rbacv1listers.RoleBindingLister
 
 	eventDispatcherConfigStore *config.EventDispatcherConfigStore
@@ -97,7 +104,6 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1.InMemoryChannel)
 	// 2. Dispatcher k8s Service for it's existence.
 	// 3. Dispatcher endpoints to ensure that there's something backing the Service.
 	// 4. k8s service representing the channel that will use ExternalName to point to the Dispatcher k8s service
-
 	scope, ok := imc.Annotations[eventing.ScopeAnnotationKey]
 	if !ok {
 		scope = eventing.ScopeCluster
@@ -157,9 +163,8 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1.InMemoryChannel)
 		return err
 	}
 	imc.Status.MarkChannelServiceTrue()
-	imc.Status.SetAddress(apis.HTTP(network.GetServiceHostname(svc.Name, svc.Namespace)))
 
-	// If a DeadLetterSink is defined in Spec.Delivery then whe resolve its URI and update the stauts
+	// If a DeadLetterSink is defined in Spec.Delivery then whe resolve its URI and update the status
 	if imc.Spec.Delivery != nil && imc.Spec.Delivery.DeadLetterSink != nil {
 		deadLetterSinkAddr, err := r.uriResolver.AddressableFromDestinationV1(ctx, *imc.Spec.Delivery.DeadLetterSink, imc)
 		if err != nil {
@@ -173,10 +178,79 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1.InMemoryChannel)
 		imc.Status.MarkDeadLetterSinkNotConfigured()
 	}
 
+	transportEncryptionFlags := feature.FromContext(ctx)
+	if transportEncryptionFlags.IsPermissiveTransportEncryption() {
+		caCerts, err := r.getCaCerts()
+		if err != nil {
+			return err
+		}
+
+		httpAddress := r.httpAddress(svc)
+		httpsAddress := r.httpsAddress(caCerts, imc)
+		// Permissive mode:
+		// - status.address http address with host-based routing
+		// - status.addresses:
+		//   - https address with path-based routing
+		//   - http address with host-based routing
+		imc.Status.Addresses = []duckv1.Addressable{httpsAddress, httpAddress}
+		imc.Status.Address = &httpAddress
+	} else if transportEncryptionFlags.IsStrictTransportEncryption() {
+		// Strict mode: (only https addresses)
+		// - status.address https address with path-based routing
+		// - status.addresses:
+		//   - https address with path-based routing
+		caCerts, err := r.getCaCerts()
+		if err != nil {
+			return err
+		}
+
+		httpsAddress := r.httpsAddress(caCerts, imc)
+		imc.Status.Addresses = []duckv1.Addressable{httpsAddress}
+		imc.Status.Address = &httpsAddress
+	} else {
+		httpAddress := r.httpAddress(svc)
+		imc.Status.Address = &httpAddress
+	}
+
+	imc.GetConditionSet().Manage(imc.GetStatus()).MarkTrue(v1.InMemoryChannelConditionAddressable)
+
 	// Ok, so now the Dispatcher Deployment & Service have been created, we're golden since the
 	// dispatcher watches the Channel and where it needs to dispatch events to.
 	logging.FromContext(ctx).Debugw("Reconciled InMemoryChannel", zap.Any("InMemoryChannel", imc))
 	return nil
+}
+
+func (r *Reconciler) getCaCerts() (string, error) {
+	// Getting the secret called "imc-dispatcher-tls" from system namespace
+	secret, err := r.secretLister.Secrets(r.systemNamespace).Get(dispatcherTLSSecretName)
+	if err != nil {
+		return "", fmt.Errorf("failed to get CA certs from %s/%s: %w", r.systemNamespace, dispatcherTLSSecretName, err)
+	}
+	caCerts, ok := secret.Data[caCertsSecretKey]
+	if !ok {
+		return "", fmt.Errorf("failed to get CA certs from %s/%s: missing %s key", r.systemNamespace, dispatcherTLSSecretName, caCertsSecretKey)
+	}
+	return string(caCerts), nil
+}
+
+func (r *Reconciler) httpAddress(svc *corev1.Service) duckv1.Addressable {
+	// http address uses host-based routing
+	httpAddress := duckv1.Addressable{
+		Name: pointer.String("http"),
+		URL:  apis.HTTP(network.GetServiceHostname(svc.Name, svc.Namespace)),
+	}
+	return httpAddress
+}
+
+func (r *Reconciler) httpsAddress(caCerts string, imc *v1.InMemoryChannel) duckv1.Addressable {
+	// https address uses path-based routing
+	httpsAddress := duckv1.Addressable{
+		Name:    pointer.String("https"),
+		URL:     apis.HTTPS(fmt.Sprintf("%s.%s.svc.%s", dispatcherName, r.systemNamespace, network.GetClusterDomainName())),
+		CACerts: pointer.String(caCerts),
+	}
+	httpsAddress.URL.Path = fmt.Sprintf("/%s/%s", imc.Namespace, imc.Name)
+	return httpsAddress
 }
 
 func (r *Reconciler) reconcileDispatcher(ctx context.Context, scope, dispatcherNamespace string, imc *v1.InMemoryChannel) (*appsv1.Deployment, error) {
