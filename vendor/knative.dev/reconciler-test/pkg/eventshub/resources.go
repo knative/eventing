@@ -22,17 +22,21 @@ import (
 	"strings"
 
 	"knative.dev/pkg/logging"
-
 	"knative.dev/reconciler-test/pkg/environment"
 	eventshubrbac "knative.dev/reconciler-test/pkg/eventshub/rbac"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/knative"
 	"knative.dev/reconciler-test/pkg/manifest"
+	"knative.dev/reconciler-test/pkg/resources/knativeservice"
+	"knative.dev/reconciler-test/pkg/resources/service"
 )
 
-//go:embed *.yaml
-var templates embed.FS
+//go:embed 102-service.yaml 103-pod.yaml
+var servicePodTemplates embed.FS
+
+//go:embed 104-forwarder.yaml
+var forwarderTemplates embed.FS
 
 // Install starts a new eventshub with the provided name
 // Note: this function expects that the Environment is configured with the
@@ -70,10 +74,24 @@ func Install(name string, options ...EventsHubOption) feature.StepFn {
 		// Install ServiceAccount, Role, RoleBinding
 		eventshubrbac.Install()(ctx, t)
 
-		isReceiver := strings.Contains(envs["EVENT_GENERATORS"], "receiver")
+		isReceiver := strings.Contains(envs[EventGeneratorsEnv], "receiver")
+
+		var withForwarder bool
+		// Allow forwarder only when eventshub is receiver.
+		if isForwarder(ctx) && isReceiver {
+			withForwarder = isForwarder(ctx)
+		}
+
+		serviceName := name
+		// When forwarder is included we need to rename the eventshub service to
+		// prevent conflict with the forwarder service.
+		if withForwarder {
+			serviceName = feature.MakeRandomK8sName(name)
+		}
 
 		cfg := map[string]interface{}{
 			"name":          name,
+			"serviceName":   serviceName,
 			"envs":          envs,
 			"image":         ImageFromContext(ctx),
 			"withReadiness": isReceiver,
@@ -85,8 +103,8 @@ func Install(name string, options ...EventsHubOption) feature.StepFn {
 
 		manifest.PodSecurityCfgFn(ctx, t)(cfg)
 
-		// Deploy
-		if _, err := manifest.InstallYamlFS(ctx, templates, cfg); err != nil {
+		// Deploy Service/Pod
+		if _, err := manifest.InstallYamlFS(ctx, servicePodTemplates, cfg); err != nil {
 			log.Fatal(err)
 		}
 
@@ -94,8 +112,27 @@ func Install(name string, options ...EventsHubOption) feature.StepFn {
 
 		// If the eventhubs starts an event receiver, we need to wait for the service endpoint to be synced
 		if isReceiver {
-			k8s.WaitForServiceEndpointsOrFail(ctx, t, name, 1)
-			k8s.WaitForServiceReadyOrFail(ctx, t, name, "/health/ready")
+			k8s.WaitForServiceEndpointsOrFail(ctx, t, serviceName, 1)
+			k8s.WaitForServiceReadyOrFail(ctx, t, serviceName, "/health/ready")
+		}
+
+		if withForwarder {
+			sinkURL, err := service.Address(ctx, serviceName)
+			if err != nil {
+				log.Fatal(err)
+			}
+			// At this point env contains "receiver" so we need to override it.
+			envs[EventGeneratorsEnv] = "forwarder"
+			// No event recording desired, just logging.
+			envs[EventLogsEnv] = "logger"
+			cfg["envs"] = envs
+			cfg["sink"] = sinkURL
+
+			// Deploy Forwarder
+			if _, err := manifest.InstallYamlFS(ctx, forwarderTemplates, cfg); err != nil {
+				log.Fatal(err)
+			}
+			knativeservice.IsReady(name)
 		}
 	}
 }

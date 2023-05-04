@@ -33,17 +33,29 @@ import (
 	"knative.dev/reconciler-test/pkg/k8s"
 )
 
+type forwarderKey struct{}
+
+// WithKnativeServiceForwarder deploys a Knative Service forwarder that will forward requests to eventshub.
+func WithKnativeServiceForwarder(ctx context.Context, env environment.Environment) (context.Context, error) {
+	return context.WithValue(ctx, forwarderKey{}, true), nil
+}
+
+func isForwarder(ctx context.Context) bool {
+	v := ctx.Value(forwarderKey{})
+	return v != nil && v.(bool)
+}
+
 // EventsHubOption is used to define an env for the eventshub image
 type EventsHubOption = func(context.Context, map[string]string) error
 
 // StartReceiver starts the receiver in the eventshub
 // This can be used together with EchoEvent, ReplyWithTransformedEvent, ReplyWithAppendedData
-var StartReceiver EventsHubOption = envAdditive("EVENT_GENERATORS", "receiver")
+var StartReceiver EventsHubOption = envAdditive(EventGeneratorsEnv, "receiver")
 
 // StartSender starts the sender in the eventshub
 // This can be used together with InputEvent, AddTracing, EnableIncrementalId, InputEncoding and InputHeader options
 func StartSender(sinkSvc string) EventsHubOption {
-	return compose(envAdditive("EVENT_GENERATORS", "sender"), func(ctx context.Context, envs map[string]string) error {
+	return compose(envAdditive(EventGeneratorsEnv, "sender"), func(ctx context.Context, envs map[string]string) error {
 		envs["SINK"] = "http://" + network.GetServiceHostname(sinkSvc, environment.FromContext(ctx).Namespace())
 		return nil
 	})
@@ -52,7 +64,7 @@ func StartSender(sinkSvc string) EventsHubOption {
 // StartSenderToResource starts the sender in the eventshub pointing to the provided resource
 // This can be used together with InputEvent, AddTracing, EnableIncrementalId, InputEncoding and InputHeader options
 func StartSenderToResource(gvr schema.GroupVersionResource, name string) EventsHubOption {
-	return compose(envAdditive("EVENT_GENERATORS", "sender"), func(ctx context.Context, envs map[string]string) error {
+	return compose(envAdditive(EventGeneratorsEnv, "sender"), func(ctx context.Context, envs map[string]string) error {
 		u, err := k8s.Address(ctx, gvr, name)
 		if err != nil {
 			return err
@@ -68,7 +80,7 @@ func StartSenderToResource(gvr schema.GroupVersionResource, name string) EventsH
 // StartSenderURL starts the sender in the eventshub sinking to a URL.
 // This can be used together with InputEvent, AddTracing, EnableIncrementalId, InputEncoding and InputHeader options
 func StartSenderURL(sink string) EventsHubOption {
-	return compose(envAdditive("EVENT_GENERATORS", "sender"), func(ctx context.Context, envs map[string]string) error {
+	return compose(envAdditive(EventGeneratorsEnv, "sender"), func(ctx context.Context, envs map[string]string) error {
 		envs["SINK"] = sink
 		return nil
 	})

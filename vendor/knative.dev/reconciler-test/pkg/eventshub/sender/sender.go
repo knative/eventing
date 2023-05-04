@@ -107,9 +107,7 @@ type generator struct {
 	eventQueue []conformanceevent.Event
 }
 
-type Option func(*nethttp.Client) error
-
-func Start(ctx context.Context, logs *eventshub.EventLogs, clientOpts ...Option) error {
+func Start(ctx context.Context, logs *eventshub.EventLogs, clientOpts ...eventshub.ClientOption) error {
 	var env generator
 	if err := envconfig.Process("", &env); err != nil {
 		return fmt.Errorf("failed to process env var. %w", err)
