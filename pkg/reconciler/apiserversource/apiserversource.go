@@ -118,7 +118,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1.ApiServerSour
 
 	// An empty selector targets all namespaces.
 	allNamespaces := isEmptySelector(source.Spec.NamespaceSelector)
-	ra, err := r.createReceiveAdapter(ctx, source, sinkURI.String(), namespaces, allNamespaces)
+	ra, err := r.createReceiveAdapter(ctx, source, sinkAddr, namespaces, allNamespaces)
 	if err != nil {
 		logging.FromContext(ctx).Errorw("Unable to create the receive adapter", zap.Error(err))
 		return err
@@ -170,7 +170,7 @@ func isEmptySelector(selector *metav1.LabelSelector) bool {
 	return false
 }
 
-func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1.ApiServerSource, sinkURI string, namespaces []string, allNamespaces bool) (*appsv1.Deployment, error) {
+func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1.ApiServerSource, sinkAddr *duckv1.Addressable, namespaces []string, allNamespaces bool) (*appsv1.Deployment, error) {
 	// TODO: missing.
 	// if err := checkResourcesStatus(src); err != nil {
 	// 	return nil, err
@@ -180,7 +180,8 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1.ApiServer
 		Image:         r.receiveAdapterImage,
 		Source:        src,
 		Labels:        resources.Labels(src.Name),
-		SinkURI:       sinkURI,
+		CACerts:       sinkAddr.CACerts,
+		SinkURI:       sinkAddr.URL.String(),
 		Configs:       r.configs,
 		Namespaces:    namespaces,
 		AllNamespaces: allNamespaces,

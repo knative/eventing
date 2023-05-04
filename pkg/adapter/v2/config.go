@@ -39,6 +39,7 @@ const (
 	EnvConfigName                 = "NAME"
 	EnvConfigResourceGroup        = "K_RESOURCE_GROUP"
 	EnvConfigSink                 = "K_SINK"
+	EnvConfigCACert               = "K_CA_CERTS"
 	EnvConfigCEOverrides          = "K_CE_OVERRIDES"
 	EnvConfigMetricsConfig        = "K_METRICS_CONFIG"
 	EnvConfigLoggingConfig        = "K_LOGGING_CONFIG"

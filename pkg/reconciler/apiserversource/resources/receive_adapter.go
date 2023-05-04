@@ -45,6 +45,7 @@ type ReceiveAdapterArgs struct {
 	Source        *v1.ApiServerSource
 	Labels        map[string]string
 	SinkURI       string
+	CACerts       *string
 	Configs       reconcilersource.ConfigAccessor
 	Namespaces    []string
 	AllNamespaces bool
@@ -173,12 +174,19 @@ func makeEnv(args *ReceiveAdapterArgs) ([]corev1.EnvVar, error) {
 		Value: "knative.dev/eventing",
 	}}
 
+	if args.CACerts != nil {
+		envs = append(envs, corev1.EnvVar{
+			Name:  adapter.EnvConfigCACert,
+			Value: *args.CACerts,
+		})
+	}
+
 	envs = append(envs, args.Configs.ToEnvVars()...)
 
 	if args.Source.Spec.CloudEventOverrides != nil {
 		ceJson, err := json.Marshal(args.Source.Spec.CloudEventOverrides)
 		if err != nil {
-			return nil, fmt.Errorf("Failure to marshal cloud event overrides %v: %v", args.Source.Spec.CloudEventOverrides, err)
+			return nil, fmt.Errorf("failure to marshal cloud event overrides %v: %v", args.Source.Spec.CloudEventOverrides, err)
 		}
 		envs = append(envs, corev1.EnvVar{Name: adapter.EnvConfigCEOverrides, Value: string(ceJson)})
 	}
