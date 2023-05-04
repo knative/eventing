@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"knative.dev/pkg/logging"
+	"knative.dev/reconciler-test/pkg/eventshub/forwarder"
 
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/eventshub/logger_vent"
@@ -44,6 +45,11 @@ func main() {
 			},
 			eventshub.SenderEventGenerator: func(ctx context.Context, logs *eventshub.EventLogs) error {
 				return sender.Start(ctx, logs, eventshub.WithClientTracing)
+			},
+			eventshub.ForwarderEventGenerator: func(ctx context.Context, logs *eventshub.EventLogs) error {
+				return forwarder.NewFromEnv(ctx, logs,
+					[]eventshub.HandlerFunc{eventshub.WithServerTracing},
+					[]eventshub.ClientOption{eventshub.WithClientTracing}).Start(ctx)
 			},
 		},
 	)

@@ -1379,7 +1379,7 @@ knative.dev/pkg/webhook/resourcesemantics
 knative.dev/pkg/webhook/resourcesemantics/conversion
 knative.dev/pkg/webhook/resourcesemantics/defaulting
 knative.dev/pkg/webhook/resourcesemantics/validation
-# knative.dev/reconciler-test v0.0.0-20230501013554-1d362623689a
+# knative.dev/reconciler-test v0.0.0-20230503154355-dc48d52d7e3c
 ## explicit; go 1.18
 knative.dev/reconciler-test/cmd/eventshub
 knative.dev/reconciler-test/pkg/environment
@@ -1388,6 +1388,7 @@ knative.dev/reconciler-test/pkg/eventshub/assert
 knative.dev/reconciler-test/pkg/eventshub/dropevents
 knative.dev/reconciler-test/pkg/eventshub/dropevents/dropeventsfibonacci
 knative.dev/reconciler-test/pkg/eventshub/dropevents/dropeventsfirst
+knative.dev/reconciler-test/pkg/eventshub/forwarder
 knative.dev/reconciler-test/pkg/eventshub/logger_vent
 knative.dev/reconciler-test/pkg/eventshub/rbac
 knative.dev/reconciler-test/pkg/eventshub/receiver
@@ -1404,6 +1405,7 @@ knative.dev/reconciler-test/pkg/milestone
 knative.dev/reconciler-test/pkg/resources/cronjob
 knative.dev/reconciler-test/pkg/resources/deployment
 knative.dev/reconciler-test/pkg/resources/job
+knative.dev/reconciler-test/pkg/resources/knativeservice
 knative.dev/reconciler-test/pkg/resources/pod
 knative.dev/reconciler-test/pkg/resources/service
 knative.dev/reconciler-test/pkg/state
