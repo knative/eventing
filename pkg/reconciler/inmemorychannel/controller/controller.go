@@ -120,7 +120,7 @@ func NewController(
 		Handler:    controller.HandleAll(grCh),
 	})
 	secretInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.FilterWithName(secretName),
+		FilterFunc: controller.FilterWithName(dispatcherTLSSecretName),
 		Handler:    controller.HandleAll(grCh),
 	})
 

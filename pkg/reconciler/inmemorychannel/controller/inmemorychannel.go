@@ -56,8 +56,8 @@ const (
 	dispatcherRoleBindingCreated    = "DispatcherRoleBindingCreated"
 	dispatcherDeploymentCreated     = "DispatcherDeploymentCreated"
 	dispatcherServiceCreated        = "DispatcherServiceCreated"
-	secretName                      = "imc-dispatcher-tls"
-	secretKey                       = "ca.crt"
+	dispatcherTLSSecretName         = "imc-dispatcher-tls"
+	caCertsSecretKey                = "ca.crt"
 )
 
 func newDeploymentWarn(err error) pkgreconciler.Event {
@@ -221,13 +221,13 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1.InMemoryChannel)
 
 func (r *Reconciler) getCaCerts() (string, error) {
 	// Getting the secret called "imc-dispatcher-tls" from system namespace
-	secret, err := r.secretLister.Secrets(r.systemNamespace).Get(secretName)
+	secret, err := r.secretLister.Secrets(r.systemNamespace).Get(dispatcherTLSSecretName)
 	if err != nil {
-		return "", fmt.Errorf("failed to get CA certs from %s/%s: %w", r.systemNamespace, secretName, err)
+		return "", fmt.Errorf("failed to get CA certs from %s/%s: %w", r.systemNamespace, dispatcherTLSSecretName, err)
 	}
-	caCerts, ok := secret.Data[secretKey]
+	caCerts, ok := secret.Data[caCertsSecretKey]
 	if !ok {
-		return "", fmt.Errorf("failed to get CA certs from %s/%s: missing %s key", r.systemNamespace, secretName, secretKey)
+		return "", fmt.Errorf("failed to get CA certs from %s/%s: missing %s key", r.systemNamespace, dispatcherTLSSecretName, caCertsSecretKey)
 	}
 	return string(caCerts), nil
 }
