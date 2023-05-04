@@ -1,6 +1,3 @@
-//go:build !race
-// +build !race
-
 /*
 Copyright 2023 The Knative Authors
 
@@ -65,7 +62,7 @@ func TestStartServers(t *testing.T) {
 			errChan := make(chan error)
 
 			cmw := newFeatureCMW(tc.transportEncryption)
-			sm, err := NewServerManager(httpReceiver, httpsReceiver, &basicHandler{}, cmw)
+			sm, err := NewServerManager(ctx, httpReceiver, httpsReceiver, &basicHandler{}, cmw)
 			assert.NoError(t, err)
 			go func() {
 				err1, err2 := sm.StartServers(ctx)
@@ -110,15 +107,16 @@ func TestStartServers(t *testing.T) {
 }
 
 func TestStartServersHttpError(t *testing.T) {
+	ctx := context.TODO()
 	receiver := kncloudevents.NewHTTPMessageReceiver(0, kncloudevents.WithDrainQuietPeriod(time.Millisecond))
 	cmw := newFeatureCMW(feature.Disabled)
 
 	// httpReceiver set to nil
-	_, err := NewServerManager(nil, receiver, &basicHandler{}, cmw)
+	_, err := NewServerManager(ctx, nil, receiver, &basicHandler{}, cmw)
 	assert.Error(t, err)
 
 	// httpsReceiver set to nil
-	_, err = NewServerManager(receiver, nil, &basicHandler{}, cmw)
+	_, err = NewServerManager(ctx, receiver, nil, &basicHandler{}, cmw)
 	assert.Error(t, err)
 }
 

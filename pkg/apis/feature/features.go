@@ -71,6 +71,11 @@ func (e Flags) IsStrictTransportEncryption() bool {
 	return e != nil && e[TransportEncryption] == Strict
 }
 
+// IsDisbledTransportEncryption returns true if the TransportEncryption feature is in Disabled mode.
+func (e Flags) IsDisbledTransportEncryption() bool {
+	return e != nil && e[TransportEncryption] == Disabled
+}
+
 // NewFlagsConfigFromMap creates a Flags from the supplied Map
 func NewFlagsConfigFromMap(data map[string]string) (Flags, error) {
 	flags := Flags{}

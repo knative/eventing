@@ -169,41 +169,6 @@ func TestStartListenReceiveEvent(t *testing.T) {
 	assert.Equal(t, nil, <-errChan)
 
 }
-
-func TestUpdateHandler(t *testing.T) {
-	ctx, cancelFunc := context.WithCancel(context.TODO())
-	messageReceiver := NewHTTPMessageReceiver(0, WithDrainQuietPeriod(time.Millisecond))
-	errChan := make(chan error)
-	receivedRequest := make(chan bool, 1)
-
-	originalHandler := &blockingHandler{
-		blockFor: time.Microsecond,
-	}
-	newHandler := &blockingHandler{
-		blockFor:        time.Microsecond,
-		receivedRequest: receivedRequest,
-	}
-	go func() {
-		errChan <- messageReceiver.StartListen(WithShutdownTimeout(ctx, time.Millisecond), originalHandler)
-	}()
-
-	<-messageReceiver.Ready
-
-	messageReceiver.UpdateHandler(newHandler)
-	client := &http.Client{}
-	addr := "http://" + messageReceiver.server.Addr
-	req, err := http.NewRequest("GET", addr, nil)
-	assert.NoError(t, err)
-
-	resp, err := client.Do(req)
-	assert.NoError(t, err)
-	assert.Equal(t, http.StatusOK, resp.StatusCode)
-
-	<-receivedRequest
-	cancelFunc()
-	assert.Equal(t, nil, <-errChan)
-}
-
 func TestGetAddr(t *testing.T) {
 	ctx, cancelFunc := context.WithCancel(context.TODO())
 	errChan := make(chan error)

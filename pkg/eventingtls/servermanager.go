@@ -40,18 +40,23 @@ type ServerManager struct {
 	httpsReceiver *kncloudevents.HTTPMessageReceiver
 	handler       http.Handler
 	cmw           configmap.Watcher
+	featureStore  *feature.Store
 }
 
-func NewServerManager(httpReceiver, httpsReceiver *kncloudevents.HTTPMessageReceiver, handler http.Handler, cmw configmap.Watcher) (*ServerManager, error) {
+func NewServerManager(ctx context.Context, httpReceiver, httpsReceiver *kncloudevents.HTTPMessageReceiver, handler http.Handler, cmw configmap.Watcher) (*ServerManager, error) {
 	if httpReceiver == nil || httpsReceiver == nil {
 		return nil, fmt.Errorf("message receiver not provided")
 	}
+
+	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"))
+	featureStore.WatchConfigs(cmw)
 
 	return &ServerManager{
 		httpReceiver:  httpReceiver,
 		httpsReceiver: httpsReceiver,
 		handler:       handler,
 		cmw:           cmw,
+		featureStore:  featureStore,
 	}, nil
 }
 
@@ -63,45 +68,36 @@ func (s *ServerManager) StartServers(ctx context.Context) (httpError, httpsError
 
 	go func() {
 		defer wg.Done()
-		httpError = s.httpReceiver.StartListen(ctx, s.handler)
+		httpError = s.httpReceiver.StartListen(ctx, s.httpHandler())
 	}()
 
 	go func() {
 		defer wg.Done()
-		httpsError = s.httpsReceiver.StartListen(ctx, s.handler)
+		httpsError = s.httpsReceiver.StartListen(ctx, s.httpsHandler())
 	}()
-
-	<-s.httpReceiver.Ready
-	<-s.httpsReceiver.Ready
-
-	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {
-		s.updateHandlers(ctx, value.(feature.Flags))
-	})
-	featureStore.WatchConfigs(s.cmw)
 
 	wg.Wait()
 	return
 }
 
-func (s *ServerManager) updateHandlers(ctx context.Context, flags feature.Flags) {
-	if flags.IsStrictTransportEncryption() {
-		logging.FromContext(ctx).Info("transport-encryption: strict. Disabling http handler")
-		s.httpReceiver.UpdateHandler(statusNotFoundHandler(ctx))
-		s.httpsReceiver.UpdateHandler(s.handler)
-	} else if flags.IsPermissiveTransportEncryption() {
-		logging.FromContext(ctx).Info("transport-encryption: permissive. Enabling both http and https handlers")
-		s.httpReceiver.UpdateHandler(s.handler)
-		s.httpsReceiver.UpdateHandler(s.handler)
-	} else {
-		// disabled mode
-		logging.FromContext(ctx).Info("transport encryption: disabled. Disabling https handler")
-		s.httpReceiver.UpdateHandler(s.handler)
-		s.httpsReceiver.UpdateHandler(statusNotFoundHandler(ctx))
-	}
+func (s *ServerManager) httpHandler() http.Handler {
+	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+		flags := s.featureStore.Load()
+		if flags.IsStrictTransportEncryption() {
+			response.WriteHeader(http.StatusNotFound)
+			return
+		}
+		s.handler.ServeHTTP(response, request)
+	})
 }
 
-func statusNotFoundHandler(ctx context.Context) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusNotFound)
+func (s *ServerManager) httpsHandler() http.Handler {
+	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+		flags := s.featureStore.Load()
+		if flags.IsDisbledTransportEncryption() {
+			response.WriteHeader(http.StatusNotFound)
+			return
+		}
+		s.handler.ServeHTTP(response, request)
 	})
 }
