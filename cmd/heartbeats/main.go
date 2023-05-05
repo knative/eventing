@@ -135,7 +135,7 @@ func main() {
 	}
 	defer tracer.Shutdown(ctx)
 
-	opts := make([]cehttp.Option, 1)
+	opts := make([]cehttp.Option, 0, 1)
 	opts = append(opts, cloudevents.WithTarget(sink))
 
 	if eventingtls.IsHttpsSink(sink) {
