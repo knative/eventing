@@ -28,11 +28,14 @@ import (
 	"syscall"
 	"time"
 
+	"go.opencensus.io/plugin/ochttp"
 	"go.uber.org/zap"
+	"knative.dev/eventing/pkg/eventingtls"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/signals"
 	"knative.dev/pkg/tracing"
 	"knative.dev/pkg/tracing/config"
+	"knative.dev/pkg/tracing/propagation/tracecontextb3"
 
 	"github.com/cloudevents/sdk-go/observability/opencensus/v2/client"
 	cloudevents "github.com/cloudevents/sdk-go/v2"
@@ -50,6 +53,7 @@ var (
 	eventSource string
 	eventType   string
 	sink        string
+	cacerts     string
 	label       string
 	periodStr   string
 	msg         string
@@ -59,6 +63,7 @@ func init() {
 	flag.StringVar(&eventSource, "eventSource", "", "the event-source (CloudEvents)")
 	flag.StringVar(&eventType, "eventType", "dev.knative.eventing.samples.heartbeat", "the event-type (CloudEvents)")
 	flag.StringVar(&sink, "sink", "", "the host url to heartbeat to")
+	flag.StringVar(&cacerts, "cacerts", "", "the ca cert for the host url to heartbeat to")
 	flag.StringVar(&label, "label", "", "a special label")
 	flag.StringVar(&periodStr, "period", "5s", "the duration between heartbeats. Supported formats: Go (https://pkg.go.dev/time#ParseDuration), integers (interpreted as seconds)")
 	flag.StringVar(&msg, "msg", "", "message content in data.msg")
@@ -67,6 +72,9 @@ func init() {
 type envConfig struct {
 	// Sink URL where to send heartbeat cloudevents
 	Sink string `envconfig:"K_SINK"`
+
+	// CACert is the certificate for enabling HTTPS in Sink URL
+	CACerts string `envconfig:"K_CA_CERTS"`
 
 	// CEOverrides are the CloudEvents overrides to be applied to the outbound event.
 	CEOverrides string `envconfig:"K_CE_OVERRIDES"`
@@ -102,6 +110,10 @@ func main() {
 		sink = env.Sink
 	}
 
+	if env.CACerts != "" {
+		cacerts = env.CACerts
+	}
+
 	var ceOverrides *duckv1.CloudEventOverrides
 	if len(env.CEOverrides) > 0 {
 		overrides := duckv1.CloudEventOverrides{}
@@ -122,7 +134,28 @@ func main() {
 		log.Fatalf("Failed to initialize tracing: %v", err)
 	}
 	defer tracer.Shutdown(ctx)
-	c, err := client.NewClientHTTP([]cehttp.Option{cloudevents.WithTarget(sink)}, nil)
+
+	opts := make([]cehttp.Option, 0, 1)
+	opts = append(opts, cloudevents.WithTarget(sink))
+
+	if eventingtls.IsHttpsSink(sink) {
+		clientConfig := eventingtls.NewDefaultClientConfig()
+		clientConfig.CACerts = &cacerts
+
+		httpTransport := http.DefaultTransport.(*http.Transport).Clone()
+		httpTransport.TLSClientConfig, err = eventingtls.GetTLSClientConfig(clientConfig)
+		if err != nil {
+			log.Fatalf("Failed to get TLS Client Config: %v", err)
+		}
+
+		transport := &ochttp.Transport{
+			Base:        httpTransport,
+			Propagation: tracecontextb3.TraceContextEgress,
+		}
+		opts = append(opts, cehttp.WithRoundTripper(transport))
+	}
+
+	c, err := client.NewClientHTTP(opts, nil)
 	if err != nil {
 		log.Fatalf("failed to create client: %s", err.Error())
 	}
