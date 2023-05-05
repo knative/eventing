@@ -135,17 +135,17 @@ func main() {
 	}
 	defer tracer.Shutdown(ctx)
 
-	opts := make([]cehttp.Option, 0)
+	opts := make([]cehttp.Option, 1)
 	opts = append(opts, cloudevents.WithTarget(sink))
 
-	if cacerts != "" && eventingtls.IsHttpsSink(sink) {
+	if eventingtls.IsHttpsSink(sink) {
 		clientConfig := eventingtls.NewDefaultClientConfig()
 		clientConfig.CACerts = &cacerts
 
 		httpTransport := http.DefaultTransport.(*http.Transport).Clone()
 		httpTransport.TLSClientConfig, err = eventingtls.GetTLSClientConfig(clientConfig)
 		if err != nil {
-			log.Printf("Failed to get TLS Client Config: %v", err)
+			log.Fatalf("Failed to get TLS Client Config: %v", err)
 		}
 
 		transport := &ochttp.Transport{
