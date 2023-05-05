@@ -61,14 +61,9 @@ jobs:
       with:
         go-version: 1.20.x
 
-    - name: Install Dependencies
-      working-directory: ./
-      run: |
-        echo '::group:: install ko'
-        curl -L https://github.com/google/ko/releases/download/v0.6.0/ko_0.6.0_Linux_x86_64.tar.gz | tar xzf - ko
-        chmod +x ./ko
-        sudo mv ko /usr/local/bin
-        echo '::endgroup::'
+    # Install the latest release of ko
+    - name: Install ko
+      uses: ko-build/setup-ko@v0.6
 
     - name: Check out code onto GOPATH
       uses: actions/checkout@v2
