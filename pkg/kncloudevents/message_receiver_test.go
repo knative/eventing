@@ -170,6 +170,27 @@ func TestStartListenReceiveEvent(t *testing.T) {
 
 }
 
+func TestGetAddr(t *testing.T) {
+	ctx, cancelFunc := context.WithCancel(context.TODO())
+	errChan := make(chan error)
+	messageReceiver := NewHTTPMessageReceiver(0, WithDrainQuietPeriod(time.Millisecond))
+	go func() {
+		errChan <- messageReceiver.StartListen(WithShutdownTimeout(ctx, time.Millisecond), &blockingHandler{blockFor: time.Microsecond})
+	}()
+
+	<-messageReceiver.Ready
+	assert.NotEmpty(t, messageReceiver.GetAddr())
+
+	cancelFunc()
+	assert.Equal(t, nil, <-errChan)
+}
+
+func TestGetAddrEmpty(t *testing.T) {
+	messageReceiver := NewHTTPMessageReceiver(0, WithDrainQuietPeriod(time.Millisecond))
+
+	assert.Empty(t, messageReceiver.GetAddr())
+}
+
 func TestWithWriteTimeout(t *testing.T) {
 	writeTimeout := time.Millisecond * 10
 

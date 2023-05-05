@@ -114,6 +114,14 @@ func WithReadTimeout(duration time.Duration) HTTPMessageReceiverOption {
 	}
 }
 
+func (recv *HTTPMessageReceiver) GetAddr() string {
+	if recv.server != nil {
+		return recv.server.Addr
+	}
+
+	return ""
+}
+
 // Blocking
 func (recv *HTTPMessageReceiver) StartListen(ctx context.Context, handler http.Handler) error {
 	var err error
