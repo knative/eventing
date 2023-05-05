@@ -62,7 +62,7 @@ func NewServerManager(ctx context.Context, httpReceiver, httpsReceiver *kncloude
 // Blocking call. Starts the 2 servers
 func (s *ServerManager) StartServers(ctx context.Context) error {
 	// start servers
-	errCh := make(chan error)
+	errCh := make(chan error, 2)
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
