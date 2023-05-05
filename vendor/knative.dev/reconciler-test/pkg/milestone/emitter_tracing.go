@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -29,8 +30,8 @@ import (
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/test/helpers"
-	"knative.dev/pkg/test/prow"
 	"knative.dev/pkg/test/zipkin"
+
 	"knative.dev/reconciler-test/pkg/feature"
 )
 
@@ -111,7 +112,7 @@ func (e tracingEmitter) getTracesForNamespace(ns string) ([]byte, error) {
 }
 
 func (e tracingEmitter) exportTrace(trace []byte, fileName string) error {
-	tracesDir := filepath.Join(prow.GetLocalArtifactsDir(), "traces")
+	tracesDir := filepath.Join(getLocalArtifactsDir(), "traces")
 	if err := helpers.CreateDir(tracesDir); err != nil {
 		return fmt.Errorf("error creating directory %q: %w", tracesDir, err)
 	}
@@ -127,6 +128,17 @@ func (e tracingEmitter) exportTrace(trace []byte, fileName string) error {
 		return fmt.Errorf("error writing trace into file %q: %w", fp, err)
 	}
 	return nil
+}
+
+// getLocalArtifactsDir gets the artifacts directory where prow looks for artifacts.
+// By default, it will look at the env var ARTIFACTS.
+func getLocalArtifactsDir() string {
+	dir := os.Getenv("ARTIFACTS")
+	if dir == "" {
+		dir = "artifacts"
+		log.Printf("Env variable ARTIFACTS not set. Using %s instead.", dir)
+	}
+	return dir
 }
 
 // findTrace fetches tracing endpoint and retrieves Zipkin traces matching the annotation query.
