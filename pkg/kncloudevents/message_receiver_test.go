@@ -169,6 +169,7 @@ func TestStartListenReceiveEvent(t *testing.T) {
 	assert.Equal(t, nil, <-errChan)
 
 }
+
 func TestGetAddr(t *testing.T) {
 	ctx, cancelFunc := context.WithCancel(context.TODO())
 	errChan := make(chan error)
