@@ -170,7 +170,7 @@ func GetTLSServerConfig(config ServerConfig) (*tls.Config, error) {
 // IsHttpsSink returns true if the sink has scheme equal to https.
 func IsHttpsSink(sink string) bool {
 	s, err := apis.ParseURL(sink)
-	if err != nil {
+	if err != nil || s == nil {
 		return false
 	}
 	return strings.EqualFold(s.Scheme, "https")
