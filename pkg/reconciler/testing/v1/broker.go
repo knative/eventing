@@ -253,3 +253,17 @@ func WithDLSNotConfigured() BrokerOption {
 		b.Status.MarkDeadLetterSinkNotConfigured()
 	}
 }
+
+func WithBrokerAddressHTTPS(address duckv1.Addressable) BrokerOption {
+	return func(b *v1.Broker) {
+		b.Status.Address = &address
+		b.GetConditionSet().Manage(b.GetStatus()).MarkTrue(v1.BrokerConditionAddressable)
+	}
+}
+
+func WithBrokersAddresses(addresses []duckv1.Addressable) BrokerOption {
+	return func(b *v1.Broker) {
+		b.Status.Addresses = addresses
+		b.GetConditionSet().Manage(b.GetStatus()).MarkTrue(v1.BrokerConditionAddressable)
+	}
+}
