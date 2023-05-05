@@ -74,7 +74,7 @@ type envConfig struct {
 	Sink string `envconfig:"K_SINK"`
 
 	// CACert is the certificate for enabling HTTPS in Sink URL
-	CACert string `envconfig:"K_CA_CERTS"`
+	CACerts string `envconfig:"K_CA_CERTS"`
 
 	// CEOverrides are the CloudEvents overrides to be applied to the outbound event.
 	CEOverrides string `envconfig:"K_CE_OVERRIDES"`
@@ -110,8 +110,8 @@ func main() {
 		sink = env.Sink
 	}
 
-	if env.CACert != "" {
-		cacerts = env.CACert
+	if env.CACerts != "" {
+		cacerts = env.CACerts
 	}
 
 	var ceOverrides *duckv1.CloudEventOverrides
