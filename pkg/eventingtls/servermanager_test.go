@@ -65,9 +65,7 @@ func TestStartServers(t *testing.T) {
 			sm, err := NewServerManager(ctx, httpReceiver, httpsReceiver, &basicHandler{}, cmw)
 			assert.NoError(t, err)
 			go func() {
-				err1, err2 := sm.StartServers(ctx)
-				errChan <- err1
-				errChan <- err2
+				errChan <- sm.StartServers(ctx)
 			}()
 
 			<-httpReceiver.Ready
@@ -100,7 +98,6 @@ func TestStartServers(t *testing.T) {
 
 			// stop servers and ensure no errors for http/https
 			cancelFunc()
-			assert.NoError(t, <-errChan)
 			assert.NoError(t, <-errChan)
 		})
 	}

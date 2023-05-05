@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"sync"
 
 	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/eventing/pkg/kncloudevents"
@@ -61,23 +60,30 @@ func NewServerManager(ctx context.Context, httpReceiver, httpsReceiver *kncloude
 }
 
 // Blocking call. Starts the 2 servers
-func (s *ServerManager) StartServers(ctx context.Context) (httpError, httpsError error) {
+func (s *ServerManager) StartServers(ctx context.Context) error {
 	// start servers
-	wg := sync.WaitGroup{}
-	wg.Add(2)
+	errCh := make(chan error, 2)
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 
 	go func() {
-		defer wg.Done()
-		httpError = s.httpReceiver.StartListen(ctx, s.httpHandler())
+		if err := s.httpReceiver.StartListen(ctx, s.httpHandler()); err != nil {
+			errCh <- err
+		}
 	}()
 
 	go func() {
-		defer wg.Done()
-		httpsError = s.httpsReceiver.StartListen(ctx, s.httpsHandler())
+		if err := s.httpsReceiver.StartListen(ctx, s.httpsHandler()); err != nil {
+			errCh <- err
+		}
 	}()
 
-	wg.Wait()
-	return
+	select {
+	case err := <-errCh:
+		return err
+	case <-ctx.Done():
+		return nil
+	}
 }
 
 func (s *ServerManager) httpHandler() http.Handler {
