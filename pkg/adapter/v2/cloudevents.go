@@ -145,11 +145,11 @@ func NewClient(cfg ClientConfig) (Client, error) {
 		if sinkWait := cfg.Env.GetSinktimeout(); sinkWait > 0 {
 			pOpts = append(pOpts, setTimeOut(time.Duration(sinkWait)*time.Second))
 		}
-		if caCerts := cfg.Env.GetCACerts(); (caCerts != nil && *caCerts != "") && eventingtls.IsHttpsSink(cfg.Env.GetSink()) {
+		if eventingtls.IsHttpsSink(cfg.Env.GetSink()) {
 			var err error
 
 			clientConfig := eventingtls.NewDefaultClientConfig()
-			clientConfig.CACerts = caCerts
+			clientConfig.CACerts = cfg.Env.GetCACerts()
 
 			httpTransport := nethttp.DefaultTransport.(*nethttp.Transport).Clone()
 			httpTransport.TLSClientConfig, err = eventingtls.GetTLSClientConfig(clientConfig)
