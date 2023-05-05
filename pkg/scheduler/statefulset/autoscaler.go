@@ -167,7 +167,7 @@ func (a *autoscaler) doautoscale(ctx context.Context, attemptScaleDown bool, pen
 		return err
 	}
 
-	a.logger.Infow("checking adapter capacity",
+	a.logger.Debugw("checking adapter capacity",
 		zap.Int32("pending", pending),
 		zap.Int32("replicas", scale.Spec.Replicas),
 		zap.Int32("last ordinal", state.LastOrdinal))
