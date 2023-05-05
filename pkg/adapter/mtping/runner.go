@@ -24,7 +24,6 @@ import (
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
-	cecontext "github.com/cloudevents/sdk-go/v2/context"
 	"github.com/google/uuid"
 	"github.com/robfig/cron/v3"
 	"go.opentelemetry.io/otel/trace"
@@ -118,7 +117,7 @@ func (a *cronJobsRunner) AddSchedule(source *sourcesv1.PingSource) cron.EntryID 
 		return -1
 	}
 
-	id, _ := a.cron.AddFunc(schedule, a.cronTick(ctx, client, event))
+	id, _ := a.cron.AddFunc(schedule, a.cronTick(ctx, client, source, event))
 	return id
 }
 
@@ -139,12 +138,13 @@ func (a *cronJobsRunner) Stop() {
 	}
 }
 
-func (a *cronJobsRunner) cronTick(ctx context.Context, client adapter.Client, event cloudevents.Event) func() {
+func (a *cronJobsRunner) cronTick(ctx context.Context, client kncloudevents.Client, src *sourcesv1.PingSource, event cloudevents.Event) func() {
+	target := src.Status.SinkURI.String()
+
 	return func() {
 		event := event.Clone()
 		event.SetID(uuid.New().String()) // provide an ID here so we can track it with logging
 		defer a.Logger.Debug("Finished sending cloudevent id: ", event.ID())
-		target := cecontext.TargetFrom(ctx).String()
 		source := event.Context.GetSource()
 
 		// Provide a delay so not all ping fired instantaneously distribute load on resources.
@@ -155,7 +155,7 @@ func (a *cronJobsRunner) cronTick(ctx context.Context, client adapter.Client, ev
 		if result := client.Send(ctx, event); !cloudevents.IsACK(result) {
 			// Exhausted number of retries. Event is lost.
 			a.Logger.Error("failed to send cloudevent result: ", zap.Any("result", result),
-				zap.String("source", source), zap.String("target", target), zap.String("id", event.ID()))
+				zap.String("source", source), zap.String("target", src.Status.SinkURI.String()), zap.String("id", event.ID()))
 		}
 
 		client.CloseIdleConnections()
@@ -199,7 +199,7 @@ func (a *cronJobsRunner) newPingSourceClient(source *sourcesv1.PingSource) (adap
 	}
 
 	env.Sink = source.Status.SinkURI.String()
-	env.CACerts = nil // TODO CA Certs from source status
+	env.CACerts = source.Status.SinkCACerts
 
 	cfg := adapter.ClientConfig{
 		Env:                 &env,

@@ -24,10 +24,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
-	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
-	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1/pingsource"
-	rtv1 "knative.dev/eventing/pkg/reconciler/testing/v1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/configmap"
@@ -35,6 +31,11 @@ import (
 	"knative.dev/pkg/logging"
 	logtesting "knative.dev/pkg/logging/testing"
 	. "knative.dev/pkg/reconciler/testing"
+
+	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
+	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
+	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1/pingsource"
+	rtv1 "knative.dev/eventing/pkg/reconciler/testing/v1"
 )
 
 const (
@@ -58,6 +59,9 @@ var (
 	}
 
 	sinkURI, _ = apis.ParseURL("https://" + sinkName)
+	sinkAddr   = &duckv1.Addressable{
+		URL: sinkURI,
+	}
 )
 
 func TestAllCases(t *testing.T) {
@@ -83,7 +87,7 @@ func TestAllCases(t *testing.T) {
 					}),
 					rtv1.WithInitPingSourceConditions,
 					rtv1.WithPingSourceDeployed,
-					rtv1.WithPingSourceSink(sinkURI),
+					rtv1.WithPingSourceSink(sinkAddr),
 					rtv1.WithPingSourceCloudEventAttributes,
 				),
 			},
@@ -106,7 +110,7 @@ func TestAllCases(t *testing.T) {
 					}),
 					rtv1.WithInitPingSourceConditions,
 					rtv1.WithPingSourceDeployed,
-					rtv1.WithPingSourceSink(sinkURI),
+					rtv1.WithPingSourceSink(sinkAddr),
 					rtv1.WithPingSourceCloudEventAttributes,
 				),
 			},
@@ -131,7 +135,7 @@ func TestAllCases(t *testing.T) {
 					}),
 					rtv1.WithInitPingSourceConditions,
 					rtv1.WithPingSourceDeployed,
-					rtv1.WithPingSourceSink(sinkURI),
+					rtv1.WithPingSourceSink(sinkAddr),
 					rtv1.WithPingSourceCloudEventAttributes,
 				),
 			},
@@ -156,7 +160,7 @@ func TestAllCases(t *testing.T) {
 					}),
 					rtv1.WithInitPingSourceConditions,
 					rtv1.WithPingSourceDeployed,
-					rtv1.WithPingSourceSink(sinkURI),
+					rtv1.WithPingSourceSink(sinkAddr),
 					rtv1.WithPingSourceCloudEventAttributes,
 				),
 			},
@@ -181,7 +185,7 @@ func TestAllCases(t *testing.T) {
 					}),
 					rtv1.WithInitPingSourceConditions,
 					rtv1.WithPingSourceDeployed,
-					rtv1.WithPingSourceSink(sinkURI),
+					rtv1.WithPingSourceSink(sinkAddr),
 					rtv1.WithPingSourceCloudEventAttributes,
 					rtv1.WithPingSourceDeleted,
 				),
@@ -203,7 +207,7 @@ func TestAllCases(t *testing.T) {
 					}),
 					rtv1.WithInitPingSourceConditions,
 					rtv1.WithPingSourceDeployed,
-					rtv1.WithPingSourceSink(sinkURI),
+					rtv1.WithPingSourceSink(sinkAddr),
 					rtv1.WithPingSourceCloudEventAttributes,
 					rtv1.WithPingSourceDeleted,
 				),

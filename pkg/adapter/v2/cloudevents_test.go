@@ -307,7 +307,7 @@ func TestTLS(t *testing.T) {
 	ctx, cancel := context.WithCancel(ctx)
 	t.Cleanup(cancel)
 
-	ca := eventingtlstesting.StartServer(ctx, t, 8333)
+	ca := eventingtlstesting.StartServer(ctx, t, 8333, nil)
 
 	event := cetest.MinEvent()
 

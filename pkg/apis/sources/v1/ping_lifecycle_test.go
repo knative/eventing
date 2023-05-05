@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -53,6 +54,9 @@ func TestPingSource_PingSourceSource(t *testing.T) {
 
 func TestPingSourceStatusIsReady(t *testing.T) {
 	exampleUri, _ := apis.ParseURL("uri://example")
+	exampleAddr := &duckv1.Addressable{
+		URL: exampleUri,
+	}
 
 	tests := []struct {
 		name                string
@@ -88,7 +92,7 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 			s := &PingSourceStatus{}
 			s.InitializeConditions()
 
-			s.MarkSink(exampleUri)
+			s.MarkSink(exampleAddr)
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionUnknown,
@@ -98,7 +102,7 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 		s: func() *PingSourceStatus {
 			s := &PingSourceStatus{}
 			s.InitializeConditions()
-			s.MarkSink(exampleUri)
+			s.MarkSink(exampleAddr)
 			s.PropagateDeploymentAvailability(availableDeployment)
 			return s
 		}(),
@@ -124,6 +128,9 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 
 func TestPingSourceStatusGetTopLevelCondition(t *testing.T) {
 	exampleUri, _ := apis.ParseURL("uri://example")
+	exampleAddr := &duckv1.Addressable{
+		URL: exampleUri,
+	}
 
 	tests := []struct {
 		name string
@@ -161,7 +168,7 @@ func TestPingSourceStatusGetTopLevelCondition(t *testing.T) {
 		s: func() *PingSourceStatus {
 			s := &PingSourceStatus{}
 			s.InitializeConditions()
-			s.MarkSink(exampleUri)
+			s.MarkSink(exampleAddr)
 			return s
 		}(),
 		want: &apis.Condition{
@@ -173,7 +180,7 @@ func TestPingSourceStatusGetTopLevelCondition(t *testing.T) {
 		s: func() *PingSourceStatus {
 			s := &PingSourceStatus{}
 			s.InitializeConditions()
-			s.MarkSink(exampleUri)
+			s.MarkSink(exampleAddr)
 			s.PropagateDeploymentAvailability(availableDeployment)
 			return s
 		}(),
@@ -197,6 +204,10 @@ func TestPingSourceStatusGetTopLevelCondition(t *testing.T) {
 
 func TestPingSourceStatusGetCondition(t *testing.T) {
 	exampleUri, _ := apis.ParseURL("uri://example")
+	exampleAddr := &duckv1.Addressable{
+		URL: exampleUri,
+	}
+
 	tests := []struct {
 		name      string
 		s         *PingSourceStatus
@@ -237,7 +248,7 @@ func TestPingSourceStatusGetCondition(t *testing.T) {
 		s: func() *PingSourceStatus {
 			s := &PingSourceStatus{}
 			s.InitializeConditions()
-			s.MarkSink(exampleUri)
+			s.MarkSink(exampleAddr)
 			return s
 		}(),
 		condQuery: PingSourceConditionReady,

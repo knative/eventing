@@ -32,14 +32,22 @@ import (
 	"knative.dev/eventing/pkg/kncloudevents"
 )
 
-func StartServer(ctx context.Context, t *testing.T, port int) string {
+var (
+	CA  []byte
+	Key []byte
+	Crt []byte
+)
+
+func init() {
+	CA, Key, Crt = loadCerts()
+}
+
+func StartServer(ctx context.Context, t *testing.T, port int, requests chan<- *nethttp.Request) string {
 
 	secret := types.NamespacedName{
 		Namespace: "knative-tests",
 		Name:      "tls-secret",
 	}
-
-	ca, key, crt := loadCerts()
 
 	_ = secretinformer.Get(ctx).Informer().GetStore().Add(&corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -47,8 +55,8 @@ func StartServer(ctx context.Context, t *testing.T, port int) string {
 			Name:      secret.Name,
 		},
 		Data: map[string][]byte{
-			"tls.key": key,
-			"tls.crt": crt,
+			"tls.key": Key,
+			"tls.crt": Crt,
 		},
 		Type: corev1.SecretTypeTLS,
 	})
@@ -63,7 +71,11 @@ func StartServer(ctx context.Context, t *testing.T, port int) string {
 	)
 
 	go func() {
+		defer close(requests)
 		err := receiver.StartListen(ctx, nethttp.HandlerFunc(func(writer nethttp.ResponseWriter, request *nethttp.Request) {
+			if requests != nil {
+				requests <- request
+			}
 			if request.TLS == nil {
 				// It's not on TLS, fail request
 				writer.WriteHeader(nethttp.StatusInternalServerError)
@@ -76,7 +88,7 @@ func StartServer(ctx context.Context, t *testing.T, port int) string {
 		}
 	}()
 
-	return string(ca)
+	return string(CA)
 }
 
 func loadCerts() (ca, key, crt []byte) {
