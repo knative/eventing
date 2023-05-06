@@ -417,8 +417,9 @@ func (r *Reconciler) httpAddress(b *eventingv1.Broker) pkgduckv1.Addressable {
 	// http address uses host-based routing
 	httpAddress := pkgduckv1.Addressable{
 		Name: pointer.String("http"),
-		URL:  apis.HTTP(network.GetServiceHostname(b.Name, b.Namespace)),
+		URL:  apis.HTTP(network.GetServiceHostname(names.BrokerIngressName, system.Namespace())),
 	}
+	httpAddress.URL.Path = fmt.Sprintf("/%s/%s", b.Namespace, b.Name)
 	return httpAddress
 }
 

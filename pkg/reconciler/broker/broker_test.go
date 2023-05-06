@@ -86,7 +86,7 @@ var (
 
 	brokerAddress = &apis.URL{
 		Scheme: "http",
-		Host:   network.GetServiceHostname(ingressServiceName, testNS),
+		Host:   network.GetServiceHostname(ingressServiceName, systemNS),
 		Path:   fmt.Sprintf("/%s/%s", testNS, brokerName),
 	}
 
@@ -589,9 +589,6 @@ func TestReconcile(t *testing.T) {
 				makeTLSSecret(),
 			},
 			WantErr: false,
-			WantCreates: []runtime.Object{
-				createChannel(),
-			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
 					WithBrokerClass(eventing.MTChannelBrokerClassValue),
@@ -642,9 +639,6 @@ func TestReconcile(t *testing.T) {
 				makeTLSSecret(),
 			},
 			WantErr: false,
-			WantCreates: []runtime.Object{
-				createChannel(),
-			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
 					WithBrokerClass(eventing.MTChannelBrokerClassValue),
@@ -713,11 +707,11 @@ func TestReconcile(t *testing.T) {
 }
 
 func httpsURL(name string, ns string) *apis.URL {
-	u, err := apis.ParseURL(fmt.Sprintf("https://broker-ingress.%s.svc.cluster.local/%s/%s", testNS, ns, name))
-	if err != nil {
-		panic(err)
+	return &apis.URL{
+		Scheme: "https",
+		Host:   network.GetServiceHostname(ingressServiceName, systemNS),
+		Path:   fmt.Sprintf("/%s/%s", ns, name),
 	}
-	return u
 }
 
 func config() *duckv1.KReference {

@@ -81,6 +81,7 @@ func (bs *BrokerStatus) SetAddress(url *apis.URL) {
 
 	if url != nil {
 		bs.GetConditionSet().Manage(bs).MarkTrue(BrokerConditionAddressable)
+		bs.AddressStatus.Address.Name = &url.Scheme
 	} else {
 		bs.GetConditionSet().Manage(bs).MarkFalse(BrokerConditionAddressable, "nil URL", "URL is nil")
 	}
