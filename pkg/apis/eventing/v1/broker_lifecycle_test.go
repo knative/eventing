@@ -19,6 +19,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/apis/eventing"
@@ -277,7 +278,7 @@ func TestBrokerInitializeConditions(t *testing.T) {
 		bs:   TestHelper.ReadyBrokerStatusWithoutDLS(),
 		want: &BrokerStatus{
 			AddressStatus: duckv1.AddressStatus{
-				Address: &duckv1.Addressable{URL: url},
+				Address: &duckv1.Addressable{Name: pointer.String("http"), URL: url},
 			},
 			Status: duckv1.Status{
 				Conditions: []apis.Condition{{
