@@ -104,11 +104,12 @@ func (sb *SinkBinding) Do(ctx context.Context, ps *duckv1.WithPod) {
 		logging.FromContext(ctx).Errorf("No Resolver associated with context for sink: %+v", sb)
 		return
 	}
-	uri, err := resolver.URIFromDestinationV1(ctx, sb.Spec.Sink, sb)
+	addr, err := resolver.AddressableFromDestinationV1(ctx, sb.Spec.Sink, sb)
 	if err != nil {
 		logging.FromContext(ctx).Errorw("URI could not be extracted from destination: ", zap.Error(err))
 		return
 	}
+	uri := addr.URL
 	sb.Status.MarkSink(uri)
 
 	var ceOverrides string
@@ -130,6 +131,10 @@ func (sb *SinkBinding) Do(ctx context.Context, ps *duckv1.WithPod) {
 			Name:  "K_CE_OVERRIDES",
 			Value: ceOverrides,
 		})
+		spec.InitContainers[i].Env = append(spec.InitContainers[i].Env, corev1.EnvVar{
+			Name:  "K_CA_CERTS",
+			Value: *addr.CACerts,
+		})
 	}
 	for i := range spec.Containers {
 		spec.Containers[i].Env = append(spec.Containers[i].Env, corev1.EnvVar{
@@ -139,6 +144,10 @@ func (sb *SinkBinding) Do(ctx context.Context, ps *duckv1.WithPod) {
 		spec.Containers[i].Env = append(spec.Containers[i].Env, corev1.EnvVar{
 			Name:  "K_CE_OVERRIDES",
 			Value: ceOverrides,
+		})
+		spec.Containers[i].Env = append(spec.Containers[i].Env, corev1.EnvVar{
+			Name:  "K_CA_CERTS",
+			Value: *addr.CACerts,
 		})
 	}
 }
@@ -152,7 +161,7 @@ func (sb *SinkBinding) Undo(ctx context.Context, ps *duckv1.WithPod) {
 		env := make([]corev1.EnvVar, 0, len(spec.InitContainers[i].Env))
 		for j, ev := range c.Env {
 			switch ev.Name {
-			case "K_SINK", "K_CE_OVERRIDES":
+			case "K_SINK", "K_CE_OVERRIDES", "K_CA_CERTS":
 				continue
 			default:
 				env = append(env, spec.InitContainers[i].Env[j])
@@ -167,7 +176,7 @@ func (sb *SinkBinding) Undo(ctx context.Context, ps *duckv1.WithPod) {
 		env := make([]corev1.EnvVar, 0, len(spec.Containers[i].Env))
 		for j, ev := range c.Env {
 			switch ev.Name {
-			case "K_SINK", "K_CE_OVERRIDES":
+			case "K_SINK", "K_CE_OVERRIDES", "K_CA_CERTS":
 				continue
 			default:
 				env = append(env, spec.Containers[i].Env[j])
