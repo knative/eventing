@@ -77,6 +77,10 @@ const (
 	// SinkBindingConditionSinkProvided is configured to indicate whether the
 	// sink has been properly extracted from the resolver.
 	SinkBindingConditionSinkProvided apis.ConditionType = "SinkProvided"
+
+	// SinkBindingConditionSinkCACertsProvided is configured to indicate whether the
+	// sink cacerts has been properly extracted from the resolver.
+	SinkBindingConditionSinkCACertsProvided apis.ConditionType = "SinkCACertsProvided"
 )
 
 // SinkBindingStatus communicates the observed state of the SinkBinding (from the controller).

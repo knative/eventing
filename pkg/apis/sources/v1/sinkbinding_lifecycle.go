@@ -94,6 +94,15 @@ func (sbs *SinkBindingStatus) MarkSink(uri *apis.URL) {
 	}
 }
 
+func (sbs *SinkBindingStatus) MarkSinkCACerts(certs *string) {
+	sbs.SinkCACerts = certs
+	if certs != nil {
+		sbCondSet.Manage(sbs).MarkTrue(SinkBindingConditionSinkCACertsProvided)
+	} else {
+		sbCondSet.Manage(sbs).MarkFalse(SinkBindingConditionSinkCACertsProvided, "SinkCACertsEmpty", "Sink CA Certs has resolved to empty.%s", "")
+	}
+}
+
 // Do implements psbinding.Bindable
 func (sb *SinkBinding) Do(ctx context.Context, ps *duckv1.WithPod) {
 	// First undo so that we can just unconditionally append below.
@@ -111,6 +120,7 @@ func (sb *SinkBinding) Do(ctx context.Context, ps *duckv1.WithPod) {
 	}
 	uri := addr.URL
 	sb.Status.MarkSink(uri)
+	sb.Status.MarkSinkCACerts(addr.CACerts)
 
 	var ceOverrides string
 	if sb.Spec.CloudEventOverrides != nil {

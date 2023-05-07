@@ -167,8 +167,8 @@ func (s *SinkBindingSubResourcesReconciler) Reconcile(ctx context.Context, b psb
 		sb.Status.MarkBindingUnavailable("NoAddressable", "Addressable could not be extracted from destination")
 		return err
 	}
-	uri := addr.URL
-	sb.Status.MarkSink(uri)
+	sb.Status.MarkSink(addr.URL)
+	sb.Status.MarkSinkCACerts(addr.CACerts)
 	return nil
 }
 
