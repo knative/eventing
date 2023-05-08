@@ -132,11 +132,6 @@ func (sb *SinkBinding) Do(ctx context.Context, ps *duckv1.WithPod) {
 				Name:  "K_CA_CERTS",
 				Value: *addr.CACerts,
 			})
-		} else {
-			spec.InitContainers[i].Env = append(spec.InitContainers[i].Env, corev1.EnvVar{
-				Name:  "K_CA_CERTS",
-				Value: "",
-			})
 		}
 		spec.InitContainers[i].Env = append(spec.InitContainers[i].Env, corev1.EnvVar{
 			Name:  "K_CE_OVERRIDES",
@@ -152,11 +147,6 @@ func (sb *SinkBinding) Do(ctx context.Context, ps *duckv1.WithPod) {
 			spec.Containers[i].Env = append(spec.Containers[i].Env, corev1.EnvVar{
 				Name:  "K_CA_CERTS",
 				Value: *addr.CACerts,
-			})
-		} else {
-			spec.Containers[i].Env = append(spec.Containers[i].Env, corev1.EnvVar{
-				Name:  "K_CA_CERTS",
-				Value: "",
 			})
 		}
 		spec.Containers[i].Env = append(spec.Containers[i].Env, corev1.EnvVar{
