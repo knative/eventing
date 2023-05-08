@@ -342,6 +342,7 @@ func TestSinkBindingDo(t *testing.T) {
 			Host:   "thing.ns.svc.cluster.local",
 			Path:   "/a/path",
 		},
+		CACerts: &caCert,
 	}
 
 	overrides := duckv1.CloudEventOverrides{Extensions: map[string]string{"foo": "bar"}}
