@@ -410,7 +410,7 @@ func TestSinkBindingDo(t *testing.T) {
 								Value: "the wrong value",
 							}, {
 								Name:  "K_CA_CERTS",
-								Value: caCert,
+								Value: "wrong value",
 							}, {
 								Name:  "K_CE_OVERRIDES",
 								Value: `{"extensions":{"wrong":"value"}}`,
