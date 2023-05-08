@@ -57,7 +57,7 @@ import (
 )
 
 const (
-	brokerIngressTLSSecretName = "mt-broker-ingress-server-tls"
+	brokerIngressTLSSecretName = "mt-broker-ingress-server-tls" //nolint:gosec // This is not a hardcoded credential
 	caCertsSecretKey           = eventingtls.SecretCACert
 )
 
