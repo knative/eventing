@@ -85,21 +85,13 @@ func (sbs *SinkBindingStatus) MarkBindingAvailable() {
 }
 
 // MarkSink sets the condition that the source has a sink configured.
-func (sbs *SinkBindingStatus) MarkSink(uri *apis.URL) {
-	sbs.SinkURI = uri
-	if uri != nil {
+func (sbs *SinkBindingStatus) MarkSink(addr *duckv1.Addressable) {
+	if addr != nil {
+		sbs.SinkURI = addr.URL
+		sbs.SinkCACerts = addr.CACerts
 		sbCondSet.Manage(sbs).MarkTrue(SinkBindingConditionSinkProvided)
 	} else {
 		sbCondSet.Manage(sbs).MarkFalse(SinkBindingConditionSinkProvided, "SinkEmpty", "Sink has resolved to empty.%s", "")
-	}
-}
-
-func (sbs *SinkBindingStatus) MarkSinkCACerts(certs *string) {
-	sbs.SinkCACerts = certs
-	if certs != nil {
-		sbCondSet.Manage(sbs).MarkTrue(SinkBindingConditionSinkCACertsProvided)
-	} else {
-		sbCondSet.Manage(sbs).MarkFalse(SinkBindingConditionSinkCACertsProvided, "SinkCACertsEmpty", "Sink CA Certs has resolved to empty.%s", "")
 	}
 }
 
@@ -118,9 +110,7 @@ func (sb *SinkBinding) Do(ctx context.Context, ps *duckv1.WithPod) {
 		logging.FromContext(ctx).Errorw("URI could not be extracted from destination: ", zap.Error(err))
 		return
 	}
-	uri := addr.URL
-	sb.Status.MarkSink(uri)
-	sb.Status.MarkSinkCACerts(addr.CACerts)
+	sb.Status.MarkSink(addr)
 
 	var ceOverrides string
 	if sb.Spec.CloudEventOverrides != nil {
@@ -135,7 +125,7 @@ func (sb *SinkBinding) Do(ctx context.Context, ps *duckv1.WithPod) {
 	for i := range spec.InitContainers {
 		spec.InitContainers[i].Env = append(spec.InitContainers[i].Env, corev1.EnvVar{
 			Name:  "K_SINK",
-			Value: uri.String(),
+			Value: addr.URL.String(),
 		})
 		spec.InitContainers[i].Env = append(spec.InitContainers[i].Env, corev1.EnvVar{
 			Name:  "K_CE_OVERRIDES",
@@ -149,7 +139,7 @@ func (sb *SinkBinding) Do(ctx context.Context, ps *duckv1.WithPod) {
 	for i := range spec.Containers {
 		spec.Containers[i].Env = append(spec.Containers[i].Env, corev1.EnvVar{
 			Name:  "K_SINK",
-			Value: uri.String(),
+			Value: addr.URL.String(),
 		})
 		spec.Containers[i].Env = append(spec.Containers[i].Env, corev1.EnvVar{
 			Name:  "K_CE_OVERRIDES",
