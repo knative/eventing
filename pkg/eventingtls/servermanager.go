@@ -90,6 +90,9 @@ func (s *ServerManager) httpHandler() http.Handler {
 	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
 		flags := s.featureStore.Load()
 		if flags.IsStrictTransportEncryption() {
+			// As flag updates are eventually consistent across all components,
+			// we want a retryable error. A 404 seemed the most reasonable (400
+			// is not retryable).
 			response.WriteHeader(http.StatusNotFound)
 			return
 		}
@@ -101,6 +104,9 @@ func (s *ServerManager) httpsHandler() http.Handler {
 	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
 		flags := s.featureStore.Load()
 		if flags.IsDisbledTransportEncryption() {
+			// As flag updates are eventually consistent across all components,
+			// we want a retryable error. A 404 seemed the most reasonable (400
+			// is not retryable).
 			response.WriteHeader(http.StatusNotFound)
 			return
 		}
