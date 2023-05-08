@@ -51,13 +51,14 @@ import (
 	brokerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/broker"
 	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1"
 	ducklib "knative.dev/eventing/pkg/duck"
+	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/reconciler/broker/resources"
 	"knative.dev/eventing/pkg/reconciler/names"
 )
 
 const (
 	brokerIngressTLSSecretName = "mt-broker-ingress-server-tls"
-	caCertsSecretKey           = "ca.crt"
+	caCertsSecretKey           = eventingtls.SecretCACert
 )
 
 type Reconciler struct {
@@ -201,10 +202,10 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 		httpAddress := r.httpAddress(b)
 		httpsAddress := r.httpsAddress(caCerts, b)
 		// Permissive mode:
-		// - status.address http address with host-based routing
+		// - status.address http address with path-based routing
 		// - status.addresses:
 		//   - https address with path-based routing
-		//   - http address with host-based routing
+		//   - http address with path-based routing
 		b.Status.Addresses = []pkgduckv1.Addressable{httpsAddress, httpAddress}
 		b.Status.Address = &httpAddress
 	} else if transportEncryptionFlags.IsStrictTransportEncryption() {
@@ -414,7 +415,7 @@ func (r *Reconciler) getCaCerts() (string, error) {
 }
 
 func (r *Reconciler) httpAddress(b *eventingv1.Broker) pkgduckv1.Addressable {
-	// http address uses host-based routing
+	// http address uses path-based routing
 	httpAddress := pkgduckv1.Addressable{
 		Name: pointer.String("http"),
 		URL:  apis.HTTP(network.GetServiceHostname(names.BrokerIngressName, system.Namespace())),

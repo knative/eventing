@@ -43,6 +43,8 @@ const (
 	TLSCrt = "tls.crt"
 	// DefaultMinTLSVersion is the default minimum TLS version for servers and clients.
 	DefaultMinTLSVersion = tls.VersionTLS12
+	// SecretCACrt is the name of the CA Cert in the secret
+	SecretCACert = "ca.crt"
 )
 
 type ClientConfig struct {

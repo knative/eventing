@@ -46,6 +46,7 @@ import (
 	"knative.dev/eventing/pkg/apis/feature"
 	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	inmemorychannelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/inmemorychannel"
+	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/reconciler/inmemorychannel/controller/config"
 	"knative.dev/eventing/pkg/reconciler/inmemorychannel/controller/resources"
 )
@@ -57,7 +58,7 @@ const (
 	dispatcherDeploymentCreated     = "DispatcherDeploymentCreated"
 	dispatcherServiceCreated        = "DispatcherServiceCreated"
 	dispatcherTLSSecretName         = "imc-dispatcher-tls"
-	caCertsSecretKey                = "ca.crt"
+	caCertsSecretKey                = eventingtls.SecretCACert
 )
 
 func newDeploymentWarn(err error) pkgreconciler.Event {
