@@ -36,6 +36,7 @@ import (
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/injection/clients/dynamicclient"
+	secretinformer "knative.dev/pkg/injection/clients/namespacedkube/informers/core/v1/secret"
 	"knative.dev/pkg/logging"
 	pkgreconciler "knative.dev/pkg/reconciler"
 	"knative.dev/pkg/system"
@@ -64,6 +65,7 @@ func NewController(
 	subscriptionInformer := subscriptioninformer.Get(ctx)
 	endpointsInformer := endpointsinformer.Get(ctx)
 	configmapInformer := configmapinformer.Get(ctx)
+	secretInformer := secretinformer.Get(ctx)
 
 	var err error
 	if Tracer, err = tracing.SetupPublishingWithDynamicConfig(logger, cmw, "mt-broker-controller", tracingconfig.ConfigName); err != nil {
@@ -84,6 +86,7 @@ func NewController(
 		subscriptionLister: subscriptionInformer.Lister(),
 		brokerClass:        eventing.MTChannelBrokerClassValue,
 		configmapLister:    configmapInformer.Lister(),
+		secretLister:       secretInformer.Lister(),
 	}
 	impl := brokerreconciler.NewImpl(ctx, r, eventing.MTChannelBrokerClassValue)
 
@@ -117,6 +120,10 @@ func NewController(
 			pkgreconciler.NamespaceFilterFunc(system.Namespace()),
 			pkgreconciler.NameFilterFunc(names.BrokerIngressName)),
 		Handler: controller.HandleAll(grCb),
+	})
+	secretInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: controller.FilterWithName(brokerIngressTLSSecretName),
+		Handler:    controller.HandleAll(grCb),
 	})
 
 	return impl

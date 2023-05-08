@@ -31,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 	corev1listers "k8s.io/client-go/listers/core/v1"
+	"k8s.io/utils/pointer"
 	"knative.dev/pkg/kmeta"
 
 	"knative.dev/pkg/apis"
@@ -44,13 +45,20 @@ import (
 	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/apis/eventing"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	"knative.dev/eventing/pkg/apis/feature"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
 	brokerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/broker"
 	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1"
 	ducklib "knative.dev/eventing/pkg/duck"
+	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/reconciler/broker/resources"
 	"knative.dev/eventing/pkg/reconciler/names"
+)
+
+const (
+	brokerIngressTLSSecretName = "mt-broker-ingress-server-tls" //nolint:gosec // This is not a hardcoded credential
+	caCertsSecretKey           = eventingtls.SecretCACert
 )
 
 type Reconciler struct {
@@ -61,6 +69,7 @@ type Reconciler struct {
 	endpointsLister    corev1listers.EndpointsLister
 	subscriptionLister messaginglisters.SubscriptionLister
 	configmapLister    corev1listers.ConfigMapLister
+	secretLister       corev1listers.SecretLister
 
 	channelableTracker ducklib.ListableTracker
 
@@ -183,11 +192,41 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 
 	// Route everything to shared ingress, just tack on the namespace/name as path
 	// so we can route there appropriately.
-	b.Status.SetAddress(&apis.URL{
-		Scheme: "http",
-		Host:   network.GetServiceHostname(names.BrokerIngressName, system.Namespace()),
-		Path:   fmt.Sprintf("/%s/%s", b.Namespace, b.Name),
-	})
+	transportEncryptionFlags := feature.FromContext(ctx)
+	if transportEncryptionFlags.IsPermissiveTransportEncryption() {
+		caCerts, err := r.getCaCerts()
+		if err != nil {
+			return err
+		}
+
+		httpAddress := r.httpAddress(b)
+		httpsAddress := r.httpsAddress(caCerts, b)
+		// Permissive mode:
+		// - status.address http address with path-based routing
+		// - status.addresses:
+		//   - https address with path-based routing
+		//   - http address with path-based routing
+		b.Status.Addresses = []pkgduckv1.Addressable{httpsAddress, httpAddress}
+		b.Status.Address = &httpAddress
+	} else if transportEncryptionFlags.IsStrictTransportEncryption() {
+		// Strict mode: (only https addresses)
+		// - status.address https address with path-based routing
+		// - status.addresses:
+		//   - https address with path-based routing
+		caCerts, err := r.getCaCerts()
+		if err != nil {
+			return err
+		}
+
+		httpsAddress := r.httpsAddress(caCerts, b)
+		b.Status.Addresses = []pkgduckv1.Addressable{httpsAddress}
+		b.Status.Address = &httpsAddress
+	} else {
+		httpAddress := r.httpAddress(b)
+		b.Status.Address = &httpAddress
+	}
+
+	b.GetConditionSet().Manage(b.GetStatus()).MarkTrue(eventingv1.BrokerConditionAddressable)
 
 	// So, at this point the Broker is ready and everything should be solid
 	// for the triggers to act upon.
@@ -360,4 +399,38 @@ func TriggerChannelLabels(brokerName string) map[string]string {
 		eventing.BrokerLabelKey:                 brokerName,
 		"eventing.knative.dev/brokerEverything": "true",
 	}
+}
+
+func (r *Reconciler) getCaCerts() (string, error) {
+	// Getting the secret called "mt-broker-ingress-server-tls" from system namespace
+	secret, err := r.secretLister.Secrets(system.Namespace()).Get(brokerIngressTLSSecretName)
+	if err != nil {
+		return "", fmt.Errorf("failed to get CA certs from %s/%s: %w", system.Namespace(), brokerIngressTLSSecretName, err)
+	}
+	caCerts, ok := secret.Data[caCertsSecretKey]
+	if !ok {
+		return "", fmt.Errorf("failed to get CA certs from %s/%s: missing %s key", system.Namespace(), brokerIngressTLSSecretName, caCertsSecretKey)
+	}
+	return string(caCerts), nil
+}
+
+func (r *Reconciler) httpAddress(b *eventingv1.Broker) pkgduckv1.Addressable {
+	// http address uses path-based routing
+	httpAddress := pkgduckv1.Addressable{
+		Name: pointer.String("http"),
+		URL:  apis.HTTP(network.GetServiceHostname(names.BrokerIngressName, system.Namespace())),
+	}
+	httpAddress.URL.Path = fmt.Sprintf("/%s/%s", b.Namespace, b.Name)
+	return httpAddress
+}
+
+func (r *Reconciler) httpsAddress(caCerts string, b *eventingv1.Broker) pkgduckv1.Addressable {
+	// https address uses path-based routing
+	httpsAddress := pkgduckv1.Addressable{
+		Name:    pointer.String("https"),
+		URL:     apis.HTTPS(fmt.Sprintf("%s.%s.svc.%s", names.BrokerIngressName, system.Namespace(), network.GetClusterDomainName())),
+		CACerts: pointer.String(caCerts),
+	}
+	httpsAddress.URL.Path = fmt.Sprintf("/%s/%s", b.Namespace, b.Name)
+	return httpsAddress
 }

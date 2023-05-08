@@ -24,12 +24,15 @@ import (
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/pointer"
 
 	clientgotesting "k8s.io/client-go/testing"
 	"knative.dev/eventing/pkg/apis/eventing"
+	"knative.dev/eventing/pkg/apis/feature"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
 	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/broker"
@@ -565,6 +568,106 @@ func TestReconcile(t *testing.T) {
 			WantPatches: []clientgotesting.PatchActionImpl{
 				makeChannelDeliveryRetryPatch(deliveryRetries),
 			},
+		}, {
+			Name: "TLS permissive",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				makeDLSServiceAsUnstructured(),
+				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
+					WithBrokerConfig(config()),
+					WithDeadLeaderSink(sinkSVCDest.Ref, ""),
+					WithInitBrokerConditions),
+				createChannel(withChannelReady, withChannelDeadLetterSink(sinkSVCDest)),
+				imcConfigMap(),
+				NewEndpoints(filterServiceName, systemNS,
+					WithEndpointsLabels(FilterLabels()),
+					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
+				NewEndpoints(ingressServiceName, systemNS,
+					WithEndpointsLabels(IngressLabels()),
+					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
+				makeTLSSecret(),
+			},
+			WantErr: false,
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
+					WithBrokerConfig(config()),
+					WithBrokerReadyWithDLS,
+					WithDeadLeaderSink(sinkSVCDest.Ref, ""),
+					WithBrokerAddressURI(brokerAddress),
+					WithBrokerStatusDLSURI(dlsURI),
+					WithChannelAddressAnnotation(triggerChannelURL),
+					WithChannelAPIVersionAnnotation(triggerChannelAPIVersion),
+					WithChannelKindAnnotation(triggerChannelKind),
+					WithChannelNameAnnotation(triggerChannelName),
+					WithBrokersAddresses([]duckv1.Addressable{
+						{
+							Name:    pointer.String("https"),
+							URL:     httpsURL(brokerName, testNS),
+							CACerts: pointer.String(testCaCerts),
+						},
+						{
+							Name: pointer.String("http"),
+							URL:  brokerAddress,
+						},
+					}),
+				),
+			}},
+			Ctx: feature.ToContext(context.Background(), feature.Flags{
+				feature.TransportEncryption: feature.Permissive,
+			}),
+		},
+		{
+			Name: "TLS strict",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				makeDLSServiceAsUnstructured(),
+				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
+					WithBrokerConfig(config()),
+					WithDeadLeaderSink(sinkSVCDest.Ref, ""),
+					WithInitBrokerConditions),
+				createChannel(withChannelReady, withChannelDeadLetterSink(sinkSVCDest)),
+				imcConfigMap(),
+				NewEndpoints(filterServiceName, systemNS,
+					WithEndpointsLabels(FilterLabels()),
+					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
+				NewEndpoints(ingressServiceName, systemNS,
+					WithEndpointsLabels(IngressLabels()),
+					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
+				makeTLSSecret(),
+			},
+			WantErr: false,
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
+					WithBrokerConfig(config()),
+					WithBrokerReadyWithDLS,
+					WithDeadLeaderSink(sinkSVCDest.Ref, ""),
+					WithBrokerAddressURI(brokerAddress),
+					WithBrokerStatusDLSURI(dlsURI),
+					WithChannelAddressAnnotation(triggerChannelURL),
+					WithChannelAPIVersionAnnotation(triggerChannelAPIVersion),
+					WithChannelKindAnnotation(triggerChannelKind),
+					WithChannelNameAnnotation(triggerChannelName),
+					WithBrokersAddresses([]duckv1.Addressable{
+						{
+							Name:    pointer.String("https"),
+							URL:     httpsURL(brokerName, testNS),
+							CACerts: pointer.String(testCaCerts),
+						},
+					}),
+					WithBrokerAddressHTTPS(duckv1.Addressable{
+						Name:    pointer.String("https"),
+						URL:     httpsURL(brokerName, testNS),
+						CACerts: pointer.String(testCaCerts),
+					}),
+				),
+			}},
+			Ctx: feature.ToContext(context.Background(), feature.Flags{
+				feature.TransportEncryption: feature.Strict,
+			}),
 		},
 	}
 
@@ -574,12 +677,22 @@ func TestReconcile(t *testing.T) {
 		ctx = v1a1addr.WithDuck(ctx)
 		ctx = v1b1addr.WithDuck(ctx)
 
+		cm, err := listers.GetConfigMapLister().ConfigMaps(testNS).Get("config-features")
+		if err == nil {
+			flags, err := feature.NewFlagsConfigFromConfigMap(cm)
+			if err != nil {
+				panic(err)
+			}
+			ctx = feature.ToContext(ctx, flags)
+		}
+
 		r := &Reconciler{
 			eventingClientSet:  fakeeventingclient.Get(ctx),
 			dynamicClientSet:   fakedynamicclient.Get(ctx),
 			subscriptionLister: listers.GetSubscriptionLister(),
 			endpointsLister:    listers.GetEndpointsLister(),
 			configmapLister:    listers.GetConfigMapLister(),
+			secretLister:       listers.GetSecretLister(),
 			channelableTracker: duck.NewListableTrackerFromTracker(ctx, channelable.Get, tracker.New(func(types.NamespacedName) {}, 0)),
 		}
 		return broker.NewReconciler(ctx, logger,
@@ -591,6 +704,14 @@ func TestReconcile(t *testing.T) {
 		false,
 		logger,
 	))
+}
+
+func httpsURL(name string, ns string) *apis.URL {
+	return &apis.URL{
+		Scheme: "https",
+		Host:   network.GetServiceHostname(ingressServiceName, systemNS),
+		Path:   fmt.Sprintf("/%s/%s", ns, name),
+	}
 }
 
 func config() *duckv1.KReference {
@@ -778,5 +899,45 @@ func makeChannelDeliveryRetryPatch(retries int) clientgotesting.PatchActionImpl 
 		},
 		Name:  fmt.Sprintf("%s-kne-trigger", brokerName),
 		Patch: []byte(`[{"op":"add","path":"/spec/delivery","value":{"retry":` + strconv.Itoa(retries) + `}}]`),
+	}
+}
+
+const (
+	testCaCerts = `
+-----BEGIN CERTIFICATE-----
+MIIDmjCCAoKgAwIBAgIUYzA4bTMXevuk3pl2Mn8hpCYL2C0wDQYJKoZIhvcNAQEL
+BQAwLzELMAkGA1UEBhMCVVMxIDAeBgNVBAMMF0tuYXRpdmUtRXhhbXBsZS1Sb290
+LUNBMB4XDTIzMDQwNTEzMTUyNFoXDTI2MDEyMzEzMTUyNFowbTELMAkGA1UEBhMC
+VVMxEjAQBgNVBAgMCVlvdXJTdGF0ZTERMA8GA1UEBwwIWW91ckNpdHkxHTAbBgNV
+BAoMFEV4YW1wbGUtQ2VydGlmaWNhdGVzMRgwFgYDVQQDDA9sb2NhbGhvc3QubG9j
+YWwwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQC5teo+En6U5nhqn7Sc
+uanqswUmPlgs9j/8l21Rhb4T+ezlYKGQGhbJyFFMuiCE1Rjn8bpCwi7Nnv12Y2nz
+FhEv2Jx0yL3Tqx0Q593myqKDq7326EtbO7wmDT0XD03twH5i9XZ0L0ihPWn1mjUy
+WxhnHhoFpXrsnQECJorZY6aTrFbGVYelIaj5AriwiqyL0fET8pueI2GwLjgWHFSH
+X8XsGAlcLUhkQG0Z+VO9usy4M1Wpt+cL6cnTiQ+sRmZ6uvaj8fKOT1Slk/oUeAi4
+WqFkChGzGzLik0QrhKGTdw3uUvI1F2sdQj0GYzXaWqRz+tP9qnXdzk1GrszKKSlm
+WBTLAgMBAAGjcDBuMB8GA1UdIwQYMBaAFJJcCftus4vj98N0zQQautsjEu82MAkG
+A1UdEwQCMAAwCwYDVR0PBAQDAgTwMBQGA1UdEQQNMAuCCWxvY2FsaG9zdDAdBgNV
+HQ4EFgQUnu/3vqA3VEzm128x/hLyZzR9JlgwDQYJKoZIhvcNAQELBQADggEBAFc+
+1cKt/CNjHXUsirgEhry2Mm96R6Yxuq//mP2+SEjdab+FaXPZkjHx118u3PPX5uTh
+gTT7rMfka6J5xzzQNqJbRMgNpdEFH1bbc11aYuhi0khOAe0cpQDtktyuDJQMMv3/
+3wu6rLr6fmENo0gdcyUY9EiYrglWGtdXhlo4ySRY8UZkUScG2upvyOhHTxVCAjhP
+efbMkNjmDuZOMK+wqanqr5YV6zMPzkQK7DspfRgasMAQmugQu7r2MZpXg8Ilhro1
+s/wImGnMVk5RzpBVrq2VB9SkX/ThTVYEC/Sd9BQM364MCR+TA1l8/ptaLFLuwyw8
+O2dgzikq8iSy1BlRsVw=
+-----END CERTIFICATE-----
+`
+)
+
+func makeTLSSecret() *corev1.Secret {
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: systemNS,
+			Name:      brokerIngressTLSSecretName,
+		},
+		Data: map[string][]byte{
+			"ca.crt": []byte(testCaCerts),
+		},
+		Type: corev1.SecretTypeTLS,
 	}
 }
