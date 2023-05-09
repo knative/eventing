@@ -85,9 +85,10 @@ func (sbs *SinkBindingStatus) MarkBindingAvailable() {
 }
 
 // MarkSink sets the condition that the source has a sink configured.
-func (sbs *SinkBindingStatus) MarkSink(uri *apis.URL) {
-	sbs.SinkURI = uri
-	if uri != nil {
+func (sbs *SinkBindingStatus) MarkSink(addr *duckv1.Addressable) {
+	if addr != nil {
+		sbs.SinkURI = addr.URL
+		sbs.SinkCACerts = addr.CACerts
 		sbCondSet.Manage(sbs).MarkTrue(SinkBindingConditionSinkProvided)
 	} else {
 		sbCondSet.Manage(sbs).MarkFalse(SinkBindingConditionSinkProvided, "SinkEmpty", "Sink has resolved to empty.%s", "")
@@ -104,12 +105,12 @@ func (sb *SinkBinding) Do(ctx context.Context, ps *duckv1.WithPod) {
 		logging.FromContext(ctx).Errorf("No Resolver associated with context for sink: %+v", sb)
 		return
 	}
-	uri, err := resolver.URIFromDestinationV1(ctx, sb.Spec.Sink, sb)
+	addr, err := resolver.AddressableFromDestinationV1(ctx, sb.Spec.Sink, sb)
 	if err != nil {
 		logging.FromContext(ctx).Errorw("URI could not be extracted from destination: ", zap.Error(err))
 		return
 	}
-	sb.Status.MarkSink(uri)
+	sb.Status.MarkSink(addr)
 
 	var ceOverrides string
 	if sb.Spec.CloudEventOverrides != nil {
@@ -124,8 +125,14 @@ func (sb *SinkBinding) Do(ctx context.Context, ps *duckv1.WithPod) {
 	for i := range spec.InitContainers {
 		spec.InitContainers[i].Env = append(spec.InitContainers[i].Env, corev1.EnvVar{
 			Name:  "K_SINK",
-			Value: uri.String(),
+			Value: addr.URL.String(),
 		})
+		if addr.CACerts != nil {
+			spec.InitContainers[i].Env = append(spec.InitContainers[i].Env, corev1.EnvVar{
+				Name:  "K_CA_CERTS",
+				Value: *addr.CACerts,
+			})
+		}
 		spec.InitContainers[i].Env = append(spec.InitContainers[i].Env, corev1.EnvVar{
 			Name:  "K_CE_OVERRIDES",
 			Value: ceOverrides,
@@ -134,8 +141,14 @@ func (sb *SinkBinding) Do(ctx context.Context, ps *duckv1.WithPod) {
 	for i := range spec.Containers {
 		spec.Containers[i].Env = append(spec.Containers[i].Env, corev1.EnvVar{
 			Name:  "K_SINK",
-			Value: uri.String(),
+			Value: addr.URL.String(),
 		})
+		if addr.CACerts != nil {
+			spec.Containers[i].Env = append(spec.Containers[i].Env, corev1.EnvVar{
+				Name:  "K_CA_CERTS",
+				Value: *addr.CACerts,
+			})
+		}
 		spec.Containers[i].Env = append(spec.Containers[i].Env, corev1.EnvVar{
 			Name:  "K_CE_OVERRIDES",
 			Value: ceOverrides,
@@ -152,7 +165,7 @@ func (sb *SinkBinding) Undo(ctx context.Context, ps *duckv1.WithPod) {
 		env := make([]corev1.EnvVar, 0, len(spec.InitContainers[i].Env))
 		for j, ev := range c.Env {
 			switch ev.Name {
-			case "K_SINK", "K_CE_OVERRIDES":
+			case "K_SINK", "K_CE_OVERRIDES", "K_CA_CERTS":
 				continue
 			default:
 				env = append(env, spec.InitContainers[i].Env[j])
@@ -167,7 +180,7 @@ func (sb *SinkBinding) Undo(ctx context.Context, ps *duckv1.WithPod) {
 		env := make([]corev1.EnvVar, 0, len(spec.Containers[i].Env))
 		for j, ev := range c.Env {
 			switch ev.Name {
-			case "K_SINK", "K_CE_OVERRIDES":
+			case "K_SINK", "K_CE_OVERRIDES", "K_CA_CERTS":
 				continue
 			default:
 				env = append(env, spec.Containers[i].Env[j])

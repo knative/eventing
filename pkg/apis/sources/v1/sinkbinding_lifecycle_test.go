@@ -26,12 +26,38 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/utils/pointer"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
 	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
 	"knative.dev/pkg/resolver"
 	"knative.dev/pkg/tracker"
+)
+
+var (
+	caCert = `
+	-----BEGIN CERTIFICATE-----
+	MIIDPzCCAiegAwIBAgIUYuysnNGPwBjbiDRc+/9s9Jl3N8YwDQYJKoZIhvcNAQEL
+	BQAwLzELMAkGA1UEBhMCVVMxIDAeBgNVBAMMF0tuYXRpdmUtRXhhbXBsZS1Sb290
+	LUNBMB4XDTIzMDQwNTEzMTQxMloXDTI2MDEyMzEzMTQxMlowLzELMAkGA1UEBhMC
+	VVMxIDAeBgNVBAMMF0tuYXRpdmUtRXhhbXBsZS1Sb290LUNBMIIBIjANBgkqhkiG
+	9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyEwyvWKc/SJzblAc/pNIE7UJHIpbEUDtwOom
+	YvytwcMhI73zlSVhAcOagwnn3AvBg3McGPyLGghr9EuXBE1Vx584Pw1cmKOwbyiC
+	SQtaRwbztzM555T4Rtrk4tdKm+WHD/HiYAB/s+OnPJ6F6yBedT6nW08HlTP5lJX1
+	U21+OAiOSU4zx+YYlkRbHq8aYggB1YM+hdRSStl9Mc/nw6TWlVsd2LjppXgoxSKl
+	YTB4ZwnaKmrIRa9hFf1DVY/nTlmUP2iGr9131CLs3/5QyoFRWI6ayfnRSkmVwKLS
+	8AW/b4jh+qJVIaeLCw5QF4RuqsE5VaUj6wlEqWM4eI+5Uaj+5QIDAQABo1MwUTAd
+	BgNVHQ4EFgQUklwJ+26zi+P3w3TNBBq62yMS7zYwHwYDVR0jBBgwFoAUklwJ+26z
+	i+P3w3TNBBq62yMS7zYwDwYDVR0TAQH/BAUwAwEB/zANBgkqhkiG9w0BAQsFAAOC
+	AQEAWwlatEXUTiB4O3M/fLSZ4JlAA1bq2U+dafiUiq5Ym0F1/UGu7YD74LGm4n03
+	X9QU4jVwAkxL8pFV68NEBFJXOwFRyVQ1THAfhzij5teMAd4aqaffEPF0YfE8+rdg
+	MSQx9n/OOeeyqWlaAqI3D9SEoSFPk5Xbfdzu6zGggizJwIYus77LOYxS7hvGxCci
+	dTnEHvGoP14/13F/2vZLSaH9qrAv3cTenVYRN1QSSVI0V2XAhz+HAOjO2muaaYEG
+	2eKiYvHvG0p5aCRIZYi4z3q6QAr9z+nyRyO1Tw/CnbCOeULQoOZWLy8xE9zBOE1t
+	JQArXobwA4IZrx13xxsMafyt0A==
+	-----END CERTIFICATE-----
+	`
 )
 
 func init() {
@@ -97,8 +123,12 @@ func TestSinkBindingSetObsGen(t *testing.T) {
 }
 
 func TestSinkBindingStatusIsReady(t *testing.T) {
-	sink := apis.HTTP("table.ns.svc.cluster.local/flip")
-	sink.Scheme = "uri"
+	sink := &duckv1.Addressable{
+		Name:    pointer.String("http"),
+		URL:     apis.HTTP("table.ns.svc.cluster.local/flip"),
+		CACerts: &caCert,
+	}
+	sink.URL.Scheme = "uri"
 	tests := []struct {
 		name string
 		s    *SinkBindingStatus
@@ -203,6 +233,9 @@ func TestSinkBindingUndo(t *testing.T) {
 								Name:  "K_SINK",
 								Value: "http://localhost:8080",
 							}, {
+								Name:  "K_CA_CERTS",
+								Value: caCert,
+							}, {
 								Name:  "BAZ",
 								Value: "INGA",
 							}, {
@@ -220,6 +253,9 @@ func TestSinkBindingUndo(t *testing.T) {
 								Name:  "K_SINK",
 								Value: "http://localhost:8080",
 							}, {
+								Name:  "K_CA_CERTS",
+								Value: caCert,
+							}, {
 								Name:  "BAZ",
 								Value: "INGA",
 							}, {
@@ -232,6 +268,9 @@ func TestSinkBindingUndo(t *testing.T) {
 							Env: []corev1.EnvVar{{
 								Name:  "K_SINK",
 								Value: "http://localhost:8080",
+							}, {
+								Name:  "K_CA_CERTS",
+								Value: caCert,
 							}, {
 								Name:  "BAZ",
 								Value: "INGA",
@@ -303,6 +342,7 @@ func TestSinkBindingDo(t *testing.T) {
 			Host:   "thing.ns.svc.cluster.local",
 			Path:   "/a/path",
 		},
+		CACerts: &caCert,
 	}
 
 	overrides := duckv1.CloudEventOverrides{Extensions: map[string]string{"foo": "bar"}}
@@ -324,6 +364,9 @@ func TestSinkBindingDo(t *testing.T) {
 								Name:  "K_SINK",
 								Value: destination.URI.String(),
 							}, {
+								Name:  "K_CA_CERTS",
+								Value: caCert,
+							}, {
 								Name:  "K_CE_OVERRIDES",
 								Value: `{"extensions":{"foo":"bar"}}`,
 							}},
@@ -342,6 +385,9 @@ func TestSinkBindingDo(t *testing.T) {
 							Env: []corev1.EnvVar{{
 								Name:  "K_SINK",
 								Value: destination.URI.String(),
+							}, {
+								Name:  "K_CA_CERTS",
+								Value: caCert,
 							}, {
 								Name:  "K_CE_OVERRIDES",
 								Value: `{"extensions":{"foo":"bar"}}`,
@@ -364,6 +410,9 @@ func TestSinkBindingDo(t *testing.T) {
 								Name:  "K_SINK",
 								Value: "the wrong value",
 							}, {
+								Name:  "K_CA_CERTS",
+								Value: "wrong value",
+							}, {
 								Name:  "K_CE_OVERRIDES",
 								Value: `{"extensions":{"wrong":"value"}}`,
 							}},
@@ -382,6 +431,9 @@ func TestSinkBindingDo(t *testing.T) {
 							Env: []corev1.EnvVar{{
 								Name:  "K_SINK",
 								Value: destination.URI.String(),
+							}, {
+								Name:  "K_CA_CERTS",
+								Value: caCert,
 							}, {
 								Name:  "K_CE_OVERRIDES",
 								Value: `{"extensions":{"foo":"bar"}}`,
@@ -434,6 +486,9 @@ func TestSinkBindingDo(t *testing.T) {
 								Name:  "K_SINK",
 								Value: destination.URI.String(),
 							}, {
+								Name:  "K_CA_CERTS",
+								Value: caCert,
+							}, {
 								Name:  "K_CE_OVERRIDES",
 								Value: `{"extensions":{"foo":"bar"}}`,
 							}},
@@ -451,6 +506,9 @@ func TestSinkBindingDo(t *testing.T) {
 								Name:  "K_SINK",
 								Value: destination.URI.String(),
 							}, {
+								Name:  "K_CA_CERTS",
+								Value: caCert,
+							}, {
 								Name:  "K_CE_OVERRIDES",
 								Value: `{"extensions":{"foo":"bar"}}`,
 							}},
@@ -463,6 +521,9 @@ func TestSinkBindingDo(t *testing.T) {
 							}, {
 								Name:  "K_SINK",
 								Value: destination.URI.String(),
+							}, {
+								Name:  "K_CA_CERTS",
+								Value: caCert,
 							}, {
 								Name:  "K_CE_OVERRIDES",
 								Value: `{"extensions":{"foo":"bar"}}`,
@@ -520,6 +581,9 @@ func TestSinkBindingDoNoURI(t *testing.T) {
 						Image: "busybox",
 						Env: []corev1.EnvVar{{
 							Name:  "K_SINK",
+							Value: "this should be removed",
+						}, {
+							Name:  "K_CA_CERTS",
 							Value: "this should be removed",
 						}, {
 							Name:  "K_CE_OVERRIDES",
