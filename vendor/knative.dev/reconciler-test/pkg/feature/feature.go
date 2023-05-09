@@ -266,6 +266,42 @@ var (
 	_ StepFn = (&Feature{}).DeleteResources
 )
 
+// PrerequisiteResult is the result returned by ShouldRun.
+type PrerequisiteResult struct {
+	// ShouldRun is the flag signaling whether other timings will run or not.
+	// True means other timings will run, false will skip other timings.
+	ShouldRun bool
+	// Reason will report why a given prerequisite is not satisfied.
+	// This is used to report a clear skip reason to the user.
+	Reason string
+}
+
+// ShouldRun is the function signature for Prerequisite steps.
+type ShouldRun func(ctx context.Context, t T) (PrerequisiteResult, error)
+
+func (sr ShouldRun) AsStepFn() StepFn {
+	return func(ctx context.Context, t T) {
+		shouldRun, err := sr(ctx, t)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !shouldRun.ShouldRun {
+			t.Errorf("Prerequisite: %s", shouldRun.Reason)
+		}
+	}
+}
+
+// Prerequisite adds a step function to the feature set at the Prerequisite timing phase.
+func (f *Feature) Prerequisite(name string, fn ShouldRun) {
+	f.AddStep(Step{
+		Name: name,
+		S:    Any,
+		L:    All,
+		T:    Prerequisite,
+		Fn:   fn.AsStepFn(),
+	})
+}
+
 // Setup adds a step function to the feature set at the Setup timing phase.
 func (f *Feature) Setup(name string, fn StepFn) {
 	f.AddStep(Step{

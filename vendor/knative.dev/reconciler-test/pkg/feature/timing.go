@@ -23,7 +23,10 @@ import (
 type Timing uint8
 
 const (
-	Setup Timing = iota
+	// Prerequisite timing allows having steps that are asserting whether the feature should run
+	// or not, a failed Prerequisite step will cause the other steps to be skipped.
+	Prerequisite Timing = iota
+	Setup
 	Requirement
 	Assert
 	Teardown
@@ -38,12 +41,13 @@ func (t Timing) MarshalJSON() ([]byte, error) {
 }
 
 func Timings() []Timing {
-	return []Timing{Setup, Requirement, Assert, Teardown}
+	return []Timing{Prerequisite, Setup, Requirement, Assert, Teardown}
 }
 
 var timingMapping = map[Timing]string{
-	Setup:       "Setup",
-	Requirement: "Requirement",
-	Assert:      "Assert",
-	Teardown:    "Teardown",
+	Prerequisite: "Prerequisite",
+	Setup:        "Setup",
+	Requirement:  "Requirement",
+	Assert:       "Assert",
+	Teardown:     "Teardown",
 }
