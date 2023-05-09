@@ -51,6 +51,23 @@ func SendsEventsWithSinkRef() *feature.Feature {
 	return f
 }
 
+func SendsEventsWithBrokerSink() *feature.Feature {
+	source := feature.MakeRandomK8sName("pingsource")
+	sink := feature.MakeRandomK8sName("sink")
+	f := feature.NewFeature()
+
+	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
+
+	f.Requirement("install pingsource", pingsource.Install(source, pingsource.WithSink(service.AsKReference(sink), "")))
+	f.Requirement("pingsource goes ready", pingsource.IsReady(source))
+
+	f.Stable("pingsource with broker sink").
+		Must("deliver events",
+			assert.OnStore(sink).MatchEvent(test.HasType("dev.knative.sources.ping")).AtLeast(1))
+
+	return f
+}
+
 func SendsEventsWithSinkURI() *feature.Feature {
 	source := feature.MakeRandomK8sName("pingsource")
 	sink := feature.MakeRandomK8sName("sink")
