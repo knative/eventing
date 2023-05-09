@@ -30,6 +30,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/logging"
+
 	testlog "knative.dev/reconciler-test/pkg/logging"
 
 	"knative.dev/reconciler-test/pkg/feature"
