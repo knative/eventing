@@ -22,11 +22,11 @@ import (
 
 	"knative.dev/eventing/pkg/reconciler/testing"
 
-	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 )
 
@@ -62,9 +62,9 @@ func WithPingSourceSinkNotFound(s *v1.PingSource) {
 	s.Status.MarkNoSink("NotFound", "")
 }
 
-func WithPingSourceSink(uri *apis.URL) PingSourceOption {
+func WithPingSourceSink(addr *duckv1.Addressable) PingSourceOption {
 	return func(s *v1.PingSource) {
-		s.Status.MarkSink(uri)
+		s.Status.MarkSink(addr)
 	}
 }
 

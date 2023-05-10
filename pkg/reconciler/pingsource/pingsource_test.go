@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
+	"k8s.io/utils/pointer"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -48,6 +49,7 @@ import (
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1/pingsource"
+	"knative.dev/eventing/pkg/eventingtls/eventingtlstesting"
 	"knative.dev/eventing/pkg/reconciler/pingsource/resources"
 	reconcilersource "knative.dev/eventing/pkg/reconciler/source"
 
@@ -76,7 +78,6 @@ var (
 		},
 	}
 	sinkDNS         = "sink.mynamespace.svc." + network.GetClusterDomainName()
-	sinkURI         = apis.HTTP(sinkDNS)
 	sinkURL         = apis.HTTP(sinkDNS)
 	sinkAddressable = &duckv1.Addressable{
 		Name: &sinkURL.Scheme,
@@ -224,7 +225,7 @@ func TestAllCases(t *testing.T) {
 					rtv1.WithPingSourceObjectMetaGeneration(generation),
 					// Status Update:
 					rtv1.WithInitPingSourceConditions,
-					rtv1.WithPingSourceSink(sinkURI),
+					rtv1.WithPingSourceSink(sinkAddressable),
 					rtv1.WithPingSourceStatusObservedGeneration(generation),
 				),
 			}},
@@ -265,7 +266,57 @@ func TestAllCases(t *testing.T) {
 					// Status Update:
 					rtv1.WithInitPingSourceConditions,
 					rtv1.WithPingSourceDeployed,
-					rtv1.WithPingSourceSink(sinkURI),
+					rtv1.WithPingSourceSink(sinkAddressable),
+					rtv1.WithPingSourceCloudEventAttributes,
+					rtv1.WithPingSourceStatusObservedGeneration(generation),
+				),
+			}},
+		}, {
+			Name: "Propagate CA certs",
+			Objects: []runtime.Object{
+				rtv1.NewPingSource(sourceName, testNS,
+					rtv1.WithPingSourceSpec(sourcesv1.PingSourceSpec{
+						Schedule:    testSchedule,
+						ContentType: testContentType,
+						Data:        testData,
+						SourceSpec: duckv1.SourceSpec{
+							Sink: sinkDest,
+						},
+					}),
+					rtv1.WithPingSource(sourceUID),
+					rtv1.WithPingSourceObjectMetaGeneration(generation),
+				),
+				rtv1.NewChannel(sinkName, testNS,
+					rtv1.WithInitChannelConditions,
+					rtv1.WithChannelAddress(&duckv1.Addressable{
+						Name:    sinkAddressable.Name,
+						URL:     sinkAddressable.URL,
+						CACerts: pointer.String(string(eventingtlstesting.CA)),
+					}),
+				),
+				makeAvailableMTAdapter(WithContainerEnv("KUBERNETES_MIN_VERSION", "v1.0.0")),
+			},
+			Key: testNS + "/" + sourceName,
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: rtv1.NewPingSource(sourceName, testNS,
+					rtv1.WithPingSourceSpec(sourcesv1.PingSourceSpec{
+						Schedule:    testSchedule,
+						ContentType: testContentType,
+						Data:        testData,
+						SourceSpec: duckv1.SourceSpec{
+							Sink: sinkDest,
+						},
+					}),
+					rtv1.WithPingSource(sourceUID),
+					rtv1.WithPingSourceObjectMetaGeneration(generation),
+					// Status Update:
+					rtv1.WithInitPingSourceConditions,
+					rtv1.WithPingSourceDeployed,
+					rtv1.WithPingSourceSink(&duckv1.Addressable{
+						Name:    sinkAddressable.Name,
+						URL:     sinkAddressable.URL,
+						CACerts: pointer.String(string(eventingtlstesting.CA)),
+					}),
 					rtv1.WithPingSourceCloudEventAttributes,
 					rtv1.WithPingSourceStatusObservedGeneration(generation),
 				),
@@ -310,7 +361,7 @@ func TestAllCases(t *testing.T) {
 					// Status Update:
 					rtv1.WithInitPingSourceConditions,
 					rtv1.WithPingSourceDeployed,
-					rtv1.WithPingSourceSink(sinkURI),
+					rtv1.WithPingSourceSink(sinkAddressable),
 					rtv1.WithPingSourceCloudEventAttributes,
 					rtv1.WithPingSourceStatusObservedGeneration(generation),
 				),
@@ -355,7 +406,7 @@ func TestAllCases(t *testing.T) {
 					// Status Update:
 					rtv1.WithInitPingSourceConditions,
 					rtv1.WithPingSourceDeployed,
-					rtv1.WithPingSourceSink(sinkURI),
+					rtv1.WithPingSourceSink(sinkAddressable),
 					rtv1.WithPingSourceCloudEventAttributes,
 					rtv1.WithPingSourceStatusObservedGeneration(generation),
 				),
@@ -397,7 +448,7 @@ func TestAllCases(t *testing.T) {
 					// Status Update:
 					rtv1.WithInitPingSourceConditions,
 					rtv1.WithPingSourceDeployed,
-					rtv1.WithPingSourceSink(sinkURI),
+					rtv1.WithPingSourceSink(sinkAddressable),
 					rtv1.WithPingSourceCloudEventAttributes,
 					rtv1.WithPingSourceStatusObservedGeneration(generation),
 				),

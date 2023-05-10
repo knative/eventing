@@ -20,13 +20,18 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	nethttp "net/http"
 	"reflect"
+	"sync"
 	"testing"
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
-
+	"github.com/cloudevents/sdk-go/v2/binding"
+	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
+	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -38,6 +43,7 @@ import (
 	"knative.dev/eventing/pkg/adapter/v2"
 	adaptertesting "knative.dev/eventing/pkg/adapter/v2/test"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
+	"knative.dev/eventing/pkg/eventingtls/eventingtlstesting"
 )
 
 const (
@@ -222,6 +228,109 @@ func TestAddRunRemoveSchedules(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestSendEventsTLS(t *testing.T) {
+
+	ctx, _ := rectesting.SetupFakeContext(t)
+	requestsChan := make(chan *nethttp.Request, 10)
+	requests := make([]*nethttp.Request, 0, 8)
+	ca := eventingtlstesting.StartServer(ctx, t, 8334, requestsChan)
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for r := range requestsChan {
+			requests = append(requests, r)
+		}
+	}()
+
+	testCases := map[string]struct {
+		src             *sourcesv1.PingSource
+		wantContentType string
+		wantData        []byte
+	}{
+		"Valid CA certs": {
+			src: &sourcesv1.PingSource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-name1",
+					Namespace: "test-ns",
+				},
+				Spec: sourcesv1.PingSourceSpec{
+					SourceSpec: duckv1.SourceSpec{
+						CloudEventOverrides: &duckv1.CloudEventOverrides{},
+					},
+					Schedule:    "* * * * *",
+					ContentType: cloudevents.TextPlain,
+					Data:        sampleData,
+				},
+				Status: sourcesv1.PingSourceStatus{
+					SourceStatus: duckv1.SourceStatus{
+						SinkURI:     &apis.URL{Scheme: "https", Host: "localhost:8334"},
+						SinkCACerts: pointer.String(ca),
+					},
+				},
+			},
+			wantData:        []byte(sampleData),
+			wantContentType: cloudevents.TextPlain,
+		},
+		"No CA certs": {
+			src: &sourcesv1.PingSource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-name2",
+					Namespace: "test-ns",
+				},
+				Spec: sourcesv1.PingSourceSpec{
+					SourceSpec: duckv1.SourceSpec{
+						CloudEventOverrides: &duckv1.CloudEventOverrides{},
+					},
+					Schedule:    "* * * * *",
+					ContentType: cloudevents.TextPlain,
+					Data:        sampleData,
+				},
+				Status: sourcesv1.PingSourceStatus{
+					SourceStatus: duckv1.SourceStatus{
+						SinkURI: &apis.URL{Scheme: "https", Host: "localhost:8334"},
+					},
+				},
+			},
+			wantData:        []byte(sampleData),
+			wantContentType: cloudevents.TextPlain,
+		},
+	}
+	for n, tc := range testCases {
+		t.Run(n, func(t *testing.T) {
+			logger := logging.FromContext(ctx)
+
+			cc := adapter.ClientConfig{
+				CeOverrides: tc.src.Spec.CloudEventOverrides,
+			}
+			runner := NewCronJobsRunner(cc, kubeclient.Get(ctx), logger)
+			entryId := runner.AddSchedule(tc.src)
+
+			entry := runner.cron.Entry(entryId)
+			if entry.ID != entryId {
+				t.Error("Entry has not been added")
+			}
+
+			entry.Job.Run()
+		})
+	}
+
+	close(requestsChan)
+	wg.Wait()
+
+	require.Len(t, requests, 1)
+
+	message := cehttp.NewMessageFromHttpRequest(requests[0])
+	defer message.Finish(nil)
+
+	event, err := binding.ToEvent(ctx, message)
+	require.Nil(t, err)
+
+	require.Equal(t, sourcesv1.PingSourceEventType, event.Type())
+	require.Equal(t, sourcesv1.PingSourceSource("test-ns", "test-name1"), event.Source())
 }
 
 func TestStartStopCron(t *testing.T) {

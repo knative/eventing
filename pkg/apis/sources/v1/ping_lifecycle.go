@@ -23,6 +23,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 const (
@@ -86,9 +87,10 @@ func (s *PingSourceStatus) InitializeConditions() {
 }
 
 // MarkSink sets the condition that the source has a sink configured.
-func (s *PingSourceStatus) MarkSink(uri *apis.URL) {
-	s.SinkURI = uri
+func (s *PingSourceStatus) MarkSink(uri *duckv1.Addressable) {
 	if uri != nil {
+		s.SinkURI = uri.URL
+		s.SinkCACerts = uri.CACerts
 		PingSourceCondSet.Manage(s).MarkTrue(PingSourceConditionSinkProvided)
 	} else {
 		PingSourceCondSet.Manage(s).MarkFalse(PingSourceConditionSinkProvided, "SinkEmpty", "Sink has resolved to empty.")
