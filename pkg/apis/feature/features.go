@@ -71,8 +71,8 @@ func (e Flags) IsStrictTransportEncryption() bool {
 	return e != nil && e[TransportEncryption] == Strict
 }
 
-// IsDisbledTransportEncryption returns true if the TransportEncryption feature is in Disabled mode.
-func (e Flags) IsDisbledTransportEncryption() bool {
+// IsDisabledTransportEncryption returns true if the TransportEncryption feature is in Disabled mode.
+func (e Flags) IsDisabledTransportEncryption() bool {
 	return e != nil && e[TransportEncryption] == Disabled
 }
 
