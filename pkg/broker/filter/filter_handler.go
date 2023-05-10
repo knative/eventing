@@ -82,8 +82,6 @@ var HeaderProxyAllowList = map[string]struct{}{
 
 // Handler parses Cloud Events, determines if they pass a filter, and sends them to a subscriber.
 type Handler struct {
-	// receiver receives incoming HTTP requests
-	receiver *kncloudevents.HTTPMessageReceiver
 	// sender sends requests to downstream services
 	sender *kncloudevents.HTTPMessageSender
 	// reporter reports stats of status code and dispatch time
@@ -96,7 +94,7 @@ type Handler struct {
 
 // NewHandler creates a new Handler and its associated MessageReceiver. The caller is responsible for
 // Start()ing the returned Handler.
-func NewHandler(logger *zap.Logger, triggerLister eventinglisters.TriggerLister, reporter StatsReporter, port int, wc func(ctx context.Context) context.Context) (*Handler, error) {
+func NewHandler(logger *zap.Logger, triggerLister eventinglisters.TriggerLister, reporter StatsReporter, wc func(ctx context.Context) context.Context) (*Handler, error) {
 	kncloudevents.ConfigureConnectionArgs(&kncloudevents.ConnectionArgs{
 		MaxIdleConns:        defaultMaxIdleConnections,
 		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
@@ -108,22 +106,12 @@ func NewHandler(logger *zap.Logger, triggerLister eventinglisters.TriggerLister,
 	}
 
 	return &Handler{
-		receiver:      kncloudevents.NewHTTPMessageReceiver(port),
 		sender:        sender,
 		reporter:      reporter,
 		triggerLister: triggerLister,
 		logger:        logger,
 		withContext:   wc,
 	}, nil
-}
-
-// Start begins to receive messages for the handler.
-//
-// HTTP POST requests to the root path (/) are accepted.
-//
-// This method will block until ctx is done.
-func (h *Handler) Start(ctx context.Context) error {
-	return h.receiver.StartListen(ctx, h)
 }
 
 // 1. validate request

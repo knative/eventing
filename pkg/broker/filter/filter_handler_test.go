@@ -409,7 +409,6 @@ func TestReceiver(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-
 			fh := fakeHandler{
 				failRequest:            tc.requestFails,
 				failStatus:             tc.failureStatus,
@@ -441,7 +440,6 @@ func TestReceiver(t *testing.T) {
 				zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())),
 				listers.GetTriggerLister(),
 				reporter,
-				8080,
 				func(ctx context.Context) context.Context {
 					return ctx
 				},
@@ -587,7 +585,6 @@ func TestReceiver_WithSubscriptionsAPI(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-
 			fh := fakeHandler{
 				t: t,
 			}
@@ -613,7 +610,7 @@ func TestReceiver_WithSubscriptionsAPI(t *testing.T) {
 				zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())),
 				listers.GetTriggerLister(),
 				reporter,
-				8080, func(ctx context.Context) context.Context {
+				func(ctx context.Context) context.Context {
 					return feature.ToContext(context.TODO(), feature.Flags{
 						feature.NewTriggerFilters: feature.Enabled,
 					})
