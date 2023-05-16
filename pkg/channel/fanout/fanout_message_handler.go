@@ -89,7 +89,7 @@ type FanoutMessageHandler struct {
 
 // NewMessageHandler creates a new fanout.MessageHandler.
 
-func NewFanoutMessageHandler(logger *zap.Logger, messageDispatcher channel.MessageDispatcher, config Config, reporter channel.StatsReporter) (*FanoutMessageHandler, error) {
+func NewFanoutMessageHandler(logger *zap.Logger, messageDispatcher channel.MessageDispatcher, config Config, reporter channel.StatsReporter, receiverOpts ...channel.MessageReceiverOptions) (*FanoutMessageHandler, error) {
 	handler := &FanoutMessageHandler{
 		logger:       logger,
 		dispatcher:   messageDispatcher,
@@ -101,7 +101,7 @@ func NewFanoutMessageHandler(logger *zap.Logger, messageDispatcher channel.Messa
 	copy(handler.subscriptions, config.Subscriptions)
 	// The receiver function needs to point back at the handler itself, so set it up after
 	// initialization.
-	receiver, err := channel.NewMessageReceiver(createMessageReceiverFunction(handler), logger, reporter)
+	receiver, err := channel.NewMessageReceiver(createMessageReceiverFunction(handler), logger, reporter, receiverOpts...)
 	if err != nil {
 		return nil, err
 	}

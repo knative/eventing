@@ -31,6 +31,10 @@ spec:
       port: 80
       protocol: TCP
       targetPort: 8080
+    - name: https-dispatcher
+      port: 443
+      protocol: TCP
+      targetPort: 8443
     - name: http-metrics
       port: 9090
       targetPort: 9090

@@ -29,6 +29,7 @@ import (
 	"knative.dev/pkg/kmeta"
 
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
+	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/kncloudevents"
 
 	"knative.dev/pkg/logging"
@@ -43,6 +44,7 @@ import (
 	tracingconfig "knative.dev/pkg/tracing/config"
 
 	"knative.dev/eventing/pkg/apis/eventing"
+	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/eventing/pkg/channel"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	inmemorychannelinformer "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/inmemorychannel"
@@ -53,7 +55,8 @@ import (
 const (
 	readTimeout   = 15 * time.Minute
 	writeTimeout  = 15 * time.Minute
-	port          = 8080
+	httpPort      = 8080
+	httpsPort     = 8443
 	finalizerName = "imc-dispatcher"
 )
 
@@ -108,19 +111,6 @@ func NewController(
 		chMsgHandler: sh,
 	}
 
-	args := &inmemorychannel.InMemoryMessageDispatcherArgs{
-		Port:         port,
-		ReadTimeout:  readTimeout,
-		WriteTimeout: writeTimeout,
-		Handler:      sh,
-		Logger:       logger.Desugar(),
-
-		HTTPMessageReceiverOptions: []kncloudevents.HTTPMessageReceiverOption{
-			kncloudevents.WithChecker(readinessCheckerHTTPHandler(readinessChecker)),
-		},
-	}
-	inMemoryDispatcher := inmemorychannel.NewMessageDispatcher(args)
-
 	inmemorychannelInformer := inmemorychannelinformer.Get(ctx)
 
 	r := &Reconciler{
@@ -142,9 +132,47 @@ func NewController(
 				DeleteFunc: r.deleteFunc,
 			}})
 
+	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {
+		impl.GlobalResync(inmemorychannelInformer.Informer())
+	})
+	featureStore.WatchConfigs(cmw)
+
+	httpArgs := &inmemorychannel.InMemoryMessageDispatcherArgs{
+		Port:         httpPort,
+		ReadTimeout:  readTimeout,
+		WriteTimeout: writeTimeout,
+		Handler:      sh,
+		Logger:       logger.Desugar(),
+
+		HTTPMessageReceiverOptions: []kncloudevents.HTTPMessageReceiverOption{
+			kncloudevents.WithChecker(readinessCheckerHTTPHandler(readinessChecker)),
+		},
+	}
+	httpDispatcher := inmemorychannel.NewMessageDispatcher(httpArgs)
+	httpReceiver := httpDispatcher.GetReceiver()
+
+	httpsArgs := &inmemorychannel.InMemoryMessageDispatcherArgs{
+		Port:         httpsPort,
+		ReadTimeout:  readTimeout,
+		WriteTimeout: writeTimeout,
+		Handler:      sh,
+		Logger:       logger.Desugar(),
+
+		// TODO: add tls config
+		HTTPMessageReceiverOptions: []kncloudevents.HTTPMessageReceiverOption{},
+	}
+	httpsDispatcher := inmemorychannel.NewMessageDispatcher(httpsArgs)
+	httpsReceiver := httpsDispatcher.GetReceiver()
+
+	s, err := eventingtls.NewServerManager(ctx, &httpReceiver, &httpsReceiver, httpDispatcher.GetHandler(ctx), cmw)
+	if err != nil {
+		logger.Panicf("unable to initialize server manager: %s", err)
+	}
+
 	// Start the dispatcher.
 	go func() {
-		err := inMemoryDispatcher.Start(ctx)
+		err := s.StartServers(ctx)
+
 		if err != nil {
 			logging.FromContext(ctx).Errorw("Failed stopping inMemoryDispatcher.", zap.Error(err))
 		}

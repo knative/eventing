@@ -120,6 +120,17 @@ func (h *MessageHandler) CountChannelHandlers() int {
 // request's channel key.
 func (h *MessageHandler) ServeHTTP(response http.ResponseWriter, request *http.Request) {
 	channelKey := request.Host
+
+	if request.URL.Path != "/" {
+		channelRef, err := channel.ParseChannelFromPath(request.URL.Path)
+		if err != nil {
+			h.logger.Error("unable to retrieve channel from path")
+			response.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		channelKey = fmt.Sprintf("%s/%s", channelRef.Namespace, channelRef.Name)
+	}
+
 	fh := h.GetChannelHandler(channelKey)
 	if fh == nil {
 		h.logger.Info("Unable to find a handler for request", zap.String("channelKey", channelKey))
