@@ -25,7 +25,7 @@ import (
 
 	// Fake injection informers
 	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/broker/fake"
-	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta1/eventtype/fake"
+	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta2/eventtype/fake"
 )
 
 func TestNew(t *testing.T) {

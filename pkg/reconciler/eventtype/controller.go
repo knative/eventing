@@ -24,8 +24,8 @@ import (
 
 	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	brokerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/broker"
-	eventtypeinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta1/eventtype"
-	eventtypereconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1beta1/eventtype"
+	eventtypeinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta2/eventtype"
+	eventtypereconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1beta2/eventtype"
 )
 
 // NewController initializes the controller and is called by the generated code
