@@ -23,7 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
-	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
+	eventingv1beta2 "knative.dev/eventing/pkg/apis/eventing/v1beta2"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"
@@ -32,7 +32,7 @@ import (
 
 type EventType struct {
 	Name       string
-	EventTypes func(etl eventingv1beta1.EventTypeList) (bool, error)
+	EventTypes func(etl eventingv1beta2.EventTypeList) (bool, error)
 }
 
 func WaitForEventType(eventtype EventType, timing ...time.Duration) feature.StepFn {
@@ -40,10 +40,10 @@ func WaitForEventType(eventtype EventType, timing ...time.Duration) feature.Step
 		env := environment.FromContext(ctx)
 		interval, timeout := k8s.PollTimings(ctx, timing)
 		var lastErr error
-		var lastEtl *eventingv1beta1.EventTypeList
+		var lastEtl *eventingv1beta2.EventTypeList
 		err := wait.PollImmediate(interval, timeout, func() (done bool, err error) {
 			etl, err := eventingclient.Get(ctx).
-				EventingV1beta1().
+				EventingV1beta2().
 				EventTypes(env.Namespace()).
 				List(ctx, metav1.ListOptions{})
 			if err != nil {
@@ -63,7 +63,7 @@ func WaitForEventType(eventtype EventType, timing ...time.Duration) feature.Step
 func AssertPresent(expectedCeTypes sets.String) EventType {
 	return EventType{
 		Name: "test eventtypes match or not",
-		EventTypes: func(etl eventingv1beta1.EventTypeList) (bool, error) {
+		EventTypes: func(etl eventingv1beta2.EventTypeList) (bool, error) {
 			eventtypesCount := 0
 			for _, et := range etl.Items {
 				if expectedCeTypes.Has(et.Spec.Type) {
