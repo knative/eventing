@@ -191,6 +191,11 @@ type TriggerStatus struct {
 	// +optional
 	SubscriberURI *apis.URL `json:"subscriberUri,omitempty"`
 
+	// SubscriberCACerts is the Certification Authority (CA) certificates in PEM format
+	// according to https://www.rfc-editor.org/rfc/rfc7468 of the receiver for this Trigger.
+	// +optional
+	SubscriberCACerts *string `json:"subscriberCACerts,omitempty"`
+
 	// DeliveryStatus contains a resolved URL to the dead letter sink address, and any other
 	// resolved delivery options.
 	eventingduckv1.DeliveryStatus `json:",inline"`

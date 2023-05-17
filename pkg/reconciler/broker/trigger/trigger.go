@@ -120,10 +120,12 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, t *eventingv1.Trigger) p
 		logging.FromContext(ctx).Errorw("Unable to get the Subscriber's URI", zap.Error(err))
 		t.Status.MarkSubscriberResolvedFailed("Unable to get the Subscriber's URI", "%v", err)
 		t.Status.SubscriberURI = nil
+		t.Status.SubscriberCACerts = nil
 		return err
 	}
 	subscriberURI := subscriberAddr.URL
 	t.Status.SubscriberURI = subscriberURI
+	t.Status.SubscriberCACerts = subscriberAddr.CACerts
 	t.Status.MarkSubscriberResolvedSucceeded()
 
 	if err := r.resolveDeadLetterSink(ctx, b, t); err != nil {

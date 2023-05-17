@@ -189,6 +189,12 @@ func WithTriggerStatusSubscriberURI(uri string) TriggerOption {
 	}
 }
 
+func WithTriggerStatusSubscriberCACerts(caCerts *string) TriggerOption {
+	return func(t *v1.Trigger) {
+		t.Status.SubscriberCACerts = caCerts
+	}
+}
+
 func WithTriggerStatusDeadLetterSinkURI(uri string) TriggerOption {
 	return func(t *v1.Trigger) {
 		u, _ := apis.ParseURL(uri)
