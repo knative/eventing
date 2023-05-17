@@ -60,6 +60,12 @@ const (
 	// annotation key used to specify the address of its channel.
 	BrokerChannelAddressStatusAnnotationKey = "knative.dev/channelAddress"
 
+	// BrokerChannelCACertsStatusAnnotationKey is the broker status annotation
+	// key used to specify the channels Certification Authority (CA)
+	// certificates in PEM format according to
+	// https://www.rfc-editor.org/rfc/rfc7468
+	BrokerChannelCACertsStatusAnnotationKey = "knative.dev/channelCACerts"
+
 	// BrokerChannelAPIVersionStatusAnnotationKey is the broker status
 	// annotation key used to specify the APIVersion of the channel for
 	// the triggers to subscribe to.

@@ -173,6 +173,15 @@ func WithChannelAddressAnnotation(address string) BrokerOption {
 	}
 }
 
+func WithChannelCACertsAnnotation(caCerts string) BrokerOption {
+	return func(b *v1.Broker) {
+		if b.Status.Annotations == nil {
+			b.Status.Annotations = make(map[string]string, 1)
+		}
+		b.Status.Annotations[eventing.BrokerChannelCACertsStatusAnnotationKey] = caCerts
+	}
+}
+
 func WithBrokerStatusDLSURI(dlsURI *apis.URL) BrokerOption {
 	return func(b *v1.Broker) {
 		b.Status.MarkDeadLetterSinkResolvedSucceeded(dlsURI)
