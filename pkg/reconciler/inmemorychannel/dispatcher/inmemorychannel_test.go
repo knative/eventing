@@ -554,7 +554,7 @@ type fakeMultiChannelHandler struct {
 }
 
 func newFakeMultiChannelHandler() *fakeMultiChannelHandler {
-	return &fakeMultiChannelHandler{handlers: make(map[string]fanout.MessageHandler, 1)}
+	return &fakeMultiChannelHandler{handlers: make(map[string]fanout.MessageHandler, 2)}
 }
 
 func (f *fakeMultiChannelHandler) ServeHTTP(response http.ResponseWriter, request *http.Request) {}

@@ -21,7 +21,9 @@ import (
 	"time"
 
 	"knative.dev/pkg/injection"
+	"knative.dev/pkg/system"
 
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/cache"
 
 	"github.com/google/uuid"
@@ -50,6 +52,8 @@ import (
 	inmemorychannelinformer "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/inmemorychannel"
 	inmemorychannelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/inmemorychannel"
 	"knative.dev/eventing/pkg/inmemorychannel"
+	kubeclient "knative.dev/pkg/client/injection/kube/client"
+	secretinformer "knative.dev/pkg/injection/clients/namespacedkube/informers/core/v1/secret"
 )
 
 const (
@@ -58,6 +62,7 @@ const (
 	httpPort      = 8080
 	httpsPort     = 8443
 	finalizerName = "imc-dispatcher"
+	tlsSecretName = "imc-dispatcher-server-tls"
 )
 
 type envConfig struct {
@@ -151,6 +156,16 @@ func NewController(
 	httpDispatcher := inmemorychannel.NewMessageDispatcher(httpArgs)
 	httpReceiver := httpDispatcher.GetReceiver()
 
+	secret := types.NamespacedName{
+		Namespace: system.Namespace(),
+		Name:      tlsSecretName,
+	}
+	serverTLSConfig := eventingtls.NewDefaultServerConfig()
+	serverTLSConfig.GetCertificate = eventingtls.GetCertificateFromSecret(ctx, secretinformer.Get(ctx), kubeclient.Get(ctx), secret)
+	tlsConfig, err := eventingtls.GetTLSServerConfig(serverTLSConfig)
+	if err != nil {
+		logger.Panicf("unable to get tls config: %s", err)
+	}
 	httpsArgs := &inmemorychannel.InMemoryMessageDispatcherArgs{
 		Port:         httpsPort,
 		ReadTimeout:  readTimeout,
@@ -158,8 +173,7 @@ func NewController(
 		Handler:      sh,
 		Logger:       logger.Desugar(),
 
-		// TODO: add tls config
-		HTTPMessageReceiverOptions: []kncloudevents.HTTPMessageReceiverOption{},
+		HTTPMessageReceiverOptions: []kncloudevents.HTTPMessageReceiverOption{kncloudevents.WithTLSConfig(tlsConfig)},
 	}
 	httpsDispatcher := inmemorychannel.NewMessageDispatcher(httpsArgs)
 	httpsReceiver := httpsDispatcher.GetReceiver()

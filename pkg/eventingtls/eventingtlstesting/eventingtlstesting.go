@@ -49,17 +49,7 @@ func StartServer(ctx context.Context, t *testing.T, port int, requests chan<- *n
 		Name:      "tls-secret",
 	}
 
-	_ = secretinformer.Get(ctx).Informer().GetStore().Add(&corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: secret.Namespace,
-			Name:      secret.Name,
-		},
-		Data: map[string][]byte{
-			"tls.key": Key,
-			"tls.crt": Crt,
-		},
-		Type: corev1.SecretTypeTLS,
-	})
+	_ = secretinformer.Get(ctx).Informer().GetStore().Add(GetTLSSecret(secret.Namespace, secret.Name))
 
 	serverTLSConfig := eventingtls.NewDefaultServerConfig()
 	serverTLSConfig.GetCertificate = eventingtls.GetCertificateFromSecret(ctx, secretinformer.Get(ctx), kubeclient.Get(ctx), secret)
@@ -186,4 +176,18 @@ s/wImGnMVk5RzpBVrq2VB9SkX/ThTVYEC/Sd9BQM364MCR+TA1l8/ptaLFLuwyw8
 O2dgzikq8iSy1BlRsVw=
 -----END CERTIFICATE-----
 `)
+}
+
+func GetTLSSecret(namespace, name string) *corev1.Secret {
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      name,
+		},
+		Data: map[string][]byte{
+			"tls.key": Key,
+			"tls.crt": Crt,
+		},
+		Type: corev1.SecretTypeTLS,
+	}
 }

@@ -111,6 +111,7 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1.InMemoryChannel) rec
 		}
 	}
 
+	// Look for an https handler that's configured to use paths
 	httpsHandler := r.multiChannelMessageHandler.GetChannelHandler(config.Path)
 	if httpsHandler == nil {
 		// No handler yet, create one.

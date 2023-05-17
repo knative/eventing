@@ -325,6 +325,12 @@ func testFanoutMessageHandler(t *testing.T, async bool, receiverFunc channel.Unb
 		t.Fatal(err)
 	}
 
+	calledChan := make(chan bool, 1)
+	recvOptionFunc := func(*channel.MessageReceiver) error {
+		calledChan <- true
+		return nil
+	}
+
 	h, err := NewFanoutMessageHandler(
 		logger,
 		channel.NewMessageDispatcher(logger),
@@ -333,7 +339,9 @@ func testFanoutMessageHandler(t *testing.T, async bool, receiverFunc channel.Unb
 			AsyncHandler:  async,
 		},
 		reporter,
+		recvOptionFunc,
 	)
+	<-calledChan
 	if err != nil {
 		t.Fatal("NewHandler failed =", err)
 	}
