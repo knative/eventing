@@ -339,6 +339,11 @@ func (in *TriggerStatus) DeepCopyInto(out *TriggerStatus) {
 		*out = new(apis.URL)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.SubscriberCACerts != nil {
+		in, out := &in.SubscriberCACerts, &out.SubscriberCACerts
+		*out = new(string)
+		**out = **in
+	}
 	in.DeliveryStatus.DeepCopyInto(&out.DeliveryStatus)
 	return
 }

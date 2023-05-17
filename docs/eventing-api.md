@@ -2282,6 +2282,19 @@ knative.dev/pkg/apis.URL
 </tr>
 <tr>
 <td>
+<code>subscriberCACerts</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SubscriberCACerts is the Certification Authority (CA) certificates in PEM format
+according to <a href="https://www.rfc-editor.org/rfc/rfc7468">https://www.rfc-editor.org/rfc/rfc7468</a> of the receiver for this Trigger.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>DeliveryStatus</code><br/>
 <em>
 <a href="#duck.knative.dev/v1.DeliveryStatus">
