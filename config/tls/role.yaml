@@ -21,7 +21,7 @@ metadata:
   name: tls-role
   namespace: knative-eventing
 rules:
-- apiGroups: 
+- apiGroups:
     - ""
   resources:
     - secrets
