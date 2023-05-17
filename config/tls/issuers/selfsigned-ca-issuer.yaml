@@ -12,35 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# This is the issuer that every Eventing component should use to issue their server's certs.
 apiVersion: cert-manager.io/v1
-kind: Certificate
+kind: Issuer
 metadata:
-  name: mt-broker-ingress-server-tls
+  name: selfsigned-ca-issuer
   namespace: knative-eventing
 spec:
-  # Secret names are always required.
-  secretName: mt-broker-ingress-server-tls
-
-  secretTemplate:
-    labels:
-      app.kubernetes.io/component: broker-ingress
-      app.kubernetes.io/name: knative-eventing
-
-  duration: 2160h # 90d
-  renewBefore: 360h # 15d
-  subject:
-    organizations:
-      - local
-  isCA: false
-  privateKey:
-    algorithm: RSA
-    encoding: PKCS1
-    size: 2048
-
-  dnsNames:
-    - broker-ingress.knative-eventing.svc.cluster.local
-
-  issuerRef:
-    name: selfsigned-ca-issuer
-    kind: Issuer
-    group: cert-manager.io
+  ca:
+    secretName: eventing-ca
