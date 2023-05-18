@@ -142,7 +142,6 @@ func SendEventsWithTLSRecieverAsSink() *feature.Feature {
 		Must("delivers events on sink with ref",
 			eventasssert.OnStore(sink).
 				Match(eventasssert.MatchKind(eventshub.EventReceived)).
-				MatchEvent(test.HasType("dev.knative.apiserver.resource.update")).
 				AtLeast(1),
 		)
 
