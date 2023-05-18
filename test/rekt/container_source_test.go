@@ -95,7 +95,7 @@ func TestContainerSourceWithTLS(t *testing.T) {
 		knative.WithTracingConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
-		eventshub.WithTLS(t)
+		eventshub.WithTLS(t),
 	)
 	t.Cleanup(env.Finish)
 

@@ -130,14 +130,11 @@ func SendEventsWithTLSRecieverAsSink() *feature.Feature {
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiverTLS))
 
-	cfg := []manifest.CfgFn{}
-
 	f.Requirement("install ContainerSource", func(ctx context.Context, t feature.T) {
 		d := service.AsDestinationRef(sink)
 		d.CACerts = eventshub.GetCaCerts(ctx)
 
-		cfg = append(cfg, containersource.WithSink(d))
-		containersource.Install(source, cfg...)(ctx, t)
+		containersource.Install(source, containersource.WithSink(d))(ctx, t)
 	})
 	f.Requirement("ContainerSource goes ready", containersource.IsReady(source))
 
