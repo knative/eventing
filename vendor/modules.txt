@@ -1379,7 +1379,7 @@ knative.dev/pkg/webhook/resourcesemantics
 knative.dev/pkg/webhook/resourcesemantics/conversion
 knative.dev/pkg/webhook/resourcesemantics/defaulting
 knative.dev/pkg/webhook/resourcesemantics/validation
-# knative.dev/reconciler-test v0.0.0-20230509130259-914f5d7a110b
+# knative.dev/reconciler-test v0.0.0-20230518074312-ecf02ac620e2
 ## explicit; go 1.18
 knative.dev/reconciler-test/cmd/eventshub
 knative.dev/reconciler-test/pkg/environment
@@ -1407,6 +1407,7 @@ knative.dev/reconciler-test/pkg/resources/deployment
 knative.dev/reconciler-test/pkg/resources/job
 knative.dev/reconciler-test/pkg/resources/knativeservice
 knative.dev/reconciler-test/pkg/resources/pod
+knative.dev/reconciler-test/pkg/resources/secret
 knative.dev/reconciler-test/pkg/resources/service
 knative.dev/reconciler-test/pkg/state
 # sigs.k8s.io/json v0.0.0-20220713155537-f223a00ba0e2

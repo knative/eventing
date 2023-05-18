@@ -235,6 +235,13 @@ func (mr *MagicGlobalEnvironment) Environment(opts ...EnvOpts) (context.Context,
 		logging.FromContext(ctx).Fatal(err)
 	}
 
+	for _, in := range GetPostInit(ctx) {
+		ctx, err = in(ctx, env)
+		if err != nil {
+			logging.FromContext(ctx).Fatal(err)
+		}
+	}
+
 	env.milestones.Environment(map[string]string{
 		// TODO: we could add more detail here, don't send secrets.
 		"requirementLevel": env.RequirementLevel().String(),
@@ -243,6 +250,24 @@ func (mr *MagicGlobalEnvironment) Environment(opts ...EnvOpts) (context.Context,
 	})
 
 	return ctx, env
+}
+
+type postInitKey struct{}
+
+type InitFn = EnvOpts
+
+func WithPostInit(ctx context.Context, fn InitFn) context.Context {
+	fns := GetPostInit(ctx)
+	fns = append(fns, fn)
+	return context.WithValue(ctx, postInitKey{}, fns)
+}
+
+func GetPostInit(ctx context.Context) []InitFn {
+	fns := ctx.Value(postInitKey{})
+	if fns == nil {
+		return []InitFn{}
+	}
+	return fns.([]InitFn)
 }
 
 func inNamespace() EnvOpts {

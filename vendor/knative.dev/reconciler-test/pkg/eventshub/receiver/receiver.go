@@ -18,6 +18,7 @@ package receiver
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"net/http"
 	"strings"
@@ -50,11 +51,15 @@ type Receiver struct {
 	skipResponseCode    int
 	skipResponseHeaders map[string]string
 	skipResponseBody    string
+	EnforceTLS          bool
 }
 
 type envConfig struct {
 	// ReceiverName is used to identify this instance of the receiver.
 	ReceiverName string `envconfig:"POD_NAME" default:"receiver-default" required:"true"`
+
+	// EnforceTLS is used to enforce TLS.
+	EnforceTLS bool `envconfig:"ENFORCE_TLS" default:"false"`
 
 	// ResponseWaitTime is the seconds to wait for the eventshub to write any response
 	ResponseWaitTime int `envconfig:"RESPONSE_WAIT_TIME" default:"0" required:"false"`
@@ -128,6 +133,7 @@ func NewFromEnv(ctx context.Context, eventLogs *eventshub.EventLogs) *Receiver {
 
 	return &Receiver{
 		Name:                env.ReceiverName,
+		EnforceTLS:          env.EnforceTLS,
 		EventLogs:           eventLogs,
 		ctx:                 ctx,
 		replyFunc:           replyFunc,
@@ -149,16 +155,33 @@ func (o *Receiver) Start(ctx context.Context, handlerFuncs ...func(handler http.
 	}
 
 	server := &http.Server{Addr: ":8080", Handler: handler}
+	serverTLS := &http.Server{
+		Addr: ":8443",
+		TLSConfig: &tls.Config{
+			MinVersion: tls.VersionTLS12,
+		},
+		Handler: handler,
+	}
 
-	var err error
+	var httpErr error
 	go func() {
-		err = server.ListenAndServe()
+		httpErr = server.ListenAndServe()
 	}()
+	var httpsErr error
+	if o.EnforceTLS {
+		go func() {
+			httpsErr = serverTLS.ListenAndServeTLS("/etc/tls/certificates/tls.crt", "/etc/tls/certificates/tls.key")
+		}()
+		defer serverTLS.Close()
+	}
 
 	<-ctx.Done()
 
-	if err != nil {
-		return fmt.Errorf("error while starting the HTTP server: %w", err)
+	if httpErr != nil {
+		return fmt.Errorf("error while starting the HTTP server: %w", httpErr)
+	}
+	if httpsErr != nil {
+		return fmt.Errorf("error while starting the HTTPS server: %w", httpsErr)
 	}
 
 	logging.FromContext(ctx).Info("Closing the HTTP server")
@@ -173,6 +196,11 @@ func (o *Receiver) ServeHTTP(writer http.ResponseWriter, request *http.Request) 
 		writer.WriteHeader(code)
 		_, _ = writer.Write([]byte(http.StatusText(code)))
 		return
+	}
+
+	var rejectErr error
+	if o.EnforceTLS && !isTLS(request) {
+		rejectErr = fmt.Errorf("failed to enforce TLS connection for request %s", request.RequestURI)
 	}
 
 	m := cloudeventshttp.NewMessageFromHttpRequest(request)
@@ -190,15 +218,17 @@ func (o *Receiver) ServeHTTP(writer http.ResponseWriter, request *http.Request) 
 		headers.Set("Host", request.Host)
 	}
 
-	eventErrStr := ""
-	if eventErr != nil {
-		eventErrStr = eventErr.Error()
+	errString := ""
+	if rejectErr != nil {
+		errString = rejectErr.Error()
+	} else if eventErr != nil {
+		errString = eventErr.Error()
 	}
 
 	shouldSkip := o.counter.Skip()
 	var s uint64
 	var kind eventshub.EventKind
-	if shouldSkip {
+	if shouldSkip || rejectErr != nil {
 		kind = eventshub.EventRejected
 		s = atomic.AddUint64(&o.dropSeq, 1)
 	} else {
@@ -207,7 +237,7 @@ func (o *Receiver) ServeHTTP(writer http.ResponseWriter, request *http.Request) 
 	}
 
 	eventInfo := eventshub.EventInfo{
-		Error:       eventErrStr,
+		Error:       errString,
 		Event:       event,
 		HTTPHeaders: headers,
 		Origin:      request.RemoteAddr,
@@ -226,7 +256,12 @@ func (o *Receiver) ServeHTTP(writer http.ResponseWriter, request *http.Request) 
 		time.Sleep(o.responseWaitTime)
 	}
 
-	if shouldSkip {
+	if rejectErr != nil {
+		for headerKey, headerValue := range o.skipResponseHeaders {
+			writer.Header().Set(headerKey, headerValue)
+		}
+		writer.WriteHeader(http.StatusBadRequest)
+	} else if shouldSkip {
 		// Trigger a redelivery
 		for headerKey, headerValue := range o.skipResponseHeaders {
 			writer.Header().Set(headerKey, headerValue)
@@ -236,4 +271,9 @@ func (o *Receiver) ServeHTTP(writer http.ResponseWriter, request *http.Request) 
 	} else {
 		o.replyFunc(o.ctx, writer, eventInfo)
 	}
+}
+
+func isTLS(request *http.Request) bool {
+	return strings.EqualFold(request.URL.Scheme, "https") &&
+		request.TLS != nil && request.TLS.HandshakeComplete
 }

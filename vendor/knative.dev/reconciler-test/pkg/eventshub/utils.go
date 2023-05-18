@@ -37,6 +37,8 @@ const (
 	ConfigLoggingEnv   = "K_CONFIG_LOGGING"
 	EventGeneratorsEnv = "EVENT_GENERATORS"
 	EventLogsEnv       = "EVENT_LOGS"
+
+	EnforceTLS = "ENFORCE_TLS"
 )
 
 func ParseHeaders(serializedHeaders string) http.Header {

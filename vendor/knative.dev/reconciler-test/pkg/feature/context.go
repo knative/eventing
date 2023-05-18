@@ -29,11 +29,10 @@ func ContextWith(ctx context.Context, f *Feature) context.Context {
 }
 
 // FromContext returns the Feature from Context, if not found FromContext will
-// panic.
-// TODO: revisit if we really want to panic here... likely not.
+// return nil.
 func FromContext(ctx context.Context) *Feature {
 	if e, ok := ctx.Value(envKey{}).(*Feature); ok {
 		return e
 	}
-	panic("no Feature found in context")
+	return nil
 }
