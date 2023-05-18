@@ -17,6 +17,7 @@ limitations under the License.
 package containersource
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/cloudevents/sdk-go/v2/test"
@@ -30,6 +31,8 @@ import (
 
 	"knative.dev/eventing/test/rekt/resources/containersource"
 	"knative.dev/eventing/test/rekt/resources/pingsource"
+
+	eventasssert "knative.dev/reconciler-test/pkg/eventshub/assert"
 )
 
 func SendsEventsWithSinkRef() *feature.Feature {
@@ -115,6 +118,36 @@ func SendsEventsWithArgs() *feature.Feature {
 			test.HasType("dev.knative.eventing.samples.heartbeat"),
 			assert.MatchHeartBeatsImageMessage(message),
 		).AtLeast(1))
+
+	return f
+}
+
+func SendEventsWithTLSRecieverAsSink() *feature.Feature {
+	source := feature.MakeRandomK8sName("containersource")
+	sink := feature.MakeRandomK8sName("sink")
+
+	f := feature.NewFeatureNamed("Send events to TLS sink")
+
+	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiverTLS))
+
+	cfg := []manifest.CfgFn{}
+
+	f.Requirement("install ContainerSource", func(ctx context.Context, t feature.T) {
+		d := service.AsDestinationRef(sink)
+		d.CACerts = eventshub.GetCaCerts(ctx)
+
+		cfg = append(cfg, containersource.WithSink(d))
+		containersource.Install(source, cfg...)(ctx, t)
+	})
+	f.Requirement("ContainerSource goes ready", containersource.IsReady(source))
+
+	f.Stable("ContainerSource as event source").
+		Must("delivers events on sink with ref",
+			eventasssert.OnStore(sink).
+				Match(eventasssert.MatchKind(eventshub.EventReceived)).
+				MatchEvent(test.HasType("dev.knative.apiserver.resource.update")).
+				AtLeast(1),
+		)
 
 	return f
 }

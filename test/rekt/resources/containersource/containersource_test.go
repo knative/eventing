@@ -165,7 +165,7 @@ func Example_withSink() {
 	//   sink:
 	//     ref:
 	//       kind: sinkkind
-	//       namespace: bar
+	//       namespace: sinknamespace
 	//       name: sinkname
 	//       apiVersion: sinkversion
 	//     uri: uri/parts

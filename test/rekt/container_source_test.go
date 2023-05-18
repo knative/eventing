@@ -85,3 +85,19 @@ func TestContainerSourceWithArgs(t *testing.T) {
 
 	env.Test(ctx, t, containersource.SendsEventsWithArgs())
 }
+
+func TestContainerSourceWithTLS(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+		eventshub.WithTLS(t)
+	)
+	t.Cleanup(env.Finish)
+
+	env.Test(ctx, t, containersource.SendEventsWithTLSRecieverAsSink())
+}
