@@ -83,14 +83,14 @@ func WaitForReadyOrDone(ctx context.Context, t feature.T, ref corev1.ObjectRefer
 	case "jobs":
 		err := WaitUntilJobDone(ctx, t, ref.Name, interval, timeout)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed waiting for job done %+v %+v: %w", gvr, ref, err)
 		}
 		return nil
 
 	default:
 		err := WaitForResourceReady(ctx, t, ref.Namespace, ref.Name, gvr, interval, timeout)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed waiting for resource %+v %+v: %w", gvr, ref, err)
 		}
 	}
 

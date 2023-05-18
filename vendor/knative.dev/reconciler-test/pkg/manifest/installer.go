@@ -26,6 +26,7 @@ import (
 	"k8s.io/client-go/util/retry"
 	"knative.dev/pkg/injection/clients/dynamicclient"
 	"knative.dev/pkg/logging"
+
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"
 )
@@ -69,7 +70,9 @@ func InstallYamlFS(ctx context.Context, fsys fs.FS, base map[string]interface{})
 
 	// Save the refs to Environment and Feature
 	env.Reference(manifest.References()...)
-	f.Reference(manifest.References()...)
+	if f != nil {
+		f.Reference(manifest.References()...)
+	}
 
 	// Temp
 	refs := manifest.References()

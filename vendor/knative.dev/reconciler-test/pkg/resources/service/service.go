@@ -87,7 +87,6 @@ func AsDestinationRef(name string) *duckv1.Destination {
 	}
 }
 
-// Address
 func Address(ctx context.Context, name string) (*apis.URL, error) {
 	return k8s.Address(ctx, GVR(), name)
 }
