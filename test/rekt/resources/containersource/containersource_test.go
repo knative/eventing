@@ -20,6 +20,9 @@ import (
 	"embed"
 	"os"
 
+	"knative.dev/eventing/test/rekt/resources/containersource"
+	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	testlog "knative.dev/reconciler-test/pkg/logging"
 	"knative.dev/reconciler-test/pkg/manifest"
 )
@@ -111,6 +114,60 @@ func Example_full() {
 	//       namespace: bar
 	//       name: thesink
 	//       apiVersion: something.valid/v1
+	//     uri: uri/parts
+	//   template:
+	//     spec:
+	//       containers:
+	//       - name: heartbeats
+	//         image: ko://knative.dev/eventing/cmd/heartbeats
+	//         imagePullPolicy: IfNotPresent
+	//         args:
+	//         - --period=1
+	//         env:
+	//         - name: POD_NAME
+	//           value: heartbeats
+	//         - name: POD_NAMESPACE
+	//           value: bar
+}
+
+func Example_withSink() {
+	ctx := testlog.NewContext()
+	images := map[string]string{}
+	cfg := map[string]interface{}{
+		"name":      "foo",
+		"namespace": "bar",
+	}
+
+	sinkRef := &duckv1.Destination{
+		Ref: &duckv1.KReference{
+			Kind:       "sinkkind",
+			Namespace:  "sinknamespace",
+			Name:       "sinkname",
+			APIVersion: "sinkversion",
+		},
+		URI: &apis.URL{Path: "uri/parts"},
+	}
+	containersource.WithSink(sinkRef)(cfg)
+
+	files, err := manifest.ExecuteYAML(ctx, yaml, images, cfg)
+	if err != nil {
+		panic(err)
+	}
+
+	manifest.OutputYAML(os.Stdout, files)
+	// Output:
+	// apiVersion: sources.knative.dev/v1
+	// kind: ContainerSource
+	// metadata:
+	//   name: foo
+	//   namespace: bar
+	// spec:
+	//   sink:
+	//     ref:
+	//       kind: sinkkind
+	//       namespace: bar
+	//       name: sinkname
+	//       apiVersion: sinkversion
 	//     uri: uri/parts
 	//   template:
 	//     spec:

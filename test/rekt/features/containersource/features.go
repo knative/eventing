@@ -56,7 +56,7 @@ func SendsEventsWithSinkURI() *feature.Feature {
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 
-	f.Requirement("install containersource", containersource.Install(source, containersource.WithSink(service.AsKReference(sink), "")))
+	f.Requirement("install containersource", containersource.Install(source, containersource.WithSink(service.AsDestinationRef(sink))))
 	f.Requirement("containersource goes ready", containersource.IsReady(source))
 
 	f.Stable("containersource as event source").
@@ -105,7 +105,7 @@ func SendsEventsWithArgs() *feature.Feature {
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 
 	f.Requirement("install containersource", containersource.Install(source,
-		containersource.WithSink(service.AsKReference(sink), ""),
+		containersource.WithSink(service.AsDestinationRef(sink)),
 		containersource.WithArgs(args),
 	))
 	f.Requirement("containersource goes ready", containersource.IsReady(source))

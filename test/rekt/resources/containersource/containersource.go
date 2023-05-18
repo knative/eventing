@@ -23,8 +23,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	"knative.dev/eventing/test/rekt/resources/source"
-
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/k8s"
@@ -67,7 +66,35 @@ func Install(name string, opts ...manifest.CfgFn) feature.StepFn {
 }
 
 // WithSink adds the sink related config to a ContainerSource spec.
-var WithSink = source.WithSink
+func WithSink(d *duckv1.Destination) manifest.CfgFn {
+	return func(cfg map[string]interface{}) {
+		if _, set := cfg["sink"]; !set {
+			cfg["sink"] = map[string]interface{}{}
+		}
+		sink := cfg["sink"].(map[string]interface{})
+
+		ref := d.Ref
+		uri := d.URI
+
+		if d.CACerts != nil {
+			sink["CACerts"] = *d.CACerts
+		}
+
+		if uri != nil {
+			sink["uri"] = uri.String()
+		}
+		if ref != nil {
+			if _, set := sink["ref"]; !set {
+				sink["ref"] = map[string]interface{}{}
+			}
+			sref := sink["ref"].(map[string]interface{})
+			sref["apiVersion"] = ref.APIVersion
+			sref["kind"] = ref.Kind
+			// skip namespace
+			sref["name"] = ref.Name
+		}
+	}
+}
 
 // WithExtensions adds the ceOverrides related config to a ContainerSource spec.
 func WithExtensions(extensions map[string]interface{}) manifest.CfgFn {

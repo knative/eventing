@@ -77,7 +77,7 @@ func ChannelChain(length int, createSubscriberFn func(ref *duckv1.KReference, ur
 	}
 
 	// attach the first channel to the source
-	f.Requirement("install containersource", containersource.Install(cs, containersource.WithSink(channel_impl.AsRef(channels[0]), "")))
+	f.Requirement("install containersource", containersource.Install(cs, containersource.WithSink(channel_impl.AsDest(channels[0]))))
 	f.Requirement("containersource goes ready", containersource.IsReady(cs))
 
 	f.Assert("chained channels relay events", assert.OnStore(sink).MatchEvent(test.HasType("dev.knative.eventing.samples.heartbeat")).AtLeast(1))
