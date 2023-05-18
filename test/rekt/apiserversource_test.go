@@ -24,13 +24,15 @@ import (
 	"time"
 
 	"knative.dev/pkg/system"
+	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/knative"
 
-	apiserversourcefeatures "knative.dev/eventing/test/rekt/features/apiserversource"
 	_ "knative.dev/pkg/system/testing"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"
+
+	apiserversourcefeatures "knative.dev/eventing/test/rekt/features/apiserversource"
 )
 
 // TestApiServerSourceValidationWebhookConfigurationOnCreate tests if the webhook
@@ -77,6 +79,21 @@ func TestApiServerSourceDataPlane_SinkTypes(t *testing.T) {
 	)
 
 	env.TestSet(ctx, t, apiserversourcefeatures.DataPlane_SinkTypes())
+}
+
+func TestApiServerSourceDataPlaneTLS(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		//environment.Managed(t),
+		eventshub.WithTLS(t),
+	)
+
+	env.Test(ctx, t, apiserversourcefeatures.SendsEventsWithTLS())
 }
 
 func TestApiServerSourceDataPlane_EventModes(t *testing.T) {

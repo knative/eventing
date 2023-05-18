@@ -21,6 +21,7 @@ import (
 	"os"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/pkg/apis"
 	testlog "knative.dev/reconciler-test/pkg/logging"
 
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
@@ -120,13 +121,16 @@ func Example_withSink() {
 		"namespace": "bar",
 	}
 
-	sinkRef := &duckv1.KReference{
-		Kind:       "sinkkind",
-		Namespace:  "sinknamespace",
-		Name:       "sinkname",
-		APIVersion: "sinkversion",
+	sinkRef := &duckv1.Destination{
+		Ref: &duckv1.KReference{
+			Kind:       "sinkkind",
+			Namespace:  "sinknamespace",
+			Name:       "sinkname",
+			APIVersion: "sinkversion",
+		},
+		URI: &apis.URL{Path: "uri/parts"},
 	}
-	apiserversource.WithSink(sinkRef, "uri/parts")(cfg)
+	apiserversource.WithSink(sinkRef)(cfg)
 
 	files, err := manifest.ExecuteYAML(ctx, yaml, images, cfg)
 	if err != nil {
@@ -302,11 +306,14 @@ func Example_full() {
 		"namespace": "bar",
 	}
 
-	sinkRef := &duckv1.KReference{
-		Kind:       "sinkkind",
-		Namespace:  "sinknamespace",
-		Name:       "sinkname",
-		APIVersion: "sinkversion",
+	sinkRef := &duckv1.Destination{
+		Ref: &duckv1.KReference{
+			Kind:       "sinkkind",
+			Namespace:  "sinknamespace",
+			Name:       "sinkname",
+			APIVersion: "sinkversion",
+		},
+		URI: &apis.URL{Path: "uri/parts"},
 	}
 
 	res1 := v1.APIVersionKindSelector{
@@ -339,7 +346,7 @@ func Example_full() {
 
 	apiserversource.WithServiceAccountName("src-sa")(cfg)
 	apiserversource.WithEventMode(v1.ReferenceMode)(cfg)
-	apiserversource.WithSink(sinkRef, "uri/parts")(cfg)
+	apiserversource.WithSink(sinkRef)(cfg)
 	apiserversource.WithResources(res1, res2, res3)(cfg)
 
 	files, err := manifest.ExecuteYAML(ctx, yaml, images, cfg)
