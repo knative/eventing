@@ -229,11 +229,13 @@ func (r *Reconciler) resolveSubscriber(ctx context.Context, subscription *v1.Sub
 		subscriberURI := subscriberAddr.URL
 		// If there is a change in resolved URI, log it.
 		if subscription.Status.PhysicalSubscription.SubscriberURI == nil || subscription.Status.PhysicalSubscription.SubscriberURI.String() != subscriberURI.String() {
-			logging.FromContext(ctx).Debugw("Resolved Subscriber", zap.String("subscriberURI", subscriberURI.String()))
+			logging.FromContext(ctx).Debugw("Resolved Subscriber", zap.String("subscriberURI", subscriberURI.String()), zap.Stringp("subscriberCACerts", subscriberAddr.CACerts))
 			subscription.Status.PhysicalSubscription.SubscriberURI = subscriberURI
+			subscription.Status.PhysicalSubscription.SubscriberCACerts = subscriberAddr.CACerts
 		}
 	} else {
 		subscription.Status.PhysicalSubscription.SubscriberURI = nil
+		subscription.Status.PhysicalSubscription.SubscriberCACerts = nil
 	}
 	return nil
 }
@@ -259,11 +261,13 @@ func (r *Reconciler) resolveReply(ctx context.Context, subscription *v1.Subscrip
 		replyURI := replyAddr.URL
 		// If there is a change in resolved URI, log it.
 		if subscription.Status.PhysicalSubscription.ReplyURI == nil || subscription.Status.PhysicalSubscription.ReplyURI.String() != replyURI.String() {
-			logging.FromContext(ctx).Debugw("Resolved reply", zap.String("replyURI", replyURI.String()))
+			logging.FromContext(ctx).Debugw("Resolved reply", zap.String("replyURI", replyURI.String()), zap.Stringp("replyCACerts", replyAddr.CACerts))
 			subscription.Status.PhysicalSubscription.ReplyURI = replyURI
+			subscription.Status.PhysicalSubscription.ReplyCACerts = replyAddr.CACerts
 		}
 	} else {
 		subscription.Status.PhysicalSubscription.ReplyURI = nil
+		subscription.Status.PhysicalSubscription.ReplyCACerts = nil
 	}
 	return nil
 }
@@ -494,18 +498,22 @@ func (r *Reconciler) updateChannelAddSubscription(channel *eventingduckv1.Channe
 		if v.UID == sub.UID {
 			channel.Spec.Subscribers[i].Generation = sub.Generation
 			channel.Spec.Subscribers[i].SubscriberURI = sub.Status.PhysicalSubscription.SubscriberURI
+			channel.Spec.Subscribers[i].SubscriberCACerts = sub.Status.PhysicalSubscription.SubscriberCACerts
 			channel.Spec.Subscribers[i].ReplyURI = sub.Status.PhysicalSubscription.ReplyURI
+			channel.Spec.Subscribers[i].ReplyCACerts = sub.Status.PhysicalSubscription.ReplyCACerts
 			channel.Spec.Subscribers[i].Delivery = deliverySpec(sub, channel)
 			return
 		}
 	}
 
 	toAdd := eventingduckv1.SubscriberSpec{
-		UID:           sub.UID,
-		Generation:    sub.Generation,
-		SubscriberURI: sub.Status.PhysicalSubscription.SubscriberURI,
-		ReplyURI:      sub.Status.PhysicalSubscription.ReplyURI,
-		Delivery:      deliverySpec(sub, channel),
+		UID:               sub.UID,
+		Generation:        sub.Generation,
+		SubscriberURI:     sub.Status.PhysicalSubscription.SubscriberURI,
+		SubscriberCACerts: sub.Status.PhysicalSubscription.SubscriberCACerts,
+		ReplyURI:          sub.Status.PhysicalSubscription.ReplyURI,
+		ReplyCACerts:      sub.Status.PhysicalSubscription.ReplyCACerts,
+		Delivery:          deliverySpec(sub, channel),
 	}
 
 	// Must not have been found. Add it.

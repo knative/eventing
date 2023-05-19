@@ -210,12 +210,24 @@ func WithSubscriptionPhysicalSubscriptionSubscriber(uri *apis.URL) SubscriptionO
 	}
 }
 
+func WithSubscriptionPhysicalSubscriptionSubscriberCACerts(caCerts string) SubscriptionOption {
+	return func(s *v1.Subscription) {
+		s.Status.PhysicalSubscription.SubscriberCACerts = &caCerts
+	}
+}
+
 func WithSubscriptionPhysicalSubscriptionReply(uri *apis.URL) SubscriptionOption {
 	return func(s *v1.Subscription) {
 		if uri == nil {
 			panic(errors.New("nil URI"))
 		}
 		s.Status.PhysicalSubscription.ReplyURI = uri
+	}
+}
+
+func WithSubscriptionPhysicalSubscriptionReplyCACerts(caCerts string) SubscriptionOption {
+	return func(s *v1.Subscription) {
+		s.Status.PhysicalSubscription.ReplyCACerts = &caCerts
 	}
 }
 

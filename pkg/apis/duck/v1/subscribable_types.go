@@ -42,9 +42,19 @@ type SubscriberSpec struct {
 	// SubscriberURI is the endpoint for the subscriber
 	// +optional
 	SubscriberURI *apis.URL `json:"subscriberUri,omitempty"`
+	// SubscriberCACerts is the Certification Authority (CA) certificates in PEM
+	// format according to https://www.rfc-editor.org/rfc/rfc7468 for the
+	// subscriberUri
+	// +optional
+	SubscriberCACerts *string `json:"subscriberCACerts,omitempty"`
 	// ReplyURI is the endpoint for the reply
 	// +optional
 	ReplyURI *apis.URL `json:"replyUri,omitempty"`
+	// ReplyCACerts is the Certification Authority (CA) certificates in PEM
+	// format according to https://www.rfc-editor.org/rfc/rfc7468 for the
+	// replyUri.
+	// +optional
+	ReplyCACerts *string `json:"replyCACerts,omitempty"`
 	// +optional
 	// DeliverySpec contains options controlling the event delivery
 	// +optional
