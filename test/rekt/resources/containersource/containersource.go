@@ -19,6 +19,7 @@ package containersource
 import (
 	"context"
 	"embed"
+	"strings"
 	"time"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -77,7 +78,9 @@ func WithSink(d *duckv1.Destination) manifest.CfgFn {
 		uri := d.URI
 
 		if d.CACerts != nil {
-			sink["CACerts"] = *d.CACerts
+			// This is a multi-line string and should be indented accordingly.
+			// Replace "new line" with "new line + spaces".
+			sink["CACerts"] = strings.ReplaceAll(*d.CACerts, "\n", "\n      ")
 		}
 
 		if uri != nil {

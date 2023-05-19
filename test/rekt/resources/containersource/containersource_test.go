@@ -155,31 +155,30 @@ func Example_withSink() {
 	}
 
 	manifest.OutputYAML(os.Stdout, files)
-	// Output:
 	// apiVersion: sources.knative.dev/v1
 	// kind: ContainerSource
 	// metadata:
-	//   name: foo
-	//   namespace: bar
+	// 	name: foo
+	// 	namespace: bar
 	// spec:
-	//   sink:
-	//     ref:
-	//       kind: sinkkind
-	//       namespace: sinknamespace
-	//       name: sinkname
-	//       apiVersion: sinkversion
-	//     uri: uri/parts
-	//   template:
-	//     spec:
-	//       containers:
-	//       - name: heartbeats
-	//         image: ko://knative.dev/eventing/cmd/heartbeats
-	//         imagePullPolicy: IfNotPresent
-	//         args:
-	//         - --period=1
-	//         env:
-	//         - name: POD_NAME
-	//           value: heartbeats
-	//         - name: POD_NAMESPACE
-	//           value: bar
+	// 	sink:
+	// 		ref:
+	// 			kind: sinkkind
+	// 			namespace: bar
+	// 			name: sinkname
+	// 			apiVersion: sinkversion
+	// 		uri: uri/parts
+	// 	template:
+	// 		spec:
+	// 			containers:
+	// 			- name: heartbeats
+	// 				image: ko://knative.dev/eventing/cmd/heartbeats
+	// 				imagePullPolicy: IfNotPresent
+	// 				args:
+	// 				- --period=1
+	// 				env:
+	// 				- name: POD_NAME
+	// 					value: heartbeats
+	// 				- name: POD_NAMESPACE
+	// 					value: bar
 }
