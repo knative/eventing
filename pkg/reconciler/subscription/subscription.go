@@ -226,13 +226,10 @@ func (r *Reconciler) resolveSubscriber(ctx context.Context, subscription *v1.Sub
 			subscription.Status.MarkReferencesNotResolved(subscriberResolveFailed, "Failed to resolve spec.subscriber: %v", err)
 			return pkgreconciler.NewEvent(corev1.EventTypeWarning, subscriberResolveFailed, "Failed to resolve spec.subscriber: %w", err)
 		}
-		subscriberURI := subscriberAddr.URL
-		// If there is a change in resolved URI, log it.
-		if subscription.Status.PhysicalSubscription.SubscriberURI == nil || subscription.Status.PhysicalSubscription.SubscriberURI.String() != subscriberURI.String() {
-			logging.FromContext(ctx).Debugw("Resolved Subscriber", zap.String("subscriberURI", subscriberURI.String()), zap.Stringp("subscriberCACerts", subscriberAddr.CACerts))
-			subscription.Status.PhysicalSubscription.SubscriberURI = subscriberURI
-			subscription.Status.PhysicalSubscription.SubscriberCACerts = subscriberAddr.CACerts
-		}
+
+		logging.FromContext(ctx).Debugw("Resolved Subscriber", zap.Any("subscriber", subscriberAddr))
+		subscription.Status.PhysicalSubscription.SubscriberURI = subscriberAddr.URL
+		subscription.Status.PhysicalSubscription.SubscriberCACerts = subscriberAddr.CACerts
 	} else {
 		subscription.Status.PhysicalSubscription.SubscriberURI = nil
 		subscription.Status.PhysicalSubscription.SubscriberCACerts = nil
@@ -258,13 +255,10 @@ func (r *Reconciler) resolveReply(ctx context.Context, subscription *v1.Subscrip
 			subscription.Status.MarkReferencesNotResolved(replyResolveFailed, "Failed to resolve spec.reply: %v", err)
 			return pkgreconciler.NewEvent(corev1.EventTypeWarning, replyResolveFailed, "Failed to resolve spec.reply: %w", err)
 		}
-		replyURI := replyAddr.URL
-		// If there is a change in resolved URI, log it.
-		if subscription.Status.PhysicalSubscription.ReplyURI == nil || subscription.Status.PhysicalSubscription.ReplyURI.String() != replyURI.String() {
-			logging.FromContext(ctx).Debugw("Resolved reply", zap.String("replyURI", replyURI.String()), zap.Stringp("replyCACerts", replyAddr.CACerts))
-			subscription.Status.PhysicalSubscription.ReplyURI = replyURI
-			subscription.Status.PhysicalSubscription.ReplyCACerts = replyAddr.CACerts
-		}
+
+		logging.FromContext(ctx).Debugw("Resolved reply", zap.Any("reply", replyAddr))
+		subscription.Status.PhysicalSubscription.ReplyURI = replyAddr.URL
+		subscription.Status.PhysicalSubscription.ReplyCACerts = replyAddr.CACerts
 	} else {
 		subscription.Status.PhysicalSubscription.ReplyURI = nil
 		subscription.Status.PhysicalSubscription.ReplyCACerts = nil
