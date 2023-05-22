@@ -57,13 +57,14 @@ import (
 )
 
 const (
-	subscriberName = "subscriber"
-	replyName      = "reply"
-	channelName    = "origin"
-	serviceName    = "service"
-	dlcName        = "dlc"
-	dlc2Name       = "dlc2"
-	dlsName        = "dls"
+	subscriberName    = "subscriber"
+	replyName         = "reply"
+	channelName       = "origin"
+	serviceName       = "service"
+	dlcName           = "dlc"
+	dlc2Name          = "dlc2"
+	dlsName           = "dls"
+	tlsSubscriberName = "tls-subscriber"
 
 	subscriptionUID        = subscriptionName + "-abc-123"
 	subscriptionName       = "testsubscription"
@@ -82,6 +83,35 @@ var (
 	subscriberURI = apis.HTTP(subscriberDNS)
 	subscriber    = duckv1.Addressable{
 		URL: subscriberURI,
+	}
+
+	tlsSubscriberDNS     = "tls-subscriber.mynamespace.svc." + network.GetClusterDomainName()
+	tlsSubscriberURI     = apis.HTTPS(tlsSubscriberDNS)
+	tlsSubscriberCACerts = `
+-----BEGIN CERTIFICATE-----
+MIIDLTCCAhWgAwIBAgIJAOjtl0zhGBvpMA0GCSqGSIb3DQEBCwUAMC0xEzARBgNV
+BAoMCmlvLnN0cmltemkxFjAUBgNVBAMMDWNsdXN0ZXItY2EgdjAwHhcNMjAxMjIw
+MDgzNzU4WhcNMjExMjIwMDgzNzU4WjAtMRMwEQYDVQQKDAppby5zdHJpbXppMRYw
+FAYDVQQDDA1jbHVzdGVyLWNhIHYwMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIB
+CgKCAQEAy7rIo+UwJh5dL6PhUfDe9wRuLgOf1ZeZmabd++eLc2kWL1r6TO8X034n
+CerkREfjF+MjDoK30z9xvEURThoSi20a4i/Cb39on9T0AgOr5qCSrqlN9n4KtRey
+ZLnKKA5QyLAM6kzyyvIg4PVwWCWFTQSicDPzqd2OmH6jtogD50FkbaP7LcyrKnWf
+64gcR9CCEAcrO8tJdhcZP2Slxg+RvupVjXK1rdZcI6/liZ3Jp4hzApSRN30x/8wU
+5eJYAtzaeWUvJ0Yq/7BH7uY8J+2Hwh+shhi5K98HBAKeISwuIJEQrWmmUer8WGp1
+IcBZqXbkd4dBXuFa0chO0gSKvzjKpQIDAQABo1AwTjAdBgNVHQ4EFgQUeascji1L
+C2voPwDAlPL6iz8TzncwHwYDVR0jBBgwFoAUeascji1LC2voPwDAlPL6iz8Tzncw
+DAYDVR0TBAUwAwEB/zANBgkqhkiG9w0BAQsFAAOCAQEAIEL2uustCrpPas06LyoR
+VR6QFHQJDcMgdL0CZFE46uLSgGupXO0ybmPP2ymBJ1zDNxx1qskNTwBsfBJLBAj6
+8LfJmhfw98QK8YQDJ/Xhx3fcVxjn6NjJ3RYOyb5bqSIGGCQZRmbMjerf71KMhP3X
+rdYg2hVoCvfRcfP2G0jbWtMRK4+MlB3oEvhIvQQW1dw4sohw32HaNJnzb7dErEDB
+Ha2zVM47CcNezdWYUD5NQzFqCRypgrIONafQI2S+Ck7aKOiqF03QSug4wizRbKhT
+uYpQg59dUIOBebg0roRF326H2x6kFGn5L2o+TROrZeeXT8vyIl2R33o3E+ULpuw+
+Vw==
+-----END CERTIFICATE-----
+`
+	tlsSubscriber = duckv1.Addressable{
+		URL:     tlsSubscriberURI,
+		CACerts: &tlsSubscriberCACerts,
 	}
 
 	replyDNS = "reply.mynamespace.svc." + network.GetClusterDomainName()
@@ -694,6 +724,88 @@ func TestAllCases(t *testing.T) {
 					MarkSubscriptionReady,
 				),
 			}},
+		}, {
+			Name: "subscriber with CA certs",
+			Objects: []runtime.Object{
+				NewSubscription(subscriptionName, testNS,
+					//WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(imcV1GVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, tlsSubscriberName, testNS),
+					WithInitSubscriptionConditions,
+					WithSubscriptionFinalizers(finalizerName),
+					MarkReferencesResolved,
+					MarkAddedToChannel,
+					//WithSubscriptionPhysicalSubscriptionSubscriber(&tlsSubscriber),
+					//WithSubscriptionPhysicalSubscriptionReply(&reply),
+				),
+				// Subscriber
+				NewUnstructured(subscriberGVK, tlsSubscriberName, testNS,
+					WithUnstructuredAddressableTLS(tlsSubscriberDNS, tlsSubscriberCACerts),
+				),
+				// Reply
+				// NewInMemoryChannel(replyName, testNS,
+				// 	WithInitInMemoryChannelConditions,
+				// 	WithInMemoryChannelAddress(replyDNS),
+				// ),
+				// Channel
+				NewInMemoryChannel(channelName, testNS,
+					WithInitInMemoryChannelConditions,
+					WithInMemoryChannelReady(channelDNS),
+					WithInMemoryChannelSubscribers([]eventingduck.SubscriberSpec{{
+						//UID:           subscriptionUID,
+						//Generation:    0,
+						SubscriberURI: tlsSubscriberURI,
+						//ReplyURI:      replyURI,
+						// }, {
+						// 	UID:           "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
+						// 	Generation:    1,
+						// 	SubscriberURI: apis.HTTP("call2"),
+						// 	ReplyURI:      apis.HTTP("sink2"),
+					}}),
+					// WithInMemoryChannelStatusSubscribers([]eventingduck.SubscriberStatus{{
+					// 	UID:                subscriptionUID,
+					// 	ObservedGeneration: 0,
+					// 	Ready:              "True",
+					// }, {
+					// 	UID:                "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
+					// 	ObservedGeneration: 1,
+					// 	Ready:              "True",
+					// }}),
+					WithInMemoryChannelAddressHTTPS(duckv1.Addressable{
+						URL:     tlsSubscriberURI,
+						CACerts: &tlsSubscriberCACerts,
+					}),
+				),
+			},
+			Key:     testNS + "/" + subscriptionName,
+			WantErr: false,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "SubscriberSync", "Subscription was synchronized to channel %q", channelName),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewSubscription(subscriptionName, testNS,
+					//WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(imcV1GVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, tlsSubscriberName, testNS),
+					//WithSubscriptionReply(imcV1GVK, replyName, testNS),
+					WithInitSubscriptionConditions,
+					WithSubscriptionFinalizers(finalizerName),
+					WithSubscriptionPhysicalSubscriptionSubscriber(&tlsSubscriber),
+					//WithSubscriptionPhysicalSubscriptionReply(&reply),
+					// - Status Update -
+					MarkReferencesResolved,
+					MarkAddedToChannel,
+					//MarkSubscriptionReady,
+				),
+			}},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
+					{
+						SubscriberURI:     tlsSubscriberURI,
+						SubscriberCACerts: &tlsSubscriberCACerts,
+					},
+				}),
+			},
 		}, {
 			Name: "channel does not exist",
 			Objects: []runtime.Object{

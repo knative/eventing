@@ -59,6 +59,19 @@ func WithUnstructuredAddressable(hostname string) UnstructuredOption {
 	}
 }
 
+func WithUnstructuredAddressableTLS(hostname string, caCerts string) UnstructuredOption {
+	return func(u *unstructured.Unstructured) {
+		status, ok := u.Object["status"].(map[string]interface{})
+		if ok {
+			status["address"] = map[string]interface{}{
+				"hostname": hostname,
+				"url":      fmt.Sprintf("https://%s", hostname),
+				"caCerts":  caCerts,
+			}
+		}
+	}
+}
+
 func apiVersion(gvk metav1.GroupVersionKind) string {
 	groupVersion := gvk.Version
 	if gvk.Group != "" {
