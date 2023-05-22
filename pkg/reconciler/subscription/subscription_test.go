@@ -87,8 +87,7 @@ var (
 
 	tlsSubscriberDNS     = "tls-subscriber.mynamespace.svc." + network.GetClusterDomainName()
 	tlsSubscriberURI     = apis.HTTPS(tlsSubscriberDNS)
-	tlsSubscriberCACerts = `
------BEGIN CERTIFICATE-----
+	tlsSubscriberCACerts = `-----BEGIN CERTIFICATE-----
 MIIDLTCCAhWgAwIBAgIJAOjtl0zhGBvpMA0GCSqGSIb3DQEBCwUAMC0xEzARBgNV
 BAoMCmlvLnN0cmltemkxFjAUBgNVBAMMDWNsdXN0ZXItY2EgdjAwHhcNMjAxMjIw
 MDgzNzU4WhcNMjExMjIwMDgzNzU4WjAtMRMwEQYDVQQKDAppby5zdHJpbXppMRYw
@@ -728,49 +727,24 @@ func TestAllCases(t *testing.T) {
 			Name: "subscriber with CA certs",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
-					//WithSubscriptionUID(subscriptionUID),
 					WithSubscriptionChannel(imcV1GVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, tlsSubscriberName, testNS),
 					WithInitSubscriptionConditions,
 					WithSubscriptionFinalizers(finalizerName),
 					MarkReferencesResolved,
 					MarkAddedToChannel,
-					//WithSubscriptionPhysicalSubscriptionSubscriber(&tlsSubscriber),
-					//WithSubscriptionPhysicalSubscriptionReply(&reply),
 				),
 				// Subscriber
 				NewUnstructured(subscriberGVK, tlsSubscriberName, testNS,
 					WithUnstructuredAddressableTLS(tlsSubscriberDNS, tlsSubscriberCACerts),
 				),
-				// Reply
-				// NewInMemoryChannel(replyName, testNS,
-				// 	WithInitInMemoryChannelConditions,
-				// 	WithInMemoryChannelAddress(replyDNS),
-				// ),
 				// Channel
 				NewInMemoryChannel(channelName, testNS,
 					WithInitInMemoryChannelConditions,
 					WithInMemoryChannelReady(channelDNS),
 					WithInMemoryChannelSubscribers([]eventingduck.SubscriberSpec{{
-						//UID:           subscriptionUID,
-						//Generation:    0,
 						SubscriberURI: tlsSubscriberURI,
-						//ReplyURI:      replyURI,
-						// }, {
-						// 	UID:           "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
-						// 	Generation:    1,
-						// 	SubscriberURI: apis.HTTP("call2"),
-						// 	ReplyURI:      apis.HTTP("sink2"),
 					}}),
-					// WithInMemoryChannelStatusSubscribers([]eventingduck.SubscriberStatus{{
-					// 	UID:                subscriptionUID,
-					// 	ObservedGeneration: 0,
-					// 	Ready:              "True",
-					// }, {
-					// 	UID:                "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
-					// 	ObservedGeneration: 1,
-					// 	Ready:              "True",
-					// }}),
 					WithInMemoryChannelAddressHTTPS(duckv1.Addressable{
 						URL:     tlsSubscriberURI,
 						CACerts: &tlsSubscriberCACerts,
@@ -784,18 +758,13 @@ func TestAllCases(t *testing.T) {
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
-					//WithSubscriptionUID(subscriptionUID),
 					WithSubscriptionChannel(imcV1GVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, tlsSubscriberName, testNS),
-					//WithSubscriptionReply(imcV1GVK, replyName, testNS),
 					WithInitSubscriptionConditions,
 					WithSubscriptionFinalizers(finalizerName),
 					WithSubscriptionPhysicalSubscriptionSubscriber(&tlsSubscriber),
-					//WithSubscriptionPhysicalSubscriptionReply(&reply),
-					// - Status Update -
 					MarkReferencesResolved,
 					MarkAddedToChannel,
-					//MarkSubscriptionReady,
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
@@ -803,6 +772,69 @@ func TestAllCases(t *testing.T) {
 					{
 						SubscriberURI:     tlsSubscriberURI,
 						SubscriberCACerts: &tlsSubscriberCACerts,
+					},
+				}),
+			},
+		}, {
+			Name: "reply with CA certs",
+			Objects: []runtime.Object{
+				NewSubscription(subscriptionName, testNS,
+					WithSubscriptionChannel(imcV1GVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
+					WithSubscriptionReply(imcV1GVK, tlsSubscriberName, testNS),
+					WithInitSubscriptionConditions,
+					WithSubscriptionFinalizers(finalizerName),
+					MarkReferencesResolved,
+					MarkAddedToChannel,
+				),
+				// Subscriber
+				NewUnstructured(subscriberGVK, subscriberName, testNS,
+					WithUnstructuredAddressable(subscriberDNS),
+				),
+				// Reply
+				NewInMemoryChannel(tlsSubscriberName, testNS,
+					WithInitInMemoryChannelConditions,
+					WithInMemoryChannelAddressHTTPS(duckv1.Addressable{
+						URL:     tlsSubscriberURI,
+						CACerts: &tlsSubscriberCACerts,
+					}),
+				),
+				// Channel
+				NewInMemoryChannel(channelName, testNS,
+					WithInitInMemoryChannelConditions,
+					WithInMemoryChannelReady(channelDNS),
+					WithInMemoryChannelSubscribers([]eventingduck.SubscriberSpec{{
+						SubscriberURI: subscriberURI,
+						ReplyURI:      tlsSubscriberURI,
+					}}),
+					WithInMemoryChannelAddress(subscriberDNS),
+				),
+			},
+			Key:     testNS + "/" + subscriptionName,
+			WantErr: false,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "SubscriberSync", "Subscription was synchronized to channel %q", channelName),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewSubscription(subscriptionName, testNS,
+					WithSubscriptionChannel(imcV1GVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
+					WithSubscriptionReply(imcV1GVK, tlsSubscriberName, testNS),
+					WithInitSubscriptionConditions,
+					WithSubscriptionFinalizers(finalizerName),
+					WithSubscriptionPhysicalSubscriptionSubscriber(&subscriber),
+					WithSubscriptionPhysicalSubscriptionReply(&tlsSubscriber),
+					// - Status Update -
+					MarkReferencesResolved,
+					MarkAddedToChannel,
+				),
+			}},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
+					{
+						SubscriberURI: subscriberURI,
+						ReplyURI:      tlsSubscriberURI,
+						ReplyCACerts:  &tlsSubscriberCACerts,
 					},
 				}),
 			},
