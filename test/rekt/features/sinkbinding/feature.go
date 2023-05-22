@@ -120,6 +120,31 @@ func SinkBindingV1Job(ctx context.Context) *feature.Feature {
 	return f
 }
 
+func SinkBindingV1DeploymentTLS(ctx context.Context) *feature.Feature {
+	sbinding := feature.MakeRandomK8sName("sinkbinding")
+	sink := feature.MakeRandomK8sName("sink")
+
+	f := feature.NewFeatureNamed("SinkBinding V1 Deployment test with TLS")
+
+	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiverTLS))
+
+	f.Requirement("install SinkBinding", func(ctx context.Context, t feature.T) {
+		d := service.AsDestinationRef(sink)
+		d.CACerts = eventshub.GetCaCerts(ctx)
+
+		cfg = append(cfg, sinkbinding.WithSink(d))
+		sinkbinding.Install(sbinding, cfg...)(ctx, t)
+	})
+	f.Requirement("SinkBinding goes ready", sinkbinding.IsReady(sbinding))
+	f.Stable("SinkBinding as event source").
+		Must("delivers events on sink with ref",
+			eventasssert.OnStore(sink).
+				Match(eventasssert.MatchKind(eventshub.EventReceived)).
+				AtLeast(1),
+		)
+	return f
+}
+
 // AsTrackerReference returns a tracker.Reference for a Job without namespace.
 func AsTrackerReference(name string) *tracker.Reference {
 	return &tracker.Reference{
