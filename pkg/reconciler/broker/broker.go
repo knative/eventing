@@ -153,6 +153,10 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 	b.Status.Annotations[eventing.BrokerChannelAPIVersionStatusAnnotationKey] = chanMan.ref.APIVersion
 	b.Status.Annotations[eventing.BrokerChannelNameStatusAnnotationKey] = chanMan.ref.Name
 
+	if caCerts := triggerChan.Status.Address.CACerts; caCerts != nil && *caCerts != "" {
+		b.Status.Annotations[eventing.BrokerChannelCACertsStatusAnnotationKey] = *caCerts
+	}
+
 	channelStatus := &duckv1.ChannelableStatus{
 		AddressStatus: pkgduckv1.AddressStatus{
 			Address: &pkgduckv1.Addressable{URL: triggerChan.Status.Address.URL},
