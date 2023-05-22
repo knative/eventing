@@ -127,17 +127,11 @@ Vw==
 
 	dlcDNS = "dlc.mynamespace.svc." + network.GetClusterDomainName()
 	dlcURI = apis.HTTP(dlcDNS)
-	dlc    = duckv1.Addressable{
-		URL: dlcURI,
-	}
 
 	dlc2DNS = "dlc2.mynamespace.svc." + network.GetClusterDomainName()
 
 	dlsDNS = "dls.mynamespace.svc." + network.GetClusterDomainName()
 	dlsURI = apis.HTTP(dlsDNS)
-	dls    = duckv1.Addressable{
-		URL: dlsURI,
-	}
 
 	subscriberGVK = metav1.GroupVersionKind{
 		Group:   "messaging.knative.dev",
