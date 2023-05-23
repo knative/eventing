@@ -123,9 +123,21 @@ type SubscriptionStatusPhysicalSubscription struct {
 	// +optional
 	SubscriberURI *apis.URL `json:"subscriberUri,omitempty"`
 
+	// SubscriberCACerts is the Certification Authority (CA) certificates in PEM
+	// format according to https://www.rfc-editor.org/rfc/rfc7468 for the
+	// resolved URI for spec.subscriber.
+	// +optional
+	SubscriberCACerts *string `json:"subscriberCACerts,omitempty"`
+
 	// ReplyURI is the fully resolved URI for the spec.reply.
 	// +optional
 	ReplyURI *apis.URL `json:"replyUri,omitempty"`
+
+	// ReplyCACerts is the Certification Authority (CA) certificates in PEM
+	// format according to https://www.rfc-editor.org/rfc/rfc7468 for the
+	// resolved URI for the spec.reply.
+	// +optional
+	ReplyCACerts *string `json:"replyCACerts,omitempty"`
 
 	// DeliveryStatus contains a resolved URL to the dead letter sink address, and any other
 	// resolved delivery options.

@@ -201,21 +201,23 @@ func WithSubscriptionDeliveryRef(gvk metav1.GroupVersionKind, name, namespace st
 	}
 }
 
-func WithSubscriptionPhysicalSubscriptionSubscriber(uri *apis.URL) SubscriptionOption {
+func WithSubscriptionPhysicalSubscriptionSubscriber(subscriber *duckv1.Addressable) SubscriptionOption {
 	return func(s *v1.Subscription) {
-		if uri == nil {
-			panic(errors.New("nil URI"))
+		if subscriber == nil {
+			panic(errors.New("nil subscriber"))
 		}
-		s.Status.PhysicalSubscription.SubscriberURI = uri
+		s.Status.PhysicalSubscription.SubscriberURI = subscriber.URL
+		s.Status.PhysicalSubscription.SubscriberCACerts = subscriber.CACerts
 	}
 }
 
-func WithSubscriptionPhysicalSubscriptionReply(uri *apis.URL) SubscriptionOption {
+func WithSubscriptionPhysicalSubscriptionReply(reply *duckv1.Addressable) SubscriptionOption {
 	return func(s *v1.Subscription) {
-		if uri == nil {
-			panic(errors.New("nil URI"))
+		if reply == nil {
+			panic(errors.New("nil reply"))
 		}
-		s.Status.PhysicalSubscription.ReplyURI = uri
+		s.Status.PhysicalSubscription.ReplyURI = reply.URL
+		s.Status.PhysicalSubscription.ReplyCACerts = reply.CACerts
 	}
 }
 
