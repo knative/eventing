@@ -24,6 +24,8 @@ import (
 	"strings"
 	"testing"
 
+	"knative.dev/eventing/pkg/apis/eventing/v1beta2"
+
 	apix1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -31,7 +33,6 @@ import (
 	clientgotesting "k8s.io/client-go/testing"
 	v1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/apis/eventing"
-	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/reconciler/source/duck/resources"
 	"knative.dev/pkg/apis"
@@ -42,7 +43,7 @@ import (
 	logtesting "knative.dev/pkg/logging/testing"
 	"knative.dev/pkg/ptr"
 
-	. "knative.dev/eventing/pkg/reconciler/testing/v1beta1"
+	. "knative.dev/eventing/pkg/reconciler/testing/v1beta2"
 	. "knative.dev/pkg/reconciler/testing"
 )
 
@@ -323,9 +324,9 @@ func makeSourceCRD(eventTypes []eventTypeEntry) *apix1.CustomResourceDefinition 
 	}
 }
 
-func makeEventType(ceType, ceSource string) *v1beta1.EventType {
+func makeEventType(ceType, ceSource string) *v1beta2.EventType {
 	ceSourceURL, _ := apis.ParseURL(ceSource)
-	return &v1beta1.EventType{
+	return &v1beta2.EventType{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%x", md5.Sum([]byte(ceType+ceSource+sourceUID))),
 			Labels:    resources.Labels(sourceName),
@@ -339,7 +340,7 @@ func makeEventType(ceType, ceSource string) *v1beta1.EventType {
 				Controller:         ptr.Bool(true),
 			}},
 		},
-		Spec: v1beta1.EventTypeSpec{
+		Spec: v1beta2.EventTypeSpec{
 			Type:   ceType,
 			Source: ceSourceURL,
 			Broker: sinkName,
@@ -347,7 +348,7 @@ func makeEventType(ceType, ceSource string) *v1beta1.EventType {
 	}
 }
 
-func makeEventTypeWithName(ceType, ceSource, name string) *v1beta1.EventType {
+func makeEventTypeWithName(ceType, ceSource, name string) *v1beta2.EventType {
 	et := makeEventType(ceType, ceSource)
 	et.Name = name
 	return et
