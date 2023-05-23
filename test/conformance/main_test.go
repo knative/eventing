@@ -20,6 +20,7 @@ package conformance
 
 import (
 	"context"
+	"flag"
 	"log"
 	"os"
 	"strings"
@@ -46,6 +47,7 @@ var brokerClass string
 func TestMain(m *testing.M) {
 	os.Exit(func() int {
 		test.InitializeEventingFlags()
+		flag.Parse()
 		testlib.ReuseNamespace = test.EventingFlags.ReuseNamespace
 		channelTestRunner = testlib.ComponentsTestRunner{
 			ComponentFeatureMap: testlib.ChannelFeatureMap,
@@ -61,7 +63,7 @@ func TestMain(m *testing.M) {
 			ComponentName:       test.EventingFlags.BrokerName,
 			ComponentNamespace:  test.EventingFlags.BrokerNamespace,
 		}
-		brokerClass = test.EventingFlags.BrokerClass
+		brokerClass = test.BrokerClass
 
 		addSourcesInitializers()
 		// Any tests may SetupZipkinTracing, it will only actually be done once. This should be the ONLY

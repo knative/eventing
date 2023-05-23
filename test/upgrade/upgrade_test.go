@@ -20,8 +20,10 @@ limitations under the License.
 package upgrade
 
 import (
+	"flag"
 	"testing"
 
+	"knative.dev/eventing/test"
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/upgrade/installation"
 	"knative.dev/pkg/system"
@@ -70,5 +72,7 @@ func TestEventingUpgrades(t *testing.T) {
 }
 
 func TestMain(m *testing.M) {
+	test.InitializeEventingFlags()
+	flag.Parse()
 	RunMainTest(m)
 }

@@ -21,7 +21,6 @@ package test
 
 import (
 	"flag"
-	"log"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	testflags "knative.dev/eventing/test/flags"
@@ -43,17 +42,18 @@ const (
 	BrokerNameUsage = "When testing a pre-existing broker, specify the Broker name so the conformance tests " +
 		"won't create their own."
 	BrokerNamespaceUsage = "When testing a pre-existing broker, this variable specifies the namespace the broker can be found in."
+	BrokerClass          = "MTChannelBasedBroker"
 )
 
 // EventingFlags holds the command line flags specific to knative/eventing.
 var EventingFlags testflags.EventingEnvironmentFlags
 
-// InitializeEventingFlags registers flags used by e2e tests, calling flag.Parse() here would fail in
-// go1.13+, see https://github.com/knative/test-infra/issues/1329 for details
+// InitializeEventingFlags registers flags used by e2e tests.
 func InitializeEventingFlags() {
-
+	// Default value for Channels.
+	EventingFlags.Channels = []metav1.TypeMeta{testlib.DefaultChannel}
 	flag.Var(&EventingFlags.Channels, "channels", ChannelUsage)
-	flag.StringVar(&EventingFlags.BrokerClass, "brokerclass", "MTChannelBasedBroker", BrokerClassUsage)
+
 	flag.Var(&EventingFlags.Sources, "sources", SourceUsage)
 	flag.StringVar(&EventingFlags.PipeFile, "pipefile", "/tmp/prober-signal", "Temporary file to write the prober signal into.")
 	flag.StringVar(&EventingFlags.ReadyFile, "readyfile", "/tmp/prober-ready", "Temporary file to get the prober result.")
@@ -63,18 +63,4 @@ func InitializeEventingFlags() {
 	// Might be useful in restricted environments where namespaces need to be
 	// created by a user with increased privileges (admin).
 	flag.BoolVar(&EventingFlags.ReuseNamespace, "reusenamespace", false, "Whether to re-use namespace for a test if it already exists.")
-	flag.Parse()
-
-	// If no channel is passed through the flag, initialize it as the DefaultChannel.
-	if EventingFlags.Channels == nil || len(EventingFlags.Channels) == 0 {
-		EventingFlags.Channels = []metav1.TypeMeta{testlib.DefaultChannel}
-	}
-
-	if EventingFlags.BrokerClass == "" {
-		log.Fatalf("Brokerclass not specified")
-	}
-
-	if EventingFlags.BrokerClass != "MTChannelBasedBroker" {
-		log.Fatalf("Invalid Brokerclass specified, got %q must be %q", EventingFlags.BrokerClass, "MTChannelBasedBroker")
-	}
 }
