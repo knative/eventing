@@ -32,6 +32,7 @@ import (
 	"knative.dev/pkg/logging"
 
 	"knative.dev/reconciler-test/pkg/eventshub"
+
 	"knative.dev/reconciler-test/pkg/eventshub/dropevents"
 )
 
@@ -200,7 +201,7 @@ func (o *Receiver) ServeHTTP(writer http.ResponseWriter, request *http.Request) 
 
 	var rejectErr error
 	if o.EnforceTLS && !isTLS(request) {
-		rejectErr = fmt.Errorf("failed to enforce TLS connection for request %s", request.RequestURI)
+		rejectErr = fmt.Errorf("failed to enforce TLS connection for request %s", request.URL.String())
 	}
 
 	m := cloudeventshttp.NewMessageFromHttpRequest(request)
@@ -245,6 +246,7 @@ func (o *Receiver) ServeHTTP(writer http.ResponseWriter, request *http.Request) 
 		Time:        time.Now(),
 		Sequence:    s,
 		Kind:        kind,
+		Connection:  toConnection(request),
 	}
 
 	if err := o.EventLogs.Vent(eventInfo); err != nil {
@@ -273,7 +275,34 @@ func (o *Receiver) ServeHTTP(writer http.ResponseWriter, request *http.Request) 
 	}
 }
 
+func toConnection(request *http.Request) *eventshub.Connection {
+
+	if request.TLS != nil {
+		c := &eventshub.Connection{TLS: &eventshub.ConnectionTLS{}}
+		c.TLS.CipherSuite = request.TLS.CipherSuite
+		c.TLS.CipherSuiteName = tls.CipherSuiteName(request.TLS.CipherSuite)
+		c.TLS.HandshakeComplete = request.TLS.HandshakeComplete
+		c.TLS.IsInsecureCipherSuite = isInsecureCipherSuite(request.TLS)
+		return c
+	}
+
+	return nil
+}
+
 func isTLS(request *http.Request) bool {
-	return strings.EqualFold(request.URL.Scheme, "https") &&
-		request.TLS != nil && request.TLS.HandshakeComplete
+	return request.TLS != nil && request.TLS.HandshakeComplete && !isInsecureCipherSuite(request.TLS)
+}
+
+func isInsecureCipherSuite(conn *tls.ConnectionState) bool {
+	if conn == nil {
+		return true
+	}
+
+	res := false
+	for _, s := range tls.InsecureCipherSuites() {
+		if s.ID == conn.CipherSuite {
+			res = true
+		}
+	}
+	return res
 }

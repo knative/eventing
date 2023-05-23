@@ -17,6 +17,7 @@ limitations under the License.
 package eventshub
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -39,6 +40,17 @@ const (
 	EventResponse EventKind = "Response"
 )
 
+type ConnectionTLS struct {
+	CipherSuite           uint16 `json:"cipherSuite,omitempty"`
+	CipherSuiteName       string `json:"cipherSuiteName,omitempty"`
+	HandshakeComplete     bool   `json:"handshakeComplete,omitempty"`
+	IsInsecureCipherSuite bool   `json:"isInsecureCipherSuite,omitempty"`
+}
+
+type Connection struct {
+	TLS *ConnectionTLS `json:"TLS,omitempty"`
+}
+
 // Structure to hold information about an event seen by eventshub pod.
 type EventInfo struct {
 	Kind EventKind `json:"kind"`
@@ -55,6 +67,9 @@ type EventInfo struct {
 	Body []byte `json:"body,omitempty"`
 
 	StatusCode int `json:"statusCode,omitempty"`
+
+	// Connection holds some underlying connection info like TLS, etc.
+	Connection *Connection `json:"connection,omitempty"`
 
 	Origin   string    `json:"origin,omitempty"`
 	Observer string    `json:"observer,omitempty"`
@@ -98,6 +113,11 @@ func (ei *EventInfo) String() string {
 	}
 	if ei.StatusCode != 0 {
 		sb.WriteString(fmt.Sprintf("--- Status Code: %d ---\n", ei.StatusCode))
+	}
+	if ei.Connection != nil {
+		sb.WriteString("--- Connection ---\n")
+		c, _ := json.MarshalIndent(ei.Connection, "", "  ")
+		sb.WriteString(string(c) + "\n")
 	}
 	sb.WriteString("--- Origin: '" + ei.Origin + "' ---\n")
 	sb.WriteString("--- Observer: '" + ei.Observer + "' ---\n")
