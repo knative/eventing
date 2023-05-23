@@ -123,8 +123,7 @@ func SendsEventsWithArgs() *feature.Feature {
 func SendEventsWithTLSRecieverAsSink() *feature.Feature {
 	source := feature.MakeRandomK8sName("containersource")
 	sink := feature.MakeRandomK8sName("sink")
-
-	f := feature.NewFeatureNamed("Send events to TLS sink")
+	f := feature.NewFeature()
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiverTLS))
 
@@ -134,15 +133,13 @@ func SendEventsWithTLSRecieverAsSink() *feature.Feature {
 
 		containersource.Install(source, containersource.WithSink(d))(ctx, t)
 	})
-	f.Requirement("ContainerSource goes ready", containersource.IsReady(source))
+	f.Requirement("containersource goes ready", containersource.IsReady(source))
 
-	f.Stable("ContainerSource as event source").
-		Must("delivers events on sink with ref",
-			assert.OnStore(sink).
-				Match(assert.MatchKind(eventshub.EventReceived)).
-				MatchEvent(test.HasType("dev.knative.eventing.samples.heartbeat")).
-				AtLeast(1),
-		)
+	f.Stable("containersource as event source").
+		Must("delivers events",
+			assert.OnStore(sink).MatchEvent(
+				test.HasType("dev.knative.eventing.samples.heartbeat"),
+			).AtLeast(1))
 
 	return f
 }
