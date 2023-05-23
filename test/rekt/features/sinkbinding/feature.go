@@ -123,10 +123,24 @@ func SinkBindingV1Job(ctx context.Context) *feature.Feature {
 func SinkBindingV1DeploymentTLS(ctx context.Context) *feature.Feature {
 	sbinding := feature.MakeRandomK8sName("sinkbinding")
 	sink := feature.MakeRandomK8sName("sink")
+	subject := feature.MakeRandomK8sName("subject")
 
 	f := feature.NewFeatureNamed("SinkBinding V1 Deployment test with TLS")
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiverTLS))
+	
+	f.Setup("install a deployment", deployment.Install(subject, heartbeatsImage,
+		deployment.WithEnvs(map[string]string{
+			"POD_NAME":      "heartbeats",
+			"POD_NAMESPACE": env.Namespace(),
+		})))
+	extensions := map[string]string{
+		"sinkbinding": extensionSecret,
+	}
+	cfg := []manifest.CfgFn{
+		sinkbinding.WithExtensions(extensions),
+		deployment.AsTrackerReference(subject),
+	}
 
 	f.Requirement("install SinkBinding", func(ctx context.Context, t feature.T) {
 		d := service.AsDestinationRef(sink)
