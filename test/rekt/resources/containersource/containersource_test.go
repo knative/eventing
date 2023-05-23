@@ -147,8 +147,8 @@ func Example_sink() {
 
 	sinkRef := &duckv1.Destination{
 		Ref: &duckv1.KReference{
-			Kind: "AKind",
-			// Namespace:  "sinknamespace",
+			Kind:       "AKind",
+			Namespace:  "sinknamespace",
 			Name:       "thesink",
 			APIVersion: "something.valid/v1",
 		},
@@ -176,7 +176,7 @@ func Example_sink() {
 	//   sink:
 	//     ref:
 	//       kind: AKind
-	//       namespace: bar
+	//       namespace: sinknamespace
 	//       name: thesink
 	//       apiVersion: something.valid/v1
 	//     uri: uri/parts
