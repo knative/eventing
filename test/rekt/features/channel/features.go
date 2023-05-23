@@ -27,10 +27,11 @@ import (
 	"github.com/google/uuid"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/eventshub"
-	"knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
 	"knative.dev/reconciler-test/resources/svc"
+
+	"knative.dev/reconciler-test/pkg/eventshub/assert"
 
 	eventasssert "knative.dev/reconciler-test/pkg/eventshub/assert"
 
@@ -86,7 +87,7 @@ func ChannelChain(length int, createSubscriberFn func(ref *duckv1.KReference, ur
 func DeadLetterSink(createSubscriberFn func(ref *duckv1.KReference, uri string) manifest.CfgFn) *feature.Feature {
 	f := feature.NewFeature()
 	sink := feature.MakeRandomK8sName("sink")
-	failer := feature.MakeK8sNamePrefix("failer")
+	failer := feature.MakeRandomK8sName("failer")
 	cs := feature.MakeRandomK8sName("containersource")
 	name := feature.MakeRandomK8sName("channel")
 	sub := feature.MakeRandomK8sName("subscription")
@@ -116,7 +117,7 @@ func DeadLetterSink(createSubscriberFn func(ref *duckv1.KReference, uri string) 
 func DeadLetterSinkGenericChannel(createSubscriberFn func(ref *duckv1.KReference, uri string) manifest.CfgFn) *feature.Feature {
 	f := feature.NewFeature()
 	sink := feature.MakeRandomK8sName("sink")
-	failer := feature.MakeK8sNamePrefix("failer")
+	failer := feature.MakeRandomK8sName("failer")
 	cs := feature.MakeRandomK8sName("containersource")
 	name := feature.MakeRandomK8sName("channel")
 	sub := feature.MakeRandomK8sName("subscription")
