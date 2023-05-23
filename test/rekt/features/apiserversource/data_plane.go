@@ -21,16 +21,20 @@ import (
 	"fmt"
 
 	"github.com/cloudevents/sdk-go/v2/test"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/apimachinery/pkg/util/sets"
 	"knative.dev/reconciler-test/pkg/eventshub"
-	eventasssert "knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
 	"knative.dev/reconciler-test/pkg/resources/service"
+
+	eventasssert "knative.dev/reconciler-test/pkg/eventshub/assert"
+
+	"knative.dev/reconciler-test/pkg/resources/pod"
 
 	"knative.dev/eventing/pkg/apis/sources"
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
@@ -41,7 +45,6 @@ import (
 	"knative.dev/eventing/test/rekt/resources/namespace"
 	"knative.dev/eventing/test/rekt/resources/pingsource"
 	"knative.dev/eventing/test/rekt/resources/trigger"
-	"knative.dev/reconciler-test/pkg/resources/pod"
 )
 
 const (
@@ -110,7 +113,7 @@ func SendsEventsWithSinkRef() *feature.Feature {
 	cfg := []manifest.CfgFn{
 		apiserversource.WithServiceAccountName(sacmName),
 		apiserversource.WithEventMode(v1.ResourceMode),
-		apiserversource.WithSink(service.AsKReference(sink), ""),
+		apiserversource.WithSink(service.AsDestinationRef(sink)),
 		apiserversource.WithResources(v1.APIVersionKindSelector{
 			APIVersion: "v1",
 			Kind:       "Event",
@@ -147,7 +150,7 @@ func SendsEventsWithSinkUri() *feature.Feature {
 		cfg := []manifest.CfgFn{
 			apiserversource.WithServiceAccountName(sacmName),
 			apiserversource.WithEventMode(v1.ResourceMode),
-			apiserversource.WithSink(nil, sinkuri.String()),
+			apiserversource.WithSink(&duckv1.Destination{URI: sinkuri}),
 			apiserversource.WithResources(v1.APIVersionKindSelector{
 				APIVersion: "v1",
 				Kind:       "Event",
@@ -161,6 +164,47 @@ func SendsEventsWithSinkUri() *feature.Feature {
 	f.Stable("ApiServerSource as event source").
 		Must("delivers events on sink with URI",
 			eventasssert.OnStore(sink).MatchEvent(test.HasType("dev.knative.apiserver.resource.update")).AtLeast(1))
+
+	return f
+}
+
+func SendsEventsWithTLS() *feature.Feature {
+	source := feature.MakeRandomK8sName("apiserversource")
+	sink := feature.MakeRandomK8sName("sink")
+
+	f := feature.NewFeatureNamed("Send events to TLS sink")
+
+	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiverTLS))
+
+	sacmName := feature.MakeRandomK8sName("apiserversource")
+	f.Requirement("Create Service Account for ApiServerSource with RBAC for v1.Event resources",
+		setupAccountAndRoleForPods(sacmName))
+
+	cfg := []manifest.CfgFn{
+		apiserversource.WithServiceAccountName(sacmName),
+		apiserversource.WithEventMode(v1.ResourceMode),
+		apiserversource.WithResources(v1.APIVersionKindSelector{
+			APIVersion: "v1",
+			Kind:       "Event",
+		}),
+	}
+
+	f.Requirement("install ApiServerSource", func(ctx context.Context, t feature.T) {
+		d := service.AsDestinationRef(sink)
+		d.CACerts = eventshub.GetCaCerts(ctx)
+
+		cfg = append(cfg, apiserversource.WithSink(d))
+		apiserversource.Install(source, cfg...)(ctx, t)
+	})
+	f.Requirement("ApiServerSource goes ready", apiserversource.IsReady(source))
+
+	f.Stable("ApiServerSource as event source").
+		Must("delivers events on sink with ref",
+			eventasssert.OnStore(sink).
+				Match(eventasssert.MatchKind(eventshub.EventReceived)).
+				MatchEvent(test.HasType("dev.knative.apiserver.resource.update")).
+				AtLeast(1),
+		)
 
 	return f
 }
@@ -194,7 +238,7 @@ func SendsEventsWithEventTypes() *feature.Feature {
 		cfg := []manifest.CfgFn{
 			apiserversource.WithServiceAccountName(sacmName),
 			apiserversource.WithEventMode(v1.ResourceMode),
-			apiserversource.WithSink(nil, brokeruri.String()),
+			apiserversource.WithSink(&duckv1.Destination{URI: brokeruri}),
 			apiserversource.WithResources(v1.APIVersionKindSelector{
 				APIVersion: "v1",
 				Kind:       "Event",
@@ -229,7 +273,7 @@ func SendsEventsWithObjectReferencePayload() *feature.Feature {
 	cfg := []manifest.CfgFn{
 		apiserversource.WithServiceAccountName(sacmName),
 		apiserversource.WithEventMode(v1.ReferenceMode),
-		apiserversource.WithSink(service.AsKReference(sink), ""),
+		apiserversource.WithSink(service.AsDestinationRef(sink)),
 		apiserversource.WithResources(v1.APIVersionKindSelector{
 			APIVersion: "v1",
 			Kind:       "Pod",
@@ -272,7 +316,7 @@ func SendsEventsWithResourceEventPayload() *feature.Feature {
 	cfg := []manifest.CfgFn{
 		apiserversource.WithServiceAccountName(sacmName),
 		apiserversource.WithEventMode(v1.ResourceMode),
-		apiserversource.WithSink(service.AsKReference(sink), ""),
+		apiserversource.WithSink(service.AsDestinationRef(sink)),
 		apiserversource.WithResources(v1.APIVersionKindSelector{
 			APIVersion: "v1",
 			Kind:       "Pod",
@@ -315,7 +359,7 @@ func SendsEventsForAllResources() *feature.Feature {
 	cfg := []manifest.CfgFn{
 		apiserversource.WithServiceAccountName(sacmName),
 		apiserversource.WithEventMode("Reference"),
-		apiserversource.WithSink(service.AsKReference(sink), ""),
+		apiserversource.WithSink(service.AsDestinationRef(sink)),
 		apiserversource.WithResources(v1.APIVersionKindSelector{
 			APIVersion: "v1",
 			Kind:       "Pod",
@@ -368,7 +412,7 @@ func SendsEventsForAllResourcesWithNamespaceSelector() *feature.Feature {
 	cfg := []manifest.CfgFn{
 		apiserversource.WithServiceAccountName(sacmName),
 		apiserversource.WithEventMode("Reference"),
-		apiserversource.WithSink(service.AsKReference(sink), ""),
+		apiserversource.WithSink(service.AsDestinationRef(sink)),
 		apiserversource.WithResources(v1.APIVersionKindSelector{
 			APIVersion: "v1",
 			Kind:       "Pod",
@@ -441,7 +485,7 @@ func SendsEventsForAllResourcesWithEmptyNamespaceSelector() *feature.Feature {
 	cfg := []manifest.CfgFn{
 		apiserversource.WithServiceAccountName(sacmName),
 		apiserversource.WithEventMode("Reference"),
-		apiserversource.WithSink(service.AsKReference(sink), ""),
+		apiserversource.WithSink(service.AsDestinationRef(sink)),
 		apiserversource.WithResources(v1.APIVersionKindSelector{
 			APIVersion: "sources.knative.dev/v1",
 			Kind:       "PingSource",
@@ -499,7 +543,7 @@ func SendsEventsForLabelMatchingResources() *feature.Feature {
 	cfg := []manifest.CfgFn{
 		apiserversource.WithServiceAccountName(sacmName),
 		apiserversource.WithEventMode("Reference"),
-		apiserversource.WithSink(service.AsKReference(sink), ""),
+		apiserversource.WithSink(service.AsDestinationRef(sink)),
 		apiserversource.WithResources(v1.APIVersionKindSelector{
 			APIVersion:    "v1",
 			Kind:          "Pod",
@@ -593,7 +637,7 @@ func SendEventsForLabelExpressionMatchingResources() *feature.Feature {
 	cfg := []manifest.CfgFn{
 		apiserversource.WithServiceAccountName(sacmName),
 		apiserversource.WithEventMode("Reference"),
-		apiserversource.WithSink(service.AsKReference(sink), ""),
+		apiserversource.WithSink(service.AsDestinationRef(sink)),
 		apiserversource.WithResources(v1.APIVersionKindSelector{
 			APIVersion:    "v1",
 			Kind:          "Pod",
@@ -682,7 +726,7 @@ func SendsEventsWithRetries() *feature.Feature {
 		cfg := []manifest.CfgFn{
 			apiserversource.WithServiceAccountName(sacmName),
 			apiserversource.WithEventMode(v1.ReferenceMode),
-			apiserversource.WithSink(nil, sinkuri.String()),
+			apiserversource.WithSink(&duckv1.Destination{URI: sinkuri}),
 			apiserversource.WithResources(v1.APIVersionKindSelector{
 				APIVersion:    "v1",
 				Kind:          "Pod",

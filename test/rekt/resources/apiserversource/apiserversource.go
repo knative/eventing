@@ -19,14 +19,16 @@ package apiserversource
 import (
 	"context"
 	"embed"
+	"strings"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/k8s"
+
+	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/manifest"
@@ -79,15 +81,24 @@ func WithEventMode(eventMode string) manifest.CfgFn {
 }
 
 // WithSink adds the sink related config to a ApiServerSource spec.
-func WithSink(ref *duckv1.KReference, uri string) manifest.CfgFn {
+func WithSink(d *duckv1.Destination) manifest.CfgFn {
 	return func(cfg map[string]interface{}) {
 		if _, set := cfg["sink"]; !set {
 			cfg["sink"] = map[string]interface{}{}
 		}
 		sink := cfg["sink"].(map[string]interface{})
 
-		if uri != "" {
-			sink["uri"] = uri
+		ref := d.Ref
+		uri := d.URI
+
+		if d.CACerts != nil {
+			// This is a multi-line string and should be indented accordingly.
+			// Replace "new line" with "new line + spaces".
+			sink["CACerts"] = strings.ReplaceAll(*d.CACerts, "\n", "\n      ")
+		}
+
+		if uri != nil {
+			sink["uri"] = uri.String()
 		}
 		if ref != nil {
 			if _, set := sink["ref"]; !set {

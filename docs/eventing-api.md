@@ -637,6 +637,20 @@ knative.dev/pkg/apis.URL
 </tr>
 <tr>
 <td>
+<code>subscriberCACerts</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SubscriberCACerts is the Certification Authority (CA) certificates in PEM
+format according to <a href="https://www.rfc-editor.org/rfc/rfc7468">https://www.rfc-editor.org/rfc/rfc7468</a> for the
+subscriberUri</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>replyUri</code><br/>
 <em>
 <a href="https://pkg.go.dev/knative.dev/pkg/apis#URL">
@@ -647,6 +661,20 @@ knative.dev/pkg/apis.URL
 <td>
 <em>(Optional)</em>
 <p>ReplyURI is the endpoint for the reply</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>replyCACerts</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ReplyCACerts is the Certification Authority (CA) certificates in PEM
+format according to <a href="https://www.rfc-editor.org/rfc/rfc7468">https://www.rfc-editor.org/rfc/rfc7468</a> for the
+replyUri.</p>
 </td>
 </tr>
 <tr>
@@ -4528,6 +4556,20 @@ knative.dev/pkg/apis.URL
 </tr>
 <tr>
 <td>
+<code>subscriberCACerts</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SubscriberCACerts is the Certification Authority (CA) certificates in PEM
+format according to <a href="https://www.rfc-editor.org/rfc/rfc7468">https://www.rfc-editor.org/rfc/rfc7468</a> for the
+resolved URI for spec.subscriber.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>replyUri</code><br/>
 <em>
 <a href="https://pkg.go.dev/knative.dev/pkg/apis#URL">
@@ -4538,6 +4580,20 @@ knative.dev/pkg/apis.URL
 <td>
 <em>(Optional)</em>
 <p>ReplyURI is the fully resolved URI for the spec.reply.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>replyCACerts</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ReplyCACerts is the Certification Authority (CA) certificates in PEM
+format according to <a href="https://www.rfc-editor.org/rfc/rfc7468">https://www.rfc-editor.org/rfc/rfc7468</a> for the
+resolved URI for the spec.reply.</p>
 </td>
 </tr>
 <tr>
