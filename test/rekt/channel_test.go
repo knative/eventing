@@ -23,6 +23,8 @@ import (
 	"testing"
 
 	"github.com/cloudevents/sdk-go/v2/binding"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/system"
 	_ "knative.dev/pkg/system/testing"
@@ -32,6 +34,7 @@ import (
 	"knative.dev/reconciler-test/pkg/manifest"
 
 	"knative.dev/eventing/test/rekt/features/channel"
+	"knative.dev/eventing/test/rekt/features/workloads"
 	ch "knative.dev/eventing/test/rekt/resources/channel"
 	chimpl "knative.dev/eventing/test/rekt/resources/channel_impl"
 	"knative.dev/eventing/test/rekt/resources/subscription"
@@ -317,4 +320,31 @@ func TestChannelDeadLetterSinkExtensions(t *testing.T) {
 	}
 
 	env.TestSet(ctx, t, channel.ChannelDeadLetterSinkExtensions(createSubscriberFn))
+}
+
+func TestInMemoryChannelDataPlaneLabels(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+	)
+
+	env.Test(ctx, t, workloads.Selector(workloads.Workload{
+		GVR: schema.GroupVersionResource{
+			Version:  "v1",
+			Resource: "pods",
+		},
+		PartialName: "imc-dispatcher",
+		Namespace:   system.Namespace(),
+		Selector: metav1.LabelSelector{
+			MatchLabels: map[string]string{
+				"app.kubernetes.io/name":      "knative-eventing",
+				"app.kubernetes.io/component": "imc-dispatcher",
+			},
+		},
+	}))
 }

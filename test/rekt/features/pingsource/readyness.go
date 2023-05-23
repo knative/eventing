@@ -17,15 +17,16 @@ limitations under the License.
 package pingsource
 
 import (
-	"knative.dev/eventing/test/rekt/resources/pingsource"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
 	"knative.dev/reconciler-test/pkg/resources/service"
+
+	"knative.dev/eventing/test/rekt/resources/pingsource"
 )
 
-// PingSourceGoesReady returns a feature testing if a pingsource becomes ready.
-func PingSourceGoesReady(name string, cfg ...manifest.CfgFn) *feature.Feature {
+// GoesReady returns a feature testing if a pingsource becomes ready.
+func GoesReady(name string, cfg ...manifest.CfgFn) *feature.Feature {
 	f := feature.NewFeatureNamed("PingSource goes ready.")
 
 	sink := feature.MakeRandomK8sName("sink")

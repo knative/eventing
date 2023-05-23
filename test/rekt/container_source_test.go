@@ -22,9 +22,15 @@ package rekt
 import (
 	"testing"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+
 	"knative.dev/eventing/test/rekt/features/containersource"
+	"knative.dev/eventing/test/rekt/features/workloads"
+
 	"knative.dev/pkg/system"
 	"knative.dev/reconciler-test/pkg/environment"
+	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/knative"
 )
@@ -84,4 +90,33 @@ func TestContainerSourceWithArgs(t *testing.T) {
 	)
 
 	env.Test(ctx, t, containersource.SendsEventsWithArgs())
+}
+
+func TestContainerSourceDataPlaneLabels(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+	)
+
+	srcname := feature.MakeRandomK8sName("containersource")
+	env.Prerequisite(ctx, t, containersource.GoesReady(srcname))
+
+	env.Test(ctx, t, workloads.Selector(workloads.Workload{
+		GVR: schema.GroupVersionResource{
+			Version:  "v1",
+			Resource: "pods",
+		},
+		PartialName: srcname,
+		Selector: metav1.LabelSelector{
+			MatchLabels: map[string]string{
+				"app.kubernetes.io/name":      "knative-eventing",
+				"app.kubernetes.io/component": "containersource-adapter",
+			},
+		},
+	}))
 }

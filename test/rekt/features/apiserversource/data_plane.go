@@ -32,6 +32,8 @@ import (
 	"knative.dev/reconciler-test/pkg/manifest"
 	"knative.dev/reconciler-test/pkg/resources/service"
 
+	"knative.dev/reconciler-test/pkg/resources/pod"
+
 	"knative.dev/eventing/pkg/apis/sources"
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/eventing/test/rekt/resources/account_role"
@@ -41,7 +43,6 @@ import (
 	"knative.dev/eventing/test/rekt/resources/namespace"
 	"knative.dev/eventing/test/rekt/resources/pingsource"
 	"knative.dev/eventing/test/rekt/resources/trigger"
-	"knative.dev/reconciler-test/pkg/resources/pod"
 )
 
 const (

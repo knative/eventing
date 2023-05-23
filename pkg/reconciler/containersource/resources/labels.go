@@ -24,5 +24,7 @@ func Labels(name string) map[string]string {
 	return map[string]string{
 		"sources.knative.dev/source":          containerSourceController,
 		"sources.knative.dev/containerSource": name,
+		"app.kubernetes.io/name":              "knative-eventing",
+		"app.kubernetes.io/component":         "containersource-adapter",
 	}
 }

@@ -101,6 +101,8 @@ func TestMakeDeployment(t *testing.T) {
 					Labels: map[string]string{
 						"sources.knative.dev/containerSource": name,
 						"sources.knative.dev/source":          "container-source-controller",
+						"app.kubernetes.io/name":              "knative-eventing",
+						"app.kubernetes.io/component":         "containersource-adapter",
 					},
 				},
 				Spec: appsv1.DeploymentSpec{
@@ -108,6 +110,8 @@ func TestMakeDeployment(t *testing.T) {
 						MatchLabels: map[string]string{
 							"sources.knative.dev/containerSource": name,
 							"sources.knative.dev/source":          "container-source-controller",
+							"app.kubernetes.io/name":              "knative-eventing",
+							"app.kubernetes.io/component":         "containersource-adapter",
 						},
 					},
 					Template: corev1.PodTemplateSpec{
@@ -115,6 +119,8 @@ func TestMakeDeployment(t *testing.T) {
 							Labels: map[string]string{
 								"sources.knative.dev/containerSource": name,
 								"sources.knative.dev/source":          "container-source-controller",
+								"app.kubernetes.io/name":              "knative-eventing",
+								"app.kubernetes.io/component":         "containersource-adapter",
 							},
 						},
 						Spec: corev1.PodSpec{
@@ -223,6 +229,8 @@ func TestMakeDeployment(t *testing.T) {
 					Labels: map[string]string{
 						"sources.knative.dev/containerSource": name,
 						"sources.knative.dev/source":          "container-source-controller",
+						"app.kubernetes.io/name":              "knative-eventing",
+						"app.kubernetes.io/component":         "containersource-adapter",
 					},
 				},
 				Spec: appsv1.DeploymentSpec{
@@ -230,6 +238,8 @@ func TestMakeDeployment(t *testing.T) {
 						MatchLabels: map[string]string{
 							"sources.knative.dev/containerSource": name,
 							"sources.knative.dev/source":          "container-source-controller",
+							"app.kubernetes.io/name":              "knative-eventing",
+							"app.kubernetes.io/component":         "containersource-adapter",
 						},
 					},
 					Template: corev1.PodTemplateSpec{
@@ -237,6 +247,8 @@ func TestMakeDeployment(t *testing.T) {
 							Labels: map[string]string{
 								"sources.knative.dev/containerSource": name,
 								"sources.knative.dev/source":          "container-source-controller",
+								"app.kubernetes.io/name":              "knative-eventing",
+								"app.kubernetes.io/component":         "containersource-adapter",
 							},
 						},
 						Spec: corev1.PodSpec{
