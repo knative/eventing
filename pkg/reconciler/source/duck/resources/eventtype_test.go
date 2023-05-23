@@ -23,7 +23,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
+	"knative.dev/eventing/pkg/apis/eventing/v1beta2"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/ptr"
@@ -38,7 +38,7 @@ func TestMakeEventType(t *testing.T) {
 				UID:       "source-uid",
 			},
 			TypeMeta: metav1.TypeMeta{
-				APIVersion: "testing.sources.knative.dev/v1beta1",
+				APIVersion: "testing.sources.knative.dev/v1beta2",
 				Kind:       "TestSource",
 			},
 			Spec: duckv1.SourceSpec{
@@ -57,13 +57,13 @@ func TestMakeEventType(t *testing.T) {
 
 	got := MakeEventType(args)
 
-	want := &v1beta1.EventType{
+	want := &v1beta2.EventType{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%x", md5.Sum([]byte("my-type"+"http://my-source"+"http://my-schema"+"source-uid"))),
 			Labels:    Labels("source-name"),
 			Namespace: "source-namespace",
 			OwnerReferences: []metav1.OwnerReference{{
-				APIVersion:         "testing.sources.knative.dev/v1beta1",
+				APIVersion:         "testing.sources.knative.dev/v1beta2",
 				Kind:               "TestSource",
 				Name:               "source-name",
 				UID:                "source-uid",
@@ -71,7 +71,7 @@ func TestMakeEventType(t *testing.T) {
 				Controller:         ptr.Bool(true),
 			}},
 		},
-		Spec: v1beta1.EventTypeSpec{
+		Spec: v1beta2.EventTypeSpec{
 			Type:        "my-type",
 			Source:      apis.HTTP("my-source"),
 			Schema:      apis.HTTP("my-schema"),
