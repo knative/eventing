@@ -264,5 +264,5 @@ func asMap(eventTypes []v1beta2.EventType, keyFunc func(*v1beta2.EventType) stri
 
 // TODO we should probably use the hash of this instead. Will be revisited together with https://github.com/knative/eventing/issues/2750.
 func keyFromEventType(eventType *v1beta2.EventType) string {
-	return fmt.Sprintf("%s_%s_%s_%s", eventType.Spec.Type, eventType.Spec.Source, eventType.Spec.Schema, eventType.Spec.Broker)
+	return fmt.Sprintf("%s_%s_%s_%s", eventType.Spec.Type, eventType.Spec.Source, eventType.Spec.Schema, eventType.Spec.Reference.Name)
 }

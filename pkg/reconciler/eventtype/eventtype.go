@@ -83,5 +83,5 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, et *v1beta2.EventType) p
 
 // getBroker returns the Broker for EventType 'et' if it exists, otherwise it returns an error.
 func (r *Reconciler) getBroker(et *v1beta2.EventType) (*v1.Broker, error) {
-	return r.brokerLister.Brokers(et.Namespace).Get(et.Spec.Broker)
+	return r.brokerLister.Brokers(et.Namespace).Get(et.Spec.Reference.Name)
 }

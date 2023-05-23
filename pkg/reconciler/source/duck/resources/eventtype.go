@@ -40,9 +40,6 @@ func MakeEventType(args *EventTypeArgs) *v1beta2.EventType {
 	// Name it with the hash of the concatenation of the three fields.
 	// Cannot generate a fixed name based on type+UUID, because long type names might be cut, and we end up trying to create
 	// event types with the same name.
-	// TODO revisit whether we want multiple event types, or just one with multiple owner refs. That will depend on the fields
-	//  it will contain. For example, if we remove Broker and Source, then the latter makes more sense.
-	//  See https://github.com/knative/eventing/issues/2750
 	fixedName := fmt.Sprintf("%x", md5.Sum([]byte(args.CeType+args.CeSource.String()+args.CeSchema.String()+string(args.Source.GetUID())))) //nolint:gosec // No strong cryptography needed.
 	return &v1beta2.EventType{
 		ObjectMeta: metav1.ObjectMeta{
@@ -59,10 +56,9 @@ func MakeEventType(args *EventTypeArgs) *v1beta2.EventType {
 			}},
 		},
 		Spec: v1beta2.EventTypeSpec{
-			Type:   args.CeType,
-			Source: args.CeSource,
-			// TODO remove broker https://github.com/knative/eventing/issues/2750
-			Broker:      args.Source.Spec.Sink.GetRef().Name,
+			Type:        args.CeType,
+			Source:      args.CeSource,
+			Reference:   args.Source.Spec.Sink.Ref,
 			Description: args.Description,
 			Schema:      args.CeSchema,
 		},

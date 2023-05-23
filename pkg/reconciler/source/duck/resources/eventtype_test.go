@@ -44,7 +44,9 @@ func TestMakeEventType(t *testing.T) {
 			Spec: duckv1.SourceSpec{
 				Sink: duckv1.Destination{
 					Ref: &duckv1.KReference{
-						Name: "sink-name",
+						APIVersion: "eventing.knative.dev/v1",
+						Kind:       "Broker",
+						Name:       "sink-name",
 					},
 				},
 			},
@@ -76,7 +78,12 @@ func TestMakeEventType(t *testing.T) {
 			Source:      apis.HTTP("my-source"),
 			Schema:      apis.HTTP("my-schema"),
 			Description: "my-description",
-			Broker:      "sink-name",
+			Reference: &duckv1.KReference{
+				APIVersion: "eventing.knative.dev/v1",
+				Kind:       "Broker",
+				Name:       "sink-name",
+			},
+			//			Broker:      "sink-name",
 		},
 	}
 

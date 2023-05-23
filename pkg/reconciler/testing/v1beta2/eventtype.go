@@ -60,12 +60,11 @@ func WithEventTypeType(t string) EventTypeOption {
 	}
 }
 
-func WithEventTypeBroker(broker string) EventTypeOption {
-	return func(et *v1beta2.EventType) {
-		et.Spec.Broker = broker
-	}
-}
-
+//	func WithEventTypeBroker(broker string) EventTypeOption {
+//		return func(et *v1beta2.EventType) {
+//			et.Spec.Broker = broker
+//		}
+//	}
 func WithEventTypeDescription(description string) EventTypeOption {
 	return func(et *v1beta2.EventType) {
 		et.Spec.Description = description

@@ -19,6 +19,7 @@ package eventtype
 import (
 	"context"
 	"fmt"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
@@ -78,14 +79,14 @@ func TestReconcile(t *testing.T) {
 			NewEventType(eventTypeName, testNS,
 				WithEventTypeType(eventTypeType),
 				WithEventTypeSource(eventTypeSource),
-				WithEventTypeBroker(eventTypeBroker),
+				WithEventTypeReference(brokerReference(eventTypeBroker)),
 			),
 		},
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 			Object: NewEventType(eventTypeName, testNS,
 				WithEventTypeType(eventTypeType),
 				WithEventTypeSource(eventTypeSource),
-				WithEventTypeBroker(eventTypeBroker),
+				WithEventTypeReference(brokerReference(eventTypeBroker)),
 				WithInitEventTypeConditions,
 				WithEventTypeBrokerDoesNotExist,
 			),
@@ -101,7 +102,7 @@ func TestReconcile(t *testing.T) {
 			NewEventType(eventTypeName, testNS,
 				WithEventTypeType(eventTypeType),
 				WithEventTypeSource(eventTypeSource),
-				WithEventTypeBroker(eventTypeBroker),
+				WithEventTypeReference(brokerReference(eventTypeBroker)),
 			),
 			NewBroker(eventTypeBroker, testNS,
 				WithInitBrokerConditions,
@@ -112,7 +113,7 @@ func TestReconcile(t *testing.T) {
 			Object: NewEventType(eventTypeName, testNS,
 				WithEventTypeType(eventTypeType),
 				WithEventTypeSource(eventTypeSource),
-				WithEventTypeBroker(eventTypeBroker),
+				WithEventTypeReference(brokerReference(eventTypeBroker)),
 				WithEventTypeBrokerExists,
 				WithEventTypeBrokerFailed("DeploymentFailure", "inducing failure for create deployments"),
 			),
@@ -124,7 +125,7 @@ func TestReconcile(t *testing.T) {
 			NewEventType(eventTypeName, testNS,
 				WithEventTypeType(eventTypeType),
 				WithEventTypeSource(eventTypeSource),
-				WithEventTypeBroker(eventTypeBroker),
+				WithEventTypeReference(brokerReference(eventTypeBroker)),
 			),
 			NewBroker(eventTypeBroker, testNS,
 				WithInitBrokerConditions,
@@ -134,7 +135,7 @@ func TestReconcile(t *testing.T) {
 			Object: NewEventType(eventTypeName, testNS,
 				WithEventTypeType(eventTypeType),
 				WithEventTypeSource(eventTypeSource),
-				WithEventTypeBroker(eventTypeBroker),
+				WithEventTypeReference(brokerReference(eventTypeBroker)),
 				WithEventTypeBrokerExists,
 				WithEventTypeBrokerUnknown("", ""),
 			),
@@ -146,7 +147,7 @@ func TestReconcile(t *testing.T) {
 			NewEventType(eventTypeName, testNS,
 				WithEventTypeType(eventTypeType),
 				WithEventTypeSource(eventTypeSource),
-				WithEventTypeBroker(eventTypeBroker),
+				WithEventTypeReference(brokerReference(eventTypeBroker)),
 			),
 			NewBroker(eventTypeBroker, testNS,
 				WithBrokerReady,
@@ -156,7 +157,7 @@ func TestReconcile(t *testing.T) {
 			Object: NewEventType(eventTypeName, testNS,
 				WithEventTypeType(eventTypeType),
 				WithEventTypeSource(eventTypeSource),
-				WithEventTypeBroker(eventTypeBroker),
+				WithEventTypeReference(brokerReference(eventTypeBroker)),
 				WithEventTypeBrokerExists,
 				WithEventTypeBrokerReady,
 			),
@@ -177,4 +178,12 @@ func TestReconcile(t *testing.T) {
 		false,
 		logger,
 	))
+}
+
+func brokerReference(brokerName string) *duckv1.KReference {
+	return &duckv1.KReference{
+		APIVersion: "eventing.knative.dev/v1",
+		Kind:       "Broker",
+		Name:       brokerName,
+	}
 }
