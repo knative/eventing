@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	"github.com/cloudevents/sdk-go/v2/test"
+	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -503,10 +504,10 @@ func SendsEventsForAllResourcesWithEmptyNamespaceSelector() *feature.Feature {
 	pingSource2 := feature.MakeRandomK8sName("ping-source-2")
 
 	f.Requirement("install PingSource 1",
-		pingsource.Install(pingSource1, pingsource.WithSink(nil, "http://example.com")),
+		pingsource.Install(pingSource1, pingsource.WithSink(&duckv1.Destination{URI: apis.HTTP("example.com")})),
 	)
 	f.Requirement("install PingSource 2",
-		pingsource.Install(pingSource2, pingsource.WithSink(nil, "http://example.com")),
+		pingsource.Install(pingSource2, pingsource.WithSink(&duckv1.Destination{URI: apis.HTTP("example.com")})),
 	)
 
 	f.Stable("ApiServerSource as event source").
