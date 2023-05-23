@@ -730,7 +730,7 @@ func TestAllCases(t *testing.T) {
 				),
 				// Subscriber
 				NewUnstructured(subscriberGVK, tlsSubscriberName, testNS,
-					WithUnstructuredAddressableTLS(tlsSubscriberDNS, tlsSubscriberCACerts),
+					WithUnstructuredAddressableTLS(tlsSubscriberDNS, &tlsSubscriberCACerts),
 				),
 				// Channel
 				NewInMemoryChannel(channelName, testNS,
@@ -739,10 +739,7 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelSubscribers([]eventingduck.SubscriberSpec{{
 						SubscriberURI: tlsSubscriberURI,
 					}}),
-					WithInMemoryChannelAddressHTTPS(duckv1.Addressable{
-						URL:     tlsSubscriberURI,
-						CACerts: &tlsSubscriberCACerts,
-					}),
+					WithInMemoryChannelAddress(channelDNS),
 				),
 			},
 			Key:     testNS + "/" + subscriptionName,
@@ -832,6 +829,56 @@ func TestAllCases(t *testing.T) {
 					},
 				}),
 			},
+		}, {
+			Name: "no patch on subscriber without CA certs",
+			Objects: []runtime.Object{
+				NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(imcV1GVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, tlsSubscriberName, testNS),
+					WithInitSubscriptionConditions,
+					WithSubscriptionFinalizers(finalizerName),
+					MarkReferencesResolved,
+					MarkAddedToChannel,
+					MarkSubscriptionReady,
+				),
+				// Subscriber
+				NewUnstructured(subscriberGVK, tlsSubscriberName, testNS,
+					WithUnstructuredAddressableTLS(tlsSubscriberDNS, nil),
+				),
+				// Channel
+				NewInMemoryChannel(channelName, testNS,
+					WithInitInMemoryChannelConditions,
+					WithInMemoryChannelReady(channelDNS),
+					WithInMemoryChannelSubscribers([]eventingduck.SubscriberSpec{{
+						UID:           subscriptionUID,
+						SubscriberURI: tlsSubscriberURI,
+					}}),
+					WithInMemoryChannelStatusSubscribers([]eventingduck.SubscriberStatus{{
+						UID:                subscriptionUID,
+						ObservedGeneration: 0,
+						Ready:              "True",
+					}}),
+				),
+			},
+			Key:     testNS + "/" + subscriptionName,
+			WantErr: false,
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(imcV1GVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, tlsSubscriberName, testNS),
+					WithInitSubscriptionConditions,
+					WithSubscriptionFinalizers(finalizerName),
+					MarkReferencesResolved,
+					MarkAddedToChannel,
+					MarkSubscriptionReady,
+					WithSubscriptionPhysicalSubscriptionSubscriber(&duckv1.Addressable{
+						URL: tlsSubscriberURI,
+					}),
+				),
+			}},
+			WantPatches: nil,
 		}, {
 			Name: "channel does not exist",
 			Objects: []runtime.Object{

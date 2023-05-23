@@ -59,15 +59,19 @@ func WithUnstructuredAddressable(hostname string) UnstructuredOption {
 	}
 }
 
-func WithUnstructuredAddressableTLS(hostname string, caCerts string) UnstructuredOption {
+func WithUnstructuredAddressableTLS(hostname string, caCerts *string) UnstructuredOption {
 	return func(u *unstructured.Unstructured) {
 		status, ok := u.Object["status"].(map[string]interface{})
 		if ok {
-			status["address"] = map[string]interface{}{
+			address := map[string]interface{}{
 				"hostname": hostname,
 				"url":      fmt.Sprintf("https://%s", hostname),
-				"caCerts":  caCerts,
 			}
+			if caCerts != nil {
+				address["caCerts"] = *caCerts
+			}
+
+			status["address"] = address
 		}
 	}
 }
