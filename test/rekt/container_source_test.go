@@ -98,7 +98,6 @@ func TestContainerSourceWithTLS(t *testing.T) {
 		// environment.Managed(t),
 		eventshub.WithTLS(t),
 	)
-	t.Cleanup(env.Finish)
 
 	env.Test(ctx, t, containersource.SendEventsWithTLSRecieverAsSink())
 }
