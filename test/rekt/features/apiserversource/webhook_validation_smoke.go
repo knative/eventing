@@ -20,12 +20,13 @@ import (
 	"context"
 
 	"github.com/stretchr/testify/assert"
+	"knative.dev/reconciler-test/pkg/resources/service"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/reconciler-test/pkg/feature"
+
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/eventing/test/rekt/resources/apiserversource"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
-	"knative.dev/reconciler-test/pkg/feature"
 )
 
 func CreateWithInvalidSpec() *feature.Feature {
@@ -53,11 +54,7 @@ func UpdateWithInvalidSpec(name string) *feature.Feature {
 func createApiServerSourceWithInvalidSpec(name string) func(ctx context.Context, t feature.T) {
 	return func(ctx context.Context, t feature.T) {
 		_, err := apiserversource.InstallLocalYaml(ctx, name,
-			apiserversource.WithSink(&duckv1.KReference{
-				Kind:       "Service",
-				Name:       "foo-svc",
-				APIVersion: "v1",
-			}, ""),
+			apiserversource.WithSink(service.AsDestinationRef("foo-svc")),
 			apiserversource.WithResources(v1.APIVersionKindSelector{
 				APIVersion: "v1",
 				Kind:       "Event",

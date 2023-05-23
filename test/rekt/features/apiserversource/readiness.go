@@ -18,13 +18,13 @@ package apiserversource
 
 import (
 	rbacv1 "k8s.io/api/rbac/v1"
-	v1 "knative.dev/eventing/pkg/apis/sources/v1"
-	"knative.dev/eventing/test/rekt/resources/account_role"
-	"knative.dev/eventing/test/rekt/resources/apiserversource"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
 	"knative.dev/reconciler-test/pkg/resources/service"
+
+	v1 "knative.dev/eventing/pkg/apis/sources/v1"
+	"knative.dev/eventing/test/rekt/resources/account_role"
+	"knative.dev/eventing/test/rekt/resources/apiserversource"
 )
 
 // GoesReady returns a feature testing if an ApiServerSource becomes ready.
@@ -60,11 +60,7 @@ func Install(name string, cfg ...manifest.CfgFn) *feature.Feature {
 	cfg = append(cfg,
 		apiserversource.WithServiceAccountName(sacmName),
 		apiserversource.WithEventMode(v1.ResourceMode),
-		apiserversource.WithSink(&duckv1.KReference{
-			Kind:       "Service",
-			Name:       sink,
-			APIVersion: "v1",
-		}, ""),
+		apiserversource.WithSink(service.AsDestinationRef(sink)),
 		apiserversource.WithResources(v1.APIVersionKindSelector{
 			APIVersion: "v1",
 			Kind:       "Event",

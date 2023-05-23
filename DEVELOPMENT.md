@@ -161,6 +161,17 @@ ko apply -f config/brokers/mt-channel-broker/
 Depending on your needs you might want to install other
 [Broker implementations](https://github.com/knative/eventing/tree/main/docs/broker).
 
+## Install Cert-Manager
+
+Install the Cert-manager operator to run e2e tests for TLS
+
+```shell
+kubectl apply -f third_party/cert-manager
+```
+
+Depending on your needs you might want to install other
+[Broker implementations](https://github.com/knative/eventing/tree/main/docs/broker).
+
 ## Enable Sugar controller
 
 If you are running e2e tests that leverage the Sugar Controller, you will need

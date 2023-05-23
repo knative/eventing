@@ -76,6 +76,10 @@ spec:
       name: {{ .sink.ref.name }}
       apiVersion: {{ .sink.ref.apiVersion }}
     {{ end }}
+    {{ if .sink.CACerts }}
+    CACerts: |-
+      {{ .sink.CACerts }}
+    {{ end }}
     {{ if .sink.uri }}
     uri: {{ .sink.uri }}
     {{ end }}
