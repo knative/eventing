@@ -31,8 +31,6 @@ import (
 
 	"knative.dev/eventing/test/rekt/resources/containersource"
 	"knative.dev/eventing/test/rekt/resources/pingsource"
-
-	eventasssert "knative.dev/reconciler-test/pkg/eventshub/assert"
 )
 
 func SendsEventsWithSinkRef() *feature.Feature {
@@ -140,8 +138,9 @@ func SendEventsWithTLSRecieverAsSink() *feature.Feature {
 
 	f.Stable("ContainerSource as event source").
 		Must("delivers events on sink with ref",
-			eventasssert.OnStore(sink).
-				Match(eventasssert.MatchKind(eventshub.EventReceived)).
+			assert.OnStore(sink).
+				Match(assert.MatchKind(eventshub.EventReceived)).
+				MatchEvent(test.HasType("dev.knative.eventing.samples.heartbeat")).
 				AtLeast(1),
 		)
 
