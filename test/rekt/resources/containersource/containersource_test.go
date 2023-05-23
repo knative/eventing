@@ -84,6 +84,7 @@ func Example_full() {
 		"sink": map[string]interface{}{
 			"ref": map[string]interface{}{
 				"kind":       "AKind",
+				"namespace":  "ANamespace",
 				"apiVersion": "something.valid/v1",
 				"name":       "thesink",
 			},
@@ -111,7 +112,7 @@ func Example_full() {
 	//   sink:
 	//     ref:
 	//       kind: AKind
-	//       namespace: bar
+	//       namespace: ANamespace
 	//       name: thesink
 	//       apiVersion: something.valid/v1
 	//     uri: uri/parts
