@@ -76,6 +76,10 @@ func (e Flags) IsDisabledTransportEncryption() bool {
 	return e != nil && e[TransportEncryption] == Disabled
 }
 
+func (e Flags) String() string {
+	return fmt.Sprintf("%+v", map[string]Flag(e))
+}
+
 // NewFlagsConfigFromMap creates a Flags from the supplied Map
 func NewFlagsConfigFromMap(data map[string]string) (Flags, error) {
 	flags := Flags{}
