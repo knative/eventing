@@ -130,20 +130,27 @@ func Example_full() {
 	//           value: bar
 }
 
-func Example_withSink() {
+func Example_sink() {
 	ctx := testlog.NewContext()
 	images := map[string]string{}
 	cfg := map[string]interface{}{
 		"name":      "foo",
 		"namespace": "bar",
+		"args":      "--period=1",
+		"ceOverrides": map[string]interface{}{
+			"extensions": map[string]string{
+				"ext1": "val1",
+				"ext2": "val2",
+			},
+		},
 	}
 
 	sinkRef := &duckv1.Destination{
 		Ref: &duckv1.KReference{
-			Kind:       "sinkkind",
-			Namespace:  "sinknamespace",
-			Name:       "sinkname",
-			APIVersion: "sinkversion",
+			Kind: "AKind",
+			// Namespace:  "sinknamespace",
+			Name:       "thesink",
+			APIVersion: "something.valid/v1",
 		},
 		URI: &apis.URL{Path: "uri/parts"},
 	}
@@ -155,30 +162,35 @@ func Example_withSink() {
 	}
 
 	manifest.OutputYAML(os.Stdout, files)
+	// Output:
 	// apiVersion: sources.knative.dev/v1
 	// kind: ContainerSource
 	// metadata:
-	// 	name: foo
-	// 	namespace: bar
+	//   name: foo
+	//   namespace: bar
 	// spec:
-	// 	sink:
-	// 		ref:
-	// 			kind: sinkkind
-	// 			namespace: bar
-	// 			name: sinkname
-	// 			apiVersion: sinkversion
-	// 		uri: uri/parts
-	// 	template:
-	// 		spec:
-	// 			containers:
-	// 			- name: heartbeats
-	// 				image: ko://knative.dev/eventing/cmd/heartbeats
-	// 				imagePullPolicy: IfNotPresent
-	// 				args:
-	// 				- --period=1
-	// 				env:
-	// 				- name: POD_NAME
-	// 					value: heartbeats
-	// 				- name: POD_NAMESPACE
-	// 					value: bar
+	//   ceOverrides:
+	//     extensions:
+	//       ext1: val1
+	//       ext2: val2
+	//   sink:
+	//     ref:
+	//       kind: AKind
+	//       namespace: bar
+	//       name: thesink
+	//       apiVersion: something.valid/v1
+	//     uri: uri/parts
+	//   template:
+	//     spec:
+	//       containers:
+	//       - name: heartbeats
+	//         image: ko://knative.dev/eventing/cmd/heartbeats
+	//         imagePullPolicy: IfNotPresent
+	//         args:
+	//         - --period=1
+	//         env:
+	//         - name: POD_NAME
+	//           value: heartbeats
+	//         - name: POD_NAMESPACE
+	//           value: bar
 }
