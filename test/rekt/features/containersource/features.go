@@ -136,9 +136,11 @@ func SendEventsWithTLSRecieverAsSink() *feature.Feature {
 
 	f.Stable("containersource as event source").
 		Must("delivers events",
-			assert.OnStore(sink).MatchEvent(
-				test.HasType("dev.knative.eventing.samples.heartbeat"),
-			).AtLeast(1))
+			assert.OnStore(sink).
+				Match(assert.MatchKind(eventshub.EventReceived)).
+				MatchEvent(test.HasType("dev.knative.eventing.samples.heartbeat")).
+				AtLeast(1),
+		)
 
 	return f
 }
