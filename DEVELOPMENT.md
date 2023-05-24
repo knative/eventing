@@ -111,29 +111,6 @@ _Adding the `upstream` remote sets you up nicely for regularly
 Once you reach this point you are ready to do a full build and deploy as
 follows.
 
-## Starting Eventing Controller
-
-Once you've [setup your development environment](#getting-started), stand up
-`Knative Eventing` with:
-
-```shell
-ko apply -f config/
-```
-
-You can see things running with:
-
-```shell
-$ kubectl -n knative-eventing get pods
-NAME                                   READY     STATUS    RESTARTS   AGE
-eventing-controller-59f7969778-4dt7l   1/1       Running   0          2h
-```
-
-You can access the Eventing Controller's logs with:
-
-```shell
-kubectl -n knative-eventing logs $(kubectl -n knative-eventing get pods -l app=eventing-controller -o name)
-```
-
 ## Install Channels
 
 Install the
@@ -179,6 +156,29 @@ to explicitly enable it.
 
 ```shell
 ko apply -f test/config/sugar.yaml
+```
+
+## Starting Eventing Controller
+
+Once you've [setup your development environment](#getting-started), stand up
+`Knative Eventing` with:
+
+```shell
+ko apply -f config/
+```
+
+You can see things running with:
+
+```shell
+$ kubectl -n knative-eventing get pods
+NAME                                   READY     STATUS    RESTARTS   AGE
+eventing-controller-59f7969778-4dt7l   1/1       Running   0          2h
+```
+
+You can access the Eventing Controller's logs with:
+
+```shell
+kubectl -n knative-eventing logs $(kubectl -n knative-eventing get pods -l app=eventing-controller -o name)
 ```
 
 ## Iterating
