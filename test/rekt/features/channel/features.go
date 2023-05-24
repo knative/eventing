@@ -39,7 +39,6 @@ import (
 	"knative.dev/eventing/test/rekt/resources/channel_impl"
 	"knative.dev/eventing/test/rekt/resources/containersource"
 	"knative.dev/eventing/test/rekt/resources/delivery"
-	"knative.dev/eventing/test/rekt/resources/source"
 	"knative.dev/eventing/test/rekt/resources/subscription"
 )
 
@@ -78,7 +77,7 @@ func ChannelChain(length int, createSubscriberFn func(ref *duckv1.KReference, ur
 	}
 
 	// attach the first channel to the source
-	f.Requirement("install containersource", containersource.Install(cs, containersource.WithSink(channel_impl.AsRef(channels[0]), "")))
+	f.Requirement("install containersource", containersource.Install(cs, containersource.WithSink(channel_impl.AsDestinationRef(channels[0]))))
 	f.Requirement("containersource goes ready", containersource.IsReady(cs))
 
 	f.Assert("chained channels relay events", assert.OnStore(sink).MatchEvent(test.HasType("dev.knative.eventing.samples.heartbeat")).AtLeast(1))
@@ -104,7 +103,7 @@ func DeadLetterSink(createSubscriberFn func(ref *duckv1.KReference, uri string) 
 	f.Setup("channel is ready", channel_impl.IsReady(name))
 	f.Setup("subscription is ready", subscription.IsReady(sub))
 
-	f.Requirement("install containersource", containersource.Install(cs, source.WithSink(channel_impl.AsRef(name), "")))
+	f.Requirement("install containersource", containersource.Install(cs, containersource.WithSink(channel_impl.AsDestinationRef(name))))
 	f.Requirement("containersource is ready", containersource.IsReady(cs))
 	f.Requirement("Channel has dead letter sink uri", channel_impl.HasDeadLetterSinkURI(name, channel_impl.GVR()))
 
@@ -137,7 +136,7 @@ func DeadLetterSinkGenericChannel(createSubscriberFn func(ref *duckv1.KReference
 	f.Setup("channel is ready", channel.IsReady(name))
 	f.Setup("subscription is ready", subscription.IsReady(sub))
 
-	f.Requirement("install containersource", containersource.Install(cs, source.WithSink(channel.AsRef(name), "")))
+	f.Requirement("install containersource", containersource.Install(cs, containersource.WithSink(channel_impl.AsDestinationRef(name))))
 	f.Requirement("containersource is ready", containersource.IsReady(cs))
 	f.Requirement("Channel has dead letter sink uri", channel_impl.HasDeadLetterSinkURI(name, channel.GVR()))
 
@@ -160,7 +159,7 @@ func AsDeadLetterSink(createSubscriberFn func(ref *duckv1.KReference, uri string
 	failer := feature.MakeRandomK8sName("failer")
 	sink := feature.MakeRandomK8sName("sink")
 
-	f.Setup("install containersource", containersource.Install(cs, source.WithSink(channel.AsRef(name), "")))
+	f.Setup("install containersource", containersource.Install(cs, containersource.WithSink(channel_impl.AsDestinationRef(name))))
 
 	f.Setup("install channel", channel.Install(name,
 		channel.WithTemplate(),

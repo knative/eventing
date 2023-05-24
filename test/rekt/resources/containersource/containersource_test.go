@@ -20,6 +20,9 @@ import (
 	"embed"
 	"os"
 
+	"knative.dev/eventing/test/rekt/resources/containersource"
+	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	testlog "knative.dev/reconciler-test/pkg/logging"
 	"knative.dev/reconciler-test/pkg/manifest"
 )
@@ -81,12 +84,83 @@ func Example_full() {
 		"sink": map[string]interface{}{
 			"ref": map[string]interface{}{
 				"kind":       "AKind",
+				"namespace":  "ANamespace",
 				"apiVersion": "something.valid/v1",
 				"name":       "thesink",
 			},
-			"uri": "uri/parts",
+			"uri":     "uri/parts",
+			"CACerts": "cert",
 		},
 	}
+
+	files, err := manifest.ExecuteYAML(ctx, yaml, images, cfg)
+	if err != nil {
+		panic(err)
+	}
+
+	manifest.OutputYAML(os.Stdout, files)
+	// apiVersion: sources.knative.dev/v1
+	// kind: ContainerSource
+	// metadata:
+	//
+	//	name: foo
+	//	namespace: bar
+	//
+	// spec:
+	//
+	//	ceOverrides:
+	//	  extensions:
+	//	    ext1: val1
+	//	    ext2: val2
+	//	sink:
+	//	  ref:
+	//	    kind: AKind
+	//	    namespace: ANamespace
+	//	    name: thesink
+	//	    apiVersion: something.valid/v1
+	//	  uri: uri/parts
+	//	  CACerts: |-
+	//	    cert
+	//	template:
+	//	  spec:
+	//	    containers:
+	//	    - name: heartbeats
+	//	      image: ko://knative.dev/eventing/cmd/heartbeats
+	//	      imagePullPolicy: IfNotPresent
+	//	      args:
+	//	      - --period=1
+	//	      env:
+	//	      - name: POD_NAME
+	//	        value: heartbeats
+	//	      - name: POD_NAMESPACE
+	//	        value: bar
+}
+
+func Example_sink() {
+	ctx := testlog.NewContext()
+	images := map[string]string{}
+	cfg := map[string]interface{}{
+		"name":      "foo",
+		"namespace": "bar",
+		"args":      "--period=1",
+		"ceOverrides": map[string]interface{}{
+			"extensions": map[string]string{
+				"ext1": "val1",
+				"ext2": "val2",
+			},
+		},
+	}
+
+	sinkRef := &duckv1.Destination{
+		Ref: &duckv1.KReference{
+			Kind:       "AKind",
+			Namespace:  "sinknamespace",
+			Name:       "thesink",
+			APIVersion: "something.valid/v1",
+		},
+		URI: &apis.URL{Path: "uri/parts"},
+	}
+	containersource.WithSink(sinkRef)(cfg)
 
 	files, err := manifest.ExecuteYAML(ctx, yaml, images, cfg)
 	if err != nil {
@@ -108,7 +182,7 @@ func Example_full() {
 	//   sink:
 	//     ref:
 	//       kind: AKind
-	//       namespace: bar
+	//       namespace: sinknamespace
 	//       name: thesink
 	//       apiVersion: something.valid/v1
 	//     uri: uri/parts
