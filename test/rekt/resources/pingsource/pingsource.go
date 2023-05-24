@@ -19,6 +19,7 @@ package pingsource
 import (
 	"context"
 	"embed"
+	"strings"
 	"time"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -66,6 +67,13 @@ func WithSink(dest *duckv1.Destination) manifest.CfgFn {
 
 		uri := dest.URI
 		ref := dest.Ref
+
+
+		if dest.CACerts != nil {
+			// This is a multi-line string and should be indented accordingly.
+			// Replace "new line" with "new line + spaces".
+			sink["CACerts"] = strings.ReplaceAll(*dest.CACerts, "\n", "\n      ")
+		}
 
 		if uri != nil {
 			sink["uri"] = uri.String()
