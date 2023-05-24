@@ -36,7 +36,6 @@ jobs:
         # Add the flags we use for each of these test suites.
         - test-suite: ./test/e2e
           extra-test-flags: >
-            -brokerclass=MTChannelBasedBroker
             -channels=messaging.knative.dev/v1:Channel,messaging.knative.dev/v1:InMemoryChannel
             -sources=sources.knative.dev/v1:ApiServerSource,sources.knative.dev/v1:ContainerSource,sources.knative.dev/v1beta2:PingSource
         - test-suite: ./test/conformance
