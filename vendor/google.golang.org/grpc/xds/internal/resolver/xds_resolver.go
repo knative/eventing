@@ -25,7 +25,9 @@ import (
 	"strings"
 
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/internal"
 	"google.golang.org/grpc/internal/grpclog"
+	"google.golang.org/grpc/internal/grpcrand"
 	"google.golang.org/grpc/internal/grpcsync"
 	"google.golang.org/grpc/internal/pretty"
 	iresolver "google.golang.org/grpc/internal/resolver"
@@ -37,10 +39,10 @@ import (
 
 const xdsScheme = "xds"
 
-// NewBuilderForTesting creates a new xds resolver builder using a specific xds
+// newBuilderForTesting creates a new xds resolver builder using a specific xds
 // bootstrap config, so tests can use multiple xds clients in different
 // ClientConns at the same time.
-func NewBuilderForTesting(config []byte) (resolver.Builder, error) {
+func newBuilderForTesting(config []byte) (resolver.Builder, error) {
 	return &xdsResolverBuilder{
 		newXDSClient: func() (xdsclient.XDSClient, error) {
 			return xdsclient.NewWithBootstrapContentsForTesting(config)
@@ -53,6 +55,7 @@ var newXDSClient = func() (xdsclient.XDSClient, error) { return xdsclient.New() 
 
 func init() {
 	resolver.Register(&xdsResolverBuilder{})
+	internal.NewXDSResolverWithConfigForTesting = newBuilderForTesting
 }
 
 type xdsResolverBuilder struct {
@@ -69,6 +72,7 @@ func (b *xdsResolverBuilder) Build(target resolver.Target, cc resolver.ClientCon
 		closed:         grpcsync.NewEvent(),
 		updateCh:       make(chan suWithError, 1),
 		activeClusters: make(map[string]*clusterInfo),
+		channelID:      grpcrand.Uint64(),
 	}
 	defer func() {
 		if retErr != nil {
@@ -182,6 +186,10 @@ type xdsResolver struct {
 	activeClusters map[string]*clusterInfo
 
 	curConfigSelector *configSelector
+
+	// A random number which uniquely identifies the channel which owns this
+	// resolver.
+	channelID uint64
 }
 
 // sendNewServiceConfig prunes active clusters, generates a new service config
