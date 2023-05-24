@@ -44,7 +44,7 @@ You must install these tools:
 
 1. Set up a kubernetes cluster. You can use one of the resources below, or any other kubernetes cluster:
    - [minikube start](https://minikube.sigs.k8s.io/docs/start/)
-   - [KinD quickstart](https://minikube.sigs.k8s.io/docs/start/)
+   - [KinD quickstart](https://kind.sigs.k8s.io/docs/user/quick-start/)
 1. Set up a Linux Container repository for pushing images. You can use any
    container image registry by adjusting the authentication methods and
    repository paths mentioned in the sections below.
