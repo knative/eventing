@@ -75,6 +75,9 @@ spec:
                     uri:
                       description: URI can be an absolute URL(non-empty scheme and non-empty host) pointing to the target or a relative URI. Relative URIs will be resolved using the base URI retrieved from Ref.
                       type: string
+                    CACerts:
+                      description: CACerts is the Certification Authority (CA) certificates in PEM format that the source trusts when sending events to the sink.
+                      type: string
                 subject:
                   description: Subject references the resource(s) whose "runtime contract" should be augmented by Binding implementations.
                   type: object
@@ -168,6 +171,9 @@ spec:
                   format: int64
                 sinkUri:
                   description: SinkURI is the current active sink URI that has been configured for the Source.
+                  type: string
+                sinkCACerts:
+                  description: CACerts is the Certification Authority (CA) certificates in PEM format that the source trusts when sending events to the sink.
                   type: string
       additionalPrinterColumns:
         - name: Sink

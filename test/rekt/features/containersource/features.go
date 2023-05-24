@@ -17,6 +17,7 @@ limitations under the License.
 package containersource
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/cloudevents/sdk-go/v2/test"
@@ -29,7 +30,6 @@ import (
 	"knative.dev/reconciler-test/pkg/resources/service"
 
 	"knative.dev/eventing/test/rekt/resources/containersource"
-	"knative.dev/eventing/test/rekt/resources/pingsource"
 )
 
 func SendsEventsWithSinkRef() *feature.Feature {
@@ -39,7 +39,7 @@ func SendsEventsWithSinkRef() *feature.Feature {
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 
-	f.Requirement("install containersource", containersource.Install(source, pingsource.WithSink(service.AsKReference(sink), "")))
+	f.Requirement("install containersource", containersource.Install(source, containersource.WithSink(service.AsDestinationRef(sink))))
 	f.Requirement("containersource goes ready", containersource.IsReady(source))
 
 	f.Stable("containersource as event source").
@@ -56,7 +56,7 @@ func SendsEventsWithSinkURI() *feature.Feature {
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 
-	f.Requirement("install containersource", containersource.Install(source, containersource.WithSink(service.AsKReference(sink), "")))
+	f.Requirement("install containersource", containersource.Install(source, containersource.WithSink(service.AsDestinationRef(sink))))
 	f.Requirement("containersource goes ready", containersource.IsReady(source))
 
 	f.Stable("containersource as event source").
@@ -77,7 +77,7 @@ func SendsEventsWithCloudEventOverrides() *feature.Feature {
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 
 	f.Requirement("install containersource", containersource.Install(source,
-		pingsource.WithSink(service.AsKReference(sink), ""),
+		containersource.WithSink(service.AsDestinationRef(sink)),
 		containersource.WithExtensions(extensions),
 		manifest.WithPodAnnotations(map[string]interface{}{
 			"foo": true,
@@ -105,7 +105,7 @@ func SendsEventsWithArgs() *feature.Feature {
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 
 	f.Requirement("install containersource", containersource.Install(source,
-		containersource.WithSink(service.AsKReference(sink), ""),
+		containersource.WithSink(service.AsDestinationRef(sink)),
 		containersource.WithArgs(args),
 	))
 	f.Requirement("containersource goes ready", containersource.IsReady(source))
@@ -115,6 +115,32 @@ func SendsEventsWithArgs() *feature.Feature {
 			test.HasType("dev.knative.eventing.samples.heartbeat"),
 			assert.MatchHeartBeatsImageMessage(message),
 		).AtLeast(1))
+
+	return f
+}
+
+func SendEventsWithTLSRecieverAsSink() *feature.Feature {
+	source := feature.MakeRandomK8sName("containersource")
+	sink := feature.MakeRandomK8sName("sink")
+	f := feature.NewFeature()
+
+	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiverTLS))
+
+	f.Requirement("install ContainerSource", func(ctx context.Context, t feature.T) {
+		d := service.AsDestinationRef(sink)
+		d.CACerts = eventshub.GetCaCerts(ctx)
+
+		containersource.Install(source, containersource.WithSink(d))(ctx, t)
+	})
+	f.Requirement("containersource goes ready", containersource.IsReady(source))
+
+	f.Stable("containersource as event source").
+		Must("delivers events",
+			assert.OnStore(sink).
+				Match(assert.MatchKind(eventshub.EventReceived)).
+				MatchEvent(test.HasType("dev.knative.eventing.samples.heartbeat")).
+				AtLeast(1),
+		)
 
 	return f
 }
