@@ -160,7 +160,7 @@ func AsRef(name string) *duckv1.KReference {
 }
 
 // AsRef returns a KRef for a Channel without namespace.
-func AsDest(name string) *duckv1.Destination {
+func AsDestinationRef(name string) *duckv1.Destination {
 	apiVersion, kind := GVK().ToAPIVersionAndKind()
 	return &duckv1.Destination{
 		Ref: &duckv1.KReference{
