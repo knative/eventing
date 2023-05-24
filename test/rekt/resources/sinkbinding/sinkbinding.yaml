@@ -41,6 +41,10 @@ spec:
     {{ if .sink.uri }}
     uri: {{ .sink.uri }}
     {{ end }}
+    {{ if .sink.CACerts }}
+    CACerts: |-
+      {{ .sink.CACerts }}
+    {{ end }}
   subject:
     kind: {{ .subject.kind }}
     apiVersion: {{ .subject.apiVersion }}

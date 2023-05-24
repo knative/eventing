@@ -88,7 +88,8 @@ func Example_full() {
 				"apiVersion": "something.valid/v1",
 				"name":       "thesink",
 			},
-			"uri": "uri/parts",
+			"uri":     "uri/parts",
+			"CACerts": "cert",
 		},
 	}
 
@@ -98,37 +99,41 @@ func Example_full() {
 	}
 
 	manifest.OutputYAML(os.Stdout, files)
-	// Output:
 	// apiVersion: sources.knative.dev/v1
 	// kind: ContainerSource
 	// metadata:
-	//   name: foo
-	//   namespace: bar
+	//
+	//	name: foo
+	//	namespace: bar
+	//
 	// spec:
-	//   ceOverrides:
-	//     extensions:
-	//       ext1: val1
-	//       ext2: val2
-	//   sink:
-	//     ref:
-	//       kind: AKind
-	//       namespace: ANamespace
-	//       name: thesink
-	//       apiVersion: something.valid/v1
-	//     uri: uri/parts
-	//   template:
-	//     spec:
-	//       containers:
-	//       - name: heartbeats
-	//         image: ko://knative.dev/eventing/cmd/heartbeats
-	//         imagePullPolicy: IfNotPresent
-	//         args:
-	//         - --period=1
-	//         env:
-	//         - name: POD_NAME
-	//           value: heartbeats
-	//         - name: POD_NAMESPACE
-	//           value: bar
+	//
+	//	ceOverrides:
+	//	  extensions:
+	//	    ext1: val1
+	//	    ext2: val2
+	//	sink:
+	//	  ref:
+	//	    kind: AKind
+	//	    namespace: ANamespace
+	//	    name: thesink
+	//	    apiVersion: something.valid/v1
+	//	  uri: uri/parts
+	//	  CACerts: |-
+	//	    cert
+	//	template:
+	//	  spec:
+	//	    containers:
+	//	    - name: heartbeats
+	//	      image: ko://knative.dev/eventing/cmd/heartbeats
+	//	      imagePullPolicy: IfNotPresent
+	//	      args:
+	//	      - --period=1
+	//	      env:
+	//	      - name: POD_NAME
+	//	        value: heartbeats
+	//	      - name: POD_NAMESPACE
+	//	        value: bar
 }
 
 func Example_sink() {
