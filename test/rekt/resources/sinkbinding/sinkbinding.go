@@ -128,15 +128,15 @@ func WithSink(d *duckv1.Destination) manifest.CfgFn {
 	}
 	if ref != nil {
 		    if _, set := sink["ref"]; !set {
-			       sink["ref"] = map[string]interface{}{}
+			     sink["ref"] = map[string]interface{}{}
 		    }
-			sref := sink["ref"] = map[string]interface{}{}
+		    sref := sink["ref"].(map[string]interface{})
 		    sref["apiVersion"] = ref.APIVersion
 		    sref["kind"] = ref.Kind
 		    // skip namespace
 		    sref["name"] = ref.Name
 		}
-    }
+        }
 }
 
 // IsReady tests to see if a PingSource becomes ready within the time given.
