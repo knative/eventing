@@ -42,12 +42,9 @@ You must install these tools:
 
 ### Create a cluster and a repo
 
-1. [Set up a kubernetes cluster](https://www.knative.dev/docs/install/)
-   - Follow an install guide up through "Creating a Kubernetes Cluster"
-   - You do _not_ need to install Istio or Knative using the instructions in the
-     guide. Simply create the cluster and come back here.
-   - If you _did_ install Istio/Knative following those instructions, that's
-     fine too, you'll just redeploy over them, below.
+1. Set up a kubernetes cluster. You can use one of the resources below, or any other kubernetes cluster:
+   - [minikube start](https://minikube.sigs.k8s.io/docs/start/)
+   - [KinD quickstart](https://kind.sigs.k8s.io/docs/user/quick-start/)
 1. Set up a Linux Container repository for pushing images. You can use any
    container image registry by adjusting the authentication methods and
    repository paths mentioned in the sections below.
