@@ -19,15 +19,9 @@ package kncloudevents
 import (
 	nethttp "net/http"
 	"sync"
-	"time"
 
 	"go.opencensus.io/plugin/ochttp"
 	"knative.dev/pkg/tracing/propagation/tracecontextb3"
-)
-
-const (
-	defaultRetryWaitMin = 1 * time.Second
-	defaultRetryWaitMax = 30 * time.Second
 )
 
 type holder struct {
@@ -64,7 +58,7 @@ func getClient() *nethttp.Client {
 // ConfigureConnectionArgs configures the new connection args.
 // The existing client won't be affected, but a new one will be created.
 // Use sparingly, because it might lead to creating a lot of clients, none of them sharing their connection pool!
-func ConfigureConnectionArgs(ca *ConnectionArgs) {
+func configureConnectionArgsOldClient(ca *ConnectionArgs) {
 	clientHolder.clientMutex.Lock()
 	defer clientHolder.clientMutex.Unlock()
 
@@ -86,21 +80,4 @@ func ConfigureConnectionArgs(ca *ConnectionArgs) {
 	}
 
 	clientHolder.connectionArgs = ca
-}
-
-// ConnectionArgs allow to configure connection parameters to the underlying
-// HTTP Client transport.
-type ConnectionArgs struct {
-	// MaxIdleConns refers to the max idle connections, as in net/http/transport.
-	MaxIdleConns int
-	// MaxIdleConnsPerHost refers to the max idle connections per host, as in net/http/transport.
-	MaxIdleConnsPerHost int
-}
-
-func (ca *ConnectionArgs) configureTransport(transport *nethttp.Transport) {
-	if ca == nil {
-		return
-	}
-	transport.MaxIdleConns = ca.MaxIdleConns
-	transport.MaxIdleConnsPerHost = ca.MaxIdleConnsPerHost
 }
