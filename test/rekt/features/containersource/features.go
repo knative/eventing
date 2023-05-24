@@ -30,7 +30,6 @@ import (
 	"knative.dev/reconciler-test/pkg/resources/service"
 
 	"knative.dev/eventing/test/rekt/resources/containersource"
-	"knative.dev/eventing/test/rekt/resources/pingsource"
 )
 
 func SendsEventsWithSinkRef() *feature.Feature {
@@ -40,7 +39,7 @@ func SendsEventsWithSinkRef() *feature.Feature {
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 
-	f.Requirement("install containersource", containersource.Install(source, pingsource.WithSink(service.AsKReference(sink), "")))
+	f.Requirement("install containersource", containersource.Install(source, containersource.WithSink(service.AsDestinationRef(sink))))
 	f.Requirement("containersource goes ready", containersource.IsReady(source))
 
 	f.Stable("containersource as event source").
@@ -78,7 +77,7 @@ func SendsEventsWithCloudEventOverrides() *feature.Feature {
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 
 	f.Requirement("install containersource", containersource.Install(source,
-		pingsource.WithSink(service.AsKReference(sink), ""),
+		containersource.WithSink(service.AsDestinationRef(sink)),
 		containersource.WithExtensions(extensions),
 		manifest.WithPodAnnotations(map[string]interface{}{
 			"foo": true,
