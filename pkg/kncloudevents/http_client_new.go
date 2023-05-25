@@ -34,29 +34,35 @@ const (
 )
 
 var (
-	clientsMutex   sync.Mutex
-	clients        map[string]*nethttp.Client
-	connectionArgs *ConnectionArgs
+	clients clientsHolder
 )
 
+type clientsHolder struct {
+	mu             sync.Mutex
+	clients        map[string]*nethttp.Client
+	connectionArgs *ConnectionArgs
+}
+
 func init() {
-	clients = make(map[string]*nethttp.Client)
+	clients = clientsHolder{
+		clients: make(map[string]*nethttp.Client),
+	}
 }
 
 func getClientForAddressable(addressable duckv1.Addressable) (*nethttp.Client, error) {
-	clientsMutex.Lock()
-	defer clientsMutex.Unlock()
+	clients.mu.Lock()
+	defer clients.mu.Unlock()
 
 	clientKey := addressable.URL.String()
 
-	client, ok := clients[clientKey]
+	client, ok := clients.clients[clientKey]
 	if !ok {
 		newClient, err := createNewClient(addressable)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create new client for addressable: %w", err)
 		}
 
-		clients[clientKey] = newClient
+		clients.clients[clientKey] = newClient
 
 		client = newClient
 	}
@@ -79,7 +85,7 @@ func createNewClient(addressable duckv1.Addressable) (*nethttp.Client, error) {
 		}
 	}
 
-	connectionArgs.configureTransport(base)
+	clients.connectionArgs.configureTransport(base)
 	client := &nethttp.Client{
 		// Add output tracing.
 		Transport: &ochttp.Transport{
@@ -92,8 +98,8 @@ func createNewClient(addressable duckv1.Addressable) (*nethttp.Client, error) {
 }
 
 func AddOrUpdateAddressableHandler(addressable duckv1.Addressable) {
-	clientsMutex.Lock()
-	defer clientsMutex.Unlock()
+	clients.mu.Lock()
+	defer clients.mu.Unlock()
 
 	clientKey := addressable.URL.String()
 
@@ -102,16 +108,16 @@ func AddOrUpdateAddressableHandler(addressable duckv1.Addressable) {
 		fmt.Printf("failed to create new client: %v", err)
 		return
 	}
-	clients[clientKey] = client
+	clients.clients[clientKey] = client
 }
 
 func DeleteAddressableHandler(addressable duckv1.Addressable) {
-	clientsMutex.Lock()
-	defer clientsMutex.Unlock()
+	clients.mu.Lock()
+	defer clients.mu.Unlock()
 
 	clientKey := addressable.URL.String()
 
-	delete(clients, clientKey)
+	delete(clients.clients, clientKey)
 }
 
 // ConfigureConnectionArgs configures the new connection args.
@@ -119,29 +125,29 @@ func DeleteAddressableHandler(addressable duckv1.Addressable) {
 func ConfigureConnectionArgs(ca *ConnectionArgs) {
 	configureConnectionArgsOldClient(ca) //also configure the connection args of the old client
 
-	clientsMutex.Lock()
-	defer clientsMutex.Unlock()
+	clients.mu.Lock()
+	defer clients.mu.Unlock()
 
 	// Check if same config
-	if connectionArgs != nil &&
+	if clients.connectionArgs != nil &&
 		ca != nil &&
-		ca.MaxIdleConns == connectionArgs.MaxIdleConns &&
-		ca.MaxIdleConnsPerHost == connectionArgs.MaxIdleConnsPerHost {
+		ca.MaxIdleConns == clients.connectionArgs.MaxIdleConns &&
+		ca.MaxIdleConnsPerHost == clients.connectionArgs.MaxIdleConnsPerHost {
 		return
 	}
 
-	if len(clients) > 0 {
+	if len(clients.clients) > 0 {
 		// Let's try to clean up a bit the existing clients
 		// Note: this won't remove it nor close it
-		for _, client := range clients {
+		for _, client := range clients.clients {
 			client.CloseIdleConnections()
 		}
 
 		// Resetting clients
-		clients = make(map[string]*nethttp.Client)
+		clients.clients = make(map[string]*nethttp.Client)
 	}
 
-	connectionArgs = ca
+	clients.connectionArgs = ca
 }
 
 // ConnectionArgs allow to configure connection parameters to the underlying
