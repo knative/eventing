@@ -376,6 +376,36 @@ func TestReconcile(t *testing.T) {
 					WithDLSNotConfigured()),
 			}},
 		}, {
+			Name: "Successful Reconciliation with a Channel with CA certs",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
+					WithBrokerConfig(config()),
+					WithInitBrokerConditions),
+				createChannel(withChannelReady, withChannelStatusCACerts(testCaCerts)),
+				imcConfigMap(),
+				NewEndpoints(filterServiceName, systemNS,
+					WithEndpointsLabels(FilterLabels()),
+					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
+				NewEndpoints(ingressServiceName, systemNS,
+					WithEndpointsLabels(IngressLabels()),
+					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
+					WithBrokerConfig(config()),
+					WithBrokerReady,
+					WithBrokerAddressURI(brokerAddress),
+					WithChannelAddressAnnotation(triggerChannelURL),
+					WithChannelCACertsAnnotation(testCaCerts),
+					WithChannelAPIVersionAnnotation(triggerChannelAPIVersion),
+					WithChannelKindAnnotation(triggerChannelKind),
+					WithChannelNameAnnotation(triggerChannelName),
+					WithDLSNotConfigured()),
+			}},
+		}, {
 			Name: "Successful Reconciliation. Using legacy channel template config element.",
 			Key:  testKey,
 			Objects: []runtime.Object{
@@ -769,6 +799,15 @@ func withChannelDeadLetterSink(d duckv1.Destination) unstructuredOption {
 	return func(channel *unstructured.Unstructured) {
 		unstructured.SetNestedField(channel.Object, u,
 			"spec", "delivery", "deadLetterSink")
+	}
+}
+
+func withChannelStatusCACerts(caCerts string) unstructuredOption {
+	return func(channel *unstructured.Unstructured) {
+		if err := unstructured.SetNestedField(channel.Object, caCerts,
+			"status", "address", "caCerts"); err != nil {
+			panic(err)
+		}
 	}
 }
 

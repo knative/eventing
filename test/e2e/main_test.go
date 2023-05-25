@@ -19,6 +19,7 @@ limitations under the License.
 package e2e
 
 import (
+	"flag"
 	"os"
 	"testing"
 
@@ -32,12 +33,13 @@ var brokerClass string
 
 func TestMain(m *testing.M) {
 	test.InitializeEventingFlags()
+	flag.Parse()
 	testlib.ReuseNamespace = test.EventingFlags.ReuseNamespace
 	channelTestRunner = testlib.ComponentsTestRunner{
 		ComponentFeatureMap: testlib.ChannelFeatureMap,
 		ComponentsToTest:    test.EventingFlags.Channels,
 	}
-	brokerClass = test.EventingFlags.BrokerClass
+	brokerClass = test.BrokerClass
 
 	exit := m.Run()
 

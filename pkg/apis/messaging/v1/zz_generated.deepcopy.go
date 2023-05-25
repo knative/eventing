@@ -377,10 +377,20 @@ func (in *SubscriptionStatusPhysicalSubscription) DeepCopyInto(out *Subscription
 		*out = new(apis.URL)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.SubscriberCACerts != nil {
+		in, out := &in.SubscriberCACerts, &out.SubscriberCACerts
+		*out = new(string)
+		**out = **in
+	}
 	if in.ReplyURI != nil {
 		in, out := &in.ReplyURI, &out.ReplyURI
 		*out = new(apis.URL)
 		(*in).DeepCopyInto(*out)
+	}
+	if in.ReplyCACerts != nil {
+		in, out := &in.ReplyCACerts, &out.ReplyCACerts
+		*out = new(string)
+		**out = **in
 	}
 	in.DeliveryStatus.DeepCopyInto(&out.DeliveryStatus)
 	return

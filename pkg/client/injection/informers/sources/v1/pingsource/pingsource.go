@@ -21,15 +21,8 @@ package pingsource
 import (
 	context "context"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	cache "k8s.io/client-go/tools/cache"
-	apissourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
-	versioned "knative.dev/eventing/pkg/client/clientset/versioned"
 	v1 "knative.dev/eventing/pkg/client/informers/externalversions/sources/v1"
-	client "knative.dev/eventing/pkg/client/injection/client"
 	factory "knative.dev/eventing/pkg/client/injection/informers/factory"
-	sourcesv1 "knative.dev/eventing/pkg/client/listers/sources/v1"
 	controller "knative.dev/pkg/controller"
 	injection "knative.dev/pkg/injection"
 	logging "knative.dev/pkg/logging"
@@ -37,7 +30,6 @@ import (
 
 func init() {
 	injection.Default.RegisterInformer(withInformer)
-	injection.Dynamic.RegisterDynamicInformer(withDynamicInformer)
 }
 
 // Key is used for associating the Informer inside the context.Context.
@@ -49,11 +41,6 @@ func withInformer(ctx context.Context) (context.Context, controller.Informer) {
 	return context.WithValue(ctx, Key{}, inf), inf.Informer()
 }
 
-func withDynamicInformer(ctx context.Context) context.Context {
-	inf := &wrapper{client: client.Get(ctx), resourceVersion: injection.GetResourceVersion(ctx)}
-	return context.WithValue(ctx, Key{}, inf)
-}
-
 // Get extracts the typed informer from the context.
 func Get(ctx context.Context) v1.PingSourceInformer {
 	untyped := ctx.Value(Key{})
@@ -62,55 +49,4 @@ func Get(ctx context.Context) v1.PingSourceInformer {
 			"Unable to fetch knative.dev/eventing/pkg/client/informers/externalversions/sources/v1.PingSourceInformer from context.")
 	}
 	return untyped.(v1.PingSourceInformer)
-}
-
-type wrapper struct {
-	client versioned.Interface
-
-	namespace string
-
-	resourceVersion string
-}
-
-var _ v1.PingSourceInformer = (*wrapper)(nil)
-var _ sourcesv1.PingSourceLister = (*wrapper)(nil)
-
-func (w *wrapper) Informer() cache.SharedIndexInformer {
-	return cache.NewSharedIndexInformer(nil, &apissourcesv1.PingSource{}, 0, nil)
-}
-
-func (w *wrapper) Lister() sourcesv1.PingSourceLister {
-	return w
-}
-
-func (w *wrapper) PingSources(namespace string) sourcesv1.PingSourceNamespaceLister {
-	return &wrapper{client: w.client, namespace: namespace, resourceVersion: w.resourceVersion}
-}
-
-// SetResourceVersion allows consumers to adjust the minimum resourceVersion
-// used by the underlying client.  It is not accessible via the standard
-// lister interface, but can be accessed through a user-defined interface and
-// an implementation check e.g. rvs, ok := foo.(ResourceVersionSetter)
-func (w *wrapper) SetResourceVersion(resourceVersion string) {
-	w.resourceVersion = resourceVersion
-}
-
-func (w *wrapper) List(selector labels.Selector) (ret []*apissourcesv1.PingSource, err error) {
-	lo, err := w.client.SourcesV1().PingSources(w.namespace).List(context.TODO(), metav1.ListOptions{
-		LabelSelector:   selector.String(),
-		ResourceVersion: w.resourceVersion,
-	})
-	if err != nil {
-		return nil, err
-	}
-	for idx := range lo.Items {
-		ret = append(ret, &lo.Items[idx])
-	}
-	return ret, nil
-}
-
-func (w *wrapper) Get(name string) (*apissourcesv1.PingSource, error) {
-	return w.client.SourcesV1().PingSources(w.namespace).Get(context.TODO(), name, metav1.GetOptions{
-		ResourceVersion: w.resourceVersion,
-	})
 }

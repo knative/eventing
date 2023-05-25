@@ -57,13 +57,14 @@ import (
 )
 
 const (
-	subscriberName = "subscriber"
-	replyName      = "reply"
-	channelName    = "origin"
-	serviceName    = "service"
-	dlcName        = "dlc"
-	dlc2Name       = "dlc2"
-	dlsName        = "dls"
+	subscriberName    = "subscriber"
+	replyName         = "reply"
+	channelName       = "origin"
+	serviceName       = "service"
+	dlcName           = "dlc"
+	dlc2Name          = "dlc2"
+	dlsName           = "dls"
+	tlsSubscriberName = "tls-subscriber"
 
 	subscriptionUID        = subscriptionName + "-abc-123"
 	subscriptionName       = "testsubscription"
@@ -80,12 +81,49 @@ var (
 
 	subscriberDNS = "subscriber.mynamespace.svc." + network.GetClusterDomainName()
 	subscriberURI = apis.HTTP(subscriberDNS)
+	subscriber    = duckv1.Addressable{
+		URL: subscriberURI,
+	}
+
+	tlsSubscriberDNS     = "tls-subscriber.mynamespace.svc." + network.GetClusterDomainName()
+	tlsSubscriberURI     = apis.HTTPS(tlsSubscriberDNS)
+	tlsSubscriberCACerts = `-----BEGIN CERTIFICATE-----
+MIIDLTCCAhWgAwIBAgIJAOjtl0zhGBvpMA0GCSqGSIb3DQEBCwUAMC0xEzARBgNV
+BAoMCmlvLnN0cmltemkxFjAUBgNVBAMMDWNsdXN0ZXItY2EgdjAwHhcNMjAxMjIw
+MDgzNzU4WhcNMjExMjIwMDgzNzU4WjAtMRMwEQYDVQQKDAppby5zdHJpbXppMRYw
+FAYDVQQDDA1jbHVzdGVyLWNhIHYwMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIB
+CgKCAQEAy7rIo+UwJh5dL6PhUfDe9wRuLgOf1ZeZmabd++eLc2kWL1r6TO8X034n
+CerkREfjF+MjDoK30z9xvEURThoSi20a4i/Cb39on9T0AgOr5qCSrqlN9n4KtRey
+ZLnKKA5QyLAM6kzyyvIg4PVwWCWFTQSicDPzqd2OmH6jtogD50FkbaP7LcyrKnWf
+64gcR9CCEAcrO8tJdhcZP2Slxg+RvupVjXK1rdZcI6/liZ3Jp4hzApSRN30x/8wU
+5eJYAtzaeWUvJ0Yq/7BH7uY8J+2Hwh+shhi5K98HBAKeISwuIJEQrWmmUer8WGp1
+IcBZqXbkd4dBXuFa0chO0gSKvzjKpQIDAQABo1AwTjAdBgNVHQ4EFgQUeascji1L
+C2voPwDAlPL6iz8TzncwHwYDVR0jBBgwFoAUeascji1LC2voPwDAlPL6iz8Tzncw
+DAYDVR0TBAUwAwEB/zANBgkqhkiG9w0BAQsFAAOCAQEAIEL2uustCrpPas06LyoR
+VR6QFHQJDcMgdL0CZFE46uLSgGupXO0ybmPP2ymBJ1zDNxx1qskNTwBsfBJLBAj6
+8LfJmhfw98QK8YQDJ/Xhx3fcVxjn6NjJ3RYOyb5bqSIGGCQZRmbMjerf71KMhP3X
+rdYg2hVoCvfRcfP2G0jbWtMRK4+MlB3oEvhIvQQW1dw4sohw32HaNJnzb7dErEDB
+Ha2zVM47CcNezdWYUD5NQzFqCRypgrIONafQI2S+Ck7aKOiqF03QSug4wizRbKhT
+uYpQg59dUIOBebg0roRF326H2x6kFGn5L2o+TROrZeeXT8vyIl2R33o3E+ULpuw+
+Vw==
+-----END CERTIFICATE-----
+`
+	tlsSubscriber = duckv1.Addressable{
+		URL:     tlsSubscriberURI,
+		CACerts: &tlsSubscriberCACerts,
+	}
 
 	replyDNS = "reply.mynamespace.svc." + network.GetClusterDomainName()
 	replyURI = apis.HTTP(replyDNS)
+	reply    = duckv1.Addressable{
+		URL: replyURI,
+	}
 
 	serviceDNS = serviceName + "." + testNS + ".svc." + network.GetClusterDomainName()
 	serviceURI = apis.HTTP(serviceDNS)
+	service    = duckv1.Addressable{
+		URL: serviceURI,
+	}
 
 	dlcDNS = "dlc.mynamespace.svc." + network.GetClusterDomainName()
 	dlcURI = apis.HTTP(dlcDNS)
@@ -130,8 +168,8 @@ var (
 		Namespace:  testNS,
 		Name:       channelName,
 	}
-	sinkURL         = apis.HTTP("example.com")
-	sinkAddressable = &duckv1.Addressable{
+	sinkURL = apis.HTTP("example.com")
+	sink    = &duckv1.Addressable{
 		Name: &sinkURL.Scheme,
 		URL:  sinkURL,
 	}
@@ -161,8 +199,8 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionFinalizers(finalizerName),
 					MarkReferencesResolved,
 					MarkAddedToChannel,
-					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
-					WithSubscriptionPhysicalSubscriptionReply(replyURI),
+					WithSubscriptionPhysicalSubscriptionSubscriber(&subscriber),
+					WithSubscriptionPhysicalSubscriptionReply(&reply),
 				),
 				// Subscriber
 				NewUnstructured(subscriberGVK, subscriberName, testNS,
@@ -209,8 +247,8 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionReply(imcV1GVK, replyName, testNS),
 					WithInitSubscriptionConditions,
 					WithSubscriptionFinalizers(finalizerName),
-					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
-					WithSubscriptionPhysicalSubscriptionReply(replyURI),
+					WithSubscriptionPhysicalSubscriptionSubscriber(&subscriber),
+					WithSubscriptionPhysicalSubscriptionReply(&reply),
 					// - Status Update -
 					MarkSubscriptionReady,
 				),
@@ -227,8 +265,8 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionFinalizers(finalizerName),
 					MarkReferencesResolved,
 					MarkAddedToChannel,
-					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
-					WithSubscriptionPhysicalSubscriptionReply(replyURI),
+					WithSubscriptionPhysicalSubscriptionSubscriber(&subscriber),
+					WithSubscriptionPhysicalSubscriptionReply(&reply),
 				),
 				// Subscriber
 				NewUnstructured(subscriberGVK, subscriberName, testNS+"-2",
@@ -275,8 +313,8 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionReply(imcV1GVK, replyName, testNS),
 					WithInitSubscriptionConditions,
 					WithSubscriptionFinalizers(finalizerName),
-					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
-					WithSubscriptionPhysicalSubscriptionReply(replyURI),
+					WithSubscriptionPhysicalSubscriptionSubscriber(&subscriber),
+					WithSubscriptionPhysicalSubscriptionReply(&reply),
 					// - Status Update -
 					MarkSubscriptionReady,
 				),
@@ -293,8 +331,8 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionFinalizers(finalizerName),
 					MarkReferencesResolved,
 					MarkAddedToChannel,
-					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
-					WithSubscriptionPhysicalSubscriptionReply(replyURI),
+					WithSubscriptionPhysicalSubscriptionSubscriber(&subscriber),
+					WithSubscriptionPhysicalSubscriptionReply(&reply),
 				),
 				// Subscriber
 				NewUnstructured(subscriberGVK, subscriberName, testNS,
@@ -341,8 +379,8 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionReply(imcV1GVK, replyName, testNS+"-2"),
 					WithInitSubscriptionConditions,
 					WithSubscriptionFinalizers(finalizerName),
-					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
-					WithSubscriptionPhysicalSubscriptionReply(replyURI),
+					WithSubscriptionPhysicalSubscriptionSubscriber(&subscriber),
+					WithSubscriptionPhysicalSubscriptionReply(&reply),
 					// - Status Update -
 					MarkSubscriptionReady,
 				),
@@ -362,8 +400,8 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionFinalizers(finalizerName),
 					MarkReferencesResolved,
 					MarkAddedToChannel,
-					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
-					WithSubscriptionPhysicalSubscriptionReply(replyURI),
+					WithSubscriptionPhysicalSubscriptionSubscriber(&subscriber),
+					WithSubscriptionPhysicalSubscriptionReply(&reply),
 				),
 				// Subscriber
 				NewUnstructured(subscriberGVK, subscriberName, testNS,
@@ -420,8 +458,8 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionReply(imcV1GVK, replyName, testNS),
 					WithInitSubscriptionConditions,
 					WithSubscriptionFinalizers(finalizerName),
-					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
-					WithSubscriptionPhysicalSubscriptionReply(replyURI),
+					WithSubscriptionPhysicalSubscriptionSubscriber(&subscriber),
+					WithSubscriptionPhysicalSubscriptionReply(&reply),
 					// - Status Update -
 					MarkSubscriptionReady,
 				),
@@ -441,8 +479,8 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionFinalizers(finalizerName),
 					MarkReferencesResolved,
 					MarkAddedToChannel,
-					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
-					WithSubscriptionPhysicalSubscriptionReply(replyURI),
+					WithSubscriptionPhysicalSubscriptionSubscriber(&subscriber),
+					WithSubscriptionPhysicalSubscriptionReply(&reply),
 				),
 				// Subscriber
 				NewUnstructured(subscriberGVK, subscriberName, testNS,
@@ -499,8 +537,8 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionReply(imcV1GVK, replyName, testNS),
 					WithInitSubscriptionConditions,
 					WithSubscriptionFinalizers(finalizerName),
-					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
-					WithSubscriptionPhysicalSubscriptionReply(replyURI),
+					WithSubscriptionPhysicalSubscriptionSubscriber(&subscriber),
+					WithSubscriptionPhysicalSubscriptionReply(&reply),
 					// - Status Update -
 					MarkSubscriptionReady,
 				),
@@ -520,8 +558,8 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionFinalizers(finalizerName),
 					MarkReferencesResolved,
 					MarkAddedToChannel,
-					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
-					WithSubscriptionPhysicalSubscriptionReply(replyURI),
+					WithSubscriptionPhysicalSubscriptionSubscriber(&subscriber),
+					WithSubscriptionPhysicalSubscriptionReply(&reply),
 				),
 				// Subscriber
 				NewUnstructured(subscriberGVK, subscriberName, testNS,
@@ -586,8 +624,8 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionReply(imcV1GVK, replyName, testNS),
 					WithInitSubscriptionConditions,
 					WithSubscriptionFinalizers(finalizerName),
-					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
-					WithSubscriptionPhysicalSubscriptionReply(replyURI),
+					WithSubscriptionPhysicalSubscriptionSubscriber(&subscriber),
+					WithSubscriptionPhysicalSubscriptionReply(&reply),
 					// - Status Update -
 					MarkSubscriptionReady,
 				),
@@ -607,8 +645,8 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionFinalizers(finalizerName),
 					MarkReferencesResolved,
 					MarkAddedToChannel,
-					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
-					WithSubscriptionPhysicalSubscriptionReply(replyURI),
+					WithSubscriptionPhysicalSubscriptionSubscriber(&subscriber),
+					WithSubscriptionPhysicalSubscriptionReply(&reply),
 				),
 				// Subscriber
 				NewUnstructured(subscriberGVK, subscriberName, testNS,
@@ -673,12 +711,174 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionReply(imcV1GVK, replyName, testNS),
 					WithInitSubscriptionConditions,
 					WithSubscriptionFinalizers(finalizerName),
-					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
-					WithSubscriptionPhysicalSubscriptionReply(replyURI),
+					WithSubscriptionPhysicalSubscriptionSubscriber(&subscriber),
+					WithSubscriptionPhysicalSubscriptionReply(&reply),
 					// - Status Update -
 					MarkSubscriptionReady,
 				),
 			}},
+		}, {
+			Name: "subscriber with CA certs",
+			Objects: []runtime.Object{
+				NewSubscription(subscriptionName, testNS,
+					WithSubscriptionChannel(imcV1GVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, tlsSubscriberName, testNS),
+					WithInitSubscriptionConditions,
+					WithSubscriptionFinalizers(finalizerName),
+					MarkReferencesResolved,
+					MarkAddedToChannel,
+				),
+				// Subscriber
+				NewUnstructured(subscriberGVK, tlsSubscriberName, testNS,
+					WithUnstructuredAddressableTLS(tlsSubscriberDNS, &tlsSubscriberCACerts),
+				),
+				// Channel
+				NewInMemoryChannel(channelName, testNS,
+					WithInitInMemoryChannelConditions,
+					WithInMemoryChannelReady(channelDNS),
+					WithInMemoryChannelSubscribers([]eventingduck.SubscriberSpec{{
+						SubscriberURI: tlsSubscriberURI,
+					}}),
+					WithInMemoryChannelAddress(channelDNS),
+				),
+			},
+			Key:     testNS + "/" + subscriptionName,
+			WantErr: false,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "SubscriberSync", "Subscription was synchronized to channel %q", channelName),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewSubscription(subscriptionName, testNS,
+					WithSubscriptionChannel(imcV1GVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, tlsSubscriberName, testNS),
+					WithInitSubscriptionConditions,
+					WithSubscriptionFinalizers(finalizerName),
+					WithSubscriptionPhysicalSubscriptionSubscriber(&tlsSubscriber),
+					MarkReferencesResolved,
+					MarkAddedToChannel,
+				),
+			}},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
+					{
+						SubscriberURI:     tlsSubscriberURI,
+						SubscriberCACerts: &tlsSubscriberCACerts,
+					},
+				}),
+			},
+		}, {
+			Name: "reply with CA certs",
+			Objects: []runtime.Object{
+				NewSubscription(subscriptionName, testNS,
+					WithSubscriptionChannel(imcV1GVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
+					WithSubscriptionReply(imcV1GVK, tlsSubscriberName, testNS),
+					WithInitSubscriptionConditions,
+					WithSubscriptionFinalizers(finalizerName),
+					MarkReferencesResolved,
+					MarkAddedToChannel,
+				),
+				// Subscriber
+				NewUnstructured(subscriberGVK, subscriberName, testNS,
+					WithUnstructuredAddressable(subscriberDNS),
+				),
+				// Reply
+				NewInMemoryChannel(tlsSubscriberName, testNS,
+					WithInitInMemoryChannelConditions,
+					WithInMemoryChannelAddressHTTPS(duckv1.Addressable{
+						URL:     tlsSubscriberURI,
+						CACerts: &tlsSubscriberCACerts,
+					}),
+				),
+				// Channel
+				NewInMemoryChannel(channelName, testNS,
+					WithInitInMemoryChannelConditions,
+					WithInMemoryChannelReady(channelDNS),
+					WithInMemoryChannelSubscribers([]eventingduck.SubscriberSpec{{
+						SubscriberURI: subscriberURI,
+						ReplyURI:      tlsSubscriberURI,
+					}}),
+					WithInMemoryChannelAddress(subscriberDNS),
+				),
+			},
+			Key:     testNS + "/" + subscriptionName,
+			WantErr: false,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "SubscriberSync", "Subscription was synchronized to channel %q", channelName),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewSubscription(subscriptionName, testNS,
+					WithSubscriptionChannel(imcV1GVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
+					WithSubscriptionReply(imcV1GVK, tlsSubscriberName, testNS),
+					WithInitSubscriptionConditions,
+					WithSubscriptionFinalizers(finalizerName),
+					WithSubscriptionPhysicalSubscriptionSubscriber(&subscriber),
+					WithSubscriptionPhysicalSubscriptionReply(&tlsSubscriber),
+					// - Status Update -
+					MarkReferencesResolved,
+					MarkAddedToChannel,
+				),
+			}},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
+					{
+						SubscriberURI: subscriberURI,
+						ReplyURI:      tlsSubscriberURI,
+						ReplyCACerts:  &tlsSubscriberCACerts,
+					},
+				}),
+			},
+		}, {
+			Name: "no patch on subscriber without CA certs",
+			Objects: []runtime.Object{
+				NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(imcV1GVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, tlsSubscriberName, testNS),
+					WithInitSubscriptionConditions,
+					WithSubscriptionFinalizers(finalizerName),
+					MarkReferencesResolved,
+					MarkAddedToChannel,
+					MarkSubscriptionReady,
+				),
+				// Subscriber
+				NewUnstructured(subscriberGVK, tlsSubscriberName, testNS,
+					WithUnstructuredAddressableTLS(tlsSubscriberDNS, nil),
+				),
+				// Channel
+				NewInMemoryChannel(channelName, testNS,
+					WithInitInMemoryChannelConditions,
+					WithInMemoryChannelReady(channelDNS),
+					WithInMemoryChannelSubscribers([]eventingduck.SubscriberSpec{{
+						UID:           subscriptionUID,
+						SubscriberURI: tlsSubscriberURI,
+					}}),
+					WithInMemoryChannelStatusSubscribers([]eventingduck.SubscriberStatus{{
+						UID:                subscriptionUID,
+						ObservedGeneration: 0,
+						Ready:              "True",
+					}}),
+				),
+			},
+			Key:     testNS + "/" + subscriptionName,
+			WantErr: false,
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(imcV1GVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, tlsSubscriberName, testNS),
+					WithInitSubscriptionConditions,
+					WithSubscriptionFinalizers(finalizerName),
+					MarkReferencesResolved,
+					MarkAddedToChannel,
+					MarkSubscriptionReady,
+					WithSubscriptionPhysicalSubscriptionSubscriber(&duckv1.Addressable{
+						URL: tlsSubscriberURI,
+					}),
+				),
+			}},
+			WantPatches: nil,
 		}, {
 			Name: "channel does not exist",
 			Objects: []runtime.Object{
@@ -831,7 +1031,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionReply(imcV1GVK, replyName, testNS),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
-					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
+					WithSubscriptionPhysicalSubscriptionSubscriber(&subscriber),
 					WithSubscriptionReferencesNotResolved(replyResolveFailed, fmt.Sprintf(`Failed to resolve spec.reply: failed to get object testnamespace/reply: inmemorychannels.messaging.knative.dev %q not found`, replyName)),
 				),
 			}},
@@ -866,7 +1066,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionUID(subscriptionUID),
 					WithSubscriptionChannel(imcV1GVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
-					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
+					WithSubscriptionPhysicalSubscriptionSubscriber(&subscriber),
 					WithSubscriptionReply(nonAddressableGVK, replyName, testNS),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
@@ -909,7 +1109,7 @@ func TestAllCases(t *testing.T) {
 					MarkReferencesResolved,
 					MarkAddedToChannel,
 
-					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
+					WithSubscriptionPhysicalSubscriptionSubscriber(&subscriber),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
@@ -951,7 +1151,7 @@ func TestAllCases(t *testing.T) {
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
 					WithSubscriptionReferencesNotResolved("DeadLetterSinkResolveFailed", `Failed to resolve spec.delivery.deadLetterSink: failed to get object testnamespace/dls: subscribers.messaging.knative.dev "dls" not found`),
-					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
+					WithSubscriptionPhysicalSubscriptionSubscriber(&subscriber),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
@@ -994,7 +1194,7 @@ func TestAllCases(t *testing.T) {
 					WithInitSubscriptionConditions,
 					MarkReferencesResolved,
 					MarkAddedToChannel,
-					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
+					WithSubscriptionPhysicalSubscriptionSubscriber(&subscriber),
 					WithSubscriptionDeadLetterSinkURI(dlsURI),
 				),
 			}},
@@ -1019,7 +1219,7 @@ func TestAllCases(t *testing.T) {
 					WithInitChannelConditions,
 					WithBackingChannelObjRef(&imcV1KRef),
 					WithBackingChannelReady,
-					WithChannelAddress(sinkAddressable),
+					WithChannelAddress(sink),
 					WithChannelDLSUnknown(),
 				),
 				NewInMemoryChannel(channelName, testNS,
@@ -1045,7 +1245,7 @@ func TestAllCases(t *testing.T) {
 					MarkReferencesResolved,
 					MarkAddedToChannel,
 
-					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
+					WithSubscriptionPhysicalSubscriptionSubscriber(&subscriber),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
@@ -1133,8 +1333,8 @@ func TestAllCases(t *testing.T) {
 					WithInitSubscriptionConditions,
 					MarkReferencesResolved,
 					MarkAddedToChannel,
-					WithSubscriptionPhysicalSubscriptionReply(replyURI),
-					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
+					WithSubscriptionPhysicalSubscriptionReply(&reply),
+					WithSubscriptionPhysicalSubscriptionSubscriber(&subscriber),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
@@ -1181,8 +1381,8 @@ func TestAllCases(t *testing.T) {
 					WithInitSubscriptionConditions,
 					MarkReferencesResolved,
 					MarkAddedToChannel,
-					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
-					WithSubscriptionPhysicalSubscriptionReply(replyURI),
+					WithSubscriptionPhysicalSubscriptionSubscriber(&subscriber),
+					WithSubscriptionPhysicalSubscriptionReply(&reply),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
@@ -1202,7 +1402,7 @@ func TestAllCases(t *testing.T) {
 					WithInitSubscriptionConditions,
 					WithSubscriptionFinalizers(finalizerName),
 					MarkSubscriptionReady,
-					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
+					WithSubscriptionPhysicalSubscriptionSubscriber(&subscriber),
 				),
 				NewUnstructured(subscriberGVK, subscriberName, testNS,
 					WithUnstructuredAddressable(subscriberDNS),
@@ -1230,7 +1430,7 @@ func TestAllCases(t *testing.T) {
 					WithInitSubscriptionConditions,
 					WithSubscriptionFinalizers(finalizerName),
 					MarkSubscriptionReady,
-					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
+					WithSubscriptionPhysicalSubscriptionSubscriber(&subscriber),
 					WithSubscriptionStatusObservedGeneration(subscriptionGeneration),
 				),
 			}},
@@ -1269,7 +1469,7 @@ func TestAllCases(t *testing.T) {
 					WithInitSubscriptionConditions,
 					MarkReferencesResolved,
 					MarkAddedToChannel,
-					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI),
+					WithSubscriptionPhysicalSubscriptionSubscriber(&service),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
@@ -1293,7 +1493,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionSubscriberRef(serviceGVK, serviceName, testNS),
 					WithInitSubscriptionConditions,
 					MarkSubscriptionReady,
-					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI),
+					WithSubscriptionPhysicalSubscriptionSubscriber(&service),
 				),
 				NewInMemoryChannel(channelName, testNS,
 					WithInitInMemoryChannelConditions,
@@ -1318,7 +1518,7 @@ func TestAllCases(t *testing.T) {
 					WithInitSubscriptionConditions,
 					MarkReferencesResolved,
 					MarkAddedToChannel,
-					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI),
+					WithSubscriptionPhysicalSubscriptionSubscriber(&service),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
@@ -1347,7 +1547,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionSubscriberRef(serviceGVK, serviceName, testNS),
 					WithInitSubscriptionConditions,
 					MarkSubscriptionReady,
-					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI),
+					WithSubscriptionPhysicalSubscriptionSubscriber(&service),
 				),
 				NewInMemoryChannel(channelName, testNS,
 					WithInitInMemoryChannelConditions,
@@ -1376,7 +1576,7 @@ func TestAllCases(t *testing.T) {
 					WithInitSubscriptionConditions,
 					MarkReferencesResolved,
 					MarkAddedToChannel,
-					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI),
+					WithSubscriptionPhysicalSubscriptionSubscriber(&service),
 					WithSubscriptionDeadLetterSinkURI(dlsURI),
 				),
 			}},
@@ -1435,7 +1635,7 @@ func TestAllCases(t *testing.T) {
 					WithInitSubscriptionConditions,
 					MarkReferencesResolved,
 					MarkAddedToChannel,
-					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI),
+					WithSubscriptionPhysicalSubscriptionSubscriber(&service),
 					WithSubscriptionDeliverySpec(&eventingduck.DeliverySpec{
 						DeadLetterSink: &duckv1.Destination{
 							Ref: &duckv1.KReference{
@@ -1518,7 +1718,7 @@ func TestAllCases(t *testing.T) {
 					WithInitSubscriptionConditions,
 					MarkReferencesResolved,
 					MarkAddedToChannel,
-					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI),
+					WithSubscriptionPhysicalSubscriptionSubscriber(&service),
 					WithSubscriptionDeadLetterSinkURI(dlcURI),
 				),
 			}},
@@ -1583,7 +1783,7 @@ func TestAllCases(t *testing.T) {
 					WithInitSubscriptionConditions,
 					MarkReferencesResolved,
 					MarkAddedToChannel,
-					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI),
+					WithSubscriptionPhysicalSubscriptionSubscriber(&service),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
@@ -1634,7 +1834,7 @@ func TestAllCases(t *testing.T) {
 					WithInitSubscriptionConditions,
 					MarkReferencesResolved,
 					MarkAddedToChannel,
-					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI),
+					WithSubscriptionPhysicalSubscriptionSubscriber(&service),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
@@ -1695,7 +1895,7 @@ func TestAllCases(t *testing.T) {
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
 					WithSubscriptionReferencesNotResolved("DeadLetterSinkResolveFailed", fmt.Sprintf("channel %s didn't set status.deadLetterSinkURI", channelName)),
-					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI),
+					WithSubscriptionPhysicalSubscriptionSubscriber(&service),
 				),
 			}},
 		},
@@ -1762,7 +1962,7 @@ func TestAllCases(t *testing.T) {
 					WithInitSubscriptionConditions,
 					MarkReferencesResolved,
 					MarkAddedToChannel,
-					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI),
+					WithSubscriptionPhysicalSubscriptionSubscriber(&service),
 					WithSubscriptionDeliverySpec(&eventingduck.DeliverySpec{
 						DeadLetterSink: &duckv1.Destination{
 							Ref: &duckv1.KReference{
@@ -1846,7 +2046,7 @@ func TestAllCases(t *testing.T) {
 					WithInitSubscriptionConditions,
 					MarkReferencesResolved,
 					MarkAddedToChannel,
-					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI),
+					WithSubscriptionPhysicalSubscriptionSubscriber(&service),
 					WithSubscriptionDeliverySpec(&eventingduck.DeliverySpec{
 						Timeout:       pointer.String("PT1S"),
 						RetryAfterMax: pointer.String("PT2S"),
@@ -1877,7 +2077,7 @@ func TestAllCases(t *testing.T) {
 					WithInitSubscriptionConditions,
 					MarkSubscriptionReady,
 					WithSubscriptionFinalizers(finalizerName),
-					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI),
+					WithSubscriptionPhysicalSubscriptionSubscriber(&service),
 					WithSubscriptionDeleted,
 				),
 				NewUnstructured(subscriberGVK, subscriberName, testNS,
@@ -1911,7 +2111,7 @@ func TestAllCases(t *testing.T) {
 					WithInitSubscriptionConditions,
 					MarkSubscriptionReady,
 					WithSubscriptionFinalizers(finalizerName),
-					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI),
+					WithSubscriptionPhysicalSubscriptionSubscriber(&service),
 					WithSubscriptionDeleted,
 				),
 				NewUnstructured(subscriberGVK, subscriberName, testNS,
@@ -1942,7 +2142,7 @@ func TestAllCases(t *testing.T) {
 					MarkNotAddedToChannel("PhysicalChannelSyncFailed", "Failed to sync physical Channel: inducing failure for patch inmemorychannels"),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 					WithSubscriptionFinalizers(finalizerName),
-					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI),
+					WithSubscriptionPhysicalSubscriptionSubscriber(&service),
 					WithSubscriptionDeleted,
 				),
 			}},
@@ -1960,7 +2160,7 @@ func TestAllCases(t *testing.T) {
 					WithInitSubscriptionConditions,
 					MarkSubscriptionReady,
 					WithSubscriptionFinalizers(finalizerName),
-					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI),
+					WithSubscriptionPhysicalSubscriptionSubscriber(&service),
 					WithSubscriptionDeleted,
 				),
 				NewUnstructured(subscriberGVK, subscriberName, testNS,

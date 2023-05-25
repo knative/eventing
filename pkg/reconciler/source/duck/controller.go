@@ -29,7 +29,7 @@ import (
 	"knative.dev/pkg/logging"
 
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
-	eventtypeinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta1/eventtype"
+	eventtypeinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta2/eventtype"
 	crdinfomer "knative.dev/pkg/client/injection/apiextensions/informers/apiextensions/v1/customresourcedefinition"
 	sourceinformer "knative.dev/pkg/client/injection/ducks/duck/v1/source"
 )

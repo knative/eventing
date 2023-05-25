@@ -234,7 +234,7 @@ func TestSendEventsTLS(t *testing.T) {
 
 	ctx, _ := rectesting.SetupFakeContext(t)
 	requestsChan := make(chan *nethttp.Request, 10)
-	requests := make([]*nethttp.Request, 0, 8)
+	events := make([]*cloudevents.Event, 0, 8)
 	ca := eventingtlstesting.StartServer(ctx, t, 8334, requestsChan)
 
 	var wg sync.WaitGroup
@@ -242,7 +242,15 @@ func TestSendEventsTLS(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		for r := range requestsChan {
-			requests = append(requests, r)
+			func() {
+				message := cehttp.NewMessageFromHttpRequest(r)
+				defer message.Finish(nil)
+
+				event, err := binding.ToEvent(ctx, message)
+				require.Nil(t, err)
+
+				events = append(events, event)
+			}()
 		}
 	}()
 
@@ -321,13 +329,9 @@ func TestSendEventsTLS(t *testing.T) {
 	close(requestsChan)
 	wg.Wait()
 
-	require.Len(t, requests, 1)
+	require.Len(t, events, 1)
 
-	message := cehttp.NewMessageFromHttpRequest(requests[0])
-	defer message.Finish(nil)
-
-	event, err := binding.ToEvent(ctx, message)
-	require.Nil(t, err)
+	event := events[0]
 
 	require.Equal(t, sourcesv1.PingSourceEventType, event.Type())
 	require.Equal(t, sourcesv1.PingSourceSource("test-ns", "test-name1"), event.Source())

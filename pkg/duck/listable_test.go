@@ -299,8 +299,9 @@ type fakeInformer struct {
 	eventHandlerAdded bool
 }
 
-func (fi *fakeInformer) AddEventHandler(cache.ResourceEventHandler) {
+func (fi *fakeInformer) AddEventHandler(handler cache.ResourceEventHandler) (cache.ResourceEventHandlerRegistration, error) {
 	fi.eventHandlerAdded = true
+	return nil, nil
 }
 
 var _ cache.SharedIndexInformer = (*fakeInformer)(nil)
