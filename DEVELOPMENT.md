@@ -11,10 +11,12 @@ Also take a look at:
 ## Getting started
 
 1. [Create and checkout a repo fork](#checkout-your-fork)
-1. [Install a channel implementation](#install-channels)
+2. [Make sure all the requirements are fullfilled](#requirements)
+3. [Create a cluster and Linux Container repo](#create-a-cluster-and-a-repo)
+4. [Set up the environment variables](#setup-your-environment)
+5. [Start eventing controller](#starting-eventing-controller)
+6. [Install the rest (Optional)](#install-channels)
 
-Once you meet these requirements, you can
-[start the eventing-controller](#starting-eventing-controller).
 
 > :information_source: If you intend to use event sinks based on Knative
 > Services as described in some of our examples, consider installing
@@ -111,6 +113,29 @@ _Adding the `upstream` remote sets you up nicely for regularly
 Once you reach this point you are ready to do a full build and deploy as
 follows.
 
+## Starting Eventing Controller
+
+Once you've [setup your development environment](#getting-started), stand up
+`Knative Eventing` with:
+
+```shell
+ko apply -f config/
+```
+
+You can see things running with:
+
+```shell
+$ kubectl -n knative-eventing get pods
+NAME                                   READY     STATUS    RESTARTS   AGE
+eventing-controller-59f7969778-4dt7l   1/1       Running   0          2h
+```
+
+You can access the Eventing Controller's logs with:
+
+```shell
+kubectl -n knative-eventing logs $(kubectl -n knative-eventing get pods -l app=eventing-controller -o name)
+```
+
 ## Install Channels
 
 Install the
@@ -156,29 +181,6 @@ to explicitly enable it.
 
 ```shell
 ko apply -f test/config/sugar.yaml
-```
-
-## Starting Eventing Controller
-
-Once you've [setup your development environment](#getting-started), stand up
-`Knative Eventing` with:
-
-```shell
-ko apply -f config/
-```
-
-You can see things running with:
-
-```shell
-$ kubectl -n knative-eventing get pods
-NAME                                   READY     STATUS    RESTARTS   AGE
-eventing-controller-59f7969778-4dt7l   1/1       Running   0          2h
-```
-
-You can access the Eventing Controller's logs with:
-
-```shell
-kubectl -n knative-eventing logs $(kubectl -n knative-eventing get pods -l app=eventing-controller -o name)
 ```
 
 ## Iterating
