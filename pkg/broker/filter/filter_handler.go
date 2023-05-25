@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
@@ -35,7 +34,7 @@ import (
 	"go.opencensus.io/trace"
 	"go.uber.org/zap"
 	channelAttributes "knative.dev/eventing/pkg/channel/attributes"
-	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/logging"
 
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
@@ -82,8 +81,6 @@ var HeaderProxyAllowList = map[string]struct{}{
 
 // Handler parses Cloud Events, determines if they pass a filter, and sends them to a subscriber.
 type Handler struct {
-	// sender sends requests to downstream services
-	sender *kncloudevents.HTTPMessageSender
 	// reporter reports stats of status code and dispatch time
 	reporter StatsReporter
 
@@ -100,13 +97,7 @@ func NewHandler(logger *zap.Logger, triggerLister eventinglisters.TriggerLister,
 		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
 	})
 
-	sender, err := kncloudevents.NewHTTPMessageSenderWithTarget("")
-	if err != nil {
-		return nil, fmt.Errorf("failed to create message sender: %w", err)
-	}
-
 	return &Handler{
-		sender:        sender,
 		reporter:      reporter,
 		triggerLister: triggerLister,
 		logger:        logger,
@@ -211,10 +202,14 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 
 	h.reportArrivalTime(event, reportArgs)
 
-	h.send(ctx, writer, request.Header, subscriberURI.URL(), reportArgs, event, ttl)
+	target := duckv1.Addressable{
+		URL:     t.Status.SubscriberURI,
+		CACerts: t.Status.SubscriberCACerts,
+	}
+	h.send(ctx, writer, request.Header, target, reportArgs, event, ttl)
 }
 
-func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers http.Header, target *url.URL, reportArgs *ReportArgs, event *cloudevents.Event, ttl int32) {
+func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers http.Header, target duckv1.Addressable, reportArgs *ReportArgs, event *cloudevents.Event, ttl int32) {
 	// send the event to trigger's subscriber
 	response, responseErr := h.sendEvent(ctx, headers, target, event, reportArgs)
 
@@ -235,7 +230,7 @@ func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers 
 
 		// Read Response body to responseErr
 		errExtensionInfo := broker.ErrExtensionInfo{
-			ErrDestination:  (*apis.URL)(target),
+			ErrDestination:  target.URL,
 			ErrResponseBody: responseErr.ResponseBody,
 		}
 		errExtensionBytes, msErr := json.Marshal(errExtensionInfo)
@@ -249,23 +244,23 @@ func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers 
 		return
 	}
 
-	h.logger.Debug("Successfully dispatched message", zap.Any("target", target.String()))
+	h.logger.Debug("Successfully dispatched message", zap.Any("target", target))
 
 	// If there is an event in the response write it to the response
-	statusCode, err := h.writeResponse(ctx, writer, response, ttl, target.String())
+	statusCode, err := h.writeResponse(ctx, writer, response, ttl, target.URL.String())
 	if err != nil {
 		h.logger.Error("failed to write response", zap.Error(err))
 	}
 	_ = h.reporter.ReportEventCount(reportArgs, statusCode)
 }
 
-func (h *Handler) sendEvent(ctx context.Context, headers http.Header, target *url.URL, event *cloudevents.Event, reporterArgs *ReportArgs) (*http.Response, ErrHandler) {
+func (h *Handler) sendEvent(ctx context.Context, headers http.Header, target duckv1.Addressable, event *cloudevents.Event, reporterArgs *ReportArgs) (*http.Response, ErrHandler) {
 	responseErr := ErrHandler{
 		ResponseCode: NoResponse,
 	}
 
 	// Send the event to the subscriber
-	req, err := h.sender.NewCloudEventRequestWithTarget(ctx, target.String())
+	req, err := kncloudevents.NewCloudEventRequest(ctx, target)
 	if err != nil {
 		responseErr.err = fmt.Errorf("failed to create the request: %w", err)
 		return nil, responseErr
@@ -279,14 +274,14 @@ func (h *Handler) sendEvent(ctx context.Context, headers http.Header, target *ur
 	// Following the spec https://github.com/knative/specs/blob/main/specs/eventing/data-plane.md#derived-reply-events
 	additionalHeaders.Set("prefer", "reply")
 
-	err = kncloudevents.WriteHTTPRequestWithAdditionalHeaders(ctx, message, req, additionalHeaders)
+	err = kncloudevents.WriteRequestWithAdditionalHeaders(ctx, message, req, additionalHeaders)
 	if err != nil {
 		responseErr.err = fmt.Errorf("failed to write request: %w", err)
 		return nil, responseErr
 	}
 
 	start := time.Now()
-	resp, err := h.sender.Send(req)
+	resp, err := req.Send()
 	dispatchTime := time.Since(start)
 	if err != nil {
 		responseErr.ResponseCode = http.StatusInternalServerError
