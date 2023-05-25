@@ -19,6 +19,7 @@ package sinkbinding
 import (
 	"context"
 	"embed"
+	"strings"
 	"time"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -104,6 +105,38 @@ func WithExtensions(extensions map[string]string) manifest.CfgFn {
 			}
 		}
 	}
+}
+
+func WithSink(d *duckv1.Destination) manifest.CfgFn {
+	return func(cfg map[string]interface{}) {
+	if _, set := cfg["sink"]; !set {
+		cfg["sink"] = map[string]interface{}{}
+	}
+	sink := cfg["sink"].(map[string]interface{})
+
+	ref := d.Ref
+	uri := d.URI
+
+	if d.CACerts != nil {
+		// This is a multi-line string and should be indented accordingly.
+		// Replace "new line" with "new line + spaces".
+		sink["CACerts"] = strings.ReplaceAll(*d.CACerts, "\n", "\n      ")
+	}
+
+	if uri != nil {
+		sink["uri"] = uri.String()
+	}
+	if ref != nil {
+		    if _, set := sink["ref"]; !set {
+			     sink["ref"] = map[string]interface{}{}
+		    }
+		    sref := sink["ref"].(map[string]interface{})
+		    sref["apiVersion"] = ref.APIVersion
+		    sref["kind"] = ref.Kind
+		    // skip namespace
+		    sref["name"] = ref.Name
+		}
+        }
 }
 
 // IsReady tests to see if a PingSource becomes ready within the time given.
