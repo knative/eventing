@@ -26,11 +26,10 @@ import (
 	"knative.dev/pkg/test/zipkin"
 )
 
-// RunMainTest initializes the flags to run the eventing upgrade tests, and runs the channel tests.
+// RunMainTest expects flags to be already initialized.
 // This function needs to be exposed, so that test cases in other repositories can call the upgrade
 // main tests in eventing.
 func RunMainTest(m *testing.M) {
-	test.InitializeEventingFlags()
 	channelTestRunner = testlib.ComponentsTestRunner{
 		ComponentFeatureMap: testlib.ChannelFeatureMap,
 		ComponentsToTest:    test.EventingFlags.Channels,

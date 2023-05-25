@@ -18,8 +18,6 @@ package containersource
 
 import (
 	"knative.dev/eventing/test/rekt/resources/containersource"
-	"knative.dev/eventing/test/rekt/resources/pingsource"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
 	"knative.dev/reconciler-test/pkg/resources/service"
@@ -33,11 +31,7 @@ func GoesReady(name string, cfg ...manifest.CfgFn) *feature.Feature {
 	f.Setup("install a service", service.Install(sink,
 		service.WithSelectors(map[string]string{"app": "rekt"})))
 
-	cfg = append(cfg, pingsource.WithSink(&duckv1.KReference{
-		Kind:       "Service",
-		Name:       sink,
-		APIVersion: "v1",
-	}, ""))
+	cfg = append(cfg, containersource.WithSink(service.AsDestinationRef(sink)))
 
 	f.Setup("install a ContainerSource", containersource.Install(name, cfg...))
 

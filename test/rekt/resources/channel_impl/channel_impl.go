@@ -159,5 +159,17 @@ func AsRef(name string) *duckv1.KReference {
 	}
 }
 
+// AsRef returns a KRef for a Channel without namespace.
+func AsDestinationRef(name string) *duckv1.Destination {
+	apiVersion, kind := GVK().ToAPIVersionAndKind()
+	return &duckv1.Destination{
+		Ref: &duckv1.KReference{
+			Kind:       kind,
+			APIVersion: apiVersion,
+			Name:       name,
+		},
+	}
+}
+
 // WithDeadLetterSink adds the dead letter sink related config to a Subscription spec.
 var WithDeadLetterSink = delivery.WithDeadLetterSink
