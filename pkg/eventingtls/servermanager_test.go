@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package eventingtls
+package eventingtls_test
 
 import (
 	"context"
@@ -27,6 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"knative.dev/eventing/pkg/apis/feature"
+	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/pkg/configmap"
 )
@@ -62,7 +63,7 @@ func TestStartServers(t *testing.T) {
 			errChan := make(chan error)
 
 			cmw := newFeatureCMW(tc.transportEncryption)
-			sm, err := NewServerManager(ctx, httpReceiver, httpsReceiver, &basicHandler{}, cmw)
+			sm, err := eventingtls.NewServerManager(ctx, httpReceiver, httpsReceiver, &basicHandler{}, cmw)
 			assert.NoError(t, err)
 			go func() {
 				errChan <- sm.StartServers(ctx)
@@ -109,11 +110,11 @@ func TestStartServersHttpError(t *testing.T) {
 	cmw := newFeatureCMW(feature.Disabled)
 
 	// httpReceiver set to nil
-	_, err := NewServerManager(ctx, nil, receiver, &basicHandler{}, cmw)
+	_, err := eventingtls.NewServerManager(ctx, nil, receiver, &basicHandler{}, cmw)
 	assert.Error(t, err)
 
 	// httpsReceiver set to nil
-	_, err = NewServerManager(ctx, receiver, nil, &basicHandler{}, cmw)
+	_, err = eventingtls.NewServerManager(ctx, receiver, nil, &basicHandler{}, cmw)
 	assert.Error(t, err)
 }
 

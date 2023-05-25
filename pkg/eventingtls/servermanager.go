@@ -22,7 +22,6 @@ import (
 	"net/http"
 
 	"knative.dev/eventing/pkg/apis/feature"
-	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/logging"
 )
@@ -35,14 +34,18 @@ import (
 // permissive: both http and https servers
 // strict: only https server
 type ServerManager struct {
-	httpReceiver  *kncloudevents.HTTPMessageReceiver
-	httpsReceiver *kncloudevents.HTTPMessageReceiver
+	httpReceiver  Receiver
+	httpsReceiver Receiver
 	handler       http.Handler
 	cmw           configmap.Watcher
 	featureStore  *feature.Store
 }
 
-func NewServerManager(ctx context.Context, httpReceiver, httpsReceiver *kncloudevents.HTTPMessageReceiver, handler http.Handler, cmw configmap.Watcher) (*ServerManager, error) {
+type Receiver interface {
+	StartListen(context.Context, http.Handler) error
+}
+
+func NewServerManager(ctx context.Context, httpReceiver, httpsReceiver Receiver, handler http.Handler, cmw configmap.Watcher) (*ServerManager, error) {
 	if httpReceiver == nil || httpsReceiver == nil {
 		return nil, fmt.Errorf("message receiver not provided")
 	}
