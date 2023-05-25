@@ -24,9 +24,9 @@ import (
 	"go.opencensus.io/plugin/ochttp"
 )
 
-func TestConfigureConnectionArgs(t *testing.T) {
+func TestConfigureConnectionArgsOldClient(t *testing.T) {
 	// Set connection args
-	ConfigureConnectionArgs(&ConnectionArgs{
+	configureConnectionArgsOldClient(&ConnectionArgs{
 		MaxIdleConnsPerHost: 1000,
 		MaxIdleConns:        1000,
 	})
@@ -37,7 +37,7 @@ func TestConfigureConnectionArgs(t *testing.T) {
 	require.Equal(t, 1000, castToTransport(client1).MaxIdleConnsPerHost)
 
 	// Set other connection args
-	ConfigureConnectionArgs(&ConnectionArgs{
+	configureConnectionArgsOldClient(&ConnectionArgs{
 		MaxIdleConnsPerHost: 2000,
 		MaxIdleConns:        2000,
 	})
@@ -48,14 +48,14 @@ func TestConfigureConnectionArgs(t *testing.T) {
 	require.Equal(t, 2000, castToTransport(client2).MaxIdleConnsPerHost)
 
 	// Try to set the same value and client should not be cleaned up
-	ConfigureConnectionArgs(&ConnectionArgs{
+	configureConnectionArgsOldClient(&ConnectionArgs{
 		MaxIdleConnsPerHost: 2000,
 		MaxIdleConns:        2000,
 	})
 	require.Same(t, getClient(), client2)
 
 	// Set back to nil
-	ConfigureConnectionArgs(nil)
+	configureConnectionArgsOldClient(nil)
 	client3 := getClient()
 
 	require.Same(t, getClient(), client3)

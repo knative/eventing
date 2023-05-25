@@ -19,35 +19,29 @@ package kncloudevents
 import (
 	nethttp "net/http"
 	"sync"
-	"time"
 
 	"go.opencensus.io/plugin/ochttp"
 	"knative.dev/pkg/tracing/propagation/tracecontextb3"
 )
 
-const (
-	defaultRetryWaitMin = 1 * time.Second
-	defaultRetryWaitMax = 30 * time.Second
-)
-
-type holder struct {
+type legacyHolder struct {
 	clientMutex    sync.Mutex
 	connectionArgs *ConnectionArgs
 	client         **nethttp.Client
 }
 
-var clientHolder = holder{}
+var legacyClientHolder = legacyHolder{}
 
 // The used HTTP client is a singleton, so the same http client is reused across all the application.
 // If connection args is modified, client is cleaned and a new one is created.
 func getClient() *nethttp.Client {
-	clientHolder.clientMutex.Lock()
-	defer clientHolder.clientMutex.Unlock()
+	legacyClientHolder.clientMutex.Lock()
+	defer legacyClientHolder.clientMutex.Unlock()
 
-	if clientHolder.client == nil {
+	if legacyClientHolder.client == nil {
 		// Add connection options to the default transport.
 		var base = nethttp.DefaultTransport.(*nethttp.Transport).Clone()
-		clientHolder.connectionArgs.configureTransport(base)
+		legacyClientHolder.connectionArgs.configureTransport(base)
 		c := &nethttp.Client{
 			// Add output tracing.
 			Transport: &ochttp.Transport{
@@ -55,52 +49,35 @@ func getClient() *nethttp.Client {
 				Propagation: tracecontextb3.TraceContextEgress,
 			},
 		}
-		clientHolder.client = &c
+		legacyClientHolder.client = &c
 	}
 
-	return *clientHolder.client
+	return *legacyClientHolder.client
 }
 
 // ConfigureConnectionArgs configures the new connection args.
 // The existing client won't be affected, but a new one will be created.
 // Use sparingly, because it might lead to creating a lot of clients, none of them sharing their connection pool!
-func ConfigureConnectionArgs(ca *ConnectionArgs) {
-	clientHolder.clientMutex.Lock()
-	defer clientHolder.clientMutex.Unlock()
+func configureConnectionArgsOldClient(ca *ConnectionArgs) {
+	legacyClientHolder.clientMutex.Lock()
+	defer legacyClientHolder.clientMutex.Unlock()
 
 	// Check if same config
-	if clientHolder.connectionArgs != nil &&
+	if legacyClientHolder.connectionArgs != nil &&
 		ca != nil &&
-		ca.MaxIdleConns == clientHolder.connectionArgs.MaxIdleConns &&
-		ca.MaxIdleConnsPerHost == clientHolder.connectionArgs.MaxIdleConnsPerHost {
+		ca.MaxIdleConns == legacyClientHolder.connectionArgs.MaxIdleConns &&
+		ca.MaxIdleConnsPerHost == legacyClientHolder.connectionArgs.MaxIdleConnsPerHost {
 		return
 	}
 
-	if clientHolder.client != nil {
+	if legacyClientHolder.client != nil {
 		// Let's try to clean up a bit the existing client
 		// Note: this won't remove it nor close it
-		(*clientHolder.client).CloseIdleConnections()
+		(*legacyClientHolder.client).CloseIdleConnections()
 
 		// Setting client to nil
-		clientHolder.client = nil
+		legacyClientHolder.client = nil
 	}
 
-	clientHolder.connectionArgs = ca
-}
-
-// ConnectionArgs allow to configure connection parameters to the underlying
-// HTTP Client transport.
-type ConnectionArgs struct {
-	// MaxIdleConns refers to the max idle connections, as in net/http/transport.
-	MaxIdleConns int
-	// MaxIdleConnsPerHost refers to the max idle connections per host, as in net/http/transport.
-	MaxIdleConnsPerHost int
-}
-
-func (ca *ConnectionArgs) configureTransport(transport *nethttp.Transport) {
-	if ca == nil {
-		return
-	}
-	transport.MaxIdleConns = ca.MaxIdleConns
-	transport.MaxIdleConnsPerHost = ca.MaxIdleConnsPerHost
+	legacyClientHolder.connectionArgs = ca
 }
