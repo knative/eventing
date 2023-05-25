@@ -17,14 +17,13 @@ limitations under the License.
 package kncloudevents
 
 import (
-	"crypto/tls"
-	"crypto/x509"
 	"fmt"
 	nethttp "net/http"
 	"sync"
 	"time"
 
 	"go.opencensus.io/plugin/ochttp"
+	"knative.dev/eventing/pkg/eventingtls"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/tracing/propagation/tracecontextb3"
 )
@@ -69,18 +68,14 @@ func createNewClient(addressable duckv1.Addressable) (*nethttp.Client, error) {
 	var base = nethttp.DefaultTransport.(*nethttp.Transport).Clone()
 
 	if addressable.CACerts != nil && *addressable.CACerts != "" {
-		certPool, err := x509.SystemCertPool()
+		var err error
+
+		clientConfig := eventingtls.NewDefaultClientConfig()
+		clientConfig.CACerts = addressable.CACerts
+
+		base.TLSClientConfig, err = eventingtls.GetTLSClientConfig(clientConfig)
 		if err != nil {
-			return nil, fmt.Errorf("could not get system cert pool: %w", err)
-		}
-
-		if ok := certPool.AppendCertsFromPEM([]byte(*addressable.CACerts)); !ok {
-			return nil, fmt.Errorf("failed to append CA certs from PEM to cert pool")
-		}
-
-		base.TLSClientConfig = &tls.Config{
-			MinVersion: tls.VersionTLS12,
-			RootCAs:    certPool,
+			return nil, err
 		}
 	}
 
