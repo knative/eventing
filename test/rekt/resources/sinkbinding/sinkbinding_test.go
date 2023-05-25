@@ -141,3 +141,42 @@ func Example_full() {
 	//         match1: this
 	//         match2: that
 }
+
+func Example_withSink() {
+	ctx := testlog.NewContext()
+	images := map[string]string{}
+	cfg := map[string]interface{}{
+		"name":      "foo",
+		"namespace": "bar",
+	}
+
+	sinkRef := &duckv1.Destination{
+		Ref: &duckv1.KReference{
+			Kind:       "sinkkind",
+			Namespace:  "sinknamespace",
+			Name:       "sinkname",
+			APIVersion: "sinkversion",
+		},
+		URI: &apis.URL{Path: "uri/parts"},
+    }
+    sinkbinding.WithSink(sinkRef)(cfg)
+	files, err := manifest.ExecuteYAML(ctx, yaml, images, cfg)
+	if err != nil {
+		panic(err)
+	}
+
+	manifest.OutputYAML(os.Stdout, files)
+    // Output:
+	// apiVersion: sources.knative.dev/v1
+	// kind: SinkBinding
+	// metadata:
+	//   name: foo
+	//   namespace: bar
+	// spec:
+	//   sink:
+	//     ref:
+	//          kind: sinkkind
+	// 			namespace: bar
+	// 			name: sinkname
+	// 			apiVersion: sinkversion
+	//     uri: uri/parts

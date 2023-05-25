@@ -38,6 +38,10 @@ spec:
       namespace: {{ .namespace }}
       name: {{ .sink.ref.name }}
     {{ end }}
+    {{ if .sink.CACerts }}
+    CACerts: |-
+      {{ .sink.CACerts }}
+    {{ end }}
     {{ if .sink.uri }}
     uri: {{ .sink.uri }}
     {{ end }}
