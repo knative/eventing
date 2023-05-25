@@ -34,6 +34,7 @@ import (
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 
 	"knative.dev/pkg/tracing"
 	tracingconfig "knative.dev/pkg/tracing/config"
@@ -49,8 +50,7 @@ import (
 
 func TestNewMessageDispatcher(t *testing.T) {
 	logger := logtesting.TestLogger(t).Desugar()
-	reporter := channel.NewStatsReporter("testcontainer", "testpod")
-	sh := multichannelfanout.NewMessageHandler(context.TODO(), logger, channel.NewMessageDispatcher(logger), reporter)
+	sh := multichannelfanout.NewMessageHandler(context.TODO(), logger)
 
 	args := &InMemoryMessageDispatcherArgs{
 		Port:         8080,
@@ -70,8 +70,7 @@ func TestNewMessageDispatcher(t *testing.T) {
 // This test emulates a real dispatcher usage
 func TestDispatcher_close(t *testing.T) {
 	logger := logtesting.TestLogger(t).Desugar()
-	reporter := channel.NewStatsReporter("testcontainer", "testpod")
-	sh := multichannelfanout.NewMessageHandler(context.TODO(), logger, channel.NewMessageDispatcher(logger), reporter)
+	sh := multichannelfanout.NewMessageHandler(context.TODO(), logger)
 
 	port, err := freePort()
 	if err != nil {
@@ -208,12 +207,12 @@ func TestDispatcher_dispatch(t *testing.T) {
 				FanoutConfig: fanout.Config{
 					AsyncHandler: false,
 					Subscriptions: []fanout.Subscription{{
-						Subscriber: mustParseUrl(t, transformationsServer.URL).URL(),
-						Reply:      mustParseUrl(t, channelBProxy.URL).URL(),
+						Subscriber: *mustParseUrlToAddressable(t, transformationsServer.URL),
+						Reply:      mustParseUrlToAddressable(t, channelBProxy.URL),
 					}, {
-						Subscriber: mustParseUrl(t, transformationsFailureServer.URL).URL(),
-						Reply:      mustParseUrl(t, channelBProxy.URL).URL(),
-						DeadLetter: mustParseUrl(t, deadLetterServer.URL).URL(),
+						Subscriber: *mustParseUrlToAddressable(t, transformationsFailureServer.URL),
+						Reply:      mustParseUrlToAddressable(t, channelBProxy.URL),
+						DeadLetter: mustParseUrlToAddressable(t, deadLetterServer.URL),
 					}},
 				},
 			},
@@ -224,7 +223,7 @@ func TestDispatcher_dispatch(t *testing.T) {
 				FanoutConfig: fanout.Config{
 					AsyncHandler: false,
 					Subscriptions: []fanout.Subscription{{
-						Subscriber: mustParseUrl(t, receiverServer.URL).URL(),
+						Subscriber: *mustParseUrlToAddressable(t, receiverServer.URL),
 					}},
 				},
 			},
@@ -312,6 +311,12 @@ func mustParseUrl(t testing.TB, str string) *apis.URL {
 		t.Fatal(err)
 	}
 	return url
+}
+
+func mustParseUrlToAddressable(t testing.TB, url string) *duckv1.Addressable {
+	return &duckv1.Addressable{
+		URL: mustParseUrl(t, url),
+	}
 }
 
 func freePort() (int, error) {

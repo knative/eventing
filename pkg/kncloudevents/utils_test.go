@@ -20,10 +20,11 @@ import (
 	"context"
 	"io"
 	"net/http"
-	"net/http/httptest"
 	"testing"
 
 	"github.com/cloudevents/sdk-go/v2/binding/test"
+	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"
@@ -31,12 +32,16 @@ import (
 )
 
 // Test additional headers are added to the request
-func TestWriteHTTPRequestWithAdditionalHeadersWritesIntoRequest(t *testing.T) {
+func TestWriteRequestWithAdditionalHeadersWritesIntoRequest(t *testing.T) {
 	ctx := context.TODO()
 	ceSource := "knative.dev/eventing/kncloudevents/receive/test"
 	ceType := "knative.dev.kncloudevents.test.sent"
 	ceData := "some-foo-string"
-	request := httptest.NewRequest("POST", "http://foobar:12345", nil)
+	url, err := apis.ParseURL("http://foobar:12345")
+	assert.NoError(t, err)
+
+	request, err := NewCloudEventRequest(ctx, duckv1.Addressable{URL: url})
+	assert.NoError(t, err)
 
 	ceEvent := cloudevents.NewEvent()
 	ceEvent.SetType(ceType)
@@ -46,7 +51,7 @@ func TestWriteHTTPRequestWithAdditionalHeadersWritesIntoRequest(t *testing.T) {
 	message := binding.ToMessage(&ceEvent)
 	defer message.Finish(nil)
 
-	err := WriteHTTPRequestWithAdditionalHeaders(ctx, message, request, http.Header{})
+	err = WriteRequestWithAdditionalHeaders(ctx, message, request, http.Header{})
 	assert.NoError(t, err)
 
 	assert.Equal(t, []string{ceSource}, request.Header["Ce-Source"])
@@ -59,9 +64,13 @@ func TestWriteHTTPRequestWithAdditionalHeadersWritesIntoRequest(t *testing.T) {
 }
 
 // Test additional headers are added to the request
-func TestWriteHTTPRequestWithAdditionalHeadersAddsHeadersToRequest(t *testing.T) {
+func TestWriteRequestWithAdditionalHeadersAddsHeadersToRequest(t *testing.T) {
 	ctx := context.TODO()
-	request := httptest.NewRequest("POST", "http://foobar:12345", nil)
+	url, err := apis.ParseURL("http://foobar:12345")
+	assert.NoError(t, err)
+
+	request, err := NewCloudEventRequest(ctx, duckv1.Addressable{URL: url})
+	assert.NoError(t, err)
 
 	ceEvent := cloudevents.NewEvent()
 	message := binding.ToMessage(&ceEvent)
@@ -71,7 +80,7 @@ func TestWriteHTTPRequestWithAdditionalHeadersAddsHeadersToRequest(t *testing.T)
 	additionalHeaders["Some-Key"] = []string{"some-value"}
 	additionalHeaders["Another-Key"] = []string{"another-value"}
 
-	err := WriteHTTPRequestWithAdditionalHeaders(ctx, message, request, additionalHeaders)
+	err = WriteRequestWithAdditionalHeaders(ctx, message, request, additionalHeaders)
 	assert.NoError(t, err)
 
 	assert.Equal(t, additionalHeaders["Some-Key"], request.Header["Some-Key"])

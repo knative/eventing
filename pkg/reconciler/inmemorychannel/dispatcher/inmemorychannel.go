@@ -29,6 +29,7 @@ import (
 	"go.uber.org/zap"
 
 	"knative.dev/pkg/apis/duck"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/reconciler"
@@ -138,6 +139,8 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1.InMemoryChannel) rec
 		}
 	}
 
+	handleSubscribers(imc.Spec.Subscribers, kncloudevents.AddOrUpdateAddressableHandler)
+
 	return nil
 }
 
@@ -213,6 +216,31 @@ func (r *Reconciler) deleteFunc(obj interface{}) {
 	if imc.Status.Address != nil && imc.Status.Address.URL != nil {
 		if hostName := imc.Status.Address.URL.Host; hostName != "" {
 			r.multiChannelMessageHandler.DeleteChannelHandler(hostName)
+		}
+	}
+
+	handleSubscribers(imc.Spec.Subscribers, kncloudevents.DeleteAddressableHandler)
+}
+
+func handleSubscribers(subscribers []eventingduckv1.SubscriberSpec, handle func(duckv1.Addressable)) {
+	for _, sub := range subscribers {
+		handle(duckv1.Addressable{
+			URL:     sub.SubscriberURI,
+			CACerts: sub.SubscriberCACerts,
+		})
+
+		if sub.ReplyURI != nil {
+			handle(duckv1.Addressable{
+				URL:     sub.ReplyURI,
+				CACerts: sub.ReplyCACerts,
+			})
+		}
+
+		if sub.Delivery != nil && sub.Delivery.DeadLetterSink != nil && sub.Delivery.DeadLetterSink.URI != nil {
+			handle(duckv1.Addressable{
+				URL:     sub.Delivery.DeadLetterSink.URI,
+				CACerts: sub.Delivery.DeadLetterSink.CACerts,
+			})
 		}
 	}
 }

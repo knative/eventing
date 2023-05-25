@@ -35,6 +35,7 @@ import (
 	"go.opencensus.io/trace"
 	"go.uber.org/zap"
 	channelAttributes "knative.dev/eventing/pkg/channel/attributes"
+	"knative.dev/pkg/apis"
 	"knative.dev/pkg/logging"
 
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
@@ -246,7 +247,7 @@ func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers 
 
 		// Read Response body to responseErr
 		errExtensionInfo := broker.ErrExtensionInfo{
-			ErrDestination:  target,
+			ErrDestination:  (*apis.URL)(target),
 			ErrResponseBody: responseErr.ResponseBody,
 		}
 		errExtensionBytes, msErr := json.Marshal(errExtensionInfo)

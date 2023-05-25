@@ -55,7 +55,7 @@ type MessageHandler struct {
 }
 
 // NewHandler creates a new Handler.
-func NewMessageHandler(_ context.Context, logger *zap.Logger, messageDispatcher channel.MessageDispatcher, reporter channel.StatsReporter) *MessageHandler {
+func NewMessageHandler(_ context.Context, logger *zap.Logger) *MessageHandler {
 	return &MessageHandler{
 		logger:   logger,
 		handlers: make(map[string]fanout.MessageHandler),

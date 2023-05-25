@@ -16,10 +16,12 @@ limitations under the License.
 
 package broker
 
-import "net/url"
+import (
+	"knative.dev/pkg/apis"
+)
 
 // ErrExtensionInfo struct store the broker-filter's destination and responsebody
 type ErrExtensionInfo struct {
-	ErrDestination  *url.URL `json:"errdestination"`
-	ErrResponseBody []byte   `json:"errresponsebody"`
+	ErrDestination  *apis.URL `json:"errdestination"`
+	ErrResponseBody []byte    `json:"errresponsebody"`
 }

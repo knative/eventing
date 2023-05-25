@@ -34,6 +34,8 @@ import (
 
 	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/utils"
+	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 type fakeMessageHandler struct {
@@ -150,11 +152,13 @@ func benchmarkMessageDispatcher(fmh fakeMessageHandler, b *testing.B) {
 		responseBody: s,
 	}
 	destServer := httptest.NewServer(destHandler)
-	destination := getOnlyDomainURL(b, fmh.sendToDestination, destServer.URL)
+	destination := duckv1.Addressable{
+		URL: getOnlyDomainURL(b, fmh.sendToDestination, destServer.URL),
+	}
 
 	var deadLetterSinkHandler *fakeHttpHandler
 	var deadLetterSinkServer *httptest.Server
-	var deadLetterSink *url.URL
+	var deadLetterSink *duckv1.Addressable
 	if fmh.hasDeadLetterSink {
 		deadLetterSinkHandler = &fakeHttpHandler{
 			b:        b,
@@ -164,7 +168,9 @@ func benchmarkMessageDispatcher(fmh fakeMessageHandler, b *testing.B) {
 		deadLetterSinkServer = httptest.NewServer(deadLetterSinkHandler)
 		defer deadLetterSinkServer.Close()
 
-		deadLetterSink = getOnlyDomainURL(b, true, deadLetterSinkServer.URL)
+		deadLetterSink = &duckv1.Addressable{
+			URL: getOnlyDomainURL(b, true, deadLetterSinkServer.URL),
+		}
 	}
 
 	event := test.FullEvent()
@@ -244,13 +250,13 @@ func (f *fakeHttpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func getOnlyDomainURL(b *testing.B, shouldSend bool, serverURL string) *url.URL {
+func getOnlyDomainURL(b *testing.B, shouldSend bool, serverURL string) *apis.URL {
 	if shouldSend {
 		server, err := url.Parse(serverURL)
 		if err != nil {
 			b.Errorf("Bad serverURL: %q", serverURL)
 		}
-		return &url.URL{
+		return &apis.URL{
 			Host: server.Host,
 		}
 	}

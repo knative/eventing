@@ -38,6 +38,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 
 	"knative.dev/eventing/pkg/utils"
+	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 var (
@@ -810,7 +812,7 @@ func TestDispatchMessage(t *testing.T) {
 
 			var deadLetterSinkHandler *fakeHandler
 			var deadLetterSinkServer *httptest.Server
-			var deadLetterSink *url.URL
+			var deadLetterSink *duckv1.Addressable
 			if tc.hasDeadLetterSink {
 				deadLetterSinkHandler = &fakeHandler{
 					t:        t,
@@ -820,7 +822,9 @@ func TestDispatchMessage(t *testing.T) {
 				deadLetterSinkServer = httptest.NewServer(deadLetterSinkHandler)
 				defer deadLetterSinkServer.Close()
 
-				deadLetterSink = getOnlyDomainURL(t, true, deadLetterSinkServer.URL)
+				deadLetterSink = &duckv1.Addressable{
+					URL: getOnlyDomainURL(t, true, deadLetterSinkServer.URL),
+				}
 			}
 
 			event := cloudevents.NewEvent(cloudevents.VersionV1)
@@ -836,8 +840,12 @@ func TestDispatchMessage(t *testing.T) {
 
 			md := NewMessageDispatcher(zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())))
 
-			destination := getOnlyDomainURL(t, tc.sendToDestination, destServer.URL)
-			reply := getOnlyDomainURL(t, tc.sendToReply, replyServer.URL)
+			destination := duckv1.Addressable{
+				URL: getOnlyDomainURL(t, tc.sendToDestination, destServer.URL),
+			}
+			reply := &duckv1.Addressable{
+				URL: getOnlyDomainURL(t, tc.sendToReply, replyServer.URL),
+			}
 
 			// We need to do message -> event -> message to emulate the same transformers the event receiver would do
 			message := binding.ToMessage(&event)
@@ -917,13 +925,13 @@ func TestDispatchMessage(t *testing.T) {
 	}
 }
 
-func getOnlyDomainURL(t *testing.T, shouldSend bool, serverURL string) *url.URL {
+func getOnlyDomainURL(t *testing.T, shouldSend bool, serverURL string) *apis.URL {
 	if shouldSend {
 		server, err := url.Parse(serverURL)
 		if err != nil {
 			t.Errorf("Bad serverURL: %q", serverURL)
 		}
-		return &url.URL{
+		return &apis.URL{
 			Host: server.Host,
 		}
 	}
