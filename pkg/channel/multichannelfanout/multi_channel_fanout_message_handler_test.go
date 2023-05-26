@@ -146,7 +146,7 @@ func TestServeHTTPMessageHandler(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []fanout.Subscription{
 								{
-									Reply: replaceDomain,
+									Reply: &replaceDomain,
 								},
 							},
 						},
@@ -172,7 +172,7 @@ func TestServeHTTPMessageHandler(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []fanout.Subscription{
 								{
-									Reply: replaceDomain,
+									Reply: &replaceDomain,
 								},
 							},
 						},
