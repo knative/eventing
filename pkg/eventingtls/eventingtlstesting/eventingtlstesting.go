@@ -43,7 +43,7 @@ func init() {
 	CA, Key, Crt = loadCerts()
 }
 
-func StartServer(ctx context.Context, t *testing.T, port int, requests chan<- *nethttp.Request) string {
+func StartServer(ctx context.Context, t *testing.T, port int, requests chan<- *nethttp.Request, receiverOptions ...kncloudevents.HTTPMessageReceiverOption) string {
 	handler := nethttp.HandlerFunc(func(writer nethttp.ResponseWriter, request *nethttp.Request) {
 		if requests != nil {
 			requests <- request
@@ -56,10 +56,10 @@ func StartServer(ctx context.Context, t *testing.T, port int, requests chan<- *n
 		writer.WriteHeader(nethttp.StatusOK)
 	})
 
-	return StartServerWithCustomHandler(ctx, t, port, handler)
+	return StartServerWithCustomHandler(ctx, t, port, handler, receiverOptions...)
 }
 
-func StartServerWithCustomHandler(ctx context.Context, t *testing.T, port int, handler http.Handler) string {
+func StartServerWithCustomHandler(ctx context.Context, t *testing.T, port int, handler http.Handler, receiverOptions ...kncloudevents.HTTPMessageReceiverOption) string {
 	secret := types.NamespacedName{
 		Namespace: "knative-tests",
 		Name:      "tls-secret",
@@ -83,7 +83,9 @@ func StartServerWithCustomHandler(ctx context.Context, t *testing.T, port int, h
 	assert.Nil(t, err)
 
 	receiver := kncloudevents.NewHTTPMessageReceiver(port,
-		kncloudevents.WithTLSConfig(tlsConfig),
+		append(receiverOptions,
+			kncloudevents.WithTLSConfig(tlsConfig),
+		)...,
 	)
 
 	go func() {

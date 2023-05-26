@@ -22,13 +22,13 @@ import (
 	"encoding/base64"
 	"io"
 	"net/http"
-	nethttp "net/http"
 	"net/http/httptest"
 	"net/url"
 	"strconv"
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"
@@ -44,6 +44,7 @@ import (
 	rectesting "knative.dev/pkg/reconciler/testing"
 
 	"knative.dev/eventing/pkg/eventingtls/eventingtlstesting"
+	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -935,12 +936,18 @@ func TestDispatchMessage(t *testing.T) {
 func TestDispatchMessageToTLSEndpoint(t *testing.T) {
 	var wg sync.WaitGroup
 	ctx, _ := rectesting.SetupFakeContext(t)
+	ctx, cancel := context.WithCancel(ctx)
+	defer func() {
+		cancel()
+		// give the servers a bit time to fully shutdown to prevent port clashes
+		time.Sleep(500 * time.Millisecond)
+	}()
 	eventToSend := test.FullEvent()
 
 	// destination
-	destinationRequestsChan := make(chan *nethttp.Request, 10)
+	destinationRequestsChan := make(chan *http.Request, 10)
 	destinationReceivedEvents := make([]*cloudevents.Event, 0, 10)
-	destinationCA := eventingtlstesting.StartServer(ctx, t, 8334, destinationRequestsChan)
+	destinationCA := eventingtlstesting.StartServer(ctx, t, 8334, destinationRequestsChan, kncloudevents.WithDrainQuietPeriod(time.Millisecond))
 	destination := duckv1.Addressable{
 		URL:     apis.HTTPS("localhost:8334"),
 		CACerts: &destinationCA,
@@ -982,11 +989,20 @@ func TestDispatchMessageToTLSEndpoint(t *testing.T) {
 func TestDispatchMessageToTLSEndpointWithReply(t *testing.T) {
 	var wg sync.WaitGroup
 	ctx, _ := rectesting.SetupFakeContext(t)
+	ctxDestination, cancelDestination := context.WithCancel(ctx)
+	ctxReply, cancelReply := context.WithCancel(ctx)
+	defer func() {
+		cancelDestination()
+		cancelReply()
+		// give the servers a bit time to fully shutdown to prevent port clashes
+		time.Sleep(500 * time.Millisecond)
+	}()
+
 	eventToSend := test.FullEvent()
 	eventToReply := test.FullEvent()
 
 	// destination
-	destinationHandler := http.HandlerFunc(func(w nethttp.ResponseWriter, r *nethttp.Request) {
+	destinationHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// reply with the eventToReply event
 		w.Header().Add("ce-id", eventToReply.ID())
 		w.Header().Add("ce-specversion", eventToReply.SpecVersion())
@@ -994,16 +1010,16 @@ func TestDispatchMessageToTLSEndpointWithReply(t *testing.T) {
 		w.Write(eventToReply.Data())
 	})
 
-	destinationCA := eventingtlstesting.StartServerWithCustomHandler(ctx, t, 8334, destinationHandler)
+	destinationCA := eventingtlstesting.StartServerWithCustomHandler(ctxDestination, t, 8334, destinationHandler, kncloudevents.WithDrainQuietPeriod(time.Millisecond))
 	destination := duckv1.Addressable{
 		URL:     apis.HTTPS("localhost:8334"),
 		CACerts: &destinationCA,
 	}
 
 	// reply
-	replyRequestsChan := make(chan *nethttp.Request, 10)
+	replyRequestsChan := make(chan *http.Request, 10)
 	replyReceivedEvents := make([]*cloudevents.Event, 0, 10)
-	replyCA := eventingtlstesting.StartServer(ctx, t, 8335, replyRequestsChan)
+	replyCA := eventingtlstesting.StartServer(ctxReply, t, 8335, replyRequestsChan, kncloudevents.WithDrainQuietPeriod(time.Millisecond))
 	reply := duckv1.Addressable{
 		URL:     apis.HTTPS("localhost:8335"),
 		CACerts: &replyCA,
@@ -1045,24 +1061,32 @@ func TestDispatchMessageToTLSEndpointWithReply(t *testing.T) {
 func TestDispatchMessageToTLSEndpointWithDeadLetterSink(t *testing.T) {
 	var wg sync.WaitGroup
 	ctx, _ := rectesting.SetupFakeContext(t)
+	ctxDestination, cancelDestination := context.WithCancel(ctx)
+	ctxDls, cancelDls := context.WithCancel(ctx)
+	defer func() {
+		cancelDestination()
+		cancelDls()
+		// give the servers a bit time to fully shutdown to prevent port clashes
+		time.Sleep(500 * time.Millisecond)
+	}()
 	eventToSend := test.FullEvent()
 
 	// destination
-	destinationHandler := http.HandlerFunc(func(w nethttp.ResponseWriter, r *nethttp.Request) {
+	destinationHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// reply with 500 code
 		w.WriteHeader(http.StatusInternalServerError)
 	})
 
-	destinationCA := eventingtlstesting.StartServerWithCustomHandler(ctx, t, 8334, destinationHandler)
+	destinationCA := eventingtlstesting.StartServerWithCustomHandler(ctxDestination, t, 8334, destinationHandler, kncloudevents.WithDrainQuietPeriod(time.Millisecond))
 	destination := duckv1.Addressable{
 		URL:     apis.HTTPS("localhost:8334"),
 		CACerts: &destinationCA,
 	}
 
 	// dls
-	dlsRequestsChan := make(chan *nethttp.Request, 10)
+	dlsRequestsChan := make(chan *http.Request, 10)
 	dlsReceivedEvents := make([]*cloudevents.Event, 0, 10)
-	dlsCA := eventingtlstesting.StartServer(ctx, t, 8335, dlsRequestsChan)
+	dlsCA := eventingtlstesting.StartServer(ctxDls, t, 8335, dlsRequestsChan, kncloudevents.WithDrainQuietPeriod(time.Millisecond))
 	dls := duckv1.Addressable{
 		URL:     apis.HTTPS("localhost:8335"),
 		CACerts: &dlsCA,
