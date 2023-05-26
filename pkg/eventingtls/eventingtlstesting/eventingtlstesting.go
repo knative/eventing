@@ -18,6 +18,7 @@ package eventingtlstesting
 
 import (
 	"context"
+	"net/http"
 	nethttp "net/http"
 	"testing"
 
@@ -43,7 +44,22 @@ func init() {
 }
 
 func StartServer(ctx context.Context, t *testing.T, port int, requests chan<- *nethttp.Request) string {
+	handler := nethttp.HandlerFunc(func(writer nethttp.ResponseWriter, request *nethttp.Request) {
+		if requests != nil {
+			requests <- request
+		}
+		if request.TLS == nil {
+			// It's not on TLS, fail request
+			writer.WriteHeader(nethttp.StatusInternalServerError)
+			return
+		}
+		writer.WriteHeader(nethttp.StatusOK)
+	})
 
+	return StartServerWithCustomHandler(ctx, t, port, handler)
+}
+
+func StartServerWithCustomHandler(ctx context.Context, t *testing.T, port int, handler http.Handler) string {
 	secret := types.NamespacedName{
 		Namespace: "knative-tests",
 		Name:      "tls-secret",
@@ -71,18 +87,7 @@ func StartServer(ctx context.Context, t *testing.T, port int, requests chan<- *n
 	)
 
 	go func() {
-		defer close(requests)
-		err := receiver.StartListen(ctx, nethttp.HandlerFunc(func(writer nethttp.ResponseWriter, request *nethttp.Request) {
-			if requests != nil {
-				requests <- request
-			}
-			if request.TLS == nil {
-				// It's not on TLS, fail request
-				writer.WriteHeader(nethttp.StatusInternalServerError)
-				return
-			}
-			writer.WriteHeader(nethttp.StatusOK)
-		}))
+		err := receiver.StartListen(ctx, handler)
 		if err != nil {
 			panic(err)
 		}

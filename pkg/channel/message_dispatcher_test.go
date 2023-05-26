@@ -22,21 +22,28 @@ import (
 	"encoding/base64"
 	"io"
 	"net/http"
+	nethttp "net/http"
 	"net/http/httptest"
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"
 	"github.com/cloudevents/sdk-go/v2/binding/transformer"
+	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
+	"github.com/cloudevents/sdk-go/v2/test"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
 	"k8s.io/apimachinery/pkg/util/sets"
+	rectesting "knative.dev/pkg/reconciler/testing"
 
+	"knative.dev/eventing/pkg/eventingtls/eventingtlstesting"
 	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -923,6 +930,175 @@ func TestDispatchMessage(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestDispatchMessageToTLSEndpoint(t *testing.T) {
+	var wg sync.WaitGroup
+	ctx, _ := rectesting.SetupFakeContext(t)
+	eventToSend := test.FullEvent()
+
+	// destination
+	destinationRequestsChan := make(chan *nethttp.Request, 10)
+	destinationReceivedEvents := make([]*cloudevents.Event, 0, 10)
+	destinationCA := eventingtlstesting.StartServer(ctx, t, 8334, destinationRequestsChan)
+	destination := duckv1.Addressable{
+		URL:     apis.HTTPS("localhost:8334"),
+		CACerts: &destinationCA,
+	}
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for r := range destinationRequestsChan {
+			func() {
+				message := cehttp.NewMessageFromHttpRequest(r)
+				defer message.Finish(nil)
+
+				event, err := binding.ToEvent(ctx, message)
+				require.Nil(t, err)
+
+				destinationReceivedEvents = append(destinationReceivedEvents, event)
+			}()
+		}
+	}()
+
+	md := NewMessageDispatcher(zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())))
+
+	// send event
+	message := binding.ToMessage(&eventToSend)
+	info, err := md.DispatchMessage(ctx, message, nil, destination, nil, nil)
+	require.Nil(t, err)
+	require.Equal(t, 200, info.ResponseCode)
+
+	// check received events
+	close(destinationRequestsChan)
+	wg.Wait()
+
+	require.Len(t, destinationReceivedEvents, 1)
+	require.Equal(t, eventToSend.ID(), destinationReceivedEvents[0].ID())
+	require.Equal(t, eventToSend.Data(), destinationReceivedEvents[0].Data())
+}
+
+func TestDispatchMessageToTLSEndpointWithReply(t *testing.T) {
+	var wg sync.WaitGroup
+	ctx, _ := rectesting.SetupFakeContext(t)
+	eventToSend := test.FullEvent()
+	eventToReply := test.FullEvent()
+
+	// destination
+	destinationHandler := http.HandlerFunc(func(w nethttp.ResponseWriter, r *nethttp.Request) {
+		// reply with the eventToReply event
+		w.Header().Add("ce-id", eventToReply.ID())
+		w.Header().Add("ce-specversion", eventToReply.SpecVersion())
+
+		w.Write(eventToReply.Data())
+	})
+
+	destinationCA := eventingtlstesting.StartServerWithCustomHandler(ctx, t, 8334, destinationHandler)
+	destination := duckv1.Addressable{
+		URL:     apis.HTTPS("localhost:8334"),
+		CACerts: &destinationCA,
+	}
+
+	// reply
+	replyRequestsChan := make(chan *nethttp.Request, 10)
+	replyReceivedEvents := make([]*cloudevents.Event, 0, 10)
+	replyCA := eventingtlstesting.StartServer(ctx, t, 8335, replyRequestsChan)
+	reply := duckv1.Addressable{
+		URL:     apis.HTTPS("localhost:8335"),
+		CACerts: &replyCA,
+	}
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for r := range replyRequestsChan {
+			func() {
+				message := cehttp.NewMessageFromHttpRequest(r)
+				defer message.Finish(nil)
+
+				event, err := binding.ToEvent(ctx, message)
+				require.Nil(t, err)
+
+				replyReceivedEvents = append(replyReceivedEvents, event)
+			}()
+		}
+	}()
+
+	md := NewMessageDispatcher(zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())))
+
+	// send event
+	message := binding.ToMessage(&eventToSend)
+	info, err := md.DispatchMessage(ctx, message, nil, destination, &reply, nil)
+	require.Nil(t, err)
+	require.Equal(t, 200, info.ResponseCode)
+
+	// check received events
+	close(replyRequestsChan)
+	wg.Wait()
+
+	require.Len(t, replyReceivedEvents, 1)
+	require.Equal(t, eventToReply.ID(), replyReceivedEvents[0].ID())
+	require.Equal(t, eventToReply.Data(), replyReceivedEvents[0].Data())
+}
+
+func TestDispatchMessageToTLSEndpointWithDeadLetterSink(t *testing.T) {
+	var wg sync.WaitGroup
+	ctx, _ := rectesting.SetupFakeContext(t)
+	eventToSend := test.FullEvent()
+
+	// destination
+	destinationHandler := http.HandlerFunc(func(w nethttp.ResponseWriter, r *nethttp.Request) {
+		// reply with 500 code
+		w.WriteHeader(http.StatusInternalServerError)
+	})
+
+	destinationCA := eventingtlstesting.StartServerWithCustomHandler(ctx, t, 8334, destinationHandler)
+	destination := duckv1.Addressable{
+		URL:     apis.HTTPS("localhost:8334"),
+		CACerts: &destinationCA,
+	}
+
+	// dls
+	dlsRequestsChan := make(chan *nethttp.Request, 10)
+	dlsReceivedEvents := make([]*cloudevents.Event, 0, 10)
+	dlsCA := eventingtlstesting.StartServer(ctx, t, 8335, dlsRequestsChan)
+	dls := duckv1.Addressable{
+		URL:     apis.HTTPS("localhost:8335"),
+		CACerts: &dlsCA,
+	}
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for r := range dlsRequestsChan {
+			func() {
+				message := cehttp.NewMessageFromHttpRequest(r)
+				defer message.Finish(nil)
+
+				event, err := binding.ToEvent(ctx, message)
+				require.Nil(t, err)
+
+				dlsReceivedEvents = append(dlsReceivedEvents, event)
+			}()
+		}
+	}()
+
+	md := NewMessageDispatcher(zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())))
+
+	// send event
+	message := binding.ToMessage(&eventToSend)
+	info, err := md.DispatchMessage(ctx, message, nil, destination, nil, &dls)
+	require.Nil(t, err)
+	require.Equal(t, 200, info.ResponseCode)
+
+	// check received events
+	close(dlsRequestsChan)
+	wg.Wait()
+
+	require.Len(t, dlsReceivedEvents, 1)
+	require.Equal(t, eventToSend.ID(), dlsReceivedEvents[0].ID())
+	require.Equal(t, eventToSend.Data(), dlsReceivedEvents[0].Data())
 }
 
 func getOnlyDomainURL(t *testing.T, shouldSend bool, serverURL string) *apis.URL {
