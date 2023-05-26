@@ -85,9 +85,9 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1.InMemoryChannel) rec
 		return err
 	}
 
-	// First grab the MultiChannelFanoutMessage handler
-	handler := r.multiChannelMessageHandler.GetChannelHandler(config.HostName)
-	if handler == nil {
+	// First grab the host based MultiChannelFanoutMessage httpHandler
+	httpHandler := r.multiChannelMessageHandler.GetChannelHandler(config.HostName)
+	if httpHandler == nil {
 		// No handler yet, create one.
 		fanoutHandler, err := fanout.NewFanoutMessageHandler(
 			logging.FromContext(ctx).Desugar(),
@@ -102,12 +102,39 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1.InMemoryChannel) rec
 		r.multiChannelMessageHandler.SetChannelHandler(config.HostName, fanoutHandler)
 	} else {
 		// Just update the config if necessary.
-		haveSubs := handler.GetSubscriptions(ctx)
+		haveSubs := httpHandler.GetSubscriptions(ctx)
 
 		// Ignore the closures, we stash the values that we can tell from if the values have actually changed.
 		if diff := cmp.Diff(config.FanoutConfig.Subscriptions, haveSubs, cmpopts.IgnoreFields(kncloudevents.RetryConfig{}, "Backoff", "CheckRetry")); diff != "" {
 			logging.FromContext(ctx).Info("Updating fanout config: ", zap.String("Diff", diff))
-			handler.SetSubscriptions(ctx, config.FanoutConfig.Subscriptions)
+			httpHandler.SetSubscriptions(ctx, config.FanoutConfig.Subscriptions)
+		}
+	}
+
+	// Look for an https handler that's configured to use paths
+	httpsHandler := r.multiChannelMessageHandler.GetChannelHandler(config.Path)
+	if httpsHandler == nil {
+		// No handler yet, create one.
+		fanoutHandler, err := fanout.NewFanoutMessageHandler(
+			logging.FromContext(ctx).Desugar(),
+			channel.NewMessageDispatcher(logging.FromContext(ctx).Desugar()),
+			config.FanoutConfig,
+			r.reporter,
+			channel.ResolveMessageChannelFromPath(channel.ParseChannelFromPath),
+		)
+		if err != nil {
+			logging.FromContext(ctx).Error("Failed to create a new fanout.MessageHandler", err)
+			return err
+		}
+		r.multiChannelMessageHandler.SetChannelHandler(config.Path, fanoutHandler)
+	} else {
+		// Just update the config if necessary.
+		haveSubs := httpsHandler.GetSubscriptions(ctx)
+
+		// Ignore the closures, we stash the values that we can tell from if the values have actually changed.
+		if diff := cmp.Diff(config.FanoutConfig.Subscriptions, haveSubs, cmpopts.IgnoreFields(kncloudevents.RetryConfig{}, "Backoff", "CheckRetry")); diff != "" {
+			logging.FromContext(ctx).Info("Updating fanout config: ", zap.String("Diff", diff))
+			httpsHandler.SetSubscriptions(ctx, config.FanoutConfig.Subscriptions)
 		}
 	}
 
@@ -163,6 +190,7 @@ func newConfigForInMemoryChannel(imc *v1.InMemoryChannel) (*multichannelfanout.C
 		Namespace: imc.Namespace,
 		Name:      imc.Name,
 		HostName:  imc.Status.Address.URL.Host,
+		Path:      fmt.Sprintf("%s/%s", imc.Namespace, imc.Name),
 		FanoutConfig: fanout.Config{
 			AsyncHandler:  true,
 			Subscriptions: subs,

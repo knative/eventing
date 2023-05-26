@@ -33,10 +33,12 @@ import (
 	_ "knative.dev/eventing/pkg/client/injection/client/fake"
 	// Fake injection informers
 	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/inmemorychannel/fake"
+	_ "knative.dev/pkg/injection/clients/namespacedkube/informers/core/v1/secret/fake"
 )
 
 func TestNew(t *testing.T) {
 	ctx, cancel, _ := SetupFakeContextWithCancel(t)
+
 	defer cancel()
 	// Replace test logger because the shutdown of the dispatcher may happen
 	// after the test ends, causing a data race on the t logger

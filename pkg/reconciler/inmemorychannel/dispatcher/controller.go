@@ -21,7 +21,9 @@ import (
 	"time"
 
 	"knative.dev/pkg/injection"
+	"knative.dev/pkg/system"
 
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/cache"
 
 	"github.com/google/uuid"
@@ -29,6 +31,7 @@ import (
 	"knative.dev/pkg/kmeta"
 
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
+	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/kncloudevents"
 
 	"knative.dev/pkg/logging"
@@ -43,18 +46,23 @@ import (
 	tracingconfig "knative.dev/pkg/tracing/config"
 
 	"knative.dev/eventing/pkg/apis/eventing"
+	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/eventing/pkg/channel"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	inmemorychannelinformer "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/inmemorychannel"
 	inmemorychannelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/inmemorychannel"
 	"knative.dev/eventing/pkg/inmemorychannel"
+	kubeclient "knative.dev/pkg/client/injection/kube/client"
+	secretinformer "knative.dev/pkg/injection/clients/namespacedkube/informers/core/v1/secret"
 )
 
 const (
 	readTimeout   = 15 * time.Minute
 	writeTimeout  = 15 * time.Minute
-	port          = 8080
+	httpPort      = 8080
+	httpsPort     = 8443
 	finalizerName = "imc-dispatcher"
+	tlsSecretName = "imc-dispatcher-server-tls"
 )
 
 type envConfig struct {
@@ -108,19 +116,6 @@ func NewController(
 		chMsgHandler: sh,
 	}
 
-	args := &inmemorychannel.InMemoryMessageDispatcherArgs{
-		Port:         port,
-		ReadTimeout:  readTimeout,
-		WriteTimeout: writeTimeout,
-		Handler:      sh,
-		Logger:       logger.Desugar(),
-
-		HTTPMessageReceiverOptions: []kncloudevents.HTTPMessageReceiverOption{
-			kncloudevents.WithChecker(readinessCheckerHTTPHandler(readinessChecker)),
-		},
-	}
-	inMemoryDispatcher := inmemorychannel.NewMessageDispatcher(args)
-
 	inmemorychannelInformer := inmemorychannelinformer.Get(ctx)
 
 	r := &Reconciler{
@@ -142,9 +137,56 @@ func NewController(
 				DeleteFunc: r.deleteFunc,
 			}})
 
+	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {
+		impl.GlobalResync(inmemorychannelInformer.Informer())
+	})
+	featureStore.WatchConfigs(cmw)
+
+	httpArgs := &inmemorychannel.InMemoryMessageDispatcherArgs{
+		Port:         httpPort,
+		ReadTimeout:  readTimeout,
+		WriteTimeout: writeTimeout,
+		Handler:      sh,
+		Logger:       logger.Desugar(),
+
+		HTTPMessageReceiverOptions: []kncloudevents.HTTPMessageReceiverOption{
+			kncloudevents.WithChecker(readinessCheckerHTTPHandler(readinessChecker)),
+		},
+	}
+	httpDispatcher := inmemorychannel.NewMessageDispatcher(httpArgs)
+	httpReceiver := httpDispatcher.GetReceiver()
+
+	secret := types.NamespacedName{
+		Namespace: system.Namespace(),
+		Name:      tlsSecretName,
+	}
+	serverTLSConfig := eventingtls.NewDefaultServerConfig()
+	serverTLSConfig.GetCertificate = eventingtls.GetCertificateFromSecret(ctx, secretinformer.Get(ctx), kubeclient.Get(ctx), secret)
+	tlsConfig, err := eventingtls.GetTLSServerConfig(serverTLSConfig)
+	if err != nil {
+		logger.Panicf("unable to get tls config: %s", err)
+	}
+	httpsArgs := &inmemorychannel.InMemoryMessageDispatcherArgs{
+		Port:         httpsPort,
+		ReadTimeout:  readTimeout,
+		WriteTimeout: writeTimeout,
+		Handler:      sh,
+		Logger:       logger.Desugar(),
+
+		HTTPMessageReceiverOptions: []kncloudevents.HTTPMessageReceiverOption{kncloudevents.WithTLSConfig(tlsConfig)},
+	}
+	httpsDispatcher := inmemorychannel.NewMessageDispatcher(httpsArgs)
+	httpsReceiver := httpsDispatcher.GetReceiver()
+
+	s, err := eventingtls.NewServerManager(ctx, &httpReceiver, &httpsReceiver, httpDispatcher.GetHandler(ctx), cmw)
+	if err != nil {
+		logger.Panicf("unable to initialize server manager: %s", err)
+	}
+
 	// Start the dispatcher.
 	go func() {
-		err := inMemoryDispatcher.Start(ctx)
+		err := s.StartServers(ctx)
+
 		if err != nil {
 			logging.FromContext(ctx).Errorw("Failed stopping inMemoryDispatcher.", zap.Error(err))
 		}

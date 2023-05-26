@@ -41,11 +41,11 @@ func TestReadinessChecker(t *testing.T) {
 	})
 
 	// Multi-channel handler with 0 handlers.
-	hander := newFakeMultiChannelHandler()
+	handler := newFakeMultiChannelHandler()
 
 	rc := &DispatcherReadyChecker{
 		chLister:     ls.GetInMemoryChannelLister(),
-		chMsgHandler: hander,
+		chMsgHandler: handler,
 	}
 
 	ts := httptest.NewServer(readinessCheckerHTTPHandler(rc))
@@ -61,7 +61,8 @@ func TestReadinessChecker(t *testing.T) {
 	}
 
 	// Add one handler
-	hander.SetChannelHandler("foo", &fanout.FanoutMessageHandler{})
+	handler.SetChannelHandler("foo", &fanout.FanoutMessageHandler{})
+	handler.SetChannelHandler("bar", &fanout.FanoutMessageHandler{})
 
 	res, err = http.Get(ts.URL)
 	if err != nil {

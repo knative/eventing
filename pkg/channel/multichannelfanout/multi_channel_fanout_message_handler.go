@@ -45,12 +45,6 @@ type MultiChannelMessageHandler interface {
 	CountChannelHandlers() int
 }
 
-// makeChannelKeyFromConfig creates the channel key for a given channelConfig. It is a helper around
-// MakeChannelKey.
-func makeChannelKeyFromConfig(config ChannelConfig) string {
-	return config.HostName
-}
-
 // Handler is an http.Handler that introspects the incoming request to determine what Channel it is
 // on, and then delegates handling of that request to the single fanout.FanoutMessageHandler corresponding to
 // that Channel.
@@ -70,21 +64,26 @@ func NewMessageHandler(_ context.Context, logger *zap.Logger, messageDispatcher 
 
 // NewMessageHandlerWithConfig creates a new Handler with the specified configuration. This is really meant for tests
 // where you want to apply a fully specified configuration for tests. Reconciler operates on single channel at a time.
-func NewMessageHandlerWithConfig(_ context.Context, logger *zap.Logger, messageDispatcher channel.MessageDispatcher, conf Config, reporter channel.StatsReporter) (*MessageHandler, error) {
+func NewMessageHandlerWithConfig(_ context.Context, logger *zap.Logger, messageDispatcher channel.MessageDispatcher, conf Config, reporter channel.StatsReporter, recvOptions ...channel.MessageReceiverOptions) (*MessageHandler, error) {
 	handlers := make(map[string]fanout.MessageHandler, len(conf.ChannelConfigs))
 
 	for _, cc := range conf.ChannelConfigs {
-		key := makeChannelKeyFromConfig(cc)
-		handler, err := fanout.NewFanoutMessageHandler(logger, messageDispatcher, cc.FanoutConfig, reporter)
-		if err != nil {
-			logger.Error("Failed creating new fanout handler.", zap.Error(err))
-			return nil, err
+		keys := []string{cc.HostName, cc.Path}
+		for _, key := range keys {
+			if key == "" {
+				continue
+			}
+			handler, err := fanout.NewFanoutMessageHandler(logger, messageDispatcher, cc.FanoutConfig, reporter, recvOptions...)
+			if err != nil {
+				logger.Error("Failed creating new fanout handler.", zap.Error(err))
+				return nil, err
+			}
+			if _, present := handlers[key]; present {
+				logger.Error("Duplicate channel key", zap.String("channelKey", key))
+				return nil, fmt.Errorf("duplicate channel key: %v", key)
+			}
+			handlers[key] = handler
 		}
-		if _, present := handlers[key]; present {
-			logger.Error("Duplicate channel key", zap.String("channelKey", key))
-			return nil, fmt.Errorf("duplicate channel key: %v", key)
-		}
-		handlers[key] = handler
 	}
 	return &MessageHandler{
 		logger:   logger,
@@ -120,6 +119,17 @@ func (h *MessageHandler) CountChannelHandlers() int {
 // request's channel key.
 func (h *MessageHandler) ServeHTTP(response http.ResponseWriter, request *http.Request) {
 	channelKey := request.Host
+
+	if request.URL.Path != "/" {
+		channelRef, err := channel.ParseChannelFromPath(request.URL.Path)
+		if err != nil {
+			h.logger.Error("unable to retrieve channel from path")
+			response.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		channelKey = fmt.Sprintf("%s/%s", channelRef.Namespace, channelRef.Name)
+	}
+
 	fh := h.GetChannelHandler(channelKey)
 	if fh == nil {
 		h.logger.Info("Unable to find a handler for request", zap.String("channelKey", channelKey))

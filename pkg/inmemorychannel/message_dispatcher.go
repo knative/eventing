@@ -52,6 +52,10 @@ func (d *InMemoryMessageDispatcher) GetHandler(ctx context.Context) multichannel
 	return d.handler
 }
 
+func (d *InMemoryMessageDispatcher) GetReceiver() kncloudevents.HTTPMessageReceiver {
+	return *d.httpBindingsReceiver
+}
+
 // Start starts the inmemory dispatcher's message processing.
 // This is a blocking call.
 func (d *InMemoryMessageDispatcher) Start(ctx context.Context) error {

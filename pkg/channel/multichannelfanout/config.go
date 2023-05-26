@@ -29,5 +29,6 @@ type ChannelConfig struct {
 	Namespace    string
 	Name         string
 	HostName     string
+	Path         string
 	FanoutConfig fanout.Config
 }

@@ -76,7 +76,8 @@ func (c *DispatcherReadyChecker) IsReady() (bool, error) {
 		}
 	}
 
-	c.isReady = c.chMsgHandler.CountChannelHandlers() >= len(readyChannels)
+	// Each channel creates two handler (http/https).
+	c.isReady = c.chMsgHandler.CountChannelHandlers() >= 2*len(readyChannels)
 	return c.isReady, nil
 }
 
