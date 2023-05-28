@@ -59,6 +59,9 @@ spec:
         - containerPort: 8080
           name: http
           protocol: TCP
+        - containerPort: 8443
+          name: https
+          protocol: TCP
         - containerPort: 9092
           name: metrics
           protocol: TCP
@@ -88,6 +91,8 @@ spec:
             value: knative.dev/internal/eventing
           - name: INGRESS_PORT
             value: "8080"
+          - name: INGRESS_PORT_HTTPS
+            value: "8443"
         securityContext:
           allowPrivilegeEscalation: false
           readOnlyRootFilesystem: true
@@ -116,6 +121,10 @@ spec:
       port: 80
       protocol: TCP
       targetPort: 8080
+    - name: https
+      port: 443
+      protocol: TCP
+      targetPort: 8443
     - name: http-metrics
       port: 9092
       protocol: TCP

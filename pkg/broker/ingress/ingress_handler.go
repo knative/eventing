@@ -46,12 +46,12 @@ import (
 
 const (
 	// noDuration signals that the dispatch step hasn't started
-	noDuration = -1
+	noDuration                       = -1
+	defaultMaxIdleConnections        = 1000
+	defaultMaxIdleConnectionsPerHost = 1000
 )
 
 type Handler struct {
-	// Receiver receives incoming HTTP requests
-	Receiver *kncloudevents.HTTPMessageReceiver
 	// Sender sends requests to the broker
 	Sender *kncloudevents.HTTPMessageSender
 	// Defaults sets default values to incoming events
@@ -62,6 +62,27 @@ type Handler struct {
 	BrokerLister eventinglisters.BrokerLister
 
 	Logger *zap.Logger
+}
+
+func NewHandler(logger *zap.Logger, reporter StatsReporter, defaulter client.EventDefaulter, brokerLister eventinglisters.BrokerLister) (*Handler, error) {
+	connectionArgs := kncloudevents.ConnectionArgs{
+		MaxIdleConns:        defaultMaxIdleConnections,
+		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
+	}
+	kncloudevents.ConfigureConnectionArgs(&connectionArgs)
+
+	sender, err := kncloudevents.NewHTTPMessageSenderWithTarget("")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create message sender: %w", err)
+	}
+
+	return &Handler{
+		Sender:       sender,
+		Defaulter:    defaulter,
+		Reporter:     reporter,
+		Logger:       logger,
+		BrokerLister: brokerLister,
+	}, nil
 }
 
 func (h *Handler) getBroker(name, namespace string) (*eventingv1.Broker, error) {
@@ -88,17 +109,13 @@ func (h *Handler) getChannelAddress(name, namespace string) (string, error) {
 		return "", err
 	}
 	if broker.Status.Annotations == nil {
-		return "", fmt.Errorf("Broker status annotations uninitialized")
+		return "", fmt.Errorf("broker status annotations uninitialized")
 	}
 	address, present := broker.Status.Annotations[eventing.BrokerChannelAddressStatusAnnotationKey]
 	if !present {
-		return "", fmt.Errorf("Channel address not found in broker status annotations")
+		return "", fmt.Errorf("channel address not found in broker status annotations")
 	}
 	return address, nil
-}
-
-func (h *Handler) Start(ctx context.Context) error {
-	return h.Receiver.StartListen(ctx, h)
 }
 
 func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {

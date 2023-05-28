@@ -1,0 +1,13 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: mt-broker-ingress
+  namespace: knative-eventing
+subjects:
+  - kind: ServiceAccount
+    name: mt-broker-ingress
+    namespace: knative-eventing
+roleRef:
+  kind: Role
+  name: mt-broker-ingress
+  apiGroup: rbac.authorization.k8s.io

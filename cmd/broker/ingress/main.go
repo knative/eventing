@@ -44,7 +44,6 @@ import (
 	broker "knative.dev/eventing/pkg/broker"
 	"knative.dev/eventing/pkg/broker/ingress"
 	brokerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/broker"
-	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/reconciler/names"
 )
 
@@ -68,6 +67,8 @@ type envConfig struct {
 	ContainerName string `envconfig:"CONTAINER_NAME" required:"true"`
 	Port          int    `envconfig:"INGRESS_PORT" default:"8080"`
 	MaxTTL        int    `envconfig:"MAX_TTL" default:"255"`
+	HTTPPort      int    `envconfig:"INGRESS_PORT" default:"8080"`
+	HTTPSPort     int    `envconfig:"INGRESS_PORT_HTTPS" default:"8443"`
 }
 
 func main() {
@@ -126,25 +127,16 @@ func main() {
 		logger.Fatal("Error setting up trace publishing", zap.Error(err))
 	}
 
-	connectionArgs := kncloudevents.ConnectionArgs{
-		MaxIdleConns:        defaultMaxIdleConnections,
-		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
-	}
-	kncloudevents.ConfigureConnectionArgs(&connectionArgs)
-	sender, err := kncloudevents.NewHTTPMessageSenderWithTarget("")
-	if err != nil {
-		logger.Fatal("Unable to create message sender", zap.Error(err))
-	}
-
 	reporter := ingress.NewStatsReporter(env.ContainerName, kmeta.ChildName(env.PodName, uuid.New().String()))
 
-	h := &ingress.Handler{
-		Receiver:     kncloudevents.NewHTTPMessageReceiver(env.Port),
-		Sender:       sender,
-		Defaulter:    broker.TTLDefaulter(logger, int32(env.MaxTTL)),
-		Reporter:     reporter,
-		Logger:       logger,
-		BrokerLister: brokerLister,
+	handler, err := ingress.NewHandler(logger, reporter, broker.TTLDefaulter(logger, int32(env.MaxTTL)), brokerLister)
+	if err != nil {
+		logger.Fatal("Error creating Handler", zap.Error(err))
+	}
+
+	serverManager, err := ingress.NewServerManager(ctx, logger, configMapWatcher, env.HTTPPort, env.HTTPSPort, handler)
+	if err != nil {
+		logger.Fatal("Error creating server manager", zap.Error(err))
 	}
 
 	// configMapWatcher does not block, so start it first.
@@ -158,9 +150,11 @@ func main() {
 		logger.Fatal("Failed to start informers", zap.Error(err))
 	}
 
-	// Start blocks forever.
-	if err = h.Start(ctx); err != nil {
-		logger.Error("ingress.Start() returned an error", zap.Error(err))
+	// Start the servers
+	logger.Info("Filter starting...")
+	err = serverManager.StartServers(ctx)
+	if err != nil {
+		logger.Fatal("serverManager.StartServers() returned an error", zap.Error(err))
 	}
 	tracer.Shutdown(context.Background())
 	logger.Info("Exiting...")
