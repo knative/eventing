@@ -22,6 +22,9 @@ import (
 
 	testlog "knative.dev/reconciler-test/pkg/logging"
 	"knative.dev/reconciler-test/pkg/manifest"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/eventing/test/rekt/features/sinkbinding"
+	"knative.dev/pkg/apis"
 )
 
 //go:embed *.yaml
