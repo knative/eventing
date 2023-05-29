@@ -179,6 +179,6 @@ func (imcs *InMemoryChannelStatus) MarkDeadLetterSinkNotConfigured() {
 }
 
 func (imcs *InMemoryChannelStatus) MarkDeadLetterSinkResolvedFailed(reason, messageFormat string, messageA ...interface{}) {
-	imcs.DeadLetterSinkURI = nil
+	imcs.DeliveryStatus = eventingduck.DeliveryStatus{}
 	imcCondSet.Manage(imcs).MarkFalse(InMemoryChannelConditionDeadLetterSinkResolved, reason, messageFormat, messageA...)
 }

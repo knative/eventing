@@ -615,7 +615,7 @@ func BrokerStatusDLSURISet(ctx context.Context, t feature.T) {
 	broker := getBroker(ctx, t)
 
 	if broker.IsReady() {
-		if broker.Status.DeadLetterSinkURI == nil {
+		if !broker.Status.DeliveryStatus.IsSet() {
 			t.Errorf("broker DLS not resolved but resource reported ready")
 		}
 		// Success!

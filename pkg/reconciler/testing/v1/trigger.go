@@ -23,11 +23,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	eventingv1 "knative.dev/eventing/pkg/apis/duck/v1"
-	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/ptr"
+
+	eventingv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
 )
 
 // TriggerOption enables further configuration of a Trigger.
@@ -195,10 +196,9 @@ func WithTriggerStatusSubscriberCACerts(caCerts *string) TriggerOption {
 	}
 }
 
-func WithTriggerStatusDeadLetterSinkURI(uri string) TriggerOption {
+func WithTriggerStatusDeadLetterSinkURI(uri duckv1.Addressable) TriggerOption {
 	return func(t *v1.Trigger) {
-		u, _ := apis.ParseURL(uri)
-		t.Status.DeadLetterSinkURI = u
+		t.Status.DeliveryStatus = eventingv1.NewDeliveryStatusFromAddressable(&uri)
 	}
 }
 

@@ -67,7 +67,6 @@ const (
 	testNS     = "test-namespace"
 	brokerName = "test-broker"
 	dlsName    = "test-dls"
-	dlsURL     = "http://example.com"
 
 	configMapName = "test-configmap"
 
@@ -149,6 +148,9 @@ var (
 			Namespace:  testNS,
 		},
 	}
+	k8sSVCDestAddr = duckv1.Addressable{
+		URL: apis.HTTP(network.GetServiceHostname(subscriberName, testNS)),
+	}
 
 	sinkDNS = network.GetServiceHostname("sink", "mynamespace")
 	sinkURI = "http://" + sinkDNS
@@ -159,7 +161,12 @@ var (
 		Path:   fmt.Sprintf("/%s/%s", testNS, brokerName),
 	}
 
-	brokerDLSURI, _ = apis.ParseURL("http://test-dls.test-namespace.svc.cluster.local")
+	brokerDLS = duckv1.Addressable{
+		URL:     apis.HTTP("test-dls.test-namespace.svc.cluster.local"),
+		CACerts: nil,
+	}
+
+	dlsURL, _    = apis.ParseURL("http://example.com")
 )
 
 func TestReconcile(t *testing.T) {
@@ -281,7 +288,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerRetry(5, nil, nil)),
 			},
 			WantCreates: []runtime.Object{
-				resources.NewSubscription(makeTrigger(testNS), createTriggerChannelRef(), makeBrokerRef(), makeServiceURI(), makeDelivery(nil, "", ptr.Int32(5), nil, nil)),
+				resources.NewSubscription(makeTrigger(testNS), createTriggerChannelRef(), makeBrokerRef(), makeServiceURI(), makeDelivery(nil, nil, ptr.Int32(5), nil, nil)),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewTrigger(triggerName, testNS, brokerName,
@@ -311,7 +318,7 @@ func TestReconcile(t *testing.T) {
 				NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
 					WithTriggerSubscriberURI(subscriberURI),
-					WithTriggerDeadLeaderSink(nil, dlsURL)),
+					WithTriggerDeadLeaderSink(nil, dlsURL.String())),
 			},
 			WantCreates: []runtime.Object{
 				resources.NewSubscription(makeTrigger(testNS), createTriggerChannelRef(), makeBrokerRef(), makeServiceURI(), makeDelivery(nil, dlsURL, nil, nil, nil)),
@@ -320,13 +327,13 @@ func TestReconcile(t *testing.T) {
 				Object: NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
 					WithTriggerSubscriberURI(subscriberURI),
-					WithTriggerDeadLeaderSink(nil, dlsURL),
+					WithTriggerDeadLeaderSink(nil, dlsURL.String()),
 					WithTriggerBrokerReady(),
 					WithTriggerDependencyReady(),
 					WithTriggerSubscriberResolvedSucceeded(),
 					WithTriggerSubscribedUnknown("SubscriptionNotConfigured", "Subscription has not yet been reconciled."),
 					WithTriggerStatusSubscriberURI(subscriberURI),
-					WithTriggerStatusDeadLetterSinkURI(dlsURL),
+					WithTriggerStatusDeadLetterSinkURI(duckv1.Addressable{URL: dlsURL}),
 					WithTriggerDeadLetterSinkResolvedSucceeded()),
 			}},
 		}, {
@@ -686,12 +693,12 @@ func TestReconcile(t *testing.T) {
 					WithTriggerSubscriptionNotConfigured(),
 					WithTriggerStatusSubscriberURI(k8sServiceResolvedURI),
 					WithTriggerSubscriberResolvedSucceeded(),
-					WithTriggerStatusDeadLetterSinkURI("http://test-dls.test-namespace.svc.cluster.local"),
+					WithTriggerStatusDeadLetterSinkURI(brokerDLS),
 					WithTriggerDeadLetterSinkResolvedSucceeded(),
 				),
 			}},
 			WantCreates: []runtime.Object{
-				resources.NewSubscription(makeTrigger(testNS), createTriggerChannelRef(), makeBrokerRef(), makeServiceURI(), makeDelivery(dlsSVCDest.Ref, "", nil, nil, nil)),
+				resources.NewSubscription(makeTrigger(testNS), createTriggerChannelRef(), makeBrokerRef(), makeServiceURI(), makeDelivery(dlsSVCDest.Ref, nil, nil, nil, nil)),
 			},
 			WantErr: false,
 		}, {
@@ -740,7 +747,7 @@ func TestReconcile(t *testing.T) {
 					WithChannelKindAnnotation(triggerChannelKind),
 					WithChannelNameAnnotation(triggerChannelName),
 					WithDeadLeaderSink(dlsSVCDest.Ref, ""),
-					WithBrokerStatusDLSURI(brokerDLSURI),
+					WithBrokerStatusDLSURI(brokerDLS),
 				),
 				createChannel(testNS, true),
 				imcConfigMap(),
@@ -752,7 +759,7 @@ func TestReconcile(t *testing.T) {
 			},
 			WantErr: false,
 			WantCreates: []runtime.Object{
-				resources.NewSubscription(makeTrigger(testNS), createTriggerChannelRef(), makeBrokerRef(), makeServiceURI(), makeDelivery(dlsSVCDest.Ref, "", nil, nil, nil)),
+				resources.NewSubscription(makeTrigger(testNS), createTriggerChannelRef(), makeBrokerRef(), makeServiceURI(), makeDelivery(dlsSVCDest.Ref, nil, nil, nil, nil)),
 			},
 			WantDeletes: []clientgotesting.DeleteActionImpl{{
 				ActionImpl: clientgotesting.ActionImpl{
@@ -773,7 +780,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerSubscriptionNotConfigured(),
 					WithTriggerStatusSubscriberURI(subscriberURI),
 					WithTriggerSubscriberResolvedSucceeded(),
-					WithTriggerStatusDeadLetterSinkURI("http://test-dls.test-namespace.svc.cluster.local"),
+					WithTriggerStatusDeadLetterSinkURI(brokerDLS),
 					WithTriggerDeadLetterSinkResolvedSucceeded(),
 				),
 			}},
@@ -794,7 +801,7 @@ func TestReconcile(t *testing.T) {
 					WithChannelKindAnnotation(triggerChannelKind),
 					WithChannelNameAnnotation(triggerChannelName),
 					WithDeadLeaderSink(dlsSVCDest.Ref, ""),
-					WithBrokerStatusDLSURI(brokerDLSURI),
+					WithBrokerStatusDLSURI(brokerDLS),
 				),
 				createChannel(testNS, true),
 				// Use the legacy channel template configmap element at this test.
@@ -807,7 +814,7 @@ func TestReconcile(t *testing.T) {
 			},
 			WantErr: false,
 			WantCreates: []runtime.Object{
-				resources.NewSubscription(makeTrigger(testNS), createTriggerChannelRef(), makeBrokerRef(), makeServiceURI(), makeDelivery(dlsSVCDest.Ref, "", nil, nil, nil)),
+				resources.NewSubscription(makeTrigger(testNS), createTriggerChannelRef(), makeBrokerRef(), makeServiceURI(), makeDelivery(dlsSVCDest.Ref, nil, nil, nil, nil)),
 			},
 			WantDeletes: []clientgotesting.DeleteActionImpl{{
 				ActionImpl: clientgotesting.ActionImpl{
@@ -828,7 +835,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerSubscriptionNotConfigured(),
 					WithTriggerStatusSubscriberURI(subscriberURI),
 					WithTriggerSubscriberResolvedSucceeded(),
-					WithTriggerStatusDeadLetterSinkURI("http://test-dls.test-namespace.svc.cluster.local"),
+					WithTriggerStatusDeadLetterSinkURI(brokerDLS),
 					WithTriggerDeadLetterSinkResolvedSucceeded(),
 				),
 			}},
@@ -849,7 +856,7 @@ func TestReconcile(t *testing.T) {
 					WithChannelKindAnnotation(triggerChannelKind),
 					WithChannelNameAnnotation(triggerChannelName),
 					WithDeadLeaderSink(k8sSVCDest.Ref, ""),
-					WithBrokerStatusDLSURI(k8sSVCDest.URI),
+					WithBrokerStatusDLSURI(k8sSVCDestAddr),
 				),
 				createChannel(testNS, true),
 				imcConfigMap(),
@@ -862,7 +869,7 @@ func TestReconcile(t *testing.T) {
 			},
 			WantErr: false,
 			WantCreates: []runtime.Object{
-				resources.NewSubscription(makeTrigger(testNS), createTriggerChannelRef(), makeBrokerRef(), makeServiceURI(), makeDelivery(dlsSVCDest.Ref, "", nil, nil, nil)),
+				resources.NewSubscription(makeTrigger(testNS), createTriggerChannelRef(), makeBrokerRef(), makeServiceURI(), makeDelivery(dlsSVCDest.Ref, nil, nil, nil, nil)),
 			},
 			WantDeletes: []clientgotesting.DeleteActionImpl{{
 				ActionImpl: clientgotesting.ActionImpl{
@@ -884,7 +891,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerSubscriptionNotConfigured(),
 					WithTriggerStatusSubscriberURI(subscriberURI),
 					WithTriggerSubscriberResolvedSucceeded(),
-					WithTriggerStatusDeadLetterSinkURI("http://test-dls.test-namespace.svc.cluster.local"),
+					WithTriggerStatusDeadLetterSinkURI(brokerDLS),
 					WithTriggerDeadLetterSinkResolvedSucceeded(),
 				),
 			}},
@@ -904,7 +911,6 @@ func TestReconcile(t *testing.T) {
 					WithChannelKindAnnotation(triggerChannelKind),
 					WithChannelNameAnnotation(triggerChannelName),
 					WithDeadLeaderSink(k8sSVCDest.Ref, ""),
-					WithBrokerStatusDLSURI(nil),
 				),
 				createChannel(testNS, true),
 				imcConfigMap(),
@@ -1364,20 +1370,16 @@ func makeEmptyDelivery() *eventingduckv1.DeliverySpec {
 	return nil
 }
 
-func makeDelivery(ref *duckv1.KReference, uri string, retry *int32, backoffPolicy *eventingduckv1.BackoffPolicyType, backoffDelay *string) *eventingduckv1.DeliverySpec {
+func makeDelivery(ref *duckv1.KReference, uri *apis.URL, retry *int32, backoffPolicy *eventingduckv1.BackoffPolicyType, backoffDelay *string) *eventingduckv1.DeliverySpec {
 	ds := &eventingduckv1.DeliverySpec{
 		Retry:         retry,
 		BackoffPolicy: backoffPolicy,
 		BackoffDelay:  backoffDelay,
 	}
-	if ref != nil || uri != "" {
-		var u *apis.URL
-		if uri != "" {
-			u, _ = apis.ParseURL(uri)
-		}
+	if ref != nil || uri != nil {
 		ds.DeadLetterSink = &duckv1.Destination{
 			Ref: ref,
-			URI: u,
+			URI: uri,
 		}
 	}
 	return ds

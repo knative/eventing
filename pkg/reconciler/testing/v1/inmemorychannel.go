@@ -218,11 +218,7 @@ func WithInMemoryChannelStatusDLSURI(dlsURI *duckv1.Addressable) InMemoryChannel
 			imc.Status.MarkDeadLetterSinkNotConfigured()
 			return
 		}
-		ds := eventingv1.DeliveryStatus{
-			DeadLetterSinkURI:     dlsURI.URL,
-			DeadLetterSinkCACerts: dlsURI.CACerts,
-		}
-		imc.Status.MarkDeadLetterSinkResolvedSucceeded(ds)
+		imc.Status.MarkDeadLetterSinkResolvedSucceeded(eventingv1.NewDeliveryStatusFromAddressable(dlsURI))
 	}
 }
 

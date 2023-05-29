@@ -138,11 +138,11 @@ func (cs *ChannelStatus) MarkDeadLetterSinkResolvedSucceeded(deadLetterSink even
 }
 
 func (cs *ChannelStatus) MarkDeadLetterSinkNotConfigured() {
-	cs.DeadLetterSinkURI = nil
+	cs.DeliveryStatus = eventingduck.DeliveryStatus{}
 	chCondSet.Manage(cs).MarkTrueWithReason(ChannelConditionDeadLetterSinkResolved, "DeadLetterSinkNotConfigured", "No dead letter sink is configured.")
 }
 
 func (cs *ChannelStatus) MarkDeadLetterSinkResolvedFailed(reason, messageFormat string, messageA ...interface{}) {
-	cs.DeadLetterSinkURI = nil
+	cs.DeliveryStatus = eventingduck.DeliveryStatus{}
 	chCondSet.Manage(cs).MarkFalse(ChannelConditionDeadLetterSinkResolved, reason, messageFormat, messageA...)
 }

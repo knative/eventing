@@ -226,8 +226,7 @@ func WithSubscriptionDeadLetterSinkURI(uri *duckv1.Addressable) SubscriptionOpti
 		if uri == nil {
 			panic(errors.New("nil URI"))
 		}
-		s.Status.PhysicalSubscription.DeadLetterSinkURI = uri.URL
-		s.Status.PhysicalSubscription.DeadLetterSinkCACerts = uri.CACerts
+		s.Status.PhysicalSubscription.DeliveryStatus = eventingduckv1.NewDeliveryStatusFromAddressable(uri)
 	}
 }
 

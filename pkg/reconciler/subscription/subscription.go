@@ -271,7 +271,7 @@ func (r *Reconciler) resolveDeadLetterSink(ctx context.Context, subscription *v1
 	if subscription.Spec.Delivery != nil && subscription.Spec.Delivery.DeadLetterSink != nil {
 		deadLetterSinkAddr, err := r.destinationResolver.AddressableFromDestinationV1(ctx, *subscription.Spec.Delivery.DeadLetterSink, subscription)
 		if err != nil {
-			subscription.Status.PhysicalSubscription.DeadLetterSinkURI = nil
+			subscription.Status.PhysicalSubscription.DeliveryStatus = eventingduckv1.DeliveryStatus{}
 			logging.FromContext(ctx).Warnw("Failed to resolve spec.delivery.deadLetterSink",
 				zap.Error(err),
 				zap.Any("delivery.deadLetterSink", subscription.Spec.Delivery.DeadLetterSink))
@@ -280,17 +280,15 @@ func (r *Reconciler) resolveDeadLetterSink(ctx context.Context, subscription *v1
 		}
 
 		logging.FromContext(ctx).Debugw("Resolved deadLetterSink", zap.String("deadLetterSinkURI", deadLetterSinkAddr.URL.String()))
-		subscription.Status.PhysicalSubscription.DeadLetterSinkURI = deadLetterSinkAddr.URL
-		subscription.Status.PhysicalSubscription.DeadLetterSinkCACerts = deadLetterSinkAddr.CACerts
+		subscription.Status.PhysicalSubscription.DeliveryStatus = eventingduckv1.NewDeliveryStatusFromAddressable(deadLetterSinkAddr)
 		return nil
 	}
 
 	// In case there is no DLS defined in the Subscription Spec, fallback to Channel's
 	if channel.Spec.Delivery != nil && channel.Spec.Delivery.DeadLetterSink != nil {
-		if channel.Status.DeadLetterSinkURI != nil {
-			logging.FromContext(ctx).Debugw("Resolved channel deadLetterSink", zap.String("deadLetterSinkURI", channel.Status.DeadLetterSinkURI.String()))
-			subscription.Status.PhysicalSubscription.DeadLetterSinkURI = channel.Status.DeadLetterSinkURI
-			subscription.Status.PhysicalSubscription.DeadLetterSinkCACerts = channel.Status.DeadLetterSinkCACerts
+		if channel.Status.DeliveryStatus.IsSet() {
+			logging.FromContext(ctx).Debugw("Resolved channel deadLetterSink", zap.Any("deadLetterSink", channel.Status.DeliveryStatus))
+			subscription.Status.PhysicalSubscription.DeliveryStatus = channel.Status.DeliveryStatus
 			return nil
 		}
 		subscription.Status.PhysicalSubscription.DeliveryStatus = eventingduckv1.DeliveryStatus{}
@@ -518,11 +516,10 @@ func (r *Reconciler) updateChannelAddSubscription(channel *eventingduckv1.Channe
 func deliverySpec(sub *v1.Subscription, channel *eventingduckv1.Channelable) (delivery *eventingduckv1.DeliverySpec) {
 	if sub.Spec.Delivery == nil && channel.Spec.Delivery != nil {
 		// Default to the channel spec
-		if sub.Status.PhysicalSubscription.DeadLetterSinkURI != nil {
+		if sub.Status.PhysicalSubscription.DeliveryStatus.IsSet() {
+			dest := eventingduckv1.NewDestinationFromDeliveryStatus(sub.Status.PhysicalSubscription.DeliveryStatus)
 			delivery = &eventingduckv1.DeliverySpec{
-				DeadLetterSink: &duckv1.Destination{
-					URI: sub.Status.PhysicalSubscription.DeadLetterSinkURI,
-				},
+				DeadLetterSink: &dest,
 			}
 		}
 		if channel.Spec.Delivery.BackoffDelay != nil ||
@@ -544,11 +541,10 @@ func deliverySpec(sub *v1.Subscription, channel *eventingduckv1.Channelable) (de
 
 	// Only set the deadletter sink if it's not nil. Otherwise we'll just end up patching
 	// empty delivery in there.
-	if sub.Status.PhysicalSubscription.DeadLetterSinkURI != nil {
+	if sub.Status.PhysicalSubscription.DeliveryStatus.IsSet() {
+		dest := eventingduckv1.NewDestinationFromDeliveryStatus(sub.Status.PhysicalSubscription.DeliveryStatus)
 		delivery = &eventingduckv1.DeliverySpec{
-			DeadLetterSink: &duckv1.Destination{
-				URI: sub.Status.PhysicalSubscription.DeadLetterSinkURI,
-			},
+			DeadLetterSink: &dest,
 		}
 	}
 	if sub.Spec.Delivery != nil &&

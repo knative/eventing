@@ -174,10 +174,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1.InMemoryChannel)
 			imc.Status.MarkDeadLetterSinkResolvedFailed("Unable to get the DeadLetterSink's URI", "%v", err)
 			return fmt.Errorf("Failed to resolve Dead Letter Sink URI: %v", err)
 		}
-		imc.Status.MarkDeadLetterSinkResolvedSucceeded(eventingduck.DeliveryStatus{
-			DeadLetterSinkURI:     deadLetterSinkAddr.URL,
-			DeadLetterSinkCACerts: deadLetterSinkAddr.CACerts,
-		})
+		imc.Status.MarkDeadLetterSinkResolvedSucceeded(eventingduck.NewDeliveryStatusFromAddressable(deadLetterSinkAddr))
 	} else {
 		imc.Status.MarkDeadLetterSinkNotConfigured()
 	}

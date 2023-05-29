@@ -19,12 +19,13 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+
 	eventingv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/apis/eventing"
 	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/broker"
-	"knative.dev/pkg/apis"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 // BrokerOption enables further configuration of a Broker.
@@ -182,9 +183,9 @@ func WithChannelCACertsAnnotation(caCerts string) BrokerOption {
 	}
 }
 
-func WithBrokerStatusDLSURI(dlsURI *apis.URL) BrokerOption {
+func WithBrokerStatusDLSURI(dls duckv1.Addressable) BrokerOption {
 	return func(b *v1.Broker) {
-		b.Status.MarkDeadLetterSinkResolvedSucceeded(dlsURI)
+		b.Status.MarkDeadLetterSinkResolvedSucceeded(eventingv1.NewDeliveryStatusFromAddressable(&dls))
 	}
 }
 
