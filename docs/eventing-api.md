@@ -437,6 +437,19 @@ knative.dev/pkg/apis.URL
 where failed events are sent to.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>deadLetterSinkCACerts</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>DeadLetterSinkCACerts are Certification Authority (CA) certificates in PEM format
+according to <a href="https://www.rfc-editor.org/rfc/rfc7468">https://www.rfc-editor.org/rfc/rfc7468</a>.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="duck.knative.dev/v1.Subscribable">Subscribable

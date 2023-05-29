@@ -158,7 +158,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 	}
 
 	channelStatus := &duckv1.ChannelableStatus{
-		AddressStatus: triggerChan.Status.AddressStatus,
+		AddressStatus:  triggerChan.Status.AddressStatus,
 		DeliveryStatus: triggerChan.Status.DeliveryStatus,
 	}
 

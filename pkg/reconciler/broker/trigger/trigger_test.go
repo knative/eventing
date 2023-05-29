@@ -166,7 +166,7 @@ var (
 		CACerts: nil,
 	}
 
-	dlsURL, _    = apis.ParseURL("http://example.com")
+	dlsURL, _ = apis.ParseURL("http://example.com")
 )
 
 func TestReconcile(t *testing.T) {
