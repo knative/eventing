@@ -24,9 +24,10 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
-	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 )
 
 var (
@@ -349,7 +350,7 @@ func TestInMemoryChannelIsReady(t *testing.T) {
 				cs.MarkDispatcherFailed("NotReadyDispatcher", "testing")
 			}
 			if test.DLSResolved == &trueVal {
-				cs.MarkDeadLetterSinkResolvedSucceeded(nil)
+				cs.MarkDeadLetterSinkResolvedSucceeded(eventingduckv1.DeliveryStatus{})
 			} else if test.DLSResolved == &falseVal {
 				cs.MarkDeadLetterSinkResolvedFailed("Unable to get the dead letter sink's URI", "DLS reference not found")
 			} else {
