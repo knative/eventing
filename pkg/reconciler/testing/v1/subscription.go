@@ -25,11 +25,11 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
-	"knative.dev/pkg/apis"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 // SubscriptionOption enables further configuration of a Subscription.
@@ -221,12 +221,13 @@ func WithSubscriptionPhysicalSubscriptionReply(reply *duckv1.Addressable) Subscr
 	}
 }
 
-func WithSubscriptionDeadLetterSinkURI(uri *apis.URL) SubscriptionOption {
+func WithSubscriptionDeadLetterSinkURI(uri *duckv1.Addressable) SubscriptionOption {
 	return func(s *v1.Subscription) {
 		if uri == nil {
 			panic(errors.New("nil URI"))
 		}
-		s.Status.PhysicalSubscription.DeadLetterSinkURI = uri
+		s.Status.PhysicalSubscription.DeadLetterSinkURI = uri.URL
+		s.Status.PhysicalSubscription.DeadLetterSinkCACerts = uri.CACerts
 	}
 }
 

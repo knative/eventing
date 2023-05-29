@@ -64,19 +64,23 @@ import (
 )
 
 const (
-	systemNS              = "knative-testing"
-	dlsName               = "test-dls"
-	testNS                = "test-namespace"
-	imcName               = "test-imc"
-	channelServiceAddress = "test-imc-kn-channel.test-namespace.svc.cluster.local"
-	imageName             = "test-image"
-	maxIdleConns          = 2000
-	maxIdleConnsPerHost   = 200
+	systemNS            = "knative-testing"
+	dlsName             = "test-dls"
+	testNS              = "test-namespace"
+	imcName             = "test-imc"
+	imageName           = "test-image"
+	maxIdleConns        = 2000
+	maxIdleConnsPerHost = 200
 
 	imcGeneration = 7
 )
 
 var (
+	channelServiceAddress = duckv1.Addressable{
+		Name: pointer.String("http"),
+		URL:  apis.HTTP("test-imc-kn-channel.test-namespace.svc.cluster.local"),
+	}
+
 	imcDest = duckv1.Destination{
 		Ref: &duckv1.KReference{
 			Name:       dlsName,
@@ -87,6 +91,10 @@ var (
 	}
 
 	dlsURI, _ = apis.ParseURL("http://test-dls.test-namespace.svc.cluster.local")
+	dlsStatus = &duckv1.Addressable{
+		URL:     dlsURI,
+		CACerts: nil,
+	}
 )
 
 func TestAllCases(t *testing.T) {
@@ -312,7 +320,7 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelChannelServiceReady(),
 					WithInMemoryChannelAddress(channelServiceAddress),
 					WithDeadLetterSink(imcDest.Ref, ""),
-					WithInMemoryChannelStatusDLSURI(dlsURI),
+					WithInMemoryChannelStatusDLSURI(dlsStatus),
 				),
 			}},
 		}, {
@@ -337,7 +345,7 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelChannelServiceReady(),
 					WithInMemoryChannelAddress(channelServiceAddress),
 					WithDeadLetterSink(imcDest.Ref, ""),
-					WithInMemoryChannelStatusDLSURI(dlsURI),
+					WithInMemoryChannelStatusDLSURI(dlsStatus),
 				),
 			}},
 		}, {
@@ -387,7 +395,7 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelSubscribers(subscribers),
 					WithInMemoryChannelAddress(channelServiceAddress),
 					WithDeadLetterSink(imcDest.Ref, ""),
-					WithInMemoryChannelStatusDLSURI(dlsURI),
+					WithInMemoryChannelStatusDLSURI(dlsStatus),
 				),
 			}},
 		}, {
@@ -417,7 +425,7 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelStatusSubscribers(subscriberStatuses),
 					WithInMemoryChannelAddress(channelServiceAddress),
 					WithDeadLetterSink(imcDest.Ref, ""),
-					WithInMemoryChannelStatusDLSURI(dlsURI),
+					WithInMemoryChannelStatusDLSURI(dlsStatus),
 				),
 			}},
 		}, {
@@ -482,13 +490,10 @@ func TestAllCases(t *testing.T) {
 							URL:     httpsURL(imcName, testNS),
 							CACerts: pointer.String(testCaCerts),
 						},
-						{
-							Name: pointer.String("http"),
-							URL:  apis.HTTP(channelServiceAddress),
-						},
+						channelServiceAddress,
 					}),
 					WithDeadLetterSink(imcDest.Ref, ""),
-					WithInMemoryChannelStatusDLSURI(dlsURI),
+					WithInMemoryChannelStatusDLSURI(dlsStatus),
 				),
 			}},
 			Ctx: feature.ToContext(context.Background(), feature.Flags{
@@ -535,7 +540,7 @@ func TestAllCases(t *testing.T) {
 						},
 					}),
 					WithDeadLetterSink(imcDest.Ref, ""),
-					WithInMemoryChannelStatusDLSURI(dlsURI),
+					WithInMemoryChannelStatusDLSURI(dlsStatus),
 				),
 			}},
 			Ctx: feature.ToContext(context.Background(), feature.Flags{
@@ -615,7 +620,7 @@ func TestInNamespace(t *testing.T) {
 					WithInMemoryChannelChannelServiceReady(),
 					WithInMemoryChannelAddress(channelServiceAddress),
 					WithDeadLetterSink(imcDest.Ref, ""),
-					WithInMemoryChannelStatusDLSURI(dlsURI),
+					WithInMemoryChannelStatusDLSURI(dlsStatus),
 				),
 			}},
 			WantEvents: []string{
@@ -654,7 +659,7 @@ func TestInNamespace(t *testing.T) {
 					WithInMemoryChannelChannelServiceReady(),
 					WithInMemoryChannelAddress(channelServiceAddress),
 					WithDeadLetterSink(imcDest.Ref, ""),
-					WithInMemoryChannelStatusDLSURI(dlsURI),
+					WithInMemoryChannelStatusDLSURI(dlsStatus),
 				),
 			}},
 		},

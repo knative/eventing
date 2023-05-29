@@ -140,12 +140,9 @@ func WithInMemoryChannelEndpointsReady() InMemoryChannelOption {
 	}
 }
 
-func WithInMemoryChannelAddress(a string) InMemoryChannelOption {
+func WithInMemoryChannelAddress(a duckv1.Addressable) InMemoryChannelOption {
 	return func(imc *v1.InMemoryChannel) {
-		imc.Status.SetAddress(&apis.URL{
-			Scheme: "http",
-			Host:   a,
-		})
+		imc.Status.SetAddress(&a)
 	}
 }
 
@@ -163,12 +160,9 @@ func WithInMemoryChannelAddresses(addresses []duckv1.Addressable) InMemoryChanne
 	}
 }
 
-func WithInMemoryChannelReady(host string) InMemoryChannelOption {
+func WithInMemoryChannelReady(a duckv1.Addressable) InMemoryChannelOption {
 	return func(imc *v1.InMemoryChannel) {
-		imc.Status.SetAddress(&apis.URL{
-			Scheme: "http",
-			Host:   host,
-		})
+		imc.Status.SetAddress(&a)
 		imc.Status.MarkChannelServiceTrue()
 		imc.Status.MarkEndpointsTrue()
 		imc.Status.MarkServiceTrue()
@@ -218,9 +212,17 @@ func WithInMemoryScopeAnnotation(value string) InMemoryChannelOption {
 	}
 }
 
-func WithInMemoryChannelStatusDLSURI(dlsURI *apis.URL) InMemoryChannelOption {
+func WithInMemoryChannelStatusDLSURI(dlsURI *duckv1.Addressable) InMemoryChannelOption {
 	return func(imc *v1.InMemoryChannel) {
-		imc.Status.MarkDeadLetterSinkResolvedSucceeded(dlsURI)
+		if dlsURI == nil {
+			imc.Status.MarkDeadLetterSinkNotConfigured()
+			return
+		}
+		ds := eventingv1.DeliveryStatus{
+			DeadLetterSinkURI:     dlsURI.URL,
+			DeadLetterSinkCACerts: dlsURI.CACerts,
+		}
+		imc.Status.MarkDeadLetterSinkResolvedSucceeded(ds)
 	}
 }
 

@@ -20,6 +20,8 @@ import (
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -47,14 +49,15 @@ func NewUnstructured(gvk metav1.GroupVersionKind, name, namespace string, uo ...
 	return u
 }
 
-func WithUnstructuredAddressable(hostname string) UnstructuredOption {
+func WithUnstructuredAddressable(addr duckv1.Addressable) UnstructuredOption {
 	return func(u *unstructured.Unstructured) {
 		status, ok := u.Object["status"].(map[string]interface{})
 		if ok {
-			status["address"] = map[string]interface{}{
-				"hostname": hostname,
-				"url":      fmt.Sprintf("http://%s", hostname),
+			obj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&addr)
+			if err != nil {
+				panic(err)
 			}
+			status["address"] = obj
 		}
 	}
 }

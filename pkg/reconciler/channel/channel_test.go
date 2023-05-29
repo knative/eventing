@@ -26,12 +26,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	clientgotesting "k8s.io/client-go/testing"
 	"k8s.io/utils/pointer"
-	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
-	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
-	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
-	channelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/channel"
-	"knative.dev/eventing/pkg/duck"
-	. "knative.dev/eventing/pkg/reconciler/testing/v1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	v1addr "knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
@@ -42,6 +36,13 @@ import (
 	"knative.dev/pkg/network"
 	. "knative.dev/pkg/reconciler/testing"
 	"knative.dev/pkg/tracker"
+
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
+	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
+	channelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/channel"
+	"knative.dev/eventing/pkg/duck"
+	. "knative.dev/eventing/pkg/reconciler/testing/v1"
 )
 
 const (
@@ -52,17 +53,13 @@ const (
 var (
 	testKey = fmt.Sprintf("%s/%s", testNS, channelName)
 
-	backingChannelHostname = network.GetServiceHostname("foo", "bar")
-
 	deliverySpec = &eventingduckv1.DeliverySpec{
 		Retry: pointer.Int32(10),
 	}
 
-	backingChannelURL = apis.HTTP(backingChannelHostname)
-
-	backingChannelAddressable = &duckv1.Addressable{
-		Name: &backingChannelURL.Scheme,
-		URL:  backingChannelURL,
+	backingChannelAddressable = duckv1.Addressable{
+		Name: pointer.String("http"),
+		URL:  apis.HTTP(network.GetServiceHostname("foo", "bar")),
 	}
 )
 
@@ -137,7 +134,7 @@ func TestReconcile(t *testing.T) {
 				WithInMemoryChannelServiceReady(),
 				WithInMemoryChannelEndpointsReady(),
 				WithInMemoryChannelChannelServiceReady(),
-				WithInMemoryChannelAddress(backingChannelHostname),
+				WithInMemoryChannelAddress(backingChannelAddressable),
 				WithInMemoryChannelDLSUnknown()),
 		},
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
@@ -147,7 +144,7 @@ func TestReconcile(t *testing.T) {
 				WithBackingChannelObjRef(backingChannelObjRef()),
 				WithBackingChannelReady,
 				WithChannelDLSUnknown(),
-				WithChannelAddress(backingChannelAddressable)),
+				WithChannelAddress(&backingChannelAddressable)),
 		}},
 	}, {
 		Name: "Already reconciled",
@@ -158,7 +155,7 @@ func TestReconcile(t *testing.T) {
 				WithInitChannelConditions,
 				WithBackingChannelObjRef(backingChannelObjRef()),
 				WithBackingChannelReady,
-				WithChannelAddress(backingChannelAddressable),
+				WithChannelAddress(&backingChannelAddressable),
 				WithChannelDLSUnknown()),
 			NewInMemoryChannel(channelName, testNS,
 				WithInitInMemoryChannelConditions,
@@ -167,7 +164,7 @@ func TestReconcile(t *testing.T) {
 				WithInMemoryChannelEndpointsReady(),
 				WithInMemoryChannelChannelServiceReady(),
 				WithInMemoryChannelSubscribers(subscribers()),
-				WithInMemoryChannelAddress(backingChannelHostname),
+				WithInMemoryChannelAddress(backingChannelAddressable),
 				WithInMemoryChannelDLSUnknown()),
 		},
 	}, {
@@ -179,7 +176,7 @@ func TestReconcile(t *testing.T) {
 				WithInitChannelConditions,
 				WithBackingChannelObjRef(backingChannelObjRef()),
 				WithBackingChannelReady,
-				WithChannelAddress(backingChannelAddressable)),
+				WithChannelAddress(&backingChannelAddressable)),
 		},
 		WantCreates: []runtime.Object{
 			createChannel(testNS, channelName, false),
@@ -203,7 +200,7 @@ func TestReconcile(t *testing.T) {
 				WithBackingChannelObjRef(backingChannelObjRef()),
 				WithBackingChannelReady,
 				WithChannelDelivery(deliverySpec),
-				WithChannelAddress(backingChannelAddressable)),
+				WithChannelAddress(&backingChannelAddressable)),
 		},
 		WantCreates: []runtime.Object{
 			&unstructured.Unstructured{
@@ -252,7 +249,7 @@ func TestReconcile(t *testing.T) {
 				WithInitChannelConditions,
 				WithBackingChannelObjRef(backingChannelObjRef()),
 				WithBackingChannelReady,
-				WithChannelAddress(backingChannelAddressable),
+				WithChannelAddress(&backingChannelAddressable),
 				WithChannelGeneration(42)),
 			NewInMemoryChannel(channelName, testNS,
 				WithInitInMemoryChannelConditions,
@@ -261,7 +258,7 @@ func TestReconcile(t *testing.T) {
 				WithInMemoryChannelEndpointsReady(),
 				WithInMemoryChannelChannelServiceReady(),
 				WithInMemoryChannelSubscribers(subscribers()),
-				WithInMemoryChannelAddress(backingChannelHostname),
+				WithInMemoryChannelAddress(backingChannelAddressable),
 				WithInMemoryChannelDLSUnknown()),
 		},
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
@@ -271,7 +268,7 @@ func TestReconcile(t *testing.T) {
 				WithBackingChannelObjRef(backingChannelObjRef()),
 				WithChannelDLSUnknown(),
 				WithBackingChannelReady,
-				WithChannelAddress(backingChannelAddressable),
+				WithChannelAddress(&backingChannelAddressable),
 				WithChannelGeneration(42),
 				// Updates
 				WithChannelObservedGeneration(42)),
@@ -285,7 +282,7 @@ func TestReconcile(t *testing.T) {
 				WithInitChannelConditions,
 				WithBackingChannelObjRef(backingChannelObjRef()),
 				WithBackingChannelReady,
-				WithChannelAddress(backingChannelAddressable)),
+				WithChannelAddress(&backingChannelAddressable)),
 			NewInMemoryChannel(channelName, testNS,
 				WithInitInMemoryChannelConditions,
 				WithInMemoryChannelDuckAnnotationV1Beta1,
@@ -293,7 +290,7 @@ func TestReconcile(t *testing.T) {
 				WithInMemoryChannelServiceReady(),
 				WithInMemoryChannelEndpointsReady(),
 				WithInMemoryChannelChannelServiceReady(),
-				WithInMemoryChannelAddress(backingChannelHostname),
+				WithInMemoryChannelAddress(backingChannelAddressable),
 				WithInMemoryChannelSubscribers(subscribers()),
 				WithInMemoryChannelStatusSubscribers(subscriberStatuses()),
 				WithInMemoryChannelDLSUnknown()),
@@ -304,7 +301,7 @@ func TestReconcile(t *testing.T) {
 				WithInitChannelConditions,
 				WithBackingChannelObjRef(backingChannelObjRef()),
 				WithBackingChannelReady,
-				WithChannelAddress(backingChannelAddressable),
+				WithChannelAddress(&backingChannelAddressable),
 				WithChannelSubscriberStatuses(subscriberStatuses()),
 				WithChannelDLSUnknown()),
 		}},
@@ -406,8 +403,7 @@ func createChannelCRD(namespace, name string, ready bool) *unstructured.Unstruct
 	if ready {
 		u.Object["status"] = map[string]interface{}{
 			"address": map[string]interface{}{
-				"hostname": backingChannelHostname,
-				"url":      fmt.Sprintf("http://%s", backingChannelHostname),
+				"url": backingChannelAddressable.URL.String(),
 			},
 		}
 	}

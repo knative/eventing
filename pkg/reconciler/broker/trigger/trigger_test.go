@@ -1310,11 +1310,13 @@ func createTriggerChannelRef() *corev1.ObjectReference {
 	}
 }
 
-func makeServiceURI() *apis.URL {
-	return &apis.URL{
-		Scheme: "http",
-		Host:   network.GetServiceHostname("broker-filter", systemNS),
-		Path:   fmt.Sprintf("/triggers/%s/%s/%s", testNS, triggerName, triggerUID),
+func makeServiceURI() *duckv1.Destination {
+	return &duckv1.Destination{
+		URI: &apis.URL{
+			Scheme: "http",
+			Host:   network.GetServiceHostname("broker-filter", systemNS),
+			Path:   fmt.Sprintf("/triggers/%s/%s/%s", testNS, triggerName, triggerUID),
+		},
 	}
 }
 func makeFilterSubscription(subscriberNamespace string) *messagingv1.Subscription {

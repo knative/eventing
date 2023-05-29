@@ -21,31 +21,35 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"knative.dev/pkg/configmap"
+	logtesting "knative.dev/pkg/logging/testing"
+
 	apiseventing "knative.dev/eventing/pkg/apis/eventing"
 	eventing "knative.dev/eventing/pkg/apis/eventing/v1"
 	brokerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/broker"
 	v1lister "knative.dev/eventing/pkg/client/listers/eventing/v1"
 	testingv1 "knative.dev/eventing/pkg/reconciler/testing/v1"
-	"knative.dev/pkg/configmap"
-	logtesting "knative.dev/pkg/logging/testing"
 
 	. "knative.dev/pkg/reconciler/testing"
+
+	_ "knative.dev/pkg/client/injection/ducks/duck/v1/source/fake"
+	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap/fake"
+	_ "knative.dev/pkg/injection/clients/namespacedkube/informers/core/v1/secret/fake"
 
 	// Fake injection informers
 	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/broker/fake"
 	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/trigger/fake"
 	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/subscription/fake"
-	_ "knative.dev/pkg/client/injection/ducks/duck/v1/source/fake"
-	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap/fake"
 )
 
 func TestNew(t *testing.T) {
 	ctx, _ := SetupFakeContext(t)
 
-	c := NewController(ctx, configmap.NewStaticWatcher())
+	c := NewController(ctx, configmap.NewStaticWatcher(&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "config-features"}}))
 
 	if c == nil {
 		t.Fatal("Expected NewController to return a non-nil value")
