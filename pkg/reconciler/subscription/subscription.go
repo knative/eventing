@@ -278,10 +278,10 @@ func (r *Reconciler) resolveDeadLetterSink(ctx context.Context, subscription *v1
 			subscription.Status.MarkReferencesNotResolved(deadLetterSinkResolveFailed, "Failed to resolve spec.delivery.deadLetterSink: %v", err)
 			return pkgreconciler.NewEvent(corev1.EventTypeWarning, deadLetterSinkResolveFailed, "Failed to resolve spec.delivery.deadLetterSink: %w", err)
 		}
-		deadLetterSinkURI := deadLetterSinkAddr.URL
 
-		logging.FromContext(ctx).Debugw("Resolved deadLetterSink", zap.String("deadLetterSinkURI", deadLetterSinkURI.String()))
-		subscription.Status.PhysicalSubscription.DeadLetterSinkURI = deadLetterSinkURI
+		logging.FromContext(ctx).Debugw("Resolved deadLetterSink", zap.String("deadLetterSinkURI", deadLetterSinkAddr.URL.String()))
+		subscription.Status.PhysicalSubscription.DeadLetterSinkURI = deadLetterSinkAddr.URL
+		subscription.Status.PhysicalSubscription.DeadLetterSinkCACerts = deadLetterSinkAddr.CACerts
 		return nil
 	}
 
@@ -290,9 +290,10 @@ func (r *Reconciler) resolveDeadLetterSink(ctx context.Context, subscription *v1
 		if channel.Status.DeadLetterSinkURI != nil {
 			logging.FromContext(ctx).Debugw("Resolved channel deadLetterSink", zap.String("deadLetterSinkURI", channel.Status.DeadLetterSinkURI.String()))
 			subscription.Status.PhysicalSubscription.DeadLetterSinkURI = channel.Status.DeadLetterSinkURI
+			subscription.Status.PhysicalSubscription.DeadLetterSinkCACerts = channel.Status.DeadLetterSinkCACerts
 			return nil
 		}
-		subscription.Status.PhysicalSubscription.DeadLetterSinkURI = nil
+		subscription.Status.PhysicalSubscription.DeliveryStatus = eventingduckv1.DeliveryStatus{}
 		logging.FromContext(ctx).Warnw("Channel didn't set status.deadLetterSinkURI",
 			zap.Any("delivery.deadLetterSink", channel.Spec.Delivery.DeadLetterSink))
 		subscription.Status.MarkReferencesNotResolved(deadLetterSinkResolveFailed, "channel %s didn't set status.deadLetterSinkURI", channel.Name)
@@ -300,7 +301,7 @@ func (r *Reconciler) resolveDeadLetterSink(ctx context.Context, subscription *v1
 	}
 
 	// There is no DLS defined in neither Subscription nor the Channel
-	subscription.Status.PhysicalSubscription.DeadLetterSinkURI = nil
+	subscription.Status.PhysicalSubscription.DeliveryStatus = eventingduckv1.DeliveryStatus{}
 	return nil
 }
 
