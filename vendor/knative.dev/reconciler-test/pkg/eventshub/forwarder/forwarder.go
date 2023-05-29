@@ -29,6 +29,7 @@ import (
 	"go.opencensus.io/trace"
 	"go.uber.org/zap"
 
+	"github.com/cloudevents/sdk-go/v2/binding"
 	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	cloudeventshttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"github.com/kelseyhightower/envconfig"
@@ -164,7 +165,8 @@ func (o *Forwarder) ServeHTTP(writer http.ResponseWriter, request *http.Request)
 	if err != nil {
 		logging.FromContext(o.ctx).Error("Cannot create the request: ", err)
 	}
-	err = cehttp.WriteRequest(requestCtx, m, req)
+
+	err = cehttp.WriteRequest(requestCtx, binding.ToMessage(event), req)
 	if err != nil {
 		logging.FromContext(o.ctx).Error("Cannot write the event: ", err)
 	}
