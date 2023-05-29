@@ -22,9 +22,10 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	corev1 "k8s.io/api/core/v1"
-	v1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+
+	v1 "knative.dev/eventing/pkg/apis/duck/v1"
 )
 
 var (
@@ -240,7 +241,7 @@ func TestChannelConditionStatus(t *testing.T) {
 			}
 
 			if test.DLSResolved == corev1.ConditionTrue {
-				cs.MarkDeadLetterSinkResolvedSucceeded(nil)
+				cs.MarkDeadLetterSinkResolvedSucceeded(v1.DeliveryStatus{})
 			}
 			got := cs.GetTopLevelCondition().Status
 			if test.wantConditionStatus != got {

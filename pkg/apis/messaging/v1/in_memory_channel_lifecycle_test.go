@@ -337,7 +337,7 @@ func TestInMemoryChannelIsReady(t *testing.T) {
 				cs.MarkChannelServiceFailed("NotReadyChannelService", "testing")
 			}
 			if test.setAddress {
-				cs.SetAddress(&apis.URL{Scheme: "http", Host: "foo.bar"})
+				cs.SetAddress(&duckv1.Addressable{URL: &apis.URL{Scheme: "http", Host: "foo.bar"}})
 			}
 			if test.markEndpointsReady {
 				cs.MarkEndpointsTrue()
@@ -426,7 +426,7 @@ func TestInMemoryChannelStatus_SetAddressable(t *testing.T) {
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
 			cs := &InMemoryChannelStatus{}
-			cs.SetAddress(tc.url)
+			cs.SetAddress(&duckv1.Addressable{URL: tc.url})
 			if diff := cmp.Diff(tc.want, cs, ignoreAllButTypeAndStatus); diff != "" {
 				t.Error("unexpected conditions (-want, +got) =", diff)
 			}
@@ -439,7 +439,7 @@ func ReadyBrokerStatusWithoutDLS() *InMemoryChannelStatus {
 	imcs.MarkChannelServiceTrue()
 	imcs.MarkDeadLetterSinkNotConfigured()
 	imcs.MarkEndpointsTrue()
-	imcs.SetAddress(apis.HTTP("example.com"))
+	imcs.SetAddress(&duckv1.Addressable{URL: apis.HTTP("example.com")})
 	imcs.MarkServiceTrue()
 	return imcs
 }
