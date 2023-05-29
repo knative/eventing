@@ -154,4 +154,8 @@ type DeliveryStatus struct {
 	// where failed events are sent to.
 	// +optional
 	DeadLetterSinkURI *apis.URL `json:"deadLetterSinkUri,omitempty"`
+	// DeadLetterSinkCACerts are Certification Authority (CA) certificates in PEM format
+	// according to https://www.rfc-editor.org/rfc/rfc7468.
+	// +optional
+	DeadLetterSinkCACerts *string `json:"deadLetterSinkCACerts,omitempty"`
 }
