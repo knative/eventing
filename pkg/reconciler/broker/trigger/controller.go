@@ -22,8 +22,19 @@ import (
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
+	"knative.dev/pkg/client/injection/ducks/duck/v1/source"
+	configmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap"
+	"knative.dev/pkg/configmap"
+	"knative.dev/pkg/controller"
+	"knative.dev/pkg/injection/clients/dynamicclient"
+	secretinformer "knative.dev/pkg/injection/clients/namespacedkube/informers/core/v1/secret"
+	"knative.dev/pkg/logging"
+	pkgreconciler "knative.dev/pkg/reconciler"
+	"knative.dev/pkg/resolver"
+
 	apiseventing "knative.dev/eventing/pkg/apis/eventing"
 	eventing "knative.dev/eventing/pkg/apis/eventing/v1"
+	"knative.dev/eventing/pkg/apis/feature"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	brokerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/broker"
 	triggerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/trigger"
@@ -32,14 +43,6 @@ import (
 	triggerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/trigger"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1"
 	"knative.dev/eventing/pkg/duck"
-	"knative.dev/pkg/client/injection/ducks/duck/v1/source"
-	configmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap"
-	"knative.dev/pkg/configmap"
-	"knative.dev/pkg/controller"
-	"knative.dev/pkg/injection/clients/dynamicclient"
-	"knative.dev/pkg/logging"
-	pkgreconciler "knative.dev/pkg/reconciler"
-	"knative.dev/pkg/resolver"
 )
 
 // NewController initializes the controller and is called by the generated code
@@ -53,6 +56,10 @@ func NewController(
 	brokerInformer := brokerinformer.Get(ctx)
 	subscriptionInformer := subscriptioninformer.Get(ctx)
 	configmapInformer := configmapinformer.Get(ctx)
+	secretInformer := secretinformer.Get(ctx)
+
+	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"))
+	featureStore.WatchConfigs(cmw)
 
 	triggerLister := triggerInformer.Lister()
 	r := &Reconciler{
@@ -62,9 +69,11 @@ func NewController(
 		brokerLister:       brokerInformer.Lister(),
 		triggerLister:      triggerLister,
 		configmapLister:    configmapInformer.Lister(),
+		secretLister:       secretInformer.Lister(),
 	}
 	impl := triggerreconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
 		return controller.Options{
+			ConfigStore:       featureStore,
 			PromoteFilterFunc: filterTriggers(r.brokerLister),
 		}
 	})

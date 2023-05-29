@@ -28,24 +28,29 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/dynamic"
 	corev1listers "k8s.io/client-go/listers/core/v1"
+	"k8s.io/utils/pointer"
+	"knative.dev/pkg/apis"
+	"knative.dev/pkg/network"
 
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/controller"
+	"knative.dev/pkg/logging"
+	pkgreconciler "knative.dev/pkg/reconciler"
+	"knative.dev/pkg/resolver"
+	"knative.dev/pkg/system"
+
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/apis/eventing"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	"knative.dev/eventing/pkg/apis/feature"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1"
 	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1"
 	"knative.dev/eventing/pkg/duck"
+	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/reconciler/broker/resources"
 	"knative.dev/eventing/pkg/reconciler/sugar/trigger/path"
-	"knative.dev/pkg/apis"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
-	"knative.dev/pkg/controller"
-	"knative.dev/pkg/logging"
-	"knative.dev/pkg/network"
-	pkgreconciler "knative.dev/pkg/reconciler"
-	"knative.dev/pkg/resolver"
-	"knative.dev/pkg/system"
 )
 
 var brokerGVK = eventingv1.SchemeGroupVersion.WithKind("Broker")
@@ -55,6 +60,8 @@ const (
 	subscriptionDeleteFailed = "SubscriptionDeleteFailed"
 	subscriptionCreateFailed = "SubscriptionCreateFailed"
 	subscriptionGetFailed    = "SubscriptionGetFailed"
+
+	brokerFilterTLSSecretName = "mt-broker-filter-server-tls" //nolint:gosec // This is not a hardcoded credential
 )
 
 type Reconciler struct {
@@ -66,6 +73,7 @@ type Reconciler struct {
 	brokerLister       eventinglisters.BrokerLister
 	triggerLister      eventinglisters.TriggerLister
 	configmapLister    corev1listers.ConfigMapLister
+	secretLister       corev1listers.SecretLister
 
 	// Dynamic tracker to track Sources. In particular, it tracks the dependency between Triggers and Sources.
 	sourceTracker duck.ListableTracker
@@ -157,23 +165,22 @@ func (r *Reconciler) resolveDeadLetterSink(ctx context.Context, b *eventingv1.Br
 			t.Status.MarkDeadLetterSinkResolvedFailed("Unable to get the dead letter sink's URI", "%v", err)
 			return err
 		}
-		deadLetterSinkURI := deadLetterSinkAddr.URL
-
-		t.Status.DeadLetterSinkURI = deadLetterSinkURI
+		t.Status.DeadLetterSinkURI = deadLetterSinkAddr.URL
+		t.Status.DeadLetterSinkCACerts = deadLetterSinkAddr.CACerts
 		t.Status.MarkDeadLetterSinkResolvedSucceeded()
 		// In case there is no DLS defined in the Trigger Spec, fallback to Broker's
 	} else if b.Spec.Delivery != nil && b.Spec.Delivery.DeadLetterSink != nil {
 		if b.Status.DeadLetterSinkURI != nil {
-			t.Status.DeadLetterSinkURI = b.Status.DeadLetterSinkURI
+			t.Status.DeliveryStatus = b.Status.DeliveryStatus
 			t.Status.MarkDeadLetterSinkResolvedSucceeded()
 		} else {
-			t.Status.DeadLetterSinkURI = nil
+			t.Status.DeliveryStatus = eventingduckv1.DeliveryStatus{}
 			t.Status.MarkDeadLetterSinkResolvedFailed(fmt.Sprintf("Broker %s didn't set status.deadLetterSinkURI", b.Name), "")
 			return fmt.Errorf("broker %s didn't set status.deadLetterSinkURI", b.Name)
 		}
 	} else {
 		// There is no DLS defined in neither Trigger nor the Broker
-		t.Status.DeadLetterSinkURI = nil
+		t.Status.DeliveryStatus = eventingduckv1.DeliveryStatus{}
 		t.Status.MarkDeadLetterSinkNotConfigured()
 	}
 
@@ -182,12 +189,32 @@ func (r *Reconciler) resolveDeadLetterSink(ctx context.Context, b *eventingv1.Br
 
 // subscribeToBrokerChannel subscribes service 'svc' to the Broker's channels.
 func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, b *eventingv1.Broker, t *eventingv1.Trigger, brokerTrigger *corev1.ObjectReference) (*messagingv1.Subscription, error) {
-	recorder := controller.GetEventRecorder(ctx)
-	uri := &apis.URL{
-		Scheme: "http",
-		Host:   network.GetServiceHostname("broker-filter", system.Namespace()),
-		Path:   path.Generate(t),
+	var dest *duckv1.Destination
+	transportEncryptionFlags := feature.FromContext(ctx)
+	if transportEncryptionFlags.IsPermissiveTransportEncryption() || transportEncryptionFlags.IsStrictTransportEncryption() {
+		caCerts, err := r.getCaCerts()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get CA certs: %w", err)
+		}
+
+		dest = &duckv1.Destination{
+			URI: &apis.URL{
+				Scheme: "https",
+				Host:   network.GetServiceHostname("broker-filter", system.Namespace()),
+				Path:   path.Generate(t),
+			},
+			CACerts: pointer.String(caCerts),
+		}
+	} else {
+		dest = &duckv1.Destination{
+			URI: &apis.URL{
+				Scheme: "http",
+				Host:   network.GetServiceHostname("broker-filter", system.Namespace()),
+				Path:   path.Generate(t),
+			},
+		}
 	}
+
 	// Note that we have to hard code the brokerGKV stuff as sometimes typemeta is not
 	// filled in. So instead of b.TypeMeta.Kind and b.TypeMeta.APIVersion, we have to
 	// do it this way.
@@ -203,7 +230,9 @@ func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, b *eventingv1
 		delivery = b.Spec.Delivery
 	}
 
-	expected := resources.NewSubscription(t, brokerTrigger, brokerObjRef, uri, delivery)
+	recorder := controller.GetEventRecorder(ctx)
+
+	expected := resources.NewSubscription(t, brokerTrigger, brokerObjRef, dest, delivery)
 
 	sub, err := r.subscriptionLister.Subscriptions(t.Namespace).Get(expected.Name)
 	// If the resource doesn't exist, we'll create it.
@@ -320,4 +349,16 @@ func getBrokerChannelRef(b *eventingv1.Broker) (*corev1.ObjectReference, error) 
 		}
 	}
 	return nil, errors.New("Broker.Status.Annotations nil or missing values")
+}
+
+func (r *Reconciler) getCaCerts() (string, error) {
+	secret, err := r.secretLister.Secrets(system.Namespace()).Get(brokerFilterTLSSecretName)
+	if err != nil {
+		return "", fmt.Errorf("failed to get CA certs from %s/%s: %w", system.Namespace(), brokerFilterTLSSecretName, err)
+	}
+	caCerts, ok := secret.Data[eventingtls.SecretCACert]
+	if !ok {
+		return "", fmt.Errorf("failed to get CA certs from %s/%s: missing %s key", system.Namespace(), brokerFilterTLSSecretName, eventingtls.SecretCACert)
+	}
+	return string(caCerts), nil
 }
