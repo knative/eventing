@@ -27,8 +27,10 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"k8s.io/utils/pointer"
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/kncloudevents"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	pkgduckv1 "knative.dev/pkg/apis/duck/v1"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
@@ -45,17 +47,25 @@ import (
 // Domains used in subscriptions, which will be replaced by the real domains of the started HTTP
 // servers.
 var (
-	replaceSubscriber = apis.HTTP("replaceSubscriber").URL()
-	replaceReplier    = apis.HTTP("replaceReplier").URL()
+	replaceSubscriber = duckv1.Addressable{
+		URL: apis.HTTP("replaceSubscriber"),
+	}
+	replaceReplier = duckv1.Addressable{
+		URL: apis.HTTP("replaceReplier"),
+	}
 )
 
 func TestSubscriberSpecToFanoutConfig(t *testing.T) {
-	three := int32(3)
+	subscriberCACerts := "subscriber-certs"
+	replyCACerts := "reply-certs"
+	dlsCACerts := "dls-certs"
 	linear := eventingduckv1.BackoffPolicyLinear
 	delay := "PT1S"
 	spec := &eventingduckv1.SubscriberSpec{
-		SubscriberURI: apis.HTTP("subscriber.example.com"),
-		ReplyURI:      apis.HTTP("reply.example.com"),
+		SubscriberURI:     apis.HTTP("subscriber.example.com"),
+		SubscriberCACerts: &subscriberCACerts,
+		ReplyURI:          apis.HTTP("reply.example.com"),
+		ReplyCACerts:      &replyCACerts,
 		Delivery: &eventingduckv1.DeliverySpec{
 			DeadLetterSink: &pkgduckv1.Destination{
 				Ref: &pkgduckv1.KReference{
@@ -64,17 +74,27 @@ func TestSubscriberSpecToFanoutConfig(t *testing.T) {
 					Name:       "myname",
 					APIVersion: "myapiversion",
 				},
-				URI: apis.HTTP("dls.example.com"),
+				URI:     apis.HTTP("dls.example.com"),
+				CACerts: &dlsCACerts,
 			},
-			Retry:         &three,
+			Retry:         pointer.Int32(3),
 			BackoffPolicy: &linear,
 			BackoffDelay:  &delay,
 		},
 	}
 	want := Subscription{
-		Subscriber: apis.HTTP("subscriber.example.com").URL(),
-		Reply:      apis.HTTP("reply.example.com").URL(),
-		DeadLetter: apis.HTTP("dls.example.com").URL(),
+		Subscriber: duckv1.Addressable{
+			URL:     apis.HTTP("subscriber.example.com"),
+			CACerts: &subscriberCACerts,
+		},
+		Reply: &duckv1.Addressable{
+			URL:     apis.HTTP("reply.example.com"),
+			CACerts: &replyCACerts,
+		},
+		DeadLetter: &duckv1.Addressable{
+			URL:     apis.HTTP("dls.example.com"),
+			CACerts: &dlsCACerts,
+		},
 		RetryConfig: &kncloudevents.RetryConfig{
 			RetryMax:      3,
 			BackoffPolicy: &linear,
@@ -96,19 +116,29 @@ func TestGetSetSubscriptions(t *testing.T) {
 	if len(subs) != 0 {
 		t.Error("Wanted 0 subs, got: ", len(subs))
 	}
-	h.SetSubscriptions(context.TODO(), []Subscription{{Subscriber: apis.HTTP("subscriber.example.com").URL()}})
+	h.SetSubscriptions(context.TODO(), []Subscription{{Subscriber: duckv1.Addressable{
+		URL: apis.HTTP("subscriber.example.com"),
+	}}})
 	subs = h.GetSubscriptions(context.TODO())
 	if len(subs) != 1 {
 		t.Error("Wanted 1 subs, got: ", len(subs))
 
 	}
-	h.SetSubscriptions(context.TODO(), []Subscription{{Subscriber: apis.HTTP("subscriber.example.com").URL()}, {Subscriber: apis.HTTP("subscriber2.example.com").URL()}})
+	h.SetSubscriptions(context.TODO(), []Subscription{{Subscriber: duckv1.Addressable{
+		URL: apis.HTTP("subscriber.example.com"),
+	}}, {Subscriber: duckv1.Addressable{
+		URL: apis.HTTP("subscriber2.example.com"),
+	}}})
 	subs = h.GetSubscriptions(context.TODO())
 	if len(subs) != 2 {
 		t.Error("Wanted 2 subs, got: ", len(subs))
 
 	}
-	h.SetSubscriptions(context.TODO(), []Subscription{{Subscriber: apis.HTTP("subscriber.example.com").URL()}, {Subscriber: apis.HTTP("subscriber3.example.com").URL()}})
+	h.SetSubscriptions(context.TODO(), []Subscription{{Subscriber: duckv1.Addressable{
+		URL: apis.HTTP("subscriber.example.com"),
+	}}, {Subscriber: duckv1.Addressable{
+		URL: apis.HTTP("subscriber3.example.com"),
+	}}})
 	subs = h.GetSubscriptions(context.TODO())
 	if len(subs) != 2 {
 		t.Error("Wanted 2 subs, got: ", len(subs))
@@ -176,7 +206,7 @@ func TestFanoutMessageHandler_ServeHTTP(t *testing.T) {
 		"reply fails": {
 			subs: []Subscription{
 				{
-					Reply: replaceReplier,
+					Reply: &replaceReplier,
 				},
 			},
 			replier: func(writer http.ResponseWriter, _ *http.Request) {
@@ -203,7 +233,7 @@ func TestFanoutMessageHandler_ServeHTTP(t *testing.T) {
 			subs: []Subscription{
 				{
 					Subscriber: replaceSubscriber,
-					Reply:      replaceReplier,
+					Reply:      &replaceReplier,
 				},
 			},
 			subscriber: callableSucceed,
@@ -219,7 +249,7 @@ func TestFanoutMessageHandler_ServeHTTP(t *testing.T) {
 			subs: []Subscription{
 				{
 					Subscriber: replaceSubscriber,
-					Reply:      replaceReplier,
+					Reply:      &replaceReplier,
 				},
 			},
 			subscriber: callableSucceed,
@@ -235,11 +265,11 @@ func TestFanoutMessageHandler_ServeHTTP(t *testing.T) {
 			subs: []Subscription{
 				{
 					Subscriber: replaceSubscriber,
-					Reply:      replaceReplier,
+					Reply:      &replaceReplier,
 				},
 				{
 					Subscriber: replaceSubscriber,
-					Reply:      replaceReplier,
+					Reply:      &replaceReplier,
 				},
 			},
 			subscriber:          callableSucceed,
@@ -253,15 +283,15 @@ func TestFanoutMessageHandler_ServeHTTP(t *testing.T) {
 			subs: []Subscription{
 				{
 					Subscriber: replaceSubscriber,
-					Reply:      replaceReplier,
+					Reply:      &replaceReplier,
 				},
 				{
 					Subscriber: replaceSubscriber,
-					Reply:      replaceReplier,
+					Reply:      &replaceReplier,
 				},
 				{
 					Subscriber: replaceSubscriber,
-					Reply:      replaceReplier,
+					Reply:      &replaceReplier,
 				},
 			},
 			subscriber: callableSucceed,
@@ -312,10 +342,14 @@ func testFanoutMessageHandler(t *testing.T, async bool, receiverFunc channel.Unb
 	subs := make([]Subscription, 0)
 	for _, sub := range inSubs {
 		if sub.Subscriber == replaceSubscriber {
-			sub.Subscriber = apis.HTTP(subscriberServer.URL[7:]).URL() // strip the leading 'http://'
+			sub.Subscriber = duckv1.Addressable{
+				URL: apis.HTTP(subscriberServer.URL[7:]), // strip the leading 'http://'
+			}
 		}
-		if sub.Reply == replaceReplier {
-			sub.Reply = apis.HTTP(replyServer.URL[7:]).URL() // strip the leading 'http://'
+		if sub.Reply == &replaceReplier {
+			sub.Reply = &duckv1.Addressable{
+				URL: apis.HTTP(replyServer.URL[7:]), // strip the leading 'http://'
+			}
 		}
 		subs = append(subs, sub)
 	}

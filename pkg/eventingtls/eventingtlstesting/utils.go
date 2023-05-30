@@ -1,5 +1,5 @@
 /*
-Copyright 2022 The Knative Authors
+Copyright 2023 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,14 +14,21 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package broker
+package eventingtlstesting
 
-import (
-	"knative.dev/pkg/apis"
-)
+import "net/http"
 
-// ErrExtensionInfo struct store the broker-filter's destination and responsebody
-type ErrExtensionInfo struct {
-	ErrDestination  *apis.URL `json:"errdestination"`
-	ErrResponseBody []byte    `json:"errresponsebody"`
+// RequestsChannelHandler
+func RequestsChannelHandler(requestsChan chan<- *http.Request) http.Handler {
+	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		if requestsChan != nil {
+			requestsChan <- request
+		}
+		if request.TLS == nil {
+			// It's not on TLS, fail request
+			writer.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		writer.WriteHeader(http.StatusOK)
+	})
 }

@@ -22,8 +22,9 @@ import (
 	"testing"
 
 	"go.opencensus.io/stats/view"
-	"knative.dev/eventing/pkg/kncloudevents"
+	"knative.dev/eventing/pkg/eventingtls/eventingtlstesting"
 	"knative.dev/eventing/pkg/metrics/source"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/leaderelection"
 	"knative.dev/pkg/metrics"
 
@@ -46,6 +47,7 @@ func TestMainMessageAdapterWithContext(t *testing.T) {
 	metricsJson, _ := metrics.OptionsToJSON(m)
 
 	os.Setenv("K_SINK", "http://sink")
+	os.Setenv("K_CA_CERTS", string(eventingtlstesting.CA))
 	os.Setenv("NAMESPACE", "ns")
 	os.Setenv("K_METRICS_CONFIG", metricsJson)
 	os.Setenv("K_LOGGING_CONFIG", "logging")
@@ -53,6 +55,7 @@ func TestMainMessageAdapterWithContext(t *testing.T) {
 
 	defer func() {
 		os.Unsetenv("K_SINK")
+		os.Unsetenv("K_CA_CERTS")
 		os.Unsetenv("NAMESPACE")
 		os.Unsetenv("K_METRICS_CONFIG")
 		os.Unsetenv("K_LOGGING_CONFIG")
@@ -64,14 +67,18 @@ func TestMainMessageAdapterWithContext(t *testing.T) {
 	MainMessageAdapterWithContext(ctx,
 		"mycomponentbindings",
 		func() EnvConfigAccessor { return &myEnvConfig{} },
-		func(ctx context.Context, environment EnvConfigAccessor, sender *kncloudevents.HTTPMessageSender, reporter source.StatsReporter) MessageAdapter {
+		func(ctx context.Context, environment EnvConfigAccessor, sink duckv1.Addressable, reporter source.StatsReporter) MessageAdapter {
 			env := environment.(*myEnvConfig)
 			if env.Mode != "mymode" {
 				t.Error("Expected mode mymode, got:", env.Mode)
 			}
 
-			if env.Sink != "http://sink" {
-				t.Error("Expected sinkURI http://sink, got:", env.Sink)
+			if sink.URL.String() != "http://sink" {
+				t.Error("Expected sink.URL http://sink, got:", sink.URL.String())
+			}
+
+			if sink.CACerts == nil || *sink.CACerts != string(eventingtlstesting.CA) {
+				t.Error("Unexpected sink.CACerts, got", sink.CACerts)
 			}
 
 			if leaderelection.HasLeaderElection(ctx) {

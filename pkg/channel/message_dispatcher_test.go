@@ -26,18 +26,28 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"
 	"github.com/cloudevents/sdk-go/v2/binding/transformer"
+	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
+	"github.com/cloudevents/sdk-go/v2/test"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
 	"k8s.io/apimachinery/pkg/util/sets"
+	rectesting "knative.dev/pkg/reconciler/testing"
 
+	"knative.dev/eventing/pkg/eventingtls/eventingtlstesting"
+	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/utils"
+	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 var (
@@ -810,7 +820,7 @@ func TestDispatchMessage(t *testing.T) {
 
 			var deadLetterSinkHandler *fakeHandler
 			var deadLetterSinkServer *httptest.Server
-			var deadLetterSink *url.URL
+			var deadLetterSink *duckv1.Addressable
 			if tc.hasDeadLetterSink {
 				deadLetterSinkHandler = &fakeHandler{
 					t:        t,
@@ -820,7 +830,9 @@ func TestDispatchMessage(t *testing.T) {
 				deadLetterSinkServer = httptest.NewServer(deadLetterSinkHandler)
 				defer deadLetterSinkServer.Close()
 
-				deadLetterSink = getOnlyDomainURL(t, true, deadLetterSinkServer.URL)
+				deadLetterSink = &duckv1.Addressable{
+					URL: getOnlyDomainURL(t, true, deadLetterSinkServer.URL),
+				}
 			}
 
 			event := cloudevents.NewEvent(cloudevents.VersionV1)
@@ -836,8 +848,12 @@ func TestDispatchMessage(t *testing.T) {
 
 			md := NewMessageDispatcher(zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())))
 
-			destination := getOnlyDomainURL(t, tc.sendToDestination, destServer.URL)
-			reply := getOnlyDomainURL(t, tc.sendToReply, replyServer.URL)
+			destination := duckv1.Addressable{
+				URL: getOnlyDomainURL(t, tc.sendToDestination, destServer.URL),
+			}
+			reply := &duckv1.Addressable{
+				URL: getOnlyDomainURL(t, tc.sendToReply, replyServer.URL),
+			}
 
 			// We need to do message -> event -> message to emulate the same transformers the event receiver would do
 			message := binding.ToMessage(&event)
@@ -917,13 +933,208 @@ func TestDispatchMessage(t *testing.T) {
 	}
 }
 
-func getOnlyDomainURL(t *testing.T, shouldSend bool, serverURL string) *url.URL {
+func TestDispatchMessageToTLSEndpoint(t *testing.T) {
+	var wg sync.WaitGroup
+	ctx, _ := rectesting.SetupFakeContext(t)
+	ctx, cancel := context.WithCancel(ctx)
+	defer func() {
+		cancel()
+		// give the servers a bit time to fully shutdown to prevent port clashes
+		time.Sleep(500 * time.Millisecond)
+	}()
+	eventToSend := test.FullEvent()
+
+	// destination
+	destinationRequestsChan := make(chan *http.Request, 10)
+	destinationReceivedEvents := make([]*cloudevents.Event, 0, 10)
+	destinationHandler := eventingtlstesting.RequestsChannelHandler(destinationRequestsChan)
+	destinationCA := eventingtlstesting.StartServer(ctx, t, 8334, destinationHandler, kncloudevents.WithDrainQuietPeriod(time.Millisecond))
+	destination := duckv1.Addressable{
+		URL:     apis.HTTPS("localhost:8334"),
+		CACerts: &destinationCA,
+	}
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for r := range destinationRequestsChan {
+			func() {
+				message := cehttp.NewMessageFromHttpRequest(r)
+				defer message.Finish(nil)
+
+				event, err := binding.ToEvent(ctx, message)
+				require.Nil(t, err)
+
+				destinationReceivedEvents = append(destinationReceivedEvents, event)
+			}()
+		}
+	}()
+
+	md := NewMessageDispatcher(zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())))
+
+	// send event
+	message := binding.ToMessage(&eventToSend)
+	info, err := md.DispatchMessage(ctx, message, nil, destination, nil, nil)
+	require.Nil(t, err)
+	require.Equal(t, 200, info.ResponseCode)
+
+	// check received events
+	close(destinationRequestsChan)
+	wg.Wait()
+
+	require.Len(t, destinationReceivedEvents, 1)
+	require.Equal(t, eventToSend.ID(), destinationReceivedEvents[0].ID())
+	require.Equal(t, eventToSend.Data(), destinationReceivedEvents[0].Data())
+}
+
+func TestDispatchMessageToTLSEndpointWithReply(t *testing.T) {
+	var wg sync.WaitGroup
+	ctx, _ := rectesting.SetupFakeContext(t)
+	ctxDestination, cancelDestination := context.WithCancel(ctx)
+	ctxReply, cancelReply := context.WithCancel(ctx)
+	defer func() {
+		cancelDestination()
+		cancelReply()
+		// give the servers a bit time to fully shutdown to prevent port clashes
+		time.Sleep(500 * time.Millisecond)
+	}()
+
+	eventToSend := test.FullEvent()
+	eventToReply := test.FullEvent()
+
+	// destination
+	destinationHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// reply with the eventToReply event
+		w.Header().Add("ce-id", eventToReply.ID())
+		w.Header().Add("ce-specversion", eventToReply.SpecVersion())
+
+		w.Write(eventToReply.Data())
+	})
+
+	destinationCA := eventingtlstesting.StartServer(ctxDestination, t, 8334, destinationHandler, kncloudevents.WithDrainQuietPeriod(time.Millisecond))
+	destination := duckv1.Addressable{
+		URL:     apis.HTTPS("localhost:8334"),
+		CACerts: &destinationCA,
+	}
+
+	// reply
+	replyRequestsChan := make(chan *http.Request, 10)
+	replyHandler := eventingtlstesting.RequestsChannelHandler(replyRequestsChan)
+	replyReceivedEvents := make([]*cloudevents.Event, 0, 10)
+	replyCA := eventingtlstesting.StartServer(ctxReply, t, 8335, replyHandler, kncloudevents.WithDrainQuietPeriod(time.Millisecond))
+	reply := duckv1.Addressable{
+		URL:     apis.HTTPS("localhost:8335"),
+		CACerts: &replyCA,
+	}
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for r := range replyRequestsChan {
+			func() {
+				message := cehttp.NewMessageFromHttpRequest(r)
+				defer message.Finish(nil)
+
+				event, err := binding.ToEvent(ctx, message)
+				require.Nil(t, err)
+
+				replyReceivedEvents = append(replyReceivedEvents, event)
+			}()
+		}
+	}()
+
+	md := NewMessageDispatcher(zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())))
+
+	// send event
+	message := binding.ToMessage(&eventToSend)
+	info, err := md.DispatchMessage(ctx, message, nil, destination, &reply, nil)
+	require.Nil(t, err)
+	require.Equal(t, 200, info.ResponseCode)
+
+	// check received events
+	close(replyRequestsChan)
+	wg.Wait()
+
+	require.Len(t, replyReceivedEvents, 1)
+	require.Equal(t, eventToReply.ID(), replyReceivedEvents[0].ID())
+	require.Equal(t, eventToReply.Data(), replyReceivedEvents[0].Data())
+}
+
+func TestDispatchMessageToTLSEndpointWithDeadLetterSink(t *testing.T) {
+	var wg sync.WaitGroup
+	ctx, _ := rectesting.SetupFakeContext(t)
+	ctxDestination, cancelDestination := context.WithCancel(ctx)
+	ctxDls, cancelDls := context.WithCancel(ctx)
+	defer func() {
+		cancelDestination()
+		cancelDls()
+		// give the servers a bit time to fully shutdown to prevent port clashes
+		time.Sleep(500 * time.Millisecond)
+	}()
+	eventToSend := test.FullEvent()
+
+	// destination
+	destinationHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// reply with 500 code
+		w.WriteHeader(http.StatusInternalServerError)
+	})
+
+	destinationCA := eventingtlstesting.StartServer(ctxDestination, t, 8334, destinationHandler, kncloudevents.WithDrainQuietPeriod(time.Millisecond))
+	destination := duckv1.Addressable{
+		URL:     apis.HTTPS("localhost:8334"),
+		CACerts: &destinationCA,
+	}
+
+	// dls
+	dlsRequestsChan := make(chan *http.Request, 10)
+	dlsHandler := eventingtlstesting.RequestsChannelHandler(dlsRequestsChan)
+	dlsReceivedEvents := make([]*cloudevents.Event, 0, 10)
+	dlsCA := eventingtlstesting.StartServer(ctxDls, t, 8335, dlsHandler, kncloudevents.WithDrainQuietPeriod(time.Millisecond))
+	dls := duckv1.Addressable{
+		URL:     apis.HTTPS("localhost:8335"),
+		CACerts: &dlsCA,
+	}
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for r := range dlsRequestsChan {
+			func() {
+				message := cehttp.NewMessageFromHttpRequest(r)
+				defer message.Finish(nil)
+
+				event, err := binding.ToEvent(ctx, message)
+				require.Nil(t, err)
+
+				dlsReceivedEvents = append(dlsReceivedEvents, event)
+			}()
+		}
+	}()
+
+	md := NewMessageDispatcher(zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())))
+
+	// send event
+	message := binding.ToMessage(&eventToSend)
+	info, err := md.DispatchMessage(ctx, message, nil, destination, nil, &dls)
+	require.Nil(t, err)
+	require.Equal(t, 200, info.ResponseCode)
+
+	// check received events
+	close(dlsRequestsChan)
+	wg.Wait()
+
+	require.Len(t, dlsReceivedEvents, 1)
+	require.Equal(t, eventToSend.ID(), dlsReceivedEvents[0].ID())
+	require.Equal(t, eventToSend.Data(), dlsReceivedEvents[0].Data())
+}
+
+func getOnlyDomainURL(t *testing.T, shouldSend bool, serverURL string) *apis.URL {
 	if shouldSend {
 		server, err := url.Parse(serverURL)
 		if err != nil {
 			t.Errorf("Bad serverURL: %q", serverURL)
 		}
-		return &url.URL{
+		return &apis.URL{
 			Host: server.Host,
 		}
 	}

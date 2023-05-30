@@ -29,6 +29,7 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
 	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/ptr"
 
 	"knative.dev/eventing/pkg/channel"
@@ -37,7 +38,9 @@ import (
 
 var (
 	// The httptest.Server's host name will replace this value in all ChannelConfigs.
-	replaceDomain = apis.HTTP("replaceDomain").URL()
+	replaceDomain = duckv1.Addressable{
+		URL: apis.HTTP("replaceDomain"),
+	}
 )
 
 func TestNewMessageHandlerWithConfig(t *testing.T) {
@@ -91,7 +94,7 @@ func TestNewMessageHandler(t *testing.T) {
 	reporter := channel.NewStatsReporter("testcontainer", "testpod")
 	logger := zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller()))
 
-	handler := NewMessageHandler(context.TODO(), logger, channel.NewMessageDispatcher(logger), reporter)
+	handler := NewMessageHandler(context.TODO(), logger)
 	h := handler.GetChannelHandler(handlerName)
 	if len(handler.handlers) != 0 {
 		t.Errorf("non-empty handler map on creation")
@@ -143,7 +146,7 @@ func TestServeHTTPMessageHandler(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []fanout.Subscription{
 								{
-									Reply: replaceDomain,
+									Reply: &replaceDomain,
 								},
 							},
 						},
@@ -169,7 +172,7 @@ func TestServeHTTPMessageHandler(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []fanout.Subscription{
 								{
-									Reply: replaceDomain,
+									Reply: &replaceDomain,
 								},
 							},
 						},
@@ -189,7 +192,7 @@ func TestServeHTTPMessageHandler(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []fanout.Subscription{
 								{
-									Reply: replaceDomain,
+									Reply: &replaceDomain,
 								},
 							},
 						},
@@ -211,7 +214,9 @@ func TestServeHTTPMessageHandler(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []fanout.Subscription{
 								{
-									Reply: apis.HTTP("first-to-domain").URL(),
+									Reply: &duckv1.Addressable{
+										URL: apis.HTTP("first-to-domain"),
+									},
 								},
 							},
 						},
@@ -246,7 +251,9 @@ func TestServeHTTPMessageHandler(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []fanout.Subscription{
 								{
-									Reply: apis.HTTP("first-to-domain").URL(),
+									Reply: &duckv1.Addressable{
+										URL: apis.HTTP("first-to-domain"),
+									},
 								},
 							},
 						},
@@ -362,10 +369,14 @@ func replaceDomains(config Config, replacement string) {
 	for i, cc := range config.ChannelConfigs {
 		for j, sub := range cc.FanoutConfig.Subscriptions {
 			if sub.Subscriber == replaceDomain {
-				sub.Subscriber = apis.HTTP(replacement).URL()
+				sub.Subscriber = duckv1.Addressable{
+					URL: apis.HTTP(replacement),
+				}
 			}
-			if sub.Reply == replaceDomain {
-				sub.Reply = apis.HTTP(replacement).URL()
+			if sub.Reply != nil && *sub.Reply == replaceDomain {
+				sub.Reply = &duckv1.Addressable{
+					URL: apis.HTTP(replacement),
+				}
 			}
 			cc.FanoutConfig.Subscriptions[j] = sub
 		}

@@ -342,11 +342,20 @@ func TestReconciler_ReconcileKind(t *testing.T) {
 				WithInMemoryChannelSubscribers(subscribers),
 				WithInMemoryChannelAddress(channelServiceAddress),
 				WithInMemoryChannelDLSUnknown()),
-			wantSubs: []fanout.Subscription{
-				{Subscriber: apis.HTTP("call1").URL(),
-					Reply: apis.HTTP("sink2").URL()},
-				{Subscriber: apis.HTTP("call2").URL(),
-					Reply: apis.HTTP("sink2").URL()},
+			wantSubs: []fanout.Subscription{{
+				Subscriber: duckv1.Addressable{
+					URL: apis.HTTP("call1"),
+				},
+				Reply: &duckv1.Addressable{
+					URL: apis.HTTP("sink2"),
+				},
+			}, {
+				Subscriber: duckv1.Addressable{
+					URL: apis.HTTP("call2"),
+				},
+				Reply: &duckv1.Addressable{
+					URL: apis.HTTP("sink2"),
+				}},
 			},
 		},
 		"with one subscriber, one added": {
@@ -360,11 +369,19 @@ func TestReconciler_ReconcileKind(t *testing.T) {
 				WithInMemoryChannelAddress(channelServiceAddress),
 				WithInMemoryChannelDLSUnknown()),
 			subs: []fanout.Subscription{*subscription1},
-			wantSubs: []fanout.Subscription{
-				{Subscriber: apis.HTTP("call1").URL(),
-					Reply: apis.HTTP("sink2").URL()},
-				{Subscriber: apis.HTTP("call2").URL(),
-					Reply: apis.HTTP("sink2").URL()},
+			wantSubs: []fanout.Subscription{{
+				Subscriber: duckv1.Addressable{
+					URL: apis.HTTP("call1"),
+				},
+				Reply: &duckv1.Addressable{
+					URL: apis.HTTP("sink2"),
+				}}, {
+				Subscriber: duckv1.Addressable{
+					URL: apis.HTTP("call2"),
+				},
+				Reply: &duckv1.Addressable{
+					URL: apis.HTTP("sink2"),
+				}},
 			},
 		},
 		"with two subscribers, none added": {
@@ -378,11 +395,19 @@ func TestReconciler_ReconcileKind(t *testing.T) {
 				WithInMemoryChannelAddress(channelServiceAddress),
 				WithInMemoryChannelDLSUnknown()),
 			subs: []fanout.Subscription{*subscription1, *subscription2},
-			wantSubs: []fanout.Subscription{
-				{Subscriber: apis.HTTP("call1").URL(),
-					Reply: apis.HTTP("sink2").URL()},
-				{Subscriber: apis.HTTP("call2").URL(),
-					Reply: apis.HTTP("sink2").URL()},
+			wantSubs: []fanout.Subscription{{
+				Subscriber: duckv1.Addressable{
+					URL: apis.HTTP("call1"),
+				},
+				Reply: &duckv1.Addressable{
+					URL: apis.HTTP("sink2"),
+				}}, {
+				Subscriber: duckv1.Addressable{
+					URL: apis.HTTP("call2"),
+				},
+				Reply: &duckv1.Addressable{
+					URL: apis.HTTP("sink2"),
+				}},
 			},
 		},
 		"with two subscribers, one removed": {
@@ -397,8 +422,13 @@ func TestReconciler_ReconcileKind(t *testing.T) {
 				WithInMemoryChannelDLSUnknown()),
 			subs: []fanout.Subscription{*subscription1, *subscription2},
 			wantSubs: []fanout.Subscription{
-				{Subscriber: apis.HTTP("call1").URL(),
-					Reply: apis.HTTP("sink2").URL()},
+				{
+					Subscriber: duckv1.Addressable{
+						URL: apis.HTTP("call1"),
+					},
+					Reply: &duckv1.Addressable{
+						URL: apis.HTTP("sink2"),
+					}},
 			},
 		},
 		"with two subscribers, one removed one added": {
@@ -413,10 +443,19 @@ func TestReconciler_ReconcileKind(t *testing.T) {
 				WithInMemoryChannelDLSUnknown()),
 			subs: []fanout.Subscription{*subscription1, *subscription2},
 			wantSubs: []fanout.Subscription{
-				{Subscriber: apis.HTTP("call1").URL(),
-					Reply: apis.HTTP("sink2").URL()},
-				{Subscriber: apis.HTTP("call3").URL(),
-					Reply: apis.HTTP("sink2").URL()},
+				{
+					Subscriber: duckv1.Addressable{
+						URL: apis.HTTP("call1"),
+					},
+					Reply: &duckv1.Addressable{
+						URL: apis.HTTP("sink2"),
+					}}, {
+					Subscriber: duckv1.Addressable{
+						URL: apis.HTTP("call3"),
+					},
+					Reply: &duckv1.Addressable{
+						URL: apis.HTTP("sink2"),
+					}},
 			},
 		},
 		"with one subscriber, with delivery spec changed": {
@@ -429,12 +468,21 @@ func TestReconciler_ReconcileKind(t *testing.T) {
 				WithInMemoryChannelSubscribers([]eventingduckv1.SubscriberSpec{subscriber1WithLinearRetry}),
 				WithInMemoryChannelAddress(channelServiceAddress),
 				WithInMemoryChannelDLSUnknown()),
-			subs: []fanout.Subscription{{Subscriber: apis.HTTP("call1").URL(),
-				Reply:       apis.HTTP("sink2").URL(),
+			subs: []fanout.Subscription{{
+				Subscriber: duckv1.Addressable{
+					URL: apis.HTTP("call1"),
+				},
+				Reply: &duckv1.Addressable{
+					URL: apis.HTTP("sink2"),
+				},
 				RetryConfig: &kncloudevents.RetryConfig{RetryMax: 2, BackoffPolicy: &exponential}}},
 			wantSubs: []fanout.Subscription{
-				{Subscriber: apis.HTTP("call1").URL(),
-					Reply:       apis.HTTP("sink2").URL(),
+				{Subscriber: duckv1.Addressable{
+					URL: apis.HTTP("call1"),
+				},
+					Reply: &duckv1.Addressable{
+						URL: apis.HTTP("sink2"),
+					},
 					RetryConfig: &kncloudevents.RetryConfig{RetryMax: 3, BackoffPolicy: &linear}},
 			},
 		},

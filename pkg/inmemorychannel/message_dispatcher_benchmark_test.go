@@ -41,10 +41,10 @@ func BenchmarkDispatcher_dispatch_ok_through_2_channels(b *testing.B) {
 	logger := zap.NewNop()
 	reporter := channel.NewStatsReporter("testcontainer", "testpod")
 
-	channelAUrl := mustParseUrl(b, "http://channela.svc/")
-	transformationsUrl := mustParseUrl(b, "http://transformations.svc/")
-	channelBUrl := mustParseUrl(b, "http://channelb.svc/")
-	receiverUrl := mustParseUrl(b, "http://receiver.svc/")
+	channelA := mustParseUrlToAddressable(b, "http://channela.svc/")
+	transformations := mustParseUrlToAddressable(b, "http://transformations.svc/")
+	channelB := mustParseUrlToAddressable(b, "http://channelb.svc/")
+	receiver := mustParseUrlToAddressable(b, "http://receiver.svc/")
 
 	// The message flow is:
 	// send -> channela -> sub aaaa -> transformationsServer -> channelb -> sub bbbb -> receiver
@@ -57,8 +57,8 @@ func BenchmarkDispatcher_dispatch_ok_through_2_channels(b *testing.B) {
 				FanoutConfig: fanout.Config{
 					AsyncHandler: false,
 					Subscriptions: []fanout.Subscription{{
-						Subscriber: transformationsUrl.URL(),
-						Reply:      channelBUrl.URL(),
+						Subscriber: *transformations,
+						Reply:      channelB,
 					}},
 				},
 			},
@@ -69,7 +69,7 @@ func BenchmarkDispatcher_dispatch_ok_through_2_channels(b *testing.B) {
 				FanoutConfig: fanout.Config{
 					AsyncHandler: false,
 					Subscriptions: []fanout.Subscription{{
-						Subscriber: receiverUrl.URL(),
+						Subscriber: *receiver,
 					}},
 				},
 			},
@@ -77,12 +77,12 @@ func BenchmarkDispatcher_dispatch_ok_through_2_channels(b *testing.B) {
 	}
 
 	// Let's mock this stuff!
-	httpSender, err := kncloudevents.NewHTTPMessageSenderWithTarget(channelAUrl.String())
+	httpSender, err := kncloudevents.NewHTTPMessageSenderWithTarget(channelA.URL.String())
 	if err != nil {
 		b.Fatal(err)
 	}
 
-	multiChannelFanoutHandler, err := multichannelfanout.NewMessageHandlerWithConfig(context.TODO(), logger, channel.NewMessageDispatcherFromSender(logger, httpSender), config, reporter)
+	multiChannelFanoutHandler, err := multichannelfanout.NewMessageHandlerWithConfig(context.TODO(), logger, channel.NewMessageDispatcher(logger), config, reporter)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -96,17 +96,17 @@ func BenchmarkDispatcher_dispatch_ok_through_2_channels(b *testing.B) {
 
 	dispatcher := NewMessageDispatcher(dispatcherArgs)
 	requestHandler := kncloudevents.CreateHandler(dispatcher.handler)
-	httpSender.Client = mockedHTTPClient(clientMock(channelAUrl.Host, transformationsUrl.Host, channelBUrl.Host, receiverUrl.Host, requestHandler))
+	httpSender.Client = mockedHTTPClient(clientMock(channelA.URL.Host, transformations.URL.Host, channelB.URL.Host, receiver.URL.Host, requestHandler))
 
 	// Start the bench
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		req, _ := httpSender.NewCloudEventRequest(context.Background())
+		req, _ := kncloudevents.NewCloudEventRequest(context.Background(), *channelA)
 
 		event := test.FullEvent()
-		_ = protocolhttp.WriteRequest(context.Background(), binding.ToMessage(&event), req)
+		_ = protocolhttp.WriteRequest(context.Background(), binding.ToMessage(&event), req.Request)
 
-		_, _ = httpSender.Send(req)
+		_, _ = req.Send()
 	}
 }
 
