@@ -61,7 +61,7 @@ func ExpectCACerts(gvr schema.GroupVersionResource, name string) feature.StepFn 
 
 func waitFor(gvr schema.GroupVersionResource, name string, cond Condition) feature.StepFn {
 	return func(ctx context.Context, t feature.T) {
-		k8s.IsReady(gvr, name) // Precondition
+		k8s.IsReady(gvr, name)(ctx, t) // Precondition
 
 		namespace := environment.FromContext(ctx).Namespace()
 		obj, err := dynamicclient.Get(ctx).Resource(gvr).
