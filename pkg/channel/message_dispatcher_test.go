@@ -947,7 +947,8 @@ func TestDispatchMessageToTLSEndpoint(t *testing.T) {
 	// destination
 	destinationRequestsChan := make(chan *http.Request, 10)
 	destinationReceivedEvents := make([]*cloudevents.Event, 0, 10)
-	destinationCA := eventingtlstesting.StartServer(ctx, t, 8334, destinationRequestsChan, kncloudevents.WithDrainQuietPeriod(time.Millisecond))
+	destinationHandler := eventingtlstesting.RequestsChannelHandler(destinationRequestsChan)
+	destinationCA := eventingtlstesting.StartServer(ctx, t, 8334, destinationHandler, kncloudevents.WithDrainQuietPeriod(time.Millisecond))
 	destination := duckv1.Addressable{
 		URL:     apis.HTTPS("localhost:8334"),
 		CACerts: &destinationCA,
@@ -1010,7 +1011,7 @@ func TestDispatchMessageToTLSEndpointWithReply(t *testing.T) {
 		w.Write(eventToReply.Data())
 	})
 
-	destinationCA := eventingtlstesting.StartServerWithCustomHandler(ctxDestination, t, 8334, destinationHandler, kncloudevents.WithDrainQuietPeriod(time.Millisecond))
+	destinationCA := eventingtlstesting.StartServer(ctxDestination, t, 8334, destinationHandler, kncloudevents.WithDrainQuietPeriod(time.Millisecond))
 	destination := duckv1.Addressable{
 		URL:     apis.HTTPS("localhost:8334"),
 		CACerts: &destinationCA,
@@ -1018,8 +1019,9 @@ func TestDispatchMessageToTLSEndpointWithReply(t *testing.T) {
 
 	// reply
 	replyRequestsChan := make(chan *http.Request, 10)
+	replyHandler := eventingtlstesting.RequestsChannelHandler(replyRequestsChan)
 	replyReceivedEvents := make([]*cloudevents.Event, 0, 10)
-	replyCA := eventingtlstesting.StartServer(ctxReply, t, 8335, replyRequestsChan, kncloudevents.WithDrainQuietPeriod(time.Millisecond))
+	replyCA := eventingtlstesting.StartServer(ctxReply, t, 8335, replyHandler, kncloudevents.WithDrainQuietPeriod(time.Millisecond))
 	reply := duckv1.Addressable{
 		URL:     apis.HTTPS("localhost:8335"),
 		CACerts: &replyCA,
@@ -1077,7 +1079,7 @@ func TestDispatchMessageToTLSEndpointWithDeadLetterSink(t *testing.T) {
 		w.WriteHeader(http.StatusInternalServerError)
 	})
 
-	destinationCA := eventingtlstesting.StartServerWithCustomHandler(ctxDestination, t, 8334, destinationHandler, kncloudevents.WithDrainQuietPeriod(time.Millisecond))
+	destinationCA := eventingtlstesting.StartServer(ctxDestination, t, 8334, destinationHandler, kncloudevents.WithDrainQuietPeriod(time.Millisecond))
 	destination := duckv1.Addressable{
 		URL:     apis.HTTPS("localhost:8334"),
 		CACerts: &destinationCA,
@@ -1085,8 +1087,9 @@ func TestDispatchMessageToTLSEndpointWithDeadLetterSink(t *testing.T) {
 
 	// dls
 	dlsRequestsChan := make(chan *http.Request, 10)
+	dlsHandler := eventingtlstesting.RequestsChannelHandler(dlsRequestsChan)
 	dlsReceivedEvents := make([]*cloudevents.Event, 0, 10)
-	dlsCA := eventingtlstesting.StartServer(ctxDls, t, 8335, dlsRequestsChan, kncloudevents.WithDrainQuietPeriod(time.Millisecond))
+	dlsCA := eventingtlstesting.StartServer(ctxDls, t, 8335, dlsHandler, kncloudevents.WithDrainQuietPeriod(time.Millisecond))
 	dls := duckv1.Addressable{
 		URL:     apis.HTTPS("localhost:8335"),
 		CACerts: &dlsCA,
