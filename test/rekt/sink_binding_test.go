@@ -54,7 +54,7 @@ func TestSinkBindingV1DeploymentTLS(t *testing.T) {
 		knative.WithLoggingConfig,
 		knative.WithTracingConfig,
 		k8s.WithEventListener,
-		//environment.Managed(t),
+		environment.Managed(t),
 		eventshub.WithTLS(t),
 	)
 	t.Cleanup(env.Finish)
