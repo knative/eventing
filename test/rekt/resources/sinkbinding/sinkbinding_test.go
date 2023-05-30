@@ -161,12 +161,12 @@ func Example_withSink() {
 			APIVersion: "sinkversion",
 		},
 		URI: &apis.URL{Path: "uri/parts"},
-    }
-    sinkbinding.WithSink(sinkRef)(cfg)
-	files, err := manifest.ExecuteYAML(ctx, yaml, images, cfg)
-	if err != nil {
+         }
+         sinkbinding.WithSink(sinkRef)(cfg)
+	    files, err := manifest.ExecuteYAML(ctx, yaml, images, cfg)
+	    if err != nil {
 		panic(err)
-	}
+	    }
 
 	manifest.OutputYAML(os.Stdout, files)
         // Output:
