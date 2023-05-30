@@ -115,7 +115,8 @@ func Example_fullbase64() {
 				"name":       "sinkname",
 				"apiVersion": "sinkversion",
 			},
-			"uri": "uri/parts",
+			"uri":     "uri/parts",
+			"CACerts": "xyz",
 		},
 	}
 
@@ -142,4 +143,6 @@ func Example_fullbase64() {
 	//       name: sinkname
 	//       apiVersion: sinkversion
 	//     uri: uri/parts
+	//     CACerts: |-
+	//       xyz
 }

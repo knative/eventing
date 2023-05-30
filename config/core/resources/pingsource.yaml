@@ -103,6 +103,9 @@ spec:
                                 Relative URIs will be resolved using the base URI retrieved
                                 from Ref.'
                     type: string
+                  CACerts:
+                    description: CACerts is the Certification Authority (CA) certificates in PEM format that the source trusts when sending events to the sink.
+                    type: string
               timezone:
                 description: 'Timezone modifies the actual time relative to the specified
                         timezone. Defaults to the system time zone. More general information
@@ -177,6 +180,9 @@ spec:
               sinkUri:
                 description: 'SinkURI is the current active sink URI that has been
                           configured for the Source.'
+                type: string
+              sinkCACerts:
+                description: CACerts is the Certification Authority (CA) certificates in PEM format that the source trusts when sending events to the sink.
                 type: string
     additionalPrinterColumns:
     - name: Sink

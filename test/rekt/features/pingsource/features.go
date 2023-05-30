@@ -21,11 +21,14 @@ import (
 
 	"github.com/cloudevents/sdk-go/v2/test"
 	"k8s.io/apimachinery/pkg/util/sets"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/eventshub"
-	"knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
 	"knative.dev/reconciler-test/pkg/resources/service"
+
+	"knative.dev/reconciler-test/pkg/eventshub/assert"
+	eventassert "knative.dev/reconciler-test/pkg/eventshub/assert"
 
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/eventing/test/rekt/resources/broker"
@@ -41,12 +44,36 @@ func SendsEventsWithSinkRef() *feature.Feature {
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 
-	f.Requirement("install pingsource", pingsource.Install(source, pingsource.WithSink(service.AsKReference(sink), "")))
+	f.Requirement("install pingsource", pingsource.Install(source, pingsource.WithSink(service.AsDestinationRef(sink))))
 	f.Requirement("pingsource goes ready", pingsource.IsReady(source))
 
 	f.Stable("pingsource as event source").
 		Must("delivers events",
 			assert.OnStore(sink).MatchEvent(test.HasType("dev.knative.sources.ping")).AtLeast(1))
+
+	return f
+}
+
+func SendsEventsTLS() *feature.Feature {
+	source := feature.MakeRandomK8sName("pingsource")
+	sink := feature.MakeRandomK8sName("sink")
+	f := feature.NewFeature()
+
+	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiverTLS))
+
+	f.Requirement("install pingsource", func(ctx context.Context, t feature.T) {
+		d := service.AsDestinationRef(sink)
+		d.CACerts = eventshub.GetCaCerts(ctx)
+
+		pingsource.Install(source, pingsource.WithSink(d))(ctx, t)
+	})
+	f.Requirement("pingsource goes ready", pingsource.IsReady(source))
+
+	f.Stable("pingsource as event source").
+		Must("delivers events", assert.OnStore(sink).
+			Match(eventassert.MatchKind(eventshub.EventReceived)).
+			MatchEvent(test.HasType("dev.knative.sources.ping")).
+			AtLeast(1))
 
 	return f
 }
@@ -58,7 +85,7 @@ func SendsEventsWithSinkURI() *feature.Feature {
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 
-	f.Requirement("install pingsource", pingsource.Install(source, pingsource.WithSink(service.AsKReference(sink), "")))
+	f.Requirement("install pingsource", pingsource.Install(source, pingsource.WithSink(service.AsDestinationRef(sink))))
 	f.Requirement("pingsource goes ready", pingsource.IsReady(source))
 
 	f.Stable("pingsource as event source").
@@ -77,7 +104,7 @@ func SendsEventsWithCloudEventData() *feature.Feature {
 
 	f.Requirement("install pingsource", pingsource.Install(source,
 		pingsource.WithDataBase64("text/plain", "aGVsbG8sIHdvcmxkIQ=="),
-		pingsource.WithSink(service.AsKReference(sink), ""),
+		pingsource.WithSink(service.AsDestinationRef(sink)),
 	))
 	f.Requirement("pingsource goes ready", pingsource.IsReady(source))
 
@@ -112,7 +139,7 @@ func SendsEventsWithEventTypes() *feature.Feature {
 			t.Error("failed to get address of broker", err)
 		}
 		cfg := []manifest.CfgFn{
-			pingsource.WithSink(nil, brokeruri.String()),
+			pingsource.WithSink(&duckv1.Destination{URI: brokeruri}),
 			pingsource.WithData("text/plain", "hello, world!"),
 		}
 		pingsource.Install(source, cfg...)(ctx, t)

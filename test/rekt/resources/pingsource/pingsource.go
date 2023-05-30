@@ -19,10 +19,11 @@ package pingsource
 import (
 	"context"
 	"embed"
+	"strings"
 	"time"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"knative.dev/eventing/test/rekt/resources/source"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/k8s"
 
 	"knative.dev/reconciler-test/pkg/feature"
@@ -57,7 +58,37 @@ func IsReady(name string, timings ...time.Duration) feature.StepFn {
 }
 
 // WithSink adds the sink related config to a PingSource spec.
-var WithSink = source.WithSink
+func WithSink(dest *duckv1.Destination) manifest.CfgFn {
+	return func(cfg map[string]interface{}) {
+		if _, set := cfg["sink"]; !set {
+			cfg["sink"] = map[string]interface{}{}
+		}
+		sink := cfg["sink"].(map[string]interface{})
+
+		uri := dest.URI
+		ref := dest.Ref
+
+		if dest.CACerts != nil {
+			// This is a multi-line string and should be indented accordingly.
+			// Replace "new line" with "new line + spaces".
+			sink["CACerts"] = strings.ReplaceAll(*dest.CACerts, "\n", "\n      ")
+		}
+
+		if uri != nil {
+			sink["uri"] = uri.String()
+		}
+		if ref != nil {
+			if _, set := sink["ref"]; !set {
+				sink["ref"] = map[string]interface{}{}
+			}
+			sref := sink["ref"].(map[string]interface{})
+			sref["apiVersion"] = ref.APIVersion
+			sref["kind"] = ref.Kind
+			// skip namespace
+			sref["name"] = ref.Name
+		}
+	}
+}
 
 // WithData adds the contentType and data config to a PingSource spec.
 func WithData(contentType, data string) manifest.CfgFn {

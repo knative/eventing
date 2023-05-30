@@ -42,4 +42,8 @@ spec:
     {{ if .sink.uri }}
     uri: {{ .sink.uri }}
     {{ end }}
+    {{ if .sink.CACerts }}
+    CACerts: |-
+      {{ .sink.CACerts }}
+    {{ end }}
   {{ end }}
