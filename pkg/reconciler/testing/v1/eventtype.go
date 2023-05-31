@@ -18,8 +18,9 @@ package testing
 
 import (
 	"context"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"time"
+
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/pkg/apis/eventing/v1beta2"
@@ -64,7 +65,6 @@ func WithEventTypeType(t string) EventTypeOption {
 func WithEventTypeReference(ref *duckv1.KReference) EventTypeOption {
 	return func(et *v1beta2.EventType) {
 		et.Spec.Reference = ref
-		//		et.Spec.Broker = et.Spec.Reference.Name
 	}
 }
 

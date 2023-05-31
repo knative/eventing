@@ -18,6 +18,7 @@ package v1beta1
 
 import (
 	"context"
+
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
 	"knative.dev/eventing/pkg/apis/eventing/v1beta2"

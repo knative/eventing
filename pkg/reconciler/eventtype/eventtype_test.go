@@ -19,8 +19,9 @@ package eventtype
 import (
 	"context"
 	"fmt"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"testing"
+
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
