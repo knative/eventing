@@ -30,7 +30,6 @@ import (
 
 // NewController initializes the controller and is called by the generated code
 // Registers event handlers to enqueue events
-// TODO remove https://github.com/knative/eventing/issues/2750
 func NewController(
 	ctx context.Context,
 	cmw configmap.Watcher,

@@ -341,9 +341,9 @@ func makeEventType(ceType, ceSource string) *v1beta2.EventType {
 			}},
 		},
 		Spec: v1beta2.EventTypeSpec{
-			Type:   ceType,
-			Source: ceSourceURL,
-			Broker: sinkName,
+			Type:      ceType,
+			Source:    ceSourceURL,
+			Reference: brokerDest.Ref,
 		},
 	}
 }

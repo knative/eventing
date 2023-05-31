@@ -104,9 +104,6 @@ func (r *Reconciler) reconcile(ctx context.Context, source *duckv1.Source) error
 	return nil
 }
 
-// TODO revisit most of this logic once we get rid of Broker and maybe some other bits.
-//
-//	https://github.com/knative/eventing/issues/2750.
 func (r *Reconciler) reconcileEventTypes(ctx context.Context, src *duckv1.Source) error {
 	current, err := r.getEventTypes(ctx, src)
 	if err != nil {
@@ -153,16 +150,14 @@ func (r *Reconciler) getEventTypes(ctx context.Context, src *duckv1.Source) ([]v
 }
 
 func (r *Reconciler) makeEventTypes(ctx context.Context, src *duckv1.Source) []v1beta2.EventType {
-	// Only create EventTypes for Broker sinks.
+	// Only create EventTypes for Broker sinks, for now
 	// We add this check here in case the Source was changed from Broker to non-Broker sink.
 	// If so, we need to delete the existing ones, thus we return empty expected.
-	// TODO remove broker from EventType https://github.com/knative/eventing/issues/2750
 	if ref := src.Spec.Sink.GetRef(); ref == nil || ref.Kind != "Broker" {
 		return make([]v1beta2.EventType, 0)
 	}
 
 	// If the Source didn't specify a CloudEventsAttributes, then we skip the creation of EventTypes.
-	// TODO might change in the near future https://github.com/knative/eventing/issues/2750.
 	if src.Status.CloudEventAttributes == nil {
 		return make([]v1beta2.EventType, 0)
 	}
@@ -242,7 +237,6 @@ func (r *Reconciler) computeDiff(current []v1beta2.EventType, expected []v1beta2
 	}
 	// Need to check whether the current EventTypes are not in the expected map. If so, we have to delete them.
 	// This could happen if the Source CO changes its broker.
-	// TODO remove once we remove Broker https://github.com/knative/eventing/issues/2750
 	for i := range current {
 		c := current[i]
 		if _, ok := expectedMap[keyFromEventType(&c)]; !ok {
@@ -262,7 +256,6 @@ func asMap(eventTypes []v1beta2.EventType, keyFunc func(*v1beta2.EventType) stri
 	return eventTypesAsMap
 }
 
-// TODO we should probably use the hash of this instead. Will be revisited together with https://github.com/knative/eventing/issues/2750.
 func keyFromEventType(eventType *v1beta2.EventType) string {
-	return fmt.Sprintf("%s_%s_%s_%s", eventType.Spec.Type, eventType.Spec.Source, eventType.Spec.Schema, eventType.Spec.Broker)
+	return fmt.Sprintf("%s_%s_%s_%s", eventType.Spec.Type, eventType.Spec.Source, eventType.Spec.Schema, eventType.Spec.Reference.Name)
 }
