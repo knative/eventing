@@ -33,6 +33,7 @@ import (
 	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"go.opencensus.io/trace"
 	"go.uber.org/zap"
+	"k8s.io/client-go/tools/cache"
 	channelAttributes "knative.dev/eventing/pkg/channel/attributes"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/logging"
@@ -40,6 +41,7 @@ import (
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/pkg/apis/feature"
 	broker "knative.dev/eventing/pkg/broker"
+	v1 "knative.dev/eventing/pkg/client/informers/externalversions/eventing/v1"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1"
 	"knative.dev/eventing/pkg/eventfilter"
 	"knative.dev/eventing/pkg/eventfilter/attributes"
@@ -89,17 +91,49 @@ type Handler struct {
 	withContext   func(ctx context.Context) context.Context
 }
 
-// NewHandler creates a new Handler and its associated MessageReceiver. The caller is responsible for
-// Start()ing the returned Handler.
-func NewHandler(logger *zap.Logger, triggerLister eventinglisters.TriggerLister, reporter StatsReporter, wc func(ctx context.Context) context.Context) (*Handler, error) {
+// NewHandler creates a new Handler and its associated MessageReceiver.
+func NewHandler(logger *zap.Logger, triggerInformer v1.TriggerInformer, reporter StatsReporter, wc func(ctx context.Context) context.Context) (*Handler, error) {
 	kncloudevents.ConfigureConnectionArgs(&kncloudevents.ConnectionArgs{
 		MaxIdleConns:        defaultMaxIdleConnections,
 		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
 	})
 
+	triggerInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			trigger, ok := obj.(eventingv1.Trigger)
+			if !ok {
+				return
+			}
+			kncloudevents.AddOrUpdateAddressableHandler(duckv1.Addressable{
+				URL:     trigger.Status.SubscriberURI,
+				CACerts: trigger.Status.SubscriberCACerts,
+			})
+		},
+		UpdateFunc: func(_, obj interface{}) {
+			trigger, ok := obj.(eventingv1.Trigger)
+			if !ok {
+				return
+			}
+			kncloudevents.AddOrUpdateAddressableHandler(duckv1.Addressable{
+				URL:     trigger.Status.SubscriberURI,
+				CACerts: trigger.Status.SubscriberCACerts,
+			})
+		},
+		DeleteFunc: func(obj interface{}) {
+			trigger, ok := obj.(eventingv1.Trigger)
+			if !ok {
+				return
+			}
+			kncloudevents.DeleteAddressableHandler(duckv1.Addressable{
+				URL:     trigger.Status.SubscriberURI,
+				CACerts: trigger.Status.SubscriberCACerts,
+			})
+		},
+	})
+
 	return &Handler{
 		reporter:      reporter,
-		triggerLister: triggerLister,
+		triggerLister: triggerInformer.Lister(),
 		logger:        logger,
 		withContext:   wc,
 	}, nil
