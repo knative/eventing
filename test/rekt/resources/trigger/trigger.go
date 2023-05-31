@@ -19,6 +19,7 @@ package trigger
 import (
 	"context"
 	"embed"
+	"strings"
 	"time"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -65,6 +66,39 @@ func WithSubscriber(ref *duckv1.KReference, uri string) manifest.CfgFn {
 
 		if uri != "" {
 			subscriber["uri"] = uri
+		}
+		if ref != nil {
+			if _, set := subscriber["ref"]; !set {
+				subscriber["ref"] = map[string]interface{}{}
+			}
+			sref := subscriber["ref"].(map[string]interface{})
+			sref["apiVersion"] = ref.APIVersion
+			sref["kind"] = ref.Kind
+			// skip namespace
+			sref["name"] = ref.Name
+		}
+	}
+}
+
+// WithSubscriberFromDestination adds the subscriber related config to a Trigger spec.
+func WithSubscriberFromDestination(dest *duckv1.Destination) manifest.CfgFn {
+	return func(cfg map[string]interface{}) {
+		if _, set := cfg["subscriber"]; !set {
+			cfg["subscriber"] = map[string]interface{}{}
+		}
+		subscriber := cfg["subscriber"].(map[string]interface{})
+
+		uri := dest.URI
+		ref := dest.Ref
+
+		if dest.CACerts != nil {
+			// This is a multi-line string and should be indented accordingly.
+			// Replace "new line" with "new line + spaces".
+			subscriber["CACerts"] = strings.ReplaceAll(*dest.CACerts, "\n", "\n      ")
+		}
+
+		if uri != nil {
+			subscriber["uri"] = uri.String()
 		}
 		if ref != nil {
 			if _, set := subscriber["ref"]; !set {
