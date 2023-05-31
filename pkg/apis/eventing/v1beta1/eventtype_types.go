@@ -41,7 +41,6 @@ type EventType struct {
 	// Status represents the current state of the EventType.
 	// This data may be out of date.
 	// +optional
-	// TODO might be removed https://github.com/knative/eventing/issues/2750
 	Status EventTypeStatus `json:"status,omitempty"`
 }
 
@@ -77,7 +76,6 @@ type EventTypeSpec struct {
 	// The contents are not validated or manipulated by the system.
 	// +optional
 	SchemaData string `json:"schemaData,omitempty"`
-	// TODO remove https://github.com/knative/eventing/issues/2750
 	// Broker refers to the Broker that can provide the EventType.
 	// +optional
 	Broker string `json:"broker,omitempty"`

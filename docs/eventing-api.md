@@ -2471,8 +2471,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>TODO remove <a href="https://github.com/knative/eventing/issues/2750">https://github.com/knative/eventing/issues/2750</a>
-Broker refers to the Broker that can provide the EventType.</p>
+<p>Broker refers to the Broker that can provide the EventType.</p>
 </td>
 </tr>
 <tr>
@@ -2502,8 +2501,7 @@ EventTypeStatus
 <td>
 <em>(Optional)</em>
 <p>Status represents the current state of the EventType.
-This data may be out of date.
-TODO might be removed <a href="https://github.com/knative/eventing/issues/2750">https://github.com/knative/eventing/issues/2750</a></p>
+This data may be out of date.</p>
 </td>
 </tr>
 </tbody>
@@ -2586,8 +2584,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>TODO remove <a href="https://github.com/knative/eventing/issues/2750">https://github.com/knative/eventing/issues/2750</a>
-Broker refers to the Broker that can provide the EventType.</p>
+<p>Broker refers to the Broker that can provide the EventType.</p>
 </td>
 </tr>
 <tr>
@@ -2771,8 +2768,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>TODO remove <a href="https://github.com/knative/eventing/issues/2750">https://github.com/knative/eventing/issues/2750</a>
-Broker refers to the Broker that can provide the EventType.
+<p>Broker refers to the Broker that can provide the EventType.
 Deprecated: This field is deprecated and will be removed in a future release.</p>
 </td>
 </tr>
@@ -2818,8 +2814,7 @@ EventTypeStatus
 <td>
 <em>(Optional)</em>
 <p>Status represents the current state of the EventType.
-This data may be out of date.
-TODO might be removed <a href="https://github.com/knative/eventing/issues/2750">https://github.com/knative/eventing/issues/2750</a></p>
+This data may be out of date.</p>
 </td>
 </tr>
 </tbody>
@@ -2902,8 +2897,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>TODO remove <a href="https://github.com/knative/eventing/issues/2750">https://github.com/knative/eventing/issues/2750</a>
-Broker refers to the Broker that can provide the EventType.
+<p>Broker refers to the Broker that can provide the EventType.
 Deprecated: This field is deprecated and will be removed in a future release.</p>
 </td>
 </tr>
