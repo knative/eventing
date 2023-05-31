@@ -20,6 +20,8 @@ import (
 	"context"
 	"testing"
 
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+
 	"github.com/google/go-cmp/cmp"
 
 	"knative.dev/pkg/apis"
@@ -35,24 +37,38 @@ func TestEventTypeDefaults(t *testing.T) {
 		"nil spec": {
 			initial: EventType{},
 			expected: EventType{
-				Spec: EventTypeSpec{},
+				Spec: EventTypeSpec{
+					Reference: &duckv1.KReference{
+						APIVersion: "eventing.knative.dev/v1",
+						Kind:       "Broker",
+						Name:       "default",
+					},
+				},
 			},
 		},
 		"broker empty": {
 			initial: EventType{
 				Spec: EventTypeSpec{
-					Type:      "test-type",
-					Source:    testSource,
-					Reference: nil,
-					Schema:    testSchema,
+					Type:   "test-type",
+					Source: testSource,
+					Reference: &duckv1.KReference{
+						APIVersion: "eventing.knative.dev/v1",
+						Kind:       "Broker",
+						Name:       "default",
+					},
+					Schema: testSchema,
 				},
 			},
 			expected: EventType{
 				Spec: EventTypeSpec{
-					Type:      "test-type",
-					Source:    testSource,
-					Reference: nil,
-					Schema:    testSchema,
+					Type:   "test-type",
+					Source: testSource,
+					Reference: &duckv1.KReference{
+						APIVersion: "eventing.knative.dev/v1",
+						Kind:       "Broker",
+						Name:       "default",
+					},
+					Schema: testSchema,
 				},
 			},
 		},
@@ -66,10 +82,14 @@ func TestEventTypeDefaults(t *testing.T) {
 			},
 			expected: EventType{
 				Spec: EventTypeSpec{
-					Type:      "test-type",
-					Source:    testSource,
-					Reference: nil,
-					Schema:    testSchema,
+					Type:   "test-type",
+					Source: testSource,
+					Reference: &duckv1.KReference{
+						APIVersion: "eventing.knative.dev/v1",
+						Kind:       "Broker",
+						Name:       "default",
+					},
+					Schema: testSchema,
 				},
 			},
 		},
