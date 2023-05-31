@@ -535,7 +535,7 @@ func TestReconcile(t *testing.T) {
 						URI:     dlsURL,
 						CACerts: pointer.String(string(eventingtlstesting.CA)),
 					}),
-					WithBrokerStatusDLSURI(duckv1.Addressable{
+					WithBrokerStatusDLS(duckv1.Addressable{
 						URL:     dlsURL,
 						CACerts: pointer.String(string(eventingtlstesting.CA)),
 					}),
@@ -992,7 +992,7 @@ func TestReconcile(t *testing.T) {
 					WithChannelKindAnnotation(triggerChannelKind),
 					WithChannelNameAnnotation(triggerChannelName),
 					WithDeadLeaderSink(dlsSVCDest),
-					WithBrokerStatusDLSURI(brokerDLS),
+					WithBrokerStatusDLS(brokerDLS),
 				),
 				createChannel(testNS, true),
 				imcConfigMap(),
@@ -1052,7 +1052,7 @@ func TestReconcile(t *testing.T) {
 					WithChannelKindAnnotation(triggerChannelKind),
 					WithChannelNameAnnotation(triggerChannelName),
 					WithDeadLeaderSink(dlsSVCDest),
-					WithBrokerStatusDLSURI(brokerDLS),
+					WithBrokerStatusDLS(brokerDLS),
 				),
 				createChannel(testNS, true),
 				// Use the legacy channel template configmap element at this test.
@@ -1113,7 +1113,7 @@ func TestReconcile(t *testing.T) {
 					WithChannelKindAnnotation(triggerChannelKind),
 					WithChannelNameAnnotation(triggerChannelName),
 					WithDeadLeaderSink(k8sSVCDest),
-					WithBrokerStatusDLSURI(k8sSVCDestAddr),
+					WithBrokerStatusDLS(k8sSVCDestAddr),
 				),
 				createChannel(testNS, true),
 				imcConfigMap(),

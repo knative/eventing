@@ -183,7 +183,7 @@ func WithChannelCACertsAnnotation(caCerts string) BrokerOption {
 	}
 }
 
-func WithBrokerStatusDLSURI(dls duckv1.Addressable) BrokerOption {
+func WithBrokerStatusDLS(dls duckv1.Addressable) BrokerOption {
 	return func(b *v1.Broker) {
 		b.Status.MarkDeadLetterSinkResolvedSucceeded(eventingv1.NewDeliveryStatusFromAddressable(&dls))
 	}
