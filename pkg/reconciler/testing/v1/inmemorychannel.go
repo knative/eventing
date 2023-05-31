@@ -23,8 +23,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/pkg/apis"
-
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
 	eventingv1 "knative.dev/eventing/pkg/apis/duck/v1"
@@ -212,7 +210,7 @@ func WithInMemoryScopeAnnotation(value string) InMemoryChannelOption {
 	}
 }
 
-func WithInMemoryChannelStatusDLSURI(dlsURI *duckv1.Addressable) InMemoryChannelOption {
+func WithInMemoryChannelStatusDLS(dlsURI *duckv1.Addressable) InMemoryChannelOption {
 	return func(imc *v1.InMemoryChannel) {
 		if dlsURI == nil {
 			imc.Status.MarkDeadLetterSinkNotConfigured()
@@ -239,18 +237,11 @@ func WithInMemoryChannelDLSResolvedFailed() InMemoryChannelOption {
 	}
 }
 
-func WithDeadLetterSink(ref *duckv1.KReference, uri string) InMemoryChannelOption {
+func WithDeadLetterSink(d duckv1.Destination) InMemoryChannelOption {
 	return func(imc *v1.InMemoryChannel) {
 		if imc.Spec.Delivery == nil {
 			imc.Spec.Delivery = new(eventingv1.DeliverySpec)
 		}
-		var u *apis.URL
-		if uri != "" {
-			u, _ = apis.ParseURL(uri)
-		}
-		imc.Spec.Delivery.DeadLetterSink = &duckv1.Destination{
-			Ref: ref,
-			URI: u,
-		}
+		imc.Spec.Delivery.DeadLetterSink = &d
 	}
 }
