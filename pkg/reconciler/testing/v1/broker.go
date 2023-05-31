@@ -216,19 +216,12 @@ func WithChannelNameAnnotation(name string) BrokerOption {
 	}
 }
 
-func WithDeadLeaderSink(ref *duckv1.KReference, uri string) BrokerOption {
+func WithDeadLeaderSink(d duckv1.Destination) BrokerOption {
 	return func(b *v1.Broker) {
 		if b.Spec.Delivery == nil {
 			b.Spec.Delivery = new(eventingv1.DeliverySpec)
 		}
-		var u *apis.URL
-		if uri != "" {
-			u, _ = apis.ParseURL(uri)
-		}
-		b.Spec.Delivery.DeadLetterSink = &duckv1.Destination{
-			Ref: ref,
-			URI: u,
-		}
+		b.Spec.Delivery.DeadLetterSink = &d
 	}
 }
 

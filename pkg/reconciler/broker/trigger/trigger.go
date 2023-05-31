@@ -131,8 +131,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, t *eventingv1.Trigger) p
 		t.Status.SubscriberCACerts = nil
 		return err
 	}
-	subscriberURI := subscriberAddr.URL
-	t.Status.SubscriberURI = subscriberURI
+	t.Status.SubscriberURI = subscriberAddr.URL
 	t.Status.SubscriberCACerts = subscriberAddr.CACerts
 	t.Status.MarkSubscriberResolvedSucceeded()
 

@@ -59,19 +59,21 @@ func WithTriggerSubscriberURI(rawurl string) TriggerOption {
 	}
 }
 
-func WithTriggerDeadLeaderSink(ref *duckv1.KReference, uri string) TriggerOption {
+func WithTriggerSubscriber(sub duckv1.Destination) TriggerOption {
+	if err := sub.Validate(context.Background()).Filter(apis.ErrorLevel); err != nil {
+		panic(err)
+	}
+	return func(t *v1.Trigger) {
+		t.Spec.Subscriber = sub
+	}
+}
+
+func WithTriggerDeadLeaderSink(destination duckv1.Destination) TriggerOption {
 	return func(t *v1.Trigger) {
 		if t.Spec.Delivery == nil {
 			t.Spec.Delivery = new(eventingv1.DeliverySpec)
 		}
-		var u *apis.URL
-		if uri != "" {
-			u, _ = apis.ParseURL(uri)
-		}
-		t.Spec.Delivery.DeadLetterSink = &duckv1.Destination{
-			Ref: ref,
-			URI: u,
-		}
+		t.Spec.Delivery.DeadLetterSink = &destination
 	}
 }
 
@@ -190,9 +192,9 @@ func WithTriggerStatusSubscriberURI(uri string) TriggerOption {
 	}
 }
 
-func WithTriggerStatusSubscriberCACerts(caCerts *string) TriggerOption {
+func WithTriggerStatusSubscriberCACerts(caCerts string) TriggerOption {
 	return func(t *v1.Trigger) {
-		t.Status.SubscriberCACerts = caCerts
+		t.Status.SubscriberCACerts = &caCerts
 	}
 }
 
@@ -268,6 +270,12 @@ func WithTriggerDeadLetterSinkResolvedFailed(reason, message string) TriggerOpti
 func WithTriggerDeadLetterSinkResolvedSucceeded() TriggerOption {
 	return func(t *v1.Trigger) {
 		t.Status.MarkDeadLetterSinkResolvedSucceeded()
+	}
+}
+
+func WithTriggerDeadLetterSinkCACerts(ca string) TriggerOption {
+	return func(t *v1.Trigger) {
+		t.Status.DeadLetterSinkCACerts = &ca
 	}
 }
 
