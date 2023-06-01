@@ -86,9 +86,6 @@ func Install(name string, options ...EventsHubOption) feature.StepFn {
 		eventListener := k8s.EventListenerFromContext(ctx)
 		registerEventsHubStore(ctx, eventListener, name, namespace)
 
-		// Install ServiceAccount, Role, RoleBinding
-		eventshubrbac.Install()(ctx, t)
-
 		isReceiver := strings.Contains(envs[EventGeneratorsEnv], "receiver")
 		isEnforceTLS := strings.Contains(envs[EnforceTLS], "true")
 
@@ -113,6 +110,9 @@ func Install(name string, options ...EventsHubOption) feature.StepFn {
 			"withReadiness":  isReceiver,
 			"withEnforceTLS": isEnforceTLS,
 		}
+
+		// Install ServiceAccount, Role, RoleBinding
+		eventshubrbac.Install(cfg)(ctx, t)
 
 		if ic := environment.GetIstioConfig(ctx); ic.Enabled {
 			manifest.WithIstioPodAnnotations(cfg)
