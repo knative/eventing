@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -95,8 +96,10 @@ func TestApiServerSourceGetGroupVersionKind(t *testing.T) {
 }
 
 func TestApiServerSourceStatusIsReady(t *testing.T) {
-	sink := apis.HTTP("example")
-	sink.Scheme = "uri"
+	sink := &duckv1.Addressable{
+		URL: apis.HTTP("example"),
+	}
+	sink.URL.Scheme = "uri"
 
 	tests := []struct {
 		name                string
@@ -245,8 +248,10 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 }
 
 func TestApiServerSourceStatusGetCondition(t *testing.T) {
-	sink := apis.HTTP("example")
-	sink.Scheme = "uri"
+	sink := &duckv1.Addressable{
+		URL: apis.HTTP("example"),
+	}
+	sink.URL.Scheme = "uri"
 
 	tests := []struct {
 		name      string
