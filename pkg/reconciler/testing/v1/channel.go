@@ -147,9 +147,9 @@ func WithChannelSubscriberStatuses(subscriberStatuses []eventingduckv1.Subscribe
 	}
 }
 
-func WithChannelStatusDLSURI(dlsURI eventingduckv1.DeliveryStatus) ChannelOption {
+func WithChannelStatusDLS(ds eventingduckv1.DeliveryStatus) ChannelOption {
 	return func(c *eventingv1.Channel) {
-		c.Status.MarkDeadLetterSinkResolvedSucceeded(dlsURI)
+		c.Status.MarkDeadLetterSinkResolvedSucceeded(ds)
 	}
 }
 

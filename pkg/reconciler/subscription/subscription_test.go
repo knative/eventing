@@ -1201,7 +1201,7 @@ func TestAllCases(t *testing.T) {
 					MarkReferencesResolved,
 					MarkAddedToChannel,
 					WithSubscriptionPhysicalSubscriptionSubscriber(&subscriber),
-					WithSubscriptionDeadLetterSinkURI(dlsURI),
+					WithSubscriptionDeadLetterSink(dlsURI),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
@@ -1541,7 +1541,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionChannel(imcV1GVK, channelName),
 					WithSubscriptionSubscriberRef(serviceGVK, serviceName, testNS),
 					WithSubscriptionDeliveryRef(subscriberGVK, dlsName, testNS),
-					WithSubscriptionDeadLetterSinkURI(dlsURI),
+					WithSubscriptionDeadLetterSink(dlsURI),
 				),
 				NewUnstructured(subscriberGVK, dlsName, testNS,
 					WithUnstructuredAddressable(dls),
@@ -1583,7 +1583,7 @@ func TestAllCases(t *testing.T) {
 					MarkReferencesResolved,
 					MarkAddedToChannel,
 					WithSubscriptionPhysicalSubscriptionSubscriber(&service),
-					WithSubscriptionDeadLetterSinkURI(dlsURI),
+					WithSubscriptionDeadLetterSink(dlsURI),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
@@ -1655,7 +1655,7 @@ func TestAllCases(t *testing.T) {
 						BackoffPolicy: &linear,
 						BackoffDelay:  pointer.String("PT1S"),
 					}),
-					WithSubscriptionDeadLetterSinkURI(dlsURI),
+					WithSubscriptionDeadLetterSink(dlsURI),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
@@ -1725,7 +1725,7 @@ func TestAllCases(t *testing.T) {
 					MarkReferencesResolved,
 					MarkAddedToChannel,
 					WithSubscriptionPhysicalSubscriptionSubscriber(&service),
-					WithSubscriptionDeadLetterSinkURI(dlcStatus),
+					WithSubscriptionDeadLetterSink(dlcStatus),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
@@ -1982,7 +1982,7 @@ func TestAllCases(t *testing.T) {
 						BackoffPolicy: &linear,
 						BackoffDelay:  pointer.String("PT1S"),
 					}),
-					WithSubscriptionDeadLetterSinkURI(dlsURI),
+					WithSubscriptionDeadLetterSink(dlsURI),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{

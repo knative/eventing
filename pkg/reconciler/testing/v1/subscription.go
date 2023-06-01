@@ -221,12 +221,12 @@ func WithSubscriptionPhysicalSubscriptionReply(reply *duckv1.Addressable) Subscr
 	}
 }
 
-func WithSubscriptionDeadLetterSinkURI(uri *duckv1.Addressable) SubscriptionOption {
+func WithSubscriptionDeadLetterSink(dls *duckv1.Addressable) SubscriptionOption {
 	return func(s *v1.Subscription) {
-		if uri == nil {
+		if dls == nil {
 			panic(errors.New("nil URI"))
 		}
-		s.Status.PhysicalSubscription.DeliveryStatus = eventingduckv1.NewDeliveryStatusFromAddressable(uri)
+		s.Status.PhysicalSubscription.DeliveryStatus = eventingduckv1.NewDeliveryStatusFromAddressable(dls)
 	}
 }
 

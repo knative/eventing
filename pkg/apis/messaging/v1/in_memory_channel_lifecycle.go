@@ -168,8 +168,8 @@ func (imcs *InMemoryChannelStatus) MarkEndpointsTrue() {
 	imcCondSet.Manage(imcs).MarkTrue(InMemoryChannelConditionEndpointsReady)
 }
 
-func (imcs *InMemoryChannelStatus) MarkDeadLetterSinkResolvedSucceeded(deadLetterSinkURI eventingduck.DeliveryStatus) {
-	imcs.DeliveryStatus = deadLetterSinkURI
+func (imcs *InMemoryChannelStatus) MarkDeadLetterSinkResolvedSucceeded(ds eventingduck.DeliveryStatus) {
+	imcs.DeliveryStatus = ds
 	imcCondSet.Manage(imcs).MarkTrue(InMemoryChannelConditionDeadLetterSinkResolved)
 }
 

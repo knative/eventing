@@ -210,13 +210,13 @@ func WithInMemoryScopeAnnotation(value string) InMemoryChannelOption {
 	}
 }
 
-func WithInMemoryChannelStatusDLS(dlsURI *duckv1.Addressable) InMemoryChannelOption {
+func WithInMemoryChannelStatusDLS(dls *duckv1.Addressable) InMemoryChannelOption {
 	return func(imc *v1.InMemoryChannel) {
-		if dlsURI == nil {
+		if dls == nil {
 			imc.Status.MarkDeadLetterSinkNotConfigured()
 			return
 		}
-		imc.Status.MarkDeadLetterSinkResolvedSucceeded(eventingv1.NewDeliveryStatusFromAddressable(dlsURI))
+		imc.Status.MarkDeadLetterSinkResolvedSucceeded(eventingv1.NewDeliveryStatusFromAddressable(dls))
 	}
 }
 
