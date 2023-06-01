@@ -11,10 +11,12 @@ Also take a look at:
 ## Getting started
 
 1. [Create and checkout a repo fork](#checkout-your-fork)
-1. [Install a channel implementation](#install-channels)
+2. [Make sure all the requirements are fullfilled](#requirements)
+3. [Create a cluster and Linux Container repo](#create-a-cluster-and-a-repo)
+4. [Set up the environment variables](#setup-your-environment)
+5. [Start eventing controller](#starting-eventing-controller)
+6. [Install the rest (Optional)](#install-channels)
 
-Once you meet these requirements, you can
-[start the eventing-controller](#starting-eventing-controller).
 
 > :information_source: If you intend to use event sinks based on Knative
 > Services as described in some of our examples, consider installing

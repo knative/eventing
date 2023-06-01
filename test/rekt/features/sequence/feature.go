@@ -22,16 +22,18 @@ import (
 
 	"github.com/cloudevents/sdk-go/v2/test"
 	"github.com/google/uuid"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 
 	"knative.dev/eventing/test/rekt/resources/channel_template"
 	"knative.dev/eventing/test/rekt/resources/pingsource"
 	"knative.dev/eventing/test/rekt/resources/sequence"
 
 	"knative.dev/reconciler-test/pkg/eventshub"
-	"knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
 	"knative.dev/reconciler-test/pkg/resources/service"
+
+	"knative.dev/reconciler-test/pkg/eventshub/assert"
 )
 
 func SequenceTest(channelTemplate channel_template.ChannelTemplate) *feature.Feature {
@@ -77,7 +79,7 @@ func SequenceTest(channelTemplate channel_template.ChannelTemplate) *feature.Fea
 			t.Error("failed to get address of broker", err)
 		}
 		cfg := []manifest.CfgFn{
-			pingsource.WithSink(nil, sequenceUri.String()),
+			pingsource.WithSink(&duckv1.Destination{URI: sequenceUri}),
 			pingsource.WithData("text/plain", eventBody),
 		}
 		pingsource.Install(source, cfg...)(ctx, t)

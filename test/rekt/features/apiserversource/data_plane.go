@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	"github.com/cloudevents/sdk-go/v2/test"
+	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -38,6 +39,7 @@ import (
 
 	"knative.dev/eventing/pkg/apis/sources"
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
+	"knative.dev/eventing/test/rekt/features/source"
 	"knative.dev/eventing/test/rekt/resources/account_role"
 	"knative.dev/eventing/test/rekt/resources/apiserversource"
 	"knative.dev/eventing/test/rekt/resources/broker"
@@ -169,7 +171,7 @@ func SendsEventsWithSinkUri() *feature.Feature {
 }
 
 func SendsEventsWithTLS() *feature.Feature {
-	source := feature.MakeRandomK8sName("apiserversource")
+	src := feature.MakeRandomK8sName("apiserversource")
 	sink := feature.MakeRandomK8sName("sink")
 
 	f := feature.NewFeatureNamed("Send events to TLS sink")
@@ -194,9 +196,9 @@ func SendsEventsWithTLS() *feature.Feature {
 		d.CACerts = eventshub.GetCaCerts(ctx)
 
 		cfg = append(cfg, apiserversource.WithSink(d))
-		apiserversource.Install(source, cfg...)(ctx, t)
+		apiserversource.Install(src, cfg...)(ctx, t)
 	})
-	f.Requirement("ApiServerSource goes ready", apiserversource.IsReady(source))
+	f.Requirement("ApiServerSource goes ready", apiserversource.IsReady(src))
 
 	f.Stable("ApiServerSource as event source").
 		Must("delivers events on sink with ref",
@@ -204,7 +206,9 @@ func SendsEventsWithTLS() *feature.Feature {
 				Match(eventasssert.MatchKind(eventshub.EventReceived)).
 				MatchEvent(test.HasType("dev.knative.apiserver.resource.update")).
 				AtLeast(1),
-		)
+		).
+		Must("Set sinkURI to HTTPS endpoint", source.ExpectHTTPSSink(apiserversource.Gvr(), src)).
+		Must("Set sinkCACerts to non empty CA certs", source.ExpectCACerts(apiserversource.Gvr(), src))
 
 	return f
 }
@@ -503,10 +507,10 @@ func SendsEventsForAllResourcesWithEmptyNamespaceSelector() *feature.Feature {
 	pingSource2 := feature.MakeRandomK8sName("ping-source-2")
 
 	f.Requirement("install PingSource 1",
-		pingsource.Install(pingSource1, pingsource.WithSink(nil, "http://example.com")),
+		pingsource.Install(pingSource1, pingsource.WithSink(&duckv1.Destination{URI: apis.HTTP("example.com")})),
 	)
 	f.Requirement("install PingSource 2",
-		pingsource.Install(pingSource2, pingsource.WithSink(nil, "http://example.com")),
+		pingsource.Install(pingSource2, pingsource.WithSink(&duckv1.Destination{URI: apis.HTTP("example.com")})),
 	)
 
 	f.Stable("ApiServerSource as event source").

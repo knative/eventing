@@ -1,11 +1,11 @@
 /*
-Copyright 2021 The Knative Authors
+Copyright 2020 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-	http://www.apache.org/licenses/LICENSE-2.0
+    http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,6 +19,8 @@ package v1beta2
 import (
 	"context"
 	"testing"
+
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 
 	"github.com/google/go-cmp/cmp"
 	"knative.dev/pkg/apis"
@@ -59,7 +61,11 @@ func TestEventTypeSpecValidation(t *testing.T) {
 		ets: &EventTypeSpec{
 			Type:   "test-type",
 			Source: testSource,
-			Broker: "test-broker",
+			Reference: &duckv1.KReference{
+				APIVersion: "eventing.knative.dev/v1",
+				Kind:       "Broker",
+				Name:       "test-broker",
+			},
 		},
 	},
 	}
@@ -89,18 +95,26 @@ func TestEventTypeImmutableFields(t *testing.T) {
 		name: "good (no change)",
 		current: &EventType{
 			Spec: EventTypeSpec{
-				Type:       "test-type",
-				Source:     testSource,
-				Broker:     "test-broker",
+				Type:   "test-type",
+				Source: testSource,
+				Reference: &duckv1.KReference{
+					APIVersion: "eventing.knative.dev/v1",
+					Kind:       "Broker",
+					Name:       "test-broker",
+				},
 				Schema:     testSchema,
 				SchemaData: testSchemaData,
 			},
 		},
 		original: &EventType{
 			Spec: EventTypeSpec{
-				Type:       "test-type",
-				Source:     testSource,
-				Broker:     "test-broker",
+				Type:   "test-type",
+				Source: testSource,
+				Reference: &duckv1.KReference{
+					APIVersion: "eventing.knative.dev/v1",
+					Kind:       "Broker",
+					Name:       "test-broker",
+				},
 				Schema:     testSchema,
 				SchemaData: testSchemaData,
 			},
@@ -112,7 +126,11 @@ func TestEventTypeImmutableFields(t *testing.T) {
 			Spec: EventTypeSpec{
 				Type:   "test-type",
 				Source: testSource,
-				Broker: "test-broker",
+				Reference: &duckv1.KReference{
+					APIVersion: "eventing.knative.dev/v1",
+					Kind:       "Broker",
+					Name:       "test-broker",
+				},
 				Schema: testSchema,
 			},
 		},
@@ -124,20 +142,28 @@ func TestEventTypeImmutableFields(t *testing.T) {
 			Spec: EventTypeSpec{
 				Type:   "test-type",
 				Source: testSource,
-				Broker: "test-broker",
+				Reference: &duckv1.KReference{
+					APIVersion: "eventing.knative.dev/v1",
+					Kind:       "Broker",
+					Name:       "test-broker",
+				},
 			},
 		},
 		original: &EventType{
 			Spec: EventTypeSpec{
 				Type:   "test-type",
 				Source: testSource,
-				Broker: "original-broker",
+				Reference: &duckv1.KReference{
+					APIVersion: "eventing.knative.dev/v1",
+					Kind:       "Broker",
+					Name:       "original-broker",
+				},
 			},
 		},
 		want: &apis.FieldError{
 			Message: "Immutable fields changed (-old +new)",
 			Paths:   []string{"spec"},
-			Details: `{v1beta2.EventTypeSpec}.Broker:
+			Details: `{v1beta2.EventTypeSpec}.Reference.Name:
 	-: "original-broker"
 	+: "test-broker"
 `,
@@ -148,14 +174,22 @@ func TestEventTypeImmutableFields(t *testing.T) {
 			Spec: EventTypeSpec{
 				Type:   "test-type",
 				Source: testSource,
-				Broker: "test-broker",
+				Reference: &duckv1.KReference{
+					APIVersion: "eventing.knative.dev/v1",
+					Kind:       "Broker",
+					Name:       "test-broker",
+				},
 			},
 		},
 		original: &EventType{
 			Spec: EventTypeSpec{
 				Type:   "original-type",
 				Source: testSource,
-				Broker: "test-broker",
+				Reference: &duckv1.KReference{
+					APIVersion: "eventing.knative.dev/v1",
+					Kind:       "Broker",
+					Name:       "test-broker",
+				},
 			},
 		},
 		want: &apis.FieldError{
@@ -172,14 +206,22 @@ func TestEventTypeImmutableFields(t *testing.T) {
 			Spec: EventTypeSpec{
 				Type:   "test-type",
 				Source: testSource,
-				Broker: "test-broker",
+				Reference: &duckv1.KReference{
+					APIVersion: "eventing.knative.dev/v1",
+					Kind:       "Broker",
+					Name:       "test-broker",
+				},
 			},
 		},
 		original: &EventType{
 			Spec: EventTypeSpec{
 				Type:   "test-type",
 				Source: differentSource,
-				Broker: "test-broker",
+				Reference: &duckv1.KReference{
+					APIVersion: "eventing.knative.dev/v1",
+					Kind:       "Broker",
+					Name:       "test-broker",
+				},
 			},
 		},
 		want: &apis.FieldError{
@@ -196,7 +238,11 @@ func TestEventTypeImmutableFields(t *testing.T) {
 			Spec: EventTypeSpec{
 				Type:   "test-type",
 				Source: testSource,
-				Broker: "test-broker",
+				Reference: &duckv1.KReference{
+					APIVersion: "eventing.knative.dev/v1",
+					Kind:       "Broker",
+					Name:       "test-broker",
+				},
 				Schema: testSchema,
 			},
 		},
@@ -204,7 +250,11 @@ func TestEventTypeImmutableFields(t *testing.T) {
 			Spec: EventTypeSpec{
 				Type:   "test-type",
 				Source: testSource,
-				Broker: "test-broker",
+				Reference: &duckv1.KReference{
+					APIVersion: "eventing.knative.dev/v1",
+					Kind:       "Broker",
+					Name:       "test-broker",
+				},
 				Schema: differentSchema,
 			},
 		},
@@ -220,18 +270,26 @@ func TestEventTypeImmutableFields(t *testing.T) {
 		name: "bad (description change)",
 		current: &EventType{
 			Spec: EventTypeSpec{
-				Type:        "test-type",
-				Source:      testSource,
-				Broker:      "test-broker",
+				Type:   "test-type",
+				Source: testSource,
+				Reference: &duckv1.KReference{
+					APIVersion: "eventing.knative.dev/v1",
+					Kind:       "Broker",
+					Name:       "test-broker",
+				},
 				Schema:      testSchema,
 				Description: "test-description",
 			},
 		},
 		original: &EventType{
 			Spec: EventTypeSpec{
-				Type:        "test-type",
-				Source:      testSource,
-				Broker:      "test-broker",
+				Type:   "test-type",
+				Source: testSource,
+				Reference: &duckv1.KReference{
+					APIVersion: "eventing.knative.dev/v1",
+					Kind:       "Broker",
+					Name:       "test-broker",
+				},
 				Schema:      testSchema,
 				Description: "original-description",
 			},

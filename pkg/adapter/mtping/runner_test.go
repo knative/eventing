@@ -234,8 +234,9 @@ func TestSendEventsTLS(t *testing.T) {
 
 	ctx, _ := rectesting.SetupFakeContext(t)
 	requestsChan := make(chan *nethttp.Request, 10)
+	handler := eventingtlstesting.RequestsChannelHandler(requestsChan)
 	events := make([]*cloudevents.Event, 0, 8)
-	ca := eventingtlstesting.StartServer(ctx, t, 8334, requestsChan)
+	ca := eventingtlstesting.StartServer(ctx, t, 8334, handler)
 
 	var wg sync.WaitGroup
 	wg.Add(1)

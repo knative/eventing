@@ -17,11 +17,11 @@ limitations under the License.
 package pingsource
 
 import (
-	"knative.dev/eventing/test/rekt/resources/pingsource"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
 	"knative.dev/reconciler-test/pkg/resources/service"
+
+	"knative.dev/eventing/test/rekt/resources/pingsource"
 )
 
 // PingSourceGoesReady returns a feature testing if a pingsource becomes ready.
@@ -32,11 +32,7 @@ func PingSourceGoesReady(name string, cfg ...manifest.CfgFn) *feature.Feature {
 	f.Setup("install a service", service.Install(sink,
 		service.WithSelectors(map[string]string{"app": "rekt"})))
 
-	cfg = append(cfg, pingsource.WithSink(&duckv1.KReference{
-		Kind:       "Service",
-		Name:       sink,
-		APIVersion: "v1",
-	}, ""))
+	cfg = append(cfg, pingsource.WithSink(service.AsDestinationRef(sink)))
 
 	f.Setup("install a PingSource", pingsource.Install(name, cfg...))
 

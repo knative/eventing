@@ -23,7 +23,8 @@ import (
 	"github.com/hashicorp/go-retryablehttp"
 )
 
-// HTTPMessageSender is a wrapper for an http client that can send cloudevents.Request with retries
+// HTTPMessageSender is a wrapper for an http client that can send cloudevents.Request with retries.
+// Deprecated: Use kncloudevents.CloudEventsRequest instead.
 type HTTPMessageSender struct {
 	Client *nethttp.Client
 	Target string

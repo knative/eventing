@@ -25,7 +25,6 @@ import (
 	"context"
 	"errors"
 	nethttp "net/http"
-	"net/url"
 	"sync"
 	"time"
 
@@ -36,6 +35,7 @@ import (
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/kncloudevents"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 const (
@@ -43,9 +43,9 @@ const (
 )
 
 type Subscription struct {
-	Subscriber  *url.URL
-	Reply       *url.URL
-	DeadLetter  *url.URL
+	Subscriber  duckv1.Addressable
+	Reply       *duckv1.Addressable
+	DeadLetter  *duckv1.Addressable
 	RetryConfig *kncloudevents.RetryConfig
 }
 
@@ -89,7 +89,7 @@ type FanoutMessageHandler struct {
 
 // NewMessageHandler creates a new fanout.MessageHandler.
 
-func NewFanoutMessageHandler(logger *zap.Logger, messageDispatcher channel.MessageDispatcher, config Config, reporter channel.StatsReporter) (*FanoutMessageHandler, error) {
+func NewFanoutMessageHandler(logger *zap.Logger, messageDispatcher channel.MessageDispatcher, config Config, reporter channel.StatsReporter, receiverOpts ...channel.MessageReceiverOptions) (*FanoutMessageHandler, error) {
 	handler := &FanoutMessageHandler{
 		logger:       logger,
 		dispatcher:   messageDispatcher,
@@ -101,7 +101,7 @@ func NewFanoutMessageHandler(logger *zap.Logger, messageDispatcher channel.Messa
 	copy(handler.subscriptions, config.Subscriptions)
 	// The receiver function needs to point back at the handler itself, so set it up after
 	// initialization.
-	receiver, err := channel.NewMessageReceiver(createMessageReceiverFunction(handler), logger, reporter)
+	receiver, err := channel.NewMessageReceiver(createMessageReceiverFunction(handler), logger, reporter, receiverOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -111,20 +111,26 @@ func NewFanoutMessageHandler(logger *zap.Logger, messageDispatcher channel.Messa
 }
 
 func SubscriberSpecToFanoutConfig(sub eventingduckv1.SubscriberSpec) (*Subscription, error) {
-	var destination *url.URL
-	if sub.SubscriberURI != nil {
-		destination = sub.SubscriberURI.URL()
+	destination := duckv1.Addressable{
+		URL:     sub.SubscriberURI,
+		CACerts: sub.SubscriberCACerts,
 	}
 
-	var reply *url.URL
+	var reply *duckv1.Addressable
 	if sub.ReplyURI != nil {
-		reply = sub.ReplyURI.URL()
+		reply = &duckv1.Addressable{
+			URL:     sub.ReplyURI,
+			CACerts: sub.ReplyCACerts,
+		}
 	}
 
-	var deadLetter *url.URL
+	var deadLetter *duckv1.Addressable
 	if sub.Delivery != nil && sub.Delivery.DeadLetterSink != nil && sub.Delivery.DeadLetterSink.URI != nil {
 		// Subscription reconcilers resolves the URI.
-		deadLetter = sub.Delivery.DeadLetterSink.URI.URL()
+		deadLetter = &duckv1.Addressable{
+			URL:     sub.Delivery.DeadLetterSink.URI,
+			CACerts: sub.Delivery.DeadLetterSink.CACerts,
+		}
 	}
 
 	var retryConfig *kncloudevents.RetryConfig

@@ -29,6 +29,7 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
 	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/ptr"
 
 	"knative.dev/eventing/pkg/channel"
@@ -37,7 +38,9 @@ import (
 
 var (
 	// The httptest.Server's host name will replace this value in all ChannelConfigs.
-	replaceDomain = apis.HTTP("replaceDomain").URL()
+	replaceDomain = duckv1.Addressable{
+		URL: apis.HTTP("replaceDomain"),
+	}
 )
 
 func TestNewMessageHandlerWithConfig(t *testing.T) {
@@ -91,7 +94,7 @@ func TestNewMessageHandler(t *testing.T) {
 	reporter := channel.NewStatsReporter("testcontainer", "testpod")
 	logger := zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller()))
 
-	handler := NewMessageHandler(context.TODO(), logger, channel.NewMessageDispatcher(logger), reporter)
+	handler := NewMessageHandler(context.TODO(), logger)
 	h := handler.GetChannelHandler(handlerName)
 	if len(handler.handlers) != 0 {
 		t.Errorf("non-empty handler map on creation")
@@ -122,18 +125,62 @@ func TestServeHTTPMessageHandler(t *testing.T) {
 		config             Config
 		eventID            *string
 		respStatusCode     int
-		key                string
+		hostKey            string
+		pathKey            string
+		recvOptions        []channel.MessageReceiverOptions
 		expectedStatusCode int
 	}{
-		"non-existent channel": {
+		"non-existent channel host based": {
 			config:             Config{},
-			key:                "default.does-not-exist",
+			hostKey:            "default.does-not-exist",
+			expectedStatusCode: http.StatusInternalServerError,
+		},
+		"non-existent channel path based": {
+			hostKey: "first-channel.default",
+			config: Config{
+				ChannelConfigs: []ChannelConfig{
+					{
+						Namespace: "ns",
+						Name:      "name",
+						HostName:  "first-channel.default",
+						FanoutConfig: fanout.Config{
+							Subscriptions: []fanout.Subscription{
+								{
+									Reply: &replaceDomain,
+								},
+							},
+						},
+					},
+				},
+			},
+			pathKey:            "some-namespace/wrong-channel",
 			expectedStatusCode: http.StatusInternalServerError,
 		},
 		"bad host": {
 			config:             Config{},
-			key:                "no-dot",
+			hostKey:            "no-dot",
 			expectedStatusCode: http.StatusInternalServerError,
+		},
+		"malformed path": {
+			hostKey: "first-channel.default",
+			config: Config{
+				ChannelConfigs: []ChannelConfig{
+					{
+						Namespace: "ns",
+						Name:      "name",
+						HostName:  "first-channel.default",
+						FanoutConfig: fanout.Config{
+							Subscriptions: []fanout.Subscription{
+								{
+									Reply: &replaceDomain,
+								},
+							},
+						},
+					},
+				},
+			},
+			pathKey:            "missing-forward-slash",
+			expectedStatusCode: http.StatusBadRequest,
 		},
 		"pass through failure": {
 			config: Config{
@@ -145,7 +192,7 @@ func TestServeHTTPMessageHandler(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []fanout.Subscription{
 								{
-									Reply: replaceDomain,
+									Reply: &replaceDomain,
 								},
 							},
 						},
@@ -153,7 +200,7 @@ func TestServeHTTPMessageHandler(t *testing.T) {
 				},
 			},
 			respStatusCode:     http.StatusInternalServerError,
-			key:                "first-channel.default",
+			hostKey:            "first-channel.default",
 			expectedStatusCode: http.StatusInternalServerError,
 		},
 		"invalid event": {
@@ -167,7 +214,9 @@ func TestServeHTTPMessageHandler(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []fanout.Subscription{
 								{
-									Reply: apis.HTTP("first-to-domain").URL(),
+									Reply: &duckv1.Addressable{
+										URL: apis.HTTP("first-to-domain"),
+									},
 								},
 							},
 						},
@@ -188,7 +237,7 @@ func TestServeHTTPMessageHandler(t *testing.T) {
 			},
 			eventID:            ptr.String(""), // invalid id
 			respStatusCode:     http.StatusOK,
-			key:                "second-channel.default",
+			hostKey:            "second-channel.default",
 			expectedStatusCode: http.StatusBadRequest,
 		},
 		"choose channel": {
@@ -202,7 +251,9 @@ func TestServeHTTPMessageHandler(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []fanout.Subscription{
 								{
-									Reply: apis.HTTP("first-to-domain").URL(),
+									Reply: &duckv1.Addressable{
+										URL: apis.HTTP("first-to-domain"),
+									},
 								},
 							},
 						},
@@ -222,8 +273,33 @@ func TestServeHTTPMessageHandler(t *testing.T) {
 				},
 			},
 			respStatusCode:     http.StatusOK,
-			key:                "second-channel.default",
+			hostKey:            "second-channel.default",
 			expectedStatusCode: http.StatusAccepted,
+		},
+		"path based": {
+			config: Config{
+				ChannelConfigs: []ChannelConfig{
+					{
+
+						Namespace: "ns",
+						Name:      "name",
+						HostName:  "first-channel.default",
+						Path:      "default/first-channel",
+						FanoutConfig: fanout.Config{
+							Subscriptions: []fanout.Subscription{
+								{
+									Subscriber: replaceDomain,
+								},
+							},
+						},
+					},
+				},
+			},
+			respStatusCode:     http.StatusOK,
+			hostKey:            "host.should.be.ignored",
+			pathKey:            "default/first-channel",
+			expectedStatusCode: http.StatusAccepted,
+			recvOptions:        []channel.MessageReceiverOptions{channel.ResolveMessageChannelFromPath(channel.ParseChannelFromPath)},
 		},
 	}
 	for n, tc := range testCases {
@@ -236,7 +312,7 @@ func TestServeHTTPMessageHandler(t *testing.T) {
 
 			logger := zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller()))
 			reporter := channel.NewStatsReporter("testcontainer", "testpod")
-			h, err := NewMessageHandlerWithConfig(context.TODO(), logger, channel.NewMessageDispatcher(logger), tc.config, reporter)
+			h, err := NewMessageHandlerWithConfig(context.TODO(), logger, channel.NewMessageDispatcher(logger), tc.config, reporter, tc.recvOptions...)
 			if err != nil {
 				t.Fatalf("Unexpected NewHandler error: '%v'", err)
 			}
@@ -255,7 +331,7 @@ func TestServeHTTPMessageHandler(t *testing.T) {
 			event.SetSource("testsource")
 			event.SetData(cloudevents.ApplicationJSON, "{}")
 
-			req := httptest.NewRequest(http.MethodPost, "http://"+tc.key+"/", nil)
+			req := httptest.NewRequest(http.MethodPost, "http://"+tc.hostKey+"/"+tc.pathKey, nil)
 			err = bindingshttp.WriteRequest(ctx, binding.ToMessage(&event), req)
 			if err != nil {
 				t.Fatal(err)
@@ -293,10 +369,14 @@ func replaceDomains(config Config, replacement string) {
 	for i, cc := range config.ChannelConfigs {
 		for j, sub := range cc.FanoutConfig.Subscriptions {
 			if sub.Subscriber == replaceDomain {
-				sub.Subscriber = apis.HTTP(replacement).URL()
+				sub.Subscriber = duckv1.Addressable{
+					URL: apis.HTTP(replacement),
+				}
 			}
-			if sub.Reply == replaceDomain {
-				sub.Reply = apis.HTTP(replacement).URL()
+			if sub.Reply != nil && *sub.Reply == replaceDomain {
+				sub.Reply = &duckv1.Addressable{
+					URL: apis.HTTP(replacement),
+				}
 			}
 			cc.FanoutConfig.Subscriptions[j] = sub
 		}

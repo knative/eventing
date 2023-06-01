@@ -218,6 +218,9 @@ spec:
               sinkUri:
                 description: SinkURI is the current active sink URI that has been configured for the Source.
                 type: string
+              sinkCACerts:
+                description: CACerts is the Certification Authority (CA) certificates in PEM format that the source trusts when sending events to the sink.
+                type: string
               namespaces:
                 description: Namespaces show the namespaces currently watched by the ApiServerSource
                 type: array

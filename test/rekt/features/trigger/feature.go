@@ -20,11 +20,13 @@ import (
 	"context"
 
 	"github.com/cloudevents/sdk-go/v2/test"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/eventshub"
-	"knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
 	"knative.dev/reconciler-test/pkg/resources/service"
+
+	"knative.dev/reconciler-test/pkg/eventshub/assert"
 
 	"knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/eventing/test/rekt/resources/pingsource"
@@ -69,7 +71,7 @@ func TriggerDependencyAnnotation() *feature.Feature {
 		}
 		cfg := []manifest.CfgFn{
 			pingsource.WithSchedule("*/1 * * * *"),
-			pingsource.WithSink(nil, brokeruri.String()),
+			pingsource.WithSink(&duckv1.Destination{URI: brokeruri}),
 			pingsource.WithData("text/plain", "Test trigger-annotation"),
 		}
 		pingsource.Install(psourcename, cfg...)(ctx, t)

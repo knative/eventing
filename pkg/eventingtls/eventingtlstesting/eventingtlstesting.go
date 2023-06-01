@@ -18,7 +18,7 @@ package eventingtlstesting
 
 import (
 	"context"
-	nethttp "net/http"
+	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -42,8 +42,7 @@ func init() {
 	CA, Key, Crt = loadCerts()
 }
 
-func StartServer(ctx context.Context, t *testing.T, port int, requests chan<- *nethttp.Request) string {
-
+func StartServer(ctx context.Context, t *testing.T, port int, handler http.Handler, receiverOptions ...kncloudevents.HTTPMessageReceiverOption) string {
 	secret := types.NamespacedName{
 		Namespace: "knative-tests",
 		Name:      "tls-secret",
@@ -67,22 +66,13 @@ func StartServer(ctx context.Context, t *testing.T, port int, requests chan<- *n
 	assert.Nil(t, err)
 
 	receiver := kncloudevents.NewHTTPMessageReceiver(port,
-		kncloudevents.WithTLSConfig(tlsConfig),
+		append(receiverOptions,
+			kncloudevents.WithTLSConfig(tlsConfig),
+		)...,
 	)
 
 	go func() {
-		defer close(requests)
-		err := receiver.StartListen(ctx, nethttp.HandlerFunc(func(writer nethttp.ResponseWriter, request *nethttp.Request) {
-			if requests != nil {
-				requests <- request
-			}
-			if request.TLS == nil {
-				// It's not on TLS, fail request
-				writer.WriteHeader(nethttp.StatusInternalServerError)
-				return
-			}
-			writer.WriteHeader(nethttp.StatusOK)
-		}))
+		err := receiver.StartListen(ctx, handler)
 		if err != nil {
 			panic(err)
 		}

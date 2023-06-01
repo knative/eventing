@@ -1,5 +1,5 @@
 /*
-Copyright 2021 The Knative Authors
+Copyright 2023 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,24 +14,21 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1beta2
+package eventingtlstesting
 
-import (
-	"context"
+import "net/http"
 
-	duckv1 "knative.dev/pkg/apis/duck/v1"
-)
-
-func (et *EventType) SetDefaults(ctx context.Context) {
-	et.Spec.SetDefaults(ctx)
-}
-
-func (ets *EventTypeSpec) SetDefaults(ctx context.Context) {
-	if ets.Reference == nil {
-		ets.Reference = &duckv1.KReference{
-			APIVersion: "eventing.knative.dev/v1",
-			Kind:       "Broker",
-			Name:       "default",
+// RequestsChannelHandler
+func RequestsChannelHandler(requestsChan chan<- *http.Request) http.Handler {
+	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		if requestsChan != nil {
+			requestsChan <- request
 		}
-	}
+		if request.TLS == nil {
+			// It's not on TLS, fail request
+			writer.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		writer.WriteHeader(http.StatusOK)
+	})
 }

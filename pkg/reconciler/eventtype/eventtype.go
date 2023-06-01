@@ -46,18 +46,17 @@ var brokerGVK = v1.SchemeGroupVersion.WithKind("Broker")
 var _ eventtypereconciler.Interface = (*Reconciler)(nil)
 
 // ReconcileKind implements Interface.ReconcileKind.
-// 1. Verify the Broker exists.
-// 2. Verify the Broker is ready.
-// TODO remove https://github.com/knative/eventing/issues/2750
+// 1. Verify the Broker/Reference exists.
+// 2. Verify the Broker/Reference is ready.
 func (r *Reconciler) ReconcileKind(ctx context.Context, et *v1beta2.EventType) pkgreconciler.Event {
-	b, err := r.getBroker(et)
+	b, err := r.getReference(et)
 	if err != nil {
 		if apierrs.IsNotFound(err) {
-			logging.FromContext(ctx).Errorw("Broker does not exist", zap.Error(err))
+			logging.FromContext(ctx).Errorw("Broker reference does not exist", zap.Error(err))
 			et.Status.MarkBrokerDoesNotExist()
 		} else {
-			logging.FromContext(ctx).Errorw("Unable to get the Broker", zap.Error(err))
-			et.Status.MarkBrokerExistsUnknown("BrokerGetFailed", "Failed to get broker: %v", err)
+			logging.FromContext(ctx).Errorw("Unable to get the Broker reference", zap.Error(err))
+			et.Status.MarkBrokerExistsUnknown("BrokerGetFailed", "Failed to get broker reference: %v", err)
 		}
 		return err
 	}
@@ -72,7 +71,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, et *v1beta2.EventType) p
 	}
 	// Tell tracker to reconcile this EventType whenever the Broker changes.
 	if err = r.tracker.TrackReference(ref, et); err != nil {
-		logging.FromContext(ctx).Errorw("Unable to track changes to Broker", zap.Error(err))
+		logging.FromContext(ctx).Errorw("Unable to track changes to Broker reference", zap.Error(err))
 		return err
 	}
 
@@ -81,7 +80,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, et *v1beta2.EventType) p
 	return nil
 }
 
-// getBroker returns the Broker for EventType 'et' if it exists, otherwise it returns an error.
-func (r *Reconciler) getBroker(et *v1beta2.EventType) (*v1.Broker, error) {
-	return r.brokerLister.Brokers(et.Namespace).Get(et.Spec.Broker)
+// getReference returns the Broker for EventType 'et' if it exists, otherwise it returns an error.
+func (r *Reconciler) getReference(et *v1beta2.EventType) (*v1.Broker, error) {
+	return r.brokerLister.Brokers(et.Namespace).Get(et.Spec.Reference.Name)
 }
