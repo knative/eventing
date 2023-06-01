@@ -23,9 +23,10 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 
 	corev1 "k8s.io/api/core/v1"
-	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 )
 
 var (
@@ -260,7 +261,7 @@ func TestEventTypeConditionStatus(t *testing.T) {
 
 			got := ets.GetTopLevelCondition().Status
 			if test.wantConditionStatus != got {
-				t.Errorf("unexpected readiness: want %v, got %v", test.wantConditionStatus, got)
+				t.Errorf("unexpected readiness: want %v, got %v\n%+v", test.wantConditionStatus, got, ets)
 			}
 		})
 	}
