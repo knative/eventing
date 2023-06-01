@@ -39,14 +39,22 @@ var (
 
 type clientsHolder struct {
 	mu             sync.Mutex
-	clients        map[string]*nethttp.Client
+	clients        map[string]*clientsMapEntry
 	connectionArgs *ConnectionArgs
+	ttl            time.Duration
+}
+
+type clientsMapEntry struct {
+	client *nethttp.Client
+	expiry int64
 }
 
 func init() {
 	clients = clientsHolder{
-		clients: make(map[string]*nethttp.Client),
+		clients: make(map[string]*clientsMapEntry),
+		ttl:     time.Minute * 30,
 	}
+	go cleanupClientsMap()
 }
 
 func getClientForAddressable(addressable duckv1.Addressable) (*nethttp.Client, error) {
@@ -55,16 +63,20 @@ func getClientForAddressable(addressable duckv1.Addressable) (*nethttp.Client, e
 
 	clientKey := addressable.URL.String()
 
-	client, ok := clients.clients[clientKey]
+	clientEntry, ok := clients.clients[clientKey]
+	expiry := time.Now().Add(clients.ttl).UnixNano()
+	client := clientEntry.client
 	if !ok {
 		newClient, err := createNewClient(addressable)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create new client for addressable: %w", err)
 		}
 
-		clients.clients[clientKey] = newClient
+		clients.clients[clientKey] = &clientsMapEntry{client: newClient, expiry: expiry}
 
 		client = newClient
+	} else {
+		clientEntry.expiry = expiry
 	}
 
 	return client, nil
@@ -108,7 +120,8 @@ func AddOrUpdateAddressableHandler(addressable duckv1.Addressable) {
 		fmt.Printf("failed to create new client: %v", err)
 		return
 	}
-	clients.clients[clientKey] = client
+	expiry := time.Now().Add(clients.ttl).UnixNano()
+	clients.clients[clientKey] = &clientsMapEntry{client: client, expiry: expiry}
 }
 
 func DeleteAddressableHandler(addressable duckv1.Addressable) {
@@ -139,12 +152,12 @@ func ConfigureConnectionArgs(ca *ConnectionArgs) {
 	if len(clients.clients) > 0 {
 		// Let's try to clean up a bit the existing clients
 		// Note: this won't remove it nor close it
-		for _, client := range clients.clients {
-			client.CloseIdleConnections()
+		for _, clientEntry := range clients.clients {
+			clientEntry.client.CloseIdleConnections()
 		}
 
 		// Resetting clients
-		clients.clients = make(map[string]*nethttp.Client)
+		clients.clients = make(map[string]*clientsMapEntry)
 	}
 
 	clients.connectionArgs = ca
@@ -165,4 +178,17 @@ func (ca *ConnectionArgs) configureTransport(transport *nethttp.Transport) {
 	}
 	transport.MaxIdleConns = ca.MaxIdleConns
 	transport.MaxIdleConnsPerHost = ca.MaxIdleConnsPerHost
+}
+
+func cleanupClientsMap() {
+	for {
+		time.Sleep(5 * time.Minute)
+		clients.mu.Lock()
+		for k, cme := range clients.clients {
+			if time.Now().UnixNano() > cme.expiry {
+				delete(clients.clients, k)
+			}
+		}
+		clients.mu.Unlock()
+	}
 }
