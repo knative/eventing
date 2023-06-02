@@ -170,18 +170,22 @@ func Example_withSink() {
 
 	manifest.OutputYAML(os.Stdout, files)
         // Output:
-	// apiVersion: sources.knative.dev/v1
-	// kind: SinkBinding
-	// metadata:
-	//   name: foo
-	//   namespace: bar
-	// spec:
-	//   sink:
-	//     ref:
-	//          kind: sinkkind
-	// 			namespace: bar
-	// 			name: sinkname
-	// 			apiVersion: sinkversion
-	//     uri: uri/parts
+        // apiVersion: sources.knative.dev/v1
+       //  kind: SinkBinding
+       //  metadata:
+      //     name: foo
+      //     namespace: bar
+      //   spec:
+      //     sink:
+      //       ref:
+      //         apiVersion: sinkversion
+      //         kind: sinkkind
+      //         namespace: bar
+      //         name: sinkname
+      //       uri: uri/parts
+     //     subject:
+    //         kind: <no value>
+   //          apiVersion: <no value>
+  //           namespace: bar
 }	
 	
