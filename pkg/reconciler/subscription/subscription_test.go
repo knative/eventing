@@ -77,13 +77,14 @@ const (
 // subscriptions have: channel -> SUB -> subscriber -viaSub-> reply
 
 var (
-	channelDNS = "channel.mynamespace.svc." + network.GetClusterDomainName()
-
-	subscriberDNS = "subscriber.mynamespace.svc." + network.GetClusterDomainName()
-	subscriberURI = apis.HTTP(subscriberDNS)
-	subscriber    = duckv1.Addressable{
-		URL: subscriberURI,
+	channelDNS = duckv1.Addressable{
+		URL: apis.HTTP("channel.mynamespace.svc." + network.GetClusterDomainName()),
 	}
+
+	subscriber = duckv1.Addressable{
+		URL: apis.HTTP("subscriber.mynamespace.svc." + network.GetClusterDomainName()),
+	}
+	subscriberURI = subscriber.URL
 
 	tlsSubscriberDNS     = "tls-subscriber.mynamespace.svc." + network.GetClusterDomainName()
 	tlsSubscriberURI     = apis.HTTPS(tlsSubscriberDNS)
@@ -113,11 +114,10 @@ Vw==
 		CACerts: &tlsSubscriberCACerts,
 	}
 
-	replyDNS = "reply.mynamespace.svc." + network.GetClusterDomainName()
-	replyURI = apis.HTTP(replyDNS)
-	reply    = duckv1.Addressable{
-		URL: replyURI,
+	reply = duckv1.Addressable{
+		URL: apis.HTTP("reply.mynamespace.svc." + network.GetClusterDomainName()),
 	}
+	replyURI = reply.URL
 
 	serviceDNS = serviceName + "." + testNS + ".svc." + network.GetClusterDomainName()
 	serviceURI = apis.HTTP(serviceDNS)
@@ -125,13 +125,19 @@ Vw==
 		URL: serviceURI,
 	}
 
-	dlcDNS = "dlc.mynamespace.svc." + network.GetClusterDomainName()
-	dlcURI = apis.HTTP(dlcDNS)
+	dlc = duckv1.Addressable{
+		URL: apis.HTTP("dlc.mynamespace.svc." + network.GetClusterDomainName()),
+	}
+	dlcStatus = &dlc
 
-	dlc2DNS = "dlc2.mynamespace.svc." + network.GetClusterDomainName()
+	dlc2 = duckv1.Addressable{
+		URL: apis.HTTP("dlc2.mynamespace.svc." + network.GetClusterDomainName()),
+	}
 
-	dlsDNS = "dls.mynamespace.svc." + network.GetClusterDomainName()
-	dlsURI = apis.HTTP(dlsDNS)
+	dls = duckv1.Addressable{
+		URL: apis.HTTP("dls.mynamespace.svc." + network.GetClusterDomainName()),
+	}
+	dlsURI = &dls
 
 	subscriberGVK = metav1.GroupVersionKind{
 		Group:   "messaging.knative.dev",
@@ -204,12 +210,12 @@ func TestAllCases(t *testing.T) {
 				),
 				// Subscriber
 				NewUnstructured(subscriberGVK, subscriberName, testNS,
-					WithUnstructuredAddressable(subscriberDNS),
+					WithUnstructuredAddressable(subscriber),
 				),
 				// Reply
 				NewInMemoryChannel(replyName, testNS,
 					WithInitInMemoryChannelConditions,
-					WithInMemoryChannelAddress(replyDNS),
+					WithInMemoryChannelAddress(reply),
 				),
 				// Channel
 				NewInMemoryChannel(channelName, testNS,
@@ -270,12 +276,12 @@ func TestAllCases(t *testing.T) {
 				),
 				// Subscriber
 				NewUnstructured(subscriberGVK, subscriberName, testNS+"-2",
-					WithUnstructuredAddressable(subscriberDNS),
+					WithUnstructuredAddressable(subscriber),
 				),
 				// Reply
 				NewInMemoryChannel(replyName, testNS,
 					WithInitInMemoryChannelConditions,
-					WithInMemoryChannelAddress(replyDNS),
+					WithInMemoryChannelAddress(reply),
 				),
 				// Channel
 				NewInMemoryChannel(channelName, testNS,
@@ -336,12 +342,12 @@ func TestAllCases(t *testing.T) {
 				),
 				// Subscriber
 				NewUnstructured(subscriberGVK, subscriberName, testNS,
-					WithUnstructuredAddressable(subscriberDNS),
+					WithUnstructuredAddressable(subscriber),
 				),
 				// Reply
 				NewInMemoryChannel(replyName, testNS+"-2",
 					WithInitInMemoryChannelConditions,
-					WithInMemoryChannelAddress(replyDNS),
+					WithInMemoryChannelAddress(reply),
 				),
 				// Channel
 				NewInMemoryChannel(channelName, testNS,
@@ -405,12 +411,12 @@ func TestAllCases(t *testing.T) {
 				),
 				// Subscriber
 				NewUnstructured(subscriberGVK, subscriberName, testNS,
-					WithUnstructuredAddressable(subscriberDNS),
+					WithUnstructuredAddressable(subscriber),
 				),
 				// Reply
 				NewInMemoryChannel(replyName, testNS,
 					WithInitInMemoryChannelConditions,
-					WithInMemoryChannelAddress(replyDNS),
+					WithInMemoryChannelAddress(reply),
 				),
 				// Channel
 				NewInMemoryChannel(channelName, testNS,
@@ -484,12 +490,12 @@ func TestAllCases(t *testing.T) {
 				),
 				// Subscriber
 				NewUnstructured(subscriberGVK, subscriberName, testNS,
-					WithUnstructuredAddressable(subscriberDNS),
+					WithUnstructuredAddressable(subscriber),
 				),
 				// Reply
 				NewInMemoryChannel(replyName, testNS,
 					WithInitInMemoryChannelConditions,
-					WithInMemoryChannelAddress(replyDNS),
+					WithInMemoryChannelAddress(reply),
 				),
 				// Channel
 				NewInMemoryChannel(channelName, testNS,
@@ -563,12 +569,12 @@ func TestAllCases(t *testing.T) {
 				),
 				// Subscriber
 				NewUnstructured(subscriberGVK, subscriberName, testNS,
-					WithUnstructuredAddressable(subscriberDNS),
+					WithUnstructuredAddressable(subscriber),
 				),
 				// Reply
 				NewInMemoryChannel(replyName, testNS,
 					WithInitInMemoryChannelConditions,
-					WithInMemoryChannelAddress(replyDNS),
+					WithInMemoryChannelAddress(reply),
 				),
 				// Channel
 				NewInMemoryChannel(channelName, testNS,
@@ -650,12 +656,12 @@ func TestAllCases(t *testing.T) {
 				),
 				// Subscriber
 				NewUnstructured(subscriberGVK, subscriberName, testNS,
-					WithUnstructuredAddressable(subscriberDNS),
+					WithUnstructuredAddressable(subscriber),
 				),
 				// Reply
 				NewInMemoryChannel(replyName, testNS,
 					WithInitInMemoryChannelConditions,
-					WithInMemoryChannelAddress(replyDNS),
+					WithInMemoryChannelAddress(reply),
 				),
 				// Channel
 				NewInMemoryChannel(channelName, testNS,
@@ -780,7 +786,7 @@ func TestAllCases(t *testing.T) {
 				),
 				// Subscriber
 				NewUnstructured(subscriberGVK, subscriberName, testNS,
-					WithUnstructuredAddressable(subscriberDNS),
+					WithUnstructuredAddressable(subscriber),
 				),
 				// Reply
 				NewInMemoryChannel(tlsSubscriberName, testNS,
@@ -798,7 +804,7 @@ func TestAllCases(t *testing.T) {
 						SubscriberURI: subscriberURI,
 						ReplyURI:      tlsSubscriberURI,
 					}}),
-					WithInMemoryChannelAddress(subscriberDNS),
+					WithInMemoryChannelAddress(subscriber),
 				),
 			},
 			Key:     testNS + "/" + subscriptionName,
@@ -1012,7 +1018,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionReply(imcV1GVK, replyName, testNS),
 				),
 				NewUnstructured(subscriberGVK, subscriberName, testNS,
-					WithUnstructuredAddressable(subscriberDNS)),
+					WithUnstructuredAddressable(subscriber)),
 				NewInMemoryChannel(channelName, testNS,
 					WithInitInMemoryChannelConditions,
 					WithInMemoryChannelAddress(channelDNS),
@@ -1048,7 +1054,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionReply(nonAddressableGVK, replyName, testNS), // reply will be a nonAddressableGVK for this test
 				),
 				NewUnstructured(subscriberGVK, subscriberName, testNS,
-					WithUnstructuredAddressable(subscriberDNS),
+					WithUnstructuredAddressable(subscriber),
 				),
 				NewInMemoryChannel(channelName, testNS,
 					WithInitInMemoryChannelConditions,
@@ -1085,7 +1091,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 				),
 				NewUnstructured(subscriberGVK, subscriberName, testNS,
-					WithUnstructuredAddressable(subscriberDNS),
+					WithUnstructuredAddressable(subscriber),
 				),
 				NewInMemoryChannel(channelName, testNS,
 					WithInitInMemoryChannelConditions,
@@ -1128,7 +1134,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionDeliveryRef(subscriberGVK, dlsName, testNS),
 				),
 				NewUnstructured(subscriberGVK, subscriberName, testNS,
-					WithUnstructuredAddressable(subscriberDNS),
+					WithUnstructuredAddressable(subscriber),
 				),
 				NewInMemoryChannel(channelName, testNS,
 					WithInitInMemoryChannelConditions,
@@ -1167,10 +1173,10 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionDeliveryRef(subscriberGVK, dlsName, testNS),
 				),
 				NewUnstructured(subscriberGVK, subscriberName, testNS,
-					WithUnstructuredAddressable(subscriberDNS),
+					WithUnstructuredAddressable(subscriber),
 				),
 				NewUnstructured(subscriberGVK, dlsName, testNS,
-					WithUnstructuredAddressable(dlsDNS),
+					WithUnstructuredAddressable(dls),
 				),
 				NewInMemoryChannel(channelName, testNS,
 					WithInitInMemoryChannelConditions,
@@ -1195,7 +1201,7 @@ func TestAllCases(t *testing.T) {
 					MarkReferencesResolved,
 					MarkAddedToChannel,
 					WithSubscriptionPhysicalSubscriptionSubscriber(&subscriber),
-					WithSubscriptionDeadLetterSinkURI(dlsURI),
+					WithSubscriptionDeadLetterSink(dlsURI),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
@@ -1213,7 +1219,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 				),
 				NewUnstructured(subscriberGVK, subscriberName, testNS,
-					WithUnstructuredAddressable(subscriberDNS),
+					WithUnstructuredAddressable(subscriber),
 				),
 				NewChannel(channelName, testNS,
 					WithInitChannelConditions,
@@ -1226,7 +1232,7 @@ func TestAllCases(t *testing.T) {
 					WithInitInMemoryChannelConditions,
 					WithInMemoryChannelAddress(channelDNS),
 					WithInMemoryChannelReadySubscriber(subscriptionUID),
-					WithInMemoryChannelReady("example.com"),
+					WithInMemoryChannelReady(duckv1.Addressable{URL: apis.HTTP("example.com")}),
 				),
 			},
 			Key:     testNS + "/" + subscriptionName,
@@ -1263,7 +1269,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 				),
 				NewUnstructured(subscriberGVK, subscriberName, testNS,
-					WithUnstructuredAddressable(subscriberDNS),
+					WithUnstructuredAddressable(subscriber),
 				),
 				NewChannel(channelName, testNS,
 					WithInitChannelConditions,
@@ -1273,7 +1279,7 @@ func TestAllCases(t *testing.T) {
 				NewInMemoryChannel(channelName, testNS,
 					WithInitInMemoryChannelConditions,
 					WithInMemoryChannelReadySubscriber(subscriptionUID),
-					WithInMemoryChannelReady("example.com"),
+					WithInMemoryChannelReady(duckv1.Addressable{URL: apis.HTTP("example.com")}),
 				),
 			},
 			Key:     testNS + "/" + subscriptionName,
@@ -1305,7 +1311,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionReply(imcV1GVK, replyName, testNS),
 				),
 				NewUnstructured(subscriberGVK, subscriberName, testNS,
-					WithUnstructuredAddressable(subscriberDNS),
+					WithUnstructuredAddressable(subscriber),
 				),
 				NewInMemoryChannel(channelName, testNS,
 					WithInitInMemoryChannelConditions,
@@ -1314,7 +1320,7 @@ func TestAllCases(t *testing.T) {
 				),
 				NewInMemoryChannel(replyName, testNS,
 					WithInitInMemoryChannelConditions,
-					WithInMemoryChannelAddress(replyDNS),
+					WithInMemoryChannelAddress(reply),
 				),
 			},
 			Key:     testNS + "/" + subscriptionName,
@@ -1353,7 +1359,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionReply(imcV1GVK, replyName, testNS),
 				),
 				NewUnstructured(subscriberGVK, subscriberName, testNS,
-					WithUnstructuredAddressable(subscriberDNS),
+					WithUnstructuredAddressable(subscriber),
 				),
 				NewInMemoryChannel(channelName, testNS,
 					WithInitInMemoryChannelConditions,
@@ -1362,7 +1368,7 @@ func TestAllCases(t *testing.T) {
 				),
 				NewInMemoryChannel(replyName, testNS,
 					WithInitInMemoryChannelConditions,
-					WithInMemoryChannelAddress(replyDNS),
+					WithInMemoryChannelAddress(reply),
 				),
 			},
 			Key:     testNS + "/" + subscriptionName,
@@ -1405,7 +1411,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionPhysicalSubscriptionSubscriber(&subscriber),
 				),
 				NewUnstructured(subscriberGVK, subscriberName, testNS,
-					WithUnstructuredAddressable(subscriberDNS),
+					WithUnstructuredAddressable(subscriber),
 				),
 				NewInMemoryChannel(channelName, testNS,
 					WithInitInMemoryChannelConditions,
@@ -1535,10 +1541,10 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionChannel(imcV1GVK, channelName),
 					WithSubscriptionSubscriberRef(serviceGVK, serviceName, testNS),
 					WithSubscriptionDeliveryRef(subscriberGVK, dlsName, testNS),
-					WithSubscriptionDeadLetterSinkURI(dlsURI),
+					WithSubscriptionDeadLetterSink(dlsURI),
 				),
 				NewUnstructured(subscriberGVK, dlsName, testNS,
-					WithUnstructuredAddressable(dlsDNS),
+					WithUnstructuredAddressable(dls),
 				),
 				// an already rec'ed subscription
 				NewSubscription("b-"+subscriptionName, testNS,
@@ -1577,7 +1583,7 @@ func TestAllCases(t *testing.T) {
 					MarkReferencesResolved,
 					MarkAddedToChannel,
 					WithSubscriptionPhysicalSubscriptionSubscriber(&service),
-					WithSubscriptionDeadLetterSinkURI(dlsURI),
+					WithSubscriptionDeadLetterSink(dlsURI),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
@@ -1609,7 +1615,7 @@ func TestAllCases(t *testing.T) {
 					}),
 				),
 				NewUnstructured(subscriberGVK, dlsName, testNS,
-					WithUnstructuredAddressable(dlsDNS),
+					WithUnstructuredAddressable(dls),
 				),
 				NewInMemoryChannel(channelName, testNS,
 					WithInitInMemoryChannelConditions,
@@ -1649,7 +1655,7 @@ func TestAllCases(t *testing.T) {
 						BackoffPolicy: &linear,
 						BackoffDelay:  pointer.String("PT1S"),
 					}),
-					WithSubscriptionDeadLetterSinkURI(dlsURI),
+					WithSubscriptionDeadLetterSink(dlsURI),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
@@ -1679,7 +1685,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionSubscriberRef(serviceGVK, serviceName, testNS),
 				),
 				NewUnstructured(subscriberGVK, dlcName, testNS,
-					WithUnstructuredAddressable(dlcDNS),
+					WithUnstructuredAddressable(dlc),
 				),
 				NewInMemoryChannel(channelName, testNS,
 					WithInitInMemoryChannelConditions,
@@ -1699,7 +1705,7 @@ func TestAllCases(t *testing.T) {
 						BackoffPolicy: &linear,
 						BackoffDelay:  pointer.String("PT1S"),
 					}),
-					WithInMemoryChannelStatusDLSURI(dlcURI),
+					WithInMemoryChannelStatusDLS(dlcStatus),
 				),
 				NewService(serviceName, testNS),
 			},
@@ -1719,7 +1725,7 @@ func TestAllCases(t *testing.T) {
 					MarkReferencesResolved,
 					MarkAddedToChannel,
 					WithSubscriptionPhysicalSubscriptionSubscriber(&service),
-					WithSubscriptionDeadLetterSinkURI(dlcURI),
+					WithSubscriptionDeadLetterSink(dlcStatus),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
@@ -1753,7 +1759,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionSubscriberRef(serviceGVK, serviceName, testNS),
 				),
 				NewUnstructured(subscriberGVK, dlcName, testNS,
-					WithUnstructuredAddressable(dlcDNS),
+					WithUnstructuredAddressable(dlc),
 				),
 				NewInMemoryChannel(channelName, testNS,
 					WithInitInMemoryChannelConditions,
@@ -1764,7 +1770,7 @@ func TestAllCases(t *testing.T) {
 						Timeout:       pointer.String("PT1S"),
 						RetryAfterMax: pointer.String("PT2S"),
 					}),
-					WithInMemoryChannelStatusDLSURI(dlcURI),
+					WithInMemoryChannelStatusDLS(dlcStatus),
 				),
 				NewService(serviceName, testNS),
 			},
@@ -1809,7 +1815,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionSubscriberRef(serviceGVK, serviceName, testNS),
 				),
 				NewUnstructured(subscriberGVK, dlcName, testNS,
-					WithUnstructuredAddressable(dlcDNS),
+					WithUnstructuredAddressable(dlc),
 				),
 				NewInMemoryChannel(channelName, testNS,
 					WithInitInMemoryChannelConditions,
@@ -1856,7 +1862,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionSubscriberRef(serviceGVK, serviceName, testNS),
 				),
 				NewUnstructured(subscriberGVK, dlcName, testNS,
-					WithUnstructuredAddressable(dlcDNS),
+					WithUnstructuredAddressable(dlc),
 				),
 				NewInMemoryChannel(channelName, testNS,
 					WithInitInMemoryChannelConditions,
@@ -1873,7 +1879,7 @@ func TestAllCases(t *testing.T) {
 							},
 						},
 					}),
-					WithInMemoryChannelStatusDLSURI(nil),
+					WithInMemoryChannelStatusDLS(nil),
 					WithInMemoryChannelReady(channelDNS),
 				),
 				NewService(serviceName, testNS),
@@ -1921,10 +1927,10 @@ func TestAllCases(t *testing.T) {
 					}),
 				),
 				NewUnstructured(subscriberGVK, dlsName, testNS,
-					WithUnstructuredAddressable(dlsDNS),
+					WithUnstructuredAddressable(dls),
 				),
 				NewUnstructured(subscriberGVK, dlc2Name, testNS,
-					WithUnstructuredAddressable(dlc2DNS),
+					WithUnstructuredAddressable(dlc2),
 				),
 				NewInMemoryChannel(channelName, testNS,
 					WithInitInMemoryChannelConditions,
@@ -1976,7 +1982,7 @@ func TestAllCases(t *testing.T) {
 						BackoffPolicy: &linear,
 						BackoffDelay:  pointer.String("PT1S"),
 					}),
-					WithSubscriptionDeadLetterSinkURI(dlsURI),
+					WithSubscriptionDeadLetterSink(dlsURI),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
@@ -2014,10 +2020,10 @@ func TestAllCases(t *testing.T) {
 					}),
 				),
 				NewUnstructured(subscriberGVK, dlsName, testNS,
-					WithUnstructuredAddressable(dlsDNS),
+					WithUnstructuredAddressable(dls),
 				),
 				NewUnstructured(subscriberGVK, dlc2Name, testNS,
-					WithUnstructuredAddressable(dlc2DNS),
+					WithUnstructuredAddressable(dlc2),
 				),
 				NewInMemoryChannel(channelName, testNS,
 					WithInitInMemoryChannelConditions,
@@ -2081,7 +2087,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionDeleted,
 				),
 				NewUnstructured(subscriberGVK, subscriberName, testNS,
-					WithUnstructuredAddressable(subscriberDNS),
+					WithUnstructuredAddressable(subscriber),
 				),
 				NewInMemoryChannel(channelName, testNS,
 					WithInitInMemoryChannelConditions,
@@ -2115,7 +2121,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionDeleted,
 				),
 				NewUnstructured(subscriberGVK, subscriberName, testNS,
-					WithUnstructuredAddressable(subscriberDNS),
+					WithUnstructuredAddressable(subscriber),
 				),
 				NewInMemoryChannel(channelName, testNS,
 					WithInitInMemoryChannelConditions,
@@ -2164,7 +2170,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionDeleted,
 				),
 				NewUnstructured(subscriberGVK, subscriberName, testNS,
-					WithUnstructuredAddressable(subscriberDNS),
+					WithUnstructuredAddressable(subscriber),
 				),
 			},
 			Key: testNS + "/" + subscriptionName,

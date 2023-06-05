@@ -31,12 +31,6 @@ import (
 	"k8s.io/utils/pointer"
 
 	clientgotesting "k8s.io/client-go/testing"
-	"knative.dev/eventing/pkg/apis/eventing"
-	"knative.dev/eventing/pkg/apis/feature"
-	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
-	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
-	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/broker"
-	"knative.dev/eventing/pkg/duck"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	v1a1addr "knative.dev/pkg/client/injection/ducks/duck/v1alpha1/addressable"
@@ -48,10 +42,18 @@ import (
 	"knative.dev/pkg/network"
 	"knative.dev/pkg/tracker"
 
-	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/trigger/fake"
-	. "knative.dev/eventing/pkg/reconciler/testing/v1"
+	"knative.dev/eventing/pkg/apis/eventing"
+	"knative.dev/eventing/pkg/apis/feature"
+	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
+	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
+	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/broker"
+	"knative.dev/eventing/pkg/duck"
+
 	_ "knative.dev/pkg/client/injection/ducks/duck/v1/addressable/fake"
 	. "knative.dev/pkg/reconciler/testing"
+
+	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/trigger/fake"
+	. "knative.dev/eventing/pkg/reconciler/testing/v1"
 )
 
 const (
@@ -122,7 +124,9 @@ var (
 		},
 	}
 
-	dlsURI, _ = apis.ParseURL("http://test-dls.test-namespace.svc.cluster.local")
+	dls = duckv1.Addressable{
+		URL: apis.HTTP("test-dls.test-namespace.svc.cluster.local"),
+	}
 )
 
 func TestReconcile(t *testing.T) {
@@ -477,7 +481,7 @@ func TestReconcile(t *testing.T) {
 				NewBroker(brokerName, testNS,
 					WithBrokerClass(eventing.MTChannelBrokerClassValue),
 					WithBrokerConfig(config()),
-					WithDeadLeaderSink(brokerDestv1.Ref, ""),
+					WithDeadLeaderSink(brokerDestv1),
 					WithInitBrokerConditions),
 				createChannel(withChannelDeadLetterSink(brokerDestv1)),
 				imcConfigMap(),
@@ -493,7 +497,7 @@ func TestReconcile(t *testing.T) {
 					WithInitBrokerConditions,
 					WithBrokerClass(eventing.MTChannelBrokerClassValue),
 					WithBrokerConfig(config()),
-					WithDeadLeaderSink(brokerDestv1.Ref, ""),
+					WithDeadLeaderSink(brokerDestv1),
 					WithTriggerChannelFailed("NoAddress", "Channel does not have an address.")),
 			}},
 		}, {
@@ -504,7 +508,7 @@ func TestReconcile(t *testing.T) {
 				NewBroker(brokerName, testNS,
 					WithBrokerClass(eventing.MTChannelBrokerClassValue),
 					WithBrokerConfig(config()),
-					WithDeadLeaderSink(sinkSVCDest.Ref, ""),
+					WithDeadLeaderSink(sinkSVCDest),
 					WithInitBrokerConditions),
 				createChannel(withChannelReady, withChannelDeadLetterSink(sinkSVCDest)),
 				imcConfigMap(),
@@ -520,9 +524,9 @@ func TestReconcile(t *testing.T) {
 					WithBrokerClass(eventing.MTChannelBrokerClassValue),
 					WithBrokerConfig(config()),
 					WithBrokerReadyWithDLS,
-					WithDeadLeaderSink(sinkSVCDest.Ref, ""),
+					WithDeadLeaderSink(sinkSVCDest),
 					WithBrokerAddressURI(brokerAddress),
-					WithBrokerStatusDLSURI(dlsURI),
+					WithBrokerStatusDLS(dls),
 					WithChannelAddressAnnotation(triggerChannelURL),
 					WithChannelAPIVersionAnnotation(triggerChannelAPIVersion),
 					WithChannelKindAnnotation(triggerChannelKind),
@@ -537,7 +541,7 @@ func TestReconcile(t *testing.T) {
 				NewBroker(brokerName, testNS,
 					WithBrokerClass(eventing.MTChannelBrokerClassValue),
 					WithBrokerConfig(config()),
-					WithDeadLeaderSink(sinkSVCDest.Ref, ""),
+					WithDeadLeaderSink(sinkSVCDest),
 					WithInitBrokerConditions),
 				createChannel(withChannelReady, withChannelDeadLetterSink(alternateDLSDest)),
 				imcConfigMap(),
@@ -553,9 +557,9 @@ func TestReconcile(t *testing.T) {
 					WithBrokerClass(eventing.MTChannelBrokerClassValue),
 					WithBrokerConfig(config()),
 					WithBrokerReadyWithDLS,
-					WithDeadLeaderSink(sinkSVCDest.Ref, ""),
+					WithDeadLeaderSink(sinkSVCDest),
 					WithBrokerAddressURI(brokerAddress),
-					WithBrokerStatusDLSURI(dlsURI),
+					WithBrokerStatusDLS(dls),
 					WithChannelAddressAnnotation(triggerChannelURL),
 					WithChannelAPIVersionAnnotation(triggerChannelAPIVersion),
 					WithChannelKindAnnotation(triggerChannelKind),
@@ -606,7 +610,7 @@ func TestReconcile(t *testing.T) {
 				NewBroker(brokerName, testNS,
 					WithBrokerClass(eventing.MTChannelBrokerClassValue),
 					WithBrokerConfig(config()),
-					WithDeadLeaderSink(sinkSVCDest.Ref, ""),
+					WithDeadLeaderSink(sinkSVCDest),
 					WithInitBrokerConditions),
 				createChannel(withChannelReady, withChannelDeadLetterSink(sinkSVCDest)),
 				imcConfigMap(),
@@ -624,9 +628,9 @@ func TestReconcile(t *testing.T) {
 					WithBrokerClass(eventing.MTChannelBrokerClassValue),
 					WithBrokerConfig(config()),
 					WithBrokerReadyWithDLS,
-					WithDeadLeaderSink(sinkSVCDest.Ref, ""),
+					WithDeadLeaderSink(sinkSVCDest),
 					WithBrokerAddressURI(brokerAddress),
-					WithBrokerStatusDLSURI(dlsURI),
+					WithBrokerStatusDLS(dls),
 					WithChannelAddressAnnotation(triggerChannelURL),
 					WithChannelAPIVersionAnnotation(triggerChannelAPIVersion),
 					WithChannelKindAnnotation(triggerChannelKind),
@@ -656,7 +660,7 @@ func TestReconcile(t *testing.T) {
 				NewBroker(brokerName, testNS,
 					WithBrokerClass(eventing.MTChannelBrokerClassValue),
 					WithBrokerConfig(config()),
-					WithDeadLeaderSink(sinkSVCDest.Ref, ""),
+					WithDeadLeaderSink(sinkSVCDest),
 					WithInitBrokerConditions),
 				createChannel(withChannelReady, withChannelDeadLetterSink(sinkSVCDest)),
 				imcConfigMap(),
@@ -674,9 +678,9 @@ func TestReconcile(t *testing.T) {
 					WithBrokerClass(eventing.MTChannelBrokerClassValue),
 					WithBrokerConfig(config()),
 					WithBrokerReadyWithDLS,
-					WithDeadLeaderSink(sinkSVCDest.Ref, ""),
+					WithDeadLeaderSink(sinkSVCDest),
 					WithBrokerAddressURI(brokerAddress),
-					WithBrokerStatusDLSURI(dlsURI),
+					WithBrokerStatusDLS(dls),
 					WithChannelAddressAnnotation(triggerChannelURL),
 					WithChannelAPIVersionAnnotation(triggerChannelAPIVersion),
 					WithChannelKindAnnotation(triggerChannelKind),
@@ -813,7 +817,7 @@ func withChannelStatusCACerts(caCerts string) unstructuredOption {
 
 func withChannelReady(channel *unstructured.Unstructured) {
 	withChannelStatusAddress(triggerChannelURL)(channel)
-	withChannelStatusDeadLetterSinkURI(dlsURI.String())(channel)
+	withChannelStatusDeadLetterSinkURI(dls.URL.String())(channel)
 }
 
 func createChannel(opts ...unstructuredOption) *unstructured.Unstructured {

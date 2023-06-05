@@ -21,19 +21,19 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/pkg/apis"
 	"knative.dev/pkg/kmeta"
+
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/apis/eventing"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
-// NewSubscription returns a placeholder subscription for trigger 't', from brokerTrigger to 'uri'
+// NewSubscription returns a placeholder subscription for trigger 't', from brokerTrigger to 'dest'
 // replying to brokerIngress.
-func NewSubscription(t *eventingv1.Trigger, brokerTrigger, brokerRef *corev1.ObjectReference, uri *apis.URL, delivery *eventingduckv1.DeliverySpec) *messagingv1.Subscription {
+func NewSubscription(t *eventingv1.Trigger, brokerTrigger, brokerRef *corev1.ObjectReference, dest *duckv1.Destination, delivery *eventingduckv1.DeliverySpec) *messagingv1.Subscription {
 	return &messagingv1.Subscription{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: t.Namespace,
@@ -49,9 +49,7 @@ func NewSubscription(t *eventingv1.Trigger, brokerTrigger, brokerRef *corev1.Obj
 				Kind:       brokerTrigger.Kind,
 				Name:       brokerTrigger.Name,
 			},
-			Subscriber: &duckv1.Destination{
-				URI: uri,
-			},
+			Subscriber: dest,
 			Reply: &duckv1.Destination{
 				Ref: &duckv1.KReference{
 					APIVersion: brokerRef.APIVersion,

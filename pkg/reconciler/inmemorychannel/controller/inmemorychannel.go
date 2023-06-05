@@ -42,6 +42,7 @@ import (
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/resolver"
 
+	eventingduck "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/feature"
 	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
@@ -173,8 +174,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1.InMemoryChannel)
 			imc.Status.MarkDeadLetterSinkResolvedFailed("Unable to get the DeadLetterSink's URI", "%v", err)
 			return fmt.Errorf("Failed to resolve Dead Letter Sink URI: %v", err)
 		}
-		deadLetterSinkUri := deadLetterSinkAddr.URL
-		imc.Status.MarkDeadLetterSinkResolvedSucceeded(deadLetterSinkUri)
+		imc.Status.MarkDeadLetterSinkResolvedSucceeded(eventingduck.NewDeliveryStatusFromAddressable(deadLetterSinkAddr))
 	} else {
 		imc.Status.MarkDeadLetterSinkNotConfigured()
 	}

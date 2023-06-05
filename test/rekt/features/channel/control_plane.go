@@ -259,7 +259,7 @@ func readyChannelWithDLSHaveStatusUpdated(name string) feature.StepFn {
 
 		// Confirm the channel is ready, and has the status.deadLetterSinkURI set.
 		if c := ch.Status.GetCondition(apis.ConditionReady); c.IsTrue() {
-			if ch.Status.DeadLetterSinkURI == nil {
+			if !ch.Status.DeliveryStatus.IsSet() {
 				bytes, _ := json.MarshalIndent(ch, "", " ")
 				t.Errorf("channel DLS not resolved but resource reported ready, state:\n%s", string(bytes))
 			}

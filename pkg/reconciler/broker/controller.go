@@ -21,15 +21,6 @@ import (
 
 	"go.uber.org/zap"
 	"k8s.io/client-go/tools/cache"
-	"knative.dev/eventing/pkg/apis/eventing"
-	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
-	eventingclient "knative.dev/eventing/pkg/client/injection/client"
-	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
-	brokerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/broker"
-	subscriptioninformer "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/subscription"
-	brokerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/broker"
-	"knative.dev/eventing/pkg/duck"
-	"knative.dev/eventing/pkg/reconciler/names"
 	"knative.dev/pkg/apis"
 	configmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap"
 	endpointsinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/endpoints"
@@ -42,6 +33,17 @@ import (
 	"knative.dev/pkg/system"
 	"knative.dev/pkg/tracing"
 	tracingconfig "knative.dev/pkg/tracing/config"
+
+	"knative.dev/eventing/pkg/apis/eventing"
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	"knative.dev/eventing/pkg/apis/feature"
+	eventingclient "knative.dev/eventing/pkg/client/injection/client"
+	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
+	brokerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/broker"
+	subscriptioninformer "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/subscription"
+	brokerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/broker"
+	"knative.dev/eventing/pkg/duck"
+	"knative.dev/eventing/pkg/reconciler/names"
 )
 
 const (
@@ -67,6 +69,9 @@ func NewController(
 	configmapInformer := configmapinformer.Get(ctx)
 	secretInformer := secretinformer.Get(ctx)
 
+	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"))
+	featureStore.WatchConfigs(cmw)
+
 	var err error
 	if Tracer, err = tracing.SetupPublishingWithDynamicConfig(logger, cmw, "mt-broker-controller", tracingconfig.ConfigName); err != nil {
 		logger.Fatal("Error setting up trace publishing", zap.Error(err))
@@ -79,6 +84,8 @@ func NewController(
 		BrokerConditionAddressable,
 	))
 
+	brokerFilter := pkgreconciler.AnnotationFilterFunc(brokerreconciler.ClassAnnotationKey, eventing.MTChannelBrokerClassValue, false /*allowUnset*/)
+
 	r := &Reconciler{
 		eventingClientSet:  eventingclient.Get(ctx),
 		dynamicClientSet:   dynamicclient.Get(ctx),
@@ -88,11 +95,15 @@ func NewController(
 		configmapLister:    configmapInformer.Lister(),
 		secretLister:       secretInformer.Lister(),
 	}
-	impl := brokerreconciler.NewImpl(ctx, r, eventing.MTChannelBrokerClassValue)
+	impl := brokerreconciler.NewImpl(ctx, r, eventing.MTChannelBrokerClassValue, func(impl *controller.Impl) controller.Options {
+		return controller.Options{
+			ConfigStore:       featureStore,
+			PromoteFilterFunc: brokerFilter,
+		}
+	})
 
 	r.channelableTracker = duck.NewListableTrackerFromTracker(ctx, channelable.Get, impl.Tracker)
 
-	brokerFilter := pkgreconciler.AnnotationFilterFunc(brokerreconciler.ClassAnnotationKey, eventing.MTChannelBrokerClassValue, false /*allowUnset*/)
 	brokerInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: brokerFilter,
 		Handler:    controller.HandleAll(impl.Enqueue),

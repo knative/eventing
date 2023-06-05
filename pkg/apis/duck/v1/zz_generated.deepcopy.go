@@ -184,6 +184,11 @@ func (in *DeliveryStatus) DeepCopyInto(out *DeliveryStatus) {
 		*out = new(apis.URL)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.DeadLetterSinkCACerts != nil {
+		in, out := &in.DeadLetterSinkCACerts, &out.DeadLetterSinkCACerts
+		*out = new(string)
+		**out = **in
+	}
 	return
 }
 

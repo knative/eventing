@@ -154,4 +154,26 @@ type DeliveryStatus struct {
 	// where failed events are sent to.
 	// +optional
 	DeadLetterSinkURI *apis.URL `json:"deadLetterSinkUri,omitempty"`
+	// DeadLetterSinkCACerts are Certification Authority (CA) certificates in PEM format
+	// according to https://www.rfc-editor.org/rfc/rfc7468.
+	// +optional
+	DeadLetterSinkCACerts *string `json:"deadLetterSinkCACerts,omitempty"`
+}
+
+func (ds *DeliveryStatus) IsSet() bool {
+	return ds.DeadLetterSinkURI != nil
+}
+
+func NewDeliveryStatusFromAddressable(addr *duckv1.Addressable) DeliveryStatus {
+	return DeliveryStatus{
+		DeadLetterSinkURI:     addr.URL,
+		DeadLetterSinkCACerts: addr.CACerts,
+	}
+}
+
+func NewDestinationFromDeliveryStatus(status DeliveryStatus) duckv1.Destination {
+	return duckv1.Destination{
+		URI:     status.DeadLetterSinkURI,
+		CACerts: status.DeadLetterSinkCACerts,
+	}
 }

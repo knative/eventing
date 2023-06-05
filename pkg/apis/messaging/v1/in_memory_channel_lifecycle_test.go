@@ -24,9 +24,10 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
-	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 )
 
 var (
@@ -336,7 +337,7 @@ func TestInMemoryChannelIsReady(t *testing.T) {
 				cs.MarkChannelServiceFailed("NotReadyChannelService", "testing")
 			}
 			if test.setAddress {
-				cs.SetAddress(&apis.URL{Scheme: "http", Host: "foo.bar"})
+				cs.SetAddress(&duckv1.Addressable{URL: &apis.URL{Scheme: "http", Host: "foo.bar"}})
 			}
 			if test.markEndpointsReady {
 				cs.MarkEndpointsTrue()
@@ -349,7 +350,7 @@ func TestInMemoryChannelIsReady(t *testing.T) {
 				cs.MarkDispatcherFailed("NotReadyDispatcher", "testing")
 			}
 			if test.DLSResolved == &trueVal {
-				cs.MarkDeadLetterSinkResolvedSucceeded(nil)
+				cs.MarkDeadLetterSinkResolvedSucceeded(eventingduckv1.DeliveryStatus{})
 			} else if test.DLSResolved == &falseVal {
 				cs.MarkDeadLetterSinkResolvedFailed("Unable to get the dead letter sink's URI", "DLS reference not found")
 			} else {
@@ -425,7 +426,7 @@ func TestInMemoryChannelStatus_SetAddressable(t *testing.T) {
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
 			cs := &InMemoryChannelStatus{}
-			cs.SetAddress(tc.url)
+			cs.SetAddress(&duckv1.Addressable{URL: tc.url})
 			if diff := cmp.Diff(tc.want, cs, ignoreAllButTypeAndStatus); diff != "" {
 				t.Error("unexpected conditions (-want, +got) =", diff)
 			}
@@ -438,7 +439,7 @@ func ReadyBrokerStatusWithoutDLS() *InMemoryChannelStatus {
 	imcs.MarkChannelServiceTrue()
 	imcs.MarkDeadLetterSinkNotConfigured()
 	imcs.MarkEndpointsTrue()
-	imcs.SetAddress(apis.HTTP("example.com"))
+	imcs.SetAddress(&duckv1.Addressable{URL: apis.HTTP("example.com")})
 	imcs.MarkServiceTrue()
 	return imcs
 }
