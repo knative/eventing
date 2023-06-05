@@ -34,6 +34,17 @@ import (
 // It'll either return a pointer to the new Secret or and error indicating
 // why it couldn't do it.
 func CopySecret(corev1Input clientcorev1.CoreV1Interface, srcNS string, srcSecretName string, tgtNS string, svcAccount string) (*corev1.Secret, error) {
+	return CopySecretWithName(corev1Input,
+		srcNS,
+		srcSecretName,
+		tgtNS,
+		srcSecretName, /* Use same target name as source by default */
+		svcAccount)
+}
+
+// CopySecretWithName will copy a secret from one namespace into another.
+// Allows for specifying target secret name.
+func CopySecretWithName(corev1Input clientcorev1.CoreV1Interface, srcNS, srcSecretName, tgtNS, tgtSecretName, svcAccount string) (*corev1.Secret, error) {
 	tgtNamespaceSvcAcct := corev1Input.ServiceAccounts(tgtNS)
 	srcSecrets := corev1Input.Secrets(srcNS)
 	tgtNamespaceSecrets := corev1Input.Secrets(tgtNS)
@@ -54,7 +65,7 @@ func CopySecret(corev1Input clientcorev1.CoreV1Interface, srcNS string, srcSecre
 		context.Background(),
 		&corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: srcSecretName,
+				Name: tgtSecretName,
 			},
 			Data: srcSecret.Data,
 			Type: srcSecret.Type,
@@ -72,14 +83,14 @@ func CopySecret(corev1Input clientcorev1.CoreV1Interface, srcNS string, srcSecre
 	}
 
 	for _, secret := range tgtSvcAccount.ImagePullSecrets {
-		if secret.Name == srcSecretName {
+		if secret.Name == tgtSecretName {
 			return newSecret, nil
 		}
 	}
 	// Prevent overwriting existing imagePullSecrets
-	patch := `[{"op":"add","path":"/imagePullSecrets/-","value":{"name":"` + srcSecretName + `"}}]`
+	patch := `[{"op":"add","path":"/imagePullSecrets/-","value":{"name":"` + tgtSecretName + `"}}]`
 	if len(tgtSvcAccount.ImagePullSecrets) == 0 {
-		patch = `[{"op":"add","path":"/imagePullSecrets","value":[{"name":"` + srcSecretName + `"}]}]`
+		patch = `[{"op":"add","path":"/imagePullSecrets","value":[{"name":"` + tgtSecretName + `"}]}]`
 	}
 	_, err = tgtNamespaceSvcAcct.Patch(context.Background(), svcAccount, types.JSONPatchType,
 		[]byte(patch), metav1.PatchOptions{})
