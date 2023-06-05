@@ -52,13 +52,16 @@ import (
 const (
 	testNS                            = "test-namespace"
 	imcName                           = "test-imc"
-	channelServiceAddress             = "test-imc-kn-channel.test-namespace.svc.cluster.local"
 	twoSubscriberPatch                = `[{"op":"add","path":"/status/subscribers","value":[{"observedGeneration":1,"ready":"True","uid":"2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1"},{"observedGeneration":2,"ready":"True","uid":"34c5aec8-deb6-11e8-9f32-f2801f1b9fd1"}]}]`
 	oneSubscriberPatch                = `[{"op":"add","path":"/status/subscribers","value":[{"observedGeneration":1,"ready":"True","uid":"2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1"}]}]`
 	oneSubscriberRemovedOneAddedPatch = `[{"op":"add","path":"/status/subscribers/2","value":{"observedGeneration":2,"ready":"True","uid":"34c5aec8-deb6-11e8-9f32-f2801f1b9fd1"}},{"op":"remove","path":"/status/subscribers/0"}]`
 )
 
 var (
+	channelServiceAddress = duckv1.Addressable{
+		URL: apis.HTTP("test-imc-kn-channel.test-namespace.svc.cluster.local"),
+	}
+
 	linear      = eventingduckv1.BackoffPolicyLinear
 	exponential = eventingduckv1.BackoffPolicyExponential
 
@@ -500,7 +503,7 @@ func TestReconciler_ReconcileKind(t *testing.T) {
 				handler := newFakeMultiChannelHandler()
 				if fanoutHandler != nil {
 					fanoutHandler.SetSubscriptions(context.TODO(), tc.subs)
-					handler.SetChannelHandler(channelServiceAddress, fanoutHandler)
+					handler.SetChannelHandler(channelServiceAddress.URL.String(), fanoutHandler)
 				}
 				r := &Reconciler{
 					multiChannelMessageHandler: handler,
@@ -510,9 +513,9 @@ func TestReconciler_ReconcileKind(t *testing.T) {
 				if e != tc.wantResult {
 					t.Errorf("Results differ, want %v have %v", tc.wantResult, e)
 				}
-				channelHandler := handler.GetChannelHandler(channelServiceAddress)
+				channelHandler := handler.GetChannelHandler(channelServiceAddress.URL.Host)
 				if channelHandler == nil {
-					t.Error("Did not get handler")
+					t.Errorf("Did not get handler for %s", channelServiceAddress.URL.Host)
 				}
 				if diff := cmp.Diff(tc.wantSubs, channelHandler.GetSubscriptions(context.TODO()), cmpopts.IgnoreFields(kncloudevents.RetryConfig{}, "Backoff", "CheckRetry")); diff != "" {
 					t.Error("unexpected subs (+want/-got)", diff)
@@ -543,7 +546,7 @@ func TestReconciler_InvalidInputs(t *testing.T) {
 			t.Run("handler-"+n, func(t *testing.T) {
 				handler := newFakeMultiChannelHandler()
 				if fanoutHandler != nil {
-					handler.SetChannelHandler(channelServiceAddress, fanoutHandler)
+					handler.SetChannelHandler(channelServiceAddress.URL.String(), fanoutHandler)
 				}
 				r := &Reconciler{
 					multiChannelMessageHandler: handler,
@@ -573,13 +576,13 @@ func TestReconciler_Deletion(t *testing.T) {
 			t.Run("handler-"+n, func(t *testing.T) {
 				handler := newFakeMultiChannelHandler()
 				if fanoutHandler != nil {
-					handler.SetChannelHandler(channelServiceAddress, fanoutHandler)
+					handler.SetChannelHandler(channelServiceAddress.URL.Host, fanoutHandler)
 				}
 				r := &Reconciler{
 					multiChannelMessageHandler: handler,
 				}
 				r.deleteFunc(tc.imc)
-				if handler.GetChannelHandler(channelServiceAddress) != nil {
+				if handler.GetChannelHandler(channelServiceAddress.URL.Host) != nil {
 					t.Error("Got handler")
 				}
 			})

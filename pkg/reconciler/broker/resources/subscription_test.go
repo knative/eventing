@@ -22,12 +22,13 @@ import (
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/apis/eventing"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
-	"knative.dev/pkg/apis"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 func TestNewSubscription(t *testing.T) {
@@ -57,7 +58,10 @@ func TestNewSubscription(t *testing.T) {
 			URI: apis.HTTP("dlc.example.com"),
 		},
 	}
-	got := NewSubscription(trigger, triggerChannelRef, brokerRef, apis.HTTP("example.com"), delivery)
+	dest := &duckv1.Destination{
+		URI: apis.HTTP("example.com"),
+	}
+	got := NewSubscription(trigger, triggerChannelRef, brokerRef, dest, delivery)
 	want := &messagingv1.Subscription{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "t-namespace",

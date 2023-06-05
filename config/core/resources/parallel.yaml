@@ -98,6 +98,9 @@ spec:
                                   URIs will be resolved using the base
                                   URI retrieved from Ref.
                               type: string
+                            CACerts:
+                              description: Certification Authority (CA) certificates in PEM format that the source trusts when sending events to the sink.
+                              type: string
                         retry:
                           description: Retry is the minimum number of retries
                               the sender should attempt when sending an

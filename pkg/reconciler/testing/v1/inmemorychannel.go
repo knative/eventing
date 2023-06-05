@@ -23,8 +23,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/pkg/apis"
-
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
 	eventingv1 "knative.dev/eventing/pkg/apis/duck/v1"
@@ -140,12 +138,9 @@ func WithInMemoryChannelEndpointsReady() InMemoryChannelOption {
 	}
 }
 
-func WithInMemoryChannelAddress(a string) InMemoryChannelOption {
+func WithInMemoryChannelAddress(a duckv1.Addressable) InMemoryChannelOption {
 	return func(imc *v1.InMemoryChannel) {
-		imc.Status.SetAddress(&apis.URL{
-			Scheme: "http",
-			Host:   a,
-		})
+		imc.Status.SetAddress(&a)
 	}
 }
 
@@ -163,12 +158,9 @@ func WithInMemoryChannelAddresses(addresses []duckv1.Addressable) InMemoryChanne
 	}
 }
 
-func WithInMemoryChannelReady(host string) InMemoryChannelOption {
+func WithInMemoryChannelReady(a duckv1.Addressable) InMemoryChannelOption {
 	return func(imc *v1.InMemoryChannel) {
-		imc.Status.SetAddress(&apis.URL{
-			Scheme: "http",
-			Host:   host,
-		})
+		imc.Status.SetAddress(&a)
 		imc.Status.MarkChannelServiceTrue()
 		imc.Status.MarkEndpointsTrue()
 		imc.Status.MarkServiceTrue()
@@ -218,9 +210,13 @@ func WithInMemoryScopeAnnotation(value string) InMemoryChannelOption {
 	}
 }
 
-func WithInMemoryChannelStatusDLSURI(dlsURI *apis.URL) InMemoryChannelOption {
+func WithInMemoryChannelStatusDLS(dls *duckv1.Addressable) InMemoryChannelOption {
 	return func(imc *v1.InMemoryChannel) {
-		imc.Status.MarkDeadLetterSinkResolvedSucceeded(dlsURI)
+		if dls == nil {
+			imc.Status.MarkDeadLetterSinkNotConfigured()
+			return
+		}
+		imc.Status.MarkDeadLetterSinkResolvedSucceeded(eventingv1.NewDeliveryStatusFromAddressable(dls))
 	}
 }
 
@@ -241,18 +237,11 @@ func WithInMemoryChannelDLSResolvedFailed() InMemoryChannelOption {
 	}
 }
 
-func WithDeadLetterSink(ref *duckv1.KReference, uri string) InMemoryChannelOption {
+func WithDeadLetterSink(d duckv1.Destination) InMemoryChannelOption {
 	return func(imc *v1.InMemoryChannel) {
 		if imc.Spec.Delivery == nil {
 			imc.Spec.Delivery = new(eventingv1.DeliverySpec)
 		}
-		var u *apis.URL
-		if uri != "" {
-			u, _ = apis.ParseURL(uri)
-		}
-		imc.Spec.Delivery.DeadLetterSink = &duckv1.Destination{
-			Ref: ref,
-			URI: u,
-		}
+		imc.Spec.Delivery.DeadLetterSink = &d
 	}
 }

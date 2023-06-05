@@ -23,6 +23,8 @@ import (
 	"k8s.io/utils/pointer"
 	"knative.dev/pkg/apis"
 	v1 "knative.dev/pkg/apis/duck/v1"
+
+	eventingduck "knative.dev/eventing/pkg/apis/duck/v1"
 )
 
 var imcCondSet = apis.NewLivingConditionSet(
@@ -97,10 +99,10 @@ func (imcs *InMemoryChannelStatus) InitializeConditions() {
 	imcCondSet.Manage(imcs).InitializeConditions()
 }
 
-func (imcs *InMemoryChannelStatus) SetAddress(url *apis.URL) {
-	imcs.Address = &v1.Addressable{URL: url}
-	if url != nil {
-		imcs.Address.Name = pointer.String(url.Scheme)
+func (imcs *InMemoryChannelStatus) SetAddress(addr *v1.Addressable) {
+	imcs.Address = addr
+	if addr != nil && addr.URL != nil {
+		imcs.Address.Name = pointer.String(addr.URL.Scheme)
 		imcCondSet.Manage(imcs).MarkTrue(InMemoryChannelConditionAddressable)
 	} else {
 		imcCondSet.Manage(imcs).MarkFalse(InMemoryChannelConditionAddressable, "emptyHostname", "hostname is the empty string")
@@ -166,17 +168,17 @@ func (imcs *InMemoryChannelStatus) MarkEndpointsTrue() {
 	imcCondSet.Manage(imcs).MarkTrue(InMemoryChannelConditionEndpointsReady)
 }
 
-func (imcs *InMemoryChannelStatus) MarkDeadLetterSinkResolvedSucceeded(deadLetterSinkURI *apis.URL) {
-	imcs.DeliveryStatus.DeadLetterSinkURI = deadLetterSinkURI
+func (imcs *InMemoryChannelStatus) MarkDeadLetterSinkResolvedSucceeded(ds eventingduck.DeliveryStatus) {
+	imcs.DeliveryStatus = ds
 	imcCondSet.Manage(imcs).MarkTrue(InMemoryChannelConditionDeadLetterSinkResolved)
 }
 
 func (imcs *InMemoryChannelStatus) MarkDeadLetterSinkNotConfigured() {
-	imcs.DeadLetterSinkURI = nil
+	imcs.DeliveryStatus = eventingduck.DeliveryStatus{}
 	imcCondSet.Manage(imcs).MarkTrueWithReason(InMemoryChannelConditionDeadLetterSinkResolved, "DeadLetterSinkNotConfigured", "No dead letter sink is configured.")
 }
 
 func (imcs *InMemoryChannelStatus) MarkDeadLetterSinkResolvedFailed(reason, messageFormat string, messageA ...interface{}) {
-	imcs.DeadLetterSinkURI = nil
+	imcs.DeliveryStatus = eventingduck.DeliveryStatus{}
 	imcCondSet.Manage(imcs).MarkFalse(InMemoryChannelConditionDeadLetterSinkResolved, reason, messageFormat, messageA...)
 }

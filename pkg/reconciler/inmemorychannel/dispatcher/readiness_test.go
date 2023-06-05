@@ -22,6 +22,9 @@ import (
 	"testing"
 
 	"k8s.io/apimachinery/pkg/runtime"
+	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+
 	"knative.dev/eventing/pkg/channel/fanout"
 
 	. "knative.dev/eventing/pkg/reconciler/testing/v1"
@@ -35,7 +38,7 @@ func TestReadinessChecker(t *testing.T) {
 			WithInMemoryChannelServiceReady(),
 			WithInMemoryChannelEndpointsReady(),
 			WithInMemoryChannelChannelServiceReady(),
-			WithInMemoryChannelAddress("fake-address"),
+			WithInMemoryChannelAddress(duckv1.Addressable{URL: apis.HTTP("fake-address")}),
 			WithInMemoryChannelDLSUnknown(),
 		),
 	})

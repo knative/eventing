@@ -23,11 +23,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	eventingv1 "knative.dev/eventing/pkg/apis/duck/v1"
-	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/ptr"
+
+	eventingv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
 )
 
 // TriggerOption enables further configuration of a Trigger.
@@ -58,19 +59,21 @@ func WithTriggerSubscriberURI(rawurl string) TriggerOption {
 	}
 }
 
-func WithTriggerDeadLeaderSink(ref *duckv1.KReference, uri string) TriggerOption {
+func WithTriggerSubscriber(sub duckv1.Destination) TriggerOption {
+	if err := sub.Validate(context.Background()).Filter(apis.ErrorLevel); err != nil {
+		panic(err)
+	}
+	return func(t *v1.Trigger) {
+		t.Spec.Subscriber = sub
+	}
+}
+
+func WithTriggerDeadLeaderSink(destination duckv1.Destination) TriggerOption {
 	return func(t *v1.Trigger) {
 		if t.Spec.Delivery == nil {
 			t.Spec.Delivery = new(eventingv1.DeliverySpec)
 		}
-		var u *apis.URL
-		if uri != "" {
-			u, _ = apis.ParseURL(uri)
-		}
-		t.Spec.Delivery.DeadLetterSink = &duckv1.Destination{
-			Ref: ref,
-			URI: u,
-		}
+		t.Spec.Delivery.DeadLetterSink = &destination
 	}
 }
 
@@ -189,16 +192,15 @@ func WithTriggerStatusSubscriberURI(uri string) TriggerOption {
 	}
 }
 
-func WithTriggerStatusSubscriberCACerts(caCerts *string) TriggerOption {
+func WithTriggerStatusSubscriberCACerts(caCerts string) TriggerOption {
 	return func(t *v1.Trigger) {
-		t.Status.SubscriberCACerts = caCerts
+		t.Status.SubscriberCACerts = &caCerts
 	}
 }
 
-func WithTriggerStatusDeadLetterSinkURI(uri string) TriggerOption {
+func WithTriggerStatusDeadLetterSinkURI(uri duckv1.Addressable) TriggerOption {
 	return func(t *v1.Trigger) {
-		u, _ := apis.ParseURL(uri)
-		t.Status.DeadLetterSinkURI = u
+		t.Status.DeliveryStatus = eventingv1.NewDeliveryStatusFromAddressable(&uri)
 	}
 }
 
@@ -268,6 +270,12 @@ func WithTriggerDeadLetterSinkResolvedFailed(reason, message string) TriggerOpti
 func WithTriggerDeadLetterSinkResolvedSucceeded() TriggerOption {
 	return func(t *v1.Trigger) {
 		t.Status.MarkDeadLetterSinkResolvedSucceeded()
+	}
+}
+
+func WithTriggerDeadLetterSinkCACerts(ca string) TriggerOption {
+	return func(t *v1.Trigger) {
+		t.Status.DeadLetterSinkCACerts = &ca
 	}
 }
 

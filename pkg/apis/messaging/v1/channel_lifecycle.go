@@ -19,9 +19,10 @@ package v1
 import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	eventingduck "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+
+	eventingduck "knative.dev/eventing/pkg/apis/duck/v1"
 )
 
 var chCondSet = apis.NewLivingConditionSet(
@@ -131,17 +132,17 @@ func (cs *ChannelStatus) PropagateStatuses(chs *eventingduck.ChannelableStatus) 
 	cs.SubscribableStatus = chs.SubscribableStatus
 }
 
-func (cs *ChannelStatus) MarkDeadLetterSinkResolvedSucceeded(deadLetterSinkURI *apis.URL) {
-	cs.DeliveryStatus.DeadLetterSinkURI = deadLetterSinkURI
+func (cs *ChannelStatus) MarkDeadLetterSinkResolvedSucceeded(deadLetterSink eventingduck.DeliveryStatus) {
+	cs.DeliveryStatus = deadLetterSink
 	chCondSet.Manage(cs).MarkTrue(ChannelConditionDeadLetterSinkResolved)
 }
 
 func (cs *ChannelStatus) MarkDeadLetterSinkNotConfigured() {
-	cs.DeadLetterSinkURI = nil
+	cs.DeliveryStatus = eventingduck.DeliveryStatus{}
 	chCondSet.Manage(cs).MarkTrueWithReason(ChannelConditionDeadLetterSinkResolved, "DeadLetterSinkNotConfigured", "No dead letter sink is configured.")
 }
 
 func (cs *ChannelStatus) MarkDeadLetterSinkResolvedFailed(reason, messageFormat string, messageA ...interface{}) {
-	cs.DeadLetterSinkURI = nil
+	cs.DeliveryStatus = eventingduck.DeliveryStatus{}
 	chCondSet.Manage(cs).MarkFalse(ChannelConditionDeadLetterSinkResolved, reason, messageFormat, messageA...)
 }

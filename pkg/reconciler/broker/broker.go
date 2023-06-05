@@ -158,12 +158,8 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 	}
 
 	channelStatus := &duckv1.ChannelableStatus{
-		AddressStatus: pkgduckv1.AddressStatus{
-			Address: &pkgduckv1.Addressable{URL: triggerChan.Status.Address.URL},
-		},
-		DeliveryStatus: duckv1.DeliveryStatus{
-			DeadLetterSinkURI: triggerChan.Status.DeliveryStatus.DeadLetterSinkURI,
-		},
+		AddressStatus:  triggerChan.Status.AddressStatus,
+		DeliveryStatus: triggerChan.Status.DeliveryStatus,
 	}
 
 	b.Status.PropagateTriggerChannelReadiness(channelStatus)
@@ -185,8 +181,8 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 	b.Status.PropagateIngressAvailability(ingressEndpoints)
 
 	if b.Spec.Delivery != nil && b.Spec.Delivery.DeadLetterSink != nil {
-		if triggerChan.Status.DeliveryStatus.DeadLetterSinkURI != nil {
-			b.Status.MarkDeadLetterSinkResolvedSucceeded(triggerChan.Status.DeliveryStatus.DeadLetterSinkURI)
+		if triggerChan.Status.DeliveryStatus.IsSet() {
+			b.Status.MarkDeadLetterSinkResolvedSucceeded(triggerChan.Status.DeliveryStatus)
 		} else {
 			b.Status.MarkDeadLetterSinkResolvedFailed(fmt.Sprintf("Channel %s didn't set status.deadLetterSinkURI", triggerChan.Name), "")
 		}
