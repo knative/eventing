@@ -17,6 +17,7 @@ limitations under the License.
 package kncloudevents
 
 import (
+	"context"
 	"fmt"
 	nethttp "net/http"
 	"sync"
@@ -29,21 +30,24 @@ import (
 )
 
 const (
-	defaultRetryWaitMin = 1 * time.Second
-	defaultRetryWaitMax = 30 * time.Second
+	defaultRetryWaitMin    = 1 * time.Second
+	defaultRetryWaitMax    = 30 * time.Second
+	defaultClientsTTL      = 30 * time.Minute
+	defaultRecheckInterval = 5 * time.Minute
 )
 
 var (
-	clients                clientsHolder
-	ClientsTTL             = time.Minute * 30
-	ClientsRecheckInterval = time.Minute * 5
+	clients clientsHolder
 )
 
 type clientsHolder struct {
-	mu               sync.Mutex
-	clients          map[string]*clientsMapEntry
-	connectionArgs   *ConnectionArgs
-	cleanupInitiated bool
+	clientsMu       sync.Mutex
+	clients         map[string]*clientsMapEntry
+	timerMu         sync.Mutex
+	connectionArgs  *ConnectionArgs
+	ttl             time.Duration
+	recheckInterval time.Duration
+	cancelCleanup   context.CancelFunc
 }
 
 type clientsMapEntry struct {
@@ -52,20 +56,24 @@ type clientsMapEntry struct {
 }
 
 func init() {
+	ctx, cancel := context.WithCancel(context.Background())
 	clients = clientsHolder{
-		clients:          make(map[string]*clientsMapEntry),
-		cleanupInitiated: false,
+		clients:         make(map[string]*clientsMapEntry),
+		cancelCleanup:   cancel,
+		ttl:             defaultClientsTTL,
+		recheckInterval: defaultRecheckInterval,
 	}
+	go cleanupClientsMap(ctx)
 }
 
 func getClientForAddressable(addressable duckv1.Addressable) (*nethttp.Client, error) {
-	clients.mu.Lock()
-	defer clients.mu.Unlock()
+	clients.clientsMu.Lock()
+	defer clients.clientsMu.Unlock()
 
 	clientKey := addressable.URL.String()
 
 	clientEntry, ok := clients.clients[clientKey]
-	expiry := time.Now().Add(ClientsTTL).UnixNano()
+	expiry := time.Now().Add(clients.ttl).UnixNano()
 	var client *nethttp.Client
 	if !ok {
 		newClient, err := createNewClient(addressable)
@@ -79,9 +87,6 @@ func getClientForAddressable(addressable duckv1.Addressable) (*nethttp.Client, e
 	} else {
 		client = clientEntry.client
 		clientEntry.expiry = expiry
-	}
-	if !clients.cleanupInitiated {
-		go cleanupClientsMap()
 	}
 
 	return client, nil
@@ -115,8 +120,8 @@ func createNewClient(addressable duckv1.Addressable) (*nethttp.Client, error) {
 }
 
 func AddOrUpdateAddressableHandler(addressable duckv1.Addressable) {
-	clients.mu.Lock()
-	defer clients.mu.Unlock()
+	clients.clientsMu.Lock()
+	defer clients.clientsMu.Unlock()
 
 	clientKey := addressable.URL.String()
 
@@ -125,16 +130,13 @@ func AddOrUpdateAddressableHandler(addressable duckv1.Addressable) {
 		fmt.Printf("failed to create new client: %v", err)
 		return
 	}
-	expiry := time.Now().Add(ClientsTTL).UnixNano()
+	expiry := time.Now().Add(clients.ttl).UnixNano()
 	clients.clients[clientKey] = &clientsMapEntry{client: client, expiry: expiry}
-	if !clients.cleanupInitiated {
-		go cleanupClientsMap()
-	}
 }
 
 func DeleteAddressableHandler(addressable duckv1.Addressable) {
-	clients.mu.Lock()
-	defer clients.mu.Unlock()
+	clients.clientsMu.Lock()
+	defer clients.clientsMu.Unlock()
 
 	clientKey := addressable.URL.String()
 
@@ -146,8 +148,8 @@ func DeleteAddressableHandler(addressable duckv1.Addressable) {
 func ConfigureConnectionArgs(ca *ConnectionArgs) {
 	configureConnectionArgsOldClient(ca) //also configure the connection args of the old client
 
-	clients.mu.Lock()
-	defer clients.mu.Unlock()
+	clients.clientsMu.Lock()
+	defer clients.clientsMu.Unlock()
 
 	// Check if same config
 	if clients.connectionArgs != nil &&
@@ -171,6 +173,30 @@ func ConfigureConnectionArgs(ca *ConnectionArgs) {
 	clients.connectionArgs = ca
 }
 
+// SetClientTTL sets the ttl before cached clients expire
+// This does not update existing clients, it only affects new ones
+func SetClientTTL(ttl time.Duration) {
+	clients.clientsMu.Lock()
+	defer clients.clientsMu.Unlock()
+	clients.ttl = ttl
+}
+
+// SetClientRecheckInterval sets the interval before the clients map is re-checked for expired entries.
+// forceRestart will force the loop to restart with the new interval, cancelling the current iteration.
+func SetClientRecheckInterval(recheckInterval time.Duration, forceRestart bool) {
+	clients.timerMu.Lock()
+	clients.recheckInterval = recheckInterval
+	clients.timerMu.Unlock()
+	if forceRestart {
+		clients.clientsMu.Lock()
+		clients.cancelCleanup()
+		ctx, cancel := context.WithCancel(context.Background())
+		clients.cancelCleanup = cancel
+		clients.clientsMu.Unlock()
+		go cleanupClientsMap(ctx)
+	}
+}
+
 // ConnectionArgs allow to configure connection parameters to the underlying
 // HTTP Client transport.
 type ConnectionArgs struct {
@@ -188,15 +214,23 @@ func (ca *ConnectionArgs) configureTransport(transport *nethttp.Transport) {
 	transport.MaxIdleConnsPerHost = ca.MaxIdleConnsPerHost
 }
 
-func cleanupClientsMap() {
+func cleanupClientsMap(ctx context.Context) {
 	for {
-		time.Sleep(ClientsRecheckInterval)
-		clients.mu.Lock()
-		for k, cme := range clients.clients {
-			if time.Now().UnixNano() > cme.expiry {
-				delete(clients.clients, k)
+		clients.timerMu.Lock()
+		t := time.NewTimer(clients.recheckInterval)
+		clients.timerMu.Unlock()
+		select {
+		case <-ctx.Done():
+			t.Stop()
+			return
+		case <-t.C:
+			clients.clientsMu.Lock()
+			for k, cme := range clients.clients {
+				if time.Now().UnixNano() > cme.expiry {
+					delete(clients.clients, k)
+				}
 			}
+			clients.clientsMu.Unlock()
 		}
-		clients.mu.Unlock()
 	}
 }

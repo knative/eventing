@@ -18,6 +18,7 @@ package kncloudevents
 
 import (
 	nethttp "net/http"
+	"sync"
 	"testing"
 	"time"
 
@@ -148,13 +149,21 @@ func Test_ConfigureConnectionArgs(t *testing.T) {
 }
 
 func Test_GCClientsMap(t *testing.T) {
-	ClientsTTL = time.Millisecond
-	ClientsRecheckInterval = time.Millisecond * 50
+	SetClientTTL(time.Millisecond)
+	SetClientRecheckInterval(50*time.Millisecond, true)
 	target := duckv1.Addressable{
 		URL: apis.HTTP("foo.bar"),
 	}
-	getClientForAddressable(target)
+	_, _ = getClientForAddressable(target)
+	unlockOnceFirst := sync.Once{}
+	clients.clientsMu.Lock()
+	defer unlockOnceFirst.Do(clients.clientsMu.Unlock)
 	require.Equal(t, len(clients.clients), 1)
+	unlockOnceFirst.Do(clients.clientsMu.Unlock)
 	time.Sleep(time.Second * 1)
+	unlockOnceSecond := sync.Once{}
+	clients.clientsMu.Lock()
+	defer unlockOnceSecond.Do(clients.clientsMu.Unlock)
 	require.Equal(t, len(clients.clients), 0)
+	unlockOnceSecond.Do(clients.clientsMu.Unlock)
 }
