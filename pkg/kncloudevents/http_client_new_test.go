@@ -19,6 +19,7 @@ package kncloudevents
 import (
 	nethttp "net/http"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"knative.dev/pkg/apis"
@@ -144,4 +145,16 @@ func Test_ConfigureConnectionArgs(t *testing.T) {
 	require.NotSame(t, client1, client2)
 	require.NotSame(t, client1, client3)
 	require.NotSame(t, client2, client3)
+}
+
+func Test_GCClientsMap(t *testing.T) {
+	ClientsTTL = time.Millisecond
+	ClientsRecheckInterval = time.Millisecond * 50
+	target := duckv1.Addressable{
+		URL: apis.HTTP("foo.bar"),
+	}
+	getClientForAddressable(target)
+	require.Equal(t, len(clients.clients), 1)
+	time.Sleep(time.Second * 1)
+	require.Equal(t, len(clients.clients), 0)
 }

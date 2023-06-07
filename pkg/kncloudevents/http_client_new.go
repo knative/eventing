@@ -34,14 +34,16 @@ const (
 )
 
 var (
-	clients clientsHolder
+	clients                clientsHolder
+	ClientsTTL             = time.Minute * 30
+	ClientsRecheckInterval = time.Minute * 5
 )
 
 type clientsHolder struct {
-	mu             sync.Mutex
-	clients        map[string]*clientsMapEntry
-	connectionArgs *ConnectionArgs
-	ttl            time.Duration
+	mu               sync.Mutex
+	clients          map[string]*clientsMapEntry
+	connectionArgs   *ConnectionArgs
+	cleanupInitiated bool
 }
 
 type clientsMapEntry struct {
@@ -51,10 +53,9 @@ type clientsMapEntry struct {
 
 func init() {
 	clients = clientsHolder{
-		clients: make(map[string]*clientsMapEntry),
-		ttl:     time.Minute * 30,
+		clients:          make(map[string]*clientsMapEntry),
+		cleanupInitiated: false,
 	}
-	go cleanupClientsMap()
 }
 
 func getClientForAddressable(addressable duckv1.Addressable) (*nethttp.Client, error) {
@@ -64,8 +65,8 @@ func getClientForAddressable(addressable duckv1.Addressable) (*nethttp.Client, e
 	clientKey := addressable.URL.String()
 
 	clientEntry, ok := clients.clients[clientKey]
-	expiry := time.Now().Add(clients.ttl).UnixNano()
-	client := clientEntry.client
+	expiry := time.Now().Add(ClientsTTL).UnixNano()
+	var client *nethttp.Client
 	if !ok {
 		newClient, err := createNewClient(addressable)
 		if err != nil {
@@ -76,7 +77,11 @@ func getClientForAddressable(addressable duckv1.Addressable) (*nethttp.Client, e
 
 		client = newClient
 	} else {
+		client = clientEntry.client
 		clientEntry.expiry = expiry
+	}
+	if !clients.cleanupInitiated {
+		go cleanupClientsMap()
 	}
 
 	return client, nil
@@ -120,8 +125,11 @@ func AddOrUpdateAddressableHandler(addressable duckv1.Addressable) {
 		fmt.Printf("failed to create new client: %v", err)
 		return
 	}
-	expiry := time.Now().Add(clients.ttl).UnixNano()
+	expiry := time.Now().Add(ClientsTTL).UnixNano()
 	clients.clients[clientKey] = &clientsMapEntry{client: client, expiry: expiry}
+	if !clients.cleanupInitiated {
+		go cleanupClientsMap()
+	}
 }
 
 func DeleteAddressableHandler(addressable duckv1.Addressable) {
@@ -182,7 +190,7 @@ func (ca *ConnectionArgs) configureTransport(transport *nethttp.Transport) {
 
 func cleanupClientsMap() {
 	for {
-		time.Sleep(5 * time.Minute)
+		time.Sleep(ClientsRecheckInterval)
 		clients.mu.Lock()
 		for k, cme := range clients.clients {
 			if time.Now().UnixNano() > cme.expiry {
