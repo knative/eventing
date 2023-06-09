@@ -24,6 +24,7 @@ import (
 
 	"knative.dev/pkg/system"
 	"knative.dev/reconciler-test/pkg/environment"
+	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/knative"
 
@@ -43,6 +44,21 @@ func TestSinkBindingV1Deployment(t *testing.T) {
 	t.Cleanup(env.Finish)
 
 	env.Test(ctx, t, sinkbinding.SinkBindingV1Deployment(ctx))
+}
+
+func TestSinkBindingV1DeploymentTLS(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+		eventshub.WithTLS(t),
+	)
+
+	env.Test(ctx, t, sinkbinding.SinkBindingV1DeploymentTLS(ctx))
 }
 
 func TestSinkBindingV1Job(t *testing.T) {
