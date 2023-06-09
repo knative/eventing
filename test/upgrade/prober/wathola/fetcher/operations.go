@@ -54,6 +54,11 @@ func (f *fetcher) FetchReport() {
 	if err != nil {
 		config.Log.Error(err)
 	}
+	// istio-proxy container must be terminated otherwise the Job remains in active state.
+	err = f.terminateIstioProxy()
+	if err != nil {
+		config.Log.Error(err)
+	}
 	f.ensureStatePrinted()
 }
 
@@ -90,6 +95,23 @@ func (f *fetcher) fetchReport() error {
 		return err
 	}
 	f.log.Report = state
+	return nil
+}
+
+func (f *fetcher) terminateIstioProxy() error {
+	u, err := url.Parse("http://localhost:15020")
+	if err != nil {
+		return err
+	}
+	u.Path = "/quitquitquit"
+	req, err := http.NewRequest("POST", u.String(), nil)
+	if err != nil {
+		return err
+	}
+	_, err = http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
