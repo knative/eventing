@@ -19,6 +19,7 @@ package sinkbinding
 import (
 	"context"
 	"embed"
+	"strings"
 	"time"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -42,24 +43,7 @@ func Install(name string, sink *duckv1.Destination, subject *tracker.Reference, 
 		"name": name,
 	}
 
-	// TODO: move this to a common sources resource.
-	{
-		s := map[string]interface{}{}
-		if sink.URI != nil {
-			s["uri"] = sink.URI
-		}
-		if sink.Ref != nil {
-			if _, set := s["ref"]; !set {
-				s["ref"] = map[string]interface{}{}
-			}
-			sref := s["ref"].(map[string]interface{})
-			sref["apiVersion"] = sink.Ref.APIVersion
-			sref["kind"] = sink.Ref.Kind
-			// skip namespace
-			sref["name"] = sink.Ref.Name
-		}
-		cfg["sink"] = s
-	}
+	WithSink(sink)(cfg)
 
 	{
 		s := map[string]interface{}{}
@@ -102,6 +86,38 @@ func WithExtensions(extensions map[string]string) manifest.CfgFn {
 			for k, v := range extensions {
 				ceExt[k] = v
 			}
+		}
+	}
+}
+
+func WithSink(d *duckv1.Destination) manifest.CfgFn {
+	return func(cfg map[string]interface{}) {
+		if _, set := cfg["sink"]; !set {
+			cfg["sink"] = map[string]interface{}{}
+		}
+		sink := cfg["sink"].(map[string]interface{})
+
+		ref := d.Ref
+		uri := d.URI
+
+		if d.CACerts != nil {
+			// This is a multi-line string and should be indented accordingly.
+			// Replace "new line" with "new line + spaces".
+			sink["CACerts"] = strings.ReplaceAll(*d.CACerts, "\n", "\n      ")
+		}
+
+		if uri != nil {
+			sink["uri"] = uri.String()
+		}
+		if ref != nil {
+			if _, set := sink["ref"]; !set {
+				sink["ref"] = map[string]interface{}{}
+			}
+			sref := sink["ref"].(map[string]interface{})
+			sref["apiVersion"] = ref.APIVersion
+			sref["kind"] = ref.Kind
+			// skip namespace
+			sref["name"] = ref.Name
 		}
 	}
 }
