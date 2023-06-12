@@ -45,7 +45,7 @@ func NewServerManager(ctx context.Context, logger *zap.Logger, cmw configmap.Wat
 func getServerTLSConfig(ctx context.Context) (*tls.Config, error) {
 	secret := types.NamespacedName{
 		Namespace: "knative-eventing",
-		Name:      "mt-broker-filter-server-tls", // wasn't it: "mt-channel-based-broker-filter-tls"???
+		Name:      "mt-broker-filter-server-tls",
 	}
 
 	serverTLSConfig := eventingtls.NewDefaultServerConfig()
