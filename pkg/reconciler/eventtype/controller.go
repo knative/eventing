@@ -25,6 +25,7 @@ import (
 	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	brokerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/broker"
 	eventtypeinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta2/eventtype"
+	channelinformer "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/channel"
 	eventtypereconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1beta2/eventtype"
 )
 
@@ -35,10 +36,12 @@ func NewController(
 	cmw configmap.Watcher,
 ) *controller.Impl {
 	brokerInformer := brokerinformer.Get(ctx)
+	channelInformer := channelinformer.Get(ctx)
 	eventTypeInformer := eventtypeinformer.Get(ctx)
 
 	r := &Reconciler{
 		eventTypeLister: eventTypeInformer.Lister(),
+		channelLister:   channelInformer.Lister(),
 		brokerLister:    brokerInformer.Lister(),
 	}
 	impl := eventtypereconciler.NewImpl(ctx, r)

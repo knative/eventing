@@ -20,15 +20,18 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	"knative.dev/pkg/apis"
 )
 
-var eventTypeCondSet = apis.NewLivingConditionSet(EventTypeConditionBrokerExists, EventTypeConditionBrokerReady)
+var eventTypeCondSet = apis.NewLivingConditionSet(EventTypeConditionBrokerExists, EventTypeConditionBrokerReady, EventTypeConditionChannelExists, EventTypeConditionChannelReady)
 
 const (
-	EventTypeConditionReady                           = apis.ConditionReady
-	EventTypeConditionBrokerExists apis.ConditionType = "BrokerExists"
-	EventTypeConditionBrokerReady  apis.ConditionType = "BrokerReady"
+	EventTypeConditionReady                            = apis.ConditionReady
+	EventTypeConditionBrokerExists  apis.ConditionType = "BrokerExists"
+	EventTypeConditionBrokerReady   apis.ConditionType = "BrokerReady"
+	EventTypeConditionChannelExists apis.ConditionType = "ChannelExists"
+	EventTypeConditionChannelReady  apis.ConditionType = "ChannelReady"
 )
 
 // GetConditionSet retrieves the condition set for this resource. Implements the KRShaped interface.
@@ -101,4 +104,52 @@ func (et *EventTypeStatus) PropagateBrokerStatus(bs *eventingv1.BrokerStatus) {
 	default:
 		et.MarkBrokerUnknown("BrokerUnknown", "The status of Broker is invalid: %v", bc.Status)
 	}
+}
+
+func (et *EventTypeStatus) MarkChannelExists() {
+	eventTypeCondSet.Manage(et).MarkTrue(EventTypeConditionChannelExists)
+}
+
+func (et *EventTypeStatus) MarkChannelDoesNotExist() {
+	eventTypeCondSet.Manage(et).MarkFalse(EventTypeConditionChannelExists, "ChannelDoesNotExist", "Channel does not exist")
+}
+
+func (et *EventTypeStatus) MarkChannelExistsUnknown(reason, messageFormat string, messageA ...interface{}) {
+	eventTypeCondSet.Manage(et).MarkUnknown(EventTypeConditionChannelExists, reason, messageFormat, messageA...)
+}
+
+func (et *EventTypeStatus) MarkChannelReady() {
+	eventTypeCondSet.Manage(et).MarkTrue(EventTypeConditionChannelReady)
+}
+
+func (et *EventTypeStatus) MarkChannelFailed(reason, messageFormat string, messageA ...interface{}) {
+	eventTypeCondSet.Manage(et).MarkFalse(EventTypeConditionChannelReady, reason, messageFormat, messageA...)
+}
+
+func (et *EventTypeStatus) MarkChannelUnknown(reason, messageFormat string, messageA ...interface{}) {
+	eventTypeCondSet.Manage(et).MarkUnknown(EventTypeConditionChannelReady, reason, messageFormat, messageA...)
+}
+
+func (et *EventTypeStatus) MarkChannelNotConfigured() {
+	eventTypeCondSet.Manage(et).MarkUnknown(EventTypeConditionChannelReady, "ChannelNotConfigured", "Channel has not yet been reconciled.")
+}
+
+func (et *EventTypeStatus) PropagateChannelStatus(cs *messagingv1.ChannelStatus) {
+
+	cc := cs.GetTopLevelCondition()
+	if cc == nil {
+		et.MarkChannelNotConfigured()
+		return
+	}
+	switch cc.Status {
+	case corev1.ConditionUnknown:
+		et.MarkChannelUnknown(cc.Reason, cc.Message)
+	case corev1.ConditionTrue:
+		et.MarkChannelReady()
+	case corev1.ConditionFalse:
+		et.MarkChannelFailed(cc.Reason, cc.Message)
+	default:
+		et.MarkChannelUnknown("ChannelUnknown", "The status of Channel is invalid: %v", cc.Status)
+	}
+
 }
