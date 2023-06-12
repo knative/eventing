@@ -43,11 +43,6 @@ var (
 		Status: corev1.ConditionTrue,
 	}
 
-	eventTypeConditionBrokerReady = apis.Condition{
-		Type:   EventTypeConditionBrokerReady,
-		Status: corev1.ConditionTrue,
-	}
-
 	ignoreAllButTypeAndStatus = cmpopts.IgnoreFields(
 		apis.Condition{},
 		"LastTransitionTime", "Message", "Reason", "Severity")
@@ -89,30 +84,6 @@ func TestEventTypeGetCondition(t *testing.T) {
 		},
 		condQuery: EventTypeConditionBrokerExists,
 		want:      &eventTypeConditionBrokerExists,
-	}, {
-		name: "multiple conditions, condition true",
-		ets: &EventTypeStatus{
-			Status: duckv1.Status{
-				Conditions: []apis.Condition{
-					eventTypeConditionBrokerExists,
-					eventTypeConditionBrokerReady,
-				},
-			},
-		},
-		condQuery: EventTypeConditionBrokerReady,
-		want:      &eventTypeConditionBrokerReady,
-	}, {
-		name: "unknown condition",
-		ets: &EventTypeStatus{
-			Status: duckv1.Status{
-				Conditions: []apis.Condition{
-					eventTypeConditionBrokerReady,
-					eventTypeConditionReady,
-				},
-			},
-		},
-		condQuery: apis.ConditionType("foo"),
-		want:      nil,
 	}}
 
 	for _, test := range tests {
@@ -139,9 +110,6 @@ func TestEventTypeInitializeConditions(t *testing.T) {
 					Type:   EventTypeConditionBrokerExists,
 					Status: corev1.ConditionUnknown,
 				}, {
-					Type:   EventTypeConditionBrokerReady,
-					Status: corev1.ConditionUnknown,
-				}, {
 					Type:   EventTypeConditionReady,
 					Status: corev1.ConditionUnknown,
 				},
@@ -164,38 +132,12 @@ func TestEventTypeInitializeConditions(t *testing.T) {
 					Type:   EventTypeConditionBrokerExists,
 					Status: corev1.ConditionFalse,
 				}, {
-					Type:   EventTypeConditionBrokerReady,
-					Status: corev1.ConditionUnknown,
-				}, {
 					Type:   EventTypeConditionReady,
 					Status: corev1.ConditionUnknown,
 				}},
 			},
 		},
-	}, {
-		name: "one true",
-		ets: &EventTypeStatus{
-			Status: duckv1.Status{
-				Conditions: []apis.Condition{{
-					Type:   EventTypeConditionBrokerReady,
-					Status: corev1.ConditionTrue,
-				}},
-			},
-		},
-		want: &EventTypeStatus{
-			Status: duckv1.Status{
-				Conditions: []apis.Condition{{
-					Type:   EventTypeConditionBrokerExists,
-					Status: corev1.ConditionUnknown,
-				}, {
-					Type:   EventTypeConditionBrokerReady,
-					Status: corev1.ConditionTrue,
-				}, {
-					Type:   EventTypeConditionReady,
-					Status: corev1.ConditionUnknown,
-				}},
-			},
-		}},
+	},
 	}
 
 	for _, test := range tests {
@@ -230,16 +172,6 @@ func TestEventTypeConditionStatus(t *testing.T) {
 		brokerStatus:        nil,
 		wantConditionStatus: corev1.ConditionFalse,
 	}, {
-		name:                "broker ready sad",
-		markBrokerExists:    &trueValue,
-		brokerStatus:        eventingv1.TestHelper.FalseBrokerStatus(),
-		wantConditionStatus: corev1.ConditionFalse,
-	}, {
-		name:                "broker ready unknown",
-		markBrokerExists:    &trueValue,
-		brokerStatus:        eventingv1.TestHelper.UnknownBrokerStatus(),
-		wantConditionStatus: corev1.ConditionUnknown,
-	}, {
 		name:                "all sad",
 		markBrokerExists:    &falseValue,
 		brokerStatus:        nil,
@@ -254,9 +186,6 @@ func TestEventTypeConditionStatus(t *testing.T) {
 				} else {
 					ets.MarkBrokerDoesNotExist()
 				}
-			}
-			if test.brokerStatus != nil {
-				ets.PropagateBrokerStatus(test.brokerStatus)
 			}
 
 			got := ets.GetTopLevelCondition().Status
