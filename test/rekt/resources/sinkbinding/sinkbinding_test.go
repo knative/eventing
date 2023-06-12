@@ -20,11 +20,11 @@ import (
 	"embed"
 	"os"
 
-	testlog "knative.dev/reconciler-test/pkg/logging"
-	"knative.dev/reconciler-test/pkg/manifest"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/eventing/test/rekt/resources/sinkbinding"
 	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+	testlog "knative.dev/reconciler-test/pkg/logging"
+	"knative.dev/reconciler-test/pkg/manifest"
 )
 
 //go:embed *.yaml
@@ -161,31 +161,30 @@ func Example_withSink() {
 			APIVersion: "sinkversion",
 		},
 		URI: &apis.URL{Path: "uri/parts"},
-         }
-         sinkbinding.WithSink(sinkRef)(cfg)
-	    files, err := manifest.ExecuteYAML(ctx, yaml, images, cfg)
-	    if err != nil {
+	}
+	sinkbinding.WithSink(sinkRef)(cfg)
+	files, err := manifest.ExecuteYAML(ctx, yaml, images, cfg)
+	if err != nil {
 		panic(err)
-	    }
+	}
 
 	manifest.OutputYAML(os.Stdout, files)
-        // Output:
-        // apiVersion: sources.knative.dev/v1
-       	// kind: SinkBinding
-       	// metadata:
-      	//   name: foo
-      	//   namespace: bar
-      	// spec:
-      	//   sink:
-      	//     ref:
-      	//       apiVersion: sinkversion
-      	//       kind: sinkkind
-      	//       namespace: bar
-      	//       name: sinkname
-      	//     uri: uri/parts
-     	//   subject:
-    	//     kind: <no value>
-   	//     apiVersion: <no value>
-  	//     namespace: bar
-}	
-	
+	// Output:
+	// apiVersion: sources.knative.dev/v1
+	// kind: SinkBinding
+	// metadata:
+	//   name: foo
+	//   namespace: bar
+	// spec:
+	//   sink:
+	//     ref:
+	//       apiVersion: sinkversion
+	//       kind: sinkkind
+	//       namespace: bar
+	//       name: sinkname
+	//     uri: uri/parts
+	//   subject:
+	//     kind: <no value>
+	//     apiVersion: <no value>
+	//     namespace: bar
+}
