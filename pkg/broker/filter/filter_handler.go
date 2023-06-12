@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
@@ -34,13 +33,15 @@ import (
 	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"go.opencensus.io/trace"
 	"go.uber.org/zap"
+	"k8s.io/client-go/tools/cache"
 	channelAttributes "knative.dev/eventing/pkg/channel/attributes"
-	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/logging"
 
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/pkg/apis/feature"
 	broker "knative.dev/eventing/pkg/broker"
+	v1 "knative.dev/eventing/pkg/client/informers/externalversions/eventing/v1"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1"
 	"knative.dev/eventing/pkg/eventfilter"
 	"knative.dev/eventing/pkg/eventfilter/attributes"
@@ -82,10 +83,6 @@ var HeaderProxyAllowList = map[string]struct{}{
 
 // Handler parses Cloud Events, determines if they pass a filter, and sends them to a subscriber.
 type Handler struct {
-	// receiver receives incoming HTTP requests
-	receiver *kncloudevents.HTTPMessageReceiver
-	// sender sends requests to downstream services
-	sender *kncloudevents.HTTPMessageSender
 	// reporter reports stats of status code and dispatch time
 	reporter StatsReporter
 
@@ -94,36 +91,52 @@ type Handler struct {
 	withContext   func(ctx context.Context) context.Context
 }
 
-// NewHandler creates a new Handler and its associated MessageReceiver. The caller is responsible for
-// Start()ing the returned Handler.
-func NewHandler(logger *zap.Logger, triggerLister eventinglisters.TriggerLister, reporter StatsReporter, port int, wc func(ctx context.Context) context.Context) (*Handler, error) {
+// NewHandler creates a new Handler and its associated MessageReceiver.
+func NewHandler(logger *zap.Logger, triggerInformer v1.TriggerInformer, reporter StatsReporter, wc func(ctx context.Context) context.Context) (*Handler, error) {
 	kncloudevents.ConfigureConnectionArgs(&kncloudevents.ConnectionArgs{
 		MaxIdleConns:        defaultMaxIdleConnections,
 		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
 	})
 
-	sender, err := kncloudevents.NewHTTPMessageSenderWithTarget("")
-	if err != nil {
-		return nil, fmt.Errorf("failed to create message sender: %w", err)
-	}
+	triggerInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			trigger, ok := obj.(eventingv1.Trigger)
+			if !ok {
+				return
+			}
+			kncloudevents.AddOrUpdateAddressableHandler(duckv1.Addressable{
+				URL:     trigger.Status.SubscriberURI,
+				CACerts: trigger.Status.SubscriberCACerts,
+			})
+		},
+		UpdateFunc: func(_, obj interface{}) {
+			trigger, ok := obj.(eventingv1.Trigger)
+			if !ok {
+				return
+			}
+			kncloudevents.AddOrUpdateAddressableHandler(duckv1.Addressable{
+				URL:     trigger.Status.SubscriberURI,
+				CACerts: trigger.Status.SubscriberCACerts,
+			})
+		},
+		DeleteFunc: func(obj interface{}) {
+			trigger, ok := obj.(eventingv1.Trigger)
+			if !ok {
+				return
+			}
+			kncloudevents.DeleteAddressableHandler(duckv1.Addressable{
+				URL:     trigger.Status.SubscriberURI,
+				CACerts: trigger.Status.SubscriberCACerts,
+			})
+		},
+	})
 
 	return &Handler{
-		receiver:      kncloudevents.NewHTTPMessageReceiver(port),
-		sender:        sender,
 		reporter:      reporter,
-		triggerLister: triggerLister,
+		triggerLister: triggerInformer.Lister(),
 		logger:        logger,
 		withContext:   wc,
 	}, nil
-}
-
-// Start begins to receive messages for the handler.
-//
-// HTTP POST requests to the root path (/) are accepted.
-//
-// This method will block until ctx is done.
-func (h *Handler) Start(ctx context.Context) error {
-	return h.receiver.StartListen(ctx, h)
 }
 
 // 1. validate request
@@ -223,10 +236,14 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 
 	h.reportArrivalTime(event, reportArgs)
 
-	h.send(ctx, writer, request.Header, subscriberURI.URL(), reportArgs, event, ttl)
+	target := duckv1.Addressable{
+		URL:     t.Status.SubscriberURI,
+		CACerts: t.Status.SubscriberCACerts,
+	}
+	h.send(ctx, writer, request.Header, target, reportArgs, event, ttl)
 }
 
-func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers http.Header, target *url.URL, reportArgs *ReportArgs, event *cloudevents.Event, ttl int32) {
+func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers http.Header, target duckv1.Addressable, reportArgs *ReportArgs, event *cloudevents.Event, ttl int32) {
 	// send the event to trigger's subscriber
 	response, responseErr := h.sendEvent(ctx, headers, target, event, reportArgs)
 
@@ -247,7 +264,7 @@ func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers 
 
 		// Read Response body to responseErr
 		errExtensionInfo := broker.ErrExtensionInfo{
-			ErrDestination:  (*apis.URL)(target),
+			ErrDestination:  target.URL,
 			ErrResponseBody: responseErr.ResponseBody,
 		}
 		errExtensionBytes, msErr := json.Marshal(errExtensionInfo)
@@ -261,23 +278,23 @@ func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers 
 		return
 	}
 
-	h.logger.Debug("Successfully dispatched message", zap.Any("target", target.String()))
+	h.logger.Debug("Successfully dispatched message", zap.Any("target", target))
 
 	// If there is an event in the response write it to the response
-	statusCode, err := h.writeResponse(ctx, writer, response, ttl, target.String())
+	statusCode, err := h.writeResponse(ctx, writer, response, ttl, target.URL.String())
 	if err != nil {
 		h.logger.Error("failed to write response", zap.Error(err))
 	}
 	_ = h.reporter.ReportEventCount(reportArgs, statusCode)
 }
 
-func (h *Handler) sendEvent(ctx context.Context, headers http.Header, target *url.URL, event *cloudevents.Event, reporterArgs *ReportArgs) (*http.Response, ErrHandler) {
+func (h *Handler) sendEvent(ctx context.Context, headers http.Header, target duckv1.Addressable, event *cloudevents.Event, reporterArgs *ReportArgs) (*http.Response, ErrHandler) {
 	responseErr := ErrHandler{
 		ResponseCode: NoResponse,
 	}
 
 	// Send the event to the subscriber
-	req, err := h.sender.NewCloudEventRequestWithTarget(ctx, target.String())
+	req, err := kncloudevents.NewCloudEventRequest(ctx, target)
 	if err != nil {
 		responseErr.err = fmt.Errorf("failed to create the request: %w", err)
 		return nil, responseErr
@@ -291,14 +308,14 @@ func (h *Handler) sendEvent(ctx context.Context, headers http.Header, target *ur
 	// Following the spec https://github.com/knative/specs/blob/main/specs/eventing/data-plane.md#derived-reply-events
 	additionalHeaders.Set("prefer", "reply")
 
-	err = kncloudevents.WriteHTTPRequestWithAdditionalHeaders(ctx, message, req, additionalHeaders)
+	err = kncloudevents.WriteRequestWithAdditionalHeaders(ctx, message, req, additionalHeaders)
 	if err != nil {
 		responseErr.err = fmt.Errorf("failed to write request: %w", err)
 		return nil, responseErr
 	}
 
 	start := time.Now()
-	resp, err := h.sender.Send(req)
+	resp, err := req.Send()
 	dispatchTime := time.Since(start)
 	if err != nil {
 		responseErr.ResponseCode = http.StatusInternalServerError

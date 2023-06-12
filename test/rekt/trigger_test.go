@@ -25,6 +25,7 @@ import (
 	"knative.dev/pkg/system"
 	_ "knative.dev/pkg/system/testing"
 	"knative.dev/reconciler-test/pkg/environment"
+	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/knative"
 
@@ -78,4 +79,17 @@ func TestTriggerDependencyAnnotation(t *testing.T) {
 
 	// Test that a bad Trigger doesn't affect sending messages to a valid one
 	env.Test(ctx, t, trigger.TriggerDependencyAnnotation())
+}
+
+func TestTriggerTLSSubscriber(t *testing.T) {
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+		eventshub.WithTLS(t),
+	)
+
+	env.Test(ctx, t, trigger.TriggerWithTLSSubscriber())
 }
