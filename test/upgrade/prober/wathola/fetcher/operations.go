@@ -18,12 +18,10 @@ package fetcher
 
 import (
 	"encoding/json"
-	"errors"
 	"io"
 	"net/http"
 	"net/url"
 	"os"
-	"syscall"
 
 	"github.com/wavesoftware/go-ensure"
 	"go.uber.org/zap"
@@ -93,13 +91,6 @@ func (f *fetcher) fetchReport() error {
 	}
 	f.log.Report = state
 	return nil
-}
-
-func (f *fetcher) TerminateIstioProxy() {
-	_, err := http.DefaultClient.Get("http://localhost:15020/quitquitquit")
-	if err != nil && !errors.Is(err, syscall.ECONNREFUSED) {
-		config.Log.Warn("[Ignore this warning if Istio proxy is not used on this pod]", err)
-	}
 }
 
 func (f *fetcher) ensureStatePrinted() {

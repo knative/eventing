@@ -26,7 +26,6 @@ import (
 // Fetcher will fetch a report from remote receiver service.
 type Fetcher interface {
 	FetchReport()
-	TerminateIstioProxy()
 }
 
 // Execution represents a response from remote receiver service and local logs
