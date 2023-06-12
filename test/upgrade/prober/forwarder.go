@@ -68,6 +68,12 @@ func (p *prober) forwarderKService(name, namespace string) *unstructured.Unstruc
 		},
 		"spec": map[string]interface{}{
 			"template": map[string]interface{}{
+				"metadata": map[string]interface{}{
+					"annotations": map[string]interface{}{
+						"sidecar.istio.io/inject":                true,
+						"sidecar.istio.io/rewriteAppHTTPProbers": true,
+					},
+				},
 				"spec": map[string]interface{}{
 					"containers": []map[string]interface{}{{
 						"name":  forwarder.Name,
