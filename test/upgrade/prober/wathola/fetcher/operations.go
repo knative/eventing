@@ -18,10 +18,12 @@ package fetcher
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/url"
 	"os"
+	"syscall"
 
 	"github.com/wavesoftware/go-ensure"
 	"go.uber.org/zap"
@@ -51,11 +53,6 @@ func New() Fetcher {
 // it on the output as JSON.
 func (f *fetcher) FetchReport() {
 	err := f.fetchReport()
-	if err != nil {
-		config.Log.Error(err)
-	}
-	// istio-proxy container must be terminated otherwise the Job remains in active state.
-	err = f.terminateIstioProxy()
 	if err != nil {
 		config.Log.Error(err)
 	}
@@ -98,21 +95,11 @@ func (f *fetcher) fetchReport() error {
 	return nil
 }
 
-func (f *fetcher) terminateIstioProxy() error {
-	u, err := url.Parse("http://localhost:15020")
-	if err != nil {
-		return err
+func (f *fetcher) TerminateIstioProxy() {
+	_, err := http.DefaultClient.Get("http://localhost:15020/quitquitquit")
+	if err != nil && !errors.Is(err, syscall.ECONNREFUSED) {
+		config.Log.Warn("[Ignore this warning if Istio proxy is not used on this pod]", err)
 	}
-	u.Path = "/quitquitquit"
-	req, err := http.NewRequest("POST", u.String(), nil)
-	if err != nil {
-		return err
-	}
-	_, err = http.DefaultClient.Do(req)
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 func (f *fetcher) ensureStatePrinted() {

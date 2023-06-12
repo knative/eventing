@@ -21,5 +21,7 @@ import (
 )
 
 func main() {
-	fetcher.New().FetchReport()
+	f := fetcher.New()
+	defer f.TerminateIstioProxy()
+	f.FetchReport()
 }
