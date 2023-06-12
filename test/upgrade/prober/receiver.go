@@ -93,6 +93,10 @@ func (p *prober) createReceiverDeployment() *appsv1.Deployment {
 					Labels: map[string]string{
 						"app": receiver.Name,
 					},
+					Annotations: map[string]string{
+						"sidecar.istio.io/inject":                "true",
+						"sidecar.istio.io/rewriteAppHTTPProbers": "true",
+					},
 				},
 				Spec: corev1.PodSpec{
 					Volumes: []corev1.Volume{{

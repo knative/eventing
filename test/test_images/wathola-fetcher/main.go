@@ -17,9 +17,22 @@ limitations under the License.
 package main
 
 import (
+	"errors"
+	"log"
+	"net/http"
+	"syscall"
+
 	"knative.dev/eventing/test/upgrade/prober/wathola/fetcher"
 )
 
 func main() {
+	defer maybeQuitIstioProxy()
 	fetcher.New().FetchReport()
+}
+
+func maybeQuitIstioProxy() {
+	_, err := http.DefaultClient.Get("http://localhost:15020/quitquitquit")
+	if err != nil && !errors.Is(err, syscall.ECONNREFUSED) {
+		log.Println("[Ignore this warning if Istio proxy is not used on this pod]", err)
+	}
 }

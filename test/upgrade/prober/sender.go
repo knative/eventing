@@ -53,6 +53,10 @@ func (p *prober) deploySender() {
 					Labels: map[string]string{
 						"app": sender.Name,
 					},
+					Annotations: map[string]string{
+						"sidecar.istio.io/inject":                "true",
+						"sidecar.istio.io/rewriteAppHTTPProbers": "true",
+					},
 				},
 				Spec: corev1.PodSpec{
 					Volumes: []corev1.Volume{{
