@@ -224,7 +224,7 @@ func cleanupClientsMap(ctx context.Context) {
 		case <-t.C:
 			clients.clientsMu.Lock()
 			for k, cme := range clients.clients {
-				if time.Now().Sub(cme.lastAccessed) > clients.ttl {
+				if time.Since(cme.lastAccessed) > clients.ttl {
 					delete(clients.clients, k)
 				}
 			}
