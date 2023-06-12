@@ -51,8 +51,8 @@ type clientsHolder struct {
 }
 
 type clientsMapEntry struct {
-	client *nethttp.Client
-	expiry int64
+	client       *nethttp.Client
+	lastAccessed time.Time
 }
 
 func init() {
@@ -73,7 +73,6 @@ func getClientForAddressable(addressable duckv1.Addressable) (*nethttp.Client, e
 	clientKey := addressable.URL.String()
 
 	clientEntry, ok := clients.clients[clientKey]
-	expiry := time.Now().Add(clients.ttl).UnixNano()
 	var client *nethttp.Client
 	if !ok {
 		newClient, err := createNewClient(addressable)
@@ -81,12 +80,12 @@ func getClientForAddressable(addressable duckv1.Addressable) (*nethttp.Client, e
 			return nil, fmt.Errorf("failed to create new client for addressable: %w", err)
 		}
 
-		clients.clients[clientKey] = &clientsMapEntry{client: newClient, expiry: expiry}
+		clients.clients[clientKey] = &clientsMapEntry{client: newClient, lastAccessed: time.Now()}
 
 		client = newClient
 	} else {
 		client = clientEntry.client
-		clientEntry.expiry = expiry
+		clientEntry.lastAccessed = time.Now()
 	}
 
 	return client, nil
@@ -130,8 +129,7 @@ func AddOrUpdateAddressableHandler(addressable duckv1.Addressable) {
 		fmt.Printf("failed to create new client: %v", err)
 		return
 	}
-	expiry := time.Now().Add(clients.ttl).UnixNano()
-	clients.clients[clientKey] = &clientsMapEntry{client: client, expiry: expiry}
+	clients.clients[clientKey] = &clientsMapEntry{client: client, lastAccessed: time.Now()}
 }
 
 func DeleteAddressableHandler(addressable duckv1.Addressable) {
@@ -226,7 +224,7 @@ func cleanupClientsMap(ctx context.Context) {
 		case <-t.C:
 			clients.clientsMu.Lock()
 			for k, cme := range clients.clients {
-				if time.Now().UnixNano() > cme.expiry {
+				if time.Now().Sub(cme.lastAccessed) > clients.ttl {
 					delete(clients.clients, k)
 				}
 			}
