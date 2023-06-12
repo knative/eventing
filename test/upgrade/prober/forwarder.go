@@ -70,8 +70,9 @@ func (p *prober) forwarderKService(name, namespace string) *unstructured.Unstruc
 			"template": map[string]interface{}{
 				"metadata": map[string]interface{}{
 					"annotations": map[string]interface{}{
-						"sidecar.istio.io/inject":                true,
-						"sidecar.istio.io/rewriteAppHTTPProbers": true,
+						"sidecar.istio.io/inject":                "true",
+						"sidecar.istio.io/rewriteAppHTTPProbers": "true",
+						"proxy.istio.io/config":                  `{ "holdApplicationUntilProxyStarts": true }`,
 					},
 				},
 				"spec": map[string]interface{}{
