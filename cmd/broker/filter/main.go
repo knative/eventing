@@ -39,8 +39,7 @@ import (
 	"knative.dev/eventing/cmd/broker"
 	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/eventing/pkg/broker/filter"
-	eventingclientset "knative.dev/eventing/pkg/client/clientset/versioned"
-	eventinginformers "knative.dev/eventing/pkg/client/informers/externalversions"
+	triggerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/trigger"
 	"knative.dev/eventing/pkg/reconciler/names"
 )
 
@@ -54,7 +53,8 @@ type envConfig struct {
 	// TODO: change this environment variable to something like "PodGroupName".
 	PodName       string `envconfig:"POD_NAME" required:"true"`
 	ContainerName string `envconfig:"CONTAINER_NAME" required:"true"`
-	Port          int    `envconfig:"FILTER_PORT" default:"8080"`
+	HTTPPort      int    `envconfig:"FILTER_PORT" default:"8080"`
+	HTTPSPort     int    `envconfig:"FILTER_PORT_HTTPS" default:"8443"`
 }
 
 func main() {
@@ -70,7 +70,11 @@ func main() {
 		log.Fatal("Failed to process env var", zap.Error(err))
 	}
 
-	ctx, _ = injection.Default.SetupInformers(ctx, cfg)
+	log.Printf("Registering %d clients", len(injection.Default.GetClients()))
+	log.Printf("Registering %d informer factories", len(injection.Default.GetInformerFactories()))
+	log.Printf("Registering %d informers", len(injection.Default.GetInformers()))
+
+	ctx, informers := injection.Default.SetupInformers(ctx, cfg)
 	kubeClient := kubeclient.Get(ctx)
 
 	loggingConfig, err := broker.GetLoggingConfig(ctx, system.Namespace(), logging.ConfigMapName())
@@ -82,11 +86,6 @@ func main() {
 	defer flush(sl)
 
 	logger.Info("Starting the Broker Filter")
-
-	eventingClient := eventingclientset.NewForConfigOrDie(cfg)
-	eventingFactory := eventinginformers.NewSharedInformerFactory(eventingClient,
-		controller.GetResyncPeriod(ctx))
-	triggerInformer := eventingFactory.Eventing().V1().Triggers()
 
 	// Watch the logging config map and dynamically update logging levels.
 	configMapWatcher := configmap.NewInformedWatcher(kubeClient, system.Namespace())
@@ -121,9 +120,13 @@ func main() {
 
 	// We are running both the receiver (takes messages in from the Broker) and the dispatcher (send
 	// the messages to the triggers' subscribers) in this binary.
-	handler, err := filter.NewHandler(logger, triggerInformer.Lister(), reporter, env.Port, ctxFunc)
+	handler, err := filter.NewHandler(logger, triggerinformer.Get(ctx), reporter, ctxFunc)
 	if err != nil {
 		logger.Fatal("Error creating Handler", zap.Error(err))
+	}
+	serverManager, err := filter.NewServerManager(ctx, logger, configMapWatcher, env.HTTPPort, env.HTTPSPort, handler)
+	if err != nil {
+		logger.Fatal("Error creating server manager", zap.Error(err))
 	}
 
 	// configMapWatcher does not block, so start it first.
@@ -132,17 +135,16 @@ func main() {
 	}
 
 	// Start all of the informers and wait for them to sync.
-	logger.Info("Starting informer.")
+	logger.Info("Starting informers.")
+	if err := controller.StartInformers(ctx.Done(), informers...); err != nil {
+		logger.Fatal("Failed to start informers", zap.Error(err))
+	}
 
-	go eventingFactory.Start(ctx.Done())
-	eventingFactory.WaitForCacheSync(ctx.Done())
-
-	// Start blocks forever.
+	// Start the servers
 	logger.Info("Filter starting...")
-
-	err = handler.Start(ctx)
+	err = serverManager.StartServers(ctx)
 	if err != nil {
-		logger.Fatal("handler.Start() returned an error", zap.Error(err))
+		logger.Fatal("serverManager.StartServers() returned an error", zap.Error(err))
 	}
 	tracer.Shutdown(context.Background())
 	logger.Info("Exiting...")

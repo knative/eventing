@@ -50,6 +50,10 @@ spec:
     {{ if .subscriber.uri }}
     uri: {{ .subscriber.uri }}
     {{ end }}
+    {{ if .subscriber.CACerts }}
+    CACerts: |-
+      {{ .subscriber.CACerts }}
+    {{ end }}
   {{ end }}
   {{ if .delivery }}
   delivery:

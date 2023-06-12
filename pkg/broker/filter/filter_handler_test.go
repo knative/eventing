@@ -36,14 +36,15 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"knative.dev/pkg/apis"
 
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/eventing/pkg/broker"
-	reconcilertesting "knative.dev/eventing/pkg/reconciler/testing/v1"
+	reconcilertesting "knative.dev/pkg/reconciler/testing"
+
+	triggerinformerfake "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/trigger/fake"
 )
 
 const (
@@ -409,6 +410,7 @@ func TestReceiver(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
+			ctx, _ := reconcilertesting.SetupFakeContext(t)
 
 			fh := fakeHandler{
 				failRequest:            tc.requestFails,
@@ -423,7 +425,6 @@ func TestReceiver(t *testing.T) {
 			defer s.Close()
 
 			// Replace the SubscriberURI to point at our fake server.
-			correctURI := make([]runtime.Object, 0, len(tc.triggers))
 			for _, trig := range tc.triggers {
 				if trig.Status.SubscriberURI != nil && trig.Status.SubscriberURI.String() == toBeReplaced {
 
@@ -433,15 +434,13 @@ func TestReceiver(t *testing.T) {
 					}
 					trig.Status.SubscriberURI = url
 				}
-				correctURI = append(correctURI, trig)
+				triggerinformerfake.Get(ctx).Informer().GetStore().Add(trig)
 			}
-			listers := reconcilertesting.NewListers(correctURI)
 			reporter := &mockReporter{}
 			r, err := NewHandler(
 				zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())),
-				listers.GetTriggerLister(),
+				triggerinformerfake.Get(ctx),
 				reporter,
-				8080,
 				func(ctx context.Context) context.Context {
 					return ctx
 				},
@@ -587,6 +586,7 @@ func TestReceiver_WithSubscriptionsAPI(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
+			ctx, _ := reconcilertesting.SetupFakeContext(t)
 
 			fh := fakeHandler{
 				t: t,
@@ -595,7 +595,6 @@ func TestReceiver_WithSubscriptionsAPI(t *testing.T) {
 			defer s.Close()
 
 			// Replace the SubscriberURI to point at our fake server.
-			correctURI := make([]runtime.Object, 0, len(tc.triggers))
 			for _, trig := range tc.triggers {
 				if trig.Status.SubscriberURI != nil && trig.Status.SubscriberURI.String() == toBeReplaced {
 
@@ -605,15 +604,14 @@ func TestReceiver_WithSubscriptionsAPI(t *testing.T) {
 					}
 					trig.Status.SubscriberURI = url
 				}
-				correctURI = append(correctURI, trig)
+				triggerinformerfake.Get(ctx).Informer().GetStore().Add(trig)
 			}
-			listers := reconcilertesting.NewListers(correctURI)
 			reporter := &mockReporter{}
 			r, err := NewHandler(
 				zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())),
-				listers.GetTriggerLister(),
+				triggerinformerfake.Get(ctx),
 				reporter,
-				8080, func(ctx context.Context) context.Context {
+				func(ctx context.Context) context.Context {
 					return feature.ToContext(context.TODO(), feature.Flags{
 						feature.NewTriggerFilters: feature.Enabled,
 					})
