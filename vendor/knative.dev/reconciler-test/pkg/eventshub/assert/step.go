@@ -28,8 +28,40 @@ func (m MatchAssertionBuilder) Match(matchers ...eventshub.EventInfoMatcher) Mat
 	return m
 }
 
-// MatchEvent is a shortcut for Match(MatchEvent())
+// MatchReceivedEvent is a shortcut for Match(MatchKind(eventshub.EventReceived), MatchEvent(matchers...))
+func (m MatchAssertionBuilder) MatchReceivedEvent(matchers ...cetest.EventMatcher) MatchAssertionBuilder {
+	m.matchers = append(m.matchers, MatchKind(eventshub.EventReceived))
+	m.matchers = append(m.matchers, MatchEvent(matchers...))
+	return m
+}
+
+// MatchRejectedEvent is a shortcut for Match(MatchKind(eventshub.EventRejected), MatchEvent(matchers...))
+func (m MatchAssertionBuilder) MatchRejectedEvent(matchers ...cetest.EventMatcher) MatchAssertionBuilder {
+	m.matchers = append(m.matchers, MatchKind(eventshub.EventRejected))
+	m.matchers = append(m.matchers, MatchEvent(matchers...))
+	return m
+}
+
+// MatchSentEvent is a shortcut for Match(MatchKind(eventshub.EventSent), MatchEvent(matchers...))
+func (m MatchAssertionBuilder) MatchSentEvent(matchers ...cetest.EventMatcher) MatchAssertionBuilder {
+	m.matchers = append(m.matchers, MatchKind(eventshub.EventSent))
+	m.matchers = append(m.matchers, MatchEvent(matchers...))
+	return m
+}
+
+// MatchResponseEvent is a shortcut for Match(MatchKind(eventshub.EventResponse), MatchEvent(matchers...))
+func (m MatchAssertionBuilder) MatchResponseEvent(matchers ...cetest.EventMatcher) MatchAssertionBuilder {
+	m.matchers = append(m.matchers, MatchKind(eventshub.EventResponse))
+	m.matchers = append(m.matchers, MatchEvent(matchers...))
+	return m
+}
+
+// MatchEvent is a shortcut for Match(MatchEvent(), OneOf(MatchKind(eventshub.EventReceived), MatchKind(eventshub.EventSent)))
 func (m MatchAssertionBuilder) MatchEvent(matchers ...cetest.EventMatcher) MatchAssertionBuilder {
+	m.matchers = append(m.matchers, OneOf(
+		MatchKind(eventshub.EventReceived),
+		MatchKind(eventshub.EventSent),
+	))
 	m.matchers = append(m.matchers, MatchEvent(matchers...))
 	return m
 }
