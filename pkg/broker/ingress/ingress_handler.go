@@ -31,6 +31,7 @@ import (
 	"go.opencensus.io/trace"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/cache"
 
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/network"
@@ -38,6 +39,7 @@ import (
 	"knative.dev/eventing/pkg/apis/eventing"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/pkg/broker"
+	v1 "knative.dev/eventing/pkg/client/informers/externalversions/eventing/v1"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1"
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/tracing"
@@ -63,18 +65,51 @@ type Handler struct {
 	Logger *zap.Logger
 }
 
-func NewHandler(logger *zap.Logger, reporter StatsReporter, defaulter client.EventDefaulter, brokerLister eventinglisters.BrokerLister) (*Handler, error) {
+func NewHandler(logger *zap.Logger, reporter StatsReporter, defaulter client.EventDefaulter, brokerInformer v1.BrokerInformer) (*Handler, error) {
 	connectionArgs := kncloudevents.ConnectionArgs{
 		MaxIdleConns:        defaultMaxIdleConnections,
 		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
 	}
 	kncloudevents.ConfigureConnectionArgs(&connectionArgs)
 
+	brokerInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			broker, ok := obj.(eventingv1.Broker)
+			if !ok {
+				return
+			}
+			kncloudevents.AddOrUpdateAddressableHandler(duckv1.Addressable{
+				URL:     broker.Status.Address.URL,
+				CACerts: broker.Status.Address.CACerts,
+			})
+		},
+		UpdateFunc: func(_, obj interface{}) {
+			broker, ok := obj.(eventingv1.Broker)
+			if !ok {
+				return
+			}
+			kncloudevents.AddOrUpdateAddressableHandler(duckv1.Addressable{
+				URL:     broker.Status.Address.URL,
+				CACerts: broker.Status.Address.CACerts,
+			})
+		},
+		DeleteFunc: func(obj interface{}) {
+			broker, ok := obj.(eventingv1.Broker)
+			if !ok {
+				return
+			}
+			kncloudevents.DeleteAddressableHandler(duckv1.Addressable{
+				URL:     broker.Status.Address.URL,
+				CACerts: broker.Status.Address.CACerts,
+			})
+		},
+	})
+
 	return &Handler{
 		Defaulter:    defaulter,
 		Reporter:     reporter,
 		Logger:       logger,
-		BrokerLister: brokerLister,
+		BrokerLister: brokerInformer.Lister(),
 	}, nil
 }
 

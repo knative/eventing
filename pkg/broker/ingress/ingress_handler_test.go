@@ -31,15 +31,15 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"go.uber.org/zap"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
 	"knative.dev/eventing/pkg/apis/eventing"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/pkg/broker"
-	"knative.dev/eventing/pkg/kncloudevents"
-	reconcilertestingv1 "knative.dev/eventing/pkg/reconciler/testing/v1"
+	reconcilertesting "knative.dev/pkg/reconciler/testing"
+
+	brokerinformerfake "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/broker/fake"
 )
 
 const (
@@ -253,6 +253,7 @@ func TestHandler_ServeHTTP(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
+			ctx, _ := reconcilertesting.SetupFakeContext(t)
 
 			s := httptest.NewServer(tc.handler)
 			defer s.Close()
@@ -268,7 +269,6 @@ func TestHandler_ServeHTTP(t *testing.T) {
 				request.Header.Add(cehttp.ContentType, event.ApplicationCloudEventsJSON)
 			}
 
-			brokers := make([]runtime.Object, 0, len(tc.brokers))
 			for _, b := range tc.brokers {
 				// Write the channel address in the broker status annotation unless explicitly set to nil
 				if b.Status.Annotations != nil {
@@ -278,16 +278,12 @@ func TestHandler_ServeHTTP(t *testing.T) {
 						}
 					}
 				}
-				brokers = append(brokers, b)
+				brokerinformerfake.Get(ctx).Informer().GetStore().Add(b)
 			}
-			listers := reconcilertestingv1.NewListers(brokers)
-			sender, _ := kncloudevents.NewHTTPMessageSenderWithTarget("")
-			h := &Handler{
-				Sender:       sender,
-				Defaulter:    tc.defaulter,
-				Reporter:     &mockReporter{},
-				Logger:       logger,
-				BrokerLister: listers.GetBrokerLister(),
+
+			h, err := NewHandler(logger, &mockReporter{}, tc.defaulter, brokerinformerfake.Get(ctx))
+			if err != nil {
+				t.Fatal("Unable to create receiver:", err)
 			}
 
 			h.ServeHTTP(recorder, request)

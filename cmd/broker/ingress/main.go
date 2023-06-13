@@ -104,7 +104,7 @@ func main() {
 
 	logger.Info("Starting the Broker Ingress")
 
-	brokerLister := brokerinformer.Get(ctx).Lister()
+	brokerInformer := brokerinformer.Get(ctx)
 
 	// Watch the logging config map and dynamically update logging levels.
 	configMapWatcher := configmap.NewInformedWatcher(kubeclient.Get(ctx), system.Namespace())
@@ -129,7 +129,7 @@ func main() {
 
 	reporter := ingress.NewStatsReporter(env.ContainerName, kmeta.ChildName(env.PodName, uuid.New().String()))
 
-	handler, err := ingress.NewHandler(logger, reporter, broker.TTLDefaulter(logger, int32(env.MaxTTL)), brokerLister)
+	handler, err := ingress.NewHandler(logger, reporter, broker.TTLDefaulter(logger, int32(env.MaxTTL)), brokerInformer)
 	if err != nil {
 		logger.Fatal("Error creating Handler", zap.Error(err))
 	}
