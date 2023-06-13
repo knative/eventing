@@ -90,6 +90,20 @@ func MatchKind(kind eventshub.EventKind) eventshub.EventInfoMatcher {
 	}
 }
 
+func OneOf(matchers ...eventshub.EventInfoMatcher) eventshub.EventInfoMatcher {
+	return func(info eventshub.EventInfo) error {
+		var lastErr error
+		for _, m := range matchers {
+			err := m(info)
+			if err == nil {
+				return nil
+			}
+			lastErr = err
+		}
+		return lastErr
+	}
+}
+
 // MatchStatusCode matches the status code of EventInfo
 func MatchStatusCode(statusCode int) eventshub.EventInfoMatcher {
 	return func(info eventshub.EventInfo) error {
