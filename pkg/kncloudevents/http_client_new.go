@@ -32,7 +32,7 @@ import (
 const (
 	defaultRetryWaitMin    = 1 * time.Second
 	defaultRetryWaitMax    = 30 * time.Second
-	defaultRecheckInterval = 5 * time.Minute
+	defaultCleanupInterval = 5 * time.Minute
 )
 
 var (
@@ -44,7 +44,7 @@ type clientsHolder struct {
 	clients         map[string]*nethttp.Client
 	timerMu         sync.Mutex
 	connectionArgs  *ConnectionArgs
-	recheckInterval time.Duration
+	cleanupInterval time.Duration
 	cancelCleanup   context.CancelFunc
 }
 
@@ -53,7 +53,7 @@ func init() {
 	clients = clientsHolder{
 		clients:         make(map[string]*nethttp.Client),
 		cancelCleanup:   cancel,
-		recheckInterval: defaultRecheckInterval,
+		cleanupInterval: defaultCleanupInterval,
 	}
 	go cleanupClientsMap(ctx)
 }
@@ -159,11 +159,11 @@ func ConfigureConnectionArgs(ca *ConnectionArgs) {
 	clients.connectionArgs = ca
 }
 
-// SetClientRecheckInterval sets the interval before the clients map is re-checked for expired entries.
+// SetClientCleanupInterval sets the interval before the clients map is re-checked for expired entries.
 // forceRestart will force the loop to restart with the new interval, cancelling the current iteration.
-func SetClientRecheckInterval(recheckInterval time.Duration, forceRestart bool) {
+func SetClientCleanupInterval(cleanupInterval time.Duration, forceRestart bool) {
 	clients.timerMu.Lock()
-	clients.recheckInterval = recheckInterval
+	clients.cleanupInterval = cleanupInterval
 	clients.timerMu.Unlock()
 	if forceRestart {
 		clients.clientsMu.Lock()
@@ -195,7 +195,7 @@ func (ca *ConnectionArgs) configureTransport(transport *nethttp.Transport) {
 func cleanupClientsMap(ctx context.Context) {
 	for {
 		clients.timerMu.Lock()
-		t := time.NewTimer(clients.recheckInterval)
+		t := time.NewTimer(clients.cleanupInterval)
 		clients.timerMu.Unlock()
 		select {
 		case <-ctx.Done():
