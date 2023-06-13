@@ -1271,6 +1271,7 @@ knative.dev/pkg/client/injection/ducks/duck/v1/addressable
 knative.dev/pkg/client/injection/ducks/duck/v1/addressable/fake
 knative.dev/pkg/client/injection/ducks/duck/v1/conditions
 knative.dev/pkg/client/injection/ducks/duck/v1/conditions/fake
+knative.dev/pkg/client/injection/ducks/duck/v1/kresource
 knative.dev/pkg/client/injection/ducks/duck/v1/podspecable
 knative.dev/pkg/client/injection/ducks/duck/v1/source
 knative.dev/pkg/client/injection/ducks/duck/v1/source/fake
