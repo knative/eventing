@@ -116,7 +116,6 @@ func TestReconcile(t *testing.T) {
 				WithEventTypeSource(eventTypeSource),
 				WithEventTypeReference(brokerReference(eventTypeBroker)),
 				WithEventTypeBrokerExists,
-				WithEventTypeBrokerFailed("DeploymentFailure", "inducing failure for create deployments"),
 			),
 		}},
 	}, {
@@ -138,7 +137,6 @@ func TestReconcile(t *testing.T) {
 				WithEventTypeSource(eventTypeSource),
 				WithEventTypeReference(brokerReference(eventTypeBroker)),
 				WithEventTypeBrokerExists,
-				WithEventTypeBrokerUnknown("", ""),
 			),
 		}},
 	}, {
@@ -160,7 +158,6 @@ func TestReconcile(t *testing.T) {
 				WithEventTypeSource(eventTypeSource),
 				WithEventTypeReference(brokerReference(eventTypeBroker)),
 				WithEventTypeBrokerExists,
-				WithEventTypeBrokerReady,
 			),
 		}},
 	}}

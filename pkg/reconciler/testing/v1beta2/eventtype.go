@@ -102,20 +102,3 @@ func WithEventTypeBrokerDoesNotExist(et *v1beta2.EventType) {
 func WithEventTypeBrokerExists(et *v1beta2.EventType) {
 	et.Status.MarkBrokerExists()
 }
-
-func WithEventTypeBrokerFailed(reason, message string) EventTypeOption {
-	return func(et *v1beta2.EventType) {
-		et.Status.MarkBrokerFailed(reason, message)
-	}
-}
-
-func WithEventTypeBrokerUnknown(reason, message string) EventTypeOption {
-	return func(et *v1beta2.EventType) {
-		et.Status.MarkBrokerUnknown(reason, message)
-	}
-}
-
-// WithEventTypeBrokerReady calls .Status.MarkBrokerReady on the EventType.
-func WithEventTypeBrokerReady(et *v1beta2.EventType) {
-	et.Status.MarkBrokerReady()
-}

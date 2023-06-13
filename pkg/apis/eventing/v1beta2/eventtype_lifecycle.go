@@ -17,18 +17,14 @@ limitations under the License.
 package v1beta2
 
 import (
-	corev1 "k8s.io/api/core/v1"
-
-	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/pkg/apis"
 )
 
-var eventTypeCondSet = apis.NewLivingConditionSet(EventTypeConditionBrokerExists, EventTypeConditionBrokerReady)
+var eventTypeCondSet = apis.NewLivingConditionSet(EventTypeConditionBrokerExists)
 
 const (
 	EventTypeConditionReady                           = apis.ConditionReady
 	EventTypeConditionBrokerExists apis.ConditionType = "BrokerExists"
-	EventTypeConditionBrokerReady  apis.ConditionType = "BrokerReady"
 )
 
 // GetConditionSet retrieves the condition set for this resource. Implements the KRShaped interface.
@@ -66,39 +62,4 @@ func (et *EventTypeStatus) MarkBrokerDoesNotExist() {
 
 func (et *EventTypeStatus) MarkBrokerExistsUnknown(reason, messageFormat string, messageA ...interface{}) {
 	eventTypeCondSet.Manage(et).MarkUnknown(EventTypeConditionBrokerExists, reason, messageFormat, messageA...)
-}
-
-func (et *EventTypeStatus) MarkBrokerReady() {
-	eventTypeCondSet.Manage(et).MarkTrue(EventTypeConditionBrokerReady)
-}
-
-func (et *EventTypeStatus) MarkBrokerFailed(reason, messageFormat string, messageA ...interface{}) {
-	eventTypeCondSet.Manage(et).MarkFalse(EventTypeConditionBrokerReady, reason, messageFormat, messageA...)
-}
-
-func (et *EventTypeStatus) MarkBrokerUnknown(reason, messageFormat string, messageA ...interface{}) {
-	eventTypeCondSet.Manage(et).MarkUnknown(EventTypeConditionBrokerReady, reason, messageFormat, messageA...)
-}
-
-func (et *EventTypeStatus) MarkBrokerNotConfigured() {
-	eventTypeCondSet.Manage(et).MarkUnknown(EventTypeConditionBrokerReady,
-		"BrokerNotConfigured", "Broker has not yet been reconciled.")
-}
-
-func (et *EventTypeStatus) PropagateBrokerStatus(bs *eventingv1.BrokerStatus) {
-	bc := bs.GetConditionSet().Manage(bs).GetTopLevelCondition()
-	if bc == nil {
-		et.MarkBrokerNotConfigured()
-		return
-	}
-	switch {
-	case bc.Status == corev1.ConditionUnknown:
-		et.MarkBrokerUnknown(bc.Reason, bc.Message)
-	case bc.Status == corev1.ConditionTrue:
-		eventTypeCondSet.Manage(et).MarkTrue(EventTypeConditionBrokerReady)
-	case bc.Status == corev1.ConditionFalse:
-		et.MarkBrokerFailed(bc.Reason, bc.Message)
-	default:
-		et.MarkBrokerUnknown("BrokerUnknown", "The status of Broker is invalid: %v", bc.Status)
-	}
 }

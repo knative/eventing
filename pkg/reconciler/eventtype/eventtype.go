@@ -75,8 +75,6 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, et *v1beta2.EventType) p
 		return err
 	}
 
-	et.Status.PropagateBrokerStatus(&b.Status)
-
 	return nil
 }
 
