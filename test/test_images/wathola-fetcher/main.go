@@ -31,7 +31,7 @@ func main() {
 }
 
 func maybeQuitIstioProxy() {
-	req, _ := http.NewRequest("POST", "http://localhost:15020/quitquitquit", nil)
+	req, _ := http.NewRequest(http.MethodPost, "http://localhost:15020/quitquitquit", nil)
 
 	_, err := http.DefaultClient.Do(req)
 
