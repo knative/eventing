@@ -31,7 +31,10 @@ func main() {
 }
 
 func maybeQuitIstioProxy() {
-	_, err := http.DefaultClient.Get("http://localhost:15020/quitquitquit")
+	req, _ := http.NewRequest(http.MethodPost, "http://localhost:15020/quitquitquit", nil)
+
+	_, err := http.DefaultClient.Do(req)
+
 	if err != nil && !errors.Is(err, syscall.ECONNREFUSED) {
 		log.Println("[Ignore this warning if Istio proxy is not used on this pod]", err)
 	}
