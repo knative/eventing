@@ -39,7 +39,7 @@ var (
 	}
 
 	eventTypeConditionBrokerExists = apis.Condition{
-		Type:   EventTypeConditionBrokerExists,
+		Type:   EventTypeConditionReferenceExists,
 		Status: corev1.ConditionTrue,
 	}
 
@@ -82,7 +82,7 @@ func TestEventTypeGetCondition(t *testing.T) {
 				},
 			},
 		},
-		condQuery: EventTypeConditionBrokerExists,
+		condQuery: EventTypeConditionReferenceExists,
 		want:      &eventTypeConditionBrokerExists,
 	}}
 
@@ -107,13 +107,12 @@ func TestEventTypeInitializeConditions(t *testing.T) {
 		want: &EventTypeStatus{
 			Status: duckv1.Status{
 				Conditions: []apis.Condition{{
-					Type:   EventTypeConditionBrokerExists,
-					Status: corev1.ConditionUnknown,
-				}, {
 					Type:   EventTypeConditionReady,
 					Status: corev1.ConditionUnknown,
-				},
-				},
+				}, {
+					Type:   EventTypeConditionReferenceExists,
+					Status: corev1.ConditionUnknown,
+				}},
 			},
 		},
 	}, {
@@ -121,7 +120,7 @@ func TestEventTypeInitializeConditions(t *testing.T) {
 		ets: &EventTypeStatus{
 			Status: duckv1.Status{
 				Conditions: []apis.Condition{{
-					Type:   EventTypeConditionBrokerExists,
+					Type:   EventTypeConditionReferenceExists,
 					Status: corev1.ConditionFalse,
 				}},
 			},
@@ -129,11 +128,11 @@ func TestEventTypeInitializeConditions(t *testing.T) {
 		want: &EventTypeStatus{
 			Status: duckv1.Status{
 				Conditions: []apis.Condition{{
-					Type:   EventTypeConditionBrokerExists,
-					Status: corev1.ConditionFalse,
-				}, {
 					Type:   EventTypeConditionReady,
 					Status: corev1.ConditionUnknown,
+				}, {
+					Type:   EventTypeConditionReferenceExists,
+					Status: corev1.ConditionFalse,
 				}},
 			},
 		},
@@ -182,9 +181,9 @@ func TestEventTypeConditionStatus(t *testing.T) {
 			ets := &EventTypeStatus{}
 			if test.markBrokerExists != nil {
 				if *test.markBrokerExists {
-					ets.MarkBrokerExists()
+					ets.MarkReferenceExists()
 				} else {
-					ets.MarkBrokerDoesNotExist()
+					ets.MarkReferenceDoesNotExist()
 				}
 			}
 

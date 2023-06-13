@@ -96,7 +96,7 @@ func WithEventTypeBrokerDoesNotExist(et *v1beta1.EventType) {
 	et.Status.MarkBrokerDoesNotExist()
 }
 
-// WithEventTypeBrokerExists calls .Status.MarkBrokerExists on the EventType.
+// WithEventTypeBrokerExists calls .Status.MarkReferenceExists on the EventType.
 func WithEventTypeBrokerExists(et *v1beta1.EventType) {
 	et.Status.MarkBrokerExists()
 }
