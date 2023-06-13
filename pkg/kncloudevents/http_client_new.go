@@ -32,7 +32,6 @@ import (
 const (
 	defaultRetryWaitMin    = 1 * time.Second
 	defaultRetryWaitMax    = 30 * time.Second
-	defaultClientsTTL      = 30 * time.Minute
 	defaultRecheckInterval = 5 * time.Minute
 )
 
@@ -42,25 +41,18 @@ var (
 
 type clientsHolder struct {
 	clientsMu       sync.Mutex
-	clients         map[string]*clientsMapEntry
+	clients         map[string]*nethttp.Client
 	timerMu         sync.Mutex
 	connectionArgs  *ConnectionArgs
-	ttl             time.Duration
 	recheckInterval time.Duration
 	cancelCleanup   context.CancelFunc
-}
-
-type clientsMapEntry struct {
-	client       *nethttp.Client
-	lastAccessed time.Time
 }
 
 func init() {
 	ctx, cancel := context.WithCancel(context.Background())
 	clients = clientsHolder{
-		clients:         make(map[string]*clientsMapEntry),
+		clients:         make(map[string]*nethttp.Client),
 		cancelCleanup:   cancel,
-		ttl:             defaultClientsTTL,
 		recheckInterval: defaultRecheckInterval,
 	}
 	go cleanupClientsMap(ctx)
@@ -72,20 +64,16 @@ func getClientForAddressable(addressable duckv1.Addressable) (*nethttp.Client, e
 
 	clientKey := addressable.URL.String()
 
-	clientEntry, ok := clients.clients[clientKey]
-	var client *nethttp.Client
+	client, ok := clients.clients[clientKey]
 	if !ok {
 		newClient, err := createNewClient(addressable)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create new client for addressable: %w", err)
 		}
 
-		clients.clients[clientKey] = &clientsMapEntry{client: newClient, lastAccessed: time.Now()}
+		clients.clients[clientKey] = newClient
 
 		client = newClient
-	} else {
-		client = clientEntry.client
-		clientEntry.lastAccessed = time.Now()
 	}
 
 	return client, nil
@@ -129,7 +117,7 @@ func AddOrUpdateAddressableHandler(addressable duckv1.Addressable) {
 		fmt.Printf("failed to create new client: %v", err)
 		return
 	}
-	clients.clients[clientKey] = &clientsMapEntry{client: client, lastAccessed: time.Now()}
+	clients.clients[clientKey] = client
 }
 
 func DeleteAddressableHandler(addressable duckv1.Addressable) {
@@ -161,22 +149,14 @@ func ConfigureConnectionArgs(ca *ConnectionArgs) {
 		// Let's try to clean up a bit the existing clients
 		// Note: this won't remove it nor close it
 		for _, clientEntry := range clients.clients {
-			clientEntry.client.CloseIdleConnections()
+			clientEntry.CloseIdleConnections()
 		}
 
 		// Resetting clients
-		clients.clients = make(map[string]*clientsMapEntry)
+		clients.clients = make(map[string]*nethttp.Client)
 	}
 
 	clients.connectionArgs = ca
-}
-
-// SetClientTTL sets the ttl before cached clients expire
-// This does not update existing clients, it only affects new ones
-func SetClientTTL(ttl time.Duration) {
-	clients.clientsMu.Lock()
-	defer clients.clientsMu.Unlock()
-	clients.ttl = ttl
 }
 
 // SetClientRecheckInterval sets the interval before the clients map is re-checked for expired entries.
@@ -219,14 +199,14 @@ func cleanupClientsMap(ctx context.Context) {
 		clients.timerMu.Unlock()
 		select {
 		case <-ctx.Done():
+			clients.timerMu.Lock()
 			t.Stop()
+			clients.timerMu.Unlock()
 			return
 		case <-t.C:
 			clients.clientsMu.Lock()
-			for k, cme := range clients.clients {
-				if time.Since(cme.lastAccessed) > clients.ttl {
-					delete(clients.clients, k)
-				}
+			for _, cme := range clients.clients {
+				cme.CloseIdleConnections()
 			}
 			clients.clientsMu.Unlock()
 		}
