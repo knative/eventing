@@ -57,7 +57,7 @@ func (et *EventTypeStatus) MarkReferenceExists() {
 }
 
 func (et *EventTypeStatus) MarkReferenceDoesNotExist() {
-	eventTypeCondSet.Manage(et).MarkFalse(EventTypeConditionReferenceExists, "BrokerDoesNotExist", "Broker does not exist")
+	eventTypeCondSet.Manage(et).MarkFalse(EventTypeConditionReferenceExists, "ResourceDoesNotExist", "Resource in spec.reference does not exist")
 }
 
 func (et *EventTypeStatus) MarkReferenceExistsUnknown(reason, messageFormat string, messageA ...interface{}) {
