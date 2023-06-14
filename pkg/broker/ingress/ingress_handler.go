@@ -128,14 +128,17 @@ func (h *Handler) guessChannelAddress(name, namespace, domain string) (*duckv1.A
 		return nil, err
 	}
 
-	return &duckv1.Addressable{
+	addr := &duckv1.Addressable{
 		URL: &apis.URL{
 			Scheme: "http",
 			Host:   fmt.Sprintf("%s-kne-trigger-kn-channel.%s.svc.%s", name, namespace, domain),
 			Path:   "/",
 		},
-		CACerts: broker.Status.Address.CACerts,
-	}, nil
+	}
+	if broker.Status.Address != nil {
+		addr.CACerts = broker.Status.Address.CACerts
+	}
+	return addr, nil
 }
 
 func (h *Handler) getChannelAddress(name, namespace string) (*duckv1.Addressable, error) {
@@ -157,8 +160,10 @@ func (h *Handler) getChannelAddress(name, namespace string) (*duckv1.Addressable
 	}
 
 	addr := &duckv1.Addressable{
-		URL:     url,
-		CACerts: broker.Status.Address.CACerts,
+		URL: url,
+	}
+	if broker.Status.Address != nil {
+		addr.CACerts = broker.Status.Address.CACerts
 	}
 	return addr, nil
 }
