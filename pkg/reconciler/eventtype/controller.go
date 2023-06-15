@@ -19,11 +19,10 @@ package eventtype
 import (
 	"context"
 
+	"knative.dev/eventing/pkg/resolver"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 
-	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
-	brokerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/broker"
 	eventtypeinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta2/eventtype"
 	eventtypereconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1beta2/eventtype"
 )
@@ -34,26 +33,16 @@ func NewController(
 	ctx context.Context,
 	cmw configmap.Watcher,
 ) *controller.Impl {
-	brokerInformer := brokerinformer.Get(ctx)
 	eventTypeInformer := eventtypeinformer.Get(ctx)
 
-	r := &Reconciler{
-		eventTypeLister: eventTypeInformer.Lister(),
-		brokerLister:    brokerInformer.Lister(),
-	}
+	r := &Reconciler{}
 	impl := eventtypereconciler.NewImpl(ctx, r)
 
 	eventTypeInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	// Tracker is used to notify us that a EventType's Broker has changed so that
 	// we can reconcile.
-	r.tracker = impl.Tracker
-	brokerInformer.Informer().AddEventHandler(controller.HandleAll(
-		controller.EnsureTypeMeta(
-			r.tracker.OnChanged,
-			v1.SchemeGroupVersion.WithKind("Broker"),
-		),
-	))
+	r.kReferenceResolver = resolver.NewKReferenceResolverFromTracker(ctx, impl.Tracker)
 
 	return impl
 }

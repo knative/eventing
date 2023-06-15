@@ -21,6 +21,8 @@ import (
 
 	"knative.dev/pkg/configmap"
 
+	"knative.dev/pkg/client/injection/ducks/duck/v1/kresource"
+
 	. "knative.dev/pkg/reconciler/testing"
 
 	// Fake injection informers
@@ -30,6 +32,7 @@ import (
 
 func TestNew(t *testing.T) {
 	ctx, _ := SetupFakeContext(t)
+	ctx = kresource.WithDuck(ctx)
 
 	c := NewController(ctx, configmap.NewStaticWatcher())
 
