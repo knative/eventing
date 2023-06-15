@@ -19,8 +19,6 @@ package v1beta1
 import (
 	"context"
 
-	duckv1 "knative.dev/pkg/apis/duck/v1"
-
 	"knative.dev/eventing/pkg/apis/eventing/v1beta2"
 
 	"knative.dev/pkg/apis"
@@ -35,15 +33,11 @@ func (source *EventType) ConvertTo(ctx context.Context, obj apis.Convertible) er
 			Status: source.Status.Status,
 		}
 		sink.Spec = v1beta2.EventTypeSpec{
-			Type:       source.Spec.Type,
-			Source:     source.Spec.Source,
-			Schema:     source.Spec.Schema,
-			SchemaData: source.Spec.SchemaData,
-			Reference: &duckv1.KReference{
-				APIVersion: "eventing.knative.dev/v1",
-				Kind:       "Broker",
-				Name:       source.Spec.Broker,
-			},
+			Type:        source.Spec.Type,
+			Source:      source.Spec.Source,
+			Schema:      source.Spec.Schema,
+			SchemaData:  source.Spec.SchemaData,
+			Reference:   source.Spec.Reference,
 			Description: source.Spec.Description,
 		}
 
@@ -67,7 +61,7 @@ func (sink *EventType) ConvertFrom(ctx context.Context, obj apis.Convertible) er
 			Source:      source.Spec.Source,
 			Schema:      source.Spec.Schema,
 			SchemaData:  source.Spec.SchemaData,
-			Broker:      source.Spec.Reference.Name,
+			Reference:   source.Spec.Reference,
 			Description: source.Spec.Description,
 		}
 
