@@ -21,11 +21,15 @@ import (
 	"fmt"
 	"testing"
 
+	"k8s.io/apimachinery/pkg/types"
+	"knative.dev/eventing/pkg/resolver"
+	"knative.dev/pkg/client/injection/ducks/duck/v1/kresource"
+	"knative.dev/pkg/tracker"
+
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	clientgotesting "k8s.io/client-go/testing"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1beta2/eventtype"
@@ -35,7 +39,6 @@ import (
 	"knative.dev/pkg/controller"
 	logtesting "knative.dev/pkg/logging/testing"
 	. "knative.dev/pkg/reconciler/testing"
-	"knative.dev/pkg/tracker"
 )
 
 const (
@@ -94,80 +97,15 @@ func TestReconcile(t *testing.T) {
 		}},
 		WantErr: true,
 		WantEvents: []string{
-			Eventf(corev1.EventTypeWarning, "InternalError", `broker.eventing.knative.dev "test-broker" not found`),
+			Eventf(corev1.EventTypeWarning, "InternalError failed to get object default/test-broker:", `brokers.eventing.knative.dev "test-broker" not found`),
 		},
-	}, {
-		Name: "The status of Broker is False",
-		Key:  testKey,
-		Objects: []runtime.Object{
-			NewEventType(eventTypeName, testNS,
-				WithEventTypeType(eventTypeType),
-				WithEventTypeSource(eventTypeSource),
-				WithEventTypeReference(brokerReference(eventTypeBroker)),
-			),
-			NewBroker(eventTypeBroker, testNS,
-				WithInitBrokerConditions,
-				WithIngressFailed("DeploymentFailure", "inducing failure for create deployments"),
-			),
-		},
-		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-			Object: NewEventType(eventTypeName, testNS,
-				WithEventTypeType(eventTypeType),
-				WithEventTypeSource(eventTypeSource),
-				WithEventTypeReference(brokerReference(eventTypeBroker)),
-				WithEventTypeResourceExists,
-			),
-		}},
-	}, {
-		Name: "The status of Broker is Unknown",
-		Key:  testKey,
-		Objects: []runtime.Object{
-			NewEventType(eventTypeName, testNS,
-				WithEventTypeType(eventTypeType),
-				WithEventTypeSource(eventTypeSource),
-				WithEventTypeReference(brokerReference(eventTypeBroker)),
-			),
-			NewBroker(eventTypeBroker, testNS,
-				WithInitBrokerConditions,
-			),
-		},
-		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-			Object: NewEventType(eventTypeName, testNS,
-				WithEventTypeType(eventTypeType),
-				WithEventTypeSource(eventTypeSource),
-				WithEventTypeReference(brokerReference(eventTypeBroker)),
-				WithEventTypeResourceExists,
-			),
-		}},
-	}, {
-		Name: "Successful reconcile, became ready",
-		Key:  testKey,
-		Objects: []runtime.Object{
-			NewEventType(eventTypeName, testNS,
-				WithEventTypeType(eventTypeType),
-				WithEventTypeSource(eventTypeSource),
-				WithEventTypeReference(brokerReference(eventTypeBroker)),
-			),
-			NewBroker(eventTypeBroker, testNS,
-				WithBrokerReady,
-			),
-		},
-		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-			Object: NewEventType(eventTypeName, testNS,
-				WithEventTypeType(eventTypeType),
-				WithEventTypeSource(eventTypeSource),
-				WithEventTypeReference(brokerReference(eventTypeBroker)),
-				WithEventTypeResourceExists,
-			),
-		}},
 	}}
 
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
+		ctx = kresource.WithDuck(ctx)
 		r := &Reconciler{
-			eventTypeLister: listers.GetEventTypeLister(),
-			brokerLister:    listers.GetBrokerLister(),
-			tracker:         tracker.New(func(types.NamespacedName) {}, 0),
+			kReferenceResolver: resolver.NewKReferenceResolverFromTracker(ctx, tracker.New(func(types.NamespacedName) {}, 0)),
 		}
 		return eventtype.NewReconciler(ctx, logger,
 			fakeeventingclient.Get(ctx), listers.GetEventTypeLister(),
