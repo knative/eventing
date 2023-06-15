@@ -115,7 +115,7 @@ func TestReconcile(t *testing.T) {
 				WithEventTypeType(eventTypeType),
 				WithEventTypeSource(eventTypeSource),
 				WithEventTypeReference(brokerReference(eventTypeBroker)),
-				WithEventTypeBrokerExists,
+				WithEventTypeResourceExists,
 			),
 		}},
 	}, {
@@ -136,7 +136,7 @@ func TestReconcile(t *testing.T) {
 				WithEventTypeType(eventTypeType),
 				WithEventTypeSource(eventTypeSource),
 				WithEventTypeReference(brokerReference(eventTypeBroker)),
-				WithEventTypeBrokerExists,
+				WithEventTypeResourceExists,
 			),
 		}},
 	}, {
@@ -157,7 +157,7 @@ func TestReconcile(t *testing.T) {
 				WithEventTypeType(eventTypeType),
 				WithEventTypeSource(eventTypeSource),
 				WithEventTypeReference(brokerReference(eventTypeBroker)),
-				WithEventTypeBrokerExists,
+				WithEventTypeResourceExists,
 			),
 		}},
 	}}

@@ -94,11 +94,11 @@ func WithEventTypeDeletionTimestamp(et *v1beta2.EventType) {
 }
 
 // WithEventTypeBrokerNotFound calls .Status.MarkFilterFailed on the EventType.
-func WithEventTypeBrokerDoesNotExist(et *v1beta2.EventType) {
-	et.Status.MarkBrokerDoesNotExist()
+func WithEventTypeResourceDoesNotExist(et *v1beta2.EventType) {
+	et.Status.MarkReferenceDoesNotExist()
 }
 
-// WithEventTypeBrokerExists calls .Status.MarkBrokerExists on the EventType.
-func WithEventTypeBrokerExists(et *v1beta2.EventType) {
-	et.Status.MarkBrokerExists()
+// WithEventTypeResourceExists calls .Status.MarkReferenceExists on the EventType.
+func WithEventTypeResourceExists(et *v1beta2.EventType) {
+	et.Status.MarkReferenceExists()
 }

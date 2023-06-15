@@ -20,11 +20,11 @@ import (
 	"knative.dev/pkg/apis"
 )
 
-var eventTypeCondSet = apis.NewLivingConditionSet(EventTypeConditionBrokerExists)
+var eventTypeCondSet = apis.NewLivingConditionSet(EventTypeConditionReferenceExists)
 
 const (
-	EventTypeConditionReady                           = apis.ConditionReady
-	EventTypeConditionBrokerExists apis.ConditionType = "BrokerExists"
+	EventTypeConditionReady                              = apis.ConditionReady
+	EventTypeConditionReferenceExists apis.ConditionType = "ReferenceExists"
 )
 
 // GetConditionSet retrieves the condition set for this resource. Implements the KRShaped interface.
@@ -52,14 +52,14 @@ func (et *EventTypeStatus) InitializeConditions() {
 	eventTypeCondSet.Manage(et).InitializeConditions()
 }
 
-func (et *EventTypeStatus) MarkBrokerExists() {
-	eventTypeCondSet.Manage(et).MarkTrue(EventTypeConditionBrokerExists)
+func (et *EventTypeStatus) MarkReferenceExists() {
+	eventTypeCondSet.Manage(et).MarkTrue(EventTypeConditionReferenceExists)
 }
 
-func (et *EventTypeStatus) MarkBrokerDoesNotExist() {
-	eventTypeCondSet.Manage(et).MarkFalse(EventTypeConditionBrokerExists, "BrokerDoesNotExist", "Broker does not exist")
+func (et *EventTypeStatus) MarkReferenceDoesNotExist() {
+	eventTypeCondSet.Manage(et).MarkFalse(EventTypeConditionReferenceExists, "ResourceDoesNotExist", "Resource in spec.reference does not exist")
 }
 
-func (et *EventTypeStatus) MarkBrokerExistsUnknown(reason, messageFormat string, messageA ...interface{}) {
-	eventTypeCondSet.Manage(et).MarkUnknown(EventTypeConditionBrokerExists, reason, messageFormat, messageA...)
+func (et *EventTypeStatus) MarkReferenceExistsUnknown(reason, messageFormat string, messageA ...interface{}) {
+	eventTypeCondSet.Manage(et).MarkUnknown(EventTypeConditionReferenceExists, reason, messageFormat, messageA...)
 }
