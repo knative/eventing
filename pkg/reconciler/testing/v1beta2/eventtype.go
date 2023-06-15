@@ -93,7 +93,7 @@ func WithEventTypeDeletionTimestamp(et *v1beta2.EventType) {
 	et.ObjectMeta.SetDeletionTimestamp(&t)
 }
 
-// WithEventTypeBrokerNotFound calls .Status.MarkFilterFailed on the EventType.
+// WithEventTypeResourceDoesNotExist calls .Status.MarkFilterFailed on the EventType.
 func WithEventTypeResourceDoesNotExist(et *v1beta2.EventType) {
 	et.Status.MarkReferenceDoesNotExist()
 }
