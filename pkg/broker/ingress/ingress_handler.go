@@ -137,6 +137,7 @@ func (h *Handler) guessChannelAddress(name, namespace, domain string) (*duckv1.A
 	}
 	if broker.Status.Address != nil {
 		addr.CACerts = broker.Status.Address.CACerts
+		addr.URL.Scheme = broker.Status.Address.URL.Scheme
 	}
 	return addr, nil
 }
@@ -164,6 +165,7 @@ func (h *Handler) getChannelAddress(name, namespace string) (*duckv1.Addressable
 	}
 	if broker.Status.Address != nil {
 		addr.CACerts = broker.Status.Address.CACerts
+		addr.URL.Scheme = broker.Status.Address.URL.Scheme
 	}
 	return addr, nil
 }
