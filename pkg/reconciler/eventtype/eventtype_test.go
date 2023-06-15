@@ -89,7 +89,7 @@ func TestReconcile(t *testing.T) {
 				WithEventTypeSource(eventTypeSource),
 				WithEventTypeReference(brokerReference(eventTypeBroker)),
 				WithInitEventTypeConditions,
-				WithEventTypeBrokerDoesNotExist,
+				WithEventTypeResourceDoesNotExist,
 			),
 		}},
 		WantErr: true,
