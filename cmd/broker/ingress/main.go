@@ -151,7 +151,7 @@ func main() {
 	}
 
 	// Start the servers
-	logger.Info("Filter starting...")
+	logger.Info("Ingress starting...")
 	err = serverManager.StartServers(ctx)
 	if err != nil {
 		logger.Fatal("serverManager.StartServers() returned an error", zap.Error(err))
