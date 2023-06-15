@@ -52,15 +52,15 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, et *v1beta2.EventType) p
 	b, err := r.getReference(et)
 	if err != nil {
 		if apierrs.IsNotFound(err) {
-			logging.FromContext(ctx).Errorw("Broker reference does not exist", zap.Error(err))
-			et.Status.MarkBrokerDoesNotExist()
+			logging.FromContext(ctx).Errorw("Reference does not exist", zap.Error(err))
+			et.Status.MarkReferenceDoesNotExist()
 		} else {
-			logging.FromContext(ctx).Errorw("Unable to get the Broker reference", zap.Error(err))
-			et.Status.MarkBrokerExistsUnknown("BrokerGetFailed", "Failed to get broker reference: %v", err)
+			logging.FromContext(ctx).Errorw("Unable to get the reference", zap.Error(err))
+			et.Status.MarkReferenceExistsUnknown("ReferenceGetFailed", "Failed to get reference: %v", err)
 		}
 		return err
 	}
-	et.Status.MarkBrokerExists()
+	et.Status.MarkReferenceExists()
 
 	apiVersion, kind := brokerGVK.ToAPIVersionAndKind()
 	ref := tracker.Reference{
@@ -71,7 +71,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, et *v1beta2.EventType) p
 	}
 	// Tell tracker to reconcile this EventType whenever the Broker changes.
 	if err = r.tracker.TrackReference(ref, et); err != nil {
-		logging.FromContext(ctx).Errorw("Unable to track changes to Broker reference", zap.Error(err))
+		logging.FromContext(ctx).Errorw("Unable to track changes to reference", zap.Error(err))
 		return err
 	}
 

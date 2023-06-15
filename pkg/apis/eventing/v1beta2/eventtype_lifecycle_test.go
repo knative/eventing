@@ -39,7 +39,7 @@ var (
 	}
 
 	eventTypeConditionBrokerExists = apis.Condition{
-		Type:   EventTypeConditionBrokerExists,
+		Type:   EventTypeConditionReferenceExists,
 		Status: corev1.ConditionTrue,
 	}
 
@@ -82,7 +82,7 @@ func TestEventTypeGetCondition(t *testing.T) {
 				},
 			},
 		},
-		condQuery: EventTypeConditionBrokerExists,
+		condQuery: EventTypeConditionReferenceExists,
 		want:      &eventTypeConditionBrokerExists,
 	}}
 
@@ -107,13 +107,12 @@ func TestEventTypeInitializeConditions(t *testing.T) {
 		want: &EventTypeStatus{
 			Status: duckv1.Status{
 				Conditions: []apis.Condition{{
-					Type:   EventTypeConditionBrokerExists,
-					Status: corev1.ConditionUnknown,
-				}, {
 					Type:   EventTypeConditionReady,
 					Status: corev1.ConditionUnknown,
-				},
-				},
+				}, {
+					Type:   EventTypeConditionReferenceExists,
+					Status: corev1.ConditionUnknown,
+				}},
 			},
 		},
 	}, {
@@ -121,7 +120,7 @@ func TestEventTypeInitializeConditions(t *testing.T) {
 		ets: &EventTypeStatus{
 			Status: duckv1.Status{
 				Conditions: []apis.Condition{{
-					Type:   EventTypeConditionBrokerExists,
+					Type:   EventTypeConditionReferenceExists,
 					Status: corev1.ConditionFalse,
 				}},
 			},
@@ -129,11 +128,11 @@ func TestEventTypeInitializeConditions(t *testing.T) {
 		want: &EventTypeStatus{
 			Status: duckv1.Status{
 				Conditions: []apis.Condition{{
-					Type:   EventTypeConditionBrokerExists,
-					Status: corev1.ConditionFalse,
-				}, {
 					Type:   EventTypeConditionReady,
 					Status: corev1.ConditionUnknown,
+				}, {
+					Type:   EventTypeConditionReferenceExists,
+					Status: corev1.ConditionFalse,
 				}},
 			},
 		},
@@ -153,38 +152,38 @@ func TestEventTypeInitializeConditions(t *testing.T) {
 func TestEventTypeConditionStatus(t *testing.T) {
 	tests := []struct {
 		name                string
-		markBrokerExists    *bool
+		markResourceExists  *bool
 		brokerStatus        *eventingv1.BrokerStatus
 		wantConditionStatus corev1.ConditionStatus
 	}{{
 		name:                "all happy",
-		markBrokerExists:    &trueValue,
+		markResourceExists:  &trueValue,
 		brokerStatus:        eventingv1.TestHelper.ReadyBrokerStatus(),
 		wantConditionStatus: corev1.ConditionTrue,
 	}, {
 		name:                "all happy, dls not configured",
-		markBrokerExists:    &trueValue,
+		markResourceExists:  &trueValue,
 		brokerStatus:        eventingv1.TestHelper.ReadyBrokerStatusWithoutDLS(),
 		wantConditionStatus: corev1.ConditionTrue,
 	}, {
 		name:                "broker exist sad",
-		markBrokerExists:    &falseValue,
+		markResourceExists:  &falseValue,
 		brokerStatus:        nil,
 		wantConditionStatus: corev1.ConditionFalse,
 	}, {
 		name:                "all sad",
-		markBrokerExists:    &falseValue,
+		markResourceExists:  &falseValue,
 		brokerStatus:        nil,
 		wantConditionStatus: corev1.ConditionFalse,
 	}}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			ets := &EventTypeStatus{}
-			if test.markBrokerExists != nil {
-				if *test.markBrokerExists {
-					ets.MarkBrokerExists()
+			if test.markResourceExists != nil {
+				if *test.markResourceExists {
+					ets.MarkReferenceExists()
 				} else {
-					ets.MarkBrokerDoesNotExist()
+					ets.MarkReferenceDoesNotExist()
 				}
 			}
 
