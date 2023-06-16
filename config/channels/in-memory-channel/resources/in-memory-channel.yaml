@@ -152,7 +152,13 @@ spec:
               address:
                 type: object
                 properties:
+                  name:
+                    description: Name of the address.
+                    type: string
                   url:
+                    type: string
+                  CACerts:
+                    description: Certification Authority (CA) certificates in PEM format according to https://www.rfc-editor.org/rfc/rfc7468.
                     type: string
               annotations:
                 description: Annotations is additional Status fields for the Resource to save some additional State as well as convey more information to the user. This is roughly akin to Annotations on any k8s resource, just the reconciler conveying richer information outwards.
