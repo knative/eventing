@@ -106,7 +106,7 @@ func New(ctx context.Context, cfg *Config) (scheduler.Scheduler, error) {
 	autoscaler := newAutoscaler(ctx, cfg, stateAccessor)
 
 	var wg sync.WaitGroup
-	wg.Add(2)
+	wg.Add(1)
 	go func() {
 		wg.Wait()
 		autoscaler.Start(ctx)
