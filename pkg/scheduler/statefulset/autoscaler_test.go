@@ -184,7 +184,7 @@ func TestAutoscaler(t *testing.T) {
 			wantReplicas:        int32(2),
 			schedulerPolicyType: scheduler.MAXFILLUP,
 			reserved: map[types.NamespacedName]map[string]int32{
-				types.NamespacedName{Namespace: testNs, Name: "vpod-1"}: {
+				{Namespace: testNs, Name: "vpod-1"}: {
 					"statefulset-name-0": 2,
 				},
 			},
@@ -410,7 +410,7 @@ func TestAutoscaler(t *testing.T) {
 				},
 				getPending: func() Pending {
 					return map[types.NamespacedName]int32{
-						types.NamespacedName{}: tc.pendings,
+						{}: tc.pendings,
 					}
 				},
 			}
