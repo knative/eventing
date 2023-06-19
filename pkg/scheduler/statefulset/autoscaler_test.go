@@ -59,6 +59,7 @@ func TestAutoscaler(t *testing.T) {
 		schedulerPolicyType scheduler.SchedulerPolicyType
 		schedulerPolicy     *scheduler.SchedulerPolicy
 		deschedulerPolicy   *scheduler.SchedulerPolicy
+		reserved            map[types.NamespacedName]map[string]int32
 	}{
 		{
 			name:     "no replicas, no placements, no pending",
@@ -170,6 +171,23 @@ func TestAutoscaler(t *testing.T) {
 			pendings:            int32(0),
 			wantReplicas:        int32(2),
 			schedulerPolicyType: scheduler.MAXFILLUP,
+		},
+		{
+			name:     "with replicas, with placements, with reserved",
+			replicas: int32(2),
+			vpods: []scheduler.VPod{
+				tscheduler.NewVPod(testNs, "vpod-1", 15, []duckv1alpha1.Placement{
+					{PodName: "statefulset-name-0", VReplicas: int32(5)},
+					{PodName: "statefulset-name-1", VReplicas: int32(7)}}),
+			},
+			pendings:            int32(0),
+			wantReplicas:        int32(2),
+			schedulerPolicyType: scheduler.MAXFILLUP,
+			reserved: map[types.NamespacedName]map[string]int32{
+				types.NamespacedName{Namespace: testNs, Name: "vpod-1"}: {
+					"statefulset-name-0": 2,
+				},
+			},
 		},
 		{
 			name:     "with replicas, with placements, no pending, scale down",
@@ -387,6 +405,14 @@ func TestAutoscaler(t *testing.T) {
 				Evictor:              noopEvictor,
 				RefreshPeriod:        10 * time.Second,
 				PodCapacity:          10,
+				getReserved: func() map[types.NamespacedName]map[string]int32 {
+					return tc.reserved
+				},
+				getPending: func() Pending {
+					return map[types.NamespacedName]int32{
+						types.NamespacedName{}: tc.pendings,
+					}
+				},
 			}
 			autoscaler := newAutoscaler(ctx, cfg, stateAccessor)
 			_ = autoscaler.Promote(reconciler.UniversalBucket(), nil)
@@ -395,7 +421,7 @@ func TestAutoscaler(t *testing.T) {
 				vpodClient.Append(vpod)
 			}
 
-			err = autoscaler.doautoscale(ctx, tc.scaleDown, tc.pendings)
+			err = autoscaler.syncAutoscale(ctx, tc.scaleDown)
 			if err != nil {
 				t.Fatal("unexpected error", err)
 			}
@@ -444,6 +470,12 @@ func TestAutoscalerScaleDownToZero(t *testing.T) {
 		Evictor:              noopEvictor,
 		RefreshPeriod:        2 * time.Second,
 		PodCapacity:          10,
+		getPending: func() Pending {
+			return nil
+		},
+		getReserved: func() map[types.NamespacedName]map[string]int32 {
+			return nil
+		},
 	}
 	autoscaler := newAutoscaler(ctx, cfg, stateAccessor)
 	_ = autoscaler.Promote(reconciler.UniversalBucket(), nil)

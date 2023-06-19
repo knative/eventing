@@ -52,9 +52,8 @@ type Autoscaler interface {
 	// Start runs the autoscaler until cancelled.
 	Start(ctx context.Context)
 
-	// Autoscale is used to immediately trigger the autoscaler with the hint
-	// that pending number of vreplicas couldn't be scheduled.
-	Autoscale(ctx context.Context, attemptScaleDown bool, pending int32)
+	// Autoscale is used to immediately trigger the autoscaler.
+	Autoscale(ctx context.Context)
 }
 
 type autoscaler struct {
@@ -63,7 +62,7 @@ type autoscaler struct {
 	vpodLister        scheduler.VPodLister
 	logger            *zap.SugaredLogger
 	stateAccessor     st.StateAccessor
-	trigger           chan int32
+	trigger           chan struct{}
 	evictor           scheduler.Evictor
 
 	// capacity is the total number of virtual replicas available per pod.
@@ -77,6 +76,11 @@ type autoscaler struct {
 	// The autoscaler is considered the leader when ephemeralLeaderElectionObject is in a
 	// bucket where we've been promoted.
 	isLeader atomic.Bool
+
+	// getReserved returns reserved replicas.
+	getReserved GetReserved
+	// getPending returns pending replicas.
+	getPending GetPending
 }
 
 var (
@@ -108,53 +112,59 @@ func newAutoscaler(ctx context.Context, cfg *Config, stateAccessor st.StateAcces
 		vpodLister:        cfg.VPodLister,
 		stateAccessor:     stateAccessor,
 		evictor:           cfg.Evictor,
-		trigger:           make(chan int32, 1),
+		trigger:           make(chan struct{}, 1),
 		capacity:          cfg.PodCapacity,
 		refreshPeriod:     cfg.RefreshPeriod,
 		lock:              new(sync.Mutex),
 		isLeader:          atomic.Bool{},
+		getReserved:       cfg.getReserved,
+		getPending:        cfg.getPending,
 	}
 }
 
 func (a *autoscaler) Start(ctx context.Context) {
 	attemptScaleDown := false
-	pending := int32(0)
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-time.After(a.refreshPeriod):
 			attemptScaleDown = true
-		case pending = <-a.trigger:
+		case <-a.trigger:
 			attemptScaleDown = false
 		}
 
 		// Retry a few times, just so that we don't have to wait for the next beat when
 		// a transient error occurs
-		a.syncAutoscale(ctx, attemptScaleDown, pending)
-		pending = int32(0)
+		a.syncAutoscale(ctx, attemptScaleDown)
 	}
 }
 
-func (a *autoscaler) Autoscale(ctx context.Context, attemptScaleDown bool, pending int32) {
-	a.syncAutoscale(ctx, attemptScaleDown, pending)
+func (a *autoscaler) Autoscale(ctx context.Context) {
+	a.syncAutoscale(ctx, false)
 }
 
-func (a *autoscaler) syncAutoscale(ctx context.Context, attemptScaleDown bool, pending int32) {
+func (a *autoscaler) syncAutoscale(ctx context.Context, attemptScaleDown bool) error {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
+	var lastErr error
 	wait.Poll(500*time.Millisecond, 5*time.Second, func() (bool, error) {
-		err := a.doautoscale(ctx, attemptScaleDown, pending)
+		err := a.doautoscale(ctx, attemptScaleDown, a.getPending().Total())
+		if err != nil {
+			logging.FromContext(ctx).Errorw("Failed to autoscale", zap.Error(err))
+		}
+		lastErr = err
 		return err == nil, nil
 	})
+	return lastErr
 }
 
 func (a *autoscaler) doautoscale(ctx context.Context, attemptScaleDown bool, pending int32) error {
 	if !a.isLeader.Load() {
 		return nil
 	}
-	state, err := a.stateAccessor.State(nil)
+	state, err := a.stateAccessor.State(a.getReserved())
 	if err != nil {
 		a.logger.Info("error while refreshing scheduler state (will retry)", zap.Error(err))
 		return err
