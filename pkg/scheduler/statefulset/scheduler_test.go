@@ -907,7 +907,7 @@ type fakeAutoscaler struct {
 func (f *fakeAutoscaler) Start(ctx context.Context) {
 }
 
-func (f *fakeAutoscaler) Autoscale(ctx context.Context, attemptScaleDown bool, pending int32) {
+func (f *fakeAutoscaler) Autoscale(ctx context.Context) {
 }
 
 func newFakeAutoscaler() *fakeAutoscaler {
