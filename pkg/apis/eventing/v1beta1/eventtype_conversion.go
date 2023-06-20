@@ -19,6 +19,8 @@ package v1beta1
 import (
 	"context"
 
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+
 	"knative.dev/eventing/pkg/apis/eventing/v1beta2"
 
 	"knative.dev/pkg/apis"
@@ -37,8 +39,22 @@ func (source *EventType) ConvertTo(ctx context.Context, obj apis.Convertible) er
 			Source:      source.Spec.Source,
 			Schema:      source.Spec.Schema,
 			SchemaData:  source.Spec.SchemaData,
-			Reference:   source.Spec.Reference,
 			Description: source.Spec.Description,
+		}
+
+		// for old stuff, we play nice here
+		// default to broker, but as a reference
+		if source.Spec.Reference == nil && source.Spec.Broker != "" {
+			sink.Spec.Reference = &duckv1.KReference{
+				APIVersion: "eventing.knative.dev/v1",
+				Kind:       "Broker",
+				Name:       source.Spec.Broker,
+			}
+		}
+
+		// if we have a reference, use it
+		if source.Spec.Reference != nil {
+			sink.Spec.Reference = source.Spec.Reference
 		}
 
 		return nil
