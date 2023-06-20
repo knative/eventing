@@ -23,5 +23,4 @@ const (
 	KReferenceMapping   = "kreference-mapping"
 	NewTriggerFilters   = "new-trigger-filters"
 	TransportEncryption = "transport-encryption"
-	Istio               = "istio"
 )
