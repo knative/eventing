@@ -23,7 +23,7 @@ func (et *EventType) SetDefaults(ctx context.Context) {
 }
 
 func (ets *EventTypeSpec) SetDefaults(ctx context.Context) {
-	if ets.Broker == "" {
+	if ets.Reference == nil && ets.Broker == "" {
 		ets.Broker = "default"
 	}
 }

@@ -39,6 +39,22 @@ spec:
             properties:
               broker:
                 type: string
+              reference:
+                description: Reference Broker. For example
+                type: object
+                properties:
+                  apiVersion:
+                    description: API version of the referent.
+                    type: string
+                  kind:
+                    description: 'Kind of the referent. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                    type: string
+                  name:
+                    description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                    type: string
+                  namespace:
+                    description: 'Namespace of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/ This is an optional field, it gets defaulted to the object holding it if left out.'
+                    type: string
               description:
                 description: 'Description is an optional field used to describe the
                     EventType, in any meaningful way.'
@@ -142,108 +158,7 @@ spec:
     name: v1beta2
     served: true
     storage: false
-    schema:
-      openAPIV3Schema:
-        type: object
-        description: 'EventType represents a type of event that can be consumed from a Broker.'
-        properties:
-          spec:
-            description: 'Spec defines the desired state of the EventType.'
-            type: object
-            properties:
-              broker:
-                type: string
-              reference:
-                description: Reference Broker. For example
-                type: object
-                properties:
-                  apiVersion:
-                    description: API version of the referent.
-                    type: string
-                  kind:
-                    description: 'Kind of the referent. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
-                    type: string
-                  name:
-                    description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
-                    type: string
-                  namespace:
-                    description: 'Namespace of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/ This is optional field, it gets defaulted to the object holding it if left out.'
-                    type: string
-              description:
-                description: 'Description is an optional field used to describe the
-                    EventType, in any meaningful way.'
-                type: string
-              schema:
-                description: 'Schema is a URI, it represents the CloudEvents schemaurl
-                    extension attribute. It may be a JSON schema, a protobuf schema,
-                    etc. It is optional.'
-                type: string
-              schemaData:
-                description: 'SchemaData allows the CloudEvents schema to be stored
-                    directly in the EventType. Content is dependent on the encoding.
-                    Optional attribute. The contents are not validated or manipulated
-                    by the system.'
-                type: string
-              source:
-                description: 'Source is a URI, it represents the CloudEvents source.'
-                type: string
-              type:
-                description: 'Type represents the CloudEvents type. It is authoritative.'
-                type: string
-          status:
-            description: 'Status represents the current state of the EventType. This data
-                may be out of date.'
-            type: object
-            properties:
-              annotations:
-                description: 'Annotations is additional Status fields for the Resource
-                    to save some additional State as well as convey more information
-                    to the user. This is roughly akin to Annotations on any k8s resource,
-                    just the reconciler conveying richer information outwards.'
-                type: object
-                x-kubernetes-preserve-unknown-fields: true
-              conditions:
-                description: 'Conditions the latest available observations of a resource''s
-                    current state.'
-                type: array
-                items:
-                  type: object
-                  required:
-                    - type
-                    - status
-                  properties:
-                    lastTransitionTime:
-                      description: 'LastTransitionTime is the last time the condition
-                          transitioned from one status to another. We use VolatileTime
-                          in place of metav1.Time to exclude this from creating
-                          equality.Semantic differences (all other things held
-                          constant).'
-                      type: string
-                    message:
-                      description: 'A human readable message indicating details
-                          about the transition.'
-                      type: string
-                    reason:
-                      description: 'The reason for the condition''s last transition.'
-                      type: string
-                    severity:
-                      description: 'Severity with which to treat failures of
-                          this type of condition. When this is not specified,
-                          it defaults to Error.'
-                      type: string
-                    status:
-                      description: 'Status of the condition, one of True, False,
-                          Unknown.'
-                      type: string
-                    type:
-                      description: 'Type of condition.'
-                      type: string
-              observedGeneration:
-                description: 'ObservedGeneration is the ''Generation'' of the Service
-                    that was last processed by the controller.'
-                type: integer
-                format: int64
-
+    # v1beta1 schema is identical to the v1beta2 schema
   names:
     kind: EventType
     plural: eventtypes

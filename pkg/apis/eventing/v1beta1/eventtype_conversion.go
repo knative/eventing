@@ -35,16 +35,26 @@ func (source *EventType) ConvertTo(ctx context.Context, obj apis.Convertible) er
 			Status: source.Status.Status,
 		}
 		sink.Spec = v1beta2.EventTypeSpec{
-			Type:       source.Spec.Type,
-			Source:     source.Spec.Source,
-			Schema:     source.Spec.Schema,
-			SchemaData: source.Spec.SchemaData,
-			Reference: &duckv1.KReference{
+			Type:        source.Spec.Type,
+			Source:      source.Spec.Source,
+			Schema:      source.Spec.Schema,
+			SchemaData:  source.Spec.SchemaData,
+			Description: source.Spec.Description,
+		}
+
+		// for old stuff, we play nice here
+		// default to broker, but as a reference
+		if source.Spec.Reference == nil && source.Spec.Broker != "" {
+			sink.Spec.Reference = &duckv1.KReference{
 				APIVersion: "eventing.knative.dev/v1",
 				Kind:       "Broker",
 				Name:       source.Spec.Broker,
-			},
-			Description: source.Spec.Description,
+			}
+		}
+
+		// if we have a reference, use it
+		if source.Spec.Reference != nil {
+			sink.Spec.Reference = source.Spec.Reference
 		}
 
 		return nil
@@ -67,7 +77,7 @@ func (sink *EventType) ConvertFrom(ctx context.Context, obj apis.Convertible) er
 			Source:      source.Spec.Source,
 			Schema:      source.Spec.Schema,
 			SchemaData:  source.Spec.SchemaData,
-			Broker:      source.Spec.Reference.Name,
+			Reference:   source.Spec.Reference,
 			Description: source.Spec.Description,
 		}
 

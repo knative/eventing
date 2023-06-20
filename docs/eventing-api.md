@@ -2489,6 +2489,21 @@ string
 </tr>
 <tr>
 <td>
+<code>reference</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#KReference">
+knative.dev/pkg/apis/duck/v1.KReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Reference is a KReference to the belonging addressable.
+For example, this could be a pointer to a Broker.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>description</code><br/>
 <em>
 string
@@ -2598,6 +2613,21 @@ string
 <td>
 <em>(Optional)</em>
 <p>Broker refers to the Broker that can provide the EventType.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>reference</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#KReference">
+knative.dev/pkg/apis/duck/v1.KReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Reference is a KReference to the belonging addressable.
+For example, this could be a pointer to a Broker.</p>
 </td>
 </tr>
 <tr>

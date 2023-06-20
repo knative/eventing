@@ -79,6 +79,10 @@ type EventTypeSpec struct {
 	// Broker refers to the Broker that can provide the EventType.
 	// +optional
 	Broker string `json:"broker,omitempty"`
+	// Reference is a KReference to the belonging addressable.
+	// For example, this could be a pointer to a Broker.
+	// +optional
+	Reference *duckv1.KReference `json:"reference,omitempty"`
 	// Description is an optional field used to describe the EventType, in any meaningful way.
 	// +optional
 	Description string `json:"description,omitempty"`
