@@ -17,6 +17,7 @@ limitations under the License.
 package kncloudevents
 
 import (
+	"context"
 	"fmt"
 	nethttp "net/http"
 	"sync"
@@ -29,8 +30,9 @@ import (
 )
 
 const (
-	defaultRetryWaitMin = 1 * time.Second
-	defaultRetryWaitMax = 30 * time.Second
+	defaultRetryWaitMin    = 1 * time.Second
+	defaultRetryWaitMax    = 30 * time.Second
+	defaultCleanupInterval = 5 * time.Minute
 )
 
 var (
@@ -38,20 +40,27 @@ var (
 )
 
 type clientsHolder struct {
-	mu             sync.Mutex
-	clients        map[string]*nethttp.Client
-	connectionArgs *ConnectionArgs
+	clientsMu       sync.Mutex
+	clients         map[string]*nethttp.Client
+	timerMu         sync.Mutex
+	connectionArgs  *ConnectionArgs
+	cleanupInterval time.Duration
+	cancelCleanup   context.CancelFunc
 }
 
 func init() {
+	ctx, cancel := context.WithCancel(context.Background())
 	clients = clientsHolder{
-		clients: make(map[string]*nethttp.Client),
+		clients:         make(map[string]*nethttp.Client),
+		cancelCleanup:   cancel,
+		cleanupInterval: defaultCleanupInterval,
 	}
+	go cleanupClientsMap(ctx)
 }
 
 func getClientForAddressable(addressable duckv1.Addressable) (*nethttp.Client, error) {
-	clients.mu.Lock()
-	defer clients.mu.Unlock()
+	clients.clientsMu.Lock()
+	defer clients.clientsMu.Unlock()
 
 	clientKey := addressable.URL.String()
 
@@ -98,8 +107,8 @@ func createNewClient(addressable duckv1.Addressable) (*nethttp.Client, error) {
 }
 
 func AddOrUpdateAddressableHandler(addressable duckv1.Addressable) {
-	clients.mu.Lock()
-	defer clients.mu.Unlock()
+	clients.clientsMu.Lock()
+	defer clients.clientsMu.Unlock()
 
 	clientKey := addressable.URL.String()
 
@@ -112,8 +121,8 @@ func AddOrUpdateAddressableHandler(addressable duckv1.Addressable) {
 }
 
 func DeleteAddressableHandler(addressable duckv1.Addressable) {
-	clients.mu.Lock()
-	defer clients.mu.Unlock()
+	clients.clientsMu.Lock()
+	defer clients.clientsMu.Unlock()
 
 	clientKey := addressable.URL.String()
 
@@ -125,8 +134,8 @@ func DeleteAddressableHandler(addressable duckv1.Addressable) {
 func ConfigureConnectionArgs(ca *ConnectionArgs) {
 	configureConnectionArgsOldClient(ca) //also configure the connection args of the old client
 
-	clients.mu.Lock()
-	defer clients.mu.Unlock()
+	clients.clientsMu.Lock()
+	defer clients.clientsMu.Unlock()
 
 	// Check if same config
 	if clients.connectionArgs != nil &&
@@ -139,8 +148,8 @@ func ConfigureConnectionArgs(ca *ConnectionArgs) {
 	if len(clients.clients) > 0 {
 		// Let's try to clean up a bit the existing clients
 		// Note: this won't remove it nor close it
-		for _, client := range clients.clients {
-			client.CloseIdleConnections()
+		for _, clientEntry := range clients.clients {
+			clientEntry.CloseIdleConnections()
 		}
 
 		// Resetting clients
@@ -148,6 +157,22 @@ func ConfigureConnectionArgs(ca *ConnectionArgs) {
 	}
 
 	clients.connectionArgs = ca
+}
+
+// SetClientCleanupInterval sets the interval before the clients map is re-checked for expired entries.
+// forceRestart will force the loop to restart with the new interval, cancelling the current iteration.
+func SetClientCleanupInterval(cleanupInterval time.Duration, forceRestart bool) {
+	clients.timerMu.Lock()
+	clients.cleanupInterval = cleanupInterval
+	clients.timerMu.Unlock()
+	if forceRestart {
+		clients.clientsMu.Lock()
+		clients.cancelCleanup()
+		ctx, cancel := context.WithCancel(context.Background())
+		clients.cancelCleanup = cancel
+		clients.clientsMu.Unlock()
+		go cleanupClientsMap(ctx)
+	}
 }
 
 // ConnectionArgs allow to configure connection parameters to the underlying
@@ -165,4 +190,25 @@ func (ca *ConnectionArgs) configureTransport(transport *nethttp.Transport) {
 	}
 	transport.MaxIdleConns = ca.MaxIdleConns
 	transport.MaxIdleConnsPerHost = ca.MaxIdleConnsPerHost
+}
+
+func cleanupClientsMap(ctx context.Context) {
+	for {
+		clients.timerMu.Lock()
+		t := time.NewTimer(clients.cleanupInterval)
+		clients.timerMu.Unlock()
+		select {
+		case <-ctx.Done():
+			clients.timerMu.Lock()
+			t.Stop()
+			clients.timerMu.Unlock()
+			return
+		case <-t.C:
+			clients.clientsMu.Lock()
+			for _, cme := range clients.clients {
+				cme.CloseIdleConnections()
+			}
+			clients.clientsMu.Unlock()
+		}
+	}
 }
