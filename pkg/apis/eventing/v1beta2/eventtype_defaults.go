@@ -18,8 +18,6 @@ package v1beta2
 
 import (
 	"context"
-
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 func (et *EventType) SetDefaults(ctx context.Context) {
@@ -27,11 +25,5 @@ func (et *EventType) SetDefaults(ctx context.Context) {
 }
 
 func (ets *EventTypeSpec) SetDefaults(ctx context.Context) {
-	if ets.Reference == nil {
-		ets.Reference = &duckv1.KReference{
-			APIVersion: "eventing.knative.dev/v1",
-			Kind:       "Broker",
-			Name:       "default",
-		}
-	}
+
 }
