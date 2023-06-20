@@ -29,6 +29,7 @@ import (
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/resources/service"
 
+	"knative.dev/eventing/test/rekt/features/featureflags"
 	"knative.dev/eventing/test/rekt/resources/containersource"
 )
 
@@ -123,6 +124,8 @@ func SendEventsWithTLSRecieverAsSink() *feature.Feature {
 	source := feature.MakeRandomK8sName("containersource")
 	sink := feature.MakeRandomK8sName("sink")
 	f := feature.NewFeature()
+
+	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiverTLS))
 
