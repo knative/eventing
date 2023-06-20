@@ -32,6 +32,7 @@ import (
 	"knative.dev/reconciler-test/pkg/resources/deployment"
 	"knative.dev/reconciler-test/pkg/resources/service"
 
+	"knative.dev/eventing/test/rekt/features/featureflags"
 	"knative.dev/eventing/test/rekt/resources/sinkbinding"
 )
 
@@ -127,6 +128,8 @@ func SinkBindingV1DeploymentTLS(ctx context.Context) *feature.Feature {
 	extensionSecret := string(uuid.NewUUID())
 
 	f := feature.NewFeatureNamed("SinkBinding V1 Deployment test")
+
+	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
 
 	env := environment.FromContext(ctx)
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiverTLS))

@@ -28,6 +28,10 @@ import (
 	apifeature "knative.dev/eventing/pkg/apis/feature"
 )
 
+const (
+	istioFeatureFlagName = "istio"
+)
+
 func TransportEncryptionPermissiveOrStrict() feature.ShouldRun {
 	return func(ctx context.Context, t feature.T) (feature.PrerequisiteResult, error) {
 		flags, err := getFeatureFlags(ctx, "config-features")
@@ -37,6 +41,20 @@ func TransportEncryptionPermissiveOrStrict() feature.ShouldRun {
 
 		return feature.PrerequisiteResult{
 			ShouldRun: flags.IsPermissiveTransportEncryption() || flags.IsStrictTransportEncryption(),
+			Reason:    flags.String(),
+		}, nil
+	}
+}
+
+func IstioDisabled() feature.ShouldRun {
+	return func(ctx context.Context, t feature.T) (feature.PrerequisiteResult, error) {
+		flags, err := getFeatureFlags(ctx, "config-features")
+		if err != nil {
+			return feature.PrerequisiteResult{}, err
+		}
+
+		return feature.PrerequisiteResult{
+			ShouldRun: !flags.IsEnabled(istioFeatureFlagName),
 			Reason:    flags.String(),
 		}, nil
 	}

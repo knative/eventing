@@ -39,6 +39,7 @@ import (
 
 	"knative.dev/eventing/pkg/apis/sources"
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
+	"knative.dev/eventing/test/rekt/features/featureflags"
 	"knative.dev/eventing/test/rekt/features/source"
 	"knative.dev/eventing/test/rekt/resources/account_role"
 	"knative.dev/eventing/test/rekt/resources/apiserversource"
@@ -175,6 +176,8 @@ func SendsEventsWithTLS() *feature.Feature {
 	sink := feature.MakeRandomK8sName("sink")
 
 	f := feature.NewFeatureNamed("Send events to TLS sink")
+
+	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiverTLS))
 
