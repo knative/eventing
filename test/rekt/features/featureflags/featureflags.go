@@ -42,6 +42,20 @@ func TransportEncryptionPermissiveOrStrict() feature.ShouldRun {
 	}
 }
 
+func IstioDisabled() feature.ShouldRun {
+	return func(ctx context.Context, t feature.T) (feature.PrerequisiteResult, error) {
+		flags, err := getFeatureFlags(ctx, "config-features")
+		if err != nil {
+			return feature.PrerequisiteResult{}, err
+		}
+
+		return feature.PrerequisiteResult{
+			ShouldRun: !flags.IsEnabled(apifeature.Istio),
+			Reason:    flags.String(),
+		}, nil
+	}
+}
+
 func getFeatureFlags(ctx context.Context, cmName string) (apifeature.Flags, error) {
 	ns := system.Namespace()
 	cm, err := kubeclient.Get(ctx).

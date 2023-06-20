@@ -31,6 +31,7 @@ import (
 	eventassert "knative.dev/reconciler-test/pkg/eventshub/assert"
 
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
+	"knative.dev/eventing/test/rekt/features/featureflags"
 	"knative.dev/eventing/test/rekt/features/source"
 	"knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/eventing/test/rekt/resources/eventtype"
@@ -59,6 +60,8 @@ func SendsEventsTLS() *feature.Feature {
 	src := feature.MakeRandomK8sName("pingsource")
 	sink := feature.MakeRandomK8sName("sink")
 	f := feature.NewFeature()
+
+	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiverTLS))
 
