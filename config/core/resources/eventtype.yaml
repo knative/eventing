@@ -158,6 +158,7 @@ spec:
     name: v1beta2
     served: true
     storage: false
+    # v1beta1 schema is identical to the v1beta2 schema
   names:
     kind: EventType
     plural: eventtypes
