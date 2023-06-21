@@ -153,7 +153,7 @@ func (r *Reconciler) makeEventTypes(ctx context.Context, src *duckv1.Source) []v
 	// Only create EventTypes for Broker sinks, for now
 	// We add this check here in case the Source was changed from Broker to non-Broker sink.
 	// If so, we need to delete the existing ones, thus we return empty expected.
-	if ref := src.Spec.Sink.GetRef(); ref == nil || ref.Kind != "Broker" {
+	if ref := src.Spec.Sink.GetRef(); ref == nil {
 		return make([]v1beta2.EventType, 0)
 	}
 
