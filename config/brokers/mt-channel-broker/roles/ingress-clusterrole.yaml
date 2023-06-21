@@ -22,6 +22,16 @@ rules:
   - apiGroups:
       - eventing.knative.dev
     resources:
+      - eventtypes
+    verbs:
+      - create
+      - update
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - eventing.knative.dev
+    resources:
       - brokers
     verbs:
       - get

@@ -61,6 +61,8 @@ type Handler struct {
 	// BrokerLister gets broker objects
 	BrokerLister eventinglisters.BrokerLister
 
+	EvenTypeHandler *broker.EventtypeAutoHandler
+
 	Logger *zap.Logger
 }
 
@@ -181,6 +183,12 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	_ = h.Reporter.ReportEventCount(reporterArgs, statusCode)
 
 	writer.WriteHeader(statusCode)
+
+	if h.EvenTypeHandler != nil {
+		if err := h.EvenTypeHandler.AutoCreateEventType(ctx, event, brokerNamespacedName); err != nil {
+			h.Logger.Error("Even type auto create failed", zap.Error(err))
+		}
+	}
 }
 
 func (h *Handler) receive(ctx context.Context, headers http.Header, event *cloudevents.Event, brokerNamespace, brokerName string) (int, time.Duration) {

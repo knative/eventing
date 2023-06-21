@@ -19,6 +19,9 @@ package main
 import (
 	"context"
 	"fmt"
+	"knative.dev/eventing/pkg/apis/feature"
+	eventingclient "knative.dev/eventing/pkg/client/injection/client"
+	eventtypeinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta2/eventtype"
 	"log"
 
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
@@ -136,15 +139,27 @@ func main() {
 		logger.Fatal("Unable to create message sender", zap.Error(err))
 	}
 
+	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"))
+	featureStore.WatchConfigs(configMapWatcher)
+
+	autoCreate := &broker.EventtypeAutoHandler{
+		BrokerLister:    brokerLister,
+		EventTypeLister: eventtypeinformer.Get(ctx).Lister(),
+		EventingClient:  eventingclient.Get(ctx).EventingV1beta2(),
+		FeatureStore:    featureStore,
+		Logger:          logger,
+	}
+
 	reporter := ingress.NewStatsReporter(env.ContainerName, kmeta.ChildName(env.PodName, uuid.New().String()))
 
 	h := &ingress.Handler{
-		Receiver:     kncloudevents.NewHTTPMessageReceiver(env.Port),
-		Sender:       sender,
-		Defaulter:    broker.TTLDefaulter(logger, int32(env.MaxTTL)),
-		Reporter:     reporter,
-		Logger:       logger,
-		BrokerLister: brokerLister,
+		Receiver:        kncloudevents.NewHTTPMessageReceiver(env.Port),
+		Sender:          sender,
+		Defaulter:       broker.TTLDefaulter(logger, int32(env.MaxTTL)),
+		Reporter:        reporter,
+		Logger:          logger,
+		BrokerLister:    brokerLister,
+		EvenTypeHandler: autoCreate,
 	}
 
 	// configMapWatcher does not block, so start it first.
