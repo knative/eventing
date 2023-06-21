@@ -1237,17 +1237,17 @@ k8s.io/utils/net
 k8s.io/utils/pointer
 k8s.io/utils/strings/slices
 k8s.io/utils/trace
-# knative.dev/hack v0.0.0-20230606014732-a861c8e9da08
+# knative.dev/hack v0.0.0-20230615155948-d7586a218601
 ## explicit; go 1.18
 knative.dev/hack
 knative.dev/hack/shell
-# knative.dev/hack/schema v0.0.0-20230606014732-a861c8e9da08
+# knative.dev/hack/schema v0.0.0-20230615155948-d7586a218601
 ## explicit; go 1.18
 knative.dev/hack/schema/commands
 knative.dev/hack/schema/docs
 knative.dev/hack/schema/registry
 knative.dev/hack/schema/schema
-# knative.dev/pkg v0.0.0-20230612155445-74c4be5e935e
+# knative.dev/pkg v0.0.0-20230616134650-eb63a40adfb0
 ## explicit; go 1.18
 knative.dev/pkg/apiextensions/storageversion
 knative.dev/pkg/apiextensions/storageversion/cmd/migrate
