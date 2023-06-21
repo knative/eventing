@@ -19,66 +19,39 @@ package eventtype
 import (
 	"context"
 
+	"knative.dev/eventing/pkg/resolver"
+
 	"go.uber.org/zap"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 
-	"knative.dev/pkg/logging"
-	pkgreconciler "knative.dev/pkg/reconciler"
-	"knative.dev/pkg/tracker"
-
-	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/pkg/apis/eventing/v1beta2"
 	eventtypereconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1beta2/eventtype"
-	listersv1 "knative.dev/eventing/pkg/client/listers/eventing/v1"
-	listersv1beta2 "knative.dev/eventing/pkg/client/listers/eventing/v1beta2"
+	"knative.dev/pkg/logging"
+	pkgreconciler "knative.dev/pkg/reconciler"
 )
 
 type Reconciler struct {
-	// listers index properties about resources
-	eventTypeLister listersv1beta2.EventTypeLister
-	brokerLister    listersv1.BrokerLister
-	tracker         tracker.Interface
+	kReferenceResolver *resolver.KReferenceResolver
 }
-
-var brokerGVK = v1.SchemeGroupVersion.WithKind("Broker")
 
 // Check that our Reconciler implements interface
 var _ eventtypereconciler.Interface = (*Reconciler)(nil)
 
 // ReconcileKind implements Interface.ReconcileKind.
-// 1. Verify the Broker/Reference exists.
-// 2. Verify the Broker/Reference is ready.
+// 1. Verify the Reference exists.
 func (r *Reconciler) ReconcileKind(ctx context.Context, et *v1beta2.EventType) pkgreconciler.Event {
-	b, err := r.getReference(et)
+
+	_, err := r.kReferenceResolver.Resolve(ctx, et.Spec.Reference, et)
 	if err != nil {
 		if apierrs.IsNotFound(err) {
-			logging.FromContext(ctx).Errorw("Broker reference does not exist", zap.Error(err))
-			et.Status.MarkBrokerDoesNotExist()
+			logging.FromContext(ctx).Errorw("Reference does not exist", zap.Error(err))
+			et.Status.MarkReferenceDoesNotExist()
 		} else {
-			logging.FromContext(ctx).Errorw("Unable to get the Broker reference", zap.Error(err))
-			et.Status.MarkBrokerExistsUnknown("BrokerGetFailed", "Failed to get broker reference: %v", err)
+			logging.FromContext(ctx).Errorw("Unable to get the reference", zap.Error(err))
+			et.Status.MarkReferenceExistsUnknown("ReferenceGetFailed", "Failed to get reference: %v", err)
 		}
 		return err
 	}
-	et.Status.MarkBrokerExists()
-
-	apiVersion, kind := brokerGVK.ToAPIVersionAndKind()
-	ref := tracker.Reference{
-		APIVersion: apiVersion,
-		Kind:       kind,
-		Namespace:  b.Namespace,
-		Name:       b.Name,
-	}
-	// Tell tracker to reconcile this EventType whenever the Broker changes.
-	if err = r.tracker.TrackReference(ref, et); err != nil {
-		logging.FromContext(ctx).Errorw("Unable to track changes to Broker reference", zap.Error(err))
-		return err
-	}
-
+	et.Status.MarkReferenceExists()
 	return nil
-}
-
-// getReference returns the Broker for EventType 'et' if it exists, otherwise it returns an error.
-func (r *Reconciler) getReference(et *v1beta2.EventType) (*v1.Broker, error) {
-	return r.brokerLister.Brokers(et.Namespace).Get(et.Spec.Reference.Name)
 }

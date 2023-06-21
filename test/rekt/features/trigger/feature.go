@@ -28,6 +28,7 @@ import (
 
 	"knative.dev/reconciler-test/pkg/eventshub/assert"
 
+	"knative.dev/eventing/test/rekt/features/featureflags"
 	"knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/eventing/test/rekt/resources/pingsource"
 	"knative.dev/eventing/test/rekt/resources/trigger"
@@ -89,6 +90,8 @@ func TriggerDependencyAnnotation() *feature.Feature {
 
 func TriggerWithTLSSubscriber() *feature.Feature {
 	f := feature.NewFeatureNamed("Trigger with TLS subscriber")
+
+	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
 
 	brokerName := feature.MakeRandomK8sName("broker")
 	sourceName := feature.MakeRandomK8sName("source")

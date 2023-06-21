@@ -37,13 +37,7 @@ func TestEventTypeDefaults(t *testing.T) {
 		"nil spec": {
 			initial: EventType{},
 			expected: EventType{
-				Spec: EventTypeSpec{
-					Reference: &duckv1.KReference{
-						APIVersion: "eventing.knative.dev/v1",
-						Kind:       "Broker",
-						Name:       "default",
-					},
-				},
+				Spec: EventTypeSpec{},
 			},
 		},
 		"broker empty": {
@@ -84,11 +78,6 @@ func TestEventTypeDefaults(t *testing.T) {
 				Spec: EventTypeSpec{
 					Type:   "test-type",
 					Source: testSource,
-					Reference: &duckv1.KReference{
-						APIVersion: "eventing.knative.dev/v1",
-						Kind:       "Broker",
-						Name:       "default",
-					},
 					Schema: testSchema,
 				},
 			},
