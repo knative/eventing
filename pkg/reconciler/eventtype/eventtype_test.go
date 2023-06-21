@@ -97,7 +97,7 @@ func TestReconcile(t *testing.T) {
 		}},
 		WantErr: true,
 		WantEvents: []string{
-			Eventf(corev1.EventTypeWarning, "InternalError failed to get object default/test-broker:", `brokers.eventing.knative.dev "test-broker" not found`),
+			Eventf(corev1.EventTypeWarning, "InternalError failed to get object test-namespace/test-broker:", `brokers.eventing.knative.dev "test-broker" not found`),
 		},
 	}}
 
@@ -121,5 +121,6 @@ func brokerReference(brokerName string) *duckv1.KReference {
 		APIVersion: "eventing.knative.dev/v1",
 		Kind:       "Broker",
 		Name:       brokerName,
+		Namespace:  testNS,
 	}
 }
