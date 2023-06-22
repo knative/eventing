@@ -197,7 +197,7 @@ Once the codegen and dependency information is correct, redeploying the
 controller is simply:
 
 ```shell
-ko apply -f config/controller.yaml
+ko apply -f config/500-controller.yaml
 ```
 
 Or you can [clean it up completely](#clean-up) and start again.
