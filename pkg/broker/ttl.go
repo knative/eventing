@@ -27,7 +27,7 @@ import (
 
 const (
 	// TTLAttribute is the name of the CloudEvents extension attribute used to store the
-	// Broker's TTL (number of times a single event can reply through a Broker continuously). All
+	// Broker's TTL (number of times a single events can reply through a Broker continuously). All
 	// interactions with the attribute should be done through the GetTTL and SetTTL functions.
 	TTLAttribute = "knativebrokerttl"
 )
@@ -53,7 +53,7 @@ func DeleteTTL(ctx cloudevents.EventContext) error {
 	return ctx.SetExtension(TTLAttribute, nil)
 }
 
-// TTLDefaulter returns a cloudevents event defaulter that will manage the TTL
+// TTLDefaulter returns a cloudevents events defaulter that will manage the TTL
 // for events with the following rules:
 //
 //	If TTL is not found, it will set it to the default passed in.
@@ -61,18 +61,18 @@ func DeleteTTL(ctx cloudevents.EventContext) error {
 //	If TTL is > 1, it will be reduced by one.
 func TTLDefaulter(logger *zap.Logger, defaultTTL int32) client.EventDefaulter {
 	return func(ctx context.Context, event cloudevents.Event) cloudevents.Event {
-		// Get the current or default TTL from the event.
+		// Get the current or default TTL from the events.
 		var ttl int32
 		if ttlraw, err := event.Context.GetExtension(TTLAttribute); err != nil {
-			logger.Debug("TTL not found in outbound event, defaulting.",
-				zap.String("event.id", event.ID()),
+			logger.Debug("TTL not found in outbound events, defaulting.",
+				zap.String("events.id", event.ID()),
 				zap.Int32(TTLAttribute, defaultTTL),
 				zap.Error(err),
 			)
 			ttl = defaultTTL
 		} else if ttl, err = cetypes.ToInteger(ttlraw); err != nil {
 			logger.Warn("Failed to convert existing TTL into integer, defaulting.",
-				zap.String("event.id", event.ID()),
+				zap.String("events.id", event.ID()),
 				zap.Any(TTLAttribute, ttlraw),
 				zap.Error(err),
 			)
@@ -84,10 +84,10 @@ func TTLDefaulter(logger *zap.Logger, defaultTTL int32) client.EventDefaulter {
 				ttl = 0
 			}
 		}
-		// Overwrite the TTL into the event.
+		// Overwrite the TTL into the events.
 		if err := SetTTL(event.Context, ttl); err != nil {
-			logger.Error("Failed to set TTL on outbound event.",
-				zap.String("event.id", event.ID()),
+			logger.Error("Failed to set TTL on outbound events.",
+				zap.String("events.id", event.ID()),
 				zap.Int32(TTLAttribute, ttl),
 				zap.Error(err),
 			)

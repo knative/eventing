@@ -48,7 +48,7 @@ func generateEventTypeName(name, namespace, eventType, eventSource string) strin
 	return utils.ToDNS1123Subdomain(fmt.Sprintf("%s-%s-%s", "et", name, suffix))
 }
 
-// AutoCreateEventType creates EventType object based on processed event's types from addressable KReference objects
+// AutoCreateEventType creates EventType object based on processed events's types from addressable KReference objects
 func (h *EventTypeAutoHandler) AutoCreateEventType(ctx context.Context, event *event.Event, addressable *v1.KReference, ownerUID types.UID) error {
 	// Feature flag gate
 	if !h.FeatureStore.IsEnabled(feature.EvenTypeAutoCreate) {
@@ -89,7 +89,7 @@ func (h *EventTypeAutoHandler) AutoCreateEventType(ctx context.Context, event *e
 			Source: source,
 			Schema: schema,
 			//TODO: should we try to capture?
-			//SchemaData: event.DataSchema(),
+			//SchemaData: events.DataSchema(),
 			Reference:   addressable,
 			Description: "Event Type auto-created by controller",
 		},
