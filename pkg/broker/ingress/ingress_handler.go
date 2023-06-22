@@ -19,6 +19,7 @@ package ingress
 import (
 	"context"
 	"fmt"
+	v1 "knative.dev/pkg/apis/duck/v1"
 	"net/http"
 	"net/url"
 	"strings"
@@ -61,7 +62,7 @@ type Handler struct {
 	// BrokerLister gets broker objects
 	BrokerLister eventinglisters.BrokerLister
 
-	EvenTypeHandler *broker.EventtypeAutoHandler
+	EvenTypeHandler *broker.EventTypeAutoHandler
 
 	Logger *zap.Logger
 }
@@ -184,10 +185,25 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 
 	writer.WriteHeader(statusCode)
 
+	// EventType auto-create feature handling
 	if h.EvenTypeHandler != nil {
-		if err := h.EvenTypeHandler.AutoCreateEventType(ctx, event, brokerNamespacedName); err != nil {
+		b, err := h.getBroker(brokerName, brokerNamespace)
+		if err != nil {
+			h.Logger.Warn("Failed to retrieve broker", zap.Error(err))
+		}
+		if err := h.EvenTypeHandler.AutoCreateEventType(ctx, event, toKReference(b), b.GetUID()); err != nil {
 			h.Logger.Error("Even type auto create failed", zap.Error(err))
 		}
+	}
+}
+
+func toKReference(broker *eventingv1.Broker) *v1.KReference {
+	return &v1.KReference{
+		Kind:       broker.Kind,
+		Namespace:  broker.Namespace,
+		Name:       broker.Name,
+		APIVersion: broker.APIVersion,
+		Address:    broker.Status.Address.Name,
 	}
 }
 

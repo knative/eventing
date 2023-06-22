@@ -19,40 +19,37 @@ package broker
 import (
 	"context"
 	"encoding/base64"
+	"fmt"
 	"github.com/cloudevents/sdk-go/v2/event"
 	"go.uber.org/zap"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/pkg/apis/eventing/v1beta2"
 	"knative.dev/eventing/pkg/apis/feature"
 	eventingv1beta2 "knative.dev/eventing/pkg/client/clientset/versioned/typed/eventing/v1beta2"
-	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1"
 	v1beta22 "knative.dev/eventing/pkg/client/listers/eventing/v1beta2"
 	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/apis"
 	v1 "knative.dev/pkg/apis/duck/v1"
 )
 
-type EventtypeAutoHandler struct {
-	BrokerLister    eventinglisters.BrokerLister
+type EventTypeAutoHandler struct {
 	EventTypeLister v1beta22.EventTypeLister
 	EventingClient  eventingv1beta2.EventingV1beta2Interface
 	FeatureStore    *feature.Store
 	Logger          *zap.Logger
 }
 
-func (h *EventtypeAutoHandler) getBroker(name, namespace string) (*eventingv1.Broker, error) {
-	broker, err := h.BrokerLister.Brokers(namespace).Get(name)
-	if err != nil {
-		h.Logger.Warn("Broker getter failed")
-		return nil, err
-	}
-	return broker, nil
+// generateEventTypeName is a pseudo unique name for EvenType object based on on the input params
+func generateEventTypeName(name, namespace, eventType, eventSource string) string {
+	suffixParts := name + namespace + eventType + eventSource
+	suffix := base64.StdEncoding.EncodeToString([]byte(suffixParts))[:10]
+	return utils.ToDNS1123Subdomain(fmt.Sprintf("%s-%s-%s", "et", name, suffix))
 }
 
-func (h *EventtypeAutoHandler) AutoCreateEventType(ctx context.Context, event *event.Event, broker types.NamespacedName) error {
+// AutoCreateEventType creates EventType object based on processed event's types from addressable KReference objects
+func (h *EventTypeAutoHandler) AutoCreateEventType(ctx context.Context, event *event.Event, addressable *v1.KReference, ownerUID types.UID) error {
 	// Feature flag gate
 	if !h.FeatureStore.IsEnabled(feature.EvenTypeAutoCreate) {
 		h.Logger.Debug("Event Type auto creation is disabled")
@@ -60,10 +57,9 @@ func (h *EventtypeAutoHandler) AutoCreateEventType(ctx context.Context, event *e
 	}
 	h.Logger.Debug("Event Types auto creation is enabled")
 
-	//TODO: Is the name unique enough?
-	eventTypeName := utils.ToDNS1123Subdomain("et-" + broker.Name + "-" + base64.StdEncoding.EncodeToString([]byte(broker.Name + broker.Namespace + event.Type()))[:10])
+	eventTypeName := generateEventTypeName(addressable.Name, addressable.Namespace, event.Type(), event.Source())
 
-	exists, err := h.EventTypeLister.EventTypes(broker.Namespace).Get(eventTypeName)
+	exists, err := h.EventTypeLister.EventTypes(addressable.Namespace).Get(eventTypeName)
 	if err != nil && !apierrs.IsNotFound(err) {
 		h.Logger.Error("Failed to retrieve Even Type", zap.Error(err))
 		return err
@@ -75,20 +71,16 @@ func (h *EventtypeAutoHandler) AutoCreateEventType(ctx context.Context, event *e
 	source, _ := apis.ParseURL(event.Source())
 	schema, _ := apis.ParseURL(event.DataSchema())
 
-	b, err := h.getBroker(broker.Name, broker.Namespace)
-	if err != nil {
-		return err
-	}
 	et := &v1beta2.EventType{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      eventTypeName,
-			Namespace: broker.Namespace,
+			Namespace: addressable.Namespace,
 			OwnerReferences: []metav1.OwnerReference{
 				{
-					APIVersion: b.APIVersion,
-					Kind:       b.Kind,
-					Name:       b.Name,
-					UID:        b.GetUID(),
+					APIVersion: addressable.APIVersion,
+					Kind:       addressable.Kind,
+					Name:       addressable.Name,
+					UID:        ownerUID,
 				},
 			},
 		},
@@ -98,13 +90,7 @@ func (h *EventtypeAutoHandler) AutoCreateEventType(ctx context.Context, event *e
 			Schema: schema,
 			//TODO: should we try to capture?
 			//SchemaData: event.DataSchema(),
-			Reference: &v1.KReference{
-				Kind:       b.Kind,
-				Name:       b.Name,
-				Namespace:  b.Namespace,
-				APIVersion: b.APIVersion,
-				Address:    b.Spec.Config.Address,
-			},
+			Reference:   addressable,
 			Description: "Event Type auto-created by controller",
 		},
 	}

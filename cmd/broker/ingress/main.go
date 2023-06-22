@@ -142,29 +142,31 @@ func main() {
 	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"))
 	featureStore.WatchConfigs(configMapWatcher)
 
-	autoCreate := &broker.EventtypeAutoHandler{
-		BrokerLister:    brokerLister,
-		EventTypeLister: eventtypeinformer.Get(ctx).Lister(),
-		EventingClient:  eventingclient.Get(ctx).EventingV1beta2(),
-		FeatureStore:    featureStore,
-		Logger:          logger,
-	}
-
 	reporter := ingress.NewStatsReporter(env.ContainerName, kmeta.ChildName(env.PodName, uuid.New().String()))
 
 	h := &ingress.Handler{
-		Receiver:        kncloudevents.NewHTTPMessageReceiver(env.Port),
-		Sender:          sender,
-		Defaulter:       broker.TTLDefaulter(logger, int32(env.MaxTTL)),
-		Reporter:        reporter,
-		Logger:          logger,
-		BrokerLister:    brokerLister,
-		EvenTypeHandler: autoCreate,
+		Receiver:     kncloudevents.NewHTTPMessageReceiver(env.Port),
+		Sender:       sender,
+		Defaulter:    broker.TTLDefaulter(logger, int32(env.MaxTTL)),
+		Reporter:     reporter,
+		Logger:       logger,
+		BrokerLister: brokerLister,
 	}
 
 	// configMapWatcher does not block, so start it first.
 	if err = configMapWatcher.Start(ctx.Done()); err != nil {
 		logger.Warn("Failed to start ConfigMap watcher", zap.Error(err))
+	}
+
+	// Init auto-create only if enabled, after ConfigMap watcher is started
+	if featureStore.IsEnabled(feature.EvenTypeAutoCreate) {
+		autoCreate := &broker.EventTypeAutoHandler{
+			EventTypeLister: eventtypeinformer.Get(ctx).Lister(),
+			EventingClient:  eventingclient.Get(ctx).EventingV1beta2(),
+			FeatureStore:    featureStore,
+			Logger:          logger,
+		}
+		h.EvenTypeHandler = autoCreate
 	}
 
 	// Start all of the informers and wait for them to sync.
