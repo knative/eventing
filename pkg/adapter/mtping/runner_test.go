@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"fmt"
 	nethttp "net/http"
 	"reflect"
 	"sync"
@@ -236,7 +237,8 @@ func TestSendEventsTLS(t *testing.T) {
 	requestsChan := make(chan *nethttp.Request, 10)
 	handler := eventingtlstesting.RequestsChannelHandler(requestsChan)
 	events := make([]*cloudevents.Event, 0, 8)
-	ca := eventingtlstesting.StartServer(ctx, t, 8334, handler)
+	ca, port := eventingtlstesting.StartServerOnFreePort(ctx, t, handler)
+	hostString := fmt.Sprintf("localhost:%d", port)
 
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -276,7 +278,7 @@ func TestSendEventsTLS(t *testing.T) {
 				},
 				Status: sourcesv1.PingSourceStatus{
 					SourceStatus: duckv1.SourceStatus{
-						SinkURI:     &apis.URL{Scheme: "https", Host: "localhost:8334"},
+						SinkURI:     &apis.URL{Scheme: "https", Host: hostString},
 						SinkCACerts: pointer.String(ca),
 					},
 				},
@@ -300,7 +302,7 @@ func TestSendEventsTLS(t *testing.T) {
 				},
 				Status: sourcesv1.PingSourceStatus{
 					SourceStatus: duckv1.SourceStatus{
-						SinkURI: &apis.URL{Scheme: "https", Host: "localhost:8334"},
+						SinkURI: &apis.URL{Scheme: "https", Host: hostString},
 					},
 				},
 			},
