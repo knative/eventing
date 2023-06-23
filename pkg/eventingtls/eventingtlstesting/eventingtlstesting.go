@@ -18,12 +18,10 @@ package eventingtlstesting
 
 import (
 	"context"
-	"net"
 	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -42,13 +40,6 @@ var (
 
 func init() {
 	CA, Key, Crt = loadCerts()
-}
-
-func StartServerOnFreePort(ctx context.Context, t *testing.T, handler http.Handler, receiverOptions ...kncloudevents.HTTPMessageReceiverOption) (string, int) {
-	port, err := getFreePort()
-	require.NoError(t, err)
-	ca := StartServer(ctx, t, port, handler, receiverOptions...)
-	return ca, port
 }
 
 func StartServer(ctx context.Context, t *testing.T, port int, handler http.Handler, receiverOptions ...kncloudevents.HTTPMessageReceiverOption) string {
@@ -88,20 +79,6 @@ func StartServer(ctx context.Context, t *testing.T, port int, handler http.Handl
 	}()
 
 	return string(CA)
-}
-
-func getFreePort() (int, error) {
-	address, err := net.ResolveTCPAddr("tcp", "localhost:0")
-	if err != nil {
-		return 0, err
-	}
-
-	l, err := net.ListenTCP("tcp", address)
-	if err != nil {
-		return 0, err
-	}
-	defer l.Close()
-	return l.Addr().(*net.TCPAddr).Port, nil
 }
 
 func loadCerts() ([]byte, []byte, []byte) {

@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
-	"fmt"
 	nethttp "net/http"
 	"reflect"
 	"sync"
@@ -237,8 +236,8 @@ func TestSendEventsTLS(t *testing.T) {
 	requestsChan := make(chan *nethttp.Request, 10)
 	handler := eventingtlstesting.RequestsChannelHandler(requestsChan)
 	events := make([]*cloudevents.Event, 0, 8)
-	ca, port := eventingtlstesting.StartServerOnFreePort(ctx, t, handler)
-	hostString := fmt.Sprintf("localhost:%d", port)
+	ca := eventingtlstesting.StartServer(ctx, t, 8500, handler)
+	hostString := "localhost:8500"
 
 	var wg sync.WaitGroup
 	wg.Add(1)
