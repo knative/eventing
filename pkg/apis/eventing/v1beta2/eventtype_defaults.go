@@ -22,8 +22,14 @@ import (
 
 func (et *EventType) SetDefaults(ctx context.Context) {
 	et.Spec.SetDefaults(ctx)
+	setReferenceNs(et)
 }
 
 func (ets *EventTypeSpec) SetDefaults(ctx context.Context) {
+}
 
+func setReferenceNs(et *EventType) {
+	if et.Spec.Reference != nil && et.Spec.Reference.Namespace == "" {
+		et.Spec.Reference.Namespace = et.GetNamespace()
+	}
 }
