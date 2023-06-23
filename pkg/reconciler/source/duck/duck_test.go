@@ -112,11 +112,26 @@ func TestAllCases(t *testing.T) {
 						Source: "http://my-source-1",
 					}})
 					// change the target.
-					s.Spec.Sink.Ref.Kind = "TotesNotABroker"
+					//s.Spec.Sink.Ref.Kind = "TotesNotABroker"
+
+					s.Spec.Sink = duckv1.Destination{
+						Ref: &duckv1.KReference{
+							Name:       sinkName,
+							Kind:       "Service",
+							APIVersion: "v1",
+						},
+					}
 					return s
 				}(),
 			},
 			Key: testNS + "/" + sourceName,
+			WantCreates: []runtime.Object{
+				makeEventTypeWithReference("my-type-1", "http://my-source-1", &duckv1.KReference{
+					Name:       sinkName,
+					Kind:       "Service",
+					APIVersion: "v1",
+				}),
+			},
 		}, {
 			Name: "valid source with broker sink, create event types",
 			Objects: []runtime.Object{
@@ -325,6 +340,10 @@ func makeSourceCRD(eventTypes []eventTypeEntry) *apix1.CustomResourceDefinition 
 }
 
 func makeEventType(ceType, ceSource string) *v1beta2.EventType {
+	return makeEventTypeWithReference(ceType, ceSource, brokerDest.Ref)
+}
+
+func makeEventTypeWithReference(ceType, ceSource string, ref *duckv1.KReference) *v1beta2.EventType {
 	ceSourceURL, _ := apis.ParseURL(ceSource)
 	return &v1beta2.EventType{
 		ObjectMeta: metav1.ObjectMeta{
@@ -343,7 +362,7 @@ func makeEventType(ceType, ceSource string) *v1beta2.EventType {
 		Spec: v1beta2.EventTypeSpec{
 			Type:      ceType,
 			Source:    ceSourceURL,
-			Reference: brokerDest.Ref,
+			Reference: ref,
 		},
 	}
 }
