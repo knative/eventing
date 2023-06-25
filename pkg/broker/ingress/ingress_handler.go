@@ -160,12 +160,14 @@ func (h *Handler) getChannelAddress(name, namespace string) (*duckv1.Addressable
 		return nil, fmt.Errorf("failed to parse channel address url")
 	}
 
+        var caCerts *string
+        certs, present := broker.Status.Annotations[eventing.BrokerChannelCACertsStatusAnnotationKey]
+	if present && certs != "" {
+		caCerts = pointer.String(certs)
+	}
 	addr := &duckv1.Addressable{
 		URL: url,
-	}
-	if broker.Status.Address != nil {
-		addr.CACerts = broker.Status.Address.CACerts
-		addr.URL.Scheme = broker.Status.Address.URL.Scheme
+		CACerts: caCerts
 	}
 	return addr, nil
 }
