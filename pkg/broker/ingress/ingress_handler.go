@@ -32,9 +32,9 @@ import (
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/utils/pointer"
 
 	"knative.dev/pkg/apis"
-	"knative.dev/pkg/network"
 
 	"knative.dev/eventing/pkg/apis/eventing"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
@@ -122,26 +122,6 @@ func (h *Handler) getBroker(name, namespace string) (*eventingv1.Broker, error) 
 	return broker, nil
 }
 
-func (h *Handler) guessChannelAddress(name, namespace, domain string) (*duckv1.Addressable, error) {
-	broker, err := h.getBroker(name, namespace)
-	if err != nil {
-		return nil, err
-	}
-
-	addr := &duckv1.Addressable{
-		URL: &apis.URL{
-			Scheme: "http",
-			Host:   fmt.Sprintf("%s-kne-trigger-kn-channel.%s.svc.%s", name, namespace, domain),
-			Path:   "/",
-		},
-	}
-	if broker.Status.Address != nil {
-		addr.CACerts = broker.Status.Address.CACerts
-		addr.URL.Scheme = broker.Status.Address.URL.Scheme
-	}
-	return addr, nil
-}
-
 func (h *Handler) getChannelAddress(name, namespace string) (*duckv1.Addressable, error) {
 	broker, err := h.getBroker(name, namespace)
 	if err != nil {
@@ -160,14 +140,14 @@ func (h *Handler) getChannelAddress(name, namespace string) (*duckv1.Addressable
 		return nil, fmt.Errorf("failed to parse channel address url")
 	}
 
-        var caCerts *string
-        certs, present := broker.Status.Annotations[eventing.BrokerChannelCACertsStatusAnnotationKey]
+	var caCerts *string
+	certs, present := broker.Status.Annotations[eventing.BrokerChannelCACertsStatusAnnotationKey]
 	if present && certs != "" {
 		caCerts = pointer.String(certs)
 	}
 	addr := &duckv1.Addressable{
-		URL: url,
-		CACerts: caCerts
+		URL:     url,
+		CACerts: caCerts,
 	}
 	return addr, nil
 }
@@ -270,11 +250,7 @@ func (h *Handler) receive(ctx context.Context, headers http.Header, event *cloud
 
 	channelAddress, err := h.getChannelAddress(brokerName, brokerNamespace)
 	if err != nil {
-		h.Logger.Warn("Failed to get channel address, falling back on guess", zap.Error(err))
-		channelAddress, err = h.guessChannelAddress(brokerName, brokerNamespace, network.GetClusterDomainName())
-		if err != nil {
-			h.Logger.Warn("Broker not found in the namespace", zap.Error(err))
-		}
+		h.Logger.Warn("Broker not found in the namespace", zap.Error(err))
 	}
 
 	return h.send(ctx, headers, event, *channelAddress)
