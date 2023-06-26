@@ -62,10 +62,6 @@ func (r *KReferenceResolver) Resolve(ctx context.Context, ref *v1.KReference, pa
 		return nil, apierrs.NewBadRequest("ref is nil")
 	}
 
-	if ref.Namespace == "" {
-		ref.Namespace = corev1.NamespaceDefault
-	}
-
 	or := &corev1.ObjectReference{
 		Kind:       ref.Kind,
 		Namespace:  ref.Namespace,
