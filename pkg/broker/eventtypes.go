@@ -31,7 +31,7 @@ import (
 	v1beta22 "knative.dev/eventing/pkg/client/listers/eventing/v1beta2"
 	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/apis"
-	v1 "knative.dev/pkg/apis/duck/v1"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 type EventTypeAutoHandler struct {
