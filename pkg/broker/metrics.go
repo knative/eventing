@@ -23,7 +23,7 @@ import (
 
 const (
 	// EventArrivalTime is used to access the metadata stored on a
-	// CloudEvent to measure the time difference between when an event is
+	// CloudEvent to measure the time difference between when an events is
 	// received on a broker and before it is dispatched to the trigger function.
 	// The format is an RFC3339 time in string format. For example: 2019-08-26T23:38:17.834384404Z.
 	EventArrivalTime = "knativearrivaltime"
