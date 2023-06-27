@@ -47,3 +47,7 @@ data:
   # ALPHA feature: The transport-encryption flag allows you to encrypt events in transit using the transport layer security (TLS) protocol.
   # For more details: https://github.com/knative/eventing/issues/5957
   transport-encryption: "disabled"
+
+  # ALPHA feature: The eventtype-auto-create flag allows automatic creation of Even Type instances based on Event's type being processed.
+  # For more details: https://github.com/knative/eventing/issues/6909
+  eventtype-auto-create: "disabled"

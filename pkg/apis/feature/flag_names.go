@@ -23,4 +23,5 @@ const (
 	KReferenceMapping   = "kreference-mapping"
 	NewTriggerFilters   = "new-trigger-filters"
 	TransportEncryption = "transport-encryption"
+	EvenTypeAutoCreate  = "eventtype-auto-create"
 )
