@@ -19,7 +19,6 @@ package ingress
 import (
 	"context"
 	"fmt"
-	v1 "knative.dev/pkg/apis/duck/v1"
 	"net/http"
 	"net/url"
 	"strings"
@@ -34,6 +33,7 @@ import (
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
 
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/network"
 
 	"knative.dev/eventing/pkg/apis/eventing"
@@ -197,8 +197,8 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	}
 }
 
-func toKReference(broker *eventingv1.Broker) *v1.KReference {
-	return &v1.KReference{
+func toKReference(broker *eventingv1.Broker) *duckv1.KReference {
+	return &duckv1.KReference{
 		Kind:       broker.Kind,
 		Namespace:  broker.Namespace,
 		Name:       broker.Name,

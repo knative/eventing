@@ -20,11 +20,14 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+
 	"github.com/cloudevents/sdk-go/v2/event"
 	"go.uber.org/zap"
+
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+
 	"knative.dev/eventing/pkg/apis/eventing/v1beta2"
 	"knative.dev/eventing/pkg/apis/feature"
 	eventingv1beta2 "knative.dev/eventing/pkg/client/clientset/versioned/typed/eventing/v1beta2"
@@ -49,7 +52,7 @@ func generateEventTypeName(name, namespace, eventType, eventSource string) strin
 }
 
 // AutoCreateEventType creates EventType object based on processed events's types from addressable KReference objects
-func (h *EventTypeAutoHandler) AutoCreateEventType(ctx context.Context, event *event.Event, addressable *v1.KReference, ownerUID types.UID) error {
+func (h *EventTypeAutoHandler) AutoCreateEventType(ctx context.Context, event *event.Event, addressable *duckv1.KReference, ownerUID types.UID) error {
 	// Feature flag gate
 	if !h.FeatureStore.IsEnabled(feature.EvenTypeAutoCreate) {
 		h.Logger.Debug("Event Type auto creation is disabled")

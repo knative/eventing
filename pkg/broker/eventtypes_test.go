@@ -18,6 +18,9 @@ package broker
 
 import (
 	"context"
+	"reflect"
+	"testing"
+
 	v2 "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/event"
 	"go.uber.org/zap"
@@ -29,17 +32,15 @@ import (
 	fakeeventingclientset "knative.dev/eventing/pkg/client/clientset/versioned/fake"
 	reconcilertestingv1beta2 "knative.dev/eventing/pkg/reconciler/testing/v1beta2"
 	"knative.dev/eventing/test/lib/resources"
-	v1 "knative.dev/pkg/apis/duck/v1"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	logtesting "knative.dev/pkg/logging/testing"
-	"reflect"
-	"testing"
 )
 
 func TestEventTypeAutoHandler_AutoCreateEventType(t *testing.T) {
 	testCases := []struct {
 		name              string
 		featureFlag       string
-		addressable       *v1.KReference
+		addressable       *duckv1.KReference
 		events            []v2.Event
 		expectedEventType []v1beta2.EventType
 		expectedError     error
@@ -47,7 +48,7 @@ func TestEventTypeAutoHandler_AutoCreateEventType(t *testing.T) {
 		{
 			name:        "With 1 broker and 1 type",
 			featureFlag: "enabled",
-			addressable: &v1.KReference{
+			addressable: &duckv1.KReference{
 				APIVersion: "eventing.knative.dev/v1",
 				Kind:       "Broker",
 				Namespace:  "default",
@@ -61,7 +62,7 @@ func TestEventTypeAutoHandler_AutoCreateEventType(t *testing.T) {
 		{
 			name:        "With 1 broker and multiple types",
 			featureFlag: "enabled",
-			addressable: &v1.KReference{
+			addressable: &duckv1.KReference{
 				APIVersion: "eventing.knative.dev/v1",
 				Kind:       "Broker",
 				Namespace:  "default",
@@ -181,7 +182,7 @@ func initEvent(eventType string) v2.Event {
 func initEventTypeObject() v1beta2.EventType {
 	return v1beta2.EventType{
 		Spec: v1beta2.EventTypeSpec{
-			Reference: &v1.KReference{
+			Reference: &duckv1.KReference{
 				APIVersion: "eventing.knative.dev/v1",
 				Kind:       "Broker",
 				Namespace:  "default",
