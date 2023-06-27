@@ -85,11 +85,10 @@ func (h *EventTypeAutoHandler) AutoCreateEventType(ctx context.Context, event *e
 			},
 		},
 		Spec: v1beta2.EventTypeSpec{
-			Type:   event.Type(),
-			Source: source,
-			Schema: schema,
-			//TODO: should we try to capture?
-			//SchemaData: events.DataSchema(),
+			Type:        event.Type(),
+			Source:      source,
+			Schema:      schema,
+			SchemaData:  event.DataSchema(),
 			Reference:   addressable,
 			Description: "Event Type auto-created by controller",
 		},
