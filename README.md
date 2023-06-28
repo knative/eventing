@@ -12,6 +12,17 @@ _Secure event processing and discovery with CloudEvents_
 [![Slack](https://img.shields.io/badge/%23eventing-white.svg?logo=slack&color=522a5e)](https://knative.slack.com/archives/C9JP909F0)
 [![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/5913/badge)](https://bestpractices.coreinfrastructure.org/projects/5913)
 
+## What is Knative Eventing?
+
+Knative Eventing is a collection of APIs that enable you to use an [event-driven architecture](https://en.wikipedia.org/wiki/Event-driven_architecture){target=_blank} with your applications. You can use these APIs to create components that route events from event producers to event consumers, known as sinks, that receive events. Sinks can also be configured to respond to HTTP requests by sending a response event.
+
+Knative Eventing uses standard HTTP POST requests to send and receive events between event producers and sinks. These events conform to the [CloudEvents specifications](https://cloudevents.io/){target=_blank}, which enables creating, parsing, sending, and receiving events in any programming language.
+
+Knative Eventing components are loosely coupled, and can be developed and deployed independently of each other. Any producer can generate events before there are active event consumers that are listening for those events. Any event consumer can express interest in a class of events before there are producers that are creating those events.
+
+
+## What to expect here?
+
 This repository contains a work-in-progress eventing system that is designed to
 address a common need for cloud native development:
 
@@ -23,6 +34,8 @@ address a common need for cloud native development:
    - without modifying producer or consumer, and
    - with the ability to select a specific subset of events from a particular
      producer.
+
+## More on Knative Eventing
 
 The high level mission of Knative Eventing is: **Enable asynchronous application
 development through event delivery from anywhere.**
