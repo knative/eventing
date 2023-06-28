@@ -22,6 +22,7 @@ import (
 	"github.com/cloudevents/sdk-go/v2/test"
 	"k8s.io/apimachinery/pkg/util/sets"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
@@ -31,6 +32,7 @@ import (
 	eventassert "knative.dev/reconciler-test/pkg/eventshub/assert"
 
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
+	"knative.dev/eventing/test/rekt/features"
 	"knative.dev/eventing/test/rekt/features/featureflags"
 	"knative.dev/eventing/test/rekt/features/source"
 	"knative.dev/eventing/test/rekt/resources/broker"
@@ -51,7 +53,13 @@ func SendsEventsWithSinkRef() *feature.Feature {
 
 	f.Stable("pingsource as event source").
 		Must("delivers events",
-			assert.OnStore(sink).MatchEvent(test.HasType("dev.knative.sources.ping")).AtLeast(1))
+			func(ctx context.Context, t feature.T) {
+				assert.OnStore(sink).
+					Match(features.HasKnNamespaceHeader(environment.FromContext(ctx).Namespace())).
+					MatchEvent(test.HasType("dev.knative.sources.ping")).
+					AtLeast(1)(ctx, t)
+			},
+		)
 
 	return f
 }

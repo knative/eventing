@@ -32,10 +32,12 @@ import (
 	"github.com/cloudevents/sdk-go/v2/binding/buffering"
 	"go.opencensus.io/trace"
 	"go.uber.org/zap"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+
+	"knative.dev/eventing/pkg/apis"
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/kncloudevents"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 const (
@@ -191,6 +193,7 @@ func createMessageReceiverFunction(f *FanoutMessageHandler) func(context.Context
 			go func(m binding.Message, h nethttp.Header, s *trace.Span, r *channel.StatsReporter, args *channel.ReportArgs) {
 				// Run async dispatch with background context.
 				ctx = trace.NewContext(context.Background(), s)
+				h.Set(apis.KnNamespaceHeader, ref.Namespace)
 				// Any returned error is already logged in f.dispatch().
 				dispatchResultForFanout := f.dispatch(ctx, subs, m, h)
 				_ = ParseDispatchResultAndReportMetrics(dispatchResultForFanout, *r, *args)

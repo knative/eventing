@@ -34,13 +34,15 @@ import (
 	"go.opencensus.io/trace"
 	"go.uber.org/zap"
 	"k8s.io/client-go/tools/cache"
-	channelAttributes "knative.dev/eventing/pkg/channel/attributes"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/logging"
 
+	"knative.dev/eventing/pkg/apis"
+	channelAttributes "knative.dev/eventing/pkg/channel/attributes"
+
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/pkg/apis/feature"
-	broker "knative.dev/eventing/pkg/broker"
+	"knative.dev/eventing/pkg/broker"
 	v1 "knative.dev/eventing/pkg/client/informers/externalversions/eventing/v1"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1"
 	"knative.dev/eventing/pkg/eventfilter"
@@ -240,12 +242,12 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 		URL:     t.Status.SubscriberURI,
 		CACerts: t.Status.SubscriberCACerts,
 	}
-	h.send(ctx, writer, request.Header, target, reportArgs, event, ttl)
+	h.send(ctx, writer, request.Header, target, reportArgs, event, t, ttl)
 }
 
-func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers http.Header, target duckv1.Addressable, reportArgs *ReportArgs, event *cloudevents.Event, ttl int32) {
+func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers http.Header, target duckv1.Addressable, reportArgs *ReportArgs, event *cloudevents.Event, t *eventingv1.Trigger, ttl int32) {
 	// send the event to trigger's subscriber
-	response, responseErr := h.sendEvent(ctx, headers, target, event, reportArgs)
+	response, responseErr := h.sendEvent(ctx, headers, target, event, t, reportArgs)
 
 	if responseErr.err != nil {
 		h.logger.Error("failed to send event", zap.Error(responseErr.err))
@@ -288,7 +290,7 @@ func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers 
 	_ = h.reporter.ReportEventCount(reportArgs, statusCode)
 }
 
-func (h *Handler) sendEvent(ctx context.Context, headers http.Header, target duckv1.Addressable, event *cloudevents.Event, reporterArgs *ReportArgs) (*http.Response, ErrHandler) {
+func (h *Handler) sendEvent(ctx context.Context, headers http.Header, target duckv1.Addressable, event *cloudevents.Event, t *eventingv1.Trigger, reporterArgs *ReportArgs) (*http.Response, ErrHandler) {
 	responseErr := ErrHandler{
 		ResponseCode: NoResponse,
 	}
@@ -304,6 +306,7 @@ func (h *Handler) sendEvent(ctx context.Context, headers http.Header, target duc
 	defer message.Finish(nil)
 
 	additionalHeaders := utils.PassThroughHeaders(headers)
+	additionalHeaders.Set(apis.KnNamespaceHeader, t.GetNamespace())
 
 	// Following the spec https://github.com/knative/specs/blob/main/specs/eventing/data-plane.md#derived-reply-events
 	additionalHeaders.Set("prefer", "reply")

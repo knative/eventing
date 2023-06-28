@@ -192,7 +192,7 @@ func (a *cronJobsRunner) newPingSourceClient(source *sourcesv1.PingSource) (adap
 	var env adapter.EnvConfig
 	if a.clientConfig.Env != nil {
 		env = adapter.EnvConfig{
-			Namespace:      a.clientConfig.Env.GetNamespace(),
+			Namespace:      source.GetNamespace(),
 			Name:           a.clientConfig.Env.GetName(),
 			EnvSinkTimeout: fmt.Sprintf("%d", a.clientConfig.Env.GetSinktimeout()),
 		}
