@@ -33,6 +33,7 @@ import (
 
 	"knative.dev/eventing/pkg/adapter/v2"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
+	"knative.dev/eventing/pkg/kncloudevents"
 )
 
 const (
@@ -58,7 +59,7 @@ func NewEnvConfig() adapter.EnvConfigAccessor {
 
 func NewAdapter(ctx context.Context, env adapter.EnvConfigAccessor, ceClient cloudevents.Client) adapter.Adapter {
 	logger := logging.FromContext(ctx)
-	runner := NewCronJobsRunner(adapter.GetClientConfig(ctx), kubeclient.Get(ctx), logging.FromContext(ctx))
+	runner := NewCronJobsRunner(kncloudevents.GetClientConfig(ctx), kubeclient.Get(ctx), logging.FromContext(ctx))
 
 	return &mtpingAdapter{
 		logger:    logger,

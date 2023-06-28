@@ -28,8 +28,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	kncloudevents "knative.dev/eventing/pkg/adapter/v2"
+
 	sources "knative.dev/eventing/pkg/apis/sources"
+	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/observability"
 )
 

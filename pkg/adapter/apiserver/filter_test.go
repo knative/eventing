@@ -19,8 +19,8 @@ package apiserver
 import (
 	"testing"
 
-	adaptertest "knative.dev/eventing/pkg/adapter/v2/test"
 	sources "knative.dev/eventing/pkg/apis/sources"
+	kncloudeventstest "knative.dev/eventing/pkg/kncloudevents/test"
 )
 
 func TestControllerAddEventWithNoController(t *testing.T) {
@@ -95,7 +95,7 @@ func TestControllerDeleteEventWithGoodControllerNoAPIVersion(t *testing.T) {
 	validateSent(t, tc, sources.ApiServerSourceDeleteRefEventType)
 }
 
-func makeController(apiVersion, kind string) (*controllerFilter, *adaptertest.TestCloudEventsClient) {
+func makeController(apiVersion, kind string) (*controllerFilter, *kncloudeventstest.TestCloudEventsClient) {
 	delegate, tc := makeRefAndTestingClient()
 	return &controllerFilter{
 		apiVersion: apiVersion,

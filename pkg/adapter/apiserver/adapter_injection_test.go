@@ -23,7 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	fakekubeclientset "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest"
-	adaptertest "knative.dev/eventing/pkg/adapter/v2/test"
+	kncloudeventstest "knative.dev/eventing/pkg/kncloudevents/test"
 	reconcilertesting "knative.dev/eventing/pkg/reconciler/testing"
 	"knative.dev/pkg/injection"
 	logtesting "knative.dev/pkg/logging/testing"
@@ -55,7 +55,7 @@ func SetupFakeContextWithCancel(t *testing.T, objects []runtime.Object) (context
 }
 
 func TestNewAdaptor(t *testing.T) {
-	ce := adaptertest.NewTestClient()
+	ce := kncloudeventstest.NewTestClient()
 
 	testCases := map[string]struct {
 		opt     envConfig

@@ -23,13 +23,12 @@ import (
 	"net/http"
 
 	"go.uber.org/zap"
+	"knative.dev/eventing/pkg/kncloudevents/crstatusevent"
 	"knative.dev/pkg/tracing"
 
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/profiling"
-
-	"knative.dev/eventing/pkg/adapter/v2/util/crstatusevent"
 )
 
 // loggerConfiguratorFromEnvironment configures

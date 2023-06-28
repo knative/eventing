@@ -23,14 +23,13 @@ import (
 	"os"
 
 	"go.uber.org/zap"
+	"knative.dev/eventing/pkg/kncloudevents/crstatusevent"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/logging/logkey"
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/profiling"
 	"knative.dev/pkg/tracing"
 	tracingconfig "knative.dev/pkg/tracing/config"
-
-	"knative.dev/eventing/pkg/adapter/v2/util/crstatusevent"
 )
 
 const (

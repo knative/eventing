@@ -25,14 +25,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
+	kncloudeventstest "knative.dev/eventing/pkg/kncloudevents/test"
 
 	"github.com/robfig/cron/v3"
 
 	_ "knative.dev/pkg/client/injection/kube/client/fake"
 	"knative.dev/pkg/logging"
 	rectesting "knative.dev/pkg/reconciler/testing"
-
-	adaptertest "knative.dev/eventing/pkg/adapter/v2/test"
 )
 
 func TestStartStopAdapter(t *testing.T) {
@@ -40,7 +39,7 @@ func TestStartStopAdapter(t *testing.T) {
 	ctx, cancel := context.WithCancel(ctx)
 	envCfg := NewEnvConfig()
 
-	ce := adaptertest.NewTestClient()
+	ce := kncloudeventstest.NewTestClient()
 	adapter := NewAdapter(ctx, envCfg, ce)
 
 	done := make(chan struct{})

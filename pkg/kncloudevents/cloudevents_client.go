@@ -14,15 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package adapter
+package kncloudevents
 
 import (
 	"context"
 	"errors"
-	"fmt"
 	nethttp "net/http"
 	"net/url"
-	"time"
 
 	obshttp "github.com/cloudevents/sdk-go/observability/opencensus/v2/http"
 	cloudevents "github.com/cloudevents/sdk-go/v2"
@@ -34,10 +32,11 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/tracing/propagation/tracecontextb3"
 
-	"knative.dev/eventing/pkg/adapter/v2/util/crstatusevent"
 	"knative.dev/eventing/pkg/eventingtls"
+	"knative.dev/eventing/pkg/kncloudevents/crstatusevent"
 	"knative.dev/eventing/pkg/metrics/source"
 	obsclient "knative.dev/eventing/pkg/observability/client"
+	//pkgapis "knative.dev/pkg/apis"
 )
 
 type closeIdler interface {
@@ -71,38 +70,36 @@ func NewClientHTTPObserved(topt []http.Option, copt []ceclient.Option) (Client, 
 
 // NewCloudEventsClient returns a client that will apply the ceOverrides to
 // outbound events and report outbound event counts.
-func NewCloudEventsClient(target string, ceOverrides *duckv1.CloudEventOverrides, reporter source.StatsReporter) (Client, error) {
-	opts := make([]http.Option, 0)
-	if len(target) > 0 {
-		opts = append(opts, cloudevents.WithTarget(target))
-	}
+func NewCloudEventsClient(target *duckv1.Addressable, ceOverrides *duckv1.CloudEventOverrides, reporter source.StatsReporter) (Client, error) {
 	return NewClient(ClientConfig{
+		Target:      target,
 		CeOverrides: ceOverrides,
 		Reporter:    reporter,
-		Options:     opts,
 	})
 }
 
-// NewCloudEventsClientWithOptions returns a client created with provided options
-func NewCloudEventsClientWithOptions(ceOverrides *duckv1.CloudEventOverrides, reporter source.StatsReporter, opts ...http.Option) (Client, error) {
-	return NewClient(ClientConfig{
-		CeOverrides: ceOverrides,
-		Reporter:    reporter,
-		Options:     opts,
-	})
-}
+// // NewCloudEventsClientWithOptions returns a client created with provided options
+// func NewCloudEventsClientWithOptions(ceOverrides *duckv1.CloudEventOverrides, reporter source.StatsReporter, opts ...http.Option) (Client, error) {
+// 	return NewClient(ClientConfig{
+// 		CeOverrides: ceOverrides,
+// 		Reporter:    reporter,
+// 		Options:     opts,
+// 	})
+// }
 
 // NewCloudEventsClientCRStatus returns a client CR status
-func NewCloudEventsClientCRStatus(env EnvConfigAccessor, reporter source.StatsReporter, crStatusEventClient *crstatusevent.CRStatusEventClient) (Client, error) {
+func NewCloudEventsClientCRStatus(target *duckv1.Addressable, reporter source.StatsReporter, crStatusEventClient *crstatusevent.CRStatusEventClient) (Client, error) {
 	return NewClient(ClientConfig{
-		Env:                 env,
+		Target:              target,
 		Reporter:            reporter,
 		CrStatusEventClient: crStatusEventClient,
+		//CeOverrides:         env.GetCloudEventOverrides(),
 	})
 }
 
 type ClientConfig struct {
-	Env                 EnvConfigAccessor
+	//Env                 EnvConfigAccessor
+	Target              *duckv1.Addressable
 	CeOverrides         *duckv1.CloudEventOverrides
 	Reporter            source.StatsReporter
 	CrStatusEventClient *crstatusevent.CRStatusEventClient
@@ -113,7 +110,7 @@ type ClientConfig struct {
 
 type clientConfigKey struct{}
 
-func withClientConfig(ctx context.Context, r ClientConfig) context.Context {
+func WithClientConfig(ctx context.Context, r ClientConfig) context.Context {
 	return context.WithValue(ctx, clientConfigKey{}, r)
 }
 
@@ -138,18 +135,15 @@ func NewClient(cfg ClientConfig) (Client, error) {
 	var closeIdler closeIdler = nethttp.DefaultTransport.(*nethttp.Transport)
 
 	ceOverrides := cfg.CeOverrides
-	if cfg.Env != nil {
-		if target := cfg.Env.GetSink(); len(target) > 0 {
-			pOpts = append(pOpts, cloudevents.WithTarget(target))
-		}
-		if sinkWait := cfg.Env.GetSinktimeout(); sinkWait > 0 {
-			pOpts = append(pOpts, setTimeOut(time.Duration(sinkWait)*time.Second))
-		}
-		if eventingtls.IsHttpsSink(cfg.Env.GetSink()) {
+
+	if cfg.Target != nil {
+		pOpts = append(pOpts, cloudevents.WithTarget(cfg.Target.URL.String()))
+
+		if eventingtls.IsHttpsSink(cfg.Target.URL.String()) {
 			var err error
 
 			clientConfig := eventingtls.NewDefaultClientConfig()
-			clientConfig.CACerts = cfg.Env.GetCACerts()
+			clientConfig.CACerts = cfg.Target.CACerts
 
 			httpTransport := nethttp.DefaultTransport.(*nethttp.Transport).Clone()
 			httpTransport.TLSClientConfig, err = eventingtls.GetTLSClientConfig(clientConfig)
@@ -164,13 +158,6 @@ func NewClient(cfg ClientConfig) (Client, error) {
 				Propagation: tracecontextb3.TraceContextEgress,
 			}
 		}
-		if ceOverrides == nil {
-			var err error
-			ceOverrides, err = cfg.Env.GetCloudEventOverrides()
-			if err != nil {
-				return nil, err
-			}
-		}
 	}
 
 	pOpts = append(pOpts, http.WithRoundTripper(transport))
@@ -179,13 +166,14 @@ func NewClient(cfg ClientConfig) (Client, error) {
 	opts := append(pOpts, cfg.Options...)
 
 	ceClient, err := newClientHTTPObserved(opts, nil)
+	if err != nil {
+		return nil, err
+	}
 
 	if cfg.CrStatusEventClient == nil {
 		cfg.CrStatusEventClient = crstatusevent.GetDefaultClient()
 	}
-	if err != nil {
-		return nil, err
-	}
+
 	return &client{
 		ceClient:            ceClient,
 		closeIdler:          closeIdler,
@@ -193,19 +181,6 @@ func NewClient(cfg ClientConfig) (Client, error) {
 		reporter:            cfg.Reporter,
 		crStatusEventClient: cfg.CrStatusEventClient,
 	}, nil
-}
-
-func setTimeOut(duration time.Duration) http.Option {
-	return func(p *http.Protocol) error {
-		if p == nil {
-			return fmt.Errorf("http target option can not set nil protocol")
-		}
-		if p.Client == nil {
-			p.Client = &nethttp.Client{}
-		}
-		p.Client.Timeout = duration
-		return nil
-	}
 }
 
 type client struct {

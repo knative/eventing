@@ -40,10 +40,10 @@ import (
 	"knative.dev/pkg/logging"
 	rectesting "knative.dev/pkg/reconciler/testing"
 
-	"knative.dev/eventing/pkg/adapter/v2"
-	adaptertesting "knative.dev/eventing/pkg/adapter/v2/test"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/eventing/pkg/eventingtls/eventingtlstesting"
+	"knative.dev/eventing/pkg/kncloudevents"
+	kncloudeventstest "knative.dev/eventing/pkg/kncloudevents/test"
 )
 
 const (
@@ -206,9 +206,9 @@ func TestAddRunRemoveSchedules(t *testing.T) {
 		t.Run(n, func(t *testing.T) {
 			ctx, _ := rectesting.SetupFakeContext(t)
 			logger := logging.FromContext(ctx)
-			ce := adaptertesting.NewTestClient()
+			ce := kncloudeventstest.NewTestClient()
 
-			runner := NewCronJobsRunner(adapter.ClientConfig{Client: ce}, kubeclient.Get(ctx), logger)
+			runner := NewCronJobsRunner(kncloudevents.ClientConfig{Client: ce}, kubeclient.Get(ctx), logger)
 			entryId := runner.AddSchedule(tc.src)
 
 			entry := runner.cron.Entry(entryId)
@@ -312,7 +312,7 @@ func TestSendEventsTLS(t *testing.T) {
 		t.Run(n, func(t *testing.T) {
 			logger := logging.FromContext(ctx)
 
-			cc := adapter.ClientConfig{
+			cc := kncloudevents.ClientConfig{
 				CeOverrides: tc.src.Spec.CloudEventOverrides,
 			}
 			runner := NewCronJobsRunner(cc, kubeclient.Get(ctx), logger)
@@ -341,9 +341,9 @@ func TestSendEventsTLS(t *testing.T) {
 func TestStartStopCron(t *testing.T) {
 	ctx, _ := rectesting.SetupFakeContext(t)
 	logger := logging.FromContext(ctx)
-	ce := adaptertesting.NewTestClient()
+	ce := kncloudeventstest.NewTestClient()
 
-	runner := NewCronJobsRunner(adapter.ClientConfig{Client: ce}, kubeclient.Get(ctx), logger)
+	runner := NewCronJobsRunner(kncloudevents.ClientConfig{Client: ce}, kubeclient.Get(ctx), logger)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	wctx, wcancel := context.WithCancel(context.Background())
@@ -370,9 +370,9 @@ func TestStartStopCronDelayWait(t *testing.T) {
 	}
 	ctx, _ := rectesting.SetupFakeContext(t)
 	logger := logging.FromContext(ctx)
-	ce := adaptertesting.NewTestClientWithDelay(time.Second * 5)
+	ce := kncloudeventstest.NewTestClientWithDelay(time.Second * 5)
 
-	runner := NewCronJobsRunner(adapter.ClientConfig{Client: ce}, kubeclient.Get(ctx), logger)
+	runner := NewCronJobsRunner(kncloudevents.ClientConfig{Client: ce}, kubeclient.Get(ctx), logger)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -411,7 +411,7 @@ func TestStartStopCronDelayWait(t *testing.T) {
 	validateSent(t, ce, []byte("some delayed data"), cloudevents.TextPlain, nil)
 }
 
-func validateSent(t *testing.T, ce *adaptertesting.TestCloudEventsClient, wantData []byte, wantContentType string, extensions map[string]string) {
+func validateSent(t *testing.T, ce *kncloudeventstest.TestCloudEventsClient, wantData []byte, wantContentType string, extensions map[string]string) {
 	if got := len(ce.Sent()); got != 1 {
 		t.Error("Expected 1 event to be sent, got", got)
 	}

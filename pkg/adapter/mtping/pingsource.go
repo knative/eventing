@@ -21,8 +21,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	pkgreconciler "knative.dev/pkg/reconciler"
-
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1/pingsource"
 	"knative.dev/pkg/kmeta"
@@ -31,14 +29,14 @@ import (
 
 // newPingSourceSkipped makes a new reconciler event with event type Normal, and
 // reason PingSourceNotReady
-func newPingSourceSkipped() pkgreconciler.Event {
-	return pkgreconciler.NewEvent(corev1.EventTypeNormal, "PingSourceSkipped", "PingSource is not ready")
+func newPingSourceSkipped() reconciler.Event {
+	return reconciler.NewEvent(corev1.EventTypeNormal, "PingSourceSkipped", "PingSource is not ready")
 }
 
 // newPingSourceNotReady makes a new reconciler event with event type Normal, and
 // reason PingSourceNotReady
-func newPingSourceSynchronized() pkgreconciler.Event {
-	return pkgreconciler.NewEvent(corev1.EventTypeNormal, "PingSourceSynchronized", "PingSource adapter is synchronized")
+func newPingSourceSynchronized() reconciler.Event {
+	return reconciler.NewEvent(corev1.EventTypeNormal, "PingSourceSynchronized", "PingSource adapter is synchronized")
 }
 
 // Reconciler reconciles PingSources

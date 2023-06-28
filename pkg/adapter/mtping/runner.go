@@ -32,11 +32,11 @@ import (
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/record"
 
-	"knative.dev/eventing/pkg/adapter/v2"
-	kncloudevents "knative.dev/eventing/pkg/adapter/v2"
-	"knative.dev/eventing/pkg/adapter/v2/util/crstatusevent"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
+	"knative.dev/eventing/pkg/kncloudevents"
+	"knative.dev/eventing/pkg/kncloudevents/crstatusevent"
 	"knative.dev/eventing/pkg/observability"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 type CronJobRunner interface {
@@ -63,7 +63,7 @@ const (
 	resourceGroup = "pingsources.sources.knative.dev"
 )
 
-func NewCronJobsRunner(cfg adapter.ClientConfig, kubeClient kubernetes.Interface, logger *zap.SugaredLogger, opts ...cron.Option) *cronJobsRunner {
+func NewCronJobsRunner(cfg kncloudevents.ClientConfig, kubeClient kubernetes.Interface, logger *zap.SugaredLogger, opts ...cron.Option) *cronJobsRunner {
 	return &cronJobsRunner{
 		cron:         *cron.New(opts...),
 		Logger:       logger,
@@ -188,21 +188,14 @@ func makeEvent(source *sourcesv1.PingSource) (cloudevents.Event, error) {
 	return event, nil
 }
 
-func (a *cronJobsRunner) newPingSourceClient(source *sourcesv1.PingSource) (adapter.Client, error) {
-	var env adapter.EnvConfig
-	if a.clientConfig.Env != nil {
-		env = adapter.EnvConfig{
-			Namespace:      a.clientConfig.Env.GetNamespace(),
-			Name:           a.clientConfig.Env.GetName(),
-			EnvSinkTimeout: fmt.Sprintf("%d", a.clientConfig.Env.GetSinktimeout()),
-		}
+func (a *cronJobsRunner) newPingSourceClient(source *sourcesv1.PingSource) (kncloudevents.Client, error) {
+	target := &duckv1.Addressable{
+		URL:     source.Status.SinkURI,
+		CACerts: source.Status.SinkCACerts,
 	}
 
-	env.Sink = source.Status.SinkURI.String()
-	env.CACerts = source.Status.SinkCACerts
-
-	cfg := adapter.ClientConfig{
-		Env:                 &env,
+	cfg := kncloudevents.ClientConfig{
+		Target:              target,
 		CeOverrides:         source.Spec.CloudEventOverrides,
 		Reporter:            a.clientConfig.Reporter,
 		CrStatusEventClient: a.clientConfig.CrStatusEventClient,
@@ -210,5 +203,5 @@ func (a *cronJobsRunner) newPingSourceClient(source *sourcesv1.PingSource) (adap
 		Client:              a.clientConfig.Client,
 	}
 
-	return adapter.NewClient(cfg)
+	return kncloudevents.NewClient(cfg)
 }

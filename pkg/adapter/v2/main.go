@@ -27,8 +27,10 @@ import (
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
+	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"github.com/kelseyhightower/envconfig"
 	"go.uber.org/zap"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/tracing"
 
 	corev1 "k8s.io/api/core/v1"
@@ -48,8 +50,10 @@ import (
 	"knative.dev/pkg/reconciler"
 	"knative.dev/pkg/signals"
 
-	"knative.dev/eventing/pkg/adapter/v2/util/crstatusevent"
+	"knative.dev/eventing/pkg/kncloudevents"
+	"knative.dev/eventing/pkg/kncloudevents/crstatusevent"
 	"knative.dev/eventing/pkg/metrics/source"
+	pkgapis "knative.dev/pkg/apis"
 )
 
 // Adapter is the interface receive adapters are expected to implement
@@ -209,19 +213,45 @@ func MainWithInformers(ctx context.Context, component string, env EnvConfigAcces
 
 	crStatusEventClient := configurator.CreateCloudEventsStatusReporter(ctx)
 
+	var target *duckv1.Addressable
+	if env.GetSink() != "" {
+		targetUrl, err := pkgapis.ParseURL(env.GetSink())
+		if err != nil {
+			logger.Errorw("Could not parse sink URL", zap.Error(err))
+		}
+		target := &duckv1.Addressable{
+			URL:     targetUrl,
+			CACerts: env.GetCACerts(),
+		}
+
+		logger.Infof("env.GetSink() = %s, target = %v", env.GetSink(), target)
+	}
+
 	reporter, err := source.NewStatsReporter()
 	if err != nil {
 		logger.Errorw("Error building statsreporter", zap.Error(err))
 	}
 
-	clientConfig := ClientConfig{
-		Env:                 env,
+	ceOverrides, err := env.GetCloudEventOverrides()
+	if err != nil {
+		logger.Errorw("Error getting cloud events overrides", zap.Error(err))
+	}
+
+	options := make([]cehttp.Option, 0)
+	if sinkWait := env.GetSinktimeout(); sinkWait > 0 {
+		options = append(options, setTimeOut(time.Duration(sinkWait)*time.Second))
+	}
+
+	clientConfig := kncloudevents.ClientConfig{
+		Target:              target,
 		Reporter:            reporter,
 		CrStatusEventClient: crStatusEventClient,
+		CeOverrides:         ceOverrides,
+		Options:             options,
 	}
-	ctx = withClientConfig(ctx, clientConfig)
+	ctx = kncloudevents.WithClientConfig(ctx, clientConfig)
 
-	eventsClient, err := NewClient(clientConfig)
+	eventsClient, err := kncloudevents.NewClient(clientConfig)
 	if err != nil {
 		logger.Fatalw("Error building cloud event client", zap.Error(err))
 	}
@@ -453,3 +483,16 @@ func newConfigurator(env EnvConfigAccessor, opts ...ConfiguratorOption) AdapterC
 }
 
 var _ AdapterConfigurator = (*adapterConfigurator)(nil)
+
+func setTimeOut(duration time.Duration) cehttp.Option {
+	return func(p *cehttp.Protocol) error {
+		if p == nil {
+			return fmt.Errorf("http target option can not set nil protocol")
+		}
+		if p.Client == nil {
+			p.Client = &http.Client{}
+		}
+		p.Client.Timeout = duration
+		return nil
+	}
+}
