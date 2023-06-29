@@ -38,6 +38,8 @@ import (
 	"knative.dev/pkg/network"
 	"knative.dev/pkg/system"
 
+	eventingapis "knative.dev/eventing/pkg/apis"
+
 	"knative.dev/eventing/pkg/broker"
 	"knative.dev/eventing/pkg/channel/attributes"
 	"knative.dev/eventing/pkg/kncloudevents"
@@ -146,6 +148,13 @@ func (d *MessageDispatcherImpl) DispatchMessageWithRetries(ctx context.Context, 
 		// No destination url, try to send to reply if available
 		responseMessage = message
 		responseAdditionalHeaders = additionalHeaders
+	}
+
+	if additionalHeaders.Get(eventingapis.KnNamespaceHeader) != "" {
+		if responseAdditionalHeaders == nil {
+			responseAdditionalHeaders = make(nethttp.Header)
+		}
+		responseAdditionalHeaders.Set(eventingapis.KnNamespaceHeader, additionalHeaders.Get(eventingapis.KnNamespaceHeader))
 	}
 
 	// No response, dispatch completed
