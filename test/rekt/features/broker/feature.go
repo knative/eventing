@@ -26,9 +26,11 @@ import (
 	"github.com/cloudevents/sdk-go/v2/binding/spec"
 	"github.com/cloudevents/sdk-go/v2/test"
 	"github.com/google/uuid"
+	"knative.dev/reconciler-test/pkg/environment"
 
 	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	"knative.dev/eventing/test/rekt/features"
 	"knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/eventing/test/rekt/resources/channel"
 	"knative.dev/eventing/test/rekt/resources/subscription"
@@ -186,10 +188,12 @@ func BrokerWithManyTriggers() *feature.Feature {
 			for _, matcher := range matchers {
 				// One match per event is enough
 				f.Stable("test message without explicit prefer header should have the header").
-					Must("delivers events",
-						eventasssert.OnStore(sink).Match(
-							matcher,
-						).AtLeast(1))
+					Must("delivers events", func(ctx context.Context, t feature.T) {
+						eventasssert.OnStore(sink).
+							Match(features.HasKnNamespaceHeader(environment.FromContext(ctx).Namespace())).
+							Match(matcher).
+							AtLeast(1)(ctx, t)
+					})
 			}
 		}
 	}
@@ -628,14 +632,19 @@ func brokerRedeliveryDropN(retryNum int32, dropNum uint) *feature.Feature {
 
 	f.Stable("Broker Redelivery failed the first n events").
 		Must("delivers events",
-			eventasssert.OnStore(sink).Match(
-				eventasssert.MatchKind(eventasssert.EventReceived),
-				eventasssert.MatchEvent(
-					test.HasSource(eventSource),
-					test.HasType(eventType),
-					test.HasData([]byte(eventBody)),
-				),
-			).AtLeast(1))
+			func(ctx context.Context, t feature.T) {
+				eventasssert.OnStore(sink).
+					Match(features.HasKnNamespaceHeader(environment.FromContext(ctx).Namespace())).
+					Match(
+						eventasssert.MatchKind(eventasssert.EventReceived),
+						eventasssert.MatchEvent(
+							test.HasSource(eventSource),
+							test.HasType(eventType),
+							test.HasData([]byte(eventBody)),
+						),
+					).
+					AtLeast(1)(ctx, t)
+			})
 
 	return f
 }
@@ -693,11 +702,14 @@ func brokerSubscriberUnreachable() *feature.Feature {
 	))
 
 	f.Assert("Receives dls extensions when subscriber is unreachable",
-		eventasssert.OnStore(sink).
-			MatchEvent(
-				test.HasExtension("knativeerrordest", "http://fake.svc.cluster.local"),
-			).
-			AtLeast(1),
+		func(ctx context.Context, t feature.T) {
+			eventasssert.OnStore(sink).
+				Match(features.HasKnNamespaceHeader(environment.FromContext(ctx).Namespace())).
+				MatchEvent(
+					test.HasExtension("knativeerrordest", "http://fake.svc.cluster.local"),
+				).
+				AtLeast(1)(ctx, t)
+		},
 	)
 	return f
 }
