@@ -40,7 +40,8 @@ func TestWriteRequestWithAdditionalHeadersWritesIntoRequest(t *testing.T) {
 	url, err := apis.ParseURL("http://foobar:12345")
 	assert.NoError(t, err)
 
-	request, err := NewCloudEventRequest(ctx, duckv1.Addressable{URL: url})
+	client := newClientImpl()
+	request, err := client.NewRequest(ctx, duckv1.Addressable{URL: url})
 	assert.NoError(t, err)
 
 	ceEvent := cloudevents.NewEvent()
@@ -54,10 +55,10 @@ func TestWriteRequestWithAdditionalHeadersWritesIntoRequest(t *testing.T) {
 	err = WriteRequestWithAdditionalHeaders(ctx, message, request, http.Header{})
 	assert.NoError(t, err)
 
-	assert.Equal(t, []string{ceSource}, request.Header["Ce-Source"])
-	assert.Equal(t, []string{ceType}, request.Header["Ce-Type"])
-	assert.Equal(t, []string{cloudevents.TextPlain}, request.Header["Content-Type"])
-	gotPayload, err := io.ReadAll(request.Body)
+	assert.Equal(t, []string{ceSource}, request.HTTPRequest().Header["Ce-Source"])
+	assert.Equal(t, []string{ceType}, request.HTTPRequest().Header["Ce-Type"])
+	assert.Equal(t, []string{cloudevents.TextPlain}, request.HTTPRequest().Header["Content-Type"])
+	gotPayload, err := io.ReadAll(request.HTTPRequest().Body)
 	assert.NoError(t, err)
 	assert.Equal(t, []byte(ceData), gotPayload)
 
@@ -69,7 +70,8 @@ func TestWriteRequestWithAdditionalHeadersAddsHeadersToRequest(t *testing.T) {
 	url, err := apis.ParseURL("http://foobar:12345")
 	assert.NoError(t, err)
 
-	request, err := NewCloudEventRequest(ctx, duckv1.Addressable{URL: url})
+	client := newClientImpl()
+	request, err := client.NewRequest(ctx, duckv1.Addressable{URL: url})
 	assert.NoError(t, err)
 
 	ceEvent := cloudevents.NewEvent()
@@ -83,8 +85,8 @@ func TestWriteRequestWithAdditionalHeadersAddsHeadersToRequest(t *testing.T) {
 	err = WriteRequestWithAdditionalHeaders(ctx, message, request, additionalHeaders)
 	assert.NoError(t, err)
 
-	assert.Equal(t, additionalHeaders["Some-Key"], request.Header["Some-Key"])
-	assert.Equal(t, additionalHeaders["Another-Key"], request.Header["Another-Key"])
+	assert.Equal(t, additionalHeaders["Some-Key"], request.HTTPRequest().Header["Some-Key"])
+	assert.Equal(t, additionalHeaders["Another-Key"], request.HTTPRequest().Header["Another-Key"])
 
 }
 

@@ -23,18 +23,42 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/cloudevents/sdk-go/v2/binding"
+	"github.com/cloudevents/sdk-go/v2/event"
+	"github.com/cloudevents/sdk-go/v2/protocol/http"
 	"github.com/hashicorp/go-retryablehttp"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 const RetryAfterHeader = "Retry-After"
 
-type CloudEventRequest struct {
+type Request interface {
+	BindEvent(context.Context, event.Event) error
+	Send() (*nethttp.Response, error)
+	SendWithRetries(config *RetryConfig) (*nethttp.Response, error)
+	HTTPRequest() *nethttp.Request
+}
+
+var _ Request = (*requestImpl)(nil)
+
+type requestImpl struct {
 	*nethttp.Request
 	Target duckv1.Addressable
 }
 
-func (req *CloudEventRequest) Send() (*nethttp.Response, error) {
+func (req *requestImpl) HTTPRequest() *nethttp.Request {
+	return req.Request
+}
+
+func (req *requestImpl) BindEvent(ctx context.Context, event event.Event) error {
+	message := binding.ToMessage(&event)
+	defer message.Finish(nil)
+
+	err := http.WriteRequest(ctx, message, req.HTTPRequest())
+	return err
+}
+
+func (req *requestImpl) Send() (*nethttp.Response, error) {
 	client, err := getClientForAddressable(req.Target)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get client for addressable: %w", err)
@@ -42,7 +66,7 @@ func (req *CloudEventRequest) Send() (*nethttp.Response, error) {
 	return client.Do(req.Request)
 }
 
-func (req *CloudEventRequest) SendWithRetries(config *RetryConfig) (*nethttp.Response, error) {
+func (req *requestImpl) SendWithRetries(config *RetryConfig) (*nethttp.Response, error) {
 	if config == nil {
 		return req.Send()
 	}
@@ -79,18 +103,6 @@ func (req *CloudEventRequest) SendWithRetries(config *RetryConfig) (*nethttp.Res
 	}
 
 	return retryableClient.Do(retryableReq)
-}
-
-func NewCloudEventRequest(ctx context.Context, target duckv1.Addressable) (*CloudEventRequest, error) {
-	nethttpReqest, err := nethttp.NewRequestWithContext(ctx, "POST", target.URL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return &CloudEventRequest{
-		Target:  target,
-		Request: nethttpReqest,
-	}, nil
 }
 
 // generateBackoffFunction returns a valid retryablehttp.Backoff implementation which

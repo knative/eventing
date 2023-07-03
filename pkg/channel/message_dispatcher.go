@@ -72,6 +72,7 @@ var _ MessageDispatcher = &MessageDispatcherImpl{}
 type MessageDispatcherImpl struct {
 	supportedSchemes sets.String
 
+	client kncloudevents.Client
 	logger *zap.Logger
 }
 
@@ -85,6 +86,7 @@ type DispatchExecutionInfo struct {
 func NewMessageDispatcher(logger *zap.Logger) *MessageDispatcherImpl {
 	return &MessageDispatcherImpl{
 		supportedSchemes: sets.NewString("http", "https"),
+		client:           kncloudevents.NewClient(),
 		logger:           logger,
 	}
 }
@@ -210,7 +212,7 @@ func (d *MessageDispatcherImpl) executeRequest(ctx context.Context,
 	ctx, span := trace.StartSpan(ctx, "knative.dev", trace.WithSpanKind(trace.SpanKindClient))
 	defer span.End()
 
-	req, err := kncloudevents.NewCloudEventRequest(ctx, *target)
+	req, err := d.client.NewRequest(ctx, *target)
 	if err != nil {
 		return ctx, nil, nil, &execInfo, err
 	}

@@ -42,6 +42,7 @@ import (
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/eventing/pkg/broker"
+	"knative.dev/eventing/pkg/kncloudevents"
 	reconcilertesting "knative.dev/pkg/reconciler/testing"
 
 	triggerinformerfake "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/trigger/fake"
@@ -438,6 +439,7 @@ func TestReceiver(t *testing.T) {
 			}
 			reporter := &mockReporter{}
 			r, err := NewHandler(
+				kncloudevents.NewClient(),
 				zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())),
 				triggerinformerfake.Get(ctx),
 				reporter,
@@ -608,6 +610,7 @@ func TestReceiver_WithSubscriptionsAPI(t *testing.T) {
 			}
 			reporter := &mockReporter{}
 			r, err := NewHandler(
+				kncloudevents.NewClient(),
 				zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())),
 				triggerinformerfake.Get(ctx),
 				reporter,

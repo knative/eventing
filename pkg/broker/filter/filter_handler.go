@@ -86,15 +86,15 @@ var HeaderProxyAllowList = map[string]struct{}{
 // Handler parses Cloud Events, determines if they pass a filter, and sends them to a subscriber.
 type Handler struct {
 	// reporter reports stats of status code and dispatch time
-	reporter StatsReporter
-
+	reporter      StatsReporter
+	client        kncloudevents.Client
 	triggerLister eventinglisters.TriggerLister
 	logger        *zap.Logger
 	withContext   func(ctx context.Context) context.Context
 }
 
 // NewHandler creates a new Handler and its associated MessageReceiver.
-func NewHandler(logger *zap.Logger, triggerInformer v1.TriggerInformer, reporter StatsReporter, wc func(ctx context.Context) context.Context) (*Handler, error) {
+func NewHandler(client kncloudevents.Client, logger *zap.Logger, triggerInformer v1.TriggerInformer, reporter StatsReporter, wc func(ctx context.Context) context.Context) (*Handler, error) {
 	kncloudevents.ConfigureConnectionArgs(&kncloudevents.ConnectionArgs{
 		MaxIdleConns:        defaultMaxIdleConnections,
 		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
@@ -135,6 +135,7 @@ func NewHandler(logger *zap.Logger, triggerInformer v1.TriggerInformer, reporter
 
 	return &Handler{
 		reporter:      reporter,
+		client:        client,
 		triggerLister: triggerInformer.Lister(),
 		logger:        logger,
 		withContext:   wc,
@@ -296,7 +297,7 @@ func (h *Handler) sendEvent(ctx context.Context, headers http.Header, target duc
 	}
 
 	// Send the event to the subscriber
-	req, err := kncloudevents.NewCloudEventRequest(ctx, target)
+	req, err := h.client.NewRequest(ctx, target)
 	if err != nil {
 		responseErr.err = fmt.Errorf("failed to create the request: %w", err)
 		return nil, responseErr

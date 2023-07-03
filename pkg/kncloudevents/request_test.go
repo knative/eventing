@@ -96,8 +96,9 @@ func TestCloudEventRequest_SendWithRetries(t *testing.T) {
 				writer.WriteHeader(tt.wantStatus)
 			}))
 
+			client := newClientImpl()
 			target := urlstrToAddressable(t, server.URL)
-			request, err := NewCloudEventRequest(ctx, target)
+			request, err := client.NewRequest(ctx, target)
 			assert.Nil(t, err)
 			got, err := request.SendWithRetries(tt.config)
 			if err != nil {
@@ -137,8 +138,9 @@ func TestCloudEventRequest_SendWithRetriesWithBufferedMessage(t *testing.T) {
 		}
 	}))
 
+	client := newClientImpl()
 	target := urlstrToAddressable(t, server.URL)
-	request, err := NewCloudEventRequest(context.TODO(), target)
+	request, err := client.NewRequest(context.TODO(), target)
 	assert.Nil(t, err)
 
 	// Create a message similar to the one we send with channels
@@ -146,7 +148,7 @@ func TestCloudEventRequest_SendWithRetriesWithBufferedMessage(t *testing.T) {
 	bufferedMessage, err := buffering.BufferMessage(context.TODO(), mockMessage)
 	assert.Nil(t, err)
 
-	err = cehttp.WriteRequest(context.TODO(), bufferedMessage, request.Request)
+	err = cehttp.WriteRequest(context.TODO(), bufferedMessage, request.HTTPRequest())
 	assert.Nil(t, err)
 
 	got, err := request.SendWithRetries(config)
@@ -189,7 +191,8 @@ func TestCloudEventRequest_SendWithRetriesWithSingleRequestTimeout(t *testing.T)
 	}
 
 	target := urlstrToAddressable(t, server.URL)
-	request, err := NewCloudEventRequest(context.TODO(), target)
+	client := newClientImpl()
+	request, err := client.NewRequest(context.TODO(), target)
 	require.NoError(t, err)
 
 	got, err := request.SendWithRetries(config)
@@ -263,8 +266,9 @@ func TestCloudEventRequest_SendWithRetriesOnNetworkErrors(t *testing.T) {
 		return checkRetry(ctx, resp, err)
 	}
 
+	client := newClientImpl()
 	targetAddressable := urlstrToAddressable(t, "http://"+target)
-	request, err := NewCloudEventRequest(context.TODO(), targetAddressable)
+	request, err := client.NewRequest(context.TODO(), targetAddressable)
 	assert.Nil(t, err)
 
 	_, err = request.SendWithRetries(&r)
