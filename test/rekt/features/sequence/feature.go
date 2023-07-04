@@ -79,7 +79,7 @@ func SequenceTest(channelTemplate channel_template.ChannelTemplate) *feature.Fea
 			t.Error("failed to get address of broker", err)
 		}
 		cfg := []manifest.CfgFn{
-			pingsource.WithSink(&duckv1.Destination{URI: sequenceUri}),
+			pingsource.WithSink(&duckv1.Destination{URI: sequenceUri.URL, CACerts: sequenceUri.CACerts}),
 			pingsource.WithData("text/plain", eventBody),
 		}
 		pingsource.Install(source, cfg...)(ctx, t)

@@ -153,7 +153,7 @@ func SendsEventsWithEventTypes() *feature.Feature {
 			t.Error("failed to get address of broker", err)
 		}
 		cfg := []manifest.CfgFn{
-			pingsource.WithSink(&duckv1.Destination{URI: brokeruri}),
+			pingsource.WithSink(&duckv1.Destination{URI: brokeruri.URL, CACerts: brokeruri.CACerts}),
 			pingsource.WithData("text/plain", "hello, world!"),
 		}
 		pingsource.Install(source, cfg...)(ctx, t)
