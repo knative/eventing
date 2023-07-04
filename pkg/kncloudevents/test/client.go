@@ -27,25 +27,25 @@ import (
 	"knative.dev/eventing/pkg/kncloudevents"
 )
 
-var _ kncloudevents.Client = (*Client)(nil)
+var _ kncloudevents.Client = (*FakeClient)(nil)
 
-func NewClient() *Client {
-	return &Client{
+func NewFakeClient() *FakeClient {
+	return &FakeClient{
 		sentEvents: make([]event.Event, 0),
 	}
 }
 
-type Client struct {
+type FakeClient struct {
 	delay      time.Duration
 	sentEvents []event.Event
 }
 
 // SentEvents returns all events sent within all requests of this client.
-func (c *Client) SentEvents() []event.Event {
+func (c *FakeClient) SentEvents() []event.Event {
 	return c.sentEvents
 }
 
-func (c *Client) Send(request *kncloudevents.Request) (*nethttp.Response, error) {
+func (c *FakeClient) Send(request *kncloudevents.Request) (*nethttp.Response, error) {
 	if c.delay > 0 {
 		time.Sleep(c.delay)
 	}
@@ -64,6 +64,6 @@ func (c *Client) Send(request *kncloudevents.Request) (*nethttp.Response, error)
 	}, nil
 }
 
-func (req *Client) SendWithRetries(request *kncloudevents.Request, config *kncloudevents.RetryConfig) (*nethttp.Response, error) {
+func (req *FakeClient) SendWithRetries(request *kncloudevents.Request, config *kncloudevents.RetryConfig) (*nethttp.Response, error) {
 	return req.Send(request)
 }

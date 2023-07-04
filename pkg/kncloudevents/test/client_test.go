@@ -52,7 +52,7 @@ func Test_Client_SentEvents(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.TODO()
 
-			imClient := NewClient()
+			imClient := NewFakeClient()
 
 			for _, event := range tt.eventsToSend {
 				req, err := kncloudevents.NewRequest(ctx, duckv1.Addressable{
