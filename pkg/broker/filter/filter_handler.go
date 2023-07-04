@@ -297,7 +297,7 @@ func (h *Handler) sendEvent(ctx context.Context, headers http.Header, target duc
 	}
 
 	// Send the event to the subscriber
-	req, err := h.client.NewRequest(ctx, target)
+	req, err := kncloudevents.NewRequest(ctx, target)
 	if err != nil {
 		responseErr.err = fmt.Errorf("failed to create the request: %w", err)
 		return nil, responseErr
@@ -319,7 +319,7 @@ func (h *Handler) sendEvent(ctx context.Context, headers http.Header, target duc
 	}
 
 	start := time.Now()
-	resp, err := req.Send()
+	resp, err := h.client.Send(req)
 	dispatchTime := time.Since(start)
 	if err != nil {
 		responseErr.ResponseCode = http.StatusInternalServerError

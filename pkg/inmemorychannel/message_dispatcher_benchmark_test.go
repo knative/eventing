@@ -102,12 +102,12 @@ func BenchmarkDispatcher_dispatch_ok_through_2_channels(b *testing.B) {
 	// Start the bench
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		req, _ := client.NewRequest(context.Background(), *channelA)
+		req, _ := kncloudevents.NewRequest(context.Background(), *channelA)
 
 		event := test.FullEvent()
 		_ = protocolhttp.WriteRequest(context.Background(), binding.ToMessage(&event), req.HTTPRequest())
 
-		_, _ = req.Send()
+		_, _ = client.Send(req)
 	}
 }
 

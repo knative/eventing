@@ -40,8 +40,7 @@ func TestWriteRequestWithAdditionalHeadersWritesIntoRequest(t *testing.T) {
 	url, err := apis.ParseURL("http://foobar:12345")
 	assert.NoError(t, err)
 
-	client := newClientImpl()
-	request, err := client.NewRequest(ctx, duckv1.Addressable{URL: url})
+	request, err := NewRequest(ctx, duckv1.Addressable{URL: url})
 	assert.NoError(t, err)
 
 	ceEvent := cloudevents.NewEvent()
@@ -70,8 +69,7 @@ func TestWriteRequestWithAdditionalHeadersAddsHeadersToRequest(t *testing.T) {
 	url, err := apis.ParseURL("http://foobar:12345")
 	assert.NoError(t, err)
 
-	client := newClientImpl()
-	request, err := client.NewRequest(ctx, duckv1.Addressable{URL: url})
+	request, err := NewRequest(ctx, duckv1.Addressable{URL: url})
 	assert.NoError(t, err)
 
 	ceEvent := cloudevents.NewEvent()
@@ -87,7 +85,6 @@ func TestWriteRequestWithAdditionalHeadersAddsHeadersToRequest(t *testing.T) {
 
 	assert.Equal(t, additionalHeaders["Some-Key"], request.HTTPRequest().Header["Some-Key"])
 	assert.Equal(t, additionalHeaders["Another-Key"], request.HTTPRequest().Header["Another-Key"])
-
 }
 
 // If reader's message does have Type attribute

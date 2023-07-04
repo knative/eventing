@@ -40,7 +40,7 @@ func WriteHTTPRequestWithAdditionalHeaders(ctx context.Context, message binding.
 	return nil
 }
 
-func WriteRequestWithAdditionalHeaders(ctx context.Context, message binding.Message, req Request,
+func WriteRequestWithAdditionalHeaders(ctx context.Context, message binding.Message, req *Request,
 	additionalHeaders nethttp.Header, transformers ...binding.Transformer) error {
 	return WriteHTTPRequestWithAdditionalHeaders(ctx, message, req.HTTPRequest(), additionalHeaders, transformers...)
 }

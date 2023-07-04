@@ -48,7 +48,7 @@ const (
 	Invalid
 )
 
-func TestCloudEventRequest_SendWithRetries(t *testing.T) {
+func Test_clientImpl_SendWithRetries(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -98,9 +98,9 @@ func TestCloudEventRequest_SendWithRetries(t *testing.T) {
 
 			client := newClientImpl()
 			target := urlstrToAddressable(t, server.URL)
-			request, err := client.NewRequest(ctx, target)
+			request, err := NewRequest(ctx, target)
 			assert.Nil(t, err)
-			got, err := request.SendWithRetries(tt.config)
+			got, err := client.SendWithRetries(request, tt.config)
 			if err != nil {
 				t.Fatalf("SendWithRetries() error = %v, wantErr nil", err)
 			}
@@ -114,7 +114,7 @@ func TestCloudEventRequest_SendWithRetries(t *testing.T) {
 	}
 }
 
-func TestCloudEventRequest_SendWithRetriesWithBufferedMessage(t *testing.T) {
+func Test_clientImpl_SendWithRetriesWithBufferedMessage(t *testing.T) {
 	t.Parallel()
 
 	const wantToSkip = 9
@@ -140,7 +140,7 @@ func TestCloudEventRequest_SendWithRetriesWithBufferedMessage(t *testing.T) {
 
 	client := newClientImpl()
 	target := urlstrToAddressable(t, server.URL)
-	request, err := client.NewRequest(context.TODO(), target)
+	request, err := NewRequest(context.TODO(), target)
 	assert.Nil(t, err)
 
 	// Create a message similar to the one we send with channels
@@ -151,7 +151,7 @@ func TestCloudEventRequest_SendWithRetriesWithBufferedMessage(t *testing.T) {
 	err = cehttp.WriteRequest(context.TODO(), bufferedMessage, request.HTTPRequest())
 	assert.Nil(t, err)
 
-	got, err := request.SendWithRetries(config)
+	got, err := client.SendWithRetries(request, config)
 	if err != nil {
 		t.Fatalf("SendWithRetries() error = %v, wantErr nil", err)
 	}
@@ -163,7 +163,7 @@ func TestCloudEventRequest_SendWithRetriesWithBufferedMessage(t *testing.T) {
 	}
 }
 
-func TestCloudEventRequest_SendWithRetriesWithSingleRequestTimeout(t *testing.T) {
+func Test_clientImpl_SendWithRetriesWithSingleRequestTimeout(t *testing.T) {
 	t.Parallel()
 
 	timeout := time.Second * 3
@@ -192,17 +192,17 @@ func TestCloudEventRequest_SendWithRetriesWithSingleRequestTimeout(t *testing.T)
 
 	target := urlstrToAddressable(t, server.URL)
 	client := newClientImpl()
-	request, err := client.NewRequest(context.TODO(), target)
+	request, err := NewRequest(context.TODO(), target)
 	require.NoError(t, err)
 
-	got, err := request.SendWithRetries(config)
+	got, err := client.SendWithRetries(request, config)
 
 	require.Equal(t, 5, int(atomic.LoadInt32(&n)))
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, got.StatusCode)
 }
 
-func TestCloudEventRequest_SendWithRetriesOnNetworkErrors(t *testing.T) {
+func Test_clientImpl_SendWithRetriesOnNetworkErrors(t *testing.T) {
 
 	n := int32(10)
 	linear := v1.BackoffPolicyLinear
@@ -268,10 +268,10 @@ func TestCloudEventRequest_SendWithRetriesOnNetworkErrors(t *testing.T) {
 
 	client := newClientImpl()
 	targetAddressable := urlstrToAddressable(t, "http://"+target)
-	request, err := client.NewRequest(context.TODO(), targetAddressable)
+	request, err := NewRequest(context.TODO(), targetAddressable)
 	assert.Nil(t, err)
 
-	_, err = request.SendWithRetries(&r)
+	_, err = client.SendWithRetries(request, &r)
 	assert.Nil(t, err)
 
 	// nCalls keeps track of how many times a call to check retry occurs.

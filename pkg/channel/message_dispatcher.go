@@ -212,7 +212,7 @@ func (d *MessageDispatcherImpl) executeRequest(ctx context.Context,
 	ctx, span := trace.StartSpan(ctx, "knative.dev", trace.WithSpanKind(trace.SpanKindClient))
 	defer span.End()
 
-	req, err := d.client.NewRequest(ctx, *target)
+	req, err := kncloudevents.NewRequest(ctx, *target)
 	if err != nil {
 		return ctx, nil, nil, &execInfo, err
 	}
@@ -227,7 +227,7 @@ func (d *MessageDispatcherImpl) executeRequest(ctx context.Context,
 	}
 
 	start := time.Now()
-	response, err := req.SendWithRetries(configs)
+	response, err := d.client.SendWithRetries(req, configs)
 	dispatchTime := time.Since(start)
 	if err != nil {
 		execInfo.Time = dispatchTime
