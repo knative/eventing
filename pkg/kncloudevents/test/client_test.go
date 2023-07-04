@@ -41,7 +41,7 @@ func Test_inMemoryRequest_SentEvents(t *testing.T) {
 			wantReceivedEvents: 0,
 		},
 		{
-			name: "Should count received events correclty",
+			name: "Should count received events correctly",
 			eventsToSend: []event.Event{
 				test.FullEvent(),
 				test.FullEvent(),
