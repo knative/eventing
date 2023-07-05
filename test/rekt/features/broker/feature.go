@@ -162,19 +162,22 @@ func ManyTriggers() *feature.FeatureSet {
 				eventshub.InputEvent(eventToSend),
 			))
 
+			f.Assert("source sent event", eventasssert.OnStore(source).
+				MatchSentEvent(test.HasId(eventToSend.ID())).
+				AtLeast(1),
+			)
+
 			for sink, eventFilter := range testcase.eventFilters {
 
 				// Check on every dumper whether we should expect this event or not
 				if eventFilter.toEventMatcher()(eventToSend) == nil {
-
-					f.Stable("test message without explicit prefer header should have the header").
-						Must("delivers events", func(ctx context.Context, t feature.T) {
-							eventasssert.OnStore(sink).
-								Match(features.HasKnNamespaceHeader(environment.FromContext(ctx).Namespace())).
-								MatchEvent(test.HasId(eventToSend.ID())).
-								MatchEvent(event.toEventMatcher()).
-								AtLeast(1)(ctx, t)
-						})
+					f.Assert(fmt.Sprintf("%s receive event %s", sink, eventToSend.ID()), func(ctx context.Context, t feature.T) {
+						eventasssert.OnStore(sink).
+							Match(features.HasKnNamespaceHeader(environment.FromContext(ctx).Namespace())).
+							MatchReceivedEvent(test.HasId(eventToSend.ID())).
+							MatchReceivedEvent(event.toEventMatcher()).
+							AtLeast(1)(ctx, t)
+					})
 				}
 			}
 		}
