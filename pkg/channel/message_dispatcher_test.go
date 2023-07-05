@@ -33,7 +33,6 @@ import (
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"
 	"github.com/cloudevents/sdk-go/v2/binding/transformer"
-	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"github.com/cloudevents/sdk-go/v2/test"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
@@ -43,11 +42,12 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	rectesting "knative.dev/pkg/reconciler/testing"
 
+	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+
 	"knative.dev/eventing/pkg/eventingtls/eventingtlstesting"
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/utils"
-	"knative.dev/pkg/apis"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 var (
@@ -945,9 +945,9 @@ func TestDispatchMessageToTLSEndpoint(t *testing.T) {
 	eventToSend := test.FullEvent()
 
 	// destination
-	destinationRequestsChan := make(chan *http.Request, 10)
-	destinationReceivedEvents := make([]*cloudevents.Event, 0, 10)
-	destinationHandler := eventingtlstesting.RequestsChannelHandler(destinationRequestsChan)
+	destinationEventsChan := make(chan cloudevents.Event, 10)
+	destinationReceivedEvents := make([]cloudevents.Event, 0, 10)
+	destinationHandler := eventingtlstesting.EventChannelHandler(destinationEventsChan)
 	destinationCA := eventingtlstesting.StartServer(ctx, t, 8334, destinationHandler, kncloudevents.WithDrainQuietPeriod(time.Millisecond))
 	destination := duckv1.Addressable{
 		URL:     apis.HTTPS("localhost:8334"),
@@ -957,16 +957,8 @@ func TestDispatchMessageToTLSEndpoint(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		for r := range destinationRequestsChan {
-			func() {
-				message := cehttp.NewMessageFromHttpRequest(r)
-				defer message.Finish(nil)
-
-				event, err := binding.ToEvent(ctx, message)
-				require.Nil(t, err)
-
-				destinationReceivedEvents = append(destinationReceivedEvents, event)
-			}()
+		for event := range destinationEventsChan {
+			destinationReceivedEvents = append(destinationReceivedEvents, event)
 		}
 	}()
 
@@ -979,7 +971,7 @@ func TestDispatchMessageToTLSEndpoint(t *testing.T) {
 	require.Equal(t, 200, info.ResponseCode)
 
 	// check received events
-	close(destinationRequestsChan)
+	close(destinationEventsChan)
 	wg.Wait()
 
 	require.Len(t, destinationReceivedEvents, 1)
@@ -1018,9 +1010,9 @@ func TestDispatchMessageToTLSEndpointWithReply(t *testing.T) {
 	}
 
 	// reply
-	replyRequestsChan := make(chan *http.Request, 10)
-	replyHandler := eventingtlstesting.RequestsChannelHandler(replyRequestsChan)
-	replyReceivedEvents := make([]*cloudevents.Event, 0, 10)
+	replyEventChan := make(chan cloudevents.Event, 10)
+	replyHandler := eventingtlstesting.EventChannelHandler(replyEventChan)
+	replyReceivedEvents := make([]cloudevents.Event, 0, 10)
 	replyCA := eventingtlstesting.StartServer(ctxReply, t, 8335, replyHandler, kncloudevents.WithDrainQuietPeriod(time.Millisecond))
 	reply := duckv1.Addressable{
 		URL:     apis.HTTPS("localhost:8335"),
@@ -1030,16 +1022,8 @@ func TestDispatchMessageToTLSEndpointWithReply(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		for r := range replyRequestsChan {
-			func() {
-				message := cehttp.NewMessageFromHttpRequest(r)
-				defer message.Finish(nil)
-
-				event, err := binding.ToEvent(ctx, message)
-				require.Nil(t, err)
-
-				replyReceivedEvents = append(replyReceivedEvents, event)
-			}()
+		for event := range replyEventChan {
+			replyReceivedEvents = append(replyReceivedEvents, event)
 		}
 	}()
 
@@ -1052,7 +1036,7 @@ func TestDispatchMessageToTLSEndpointWithReply(t *testing.T) {
 	require.Equal(t, 200, info.ResponseCode)
 
 	// check received events
-	close(replyRequestsChan)
+	close(replyEventChan)
 	wg.Wait()
 
 	require.Len(t, replyReceivedEvents, 1)
@@ -1086,9 +1070,9 @@ func TestDispatchMessageToTLSEndpointWithDeadLetterSink(t *testing.T) {
 	}
 
 	// dls
-	dlsRequestsChan := make(chan *http.Request, 10)
-	dlsHandler := eventingtlstesting.RequestsChannelHandler(dlsRequestsChan)
-	dlsReceivedEvents := make([]*cloudevents.Event, 0, 10)
+	dlsEventChan := make(chan cloudevents.Event, 10)
+	dlsHandler := eventingtlstesting.EventChannelHandler(dlsEventChan)
+	dlsReceivedEvents := make([]cloudevents.Event, 0, 10)
 	dlsCA := eventingtlstesting.StartServer(ctxDls, t, 8335, dlsHandler, kncloudevents.WithDrainQuietPeriod(time.Millisecond))
 	dls := duckv1.Addressable{
 		URL:     apis.HTTPS("localhost:8335"),
@@ -1098,16 +1082,8 @@ func TestDispatchMessageToTLSEndpointWithDeadLetterSink(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		for r := range dlsRequestsChan {
-			func() {
-				message := cehttp.NewMessageFromHttpRequest(r)
-				defer message.Finish(nil)
-
-				event, err := binding.ToEvent(ctx, message)
-				require.Nil(t, err)
-
-				dlsReceivedEvents = append(dlsReceivedEvents, event)
-			}()
+		for event := range dlsEventChan {
+			dlsReceivedEvents = append(dlsReceivedEvents, event)
 		}
 	}()
 
@@ -1120,7 +1096,7 @@ func TestDispatchMessageToTLSEndpointWithDeadLetterSink(t *testing.T) {
 	require.Equal(t, 200, info.ResponseCode)
 
 	// check received events
-	close(dlsRequestsChan)
+	close(dlsEventChan)
 	wg.Wait()
 
 	require.Len(t, dlsReceivedEvents, 1)
