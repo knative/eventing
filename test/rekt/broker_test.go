@@ -47,7 +47,7 @@ func TestBrokerWithManyTriggers(t *testing.T) {
 		environment.WithPollTimings(5*time.Second, 4*time.Minute),
 	)
 
-	env.Test(ctx, t, broker.BrokerWithManyTriggers())
+	env.TestSet(ctx, t, broker.ManyTriggers())
 }
 
 // TestBrokerWorkFlowWithTransformation test broker transformation respectively follow
