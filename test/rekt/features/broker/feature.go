@@ -168,6 +168,8 @@ func ManyTriggers() *feature.FeatureSet {
 			)
 
 			for sink, eventFilter := range testcase.eventFilters {
+				sink := sink                      // capture variable
+				matcher := event.toEventMatcher() // capture variable
 
 				// Check on every dumper whether we should expect this event or not
 				if eventFilter.toEventMatcher()(eventToSend) == nil {
@@ -175,7 +177,7 @@ func ManyTriggers() *feature.FeatureSet {
 						eventasssert.OnStore(sink).
 							Match(features.HasKnNamespaceHeader(environment.FromContext(ctx).Namespace())).
 							MatchReceivedEvent(test.HasId(eventToSend.ID())).
-							MatchReceivedEvent(event.toEventMatcher()).
+							MatchReceivedEvent(matcher).
 							AtLeast(1)(ctx, t)
 					})
 				}
