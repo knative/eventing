@@ -20,15 +20,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
-	nethttp "net/http"
 	"reflect"
 	"sync"
 	"testing"
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
-	"github.com/cloudevents/sdk-go/v2/binding"
-	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
@@ -233,25 +230,17 @@ func TestAddRunRemoveSchedules(t *testing.T) {
 func TestSendEventsTLS(t *testing.T) {
 
 	ctx, _ := rectesting.SetupFakeContext(t)
-	requestsChan := make(chan *nethttp.Request, 10)
-	handler := eventingtlstesting.RequestsChannelHandler(requestsChan)
-	events := make([]*cloudevents.Event, 0, 8)
+	eventsChan := make(chan cloudevents.Event, 10)
+	handler := eventingtlstesting.EventChannelHandler(eventsChan)
+	events := make([]cloudevents.Event, 0, 8)
 	ca := eventingtlstesting.StartServer(ctx, t, 8334, handler)
 
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		for r := range requestsChan {
-			func() {
-				message := cehttp.NewMessageFromHttpRequest(r)
-				defer message.Finish(nil)
-
-				event, err := binding.ToEvent(ctx, message)
-				require.Nil(t, err)
-
-				events = append(events, event)
-			}()
+		for event := range eventsChan {
+			events = append(events, event)
 		}
 	}()
 
@@ -327,7 +316,7 @@ func TestSendEventsTLS(t *testing.T) {
 		})
 	}
 
-	close(requestsChan)
+	close(eventsChan)
 	wg.Wait()
 
 	require.Len(t, events, 1)
