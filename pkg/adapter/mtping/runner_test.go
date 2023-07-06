@@ -233,7 +233,8 @@ func TestSendEventsTLS(t *testing.T) {
 	eventsChan := make(chan cloudevents.Event, 10)
 	handler := eventingtlstesting.EventChannelHandler(eventsChan)
 	events := make([]cloudevents.Event, 0, 8)
-	ca := eventingtlstesting.StartServer(ctx, t, 8334, handler)
+	ca := eventingtlstesting.StartServer(ctx, t, 8500, handler)
+	hostString := "localhost:8500"
 
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -265,7 +266,7 @@ func TestSendEventsTLS(t *testing.T) {
 				},
 				Status: sourcesv1.PingSourceStatus{
 					SourceStatus: duckv1.SourceStatus{
-						SinkURI:     &apis.URL{Scheme: "https", Host: "localhost:8334"},
+						SinkURI:     &apis.URL{Scheme: "https", Host: hostString},
 						SinkCACerts: pointer.String(ca),
 					},
 				},
@@ -289,7 +290,7 @@ func TestSendEventsTLS(t *testing.T) {
 				},
 				Status: sourcesv1.PingSourceStatus{
 					SourceStatus: duckv1.SourceStatus{
-						SinkURI: &apis.URL{Scheme: "https", Host: "localhost:8334"},
+						SinkURI: &apis.URL{Scheme: "https", Host: hostString},
 					},
 				},
 			},
