@@ -18,6 +18,7 @@ linters:
     - prealloc
     - unconvert
     - unparam
+    - loopclosure
   disable:
     - errcheck
 
