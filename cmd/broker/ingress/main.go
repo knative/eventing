@@ -41,9 +41,12 @@ import (
 	tracingconfig "knative.dev/pkg/tracing/config"
 
 	cmdbroker "knative.dev/eventing/cmd/broker"
+	"knative.dev/eventing/pkg/apis/feature"
 	broker "knative.dev/eventing/pkg/broker"
 	"knative.dev/eventing/pkg/broker/ingress"
+	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	brokerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/broker"
+	eventtypeinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta2/eventtype"
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/reconciler/names"
 )
@@ -136,6 +139,9 @@ func main() {
 		logger.Fatal("Unable to create message sender", zap.Error(err))
 	}
 
+	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"))
+	featureStore.WatchConfigs(configMapWatcher)
+
 	reporter := ingress.NewStatsReporter(env.ContainerName, kmeta.ChildName(env.PodName, uuid.New().String()))
 
 	h := &ingress.Handler{
@@ -150,6 +156,17 @@ func main() {
 	// configMapWatcher does not block, so start it first.
 	if err = configMapWatcher.Start(ctx.Done()); err != nil {
 		logger.Warn("Failed to start ConfigMap watcher", zap.Error(err))
+	}
+
+	// Init auto-create only if enabled, after ConfigMap watcher is started
+	if featureStore.IsEnabled(feature.EvenTypeAutoCreate) {
+		autoCreate := &broker.EventTypeAutoHandler{
+			EventTypeLister: eventtypeinformer.Get(ctx).Lister(),
+			EventingClient:  eventingclient.Get(ctx).EventingV1beta2(),
+			FeatureStore:    featureStore,
+			Logger:          logger,
+		}
+		h.EvenTypeHandler = autoCreate
 	}
 
 	// Start all of the informers and wait for them to sync.

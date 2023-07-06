@@ -26,9 +26,11 @@ import (
 	"github.com/cloudevents/sdk-go/v2/binding/spec"
 	"github.com/cloudevents/sdk-go/v2/test"
 	"github.com/google/uuid"
+	"knative.dev/reconciler-test/pkg/environment"
 
 	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	"knative.dev/eventing/test/rekt/features"
 	"knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/eventing/test/rekt/resources/channel"
 	"knative.dev/eventing/test/rekt/resources/subscription"
@@ -44,8 +46,8 @@ import (
 	"knative.dev/reconciler-test/pkg/resources/service"
 )
 
-func BrokerWithManyTriggers() *feature.Feature {
-	f := feature.NewFeatureNamed("broker With Many Triggers")
+func ManyTriggers() *feature.FeatureSet {
+	fs := &feature.FeatureSet{Name: "Broker with many triggers"}
 
 	// Construct different type, source and extensions of events
 	any := eventingv1.TriggerAnyFilter
@@ -64,20 +66,20 @@ func BrokerWithManyTriggers() *feature.Feature {
 	nonMatchingExtensionValue := "nonmatchingextval"
 
 	eventFilters1 := make(map[string]eventTestCase)
-	eventFilters1["dumper-1"] = neweventTestCase(any, any)
-	eventFilters1["dumper-12"] = neweventTestCase(eventType1, any)
-	eventFilters1["dumper-123"] = neweventTestCase(any, eventSource1)
-	eventFilters1["dumper-1234"] = neweventTestCase(eventType1, eventSource1)
+	eventFilters1["dumper-1"] = newEventTestCase(any, any)
+	eventFilters1["dumper-12"] = newEventTestCase(eventType1, any)
+	eventFilters1["dumper-123"] = newEventTestCase(any, eventSource1)
+	eventFilters1["dumper-1234"] = newEventTestCase(eventType1, eventSource1)
 
 	eventFilters2 := make(map[string]eventTestCase)
-	eventFilters2["dumper-12345"] = neweventTestCaseWithExtensions(any, any, map[string]interface{}{extensionName1: extensionValue1})
-	eventFilters2["dumper-123456"] = neweventTestCaseWithExtensions(any, any, map[string]interface{}{extensionName1: extensionValue1, extensionName2: extensionValue2})
-	eventFilters2["dumper-1234567"] = neweventTestCaseWithExtensions(any, any, map[string]interface{}{extensionName2: extensionValue2})
-	eventFilters2["dumper-654321"] = neweventTestCaseWithExtensions(eventType1, any, map[string]interface{}{extensionName1: extensionValue1})
-	eventFilters2["dumper-54321"] = neweventTestCaseWithExtensions(any, any, map[string]interface{}{extensionName1: any})
-	eventFilters2["dumper-4321"] = neweventTestCaseWithExtensions(any, eventSource1, map[string]interface{}{extensionName1: extensionValue1})
-	eventFilters2["dumper-321"] = neweventTestCaseWithExtensions(any, eventSource1, map[string]interface{}{extensionName1: extensionValue1, extensionName2: extensionValue2})
-	eventFilters2["dumper-21"] = neweventTestCaseWithExtensions(any, eventSource2, map[string]interface{}{extensionName1: extensionValue1, extensionName2: extensionValue1})
+	eventFilters2["dumper-12345"] = newEventTestCaseWithExtensions(any, any, map[string]interface{}{extensionName1: extensionValue1})
+	eventFilters2["dumper-123456"] = newEventTestCaseWithExtensions(any, any, map[string]interface{}{extensionName1: extensionValue1, extensionName2: extensionValue2})
+	eventFilters2["dumper-1234567"] = newEventTestCaseWithExtensions(any, any, map[string]interface{}{extensionName2: extensionValue2})
+	eventFilters2["dumper-654321"] = newEventTestCaseWithExtensions(eventType1, any, map[string]interface{}{extensionName1: extensionValue1})
+	eventFilters2["dumper-54321"] = newEventTestCaseWithExtensions(any, any, map[string]interface{}{extensionName1: any})
+	eventFilters2["dumper-4321"] = newEventTestCaseWithExtensions(any, eventSource1, map[string]interface{}{extensionName1: extensionValue1})
+	eventFilters2["dumper-321"] = newEventTestCaseWithExtensions(any, eventSource1, map[string]interface{}{extensionName1: extensionValue1, extensionName2: extensionValue2})
+	eventFilters2["dumper-21"] = newEventTestCaseWithExtensions(any, eventSource2, map[string]interface{}{extensionName1: extensionValue1, extensionName2: extensionValue1})
 
 	tests := []struct {
 		name string
@@ -113,17 +115,16 @@ func BrokerWithManyTriggers() *feature.Feature {
 		},
 	}
 
-	// Map to save the expected matchers per dumper so that we can verify the delivery.
-	// matcherBySink is to verify the sink and corresponding matcher
-	matcherBySink := make(map[string][]eventshub.EventInfoMatcher)
-
-	// Create the broker
-	brokerName := feature.MakeRandomK8sName("broker")
-	f.Setup("install broker", broker.Install(brokerName, broker.WithEnvConfig()...))
-	f.Setup("broker is ready", broker.IsReady(brokerName))
-	f.Setup("broker is addressable", broker.IsAddressable(brokerName))
-
 	for _, testcase := range tests {
+
+		f := feature.NewFeatureNamed(testcase.name)
+
+		// Create the broker
+		brokerName := feature.MakeRandomK8sName("broker")
+		f.Setup("install broker", broker.Install(brokerName, broker.WithEnvConfig()...))
+		f.Setup("broker is ready", broker.IsReady(brokerName))
+		f.Setup("broker is addressable", broker.IsAddressable(brokerName))
+
 		for sink, eventFilter := range testcase.eventFilters {
 			f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 			filter := eventingv1.TriggerFilterAttributes{
@@ -139,20 +140,19 @@ func BrokerWithManyTriggers() *feature.Feature {
 			}
 
 			// Install the trigger
-			via := feature.MakeRandomK8sName("via")
-			f.Setup("install trigger", trigger.Install(via, brokerName, cfg...))
-			f.Setup("trigger goes ready", trigger.IsReady(via))
+			f.Setup("install trigger", trigger.Install(sink, brokerName, cfg...))
+			f.Setup("trigger goes ready", trigger.IsReady(sink))
 		}
 
 		for _, event := range testcase.eventsToSend {
 			eventToSend := cloudevents.NewEvent()
-			eventToSend.SetID(uuid.New().String())
+			eventToSend.SetID(event.toID())
 			eventToSend.SetType(event.Type)
 			eventToSend.SetSource(event.Source)
 			for k, v := range event.Extensions {
 				eventToSend.SetExtension(k, v)
 			}
-			data := fmt.Sprintf(`{"msg":"%s"}`, uuid.New())
+			data := fmt.Sprintf(`{"msg":"%s"}`, eventToSend.ID())
 			eventToSend.SetData(cloudevents.ApplicationJSON, []byte(data))
 
 			source := feature.MakeRandomK8sName("source")
@@ -162,39 +162,32 @@ func BrokerWithManyTriggers() *feature.Feature {
 				eventshub.InputEvent(eventToSend),
 			))
 
-			// Sent event matcher
-			sentEventMatcher := test.AllOf(
-				test.HasId(eventToSend.ID()),
-				event.toEventMatcher(),
+			f.Assert("source sent event", eventasssert.OnStore(source).
+				MatchSentEvent(test.HasId(eventToSend.ID())).
+				AtLeast(1),
 			)
 
-			// Check on every dumper whether we should expect this event or not
 			for sink, eventFilter := range testcase.eventFilters {
+				sink := sink                      // capture variable
+				matcher := event.toEventMatcher() // capture variable
 
+				// Check on every dumper whether we should expect this event or not
 				if eventFilter.toEventMatcher()(eventToSend) == nil {
-					// This filter should match this event
-					matcherBySink[sink] = append(
-						matcherBySink[sink],
-						eventasssert.MatchEvent(sentEventMatcher),
-					)
+					f.Assert(fmt.Sprintf("%s receive event %s", sink, eventToSend.ID()), func(ctx context.Context, t feature.T) {
+						eventasssert.OnStore(sink).
+							Match(features.HasKnNamespaceHeader(environment.FromContext(ctx).Namespace())).
+							MatchReceivedEvent(test.HasId(eventToSend.ID())).
+							MatchReceivedEvent(matcher).
+							AtLeast(1)(ctx, t)
+					})
 				}
 			}
 		}
 
-		// Let's check that all expected matchers are fulfilled
-		for sink, matchers := range matcherBySink {
-			for _, matcher := range matchers {
-				// One match per event is enough
-				f.Stable("test message without explicit prefer header should have the header").
-					Must("delivers events",
-						eventasssert.OnStore(sink).Match(
-							matcher,
-						).AtLeast(1))
-			}
-		}
+		fs.Features = append(fs.Features, f)
 	}
 
-	return f
+	return fs
 }
 
 func BrokerWorkFlowWithTransformation() *feature.FeatureSet {
@@ -628,14 +621,19 @@ func brokerRedeliveryDropN(retryNum int32, dropNum uint) *feature.Feature {
 
 	f.Stable("Broker Redelivery failed the first n events").
 		Must("delivers events",
-			eventasssert.OnStore(sink).Match(
-				eventasssert.MatchKind(eventasssert.EventReceived),
-				eventasssert.MatchEvent(
-					test.HasSource(eventSource),
-					test.HasType(eventType),
-					test.HasData([]byte(eventBody)),
-				),
-			).AtLeast(1))
+			func(ctx context.Context, t feature.T) {
+				eventasssert.OnStore(sink).
+					Match(features.HasKnNamespaceHeader(environment.FromContext(ctx).Namespace())).
+					Match(
+						eventasssert.MatchKind(eventasssert.EventReceived),
+						eventasssert.MatchEvent(
+							test.HasSource(eventSource),
+							test.HasType(eventType),
+							test.HasData([]byte(eventBody)),
+						),
+					).
+					AtLeast(1)(ctx, t)
+			})
 
 	return f
 }
@@ -693,11 +691,14 @@ func brokerSubscriberUnreachable() *feature.Feature {
 	))
 
 	f.Assert("Receives dls extensions when subscriber is unreachable",
-		eventasssert.OnStore(sink).
-			MatchEvent(
-				test.HasExtension("knativeerrordest", "http://fake.svc.cluster.local"),
-			).
-			AtLeast(1),
+		func(ctx context.Context, t feature.T) {
+			eventasssert.OnStore(sink).
+				Match(features.HasKnNamespaceHeader(environment.FromContext(ctx).Namespace())).
+				MatchEvent(
+					test.HasExtension("knativeerrordest", "http://fake.svc.cluster.local"),
+				).
+				AtLeast(1)(ctx, t)
+		},
 	)
 	return f
 }
@@ -752,7 +753,7 @@ func brokerSubscriberErrorNodata() *feature.Feature {
 		sink,
 		func(ctx context.Context) test.EventMatcher {
 			failerAddress, _ := service.Address(ctx, failer)
-			return test.HasExtension("knativeerrordest", failerAddress.String())
+			return test.HasExtension("knativeerrordest", failerAddress.URL.String())
 		},
 		func(ctx context.Context) test.EventMatcher {
 			return test.HasExtension("knativeerrorcode", "422")
@@ -814,7 +815,7 @@ func brokerSubscriberErrorWithdata() *feature.Feature {
 		sink,
 		func(ctx context.Context) test.EventMatcher {
 			failerAddress, _ := service.Address(ctx, failer)
-			return test.HasExtension("knativeerrordest", failerAddress.String())
+			return test.HasExtension("knativeerrordest", failerAddress.URL.String())
 		},
 		func(ctx context.Context) test.EventMatcher {
 			return test.HasExtension("knativeerrorcode", "422")
@@ -997,11 +998,11 @@ type eventTestCase struct {
 	Extensions map[string]interface{}
 }
 
-func neweventTestCase(tp, source string) eventTestCase {
+func newEventTestCase(tp, source string) eventTestCase {
 	return eventTestCase{Type: tp, Source: source}
 }
 
-func neweventTestCaseWithExtensions(tp string, source string, extensions map[string]interface{}) eventTestCase {
+func newEventTestCaseWithExtensions(tp string, source string, extensions map[string]interface{}) eventTestCase {
 	return eventTestCase{Type: tp, Source: source, Extensions: extensions}
 }
 
@@ -1029,4 +1030,12 @@ func (tc eventTestCase) toEventMatcher() test.EventMatcher {
 	}
 
 	return test.AllOf(matchers...)
+}
+
+func (tc eventTestCase) toID() string {
+	id := fmt.Sprintf("%s-%s", tc.Type, tc.Source)
+	for k, v := range tc.Extensions {
+		id += fmt.Sprintf("-%s_%s", k, v)
+	}
+	return id
 }

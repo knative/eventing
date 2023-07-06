@@ -17,13 +17,13 @@ limitations under the License.
 package new_trigger_filters
 
 import (
-	"context"
 	"fmt"
 
 	. "github.com/cloudevents/sdk-go/v2/test"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	. "knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
+	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/manifest"
 	"knative.dev/reconciler-test/pkg/resources/service"
 
@@ -78,22 +78,17 @@ func FiltersFeatureSet(brokerName string) *feature.FeatureSet {
 
 		f.Setup("Install trigger", trigger.Install(triggerName, brokerName, cfg...))
 		f.Setup("Wait for trigger to become ready", trigger.IsReady(triggerName))
+		f.Setup("Broker is addressable", k8s.IsAddressable(broker.GVR(), brokerName))
 
-		f.Requirement("Install matched event sender", func(ctx context.Context, t feature.T) {
-			u, err := broker.Address(ctx, brokerName)
-			if err != nil || u == nil {
-				t.Error("failed to get the address of the broker", brokerName, err)
-			}
-			eventshub.Install(matchedSender, eventshub.StartSenderURL(u.String()), eventshub.InputEvent(matchedEvent))(ctx, t)
-		})
+		f.Requirement("Install matched event sender", eventshub.Install(matchedSender,
+			eventshub.StartSenderToResource(broker.GVR(), brokerName),
+			eventshub.InputEvent(matchedEvent)),
+		)
 
-		f.Requirement("Install unmatched event sender", func(ctx context.Context, t feature.T) {
-			u, err := broker.Address(ctx, brokerName)
-			if err != nil || u == nil {
-				t.Error("failed to get the address of the broker", brokerName, err)
-			}
-			eventshub.Install(unmatchedSender, eventshub.StartSenderURL(u.String()), eventshub.InputEvent(unmatchedEvent))(ctx, t)
-		})
+		f.Requirement("Install unmatched event sender", eventshub.Install(unmatchedSender,
+			eventshub.StartSenderToResource(broker.GVR(), brokerName),
+			eventshub.InputEvent(unmatchedEvent)),
+		)
 
 		f.Alpha("Triggers with new filters").
 			Must("must deliver matched events", OnStore(subscriber).MatchEvent(HasId(matchedEvent.ID())).AtLeast(1)).

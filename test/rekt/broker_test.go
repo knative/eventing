@@ -28,6 +28,7 @@ import (
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/knative"
+	"knative.dev/reconciler-test/pkg/tracing"
 
 	"knative.dev/eventing/test/rekt/features/broker"
 	b "knative.dev/eventing/test/rekt/resources/broker"
@@ -42,10 +43,11 @@ func TestBrokerWithManyTriggers(t *testing.T) {
 		knative.WithTracingConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
+		tracing.WithGatherer(t),
 		environment.WithPollTimings(5*time.Second, 4*time.Minute),
 	)
 
-	env.Test(ctx, t, broker.BrokerWithManyTriggers())
+	env.TestSet(ctx, t, broker.ManyTriggers())
 }
 
 // TestBrokerWorkFlowWithTransformation test broker transformation respectively follow

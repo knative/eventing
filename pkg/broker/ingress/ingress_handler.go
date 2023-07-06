@@ -33,6 +33,7 @@ import (
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
 
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/network"
 
 	"knative.dev/eventing/pkg/apis/eventing"
@@ -60,6 +61,8 @@ type Handler struct {
 	Reporter StatsReporter
 	// BrokerLister gets broker objects
 	BrokerLister eventinglisters.BrokerLister
+
+	EvenTypeHandler *broker.EventTypeAutoHandler
 
 	Logger *zap.Logger
 }
@@ -181,6 +184,27 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	_ = h.Reporter.ReportEventCount(reporterArgs, statusCode)
 
 	writer.WriteHeader(statusCode)
+
+	// EventType auto-create feature handling
+	if h.EvenTypeHandler != nil {
+		b, err := h.getBroker(brokerName, brokerNamespace)
+		if err != nil {
+			h.Logger.Warn("Failed to retrieve broker", zap.Error(err))
+		}
+		if err := h.EvenTypeHandler.AutoCreateEventType(ctx, event, toKReference(b), b.GetUID()); err != nil {
+			h.Logger.Error("Even type auto create failed", zap.Error(err))
+		}
+	}
+}
+
+func toKReference(broker *eventingv1.Broker) *duckv1.KReference {
+	return &duckv1.KReference{
+		Kind:       broker.Kind,
+		Namespace:  broker.Namespace,
+		Name:       broker.Name,
+		APIVersion: broker.APIVersion,
+		Address:    broker.Status.Address.Name,
+	}
 }
 
 func (h *Handler) receive(ctx context.Context, headers http.Header, event *cloudevents.Event, brokerNamespace, brokerName string) (int, time.Duration) {

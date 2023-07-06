@@ -1,5 +1,5 @@
 /*
-Copyright 2021 The Knative Authors
+Copyright 2023 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,22 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1beta2
+package apis
 
-import (
-	"context"
+const (
+	KnNamespaceHeader = "Kn-Namespace"
 )
-
-func (et *EventType) SetDefaults(ctx context.Context) {
-	et.Spec.SetDefaults(ctx)
-	setReferenceNs(et)
-}
-
-func (ets *EventTypeSpec) SetDefaults(ctx context.Context) {
-}
-
-func setReferenceNs(et *EventType) {
-	if et.Spec.Reference != nil && et.Spec.Reference.Namespace == "" {
-		et.Spec.Reference.Namespace = et.GetNamespace()
-	}
-}
