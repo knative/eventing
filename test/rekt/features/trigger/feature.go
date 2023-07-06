@@ -72,7 +72,7 @@ func TriggerDependencyAnnotation() *feature.Feature {
 		}
 		cfg := []manifest.CfgFn{
 			pingsource.WithSchedule("*/1 * * * *"),
-			pingsource.WithSink(&duckv1.Destination{URI: brokeruri}),
+			pingsource.WithSink(&duckv1.Destination{URI: brokeruri.URL, CACerts: brokeruri.CACerts}),
 			pingsource.WithData("text/plain", "Test trigger-annotation"),
 		}
 		pingsource.Install(psourcename, cfg...)(ctx, t)

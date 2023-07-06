@@ -753,7 +753,7 @@ func brokerSubscriberErrorNodata() *feature.Feature {
 		sink,
 		func(ctx context.Context) test.EventMatcher {
 			failerAddress, _ := service.Address(ctx, failer)
-			return test.HasExtension("knativeerrordest", failerAddress.String())
+			return test.HasExtension("knativeerrordest", failerAddress.URL.String())
 		},
 		func(ctx context.Context) test.EventMatcher {
 			return test.HasExtension("knativeerrorcode", "422")
@@ -815,7 +815,7 @@ func brokerSubscriberErrorWithdata() *feature.Feature {
 		sink,
 		func(ctx context.Context) test.EventMatcher {
 			failerAddress, _ := service.Address(ctx, failer)
-			return test.HasExtension("knativeerrordest", failerAddress.String())
+			return test.HasExtension("knativeerrordest", failerAddress.URL.String())
 		},
 		func(ctx context.Context) test.EventMatcher {
 			return test.HasExtension("knativeerrorcode", "422")
