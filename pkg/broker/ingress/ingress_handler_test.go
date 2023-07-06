@@ -205,9 +205,9 @@ func TestHandler_ServeHTTP(t *testing.T) {
 			method:     nethttp.MethodPost,
 			uri:        "/ns/name",
 			body:       getValidEvent(),
-			statusCode: nethttp.StatusInternalServerError,
+			statusCode: nethttp.StatusBadRequest,
 			handler:    handler(),
-			reporter:   &mockReporter{StatusCode: nethttp.StatusInternalServerError, EventDispatchTimeReported: true},
+			reporter:   &mockReporter{StatusCode: nethttp.StatusBadRequest, EventDispatchTimeReported: false},
 			defaulter:  broker.TTLDefaulter(logger, 100),
 			brokers: []*eventingv1.Broker{
 				withUninitializedAnnotations(makeBroker("name", "ns")),

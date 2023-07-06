@@ -274,6 +274,7 @@ func (h *Handler) receive(ctx context.Context, headers http.Header, event *cloud
 	channelAddress, err := h.getChannelAddress(brokerName, brokerNamespace)
 	if err != nil {
 		h.Logger.Warn("Broker not found in the namespace", zap.Error(err))
+		return http.StatusBadRequest, noDuration
 	}
 
 	return h.send(ctx, headers, event, *channelAddress)
