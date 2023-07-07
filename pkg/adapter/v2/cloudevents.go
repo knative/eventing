@@ -108,8 +108,6 @@ type ClientConfig struct {
 	Reporter            source.StatsReporter
 	CrStatusEventClient *crstatusevent.CRStatusEventClient
 	Options             []http.Option
-
-	Client Client
 }
 
 type clientConfigKey struct{}
@@ -127,10 +125,6 @@ func GetClientConfig(ctx context.Context) ClientConfig {
 }
 
 func NewClient(cfg ClientConfig) (Client, error) {
-	if cfg.Client != nil {
-		return cfg.Client, nil
-	}
-
 	transport := &ochttp.Transport{
 		Propagation: tracecontextb3.TraceContextEgress,
 	}

@@ -20,14 +20,19 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"net/http"
+	"net/http/httptest"
 	"reflect"
 	"sync"
 	"testing"
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
+	"github.com/cloudevents/sdk-go/v2/binding"
+	bindingshttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/pointer"
 
 	"knative.dev/pkg/apis"
@@ -38,7 +43,6 @@ import (
 	rectesting "knative.dev/pkg/reconciler/testing"
 
 	"knative.dev/eventing/pkg/adapter/v2"
-	adaptertesting "knative.dev/eventing/pkg/adapter/v2/test"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/eventing/pkg/eventingtls/eventingtlstesting"
 )
@@ -77,11 +81,6 @@ func TestAddRunRemoveSchedules(t *testing.T) {
 					ContentType: cloudevents.TextPlain,
 					Data:        sampleData,
 				},
-				Status: sourcesv1.PingSourceStatus{
-					SourceStatus: duckv1.SourceStatus{
-						SinkURI: &apis.URL{Path: "a sink"},
-					},
-				},
 			},
 			wantData:        []byte(sampleData),
 			wantContentType: cloudevents.TextPlain,
@@ -101,11 +100,6 @@ func TestAddRunRemoveSchedules(t *testing.T) {
 					ContentType: cloudevents.TextPlain,
 					Data:        sampleData,
 				},
-				Status: sourcesv1.PingSourceStatus{
-					SourceStatus: duckv1.SourceStatus{
-						SinkURI: &apis.URL{Path: "a sink"},
-					},
-				},
 			},
 			wantData:        []byte(sampleData),
 			wantContentType: cloudevents.TextPlain,
@@ -122,11 +116,6 @@ func TestAddRunRemoveSchedules(t *testing.T) {
 					Schedule:    "* * * * ?",
 					ContentType: cloudevents.TextPlain,
 					DataBase64:  sampleDataBase64,
-				},
-				Status: sourcesv1.PingSourceStatus{
-					SourceStatus: duckv1.SourceStatus{
-						SinkURI: &apis.URL{Path: "a sink"},
-					},
 				},
 			},
 			wantData:        decodeBase64(sampleDataBase64),
@@ -145,11 +134,6 @@ func TestAddRunRemoveSchedules(t *testing.T) {
 					Data:        sampleJSONData,
 					ContentType: cloudevents.ApplicationJSON,
 				},
-				Status: sourcesv1.PingSourceStatus{
-					SourceStatus: duckv1.SourceStatus{
-						SinkURI: &apis.URL{Path: "a sink"},
-					},
-				},
 			},
 			wantData:        []byte(sampleJSONData),
 			wantContentType: cloudevents.ApplicationJSON,
@@ -166,11 +150,6 @@ func TestAddRunRemoveSchedules(t *testing.T) {
 					Schedule:    "* * * * ?",
 					DataBase64:  sampleJSONDataBase64,
 					ContentType: cloudevents.ApplicationJSON,
-				},
-				Status: sourcesv1.PingSourceStatus{
-					SourceStatus: duckv1.SourceStatus{
-						SinkURI: &apis.URL{Path: "a sink"},
-					},
 				},
 			},
 			wantData:        decodeBase64(sampleJSONDataBase64),
@@ -189,11 +168,6 @@ func TestAddRunRemoveSchedules(t *testing.T) {
 					Data:        sampleXmlData,
 					ContentType: cloudevents.ApplicationXML,
 				},
-				Status: sourcesv1.PingSourceStatus{
-					SourceStatus: duckv1.SourceStatus{
-						SinkURI: &apis.URL{Path: "a sink"},
-					},
-				},
 			},
 			wantData:        []byte(sampleXmlData),
 			wantContentType: cloudevents.ApplicationXML,
@@ -203,9 +177,15 @@ func TestAddRunRemoveSchedules(t *testing.T) {
 		t.Run(n, func(t *testing.T) {
 			ctx, _ := rectesting.SetupFakeContext(t)
 			logger := logging.FromContext(ctx)
-			ce := adaptertesting.NewTestClient()
 
-			runner := NewCronJobsRunner(adapter.ClientConfig{Client: ce}, kubeclient.Get(ctx), logger)
+			h, events := eventsAccumulator()
+
+			s := httptest.NewServer(h)
+			defer s.Close()
+			url, _ := apis.ParseURL(s.URL)
+
+			runner := NewCronJobsRunner(adapter.ClientConfig{}, kubeclient.Get(ctx), logger)
+			tc.src.Status.SinkURI = url
 			entryId := runner.AddSchedule(tc.src)
 
 			entry := runner.cron.Entry(entryId)
@@ -215,7 +195,7 @@ func TestAddRunRemoveSchedules(t *testing.T) {
 
 			entry.Job.Run()
 
-			validateSent(t, ce, tc.wantData, tc.wantContentType, tc.src.Spec.CloudEventOverrides.Extensions)
+			validateSent(t, *events, tc.wantData, tc.wantContentType, tc.src.Spec.CloudEventOverrides.Extensions)
 
 			runner.RemoveSchedule(entryId)
 
@@ -331,9 +311,8 @@ func TestSendEventsTLS(t *testing.T) {
 func TestStartStopCron(t *testing.T) {
 	ctx, _ := rectesting.SetupFakeContext(t)
 	logger := logging.FromContext(ctx)
-	ce := adaptertesting.NewTestClient()
 
-	runner := NewCronJobsRunner(adapter.ClientConfig{Client: ce}, kubeclient.Get(ctx), logger)
+	runner := NewCronJobsRunner(adapter.ClientConfig{}, kubeclient.Get(ctx), logger)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	wctx, wcancel := context.WithCancel(context.Background())
@@ -360,9 +339,17 @@ func TestStartStopCronDelayWait(t *testing.T) {
 	}
 	ctx, _ := rectesting.SetupFakeContext(t)
 	logger := logging.FromContext(ctx)
-	ce := adaptertesting.NewTestClientWithDelay(time.Second * 5)
 
-	runner := NewCronJobsRunner(adapter.ClientConfig{Client: ce}, kubeclient.Get(ctx), logger)
+	h, events := eventsAccumulator()
+
+	s := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		time.Sleep(5 * time.Second)
+		h.ServeHTTP(writer, request)
+	}))
+	defer s.Close()
+	url, _ := apis.ParseURL(s.URL)
+
+	runner := NewCronJobsRunner(adapter.ClientConfig{}, kubeclient.Get(ctx), logger)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -384,7 +371,7 @@ func TestStartStopCronDelayWait(t *testing.T) {
 				},
 				Status: sourcesv1.PingSourceStatus{
 					SourceStatus: duckv1.SourceStatus{
-						SinkURI: &apis.URL{Path: "a delayed sink"},
+						SinkURI: url,
 					},
 				},
 			})
@@ -398,15 +385,18 @@ func TestStartStopCronDelayWait(t *testing.T) {
 
 	runner.Stop() // cron job because of delay is still running.
 
-	validateSent(t, ce, []byte("some delayed data"), cloudevents.TextPlain, nil)
+	validateSent(t, *events, []byte("some delayed data"), cloudevents.TextPlain, nil)
 }
 
-func validateSent(t *testing.T, ce *adaptertesting.TestCloudEventsClient, wantData []byte, wantContentType string, extensions map[string]string) {
-	if got := len(ce.Sent()); got != 1 {
-		t.Error("Expected 1 event to be sent, got", got)
+func validateSent(t *testing.T, events []cloudevents.Event, wantData []byte, wantContentType string, extensions map[string]string) {
+	err := wait.PollImmediate(time.Second, time.Minute, func() (done bool, err error) {
+		return len(events) == 1, nil
+	})
+	if err != nil {
+		t.Fatal("Expected 1 event to be sent, got", len(events))
 	}
 
-	event := ce.Sent()[0]
+	event := events[0]
 
 	if gotContentType := event.DataContentType(); gotContentType != wantContentType {
 		t.Errorf("Expected event with contentType=%q to be sent, got %q", wantContentType, gotContentType)
@@ -435,4 +425,24 @@ func validateSent(t *testing.T, ce *adaptertesting.TestCloudEventsClient, wantDa
 			t.Errorf("Expected event with extension overrides to be the same want: %v, but got: %v", extensions, gotExtensions)
 		}
 	}
+}
+
+func eventsAccumulator() (http.Handler, *[]cloudevents.Event) {
+	var mu sync.Mutex
+	events := make([]cloudevents.Event, 0, 8)
+
+	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		m := bindingshttp.NewMessageFromHttpRequest(request)
+		event, err := binding.ToEvent(request.Context(), m)
+		if err != nil {
+			writer.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		mu.Lock()
+		defer mu.Unlock()
+
+		events = append(events, *event)
+		writer.WriteHeader(http.StatusOK)
+	}), &events
 }

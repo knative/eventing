@@ -207,7 +207,6 @@ func (a *cronJobsRunner) newPingSourceClient(source *sourcesv1.PingSource) (adap
 		Reporter:            a.clientConfig.Reporter,
 		CrStatusEventClient: a.clientConfig.CrStatusEventClient,
 		Options:             a.clientConfig.Options,
-		Client:              a.clientConfig.Client,
 	}
 
 	return adapter.NewClient(cfg)
