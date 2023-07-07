@@ -37,6 +37,7 @@ import (
 	"knative.dev/eventing/pkg/apis/eventing"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/pkg/apis/feature"
+	"knative.dev/eventing/pkg/broker/ingress"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
 	brokerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/broker"
@@ -133,7 +134,7 @@ func NewController(
 		Handler: controller.HandleAll(grCb),
 	})
 	secretInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.FilterWithName(brokerIngressTLSSecretName),
+		FilterFunc: controller.FilterWithName(ingress.TLSSecretName),
 		Handler:    controller.HandleAll(grCb),
 	})
 
