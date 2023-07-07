@@ -24,14 +24,11 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/kncloudevents"
+	"knative.dev/eventing/pkg/reconciler/broker"
 	"knative.dev/pkg/configmap"
 
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	secretinformer "knative.dev/pkg/injection/clients/namespacedkube/informers/core/v1/secret"
-)
-
-const (
-	TLSSecretName = "mt-broker-ingress-server-tls" //nolint:gosec // This is not a hardcoded credential
 )
 
 func NewServerManager(ctx context.Context, logger *zap.Logger, cmw configmap.Watcher, httpPort, httpsPort int, handler *Handler) (*eventingtls.ServerManager, error) {
@@ -49,7 +46,7 @@ func NewServerManager(ctx context.Context, logger *zap.Logger, cmw configmap.Wat
 func getServerTLSConfig(ctx context.Context) (*tls.Config, error) {
 	secret := types.NamespacedName{
 		Namespace: "knative-eventing",
-		Name:      TLSSecretName,
+		Name:      broker.IngressServerTLSSecretName,
 	}
 
 	serverTLSConfig := eventingtls.NewDefaultServerConfig()

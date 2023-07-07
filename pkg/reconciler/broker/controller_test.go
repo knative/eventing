@@ -22,7 +22,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"knative.dev/eventing/pkg/broker/ingress"
 	"knative.dev/pkg/configmap"
 	. "knative.dev/pkg/reconciler/testing"
 	"knative.dev/pkg/system"
@@ -44,7 +43,7 @@ func TestNew(t *testing.T) {
 
 	secret := types.NamespacedName{
 		Namespace: system.Namespace(),
-		Name:      ingress.TLSSecretName,
+		Name:      IngressServerTLSSecretName,
 	}
 
 	_ = secretinformer.Get(ctx).Informer().GetStore().Add(&corev1.Secret{

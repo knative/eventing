@@ -47,7 +47,6 @@ import (
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/pkg/apis/feature"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
-	"knative.dev/eventing/pkg/broker/ingress"
 	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
 	brokerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/broker"
 	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1"
@@ -58,7 +57,9 @@ import (
 )
 
 const (
-	caCertsSecretKey = eventingtls.SecretCACert
+	IngressServerTLSSecretName = "mt-broker-ingress-server-tls" //nolint:gosec // This is not a hardcoded credential
+	FilterServerTLSSecretName  = "mt-broker-filter-server-tls"  //nolint:gosec // This is not a hardcoded credential
+	caCertsSecretKey           = eventingtls.SecretCACert
 )
 
 type Reconciler struct {
@@ -402,13 +403,13 @@ func TriggerChannelLabels(brokerName string) map[string]string {
 }
 
 func (r *Reconciler) getCaCerts() (string, error) {
-	secret, err := r.secretLister.Secrets(system.Namespace()).Get(ingress.TLSSecretName)
+	secret, err := r.secretLister.Secrets(system.Namespace()).Get(IngressServerTLSSecretName)
 	if err != nil {
-		return "", fmt.Errorf("failed to get CA certs from %s/%s: %w", system.Namespace(), ingress.TLSSecretName, err)
+		return "", fmt.Errorf("failed to get CA certs from %s/%s: %w", system.Namespace(), IngressServerTLSSecretName, err)
 	}
 	caCerts, ok := secret.Data[caCertsSecretKey]
 	if !ok {
-		return "", fmt.Errorf("failed to get CA certs from %s/%s: missing %s key", system.Namespace(), ingress.TLSSecretName, caCertsSecretKey)
+		return "", fmt.Errorf("failed to get CA certs from %s/%s: missing %s key", system.Namespace(), IngressServerTLSSecretName, caCertsSecretKey)
 	}
 	return string(caCerts), nil
 }

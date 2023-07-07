@@ -44,12 +44,12 @@ import (
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/pkg/apis/feature"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
-	"knative.dev/eventing/pkg/broker/filter"
 	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1"
 	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1"
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/eventingtls"
+	"knative.dev/eventing/pkg/reconciler/broker"
 	"knative.dev/eventing/pkg/reconciler/broker/resources"
 	"knative.dev/eventing/pkg/reconciler/sugar/trigger/path"
 )
@@ -349,13 +349,13 @@ func getBrokerChannelRef(b *eventingv1.Broker) (*corev1.ObjectReference, error) 
 }
 
 func (r *Reconciler) getCaCerts() (string, error) {
-	secret, err := r.secretLister.Secrets(system.Namespace()).Get(filter.TLSSecretName)
+	secret, err := r.secretLister.Secrets(system.Namespace()).Get(broker.FilterServerTLSSecretName)
 	if err != nil {
-		return "", fmt.Errorf("failed to get CA certs from %s/%s: %w", system.Namespace(), filter.TLSSecretName, err)
+		return "", fmt.Errorf("failed to get CA certs from %s/%s: %w", system.Namespace(), broker.FilterServerTLSSecretName, err)
 	}
 	caCerts, ok := secret.Data[eventingtls.SecretCACert]
 	if !ok {
-		return "", fmt.Errorf("failed to get CA certs from %s/%s: missing %s key", system.Namespace(), filter.TLSSecretName, eventingtls.SecretCACert)
+		return "", fmt.Errorf("failed to get CA certs from %s/%s: missing %s key", system.Namespace(), broker.FilterServerTLSSecretName, eventingtls.SecretCACert)
 	}
 	return string(caCerts), nil
 }

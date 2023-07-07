@@ -44,7 +44,6 @@ import (
 
 	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/feature"
-	"knative.dev/eventing/pkg/broker/ingress"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
 	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/broker"
@@ -977,7 +976,7 @@ func makeTLSSecret() *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: systemNS,
-			Name:      ingress.TLSSecretName,
+			Name:      IngressServerTLSSecretName,
 		},
 		Data: map[string][]byte{
 			"ca.crt": []byte(testCaCerts),
