@@ -49,7 +49,6 @@ import (
 	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1"
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/eventingtls"
-	"knative.dev/eventing/pkg/reconciler/broker"
 	"knative.dev/eventing/pkg/reconciler/broker/resources"
 	"knative.dev/eventing/pkg/reconciler/sugar/trigger/path"
 )
@@ -58,9 +57,10 @@ var brokerGVK = eventingv1.SchemeGroupVersion.WithKind("Broker")
 
 const (
 	// Name of the corev1.Events emitted from the Trigger reconciliation process.
-	subscriptionDeleteFailed = "SubscriptionDeleteFailed"
-	subscriptionCreateFailed = "SubscriptionCreateFailed"
-	subscriptionGetFailed    = "SubscriptionGetFailed"
+	subscriptionDeleteFailed  = "SubscriptionDeleteFailed"
+	subscriptionCreateFailed  = "SubscriptionCreateFailed"
+	subscriptionGetFailed     = "SubscriptionGetFailed"
+	filterServerTLSSecretName = "mt-broker-filter-server-tls" //nolint:gosec // This is not a hardcoded credential
 )
 
 type Reconciler struct {
@@ -349,13 +349,13 @@ func getBrokerChannelRef(b *eventingv1.Broker) (*corev1.ObjectReference, error) 
 }
 
 func (r *Reconciler) getCaCerts() (string, error) {
-	secret, err := r.secretLister.Secrets(system.Namespace()).Get(broker.FilterServerTLSSecretName)
+	secret, err := r.secretLister.Secrets(system.Namespace()).Get(filterServerTLSSecretName)
 	if err != nil {
-		return "", fmt.Errorf("failed to get CA certs from %s/%s: %w", system.Namespace(), broker.FilterServerTLSSecretName, err)
+		return "", fmt.Errorf("failed to get CA certs from %s/%s: %w", system.Namespace(), filterServerTLSSecretName, err)
 	}
 	caCerts, ok := secret.Data[eventingtls.SecretCACert]
 	if !ok {
-		return "", fmt.Errorf("failed to get CA certs from %s/%s: missing %s key", system.Namespace(), broker.FilterServerTLSSecretName, eventingtls.SecretCACert)
+		return "", fmt.Errorf("failed to get CA certs from %s/%s: missing %s key", system.Namespace(), filterServerTLSSecretName, eventingtls.SecretCACert)
 	}
 	return string(caCerts), nil
 }

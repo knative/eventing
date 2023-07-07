@@ -57,8 +57,7 @@ import (
 )
 
 const (
-	IngressServerTLSSecretName = "mt-broker-ingress-server-tls" //nolint:gosec // This is not a hardcoded credential
-	FilterServerTLSSecretName  = "mt-broker-filter-server-tls"  //nolint:gosec // This is not a hardcoded credential
+	ingressServerTLSSecretName = "mt-broker-ingress-server-tls" //nolint:gosec // This is not a hardcoded credential
 	caCertsSecretKey           = eventingtls.SecretCACert
 )
 
@@ -403,13 +402,13 @@ func TriggerChannelLabels(brokerName string) map[string]string {
 }
 
 func (r *Reconciler) getCaCerts() (string, error) {
-	secret, err := r.secretLister.Secrets(system.Namespace()).Get(IngressServerTLSSecretName)
+	secret, err := r.secretLister.Secrets(system.Namespace()).Get(ingressServerTLSSecretName)
 	if err != nil {
-		return "", fmt.Errorf("failed to get CA certs from %s/%s: %w", system.Namespace(), IngressServerTLSSecretName, err)
+		return "", fmt.Errorf("failed to get CA certs from %s/%s: %w", system.Namespace(), ingressServerTLSSecretName, err)
 	}
 	caCerts, ok := secret.Data[caCertsSecretKey]
 	if !ok {
-		return "", fmt.Errorf("failed to get CA certs from %s/%s: missing %s key", system.Namespace(), IngressServerTLSSecretName, caCertsSecretKey)
+		return "", fmt.Errorf("failed to get CA certs from %s/%s: missing %s key", system.Namespace(), ingressServerTLSSecretName, caCertsSecretKey)
 	}
 	return string(caCerts), nil
 }

@@ -976,7 +976,7 @@ func makeTLSSecret() *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: systemNS,
-			Name:      IngressServerTLSSecretName,
+			Name:      ingressServerTLSSecretName,
 		},
 		Data: map[string][]byte{
 			"ca.crt": []byte(testCaCerts),
