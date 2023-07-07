@@ -412,7 +412,7 @@ func TestReconcile(t *testing.T) {
 					WithChannelAPIVersionAnnotation(triggerChannelAPIVersion),
 					WithChannelKindAnnotation(triggerChannelKind),
 					WithChannelNameAnnotation(triggerChannelName)),
-				NewSecret("mt-broker-filter-server-tls", systemNS, WithSecretData(map[string][]byte{
+				NewSecret(filterServerTLSSecretName, systemNS, WithSecretData(map[string][]byte{
 					"ca.crt": eventingtlstesting.CA,
 				})),
 				NewTrigger(triggerName, testNS, brokerName,
@@ -473,7 +473,7 @@ func TestReconcile(t *testing.T) {
 					WithChannelAPIVersionAnnotation(triggerChannelAPIVersion),
 					WithChannelKindAnnotation(triggerChannelKind),
 					WithChannelNameAnnotation(triggerChannelName)),
-				NewSecret("mt-broker-filter-server-tls", systemNS, WithSecretData(map[string][]byte{
+				NewSecret(filterServerTLSSecretName, systemNS, WithSecretData(map[string][]byte{
 					"ca.crt": eventingtlstesting.CA,
 				})),
 				NewTrigger(triggerName, testNS, brokerName,

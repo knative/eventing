@@ -133,7 +133,7 @@ func NewController(
 		Handler: controller.HandleAll(grCb),
 	})
 	secretInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.FilterWithName(brokerIngressTLSSecretName),
+		FilterFunc: controller.FilterWithName(ingressServerTLSSecretName),
 		Handler:    controller.HandleAll(grCb),
 	})
 

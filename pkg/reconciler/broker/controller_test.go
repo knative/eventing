@@ -43,7 +43,7 @@ func TestNew(t *testing.T) {
 
 	secret := types.NamespacedName{
 		Namespace: system.Namespace(),
-		Name:      brokerIngressTLSSecretName,
+		Name:      ingressServerTLSSecretName,
 	}
 
 	_ = secretinformer.Get(ctx).Informer().GetStore().Add(&corev1.Secret{
