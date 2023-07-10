@@ -164,30 +164,37 @@ func (o *Receiver) Start(ctx context.Context, handlerFuncs ...func(handler http.
 		Handler: handler,
 	}
 
-	var httpErr error
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	errors := make(chan error, 2)
 	go func() {
-		httpErr = server.ListenAndServe()
+		if err := server.ListenAndServe(); err != nil {
+			errors <- fmt.Errorf("error while starting the HTTP server: %w", err)
+			cancel()
+		}
+		defer server.Close()
 	}()
-	var httpsErr error
 	if o.EnforceTLS {
 		go func() {
-			httpsErr = serverTLS.ListenAndServeTLS("/etc/tls/certificates/tls.crt", "/etc/tls/certificates/tls.key")
+			if err := serverTLS.ListenAndServeTLS("/etc/tls/certificates/tls.crt", "/etc/tls/certificates/tls.key"); err != nil {
+				errors <- fmt.Errorf("error while starting the HTTPS server: %w", err)
+				cancel()
+			}
 		}()
 		defer serverTLS.Close()
 	}
 
 	<-ctx.Done()
+	close(errors)
 
-	if httpErr != nil {
-		return fmt.Errorf("error while starting the HTTP server: %w", httpErr)
+	for err := range errors {
+		if err != nil {
+			return err
+		}
 	}
-	if httpsErr != nil {
-		return fmt.Errorf("error while starting the HTTPS server: %w", httpsErr)
-	}
 
-	logging.FromContext(ctx).Info("Closing the HTTP server")
-
-	return server.Close()
+	return nil
 }
 
 func (o *Receiver) ServeHTTP(writer http.ResponseWriter, request *http.Request) {

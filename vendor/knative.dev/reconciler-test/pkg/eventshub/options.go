@@ -80,7 +80,7 @@ func StartSenderTLS(sinkSvc string, caCerts *string) EventsHubOption {
 // StartSenderToResource starts the sender in the eventshub pointing to the provided resource
 // This can be used together with InputEvent, AddTracing, EnableIncrementalId, InputEncoding and InputHeader options
 func StartSenderToResource(gvr schema.GroupVersionResource, name string) EventsHubOption {
-	return compose(envAdditive(EventGeneratorsEnv, "sender"), func(ctx context.Context, envs map[string]string) error {
+	return func(ctx context.Context, envs map[string]string) error {
 		u, err := k8s.Address(ctx, gvr, name)
 		if err != nil {
 			return err
@@ -88,14 +88,14 @@ func StartSenderToResource(gvr schema.GroupVersionResource, name string) EventsH
 		if u == nil {
 			return fmt.Errorf("resource %v named %s is not addressable", gvr, name)
 		}
-		envs["SINK"] = u.URL.String()
-		return nil
-	})
+		return StartSenderURL(u.URL.String())(ctx, envs)
+	}
 }
 
-// StartSenderToResourceTLS starts the sender in the eventshub pointing to the provided resource
+// StartSenderToResourceTLS starts the sender in the eventshub pointing to the provided resource.
+// `caCerts` parameter is optional, if nil, it will fall back to use the addressable CA certs.
 // This can be used together with InputEvent, AddTracing, EnableIncrementalId, InputEncoding and InputHeader options
-func StartSenderToResourceTLS(gvr schema.GroupVersionResource, name string) EventsHubOption {
+func StartSenderToResourceTLS(gvr schema.GroupVersionResource, name string, caCerts *string) EventsHubOption {
 	return func(ctx context.Context, m map[string]string) error {
 		u, err := k8s.Address(ctx, gvr, name)
 		if err != nil {
@@ -104,12 +104,12 @@ func StartSenderToResourceTLS(gvr schema.GroupVersionResource, name string) Even
 		if u == nil {
 			return fmt.Errorf("resource %v named %s is not addressable", gvr, name)
 		}
+		u.URL.Scheme = "https"
 
-		return compose(
-			StartSender(u.URL.String()),
-			envAdditive(EnforceTLS, "true"),
-			envCACerts(u.CACerts),
-		)(ctx, m)
+		if caCerts == nil && u.CACerts != nil {
+			caCerts = u.CACerts
+		}
+		return StartSenderURLTLS(u.URL.String(), caCerts)(ctx, m)
 	}
 }
 
