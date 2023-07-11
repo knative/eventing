@@ -20,6 +20,7 @@ limitations under the License.
 package rekt
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -50,17 +51,23 @@ func TestPingSourceWithSinkRef(t *testing.T) {
 func TestPingSourceTLS(t *testing.T) {
 	t.Parallel()
 
-	ctx, env := global.Environment(
-		knative.WithKnativeNamespace(system.Namespace()),
-		knative.WithLoggingConfig,
-		knative.WithTracingConfig,
-		k8s.WithEventListener,
-		environment.Managed(t),
-		eventshub.WithTLS(t),
-	)
-	t.Cleanup(env.Finish)
+	for i := 0; i < 10; i++ {
 
-	env.Test(ctx, t, pingsource.SendsEventsTLS())
+		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
+			t.Parallel()
+
+			ctx, env := global.Environment(
+				knative.WithKnativeNamespace(system.Namespace()),
+				knative.WithLoggingConfig,
+				knative.WithTracingConfig,
+				k8s.WithEventListener,
+				environment.Managed(t),
+				eventshub.WithTLS(t),
+			)
+
+			env.Test(ctx, t, pingsource.SendsEventsTLS())
+		})
+	}
 }
 
 func TestPingSourceWithSinkURI(t *testing.T) {
