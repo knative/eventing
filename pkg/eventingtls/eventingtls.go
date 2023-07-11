@@ -45,6 +45,10 @@ const (
 	DefaultMinTLSVersion = tls.VersionTLS12
 	// SecretCACrt is the name of the CA Cert in the secret
 	SecretCACert = "ca.crt"
+	// IMCDispatcherServerTLSSecretName is the name of the tls secret for the imc dispatcher server
+	IMCDispatcherServerTLSSecretName = "imc-dispatcher-server-tls"
+	// IMCDispatcherTLSSecretName is the name of the tls secret for the imc dispatcher
+	IMCDispatcherTLSSecretName = "imc-dispatcher-tls"
 )
 
 type ClientConfig struct {
