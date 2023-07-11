@@ -54,6 +54,7 @@ import (
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
 	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/trigger"
 	"knative.dev/eventing/pkg/duck"
+	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/eventingtls/eventingtlstesting"
 	"knative.dev/eventing/pkg/reconciler/broker/resources"
 
@@ -412,7 +413,7 @@ func TestReconcile(t *testing.T) {
 					WithChannelAPIVersionAnnotation(triggerChannelAPIVersion),
 					WithChannelKindAnnotation(triggerChannelKind),
 					WithChannelNameAnnotation(triggerChannelName)),
-				NewSecret(filterServerTLSSecretName, systemNS, WithSecretData(map[string][]byte{
+				NewSecret(eventingtls.BrokerFilterServerTLSSecretName, systemNS, WithSecretData(map[string][]byte{
 					"ca.crt": eventingtlstesting.CA,
 				})),
 				NewTrigger(triggerName, testNS, brokerName,
@@ -473,7 +474,7 @@ func TestReconcile(t *testing.T) {
 					WithChannelAPIVersionAnnotation(triggerChannelAPIVersion),
 					WithChannelKindAnnotation(triggerChannelKind),
 					WithChannelNameAnnotation(triggerChannelName)),
-				NewSecret(filterServerTLSSecretName, systemNS, WithSecretData(map[string][]byte{
+				NewSecret(eventingtls.BrokerFilterServerTLSSecretName, systemNS, WithSecretData(map[string][]byte{
 					"ca.crt": eventingtlstesting.CA,
 				})),
 				NewTrigger(triggerName, testNS, brokerName,

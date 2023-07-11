@@ -46,9 +46,13 @@ const (
 	// SecretCACrt is the name of the CA Cert in the secret
 	SecretCACert = "ca.crt"
 	// IMCDispatcherServerTLSSecretName is the name of the tls secret for the imc dispatcher server
-	IMCDispatcherServerTLSSecretName = "imc-dispatcher-server-tls"
+	IMCDispatcherServerTLSSecretName = "imc-dispatcher-server-tls" //nolint:gosec // This is not a hardcoded credential
 	// IMCDispatcherTLSSecretName is the name of the tls secret for the imc dispatcher
-	IMCDispatcherTLSSecretName = "imc-dispatcher-tls"
+	IMCDispatcherTLSSecretName = "imc-dispatcher-tls" //nolint:gosec // This is not a hardcoded credential
+	// BrokerFilterServerTLSSecretName is the name of the tls secret for the broker filter server
+	BrokerFilterServerTLSSecretName = "mt-broker-filter-server-tls" //nolint:gosec // This is not a hardcoded credential
+	// BrokerIngressServerTLSSecretName is the name of the tls secret for the broker ingress server
+	BrokerIngressServerTLSSecretName = "mt-broker-ingress-server-tls" //nolint:gosec // This is not a hardcoded credential
 )
 
 type ClientConfig struct {
