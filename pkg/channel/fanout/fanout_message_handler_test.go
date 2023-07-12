@@ -373,6 +373,9 @@ func testFanoutMessageHandler(t *testing.T, async bool, receiverFunc channel.Unb
 			AsyncHandler:  async,
 		},
 		reporter,
+		nil,
+		nil,
+		nil,
 		recvOptionFunc,
 	)
 	<-calledChan
