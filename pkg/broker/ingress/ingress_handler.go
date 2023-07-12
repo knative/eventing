@@ -42,6 +42,7 @@ import (
 	"knative.dev/eventing/pkg/broker"
 	v1 "knative.dev/eventing/pkg/client/informers/externalversions/eventing/v1"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1"
+	"knative.dev/eventing/pkg/eventtype"
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/tracing"
 	"knative.dev/eventing/pkg/utils"
@@ -62,7 +63,7 @@ type Handler struct {
 	// BrokerLister gets broker objects
 	BrokerLister eventinglisters.BrokerLister
 
-	EvenTypeHandler *broker.EventTypeAutoHandler
+	EvenTypeHandler *eventtype.EventTypeAutoHandler
 
 	Logger *zap.Logger
 }

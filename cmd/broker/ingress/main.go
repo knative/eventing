@@ -47,6 +47,7 @@ import (
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	brokerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/broker"
 	eventtypeinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta2/eventtype"
+	"knative.dev/eventing/pkg/eventtype"
 	"knative.dev/eventing/pkg/reconciler/names"
 )
 
@@ -152,7 +153,7 @@ func main() {
 
 	// Init auto-create only if enabled, after ConfigMap watcher is started
 	if featureStore.IsEnabled(feature.EvenTypeAutoCreate) {
-		autoCreate := &broker.EventTypeAutoHandler{
+		autoCreate := &eventtype.EventTypeAutoHandler{
 			EventTypeLister: eventtypeinformer.Get(ctx).Lister(),
 			EventingClient:  eventingclient.Get(ctx).EventingV1beta2(),
 			FeatureStore:    featureStore,
