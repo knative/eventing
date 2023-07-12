@@ -222,13 +222,13 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1.InMemoryChannel)
 
 func (r *Reconciler) getCaCerts() (string, error) {
 	// Getting the secret called "imc-dispatcher-tls" from system namespace
-	secret, err := r.secretLister.Secrets(r.systemNamespace).Get(eventingtls.IMCDispatcherTLSSecretName)
+	secret, err := r.secretLister.Secrets(r.systemNamespace).Get(eventingtls.IMCDispatcherServerTLSSecretName)
 	if err != nil {
-		return "", fmt.Errorf("failed to get CA certs from %s/%s: %w", r.systemNamespace, eventingtls.IMCDispatcherTLSSecretName, err)
+		return "", fmt.Errorf("failed to get CA certs from %s/%s: %w", r.systemNamespace, eventingtls.IMCDispatcherServerTLSSecretName, err)
 	}
 	caCerts, ok := secret.Data[caCertsSecretKey]
 	if !ok {
-		return "", fmt.Errorf("failed to get CA certs from %s/%s: missing %s key", r.systemNamespace, eventingtls.IMCDispatcherTLSSecretName, caCertsSecretKey)
+		return "", fmt.Errorf("failed to get CA certs from %s/%s: missing %s key", r.systemNamespace, eventingtls.IMCDispatcherServerTLSSecretName, caCertsSecretKey)
 	}
 	return string(caCerts), nil
 }

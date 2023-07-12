@@ -121,7 +121,7 @@ func NewController(
 		Handler:    controller.HandleAll(grCh),
 	})
 	secretInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.FilterWithName(eventingtls.IMCDispatcherTLSSecretName),
+		FilterFunc: controller.FilterWithName(eventingtls.IMCDispatcherServerTLSSecretName),
 		Handler:    controller.HandleAll(grCh),
 	})
 
