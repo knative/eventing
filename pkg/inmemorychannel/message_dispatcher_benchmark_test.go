@@ -76,12 +76,6 @@ func BenchmarkDispatcher_dispatch_ok_through_2_channels(b *testing.B) {
 		},
 	}
 
-	// Let's mock this stuff!
-	httpSender, err := kncloudevents.NewHTTPMessageSenderWithTarget(channelA.URL.String())
-	if err != nil {
-		b.Fatal(err)
-	}
-
 	multiChannelFanoutHandler, err := multichannelfanout.NewMessageHandlerWithConfig(context.TODO(), logger, channel.NewMessageDispatcher(logger), config, reporter)
 	if err != nil {
 		b.Fatal(err)
@@ -96,7 +90,6 @@ func BenchmarkDispatcher_dispatch_ok_through_2_channels(b *testing.B) {
 
 	dispatcher := NewMessageDispatcher(dispatcherArgs)
 	requestHandler := kncloudevents.CreateHandler(dispatcher.handler)
-	httpSender.Client = mockedHTTPClient(clientMock(channelA.URL.Host, transformations.URL.Host, channelB.URL.Host, receiver.URL.Host, requestHandler))
 
 	// Start the bench
 	b.ResetTimer()
