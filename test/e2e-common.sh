@@ -87,6 +87,13 @@ function knative_setup() {
   unleash_duck || fail_test "Could not unleash the chaos duck"
 
   install_cert_manager || fail_test "Could not install Cert Manager"
+
+  install_prometheus || fail_test "Could not install Prometheus"
+}
+
+function install_prometheus() {
+    helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+    helm install prometheus prometheus-community/prometheus
 }
 
 function scale_controlplane() {
