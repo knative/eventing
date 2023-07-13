@@ -19,9 +19,12 @@ package sender
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	nethttp "net/http"
 	"strconv"
@@ -48,6 +51,12 @@ type generator struct {
 
 	// Sink url for the message destination
 	Sink string `envconfig:"SINK" required:"true"`
+
+	// CACert is the certificate for enabling HTTPS in Sink URL
+	CACerts string `envconfig:"CA_CERTS"`
+
+	// EnforceTLS is used to enforce TLS.
+	EnforceTLS bool `envconfig:"ENFORCE_TLS" default:"false"`
 
 	// The duration to wait before starting sending the first message
 	Delay string `envconfig:"DELAY" default:"5" required:"false"`
@@ -134,6 +143,23 @@ func Start(ctx context.Context, logs *eventshub.EventLogs, clientOpts ...eventsh
 		logging.FromContext(ctx).Info("awake, continuing")
 	}
 
+	httpClient := nethttp.DefaultClient
+
+	if env.EnforceTLS {
+		caCertPool, err := x509.SystemCertPool()
+		if err != nil {
+			return fmt.Errorf("failed to create cert pool %s: %w", env.Sink, err)
+		}
+		caCertPool.AppendCertsFromPEM([]byte(env.CACerts))
+
+		transport := nethttp.DefaultTransport.(*nethttp.Transport).Clone()
+		transport.TLSClientConfig = &tls.Config{
+			RootCAs:    caCertPool,
+			MinVersion: tls.VersionTLS12,
+		}
+		httpClient = &nethttp.Client{Transport: transport}
+	}
+
 	if env.ProbeSink {
 		probingTimeout := time.Duration(env.ProbeSinkTimeout) * time.Second
 		// Probe the sink for up to a minute.
@@ -143,7 +169,7 @@ func Start(ctx context.Context, logs *eventshub.EventLogs, clientOpts ...eventsh
 				return false, err
 			}
 
-			if _, err := nethttp.DefaultClient.Do(req); err != nil {
+			if _, err := httpClient.Do(req); err != nil {
 				logging.FromContext(ctx).Error(zap.Error(err))
 				return false, nil
 			}
@@ -152,8 +178,6 @@ func Start(ctx context.Context, logs *eventshub.EventLogs, clientOpts ...eventsh
 			return fmt.Errorf("probing the sink '%s' using timeout %s failed: %w", env.Sink, probingTimeout, err)
 		}
 	}
-
-	httpClient := &nethttp.Client{}
 
 	for _, opt := range clientOpts {
 		if err := opt(httpClient); err != nil {
@@ -282,7 +306,7 @@ func (g *generator) responseInfo(res *nethttp.Response, event *cloudevents.Event
 	responseMessage := cehttp.NewMessageFromHttpResponse(res)
 
 	if responseMessage.ReadEncoding() == binding.EncodingUnknown {
-		body, err := ioutil.ReadAll(res.Body)
+		body, err := io.ReadAll(res.Body)
 
 		if err != nil {
 			responseInfo.Error = err.Error()

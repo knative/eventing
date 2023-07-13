@@ -153,7 +153,7 @@ func SendsEventsWithSinkUri() *feature.Feature {
 		cfg := []manifest.CfgFn{
 			apiserversource.WithServiceAccountName(sacmName),
 			apiserversource.WithEventMode(v1.ResourceMode),
-			apiserversource.WithSink(&duckv1.Destination{URI: sinkuri}),
+			apiserversource.WithSink(&duckv1.Destination{URI: sinkuri.URL, CACerts: sinkuri.CACerts}),
 			apiserversource.WithResources(v1.APIVersionKindSelector{
 				APIVersion: "v1",
 				Kind:       "Event",
@@ -245,7 +245,7 @@ func SendsEventsWithEventTypes() *feature.Feature {
 		cfg := []manifest.CfgFn{
 			apiserversource.WithServiceAccountName(sacmName),
 			apiserversource.WithEventMode(v1.ResourceMode),
-			apiserversource.WithSink(&duckv1.Destination{URI: brokeruri}),
+			apiserversource.WithSink(&duckv1.Destination{URI: brokeruri.URL, CACerts: brokeruri.CACerts}),
 			apiserversource.WithResources(v1.APIVersionKindSelector{
 				APIVersion: "v1",
 				Kind:       "Event",
@@ -733,7 +733,7 @@ func SendsEventsWithRetries() *feature.Feature {
 		cfg := []manifest.CfgFn{
 			apiserversource.WithServiceAccountName(sacmName),
 			apiserversource.WithEventMode(v1.ReferenceMode),
-			apiserversource.WithSink(&duckv1.Destination{URI: sinkuri}),
+			apiserversource.WithSink(&duckv1.Destination{URI: sinkuri.URL, CACerts: sinkuri.CACerts}),
 			apiserversource.WithResources(v1.APIVersionKindSelector{
 				APIVersion:    "v1",
 				Kind:          "Pod",

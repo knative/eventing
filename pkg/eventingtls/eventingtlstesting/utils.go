@@ -16,13 +16,27 @@ limitations under the License.
 
 package eventingtlstesting
 
-import "net/http"
+import (
+	"net/http"
 
-// RequestsChannelHandler
-func RequestsChannelHandler(requestsChan chan<- *http.Request) http.Handler {
+	cloudevents "github.com/cloudevents/sdk-go/v2"
+	"github.com/cloudevents/sdk-go/v2/binding"
+	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
+)
+
+// EventChannelHandler is an http.Handler that covert received requests to cloudevent.Event and then
+// send them to the given channel.
+func EventChannelHandler(requestsChan chan<- cloudevents.Event) http.Handler {
 	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		if requestsChan != nil {
-			requestsChan <- request
+			message := cehttp.NewMessageFromHttpRequest(request)
+			defer message.Finish(nil)
+
+			event, err := binding.ToEvent(request.Context(), message)
+			if err != nil {
+				panic("Expected event: " + err.Error())
+			}
+			requestsChan <- *event
 		}
 		if request.TLS == nil {
 			// It's not on TLS, fail request

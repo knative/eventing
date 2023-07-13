@@ -459,10 +459,10 @@ func PodLogs(ctx context.Context, podName, containerName, namespace string) ([]b
 
 // WaitForAddress waits until a resource has an address.
 // Timing is optional but if provided is [interval, timeout].
-func WaitForAddress(ctx context.Context, gvr schema.GroupVersionResource, name string, timing ...time.Duration) (*apis.URL, error) {
+func WaitForAddress(ctx context.Context, gvr schema.GroupVersionResource, name string, timing ...time.Duration) (*duckv1.Addressable, error) {
 	interval, timeout := PollTimings(ctx, timing)
 
-	var addr *apis.URL
+	var addr *duckv1.Addressable
 	err := wait.PollImmediate(interval, timeout, func() (bool, error) {
 		var err error
 		addr, err = Address(ctx, gvr, name)

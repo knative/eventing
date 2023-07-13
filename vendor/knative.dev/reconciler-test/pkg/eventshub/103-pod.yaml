@@ -36,7 +36,7 @@ spec:
   {{ end }}
   containers:
     - name: eventshub
-      {{ if .withEnforceTLS }}
+      {{ if and .withEnforceTLS .isReceiver }}
       volumeMounts:
         - name: tls-certificates
           mountPath: "/etc/tls/certificates"
@@ -61,7 +61,7 @@ spec:
       {{ end }}
       image: {{ .image }}
       imagePullPolicy: "IfNotPresent"
-      {{ if .withReadiness }}
+      {{ if .isReceiver }}
       readinessProbe:
         httpGet:
           port: 8080
@@ -82,7 +82,7 @@ spec:
         - name: {{printf "%q" $key}}
           value: {{printf "%q" $value}}
         {{ end }}
-  {{ if .withEnforceTLS }}
+  {{ if and .withEnforceTLS .isReceiver }}
   volumes:
     - name: tls-certificates
       secret:

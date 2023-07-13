@@ -20,13 +20,19 @@ aliases:
   - salaboy
   docs-reviewers:
   - nainaz
+  - nak3
   - pmbanugo
+  - retocode
+  - skonto
   - snneji
   docs-wg-leads:
   - snneji
   docs-writers:
   - csantanapr
+  - nak3
   - psschwei
+  - retocode
+  - skonto
   - snneji
   eventing-reviewers:
   - aslom
@@ -61,7 +67,6 @@ aliases:
   - csantanapr
   - dprotaso
   - dsimansk
-  - evankanderson
   - knative-automation
   - knative-prow-releaser-robot
   - knative-prow-robot
@@ -78,6 +83,7 @@ aliases:
   - skonto
   - smoser-ibm
   - upodroid
+  - xtreme-sameer-vohra
   - zroubalik
   knative-release-leads:
   - Vishal-Chdhry
@@ -125,6 +131,7 @@ aliases:
   - evankanderson
   serving-approvers:
   - nak3
+  - psschwei
   - skonto
   serving-reviewers:
   - KauzClay
@@ -140,7 +147,6 @@ aliases:
   - skonto
   serving-wg-leads:
   - dprotaso
-  - psschwei
   serving-writers:
   - dprotaso
   - nak3
@@ -159,9 +165,9 @@ aliases:
   - psschwei
   - zroubalik
   trademark-committee:
-  - evankanderson
   - mchmarny
   - smoser-ibm
+  - xtreme-sameer-vohra
   ux-wg-leads:
   - snneji
   ux-writers:
