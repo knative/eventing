@@ -31,11 +31,11 @@ import (
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/kncloudevents"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
-	pkgduckv1 "knative.dev/pkg/apis/duck/v1"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"
 	bindingshttp "github.com/cloudevents/sdk-go/v2/protocol/http"
+	"github.com/cloudevents/sdk-go/v2/test"
 	"go.opencensus.io/trace"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
@@ -67,8 +67,8 @@ func TestSubscriberSpecToFanoutConfig(t *testing.T) {
 		ReplyURI:          apis.HTTP("reply.example.com"),
 		ReplyCACerts:      &replyCACerts,
 		Delivery: &eventingduckv1.DeliverySpec{
-			DeadLetterSink: &pkgduckv1.Destination{
-				Ref: &pkgduckv1.KReference{
+			DeadLetterSink: &duckv1.Destination{
+				Ref: &duckv1.KReference{
 					Kind:       "mykind",
 					Namespace:  "mynamespace",
 					Name:       "myname",
@@ -206,9 +206,18 @@ func TestFanoutMessageHandler_ServeHTTP(t *testing.T) {
 		"reply fails": {
 			subs: []Subscription{
 				{
-					Reply: &replaceReplier,
+					Subscriber: replaceSubscriber,
+					Reply:      &replaceReplier,
 				},
 			},
+			subscriber: func(writer http.ResponseWriter, req *http.Request) {
+				// repsonse with some event for reply
+				event := test.FullEvent()
+				message := binding.ToMessage(&event)
+				bindingshttp.WriteResponseWriter(context.TODO(), message, http.StatusAccepted, writer)
+				message.Finish(nil)
+			},
+			subscriberReqs: 1,
 			replier: func(writer http.ResponseWriter, _ *http.Request) {
 				writer.WriteHeader(http.StatusNotFound)
 			},
@@ -367,7 +376,6 @@ func testFanoutMessageHandler(t *testing.T, async bool, receiverFunc channel.Unb
 
 	h, err := NewFanoutMessageHandler(
 		logger,
-		channel.NewMessageDispatcher(logger),
 		Config{
 			Subscriptions: subs,
 			AsyncHandler:  async,
@@ -411,7 +419,7 @@ func testFanoutMessageHandler(t *testing.T, async bool, receiverFunc channel.Unb
 
 	h.ServeHTTP(&resp, req)
 	if resp.Code != expectedStatus {
-		t.Errorf("Unexpected status code. Expected %v, Actual %v", expectedStatus, resp.Code)
+		t.Fatalf("Unexpected status code. Expected %v, Actual %v", expectedStatus, resp.Code)
 	}
 
 	if subscriberServerWg != nil {

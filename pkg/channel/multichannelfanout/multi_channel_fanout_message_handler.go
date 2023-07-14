@@ -64,7 +64,7 @@ func NewMessageHandler(_ context.Context, logger *zap.Logger) *MessageHandler {
 
 // NewMessageHandlerWithConfig creates a new Handler with the specified configuration. This is really meant for tests
 // where you want to apply a fully specified configuration for tests. Reconciler operates on single channel at a time.
-func NewMessageHandlerWithConfig(_ context.Context, logger *zap.Logger, messageDispatcher channel.MessageDispatcher, conf Config, reporter channel.StatsReporter, recvOptions ...channel.MessageReceiverOptions) (*MessageHandler, error) {
+func NewMessageHandlerWithConfig(_ context.Context, logger *zap.Logger, conf Config, reporter channel.StatsReporter, recvOptions ...channel.MessageReceiverOptions) (*MessageHandler, error) {
 	handlers := make(map[string]fanout.MessageHandler, len(conf.ChannelConfigs))
 
 	for _, cc := range conf.ChannelConfigs {
@@ -73,7 +73,7 @@ func NewMessageHandlerWithConfig(_ context.Context, logger *zap.Logger, messageD
 			if key == "" {
 				continue
 			}
-			handler, err := fanout.NewFanoutMessageHandler(logger, messageDispatcher, cc.FanoutConfig, reporter, cc.EventTypeHandler, cc.ChannelAddressable, cc.ChannelUID, recvOptions...)
+			handler, err := fanout.NewFanoutMessageHandler(logger, cc.FanoutConfig, reporter, cc.EventTypeHandler, cc.ChannelAddressable, cc.ChannelUID, recvOptions...)
 			if err != nil {
 				logger.Error("Failed creating new fanout handler.", zap.Error(err))
 				return nil, err

@@ -46,6 +46,12 @@ import (
 	"knative.dev/eventing/pkg/utils"
 )
 
+const (
+	// noDuration signals that the dispatch step hasn't started
+	NoDuration = -1
+	NoResponse = -1
+)
+
 type DispatchInfo struct {
 	Duration       time.Duration
 	ResponseCode   int
@@ -136,6 +142,11 @@ func send(ctx context.Context, message binding.Message, destination duckv1.Addre
 		}
 	}()
 
+	if destination == (duckv1.Addressable{}) {
+		// return without error, if destination is empty
+		return dispatchExecutionInfo, nil
+	}
+
 	if destination.URL == nil {
 		return dispatchExecutionInfo, fmt.Errorf("can not dispatch message to nil destination.URL")
 	}
@@ -222,6 +233,8 @@ func send(ctx context.Context, message binding.Message, destination duckv1.Addre
 
 func executeRequest(ctx context.Context, target duckv1.Addressable, message cloudevents.Message, additionalHeaders http.Header, retryConfig *RetryConfig, transformers ...binding.Transformer) (context.Context, cloudevents.Message, *DispatchInfo, error) {
 	dispatchInfo := DispatchInfo{
+		Duration:       NoDuration,
+		ResponseCode:   NoResponse,
 		ResponseHeader: make(http.Header),
 	}
 

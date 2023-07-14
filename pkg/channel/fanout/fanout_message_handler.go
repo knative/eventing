@@ -80,8 +80,7 @@ type FanoutMessageHandler struct {
 	subscriptionsMutex sync.RWMutex
 	subscriptions      []Subscription
 
-	receiver   *channel.MessageReceiver
-	dispatcher channel.MessageDispatcher
+	receiver *channel.MessageReceiver
 
 	// TODO: Plumb context through the receiver and dispatcher and use that to store the timeout,
 	// rather than a member variable.
@@ -98,7 +97,6 @@ type FanoutMessageHandler struct {
 
 func NewFanoutMessageHandler(
 	logger *zap.Logger,
-	messageDispatcher channel.MessageDispatcher,
 	config Config,
 	reporter channel.StatsReporter,
 	eventTypeHandler *eventtype.EventTypeAutoHandler,
@@ -108,7 +106,6 @@ func NewFanoutMessageHandler(
 ) (*FanoutMessageHandler, error) {
 	handler := &FanoutMessageHandler{
 		logger:             logger,
-		dispatcher:         messageDispatcher,
 		timeout:            defaultTimeout,
 		reporter:           reporter,
 		asyncHandler:       config.AsyncHandler,
@@ -290,11 +287,11 @@ func (f *FanoutMessageHandler) ServeHTTP(response nethttp.ResponseWriter, reques
 
 // ParseDispatchResultAndReportMetric processes the dispatch result and records the related channel metrics with the appropriate context
 func ParseDispatchResultAndReportMetrics(result DispatchResult, reporter channel.StatsReporter, reportArgs channel.ReportArgs) error {
-	if result.info != nil && result.info.Time > channel.NoDuration {
-		if result.info.ResponseCode > channel.NoResponse {
-			_ = reporter.ReportEventDispatchTime(&reportArgs, result.info.ResponseCode, result.info.Time)
+	if result.info != nil && result.info.Duration > kncloudevents.NoDuration {
+		if result.info.ResponseCode > kncloudevents.NoResponse {
+			_ = reporter.ReportEventDispatchTime(&reportArgs, result.info.ResponseCode, result.info.Duration)
 		} else {
-			_ = reporter.ReportEventDispatchTime(&reportArgs, nethttp.StatusInternalServerError, result.info.Time)
+			_ = reporter.ReportEventDispatchTime(&reportArgs, nethttp.StatusInternalServerError, result.info.Duration)
 		}
 	}
 	err := result.err
@@ -320,25 +317,25 @@ func (f *FanoutMessageHandler) dispatch(ctx context.Context, subs []Subscription
 		}(sub)
 	}
 
-	var totalDispatchTimeForFanout time.Duration = channel.NoDuration
+	var totalDispatchTimeForFanout time.Duration = kncloudevents.NoDuration
 	dispatchResultForFanout := DispatchResult{
-		info: &channel.DispatchExecutionInfo{
-			Time:         channel.NoDuration,
-			ResponseCode: channel.NoResponse,
+		info: &kncloudevents.DispatchInfo{
+			Duration:     kncloudevents.NoDuration,
+			ResponseCode: kncloudevents.NoResponse,
 		},
 	}
 	for range subs {
 		select {
 		case dispatchResult := <-errorCh:
 			if dispatchResult.info != nil {
-				if dispatchResult.info.Time > channel.NoDuration {
-					if totalDispatchTimeForFanout > channel.NoDuration {
-						totalDispatchTimeForFanout += dispatchResult.info.Time
+				if dispatchResult.info.Duration > kncloudevents.NoDuration {
+					if totalDispatchTimeForFanout > kncloudevents.NoDuration {
+						totalDispatchTimeForFanout += dispatchResult.info.Duration
 					} else {
-						totalDispatchTimeForFanout = dispatchResult.info.Time
+						totalDispatchTimeForFanout = dispatchResult.info.Duration
 					}
 				}
-				dispatchResultForFanout.info.Time = totalDispatchTimeForFanout
+				dispatchResultForFanout.info.Duration = totalDispatchTimeForFanout
 				dispatchResultForFanout.info.ResponseCode = dispatchResult.info.ResponseCode
 			}
 			if dispatchResult.err != nil {
@@ -358,32 +355,28 @@ func (f *FanoutMessageHandler) dispatch(ctx context.Context, subs []Subscription
 
 // makeFanoutRequest sends the request to exactly one subscription. It handles both the `call` and
 // the `sink` portions of the subscription.
-func (f *FanoutMessageHandler) makeFanoutRequest(ctx context.Context, message binding.Message, additionalHeaders nethttp.Header, sub Subscription) (*channel.DispatchExecutionInfo, error) {
-	return f.dispatcher.DispatchMessageWithRetries(
-		ctx,
-		message,
-		additionalHeaders,
-		sub.Subscriber,
-		sub.Reply,
-		sub.DeadLetter,
-		sub.RetryConfig,
-	)
+func (f *FanoutMessageHandler) makeFanoutRequest(ctx context.Context, message binding.Message, additionalHeaders nethttp.Header, sub Subscription) (*kncloudevents.DispatchInfo, error) {
+	return kncloudevents.SendMessage(ctx, message, sub.Subscriber,
+		kncloudevents.WithHeader(additionalHeaders),
+		kncloudevents.WithReply(sub.Reply),
+		kncloudevents.WithDeadLetterSink(sub.DeadLetter),
+		kncloudevents.WithRetryConfig(sub.RetryConfig))
 }
 
 type DispatchResult struct {
 	err  error
-	info *channel.DispatchExecutionInfo
+	info *kncloudevents.DispatchInfo
 }
 
 func (d DispatchResult) Error() error {
 	return d.err
 }
 
-func (d DispatchResult) Info() *channel.DispatchExecutionInfo {
+func (d DispatchResult) Info() *kncloudevents.DispatchInfo {
 	return d.info
 }
 
-func NewDispatchResult(err error, info *channel.DispatchExecutionInfo) DispatchResult {
+func NewDispatchResult(err error, info *kncloudevents.DispatchInfo) DispatchResult {
 	return DispatchResult{
 		err:  err,
 		info: info,

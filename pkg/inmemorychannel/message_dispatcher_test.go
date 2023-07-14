@@ -230,7 +230,7 @@ func TestDispatcher_dispatch(t *testing.T) {
 		},
 	}
 
-	sh, err := multichannelfanout.NewMessageHandlerWithConfig(context.TODO(), logger, channel.NewMessageDispatcher(logger), config, reporter)
+	sh, err := multichannelfanout.NewMessageHandlerWithConfig(context.TODO(), logger, config, reporter)
 	if err != nil {
 		t.Fatal(err)
 	}

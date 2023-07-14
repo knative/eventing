@@ -112,7 +112,6 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1.InMemoryChannel) rec
 		// No handler yet, create one.
 		fanoutHandler, err := fanout.NewFanoutMessageHandler(
 			logging.FromContext(ctx).Desugar(),
-			channel.NewMessageDispatcher(logging.FromContext(ctx).Desugar()),
 			config.FanoutConfig,
 			r.reporter,
 			eventTypeAutoHandler,
@@ -141,7 +140,6 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1.InMemoryChannel) rec
 		// No handler yet, create one.
 		fanoutHandler, err := fanout.NewFanoutMessageHandler(
 			logging.FromContext(ctx).Desugar(),
-			channel.NewMessageDispatcher(logging.FromContext(ctx).Desugar()),
 			config.FanoutConfig,
 			r.reporter,
 			eventTypeAutoHandler,

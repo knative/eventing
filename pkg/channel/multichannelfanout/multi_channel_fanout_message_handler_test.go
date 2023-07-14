@@ -71,7 +71,6 @@ func TestNewMessageHandlerWithConfig(t *testing.T) {
 			_, err := NewMessageHandlerWithConfig(
 				context.TODO(),
 				logger,
-				channel.NewMessageDispatcher(logger),
 				tc.config,
 				reporter,
 			)
@@ -102,7 +101,7 @@ func TestNewMessageHandler(t *testing.T) {
 	if h != nil {
 		t.Errorf("Found handler for %q but not expected", handlerName)
 	}
-	f, err := fanout.NewFanoutMessageHandler(logger, channel.NewMessageDispatcher(logger), fanout.Config{}, reporter, nil, nil, nil)
+	f, err := fanout.NewFanoutMessageHandler(logger, fanout.Config{}, reporter, nil, nil, nil)
 	if err != nil {
 		t.Error("Failed to create FanoutMessagHandler: ", err)
 	}
@@ -312,7 +311,7 @@ func TestServeHTTPMessageHandler(t *testing.T) {
 
 			logger := zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller()))
 			reporter := channel.NewStatsReporter("testcontainer", "testpod")
-			h, err := NewMessageHandlerWithConfig(context.TODO(), logger, channel.NewMessageDispatcher(logger), tc.config, reporter, tc.recvOptions...)
+			h, err := NewMessageHandlerWithConfig(context.TODO(), logger, tc.config, reporter, tc.recvOptions...)
 			if err != nil {
 				t.Fatalf("Unexpected NewHandler error: '%v'", err)
 			}

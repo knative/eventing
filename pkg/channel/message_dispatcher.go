@@ -49,8 +49,8 @@ import (
 
 const (
 	// noDuration signals that the dispatch step hasn't started
-	NoDuration = -1
-	NoResponse = -1
+	NoDuration = kncloudevents.NoDuration
+	NoResponse = kncloudevents.NoResponse
 )
 
 type MessageDispatcher interface {
@@ -82,6 +82,7 @@ type DispatchExecutionInfo struct {
 }
 
 // NewMessageDispatcher creates a new Message dispatcher.
+// deprecated: use kncloudevents.SendMessage for message dispatching instead
 func NewMessageDispatcher(logger *zap.Logger) *MessageDispatcherImpl {
 	return &MessageDispatcherImpl{
 		supportedSchemes: sets.NewString("http", "https"),
@@ -89,10 +90,12 @@ func NewMessageDispatcher(logger *zap.Logger) *MessageDispatcherImpl {
 	}
 }
 
+// deprecated: use kncloudevents.SendMessage instead
 func (d *MessageDispatcherImpl) DispatchMessage(ctx context.Context, message cloudevents.Message, additionalHeaders nethttp.Header, destination duckv1.Addressable, reply *duckv1.Addressable, deadLetter *duckv1.Addressable) (*DispatchExecutionInfo, error) {
 	return d.DispatchMessageWithRetries(ctx, message, additionalHeaders, destination, reply, deadLetter, nil)
 }
 
+// deprecated: use kncloudevents.SendMessage instead
 func (d *MessageDispatcherImpl) DispatchMessageWithRetries(ctx context.Context, message cloudevents.Message, additionalHeaders nethttp.Header, destination duckv1.Addressable, reply *duckv1.Addressable, deadLetter *duckv1.Addressable, retriesConfig *kncloudevents.RetryConfig, transformers ...binding.Transformer) (*DispatchExecutionInfo, error) {
 	// All messages that should be finished at the end of this function
 	// are placed in this slice

@@ -40,7 +40,6 @@ import (
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/apis/feature"
 	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
-	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/channel/fanout"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/inmemorychannel"
@@ -498,7 +497,7 @@ func TestReconciler_ReconcileKind(t *testing.T) {
 		})
 		// Just run the tests once with no existing handler (creates the handler) and once
 		// with an existing, so we exercise both paths at once.
-		fh, err := fanout.NewFanoutMessageHandler(nil, channel.NewMessageDispatcher(nil), fanout.Config{}, nil, nil, nil, nil)
+		fh, err := fanout.NewFanoutMessageHandler(nil, fanout.Config{}, nil, nil, nil, nil)
 		if err != nil {
 			t.Error(err)
 		}
@@ -543,7 +542,7 @@ func TestReconciler_InvalidInputs(t *testing.T) {
 		},
 	}
 	for n, tc := range testCases {
-		fh, err := fanout.NewFanoutMessageHandler(nil, channel.NewMessageDispatcher(nil), fanout.Config{}, nil, nil, nil, nil)
+		fh, err := fanout.NewFanoutMessageHandler(nil, fanout.Config{}, nil, nil, nil, nil)
 		if err != nil {
 			t.Error(err)
 		}
@@ -573,7 +572,7 @@ func TestReconciler_Deletion(t *testing.T) {
 		},
 	}
 	for n, tc := range testCases {
-		fh, err := fanout.NewFanoutMessageHandler(nil, channel.NewMessageDispatcher(nil), fanout.Config{}, nil, nil, nil, nil)
+		fh, err := fanout.NewFanoutMessageHandler(nil, fanout.Config{}, nil, nil, nil, nil)
 		if err != nil {
 			t.Error(err)
 		}
