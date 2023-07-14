@@ -196,13 +196,6 @@ func TestFanoutMessageHandler_ServeHTTP(t *testing.T) {
 			expectedStatus:      http.StatusAccepted,
 			asyncExpectedStatus: http.StatusAccepted,
 		},
-		"empty sub succeeds": {
-			subs: []Subscription{
-				{},
-			},
-			expectedStatus:      http.StatusAccepted,
-			asyncExpectedStatus: http.StatusAccepted,
-		},
 		"reply fails": {
 			subs: []Subscription{
 				{

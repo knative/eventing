@@ -142,11 +142,6 @@ func send(ctx context.Context, message binding.Message, destination duckv1.Addre
 		}
 	}()
 
-	if destination == (duckv1.Addressable{}) {
-		// return without error, if destination is empty
-		return dispatchExecutionInfo, nil
-	}
-
 	if destination.URL == nil {
 		return dispatchExecutionInfo, fmt.Errorf("can not dispatch message to nil destination.URL")
 	}
