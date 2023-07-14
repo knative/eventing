@@ -30,6 +30,7 @@ import (
 	"github.com/cloudevents/sdk-go/v2/binding"
 	"github.com/cloudevents/sdk-go/v2/event"
 	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
+	"github.com/hashicorp/go-retryablehttp"
 	"go.opencensus.io/trace"
 
 	"knative.dev/pkg/apis"
@@ -226,27 +227,27 @@ func executeRequest(ctx context.Context, target duckv1.Addressable, message clou
 	ctx, span := trace.StartSpan(ctx, "knative.dev", trace.WithSpanKind(trace.SpanKindClient))
 	defer span.End()
 
-	req, err := NewCloudEventRequest(ctx, target)
-	if err != nil {
-		return ctx, nil, &dispatchInfo, err
-	}
-
 	if span.IsRecordingEvents() {
 		transformers = append(transformers, tracing.PopulateSpan(span, target.URL.String()))
 	}
 
-	err = WriteRequestWithAdditionalHeaders(ctx, message, req, additionalHeaders, transformers...)
+	req, err := createRequest(ctx, message, target, additionalHeaders, transformers...)
+	if err != nil {
+		return ctx, nil, &dispatchInfo, err
+	}
+
+	client, err := newClient(target)
 	if err != nil {
 		return ctx, nil, &dispatchInfo, err
 	}
 
 	start := time.Now()
-	response, err := req.SendWithRetries(retryConfig)
-	dispatchTime := time.Since(start)
+	response, err := client.DoWithRetries(req, retryConfig)
+	dispatchInfo.Duration = time.Since(start)
 	if err != nil {
-		dispatchInfo.Duration = dispatchTime
 		dispatchInfo.ResponseCode = http.StatusInternalServerError
 		dispatchInfo.ResponseBody = []byte(fmt.Sprintf("dispatch error: %s", err.Error()))
+
 		return ctx, nil, &dispatchInfo, err
 	}
 
@@ -285,6 +286,78 @@ func executeRequest(ctx context.Context, target duckv1.Addressable, message clou
 	}
 
 	return ctx, responseMessage, &dispatchInfo, nil
+}
+
+func createRequest(ctx context.Context, message binding.Message, target duckv1.Addressable, additionalHeaders http.Header, transformers ...binding.Transformer) (*http.Request, error) {
+	request, err := http.NewRequestWithContext(ctx, "POST", target.URL.String(), nil)
+	if err != nil {
+		return nil, fmt.Errorf("could not create http request: %w", err)
+	}
+
+	if err := cehttp.WriteRequest(ctx, message, request, transformers...); err != nil {
+		return nil, fmt.Errorf("could not write message to request: %w", err)
+	}
+
+	for key, val := range additionalHeaders {
+		request.Header[key] = val
+	}
+
+	return request, nil
+}
+
+// client is a wrapper arround the http.Client, which provides methods for retries
+type client struct {
+	http.Client
+}
+
+func newClient(target duckv1.Addressable) (*client, error) {
+	c, err := getClientForAddressable(target)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get http client for addressable: %w", err)
+	}
+
+	return &client{
+		Client: *c,
+	}, nil
+}
+
+func (c *client) Do(req *http.Request) (*http.Response, error) {
+	return c.Client.Do(req)
+}
+
+func (c *client) DoWithRetries(req *http.Request, retryConfig *RetryConfig) (*http.Response, error) {
+	if retryConfig == nil {
+		return c.Do(req)
+	}
+
+	client := c.Client
+	if retryConfig.RequestTimeout != 0 {
+		client = http.Client{
+			Transport:     client.Transport,
+			CheckRedirect: client.CheckRedirect,
+			Jar:           client.Jar,
+			Timeout:       retryConfig.RequestTimeout,
+		}
+	}
+
+	retryableClient := retryablehttp.Client{
+		HTTPClient:   &client,
+		RetryWaitMin: defaultRetryWaitMin,
+		RetryWaitMax: defaultRetryWaitMax,
+		RetryMax:     retryConfig.RetryMax,
+		CheckRetry:   retryablehttp.CheckRetry(retryConfig.CheckRetry),
+		Backoff:      generateBackoffFn(retryConfig),
+		ErrorHandler: func(resp *http.Response, err error, numTries int) (*http.Response, error) {
+			return resp, err
+		},
+	}
+
+	retryableReq, err := retryablehttp.FromRequest(req)
+	if err != nil {
+		return nil, err
+	}
+
+	return retryableClient.Do(retryableReq)
 }
 
 // dispatchExecutionTransformer returns Transformers based on the specified destination and DispatchExecutionInfo
