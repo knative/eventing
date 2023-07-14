@@ -30,6 +30,7 @@ import (
 
 	"knative.dev/eventing/pkg/client/injection/informers/messaging/v1/inmemorychannel"
 	inmemorychannelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/inmemorychannel"
+	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/reconciler/inmemorychannel/controller/config"
 	"knative.dev/pkg/resolver"
 
@@ -120,7 +121,7 @@ func NewController(
 		Handler:    controller.HandleAll(grCh),
 	})
 	secretInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.FilterWithName(dispatcherTLSSecretName),
+		FilterFunc: controller.FilterWithName(eventingtls.IMCDispatcherServerTLSSecretName),
 		Handler:    controller.HandleAll(grCh),
 	})
 

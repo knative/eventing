@@ -34,6 +34,7 @@ import (
 
 	"knative.dev/eventing/pkg/apis/feature"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
+	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/eventingtls/eventingtlstesting"
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/reconciler/inmemorychannel/controller/config"
@@ -942,7 +943,7 @@ func makeTLSSecret() *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: testNS,
-			Name:      "imc-dispatcher-tls",
+			Name:      eventingtls.IMCDispatcherServerTLSSecretName,
 		},
 		Data: map[string][]byte{
 			"ca.crt": []byte(testCaCerts),

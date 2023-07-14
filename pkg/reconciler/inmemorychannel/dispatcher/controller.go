@@ -62,7 +62,6 @@ const (
 	httpPort      = 8080
 	httpsPort     = 8443
 	finalizerName = "imc-dispatcher"
-	tlsSecretName = "imc-dispatcher-server-tls"
 )
 
 type envConfig struct {
@@ -158,7 +157,7 @@ func NewController(
 
 	secret := types.NamespacedName{
 		Namespace: system.Namespace(),
-		Name:      tlsSecretName,
+		Name:      eventingtls.IMCDispatcherServerTLSSecretName,
 	}
 	serverTLSConfig := eventingtls.NewDefaultServerConfig()
 	serverTLSConfig.GetCertificate = eventingtls.GetCertificateFromSecret(ctx, secretinformer.Get(ctx), kubeclient.Get(ctx), secret)
