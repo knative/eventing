@@ -37,8 +37,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zaptest"
 	"k8s.io/apimachinery/pkg/util/sets"
 	rectesting "knative.dev/pkg/reconciler/testing"
 
@@ -846,8 +844,6 @@ func TestDispatchMessage(t *testing.T) {
 
 			ctx := context.Background()
 
-			md := kncloudevents.NewMessageDispatcher(zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())))
-
 			destination := duckv1.Addressable{
 				URL: getOnlyDomainURL(t, tc.sendToDestination, destServer.URL),
 			}
@@ -872,7 +868,7 @@ func TestDispatchMessage(t *testing.T) {
 			if tc.header != nil {
 				headers = utils.PassThroughHeaders(tc.header)
 			}
-			info, err := md.DispatchMessage(ctx, message, headers, destination, reply, deadLetterSink)
+			info, err := kncloudevents.DispatchMessage(ctx, message, headers, destination, reply, deadLetterSink)
 
 			if tc.lastReceiver != "" {
 				switch tc.lastReceiver {
@@ -962,11 +958,9 @@ func TestDispatchMessageToTLSEndpoint(t *testing.T) {
 		}
 	}()
 
-	md := kncloudevents.NewMessageDispatcher(zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())))
-
 	// send event
 	message := binding.ToMessage(&eventToSend)
-	info, err := md.DispatchMessage(ctx, message, nil, destination, nil, nil)
+	info, err := kncloudevents.DispatchMessage(ctx, message, nil, destination, nil, nil)
 	require.Nil(t, err)
 	require.Equal(t, 200, info.ResponseCode)
 
@@ -1027,11 +1021,9 @@ func TestDispatchMessageToTLSEndpointWithReply(t *testing.T) {
 		}
 	}()
 
-	md := kncloudevents.NewMessageDispatcher(zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())))
-
 	// send event
 	message := binding.ToMessage(&eventToSend)
-	info, err := md.DispatchMessage(ctx, message, nil, destination, &reply, nil)
+	info, err := kncloudevents.DispatchMessage(ctx, message, nil, destination, &reply, nil)
 	require.Nil(t, err)
 	require.Equal(t, 200, info.ResponseCode)
 
@@ -1087,11 +1079,9 @@ func TestDispatchMessageToTLSEndpointWithDeadLetterSink(t *testing.T) {
 		}
 	}()
 
-	md := kncloudevents.NewMessageDispatcher(zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())))
-
 	// send event
 	message := binding.ToMessage(&eventToSend)
-	info, err := md.DispatchMessage(ctx, message, nil, destination, nil, &dls)
+	info, err := kncloudevents.DispatchMessage(ctx, message, nil, destination, nil, &dls)
 	require.Nil(t, err)
 	require.Equal(t, 200, info.ResponseCode)
 

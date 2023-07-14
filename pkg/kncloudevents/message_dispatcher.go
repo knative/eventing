@@ -9,7 +9,7 @@ You may obtain a copy of the License at
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implie
 See the License for the specific language governing permissions and
 limitations under the License.
 */
@@ -30,8 +30,6 @@ import (
 	"github.com/cloudevents/sdk-go/v2/binding"
 	"github.com/cloudevents/sdk-go/v2/protocol/http"
 	"go.opencensus.io/trace"
-	"go.uber.org/zap"
-	"k8s.io/apimachinery/pkg/util/sets"
 
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -52,47 +50,17 @@ const (
 	NoResponse = -1
 )
 
-type MessageDispatcher interface {
-	// DispatchMessage dispatches an event to a destination over HTTP.
-	//
-	// The destination and reply are URLs.
-	DispatchMessage(ctx context.Context, message cloudevents.Message, additionalHeaders nethttp.Header, destination duckv1.Addressable, reply *duckv1.Addressable, deadLetter *duckv1.Addressable) (*DispatchExecutionInfo, error)
-
-	// DispatchMessageWithRetries dispatches an event to a destination over HTTP.
-	//
-	// The destination and reply are URLs.
-	DispatchMessageWithRetries(ctx context.Context, message cloudevents.Message, additionalHeaders nethttp.Header, destination duckv1.Addressable, reply *duckv1.Addressable, deadLetter *duckv1.Addressable, config *RetryConfig, transformers ...binding.Transformer) (*DispatchExecutionInfo, error)
-}
-
-// MessageDispatcherImpl is the 'real' MessageDispatcher used everywhere except unit tests.
-var _ MessageDispatcher = &MessageDispatcherImpl{}
-
-// MessageDispatcherImpl dispatches events to a destination over HTTP.
-type MessageDispatcherImpl struct {
-	supportedSchemes sets.String
-
-	logger *zap.Logger
-}
-
 type DispatchExecutionInfo struct {
 	Time         time.Duration
 	ResponseCode int
 	ResponseBody []byte
 }
 
-// NewMessageDispatcher creates a new Message dispatcher.
-func NewMessageDispatcher(logger *zap.Logger) *MessageDispatcherImpl {
-	return &MessageDispatcherImpl{
-		supportedSchemes: sets.NewString("http", "https"),
-		logger:           logger,
-	}
+func DispatchMessage(ctx context.Context, message cloudevents.Message, additionalHeaders nethttp.Header, destination duckv1.Addressable, reply *duckv1.Addressable, deadLetter *duckv1.Addressable) (*DispatchExecutionInfo, error) {
+	return DispatchMessageWithRetries(ctx, message, additionalHeaders, destination, reply, deadLetter, nil)
 }
 
-func (d *MessageDispatcherImpl) DispatchMessage(ctx context.Context, message cloudevents.Message, additionalHeaders nethttp.Header, destination duckv1.Addressable, reply *duckv1.Addressable, deadLetter *duckv1.Addressable) (*DispatchExecutionInfo, error) {
-	return d.DispatchMessageWithRetries(ctx, message, additionalHeaders, destination, reply, deadLetter, nil)
-}
-
-func (d *MessageDispatcherImpl) DispatchMessageWithRetries(ctx context.Context, message cloudevents.Message, additionalHeaders nethttp.Header, destination duckv1.Addressable, reply *duckv1.Addressable, deadLetter *duckv1.Addressable, retriesConfig *RetryConfig, transformers ...binding.Transformer) (*DispatchExecutionInfo, error) {
+func DispatchMessageWithRetries(ctx context.Context, message cloudevents.Message, additionalHeaders nethttp.Header, destination duckv1.Addressable, reply *duckv1.Addressable, deadLetter *duckv1.Addressable, retriesConfig *RetryConfig, transformers ...binding.Transformer) (*DispatchExecutionInfo, error) {
 	// All messages that should be finished at the end of this function
 	// are placed in this slice
 	var messagesToFinish []binding.Message
@@ -103,9 +71,9 @@ func (d *MessageDispatcherImpl) DispatchMessageWithRetries(ctx context.Context, 
 	}()
 
 	// sanitize eventual host-only URLs
-	destination = *d.sanitizeAddressable(&destination)
-	reply = d.sanitizeAddressable(reply)
-	deadLetter = d.sanitizeAddressable(deadLetter)
+	destination = *sanitizeAddressable(&destination)
+	reply = sanitizeAddressable(reply)
+	deadLetter = sanitizeAddressable(deadLetter)
 
 	// If there is a destination, variables response* are filled with the response of the destination
 	// Otherwise, they are filled with the original message
@@ -118,19 +86,19 @@ func (d *MessageDispatcherImpl) DispatchMessageWithRetries(ctx context.Context, 
 		// Try to send to destination
 		messagesToFinish = append(messagesToFinish, message)
 
-		// Add `Prefer: reply` header no matter if a reply destination is provided. Discussion: https://github.com/knative/eventing/pull/5764
+		// Add `Prefer: reply` header no matter if a reply destination is provide Discussion: https://github.com/knative/eventing/pull/5764
 		additionalHeadersForDestination := nethttp.Header{}
 		if additionalHeaders != nil {
 			additionalHeadersForDestination = additionalHeaders.Clone()
 		}
 		additionalHeadersForDestination.Set("Prefer", "reply")
 
-		ctx, responseMessage, responseAdditionalHeaders, dispatchExecutionInfo, err = d.executeRequest(ctx, &destination, message, additionalHeadersForDestination, retriesConfig, transformers...)
+		ctx, responseMessage, responseAdditionalHeaders, dispatchExecutionInfo, err = executeRequest(ctx, &destination, message, additionalHeadersForDestination, retriesConfig, transformers...)
 		if err != nil {
 			// If DeadLetter is configured, then send original message with knative error extensions
 			if deadLetter != nil {
-				dispatchTransformers := d.dispatchExecutionInfoTransformers(destination.URL, dispatchExecutionInfo)
-				_, deadLetterResponse, _, dispatchExecutionInfo, deadLetterErr := d.executeRequest(ctx, deadLetter, message, additionalHeaders, retriesConfig, append(transformers, dispatchTransformers)...)
+				dispatchTransformers := dispatchExecutionInfoTransformers(destination.URL, dispatchExecutionInfo)
+				_, deadLetterResponse, _, dispatchExecutionInfo, deadLetterErr := executeRequest(ctx, deadLetter, message, additionalHeaders, retriesConfig, append(transformers, dispatchTransformers)...)
 				if deadLetterErr != nil {
 					return dispatchExecutionInfo, fmt.Errorf("unable to complete request to either %s (%v) or %s (%v)", destination.URL, err, deadLetter.URL, deadLetterErr)
 				}
@@ -164,16 +132,15 @@ func (d *MessageDispatcherImpl) DispatchMessageWithRetries(ctx context.Context, 
 	messagesToFinish = append(messagesToFinish, responseMessage)
 
 	if reply == nil {
-		d.logger.Debug("cannot forward response as reply is empty")
 		return dispatchExecutionInfo, nil
 	}
 
-	ctx, responseResponseMessage, _, dispatchExecutionInfo, err := d.executeRequest(ctx, reply, responseMessage, responseAdditionalHeaders, retriesConfig, transformers...)
+	ctx, responseResponseMessage, _, dispatchExecutionInfo, err := executeRequest(ctx, reply, responseMessage, responseAdditionalHeaders, retriesConfig, transformers...)
 	if err != nil {
 		// If DeadLetter is configured, then send original message with knative error extensions
 		if deadLetter != nil {
-			dispatchTransformers := d.dispatchExecutionInfoTransformers(reply.URL, dispatchExecutionInfo)
-			_, deadLetterResponse, _, dispatchExecutionInfo, deadLetterErr := d.executeRequest(ctx, deadLetter, message, responseAdditionalHeaders, retriesConfig, append(transformers, dispatchTransformers)...)
+			dispatchTransformers := dispatchExecutionInfoTransformers(reply.URL, dispatchExecutionInfo)
+			_, deadLetterResponse, _, dispatchExecutionInfo, deadLetterErr := executeRequest(ctx, deadLetter, message, responseAdditionalHeaders, retriesConfig, append(transformers, dispatchTransformers)...)
 			if deadLetterErr != nil {
 				return dispatchExecutionInfo, fmt.Errorf("failed to forward reply to %s (%v) and failed to send it to the dead letter sink %s (%v)", reply.URL, err, deadLetter.URL, deadLetterErr)
 			}
@@ -193,14 +160,12 @@ func (d *MessageDispatcherImpl) DispatchMessageWithRetries(ctx context.Context, 
 	return dispatchExecutionInfo, nil
 }
 
-func (d *MessageDispatcherImpl) executeRequest(ctx context.Context,
+func executeRequest(ctx context.Context,
 	target *duckv1.Addressable,
 	message cloudevents.Message,
 	additionalHeaders nethttp.Header,
 	configs *RetryConfig,
 	transformers ...binding.Transformer) (context.Context, cloudevents.Message, nethttp.Header, *DispatchExecutionInfo, error) {
-
-	d.logger.Debug("Dispatching event", zap.Any("target", target))
 
 	execInfo := DispatchExecutionInfo{
 		Time:         NoDuration,
@@ -244,7 +209,6 @@ func (d *MessageDispatcherImpl) executeRequest(ctx context.Context,
 	if isFailure(response.StatusCode) {
 		// Read response body into execInfo for failures
 		if readErr != nil && readErr != io.EOF {
-			d.logger.Error("failed to read response body", zap.Error(err))
 			execInfo.ResponseBody = []byte(fmt.Sprintf("dispatch error: %s", err.Error()))
 		} else {
 			execInfo.ResponseBody = body.Bytes()
@@ -256,7 +220,6 @@ func (d *MessageDispatcherImpl) executeRequest(ctx context.Context,
 
 	var responseMessageBody []byte
 	if readErr != nil && readErr != io.EOF {
-		d.logger.Error("failed to read response body", zap.Error(err))
 		responseMessageBody = []byte(fmt.Sprintf("Failed to read response body: %s", err.Error()))
 	} else {
 		responseMessageBody = body.Bytes()
@@ -266,28 +229,27 @@ func (d *MessageDispatcherImpl) executeRequest(ctx context.Context,
 	if responseMessage.ReadEncoding() == binding.EncodingUnknown {
 		_ = response.Body.Close()
 		_ = responseMessage.BodyReader.Close()
-		d.logger.Debug("Response is a non event, discarding it", zap.Int("status_code", response.StatusCode))
 		return ctx, nil, nil, &execInfo, nil
 	}
 	return ctx, responseMessage, utils.PassThroughHeaders(response.Header), &execInfo, nil
 }
 
-func (d *MessageDispatcherImpl) sanitizeAddressable(addressable *duckv1.Addressable) *duckv1.Addressable {
+func sanitizeAddressable(addressable *duckv1.Addressable) *duckv1.Addressable {
 	if addressable == nil {
 		return nil
 	}
 
-	addressable.URL = d.sanitizeURL(addressable.URL)
+	addressable.URL = sanitizeURL(addressable.URL)
 
 	return addressable
 }
 
-func (d *MessageDispatcherImpl) sanitizeURL(url *apis.URL) *apis.URL {
+func sanitizeURL(url *apis.URL) *apis.URL {
 	if url == nil {
 		return nil
 	}
 
-	if d.supportedSchemes.Has(url.Scheme) {
+	if url.Scheme == "http" || url.Scheme == "https" {
 		// Already a URL with a known scheme.
 		return url
 	}
@@ -300,7 +262,7 @@ func (d *MessageDispatcherImpl) sanitizeURL(url *apis.URL) *apis.URL {
 }
 
 // dispatchExecutionTransformer returns Transformers based on the specified destination and DispatchExecutionInfo
-func (d *MessageDispatcherImpl) dispatchExecutionInfoTransformers(destination *apis.URL, dispatchExecutionInfo *DispatchExecutionInfo) binding.Transformers {
+func dispatchExecutionInfoTransformers(destination *apis.URL, dispatchExecutionInfo *DispatchExecutionInfo) binding.Transformers {
 	if destination == nil {
 		destination = &apis.URL{}
 	}
@@ -312,14 +274,13 @@ func (d *MessageDispatcherImpl) dispatchExecutionInfoTransformers(destination *a
 
 		err := json.Unmarshal(dispatchExecutionInfo.ResponseBody, &errExtensionInfo)
 		if err != nil {
-			d.logger.Debug("Unmarshal dispatchExecutionInfo ResponseBody failed", zap.Error(err))
 			return nil
 		}
 		destination = errExtensionInfo.ErrDestination
 		httpResponseBody = errExtensionInfo.ErrResponseBody
 	}
 
-	destination = d.sanitizeURL(destination)
+	destination = sanitizeURL(destination)
 
 	// Encodes response body as base64 for the resulting length.
 	bodyLen := len(httpResponseBody)
