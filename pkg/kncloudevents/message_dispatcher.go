@@ -1,5 +1,5 @@
 /*
-Copyright 2023 The Knative Authors
+Copyright 2020 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -9,7 +9,7 @@ You may obtain a copy of the License at
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implie
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
@@ -52,6 +52,13 @@ const (
 	NoResponse = -1
 )
 
+type DispatchInfo struct {
+	Duration       time.Duration
+	ResponseCode   int
+	ResponseHeader http.Header
+	ResponseBody   []byte
+}
+
 type SendOption func(*senderConfig) error
 
 func WithReply(reply *duckv1.Addressable) SendOption {
@@ -76,13 +83,6 @@ func WithHeader(header http.Header) SendOption {
 
 		return nil
 	}
-}
-
-type DispatchInfo struct {
-	Duration       time.Duration
-	ResponseCode   int
-	ResponseHeader http.Header
-	ResponseBody   []byte
 }
 
 type senderConfig struct {
@@ -114,63 +114,55 @@ func SendMessage(ctx context.Context, message binding.Message, destination duckv
 }
 
 func send(ctx context.Context, message binding.Message, destination duckv1.Addressable, config *senderConfig) (*DispatchInfo, error) {
+	dispatchExecutionInfo := &DispatchInfo{}
+
 	// All messages that should be finished at the end of this function
 	// are placed in this slice
-	var messagesToFinish []binding.Message
+	messagesToFinish := []binding.Message{message}
 	defer func() {
 		for _, msg := range messagesToFinish {
 			_ = msg.Finish(nil)
 		}
 	}()
 
+	if destination.URL == nil {
+		return dispatchExecutionInfo, fmt.Errorf("can not dispatch message to nil destination.URL")
+	}
+
 	// sanitize eventual host-only URLs
 	destination = *sanitizeAddressable(&destination)
 	config.reply = sanitizeAddressable(config.reply)
 	config.deadLetterSink = sanitizeAddressable(config.deadLetterSink)
 
-	// If there is a destination, variables response* are filled with the response of the destination
-	// Otherwise, they are filled with the original message
-	var responseMessage cloudevents.Message
-	var responseAdditionalHeaders http.Header
-	var dispatchExecutionInfo *DispatchInfo
+	// send to destination
 
-	if destination.URL != nil {
-		var err error
-		// Try to send to destination
-		messagesToFinish = append(messagesToFinish, message)
-
-		// Add `Prefer: reply` header no matter if a reply destination is provide Discussion: https://github.com/knative/eventing/pull/5764
-		additionalHeadersForDestination := http.Header{}
-		if config.additionalHeaders != nil {
-			additionalHeadersForDestination = config.additionalHeaders.Clone()
-		}
-		additionalHeadersForDestination.Set("Prefer", "reply")
-
-		ctx, responseMessage, dispatchExecutionInfo, err = executeRequest(ctx, destination, message, additionalHeadersForDestination, config.retryConfig)
-		if err != nil {
-			// If DeadLetter is configured, then send original message with knative error extensions
-			if config.deadLetterSink != nil {
-				dispatchTransformers := dispatchExecutionInfoTransformers(destination.URL, dispatchExecutionInfo)
-				_, deadLetterResponse, dispatchExecutionInfo, deadLetterErr := executeRequest(ctx, *config.deadLetterSink, message, config.additionalHeaders, config.retryConfig, dispatchTransformers...)
-				if deadLetterErr != nil {
-					return dispatchExecutionInfo, fmt.Errorf("unable to complete request to either %s (%v) or %s (%v)", destination.URL, err, config.deadLetterSink.URL, deadLetterErr)
-				}
-				if deadLetterResponse != nil {
-					messagesToFinish = append(messagesToFinish, deadLetterResponse)
-				}
-
-				return dispatchExecutionInfo, nil
-			}
-			// No DeadLetter, just fail
-			return dispatchExecutionInfo, fmt.Errorf("unable to complete request to %s: %v", destination.URL, err)
-		}
-
-		responseAdditionalHeaders = dispatchExecutionInfo.ResponseHeader
-	} else {
-		// No destination url, try to send to reply if available
-		responseMessage = message
-		responseAdditionalHeaders = config.additionalHeaders
+	// Add `Prefer: reply` header no matter if a reply destination is provided. Discussion: https://github.com/knative/eventing/pull/5764
+	additionalHeadersForDestination := http.Header{}
+	if config.additionalHeaders != nil {
+		additionalHeadersForDestination = config.additionalHeaders.Clone()
 	}
+	additionalHeadersForDestination.Set("Prefer", "reply")
+
+	ctx, responseMessage, dispatchExecutionInfo, err := executeRequest(ctx, destination, message, additionalHeadersForDestination, config.retryConfig)
+	if err != nil {
+		// If DeadLetter is configured, then send original message with knative error extensions
+		if config.deadLetterSink != nil {
+			dispatchTransformers := dispatchExecutionInfoTransformers(destination.URL, dispatchExecutionInfo)
+			_, deadLetterResponse, dispatchExecutionInfo, deadLetterErr := executeRequest(ctx, *config.deadLetterSink, message, config.additionalHeaders, config.retryConfig, dispatchTransformers)
+			if deadLetterErr != nil {
+				return dispatchExecutionInfo, fmt.Errorf("unable to complete request to either %s (%v) or %s (%v)", destination.URL, err, config.deadLetterSink.URL, deadLetterErr)
+			}
+			if deadLetterResponse != nil {
+				messagesToFinish = append(messagesToFinish, deadLetterResponse)
+			}
+
+			return dispatchExecutionInfo, nil
+		}
+		// No DeadLetter, just fail
+		return dispatchExecutionInfo, fmt.Errorf("unable to complete request to %s: %v", destination.URL, err)
+	}
+
+	responseAdditionalHeaders := dispatchExecutionInfo.ResponseHeader
 
 	if config.additionalHeaders.Get(eventingapis.KnNamespaceHeader) != "" {
 		if responseAdditionalHeaders == nil {
