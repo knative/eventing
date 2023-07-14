@@ -71,6 +71,14 @@ func WithDeadLetterSink(dls *duckv1.Addressable) SendOption {
 	}
 }
 
+func WithRetryConfig(retryConfig *RetryConfig) SendOption {
+	return func(sc *senderConfig) error {
+		sc.retryConfig = retryConfig
+
+		return nil
+	}
+}
+
 func WithHeader(header http.Header) SendOption {
 	return func(sc *senderConfig) error {
 		sc.additionalHeaders = header
