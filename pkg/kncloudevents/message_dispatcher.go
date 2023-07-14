@@ -46,12 +46,6 @@ import (
 	"knative.dev/eventing/pkg/utils"
 )
 
-const (
-	// noDuration signals that the dispatch step hasn't started
-	NoDuration = -1
-	NoResponse = -1
-)
-
 type DispatchInfo struct {
 	Duration       time.Duration
 	ResponseCode   int
@@ -85,11 +79,20 @@ func WithHeader(header http.Header) SendOption {
 	}
 }
 
+func WithTransformers(transformers ...binding.Transformer) SendOption {
+	return func(sc *senderConfig) error {
+		sc.transformers = transformers
+
+		return nil
+	}
+}
+
 type senderConfig struct {
 	reply             *duckv1.Addressable
 	deadLetterSink    *duckv1.Addressable
 	additionalHeaders http.Header
 	retryConfig       *RetryConfig
+	transformers      binding.Transformers
 }
 
 func SendEvent(ctx context.Context, event event.Event, destination duckv1.Addressable, options ...SendOption) (*DispatchInfo, error) {
@@ -143,12 +146,12 @@ func send(ctx context.Context, message binding.Message, destination duckv1.Addre
 	}
 	additionalHeadersForDestination.Set("Prefer", "reply")
 
-	ctx, responseMessage, dispatchExecutionInfo, err := executeRequest(ctx, destination, message, additionalHeadersForDestination, config.retryConfig)
+	ctx, responseMessage, dispatchExecutionInfo, err := executeRequest(ctx, destination, message, additionalHeadersForDestination, config.retryConfig, config.transformers)
 	if err != nil {
 		// If DeadLetter is configured, then send original message with knative error extensions
 		if config.deadLetterSink != nil {
 			dispatchTransformers := dispatchExecutionInfoTransformers(destination.URL, dispatchExecutionInfo)
-			_, deadLetterResponse, dispatchExecutionInfo, deadLetterErr := executeRequest(ctx, *config.deadLetterSink, message, config.additionalHeaders, config.retryConfig, dispatchTransformers)
+			_, deadLetterResponse, dispatchExecutionInfo, deadLetterErr := executeRequest(ctx, *config.deadLetterSink, message, config.additionalHeaders, config.retryConfig, append(config.transformers, dispatchTransformers))
 			if deadLetterErr != nil {
 				return dispatchExecutionInfo, fmt.Errorf("unable to complete request to either %s (%v) or %s (%v)", destination.URL, err, config.deadLetterSink.URL, deadLetterErr)
 			}
@@ -184,12 +187,12 @@ func send(ctx context.Context, message binding.Message, destination duckv1.Addre
 
 	// send reply
 
-	ctx, responseResponseMessage, dispatchExecutionInfo, err := executeRequest(ctx, *config.reply, responseMessage, responseAdditionalHeaders, config.retryConfig)
+	ctx, responseResponseMessage, dispatchExecutionInfo, err := executeRequest(ctx, *config.reply, responseMessage, responseAdditionalHeaders, config.retryConfig, config.transformers)
 	if err != nil {
 		// If DeadLetter is configured, then send original message with knative error extensions
 		if config.deadLetterSink != nil {
 			dispatchTransformers := dispatchExecutionInfoTransformers(config.reply.URL, dispatchExecutionInfo)
-			_, deadLetterResponse, dispatchExecutionInfo, deadLetterErr := executeRequest(ctx, *config.deadLetterSink, message, responseAdditionalHeaders, config.retryConfig, dispatchTransformers)
+			_, deadLetterResponse, dispatchExecutionInfo, deadLetterErr := executeRequest(ctx, *config.deadLetterSink, message, responseAdditionalHeaders, config.retryConfig, append(config.transformers, dispatchTransformers))
 			if deadLetterErr != nil {
 				return dispatchExecutionInfo, fmt.Errorf("failed to forward reply to %s (%v) and failed to send it to the dead letter sink %s (%v)", config.reply.URL, err, config.deadLetterSink.URL, deadLetterErr)
 			}
@@ -211,8 +214,6 @@ func send(ctx context.Context, message binding.Message, destination duckv1.Addre
 
 func executeRequest(ctx context.Context, target duckv1.Addressable, message cloudevents.Message, additionalHeaders http.Header, retryConfig *RetryConfig, transformers ...binding.Transformer) (context.Context, cloudevents.Message, *DispatchInfo, error) {
 	dispatchInfo := DispatchInfo{
-		Duration:       NoDuration,
-		ResponseCode:   NoResponse,
 		ResponseHeader: make(http.Header),
 	}
 
