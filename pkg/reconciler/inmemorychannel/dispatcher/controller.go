@@ -30,6 +30,7 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	"knative.dev/pkg/kmeta"
 
+	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
 	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/kncloudevents"
@@ -127,6 +128,8 @@ func NewController(
 		return controller.Options{SkipStatusUpdates: true, FinalizerName: finalizerName}
 	})
 
+	r.tracker = impl.Tracker
+
 	// Watch for inmemory channels.
 	inmemorychannelInformer.Informer().AddEventHandler(
 		cache.FilteringResourceEventHandler{
@@ -136,6 +139,13 @@ func NewController(
 				UpdateFunc: controller.PassNew(impl.Enqueue),
 				DeleteFunc: r.deleteFunc,
 			}})
+
+	inmemorychannelInformer.Informer().AddEventHandler(controller.HandleAll(
+		controller.EnsureTypeMeta(
+			r.tracker.OnChanged,
+			messagingv1.SchemeGroupVersion.WithKind("InMemoryChannel"),
+		),
+	))
 
 	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {
 		impl.GlobalResync(inmemorychannelInformer.Informer())

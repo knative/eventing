@@ -312,6 +312,7 @@ func TestAllCases(t *testing.T) {
 		r := &Reconciler{
 			multiChannelMessageHandler: newFakeMultiChannelHandler(),
 			messagingClientSet:         fakeeventingclient.Get(ctx).MessagingV1(),
+			tracker:                    &FakeTracker{},
 		}
 		return inmemorychannel.NewReconciler(ctx, logger,
 			fakeeventingclient.Get(ctx), listers.GetInMemoryChannelLister(),
@@ -508,6 +509,7 @@ func TestReconciler_ReconcileKind(t *testing.T) {
 				r := &Reconciler{
 					multiChannelMessageHandler: handler,
 					messagingClientSet:         fakeEventingClient.MessagingV1(),
+					tracker:                    &FakeTracker{},
 				}
 				e := r.ReconcileKind(ctx, tc.imc)
 				if e != tc.wantResult {
@@ -550,6 +552,7 @@ func TestReconciler_InvalidInputs(t *testing.T) {
 				}
 				r := &Reconciler{
 					multiChannelMessageHandler: handler,
+					tracker:                    &FakeTracker{},
 				}
 				r.deleteFunc(tc.imc)
 			})
@@ -580,6 +583,7 @@ func TestReconciler_Deletion(t *testing.T) {
 				}
 				r := &Reconciler{
 					multiChannelMessageHandler: handler,
+					tracker:                    &FakeTracker{},
 				}
 				r.deleteFunc(tc.imc)
 				if handler.GetChannelHandler(channelServiceAddress.URL.Host) != nil {

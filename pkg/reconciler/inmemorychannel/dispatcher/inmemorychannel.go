@@ -42,6 +42,7 @@ import (
 	messagingv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/messaging/v1"
 	reconcilerv1 "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/inmemorychannel"
 	"knative.dev/eventing/pkg/kncloudevents"
+	"knative.dev/pkg/tracker"
 )
 
 // Reconciler reconciles InMemory Channels.
@@ -49,6 +50,7 @@ type Reconciler struct {
 	multiChannelMessageHandler multichannelfanout.MultiChannelMessageHandler
 	reporter                   channel.StatsReporter
 	messagingClientSet         messagingv1.MessagingV1Interface
+	tracker                    tracker.Interface
 }
 
 // Check the interfaces Reconciler should implement
@@ -74,6 +76,17 @@ func (r *Reconciler) ObserveKind(ctx context.Context, imc *v1.InMemoryChannel) r
 
 func (r *Reconciler) reconcile(ctx context.Context, imc *v1.InMemoryChannel) reconciler.Event {
 	logging.FromContext(ctx).Infow("Reconciling", zap.Any("InMemoryChannel", imc))
+	ref := tracker.Reference{
+		APIVersion: "messaging.knative.dev/v1",
+		Kind:       "InMemoryChannel",
+		Namespace:  imc.Namespace,
+		Name:       imc.Name,
+	}
+	logging.FromContext(ctx).Infof("ref: %+v", ref)
+	if err := r.tracker.TrackReference(ref, imc); err != nil {
+		logging.FromContext(ctx).Infow("TrackReference for InMemoryChannel failed", zap.Any("InMemoryChannel", imc), zap.Error(err))
+	}
+	logging.FromContext(ctx).Infof("imc: %+v", imc)
 
 	if !imc.IsReady() {
 		logging.FromContext(ctx).Debug("IMC is not ready, skipping")
