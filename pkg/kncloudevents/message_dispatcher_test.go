@@ -868,7 +868,10 @@ func TestDispatchMessage(t *testing.T) {
 			if tc.header != nil {
 				headers = utils.PassThroughHeaders(tc.header)
 			}
-			info, err := kncloudevents.DispatchMessage(ctx, message, headers, destination, reply, deadLetterSink)
+			info, err := kncloudevents.SendMessage(ctx, message, destination,
+				kncloudevents.WithHeader(headers),
+				kncloudevents.WithReply(reply),
+				kncloudevents.WithDeadLetterSink(deadLetterSink))
 
 			if tc.lastReceiver != "" {
 				switch tc.lastReceiver {
@@ -960,7 +963,7 @@ func TestDispatchMessageToTLSEndpoint(t *testing.T) {
 
 	// send event
 	message := binding.ToMessage(&eventToSend)
-	info, err := kncloudevents.DispatchMessage(ctx, message, nil, destination, nil, nil)
+	info, err := kncloudevents.SendMessage(ctx, message, destination)
 	require.Nil(t, err)
 	require.Equal(t, 200, info.ResponseCode)
 
@@ -1023,7 +1026,7 @@ func TestDispatchMessageToTLSEndpointWithReply(t *testing.T) {
 
 	// send event
 	message := binding.ToMessage(&eventToSend)
-	info, err := kncloudevents.DispatchMessage(ctx, message, nil, destination, &reply, nil)
+	info, err := kncloudevents.SendMessage(ctx, message, destination, kncloudevents.WithReply(&reply))
 	require.Nil(t, err)
 	require.Equal(t, 200, info.ResponseCode)
 
@@ -1081,7 +1084,7 @@ func TestDispatchMessageToTLSEndpointWithDeadLetterSink(t *testing.T) {
 
 	// send event
 	message := binding.ToMessage(&eventToSend)
-	info, err := kncloudevents.DispatchMessage(ctx, message, nil, destination, nil, &dls)
+	info, err := kncloudevents.SendMessage(ctx, message, destination, kncloudevents.WithDeadLetterSink(&dls))
 	require.Nil(t, err)
 	require.Equal(t, 200, info.ResponseCode)
 
