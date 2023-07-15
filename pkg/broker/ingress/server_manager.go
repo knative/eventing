@@ -30,10 +30,6 @@ import (
 	secretinformer "knative.dev/pkg/injection/clients/namespacedkube/informers/core/v1/secret"
 )
 
-const (
-	tlsSecretName = "mt-broker-ingress-server-tls" //nolint:gosec // This is not a hardcoded credential
-)
-
 func NewServerManager(ctx context.Context, logger *zap.Logger, cmw configmap.Watcher, httpPort, httpsPort int, handler *Handler) (*eventingtls.ServerManager, error) {
 	tlsConfig, err := getServerTLSConfig(ctx)
 	if err != nil {
@@ -49,7 +45,7 @@ func NewServerManager(ctx context.Context, logger *zap.Logger, cmw configmap.Wat
 func getServerTLSConfig(ctx context.Context) (*tls.Config, error) {
 	secret := types.NamespacedName{
 		Namespace: "knative-eventing",
-		Name:      tlsSecretName,
+		Name:      eventingtls.BrokerIngressServerTLSSecretName,
 	}
 
 	serverTLSConfig := eventingtls.NewDefaultServerConfig()
