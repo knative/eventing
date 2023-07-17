@@ -65,3 +65,12 @@ rules:
       - create
       - update
       - patch
+  - apiGroups:
+      - eventing.knative.dev
+    resources:
+      - eventtypes
+    verbs:
+      - create
+      - get
+      - list
+      - watch
