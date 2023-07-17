@@ -63,7 +63,6 @@ func TestPingSourceTLS(t *testing.T) {
 				k8s.WithEventListener,
 				environment.Managed(t),
 				eventshub.WithTLS(t),
-				environment.WithPollTimings(environment.DefaultPollInterval, 4*time.Minute),
 			)
 
 			env.Test(ctx, t, pingsource.SendsEventsTLS())
