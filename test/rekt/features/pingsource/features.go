@@ -29,6 +29,7 @@ import (
 	"knative.dev/reconciler-test/pkg/resources/service"
 
 	"knative.dev/reconciler-test/pkg/eventshub/assert"
+	eventassert "knative.dev/reconciler-test/pkg/eventshub/assert"
 
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/eventing/test/rekt/features"
@@ -82,6 +83,7 @@ func SendsEventsTLS() *feature.Feature {
 
 	f.Stable("pingsource as event source").
 		Must("delivers events", assert.OnStore(sink).
+			Match(eventassert.MatchKind(eventshub.EventReceived)).
 			MatchEvent(test.HasType("dev.knative.sources.ping")).
 			AtLeast(1)).
 		Must("Set sinkURI to HTTPS endpoint", source.ExpectHTTPSSink(pingsource.Gvr(), src)).
