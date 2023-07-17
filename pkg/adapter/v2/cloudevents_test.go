@@ -302,6 +302,7 @@ func TestNewCloudEventsClient_request(t *testing.T) {
 }
 
 func TestTLS(t *testing.T) {
+	t.Parallel()
 
 	ctx, _ := SetupFakeContext(t)
 	ctx = cloudevents.ContextWithRetriesExponentialBackoff(ctx, 20*time.Millisecond, 5)
@@ -344,7 +345,10 @@ func TestTLS(t *testing.T) {
 	}
 
 	for _, tc := range tt {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			reporter, err := source.NewStatsReporter()
 			assert.Nil(t, err)
 
