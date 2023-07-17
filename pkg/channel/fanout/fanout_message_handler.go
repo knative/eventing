@@ -209,8 +209,7 @@ func createMessageReceiverFunction(f *FanoutMessageHandler) func(context.Context
 				if err != nil {
 					f.logger.Warn("Failed to copy message")
 				} else {
-					// we don't need to block sending the message to create the event type
-					go f.autoCreateEventType(ctx, bufferedMessage, transformers)
+					f.autoCreateEventType(ctx, bufferedMessage, transformers)
 				}
 			}
 
@@ -255,8 +254,7 @@ func createMessageReceiverFunction(f *FanoutMessageHandler) func(context.Context
 			if err != nil {
 				f.logger.Warn("Failed to copy message")
 			} else {
-				// we don't need to block sending the message to create the event type
-				go f.autoCreateEventType(ctx, bufferedMessage, transformers)
+				f.autoCreateEventType(ctx, bufferedMessage, transformers)
 			}
 		}
 
