@@ -197,6 +197,7 @@ func (a *cronJobsRunner) newPingSourceClient(source *sourcesv1.PingSource) (adap
 			EnvSinkTimeout: fmt.Sprintf("%d", a.clientConfig.Env.GetSinktimeout()),
 		}
 	}
+	env.SetLogger(a.Logger)
 
 	env.Sink = source.Status.SinkURI.String()
 	env.CACerts = source.Status.SinkCACerts

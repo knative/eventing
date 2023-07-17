@@ -152,6 +152,8 @@ func NewClient(cfg ClientConfig) (Client, error) {
 				return nil, err
 			}
 
+			cfg.Env.GetLogger().Debugw("Setting up TLS transport", "env", cfg.Env)
+
 			closeIdler = httpTransport
 
 			transport = &ochttp.Transport{
