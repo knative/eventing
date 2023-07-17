@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"os"
 	"strconv"
-	"sync"
 	"time"
 
 	"go.uber.org/zap"
@@ -99,8 +98,7 @@ type EnvConfig struct {
 	EnvSinkTimeout string `envconfig:"K_SINK_TIMEOUT"`
 
 	// cached zap logger
-	logger   *zap.SugaredLogger
-	loggerMu sync.RWMutex
+	logger *zap.SugaredLogger
 }
 
 // EnvConfigAccessor defines accessors for the minimal
@@ -165,18 +163,9 @@ func (e *EnvConfig) GetLogger() *zap.SugaredLogger {
 		}
 
 		logger, _ := logging.NewLoggerFromConfig(loggingConfig, e.Component)
-		e.SetLogger(logger)
+		e.logger = logger
 	}
-
-	e.loggerMu.RLock()
-	defer e.loggerMu.RUnlock()
 	return e.logger
-}
-
-func (e *EnvConfig) SetLogger(logger *zap.SugaredLogger) {
-	e.loggerMu.Lock()
-	defer e.loggerMu.Unlock()
-	e.logger = logger
 }
 
 func (e *EnvConfig) GetSink() string {

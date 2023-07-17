@@ -156,8 +156,6 @@ func NewClient(cfg ClientConfig) (Client, error) {
 			httpsTransport := transport.Base.(*nethttp.Transport).Clone()
 			httpsTransport.TLSClientConfig = tlsConfig
 
-			cfg.Env.GetLogger().Debugw("Setting up TLS transport", "env", cfg.Env)
-
 			transport = &ochttp.Transport{
 				Base:        httpsTransport,
 				Propagation: tracecontextb3.TraceContextEgress,
