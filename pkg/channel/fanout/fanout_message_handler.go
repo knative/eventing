@@ -194,8 +194,9 @@ func (f *FanoutMessageHandler) autoCreateEventType(ctx context.Context, buffered
 			f.logger.Warn("No channelUID provided, unable to autocreate event type")
 			return
 		}
-		if err := f.eventTypeHandler.AutoCreateEventType(ctx, event, f.channelAddressable, *f.channelUID); err != nil {
-			f.logger.Warn("Event type auto create failed", zap.Error(err))
+		err = f.eventTypeHandler.AutoCreateEventType(ctx, event, f.channelAddressable, *f.channelUID)
+		if err != nil {
+			f.logger.Warn("EventTypeCreate failed")
 			return
 		}
 	}

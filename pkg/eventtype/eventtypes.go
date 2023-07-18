@@ -20,8 +20,6 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"time"
-
 	"github.com/cloudevents/sdk-go/v2/event"
 	"go.uber.org/zap"
 
@@ -47,7 +45,7 @@ type EventTypeAutoHandler struct {
 
 // generateEventTypeName is a pseudo unique name for EvenType object based on on the input params
 func generateEventTypeName(name, namespace, eventType, eventSource string) string {
-	suffixParts := name + namespace + eventType + eventSource
+	suffixParts := eventType + eventSource + namespace + name
 	suffix := base64.StdEncoding.EncodeToString([]byte(suffixParts))[:10]
 	return utils.ToDNS1123Subdomain(fmt.Sprintf("%s-%s-%s", "et", name, suffix))
 }
@@ -104,10 +102,4 @@ func (h *EventTypeAutoHandler) AutoCreateEventType(ctx context.Context, event *e
 		return err
 	}
 	return nil
-}
-
-func (h *EventTypeAutoHandler) AutoCreateEventTypeAsync(ctx context.Context, event *event.Event, addressable *duckv1.KReference, ownerUID types.UID) {
-	ctx, cancel := context.WithTimeout(ctx, time.Minute)
-	defer cancel()
-	go h.AutoCreateEventType(ctx, event, addressable, ownerUID)
 }

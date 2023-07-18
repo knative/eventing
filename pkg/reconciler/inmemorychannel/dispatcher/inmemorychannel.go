@@ -273,10 +273,12 @@ func handleSubscribers(subscribers []eventingduckv1.SubscriberSpec, handle func(
 
 func toKReference(imc *v1.InMemoryChannel) *duckv1.KReference {
 	return &duckv1.KReference{
-		Kind:       imc.Kind,
+		// Need to set Kind and APIVersion manually as the TypeMeta is not currently properly set https://github.com/knative/eventing/issues/7091
+		// TODO: refactor this to use imc.Kind and imc.TypeMeta once #7091 is resolved
+		Kind:       "InMemoryChannel",
+		APIVersion: "messaging.knative.dev/v1",
 		Namespace:  imc.Namespace,
 		Name:       imc.Name,
-		APIVersion: imc.APIVersion,
 		Address:    imc.Status.Address.Name,
 	}
 }
