@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"time"
 
 	"github.com/cloudevents/sdk-go/v2/event"
 	"go.uber.org/zap"
@@ -103,4 +104,10 @@ func (h *EventTypeAutoHandler) AutoCreateEventType(ctx context.Context, event *e
 		return err
 	}
 	return nil
+}
+
+func (h *EventTypeAutoHandler) AutoCreateEventTypeAsync(ctx context.Context, event *event.Event, addressable *duckv1.KReference, ownerUID types.UID) {
+	ctx, cancel := context.WithTimeout(ctx, time.Minute)
+	defer cancel()
+	go h.AutoCreateEventType(ctx, event, addressable, ownerUID)
 }
