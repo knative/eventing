@@ -23,6 +23,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"go.opencensus.io/plugin/ochttp"
 )
 
 var (
@@ -144,4 +145,8 @@ func Test_ConfigureConnectionArgs(t *testing.T) {
 	require.NotSame(t, client1, client2)
 	require.NotSame(t, client1, client3)
 	require.NotSame(t, client2, client3)
+}
+
+func castToTransport(client *nethttp.Client) *nethttp.Transport {
+	return client.Transport.(*ochttp.Transport).Base.(*nethttp.Transport)
 }
