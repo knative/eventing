@@ -259,7 +259,7 @@ func TestDispatcher_dispatch(t *testing.T) {
 	dispatcher.WaitReady()
 
 	// Ok now everything should be ready to send the event
-    request, err := kncloudevents.NewCloudEventRequest(context, channelAProxy.URL)
+	request, err := kncloudevents.NewCloudEventRequest(context, channelAProxy.URL)
 	if err != nil {
 		t.Fatal(err)
 	}
