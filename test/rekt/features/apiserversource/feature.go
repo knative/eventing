@@ -19,6 +19,7 @@ package apiserversource
 import (
 	"context"
 	"knative.dev/eventing/test/rekt/resources/apiserversource"
+	"knative.dev/eventing/test/rekt/resources/broker"
 
 	"github.com/cloudevents/sdk-go/v2/test"
 	"knative.dev/reconciler-test/pkg/eventshub"
@@ -28,22 +29,22 @@ import (
 	"knative.dev/reconciler-test/pkg/eventshub/assert"
 	eventassert "knative.dev/reconciler-test/pkg/eventshub/assert"
 
-	"knative.dev/eventing/test/rekt/features/featureflags"
 	"knative.dev/eventing/test/rekt/features/source"
-	"knative.dev/eventing/test/rekt/resources/pingsource"
 )
 
-func SendsEventsTLS() *feature.Feature {
+func SendsEventsWithBrokerAsSink() *feature.Feature {
 	src := feature.MakeRandomK8sName("apiserversource")
-	sink := feature.MakeRandomK8sName("sink")
+	brokerName := feature.MakeRandomK8sName("broker")
 	f := feature.NewFeature()
 
-	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
+	f.Setup("install broker", broker.Install(brokerName, broker.WithEnvConfig()...))
+	f.Setup("broker is ready", broker.IsReady(brokerName))
+	f.Setup("broker is addressable", broker.IsAddressable(brokerName))
 
-	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiverTLS))
+	f.Setup("install broker as the sink", eventshub.Install(brokerName, eventshub.StartReceiverTLS))
 
 	f.Requirement("install apiserversource", func(ctx context.Context, t feature.T) {
-		d := service.AsDestinationRef(sink)
+		d := service.AsDestinationRef(brokerName)
 		d.CACerts = eventshub.GetCaCerts(ctx)
 
 		apiserversource.Install(src, apiserversource.WithSink(d))(ctx, t)
@@ -51,50 +52,12 @@ func SendsEventsTLS() *feature.Feature {
 	f.Requirement("apiserversource goes ready", apiserversource.IsReady(src))
 
 	f.Stable("apiserversource as event source").
-		Must("delivers events", assert.OnStore(sink).
+		Must("delivers events", assert.OnStore(brokerName).
 			Match(eventassert.MatchKind(eventshub.EventReceived)).
-			MatchEvent(test.HasType("dev.knative.sources.ping")).
+			MatchEvent(test.HasType("dev.knative.apiserver.resource.add")).
 			AtLeast(1)).
 		Must("Set sinkURI to HTTPS endpoint", source.ExpectHTTPSSink(apiserversource.Gvr(), src)).
 		Must("Set sinkCACerts to non empty CA certs", source.ExpectCACerts(apiserversource.Gvr(), src))
-
-	return f
-}
-
-func SendsEventsWithSinkURI() *feature.Feature {
-	source := feature.MakeRandomK8sName("pingsource")
-	sink := feature.MakeRandomK8sName("sink")
-	f := feature.NewFeature()
-
-	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
-
-	f.Requirement("install pingsource", pingsource.Install(source, pingsource.WithSink(service.AsDestinationRef(sink))))
-	f.Requirement("pingsource goes ready", pingsource.IsReady(source))
-
-	f.Stable("pingsource as event source").
-		Must("delivers events",
-			assert.OnStore(sink).MatchEvent(test.HasType("dev.knative.sources.ping")).AtLeast(1))
-
-	return f
-}
-
-func SendsEventsWithCloudEventData() *feature.Feature {
-	source := feature.MakeRandomK8sName("pingsource")
-	sink := feature.MakeRandomK8sName("sink")
-	f := feature.NewFeature()
-
-	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
-
-	f.Requirement("install pingsource", pingsource.Install(source,
-		pingsource.WithDataBase64("text/plain", "aGVsbG8sIHdvcmxkIQ=="),
-		pingsource.WithSink(service.AsDestinationRef(sink)),
-	))
-	f.Requirement("pingsource goes ready", pingsource.IsReady(source))
-
-	f.Stable("pingsource as event source").
-		Must("delivers events", assert.OnStore(sink).MatchEvent(
-			test.HasType("dev.knative.sources.ping"),
-		).AtLeast(1))
 
 	return f
 }
