@@ -77,11 +77,6 @@ func BenchmarkDispatcher_dispatch_ok_through_2_channels(b *testing.B) {
 	}
 
 	// Let's mock this stuff!
-	request, err := kncloudevents.NewCloudEventRequest(context, channelA.URL.String())
-	if err != nil {
-		b.Fatal(err)
-	}
-
 	multiChannelFanoutHandler, err := multichannelfanout.NewMessageHandlerWithConfig(context.TODO(), logger, channel.NewMessageDispatcher(logger), config, reporter)
 	if err != nil {
 		b.Fatal(err)

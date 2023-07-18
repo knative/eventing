@@ -265,7 +265,7 @@ func TestDispatcher_dispatch(t *testing.T) {
 	}
 
 	event := test.FullEvent()
-	_ = protocolhttp.WriteRequest(context.Background(), binding.ToMessage(&event), req)
+	_ = protocolhttp.WriteRequest(context.Background(), binding.ToMessage(&event), request)
 
 	res, err := request.Send()
 	if err != nil {
