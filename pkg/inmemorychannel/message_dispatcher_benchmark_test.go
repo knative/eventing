@@ -91,6 +91,7 @@ func BenchmarkDispatcher_dispatch_ok_through_2_channels(b *testing.B) {
 
 	dispatcher := NewMessageDispatcher(dispatcherArgs)
 	requestHandler := kncloudevents.CreateHandler(dispatcher.handler)
+	mockedHTTPClient(clientMock(channelA.URL.Host, transformations.URL.Host, channelB.URL.Host, receiver.URL.Host, requestHandler))
 
 	// Start the bench
 	b.ResetTimer()

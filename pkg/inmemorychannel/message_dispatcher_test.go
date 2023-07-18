@@ -259,13 +259,13 @@ func TestDispatcher_dispatch(t *testing.T) {
 	dispatcher.WaitReady()
 
 	// Ok now everything should be ready to send the event
-	request, err := kncloudevents.NewCloudEventRequest(context, channelAProxy.URL)
+	request, err := kncloudevents.NewCloudEventRequest(context.TODO(), *mustParseUrlToAddressable(t, channelAProxy.URL))
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	event := test.FullEvent()
-	_ = protocolhttp.WriteRequest(context.Background(), binding.ToMessage(&event), request)
+	_ = protocolhttp.WriteRequest(context.Background(), binding.ToMessage(&event), request.Request)
 
 	res, err := request.Send()
 	if err != nil {
