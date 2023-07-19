@@ -88,7 +88,9 @@ func TestApiServerSourceDataPlane_BrokerAsSink(t *testing.T) {
 		knative.WithKnativeNamespace(system.Namespace()),
 		knative.WithLoggingConfig,
 		knative.WithTracingConfig,
+		k8s.WithEventListener,
 		environment.Managed(t),
+		eventshub.WithTLS(t),
 	)
 
 	env.Test(ctx, t, apiserversourcefeatures.SendsEventsWithBrokerAsSink())

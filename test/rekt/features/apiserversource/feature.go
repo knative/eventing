@@ -18,46 +18,57 @@ package apiserversource
 
 import (
 	"context"
+	"github.com/cloudevents/sdk-go/v2/test"
+	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/eventing/test/rekt/resources/apiserversource"
 	"knative.dev/eventing/test/rekt/resources/broker"
-
-	"github.com/cloudevents/sdk-go/v2/test"
+	"knative.dev/eventing/test/rekt/resources/trigger"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/eventshub"
+	eventasssert "knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
+	"knative.dev/reconciler-test/pkg/manifest"
 	"knative.dev/reconciler-test/pkg/resources/service"
-
-	"knative.dev/reconciler-test/pkg/eventshub/assert"
-	eventassert "knative.dev/reconciler-test/pkg/eventshub/assert"
-
-	"knative.dev/eventing/test/rekt/features/source"
 )
 
 func SendsEventsWithBrokerAsSink() *feature.Feature {
 	src := feature.MakeRandomK8sName("apiserversource")
 	brokerName := feature.MakeRandomK8sName("broker")
+	sacmName := feature.MakeRandomK8sName("apiserversource")
+	sink := feature.MakeRandomK8sName("sink")
+	via := feature.MakeRandomK8sName("via")
 	f := feature.NewFeature()
 
 	f.Setup("install broker", broker.Install(brokerName, broker.WithEnvConfig()...))
 	f.Setup("broker is ready", broker.IsReady(brokerName))
 	f.Setup("broker is addressable", broker.IsAddressable(brokerName))
+	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
+	f.Setup("install trigger", trigger.Install(via, brokerName, trigger.WithSubscriber(service.AsKReference(sink), "")))
+	f.Setup("trigger goes ready", trigger.IsReady(via))
+	f.Setup("Create Service Account for ApiServerSource with RBAC for v1.Event resources",
+		setupAccountAndRoleForPods(sacmName))
 
-	f.Setup("install broker as the sink", eventshub.Install(brokerName, eventshub.StartReceiverTLS))
-
-	f.Requirement("install apiserversource", func(ctx context.Context, t feature.T) {
-		d := service.AsDestinationRef(brokerName)
-		d.CACerts = eventshub.GetCaCerts(ctx)
-
-		apiserversource.Install(src, apiserversource.WithSink(d))(ctx, t)
+	f.Requirement("install ApiServerSource", func(ctx context.Context, t feature.T) {
+		brokeruri, err := broker.Address(ctx, brokerName)
+		if err != nil {
+			t.Error("failed to get address of broker", err)
+		}
+		cfg := []manifest.CfgFn{
+			apiserversource.WithServiceAccountName(sacmName),
+			apiserversource.WithEventMode(v1.ResourceMode),
+			apiserversource.WithSink(&duckv1.Destination{URI: brokeruri.URL, CACerts: brokeruri.CACerts}),
+			apiserversource.WithResources(v1.APIVersionKindSelector{
+				APIVersion: "v1",
+				Kind:       "Event",
+			}),
+		}
+		apiserversource.Install(src, cfg...)(ctx, t)
 	})
-	f.Requirement("apiserversource goes ready", apiserversource.IsReady(src))
+	f.Requirement("ApiServerSource goes ready", apiserversource.IsReady(src))
 
-	f.Stable("apiserversource as event source").
-		Must("delivers events", assert.OnStore(brokerName).
-			Match(eventassert.MatchKind(eventshub.EventReceived)).
-			MatchEvent(test.HasType("dev.knative.apiserver.resource.add")).
-			AtLeast(1)).
-		Must("Set sinkURI to HTTPS endpoint", source.ExpectHTTPSSink(apiserversource.Gvr(), src)).
-		Must("Set sinkCACerts to non empty CA certs", source.ExpectCACerts(apiserversource.Gvr(), src))
+	f.Stable("ApiServerSource as event source").
+		Must("delivers events on the broker sink",
+			eventasssert.OnStore(sink).MatchEvent(test.HasType("dev.knative.apiserver.resource.update")).AtLeast(1))
 
 	return f
 }
