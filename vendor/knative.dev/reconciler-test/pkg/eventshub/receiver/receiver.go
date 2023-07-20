@@ -253,7 +253,7 @@ func (o *Receiver) ServeHTTP(writer http.ResponseWriter, request *http.Request) 
 		Time:        time.Now(),
 		Sequence:    s,
 		Kind:        kind,
-		Connection:  toConnection(request),
+		Connection:  eventshub.TLSConnectionStateToConnection(request.TLS),
 	}
 
 	if err := o.EventLogs.Vent(eventInfo); err != nil {
@@ -282,34 +282,6 @@ func (o *Receiver) ServeHTTP(writer http.ResponseWriter, request *http.Request) 
 	}
 }
 
-func toConnection(request *http.Request) *eventshub.Connection {
-
-	if request.TLS != nil {
-		c := &eventshub.Connection{TLS: &eventshub.ConnectionTLS{}}
-		c.TLS.CipherSuite = request.TLS.CipherSuite
-		c.TLS.CipherSuiteName = tls.CipherSuiteName(request.TLS.CipherSuite)
-		c.TLS.HandshakeComplete = request.TLS.HandshakeComplete
-		c.TLS.IsInsecureCipherSuite = isInsecureCipherSuite(request.TLS)
-		return c
-	}
-
-	return nil
-}
-
 func isTLS(request *http.Request) bool {
-	return request.TLS != nil && request.TLS.HandshakeComplete && !isInsecureCipherSuite(request.TLS)
-}
-
-func isInsecureCipherSuite(conn *tls.ConnectionState) bool {
-	if conn == nil {
-		return true
-	}
-
-	res := false
-	for _, s := range tls.InsecureCipherSuites() {
-		if s.ID == conn.CipherSuite {
-			res = true
-		}
-	}
-	return res
+	return request.TLS != nil && request.TLS.HandshakeComplete && !eventshub.IsInsecureCipherSuite(request.TLS)
 }

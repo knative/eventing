@@ -43,6 +43,23 @@ const (
 // EventInfoMatcher returns an error if the input event info doesn't match the criteria
 type EventInfoMatcher func(EventInfo) error
 
+// WithContext transforms EventInfoMatcher to EventInfoMatcherCtx.
+func (m EventInfoMatcher) WithContext() EventInfoMatcherCtx {
+	return func(ctx context.Context, info EventInfo) error {
+		return m(info)
+	}
+}
+
+// EventInfoMatcherCtx returns an error if the input event info doesn't match the criteria
+type EventInfoMatcherCtx func(context.Context, EventInfo) error
+
+// WithContext transforms EventInfoMatcherCtx to EventInfoMatcher.
+func (m EventInfoMatcherCtx) WithContext(ctx context.Context) EventInfoMatcher {
+	return func(info EventInfo) error {
+		return m(ctx, info)
+	}
+}
+
 // Stateful store of events published by eventshub pod it is pointed at.
 // Implements k8s.EventHandler
 type Store struct {
