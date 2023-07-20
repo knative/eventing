@@ -18,7 +18,7 @@ Knative Eventing is a collection of APIs that enable you to use an [event-driven
 
 Knative Eventing is a standalone component that provides support for various types of workloads, including standard Kubernetes Services and Knative Serving Services.
 
-Knative Eventing uses standard HTTP POST requests to send and receive events between event producers and sinks. These events conform to the [CloudEvents specifications](https://cloudevents.io/), which enables creating, parsing, sending, and receiving events in any programming language.
+Knative Eventing uses standard HTTP requests to route events from sources to sinks, following the rules set by the [CloudEvents specification](https://cloudevents.io/). This is a standard set up by the CNCF that has wide support for many programming languages, making it easy to create, understand, send, and receive events.
 
 Knative Eventing components are loosely coupled, and can be developed and deployed independently of each other. Any producer can generate events before there are active event consumers that are listening for those events. Any event consumer can express interest in a class of events before there are producers that are creating those events.
 
