@@ -25,7 +25,7 @@ Knative Eventing components are loosely coupled, and can be developed and deploy
 
 ## What to expect here?
 
-This repository contains a work-in-progress eventing system that is designed to
+This repository contains an eventing system that is designed to
 address a common need for cloud native development:
 
 1. Services are loosely coupled during development and deployed independently
