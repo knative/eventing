@@ -61,9 +61,7 @@ readonly TMP_DIR
 readonly KNATIVE_DEFAULT_NAMESPACE="knative-eventing"
 
 # This the namespace used to install and test Knative Eventing.
-export SYSTEM_NAMESPACE
-SYSTEM_NAMESPACE="${SYSTEM_NAMESPACE:-"knative-eventing-"$(head -c 128 < \
-  /dev/urandom | LC_CTYPE=C tr -dc 'a-z0-9' | fold -w 10 | head -n 1)}"
+export SYSTEM_NAMESPACE=${SYSTEM_NAMESPACE:-"knative-eventing"}
 
 CERT_MANAGER_NAMESPACE="cert-manager"
 export CERT_MANAGER_NAMESPACE
