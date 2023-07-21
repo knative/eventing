@@ -24,13 +24,13 @@ import (
 	"net/url"
 	"time"
 
-	obshttp "github.com/cloudevents/sdk-go/observability/opencensus/v2/http"
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	ceclient "github.com/cloudevents/sdk-go/v2/client"
 	"github.com/cloudevents/sdk-go/v2/event"
 	"github.com/cloudevents/sdk-go/v2/protocol"
 	"github.com/cloudevents/sdk-go/v2/protocol/http"
 	"go.opencensus.io/plugin/ochttp"
+	"go.opencensus.io/plugin/ochttp/propagation/tracecontext"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/tracing/propagation/tracecontextb3"
 
@@ -53,7 +53,9 @@ type Client interface {
 var newClientHTTPObserved = NewClientHTTPObserved
 
 func NewClientHTTPObserved(topt []http.Option, copt []ceclient.Option) (Client, error) {
-	t, err := obshttp.NewObservedHTTP(topt...)
+	t, err := http.New(append(topt,
+		http.WithMiddleware(tracecontextMiddleware),
+	)...)
 	if err != nil {
 		return nil, err
 	}
@@ -108,8 +110,6 @@ type ClientConfig struct {
 	Reporter            source.StatsReporter
 	CrStatusEventClient *crstatusevent.CRStatusEventClient
 	Options             []http.Option
-
-	Client Client
 }
 
 type clientConfigKey struct{}
@@ -127,16 +127,12 @@ func GetClientConfig(ctx context.Context) ClientConfig {
 }
 
 func NewClient(cfg ClientConfig) (Client, error) {
-	if cfg.Client != nil {
-		return cfg.Client, nil
-	}
-
 	transport := &ochttp.Transport{
+		Base:        nethttp.DefaultTransport.(*nethttp.Transport),
 		Propagation: tracecontextb3.TraceContextEgress,
 	}
 
 	pOpts := make([]http.Option, 0)
-	var closeIdler closeIdler = nethttp.DefaultTransport.(*nethttp.Transport)
 
 	ceOverrides := cfg.CeOverrides
 	if cfg.Env != nil {
@@ -152,16 +148,16 @@ func NewClient(cfg ClientConfig) (Client, error) {
 			clientConfig := eventingtls.NewDefaultClientConfig()
 			clientConfig.CACerts = cfg.Env.GetCACerts()
 
-			httpTransport := nethttp.DefaultTransport.(*nethttp.Transport).Clone()
-			httpTransport.TLSClientConfig, err = eventingtls.GetTLSClientConfig(clientConfig)
+			tlsConfig, err := eventingtls.GetTLSClientConfig(clientConfig)
 			if err != nil {
 				return nil, err
 			}
 
-			closeIdler = httpTransport
+			httpsTransport := transport.Base.(*nethttp.Transport).Clone()
+			httpsTransport.TLSClientConfig = tlsConfig
 
 			transport = &ochttp.Transport{
-				Base:        httpTransport,
+				Base:        httpsTransport,
 				Propagation: tracecontextb3.TraceContextEgress,
 			}
 		}
@@ -176,7 +172,11 @@ func NewClient(cfg ClientConfig) (Client, error) {
 		pOpts = append(pOpts, http.WithHeader(apis.KnNamespaceHeader, cfg.Env.GetNamespace()))
 	}
 
-	pOpts = append(pOpts, http.WithRoundTripper(transport))
+	httpClient := nethttp.Client{Transport: roundTripperDecorator(transport)}
+
+	// Important: prepend HTTP client option to make sure that other options are applied to this
+	// client and not to the default client.
+	pOpts = append([]http.Option{http.WithClient(httpClient)}, pOpts...)
 
 	// Make sure that explicitly set options have priority
 	opts := append(pOpts, cfg.Options...)
@@ -191,7 +191,7 @@ func NewClient(cfg ClientConfig) (Client, error) {
 	}
 	return &client{
 		ceClient:            ceClient,
-		closeIdler:          closeIdler,
+		closeIdler:          transport.Base.(*nethttp.Transport),
 		ceOverrides:         ceOverrides,
 		reporter:            cfg.Reporter,
 		crStatusEventClient: cfg.CrStatusEventClient,
@@ -339,5 +339,25 @@ func MetricTagFromContext(ctx context.Context) *MetricTag {
 		Name:          "unknown",
 		Namespace:     "unknown",
 		ResourceGroup: "unknown",
+	}
+}
+
+func roundTripperDecorator(roundTripper nethttp.RoundTripper) nethttp.RoundTripper {
+	return &ochttp.Transport{
+		Propagation:    &tracecontext.HTTPFormat{},
+		Base:           roundTripper,
+		FormatSpanName: formatSpanName,
+	}
+}
+
+func formatSpanName(r *nethttp.Request) string {
+	return "cloudevents.http." + r.URL.Path
+}
+
+func tracecontextMiddleware(h nethttp.Handler) nethttp.Handler {
+	return &ochttp.Handler{
+		Propagation:    &tracecontext.HTTPFormat{},
+		Handler:        h,
+		FormatSpanName: formatSpanName,
 	}
 }

@@ -201,13 +201,19 @@ func (a *cronJobsRunner) newPingSourceClient(source *sourcesv1.PingSource) (adap
 	env.Sink = source.Status.SinkURI.String()
 	env.CACerts = source.Status.SinkCACerts
 
+	a.Logger.Debugw("Creating client",
+		"namespace", source.Namespace,
+		"name", source.Name,
+		"env", env,
+		"source", source,
+	)
+
 	cfg := adapter.ClientConfig{
 		Env:                 &env,
 		CeOverrides:         source.Spec.CloudEventOverrides,
 		Reporter:            a.clientConfig.Reporter,
 		CrStatusEventClient: a.clientConfig.CrStatusEventClient,
 		Options:             a.clientConfig.Options,
-		Client:              a.clientConfig.Client,
 	}
 
 	return adapter.NewClient(cfg)
