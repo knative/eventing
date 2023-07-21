@@ -156,6 +156,12 @@ func Start(ctx context.Context, logs *eventshub.EventLogs, clientOpts ...eventsh
 		transport.TLSClientConfig = &tls.Config{
 			RootCAs:    caCertPool,
 			MinVersion: tls.VersionTLS12,
+			VerifyConnection: func(state tls.ConnectionState) error {
+				if err := logs.Vent(env.peerCertificatesReceived(state)); err != nil {
+					return err
+				}
+				return nil
+			},
 		}
 		httpClient = &nethttp.Client{Transport: transport}
 	}
@@ -242,6 +248,16 @@ func Start(ctx context.Context, logs *eventshub.EventLogs, clientOpts ...eventsh
 			logging.FromContext(ctx).Infof("Canceled sending messages because context was closed")
 			return nil
 		}
+	}
+}
+
+func (g *generator) peerCertificatesReceived(state tls.ConnectionState) eventshub.EventInfo {
+	return eventshub.EventInfo{
+		Kind:       eventshub.PeerCertificatesReceived,
+		Connection: eventshub.TLSConnectionStateToConnection(&state),
+		Origin:     g.SenderName,
+		Observer:   g.SenderName,
+		Time:       time.Now(),
 	}
 }
 

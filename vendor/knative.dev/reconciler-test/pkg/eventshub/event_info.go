@@ -17,7 +17,9 @@ limitations under the License.
 package eventshub
 
 import (
+	"crypto/tls"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"strings"
 	"time"
@@ -38,13 +40,16 @@ const (
 
 	EventSent     EventKind = "Sent"
 	EventResponse EventKind = "Response"
+
+	PeerCertificatesReceived EventKind = "PeerCertificatesReceived"
 )
 
 type ConnectionTLS struct {
-	CipherSuite           uint16 `json:"cipherSuite,omitempty"`
-	CipherSuiteName       string `json:"cipherSuiteName,omitempty"`
-	HandshakeComplete     bool   `json:"handshakeComplete,omitempty"`
-	IsInsecureCipherSuite bool   `json:"isInsecureCipherSuite,omitempty"`
+	CipherSuite           uint16   `json:"cipherSuite,omitempty"`
+	CipherSuiteName       string   `json:"cipherSuiteName,omitempty"`
+	HandshakeComplete     bool     `json:"handshakeComplete,omitempty"`
+	IsInsecureCipherSuite bool     `json:"isInsecureCipherSuite,omitempty"`
+	PemPeerCertificates   []string `json:"pemPeerCertificates,omitempty"`
 }
 
 type Connection struct {
@@ -147,4 +152,38 @@ func (s *SearchedInfo) String() string {
 		sb.WriteRune('\n')
 	}
 	return sb.String()
+}
+
+func TLSConnectionStateToConnection(state *tls.ConnectionState) *Connection {
+
+	if state != nil {
+		c := &Connection{TLS: &ConnectionTLS{}}
+		c.TLS.CipherSuite = state.CipherSuite
+		c.TLS.CipherSuiteName = tls.CipherSuiteName(state.CipherSuite)
+		c.TLS.HandshakeComplete = state.HandshakeComplete
+		c.TLS.IsInsecureCipherSuite = IsInsecureCipherSuite(state)
+
+		for _, cert := range state.PeerCertificates {
+			pemCert := string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: cert.Raw}))
+			c.TLS.PemPeerCertificates = append(c.TLS.PemPeerCertificates, pemCert)
+		}
+
+		return c
+	}
+
+	return nil
+}
+
+func IsInsecureCipherSuite(conn *tls.ConnectionState) bool {
+	if conn == nil {
+		return true
+	}
+
+	res := false
+	for _, s := range tls.InsecureCipherSuites() {
+		if s.ID == conn.CipherSuite {
+			res = true
+		}
+	}
+	return res
 }
