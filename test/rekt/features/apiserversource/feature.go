@@ -42,7 +42,7 @@ func SendsEventsWithBrokerAsSink() *feature.Feature {
 	f.Setup("install broker", broker.Install(brokerName, broker.WithEnvConfig()...))
 	f.Setup("broker is ready", broker.IsReady(brokerName))
 	f.Setup("broker is addressable", broker.IsAddressable(brokerName))
-	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
+	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiverTLS))
 	f.Setup("install trigger", trigger.Install(via, brokerName, trigger.WithSubscriber(service.AsKReference(sink), "")))
 	f.Setup("trigger goes ready", trigger.IsReady(via))
 	f.Setup("Create Service Account for ApiServerSource with RBAC for v1.Event resources",
