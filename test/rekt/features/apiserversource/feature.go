@@ -28,10 +28,9 @@ import (
 	eventasssert "knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
-	"knative.dev/reconciler-test/pkg/resources/service"
 )
 
-func SendsEventsWithBrokerAsSink() *feature.Feature {
+func SendsEventsWithBrokerAsSinkTLS() *feature.Feature {
 	src := feature.MakeRandomK8sName("apiserversource")
 	brokerName := feature.MakeRandomK8sName("broker")
 	sacmName := feature.MakeRandomK8sName("apiserversource")
@@ -43,13 +42,26 @@ func SendsEventsWithBrokerAsSink() *feature.Feature {
 	f.Setup("broker is ready", broker.IsReady(brokerName))
 	f.Setup("broker is addressable", broker.IsAddressable(brokerName))
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiverTLS))
-	f.Setup("install trigger", trigger.Install(via, brokerName, trigger.WithSubscriber(service.AsKReference(sink), "")))
+
+	f.Setup("install trigger", func(ctx context.Context, t feature.T) {
+		caCerts := eventshub.GetCaCerts(ctx)
+		brokeruri, err := broker.Address(ctx, brokerName)
+		if err != nil {
+			t.Error("failed to get address of broker", err)
+		}
+		trigger.Install(via, brokerName, trigger.WithSubscriberFromDestination(&duckv1.Destination{
+			URI:     brokeruri.URL,
+			CACerts: caCerts,
+		}))(ctx, t)
+	})
+
 	f.Setup("trigger goes ready", trigger.IsReady(via))
 	f.Setup("Create Service Account for ApiServerSource with RBAC for v1.Event resources",
 		setupAccountAndRoleForPods(sacmName))
 
 	f.Requirement("install ApiServerSource", func(ctx context.Context, t feature.T) {
 		brokeruri, err := broker.Address(ctx, brokerName)
+		brokeruri.CACerts = eventshub.GetCaCerts(ctx)
 		if err != nil {
 			t.Error("failed to get address of broker", err)
 		}
