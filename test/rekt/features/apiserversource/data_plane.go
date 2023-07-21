@@ -766,3 +766,58 @@ func SendsEventsWithRetries() *feature.Feature {
 			).AtLeast(1))
 	return f
 }
+
+func SendsEventsWithBrokerAsSinkTLS() *feature.Feature {
+	src := feature.MakeRandomK8sName("apiserversource")
+	brokerName := feature.MakeRandomK8sName("broker")
+	sacmName := feature.MakeRandomK8sName("apiserversource")
+	sink := feature.MakeRandomK8sName("sink")
+	via := feature.MakeRandomK8sName("via")
+	f := feature.NewFeature()
+
+	f.Setup("install broker", broker.Install(brokerName, broker.WithEnvConfig()...))
+	f.Setup("broker is ready", broker.IsReady(brokerName))
+	f.Setup("broker is addressable", broker.IsAddressable(brokerName))
+	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiverTLS))
+
+	f.Setup("install trigger", func(ctx context.Context, t feature.T) {
+		caCerts := eventshub.GetCaCerts(ctx)
+		brokeruri, err := broker.Address(ctx, brokerName)
+		if err != nil {
+			t.Error("failed to get address of broker", err)
+		}
+		trigger.Install(via, brokerName, trigger.WithSubscriberFromDestination(&duckv1.Destination{
+			URI:     brokeruri.URL,
+			CACerts: caCerts,
+		}))(ctx, t)
+	})
+
+	f.Setup("trigger goes ready", trigger.IsReady(via))
+	f.Setup("Create Service Account for ApiServerSource with RBAC for v1.Event resources",
+		setupAccountAndRoleForPods(sacmName))
+
+	f.Requirement("install ApiServerSource", func(ctx context.Context, t feature.T) {
+		brokeruri, err := broker.Address(ctx, brokerName)
+		brokeruri.CACerts = eventshub.GetCaCerts(ctx)
+		if err != nil {
+			t.Error("failed to get address of broker", err)
+		}
+		cfg := []manifest.CfgFn{
+			apiserversource.WithServiceAccountName(sacmName),
+			apiserversource.WithEventMode(v1.ResourceMode),
+			apiserversource.WithSink(&duckv1.Destination{URI: brokeruri.URL, CACerts: brokeruri.CACerts}),
+			apiserversource.WithResources(v1.APIVersionKindSelector{
+				APIVersion: "v1",
+				Kind:       "Event",
+			}),
+		}
+		apiserversource.Install(src, cfg...)(ctx, t)
+	})
+	f.Requirement("ApiServerSource goes ready", apiserversource.IsReady(src))
+
+	f.Stable("ApiServerSource as event source").
+		Must("delivers events on the broker sink",
+			eventasssert.OnStore(sink).MatchEvent(test.HasType("dev.knative.apiserver.resource.update")).AtLeast(1))
+
+	return f
+}
