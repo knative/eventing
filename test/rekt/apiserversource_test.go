@@ -81,7 +81,7 @@ func TestApiServerSourceDataPlane_SinkTypes(t *testing.T) {
 	env.TestSet(ctx, t, apiserversourcefeatures.DataPlane_SinkTypes())
 }
 
-func TestApiServerSourceDataPlane_BrokerAsSink(t *testing.T) {
+func TestApiServerSourceDataPlane_BrokerAsSinkTLS(t *testing.T) {
 	t.Parallel()
 
 	ctx, env := global.Environment(
@@ -93,7 +93,7 @@ func TestApiServerSourceDataPlane_BrokerAsSink(t *testing.T) {
 		eventshub.WithTLS(t),
 	)
 
-	env.Test(ctx, t, apiserversourcefeatures.SendsEventsWithBrokerAsSink())
+	env.Test(ctx, t, apiserversourcefeatures.SendsEventsWithBrokerAsSinkTLS())
 }
 
 func TestApiServerSourceDataPlaneTLS(t *testing.T) {
