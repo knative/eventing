@@ -35,12 +35,16 @@ import (
 	"knative.dev/pkg/reconciler"
 
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	"knative.dev/eventing/pkg/apis/feature"
 	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/channel/fanout"
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
+	eventingv1beta2 "knative.dev/eventing/pkg/client/clientset/versioned/typed/eventing/v1beta2"
 	messagingv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/messaging/v1"
 	reconcilerv1 "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/inmemorychannel"
+	"knative.dev/eventing/pkg/client/listers/eventing/v1beta2"
+	"knative.dev/eventing/pkg/eventtype"
 	"knative.dev/eventing/pkg/kncloudevents"
 )
 
@@ -49,6 +53,9 @@ type Reconciler struct {
 	multiChannelMessageHandler multichannelfanout.MultiChannelMessageHandler
 	reporter                   channel.StatsReporter
 	messagingClientSet         messagingv1.MessagingV1Interface
+	eventTypeLister            v1beta2.EventTypeLister
+	eventingClient             eventingv1beta2.EventingV1beta2Interface
+	featureStore               *feature.Store
 }
 
 // Check the interfaces Reconciler should implement
@@ -85,6 +92,19 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1.InMemoryChannel) rec
 		logging.FromContext(ctx).Error("Error creating config for in memory channels", zap.Error(err))
 		return err
 	}
+	var eventTypeAutoHandler *eventtype.EventTypeAutoHandler
+	var channelReference *duckv1.KReference
+	var UID *types.UID
+	if r.featureStore.IsEnabled(feature.EvenTypeAutoCreate) {
+		eventTypeAutoHandler = &eventtype.EventTypeAutoHandler{
+			EventTypeLister: r.eventTypeLister,
+			EventingClient:  r.eventingClient,
+			FeatureStore:    r.featureStore,
+			Logger:          logging.FromContext(ctx).Desugar(),
+		}
+		channelReference = toKReference(imc)
+		UID = &imc.UID
+	}
 
 	// First grab the host based MultiChannelFanoutMessage httpHandler
 	httpHandler := r.multiChannelMessageHandler.GetChannelHandler(config.HostName)
@@ -95,6 +115,9 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1.InMemoryChannel) rec
 			channel.NewMessageDispatcher(logging.FromContext(ctx).Desugar()),
 			config.FanoutConfig,
 			r.reporter,
+			eventTypeAutoHandler,
+			channelReference,
+			UID,
 		)
 		if err != nil {
 			logging.FromContext(ctx).Error("Failed to create a new fanout.MessageHandler", err)
@@ -121,6 +144,9 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1.InMemoryChannel) rec
 			channel.NewMessageDispatcher(logging.FromContext(ctx).Desugar()),
 			config.FanoutConfig,
 			r.reporter,
+			eventTypeAutoHandler,
+			channelReference,
+			UID,
 			channel.ResolveMessageChannelFromPath(channel.ParseChannelFromPath),
 		)
 		if err != nil {
@@ -242,5 +268,17 @@ func handleSubscribers(subscribers []eventingduckv1.SubscriberSpec, handle func(
 				CACerts: sub.Delivery.DeadLetterSink.CACerts,
 			})
 		}
+	}
+}
+
+func toKReference(imc *v1.InMemoryChannel) *duckv1.KReference {
+	return &duckv1.KReference{
+		// Need to set Kind and APIVersion manually as the TypeMeta is not currently properly set https://github.com/knative/eventing/issues/7091
+		// TODO: refactor this to use imc.Kind and imc.TypeMeta once #7091 is resolved
+		Kind:       "InMemoryChannel",
+		APIVersion: "messaging.knative.dev/v1",
+		Namespace:  imc.Namespace,
+		Name:       imc.Name,
+		Address:    imc.Status.Address.Name,
 	}
 }
