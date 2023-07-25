@@ -28,11 +28,13 @@ import (
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/system"
 
+	"knative.dev/pkg/resolver"
+
+	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/eventing/pkg/client/injection/informers/messaging/v1/inmemorychannel"
 	inmemorychannelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/inmemorychannel"
 	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/reconciler/inmemorychannel/controller/config"
-	"knative.dev/pkg/resolver"
 
 	"knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment"
 	"knative.dev/pkg/client/injection/kube/informers/core/v1/endpoints"
@@ -84,9 +86,16 @@ func NewController(
 		logger.Panic("unable to process in-memory channel's required environment variables (missing DISPATCHER_IMAGE)")
 	}
 
+	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"))
+	featureStore.WatchConfigs(cmw)
+
 	r.dispatcherImage = env.Image
 
-	impl := inmemorychannelreconciler.NewImpl(ctx, r)
+	impl := inmemorychannelreconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
+		return controller.Options{
+			ConfigStore:       featureStore,
+		}
+	})
 	r.uriResolver = resolver.NewURIResolverFromTracker(ctx, impl.Tracker)
 
 	inmemorychannelInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
