@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/google/go-cmp/cmp"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -260,10 +261,29 @@ func (r *Reconciler) reconcileSubscription(ctx context.Context, t *eventingv1.Tr
 		return actual, nil
 	}
 	recorder := controller.GetEventRecorder(ctx)
-	logging.FromContext(ctx).Infow("Differing Subscription", zap.Any("expected", expected.Spec), zap.Any("actual", actual.Spec))
+	diff := cmp.Diff(actual, expected)
+	logging.FromContext(ctx).Infow("Differing Subscription",
+		zap.String("diff", diff),
+		zap.Any("expected", expected.Spec),
+		zap.Any("actual", actual.Spec))
 
-	// Given that spec.channel is immutable, we cannot just update the Subscription. We delete
-	// it and re-create it instead.
+	// Given that spec.channel is immutable, we can update the Subscription when Channel is not
+	// different. We delete it and re-create it instead when spec.channel is different.
+	if equality.Semantic.DeepDerivative(expected.Spec.Channel, actual.Spec.Channel) {
+		logging.FromContext(ctx).Info("Updating subscription")
+
+		updated := actual.DeepCopy()
+		updated.Spec = expected.Spec
+
+		newSub, err := r.eventingClientSet.MessagingV1().Subscriptions(t.Namespace).Update(ctx, updated, metav1.UpdateOptions{})
+		if err != nil {
+			logging.FromContext(ctx).Infow("Cannot update subscription", zap.Error(err))
+			recorder.Eventf(t, corev1.EventTypeWarning, subscriptionCreateFailed, "Update Trigger's subscription failed: %v", err)
+			return nil, err
+		}
+		return newSub, nil
+	}
+
 	logging.FromContext(ctx).Infow("Deleting subscription", zap.String("namespace", actual.Namespace), zap.String("name", actual.Name))
 	err := r.eventingClientSet.MessagingV1().Subscriptions(t.Namespace).Delete(ctx, actual.Name, metav1.DeleteOptions{})
 	if err != nil {
