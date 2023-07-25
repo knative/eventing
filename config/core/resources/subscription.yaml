@@ -140,6 +140,9 @@ spec:
                   uri:
                     description: URI can be an absolute URL(non-empty scheme and non-empty host) pointing to the target or a relative URI. Relative URIs will be resolved using the base URI retrieved from Ref.
                     type: string
+                  CACerts:
+                    description: Certification Authority (CA) certificates in PEM format that the subscription trusts when sending events to the sink.
+                    type: string
           status:
             type: object
             properties:
