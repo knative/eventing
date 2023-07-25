@@ -29,7 +29,7 @@ import (
 	"time"
 
 	"github.com/cloudevents/sdk-go/v2/binding"
-	"github.com/cloudevents/sdk-go/v2/binding/buffering"
+	"github.com/cloudevents/sdk-go/v2/event"
 	"go.opencensus.io/trace"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
@@ -177,21 +177,16 @@ func (f *FanoutMessageHandler) GetSubscriptions(ctx context.Context) []Subscript
 	return ret
 }
 
-func (f *FanoutMessageHandler) autoCreateEventType(ctx context.Context, bufferedMessage binding.Message, transformers []binding.Transformer) {
+func (f *FanoutMessageHandler) autoCreateEventType(ctx context.Context, evnt event.Event, transformers []binding.Transformer) {
 	if f.channelAddressable == nil {
 		f.logger.Warn("No addressable for channel")
 		return
 	} else {
-		event, err := binding.ToEvent(ctx, bufferedMessage, transformers...)
-		if err != nil {
-			f.logger.Warn("Failed to extract event from message")
-			return
-		}
 		if f.channelUID == nil {
 			f.logger.Warn("No channelUID provided, unable to autocreate event type")
 			return
 		}
-		err = f.eventTypeHandler.AutoCreateEventType(ctx, event, f.channelAddressable, *f.channelUID)
+		err := f.eventTypeHandler.AutoCreateEventType(ctx, &evnt, f.channelAddressable, *f.channelUID)
 		if err != nil {
 			f.logger.Warn("EventTypeCreate failed")
 			return
@@ -199,84 +194,57 @@ func (f *FanoutMessageHandler) autoCreateEventType(ctx context.Context, buffered
 	}
 }
 
-func createMessageReceiverFunction(f *FanoutMessageHandler) func(context.Context, channel.ChannelReference, binding.Message, []binding.Transformer, nethttp.Header) error {
+func createMessageReceiverFunction(f *FanoutMessageHandler) func(context.Context, channel.ChannelReference, event.Event, []binding.Transformer, nethttp.Header) error {
 	if f.asyncHandler {
-		return func(ctx context.Context, ref channel.ChannelReference, message binding.Message, transformers []binding.Transformer, additionalHeaders nethttp.Header) error {
+		return func(ctx context.Context, ref channel.ChannelReference, evnt event.Event, transformers []binding.Transformer, additionalHeaders nethttp.Header) error {
 			if f.eventTypeHandler != nil {
-				bufferedMessage, err := buffering.CopyMessage(ctx, message, transformers...)
-				if err != nil {
-					f.logger.Warn("Failed to copy message")
-				} else {
-					f.autoCreateEventType(ctx, bufferedMessage, transformers)
-				}
+				f.autoCreateEventType(ctx, evnt, transformers)
 			}
 
 			subs := f.GetSubscriptions(ctx)
 
 			if len(subs) == 0 {
-				// Nothing to do here, finish the message and return
-				_ = message.Finish(nil)
+				// Nothing to do here
 				return nil
 			}
 
 			parentSpan := trace.FromContext(ctx)
 			te := kncloudevents.TypeExtractorTransformer("")
 			transformers = append(transformers, &te)
-			// Message buffering here is done before starting the dispatch goroutine
-			// Because the message could be closed before the buffering happens
-			bufferedMessage, err := buffering.CopyMessage(ctx, message, transformers...)
-			if err != nil {
-				return err
-			}
 
 			reportArgs := channel.ReportArgs{}
 			reportArgs.EventType = string(te)
 			reportArgs.Ns = ref.Namespace
 
-			// We don't need the original message anymore
-			_ = message.Finish(nil)
-			go func(m binding.Message, h nethttp.Header, s *trace.Span, r *channel.StatsReporter, args *channel.ReportArgs) {
+			go func(e event.Event, h nethttp.Header, s *trace.Span, r *channel.StatsReporter, args *channel.ReportArgs) {
 				// Run async dispatch with background context.
 				ctx = trace.NewContext(context.Background(), s)
 				h.Set(apis.KnNamespaceHeader, ref.Namespace)
 				// Any returned error is already logged in f.dispatch().
-				dispatchResultForFanout := f.dispatch(ctx, subs, m, h)
+				dispatchResultForFanout := f.dispatch(ctx, subs, e, h)
 				_ = ParseDispatchResultAndReportMetrics(dispatchResultForFanout, *r, *args)
-			}(bufferedMessage, additionalHeaders, parentSpan, &f.reporter, &reportArgs)
+			}(evnt, additionalHeaders, parentSpan, &f.reporter, &reportArgs)
 			return nil
 		}
 	}
-	return func(ctx context.Context, ref channel.ChannelReference, message binding.Message, transformers []binding.Transformer, additionalHeaders nethttp.Header) error {
+	return func(ctx context.Context, ref channel.ChannelReference, event event.Event, transformers []binding.Transformer, additionalHeaders nethttp.Header) error {
 		if f.eventTypeHandler != nil {
-			bufferedMessage, err := buffering.CopyMessage(ctx, message, transformers...)
-			if err != nil {
-				f.logger.Warn("Failed to copy message")
-			} else {
-				f.autoCreateEventType(ctx, bufferedMessage, transformers)
-			}
+			f.autoCreateEventType(ctx, event, transformers)
 		}
 
 		subs := f.GetSubscriptions(ctx)
 		if len(subs) == 0 {
-			// Nothing to do here, finish the message and return
-			_ = message.Finish(nil)
+			// Nothing to do here
 			return nil
 		}
 
 		te := kncloudevents.TypeExtractorTransformer("")
 		transformers = append(transformers, &te)
-		// We buffer the message to send it several times
-		bufferedMessage, err := buffering.CopyMessage(ctx, message, transformers...)
-		if err != nil {
-			return err
-		}
-		// We don't need the original message anymore
-		_ = message.Finish(nil)
 
 		reportArgs := channel.ReportArgs{}
 		reportArgs.EventType = string(te)
 		reportArgs.Ns = ref.Namespace
-		dispatchResultForFanout := f.dispatch(ctx, subs, bufferedMessage, additionalHeaders)
+		dispatchResultForFanout := f.dispatch(ctx, subs, event, additionalHeaders)
 		return ParseDispatchResultAndReportMetrics(dispatchResultForFanout, f.reporter, reportArgs)
 	}
 }
@@ -305,14 +273,11 @@ func ParseDispatchResultAndReportMetrics(result DispatchResult, reporter channel
 
 // dispatch takes the event, fans it out to each subscription in subs. If all the fanned out
 // events return successfully, then return nil. Else, return an error.
-func (f *FanoutMessageHandler) dispatch(ctx context.Context, subs []Subscription, bufferedMessage binding.Message, additionalHeaders nethttp.Header) DispatchResult {
-	// Bind the lifecycle of the buffered message to the number of subs
-	bufferedMessage = buffering.WithAcksBeforeFinish(bufferedMessage, len(subs))
-
+func (f *FanoutMessageHandler) dispatch(ctx context.Context, subs []Subscription, event event.Event, additionalHeaders nethttp.Header) DispatchResult {
 	errorCh := make(chan DispatchResult, len(subs))
 	for _, sub := range subs {
 		go func(s Subscription) {
-			dispatchedResultPerSub, err := f.makeFanoutRequest(ctx, bufferedMessage, additionalHeaders, s)
+			dispatchedResultPerSub, err := f.makeFanoutRequest(ctx, event, additionalHeaders, s)
 			errorCh <- DispatchResult{err: err, info: dispatchedResultPerSub}
 		}(sub)
 	}
@@ -355,8 +320,8 @@ func (f *FanoutMessageHandler) dispatch(ctx context.Context, subs []Subscription
 
 // makeFanoutRequest sends the request to exactly one subscription. It handles both the `call` and
 // the `sink` portions of the subscription.
-func (f *FanoutMessageHandler) makeFanoutRequest(ctx context.Context, message binding.Message, additionalHeaders nethttp.Header, sub Subscription) (*kncloudevents.DispatchInfo, error) {
-	return kncloudevents.SendMessage(ctx, message, sub.Subscriber,
+func (f *FanoutMessageHandler) makeFanoutRequest(ctx context.Context, event event.Event, additionalHeaders nethttp.Header, sub Subscription) (*kncloudevents.DispatchInfo, error) {
+	return kncloudevents.SendEvent(ctx, event, sub.Subscriber,
 		kncloudevents.WithHeader(additionalHeaders),
 		kncloudevents.WithReply(sub.Reply),
 		kncloudevents.WithDeadLetterSink(sub.DeadLetter),

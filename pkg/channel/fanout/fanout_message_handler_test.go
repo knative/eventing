@@ -34,6 +34,7 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"
+	"github.com/cloudevents/sdk-go/v2/event"
 	bindingshttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"github.com/cloudevents/sdk-go/v2/test"
 	"go.opencensus.io/trace"
@@ -149,7 +150,7 @@ func TestGetSetSubscriptions(t *testing.T) {
 
 func TestFanoutMessageHandler_ServeHTTP(t *testing.T) {
 	testCases := map[string]struct {
-		receiverFunc        channel.UnbufferedMessageReceiverFunc
+		receiverFunc        channel.EventReceiverFunc
 		timeout             time.Duration
 		subs                []Subscription
 		subscriber          func(http.ResponseWriter, *http.Request)
@@ -160,14 +161,14 @@ func TestFanoutMessageHandler_ServeHTTP(t *testing.T) {
 		asyncExpectedStatus int
 	}{
 		"rejected by receiver": {
-			receiverFunc: func(context.Context, channel.ChannelReference, binding.Message, []binding.Transformer, http.Header) error {
+			receiverFunc: func(context.Context, channel.ChannelReference, event.Event, []binding.Transformer, http.Header) error {
 				return errors.New("rejected by test-receiver")
 			},
 			expectedStatus:      http.StatusInternalServerError,
 			asyncExpectedStatus: http.StatusInternalServerError,
 		},
 		"receiver has span": {
-			receiverFunc: func(ctx context.Context, _ channel.ChannelReference, _ binding.Message, _ []binding.Transformer, _ http.Header) error {
+			receiverFunc: func(ctx context.Context, _ channel.ChannelReference, _ event.Event, _ []binding.Transformer, _ http.Header) error {
 				if span := trace.FromContext(ctx); span == nil {
 					return errors.New("missing span")
 				}
@@ -316,7 +317,7 @@ func TestFanoutMessageHandler_ServeHTTP(t *testing.T) {
 	}
 }
 
-func testFanoutMessageHandler(t *testing.T, async bool, receiverFunc channel.UnbufferedMessageReceiverFunc, timeout time.Duration, inSubs []Subscription, subscriberHandler func(http.ResponseWriter, *http.Request), subscriberReqs int, replierHandler func(http.ResponseWriter, *http.Request), replierReqs int, expectedStatus int) {
+func testFanoutMessageHandler(t *testing.T, async bool, receiverFunc channel.EventReceiverFunc, timeout time.Duration, inSubs []Subscription, subscriberHandler func(http.ResponseWriter, *http.Request), subscriberReqs int, replierHandler func(http.ResponseWriter, *http.Request), replierReqs int, expectedStatus int) {
 	var subscriberServerWg *sync.WaitGroup
 	reporter := channel.NewStatsReporter("testcontainer", "testpod")
 	if subscriberReqs != 0 {

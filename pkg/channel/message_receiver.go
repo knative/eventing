@@ -24,7 +24,7 @@ import (
 	"time"
 
 	"github.com/cloudevents/sdk-go/v2/binding"
-	"github.com/cloudevents/sdk-go/v2/binding/buffering"
+	"github.com/cloudevents/sdk-go/v2/event"
 	"github.com/cloudevents/sdk-go/v2/protocol/http"
 	"go.uber.org/zap"
 
@@ -61,18 +61,15 @@ func (e BadRequestError) Error() string {
 // event is emitted via the receiver function.
 type MessageReceiver struct {
 	httpBindingsReceiver *kncloudevents.HTTPMessageReceiver
-	receiverFunc         UnbufferedMessageReceiverFunc
+	receiverFunc         EventReceiverFunc
 	logger               *zap.Logger
 	hostToChannelFunc    ResolveChannelFromHostFunc
 	pathToChannelFunc    ResolveChannelFromPathFunc
 	reporter             StatsReporter
 }
 
-// UnbufferedMessageReceiverFunc is the function to be called for handling the message.
-// The provided message is not buffered, so it can't be safely read more times.
-// When you perform the write (or the buffering) of the Message, you must use the transformers provided as parameters.
-// This function is responsible for invoking Message.Finish().
-type UnbufferedMessageReceiverFunc func(context.Context, ChannelReference, binding.Message, []binding.Transformer, nethttp.Header) error
+// EventReceiverFunc is the function to be called for handling the event.
+type EventReceiverFunc func(context.Context, ChannelReference, event.Event, []binding.Transformer, nethttp.Header) error
 
 // ReceiverOptions provides functional options to MessageReceiver function.
 type MessageReceiverOptions func(*MessageReceiver) error
@@ -106,7 +103,7 @@ func ResolveMessageChannelFromPath(PathToChannelFunc ResolveChannelFromPathFunc)
 
 // NewMessageReceiver creates an event receiver passing new events to the
 // receiverFunc.
-func NewMessageReceiver(receiverFunc UnbufferedMessageReceiverFunc, logger *zap.Logger, reporter StatsReporter, opts ...MessageReceiverOptions) (*MessageReceiver, error) {
+func NewMessageReceiver(receiverFunc EventReceiverFunc, logger *zap.Logger, reporter StatsReporter, opts ...MessageReceiverOptions) (*MessageReceiver, error) {
 	bindingsReceiver := kncloudevents.NewHTTPMessageReceiver(8080)
 	receiver := &MessageReceiver{
 		httpBindingsReceiver: bindingsReceiver,
@@ -208,6 +205,7 @@ func (r *MessageReceiver) ServeHTTP(response nethttp.ResponseWriter, request *ne
 	args.Ns = channel.Namespace
 
 	message := http.NewMessageFromHttpRequest(request)
+	defer message.Finish(nil)
 	if message.ReadEncoding() == binding.EncodingUnknown {
 		r.logger.Info("Cannot determine the cloudevent message encoding")
 		response.WriteHeader(nethttp.StatusBadRequest)
@@ -215,15 +213,7 @@ func (r *MessageReceiver) ServeHTTP(response nethttp.ResponseWriter, request *ne
 		return
 	}
 
-	bufferedMessage, err := buffering.CopyMessage(request.Context(), message)
-	if err != nil {
-		r.logger.Warn("Cannot buffer cloudevent message", zap.Error(err))
-		response.WriteHeader(nethttp.StatusBadRequest)
-		_ = r.reporter.ReportEventCount(&args, nethttp.StatusBadRequest)
-		return
-	}
-
-	event, err := binding.ToEvent(request.Context(), bufferedMessage)
+	event, err := binding.ToEvent(request.Context(), message)
 	if err != nil {
 		r.logger.Warn("failed to extract event from request", zap.Error(err))
 		response.WriteHeader(nethttp.StatusBadRequest)
@@ -238,7 +228,7 @@ func (r *MessageReceiver) ServeHTTP(response nethttp.ResponseWriter, request *ne
 		return
 	}
 
-	err = r.receiverFunc(request.Context(), channel, bufferedMessage, []binding.Transformer{}, utils.PassThroughHeaders(request.Header))
+	err = r.receiverFunc(request.Context(), channel, *event, []binding.Transformer{}, utils.PassThroughHeaders(request.Header))
 	if err != nil {
 		if _, ok := err.(*UnknownChannelError); ok {
 			response.WriteHeader(nethttp.StatusNotFound)
