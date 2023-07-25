@@ -44,7 +44,7 @@ func (e *UnknownChannelError) Error() string {
 	return fmt.Sprint("unknown channel: ", e.Channel)
 }
 
-// UnknownHostError represents the error when a ResolveMessageChannelFromHostHeader func cannot resolve an host
+// UnknownHostError represents the error when a ResolveChannelFromHostHeader func cannot resolve an host
 type UnknownHostError string
 
 func (e UnknownHostError) Error() string {
@@ -57,9 +57,9 @@ func (e BadRequestError) Error() string {
 	return "malformed request: " + string(e)
 }
 
-// MessageReceiver starts a server to receive new events for the channel dispatcher. The new
+// EventReceiver starts a server to receive new events for the channel dispatcher. The new
 // event is emitted via the receiver function.
-type MessageReceiver struct {
+type EventReceiver struct {
 	httpBindingsReceiver *kncloudevents.HTTPMessageReceiver
 	receiverFunc         EventReceiverFunc
 	logger               *zap.Logger
@@ -72,17 +72,17 @@ type MessageReceiver struct {
 type EventReceiverFunc func(context.Context, ChannelReference, event.Event, []binding.Transformer, nethttp.Header) error
 
 // ReceiverOptions provides functional options to MessageReceiver function.
-type MessageReceiverOptions func(*MessageReceiver) error
+type EventReceiverOptions func(*EventReceiver) error
 
 // ResolveChannelFromHostFunc function enables EventReceiver to get the Channel Reference from incoming request HostHeader
 // before calling receiverFunc.
 // Returns UnknownHostError if the channel is not found, otherwise returns a generic error.
 type ResolveChannelFromHostFunc func(string) (ChannelReference, error)
 
-// ResolveMessageChannelFromHostHeader is a ReceiverOption for NewMessageReceiver which enables the caller to overwrite the
+// ResolveChannelFromHostHeader is a ReceiverOption for NewEventReceiver which enables the caller to overwrite the
 // default behaviour defined by ParseChannelFromHost function.
-func ResolveMessageChannelFromHostHeader(hostToChannelFunc ResolveChannelFromHostFunc) MessageReceiverOptions {
-	return func(r *MessageReceiver) error {
+func ResolveChannelFromHostHeader(hostToChannelFunc ResolveChannelFromHostFunc) EventReceiverOptions {
+	return func(r *EventReceiver) error {
 		r.hostToChannelFunc = hostToChannelFunc
 		return nil
 	}
@@ -92,20 +92,20 @@ func ResolveMessageChannelFromHostHeader(hostToChannelFunc ResolveChannelFromHos
 // before calling receiverFunc.
 type ResolveChannelFromPathFunc func(string) (ChannelReference, error)
 
-// ResolveMessageChannelFromPath is a ReceiverOption for NewMessageReceiver which enables the caller to overwrite the
+// ResolveChannelFromPath is a ReceiverOption for NewMessageReceiver which enables the caller to overwrite the
 // default behaviour defined by ParseChannelFromPath function.
-func ResolveMessageChannelFromPath(PathToChannelFunc ResolveChannelFromPathFunc) MessageReceiverOptions {
-	return func(r *MessageReceiver) error {
+func ResolveChannelFromPath(PathToChannelFunc ResolveChannelFromPathFunc) EventReceiverOptions {
+	return func(r *EventReceiver) error {
 		r.pathToChannelFunc = PathToChannelFunc
 		return nil
 	}
 }
 
-// NewMessageReceiver creates an event receiver passing new events to the
+// NewEventReceiver creates an event receiver passing new events to the
 // receiverFunc.
-func NewMessageReceiver(receiverFunc EventReceiverFunc, logger *zap.Logger, reporter StatsReporter, opts ...MessageReceiverOptions) (*MessageReceiver, error) {
+func NewEventReceiver(receiverFunc EventReceiverFunc, logger *zap.Logger, reporter StatsReporter, opts ...EventReceiverOptions) (*EventReceiver, error) {
 	bindingsReceiver := kncloudevents.NewHTTPMessageReceiver(8080)
-	receiver := &MessageReceiver{
+	receiver := &EventReceiver{
 		httpBindingsReceiver: bindingsReceiver,
 		receiverFunc:         receiverFunc,
 		hostToChannelFunc:    ResolveChannelFromHostFunc(ParseChannelFromHost),
@@ -125,7 +125,7 @@ func NewMessageReceiver(receiverFunc EventReceiverFunc, logger *zap.Logger, repo
 // Only HTTP POST requests to the root path (/) are accepted. If other paths or
 // methods are needed, use the HandleRequest method directly with another HTTP
 // server.
-func (r *MessageReceiver) Start(ctx context.Context) error {
+func (r *EventReceiver) Start(ctx context.Context) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -153,7 +153,7 @@ func (r *MessageReceiver) Start(ctx context.Context) error {
 	}
 }
 
-func (r *MessageReceiver) ServeHTTP(response nethttp.ResponseWriter, request *nethttp.Request) {
+func (r *EventReceiver) ServeHTTP(response nethttp.ResponseWriter, request *nethttp.Request) {
 	response.Header().Set("Allow", "POST, OPTIONS")
 	if request.Method == nethttp.MethodOptions {
 		response.Header().Set("WebHook-Allowed-Origin", "*") // Accept from any Origin:
@@ -252,4 +252,4 @@ func ReportEventCountMetricsForDispatchError(err error, reporter StatsReporter, 
 	}
 }
 
-var _ nethttp.Handler = (*MessageReceiver)(nil)
+var _ nethttp.Handler = (*EventReceiver)(nil)

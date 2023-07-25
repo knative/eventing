@@ -27,11 +27,11 @@ import (
 )
 
 type MessageDispatcher interface {
-	GetHandler(ctx context.Context) multichannelfanout.MultiChannelMessageHandler
+	GetHandler(ctx context.Context) multichannelfanout.MultiChannelEventHandler
 }
 
 type InMemoryMessageDispatcher struct {
-	handler              multichannelfanout.MultiChannelMessageHandler
+	handler              multichannelfanout.MultiChannelEventHandler
 	httpBindingsReceiver *kncloudevents.HTTPMessageReceiver
 	writeTimeout         time.Duration
 	logger               *zap.Logger
@@ -41,14 +41,14 @@ type InMemoryMessageDispatcherArgs struct {
 	Port                       int
 	ReadTimeout                time.Duration
 	WriteTimeout               time.Duration
-	Handler                    multichannelfanout.MultiChannelMessageHandler
+	Handler                    multichannelfanout.MultiChannelEventHandler
 	Logger                     *zap.Logger
 	HTTPMessageReceiverOptions []kncloudevents.HTTPMessageReceiverOption
 }
 
-// GetHandler gets the current multichannelfanout.MessageHandler to delegate all HTTP
+// GetHandler gets the current multichannelfanout.EventHandler to delegate all HTTP
 // requests to.
-func (d *InMemoryMessageDispatcher) GetHandler(ctx context.Context) multichannelfanout.MultiChannelMessageHandler {
+func (d *InMemoryMessageDispatcher) GetHandler(ctx context.Context) multichannelfanout.MultiChannelEventHandler {
 	return d.handler
 }
 

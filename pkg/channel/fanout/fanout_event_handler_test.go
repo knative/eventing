@@ -112,7 +112,7 @@ func TestSubscriberSpecToFanoutConfig(t *testing.T) {
 }
 
 func TestGetSetSubscriptions(t *testing.T) {
-	h := &FanoutMessageHandler{subscriptions: make([]Subscription, 0)}
+	h := &FanoutEventHandler{subscriptions: make([]Subscription, 0)}
 	subs := h.GetSubscriptions(context.TODO())
 	if len(subs) != 0 {
 		t.Error("Wanted 0 subs, got: ", len(subs))
@@ -148,7 +148,7 @@ func TestGetSetSubscriptions(t *testing.T) {
 
 }
 
-func TestFanoutMessageHandler_ServeHTTP(t *testing.T) {
+func TestFanoutEventHandler_ServeHTTP(t *testing.T) {
 	testCases := map[string]struct {
 		receiverFunc        channel.EventReceiverFunc
 		timeout             time.Duration
@@ -309,15 +309,15 @@ func TestFanoutMessageHandler_ServeHTTP(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run("sync - "+n, func(t *testing.T) {
-			testFanoutMessageHandler(t, false, tc.receiverFunc, tc.timeout, tc.subs, tc.subscriber, tc.subscriberReqs, tc.replier, tc.replierReqs, tc.expectedStatus)
+			testFanoutEventHandler(t, false, tc.receiverFunc, tc.timeout, tc.subs, tc.subscriber, tc.subscriberReqs, tc.replier, tc.replierReqs, tc.expectedStatus)
 		})
 		t.Run("async - "+n, func(t *testing.T) {
-			testFanoutMessageHandler(t, true, tc.receiverFunc, tc.timeout, tc.subs, tc.subscriber, tc.subscriberReqs, tc.replier, tc.replierReqs, tc.asyncExpectedStatus)
+			testFanoutEventHandler(t, true, tc.receiverFunc, tc.timeout, tc.subs, tc.subscriber, tc.subscriberReqs, tc.replier, tc.replierReqs, tc.asyncExpectedStatus)
 		})
 	}
 }
 
-func testFanoutMessageHandler(t *testing.T, async bool, receiverFunc channel.EventReceiverFunc, timeout time.Duration, inSubs []Subscription, subscriberHandler func(http.ResponseWriter, *http.Request), subscriberReqs int, replierHandler func(http.ResponseWriter, *http.Request), replierReqs int, expectedStatus int) {
+func testFanoutEventHandler(t *testing.T, async bool, receiverFunc channel.EventReceiverFunc, timeout time.Duration, inSubs []Subscription, subscriberHandler func(http.ResponseWriter, *http.Request), subscriberReqs int, replierHandler func(http.ResponseWriter, *http.Request), replierReqs int, expectedStatus int) {
 	var subscriberServerWg *sync.WaitGroup
 	reporter := channel.NewStatsReporter("testcontainer", "testpod")
 	if subscriberReqs != 0 {
@@ -363,12 +363,12 @@ func testFanoutMessageHandler(t *testing.T, async bool, receiverFunc channel.Eve
 	}
 
 	calledChan := make(chan bool, 1)
-	recvOptionFunc := func(*channel.MessageReceiver) error {
+	recvOptionFunc := func(*channel.EventReceiver) error {
 		calledChan <- true
 		return nil
 	}
 
-	h, err := NewFanoutMessageHandler(
+	h, err := NewFanoutEventHandler(
 		logger,
 		Config{
 			Subscriptions: subs,
@@ -386,7 +386,7 @@ func testFanoutMessageHandler(t *testing.T, async bool, receiverFunc channel.Eve
 	}
 
 	if receiverFunc != nil {
-		receiver, err := channel.NewMessageReceiver(receiverFunc, logger, reporter)
+		receiver, err := channel.NewEventReceiver(receiverFunc, logger, reporter)
 		if err != nil {
 			t.Fatal("NewEventReceiver failed =", err)
 		}

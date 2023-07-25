@@ -109,7 +109,7 @@ func NewController(
 
 	reporter := channel.NewStatsReporter(env.ContainerName, kmeta.ChildName(env.PodName, uuid.New().String()))
 
-	sh := multichannelfanout.NewMessageHandler(ctx, logger.Desugar())
+	sh := multichannelfanout.NewEventHandler(ctx, logger.Desugar())
 
 	inmemorychannelInformer := inmemorychannelinformer.Get(ctx)
 
@@ -119,11 +119,11 @@ func NewController(
 	}
 
 	r := &Reconciler{
-		multiChannelMessageHandler: sh,
-		reporter:                   reporter,
-		messagingClientSet:         eventingclient.Get(ctx).MessagingV1(),
-		eventingClient:             eventingclient.Get(ctx).EventingV1beta2(),
-		eventTypeLister:            eventtypeinformer.Get(ctx).Lister(),
+		multiChannelEventHandler: sh,
+		reporter:                 reporter,
+		messagingClientSet:       eventingclient.Get(ctx).MessagingV1(),
+		eventingClient:           eventingclient.Get(ctx).EventingV1beta2(),
+		eventTypeLister:          eventtypeinformer.Get(ctx).Lister(),
 	}
 
 	impl := inmemorychannelreconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {

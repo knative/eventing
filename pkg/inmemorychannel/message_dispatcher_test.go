@@ -50,7 +50,7 @@ import (
 
 func TestNewMessageDispatcher(t *testing.T) {
 	logger := logtesting.TestLogger(t).Desugar()
-	sh := multichannelfanout.NewMessageHandler(context.TODO(), logger)
+	sh := multichannelfanout.NewEventHandler(context.TODO(), logger)
 
 	args := &InMemoryMessageDispatcherArgs{
 		Port:         8080,
@@ -70,7 +70,7 @@ func TestNewMessageDispatcher(t *testing.T) {
 // This test emulates a real dispatcher usage
 func TestDispatcher_close(t *testing.T) {
 	logger := logtesting.TestLogger(t).Desugar()
-	sh := multichannelfanout.NewMessageHandler(context.TODO(), logger)
+	sh := multichannelfanout.NewEventHandler(context.TODO(), logger)
 
 	port, err := freePort()
 	if err != nil {
@@ -230,7 +230,7 @@ func TestDispatcher_dispatch(t *testing.T) {
 		},
 	}
 
-	sh, err := multichannelfanout.NewMessageHandlerWithConfig(context.TODO(), logger, config, reporter)
+	sh, err := multichannelfanout.NewEventHandlerWithConfig(context.TODO(), logger, config, reporter)
 	if err != nil {
 		t.Fatal(err)
 	}

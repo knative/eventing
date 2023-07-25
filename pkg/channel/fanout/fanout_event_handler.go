@@ -17,8 +17,8 @@ limitations under the License.
 // Package fanout provides an http.Handler that takes in one request and fans it out to N other
 // requests, based on a list of Subscriptions. Logically, it represents all the Subscriptions to a
 // single Knative Channel.
-// It will normally be used in conjunction with multichannelfanout.MessageHandler, which contains multiple
-// fanout.MessageHandler, each corresponding to a single Knative Channel.
+// It will normally be used in conjunction with multichannelfanout.EventHandler, which contains multiple
+// fanout.EventHandler, each corresponding to a single Knative Channel.
 package fanout
 
 import (
@@ -53,7 +53,7 @@ type Subscription struct {
 	RetryConfig *kncloudevents.RetryConfig
 }
 
-// Config for a fanout.MessageHandler.
+// Config for a fanout.EventHandler.
 type Config struct {
 	Subscriptions []Subscription `json:"subscriptions"`
 	// AsyncHandler controls whether the Subscriptions are called synchronous or asynchronously.
@@ -61,18 +61,18 @@ type Config struct {
 	AsyncHandler bool `json:"asyncHandler,omitempty"`
 }
 
-// MessageHandler is an http.Handler but has methods for managing
+// EventHandler is an http.Handler but has methods for managing
 // the fanout Subscriptions. Get/Set methods are synchronized, and
 // GetSubscriptions returns a copy of the Subscriptions, so you can
 // use it to fetch a snapshot and use it after that safely.
-type MessageHandler interface {
+type EventHandler interface {
 	nethttp.Handler
 	SetSubscriptions(ctx context.Context, subs []Subscription)
 	GetSubscriptions(ctx context.Context) []Subscription
 }
 
-// MessageHandler is a http.Handler that takes a single request in and fans it out to N other servers.
-type FanoutMessageHandler struct {
+// FanoutEventHandler is a http.Handler that takes a single request in and fans it out to N other servers.
+type FanoutEventHandler struct {
 	// AsyncHandler controls whether the Subscriptions are called synchronous or asynchronously.
 	// It is expected to be false when used as a sidecar.
 	asyncHandler bool
@@ -80,7 +80,7 @@ type FanoutMessageHandler struct {
 	subscriptionsMutex sync.RWMutex
 	subscriptions      []Subscription
 
-	receiver *channel.MessageReceiver
+	receiver *channel.EventReceiver
 
 	// TODO: Plumb context through the receiver and dispatcher and use that to store the timeout,
 	// rather than a member variable.
@@ -93,18 +93,17 @@ type FanoutMessageHandler struct {
 	channelUID         *types.UID
 }
 
-// NewMessageHandler creates a new fanout.MessageHandler.
-
-func NewFanoutMessageHandler(
+// NewFanoutEventHandler creates a new fanout.EventHandler.
+func NewFanoutEventHandler(
 	logger *zap.Logger,
 	config Config,
 	reporter channel.StatsReporter,
 	eventTypeHandler *eventtype.EventTypeAutoHandler,
 	channelAddressable *duckv1.KReference,
 	channelUID *types.UID,
-	receiverOpts ...channel.MessageReceiverOptions,
-) (*FanoutMessageHandler, error) {
-	handler := &FanoutMessageHandler{
+	receiverOpts ...channel.EventReceiverOptions,
+) (*FanoutEventHandler, error) {
+	handler := &FanoutEventHandler{
 		logger:             logger,
 		timeout:            defaultTimeout,
 		reporter:           reporter,
@@ -117,7 +116,7 @@ func NewFanoutMessageHandler(
 	copy(handler.subscriptions, config.Subscriptions)
 	// The receiver function needs to point back at the handler itself, so set it up after
 	// initialization.
-	receiver, err := channel.NewMessageReceiver(createMessageReceiverFunction(handler), logger, reporter, receiverOpts...)
+	receiver, err := channel.NewEventReceiver(createEventReceiverFunction(handler), logger, reporter, receiverOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -161,7 +160,7 @@ func SubscriberSpecToFanoutConfig(sub eventingduckv1.SubscriberSpec) (*Subscript
 	return &Subscription{Subscriber: destination, Reply: reply, DeadLetter: deadLetter, RetryConfig: retryConfig}, nil
 }
 
-func (f *FanoutMessageHandler) SetSubscriptions(ctx context.Context, subs []Subscription) {
+func (f *FanoutEventHandler) SetSubscriptions(ctx context.Context, subs []Subscription) {
 	f.subscriptionsMutex.Lock()
 	defer f.subscriptionsMutex.Unlock()
 	s := make([]Subscription, len(subs))
@@ -169,7 +168,7 @@ func (f *FanoutMessageHandler) SetSubscriptions(ctx context.Context, subs []Subs
 	f.subscriptions = s
 }
 
-func (f *FanoutMessageHandler) GetSubscriptions(ctx context.Context) []Subscription {
+func (f *FanoutEventHandler) GetSubscriptions(ctx context.Context) []Subscription {
 	f.subscriptionsMutex.RLock()
 	defer f.subscriptionsMutex.RUnlock()
 	ret := make([]Subscription, len(f.subscriptions))
@@ -177,7 +176,7 @@ func (f *FanoutMessageHandler) GetSubscriptions(ctx context.Context) []Subscript
 	return ret
 }
 
-func (f *FanoutMessageHandler) autoCreateEventType(ctx context.Context, evnt event.Event, transformers []binding.Transformer) {
+func (f *FanoutEventHandler) autoCreateEventType(ctx context.Context, evnt event.Event, transformers []binding.Transformer) {
 	if f.channelAddressable == nil {
 		f.logger.Warn("No addressable for channel")
 		return
@@ -194,7 +193,7 @@ func (f *FanoutMessageHandler) autoCreateEventType(ctx context.Context, evnt eve
 	}
 }
 
-func createMessageReceiverFunction(f *FanoutMessageHandler) func(context.Context, channel.ChannelReference, event.Event, []binding.Transformer, nethttp.Header) error {
+func createEventReceiverFunction(f *FanoutEventHandler) func(context.Context, channel.ChannelReference, event.Event, []binding.Transformer, nethttp.Header) error {
 	if f.asyncHandler {
 		return func(ctx context.Context, ref channel.ChannelReference, evnt event.Event, transformers []binding.Transformer, additionalHeaders nethttp.Header) error {
 			if f.eventTypeHandler != nil {
@@ -249,7 +248,7 @@ func createMessageReceiverFunction(f *FanoutMessageHandler) func(context.Context
 	}
 }
 
-func (f *FanoutMessageHandler) ServeHTTP(response nethttp.ResponseWriter, request *nethttp.Request) {
+func (f *FanoutEventHandler) ServeHTTP(response nethttp.ResponseWriter, request *nethttp.Request) {
 	f.receiver.ServeHTTP(response, request)
 }
 
@@ -273,7 +272,7 @@ func ParseDispatchResultAndReportMetrics(result DispatchResult, reporter channel
 
 // dispatch takes the event, fans it out to each subscription in subs. If all the fanned out
 // events return successfully, then return nil. Else, return an error.
-func (f *FanoutMessageHandler) dispatch(ctx context.Context, subs []Subscription, event event.Event, additionalHeaders nethttp.Header) DispatchResult {
+func (f *FanoutEventHandler) dispatch(ctx context.Context, subs []Subscription, event event.Event, additionalHeaders nethttp.Header) DispatchResult {
 	errorCh := make(chan DispatchResult, len(subs))
 	for _, sub := range subs {
 		go func(s Subscription) {
@@ -320,7 +319,7 @@ func (f *FanoutMessageHandler) dispatch(ctx context.Context, subs []Subscription
 
 // makeFanoutRequest sends the request to exactly one subscription. It handles both the `call` and
 // the `sink` portions of the subscription.
-func (f *FanoutMessageHandler) makeFanoutRequest(ctx context.Context, event event.Event, additionalHeaders nethttp.Header, sub Subscription) (*kncloudevents.DispatchInfo, error) {
+func (f *FanoutEventHandler) makeFanoutRequest(ctx context.Context, event event.Event, additionalHeaders nethttp.Header, sub Subscription) (*kncloudevents.DispatchInfo, error) {
 	return kncloudevents.SendEvent(ctx, event, sub.Subscriber,
 		kncloudevents.WithHeader(additionalHeaders),
 		kncloudevents.WithReply(sub.Reply),
