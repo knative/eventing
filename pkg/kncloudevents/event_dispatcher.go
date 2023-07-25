@@ -314,7 +314,7 @@ func createRequest(ctx context.Context, message binding.Message, target duckv1.A
 	return request, nil
 }
 
-// client is a wrapper arround the http.Client, which provides methods for retries
+// client is a wrapper around the http.Client, which provides methods for retries
 type client struct {
 	http.Client
 }

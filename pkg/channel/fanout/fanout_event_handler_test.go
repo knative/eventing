@@ -205,7 +205,7 @@ func TestFanoutEventHandler_ServeHTTP(t *testing.T) {
 				},
 			},
 			subscriber: func(writer http.ResponseWriter, req *http.Request) {
-				// repsonse with some event for reply
+				// response with some event for reply
 				event := test.FullEvent()
 				message := binding.ToMessage(&event)
 				bindingshttp.WriteResponseWriter(context.TODO(), message, http.StatusAccepted, writer)
