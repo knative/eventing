@@ -774,6 +774,8 @@ func SendsEventsWithBrokerAsSinkTLS() *feature.Feature {
 	triggerName := feature.MakeRandomK8sName("trigger")
 	f := feature.NewFeature()
 
+	//f.Prerequisite("transport encryption is permissive or strict", featureflags.TransportEncryptionStrict())
+
 	f.Setup("install broker", broker.Install(brokerName, broker.WithEnvConfig()...))
 	f.Setup("broker is ready", broker.IsReady(brokerName))
 	f.Setup("broker is addressable", broker.IsAddressable(brokerName))
@@ -800,7 +802,7 @@ func SendsEventsWithBrokerAsSinkTLS() *feature.Feature {
 		cfg := []manifest.CfgFn{
 			apiserversource.WithServiceAccountName(src),
 			apiserversource.WithEventMode(v1.ResourceMode),
-			apiserversource.WithSink(&duckv1.Destination{URI: brokeruri.URL, CACerts: brokeruri.CACerts}),
+			apiserversource.WithSink(service.AsDestinationRef(brokerName)),
 			apiserversource.WithResources(v1.APIVersionKindSelector{
 				APIVersion: "v1",
 				Kind:       "Event",
