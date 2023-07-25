@@ -770,31 +770,26 @@ func SendsEventsWithRetries() *feature.Feature {
 func SendsEventsWithBrokerAsSinkTLS() *feature.Feature {
 	src := feature.MakeRandomK8sName("apiserversource")
 	brokerName := feature.MakeRandomK8sName("broker")
-	sacmName := feature.MakeRandomK8sName("apiserversource")
-	sink := feature.MakeRandomK8sName("sink")
-	via := feature.MakeRandomK8sName("via")
+	sinkName := feature.MakeRandomK8sName("sink") // keep the random name for the eventshub
+	triggerName := feature.MakeRandomK8sName("trigger")
 	f := feature.NewFeature()
 
 	f.Setup("install broker", broker.Install(brokerName, broker.WithEnvConfig()...))
 	f.Setup("broker is ready", broker.IsReady(brokerName))
 	f.Setup("broker is addressable", broker.IsAddressable(brokerName))
-	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiverTLS))
+	f.Setup("install sink", eventshub.Install(sinkName, eventshub.StartReceiverTLS)) // install eventshub as sink
 
-	f.Setup("install trigger", func(ctx context.Context, t feature.T) {
-		caCerts := eventshub.GetCaCerts(ctx)
-		brokeruri, err := broker.Address(ctx, brokerName)
-		if err != nil {
-			t.Error("failed to get address of broker", err)
-		}
-		trigger.Install(via, brokerName, trigger.WithSubscriberFromDestination(&duckv1.Destination{
-			URI:     brokeruri.URL,
-			CACerts: caCerts,
-		}))(ctx, t)
+	// Install Trigger
+	f.Setup("Install trigger", func(ctx context.Context, t feature.T) {
+		subscriber := service.AsKReference(sinkName) // reference the eventshub as the subscriber
+
+		trigger.Install(triggerName, brokerName,
+			trigger.WithSubscriber(subscriber, ""))(ctx, t) // use the eventshub as subscriber
 	})
+	f.Setup("Wait for Trigger to become ready", trigger.IsReady(triggerName))
 
-	f.Setup("trigger goes ready", trigger.IsReady(via))
 	f.Setup("Create Service Account for ApiServerSource with RBAC for v1.Event resources",
-		setupAccountAndRoleForPods(sacmName))
+		setupAccountAndRoleForPods(src))
 
 	f.Requirement("install ApiServerSource", func(ctx context.Context, t feature.T) {
 		brokeruri, err := broker.Address(ctx, brokerName)
@@ -803,7 +798,7 @@ func SendsEventsWithBrokerAsSinkTLS() *feature.Feature {
 			t.Error("failed to get address of broker", err)
 		}
 		cfg := []manifest.CfgFn{
-			apiserversource.WithServiceAccountName(sacmName),
+			apiserversource.WithServiceAccountName(src),
 			apiserversource.WithEventMode(v1.ResourceMode),
 			apiserversource.WithSink(&duckv1.Destination{URI: brokeruri.URL, CACerts: brokeruri.CACerts}),
 			apiserversource.WithResources(v1.APIVersionKindSelector{
@@ -817,7 +812,7 @@ func SendsEventsWithBrokerAsSinkTLS() *feature.Feature {
 
 	f.Stable("ApiServerSource as event source").
 		Must("delivers events on the broker sink",
-			eventasssert.OnStore(sink).MatchEvent(test.HasType("dev.knative.apiserver.resource.update")).AtLeast(1))
+			eventasssert.OnStore(sinkName).MatchEvent(test.HasType("dev.knative.apiserver.resource.update")).AtLeast(1)) // assert events on eventshub
 
 	return f
 }
