@@ -26,55 +26,55 @@ import (
 	"knative.dev/eventing/pkg/kncloudevents"
 )
 
-type MessageDispatcher interface {
+type EventDispatcher interface {
 	GetHandler(ctx context.Context) multichannelfanout.MultiChannelEventHandler
 }
 
-type InMemoryMessageDispatcher struct {
+type InMemoryEventDispatcher struct {
 	handler              multichannelfanout.MultiChannelEventHandler
 	httpBindingsReceiver *kncloudevents.HTTPMessageReceiver
 	writeTimeout         time.Duration
 	logger               *zap.Logger
 }
 
-type InMemoryMessageDispatcherArgs struct {
-	Port                       int
-	ReadTimeout                time.Duration
-	WriteTimeout               time.Duration
-	Handler                    multichannelfanout.MultiChannelEventHandler
-	Logger                     *zap.Logger
-	HTTPMessageReceiverOptions []kncloudevents.HTTPMessageReceiverOption
+type InMemoryEventDispatcherArgs struct {
+	Port                     int
+	ReadTimeout              time.Duration
+	WriteTimeout             time.Duration
+	Handler                  multichannelfanout.MultiChannelEventHandler
+	Logger                   *zap.Logger
+	HTTPEventReceiverOptions []kncloudevents.HTTPMessageReceiverOption
 }
 
 // GetHandler gets the current multichannelfanout.EventHandler to delegate all HTTP
 // requests to.
-func (d *InMemoryMessageDispatcher) GetHandler(ctx context.Context) multichannelfanout.MultiChannelEventHandler {
+func (d *InMemoryEventDispatcher) GetHandler(ctx context.Context) multichannelfanout.MultiChannelEventHandler {
 	return d.handler
 }
 
-func (d *InMemoryMessageDispatcher) GetReceiver() kncloudevents.HTTPMessageReceiver {
+func (d *InMemoryEventDispatcher) GetReceiver() kncloudevents.HTTPMessageReceiver {
 	return *d.httpBindingsReceiver
 }
 
 // Start starts the inmemory dispatcher's message processing.
 // This is a blocking call.
-func (d *InMemoryMessageDispatcher) Start(ctx context.Context) error {
+func (d *InMemoryEventDispatcher) Start(ctx context.Context) error {
 	return d.httpBindingsReceiver.StartListen(kncloudevents.WithShutdownTimeout(ctx, d.writeTimeout), d.handler)
 }
 
 // WaitReady blocks until the dispatcher's server is ready to receive requests.
-func (d *InMemoryMessageDispatcher) WaitReady() {
+func (d *InMemoryEventDispatcher) WaitReady() {
 	<-d.httpBindingsReceiver.Ready
 }
 
-func NewMessageDispatcher(args *InMemoryMessageDispatcherArgs) *InMemoryMessageDispatcher {
+func NewEventDispatcher(args *InMemoryEventDispatcherArgs) *InMemoryEventDispatcher {
 	// TODO set read timeouts?
 	bindingsReceiver := kncloudevents.NewHTTPMessageReceiver(
 		args.Port,
-		args.HTTPMessageReceiverOptions...,
+		args.HTTPEventReceiverOptions...,
 	)
 
-	dispatcher := &InMemoryMessageDispatcher{
+	dispatcher := &InMemoryEventDispatcher{
 		handler:              args.Handler,
 		httpBindingsReceiver: bindingsReceiver,
 		logger:               args.Logger,

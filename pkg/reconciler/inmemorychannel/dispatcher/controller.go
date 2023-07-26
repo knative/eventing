@@ -147,18 +147,18 @@ func NewController(
 
 	r.featureStore = featureStore
 
-	httpArgs := &inmemorychannel.InMemoryMessageDispatcherArgs{
+	httpArgs := &inmemorychannel.InMemoryEventDispatcherArgs{
 		Port:         httpPort,
 		ReadTimeout:  readTimeout,
 		WriteTimeout: writeTimeout,
 		Handler:      sh,
 		Logger:       logger.Desugar(),
 
-		HTTPMessageReceiverOptions: []kncloudevents.HTTPMessageReceiverOption{
+		HTTPEventReceiverOptions: []kncloudevents.HTTPMessageReceiverOption{
 			kncloudevents.WithChecker(readinessCheckerHTTPHandler(readinessChecker)),
 		},
 	}
-	httpDispatcher := inmemorychannel.NewMessageDispatcher(httpArgs)
+	httpDispatcher := inmemorychannel.NewEventDispatcher(httpArgs)
 	httpReceiver := httpDispatcher.GetReceiver()
 
 	secret := types.NamespacedName{
@@ -171,16 +171,16 @@ func NewController(
 	if err != nil {
 		logger.Panicf("unable to get tls config: %s", err)
 	}
-	httpsArgs := &inmemorychannel.InMemoryMessageDispatcherArgs{
+	httpsArgs := &inmemorychannel.InMemoryEventDispatcherArgs{
 		Port:         httpsPort,
 		ReadTimeout:  readTimeout,
 		WriteTimeout: writeTimeout,
 		Handler:      sh,
 		Logger:       logger.Desugar(),
 
-		HTTPMessageReceiverOptions: []kncloudevents.HTTPMessageReceiverOption{kncloudevents.WithTLSConfig(tlsConfig)},
+		HTTPEventReceiverOptions: []kncloudevents.HTTPMessageReceiverOption{kncloudevents.WithTLSConfig(tlsConfig)},
 	}
-	httpsDispatcher := inmemorychannel.NewMessageDispatcher(httpsArgs)
+	httpsDispatcher := inmemorychannel.NewEventDispatcher(httpsArgs)
 	httpsReceiver := httpsDispatcher.GetReceiver()
 
 	s, err := eventingtls.NewServerManager(ctx, &httpReceiver, &httpsReceiver, httpDispatcher.GetHandler(ctx), cmw)

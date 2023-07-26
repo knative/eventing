@@ -48,11 +48,11 @@ import (
 	_ "knative.dev/pkg/system/testing"
 )
 
-func TestNewMessageDispatcher(t *testing.T) {
+func TestNewEventDispatcher(t *testing.T) {
 	logger := logtesting.TestLogger(t).Desugar()
 	sh := multichannelfanout.NewEventHandler(context.TODO(), logger)
 
-	args := &InMemoryMessageDispatcherArgs{
+	args := &InMemoryEventDispatcherArgs{
 		Port:         8080,
 		ReadTimeout:  1 * time.Minute,
 		WriteTimeout: 1 * time.Minute,
@@ -60,7 +60,7 @@ func TestNewMessageDispatcher(t *testing.T) {
 		Logger:       logger,
 	}
 
-	d := NewMessageDispatcher(args)
+	d := NewEventDispatcher(args)
 
 	if d == nil {
 		t.Fatalf("Failed to create with NewDispatcher")
@@ -77,7 +77,7 @@ func TestDispatcher_close(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dispatcherArgs := &InMemoryMessageDispatcherArgs{
+	dispatcherArgs := &InMemoryEventDispatcherArgs{
 		Port:         port,
 		ReadTimeout:  1 * time.Minute,
 		WriteTimeout: 1 * time.Minute,
@@ -85,7 +85,7 @@ func TestDispatcher_close(t *testing.T) {
 		Logger:       logger,
 	}
 
-	dispatcher := NewMessageDispatcher(dispatcherArgs)
+	dispatcher := NewEventDispatcher(dispatcherArgs)
 	kncloudevents.WithDrainQuietPeriod(time.Nanosecond)(dispatcher.httpBindingsReceiver)
 
 	serverCtx, cancel := context.WithCancel(context.Background())
@@ -237,7 +237,7 @@ func TestDispatcher_dispatch(t *testing.T) {
 
 	logger.Info("Starting dispatcher", zap.Int("port", port))
 
-	dispatcherArgs := &InMemoryMessageDispatcherArgs{
+	dispatcherArgs := &InMemoryEventDispatcherArgs{
 		Port:         port,
 		ReadTimeout:  1 * time.Minute,
 		WriteTimeout: 1 * time.Minute,
@@ -245,7 +245,7 @@ func TestDispatcher_dispatch(t *testing.T) {
 		Logger:       logger,
 	}
 
-	dispatcher := NewMessageDispatcher(dispatcherArgs)
+	dispatcher := NewEventDispatcher(dispatcherArgs)
 
 	serverCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
