@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+
 	"github.com/cloudevents/sdk-go/v2/event"
 	"go.uber.org/zap"
 
