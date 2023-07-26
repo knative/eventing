@@ -32,7 +32,7 @@ type EventDispatcher interface {
 
 type InMemoryEventDispatcher struct {
 	handler              multichannelfanout.MultiChannelEventHandler
-	httpBindingsReceiver *kncloudevents.HTTPMessageReceiver
+	httpBindingsReceiver *kncloudevents.HTTPEventReceiver
 	writeTimeout         time.Duration
 	logger               *zap.Logger
 }
@@ -43,7 +43,7 @@ type InMemoryEventDispatcherArgs struct {
 	WriteTimeout             time.Duration
 	Handler                  multichannelfanout.MultiChannelEventHandler
 	Logger                   *zap.Logger
-	HTTPEventReceiverOptions []kncloudevents.HTTPMessageReceiverOption
+	HTTPEventReceiverOptions []kncloudevents.HTTPEventReceiverOption
 }
 
 // GetHandler gets the current multichannelfanout.EventHandler to delegate all HTTP
@@ -52,7 +52,7 @@ func (d *InMemoryEventDispatcher) GetHandler(ctx context.Context) multichannelfa
 	return d.handler
 }
 
-func (d *InMemoryEventDispatcher) GetReceiver() kncloudevents.HTTPMessageReceiver {
+func (d *InMemoryEventDispatcher) GetReceiver() kncloudevents.HTTPEventReceiver {
 	return *d.httpBindingsReceiver
 }
 
@@ -69,7 +69,7 @@ func (d *InMemoryEventDispatcher) WaitReady() {
 
 func NewEventDispatcher(args *InMemoryEventDispatcherArgs) *InMemoryEventDispatcher {
 	// TODO set read timeouts?
-	bindingsReceiver := kncloudevents.NewHTTPMessageReceiver(
+	bindingsReceiver := kncloudevents.NewHTTPEventReceiver(
 		args.Port,
 		args.HTTPEventReceiverOptions...,
 	)

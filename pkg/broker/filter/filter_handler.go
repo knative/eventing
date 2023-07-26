@@ -93,7 +93,7 @@ type Handler struct {
 	withContext   func(ctx context.Context) context.Context
 }
 
-// NewHandler creates a new Handler and its associated MessageReceiver.
+// NewHandler creates a new Handler and its associated EventReceiver.
 func NewHandler(logger *zap.Logger, triggerInformer v1.TriggerInformer, reporter StatsReporter, wc func(ctx context.Context) context.Context) (*Handler, error) {
 	kncloudevents.ConfigureConnectionArgs(&kncloudevents.ConnectionArgs{
 		MaxIdleConns:        defaultMaxIdleConnections,

@@ -154,7 +154,7 @@ func NewController(
 		Handler:      sh,
 		Logger:       logger.Desugar(),
 
-		HTTPEventReceiverOptions: []kncloudevents.HTTPMessageReceiverOption{
+		HTTPEventReceiverOptions: []kncloudevents.HTTPEventReceiverOption{
 			kncloudevents.WithChecker(readinessCheckerHTTPHandler(readinessChecker)),
 		},
 	}
@@ -178,7 +178,7 @@ func NewController(
 		Handler:      sh,
 		Logger:       logger.Desugar(),
 
-		HTTPEventReceiverOptions: []kncloudevents.HTTPMessageReceiverOption{kncloudevents.WithTLSConfig(tlsConfig)},
+		HTTPEventReceiverOptions: []kncloudevents.HTTPEventReceiverOption{kncloudevents.WithTLSConfig(tlsConfig)},
 	}
 	httpsDispatcher := inmemorychannel.NewEventDispatcher(httpsArgs)
 	httpsReceiver := httpsDispatcher.GetReceiver()

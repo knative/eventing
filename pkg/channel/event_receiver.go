@@ -60,7 +60,7 @@ func (e BadRequestError) Error() string {
 // EventReceiver starts a server to receive new events for the channel dispatcher. The new
 // event is emitted via the receiver function.
 type EventReceiver struct {
-	httpBindingsReceiver *kncloudevents.HTTPMessageReceiver
+	httpBindingsReceiver *kncloudevents.HTTPEventReceiver
 	receiverFunc         EventReceiverFunc
 	logger               *zap.Logger
 	hostToChannelFunc    ResolveChannelFromHostFunc
@@ -71,7 +71,7 @@ type EventReceiver struct {
 // EventReceiverFunc is the function to be called for handling the event.
 type EventReceiverFunc func(context.Context, ChannelReference, event.Event, []binding.Transformer, nethttp.Header) error
 
-// ReceiverOptions provides functional options to MessageReceiver function.
+// ReceiverOptions provides functional options to EventReceiver function.
 type EventReceiverOptions func(*EventReceiver) error
 
 // ResolveChannelFromHostFunc function enables EventReceiver to get the Channel Reference from incoming request HostHeader
@@ -92,7 +92,7 @@ func ResolveChannelFromHostHeader(hostToChannelFunc ResolveChannelFromHostFunc) 
 // before calling receiverFunc.
 type ResolveChannelFromPathFunc func(string) (ChannelReference, error)
 
-// ResolveChannelFromPath is a ReceiverOption for NewMessageReceiver which enables the caller to overwrite the
+// ResolveChannelFromPath is a ReceiverOption for NewEventReceiver which enables the caller to overwrite the
 // default behaviour defined by ParseChannelFromPath function.
 func ResolveChannelFromPath(PathToChannelFunc ResolveChannelFromPathFunc) EventReceiverOptions {
 	return func(r *EventReceiver) error {
@@ -104,7 +104,7 @@ func ResolveChannelFromPath(PathToChannelFunc ResolveChannelFromPathFunc) EventR
 // NewEventReceiver creates an event receiver passing new events to the
 // receiverFunc.
 func NewEventReceiver(receiverFunc EventReceiverFunc, logger *zap.Logger, reporter StatsReporter, opts ...EventReceiverOptions) (*EventReceiver, error) {
-	bindingsReceiver := kncloudevents.NewHTTPMessageReceiver(8080)
+	bindingsReceiver := kncloudevents.NewHTTPEventReceiver(8080)
 	receiver := &EventReceiver{
 		httpBindingsReceiver: bindingsReceiver,
 		receiverFunc:         receiverFunc,
