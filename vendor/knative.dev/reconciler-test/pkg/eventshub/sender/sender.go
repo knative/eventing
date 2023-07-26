@@ -39,6 +39,7 @@ import (
 	"github.com/cloudevents/sdk-go/v2/types"
 	"github.com/kelseyhightower/envconfig"
 	"go.opencensus.io/trace"
+	"go.uber.org/atomic"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"knative.dev/pkg/logging"
@@ -116,6 +117,10 @@ type generator struct {
 	eventQueue []conformanceevent.Event
 }
 
+var (
+	verifyConnectionCounter = atomic.NewUint64(0)
+)
+
 func Start(ctx context.Context, logs *eventshub.EventLogs, clientOpts ...eventshub.ClientOption) error {
 	var env generator
 	if err := envconfig.Process("", &env); err != nil {
@@ -143,27 +148,9 @@ func Start(ctx context.Context, logs *eventshub.EventLogs, clientOpts ...eventsh
 		logging.FromContext(ctx).Info("awake, continuing")
 	}
 
-	httpClient := nethttp.DefaultClient
-
-	if env.EnforceTLS {
-		caCertPool, err := x509.SystemCertPool()
-		if err != nil {
-			return fmt.Errorf("failed to create cert pool %s: %w", env.Sink, err)
-		}
-		caCertPool.AppendCertsFromPEM([]byte(env.CACerts))
-
-		transport := nethttp.DefaultTransport.(*nethttp.Transport).Clone()
-		transport.TLSClientConfig = &tls.Config{
-			RootCAs:    caCertPool,
-			MinVersion: tls.VersionTLS12,
-			VerifyConnection: func(state tls.ConnectionState) error {
-				if err := logs.Vent(env.peerCertificatesReceived(state)); err != nil {
-					return err
-				}
-				return nil
-			},
-		}
-		httpClient = &nethttp.Client{Transport: transport}
+	httpClient, _, err := createClient(ctx, env, logs)
+	if err != nil {
+		return err
 	}
 
 	if env.ProbeSink {
@@ -185,12 +172,6 @@ func Start(ctx context.Context, logs *eventshub.EventLogs, clientOpts ...eventsh
 		}
 	}
 
-	for _, opt := range clientOpts {
-		if err := opt(httpClient); err != nil {
-			return fmt.Errorf("unable to apply option: %w", err)
-		}
-	}
-
 	switch env.EventEncoding {
 	case "binary":
 		ctx = cloudevents.WithEncodingBinary(ctx)
@@ -202,6 +183,19 @@ func Start(ctx context.Context, logs *eventshub.EventLogs, clientOpts ...eventsh
 
 	ticker := time.NewTicker(period)
 	for {
+
+		// when enforcing TLS we want to create multiple transports to force multiple TLS handshakes
+		// on each request sent so that VerifyConnection is called multiple times.
+		httpClient, _, err = createClient(ctx, env, logs)
+		if err != nil {
+			return err
+		}
+
+		for _, opt := range clientOpts {
+			if err := opt(httpClient); err != nil {
+				return fmt.Errorf("unable to apply option: %w", err)
+			}
+		}
 
 		ctx, span := trace.StartSpan(ctx, "eventshub-sender")
 
@@ -251,13 +245,46 @@ func Start(ctx context.Context, logs *eventshub.EventLogs, clientOpts ...eventsh
 	}
 }
 
-func (g *generator) peerCertificatesReceived(state tls.ConnectionState) eventshub.EventInfo {
+func createClient(ctx context.Context, env generator, logs *eventshub.EventLogs) (*nethttp.Client, *nethttp.Transport, error) {
+	if env.EnforceTLS {
+		caCertPool, err := x509.SystemCertPool()
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to create cert pool %s: %w", env.Sink, err)
+		}
+		caCertPool.AppendCertsFromPEM([]byte(env.CACerts))
+
+		transport := nethttp.DefaultTransport.(*nethttp.Transport).Clone()
+
+		// Force multiple TLS handshakes
+		transport.DisableKeepAlives = true
+		transport.IdleConnTimeout = 500 * time.Millisecond
+
+		transport.TLSClientConfig = &tls.Config{
+			RootCAs:    caCertPool,
+			MinVersion: tls.VersionTLS12,
+			VerifyConnection: func(state tls.ConnectionState) error {
+				logging.FromContext(ctx).Infow("VerifyConnection")
+
+				if err := logs.Vent(env.peerCertificatesReceived(verifyConnectionCounter.Inc(), state)); err != nil {
+					return err
+				}
+				return nil
+			},
+		}
+		return &nethttp.Client{Transport: transport}, transport, nil
+	}
+
+	return nethttp.DefaultClient, nethttp.DefaultTransport.(*nethttp.Transport), nil
+}
+
+func (g *generator) peerCertificatesReceived(counter uint64, state tls.ConnectionState) eventshub.EventInfo {
 	return eventshub.EventInfo{
 		Kind:       eventshub.PeerCertificatesReceived,
 		Connection: eventshub.TLSConnectionStateToConnection(&state),
 		Origin:     g.SenderName,
 		Observer:   g.SenderName,
 		Time:       time.Now(),
+		Sequence:   counter,
 	}
 }
 
