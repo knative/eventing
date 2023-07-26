@@ -109,12 +109,15 @@ type senderConfig struct {
 	transformers      binding.Transformers
 }
 
+// SendEvent sends the given event to the given destination.
 func SendEvent(ctx context.Context, event event.Event, destination duckv1.Addressable, options ...SendOption) (*DispatchInfo, error) {
 	message := binding.ToMessage(&event)
 
 	return SendMessage(ctx, message, destination, options...)
 }
 
+// SendMessage sends the given message to the given destination.
+// SendMessage is kept for compatibility and SendEvent should be used whenever possible.
 func SendMessage(ctx context.Context, message binding.Message, destination duckv1.Addressable, options ...SendOption) (*DispatchInfo, error) {
 	config := &senderConfig{
 		additionalHeaders: make(http.Header),
