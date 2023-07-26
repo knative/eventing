@@ -176,7 +176,7 @@ func (f *FanoutEventHandler) GetSubscriptions(ctx context.Context) []Subscriptio
 	return ret
 }
 
-func (f *FanoutEventHandler) autoCreateEventType(ctx context.Context, evnt event.Event, transformers []binding.Transformer) {
+func (f *FanoutEventHandler) autoCreateEventType(ctx context.Context, evnt event.Event) {
 	if f.channelAddressable == nil {
 		f.logger.Warn("No addressable for channel")
 		return
@@ -197,7 +197,7 @@ func createEventReceiverFunction(f *FanoutEventHandler) func(context.Context, ch
 	if f.asyncHandler {
 		return func(ctx context.Context, ref channel.ChannelReference, evnt event.Event, transformers []binding.Transformer, additionalHeaders nethttp.Header) error {
 			if f.eventTypeHandler != nil {
-				f.autoCreateEventType(ctx, evnt, transformers)
+				f.autoCreateEventType(ctx, evnt)
 			}
 
 			subs := f.GetSubscriptions(ctx)
@@ -228,7 +228,7 @@ func createEventReceiverFunction(f *FanoutEventHandler) func(context.Context, ch
 	}
 	return func(ctx context.Context, ref channel.ChannelReference, event event.Event, transformers []binding.Transformer, additionalHeaders nethttp.Header) error {
 		if f.eventTypeHandler != nil {
-			f.autoCreateEventType(ctx, event, transformers)
+			f.autoCreateEventType(ctx, event)
 		}
 
 		subs := f.GetSubscriptions(ctx)
