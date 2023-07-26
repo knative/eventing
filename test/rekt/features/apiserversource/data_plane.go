@@ -774,7 +774,7 @@ func SendsEventsWithBrokerAsSinkTLS() *feature.Feature {
 	triggerName := feature.MakeRandomK8sName("trigger")
 	f := feature.NewFeature()
 
-	//f.Prerequisite("transport encryption is permissive or strict", featureflags.TransportEncryptionStrict())
+	f.Prerequisite("transport encryption is permissive or strict", featureflags.TransportEncryptionStrict())
 
 	f.Setup("install broker", broker.Install(brokerName, broker.WithEnvConfig()...))
 	f.Setup("broker is ready", broker.IsReady(brokerName))
@@ -814,7 +814,11 @@ func SendsEventsWithBrokerAsSinkTLS() *feature.Feature {
 
 	f.Stable("ApiServerSource as event source").
 		Must("delivers events on the broker sink",
-			eventasssert.OnStore(sinkName).MatchEvent(test.HasType("dev.knative.apiserver.resource.update")).AtLeast(1)) // assert events on eventshub
+			eventasssert.OnStore(sinkName).MatchEvent(test.HasType("dev.knative.apiserver.resource.update")).AtLeast(1)). // assert events on eventshub
+		Must("ApiServerSource has HTTPS sink",
+			source.ExpectHTTPSSink(v1.SchemeGroupVersion.WithResource("apiserversources"), src)). // assert HTTPS sink for ApiServerSource
+		Must("ApiServerSource has CA certs",
+			source.ExpectCACerts(v1.SchemeGroupVersion.WithResource("apiserversources"), src)) // assert CA certs for ApiServerSource
 
 	return f
 }
