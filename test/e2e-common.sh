@@ -49,7 +49,7 @@ readonly CONFIG_TRACING_CONFIG="test/config/config-tracing.yaml"
 readonly KNATIVE_EVENTING_MONITORING_YAML="test/config/monitoring.yaml"
 
 # The number of controlplane replicas to run.
-readonly REPLICAS=3
+readonly REPLICAS=${REPLICAS:-3}
 
 # Should deploy a Knative Monitoring as well
 readonly DEPLOY_KNATIVE_MONITORING="${DEPLOY_KNATIVE_MONITORING:-1}"
@@ -76,6 +76,8 @@ UNINSTALL_LIST=()
 
 # Setup the Knative environment for running tests.
 function knative_setup() {
+  install_cert_manager || fail_test "Could not install Cert Manager"
+
   install_knative_eventing "HEAD"
 
   install_mt_broker || fail_test "Could not install MT Channel Based Broker"
@@ -83,8 +85,6 @@ function knative_setup() {
   enable_sugar || fail_test "Could not enable Sugar Controller Injection"
 
   unleash_duck || fail_test "Could not unleash the chaos duck"
-
-  install_cert_manager || fail_test "Could not install Cert Manager"
 }
 
 function scale_controlplane() {
