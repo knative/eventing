@@ -110,6 +110,23 @@ _Adding the `upstream` remote sets you up nicely for regularly
 Once you reach this point you are ready to do a full build and deploy as
 follows.
 
+## Quick full build and install
+
+Eventing components are pluggable, and you can install specific components depending on your
+needs, however, for a full build and install, you can run:
+
+```shell
+./hack/install.sh
+```
+
+By default, it will build container images for the architecture of your local machine, if you need
+to build images for a different platform (OS and architecture), you can provide `KO_FLAGS` as
+follow:
+
+```shell
+KO_FLAGS=--platform="linux/amd64" ./hack/install.sh
+```
+
 ## Starting Eventing Controller
 
 Once you've [setup your development environment](#getting-started), stand up
