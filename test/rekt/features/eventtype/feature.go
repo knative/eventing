@@ -69,5 +69,8 @@ func eventTypeWithBrokerAsReference(retryNum int32, dropNum uint) *feature.Featu
 		eventshub.InputEvent(event),
 	))
 
+	// The eventType should be already auto-created. We then need to pop up the eventType in the event registry.
+	// We need to validate the reference of the eventType is pointing to the broker.
+
 	return f
 }

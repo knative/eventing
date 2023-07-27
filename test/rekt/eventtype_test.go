@@ -29,8 +29,6 @@ import (
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/knative"
 	"knative.dev/reconciler-test/pkg/tracing"
-
-	"knative.dev/eventing/test/rekt/features/broker"
 )
 
 func TestEventTypeWithBrokerAsReference(t *testing.T) {
@@ -46,5 +44,5 @@ func TestEventTypeWithBrokerAsReference(t *testing.T) {
 		environment.WithPollTimings(5*time.Second, 4*time.Minute),
 	)
 
-	env.TestSet(ctx, t, broker.ManyTriggers())
+	env.TestSet(ctx, t, eventtype.eventTypeWithBrokerAsReference())
 }
