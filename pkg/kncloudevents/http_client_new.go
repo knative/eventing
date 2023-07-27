@@ -132,7 +132,6 @@ func DeleteAddressableHandler(addressable duckv1.Addressable) {
 // ConfigureConnectionArgs configures the new connection args.
 // Use sparingly, because it might lead to creating a lot of clients, none of them sharing their connection pool!
 func ConfigureConnectionArgs(ca *ConnectionArgs) {
-	configureConnectionArgsOldClient(ca) //also configure the connection args of the old client
 
 	clients.clientsMu.Lock()
 	defer clients.clientsMu.Unlock()
