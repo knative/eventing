@@ -32,11 +32,13 @@ import (
 	"github.com/cloudevents/sdk-go/v2/binding/buffering"
 	"go.opencensus.io/trace"
 	"go.uber.org/zap"
+	"k8s.io/apimachinery/pkg/types"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
 	"knative.dev/eventing/pkg/apis"
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/channel"
+	"knative.dev/eventing/pkg/eventtype"
 	"knative.dev/eventing/pkg/kncloudevents"
 )
 
@@ -85,19 +87,34 @@ type FanoutMessageHandler struct {
 	// rather than a member variable.
 	timeout time.Duration
 
-	reporter channel.StatsReporter
-	logger   *zap.Logger
+	reporter           channel.StatsReporter
+	logger             *zap.Logger
+	eventTypeHandler   *eventtype.EventTypeAutoHandler
+	channelAddressable *duckv1.KReference
+	channelUID         *types.UID
 }
 
 // NewMessageHandler creates a new fanout.MessageHandler.
 
-func NewFanoutMessageHandler(logger *zap.Logger, messageDispatcher channel.MessageDispatcher, config Config, reporter channel.StatsReporter, receiverOpts ...channel.MessageReceiverOptions) (*FanoutMessageHandler, error) {
+func NewFanoutMessageHandler(
+	logger *zap.Logger,
+	messageDispatcher channel.MessageDispatcher,
+	config Config,
+	reporter channel.StatsReporter,
+	eventTypeHandler *eventtype.EventTypeAutoHandler,
+	channelAddressable *duckv1.KReference,
+	channelUID *types.UID,
+	receiverOpts ...channel.MessageReceiverOptions,
+) (*FanoutMessageHandler, error) {
 	handler := &FanoutMessageHandler{
-		logger:       logger,
-		dispatcher:   messageDispatcher,
-		timeout:      defaultTimeout,
-		reporter:     reporter,
-		asyncHandler: config.AsyncHandler,
+		logger:             logger,
+		dispatcher:         messageDispatcher,
+		timeout:            defaultTimeout,
+		reporter:           reporter,
+		asyncHandler:       config.AsyncHandler,
+		eventTypeHandler:   eventTypeHandler,
+		channelAddressable: channelAddressable,
+		channelUID:         channelUID,
 	}
 	handler.subscriptions = make([]Subscription, len(config.Subscriptions))
 	copy(handler.subscriptions, config.Subscriptions)
@@ -163,9 +180,40 @@ func (f *FanoutMessageHandler) GetSubscriptions(ctx context.Context) []Subscript
 	return ret
 }
 
+func (f *FanoutMessageHandler) autoCreateEventType(ctx context.Context, bufferedMessage binding.Message, transformers []binding.Transformer) {
+	if f.channelAddressable == nil {
+		f.logger.Warn("No addressable for channel")
+		return
+	} else {
+		event, err := binding.ToEvent(ctx, bufferedMessage, transformers...)
+		if err != nil {
+			f.logger.Warn("Failed to extract event from message")
+			return
+		}
+		if f.channelUID == nil {
+			f.logger.Warn("No channelUID provided, unable to autocreate event type")
+			return
+		}
+		err = f.eventTypeHandler.AutoCreateEventType(ctx, event, f.channelAddressable, *f.channelUID)
+		if err != nil {
+			f.logger.Warn("EventTypeCreate failed")
+			return
+		}
+	}
+}
+
 func createMessageReceiverFunction(f *FanoutMessageHandler) func(context.Context, channel.ChannelReference, binding.Message, []binding.Transformer, nethttp.Header) error {
 	if f.asyncHandler {
 		return func(ctx context.Context, ref channel.ChannelReference, message binding.Message, transformers []binding.Transformer, additionalHeaders nethttp.Header) error {
+			if f.eventTypeHandler != nil {
+				bufferedMessage, err := buffering.CopyMessage(ctx, message, transformers...)
+				if err != nil {
+					f.logger.Warn("Failed to copy message")
+				} else {
+					f.autoCreateEventType(ctx, bufferedMessage, transformers)
+				}
+			}
+
 			subs := f.GetSubscriptions(ctx)
 
 			if len(subs) == 0 {
@@ -202,6 +250,15 @@ func createMessageReceiverFunction(f *FanoutMessageHandler) func(context.Context
 		}
 	}
 	return func(ctx context.Context, ref channel.ChannelReference, message binding.Message, transformers []binding.Transformer, additionalHeaders nethttp.Header) error {
+		if f.eventTypeHandler != nil {
+			bufferedMessage, err := buffering.CopyMessage(ctx, message, transformers...)
+			if err != nil {
+				f.logger.Warn("Failed to copy message")
+			} else {
+				f.autoCreateEventType(ctx, bufferedMessage, transformers)
+			}
+		}
+
 		subs := f.GetSubscriptions(ctx)
 		if len(subs) == 0 {
 			// Nothing to do here, finish the message and return

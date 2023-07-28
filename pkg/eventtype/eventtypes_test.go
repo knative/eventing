@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package broker
+package eventtype
 
 import (
 	"context"
@@ -129,21 +129,21 @@ func TestEventTypeAutoHandler_GenerateEventTypeName(t *testing.T) {
 			namespace:    "default",
 			eventType:    "events.type",
 			eventSource:  "events.source",
-			expectedName: "et-example-zxhhbxbszw",
+			expectedName: "et-example-zxzlbnrzln",
 		},
 		{
 			name:         "EXAMPLE",
 			namespace:    "default",
 			eventType:    "events.type",
 			eventSource:  "events.source",
-			expectedName: "et-example-rvhbtvbmrw",
+			expectedName: "et-example-zxzlbnrzln",
 		},
 		{
 			name:         "emptyName",
 			namespace:    "default",
 			eventType:    "events.type",
 			eventSource:  "events.source",
-			expectedName: "et-emptyname-zw1wdhloyw",
+			expectedName: "et-emptyname-zxzlbnrzln",
 		},
 	}
 

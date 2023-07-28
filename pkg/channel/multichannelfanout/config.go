@@ -17,7 +17,10 @@ limitations under the License.
 package multichannelfanout
 
 import (
+	"k8s.io/apimachinery/pkg/types"
 	"knative.dev/eventing/pkg/channel/fanout"
+	"knative.dev/eventing/pkg/eventtype"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 type Config struct {
@@ -26,9 +29,12 @@ type Config struct {
 
 // ChannelConfig is the configuration for a single Channel.
 type ChannelConfig struct {
-	Namespace    string
-	Name         string
-	HostName     string
-	Path         string
-	FanoutConfig fanout.Config
+	Namespace          string
+	Name               string
+	HostName           string
+	Path               string
+	FanoutConfig       fanout.Config
+	EventTypeHandler   *eventtype.EventTypeAutoHandler
+	ChannelAddressable *duckv1.KReference
+	ChannelUID         *types.UID
 }

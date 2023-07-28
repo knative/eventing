@@ -38,6 +38,7 @@ import (
 	. "knative.dev/pkg/reconciler/testing"
 
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	"knative.dev/eventing/pkg/apis/feature"
 	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/channel/fanout"
@@ -492,9 +493,12 @@ func TestReconciler_ReconcileKind(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		ctx, fakeEventingClient := fakeeventingclient.With(context.Background(), tc.imc)
+		feature.ToContext(ctx, feature.Flags{
+			feature.EvenTypeAutoCreate: feature.Disabled,
+		})
 		// Just run the tests once with no existing handler (creates the handler) and once
 		// with an existing, so we exercise both paths at once.
-		fh, err := fanout.NewFanoutMessageHandler(nil, channel.NewMessageDispatcher(nil), fanout.Config{}, nil)
+		fh, err := fanout.NewFanoutMessageHandler(nil, channel.NewMessageDispatcher(nil), fanout.Config{}, nil, nil, nil, nil)
 		if err != nil {
 			t.Error(err)
 		}
@@ -508,6 +512,7 @@ func TestReconciler_ReconcileKind(t *testing.T) {
 				r := &Reconciler{
 					multiChannelMessageHandler: handler,
 					messagingClientSet:         fakeEventingClient.MessagingV1(),
+					featureStore:               feature.NewStore(logtesting.TestLogger(t)),
 				}
 				e := r.ReconcileKind(ctx, tc.imc)
 				if e != tc.wantResult {
@@ -538,7 +543,7 @@ func TestReconciler_InvalidInputs(t *testing.T) {
 		},
 	}
 	for n, tc := range testCases {
-		fh, err := fanout.NewFanoutMessageHandler(nil, channel.NewMessageDispatcher(nil), fanout.Config{}, nil)
+		fh, err := fanout.NewFanoutMessageHandler(nil, channel.NewMessageDispatcher(nil), fanout.Config{}, nil, nil, nil, nil)
 		if err != nil {
 			t.Error(err)
 		}
@@ -568,7 +573,7 @@ func TestReconciler_Deletion(t *testing.T) {
 		},
 	}
 	for n, tc := range testCases {
-		fh, err := fanout.NewFanoutMessageHandler(nil, channel.NewMessageDispatcher(nil), fanout.Config{}, nil)
+		fh, err := fanout.NewFanoutMessageHandler(nil, channel.NewMessageDispatcher(nil), fanout.Config{}, nil, nil, nil, nil)
 		if err != nil {
 			t.Error(err)
 		}

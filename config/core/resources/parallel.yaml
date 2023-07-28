@@ -163,9 +163,26 @@ spec:
             type: object
             properties:
               address:
+                description: Parallel is Addressable. It exposes the endpoint as an URI to get events delivered into the Parallel.
                 type: object
                 properties:
+                  name:
+                    type: string
                   url:
+                    type: string
+                  CACerts:
+                    type: string
+              addresses:
+                description: Parallel is Addressable. It exposes the endpoints as URIs to get events delivered into the Parallel.
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    url:
+                      type: string
+                    CACerts:
                       type: string
               annotations:
                 description: Annotations is additional Status fields for the Resource

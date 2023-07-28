@@ -49,6 +49,7 @@ import (
 	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/eventing/pkg/channel"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
+	eventtypeinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta2/eventtype"
 	inmemorychannelinformer "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/inmemorychannel"
 	inmemorychannelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/inmemorychannel"
 	"knative.dev/eventing/pkg/inmemorychannel"
@@ -121,7 +122,10 @@ func NewController(
 		multiChannelMessageHandler: sh,
 		reporter:                   reporter,
 		messagingClientSet:         eventingclient.Get(ctx).MessagingV1(),
+		eventingClient:             eventingclient.Get(ctx).EventingV1beta2(),
+		eventTypeLister:            eventtypeinformer.Get(ctx).Lister(),
 	}
+
 	impl := inmemorychannelreconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
 		return controller.Options{SkipStatusUpdates: true, FinalizerName: finalizerName}
 	})
@@ -140,6 +144,8 @@ func NewController(
 		impl.GlobalResync(inmemorychannelInformer.Informer())
 	})
 	featureStore.WatchConfigs(cmw)
+
+	r.featureStore = featureStore
 
 	httpArgs := &inmemorychannel.InMemoryMessageDispatcherArgs{
 		Port:         httpPort,
