@@ -81,6 +81,7 @@ func (req *CloudEventRequest) SendWithRetries(config *RetryConfig) (*nethttp.Res
 	return retryableClient.Do(retryableReq)
 }
 
+// Deprecated: use pkg/kncloudevents.SendEvent() instead
 func NewCloudEventRequest(ctx context.Context, target duckv1.Addressable) (*CloudEventRequest, error) {
 	nethttpReqest, err := nethttp.NewRequestWithContext(ctx, "POST", target.URL.String(), nil)
 	if err != nil {
