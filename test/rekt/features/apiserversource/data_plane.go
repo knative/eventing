@@ -809,7 +809,7 @@ func SendsEventsWithBrokerAsSinkTLS() *feature.Feature {
 
 	f.Stable("ApiServerSource as event source").
 		Must("delivers events on the broker sink",
-			eventasssert.OnStore(sinkName).MatchEvent(test.HasType("dev.knative.apiserver.resource.update")).AtLeast(1)). // assert events on eventshub
+			eventasssert.OnStore(sinkName).MatchEvent(test.HasType(sources.ApiServerSourceUpdateEventType)).AtLeast(1)). // assert events on eventshub
 		Must("ApiServerSource has HTTPS sink",
 			source.ExpectHTTPSSink(v1.SchemeGroupVersion.WithResource("apiserversources"), src)). // assert HTTPS sink for ApiServerSource
 		Must("ApiServerSource has CA certs",
