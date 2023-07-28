@@ -259,21 +259,13 @@ func TestDispatcher_dispatch(t *testing.T) {
 	dispatcher.WaitReady()
 
 	// Ok now everything should be ready to send the event
-	request, err := kncloudevents.NewCloudEventRequest(context.TODO(), *mustParseUrlToAddressable(t, channelAProxy.URL))
+	dispatchInfo, err := kncloudevents.SendEvent(context.TODO(), test.FullEvent(), *mustParseUrlToAddressable(t, channelAProxy.URL))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	event := test.FullEvent()
-	_ = protocolhttp.WriteRequest(context.Background(), binding.ToMessage(&event), request.Request)
-
-	res, err := request.Send()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if res.StatusCode != http.StatusAccepted {
-		t.Fatal("Expected 202, Have", res.StatusCode)
+	if dispatchInfo.ResponseCode != http.StatusAccepted {
+		t.Fatal("Expected 202, Got: ", dispatchInfo.ResponseCode)
 	}
 
 	transformationsFailureWg.Wait()
