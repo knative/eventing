@@ -90,7 +90,7 @@ func RotateDispatcherTLSCertificate() *feature.Feature {
 		AtLeast(1),
 	)
 	f.Assert("Source match updated peer certificate", assert.OnStore(source).
-		MatchPeerCertificatesReceived(assert.MatchPeerCertificatesFromSecret(secretName, "tls.crt")).
+		MatchPeerCertificatesReceived(assert.MatchPeerCertificatesFromSecret(system.Namespace(), secretName, "tls.crt")).
 		AtLeast(1),
 	)
 
