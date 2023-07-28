@@ -782,7 +782,7 @@ func SendsEventsWithBrokerAsSinkTLS() *feature.Feature {
 	f.Setup("install sink", eventshub.Install(sinkName, eventshub.StartReceiverTLS)) // install eventshub as sink
 
 	// Install Trigger
-	f.Setup("Install trigger", trigger.Install(triggerName, brokerName, trigger.WithSubscriber(service.AsKReference(sink), "")))
+	f.Setup("Install trigger", trigger.Install(triggerName, brokerName, trigger.WithSubscriber(service.AsKReference(sinkName), "")))
 	f.Setup("Wait for Trigger to become ready", trigger.IsReady(triggerName))
 
 	f.Setup("Create Service Account for ApiServerSource with RBAC for v1.Event resources",
