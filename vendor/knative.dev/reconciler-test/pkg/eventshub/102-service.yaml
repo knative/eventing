@@ -22,5 +22,6 @@ spec:
     app: eventshub-{{ .name }}
   ports:
     - protocol: TCP
+      name: http
       port: 80
       targetPort: 8080
