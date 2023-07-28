@@ -23,6 +23,7 @@ import (
 	"testing"
 	"time"
 
+	"eventing/test/rekt/features/eventtype"
 	"knative.dev/pkg/system"
 	_ "knative.dev/pkg/system/testing"
 	"knative.dev/reconciler-test/pkg/environment"

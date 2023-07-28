@@ -75,3 +75,19 @@ func AssertPresent(expectedCeTypes sets.String) EventType {
 	}
 
 }
+
+func AssertReferenceMatch(expectedCeType string) EventType {
+	return EventType{
+		Name: "test eventtypes's reference match or not",
+		EventTypes: func(etl eventingv1beta2.EventTypeList) (bool, error) {
+			eventtypesCount := 0
+			for _, et := range etl.Items {
+				if expectedCeType == et.Spec.Reference.Kind {
+					eventtypesCount++
+				}
+			}
+			return (eventtypesCount == len(etl.Items)), nil
+		},
+	}
+
+}

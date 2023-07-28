@@ -21,6 +21,7 @@ import (
 	"github.com/google/uuid"
 	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/test/rekt/resources/broker"
+	"knative.dev/eventing/test/rekt/resources/eventtype"
 	"knative.dev/eventing/test/rekt/resources/trigger"
 	"knative.dev/pkg/ptr"
 	"knative.dev/reconciler-test/pkg/eventshub"
@@ -71,6 +72,9 @@ func eventTypeWithBrokerAsReference(retryNum int32, dropNum uint) *feature.Featu
 
 	// The eventType should be already auto-created. We then need to pop up the eventType in the event registry.
 	// We need to validate the reference of the eventType is pointing to the broker.
+	f.Stable("ApiServerSource as event source").
+		Must("ApiServerSource test eventtypes match",
+			eventtype.WaitForEventType(eventtype.AssertReferenceMatch("InMemoryChannel")))
 
 	return f
 }
