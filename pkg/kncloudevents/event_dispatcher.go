@@ -39,11 +39,11 @@ import (
 	"knative.dev/pkg/system"
 
 	eventingapis "knative.dev/eventing/pkg/apis"
+	"knative.dev/eventing/pkg/utils"
 
 	"knative.dev/eventing/pkg/broker"
 	"knative.dev/eventing/pkg/channel/attributes"
 	"knative.dev/eventing/pkg/tracing"
-	"knative.dev/eventing/pkg/utils"
 )
 
 const (
@@ -182,7 +182,7 @@ func send(ctx context.Context, message binding.Message, destination duckv1.Addre
 		return dispatchExecutionInfo, fmt.Errorf("unable to complete request to %s: %v", destination.URL, err)
 	}
 
-	responseAdditionalHeaders := dispatchExecutionInfo.ResponseHeader
+	responseAdditionalHeaders := utils.PassThroughHeaders(dispatchExecutionInfo.ResponseHeader)
 
 	if config.additionalHeaders.Get(eventingapis.KnNamespaceHeader) != "" {
 		if responseAdditionalHeaders == nil {
@@ -264,7 +264,7 @@ func executeRequest(ctx context.Context, target duckv1.Addressable, message clou
 	}
 
 	dispatchInfo.ResponseCode = response.StatusCode
-	dispatchInfo.ResponseHeader = utils.PassThroughHeaders(response.Header)
+	dispatchInfo.ResponseHeader = response.Header
 
 	body := new(bytes.Buffer)
 	_, readErr := body.ReadFrom(response.Body)
@@ -287,6 +287,7 @@ func executeRequest(ctx context.Context, target duckv1.Addressable, message clou
 		responseMessageBody = []byte(fmt.Sprintf("Failed to read response body: %s", err.Error()))
 	} else {
 		responseMessageBody = body.Bytes()
+		dispatchInfo.ResponseBody = responseMessageBody
 	}
 	responseMessage := cehttp.NewMessage(response.Header, io.NopCloser(bytes.NewReader(responseMessageBody)))
 
