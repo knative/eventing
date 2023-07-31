@@ -259,20 +259,15 @@ func TestDispatcher_dispatch(t *testing.T) {
 	dispatcher.WaitReady()
 
 	// Ok now everything should be ready to send the event
-	httpsender, err := kncloudevents.NewHTTPMessageSenderWithTarget(channelAProxy.URL)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	req, err := httpsender.NewCloudEventRequest(context.Background())
+	request, err := kncloudevents.NewCloudEventRequest(context.TODO(), *mustParseUrlToAddressable(t, channelAProxy.URL))
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	event := test.FullEvent()
-	_ = protocolhttp.WriteRequest(context.Background(), binding.ToMessage(&event), req)
+	_ = protocolhttp.WriteRequest(context.Background(), binding.ToMessage(&event), request.Request)
 
-	res, err := httpsender.Send(req)
+	res, err := request.Send()
 	if err != nil {
 		t.Fatal(err)
 	}
