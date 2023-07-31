@@ -9,7 +9,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 
-	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/feature"
 )
@@ -126,10 +125,10 @@ func toFixedContextMatchers(ctx context.Context, matchers []eventshub.EventInfoM
 	return out
 }
 
-func MatchPeerCertificatesFromSecret(name string, key string) eventshub.EventInfoMatcherCtx {
+func MatchPeerCertificatesFromSecret(namespace, name string, key string) eventshub.EventInfoMatcherCtx {
 	return func(ctx context.Context, info eventshub.EventInfo) error {
 		secret, err := kubeclient.Get(ctx).CoreV1().
-			Secrets(environment.FromContext(ctx).Namespace()).
+			Secrets(namespace).
 			Get(ctx, name, metav1.GetOptions{})
 
 		if err != nil {
@@ -141,7 +140,7 @@ func MatchPeerCertificatesFromSecret(name string, key string) eventshub.EventInf
 			return fmt.Errorf("failed to get value from secret %s/%s for key %s", secret.Namespace, secret.Name, key)
 		}
 
-		if info.Connection == nil && info.Connection.TLS == nil {
+		if info.Connection == nil || info.Connection.TLS == nil {
 			return fmt.Errorf("failed to match peer certificates, connection is not TLS")
 		}
 
