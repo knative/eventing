@@ -161,14 +161,14 @@ func TestFanoutEventHandler_ServeHTTP(t *testing.T) {
 		asyncExpectedStatus int
 	}{
 		"rejected by receiver": {
-			receiverFunc: func(context.Context, channel.ChannelReference, event.Event, []binding.Transformer, http.Header) error {
+			receiverFunc: func(context.Context, channel.ChannelReference, event.Event, http.Header) error {
 				return errors.New("rejected by test-receiver")
 			},
 			expectedStatus:      http.StatusInternalServerError,
 			asyncExpectedStatus: http.StatusInternalServerError,
 		},
 		"receiver has span": {
-			receiverFunc: func(ctx context.Context, _ channel.ChannelReference, _ event.Event, _ []binding.Transformer, _ http.Header) error {
+			receiverFunc: func(ctx context.Context, _ channel.ChannelReference, _ event.Event, _ http.Header) error {
 				if span := trace.FromContext(ctx); span == nil {
 					return errors.New("missing span")
 				}

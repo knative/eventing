@@ -69,7 +69,7 @@ type EventReceiver struct {
 }
 
 // EventReceiverFunc is the function to be called for handling the event.
-type EventReceiverFunc func(context.Context, ChannelReference, event.Event, []binding.Transformer, nethttp.Header) error
+type EventReceiverFunc func(context.Context, ChannelReference, event.Event, nethttp.Header) error
 
 // ReceiverOptions provides functional options to EventReceiver function.
 type EventReceiverOptions func(*EventReceiver) error
@@ -228,7 +228,7 @@ func (r *EventReceiver) ServeHTTP(response nethttp.ResponseWriter, request *neth
 		return
 	}
 
-	err = r.receiverFunc(request.Context(), channel, *event, []binding.Transformer{}, utils.PassThroughHeaders(request.Header))
+	err = r.receiverFunc(request.Context(), channel, *event, utils.PassThroughHeaders(request.Header))
 	if err != nil {
 		if _, ok := err.(*UnknownChannelError); ok {
 			response.WriteHeader(nethttp.StatusNotFound)

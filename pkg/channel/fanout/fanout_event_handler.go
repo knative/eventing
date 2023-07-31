@@ -28,7 +28,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cloudevents/sdk-go/v2/binding"
 	"github.com/cloudevents/sdk-go/v2/event"
 	"go.opencensus.io/trace"
 	"go.uber.org/zap"
@@ -193,9 +192,9 @@ func (f *FanoutEventHandler) autoCreateEventType(ctx context.Context, evnt event
 	}
 }
 
-func createEventReceiverFunction(f *FanoutEventHandler) func(context.Context, channel.ChannelReference, event.Event, []binding.Transformer, nethttp.Header) error {
+func createEventReceiverFunction(f *FanoutEventHandler) func(context.Context, channel.ChannelReference, event.Event, nethttp.Header) error {
 	if f.asyncHandler {
-		return func(ctx context.Context, ref channel.ChannelReference, evnt event.Event, transformers []binding.Transformer, additionalHeaders nethttp.Header) error {
+		return func(ctx context.Context, ref channel.ChannelReference, evnt event.Event, additionalHeaders nethttp.Header) error {
 			if f.eventTypeHandler != nil {
 				f.autoCreateEventType(ctx, evnt)
 			}
@@ -208,11 +207,8 @@ func createEventReceiverFunction(f *FanoutEventHandler) func(context.Context, ch
 			}
 
 			parentSpan := trace.FromContext(ctx)
-			te := kncloudevents.TypeExtractorTransformer("")
-			transformers = append(transformers, &te)
-
 			reportArgs := channel.ReportArgs{}
-			reportArgs.EventType = string(te)
+			reportArgs.EventType = evnt.Type()
 			reportArgs.Ns = ref.Namespace
 
 			go func(e event.Event, h nethttp.Header, s *trace.Span, r *channel.StatsReporter, args *channel.ReportArgs) {
@@ -226,7 +222,7 @@ func createEventReceiverFunction(f *FanoutEventHandler) func(context.Context, ch
 			return nil
 		}
 	}
-	return func(ctx context.Context, ref channel.ChannelReference, event event.Event, transformers []binding.Transformer, additionalHeaders nethttp.Header) error {
+	return func(ctx context.Context, ref channel.ChannelReference, event event.Event, additionalHeaders nethttp.Header) error {
 		if f.eventTypeHandler != nil {
 			f.autoCreateEventType(ctx, event)
 		}
@@ -237,11 +233,8 @@ func createEventReceiverFunction(f *FanoutEventHandler) func(context.Context, ch
 			return nil
 		}
 
-		te := kncloudevents.TypeExtractorTransformer("")
-		transformers = append(transformers, &te)
-
 		reportArgs := channel.ReportArgs{}
-		reportArgs.EventType = string(te)
+		reportArgs.EventType = event.Type()
 		reportArgs.Ns = ref.Namespace
 		dispatchResultForFanout := f.dispatch(ctx, subs, event, additionalHeaders)
 		return ParseDispatchResultAndReportMetrics(dispatchResultForFanout, f.reporter, reportArgs)
