@@ -18,6 +18,7 @@ package eventtype
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -51,6 +52,9 @@ func WaitForEventType(eventtype EventType, timing ...time.Duration) feature.Step
 				return false, nil
 			}
 			lastEtl = etl
+			fmt.Println("eventtype.Name", eventtype.EventTypes)
+			fmt.Printf("eventtypehaha %#v\n", eventtype.EventTypes)
+			fmt.Printf("eventtype %+v\n", eventtype)
 			return eventtype.EventTypes(*etl)
 		})
 		if err != nil {
@@ -64,12 +68,15 @@ func AssertPresent(expectedCeTypes sets.String) EventType {
 	return EventType{
 		Name: "test eventtypes match or not",
 		EventTypes: func(etl eventingv1beta2.EventTypeList) (bool, error) {
+			fmt.Println("expectedCeTypes", expectedCeTypes)
 			eventtypesCount := 0
 			for _, et := range etl.Items {
+				fmt.Println("et.Spec.Type", et.Spec.Type)
 				if expectedCeTypes.Has(et.Spec.Type) {
 					eventtypesCount++
 				}
 			}
+			fmt.Println("eventtypesCount", eventtypesCount)
 			return (eventtypesCount == len(etl.Items)), nil
 		},
 	}
@@ -77,15 +84,21 @@ func AssertPresent(expectedCeTypes sets.String) EventType {
 }
 
 func AssertReferenceMatch(expectedCeType string) EventType {
+
+	fmt.Println("haha")
+	fmt.Println(expectedCeType)
+
 	return EventType{
 		Name: "test eventtypes's reference match or not",
 		EventTypes: func(etl eventingv1beta2.EventTypeList) (bool, error) {
 			eventtypesCount := 0
 			for _, et := range etl.Items {
+				fmt.Println("et.Spec.Reference.Kind", et.Spec.Reference.Kind)
 				if expectedCeType == et.Spec.Reference.Kind {
 					eventtypesCount++
 				}
 			}
+			fmt.Println("eventtypesCount", eventtypesCount)
 			return (eventtypesCount == len(etl.Items)), nil
 		},
 	}

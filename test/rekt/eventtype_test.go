@@ -44,5 +44,5 @@ func TestEventTypeWithBrokerAsReference(t *testing.T) {
 		environment.WithPollTimings(5*time.Second, 4*time.Minute),
 	)
 
-	env.TestSet(ctx, t, eventtype.EventTypeWithBrokerAsReference())
+	env.Test(ctx, t, eventtype.EventTypeWithBrokerAsReference())
 }
