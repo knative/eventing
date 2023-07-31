@@ -774,7 +774,7 @@ func SendsEventsWithBrokerAsSinkTLS() *feature.Feature {
 	triggerName := feature.MakeRandomK8sName("trigger")
 	f := feature.NewFeature()
 
-	f.Prerequisite("transport encryption is permissive or strict", featureflags.TransportEncryptionStrict())
+	f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
 
 	f.Setup("install broker", broker.Install(brokerName, broker.WithEnvConfig()...))
 	f.Setup("broker is ready", broker.IsReady(brokerName))
