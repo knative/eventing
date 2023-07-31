@@ -38,6 +38,7 @@ import (
 	"knative.dev/pkg/logging"
 
 	"knative.dev/eventing/pkg/apis"
+	"knative.dev/eventing/pkg/utils"
 
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/pkg/apis/feature"
@@ -222,7 +223,7 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 		URL:     t.Status.SubscriberURI,
 		CACerts: t.Status.SubscriberCACerts,
 	}
-	h.send(ctx, writer, request.Header, target, reportArgs, event, t, ttl)
+	h.send(ctx, writer, utils.PassThroughHeaders(request.Header), target, reportArgs, event, t, ttl)
 }
 
 func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers http.Header, target duckv1.Addressable, reportArgs *ReportArgs, event *cloudevents.Event, t *eventingv1.Trigger, ttl int32) {
