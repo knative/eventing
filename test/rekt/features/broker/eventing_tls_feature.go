@@ -81,6 +81,7 @@ func RotateIngressTLSCertificate() *feature.Feature {
 
 	f.Assert("Event sent", assert.OnStore(source).
 		MatchSentEvent(cetest.HasId(event.ID())).
+		Match(assert.MatchStatusCode(202)).
 		AtLeast(1),
 	)
 	f.Assert("Event received", assert.OnStore(sink).

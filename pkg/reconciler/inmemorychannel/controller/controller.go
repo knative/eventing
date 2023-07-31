@@ -93,7 +93,7 @@ func NewController(
 
 	impl := inmemorychannelreconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
 		return controller.Options{
-			ConfigStore:       featureStore,
+			ConfigStore: featureStore,
 		}
 	})
 	r.uriResolver = resolver.NewURIResolverFromTracker(ctx, impl.Tracker)
