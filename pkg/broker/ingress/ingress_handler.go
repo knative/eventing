@@ -45,6 +45,7 @@ import (
 	"knative.dev/eventing/pkg/eventtype"
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/tracing"
+	"knative.dev/eventing/pkg/utils"
 )
 
 const (
@@ -225,7 +226,7 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 		eventType: event.Type(),
 	}
 
-	statusCode, dispatchTime := h.receive(ctx, request.Header, event, brokerNamespace, brokerName)
+	statusCode, dispatchTime := h.receive(ctx, utils.PassThroughHeaders(request.Header), event, brokerNamespace, brokerName)
 	if dispatchTime > kncloudevents.NoDuration {
 		_ = h.Reporter.ReportEventDispatchTime(reporterArgs, statusCode, dispatchTime)
 	}
