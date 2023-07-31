@@ -5,6 +5,7 @@ This doc explains how to setup a development environment so you can get started
 Also take a look at:
 
 - [The pull request workflow](https://www.knative.dev/contributing/contributing/#pull-requests)
+- [Quick full build and install](#quick-full-build-and-install)
 - [How to add and run tests](./test/README.md)
 - [Iterating](#iterating)
 
