@@ -20,16 +20,15 @@ limitations under the License.
 package rekt
 
 import (
-	"testing"
-	"time"
-
-	"eventing/test/rekt/features/eventtype"
+	"knative.dev/eventing/test/rekt/features/eventtype"
 	"knative.dev/pkg/system"
 	_ "knative.dev/pkg/system/testing"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/knative"
 	"knative.dev/reconciler-test/pkg/tracing"
+	"testing"
+	"time"
 )
 
 func TestEventTypeWithBrokerAsReference(t *testing.T) {
@@ -45,5 +44,5 @@ func TestEventTypeWithBrokerAsReference(t *testing.T) {
 		environment.WithPollTimings(5*time.Second, 4*time.Minute),
 	)
 
-	env.TestSet(ctx, t, eventtype.eventTypeWithBrokerAsReference())
+	env.TestSet(ctx, t, eventtype.EventTypeWithBrokerAsReference())
 }
