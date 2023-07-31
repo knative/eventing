@@ -23,7 +23,6 @@ import (
 	nethttp "net/http"
 	"time"
 
-	"github.com/cloudevents/sdk-go/v2/binding"
 	"github.com/cloudevents/sdk-go/v2/event"
 	"github.com/cloudevents/sdk-go/v2/protocol/http"
 	"go.uber.org/zap"
@@ -204,16 +203,7 @@ func (r *EventReceiver) ServeHTTP(response nethttp.ResponseWriter, request *neth
 
 	args.Ns = channel.Namespace
 
-	message := http.NewMessageFromHttpRequest(request)
-	defer message.Finish(nil)
-	if message.ReadEncoding() == binding.EncodingUnknown {
-		r.logger.Info("Cannot determine the cloudevent message encoding")
-		response.WriteHeader(nethttp.StatusBadRequest)
-		r.reporter.ReportEventCount(&args, nethttp.StatusBadRequest)
-		return
-	}
-
-	event, err := binding.ToEvent(request.Context(), message)
+	event, err := http.NewEventFromHTTPRequest(request)
 	if err != nil {
 		r.logger.Warn("failed to extract event from request", zap.Error(err))
 		response.WriteHeader(nethttp.StatusBadRequest)
