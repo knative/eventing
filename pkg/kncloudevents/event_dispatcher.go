@@ -179,7 +179,7 @@ func send(ctx context.Context, message binding.Message, destination duckv1.Addre
 			return dispatchExecutionInfo, nil
 		}
 		// No DeadLetter, just fail
-		return dispatchExecutionInfo, fmt.Errorf("unable to complete request to %s: %v", destination.URL, err)
+		return dispatchExecutionInfo, fmt.Errorf("unable to complete request to %s: %w", destination.URL, err)
 	}
 
 	responseAdditionalHeaders := utils.PassThroughHeaders(dispatchExecutionInfo.ResponseHeader)
@@ -220,7 +220,7 @@ func send(ctx context.Context, message binding.Message, destination duckv1.Addre
 			return dispatchExecutionInfo, nil
 		}
 		// No DeadLetter, just fail
-		return dispatchExecutionInfo, fmt.Errorf("failed to forward reply to %s: %v", config.reply.URL, err)
+		return dispatchExecutionInfo, fmt.Errorf("failed to forward reply to %s: %w", config.reply.URL, err)
 	}
 	if responseResponseMessage != nil {
 		messagesToFinish = append(messagesToFinish, responseResponseMessage)
@@ -245,12 +245,12 @@ func executeRequest(ctx context.Context, target duckv1.Addressable, message clou
 
 	req, err := createRequest(ctx, message, target, additionalHeaders, transformers...)
 	if err != nil {
-		return ctx, nil, &dispatchInfo, err
+		return ctx, nil, &dispatchInfo, fmt.Errorf("failed to create request: %w", err)
 	}
 
 	client, err := newClient(target)
 	if err != nil {
-		return ctx, nil, &dispatchInfo, err
+		return ctx, nil, &dispatchInfo, fmt.Errorf("failed to create http client: %w", err)
 	}
 
 	start := time.Now()
