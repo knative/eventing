@@ -99,22 +99,121 @@ func BenchmarkExactFilter(b *testing.B) {
 	)
 }
 
+// Test Any Filter
+func BenchmarkAnyFilter(b *testing.B) {
+	event := cetest.FullEvent()
+
+	// Define a filter here for testing
+	filter1, _ := subscriptionsapi.NewExactFilter(map[string]string{"id": event.ID()})
+
+	RunFilterBenchmarks(b,
+		func(i interface{}) eventfilter.Filter {
+			// We create the AnyFilter with our predefined filters.
+			return subscriptionsapi.NewAnyFilter(filter1)
+		},
+		FilterBenchmark{
+			name:  "Pass with any match",
+			arg:   nil, // In this case, we're not using the arg in filter creation.
+			event: event,
+		},
+	)
+}
+
 // Test Not Filter
-//func BenchmarkNotFilter(b *testing.B) {
-//	event := cetest.FullEvent()
-//
-//	RunFilterBenchmarks(b,
-//		func(i interface{}) eventfilter.Filter {
-//			filter := subscriptionsapi.NewNotFilter(i.(eventfilter.Filter))
-//			return filter
-//		},
-//		FilterBenchmark{
-//			name: "No pass with exact match of id and source",
-//			arg: map[string]string{
-//				"id":     "qwertyuiopasdfghjklzxcvbnm",
-//				"source": "qwertyuiopasdfghjklzxcvbnm",
-//			},
-//			event: event,
-//		},
-//	)
-//}
+func BenchmarkNotFilter(b *testing.B) {
+	event := cetest.FullEvent()
+
+	filter, _ := subscriptionsapi.NewExactFilter(map[string]string{"id": event.ID()})
+
+	RunFilterBenchmarks(b,
+		func(i interface{}) eventfilter.Filter {
+			// Create the NotFilter with our predefined filter.
+			return subscriptionsapi.NewNotFilter(filter)
+		},
+		FilterBenchmark{
+			name:  "Not filter test",
+			arg:   nil, // In this case, we're not using the arg in filter creation.
+			event: event,
+		},
+	)
+}
+
+// Test Prefix Filter
+func BenchmarkPrefixFilter(b *testing.B) {
+	event := cetest.FullEvent()
+
+	RunFilterBenchmarks(b,
+		func(i interface{}) eventfilter.Filter {
+			filter, err := subscriptionsapi.NewPrefixFilter(i.(map[string]string))
+			if err != nil {
+				b.Fatalf("failed to create filter: %v", err)
+			}
+			return filter
+		},
+		FilterBenchmark{
+			name:  "Pass with prefix match of id",
+			arg:   map[string]string{"id": event.ID()[0:5]},
+			event: event,
+		},
+		FilterBenchmark{
+			name: "Pass with prefix match of all context attributes",
+			arg: map[string]string{
+				"id":              event.ID()[0:5],
+				"source":          event.Source()[0:5],
+				"type":            event.Type()[0:5],
+				"dataschema":      event.DataSchema()[0:5],
+				"datacontenttype": event.DataContentType()[0:5],
+				"subject":         event.Subject()[0:5],
+			},
+			event: event,
+		},
+		FilterBenchmark{
+			name: "No pass with prefix match of id and source",
+			arg: map[string]string{
+				"id":     "qwertyuiopasdfghjklzxcvbnm",
+				"source": "qwertyuiopasdfghjklzxcvbnm",
+			},
+			event: event,
+		},
+	)
+}
+
+// Test Suffix Filter
+func BenchmarkSuffixFilter(b *testing.B) {
+	event := cetest.FullEvent()
+
+	RunFilterBenchmarks(b,
+		func(i interface{}) eventfilter.Filter {
+			filter, err := subscriptionsapi.NewSuffixFilter(i.(map[string]string))
+			if err != nil {
+				b.Fatalf("failed to create filter: %v", err)
+			}
+			return filter
+		},
+		FilterBenchmark{
+			name:  "Pass with suffix match of id",
+			arg:   map[string]string{"id": event.ID()[len(event.ID())-5:]},
+			event: event,
+		},
+		FilterBenchmark{
+			name: "Pass with suffix match of all context attributes",
+			arg: map[string]string{
+				"id":              event.ID()[len(event.ID())-5:],
+				"source":          event.Source()[len(event.Source())-5:],
+				"type":            event.Type()[len(event.Type())-5:],
+				"dataschema":      event.DataSchema()[len(event.DataSchema())-5:],
+				"datacontenttype": event.DataContentType()[len(event.DataContentType())-5:],
+				"subject":         event.Subject()[len(event.Subject())-5:],
+			},
+			event: event,
+		},
+		FilterBenchmark{
+			name: "No pass with suffix match of id and source",
+			arg: map[string]string{
+				"id":     "qwertyuiopasdfghjklzxcvbnm",
+				"source": "qwertyuiopasdfghjklzxcvbnm",
+			},
+			event: event,
+		},
+	)
+}
