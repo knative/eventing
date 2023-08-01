@@ -69,7 +69,13 @@ func NewController(
 	configmapInformer := configmapinformer.Get(ctx)
 	secretInformer := secretinformer.Get(ctx)
 
-	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"))
+	var globalResync func(obj interface{})
+
+	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {
+		if globalResync != nil {
+			globalResync(nil)
+		}
+	})
 	featureStore.WatchConfigs(cmw)
 
 	var err error
@@ -112,7 +118,7 @@ func NewController(
 	// When the endpoints in our multi-tenant filter/ingress change, do a global resync.
 	// During installation, we might reconcile Brokers before our shared filter/ingress is
 	// ready, so when these endpoints change perform a global resync.
-	grCb := func(obj interface{}) {
+	globalResync = func(obj interface{}) {
 		// Since changes in the Filter/Ingress Service endpoints affect all the Broker objects,
 		// do a global resync.
 		logger.Info("Doing a global resync due to endpoint changes in shared broker component")
@@ -123,18 +129,18 @@ func NewController(
 		FilterFunc: pkgreconciler.ChainFilterFuncs(
 			pkgreconciler.NamespaceFilterFunc(system.Namespace()),
 			pkgreconciler.NameFilterFunc(names.BrokerFilterName)),
-		Handler: controller.HandleAll(grCb),
+		Handler: controller.HandleAll(globalResync),
 	})
 	// Resync for the ingress.
 	endpointsInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: pkgreconciler.ChainFilterFuncs(
 			pkgreconciler.NamespaceFilterFunc(system.Namespace()),
 			pkgreconciler.NameFilterFunc(names.BrokerIngressName)),
-		Handler: controller.HandleAll(grCb),
+		Handler: controller.HandleAll(globalResync),
 	})
 	secretInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.FilterWithName(ingressServerTLSSecretName),
-		Handler:    controller.HandleAll(grCb),
+		Handler:    controller.HandleAll(globalResync),
 	})
 
 	return impl
