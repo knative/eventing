@@ -145,10 +145,7 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 
 	ctx := h.withContext(request.Context())
 
-	message := cehttp.NewMessageFromHttpRequest(request)
-	defer message.Finish(nil)
-
-	event, err := binding.ToEvent(ctx, message)
+	event, err := cehttp.NewEventFromHTTPRequest(request)
 	if err != nil {
 		h.logger.Warn("failed to extract event from request", zap.Error(err))
 		writer.WriteHeader(http.StatusBadRequest)
