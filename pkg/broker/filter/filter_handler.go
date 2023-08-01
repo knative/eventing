@@ -244,7 +244,7 @@ func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers 
 
 		h.reporter.ReportEventDispatchTime(reportArgs, dispatchInfo.ResponseCode, dispatchInfo.Duration)
 
-		writeHeaders(dispatchInfo.ResponseHeader, writer)
+		writeHeaders(utils.PassThroughHeaders(dispatchInfo.ResponseHeader), writer)
 		writer.WriteHeader(dispatchInfo.ResponseCode)
 
 		// Read Response body to responseErr
@@ -257,7 +257,10 @@ func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers 
 			h.logger.Error("failed to marshal errExtensionInfo", zap.Error(msErr))
 			return
 		}
-		_, _ = writer.Write(errExtensionBytes)
+		_, err = writer.Write(errExtensionBytes)
+		if err != nil {
+			h.logger.Error("failed to write error response", zap.Error(err))
+		}
 		_ = h.reporter.ReportEventCount(reportArgs, dispatchInfo.ResponseCode)
 
 		return
