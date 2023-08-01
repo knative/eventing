@@ -17,9 +17,7 @@ limitations under the License.
 package new_trigger_filters
 
 import (
-	"bytes"
 	"fmt"
-	"text/template"
 
 	. "github.com/cloudevents/sdk-go/v2/test"
 	"knative.dev/reconciler-test/pkg/eventshub"
@@ -116,56 +114,4 @@ func WithNewFilters(filters string) manifest.CfgFn {
 	return func(cfg map[string]interface{}) {
 		cfg["filters"] = filters
 	}
-}
-
-type Filter interface {
-	FilterString() string
-}
-
-type AttributeFilter struct {
-	Type      string
-	Attribute string
-	Value     string
-}
-
-func (f *AttributeFilter) FilterString() string {
-	return fmt.Sprintf(`
-	- %s:
-		%s: %s`, f.Type, f.Attribute, f.Value)
-}
-
-type CESQLFilter struct {
-	Value string
-}
-
-func (f *CESQLFilter) FilterString() string {
-	return fmt.Sprintf(" - cesql: %s", f.Value)
-}
-
-type NotFilter struct {
-	Filter Filter
-}
-
-func (f *NotFilter) FilterString() string {
-	return fmt.Sprintf(`
-	- not:
-		%s`, f.Filter.FilterString())
-}
-
-type ArrayFilter struct {
-	Type    string
-	Filters []Filter
-}
-
-func (f *ArrayFilter) FilterString() string {
-	tmpl, err := template.New("filter").Parse("- {{.Type}}:\n\t{{range $_, $filter := .Filters}}{{printf \"%s\n\t\" $filter.FilterString}}{{end}}")
-	if err != nil {
-		panic("failed to parse filter string")
-	}
-	var result bytes.Buffer
-	err = tmpl.Execute(&result, *f)
-	if err != nil {
-		panic("failed to execute template to filter")
-	}
-	return result.String()
 }
