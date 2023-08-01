@@ -86,11 +86,11 @@ func NewController(
 		logger.Panic("unable to process in-memory channel's required environment variables (missing DISPATCHER_IMAGE)")
 	}
 
-	var grCh func(obj interface{})
+	var globalResync func(obj interface{})
 
 	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {
-		if grCh != nil {
-			grCh(nil)
+		if globalResync != nil {
+			globalResync(nil)
 		}
 	})
 	featureStore.WatchConfigs(cmw)
@@ -111,7 +111,7 @@ func NewController(
 	// a global Resync for all the channels to take stock of their health when these change.
 
 	// Call GlobalResync on inmemorychannels.
-	grCh = func(interface{}) {
+	globalResync = func(interface{}) {
 		impl.GlobalResync(inmemorychannelInformer.Informer())
 	}
 
