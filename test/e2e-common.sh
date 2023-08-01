@@ -76,6 +76,8 @@ UNINSTALL_LIST=()
 
 # Setup the Knative environment for running tests.
 function knative_setup() {
+  install_cert_manager || fail_test "Could not install Cert Manager"
+
   install_knative_eventing "HEAD"
 
   install_mt_broker || fail_test "Could not install MT Channel Based Broker"

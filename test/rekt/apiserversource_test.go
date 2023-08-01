@@ -91,6 +91,7 @@ func TestApiServerSourceDataPlane_BrokerAsSinkTLS(t *testing.T) {
 		k8s.WithEventListener,
 		environment.Managed(t),
 		eventshub.WithTLS(t),
+		environment.WithPollTimings(5*time.Second, 2*time.Minute),
 	)
 
 	env.Test(ctx, t, apiserversourcefeatures.SendsEventsWithBrokerAsSinkTLS())
