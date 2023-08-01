@@ -88,6 +88,11 @@ func StartSenderToResource(gvr schema.GroupVersionResource, name string) EventsH
 		if u == nil {
 			return fmt.Errorf("resource %v named %s is not addressable", gvr, name)
 		}
+
+		if u.URL.Scheme == "https" {
+			return StartSenderURLTLS(u.URL.String(), u.CACerts)(ctx, envs)
+		}
+
 		return StartSenderURL(u.URL.String())(ctx, envs)
 	}
 }
