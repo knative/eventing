@@ -42,7 +42,7 @@ import (
 	"knative.dev/eventing/pkg/utils"
 
 	"knative.dev/eventing/pkg/broker"
-	"knative.dev/eventing/pkg/channel/attributes"
+	"knative.dev/eventing/pkg/kncloudevents/attributes"
 	"knative.dev/eventing/pkg/tracing"
 )
 

@@ -41,8 +41,8 @@ import (
 	eventingapis "knative.dev/eventing/pkg/apis"
 
 	"knative.dev/eventing/pkg/broker"
-	"knative.dev/eventing/pkg/channel/attributes"
 	"knative.dev/eventing/pkg/kncloudevents"
+	"knative.dev/eventing/pkg/kncloudevents/attributes"
 	"knative.dev/eventing/pkg/tracing"
 	"knative.dev/eventing/pkg/utils"
 )
