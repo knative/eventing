@@ -82,7 +82,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: knative-eventing-namespaced-edit
   labels:
-    rbac.authorization.k8s.io/aggregate-to-view: "true"
+    rbac.authorization.k8s.io/aggregate-to-edit: "true"
     app.kubernetes.io/version: devel
     app.kubernetes.io/name: knative-eventing
 rules:
