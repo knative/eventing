@@ -37,23 +37,32 @@ import (
 )
 
 func RotateIngressTLSCertificate() *feature.Feature {
-	certificateName := "mt-broker-ingress-server-tls"
-	secretName := "mt-broker-ingress-server-tls"
+	ingressCertificateName := "mt-broker-ingress-server-tls"
+	ingressSecretName := "mt-broker-ingress-server-tls"
+
+	filterCertificateName := "mt-broker-filter-server-tls"
 
 	brokerName := feature.MakeRandomK8sName("broker")
 	triggerName := feature.MakeRandomK8sName("trigger")
 	sink := feature.MakeRandomK8sName("sink")
 	source := feature.MakeRandomK8sName("source")
 
-	f := feature.NewFeatureNamed("Rotate " + certificateName + " certificate")
+	f := feature.NewFeatureNamed("Rotate " + ingressCertificateName + " certificate")
 
 	f.Prerequisite("transport encryption is permissive or strict", featureflags.TransportEncryptionStrict())
 	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
 
-	f.Setup("Rotate certificate", certificate.Rotate(certificate.RotateCertificate{
+	f.Setup("Rotate ingress certificate", certificate.Rotate(certificate.RotateCertificate{
 		Certificate: types.NamespacedName{
 			Namespace: system.Namespace(),
-			Name:      certificateName,
+			Name:      ingressCertificateName,
+		},
+	}))
+	// We cannot externally verify this certificate rotation
+	f.Setup("Rotate filter certificate", certificate.Rotate(certificate.RotateCertificate{
+		Certificate: types.NamespacedName{
+			Namespace: system.Namespace(),
+			Name:      filterCertificateName,
 		},
 	}))
 
@@ -89,7 +98,7 @@ func RotateIngressTLSCertificate() *feature.Feature {
 		AtLeast(1),
 	)
 	f.Assert("Source match updated peer certificate", assert.OnStore(source).
-		MatchPeerCertificatesReceived(assert.MatchPeerCertificatesFromSecret(system.Namespace(), secretName, "tls.crt")).
+		MatchPeerCertificatesReceived(assert.MatchPeerCertificatesFromSecret(system.Namespace(), ingressSecretName, "tls.crt")).
 		AtLeast(1),
 	)
 
