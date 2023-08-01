@@ -775,6 +775,7 @@ func SendsEventsWithBrokerAsSinkTLS() *feature.Feature {
 	f := feature.NewFeature()
 
 	f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
+	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
 
 	f.Setup("install broker", broker.Install(brokerName, broker.WithEnvConfig()...))
 	f.Setup("broker is ready", broker.IsReady(brokerName))
