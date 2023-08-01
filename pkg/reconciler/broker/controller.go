@@ -129,18 +129,18 @@ func NewController(
 		FilterFunc: pkgreconciler.ChainFilterFuncs(
 			pkgreconciler.NamespaceFilterFunc(system.Namespace()),
 			pkgreconciler.NameFilterFunc(names.BrokerFilterName)),
-		Handler: controller.HandleAll(grCb),
+		Handler: controller.HandleAll(globalResync),
 	})
 	// Resync for the ingress.
 	endpointsInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: pkgreconciler.ChainFilterFuncs(
 			pkgreconciler.NamespaceFilterFunc(system.Namespace()),
 			pkgreconciler.NameFilterFunc(names.BrokerIngressName)),
-		Handler: controller.HandleAll(grCb),
+		Handler: controller.HandleAll(globalResync),
 	})
 	secretInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.FilterWithName(ingressServerTLSSecretName),
-		Handler:    controller.HandleAll(grCb),
+		Handler:    controller.HandleAll(globalResync),
 	})
 
 	return impl
