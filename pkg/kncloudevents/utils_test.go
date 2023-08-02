@@ -22,7 +22,6 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/cloudevents/sdk-go/v2/binding/test"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
@@ -86,28 +85,4 @@ func TestWriteRequestWithAdditionalHeadersAddsHeadersToRequest(t *testing.T) {
 	assert.Equal(t, additionalHeaders["Some-Key"], request.Header["Some-Key"])
 	assert.Equal(t, additionalHeaders["Another-Key"], request.Header["Another-Key"])
 
-}
-
-// If reader's message does have Type attribute
-func TestTypeExtractorTransformerWithType(t *testing.T) {
-	ceType := "some.custom.type"
-	ceEvent := cloudevents.NewEvent()
-	ceEvent.SetType(ceType)
-
-	var te = TypeExtractorTransformer("")
-	mockBinaryMsg := test.MustCreateMockBinaryMessage(ceEvent)
-	te.Transform(mockBinaryMsg.(binding.MessageMetadataReader), mockBinaryMsg.(binding.MessageMetadataWriter))
-
-	assert.Equal(t, ceType, string(te))
-}
-
-// If reader's message does NOT have Type attribute
-func TestTypeExtractorTransformerWithoutType(t *testing.T) {
-	ceEvent := cloudevents.NewEvent()
-
-	var te = TypeExtractorTransformer("")
-	mockBinaryMsg := test.MustCreateMockBinaryMessage(ceEvent)
-	te.Transform(mockBinaryMsg.(binding.MessageMetadataReader), mockBinaryMsg.(binding.MessageMetadataWriter))
-
-	assert.Equal(t, "", string(te))
 }

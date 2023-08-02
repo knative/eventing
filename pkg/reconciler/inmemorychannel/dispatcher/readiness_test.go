@@ -64,8 +64,8 @@ func TestReadinessChecker(t *testing.T) {
 	}
 
 	// Add one handler
-	handler.SetChannelHandler("foo", &fanout.FanoutMessageHandler{})
-	handler.SetChannelHandler("bar", &fanout.FanoutMessageHandler{})
+	handler.SetChannelHandler("foo", &fanout.FanoutEventHandler{})
+	handler.SetChannelHandler("bar", &fanout.FanoutEventHandler{})
 
 	res, err = http.Get(ts.URL)
 	if err != nil {

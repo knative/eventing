@@ -16,13 +16,13 @@ limitations under the License.
 
 // Package multichannelfanout provides an http.Handler that takes in one request to a Knative
 // Channel and fans it out to N other requests. Logically, it represents multiple Knative Channels.
-// It is made up of a map, map[channel]fanout.MessageHandler and each incoming request is inspected to
-// determine which Channel it is on. This Handler delegates the HTTP handling to the fanout.MessageHandler
+// It is made up of a map, map[channel]fanout.EventHandler and each incoming request is inspected to
+// determine which Channel it is on. This Handler delegates the HTTP handling to the fanout.EventHandler
 // corresponding to the incoming request's Channel.
 // It is often used in conjunction with a swappable.Handler. The swappable.Handler delegates all its
-// requests to the multichannelfanout.MessageHandler. When a new configuration is available, a new
-// multichannelfanout.MessageHandler is created and swapped in for all subsequent requests. The old
-// multichannelfanout.MessageHandler is discarded.
+// requests to the multichannelfanout.EventHandler. When a new configuration is available, a new
+// multichannelfanout.EventHandler is created and swapped in for all subsequent requests. The old
+// multichannelfanout.EventHandler is discarded.
 package multichannelfanout
 
 import (
@@ -37,35 +37,35 @@ import (
 	"knative.dev/eventing/pkg/channel/fanout"
 )
 
-type MultiChannelMessageHandler interface {
+type MultiChannelEventHandler interface {
 	http.Handler
-	SetChannelHandler(host string, handler fanout.MessageHandler)
+	SetChannelHandler(host string, handler fanout.EventHandler)
 	DeleteChannelHandler(host string)
-	GetChannelHandler(host string) fanout.MessageHandler
+	GetChannelHandler(host string) fanout.EventHandler
 	CountChannelHandlers() int
 }
 
 // Handler is an http.Handler that introspects the incoming request to determine what Channel it is
-// on, and then delegates handling of that request to the single fanout.FanoutMessageHandler corresponding to
+// on, and then delegates handling of that request to the single fanout.FanoutEventHandler corresponding to
 // that Channel.
-type MessageHandler struct {
+type EventHandler struct {
 	logger       *zap.Logger
 	handlersLock sync.RWMutex
-	handlers     map[string]fanout.MessageHandler
+	handlers     map[string]fanout.EventHandler
 }
 
 // NewHandler creates a new Handler.
-func NewMessageHandler(_ context.Context, logger *zap.Logger) *MessageHandler {
-	return &MessageHandler{
+func NewEventHandler(_ context.Context, logger *zap.Logger) *EventHandler {
+	return &EventHandler{
 		logger:   logger,
-		handlers: make(map[string]fanout.MessageHandler),
+		handlers: make(map[string]fanout.EventHandler),
 	}
 }
 
-// NewMessageHandlerWithConfig creates a new Handler with the specified configuration. This is really meant for tests
+// NewEventHandlerWithConfig creates a new Handler with the specified configuration. This is really meant for tests
 // where you want to apply a fully specified configuration for tests. Reconciler operates on single channel at a time.
-func NewMessageHandlerWithConfig(_ context.Context, logger *zap.Logger, messageDispatcher channel.MessageDispatcher, conf Config, reporter channel.StatsReporter, recvOptions ...channel.MessageReceiverOptions) (*MessageHandler, error) {
-	handlers := make(map[string]fanout.MessageHandler, len(conf.ChannelConfigs))
+func NewEventHandlerWithConfig(_ context.Context, logger *zap.Logger, conf Config, reporter channel.StatsReporter, recvOptions ...channel.EventReceiverOptions) (*EventHandler, error) {
+	handlers := make(map[string]fanout.EventHandler, len(conf.ChannelConfigs))
 
 	for _, cc := range conf.ChannelConfigs {
 		keys := []string{cc.HostName, cc.Path}
@@ -73,7 +73,7 @@ func NewMessageHandlerWithConfig(_ context.Context, logger *zap.Logger, messageD
 			if key == "" {
 				continue
 			}
-			handler, err := fanout.NewFanoutMessageHandler(logger, messageDispatcher, cc.FanoutConfig, reporter, cc.EventTypeHandler, cc.ChannelAddressable, cc.ChannelUID, recvOptions...)
+			handler, err := fanout.NewFanoutEventHandler(logger, cc.FanoutConfig, reporter, cc.EventTypeHandler, cc.ChannelAddressable, cc.ChannelUID, recvOptions...)
 			if err != nil {
 				logger.Error("Failed creating new fanout handler.", zap.Error(err))
 				return nil, err
@@ -85,39 +85,39 @@ func NewMessageHandlerWithConfig(_ context.Context, logger *zap.Logger, messageD
 			handlers[key] = handler
 		}
 	}
-	return &MessageHandler{
+	return &EventHandler{
 		logger:   logger,
 		handlers: handlers,
 	}, nil
 }
 
-func (h *MessageHandler) SetChannelHandler(host string, handler fanout.MessageHandler) {
+func (h *EventHandler) SetChannelHandler(host string, handler fanout.EventHandler) {
 	h.handlersLock.Lock()
 	defer h.handlersLock.Unlock()
 	h.handlers[host] = handler
 }
 
-func (h *MessageHandler) DeleteChannelHandler(host string) {
+func (h *EventHandler) DeleteChannelHandler(host string) {
 	h.handlersLock.Lock()
 	defer h.handlersLock.Unlock()
 	delete(h.handlers, host)
 }
 
-func (h *MessageHandler) GetChannelHandler(host string) fanout.MessageHandler {
+func (h *EventHandler) GetChannelHandler(host string) fanout.EventHandler {
 	h.handlersLock.RLock()
 	defer h.handlersLock.RUnlock()
 	return h.handlers[host]
 }
 
-func (h *MessageHandler) CountChannelHandlers() int {
+func (h *EventHandler) CountChannelHandlers() int {
 	h.handlersLock.RLock()
 	defer h.handlersLock.RUnlock()
 	return len(h.handlers)
 }
 
-// ServeHTTP delegates the actual handling of the request to a fanout.MessageHandler, based on the
+// ServeHTTP delegates the actual handling of the request to a fanout.EventHandler, based on the
 // request's channel key.
-func (h *MessageHandler) ServeHTTP(response http.ResponseWriter, request *http.Request) {
+func (h *EventHandler) ServeHTTP(response http.ResponseWriter, request *http.Request) {
 	channelKey := request.Host
 
 	if request.URL.Path != "/" {
