@@ -86,7 +86,13 @@ func NewController(
 		logger.Panic("unable to process in-memory channel's required environment variables (missing DISPATCHER_IMAGE)")
 	}
 
-	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"))
+	var globalResync func(obj interface{})
+
+	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {
+		if globalResync != nil {
+			globalResync(nil)
+		}
+	})
 	featureStore.WatchConfigs(cmw)
 
 	r.dispatcherImage = env.Image
@@ -105,33 +111,33 @@ func NewController(
 	// a global Resync for all the channels to take stock of their health when these change.
 
 	// Call GlobalResync on inmemorychannels.
-	grCh := func(obj interface{}) {
+	globalResync = func(interface{}) {
 		impl.GlobalResync(inmemorychannelInformer.Informer())
 	}
 
 	deploymentInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.FilterWithName(dispatcherName),
-		Handler:    controller.HandleAll(grCh),
+		Handler:    controller.HandleAll(globalResync),
 	})
 	serviceInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.FilterWithName(dispatcherName),
-		Handler:    controller.HandleAll(grCh),
+		Handler:    controller.HandleAll(globalResync),
 	})
 	endpointsInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.FilterWithName(dispatcherName),
-		Handler:    controller.HandleAll(grCh),
+		Handler:    controller.HandleAll(globalResync),
 	})
 	serviceAccountInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.FilterWithName(dispatcherName),
-		Handler:    controller.HandleAll(grCh),
+		Handler:    controller.HandleAll(globalResync),
 	})
 	roleBindingInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.FilterWithName(dispatcherName),
-		Handler:    controller.HandleAll(grCh),
+		Handler:    controller.HandleAll(globalResync),
 	})
 	secretInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.FilterWithName(eventingtls.IMCDispatcherServerTLSSecretName),
-		Handler:    controller.HandleAll(grCh),
+		Handler:    controller.HandleAll(globalResync),
 	})
 
 	// Setup the watch on the config map of dispatcher config
