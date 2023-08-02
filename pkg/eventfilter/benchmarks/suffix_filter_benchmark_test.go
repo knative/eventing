@@ -54,6 +54,18 @@ func BenchmarkSuffixFilter(b *testing.B) {
 			event: event,
 		},
 		FilterBenchmark{
+			name: "Pass with suffix match of all context attributes",
+			arg: map[string]string{
+				"id":              event.ID()[len(event.ID())-3:],
+				"source":          event.Source()[len(event.Source())-3:],
+				"type":            event.Type()[len(event.Type())-3:],
+				"dataschema":      event.DataSchema()[len(event.DataSchema())-3:],
+				"datacontenttype": event.DataContentType()[len(event.DataContentType())-3:],
+				"subject":         event.Subject()[len(event.Subject())-3:],
+			},
+			event: event,
+		},
+		FilterBenchmark{
 			name: "No pass with suffix match of id and source",
 			arg: map[string]string{
 				"id":     "qwertyuiopasdfghjklzxcvbnm",

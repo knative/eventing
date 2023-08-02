@@ -54,6 +54,18 @@ func BenchmarkPrefixFilter(b *testing.B) {
 			event: event,
 		},
 		FilterBenchmark{
+			name: "Pass with prefix match of all context attributes",
+			arg: map[string]string{
+				"id":              event.ID()[0:3],
+				"source":          event.Source()[0:3],
+				"type":            event.Type()[0:3],
+				"dataschema":      event.DataSchema()[0:3],
+				"datacontenttype": event.DataContentType()[0:3],
+				"subject":         event.Subject()[0:3],
+			},
+			event: event,
+		},
+		FilterBenchmark{
 			name: "No pass with prefix match of id and source",
 			arg: map[string]string{
 				"id":     "qwertyuiopasdfghjklzxcvbnm",
