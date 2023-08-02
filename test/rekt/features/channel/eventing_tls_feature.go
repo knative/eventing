@@ -47,7 +47,7 @@ func RotateDispatcherTLSCertificate() *feature.Feature {
 
 	f := feature.NewFeatureNamed("Rotate " + certificateName + " certificate")
 
-	f.Prerequisite("transport encryption is permissive or strict", featureflags.TransportEncryptionStrict())
+	f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
 	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
 
 	f.Setup("Rotate certificate", certificate.Rotate(certificate.RotateCertificate{
