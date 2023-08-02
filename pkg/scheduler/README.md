@@ -1,6 +1,6 @@
 # Knative Eventing Multi-Tenant Scheduler with High-Availability
 
-An eventing source instance (for example, [KafkaSource](https://github.com/knative-sandbox/eventing-kafka/tree/main/pkg/source), [RedisStreamSource](https://github.com/knative-sandbox/eventing-redis/tree/main/source), etc) gets materialized as a virtual pod (**vpod**) and can be scaled up and down by increasing or decreasing the number of virtual pod replicas (**vreplicas**).  A vreplica corresponds to a resource in the source that can replicated for maximum distributed processing (for example, number of consumers running in a consumer group).
+An eventing source instance (for example, [KafkaSource](https://github.com/knative-extensions/eventing-kafka/tree/main/pkg/source), [RedisStreamSource](https://github.com/knative-extensions/eventing-redis/tree/main/source), etc) gets materialized as a virtual pod (**vpod**) and can be scaled up and down by increasing or decreasing the number of virtual pod replicas (**vreplicas**).  A vreplica corresponds to a resource in the source that can replicated for maximum distributed processing (for example, number of consumers running in a consumer group).
 
 The vpod multi-tenant [scheduler](#1scheduler) is responsible for placing vreplicas onto real Kubernetes pods. Each pod is limited in capacity and can hold a maximum number of vreplicas. The scheduler takes a list of (source, # of vreplicas) tuples and computes a set of Placements. Placement info are added to the source status.
 
