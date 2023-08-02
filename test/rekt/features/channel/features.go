@@ -36,13 +36,13 @@ import (
 
 	eventasssert "knative.dev/reconciler-test/pkg/eventshub/assert"
 
-	"knative.dev/eventing/pkg/utils"
 	"knative.dev/eventing/test/rekt/features"
 	"knative.dev/eventing/test/rekt/resources/channel"
 	"knative.dev/eventing/test/rekt/resources/channel_impl"
 	"knative.dev/eventing/test/rekt/resources/containersource"
 	"knative.dev/eventing/test/rekt/resources/delivery"
 	"knative.dev/eventing/test/rekt/resources/subscription"
+	testutils "knative.dev/eventing/test/utils"
 )
 
 func ChannelChain(length int, createSubscriberFn func(ref *duckv1.KReference, uri string) manifest.CfgFn) *feature.Feature {
@@ -343,7 +343,7 @@ func channelSubscriberUnreachable(createSubscriberFn func(ref *duckv1.KReference
 	channelName := feature.MakeRandomK8sName("channel")
 	sub := feature.MakeRandomK8sName("subscription")
 
-	subscriberUri := fmt.Sprintf("http://fake.svc.%s", utils.GetClusterDomain())
+	subscriberUri := fmt.Sprintf("http://fake.svc.%s", testutils.GetClusterDomain())
 
 	ev := test.FullEvent()
 

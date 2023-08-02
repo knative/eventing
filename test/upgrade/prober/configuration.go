@@ -31,11 +31,11 @@ import (
 	pkgTest "knative.dev/pkg/test"
 	pkgupgrade "knative.dev/pkg/test/upgrade"
 
-	"knative.dev/eventing/pkg/utils"
 	"knative.dev/eventing/test/lib/resources"
 	"knative.dev/eventing/test/upgrade/prober/sut"
 	"knative.dev/eventing/test/upgrade/prober/wathola/forwarder"
 	"knative.dev/eventing/test/upgrade/prober/wathola/receiver"
+	testutils "knative.dev/eventing/test/utils"
 )
 
 const (
@@ -193,7 +193,7 @@ func (p *prober) compileTemplate(templateName string, endpoint interface{}, trac
 		p.config,
 		endpoint,
 		tracingConfig,
-		fmt.Sprintf(forwarderTargetFmt, p.client.Namespace, utils.GetClusterDomain()),
+		fmt.Sprintf(forwarderTargetFmt, p.client.Namespace, testutils.GetClusterDomain()),
 	}
 	p.ensureNoError(tmpl.Execute(&buff, data))
 	return buff.String()

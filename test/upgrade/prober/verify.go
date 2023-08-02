@@ -39,10 +39,10 @@ import (
 	"knative.dev/pkg/test/prow"
 	"knative.dev/pkg/test/zipkin"
 
-	"knative.dev/eventing/pkg/utils"
 	"knative.dev/eventing/test/upgrade/prober/wathola/event"
 	"knative.dev/eventing/test/upgrade/prober/wathola/fetcher"
 	"knative.dev/eventing/test/upgrade/prober/wathola/receiver"
+	testutils "knative.dev/eventing/test/utils"
 )
 
 const (
@@ -142,7 +142,7 @@ func (p *prober) getStepNoFromMsg(message string) (string, error) {
 func (p *prober) getTraceForStepEvent(eventNo string) []byte {
 	p.log.Debugf("Fetching trace for Step event #%s", eventNo)
 	query := fmt.Sprintf("step=%s and cloudevents.type=%s and target=%s",
-		eventNo, event.StepType, fmt.Sprintf(forwarderTargetFmt, p.client.Namespace, utils.GetClusterDomain()))
+		eventNo, event.StepType, fmt.Sprintf(forwarderTargetFmt, p.client.Namespace, testutils.GetClusterDomain()))
 	trace, err := event.FindTrace(query)
 	if err != nil {
 		p.log.Warn(err)
@@ -159,7 +159,7 @@ func (p *prober) exportFinishedEventTrace() {
 func (p *prober) getTraceForFinishedEvent() []byte {
 	p.log.Info("Fetching trace for Finished event")
 	query := fmt.Sprintf("cloudevents.type=%s and target=%s",
-		event.FinishedType, fmt.Sprintf(forwarderTargetFmt, p.client.Namespace, utils.GetClusterDomain()))
+		event.FinishedType, fmt.Sprintf(forwarderTargetFmt, p.client.Namespace, testutils.GetClusterDomain()))
 	trace, err := event.FindTrace(query)
 	if err != nil {
 		p.log.Warn(err)

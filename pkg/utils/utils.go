@@ -17,7 +17,6 @@ limitations under the License.
 package utils
 
 import (
-	"os"
 	"regexp"
 	"strings"
 
@@ -91,13 +90,4 @@ func GenerateFixedName(owner metav1.Object, prefix string) string {
 
 	// A dot must be followed by [a-z0-9] to be DNS1123 compliant. Make sure we are not joining a dot and a dash.
 	return strings.TrimSuffix(prefix, ".") + uid
-}
-
-// GetClusterDomain returns the cluster domain from the `CLUSTER_DOMAIN` env var.
-// If the env var is not set, it will return the "cluster.local" default.
-func GetClusterDomain() string {
-	if domain, ok := os.LookupEnv("CLUSTER_DOMAIN"); ok {
-		return domain
-	}
-	return "cluster.local"
 }
