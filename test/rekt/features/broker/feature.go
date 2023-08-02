@@ -30,6 +30,7 @@ import (
 
 	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	"knative.dev/eventing/pkg/utils"
 	"knative.dev/eventing/test/rekt/features"
 	"knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/eventing/test/rekt/resources/channel"
@@ -667,6 +668,8 @@ func brokerSubscriberUnreachable() *feature.Feature {
 	event.SetSource(eventSource)
 	event.SetData(cloudevents.ApplicationJSON, []byte(eventBody))
 
+	subscriberUri := fmt.Sprintf("http://fake.svc.%s", utils.GetClusterDomain())
+
 	//Install the broker
 	brokerName := feature.MakeRandomK8sName("broker")
 	f.Setup("install broker", broker.Install(brokerName, broker.WithEnvConfig()...))
@@ -679,7 +682,7 @@ func brokerSubscriberUnreachable() *feature.Feature {
 	f.Setup("install trigger", trigger.Install(
 		triggerName,
 		brokerName,
-		trigger.WithSubscriber(nil, "http://fake.svc.cluster.local"),
+		trigger.WithSubscriber(nil, subscriberUri),
 		trigger.WithDeadLetterSink(service.AsKReference(sink), ""),
 	))
 	f.Setup("trigger goes ready", trigger.IsReady(triggerName))
@@ -695,7 +698,7 @@ func brokerSubscriberUnreachable() *feature.Feature {
 			eventasssert.OnStore(sink).
 				Match(features.HasKnNamespaceHeader(environment.FromContext(ctx).Namespace())).
 				MatchEvent(
-					test.HasExtension("knativeerrordest", "http://fake.svc.cluster.local"),
+					test.HasExtension("knativeerrordest", subscriberUri),
 				).
 				AtLeast(1)(ctx, t)
 		},

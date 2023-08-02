@@ -36,6 +36,7 @@ import (
 
 	eventasssert "knative.dev/reconciler-test/pkg/eventshub/assert"
 
+	"knative.dev/eventing/pkg/utils"
 	"knative.dev/eventing/test/rekt/features"
 	"knative.dev/eventing/test/rekt/resources/channel"
 	"knative.dev/eventing/test/rekt/resources/channel_impl"
@@ -342,6 +343,8 @@ func channelSubscriberUnreachable(createSubscriberFn func(ref *duckv1.KReference
 	channelName := feature.MakeRandomK8sName("channel")
 	sub := feature.MakeRandomK8sName("subscription")
 
+	subscriberUri := fmt.Sprintf("http://fake.svc.%s", utils.GetClusterDomain())
+
 	ev := test.FullEvent()
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
@@ -350,7 +353,7 @@ func channelSubscriberUnreachable(createSubscriberFn func(ref *duckv1.KReference
 
 	f.Setup("install subscription", subscription.Install(sub,
 		subscription.WithChannel(channel_impl.AsRef(channelName)),
-		createSubscriberFn(nil, "http://fake.svc.cluster.local"),
+		createSubscriberFn(nil, subscriberUri),
 	))
 	f.Setup("channel is ready", channel_impl.IsReady(channelName))
 	f.Setup("channel is addressable", channel_impl.IsAddressable(channelName))
@@ -366,7 +369,7 @@ func channelSubscriberUnreachable(createSubscriberFn func(ref *duckv1.KReference
 
 	f.Assert("Receives dls extensions when subscriber is unreachable", eventasssert.OnStore(sink).
 		MatchEvent(
-			test.HasExtension("knativeerrordest", "http://fake.svc.cluster.local")).
+			test.HasExtension("knativeerrordest", subscriberUri)).
 		AtLeast(1),
 	)
 

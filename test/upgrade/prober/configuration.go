@@ -31,6 +31,7 @@ import (
 	pkgTest "knative.dev/pkg/test"
 	pkgupgrade "knative.dev/pkg/test/upgrade"
 
+	"knative.dev/eventing/pkg/utils"
 	"knative.dev/eventing/test/lib/resources"
 	"knative.dev/eventing/test/upgrade/prober/sut"
 	"knative.dev/eventing/test/upgrade/prober/wathola/forwarder"
@@ -53,7 +54,7 @@ const (
 
 	prefix = "eventing_upgrade_tests"
 
-	forwarderTargetFmt = "http://" + receiver.Name + ".%s.svc.cluster.local"
+	forwarderTargetFmt = "http://" + receiver.Name + ".%s.svc.%s"
 
 	defaultTraceExportLimit = 100
 )
@@ -192,7 +193,7 @@ func (p *prober) compileTemplate(templateName string, endpoint interface{}, trac
 		p.config,
 		endpoint,
 		tracingConfig,
-		fmt.Sprintf(forwarderTargetFmt, p.client.Namespace),
+		fmt.Sprintf(forwarderTargetFmt, p.client.Namespace, utils.GetClusterDomain()),
 	}
 	p.ensureNoError(tmpl.Execute(&buff, data))
 	return buff.String()
