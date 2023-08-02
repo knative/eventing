@@ -28,6 +28,7 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	"github.com/pkg/errors"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/network"
 	pkgTest "knative.dev/pkg/test"
 	pkgupgrade "knative.dev/pkg/test/upgrade"
 
@@ -35,7 +36,6 @@ import (
 	"knative.dev/eventing/test/upgrade/prober/sut"
 	"knative.dev/eventing/test/upgrade/prober/wathola/forwarder"
 	"knative.dev/eventing/test/upgrade/prober/wathola/receiver"
-	testutils "knative.dev/eventing/test/utils"
 )
 
 const (
@@ -193,7 +193,7 @@ func (p *prober) compileTemplate(templateName string, endpoint interface{}, trac
 		p.config,
 		endpoint,
 		tracingConfig,
-		fmt.Sprintf(forwarderTargetFmt, p.client.Namespace, testutils.GetClusterDomain()),
+		fmt.Sprintf(forwarderTargetFmt, p.client.Namespace, network.GetClusterDomainName()),
 	}
 	p.ensureNoError(tmpl.Execute(&buff, data))
 	return buff.String()

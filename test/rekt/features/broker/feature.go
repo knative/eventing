@@ -35,9 +35,9 @@ import (
 	"knative.dev/eventing/test/rekt/resources/channel"
 	"knative.dev/eventing/test/rekt/resources/subscription"
 	"knative.dev/eventing/test/rekt/resources/trigger"
-	testutils "knative.dev/eventing/test/utils"
 
 	v1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/network"
 	"knative.dev/pkg/ptr"
 
 	"knative.dev/reconciler-test/pkg/eventshub"
@@ -668,7 +668,7 @@ func brokerSubscriberUnreachable() *feature.Feature {
 	event.SetSource(eventSource)
 	event.SetData(cloudevents.ApplicationJSON, []byte(eventBody))
 
-	subscriberUri := fmt.Sprintf("http://fake.svc.%s", testutils.GetClusterDomain())
+	subscriberUri := fmt.Sprintf("http://fake.svc.%s", network.GetClusterDomainName())
 
 	//Install the broker
 	brokerName := feature.MakeRandomK8sName("broker")

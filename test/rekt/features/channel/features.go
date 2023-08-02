@@ -26,6 +26,7 @@ import (
 	"github.com/cloudevents/sdk-go/v2/test"
 	"github.com/google/uuid"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/network"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/feature"
@@ -42,7 +43,6 @@ import (
 	"knative.dev/eventing/test/rekt/resources/containersource"
 	"knative.dev/eventing/test/rekt/resources/delivery"
 	"knative.dev/eventing/test/rekt/resources/subscription"
-	testutils "knative.dev/eventing/test/utils"
 )
 
 func ChannelChain(length int, createSubscriberFn func(ref *duckv1.KReference, uri string) manifest.CfgFn) *feature.Feature {
@@ -343,7 +343,7 @@ func channelSubscriberUnreachable(createSubscriberFn func(ref *duckv1.KReference
 	channelName := feature.MakeRandomK8sName("channel")
 	sub := feature.MakeRandomK8sName("subscription")
 
-	subscriberUri := fmt.Sprintf("http://fake.svc.%s", testutils.GetClusterDomain())
+	subscriberUri := fmt.Sprintf("http://fake.svc.%s", network.GetClusterDomainName())
 
 	ev := test.FullEvent()
 
