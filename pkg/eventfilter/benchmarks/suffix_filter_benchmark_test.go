@@ -17,10 +17,11 @@ limitations under the License.
 package benchmarks
 
 import (
+	"testing"
+
 	cetest "github.com/cloudevents/sdk-go/v2/test"
 	"knative.dev/eventing/pkg/eventfilter"
 	"knative.dev/eventing/pkg/eventfilter/subscriptionsapi"
-	"testing"
 )
 
 // Test Suffix Filter
