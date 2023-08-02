@@ -58,8 +58,8 @@ func TestStartServers(t *testing.T) {
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
 			ctx, cancelFunc := context.WithCancel(context.TODO())
-			httpReceiver := kncloudevents.NewHTTPMessageReceiver(0, kncloudevents.WithDrainQuietPeriod(time.Millisecond))
-			httpsReceiver := kncloudevents.NewHTTPMessageReceiver(0, kncloudevents.WithDrainQuietPeriod(time.Millisecond))
+			httpReceiver := kncloudevents.NewHTTPEventReceiver(0, kncloudevents.WithDrainQuietPeriod(time.Millisecond))
+			httpsReceiver := kncloudevents.NewHTTPEventReceiver(0, kncloudevents.WithDrainQuietPeriod(time.Millisecond))
 			errChan := make(chan error)
 
 			cmw := newFeatureCMW(tc.transportEncryption)
@@ -106,7 +106,7 @@ func TestStartServers(t *testing.T) {
 
 func TestStartServersHttpError(t *testing.T) {
 	ctx := context.TODO()
-	receiver := kncloudevents.NewHTTPMessageReceiver(0, kncloudevents.WithDrainQuietPeriod(time.Millisecond))
+	receiver := kncloudevents.NewHTTPEventReceiver(0, kncloudevents.WithDrainQuietPeriod(time.Millisecond))
 	cmw := newFeatureCMW(feature.Disabled)
 
 	// httpReceiver set to nil

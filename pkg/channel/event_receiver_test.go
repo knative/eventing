@@ -29,6 +29,7 @@ import (
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"
 	"github.com/cloudevents/sdk-go/v2/client"
+	"github.com/cloudevents/sdk-go/v2/event"
 	"github.com/cloudevents/sdk-go/v2/protocol/http"
 	"github.com/cloudevents/sdk-go/v2/test"
 	"github.com/google/go-cmp/cmp"
@@ -45,16 +46,16 @@ import (
 	"knative.dev/pkg/tracing/propagation/tracecontextb3"
 )
 
-func TestMessageReceiver_ServeHTTP(t *testing.T) {
+func TestEventReceiver_ServeHTTP(t *testing.T) {
 	testCases := map[string]struct {
 		method            string
 		host              string
 		path              string
 		additionalHeaders nethttp.Header
 		expected          int
-		receiverFunc      UnbufferedMessageReceiverFunc
+		receiverFunc      EventReceiverFunc
 		responseValidator func(r httptest.ResponseRecorder) error
-		opts              []MessageReceiverOptions
+		opts              []EventReceiverOptions
 	}{
 		"host based channel reference with non '/' path": {
 			path:     "/something",
@@ -63,7 +64,7 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 		"path based channel reference with malformed path": {
 			path:     "/something",
 			expected: nethttp.StatusBadRequest,
-			opts:     []MessageReceiverOptions{ResolveMessageChannelFromPath(ParseChannelFromPath)},
+			opts:     []EventReceiverOptions{ResolveChannelFromPath(ParseChannelFromPath)},
 		},
 		"not a POST": {
 			method:   nethttp.MethodGet,
@@ -74,13 +75,13 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 			expected: nethttp.StatusBadRequest,
 		},
 		"unknown channel error": {
-			receiverFunc: func(_ context.Context, c ChannelReference, _ binding.Message, _ []binding.Transformer, _ nethttp.Header) error {
+			receiverFunc: func(_ context.Context, c ChannelReference, _ event.Event, _ nethttp.Header) error {
 				return &UnknownChannelError{Channel: c}
 			},
 			expected: nethttp.StatusNotFound,
 		},
 		"other receiver function error": {
-			receiverFunc: func(_ context.Context, _ ChannelReference, _ binding.Message, _ []binding.Transformer, _ nethttp.Header) error {
+			receiverFunc: func(_ context.Context, _ ChannelReference, _ event.Event, _ nethttp.Header) error {
 				return errors.New("test induced receiver function error")
 			},
 			expected: nethttp.StatusInternalServerError,
@@ -88,14 +89,14 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 		"path based channel reference": {
 			path: "/new-namespace/new-channel",
 			host: "test-name.test-namespace.svc." + network.GetClusterDomainName(),
-			receiverFunc: func(ctx context.Context, r ChannelReference, m binding.Message, transformers []binding.Transformer, additionalHeaders nethttp.Header) error {
+			receiverFunc: func(ctx context.Context, r ChannelReference, m event.Event, additionalHeaders nethttp.Header) error {
 				if r.Namespace != "new-namespace" || r.Name != "new-channel" {
 					return fmt.Errorf("bad channel reference %v", r)
 				}
 				return nil
 			},
 			expected: nethttp.StatusAccepted,
-			opts:     []MessageReceiverOptions{ResolveMessageChannelFromPath(ParseChannelFromPath)},
+			opts:     []EventReceiverOptions{ResolveChannelFromPath(ParseChannelFromPath)},
 		},
 		"headers and body pass through": {
 			// The header, body, and host values set here are verified in the receiverFunc. Altering
@@ -107,19 +108,14 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 				"knatIve-will-pass-through": {"true", "always"},
 			},
 			host: "test-name.test-namespace.svc." + network.GetClusterDomainName(),
-			receiverFunc: func(ctx context.Context, r ChannelReference, m binding.Message, transformers []binding.Transformer, additionalHeaders nethttp.Header) error {
+			receiverFunc: func(ctx context.Context, r ChannelReference, e event.Event, additionalHeaders nethttp.Header) error {
 				if r.Namespace != "test-namespace" || r.Name != "test-name" {
 					return fmt.Errorf("test receiver func -- bad reference: %v", r)
 				}
 
-				e, err := binding.ToEvent(ctx, m, transformers...)
-				if err != nil {
-					return err
-				}
-
 				// Check payload
 				var payload string
-				err = e.DataAs(&payload)
+				err := e.DataAs(&payload)
 				if err != nil {
 					return err
 				}
@@ -172,7 +168,7 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 			}
 
 			f := tc.receiverFunc
-			r, err := NewMessageReceiver(f, zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())), reporter, tc.opts...)
+			r, err := NewEventReceiver(f, zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())), reporter, tc.opts...)
 			if err != nil {
 				t.Fatalf("Error creating new event receiver. Error:%s", err)
 			}
@@ -215,12 +211,12 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 	}
 }
 
-func TestMessageReceiver_ServerStart_trace_propagation(t *testing.T) {
+func TestEventReceiver_ServerStart_trace_propagation(t *testing.T) {
 	want := test.ConvertEventExtensionsToString(t, test.FullEvent())
 
 	done := make(chan struct{}, 1)
 
-	receiverFunc := func(ctx context.Context, r ChannelReference, m binding.Message, transformers []binding.Transformer, additionalHeaders nethttp.Header) error {
+	receiverFunc := func(ctx context.Context, r ChannelReference, e event.Event, additionalHeaders nethttp.Header) error {
 		if r.Namespace != "test-namespace" || r.Name != "test-name" {
 			return fmt.Errorf("test receiver func -- bad reference: %v", r)
 		}
@@ -241,7 +237,7 @@ func TestMessageReceiver_ServerStart_trace_propagation(t *testing.T) {
 	reporter := NewStatsReporter("testcontainer", "testpod")
 	logger, _ := zap.NewDevelopment()
 
-	r, err := NewMessageReceiver(receiverFunc, logger, reporter)
+	r, err := NewEventReceiver(receiverFunc, logger, reporter)
 	if err != nil {
 		t.Fatalf("Error creating new event receiver. Error:%s", err)
 	}
@@ -279,14 +275,14 @@ func TestMessageReceiver_ServerStart_trace_propagation(t *testing.T) {
 	<-done
 }
 
-func TestMessageReceiver_WrongRequest(t *testing.T) {
+func TestEventReceiver_WrongRequest(t *testing.T) {
 	reporter := NewStatsReporter("testcontainer", "testpod")
 	host := "http://test-channel.test-namespace.svc." + network.GetClusterDomainName() + "/"
 
-	f := func(_ context.Context, _ ChannelReference, _ binding.Message, _ []binding.Transformer, _ nethttp.Header) error {
+	f := func(_ context.Context, _ ChannelReference, _ event.Event, _ nethttp.Header) error {
 		return errors.New("test induced receiver function error")
 	}
-	r, err := NewMessageReceiver(f, zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())), reporter)
+	r, err := NewEventReceiver(f, zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())), reporter)
 	if err != nil {
 		t.Fatalf("Error creating new event receiver. Error:%s", err)
 	}
@@ -302,18 +298,18 @@ func TestMessageReceiver_WrongRequest(t *testing.T) {
 	}
 }
 
-func TestMessageReceiver_UnknownHost(t *testing.T) {
+func TestEventReceiver_UnknownHost(t *testing.T) {
 	host := "http://test-channel.test-namespace.svc." + network.GetClusterDomainName() + "/"
 	reporter := NewStatsReporter("testcontainer", "testpod")
 
-	f := func(_ context.Context, _ ChannelReference, _ binding.Message, _ []binding.Transformer, _ nethttp.Header) error {
+	f := func(_ context.Context, _ ChannelReference, _ event.Event, _ nethttp.Header) error {
 		return errors.New("test induced receiver function error")
 	}
-	r, err := NewMessageReceiver(
+	r, err := NewEventReceiver(
 		f,
 		zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())),
 		reporter,
-		ResolveMessageChannelFromHostHeader(func(s string) (reference ChannelReference, err error) {
+		ResolveChannelFromHostHeader(func(s string) (reference ChannelReference, err error) {
 			return ChannelReference{}, UnknownHostError(s)
 		}))
 	if err != nil {

@@ -109,7 +109,7 @@ func NewController(
 
 	reporter := channel.NewStatsReporter(env.ContainerName, kmeta.ChildName(env.PodName, uuid.New().String()))
 
-	sh := multichannelfanout.NewMessageHandler(ctx, logger.Desugar())
+	sh := multichannelfanout.NewEventHandler(ctx, logger.Desugar())
 
 	inmemorychannelInformer := inmemorychannelinformer.Get(ctx)
 
@@ -119,11 +119,11 @@ func NewController(
 	}
 
 	r := &Reconciler{
-		multiChannelMessageHandler: sh,
-		reporter:                   reporter,
-		messagingClientSet:         eventingclient.Get(ctx).MessagingV1(),
-		eventingClient:             eventingclient.Get(ctx).EventingV1beta2(),
-		eventTypeLister:            eventtypeinformer.Get(ctx).Lister(),
+		multiChannelEventHandler: sh,
+		reporter:                 reporter,
+		messagingClientSet:       eventingclient.Get(ctx).MessagingV1(),
+		eventingClient:           eventingclient.Get(ctx).EventingV1beta2(),
+		eventTypeLister:          eventtypeinformer.Get(ctx).Lister(),
 	}
 
 	impl := inmemorychannelreconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
@@ -147,18 +147,18 @@ func NewController(
 
 	r.featureStore = featureStore
 
-	httpArgs := &inmemorychannel.InMemoryMessageDispatcherArgs{
+	httpArgs := &inmemorychannel.InMemoryEventDispatcherArgs{
 		Port:         httpPort,
 		ReadTimeout:  readTimeout,
 		WriteTimeout: writeTimeout,
 		Handler:      sh,
 		Logger:       logger.Desugar(),
 
-		HTTPMessageReceiverOptions: []kncloudevents.HTTPMessageReceiverOption{
+		HTTPEventReceiverOptions: []kncloudevents.HTTPEventReceiverOption{
 			kncloudevents.WithChecker(readinessCheckerHTTPHandler(readinessChecker)),
 		},
 	}
-	httpDispatcher := inmemorychannel.NewMessageDispatcher(httpArgs)
+	httpDispatcher := inmemorychannel.NewEventDispatcher(httpArgs)
 	httpReceiver := httpDispatcher.GetReceiver()
 
 	secret := types.NamespacedName{
@@ -171,16 +171,16 @@ func NewController(
 	if err != nil {
 		logger.Panicf("unable to get tls config: %s", err)
 	}
-	httpsArgs := &inmemorychannel.InMemoryMessageDispatcherArgs{
+	httpsArgs := &inmemorychannel.InMemoryEventDispatcherArgs{
 		Port:         httpsPort,
 		ReadTimeout:  readTimeout,
 		WriteTimeout: writeTimeout,
 		Handler:      sh,
 		Logger:       logger.Desugar(),
 
-		HTTPMessageReceiverOptions: []kncloudevents.HTTPMessageReceiverOption{kncloudevents.WithTLSConfig(tlsConfig)},
+		HTTPEventReceiverOptions: []kncloudevents.HTTPEventReceiverOption{kncloudevents.WithTLSConfig(tlsConfig)},
 	}
-	httpsDispatcher := inmemorychannel.NewMessageDispatcher(httpsArgs)
+	httpsDispatcher := inmemorychannel.NewEventDispatcher(httpsArgs)
 	httpsReceiver := httpsDispatcher.GetReceiver()
 
 	s, err := eventingtls.NewServerManager(ctx, &httpReceiver, &httpsReceiver, httpDispatcher.GetHandler(ctx), cmw)

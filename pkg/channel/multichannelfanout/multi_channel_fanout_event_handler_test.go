@@ -43,7 +43,7 @@ var (
 	}
 )
 
-func TestNewMessageHandlerWithConfig(t *testing.T) {
+func TestNewEventHandlerWithConfig(t *testing.T) {
 	testCases := []struct {
 		name      string
 		config    Config
@@ -68,10 +68,9 @@ func TestNewMessageHandlerWithConfig(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			logger := zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller()))
-			_, err := NewMessageHandlerWithConfig(
+			_, err := NewEventHandlerWithConfig(
 				context.TODO(),
 				logger,
-				channel.NewMessageDispatcher(logger),
 				tc.config,
 				reporter,
 			)
@@ -89,12 +88,12 @@ func TestNewMessageHandlerWithConfig(t *testing.T) {
 	}
 }
 
-func TestNewMessageHandler(t *testing.T) {
+func TestNewEventHandler(t *testing.T) {
 	handlerName := "handler.example.com"
 	reporter := channel.NewStatsReporter("testcontainer", "testpod")
 	logger := zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller()))
 
-	handler := NewMessageHandler(context.TODO(), logger)
+	handler := NewEventHandler(context.TODO(), logger)
 	h := handler.GetChannelHandler(handlerName)
 	if len(handler.handlers) != 0 {
 		t.Errorf("non-empty handler map on creation")
@@ -102,7 +101,7 @@ func TestNewMessageHandler(t *testing.T) {
 	if h != nil {
 		t.Errorf("Found handler for %q but not expected", handlerName)
 	}
-	f, err := fanout.NewFanoutMessageHandler(logger, channel.NewMessageDispatcher(logger), fanout.Config{}, reporter, nil, nil, nil)
+	f, err := fanout.NewFanoutEventHandler(logger, fanout.Config{}, reporter, nil, nil, nil)
 	if err != nil {
 		t.Error("Failed to create FanoutMessagHandler: ", err)
 	}
@@ -119,7 +118,7 @@ func TestNewMessageHandler(t *testing.T) {
 
 }
 
-func TestServeHTTPMessageHandler(t *testing.T) {
+func TestServeHTTPEventHandler(t *testing.T) {
 	testCases := map[string]struct {
 		name               string
 		config             Config
@@ -127,7 +126,7 @@ func TestServeHTTPMessageHandler(t *testing.T) {
 		respStatusCode     int
 		hostKey            string
 		pathKey            string
-		recvOptions        []channel.MessageReceiverOptions
+		recvOptions        []channel.EventReceiverOptions
 		expectedStatusCode int
 	}{
 		"non-existent channel host based": {
@@ -299,7 +298,7 @@ func TestServeHTTPMessageHandler(t *testing.T) {
 			hostKey:            "host.should.be.ignored",
 			pathKey:            "default/first-channel",
 			expectedStatusCode: http.StatusAccepted,
-			recvOptions:        []channel.MessageReceiverOptions{channel.ResolveMessageChannelFromPath(channel.ParseChannelFromPath)},
+			recvOptions:        []channel.EventReceiverOptions{channel.ResolveChannelFromPath(channel.ParseChannelFromPath)},
 		},
 	}
 	for n, tc := range testCases {
@@ -312,7 +311,7 @@ func TestServeHTTPMessageHandler(t *testing.T) {
 
 			logger := zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller()))
 			reporter := channel.NewStatsReporter("testcontainer", "testpod")
-			h, err := NewMessageHandlerWithConfig(context.TODO(), logger, channel.NewMessageDispatcher(logger), tc.config, reporter, tc.recvOptions...)
+			h, err := NewEventHandlerWithConfig(context.TODO(), logger, tc.config, reporter, tc.recvOptions...)
 			if err != nil {
 				t.Fatalf("Unexpected NewHandler error: '%v'", err)
 			}
