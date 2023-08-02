@@ -299,6 +299,8 @@ func ExampleWithNewFilters() {
 	trigger.WithNewFilters([]eventingv1.SubscriptionsAPIFilter{
 		{
 			CESQL: "source IN ('order.created', 'order.updated', 'order.canceled')",
+		},
+		{
 			Not: &eventingv1.SubscriptionsAPIFilter{
 				CESQL: "type = 'tp'",
 			},
@@ -321,6 +323,6 @@ func ExampleWithNewFilters() {
 	//   broker: baz
 	//   filters:
 	//     - cesql: source IN ('order.created', 'order.updated', 'order.canceled')
-	//     not:
-	//       cesql: type = 'tp'
+	//     - not:
+	//         cesql: type = 'tp'
 }

@@ -204,7 +204,7 @@ func WithNewFilters(filters []eventingv1.SubscriptionsAPIFilter) manifest.CfgFn 
 	lines := strings.Split(filtersYaml, "\n")
 	out := make([]string, 0, len(lines))
 	for i := range lines {
-		out = append(out, "  "+lines[i])
+		out = append(out, "    "+lines[i])
 	}
 
 	return func(m map[string]interface{}) {

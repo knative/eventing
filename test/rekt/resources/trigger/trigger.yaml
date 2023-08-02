@@ -36,7 +36,7 @@ spec:
   {{ end }}
   {{ if .filters }}
   filters:
-  {{ .filters }}
+{{ .filters }}
   {{ end }}
   {{ if .subscriber }}
   subscriber:
