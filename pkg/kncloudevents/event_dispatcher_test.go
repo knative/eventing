@@ -1,11 +1,11 @@
 /*
-Copyright 2020 The Knative Authors
+Copyright 2023 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package channel
+package kncloudevents_test
 
 import (
 	"bytes"
@@ -37,8 +37,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zaptest"
 	"k8s.io/apimachinery/pkg/util/sets"
 	rectesting "knative.dev/pkg/reconciler/testing"
 
@@ -78,7 +76,7 @@ const (
 	testCeType   = "testtype"
 )
 
-func TestDispatchMessage(t *testing.T) {
+func TestSendEvent(t *testing.T) {
 	testCases := map[string]struct {
 		sendToDestination         bool
 		sendToReply               bool
@@ -196,56 +194,8 @@ func TestDispatchMessage(t *testing.T) {
 			eventExtensions: map[string]string{
 				"abc": `"ce-abc-value"`,
 			},
-			expectedReplyRequest: &requestValidation{
-				Headers: map[string][]string{
-					"x-request-id":   {"id123"},
-					"knative-1":      {"knative-1-value"},
-					"knative-2":      {"knative-2-value"},
-					"traceparent":    {"ignored-value-header"},
-					"ce-abc":         {`"ce-abc-value"`},
-					"ce-id":          {"ignored-value-header"},
-					"ce-time":        {"ignored-value-header"},
-					"ce-source":      {testCeSource},
-					"ce-type":        {testCeType},
-					"ce-specversion": {cloudevents.VersionV1},
-				},
-				Body: `"reply"`,
-			},
 			lastReceiver: "reply",
-		},
-		"reply - only -- error": {
-			sendToReply: true,
-			header: map[string][]string{
-				// do-not-forward should not get forwarded.
-				"do-not-forward": {"header"},
-				"x-request-id":   {"id123"},
-				"knative-1":      {"knative-1-value"},
-				"knative-2":      {"knative-2-value"},
-			},
-			body: "reply",
-			eventExtensions: map[string]string{
-				"abc": `"ce-abc-value"`,
-			},
-			expectedReplyRequest: &requestValidation{
-				Headers: map[string][]string{
-					"x-request-id":   {"id123"},
-					"knative-1":      {"knative-1-value"},
-					"knative-2":      {"knative-2-value"},
-					"traceparent":    {"ignored-value-header"},
-					"ce-abc":         {`"ce-abc-value"`},
-					"ce-id":          {"ignored-value-header"},
-					"ce-time":        {"ignored-value-header"},
-					"ce-source":      {testCeSource},
-					"ce-type":        {testCeType},
-					"ce-specversion": {cloudevents.VersionV1},
-				},
-				Body: `"reply"`,
-			},
-			fakeResponse: &http.Response{
-				StatusCode: http.StatusNotFound,
-				Body:       io.NopCloser(bytes.NewBufferString("destination-response")),
-			},
-			expectedErr: true,
+			expectedErr:  true,
 		},
 		"destination and reply - dest returns bad status code": {
 			sendToDestination: true,
@@ -513,6 +463,7 @@ func TestDispatchMessage(t *testing.T) {
 			lastReceiver: "deadLetter",
 		},
 		"invalid reply and delivery option - deadletter reply without event": {
+			sendToDestination: true,
 			sendToReply:       true,
 			hasDeadLetterSink: true,
 			header: map[string][]string{
@@ -526,11 +477,12 @@ func TestDispatchMessage(t *testing.T) {
 			eventExtensions: map[string]string{
 				"abc": `"ce-abc-value"`,
 			},
-			expectedReplyRequest: &requestValidation{
+			expectedDestRequest: &requestValidation{
 				Headers: map[string][]string{
 					"x-request-id":   {"id123"},
 					"knative-1":      {"knative-1-value"},
 					"knative-2":      {"knative-2-value"},
+					"prefer":         {"reply"},
 					"traceparent":    {"ignored-value-header"},
 					"ce-abc":         {`"ce-abc-value"`},
 					"ce-id":          {"ignored-value-header"},
@@ -541,16 +493,48 @@ func TestDispatchMessage(t *testing.T) {
 				},
 				Body: `"destination"`,
 			},
+			fakeResponse: &http.Response{
+				StatusCode: http.StatusAccepted,
+				Header: map[string][]string{
+					"do-not-passthrough": {"no"},
+					"x-request-id":       {"altered-id"},
+					"knative-1":          {"new-knative-1-value"},
+					"ce-abc":             {`"new-ce-abc-value"`},
+					"ce-id":              {"ignored-value-header"},
+					"ce-time":            {"2002-10-02T15:00:00Z"},
+					"ce-source":          {testCeSource},
+					"ce-type":            {testCeType},
+					"ce-specversion":     {cloudevents.VersionV1},
+				},
+				Body: io.NopCloser(bytes.NewBufferString("destination-response")),
+			},
+			expectedReplyRequest: &requestValidation{
+				Headers: map[string][]string{
+					"x-request-id":   {"altered-id"},
+					"knative-1":      {"new-knative-1-value"},
+					"traceparent":    {"ignored-value-header"},
+					"ce-abc":         {`"new-ce-abc-value"`},
+					"ce-id":          {"ignored-value-header"},
+					"ce-time":        {"2002-10-02T15:00:00Z"},
+					"ce-source":      {testCeSource},
+					"ce-type":        {testCeType},
+					"ce-specversion": {cloudevents.VersionV1},
+				},
+				Body: "destination-response",
+			},
+			fakeReplyResponse: &http.Response{
+				StatusCode: http.StatusBadRequest,
+				Body:       io.NopCloser(bytes.NewBufferString("reply-response-body")),
+			},
 			expectedDeadLetterRequest: &requestValidation{
 				Headers: map[string][]string{
-					"x-request-id":        {"id123"},
-					"knative-1":           {"knative-1-value"},
-					"knative-2":           {"knative-2-value"},
+					"x-request-id":        {"altered-id"},
+					"knative-1":           {"new-knative-1-value"},
 					"traceparent":         {"ignored-value-header"},
 					"ce-abc":              {`"ce-abc-value"`},
 					"ce-id":               {"ignored-value-header"},
 					"ce-knativeerrorcode": {strconv.Itoa(http.StatusBadRequest)},
-					"ce-knativeerrordata": {base64.StdEncoding.EncodeToString([]byte("destination-response"))},
+					"ce-knativeerrordata": {base64.StdEncoding.EncodeToString([]byte("reply-response-body"))},
 					"ce-time":             {"2002-10-02T15:00:00Z"},
 					"ce-source":           {testCeSource},
 					"ce-type":             {testCeType},
@@ -558,13 +542,9 @@ func TestDispatchMessage(t *testing.T) {
 				},
 				Body: `"destination"`,
 			},
-			fakeReplyResponse: &http.Response{
-				StatusCode: http.StatusBadRequest,
-				Body:       io.NopCloser(bytes.NewBufferString("destination-response")),
-			},
 			fakeDeadLetterResponse: &http.Response{
 				StatusCode: http.StatusAccepted,
-				Body:       io.NopCloser(bytes.NewBufferString("deadlettersink-response")),
+				Body:       io.NopCloser(bytes.NewBufferString("deadlettersink-response-body")),
 			},
 			lastReceiver: "deadLetter",
 		},
@@ -846,8 +826,6 @@ func TestDispatchMessage(t *testing.T) {
 
 			ctx := context.Background()
 
-			md := NewMessageDispatcher(zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())))
-
 			destination := duckv1.Addressable{
 				URL: getOnlyDomainURL(t, tc.sendToDestination, destServer.URL),
 			}
@@ -872,7 +850,10 @@ func TestDispatchMessage(t *testing.T) {
 			if tc.header != nil {
 				headers = utils.PassThroughHeaders(tc.header)
 			}
-			info, err := md.DispatchMessage(ctx, message, headers, destination, reply, deadLetterSink)
+			info, err := kncloudevents.SendMessage(ctx, message, destination,
+				kncloudevents.WithReply(reply),
+				kncloudevents.WithDeadLetterSink(deadLetterSink),
+				kncloudevents.WithHeader(headers))
 
 			if tc.lastReceiver != "" {
 				switch tc.lastReceiver {
@@ -962,11 +943,9 @@ func TestDispatchMessageToTLSEndpoint(t *testing.T) {
 		}
 	}()
 
-	md := NewMessageDispatcher(zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())))
-
 	// send event
 	message := binding.ToMessage(&eventToSend)
-	info, err := md.DispatchMessage(ctx, message, nil, destination, nil, nil)
+	info, err := kncloudevents.SendMessage(ctx, message, destination)
 	require.Nil(t, err)
 	require.Equal(t, 200, info.ResponseCode)
 
@@ -1027,11 +1006,9 @@ func TestDispatchMessageToTLSEndpointWithReply(t *testing.T) {
 		}
 	}()
 
-	md := NewMessageDispatcher(zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())))
-
 	// send event
 	message := binding.ToMessage(&eventToSend)
-	info, err := md.DispatchMessage(ctx, message, nil, destination, &reply, nil)
+	info, err := kncloudevents.SendMessage(ctx, message, destination, kncloudevents.WithReply(&reply))
 	require.Nil(t, err)
 	require.Equal(t, 200, info.ResponseCode)
 
@@ -1087,11 +1064,9 @@ func TestDispatchMessageToTLSEndpointWithDeadLetterSink(t *testing.T) {
 		}
 	}()
 
-	md := NewMessageDispatcher(zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())))
-
 	// send event
 	message := binding.ToMessage(&eventToSend)
-	info, err := md.DispatchMessage(ctx, message, nil, destination, nil, &dls)
+	info, err := kncloudevents.SendMessage(ctx, message, destination, kncloudevents.WithDeadLetterSink(&dls))
 	require.Nil(t, err)
 	require.Equal(t, 200, info.ResponseCode)
 

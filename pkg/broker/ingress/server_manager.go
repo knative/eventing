@@ -36,8 +36,8 @@ func NewServerManager(ctx context.Context, logger *zap.Logger, cmw configmap.Wat
 		logger.Info("failed to get TLS server config", zap.Error(err))
 	}
 
-	httpReceiver := kncloudevents.NewHTTPMessageReceiver(httpPort)
-	httpsReceiver := kncloudevents.NewHTTPMessageReceiver(httpsPort, kncloudevents.WithTLSConfig(tlsConfig))
+	httpReceiver := kncloudevents.NewHTTPEventReceiver(httpPort)
+	httpsReceiver := kncloudevents.NewHTTPEventReceiver(httpsPort, kncloudevents.WithTLSConfig(tlsConfig))
 
 	return eventingtls.NewServerManager(ctx, httpReceiver, httpsReceiver, handler, cmw)
 }

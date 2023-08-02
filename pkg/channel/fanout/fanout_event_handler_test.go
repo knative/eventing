@@ -31,11 +31,12 @@ import (
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/kncloudevents"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
-	pkgduckv1 "knative.dev/pkg/apis/duck/v1"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"
+	"github.com/cloudevents/sdk-go/v2/event"
 	bindingshttp "github.com/cloudevents/sdk-go/v2/protocol/http"
+	"github.com/cloudevents/sdk-go/v2/test"
 	"go.opencensus.io/trace"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
@@ -67,8 +68,8 @@ func TestSubscriberSpecToFanoutConfig(t *testing.T) {
 		ReplyURI:          apis.HTTP("reply.example.com"),
 		ReplyCACerts:      &replyCACerts,
 		Delivery: &eventingduckv1.DeliverySpec{
-			DeadLetterSink: &pkgduckv1.Destination{
-				Ref: &pkgduckv1.KReference{
+			DeadLetterSink: &duckv1.Destination{
+				Ref: &duckv1.KReference{
 					Kind:       "mykind",
 					Namespace:  "mynamespace",
 					Name:       "myname",
@@ -111,7 +112,7 @@ func TestSubscriberSpecToFanoutConfig(t *testing.T) {
 }
 
 func TestGetSetSubscriptions(t *testing.T) {
-	h := &FanoutMessageHandler{subscriptions: make([]Subscription, 0)}
+	h := &FanoutEventHandler{subscriptions: make([]Subscription, 0)}
 	subs := h.GetSubscriptions(context.TODO())
 	if len(subs) != 0 {
 		t.Error("Wanted 0 subs, got: ", len(subs))
@@ -147,9 +148,9 @@ func TestGetSetSubscriptions(t *testing.T) {
 
 }
 
-func TestFanoutMessageHandler_ServeHTTP(t *testing.T) {
+func TestFanoutEventHandler_ServeHTTP(t *testing.T) {
 	testCases := map[string]struct {
-		receiverFunc        channel.UnbufferedMessageReceiverFunc
+		receiverFunc        channel.EventReceiverFunc
 		timeout             time.Duration
 		subs                []Subscription
 		subscriber          func(http.ResponseWriter, *http.Request)
@@ -160,14 +161,14 @@ func TestFanoutMessageHandler_ServeHTTP(t *testing.T) {
 		asyncExpectedStatus int
 	}{
 		"rejected by receiver": {
-			receiverFunc: func(context.Context, channel.ChannelReference, binding.Message, []binding.Transformer, http.Header) error {
+			receiverFunc: func(context.Context, channel.ChannelReference, event.Event, http.Header) error {
 				return errors.New("rejected by test-receiver")
 			},
 			expectedStatus:      http.StatusInternalServerError,
 			asyncExpectedStatus: http.StatusInternalServerError,
 		},
 		"receiver has span": {
-			receiverFunc: func(ctx context.Context, _ channel.ChannelReference, _ binding.Message, _ []binding.Transformer, _ http.Header) error {
+			receiverFunc: func(ctx context.Context, _ channel.ChannelReference, _ event.Event, _ http.Header) error {
 				if span := trace.FromContext(ctx); span == nil {
 					return errors.New("missing span")
 				}
@@ -196,19 +197,21 @@ func TestFanoutMessageHandler_ServeHTTP(t *testing.T) {
 			expectedStatus:      http.StatusAccepted,
 			asyncExpectedStatus: http.StatusAccepted,
 		},
-		"empty sub succeeds": {
-			subs: []Subscription{
-				{},
-			},
-			expectedStatus:      http.StatusAccepted,
-			asyncExpectedStatus: http.StatusAccepted,
-		},
 		"reply fails": {
 			subs: []Subscription{
 				{
-					Reply: &replaceReplier,
+					Subscriber: replaceSubscriber,
+					Reply:      &replaceReplier,
 				},
 			},
+			subscriber: func(writer http.ResponseWriter, req *http.Request) {
+				// response with some event for reply
+				event := test.FullEvent()
+				message := binding.ToMessage(&event)
+				bindingshttp.WriteResponseWriter(context.TODO(), message, http.StatusAccepted, writer)
+				message.Finish(nil)
+			},
+			subscriberReqs: 1,
 			replier: func(writer http.ResponseWriter, _ *http.Request) {
 				writer.WriteHeader(http.StatusNotFound)
 			},
@@ -306,15 +309,15 @@ func TestFanoutMessageHandler_ServeHTTP(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run("sync - "+n, func(t *testing.T) {
-			testFanoutMessageHandler(t, false, tc.receiverFunc, tc.timeout, tc.subs, tc.subscriber, tc.subscriberReqs, tc.replier, tc.replierReqs, tc.expectedStatus)
+			testFanoutEventHandler(t, false, tc.receiverFunc, tc.timeout, tc.subs, tc.subscriber, tc.subscriberReqs, tc.replier, tc.replierReqs, tc.expectedStatus)
 		})
 		t.Run("async - "+n, func(t *testing.T) {
-			testFanoutMessageHandler(t, true, tc.receiverFunc, tc.timeout, tc.subs, tc.subscriber, tc.subscriberReqs, tc.replier, tc.replierReqs, tc.asyncExpectedStatus)
+			testFanoutEventHandler(t, true, tc.receiverFunc, tc.timeout, tc.subs, tc.subscriber, tc.subscriberReqs, tc.replier, tc.replierReqs, tc.asyncExpectedStatus)
 		})
 	}
 }
 
-func testFanoutMessageHandler(t *testing.T, async bool, receiverFunc channel.UnbufferedMessageReceiverFunc, timeout time.Duration, inSubs []Subscription, subscriberHandler func(http.ResponseWriter, *http.Request), subscriberReqs int, replierHandler func(http.ResponseWriter, *http.Request), replierReqs int, expectedStatus int) {
+func testFanoutEventHandler(t *testing.T, async bool, receiverFunc channel.EventReceiverFunc, timeout time.Duration, inSubs []Subscription, subscriberHandler func(http.ResponseWriter, *http.Request), subscriberReqs int, replierHandler func(http.ResponseWriter, *http.Request), replierReqs int, expectedStatus int) {
 	var subscriberServerWg *sync.WaitGroup
 	reporter := channel.NewStatsReporter("testcontainer", "testpod")
 	if subscriberReqs != 0 {
@@ -360,14 +363,13 @@ func testFanoutMessageHandler(t *testing.T, async bool, receiverFunc channel.Unb
 	}
 
 	calledChan := make(chan bool, 1)
-	recvOptionFunc := func(*channel.MessageReceiver) error {
+	recvOptionFunc := func(*channel.EventReceiver) error {
 		calledChan <- true
 		return nil
 	}
 
-	h, err := NewFanoutMessageHandler(
+	h, err := NewFanoutEventHandler(
 		logger,
-		channel.NewMessageDispatcher(logger),
 		Config{
 			Subscriptions: subs,
 			AsyncHandler:  async,
@@ -384,7 +386,7 @@ func testFanoutMessageHandler(t *testing.T, async bool, receiverFunc channel.Unb
 	}
 
 	if receiverFunc != nil {
-		receiver, err := channel.NewMessageReceiver(receiverFunc, logger, reporter)
+		receiver, err := channel.NewEventReceiver(receiverFunc, logger, reporter)
 		if err != nil {
 			t.Fatal("NewEventReceiver failed =", err)
 		}
@@ -411,7 +413,7 @@ func testFanoutMessageHandler(t *testing.T, async bool, receiverFunc channel.Unb
 
 	h.ServeHTTP(&resp, req)
 	if resp.Code != expectedStatus {
-		t.Errorf("Unexpected status code. Expected %v, Actual %v", expectedStatus, resp.Code)
+		t.Fatalf("Unexpected status code. Expected %v, Actual %v", expectedStatus, resp.Code)
 	}
 
 	if subscriberServerWg != nil {

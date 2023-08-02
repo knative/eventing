@@ -48,11 +48,11 @@ import (
 	_ "knative.dev/pkg/system/testing"
 )
 
-func TestNewMessageDispatcher(t *testing.T) {
+func TestNewEventDispatcher(t *testing.T) {
 	logger := logtesting.TestLogger(t).Desugar()
-	sh := multichannelfanout.NewMessageHandler(context.TODO(), logger)
+	sh := multichannelfanout.NewEventHandler(context.TODO(), logger)
 
-	args := &InMemoryMessageDispatcherArgs{
+	args := &InMemoryEventDispatcherArgs{
 		Port:         8080,
 		ReadTimeout:  1 * time.Minute,
 		WriteTimeout: 1 * time.Minute,
@@ -60,7 +60,7 @@ func TestNewMessageDispatcher(t *testing.T) {
 		Logger:       logger,
 	}
 
-	d := NewMessageDispatcher(args)
+	d := NewEventDispatcher(args)
 
 	if d == nil {
 		t.Fatalf("Failed to create with NewDispatcher")
@@ -70,14 +70,14 @@ func TestNewMessageDispatcher(t *testing.T) {
 // This test emulates a real dispatcher usage
 func TestDispatcher_close(t *testing.T) {
 	logger := logtesting.TestLogger(t).Desugar()
-	sh := multichannelfanout.NewMessageHandler(context.TODO(), logger)
+	sh := multichannelfanout.NewEventHandler(context.TODO(), logger)
 
 	port, err := freePort()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	dispatcherArgs := &InMemoryMessageDispatcherArgs{
+	dispatcherArgs := &InMemoryEventDispatcherArgs{
 		Port:         port,
 		ReadTimeout:  1 * time.Minute,
 		WriteTimeout: 1 * time.Minute,
@@ -85,7 +85,7 @@ func TestDispatcher_close(t *testing.T) {
 		Logger:       logger,
 	}
 
-	dispatcher := NewMessageDispatcher(dispatcherArgs)
+	dispatcher := NewEventDispatcher(dispatcherArgs)
 	kncloudevents.WithDrainQuietPeriod(time.Nanosecond)(dispatcher.httpBindingsReceiver)
 
 	serverCtx, cancel := context.WithCancel(context.Background())
@@ -230,14 +230,14 @@ func TestDispatcher_dispatch(t *testing.T) {
 		},
 	}
 
-	sh, err := multichannelfanout.NewMessageHandlerWithConfig(context.TODO(), logger, channel.NewMessageDispatcher(logger), config, reporter)
+	sh, err := multichannelfanout.NewEventHandlerWithConfig(context.TODO(), logger, config, reporter)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	logger.Info("Starting dispatcher", zap.Int("port", port))
 
-	dispatcherArgs := &InMemoryMessageDispatcherArgs{
+	dispatcherArgs := &InMemoryEventDispatcherArgs{
 		Port:         port,
 		ReadTimeout:  1 * time.Minute,
 		WriteTimeout: 1 * time.Minute,
@@ -245,7 +245,7 @@ func TestDispatcher_dispatch(t *testing.T) {
 		Logger:       logger,
 	}
 
-	dispatcher := NewMessageDispatcher(dispatcherArgs)
+	dispatcher := NewEventDispatcher(dispatcherArgs)
 
 	serverCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -259,21 +259,13 @@ func TestDispatcher_dispatch(t *testing.T) {
 	dispatcher.WaitReady()
 
 	// Ok now everything should be ready to send the event
-	request, err := kncloudevents.NewCloudEventRequest(context.TODO(), *mustParseUrlToAddressable(t, channelAProxy.URL))
+	dispatchInfo, err := kncloudevents.SendEvent(context.TODO(), test.FullEvent(), *mustParseUrlToAddressable(t, channelAProxy.URL))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	event := test.FullEvent()
-	_ = protocolhttp.WriteRequest(context.Background(), binding.ToMessage(&event), request.Request)
-
-	res, err := request.Send()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if res.StatusCode != http.StatusAccepted {
-		t.Fatal("Expected 202, Have", res.StatusCode)
+	if dispatchInfo.ResponseCode != http.StatusAccepted {
+		t.Fatal("Expected 202, Got: ", dispatchInfo.ResponseCode)
 	}
 
 	transformationsFailureWg.Wait()

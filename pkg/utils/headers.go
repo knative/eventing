@@ -28,8 +28,8 @@ import (
 var (
 	// These MUST be lowercase strings, as they will be compared against lowercase strings.
 	forwardHeaders = sets.NewString(
-		// tracing
-		"x-request-id",
+		"x-request-id", // tracing
+		"retry-after",
 	)
 	// These MUST be lowercase strings, as they will be compared against lowercase strings.
 	// Removing CloudEvents ce- prefixes on purpose as they should be set in the CloudEvent itself as extensions.
