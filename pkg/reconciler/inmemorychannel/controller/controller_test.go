@@ -48,12 +48,20 @@ func TestNew(t *testing.T) {
 	ctx = v1addr.WithDuck(ctx)
 
 	os.Setenv("DISPATCHER_IMAGE", "animage")
-	cmw := configmap.NewStaticWatcher(&corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      config.EventDispatcherConfigMap,
-			Namespace: "knative-eventing",
+	cmw := configmap.NewStaticWatcher(
+		&corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      config.EventDispatcherConfigMap,
+				Namespace: "knative-eventing",
+			},
 		},
-	})
+		&corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "config-features",
+				Namespace: "knative-eventing",
+			},
+		},
+	)
 
 	secret := types.NamespacedName{
 		Namespace: system.Namespace(),
