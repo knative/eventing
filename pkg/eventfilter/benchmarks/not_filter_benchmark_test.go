@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
 package benchmarks
 
 import (
@@ -24,20 +23,31 @@ import (
 	"knative.dev/eventing/pkg/eventfilter/subscriptionsapi"
 )
 
-// Test Not Filter
 func BenchmarkNotFilter(b *testing.B) {
+	// Full event with all possible fields filled
 	event := cetest.FullEvent()
 
 	filter, _ := subscriptionsapi.NewExactFilter(map[string]string{"id": event.ID()})
+	prefixFilter, _ := subscriptionsapi.NewPrefixFilter(map[string]string{"type": "com.github.pull.create"})
+	suffixFilter, _ := subscriptionsapi.NewSuffixFilter(map[string]string{"source": "github.com/cloudevents/sdk-go/v2"})
 
 	RunFilterBenchmarks(b,
 		func(i interface{}) eventfilter.Filter {
-			// Create the NotFilter with our predefined filter.
-			return subscriptionsapi.NewNotFilter(filter)
+			return subscriptionsapi.NewNotFilter(i.(eventfilter.Filter))
 		},
 		FilterBenchmark{
-			name:  "Not filter test",
-			arg:   nil, // In this case, we're not using the arg in filter creation.
+			name:  "Not filter with exact filter test",
+			arg:   filter,
+			event: event,
+		},
+		FilterBenchmark{
+			name:  "Not filter with prefix filter test",
+			arg:   prefixFilter,
+			event: event,
+		},
+		FilterBenchmark{
+			name:  "Not filter with suffix filter test",
+			arg:   suffixFilter,
 			event: event,
 		},
 	)
