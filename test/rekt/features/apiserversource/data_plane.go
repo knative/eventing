@@ -768,54 +768,54 @@ func SendsEventsWithRetries() *feature.Feature {
 }
 
 func SendsEventsWithBrokerAsSinkTLS() *feature.Feature {
-	//src := feature.MakeRandomK8sName("apiserversource")
+	src := feature.MakeRandomK8sName("apiserversource")
 	brokerName := feature.MakeRandomK8sName("broker")
-	//sinkName := feature.MakeRandomK8sName("sink") // keep the random name for the eventshub
-	//triggerName := feature.MakeRandomK8sName("trigger")
+	sinkName := feature.MakeRandomK8sName("sink") // keep the random name for the eventshub
+	triggerName := feature.MakeRandomK8sName("trigger")
 	f := feature.NewFeature()
 
-	//f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
-	//f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
+	f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
+	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
 
 	f.Setup("install broker", broker.Install(brokerName, broker.WithEnvConfig()...))
 	f.Setup("broker is ready", broker.IsReady(brokerName))
-	//f.Setup("broker is addressable", broker.IsAddressable(brokerName))
-	//f.Setup("install sink", eventshub.Install(sinkName, eventshub.StartReceiverTLS)) // install eventshub as sink
-	//
-	//// Install Trigger
-	////f.Setup("Install trigger", trigger.Install(triggerName, brokerName, trigger.WithSubscriber(service.AsKReference(sinkName), "")))
-	////f.Setup("Wait for Trigger to become ready", trigger.IsReady(triggerName))
-	//
-	//f.Setup("Create Service Account for ApiServerSource with RBAC for v1.Event resources",
-	//	setupAccountAndRoleForPods(src))
-	//
-	//f.Requirement("install ApiServerSource", func(ctx context.Context, t feature.T) {
-	//	brokeruri, err := broker.Address(ctx, brokerName)
-	//	brokeruri.CACerts = eventshub.GetCaCerts(ctx)
-	//	if err != nil {
-	//		t.Error("failed to get address of broker", err)
-	//	}
-	//	cfg := []manifest.CfgFn{
-	//		apiserversource.WithServiceAccountName(src),
-	//		apiserversource.WithEventMode(v1.ResourceMode),
-	//		apiserversource.WithSink(service.AsDestinationRef(brokerName)),
-	//		apiserversource.WithResources(v1.APIVersionKindSelector{
-	//			APIVersion: "v1",
-	//			Kind:       "Event",
-	//		}),
-	//	}
-	//	apiserversource.Install(src, cfg...)
-	//})
-	//
-	//f.Requirement("ApiServerSource goes ready", apiserversource.IsReady(src))
-	//
-	//f.Stable("ApiServerSource as event source").
-	//	Must("delivers events on the broker sink",
-	//		eventasssert.OnStore(sinkName).MatchEvent(test.HasType(sources.ApiServerSourceUpdateEventType)).AtLeast(1)). // assert events on eventshub
-	//	Must("ApiServerSource has HTTPS sink",
-	//		source.ExpectHTTPSSink(v1.SchemeGroupVersion.WithResource("apiserversources"), src)). // assert HTTPS sink for ApiServerSource
-	//	Must("ApiServerSource has CA certs",
-	//		source.ExpectCACerts(v1.SchemeGroupVersion.WithResource("apiserversources"), src)) // assert CA certs for ApiServerSource
+	f.Setup("broker is addressable", broker.IsAddressable(brokerName))
+	f.Setup("install sink", eventshub.Install(sinkName, eventshub.StartReceiverTLS)) // install eventshub as sink
+
+	// Install Trigger
+	f.Setup("Install trigger", trigger.Install(triggerName, brokerName, trigger.WithSubscriber(service.AsKReference(sinkName), "")))
+	f.Setup("Wait for Trigger to become ready", trigger.IsReady(triggerName))
+
+	f.Setup("Create Service Account for ApiServerSource with RBAC for v1.Event resources",
+		setupAccountAndRoleForPods(src))
+
+	f.Requirement("install ApiServerSource", func(ctx context.Context, t feature.T) {
+		brokeruri, err := broker.Address(ctx, brokerName)
+		brokeruri.CACerts = eventshub.GetCaCerts(ctx)
+		if err != nil {
+			t.Error("failed to get address of broker", err)
+		}
+		cfg := []manifest.CfgFn{
+			apiserversource.WithServiceAccountName(src),
+			apiserversource.WithEventMode(v1.ResourceMode),
+			apiserversource.WithSink(service.AsDestinationRef(brokerName)),
+			apiserversource.WithResources(v1.APIVersionKindSelector{
+				APIVersion: "v1",
+				Kind:       "Event",
+			}),
+		}
+		apiserversource.Install(src, cfg...)
+	})
+
+	f.Requirement("ApiServerSource goes ready", apiserversource.IsReady(src))
+
+	f.Stable("ApiServerSource as event source").
+		Must("delivers events on the broker sink",
+			eventasssert.OnStore(sinkName).MatchEvent(test.HasType(sources.ApiServerSourceUpdateEventType)).AtLeast(1)). // assert events on eventshub
+		Must("ApiServerSource has HTTPS sink",
+			source.ExpectHTTPSSink(v1.SchemeGroupVersion.WithResource("apiserversources"), src)). // assert HTTPS sink for ApiServerSource
+		Must("ApiServerSource has CA certs",
+			source.ExpectCACerts(v1.SchemeGroupVersion.WithResource("apiserversources"), src)) // assert CA certs for ApiServerSource
 
 	return f
 }
