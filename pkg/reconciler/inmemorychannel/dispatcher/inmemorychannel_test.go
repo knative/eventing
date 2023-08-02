@@ -40,7 +40,6 @@ import (
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/apis/feature"
 	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
-	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/channel/fanout"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/inmemorychannel"
@@ -311,8 +310,8 @@ func TestAllCases(t *testing.T) {
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		ctx = v1addr.WithDuck(ctx)
 		r := &Reconciler{
-			multiChannelMessageHandler: newFakeMultiChannelHandler(),
-			messagingClientSet:         fakeeventingclient.Get(ctx).MessagingV1(),
+			multiChannelEventHandler: newFakeMultiChannelHandler(),
+			messagingClientSet:       fakeeventingclient.Get(ctx).MessagingV1(),
 		}
 		return inmemorychannel.NewReconciler(ctx, logger,
 			fakeeventingclient.Get(ctx), listers.GetInMemoryChannelLister(),
@@ -498,11 +497,11 @@ func TestReconciler_ReconcileKind(t *testing.T) {
 		})
 		// Just run the tests once with no existing handler (creates the handler) and once
 		// with an existing, so we exercise both paths at once.
-		fh, err := fanout.NewFanoutMessageHandler(nil, channel.NewMessageDispatcher(nil), fanout.Config{}, nil, nil, nil, nil)
+		fh, err := fanout.NewFanoutEventHandler(nil, fanout.Config{}, nil, nil, nil, nil)
 		if err != nil {
 			t.Error(err)
 		}
-		for _, fanoutHandler := range []fanout.MessageHandler{nil, fh} {
+		for _, fanoutHandler := range []fanout.EventHandler{nil, fh} {
 			t.Run("handler-"+n, func(t *testing.T) {
 				handler := newFakeMultiChannelHandler()
 				if fanoutHandler != nil {
@@ -510,9 +509,9 @@ func TestReconciler_ReconcileKind(t *testing.T) {
 					handler.SetChannelHandler(channelServiceAddress.URL.String(), fanoutHandler)
 				}
 				r := &Reconciler{
-					multiChannelMessageHandler: handler,
-					messagingClientSet:         fakeEventingClient.MessagingV1(),
-					featureStore:               feature.NewStore(logtesting.TestLogger(t)),
+					multiChannelEventHandler: handler,
+					messagingClientSet:       fakeEventingClient.MessagingV1(),
+					featureStore:             feature.NewStore(logtesting.TestLogger(t)),
 				}
 				e := r.ReconcileKind(ctx, tc.imc)
 				if e != tc.wantResult {
@@ -543,18 +542,18 @@ func TestReconciler_InvalidInputs(t *testing.T) {
 		},
 	}
 	for n, tc := range testCases {
-		fh, err := fanout.NewFanoutMessageHandler(nil, channel.NewMessageDispatcher(nil), fanout.Config{}, nil, nil, nil, nil)
+		fh, err := fanout.NewFanoutEventHandler(nil, fanout.Config{}, nil, nil, nil, nil)
 		if err != nil {
 			t.Error(err)
 		}
-		for _, fanoutHandler := range []fanout.MessageHandler{nil, fh} {
+		for _, fanoutHandler := range []fanout.EventHandler{nil, fh} {
 			t.Run("handler-"+n, func(t *testing.T) {
 				handler := newFakeMultiChannelHandler()
 				if fanoutHandler != nil {
 					handler.SetChannelHandler(channelServiceAddress.URL.String(), fanoutHandler)
 				}
 				r := &Reconciler{
-					multiChannelMessageHandler: handler,
+					multiChannelEventHandler: handler,
 				}
 				r.deleteFunc(tc.imc)
 			})
@@ -573,18 +572,18 @@ func TestReconciler_Deletion(t *testing.T) {
 		},
 	}
 	for n, tc := range testCases {
-		fh, err := fanout.NewFanoutMessageHandler(nil, channel.NewMessageDispatcher(nil), fanout.Config{}, nil, nil, nil, nil)
+		fh, err := fanout.NewFanoutEventHandler(nil, fanout.Config{}, nil, nil, nil, nil)
 		if err != nil {
 			t.Error(err)
 		}
-		for _, fanoutHandler := range []fanout.MessageHandler{nil, fh} {
+		for _, fanoutHandler := range []fanout.EventHandler{nil, fh} {
 			t.Run("handler-"+n, func(t *testing.T) {
 				handler := newFakeMultiChannelHandler()
 				if fanoutHandler != nil {
 					handler.SetChannelHandler(channelServiceAddress.URL.Host, fanoutHandler)
 				}
 				r := &Reconciler{
-					multiChannelMessageHandler: handler,
+					multiChannelEventHandler: handler,
 				}
 				r.deleteFunc(tc.imc)
 				if handler.GetChannelHandler(channelServiceAddress.URL.Host) != nil {
@@ -606,16 +605,16 @@ func makePatch(namespace, name, patch string) clientgotesting.PatchActionImpl {
 }
 
 type fakeMultiChannelHandler struct {
-	handlers map[string]fanout.MessageHandler
+	handlers map[string]fanout.EventHandler
 }
 
 func newFakeMultiChannelHandler() *fakeMultiChannelHandler {
-	return &fakeMultiChannelHandler{handlers: make(map[string]fanout.MessageHandler, 2)}
+	return &fakeMultiChannelHandler{handlers: make(map[string]fanout.EventHandler, 2)}
 }
 
 func (f *fakeMultiChannelHandler) ServeHTTP(response http.ResponseWriter, request *http.Request) {}
 
-func (f *fakeMultiChannelHandler) SetChannelHandler(host string, handler fanout.MessageHandler) {
+func (f *fakeMultiChannelHandler) SetChannelHandler(host string, handler fanout.EventHandler) {
 	f.handlers[host] = handler
 }
 
@@ -623,7 +622,7 @@ func (f *fakeMultiChannelHandler) DeleteChannelHandler(host string) {
 	delete(f.handlers, host)
 }
 
-func (f *fakeMultiChannelHandler) GetChannelHandler(host string) fanout.MessageHandler {
+func (f *fakeMultiChannelHandler) GetChannelHandler(host string) fanout.EventHandler {
 	return f.handlers[host]
 }
 

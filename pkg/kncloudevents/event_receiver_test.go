@@ -37,13 +37,13 @@ func TestStartListenOnPort(t *testing.T) {
 	port := 12999
 	drainQuietPeriod := time.Millisecond * 10
 	errChan := make(chan error)
-	messageReceiver := NewHTTPMessageReceiver(port, WithDrainQuietPeriod(drainQuietPeriod))
+	eventReceiver := NewHTTPEventReceiver(port, WithDrainQuietPeriod(drainQuietPeriod))
 	ctx, cancelFunc := context.WithCancel(context.TODO())
 	go func() {
-		errChan <- messageReceiver.StartListen(ctx, &testEventParsingHandler{})
+		errChan <- eventReceiver.StartListen(ctx, &testEventParsingHandler{})
 	}()
 
-	<-messageReceiver.Ready
+	<-eventReceiver.Ready
 	conn, err := net.DialTCP("tcp", nil, &net.TCPAddr{Port: port})
 	assert.NoError(t, err)
 	conn.Close()
@@ -59,19 +59,19 @@ func TestWithShutdownTimeout(t *testing.T) {
 	serverShutdownTimeout := time.Millisecond * 15
 	errChan := make(chan error)
 	receivedRequest := make(chan bool, 1)
-	messageReceiver := NewHTTPMessageReceiver(0, WithDrainQuietPeriod(drainQuietPeriod))
+	eventReceiver := NewHTTPEventReceiver(0, WithDrainQuietPeriod(drainQuietPeriod))
 	ctx, cancelFunc := context.WithCancel(context.TODO())
 
 	go func() {
-		errChan <- messageReceiver.StartListen(WithShutdownTimeout(ctx, serverShutdownTimeout), &blockingHandler{
+		errChan <- eventReceiver.StartListen(WithShutdownTimeout(ctx, serverShutdownTimeout), &blockingHandler{
 			blockFor:        serverShutdownTimeout * 100,
 			receivedRequest: receivedRequest,
 		})
 	}()
 
-	<-messageReceiver.Ready
+	<-eventReceiver.Ready
 
-	addr := "http://" + messageReceiver.server.Addr
+	addr := "http://" + eventReceiver.server.Addr
 	client := http.DefaultClient
 	req, err := http.NewRequest("GET", addr, nil)
 	assert.NoError(t, err)
@@ -94,16 +94,16 @@ func TestWithChecker(t *testing.T) {
 		checkerInvoked <- true
 		writer.WriteHeader(http.StatusTeapot)
 	}
-	messageReceiver := NewHTTPMessageReceiver(0, WithDrainQuietPeriod(drainQuietPeriod), WithChecker(someChecker))
+	eventReceiver := NewHTTPEventReceiver(0, WithDrainQuietPeriod(drainQuietPeriod), WithChecker(someChecker))
 	ctx, cancelFunc := context.WithCancel(context.TODO())
 
 	go func() {
-		errChan <- messageReceiver.StartListen(ctx, &testEventParsingHandler{})
+		errChan <- eventReceiver.StartListen(ctx, &testEventParsingHandler{})
 	}()
 
-	<-messageReceiver.Ready
+	<-eventReceiver.Ready
 
-	addr := "http://" + messageReceiver.server.Addr
+	addr := "http://" + eventReceiver.server.Addr
 	client := http.DefaultClient
 	req, err := http.NewRequest("GET", addr, nil)
 	assert.NoError(t, err)
@@ -123,14 +123,14 @@ func TestWithChecker(t *testing.T) {
 func TestStartListenReceiveEvent(t *testing.T) {
 	drainQuietPeriod := time.Millisecond * 10
 	errChan := make(chan error)
-	messageReceiver := NewHTTPMessageReceiver(0, WithDrainQuietPeriod(drainQuietPeriod))
+	eventReceiver := NewHTTPEventReceiver(0, WithDrainQuietPeriod(drainQuietPeriod))
 	ctx, cancelFunc := context.WithCancel(context.TODO())
 	handler := &testEventParsingHandler{
 		t:              t,
 		ReceivedEvents: make(chan *event.Event, 1),
 	}
 	go func() {
-		errChan <- messageReceiver.StartListen(ctx, handler)
+		errChan <- eventReceiver.StartListen(ctx, handler)
 	}()
 
 	p, err := cloudevents.NewHTTP()
@@ -146,9 +146,9 @@ func TestStartListenReceiveEvent(t *testing.T) {
 		"message": "Hi World!",
 	})
 
-	<-messageReceiver.Ready
+	<-eventReceiver.Ready
 
-	addr := "http://" + messageReceiver.server.Addr
+	addr := "http://" + eventReceiver.server.Addr
 	ctx = cloudevents.ContextWithTarget(ctx, addr)
 	res := ceClient.Send(ctx, ceEvent)
 	if cloudevents.IsUndelivered(res) {
@@ -173,38 +173,38 @@ func TestStartListenReceiveEvent(t *testing.T) {
 func TestGetAddr(t *testing.T) {
 	ctx, cancelFunc := context.WithCancel(context.TODO())
 	errChan := make(chan error)
-	messageReceiver := NewHTTPMessageReceiver(0, WithDrainQuietPeriod(time.Millisecond))
+	eventReceiver := NewHTTPEventReceiver(0, WithDrainQuietPeriod(time.Millisecond))
 	go func() {
-		errChan <- messageReceiver.StartListen(WithShutdownTimeout(ctx, time.Millisecond), &blockingHandler{blockFor: time.Microsecond})
+		errChan <- eventReceiver.StartListen(WithShutdownTimeout(ctx, time.Millisecond), &blockingHandler{blockFor: time.Microsecond})
 	}()
 
-	<-messageReceiver.Ready
-	assert.NotEmpty(t, messageReceiver.GetAddr())
+	<-eventReceiver.Ready
+	assert.NotEmpty(t, eventReceiver.GetAddr())
 
 	cancelFunc()
 	assert.Equal(t, nil, <-errChan)
 }
 
 func TestGetAddrEmpty(t *testing.T) {
-	messageReceiver := NewHTTPMessageReceiver(0, WithDrainQuietPeriod(time.Millisecond))
+	eventReceiver := NewHTTPEventReceiver(0, WithDrainQuietPeriod(time.Millisecond))
 
-	assert.Empty(t, messageReceiver.GetAddr())
+	assert.Empty(t, eventReceiver.GetAddr())
 }
 
 func TestWithWriteTimeout(t *testing.T) {
 	writeTimeout := time.Millisecond * 10
 
-	messageReceiver := NewHTTPMessageReceiver(0, WithWriteTimeout(writeTimeout))
+	eventReceiver := NewHTTPEventReceiver(0, WithWriteTimeout(writeTimeout))
 
-	assert.Equal(t, writeTimeout, messageReceiver.server.WriteTimeout)
+	assert.Equal(t, writeTimeout, eventReceiver.server.WriteTimeout)
 }
 
 func TestWithReadTimeout(t *testing.T) {
 	readTimeout := 30 * time.Second
 
-	messageReceiver := NewHTTPMessageReceiver(0, WithReadTimeout(readTimeout))
+	eventReceiver := NewHTTPEventReceiver(0, WithReadTimeout(readTimeout))
 
-	assert.Equal(t, readTimeout, messageReceiver.server.ReadTimeout)
+	assert.Equal(t, readTimeout, eventReceiver.server.ReadTimeout)
 }
 
 type testEventParsingHandler struct {
