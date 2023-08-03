@@ -31,9 +31,9 @@ var templates embed.FS
 
 // Install creates the necessary ServiceAccount, Role, RoleBinding for the eventshub.
 // The resources are named according to the current namespace defined in the environment.
-func Install() feature.StepFn {
+func Install(cfg map[string]interface{}) feature.StepFn {
 	return func(ctx context.Context, t feature.T) {
-		if _, err := manifest.InstallYamlFS(ctx, templates, map[string]interface{}{}); err != nil && !apierrors.IsAlreadyExists(err) {
+		if _, err := manifest.InstallYamlFS(ctx, templates, cfg); err != nil && !apierrors.IsAlreadyExists(err) {
 			t.Fatal(err)
 		}
 	}

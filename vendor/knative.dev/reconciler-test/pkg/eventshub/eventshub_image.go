@@ -31,7 +31,7 @@ func ImageFromContext(ctx context.Context) string {
 	if e, ok := ctx.Value(eventshubImageKey{}).(string); ok {
 		return e
 	}
-	return "ko://" + cmdPackage()
+	return "ko://" + eventshubPackage()
 }
 
 // WithCustomImage allows you to specify a custom eventshub image to be used when invoking eventshub.Install
@@ -48,7 +48,7 @@ func registerImage(ctx context.Context) error {
 	return err
 }
 
-func cmdPackage() string {
+func eventshubPackage() string {
 	this := reflect.TypeOf(eventshubImageKey{}).PkgPath()
 	root := path.Dir(path.Dir(this))
 	return path.Join(root, "cmd", "eventshub")
