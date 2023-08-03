@@ -26,44 +26,56 @@ spec:
   {{ end }}
   {{if .subscriber }}
   subscriber:
-    {{ if .subscriber.ref }}
+    { { if .subscriber.ref } }
     ref:
-      kind: {{ .subscriber.ref.kind }}
-      namespace: {{ .namespace }}
-      name: {{ .subscriber.ref.name }}
-      apiVersion: {{ .subscriber.ref.apiVersion }}
-    {{ end }}
-    {{ if .subscriber.uri }}
-    uri: {{ .subscriber.uri }}
-    {{ end }}
+      kind: { { .subscriber.ref.kind } }
+      namespace: { { .namespace } }
+      name: { { .subscriber.ref.name } }
+      apiVersion: { { .subscriber.ref.apiVersion } }
+    { { end } }
+    { { if .subscriber.uri } }
+    uri: { { .subscriber.uri } }
+    { { end } }
+    { { if .subscriber.CACerts } }
+    CACerts: |-
+      {{ .subscriber.CACerts }}
+    { { end } }
   {{ end }}
   {{if .reply }}
   reply:
-    {{ if .reply.ref }}
+    { { if .reply.ref } }
     ref:
-      kind: {{ .reply.ref.kind }}
-      namespace: {{ .namespace }}
-      name: {{ .reply.ref.name }}
-      apiVersion: {{ .reply.ref.apiVersion }}
-    {{ end }}
-    {{ if .reply.uri }}
-    uri: {{ .reply.uri }}
-    {{ end }}
+      kind: { { .reply.ref.kind } }
+      namespace: { { .namespace } }
+      name: { { .reply.ref.name } }
+      apiVersion: { { .reply.ref.apiVersion } }
+    { { end } }
+    { { if .reply.uri } }
+    uri: { { .reply.uri } }
+    { { end } }
+    { { if .reply.CACerts } }
+    CACerts: |-
+      {{ .reply.CACerts }}
+    { { end } }
   {{ end }}
   {{ if .delivery }}
   delivery:
     {{ if .delivery.deadLetterSink }}
     deadLetterSink:
-      {{ if .delivery.deadLetterSink.ref }}
+      { { if .delivery.deadLetterSink.ref } }
       ref:
-        kind: {{ .delivery.deadLetterSink.ref.kind }}
-        namespace: {{ .namespace }}
-        name: {{ .delivery.deadLetterSink.ref.name }}
-        apiVersion: {{ .delivery.deadLetterSink.ref.apiVersion }}
-      {{ end }}
-      {{ if .delivery.deadLetterSink.uri }}
-      uri: {{ .delivery.deadLetterSink.uri }}
-      {{ end }}
+        kind: { { .delivery.deadLetterSink.ref.kind } }
+        namespace: { { .namespace } }
+        name: { { .delivery.deadLetterSink.ref.name } }
+        apiVersion: { { .delivery.deadLetterSink.ref.apiVersion } }
+      { { end } }
+      { { if .delivery.deadLetterSink.uri } }
+      uri: { { .delivery.deadLetterSink.uri } }
+      { { end } }
+      { { if .delivery.deadLetterSink.CACerts } }
+      CACerts: |-
+        {{ .delivery.deadLetterSink.CACerts }}
+      { { end } }
     {{ end }}
     {{ if .delivery.retry }}
     retry: {{ .delivery.retry}}
