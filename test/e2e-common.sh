@@ -147,11 +147,14 @@ function install_knative_eventing() {
       -f "${EVENTING_CORE_NAME}" || return 1
     UNINSTALL_LIST+=( "${EVENTING_CORE_NAME}" )
 
-    local EVENTING_TLS_NAME=${TMP_DIR}/${EVENTING_TLS_YAML##*/}
-    sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" ${EVENTING_TLS_YAML} > ${EVENTING_TLS_NAME}
+    local EVENTING_TLS_REPLACES=${TMP_DIR}/${EVENTING_TLS_YAML##*/}
+    sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" ${EVENTING_TLS_YAML} > ${EVENTING_TLS_REPLACES}
+    if [[ ! -z "${CLUSTER_SUFFIX}" ]]; then
+      sed -i "s/cluster.local/${CLUSTER_SUFFIX}/g" ${EVENTING_TLS_REPLACES}
+    fi
     kubectl apply \
-      -f "${EVENTING_TLS_NAME}" || return 1
-    UNINSTALL_LIST+=( "${EVENTING_TLS_NAME}" )
+      -f "${EVENTING_TLS_REPLACES}" || return 1
+    UNINSTALL_LIST+=( "${EVENTING_TLS_REPLACES}" )
 
     kubectl patch horizontalpodautoscalers.autoscaling -n ${SYSTEM_NAMESPACE} eventing-webhook -p '{"spec": {"minReplicas": '${REPLICAS}'}}' || return 1
 
