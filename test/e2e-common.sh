@@ -222,13 +222,13 @@ function install_mt_broker() {
     echo "use exist EVENTING_MT_CHANNEL_BROKER_YAML"
   fi
   local EVENTING_MT_CHANNEL_BROKER_NAME=${TMP_DIR}/${EVENTING_MT_CHANNEL_BROKER_YAML##*/}
-  sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" ${EVENTING_MT_CHANNEL_BROKER_YAML} > ${EVENTING_MT_CHANNEL_BROKER_NAME}
+  sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" "${EVENTING_MT_CHANNEL_BROKER_YAML}" > "${EVENTING_MT_CHANNEL_BROKER_NAME}"
   kubectl apply \
     -f "${EVENTING_MT_CHANNEL_BROKER_NAME}" || return 1
   UNINSTALL_LIST+=( "${EVENTING_MT_CHANNEL_BROKER_NAME}" )
   scale_controlplane mt-broker-controller
 
-  wait_until_pods_running ${SYSTEM_NAMESPACE} || fail_test "Knative Eventing with MT Broker did not come up"
+  wait_until_pods_running "${SYSTEM_NAMESPACE}" || fail_test "Knative Eventing with MT Broker did not come up"
 }
 
 function enable_sugar() {
@@ -237,7 +237,7 @@ function enable_sugar() {
   echo "enable sugar controller injection"
   cat test/config/sugar.yaml | \
     sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" | \
-    ko apply ${KO_FLAGS} -f - || return $?
+    ko apply "${KO_FLAGS}" -f - || return $?
 }
 
 function unleash_duck() {
@@ -246,12 +246,12 @@ function unleash_duck() {
   echo "enable debug logging"
   cat test/config/config-logging.yaml | \
     sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" | \
-    ko apply ${KO_FLAGS} -f - || return $?
+    ko apply "${KO_FLAGS}" -f - || return $?
 
   echo "unleash the duck"
   cat test/config/chaosduck.yaml | \
     sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" | \
-    ko apply ${KO_FLAGS} -f - || return $?
+    ko apply "${KO_FLAGS}" -f - || return $?
     if (( SCALE_CHAOSDUCK_TO_ZERO )); then kubectl -n "${SYSTEM_NAMESPACE}" scale deployment/chaosduck --replicas=0; fi
 }
 
@@ -277,10 +277,10 @@ function add_trap() {
   local cmd=$1
   shift
   for trap_signal in $@; do
-    local current_trap="$(trap -p $trap_signal | cut -d\' -f2)"
+    local current_trap="$(trap -p "$trap_signal" | cut -d\' -f2)"
     local new_cmd="($cmd)"
     [[ -n "${current_trap}" ]] && new_cmd="${current_trap};${new_cmd}"
-    trap -- "${new_cmd}" $trap_signal
+    trap -- "${new_cmd}" "$trap_signal"
   done
 }
 
@@ -294,7 +294,7 @@ function test_setup() {
   fi
 
   # Capture all logs.
-  kail >${ARTIFACTS}/k8s.log.txt &
+  kail >"${ARTIFACTS}"/k8s.log.txt &
   local kail_pid=$!
   # Clean up kail so it doesn't interfere with job shutting down
   add_trap "kill $kail_pid || true" EXIT
@@ -329,7 +329,7 @@ function install_channel_crds() {
     echo "use existing ${EVENTING_IN_MEMORY_CHANNEL_YAML}"
   fi
   local EVENTING_IN_MEMORY_CHANNEL_NAME=${TMP_DIR}/${EVENTING_IN_MEMORY_CHANNEL_YAML##*/}
-  sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" ${EVENTING_IN_MEMORY_CHANNEL_YAML} > ${EVENTING_IN_MEMORY_CHANNEL_NAME}
+  sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" "${EVENTING_IN_MEMORY_CHANNEL_YAML}" > "${EVENTING_IN_MEMORY_CHANNEL_NAME}"
   kubectl apply \
     -f "${EVENTING_IN_MEMORY_CHANNEL_NAME}" || return 1
   UNINSTALL_LIST+=( "${EVENTING_IN_MEMORY_CHANNEL_NAME}" )
