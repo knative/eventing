@@ -36,7 +36,7 @@ import (
 	"knative.dev/eventing/test/rekt/resources/trigger"
 )
 
-func RotateIngressTLSCertificate() *feature.Feature {
+func RotateMTChannelBrokerTLSCertificates() *feature.Feature {
 	ingressCertificateName := "mt-broker-ingress-server-tls"
 	ingressSecretName := "mt-broker-ingress-server-tls"
 
@@ -47,7 +47,7 @@ func RotateIngressTLSCertificate() *feature.Feature {
 	sink := feature.MakeRandomK8sName("sink")
 	source := feature.MakeRandomK8sName("source")
 
-	f := feature.NewFeatureNamed("Rotate " + ingressCertificateName + " certificate")
+	f := feature.NewFeatureNamed("Rotate MTChannelBroker TLS certificate")
 
 	f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
 	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())

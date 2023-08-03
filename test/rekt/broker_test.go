@@ -232,7 +232,7 @@ func TestBrokerDeliverLongResponseMessage(t *testing.T) {
 	env.TestSet(ctx, t, broker.BrokerDeliverLongResponseMessage())
 }
 
-func TestBrokerRotateIngressTLSCertificate(t *testing.T) {
+func TestMTChannelBrokerRotateTLSCertificates(t *testing.T) {
 	t.Parallel()
 
 	ctx, env := global.Environment(
@@ -245,5 +245,5 @@ func TestBrokerRotateIngressTLSCertificate(t *testing.T) {
 		environment.WithPollTimings(5*time.Second, 4*time.Minute),
 	)
 
-	env.Test(ctx, t, broker.RotateIngressTLSCertificate())
+	env.Test(ctx, t, broker.RotateMTChannelBrokerTLSCertificates())
 }
