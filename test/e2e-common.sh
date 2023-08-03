@@ -136,27 +136,27 @@ function build_knative_from_source() {
 # Parameters: $1 - Knative Eventing version "HEAD" or "latest-release".
 function install_knative_eventing() {
   echo ">> Creating ${SYSTEM_NAMESPACE} namespace if it does not exist"
-  kubectl get ns ${SYSTEM_NAMESPACE} || kubectl create namespace ${SYSTEM_NAMESPACE}
+  kubectl get ns "${SYSTEM_NAMESPACE}" || kubectl create namespace "${SYSTEM_NAMESPACE}"
   # Install Knative Eventing in the current cluster.
   echo "Installing Knative Eventing from: ${1}"
   if [[ "$1" == "HEAD" ]]; then
     build_knative_from_source
     local EVENTING_CORE_NAME=${TMP_DIR}/${EVENTING_CORE_YAML##*/}
-    sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" ${EVENTING_CORE_YAML} > ${EVENTING_CORE_NAME}
+    sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" "${EVENTING_CORE_YAML}" > "${EVENTING_CORE_NAME}"
     kubectl apply \
       -f "${EVENTING_CORE_NAME}" || return 1
     UNINSTALL_LIST+=( "${EVENTING_CORE_NAME}" )
 
     local EVENTING_TLS_REPLACES=${TMP_DIR}/${EVENTING_TLS_YAML##*/}
-    sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" ${EVENTING_TLS_YAML} > ${EVENTING_TLS_REPLACES}
+    sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" "${EVENTING_TLS_YAML}" > "${EVENTING_TLS_REPLACES}"
     if [[ ! -z "${CLUSTER_SUFFIX}" ]]; then
-      sed -i "s/cluster.local/${CLUSTER_SUFFIX}/g" ${EVENTING_TLS_REPLACES}
+      sed -i "s/cluster.local/${CLUSTER_SUFFIX}/g" "${EVENTING_TLS_REPLACES}"
     fi
     kubectl apply \
       -f "${EVENTING_TLS_REPLACES}" || return 1
     UNINSTALL_LIST+=( "${EVENTING_TLS_REPLACES}" )
 
-    kubectl patch horizontalpodautoscalers.autoscaling -n ${SYSTEM_NAMESPACE} eventing-webhook -p '{"spec": {"minReplicas": '${REPLICAS}'}}' || return 1
+    kubectl patch horizontalpodautoscalers.autoscaling -n "${SYSTEM_NAMESPACE}" eventing-webhook -p '{"spec": {"minReplicas": '"${REPLICAS}"'}}' || return 1
 
   else
     local EVENTING_RELEASE_YAML=${TMP_DIR}/"eventing-${LATEST_RELEASE_VERSION}.yaml"
@@ -166,7 +166,7 @@ function install_knative_eventing() {
       || fail_test "Unable to download latest knative/eventing file."
 
     # Replace the default system namespace with the test's system namespace.
-    sed -i "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" ${EVENTING_RELEASE_YAML}
+    sed -i "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" "${EVENTING_RELEASE_YAML}"
 
     echo "Knative EVENTING YAML: ${EVENTING_RELEASE_YAML}"
 
@@ -176,15 +176,15 @@ function install_knative_eventing() {
 
   # Setup config tracing for tracing tests
   local TMP_CONFIG_TRACING_CONFIG=${TMP_DIR}/${CONFIG_TRACING_CONFIG##*/}
-  sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" ${CONFIG_TRACING_CONFIG} > ${TMP_CONFIG_TRACING_CONFIG}
-  kubectl replace -f ${TMP_CONFIG_TRACING_CONFIG}
+  sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" "${CONFIG_TRACING_CONFIG}" > "${TMP_CONFIG_TRACING_CONFIG}"
+  kubectl replace -f "${TMP_CONFIG_TRACING_CONFIG}"
 
   scale_controlplane eventing-webhook eventing-controller
 
-  wait_until_pods_running ${SYSTEM_NAMESPACE} || fail_test "Knative Eventing did not come up"
+  wait_until_pods_running "${SYSTEM_NAMESPACE}" || fail_test "Knative Eventing did not come up"
 
   echo "check the config map"
-  kubectl get configmaps -n ${SYSTEM_NAMESPACE}
+  kubectl get configmaps -n "${SYSTEM_NAMESPACE}"
   if ! (( DEPLOY_KNATIVE_MONITORING )); then return 0; fi
 
   # Ensure knative monitoring is installed only once
