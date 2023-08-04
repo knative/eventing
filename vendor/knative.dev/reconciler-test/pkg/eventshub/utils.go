@@ -33,8 +33,10 @@ import (
 )
 
 const (
-	ConfigTracingEnv = "K_CONFIG_TRACING"
-	ConfigLoggingEnv = "K_CONFIG_LOGGING"
+	ConfigTracingEnv   = "K_CONFIG_TRACING"
+	ConfigLoggingEnv   = "K_CONFIG_LOGGING"
+	EventGeneratorsEnv = "EVENT_GENERATORS"
+	EventLogsEnv       = "EVENT_LOGS"
 )
 
 func ParseHeaders(serializedHeaders string) http.Header {
@@ -115,3 +117,6 @@ func WithClientTracing(client *http.Client) error {
 	}
 	return nil
 }
+
+type HandlerFunc func(handler http.Handler) http.Handler
+type ClientOption func(*http.Client) error
