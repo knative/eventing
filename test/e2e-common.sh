@@ -149,7 +149,7 @@ function install_knative_eventing() {
 
     local EVENTING_TLS_REPLACES=${TMP_DIR}/${EVENTING_TLS_YAML##*/}
     sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" "${EVENTING_TLS_YAML}" > "${EVENTING_TLS_REPLACES}"
-    if [[ ! -z "${CLUSTER_SUFFIX}" ]]; then
+    if [[ ! -z "${CLUSTER_SUFFIX:-}" ]]; then
       sed -i "s/cluster.local/${CLUSTER_SUFFIX}/g" "${EVENTING_TLS_REPLACES}"
     fi
     kubectl apply \
