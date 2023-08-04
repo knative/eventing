@@ -102,8 +102,9 @@ func SendEvent(ctx context.Context, t *testing.T) *feature.Feature {
 	// Create A New Feature To Send An Event And Verify Retry-After Duration
 	f := feature.NewFeatureNamed("Send Events")
 	f.Setup("Install An EventsHub Sender", eventshub.Install(senderName, eventshub.StartSenderToResource(channel.GVR(), channelName), eventshub.InputEvent(event)))
-	f.Assert("Events Received", assert.OnStore(receiverName).MatchEvent(cetest.HasId(event.ID())).Exact(retryAttempts+1)) // One Successful Response
-	f.Assert("Event Timing Verified", assert.OnStore(receiverName).
+	f.Assert("Rejected Events Received", assert.OnStore(receiverName).MatchRejectedEvent(cetest.HasId(event.ID())).Exact(retryAttempts)) // `retryAttempts` dropped events
+	f.Assert("Received Events Received", assert.OnStore(receiverName).MatchReceivedEvent(cetest.HasId(event.ID())).Exact(1))             // One Successful Response
+	f.Assert("Event Timing Verified of received event", assert.OnStore(receiverName).
 		Match(receivedAtRegularInterval(event.ID(), time.Duration(retryAfterSeconds)*time.Second, time.Duration(expectedIntervalMargin)*time.Second)).Exact(retryAttempts+1))
 
 	// Return The SendEvents Feature
@@ -176,6 +177,10 @@ func receivedAtRegularInterval(id string, wait time.Duration, errorMarging time.
 		// exits since it does not have a prior event to check
 		// the interval with.
 		if expected.Equal(time.Time{}) {
+			return nil
+		}
+
+		if eventInfo.Kind != assert.EventReceived {
 			return nil
 		}
 
