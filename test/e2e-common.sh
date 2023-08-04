@@ -72,6 +72,8 @@ readonly LATEST_RELEASE_VERSION=$(latest_version)
 
 readonly SKIP_UPLOAD_TEST_IMAGES="${SKIP_UPLOAD_TEST_IMAGES:-}"
 
+readonly KAIL_VERSION=v0.16.1
+
 UNINSTALL_LIST=()
 
 # Setup the Knative environment for running tests.
@@ -287,7 +289,7 @@ function test_setup() {
 
   # Install kail if needed.
   if ! which kail >/dev/null; then
-    bash <(curl -sfL https://raw.githubusercontent.com/boz/kail/master/godownloader.sh) -b "$GOPATH/bin"
+    go install github.com/boz/kail/cmd/kail@"${KAIL_VERSION}"
   fi
 
   # Capture all logs.
