@@ -337,7 +337,7 @@ function install_channel_crds() {
   # TODO(https://github.com/knative/eventing/issues/3590): Enable once IMC chaos issues are fixed.
   # scale_controlplane imc-controller imc-dispatcher
 
-  wait_until_pods_running ${SYSTEM_NAMESPACE} || fail_test "Failed to install the In-Memory Channel CRD"
+  wait_until_pods_running "${SYSTEM_NAMESPACE}" || fail_test "Failed to install the In-Memory Channel CRD"
 }
 
 function uninstall_channel_crds() {
@@ -350,13 +350,13 @@ function dump_extra_cluster_state() {
   # Collecting logs from all knative's eventing pods.
   echo "============================================================"
   local namespace=${SYSTEM_NAMESPACE}
-  for pod in $(kubectl get pod -n $namespace | grep Running | awk '{print $1}'); do
-    for container in $(kubectl get pod "${pod}" -n $namespace -ojsonpath='{.spec.containers[*].name}'); do
+  for pod in $(kubectl get pod -n "$namespace" | grep Running | awk '{print $1}'); do
+    for container in $(kubectl get pod "${pod}" -n "$namespace" -ojsonpath='{.spec.containers[*].name}'); do
       echo "Namespace, Pod, Container: ${namespace}, ${pod}, ${container}"
-      kubectl logs -n $namespace "${pod}" -c "${container}" || true
+      kubectl logs -n "$namespace" "${pod}" -c "${container}" || true
       echo "----------------------------------------------------------"
       echo "Namespace, Pod, Container (Previous instance): ${namespace}, ${pod}, ${container}"
-      kubectl logs -p -n $namespace "${pod}" -c "${container}" || true
+      kubectl logs -p -n "$namespace" "${pod}" -c "${container}" || true
       echo "============================================================"
     done
   done
