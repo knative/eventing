@@ -27,19 +27,19 @@ jobs:
       matrix:
         include:
           - repo: eventing-autoscaler-keda
-            org: knative-sandbox
+            org: knative-extensions
           - repo: eventing-ceph
-            org: knative-sandbox
+            org: knative-extensions
           - repo: eventing-github
-            org: knative-sandbox
+            org: knative-extensions
           - repo: eventing-gitlab
-            org: knative-sandbox
+            org: knative-extensions
           - repo: eventing-kafka
-            org: knative-sandbox
+            org: knative-extensions
           - repo: eventing-kafka-broker
-            org: knative-sandbox
+            org: knative-extensions
           - repo: eventing-rabbitmq
-            org: knative-sandbox
+            org: knative-extensions
 
     runs-on: ubuntu-latest
     env:
