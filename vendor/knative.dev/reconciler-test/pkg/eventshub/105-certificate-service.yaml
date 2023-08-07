@@ -43,7 +43,7 @@ spec:
     size: 2048
 
   dnsNames:
-    - {{ .serviceName }}.{{ .namespace }}.svc.cluster.local
+    - {{ .serviceName }}.{{ .namespace }}.svc.{{ .clusterDomain }}
   ipAddresses: # used for testing and port-forwarding
     - 127.0.0.1
 
