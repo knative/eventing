@@ -74,3 +74,11 @@ rules:
       - get
       - list
       - watch
+  - apiGroups:
+      - eventing.knative.dev
+    resources:
+      - brokers
+    verbs:
+      - get
+      - list
+      - watch
