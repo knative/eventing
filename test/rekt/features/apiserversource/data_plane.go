@@ -19,6 +19,7 @@ package apiserversource
 import (
 	"context"
 	"fmt"
+
 	"github.com/cloudevents/sdk-go/v2/test"
 	"knative.dev/eventing/test/rekt/resources/addressable"
 	"knative.dev/pkg/apis"
