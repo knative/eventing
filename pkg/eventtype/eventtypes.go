@@ -18,7 +18,7 @@ package eventtype
 
 import (
 	"context"
-	"encoding/base64"
+	"crypto/md5"
 	"fmt"
 
 	"github.com/cloudevents/sdk-go/v2/event"
@@ -44,14 +44,16 @@ type EventTypeAutoHandler struct {
 	Logger          *zap.Logger
 }
 
-// generateEventTypeName is a pseudo unique name for EvenType object based on on the input params
+// generateEventTypeName is a pseudo unique name for EvenType object based on the input params
 func generateEventTypeName(name, namespace, eventType, eventSource string) string {
-	suffixParts := eventType + eventSource + namespace + name
-	suffix := base64.StdEncoding.EncodeToString([]byte(suffixParts))[:10]
-	return utils.ToDNS1123Subdomain(fmt.Sprintf("%s-%s-%s", "et", name, suffix))
+	// Take last third of the event type as a seed
+	eventTypeSuffix := eventType[len(eventType)-len(eventType)/3:]
+	suffixParts := eventType + eventSource + eventTypeSuffix + namespace + name
+	suffix := md5.Sum([]byte(suffixParts)) //nolint:gosec not cryptographic use
+	return utils.ToDNS1123Subdomain(fmt.Sprintf("%s-%s-%x", "et", name, suffix))
 }
 
-// AutoCreateEventType creates EventType object based on processed events's types from addressable KReference objects
+// AutoCreateEventType creates EventType object based on processed event's types from addressable KReference objects
 func (h *EventTypeAutoHandler) AutoCreateEventType(ctx context.Context, event *event.Event, addressable *duckv1.KReference, ownerUID types.UID) error {
 	// Feature flag gate
 	if !h.FeatureStore.IsEnabled(feature.EvenTypeAutoCreate) {
