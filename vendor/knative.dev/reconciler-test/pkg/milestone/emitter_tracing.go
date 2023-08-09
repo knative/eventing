@@ -49,7 +49,6 @@ func NewTracingGatherer(ctx context.Context, namespace string, zipkinNamespace s
 		kubeclient.Get(ctx),
 		logging.FromContext(ctx).Infof,
 		zipkinNamespace)
-	zipkin.ZipkinTracingEnabled = true
 	return &tracingEmitter{ctx: ctx, namespace: namespace, t: t}, err
 }
 

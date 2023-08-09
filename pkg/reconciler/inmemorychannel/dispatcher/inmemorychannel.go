@@ -52,7 +52,7 @@ import (
 
 // Reconciler reconciles InMemory Channels.
 type Reconciler struct {
-	multiChannelMessageHandler multichannelfanout.MultiChannelMessageHandler
+	multiChannelEventHandler multichannelfanout.MultiChannelEventHandler
 	reporter                   channel.StatsReporter
 	messagingClientSet         messagingv1.MessagingV1Interface
 	eventTypeLister            v1beta2.EventTypeLister
@@ -122,12 +122,11 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1.InMemoryChannel) rec
 	}
 
 	// First grab the host based MultiChannelFanoutMessage httpHandler
-	httpHandler := r.multiChannelMessageHandler.GetChannelHandler(config.HostName)
+	httpHandler := r.multiChannelEventHandler.GetChannelHandler(config.HostName)
 	if httpHandler == nil {
 		// No handler yet, create one.
-		fanoutHandler, err := fanout.NewFanoutMessageHandler(
+		fanoutHandler, err := fanout.NewFanoutEventHandler(
 			logging.FromContext(ctx).Desugar(),
-			channel.NewMessageDispatcher(logging.FromContext(ctx).Desugar()),
 			config.FanoutConfig,
 			r.reporter,
 			eventTypeAutoHandler,
@@ -135,10 +134,10 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1.InMemoryChannel) rec
 			UID,
 		)
 		if err != nil {
-			logging.FromContext(ctx).Error("Failed to create a new fanout.MessageHandler", err)
+			logging.FromContext(ctx).Error("Failed to create a new fanout.EventHandler", err)
 			return err
 		}
-		r.multiChannelMessageHandler.SetChannelHandler(config.HostName, fanoutHandler)
+		r.multiChannelEventHandler.SetChannelHandler(config.HostName, fanoutHandler)
 	} else {
 		// Just update the config if necessary.
 		haveSubs := httpHandler.GetSubscriptions(ctx)
@@ -151,24 +150,23 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1.InMemoryChannel) rec
 	}
 
 	// Look for an https handler that's configured to use paths
-	httpsHandler := r.multiChannelMessageHandler.GetChannelHandler(config.Path)
+	httpsHandler := r.multiChannelEventHandler.GetChannelHandler(config.Path)
 	if httpsHandler == nil {
 		// No handler yet, create one.
-		fanoutHandler, err := fanout.NewFanoutMessageHandler(
+		fanoutHandler, err := fanout.NewFanoutEventHandler(
 			logging.FromContext(ctx).Desugar(),
-			channel.NewMessageDispatcher(logging.FromContext(ctx).Desugar()),
 			config.FanoutConfig,
 			r.reporter,
 			eventTypeAutoHandler,
 			eventTypeOwnerRef,
 			UID,
-			channel.ResolveMessageChannelFromPath(channel.ParseChannelFromPath),
+			channel.ResolveChannelFromPath(channel.ParseChannelFromPath),
 		)
 		if err != nil {
-			logging.FromContext(ctx).Error("Failed to create a new fanout.MessageHandler", err)
+			logging.FromContext(ctx).Error("Failed to create a new fanout.EventHandler", err)
 			return err
 		}
-		r.multiChannelMessageHandler.SetChannelHandler(config.Path, fanoutHandler)
+		r.multiChannelEventHandler.SetChannelHandler(config.Path, fanoutHandler)
 	} else {
 		// Just update the config if necessary.
 		haveSubs := httpsHandler.GetSubscriptions(ctx)
@@ -256,7 +254,7 @@ func (r *Reconciler) deleteFunc(obj interface{}) {
 	}
 	if imc.Status.Address != nil && imc.Status.Address.URL != nil {
 		if hostName := imc.Status.Address.URL.Host; hostName != "" {
-			r.multiChannelMessageHandler.DeleteChannelHandler(hostName)
+			r.multiChannelEventHandler.DeleteChannelHandler(hostName)
 		}
 	}
 

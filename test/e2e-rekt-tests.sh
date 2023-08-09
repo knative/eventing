@@ -38,4 +38,10 @@ echo "Running E2E Reconciler Tests"
 
 go_test_e2e -timeout=1h ./test/rekt || fail_test
 
+echo "Running E2E Reconciler Tests with strict transport encryption"
+
+kubectl apply -Rf "$(dirname "$0")/config-transport-encryption"
+
+go_test_e2e -timeout=1h ./test/rekt -run TLS || fail_test
+
 success
