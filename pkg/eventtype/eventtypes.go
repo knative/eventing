@@ -18,7 +18,7 @@ package eventtype
 
 import (
 	"context"
-	"crypto/md5"
+	"crypto/md5" //nolint:gosec
 	"fmt"
 
 	"github.com/cloudevents/sdk-go/v2/event"
@@ -49,7 +49,7 @@ func generateEventTypeName(name, namespace, eventType, eventSource string) strin
 	// Take last third of the event type as a seed
 	eventTypeSuffix := eventType[len(eventType)-len(eventType)/3:]
 	suffixParts := eventType + eventSource + eventTypeSuffix + namespace + name
-	suffix := md5.Sum([]byte(suffixParts)) //nolint:gosec not cryptographic use
+	suffix := md5.Sum([]byte(suffixParts)) //nolint:gosec
 	return utils.ToDNS1123Subdomain(fmt.Sprintf("%s-%s-%x", "et", name, suffix))
 }
 
