@@ -46,9 +46,7 @@ type EventTypeAutoHandler struct {
 
 // generateEventTypeName is a pseudo unique name for EvenType object based on the input params
 func generateEventTypeName(name, namespace, eventType, eventSource string) string {
-	// Take last third of the event type as a seed
-	eventTypeSuffix := eventType[len(eventType)-len(eventType)/3:]
-	suffixParts := eventType + eventSource + eventTypeSuffix + namespace + name
+	suffixParts := eventType + eventSource + namespace + name
 	suffix := md5.Sum([]byte(suffixParts)) //nolint:gosec
 	return utils.ToDNS1123Subdomain(fmt.Sprintf("%s-%s-%x", "et", name, suffix))
 }

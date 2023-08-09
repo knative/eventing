@@ -129,21 +129,21 @@ func TestEventTypeAutoHandler_GenerateEventTypeName(t *testing.T) {
 			namespace:    "default",
 			eventType:    "events.type",
 			eventSource:  "events.source",
-			expectedName: "et-example-a8badc420c3adc7b244cd25396bdfde7",
+			expectedName: "et-example-eaed2996d719048dfae11b607d68b7ad",
 		},
 		{
 			name:         "EXAMPLE",
 			namespace:    "default",
 			eventType:    "events.type",
 			eventSource:  "events.source",
-			expectedName: "et-example-c760b34dc7167b1585a2c261dd59c650",
+			expectedName: "et-example-f4d9f28cdbe397fe92eb5899e7294121",
 		},
 		{
 			name:         "",
 			namespace:    "default",
 			eventType:    "events.type",
 			eventSource:  "events.source",
-			expectedName: "et--e1a16b372573d013d9fa573c7454a5d0",
+			expectedName: "et--72f2dad9d914dcd0445cae74ba99d15c",
 		},
 	}
 
