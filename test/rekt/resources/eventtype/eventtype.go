@@ -18,9 +18,8 @@ package eventtype
 
 import (
 	"context"
+	"embed"
 	"fmt"
-	"time"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -29,7 +28,12 @@ import (
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/k8s"
+	"knative.dev/reconciler-test/pkg/manifest"
+	"time"
 )
+
+//go:embed eventtype.yaml
+var yaml embed.FS
 
 type EventType struct {
 	Name       string
@@ -99,4 +103,14 @@ func AssertReferenceMatch(expectedCeType string) EventType {
 		},
 	}
 
+}
+
+// The function will apply the config map eventtype.yaml file to enable auto creation of eventtype
+// The yaml file is in /test/eventtype.yaml
+// manifest.InstallYamlFS(ctx, yaml, cfg)
+func ApplyEventTypeConfigMap() feature.StepFn {
+	return func(ctx context.Context, t feature.T) {
+
+		manifest.InstallYamlFS(ctx, yaml, nil)
+	}
 }

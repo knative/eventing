@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config-features
+  namespace: knative-eventing
+  labels:
+    knative.dev/config-propagation: original
+    knative.dev/config-category: eventing
+    app.kubernetes.io/version: devel
+    app.kubernetes.io/name: knative-eventing
+data:
+  # ALPHA feature: The eventtype-auto-create flag allows automatic creation of Even Type instances based on Event's type being processed.
+  # For more details: https://github.com/knative/eventing/issues/6909
+  eventtype-auto-create: "enabled"

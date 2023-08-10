@@ -138,6 +138,9 @@ func SendsEventsWithEventTypes() *feature.Feature {
 
 	f := new(feature.Feature)
 
+	// Enable the eventtype auto-creation in configmap
+	f.Setup("enable eventtype auto-creation", eventtype.ApplyEventTypeConfigMap())
+
 	//Install the broker
 	brokerName := feature.MakeRandomK8sName("broker")
 	f.Setup("install broker", broker.Install(brokerName, broker.WithEnvConfig()...))
