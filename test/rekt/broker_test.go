@@ -26,6 +26,7 @@ import (
 	"knative.dev/pkg/system"
 	_ "knative.dev/pkg/system/testing"
 	"knative.dev/reconciler-test/pkg/environment"
+	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/knative"
 	"knative.dev/reconciler-test/pkg/tracing"
@@ -229,4 +230,20 @@ func TestBrokerDeliverLongResponseMessage(t *testing.T) {
 	)
 
 	env.TestSet(ctx, t, broker.BrokerDeliverLongResponseMessage())
+}
+
+func TestMTChannelBrokerRotateTLSCertificates(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+		eventshub.WithTLS(t),
+		environment.WithPollTimings(5*time.Second, 4*time.Minute),
+	)
+
+	env.Test(ctx, t, broker.RotateMTChannelBrokerTLSCertificates())
 }

@@ -508,7 +508,7 @@ func TestReceiver(t *testing.T) {
 				return
 			}
 			if err != nil || event == nil {
-				t.Fatalf("Expected response event, actually nil")
+				t.Fatalf("Expected response event, actually nil (err: %+v)", err)
 			}
 
 			// The TTL will be added again.

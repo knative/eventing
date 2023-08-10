@@ -1,7 +1,7 @@
 # Reconciler Tests
 
 This is the staging location for the new
-[e2e testing framework](https://github.com/knative-sandbox/reconciler-test).
+[e2e testing framework](https://github.com/knative-extensions/reconciler-test).
 
 To run the tests on an existing cluster:
 
