@@ -70,7 +70,7 @@ func AssertPresent(expectedCeTypes sets.String) EventType {
 		Name: "test eventtypes match or not",
 		EventTypes: func(etl eventingv1beta2.EventTypeList) (bool, error) {
 			// Clone the expectedCeTypes
-			clonedExpectedCeTypes := expectedCeTypes.Clone() 
+			clonedExpectedCeTypes := expectedCeTypes.Clone()
 			for _, et := range etl.Items {
 				clonedExpectedCeTypes.Delete(et.Spec.Type) // remove from the cloned set
 			}
