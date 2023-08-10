@@ -18,6 +18,7 @@ package eventtype
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -64,12 +65,36 @@ func AssertPresent(expectedCeTypes sets.String) EventType {
 	return EventType{
 		Name: "test eventtypes match or not",
 		EventTypes: func(etl eventingv1beta2.EventTypeList) (bool, error) {
+			// Clone the expectedCeTypes
+			clonedExpectedCeTypes := expectedCeTypes.Union(nil) // assuming sets.String has an Union method which when given nil returns a clone
+			fmt.Println("expectedCeTypes", clonedExpectedCeTypes)
+			fmt.Println("etl.Items", etl.Items)
+			for _, et := range etl.Items {
+				fmt.Println("going to delete et.Spec.Type", et.Spec.Type)
+				clonedExpectedCeTypes.Delete(et.Spec.Type) // remove from the cloned set
+			}
+			return clonedExpectedCeTypes.Len() == 0, nil
+		},
+	}
+
+}
+
+func AssertReferenceMatch(expectedCeType string) EventType {
+
+	fmt.Println("haha")
+	fmt.Println(expectedCeType)
+
+	return EventType{
+		Name: "test eventtypes's reference match or not",
+		EventTypes: func(etl eventingv1beta2.EventTypeList) (bool, error) {
 			eventtypesCount := 0
 			for _, et := range etl.Items {
-				if expectedCeTypes.Has(et.Spec.Type) {
+				fmt.Println("et.Spec.Reference.Kind", et.Spec.Reference.Kind)
+				if expectedCeType == et.Spec.Reference.Kind {
 					eventtypesCount++
 				}
 			}
+			fmt.Println("eventtypesCount", eventtypesCount)
 			return (eventtypesCount == len(etl.Items)), nil
 		},
 	}
