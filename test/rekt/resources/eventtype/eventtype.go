@@ -19,7 +19,8 @@ package eventtype
 import (
 	"context"
 	"embed"
-	"fmt"
+	"time"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -29,7 +30,6 @@ import (
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/manifest"
-	"time"
 )
 
 //go:embed eventtype.yaml
@@ -71,10 +71,7 @@ func AssertPresent(expectedCeTypes sets.String) EventType {
 		EventTypes: func(etl eventingv1beta2.EventTypeList) (bool, error) {
 			// Clone the expectedCeTypes
 			clonedExpectedCeTypes := expectedCeTypes.Union(nil) // assuming sets.String has an Union method which when given nil returns a clone
-			fmt.Println("expectedCeTypes", clonedExpectedCeTypes)
-			fmt.Println("etl.Items", etl.Items)
 			for _, et := range etl.Items {
-				fmt.Println("going to delete et.Spec.Type", et.Spec.Type)
 				clonedExpectedCeTypes.Delete(et.Spec.Type) // remove from the cloned set
 			}
 			return clonedExpectedCeTypes.Len() == 0, nil
@@ -85,20 +82,16 @@ func AssertPresent(expectedCeTypes sets.String) EventType {
 
 func AssertReferenceMatch(expectedCeType string) EventType {
 
-	fmt.Println("haha")
-	fmt.Println(expectedCeType)
-
 	return EventType{
 		Name: "test eventtypes's reference match or not",
 		EventTypes: func(etl eventingv1beta2.EventTypeList) (bool, error) {
 			eventtypesCount := 0
 			for _, et := range etl.Items {
-				fmt.Println("et.Spec.Reference.Kind", et.Spec.Reference.Kind)
 				if expectedCeType == et.Spec.Reference.Kind {
 					eventtypesCount++
 				}
 			}
-			fmt.Println("eventtypesCount", eventtypesCount)
+
 			return (eventtypesCount == len(etl.Items)), nil
 		},
 	}
@@ -107,10 +100,8 @@ func AssertReferenceMatch(expectedCeType string) EventType {
 
 // The function will apply the config map eventtype.yaml file to enable auto creation of eventtype
 // The yaml file is in /test/eventtype.yaml
-// manifest.InstallYamlFS(ctx, yaml, cfg)
 func ApplyEventTypeConfigMap() feature.StepFn {
 	return func(ctx context.Context, t feature.T) {
-
 		manifest.InstallYamlFS(ctx, yaml, nil)
 	}
 }
