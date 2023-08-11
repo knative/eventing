@@ -802,6 +802,10 @@ func SendsEventsWithBrokerAsSinkTLS() *feature.Feature {
 		apiserversource.WithResources(v1.APIVersionKindSelector{
 			APIVersion: "v1",
 			Kind:       "Event",
+		}, v1.APIVersionKindSelector{
+			APIVersion:    "v1",
+			Kind:          "Pod",
+			LabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"e2e": "testing"}},
 		}),
 	}
 
@@ -815,9 +819,27 @@ func SendsEventsWithBrokerAsSinkTLS() *feature.Feature {
 
 	f.Requirement("ApiServerSource goes ready", apiserversource.IsReady(src))
 
+	examplePodName := feature.MakeRandomK8sName("example")
+
+	// create a pod so that ApiServerSource delivers an event to its sink
+	// event body is similar to this:
+	// {"kind":"Pod","namespace":"test-wmbcixlv","name":"example-axvlzbvc","apiVersion":"v1"}
+	f.Requirement("install example pod",
+		pod.Install(examplePodName, exampleImage,
+			pod.WithLabels(map[string]string{"e2e": "testing"})),
+	)
+
 	f.Stable("ApiServerSource as event source").
 		Must("delivers events",
-			eventasssert.OnStore(sinkName).MatchEvent(test.HasType(sources.ApiServerSourceUpdateEventType)).AtLeast(1))
+			eventasssert.OnStore(sinkName).MatchEvent(
+				test.HasType(sources.ApiServerSourceUpdateEventType),
+			).AtLeast(1),
+		)
+	eventasssert.MatchEvent(
+		test.HasType("dev.knative.apiserver.ref.add"),
+		test.DataContains(`"kind":"Pod"`),
+		test.DataContains(fmt.Sprintf(`"name":"%s"`, examplePodName)),
+	)
 
 	return f
 
