@@ -226,6 +226,9 @@ func (s *StatefulSetScheduler) Schedule(vpod scheduler.VPod) ([]duckv1alpha1.Pla
 }
 
 func (s *StatefulSetScheduler) scheduleVPod(vpod scheduler.VPod) ([]duckv1alpha1.Placement, error) {
+	// Attempt to scale down (async)
+	defer s.autoscaler.Autoscale(s.ctx, true, s.pendingVReplicas())
+
 	logger := s.logger.With("key", vpod.GetKey())
 	logger.Debugw("scheduling", zap.Any("pending", toJSONable(s.pending)))
 
@@ -310,7 +313,7 @@ func (s *StatefulSetScheduler) scheduleVPod(vpod scheduler.VPod) ([]duckv1alpha1
 
 		s.pending[vpod.GetKey()] = left
 
-		// Trigger the autoscaler
+		// Trigger the autoscaler (async)
 		if s.autoscaler != nil {
 			s.autoscaler.Autoscale(s.ctx, false, s.pendingVReplicas())
 		}
@@ -347,8 +350,9 @@ func (s *StatefulSetScheduler) rebalanceReplicasWithPolicy(vpod scheduler.VPod, 
 }
 
 func (s *StatefulSetScheduler) removeReplicasWithPolicy(vpod scheduler.VPod, diff int32, placements []duckv1alpha1.Placement) []duckv1alpha1.Placement {
-	logger := s.logger.Named("remove replicas with policy")
+	logger := s.logger.With(zap.String("action", "remove replicas with policy"))
 	numVreps := diff
+	logger.Debug(zap.Int32("numVreps", numVreps))
 
 	for i := int32(0); i < numVreps; i++ { //deschedule one vreplica at a time
 		state, err := s.stateAccessor.State(s.reserved)
@@ -415,9 +419,10 @@ func (s *StatefulSetScheduler) removeSelectionFromPlacements(placementPodID int3
 }
 
 func (s *StatefulSetScheduler) addReplicasWithPolicy(vpod scheduler.VPod, diff int32, placements []duckv1alpha1.Placement) ([]duckv1alpha1.Placement, int32) {
-	logger := s.logger.Named("add replicas with policy")
-
+	logger := s.logger.With(zap.String("action", "add replicas with policy"))
 	numVreps := diff
+	logger.Debug(zap.Int32("numVreps", numVreps))
+
 	for i := int32(0); i < numVreps; i++ { //schedule one vreplica at a time (find most suitable pod placement satisying predicates with high score)
 		// Get the current placements state
 		state, err := s.stateAccessor.State(s.reserved)
@@ -433,6 +438,7 @@ func (s *StatefulSetScheduler) addReplicasWithPolicy(vpod scheduler.VPod, diff i
 			break               //end the iteration for all vreps since there are not pods
 		}
 
+		logger.Debug("Finding feasible pods")
 		feasiblePods := s.findFeasiblePods(s.ctx, state, vpod, state.SchedPolicy)
 		if len(feasiblePods) == 0 { //no pods available to schedule this vreplica
 			logger.Info("no feasible pods available to schedule this vreplica")
@@ -451,6 +457,7 @@ func (s *StatefulSetScheduler) addReplicasWithPolicy(vpod scheduler.VPod, diff i
 			continue
 		} */
 
+		logger.Debug("Prioritizing pods")
 		priorityList, err := s.prioritizePods(s.ctx, state, vpod, feasiblePods, state.SchedPolicy)
 		if err != nil {
 			logger.Info("error while scoring pods using priorities", zap.Error(err))

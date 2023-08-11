@@ -18,10 +18,13 @@ package statefulset
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"go.uber.org/zap"
 	v1 "k8s.io/api/core/v1"
@@ -57,13 +60,18 @@ type Autoscaler interface {
 	Autoscale(ctx context.Context, attemptScaleDown bool, pending int32)
 }
 
+type AutoscaleTrigger struct {
+	AttempScaleDown bool
+	Pending         int32
+}
+
 type autoscaler struct {
 	statefulSetClient clientappsv1.StatefulSetInterface
 	statefulSetName   string
 	vpodLister        scheduler.VPodLister
 	logger            *zap.SugaredLogger
 	stateAccessor     st.StateAccessor
-	trigger           chan int32
+	trigger           chan AutoscaleTrigger
 	evictor           scheduler.Evictor
 
 	// capacity is the total number of virtual replicas available per pod.
@@ -108,7 +116,7 @@ func newAutoscaler(ctx context.Context, cfg *Config, stateAccessor st.StateAcces
 		vpodLister:        cfg.VPodLister,
 		stateAccessor:     stateAccessor,
 		evictor:           cfg.Evictor,
-		trigger:           make(chan int32, 1),
+		trigger:           make(chan AutoscaleTrigger, 20),
 		capacity:          cfg.PodCapacity,
 		refreshPeriod:     cfg.RefreshPeriod,
 		lock:              new(sync.Mutex),
@@ -117,27 +125,33 @@ func newAutoscaler(ctx context.Context, cfg *Config, stateAccessor st.StateAcces
 }
 
 func (a *autoscaler) Start(ctx context.Context) {
-	attemptScaleDown := false
-	pending := int32(0)
+	a.maybeTriggerAutoscaleOnStart()
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case <-time.After(a.refreshPeriod):
-			attemptScaleDown = true
-		case pending = <-a.trigger:
-			attemptScaleDown = false
+		case t := <-a.trigger:
+			a.syncAutoscale(ctx, t.AttempScaleDown, t.Pending)
 		}
+	}
+}
 
-		// Retry a few times, just so that we don't have to wait for the next beat when
-		// a transient error occurs
-		a.syncAutoscale(ctx, attemptScaleDown, pending)
-		pending = int32(0)
+// maybeTriggerAutoscaleOnStart triggers the autoscaler when it is started when the vpodLister
+// returns no vpods.
+func (a *autoscaler) maybeTriggerAutoscaleOnStart() {
+	_, err := a.vpodLister()
+	if err != nil {
+		a.logger.Warnw("failed to list vpods", "err", err)
+	} else {
+		a.trigger <- AutoscaleTrigger{AttempScaleDown: true, Pending: 0}
 	}
 }
 
 func (a *autoscaler) Autoscale(ctx context.Context, attemptScaleDown bool, pending int32) {
-	a.syncAutoscale(ctx, attemptScaleDown, pending)
+	select {
+	case a.trigger <- AutoscaleTrigger{AttempScaleDown: attemptScaleDown, Pending: pending}:
+	default:
+	}
 }
 
 func (a *autoscaler) syncAutoscale(ctx context.Context, attemptScaleDown bool, pending int32) {
@@ -205,6 +219,7 @@ func (a *autoscaler) doautoscale(ctx context.Context, attemptScaleDown bool, pen
 		newreplicas = scale.Spec.Replicas
 	}
 
+	a.logger.Debugf("expected replicas %d, got %d", newreplicas, scale.Spec.Replicas)
 	if newreplicas != scale.Spec.Replicas {
 		scale.Spec.Replicas = newreplicas
 		a.logger.Infow("updating adapter replicas", zap.Int32("replicas", scale.Spec.Replicas))
@@ -223,6 +238,12 @@ func (a *autoscaler) doautoscale(ctx context.Context, attemptScaleDown bool, pen
 }
 
 func (a *autoscaler) mayCompact(s *st.State, scaleUpFactor int32) {
+	a.logger.Debugw("Trying to compact and scale down",
+		zap.Int32("scaleUpFactor", scaleUpFactor),
+		zap.Any("schedulablePods", s.SchedulablePods),
+		zap.Int32("lastOrdinal", s.LastOrdinal),
+	)
+
 	// when there is only one pod there is nothing to move or number of pods is just enough!
 	if s.LastOrdinal < 1 || len(s.SchedulablePods) <= int(scaleUpFactor) {
 		return
@@ -276,16 +297,18 @@ func (a *autoscaler) compact(s *st.State, scaleUpFactor int32) error {
 				ordinal := st.OrdinalFromPodName(placements[i].PodName)
 
 				if ordinal == s.LastOrdinal-j {
-					wait.PollImmediate(50*time.Millisecond, 5*time.Second, func() (bool, error) {
-						if s.PodLister != nil {
-							pod, err = s.PodLister.Get(placements[i].PodName)
+					if s.PodLister != nil {
+						pod, err = s.PodLister.Get(placements[i].PodName)
+						if apierrors.IsNotFound(err) {
+							continue
 						}
-						return err == nil, nil
-					})
-
-					err = a.evictor(pod, vpod, &placements[i])
-					if err != nil {
-						return err
+						if err != nil {
+							return fmt.Errorf("failed to get pod %s: %w", placements[i].PodName, err)
+						}
+						err = a.evictor(pod, vpod, &placements[i])
+						if err != nil {
+							return err
+						}
 					}
 				}
 			}

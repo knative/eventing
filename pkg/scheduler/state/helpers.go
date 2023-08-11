@@ -20,10 +20,8 @@ import (
 	"math"
 	"strconv"
 	"strings"
-	"time"
 
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"knative.dev/eventing/pkg/scheduler"
 )
 
@@ -51,13 +49,8 @@ func GetVPod(key types.NamespacedName, vpods []scheduler.VPod) scheduler.VPod {
 
 func SatisfyZoneAvailability(feasiblePods []int32, states *State) bool {
 	zoneMap := make(map[string]struct{})
-	var zoneName string
-	var err error
 	for _, podID := range feasiblePods {
-		wait.PollImmediate(50*time.Millisecond, 5*time.Second, func() (bool, error) {
-			zoneName, _, err = states.GetPodInfo(PodNameFromOrdinal(states.StatefulSetName, podID))
-			return err == nil, nil
-		})
+		zoneName, _, _ := states.GetPodInfo(PodNameFromOrdinal(states.StatefulSetName, podID))
 		zoneMap[zoneName] = struct{}{}
 	}
 	return len(zoneMap) == int(states.NumZones)
@@ -65,13 +58,8 @@ func SatisfyZoneAvailability(feasiblePods []int32, states *State) bool {
 
 func SatisfyNodeAvailability(feasiblePods []int32, states *State) bool {
 	nodeMap := make(map[string]struct{})
-	var nodeName string
-	var err error
 	for _, podID := range feasiblePods {
-		wait.PollImmediate(50*time.Millisecond, 5*time.Second, func() (bool, error) {
-			_, nodeName, err = states.GetPodInfo(PodNameFromOrdinal(states.StatefulSetName, podID))
-			return err == nil, nil
-		})
+		_, nodeName, _ := states.GetPodInfo(PodNameFromOrdinal(states.StatefulSetName, podID))
 		nodeMap[nodeName] = struct{}{}
 	}
 	return len(nodeMap) == int(states.NumNodes)

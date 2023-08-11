@@ -20,16 +20,16 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strconv"
-	"time"
 
 	"go.uber.org/zap"
 	v1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/apimachinery/pkg/util/wait"
 	clientappsv1 "k8s.io/client-go/kubernetes/typed/apps/v1"
 	corev1 "k8s.io/client-go/listers/core/v1"
 
@@ -227,11 +227,11 @@ func (s *stateBuilder) State(reserved map[types.NamespacedName]map[string]int32)
 	}
 
 	for podId := int32(0); podId < scale.Spec.Replicas && s.podLister != nil; podId++ {
-		var pod *v1.Pod
-		wait.PollImmediate(50*time.Millisecond, 5*time.Second, func() (bool, error) {
-			pod, err = s.podLister.Get(PodNameFromOrdinal(s.statefulSetName, podId))
-			return err == nil, nil
-		})
+		podName := PodNameFromOrdinal(s.statefulSetName, podId)
+		pod, err := s.podLister.Get(podName)
+		if err != nil && !apierrors.IsNotFound(err) {
+			return nil, fmt.Errorf("failed to get pod %s from lister: %w", podName, err)
+		}
 
 		if pod != nil {
 			if isPodUnschedulable(pod) {
@@ -275,11 +275,10 @@ func (s *stateBuilder) State(reserved map[types.NamespacedName]map[string]int32)
 
 			withPlacement[vpod.GetKey()][podName] = true
 
-			var pod *v1.Pod
-			wait.PollImmediate(50*time.Millisecond, 5*time.Second, func() (bool, error) {
-				pod, err = s.podLister.Get(podName)
-				return err == nil, nil
-			})
+			pod, err := s.podLister.Get(podName)
+			if err != nil && !apierrors.IsNotFound(err) {
+				return nil, fmt.Errorf("failed to get pod %s from lister: %w", podName, err)
+			}
 
 			if pod != nil && schedulablePods.Has(OrdinalFromPodName(pod.GetName())) {
 				nodeName := pod.Spec.NodeName       //node name for this pod
@@ -300,11 +299,10 @@ func (s *stateBuilder) State(reserved map[types.NamespacedName]map[string]int32)
 					continue
 				}
 
-				var pod *v1.Pod
-				wait.PollImmediate(50*time.Millisecond, 5*time.Second, func() (bool, error) {
-					pod, err = s.podLister.Get(podName)
-					return err == nil, nil
-				})
+				pod, err := s.podLister.Get(podName)
+				if err != nil && !apierrors.IsNotFound(err) {
+					return nil, fmt.Errorf("failed to get pod %s from pod lister: %w", podName, err)
+				}
 
 				if pod != nil && schedulablePods.Has(OrdinalFromPodName(pod.GetName())) {
 					nodeName := pod.Spec.NodeName       //node name for this pod
