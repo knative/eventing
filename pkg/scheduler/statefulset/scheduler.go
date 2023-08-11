@@ -226,11 +226,11 @@ func (s *StatefulSetScheduler) Schedule(vpod scheduler.VPod) ([]duckv1alpha1.Pla
 }
 
 func (s *StatefulSetScheduler) scheduleVPod(vpod scheduler.VPod) ([]duckv1alpha1.Placement, error) {
-	// Attempt to scale down (async)
-	defer s.autoscaler.Autoscale(s.ctx, true, s.pendingVReplicas())
-
 	logger := s.logger.With("key", vpod.GetKey())
 	logger.Debugw("scheduling", zap.Any("pending", toJSONable(s.pending)))
+
+	// Attempt to scale down (async)
+	defer s.autoscaler.Autoscale(s.ctx, true, s.pendingVReplicas())
 
 	// Get the current placements state
 	// Quite an expensive operation but safe and simple.

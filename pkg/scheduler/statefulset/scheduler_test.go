@@ -783,7 +783,8 @@ func TestStatefulsetScheduler(t *testing.T) {
 				StatefulSetName:      sfsName,
 				VPodLister:           vpodClient.List,
 			}
-			s := newStatefulSetScheduler(ctx, cfg, sa, nil, lsp.GetPodLister().Pods(testNs))
+			fa := newFakeAutoscaler()
+			s := newStatefulSetScheduler(ctx, cfg, sa, fa, lsp.GetPodLister().Pods(testNs))
 			if tc.pending != nil {
 				s.pending = tc.pending
 			}
