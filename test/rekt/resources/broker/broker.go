@@ -264,3 +264,18 @@ func HasDeliveryBackoffPolicy() Condition {
 		},
 	}
 }
+
+func AsDestinationRef(name string) *duckv1.Destination {
+	return &duckv1.Destination{
+		Ref: AsKReference(name),
+	}
+}
+
+// AsKReference returns a KReference for a Broker without namespace.
+func AsKReference(name string) *duckv1.KReference {
+	return &duckv1.KReference{
+		Kind:       "Broker",
+		Name:       name,
+		APIVersion: "eventing.knative.dev/v1",
+	}
+}

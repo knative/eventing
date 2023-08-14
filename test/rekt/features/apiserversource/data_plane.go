@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	"github.com/cloudevents/sdk-go/v2/test"
+	"knative.dev/eventing/test/rekt/resources/addressable"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
@@ -765,4 +766,87 @@ func SendsEventsWithRetries() *feature.Feature {
 				),
 			).AtLeast(1))
 	return f
+}
+
+func SendsEventsWithBrokerAsSinkTLS() *feature.Feature {
+	src := feature.MakeRandomK8sName("apiserversource")
+	sacmName := feature.MakeRandomK8sName("apiserversource")
+	brokerName := feature.MakeRandomK8sName("broker")
+	sinkName := feature.MakeRandomK8sName("sink")
+	triggerName := feature.MakeRandomK8sName("trigger")
+	f := feature.NewFeature()
+
+	f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
+	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
+
+	f.Setup("install broker", broker.Install(brokerName, broker.WithEnvConfig()...))
+	f.Setup("broker is ready", broker.IsReady(brokerName))
+	f.Setup("broker is addressable", broker.IsAddressable(brokerName))
+	f.Setup("Broker has HTTPS address", broker.ValidateAddress(brokerName, addressable.AssertHTTPSAddress))
+
+	f.Setup("install sink", eventshub.Install(sinkName, eventshub.StartReceiverTLS))
+
+	f.Setup("install trigger", func(ctx context.Context, t feature.T) {
+		d := service.AsDestinationRef(sinkName)
+		d.CACerts = eventshub.GetCaCerts(ctx)
+		trigger.Install(triggerName, brokerName, trigger.WithSubscriberFromDestination(d))(ctx, t)
+	})
+	f.Setup("Wait for Trigger to become ready", trigger.IsReady(triggerName))
+
+	f.Setup("Create Service Account for ApiServerSource with RBAC for v1.Event resources",
+		setupAccountAndRoleForPods(sacmName))
+
+	cfg := []manifest.CfgFn{
+		apiserversource.WithServiceAccountName(sacmName),
+		apiserversource.WithEventMode(v1.ResourceMode),
+		apiserversource.WithResources(v1.APIVersionKindSelector{
+			APIVersion: "v1",
+			Kind:       "Event",
+		}, v1.APIVersionKindSelector{
+			APIVersion:    "v1",
+			Kind:          "Pod",
+			LabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"e2e": "testing"}},
+		}),
+	}
+
+	f.Requirement("install ApiServerSource", func(ctx context.Context, t feature.T) {
+		d := broker.AsDestinationRef(brokerName)
+
+		brokerAddr, err := broker.Address(ctx, brokerName)
+		if err != nil {
+			t.Fatal("failed to get the address of the broker service", brokerName, err)
+		}
+
+		d.CACerts = brokerAddr.CACerts
+
+		cfg = append(cfg, apiserversource.WithSink(d))
+		apiserversource.Install(src, cfg...)(ctx, t)
+	})
+
+	f.Requirement("ApiServerSource goes ready", apiserversource.IsReady(src))
+
+	examplePodName := feature.MakeRandomK8sName("example")
+
+	// create a pod so that ApiServerSource delivers an event to its sink
+	// event body is similar to this:
+	// {"kind":"Pod","namespace":"test-wmbcixlv","name":"example-axvlzbvc","apiVersion":"v1"}
+	f.Requirement("install example pod",
+		pod.Install(examplePodName, exampleImage,
+			pod.WithLabels(map[string]string{"e2e": "testing"})),
+	)
+
+	f.Stable("ApiServerSource as event source").
+		Must("delivers events",
+			eventasssert.OnStore(sinkName).MatchEvent(
+				test.HasType(sources.ApiServerSourceUpdateEventType),
+			).AtLeast(1),
+		)
+	eventasssert.MatchEvent(
+		test.HasType("dev.knative.apiserver.ref.add"),
+		test.DataContains(`"kind":"Pod"`),
+		test.DataContains(fmt.Sprintf(`"name":"%s"`, examplePodName)),
+	)
+
+	return f
+
 }
