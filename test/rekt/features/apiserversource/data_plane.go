@@ -811,7 +811,13 @@ func SendsEventsWithBrokerAsSinkTLS() *feature.Feature {
 
 	f.Requirement("install ApiServerSource", func(ctx context.Context, t feature.T) {
 		d := broker.AsDestinationRef(brokerName)
-		d.CACerts = eventshub.GetCaCerts(ctx)
+
+		brokerAddr, err := broker.Address(ctx, brokerName)
+		if err != nil {
+			t.Fatal("failed to get the address of the broker service", brokerName, err)
+		}
+
+		d.CACerts = brokerAddr.CACerts
 
 		cfg = append(cfg, apiserversource.WithSink(d))
 		apiserversource.Install(src, cfg...)(ctx, t)
