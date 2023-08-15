@@ -31,10 +31,7 @@ kind: Cluster
 # See: https://kubernetes.slack.com/archives/CEKK1KTN2/p1600268272383600
 kubeadmConfigPatches:
   - |
-    apiVersion: kubeadm.k8s.io/v1beta2
     kind: ClusterConfiguration
-    metadata:
-      name: config
     apiServer:
       extraArgs:
         "service-account-issuer": "kubernetes.default.svc"

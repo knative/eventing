@@ -158,6 +158,21 @@ func IsAddressable(name string, timings ...time.Duration) feature.StepFn {
 	return k8s.IsAddressable(GVR(), name, timings...)
 }
 
+// ValidateAddress validates the address retured by Address
+func ValidateAddress(name string, validate addressable.ValidateAddress, timings ...time.Duration) feature.StepFn {
+	return func(ctx context.Context, t feature.T) {
+		addr, err := Address(ctx, name, timings...)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		if err := validate(addr); err != nil {
+			t.Error(err)
+			return
+		}
+	}
+}
+
 // Address returns a broker's address.
 func Address(ctx context.Context, name string, timings ...time.Duration) (*duckv1.Addressable, error) {
 	return addressable.Address(ctx, GVR(), name, timings...)
@@ -247,5 +262,20 @@ func HasDeliveryBackoffPolicy() Condition {
 				br.Spec.Delivery.BackoffPolicy != nil &&
 				len(*br.Spec.Delivery.BackoffPolicy) > 0, nil
 		},
+	}
+}
+
+func AsDestinationRef(name string) *duckv1.Destination {
+	return &duckv1.Destination{
+		Ref: AsKReference(name),
+	}
+}
+
+// AsKReference returns a KReference for a Broker without namespace.
+func AsKReference(name string) *duckv1.KReference {
+	return &duckv1.KReference{
+		Kind:       "Broker",
+		Name:       name,
+		APIVersion: "eventing.knative.dev/v1",
 	}
 }

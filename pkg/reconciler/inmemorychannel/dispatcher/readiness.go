@@ -44,7 +44,7 @@ type DispatcherReadyChecker struct {
 	chLister messaginglistersv1.InMemoryChannelLister
 
 	// Allows listing/counting the handlers which have already been registered.
-	chMsgHandler multichannelfanout.MultiChannelMessageHandler
+	chMsgHandler multichannelfanout.MultiChannelEventHandler
 
 	// Allows safe concurrent read/write of 'isReady'.
 	sync.Mutex

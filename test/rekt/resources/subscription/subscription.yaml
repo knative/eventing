@@ -36,6 +36,10 @@ spec:
     {{ if .subscriber.uri }}
     uri: {{ .subscriber.uri }}
     {{ end }}
+    {{ if .subscriber.CACerts }}
+    CACerts: |-
+      {{ .subscriber.CACerts }}
+    {{ end }}
   {{ end }}
   {{if .reply }}
   reply:
@@ -48,6 +52,10 @@ spec:
     {{ end }}
     {{ if .reply.uri }}
     uri: {{ .reply.uri }}
+    {{ end }}
+    {{ if .reply.CACerts }}
+    CACerts: |-
+      {{ .reply.CACerts }}
     {{ end }}
   {{ end }}
   {{ if .delivery }}
@@ -63,6 +71,10 @@ spec:
       {{ end }}
       {{ if .delivery.deadLetterSink.uri }}
       uri: {{ .delivery.deadLetterSink.uri }}
+      {{ end }}
+      {{ if .delivery.deadLetterSink.CACerts }}
+      CACerts: |-
+        {{ .delivery.deadLetterSink.CACerts }}
       {{ end }}
     {{ end }}
     {{ if .delivery.retry }}

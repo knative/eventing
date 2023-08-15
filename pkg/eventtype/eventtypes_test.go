@@ -129,21 +129,21 @@ func TestEventTypeAutoHandler_GenerateEventTypeName(t *testing.T) {
 			namespace:    "default",
 			eventType:    "events.type",
 			eventSource:  "events.source",
-			expectedName: "et-example-zxzlbnrzln",
+			expectedName: "et-example-eaed2996d719048dfae11b607d68b7ad",
 		},
 		{
 			name:         "EXAMPLE",
 			namespace:    "default",
 			eventType:    "events.type",
 			eventSource:  "events.source",
-			expectedName: "et-example-zxzlbnrzln",
+			expectedName: "et-example-f4d9f28cdbe397fe92eb5899e7294121",
 		},
 		{
-			name:         "emptyName",
+			name:         "",
 			namespace:    "default",
 			eventType:    "events.type",
 			eventSource:  "events.source",
-			expectedName: "et-emptyname-zxzlbnrzln",
+			expectedName: "et--72f2dad9d914dcd0445cae74ba99d15c",
 		},
 	}
 
@@ -153,6 +153,104 @@ func TestEventTypeAutoHandler_GenerateEventTypeName(t *testing.T) {
 
 			if result != tc.expectedName {
 				t.Errorf("test case '%s', expected '%s', got '%s'", tc.name, tc.expectedName, result)
+			}
+		})
+	}
+}
+
+func TestEventTypeAutoHandler_GenerateEventTypeNameUnique(t *testing.T) {
+	type eventTypeMock struct {
+		name        string
+		namespace   string
+		eventType   string
+		eventSource string
+	}
+
+	testCases := []struct {
+		name           string
+		eventTypeA     eventTypeMock
+		eventTypeB     eventTypeMock
+		expectedUnique bool
+	}{
+		{
+			name: "Long equal name of addressable",
+			eventTypeA: eventTypeMock{
+				name:        "long-addressable-name",
+				namespace:   "default",
+				eventType:   "com.example.organization.events.typeA",
+				eventSource: "events.source.A",
+			},
+			eventTypeB: eventTypeMock{
+				name:        "long-addressable-name",
+				namespace:   "default",
+				eventType:   "com.example.organization.events.typeB",
+				eventSource: "events.source.B",
+			},
+			expectedUnique: true,
+		},
+		{
+			name: "Long equal name & same source",
+			eventTypeA: eventTypeMock{
+				name:        "long-addressable-name",
+				namespace:   "default",
+				eventType:   "com.example.organization.events.typeA",
+				eventSource: "events.source.A",
+			},
+			eventTypeB: eventTypeMock{
+				name:        "long-addressable-name",
+				namespace:   "default",
+				eventType:   "com.example.organization.events.typeB",
+				eventSource: "events.source.A",
+			},
+			expectedUnique: true,
+		},
+		{
+			name: "Long name with one char diff",
+			eventTypeA: eventTypeMock{
+				name:        "long-addressable-nameA",
+				namespace:   "default",
+				eventType:   "com.example.organization.events.typeA",
+				eventSource: "events.source.A",
+			},
+			eventTypeB: eventTypeMock{
+				name:        "long-addressable-nameB",
+				namespace:   "default",
+				eventType:   "com.example.organization.events.typeA",
+				eventSource: "events.source.B",
+			},
+			expectedUnique: true,
+		},
+		{
+			name: "All same input params are not unique",
+			eventTypeA: eventTypeMock{
+				name:        "long-addressable-name",
+				namespace:   "default",
+				eventType:   "com.example.organization.events.typeA",
+				eventSource: "events.source.A",
+			},
+			eventTypeB: eventTypeMock{
+				name:        "long-addressable-name",
+				namespace:   "default",
+				eventType:   "com.example.organization.events.typeA",
+				eventSource: "events.source.A",
+			},
+			expectedUnique: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			resultA := generateEventTypeName(tc.eventTypeA.name, tc.eventTypeA.namespace, tc.eventTypeA.eventType, tc.eventTypeA.eventSource)
+			resultB := generateEventTypeName(tc.eventTypeB.name, tc.eventTypeB.namespace, tc.eventTypeB.eventType, tc.eventTypeB.eventSource)
+
+			if tc.expectedUnique {
+				if resultA == resultB {
+					t.Errorf("test case '%s', generated name '%s' x '%s' must be unique", tc.name, resultA, resultB)
+				}
+			} else {
+				if resultA != resultB {
+					t.Errorf("test case '%s', generated name '%s' x '%s' must be equal", tc.name, resultA, resultB)
+				}
 			}
 		})
 	}

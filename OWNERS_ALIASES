@@ -43,6 +43,7 @@ aliases:
   - pierDipi
   eventing-writers:
   - aliok
+  - creydr
   - lberk
   - lionelvillard
   - matzew
@@ -58,9 +59,8 @@ aliases:
   - lkingland
   - matejvasek
   - salaboy
-  - zroubalik
   functions-wg-leads:
-  - lance
+  - lkingland
   - salaboy
   knative-admin:
   - Vishal-Chdhry
@@ -85,7 +85,6 @@ aliases:
   - smoser-ibm
   - upodroid
   - xtreme-sameer-vohra
-  - zroubalik
   knative-release-leads:
   - Vishal-Chdhry
   - creydr
@@ -164,7 +163,6 @@ aliases:
   - dsimansk
   - kvmware
   - psschwei
-  - zroubalik
   trademark-committee:
   - mchmarny
   - smoser-ibm
