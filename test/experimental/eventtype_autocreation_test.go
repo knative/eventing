@@ -41,5 +41,5 @@ func TestPingSourceEventTypeMatch(t *testing.T) {
 		environment.Managed(t),
 	)
 
-	env.Test(ctx, t, eventtype_autocreation.SendsEventsWithEventTypes())
+	env.Test(ctx, t, eventtype_autocreation.SendsEventsFromPingSourceWithEventTypes())
 }

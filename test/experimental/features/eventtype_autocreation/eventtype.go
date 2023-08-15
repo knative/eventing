@@ -19,7 +19,7 @@ import (
 )
 
 // SendsEventsWithEventTypes tests pingsource to a ready broker.
-func SendsEventsWithEventTypes() *feature.Feature {
+func SendsEventsFromPingSourceWithEventTypes() *feature.Feature {
 	source := feature.MakeRandomK8sName("source")
 	sink := feature.MakeRandomK8sName("sink")
 	via := feature.MakeRandomK8sName("via")
