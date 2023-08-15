@@ -19,7 +19,7 @@ require (
 	github.com/hashicorp/golang-lru v0.5.4
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/mitchellh/go-homedir v1.1.0
-	github.com/openzipkin/zipkin-go v0.3.0
+	github.com/openzipkin/zipkin-go v0.4.1
 	github.com/pelletier/go-toml/v2 v2.0.5
 	github.com/phayes/freeport v0.0.0-20180830031419-95f893ade6f2
 	github.com/pkg/errors v0.9.1
@@ -36,7 +36,7 @@ require (
 	go.uber.org/multierr v1.8.0
 	go.uber.org/zap v1.24.0
 	golang.org/x/sync v0.3.0
-	google.golang.org/grpc v1.55.0
+	google.golang.org/grpc v1.57.0
 	google.golang.org/protobuf v1.31.0
 	k8s.io/api v0.26.5
 	k8s.io/apiextensions-apiserver v0.26.5
@@ -44,21 +44,21 @@ require (
 	k8s.io/apiserver v0.26.5
 	k8s.io/client-go v0.26.5
 	k8s.io/utils v0.0.0-20221108210102-8e77b1f39fe2
-	knative.dev/hack v0.0.0-20230809013436-ab12e24b8c13
-	knative.dev/hack/schema v0.0.0-20230809013436-ab12e24b8c13
-	knative.dev/pkg v0.0.0-20230809013237-cceb144872f7
+	knative.dev/hack v0.0.0-20230814132844-3403e3502fdc
+	knative.dev/hack/schema v0.0.0-20230814132844-3403e3502fdc
+	knative.dev/pkg v0.0.0-20230814093643-26b41ba523a0
 	knative.dev/reconciler-test v0.0.0-20230810072538-a7237b013cbb
 	sigs.k8s.io/yaml v1.3.0
 )
 
 require (
-	cloud.google.com/go v0.110.2 // indirect
-	cloud.google.com/go/compute v1.19.3 // indirect
+	cloud.google.com/go v0.110.6 // indirect
+	cloud.google.com/go/compute v1.23.0 // indirect
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
-	cloud.google.com/go/iam v1.1.0 // indirect
+	cloud.google.com/go/iam v1.1.1 // indirect
 	cloud.google.com/go/storage v1.31.0 // indirect
 	contrib.go.opencensus.io/exporter/ocagent v0.7.1-0.20200907061046-05415f1de66d // indirect
-	contrib.go.opencensus.io/exporter/prometheus v0.4.0 // indirect
+	contrib.go.opencensus.io/exporter/prometheus v0.4.2 // indirect
 	contrib.go.opencensus.io/exporter/zipkin v0.1.2 // indirect
 	github.com/antlr/antlr4/runtime/Go/antlr v1.4.10 // indirect
 	github.com/benbjohnson/clock v1.1.0 // indirect
@@ -85,8 +85,8 @@ require (
 	github.com/google/go-github/v27 v27.0.6 // indirect
 	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/google/s2a-go v0.1.4 // indirect
-	github.com/googleapis/enterprise-certificate-proxy v0.2.3 // indirect
-	github.com/googleapis/gax-go/v2 v2.11.0 // indirect
+	github.com/googleapis/enterprise-certificate-proxy v0.2.5 // indirect
+	github.com/googleapis/gax-go/v2 v2.12.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.11.3 // indirect
 	github.com/imdario/mergo v0.3.9 // indirect
 	github.com/inconshreveable/mousetrap v1.0.1 // indirect
@@ -103,7 +103,7 @@ require (
 	github.com/prometheus/client_model v0.4.0 // indirect
 	github.com/prometheus/common v0.44.0 // indirect
 	github.com/prometheus/procfs v0.10.1 // indirect
-	github.com/prometheus/statsd_exporter v0.21.0 // indirect
+	github.com/prometheus/statsd_exporter v0.22.7 // indirect
 	github.com/rickb777/plural v1.2.1 // indirect
 	github.com/rs/dnscache v0.0.0-20211102005908-e0241e321417 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
@@ -113,19 +113,19 @@ require (
 	golang.org/x/crypto v0.12.0 // indirect
 	golang.org/x/mod v0.12.0 // indirect
 	golang.org/x/net v0.14.0 // indirect
-	golang.org/x/oauth2 v0.8.0 // indirect
+	golang.org/x/oauth2 v0.11.0 // indirect
 	golang.org/x/sys v0.11.0 // indirect
 	golang.org/x/term v0.11.0 // indirect
 	golang.org/x/text v0.12.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
-	golang.org/x/tools v0.11.0 // indirect
+	golang.org/x/tools v0.12.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.2.0 // indirect
-	google.golang.org/api v0.126.0 // indirect
+	google.golang.org/api v0.136.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/genproto v0.0.0-20230530153820-e85fd2cbaebc // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20230530153820-e85fd2cbaebc // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20230530153820-e85fd2cbaebc // indirect
+	google.golang.org/genproto v0.0.0-20230803162519-f966b187b2e5 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20230803162519-f966b187b2e5 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20230807174057-1744710a1577 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
