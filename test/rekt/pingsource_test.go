@@ -23,6 +23,8 @@ import (
 	"testing"
 	"time"
 
+	"knative.dev/eventing/test/experimental/features/eventtype_autocreation"
+
 	"knative.dev/pkg/system"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/eventshub"
@@ -103,5 +105,5 @@ func TestPingSourceWithEventTypes(t *testing.T) {
 		environment.WithPollTimings(5*time.Second, 2*time.Minute),
 	)
 
-	env.Test(ctx, t, pingsource.SendsEventsWithEventTypes())
+	env.Test(ctx, t, eventtype_autocreation.SendsEventsWithEventTypes())
 }
