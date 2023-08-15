@@ -1,3 +1,19 @@
+/*
+Copyright 2021 The Knative Authors
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package eventtype_autocreation
 
 import (
@@ -7,7 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/eventing/test/rekt/resources/broker"
-	"knative.dev/eventing/test/rekt/resources/eventtype"
 	"knative.dev/eventing/test/rekt/resources/pingsource"
 	"knative.dev/eventing/test/rekt/resources/trigger"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -55,8 +70,8 @@ func SendsEventsFromPingSourceWithEventTypes() *feature.Feature {
 	f.Stable("pingsource as event source").
 		Must("delivers events on broker with URI", assert.OnStore(sink).MatchEvent(
 			test.HasType("dev.knative.sources.ping")).AtLeast(1)).
-		Must("PingSource test eventtypes match", eventtype.WaitForEventType(
-			eventtype.EventType(AssertPresent(expectedCeTypes))))
+		Must("PingSource test eventtypes match", WaitForEventType(
+			EventType(AssertPresent(expectedCeTypes))))
 
 	return f
 }
