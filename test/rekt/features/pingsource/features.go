@@ -160,8 +160,7 @@ func SendsEventsWithEventTypes() *feature.Feature {
 	})
 	f.Requirement("PingSource goes ready", pingsource.IsReady(source))
 
-	expectedCeTypes := sets.New[string]()
-	expectedCeTypes.Insert(sourcesv1.PingSourceEventType)
+	expectedCeTypes := sets.New(sourcesv1.PingSourceEventType)
 
 	f.Stable("pingsource as event source").
 		Must("delivers events on broker with URI", assert.OnStore(sink).MatchEvent(
