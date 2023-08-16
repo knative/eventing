@@ -18,6 +18,7 @@ package eventtype_autocreation
 
 import (
 	"context"
+
 	"knative.dev/eventing/test/rekt/resources/eventtype"
 
 	"github.com/cloudevents/sdk-go/v2/test"
