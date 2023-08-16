@@ -18,6 +18,7 @@ package eventtype_autocreation
 
 import (
 	"context"
+	"knative.dev/eventing/test/rekt/resources/eventtype"
 
 	"github.com/cloudevents/sdk-go/v2/test"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -40,8 +41,6 @@ func SendsEventsFromPingSourceWithEventTypes() *feature.Feature {
 	via := feature.MakeRandomK8sName("via")
 
 	f := new(feature.Feature)
-
-	f.Setup("enable eventtype auto-creation", ApplyEventTypeConfigMap())
 
 	//Install the broker
 	brokerName := feature.MakeRandomK8sName("broker")
@@ -70,8 +69,8 @@ func SendsEventsFromPingSourceWithEventTypes() *feature.Feature {
 	f.Stable("pingsource as event source").
 		Must("delivers events on broker with URI", assert.OnStore(sink).MatchEvent(
 			test.HasType("dev.knative.sources.ping")).AtLeast(1)).
-		Must("PingSource test eventtypes match", WaitForEventType(
-			AssertPresent(expectedCeTypes)))
+		Must("PingSource test eventtypes match", eventtype.WaitForEventType(
+			eventtype.AssertPresent(expectedCeTypes)))
 
 	return f
 }
