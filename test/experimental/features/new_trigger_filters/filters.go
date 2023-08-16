@@ -17,11 +17,10 @@ limitations under the License.
 package new_trigger_filters
 
 import (
-	"bytes"
 	"fmt"
-	"text/template"
 
 	. "github.com/cloudevents/sdk-go/v2/test"
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	. "knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
@@ -29,6 +28,7 @@ import (
 	"knative.dev/reconciler-test/pkg/manifest"
 	"knative.dev/reconciler-test/pkg/resources/service"
 
+	"github.com/cloudevents/sdk-go/v2/event"
 	"knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/eventing/test/rekt/resources/trigger"
 )
@@ -118,54 +118,150 @@ func WithNewFilters(filters string) manifest.CfgFn {
 	}
 }
 
-type Filter interface {
-	FilterString() string
+type CloudEventsContext struct {
+	eventType            string
+	eventSource          string
+	eventSubject         string
+	eventID              string
+	eventDataSchema      string
+	eventDataContentType string
 }
 
-type AttributeFilter struct {
-	Type      string
-	Attribute string
-	Value     string
-}
+func AnyFilterFeature(brokerName string) *feature.Feature {
+	f := feature.NewFeature()
 
-func (f *AttributeFilter) FilterString() string {
-	return fmt.Sprintf(`
-	- %s:
-		%s: %s`, f.Type, f.Attribute, f.Value)
-}
-
-type CESQLFilter struct {
-	Value string
-}
-
-func (f *CESQLFilter) FilterString() string {
-	return fmt.Sprintf(" - cesql: %s", f.Value)
-}
-
-type NotFilter struct {
-	Filter Filter
-}
-
-func (f *NotFilter) FilterString() string {
-	return fmt.Sprintf(`
-	- not:
-		%s`, f.Filter.FilterString())
-}
-
-type ArrayFilter struct {
-	Type    string
-	Filters []Filter
-}
-
-func (f *ArrayFilter) FilterString() string {
-	tmpl, err := template.New("filter").Parse("- {{.Type}}:\n\t{{range $_, $filter := .Filters}}{{printf \"%s\n\t\" $filter.FilterString}}{{end}}")
-	if err != nil {
-		panic("failed to parse filter string")
+	eventContexts := []struct {
+		eventCtx      CloudEventsContext
+		shouldDeliver bool
+	}{
+		{
+			eventCtx: CloudEventsContext{
+				eventType: "exact.event.type",
+			},
+			shouldDeliver: true,
+		},
+		{
+			eventCtx: CloudEventsContext{
+				eventType: "prefix.event.type",
+			},
+			shouldDeliver: true,
+		},
+		{
+			eventCtx: CloudEventsContext{
+				eventType: "event.type.suffix",
+			},
+			shouldDeliver: true,
+		},
+		{
+			eventCtx: CloudEventsContext{
+				eventType: "not.type.event",
+			},
+			shouldDeliver: true,
+		},
+		{
+			eventCtx: CloudEventsContext{
+				eventType: "cesql.event.type",
+			},
+			shouldDeliver: true,
+		},
+		{
+			eventCtx: CloudEventsContext{
+				eventType: "not.event.type",
+			},
+			shouldDeliver: false,
+		},
 	}
-	var result bytes.Buffer
-	err = tmpl.Execute(&result, *f)
-	if err != nil {
-		panic("failed to execute template to filter")
+
+	filters := []eventingv1.SubscriptionsAPIFilter{
+		{
+			Any: []eventingv1.SubscriptionsAPIFilter{
+				{
+					Exact: map[string]string{
+						"type": "exact.event.type",
+					},
+				},
+				{
+					Prefix: map[string]string{
+						"type": "prefix",
+					},
+				},
+				{
+					Suffix: map[string]string{
+						"type": "suffix",
+					},
+				},
+				{
+					Not: &eventingv1.SubscriptionsAPIFilter{
+						CESQL: "type LIKE %event.type%",
+					},
+				},
+				{
+					CESQL: "type = 'cesql.event.type'",
+				},
+			},
+		},
 	}
-	return result.String()
+
+	subscriber := feature.MakeRandomK8sName("subscriber")
+	triggerName := feature.MakeRandomK8sName("trigger")
+
+	f.Setup("Install trigger subscriber", eventshub.Install(subscriber, eventshub.StartReceiver))
+
+	cfg := []manifest.CfgFn{
+		trigger.WithSubscriber(service.AsKReference(subscriber), ""),
+		trigger.WithNewFilters(filters),
+	}
+
+	f.Setup("Install trigger", trigger.Install(triggerName, brokerName, cfg...))
+	f.Setup("Wait for trigger to become ready", trigger.IsReady(triggerName))
+	f.Setup("Broker is addressable", k8s.IsAddressable(broker.GVR(), brokerName))
+
+	asserter := f.Alpha("Any filter")
+
+	events := make([]event.Event, len(eventContexts))
+	for idx, eventCtx := range eventContexts {
+		events[idx] = newEventFromEventContext(eventCtx.eventCtx)
+		eventSender := feature.MakeRandomK8sName("sender")
+
+		f.Requirement(fmt.Sprintf("Install event sender %s", eventSender), eventshub.Install(eventSender,
+			eventshub.StartSenderToResource(broker.GVR(), brokerName),
+			eventshub.InputEvent(events[idx]),
+		))
+
+		if eventCtx.shouldDeliver {
+			asserter.
+				Must("must deliver matched events", OnStore(subscriber).MatchEvent(HasId(events[idx].ID())).AtLeast(1))
+
+		} else {
+			asserter.
+				MustNot("must not deliver unmatched events", OnStore(subscriber).MatchEvent(HasId(events[idx].ID())).Not())
+		}
+
+	}
+
+	return f
+
+}
+
+func newEventFromEventContext(eventCtx CloudEventsContext) event.Event {
+	event := MinEvent()
+	if eventCtx.eventType != "" {
+		event.SetType(eventCtx.eventType)
+	}
+	if eventCtx.eventSource != "" {
+		event.SetSource(eventCtx.eventSource)
+	}
+	if eventCtx.eventSubject != "" {
+		event.SetSubject(eventCtx.eventSubject)
+	}
+	if eventCtx.eventID != "" {
+		event.SetID(eventCtx.eventID)
+	}
+	if eventCtx.eventDataSchema != "" {
+		event.SetDataSchema(eventCtx.eventDataSchema)
+	}
+	if eventCtx.eventDataContentType != "" {
+		event.SetDataContentType(eventCtx.eventDataContentType)
+	}
+	return event
 }
