@@ -21,6 +21,7 @@ package rekt
 
 import (
 	"testing"
+	"time"
 
 	"knative.dev/pkg/system"
 	"knative.dev/reconciler-test/pkg/environment"
@@ -88,4 +89,19 @@ func TestPingSourceWithCloudEventData(t *testing.T) {
 	)
 
 	env.Test(ctx, t, pingsource.SendsEventsWithCloudEventData())
+}
+
+func TestPingSourceWithEventTypes(t *testing.T) {
+	t.Skip("The original test's logic is wrong. After it is fixed, this test wil start failing. So skip for now. This test will moved to experimental rekt package.")
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+		environment.WithPollTimings(5*time.Second, 2*time.Minute),
+	)
+
+	env.Test(ctx, t, pingsource.SendsEventsWithEventTypes())
 }
