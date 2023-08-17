@@ -188,7 +188,7 @@ func AnyFilterFeature(brokerName string) *feature.Feature {
 				},
 				{
 					Not: &eventingv1.SubscriptionsAPIFilter{
-						CESQL: "type LIKE %event.type%",
+						CESQL: "type LIKE '%event.type%'",
 					},
 				},
 				{
