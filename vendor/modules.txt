@@ -498,8 +498,8 @@ golang.org/x/tools/internal/typeparams
 ## explicit; go 1.17
 golang.org/x/xerrors
 golang.org/x/xerrors/internal
-# gomodules.xyz/jsonpatch/v2 v2.2.0
-## explicit; go 1.12
+# gomodules.xyz/jsonpatch/v2 v2.3.0
+## explicit; go 1.20
 gomodules.xyz/jsonpatch/v2
 # google.golang.org/api v0.136.0
 ## explicit; go 1.19
@@ -1177,17 +1177,17 @@ k8s.io/utils/net
 k8s.io/utils/pointer
 k8s.io/utils/strings/slices
 k8s.io/utils/trace
-# knative.dev/hack v0.0.0-20230814132844-3403e3502fdc
+# knative.dev/hack v0.0.0-20230815012940-044c02b7a447
 ## explicit; go 1.18
 knative.dev/hack
 knative.dev/hack/shell
-# knative.dev/hack/schema v0.0.0-20230814132844-3403e3502fdc
+# knative.dev/hack/schema v0.0.0-20230815012940-044c02b7a447
 ## explicit; go 1.18
 knative.dev/hack/schema/commands
 knative.dev/hack/schema/docs
 knative.dev/hack/schema/registry
 knative.dev/hack/schema/schema
-# knative.dev/pkg v0.0.0-20230814093643-26b41ba523a0
+# knative.dev/pkg v0.0.0-20230815132840-4f651e092853
 ## explicit; go 1.18
 knative.dev/pkg/apiextensions/storageversion
 knative.dev/pkg/apiextensions/storageversion/cmd/migrate
@@ -1325,7 +1325,7 @@ knative.dev/pkg/webhook/resourcesemantics
 knative.dev/pkg/webhook/resourcesemantics/conversion
 knative.dev/pkg/webhook/resourcesemantics/defaulting
 knative.dev/pkg/webhook/resourcesemantics/validation
-# knative.dev/reconciler-test v0.0.0-20230810072538-a7237b013cbb
+# knative.dev/reconciler-test v0.0.0-20230817080342-39774f133674
 ## explicit; go 1.18
 knative.dev/reconciler-test/cmd/eventshub
 knative.dev/reconciler-test/pkg/environment
