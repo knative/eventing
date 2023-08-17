@@ -35,7 +35,7 @@ import (
 	"knative.dev/reconciler-test/pkg/resources/service"
 )
 
-// SendsEventsWithEventTypes tests pingsource to a ready broker.
+// SendsEventsFromPingSourceWithEventTypes tests that the created EventType from a Pingsource to a Broker is of type "dev.knative.sources.ping".
 func SendsEventsFromPingSourceWithEventTypes() *feature.Feature {
 	source := feature.MakeRandomK8sName("source")
 	sink := feature.MakeRandomK8sName("sink")
