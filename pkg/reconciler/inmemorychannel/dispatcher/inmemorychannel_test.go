@@ -54,7 +54,7 @@ const (
 	imcName                           = "test-imc"
 	twoSubscriberPatch                = `[{"op":"add","path":"/status/subscribers","value":[{"observedGeneration":1,"ready":"True","uid":"2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1"},{"observedGeneration":2,"ready":"True","uid":"34c5aec8-deb6-11e8-9f32-f2801f1b9fd1"}]}]`
 	oneSubscriberPatch                = `[{"op":"add","path":"/status/subscribers","value":[{"observedGeneration":1,"ready":"True","uid":"2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1"}]}]`
-	oneSubscriberRemovedOneAddedPatch = `[{"op":"add","path":"/status/subscribers/2","value":{"observedGeneration":2,"ready":"True","uid":"34c5aec8-deb6-11e8-9f32-f2801f1b9fd1"}},{"op":"remove","path":"/status/subscribers/0"}]`
+	oneSubscriberRemovedOneAddedPatch = `[{"op":"replace","path":"/status/subscribers/0/uid","value":"2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1"},{"op":"replace","path":"/status/subscribers/0/observedGeneration","value":1},{"op":"replace","path":"/status/subscribers/1/uid","value":"34c5aec8-deb6-11e8-9f32-f2801f1b9fd1"},{"op":"replace","path":"/status/subscribers/1/observedGeneration","value":2}]`
 )
 
 var (
