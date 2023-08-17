@@ -27,6 +27,7 @@ import (
 	"knative.dev/reconciler-test/pkg/manifest"
 	"knative.dev/reconciler-test/pkg/resources/service"
 
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/eventing/test/rekt/resources/trigger"
 )
@@ -43,20 +44,45 @@ func FiltersFeatureSet(brokerName string) *feature.FeatureSet {
 
 	features := make([]*feature.Feature, 0, 8)
 	tests := map[string]struct {
-		filters string
+		filters []eventingv1.SubscriptionsAPIFilter
 		step    feature.StepFn
 	}{
 		"Exact filter": {
-			filters: fmt.Sprintf(snippetFor("exact"), matchedEvent.Type(), matchedEvent.Source()),
+			filters: []eventingv1.SubscriptionsAPIFilter{
+				{
+					Exact: map[string]string{
+						"type":   matchedEvent.Type(),
+						"source": matchedEvent.Source(),
+					},
+				},
+			},
 		},
 		"Prefix filter": {
-			filters: fmt.Sprintf(snippetFor("prefix"), matchedEvent.Type()[:4], matchedEvent.Source()[:4]),
+			filters: []eventingv1.SubscriptionsAPIFilter{
+				{
+					Prefix: map[string]string{
+						"type":   matchedEvent.Type()[:4],
+						"source": matchedEvent.Source()[:4],
+					},
+				},
+			},
 		},
 		"Suffix filter": {
-			filters: fmt.Sprintf(snippetFor("suffix"), matchedEvent.Type()[5:], matchedEvent.Source()[5:]),
+			filters: []eventingv1.SubscriptionsAPIFilter{
+				{
+					Suffix: map[string]string{
+						"type":   matchedEvent.Type()[5:],
+						"source": matchedEvent.Source()[5:],
+					},
+				},
+			},
 		},
 		"CloudEvents SQL filter": {
-			filters: fmt.Sprintf(`- cesql: "type = '%s' AND source = '%s'" `, matchedEvent.Type(), matchedEvent.Source()),
+			filters: []eventingv1.SubscriptionsAPIFilter{
+				{
+					CESQL: fmt.Sprintf("type = '%s' AND source = '%s'", matchedEvent.Type(), matchedEvent.Source()),
+				},
+			},
 		},
 	}
 
@@ -73,7 +99,7 @@ func FiltersFeatureSet(brokerName string) *feature.FeatureSet {
 		// Set the Trigger subscriber.
 		cfg := []manifest.CfgFn{
 			trigger.WithSubscriber(service.AsKReference(subscriber), ""),
-			WithNewFilters(fs.filters),
+			trigger.WithNewFilters(fs.filters),
 		}
 
 		f.Setup("Install trigger", trigger.Install(triggerName, brokerName, cfg...))
@@ -99,19 +125,5 @@ func FiltersFeatureSet(brokerName string) *feature.FeatureSet {
 	return &feature.FeatureSet{
 		Name:     "New trigger filters",
 		Features: features,
-	}
-}
-
-func snippetFor(key string) string {
-	return fmt.Sprintf(`
-    - %s:
-        type: %%s
-        source: %%s`, key)
-}
-
-// WithNewFilters adds a filter config to a Trigger spec using the new filters API.
-func WithNewFilters(filters string) manifest.CfgFn {
-	return func(cfg map[string]interface{}) {
-		cfg["filters"] = filters
 	}
 }
