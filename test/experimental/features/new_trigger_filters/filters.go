@@ -125,49 +125,35 @@ type CloudEventsContext struct {
 	eventID              string
 	eventDataSchema      string
 	eventDataContentType string
+	shouldDeliver        bool
 }
 
 func AnyFilterFeature(brokerName string) *feature.Feature {
 	f := feature.NewFeature()
 
-	eventContexts := []struct {
-		eventCtx      CloudEventsContext
-		shouldDeliver bool
-	}{
+	eventContexts := []CloudEventsContext{
 		{
-			eventCtx: CloudEventsContext{
-				eventType: "exact.event.type",
-			},
+			eventType:     "exact.event.type",
 			shouldDeliver: true,
 		},
 		{
-			eventCtx: CloudEventsContext{
-				eventType: "prefix.event.type",
-			},
+			eventType:     "prefix.event.type",
 			shouldDeliver: true,
 		},
 		{
-			eventCtx: CloudEventsContext{
-				eventType: "event.type.suffix",
-			},
+			eventType:     "event.type.suffix",
 			shouldDeliver: true,
 		},
 		{
-			eventCtx: CloudEventsContext{
-				eventType: "not.type.event",
-			},
+			eventType:     "not.type.event",
 			shouldDeliver: true,
 		},
 		{
-			eventCtx: CloudEventsContext{
-				eventType: "cesql.event.type",
-			},
+			eventType:     "cesql.event.type",
 			shouldDeliver: true,
 		},
 		{
-			eventCtx: CloudEventsContext{
-				eventType: "not.event.type",
-			},
+			eventType:     "not.event.type",
 			shouldDeliver: false,
 		},
 	}
@@ -202,13 +188,19 @@ func AnyFilterFeature(brokerName string) *feature.Feature {
 		},
 	}
 
-	subscriber := feature.MakeRandomK8sName("subscriber")
+	f = newEventFilterFeature(eventContexts, filters, f, brokerName)
+
+	return f
+}
+
+func newEventFilterFeature(eventContexts []CloudEventsContext, filters []eventingv1.SubscriptionsAPIFilter, f *feature.Feature, brokerName string) *feature.Feature {
+	subscriberName := feature.MakeRandomK8sName("subscriber")
 	triggerName := feature.MakeRandomK8sName("trigger")
 
-	f.Setup("Install trigger subscriber", eventshub.Install(subscriber, eventshub.StartReceiver))
+	f.Setup("Install trigger subscriber", eventshub.Install(subscriberName, eventshub.StartReceiver))
 
 	cfg := []manifest.CfgFn{
-		trigger.WithSubscriber(service.AsKReference(subscriber), ""),
+		trigger.WithSubscriber(service.AsKReference(subscriberName), ""),
 		trigger.WithNewFilters(filters),
 	}
 
@@ -216,35 +208,31 @@ func AnyFilterFeature(brokerName string) *feature.Feature {
 	f.Setup("Wait for trigger to become ready", trigger.IsReady(triggerName))
 	f.Setup("Broker is addressable", k8s.IsAddressable(broker.GVR(), brokerName))
 
-	asserter := f.Alpha("Any filter")
+	asserter := f.Alpha("New filters")
 
-	events := make([]event.Event, len(eventContexts))
-	for idx, eventCtx := range eventContexts {
-		events[idx] = newEventFromEventContext(eventCtx.eventCtx)
+	for _, eventCtx := range eventContexts {
+		event := newEventFromEventContext(eventCtx)
 		eventSender := feature.MakeRandomK8sName("sender")
 
 		f.Requirement(fmt.Sprintf("Install event sender %s", eventSender), eventshub.Install(eventSender,
 			eventshub.StartSenderToResource(broker.GVR(), brokerName),
-			eventshub.InputEvent(events[idx]),
+			eventshub.InputEvent(event),
 		))
 
 		if eventCtx.shouldDeliver {
-			asserter.
-				Must("must deliver matched events", OnStore(subscriber).MatchEvent(HasId(events[idx].ID())).AtLeast(1))
-
+			asserter.Must("must deliver matched event", OnStore(subscriberName).MatchEvent(HasId(event.ID())).AtLeast(1))
 		} else {
-			asserter.
-				MustNot("must not deliver unmatched events", OnStore(subscriber).MatchEvent(HasId(events[idx].ID())).Not())
+			asserter.MustNot("must not deliver unmatched event", OnStore(subscriberName).MatchEvent(HasId(event.ID())).Not())
 		}
-
 	}
 
 	return f
-
 }
 
 func newEventFromEventContext(eventCtx CloudEventsContext) event.Event {
 	event := MinEvent()
+	// Ensure that each event has a unique ID
+	event.SetID(feature.MakeRandomK8sName("event"))
 	if eventCtx.eventType != "" {
 		event.SetType(eventCtx.eventType)
 	}
