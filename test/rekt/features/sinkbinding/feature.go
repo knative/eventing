@@ -117,7 +117,7 @@ func SendsEventsWithBrokerAsSinkTLS(ctx context.Context) *feature.Feature {
 
 	f.Stable("Create a deployment as sinkbinding's subject").
 		Must("delivers events",
-			eventasssert.OnStore(sink).
+			eventasssert.OnStore(sinkName).
 				Match(eventasssert.MatchKind(eventshub.EventReceived)).
 				MatchEvent(test.HasExtension("sinkbinding", extensionSecret)).
 				AtLeast(1),
