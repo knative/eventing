@@ -93,7 +93,7 @@ func SendsEventsWithBrokerAsSinkTLS(ctx context.Context) *feature.Feature {
 	f.Setup("broker is addressable", broker.IsAddressable(brokerName))
 	f.Setup("Broker has HTTPS address", broker.ValidateAddress(brokerName, addressable.AssertHTTPSAddress))
 	env := environment.FromContext(ctx)
-	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiverTLS))
+	f.Setup("install sink", eventshub.Install(sinkName, eventshub.StartReceiverTLS))
 	f.Setup("install a deployment", deployment.Install(subject, heartbeatsImage,
 		deployment.WithEnvs(map[string]string{
 			"POD_NAME":      "heartbeats",
