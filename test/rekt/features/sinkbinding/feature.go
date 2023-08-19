@@ -109,7 +109,7 @@ func SendsEventsWithBrokerAsSinkTLS(ctx context.Context) *feature.Feature {
 	}
 
 	f.Requirement("install SinkBinding", func(ctx context.Context, t feature.T) {
-		d := service.AsDestinationRef(sink)
+		d := service.AsDestinationRef(sinkName)
 		d.CACerts = eventshub.GetCaCerts(ctx)
 		sinkbinding.Install(sbinding, d, deployment.AsTrackerReference(subject), cfg...)(ctx, t)
 	})
