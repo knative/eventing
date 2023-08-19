@@ -81,6 +81,7 @@ func SendsEventsWithBrokerAsSinkTLS(ctx context.Context) *feature.Feature {
 	sbinding := feature.MakeRandomK8sName("sinkbinding")
 	brokerName := feature.MakeRandomK8sName("broker")
 	sinkName := feature.MakeRandomK8sName("sink")
+	subject := feature.MakeRandomK8sName("subject")
 	extensionSecret := string(uuid.NewUUID())
 
 	f := feature.NewFeatureNamed("SinkBinding V1 Deployment BrokerAsSink test")
