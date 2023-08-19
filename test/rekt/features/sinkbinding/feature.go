@@ -23,6 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"knative.dev/eventing/test/rekt/resources/addressable"
+	"knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/pkg/tracker"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/eventshub"
