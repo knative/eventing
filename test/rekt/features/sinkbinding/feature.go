@@ -22,6 +22,8 @@ import (
 	"github.com/cloudevents/sdk-go/v2/test"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
+	"knative.dev/eventing/test/rekt/resources/addressable"
+	"knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/pkg/tracker"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/eventshub"
@@ -72,6 +74,55 @@ func SinkBindingV1Deployment(ctx context.Context) *feature.Feature {
 			eventasssert.OnStore(sink).MatchEvent(
 				test.HasExtension("sinkbinding", extensionSecret),
 			).AtLeast(1))
+
+	return f
+}
+
+func SendsEventsWithBrokerAsSinkTLS(ctx context.Context) *feature.Feature {
+	sbinding := feature.MakeRandomK8sName("sinkbinding")
+	brokerName := feature.MakeRandomK8sName("broker")
+	sinkName := feature.MakeRandomK8sName("sink")
+	subject := feature.MakeRandomK8sName("subject")
+	extensionSecret := string(uuid.NewUUID())
+
+	f := feature.NewFeatureNamed("SinkBinding V1 Deployment BrokerAsSink test")
+	f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
+	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
+
+	f.Setup("install broker", broker.Install(brokerName, broker.WithEnvConfig()...))
+	f.Setup("broker is ready", broker.IsReady(brokerName))
+	f.Setup("broker is addressable", broker.IsAddressable(brokerName))
+	f.Setup("Broker has HTTPS address", broker.ValidateAddress(brokerName, addressable.AssertHTTPSAddress))
+	env := environment.FromContext(ctx)
+	f.Setup("install sink", eventshub.Install(sinkName, eventshub.StartReceiverTLS))
+	f.Setup("install a deployment", deployment.Install(subject, heartbeatsImage,
+		deployment.WithEnvs(map[string]string{
+			"POD_NAME":      "heartbeats",
+			"POD_NAMESPACE": env.Namespace(),
+		})))
+
+	extensions := map[string]string{
+		"sinkbinding": extensionSecret,
+	}
+
+	cfg := []manifest.CfgFn{
+		sinkbinding.WithExtensions(extensions),
+	}
+
+	f.Requirement("install SinkBinding", func(ctx context.Context, t feature.T) {
+		d := service.AsDestinationRef(sinkName)
+		d.CACerts = eventshub.GetCaCerts(ctx)
+		sinkbinding.Install(sbinding, d, deployment.AsTrackerReference(subject), cfg...)(ctx, t)
+	})
+	f.Requirement("SinkBinding goes ready", sinkbinding.IsReady(sbinding))
+
+	f.Stable("Create a deployment as sinkbinding's subject").
+		Must("delivers events",
+			eventasssert.OnStore(sinkName).
+				Match(eventasssert.MatchKind(eventshub.EventReceived)).
+				MatchEvent(test.HasExtension("sinkbinding", extensionSecret)).
+				AtLeast(1),
+		)
 
 	return f
 }
