@@ -73,7 +73,7 @@ func TestSinkBindingV1Deployment_BrokerAsSinkTLS(t *testing.T) {
 		eventshub.WithTLS(t),
 	)
 
-	env.Test(ctx, t, sinkbinding.SendsEventsWithBrokerAsSinkTLS())
+	env.Test(ctx, t, sinkbinding.SendsEventsWithBrokerAsSinkTLS(ctx))
 }
 
 func TestSinkBindingV1Job(t *testing.T) {
