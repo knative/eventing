@@ -86,6 +86,7 @@ func WithIstioPodAnnotations(cfg map[string]interface{}) {
 	podAnnotations := map[string]interface{}{
 		"sidecar.istio.io/inject":                "true",
 		"sidecar.istio.io/rewriteAppHTTPProbers": "true",
+		"proxy.istio.io/config":                  "{ 'holdApplicationUntilProxyStarts': true }",
 	}
 
 	WithAnnotations(podAnnotations)(cfg)
