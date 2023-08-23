@@ -19,7 +19,6 @@ package dispatcher
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -44,7 +43,6 @@ import (
 	eventingv1beta2 "knative.dev/eventing/pkg/client/clientset/versioned/typed/eventing/v1beta2"
 	messagingv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/messaging/v1"
 	reconcilerv1 "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/inmemorychannel"
-	eventingv1 "knative.dev/eventing/pkg/client/listers/eventing/v1"
 	"knative.dev/eventing/pkg/client/listers/eventing/v1beta2"
 	"knative.dev/eventing/pkg/eventtype"
 	"knative.dev/eventing/pkg/kncloudevents"
@@ -53,12 +51,11 @@ import (
 // Reconciler reconciles InMemory Channels.
 type Reconciler struct {
 	multiChannelEventHandler multichannelfanout.MultiChannelEventHandler
-	reporter                   channel.StatsReporter
-	messagingClientSet         messagingv1.MessagingV1Interface
-	eventTypeLister            v1beta2.EventTypeLister
-	brokerLister               eventingv1.BrokerLister
-	eventingClient             eventingv1beta2.EventingV1beta2Interface
-	featureStore               *feature.Store
+	reporter                 channel.StatsReporter
+	messagingClientSet       messagingv1.MessagingV1Interface
+	eventTypeLister          v1beta2.EventTypeLister
+	eventingClient           eventingv1beta2.EventingV1beta2Interface
+	featureStore             *feature.Store
 }
 
 // Check the interfaces Reconciler should implement
@@ -96,9 +93,12 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1.InMemoryChannel) rec
 		return err
 	}
 	var eventTypeAutoHandler *eventtype.EventTypeAutoHandler
-	var eventTypeOwnerRef *duckv1.KReference
+	var channelRef *duckv1.KReference
 	var UID *types.UID
-	if r.featureStore.IsEnabled(feature.EvenTypeAutoCreate) {
+	if ownerReferences := imc.GetOwnerReferences(); r.featureStore.IsEnabled(feature.EvenTypeAutoCreate) &&
+		(len(ownerReferences) == 0 ||
+			ownerReferences[0].Kind != "Broker") {
+		logging.FromContext(ctx).Info("EventType autocreate is enabled, creating handler")
 		eventTypeAutoHandler = &eventtype.EventTypeAutoHandler{
 			EventTypeLister: r.eventTypeLister,
 			EventingClient:  r.eventingClient,
@@ -106,18 +106,8 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1.InMemoryChannel) rec
 			Logger:          logging.FromContext(ctx).Desugar(),
 		}
 
-		if ownerReferences := imc.GetOwnerReferences(); len(ownerReferences) > 0 {
-			eventTypeOwnerRef, err = r.brokerKReferenceFromOwnerReference(ownerReferences[0], imc.Namespace)
-			UID = &ownerReferences[0].UID
-			if err != nil {
-				eventTypeOwnerRef = toKReference(imc)
-				UID = &imc.UID
-			}
-		} else {
-			eventTypeOwnerRef = toKReference(imc)
-			UID = &imc.UID
-		}
-		logging.FromContext(ctx).Info("Created owner ref", zap.Any("eventTypeOwnerRef", eventTypeOwnerRef))
+		channelRef = toKReference(imc)
+		UID = &imc.UID
 
 	}
 
@@ -130,7 +120,7 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1.InMemoryChannel) rec
 			config.FanoutConfig,
 			r.reporter,
 			eventTypeAutoHandler,
-			eventTypeOwnerRef,
+			channelRef,
 			UID,
 		)
 		if err != nil {
@@ -158,7 +148,7 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1.InMemoryChannel) rec
 			config.FanoutConfig,
 			r.reporter,
 			eventTypeAutoHandler,
-			eventTypeOwnerRef,
+			channelRef,
 			UID,
 			channel.ResolveChannelFromPath(channel.ParseChannelFromPath),
 		)
@@ -294,21 +284,4 @@ func toKReference(imc *v1.InMemoryChannel) *duckv1.KReference {
 		Name:       imc.Name,
 		Address:    imc.Status.Address.Name,
 	}
-}
-
-func (r *Reconciler) brokerKReferenceFromOwnerReference(ownerRef metav1.OwnerReference, namespace string) (*duckv1.KReference, error) {
-	if !strings.Contains(strings.ToLower(ownerRef.Kind), "broker") {
-		return nil, fmt.Errorf("the OwnerReference must be a broker")
-	}
-	broker, err := r.brokerLister.Brokers(namespace).Get(ownerRef.Name)
-	if err != nil {
-		return nil, err
-	}
-	return &duckv1.KReference{
-		Kind:       ownerRef.Kind,
-		APIVersion: ownerRef.APIVersion,
-		Namespace:  broker.Namespace,
-		Name:       ownerRef.Name,
-		Address:    broker.Status.Address.Name,
-	}, nil
 }
