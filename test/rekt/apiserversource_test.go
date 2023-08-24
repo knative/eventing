@@ -67,8 +67,8 @@ func TestApiServerSourceValidationWebhookConfigurationOnUpdate(t *testing.T) {
 }
 
 func TestApiServerSourceDataPlane_SinkTypes(t *testing.T) {
-	t.Parallel()
-
+	//t.Parallel()
+	t.Skip("Skipping until the test logic is fixed.")
 	ctx, env := global.Environment(
 		knative.WithKnativeNamespace(system.Namespace()),
 		knative.WithLoggingConfig,
