@@ -247,13 +247,20 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 }
 
 func toKReference(broker *eventingv1.Broker) *duckv1.KReference {
-	return &duckv1.KReference{
+	kref := &duckv1.KReference{
 		Kind:       broker.Kind,
 		Namespace:  broker.Namespace,
 		Name:       broker.Name,
 		APIVersion: broker.APIVersion,
 		Address:    broker.Status.Address.Name,
 	}
+	if kref.Kind == "" {
+		kref.Kind = "Broker"
+	}
+	if kref.APIVersion == "" {
+		kref.APIVersion = "eventing.knative.dev/v1"
+	}
+	return kref
 }
 
 func (h *Handler) receive(ctx context.Context, headers http.Header, event *cloudevents.Event, brokerNamespace, brokerName string) (int, time.Duration) {
