@@ -872,6 +872,8 @@ k8s.io/utils v0.0.0-20221108210102-8e77b1f39fe2 h1:GfD9OzL11kvZN5iArC6oTS7RTj7oJ
 k8s.io/utils v0.0.0-20221108210102-8e77b1f39fe2/go.mod h1:OLgZIPagt7ERELqWJFomSt595RzquPNLL48iOWgYOg0=
 knative.dev/hack v0.0.0-20230815012940-044c02b7a447 h1:Lr4O/WEyZHuUBFbqATYdQlfLXvhPUCluF4zlgRi59T4=
 knative.dev/hack v0.0.0-20230815012940-044c02b7a447/go.mod h1:yk2OjGDsbEnQjfxdm0/HJKS2WqTLEFg/N6nUs6Rqx3Q=
+knative.dev/hack v0.0.0-20230818155117-9cc05a31e8c0 h1:n9YEGYuoj31pAkhGlNL+xTQAeXKYTLeMmIZLWA9fAeo=
+knative.dev/hack v0.0.0-20230818155117-9cc05a31e8c0/go.mod h1:yk2OjGDsbEnQjfxdm0/HJKS2WqTLEFg/N6nUs6Rqx3Q=
 knative.dev/hack/schema v0.0.0-20230815012940-044c02b7a447 h1:/Q72vaUeJsQ3cVNddEYA8aqb++E2woTDEd8DrmcUsnM=
 knative.dev/hack/schema v0.0.0-20230815012940-044c02b7a447/go.mod h1:GeIb+PLd5mllawcpHEGF5J5fYTQrvgEO5liao8lUKUs=
 knative.dev/pkg v0.0.0-20230815132840-4f651e092853 h1:OyAYpXLa/jQWClFxRegCccGySyX2/1BVRtKaAWRE/xM=
