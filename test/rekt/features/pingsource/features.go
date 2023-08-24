@@ -18,27 +18,28 @@ package pingsource
 
 import (
 	"context"
+	
+	"k8s.io/apimachinery/pkg/util/sets"
+	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
+	"knative.dev/eventing/test/rekt/resources/broker"
+	"knative.dev/eventing/test/rekt/resources/eventtype"
+	"knative.dev/eventing/test/rekt/resources/trigger"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/reconciler-test/pkg/manifest"
 
 	"github.com/cloudevents/sdk-go/v2/test"
-	"k8s.io/apimachinery/pkg/util/sets"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/feature"
-	"knative.dev/reconciler-test/pkg/manifest"
 	"knative.dev/reconciler-test/pkg/resources/service"
 
 	"knative.dev/reconciler-test/pkg/eventshub/assert"
 	eventassert "knative.dev/reconciler-test/pkg/eventshub/assert"
 
-	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/eventing/test/rekt/features"
 	"knative.dev/eventing/test/rekt/features/featureflags"
 	"knative.dev/eventing/test/rekt/features/source"
-	"knative.dev/eventing/test/rekt/resources/broker"
-	"knative.dev/eventing/test/rekt/resources/eventtype"
 	"knative.dev/eventing/test/rekt/resources/pingsource"
-	"knative.dev/eventing/test/rekt/resources/trigger"
 )
 
 func SendsEventsWithSinkRef() *feature.Feature {
