@@ -60,7 +60,7 @@ func WaitForEventType(eventtype EventType, timing ...time.Duration) feature.Step
 	}
 }
 
-func AssertPresent(expectedCeTypes sets.String) EventType {
+func AssertPresent(expectedCeTypes sets.Set[string]) EventType {
 	return EventType{
 		Name: "test eventtypes match or not",
 		EventTypes: func(etl eventingv1beta2.EventTypeList) (bool, error) {
