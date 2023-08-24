@@ -50,11 +50,11 @@ import (
 )
 
 const (
-	testNS                            = "test-namespace"
-	imcName                           = "test-imc"
-	twoSubscriberPatch                = `[{"op":"add","path":"/status/subscribers","value":[{"observedGeneration":1,"ready":"True","uid":"2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1"},{"observedGeneration":2,"ready":"True","uid":"34c5aec8-deb6-11e8-9f32-f2801f1b9fd1"}]}]`
-	oneSubscriberPatch                = `[{"op":"add","path":"/status/subscribers","value":[{"observedGeneration":1,"ready":"True","uid":"2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1"}]}]`
-	oneSubscriberRemovedOneAddedPatch = `[{"op":"add","path":"/status/subscribers/2","value":{"observedGeneration":2,"ready":"True","uid":"34c5aec8-deb6-11e8-9f32-f2801f1b9fd1"}},{"op":"remove","path":"/status/subscribers/0"}]`
+	testNS                = "test-namespace"
+	imcName               = "test-imc"
+	twoSubscriberPatch    = `[{"op":"add","path":"/status/subscribers","value":[{"observedGeneration":1,"ready":"True","uid":"2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1"},{"observedGeneration":2,"ready":"True","uid":"34c5aec8-deb6-11e8-9f32-f2801f1b9fd1"}]}]`
+	oneSubscriberPatch    = `[{"op":"add","path":"/status/subscribers","value":[{"observedGeneration":1,"ready":"True","uid":"2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1"}]}]`
+	oneSubscriberReplaced = `[{"op":"replace","path":"/status/subscribers/1/uid","value":"34c5aec8-deb6-11e8-9f32-f2801f1b9fd1"}]`
 )
 
 var (
@@ -191,7 +191,7 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelAddress(channelServiceAddress)),
 			},
 		}, {
-			Name: "with subscribers, one removed one added to status",
+			Name: "with subscribers, one replaced to status",
 			Key:  imcKey,
 			Objects: []runtime.Object{
 				NewInMemoryChannel(imcName, testNS,
@@ -201,12 +201,12 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelEndpointsReady(),
 					WithInMemoryChannelChannelServiceReady(),
 					WithInMemoryChannelSubscribers(subscribers),
-					WithInMemoryChannelReadySubscriberAndGeneration(string(subscriber3UID), subscriber3Generation),
 					WithInMemoryChannelReadySubscriberAndGeneration(string(subscriber1UID), subscriber1Generation),
+					WithInMemoryChannelReadySubscriberAndGeneration(string(subscriber3UID), subscriber3Generation),
 					WithInMemoryChannelAddress(channelServiceAddress)),
 			},
 			WantPatches: []clientgotesting.PatchActionImpl{
-				makePatch(testNS, imcName, oneSubscriberRemovedOneAddedPatch),
+				makePatch(testNS, imcName, oneSubscriberReplaced),
 			},
 		}, {
 			Name: "subscriber with delivery spec",
