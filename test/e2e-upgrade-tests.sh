@@ -39,7 +39,7 @@ function uninstall_test_resources {
   true
 }
 
-initialize "$@" --skip-istio-addon
+initialize "$@"
 
 TIMEOUT=${TIMEOUT:-60m}
 
