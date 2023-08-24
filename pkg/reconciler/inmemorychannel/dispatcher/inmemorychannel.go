@@ -93,17 +93,22 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1.InMemoryChannel) rec
 		return err
 	}
 	var eventTypeAutoHandler *eventtype.EventTypeAutoHandler
-	var channelReference *duckv1.KReference
+	var channelRef *duckv1.KReference
 	var UID *types.UID
-	if r.featureStore.IsEnabled(feature.EvenTypeAutoCreate) {
+	if ownerReferences := imc.GetOwnerReferences(); r.featureStore.IsEnabled(feature.EvenTypeAutoCreate) &&
+		(len(ownerReferences) == 0 ||
+			ownerReferences[0].Kind != "Broker") {
+		logging.FromContext(ctx).Info("EventType autocreate is enabled, creating handler")
 		eventTypeAutoHandler = &eventtype.EventTypeAutoHandler{
 			EventTypeLister: r.eventTypeLister,
 			EventingClient:  r.eventingClient,
 			FeatureStore:    r.featureStore,
 			Logger:          logging.FromContext(ctx).Desugar(),
 		}
-		channelReference = toKReference(imc)
+
+		channelRef = toKReference(imc)
 		UID = &imc.UID
+
 	}
 
 	// First grab the host based MultiChannelFanoutMessage httpHandler
@@ -116,7 +121,7 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1.InMemoryChannel) rec
 			config.FanoutConfig,
 			r.reporter,
 			eventTypeAutoHandler,
-			channelReference,
+			channelRef,
 			UID,
 		)
 		if err != nil {
@@ -145,7 +150,7 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1.InMemoryChannel) rec
 			config.FanoutConfig,
 			r.reporter,
 			eventTypeAutoHandler,
-			channelReference,
+			channelRef,
 			UID,
 			channel.ResolveMessageChannelFromPath(channel.ParseChannelFromPath),
 		)
