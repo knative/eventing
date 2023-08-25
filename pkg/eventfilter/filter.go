@@ -61,4 +61,7 @@ func (x FilterResult) Or(y FilterResult) FilterResult {
 type Filter interface {
 	// Filter compute the predicate on the provided event and returns the result of the matching
 	Filter(ctx context.Context, event cloudevents.Event) FilterResult
+
+	// Done will clean up any extra resources used by the filter. This needs to be called to avoid memory leaks
+	Done()
 }

@@ -91,3 +91,5 @@ func LookupAttribute(event cloudevents.Event, attr string) (interface{}, bool) {
 }
 
 var _ eventfilter.Filter = attributesFilter{}
+
+func (attrs attributesFilter) Done() {}

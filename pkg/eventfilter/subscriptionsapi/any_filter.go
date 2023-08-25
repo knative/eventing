@@ -36,6 +36,8 @@ type filterCount struct {
 type anyFilter struct {
 	filters []filterCount
 	rwMutex sync.RWMutex
+	c       chan int
+	d       chan bool
 }
 
 // NewAnyFilter returns an event filter which passes if any of the contained filters passes.
@@ -47,9 +49,13 @@ func NewAnyFilter(filters ...eventfilter.Filter) eventfilter.Filter {
 			filter: filter,
 		}
 	}
-	return &anyFilter{
+	f := &anyFilter{
 		filters: filterCounts,
+		c:       make(chan int),
+		d:       make(chan bool),
 	}
+	go f.optimzeLoop()
+	return f
 }
 
 func (filter *anyFilter) Filter(ctx context.Context, event cloudevents.Event) eventfilter.FilterResult {
@@ -61,16 +67,30 @@ func (filter *anyFilter) Filter(ctx context.Context, event cloudevents.Event) ev
 		res = res.Or(f.filter.Filter(ctx, event))
 		// Short circuit to optimize it
 		if res == eventfilter.PassFilter {
-			go func() {
-				val := f.count.Inc()
-				if i != 0 && val > filter.filters[i-1].count.Load() {
-					filter.optimize(i)
-				}
-			}()
+			filter.c <- i
 			return eventfilter.PassFilter
 		}
 	}
 	return res
+}
+
+func (filter *anyFilter) Done() {
+	close(filter.c)
+	<-filter.d
+}
+
+func (filter *anyFilter) optimzeLoop() {
+	for {
+		i, more := <-filter.c
+		if !more {
+			filter.d <- true
+			return
+		}
+		val := filter.filters[i].count.Inc()
+		if i != 0 && val > filter.filters[i-1].count.Load()*2 {
+			go filter.optimize(i)
+		}
+	}
 }
 
 func (filter *anyFilter) optimize(swapIdx int) {
