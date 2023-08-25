@@ -36,7 +36,6 @@ type filterCount struct {
 type anyFilter struct {
 	filters []filterCount
 	rwMutex sync.RWMutex
-	max     atomic.Uint64
 }
 
 // NewAnyFilter returns an event filter which passes if any of the contained filters passes.
@@ -64,7 +63,7 @@ func (filter *anyFilter) Filter(ctx context.Context, event cloudevents.Event) ev
 		if res == eventfilter.PassFilter {
 			go func() {
 				val := f.count.Inc()
-				if val > filter.max.Load() && i != 0 {
+				if i != 0 && val > filter.filters[i-1].count.Load() {
 					filter.optimize(i)
 				}
 			}()
@@ -77,8 +76,7 @@ func (filter *anyFilter) Filter(ctx context.Context, event cloudevents.Event) ev
 func (filter *anyFilter) optimize(swapIdx int) {
 	filter.rwMutex.Lock()
 	defer filter.rwMutex.Unlock()
-	filter.filters[0], filter.filters[swapIdx] = filter.filters[swapIdx], filter.filters[0]
-	filter.max.Store(filter.filters[0].count.Load())
+	filter.filters[swapIdx-1], filter.filters[swapIdx] = filter.filters[swapIdx], filter.filters[swapIdx-1]
 }
 
 var _ eventfilter.Filter = &anyFilter{}
