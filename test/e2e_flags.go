@@ -36,7 +36,7 @@ const (
 		"must be (for now) 'MTChannelBasedBroker'."
 	SourceUsage = "The names of the source type metas, separated by comma. " +
 		`Example: "sources.knative.dev/v1:ApiServerSource,` +
-		`sources.knative.dev/v1beta2:PingSource".`
+		`sources.knative.dev/v1:PingSource".`
 	BrokerUsage = "The name of the broker type metas, separated by comma. " +
 		`Example: "eventing.knative.dev/v1:MTChannelBasedBroker`
 	BrokerNameUsage = "When testing a pre-existing broker, specify the Broker name so the conformance tests " +
