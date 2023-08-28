@@ -61,7 +61,6 @@ func DataPlane_SinkTypes() *feature.FeatureSet {
 		Features: []*feature.Feature{
 			SendsEventsWithSinkRef(),
 			SendsEventsWithSinkUri(),
-			SendsEventsWithEventTypes(),
 
 			// TODO: things to test:
 			// - check if we actually receive add, update and delete events
