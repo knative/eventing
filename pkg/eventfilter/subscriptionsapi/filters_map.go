@@ -27,8 +27,8 @@ type FiltersMap struct {
 	rwMutex    sync.RWMutex
 }
 
-func NewFiltersMap() FiltersMap {
-	return FiltersMap{
+func NewFiltersMap() *FiltersMap {
+	return &FiltersMap{
 		filtersMap: make(map[string]eventfilter.Filter),
 	}
 }
