@@ -72,6 +72,7 @@ type Handler struct {
 	triggerLister eventinglisters.TriggerLister
 	logger        *zap.Logger
 	withContext   func(ctx context.Context) context.Context
+	filtersMap    *subscriptionsapi.FiltersMap
 }
 
 // NewHandler creates a new Handler and its associated EventReceiver.
@@ -80,6 +81,8 @@ func NewHandler(logger *zap.Logger, triggerInformer v1.TriggerInformer, reporter
 		MaxIdleConns:        defaultMaxIdleConnections,
 		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
 	})
+
+	fm := subscriptionsapi.NewFiltersMap()
 
 	triggerInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
@@ -119,6 +122,7 @@ func NewHandler(logger *zap.Logger, triggerInformer v1.TriggerInformer, reporter
 		triggerLister: triggerInformer.Lister(),
 		logger:        logger,
 		withContext:   wc,
+		filtersMap:    fm,
 	}, nil
 }
 
