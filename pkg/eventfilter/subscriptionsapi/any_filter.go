@@ -47,4 +47,6 @@ func (filter anyFilter) Filter(ctx context.Context, event cloudevents.Event) eve
 	return res
 }
 
+func (filter anyFilter) Cleanup() {}
+
 var _ eventfilter.Filter = &anyFilter{}

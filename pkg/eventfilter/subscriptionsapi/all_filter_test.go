@@ -42,11 +42,15 @@ func (*passFilter) Filter(ctx context.Context, event cloudevents.Event) eventfil
 	return eventfilter.PassFilter
 }
 
+func (*passFilter) Cleanup() {}
+
 type failFilter struct{}
 
 func (*failFilter) Filter(ctx context.Context, event cloudevents.Event) eventfilter.FilterResult {
 	return eventfilter.FailFilter
 }
+
+func (*failFilter) Cleanup() {}
 
 func TestAllFilter_Flat(t *testing.T) {
 	tests := map[string]struct {
