@@ -30,7 +30,7 @@ source "$(dirname "$0")/e2e-common.sh"
 
 # Script entry point.
 
-initialize $@ --skip-istio-addon
+initialize "$@"
 
 echo "Running E2E tests for: Multi Tenant Channel Based Broker, Channel (v1), InMemoryChannel (v1) , ApiServerSource (v1), ContainerSource (v1) and PingSource (v1beta2)"
 go_test_e2e -timeout=1h -parallel=20 ./test/e2e \
