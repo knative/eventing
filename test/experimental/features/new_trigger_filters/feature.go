@@ -202,3 +202,47 @@ func AnyFilterFeature(brokerName string) *feature.Feature {
 
 	return f
 }
+
+func AllFilterFeature(brokerName string) *feature.Feature {
+	f := feature.NewFeature()
+
+	eventContexts := []CloudEventsContext{
+		{
+			eventType:     "exact.prefix.suffix.event.type",
+			shouldDeliver: true,
+		},
+		{
+			eventType:     "not.event.type",
+			shouldDeliver: false,
+		},
+	}
+
+	filters := []eventingv1.SubscriptionsAPIFilter{
+		{
+			All: []eventingv1.SubscriptionsAPIFilter{
+				{
+					Exact: map[string]string{
+						"type": "exact.prefix.suffix.event.type",
+					},
+				},
+				{
+					Prefix: map[string]string{
+						"type": "exact.prefix",
+					},
+				},
+				{
+					Suffix: map[string]string{
+						"type": "suffix.event.type",
+					},
+				},
+				{
+					CESQL: "type LIKE 'exact.prefix.suffix%'",
+				},
+			},
+		},
+	}
+
+	f = newEventFilterFeature(eventContexts, filters, f, brokerName)
+
+	return f
+}
