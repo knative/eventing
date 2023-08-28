@@ -63,4 +63,4 @@ func (filter *exactFilter) Filter(ctx context.Context, event cloudevents.Event) 
 	return filter.attrsFilter.Filter(ctx, event)
 }
 
-func (filter *exactFilter) Done() {}
+func (filter *exactFilter) Cleanup() {}

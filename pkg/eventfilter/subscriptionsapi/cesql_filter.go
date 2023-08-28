@@ -72,4 +72,4 @@ func (filter *ceSQLFilter) Filter(ctx context.Context, event cloudevents.Event) 
 	return eventfilter.PassFilter
 }
 
-func (filter *ceSQLFilter) Done() {}
+func (filter *ceSQLFilter) Cleanup() {}

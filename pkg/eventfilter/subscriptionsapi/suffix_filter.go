@@ -71,4 +71,4 @@ func (filter *suffixFilter) Filter(ctx context.Context, event cloudevents.Event)
 	return eventfilter.PassFilter
 }
 
-func (filter *suffixFilter) Done() {}
+func (filter *suffixFilter) Cleanup() {}

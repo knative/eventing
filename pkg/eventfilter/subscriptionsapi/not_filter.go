@@ -50,4 +50,4 @@ func (filter *notFilter) Filter(ctx context.Context, event cloudevents.Event) ev
 
 var _ eventfilter.Filter = &notFilter{}
 
-func (filter *notFilter) Done() {}
+func (filter *notFilter) Cleanup() {}

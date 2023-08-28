@@ -74,9 +74,12 @@ func (filter *anyFilter) Filter(ctx context.Context, event cloudevents.Event) ev
 	return res
 }
 
-func (filter *anyFilter) Done() {
+func (filter *anyFilter) Cleanup() {
 	close(filter.c)
 	<-filter.d
+	for _, f := range filter.filters {
+		f.filter.Cleanup()
+	}
 }
 
 func (filter *anyFilter) optimzeLoop() {
