@@ -264,7 +264,6 @@ func (s *StatefulSetScheduler) scheduleVPod(vpod scheduler.VPod) ([]duckv1alpha1
 
 	logger.Debugw("scheduling", zap.Any("state", state))
 
-
 	existingPlacements := vpod.GetPlacements()
 	var left int32
 
