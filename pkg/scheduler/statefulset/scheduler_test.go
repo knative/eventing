@@ -784,9 +784,6 @@ func TestStatefulsetScheduler(t *testing.T) {
 				VPodLister:           vpodClient.List,
 			}
 			s := newStatefulSetScheduler(ctx, cfg, sa, nil, lsp.GetPodLister().Pods(testNs))
-			if tc.pending != nil {
-				s.pending = tc.pending
-			}
 
 			// Give some time for the informer to notify the scheduler and set the number of replicas
 			err = wait.PollImmediate(200*time.Millisecond, time.Second, func() (bool, error) {
