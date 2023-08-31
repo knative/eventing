@@ -60,8 +60,6 @@ import (
 
 type GetReserved func() map[types.NamespacedName]map[string]int32
 
-type GetPending func() Pending
-
 type Config struct {
 	StatefulSetNamespace string `json:"statefulSetNamespace"`
 	StatefulSetName      string `json:"statefulSetName"`
@@ -82,8 +80,6 @@ type Config struct {
 
 	// getReserved returns reserved replicas
 	getReserved GetReserved
-	// getPending returns pending replicas
-	getPending GetPending
 }
 
 func New(ctx context.Context, cfg *Config) (scheduler.Scheduler, error) {
@@ -98,11 +94,6 @@ func New(ctx context.Context, cfg *Config) (scheduler.Scheduler, error) {
 		return getReserved()
 	}
 
-	var getPending GetPending
-	cfg.getPending = func() Pending {
-		return getPending()
-	}
-
 	autoscaler := newAutoscaler(ctx, cfg, stateAccessor)
 
 	var wg sync.WaitGroup
@@ -114,7 +105,6 @@ func New(ctx context.Context, cfg *Config) (scheduler.Scheduler, error) {
 
 	s := newStatefulSetScheduler(ctx, cfg, stateAccessor, autoscaler, podLister)
 	getReserved = s.Reserved
-	getPending = s.Pending
 	wg.Done()
 
 	return s, nil
@@ -176,12 +166,6 @@ type StatefulSetScheduler struct {
 	// replicas is the (cached) number of statefulset replicas.
 	replicas int32
 
-	// pending tracks the number of virtual replicas that haven't been scheduled yet
-	// because there wasn't enough free capacity.
-	// The autoscaler uses
-	pending   Pending
-	pendingMu sync.Mutex
-
 	// reserved tracks vreplicas that have been placed (ie. scheduled) but haven't been
 	// committed yet (ie. not appearing in vpodLister)
 	reserved   map[types.NamespacedName]map[string]int32
@@ -222,7 +206,6 @@ func newStatefulSetScheduler(ctx context.Context,
 		statefulSetClient:    kubeclient.Get(ctx).AppsV1().StatefulSets(cfg.StatefulSetNamespace),
 		podLister:            podlister,
 		vpodLister:           cfg.VPodLister,
-		pending:              make(map[types.NamespacedName]int32),
 		lock:                 new(sync.Mutex),
 		stateAccessor:        stateAccessor,
 		reserved:             make(map[types.NamespacedName]map[string]int32),
@@ -242,8 +225,6 @@ func newStatefulSetScheduler(ctx context.Context,
 func (s *StatefulSetScheduler) Schedule(vpod scheduler.VPod) ([]duckv1alpha1.Placement, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	s.pendingMu.Lock()
-	defer s.pendingMu.Unlock()
 	s.reservedMu.Lock()
 	defer s.reservedMu.Unlock()
 
@@ -273,7 +254,7 @@ func (s *StatefulSetScheduler) Schedule(vpod scheduler.VPod) ([]duckv1alpha1.Pla
 
 func (s *StatefulSetScheduler) scheduleVPod(vpod scheduler.VPod) ([]duckv1alpha1.Placement, error) {
 	logger := s.logger.With("key", vpod.GetKey())
-	logger.Debugw("scheduling", zap.Any("pending", toJSONable(s.pending)))
+	logger.Debugw("scheduling")
 
 	// Get the current placements state
 	// Quite an expensive operation but safe and simple.
@@ -306,7 +287,6 @@ func (s *StatefulSetScheduler) scheduleVPod(vpod scheduler.VPod) ([]duckv1alpha1
 	tr := scheduler.GetTotalVReplicas(placements)
 	if tr == vpod.GetVReplicas() {
 		logger.Debug("scheduling succeeded (already scheduled)")
-		delete(s.pending, vpod.GetKey())
 
 		// Fully placed. Nothing to do
 		return placements, nil
@@ -354,8 +334,6 @@ func (s *StatefulSetScheduler) scheduleVPod(vpod scheduler.VPod) ([]duckv1alpha1
 		// Give time for the autoscaler to do its job
 		logger.Info("not enough pod replicas to schedule. Awaiting autoscaler", zap.Any("placement", placements), zap.Int32("left", left))
 
-		s.pending[vpod.GetKey()] = left
-
 		// Trigger the autoscaler
 		if s.autoscaler != nil {
 			s.autoscaler.Autoscale(s.ctx)
@@ -364,7 +342,6 @@ func (s *StatefulSetScheduler) scheduleVPod(vpod scheduler.VPod) ([]duckv1alpha1
 		if state.SchedPolicy != nil {
 			logger.Info("reverting to previous placements")
 			s.reservePlacements(vpod, existingPlacements)           // rebalancing doesn't care about new placements since all vreps will be re-placed
-			delete(s.pending, vpod.GetKey())                        // rebalancing doesn't care about pending since all vreps will be re-placed
 			return existingPlacements, s.notEnoughPodReplicas(left) // requeue to wait for the autoscaler to do its job
 		}
 
@@ -372,7 +349,6 @@ func (s *StatefulSetScheduler) scheduleVPod(vpod scheduler.VPod) ([]duckv1alpha1
 	}
 
 	logger.Infow("scheduling successful", zap.Any("placement", placements))
-	delete(s.pending, vpod.GetKey())
 
 	return placements, nil
 }
@@ -781,16 +757,6 @@ func (s *StatefulSetScheduler) addReplicas(states *st.State, diff int32, placeme
 	return newPlacements, diff
 }
 
-// pendingReplicas returns the total number of vreplicas
-// that haven't been scheduled yet
-func (s *StatefulSetScheduler) pendingVReplicas() int32 {
-	t := int32(0)
-	for _, v := range s.pending {
-		t += v
-	}
-	return t
-}
-
 func (s *StatefulSetScheduler) updateStatefulset(obj interface{}) {
 	statefulset, ok := obj.(*appsv1.StatefulSet)
 	if !ok {
@@ -860,16 +826,4 @@ func (s *StatefulSetScheduler) Reserved() map[types.NamespacedName]map[string]in
 	}
 
 	return r
-}
-
-func (s *StatefulSetScheduler) Pending() Pending {
-	s.pendingMu.Lock()
-	defer s.pendingMu.Unlock()
-
-	p := make(map[types.NamespacedName]int32, len(s.pending))
-	for k, v := range s.pending {
-		p[k] = v
-	}
-
-	return p
 }
