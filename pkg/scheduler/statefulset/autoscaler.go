@@ -79,6 +79,8 @@ type autoscaler struct {
 
 	// getReserved returns reserved replicas.
 	getReserved GetReserved
+
+	lastCompactAttempt time.Time
 }
 
 var (
@@ -116,6 +118,11 @@ func newAutoscaler(ctx context.Context, cfg *Config, stateAccessor st.StateAcces
 		lock:              new(sync.Mutex),
 		isLeader:          atomic.Bool{},
 		getReserved:       cfg.getReserved,
+		// Anything that is less than now() - refreshPeriod, so that we will try to compact
+		// as soon as we start.
+		lastCompactAttempt: time.Now().
+			Add(-cfg.RefreshPeriod).
+			Add(-time.Minute),
 	}
 }
 
@@ -236,6 +243,24 @@ func (a *autoscaler) doautoscale(ctx context.Context, attemptScaleDown bool) err
 }
 
 func (a *autoscaler) mayCompact(s *st.State, scaleUpFactor int32) {
+
+	// This avoids a too aggressive scale down by adding a "grace period" based on the refresh
+	// period
+	nextAttempt := a.lastCompactAttempt.Add(a.refreshPeriod)
+	if time.Now().Before(nextAttempt) {
+		a.logger.Debugw("Compact was retried before refresh period",
+			zap.Time("lastCompactAttempt", a.lastCompactAttempt),
+			zap.Time("nextAttempt", nextAttempt),
+			zap.String("refreshPeriod", a.refreshPeriod.String()),
+		)
+		return
+	}
+
+	a.logger.Debugw("Trying to compact and scale down",
+		zap.Int32("scaleUpFactor", scaleUpFactor),
+		zap.Any("state", s),
+	)
+
 	// when there is only one pod there is nothing to move or number of pods is just enough!
 	if s.LastOrdinal < 1 || len(s.SchedulablePods) <= int(scaleUpFactor) {
 		return
@@ -248,6 +273,7 @@ func (a *autoscaler) mayCompact(s *st.State, scaleUpFactor int32) {
 		usedInLastPod := s.Capacity - s.Free(s.LastOrdinal)
 
 		if freeCapacity >= usedInLastPod {
+			a.lastCompactAttempt = time.Now()
 			err := a.compact(s, scaleUpFactor)
 			if err != nil {
 				a.logger.Errorw("vreplicas compaction failed", zap.Error(err))
@@ -267,6 +293,7 @@ func (a *autoscaler) mayCompact(s *st.State, scaleUpFactor int32) {
 
 		if (freeCapacity >= usedInLastXPods) && //remaining pods can hold all vreps from evicted pods
 			(s.Replicas-scaleUpFactor >= scaleUpFactor) { //remaining # of pods is enough for HA scaling
+			a.lastCompactAttempt = time.Now()
 			err := a.compact(s, scaleUpFactor)
 			if err != nil {
 				a.logger.Errorw("vreplicas compaction failed", zap.Error(err))
