@@ -254,8 +254,6 @@ func (s *StatefulSetScheduler) Schedule(vpod scheduler.VPod) ([]duckv1alpha1.Pla
 
 func (s *StatefulSetScheduler) scheduleVPod(vpod scheduler.VPod) ([]duckv1alpha1.Placement, error) {
 	logger := s.logger.With("key", vpod.GetKey())
-	logger.Debugw("scheduling")
-
 	// Get the current placements state
 	// Quite an expensive operation but safe and simple.
 	state, err := s.stateAccessor.State(s.reserved)
@@ -263,6 +261,9 @@ func (s *StatefulSetScheduler) scheduleVPod(vpod scheduler.VPod) ([]duckv1alpha1
 		logger.Debug("error while refreshing scheduler state (will retry)", zap.Error(err))
 		return nil, err
 	}
+
+	logger.Debugw("scheduling", zap.Any("state", state))
+
 
 	existingPlacements := vpod.GetPlacements()
 	var left int32
