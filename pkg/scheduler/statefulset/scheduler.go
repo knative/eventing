@@ -110,36 +110,6 @@ func New(ctx context.Context, cfg *Config) (scheduler.Scheduler, error) {
 	return s, nil
 }
 
-// NewScheduler creates a new scheduler with pod autoscaling enabled.
-// Deprecated: Use New
-func NewScheduler(ctx context.Context,
-	namespace, name string,
-	lister scheduler.VPodLister,
-	refreshPeriod time.Duration,
-	capacity int32,
-	schedulerPolicy scheduler.SchedulerPolicyType,
-	nodeLister corev1listers.NodeLister,
-	evictor scheduler.Evictor,
-	schedPolicy *scheduler.SchedulerPolicy,
-	deschedPolicy *scheduler.SchedulerPolicy) scheduler.Scheduler {
-
-	cfg := &Config{
-		StatefulSetNamespace: namespace,
-		StatefulSetName:      name,
-		PodCapacity:          capacity,
-		RefreshPeriod:        refreshPeriod,
-		SchedulerPolicy:      schedulerPolicy,
-		SchedPolicy:          schedPolicy,
-		DeschedPolicy:        deschedPolicy,
-		Evictor:              evictor,
-		VPodLister:           lister,
-		NodeLister:           nodeLister,
-	}
-
-	s, _ := New(ctx, cfg)
-	return s
-}
-
 type Pending map[types.NamespacedName]int32
 
 func (p Pending) Total() int32 {
