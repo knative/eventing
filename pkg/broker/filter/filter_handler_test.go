@@ -21,8 +21,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"knative.dev/eventing/pkg/eventfilter/subscriptionsapi"
-	"knative.dev/pkg/logging"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -42,7 +40,9 @@ import (
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/eventing/pkg/broker"
+	"knative.dev/eventing/pkg/eventfilter/subscriptionsapi"
 	"knative.dev/pkg/apis"
+	"knative.dev/pkg/logging"
 	reconcilertesting "knative.dev/pkg/reconciler/testing"
 
 	triggerinformerfake "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/trigger/fake"
