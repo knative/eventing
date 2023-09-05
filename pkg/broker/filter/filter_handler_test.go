@@ -21,6 +21,8 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"knative.dev/eventing/pkg/eventfilter/subscriptionsapi"
+	"knative.dev/pkg/logging"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -37,11 +39,10 @@ import (
 	"go.uber.org/zap/zaptest"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"knative.dev/pkg/apis"
-
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/eventing/pkg/broker"
+	"knative.dev/pkg/apis"
 	reconcilertesting "knative.dev/pkg/reconciler/testing"
 
 	triggerinformerfake "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/trigger/fake"
@@ -594,6 +595,8 @@ func TestReceiver_WithSubscriptionsAPI(t *testing.T) {
 			s := httptest.NewServer(&fh)
 			defer s.Close()
 
+			filtersMap := subscriptionsapi.NewFiltersMap()
+
 			// Replace the SubscriberURI to point at our fake server.
 			for _, trig := range tc.triggers {
 				if trig.Status.SubscriberURI != nil && trig.Status.SubscriberURI.String() == toBeReplaced {
@@ -605,6 +608,7 @@ func TestReceiver_WithSubscriptionsAPI(t *testing.T) {
 					trig.Status.SubscriberURI = url
 				}
 				triggerinformerfake.Get(ctx).Informer().GetStore().Add(trig)
+				filtersMap.Set(fmt.Sprintf("%s.%s", trig.Namespace, trig.Name), createSubscriptionsAPIFilters(logging.FromContext(ctx).Desugar(), trig.Spec.Filters))
 			}
 			reporter := &mockReporter{}
 			r, err := NewHandler(
@@ -619,6 +623,8 @@ func TestReceiver_WithSubscriptionsAPI(t *testing.T) {
 			if err != nil {
 				t.Fatal("Unable to create receiver:", err)
 			}
+
+			r.filtersMap = filtersMap
 
 			e := tc.event
 			if e == nil {

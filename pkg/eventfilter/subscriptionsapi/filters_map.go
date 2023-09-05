@@ -35,6 +35,9 @@ func NewFiltersMap() *FiltersMap {
 func (fm *FiltersMap) Set(key string, filter eventfilter.Filter) {
 	fm.rwMutex.Lock()
 	defer fm.rwMutex.Unlock()
+	if filter, found := fm.filtersMap[key]; found {
+		filter.Cleanup()
+	}
 	fm.filtersMap[key] = filter
 }
 
