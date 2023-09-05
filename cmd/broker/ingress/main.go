@@ -131,12 +131,26 @@ func main() {
 		logger.Fatal("Error setting up trace publishing", zap.Error(err))
 	}
 
-	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"))
+	var featureStore *feature.Store
+	var handler *ingress.Handler
+
+	featureStore = feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {
+		featureFlags := value.(feature.Flags)
+		if featureFlags.IsEnabled(feature.EvenTypeAutoCreate) && featureStore != nil && handler != nil {
+			autoCreate := &eventtype.EventTypeAutoHandler{
+				EventTypeLister: eventtypeinformer.Get(ctx).Lister(),
+				EventingClient:  eventingclient.Get(ctx).EventingV1beta2(),
+				FeatureStore:    featureStore,
+				Logger:          logger,
+			}
+			handler.EvenTypeHandler = autoCreate
+		}
+	})
 	featureStore.WatchConfigs(configMapWatcher)
 
 	reporter := ingress.NewStatsReporter(env.ContainerName, kmeta.ChildName(env.PodName, uuid.New().String()))
 
-	handler, err := ingress.NewHandler(logger, reporter, broker.TTLDefaulter(logger, int32(env.MaxTTL)), brokerInformer)
+	handler, err = ingress.NewHandler(logger, reporter, broker.TTLDefaulter(logger, int32(env.MaxTTL)), brokerInformer)
 	if err != nil {
 		logger.Fatal("Error creating Handler", zap.Error(err))
 	}

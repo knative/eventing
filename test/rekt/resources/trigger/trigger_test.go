@@ -21,6 +21,7 @@ import (
 	"os"
 
 	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/test/rekt/resources/delivery"
 	"knative.dev/eventing/test/rekt/resources/trigger"
 	v1 "knative.dev/pkg/apis/duck/v1"
@@ -284,4 +285,44 @@ func ExampleWithRetry() {
 	//     retry: 3
 	//     backoffPolicy: exponential
 	//     backoffDelay: "T0"
+}
+
+func ExampleWithNewFilters() {
+	ctx := testlog.NewContext()
+	images := map[string]string{}
+	cfg := map[string]interface{}{
+		"name":       "foo",
+		"namespace":  "bar",
+		"brokerName": "baz",
+	}
+
+	trigger.WithNewFilters([]eventingv1.SubscriptionsAPIFilter{
+		{
+			CESQL: "source IN ('order.created', 'order.updated', 'order.canceled')",
+		},
+		{
+			Not: &eventingv1.SubscriptionsAPIFilter{
+				CESQL: "type = 'tp'",
+			},
+		},
+	})(cfg)
+
+	files, err := manifest.ExecuteYAML(ctx, yaml, images, cfg)
+	if err != nil {
+		panic(err)
+	}
+
+	manifest.OutputYAML(os.Stdout, files)
+	// Output:
+	// apiVersion: eventing.knative.dev/v1
+	// kind: Trigger
+	// metadata:
+	//   name: foo
+	//   namespace: bar
+	// spec:
+	//   broker: baz
+	//   filters:
+	//     - cesql: source IN ('order.created', 'order.updated', 'order.canceled')
+	//     - not:
+	//         cesql: type = 'tp'
 }

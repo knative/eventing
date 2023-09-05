@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"math"
 	"strconv"
 	"time"
 
@@ -95,6 +96,13 @@ type State struct {
 
 	// Stores for each vpod, a map of zonename to total number of vreplicas placed on all pods located in that zone currently
 	ZoneSpread map[types.NamespacedName]map[string]int32
+
+	// Pending tracks the number of virtual replicas that haven't been scheduled yet
+	// because there wasn't enough free capacity.
+	Pending map[types.NamespacedName]int32
+
+	// ExpectedVReplicaByVPod is the expected virtual replicas for each vpod key
+	ExpectedVReplicaByVPod map[types.NamespacedName]int32
 }
 
 // Free safely returns the free capacity at the given ordinal
@@ -190,6 +198,8 @@ func (s *stateBuilder) State(reserved map[types.NamespacedName]map[string]int32)
 	}
 
 	free := make([]int32, 0)
+	pending := make(map[types.NamespacedName]int32, 4)
+	expectedVReplicasByVPod := make(map[types.NamespacedName]int32, len(vpods))
 	schedulablePods := sets.NewInt32()
 	last := int32(-1)
 
@@ -255,9 +265,16 @@ func (s *stateBuilder) State(reserved map[types.NamespacedName]map[string]int32)
 		}
 	}
 
+	for _, p := range schedulablePods.List() {
+		free, last = s.updateFreeCapacity(free, last, PodNameFromOrdinal(s.statefulSetName, p), 0)
+	}
+
 	// Getting current state from existing placements for all vpods
 	for _, vpod := range vpods {
 		ps := vpod.GetPlacements()
+
+		pending[vpod.GetKey()] = pendingFromVPod(vpod)
+		expectedVReplicasByVPod[vpod.GetKey()] = vpod.GetVReplicas()
 
 		withPlacement[vpod.GetKey()] = make(map[string]bool)
 		podSpread[vpod.GetKey()] = make(map[string]int32)
@@ -321,11 +338,18 @@ func (s *stateBuilder) State(reserved map[types.NamespacedName]map[string]int32)
 
 	state := &State{FreeCap: free, SchedulablePods: schedulablePods.List(), LastOrdinal: last, Capacity: s.capacity, Replicas: scale.Spec.Replicas, NumZones: int32(len(zoneMap)), NumNodes: int32(len(nodeToZoneMap)),
 		SchedulerPolicy: s.schedulerPolicy, SchedPolicy: s.schedPolicy, DeschedPolicy: s.deschedPolicy, NodeToZoneMap: nodeToZoneMap, StatefulSetName: s.statefulSetName, PodLister: s.podLister,
-		PodSpread: podSpread, NodeSpread: nodeSpread, ZoneSpread: zoneSpread}
+		PodSpread: podSpread, NodeSpread: nodeSpread, ZoneSpread: zoneSpread, Pending: pending, ExpectedVReplicaByVPod: expectedVReplicasByVPod}
 
 	s.logger.Infow("cluster state info", zap.Any("state", state), zap.Any("reserved", toJSONable(reserved)))
 
 	return state, nil
+}
+
+func pendingFromVPod(vpod scheduler.VPod) int32 {
+	expected := vpod.GetVReplicas()
+	scheduled := scheduler.GetTotalVReplicas(vpod.GetPlacements())
+
+	return int32(math.Max(float64(0), float64(expected-scheduled)))
 }
 
 func (s *stateBuilder) updateFreeCapacity(free []int32, last int32, podName string, vreplicas int32) ([]int32, int32) {
@@ -340,11 +364,27 @@ func (s *stateBuilder) updateFreeCapacity(free []int32, last int32, podName stri
 		s.logger.Errorw("pod is overcommitted", zap.String("podName", podName), zap.Int32("free", free[ordinal]))
 	}
 
-	if ordinal > last && free[ordinal] != s.capacity {
+	if ordinal > last {
 		last = ordinal
 	}
 
 	return free, last
+}
+
+func (s *State) TotalPending() int32 {
+	t := int32(0)
+	for _, p := range s.Pending {
+		t += p
+	}
+	return t
+}
+
+func (s *State) TotalExpectedVReplicas() int32 {
+	t := int32(0)
+	for _, v := range s.ExpectedVReplicaByVPod {
+		t += v
+	}
+	return t
 }
 
 func grow(slice []int32, ordinal int32, def int32) []int32 {
@@ -435,6 +475,7 @@ func (s *State) MarshalJSON() ([]byte, error) {
 		SchedulerPolicy scheduler.SchedulerPolicyType `json:"schedulerPolicy"`
 		SchedPolicy     *scheduler.SchedulerPolicy    `json:"schedPolicy"`
 		DeschedPolicy   *scheduler.SchedulerPolicy    `json:"deschedPolicy"`
+		Pending         map[string]int32              `json:"pending"`
 	}
 
 	sj := S{
@@ -453,6 +494,7 @@ func (s *State) MarshalJSON() ([]byte, error) {
 		SchedulerPolicy: s.SchedulerPolicy,
 		SchedPolicy:     s.SchedPolicy,
 		DeschedPolicy:   s.DeschedPolicy,
+		Pending:         toJSONablePending(s.Pending),
 	}
 
 	return json.Marshal(sj)
@@ -464,4 +506,13 @@ func toJSONable(ps map[types.NamespacedName]map[string]int32) map[string]map[str
 		r[k.String()] = v
 	}
 	return r
+}
+
+func toJSONablePending(pending map[types.NamespacedName]int32) map[string]int32 {
+	r := make(map[string]int32, len(pending))
+	for k, v := range pending {
+		r[k.String()] = v
+	}
+	return r
+
 }

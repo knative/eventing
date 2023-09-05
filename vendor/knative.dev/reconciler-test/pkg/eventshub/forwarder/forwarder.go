@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -29,7 +30,6 @@ import (
 	"go.opencensus.io/trace"
 	"go.uber.org/zap"
 
-	"github.com/cloudevents/sdk-go/v2/binding"
 	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	cloudeventshttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"github.com/kelseyhightower/envconfig"
@@ -131,13 +131,9 @@ func (o *Forwarder) ServeHTTP(writer http.ResponseWriter, request *http.Request)
 
 	event, eventErr := cloudeventsbindings.ToEvent(context.TODO(), m)
 	receivedHeaders := make(http.Header)
-	headersToBeSent := make(http.Header)
 	for k, v := range request.Header {
 		if !strings.HasPrefix(k, "Ce-") {
 			receivedHeaders[k] = v
-		}
-		if strings.HasPrefix(k, "Kn-") {
-			headersToBeSent[k] = v
 		}
 	}
 	// Host header is removed from the request.Header map by net/http
@@ -165,17 +161,15 @@ func (o *Forwarder) ServeHTTP(writer http.ResponseWriter, request *http.Request)
 		logging.FromContext(o.ctx).Fatalw("Error while venting the received event", zap.Error(err))
 	}
 
-	req, err := http.NewRequestWithContext(requestCtx, http.MethodPost, o.Sink, nil)
-	if err != nil {
-		logging.FromContext(o.ctx).Error("Cannot create the request: ", err)
-	}
+	req := request.Clone(requestCtx)
+	// It is an error to set this field in an HTTP client request.
+	req.RequestURI = ""
 
-	req.Header = headersToBeSent
-
-	err = cehttp.WriteRequest(requestCtx, binding.ToMessage(event), req)
+	u, err := url.Parse(o.Sink)
 	if err != nil {
-		logging.FromContext(o.ctx).Error("Cannot write the event: ", err)
+		logging.FromContext(o.ctx).Fatalw("Unable to parse sink URL", zap.Error(err))
 	}
+	req.URL = u
 
 	eventString := "unknown"
 	if event != nil {
