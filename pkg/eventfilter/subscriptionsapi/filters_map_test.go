@@ -20,24 +20,38 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 )
 
 func TestFiltersMap(t *testing.T) {
 	fm := NewFiltersMap()
 	exact, _ := NewExactFilter(map[string]string{"type": "sample.event.type"})
+	exactTrigger := &eventingv1.Trigger{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "exact",
+			Namespace: "default",
+		},
+	}
 	prefix, _ := NewPrefixFilter(map[string]string{"source": "github.com"})
-	fm.Set("exact", exact)
-	fm.Set("prefix", prefix)
+	prefixTrigger := &eventingv1.Trigger{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "prefix",
+			Namespace: "default",
+		},
+	}
+	fm.Set(exactTrigger, exact)
+	fm.Set(prefixTrigger, prefix)
 
-	newExact, ok := fm.Get("exact")
+	newExact, ok := fm.Get(exactTrigger)
 	assert.True(t, ok)
 	assert.Equal(t, exact, newExact)
 
-	newPrefix, ok := fm.Get("prefix")
+	newPrefix, ok := fm.Get(prefixTrigger)
 	assert.True(t, ok)
 	assert.Equal(t, prefix, newPrefix)
 
-	fm.Delete("prefix")
-	_, ok = fm.Get("prefix")
+	fm.Delete(prefixTrigger)
+	_, ok = fm.Get(prefixTrigger)
 	assert.False(t, ok)
 }

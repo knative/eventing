@@ -17,8 +17,10 @@ limitations under the License.
 package subscriptionsapi
 
 import (
+	"fmt"
 	"sync"
 
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/pkg/eventfilter"
 )
 
@@ -32,7 +34,8 @@ func NewFiltersMap() *FiltersMap {
 		filtersMap: make(map[string]eventfilter.Filter),
 	}
 }
-func (fm *FiltersMap) Set(key string, filter eventfilter.Filter) {
+func (fm *FiltersMap) Set(trigger *eventingv1.Trigger, filter eventfilter.Filter) {
+	key := keyFromTrigger(trigger)
 	fm.rwMutex.Lock()
 	defer fm.rwMutex.Unlock()
 	if filter, found := fm.filtersMap[key]; found {
@@ -41,18 +44,24 @@ func (fm *FiltersMap) Set(key string, filter eventfilter.Filter) {
 	fm.filtersMap[key] = filter
 }
 
-func (fm *FiltersMap) Get(key string) (eventfilter.Filter, bool) {
+func (fm *FiltersMap) Get(trigger *eventingv1.Trigger) (eventfilter.Filter, bool) {
+	key := keyFromTrigger(trigger)
 	fm.rwMutex.RLock()
 	defer fm.rwMutex.RUnlock()
 	res, found := fm.filtersMap[key]
 	return res, found
 }
 
-func (fm *FiltersMap) Delete(key string) {
+func (fm *FiltersMap) Delete(trigger *eventingv1.Trigger) {
+	key := keyFromTrigger(trigger)
 	fm.rwMutex.Lock()
 	defer fm.rwMutex.Unlock()
 	if filter, found := fm.filtersMap[key]; found {
 		filter.Cleanup()
 	}
 	delete(fm.filtersMap, key)
+}
+
+func keyFromTrigger(trigger *eventingv1.Trigger) string {
+	return fmt.Sprintf("%s.%s", trigger.Namespace, trigger.Name)
 }

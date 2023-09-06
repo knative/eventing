@@ -91,7 +91,7 @@ func NewHandler(logger *zap.Logger, triggerInformer v1.TriggerInformer, reporter
 				return
 			}
 			logger.Debug("Adding filter to filtersMap")
-			fm.Set(fmt.Sprintf("%s.%s", trigger.Namespace, trigger.Name), createSubscriptionsAPIFilters(logger, trigger.Spec.Filters))
+			fm.Set(&trigger, createSubscriptionsAPIFilters(logger, trigger.Spec.Filters))
 			kncloudevents.AddOrUpdateAddressableHandler(duckv1.Addressable{
 				URL:     trigger.Status.SubscriberURI,
 				CACerts: trigger.Status.SubscriberCACerts,
@@ -103,7 +103,7 @@ func NewHandler(logger *zap.Logger, triggerInformer v1.TriggerInformer, reporter
 				return
 			}
 			logger.Debug("Updating filter in filtersMap")
-			fm.Set(fmt.Sprintf("%s.%s", trigger.Namespace, trigger.Name), createSubscriptionsAPIFilters(logger, trigger.Spec.Filters))
+			fm.Set(&trigger, createSubscriptionsAPIFilters(logger, trigger.Spec.Filters))
 			kncloudevents.AddOrUpdateAddressableHandler(duckv1.Addressable{
 				URL:     trigger.Status.SubscriberURI,
 				CACerts: trigger.Status.SubscriberCACerts,
@@ -115,7 +115,7 @@ func NewHandler(logger *zap.Logger, triggerInformer v1.TriggerInformer, reporter
 				return
 			}
 			logger.Debug("Deleting filter in filtersMap")
-			fm.Delete(fmt.Sprintf("%s.%s", trigger.Namespace, trigger.Name))
+			fm.Delete(&trigger)
 			kncloudevents.DeleteAddressableHandler(duckv1.Addressable{
 				URL:     trigger.Status.SubscriberURI,
 				CACerts: trigger.Status.SubscriberCACerts,
@@ -367,7 +367,7 @@ func (h *Handler) filterEvent(ctx context.Context, trigger *eventingv1.Trigger, 
 	switch {
 	case feature.FromContext(ctx).IsEnabled(feature.NewTriggerFilters):
 		logging.FromContext(ctx).Debugw("New trigger filters feature is enabled. Applying new filters.", zap.Any("filters", trigger.Spec.Filters))
-		filter, ok := h.filtersMap.Get(fmt.Sprintf("%s.%s", trigger.Namespace, trigger.Name))
+		filter, ok := h.filtersMap.Get(trigger)
 		if !ok {
 			logging.FromContext(ctx).Debug("Found no filters for trigger", zap.String("triggerFilterKey", fmt.Sprintf("%s.%s", trigger.Namespace, trigger.Name)))
 			return eventfilter.NoFilter
