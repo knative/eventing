@@ -86,36 +86,36 @@ func NewHandler(logger *zap.Logger, triggerInformer v1.TriggerInformer, reporter
 
 	triggerInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			trigger, ok := obj.(eventingv1.Trigger)
+			trigger, ok := obj.(*eventingv1.Trigger)
 			if !ok {
 				return
 			}
 			logger.Debug("Adding filter to filtersMap")
-			fm.Set(&trigger, createSubscriptionsAPIFilters(logger, trigger.Spec.Filters))
+			fm.Set(trigger, createSubscriptionsAPIFilters(logger, trigger.Spec.Filters))
 			kncloudevents.AddOrUpdateAddressableHandler(duckv1.Addressable{
 				URL:     trigger.Status.SubscriberURI,
 				CACerts: trigger.Status.SubscriberCACerts,
 			})
 		},
 		UpdateFunc: func(_, obj interface{}) {
-			trigger, ok := obj.(eventingv1.Trigger)
+			trigger, ok := obj.(*eventingv1.Trigger)
 			if !ok {
 				return
 			}
 			logger.Debug("Updating filter in filtersMap")
-			fm.Set(&trigger, createSubscriptionsAPIFilters(logger, trigger.Spec.Filters))
+			fm.Set(trigger, createSubscriptionsAPIFilters(logger, trigger.Spec.Filters))
 			kncloudevents.AddOrUpdateAddressableHandler(duckv1.Addressable{
 				URL:     trigger.Status.SubscriberURI,
 				CACerts: trigger.Status.SubscriberCACerts,
 			})
 		},
 		DeleteFunc: func(obj interface{}) {
-			trigger, ok := obj.(eventingv1.Trigger)
+			trigger, ok := obj.(*eventingv1.Trigger)
 			if !ok {
 				return
 			}
 			logger.Debug("Deleting filter in filtersMap")
-			fm.Delete(&trigger)
+			fm.Delete(trigger)
 			kncloudevents.DeleteAddressableHandler(duckv1.Addressable{
 				URL:     trigger.Status.SubscriberURI,
 				CACerts: trigger.Status.SubscriberCACerts,
