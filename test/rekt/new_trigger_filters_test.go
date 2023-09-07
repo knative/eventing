@@ -17,10 +17,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package experimental
+package rekt
 
 import (
 	"fmt"
+	newfilters "knative.dev/eventing/test/rekt/features/new_trigger_filters"
 	"testing"
 
 	"knative.dev/pkg/system"
@@ -29,7 +30,6 @@ import (
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/knative"
 
-	newfilters "knative.dev/eventing/test/experimental/features/new_trigger_filters"
 	"knative.dev/eventing/test/rekt/resources/broker"
 )
 
