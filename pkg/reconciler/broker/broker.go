@@ -228,7 +228,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 	}
 
 	if featureFlags.IsOIDCAuthentication() {
-		audience := auth.GetAudience(b)
+		audience := auth.GetAudience(eventingv1.SchemeGroupVersion.WithKind("Broker"), b.ObjectMeta)
 		logging.FromContext(ctx).Debugw("Setting the brokers audience", zap.String("audience", audience))
 		b.Status.Address.Audience = &audience
 	} else {

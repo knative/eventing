@@ -4,12 +4,13 @@ import (
 	"fmt"
 	"strings"
 
-	"knative.dev/pkg/kmeta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // GetAudience returns the audience string for the given object in the format <group>/<kind>/<namespace>/<name>
-func GetAudience(obj kmeta.Accessor) string {
-	aud := fmt.Sprintf("%s/%s/%s/%s", obj.GroupVersionKind().Group, obj.GroupVersionKind().Kind, obj.GetNamespace(), obj.GetName())
+func GetAudience(gvk schema.GroupVersionKind, objectMeta metav1.ObjectMeta) string {
+	aud := fmt.Sprintf("%s/%s/%s/%s", gvk.Group, gvk.Kind, objectMeta.Namespace, objectMeta.Name)
 
 	return strings.ToLower(aud)
 }
