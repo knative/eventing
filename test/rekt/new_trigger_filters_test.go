@@ -20,8 +20,9 @@ limitations under the License.
 package rekt
 
 import (
-	newfilters "knative.dev/eventing/test/rekt/features/new_trigger_filters"
 	"testing"
+
+	newfilters "knative.dev/eventing/test/rekt/features/new_trigger_filters"
 
 	"knative.dev/pkg/system"
 	"knative.dev/reconciler-test/pkg/environment"
