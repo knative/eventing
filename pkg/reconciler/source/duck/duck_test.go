@@ -345,6 +345,9 @@ func makeEventType(ceType, ceSource string) *v1beta2.EventType {
 
 func makeEventTypeWithReference(ceType, ceSource string, ref *duckv1.KReference) *v1beta2.EventType {
 	ceSourceURL, _ := apis.ParseURL(ceSource)
+	if ref.Namespace == "" {
+		ref.Namespace = "default"
+	}
 	return &v1beta2.EventType{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%x", md5.Sum([]byte(ceType+ceSource+sourceUID))),
