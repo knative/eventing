@@ -134,6 +134,13 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1.ApiServerSour
 	return nil
 }
 
+func (r *Reconciler) FinalizeKind(ctx context.Context, source *v1.ApiServerSource) pkgreconciler.Event {
+	logging.FromContext(ctx).Info("Deleting source")
+	// Allow for eventtypes to be cleaned up
+	source.Status.CloudEventAttributes = []duckv1.CloudEventAttributes{}
+	return nil
+}
+
 func (r *Reconciler) namespacesFromSelector(src *v1.ApiServerSource) ([]string, error) {
 	if src.Spec.NamespaceSelector == nil {
 		return []string{src.Namespace}, nil
