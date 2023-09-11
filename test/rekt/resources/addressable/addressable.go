@@ -61,3 +61,13 @@ func AssertHTTPSAddress(addr *duckv1.Addressable) error {
 	}
 	return nil
 }
+
+func AssertAddressWithAudience(audience string) func(*duckv1.Addressable) error {
+	return func(addressable *duckv1.Addressable) error {
+		if (addressable.Audience == nil && audience != "") || (addressable.Audience != nil && *addressable.Audience != audience) {
+			return fmt.Errorf("audience of address (%v) does not match expected audience %s", addressable, audience)
+		}
+
+		return nil
+	}
+}

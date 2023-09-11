@@ -767,7 +767,7 @@ func TestReconcile(t *testing.T) {
 			),
 			rttestingv1.NewBroker(sinkName, testNS,
 				rttestingv1.WithInitBrokerConditions,
-				rttestingv1.WithBrokerAddress(sinkDNS),
+				rttestingv1.WithBrokerAddressURI(apis.HTTP(sinkDNS)),
 			),
 			makeAvailableReceiveAdapter(t),
 		},
