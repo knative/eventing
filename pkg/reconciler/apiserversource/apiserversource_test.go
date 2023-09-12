@@ -142,7 +142,11 @@ func TestReconcile(t *testing.T) {
 		},
 		WantErr: true,
 		WantEvents: []string{
+			Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", sourceName),
 			Eventf(corev1.EventTypeWarning, "InternalError", `insufficient permissions: User system:serviceaccount:testnamespace:default cannot get, list, watch resource "namespaces" in API group "" in Namespace "testnamespace"`),
+		},
+		WantPatches: []clientgotesting.PatchActionImpl{
+			patchFinalizers(sourceName, testNS),
 		},
 		WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor(false)},
 		SkipNamespaceValidation: true, // SubjectAccessReview objects are cluster-scoped.
@@ -192,6 +196,12 @@ func TestReconcile(t *testing.T) {
 			makeSubjectAccessReview("namespaces", "get", "default"),
 			makeSubjectAccessReview("namespaces", "list", "default"),
 			makeSubjectAccessReview("namespaces", "watch", "default"),
+		},
+		WantEvents: []string{
+			Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", sourceName),
+		},
+		WantPatches: []clientgotesting.PatchActionImpl{
+			patchFinalizers(sourceName, testNS),
 		},
 		WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor(true)},
 		SkipNamespaceValidation: true, // SubjectAccessReview objects are cluster-scoped.
@@ -254,7 +264,11 @@ func TestReconcile(t *testing.T) {
 			Object: makeAvailableReceiveAdapterWithNamespaces(t, []string{"test-a", "test-b"}, false),
 		}},
 		WantEvents: []string{
+			Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", sourceName),
 			Eventf(corev1.EventTypeNormal, "ApiServerSourceDeploymentUpdated", `Deployment "apiserversource-test-apiserver-source-1234" updated`),
+		},
+		WantPatches: []clientgotesting.PatchActionImpl{
+			patchFinalizers(sourceName, testNS),
 		},
 		WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor(true)},
 		SkipNamespaceValidation: true, // SubjectAccessReview objects are cluster-scoped.
@@ -320,7 +334,11 @@ func TestReconcile(t *testing.T) {
 			Object: makeAvailableReceiveAdapterWithNamespaces(t, []string{"test-a", "test-b", "test-c"}, true),
 		}},
 		WantEvents: []string{
+			Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", sourceName),
 			Eventf(corev1.EventTypeNormal, "ApiServerSourceDeploymentUpdated", `Deployment "apiserversource-test-apiserver-source-1234" updated`),
+		},
+		WantPatches: []clientgotesting.PatchActionImpl{
+			patchFinalizers(sourceName, testNS),
 		},
 		WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor(true)},
 		SkipNamespaceValidation: true, // SubjectAccessReview objects are cluster-scoped.
@@ -373,6 +391,12 @@ func TestReconcile(t *testing.T) {
 			makeSubjectAccessReview("namespaces", "list", "default"),
 			makeSubjectAccessReview("namespaces", "watch", "default"),
 		},
+		WantEvents: []string{
+			Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", sourceName),
+		},
+		WantPatches: []clientgotesting.PatchActionImpl{
+			patchFinalizers(sourceName, testNS),
+		},
 		WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor(true)},
 		SkipNamespaceValidation: true, // SubjectAccessReview objects are cluster-scoped.
 	}, {
@@ -422,6 +446,12 @@ func TestReconcile(t *testing.T) {
 			makeSubjectAccessReview("namespaces", "list", "default"),
 			makeSubjectAccessReview("namespaces", "watch", "default"),
 		},
+		WantEvents: []string{
+			Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", sourceName),
+		},
+		WantPatches: []clientgotesting.PatchActionImpl{
+			patchFinalizers(sourceName, testNS),
+		},
 		WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor(true)},
 		SkipNamespaceValidation: true, // SubjectAccessReview objects are cluster-scoped.
 	}, {
@@ -441,8 +471,12 @@ func TestReconcile(t *testing.T) {
 		},
 		Key: testNS + "/" + sourceName,
 		WantEvents: []string{
+			Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", sourceName),
 			Eventf(corev1.EventTypeWarning, "SinkNotFound",
 				`Sink not found: {"ref":{"kind":"Channel","namespace":"testnamespace","name":"testsink","apiVersion":"messaging.knative.dev/v1"}}`),
+		},
+		WantPatches: []clientgotesting.PatchActionImpl{
+			patchFinalizers(sourceName, testNS),
 		},
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 			Object: rttestingv1.NewApiServerSource(sourceName, testNS,
@@ -485,10 +519,14 @@ func TestReconcile(t *testing.T) {
 		Key:     testNS + "/" + sourceName,
 		WantErr: true,
 		WantEvents: []string{
+			Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", sourceName),
 			Eventf(corev1.EventTypeNormal, apiserversourceDeploymentCreated,
 				"Deployment created, error:inducing failure for create deployments"),
 			Eventf(corev1.EventTypeWarning, "InternalError",
 				"inducing failure for create deployments"),
+		},
+		WantPatches: []clientgotesting.PatchActionImpl{
+			patchFinalizers(sourceName, testNS),
 		},
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 			Object: rttestingv1.NewApiServerSource(sourceName, testNS,
@@ -578,6 +616,12 @@ func TestReconcile(t *testing.T) {
 			makeSubjectAccessReview("namespaces", "list", "default"),
 			makeSubjectAccessReview("namespaces", "watch", "default"),
 		},
+		WantEvents: []string{
+			Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", sourceName),
+		},
+		WantPatches: []clientgotesting.PatchActionImpl{
+			patchFinalizers(sourceName, testNS),
+		},
 		WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor(true)},
 		SkipNamespaceValidation: true, // SubjectAccessReview objects are cluster-scoped.
 	}, {
@@ -602,7 +646,11 @@ func TestReconcile(t *testing.T) {
 		},
 		Key: testNS + "/" + sourceName,
 		WantEvents: []string{
+			Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", sourceName),
 			Eventf(corev1.EventTypeNormal, "ApiServerSourceDeploymentUpdated", `Deployment "apiserversource-test-apiserver-source-1234" updated`),
+		},
+		WantPatches: []clientgotesting.PatchActionImpl{
+			patchFinalizers(sourceName, testNS),
 		},
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 			Object: rttestingv1.NewApiServerSource(sourceName, testNS,
@@ -660,7 +708,11 @@ func TestReconcile(t *testing.T) {
 		},
 		Key: testNS + "/" + sourceName,
 		WantEvents: []string{
+			Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", sourceName),
 			Eventf(corev1.EventTypeNormal, "ApiServerSourceDeploymentUpdated", `Deployment "apiserversource-test-apiserver-source-1234" updated`),
+		},
+		WantPatches: []clientgotesting.PatchActionImpl{
+			patchFinalizers(sourceName, testNS),
 		},
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 			Object: rttestingv1.NewApiServerSource(sourceName, testNS,
@@ -718,7 +770,11 @@ func TestReconcile(t *testing.T) {
 		},
 		Key: testNS + "/" + sourceName,
 		WantEvents: []string{
+			Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", sourceName),
 			Eventf(corev1.EventTypeNormal, "ApiServerSourceDeploymentUpdated", `Deployment "apiserversource-test-apiserver-source-1234" updated`),
+		},
+		WantPatches: []clientgotesting.PatchActionImpl{
+			patchFinalizers(sourceName, testNS),
 		},
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 			Object: rttestingv1.NewApiServerSource(sourceName, testNS,
@@ -793,6 +849,12 @@ func TestReconcile(t *testing.T) {
 				rttestingv1.WithApiServerSourceStatusNamespaces([]string{testNS}),
 			),
 		}},
+		WantEvents: []string{
+			Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", sourceName),
+		},
+		WantPatches: []clientgotesting.PatchActionImpl{
+			patchFinalizers(sourceName, testNS),
+		},
 		WantCreates: []runtime.Object{
 			makeSubjectAccessReview("namespaces", "get", "default"),
 			makeSubjectAccessReview("namespaces", "list", "default"),
@@ -1017,4 +1079,13 @@ func subjectAccessReviewCreateReactor(allowed bool) clientgotesting.ReactionFunc
 		}
 		return false, nil, nil
 	}
+}
+
+func patchFinalizers(name, namespace string) clientgotesting.PatchActionImpl {
+	action := clientgotesting.PatchActionImpl{}
+	action.Name = name
+	action.Namespace = namespace
+	patch := `{"metadata":{"finalizers":["apiserversources.sources.knative.dev"],"resourceVersion":""}}`
+	action.Patch = []byte(patch)
+	return action
 }
