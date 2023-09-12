@@ -135,6 +135,13 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *sourcesv1.PingSo
 	return nil
 }
 
+func (r *Reconciler) FinalizeKind(ctx context.Context, source *sourcesv1.PingSource) pkgreconciler.Event {
+	logging.FromContext(ctx).Info("Deleting source")
+	// Allow for eventtypes to be cleaned up
+	source.Status.CloudEventAttributes = []duckv1.CloudEventAttributes{}
+	return nil
+}
+
 func (r *Reconciler) reconcileReceiveAdapter(ctx context.Context, source *sourcesv1.PingSource) (*appsv1.Deployment, error) {
 	args := resources.Args{
 		ConfigEnvVars:   r.configAcc.ToEnvVars(),

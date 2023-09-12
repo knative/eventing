@@ -256,7 +256,7 @@ func SendsEventsWithEventTypes() *feature.Feature {
 	})
 	f.Requirement("ApiServerSource goes ready", apiserversource.IsReady(source))
 
-	expectedCeTypes := sets.New(sources.ApiServerSourceEventReferenceModeTypes...)
+	expectedCeTypes := sets.New(sources.ApiServerSourceEventResourceModeTypes...)
 
 	f.Stable("ApiServerSource as event source").
 		Must("delivers events on broker with URI",
