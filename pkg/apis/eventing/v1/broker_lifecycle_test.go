@@ -501,7 +501,9 @@ func TestBrokerIsReady(t *testing.T) {
 			if test.markAddressable == nil && test.address == nil {
 				bs.MarkBrokerAddressableUnknown("", "")
 			}
-			bs.SetAddress(test.address)
+			bs.SetAddress(&duckv1.Addressable{
+				URL: test.address,
+			})
 
 			b := Broker{Status: bs}
 			got := b.IsReady()
