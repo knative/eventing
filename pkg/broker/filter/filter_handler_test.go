@@ -608,7 +608,7 @@ func TestReceiver_WithSubscriptionsAPI(t *testing.T) {
 					trig.Status.SubscriberURI = url
 				}
 				triggerinformerfake.Get(ctx).Informer().GetStore().Add(trig)
-				filtersMap.Set(trig, createSubscriptionsAPIFilters(logging.FromContext(ctx).Desugar(), trig.Spec.Filters))
+				filtersMap.Set(trig, createSubscriptionsAPIFilters(logging.FromContext(ctx).Desugar(), trig))
 			}
 			reporter := &mockReporter{}
 			r, err := NewHandler(

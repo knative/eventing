@@ -91,7 +91,7 @@ func NewHandler(logger *zap.Logger, triggerInformer v1.TriggerInformer, reporter
 				return
 			}
 			logger.Debug("Adding filter to filtersMap")
-			fm.Set(trigger, createSubscriptionsAPIFilters(logger, trigger.Spec.Filters))
+			fm.Set(trigger, createSubscriptionsAPIFilters(logger, trigger))
 			kncloudevents.AddOrUpdateAddressableHandler(duckv1.Addressable{
 				URL:     trigger.Status.SubscriberURI,
 				CACerts: trigger.Status.SubscriberCACerts,
@@ -103,7 +103,7 @@ func NewHandler(logger *zap.Logger, triggerInformer v1.TriggerInformer, reporter
 				return
 			}
 			logger.Debug("Updating filter in filtersMap")
-			fm.Set(trigger, createSubscriptionsAPIFilters(logger, trigger.Spec.Filters))
+			fm.Set(trigger, createSubscriptionsAPIFilters(logger, trigger))
 			kncloudevents.AddOrUpdateAddressableHandler(duckv1.Addressable{
 				URL:     trigger.Status.SubscriberURI,
 				CACerts: trigger.Status.SubscriberCACerts,
@@ -369,8 +369,12 @@ func (h *Handler) filterEvent(ctx context.Context, trigger *eventingv1.Trigger, 
 		logging.FromContext(ctx).Debugw("New trigger filters feature is enabled. Applying new filters.", zap.Any("filters", trigger.Spec.Filters))
 		filter, ok := h.filtersMap.Get(trigger)
 		if !ok {
-			logging.FromContext(ctx).Debug("Found no filters for trigger", zap.String("triggerFilterKey", fmt.Sprintf("%s.%s", trigger.Namespace, trigger.Name)))
-			return eventfilter.NoFilter
+			// trigger filters haven't update in the map yet - need to create them on the fly
+			if len(trigger.Spec.Filters) == 0 {
+				logging.FromContext(ctx).Debug("Found no filters for trigger", zap.String("triggerFilterKey", fmt.Sprintf("%s.%s", trigger.Namespace, trigger.Name)))
+				return eventfilter.NoFilter
+			}
+			return applySubscriptionsAPIFilters(ctx, trigger, event)
 		}
 		return filter.Filter(ctx, event)
 	case trigger.Spec.Filter != nil:
@@ -382,12 +386,16 @@ func (h *Handler) filterEvent(ctx context.Context, trigger *eventingv1.Trigger, 
 	}
 }
 
-func applySubscriptionsAPIFilters(ctx context.Context, filters []eventingv1.SubscriptionsAPIFilter, event cloudevents.Event) eventfilter.FilterResult {
-	return subscriptionsapi.NewAllFilter(materializeFiltersList(logging.FromContext(ctx).Desugar(), filters)...).Filter(ctx, event)
+func applySubscriptionsAPIFilters(ctx context.Context, trigger *eventingv1.Trigger, event cloudevents.Event) eventfilter.FilterResult {
+	return createSubscriptionsAPIFilters(logging.FromContext(ctx).Desugar(), trigger).Filter(ctx, event)
 }
 
-func createSubscriptionsAPIFilters(logger *zap.Logger, filters []eventingv1.SubscriptionsAPIFilter) eventfilter.Filter {
-	return subscriptionsapi.NewAllFilter(materializeFiltersList(logger, filters)...)
+func createSubscriptionsAPIFilters(logger *zap.Logger, trigger *eventingv1.Trigger) eventfilter.Filter {
+	if len(trigger.Spec.Filters) == 0 {
+		logger.Debug("Found no filters for trigger", zap.Any("trigger.Spec", trigger.Spec))
+		return subscriptionsapi.NewNoFilter()
+	}
+	return subscriptionsapi.NewAllFilter(materializeFiltersList(logger, trigger.Spec.Filters)...)
 }
 
 func materializeSubscriptionsAPIFilter(logger *zap.Logger, filter eventingv1.SubscriptionsAPIFilter) eventfilter.Filter {
