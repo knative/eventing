@@ -49,7 +49,7 @@ For complete Knative Eventing documentation, see
 [Knative eventing](https://www.knative.dev/docs/eventing/) or
 [Knative docs](https://www.knative.dev/docs/) to learn about Knative.
 
-If you are interested in contributing, see [CONTRIBUTING.md](./CONTRIBUTING.md),
+If you are interested in contributing, see [the ready to work issues](https://clotributor.dev/search?ts_query_web=knative+eventing&page=1), [CONTRIBUTING.md](./CONTRIBUTING.md),
 [DEVELOPMENT.md](./DEVELOPMENT.md) and
 [Knative working groups](https://knative.dev/community/contributing/working-groups/working-groups/#eventing).
 
