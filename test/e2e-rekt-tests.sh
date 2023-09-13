@@ -36,8 +36,6 @@ export SKIP_UPLOAD_TEST_IMAGES="true"
 
 echo "Running E2E Reconciler Tests"
 
-kubectl apply -f "$(dirname "$0")/config/features.yaml"
-
 go_test_e2e -timeout=1h ./test/rekt || fail_test
 
 echo "Running E2E Reconciler Tests with strict transport encryption"
