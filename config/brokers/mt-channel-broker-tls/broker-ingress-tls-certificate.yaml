@@ -40,6 +40,7 @@ spec:
 
   dnsNames:
     - broker-ingress.knative-eventing.svc.cluster.local
+    - broker-ingress.knative-eventing.svc
 
   issuerRef:
     name: selfsigned-ca-issuer
