@@ -386,6 +386,8 @@ function wait_for_file() {
   done
   return 0
 }
+echo "Running E2E tests for rekt"
+go test -v -tags=e2e -count=1 -parallel=12 -timeout=30m ./test/rekt
 
 function install_cert_manager() {
   kubectl apply -f third_party/cert-manager/01-cert-manager.crds.yaml
