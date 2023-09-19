@@ -45,7 +45,7 @@ type EventTypeAutoHandler struct {
 }
 
 // generateEventTypeName is a pseudo unique name for EvenType object based on the input params
-func generateEventTypeName(name, namespace, eventType, eventSource string) string {
+func GenerateEventTypeName(name, namespace, eventType, eventSource string) string {
 	suffixParts := eventType + eventSource + namespace + name
 	suffix := md5.Sum([]byte(suffixParts)) //nolint:gosec
 	return utils.ToDNS1123Subdomain(fmt.Sprintf("%s-%s-%x", "et", name, suffix))
@@ -60,7 +60,7 @@ func (h *EventTypeAutoHandler) AutoCreateEventType(ctx context.Context, event *e
 	}
 	h.Logger.Debug("Event Types auto creation is enabled")
 
-	eventTypeName := generateEventTypeName(addressable.Name, addressable.Namespace, event.Type(), event.Source())
+	eventTypeName := GenerateEventTypeName(addressable.Name, addressable.Namespace, event.Type(), event.Source())
 
 	exists, err := h.EventTypeLister.EventTypes(addressable.Namespace).Get(eventTypeName)
 	if err != nil && !apierrs.IsNotFound(err) {

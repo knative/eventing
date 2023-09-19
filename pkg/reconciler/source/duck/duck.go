@@ -38,6 +38,7 @@ import (
 	"knative.dev/eventing/pkg/apis/eventing/v1beta2"
 	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
 	listers "knative.dev/eventing/pkg/client/listers/eventing/v1beta2"
+	"knative.dev/eventing/pkg/eventtype"
 	"knative.dev/eventing/pkg/reconciler/source/duck/resources"
 )
 
@@ -208,12 +209,17 @@ func (r *Reconciler) makeEventTypes(ctx context.Context, src *duckv1.Source) []v
 		if err != nil {
 			logging.FromContext(ctx).Warnw("Failed to parse schema as a URL", zap.String("schema", s), zap.Error(err))
 		}
+		var eventTypeNamespace string
+		if eventTypeNamespace = src.Spec.Sink.Ref.Namespace; eventTypeNamespace == "" {
+			eventTypeNamespace = defaultNamespace
+		}
 		eventType := resources.MakeEventType(&resources.EventTypeArgs{
 			Source:      src,
 			CeType:      attrib.Type,
 			CeSource:    sourceURL,
 			CeSchema:    schemaURL,
 			Description: description,
+			Name:        eventtype.GenerateEventTypeName(src.Spec.Sink.Ref.Name, eventTypeNamespace, attrib.Type, sourceURL.String()),
 		})
 		if eventType.Spec.Reference.Namespace == "" {
 			eventType.Spec.Reference.Namespace = defaultNamespace

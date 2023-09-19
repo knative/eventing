@@ -17,9 +17,6 @@ limitations under the License.
 package resources
 
 import (
-	"crypto/md5" //nolint:gosec // No strong cryptography needed.
-	"fmt"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/pkg/apis/eventing/v1beta2"
 	"knative.dev/pkg/apis"
@@ -34,16 +31,13 @@ type EventTypeArgs struct {
 	CeSource    *apis.URL
 	CeSchema    *apis.URL
 	Description string
+	Name        string
 }
 
 func MakeEventType(args *EventTypeArgs) *v1beta2.EventType {
-	// Name it with the hash of the concatenation of the three fields.
-	// Cannot generate a fixed name based on type+UUID, because long type names might be cut, and we end up trying to create
-	// event types with the same name.
-	fixedName := fmt.Sprintf("%x", md5.Sum([]byte(args.CeType+args.CeSource.String()+args.CeSchema.String()+string(args.Source.GetUID())))) //nolint:gosec // No strong cryptography needed.
 	return &v1beta2.EventType{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fixedName,
+			Name:      args.Name,
 			Labels:    Labels(args.Source.Name),
 			Namespace: args.Source.Namespace,
 			OwnerReferences: []metav1.OwnerReference{{
