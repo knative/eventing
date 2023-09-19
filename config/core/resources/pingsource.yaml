@@ -22,10 +22,13 @@ metadata:
     app.kubernetes.io/version: devel
     app.kubernetes.io/name: knative-eventing
   annotations:
-    # TODO add schemas and descriptions
+    # TODO add schema
     registry.knative.dev/eventTypes: |
       [
-        { "type": "dev.knative.sources.ping" }
+        {
+          "type": "dev.knative.sources.ping",
+          "description": "CloudEvent type for fixed payloads on a specified cron schedule"
+        }
       ]
   name: pingsources.sources.knative.dev
 spec:
