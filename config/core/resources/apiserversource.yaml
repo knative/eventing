@@ -23,15 +23,33 @@ metadata:
     app.kubernetes.io/version: devel
     app.kubernetes.io/name: knative-eventing
   annotations:
-    # TODO add schemas and descriptions
+    # TODO add schemas
     registry.knative.dev/eventTypes: |
       [
-        { "type": "dev.knative.apiserver.resource.add" },
-        { "type": "dev.knative.apiserver.resource.delete" },
-        { "type": "dev.knative.apiserver.resource.update" },
-        { "type": "dev.knative.apiserver.ref.add" },
-        { "type": "dev.knative.apiserver.ref.delete" },
-        { "type": "dev.knative.apiserver.ref.update" }
+        {
+          "type": "dev.knative.apiserver.resource.add",
+          "description": "CloudEvent type used for add operations when in Resource mode"
+        },
+        {
+          "type": "dev.knative.apiserver.resource.delete",
+          "description": "CloudEvent type used for delete operations when in Resource mode"
+        },
+        {
+          "type": "dev.knative.apiserver.resource.update",
+          "description": "CloudEvent type used for update operations when in Resource mode"
+        },
+        {
+          "type": "dev.knative.apiserver.ref.add",
+          "description": "CloudEvent type used for add operations when in Reference mode"
+        },
+        {
+          "type": "dev.knative.apiserver.ref.delete",
+          "description": "CloudEvent type used for delete operations when in Reference mode"
+        },
+        {
+          "type": "dev.knative.apiserver.ref.update",
+          "description": "CloudEvent type used for update operations when in Reference mode"
+        }
       ]
   name: apiserversources.sources.knative.dev
 spec:
