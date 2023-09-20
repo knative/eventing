@@ -93,7 +93,7 @@ func Example_full() {
 	//   sink:
 	//     ref:
 	//       kind: sinkkind
-	//       namespace: bar
+	//       namespace: sinknamespace
 	//       name: sinkname
 	//       apiVersion: sinkversion
 	//     uri: uri/parts
@@ -139,7 +139,7 @@ func Example_fullbase64() {
 	//   sink:
 	//     ref:
 	//       kind: sinkkind
-	//       namespace: bar
+	//       namespace: sinknamespace
 	//       name: sinkname
 	//       apiVersion: sinkversion
 	//     uri: uri/parts
