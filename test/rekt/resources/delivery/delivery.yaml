@@ -20,7 +20,11 @@ spec:
       {{ if .delivery.deadLetterSink.ref }}
       ref:
         kind: {{ .delivery.deadLetterSink.ref.kind }}
+        {{ if .delivery.deadLetterSink.ref.namespace }}
+        namespace: {{ .delivery.deadLetterSink.ref.namespace }}
+        {{ else }}
         namespace: {{ .namespace }}
+        {{ end }}
         name: {{ .delivery.deadLetterSink.ref.name }}
         apiVersion: {{ .delivery.deadLetterSink.ref.apiVersion }}
       {{ end }}
