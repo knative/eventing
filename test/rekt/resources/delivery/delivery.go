@@ -44,7 +44,9 @@ func WithDeadLetterSink(ref *duckv1.KReference, uri string) manifest.CfgFn {
 			dref := dls["ref"].(map[string]interface{})
 			dref["apiVersion"] = ref.APIVersion
 			dref["kind"] = ref.Kind
-			// Skip namespace.
+			if ref.Namespace != "" {
+				dref["namespace"] = ref.Namespace
+			}
 			dref["name"] = ref.Name
 		}
 	}
