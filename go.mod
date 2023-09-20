@@ -1,5 +1,5 @@
 module knative.dev/eventing
-
+ 
 go 1.19
 
 require (
