@@ -29,7 +29,11 @@ spec:
     {{ if .subscriber.ref }}
     ref:
       kind: {{ .subscriber.ref.kind }}
+      {{ if .subscriber.ref.namespace }}
+      namespace: {{ .subscriber.ref.namespace }}
+      {{ else }}
       namespace: {{ .namespace }}
+      {{ end }}
       name: {{ .subscriber.ref.name }}
       apiVersion: {{ .subscriber.ref.apiVersion }}
     {{ end }}
