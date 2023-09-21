@@ -184,7 +184,7 @@ func WithEmitter(emitter milestone.Emitter) EnvOpts {
 }
 
 func (mr *MagicGlobalEnvironment) Environment(opts ...EnvOpts) (context.Context, Environment) {
-	opts = append([]EnvOpts{inNamespace()}, opts...)
+	opts = append(opts, inNamespace())
 
 	env := &MagicEnvironment{
 		c:              mr.c,
