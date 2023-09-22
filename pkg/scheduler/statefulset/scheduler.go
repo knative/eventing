@@ -198,15 +198,6 @@ func (s *StatefulSetScheduler) Schedule(vpod scheduler.VPod) ([]duckv1alpha1.Pla
 	s.reservedMu.Lock()
 	defer s.reservedMu.Unlock()
 
-	vpods, err := s.vpodLister()
-	if err != nil {
-		return nil, err
-	}
-	vpodFromLister := st.GetVPod(vpod.GetKey(), vpods)
-	if vpodFromLister != nil && vpod.GetResourceVersion() != vpodFromLister.GetResourceVersion() {
-		return nil, fmt.Errorf("vpod to schedule has resource version different from one in indexer")
-	}
-
 	placements, err := s.scheduleVPod(vpod)
 	if placements == nil {
 		return placements, err
@@ -223,7 +214,7 @@ func (s *StatefulSetScheduler) Schedule(vpod scheduler.VPod) ([]duckv1alpha1.Pla
 }
 
 func (s *StatefulSetScheduler) scheduleVPod(vpod scheduler.VPod) ([]duckv1alpha1.Placement, error) {
-	logger := s.logger.With("key", vpod.GetKey())
+	logger := s.logger.With("key", vpod.GetKey(), zap.String("component", "scheduler"))
 	// Get the current placements state
 	// Quite an expensive operation but safe and simple.
 	state, err := s.stateAccessor.State(s.reserved)
@@ -232,18 +223,60 @@ func (s *StatefulSetScheduler) scheduleVPod(vpod scheduler.VPod) ([]duckv1alpha1
 		return nil, err
 	}
 
+	// Clean up reserved from removed resources that don't appear in the vpod list anymore and have
+	// no pending resources.
+	reserved := make(map[types.NamespacedName]map[string]int32)
+	for k, v := range s.reserved {
+		if pendings, ok := state.Pending[k]; ok {
+			if pendings == 0 {
+				reserved[k] = map[string]int32{}
+			} else {
+				reserved[k] = v
+			}
+		}
+	}
+	s.reserved = reserved
+
 	logger.Debugw("scheduling", zap.Any("state", state))
 
 	existingPlacements := vpod.GetPlacements()
 	var left int32
 
-	// Remove unschedulable pods from placements
+	// Remove unschedulable or adjust overcommitted pods from placements
 	var placements []duckv1alpha1.Placement
 	if len(existingPlacements) > 0 {
 		placements = make([]duckv1alpha1.Placement, 0, len(existingPlacements))
 		for _, p := range existingPlacements {
-			if state.IsSchedulablePod(st.OrdinalFromPodName(p.PodName)) {
-				placements = append(placements, *p.DeepCopy())
+			p := p.DeepCopy()
+			ordinal := st.OrdinalFromPodName(p.PodName)
+
+			if !state.IsSchedulablePod(ordinal) {
+				continue
+			}
+
+			// Handle overcommitted pods.
+			if state.FreeCap[ordinal] < 0 {
+				// vr > free => vr: 9, overcommit 4 -> free: 0, vr: 5, pending: +4
+				// vr = free => vr: 4, overcommit 4 -> free: 0, vr: 0, pending: +4
+				// vr < free => vr: 3, overcommit 4 -> free: -1, vr: 0, pending: +3
+
+				overcommit := -state.FreeCap[ordinal]
+
+				if p.VReplicas >= overcommit {
+					state.SetFree(ordinal, 0)
+					state.Pending[vpod.GetKey()] += overcommit
+
+					p.VReplicas = p.VReplicas - overcommit
+				} else {
+					state.SetFree(ordinal, p.VReplicas-overcommit)
+					state.Pending[vpod.GetKey()] += p.VReplicas
+
+					p.VReplicas = 0
+				}
+			}
+
+			if p.VReplicas > 0 {
+				placements = append(placements, *p)
 			}
 		}
 	}
@@ -282,7 +315,7 @@ func (s *StatefulSetScheduler) scheduleVPod(vpod scheduler.VPod) ([]duckv1alpha1
 	} else { //Predicates and priorities must be used for scheduling
 		// Need less => scale down
 		if tr > vpod.GetVReplicas() && state.DeschedPolicy != nil {
-			logger.Debugw("scaling down", zap.Int32("vreplicas", tr), zap.Int32("new vreplicas", vpod.GetVReplicas()))
+			logger.Infow("scaling down", zap.Int32("vreplicas", tr), zap.Int32("new vreplicas", vpod.GetVReplicas()))
 			placements = s.removeReplicasWithPolicy(vpod, tr-vpod.GetVReplicas(), placements)
 
 			// Do not trigger the autoscaler to avoid unnecessary churn
@@ -295,17 +328,18 @@ func (s *StatefulSetScheduler) scheduleVPod(vpod scheduler.VPod) ([]duckv1alpha1
 			// Need more => scale up
 			// rebalancing needed for all vreps most likely since there are pending vreps from previous reconciliation
 			// can fall here when vreps scaled up or after eviction
-			logger.Debugw("scaling up with a rebalance (if needed)", zap.Int32("vreplicas", tr), zap.Int32("new vreplicas", vpod.GetVReplicas()))
+			logger.Infow("scaling up with a rebalance (if needed)", zap.Int32("vreplicas", tr), zap.Int32("new vreplicas", vpod.GetVReplicas()))
 			placements, left = s.rebalanceReplicasWithPolicy(vpod, vpod.GetVReplicas(), placements)
 		}
 	}
 
 	if left > 0 {
 		// Give time for the autoscaler to do its job
-		logger.Info("not enough pod replicas to schedule. Awaiting autoscaler", zap.Any("placement", placements), zap.Int32("left", left))
+		logger.Infow("not enough pod replicas to schedule")
 
 		// Trigger the autoscaler
 		if s.autoscaler != nil {
+			logger.Infow("Awaiting autoscaler", zap.Any("placement", placements), zap.Int32("left", left))
 			s.autoscaler.Autoscale(s.ctx)
 		}
 

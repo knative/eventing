@@ -106,7 +106,7 @@ func (a *autoscaler) Demote(b reconciler.Bucket) {
 
 func newAutoscaler(ctx context.Context, cfg *Config, stateAccessor st.StateAccessor) *autoscaler {
 	return &autoscaler{
-		logger:            logging.FromContext(ctx),
+		logger:            logging.FromContext(ctx).With(zap.String("component", "autoscaler")),
 		statefulSetClient: kubeclient.Get(ctx).AppsV1().StatefulSets(cfg.StatefulSetNamespace),
 		statefulSetName:   cfg.StatefulSetName,
 		vpodLister:        cfg.VPodLister,
@@ -133,8 +133,10 @@ func (a *autoscaler) Start(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-time.After(a.refreshPeriod):
+			a.logger.Infow("Triggering scale down", zap.Bool("isLeader", a.isLeader.Load()))
 			attemptScaleDown = true
 		case <-a.trigger:
+			a.logger.Infow("Triggering scale up", zap.Bool("isLeader", a.isLeader.Load()))
 			attemptScaleDown = false
 		}
 
@@ -145,9 +147,14 @@ func (a *autoscaler) Start(ctx context.Context) {
 }
 
 func (a *autoscaler) Autoscale(ctx context.Context) {
+	select {
 	// We trigger the autoscaler asynchronously by using the channel so that the scale down refresh
 	// period is reset.
-	a.trigger <- struct{}{}
+	case a.trigger <- struct{}{}:
+	default:
+		// We don't want to block if the channel's buffer is full, it will be triggered eventually.
+
+	}
 }
 
 func (a *autoscaler) syncAutoscale(ctx context.Context, attemptScaleDown bool) error {
