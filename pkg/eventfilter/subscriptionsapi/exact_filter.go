@@ -62,3 +62,5 @@ func (filter *exactFilter) Filter(ctx context.Context, event cloudevents.Event) 
 	logger.Debugw("Performing an exact match ", zap.Any("filters", filter.filters), zap.Any("event", event))
 	return filter.attrsFilter.Filter(ctx, event)
 }
+
+func (filter *exactFilter) Cleanup() {}
