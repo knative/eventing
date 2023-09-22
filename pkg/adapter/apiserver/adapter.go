@@ -18,6 +18,7 @@ package apiserver
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -88,8 +89,7 @@ func (a *apiServerAdapter) start(ctx context.Context, stopCh <-chan struct{}) er
 
 		resources, err := a.discover.ServerResourcesForGroupVersion(configRes.GVR.GroupVersion().String())
 		if err != nil {
-			a.logger.Errorf("Could not retrieve information about resource %s: %s", configRes.GVR.String(), err.Error())
-			continue
+			return fmt.Errorf("failed to retrieve information about resource %s: %v", configRes.GVR.String(), err)
 		}
 
 		exists := false
@@ -120,7 +120,7 @@ func (a *apiServerAdapter) start(ctx context.Context, stopCh <-chan struct{}) er
 		}
 
 		if !exists {
-			a.logger.Errorf("Could not retrieve information about resource %s: %s", configRes.GVR.String())
+			a.logger.Errorf("could not retrieve information about resource %s: it doesn't exist", configRes.GVR.String())
 		}
 	}
 
