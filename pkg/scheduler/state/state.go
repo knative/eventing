@@ -361,7 +361,7 @@ func (s *stateBuilder) updateFreeCapacity(free []int32, last int32, podName stri
 	// Assert the pod is not overcommitted
 	if free[ordinal] < 0 {
 		// This should not happen anymore. Log as an error but do not interrupt the current scheduling.
-		s.logger.Errorw("pod is overcommitted", zap.String("podName", podName), zap.Int32("free", free[ordinal]))
+		s.logger.Warnw("pod is overcommitted", zap.String("podName", podName), zap.Int32("free", free[ordinal]))
 	}
 
 	if ordinal > last {
