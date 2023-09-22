@@ -36,8 +36,11 @@ import (
 	pkgreconciler "knative.dev/pkg/reconciler"
 
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	"knative.dev/eventing/pkg/apis/feature"
 	v1 "knative.dev/eventing/pkg/apis/flows/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
+	"knative.dev/eventing/pkg/auth"
 	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
 	sequencereconciler "knative.dev/eventing/pkg/client/injection/reconciler/flows/v1/sequence"
 	listers "knative.dev/eventing/pkg/client/listers/flows/v1"
@@ -115,6 +118,14 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, s *v1.Sequence) pkgrecon
 		logging.FromContext(ctx).Infof("Reconciled Subscription Object for step: %d: %+v", i, sub)
 	}
 	s.Status.PropagateSubscriptionStatuses(subs)
+
+	featureFlags := feature.FromContext(ctx)
+
+	if featureFlags.IsOIDCAuthentication() {
+		audience := auth.GetAudience(eventingv1.SchemeGroupVersion.WithKind("Broker"), s.ObjectMeta)
+		logging.FromContext(ctx).Debugw("Setting the brokers audience", zap.String("audience", audience))
+		s.Status.Address.Audience = &audience
+	}
 
 	// If a sequence is modified resulting in the number of steps decreasing, there will be
 	// leftover channels and subscriptions that need to be removed.
