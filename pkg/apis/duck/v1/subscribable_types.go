@@ -47,6 +47,9 @@ type SubscriberSpec struct {
 	// subscriberUri
 	// +optional
 	SubscriberCACerts *string `json:"subscriberCACerts,omitempty"`
+	// SubscriberAudience is the OIDC audience for the subscriberUri.
+	// +optional
+	SubscriberAudience *string `json:"subscriberAudience,omitempty"`
 	// ReplyURI is the endpoint for the reply
 	// +optional
 	ReplyURI *apis.URL `json:"replyUri,omitempty"`
@@ -55,6 +58,9 @@ type SubscriberSpec struct {
 	// replyUri.
 	// +optional
 	ReplyCACerts *string `json:"replyCACerts,omitempty"`
+	// ReplyAudience is the OIDC audience for the replyUri.
+	// +optional
+	ReplyAudience *string `json:"replyAudience,omitempty"`
 	// +optional
 	// DeliverySpec contains options controlling the event delivery
 	// +optional

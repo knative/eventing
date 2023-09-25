@@ -208,6 +208,7 @@ func WithSubscriptionPhysicalSubscriptionSubscriber(subscriber *duckv1.Addressab
 		}
 		s.Status.PhysicalSubscription.SubscriberURI = subscriber.URL
 		s.Status.PhysicalSubscription.SubscriberCACerts = subscriber.CACerts
+		s.Status.PhysicalSubscription.SubscriberAudience = subscriber.Audience
 	}
 }
 
@@ -218,6 +219,7 @@ func WithSubscriptionPhysicalSubscriptionReply(reply *duckv1.Addressable) Subscr
 		}
 		s.Status.PhysicalSubscription.ReplyURI = reply.URL
 		s.Status.PhysicalSubscription.ReplyCACerts = reply.CACerts
+		s.Status.PhysicalSubscription.ReplyAudience = reply.Audience
 	}
 }
 
