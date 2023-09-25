@@ -19,6 +19,7 @@ package broker
 import (
 	"context"
 	"embed"
+	"fmt"
 	"log"
 	"os"
 	"time"
@@ -278,4 +279,11 @@ func AsKReference(name string) *duckv1.KReference {
 		Name:       name,
 		APIVersion: "eventing.knative.dev/v1",
 	}
+}
+
+func InstallMTBroker(name string) *feature.Feature {
+	f := feature.NewFeatureNamed("Multi-tenant channel-based broker")
+	f.Setup(fmt.Sprintf("Install broker %q", name), Install(name, WithEnvConfig()...))
+	f.Requirement("Broker is ready", IsReady(name))
+	return f
 }

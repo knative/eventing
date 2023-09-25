@@ -17,19 +17,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package experimental
+package rekt
 
 import (
-	"fmt"
 	"testing"
+
+	newfilters "knative.dev/eventing/test/rekt/features/new_trigger_filters"
 
 	"knative.dev/pkg/system"
 	"knative.dev/reconciler-test/pkg/environment"
-	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/knative"
 
-	newfilters "knative.dev/eventing/test/experimental/features/new_trigger_filters"
 	"knative.dev/eventing/test/rekt/resources/broker"
 )
 
@@ -45,7 +44,7 @@ func TestMTChannelBrokerNewTriggerFilters(t *testing.T) {
 	)
 	brokerName := "default"
 
-	env.Prerequisite(ctx, t, InstallMTBroker(brokerName))
+	env.Prerequisite(ctx, t, broker.InstallMTBroker(brokerName))
 	env.TestSet(ctx, t, newfilters.FiltersFeatureSet(brokerName))
 }
 
@@ -61,7 +60,7 @@ func TestMTChannelBrokerAnyTriggerFilters(t *testing.T) {
 	)
 	brokerName := "default"
 
-	env.Prerequisite(ctx, t, InstallMTBroker(brokerName))
+	env.Prerequisite(ctx, t, broker.InstallMTBroker(brokerName))
 	env.Test(ctx, t, newfilters.AnyFilterFeature(brokerName))
 }
 
@@ -77,13 +76,6 @@ func TestMTChannelBrokerAllTriggerFilters(t *testing.T) {
 	)
 	brokerName := "default"
 
-	env.Prerequisite(ctx, t, InstallMTBroker(brokerName))
+	env.Prerequisite(ctx, t, broker.InstallMTBroker(brokerName))
 	env.Test(ctx, t, newfilters.AllFilterFeature(brokerName))
-}
-
-func InstallMTBroker(name string) *feature.Feature {
-	f := feature.NewFeatureNamed("Multi-tenant channel-based broker")
-	f.Setup(fmt.Sprintf("Install broker %q", name), broker.Install(name, broker.WithEnvConfig()...))
-	f.Requirement("Broker is ready", broker.IsReady(name))
-	return f
 }
