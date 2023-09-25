@@ -18,7 +18,7 @@ package pingsource
 
 import (
 	"context"
-	
+
 	"k8s.io/apimachinery/pkg/util/sets"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/eventing/test/rekt/resources/broker"

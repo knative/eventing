@@ -23,6 +23,7 @@ import (
 
 	"knative.dev/pkg/system"
 	"knative.dev/reconciler-test/pkg/environment"
+	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/knative"
 )
@@ -39,6 +40,22 @@ func TestIMCEventTypeAutoCreate(t *testing.T) {
 	)
 
 	env.Test(ctx, t, eventtype_autocreate.AutoCreateEventTypesOnIMC())
+}
+
+func TestBrokerEventTypeAutoCreate(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+	)
+	brokerName := feature.MakeRandomK8sName("broker")
+
+	env.Prerequisite(ctx, t, InstallMTBroker(brokerName))
+	env.Test(ctx, t, eventtype_autocreate.AutoCreateEventTypesOnBroker(brokerName))
 }
 
 func TestPingSourceEventTypeMatch(t *testing.T) {

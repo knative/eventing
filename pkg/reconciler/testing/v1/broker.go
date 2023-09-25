@@ -88,19 +88,19 @@ func WithBrokerConfig(config *duckv1.KReference) BrokerOption {
 }
 
 // WithBrokerAddress sets the Broker's address.
-func WithBrokerAddress(address string) BrokerOption {
+func WithBrokerAddress(address *duckv1.Addressable) BrokerOption {
 	return func(b *v1.Broker) {
-		b.Status.SetAddress(&apis.URL{
-			Scheme: "http",
-			Host:   address,
-		})
+		b.Status.SetAddress(address)
 	}
 }
 
 // WithBrokerAddressURI sets the Broker's address as URI.
 func WithBrokerAddressURI(uri *apis.URL) BrokerOption {
 	return func(b *v1.Broker) {
-		b.Status.SetAddress(uri)
+		b.Status.SetAddress(&duckv1.Addressable{
+			Name: &uri.Scheme,
+			URL:  uri,
+		})
 	}
 }
 

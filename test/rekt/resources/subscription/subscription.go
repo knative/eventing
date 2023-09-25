@@ -73,7 +73,9 @@ func WithSubscriber(ref *duckv1.KReference, uri string) manifest.CfgFn {
 			sref := subscriber["ref"].(map[string]interface{})
 			sref["apiVersion"] = ref.APIVersion
 			sref["kind"] = ref.Kind
-			// skip namespace
+			if ref.Namespace != "" {
+				sref["namespace"] = ref.Namespace
+			}
 			sref["name"] = ref.Name
 		}
 	}
@@ -97,7 +99,9 @@ func WithReply(ref *duckv1.KReference, uri string) manifest.CfgFn {
 			sref := reply["ref"].(map[string]interface{})
 			sref["apiVersion"] = ref.APIVersion
 			sref["kind"] = ref.Kind
-			// skip namespace
+			if ref.Namespace != "" {
+				sref["namespace"] = ref.Namespace
+			}
 			sref["name"] = ref.Name
 		}
 	}

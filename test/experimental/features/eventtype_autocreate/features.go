@@ -30,6 +30,7 @@ import (
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
+	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/manifest"
 	"knative.dev/reconciler-test/pkg/resources/service"
 )
@@ -38,7 +39,7 @@ func AutoCreateEventTypesOnIMC() *feature.Feature {
 	f := feature.NewFeature()
 
 	event := cetest.FullEvent()
-	event.SetType("test.custom.event.type")
+	event.SetType("test.imc.custom.event.type")
 
 	sender := feature.MakeRandomK8sName("sender")
 	sub := feature.MakeRandomK8sName("subscription")
@@ -63,6 +64,36 @@ func AutoCreateEventTypesOnIMC() *feature.Feature {
 	expectedTypes := sets.New(event.Type())
 
 	f.Alpha("imc").
+		Must("deliver events to subscriber", assert.OnStore(sink).MatchEvent(cetest.HasId(event.ID())).AtLeast(1)).
+		Must("create event type", eventtype.WaitForEventType(eventtype.AssertPresent(expectedTypes)))
+
+	return f
+}
+
+func AutoCreateEventTypesOnBroker(brokerName string) *feature.Feature {
+	f := feature.NewFeature()
+
+	event := cetest.FullEvent()
+	event.SetType("test.broker.custom.event.type")
+
+	sender := feature.MakeRandomK8sName("sender")
+	triggerName := feature.MakeRandomK8sName("trigger")
+	sink := feature.MakeRandomK8sName("sink")
+
+	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
+	f.Setup("install subscription", trigger.Install(triggerName, brokerName, trigger.WithSubscriber(service.AsKReference(sink), "")))
+
+	f.Setup("trigger is ready", trigger.IsReady(triggerName))
+	f.Setup("broker is addressable", k8s.IsAddressable(broker.GVR(), brokerName))
+
+	f.Requirement("install event sender", eventshub.Install(sender,
+		eventshub.StartSenderToResource(broker.GVR(), brokerName),
+		eventshub.InputEvent(event),
+	))
+
+	expectedTypes := sets.New(event.Type())
+
+	f.Alpha("broker").
 		Must("deliver events to subscriber", assert.OnStore(sink).MatchEvent(cetest.HasId(event.ID())).AtLeast(1)).
 		Must("create event type", eventtype.WaitForEventType(eventtype.AssertPresent(expectedTypes)))
 

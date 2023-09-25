@@ -497,7 +497,7 @@ function report_go_test() {
   logfile="${logfile/.xml/.jsonl}"
   echo "Running go test with args: ${go_test_args[*]}"
   local gotest_retcode=0
-  go_run gotest.tools/gotestsum@v1.8.0 \
+  go_run gotest.tools/gotestsum@v1.10.1 \
     --format "${GO_TEST_VERBOSITY:-testname}" \
     --junitfile "${xml}" \
     --junitfile-testsuite-name relative \
@@ -510,14 +510,14 @@ function report_go_test() {
   echo "Test log (JSONL) written to ${logfile}"
 
   ansilog="${logfile/.jsonl/-ansi.log}"
-  go_run github.com/haveyoudebuggedit/gotestfmt/v2/cmd/gotestfmt@v2.3.1 \
+  go_run github.com/gotesttools/gotestfmt/v2/cmd/gotestfmt@v2.5.0 \
     -input "${logfile}" \
     -showteststatus \
     -nofail > "$ansilog"
   echo "Test log (ANSI) written to ${ansilog}"
 
   htmllog="${logfile/.jsonl/.html}"
-  go_run github.com/buildkite/terminal-to-html/v3/cmd/terminal-to-html@v3.6.1 \
+  go_run github.com/buildkite/terminal-to-html/v3/cmd/terminal-to-html@v3.9.1 \
     --preview < "$ansilog" > "$htmllog"
   echo "Test log (HTML) written to ${htmllog}"
 
@@ -672,7 +672,30 @@ function foreach_go_module() {
 # global env var: FLOATING_DEPS
 # --upgrade will set GOPROXY to direct unless it is already set.
 function go_update_deps() {
+  # The go.work.sum will be truncated if it exists. This is to allow the
+  # `go mod tidy` to resolve the dependencies, without the influence of the
+  # sums from the workspace.
+  __clean_goworksum_if_exists
   foreach_go_module __go_update_deps_for_module "$@"
+  __remove_goworksum_if_empty
+}
+
+function __clean_goworksum_if_exists() {
+  if [ -f "$REPO_ROOT_DIR/go.work.sum" ]; then
+    echo "=== Cleaning the go.work.sum file"
+    true > "$REPO_ROOT_DIR/go.work.sum"
+  fi
+}
+
+function __remove_goworksum_if_empty() {
+  if [ -f "$REPO_ROOT_DIR/go.work" ]; then
+    echo "=== Syncing the go workspace"
+    go work sync
+  fi
+  if ! [ -s "$REPO_ROOT_DIR/go.work.sum" ]; then
+    echo "=== Removing empty go.work.sum"
+    rm -f "$REPO_ROOT_DIR/go.work.sum"
+  fi
 }
 
 function __go_update_deps_for_module() {
@@ -718,34 +741,35 @@ function __go_update_deps_for_module() {
     fi
   fi
 
-  group "Go mod tidy and vendor"
+  group "Go mod tidy"
 
   # Prune modules.
-  local orig_pipefail_opt=$(shopt -p -o pipefail)
+  local orig_pipefail_opt
+  orig_pipefail_opt=$(shopt -p -o pipefail)
   set -o pipefail
   go mod tidy 2>&1 | grep -v "ignoring symlink" || true
-  go mod vendor 2>&1 |  grep -v "ignoring symlink" || true
+  if [[ "${FORCE_VENDOR:-false}" == "true" ]] || [ -d vendor ]; then
+    group "Go mod vendor"
+    go mod vendor 2>&1 |  grep -v "ignoring symlink" || true
+  fi
   eval "$orig_pipefail_opt"
 
-  if ! [ -d vendor ]; then
-    return 0
+  if [[ "${FORCE_VENDOR:-false}" == "true" ]] || [ -d vendor ]; then
+    group "Removing unwanted vendor files"
+    find vendor/ \( -name "OWNERS" \
+      -o -name "OWNERS_ALIASES" \
+      -o -name "BUILD" \
+      -o -name "BUILD.bazel" \
+      -o -name "*_test.go" \) -exec rm -f {} +
+
+    export GOFLAGS=-mod=vendor
+
+    group "Removing broken symlinks"
+    remove_broken_symlinks ./vendor
   fi
-  group "Removing unwanted vendor files"
-
-  # Remove unwanted vendor files
-  find vendor/ \( -name "OWNERS" \
-    -o -name "OWNERS_ALIASES" \
-    -o -name "BUILD" \
-    -o -name "BUILD.bazel" \
-    -o -name "*_test.go" \) -exec rm -f {} +
-
-  export GOFLAGS=-mod=vendor
 
   group "Updating licenses"
   update_licenses third_party/VENDOR-LICENSE "./..."
-
-  group "Removing broken symlinks"
-  remove_broken_symlinks ./vendor
   )
 }
 
@@ -788,7 +812,7 @@ function update_licenses() {
   local dst=$1
   local dir=$2
   shift
-  go_run github.com/google/go-licenses@v1.2.1 \
+  go_run github.com/google/go-licenses@v1.6.0 \
     save "${dir}" --save_path="${dst}" --force || \
     { echo "--- FAIL: go-licenses failed to update licenses"; return 1; }
 }
@@ -796,7 +820,7 @@ function update_licenses() {
 # Run go-licenses to check for forbidden licenses.
 function check_licenses() {
   # Check that we don't have any forbidden licenses.
-  go_run github.com/google/go-licenses@v1.2.1 \
+  go_run github.com/google/go-licenses@v1.6.0 \
     check "${REPO_ROOT_DIR}/..." || \
     { echo "--- FAIL: go-licenses failed the license check"; return 1; }
 }

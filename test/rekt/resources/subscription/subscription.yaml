@@ -29,7 +29,11 @@ spec:
     {{ if .subscriber.ref }}
     ref:
       kind: {{ .subscriber.ref.kind }}
+      {{ if .subscriber.ref.namespace }}
+      namespace: {{ .subscriber.ref.namespace }}
+      {{ else }}
       namespace: {{ .namespace }}
+      {{ end }}
       name: {{ .subscriber.ref.name }}
       apiVersion: {{ .subscriber.ref.apiVersion }}
     {{ end }}
@@ -46,7 +50,11 @@ spec:
     {{ if .reply.ref }}
     ref:
       kind: {{ .reply.ref.kind }}
+      {{ if .reply.ref.namespace }}
+      namespace: {{ .reply.ref.namespace }}
+      {{ else }}
       namespace: {{ .namespace }}
+      {{ end }}
       name: {{ .reply.ref.name }}
       apiVersion: {{ .reply.ref.apiVersion }}
     {{ end }}
@@ -65,7 +73,11 @@ spec:
       {{ if .delivery.deadLetterSink.ref }}
       ref:
         kind: {{ .delivery.deadLetterSink.ref.kind }}
+        {{ if .delivery.deadLetterSink.ref.namespace }}
+        namespace: {{ .delivery.deadLetterSink.ref.namespace }}
+        {{ else }}
         namespace: {{ .namespace }}
+        {{ end }}
         name: {{ .delivery.deadLetterSink.ref.name }}
         apiVersion: {{ .delivery.deadLetterSink.ref.apiVersion }}
       {{ end }}

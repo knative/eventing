@@ -65,6 +65,22 @@ func TestMTChannelBrokerAnyTriggerFilters(t *testing.T) {
 	env.Test(ctx, t, newfilters.AnyFilterFeature(brokerName))
 }
 
+func TestMTChannelBrokerAllTriggerFilters(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+	)
+	brokerName := "default"
+
+	env.Prerequisite(ctx, t, InstallMTBroker(brokerName))
+	env.Test(ctx, t, newfilters.AllFilterFeature(brokerName))
+}
+
 func InstallMTBroker(name string) *feature.Feature {
 	f := feature.NewFeatureNamed("Multi-tenant channel-based broker")
 	f.Setup(fmt.Sprintf("Install broker %q", name), broker.Install(name, broker.WithEnvConfig()...))
