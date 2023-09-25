@@ -365,15 +365,11 @@ func (h *Handler) getTrigger(ref path.NamespacedNameUID) (*eventingv1.Trigger, e
 
 func (h *Handler) filterEvent(ctx context.Context, trigger *eventingv1.Trigger, event cloudevents.Event) eventfilter.FilterResult {
 	switch {
-	case feature.FromContext(ctx).IsEnabled(feature.NewTriggerFilters):
+	case feature.FromContext(ctx).IsEnabled(feature.NewTriggerFilters) && len(trigger.Spec.Filters) > 0:
 		logging.FromContext(ctx).Debugw("New trigger filters feature is enabled. Applying new filters.", zap.Any("filters", trigger.Spec.Filters))
 		filter, ok := h.filtersMap.Get(trigger)
 		if !ok {
-			// trigger filters haven't update in the map yet - need to create them on the fly
-			if len(trigger.Spec.Filters) == 0 {
-				logging.FromContext(ctx).Debug("Found no filters for trigger", zap.String("triggerFilterKey", fmt.Sprintf("%s.%s", trigger.Namespace, trigger.Name)))
-				return eventfilter.NoFilter
-			}
+			// trigger filters haven't updated in the map yet - need to create them on the fly
 			return applySubscriptionsAPIFilters(ctx, trigger, event)
 		}
 		return filter.Filter(ctx, event)
@@ -381,7 +377,7 @@ func (h *Handler) filterEvent(ctx context.Context, trigger *eventingv1.Trigger, 
 		logging.FromContext(ctx).Debugw("Applying attributes filter.", zap.Any("filter", trigger.Spec.Filter))
 		return applyAttributesFilter(ctx, trigger.Spec.Filter, event)
 	default:
-		logging.FromContext(ctx).Debugw("Found no filters in trigger", zap.Any("triggerSpec", trigger.Spec.Filter))
+		logging.FromContext(ctx).Debugw("Found no filters in trigger", zap.Any("triggerSpec", trigger.Spec))
 		return eventfilter.NoFilter
 	}
 }

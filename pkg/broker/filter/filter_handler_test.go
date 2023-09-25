@@ -584,6 +584,15 @@ func TestReceiver_WithSubscriptionsAPI(t *testing.T) {
 			expectedEventCount:        true,
 			expectedEventDispatchTime: true,
 		},
+		"Dispatch failed - empty SubscriptionsAPI filter does not override Attributes Filter": {
+			triggers: []*eventingv1.Trigger{
+				makeTrigger(
+					withAttributesFilter(&eventingv1.TriggerFilter{
+						Attributes: map[string]string{"type": "some-other-type", "source": "some-other-source"},
+					})),
+			},
+			expectedEventCount: false,
+		},
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
