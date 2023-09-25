@@ -26,20 +26,20 @@ import (
 	"knative.dev/pkg/ptr"
 )
 
-// GetServiceAccountName returns the service account name to use for OIDC
-// authentication for the given resource.
-func GetServiceAccountName(gvk schema.GroupVersionKind, objectMeta metav1.ObjectMeta) string {
+// GetOIDCServiceAccountNameForResource returns the service account name to use
+// for OIDC authentication for the given resource.
+func GetOIDCServiceAccountNameForResource(gvk schema.GroupVersionKind, objectMeta metav1.ObjectMeta) string {
 	sa := fmt.Sprintf("oidc-%s-%s-%s", gvk.GroupKind().Group, gvk.GroupKind().Kind, objectMeta.GetName())
 
 	return strings.ToLower(sa)
 }
 
-// GetServiceAccount returns the service account for OIDC authentication for the
-// given resource.
-func GetServiceAccount(gvk schema.GroupVersionKind, objectMeta metav1.ObjectMeta) *v1.ServiceAccount {
+// GetOIDCServiceAccountForResource returns the service account to use for OIDC
+// authentication for the given resource.
+func GetOIDCServiceAccountForResource(gvk schema.GroupVersionKind, objectMeta metav1.ObjectMeta) *v1.ServiceAccount {
 	return &v1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      GetServiceAccountName(gvk, objectMeta),
+			Name:      GetOIDCServiceAccountNameForResource(gvk, objectMeta),
 			Namespace: objectMeta.GetNamespace(),
 			OwnerReferences: []metav1.OwnerReference{
 				{

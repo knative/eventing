@@ -27,7 +27,7 @@ import (
 	"knative.dev/pkg/ptr"
 )
 
-func TestGetServiceAccountName(t *testing.T) {
+func TestGetOIDCServiceAccountNameForResource(t *testing.T) {
 	tests := []struct {
 		name       string
 		gvk        schema.GroupVersionKind
@@ -59,14 +59,14 @@ func TestGetServiceAccountName(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := GetServiceAccountName(tt.gvk, tt.objectMeta); got != tt.want {
+			if got := GetOIDCServiceAccountNameForResource(tt.gvk, tt.objectMeta); got != tt.want {
 				t.Errorf("GetServiceAccountName() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func TestGetServiceAccount(t *testing.T) {
+func TestGetOIDCServiceAccountForResource(t *testing.T) {
 	gvk := eventingv1.SchemeGroupVersion.WithKind("Broker")
 	objectMeta := metav1.ObjectMeta{
 		Name:      "my-broker",
@@ -76,7 +76,7 @@ func TestGetServiceAccount(t *testing.T) {
 
 	want := v1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      GetServiceAccountName(gvk, objectMeta),
+			Name:      GetOIDCServiceAccountNameForResource(gvk, objectMeta),
 			Namespace: "my-namespace",
 			OwnerReferences: []metav1.OwnerReference{
 				{
@@ -94,7 +94,7 @@ func TestGetServiceAccount(t *testing.T) {
 		},
 	}
 
-	got := GetServiceAccount(gvk, objectMeta)
+	got := GetOIDCServiceAccountForResource(gvk, objectMeta)
 
 	if diff := cmp.Diff(*got, want); diff != "" {
 		t.Errorf("GetServiceAccount() = %+v, want %+v - diff %s", got, want, diff)
