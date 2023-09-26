@@ -129,6 +129,11 @@ type SubscriptionStatusPhysicalSubscription struct {
 	// +optional
 	SubscriberCACerts *string `json:"subscriberCACerts,omitempty"`
 
+	// SubscriberAudience is the OIDC audience for the the resolved URI for
+	// spec.subscriber.
+	// +optional
+	SubscriberAudience *string `json:"subscriberAudience,omitempty"`
+
 	// ReplyURI is the fully resolved URI for the spec.reply.
 	// +optional
 	ReplyURI *apis.URL `json:"replyUri,omitempty"`
@@ -138,6 +143,11 @@ type SubscriptionStatusPhysicalSubscription struct {
 	// resolved URI for the spec.reply.
 	// +optional
 	ReplyCACerts *string `json:"replyCACerts,omitempty"`
+
+	// ReplyAudience is the OIDC audience for the the resolved URI for
+	// spec.reply.
+	// +optional
+	ReplyAudience *string `json:"replyAudience,omitempty"`
 
 	// DeliveryStatus contains a resolved URL to the dead letter sink address, and any other
 	// resolved delivery options.
