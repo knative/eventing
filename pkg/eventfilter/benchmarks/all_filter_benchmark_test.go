@@ -86,6 +86,11 @@ func BenchmarkAllFilter(b *testing.B) {
 			event: event,
 		},
 		FilterBenchmark{
+			name:  "All filter with one non-matching filter at the end",
+			arg:   []eventfilter.Filter{filter, exactFilter2, prefixFilterNoMatch},
+			event: event,
+		},
+		FilterBenchmark{
 			name:  "All filter with all non-matching filters",
 			arg:   []eventfilter.Filter{prefixFilterNoMatch, suffixFilterNoMatch},
 			event: event,
