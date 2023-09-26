@@ -24,6 +24,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/source"
 	configmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap"
+	serviceaccountinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/injection/clients/dynamicclient"
@@ -43,6 +44,7 @@ import (
 	triggerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/trigger"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1"
 	"knative.dev/eventing/pkg/duck"
+	kubeclient "knative.dev/pkg/client/injection/kube/client"
 )
 
 // NewController initializes the controller and is called by the generated code
@@ -57,6 +59,7 @@ func NewController(
 	subscriptionInformer := subscriptioninformer.Get(ctx)
 	configmapInformer := configmapinformer.Get(ctx)
 	secretInformer := secretinformer.Get(ctx)
+	serviceaccountInformer := serviceaccountinformer.Get(ctx)
 
 	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"))
 	featureStore.WatchConfigs(cmw)
@@ -65,6 +68,7 @@ func NewController(
 	r := &Reconciler{
 		eventingClientSet:  eventingclient.Get(ctx),
 		dynamicClientSet:   dynamicclient.Get(ctx),
+		kubeclient:         kubeclient.Get(ctx),
 		subscriptionLister: subscriptionInformer.Lister(),
 		brokerLister:       brokerInformer.Lister(),
 		triggerLister:      triggerLister,
@@ -102,6 +106,12 @@ func NewController(
 
 	// Reconcile Trigger when my Subscription changes
 	subscriptionInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: controller.FilterController(&eventing.Trigger{}),
+		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
+	})
+
+	// Reconciler Trigger when the OIDC service account changes
+	serviceaccountInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.FilterController(&eventing.Trigger{}),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})

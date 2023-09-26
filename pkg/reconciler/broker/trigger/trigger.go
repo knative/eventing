@@ -27,6 +27,7 @@ import (
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/utils/pointer"
 	"knative.dev/pkg/apis"
@@ -44,6 +45,7 @@ import (
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/pkg/apis/feature"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
+	"knative.dev/eventing/pkg/auth"
 	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1"
 	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1"
@@ -65,6 +67,7 @@ const (
 type Reconciler struct {
 	eventingClientSet clientset.Interface
 	dynamicClientSet  dynamic.Interface
+	kubeclient        kubernetes.Interface
 
 	// listers index properties about resources
 	subscriptionLister messaginglisters.SubscriptionLister
@@ -135,6 +138,22 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, t *eventingv1.Trigger) p
 
 	if err := r.resolveDeadLetterSink(ctx, b, t); err != nil {
 		return err
+	}
+
+	featureFlags := feature.FromContext(ctx)
+	if featureFlags.IsOIDCAuthentication() {
+		saName := auth.GetOIDCServiceAccountNameForResource(eventingv1.SchemeGroupVersion.WithKind("Trigger"), t.ObjectMeta)
+		t.Status.Auth = &duckv1.AuthStatus{
+			ServiceAccountName: &saName,
+		}
+
+		if err := auth.EnsureOIDCServiceAccountExistsForResource(ctx, r.kubeclient, eventingv1.SchemeGroupVersion.WithKind("Trigger"), t.ObjectMeta); err != nil {
+			t.Status.MarkOIDCServiceAccountResolvedFailed("Unable to resolve service account for OIDC authentication", "%v", err)
+			return err
+		}
+		t.Status.MarkOIDCServiceAccountResolvedSucceeded()
+	} else {
+		t.Status.MarkOIDCServiceAccountResolvedSucceededWithReason("OIDC authentication feature disabled", "")
 	}
 
 	sub, err := r.subscribeToBrokerChannel(ctx, b, t, brokerTrigger)

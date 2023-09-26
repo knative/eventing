@@ -17,12 +17,17 @@ limitations under the License.
 package auth
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
+	"go.uber.org/zap"
 	v1 "k8s.io/api/core/v1"
+	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/kubernetes"
+	"knative.dev/pkg/logging"
 	"knative.dev/pkg/ptr"
 )
 
@@ -47,7 +52,7 @@ func GetOIDCServiceAccountForResource(gvk schema.GroupVersionKind, objectMeta me
 					Kind:               gvk.GroupKind().Kind,
 					Name:               objectMeta.GetName(),
 					UID:                objectMeta.GetUID(),
-					Controller:         ptr.Bool(false),
+					Controller:         ptr.Bool(true),
 					BlockOwnerDeletion: ptr.Bool(false),
 				},
 			},
@@ -56,4 +61,32 @@ func GetOIDCServiceAccountForResource(gvk schema.GroupVersionKind, objectMeta me
 			},
 		},
 	}
+}
+
+func EnsureOIDCServiceAccountExistsForResource(ctx context.Context, kubeclient kubernetes.Interface, gvk schema.GroupVersionKind, objectMeta metav1.ObjectMeta) error {
+	saName := GetOIDCServiceAccountNameForResource(gvk, objectMeta)
+	sa, err := kubeclient.CoreV1().ServiceAccounts(objectMeta.Namespace).Get(ctx, saName, metav1.GetOptions{})
+
+	// If the resource doesn't exist, we'll create it.
+	if apierrs.IsNotFound(err) {
+		logging.FromContext(ctx).Infow("Creating OIDC service account", zap.Error(err))
+
+		expected := GetOIDCServiceAccountForResource(gvk, objectMeta)
+
+		_, err = kubeclient.CoreV1().ServiceAccounts(objectMeta.Namespace).Create(ctx, expected, metav1.CreateOptions{})
+		if err != nil {
+			return fmt.Errorf("could not create OIDC service account %s/%s for %s: %w", objectMeta.Name, objectMeta.Namespace, gvk.Kind, err)
+		}
+		return nil
+	} else if err != nil {
+		logging.FromContext(ctx).Errorw("Failed to get OIDC service account", zap.Error(err))
+
+		return fmt.Errorf("could not get OIDC service account %s/%s for %s: %w", objectMeta.Name, objectMeta.Namespace, gvk.Kind, err)
+	} else if !metav1.IsControlledBy(&sa.ObjectMeta, &objectMeta) {
+		logging.FromContext(ctx).Errorw("Service account not owned by parent resource", zap.Any("service account", sa), zap.Any("parent resource ("+gvk.Kind+")", objectMeta))
+
+		return fmt.Errorf("%s %q does not own service account %q", gvk.Kind, objectMeta.Name, sa.Name)
+	}
+
+	return nil
 }
