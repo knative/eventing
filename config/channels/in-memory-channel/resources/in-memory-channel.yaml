@@ -142,11 +142,17 @@ spec:
                     replyCACerts:
                       description: Certification Authority (CA) certificates in PEM format according to https://www.rfc-editor.org/rfc/rfc7468.
                       type: string
+                    replyAudience:
+                      description: ReplyAudience is the OIDC audience for the replyUri.
+                      type: string
                     subscriberUri:
                       description: SubscriberURI is the endpoint for the subscriber
                       type: string
                     subscriberCACerts:
                       description: Certification Authority (CA) certificates in PEM format according to https://www.rfc-editor.org/rfc/rfc7468.
+                      type: string
+                    subscriberAudience:
+                      description: SubscriberAudience is the OIDC audience for the subscriberUri.
                       type: string
                     uid:
                       description: UID is used to understand the origin of the subscriber.
