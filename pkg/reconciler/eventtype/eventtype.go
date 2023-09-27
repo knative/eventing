@@ -41,16 +41,18 @@ var _ eventtypereconciler.Interface = (*Reconciler)(nil)
 // 1. Verify the Reference exists.
 func (r *Reconciler) ReconcileKind(ctx context.Context, et *v1beta2.EventType) pkgreconciler.Event {
 
-	_, err := r.kReferenceResolver.Resolve(ctx, et.Spec.Reference, et)
-	if err != nil {
-		if apierrs.IsNotFound(err) {
-			logging.FromContext(ctx).Errorw("Reference does not exist", zap.Error(err))
-			et.Status.MarkReferenceDoesNotExist()
-		} else {
-			logging.FromContext(ctx).Errorw("Unable to get the reference", zap.Error(err))
-			et.Status.MarkReferenceExistsUnknown("ReferenceGetFailed", "Failed to get reference: %v", err)
+	if et.Spec.Reference != nil {
+		_, err := r.kReferenceResolver.Resolve(ctx, et.Spec.Reference, et)
+		if err != nil {
+			if apierrs.IsNotFound(err) {
+				logging.FromContext(ctx).Errorw("Reference does not exist", zap.Error(err))
+				et.Status.MarkReferenceDoesNotExist()
+			} else {
+				logging.FromContext(ctx).Errorw("Unable to get the reference", zap.Error(err))
+				et.Status.MarkReferenceExistsUnknown("ReferenceGetFailed", "Failed to get reference: %v", err)
+			}
+			return err
 		}
-		return err
 	}
 	et.Status.MarkReferenceExists()
 	return nil
