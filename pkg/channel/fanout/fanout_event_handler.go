@@ -81,6 +81,8 @@ type FanoutEventHandler struct {
 
 	receiver *channel.EventReceiver
 
+	eventDispatcher *kncloudevents.Dispatcher
+
 	// TODO: Plumb context through the receiver and dispatcher and use that to store the timeout,
 	// rather than a member variable.
 	timeout time.Duration
@@ -100,6 +102,7 @@ func NewFanoutEventHandler(
 	eventTypeHandler *eventtype.EventTypeAutoHandler,
 	channelAddressable *duckv1.KReference,
 	channelUID *types.UID,
+	eventDispatcher *kncloudevents.Dispatcher,
 	receiverOpts ...channel.EventReceiverOptions,
 ) (*FanoutEventHandler, error) {
 	handler := &FanoutEventHandler{
@@ -110,6 +113,7 @@ func NewFanoutEventHandler(
 		eventTypeHandler:   eventTypeHandler,
 		channelAddressable: channelAddressable,
 		channelUID:         channelUID,
+		eventDispatcher:    eventDispatcher,
 	}
 	handler.subscriptions = make([]Subscription, len(config.Subscriptions))
 	copy(handler.subscriptions, config.Subscriptions)
@@ -313,7 +317,7 @@ func (f *FanoutEventHandler) dispatch(ctx context.Context, subs []Subscription, 
 // makeFanoutRequest sends the request to exactly one subscription. It handles both the `call` and
 // the `sink` portions of the subscription.
 func (f *FanoutEventHandler) makeFanoutRequest(ctx context.Context, event event.Event, additionalHeaders nethttp.Header, sub Subscription) (*kncloudevents.DispatchInfo, error) {
-	return kncloudevents.SendEvent(ctx, event, sub.Subscriber,
+	return f.eventDispatcher.SendEvent(ctx, event, sub.Subscriber,
 		kncloudevents.WithHeader(additionalHeaders),
 		kncloudevents.WithReply(sub.Reply),
 		kncloudevents.WithDeadLetterSink(sub.DeadLetter),
