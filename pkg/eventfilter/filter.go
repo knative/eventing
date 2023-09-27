@@ -57,6 +57,17 @@ func (x FilterResult) Or(y FilterResult) FilterResult {
 	return FailFilter
 }
 
+func (x FilterResult) String() string {
+	switch x {
+	case PassFilter:
+		return "PassFilter"
+	case FailFilter:
+		return "FailFilter"
+	default:
+		return "NoFilter"
+	}
+}
+
 // Filter is an interface representing an event filter of the trigger filter
 type Filter interface {
 	// Filter compute the predicate on the provided event and returns the result of the matching
