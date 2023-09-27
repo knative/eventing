@@ -23,13 +23,13 @@ import (
 )
 
 const (
-	PassFilter FilterResult = "pass"
-	FailFilter FilterResult = "fail"
-	NoFilter   FilterResult = "no_filter"
+	PassFilter FilterResult = iota
+	FailFilter
+	NoFilter
 )
 
 // FilterResult has the result of the filtering operation.
-type FilterResult string
+type FilterResult int
 
 func (x FilterResult) And(y FilterResult) FilterResult {
 	if x == NoFilter {
