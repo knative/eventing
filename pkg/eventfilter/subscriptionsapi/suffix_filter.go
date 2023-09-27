@@ -50,11 +50,6 @@ func (filter *suffixFilter) Filter(ctx context.Context, event cloudevents.Event)
 	if filter == nil {
 		return eventfilter.NoFilter
 	}
-	for attribute, value := range filter.filters {
-		if attribute == "" || value == "" {
-			return eventfilter.NoFilter
-		}
-	}
 	logger := logging.FromContext(ctx)
 	logger.Debugw("Performing a suffix match ", zap.Any("filters", filter.filters), zap.Any("event", event))
 	for k, v := range filter.filters {
@@ -64,7 +59,11 @@ func (filter *suffixFilter) Filter(ctx context.Context, event cloudevents.Event)
 				zap.Any("event", event))
 			return eventfilter.FailFilter
 		}
-		if !strings.HasSuffix(fmt.Sprintf("%v", value), v) {
+		var s string
+		if s, ok = value.(string); !ok {
+			s = fmt.Sprintf("%v", value)
+		}
+		if !strings.HasSuffix(s, v) {
 			return eventfilter.FailFilter
 		}
 	}
