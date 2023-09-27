@@ -356,6 +356,11 @@ func (in *SubscriptionStatus) DeepCopyInto(out *SubscriptionStatus) {
 	*out = *in
 	in.Status.DeepCopyInto(&out.Status)
 	in.PhysicalSubscription.DeepCopyInto(&out.PhysicalSubscription)
+	if in.Auth != nil {
+		in, out := &in.Auth, &out.Auth
+		*out = new(duckv1.AuthStatus)
+		(*in).DeepCopyInto(*out)
+	}
 	return
 }
 

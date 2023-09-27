@@ -345,6 +345,11 @@ func (in *TriggerStatus) DeepCopyInto(out *TriggerStatus) {
 		**out = **in
 	}
 	in.DeliveryStatus.DeepCopyInto(&out.DeliveryStatus)
+	if in.Auth != nil {
+		in, out := &in.Auth, &out.Auth
+		*out = new(duckv1.AuthStatus)
+		(*in).DeepCopyInto(*out)
+	}
 	return
 }
 

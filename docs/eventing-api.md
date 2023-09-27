@@ -797,6 +797,20 @@ string
 <p>A human readable message indicating details of Ready status.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>auth</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#AuthStatus">
+knative.dev/pkg/apis/duck/v1.AuthStatus
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Auth provides the relevant information for OIDC authentication.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <hr/>
@@ -2375,6 +2389,20 @@ DeliveryStatus
 resolved delivery options.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>auth</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#AuthStatus">
+knative.dev/pkg/apis/duck/v1.AuthStatus
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Auth provides the relevant information for OIDC authentication.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <hr/>
@@ -3459,6 +3487,20 @@ will target the first subscriber.
 It generally has the form {channel}.{namespace}.svc.{cluster domain name}</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>auth</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#AuthStatus">
+knative.dev/pkg/apis/duck/v1.AuthStatus
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Auth provides the relevant information for OIDC authentication.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="flows.knative.dev/v1.ParallelSubscriptionStatus">ParallelSubscriptionStatus
@@ -3791,6 +3833,20 @@ knative.dev/pkg/apis/duck/v1.Addressable
 <p>Address is the starting point to this Sequence. Sending to this
 will target the first subscriber.
 It generally has the form {channel}.{namespace}.svc.{cluster domain name}</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>auth</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#AuthStatus">
+knative.dev/pkg/apis/duck/v1.AuthStatus
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Auth provides the relevant information for OIDC authentication.</p>
 </td>
 </tr>
 </tbody>
@@ -4612,6 +4668,20 @@ SubscriptionStatusPhysicalSubscription
 </td>
 <td>
 <p>PhysicalSubscription is the fully resolved values that this Subscription represents.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>auth</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#AuthStatus">
+knative.dev/pkg/apis/duck/v1.AuthStatus
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Auth provides the relevant information for OIDC authentication.</p>
 </td>
 </tr>
 </tbody>
