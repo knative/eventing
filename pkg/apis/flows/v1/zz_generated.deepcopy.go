@@ -204,6 +204,11 @@ func (in *ParallelStatus) DeepCopyInto(out *ParallelStatus) {
 		}
 	}
 	in.AddressStatus.DeepCopyInto(&out.AddressStatus)
+	if in.Auth != nil {
+		in, out := &in.Auth, &out.Auth
+		*out = new(duckv1.AuthStatus)
+		(*in).DeepCopyInto(*out)
+	}
 	return
 }
 
@@ -366,6 +371,11 @@ func (in *SequenceStatus) DeepCopyInto(out *SequenceStatus) {
 		}
 	}
 	in.Address.DeepCopyInto(&out.Address)
+	if in.Auth != nil {
+		in, out := &in.Auth, &out.Auth
+		*out = new(duckv1.AuthStatus)
+		(*in).DeepCopyInto(*out)
+	}
 	return
 }
 

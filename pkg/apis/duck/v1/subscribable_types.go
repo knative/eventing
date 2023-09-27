@@ -23,6 +23,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/apis/duck"
+
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 // +genduck
@@ -80,6 +82,9 @@ type SubscriberStatus struct {
 	// A human readable message indicating details of Ready status.
 	// +optional
 	Message string `json:"message,omitempty"`
+	// Auth provides the relevant information for OIDC authentication.
+	// +optional
+	Auth *duckv1.AuthStatus `json:"auth,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

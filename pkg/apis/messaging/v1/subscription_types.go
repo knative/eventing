@@ -114,6 +114,10 @@ type SubscriptionStatus struct {
 
 	// PhysicalSubscription is the fully resolved values that this Subscription represents.
 	PhysicalSubscription SubscriptionStatusPhysicalSubscription `json:"physicalSubscription,omitempty"`
+
+	// Auth provides the relevant information for OIDC authentication.
+	// +optional
+	Auth *duckv1.AuthStatus `json:"auth,omitempty"`
 }
 
 // SubscriptionStatusPhysicalSubscription represents the fully resolved values for this

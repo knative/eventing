@@ -126,6 +126,13 @@ spec:
                           just the reconciler conveying richer information outwards.'
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
+              auth:
+                description: Auth provides the relevant information for OIDC authentication.
+                type: object
+                properties:
+                  serviceAccountName:
+                    description: ServiceAccountName is the name of the generated service account used for this components OIDC authentication.
+                    type: string
               ceAttributes:
                 description: 'CloudEventAttributes are the specific attributes that
                           the Source uses as part of its CloudEvents.'
