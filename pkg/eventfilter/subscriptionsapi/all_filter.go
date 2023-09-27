@@ -34,10 +34,10 @@ type filterCount struct {
 }
 
 type allFilter struct {
-	filters []filterCount
-	rwMutex sync.RWMutex
-	c       chan int
-	d       chan bool
+	filters   []filterCount
+	rwMutex   sync.RWMutex
+	indexChan chan int
+	doneChan  chan bool
 }
 
 // NewAllFilter returns an event filter which passes if all the contained filters pass
@@ -49,10 +49,11 @@ func NewAllFilter(filters ...eventfilter.Filter) eventfilter.Filter {
 			filter: filter,
 		}
 	}
+
 	f := &allFilter{
-		filters: filterCounts,
-		c:       make(chan int),
-		d:       make(chan bool),
+		filters:   filterCounts,
+		indexChan: make(chan int, 1),
+		doneChan:  make(chan bool),
 	}
 	go f.optimizeLoop()
 	return f
@@ -67,7 +68,11 @@ func (filter *allFilter) Filter(ctx context.Context, event cloudevents.Event) ev
 		res = res.And(f.filter.Filter(ctx, event))
 		// Short circuit to optimize it
 		if res == eventfilter.FailFilter {
-			filter.c <- i
+			select {
+			// don't block if the channel is full
+			case filter.indexChan <- i:
+			default:
+			}
 			return eventfilter.FailFilter
 		}
 	}
@@ -76,27 +81,27 @@ func (filter *allFilter) Filter(ctx context.Context, event cloudevents.Event) ev
 
 func (filter *allFilter) optimizeLoop() {
 	for {
-		i, more := <-filter.c
+		i, more := <-filter.indexChan
 		if !more {
-			filter.d <- true
+			filter.doneChan <- true
 			return
 		}
 		val := filter.filters[i].count.Inc()
 		if i != 0 && val > filter.filters[i-1].count.Load()*2 {
-			go filter.optimize(i)
+			go filter.swapWithEarlierFilter(i)
 		}
 	}
 }
 
-func (filter *allFilter) optimize(swapIdx int) {
+func (filter *allFilter) swapWithEarlierFilter(swapIdx int) {
 	filter.rwMutex.Lock()
 	defer filter.rwMutex.Unlock()
 	filter.filters[swapIdx-1], filter.filters[swapIdx] = filter.filters[swapIdx], filter.filters[swapIdx-1]
 }
 
 func (filter *allFilter) Cleanup() {
-	close(filter.c)
-	<-filter.d
+	close(filter.indexChan)
+	<-filter.doneChan
 	for _, f := range filter.filters {
 		f.filter.Cleanup()
 	}

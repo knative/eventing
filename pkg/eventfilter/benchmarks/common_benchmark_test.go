@@ -53,5 +53,6 @@ func RunFilterBenchmarks(b *testing.B, filterCtor func(interface{}) eventfilter.
 				Result = f.Filter(context.TODO(), fb.event)
 			}
 		})
+		f.Cleanup()
 	}
 }
