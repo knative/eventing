@@ -277,7 +277,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerDeadLetterSinkNotConfigured(),
 					WithTriggerSubscribedUnknown("SubscriptionNotConfigured", "Subscription has not yet been reconciled."),
 					WithTriggerStatusSubscriberURI(subscriberURI),
-					WithTriggerOIDCServiceAccountResolvedSucceededBecauseOIDCFeatureDisabled()),
+					WithTriggerOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled()),
 			}},
 		}, {
 			Name: "Creates subscription with retry from trigger",
@@ -311,7 +311,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerDeadLetterSinkNotConfigured(),
 					WithTriggerSubscribedUnknown("SubscriptionNotConfigured", "Subscription has not yet been reconciled."),
 					WithTriggerStatusSubscriberURI(subscriberURI),
-					WithTriggerOIDCServiceAccountResolvedSucceededBecauseOIDCFeatureDisabled()),
+					WithTriggerOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled()),
 			}},
 		}, {
 			Name: "Creates subscription with dls from trigger",
@@ -346,7 +346,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerStatusSubscriberURI(subscriberURI),
 					WithTriggerStatusDeadLetterSinkURI(duckv1.Addressable{URL: dlsURL}),
 					WithTriggerDeadLetterSinkResolvedSucceeded(),
-					WithTriggerOIDCServiceAccountResolvedSucceededBecauseOIDCFeatureDisabled()),
+					WithTriggerOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled()),
 			}},
 		}, {
 			Name: "TLS: Creates subscription with dls from trigger",
@@ -401,7 +401,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerStatusDeadLetterSinkURI(duckv1.Addressable{URL: dlsURL}),
 					WithTriggerDeadLetterSinkResolvedSucceeded(),
 					WithTriggerDeadLetterSinkCACerts(string(eventingtlstesting.CA)),
-					WithTriggerOIDCServiceAccountResolvedSucceededBecauseOIDCFeatureDisabled(),
+					WithTriggerOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 				),
 			}},
 		}, {
@@ -463,7 +463,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerStatusDeadLetterSinkURI(duckv1.Addressable{URL: dlsURL}),
 					WithTriggerDeadLetterSinkResolvedSucceeded(),
 					WithTriggerDeadLetterSinkCACerts(string(eventingtlstesting.CA)),
-					WithTriggerOIDCServiceAccountResolvedSucceededBecauseOIDCFeatureDisabled(),
+					WithTriggerOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 				),
 			}},
 		}, {
@@ -525,7 +525,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerStatusDeadLetterSinkURI(duckv1.Addressable{URL: dlsURL}),
 					WithTriggerDeadLetterSinkResolvedSucceeded(),
 					WithTriggerDeadLetterSinkCACerts(string(eventingtlstesting.CA)),
-					WithTriggerOIDCServiceAccountResolvedSucceededBecauseOIDCFeatureDisabled(),
+					WithTriggerOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 				),
 			}},
 		}, {
@@ -583,7 +583,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerStatusDeadLetterSinkURI(duckv1.Addressable{URL: dlsURL}),
 					WithTriggerDeadLetterSinkResolvedSucceeded(),
 					WithTriggerDeadLetterSinkCACerts(string(eventingtlstesting.CA)),
-					WithTriggerOIDCServiceAccountResolvedSucceededBecauseOIDCFeatureDisabled(),
+					WithTriggerOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 				),
 			}},
 		}, {
@@ -615,7 +615,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerStatusSubscriberURI(subscriberURI),
 					WithTriggerSubscriberURI(subscriberURI),
 					WithTriggerNotSubscribed("NotSubscribed", "inducing failure for create subscriptions"),
-					WithTriggerOIDCServiceAccountResolvedSucceededBecauseOIDCFeatureDisabled()),
+					WithTriggerOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled()),
 			}},
 			WantEvents: []string{
 				Eventf(corev1.EventTypeWarning, "InternalError", "inducing failure for create subscriptions"),
@@ -645,7 +645,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerDeadLetterSinkNotConfigured(),
 					WithTriggerSubscriberResolvedSucceeded(),
 					WithTriggerNotSubscribed("NotSubscribed", "inducing failure for create subscriptions"),
-					WithTriggerOIDCServiceAccountResolvedSucceededBecauseOIDCFeatureDisabled()),
+					WithTriggerOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled()),
 			}},
 			WantCreates: []runtime.Object{
 				makeFilterSubscription(testNS),
@@ -672,7 +672,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerDeadLetterSinkNotConfigured(),
 					WithTriggerNotSubscribed("NotSubscribed", `trigger "test-trigger" does not own subscription "test-broker-test-trigger-test-trigger-uid"`),
 					WithTriggerStatusSubscriberURI(subscriberURI),
-					WithTriggerOIDCServiceAccountResolvedSucceededBecauseOIDCFeatureDisabled()),
+					WithTriggerOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled()),
 			}},
 			WantEvents: []string{
 				Eventf(corev1.EventTypeWarning, "InternalError", `trigger "test-trigger" does not own subscription "test-broker-test-trigger-test-trigger-uid"`),
@@ -700,7 +700,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerSubscriberResolvedSucceeded(),
 					WithTriggerDeadLetterSinkNotConfigured(),
 					WithTriggerDependencyReady(),
-					WithTriggerOIDCServiceAccountResolvedSucceededBecauseOIDCFeatureDisabled()),
+					WithTriggerOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled()),
 			}},
 			WantDeletes: []clientgotesting.DeleteActionImpl{{
 				ActionImpl: clientgotesting.ActionImpl{
@@ -737,7 +737,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerDeadLetterSinkNotConfigured(),
 					WithTriggerStatusSubscriberURI(subscriberURI),
 					WithTriggerNotSubscribed("NotSubscribed", "inducing failure for delete subscriptions"),
-					WithTriggerOIDCServiceAccountResolvedSucceededBecauseOIDCFeatureDisabled()),
+					WithTriggerOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled()),
 			}},
 			WantDeletes: []clientgotesting.DeleteActionImpl{{
 				ActionImpl: clientgotesting.ActionImpl{
@@ -775,7 +775,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerDeadLetterSinkNotConfigured(),
 					WithTriggerStatusSubscriberURI(subscriberURI),
 					WithTriggerNotSubscribed("NotSubscribed", "inducing failure for create subscriptions"),
-					WithTriggerOIDCServiceAccountResolvedSucceededBecauseOIDCFeatureDisabled()),
+					WithTriggerOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled()),
 			}},
 			WantEvents: []string{
 				Eventf(corev1.EventTypeWarning, "SubscriptionCreateFailed", `Create Trigger's subscription failed: inducing failure for create subscriptions`),
@@ -813,7 +813,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerSubscriberResolvedSucceeded(),
 					WithTriggerDeadLetterSinkNotConfigured(),
 					WithTriggerDependencyReady(),
-					WithTriggerOIDCServiceAccountResolvedSucceededBecauseOIDCFeatureDisabled(),
+					WithTriggerOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 				),
 			}},
 			WantCreates: []runtime.Object{
@@ -842,7 +842,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerSubscriberResolvedSucceeded(),
 					WithTriggerDeadLetterSinkNotConfigured(),
 					WithTriggerDependencyReady(),
-					WithTriggerOIDCServiceAccountResolvedSucceededBecauseOIDCFeatureDisabled(),
+					WithTriggerOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 				),
 			}},
 			WantCreates: []runtime.Object{
@@ -871,7 +871,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerSubscriberResolvedSucceeded(),
 					WithTriggerDeadLetterSinkNotConfigured(),
 					WithTriggerDependencyReady(),
-					WithTriggerOIDCServiceAccountResolvedSucceededBecauseOIDCFeatureDisabled(),
+					WithTriggerOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 				),
 			}},
 			WantCreates: []runtime.Object{
@@ -954,7 +954,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerSubscriberResolvedSucceeded(),
 					WithTriggerStatusDeadLetterSinkURI(brokerDLS),
 					WithTriggerDeadLetterSinkResolvedSucceeded(),
-					WithTriggerOIDCServiceAccountResolvedSucceededBecauseOIDCFeatureDisabled(),
+					WithTriggerOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 				),
 			}},
 			WantCreates: []runtime.Object{
@@ -1054,7 +1054,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerSubscriberResolvedSucceeded(),
 					WithTriggerStatusDeadLetterSinkURI(brokerDLS),
 					WithTriggerDeadLetterSinkResolvedSucceeded(),
-					WithTriggerOIDCServiceAccountResolvedSucceededBecauseOIDCFeatureDisabled(),
+					WithTriggerOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 				),
 			}},
 		}, {
@@ -1116,7 +1116,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerSubscriberResolvedSucceeded(),
 					WithTriggerStatusDeadLetterSinkURI(brokerDLS),
 					WithTriggerDeadLetterSinkResolvedSucceeded(),
-					WithTriggerOIDCServiceAccountResolvedSucceededBecauseOIDCFeatureDisabled(),
+					WithTriggerOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 				),
 			}},
 		}, {
@@ -1180,7 +1180,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerSubscriberResolvedSucceeded(),
 					WithTriggerStatusDeadLetterSinkURI(brokerDLS),
 					WithTriggerDeadLetterSinkResolvedSucceeded(),
-					WithTriggerOIDCServiceAccountResolvedSucceededBecauseOIDCFeatureDisabled(),
+					WithTriggerOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 				),
 			}},
 		}, {
@@ -1248,7 +1248,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerSubscriberResolvedSucceeded(),
 					WithTriggerDeadLetterSinkNotConfigured(),
 					WithTriggerDependencyReady(),
-					WithTriggerOIDCServiceAccountResolvedSucceededBecauseOIDCFeatureDisabled(),
+					WithTriggerOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 				),
 			}},
 		}, {
@@ -1274,7 +1274,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerStatusSubscriberURI(subscriberURI),
 					WithTriggerSubscriberResolvedSucceeded(),
 					WithTriggerDeadLetterSinkNotConfigured(),
-					WithTriggerOIDCServiceAccountResolvedSucceededBecauseOIDCFeatureDisabled(),
+					WithTriggerOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 				),
 			}},
 		}, {
@@ -1304,7 +1304,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerSubscriberResolvedSucceeded(),
 					WithTriggerDeadLetterSinkNotConfigured(),
 					WithTriggerDependencyFailed("DependencyDoesNotExist", `Dependency does not exist: pingsources.sources.knative.dev "test-ping-source" not found`),
-					WithTriggerOIDCServiceAccountResolvedSucceededBecauseOIDCFeatureDisabled(),
+					WithTriggerOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 				),
 			}},
 			WantErr: true,
@@ -1334,7 +1334,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerSubscriberResolvedSucceeded(),
 					WithTriggerDeadLetterSinkNotConfigured(),
 					WithTriggerDependencyFailed("NotFound", ""),
-					WithTriggerOIDCServiceAccountResolvedSucceededBecauseOIDCFeatureDisabled(),
+					WithTriggerOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 				),
 			}},
 		}, {
@@ -1363,7 +1363,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerSubscriberResolvedSucceeded(),
 					WithTriggerDeadLetterSinkNotConfigured(),
 					WithTriggerDependencyUnknown("", ""),
-					WithTriggerOIDCServiceAccountResolvedSucceededBecauseOIDCFeatureDisabled(),
+					WithTriggerOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 				),
 			}},
 		},
@@ -1393,7 +1393,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerSubscriberResolvedSucceeded(),
 					WithTriggerDeadLetterSinkNotConfigured(),
 					WithTriggerDependencyUnknown("GenerationNotEqual", fmt.Sprintf("The dependency's metadata.generation, %q, is not equal to its status.observedGeneration, %q.", currentGeneration, outdatedGeneration)),
-					WithTriggerOIDCServiceAccountResolvedSucceededBecauseOIDCFeatureDisabled()),
+					WithTriggerOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled()),
 			}},
 		},
 		{
@@ -1422,7 +1422,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerSubscriberResolvedSucceeded(),
 					WithTriggerDeadLetterSinkNotConfigured(),
 					WithTriggerDependencyReady(),
-					WithTriggerOIDCServiceAccountResolvedSucceededBecauseOIDCFeatureDisabled(),
+					WithTriggerOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 				),
 			}},
 		},
@@ -1449,7 +1449,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerSubscriberResolvedSucceeded(),
 					WithTriggerDeadLetterSinkNotConfigured(),
 					WithTriggerDependencyReady(),
-					WithTriggerOIDCServiceAccountResolvedSucceededBecauseOIDCFeatureDisabled(),
+					WithTriggerOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 				),
 			}},
 			WantCreates: []runtime.Object{
@@ -1479,7 +1479,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerSubscriberResolvedSucceeded(),
 					WithTriggerDeadLetterSinkNotConfigured(),
 					WithTriggerDependencyReady(),
-					WithTriggerOIDCServiceAccountResolvedSucceededBecauseOIDCFeatureDisabled(),
+					WithTriggerOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 				),
 			}},
 			WantCreates: []runtime.Object{
@@ -1512,7 +1512,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerStatusSubscriberURI(subscriberURI),
 					WithTriggerSubscriberResolvedSucceeded(),
 					WithTriggerDeadLetterSinkNotConfigured(),
-					WithTriggerOIDCServiceAccountResolvedSucceeded(),
+					WithTriggerOIDCIdentityCreatedSucceeded(),
 					WithTriggerOIDCServiceAccountName(makeTriggerOIDCServiceAccount().Name),
 				),
 			}},
@@ -1547,13 +1547,13 @@ func TestReconcile(t *testing.T) {
 					WithTriggerStatusSubscriberURI(subscriberURI),
 					WithTriggerSubscriberResolvedSucceeded(),
 					WithTriggerDeadLetterSinkNotConfigured(),
-					WithTriggerOIDCServiceAccountResolvedFailed("Unable to resolve service account for OIDC authentication", fmt.Sprintf("Trigger %q does not own service account %q", triggerName, makeTriggerOIDCServiceAccountWithoutOwnerRef().Name)),
+					WithTriggerOIDCIdentityCreatedFailed("Unable to resolve service account for OIDC authentication", fmt.Sprintf("Trigger %s does not own service account %s", triggerName, makeTriggerOIDCServiceAccountWithoutOwnerRef().Name)),
 					WithTriggerOIDCServiceAccountName(makeTriggerOIDCServiceAccountWithoutOwnerRef().Name),
 					WithTriggerSubscribedUnknown("", ""),
 				),
 			}},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "InternalError", fmt.Sprintf("Trigger %q does not own service account %q", triggerName, makeTriggerOIDCServiceAccountWithoutOwnerRef().Name)),
+				Eventf(corev1.EventTypeWarning, "InternalError", fmt.Sprintf("Trigger %s does not own service account %s", triggerName, makeTriggerOIDCServiceAccountWithoutOwnerRef().Name)),
 			},
 		},
 	}
@@ -1566,12 +1566,13 @@ func TestReconcile(t *testing.T) {
 		ctx = v1addr.WithDuck(ctx)
 		ctx = source.WithDuck(ctx)
 		r := &Reconciler{
-			eventingClientSet:  fakeeventingclient.Get(ctx),
-			dynamicClientSet:   fakedynamicclient.Get(ctx),
-			kubeclient:         fakekubeclient.Get(ctx),
-			subscriptionLister: listers.GetSubscriptionLister(),
-			triggerLister:      listers.GetTriggerLister(),
-			secretLister:       listers.GetSecretLister(),
+			eventingClientSet:    fakeeventingclient.Get(ctx),
+			dynamicClientSet:     fakedynamicclient.Get(ctx),
+			kubeclient:           fakekubeclient.Get(ctx),
+			subscriptionLister:   listers.GetSubscriptionLister(),
+			triggerLister:        listers.GetTriggerLister(),
+			secretLister:         listers.GetSecretLister(),
+			serviceAccountLister: listers.GetServiceAccountLister(),
 
 			brokerLister:    listers.GetBrokerLister(),
 			configmapLister: listers.GetConfigMapLister(),

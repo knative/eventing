@@ -70,11 +70,12 @@ type Reconciler struct {
 	kubeclient        kubernetes.Interface
 
 	// listers index properties about resources
-	subscriptionLister messaginglisters.SubscriptionLister
-	brokerLister       eventinglisters.BrokerLister
-	triggerLister      eventinglisters.TriggerLister
-	configmapLister    corev1listers.ConfigMapLister
-	secretLister       corev1listers.SecretLister
+	subscriptionLister   messaginglisters.SubscriptionLister
+	brokerLister         eventinglisters.BrokerLister
+	triggerLister        eventinglisters.TriggerLister
+	configmapLister      corev1listers.ConfigMapLister
+	secretLister         corev1listers.SecretLister
+	serviceAccountLister corev1listers.ServiceAccountLister
 
 	// Dynamic tracker to track Sources. In particular, it tracks the dependency between Triggers and Sources.
 	sourceTracker duck.ListableTracker
@@ -147,13 +148,14 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, t *eventingv1.Trigger) p
 			ServiceAccountName: &saName,
 		}
 
-		if err := auth.EnsureOIDCServiceAccountExistsForResource(ctx, r.kubeclient, eventingv1.SchemeGroupVersion.WithKind("Trigger"), t.ObjectMeta); err != nil {
-			t.Status.MarkOIDCServiceAccountResolvedFailed("Unable to resolve service account for OIDC authentication", "%v", err)
+		if err := auth.EnsureOIDCServiceAccountExistsForResource(ctx, r.serviceAccountLister, r.kubeclient, eventingv1.SchemeGroupVersion.WithKind("Trigger"), t.ObjectMeta); err != nil {
+			t.Status.MarkOIDCIdentityCreatedFailed("Unable to resolve service account for OIDC authentication", "%v", err)
 			return err
 		}
-		t.Status.MarkOIDCServiceAccountResolvedSucceeded()
+		t.Status.MarkOIDCIdentityCreatedSucceeded()
 	} else {
-		t.Status.MarkOIDCServiceAccountResolvedSucceededWithReason("OIDC authentication feature disabled", "")
+		t.Status.Auth = nil
+		t.Status.MarkOIDCIdentityCreatedSucceededWithReason(fmt.Sprintf("%s feature disabled", feature.OIDCAuthentication), "")
 	}
 
 	sub, err := r.subscribeToBrokerChannel(ctx, b, t, brokerTrigger)

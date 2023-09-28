@@ -18,6 +18,7 @@ package testing
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,6 +30,7 @@ import (
 
 	eventingv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	"knative.dev/eventing/pkg/apis/feature"
 )
 
 // TriggerOption enables further configuration of a Trigger.
@@ -261,21 +263,21 @@ func WithTriggerSubscriberResolvedFailed(reason, message string) TriggerOption {
 	}
 }
 
-func WithTriggerOIDCServiceAccountResolvedSucceeded() TriggerOption {
+func WithTriggerOIDCIdentityCreatedSucceeded() TriggerOption {
 	return func(t *v1.Trigger) {
-		t.Status.MarkOIDCServiceAccountResolvedSucceeded()
+		t.Status.MarkOIDCIdentityCreatedSucceeded()
 	}
 }
 
-func WithTriggerOIDCServiceAccountResolvedSucceededBecauseOIDCFeatureDisabled() TriggerOption {
+func WithTriggerOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled() TriggerOption {
 	return func(t *v1.Trigger) {
-		t.Status.MarkOIDCServiceAccountResolvedSucceededWithReason("OIDC authentication feature disabled", "")
+		t.Status.MarkOIDCIdentityCreatedSucceededWithReason(fmt.Sprintf("%s feature disabled", feature.OIDCAuthentication), "")
 	}
 }
 
-func WithTriggerOIDCServiceAccountResolvedFailed(reason, message string) TriggerOption {
+func WithTriggerOIDCIdentityCreatedFailed(reason, message string) TriggerOption {
 	return func(t *v1.Trigger) {
-		t.Status.MarkOIDCServiceAccountResolvedFailed(reason, message)
+		t.Status.MarkOIDCIdentityCreatedFailed(reason, message)
 	}
 }
 

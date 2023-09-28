@@ -27,6 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
+	corev1listers "k8s.io/client-go/listers/core/v1"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/ptr"
 )
@@ -63,9 +64,11 @@ func GetOIDCServiceAccountForResource(gvk schema.GroupVersionKind, objectMeta me
 	}
 }
 
-func EnsureOIDCServiceAccountExistsForResource(ctx context.Context, kubeclient kubernetes.Interface, gvk schema.GroupVersionKind, objectMeta metav1.ObjectMeta) error {
+// EnsureOIDCServiceAccountExistsForResource makes sure the given resource has
+// an OIDC service account with an owner reference to the resource set.
+func EnsureOIDCServiceAccountExistsForResource(ctx context.Context, serviceAccountLister corev1listers.ServiceAccountLister, kubeclient kubernetes.Interface, gvk schema.GroupVersionKind, objectMeta metav1.ObjectMeta) error {
 	saName := GetOIDCServiceAccountNameForResource(gvk, objectMeta)
-	sa, err := kubeclient.CoreV1().ServiceAccounts(objectMeta.Namespace).Get(ctx, saName, metav1.GetOptions{})
+	sa, err := serviceAccountLister.ServiceAccounts(objectMeta.Namespace).Get(saName)
 
 	// If the resource doesn't exist, we'll create it.
 	if apierrs.IsNotFound(err) {
@@ -77,15 +80,16 @@ func EnsureOIDCServiceAccountExistsForResource(ctx context.Context, kubeclient k
 		if err != nil {
 			return fmt.Errorf("could not create OIDC service account %s/%s for %s: %w", objectMeta.Name, objectMeta.Namespace, gvk.Kind, err)
 		}
+
 		return nil
-	} else if err != nil {
-		logging.FromContext(ctx).Errorw("Failed to get OIDC service account", zap.Error(err))
+	}
 
+	if err != nil {
 		return fmt.Errorf("could not get OIDC service account %s/%s for %s: %w", objectMeta.Name, objectMeta.Namespace, gvk.Kind, err)
-	} else if !metav1.IsControlledBy(&sa.ObjectMeta, &objectMeta) {
-		logging.FromContext(ctx).Errorw("Service account not owned by parent resource", zap.Any("service account", sa), zap.Any("parent resource ("+gvk.Kind+")", objectMeta))
+	}
 
-		return fmt.Errorf("%s %q does not own service account %q", gvk.Kind, objectMeta.Name, sa.Name)
+	if !metav1.IsControlledBy(&sa.ObjectMeta, &objectMeta) {
+		return fmt.Errorf("%s %s does not own service account %s", gvk.Kind, objectMeta.Name, sa.Name)
 	}
 
 	return nil

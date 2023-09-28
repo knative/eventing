@@ -154,7 +154,7 @@ func TestTriggerInitializeConditions(t *testing.T) {
 					Type:   TriggerConditionDependency,
 					Status: corev1.ConditionUnknown,
 				}, {
-					Type:   TriggerConditionOIDCServiceAccountResolved,
+					Type:   TriggerConditionOIDCIdentityCreated,
 					Status: corev1.ConditionUnknown,
 				}, {
 					Type:   TriggerConditionReady,
@@ -191,7 +191,7 @@ func TestTriggerInitializeConditions(t *testing.T) {
 					Type:   TriggerConditionDependency,
 					Status: corev1.ConditionUnknown,
 				}, {
-					Type:   TriggerConditionOIDCServiceAccountResolved,
+					Type:   TriggerConditionOIDCIdentityCreated,
 					Status: corev1.ConditionUnknown,
 				}, {
 					Type:   TriggerConditionReady,
@@ -228,7 +228,7 @@ func TestTriggerInitializeConditions(t *testing.T) {
 					Type:   TriggerConditionDependency,
 					Status: corev1.ConditionUnknown,
 				}, {
-					Type:   TriggerConditionOIDCServiceAccountResolved,
+					Type:   TriggerConditionOIDCIdentityCreated,
 					Status: corev1.ConditionUnknown,
 				}, {
 					Type:   TriggerConditionReady,
@@ -410,9 +410,9 @@ func TestTriggerConditionStatus(t *testing.T) {
 				}
 			}
 			if test.oidcServiceAccountStatus {
-				ts.MarkOIDCServiceAccountResolvedSucceeded()
+				ts.MarkOIDCIdentityCreatedSucceeded()
 			} else {
-				ts.MarkOIDCServiceAccountResolvedFailed("Unable to ...", "")
+				ts.MarkOIDCIdentityCreatedFailed("Unable to ...", "")
 			}
 			got := ts.GetTopLevelCondition().Status
 			if test.wantConditionStatus != got {

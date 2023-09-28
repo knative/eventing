@@ -66,14 +66,15 @@ func NewController(
 
 	triggerLister := triggerInformer.Lister()
 	r := &Reconciler{
-		eventingClientSet:  eventingclient.Get(ctx),
-		dynamicClientSet:   dynamicclient.Get(ctx),
-		kubeclient:         kubeclient.Get(ctx),
-		subscriptionLister: subscriptionInformer.Lister(),
-		brokerLister:       brokerInformer.Lister(),
-		triggerLister:      triggerLister,
-		configmapLister:    configmapInformer.Lister(),
-		secretLister:       secretInformer.Lister(),
+		eventingClientSet:    eventingclient.Get(ctx),
+		dynamicClientSet:     dynamicclient.Get(ctx),
+		kubeclient:           kubeclient.Get(ctx),
+		subscriptionLister:   subscriptionInformer.Lister(),
+		brokerLister:         brokerInformer.Lister(),
+		triggerLister:        triggerLister,
+		configmapLister:      configmapInformer.Lister(),
+		secretLister:         secretInformer.Lister(),
+		serviceAccountLister: serviceaccountInformer.Lister(),
 	}
 	impl := triggerreconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
 		return controller.Options{
