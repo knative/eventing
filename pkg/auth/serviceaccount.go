@@ -17,12 +17,18 @@ limitations under the License.
 package auth
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
+	"go.uber.org/zap"
 	v1 "k8s.io/api/core/v1"
+	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/kubernetes"
+	corev1listers "k8s.io/client-go/listers/core/v1"
+	"knative.dev/pkg/logging"
 	"knative.dev/pkg/ptr"
 )
 
@@ -47,7 +53,7 @@ func GetOIDCServiceAccountForResource(gvk schema.GroupVersionKind, objectMeta me
 					Kind:               gvk.GroupKind().Kind,
 					Name:               objectMeta.GetName(),
 					UID:                objectMeta.GetUID(),
-					Controller:         ptr.Bool(false),
+					Controller:         ptr.Bool(true),
 					BlockOwnerDeletion: ptr.Bool(false),
 				},
 			},
@@ -56,4 +62,35 @@ func GetOIDCServiceAccountForResource(gvk schema.GroupVersionKind, objectMeta me
 			},
 		},
 	}
+}
+
+// EnsureOIDCServiceAccountExistsForResource makes sure the given resource has
+// an OIDC service account with an owner reference to the resource set.
+func EnsureOIDCServiceAccountExistsForResource(ctx context.Context, serviceAccountLister corev1listers.ServiceAccountLister, kubeclient kubernetes.Interface, gvk schema.GroupVersionKind, objectMeta metav1.ObjectMeta) error {
+	saName := GetOIDCServiceAccountNameForResource(gvk, objectMeta)
+	sa, err := serviceAccountLister.ServiceAccounts(objectMeta.Namespace).Get(saName)
+
+	// If the resource doesn't exist, we'll create it.
+	if apierrs.IsNotFound(err) {
+		logging.FromContext(ctx).Debugw("Creating OIDC service account", zap.Error(err))
+
+		expected := GetOIDCServiceAccountForResource(gvk, objectMeta)
+
+		_, err = kubeclient.CoreV1().ServiceAccounts(objectMeta.Namespace).Create(ctx, expected, metav1.CreateOptions{})
+		if err != nil {
+			return fmt.Errorf("could not create OIDC service account %s/%s for %s: %w", objectMeta.Name, objectMeta.Namespace, gvk.Kind, err)
+		}
+
+		return nil
+	}
+
+	if err != nil {
+		return fmt.Errorf("could not get OIDC service account %s/%s for %s: %w", objectMeta.Name, objectMeta.Namespace, gvk.Kind, err)
+	}
+
+	if !metav1.IsControlledBy(&sa.ObjectMeta, &objectMeta) {
+		return fmt.Errorf("service account %s not owned by %s %s", sa.Name, gvk.Kind, objectMeta.Name)
+	}
+
+	return nil
 }

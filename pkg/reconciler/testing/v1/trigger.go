@@ -18,6 +18,7 @@ package testing
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,6 +30,7 @@ import (
 
 	eventingv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	"knative.dev/eventing/pkg/apis/feature"
 )
 
 // TriggerOption enables further configuration of a Trigger.
@@ -258,6 +260,34 @@ func WithTriggerSubscriberResolvedSucceeded() TriggerOption {
 func WithTriggerSubscriberResolvedFailed(reason, message string) TriggerOption {
 	return func(t *v1.Trigger) {
 		t.Status.MarkSubscriberResolvedFailed(reason, message)
+	}
+}
+
+func WithTriggerOIDCIdentityCreatedSucceeded() TriggerOption {
+	return func(t *v1.Trigger) {
+		t.Status.MarkOIDCIdentityCreatedSucceeded()
+	}
+}
+
+func WithTriggerOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled() TriggerOption {
+	return func(t *v1.Trigger) {
+		t.Status.MarkOIDCIdentityCreatedSucceededWithReason(fmt.Sprintf("%s feature disabled", feature.OIDCAuthentication), "")
+	}
+}
+
+func WithTriggerOIDCIdentityCreatedFailed(reason, message string) TriggerOption {
+	return func(t *v1.Trigger) {
+		t.Status.MarkOIDCIdentityCreatedFailed(reason, message)
+	}
+}
+
+func WithTriggerOIDCServiceAccountName(name string) TriggerOption {
+	return func(t *v1.Trigger) {
+		if t.Status.Auth == nil {
+			t.Status.Auth = &duckv1.AuthStatus{}
+		}
+
+		t.Status.Auth.ServiceAccountName = &name
 	}
 }
 

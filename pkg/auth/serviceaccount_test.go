@@ -84,7 +84,7 @@ func TestGetOIDCServiceAccountForResource(t *testing.T) {
 					Kind:               "Broker",
 					Name:               "my-broker",
 					UID:                "my-uuid",
-					Controller:         ptr.Bool(false),
+					Controller:         ptr.Bool(true),
 					BlockOwnerDeletion: ptr.Bool(false),
 				},
 			},

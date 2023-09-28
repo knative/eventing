@@ -23,7 +23,7 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
-var triggerCondSet = apis.NewLivingConditionSet(TriggerConditionBroker, TriggerConditionSubscribed, TriggerConditionDependency, TriggerConditionSubscriberResolved, TriggerConditionDeadLetterSinkResolved)
+var triggerCondSet = apis.NewLivingConditionSet(TriggerConditionBroker, TriggerConditionSubscribed, TriggerConditionDependency, TriggerConditionSubscriberResolved, TriggerConditionDeadLetterSinkResolved, TriggerConditionOIDCIdentityCreated)
 
 const (
 	// TriggerConditionReady has status True when all subconditions below have been set to True.
@@ -38,6 +38,8 @@ const (
 	TriggerConditionSubscriberResolved apis.ConditionType = "SubscriberResolved"
 
 	TriggerConditionDeadLetterSinkResolved apis.ConditionType = "DeadLetterSinkResolved"
+
+	TriggerConditionOIDCIdentityCreated apis.ConditionType = "OIDCIdentityCreated"
 
 	// TriggerAnyFilter Constant to represent that we should allow anything.
 	TriggerAnyFilter = ""
@@ -198,4 +200,20 @@ func (ts *TriggerStatus) PropagateDependencyStatus(ks *duckv1.Source) {
 	default:
 		ts.MarkDependencyUnknown("DependencyUnknown", "The status of Dependency is invalid: %v", kc.Status)
 	}
+}
+
+func (ts *TriggerStatus) MarkOIDCIdentityCreatedSucceeded() {
+	triggerCondSet.Manage(ts).MarkTrue(TriggerConditionOIDCIdentityCreated)
+}
+
+func (ts *TriggerStatus) MarkOIDCIdentityCreatedSucceededWithReason(reason, messageFormat string, messageA ...interface{}) {
+	triggerCondSet.Manage(ts).MarkTrueWithReason(TriggerConditionOIDCIdentityCreated, reason, messageFormat, messageA...)
+}
+
+func (ts *TriggerStatus) MarkOIDCIdentityCreatedFailed(reason, messageFormat string, messageA ...interface{}) {
+	triggerCondSet.Manage(ts).MarkFalse(TriggerConditionOIDCIdentityCreated, reason, messageFormat, messageA...)
+}
+
+func (ts *TriggerStatus) MarkOIDCIdentityCreatedUnknown(reason, messageFormat string, messageA ...interface{}) {
+	triggerCondSet.Manage(ts).MarkUnknown(TriggerConditionOIDCIdentityCreated, reason, messageFormat, messageA...)
 }
