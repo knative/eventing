@@ -39,10 +39,10 @@ data:
   # For more details: https://github.com/knative/eventing/issues/5593
   kreference-mapping: "disabled"
 
-  # ALPHA feature: The new-trigger-filters flag allows you to use the new `filters` field
+  # BETA feature: The new-trigger-filters flag allows you to use the new `filters` field
   # in Trigger objects with its rich filtering capabilities.
   # For more details: https://github.com/knative/eventing/issues/5204
-  new-trigger-filters: "disabled"
+  new-trigger-filters: "enabled"
   
   # ALPHA feature: The transport-encryption flag allows you to encrypt events in transit using the transport layer security (TLS) protocol.
   # For more details: https://github.com/knative/eventing/issues/5957

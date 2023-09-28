@@ -198,6 +198,13 @@ spec:
                     just the reconciler conveying richer information outwards.
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
+              auth:
+                description: Auth provides the relevant information for OIDC authentication.
+                type: object
+                properties:
+                  serviceAccountName:
+                    description: ServiceAccountName is the name of the generated service account used for this components OIDC authentication.
+                    type: string
               branchStatuses:
                 description: BranchStatuses is an array of corresponding to branch
                     statuses. Matches the Spec.Branches array in the order.

@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"knative.dev/eventing/test/experimental/features/eventtype_autocreate"
+	"knative.dev/eventing/test/rekt/resources/broker"
 
 	"knative.dev/pkg/system"
 	"knative.dev/reconciler-test/pkg/environment"
@@ -54,7 +55,7 @@ func TestBrokerEventTypeAutoCreate(t *testing.T) {
 	)
 	brokerName := feature.MakeRandomK8sName("broker")
 
-	env.Prerequisite(ctx, t, InstallMTBroker(brokerName))
+	env.Prerequisite(ctx, t, broker.InstallMTBroker(brokerName))
 	env.Test(ctx, t, eventtype_autocreate.AutoCreateEventTypesOnBroker(brokerName))
 }
 

@@ -356,6 +356,11 @@ func (in *SubscriptionStatus) DeepCopyInto(out *SubscriptionStatus) {
 	*out = *in
 	in.Status.DeepCopyInto(&out.Status)
 	in.PhysicalSubscription.DeepCopyInto(&out.PhysicalSubscription)
+	if in.Auth != nil {
+		in, out := &in.Auth, &out.Auth
+		*out = new(duckv1.AuthStatus)
+		(*in).DeepCopyInto(*out)
+	}
 	return
 }
 
@@ -382,6 +387,11 @@ func (in *SubscriptionStatusPhysicalSubscription) DeepCopyInto(out *Subscription
 		*out = new(string)
 		**out = **in
 	}
+	if in.SubscriberAudience != nil {
+		in, out := &in.SubscriberAudience, &out.SubscriberAudience
+		*out = new(string)
+		**out = **in
+	}
 	if in.ReplyURI != nil {
 		in, out := &in.ReplyURI, &out.ReplyURI
 		*out = new(apis.URL)
@@ -389,6 +399,11 @@ func (in *SubscriptionStatusPhysicalSubscription) DeepCopyInto(out *Subscription
 	}
 	if in.ReplyCACerts != nil {
 		in, out := &in.ReplyCACerts, &out.ReplyCACerts
+		*out = new(string)
+		**out = **in
+	}
+	if in.ReplyAudience != nil {
+		in, out := &in.ReplyAudience, &out.ReplyAudience
 		*out = new(string)
 		**out = **in
 	}

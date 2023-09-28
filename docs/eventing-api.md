@@ -664,6 +664,18 @@ subscriberUri</p>
 </tr>
 <tr>
 <td>
+<code>subscriberAudience</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SubscriberAudience is the OIDC audience for the subscriberUri.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>replyUri</code><br/>
 <em>
 <a href="https://pkg.go.dev/knative.dev/pkg/apis#URL">
@@ -688,6 +700,18 @@ string
 <p>ReplyCACerts is the Certification Authority (CA) certificates in PEM
 format according to <a href="https://www.rfc-editor.org/rfc/rfc7468">https://www.rfc-editor.org/rfc/rfc7468</a> for the
 replyUri.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>replyAudience</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ReplyAudience is the OIDC audience for the replyUri.</p>
 </td>
 </tr>
 <tr>
@@ -771,6 +795,20 @@ string
 <td>
 <em>(Optional)</em>
 <p>A human readable message indicating details of Ready status.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>auth</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#AuthStatus">
+knative.dev/pkg/apis/duck/v1.AuthStatus
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Auth provides the relevant information for OIDC authentication.</p>
 </td>
 </tr>
 </tbody>
@@ -2351,6 +2389,20 @@ DeliveryStatus
 resolved delivery options.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>auth</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#AuthStatus">
+knative.dev/pkg/apis/duck/v1.AuthStatus
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Auth provides the relevant information for OIDC authentication.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <hr/>
@@ -3435,6 +3487,20 @@ will target the first subscriber.
 It generally has the form {channel}.{namespace}.svc.{cluster domain name}</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>auth</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#AuthStatus">
+knative.dev/pkg/apis/duck/v1.AuthStatus
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Auth provides the relevant information for OIDC authentication.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="flows.knative.dev/v1.ParallelSubscriptionStatus">ParallelSubscriptionStatus
@@ -3767,6 +3833,20 @@ knative.dev/pkg/apis/duck/v1.Addressable
 <p>Address is the starting point to this Sequence. Sending to this
 will target the first subscriber.
 It generally has the form {channel}.{namespace}.svc.{cluster domain name}</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>auth</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#AuthStatus">
+knative.dev/pkg/apis/duck/v1.AuthStatus
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Auth provides the relevant information for OIDC authentication.</p>
 </td>
 </tr>
 </tbody>
@@ -4590,6 +4670,20 @@ SubscriptionStatusPhysicalSubscription
 <p>PhysicalSubscription is the fully resolved values that this Subscription represents.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>auth</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#AuthStatus">
+knative.dev/pkg/apis/duck/v1.AuthStatus
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Auth provides the relevant information for OIDC authentication.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="messaging.knative.dev/v1.SubscriptionStatusPhysicalSubscription">SubscriptionStatusPhysicalSubscription
@@ -4639,6 +4733,19 @@ resolved URI for spec.subscriber.</p>
 </tr>
 <tr>
 <td>
+<code>subscriberAudience</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SubscriberAudience is the OIDC audience for the the resolved URI for
+spec.subscriber.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>replyUri</code><br/>
 <em>
 <a href="https://pkg.go.dev/knative.dev/pkg/apis#URL">
@@ -4663,6 +4770,19 @@ string
 <p>ReplyCACerts is the Certification Authority (CA) certificates in PEM
 format according to <a href="https://www.rfc-editor.org/rfc/rfc7468">https://www.rfc-editor.org/rfc/rfc7468</a> for the
 resolved URI for the spec.reply.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>replyAudience</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ReplyAudience is the OIDC audience for the the resolved URI for
+spec.reply.</p>
 </td>
 </tr>
 <tr>

@@ -92,6 +92,11 @@ func BenchmarkAllFilter(b *testing.B) {
 			events: []cloudevents.Event{event},
 		},
 		FilterBenchmark{
+			name:   "All filter with one non-matching filter at the end",
+			arg:    []eventfilter.Filter{filter, exactFilter2, prefixFilterNoMatch},
+			events: []cloudevents.Event{event},
+		},
+		FilterBenchmark{
 			name:   "All filter with large number of sub-filters that match",
 			arg:    largeMatchingFilters,
 			events: []cloudevents.Event{event},

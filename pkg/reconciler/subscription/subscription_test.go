@@ -57,14 +57,15 @@ import (
 )
 
 const (
-	subscriberName    = "subscriber"
-	replyName         = "reply"
-	channelName       = "origin"
-	serviceName       = "service"
-	dlcName           = "dlc"
-	dlc2Name          = "dlc2"
-	dlsName           = "dls"
-	tlsSubscriberName = "tls-subscriber"
+	subscriberName         = "subscriber"
+	replyName              = "reply"
+	channelName            = "origin"
+	serviceName            = "service"
+	dlcName                = "dlc"
+	dlc2Name               = "dlc2"
+	dlsName                = "dls"
+	tlsSubscriberName      = "tls-subscriber"
+	audienceSubscriberName = "audience-subscriber"
 
 	subscriptionUID        = subscriptionName + "-abc-123"
 	subscriptionName       = "testsubscription"
@@ -112,6 +113,14 @@ Vw==
 	tlsSubscriber = duckv1.Addressable{
 		URL:     tlsSubscriberURI,
 		CACerts: &tlsSubscriberCACerts,
+	}
+
+	audienceSubscriberDNS      = "subscriber-with-audience.mynamespace.svc." + network.GetClusterDomainName()
+	audienceSubscriberURI      = apis.HTTPS(audienceSubscriberDNS)
+	audienceSubscriberAudience = "my-audience"
+	audienceSubscriber         = duckv1.Addressable{
+		URL:      audienceSubscriberURI,
+		Audience: &audienceSubscriberAudience,
 	}
 
 	reply = duckv1.Addressable{
@@ -832,6 +841,118 @@ func TestAllCases(t *testing.T) {
 						SubscriberURI: subscriberURI,
 						ReplyURI:      tlsSubscriberURI,
 						ReplyCACerts:  &tlsSubscriberCACerts,
+					},
+				}),
+			},
+		}, {
+			Name: "subscriber with Audience",
+			Objects: []runtime.Object{
+				NewSubscription(subscriptionName, testNS,
+					WithSubscriptionChannel(imcV1GVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, audienceSubscriberName, testNS),
+					WithInitSubscriptionConditions,
+					WithSubscriptionFinalizers(finalizerName),
+					MarkReferencesResolved,
+					MarkAddedToChannel,
+				),
+				// Subscriber
+				NewUnstructured(subscriberGVK, audienceSubscriberName, testNS,
+					WithUnstructuredAddressable(audienceSubscriber),
+				),
+				// Channel
+				NewInMemoryChannel(channelName, testNS,
+					WithInitInMemoryChannelConditions,
+					WithInMemoryChannelReady(channelDNS),
+					WithInMemoryChannelSubscribers([]eventingduck.SubscriberSpec{{
+						SubscriberURI: audienceSubscriberURI,
+					}}),
+					WithInMemoryChannelAddress(channelDNS),
+				),
+			},
+			Key:     testNS + "/" + subscriptionName,
+			WantErr: false,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "SubscriberSync", "Subscription was synchronized to channel %q", channelName),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewSubscription(subscriptionName, testNS,
+					WithSubscriptionChannel(imcV1GVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, audienceSubscriberName, testNS),
+					WithInitSubscriptionConditions,
+					WithSubscriptionFinalizers(finalizerName),
+					WithSubscriptionPhysicalSubscriptionSubscriber(&audienceSubscriber),
+					MarkReferencesResolved,
+					MarkAddedToChannel,
+				),
+			}},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
+					{
+						SubscriberURI:      audienceSubscriberURI,
+						SubscriberAudience: &audienceSubscriberAudience,
+					},
+				}),
+			},
+		}, {
+			Name: "reply with Audience",
+			Objects: []runtime.Object{
+				NewSubscription(subscriptionName, testNS,
+					WithSubscriptionChannel(imcV1GVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
+					WithSubscriptionReply(imcV1GVK, audienceSubscriberName, testNS),
+					WithInitSubscriptionConditions,
+					WithSubscriptionFinalizers(finalizerName),
+					MarkReferencesResolved,
+					MarkAddedToChannel,
+				),
+				// Subscriber
+				NewUnstructured(subscriberGVK, subscriberName, testNS,
+					WithUnstructuredAddressable(subscriber),
+				),
+				// Reply
+				NewInMemoryChannel(audienceSubscriberName, testNS,
+					WithInitInMemoryChannelConditions,
+					WithInMemoryChannelAddressHTTPS(duckv1.Addressable{
+						URL:      audienceSubscriberURI,
+						Audience: &audienceSubscriberAudience,
+					}),
+				),
+				// Channel
+				NewInMemoryChannel(channelName, testNS,
+					WithInitInMemoryChannelConditions,
+					WithInMemoryChannelReady(channelDNS),
+					WithInMemoryChannelSubscribers([]eventingduck.SubscriberSpec{{
+						SubscriberURI: subscriberURI,
+						ReplyURI:      audienceSubscriberURI,
+					}}),
+					WithInMemoryChannelAddress(subscriber),
+				),
+			},
+			Key:     testNS + "/" + subscriptionName,
+			WantErr: false,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "SubscriberSync", "Subscription was synchronized to channel %q", channelName),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewSubscription(subscriptionName, testNS,
+					WithSubscriptionChannel(imcV1GVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
+					WithSubscriptionReply(imcV1GVK, audienceSubscriberName, testNS),
+					WithInitSubscriptionConditions,
+					WithSubscriptionFinalizers(finalizerName),
+					WithSubscriptionPhysicalSubscriptionSubscriber(&subscriber),
+					WithSubscriptionPhysicalSubscriptionReply(&audienceSubscriber),
+					// - Status Update -
+					MarkReferencesResolved,
+					MarkAddedToChannel,
+				),
+			}},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
+					{
+						SubscriberURI: subscriberURI,
+						ReplyURI:      audienceSubscriberURI,
+						ReplyAudience: &audienceSubscriberAudience,
 					},
 				}),
 			},

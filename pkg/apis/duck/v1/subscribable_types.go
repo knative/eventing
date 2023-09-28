@@ -23,6 +23,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/apis/duck"
+
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 // +genduck
@@ -47,6 +49,9 @@ type SubscriberSpec struct {
 	// subscriberUri
 	// +optional
 	SubscriberCACerts *string `json:"subscriberCACerts,omitempty"`
+	// SubscriberAudience is the OIDC audience for the subscriberUri.
+	// +optional
+	SubscriberAudience *string `json:"subscriberAudience,omitempty"`
 	// ReplyURI is the endpoint for the reply
 	// +optional
 	ReplyURI *apis.URL `json:"replyUri,omitempty"`
@@ -55,6 +60,9 @@ type SubscriberSpec struct {
 	// replyUri.
 	// +optional
 	ReplyCACerts *string `json:"replyCACerts,omitempty"`
+	// ReplyAudience is the OIDC audience for the replyUri.
+	// +optional
+	ReplyAudience *string `json:"replyAudience,omitempty"`
 	// +optional
 	// DeliverySpec contains options controlling the event delivery
 	// +optional
@@ -74,6 +82,9 @@ type SubscriberStatus struct {
 	// A human readable message indicating details of Ready status.
 	// +optional
 	Message string `json:"message,omitempty"`
+	// Auth provides the relevant information for OIDC authentication.
+	// +optional
+	Auth *duckv1.AuthStatus `json:"auth,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
