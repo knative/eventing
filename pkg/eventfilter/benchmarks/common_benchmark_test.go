@@ -43,6 +43,7 @@ func RunFilterBenchmarks(b *testing.B, filterCtor func(interface{}) eventfilter.
 		b.Run("Creation: "+fb.name, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				Filter = filterCtor(fb.arg)
+				Filter.Cleanup()
 			}
 		})
 		// Filter to use for the run
@@ -52,5 +53,6 @@ func RunFilterBenchmarks(b *testing.B, filterCtor func(interface{}) eventfilter.
 				Result = f.Filter(context.TODO(), fb.event)
 			}
 		})
+		f.Cleanup()
 	}
 }
