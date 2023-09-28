@@ -2894,6 +2894,20 @@ string
 <p>Description is an optional field used to describe the EventType, in any meaningful way.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>attributes</code><br/>
+<em>
+<a href="#eventing.knative.dev/v1beta2.EventAttributeDefinition">
+map[string]knative.dev/eventing/pkg/apis/eventing/v1beta2.EventAttributeDefinition
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CloudEvent attributes and extensions.</p>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -2910,6 +2924,43 @@ EventTypeStatus
 <em>(Optional)</em>
 <p>Status represents the current state of the EventType.
 This data may be out of date.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="eventing.knative.dev/v1beta2.EventAttributeDefinition">EventAttributeDefinition
+</h3>
+<p>
+(<em>Appears on:</em><a href="#eventing.knative.dev/v1beta2.EventTypeSpec">EventTypeSpec</a>)
+</p>
+<p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>required</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<code>value</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
 </td>
 </tr>
 </tbody>
@@ -3021,6 +3072,20 @@ string
 <td>
 <em>(Optional)</em>
 <p>Description is an optional field used to describe the EventType, in any meaningful way.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>attributes</code><br/>
+<em>
+<a href="#eventing.knative.dev/v1beta2.EventAttributeDefinition">
+map[string]knative.dev/eventing/pkg/apis/eventing/v1beta2.EventAttributeDefinition
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CloudEvent attributes and extensions.</p>
 </td>
 </tr>
 </tbody>

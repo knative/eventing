@@ -63,7 +63,7 @@ var (
 
 type EventTypeSpec struct {
 	// Type represents the CloudEvents type. It is authoritative.
-	Type string `json:"type"`
+	Type string `json:"type,omitempty"`
 	// Source is a URI, it represents the CloudEvents source.
 	// +optional
 	Source *apis.URL `json:"source,omitempty"`
@@ -87,6 +87,15 @@ type EventTypeSpec struct {
 	// Description is an optional field used to describe the EventType, in any meaningful way.
 	// +optional
 	Description string `json:"description,omitempty"`
+
+	// CloudEvent attributes and extensions.
+	// +optional
+	Attributes map[string]EventAttributeDefinition `json:"attributes,omitempty"`
+}
+
+type EventAttributeDefinition struct {
+	Required bool   `json:"required"`
+	Value    string `json:"value,omitempty"`
 }
 
 // EventTypeStatus represents the current state of a EventType.

@@ -76,6 +76,20 @@ spec:
               type:
                 description: 'Type represents the CloudEvents type. It is authoritative.'
                 type: string
+
+              attributes:
+                description: 'CloudEvent attributes and extensions.'
+                type: object
+                additionalProperties:
+                  type: object
+                  properties:
+                    required:
+                      description: 'Indicates whether the attribute is required.'
+                      type: boolean
+                    value:
+                      description: 'Value of the attribute.'
+                      type: string
+
           status:
             description: 'Status represents the current state of the EventType. This data
                 may be out of date.'
@@ -95,7 +109,7 @@ spec:
                 items:
                   type: object
                   required:
-                    - type
+#                    - type
                     - status
                   properties:
                     lastTransitionTime:
@@ -132,10 +146,10 @@ spec:
     additionalPrinterColumns:
     - name: Type
       type: string
-      jsonPath: ".spec.type"
+      jsonPath: ".spec.attributes.type.value"
     - name: Source
       type: string
-      jsonPath: ".spec.source"
+      jsonPath: ".spec.attributes.source.value"
     - name: Schema
       type: string
       jsonPath: ".spec.schema"

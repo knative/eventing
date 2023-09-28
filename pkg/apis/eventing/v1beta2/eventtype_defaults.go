@@ -26,6 +26,24 @@ func (et *EventType) SetDefaults(ctx context.Context) {
 }
 
 func (ets *EventTypeSpec) SetDefaults(ctx context.Context) {
+
+	ets.Attributes = map[string]EventAttributeDefinition{
+		"type": {
+			Required: true,
+			Value:    ets.Type,
+		},
+		"source": {
+			// this SHOULD be required...
+			Required: true,
+			Value:    ets.Source.String(),
+		},
+
+		// always force this...?
+		"specversion": {
+			Required: true,
+			Value:    "1.0",
+		},
+	}
 }
 
 func setReferenceNs(et *EventType) {
