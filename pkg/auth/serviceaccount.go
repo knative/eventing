@@ -72,7 +72,7 @@ func EnsureOIDCServiceAccountExistsForResource(ctx context.Context, serviceAccou
 
 	// If the resource doesn't exist, we'll create it.
 	if apierrs.IsNotFound(err) {
-		logging.FromContext(ctx).Infow("Creating OIDC service account", zap.Error(err))
+		logging.FromContext(ctx).Debugw("Creating OIDC service account", zap.Error(err))
 
 		expected := GetOIDCServiceAccountForResource(gvk, objectMeta)
 
