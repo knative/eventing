@@ -89,7 +89,7 @@ func EnsureOIDCServiceAccountExistsForResource(ctx context.Context, serviceAccou
 	}
 
 	if !metav1.IsControlledBy(&sa.ObjectMeta, &objectMeta) {
-		return fmt.Errorf("%s %s does not own service account %s", gvk.Kind, objectMeta.Name, sa.Name)
+		return fmt.Errorf("service account %s not owned by %s %s", sa.Name, gvk.Kind, objectMeta.Name)
 	}
 
 	return nil
