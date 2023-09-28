@@ -50,13 +50,9 @@ func (filter *prefixFilter) Filter(ctx context.Context, event cloudevents.Event)
 	if filter == nil {
 		return eventfilter.NoFilter
 	}
-	result := eventfilter.NoFilter
 	logger := logging.FromContext(ctx)
 	logger.Debugw("Performing a prefix match ", zap.Any("filters", filter.filters), zap.Any("event", event))
 	for k, v := range filter.filters {
-		if k == "" || v == "" {
-			continue
-		}
 		value, ok := attributes.LookupAttribute(event, k)
 		if !ok {
 			logger.Debugw("Couldn't find attribute in event. Prefix match failed.", zap.String("attribute", k), zap.String("prefix", v),
@@ -67,13 +63,11 @@ func (filter *prefixFilter) Filter(ctx context.Context, event cloudevents.Event)
 		if s, ok = value.(string); !ok {
 			s = fmt.Sprintf("%v", value)
 		}
-		if strings.HasPrefix(s, v) {
-			result = eventfilter.PassFilter
-		} else {
+		if !strings.HasPrefix(s, v) {
 			return eventfilter.FailFilter
 		}
 	}
-	return result
+	return eventfilter.PassFilter
 }
 
 func (filter *prefixFilter) Cleanup() {}
