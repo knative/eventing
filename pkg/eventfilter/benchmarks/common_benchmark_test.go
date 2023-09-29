@@ -26,9 +26,9 @@ import (
 )
 
 type FilterBenchmark struct {
-	name  string
-	arg   interface{}
-	event cloudevents.Event
+	name   string
+	arg    interface{}
+	events []cloudevents.Event
 }
 
 // Avoid DCE
@@ -40,7 +40,7 @@ var Result eventfilter.FilterResult
 // 2. "Run: ..." benchmark measures the time/mem to execute the filter, given a pre-built filter instance and the provided event
 func RunFilterBenchmarks(b *testing.B, filterCtor func(interface{}) eventfilter.Filter, filterBenchmarks ...FilterBenchmark) {
 	for _, fb := range filterBenchmarks {
-		b.Run("Creation: "+fb.name, func(b *testing.B) {
+		b.Run("Creation and teardown: "+fb.name, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				Filter = filterCtor(fb.arg)
 				Filter.Cleanup()
@@ -48,9 +48,10 @@ func RunFilterBenchmarks(b *testing.B, filterCtor func(interface{}) eventfilter.
 		})
 		// Filter to use for the run
 		f := filterCtor(fb.arg)
+		n := len(fb.events)
 		b.Run("Run: "+fb.name, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				Result = f.Filter(context.TODO(), fb.event)
+				Result = f.Filter(context.TODO(), fb.events[i%n])
 			}
 		})
 		f.Cleanup()

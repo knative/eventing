@@ -19,6 +19,7 @@ package benchmarks
 import (
 	"testing"
 
+	cloudevents "github.com/cloudevents/sdk-go/v2"
 	cetest "github.com/cloudevents/sdk-go/v2/test"
 	"knative.dev/eventing/pkg/eventfilter"
 	"knative.dev/eventing/pkg/eventfilter/subscriptionsapi"
@@ -56,59 +57,59 @@ func BenchmarkAllFilter(b *testing.B) {
 			return subscriptionsapi.NewAllFilter(filters...)
 		},
 		FilterBenchmark{
-			name:  "All filter with exact filter test",
-			arg:   []eventfilter.Filter{filter},
-			event: event,
+			name:   "All filter with exact filter test",
+			arg:    []eventfilter.Filter{filter},
+			events: []cloudevents.Event{event},
 		},
 		FilterBenchmark{
-			name:  "All filter match all subfilters",
-			arg:   []eventfilter.Filter{filter, prefixFilter, suffixFilter},
-			event: event,
+			name:   "All filter match all subfilters",
+			arg:    []eventfilter.Filter{filter, prefixFilter, suffixFilter},
+			events: []cloudevents.Event{event},
 		},
 		FilterBenchmark{
-			name:  "All filter no 1 match at end of array",
-			arg:   []eventfilter.Filter{prefixFilterNoMatch, suffixFilterNoMatch, filter},
-			event: event,
+			name:   "All filter no 1 match at end of array",
+			arg:    []eventfilter.Filter{prefixFilterNoMatch, suffixFilterNoMatch, filter},
+			events: []cloudevents.Event{event},
 		},
 		FilterBenchmark{
-			name:  "All filter no 1 match at start of array",
-			arg:   []eventfilter.Filter{filter, prefixFilterNoMatch, suffixFilterNoMatch},
-			event: event,
+			name:   "All filter no 1 match at start of array",
+			arg:    []eventfilter.Filter{filter, prefixFilterNoMatch, suffixFilterNoMatch},
+			events: []cloudevents.Event{event},
 		},
 		FilterBenchmark{
-			name:  "All filter with multiple exact filters that match",
-			arg:   []eventfilter.Filter{filter, exactFilter2, exactFilter3},
-			event: event,
+			name:   "All filter with multiple exact filters that match",
+			arg:    []eventfilter.Filter{filter, exactFilter2, exactFilter3},
+			events: []cloudevents.Event{event},
 		},
 		FilterBenchmark{
-			name:  "All filter with one non-matching filter in the middle",
-			arg:   []eventfilter.Filter{filter, prefixFilterNoMatch, exactFilter2},
-			event: event,
+			name:   "All filter with one non-matching filter in the middle",
+			arg:    []eventfilter.Filter{filter, prefixFilterNoMatch, exactFilter2},
+			events: []cloudevents.Event{event},
 		},
 		FilterBenchmark{
-			name:  "All filter with one non-matching filter at the end",
-			arg:   []eventfilter.Filter{filter, exactFilter2, prefixFilterNoMatch},
-			event: event,
+			name:   "All filter with all non-matching filters",
+			arg:    []eventfilter.Filter{prefixFilterNoMatch, suffixFilterNoMatch},
+			events: []cloudevents.Event{event},
 		},
 		FilterBenchmark{
-			name:  "All filter with all non-matching filters",
-			arg:   []eventfilter.Filter{prefixFilterNoMatch, suffixFilterNoMatch},
-			event: event,
+			name:   "All filter with one non-matching filter at the end",
+			arg:    []eventfilter.Filter{filter, exactFilter2, prefixFilterNoMatch},
+			events: []cloudevents.Event{event},
 		},
 		FilterBenchmark{
-			name:  "All filter with large number of sub-filters that match",
-			arg:   largeMatchingFilters,
-			event: event,
+			name:   "All filter with large number of sub-filters that match",
+			arg:    largeMatchingFilters,
+			events: []cloudevents.Event{event},
 		},
 		FilterBenchmark{
-			name:  "All filter with large number of sub-filters that do not match",
-			arg:   largeNonMatchingFilters,
-			event: event,
+			name:   "All filter with large number of sub-filters that do not match",
+			arg:    largeNonMatchingFilters,
+			events: []cloudevents.Event{event},
 		},
 		FilterBenchmark{
-			name:  "All filter with alternating matching and non-matching filters",
-			arg:   alternatingFilters,
-			event: event,
+			name:   "All filter with alternating matching and non-matching filters",
+			arg:    alternatingFilters,
+			events: []cloudevents.Event{event},
 		},
 	)
 

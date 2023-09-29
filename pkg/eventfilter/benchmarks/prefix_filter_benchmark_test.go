@@ -19,6 +19,7 @@ package benchmarks
 import (
 	"testing"
 
+	cloudevents "github.com/cloudevents/sdk-go/v2"
 	cetest "github.com/cloudevents/sdk-go/v2/test"
 	"knative.dev/eventing/pkg/eventfilter"
 	"knative.dev/eventing/pkg/eventfilter/subscriptionsapi"
@@ -37,9 +38,9 @@ func BenchmarkPrefixFilter(b *testing.B) {
 			return filter
 		},
 		FilterBenchmark{
-			name:  "Pass with prefix match of id",
-			arg:   map[string]string{"id": event.ID()[0:5]},
-			event: event,
+			name:   "Pass with prefix match of id",
+			arg:    map[string]string{"id": event.ID()[0:5]},
+			events: []cloudevents.Event{event},
 		},
 		FilterBenchmark{
 			name: "Pass with prefix match of all context attributes",
@@ -51,7 +52,7 @@ func BenchmarkPrefixFilter(b *testing.B) {
 				"datacontenttype": event.DataContentType()[0:5],
 				"subject":         event.Subject()[0:5],
 			},
-			event: event,
+			events: []cloudevents.Event{event},
 		},
 		FilterBenchmark{
 			name: "Pass with prefix match of all context attributes",
@@ -63,7 +64,7 @@ func BenchmarkPrefixFilter(b *testing.B) {
 				"datacontenttype": event.DataContentType()[0:3],
 				"subject":         event.Subject()[0:3],
 			},
-			event: event,
+			events: []cloudevents.Event{event},
 		},
 		FilterBenchmark{
 			name: "No pass with prefix match of id and source",
@@ -71,7 +72,7 @@ func BenchmarkPrefixFilter(b *testing.B) {
 				"id":     "qwertyuiopasdfghjklzxcvbnm",
 				"source": "qwertyuiopasdfghjklzxcvbnm",
 			},
-			event: event,
+			events: []cloudevents.Event{event},
 		},
 	)
 }

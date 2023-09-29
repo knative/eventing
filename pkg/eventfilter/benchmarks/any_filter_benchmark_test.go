@@ -19,6 +19,7 @@ package benchmarks
 import (
 	"testing"
 
+	cloudevents "github.com/cloudevents/sdk-go/v2"
 	cetest "github.com/cloudevents/sdk-go/v2/test"
 	"knative.dev/eventing/pkg/eventfilter"
 	"knative.dev/eventing/pkg/eventfilter/subscriptionsapi"
@@ -27,6 +28,8 @@ import (
 func BenchmarkAnyFilter(b *testing.B) {
 	// Full event with all possible fields filled
 	event := cetest.FullEvent()
+	otherEvent := cetest.FullEvent()
+	otherEvent.SetType("qwertyuiop")
 
 	filter, _ := subscriptionsapi.NewExactFilter(map[string]string{"id": event.ID()})
 	prefixFilter, _ := subscriptionsapi.NewPrefixFilter(map[string]string{"type": event.Type()[0:5]})
@@ -40,24 +43,34 @@ func BenchmarkAnyFilter(b *testing.B) {
 			return subscriptionsapi.NewAnyFilter(filters...)
 		},
 		FilterBenchmark{
-			name:  "Any filter with exact filter test",
-			arg:   []eventfilter.Filter{filter},
-			event: event,
+			name:   "Any filter with exact filter test",
+			arg:    []eventfilter.Filter{filter},
+			events: []cloudevents.Event{event},
 		},
 		FilterBenchmark{
-			name:  "Any filter match all subfilters",
-			arg:   []eventfilter.Filter{filter, prefixFilter, suffixFilter},
-			event: event,
+			name:   "Any filter match all subfilters",
+			arg:    []eventfilter.Filter{filter, prefixFilter, suffixFilter},
+			events: []cloudevents.Event{event},
 		},
 		FilterBenchmark{
-			name:  "Any filter no 1 match at end of array",
-			arg:   []eventfilter.Filter{prefixFilterNoMatch, suffixFilterNoMatch, filter},
-			event: event,
+			name:   "Any filter no 1 match at end of array",
+			arg:    []eventfilter.Filter{prefixFilterNoMatch, suffixFilterNoMatch, filter},
+			events: []cloudevents.Event{event},
 		},
 		FilterBenchmark{
-			name:  "Any filter no 1 match at start of array",
-			arg:   []eventfilter.Filter{filter, prefixFilterNoMatch, suffixFilterNoMatch},
-			event: event,
+			name:   "Any filter no 1 match at start of array",
+			arg:    []eventfilter.Filter{filter, prefixFilterNoMatch, suffixFilterNoMatch},
+			events: []cloudevents.Event{event},
+		},
+		FilterBenchmark{
+			name:   "Any filter 2 events match 2 different filters",
+			arg:    []eventfilter.Filter{prefixFilter, prefixFilterNoMatch},
+			events: []cloudevents.Event{event, otherEvent},
+		},
+		FilterBenchmark{
+			name:   "Any filter 2 events match 2 different filters, one filter in front which matches neither",
+			arg:    []eventfilter.Filter{suffixFilterNoMatch, prefixFilter, prefixFilterNoMatch},
+			events: []cloudevents.Event{event, otherEvent},
 		},
 	)
 }

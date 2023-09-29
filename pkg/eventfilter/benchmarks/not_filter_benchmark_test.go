@@ -19,6 +19,7 @@ package benchmarks
 import (
 	"testing"
 
+	cloudevents "github.com/cloudevents/sdk-go/v2"
 	cetest "github.com/cloudevents/sdk-go/v2/test"
 	"knative.dev/eventing/pkg/eventfilter"
 	"knative.dev/eventing/pkg/eventfilter/subscriptionsapi"
@@ -37,19 +38,19 @@ func BenchmarkNotFilter(b *testing.B) {
 			return subscriptionsapi.NewNotFilter(i.(eventfilter.Filter))
 		},
 		FilterBenchmark{
-			name:  "Not filter with exact filter test",
-			arg:   filter,
-			event: event,
+			name:   "Not filter with exact filter test",
+			arg:    filter,
+			events: []cloudevents.Event{event},
 		},
 		FilterBenchmark{
-			name:  "Not filter with prefix filter test",
-			arg:   prefixFilter,
-			event: event,
+			name:   "Not filter with prefix filter test",
+			arg:    prefixFilter,
+			events: []cloudevents.Event{event},
 		},
 		FilterBenchmark{
-			name:  "Not filter with suffix filter test",
-			arg:   suffixFilter,
-			event: event,
+			name:   "Not filter with suffix filter test",
+			arg:    suffixFilter,
+			events: []cloudevents.Event{event},
 		},
 	)
 }
