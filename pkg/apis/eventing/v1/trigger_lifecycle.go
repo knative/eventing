@@ -81,6 +81,7 @@ func (ts *TriggerStatus) IsReady() bool {
 // InitializeConditions sets relevant unset conditions to Unknown state.
 func (ts *TriggerStatus) InitializeConditions() {
 	triggerCondSet.Manage(ts).InitializeConditions()
+	ts.MarkOIDCIdentityCreatedNotSupported()
 }
 
 func (ts *TriggerStatus) PropagateBrokerCondition(bc *apis.Condition) {
