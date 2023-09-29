@@ -109,6 +109,9 @@ spec:
                   CACerts:
                     description: CACerts is the Certification Authority (CA) certificates in PEM format that the source trusts when sending events to the sink.
                     type: string
+                  audience:
+                    description: Audience is the OIDC audience. This only needs to be set if the target is not an Addressable and thus the Audience can't be received from the Addressable itself. If the target is an Addressable and specifies an Audience, the target's Audience takes precedence.
+                    type: string
               timezone:
                 description: 'Timezone modifies the actual time relative to the specified
                         timezone. Defaults to the system time zone. More general information
