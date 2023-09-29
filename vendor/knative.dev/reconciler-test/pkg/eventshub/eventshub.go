@@ -23,6 +23,7 @@ import (
 	"golang.org/x/sync/errgroup"
 	"knative.dev/pkg/injection"
 	"knative.dev/pkg/logging"
+	"knative.dev/pkg/signals"
 )
 
 type envConfig struct {
@@ -39,8 +40,9 @@ type EventGeneratorStarter func(context.Context, *EventLogs) error
 // Start starts a new eventshub process, with the provided factories.
 // You can create your own eventshub providing event log factories and event generator factories.
 func Start(eventLogFactories map[string]EventLogFactory, eventGeneratorFactories map[string]EventGeneratorStarter) {
-	//nolint // nil ctx is fine here, look at the code of EnableInjectionOrDie
-	ctx, _ := injection.EnableInjectionOrDie(nil, nil)
+	ctx := signals.NewContext()
+	defer maybeQuitIstioProxy(ctx) // quit at exit
+	ctx, _ = injection.EnableInjectionOrDie(ctx, nil)
 	ctx = ConfigureLogging(ctx, "eventshub")
 
 	tracer, err := ConfigureTracing(logging.FromContext(ctx), "")
