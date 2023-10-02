@@ -35,6 +35,7 @@ import (
 
 	apiserversourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1/apiserversource"
 	apiserversourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1/apiserversource"
+	serviceaccountinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount"
 )
 
 // envConfig will be used to extract the required environment variables using
@@ -54,12 +55,14 @@ func NewController(
 	deploymentInformer := deploymentinformer.Get(ctx)
 	apiServerSourceInformer := apiserversourceinformer.Get(ctx)
 	namespaceInformer := namespace.Get(ctx)
+	serviceaccountInformer := serviceaccountinformer.Get(ctx)
 
 	r := &Reconciler{
 		kubeClientSet:   kubeclient.Get(ctx),
 		ceSource:        GetCfgHost(ctx),
 		configs:         reconcilersource.WatchConfigurations(ctx, component, cmw),
 		namespaceLister: namespaceInformer.Lister(),
+		serviceAccountLister: serviceaccountInformer.Lister(),
 	}
 
 	env := &envConfig{}
@@ -88,6 +91,12 @@ func NewController(
 		AddFunc:    func(obj interface{}) { cb() },
 		UpdateFunc: func(oldObj, newObj interface{}) { cb() },
 		DeleteFunc: func(obj interface{}) { cb() },
+	})
+
+	// Reconciler ApiServerSource when the OIDC service account changes
+	serviceaccountInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: controller.FilterController(&v1.ApiServerSource{}),
+		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 
 	return impl

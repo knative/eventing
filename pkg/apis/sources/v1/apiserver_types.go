@@ -100,6 +100,10 @@ type ApiServerSourceStatus struct {
 
 	// Namespaces show the namespaces currently watched by the ApiServerSource
 	Namespaces []string `json:"namespaces"`
+
+	// Auth provides the relevant information for OIDC authentication.
+	// +optional
+	Auth *duckv1.AuthStatus `json:"auth,omitempty"`
 }
 
 // APIVersionKind is an APIVersion and Kind tuple.
