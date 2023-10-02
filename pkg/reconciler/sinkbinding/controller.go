@@ -113,6 +113,7 @@ func NewController(
 		res:     sbResolver,
 		tracker: impl.Tracker,
 		kubeclient:           kubeclient.Get(ctx),
+		serviceAccountLister: serviceaccountInformer.Lister(),
 	}
 
 	c.WithContext = func(ctx context.Context, b psbinding.Bindable) (context.Context, error) {
