@@ -19,7 +19,9 @@ package sinkbinding
 import (
 	"context"
 	"errors"
+	"fmt"
 
+	"knative.dev/eventing/pkg/auth"
 	sbinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1/sinkbinding"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/podspecable"
 	"knative.dev/pkg/client/injection/kube/informers/core/v1/namespace"
@@ -30,12 +32,17 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	"knative.dev/eventing/pkg/apis/feature"
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/pkg/apis/duck"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
@@ -43,6 +50,7 @@ import (
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/tracker"
 	"knative.dev/pkg/webhook/psbinding"
+	serviceaccountinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount"
 )
 
 const (
@@ -52,6 +60,8 @@ const (
 type SinkBindingSubResourcesReconciler struct {
 	res     *resolver.URIResolver
 	tracker tracker.Interface
+	serviceAccountLister corev1listers.ServiceAccountLister
+	kubeclient kubernetes.Interface
 }
 
 // NewController returns a new SinkBinding reconciler.
@@ -65,6 +75,7 @@ func NewController(
 	dc := dynamicclient.Get(ctx)
 	psInformerFactory := podspecable.Get(ctx)
 	namespaceInformer := namespace.Get(ctx)
+	serviceaccountInformer := serviceaccountinformer.Get(ctx)
 	c := &psbinding.BaseReconciler{
 		LeaderAwareFuncs: reconciler.LeaderAwareFuncs{
 			PromoteFunc: func(bkt reconciler.Bucket, enq func(reconciler.Bucket, types.NamespacedName)) error {
@@ -101,6 +112,7 @@ func NewController(
 	c.SubResourcesReconciler = &SinkBindingSubResourcesReconciler{
 		res:     sbResolver,
 		tracker: impl.Tracker,
+		kubeclient:           kubeclient.Get(ctx),
 	}
 
 	c.WithContext = func(ctx context.Context, b psbinding.Bindable) (context.Context, error) {
@@ -113,6 +125,12 @@ func NewController(
 			EventHandler: controller.HandleAll(c.Tracker.OnChanged),
 		},
 	}
+
+	// Reconciler Trigger when the OIDC service account changes
+	serviceaccountInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: controller.FilterController(&v1.SinkBinding{}),
+		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
+	})
 
 	return impl
 }
@@ -161,6 +179,24 @@ func (s *SinkBindingSubResourcesReconciler) Reconcile(ctx context.Context, b psb
 			Name:       sb.Spec.Sink.Ref.Name,
 		}, b)
 	}
+	
+	featureFlags := feature.FromContext(ctx)
+	if featureFlags.IsOIDCAuthentication() {
+		saName := auth.GetOIDCServiceAccountNameForResource(eventingv1.SchemeGroupVersion.WithKind("SinkBinding"), sb.ObjectMeta)
+		sb.Status.Auth = &duckv1.AuthStatus{
+			ServiceAccountName: &saName,
+		}
+
+		if err := auth.EnsureOIDCServiceAccountExistsForResource(ctx, s.serviceAccountLister, s.kubeclient, eventingv1.SchemeGroupVersion.WithKind("SinkBinding"), sb.ObjectMeta); err != nil {
+			sb.Status.MarkOIDCIdentityCreatedFailed("Unable to resolve service account for OIDC authentication", "%v", err)
+			return err
+		}
+		sb.Status.MarkOIDCIdentityCreatedSucceeded()
+	} else {
+		sb.Status.Auth = nil
+		sb.Status.MarkOIDCIdentityCreatedSucceededWithReason(fmt.Sprintf("%s feature disabled", feature.OIDCAuthentication), "")
+	}
+
 	addr, err := s.res.AddressableFromDestinationV1(ctx, sb.Spec.Sink, sb)
 	if err != nil {
 		logging.FromContext(ctx).Errorf("Failed to get Addressable from Destination: %w", err)

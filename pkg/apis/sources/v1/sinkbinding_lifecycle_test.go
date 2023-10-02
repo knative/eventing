@@ -173,8 +173,42 @@ func TestSinkBindingStatusIsReady(t *testing.T) {
 			s.MarkBindingAvailable()
 			return s
 		}(),
+		want: false,
+	}, {
+		name: "mark OIDC identity created",
+		s: func() *SinkBindingStatus {
+			s := &SinkBindingStatus{}
+			s.InitializeConditions()
+			s.MarkSink(sink)
+			s.MarkBindingAvailable()
+			s.MarkOIDCIdentityCreatedSucceeded()
+			return s
+		}(),
 		want: true,
+	}, {
+		name: "mark OIDC identity created with reason",
+		s: func() *SinkBindingStatus {
+			s := &SinkBindingStatus{}
+			s.InitializeConditions()
+			s.MarkSink(sink)
+			s.MarkBindingAvailable()
+			s.MarkOIDCIdentityCreatedSucceededWithReason("TheReason", "feature is disbaled")
+			return s
+		}(),
+		want: true,
+	}, {
+		name: "mark OIDC identity created failed",
+		s: func() *SinkBindingStatus {
+			s := &SinkBindingStatus{}
+			s.InitializeConditions()
+			s.MarkSink(sink)
+			s.MarkBindingAvailable()
+			s.MarkOIDCIdentityCreatedFailed("TheReason", "this is a message")
+			return s
+		}(),
+		want: false,
 	}}
+
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
