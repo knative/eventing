@@ -102,14 +102,16 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 	sink.URL.Scheme = "uri"
 
 	tests := []struct {
-		name                string
-		s                   *ApiServerSourceStatus
-		wantConditionStatus corev1.ConditionStatus
-		want                bool
+		name                     string
+		s                        *ApiServerSourceStatus
+		wantConditionStatus      corev1.ConditionStatus
+		want                     bool
+		oidcServiceAccountStatus bool
 	}{{
-		name: "uninitialized",
-		s:    &ApiServerSourceStatus{},
-		want: false,
+		name:                     "uninitialized",
+		s:                        &ApiServerSourceStatus{},
+		want:                     false,
+		oidcServiceAccountStatus: true,
 	}, {
 		name: "initialized",
 		s: func() *ApiServerSourceStatus {
@@ -117,8 +119,9 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 			s.InitializeConditions()
 			return s
 		}(),
-		wantConditionStatus: corev1.ConditionUnknown,
-		want:                false,
+		wantConditionStatus:      corev1.ConditionUnknown,
+		want:                     false,
+		oidcServiceAccountStatus: true,
 	}, {
 		name: "mark deployed",
 		s: func() *ApiServerSourceStatus {
@@ -127,8 +130,9 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 			s.PropagateDeploymentAvailability(availableDeployment)
 			return s
 		}(),
-		wantConditionStatus: corev1.ConditionUnknown,
-		want:                false,
+		wantConditionStatus:      corev1.ConditionUnknown,
+		want:                     false,
+		oidcServiceAccountStatus: true,
 	}, {
 		name: "mark sink",
 		s: func() *ApiServerSourceStatus {
@@ -137,8 +141,9 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 			s.MarkSink(sink)
 			return s
 		}(),
-		wantConditionStatus: corev1.ConditionUnknown,
-		want:                false,
+		wantConditionStatus:      corev1.ConditionUnknown,
+		want:                     false,
+		oidcServiceAccountStatus: true,
 	}, {
 		name: "mark sufficient permissions",
 		s: func() *ApiServerSourceStatus {
@@ -147,8 +152,9 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 			s.MarkSufficientPermissions()
 			return s
 		}(),
-		wantConditionStatus: corev1.ConditionUnknown,
-		want:                false,
+		wantConditionStatus:      corev1.ConditionUnknown,
+		want:                     false,
+		oidcServiceAccountStatus: true,
 	}, {
 		name: "mark event types",
 		s: func() *ApiServerSourceStatus {
@@ -156,8 +162,9 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 			s.InitializeConditions()
 			return s
 		}(),
-		wantConditionStatus: corev1.ConditionUnknown,
-		want:                false,
+		wantConditionStatus:      corev1.ConditionUnknown,
+		want:                     false,
+		oidcServiceAccountStatus: true,
 	}, {
 		name: "mark sink and sufficient permissions and deployed",
 		s: func() *ApiServerSourceStatus {
@@ -170,6 +177,7 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 		}(),
 		wantConditionStatus: corev1.ConditionTrue,
 		want:                true,
+		oidcServiceAccountStatus: true,
 	}, {
 		name: "mark sink and sufficient permissions and unavailable deployment",
 		s: func() *ApiServerSourceStatus {
@@ -182,6 +190,7 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 		}(),
 		wantConditionStatus: corev1.ConditionFalse,
 		want:                false,
+		oidcServiceAccountStatus: true,
 	}, {
 		name: "mark sink and sufficient permissions and unknown deployment",
 		s: func() *ApiServerSourceStatus {
@@ -194,6 +203,7 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 		}(),
 		wantConditionStatus: corev1.ConditionUnknown,
 		want:                false,
+		oidcServiceAccountStatus: true,
 	}, {
 		name: "mark sink and sufficient permissions and not deployed",
 		s: func() *ApiServerSourceStatus {
@@ -206,6 +216,7 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 		}(),
 		wantConditionStatus: corev1.ConditionUnknown,
 		want:                false,
+		oidcServiceAccountStatus: true,
 	}, {
 		name: "mark sink and sufficient permissions and deployed",
 		s: func() *ApiServerSourceStatus {
@@ -218,6 +229,7 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 		}(),
 		wantConditionStatus: corev1.ConditionTrue,
 		want:                true,
+		oidcServiceAccountStatus: true,
 	}, {
 		name: "mark sink and not enough permissions",
 		s: func() *ApiServerSourceStatus {
@@ -229,10 +241,26 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 		}(),
 		wantConditionStatus: corev1.ConditionFalse,
 		want:                false,
-	}}
+		oidcServiceAccountStatus: true,
+	}, {
+		name: "oidc status false with mark sink and sufficient permissions and deployed",
+		s: func() *ApiServerSourceStatus {
+			s := &ApiServerSourceStatus{}
+			s.InitializeConditions()
+			s.MarkSink(sink)
+			s.MarkSufficientPermissions()
+			s.PropagateDeploymentAvailability(availableDeployment)
+			return s
+		}(),
+		wantConditionStatus: corev1.ConditionTrue,
+		want:                true,
+		oidcServiceAccountStatus: false,
+	},
+}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			ss := &ApiServerSourceStatus{}
 			if test.wantConditionStatus != "" {
 				gotConditionStatus := test.s.GetTopLevelCondition().Status
 				if gotConditionStatus != test.wantConditionStatus {
@@ -242,6 +270,11 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 			got := test.s.IsReady()
 			if got != test.want {
 				t.Errorf("unexpected readiness: want %v, got %v", test.want, got)
+			}
+			if test.oidcServiceAccountStatus {
+				ss.MarkOIDCIdentityCreatedSucceeded()
+			} else {
+				ss.MarkOIDCIdentityCreatedFailed("Unable to ...", "")
 			}
 		})
 	}
