@@ -281,6 +281,12 @@ func WithTriggerOIDCIdentityCreatedFailed(reason, message string) TriggerOption 
 	}
 }
 
+func WithTriggerOIDCIdentityCreatedNotSupported() TriggerOption {
+	return func(t *v1.Trigger) {
+		t.Status.MarkOIDCIdentityCreatedNotSupported()
+	}
+}
+
 func WithTriggerOIDCServiceAccountName(name string) TriggerOption {
 	return func(t *v1.Trigger) {
 		if t.Status.Auth == nil {
