@@ -17,18 +17,20 @@ limitations under the License.
 package v1
 
 import (
+	"fmt"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	"knative.dev/eventing/pkg/apis/feature"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
-var sCondSet = apis.NewLivingConditionSet(SequenceConditionReady, SequenceConditionChannelsReady, SequenceConditionSubscriptionsReady, SequenceConditionAddressable)
+var sCondSet = apis.NewLivingConditionSet(SequenceConditionReady, SequenceConditionChannelsReady, SequenceConditionSubscriptionsReady, SequenceConditionAddressable, SequenceConditionOIDCIdentityCreated)
 
 const (
 	// SequenceConditionReady has status True when all subconditions below have been set to True.
@@ -45,6 +47,8 @@ const (
 	// SequenceConditionAddressable has status true when this Sequence meets
 	// the Addressable contract and has a non-empty hostname.
 	SequenceConditionAddressable apis.ConditionType = "Addressable"
+
+	SequenceConditionOIDCIdentityCreated apis.ConditionType = "OIDCIdentityCreated"
 )
 
 // GetConditionSet retrieves the condition set for this resource. Implements the KRShaped interface.
@@ -189,4 +193,25 @@ func (ss *SequenceStatus) setAddress(address *duckv1.Addressable) {
 		ss.Address = duckv1.Addressable{URL: address.URL}
 		sCondSet.Manage(ss).MarkTrue(SequenceConditionAddressable)
 	}
+}
+
+func (ss *SequenceStatus) MarkOIDCIdentityCreatedSucceeded() {
+	sCondSet.Manage(ss).MarkTrue(SequenceConditionOIDCIdentityCreated)
+}
+
+func (ss *SequenceStatus) MarkOIDCIdentityCreatedSucceededWithReason(reason, messageFormat string, messageA ...interface{}) {
+	sCondSet.Manage(ss).MarkTrueWithReason(SequenceConditionOIDCIdentityCreated, reason, messageFormat, messageA...)
+}
+
+func (ss *SequenceStatus) MarkOIDCIdentityCreatedFailed(reason, messageFormat string, messageA ...interface{}) {
+	sCondSet.Manage(ss).MarkFalse(SequenceConditionOIDCIdentityCreated, reason, messageFormat, messageA...)
+}
+
+func (ss *SequenceStatus) MarkOIDCIdentityCreatedUnknown(reason, messageFormat string, messageA ...interface{}) {
+	sCondSet.Manage(ss).MarkUnknown(SequenceConditionOIDCIdentityCreated, reason, messageFormat, messageA...)
+}
+
+func (ss *SequenceStatus) MarkOIDCIdentityCreatedNotSupported() {
+	// in case the OIDC feature is not supported, we mark the condition as true, to not mark the SinkBinding unready.
+	sCondSet.Manage(ss).MarkTrueWithReason(SequenceConditionOIDCIdentityCreated, fmt.Sprintf("%s feature not yet supported for SinkBinding", feature.OIDCAuthentication), "")
 }
