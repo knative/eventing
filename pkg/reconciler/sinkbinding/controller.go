@@ -27,6 +27,7 @@ import (
 	"knative.dev/pkg/client/injection/kube/informers/core/v1/namespace"
 	"knative.dev/pkg/reconciler"
 	"knative.dev/pkg/resolver"
+	"knative.dev/pkg/system"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -43,13 +44,14 @@ import (
 	"knative.dev/pkg/apis/duck"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
+	configmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap"
+	serviceaccountinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/injection/clients/dynamicclient"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/tracker"
 	"knative.dev/pkg/webhook/psbinding"
-	serviceaccountinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount"
 )
 
 const (
@@ -76,6 +78,7 @@ func NewController(
 	psInformerFactory := podspecable.Get(ctx)
 	namespaceInformer := namespace.Get(ctx)
 	serviceaccountInformer := serviceaccountinformer.Get(ctx)
+	configmapInformer := configmapinformer.Get(ctx)
 
 	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"))
 	featureStore.WatchConfigs(cmw)
@@ -132,10 +135,18 @@ func NewController(
 		},
 	}
 
-	// Reconciler SinkBinding when the OIDC service account changes
+	// Reconcile SinkBinding when the OIDC service account changes
 	serviceaccountInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.FilterController(&v1.SinkBinding{}),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
+	})
+
+	// reconcile sinkindings on changes on the features configmap
+	configmapInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: controller.FilterWithNameAndNamespace(system.Namespace(), feature.FlagsConfigName),
+		Handler: controller.HandleAll(func(i interface{}) {
+			impl.GlobalResync(sbInformer.Informer())
+		}),
 	})
 
 	return impl
@@ -186,10 +197,7 @@ func (s *SinkBindingSubResourcesReconciler) Reconcile(ctx context.Context, b psb
 		}, b)
 	}
 	
-	// Add feature flags to context 
-	ctx = s.featureStore.ToContext(ctx)
-
-	featureFlags := feature.FromContext(ctx)
+	featureFlags := s.featureStore.Load()
 	if featureFlags.IsOIDCAuthentication() {
 		saName := auth.GetOIDCServiceAccountNameForResource(v1.SchemeGroupVersion.WithKind("SinkBinding"), sb.ObjectMeta)
 		sb.Status.Auth = &duckv1.AuthStatus{
