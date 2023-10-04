@@ -109,6 +109,18 @@ rules:
       - "create"
       - "patch"
 
+  - apiGroups:
+      - ""
+    resources:
+      - "serviceaccounts"
+    verbs:
+      - "get"
+      - "create"
+      - "update"
+      - "list"
+      - "watch"
+      - "patch"
+      
   # Necessary for conversion webhook. These are copied from the serving
   # TODO: Do we really need all these permissions?
   - apiGroups: ["apiextensions.k8s.io"]

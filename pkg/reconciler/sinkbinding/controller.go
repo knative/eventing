@@ -38,7 +38,6 @@ import (
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
-	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/pkg/apis/feature"
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/pkg/apis/duck"
@@ -62,6 +61,7 @@ type SinkBindingSubResourcesReconciler struct {
 	tracker tracker.Interface
 	serviceAccountLister corev1listers.ServiceAccountLister
 	kubeclient kubernetes.Interface
+	featureStore *feature.Store
 }
 
 // NewController returns a new SinkBinding reconciler.
@@ -76,6 +76,10 @@ func NewController(
 	psInformerFactory := podspecable.Get(ctx)
 	namespaceInformer := namespace.Get(ctx)
 	serviceaccountInformer := serviceaccountinformer.Get(ctx)
+
+	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"))
+	featureStore.WatchConfigs(cmw)
+
 	c := &psbinding.BaseReconciler{
 		LeaderAwareFuncs: reconciler.LeaderAwareFuncs{
 			PromoteFunc: func(bkt reconciler.Bucket, enq func(reconciler.Bucket, types.NamespacedName)) error {
@@ -114,6 +118,7 @@ func NewController(
 		tracker: impl.Tracker,
 		kubeclient:           kubeclient.Get(ctx),
 		serviceAccountLister: serviceaccountInformer.Lister(),
+		featureStore: featureStore,
 	}
 
 	c.WithContext = func(ctx context.Context, b psbinding.Bindable) (context.Context, error) {
@@ -127,7 +132,7 @@ func NewController(
 		},
 	}
 
-	// Reconciler Trigger when the OIDC service account changes
+	// Reconciler SinkBinding when the OIDC service account changes
 	serviceaccountInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.FilterController(&v1.SinkBinding{}),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
@@ -181,14 +186,17 @@ func (s *SinkBindingSubResourcesReconciler) Reconcile(ctx context.Context, b psb
 		}, b)
 	}
 	
+	// Add feature flags to context 
+	ctx = s.featureStore.ToContext(ctx)
+
 	featureFlags := feature.FromContext(ctx)
 	if featureFlags.IsOIDCAuthentication() {
-		saName := auth.GetOIDCServiceAccountNameForResource(eventingv1.SchemeGroupVersion.WithKind("SinkBinding"), sb.ObjectMeta)
+		saName := auth.GetOIDCServiceAccountNameForResource(v1.SchemeGroupVersion.WithKind("SinkBinding"), sb.ObjectMeta)
 		sb.Status.Auth = &duckv1.AuthStatus{
 			ServiceAccountName: &saName,
 		}
 
-		if err := auth.EnsureOIDCServiceAccountExistsForResource(ctx, s.serviceAccountLister, s.kubeclient, eventingv1.SchemeGroupVersion.WithKind("SinkBinding"), sb.ObjectMeta); err != nil {
+		if err := auth.EnsureOIDCServiceAccountExistsForResource(ctx, s.serviceAccountLister, s.kubeclient, v1.SchemeGroupVersion.WithKind("SinkBinding"), sb.ObjectMeta); err != nil {
 			sb.Status.MarkOIDCIdentityCreatedFailed("Unable to resolve service account for OIDC authentication", "%v", err)
 			return err
 		}
