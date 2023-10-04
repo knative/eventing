@@ -23,7 +23,6 @@ import (
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
-	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	testing "k8s.io/client-go/testing"
@@ -36,9 +35,9 @@ type FakeEventTypes struct {
 	ns   string
 }
 
-var eventtypesResource = schema.GroupVersionResource{Group: "eventing.knative.dev", Version: "v1beta2", Resource: "eventtypes"}
+var eventtypesResource = v1beta2.SchemeGroupVersion.WithResource("eventtypes")
 
-var eventtypesKind = schema.GroupVersionKind{Group: "eventing.knative.dev", Version: "v1beta2", Kind: "EventType"}
+var eventtypesKind = v1beta2.SchemeGroupVersion.WithKind("EventType")
 
 // Get takes name of the eventType, and returns the corresponding eventType object, and an error if there is any.
 func (c *FakeEventTypes) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta2.EventType, err error) {

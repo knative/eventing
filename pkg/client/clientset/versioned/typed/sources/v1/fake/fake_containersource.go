@@ -21,13 +21,12 @@ package fake
 import (
 	"context"
 
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
-	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	testing "k8s.io/client-go/testing"
-	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
+	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 )
 
 // FakeContainerSources implements ContainerSourceInterface
@@ -36,25 +35,25 @@ type FakeContainerSources struct {
 	ns   string
 }
 
-var containersourcesResource = schema.GroupVersionResource{Group: "sources.knative.dev", Version: "v1", Resource: "containersources"}
+var containersourcesResource = v1.SchemeGroupVersion.WithResource("containersources")
 
-var containersourcesKind = schema.GroupVersionKind{Group: "sources.knative.dev", Version: "v1", Kind: "ContainerSource"}
+var containersourcesKind = v1.SchemeGroupVersion.WithKind("ContainerSource")
 
 // Get takes name of the containerSource, and returns the corresponding containerSource object, and an error if there is any.
-func (c *FakeContainerSources) Get(ctx context.Context, name string, options v1.GetOptions) (result *sourcesv1.ContainerSource, err error) {
+func (c *FakeContainerSources) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.ContainerSource, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewGetAction(containersourcesResource, c.ns, name), &sourcesv1.ContainerSource{})
+		Invokes(testing.NewGetAction(containersourcesResource, c.ns, name), &v1.ContainerSource{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*sourcesv1.ContainerSource), err
+	return obj.(*v1.ContainerSource), err
 }
 
 // List takes label and field selectors, and returns the list of ContainerSources that match those selectors.
-func (c *FakeContainerSources) List(ctx context.Context, opts v1.ListOptions) (result *sourcesv1.ContainerSourceList, err error) {
+func (c *FakeContainerSources) List(ctx context.Context, opts metav1.ListOptions) (result *v1.ContainerSourceList, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewListAction(containersourcesResource, containersourcesKind, c.ns, opts), &sourcesv1.ContainerSourceList{})
+		Invokes(testing.NewListAction(containersourcesResource, containersourcesKind, c.ns, opts), &v1.ContainerSourceList{})
 
 	if obj == nil {
 		return nil, err
@@ -64,8 +63,8 @@ func (c *FakeContainerSources) List(ctx context.Context, opts v1.ListOptions) (r
 	if label == nil {
 		label = labels.Everything()
 	}
-	list := &sourcesv1.ContainerSourceList{ListMeta: obj.(*sourcesv1.ContainerSourceList).ListMeta}
-	for _, item := range obj.(*sourcesv1.ContainerSourceList).Items {
+	list := &v1.ContainerSourceList{ListMeta: obj.(*v1.ContainerSourceList).ListMeta}
+	for _, item := range obj.(*v1.ContainerSourceList).Items {
 		if label.Matches(labels.Set(item.Labels)) {
 			list.Items = append(list.Items, item)
 		}
@@ -74,69 +73,69 @@ func (c *FakeContainerSources) List(ctx context.Context, opts v1.ListOptions) (r
 }
 
 // Watch returns a watch.Interface that watches the requested containerSources.
-func (c *FakeContainerSources) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
+func (c *FakeContainerSources) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewWatchAction(containersourcesResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a containerSource and creates it.  Returns the server's representation of the containerSource, and an error, if there is any.
-func (c *FakeContainerSources) Create(ctx context.Context, containerSource *sourcesv1.ContainerSource, opts v1.CreateOptions) (result *sourcesv1.ContainerSource, err error) {
+func (c *FakeContainerSources) Create(ctx context.Context, containerSource *v1.ContainerSource, opts metav1.CreateOptions) (result *v1.ContainerSource, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(containersourcesResource, c.ns, containerSource), &sourcesv1.ContainerSource{})
+		Invokes(testing.NewCreateAction(containersourcesResource, c.ns, containerSource), &v1.ContainerSource{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*sourcesv1.ContainerSource), err
+	return obj.(*v1.ContainerSource), err
 }
 
 // Update takes the representation of a containerSource and updates it. Returns the server's representation of the containerSource, and an error, if there is any.
-func (c *FakeContainerSources) Update(ctx context.Context, containerSource *sourcesv1.ContainerSource, opts v1.UpdateOptions) (result *sourcesv1.ContainerSource, err error) {
+func (c *FakeContainerSources) Update(ctx context.Context, containerSource *v1.ContainerSource, opts metav1.UpdateOptions) (result *v1.ContainerSource, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateAction(containersourcesResource, c.ns, containerSource), &sourcesv1.ContainerSource{})
+		Invokes(testing.NewUpdateAction(containersourcesResource, c.ns, containerSource), &v1.ContainerSource{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*sourcesv1.ContainerSource), err
+	return obj.(*v1.ContainerSource), err
 }
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeContainerSources) UpdateStatus(ctx context.Context, containerSource *sourcesv1.ContainerSource, opts v1.UpdateOptions) (*sourcesv1.ContainerSource, error) {
+func (c *FakeContainerSources) UpdateStatus(ctx context.Context, containerSource *v1.ContainerSource, opts metav1.UpdateOptions) (*v1.ContainerSource, error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceAction(containersourcesResource, "status", c.ns, containerSource), &sourcesv1.ContainerSource{})
+		Invokes(testing.NewUpdateSubresourceAction(containersourcesResource, "status", c.ns, containerSource), &v1.ContainerSource{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*sourcesv1.ContainerSource), err
+	return obj.(*v1.ContainerSource), err
 }
 
 // Delete takes name of the containerSource and deletes it. Returns an error if one occurs.
-func (c *FakeContainerSources) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
+func (c *FakeContainerSources) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteActionWithOptions(containersourcesResource, c.ns, name, opts), &sourcesv1.ContainerSource{})
+		Invokes(testing.NewDeleteActionWithOptions(containersourcesResource, c.ns, name, opts), &v1.ContainerSource{})
 
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeContainerSources) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+func (c *FakeContainerSources) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
 	action := testing.NewDeleteCollectionAction(containersourcesResource, c.ns, listOpts)
 
-	_, err := c.Fake.Invokes(action, &sourcesv1.ContainerSourceList{})
+	_, err := c.Fake.Invokes(action, &v1.ContainerSourceList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched containerSource.
-func (c *FakeContainerSources) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *sourcesv1.ContainerSource, err error) {
+func (c *FakeContainerSources) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.ContainerSource, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(containersourcesResource, c.ns, name, pt, data, subresources...), &sourcesv1.ContainerSource{})
+		Invokes(testing.NewPatchSubresourceAction(containersourcesResource, c.ns, name, pt, data, subresources...), &v1.ContainerSource{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*sourcesv1.ContainerSource), err
+	return obj.(*v1.ContainerSource), err
 }
