@@ -29,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes"
 	"knative.dev/pkg/kmeta"
 
 	duckapis "knative.dev/pkg/apis/duck"
@@ -45,6 +46,7 @@ import (
 	"knative.dev/eventing/pkg/duck"
 
 	"knative.dev/eventing/pkg/reconciler/sequence/resources"
+	corev1listers "k8s.io/client-go/listers/core/v1"
 )
 
 type Reconciler struct {
@@ -58,6 +60,8 @@ type Reconciler struct {
 
 	// dynamicClientSet allows us to configure pluggable Build objects
 	dynamicClientSet dynamic.Interface
+	serviceAccountLister corev1listers.ServiceAccountLister
+	kubeclient        kubernetes.Interface
 }
 
 // Check that our Reconciler implements sequencereconciler.Interface
