@@ -109,6 +109,7 @@ rules:
       - "create"
       - "patch"
 
+# For the SinkBinding reconciler adding the OIDC identity service accounts
   - apiGroups:
       - ""
     resources:
