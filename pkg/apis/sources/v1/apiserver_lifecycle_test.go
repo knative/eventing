@@ -172,11 +172,12 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 			s.InitializeConditions()
 			s.MarkSink(sink)
 			s.MarkSufficientPermissions()
+			s.MarkOIDCIdentityCreatedSucceeded()
 			s.PropagateDeploymentAvailability(availableDeployment)
 			return s
 		}(),
-		wantConditionStatus: corev1.ConditionTrue,
-		want:                true,
+		wantConditionStatus:      corev1.ConditionTrue,
+		want:                     true,
 		oidcServiceAccountStatus: true,
 	}, {
 		name: "mark sink and sufficient permissions and unavailable deployment",
@@ -188,9 +189,9 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 			s.PropagateDeploymentAvailability(unavailableDeployment)
 			return s
 		}(),
-		wantConditionStatus: corev1.ConditionFalse,
-		want:                false,
-		oidcServiceAccountStatus: true,
+		wantConditionStatus:      corev1.ConditionFalse,
+		want:                     false,
+		oidcServiceAccountStatus: false,
 	}, {
 		name: "mark sink and sufficient permissions and unknown deployment",
 		s: func() *ApiServerSourceStatus {
@@ -201,8 +202,8 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 			s.PropagateDeploymentAvailability(unknownDeployment)
 			return s
 		}(),
-		wantConditionStatus: corev1.ConditionUnknown,
-		want:                false,
+		wantConditionStatus:      corev1.ConditionUnknown,
+		want:                     false,
 		oidcServiceAccountStatus: true,
 	}, {
 		name: "mark sink and sufficient permissions and not deployed",
@@ -214,8 +215,8 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 			s.PropagateDeploymentAvailability(&appsv1.Deployment{})
 			return s
 		}(),
-		wantConditionStatus: corev1.ConditionUnknown,
-		want:                false,
+		wantConditionStatus:      corev1.ConditionUnknown,
+		want:                     false,
 		oidcServiceAccountStatus: true,
 	}, {
 		name: "mark sink and sufficient permissions and deployed",
@@ -225,10 +226,11 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 			s.MarkSink(sink)
 			s.MarkSufficientPermissions()
 			s.PropagateDeploymentAvailability(availableDeployment)
+			s.MarkOIDCIdentityCreatedSucceeded()
 			return s
 		}(),
-		wantConditionStatus: corev1.ConditionTrue,
-		want:                true,
+		wantConditionStatus:      corev1.ConditionTrue,
+		want:                     true,
 		oidcServiceAccountStatus: true,
 	}, {
 		name: "mark sink and not enough permissions",
@@ -239,8 +241,8 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 			s.MarkNoSufficientPermissions("areason", "amessage")
 			return s
 		}(),
-		wantConditionStatus: corev1.ConditionFalse,
-		want:                false,
+		wantConditionStatus:      corev1.ConditionFalse,
+		want:                     false,
 		oidcServiceAccountStatus: true,
 	}, {
 		name: "oidc status false with mark sink and sufficient permissions and deployed",
@@ -250,13 +252,14 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 			s.MarkSink(sink)
 			s.MarkSufficientPermissions()
 			s.PropagateDeploymentAvailability(availableDeployment)
+			s.MarkOIDCIdentityCreatedSucceeded()
 			return s
 		}(),
-		wantConditionStatus: corev1.ConditionTrue,
-		want:                true,
+		wantConditionStatus:      corev1.ConditionTrue,
+		want:                     true,
 		oidcServiceAccountStatus: false,
 	},
-}
+	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -342,6 +345,7 @@ func TestApiServerSourceStatusGetCondition(t *testing.T) {
 			s.MarkSink(sink)
 			s.MarkSufficientPermissions()
 			s.PropagateDeploymentAvailability(availableDeployment)
+			s.MarkOIDCIdentityCreatedSucceeded()
 			return s
 		}(),
 		condQuery: ApiServerConditionReady,
@@ -357,6 +361,7 @@ func TestApiServerSourceStatusGetCondition(t *testing.T) {
 			s.MarkSink(sink)
 			s.MarkSufficientPermissions()
 			s.PropagateDeploymentAvailability(availableDeployment)
+			s.MarkOIDCIdentityCreatedSucceeded()
 			return s
 		}(),
 		condQuery: ApiServerConditionReady,
@@ -389,6 +394,7 @@ func TestApiServerSourceStatusGetCondition(t *testing.T) {
 			ignoreTime := cmpopts.IgnoreFields(apis.Condition{},
 				"LastTransitionTime", "Severity")
 			if diff := cmp.Diff(test.want, got, ignoreTime); diff != "" {
+				availableDeployment.Spec.Template.Spec.SecurityContext.WindowsOptions.DeepCopy()
 				t.Errorf("unexpected condition (-want, +got) = %v", diff)
 			}
 		})
