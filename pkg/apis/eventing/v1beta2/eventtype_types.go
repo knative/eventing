@@ -65,7 +65,6 @@ type EventTypeSpec struct {
 	// Type represents the CloudEvents type. It is authoritative.
 	Type string `json:"type"`
 	// Source is a URI, it represents the CloudEvents source.
-	// +optional
 	Source *apis.URL `json:"source,omitempty"`
 	// Schema is a URI, it represents the CloudEvents schemaurl extension attribute.
 	// It may be a JSON schema, a protobuf schema, etc. It is optional.
