@@ -59,11 +59,11 @@ const (
 )
 
 type SinkBindingSubResourcesReconciler struct {
-	res     *resolver.URIResolver
-	tracker tracker.Interface
+	res                  *resolver.URIResolver
+	tracker              tracker.Interface
 	serviceAccountLister corev1listers.ServiceAccountLister
-	kubeclient kubernetes.Interface
-	featureStore *feature.Store
+	kubeclient           kubernetes.Interface
+	featureStore         *feature.Store
 }
 
 // NewController returns a new SinkBinding reconciler.
@@ -117,11 +117,11 @@ func NewController(
 
 	sbResolver := resolver.NewURIResolverFromTracker(ctx, impl.Tracker)
 	c.SubResourcesReconciler = &SinkBindingSubResourcesReconciler{
-		res:     sbResolver,
-		tracker: impl.Tracker,
+		res:                  sbResolver,
+		tracker:              impl.Tracker,
 		kubeclient:           kubeclient.Get(ctx),
 		serviceAccountLister: serviceaccountInformer.Lister(),
-		featureStore: featureStore,
+		featureStore:         featureStore,
 	}
 
 	c.WithContext = func(ctx context.Context, b psbinding.Bindable) (context.Context, error) {
@@ -196,7 +196,7 @@ func (s *SinkBindingSubResourcesReconciler) Reconcile(ctx context.Context, b psb
 			Name:       sb.Spec.Sink.Ref.Name,
 		}, b)
 	}
-	
+
 	featureFlags := s.featureStore.Load()
 	if featureFlags.IsOIDCAuthentication() {
 		saName := auth.GetOIDCServiceAccountNameForResource(v1.SchemeGroupVersion.WithKind("SinkBinding"), sb.ObjectMeta)

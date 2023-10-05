@@ -192,7 +192,7 @@ func TestSinkBindingStatusIsReady(t *testing.T) {
 			s.InitializeConditions()
 			s.MarkSink(sink)
 			s.MarkBindingAvailable()
-			s.MarkOIDCIdentityCreatedSucceededWithReason("TheReason", "feature is disbaled")
+			s.MarkOIDCIdentityCreatedSucceededWithReason("TheReason", "feature is disabled")
 			return s
 		}(),
 		want: true,
@@ -208,7 +208,6 @@ func TestSinkBindingStatusIsReady(t *testing.T) {
 		}(),
 		want: false,
 	}}
-
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

@@ -118,6 +118,7 @@ func (sbs *SinkBindingStatus) MarkOIDCIdentityCreatedNotSupported() {
 	// in case the OIDC feature is not supported, we mark the condition as true, to not mark the SinkBinding unready.
 	sbCondSet.Manage(sbs).MarkTrueWithReason(SinkBindingConditionOIDCIdentityCreated, fmt.Sprintf("%s feature not yet supported for SinkBinding", feature.OIDCAuthentication), "")
 }
+
 // Do implements psbinding.Bindable
 func (sb *SinkBinding) Do(ctx context.Context, ps *duckv1.WithPod) {
 	// First undo so that we can just unconditionally append below.
