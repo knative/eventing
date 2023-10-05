@@ -5628,6 +5628,20 @@ Source.</p>
 <p>Namespaces show the namespaces currently watched by the ApiServerSource</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>auth</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#AuthStatus">
+knative.dev/pkg/apis/duck/v1.AuthStatus
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Auth provides the relevant information for OIDC authentication.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="sources.knative.dev/v1.ContainerSourceSpec">ContainerSourceSpec
