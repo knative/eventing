@@ -173,7 +173,7 @@ func TestSinkBindingStatusIsReady(t *testing.T) {
 			s.MarkBindingAvailable()
 			return s
 		}(),
-		want: false,
+		want: true,
 	}, {
 		name: "mark OIDC identity created",
 		s: func() *SinkBindingStatus {
