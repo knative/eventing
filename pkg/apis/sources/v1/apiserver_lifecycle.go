@@ -132,17 +132,17 @@ func (s *ApiServerSourceStatus) IsReady() bool {
 }
 
 func (s *ApiServerSourceStatus) MarkOIDCIdentityCreatedSucceeded() {
-    apiserverCondSet.Manage(s).MarkTrue(ApiServerConditionOIDCIdentityCreated)
+	apiserverCondSet.Manage(s).MarkTrue(ApiServerConditionOIDCIdentityCreated)
 }
 
 func (s *ApiServerSourceStatus) MarkOIDCIdentityCreatedSucceededWithReason(reason, messageFormat string, messageA ...interface{}) {
-    apiserverCondSet.Manage(s).MarkTrueWithReason(ApiServerConditionOIDCIdentityCreated, reason, messageFormat, messageA...)
+	apiserverCondSet.Manage(s).MarkTrueWithReason(ApiServerConditionOIDCIdentityCreated, reason, messageFormat, messageA...)
 }
 
 func (s *ApiServerSourceStatus) MarkOIDCIdentityCreatedFailed(reason, messageFormat string, messageA ...interface{}) {
-    apiserverCondSet.Manage(s).MarkFalse(ApiServerConditionOIDCIdentityCreated, reason, messageFormat, messageA...)
+	apiserverCondSet.Manage(s).MarkFalse(ApiServerConditionOIDCIdentityCreated, reason, messageFormat, messageA...)
 }
 
 func (s *ApiServerSourceStatus) MarkOIDCIdentityCreatedUnknown(reason, messageFormat string, messageA ...interface{}) {
-    apiserverCondSet.Manage(s).MarkUnknown(ApiServerConditionOIDCIdentityCreated, reason, messageFormat, messageA...)
+	apiserverCondSet.Manage(s).MarkUnknown(ApiServerConditionOIDCIdentityCreated, reason, messageFormat, messageA...)
 }

@@ -27,10 +27,10 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/kmeta"
 
+	"knative.dev/eventing/pkg/apis/feature"
 	apisources "knative.dev/eventing/pkg/apis/sources"
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/eventing/pkg/reconciler/testing"
-	"knative.dev/eventing/pkg/apis/feature"
 )
 
 // ApiServerSourceOption enables further configuration of a v1 ApiServer.
@@ -150,7 +150,6 @@ func WithApiServerSourceStatusNamespaces(namespaces []string) ApiServerSourceOpt
 		c.Status.Namespaces = namespaces
 	}
 }
-
 
 func WithApiServerSourceOIDCIdentityCreatedSucceeded() ApiServerSourceOption {
 	return func(c *v1.ApiServerSource) {

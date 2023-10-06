@@ -58,10 +58,10 @@ func NewController(
 	serviceaccountInformer := serviceaccountinformer.Get(ctx)
 
 	r := &Reconciler{
-		kubeClientSet:   kubeclient.Get(ctx),
-		ceSource:        GetCfgHost(ctx),
-		configs:         reconcilersource.WatchConfigurations(ctx, component, cmw),
-		namespaceLister: namespaceInformer.Lister(),
+		kubeClientSet:        kubeclient.Get(ctx),
+		ceSource:             GetCfgHost(ctx),
+		configs:              reconcilersource.WatchConfigurations(ctx, component, cmw),
+		namespaceLister:      namespaceInformer.Lister(),
 		serviceAccountLister: serviceaccountInformer.Lister(),
 	}
 
