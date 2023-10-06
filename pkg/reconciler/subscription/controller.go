@@ -19,6 +19,7 @@ package subscription
 import (
 	"context"
 
+	"k8s.io/client-go/tools/cache"
 	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/pkg/client/injection/apiextensions/informers/apiextensions/v1/customresourcedefinition"
 	"knative.dev/pkg/configmap"
@@ -33,6 +34,8 @@ import (
 	"knative.dev/eventing/pkg/client/injection/informers/messaging/v1/subscription"
 	subscriptionreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/subscription"
 	"knative.dev/eventing/pkg/duck"
+	kubeclient "knative.dev/pkg/client/injection/kube/client"
+	serviceaccountinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount"
 	"knative.dev/pkg/injection/clients/dynamicclient"
 )
 
@@ -45,15 +48,18 @@ func NewController(
 
 	subscriptionInformer := subscription.Get(ctx)
 	channelInformer := channel.Get(ctx)
+	serviceaccountInformer := serviceaccountinformer.Get(ctx)
 
 	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"))
 	featureStore.WatchConfigs(cmw)
 
 	r := &Reconciler{
-		dynamicClientSet:   dynamicclient.Get(ctx),
-		kreferenceResolver: kref.NewKReferenceResolver(customresourcedefinition.Get(ctx).Lister()),
-		subscriptionLister: subscriptionInformer.Lister(),
-		channelLister:      channelInformer.Lister(),
+		dynamicClientSet:     dynamicclient.Get(ctx),
+		kubeclient:           kubeclient.Get(ctx),
+		kreferenceResolver:   kref.NewKReferenceResolver(customresourcedefinition.Get(ctx).Lister()),
+		subscriptionLister:   subscriptionInformer.Lister(),
+		channelLister:        channelInformer.Lister(),
+		serviceAccountLister: serviceaccountInformer.Lister(),
 	}
 	impl := subscriptionreconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
 		return controller.Options{
@@ -80,5 +86,10 @@ func NewController(
 		),
 	))
 
+	// Reconciler Subscription when the OIDC service account changes
+	serviceaccountInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: controller.FilterController(&messagingv1.Subscription{}),
+		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
+	})
 	return impl
 }
