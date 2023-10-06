@@ -100,6 +100,7 @@ func main() {
 	log.Printf("Registering %d informers", len(injection.Default.GetInformers()))
 
 	ctx, informers := injection.Default.SetupInformers(ctx, cfg)
+	ctx = injection.WithConfig(ctx, cfg)
 	loggingConfig, err := cmdbroker.GetLoggingConfig(ctx, system.Namespace(), logging.ConfigMapName())
 	if err != nil {
 		log.Fatal("Error loading/parsing logging configuration:", err)
@@ -150,11 +151,16 @@ func main() {
 	})
 	featureStore.WatchConfigs(configMapWatcher)
 
+	// Decorate contexts with the current state of the feature config.
+	ctxFunc := func(ctx context.Context) context.Context {
+		return featureStore.ToContext(ctx)
+	}
+
 	reporter := ingress.NewStatsReporter(env.ContainerName, kmeta.ChildName(env.PodName, uuid.New().String()))
 
 	oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
-
-	handler, err = ingress.NewHandler(logger, reporter, broker.TTLDefaulter(logger, int32(env.MaxTTL)), brokerInformer, oidcTokenProvider)
+	oidcTokenVerifier := auth.NewOIDCTokenVerifier(ctx)
+	handler, err = ingress.NewHandler(logger, reporter, broker.TTLDefaulter(logger, int32(env.MaxTTL)), brokerInformer, oidcTokenVerifier, oidcTokenProvider, ctxFunc)
 	if err != nil {
 		logger.Fatal("Error creating Handler", zap.Error(err))
 	}
