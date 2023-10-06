@@ -34,6 +34,7 @@ import (
 	_ "knative.dev/eventing/pkg/client/injection/informers/sources/v1/apiserversource/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/namespace/fake"
+	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount/fake"
 	. "knative.dev/pkg/reconciler/testing"
 )
 
