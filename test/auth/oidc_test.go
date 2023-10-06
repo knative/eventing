@@ -21,6 +21,7 @@ package auth
 
 import (
 	"testing"
+	"time"
 
 	"knative.dev/pkg/system"
 	"knative.dev/reconciler-test/pkg/environment"
@@ -42,4 +43,20 @@ func TestBrokerAudiencePopulated(t *testing.T) {
 	)
 
 	env.Test(ctx, t, oidc.BrokerGetsAudiencePopulated(env.Namespace()))
+}
+
+func TestBrokerSupportsOIDC(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+		environment.WithPollTimings(4*time.Second, 12*time.Minute),
+	)
+
+	env.Test(ctx, t, auth.BrokerRejectEventForWrongAudience())
+	env.Test(ctx, t, auth.BrokerHandlesEventWithValidOIDCToken())
 }
