@@ -878,130 +878,123 @@ func TestReconcile(t *testing.T) {
 		},
 		WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor(true)},
 		SkipNamespaceValidation: true, // SubjectAccessReview objects are cluster-scoped.
-	}, {
-		Name: "OIDC: creates OIDC service account",
-		Ctx: feature.ToContext(context.Background(), feature.Flags{
-			feature.OIDCAuthentication: feature.Enabled,
-		}),
-		Objects: []runtime.Object{
-			rttestingv1.NewApiServerSource(sourceName, testNS,
-				rttestingv1.WithApiServerSourceSpec(sourcesv1.ApiServerSourceSpec{
-					Resources: []sourcesv1.APIVersionKindSelector{{
-						APIVersion: "v1",
-						Kind:       "Namespace",
-					}},
-					SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
-				}),
-				rttestingv1.WithApiServerSourceUID(sourceUID),
-				rttestingv1.WithApiServerSourceObjectMetaGeneration(generation),
-			),
-			rttestingv1.NewChannel(sinkName, testNS,
-				rttestingv1.WithInitChannelConditions,
-				rttestingv1.WithChannelAddress(sinkAddressable),
-			),
-			makeAvailableReceiveAdapter(t),
-		},
-		Key: testNS + "/" + sourceName,
-		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-			Object: rttestingv1.NewApiServerSource(sourceName, testNS,
-				rttestingv1.WithApiServerSourceSpec(sourcesv1.ApiServerSourceSpec{
-					Resources: []sourcesv1.APIVersionKindSelector{{
-						APIVersion: "v1",
-						Kind:       "Namespace",
-					}},
-					SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
-				}),
-				rttestingv1.WithApiServerSourceUID(sourceUID),
-				rttestingv1.WithApiServerSourceObjectMetaGeneration(generation),
-				// Status Update:
-				rttestingv1.WithInitApiServerSourceConditions,
-				rttestingv1.WithApiServerSourceDeployed,
-				rttestingv1.WithApiServerSourceSink(sinkURI),
-				rttestingv1.WithApiServerSourceSufficientPermissions,
-				rttestingv1.WithApiServerSourceReferenceModeEventTypes(source),
-				rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
-				rttestingv1.WithApiServerSourceStatusNamespaces([]string{testNS}),
-				rttestingv1.WithApiServerSourceOIDCIdentityCreatedSucceeded(),
-				rttestingv1.WithApiServerSourceOIDCServiceAccountName(makeApiServerSourceOIDCServiceAccount().Name),
-			),
-		}},
-		WantCreates: []runtime.Object{
-			makeSubjectAccessReview("namespaces", "get", "default"),
-			makeSubjectAccessReview("namespaces", "list", "default"),
-			makeSubjectAccessReview("namespaces", "watch", "default"),
-			makeApiServerSourceOIDCServiceAccount(),
-		},
-		WantEvents: []string{
-			Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", sourceName),
-		},
-		WantPatches: []clientgotesting.PatchActionImpl{
-			patchFinalizers(sourceName, testNS),
-		},
-		WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor(true)},
-		SkipNamespaceValidation: true, // SubjectAccessReview objects are cluster-scoped.
-	}, {
-		Name: "OIDC: ApiServerSource not ready on invalid OIDC service account",
-		Ctx: feature.ToContext(context.Background(), feature.Flags{
-			feature.OIDCAuthentication: feature.Enabled,
-		}),
-		Objects: []runtime.Object{
-			makeApiServerSourceOIDCServiceAccountWithoutOwnerRef(),
-			rttestingv1.NewApiServerSource(sourceName, testNS,
-				rttestingv1.WithApiServerSourceSpec(sourcesv1.ApiServerSourceSpec{
-					Resources: []sourcesv1.APIVersionKindSelector{{
-						APIVersion: "v1",
-						Kind:       "Namespace",
-					}},
-					SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
-				}),
-				rttestingv1.WithApiServerSourceUID(sourceUID),
-				rttestingv1.WithApiServerSourceObjectMetaGeneration(generation),
-			),
-			rttestingv1.NewChannel(sinkName, testNS,
-				rttestingv1.WithInitChannelConditions,
-				rttestingv1.WithChannelAddress(sinkAddressable),
-			),
-			makeAvailableReceiveAdapter(t),
-		},
-		Key: testNS + "/" + sourceName,
-		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-			Object: rttestingv1.NewApiServerSource(sourceName, testNS,
-				rttestingv1.WithApiServerSourceSpec(sourcesv1.ApiServerSourceSpec{
-					Resources: []sourcesv1.APIVersionKindSelector{{
-						APIVersion: "v1",
-						Kind:       "Namespace",
-					}},
-					SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
-				}),
-				rttestingv1.WithApiServerSourceUID(sourceUID),
-				rttestingv1.WithApiServerSourceObjectMetaGeneration(generation),
-				// Status Update:
-				rttestingv1.WithInitApiServerSourceConditions,
-				rttestingv1.WithApiServerSourceDeployed,
-				rttestingv1.WithApiServerSourceSink(sinkURI),
-				rttestingv1.WithApiServerSourceSufficientPermissions,
-				rttestingv1.WithApiServerSourceReferenceModeEventTypes(source),
-				rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
-				rttestingv1.WithApiServerSourceStatusNamespaces([]string{testNS}),
-				rttestingv1.WithApiServerSourceOIDCIdentityCreatedFailed("Unable to resolve service account for OIDC authentication", fmt.Sprintf("service account %s not owned by ApiServerSource %s", makeApiServerSourceOIDCServiceAccountWithoutOwnerRef().Name, sourceName)),
-				rttestingv1.WithApiServerSourceOIDCServiceAccountName(makeApiServerSourceOIDCServiceAccount().Name),
-			),
-		}},
-		WantCreates: []runtime.Object{
-			makeSubjectAccessReview("namespaces", "get", "default"),
-			makeSubjectAccessReview("namespaces", "list", "default"),
-			makeSubjectAccessReview("namespaces", "watch", "default"),
-			makeApiServerSourceOIDCServiceAccount(),
-		},
-		WantEvents: []string{
-			Eventf(corev1.EventTypeWarning, "InternalError", fmt.Sprintf("service account %s not owned by ApiServerSource %s", makeApiServerSourceOIDCServiceAccountWithoutOwnerRef().Name, sourceName)),
-		},
-		WantPatches: []clientgotesting.PatchActionImpl{
-			patchFinalizers(sourceName, testNS),
-		},
-		WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor(true)},
-		SkipNamespaceValidation: true, // SubjectAccessReview objects are cluster-scoped.
 	},
+		{
+			Name: "OIDC: creates OIDC service account",
+			Ctx: feature.ToContext(context.Background(), feature.Flags{
+				feature.OIDCAuthentication: feature.Enabled,
+			}),
+			Objects: []runtime.Object{
+				rttestingv1.NewApiServerSource(sourceName, testNS,
+					rttestingv1.WithApiServerSourceSpec(sourcesv1.ApiServerSourceSpec{
+						Resources: []sourcesv1.APIVersionKindSelector{{
+							APIVersion: "v1",
+							Kind:       "Namespace",
+						}},
+						SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
+					}),
+					rttestingv1.WithApiServerSourceUID(sourceUID),
+					rttestingv1.WithApiServerSourceObjectMetaGeneration(generation),
+				),
+				rttestingv1.NewChannel(sinkName, testNS,
+					rttestingv1.WithInitChannelConditions,
+					rttestingv1.WithChannelAddress(sinkAddressable),
+				),
+				makeAvailableReceiveAdapter(t),
+			},
+			Key: testNS + "/" + sourceName,
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: rttestingv1.NewApiServerSource(sourceName, testNS,
+					rttestingv1.WithApiServerSourceSpec(sourcesv1.ApiServerSourceSpec{
+						Resources: []sourcesv1.APIVersionKindSelector{{
+							APIVersion: "v1",
+							Kind:       "Namespace",
+						}},
+						SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
+					}),
+					rttestingv1.WithApiServerSourceUID(sourceUID),
+					rttestingv1.WithApiServerSourceObjectMetaGeneration(generation),
+					// Status Update:
+					rttestingv1.WithInitApiServerSourceConditions,
+					rttestingv1.WithApiServerSourceDeployed,
+					rttestingv1.WithApiServerSourceSink(sinkURI),
+					rttestingv1.WithApiServerSourceSufficientPermissions,
+					rttestingv1.WithApiServerSourceReferenceModeEventTypes(source),
+					rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
+					rttestingv1.WithApiServerSourceStatusNamespaces([]string{testNS}),
+					rttestingv1.WithApiServerSourceOIDCIdentityCreatedSucceeded(),
+					rttestingv1.WithApiServerSourceOIDCServiceAccountName(makeApiServerSourceOIDCServiceAccount().Name),
+				),
+			}},
+			WantCreates: []runtime.Object{
+				makeApiServerSourceOIDCServiceAccount(),
+				makeSubjectAccessReview("namespaces", "get", "default"),
+				makeSubjectAccessReview("namespaces", "list", "default"),
+				makeSubjectAccessReview("namespaces", "watch", "default"),
+			},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", sourceName),
+			},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchFinalizers(sourceName, testNS),
+			},
+			WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor(true)},
+			SkipNamespaceValidation: true, // SubjectAccessReview objects are cluster-scoped.
+		},
+		{
+			Name: "OIDC: ApiServerSource not ready on invalid OIDC service account",
+			Ctx: feature.ToContext(context.Background(), feature.Flags{
+				feature.OIDCAuthentication: feature.Enabled,
+			}),
+			Objects: []runtime.Object{
+				makeApiServerSourceOIDCServiceAccountWithoutOwnerRef(),
+				rttestingv1.NewApiServerSource(sourceName, testNS,
+					rttestingv1.WithApiServerSourceSpec(sourcesv1.ApiServerSourceSpec{
+						Resources: []sourcesv1.APIVersionKindSelector{{
+							APIVersion: "v1",
+							Kind:       "Namespace",
+						}},
+						SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
+					}),
+					rttestingv1.WithApiServerSourceUID(sourceUID),
+					rttestingv1.WithApiServerSourceObjectMetaGeneration(generation),
+				),
+				rttestingv1.NewChannel(sinkName, testNS,
+					rttestingv1.WithInitChannelConditions,
+					rttestingv1.WithChannelAddress(sinkAddressable),
+				),
+				makeAvailableReceiveAdapter(t),
+			},
+			Key: testNS + "/" + sourceName,
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: rttestingv1.NewApiServerSource(sourceName, testNS,
+					rttestingv1.WithApiServerSourceSpec(sourcesv1.ApiServerSourceSpec{
+						Resources: []sourcesv1.APIVersionKindSelector{{
+							APIVersion: "v1",
+							Kind:       "Namespace",
+						}},
+						SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
+					}),
+					rttestingv1.WithApiServerSourceUID(sourceUID),
+					rttestingv1.WithApiServerSourceObjectMetaGeneration(generation),
+					// Status Update:
+					rttestingv1.WithInitApiServerSourceConditions,
+					rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
+					rttestingv1.WithApiServerSourceOIDCIdentityCreatedFailed("Unable to resolve service account for OIDC authentication", fmt.Sprintf("service account %s not owned by ApiServerSource %s", makeApiServerSourceOIDCServiceAccountWithoutOwnerRef().Name, sourceName)),
+					rttestingv1.WithApiServerSourceOIDCServiceAccountName(makeApiServerSourceOIDCServiceAccount().Name),
+				),
+			}},
+			WantErr: true,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", sourceName),
+				Eventf(corev1.EventTypeWarning, "InternalError", fmt.Sprintf("service account %s not owned by ApiServerSource %s", makeApiServerSourceOIDCServiceAccountWithoutOwnerRef().Name, sourceName)),
+			},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchFinalizers(sourceName, testNS),
+			},
+			WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor(true)},
+			SkipNamespaceValidation: true, // SubjectAccessReview objects are cluster-scoped.
+		},
 	}
 
 	logger := logtesting.TestLogger(t)
