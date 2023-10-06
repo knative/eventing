@@ -23,13 +23,24 @@ import (
 )
 
 const (
-	PassFilter FilterResult = "pass"
-	FailFilter FilterResult = "fail"
-	NoFilter   FilterResult = "no_filter"
+	PassFilter FilterResult = iota
+	FailFilter
+	NoFilter
 )
 
 // FilterResult has the result of the filtering operation.
-type FilterResult string
+type FilterResult int
+
+func (x FilterResult) String() string {
+	switch x {
+	case PassFilter:
+		return "PassFilter"
+	case FailFilter:
+		return "FailFilter"
+	default:
+		return "NoFilter"
+	}
+}
 
 // Filter is an interface representing an event filter of the trigger filter
 type Filter interface {

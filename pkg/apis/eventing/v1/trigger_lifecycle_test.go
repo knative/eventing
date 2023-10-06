@@ -155,7 +155,7 @@ func TestTriggerInitializeConditions(t *testing.T) {
 					Status: corev1.ConditionUnknown,
 				}, {
 					Type:   TriggerConditionOIDCIdentityCreated,
-					Status: corev1.ConditionUnknown,
+					Status: corev1.ConditionTrue,
 				}, {
 					Type:   TriggerConditionReady,
 					Status: corev1.ConditionUnknown,
@@ -192,10 +192,10 @@ func TestTriggerInitializeConditions(t *testing.T) {
 					Status: corev1.ConditionUnknown,
 				}, {
 					Type:   TriggerConditionOIDCIdentityCreated,
-					Status: corev1.ConditionUnknown,
+					Status: corev1.ConditionTrue,
 				}, {
 					Type:   TriggerConditionReady,
-					Status: corev1.ConditionUnknown,
+					Status: corev1.ConditionFalse,
 				}, {
 					Type:   TriggerConditionSubscriberResolved,
 					Status: corev1.ConditionUnknown,
@@ -229,7 +229,7 @@ func TestTriggerInitializeConditions(t *testing.T) {
 					Status: corev1.ConditionUnknown,
 				}, {
 					Type:   TriggerConditionOIDCIdentityCreated,
-					Status: corev1.ConditionUnknown,
+					Status: corev1.ConditionTrue,
 				}, {
 					Type:   TriggerConditionReady,
 					Status: corev1.ConditionUnknown,

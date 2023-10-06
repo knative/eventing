@@ -21,13 +21,12 @@ package fake
 import (
 	"context"
 
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
-	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	testing "k8s.io/client-go/testing"
-	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
+	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
 )
 
 // FakeSubscriptions implements SubscriptionInterface
@@ -36,25 +35,25 @@ type FakeSubscriptions struct {
 	ns   string
 }
 
-var subscriptionsResource = schema.GroupVersionResource{Group: "messaging.knative.dev", Version: "v1", Resource: "subscriptions"}
+var subscriptionsResource = v1.SchemeGroupVersion.WithResource("subscriptions")
 
-var subscriptionsKind = schema.GroupVersionKind{Group: "messaging.knative.dev", Version: "v1", Kind: "Subscription"}
+var subscriptionsKind = v1.SchemeGroupVersion.WithKind("Subscription")
 
 // Get takes name of the subscription, and returns the corresponding subscription object, and an error if there is any.
-func (c *FakeSubscriptions) Get(ctx context.Context, name string, options v1.GetOptions) (result *messagingv1.Subscription, err error) {
+func (c *FakeSubscriptions) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.Subscription, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewGetAction(subscriptionsResource, c.ns, name), &messagingv1.Subscription{})
+		Invokes(testing.NewGetAction(subscriptionsResource, c.ns, name), &v1.Subscription{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*messagingv1.Subscription), err
+	return obj.(*v1.Subscription), err
 }
 
 // List takes label and field selectors, and returns the list of Subscriptions that match those selectors.
-func (c *FakeSubscriptions) List(ctx context.Context, opts v1.ListOptions) (result *messagingv1.SubscriptionList, err error) {
+func (c *FakeSubscriptions) List(ctx context.Context, opts metav1.ListOptions) (result *v1.SubscriptionList, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewListAction(subscriptionsResource, subscriptionsKind, c.ns, opts), &messagingv1.SubscriptionList{})
+		Invokes(testing.NewListAction(subscriptionsResource, subscriptionsKind, c.ns, opts), &v1.SubscriptionList{})
 
 	if obj == nil {
 		return nil, err
@@ -64,8 +63,8 @@ func (c *FakeSubscriptions) List(ctx context.Context, opts v1.ListOptions) (resu
 	if label == nil {
 		label = labels.Everything()
 	}
-	list := &messagingv1.SubscriptionList{ListMeta: obj.(*messagingv1.SubscriptionList).ListMeta}
-	for _, item := range obj.(*messagingv1.SubscriptionList).Items {
+	list := &v1.SubscriptionList{ListMeta: obj.(*v1.SubscriptionList).ListMeta}
+	for _, item := range obj.(*v1.SubscriptionList).Items {
 		if label.Matches(labels.Set(item.Labels)) {
 			list.Items = append(list.Items, item)
 		}
@@ -74,69 +73,69 @@ func (c *FakeSubscriptions) List(ctx context.Context, opts v1.ListOptions) (resu
 }
 
 // Watch returns a watch.Interface that watches the requested subscriptions.
-func (c *FakeSubscriptions) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
+func (c *FakeSubscriptions) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewWatchAction(subscriptionsResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a subscription and creates it.  Returns the server's representation of the subscription, and an error, if there is any.
-func (c *FakeSubscriptions) Create(ctx context.Context, subscription *messagingv1.Subscription, opts v1.CreateOptions) (result *messagingv1.Subscription, err error) {
+func (c *FakeSubscriptions) Create(ctx context.Context, subscription *v1.Subscription, opts metav1.CreateOptions) (result *v1.Subscription, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(subscriptionsResource, c.ns, subscription), &messagingv1.Subscription{})
+		Invokes(testing.NewCreateAction(subscriptionsResource, c.ns, subscription), &v1.Subscription{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*messagingv1.Subscription), err
+	return obj.(*v1.Subscription), err
 }
 
 // Update takes the representation of a subscription and updates it. Returns the server's representation of the subscription, and an error, if there is any.
-func (c *FakeSubscriptions) Update(ctx context.Context, subscription *messagingv1.Subscription, opts v1.UpdateOptions) (result *messagingv1.Subscription, err error) {
+func (c *FakeSubscriptions) Update(ctx context.Context, subscription *v1.Subscription, opts metav1.UpdateOptions) (result *v1.Subscription, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateAction(subscriptionsResource, c.ns, subscription), &messagingv1.Subscription{})
+		Invokes(testing.NewUpdateAction(subscriptionsResource, c.ns, subscription), &v1.Subscription{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*messagingv1.Subscription), err
+	return obj.(*v1.Subscription), err
 }
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeSubscriptions) UpdateStatus(ctx context.Context, subscription *messagingv1.Subscription, opts v1.UpdateOptions) (*messagingv1.Subscription, error) {
+func (c *FakeSubscriptions) UpdateStatus(ctx context.Context, subscription *v1.Subscription, opts metav1.UpdateOptions) (*v1.Subscription, error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceAction(subscriptionsResource, "status", c.ns, subscription), &messagingv1.Subscription{})
+		Invokes(testing.NewUpdateSubresourceAction(subscriptionsResource, "status", c.ns, subscription), &v1.Subscription{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*messagingv1.Subscription), err
+	return obj.(*v1.Subscription), err
 }
 
 // Delete takes name of the subscription and deletes it. Returns an error if one occurs.
-func (c *FakeSubscriptions) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
+func (c *FakeSubscriptions) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteActionWithOptions(subscriptionsResource, c.ns, name, opts), &messagingv1.Subscription{})
+		Invokes(testing.NewDeleteActionWithOptions(subscriptionsResource, c.ns, name, opts), &v1.Subscription{})
 
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeSubscriptions) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+func (c *FakeSubscriptions) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
 	action := testing.NewDeleteCollectionAction(subscriptionsResource, c.ns, listOpts)
 
-	_, err := c.Fake.Invokes(action, &messagingv1.SubscriptionList{})
+	_, err := c.Fake.Invokes(action, &v1.SubscriptionList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched subscription.
-func (c *FakeSubscriptions) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *messagingv1.Subscription, err error) {
+func (c *FakeSubscriptions) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Subscription, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(subscriptionsResource, c.ns, name, pt, data, subresources...), &messagingv1.Subscription{})
+		Invokes(testing.NewPatchSubresourceAction(subscriptionsResource, c.ns, name, pt, data, subresources...), &v1.Subscription{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*messagingv1.Subscription), err
+	return obj.(*v1.Subscription), err
 }
