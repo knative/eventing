@@ -83,5 +83,5 @@ func (c *OIDCTokenProvider) GetJWT(serviceAccount types.NamespacedName, audience
 }
 
 func cacheKey(serviceAccount types.NamespacedName, audience string) string {
-	return fmt.Sprintf("%s.%s.%s", serviceAccount.Namespace, serviceAccount.Name, audience)
+	return fmt.Sprintf("%s/%s/%s", serviceAccount.Namespace, serviceAccount.Name, audience)
 }
