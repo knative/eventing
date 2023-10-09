@@ -26,7 +26,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/apis/duck"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -73,7 +72,6 @@ func (sbs *SinkBindingStatus) SetObservedGeneration(gen int64) {
 // with all of its conditions configured to Unknown.
 func (sbs *SinkBindingStatus) InitializeConditions() {
 	sbCondSet.Manage(sbs).InitializeConditions()
-	sbs.MarkOIDCIdentityCreatedNotSupported()
 }
 
 // MarkBindingUnavailable marks the SinkBinding's Ready condition to False with
@@ -112,11 +110,6 @@ func (sbs *SinkBindingStatus) MarkOIDCIdentityCreatedFailed(reason, messageForma
 
 func (sbs *SinkBindingStatus) MarkOIDCIdentityCreatedUnknown(reason, messageFormat string, messageA ...interface{}) {
 	sbCondSet.Manage(sbs).MarkUnknown(SinkBindingConditionOIDCIdentityCreated, reason, messageFormat, messageA...)
-}
-
-func (sbs *SinkBindingStatus) MarkOIDCIdentityCreatedNotSupported() {
-	// in case the OIDC feature is not supported, we mark the condition as true, to not mark the SinkBinding unready.
-	sbCondSet.Manage(sbs).MarkTrueWithReason(SinkBindingConditionOIDCIdentityCreated, fmt.Sprintf("%s feature not yet supported for SinkBinding", feature.OIDCAuthentication), "")
 }
 
 // Do implements psbinding.Bindable

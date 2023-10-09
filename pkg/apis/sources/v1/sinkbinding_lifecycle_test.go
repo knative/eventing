@@ -171,6 +171,7 @@ func TestSinkBindingStatusIsReady(t *testing.T) {
 			s.InitializeConditions()
 			s.MarkSink(sink)
 			s.MarkBindingAvailable()
+			s.MarkOIDCIdentityCreatedSucceeded()
 			return s
 		}(),
 		want: true,
