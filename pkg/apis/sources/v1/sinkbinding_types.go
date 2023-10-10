@@ -92,7 +92,6 @@ type SinkBindingStatus struct {
 	//   state.
 	// * SinkURI - the current active sink URI that has been configured for the
 	//   Source.
-	// * AuthStatus - the current status of the authentication configuration
 	duckv1.SourceStatus `json:",inline"`
 }
 
