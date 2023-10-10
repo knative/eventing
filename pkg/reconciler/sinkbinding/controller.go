@@ -112,7 +112,7 @@ func NewController(
 	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {
 		impl.GlobalResync(sbInformer.Informer())
 	})
-	
+
 	featureStore.WatchConfigs(cmw)
 
 	sbInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
