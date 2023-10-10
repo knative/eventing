@@ -18,6 +18,7 @@ package pingsource
 
 import (
 	"context"
+	serviceaccountinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount"
 
 	"go.uber.org/zap"
 
@@ -67,11 +68,13 @@ func NewController(
 
 	deploymentInformer := deploymentinformer.Get(ctx)
 	pingSourceInformer := pingsourceinformer.Get(ctx)
+	serviceaccountInformer := serviceaccountinformer.Get(ctx)
 
 	r := &Reconciler{
-		kubeClientSet: kubeclient.Get(ctx),
-		leConfig:      leConfig,
-		configAcc:     reconcilersource.WatchConfigurations(ctx, component, cmw),
+		kubeClientSet:        kubeclient.Get(ctx),
+		leConfig:             leConfig,
+		configAcc:            reconcilersource.WatchConfigurations(ctx, component, cmw),
+		serviceAccountLister: serviceaccountInformer.Lister(),
 	}
 
 	impl := pingsourcereconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
@@ -95,6 +98,11 @@ func NewController(
 				r.tracker.OnChanged,
 				appsv1.SchemeGroupVersion.WithKind("Deployment"),
 			)),
+	})
+
+	serviceaccountInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: controller.FilterWithNameAndNamespace(system.Namespace(), mtadapterName),
+		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 
 	return impl

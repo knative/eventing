@@ -35,11 +35,15 @@ const (
 
 	// PingSourceConditionDeployed has status True when the PingSource has had it's receive adapter deployment created.
 	PingSourceConditionDeployed apis.ConditionType = "Deployed"
+
+	// PingSourceConditionOIDCIdentityCreated has status True when the PingSource has had it's OIDC identity created.
+	PingSourceConditionOIDCIdentityCreated apis.ConditionType = "OIDCIdentityCreated"
 )
 
 var PingSourceCondSet = apis.NewLivingConditionSet(
 	PingSourceConditionSinkProvided,
-	PingSourceConditionDeployed)
+	PingSourceConditionDeployed,
+	PingSourceConditionOIDCIdentityCreated)
 
 const (
 	// PingSourceEventType is the default PingSource CloudEvent type.
@@ -121,4 +125,20 @@ func (s *PingSourceStatus) PropagateDeploymentAvailability(d *appsv1.Deployment)
 	if !deploymentAvailableFound {
 		PingSourceCondSet.Manage(s).MarkUnknown(PingSourceConditionDeployed, "DeploymentUnavailable", "The Deployment '%s' is unavailable.", d.Name)
 	}
+}
+
+func (s *PingSourceStatus) MarkOIDCIdentityCreatedSucceeded() {
+	PingSourceCondSet.Manage(s).MarkTrue(PingSourceConditionOIDCIdentityCreated)
+}
+
+func (s *PingSourceStatus) MarkOIDCIdentityCreatedSucceededWithReason(reason, messageFormat string, messageA ...interface{}) {
+	PingSourceCondSet.Manage(s).MarkTrueWithReason(PingSourceConditionOIDCIdentityCreated, reason, messageFormat, messageA...)
+}
+
+func (s *PingSourceStatus) MarkOIDCIdentityCreatedFailed(reason, messageFormat string, messageA ...interface{}) {
+	PingSourceCondSet.Manage(s).MarkFalse(PingSourceConditionOIDCIdentityCreated, reason, messageFormat, messageA...)
+}
+
+func (s *PingSourceStatus) MarkOIDCIdentityCreatedUnknown(reason, messageFormat string, messageA ...interface{}) {
+	PingSourceCondSet.Manage(s).MarkUnknown(PingSourceConditionOIDCIdentityCreated, reason, messageFormat, messageA...)
 }
