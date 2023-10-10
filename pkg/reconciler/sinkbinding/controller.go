@@ -80,9 +80,6 @@ func NewController(
 	serviceaccountInformer := serviceaccountinformer.Get(ctx)
 	configmapInformer := configmapinformer.Get(ctx)
 
-	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"))
-	featureStore.WatchConfigs(cmw)
-
 	c := &psbinding.BaseReconciler{
 		LeaderAwareFuncs: reconciler.LeaderAwareFuncs{
 			PromoteFunc: func(bkt reconciler.Bucket, enq func(reconciler.Bucket, types.NamespacedName)) error {
@@ -111,6 +108,12 @@ func NewController(
 		WorkQueueName: "SinkBindings",
 		Logger:        logger,
 	})
+
+	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {
+		impl.GlobalResync(sbInformer.Informer())
+	})
+	
+	featureStore.WatchConfigs(cmw)
 
 	sbInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 	namespaceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
