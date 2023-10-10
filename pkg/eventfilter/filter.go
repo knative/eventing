@@ -31,32 +31,6 @@ const (
 // FilterResult has the result of the filtering operation.
 type FilterResult int
 
-func (x FilterResult) And(y FilterResult) FilterResult {
-	if x == NoFilter {
-		return y
-	}
-	if y == NoFilter {
-		return x
-	}
-	if x == PassFilter && y == PassFilter {
-		return PassFilter
-	}
-	return FailFilter
-}
-
-func (x FilterResult) Or(y FilterResult) FilterResult {
-	if x == NoFilter {
-		return y
-	}
-	if y == NoFilter {
-		return x
-	}
-	if x == PassFilter || y == PassFilter {
-		return PassFilter
-	}
-	return FailFilter
-}
-
 func (x FilterResult) String() string {
 	switch x {
 	case PassFilter:
