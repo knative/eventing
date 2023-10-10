@@ -59,14 +59,16 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 	}
 
 	tests := []struct {
-		name                string
-		s                   *PingSourceStatus
-		wantConditionStatus corev1.ConditionStatus
-		want                bool
+		name                     string
+		s                        *PingSourceStatus
+		wantConditionStatus      corev1.ConditionStatus
+		want                     bool
+		oidcServiceAccountStatus bool
 	}{{
-		name: "uninitialized",
-		s:    &PingSourceStatus{},
-		want: false,
+		name:                     "uninitialized",
+		s:                        &PingSourceStatus{},
+		want:                     false,
+		oidcServiceAccountStatus: true,
 	}, {
 		name: "initialized",
 		s: func() *PingSourceStatus {
@@ -74,8 +76,9 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 			s.InitializeConditions()
 			return s
 		}(),
-		wantConditionStatus: corev1.ConditionUnknown,
-		want:                false,
+		wantConditionStatus:      corev1.ConditionUnknown,
+		want:                     false,
+		oidcServiceAccountStatus: true,
 	}, {
 		name: "mark deployed",
 		s: func() *PingSourceStatus {
@@ -84,8 +87,9 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 			s.PropagateDeploymentAvailability(availableDeployment)
 			return s
 		}(),
-		wantConditionStatus: corev1.ConditionUnknown,
-		want:                false,
+		wantConditionStatus:      corev1.ConditionUnknown,
+		want:                     false,
+		oidcServiceAccountStatus: true,
 	}, {
 		name: "mark sink",
 		s: func() *PingSourceStatus {
@@ -95,8 +99,9 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 			s.MarkSink(exampleAddr)
 			return s
 		}(),
-		wantConditionStatus: corev1.ConditionUnknown,
-		want:                false,
+		wantConditionStatus:      corev1.ConditionUnknown,
+		want:                     false,
+		oidcServiceAccountStatus: true,
 	}, {
 		name: "mark sink and deployed",
 		s: func() *PingSourceStatus {
@@ -106,12 +111,29 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 			s.PropagateDeploymentAvailability(availableDeployment)
 			return s
 		}(),
-		wantConditionStatus: corev1.ConditionTrue,
-		want:                true,
-	}}
+		wantConditionStatus:      corev1.ConditionTrue,
+		want:                     true,
+		oidcServiceAccountStatus: true,
+	},
+		{
+			name: "oidc status false with mark sink and deployed",
+			s: func() *PingSourceStatus {
+				s := &PingSourceStatus{}
+				s.InitializeConditions()
+				s.MarkSink(exampleAddr)
+				s.PropagateDeploymentAvailability(availableDeployment)
+				s.MarkOIDCIdentityCreatedSucceeded()
+				return s
+			}(),
+			wantConditionStatus:      corev1.ConditionUnknown,
+			want:                     true,
+			oidcServiceAccountStatus: false,
+		},
+	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			ss := &PingSourceStatus{}
 			if test.wantConditionStatus != "" {
 				gotConditionStatus := test.s.GetTopLevelCondition().Status
 				if gotConditionStatus != test.wantConditionStatus {
@@ -121,6 +143,11 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 			got := test.s.IsReady()
 			if got != test.want {
 				t.Errorf("unexpected readiness: want %v, got %v", test.want, got)
+			}
+			if test.oidcServiceAccountStatus {
+				ss.MarkOIDCIdentityCreatedSucceeded()
+			} else {
+				ss.MarkOIDCIdentityCreatedFailed("Unable to ...", "")
 			}
 		})
 	}
