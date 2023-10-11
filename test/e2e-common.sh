@@ -49,7 +49,7 @@ readonly CONFIG_TRACING_CONFIG="test/config/config-tracing.yaml"
 readonly KNATIVE_EVENTING_MONITORING_YAML="test/config/monitoring.yaml"
 
 # The number of controlplane replicas to run.
-readonly REPLICAS=3
+readonly REPLICAS=${REPLICAS:-3}
 
 # Should deploy a Knative Monitoring as well
 readonly DEPLOY_KNATIVE_MONITORING="${DEPLOY_KNATIVE_MONITORING:-1}"
@@ -76,6 +76,8 @@ UNINSTALL_LIST=()
 
 # Setup the Knative environment for running tests.
 function knative_setup() {
+  install_cert_manager || fail_test "Could not install Cert Manager"
+
   install_knative_eventing "HEAD"
 
   install_mt_broker || fail_test "Could not install MT Channel Based Broker"
@@ -83,8 +85,6 @@ function knative_setup() {
   enable_sugar || fail_test "Could not enable Sugar Controller Injection"
 
   unleash_duck || fail_test "Could not unleash the chaos duck"
-
-  install_cert_manager || fail_test "Could not install Cert Manager"
 }
 
 function scale_controlplane() {
@@ -146,6 +146,12 @@ function install_knative_eventing() {
     kubectl apply \
       -f "${EVENTING_CORE_NAME}" || return 1
     UNINSTALL_LIST+=( "${EVENTING_CORE_NAME}" )
+
+    local EVENTING_TLS_NAME=${TMP_DIR}/${EVENTING_TLS_YAML##*/}
+    sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" ${EVENTING_TLS_YAML} > ${EVENTING_TLS_NAME}
+    kubectl apply \
+      -f "${EVENTING_TLS_NAME}" || return 1
+    UNINSTALL_LIST+=( "${EVENTING_TLS_NAME}" )
 
     kubectl patch horizontalpodautoscalers.autoscaling -n ${SYSTEM_NAMESPACE} eventing-webhook -p '{"spec": {"minReplicas": '${REPLICAS}'}}' || return 1
 
