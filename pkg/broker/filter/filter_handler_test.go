@@ -39,6 +39,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/pkg/apis/feature"
+	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/broker"
 	"knative.dev/eventing/pkg/eventfilter/subscriptionsapi"
 	"knative.dev/pkg/apis"
@@ -46,6 +47,9 @@ import (
 	reconcilertesting "knative.dev/pkg/reconciler/testing"
 
 	triggerinformerfake "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/trigger/fake"
+
+	// Fake injection client
+	_ "knative.dev/pkg/client/injection/kube/client/fake"
 )
 
 const (
@@ -425,6 +429,9 @@ func TestReceiver(t *testing.T) {
 			s := httptest.NewServer(&fh)
 			defer s.Close()
 
+			logger := zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller()))
+			oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
+
 			// Replace the SubscriberURI to point at our fake server.
 			for _, trig := range tc.triggers {
 				if trig.Status.SubscriberURI != nil && trig.Status.SubscriberURI.String() == toBeReplaced {
@@ -439,7 +446,8 @@ func TestReceiver(t *testing.T) {
 			}
 			reporter := &mockReporter{}
 			r, err := NewHandler(
-				zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())),
+				logger,
+				oidcTokenProvider,
 				triggerinformerfake.Get(ctx),
 				reporter,
 				func(ctx context.Context) context.Context {
@@ -606,6 +614,9 @@ func TestReceiver_WithSubscriptionsAPI(t *testing.T) {
 
 			filtersMap := subscriptionsapi.NewFiltersMap()
 
+			logger := zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller()))
+			oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
+
 			// Replace the SubscriberURI to point at our fake server.
 			for _, trig := range tc.triggers {
 				if trig.Status.SubscriberURI != nil && trig.Status.SubscriberURI.String() == toBeReplaced {
@@ -621,7 +632,8 @@ func TestReceiver_WithSubscriptionsAPI(t *testing.T) {
 			}
 			reporter := &mockReporter{}
 			r, err := NewHandler(
-				zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())),
+				logger,
+				oidcTokenProvider,
 				triggerinformerfake.Get(ctx),
 				reporter,
 				func(ctx context.Context) context.Context {

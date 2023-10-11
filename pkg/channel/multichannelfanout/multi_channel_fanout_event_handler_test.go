@@ -28,12 +28,19 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
+	"k8s.io/client-go/rest"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/injection"
 	"knative.dev/pkg/ptr"
 
+	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/channel/fanout"
+	"knative.dev/eventing/pkg/kncloudevents"
+
+	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
+	_ "knative.dev/pkg/system/testing"
 )
 
 var (
@@ -67,12 +74,20 @@ func TestNewEventHandlerWithConfig(t *testing.T) {
 	reporter := channel.NewStatsReporter("testcontainer", "testpod")
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
+			ctx, _ = fakekubeclient.With(ctx)
+			ctx = injection.WithConfig(ctx, &rest.Config{})
+
 			logger := zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller()))
+			oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
+
+			dispatcher := kncloudevents.NewDispatcher(oidcTokenProvider)
 			_, err := NewEventHandlerWithConfig(
 				context.TODO(),
 				logger,
 				tc.config,
 				reporter,
+				dispatcher,
 			)
 			if tc.createErr != "" {
 				if err == nil {
@@ -89,9 +104,16 @@ func TestNewEventHandlerWithConfig(t *testing.T) {
 }
 
 func TestNewEventHandler(t *testing.T) {
+	ctx := context.Background()
+	ctx, _ = fakekubeclient.With(ctx)
+	ctx = injection.WithConfig(ctx, &rest.Config{})
+
 	handlerName := "handler.example.com"
 	reporter := channel.NewStatsReporter("testcontainer", "testpod")
 	logger := zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller()))
+
+	oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
+	dispatcher := kncloudevents.NewDispatcher(oidcTokenProvider)
 
 	handler := NewEventHandler(context.TODO(), logger)
 	h := handler.GetChannelHandler(handlerName)
@@ -101,7 +123,7 @@ func TestNewEventHandler(t *testing.T) {
 	if h != nil {
 		t.Errorf("Found handler for %q but not expected", handlerName)
 	}
-	f, err := fanout.NewFanoutEventHandler(logger, fanout.Config{}, reporter, nil, nil, nil)
+	f, err := fanout.NewFanoutEventHandler(logger, fanout.Config{}, reporter, nil, nil, nil, dispatcher)
 	if err != nil {
 		t.Error("Failed to create FanoutMessagHandler: ", err)
 	}
@@ -303,6 +325,10 @@ func TestServeHTTPEventHandler(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
+			ctx := context.Background()
+			ctx, _ = fakekubeclient.With(ctx)
+			ctx = injection.WithConfig(ctx, &rest.Config{})
+
 			server := httptest.NewServer(fakeHandler(tc.respStatusCode))
 			defer server.Close()
 
@@ -311,12 +337,12 @@ func TestServeHTTPEventHandler(t *testing.T) {
 
 			logger := zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller()))
 			reporter := channel.NewStatsReporter("testcontainer", "testpod")
-			h, err := NewEventHandlerWithConfig(context.TODO(), logger, tc.config, reporter, tc.recvOptions...)
+			oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
+			dispatcher := kncloudevents.NewDispatcher(oidcTokenProvider)
+			h, err := NewEventHandlerWithConfig(context.TODO(), logger, tc.config, reporter, dispatcher, tc.recvOptions...)
 			if err != nil {
 				t.Fatalf("Unexpected NewHandler error: '%v'", err)
 			}
-
-			ctx := context.Background()
 
 			event := cloudevents.NewEvent(cloudevents.VersionV1)
 

@@ -36,10 +36,14 @@ import (
 
 	"knative.dev/eventing/pkg/apis/eventing"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/broker"
 	reconcilertesting "knative.dev/pkg/reconciler/testing"
 
 	brokerinformerfake "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/broker/fake"
+
+	// Fake injection client
+	_ "knative.dev/pkg/client/injection/kube/client/fake"
 )
 
 const (
@@ -281,7 +285,9 @@ func TestHandler_ServeHTTP(t *testing.T) {
 				brokerinformerfake.Get(ctx).Informer().GetStore().Add(b)
 			}
 
-			h, err := NewHandler(logger, &mockReporter{}, tc.defaulter, brokerinformerfake.Get(ctx))
+			oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
+
+			h, err := NewHandler(logger, &mockReporter{}, tc.defaulter, brokerinformerfake.Get(ctx), oidcTokenProvider)
 			if err != nil {
 				t.Fatal("Unable to create receiver:", err)
 			}
