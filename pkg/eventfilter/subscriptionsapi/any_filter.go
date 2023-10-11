@@ -59,7 +59,7 @@ func (filter *anyFilter) Filter(ctx context.Context, event cloudevents.Event) ev
 	filter.rwMutex.RLock()
 	defer filter.rwMutex.RUnlock()
 	for i, f := range filter.filters {
-		res = res.Or(f.filter.Filter(ctx, event))
+		res = f.filter.Filter(ctx, event)
 		// Short circuit to optimize it
 		if res == eventfilter.PassFilter {
 			select {

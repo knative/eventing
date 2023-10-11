@@ -35,6 +35,7 @@ import (
 
 var sbCondSet = apis.NewLivingConditionSet(
 	SinkBindingConditionSinkProvided,
+	SinkBindingConditionOIDCIdentityCreated,
 )
 
 // GetConditionSet retrieves the condition set for this resource. Implements the KRShaped interface.
@@ -93,6 +94,22 @@ func (sbs *SinkBindingStatus) MarkSink(addr *duckv1.Addressable) {
 	} else {
 		sbCondSet.Manage(sbs).MarkFalse(SinkBindingConditionSinkProvided, "SinkEmpty", "Sink has resolved to empty.%s", "")
 	}
+}
+
+func (sbs *SinkBindingStatus) MarkOIDCIdentityCreatedSucceeded() {
+	sbCondSet.Manage(sbs).MarkTrue(SinkBindingConditionOIDCIdentityCreated)
+}
+
+func (sbs *SinkBindingStatus) MarkOIDCIdentityCreatedSucceededWithReason(reason, messageFormat string, messageA ...interface{}) {
+	sbCondSet.Manage(sbs).MarkTrueWithReason(SinkBindingConditionOIDCIdentityCreated, reason, messageFormat, messageA...)
+}
+
+func (sbs *SinkBindingStatus) MarkOIDCIdentityCreatedFailed(reason, messageFormat string, messageA ...interface{}) {
+	sbCondSet.Manage(sbs).MarkFalse(SinkBindingConditionOIDCIdentityCreated, reason, messageFormat, messageA...)
+}
+
+func (sbs *SinkBindingStatus) MarkOIDCIdentityCreatedUnknown(reason, messageFormat string, messageA ...interface{}) {
+	sbCondSet.Manage(sbs).MarkUnknown(SinkBindingConditionOIDCIdentityCreated, reason, messageFormat, messageA...)
 }
 
 // Do implements psbinding.Bindable

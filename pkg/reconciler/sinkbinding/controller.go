@@ -19,24 +19,33 @@ package sinkbinding
 import (
 	"context"
 	"errors"
+	"fmt"
 
+	"knative.dev/eventing/pkg/auth"
 	sbinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1/sinkbinding"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/podspecable"
 	"knative.dev/pkg/client/injection/kube/informers/core/v1/namespace"
 	"knative.dev/pkg/reconciler"
 	"knative.dev/pkg/resolver"
+	"knative.dev/pkg/system"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
+	"knative.dev/eventing/pkg/apis/feature"
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/pkg/apis/duck"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
+	configmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap"
+	serviceaccountinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/injection/clients/dynamicclient"
@@ -50,8 +59,11 @@ const (
 )
 
 type SinkBindingSubResourcesReconciler struct {
-	res     *resolver.URIResolver
-	tracker tracker.Interface
+	res                  *resolver.URIResolver
+	tracker              tracker.Interface
+	serviceAccountLister corev1listers.ServiceAccountLister
+	kubeclient           kubernetes.Interface
+	featureStore         *feature.Store
 }
 
 // NewController returns a new SinkBinding reconciler.
@@ -65,6 +77,9 @@ func NewController(
 	dc := dynamicclient.Get(ctx)
 	psInformerFactory := podspecable.Get(ctx)
 	namespaceInformer := namespace.Get(ctx)
+	serviceaccountInformer := serviceaccountinformer.Get(ctx)
+	configmapInformer := configmapinformer.Get(ctx)
+
 	c := &psbinding.BaseReconciler{
 		LeaderAwareFuncs: reconciler.LeaderAwareFuncs{
 			PromoteFunc: func(bkt reconciler.Bucket, enq func(reconciler.Bucket, types.NamespacedName)) error {
@@ -94,13 +109,22 @@ func NewController(
 		Logger:        logger,
 	})
 
+	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {
+		impl.GlobalResync(sbInformer.Informer())
+	})
+
+	featureStore.WatchConfigs(cmw)
+
 	sbInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 	namespaceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	sbResolver := resolver.NewURIResolverFromTracker(ctx, impl.Tracker)
 	c.SubResourcesReconciler = &SinkBindingSubResourcesReconciler{
-		res:     sbResolver,
-		tracker: impl.Tracker,
+		res:                  sbResolver,
+		tracker:              impl.Tracker,
+		kubeclient:           kubeclient.Get(ctx),
+		serviceAccountLister: serviceaccountInformer.Lister(),
+		featureStore:         featureStore,
 	}
 
 	c.WithContext = func(ctx context.Context, b psbinding.Bindable) (context.Context, error) {
@@ -113,6 +137,20 @@ func NewController(
 			EventHandler: controller.HandleAll(c.Tracker.OnChanged),
 		},
 	}
+
+	// Reconcile SinkBinding when the OIDC service account changes
+	serviceaccountInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: controller.FilterController(&v1.SinkBinding{}),
+		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
+	})
+
+	// reconcile sinkindings on changes on the features configmap
+	configmapInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: controller.FilterWithNameAndNamespace(system.Namespace(), feature.FlagsConfigName),
+		Handler: controller.HandleAll(func(i interface{}) {
+			impl.GlobalResync(sbInformer.Informer())
+		}),
+	})
 
 	return impl
 }
@@ -161,6 +199,24 @@ func (s *SinkBindingSubResourcesReconciler) Reconcile(ctx context.Context, b psb
 			Name:       sb.Spec.Sink.Ref.Name,
 		}, b)
 	}
+
+	featureFlags := s.featureStore.Load()
+	if featureFlags.IsOIDCAuthentication() {
+		saName := auth.GetOIDCServiceAccountNameForResource(v1.SchemeGroupVersion.WithKind("SinkBinding"), sb.ObjectMeta)
+		sb.Status.Auth = &duckv1.AuthStatus{
+			ServiceAccountName: &saName,
+		}
+
+		if err := auth.EnsureOIDCServiceAccountExistsForResource(ctx, s.serviceAccountLister, s.kubeclient, v1.SchemeGroupVersion.WithKind("SinkBinding"), sb.ObjectMeta); err != nil {
+			sb.Status.MarkOIDCIdentityCreatedFailed("Unable to resolve service account for OIDC authentication", "%v", err)
+			return err
+		}
+		sb.Status.MarkOIDCIdentityCreatedSucceeded()
+	} else {
+		sb.Status.Auth = nil
+		sb.Status.MarkOIDCIdentityCreatedSucceededWithReason(fmt.Sprintf("%s feature disabled", feature.OIDCAuthentication), "")
+	}
+
 	addr, err := s.res.AddressableFromDestinationV1(ctx, sb.Spec.Sink, sb)
 	if err != nil {
 		logging.FromContext(ctx).Errorf("Failed to get Addressable from Destination: %w", err)

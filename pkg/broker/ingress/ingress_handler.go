@@ -39,6 +39,7 @@ import (
 
 	"knative.dev/eventing/pkg/apis/eventing"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/broker"
 	v1 "knative.dev/eventing/pkg/client/informers/externalversions/eventing/v1"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1"
@@ -64,9 +65,11 @@ type Handler struct {
 	EvenTypeHandler *eventtype.EventTypeAutoHandler
 
 	Logger *zap.Logger
+
+	eventDispatcher *kncloudevents.Dispatcher
 }
 
-func NewHandler(logger *zap.Logger, reporter StatsReporter, defaulter client.EventDefaulter, brokerInformer v1.BrokerInformer) (*Handler, error) {
+func NewHandler(logger *zap.Logger, reporter StatsReporter, defaulter client.EventDefaulter, brokerInformer v1.BrokerInformer, oidcTokenProvider *auth.OIDCTokenProvider) (*Handler, error) {
 	connectionArgs := kncloudevents.ConnectionArgs{
 		MaxIdleConns:        defaultMaxIdleConnections,
 		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
@@ -107,10 +110,11 @@ func NewHandler(logger *zap.Logger, reporter StatsReporter, defaulter client.Eve
 	})
 
 	return &Handler{
-		Defaulter:    defaulter,
-		Reporter:     reporter,
-		Logger:       logger,
-		BrokerLister: brokerInformer.Lister(),
+		Defaulter:       defaulter,
+		Reporter:        reporter,
+		Logger:          logger,
+		BrokerLister:    brokerInformer.Lister(),
+		eventDispatcher: kncloudevents.NewDispatcher(oidcTokenProvider),
 	}, nil
 }
 
@@ -282,7 +286,7 @@ func (h *Handler) receive(ctx context.Context, headers http.Header, event *cloud
 		return http.StatusBadRequest, kncloudevents.NoDuration
 	}
 
-	dispatchInfo, err := kncloudevents.SendEvent(ctx, *event, *channelAddress, kncloudevents.WithHeader(headers))
+	dispatchInfo, err := h.eventDispatcher.SendEvent(ctx, *event, *channelAddress, kncloudevents.WithHeader(headers))
 	if err != nil {
 		h.Logger.Error("failed to dispatch event", zap.Error(err))
 		return http.StatusInternalServerError, kncloudevents.NoDuration

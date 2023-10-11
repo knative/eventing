@@ -19,25 +19,33 @@ package auth
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"go.uber.org/zap"
 	authv1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/cache"
 	"k8s.io/client-go/kubernetes"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/logging"
 )
 
+const (
+	expirationBufferTime = time.Second * 30
+)
+
 type OIDCTokenProvider struct {
 	logger     *zap.SugaredLogger
 	kubeClient kubernetes.Interface
+	tokenCache cache.Expiring
 }
 
 func NewOIDCTokenProvider(ctx context.Context) *OIDCTokenProvider {
 	tokenProvider := &OIDCTokenProvider{
 		logger:     logging.FromContext(ctx).With("component", "oidc-token-provider"),
 		kubeClient: kubeclient.Get(ctx),
+		tokenCache: *cache.NewExpiring(),
 	}
 
 	return tokenProvider
@@ -45,7 +53,9 @@ func NewOIDCTokenProvider(ctx context.Context) *OIDCTokenProvider {
 
 // GetJWT returns a JWT from the given service account for the given audience.
 func (c *OIDCTokenProvider) GetJWT(serviceAccount types.NamespacedName, audience string) (string, error) {
-	// TODO: check the cache
+	if val, ok := c.tokenCache.Get(cacheKey(serviceAccount, audience)); ok {
+		return val.(string), nil
+	}
 
 	// if not found in cache: request new token
 	tokenRequest := authv1.TokenRequest{
@@ -63,5 +73,15 @@ func (c *OIDCTokenProvider) GetJWT(serviceAccount types.NamespacedName, audience
 		return "", fmt.Errorf("could not request a token for %s: %w", serviceAccount, err)
 	}
 
+	// we need a duration until this token expires, use the expiry time - (now + 30s)
+	// this gives us a buffer so that it doesn't expire between when we retrieve it and when we use it
+	expiryTtl := tokenRequestResponse.Status.ExpirationTimestamp.Time.Sub(time.Now().Add(expirationBufferTime))
+
+	c.tokenCache.Set(cacheKey(serviceAccount, audience), tokenRequestResponse.Status.Token, expiryTtl)
+
 	return tokenRequestResponse.Status.Token, nil
+}
+
+func cacheKey(serviceAccount types.NamespacedName, audience string) string {
+	return fmt.Sprintf("%s/%s/%s", serviceAccount.Namespace, serviceAccount.Name, audience)
 }
