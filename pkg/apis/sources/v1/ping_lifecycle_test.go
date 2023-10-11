@@ -116,24 +116,28 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 		oidcServiceAccountStatus: true,
 	},
 		{
-			name: "oidc status false with mark sink and deployed",
+			name: "oidc status false",
 			s: func() *PingSourceStatus {
 				s := &PingSourceStatus{}
 				s.InitializeConditions()
 				s.MarkSink(exampleAddr)
 				s.PropagateDeploymentAvailability(availableDeployment)
-				s.MarkOIDCIdentityCreatedSucceeded()
 				return s
 			}(),
-			wantConditionStatus:      corev1.ConditionUnknown,
-			want:                     true,
+			wantConditionStatus:      corev1.ConditionFalse,
+			want:                     false,
 			oidcServiceAccountStatus: false,
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			ss := &PingSourceStatus{}
+			if test.oidcServiceAccountStatus {
+				test.s.MarkOIDCIdentityCreatedSucceeded()
+			} else {
+				test.s.MarkOIDCIdentityCreatedFailed("Unable to ...", "")
+			}
+
 			if test.wantConditionStatus != "" {
 				gotConditionStatus := test.s.GetTopLevelCondition().Status
 				if gotConditionStatus != test.wantConditionStatus {
@@ -144,11 +148,7 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 			if got != test.want {
 				t.Errorf("unexpected readiness: want %v, got %v", test.want, got)
 			}
-			if test.oidcServiceAccountStatus {
-				ss.MarkOIDCIdentityCreatedSucceeded()
-			} else {
-				ss.MarkOIDCIdentityCreatedFailed("Unable to ...", "")
-			}
+
 		})
 	}
 }
@@ -160,13 +160,18 @@ func TestPingSourceStatusGetTopLevelCondition(t *testing.T) {
 	}
 
 	tests := []struct {
-		name string
-		s    *PingSourceStatus
-		want *apis.Condition
+		name                     string
+		s                        *PingSourceStatus
+		want                     *apis.Condition
+		oidcServiceAccountStatus bool
 	}{{
 		name: "uninitialized",
 		s:    &PingSourceStatus{},
-		want: nil,
+		want: &apis.Condition{
+			Type:   PingSourceConditionReady,
+			Status: corev1.ConditionUnknown,
+		},
+		oidcServiceAccountStatus: true,
 	}, {
 		name: "initialized",
 		s: func() *PingSourceStatus {
@@ -178,6 +183,7 @@ func TestPingSourceStatusGetTopLevelCondition(t *testing.T) {
 			Type:   PingSourceConditionReady,
 			Status: corev1.ConditionUnknown,
 		},
+		oidcServiceAccountStatus: true,
 	}, {
 		name: "mark deployed",
 		s: func() *PingSourceStatus {
@@ -190,6 +196,7 @@ func TestPingSourceStatusGetTopLevelCondition(t *testing.T) {
 			Type:   PingSourceConditionReady,
 			Status: corev1.ConditionUnknown,
 		},
+		oidcServiceAccountStatus: true,
 	}, {
 		name: "mark sink",
 		s: func() *PingSourceStatus {
@@ -202,6 +209,7 @@ func TestPingSourceStatusGetTopLevelCondition(t *testing.T) {
 			Type:   PingSourceConditionReady,
 			Status: corev1.ConditionUnknown,
 		},
+		oidcServiceAccountStatus: true,
 	}, {
 		name: "mark sink and deployed",
 		s: func() *PingSourceStatus {
@@ -215,10 +223,34 @@ func TestPingSourceStatusGetTopLevelCondition(t *testing.T) {
 			Type:   PingSourceConditionReady,
 			Status: corev1.ConditionTrue,
 		},
-	}}
+		oidcServiceAccountStatus: true,
+	},
+		{
+			name: "oidc fail",
+			s: func() *PingSourceStatus {
+				s := &PingSourceStatus{}
+				s.InitializeConditions()
+				s.MarkSink(exampleAddr)
+				s.PropagateDeploymentAvailability(availableDeployment)
+				return s
+			}(),
+			want: &apis.Condition{
+				Type:   PingSourceConditionReady,
+				Status: corev1.ConditionFalse,
+				Reason: "Unable to ...",
+			},
+			oidcServiceAccountStatus: false,
+		},
+	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			if test.oidcServiceAccountStatus {
+				test.s.MarkOIDCIdentityCreatedSucceeded()
+			} else {
+				test.s.MarkOIDCIdentityCreatedFailed("Unable to ...", "")
+			}
+
 			got := test.s.GetTopLevelCondition()
 			ignoreTime := cmpopts.IgnoreFields(apis.Condition{},
 				"LastTransitionTime", "Severity")
@@ -236,15 +268,20 @@ func TestPingSourceStatusGetCondition(t *testing.T) {
 	}
 
 	tests := []struct {
-		name      string
-		s         *PingSourceStatus
-		condQuery apis.ConditionType
-		want      *apis.Condition
+		name                     string
+		s                        *PingSourceStatus
+		condQuery                apis.ConditionType
+		want                     *apis.Condition
+		oidcServiceAccountStatus bool
 	}{{
 		name:      "uninitialized",
 		s:         &PingSourceStatus{},
 		condQuery: PingSourceConditionReady,
-		want:      nil,
+		want: &apis.Condition{
+			Type:   PingSourceConditionReady,
+			Status: corev1.ConditionUnknown,
+		},
+		oidcServiceAccountStatus: true,
 	}, {
 		name: "initialized",
 		s: func() *PingSourceStatus {
@@ -257,6 +294,7 @@ func TestPingSourceStatusGetCondition(t *testing.T) {
 			Type:   PingSourceConditionReady,
 			Status: corev1.ConditionUnknown,
 		},
+		oidcServiceAccountStatus: true,
 	}, {
 		name: "mark deployed",
 		s: func() *PingSourceStatus {
@@ -270,6 +308,7 @@ func TestPingSourceStatusGetCondition(t *testing.T) {
 			Type:   PingSourceConditionReady,
 			Status: corev1.ConditionUnknown,
 		},
+		oidcServiceAccountStatus: true,
 	}, {
 		name: "mark sink",
 		s: func() *PingSourceStatus {
@@ -283,10 +322,31 @@ func TestPingSourceStatusGetCondition(t *testing.T) {
 			Type:   PingSourceConditionReady,
 			Status: corev1.ConditionUnknown,
 		},
+		oidcServiceAccountStatus: true,
+	}, {
+		name: "oidc failed",
+		s: func() *PingSourceStatus {
+			s := &PingSourceStatus{}
+			s.InitializeConditions()
+			s.MarkSink(exampleAddr)
+			return s
+		}(),
+		condQuery: PingSourceConditionReady,
+		want: &apis.Condition{
+			Type:   PingSourceConditionReady,
+			Status: corev1.ConditionFalse,
+			Reason: "Unable to ...",
+		},
+		oidcServiceAccountStatus: false,
 	}}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			if test.oidcServiceAccountStatus {
+				test.s.MarkOIDCIdentityCreatedSucceeded()
+			} else {
+				test.s.MarkOIDCIdentityCreatedFailed("Unable to ...", "")
+			}
 			got := test.s.GetCondition(test.condQuery)
 			ignoreTime := cmpopts.IgnoreFields(apis.Condition{},
 				"LastTransitionTime", "Severity")
