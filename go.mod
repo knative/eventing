@@ -45,10 +45,10 @@ require (
 	k8s.io/apiserver v0.27.6
 	k8s.io/client-go v0.27.6
 	k8s.io/utils v0.0.0-20230209194617-a36077c30491
-	knative.dev/hack v0.0.0-20231006131420-158898889ae8
-	knative.dev/hack/schema v0.0.0-20231006131420-158898889ae8
-	knative.dev/pkg v0.0.0-20231009134048-bae23eb35759
-	knative.dev/reconciler-test v0.0.0-20231006131424-4a507273509f
+	knative.dev/hack v0.0.0-20231010131532-fc76874b28c6
+	knative.dev/hack/schema v0.0.0-20231010131532-fc76874b28c6
+	knative.dev/pkg v0.0.0-20231010144348-ca8c009405dd
+	knative.dev/reconciler-test v0.0.0-20231011144451-d91e6fe1acfc
 	sigs.k8s.io/yaml v1.3.0
 )
 
@@ -114,7 +114,7 @@ require (
 	golang.org/x/crypto v0.14.0 // indirect
 	golang.org/x/mod v0.12.0 // indirect
 	golang.org/x/net v0.17.0 // indirect
-	golang.org/x/oauth2 v0.12.0 // indirect
+	golang.org/x/oauth2 v0.13.0 // indirect
 	golang.org/x/sys v0.13.0 // indirect
 	golang.org/x/term v0.13.0 // indirect
 	golang.org/x/text v0.13.0 // indirect

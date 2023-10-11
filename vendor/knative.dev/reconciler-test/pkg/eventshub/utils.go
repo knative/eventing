@@ -38,6 +38,14 @@ const (
 	EventGeneratorsEnv = "EVENT_GENERATORS"
 	EventLogsEnv       = "EVENT_LOGS"
 
+	OIDCEnabledEnv                         = "ENABLE_OIDC_AUTH"
+	OIDCGenerateValidTokenEnv              = "OIDC_GENERATE_VALID_TOKEN"
+	OIDCGenerateExpiredTokenEnv            = "OIDC_GENERATE_EXPIRED_TOKEN"
+	OIDCGenerateInvalidAudienceTokenEnv    = "OIDC_GENERATE_INVALID_AUDIENCE_TOKEN"
+	OIDCGenerateCorruptedSignatureTokenEnv = "OIDC_GENERATE_CORRUPTED_SIG_TOKEN"
+	OIDCSinkAudienceEnv                    = "OIDC_SINK_AUDIENCE"
+	OIDCTokenEnv                           = "OIDC_TOKEN"
+
 	EnforceTLS = "ENFORCE_TLS"
 )
 
