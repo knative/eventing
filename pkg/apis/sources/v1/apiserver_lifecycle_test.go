@@ -303,8 +303,7 @@ func TestApiServerSourceStatusGetCondition(t *testing.T) {
 		condQuery: ApiServerConditionReady,
 		want: &apis.Condition{
 			Type:   ApiServerConditionReady,
-			Status: corev1.ConditionFalse,
-			Reason: "Unable...",
+			Status: corev1.ConditionUnknown,
 		},
 		oidcServiceAccountStatus: true,
 	}, {
