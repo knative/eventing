@@ -32,9 +32,9 @@ import (
 	"knative.dev/eventing/pkg/client/injection/informers/flows/v1/sequence"
 	"knative.dev/eventing/pkg/client/injection/informers/messaging/v1/subscription"
 	sequencereconciler "knative.dev/eventing/pkg/client/injection/reconciler/flows/v1/sequence"
-	"knative.dev/pkg/injection/clients/dynamicclient"
-	serviceaccountinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
+	serviceaccountinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount"
+	"knative.dev/pkg/injection/clients/dynamicclient"
 )
 
 // NewController initializes the controller and is called by the generated code
@@ -52,12 +52,12 @@ func NewController(
 	featureStore.WatchConfigs(cmw)
 
 	r := &Reconciler{
-		sequenceLister:     sequenceInformer.Lister(),
-		subscriptionLister: subscriptionInformer.Lister(),
-		dynamicClientSet:   dynamicclient.Get(ctx),
-		eventingClientSet:  eventingclient.Get(ctx),
+		sequenceLister:       sequenceInformer.Lister(),
+		subscriptionLister:   subscriptionInformer.Lister(),
+		dynamicClientSet:     dynamicclient.Get(ctx),
+		eventingClientSet:    eventingclient.Get(ctx),
 		serviceAccountLister: serviceaccountInformer.Lister(),
-		kubeclient: kubeclient.Get(ctx),
+		kubeclient:           kubeclient.Get(ctx),
 	}
 
 	impl := sequencereconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {

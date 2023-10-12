@@ -62,9 +62,9 @@ type Reconciler struct {
 	eventingClientSet clientset.Interface
 
 	// dynamicClientSet allows us to configure pluggable Build objects
-	dynamicClientSet dynamic.Interface
+	dynamicClientSet     dynamic.Interface
 	serviceAccountLister corev1listers.ServiceAccountLister
-	kubeclient        kubernetes.Interface
+	kubeclient           kubernetes.Interface
 }
 
 // Check that our Reconciler implements sequencereconciler.Interface
