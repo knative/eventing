@@ -28,7 +28,7 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
-var sCondSet = apis.NewLivingConditionSet(SequenceConditionReady, SequenceConditionChannelsReady, SequenceConditionSubscriptionsReady, SequenceConditionAddressable, 
+var sCondSet = apis.NewLivingConditionSet(SequenceConditionReady, SequenceConditionChannelsReady, SequenceConditionSubscriptionsReady, SequenceConditionAddressable,
 	SequenceConditionOIDCIdentityCreated)
 
 const (
@@ -215,4 +215,3 @@ func (ss *SequenceStatus) MarkOIDCIdentityCreatedFailed(reason, messageFormat st
 func (ss *SequenceStatus) MarkOIDCIdentityCreatedUnknown(reason, messageFormat string, messageA ...interface{}) {
 	sCondSet.Manage(ss).MarkUnknown(SequenceConditionOIDCIdentityCreated, reason, messageFormat, messageA...)
 }
-
