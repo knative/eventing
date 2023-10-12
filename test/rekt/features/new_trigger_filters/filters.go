@@ -48,7 +48,7 @@ func newEventFilterFeature(eventContexts []CloudEventsContext, filters []eventin
 	f.Setup("Wait for trigger to become ready", trigger.IsReady(triggerName))
 	f.Setup("Broker is addressable", k8s.IsAddressable(broker.GVR(), brokerName))
 
-	asserter := f.Alpha("New filters")
+	asserter := f.Beta("New filters")
 
 	for _, eventCtx := range eventContexts {
 		event := newEventFromEventContext(eventCtx)
