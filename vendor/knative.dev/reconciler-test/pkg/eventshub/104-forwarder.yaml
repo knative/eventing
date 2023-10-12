@@ -32,7 +32,7 @@ spec:
         {{ end }}
     {{ end }}
     spec:
-      serviceAccountName: "{{ .namespace }}"
+      serviceAccountName: "{{ .name }}"
       containers:
         - name: eventshub-forwarder
           image: {{ .image }}
