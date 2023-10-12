@@ -32,7 +32,7 @@ import (
 )
 
 const (
-	expirationBufferTime = time.Second * 30
+	expirationBufferTime = time.Second * 300
 )
 
 type OIDCTokenProvider struct {
