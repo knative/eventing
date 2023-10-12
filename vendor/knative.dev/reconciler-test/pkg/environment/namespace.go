@@ -32,6 +32,13 @@ import (
 
 type namespaceKey struct{}
 
+// WithNamespace overrides test namespace for given environment.
+func WithNamespace(namespace string) EnvOpts {
+	return func(ctx context.Context, env Environment) (context.Context, error) {
+		return withNamespace(ctx, namespace), nil
+	}
+}
+
 func withNamespace(ctx context.Context, namespace string) context.Context {
 	return context.WithValue(ctx, namespaceKey{}, namespace)
 }
