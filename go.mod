@@ -28,7 +28,7 @@ require (
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/rogpeppe/fastuuid v1.2.0
 	github.com/stretchr/testify v1.8.1
-	github.com/tsenart/vegeta/v12 v12.11.0
+	github.com/tsenart/vegeta/v12 v12.11.1
 	github.com/wavesoftware/go-ensure v1.0.0
 	go.opencensus.io v0.24.0
 	go.opentelemetry.io/otel v1.10.0
@@ -36,7 +36,7 @@ require (
 	go.uber.org/atomic v1.9.0
 	go.uber.org/multierr v1.10.0
 	go.uber.org/zap v1.26.0
-	golang.org/x/sync v0.3.0
+	golang.org/x/sync v0.4.0
 	google.golang.org/grpc v1.58.2
 	google.golang.org/protobuf v1.31.0
 	k8s.io/api v0.27.6
@@ -47,8 +47,8 @@ require (
 	k8s.io/utils v0.0.0-20230209194617-a36077c30491
 	knative.dev/hack v0.0.0-20231010131532-fc76874b28c6
 	knative.dev/hack/schema v0.0.0-20231010131532-fc76874b28c6
-	knative.dev/pkg v0.0.0-20231010144348-ca8c009405dd
-	knative.dev/reconciler-test v0.0.0-20231011144451-d91e6fe1acfc
+	knative.dev/pkg v0.0.0-20231011202506-948f5f57818a
+	knative.dev/reconciler-test v0.0.0-20231012060156-362d56d92da9
 	sigs.k8s.io/yaml v1.3.0
 )
 
@@ -122,7 +122,7 @@ require (
 	golang.org/x/tools v0.13.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
-	google.golang.org/api v0.143.0 // indirect
+	google.golang.org/api v0.145.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20230913181813-007df8e322eb // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20230913181813-007df8e322eb // indirect
