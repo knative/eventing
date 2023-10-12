@@ -285,25 +285,25 @@ func WithSubscriptionReply(gvk metav1.GroupVersionKind, name, namespace string) 
 	}
 }
 
-func WithSubscriptionOptionOIDCIdentityCreatedSucceeded() SubscriptionOption {
+func WithSubscriptionOIDCIdentityCreatedSucceeded() SubscriptionOption {
 	return func(s *v1.Subscription) {
 		s.Status.MarkOIDCIdentityCreatedSucceeded()
 	}
 }
 
-func WithSubscriptionOptionOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled() SubscriptionOption {
+func WithSubscriptionOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled() SubscriptionOption {
 	return func(s *v1.Subscription) {
 		s.Status.MarkOIDCIdentityCreatedSucceededWithReason(fmt.Sprintf("%s feature disabled", feature.OIDCAuthentication), "")
 	}
 }
 
-func WithSubscriptionOptionOIDCIdentityCreatedFailed(reason, message string) SubscriptionOption {
+func WithSubscriptionOIDCIdentityCreatedFailed(reason, message string) SubscriptionOption {
 	return func(s *v1.Subscription) {
 		s.Status.MarkOIDCIdentityCreatedFailed(reason, message)
 	}
 }
 
-func WithSubscriptionOptionOIDCServiceAccountName(name string) SubscriptionOption {
+func WithSubscriptionOIDCServiceAccountName(name string) SubscriptionOption {
 	return func(s *v1.Subscription) {
 		if s.Status.Auth == nil {
 			s.Status.Auth = &duckv1.AuthStatus{}

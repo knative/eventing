@@ -50,7 +50,13 @@ func NewController(
 	channelInformer := channel.Get(ctx)
 	serviceaccountInformer := serviceaccountinformer.Get(ctx)
 
-	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"))
+	var globalResync func(obj interface{})
+
+	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {
+		if globalResync != nil {
+			globalResync(nil)
+		}
+	})
 	featureStore.WatchConfigs(cmw)
 
 	r := &Reconciler{

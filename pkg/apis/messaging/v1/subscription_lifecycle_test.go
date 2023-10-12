@@ -216,60 +216,60 @@ func TestSubscriptionInitializeConditions(t *testing.T) {
 
 func TestSubscriptionIsReady(t *testing.T) {
 	tests := []struct {
-		name                     string
-		markResolved             bool
-		markChannelReady         bool
-		wantReady                bool
-		markAddedToChannel       bool
-		oidcServiceAccountStatus bool
+		name                          string
+		markResolved                  bool
+		markChannelReady              bool
+		wantReady                     bool
+		markAddedToChannel            bool
+		markOIDCServiceAccountCreated bool
 	}{{
-		name:                     "all happy",
-		markResolved:             true,
-		markChannelReady:         true,
-		markAddedToChannel:       true,
-		wantReady:                true,
-		oidcServiceAccountStatus: true,
+		name:                          "all happy",
+		markResolved:                  true,
+		markChannelReady:              true,
+		markAddedToChannel:            true,
+		wantReady:                     true,
+		markOIDCServiceAccountCreated: true,
 	}, {
-		name:                     "one sad - markResolved",
-		markResolved:             false,
-		markChannelReady:         true,
-		markAddedToChannel:       true,
-		wantReady:                false,
-		oidcServiceAccountStatus: true,
+		name:                          "one sad - markResolved",
+		markResolved:                  false,
+		markChannelReady:              true,
+		markAddedToChannel:            true,
+		wantReady:                     false,
+		markOIDCServiceAccountCreated: true,
 	}, {
-		name:                     "one sad - markChannelReady",
-		markResolved:             true,
-		markChannelReady:         false,
-		markAddedToChannel:       true,
-		wantReady:                false,
-		oidcServiceAccountStatus: true,
+		name:                          "one sad - markChannelReady",
+		markResolved:                  true,
+		markChannelReady:              false,
+		markAddedToChannel:            true,
+		wantReady:                     false,
+		markOIDCServiceAccountCreated: true,
 	}, {
-		name:                     "one sad - markAddedToChannel",
-		markResolved:             true,
-		markChannelReady:         true,
-		markAddedToChannel:       false,
-		wantReady:                false,
-		oidcServiceAccountStatus: true,
+		name:                          "one sad - markAddedToChannel",
+		markResolved:                  true,
+		markChannelReady:              true,
+		markAddedToChannel:            false,
+		wantReady:                     false,
+		markOIDCServiceAccountCreated: true,
 	}, {
-		name:                     "other sad",
-		markResolved:             true,
-		markChannelReady:         false,
-		wantReady:                false,
-		oidcServiceAccountStatus: false,
+		name:                          "other sad",
+		markResolved:                  true,
+		markChannelReady:              false,
+		wantReady:                     false,
+		markOIDCServiceAccountCreated: false,
 	}, {
-		name:                     "all sad",
-		markResolved:             false,
-		markChannelReady:         false,
-		markAddedToChannel:       false,
-		wantReady:                false,
-		oidcServiceAccountStatus: false,
+		name:                          "all sad",
+		markResolved:                  false,
+		markChannelReady:              false,
+		markAddedToChannel:            false,
+		wantReady:                     false,
+		markOIDCServiceAccountCreated: false,
 	}, {
-		name:                     "oidc status false",
-		markResolved:             true,
-		markChannelReady:         true,
-		markAddedToChannel:       true,
-		wantReady:                false,
-		oidcServiceAccountStatus: false,
+		name:                          "one sad - markOIDCServiceAccountCreated",
+		markResolved:                  true,
+		markChannelReady:              true,
+		markAddedToChannel:            true,
+		wantReady:                     false,
+		markOIDCServiceAccountCreated: false,
 	}}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -289,7 +289,7 @@ func TestSubscriptionIsReady(t *testing.T) {
 					t.Errorf("Channel added, but not reflected in IsAddedToChannel")
 				}
 			}
-			if test.oidcServiceAccountStatus {
+			if test.markOIDCServiceAccountCreated {
 				ss.MarkOIDCIdentityCreatedSucceeded()
 			} else {
 				ss.MarkOIDCIdentityCreatedFailed("Unable to ...", "")
