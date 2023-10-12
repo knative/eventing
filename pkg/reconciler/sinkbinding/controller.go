@@ -27,7 +27,6 @@ import (
 	"knative.dev/pkg/client/injection/kube/informers/core/v1/namespace"
 	"knative.dev/pkg/reconciler"
 	"knative.dev/pkg/resolver"
-	"knative.dev/pkg/system"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -44,7 +43,6 @@ import (
 	"knative.dev/pkg/apis/duck"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
-	configmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap"
 	serviceaccountinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
@@ -78,7 +76,6 @@ func NewController(
 	psInformerFactory := podspecable.Get(ctx)
 	namespaceInformer := namespace.Get(ctx)
 	serviceaccountInformer := serviceaccountinformer.Get(ctx)
-	configmapInformer := configmapinformer.Get(ctx)
 
 	c := &psbinding.BaseReconciler{
 		LeaderAwareFuncs: reconciler.LeaderAwareFuncs{
@@ -142,14 +139,6 @@ func NewController(
 	serviceaccountInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.FilterController(&v1.SinkBinding{}),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
-	})
-
-	// reconcile sinkindings on changes on the features configmap
-	configmapInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.FilterWithNameAndNamespace(system.Namespace(), feature.FlagsConfigName),
-		Handler: controller.HandleAll(func(i interface{}) {
-			impl.GlobalResync(sbInformer.Informer())
-		}),
 	})
 
 	return impl
