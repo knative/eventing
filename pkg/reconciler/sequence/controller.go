@@ -59,6 +59,7 @@ func NewController(
 		serviceAccountLister: serviceaccountInformer.Lister(),
 		kubeclient: kubeclient.Get(ctx),
 	}
+
 	impl := sequencereconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
 		return controller.Options{
 			ConfigStore: featureStore,
@@ -75,7 +76,7 @@ func NewController(
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 
-	// Reconciler Sequence when the OIDC service account changes
+	// Reconcile Sequence when the OIDC service account changes
 	serviceaccountInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.FilterController(&v1.Sequence{}),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
