@@ -156,7 +156,7 @@ func Install(name string, options ...EventsHubOption) feature.StepFn {
 			// No event recording desired, just logging.
 			envs[EventLogsEnv] = "logger"
 			cfg["envs"] = envs
-			cfg["sink"] = sinkURL
+			cfg["sink"] = sinkURL.URL.String()
 
 			// Deploy Forwarder
 			if _, err := manifest.InstallYamlFS(ctx, forwarderTemplates, cfg); err != nil {

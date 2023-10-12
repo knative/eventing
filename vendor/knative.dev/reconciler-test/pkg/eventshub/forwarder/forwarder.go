@@ -130,15 +130,19 @@ func (o *Forwarder) ServeHTTP(writer http.ResponseWriter, request *http.Request)
 	defer m.Finish(nil)
 
 	event, eventErr := cloudeventsbindings.ToEvent(context.TODO(), m)
-	headers := make(http.Header)
+	receivedHeaders := make(http.Header)
+	headersToBeSent := make(http.Header)
 	for k, v := range request.Header {
 		if !strings.HasPrefix(k, "Ce-") {
-			headers[k] = v
+			receivedHeaders[k] = v
+		}
+		if strings.HasPrefix(k, "Kn-") {
+			headersToBeSent[k] = v
 		}
 	}
 	// Host header is removed from the request.Header map by net/http
 	if request.Host != "" {
-		headers.Set("Host", request.Host)
+		receivedHeaders.Set("Host", request.Host)
 	}
 
 	eventErrStr := ""
@@ -150,7 +154,7 @@ func (o *Forwarder) ServeHTTP(writer http.ResponseWriter, request *http.Request)
 		Error:       eventErrStr,
 		Event:       event,
 		Observer:    o.Name,
-		HTTPHeaders: headers,
+		HTTPHeaders: receivedHeaders,
 		Origin:      request.RemoteAddr,
 		Time:        time.Now(),
 		Kind:        eventshub.EventReceived,
@@ -165,6 +169,8 @@ func (o *Forwarder) ServeHTTP(writer http.ResponseWriter, request *http.Request)
 	if err != nil {
 		logging.FromContext(o.ctx).Error("Cannot create the request: ", err)
 	}
+
+	req.Header = headersToBeSent
 
 	err = cehttp.WriteRequest(requestCtx, binding.ToMessage(event), req)
 	if err != nil {
