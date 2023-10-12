@@ -138,7 +138,7 @@ func channelRejectsMalformedCE(ctx context.Context, t feature.T) {
 		// response was what was expected.
 		// Note: We pass in "" for the match ID because when we construct the headers manually
 		// above, they do not get stuff into the sent/response SentId fields.
-		events := knconf.Correlate(store.AssertAtLeast(t, 2, knconf.SentEventMatcher("")))
+		events := knconf.Correlate(store.AssertAtLeast(ctx, t, 2, knconf.SentEventMatcher("")))
 		for _, e := range events {
 			// Make sure HTTP response code is 4XX
 			if e.Response.StatusCode < 400 || e.Response.StatusCode > 499 {

@@ -90,10 +90,10 @@ func StartSenderToResource(gvr schema.GroupVersionResource, name string) EventsH
 		}
 
 		if u.URL.Scheme == "https" {
-			return StartSenderURLTLS(u.URL.String(), u.CACerts)(ctx, envs)
+			return compose(StartSenderURLTLS(u.URL.String(), u.CACerts), oidcSinkAudience(u.Audience))(ctx, envs)
 		}
 
-		return StartSenderURL(u.URL.String())(ctx, envs)
+		return compose(StartSenderURL(u.URL.String()), oidcSinkAudience(u.Audience))(ctx, envs)
 	}
 }
 
@@ -114,7 +114,7 @@ func StartSenderToResourceTLS(gvr schema.GroupVersionResource, name string, caCe
 		if caCerts == nil && u.CACerts != nil {
 			caCerts = u.CACerts
 		}
-		return StartSenderURLTLS(u.URL.String(), caCerts)(ctx, m)
+		return compose(StartSenderURLTLS(u.URL.String(), caCerts), oidcSinkAudience(u.Audience))(ctx, m)
 	}
 }
 
@@ -268,6 +268,44 @@ func InputMethod(method string) EventsHubOption {
 	return envOption("INPUT_METHOD", method)
 }
 
+// OIDCValidToken adds a valid OIDC token to use for OIDC authentication to the request.
+func OIDCValidToken() EventsHubOption {
+	return compose(envOption(OIDCGenerateValidTokenEnv, "true"), envOIDCEnabled())
+}
+
+// OIDCExpiredToken adds an expired OIDC token to the request. As the minimal
+// expiry for JWTs from Kubernetes are 10 minutes, the sender will delay the
+// send by 10 + 1 minutes.
+// This should be used in combination of an increase of the poll timout (via
+// environment.PollTimingsFromContext()) to not run in the default 2 minutes
+// timeout while waiting for an event which is send after 10 + 1 minutes.
+func OIDCExpiredToken() EventsHubOption {
+	return compose(envOption(OIDCGenerateExpiredTokenEnv, "true"), InitialSenderDelay(time.Minute*(OIDCTokenExpiryMinutes+1)), envOIDCEnabled())
+}
+
+// OIDCInvalidAudience creates an OIDC token with an invalid audience
+func OIDCInvalidAudience() EventsHubOption {
+	return compose(envOption(OIDCGenerateInvalidAudienceTokenEnv, "true"), envOIDCEnabled())
+}
+
+func oidcSinkAudience(aud *string) EventsHubOption {
+	if aud == nil {
+		return noop
+	}
+
+	return envOption(OIDCSinkAudienceEnv, *aud)
+}
+
+// OIDCCorruptedSignature adds an OIDC token with an invalid signature to the request.
+func OIDCCorruptedSignature() EventsHubOption {
+	return compose(envOption(OIDCGenerateCorruptedSignatureTokenEnv, "true"), envOIDCEnabled())
+}
+
+// OIDCToken adds the given token used for OIDC authentication to the request.
+func OIDCToken(jwt string) EventsHubOption {
+	return compose(envOption(OIDCTokenEnv, jwt), envOIDCEnabled())
+}
+
 // AddTracing adds tracing headers when sending events.
 // Deprecated: Exporting traces from the client/sender is enabled by default.
 var AddTracing = envOption("ADD_TRACING", "true")
@@ -347,4 +385,8 @@ func envCACerts(caCerts *string) EventsHubOption {
 		}
 		return nil
 	}
+}
+
+func envOIDCEnabled() EventsHubOption {
+	return envOption(OIDCEnabledEnv, "true")
 }
