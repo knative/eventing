@@ -18,6 +18,7 @@ package apiserversource
 
 import (
 	"context"
+	"knative.dev/eventing/pkg/apis/feature"
 
 	"github.com/kelseyhightower/envconfig"
 	"k8s.io/client-go/tools/cache"
@@ -57,6 +58,15 @@ func NewController(
 	namespaceInformer := namespace.Get(ctx)
 	serviceaccountInformer := serviceaccountinformer.Get(ctx)
 
+	var globalResync func(obj interface{})
+
+	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {
+		if globalResync != nil {
+			globalResync(nil)
+		}
+	})
+	featureStore.WatchConfigs(cmw)
+
 	r := &Reconciler{
 		kubeClientSet:        kubeclient.Get(ctx),
 		ceSource:             GetCfgHost(ctx),
@@ -71,7 +81,15 @@ func NewController(
 	}
 	r.receiveAdapterImage = env.Image
 
-	impl := apiserversourcereconciler.NewImpl(ctx, r)
+	impl := apiserversourcereconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
+		return controller.Options{
+			ConfigStore: featureStore,
+		}
+	})
+
+	globalResync = func(obj interface{}) {
+		impl.GlobalResync(apiServerSourceInformer.Informer())
+	}
 
 	r.sinkResolver = resolver.NewURIResolverFromTracker(ctx, impl.Tracker)
 
