@@ -102,173 +102,163 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 	sink.URL.Scheme = "uri"
 
 	tests := []struct {
-		name                     string
-		s                        *ApiServerSourceStatus
-		wantConditionStatus      corev1.ConditionStatus
-		want                     bool
-		oidcServiceAccountStatus bool
+		name                string
+		s                   *ApiServerSourceStatus
+		wantConditionStatus corev1.ConditionStatus
+		want                bool
 	}{{
-		name:                     "uninitialized",
-		s:                        &ApiServerSourceStatus{},
-		want:                     false,
-		oidcServiceAccountStatus: true,
+		name: "uninitialized",
+		s:    &ApiServerSourceStatus{},
+		want: false,
 	}, {
 		name: "initialized",
 		s: func() *ApiServerSourceStatus {
 			s := &ApiServerSourceStatus{}
 			s.InitializeConditions()
+			s.MarkOIDCIdentityCreatedSucceeded()
 			return s
 		}(),
-		wantConditionStatus:      corev1.ConditionUnknown,
-		want:                     false,
-		oidcServiceAccountStatus: true,
+		wantConditionStatus: corev1.ConditionUnknown,
+		want:                false,
 	}, {
 		name: "mark deployed",
 		s: func() *ApiServerSourceStatus {
 			s := &ApiServerSourceStatus{}
 			s.InitializeConditions()
+			s.MarkOIDCIdentityCreatedSucceeded()
 			s.PropagateDeploymentAvailability(availableDeployment)
 			return s
 		}(),
-		wantConditionStatus:      corev1.ConditionUnknown,
-		want:                     false,
-		oidcServiceAccountStatus: true,
+		wantConditionStatus: corev1.ConditionUnknown,
+		want:                false,
 	}, {
 		name: "mark sink",
 		s: func() *ApiServerSourceStatus {
 			s := &ApiServerSourceStatus{}
 			s.InitializeConditions()
+			s.MarkOIDCIdentityCreatedSucceeded()
 			s.MarkSink(sink)
 			return s
 		}(),
-		wantConditionStatus:      corev1.ConditionUnknown,
-		want:                     false,
-		oidcServiceAccountStatus: true,
+		wantConditionStatus: corev1.ConditionUnknown,
+		want:                false,
 	}, {
 		name: "mark sufficient permissions",
 		s: func() *ApiServerSourceStatus {
 			s := &ApiServerSourceStatus{}
 			s.InitializeConditions()
+			s.MarkOIDCIdentityCreatedSucceeded()
 			s.MarkSufficientPermissions()
 			return s
 		}(),
-		wantConditionStatus:      corev1.ConditionUnknown,
-		want:                     false,
-		oidcServiceAccountStatus: true,
+		wantConditionStatus: corev1.ConditionUnknown,
+		want:                false,
 	}, {
 		name: "mark event types",
 		s: func() *ApiServerSourceStatus {
 			s := &ApiServerSourceStatus{}
 			s.InitializeConditions()
+			s.MarkOIDCIdentityCreatedSucceeded()
 			return s
 		}(),
-		wantConditionStatus:      corev1.ConditionUnknown,
-		want:                     false,
-		oidcServiceAccountStatus: true,
+		wantConditionStatus: corev1.ConditionUnknown,
+		want:                false,
 	}, {
 		name: "mark sink and sufficient permissions and deployed",
 		s: func() *ApiServerSourceStatus {
 			s := &ApiServerSourceStatus{}
 			s.InitializeConditions()
+			s.MarkOIDCIdentityCreatedSucceeded()
 			s.MarkSink(sink)
 			s.MarkSufficientPermissions()
-			s.MarkOIDCIdentityCreatedSucceeded()
 			s.PropagateDeploymentAvailability(availableDeployment)
 			return s
 		}(),
-		wantConditionStatus:      corev1.ConditionTrue,
-		want:                     true,
-		oidcServiceAccountStatus: true,
+		wantConditionStatus: corev1.ConditionTrue,
+		want:                true,
 	}, {
 		name: "mark sink and sufficient permissions and unavailable deployment",
 		s: func() *ApiServerSourceStatus {
 			s := &ApiServerSourceStatus{}
 			s.InitializeConditions()
+			s.MarkOIDCIdentityCreatedSucceeded()
 			s.MarkSink(sink)
 			s.MarkSufficientPermissions()
 			s.PropagateDeploymentAvailability(unavailableDeployment)
 			return s
 		}(),
-		wantConditionStatus:      corev1.ConditionFalse,
-		want:                     false,
-		oidcServiceAccountStatus: false,
+		wantConditionStatus: corev1.ConditionFalse,
+		want:                false,
 	}, {
 		name: "mark sink and sufficient permissions and unknown deployment",
 		s: func() *ApiServerSourceStatus {
 			s := &ApiServerSourceStatus{}
 			s.InitializeConditions()
+			s.MarkOIDCIdentityCreatedSucceeded()
 			s.MarkSink(sink)
 			s.MarkSufficientPermissions()
 			s.PropagateDeploymentAvailability(unknownDeployment)
 			return s
 		}(),
-		wantConditionStatus:      corev1.ConditionUnknown,
-		want:                     false,
-		oidcServiceAccountStatus: true,
+		wantConditionStatus: corev1.ConditionUnknown,
+		want:                false,
 	}, {
 		name: "mark sink and sufficient permissions and not deployed",
 		s: func() *ApiServerSourceStatus {
 			s := &ApiServerSourceStatus{}
 			s.InitializeConditions()
+			s.MarkOIDCIdentityCreatedSucceeded()
 			s.MarkSink(sink)
 			s.MarkSufficientPermissions()
 			s.PropagateDeploymentAvailability(&appsv1.Deployment{})
 			return s
 		}(),
-		wantConditionStatus:      corev1.ConditionUnknown,
-		want:                     false,
-		oidcServiceAccountStatus: true,
+		wantConditionStatus: corev1.ConditionUnknown,
+		want:                false,
 	}, {
 		name: "mark sink and sufficient permissions and deployed",
 		s: func() *ApiServerSourceStatus {
 			s := &ApiServerSourceStatus{}
 			s.InitializeConditions()
+			s.MarkOIDCIdentityCreatedSucceeded()
 			s.MarkSink(sink)
 			s.MarkSufficientPermissions()
 			s.PropagateDeploymentAvailability(availableDeployment)
 			s.MarkOIDCIdentityCreatedSucceeded()
 			return s
 		}(),
-		wantConditionStatus:      corev1.ConditionTrue,
-		want:                     true,
-		oidcServiceAccountStatus: true,
+		wantConditionStatus: corev1.ConditionTrue,
+		want:                true,
 	}, {
 		name: "mark sink and not enough permissions",
 		s: func() *ApiServerSourceStatus {
 			s := &ApiServerSourceStatus{}
 			s.InitializeConditions()
+			s.MarkOIDCIdentityCreatedSucceeded()
 			s.MarkSink(sink)
 			s.MarkNoSufficientPermissions("areason", "amessage")
 			return s
 		}(),
-		wantConditionStatus:      corev1.ConditionFalse,
-		want:                     false,
-		oidcServiceAccountStatus: true,
+		wantConditionStatus: corev1.ConditionFalse,
+		want:                false,
 	}, {
 		name: "oidc status false",
 		s: func() *ApiServerSourceStatus {
 			s := &ApiServerSourceStatus{}
 			s.InitializeConditions()
+			s.MarkOIDCIdentityCreatedFailed("Unable to create the OIDC identity", "")
 			s.MarkSink(sink)
 			s.MarkSufficientPermissions()
 			s.PropagateDeploymentAvailability(availableDeployment)
-			s.MarkOIDCIdentityCreatedSucceeded()
 			return s
 		}(),
-		wantConditionStatus:      corev1.ConditionFalse,
-		want:                     false,
-		oidcServiceAccountStatus: false,
+		wantConditionStatus: corev1.ConditionFalse,
+		want:                false,
 	},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-
-			if test.oidcServiceAccountStatus {
-				test.s.MarkOIDCIdentityCreatedSucceeded()
-			} else {
-				test.s.MarkOIDCIdentityCreatedFailed("Unable to ...", "")
-			}
 
 			if test.wantConditionStatus != "" {
 				gotConditionStatus := test.s.GetTopLevelCondition().Status
@@ -396,14 +386,14 @@ func TestApiServerSourceStatusGetCondition(t *testing.T) {
 		s: func() *ApiServerSourceStatus {
 			s := &ApiServerSourceStatus{}
 			s.InitializeConditions()
-			s.MarkOIDCIdentityCreatedFailed("Unable to ...", "")
+			s.MarkOIDCIdentityCreatedFailed("Unable to create the OIDC identity", "")
 			return s
 		}(),
 		condQuery: ApiServerConditionReady,
 		want: &apis.Condition{
 			Type:   ApiServerConditionReady,
 			Status: corev1.ConditionFalse,
-			Reason: "Unable to ...",
+			Reason: "Unable to create the OIDC identity",
 		},
 	}}
 
