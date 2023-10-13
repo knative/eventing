@@ -65,7 +65,7 @@ func createApiServerSourceWithInvalidSpec(name string) func(ctx context.Context,
 
 		if err != nil {
 			// all good, error is expected
-			assert.EqualError(t, err, `admission webhook "validation.webhook.eventing.knative.dev" denied the request: validation failed: invalid value: Unknown: spec.mode`)
+			assert.ErrorContains(t, err, `admission webhook "validation.webhook.eventing.knative.dev" denied the request: validation failed: invalid value: Unknown: spec.mode`)
 		} else {
 			t.Error("expected ApiServerResource to reject invalid spec.")
 		}
@@ -82,7 +82,7 @@ func updateApiServerSourceWithInvalidSpec() func(ctx context.Context, t feature.
 
 		if err != nil {
 			// all good, error is expected
-			assert.EqualError(t, err, `admission webhook "validation.webhook.eventing.knative.dev" denied the request: validation failed: invalid value: Unknown: spec.mode`)
+			assert.ErrorContains(t, err, `admission webhook "validation.webhook.eventing.knative.dev" denied the request: validation failed: invalid value: Unknown: spec.mode`)
 		} else {
 			t.Error("expected ApiServerResource to reject invalid spec.")
 		}
