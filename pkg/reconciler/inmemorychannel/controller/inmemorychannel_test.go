@@ -33,6 +33,7 @@ import (
 	"knative.dev/pkg/resolver"
 
 	"knative.dev/eventing/pkg/apis/feature"
+	"knative.dev/eventing/pkg/auth"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/eventingtls/eventingtlstesting"
@@ -82,6 +83,11 @@ var (
 		Name: pointer.String("http"),
 		URL:  apis.HTTP("test-imc-kn-channel.test-namespace.svc.cluster.local"),
 	}
+
+	channelAudience = auth.GetAudience(v1.SchemeGroupVersion.WithKind("InMemoryChannel"), metav1.ObjectMeta{
+		Name:      imcName,
+		Namespace: testNS,
+	})
 
 	imcDest = duckv1.Destination{
 		Ref: &duckv1.KReference{
@@ -591,8 +597,43 @@ func TestAllCases(t *testing.T) {
 			Ctx: feature.ToContext(context.Background(), feature.Flags{
 				feature.TransportEncryption: feature.Strict,
 			}),
-		},
-	}
+		}, {
+			Name: "Should provision audience if authentication enabled",
+			Key:  imcKey,
+			Objects: []runtime.Object{
+				makeDLSServiceAsUnstructured(),
+				makeReadyDeployment(),
+				makeService(),
+				makeReadyEndpoints(),
+				NewInMemoryChannel(imcName, testNS,
+					WithDeadLetterSink(imcDest),
+					WithInMemoryChannelGeneration(imcGeneration),
+				),
+				makeChannelService(NewInMemoryChannel(imcName, testNS)),
+			},
+			WantErr: false,
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewInMemoryChannel(imcName, testNS,
+					WithInitInMemoryChannelConditions,
+					WithInMemoryChannelDeploymentReady(),
+					WithInMemoryChannelGeneration(imcGeneration),
+					WithInMemoryChannelStatusObservedGeneration(imcGeneration),
+					WithInMemoryChannelServiceReady(),
+					WithInMemoryChannelEndpointsReady(),
+					WithInMemoryChannelChannelServiceReady(),
+					WithInMemoryChannelAddress(channelServiceAddress),
+					WithDeadLetterSink(imcDest),
+					WithInMemoryChannelStatusDLS(dlsStatus),
+					WithInMemoryChannelAddress(duckv1.Addressable{
+						URL:      channelServiceAddress.URL,
+						Audience: &channelAudience,
+					}),
+				),
+			}},
+			Ctx: feature.ToContext(context.Background(), feature.Flags{
+				feature.OIDCAuthentication: feature.Enabled,
+			}),
+		}}
 
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
