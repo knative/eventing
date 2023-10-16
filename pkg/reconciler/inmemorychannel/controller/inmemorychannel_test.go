@@ -33,7 +33,6 @@ import (
 	"knative.dev/pkg/resolver"
 
 	"knative.dev/eventing/pkg/apis/feature"
-	"knative.dev/eventing/pkg/auth"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/eventingtls/eventingtlstesting"
@@ -84,10 +83,7 @@ var (
 		URL:  apis.HTTP("test-imc-kn-channel.test-namespace.svc.cluster.local"),
 	}
 
-	channelAudience = auth.GetAudience(v1.SchemeGroupVersion.WithKind("InMemoryChannel"), metav1.ObjectMeta{
-		Name:      imcName,
-		Namespace: testNS,
-	})
+	channelAudience = fmt.Sprintf("messaging.knative.dev/inmemorychannel/%s/%s", testNS, imcName)
 
 	imcDest = duckv1.Destination{
 		Ref: &duckv1.KReference{
