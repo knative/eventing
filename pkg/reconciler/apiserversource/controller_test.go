@@ -17,9 +17,10 @@ limitations under the License.
 package apiserversource
 
 import (
-	"knative.dev/eventing/pkg/apis/feature"
 	"os"
 	"testing"
+
+	"knative.dev/eventing/pkg/apis/feature"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

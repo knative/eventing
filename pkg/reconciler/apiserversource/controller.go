@@ -18,6 +18,7 @@ package apiserversource
 
 import (
 	"context"
+
 	"knative.dev/eventing/pkg/apis/feature"
 
 	"github.com/kelseyhightower/envconfig"
@@ -87,7 +88,7 @@ func NewController(
 		}
 	})
 
-	globalResync = func(obj interface{}) {
+	globalResync = func(interface{}) {
 		impl.GlobalResync(apiServerSourceInformer.Informer())
 	}
 
