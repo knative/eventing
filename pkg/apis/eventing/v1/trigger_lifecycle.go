@@ -17,8 +17,11 @@ limitations under the License.
 package v1
 
 import (
+	"fmt"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
@@ -78,6 +81,7 @@ func (ts *TriggerStatus) IsReady() bool {
 // InitializeConditions sets relevant unset conditions to Unknown state.
 func (ts *TriggerStatus) InitializeConditions() {
 	triggerCondSet.Manage(ts).InitializeConditions()
+	ts.MarkOIDCIdentityCreatedNotSupported()
 }
 
 func (ts *TriggerStatus) PropagateBrokerCondition(bc *apis.Condition) {
@@ -216,4 +220,9 @@ func (ts *TriggerStatus) MarkOIDCIdentityCreatedFailed(reason, messageFormat str
 
 func (ts *TriggerStatus) MarkOIDCIdentityCreatedUnknown(reason, messageFormat string, messageA ...interface{}) {
 	triggerCondSet.Manage(ts).MarkUnknown(TriggerConditionOIDCIdentityCreated, reason, messageFormat, messageA...)
+}
+
+func (ts *TriggerStatus) MarkOIDCIdentityCreatedNotSupported() {
+	// in case the OIDC feature is not supported, we mark the condition as true, to not mark the Trigger unready.
+	triggerCondSet.Manage(ts).MarkTrueWithReason(TriggerConditionOIDCIdentityCreated, fmt.Sprintf("%s feature not yet supported for this Broker class", feature.OIDCAuthentication), "")
 }

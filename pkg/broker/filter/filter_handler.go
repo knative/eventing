@@ -38,6 +38,7 @@ import (
 	"knative.dev/pkg/logging"
 
 	"knative.dev/eventing/pkg/apis"
+	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/utils"
 
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
@@ -69,6 +70,8 @@ type Handler struct {
 	// reporter reports stats of status code and dispatch time
 	reporter StatsReporter
 
+	eventDispatcher *kncloudevents.Dispatcher
+
 	triggerLister eventinglisters.TriggerLister
 	logger        *zap.Logger
 	withContext   func(ctx context.Context) context.Context
@@ -76,7 +79,7 @@ type Handler struct {
 }
 
 // NewHandler creates a new Handler and its associated EventReceiver.
-func NewHandler(logger *zap.Logger, triggerInformer v1.TriggerInformer, reporter StatsReporter, wc func(ctx context.Context) context.Context) (*Handler, error) {
+func NewHandler(logger *zap.Logger, oidcTokenProvider *auth.OIDCTokenProvider, triggerInformer v1.TriggerInformer, reporter StatsReporter, wc func(ctx context.Context) context.Context) (*Handler, error) {
 	kncloudevents.ConfigureConnectionArgs(&kncloudevents.ConnectionArgs{
 		MaxIdleConns:        defaultMaxIdleConnections,
 		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
@@ -124,11 +127,12 @@ func NewHandler(logger *zap.Logger, triggerInformer v1.TriggerInformer, reporter
 	})
 
 	return &Handler{
-		reporter:      reporter,
-		triggerLister: triggerInformer.Lister(),
-		logger:        logger,
-		withContext:   wc,
-		filtersMap:    fm,
+		reporter:        reporter,
+		eventDispatcher: kncloudevents.NewDispatcher(oidcTokenProvider),
+		triggerLister:   triggerInformer.Lister(),
+		logger:          logger,
+		withContext:     wc,
+		filtersMap:      fm,
 	}, nil
 }
 
@@ -238,7 +242,7 @@ func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers 
 	additionalHeaders := headers.Clone()
 	additionalHeaders.Set(apis.KnNamespaceHeader, t.GetNamespace())
 
-	dispatchInfo, err := kncloudevents.SendEvent(ctx, *event, target, kncloudevents.WithHeader(additionalHeaders))
+	dispatchInfo, err := h.eventDispatcher.SendEvent(ctx, *event, target, kncloudevents.WithHeader(additionalHeaders))
 	if err != nil {
 		h.logger.Error("failed to send event", zap.Error(err))
 

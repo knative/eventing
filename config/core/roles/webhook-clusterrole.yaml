@@ -109,6 +109,12 @@ rules:
       - "create"
       - "patch"
 
+# For the SinkBinding reconciler adding the OIDC identity service accounts
+  - apiGroups:
+      - ""
+    resources:
+      - "serviceaccounts"
+    verbs: *everything
   # Necessary for conversion webhook. These are copied from the serving
   # TODO: Do we really need all these permissions?
   - apiGroups: ["apiextensions.k8s.io"]

@@ -77,6 +77,10 @@ const (
 	// SinkBindingConditionSinkProvided is configured to indicate whether the
 	// sink has been properly extracted from the resolver.
 	SinkBindingConditionSinkProvided apis.ConditionType = "SinkProvided"
+
+	// SinkBindingConditionOIDCIdentityCreated is configured to indicate whether
+	// the OIDC identity has been created for the sink.
+	SinkBindingConditionOIDCIdentityCreated apis.ConditionType = "OIDCIdentityCreated"
 )
 
 // SinkBindingStatus communicates the observed state of the SinkBinding (from the controller).

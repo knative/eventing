@@ -1493,7 +1493,7 @@ func TestReconcile(t *testing.T) {
 				feature.OIDCAuthentication: feature.Enabled,
 			}),
 			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
-				makeReadySubscription(testNS),
+				makeReadySubscriptionWithAudience(testNS),
 				NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
 					WithTriggerSubscriberURI(subscriberURI),
@@ -1527,7 +1527,7 @@ func TestReconcile(t *testing.T) {
 				feature.OIDCAuthentication: feature.Enabled,
 			}),
 			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
-				makeReadySubscription(testNS),
+				makeReadySubscriptionWithAudience(testNS),
 				makeTriggerOIDCServiceAccountWithoutOwnerRef(),
 				NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
@@ -1555,6 +1555,49 @@ func TestReconcile(t *testing.T) {
 			WantEvents: []string{
 				Eventf(corev1.EventTypeWarning, "InternalError", fmt.Sprintf("service account %s not owned by Trigger %s", makeTriggerOIDCServiceAccountWithoutOwnerRef().Name, triggerName)),
 			},
+		},
+		{
+			Name: "OIDC: set Audience of broker-filter in Subscription",
+			Key:  testKey,
+			Ctx: feature.ToContext(context.Background(), feature.Flags{
+				feature.OIDCAuthentication: feature.Enabled,
+			}),
+			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
+				makeReadySubscription(testNS),
+				makeTriggerOIDCServiceAccount(),
+				NewTrigger(triggerName, testNS, brokerName,
+					WithTriggerUID(triggerUID),
+					WithTriggerSubscriberURI(subscriberURI),
+					WithInitTriggerConditions,
+				)}...),
+			WantErr: false,
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewTrigger(triggerName, testNS, brokerName,
+					WithTriggerUID(triggerUID),
+					WithTriggerSubscriberURI(subscriberURI),
+					WithTriggerBrokerReady(),
+					// The first reconciliation will initialize the status conditions.
+					WithInitTriggerConditions,
+					WithTriggerDependencyReady(),
+					WithTriggerSubscribed(),
+					WithTriggerStatusSubscriberURI(subscriberURI),
+					WithTriggerSubscriberResolvedSucceeded(),
+					WithTriggerDeadLetterSinkNotConfigured(),
+					WithTriggerSubscriptionNotConfigured(),
+					WithTriggerOIDCIdentityCreatedSucceeded(),
+					WithTriggerOIDCServiceAccountName(makeTriggerOIDCServiceAccount().Name),
+				),
+			}},
+			WantCreates: []runtime.Object{
+				resources.NewSubscription(makeTrigger(testNS), createTriggerChannelRef(), makeBrokerRef(), makeServiceURIWithAudience(), makeEmptyDelivery()),
+			},
+			WantDeletes: []clientgotesting.DeleteActionImpl{{
+				ActionImpl: clientgotesting.ActionImpl{
+					Namespace: testNS,
+					Resource:  eventingduckv1.SchemeGroupVersion.WithResource("subscriptions"),
+				},
+				Name: subscriptionName,
+			}},
 		},
 	}
 
@@ -1696,6 +1739,13 @@ func makeServiceURI() *duckv1.Destination {
 	}
 }
 
+func makeServiceURIWithAudience() *duckv1.Destination {
+	dst := makeServiceURI()
+	dst.Audience = ptr.String(FilterAudience)
+
+	return dst
+}
+
 func makeServiceURIHTTPS() *duckv1.Destination {
 	return &duckv1.Destination{
 		URI: &apis.URL{
@@ -1804,6 +1854,12 @@ func makeFilterSubscriptionNotOwnedByTrigger() *messagingv1.Subscription {
 func makeReadySubscription(subscriberNamespace string) *messagingv1.Subscription {
 	s := makeFilterSubscription(subscriberNamespace)
 	s.Status = *eventingv1.TestHelper.ReadySubscriptionStatus()
+	return s
+}
+
+func makeReadySubscriptionWithAudience(subscriberNamespace string) *messagingv1.Subscription {
+	s := makeReadySubscription(subscriberNamespace)
+	s.Spec.Subscriber.Audience = ptr.String(FilterAudience)
 	return s
 }
 

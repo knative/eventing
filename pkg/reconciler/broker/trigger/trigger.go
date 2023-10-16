@@ -62,6 +62,8 @@ const (
 	subscriptionDeleteFailed = "SubscriptionDeleteFailed"
 	subscriptionCreateFailed = "SubscriptionCreateFailed"
 	subscriptionGetFailed    = "SubscriptionGetFailed"
+
+	FilterAudience = "mt-broker-filter"
 )
 
 type Reconciler struct {
@@ -207,8 +209,8 @@ func (r *Reconciler) resolveDeadLetterSink(ctx context.Context, b *eventingv1.Br
 // subscribeToBrokerChannel subscribes service 'svc' to the Broker's channels.
 func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, b *eventingv1.Broker, t *eventingv1.Trigger, brokerTrigger *corev1.ObjectReference) (*messagingv1.Subscription, error) {
 	var dest *duckv1.Destination
-	transportEncryptionFlags := feature.FromContext(ctx)
-	if transportEncryptionFlags.IsPermissiveTransportEncryption() || transportEncryptionFlags.IsStrictTransportEncryption() {
+	featureFlags := feature.FromContext(ctx)
+	if featureFlags.IsPermissiveTransportEncryption() || featureFlags.IsStrictTransportEncryption() {
 		caCerts, err := r.getCaCerts()
 		if err != nil {
 			return nil, fmt.Errorf("failed to get CA certs: %w", err)
@@ -230,6 +232,10 @@ func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, b *eventingv1
 				Path:   path.Generate(t),
 			},
 		}
+	}
+
+	if featureFlags.IsOIDCAuthentication() {
+		dest.Audience = pointer.String(FilterAudience)
 	}
 
 	// Note that we have to hard code the brokerGKV stuff as sometimes typemeta is not

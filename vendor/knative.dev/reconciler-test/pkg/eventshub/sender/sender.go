@@ -25,8 +25,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	nethttp "net/http"
+	"os"
 	"strconv"
 	"time"
 	"unicode"
@@ -58,6 +58,9 @@ type generator struct {
 
 	// EnforceTLS is used to enforce TLS.
 	EnforceTLS bool `envconfig:"ENFORCE_TLS" default:"false"`
+
+	// EnableOIDC is used to enable OIDC authentication.
+	EnableOIDCAuth bool `envconfig:"ENABLE_OIDC_AUTH" default:"false"`
 
 	// The duration to wait before starting sending the first message
 	Delay string `envconfig:"DELAY" default:"5" required:"false"`
@@ -151,6 +154,18 @@ func Start(ctx context.Context, logs *eventshub.EventLogs, clientOpts ...eventsh
 	httpClient, _, err := createClient(ctx, env, logs)
 	if err != nil {
 		return err
+	}
+
+	if env.EnableOIDCAuth {
+		jwt, err := getOIDCToken()
+		if err != nil {
+			return err
+		}
+		if env.InputHeaders == nil {
+			env.InputHeaders = make(map[string]string)
+		}
+
+		env.InputHeaders["Authorization"] = fmt.Sprintf("Bearer %s", jwt)
 	}
 
 	if env.ProbeSink {
@@ -526,7 +541,7 @@ func (g *generator) nextGenerated(ctx context.Context) (*nethttp.Request, *cloud
 	}
 
 	if g.InputBody != "" {
-		req.Body = ioutil.NopCloser(bytes.NewReader([]byte(g.InputBody)))
+		req.Body = io.NopCloser(bytes.NewReader([]byte(g.InputBody)))
 	}
 
 	return req, event, nil
@@ -542,4 +557,13 @@ func durationWithUnit(s string) string {
 	}
 
 	return s
+}
+
+func getOIDCToken() (string, error) {
+	buf, err := os.ReadFile("/oidc/token")
+	if err != nil {
+		return "", fmt.Errorf("could not read token from file: %w", err)
+	}
+
+	return string(buf), nil
 }
