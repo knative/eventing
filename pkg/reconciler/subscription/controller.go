@@ -73,7 +73,7 @@ func NewController(
 		}
 	})
 
-	globalResync = func(obj interface{}) {
+	globalResync = func(_ interface{}) {
 		impl.GlobalResync(subscriptionInformer.Informer())
 	}
 
