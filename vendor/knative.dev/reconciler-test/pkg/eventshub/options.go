@@ -268,11 +268,6 @@ func InputMethod(method string) EventsHubOption {
 	return envOption("INPUT_METHOD", method)
 }
 
-// OIDCValidToken adds a valid OIDC token to use for OIDC authentication to the request.
-func OIDCValidToken() EventsHubOption {
-	return compose(envOption(OIDCGenerateValidTokenEnv, "true"), envOIDCEnabled())
-}
-
 // OIDCExpiredToken adds an expired OIDC token to the request. As the minimal
 // expiry for JWTs from Kubernetes are 10 minutes, the sender will delay the
 // send by 10 + 1 minutes.
@@ -289,11 +284,12 @@ func OIDCInvalidAudience() EventsHubOption {
 }
 
 func oidcSinkAudience(aud *string) EventsHubOption {
-	if aud == nil {
-		return noop
+	if aud != nil && *aud != "" {
+		// if the sink has an audience set, we enable OIDC to get a token added
+		return compose(envOption(OIDCSinkAudienceEnv, *aud), envOIDCEnabled())
 	}
 
-	return envOption(OIDCSinkAudienceEnv, *aud)
+	return noop
 }
 
 // OIDCCorruptedSignature adds an OIDC token with an invalid signature to the request.
