@@ -73,6 +73,10 @@ func NewController(
 		}
 	})
 
+	globalResync = func(obj interface{}) {
+		impl.GlobalResync(subscriptionInformer.Informer())
+	}
+
 	subscriptionInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	// Trackers used to notify us when the resources Subscription depends on change, so that the
