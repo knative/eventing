@@ -214,14 +214,11 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1.InMemoryChannel)
 	}
 
 	if featureFlags.IsOIDCAuthentication() {
-		logging.FromContext(ctx).Error("OIDC enabled")
 		audience := auth.GetAudience(v1.SchemeGroupVersion.WithKind("InMemoryChannel"), imc.ObjectMeta)
 
 		logging.FromContext(ctx).Debugw("Setting the imc audience", zap.String("audience", audience))
 		imc.Status.Address.Audience = &audience
 	} else {
-		logging.FromContext(ctx).Error("OIDC disabled")
-
 		logging.FromContext(ctx).Debug("Clearing the imc audience as OIDC is not enabled")
 		imc.Status.Address.Audience = nil
 	}
