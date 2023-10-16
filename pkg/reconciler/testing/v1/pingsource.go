@@ -19,8 +19,9 @@ package testing
 import (
 	"context"
 	"fmt"
-	"knative.dev/eventing/pkg/apis/feature"
 	"time"
+
+	"knative.dev/eventing/pkg/apis/feature"
 
 	"knative.dev/eventing/pkg/reconciler/testing"
 

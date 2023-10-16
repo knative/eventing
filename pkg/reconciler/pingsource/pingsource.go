@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
 	v1 "k8s.io/client-go/listers/core/v1"
 	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/eventing/pkg/auth"

@@ -18,6 +18,7 @@ package pingsource
 
 import (
 	"context"
+
 	serviceaccountinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount"
 
 	"go.uber.org/zap"
@@ -61,7 +62,13 @@ func NewController(
 		logger.Fatalw("Error converting leader election configuration to JSON", zap.Error(err))
 	}
 
-	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"))
+	var globalResync func(obj interface{})
+
+	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {
+		if globalResync != nil {
+			globalResync(nil)
+		}
+	})
 	featureStore.WatchConfigs(cmw)
 
 	// Configure the reconciler
@@ -82,6 +89,10 @@ func NewController(
 			ConfigStore: featureStore,
 		}
 	})
+
+	globalResync = func(interface{}) {
+		impl.GlobalResync(pingSourceInformer.Informer())
+	}
 
 	r.sinkResolver = resolver.NewURIResolver(ctx, cmw, impl.Tracker)
 

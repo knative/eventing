@@ -19,10 +19,11 @@ package pingsource
 import (
 	"context"
 	"fmt"
-	"knative.dev/eventing/pkg/apis/feature"
-	"knative.dev/eventing/pkg/auth"
 	"os"
 	"testing"
+
+	"knative.dev/eventing/pkg/apis/feature"
+	"knative.dev/eventing/pkg/auth"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"k8s.io/utils/pointer"
