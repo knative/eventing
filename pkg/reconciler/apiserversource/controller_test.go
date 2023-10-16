@@ -17,6 +17,7 @@ limitations under the License.
 package apiserversource
 
 import (
+	"knative.dev/eventing/pkg/apis/feature"
 	"os"
 	"testing"
 
@@ -69,6 +70,11 @@ func TestNew(t *testing.T) {
 		},
 		Data: map[string]string{
 			"_example": "test-config",
+		},
+	}, &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      feature.FlagsConfigName,
+			Namespace: "knative-eventing",
 		},
 	}))
 
