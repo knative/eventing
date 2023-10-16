@@ -212,7 +212,7 @@ function install_head {
 function install_latest_release() {
   header ">> Installing Knative Eventing latest public release"
 
-  install_knative_eventing_nonexistent \
+  install_knative_eventing \
     "latest-release" || \
     fail_test "Knative latest release installation failed"
 }
