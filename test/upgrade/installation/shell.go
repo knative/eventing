@@ -17,17 +17,17 @@ limitations under the License.
 package installation
 
 import (
-	"knative.dev/hack/shell"
+	"testing"
+
+	"knative.dev/pkg/test/upgrade/shell"
 )
 
-func callShellFunction(funcName string) error {
+func callShellFunction(funcName string, t *testing.T) error {
 	loc, err := shell.NewProjectLocation("../../..")
 	if err != nil {
 		return err
 	}
-	exec := shell.NewExecutor(shell.ExecutorConfig{
-		ProjectLocation: loc,
-	})
+	exec := shell.NewExecutor(t, loc)
 	fn := shell.Function{
 		Script: shell.Script{
 			Label:      funcName,
