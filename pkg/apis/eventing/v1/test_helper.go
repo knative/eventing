@@ -53,6 +53,7 @@ func (testHelper) ReadySubscriptionStatus() *messagingv1.SubscriptionStatus {
 	ss.MarkChannelReady()
 	ss.MarkReferencesResolved()
 	ss.MarkAddedToChannel()
+	ss.MarkOIDCIdentityCreatedSucceeded()
 	return ss
 }
 

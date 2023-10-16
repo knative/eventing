@@ -22,7 +22,7 @@ import (
 
 // SubCondSet is a condition set with Ready as the happy condition and
 // ReferencesResolved and ChannelReady as the dependent conditions.
-var SubCondSet = apis.NewLivingConditionSet(SubscriptionConditionReferencesResolved, SubscriptionConditionAddedToChannel, SubscriptionConditionChannelReady)
+var SubCondSet = apis.NewLivingConditionSet(SubscriptionConditionReferencesResolved, SubscriptionConditionAddedToChannel, SubscriptionConditionChannelReady, SubscriptionConditionOIDCIdentityCreated)
 
 const (
 	// SubscriptionConditionReady has status True when all subconditions below have been set to True.
@@ -37,6 +37,8 @@ const (
 
 	// SubscriptionConditionChannelReady has status True when the channel has marked the subscriber as 'ready'
 	SubscriptionConditionChannelReady apis.ConditionType = "ChannelReady"
+
+	SubscriptionConditionOIDCIdentityCreated apis.ConditionType = "OIDCIdentityCreated"
 )
 
 // GetConditionSet retrieves the condition set for this resource. Implements the KRShaped interface.
@@ -112,4 +114,20 @@ func (ss *SubscriptionStatus) MarkChannelUnknown(reason, messageFormat string, m
 // MarkNotAddedToChannel sets the AddedToChannel condition to False state.
 func (ss *SubscriptionStatus) MarkNotAddedToChannel(reason, messageFormat string, messageA ...interface{}) {
 	SubCondSet.Manage(ss).MarkFalse(SubscriptionConditionAddedToChannel, reason, messageFormat, messageA...)
+}
+
+func (ss *SubscriptionStatus) MarkOIDCIdentityCreatedSucceeded() {
+	SubCondSet.Manage(ss).MarkTrue(SubscriptionConditionOIDCIdentityCreated)
+}
+
+func (ss *SubscriptionStatus) MarkOIDCIdentityCreatedSucceededWithReason(reason, messageFormat string, messageA ...interface{}) {
+	SubCondSet.Manage(ss).MarkTrueWithReason(SubscriptionConditionOIDCIdentityCreated, reason, messageFormat, messageA...)
+}
+
+func (ss *SubscriptionStatus) MarkOIDCIdentityCreatedFailed(reason, messageFormat string, messageA ...interface{}) {
+	SubCondSet.Manage(ss).MarkFalse(SubscriptionConditionOIDCIdentityCreated, reason, messageFormat, messageA...)
+}
+
+func (ss *SubscriptionStatus) MarkOIDCIdentityCreatedUnknown(reason, messageFormat string, messageA ...interface{}) {
+	SubCondSet.Manage(ss).MarkUnknown(SubscriptionConditionOIDCIdentityCreated, reason, messageFormat, messageA...)
 }

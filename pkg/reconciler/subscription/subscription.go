@@ -28,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes"
 
 	"knative.dev/pkg/apis"
 
@@ -39,9 +40,11 @@ import (
 	"knative.dev/pkg/resolver"
 	"knative.dev/pkg/tracker"
 
+	corev1listers "k8s.io/client-go/listers/core/v1"
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/apis/feature"
 	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
+	"knative.dev/eventing/pkg/auth"
 	subscriptionreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/subscription"
 	listers "knative.dev/eventing/pkg/client/listers/messaging/v1"
 	eventingduck "knative.dev/eventing/pkg/duck"
@@ -69,12 +72,15 @@ type Reconciler struct {
 	// crdLister is used to resolve the ref version
 	kreferenceResolver *kref.KReferenceResolver
 
+	kubeclient kubernetes.Interface
+
 	// listers index properties about resources
-	subscriptionLister  listers.SubscriptionLister
-	channelLister       listers.ChannelLister
-	channelableTracker  eventingduck.ListableTracker
-	destinationResolver *resolver.URIResolver
-	tracker             tracker.Interface
+	subscriptionLister   listers.SubscriptionLister
+	channelLister        listers.ChannelLister
+	channelableTracker   eventingduck.ListableTracker
+	destinationResolver  *resolver.URIResolver
+	tracker              tracker.Interface
+	serviceAccountLister corev1listers.ServiceAccountLister
 }
 
 // Check that our Reconciler implements Interface
@@ -85,6 +91,24 @@ var _ subscriptionreconciler.Finalizer = (*Reconciler)(nil)
 
 // ReconcileKind implements Interface.ReconcileKind.
 func (r *Reconciler) ReconcileKind(ctx context.Context, subscription *v1.Subscription) pkgreconciler.Event {
+	// OIDC authentication
+	featureFlags := feature.FromContext(ctx)
+	if featureFlags.IsOIDCAuthentication() {
+		saName := auth.GetOIDCServiceAccountNameForResource(v1.SchemeGroupVersion.WithKind("Subscription"), subscription.ObjectMeta)
+		subscription.Status.Auth = &duckv1.AuthStatus{
+			ServiceAccountName: &saName,
+		}
+
+		if err := auth.EnsureOIDCServiceAccountExistsForResource(ctx, r.serviceAccountLister, r.kubeclient, v1.SchemeGroupVersion.WithKind("Subscription"), subscription.ObjectMeta); err != nil {
+			subscription.Status.MarkOIDCIdentityCreatedFailed("Unable to resolve service account for OIDC authentication", "%v", err)
+			return err
+		}
+		subscription.Status.MarkOIDCIdentityCreatedSucceeded()
+	} else {
+		subscription.Status.Auth = nil
+		subscription.Status.MarkOIDCIdentityCreatedSucceededWithReason(fmt.Sprintf("%s feature disabled", feature.OIDCAuthentication), "")
+	}
+
 	// Find the channel for this subscription.
 	channel, err := r.getChannel(ctx, subscription)
 	if err != nil {
