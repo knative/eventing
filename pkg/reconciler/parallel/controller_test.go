@@ -26,6 +26,7 @@ import (
 	_ "knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable/fake"
 	_ "knative.dev/eventing/pkg/client/injection/informers/flows/v1/parallel/fake"
 	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/subscription/fake"
+	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount/fake"
 )
 
 func TestNew(t *testing.T) {

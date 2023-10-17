@@ -18,9 +18,11 @@ package testing
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/eventing/pkg/apis/feature"
 	flowsv1 "knative.dev/eventing/pkg/apis/flows/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -111,5 +113,33 @@ func WithFlowsParallelSubscriptionsNotReady(reason, message string) FlowsParalle
 func WithFlowsParallelAddressableNotReady(reason, message string) FlowsParallelOption {
 	return func(p *flowsv1.Parallel) {
 		p.Status.MarkAddressableNotReady(reason, message)
+	}
+}
+
+func WithFlowsParallelOIDCIdentityCreatedSucceeded() FlowsParallelOption {
+	return func(p *flowsv1.Parallel) {
+		p.Status.MarkOIDCIdentityCreatedSucceeded()
+	}
+}
+
+func WithFlowsParallelOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled() FlowsParallelOption {
+	return func(p *flowsv1.Parallel) {
+		p.Status.MarkOIDCIdentityCreatedSucceededWithReason(fmt.Sprintf("%s feature disabled", feature.OIDCAuthentication), "")
+	}
+}
+
+func WithFlowsParallelOIDCIdentityCreatedFailed(reason, message string) FlowsParallelOption {
+	return func(p *flowsv1.Parallel) {
+		p.Status.MarkOIDCIdentityCreatedFailed(reason, message)
+	}
+}
+
+func WithFlowsParallelOIDCServiceAccountName(name string) FlowsParallelOption {
+	return func(p *flowsv1.Parallel) {
+		if p.Status.Auth == nil {
+			p.Status.Auth = &duckv1.AuthStatus{}
+		}
+
+		p.Status.Auth.ServiceAccountName = &name
 	}
 }

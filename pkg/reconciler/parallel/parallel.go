@@ -49,6 +49,7 @@ import (
 	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1"
 	ducklib "knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/reconciler/parallel/resources"
+	duckv1knative "knative.dev/pkg/apis/duck/v1"
 )
 
 type Reconciler struct {
@@ -81,7 +82,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, p *v1.Parallel) pkgrecon
 	featureFlags := feature.FromContext(ctx)
 	if featureFlags.IsOIDCAuthentication() {
 		saName := auth.GetOIDCServiceAccountNameForResource(v1.SchemeGroupVersion.WithKind("Parallel"), p.ObjectMeta)
-		p.Status.Auth = &duckv1.AuthStatus{
+		p.Status.Auth = &duckv1knative.AuthStatus{
 			ServiceAccountName: &saName,
 		}
 		if err := auth.EnsureOIDCServiceAccountExistsForResource(ctx, r.serviceAccountLister, r.kubeclient, v1.SchemeGroupVersion.WithKind("Parallel"), p.ObjectMeta); err != nil {
