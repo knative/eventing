@@ -48,7 +48,12 @@ func NewController(
 	subscriptionInformer := subscription.Get(ctx)
 	serviceaccountInformer := serviceaccountinformer.Get(ctx)
 
-	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"))
+	var globalResync func(obj interface{})
+	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {
+		if globalResync != nil {
+			globalResync(nil)
+		}
+	})
 	featureStore.WatchConfigs(cmw)
 
 	r := &Reconciler{
@@ -64,6 +69,10 @@ func NewController(
 			ConfigStore: featureStore,
 		}
 	})
+
+	globalResync = func(_ interface{}) {
+		impl.GlobalResync(parallelInformer.Informer())
+	}
 
 	r.channelableTracker = duck.NewListableTrackerFromTracker(ctx, channelable.Get, impl.Tracker)
 	parallelInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
