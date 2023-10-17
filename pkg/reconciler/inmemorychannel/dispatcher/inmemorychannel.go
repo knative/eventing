@@ -56,6 +56,7 @@ type Reconciler struct {
 	eventTypeLister          v1beta2.EventTypeLister
 	eventingClient           eventingv1beta2.EventingV1beta2Interface
 	featureStore             *feature.Store
+	eventDispatcher          *kncloudevents.Dispatcher
 }
 
 // Check the interfaces Reconciler should implement
@@ -108,7 +109,6 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1.InMemoryChannel) rec
 
 		channelRef = toKReference(imc)
 		UID = &imc.UID
-
 	}
 
 	// First grab the host based MultiChannelFanoutMessage httpHandler
@@ -122,6 +122,7 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1.InMemoryChannel) rec
 			eventTypeAutoHandler,
 			channelRef,
 			UID,
+			r.eventDispatcher,
 		)
 		if err != nil {
 			logging.FromContext(ctx).Error("Failed to create a new fanout.EventHandler", err)
@@ -150,6 +151,7 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1.InMemoryChannel) rec
 			eventTypeAutoHandler,
 			channelRef,
 			UID,
+			r.eventDispatcher,
 			channel.ResolveChannelFromPath(channel.ParseChannelFromPath),
 		)
 		if err != nil {

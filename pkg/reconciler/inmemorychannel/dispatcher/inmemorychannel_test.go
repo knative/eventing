@@ -40,6 +40,7 @@ import (
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/apis/feature"
 	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
+	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/channel/fanout"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/inmemorychannel"
@@ -491,13 +492,17 @@ func TestReconciler_ReconcileKind(t *testing.T) {
 		},
 	}
 	for n, tc := range testCases {
-		ctx, fakeEventingClient := fakeeventingclient.With(context.Background(), tc.imc)
+		ctx, _ := SetupFakeContext(t)
+		ctx, fakeEventingClient := fakeeventingclient.With(ctx, tc.imc)
 		feature.ToContext(ctx, feature.Flags{
 			feature.EvenTypeAutoCreate: feature.Disabled,
 		})
+
+		oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
+		dispatcher := kncloudevents.NewDispatcher(oidcTokenProvider)
 		// Just run the tests once with no existing handler (creates the handler) and once
 		// with an existing, so we exercise both paths at once.
-		fh, err := fanout.NewFanoutEventHandler(nil, fanout.Config{}, nil, nil, nil, nil)
+		fh, err := fanout.NewFanoutEventHandler(nil, fanout.Config{}, nil, nil, nil, nil, dispatcher)
 		if err != nil {
 			t.Error(err)
 		}
@@ -542,7 +547,11 @@ func TestReconciler_InvalidInputs(t *testing.T) {
 		},
 	}
 	for n, tc := range testCases {
-		fh, err := fanout.NewFanoutEventHandler(nil, fanout.Config{}, nil, nil, nil, nil)
+		ctx, _ := SetupFakeContext(t)
+
+		oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
+		dispatcher := kncloudevents.NewDispatcher(oidcTokenProvider)
+		fh, err := fanout.NewFanoutEventHandler(nil, fanout.Config{}, nil, nil, nil, nil, dispatcher)
 		if err != nil {
 			t.Error(err)
 		}
@@ -572,7 +581,11 @@ func TestReconciler_Deletion(t *testing.T) {
 		},
 	}
 	for n, tc := range testCases {
-		fh, err := fanout.NewFanoutEventHandler(nil, fanout.Config{}, nil, nil, nil, nil)
+		ctx, _ := SetupFakeContext(t)
+
+		oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
+		dispatcher := kncloudevents.NewDispatcher(oidcTokenProvider)
+		fh, err := fanout.NewFanoutEventHandler(nil, fanout.Config{}, nil, nil, nil, nil, dispatcher)
 		if err != nil {
 			t.Error(err)
 		}

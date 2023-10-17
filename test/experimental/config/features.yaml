@@ -26,4 +26,3 @@ data:
   delivery-timeout: "enabled"
   new-trigger-filters: "enabled"
   eventtype-auto-create: "enabled"
-  authentication.oidc: "enabled"

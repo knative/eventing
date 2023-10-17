@@ -58,6 +58,7 @@ func getSubscription(name string, ready bool) *messagingv1.Subscription {
 		s.Status.MarkChannelReady()
 		s.Status.MarkReferencesResolved()
 		s.Status.MarkAddedToChannel()
+		s.Status.MarkOIDCIdentityCreatedSucceeded()
 	} else {
 		s.Status.MarkChannelFailed("testInducedFailure", "Test Induced failure")
 		s.Status.MarkReferencesNotResolved("testInducedFailure", "Test Induced failure")

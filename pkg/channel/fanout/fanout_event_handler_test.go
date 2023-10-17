@@ -27,10 +27,13 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"k8s.io/client-go/rest"
 	"k8s.io/utils/pointer"
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/kncloudevents"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/injection"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"
@@ -43,6 +46,8 @@ import (
 	"knative.dev/pkg/apis"
 
 	"knative.dev/eventing/pkg/channel"
+	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
+	_ "knative.dev/pkg/system/testing"
 )
 
 // Domains used in subscriptions, which will be replaced by the real domains of the started HTTP
@@ -318,6 +323,10 @@ func TestFanoutEventHandler_ServeHTTP(t *testing.T) {
 }
 
 func testFanoutEventHandler(t *testing.T, async bool, receiverFunc channel.EventReceiverFunc, timeout time.Duration, inSubs []Subscription, subscriberHandler func(http.ResponseWriter, *http.Request), subscriberReqs int, replierHandler func(http.ResponseWriter, *http.Request), replierReqs int, expectedStatus int) {
+	ctx := context.Background()
+	ctx, _ = fakekubeclient.With(ctx)
+	ctx = injection.WithConfig(ctx, &rest.Config{})
+
 	var subscriberServerWg *sync.WaitGroup
 	reporter := channel.NewStatsReporter("testcontainer", "testpod")
 	if subscriberReqs != 0 {
@@ -362,6 +371,9 @@ func testFanoutEventHandler(t *testing.T, async bool, receiverFunc channel.Event
 		t.Fatal(err)
 	}
 
+	oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
+	dispatcher := kncloudevents.NewDispatcher(oidcTokenProvider)
+
 	calledChan := make(chan bool, 1)
 	recvOptionFunc := func(*channel.EventReceiver) error {
 		calledChan <- true
@@ -378,6 +390,7 @@ func testFanoutEventHandler(t *testing.T, async bool, receiverFunc channel.Event
 		nil,
 		nil,
 		nil,
+		dispatcher,
 		recvOptionFunc,
 	)
 	<-calledChan
@@ -403,7 +416,7 @@ func testFanoutEventHandler(t *testing.T, async bool, receiverFunc channel.Event
 	reqCtx, _ := trace.StartSpan(context.TODO(), "bla")
 	req := httptest.NewRequest(http.MethodPost, "http://channelname.channelnamespace/", nil).WithContext(reqCtx)
 
-	ctx := context.Background()
+	ctx = context.Background()
 
 	if err := bindingshttp.WriteRequest(ctx, binding.ToMessage(&event), req); err != nil {
 		t.Fatal("WriteRequest =", err)

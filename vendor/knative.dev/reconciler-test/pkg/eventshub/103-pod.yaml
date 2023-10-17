@@ -36,11 +36,18 @@ spec:
   {{ end }}
   containers:
     - name: eventshub
-      {{ if and .withEnforceTLS .isReceiver }}
+      {{ if or (and .withEnforceTLS .isReceiver) (and .withOIDCAuth (not .isReceiver)) }}
       volumeMounts:
+        {{ if and .withEnforceTLS .isReceiver }}
         - name: tls-certificates
           mountPath: "/etc/tls/certificates"
           readOnly: true
+        {{ end }}
+        {{ if and .withOIDCAuth (not .isReceiver) }}
+        - name: oidc-token
+          mountPath: "/oidc"
+          readOnly: true
+        {{ end }}
       {{ end }}
       {{ if .containerSecurityContext }}
       securityContext:
@@ -82,10 +89,18 @@ spec:
         - name: {{printf "%q" $key}}
           value: {{printf "%q" $value}}
         {{ end }}
-  {{ if and .withEnforceTLS .isReceiver }}
+  {{ if or (and .withEnforceTLS .isReceiver) (and .withOIDCAuth (not .isReceiver)) }}
   volumes:
+    {{ if and .withEnforceTLS .isReceiver }}
     - name: tls-certificates
       secret:
         secretName: server-tls-{{ .name }}
         optional: false
+    {{ end }}
+    {{ if and .withOIDCAuth (not .isReceiver) }}
+    - name: oidc-token
+      secret:
+        secretName: oidc-token-{{ .name }}
+        optional: false
+    {{ end }}
   {{ end }}

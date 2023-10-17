@@ -30,6 +30,7 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	"knative.dev/pkg/kmeta"
 
+	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
 	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/kncloudevents"
@@ -118,12 +119,15 @@ func NewController(
 		chMsgHandler: sh,
 	}
 
+	oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
+
 	r := &Reconciler{
 		multiChannelEventHandler: sh,
 		reporter:                 reporter,
 		messagingClientSet:       eventingclient.Get(ctx).MessagingV1(),
 		eventingClient:           eventingclient.Get(ctx).EventingV1beta2(),
 		eventTypeLister:          eventtypeinformer.Get(ctx).Lister(),
+		eventDispatcher:          kncloudevents.NewDispatcher(oidcTokenProvider),
 	}
 
 	impl := inmemorychannelreconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {

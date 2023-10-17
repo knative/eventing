@@ -18,6 +18,7 @@ package apiserversource
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -29,8 +30,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	clientgotesting "k8s.io/client-go/testing"
+	"knative.dev/eventing/pkg/apis/feature"
 
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
+	"knative.dev/eventing/pkg/auth"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1/apiserversource"
 	"knative.dev/eventing/pkg/reconciler/apiserversource/resources"
@@ -133,6 +136,7 @@ func TestReconcile(t *testing.T) {
 				rttestingv1.WithApiServerSourceSink(sinkURI),
 				rttestingv1.WithApiServerSourceNoSufficientPermissions,
 				rttestingv1.WithApiServerSourceStatusNamespaces([]string{testNS}),
+				rttestingv1.WithApiServerSourceOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 			),
 		}},
 		WantCreates: []runtime.Object{
@@ -190,6 +194,7 @@ func TestReconcile(t *testing.T) {
 				rttestingv1.WithApiServerSourceReferenceModeEventTypes(source),
 				rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
 				rttestingv1.WithApiServerSourceStatusNamespaces([]string{testNS}),
+				rttestingv1.WithApiServerSourceOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 			),
 		}},
 		WantCreates: []runtime.Object{
@@ -250,6 +255,7 @@ func TestReconcile(t *testing.T) {
 				rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
 				rttestingv1.WithApiServerSourceNamespaceSelector(metav1.LabelSelector{MatchLabels: map[string]string{"target": "yes"}}),
 				rttestingv1.WithApiServerSourceStatusNamespaces([]string{"test-a", "test-b"}),
+				rttestingv1.WithApiServerSourceOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 			),
 		}},
 		WantCreates: []runtime.Object{
@@ -317,6 +323,7 @@ func TestReconcile(t *testing.T) {
 				rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
 				rttestingv1.WithApiServerSourceNamespaceSelector(metav1.LabelSelector{}),
 				rttestingv1.WithApiServerSourceStatusNamespaces([]string{"test-a", "test-b", "test-c"}),
+				rttestingv1.WithApiServerSourceOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 			),
 		}},
 		WantCreates: []runtime.Object{
@@ -384,6 +391,7 @@ func TestReconcile(t *testing.T) {
 				rttestingv1.WithApiServerSourceResourceModeEventTypes(source),
 				rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
 				rttestingv1.WithApiServerSourceStatusNamespaces([]string{testNS}),
+				rttestingv1.WithApiServerSourceOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 			),
 		}},
 		WantCreates: []runtime.Object{
@@ -439,6 +447,7 @@ func TestReconcile(t *testing.T) {
 				rttestingv1.WithApiServerSourceReferenceModeEventTypes(source),
 				rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
 				rttestingv1.WithApiServerSourceStatusNamespaces([]string{testNS}),
+				rttestingv1.WithApiServerSourceOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 			),
 		}},
 		WantCreates: []runtime.Object{
@@ -493,6 +502,7 @@ func TestReconcile(t *testing.T) {
 				rttestingv1.WithInitApiServerSourceConditions,
 				rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
 				rttestingv1.WithApiServerSourceSinkNotFound,
+				rttestingv1.WithApiServerSourceOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 			),
 		}},
 		WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor(true)},
@@ -545,6 +555,7 @@ func TestReconcile(t *testing.T) {
 				rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
 				rttestingv1.WithApiServerSourceSufficientPermissions,
 				rttestingv1.WithApiServerSourceStatusNamespaces([]string{testNS}),
+				rttestingv1.WithApiServerSourceOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 			),
 		}},
 		WantCreates: []runtime.Object{
@@ -609,6 +620,7 @@ func TestReconcile(t *testing.T) {
 				rttestingv1.WithApiServerSourceReferenceModeEventTypes(source),
 				rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
 				rttestingv1.WithApiServerSourceStatusNamespaces([]string{testNS}),
+				rttestingv1.WithApiServerSourceOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 			),
 		}},
 		WantCreates: []runtime.Object{
@@ -671,6 +683,7 @@ func TestReconcile(t *testing.T) {
 				rttestingv1.WithApiServerSourceDeploymentUnavailable,
 				rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
 				rttestingv1.WithApiServerSourceStatusNamespaces([]string{testNS}),
+				rttestingv1.WithApiServerSourceOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 			),
 		}},
 		WantUpdates: []clientgotesting.UpdateActionImpl{{
@@ -736,6 +749,7 @@ func TestReconcile(t *testing.T) {
 				rttestingv1.WithApiServerSourceReferenceModeEventTypes(source),
 				rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
 				rttestingv1.WithApiServerSourceStatusNamespaces([]string{testNS}),
+				rttestingv1.WithApiServerSourceOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 			),
 		}},
 		WantUpdates: []clientgotesting.UpdateActionImpl{{
@@ -795,6 +809,7 @@ func TestReconcile(t *testing.T) {
 				rttestingv1.WithApiServerSourceReferenceModeEventTypes(source),
 				rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
 				rttestingv1.WithApiServerSourceStatusNamespaces([]string{testNS}),
+				rttestingv1.WithApiServerSourceOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 			),
 		}},
 		WantUpdates: []clientgotesting.UpdateActionImpl{{
@@ -847,6 +862,7 @@ func TestReconcile(t *testing.T) {
 				rttestingv1.WithApiServerSourceReferenceModeEventTypes(source),
 				rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
 				rttestingv1.WithApiServerSourceStatusNamespaces([]string{testNS}),
+				rttestingv1.WithApiServerSourceOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 			),
 		}},
 		WantEvents: []string{
@@ -862,18 +878,136 @@ func TestReconcile(t *testing.T) {
 		},
 		WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor(true)},
 		SkipNamespaceValidation: true, // SubjectAccessReview objects are cluster-scoped.
-	}}
+	},
+		{
+			Name: "OIDC: creates OIDC service account",
+			Ctx: feature.ToContext(context.Background(), feature.Flags{
+				feature.OIDCAuthentication: feature.Enabled,
+			}),
+			Objects: []runtime.Object{
+				rttestingv1.NewApiServerSource(sourceName, testNS,
+					rttestingv1.WithApiServerSourceSpec(sourcesv1.ApiServerSourceSpec{
+						Resources: []sourcesv1.APIVersionKindSelector{{
+							APIVersion: "v1",
+							Kind:       "Namespace",
+						}},
+						SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
+					}),
+					rttestingv1.WithApiServerSourceUID(sourceUID),
+					rttestingv1.WithApiServerSourceObjectMetaGeneration(generation),
+				),
+				rttestingv1.NewChannel(sinkName, testNS,
+					rttestingv1.WithInitChannelConditions,
+					rttestingv1.WithChannelAddress(sinkAddressable),
+				),
+				makeAvailableReceiveAdapter(t),
+			},
+			Key: testNS + "/" + sourceName,
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: rttestingv1.NewApiServerSource(sourceName, testNS,
+					rttestingv1.WithApiServerSourceSpec(sourcesv1.ApiServerSourceSpec{
+						Resources: []sourcesv1.APIVersionKindSelector{{
+							APIVersion: "v1",
+							Kind:       "Namespace",
+						}},
+						SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
+					}),
+					rttestingv1.WithApiServerSourceUID(sourceUID),
+					rttestingv1.WithApiServerSourceObjectMetaGeneration(generation),
+					// Status Update:
+					rttestingv1.WithInitApiServerSourceConditions,
+					rttestingv1.WithApiServerSourceDeployed,
+					rttestingv1.WithApiServerSourceSink(sinkURI),
+					rttestingv1.WithApiServerSourceSufficientPermissions,
+					rttestingv1.WithApiServerSourceReferenceModeEventTypes(source),
+					rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
+					rttestingv1.WithApiServerSourceStatusNamespaces([]string{testNS}),
+					rttestingv1.WithApiServerSourceOIDCIdentityCreatedSucceeded(),
+					rttestingv1.WithApiServerSourceOIDCServiceAccountName(makeApiServerSourceOIDCServiceAccount().Name),
+				),
+			}},
+			WantCreates: []runtime.Object{
+				makeApiServerSourceOIDCServiceAccount(),
+				makeSubjectAccessReview("namespaces", "get", "default"),
+				makeSubjectAccessReview("namespaces", "list", "default"),
+				makeSubjectAccessReview("namespaces", "watch", "default"),
+			},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", sourceName),
+			},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchFinalizers(sourceName, testNS),
+			},
+			WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor(true)},
+			SkipNamespaceValidation: true, // SubjectAccessReview objects are cluster-scoped.
+		},
+		{
+			Name: "OIDC: ApiServerSource not ready on invalid OIDC service account",
+			Ctx: feature.ToContext(context.Background(), feature.Flags{
+				feature.OIDCAuthentication: feature.Enabled,
+			}),
+			Objects: []runtime.Object{
+				makeApiServerSourceOIDCServiceAccountWithoutOwnerRef(),
+				rttestingv1.NewApiServerSource(sourceName, testNS,
+					rttestingv1.WithApiServerSourceSpec(sourcesv1.ApiServerSourceSpec{
+						Resources: []sourcesv1.APIVersionKindSelector{{
+							APIVersion: "v1",
+							Kind:       "Namespace",
+						}},
+						SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
+					}),
+					rttestingv1.WithApiServerSourceUID(sourceUID),
+					rttestingv1.WithApiServerSourceObjectMetaGeneration(generation),
+				),
+				rttestingv1.NewChannel(sinkName, testNS,
+					rttestingv1.WithInitChannelConditions,
+					rttestingv1.WithChannelAddress(sinkAddressable),
+				),
+				makeAvailableReceiveAdapter(t),
+			},
+			Key: testNS + "/" + sourceName,
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: rttestingv1.NewApiServerSource(sourceName, testNS,
+					rttestingv1.WithApiServerSourceSpec(sourcesv1.ApiServerSourceSpec{
+						Resources: []sourcesv1.APIVersionKindSelector{{
+							APIVersion: "v1",
+							Kind:       "Namespace",
+						}},
+						SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
+					}),
+					rttestingv1.WithApiServerSourceUID(sourceUID),
+					rttestingv1.WithApiServerSourceObjectMetaGeneration(generation),
+					// Status Update:
+					rttestingv1.WithInitApiServerSourceConditions,
+					rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
+					rttestingv1.WithApiServerSourceOIDCIdentityCreatedFailed("Unable to resolve service account for OIDC authentication", fmt.Sprintf("service account %s not owned by ApiServerSource %s", makeApiServerSourceOIDCServiceAccountWithoutOwnerRef().Name, sourceName)),
+					rttestingv1.WithApiServerSourceOIDCServiceAccountName(makeApiServerSourceOIDCServiceAccount().Name),
+				),
+			}},
+			WantErr: true,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", sourceName),
+				Eventf(corev1.EventTypeWarning, "InternalError", fmt.Sprintf("service account %s not owned by ApiServerSource %s", makeApiServerSourceOIDCServiceAccountWithoutOwnerRef().Name, sourceName)),
+			},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchFinalizers(sourceName, testNS),
+			},
+			WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor(true)},
+			SkipNamespaceValidation: true, // SubjectAccessReview objects are cluster-scoped.
+		},
+	}
 
 	logger := logtesting.TestLogger(t)
 	table.Test(t, rttestingv1.MakeFactory(func(ctx context.Context, listers *rttestingv1.Listers, cmw configmap.Watcher) controller.Reconciler {
 		ctx = addressable.WithDuck(ctx)
 		r := &Reconciler{
-			kubeClientSet:       fakekubeclient.Get(ctx),
-			ceSource:            source,
-			receiveAdapterImage: image,
-			sinkResolver:        resolver.NewURIResolverFromTracker(ctx, tracker.New(func(types.NamespacedName) {}, 0)),
-			configs:             &reconcilersource.EmptyVarsGenerator{},
-			namespaceLister:     listers.GetNamespaceLister(),
+			kubeClientSet:        fakekubeclient.Get(ctx),
+			ceSource:             source,
+			receiveAdapterImage:  image,
+			sinkResolver:         resolver.NewURIResolverFromTracker(ctx, tracker.New(func(types.NamespacedName) {}, 0)),
+			configs:              &reconcilersource.EmptyVarsGenerator{},
+			namespaceLister:      listers.GetNamespaceLister(),
+			serviceAccountLister: listers.GetServiceAccountLister(),
 		}
 		return apiserversource.NewReconciler(ctx, logger,
 			fakeeventingclient.Get(ctx), listers.GetApiServerSourceLister(),
@@ -1088,4 +1222,23 @@ func patchFinalizers(name, namespace string) clientgotesting.PatchActionImpl {
 	patch := `{"metadata":{"finalizers":["apiserversources.sources.knative.dev"],"resourceVersion":""}}`
 	action.Patch = []byte(patch)
 	return action
+}
+
+func makeApiServerSourceOIDCServiceAccount() *corev1.ServiceAccount {
+	return auth.GetOIDCServiceAccountForResource(sourcesv1.SchemeGroupVersion.WithKind("ApiServerSource"), metav1.ObjectMeta{
+		Name:      sourceName,
+		Namespace: testNS,
+		UID:       sourceUID,
+	})
+}
+
+func makeApiServerSourceOIDCServiceAccountWithoutOwnerRef() *corev1.ServiceAccount {
+	sa := auth.GetOIDCServiceAccountForResource(sourcesv1.SchemeGroupVersion.WithKind("ApiServerSource"), metav1.ObjectMeta{
+		Name:      sourceName,
+		Namespace: testNS,
+		UID:       sourceUID,
+	})
+	sa.OwnerReferences = nil
+
+	return sa
 }

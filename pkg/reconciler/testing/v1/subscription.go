@@ -19,6 +19,7 @@ package testing
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"k8s.io/apimachinery/pkg/types"
@@ -29,6 +30,7 @@ import (
 
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	"knative.dev/eventing/pkg/apis/feature"
 	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
 )
 
@@ -280,5 +282,33 @@ func WithSubscriptionReply(gvk metav1.GroupVersionKind, name, namespace string) 
 				Namespace:  namespace,
 			},
 		}
+	}
+}
+
+func WithSubscriptionOIDCIdentityCreatedSucceeded() SubscriptionOption {
+	return func(s *v1.Subscription) {
+		s.Status.MarkOIDCIdentityCreatedSucceeded()
+	}
+}
+
+func WithSubscriptionOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled() SubscriptionOption {
+	return func(s *v1.Subscription) {
+		s.Status.MarkOIDCIdentityCreatedSucceededWithReason(fmt.Sprintf("%s feature disabled", feature.OIDCAuthentication), "")
+	}
+}
+
+func WithSubscriptionOIDCIdentityCreatedFailed(reason, message string) SubscriptionOption {
+	return func(s *v1.Subscription) {
+		s.Status.MarkOIDCIdentityCreatedFailed(reason, message)
+	}
+}
+
+func WithSubscriptionOIDCServiceAccountName(name string) SubscriptionOption {
+	return func(s *v1.Subscription) {
+		if s.Status.Auth == nil {
+			s.Status.Auth = &duckv1.AuthStatus{}
+		}
+
+		s.Status.Auth.ServiceAccountName = &name
 	}
 }

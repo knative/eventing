@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package auth
+package oidc
 
 import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"

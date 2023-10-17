@@ -17,7 +17,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package experimental
+package auth
 
 import (
 	"testing"
@@ -27,7 +27,7 @@ import (
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/knative"
 
-	"knative.dev/eventing/test/experimental/features/auth"
+	"knative.dev/eventing/test/auth/features/oidc"
 )
 
 func TestBrokerAudiencePopulated(t *testing.T) {
@@ -41,5 +41,5 @@ func TestBrokerAudiencePopulated(t *testing.T) {
 		environment.Managed(t),
 	)
 
-	env.Test(ctx, t, auth.BrokerGetsAudiencePopulated(env.Namespace()))
+	env.Test(ctx, t, oidc.BrokerGetsAudiencePopulated(env.Namespace()))
 }

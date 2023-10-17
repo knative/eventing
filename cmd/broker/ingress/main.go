@@ -42,6 +42,7 @@ import (
 
 	cmdbroker "knative.dev/eventing/cmd/broker"
 	"knative.dev/eventing/pkg/apis/feature"
+	"knative.dev/eventing/pkg/auth"
 	broker "knative.dev/eventing/pkg/broker"
 	"knative.dev/eventing/pkg/broker/ingress"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
@@ -82,6 +83,7 @@ func main() {
 	metrics.MemStatsOrDie(ctx)
 
 	cfg := injection.ParseAndGetRESTConfigOrDie()
+	ctx = injection.WithConfig(ctx, cfg)
 
 	var env envConfig
 	if err := envconfig.Process("", &env); err != nil {
@@ -150,7 +152,9 @@ func main() {
 
 	reporter := ingress.NewStatsReporter(env.ContainerName, kmeta.ChildName(env.PodName, uuid.New().String()))
 
-	handler, err = ingress.NewHandler(logger, reporter, broker.TTLDefaulter(logger, int32(env.MaxTTL)), brokerInformer)
+	oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
+
+	handler, err = ingress.NewHandler(logger, reporter, broker.TTLDefaulter(logger, int32(env.MaxTTL)), brokerInformer, oidcTokenProvider)
 	if err != nil {
 		logger.Fatal("Error creating Handler", zap.Error(err))
 	}

@@ -115,6 +115,7 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 		s: func() *ApiServerSourceStatus {
 			s := &ApiServerSourceStatus{}
 			s.InitializeConditions()
+			s.MarkOIDCIdentityCreatedSucceeded()
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionUnknown,
@@ -124,6 +125,7 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 		s: func() *ApiServerSourceStatus {
 			s := &ApiServerSourceStatus{}
 			s.InitializeConditions()
+			s.MarkOIDCIdentityCreatedSucceeded()
 			s.PropagateDeploymentAvailability(availableDeployment)
 			return s
 		}(),
@@ -134,6 +136,7 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 		s: func() *ApiServerSourceStatus {
 			s := &ApiServerSourceStatus{}
 			s.InitializeConditions()
+			s.MarkOIDCIdentityCreatedSucceeded()
 			s.MarkSink(sink)
 			return s
 		}(),
@@ -144,6 +147,7 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 		s: func() *ApiServerSourceStatus {
 			s := &ApiServerSourceStatus{}
 			s.InitializeConditions()
+			s.MarkOIDCIdentityCreatedSucceeded()
 			s.MarkSufficientPermissions()
 			return s
 		}(),
@@ -154,6 +158,7 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 		s: func() *ApiServerSourceStatus {
 			s := &ApiServerSourceStatus{}
 			s.InitializeConditions()
+			s.MarkOIDCIdentityCreatedSucceeded()
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionUnknown,
@@ -163,6 +168,7 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 		s: func() *ApiServerSourceStatus {
 			s := &ApiServerSourceStatus{}
 			s.InitializeConditions()
+			s.MarkOIDCIdentityCreatedSucceeded()
 			s.MarkSink(sink)
 			s.MarkSufficientPermissions()
 			s.PropagateDeploymentAvailability(availableDeployment)
@@ -175,6 +181,7 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 		s: func() *ApiServerSourceStatus {
 			s := &ApiServerSourceStatus{}
 			s.InitializeConditions()
+			s.MarkOIDCIdentityCreatedSucceeded()
 			s.MarkSink(sink)
 			s.MarkSufficientPermissions()
 			s.PropagateDeploymentAvailability(unavailableDeployment)
@@ -187,6 +194,7 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 		s: func() *ApiServerSourceStatus {
 			s := &ApiServerSourceStatus{}
 			s.InitializeConditions()
+			s.MarkOIDCIdentityCreatedSucceeded()
 			s.MarkSink(sink)
 			s.MarkSufficientPermissions()
 			s.PropagateDeploymentAvailability(unknownDeployment)
@@ -199,6 +207,7 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 		s: func() *ApiServerSourceStatus {
 			s := &ApiServerSourceStatus{}
 			s.InitializeConditions()
+			s.MarkOIDCIdentityCreatedSucceeded()
 			s.MarkSink(sink)
 			s.MarkSufficientPermissions()
 			s.PropagateDeploymentAvailability(&appsv1.Deployment{})
@@ -211,9 +220,11 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 		s: func() *ApiServerSourceStatus {
 			s := &ApiServerSourceStatus{}
 			s.InitializeConditions()
+			s.MarkOIDCIdentityCreatedSucceeded()
 			s.MarkSink(sink)
 			s.MarkSufficientPermissions()
 			s.PropagateDeploymentAvailability(availableDeployment)
+			s.MarkOIDCIdentityCreatedSucceeded()
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionTrue,
@@ -223,16 +234,32 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 		s: func() *ApiServerSourceStatus {
 			s := &ApiServerSourceStatus{}
 			s.InitializeConditions()
+			s.MarkOIDCIdentityCreatedSucceeded()
 			s.MarkSink(sink)
 			s.MarkNoSufficientPermissions("areason", "amessage")
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionFalse,
 		want:                false,
-	}}
+	}, {
+		name: "oidc status false",
+		s: func() *ApiServerSourceStatus {
+			s := &ApiServerSourceStatus{}
+			s.InitializeConditions()
+			s.MarkOIDCIdentityCreatedFailed("Unable to create the OIDC identity", "")
+			s.MarkSink(sink)
+			s.MarkSufficientPermissions()
+			s.PropagateDeploymentAvailability(availableDeployment)
+			return s
+		}(),
+		wantConditionStatus: corev1.ConditionFalse,
+		want:                false,
+	},
+	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+
 			if test.wantConditionStatus != "" {
 				gotConditionStatus := test.s.GetTopLevelCondition().Status
 				if gotConditionStatus != test.wantConditionStatus {
@@ -243,6 +270,7 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 			if got != test.want {
 				t.Errorf("unexpected readiness: want %v, got %v", test.want, got)
 			}
+
 		})
 	}
 }
@@ -280,6 +308,7 @@ func TestApiServerSourceStatusGetCondition(t *testing.T) {
 		s: func() *ApiServerSourceStatus {
 			s := &ApiServerSourceStatus{}
 			s.InitializeConditions()
+			s.MarkOIDCIdentityCreatedSucceeded()
 			s.PropagateDeploymentAvailability(availableDeployment)
 			return s
 		}(),
@@ -293,6 +322,7 @@ func TestApiServerSourceStatusGetCondition(t *testing.T) {
 		s: func() *ApiServerSourceStatus {
 			s := &ApiServerSourceStatus{}
 			s.InitializeConditions()
+			s.MarkOIDCIdentityCreatedSucceeded()
 			s.MarkSink(sink)
 			return s
 		}(),
@@ -306,6 +336,7 @@ func TestApiServerSourceStatusGetCondition(t *testing.T) {
 		s: func() *ApiServerSourceStatus {
 			s := &ApiServerSourceStatus{}
 			s.InitializeConditions()
+			s.MarkOIDCIdentityCreatedSucceeded()
 			s.MarkSink(sink)
 			s.MarkSufficientPermissions()
 			s.PropagateDeploymentAvailability(availableDeployment)
@@ -321,6 +352,7 @@ func TestApiServerSourceStatusGetCondition(t *testing.T) {
 		s: func() *ApiServerSourceStatus {
 			s := &ApiServerSourceStatus{}
 			s.InitializeConditions()
+			s.MarkOIDCIdentityCreatedSucceeded()
 			s.MarkSink(sink)
 			s.MarkSufficientPermissions()
 			s.PropagateDeploymentAvailability(availableDeployment)
@@ -336,6 +368,7 @@ func TestApiServerSourceStatusGetCondition(t *testing.T) {
 		s: func() *ApiServerSourceStatus {
 			s := &ApiServerSourceStatus{}
 			s.InitializeConditions()
+			s.MarkOIDCIdentityCreatedSucceeded()
 			s.MarkSink(nil)
 			s.MarkSufficientPermissions()
 			s.PropagateDeploymentAvailability(availableDeployment)
@@ -348,14 +381,30 @@ func TestApiServerSourceStatusGetCondition(t *testing.T) {
 			Reason:  "SinkEmpty",
 			Message: "Sink has resolved to empty.",
 		},
+	}, {
+		name: "oidc failed",
+		s: func() *ApiServerSourceStatus {
+			s := &ApiServerSourceStatus{}
+			s.InitializeConditions()
+			s.MarkOIDCIdentityCreatedFailed("Unable to create the OIDC identity", "")
+			return s
+		}(),
+		condQuery: ApiServerConditionReady,
+		want: &apis.Condition{
+			Type:   ApiServerConditionReady,
+			Status: corev1.ConditionFalse,
+			Reason: "Unable to create the OIDC identity",
+		},
 	}}
 
 	for _, test := range tests {
+
 		t.Run(test.name, func(t *testing.T) {
 			got := test.s.GetCondition(test.condQuery)
 			ignoreTime := cmpopts.IgnoreFields(apis.Condition{},
 				"LastTransitionTime", "Severity")
 			if diff := cmp.Diff(test.want, got, ignoreTime); diff != "" {
+				availableDeployment.Spec.Template.Spec.SecurityContext.WindowsOptions.DeepCopy()
 				t.Errorf("unexpected condition (-want, +got) = %v", diff)
 			}
 		})
