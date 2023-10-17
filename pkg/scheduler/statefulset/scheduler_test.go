@@ -734,6 +734,32 @@ func TestStatefulsetScheduler(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:      "two replicas, 12 vreplicas, already scheduled on overcommitted pod, remove replicas",
+			vreplicas: 12,
+			replicas:  int32(2),
+			placements: []duckv1alpha1.Placement{
+				{PodName: "statefulset-name-0", VReplicas: 12},
+			},
+			expected: []duckv1alpha1.Placement{
+				{PodName: "statefulset-name-0", VReplicas: 10},
+				{PodName: "statefulset-name-1", VReplicas: 2},
+			},
+			schedulerPolicyType: scheduler.MAXFILLUP,
+		},
+		{
+			name:      "one replica, 12 vreplicas, already scheduled on overcommitted pod, remove replicas",
+			vreplicas: 12,
+			replicas:  int32(1),
+			placements: []duckv1alpha1.Placement{
+				{PodName: "statefulset-name-0", VReplicas: 12},
+			},
+			expected: []duckv1alpha1.Placement{
+				{PodName: "statefulset-name-0", VReplicas: 10},
+			},
+			err:                 controller.NewRequeueAfter(5 * time.Second),
+			schedulerPolicyType: scheduler.MAXFILLUP,
+		},
 	}
 
 	for _, tc := range testCases {
