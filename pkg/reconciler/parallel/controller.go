@@ -48,12 +48,7 @@ func NewController(
 	subscriptionInformer := subscription.Get(ctx)
 	serviceaccountInformer := serviceaccountinformer.Get(ctx)
 
-	var globalResync func(obj interface{})
-	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {
-		if globalResync != nil {
-			globalResync(nil)
-		}
-	})
+	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"))
 	featureStore.WatchConfigs(cmw)
 
 	r := &Reconciler{
@@ -64,7 +59,11 @@ func NewController(
 		dynamicClientSet:     dynamicclient.Get(ctx),
 		eventingClientSet:    eventingclient.Get(ctx),
 	}
-	impl := parallelreconciler.NewImpl(ctx, r)
+	impl := parallelreconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
+		return controller.Options{
+			ConfigStore: featureStore,
+		}
+	})
 
 	r.channelableTracker = duck.NewListableTrackerFromTracker(ctx, channelable.Get, impl.Tracker)
 	parallelInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
@@ -75,7 +74,7 @@ func NewController(
 		FilterFunc: controller.FilterController(&v1.Parallel{}),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
-	// Reconciler Trigger when the OIDC service account changes
+	// Reconciler Parallel when the OIDC service account changes
 	serviceaccountInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.FilterController(&v1.Parallel{}),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
