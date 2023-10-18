@@ -19,6 +19,8 @@ package pingsource
 import (
 	"context"
 
+	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
+
 	serviceaccountinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount"
 
 	"go.uber.org/zap"
@@ -112,7 +114,7 @@ func NewController(
 	})
 
 	serviceaccountInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.FilterWithNameAndNamespace(system.Namespace(), mtadapterName),
+		FilterFunc: controller.FilterController(&sourcesv1.PingSource{}),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 
