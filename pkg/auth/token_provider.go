@@ -32,7 +32,7 @@ import (
 )
 
 const (
-	expirationBufferTime = time.Second * 30
+	expirationBufferTime = 5 * time.Minute
 )
 
 type OIDCTokenProvider struct {
@@ -73,7 +73,7 @@ func (c *OIDCTokenProvider) GetJWT(serviceAccount types.NamespacedName, audience
 		return "", fmt.Errorf("could not request a token for %s: %w", serviceAccount, err)
 	}
 
-	// we need a duration until this token expires, use the expiry time - (now + 30s)
+	// we need a duration until this token expires, use the expiry time - (now + 5min)
 	// this gives us a buffer so that it doesn't expire between when we retrieve it and when we use it
 	expiryTtl := tokenRequestResponse.Status.ExpirationTimestamp.Time.Sub(time.Now().Add(expirationBufferTime))
 
