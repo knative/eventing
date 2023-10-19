@@ -21,6 +21,10 @@ import (
 	"encoding/json"
 	"fmt"
 
+	v1 "k8s.io/client-go/listers/core/v1"
+	"knative.dev/eventing/pkg/apis/feature"
+	"knative.dev/eventing/pkg/auth"
+
 	"go.uber.org/zap"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -74,6 +78,8 @@ type Reconciler struct {
 
 	// Leader election configuration for the mt receive adapter
 	leConfig string
+
+	serviceAccountLister v1.ServiceAccountLister
 }
 
 // Check that our Reconciler implements ReconcileKind
@@ -97,6 +103,24 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *sourcesv1.PingSo
 			//TODO how does this work with deprecated fields
 			dest.Ref.Namespace = source.GetNamespace()
 		}
+	}
+
+	// OIDC authentication
+	featureFlags := feature.FromContext(ctx)
+	if featureFlags.IsOIDCAuthentication() {
+		saName := auth.GetOIDCServiceAccountNameForResource(sourcesv1.SchemeGroupVersion.WithKind("PingSource"), source.ObjectMeta)
+		source.Status.Auth = &duckv1.AuthStatus{
+			ServiceAccountName: &saName,
+		}
+
+		if err := auth.EnsureOIDCServiceAccountExistsForResource(ctx, r.serviceAccountLister, r.kubeClientSet, sourcesv1.SchemeGroupVersion.WithKind("PingSource"), source.ObjectMeta); err != nil {
+			source.Status.MarkOIDCIdentityCreatedFailed("Unable to resolve service account for OIDC authentication", "%v", err)
+			return err
+		}
+		source.Status.MarkOIDCIdentityCreatedSucceeded()
+	} else {
+		source.Status.Auth = nil
+		source.Status.MarkOIDCIdentityCreatedSucceededWithReason(fmt.Sprintf("%s feature disabled", feature.OIDCAuthentication), "")
 	}
 
 	sinkAddr, err := r.sinkResolver.AddressableFromDestinationV1(ctx, *dest, source)
