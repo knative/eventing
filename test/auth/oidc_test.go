@@ -21,16 +21,20 @@ package auth
 
 import (
 	"testing"
+	"time"
 
 	"knative.dev/pkg/system"
 	"knative.dev/reconciler-test/pkg/environment"
+	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/knative"
 
 	"knative.dev/eventing/test/auth/features/oidc"
+	brokerfeatures "knative.dev/eventing/test/rekt/features/broker"
+	"knative.dev/eventing/test/rekt/resources/broker"
 )
 
-func TestBrokerAudiencePopulated(t *testing.T) {
+func TestBrokerSupportsOIDC(t *testing.T) {
 	t.Parallel()
 
 	ctx, env := global.Environment(
@@ -39,7 +43,12 @@ func TestBrokerAudiencePopulated(t *testing.T) {
 		knative.WithTracingConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
+		environment.WithPollTimings(4*time.Second, 12*time.Minute),
 	)
 
-	env.Test(ctx, t, oidc.BrokerGetsAudiencePopulated(env.Namespace()))
+	name := feature.MakeRandomK8sName("broker")
+	env.Prerequisite(ctx, t, brokerfeatures.GoesReady(name, broker.WithEnvConfig()...))
+
+	env.TestSet(ctx, t, oidc.AddressableOIDCConformance(broker.GVR(), "Broker", name, env.Namespace()))
+	env.Test(ctx, t, oidc.BrokerSendEventWithOIDCToken())
 }

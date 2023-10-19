@@ -18,6 +18,7 @@ package ingress
 
 import (
 	"bytes"
+	"context"
 	"io"
 	nethttp "net/http"
 	"net/http/httptest"
@@ -285,9 +286,18 @@ func TestHandler_ServeHTTP(t *testing.T) {
 				brokerinformerfake.Get(ctx).Informer().GetStore().Add(b)
 			}
 
-			oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
+			tokenProvider := auth.NewOIDCTokenProvider(ctx)
+			tokenVerifier := auth.NewOIDCTokenVerifier(ctx)
 
-			h, err := NewHandler(logger, &mockReporter{}, tc.defaulter, brokerinformerfake.Get(ctx), oidcTokenProvider)
+			h, err := NewHandler(logger,
+				&mockReporter{},
+				tc.defaulter,
+				brokerinformerfake.Get(ctx),
+				tokenVerifier,
+				tokenProvider,
+				func(ctx context.Context) context.Context {
+					return ctx
+				})
 			if err != nil {
 				t.Fatal("Unable to create receiver:", err)
 			}
