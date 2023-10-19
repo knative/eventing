@@ -2494,7 +2494,6 @@ knative.dev/pkg/apis.URL
 </em>
 </td>
 <td>
-<em>(Optional)</em>
 <p>Source is a URI, it represents the CloudEvents source.</p>
 </td>
 </tr>
@@ -2622,7 +2621,6 @@ knative.dev/pkg/apis.URL
 </em>
 </td>
 <td>
-<em>(Optional)</em>
 <p>Source is a URI, it represents the CloudEvents source.</p>
 </td>
 </tr>
@@ -2821,7 +2819,6 @@ knative.dev/pkg/apis.URL
 </em>
 </td>
 <td>
-<em>(Optional)</em>
 <p>Source is a URI, it represents the CloudEvents source.</p>
 </td>
 </tr>
@@ -2950,7 +2947,6 @@ knative.dev/pkg/apis.URL
 </em>
 </td>
 <td>
-<em>(Optional)</em>
 <p>Source is a URI, it represents the CloudEvents source.</p>
 </td>
 </tr>
