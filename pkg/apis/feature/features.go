@@ -51,9 +51,27 @@ const (
 // Missing entry in the map means feature is equal to feature not enabled.
 type Flags map[string]Flag
 
+func newDefaults() Flags {
+	return map[string]Flag{
+		KReferenceGroup:     Disabled,
+		DeliveryRetryAfter:  Disabled,
+		DeliveryTimeout:     Enabled,
+		KReferenceMapping:   Disabled,
+		NewTriggerFilters:   Enabled,
+		TransportEncryption: Disabled,
+		OIDCAuthentication:  Disabled,
+		EvenTypeAutoCreate:  Disabled,
+	}
+}
+
 // IsEnabled returns true if the feature is enabled
 func (e Flags) IsEnabled(featureName string) bool {
 	return e != nil && e[featureName] == Enabled
+}
+
+// IsDisabled returns true if the feature is disabled
+func (e Flags) IsDisabled(featureName string) bool {
+	return e != nil && e[featureName] == Disabled
 }
 
 // IsAllowed returns true if the feature is enabled or allowed
@@ -86,7 +104,7 @@ func (e Flags) String() string {
 
 // NewFlagsConfigFromMap creates a Flags from the supplied Map
 func NewFlagsConfigFromMap(data map[string]string) (Flags, error) {
-	flags := Flags{}
+	flags := newDefaults()
 
 	for k, v := range data {
 		if strings.HasPrefix(k, "_") {
@@ -100,12 +118,12 @@ func NewFlagsConfigFromMap(data map[string]string) (Flags, error) {
 			flags[sanitizedKey] = Disabled
 		} else if strings.EqualFold(v, string(Enabled)) {
 			flags[sanitizedKey] = Enabled
-		} else if strings.EqualFold(v, string(Permissive)) {
+		} else if k == TransportEncryption && strings.EqualFold(v, string(Permissive)) {
 			flags[sanitizedKey] = Permissive
-		} else if strings.EqualFold(v, string(Strict)) {
+		} else if k == TransportEncryption && strings.EqualFold(v, string(Strict)) {
 			flags[sanitizedKey] = Strict
 		} else {
-			return Flags{}, fmt.Errorf("cannot parse the boolean flag '%s' = '%s'. Allowed values: [true, false]", k, v)
+			return flags, fmt.Errorf("cannot parse the feature flag '%s' = '%s'", k, v)
 		}
 	}
 
