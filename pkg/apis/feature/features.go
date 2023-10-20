@@ -59,6 +59,8 @@ func newDefaults() Flags {
 		KReferenceMapping:   Disabled,
 		NewTriggerFilters:   Enabled,
 		TransportEncryption: Disabled,
+		OIDCAuthentication:  Disabled,
+		EvenTypeAutoCreate:  Disabled,
 	}
 }
 
