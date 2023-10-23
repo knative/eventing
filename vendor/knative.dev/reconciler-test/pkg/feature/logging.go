@@ -26,6 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/pkg/apis"
+	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/injection/clients/dynamicclient"
 )
 
@@ -62,13 +63,26 @@ func logReference(ref corev1.ObjectReference) StepFn {
 			return
 		}
 
-		b, err := json.MarshalIndent(r, "", " ")
+		b, err := json.MarshalIndent(r, "", "  ")
 		if err != nil {
 			t.Logf("Failed to marshal %s: %v\n", resourceStr, err)
 			return
 		}
 
-		t.Logf("%s\n%s", resourceStr, string(b))
+		// Get events for the given resource
+		events, _ := kubeclient.Get(ctx).EventsV1().
+			Events(ref.Namespace).
+			List(ctx, metav1.ListOptions{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       ref.Kind,
+					APIVersion: ref.APIVersion,
+				},
+				FieldSelector: fmt.Sprintf("involvedObject.name=%s", ref.Name),
+				Limit:         50,
+			})
+		eBytes, _ := json.MarshalIndent(events, "", "  ")
+
+		t.Logf("%s\n%s\nEvents:\n%s\n", resourceStr, string(b), string(eBytes))
 
 		// Recursively log owners
 		for _, or := range r.GetOwnerReferences() {
