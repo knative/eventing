@@ -227,6 +227,8 @@ func DeleteResources(ctx context.Context, t T, refs []corev1.ObjectReference) er
 		}
 	}
 
+	var lastResource corev1.ObjectReference // One still present resource
+
 	err := wait.Poll(time.Second, 4*time.Minute, func() (bool, error) {
 		for _, ref := range refs {
 			gv, err := schema.ParseGroupVersion(ref.APIVersion)
@@ -248,6 +250,7 @@ func DeleteResources(ctx context.Context, t T, refs []corev1.ObjectReference) er
 				return false, fmt.Errorf("failed to get resource %+v %s/%s: %w", resource, ref.Namespace, ref.Name, err)
 			}
 
+			lastResource = ref
 			t.Logf("Resource %+v %s/%s still present", resource, ref.Namespace, ref.Name)
 			return false, nil
 		}
@@ -255,6 +258,7 @@ func DeleteResources(ctx context.Context, t T, refs []corev1.ObjectReference) er
 		return true, nil
 	})
 	if err != nil {
+		LogReferences(lastResource)(ctx, t)
 		return fmt.Errorf("failed to wait for resources to be deleted: %v", err)
 	}
 
