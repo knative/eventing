@@ -1202,7 +1202,6 @@ k8s.io/utils/trace
 # knative.dev/hack v0.0.0-20231016131700-2c938d4918da
 ## explicit; go 1.18
 knative.dev/hack
-knative.dev/hack/shell
 # knative.dev/hack/schema v0.0.0-20231016131700-2c938d4918da
 ## explicit; go 1.18
 knative.dev/hack/schema/commands
@@ -1328,6 +1327,7 @@ knative.dev/pkg/test/security
 knative.dev/pkg/test/slackutil
 knative.dev/pkg/test/spoof
 knative.dev/pkg/test/upgrade
+knative.dev/pkg/test/upgrade/shell
 knative.dev/pkg/test/zipkin
 knative.dev/pkg/third_party/mako/proto/quickstore_go_proto
 knative.dev/pkg/tracing

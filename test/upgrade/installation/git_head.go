@@ -30,7 +30,7 @@ func GitHead() pkgupgrade.Operation {
 		}
 		for _, shellfunc := range ops {
 			c.Log.Info("Running shell function: ", shellfunc)
-			err := callShellFunction(shellfunc)
+			err := callShellFunction(shellfunc, c.T)
 			if err != nil {
 				c.T.Error(err)
 				return
