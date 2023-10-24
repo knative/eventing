@@ -46,7 +46,11 @@ func (cs *PingSourceSpec) Validate(ctx context.Context) *apis.FieldError {
 		schedule = "CRON_TZ=" + cs.Timezone + " " + schedule
 	}
 
-	if _, err := cron.ParseStandard(schedule); err != nil {
+	parser := cron.NewParser(
+		cron.SecondOptional | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor,
+	)
+
+	if _, err := parser.Parse(schedule); err != nil {
 		if strings.HasPrefix(err.Error(), "provided bad location") {
 			fe := apis.ErrInvalidValue(err, "timezone")
 			errs = errs.Also(fe)
