@@ -20,6 +20,7 @@ import (
 	"embed"
 	"os"
 
+	"knative.dev/pkg/apis"
 	v1 "knative.dev/pkg/apis/duck/v1"
 	testlog "knative.dev/reconciler-test/pkg/logging"
 	"knative.dev/reconciler-test/pkg/manifest"
@@ -375,21 +376,26 @@ func Example_withSubscriberAt() {
 		"namespace": "bar",
 	}
 
-	parallel.WithSubscriberAt(0, &v1.KReference{
-		Kind:       "sub0kind",
-		APIVersion: "sub0version",
-		Name:       "sub0name",
-		Namespace:  "bar",
-	}, "/extra/path")(cfg)
+	parallel.WithSubscriberAt(0, &v1.Destination{
+		Ref: &v1.KReference{
+			Kind:       "sub0kind",
+			APIVersion: "sub0version",
+			Name:       "sub0name",
+			Namespace:  "bar",
+		},
+		URI: &apis.URL{Path: "/extra/path"},
+	})(cfg)
 
-	parallel.WithSubscriberAt(1, &v1.KReference{
-		Kind:       "sub1kind",
-		APIVersion: "sub1version",
-		Name:       "sub1name",
-		Namespace:  "bar",
-	}, "")(cfg)
+	parallel.WithSubscriberAt(1, &v1.Destination{
+		Ref: &v1.KReference{
+			Kind:       "sub1kind",
+			APIVersion: "sub1version",
+			Name:       "sub1name",
+			Namespace:  "bar",
+		},
+	})(cfg)
 
-	parallel.WithSubscriberAt(2, nil, "http://full/path")(cfg)
+	parallel.WithSubscriberAt(2, &v1.Destination{URI: &apis.URL{Scheme: "http", Host: "full", Path: "path"}})(cfg)
 
 	files, err := manifest.ExecuteYAML(ctx, yaml, images, cfg)
 	if err != nil {
@@ -433,21 +439,26 @@ func Example_withFilterAt() {
 		"namespace": "bar",
 	}
 
-	parallel.WithFilterAt(0, &v1.KReference{
-		Kind:       "fil0kind",
-		APIVersion: "fil0version",
-		Name:       "fil0name",
-		Namespace:  "bar",
-	}, "/extra/path")(cfg)
+	parallel.WithFilterAt(0, &v1.Destination{
+		Ref: &v1.KReference{
+			Kind:       "fil0kind",
+			APIVersion: "fil0version",
+			Name:       "fil0name",
+			Namespace:  "bar",
+		},
+		URI: &apis.URL{Path: "/extra/path"},
+	})(cfg)
 
-	parallel.WithFilterAt(1, &v1.KReference{
-		Kind:       "fil1kind",
-		APIVersion: "fil1version",
-		Name:       "fil1name",
-		Namespace:  "bar",
-	}, "")(cfg)
+	parallel.WithFilterAt(1, &v1.Destination{
+		Ref: &v1.KReference{
+			Kind:       "fil1kind",
+			APIVersion: "fil1version",
+			Name:       "fil1name",
+			Namespace:  "bar",
+		},
+	})(cfg)
 
-	parallel.WithFilterAt(2, nil, "http://full/path")(cfg)
+	parallel.WithFilterAt(2, &v1.Destination{URI: &apis.URL{Scheme: "http", Host: "full", Path: "path"}})(cfg)
 
 	files, err := manifest.ExecuteYAML(ctx, yaml, images, cfg)
 	if err != nil {
@@ -491,21 +502,26 @@ func Example_withReplyAt() {
 		"namespace": "bar",
 	}
 
-	parallel.WithReplyAt(0, &v1.KReference{
-		Kind:       "rep0kind",
-		APIVersion: "rep0version",
-		Name:       "rep0name",
-		Namespace:  "bar",
-	}, "/extra/path")(cfg)
+	parallel.WithReplyAt(0, &v1.Destination{
+		Ref: &v1.KReference{
+			Kind:       "rep0kind",
+			APIVersion: "rep0version",
+			Name:       "rep0name",
+			Namespace:  "bar",
+		},
+		URI: &apis.URL{Path: "/extra/path"},
+	})(cfg)
 
-	parallel.WithReplyAt(1, &v1.KReference{
-		Kind:       "rep1kind",
-		APIVersion: "rep1version",
-		Name:       "rep1name",
-		Namespace:  "bar",
-	}, "")(cfg)
+	parallel.WithReplyAt(1, &v1.Destination{
+		Ref: &v1.KReference{
+			Kind:       "rep1kind",
+			APIVersion: "rep1version",
+			Name:       "rep1name",
+			Namespace:  "bar",
+		},
+	})(cfg)
 
-	parallel.WithReplyAt(2, nil, "http://full/path")(cfg)
+	parallel.WithReplyAt(2, &v1.Destination{URI: &apis.URL{Scheme: "http", Host: "full", Path: "path"}})(cfg)
 
 	files, err := manifest.ExecuteYAML(ctx, yaml, images, cfg)
 	if err != nil {
@@ -549,26 +565,35 @@ func Example_withFullAt() {
 		"namespace": "bar",
 	}
 
-	parallel.WithSubscriberAt(0, &v1.KReference{
-		Kind:       "sub0kind",
-		APIVersion: "sub0version",
-		Name:       "sub0name",
-		Namespace:  "bar",
-	}, "/extra/path")(cfg)
+	parallel.WithSubscriberAt(0, &v1.Destination{
+		Ref: &v1.KReference{
+			Kind:       "sub0kind",
+			APIVersion: "sub0version",
+			Name:       "sub0name",
+			Namespace:  "bar",
+		},
+		URI: &apis.URL{Path: "/extra/path"},
+	})(cfg)
 
-	parallel.WithReplyAt(0, &v1.KReference{
-		Kind:       "rep0kind",
-		APIVersion: "rep0version",
-		Name:       "rep0name",
-		Namespace:  "bar",
-	}, "/extra/path")(cfg)
+	parallel.WithReplyAt(0, &v1.Destination{
+		Ref: &v1.KReference{
+			Kind:       "rep0kind",
+			APIVersion: "rep0version",
+			Name:       "rep0name",
+			Namespace:  "bar",
+		},
+		URI: &apis.URL{Path: "/extra/path"},
+	})(cfg)
 
-	parallel.WithFilterAt(0, &v1.KReference{
-		Kind:       "fil0kind",
-		APIVersion: "fil0version",
-		Name:       "fil0name",
-		Namespace:  "bar",
-	}, "/extra/path")(cfg)
+	parallel.WithFilterAt(0, &v1.Destination{
+		Ref: &v1.KReference{
+			Kind:       "fil0kind",
+			APIVersion: "fil0version",
+			Name:       "fil0name",
+			Namespace:  "bar",
+		},
+		URI: &apis.URL{Path: "/extra/path"},
+	})(cfg)
 
 	files, err := manifest.ExecuteYAML(ctx, yaml, images, cfg)
 	if err != nil {
@@ -616,11 +641,14 @@ func Example_withReply() {
 		"namespace": "bar",
 	}
 
-	parallel.WithReply(&v1.KReference{
-		Kind:       "repkind",
-		APIVersion: "repversion",
-		Name:       "repname",
-	}, "/extra/path")(cfg)
+	parallel.WithReply(&v1.Destination{
+		Ref: &v1.KReference{
+			Kind:       "repkind",
+			APIVersion: "repversion",
+			Name:       "repname",
+		},
+		URI: &apis.URL{Path: "/extra/path"},
+	})(cfg)
 
 	files, err := manifest.ExecuteYAML(ctx, yaml, images, cfg)
 	if err != nil {
