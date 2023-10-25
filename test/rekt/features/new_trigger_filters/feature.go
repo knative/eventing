@@ -20,16 +20,9 @@ import (
 	"fmt"
 
 	. "github.com/cloudevents/sdk-go/v2/test"
-	"knative.dev/reconciler-test/pkg/eventshub"
-	. "knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
-	"knative.dev/reconciler-test/pkg/k8s"
-	"knative.dev/reconciler-test/pkg/manifest"
-	"knative.dev/reconciler-test/pkg/resources/service"
 
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
-	"knative.dev/eventing/test/rekt/resources/broker"
-	"knative.dev/eventing/test/rekt/resources/trigger"
 )
 
 // FiltersFeatureSet creates a feature set for testing the broker implementation of the new trigger filters experimental feature
@@ -42,10 +35,22 @@ func FiltersFeatureSet(brokerName string) *feature.FeatureSet {
 	unmatchedEvent.SetType("org.wrong.type")
 	unmatchedEvent.SetSource("org.wrong.source")
 
+	eventContexts := []CloudEventsContext{
+		{
+			eventType:     matchedEvent.Type(),
+			eventSource:   matchedEvent.Source(),
+			shouldDeliver: true,
+		},
+		{
+			eventType:     unmatchedEvent.Type(),
+			eventSource:   unmatchedEvent.Source(),
+			shouldDeliver: false,
+		},
+	}
+
 	features := make([]*feature.Feature, 0, 8)
 	tests := map[string]struct {
 		filters []eventingv1.SubscriptionsAPIFilter
-		step    feature.StepFn
 	}{
 		"Exact filter": {
 			filters: []eventingv1.SubscriptionsAPIFilter{
@@ -87,38 +92,8 @@ func FiltersFeatureSet(brokerName string) *feature.FeatureSet {
 	}
 
 	for name, fs := range tests {
-		matchedSender := feature.MakeRandomK8sName("sender")
-		unmatchedSender := feature.MakeRandomK8sName("sender")
-		subscriber := feature.MakeRandomK8sName("subscriber")
-		triggerName := feature.MakeRandomK8sName("viaTrigger")
-
 		f := feature.NewFeatureNamed(name)
-
-		f.Setup("Install trigger subscriber", eventshub.Install(subscriber, eventshub.StartReceiver))
-
-		// Set the Trigger subscriber.
-		cfg := []manifest.CfgFn{
-			trigger.WithSubscriber(service.AsKReference(subscriber), ""),
-			trigger.WithNewFilters(fs.filters),
-		}
-
-		f.Setup("Install trigger", trigger.Install(triggerName, brokerName, cfg...))
-		f.Setup("Wait for trigger to become ready", trigger.IsReady(triggerName))
-		f.Setup("Broker is addressable", k8s.IsAddressable(broker.GVR(), brokerName))
-
-		f.Requirement("Install matched event sender", eventshub.Install(matchedSender,
-			eventshub.StartSenderToResource(broker.GVR(), brokerName),
-			eventshub.InputEvent(matchedEvent)),
-		)
-
-		f.Requirement("Install unmatched event sender", eventshub.Install(unmatchedSender,
-			eventshub.StartSenderToResource(broker.GVR(), brokerName),
-			eventshub.InputEvent(unmatchedEvent)),
-		)
-
-		f.Beta("Triggers with new filters").
-			Must("must deliver matched events", OnStore(subscriber).MatchEvent(HasId(matchedEvent.ID())).AtLeast(1)).
-			MustNot("must not deliver unmatched events", OnStore(subscriber).MatchEvent(HasId(unmatchedEvent.ID())).Not())
+		f = newEventFilterFeature(eventContexts, fs.filters, f, brokerName)
 		features = append(features, f)
 	}
 
