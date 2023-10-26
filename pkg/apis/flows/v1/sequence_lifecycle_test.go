@@ -379,7 +379,7 @@ func TestSequencePropagateSetAddress(t *testing.T) {
 		want         duckv1.Addressable
 		wantStatus   corev1.ConditionStatus
 		wantAddress  string
-		wantAudience string
+		wantAudience *string
 	}{{
 		name:       "nil",
 		status:     SequenceStatus{},
@@ -433,7 +433,7 @@ func TestSequencePropagateSetAddress(t *testing.T) {
 		want:         duckv1.Addressable{URL: URL, Audience: &channelAudience},
 		wantStatus:   corev1.ConditionTrue,
 		wantAddress:  "http://example.com",
-		wantAudience: "messaging.knative.dev/inmemorychannel/testNS/test-imc",
+		wantAudience: &channelAudience,
 	}}
 
 	for _, tt := range tests {
@@ -456,11 +456,7 @@ func TestSequencePropagateSetAddress(t *testing.T) {
 			if diff := cmp.Diff(tt.wantAddress, gotAddress); diff != "" {
 				t.Error("unexpected address.url (-want, +got) =", diff)
 			}
-			gotAudience := ""
-			if got.Audience != nil {
-				gotAudience = *got.Audience
-			}
-			if diff := cmp.Diff(tt.wantAudience, gotAudience); diff != "" {
+			if diff := cmp.Diff(tt.wantAudience, got.Audience); diff != "" {
 				t.Error("unexpected address.audience (-want, +got) =", diff)
 			}
 		})
