@@ -33,10 +33,12 @@ import (
 	brokerfeatures "knative.dev/eventing/test/rekt/features/broker"
 	"knative.dev/eventing/test/rekt/features/channel"
 	parallelfeatures "knative.dev/eventing/test/rekt/features/parallel"
+	sequencefeatures "knative.dev/eventing/test/rekt/features/sequence"
 	"knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/eventing/test/rekt/resources/channel_impl"
 	"knative.dev/eventing/test/rekt/resources/channel_template"
 	"knative.dev/eventing/test/rekt/resources/parallel"
+	"knative.dev/eventing/test/rekt/resources/sequence"
 )
 
 func TestBrokerSupportsOIDC(t *testing.T) {
@@ -94,4 +96,22 @@ func TestParallelSupportsOIDC(t *testing.T) {
 	})))
 
 	env.Test(ctx, t, oidc.ParallelHasAudienceOfInputChannel(name, env.Namespace(), channel_impl.GVR(), channel_impl.GVK().Kind))
+}
+
+func TestSequenceSupportsOIDC(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+		environment.WithPollTimings(4*time.Second, 12*time.Minute),
+	)
+
+	name := feature.MakeRandomK8sName("sequence")
+	env.Prerequisite(ctx, t, sequencefeatures.GoesReady(name))
+
+	env.Test(ctx, t, oidc.AddressableHasAudiencePopulated(sequence.GVR(), sequence.GVK().Kind, name, env.Namespace()))
 }
