@@ -46,6 +46,7 @@ import (
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/apis/feature"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
+	"knative.dev/eventing/pkg/auth"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
 	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/channel/fake"
@@ -54,6 +55,7 @@ import (
 	"knative.dev/eventing/pkg/duck"
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
 	. "knative.dev/eventing/pkg/reconciler/testing/v1"
+	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 )
 
 const (
@@ -266,6 +268,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionPhysicalSubscriptionReply(&reply),
 					// - Status Update -
 					MarkSubscriptionReady,
+					WithSubscriptionOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 				),
 			}},
 		}, {
@@ -332,6 +335,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionPhysicalSubscriptionReply(&reply),
 					// - Status Update -
 					MarkSubscriptionReady,
+					WithSubscriptionOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 				),
 			}},
 		}, {
@@ -398,6 +402,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionPhysicalSubscriptionReply(&reply),
 					// - Status Update -
 					MarkSubscriptionReady,
+					WithSubscriptionOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 				),
 			}},
 		}, {
@@ -477,6 +482,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionPhysicalSubscriptionReply(&reply),
 					// - Status Update -
 					MarkSubscriptionReady,
+					WithSubscriptionOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 				),
 			}},
 		}, {
@@ -556,6 +562,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionPhysicalSubscriptionReply(&reply),
 					// - Status Update -
 					MarkSubscriptionReady,
+					WithSubscriptionOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 				),
 			}},
 		}, {
@@ -643,6 +650,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionPhysicalSubscriptionReply(&reply),
 					// - Status Update -
 					MarkSubscriptionReady,
+					WithSubscriptionOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 				),
 			}},
 		}, {
@@ -730,6 +738,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionPhysicalSubscriptionReply(&reply),
 					// - Status Update -
 					MarkSubscriptionReady,
+					WithSubscriptionOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 				),
 			}},
 		}, {
@@ -771,6 +780,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionPhysicalSubscriptionSubscriber(&tlsSubscriber),
 					MarkReferencesResolved,
 					MarkAddedToChannel,
+					WithSubscriptionOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
@@ -833,6 +843,7 @@ func TestAllCases(t *testing.T) {
 					// - Status Update -
 					MarkReferencesResolved,
 					MarkAddedToChannel,
+					WithSubscriptionOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
@@ -883,6 +894,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionPhysicalSubscriptionSubscriber(&audienceSubscriber),
 					MarkReferencesResolved,
 					MarkAddedToChannel,
+					WithSubscriptionOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
@@ -945,6 +957,7 @@ func TestAllCases(t *testing.T) {
 					// - Status Update -
 					MarkReferencesResolved,
 					MarkAddedToChannel,
+					WithSubscriptionOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
@@ -1000,6 +1013,7 @@ func TestAllCases(t *testing.T) {
 					MarkReferencesResolved,
 					MarkAddedToChannel,
 					MarkSubscriptionReady,
+					WithSubscriptionOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 					WithSubscriptionPhysicalSubscriptionSubscriber(&duckv1.Addressable{
 						URL: tlsSubscriberURI,
 					}),
@@ -1028,6 +1042,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
+					WithSubscriptionOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 					WithSubscriptionReferencesResolvedUnknown(channelReferenceFailed, fmt.Sprintf("Failed to get Spec.Channel or backing channel: inmemorychannels.messaging.knative.dev %q not found", channelName)),
 				),
 			}},
@@ -1060,6 +1075,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
+					WithSubscriptionOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 					WithSubscriptionReferencesResolvedUnknown(channelReferenceFailed, fmt.Sprintf("Failed to get Spec.Channel or backing channel: inmemorychannels.messaging.knative.dev %q not found", channelName)),
 				),
 			}},
@@ -1092,6 +1108,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
+					WithSubscriptionOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 					WithSubscriptionReferencesNotResolved(subscriberResolveFailed, "Failed to resolve spec.subscriber: address not set for Kind = Subscriber, Namespace = testnamespace, Name = subscriber, APIVersion = messaging.knative.dev/v1, Group = , Address = "),
 				),
 			}},
@@ -1123,6 +1140,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
+					WithSubscriptionOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 					WithSubscriptionReferencesNotResolved(subscriberResolveFailed, `Failed to resolve spec.subscriber: failed to get object testnamespace/subscriber: subscribers.messaging.knative.dev "subscriber" not found`),
 				),
 			}},
@@ -1159,6 +1177,7 @@ func TestAllCases(t *testing.T) {
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
 					WithSubscriptionPhysicalSubscriptionSubscriber(&subscriber),
+					WithSubscriptionOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 					WithSubscriptionReferencesNotResolved(replyResolveFailed, fmt.Sprintf(`Failed to resolve spec.reply: failed to get object testnamespace/reply: inmemorychannels.messaging.knative.dev %q not found`, replyName)),
 				),
 			}},
@@ -1197,6 +1216,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionReply(nonAddressableGVK, replyName, testNS),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
+					WithSubscriptionOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 					WithSubscriptionReferencesNotResolved(replyResolveFailed, "Failed to resolve spec.reply: address not set for Kind = Trigger, Namespace = testnamespace, Name = reply, APIVersion = eventing.knative.dev/v1, Group = , Address = "),
 				),
 			}},
@@ -1235,7 +1255,7 @@ func TestAllCases(t *testing.T) {
 					WithInitSubscriptionConditions,
 					MarkReferencesResolved,
 					MarkAddedToChannel,
-
+					WithSubscriptionOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 					WithSubscriptionPhysicalSubscriptionSubscriber(&subscriber),
 				),
 			}},
@@ -1277,6 +1297,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionDeliveryRef(subscriberGVK, dlsName, testNS),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
+					WithSubscriptionOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 					WithSubscriptionReferencesNotResolved("DeadLetterSinkResolveFailed", `Failed to resolve spec.delivery.deadLetterSink: failed to get object testnamespace/dls: subscribers.messaging.knative.dev "dls" not found`),
 					WithSubscriptionPhysicalSubscriptionSubscriber(&subscriber),
 				),
@@ -1322,6 +1343,7 @@ func TestAllCases(t *testing.T) {
 					MarkReferencesResolved,
 					MarkAddedToChannel,
 					WithSubscriptionPhysicalSubscriptionSubscriber(&subscriber),
+					WithSubscriptionOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 					WithSubscriptionDeadLetterSink(dlsURI),
 				),
 			}},
@@ -1371,7 +1393,7 @@ func TestAllCases(t *testing.T) {
 					WithInitSubscriptionConditions,
 					MarkReferencesResolved,
 					MarkAddedToChannel,
-
+					WithSubscriptionOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 					WithSubscriptionPhysicalSubscriptionSubscriber(&subscriber),
 				),
 			}},
@@ -1416,6 +1438,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
+					WithSubscriptionOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 					WithSubscriptionReferencesResolvedUnknown("ChannelReferenceFailed", "Failed to get Spec.Channel or backing channel: channel is not ready."),
 				),
 			}},
@@ -1462,6 +1485,7 @@ func TestAllCases(t *testing.T) {
 					MarkAddedToChannel,
 					WithSubscriptionPhysicalSubscriptionReply(&reply),
 					WithSubscriptionPhysicalSubscriptionSubscriber(&subscriber),
+					WithSubscriptionOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
@@ -1510,6 +1534,7 @@ func TestAllCases(t *testing.T) {
 					MarkAddedToChannel,
 					WithSubscriptionPhysicalSubscriptionSubscriber(&subscriber),
 					WithSubscriptionPhysicalSubscriptionReply(&reply),
+					WithSubscriptionOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
@@ -1559,6 +1584,7 @@ func TestAllCases(t *testing.T) {
 					MarkSubscriptionReady,
 					WithSubscriptionPhysicalSubscriptionSubscriber(&subscriber),
 					WithSubscriptionStatusObservedGeneration(subscriptionGeneration),
+					WithSubscriptionOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
@@ -1597,6 +1623,7 @@ func TestAllCases(t *testing.T) {
 					MarkReferencesResolved,
 					MarkAddedToChannel,
 					WithSubscriptionPhysicalSubscriptionSubscriber(&service),
+					WithSubscriptionOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
@@ -1646,6 +1673,7 @@ func TestAllCases(t *testing.T) {
 					MarkReferencesResolved,
 					MarkAddedToChannel,
 					WithSubscriptionPhysicalSubscriptionSubscriber(&service),
+					WithSubscriptionOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
@@ -1705,6 +1733,7 @@ func TestAllCases(t *testing.T) {
 					MarkAddedToChannel,
 					WithSubscriptionPhysicalSubscriptionSubscriber(&service),
 					WithSubscriptionDeadLetterSink(dlsURI),
+					WithSubscriptionOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
@@ -1777,6 +1806,7 @@ func TestAllCases(t *testing.T) {
 						BackoffDelay:  pointer.String("PT1S"),
 					}),
 					WithSubscriptionDeadLetterSink(dlsURI),
+					WithSubscriptionOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
@@ -1847,6 +1877,7 @@ func TestAllCases(t *testing.T) {
 					MarkAddedToChannel,
 					WithSubscriptionPhysicalSubscriptionSubscriber(&service),
 					WithSubscriptionDeadLetterSink(dlcStatus),
+					WithSubscriptionOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
@@ -1911,6 +1942,7 @@ func TestAllCases(t *testing.T) {
 					MarkReferencesResolved,
 					MarkAddedToChannel,
 					WithSubscriptionPhysicalSubscriptionSubscriber(&service),
+					WithSubscriptionOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
@@ -1962,6 +1994,7 @@ func TestAllCases(t *testing.T) {
 					MarkReferencesResolved,
 					MarkAddedToChannel,
 					WithSubscriptionPhysicalSubscriptionSubscriber(&service),
+					WithSubscriptionOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
@@ -2023,6 +2056,7 @@ func TestAllCases(t *testing.T) {
 					WithInitSubscriptionConditions,
 					WithSubscriptionReferencesNotResolved("DeadLetterSinkResolveFailed", fmt.Sprintf("channel %s didn't set status.deadLetterSinkURI", channelName)),
 					WithSubscriptionPhysicalSubscriptionSubscriber(&service),
+					WithSubscriptionOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 				),
 			}},
 		},
@@ -2104,6 +2138,7 @@ func TestAllCases(t *testing.T) {
 						BackoffDelay:  pointer.String("PT1S"),
 					}),
 					WithSubscriptionDeadLetterSink(dlsURI),
+					WithSubscriptionOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
@@ -2174,6 +2209,7 @@ func TestAllCases(t *testing.T) {
 					MarkReferencesResolved,
 					MarkAddedToChannel,
 					WithSubscriptionPhysicalSubscriptionSubscriber(&service),
+					WithSubscriptionOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 					WithSubscriptionDeliverySpec(&eventingduck.DeliverySpec{
 						Timeout:       pointer.String("PT1S"),
 						RetryAfterMax: pointer.String("PT2S"),
@@ -2301,6 +2337,114 @@ func TestAllCases(t *testing.T) {
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchRemoveFinalizers(testNS, subscriptionName),
 			},
+		}, {
+			Name: "OIDC: creates OIDC service account",
+			Key:  testNS + "/" + subscriptionName,
+			Ctx: feature.ToContext(context.Background(), feature.Flags{
+				feature.OIDCAuthentication: feature.Enabled,
+			}),
+			Objects: []runtime.Object{
+				NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(imcV1GVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
+					WithInitSubscriptionConditions,
+					WithSubscriptionFinalizers(finalizerName),
+					MarkSubscriptionReady,
+				),
+				// Subscriber
+				NewUnstructured(subscriberGVK, subscriberName, testNS,
+					WithUnstructuredAddressable(subscriber),
+				),
+				// Channel
+				NewInMemoryChannel(channelName, testNS,
+					WithInitInMemoryChannelConditions,
+					WithInMemoryChannelReady(channelDNS),
+					WithInMemoryChannelSubscribers([]eventingduck.SubscriberSpec{{
+						SubscriberURI: subscriberURI,
+						UID:           subscriptionUID,
+					}}),
+					WithInMemoryChannelAddress(channelDNS),
+					WithInMemoryChannelStatusSubscribers([]eventingduck.SubscriberStatus{{
+						UID: subscriptionUID,
+					}}),
+				),
+			},
+			WantErr: false,
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(imcV1GVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
+					WithInitSubscriptionConditions,
+					WithSubscriptionFinalizers(finalizerName),
+					WithSubscriptionPhysicalSubscriptionSubscriber(&subscriber),
+					// - Status Update -
+					MarkSubscriptionReady,
+					WithSubscriptionOIDCIdentityCreatedSucceeded(),
+					WithSubscriptionOIDCServiceAccountName(makeSubscriptionOIDCServiceAccount().Name),
+				),
+			}},
+			WantCreates: []runtime.Object{
+				makeSubscriptionOIDCServiceAccount(),
+			},
+		}, {
+			Name: "OIDC: Subscription not ready on invalid OIDC service account",
+			Key:  testNS + "/" + subscriptionName,
+			Ctx: feature.ToContext(context.Background(), feature.Flags{
+				feature.OIDCAuthentication: feature.Enabled,
+			}),
+			Objects: []runtime.Object{
+				makeSubscriptionOIDCServiceAccountWithoutOwnerRef(),
+				NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(imcV1GVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
+					WithInitSubscriptionConditions,
+					WithSubscriptionFinalizers(finalizerName),
+					MarkReferencesResolved,
+					MarkAddedToChannel,
+					WithSubscriptionPhysicalSubscriptionSubscriber(&subscriber),
+					WithSubscriptionPhysicalSubscriptionReply(&reply),
+				),
+				// Subscriber
+				NewUnstructured(subscriberGVK, subscriberName, testNS,
+					WithUnstructuredAddressable(subscriber),
+				),
+				// Channel
+				NewInMemoryChannel(channelName, testNS,
+					WithInitInMemoryChannelConditions,
+					WithInMemoryChannelReady(channelDNS),
+					WithInMemoryChannelSubscribers([]eventingduck.SubscriberSpec{{
+						SubscriberURI: subscriberURI,
+						UID:           subscriptionUID,
+					}}),
+					WithInMemoryChannelAddress(channelDNS),
+					WithInMemoryChannelStatusSubscribers([]eventingduck.SubscriberStatus{{
+						UID: subscriptionUID,
+					}}),
+				),
+			},
+			WantErr: true,
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(imcV1GVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
+					WithInitSubscriptionConditions,
+					WithSubscriptionFinalizers(finalizerName),
+					WithSubscriptionPhysicalSubscriptionSubscriber(&subscriber),
+					WithSubscriptionPhysicalSubscriptionReply(&reply),
+					// - Status Update -
+					MarkAddedToChannel,
+					MarkReferencesResolved,
+					WithSubscriptionOIDCIdentityCreatedFailed("Unable to resolve service account for OIDC authentication", fmt.Sprintf("service account %s not owned by Subscription %s", makeSubscriptionOIDCServiceAccountWithoutOwnerRef().Name, subscriptionName)),
+					WithSubscriptionOIDCServiceAccountName(makeSubscriptionOIDCServiceAccount().Name),
+				),
+			}},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, "InternalError", fmt.Sprintf("service account %s not owned by Subscription %s", makeSubscriptionOIDCServiceAccountWithoutOwnerRef().Name, subscriptionName)),
+			},
 		},
 	}
 
@@ -2309,13 +2453,15 @@ func TestAllCases(t *testing.T) {
 		ctx = channelable.WithDuck(ctx)
 		ctx = addressable.WithDuck(ctx)
 		r := &Reconciler{
-			dynamicClientSet:    dynamicclient.Get(ctx),
-			subscriptionLister:  listers.GetSubscriptionLister(),
-			channelLister:       listers.GetMessagingChannelLister(),
-			channelableTracker:  duck.NewListableTrackerFromTracker(ctx, channelable.Get, tracker.New(func(types.NamespacedName) {}, 0)),
-			destinationResolver: resolver.NewURIResolverFromTracker(ctx, tracker.New(func(types.NamespacedName) {}, 0)),
-			kreferenceResolver:  kref.NewKReferenceResolver(listers.GetCustomResourceDefinitionLister()),
-			tracker:             &FakeTracker{},
+			dynamicClientSet:     dynamicclient.Get(ctx),
+			kubeclient:           fakekubeclient.Get(ctx),
+			subscriptionLister:   listers.GetSubscriptionLister(),
+			channelLister:        listers.GetMessagingChannelLister(),
+			channelableTracker:   duck.NewListableTrackerFromTracker(ctx, channelable.Get, tracker.New(func(types.NamespacedName) {}, 0)),
+			destinationResolver:  resolver.NewURIResolverFromTracker(ctx, tracker.New(func(types.NamespacedName) {}, 0)),
+			kreferenceResolver:   kref.NewKReferenceResolver(listers.GetCustomResourceDefinitionLister()),
+			tracker:              &FakeTracker{},
+			serviceAccountLister: listers.GetServiceAccountLister(),
 		}
 		return subscription.NewReconciler(ctx, logger,
 			eventingclient.Get(ctx), listers.GetSubscriptionLister(),
@@ -2375,4 +2521,23 @@ func patchRemoveFinalizers(namespace, name string) clientgotesting.PatchActionIm
 	patch := `{"metadata":{"finalizers":[],"resourceVersion":""}}`
 	action.Patch = []byte(patch)
 	return action
+}
+
+func makeSubscriptionOIDCServiceAccount() *corev1.ServiceAccount {
+	return auth.GetOIDCServiceAccountForResource(messagingv1.SchemeGroupVersion.WithKind("Subscription"), metav1.ObjectMeta{
+		Name:      subscriptionName,
+		Namespace: testNS,
+		UID:       subscriptionUID,
+	})
+}
+
+func makeSubscriptionOIDCServiceAccountWithoutOwnerRef() *corev1.ServiceAccount {
+	sa := auth.GetOIDCServiceAccountForResource(messagingv1.SchemeGroupVersion.WithKind("Subscription"), metav1.ObjectMeta{
+		Name:      subscriptionName,
+		Namespace: testNS,
+		UID:       subscriptionUID,
+	})
+	sa.OwnerReferences = nil
+
+	return sa
 }

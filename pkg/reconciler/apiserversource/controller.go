@@ -19,6 +19,8 @@ package apiserversource
 import (
 	"context"
 
+	"knative.dev/eventing/pkg/apis/feature"
+
 	"github.com/kelseyhightower/envconfig"
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/pkg/configmap"
@@ -35,6 +37,7 @@ import (
 
 	apiserversourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1/apiserversource"
 	apiserversourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1/apiserversource"
+	serviceaccountinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount"
 )
 
 // envConfig will be used to extract the required environment variables using
@@ -54,12 +57,23 @@ func NewController(
 	deploymentInformer := deploymentinformer.Get(ctx)
 	apiServerSourceInformer := apiserversourceinformer.Get(ctx)
 	namespaceInformer := namespace.Get(ctx)
+	serviceaccountInformer := serviceaccountinformer.Get(ctx)
+
+	var globalResync func(obj interface{})
+
+	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {
+		if globalResync != nil {
+			globalResync(nil)
+		}
+	})
+	featureStore.WatchConfigs(cmw)
 
 	r := &Reconciler{
-		kubeClientSet:   kubeclient.Get(ctx),
-		ceSource:        GetCfgHost(ctx),
-		configs:         reconcilersource.WatchConfigurations(ctx, component, cmw),
-		namespaceLister: namespaceInformer.Lister(),
+		kubeClientSet:        kubeclient.Get(ctx),
+		ceSource:             GetCfgHost(ctx),
+		configs:              reconcilersource.WatchConfigurations(ctx, component, cmw),
+		namespaceLister:      namespaceInformer.Lister(),
+		serviceAccountLister: serviceaccountInformer.Lister(),
 	}
 
 	env := &envConfig{}
@@ -68,7 +82,15 @@ func NewController(
 	}
 	r.receiveAdapterImage = env.Image
 
-	impl := apiserversourcereconciler.NewImpl(ctx, r)
+	impl := apiserversourcereconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
+		return controller.Options{
+			ConfigStore: featureStore,
+		}
+	})
+
+	globalResync = func(interface{}) {
+		impl.GlobalResync(apiServerSourceInformer.Informer())
+	}
 
 	r.sinkResolver = resolver.NewURIResolverFromTracker(ctx, impl.Tracker)
 
@@ -88,6 +110,12 @@ func NewController(
 		AddFunc:    func(obj interface{}) { cb() },
 		UpdateFunc: func(oldObj, newObj interface{}) { cb() },
 		DeleteFunc: func(obj interface{}) { cb() },
+	})
+
+	// Reconciler ApiServerSource when the OIDC service account changes
+	serviceaccountInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: controller.FilterController(&v1.ApiServerSource{}),
+		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 
 	return impl

@@ -39,6 +39,7 @@ import (
 
 	"knative.dev/eventing/pkg/apis/eventing"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/broker"
 	v1 "knative.dev/eventing/pkg/client/informers/externalversions/eventing/v1"
@@ -67,9 +68,13 @@ type Handler struct {
 	Logger *zap.Logger
 
 	eventDispatcher *kncloudevents.Dispatcher
+
+	tokenVerifier *auth.OIDCTokenVerifier
+
+	withContext func(ctx context.Context) context.Context
 }
 
-func NewHandler(logger *zap.Logger, reporter StatsReporter, defaulter client.EventDefaulter, brokerInformer v1.BrokerInformer, oidcTokenProvider *auth.OIDCTokenProvider) (*Handler, error) {
+func NewHandler(logger *zap.Logger, reporter StatsReporter, defaulter client.EventDefaulter, brokerInformer v1.BrokerInformer, tokenVerifier *auth.OIDCTokenVerifier, oidcTokenProvider *auth.OIDCTokenProvider, withContext func(ctx context.Context) context.Context) (*Handler, error) {
 	connectionArgs := kncloudevents.ConnectionArgs{
 		MaxIdleConns:        defaultMaxIdleConnections,
 		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
@@ -115,6 +120,8 @@ func NewHandler(logger *zap.Logger, reporter StatsReporter, defaulter client.Eve
 		Logger:          logger,
 		BrokerLister:    brokerInformer.Lister(),
 		eventDispatcher: kncloudevents.NewDispatcher(oidcTokenProvider),
+		tokenVerifier:   tokenVerifier,
+		withContext:     withContext,
 	}, nil
 }
 
@@ -127,11 +134,7 @@ func (h *Handler) getBroker(name, namespace string) (*eventingv1.Broker, error) 
 	return broker, nil
 }
 
-func (h *Handler) getChannelAddress(name, namespace string) (*duckv1.Addressable, error) {
-	broker, err := h.getBroker(name, namespace)
-	if err != nil {
-		return nil, err
-	}
+func (h *Handler) getChannelAddress(broker *eventingv1.Broker) (*duckv1.Addressable, error) {
 	if broker.Status.Annotations == nil {
 		return nil, fmt.Errorf("broker status annotations uninitialized")
 	}
@@ -184,7 +187,7 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	ctx := request.Context()
+	ctx := h.withContext(request.Context())
 
 	message := cehttp.NewMessageFromHttpRequest(request)
 	defer message.Finish(nil)
@@ -211,6 +214,39 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 		Namespace: brokerNamespace,
 	}
 
+	broker, err := h.getBroker(brokerName, brokerNamespace)
+	if err != nil {
+		h.Logger.Warn("Failed to retrieve broker", zap.Error(err))
+		writer.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	features := feature.FromContext(ctx)
+	if features.IsOIDCAuthentication() {
+		h.Logger.Debug("OIDC authentication is enabled")
+
+		if broker.Status.Address.Audience == nil {
+			h.Logger.Warn(fmt.Sprintf("Audience of broker %s/%s must not be nil, while feature %s is enabled", broker.Name, broker.Namespace, feature.OIDCAuthentication))
+			writer.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		token := auth.GetJWTFromHeader(request.Header)
+		if token == "" {
+			h.Logger.Warn(fmt.Sprintf("No JWT in %s header provided while feature %s is enabled", auth.AuthHeaderKey, feature.OIDCAuthentication))
+			writer.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+
+		if _, err := h.tokenVerifier.VerifyJWT(ctx, token, *broker.Status.Address.Audience); err != nil {
+			h.Logger.Warn("no valid JWT provided", zap.Error(err))
+			writer.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+
+		h.Logger.Debug("Request contained a valid JWT. Continuing...")
+	}
+
 	ctx, span := trace.StartSpan(ctx, tracing.BrokerMessagingDestination(brokerNamespacedName))
 	defer span.End()
 
@@ -230,7 +266,7 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 		eventType: event.Type(),
 	}
 
-	statusCode, dispatchTime := h.receive(ctx, utils.PassThroughHeaders(request.Header), event, brokerNamespace, brokerName)
+	statusCode, dispatchTime := h.receive(ctx, utils.PassThroughHeaders(request.Header), event, broker)
 	if dispatchTime > kncloudevents.NoDuration {
 		_ = h.Reporter.ReportEventDispatchTime(reporterArgs, statusCode, dispatchTime)
 	}
@@ -240,11 +276,7 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 
 	// EventType auto-create feature handling
 	if h.EvenTypeHandler != nil {
-		b, err := h.getBroker(brokerName, brokerNamespace)
-		if err != nil {
-			h.Logger.Warn("Failed to retrieve broker", zap.Error(err))
-		}
-		if err := h.EvenTypeHandler.AutoCreateEventType(ctx, event, toKReference(b), b.GetUID()); err != nil {
+		if err := h.EvenTypeHandler.AutoCreateEventType(ctx, event, toKReference(broker), broker.GetUID()); err != nil {
 			h.Logger.Error("Even type auto create failed", zap.Error(err))
 		}
 	}
@@ -267,7 +299,7 @@ func toKReference(broker *eventingv1.Broker) *duckv1.KReference {
 	return kref
 }
 
-func (h *Handler) receive(ctx context.Context, headers http.Header, event *cloudevents.Event, brokerNamespace, brokerName string) (int, time.Duration) {
+func (h *Handler) receive(ctx context.Context, headers http.Header, event *cloudevents.Event, brokerObj *eventingv1.Broker) (int, time.Duration) {
 	// Setting the extension as a string as the CloudEvents sdk does not support non-string extensions.
 	event.SetExtension(broker.EventArrivalTime, cloudevents.Timestamp{Time: time.Now()})
 	if h.Defaulter != nil {
@@ -280,9 +312,9 @@ func (h *Handler) receive(ctx context.Context, headers http.Header, event *cloud
 		return http.StatusBadRequest, kncloudevents.NoDuration
 	}
 
-	channelAddress, err := h.getChannelAddress(brokerName, brokerNamespace)
+	channelAddress, err := h.getChannelAddress(brokerObj)
 	if err != nil {
-		h.Logger.Warn("Broker not found in the namespace", zap.Error(err))
+		h.Logger.Warn("could not get channel address from broker", zap.Error(err))
 		return http.StatusBadRequest, kncloudevents.NoDuration
 	}
 

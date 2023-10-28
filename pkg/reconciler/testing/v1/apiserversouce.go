@@ -27,6 +27,7 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/kmeta"
 
+	"knative.dev/eventing/pkg/apis/feature"
 	apisources "knative.dev/eventing/pkg/apis/sources"
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/eventing/pkg/reconciler/testing"
@@ -147,5 +148,33 @@ func WithApiServerSourceNamespaceSelector(nsSelector metav1.LabelSelector) ApiSe
 func WithApiServerSourceStatusNamespaces(namespaces []string) ApiServerSourceOption {
 	return func(c *v1.ApiServerSource) {
 		c.Status.Namespaces = namespaces
+	}
+}
+
+func WithApiServerSourceOIDCIdentityCreatedSucceeded() ApiServerSourceOption {
+	return func(c *v1.ApiServerSource) {
+		c.Status.MarkOIDCIdentityCreatedSucceeded()
+	}
+}
+
+func WithApiServerSourceOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled() ApiServerSourceOption {
+	return func(c *v1.ApiServerSource) {
+		c.Status.MarkOIDCIdentityCreatedSucceededWithReason(fmt.Sprintf("%s feature disabled", feature.OIDCAuthentication), "")
+	}
+}
+
+func WithApiServerSourceOIDCIdentityCreatedFailed(reason, message string) ApiServerSourceOption {
+	return func(c *v1.ApiServerSource) {
+		c.Status.MarkOIDCIdentityCreatedFailed(reason, message)
+	}
+}
+
+func WithApiServerSourceOIDCServiceAccountName(name string) ApiServerSourceOption {
+	return func(c *v1.ApiServerSource) {
+		if c.Status.Auth == nil {
+			c.Status.Auth = &duckv1.AuthStatus{}
+		}
+
+		c.Status.Auth.ServiceAccountName = &name
 	}
 }

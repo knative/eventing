@@ -40,8 +40,10 @@ import (
 	pkgreconciler "knative.dev/pkg/reconciler"
 	"knative.dev/pkg/resolver"
 
+	"knative.dev/eventing/pkg/apis/feature"
 	apisources "knative.dev/eventing/pkg/apis/sources"
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
+	"knative.dev/eventing/pkg/auth"
 	apiserversourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1/apiserversource"
 	"knative.dev/eventing/pkg/reconciler/apiserversource/resources"
 	reconcilersource "knative.dev/eventing/pkg/reconciler/source"
@@ -71,6 +73,8 @@ type Reconciler struct {
 
 	configs         reconcilersource.ConfigAccessor
 	namespaceLister clientv1.NamespaceLister
+
+	serviceAccountLister clientv1.ServiceAccountLister
 }
 
 var _ apiserversourcereconciler.Interface = (*Reconciler)(nil)
@@ -92,6 +96,24 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1.ApiServerSour
 			//TODO how does this work with deprecated fields
 			dest.Ref.Namespace = source.GetNamespace()
 		}
+	}
+
+	// OIDC authentication
+	featureFlags := feature.FromContext(ctx)
+	if featureFlags.IsOIDCAuthentication() {
+		saName := auth.GetOIDCServiceAccountNameForResource(v1.SchemeGroupVersion.WithKind("ApiServerSource"), source.ObjectMeta)
+		source.Status.Auth = &duckv1.AuthStatus{
+			ServiceAccountName: &saName,
+		}
+
+		if err := auth.EnsureOIDCServiceAccountExistsForResource(ctx, r.serviceAccountLister, r.kubeClientSet, v1.SchemeGroupVersion.WithKind("ApiServerSource"), source.ObjectMeta); err != nil {
+			source.Status.MarkOIDCIdentityCreatedFailed("Unable to resolve service account for OIDC authentication", "%v", err)
+			return err
+		}
+		source.Status.MarkOIDCIdentityCreatedSucceeded()
+	} else {
+		source.Status.Auth = nil
+		source.Status.MarkOIDCIdentityCreatedSucceededWithReason(fmt.Sprintf("%s feature disabled", feature.OIDCAuthentication), "")
 	}
 
 	sinkAddr, err := r.sinkResolver.AddressableFromDestinationV1(ctx, *dest, source)

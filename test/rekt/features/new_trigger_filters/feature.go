@@ -258,3 +258,84 @@ func AllFilterFeature(brokerName string) *feature.Feature {
 
 	return f
 }
+
+func MultipleTriggersAndSinksFeature(brokerName string) *feature.Feature {
+	f := feature.NewFeature()
+
+	eventContextsFirstSink := []CloudEventsContext{
+		{
+			eventType:     "type1",
+			shouldDeliver: true,
+		},
+		{
+			eventType:     "both.should.match",
+			shouldDeliver: true,
+		},
+		{
+			eventType:     "type2",
+			shouldDeliver: false,
+		},
+		{
+			eventType:     "type3",
+			shouldDeliver: false,
+		},
+	}
+
+	filtersFirstTrigger := []eventingv1.SubscriptionsAPIFilter{
+		{
+			Any: []eventingv1.SubscriptionsAPIFilter{
+				{
+					Exact: map[string]string{
+						"type": "type1",
+					},
+				},
+				{
+					Prefix: map[string]string{
+						"type": "both",
+					},
+				},
+			},
+		},
+	}
+
+	eventContextsSecondSink := []CloudEventsContext{
+		{
+			eventType:     "type1",
+			shouldDeliver: false,
+		},
+		{
+			eventType:     "both.should.match",
+			shouldDeliver: true,
+		},
+		{
+			eventType:     "type2",
+			shouldDeliver: true,
+		},
+		{
+			eventType:     "type3",
+			shouldDeliver: false,
+		},
+	}
+
+	filtersSecondTrigger := []eventingv1.SubscriptionsAPIFilter{
+		{
+			Any: []eventingv1.SubscriptionsAPIFilter{
+				{
+					Exact: map[string]string{
+						"type": "type2",
+					},
+				},
+				{
+					Prefix: map[string]string{
+						"type": "both",
+					},
+				},
+			},
+		},
+	}
+
+	f = newEventFilterFeature(eventContextsFirstSink, filtersFirstTrigger, f, brokerName)
+	f = newEventFilterFeature(eventContextsSecondSink, filtersSecondTrigger, f, brokerName)
+
+	return f
+}

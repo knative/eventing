@@ -160,18 +160,8 @@ func IsAddressable(name string, timings ...time.Duration) feature.StepFn {
 }
 
 // ValidateAddress validates the address retured by Address
-func ValidateAddress(name string, validate addressable.ValidateAddress, timings ...time.Duration) feature.StepFn {
-	return func(ctx context.Context, t feature.T) {
-		addr, err := Address(ctx, name, timings...)
-		if err != nil {
-			t.Error(err)
-			return
-		}
-		if err := validate(addr); err != nil {
-			t.Error(err)
-			return
-		}
-	}
+func ValidateAddress(name string, validate addressable.ValidateAddressFn, timings ...time.Duration) feature.StepFn {
+	return addressable.ValidateAddress(GVR(), name, validate, timings...)
 }
 
 // Address returns a broker's address.

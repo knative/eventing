@@ -46,6 +46,7 @@ import (
 	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/feature"
 	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
+	"knative.dev/eventing/pkg/auth"
 	inmemorychannelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/inmemorychannel"
 	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/reconciler/inmemorychannel/controller/config"
@@ -178,8 +179,8 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1.InMemoryChannel)
 		imc.Status.MarkDeadLetterSinkNotConfigured()
 	}
 
-	transportEncryptionFlags := feature.FromContext(ctx)
-	if transportEncryptionFlags.IsPermissiveTransportEncryption() {
+	featureFlags := feature.FromContext(ctx)
+	if featureFlags.IsPermissiveTransportEncryption() {
 		caCerts, err := r.getCaCerts()
 		if err != nil {
 			return err
@@ -194,7 +195,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1.InMemoryChannel)
 		//   - http address with host-based routing
 		imc.Status.Addresses = []duckv1.Addressable{httpsAddress, httpAddress}
 		imc.Status.Address = &httpAddress
-	} else if transportEncryptionFlags.IsStrictTransportEncryption() {
+	} else if featureFlags.IsStrictTransportEncryption() {
 		// Strict mode: (only https addresses)
 		// - status.address https address with path-based routing
 		// - status.addresses:
@@ -210,6 +211,16 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1.InMemoryChannel)
 	} else {
 		httpAddress := r.httpAddress(svc)
 		imc.Status.Address = &httpAddress
+	}
+
+	if featureFlags.IsOIDCAuthentication() {
+		audience := auth.GetAudience(v1.SchemeGroupVersion.WithKind("InMemoryChannel"), imc.ObjectMeta)
+
+		logging.FromContext(ctx).Debugw("Setting the imc audience", zap.String("audience", audience))
+		imc.Status.Address.Audience = &audience
+	} else {
+		logging.FromContext(ctx).Debug("Clearing the imc audience as OIDC is not enabled")
+		imc.Status.Address.Audience = nil
 	}
 
 	imc.GetConditionSet().Manage(imc.GetStatus()).MarkTrue(v1.InMemoryChannelConditionAddressable)

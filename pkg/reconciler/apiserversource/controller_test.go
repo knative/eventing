@@ -20,6 +20,8 @@ import (
 	"os"
 	"testing"
 
+	"knative.dev/eventing/pkg/apis/feature"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
@@ -34,6 +36,7 @@ import (
 	_ "knative.dev/eventing/pkg/client/injection/informers/sources/v1/apiserversource/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/namespace/fake"
+	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount/fake"
 	. "knative.dev/pkg/reconciler/testing"
 )
 
@@ -68,6 +71,11 @@ func TestNew(t *testing.T) {
 		},
 		Data: map[string]string{
 			"_example": "test-config",
+		},
+	}, &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      feature.FlagsConfigName,
+			Namespace: "knative-eventing",
 		},
 	}))
 
