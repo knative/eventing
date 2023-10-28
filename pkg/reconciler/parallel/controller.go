@@ -83,7 +83,7 @@ func NewController(
 		FilterFunc: controller.FilterController(&v1.Parallel{}),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
-	// Reconciler Parallel when the OIDC service account changes
+	// Reconcile Parallel when the OIDC service account changes
 	serviceaccountInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.FilterController(&v1.Parallel{}),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),

@@ -41,7 +41,7 @@ const (
 
 	// ParallelConditionAddressable has status true when this Parallel meets
 	// the Addressable contract and has a non-empty hostname.
-	ParallelConditionAddressable apis.ConditionType = "Addressable"
+	ParallelConditionAddressable         apis.ConditionType = "Addressable"
 	ParallelConditionOIDCIdentityCreated apis.ConditionType = "OIDCIdentityCreated"
 )
 
@@ -200,7 +200,7 @@ func (ps *ParallelStatus) MarkOIDCIdentityCreatedSucceeded() {
 	pCondSet.Manage(ps).MarkTrue(ParallelConditionOIDCIdentityCreated)
 }
 
-func (ps *ParallelStatus) MarkOIDCIdentityCreatedSucceededWithReason(reason, mepsageFormat string, mepsageA ...interface{}) {
+func (ps *ParallelStatus) MarkOIDCIdentityCreatedSucceededWithReason(reason, messageFormat string, messageA ...interface{}) {
 	pCondSet.Manage(ps).MarkTrueWithReason(ParallelConditionOIDCIdentityCreated, reason, messageFormat, messageA...)
 }
 
