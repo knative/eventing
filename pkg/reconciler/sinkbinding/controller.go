@@ -19,7 +19,6 @@ package sinkbinding
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"knative.dev/eventing/pkg/auth"
 	sbinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1/sinkbinding"
@@ -41,7 +40,6 @@ import (
 	"knative.dev/eventing/pkg/apis/feature"
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/pkg/apis/duck"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	serviceaccountinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount"
 	"knative.dev/pkg/configmap"
@@ -188,22 +186,8 @@ func (s *SinkBindingSubResourcesReconciler) Reconcile(ctx context.Context, b psb
 			Name:       sb.Spec.Sink.Ref.Name,
 		}, b)
 	}
-
-	featureFlags := s.featureStore.Load()
-	if featureFlags.IsOIDCAuthentication() {
-		saName := auth.GetOIDCServiceAccountNameForResource(v1.SchemeGroupVersion.WithKind("SinkBinding"), sb.ObjectMeta)
-		sb.Status.Auth = &duckv1.AuthStatus{
-			ServiceAccountName: &saName,
-		}
-
-		if err := auth.EnsureOIDCServiceAccountExistsForResource(ctx, s.serviceAccountLister, s.kubeclient, v1.SchemeGroupVersion.WithKind("SinkBinding"), sb.ObjectMeta); err != nil {
-			sb.Status.MarkOIDCIdentityCreatedFailed("Unable to resolve service account for OIDC authentication", "%v", err)
-			return err
-		}
-		sb.Status.MarkOIDCIdentityCreatedSucceeded()
-	} else {
-		sb.Status.Auth = nil
-		sb.Status.MarkOIDCIdentityCreatedSucceededWithReason(fmt.Sprintf("%s feature disabled", feature.OIDCAuthentication), "")
+	if err := auth.OIDCAuthStatusUtility(ctx, sb.Status.Auth, s.serviceAccountLister, s.kubeclient, v1.SchemeGroupVersion.WithKind("SinkBinding"), sb.ObjectMeta, &sb.Status); err != nil {
+		return err
 	}
 
 	addr, err := s.res.AddressableFromDestinationV1(ctx, sb.Spec.Sink, sb)

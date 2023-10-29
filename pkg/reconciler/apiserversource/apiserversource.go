@@ -40,7 +40,6 @@ import (
 	pkgreconciler "knative.dev/pkg/reconciler"
 	"knative.dev/pkg/resolver"
 
-	"knative.dev/eventing/pkg/apis/feature"
 	apisources "knative.dev/eventing/pkg/apis/sources"
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/eventing/pkg/auth"
@@ -99,21 +98,8 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1.ApiServerSour
 	}
 
 	// OIDC authentication
-	featureFlags := feature.FromContext(ctx)
-	if featureFlags.IsOIDCAuthentication() {
-		saName := auth.GetOIDCServiceAccountNameForResource(v1.SchemeGroupVersion.WithKind("ApiServerSource"), source.ObjectMeta)
-		source.Status.Auth = &duckv1.AuthStatus{
-			ServiceAccountName: &saName,
-		}
-
-		if err := auth.EnsureOIDCServiceAccountExistsForResource(ctx, r.serviceAccountLister, r.kubeClientSet, v1.SchemeGroupVersion.WithKind("ApiServerSource"), source.ObjectMeta); err != nil {
-			source.Status.MarkOIDCIdentityCreatedFailed("Unable to resolve service account for OIDC authentication", "%v", err)
-			return err
-		}
-		source.Status.MarkOIDCIdentityCreatedSucceeded()
-	} else {
-		source.Status.Auth = nil
-		source.Status.MarkOIDCIdentityCreatedSucceededWithReason(fmt.Sprintf("%s feature disabled", feature.OIDCAuthentication), "")
+	if err := auth.OIDCAuthStatusUtility(ctx, source.Status.Auth, r.serviceAccountLister, r.kubeClientSet, v1.SchemeGroupVersion.WithKind("ApiServerSource"), source.ObjectMeta, &source.Status); err != nil {
+		return err
 	}
 
 	sinkAddr, err := r.sinkResolver.AddressableFromDestinationV1(ctx, *dest, source)

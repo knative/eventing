@@ -92,21 +92,8 @@ var _ subscriptionreconciler.Finalizer = (*Reconciler)(nil)
 // ReconcileKind implements Interface.ReconcileKind.
 func (r *Reconciler) ReconcileKind(ctx context.Context, subscription *v1.Subscription) pkgreconciler.Event {
 	// OIDC authentication
-	featureFlags := feature.FromContext(ctx)
-	if featureFlags.IsOIDCAuthentication() {
-		saName := auth.GetOIDCServiceAccountNameForResource(v1.SchemeGroupVersion.WithKind("Subscription"), subscription.ObjectMeta)
-		subscription.Status.Auth = &duckv1.AuthStatus{
-			ServiceAccountName: &saName,
-		}
-
-		if err := auth.EnsureOIDCServiceAccountExistsForResource(ctx, r.serviceAccountLister, r.kubeclient, v1.SchemeGroupVersion.WithKind("Subscription"), subscription.ObjectMeta); err != nil {
-			subscription.Status.MarkOIDCIdentityCreatedFailed("Unable to resolve service account for OIDC authentication", "%v", err)
-			return err
-		}
-		subscription.Status.MarkOIDCIdentityCreatedSucceeded()
-	} else {
-		subscription.Status.Auth = nil
-		subscription.Status.MarkOIDCIdentityCreatedSucceededWithReason(fmt.Sprintf("%s feature disabled", feature.OIDCAuthentication), "")
+	if err := auth.OIDCAuthStatusUtility(ctx, subscription.Status.Auth, r.serviceAccountLister, r.kubeclient, v1.SchemeGroupVersion.WithKind("Subscription"), subscription.ObjectMeta, &subscription.Status); err != nil {
+		return err
 	}
 
 	// Find the channel for this subscription.
