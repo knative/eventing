@@ -19,8 +19,6 @@ package broker
 import (
 	"context"
 
-	cetest "github.com/cloudevents/sdk-go/v2/test"
-
 	"github.com/google/uuid"
 	"knative.dev/eventing/test/rekt/features/knconf"
 	"knative.dev/eventing/test/rekt/resources/broker"
@@ -52,11 +50,9 @@ func DataPlaneIngress(brokerName string) *feature.Feature {
 		state.SetOrFail(ctx, t, "brokerName", brokerName)
 	})
 
-	f = withBrokerAcceptsCEVersions(f, brokerName)
-
 	f.Stable("Conformance").
-		//Must("The ingress endpoint(s) MUST conform to at least one of the following versions of the specification: 0.3, 1.0",
-		//	brokerAcceptsCEVersions).
+		Must("The ingress endpoint(s) MUST conform to at least one of the following versions of the specification: 0.3, 1.0",
+			brokerAcceptsCEVersions).
 		May("Other versions MAY be rejected.",
 			brokerRejectsUnknownCEVersion).
 		ShouldNot("The Broker SHOULD NOT perform an upgrade of the produced event's CloudEvents version.",
@@ -71,42 +67,6 @@ func DataPlaneIngress(brokerName string) *feature.Feature {
 			brokerAcceptResponseSuccess).
 		Must("If a Broker receives a produce request and is unable to parse a valid CloudEvent, then it MUST reject the request with HTTP status code `400 Bad Request`.",
 			brokerRejectsMalformedCE)
-	return f
-}
-
-func withBrokerAcceptsCEVersions(f *feature.Feature, brokerName string) *feature.Feature {
-	uuids := map[string]string{
-		uuid.New().String(): "1.0",
-		uuid.New().String(): "0.3",
-	}
-
-	for id, version := range uuids {
-		// We need to use a different source name, otherwise, it will try to update
-		// the pod, which is immutable.
-		source := feature.MakeRandomK8sName("source")
-		event := cetest.FullEvent()
-		event.SetID(id)
-		event.SetSpecVersion(version)
-		f.Setup("Install Source", eventshub.Install(source,
-			eventshub.StartSenderToResource(broker.GVR(), brokerName),
-			eventshub.InputEvent(event),
-		))
-
-		f.Stable("Conformance").Must("The ingress endpoint(s) MUST conform to at least one of the following versions of the specification: 0.3, 1.0", func(ctx context.Context, t feature.T) {
-			store := eventshub.StoreFromContext(ctx, source)
-			// We are looking for two events, one of them is the sent event and the other
-			// is Response, so correlate them first. We want to make sure the event was sent and that the
-			// response was what was expected.
-			events := knconf.Correlate(store.AssertAtLeast(ctx, t, 2, knconf.SentEventMatcher("")))
-			for _, e := range events {
-				// Make sure HTTP response code is 2XX
-				if e.Response.StatusCode < 200 || e.Response.StatusCode > 299 {
-					t.Errorf("Expected statuscode 2XX for sequence %d got %d", e.Response.Sequence, e.Response.StatusCode)
-				}
-			}
-		})
-	}
-
 	return f
 }
 
