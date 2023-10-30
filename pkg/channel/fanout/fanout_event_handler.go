@@ -55,7 +55,7 @@ type Subscription struct {
 // Config for a fanout.EventHandler.
 type Config struct {
 	Subscriptions []Subscription `json:"subscriptions"`
-	// AsyncHandler controls whether the Subscriptions are called synchronous or asynchronously.
+	// Deprecated: AsyncHandler controls whether the Subscriptions are called synchronous or asynchronously.
 	// It is expected to be false when used as a sidecar.
 	AsyncHandler bool `json:"asyncHandler,omitempty"`
 }
@@ -240,6 +240,7 @@ func createEventReceiverFunction(f *FanoutEventHandler) func(context.Context, ch
 		reportArgs := channel.ReportArgs{}
 		reportArgs.EventType = event.Type()
 		reportArgs.Ns = ref.Namespace
+		additionalHeaders.Set(apis.KnNamespaceHeader, ref.Namespace)
 		dispatchResultForFanout := f.dispatch(ctx, subs, event, additionalHeaders)
 		return ParseDispatchResultAndReportMetrics(dispatchResultForFanout, f.reporter, reportArgs)
 	}
@@ -302,7 +303,6 @@ func (f *FanoutEventHandler) dispatch(ctx context.Context, subs []Subscription, 
 			if dispatchResult.err != nil {
 				f.logger.Error("Fanout had an error", zap.Error(dispatchResult.err))
 				dispatchResultForFanout.err = dispatchResult.err
-				return dispatchResultForFanout
 			}
 		case <-time.After(f.timeout):
 			f.logger.Error("Fanout timed out")
