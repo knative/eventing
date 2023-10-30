@@ -21,7 +21,6 @@ package rekt
 
 import (
 	"testing"
-	"time"
 
 	"knative.dev/pkg/system"
 	"knative.dev/reconciler-test/pkg/environment"
@@ -115,7 +114,6 @@ func TestPingSourceDataPlane_BrokerAsSinkTLS(t *testing.T) {
 		k8s.WithEventListener,
 		environment.Managed(t),
 		eventshub.WithTLS(t),
-		environment.WithPollTimings(5*time.Second, 2*time.Minute),
 	)
 
 	env.Test(ctx, t, pingsource.SendsEventsWithBrokerAsSinkTLS())

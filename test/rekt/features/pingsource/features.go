@@ -18,8 +18,8 @@ package pingsource
 
 import (
 	"context"
-	"fmt"
 
+	"github.com/cloudevents/sdk-go/v2/test"
 	"k8s.io/apimachinery/pkg/util/sets"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/eventing/test/rekt/resources/addressable"
@@ -27,13 +27,10 @@ import (
 	"knative.dev/eventing/test/rekt/resources/eventtype"
 	"knative.dev/eventing/test/rekt/resources/trigger"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
-	"knative.dev/reconciler-test/pkg/manifest"
-	"knative.dev/reconciler-test/pkg/resources/pod"
-
-	"github.com/cloudevents/sdk-go/v2/test"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/feature"
+	"knative.dev/reconciler-test/pkg/manifest"
 	"knative.dev/reconciler-test/pkg/resources/service"
 
 	"knative.dev/reconciler-test/pkg/eventshub/assert"
@@ -223,45 +220,12 @@ func SendsEventsWithBrokerAsSinkTLS() *feature.Feature {
 	})
 	f.Setup("Wait for Trigger to become ready", trigger.IsReady(triggerName))
 
-	f.Requirement("install PingSource", func(ctx context.Context, t feature.T) {
-		d := broker.AsDestinationRef(brokerName)
-
-		brokerAddr, err := broker.Address(ctx, brokerName)
-		if err != nil {
-			t.Fatal("failed to get the address of the broker service", brokerName, err)
-		}
-
-		d.CACerts = brokerAddr.CACerts
-
-		cfg := []manifest.CfgFn{
-			pingsource.WithSink(&duckv1.Destination{URI: brokerAddr.URL, CACerts: d.CACerts}),
-			pingsource.WithData("text/plain", "hello, world!"),
-		}
-
-		pingsource.Install(src, cfg...)(ctx, t)
-	})
-
+	f.Requirement("install PingSource", pingsource.Install(src, pingsource.WithData("text/plain", "hello, world!"), pingsource.WithSink(broker.AsDestinationRef(brokerName))))
 	f.Requirement("PingSource goes ready", pingsource.IsReady(src))
 
-	examplePodName := feature.MakeRandomK8sName("example")
-
-	// create a pod so that PingSource delivers an event to its sink
-	// event body is similar to this:
-	// {"kind":"Pod","namespace":"test-wmbcixlv","name":"example-axvlzbvc","apiVersion":"v1"}
-	f.Requirement("install example pod",
-		pod.Install(examplePodName, exampleImage,
-			pod.WithLabels(map[string]string{"e2e": "testing"})),
-	)
-
-	f.Stable("PingSource as event source").
-		Must("delivers events",
-			assert.OnStore(sinkName).MatchEvent(test.HasType("dev.knative.sources.ping")).AtLeast(1),
-		)
-	eventassert.MatchEvent(
-		test.HasType("dev.knative.ping.ref.add"),
-		test.DataContains(`"kind":"Pod"`),
-		test.DataContains(fmt.Sprintf(`"name":"%s"`, examplePodName)),
-	)
+	f.Assert("PingSource has HTTPS sink address", source.ExpectHTTPSSink(pingsource.Gvr(), src))
+	f.Assert("PingSource as event source",
+		assert.OnStore(sinkName).MatchEvent(test.HasType("dev.knative.sources.ping")).AtLeast(1))
 
 	return f
 
