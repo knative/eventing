@@ -28,3 +28,5 @@ export KO_FLAGS=${KO_FLAGS:-"--platform="""} # Default to current OS and arch
 source "$(dirname "$0")/../test/e2e-common.sh"
 
 knative_setup || exit $?
+
+test_setup || exit $?
