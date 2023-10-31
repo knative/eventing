@@ -18,6 +18,7 @@ package v1
 
 import (
 	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 // SubCondSet is a condition set with Ready as the happy condition and
@@ -130,4 +131,8 @@ func (ss *SubscriptionStatus) MarkOIDCIdentityCreatedFailed(reason, messageForma
 
 func (ss *SubscriptionStatus) MarkOIDCIdentityCreatedUnknown(reason, messageFormat string, messageA ...interface{}) {
 	SubCondSet.Manage(ss).MarkUnknown(SubscriptionConditionOIDCIdentityCreated, reason, messageFormat, messageA...)
+}
+
+func (ss *SubscriptionStatus) MarkStatus(authStatus *duckv1.AuthStatus) {
+	ss.Auth = authStatus
 }

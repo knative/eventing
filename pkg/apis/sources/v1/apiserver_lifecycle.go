@@ -146,3 +146,7 @@ func (s *ApiServerSourceStatus) MarkOIDCIdentityCreatedFailed(reason, messageFor
 func (s *ApiServerSourceStatus) MarkOIDCIdentityCreatedUnknown(reason, messageFormat string, messageA ...interface{}) {
 	apiserverCondSet.Manage(s).MarkUnknown(ApiServerConditionOIDCIdentityCreated, reason, messageFormat, messageA...)
 }
+
+func (s *ApiServerSourceStatus) MarkStatus(authStatus *duckv1.AuthStatus) {
+	s.Auth = authStatus
+}

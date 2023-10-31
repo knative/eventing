@@ -186,7 +186,7 @@ func (s *SinkBindingSubResourcesReconciler) Reconcile(ctx context.Context, b psb
 			Name:       sb.Spec.Sink.Ref.Name,
 		}, b)
 	}
-	if err := auth.OIDCAuthStatusUtility(ctx, sb.Status.Auth, s.serviceAccountLister, s.kubeclient, v1.SchemeGroupVersion.WithKind("SinkBinding"), sb.ObjectMeta, &sb.Status); err != nil {
+	if err := auth.OIDCAuthStatusUtility(ctx, s.serviceAccountLister, s.kubeclient, v1.SchemeGroupVersion.WithKind("SinkBinding"), sb.ObjectMeta, &sb.Status); err != nil {
 		return err
 	}
 

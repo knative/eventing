@@ -142,3 +142,7 @@ func (s *PingSourceStatus) MarkOIDCIdentityCreatedFailed(reason, messageFormat s
 func (s *PingSourceStatus) MarkOIDCIdentityCreatedUnknown(reason, messageFormat string, messageA ...interface{}) {
 	PingSourceCondSet.Manage(s).MarkUnknown(PingSourceConditionOIDCIdentityCreated, reason, messageFormat, messageA...)
 }
+
+func (s *PingSourceStatus) MarkStatus(authStatus *duckv1.AuthStatus) {
+	s.Auth = authStatus
+}

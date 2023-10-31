@@ -98,7 +98,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1.ApiServerSour
 	}
 
 	// OIDC authentication
-	if err := auth.OIDCAuthStatusUtility(ctx, source.Status.Auth, r.serviceAccountLister, r.kubeClientSet, v1.SchemeGroupVersion.WithKind("ApiServerSource"), source.ObjectMeta, &source.Status); err != nil {
+	if err := auth.OIDCAuthStatusUtility(ctx, r.serviceAccountLister, r.kubeClientSet, v1.SchemeGroupVersion.WithKind("ApiServerSource"), source.ObjectMeta, &source.Status); err != nil {
 		return err
 	}
 

@@ -143,7 +143,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, t *eventingv1.Trigger) p
 		return err
 	}
 
-	if err = auth.OIDCAuthStatusUtility(ctx, t.Status.Auth, r.serviceAccountLister, r.kubeclient, eventingv1.SchemeGroupVersion.WithKind("Trigger"), t.ObjectMeta, &t.Status); err != nil {
+	if err = auth.OIDCAuthStatusUtility(ctx, r.serviceAccountLister, r.kubeclient, eventingv1.SchemeGroupVersion.WithKind("Trigger"), t.ObjectMeta, &t.Status); err != nil {
 		return err
 	}
 

@@ -226,3 +226,7 @@ func (ts *TriggerStatus) MarkOIDCIdentityCreatedNotSupported() {
 	// in case the OIDC feature is not supported, we mark the condition as true, to not mark the Trigger unready.
 	triggerCondSet.Manage(ts).MarkTrueWithReason(TriggerConditionOIDCIdentityCreated, fmt.Sprintf("%s feature not yet supported for this Broker class", feature.OIDCAuthentication), "")
 }
+
+func (ts *TriggerStatus) MarkStatus(authStatus *duckv1.AuthStatus) {
+	ts.Auth = authStatus
+}
