@@ -42,10 +42,6 @@ import (
 	"knative.dev/eventing/test/rekt/resources/pingsource"
 )
 
-const (
-	exampleImage = "ko://knative.dev/eventing/test/test_images/print"
-)
-
 func SendsEventsWithSinkRef() *feature.Feature {
 	source := feature.MakeRandomK8sName("pingsource")
 	sink := feature.MakeRandomK8sName("sink")

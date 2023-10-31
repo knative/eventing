@@ -22,8 +22,6 @@ import (
 	"strings"
 	"time"
 
-	"knative.dev/eventing/test/rekt/resources/addressable"
-
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/k8s"
@@ -125,9 +123,4 @@ func WithSchedule(schedule string) manifest.CfgFn {
 			cfg["schedule"] = schedule
 		}
 	}
-}
-
-// ValidateAddress validates the address retured by Address
-func ValidateAddress(name string, validate addressable.ValidateAddressFn, timings ...time.Duration) feature.StepFn {
-	return addressable.ValidateAddress(Gvr(), name, validate, timings...)
 }
