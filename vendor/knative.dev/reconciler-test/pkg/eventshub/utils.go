@@ -43,6 +43,7 @@ const (
 	OIDCGenerateInvalidAudienceTokenEnv    = "OIDC_GENERATE_INVALID_AUDIENCE_TOKEN"
 	OIDCGenerateCorruptedSignatureTokenEnv = "OIDC_GENERATE_CORRUPTED_SIG_TOKEN"
 	OIDCSinkAudienceEnv                    = "OIDC_SINK_AUDIENCE"
+	OIDCReceiverAudienceEnv                = "OIDC_AUDIENCE"
 	OIDCTokenEnv                           = "OIDC_TOKEN"
 
 	EnforceTLS = "ENFORCE_TLS"
