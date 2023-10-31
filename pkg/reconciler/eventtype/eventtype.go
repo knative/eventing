@@ -26,6 +26,7 @@ import (
 
 	"knative.dev/eventing/pkg/apis/eventing/v1beta2"
 	eventtypereconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1beta2/eventtype"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/logging"
 	pkgreconciler "knative.dev/pkg/reconciler"
 )
@@ -38,8 +39,15 @@ type Reconciler struct {
 var _ eventtypereconciler.Interface = (*Reconciler)(nil)
 
 // ReconcileKind implements Interface.ReconcileKind.
-// 1. Verify the Reference exists.
+//  1. Check if there is a reference
+//     a) if not, reconcile to true
+//     b) if yes, continue reconciling
+//  2. Verify the Reference exists.
 func (r *Reconciler) ReconcileKind(ctx context.Context, et *v1beta2.EventType) pkgreconciler.Event {
+
+	if et.Spec.Reference == nil || isEmptyReference(et.Spec.Reference) {
+		return nil
+	}
 
 	_, err := r.kReferenceResolver.Resolve(ctx, et.Spec.Reference, et)
 	if err != nil {
@@ -52,6 +60,10 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, et *v1beta2.EventType) p
 		}
 		return err
 	}
-	et.Status.MarkReferenceExists()
+	et.Status.MarkReferenceExistsNotSet()
 	return nil
+}
+
+func isEmptyReference(ref *duckv1.KReference) bool {
+	return ref.Name == "" && ref.Namespace == "" && ref.APIVersion == "" && ref.Kind == "" && ref.Group == "" && *ref.Address == ""
 }
