@@ -18,18 +18,40 @@ package new_trigger_filters
 
 import (
 	"fmt"
-
 	. "github.com/cloudevents/sdk-go/v2/test"
 	"knative.dev/reconciler-test/pkg/feature"
 
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 )
 
-// FiltersFeatureSet creates a feature set for testing the broker implementation of the new trigger filters experimental feature
-// (aka Cloud Events Subscriptions API filters). It requires a created and ready Broker resource with brokerName.
-//
-// The feature set tests four filter dialects: exact, prefix, suffix and cesql (aka CloudEvents SQL).
-func FiltersFeatureSet(brokerName string) *feature.FeatureSet {
+type InstallBrokerFunc func(f *feature.Feature) string
+
+type CloudEventsContext struct {
+	eventType            string
+	eventSource          string
+	eventSubject         string
+	eventID              string
+	eventDataSchema      string
+	eventDataContentType string
+	shouldDeliver        bool
+}
+
+// NewFiltersFeatureSet creates a feature set which runs tests for the new trigger filters
+// It requires a function which installs a broker implementation into the current feature for testing.
+// All new triggers tests should be registered in this feature set so that they can be easily included in other
+// broker implementations for testing.
+func NewFiltersFeatureSet(installBroker InstallBrokerFunc) *feature.FeatureSet {
+	features := SingleDialectFilterFeatures(installBroker)
+	features = append(features, AllFilterFeature(installBroker), AnyFilterFeature(installBroker), MultipleTriggersAndSinksFeature(installBroker))
+	return &feature.FeatureSet{
+		Name:     "New Trigger Filters",
+		Features: features,
+	}
+}
+
+// SingleDialectFilterFeatures creates an array of features which each test a single dialect of the new filters.
+// It requires a function which installs a broker implementation into the current feature for testing.
+func SingleDialectFilterFeatures(installBroker InstallBrokerFunc) []*feature.Feature {
 	matchedEvent := FullEvent()
 	unmatchedEvent := MinEvent()
 	unmatchedEvent.SetType("org.wrong.type")
@@ -48,7 +70,7 @@ func FiltersFeatureSet(brokerName string) *feature.FeatureSet {
 		},
 	}
 
-	features := make([]*feature.Feature, 0, 8)
+	features := make([]*feature.Feature, 8)
 	tests := map[string]struct {
 		filters []eventingv1.SubscriptionsAPIFilter
 	}{
@@ -93,27 +115,14 @@ func FiltersFeatureSet(brokerName string) *feature.FeatureSet {
 
 	for name, fs := range tests {
 		f := feature.NewFeatureNamed(name)
-		f = newEventFilterFeature(eventContexts, fs.filters, f, brokerName)
+		createNewFiltersFeature(f, eventContexts, fs.filters, installBroker)
 		features = append(features, f)
 	}
 
-	return &feature.FeatureSet{
-		Name:     "New trigger filters",
-		Features: features,
-	}
+	return features
 }
 
-type CloudEventsContext struct {
-	eventType            string
-	eventSource          string
-	eventSubject         string
-	eventID              string
-	eventDataSchema      string
-	eventDataContentType string
-	shouldDeliver        bool
-}
-
-func AnyFilterFeature(brokerName string) *feature.Feature {
+func AnyFilterFeature(installBroker InstallBrokerFunc) *feature.Feature {
 	f := feature.NewFeature()
 
 	eventContexts := []CloudEventsContext{
@@ -173,12 +182,12 @@ func AnyFilterFeature(brokerName string) *feature.Feature {
 		},
 	}
 
-	f = newEventFilterFeature(eventContexts, filters, f, brokerName)
+	createNewFiltersFeature(f, eventContexts, filters, installBroker)
 
 	return f
 }
 
-func AllFilterFeature(brokerName string) *feature.Feature {
+func AllFilterFeature(installBroker InstallBrokerFunc) *feature.Feature {
 	f := feature.NewFeature()
 
 	eventContexts := []CloudEventsContext{
@@ -229,12 +238,12 @@ func AllFilterFeature(brokerName string) *feature.Feature {
 		},
 	}
 
-	f = newEventFilterFeature(eventContexts, filters, f, brokerName)
+	createNewFiltersFeature(f, eventContexts, filters, installBroker)
 
 	return f
 }
 
-func MultipleTriggersAndSinksFeature(brokerName string) *feature.Feature {
+func MultipleTriggersAndSinksFeature(installBroker InstallBrokerFunc) *feature.Feature {
 	f := feature.NewFeature()
 
 	eventContextsFirstSink := []CloudEventsContext{
@@ -309,8 +318,8 @@ func MultipleTriggersAndSinksFeature(brokerName string) *feature.Feature {
 		},
 	}
 
-	f = newEventFilterFeature(eventContextsFirstSink, filtersFirstTrigger, f, brokerName)
-	f = newEventFilterFeature(eventContextsSecondSink, filtersSecondTrigger, f, brokerName)
+	createNewFiltersFeature(f, eventContextsFirstSink, filtersFirstTrigger, installBroker)
+	createNewFiltersFeature(f, eventContextsSecondSink, filtersSecondTrigger, installBroker)
 
 	return f
 }

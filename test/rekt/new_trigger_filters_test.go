@@ -20,6 +20,7 @@ limitations under the License.
 package rekt
 
 import (
+	"knative.dev/eventing/test/rekt/resources/broker"
 	"testing"
 
 	newfilters "knative.dev/eventing/test/rekt/features/new_trigger_filters"
@@ -28,8 +29,6 @@ import (
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/knative"
-
-	"knative.dev/eventing/test/rekt/resources/broker"
 )
 
 func TestMTChannelBrokerNewTriggerFilters(t *testing.T) {
@@ -42,56 +41,6 @@ func TestMTChannelBrokerNewTriggerFilters(t *testing.T) {
 		k8s.WithEventListener,
 		environment.Managed(t),
 	)
-	brokerName := "default"
 
-	env.Prerequisite(ctx, t, broker.InstallMTBroker(brokerName))
-	env.TestSet(ctx, t, newfilters.FiltersFeatureSet(brokerName))
-}
-
-func TestMTChannelBrokerAnyTriggerFilters(t *testing.T) {
-	t.Parallel()
-
-	ctx, env := global.Environment(
-		knative.WithKnativeNamespace(system.Namespace()),
-		knative.WithLoggingConfig,
-		knative.WithTracingConfig,
-		k8s.WithEventListener,
-		environment.Managed(t),
-	)
-	brokerName := "default"
-
-	env.Prerequisite(ctx, t, broker.InstallMTBroker(brokerName))
-	env.Test(ctx, t, newfilters.AnyFilterFeature(brokerName))
-}
-
-func TestMTChannelBrokerAllTriggerFilters(t *testing.T) {
-	t.Parallel()
-
-	ctx, env := global.Environment(
-		knative.WithKnativeNamespace(system.Namespace()),
-		knative.WithLoggingConfig,
-		knative.WithTracingConfig,
-		k8s.WithEventListener,
-		environment.Managed(t),
-	)
-	brokerName := "default"
-
-	env.Prerequisite(ctx, t, broker.InstallMTBroker(brokerName))
-	env.Test(ctx, t, newfilters.AllFilterFeature(brokerName))
-}
-
-func TestMultipleSinksMultipleTriggers(t *testing.T) {
-	t.Parallel()
-
-	ctx, env := global.Environment(
-		knative.WithKnativeNamespace(system.Namespace()),
-		knative.WithLoggingConfig,
-		knative.WithTracingConfig,
-		k8s.WithEventListener,
-		environment.Managed(t),
-	)
-	brokerName := "default"
-
-	env.Prerequisite(ctx, t, broker.InstallMTBroker(brokerName))
-	env.Test(ctx, t, newfilters.MultipleTriggersAndSinksFeature(brokerName))
+	env.TestSet(ctx, t, newfilters.SingleDialectFilterFeatures(broker.InstallMTBrokerIntoFeature))
 }
