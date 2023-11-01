@@ -99,6 +99,23 @@ func TestReconcile(t *testing.T) {
 		WantEvents: []string{
 			Eventf(corev1.EventTypeWarning, "InternalError failed to get object test-namespace/test-broker:", `brokers.eventing.knative.dev "test-broker" not found`),
 		},
+	}, {
+		Name: "No reference set",
+		Key:  testKey,
+		Objects: []runtime.Object{
+			NewEventType(eventTypeName, testNS,
+				WithEventTypeType(eventTypeType),
+				WithEventTypeSource(eventTypeSource),
+			),
+		},
+		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: NewEventType(eventTypeName, testNS,
+				WithInitEventTypeConditions,
+				WithEventTypeType(eventTypeType),
+				WithEventTypeSource(eventTypeSource),
+				WithEventTypeReferenceNotSet),
+		}},
+		WantErr: false,
 	}}
 
 	logger := logtesting.TestLogger(t)

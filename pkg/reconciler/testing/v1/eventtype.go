@@ -98,6 +98,10 @@ func WithEventTypeResourceDoesNotExist(et *v1beta2.EventType) {
 	et.Status.MarkReferenceDoesNotExist()
 }
 
+func WithEventTypeReferenceNotSet(et *v1beta2.EventType) {
+	et.Status.MarkReferenceExistsNotSet()
+}
+
 // WithEventTypeResourceExists calls .Status.MarkReferenceExists on the EventType.
 func WithEventTypeResourceExists(et *v1beta2.EventType) {
 	et.Status.MarkReferenceExists()

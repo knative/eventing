@@ -46,6 +46,7 @@ var _ eventtypereconciler.Interface = (*Reconciler)(nil)
 func (r *Reconciler) ReconcileKind(ctx context.Context, et *v1beta2.EventType) pkgreconciler.Event {
 
 	if et.Spec.Reference == nil || isEmptyReference(et.Spec.Reference) {
+		et.Status.MarkReferenceExistsNotSet()
 		return nil
 	}
 
@@ -60,7 +61,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, et *v1beta2.EventType) p
 		}
 		return err
 	}
-	et.Status.MarkReferenceExistsNotSet()
+	et.Status.MarkReferenceExists()
 	return nil
 }
 
