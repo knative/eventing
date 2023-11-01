@@ -42,5 +42,5 @@ func TestMTChannelBrokerNewTriggerFilters(t *testing.T) {
 		environment.Managed(t),
 	)
 
-	env.TestSet(ctx, t, newfilters.SingleDialectFilterFeatures(broker.InstallMTBrokerIntoFeature))
+	env.TestSet(ctx, t, newfilters.NewFiltersFeatureSet(broker.InstallMTBrokerIntoFeature))
 }
