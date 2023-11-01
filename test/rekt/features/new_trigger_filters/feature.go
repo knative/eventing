@@ -18,6 +18,7 @@ package new_trigger_filters
 
 import (
 	"fmt"
+
 	. "github.com/cloudevents/sdk-go/v2/test"
 	"knative.dev/reconciler-test/pkg/feature"
 
