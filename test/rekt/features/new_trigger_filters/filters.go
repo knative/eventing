@@ -23,7 +23,6 @@ import (
 	"knative.dev/reconciler-test/pkg/eventshub"
 	. "knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
-	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/manifest"
 	"knative.dev/reconciler-test/pkg/resources/service"
 
@@ -47,7 +46,6 @@ func createNewFiltersFeature(f *feature.Feature, eventContexts []CloudEventsCont
 
 	f.Setup("Install trigger", trigger.Install(triggerName, brokerName, cfg...))
 	f.Setup("Wait for trigger to become ready", trigger.IsReady(triggerName))
-	f.Setup("Broker is addressable", k8s.IsAddressable(broker.GVR(), brokerName))
 
 	asserter := f.Beta("New filters")
 

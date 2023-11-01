@@ -71,7 +71,7 @@ func SingleDialectFilterFeatures(installBroker InstallBrokerFunc) []*feature.Fea
 		},
 	}
 
-	features := make([]*feature.Feature, 8)
+	features := make([]*feature.Feature, 0, 8)
 	tests := map[string]struct {
 		filters []eventingv1.SubscriptionsAPIFilter
 	}{
@@ -319,8 +319,14 @@ func MultipleTriggersAndSinksFeature(installBroker InstallBrokerFunc) *feature.F
 		},
 	}
 
-	createNewFiltersFeature(f, eventContextsFirstSink, filtersFirstTrigger, installBroker)
-	createNewFiltersFeature(f, eventContextsSecondSink, filtersSecondTrigger, installBroker)
+	// We need to create the broker here and mock it later so that the test uses the same broke for both filters
+	brokerName := installBroker(f)
+	fakeInstallBroker := func(_ *feature.Feature) string {
+		return brokerName
+	}
+
+	createNewFiltersFeature(f, eventContextsFirstSink, filtersFirstTrigger, fakeInstallBroker)
+	createNewFiltersFeature(f, eventContextsSecondSink, filtersSecondTrigger, fakeInstallBroker)
 
 	return f
 }
