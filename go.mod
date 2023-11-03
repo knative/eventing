@@ -13,7 +13,7 @@ require (
 	github.com/google/go-cmp v0.6.0
 	github.com/google/gofuzz v1.2.0
 	github.com/google/mako v0.0.0-20190821191249-122f8dcef9e3
-	github.com/google/uuid v1.3.1
+	github.com/google/uuid v1.4.0
 	github.com/gorilla/websocket v1.5.0
 	github.com/hashicorp/go-cleanhttp v0.5.1
 	github.com/hashicorp/go-retryablehttp v0.6.7
@@ -45,11 +45,11 @@ require (
 	k8s.io/apiserver v0.27.6
 	k8s.io/client-go v0.27.6
 	k8s.io/utils v0.0.0-20230209194617-a36077c30491
-	knative.dev/hack v0.0.0-20231025074238-d4af42e9b222
-	knative.dev/hack/schema v0.0.0-20231025074238-d4af42e9b222
-	knative.dev/pkg v0.0.0-20231023152443-b7a62c0b7003
-	knative.dev/reconciler-test v0.0.0-20231026161005-7c9868e0de8f
-	sigs.k8s.io/yaml v1.3.0
+	knative.dev/hack v0.0.0-20231102183416-0d99b7ee9d63
+	knative.dev/hack/schema v0.0.0-20231102183416-0d99b7ee9d63
+	knative.dev/pkg v0.0.0-20231102200604-fac3a4ffbc74
+	knative.dev/reconciler-test v0.0.0-20231102164934-be33c1ec366f
+	sigs.k8s.io/yaml v1.4.0
 )
 
 require (
