@@ -48,6 +48,8 @@ import (
 
 	triggerinformerfake "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/trigger/fake"
 
+	subscriptioninformerfake "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/subscription/fake"
+
 	// Fake injection client
 	_ "knative.dev/pkg/client/injection/kube/client/fake"
 )
@@ -431,6 +433,7 @@ func TestReceiver(t *testing.T) {
 
 			logger := zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller()))
 			oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
+			oidcTokenVerifier := auth.NewOIDCTokenVerifier(ctx)
 
 			// Replace the SubscriberURI to point at our fake server.
 			for _, trig := range tc.triggers {
@@ -447,8 +450,10 @@ func TestReceiver(t *testing.T) {
 			reporter := &mockReporter{}
 			r, err := NewHandler(
 				logger,
+				oidcTokenVerifier,
 				oidcTokenProvider,
 				triggerinformerfake.Get(ctx),
+				subscriptioninformerfake.Get(ctx),
 				reporter,
 				func(ctx context.Context) context.Context {
 					return ctx
@@ -616,6 +621,7 @@ func TestReceiver_WithSubscriptionsAPI(t *testing.T) {
 
 			logger := zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller()))
 			oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
+			oidcTokenVerifier := auth.NewOIDCTokenVerifier(ctx)
 
 			// Replace the SubscriberURI to point at our fake server.
 			for _, trig := range tc.triggers {
@@ -633,8 +639,10 @@ func TestReceiver_WithSubscriptionsAPI(t *testing.T) {
 			reporter := &mockReporter{}
 			r, err := NewHandler(
 				logger,
+				oidcTokenVerifier,
 				oidcTokenProvider,
 				triggerinformerfake.Get(ctx),
+				subscriptioninformerfake.Get(ctx),
 				reporter,
 				func(ctx context.Context) context.Context {
 					return feature.ToContext(context.TODO(), feature.Flags{
