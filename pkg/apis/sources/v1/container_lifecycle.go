@@ -31,11 +31,14 @@ const (
 
 	// ContainerSourceConditionReceiveAdapterReady has status True when the ContainerSource's ReceiveAdapter is ready.
 	ContainerSourceConditionReceiveAdapterReady apis.ConditionType = "ReceiveAdapterReady"
+
+	ContainerConditionOIDCIdentityCreated apis.ConditionType = "OIDCIdentityCreated"
 )
 
 var containerCondSet = apis.NewLivingConditionSet(
 	ContainerSourceConditionSinkBindingReady,
 	ContainerSourceConditionReceiveAdapterReady,
+	ContainerConditionOIDCIdentityCreated,
 )
 
 // GetConditionSet retrieves the condition set for this resource. Implements the KRShaped interface.
@@ -61,6 +64,22 @@ func (s *ContainerSourceStatus) IsReady() bool {
 // InitializeConditions sets relevant unset conditions to Unknown state.
 func (s *ContainerSourceStatus) InitializeConditions() {
 	containerCondSet.Manage(s).InitializeConditions()
+}
+
+func (s *ContainerSourceStatus) MarkOIDCIdentityCreatedSucceeded() {
+	containerCondSet.Manage(s).MarkTrue(ContainerConditionOIDCIdentityCreated)
+}
+
+func (s *ContainerSourceStatus) MarkOIDCIdentityCreatedSucceededWithReason(reason, messageFormat string, messageA ...interface{}) {
+	containerCondSet.Manage(s).MarkTrueWithReason(ContainerConditionOIDCIdentityCreated, reason, messageFormat, messageA...)
+}
+
+func (s *ContainerSourceStatus) MarkOIDCIdentityCreatedFailed(reason, messageFormat string, messageA ...interface{}) {
+	containerCondSet.Manage(s).MarkFalse(ContainerConditionOIDCIdentityCreated, reason, messageFormat, messageA...)
+}
+
+func (s *ContainerSourceStatus) MarkOIDCIdentityCreatedUnknown(reason, messageFormat string, messageA ...interface{}) {
+	containerCondSet.Manage(s).MarkUnknown(ContainerConditionOIDCIdentityCreated, reason, messageFormat, messageA...)
 }
 
 // PropagateSinkBindingStatus uses the availability of the provided Deployment to determine if
