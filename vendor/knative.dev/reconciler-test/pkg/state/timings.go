@@ -14,31 +14,39 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package environment
+package state
 
 import (
 	"context"
 	"time"
-
-	"knative.dev/reconciler-test/pkg/state"
 )
 
-// this has been moved to state pkg to break cycle between environment and feature package,
-// keeping the consts here for backwards API compatibility
 const (
 	DefaultPollInterval = 3 * time.Second
 	DefaultPollTimeout  = 2 * time.Minute
 )
 
+type timingsKey struct{}
+type timingsType struct {
+	interval time.Duration
+	timeout  time.Duration
+}
+
 // ContextWithPollTimings returns a context with poll timings set
 func ContextWithPollTimings(ctx context.Context, interval, timeout time.Duration) context.Context {
-	return state.ContextWithPollTimings(ctx, interval, timeout)
+	return context.WithValue(ctx, timingsKey{}, timingsType{
+		interval: interval,
+		timeout:  timeout,
+	})
 }
 
 // PollTimingsFromContext will get the previously set poll timing from context,
 // or return the defaults if not found.
-// - values from context.
+// - values from  context.
 // - defaults.
 func PollTimingsFromContext(ctx context.Context) (time.Duration, time.Duration) {
-	return state.PollTimingsFromContext(ctx)
+	if t, ok := ctx.Value(timingsKey{}).(timingsType); ok {
+		return t.interval, t.timeout
+	}
+	return DefaultPollInterval, DefaultPollTimeout
 }
