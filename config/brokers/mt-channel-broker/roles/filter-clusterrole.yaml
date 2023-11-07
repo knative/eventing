@@ -29,6 +29,15 @@ rules:
       - list
       - watch
   - apiGroups:
+      - messaging.knative.dev
+    resources:
+      - subscriptions
+      - subscriptions/status
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
       - ""
     resources:
       - "configmaps"
