@@ -845,10 +845,10 @@ k8s.io/kube-openapi v0.0.0-20230501164219-8b0f38b5fd1f h1:2kWPakN3i/k81b0gvD5C5F
 k8s.io/kube-openapi v0.0.0-20230501164219-8b0f38b5fd1f/go.mod h1:byini6yhqGC14c3ebc/QwanvYwhuMWF6yz2F8uwW8eg=
 k8s.io/utils v0.0.0-20230209194617-a36077c30491 h1:r0BAOLElQnnFhE/ApUsg3iHdVYYPBjNSSOMowRZxxsY=
 k8s.io/utils v0.0.0-20230209194617-a36077c30491/go.mod h1:OLgZIPagt7ERELqWJFomSt595RzquPNLL48iOWgYOg0=
-knative.dev/hack v0.0.0-20231102183416-0d99b7ee9d63 h1:QNbIbsep8jreNCXj3EFrsw0RtsrmMZw7yxYyUG5AILs=
-knative.dev/hack v0.0.0-20231102183416-0d99b7ee9d63/go.mod h1:yk2OjGDsbEnQjfxdm0/HJKS2WqTLEFg/N6nUs6Rqx3Q=
-knative.dev/hack/schema v0.0.0-20231102183416-0d99b7ee9d63 h1:Kya5aD2/qIvQJBJv+ckrQfIBFLZ99gFr8ow+V6i4ZZY=
-knative.dev/hack/schema v0.0.0-20231102183416-0d99b7ee9d63/go.mod h1:3pWwBLnTZSM9psSgCAvhKOHIPTzqfEMlWRpDu6IYhK0=
+knative.dev/hack v0.0.0-20231107173840-883479423aaa h1:XVFqW2a8xvyo231TbVSD3i+580pVej9LbTSmYex6d1g=
+knative.dev/hack v0.0.0-20231107173840-883479423aaa/go.mod h1:yk2OjGDsbEnQjfxdm0/HJKS2WqTLEFg/N6nUs6Rqx3Q=
+knative.dev/hack/schema v0.0.0-20231107173840-883479423aaa h1:g5PQEwrJcwr8uttycYgTslW8JwIH5VwKe15YIfdY69E=
+knative.dev/hack/schema v0.0.0-20231107173840-883479423aaa/go.mod h1:3pWwBLnTZSM9psSgCAvhKOHIPTzqfEMlWRpDu6IYhK0=
 knative.dev/pkg v0.0.0-20231107094615-5c9b7a8d8265 h1:wFDUSmvSQF48tUCIUIFKMOxq9jpV+vXf5l+RZYxYyt4=
 knative.dev/pkg v0.0.0-20231107094615-5c9b7a8d8265/go.mod h1:P3m1Mg/FJjmr9oFHfWcoUbJLSlBi/hgwakobPxyqrZ4=
 knative.dev/reconciler-test v0.0.0-20231107120858-d2429fb0b545 h1:0F0E77IbX5XxCxZ19Gopygwy+b6pVktrYAzMcFnVhK4=
