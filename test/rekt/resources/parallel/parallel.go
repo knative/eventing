@@ -232,3 +232,8 @@ func WithChannelTemplate(template channel_template.ChannelTemplate) manifest.Cfg
 		channelTemplate["spec"] = template.Spec
 	}
 }
+
+// ValidateAddress validates the address retured by Address
+func ValidateAddress(name string, validate addressable.ValidateAddressFn, timings ...time.Duration) feature.StepFn {
+	return addressable.ValidateAddress(GVR(), name, validate, timings...)
+}
