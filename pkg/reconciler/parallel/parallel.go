@@ -37,10 +37,10 @@ import (
 	"knative.dev/pkg/logging"
 	pkgreconciler "knative.dev/pkg/reconciler"
 
-	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
-	v1 "knative.dev/eventing/pkg/apis/flows/v1"
-	"knative.dev/eventing/pkg/apis/feature"
 	corev1listers "k8s.io/client-go/listers/core/v1"
+	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	"knative.dev/eventing/pkg/apis/feature"
+	v1 "knative.dev/eventing/pkg/apis/flows/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	"knative.dev/eventing/pkg/auth"
 	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
@@ -63,7 +63,7 @@ type Reconciler struct {
 	eventingClientSet clientset.Interface
 
 	// dynamicClientSet allows us to configure pluggable Build objects
-	dynamicClientSet dynamic.Interface
+	dynamicClientSet     dynamic.Interface
 	serviceAccountLister corev1listers.ServiceAccountLister
 }
 
@@ -94,7 +94,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, p *v1.Parallel) pkgrecon
 		p.Status.Auth = nil
 		p.Status.MarkOIDCIdentityCreatedSucceededWithReason(fmt.Sprintf("%s feature disabled", feature.OIDCAuthentication), "")
 	}
-	
+
 	if p.Status.BranchStatuses == nil {
 		p.Status.BranchStatuses = make([]v1.ParallelBranchStatus, 0)
 	}

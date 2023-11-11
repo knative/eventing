@@ -447,7 +447,7 @@ func TestParallelReady(t *testing.T) {
 			ps.PropagateSubscriptionStatuses(test.fsubs, test.subs)
 			if test.markOIDCServiceAccountCreated {
 				ps.MarkOIDCIdentityCreatedSucceeded()
-			}else{
+			} else {
 				ps.MarkOIDCIdentityCreatedFailed("Unable to create serviceaccount", "")
 			}
 			got := ps.IsReady()
