@@ -24,6 +24,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -420,6 +421,7 @@ func TestParallelReady(t *testing.T) {
 
 func TestParallelPropagateSetAddress(t *testing.T) {
 	URL := apis.HTTP("example.com")
+	audience := pointer.String("foo-bar")
 	tests := []struct {
 		name       string
 		address    *duckv1.Addressable
@@ -444,6 +446,11 @@ func TestParallelPropagateSetAddress(t *testing.T) {
 		name:       "nil",
 		address:    &duckv1.Addressable{URL: nil},
 		want:       &duckv1.Addressable{},
+		wantStatus: corev1.ConditionTrue,
+	}, {
+		name:       "Audience",
+		address:    &duckv1.Addressable{Audience: audience},
+		want:       &duckv1.Addressable{Audience: audience},
 		wantStatus: corev1.ConditionTrue,
 	}}
 
