@@ -88,7 +88,7 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1.InMemoryChannel) rec
 		return nil
 	}
 
-	config, err := newConfigForInMemoryChannel(imc)
+	config, err := newConfigForInMemoryChannel(ctx, imc)
 	if err != nil {
 		logging.FromContext(ctx).Error("Error creating config for in memory channels", zap.Error(err))
 		return err
@@ -209,11 +209,31 @@ func (r *Reconciler) patchSubscriberStatus(ctx context.Context, imc *v1.InMemory
 }
 
 // newConfigForInMemoryChannel creates a new Config for a single inmemory channel.
-func newConfigForInMemoryChannel(imc *v1.InMemoryChannel) (*multichannelfanout.ChannelConfig, error) {
+func newConfigForInMemoryChannel(ctx context.Context, imc *v1.InMemoryChannel) (*multichannelfanout.ChannelConfig, error) {
+	featureFlags := feature.FromContext(ctx)
+	if featureFlags.IsOIDCAuthentication() && len(imc.Spec.Subscribers) != len(imc.Status.Subscribers) {
+		return nil, fmt.Errorf("the number of subscribers in the status does not match the number of subscribers in the spec")
+	}
 	subs := make([]fanout.Subscription, len(imc.Spec.Subscribers))
+
+	// we will need to find the subscriber status for the service account, so let's make it easy to search for that
+	subStats := make(map[types.UID]eventingduckv1.SubscriberStatus, len(imc.Status.Subscribers))
+	for _, sub := range imc.Status.Subscribers {
+		subStats[sub.UID] = sub
+	}
 
 	for i, sub := range imc.Spec.Subscribers {
 		conf, err := fanout.SubscriberSpecToFanoutConfig(sub)
+		if featureFlags.IsOIDCAuthentication() {
+			if subStat, ok := subStats[sub.UID]; ok {
+				conf.ServiceAccount = &types.NamespacedName{
+					Name:      *subStat.Auth.ServiceAccountName,
+					Namespace: imc.Namespace,
+				}
+			} else {
+				return nil, fmt.Errorf("no matching subscriber status for a subscriber in the spec field")
+			}
+		}
 		if err != nil {
 			return nil, err
 		}
