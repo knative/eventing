@@ -46,6 +46,7 @@ type Finished struct {
 	EventsSent         int
 	TotalRequests      int
 	UnavailablePeriods []UnavailablePeriod
+	SendingInterrupted bool
 }
 
 // Type returns a type of a event
