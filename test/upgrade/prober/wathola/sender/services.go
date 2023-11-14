@@ -100,7 +100,7 @@ func (s *sender) SendContinually() {
 				start = time.Now()
 			}
 			log.Warnf("Could not send step event %v, retrying (%d): %v",
-				s.eventsSent, retry, err)
+				currentStep.Number, retry, err)
 			retry++
 			lastErr = err
 		} else {
