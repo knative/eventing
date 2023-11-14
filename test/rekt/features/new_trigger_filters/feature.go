@@ -319,7 +319,7 @@ func MultipleTriggersAndSinksFeature(installBroker InstallBrokerFunc) *feature.F
 		},
 	}
 
-	// We need to create the broker here and mock it later so that the test uses the same broke for both filters
+	// We need to create the broker here and mock it later so that the test uses the same broker for both filters
 	brokerName := installBroker(f)
 	fakeInstallBroker := func(_ *feature.Feature) string {
 		return brokerName
