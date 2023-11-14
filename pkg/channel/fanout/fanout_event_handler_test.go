@@ -390,7 +390,9 @@ func testFanoutEventHandler(t *testing.T, async bool, receiverFunc channel.Event
 		nil,
 		nil,
 		nil,
+		nil,
 		dispatcher,
+		nil,
 		recvOptionFunc,
 	)
 	<-calledChan

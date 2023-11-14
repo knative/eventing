@@ -24,6 +24,8 @@ package fanout
 import (
 	"context"
 	"errors"
+	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
+	"knative.dev/eventing/pkg/auth"
 	nethttp "net/http"
 	"sync"
 	"time"
@@ -83,6 +85,8 @@ type FanoutEventHandler struct {
 
 	eventDispatcher *kncloudevents.Dispatcher
 
+	TokenVerifier *auth.OIDCTokenVerifier
+
 	// TODO: Plumb context through the receiver and dispatcher and use that to store the timeout,
 	// rather than a member variable.
 	timeout time.Duration
@@ -91,6 +95,7 @@ type FanoutEventHandler struct {
 	logger             *zap.Logger
 	eventTypeHandler   *eventtype.EventTypeAutoHandler
 	channelAddressable *duckv1.KReference
+	imc                *v1.InMemoryChannel
 	channelUID         *types.UID
 }
 
@@ -101,9 +106,12 @@ func NewFanoutEventHandler(
 	reporter channel.StatsReporter,
 	eventTypeHandler *eventtype.EventTypeAutoHandler,
 	channelAddressable *duckv1.KReference,
+	imc *v1.InMemoryChannel,
 	channelUID *types.UID,
 	eventDispatcher *kncloudevents.Dispatcher,
+	TokenVerifier *auth.OIDCTokenVerifier,
 	receiverOpts ...channel.EventReceiverOptions,
+
 ) (*FanoutEventHandler, error) {
 	handler := &FanoutEventHandler{
 		logger:             logger,
@@ -114,12 +122,13 @@ func NewFanoutEventHandler(
 		channelAddressable: channelAddressable,
 		channelUID:         channelUID,
 		eventDispatcher:    eventDispatcher,
+		TokenVerifier:      TokenVerifier,
 	}
 	handler.subscriptions = make([]Subscription, len(config.Subscriptions))
 	copy(handler.subscriptions, config.Subscriptions)
 	// The receiver function needs to point back at the handler itself, so set it up after
 	// initialization.
-	receiver, err := channel.NewEventReceiver(createEventReceiverFunction(handler), logger, reporter, receiverOpts...)
+	receiver, err := channel.NewEventReceiver(createEventReceiverFunction(handler), logger, reporter, handler, receiverOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -161,6 +170,15 @@ func SubscriberSpecToFanoutConfig(sub eventingduckv1.SubscriberSpec) (*Subscript
 	}
 
 	return &Subscription{Subscriber: destination, Reply: reply, DeadLetter: deadLetter, RetryConfig: retryConfig}, nil
+}
+
+func (f *FanoutEventHandler) GetChannelObject() *v1.InMemoryChannel {
+	// convert the channel addressable to a channel object
+	channelObject := &v1.InMemoryChannel{}
+	channelObject.SetName(f.channelAddressable.Name)
+	channelObject.SetNamespace(f.channelAddressable.Namespace)
+	channelObject.SetUID(*f.channelUID)
+	return channelObject
 }
 
 func (f *FanoutEventHandler) SetSubscriptions(ctx context.Context, subs []Subscription) {

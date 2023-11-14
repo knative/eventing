@@ -121,8 +121,10 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1.InMemoryChannel) rec
 			r.reporter,
 			eventTypeAutoHandler,
 			channelRef,
+			imc,
 			UID,
 			r.eventDispatcher,
+			nil,
 		)
 		if err != nil {
 			logging.FromContext(ctx).Error("Failed to create a new fanout.EventHandler", err)
@@ -150,8 +152,10 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1.InMemoryChannel) rec
 			r.reporter,
 			eventTypeAutoHandler,
 			channelRef,
+			imc,
 			UID,
 			r.eventDispatcher,
+			nil,
 			channel.ResolveChannelFromPath(channel.ParseChannelFromPath),
 		)
 		if err != nil {
