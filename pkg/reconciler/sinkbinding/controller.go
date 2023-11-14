@@ -18,10 +18,7 @@ package sinkbinding
 
 import (
 	"context"
-	"errors"
-	"fmt"
 
-	"knative.dev/eventing/pkg/auth"
 	sbinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1/sinkbinding"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/podspecable"
 	"knative.dev/pkg/client/injection/kube/informers/core/v1/namespace"
@@ -32,16 +29,13 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
-	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"knative.dev/eventing/pkg/apis/feature"
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/pkg/apis/duck"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	serviceaccountinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount"
 	"knative.dev/pkg/configmap"
@@ -55,14 +49,6 @@ import (
 const (
 	controllerAgentName = "sinkbinding-controller"
 )
-
-type SinkBindingSubResourcesReconciler struct {
-	res                  *resolver.URIResolver
-	tracker              tracker.Interface
-	serviceAccountLister corev1listers.ServiceAccountLister
-	kubeclient           kubernetes.Interface
-	featureStore         *feature.Store
-}
 
 // NewController returns a new SinkBinding reconciler.
 func NewController(
@@ -170,55 +156,6 @@ func WithContextFactory(ctx context.Context, handler func(types.NamespacedName))
 	return func(ctx context.Context, b psbinding.Bindable) (context.Context, error) {
 		return v1.WithURIResolver(ctx, r), nil
 	}
-}
-
-func (s *SinkBindingSubResourcesReconciler) Reconcile(ctx context.Context, b psbinding.Bindable) error {
-	sb := b.(*v1.SinkBinding)
-	if s.res == nil {
-		err := errors.New("Resolver is nil")
-		logging.FromContext(ctx).Errorf("%w", err)
-		sb.Status.MarkBindingUnavailable("NoResolver", "No Resolver associated with context for sink")
-		return err
-	}
-	if sb.Spec.Sink.Ref != nil {
-		s.tracker.TrackReference(tracker.Reference{
-			APIVersion: sb.Spec.Sink.Ref.APIVersion,
-			Kind:       sb.Spec.Sink.Ref.Kind,
-			Namespace:  sb.Spec.Sink.Ref.Namespace,
-			Name:       sb.Spec.Sink.Ref.Name,
-		}, b)
-	}
-
-	featureFlags := s.featureStore.Load()
-	if featureFlags.IsOIDCAuthentication() {
-		saName := auth.GetOIDCServiceAccountNameForResource(v1.SchemeGroupVersion.WithKind("SinkBinding"), sb.ObjectMeta)
-		sb.Status.Auth = &duckv1.AuthStatus{
-			ServiceAccountName: &saName,
-		}
-
-		if err := auth.EnsureOIDCServiceAccountExistsForResource(ctx, s.serviceAccountLister, s.kubeclient, v1.SchemeGroupVersion.WithKind("SinkBinding"), sb.ObjectMeta); err != nil {
-			sb.Status.MarkOIDCIdentityCreatedFailed("Unable to resolve service account for OIDC authentication", "%v", err)
-			return err
-		}
-		sb.Status.MarkOIDCIdentityCreatedSucceeded()
-	} else {
-		sb.Status.Auth = nil
-		sb.Status.MarkOIDCIdentityCreatedSucceededWithReason(fmt.Sprintf("%s feature disabled", feature.OIDCAuthentication), "")
-	}
-
-	addr, err := s.res.AddressableFromDestinationV1(ctx, sb.Spec.Sink, sb)
-	if err != nil {
-		logging.FromContext(ctx).Errorf("Failed to get Addressable from Destination: %w", err)
-		sb.Status.MarkBindingUnavailable("NoAddressable", "Addressable could not be extracted from destination")
-		return err
-	}
-	sb.Status.MarkSink(addr)
-	return nil
-}
-
-// I'm just here so I won't get fined
-func (*SinkBindingSubResourcesReconciler) ReconcileDeletion(ctx context.Context, b psbinding.Bindable) error {
-	return nil
 }
 
 func createRecorder(ctx context.Context, agentName string) record.EventRecorder {
