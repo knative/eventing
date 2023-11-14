@@ -26,6 +26,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
+	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/apis/duck"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -36,6 +37,7 @@ import (
 var sbCondSet = apis.NewLivingConditionSet(
 	SinkBindingConditionSinkProvided,
 	SinkBindingConditionOIDCIdentityCreated,
+	SinkBindingConditionOIDCTokenSecretCreated,
 )
 
 // GetConditionSet retrieves the condition set for this resource. Implements the KRShaped interface.
@@ -90,6 +92,7 @@ func (sbs *SinkBindingStatus) MarkSink(addr *duckv1.Addressable) {
 	if addr != nil {
 		sbs.SinkURI = addr.URL
 		sbs.SinkCACerts = addr.CACerts
+		sbs.SinkAudience = addr.Audience
 		sbCondSet.Manage(sbs).MarkTrue(SinkBindingConditionSinkProvided)
 	} else {
 		sbCondSet.Manage(sbs).MarkFalse(SinkBindingConditionSinkProvided, "SinkEmpty", "Sink has resolved to empty.%s", "")
@@ -110,6 +113,22 @@ func (sbs *SinkBindingStatus) MarkOIDCIdentityCreatedFailed(reason, messageForma
 
 func (sbs *SinkBindingStatus) MarkOIDCIdentityCreatedUnknown(reason, messageFormat string, messageA ...interface{}) {
 	sbCondSet.Manage(sbs).MarkUnknown(SinkBindingConditionOIDCIdentityCreated, reason, messageFormat, messageA...)
+}
+
+func (sbs *SinkBindingStatus) MarkOIDCTokenSecretCreatedSuccceeded() {
+	sbCondSet.Manage(sbs).MarkTrue(SinkBindingConditionOIDCTokenSecretCreated)
+}
+
+func (sbs *SinkBindingStatus) MarkOIDCTokenSecretCreatedSuccceededWithReason(reason, messageFormat string, messageA ...interface{}) {
+	sbCondSet.Manage(sbs).MarkTrueWithReason(SinkBindingConditionOIDCTokenSecretCreated, reason, messageFormat, messageA...)
+}
+
+func (sbs *SinkBindingStatus) MarkOIDCTokenSecretCreatedFailed(reason, messageFormat string, messageA ...interface{}) {
+	sbCondSet.Manage(sbs).MarkFalse(SinkBindingConditionOIDCTokenSecretCreated, reason, messageFormat, messageA...)
+}
+
+func (sbs *SinkBindingStatus) MarkOIDCTokenSecretCreatedUnknown(reason, messageFormat string, messageA ...interface{}) {
+	sbCondSet.Manage(sbs).MarkUnknown(SinkBindingConditionOIDCTokenSecretCreated, reason, messageFormat, messageA...)
 }
 
 // Do implements psbinding.Bindable
@@ -171,6 +190,40 @@ func (sb *SinkBinding) Do(ctx context.Context, ps *duckv1.WithPod) {
 			Value: ceOverrides,
 		})
 	}
+
+	featureFlags := feature.FromContext(ctx)
+	if featureFlags.IsOIDCAuthentication() {
+
+		ps.Spec.Template.Spec.Volumes = append(ps.Spec.Template.Spec.Volumes, corev1.Volume{
+			Name: "oidc-token",
+			VolumeSource: corev1.VolumeSource{
+				Projected: &corev1.ProjectedVolumeSource{
+					Sources: []corev1.VolumeProjection{
+						{
+							Secret: &corev1.SecretProjection{
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: "oidc-token-" + sb.Name,
+								},
+							},
+						},
+					},
+				},
+			},
+		})
+
+		for i := range spec.Containers {
+			spec.Containers[i].VolumeMounts = append(spec.Containers[i].VolumeMounts, corev1.VolumeMount{
+				Name:      "oidc-token",
+				MountPath: "/oidc",
+			})
+		}
+		for i := range spec.InitContainers {
+			spec.Containers[i].VolumeMounts = append(spec.Containers[i].VolumeMounts, corev1.VolumeMount{
+				Name:      "oidc-token",
+				MountPath: "/oidc",
+			})
+		}
+	}
 }
 
 func (sb *SinkBinding) Undo(ctx context.Context, ps *duckv1.WithPod) {
@@ -189,6 +242,15 @@ func (sb *SinkBinding) Undo(ctx context.Context, ps *duckv1.WithPod) {
 			}
 		}
 		spec.InitContainers[i].Env = env
+
+		volumeMounts := make([]corev1.VolumeMount, 0, len(spec.InitContainers[i].VolumeMounts))
+		for j, vol := range c.VolumeMounts {
+			if vol.Name == "oidc-token" {
+				continue
+			}
+			volumeMounts = append(volumeMounts, spec.InitContainers[i].VolumeMounts[j])
+		}
+		spec.InitContainers[i].VolumeMounts = volumeMounts
 	}
 	for i, c := range spec.Containers {
 		if len(c.Env) == 0 {
@@ -204,5 +266,23 @@ func (sb *SinkBinding) Undo(ctx context.Context, ps *duckv1.WithPod) {
 			}
 		}
 		spec.Containers[i].Env = env
+
+		volumeMounts := make([]corev1.VolumeMount, 0, len(spec.Containers[i].VolumeMounts))
+		for j, vol := range c.VolumeMounts {
+			if vol.Name == "oidc-token" {
+				continue
+			}
+			volumeMounts = append(volumeMounts, spec.Containers[i].VolumeMounts[j])
+		}
+		spec.Containers[i].VolumeMounts = volumeMounts
 	}
+
+	volumes := make([]corev1.Volume, 0, len(spec.Volumes))
+	for i, vol := range spec.Volumes {
+		if vol.Name == "oidc-token" {
+			continue
+		}
+		volumes = append(volumes, spec.Volumes[i])
+	}
+	ps.Spec.Template.Spec.Volumes = volumes
 }

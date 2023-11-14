@@ -19,6 +19,7 @@ package sinkbinding
 import (
 	"context"
 
+	"knative.dev/eventing/pkg/auth"
 	sbinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1/sinkbinding"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/podspecable"
 	"knative.dev/pkg/client/injection/kube/informers/core/v1/namespace"
@@ -63,6 +64,16 @@ func NewController(
 	namespaceInformer := namespace.Get(ctx)
 	serviceaccountInformer := serviceaccountinformer.Get(ctx)
 
+	var globalResync func(obj interface{})
+	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {
+		logger.Infof("feature config changed. name: %s, value: %v", name, value)
+
+		if globalResync != nil {
+			globalResync(nil)
+		}
+	})
+	featureStore.WatchConfigs(cmw)
+
 	c := &psbinding.BaseReconciler{
 		LeaderAwareFuncs: reconciler.LeaderAwareFuncs{
 			PromoteFunc: func(bkt reconciler.Bucket, enq func(reconciler.Bucket, types.NamespacedName)) error {
@@ -92,11 +103,9 @@ func NewController(
 		Logger:        logger,
 	})
 
-	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {
+	globalResync = func(interface{}) {
 		impl.GlobalResync(sbInformer.Informer())
-	})
-
-	featureStore.WatchConfigs(cmw)
+	}
 
 	sbInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 	namespaceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
@@ -108,10 +117,12 @@ func NewController(
 		kubeclient:           kubeclient.Get(ctx),
 		serviceAccountLister: serviceaccountInformer.Lister(),
 		featureStore:         featureStore,
+		tokenProvider:        auth.NewOIDCTokenProvider(ctx),
 	}
 
 	c.WithContext = func(ctx context.Context, b psbinding.Bindable) (context.Context, error) {
-		return v1.WithURIResolver(ctx, sbResolver), nil
+		ctx = v1.WithURIResolver(ctx, sbResolver)
+		return featureStore.ToContext(ctx), nil
 	}
 	c.Tracker = impl.Tracker
 	c.Factory = &duck.CachedInformerFactory{
@@ -150,10 +161,14 @@ func ListAll(ctx context.Context, handler cache.ResourceEventHandler) psbinding.
 
 }
 
-func WithContextFactory(ctx context.Context, handler func(types.NamespacedName)) psbinding.BindableContext {
+func WithContextFactory(ctx context.Context, handler func(types.NamespacedName), cmw configmap.Watcher) psbinding.BindableContext {
 	r := resolver.NewURIResolverFromTracker(ctx, tracker.New(handler, controller.GetTrackerLease(ctx)))
 
+	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"))
+	featureStore.WatchConfigs(cmw)
+
 	return func(ctx context.Context, b psbinding.Bindable) (context.Context, error) {
+		ctx = featureStore.ToContext(ctx)
 		return v1.WithURIResolver(ctx, r), nil
 	}
 }

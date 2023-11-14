@@ -5957,6 +5957,18 @@ state.
 Source.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>oidcTokenSecretName</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>OIDCTokenSecretName is the name of the secret containing the token for
+this SinkBindings OIDC authentication</p>
+</td>
+</tr>
 </tbody>
 </table>
 <hr/>
