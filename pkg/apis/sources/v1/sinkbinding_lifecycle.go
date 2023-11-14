@@ -218,7 +218,7 @@ func (sb *SinkBinding) Do(ctx context.Context, ps *duckv1.WithPod) {
 			})
 		}
 		for i := range spec.InitContainers {
-			spec.Containers[i].VolumeMounts = append(spec.Containers[i].VolumeMounts, corev1.VolumeMount{
+			spec.InitContainers[i].VolumeMounts = append(spec.InitContainers[i].VolumeMounts, corev1.VolumeMount{
 				Name:      "oidc-token",
 				MountPath: "/oidc",
 			})
