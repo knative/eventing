@@ -514,6 +514,29 @@ func (r *Reconciler) updateChannelRemoveSubscription(channel *eventingduckv1.Cha
 }
 
 func (r *Reconciler) updateChannelAddSubscription(channel *eventingduckv1.Channelable, sub *v1.Subscription) {
+	r.updateChannelAddSubscriptionSpec(channel, sub)
+	r.updateChannelAddSubscriptionStatus(channel, sub)
+}
+
+func (r *Reconciler) updateChannelAddSubscriptionStatus(channel *eventingduckv1.Channelable, sub *v1.Subscription) {
+	for i, v := range channel.Status.Subscribers {
+		if v.UID == sub.UID {
+			channel.Status.Subscribers[i].Auth = sub.Status.Auth
+			channel.Status.Subscribers[i].ObservedGeneration = sub.Generation
+			return
+		}
+	}
+
+	toAdd := eventingduckv1.SubscriberStatus{
+		UID:                sub.UID,
+		Auth:               sub.Status.Auth,
+		ObservedGeneration: sub.Generation,
+	}
+
+	channel.Status.Subscribers = append(channel.Status.Subscribers, toAdd)
+}
+
+func (r *Reconciler) updateChannelAddSubscriptionSpec(channel *eventingduckv1.Channelable, sub *v1.Subscription) {
 	// Look to update subscriber.
 	for i, v := range channel.Spec.Subscribers {
 		if v.UID == sub.UID {
