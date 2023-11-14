@@ -34,6 +34,10 @@ import (
 	"knative.dev/pkg/tracker"
 )
 
+const (
+	oidcTokenVolumeName = "oidc-token"
+)
+
 var sbCondSet = apis.NewLivingConditionSet(
 	SinkBindingConditionSinkProvided,
 	SinkBindingConditionOIDCIdentityCreated,
@@ -195,7 +199,7 @@ func (sb *SinkBinding) Do(ctx context.Context, ps *duckv1.WithPod) {
 	if featureFlags.IsOIDCAuthentication() {
 
 		ps.Spec.Template.Spec.Volumes = append(ps.Spec.Template.Spec.Volumes, corev1.Volume{
-			Name: "oidc-token",
+			Name: oidcTokenVolumeName,
 			VolumeSource: corev1.VolumeSource{
 				Projected: &corev1.ProjectedVolumeSource{
 					Sources: []corev1.VolumeProjection{
@@ -213,13 +217,13 @@ func (sb *SinkBinding) Do(ctx context.Context, ps *duckv1.WithPod) {
 
 		for i := range spec.Containers {
 			spec.Containers[i].VolumeMounts = append(spec.Containers[i].VolumeMounts, corev1.VolumeMount{
-				Name:      "oidc-token",
+				Name:      oidcTokenVolumeName,
 				MountPath: "/oidc",
 			})
 		}
 		for i := range spec.InitContainers {
 			spec.InitContainers[i].VolumeMounts = append(spec.InitContainers[i].VolumeMounts, corev1.VolumeMount{
-				Name:      "oidc-token",
+				Name:      oidcTokenVolumeName,
 				MountPath: "/oidc",
 			})
 		}
@@ -243,14 +247,16 @@ func (sb *SinkBinding) Undo(ctx context.Context, ps *duckv1.WithPod) {
 		}
 		spec.InitContainers[i].Env = env
 
-		volumeMounts := make([]corev1.VolumeMount, 0, len(spec.InitContainers[i].VolumeMounts))
-		for j, vol := range c.VolumeMounts {
-			if vol.Name == "oidc-token" {
-				continue
+		if len(spec.InitContainers[i].VolumeMounts) > 0 {
+			volumeMounts := make([]corev1.VolumeMount, 0, len(spec.InitContainers[i].VolumeMounts))
+			for j, vol := range c.VolumeMounts {
+				if vol.Name == oidcTokenVolumeName {
+					continue
+				}
+				volumeMounts = append(volumeMounts, spec.InitContainers[i].VolumeMounts[j])
 			}
-			volumeMounts = append(volumeMounts, spec.InitContainers[i].VolumeMounts[j])
+			spec.InitContainers[i].VolumeMounts = volumeMounts
 		}
-		spec.InitContainers[i].VolumeMounts = volumeMounts
 	}
 	for i, c := range spec.Containers {
 		if len(c.Env) == 0 {
@@ -267,22 +273,26 @@ func (sb *SinkBinding) Undo(ctx context.Context, ps *duckv1.WithPod) {
 		}
 		spec.Containers[i].Env = env
 
-		volumeMounts := make([]corev1.VolumeMount, 0, len(spec.Containers[i].VolumeMounts))
-		for j, vol := range c.VolumeMounts {
-			if vol.Name == "oidc-token" {
-				continue
+		if len(spec.Containers[i].VolumeMounts) > 0 {
+			volumeMounts := make([]corev1.VolumeMount, 0, len(spec.Containers[i].VolumeMounts))
+			for j, vol := range c.VolumeMounts {
+				if vol.Name == oidcTokenVolumeName {
+					continue
+				}
+				volumeMounts = append(volumeMounts, spec.Containers[i].VolumeMounts[j])
 			}
-			volumeMounts = append(volumeMounts, spec.Containers[i].VolumeMounts[j])
+			spec.Containers[i].VolumeMounts = volumeMounts
 		}
-		spec.Containers[i].VolumeMounts = volumeMounts
 	}
 
-	volumes := make([]corev1.Volume, 0, len(spec.Volumes))
-	for i, vol := range spec.Volumes {
-		if vol.Name == "oidc-token" {
-			continue
+	if len(spec.Volumes) > 0 {
+		volumes := make([]corev1.Volume, 0, len(spec.Volumes))
+		for i, vol := range spec.Volumes {
+			if vol.Name == oidcTokenVolumeName {
+				continue
+			}
+			volumes = append(volumes, spec.Volumes[i])
 		}
-		volumes = append(volumes, spec.Volumes[i])
+		ps.Spec.Template.Spec.Volumes = volumes
 	}
-	ps.Spec.Template.Spec.Volumes = volumes
 }
