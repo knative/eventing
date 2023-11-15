@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"knative.dev/eventing/pkg/auth"
 	"knative.dev/pkg/resolver"
@@ -28,6 +29,7 @@ import (
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	applyconfigurationv1 "k8s.io/client-go/applyconfigurations/core/v1"
 	"k8s.io/client-go/kubernetes"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"knative.dev/eventing/pkg/apis/feature"
@@ -108,10 +110,51 @@ func (*SinkBindingSubResourcesReconciler) ReconcileDeletion(ctx context.Context,
 }
 
 func (s *SinkBindingSubResourcesReconciler) reconcileOIDCTokenSecret(ctx context.Context, sb *v1.SinkBinding) error {
+	timeFormat := "2006-01-02 15:04:05 -0600 UTC"
+	logger := logging.FromContext(ctx)
 	secretName := fmt.Sprintf("oidc-token-%s", sb.Name)
 
 	if sb.Status.SinkAudience == nil {
 		return fmt.Errorf("sinkAudience must be set on %s/%s to generate a OIDC token secret", sb.Name, sb.Namespace)
+	}
+
+	var applyConfig *applyconfigurationv1.SecretApplyConfiguration
+
+	secret, err := s.kubeclient.CoreV1().Secrets(sb.Namespace).Get(ctx, secretName, metav1.GetOptions{})
+	if err != nil {
+		if apierrs.IsNotFound(err) {
+			// create new secret
+			applyConfig = new(applyconfigurationv1.SecretApplyConfiguration).
+				WithName(secretName).
+				WithNamespace(sb.Namespace).
+				WithType(corev1.SecretTypeOpaque).
+				WithGeneration(1).
+				WithKind("Secret").
+				WithAPIVersion("v1")
+
+			logger.Debugf("No OIDC token secret found for %s/%s sinkbinding. Will create a new secret", sb.Name, sb.Namespace)
+		} else {
+			return fmt.Errorf("could not check if secret %q exists already: %w", secretName, err)
+		}
+	} else {
+		// check if token needs to be renewed
+		if expiry, ok := secret.Annotations["expiry"]; ok {
+			expiryTime, err := time.Parse(timeFormat, expiry)
+			if err != nil {
+				return fmt.Errorf("could not parse expiry date: %w", err)
+			}
+
+			if expiryTime.After(time.Now().Add(5 * time.Minute)) {
+				logger.Debugf("OIDC token secret for %s/%s sinkbinding still valid for > 5 minutes. Will not update secret", sb.Name, sb.Namespace)
+				// token is still valid for >5 minutes
+				return nil
+			}
+		}
+
+		applyConfig, err = applyconfigurationv1.ExtractSecret(secret, controllerAgentName)
+		if err != nil {
+			return fmt.Errorf("could not get apply config from secret: %w", err)
+		}
 	}
 
 	token, err := s.tokenProvider.GetJWT(types.NamespacedName{
@@ -123,21 +166,18 @@ func (s *SinkBindingSubResourcesReconciler) reconcileOIDCTokenSecret(ctx context
 		return fmt.Errorf("could not create token for SinkBinding %s/%s: %w", sb.Name, sb.Namespace, err)
 	}
 
-	secret := corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      secretName,
-			Namespace: sb.Namespace,
-		},
-		StringData: map[string]string{
-			"token": token,
-		},
-		Type: corev1.SecretTypeOpaque,
+	applyConfig = applyConfig.WithStringData(map[string]string{
+		"token": token,
+	}).WithAnnotations(map[string]string{
+		"expiry": time.Now().Add(time.Hour).Format(timeFormat),
+	})
+
+	_, err = s.kubeclient.CoreV1().Secrets(sb.Namespace).Apply(ctx, applyConfig, metav1.ApplyOptions{FieldManager: controllerAgentName})
+	if err != nil {
+		return fmt.Errorf("could not create or update OIDC token secret for SinkBinding %s/%s: %w", sb.Name, sb.Namespace, err)
 	}
 
-	_, err = s.kubeclient.CoreV1().Secrets(sb.Namespace).Create(ctx, &secret, metav1.CreateOptions{})
-	if err != nil && !apierrs.IsAlreadyExists(err) {
-		return fmt.Errorf("could not create OIDC token secret for SinkBinding %s/%s: %w", sb.Name, sb.Namespace, err)
-	}
+	logger.Debugf("Created/Updated OIDC token secret for %s/%s sinkbinding with new token.", sb.Name, sb.Namespace)
 
 	sb.Status.OIDCTokenSecretName = &secretName
 
