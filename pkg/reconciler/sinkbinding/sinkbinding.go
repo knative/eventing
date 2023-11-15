@@ -29,9 +29,11 @@ import (
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	applyconfigurationv1 "k8s.io/client-go/applyconfigurations/core/v1"
+	applyconfigurationcorev1 "k8s.io/client-go/applyconfigurations/core/v1"
+	applyconfigurationmetav1 "k8s.io/client-go/applyconfigurations/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	corev1listers "k8s.io/client-go/listers/core/v1"
+	"k8s.io/utils/pointer"
 	"knative.dev/eventing/pkg/apis/feature"
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -110,7 +112,7 @@ func (*SinkBindingSubResourcesReconciler) ReconcileDeletion(ctx context.Context,
 }
 
 func (s *SinkBindingSubResourcesReconciler) reconcileOIDCTokenSecret(ctx context.Context, sb *v1.SinkBinding) error {
-	timeFormat := "2006-01-02 15:04:05 -0600 UTC"
+	timeFormat := "2006-01-02 15:04:05 -0600"
 	logger := logging.FromContext(ctx)
 	secretName := fmt.Sprintf("oidc-token-%s", sb.Name)
 
@@ -118,19 +120,28 @@ func (s *SinkBindingSubResourcesReconciler) reconcileOIDCTokenSecret(ctx context
 		return fmt.Errorf("sinkAudience must be set on %s/%s to generate a OIDC token secret", sb.Name, sb.Namespace)
 	}
 
-	var applyConfig *applyconfigurationv1.SecretApplyConfiguration
+	var applyConfig *applyconfigurationcorev1.SecretApplyConfiguration
 
 	secret, err := s.kubeclient.CoreV1().Secrets(sb.Namespace).Get(ctx, secretName, metav1.GetOptions{})
 	if err != nil {
 		if apierrs.IsNotFound(err) {
 			// create new secret
-			applyConfig = new(applyconfigurationv1.SecretApplyConfiguration).
+			apiVersion := fmt.Sprintf("%s/%s", v1.SchemeGroupVersion.Group, v1.SchemeGroupVersion.Version)
+			applyConfig = new(applyconfigurationcorev1.SecretApplyConfiguration).
 				WithName(secretName).
 				WithNamespace(sb.Namespace).
 				WithType(corev1.SecretTypeOpaque).
 				WithGeneration(1).
 				WithKind("Secret").
-				WithAPIVersion("v1")
+				WithAPIVersion("v1").
+				WithOwnerReferences(&applyconfigurationmetav1.OwnerReferenceApplyConfiguration{
+					APIVersion:         &apiVersion,
+					Kind:               pointer.String("SinkBinding"),
+					Name:               &sb.Name,
+					UID:                &sb.UID,
+					Controller:         pointer.Bool(true),
+					BlockOwnerDeletion: pointer.Bool(false),
+				})
 
 			logger.Debugf("No OIDC token secret found for %s/%s sinkbinding. Will create a new secret", sb.Name, sb.Namespace)
 		} else {
@@ -151,7 +162,7 @@ func (s *SinkBindingSubResourcesReconciler) reconcileOIDCTokenSecret(ctx context
 			}
 		}
 
-		applyConfig, err = applyconfigurationv1.ExtractSecret(secret, controllerAgentName)
+		applyConfig, err = applyconfigurationcorev1.ExtractSecret(secret, controllerAgentName)
 		if err != nil {
 			return fmt.Errorf("could not get apply config from secret: %w", err)
 		}
