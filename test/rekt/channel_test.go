@@ -121,7 +121,7 @@ func TestSmoke_ChannelWithSubscription(t *testing.T) {
 	for _, name := range names {
 		env.Test(ctx, t, channel.SubscriptionGoesReady(name,
 			subscription.WithChannel(chRef),
-			subscription.WithSubscriber(nil, "http://example.com")),
+			subscription.WithSubscriber(nil, "http://example.com", "")),
 		)
 	}
 }
@@ -149,7 +149,7 @@ func TestSmoke_ChannelImplWithSubscription(t *testing.T) {
 	for _, name := range names {
 		env.Test(ctx, t, channel.SubscriptionGoesReady(name,
 			subscription.WithChannel(chRef),
-			subscription.WithSubscriber(nil, "http://example.com")),
+			subscription.WithSubscriber(nil, "http://example.com", "")),
 		)
 	}
 }
@@ -171,7 +171,7 @@ func TestChannelChain(t *testing.T) {
 	)
 
 	createSubscriberFn := func(ref *duckv1.KReference, uri string) manifest.CfgFn {
-		return subscription.WithSubscriber(ref, uri)
+		return subscription.WithSubscriber(ref, uri, "")
 	}
 	env.Test(ctx, t, channel.ChannelChain(10, createSubscriberFn))
 }
@@ -194,7 +194,7 @@ func TestChannelDeadLetterSink(t *testing.T) {
 	)
 
 	createSubscriberFn := func(ref *duckv1.KReference, uri string) manifest.CfgFn {
-		return subscription.WithSubscriber(ref, uri)
+		return subscription.WithSubscriber(ref, uri, "")
 	}
 	env.Test(ctx, t, channel.DeadLetterSink(createSubscriberFn))
 }
@@ -213,7 +213,7 @@ func TestGenericChannelDeadLetterSink(t *testing.T) {
 	)
 
 	createSubscriberFn := func(ref *duckv1.KReference, uri string) manifest.CfgFn {
-		return subscription.WithSubscriber(ref, uri)
+		return subscription.WithSubscriber(ref, uri, "")
 	}
 	env.Test(ctx, t, channel.DeadLetterSinkGenericChannel(createSubscriberFn))
 	env.Test(ctx, t, channel.AsDeadLetterSink(createSubscriberFn))
@@ -298,7 +298,7 @@ func TestChannelPreferHeaderCheck(t *testing.T) {
 	)
 
 	createSubscriberFn := func(ref *duckv1.KReference, uri string) manifest.CfgFn {
-		return subscription.WithSubscriber(ref, uri)
+		return subscription.WithSubscriber(ref, uri, "")
 	}
 
 	env.Test(ctx, t, channel.ChannelPreferHeaderCheck(createSubscriberFn))
@@ -316,7 +316,7 @@ func TestChannelDeadLetterSinkExtensions(t *testing.T) {
 	)
 
 	createSubscriberFn := func(ref *duckv1.KReference, uri string) manifest.CfgFn {
-		return subscription.WithSubscriber(ref, uri)
+		return subscription.WithSubscriber(ref, uri, "")
 	}
 
 	env.TestSet(ctx, t, channel.ChannelDeadLetterSinkExtensions(createSubscriberFn))
