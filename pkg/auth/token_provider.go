@@ -52,9 +52,10 @@ func NewOIDCTokenProvider(ctx context.Context) *OIDCTokenProvider {
 }
 
 // GetJWT returns a JWT from the given service account for the given audience.
-func (c *OIDCTokenProvider) GetJWT(serviceAccount types.NamespacedName, audience string) (string, error) {
+func (c *OIDCTokenProvider) GetJWT(serviceAccount types.NamespacedName, audience string) (string, time.Time, error) {
 	if val, ok := c.tokenCache.Get(cacheKey(serviceAccount, audience)); ok {
-		return val.(string), nil
+		ti := val.(tokenInfo)
+		return ti.token, ti.expiry, nil
 	}
 
 	// if not found in cache: request new token
@@ -70,18 +71,27 @@ func (c *OIDCTokenProvider) GetJWT(serviceAccount types.NamespacedName, audience
 		CreateToken(context.TODO(), serviceAccount.Name, &tokenRequest, metav1.CreateOptions{})
 
 	if err != nil {
-		return "", fmt.Errorf("could not request a token for %s: %w", serviceAccount, err)
+		return "", time.Time{}, fmt.Errorf("could not request a token for %s: %w", serviceAccount, err)
 	}
 
 	// we need a duration until this token expires, use the expiry time - (now + 5min)
 	// this gives us a buffer so that it doesn't expire between when we retrieve it and when we use it
 	expiryTtl := tokenRequestResponse.Status.ExpirationTimestamp.Time.Sub(time.Now().Add(expirationBufferTime))
 
-	c.tokenCache.Set(cacheKey(serviceAccount, audience), tokenRequestResponse.Status.Token, expiryTtl)
+	ti := tokenInfo{
+		token:  tokenRequestResponse.Status.Token,
+		expiry: tokenRequestResponse.Status.ExpirationTimestamp.Time,
+	}
+	c.tokenCache.Set(cacheKey(serviceAccount, audience), ti, expiryTtl)
 
-	return tokenRequestResponse.Status.Token, nil
+	return tokenRequestResponse.Status.Token, tokenRequestResponse.Status.ExpirationTimestamp.Time, nil
 }
 
 func cacheKey(serviceAccount types.NamespacedName, audience string) string {
 	return fmt.Sprintf("%s/%s/%s", serviceAccount.Namespace, serviceAccount.Name, audience)
+}
+
+type tokenInfo struct {
+	token  string
+	expiry time.Time
 }
