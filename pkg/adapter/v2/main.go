@@ -215,6 +215,7 @@ func MainWithInformers(ctx context.Context, component string, env EnvConfigAcces
 	}
 
 	clientConfig := ClientConfig{
+		Context:             ctx,
 		Env:                 env,
 		Reporter:            reporter,
 		CrStatusEventClient: crStatusEventClient,

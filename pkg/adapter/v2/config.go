@@ -66,6 +66,9 @@ type EnvConfig struct {
 	// Sink is the URI messages will be sent.
 	Sink string `envconfig:"K_SINK"`
 
+	// Audience is the audience of the target sink.
+	Audience *string `envconfig:"K_AUDIENCE"`
+
 	// CACerts are the Certification Authority (CA) certificates in PEM format
 	// according to https://www.rfc-editor.org/rfc/rfc7468.
 	// +optional
@@ -112,6 +115,9 @@ type EnvConfigAccessor interface {
 
 	// GetCACerts gets the CACerts of the Sink.
 	GetCACerts() *string
+
+	// Get the audience of the target sink.
+	GetAudience() *string
 
 	// Get the namespace of the adapter.
 	GetNamespace() string
@@ -174,6 +180,10 @@ func (e *EnvConfig) GetSink() string {
 
 func (e *EnvConfig) GetCACerts() *string {
 	return e.CACerts
+}
+
+func (e *EnvConfig) GetAudience() *string {
+	return e.Audience
 }
 
 func (e *EnvConfig) GetNamespace() string {
