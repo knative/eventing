@@ -343,6 +343,7 @@ func (d *Dispatcher) createRequest(ctx context.Context, message binding.Message,
 		request.Header[key] = val
 	}
 
+	// saw something interesting here, it is similar to what we want to do in this PR
 	if oidcServiceAccount != nil {
 		if target.Audience != nil && *target.Audience != "" {
 			jwt, err := d.oidcTokenProvider.GetJWT(*oidcServiceAccount, *target.Audience)
