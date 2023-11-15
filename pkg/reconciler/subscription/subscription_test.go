@@ -156,6 +156,12 @@ Vw==
 		Kind:    "Subscriber",
 	}
 
+	subscriptionGVK = metav1.GroupVersionKind{
+		Group:   "messaging.knative.dev",
+		Version: "v1",
+		Kind:    "Subscription",
+	}
+
 	nonAddressableGVK = metav1.GroupVersionKind{
 		Group:   "eventing.knative.dev",
 		Version: "v1",
@@ -2385,6 +2391,14 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionOIDCServiceAccountName(makeSubscriptionOIDCServiceAccount().Name),
 				),
 			}},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchSubscribers(testNS, channelName, nil, []eventingduck.SubscriberStatus{{UID: subscriptionUID, Auth: &duckv1.AuthStatus{
+					ServiceAccountName: pointer.String(makeSubscriptionOIDCServiceAccount().GetName()),
+				}}}),
+			},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "SubscriberSync", "Subscription was synchronized to channel %q", channelName),
+			},
 			WantCreates: []runtime.Object{
 				makeSubscriptionOIDCServiceAccount(),
 			},
@@ -2521,7 +2535,9 @@ func patchSubscribers(namespace, name string, subscriberSpecs []eventingduck.Sub
 	}
 
 	var patch string
-	if stat != "" {
+	if stat != "" && spec == `{"subscribers":null}` {
+		patch = `{"status":` + stat + `}`
+	} else if stat != "" && spec != "" {
 		patch = `{"spec":` + spec + `,` + `"status":` + stat + `}`
 	} else {
 		patch = `{"spec":` + spec + `}`
