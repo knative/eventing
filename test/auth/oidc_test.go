@@ -107,11 +107,13 @@ func TestSequenceSupportsOIDC(t *testing.T) {
 		knative.WithTracingConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
-		environment.WithPollTimings(4*time.Second, 12*time.Minute),
 	)
 
 	name := feature.MakeRandomK8sName("sequence")
-	env.Prerequisite(ctx, t, sequencefeatures.GoesReady(name))
+	env.Prerequisite(ctx, t, sequencefeatures.GoesReady(name, sequence.WithChannelTemplate(channel_template.ChannelTemplate{
+		TypeMeta: channel_impl.TypeMeta(),
+		Spec:     map[string]interface{}{},
+	})))
 
 	env.Test(ctx, t, oidc.AddressableHasAudiencePopulated(sequence.GVR(), sequence.GVK().Kind, name, env.Namespace()))
 }
