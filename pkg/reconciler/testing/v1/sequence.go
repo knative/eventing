@@ -18,9 +18,11 @@ package testing
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/eventing/pkg/apis/feature"
 	flowsv1 "knative.dev/eventing/pkg/apis/flows/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -111,5 +113,33 @@ func WithSequenceSubscriptionsNotReady(reason, message string) SequenceOption {
 func WithSequenceAddressableNotReady(reason, message string) SequenceOption {
 	return func(p *flowsv1.Sequence) {
 		p.Status.MarkAddressableNotReady(reason, message)
+	}
+}
+
+func WithSequenceOIDCIdentityCreatedSucceeded() SequenceOption {
+	return func(s *flowsv1.Sequence) {
+		s.Status.MarkOIDCIdentityCreatedSucceeded()
+	}
+}
+
+func WithSequenceOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled() SequenceOption {
+	return func(s *flowsv1.Sequence) {
+		s.Status.MarkOIDCIdentityCreatedSucceededWithReason(fmt.Sprintf("%s feature disabled", feature.OIDCAuthentication), "")
+	}
+}
+
+func WithSequenceOIDCIdentityCreatedFailed(reason, message string) SequenceOption {
+	return func(s *flowsv1.Sequence) {
+		s.Status.MarkOIDCIdentityCreatedFailed(reason, message)
+	}
+}
+
+func WithSequenceOIDCServiceAccountName(name string) SequenceOption {
+	return func(s *flowsv1.Sequence) {
+		if s.Status.Auth == nil {
+			s.Status.Auth = &duckv1.AuthStatus{}
+		}
+
+		s.Status.Auth.ServiceAccountName = &name
 	}
 }
