@@ -28,7 +28,8 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
-var sCondSet = apis.NewLivingConditionSet(SequenceConditionReady, SequenceConditionChannelsReady, SequenceConditionSubscriptionsReady, SequenceConditionAddressable)
+var sCondSet = apis.NewLivingConditionSet(SequenceConditionReady, SequenceConditionChannelsReady, SequenceConditionSubscriptionsReady, SequenceConditionAddressable,
+	SequenceConditionOIDCIdentityCreated)
 
 const (
 	// SequenceConditionReady has status True when all subconditions below have been set to True.
@@ -45,6 +46,10 @@ const (
 	// SequenceConditionAddressable has status true when this Sequence meets
 	// the Addressable contract and has a non-empty hostname.
 	SequenceConditionAddressable apis.ConditionType = "Addressable"
+
+	// SequenceConditionOIDCIdentityCreated has status True when the OIDCIdentity has been created.
+	// This condition is only relevant if the OIDC feature is enabled.
+	SequenceConditionOIDCIdentityCreated apis.ConditionType = "OIDCIdentityCreated"
 )
 
 // GetConditionSet retrieves the condition set for this resource. Implements the KRShaped interface.
@@ -189,4 +194,24 @@ func (ss *SequenceStatus) setAddress(address *duckv1.Addressable) {
 		ss.Address = duckv1.Addressable{URL: address.URL}
 		sCondSet.Manage(ss).MarkTrue(SequenceConditionAddressable)
 	}
+}
+
+// MarkOIDCIdentityCreatedSucceeded marks the OIDCIdentityCreated condition as true.
+func (ss *SequenceStatus) MarkOIDCIdentityCreatedSucceeded() {
+	sCondSet.Manage(ss).MarkTrue(SequenceConditionOIDCIdentityCreated)
+}
+
+// MarkOIDCIdentityCreatedSucceededWithReason marks the OIDCIdentityCreated condition as true with the given reason.
+func (ss *SequenceStatus) MarkOIDCIdentityCreatedSucceededWithReason(reason, messageFormat string, messageA ...interface{}) {
+	sCondSet.Manage(ss).MarkTrueWithReason(SequenceConditionOIDCIdentityCreated, reason, messageFormat, messageA...)
+}
+
+// MarkOIDCIdentityCreatedFailed marks the OIDCIdentityCreated condition as false with the given reason.
+func (ss *SequenceStatus) MarkOIDCIdentityCreatedFailed(reason, messageFormat string, messageA ...interface{}) {
+	sCondSet.Manage(ss).MarkFalse(SequenceConditionOIDCIdentityCreated, reason, messageFormat, messageA...)
+}
+
+// MarkOIDCIdentityCreatedUnknown marks the OIDCIdentityCreated condition as unknown with the given reason.
+func (ss *SequenceStatus) MarkOIDCIdentityCreatedUnknown(reason, messageFormat string, messageA ...interface{}) {
+	sCondSet.Manage(ss).MarkUnknown(SequenceConditionOIDCIdentityCreated, reason, messageFormat, messageA...)
 }

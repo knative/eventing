@@ -29,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes"
 	"knative.dev/pkg/kmeta"
 
 	duckapis "knative.dev/pkg/apis/duck"
@@ -36,15 +37,19 @@ import (
 	pkgreconciler "knative.dev/pkg/reconciler"
 
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	"knative.dev/eventing/pkg/apis/feature"
 	v1 "knative.dev/eventing/pkg/apis/flows/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
+	"knative.dev/eventing/pkg/auth"
 	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
 	sequencereconciler "knative.dev/eventing/pkg/client/injection/reconciler/flows/v1/sequence"
 	listers "knative.dev/eventing/pkg/client/listers/flows/v1"
 	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1"
 	"knative.dev/eventing/pkg/duck"
 
+	corev1listers "k8s.io/client-go/listers/core/v1"
 	"knative.dev/eventing/pkg/reconciler/sequence/resources"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 type Reconciler struct {
@@ -57,7 +62,9 @@ type Reconciler struct {
 	eventingClientSet clientset.Interface
 
 	// dynamicClientSet allows us to configure pluggable Build objects
-	dynamicClientSet dynamic.Interface
+	dynamicClientSet     dynamic.Interface
+	serviceAccountLister corev1listers.ServiceAccountLister
+	kubeclient           kubernetes.Interface
 }
 
 // Check that our Reconciler implements sequencereconciler.Interface
@@ -120,6 +127,23 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, s *v1.Sequence) pkgrecon
 	// leftover channels and subscriptions that need to be removed.
 	if err := r.removeUnwantedChannels(ctx, channelResourceInterface, s, channels); err != nil {
 		return err
+	}
+
+	featureFlags := feature.FromContext(ctx)
+	if featureFlags.IsOIDCAuthentication() {
+		saName := auth.GetOIDCServiceAccountNameForResource(v1.SchemeGroupVersion.WithKind("Sequence"), s.ObjectMeta)
+		s.Status.Auth = &duckv1.AuthStatus{
+			ServiceAccountName: &saName,
+		}
+
+		if err := auth.EnsureOIDCServiceAccountExistsForResource(ctx, r.serviceAccountLister, r.kubeclient, v1.SchemeGroupVersion.WithKind("Sequence"), s.ObjectMeta); err != nil {
+			s.Status.MarkOIDCIdentityCreatedFailed("Unable to resolve service account for OIDC authentication", "%v", err)
+			return err
+		}
+		s.Status.MarkOIDCIdentityCreatedSucceeded()
+	} else {
+		s.Status.Auth = nil
+		s.Status.MarkOIDCIdentityCreatedSucceededWithReason(fmt.Sprintf("%s feature disabled", feature.OIDCAuthentication), "")
 	}
 
 	return r.removeUnwantedSubscriptions(ctx, s, subs)
