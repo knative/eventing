@@ -113,7 +113,7 @@ func (*SinkBindingSubResourcesReconciler) ReconcileDeletion(ctx context.Context,
 }
 
 func (s *SinkBindingSubResourcesReconciler) reconcileOIDCTokenSecret(ctx context.Context, sb *v1.SinkBinding) error {
-	timeFormat := "2006-01-02 15:04:05 -0600"
+	timeFormat := "2006-01-02 15:04:05 UTC"
 	logger := logging.FromContext(ctx)
 	secretName := fmt.Sprintf("oidc-token-%s", sb.Name)
 
@@ -159,10 +159,11 @@ func (s *SinkBindingSubResourcesReconciler) reconcileOIDCTokenSecret(ctx context
 			}
 
 			if expiryTime.After(time.Now().Add(resyncAndBufferDuration)) {
-				logger.Debugf("OIDC token secret for %s/%s sinkbinding still valid for > %s. Will not update secret", sb.Name, sb.Namespace, resyncAndBufferDuration)
+				logger.Debugf("OIDC token secret for %s/%s sinkbinding still valid for > %s (expires %s). Will not update secret", sb.Name, sb.Namespace, resyncAndBufferDuration, expiryTime)
 				// token is still valid for resync period + buffer (5 min)
 				return nil
 			}
+			logger.Debugf("OIDC token secret for %s/%s sinkbinding is valid for less than %s (expires %s). Will update secret", sb.Name, sb.Namespace, resyncAndBufferDuration, expiryTime)
 		}
 
 		applyConfig, err = applyconfigurationcorev1.ExtractSecret(secret, controllerAgentName)
@@ -171,7 +172,7 @@ func (s *SinkBindingSubResourcesReconciler) reconcileOIDCTokenSecret(ctx context
 		}
 	}
 
-	token, expiry, err := s.tokenProvider.GetJWT(types.NamespacedName{
+	token, expiry, err := s.tokenProvider.GetNewJWT(types.NamespacedName{
 		Namespace: sb.Namespace,
 		Name:      *sb.Status.Auth.ServiceAccountName,
 	}, *sb.Status.SinkAudience)

@@ -59,6 +59,12 @@ func (c *OIDCTokenProvider) GetJWT(serviceAccount types.NamespacedName, audience
 	}
 
 	// if not found in cache: request new token
+	return c.GetNewJWT(serviceAccount, audience)
+}
+
+// GetNewJWT returns a new JWT from the given service account for the given audience without using the token cache.
+func (c *OIDCTokenProvider) GetNewJWT(serviceAccount types.NamespacedName, audience string) (string, time.Time, error) {
+	// request new token
 	tokenRequest := authv1.TokenRequest{
 		Spec: authv1.TokenRequestSpec{
 			Audiences: []string{audience},
