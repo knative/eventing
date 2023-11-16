@@ -2417,7 +2417,8 @@ Resource Types:
 <h3 id="eventing.knative.dev/v1beta1.EventType">EventType
 </h3>
 <p>
-<p>EventType represents a type of event that can be consumed from a Broker.</p>
+<p>EventType represents a type of event that can be consumed from a Broker.
+Deprecated: use v1beta2.EventType instead.</p>
 </p>
 <table>
 <thead>
