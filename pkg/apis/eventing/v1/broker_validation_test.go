@@ -18,13 +18,17 @@ package v1
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	"k8s.io/utils/pointer"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+
+	"knative.dev/eventing/pkg/apis/config"
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 )
 
 func TestBrokerImmutableFields(t *testing.T) {
@@ -80,6 +84,7 @@ func TestValidate(t *testing.T) {
 	tests := []struct {
 		name string
 		b    Broker
+		cfg  *config.Config
 		want *apis.FieldError
 	}{{
 		name: "missing annotation",
@@ -187,10 +192,92 @@ func TestValidate(t *testing.T) {
 			},
 		},
 		want: apis.ErrInvalidValue(invalidString, "spec.delivery.backoffDelay"),
+	}, {
+		name: "invalid config, cross namespace disallowed, cluster wide",
+		cfg: &config.Config{
+			Defaults: &config.Defaults{
+				NamespaceDefaultsConfig: nil,
+				ClusterDefault: &config.ClassAndBrokerConfig{
+					DisallowDifferentNamespaceConfig: pointer.Bool(true),
+				},
+			},
+		},
+		b: Broker{
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{"eventing.knative.dev/broker.class": "MTChannelBasedBroker"},
+				Namespace:   "ns1",
+			},
+			Spec: BrokerSpec{
+				Config: &duckv1.KReference{
+					Kind:       "ConfigMap",
+					Namespace:  "ns2",
+					Name:       "cm",
+					APIVersion: "v1",
+				},
+			},
+		},
+		want: &apis.FieldError{
+			Message: "mismatched namespaces",
+			Paths:   []string{"spec.config.namespace"},
+			Details: fmt.Sprintf("parent namespace: %q does not match ref: %q", "ns1", "ns2"),
+		},
+	}, {
+		name: "invalid config, cross namespace disallowed, namespace wide",
+		cfg: &config.Config{
+			Defaults: &config.Defaults{
+				NamespaceDefaultsConfig: map[string]*config.ClassAndBrokerConfig{
+					"ns1": {DisallowDifferentNamespaceConfig: pointer.Bool(true)},
+				},
+			},
+		},
+		b: Broker{
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{"eventing.knative.dev/broker.class": "MTChannelBasedBroker"},
+				Namespace:   "ns1",
+			},
+			Spec: BrokerSpec{
+				Config: &duckv1.KReference{
+					Kind:       "ConfigMap",
+					Namespace:  "ns2",
+					Name:       "cm",
+					APIVersion: "v1",
+				},
+			},
+		},
+		want: &apis.FieldError{
+			Message: "mismatched namespaces",
+			Paths:   []string{"spec.config.namespace"},
+			Details: fmt.Sprintf("parent namespace: %q does not match ref: %q", "ns1", "ns2"),
+		},
+	}, {
+		name: "valid config, cross namespace allowed, namespace wide",
+		cfg: &config.Config{
+			Defaults: &config.Defaults{
+				NamespaceDefaultsConfig: map[string]*config.ClassAndBrokerConfig{
+					"ns1": {DisallowDifferentNamespaceConfig: pointer.Bool(true)},
+				},
+			},
+		},
+		b: Broker{
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{"eventing.knative.dev/broker.class": "MTChannelBasedBroker"},
+				Namespace:   "ns2",
+			},
+			Spec: BrokerSpec{
+				Config: &duckv1.KReference{
+					Kind:       "ConfigMap",
+					Namespace:  "ns3",
+					Name:       "cm",
+					APIVersion: "v1",
+				},
+			},
+		},
+		want: nil,
 	}}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := test.b.Validate(context.Background())
+			ctx := config.ToContext(context.Background(), test.cfg)
+			got := test.b.Validate(ctx)
 			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
 				t.Error("Broker.Validate (-want, +got) =", diff)
 			}
