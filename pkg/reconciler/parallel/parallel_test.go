@@ -603,8 +603,7 @@ func TestAllBranches(t *testing.T) {
 			WantCreates: []runtime.Object{
 				makeFlowParallelOIDCServiceAccount(),
 			},
-		}, 
-		{
+		}, {
 			Name: "OIDC: Parallel not ready on invalid OIDC service account",
 			Key:  pKey,
 			Ctx: feature.ToContext(context.Background(), feature.Flags{
@@ -639,8 +638,7 @@ func TestAllBranches(t *testing.T) {
 			}},
 			WantEvents: []string{
 				Eventf(corev1.EventTypeWarning, "InternalError", fmt.Sprintf("service account %s not owned by Parallel %s", makeFlowParallelOIDCServiceAccountWithoutOwnerRef().Name, parallelName)),
-			},
-		},
+			}},
 	}
 
 	logger := logtesting.TestLogger(t)
@@ -828,7 +826,6 @@ func makeFlowParallelOIDCServiceAccount() *corev1.ServiceAccount {
 	return auth.GetOIDCServiceAccountForResource(v1.SchemeGroupVersion.WithKind("Parallel"), metav1.ObjectMeta{
 		Name:      parallelName,
 		Namespace: testNS,
-		UID: "",
 	})
 }
 
@@ -836,7 +833,6 @@ func makeFlowParallelOIDCServiceAccountWithoutOwnerRef() *corev1.ServiceAccount 
 	sa := auth.GetOIDCServiceAccountForResource(v1.SchemeGroupVersion.WithKind("Parallel"), metav1.ObjectMeta{
 		Name:      parallelName,
 		Namespace: testNS,
-		UID: "",
 	})
 	sa.OwnerReferences = nil
 
