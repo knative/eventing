@@ -571,7 +571,7 @@ func TestAllBranches(t *testing.T) {
 			}},
 		}, {
 			Name: "OIDC: creates OIDC service account",
-			Key:  testNS + "/" + parallelName,
+			Key:  pKey,
 			Ctx: feature.ToContext(context.Background(), feature.Flags{
 				feature.OIDCAuthentication: feature.Enabled,
 			}),
@@ -580,40 +580,33 @@ func TestAllBranches(t *testing.T) {
 					WithInitFlowsParallelConditions,
 					WithFlowsParallelChannelTemplateSpec(imc),
 					WithFlowsParallelBranches([]v1.ParallelBranch{
-						{Filter: createFilter(0), Subscriber: createSubscriber(0)},
+						{Subscriber: createSubscriber(0)},
 					}))},
 			WantErr: false,
-			WantCreates: []runtime.Object{
-				makeFlowParallelOIDCServiceAccount(),
-				createChannel(parallelName),
-				createBranchChannel(parallelName, 0),
-				resources.NewFilterSubscription(0, NewFlowsParallel(parallelName, testNS, WithFlowsParallelChannelTemplateSpec(imc), WithFlowsParallelBranches([]v1.ParallelBranch{
-					{Filter: createFilter(0), Subscriber: createSubscriber(0)},
-				}))),
-				resources.NewSubscription(0, NewFlowsParallel(parallelName, testNS, WithFlowsParallelChannelTemplateSpec(imc), WithFlowsParallelBranches([]v1.ParallelBranch{
-					{Filter: createFilter(0), Subscriber: createSubscriber(0)},
-				}))),
-			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewFlowsParallel(parallelName, testNS,
 					WithInitFlowsParallelConditions,
 					WithFlowsParallelChannelTemplateSpec(imc),
-					WithFlowsParallelBranches([]v1.ParallelBranch{{Filter: createFilter(0), Subscriber: createSubscriber(0)}}),
+					WithFlowsParallelBranches([]v1.ParallelBranch{{Subscriber: createSubscriber(0)}}),
 					WithFlowsParallelChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
 					WithFlowsParallelAddressableNotReady("emptyAddress", "addressable is nil"),
 					WithFlowsParallelSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
 					WithFlowsParallelIngressChannelStatus(createParallelChannelStatus(parallelName, corev1.ConditionFalse)),
-					WithFlowsParallelOIDCIdentityCreatedSucceeded(),
 					WithFlowsParallelOIDCServiceAccountName(makeFlowParallelOIDCServiceAccount().Name),
+					WithFlowsParallelOIDCIdentityCreatedSucceeded(),
 					WithFlowsParallelBranchStatuses([]v1.ParallelBranchStatus{{
 						FilterSubscriptionStatus: createParallelFilterSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
 						FilterChannelStatus:      createParallelBranchChannelStatus(parallelName, 0, corev1.ConditionFalse),
 						SubscriptionStatus:       createParallelSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
 					}})),
 			}},
-		}, {
-			Name: "OIDC: Subscription not ready on invalid OIDC service account",
-			Key:  testNS + "/" + parallelName,
+			WantCreates: []runtime.Object{
+				makeFlowParallelOIDCServiceAccount(),
+			},
+		}, 
+		{
+			Name: "OIDC: Parallel not ready on invalid OIDC service account",
+			Key:  pKey,
 			Ctx: feature.ToContext(context.Background(), feature.Flags{
 				feature.OIDCAuthentication: feature.Enabled,
 			}),
@@ -623,24 +616,26 @@ func TestAllBranches(t *testing.T) {
 					WithInitFlowsParallelConditions,
 					WithFlowsParallelChannelTemplateSpec(imc),
 					WithFlowsParallelBranches([]v1.ParallelBranch{
-						{Filter: createFilter(0), Subscriber: createSubscriber(0), Delivery: createDelivery(subscriberGVK, "dlc", testNS)},
+						{Subscriber: createSubscriber(0)},
 					}))},
 			WantErr: true,
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewFlowsParallel(parallelName, testNS,
 					WithInitFlowsParallelConditions,
 					WithFlowsParallelChannelTemplateSpec(imc),
-					WithFlowsParallelBranches([]v1.ParallelBranch{{Filter: createFilter(0), Subscriber: createSubscriber(0), Delivery: createDelivery(subscriberGVK, "dlc", testNS)}}),
+					WithFlowsParallelBranches([]v1.ParallelBranch{{Subscriber: createSubscriber(0)}}),
 					WithFlowsParallelChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
 					WithFlowsParallelAddressableNotReady("emptyAddress", "addressable is nil"),
 					WithFlowsParallelSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
 					WithFlowsParallelIngressChannelStatus(createParallelChannelStatus(parallelName, corev1.ConditionFalse)),
 					WithFlowsParallelOIDCIdentityCreatedFailed("Unable to resolve service account for OIDC authentication", fmt.Sprintf("service account %s not owned by Subscription %s", makeFlowParallelOIDCServiceAccountWithoutOwnerRef().Name, parallelName)),
+					WithFlowsParallelOIDCServiceAccountName(makeFlowParallelOIDCServiceAccountWithoutOwnerRef().Name),
 					WithFlowsParallelBranchStatuses([]v1.ParallelBranchStatus{{
 						FilterSubscriptionStatus: createParallelFilterSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
 						FilterChannelStatus:      createParallelBranchChannelStatus(parallelName, 0, corev1.ConditionFalse),
 						SubscriptionStatus:       createParallelSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
-					}})),
+					}}),
+				),
 			}},
 			WantEvents: []string{
 				Eventf(corev1.EventTypeWarning, "InternalError", fmt.Sprintf("service account %s not owned by Parallel %s", makeFlowParallelOIDCServiceAccountWithoutOwnerRef().Name, parallelName)),
@@ -830,16 +825,18 @@ func createDelivery(gvk metav1.GroupVersionKind, name, namespace string) *eventi
 }
 
 func makeFlowParallelOIDCServiceAccount() *corev1.ServiceAccount {
-	return auth.GetOIDCServiceAccountForResource(messagingv1.SchemeGroupVersion.WithKind("Parallel"), metav1.ObjectMeta{
+	return auth.GetOIDCServiceAccountForResource(v1.SchemeGroupVersion.WithKind("Parallel"), metav1.ObjectMeta{
 		Name:      parallelName,
 		Namespace: testNS,
+		UID: "",
 	})
 }
 
 func makeFlowParallelOIDCServiceAccountWithoutOwnerRef() *corev1.ServiceAccount {
-	sa := auth.GetOIDCServiceAccountForResource(messagingv1.SchemeGroupVersion.WithKind("Parallel"), metav1.ObjectMeta{
+	sa := auth.GetOIDCServiceAccountForResource(v1.SchemeGroupVersion.WithKind("Parallel"), metav1.ObjectMeta{
 		Name:      parallelName,
 		Namespace: testNS,
+		UID: "",
 	})
 	sa.OwnerReferences = nil
 
