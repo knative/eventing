@@ -116,9 +116,7 @@ func SetupOIDCServiceAccount(flags feature.Flags, ctx context.Context, serviceAc
 		}
 		marker.MarkOIDCIdentityCreatedSucceeded()
 	} else {
-		setAuthStatus(&duckv1.AuthStatus{
-			ServiceAccountName: nil,
-		})
+		setAuthStatus(nil)
 		marker.MarkOIDCIdentityCreatedSucceededWithReason(fmt.Sprintf("%s feature disabled", feature.OIDCAuthentication), "")
 	}
 	return nil
