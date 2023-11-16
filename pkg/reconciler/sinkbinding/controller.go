@@ -39,6 +39,7 @@ import (
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/pkg/apis/duck"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
+	secretinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/secret"
 	serviceaccountinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
@@ -65,6 +66,7 @@ func NewController(
 	psInformerFactory := podspecable.Get(ctx)
 	namespaceInformer := namespace.Get(ctx)
 	serviceaccountInformer := serviceaccountinformer.Get(ctx)
+	secretInformer := secretinformer.Get(ctx)
 
 	var globalResync func()
 	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {
@@ -118,6 +120,7 @@ func NewController(
 		tracker:              impl.Tracker,
 		kubeclient:           kubeclient.Get(ctx),
 		serviceAccountLister: serviceaccountInformer.Lister(),
+		secretLister:         secretInformer.Lister(),
 		featureStore:         featureStore,
 		tokenProvider:        auth.NewOIDCTokenProvider(ctx),
 	}

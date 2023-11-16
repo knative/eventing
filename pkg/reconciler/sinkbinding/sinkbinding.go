@@ -46,6 +46,7 @@ type SinkBindingSubResourcesReconciler struct {
 	res                  *resolver.URIResolver
 	tracker              tracker.Interface
 	serviceAccountLister corev1listers.ServiceAccountLister
+	secretLister         corev1listers.SecretLister
 	kubeclient           kubernetes.Interface
 	featureStore         *feature.Store
 	tokenProvider        *auth.OIDCTokenProvider
@@ -122,7 +123,7 @@ func (s *SinkBindingSubResourcesReconciler) reconcileOIDCTokenSecret(ctx context
 
 	var applyConfig *applyconfigurationcorev1.SecretApplyConfiguration
 
-	secret, err := s.kubeclient.CoreV1().Secrets(sb.Namespace).Get(ctx, secretName, metav1.GetOptions{})
+	secret, err := s.secretLister.Secrets(sb.Namespace).Get(secretName)
 	if err != nil {
 		if apierrs.IsNotFound(err) {
 			// create new secret
