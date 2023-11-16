@@ -43,6 +43,7 @@ import (
 
 	"knative.dev/eventing/pkg/adapter/mtping"
 	"knative.dev/eventing/pkg/adapter/v2"
+	"knative.dev/eventing/pkg/apis/feature"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/eventing/pkg/auth"
 	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1/pingsource"
@@ -105,7 +106,10 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *sourcesv1.PingSo
 	}
 
 	// OIDC authentication
-	if err := auth.OIDCAuthStatusUtility(ctx, r.serviceAccountLister, r.kubeClientSet, sourcesv1.SchemeGroupVersion.WithKind("PingSource"), source.ObjectMeta, &source.Status); err != nil {
+	featureFlags := feature.FromContext(ctx)
+	if err := auth.OIDCAuthStatusUtility(featureFlags, ctx, r.serviceAccountLister, r.kubeClientSet, sourcesv1.SchemeGroupVersion.WithKind("PingSource"), source.ObjectMeta, &source.Status, func(as *duckv1.AuthStatus) {
+		source.Status.Auth = as
+	}); err != nil {
 		return err
 	}
 

@@ -40,6 +40,7 @@ import (
 	"knative.dev/eventing/pkg/apis/feature"
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/pkg/apis/duck"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	serviceaccountinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount"
 	"knative.dev/pkg/configmap"
@@ -186,7 +187,11 @@ func (s *SinkBindingSubResourcesReconciler) Reconcile(ctx context.Context, b psb
 			Name:       sb.Spec.Sink.Ref.Name,
 		}, b)
 	}
-	if err := auth.OIDCAuthStatusUtility(ctx, s.serviceAccountLister, s.kubeclient, v1.SchemeGroupVersion.WithKind("SinkBinding"), sb.ObjectMeta, &sb.Status); err != nil {
+
+	featureFlags := s.featureStore.Load()
+	if err := auth.OIDCAuthStatusUtility(featureFlags, ctx, s.serviceAccountLister, s.kubeclient, v1.SchemeGroupVersion.WithKind("SinkBinding"), sb.ObjectMeta, &sb.Status, func(as *duckv1.AuthStatus) {
+		sb.Status.Auth = as
+	}); err != nil {
 		return err
 	}
 

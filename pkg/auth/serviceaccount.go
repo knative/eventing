@@ -98,19 +98,16 @@ func EnsureOIDCServiceAccountExistsForResource(ctx context.Context, serviceAccou
 	return nil
 }
 
-type OIDCStatusMarker interface {
+type OIDCIdentityStatusMarker interface {
 	MarkOIDCIdentityCreatedSucceeded()
 	MarkOIDCIdentityCreatedSucceededWithReason(reason, messageFormat string, messageA ...interface{})
 	MarkOIDCIdentityCreatedFailed(reason, messageFormat string, messageA ...interface{})
-	MarkStatus(authStatus *duckv1.AuthStatus)
 }
 
-func OIDCAuthStatusUtility(ctx context.Context, serviceAccountLister corev1listers.ServiceAccountLister, kubeclient kubernetes.Interface, gvk schema.GroupVersionKind, objectMeta metav1.ObjectMeta, marker OIDCStatusMarker) pkgreconciler.Event {
-	featureFlags := feature.FromContext(ctx)
-	if featureFlags.IsOIDCAuthentication() {
+func OIDCAuthStatusUtility(flags feature.Flags, ctx context.Context, serviceAccountLister corev1listers.ServiceAccountLister, kubeclient kubernetes.Interface, gvk schema.GroupVersionKind, objectMeta metav1.ObjectMeta, marker OIDCIdentityStatusMarker, setAuthStatus func(a *duckv1.AuthStatus)) pkgreconciler.Event {
+	if flags.IsOIDCAuthentication() {
 		saName := GetOIDCServiceAccountNameForResource(gvk, objectMeta)
-
-		marker.MarkStatus(&duckv1.AuthStatus{
+		setAuthStatus(&duckv1.AuthStatus{
 			ServiceAccountName: &saName,
 		})
 		if err := EnsureOIDCServiceAccountExistsForResource(ctx, serviceAccountLister, kubeclient, gvk, objectMeta); err != nil {
@@ -119,7 +116,9 @@ func OIDCAuthStatusUtility(ctx context.Context, serviceAccountLister corev1liste
 		}
 		marker.MarkOIDCIdentityCreatedSucceeded()
 	} else {
-		marker.MarkStatus(nil)
+		setAuthStatus(&duckv1.AuthStatus{
+			ServiceAccountName: nil,
+		})
 		marker.MarkOIDCIdentityCreatedSucceededWithReason(fmt.Sprintf("%s feature disabled", feature.OIDCAuthentication), "")
 	}
 	return nil

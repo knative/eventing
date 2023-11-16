@@ -112,10 +112,6 @@ func (sbs *SinkBindingStatus) MarkOIDCIdentityCreatedUnknown(reason, messageForm
 	sbCondSet.Manage(sbs).MarkUnknown(SinkBindingConditionOIDCIdentityCreated, reason, messageFormat, messageA...)
 }
 
-func (sbs *SinkBindingStatus) MarkStatus(authStatus *duckv1.AuthStatus) {
-	sbs.Auth = authStatus
-}
-
 // Do implements psbinding.Bindable
 func (sb *SinkBinding) Do(ctx context.Context, ps *duckv1.WithPod) {
 	// First undo so that we can just unconditionally append below.

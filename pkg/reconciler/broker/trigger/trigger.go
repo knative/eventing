@@ -143,7 +143,10 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, t *eventingv1.Trigger) p
 		return err
 	}
 
-	if err = auth.OIDCAuthStatusUtility(ctx, r.serviceAccountLister, r.kubeclient, eventingv1.SchemeGroupVersion.WithKind("Trigger"), t.ObjectMeta, &t.Status); err != nil {
+	featureFlags := feature.FromContext(ctx)
+	if err = auth.OIDCAuthStatusUtility(featureFlags, ctx, r.serviceAccountLister, r.kubeclient, eventingv1.SchemeGroupVersion.WithKind("Trigger"), t.ObjectMeta, &t.Status, func(as *duckv1.AuthStatus) {
+		t.Status.Auth = as
+	}); err != nil {
 		return err
 	}
 
