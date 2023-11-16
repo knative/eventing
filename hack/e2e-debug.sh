@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+export GO111MODULE=on
+
 source $(dirname "$0")/../test/e2e-common.sh
 
 test_name="$1"
@@ -27,12 +29,10 @@ if [[ -z "${test_dir}" ]]; then
 	fail_test "No testdir provided"
 fi
 
-header "Waiting Knative eventing to come up"
+header "Waiting for Knative eventing to come up"
 
 wait_until_pods_running knative-eventing || fail_test "Pods in knative-eventing didn't come up"
 
 header "Running tests"
 
-go_test_e2e -timeout=30m -run="${test_name}" "${test_dir}/..." || fail_test "Test(s) failed"
-
-success
+go_test_e2e -timeout=30m -run="${test_name}" "${test_dir}" || fail_test "Test(s) failed"
