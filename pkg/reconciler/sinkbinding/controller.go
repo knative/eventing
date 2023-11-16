@@ -18,6 +18,7 @@ package sinkbinding
 
 import (
 	"context"
+	"time"
 
 	"knative.dev/eventing/pkg/auth"
 	sbinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1/sinkbinding"
@@ -49,6 +50,7 @@ import (
 
 const (
 	controllerAgentName = "sinkbinding-controller"
+	resyncPeriod        = 30 * time.Minute
 )
 
 // NewController returns a new SinkBinding reconciler.
@@ -64,12 +66,12 @@ func NewController(
 	namespaceInformer := namespace.Get(ctx)
 	serviceaccountInformer := serviceaccountinformer.Get(ctx)
 
-	var globalResync func(obj interface{})
+	var globalResync func()
 	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {
 		logger.Infof("feature config changed. name: %s, value: %v", name, value)
 
 		if globalResync != nil {
-			globalResync(nil)
+			globalResync()
 		}
 	})
 	featureStore.WatchConfigs(cmw)
@@ -103,7 +105,7 @@ func NewController(
 		Logger:        logger,
 	})
 
-	globalResync = func(interface{}) {
+	globalResync = func() {
 		impl.GlobalResync(sbInformer.Informer())
 	}
 
@@ -138,7 +140,27 @@ func NewController(
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 
+	// do a periodic reync of all sinkbindings to renew the token secrets eventually
+	go periodicResync(ctx, globalResync)
+
 	return impl
+}
+
+func periodicResync(ctx context.Context, globalResyncFunc func()) {
+	ticker := time.NewTicker(resyncPeriod)
+	logger := logging.FromContext(ctx)
+
+	logger.Infof("Starting global resync of SinkBindings every %s", resyncPeriod)
+	for {
+		select {
+		case <-ticker.C:
+			logger.Debug("Triggering global resync of SinkBindings")
+			globalResyncFunc()
+		case <-ctx.Done():
+			logger.Debug("Context finished. Stopping periodic resync of SinkBindings")
+			return
+		}
+	}
 }
 
 func ListAll(ctx context.Context, handler cache.ResourceEventHandler) psbinding.ListAll {

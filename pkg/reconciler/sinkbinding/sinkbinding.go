@@ -150,14 +150,16 @@ func (s *SinkBindingSubResourcesReconciler) reconcileOIDCTokenSecret(ctx context
 	} else {
 		// check if token needs to be renewed
 		if expiry, ok := secret.Annotations["expiry"]; ok {
+			resyncAndBufferDuration := resyncPeriod + (5 * time.Minute)
+
 			expiryTime, err := time.Parse(timeFormat, expiry)
 			if err != nil {
 				return fmt.Errorf("could not parse expiry date: %w", err)
 			}
 
-			if expiryTime.After(time.Now().Add(5 * time.Minute)) {
-				logger.Debugf("OIDC token secret for %s/%s sinkbinding still valid for > 5 minutes. Will not update secret", sb.Name, sb.Namespace)
-				// token is still valid for >5 minutes
+			if expiryTime.After(time.Now().Add(resyncAndBufferDuration)) {
+				logger.Debugf("OIDC token secret for %s/%s sinkbinding still valid for > %s. Will not update secret", sb.Name, sb.Namespace, resyncAndBufferDuration)
+				// token is still valid for resync period + buffer (5 min)
 				return nil
 			}
 		}
