@@ -93,7 +93,7 @@ var _ subscriptionreconciler.Finalizer = (*Reconciler)(nil)
 func (r *Reconciler) ReconcileKind(ctx context.Context, subscription *v1.Subscription) pkgreconciler.Event {
 	// OIDC authentication
 	featureFlags := feature.FromContext(ctx)
-	if err := auth.OIDCAuthStatusUtility(featureFlags, ctx, r.serviceAccountLister, r.kubeclient, v1.SchemeGroupVersion.WithKind("Subscription"), subscription.ObjectMeta, &subscription.Status, func(as *duckv1.AuthStatus) {
+	if err := auth.SetupOIDCServiceAccount(featureFlags, ctx, r.serviceAccountLister, r.kubeclient, v1.SchemeGroupVersion.WithKind("Subscription"), subscription.ObjectMeta, &subscription.Status, func(as *duckv1.AuthStatus) {
 		subscription.Status.Auth = as
 	}); err != nil {
 		return err

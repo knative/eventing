@@ -104,7 +104,7 @@ type OIDCIdentityStatusMarker interface {
 	MarkOIDCIdentityCreatedFailed(reason, messageFormat string, messageA ...interface{})
 }
 
-func OIDCAuthStatusUtility(flags feature.Flags, ctx context.Context, serviceAccountLister corev1listers.ServiceAccountLister, kubeclient kubernetes.Interface, gvk schema.GroupVersionKind, objectMeta metav1.ObjectMeta, marker OIDCIdentityStatusMarker, setAuthStatus func(a *duckv1.AuthStatus)) pkgreconciler.Event {
+func SetupOIDCServiceAccount(flags feature.Flags, ctx context.Context, serviceAccountLister corev1listers.ServiceAccountLister, kubeclient kubernetes.Interface, gvk schema.GroupVersionKind, objectMeta metav1.ObjectMeta, marker OIDCIdentityStatusMarker, setAuthStatus func(a *duckv1.AuthStatus)) pkgreconciler.Event {
 	if flags.IsOIDCAuthentication() {
 		saName := GetOIDCServiceAccountNameForResource(gvk, objectMeta)
 		setAuthStatus(&duckv1.AuthStatus{

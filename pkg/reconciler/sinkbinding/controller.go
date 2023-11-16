@@ -189,7 +189,7 @@ func (s *SinkBindingSubResourcesReconciler) Reconcile(ctx context.Context, b psb
 	}
 
 	featureFlags := s.featureStore.Load()
-	if err := auth.OIDCAuthStatusUtility(featureFlags, ctx, s.serviceAccountLister, s.kubeclient, v1.SchemeGroupVersion.WithKind("SinkBinding"), sb.ObjectMeta, &sb.Status, func(as *duckv1.AuthStatus) {
+	if err := auth.SetupOIDCServiceAccount(featureFlags, ctx, s.serviceAccountLister, s.kubeclient, v1.SchemeGroupVersion.WithKind("SinkBinding"), sb.ObjectMeta, &sb.Status, func(as *duckv1.AuthStatus) {
 		sb.Status.Auth = as
 	}); err != nil {
 		return err
