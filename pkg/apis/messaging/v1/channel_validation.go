@@ -24,12 +24,15 @@ import (
 	"knative.dev/pkg/kmp"
 )
 
+const eventingControllerSAName = "eventing-controller"
+
 func (c *Channel) Validate(ctx context.Context) *apis.FieldError {
 	withNS := apis.WithinParent(ctx, c.ObjectMeta)
 	errs := c.Spec.Validate(withNS).ViaField("spec")
 	if apis.IsInUpdate(ctx) {
 		original := apis.GetBaseline(ctx).(*Channel)
 		errs = errs.Also(c.CheckImmutableFields(ctx, original))
+		errs = errs.Also(c.CheckSubscribersChangeAllowed(ctx, original))
 	}
 	return errs
 }
@@ -90,4 +93,33 @@ func (c *Channel) CheckImmutableFields(ctx context.Context, original *Channel) *
 		}
 	}
 	return nil
+}
+
+func (c *Channel) CheckSubscribersChangeAllowed(ctx context.Context, original *Channel) *apis.FieldError {
+	if !canChangeChannelSpecAuth(ctx) {
+		return c.checkSubsciberSpecAuthChanged(original)
+	}
+	return nil
+}
+
+func (c *Channel) checkSubsciberSpecAuthChanged(original *Channel) *apis.FieldError {
+	if diff, err := kmp.ShortDiff(original.Spec.Subscribers, c.Spec.Subscribers); err != nil {
+		return &apis.FieldError{
+			Message: "Failed to diff Channel.Spec.Subscribers",
+			Paths:   []string{"spec.subscribers"},
+			Details: err.Error(),
+		}
+	} else if diff != "" {
+		return &apis.FieldError{
+			Message: "Channel.Spec.Subscribers changed by a user which was not the eventing-controller service account",
+			Paths:   []string{"spec.subscribers"},
+			Details: diff,
+		}
+	}
+	return nil
+}
+
+func canChangeChannelSpecAuth(ctx context.Context) bool {
+	user := apis.GetUserInfo(ctx)
+	return user.Username == eventingControllerSAName
 }
