@@ -96,6 +96,10 @@ func (c *Channel) CheckImmutableFields(ctx context.Context, original *Channel) *
 }
 
 func (c *Channel) CheckSubscribersChangeAllowed(ctx context.Context, original *Channel) *apis.FieldError {
+	if original == nil {
+		return nil
+	}
+
 	if !canChangeChannelSpecAuth(ctx) {
 		return c.checkSubsciberSpecAuthChanged(original)
 	}
@@ -121,5 +125,8 @@ func (c *Channel) checkSubsciberSpecAuthChanged(original *Channel) *apis.FieldEr
 
 func canChangeChannelSpecAuth(ctx context.Context) bool {
 	user := apis.GetUserInfo(ctx)
+	if user == nil {
+		return false
+	}
 	return user.Username == eventingControllerSAName
 }
