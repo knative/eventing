@@ -156,12 +156,6 @@ Vw==
 		Kind:    "Subscriber",
 	}
 
-	subscriptionGVK = metav1.GroupVersionKind{
-		Group:   "messaging.knative.dev",
-		Version: "v1",
-		Kind:    "Subscription",
-	}
-
 	nonAddressableGVK = metav1.GroupVersionKind{
 		Group:   "eventing.knative.dev",
 		Version: "v1",
