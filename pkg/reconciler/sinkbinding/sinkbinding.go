@@ -113,7 +113,6 @@ func (*SinkBindingSubResourcesReconciler) ReconcileDeletion(ctx context.Context,
 }
 
 func (s *SinkBindingSubResourcesReconciler) reconcileOIDCTokenSecret(ctx context.Context, sb *v1.SinkBinding) error {
-	timeFormat := "2006-01-02 15:04:05 UTC"
 	logger := logging.FromContext(ctx)
 	secretName := fmt.Sprintf("oidc-token-%s", sb.Name)
 
@@ -150,20 +149,18 @@ func (s *SinkBindingSubResourcesReconciler) reconcileOIDCTokenSecret(ctx context
 		}
 	} else {
 		// check if token needs to be renewed
-		if expiry, ok := secret.Annotations["expiry"]; ok {
-			expiryTime, err := time.Parse(timeFormat, expiry)
-			if err != nil {
-				return fmt.Errorf("could not parse expiry date: %w", err)
-			}
-
-			resyncAndBufferDuration := resyncPeriod + tokenExpiryBuffer
-			if expiryTime.After(time.Now().Add(resyncAndBufferDuration)) {
-				logger.Debugf("OIDC token secret for %s/%s sinkbinding still valid for > %s (expires %s). Will not update secret", sb.Name, sb.Namespace, resyncAndBufferDuration, expiryTime)
-				// token is still valid for resync period + buffer
-				return nil
-			}
-			logger.Debugf("OIDC token secret for %s/%s sinkbinding is valid for less than %s (expires %s). Will update secret", sb.Name, sb.Namespace, resyncAndBufferDuration, expiryTime)
+		expiry, err := auth.GetJWTExpiry(string(secret.Data["token"]))
+		if err != nil {
+			return fmt.Errorf("could not get expiry date: %w", err)
 		}
+
+		resyncAndBufferDuration := resyncPeriod + tokenExpiryBuffer
+		if expiry.After(time.Now().Add(resyncAndBufferDuration)) {
+			logger.Debugf("OIDC token secret for %s/%s sinkbinding still valid for > %s (expires %s). Will not update secret", sb.Name, sb.Namespace, resyncAndBufferDuration, expiry)
+			// token is still valid for resync period + buffer
+			return nil
+		}
+		logger.Debugf("OIDC token secret for %s/%s sinkbinding is valid for less than %s (expires %s). Will update secret", sb.Name, sb.Namespace, resyncAndBufferDuration, expiry)
 
 		applyConfig, err = applyconfigurationcorev1.ExtractSecret(secret, controllerAgentName)
 		if err != nil {
@@ -182,8 +179,6 @@ func (s *SinkBindingSubResourcesReconciler) reconcileOIDCTokenSecret(ctx context
 
 	applyConfig = applyConfig.WithStringData(map[string]string{
 		"token": token,
-	}).WithAnnotations(map[string]string{
-		"expiry": time.Now().Add(time.Hour).Format(timeFormat),
 	})
 
 	_, err = s.kubeclient.CoreV1().Secrets(sb.Namespace).Apply(ctx, applyConfig, metav1.ApplyOptions{FieldManager: controllerAgentName})
