@@ -166,6 +166,9 @@ func (s *SinkBindingSubResourcesReconciler) reconcileOIDCTokenSecret(ctx context
 		if err != nil {
 			return fmt.Errorf("could not get apply config from secret: %w", err)
 		}
+
+		// increment generation
+		applyConfig.WithGeneration(secret.Generation + 1)
 	}
 
 	token, err := s.tokenProvider.GetNewJWT(types.NamespacedName{
