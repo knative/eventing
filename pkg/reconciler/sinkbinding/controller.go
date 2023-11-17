@@ -54,7 +54,7 @@ const (
 
 	// resyncPeriod defines the period in which SinkBindings will be reenqued
 	// (e.g. to check the validity of their OIDC token secret)
-	resyncPeriod = 30 * time.Minute
+	resyncPeriod = auth.TokenExpirationTime / 2
 	// tokenExpiryBuffer defines an additional buffer for the expiry of OIDC
 	// token secrets
 	tokenExpiryBuffer = 5 * time.Minute
