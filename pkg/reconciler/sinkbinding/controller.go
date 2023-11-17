@@ -51,7 +51,13 @@ import (
 
 const (
 	controllerAgentName = "sinkbinding-controller"
-	resyncPeriod        = 30 * time.Minute
+
+	// resyncPeriod defines the period in which SinkBindings will be reenqued
+	// (e.g. to check the validity of their OIDC token secret)
+	resyncPeriod = 30 * time.Minute
+	// tokenExpiryBuffer defines an additional buffer for the expiry of OIDC
+	// token secrets
+	tokenExpiryBuffer = 5 * time.Minute
 )
 
 // NewController returns a new SinkBinding reconciler.
