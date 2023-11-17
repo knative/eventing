@@ -171,7 +171,7 @@ func (s *SinkBindingSubResourcesReconciler) reconcileOIDCTokenSecret(ctx context
 		}
 	}
 
-	token, expiry, err := s.tokenProvider.GetNewJWT(types.NamespacedName{
+	token, err := s.tokenProvider.GetNewJWT(types.NamespacedName{
 		Namespace: sb.Namespace,
 		Name:      *sb.Status.Auth.ServiceAccountName,
 	}, *sb.Status.SinkAudience)
@@ -183,7 +183,7 @@ func (s *SinkBindingSubResourcesReconciler) reconcileOIDCTokenSecret(ctx context
 	applyConfig = applyConfig.WithStringData(map[string]string{
 		"token": token,
 	}).WithAnnotations(map[string]string{
-		"expiry": expiry.Format(timeFormat),
+		"expiry": time.Now().Add(time.Hour).Format(timeFormat),
 	})
 
 	_, err = s.kubeclient.CoreV1().Secrets(sb.Namespace).Apply(ctx, applyConfig, metav1.ApplyOptions{FieldManager: controllerAgentName})

@@ -345,7 +345,7 @@ func (d *Dispatcher) createRequest(ctx context.Context, message binding.Message,
 
 	if oidcServiceAccount != nil {
 		if target.Audience != nil && *target.Audience != "" {
-			jwt, _, err := d.oidcTokenProvider.GetJWT(*oidcServiceAccount, *target.Audience)
+			jwt, err := d.oidcTokenProvider.GetJWT(*oidcServiceAccount, *target.Audience)
 			if err != nil {
 				return nil, fmt.Errorf("could not get JWT: %w", err)
 			}
