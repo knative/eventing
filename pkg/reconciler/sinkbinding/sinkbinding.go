@@ -151,22 +151,21 @@ func (s *SinkBindingSubResourcesReconciler) reconcileOIDCTokenSecret(ctx context
 		// check if token needs to be renewed
 		expiry, err := auth.GetJWTExpiry(string(secret.Data["token"]))
 		if err != nil {
-			return fmt.Errorf("could not get expiry date: %w", err)
-		}
+			logger.Warnf("Could not get expiry date of OIDC token secret: %s. Will renew token.", err)
+		} else {
+			resyncAndBufferDuration := resyncPeriod + tokenExpiryBuffer
+			if expiry.After(time.Now().Add(resyncAndBufferDuration)) {
+				logger.Debugf("OIDC token secret for %s/%s sinkbinding still valid for > %s (expires %s). Will not update secret", sb.Name, sb.Namespace, resyncAndBufferDuration, expiry)
+				// token is still valid for resync period + buffer
+				return nil
+			}
+			logger.Debugf("OIDC token secret for %s/%s sinkbinding is valid for less than %s (expires %s). Will update secret", sb.Name, sb.Namespace, resyncAndBufferDuration, expiry)
 
-		resyncAndBufferDuration := resyncPeriod + tokenExpiryBuffer
-		if expiry.After(time.Now().Add(resyncAndBufferDuration)) {
-			logger.Debugf("OIDC token secret for %s/%s sinkbinding still valid for > %s (expires %s). Will not update secret", sb.Name, sb.Namespace, resyncAndBufferDuration, expiry)
-			// token is still valid for resync period + buffer
-			return nil
+			applyConfig, err = applyconfigurationcorev1.ExtractSecret(secret, controllerAgentName)
+			if err != nil {
+				return fmt.Errorf("could not get apply config from secret: %w", err)
+			}
 		}
-		logger.Debugf("OIDC token secret for %s/%s sinkbinding is valid for less than %s (expires %s). Will update secret", sb.Name, sb.Namespace, resyncAndBufferDuration, expiry)
-
-		applyConfig, err = applyconfigurationcorev1.ExtractSecret(secret, controllerAgentName)
-		if err != nil {
-			return fmt.Errorf("could not get apply config from secret: %w", err)
-		}
-
 		// increment generation
 		applyConfig.WithGeneration(secret.Generation + 1)
 	}
