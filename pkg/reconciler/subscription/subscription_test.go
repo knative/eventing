@@ -795,7 +795,7 @@ func TestAllCases(t *testing.T) {
 						SubscriberURI:     tlsSubscriberURI,
 						SubscriberCACerts: &tlsSubscriberCACerts,
 					},
-				}, []eventingduck.SubscriberStatus{{}}),
+				}),
 			},
 		}, {
 			Name: "reply with CA certs",
@@ -859,7 +859,7 @@ func TestAllCases(t *testing.T) {
 						ReplyURI:      tlsSubscriberURI,
 						ReplyCACerts:  &tlsSubscriberCACerts,
 					},
-				}, []eventingduck.SubscriberStatus{{}}),
+				}),
 			},
 		}, {
 			Name: "subscriber with Audience",
@@ -909,7 +909,7 @@ func TestAllCases(t *testing.T) {
 						SubscriberURI:      audienceSubscriberURI,
 						SubscriberAudience: &audienceSubscriberAudience,
 					},
-				}, []eventingduck.SubscriberStatus{{}}),
+				}),
 			},
 		}, {
 			Name: "reply with Audience",
@@ -973,7 +973,7 @@ func TestAllCases(t *testing.T) {
 						ReplyURI:      audienceSubscriberURI,
 						ReplyAudience: &audienceSubscriberAudience,
 					},
-				}, []eventingduck.SubscriberStatus{{}}),
+				}),
 			},
 		}, {
 			Name: "no patch on subscriber without CA certs",
@@ -1268,7 +1268,7 @@ func TestAllCases(t *testing.T) {
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
 					{UID: subscriptionUID, SubscriberURI: subscriberURI},
-				}, nil),
+				}),
 				patchFinalizers(testNS, subscriptionName),
 			},
 		}, {
@@ -1356,7 +1356,7 @@ func TestAllCases(t *testing.T) {
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
 					{UID: subscriptionUID, SubscriberURI: subscriberURI, Delivery: &eventingduck.DeliverySpec{DeadLetterSink: &duckv1.Destination{URI: apis.HTTP("dls.mynamespace.svc.cluster.local")}}},
-				}, nil),
+				}),
 				patchFinalizers(testNS, subscriptionName),
 			},
 		}, {
@@ -1406,7 +1406,7 @@ func TestAllCases(t *testing.T) {
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
 					{UID: subscriptionUID, SubscriberURI: subscriberURI},
-				}, nil),
+				}),
 				patchFinalizers(testNS, subscriptionName),
 			},
 		}, {
@@ -1497,7 +1497,7 @@ func TestAllCases(t *testing.T) {
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
 					{UID: subscriptionUID, ReplyURI: replyURI, SubscriberURI: subscriberURI},
-				}, nil),
+				}),
 				patchFinalizers(testNS, subscriptionName),
 			},
 		}, {
@@ -1546,7 +1546,7 @@ func TestAllCases(t *testing.T) {
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
 					{UID: subscriptionUID, SubscriberURI: subscriberURI, ReplyURI: replyURI},
-				}, nil),
+				}),
 				patchFinalizers(testNS, subscriptionName),
 			},
 		}, {
@@ -1596,7 +1596,7 @@ func TestAllCases(t *testing.T) {
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
 					{UID: subscriptionUID, Generation: subscriptionGeneration, SubscriberURI: subscriberURI},
-				}, nil),
+				}),
 			},
 		}, {
 			Name: "v1 imc+subscriber as service",
@@ -1635,7 +1635,7 @@ func TestAllCases(t *testing.T) {
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
 					{UID: subscriptionUID, SubscriberURI: serviceURI},
-				}, nil),
+				}),
 				patchFinalizers(testNS, subscriptionName),
 			},
 		}, {
@@ -1685,7 +1685,7 @@ func TestAllCases(t *testing.T) {
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
 					{UID: "a-" + subscriptionUID, SubscriberURI: serviceURI},
-				}, nil),
+				}),
 				patchFinalizers(testNS, "a-"+subscriptionName),
 			},
 		}, {
@@ -1745,7 +1745,7 @@ func TestAllCases(t *testing.T) {
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
 					{UID: "a-" + subscriptionUID, SubscriberURI: serviceURI, Delivery: &eventingduck.DeliverySpec{DeadLetterSink: &duckv1.Destination{URI: apis.HTTP("dls.mynamespace.svc.cluster.local")}}},
-				}, nil),
+				}),
 				patchFinalizers(testNS, "a-"+subscriptionName),
 			},
 		},
@@ -1829,7 +1829,7 @@ func TestAllCases(t *testing.T) {
 							BackoffDelay:  pointer.String("PT1S"),
 						},
 					},
-				}, nil),
+				}),
 				patchFinalizers(testNS, "a-"+subscriptionName),
 			},
 		},
@@ -1900,7 +1900,7 @@ func TestAllCases(t *testing.T) {
 							BackoffDelay:  pointer.String("PT1S"),
 						},
 					},
-				}, nil),
+				}),
 				patchFinalizers(testNS, "a-"+subscriptionName),
 			},
 		},
@@ -1961,7 +1961,7 @@ func TestAllCases(t *testing.T) {
 							RetryAfterMax: pointer.String("PT2S"),
 						},
 					},
-				}, nil),
+				}),
 				patchFinalizers(testNS, "a-"+subscriptionName),
 			},
 		},
@@ -2009,7 +2009,7 @@ func TestAllCases(t *testing.T) {
 						UID:           "a-" + subscriptionUID,
 						SubscriberURI: serviceURI,
 					},
-				}, nil),
+				}),
 				patchFinalizers(testNS, "a-"+subscriptionName),
 			},
 		},
@@ -2161,7 +2161,7 @@ func TestAllCases(t *testing.T) {
 							BackoffDelay:  pointer.String("PT1S"),
 						},
 					},
-				}, nil),
+				}),
 				patchFinalizers(testNS, "a-"+subscriptionName),
 			},
 		},
@@ -2232,7 +2232,7 @@ func TestAllCases(t *testing.T) {
 							RetryAfterMax: pointer.String("PT2S"),
 						},
 					},
-				}, nil),
+				}),
 				patchFinalizers(testNS, "a-"+subscriptionName),
 			},
 		},
@@ -2267,7 +2267,7 @@ func TestAllCases(t *testing.T) {
 				Eventf(corev1.EventTypeNormal, "SubscriberRemoved", "Subscription was removed from channel \"origin\""),
 			},
 			WantPatches: []clientgotesting.PatchActionImpl{
-				patchSubscribers(testNS, channelName, nil, nil),
+				patchSubscribers(testNS, channelName, nil),
 				patchRemoveFinalizers(testNS, subscriptionName),
 			},
 		}, {
@@ -2316,7 +2316,7 @@ func TestAllCases(t *testing.T) {
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
-				patchSubscribers(testNS, channelName, nil, nil),
+				patchSubscribers(testNS, channelName, nil),
 			},
 		}, {
 			Name: "subscription deleted - channel does not exist",
@@ -2392,9 +2392,10 @@ func TestAllCases(t *testing.T) {
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
-				patchSubscribers(testNS, channelName, nil, []eventingduck.SubscriberStatus{{UID: subscriptionUID, Auth: &duckv1.AuthStatus{
+				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{{UID: subscriptionUID, Auth: &duckv1.AuthStatus{
 					ServiceAccountName: pointer.String(makeSubscriptionOIDCServiceAccount().GetName()),
-				}}}),
+				}, SubscriberURI: subscriberURI,
+				}}),
 			},
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "SubscriberSync", "Subscription was synchronized to channel %q", channelName),
@@ -2489,7 +2490,7 @@ func WithSubscriptionDeliverySpec(d *eventingduck.DeliverySpec) SubscriptionOpti
 	}
 }
 
-func patchSubscribers(namespace, name string, subscriberSpecs []eventingduck.SubscriberSpec, subscriberStats []eventingduck.SubscriberStatus) clientgotesting.PatchActionImpl {
+func patchSubscribers(namespace, name string, subscriberSpecs []eventingduck.SubscriberSpec) clientgotesting.PatchActionImpl {
 	action := clientgotesting.PatchActionImpl{}
 	action.Name = name
 	action.Namespace = namespace
@@ -2514,34 +2515,7 @@ func patchSubscribers(namespace, name string, subscriberSpecs []eventingduck.Sub
 		spec = `{"subscribers":null}`
 	}
 
-	var stat string
-	if subscriberStats != nil {
-		b, err := json.Marshal(subscriberStats)
-		if err != nil {
-			return action
-		}
-		ss := make([]map[string]interface{}, 0)
-		err = json.Unmarshal(b, &ss)
-		if err != nil {
-			return action
-		}
-		subs, err := json.Marshal(ss)
-		if err != nil {
-			return action
-		}
-		stat = fmt.Sprintf(`{"subscribers":%s}`, subs)
-	} else {
-		stat = ""
-	}
-
-	var patch string
-	if stat != "" && spec == `{"subscribers":null}` {
-		patch = `{"status":` + stat + `}`
-	} else if stat != "" && spec != "" {
-		patch = `{"spec":` + spec + `,` + `"status":` + stat + `}`
-	} else {
-		patch = `{"spec":` + spec + `}`
-	}
+	patch := `{"spec":` + spec + `}`
 
 	action.Patch = []byte(patch)
 	return action
