@@ -60,6 +60,11 @@ func (in *ClassAndBrokerConfig) DeepCopyInto(out *ClassAndBrokerConfig) {
 		*out = new(BrokerConfig)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.DisallowDifferentNamespaceConfig != nil {
+		in, out := &in.DisallowDifferentNamespaceConfig, &out.DisallowDifferentNamespaceConfig
+		*out = new(bool)
+		**out = **in
+	}
 	return
 }
 

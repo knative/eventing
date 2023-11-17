@@ -23,9 +23,9 @@ spec:
   group: eventing.knative.dev
   versions:
   - &version
-    name: v1beta1
+    name: v1beta2
     served: true
-    storage: true
+    storage: false
     subresources:
       status: {}
     schema:
@@ -155,9 +155,14 @@ spec:
       type: string
       jsonPath: ".status.conditions[?(@.type==\"Ready\")].reason"
   - <<: *version
-    name: v1beta2
+    name: v1beta1
     served: true
-    storage: false
+    storage: true
+    # This indicates the v1beta1 version of the custom resource is deprecated.
+    # API requests to this version receive a warning header in the server response.
+    deprecated: true
+    # This overrides the default warning returned to API clients making v1beta1 API requests.
+    deprecationWarning: "eventing.knative.dev/v1beta1 EventType is deprecated; see https://knative.dev/docs/eventing/event-registry/ for instructions to migrate to eventing.knative.dev/v1beta2 EventType"
     # v1beta1 schema is identical to the v1beta2 schema
   names:
     kind: EventType

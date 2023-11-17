@@ -89,6 +89,9 @@ func TestParallelInitializeConditions(t *testing.T) {
 					Type:   ParallelConditionChannelsReady,
 					Status: corev1.ConditionUnknown,
 				}, {
+					Type:   ParallelConditionOIDCIdentityCreated,
+					Status: corev1.ConditionUnknown,
+				}, {
 					Type:   ParallelConditionReady,
 					Status: corev1.ConditionUnknown,
 				}, {
@@ -116,6 +119,9 @@ func TestParallelInitializeConditions(t *testing.T) {
 					Type:   ParallelConditionChannelsReady,
 					Status: corev1.ConditionFalse,
 				}, {
+					Type:   ParallelConditionOIDCIdentityCreated,
+					Status: corev1.ConditionUnknown,
+				}, {
 					Type:   ParallelConditionReady,
 					Status: corev1.ConditionUnknown,
 				}, {
@@ -141,6 +147,9 @@ func TestParallelInitializeConditions(t *testing.T) {
 					Status: corev1.ConditionUnknown,
 				}, {
 					Type:   ParallelConditionChannelsReady,
+					Status: corev1.ConditionUnknown,
+				}, {
+					Type:   ParallelConditionOIDCIdentityCreated,
 					Status: corev1.ConditionUnknown,
 				}, {
 					Type:   ParallelConditionReady,
@@ -327,82 +336,109 @@ func TestParallelPropagateSubscriptionStatusUpdated(t *testing.T) {
 
 func TestParallelReady(t *testing.T) {
 	tests := []struct {
-		name     string
-		fsubs    []*messagingv1.Subscription
-		subs     []*messagingv1.Subscription
-		ichannel *eventingduckv1.Channelable
-		channels []*eventingduckv1.Channelable
-		want     bool
+		name                          string
+		fsubs                         []*messagingv1.Subscription
+		subs                          []*messagingv1.Subscription
+		ichannel                      *eventingduckv1.Channelable
+		channels                      []*eventingduckv1.Channelable
+		markOIDCServiceAccountCreated bool
+		want                          bool
 	}{{
-		name:     "ingress false, empty",
-		fsubs:    []*messagingv1.Subscription{},
-		subs:     []*messagingv1.Subscription{},
-		ichannel: getChannelable(false),
-		channels: []*eventingduckv1.Channelable{},
-		want:     false,
+		name:                          "ingress false, empty, serviceAccount ready",
+		fsubs:                         []*messagingv1.Subscription{},
+		subs:                          []*messagingv1.Subscription{},
+		ichannel:                      getChannelable(false),
+		channels:                      []*eventingduckv1.Channelable{},
+		markOIDCServiceAccountCreated: true,
+		want:                          false,
 	}, {
-		name:     "ingress true, empty",
-		fsubs:    []*messagingv1.Subscription{},
-		subs:     []*messagingv1.Subscription{},
-		ichannel: getChannelable(true),
-		channels: []*eventingduckv1.Channelable{},
-		want:     false,
+		name:                          "ingress true, empty, serviceAccount ready",
+		fsubs:                         []*messagingv1.Subscription{},
+		subs:                          []*messagingv1.Subscription{},
+		ichannel:                      getChannelable(true),
+		channels:                      []*eventingduckv1.Channelable{},
+		markOIDCServiceAccountCreated: true,
+		want:                          false,
 	}, {
-		name:     "ingress true, one channelable not ready, one subscription ready",
-		ichannel: getChannelable(true),
-		channels: []*eventingduckv1.Channelable{getChannelable(false)},
-		fsubs:    []*messagingv1.Subscription{getSubscription("fsub0", true)},
-		subs:     []*messagingv1.Subscription{getSubscription("sub0", true)},
-		want:     false,
+		name:                          "ingress true, one channelable not ready, one subscription ready, serviceAccount ready",
+		ichannel:                      getChannelable(true),
+		channels:                      []*eventingduckv1.Channelable{getChannelable(false)},
+		fsubs:                         []*messagingv1.Subscription{getSubscription("fsub0", true)},
+		subs:                          []*messagingv1.Subscription{getSubscription("sub0", true)},
+		markOIDCServiceAccountCreated: true,
+		want:                          false,
 	}, {
-		name:     "ingress true, one channelable ready, one subscription not ready",
-		ichannel: getChannelable(true),
-		channels: []*eventingduckv1.Channelable{getChannelable(true)},
-		fsubs:    []*messagingv1.Subscription{getSubscription("fsub0", false)},
-		subs:     []*messagingv1.Subscription{getSubscription("sub0", false)},
-		want:     false,
+		name:                          "ingress true, one channelable ready, one subscription not ready, serviceAccount ready",
+		ichannel:                      getChannelable(true),
+		channels:                      []*eventingduckv1.Channelable{getChannelable(true)},
+		fsubs:                         []*messagingv1.Subscription{getSubscription("fsub0", false)},
+		subs:                          []*messagingv1.Subscription{getSubscription("sub0", false)},
+		markOIDCServiceAccountCreated: true,
+		want:                          false,
 	}, {
-		name:     "ingress false, one channelable ready, one subscription ready",
-		ichannel: getChannelable(false),
-		channels: []*eventingduckv1.Channelable{getChannelable(true)},
-		fsubs:    []*messagingv1.Subscription{getSubscription("fsub0", true)},
-		subs:     []*messagingv1.Subscription{getSubscription("sub0", true)},
-		want:     false,
+		name:                          "ingress false, one channelable ready, one subscription ready,serviceAccount ready",
+		ichannel:                      getChannelable(false),
+		channels:                      []*eventingduckv1.Channelable{getChannelable(true)},
+		fsubs:                         []*messagingv1.Subscription{getSubscription("fsub0", true)},
+		subs:                          []*messagingv1.Subscription{getSubscription("sub0", true)},
+		markOIDCServiceAccountCreated: true,
+		want:                          false,
 	}, {
-		name:     "ingress true, one channelable ready, one subscription ready",
-		ichannel: getChannelable(true),
-		channels: []*eventingduckv1.Channelable{getChannelable(true)},
-		fsubs:    []*messagingv1.Subscription{getSubscription("fsub0", true)},
-		subs:     []*messagingv1.Subscription{getSubscription("sub0", true)},
-		want:     true,
+		name:                          "ingress true, one channelable ready, one subscription ready, serviceAccount ready",
+		ichannel:                      getChannelable(true),
+		channels:                      []*eventingduckv1.Channelable{getChannelable(true)},
+		fsubs:                         []*messagingv1.Subscription{getSubscription("fsub0", true)},
+		subs:                          []*messagingv1.Subscription{getSubscription("sub0", true)},
+		markOIDCServiceAccountCreated: true,
+		want:                          true,
 	}, {
-		name:     "ingress true, one channelable ready, one not, two subscriptions ready",
-		ichannel: getChannelable(true),
-		channels: []*eventingduckv1.Channelable{getChannelable(true), getChannelable(false)},
-		fsubs:    []*messagingv1.Subscription{getSubscription("fsub0", true), getSubscription("fsub1", true)},
-		subs:     []*messagingv1.Subscription{getSubscription("sub0", true), getSubscription("sub1", true)},
-		want:     false,
+		name:                          "ingress true, one channelable ready, one subscription ready, serviceAccount not ready",
+		ichannel:                      getChannelable(true),
+		channels:                      []*eventingduckv1.Channelable{getChannelable(true)},
+		fsubs:                         []*messagingv1.Subscription{getSubscription("fsub0", true)},
+		subs:                          []*messagingv1.Subscription{getSubscription("sub0", true)},
+		markOIDCServiceAccountCreated: false,
+		want:                          false,
 	}, {
-		name:     "ingress true, two channelables ready, one subscription ready, one not",
-		ichannel: getChannelable(true),
-		channels: []*eventingduckv1.Channelable{getChannelable(true), getChannelable(true)},
-		fsubs:    []*messagingv1.Subscription{getSubscription("fsub0", true), getSubscription("fsub1", false)},
-		subs:     []*messagingv1.Subscription{getSubscription("sub0", true), getSubscription("sub1", false)},
-		want:     false,
+		name:                          "ingress true, one channelable ready, one not, two subscriptions ready, serviceAccount ready",
+		ichannel:                      getChannelable(true),
+		channels:                      []*eventingduckv1.Channelable{getChannelable(true), getChannelable(false)},
+		fsubs:                         []*messagingv1.Subscription{getSubscription("fsub0", true), getSubscription("fsub1", true)},
+		subs:                          []*messagingv1.Subscription{getSubscription("sub0", true), getSubscription("sub1", true)},
+		markOIDCServiceAccountCreated: true,
+		want:                          false,
 	}, {
-		name:     "ingress false, two channelables ready, two subscriptions ready",
-		ichannel: getChannelable(false),
-		channels: []*eventingduckv1.Channelable{getChannelable(true), getChannelable(true)},
-		fsubs:    []*messagingv1.Subscription{getSubscription("fsub0", true), getSubscription("fsub1", true)},
-		subs:     []*messagingv1.Subscription{getSubscription("sub0", true), getSubscription("sub1", true)},
-		want:     false,
+		name:                          "ingress true, two channelables ready, one subscription ready, one not, serviceAccount ready",
+		ichannel:                      getChannelable(true),
+		channels:                      []*eventingduckv1.Channelable{getChannelable(true), getChannelable(true)},
+		fsubs:                         []*messagingv1.Subscription{getSubscription("fsub0", true), getSubscription("fsub1", false)},
+		subs:                          []*messagingv1.Subscription{getSubscription("sub0", true), getSubscription("sub1", false)},
+		markOIDCServiceAccountCreated: true,
+		want:                          false,
 	}, {
-		name:     "ingress true, two channelables ready, two subscriptions ready",
-		ichannel: getChannelable(true),
-		channels: []*eventingduckv1.Channelable{getChannelable(true), getChannelable(true)},
-		fsubs:    []*messagingv1.Subscription{getSubscription("fsub0", true), getSubscription("fsub1", true)},
-		subs:     []*messagingv1.Subscription{getSubscription("sub0", true), getSubscription("sub1", true)},
-		want:     true,
+		name:                          "ingress false, two channelables ready, two subscriptions ready, serviceAccount ready",
+		ichannel:                      getChannelable(false),
+		channels:                      []*eventingduckv1.Channelable{getChannelable(true), getChannelable(true)},
+		fsubs:                         []*messagingv1.Subscription{getSubscription("fsub0", true), getSubscription("fsub1", true)},
+		subs:                          []*messagingv1.Subscription{getSubscription("sub0", true), getSubscription("sub1", true)},
+		markOIDCServiceAccountCreated: true,
+		want:                          false,
+	}, {
+		name:                          "ingress true, two channelables ready, two subscriptions ready, serviceAccount not ready",
+		ichannel:                      getChannelable(true),
+		channels:                      []*eventingduckv1.Channelable{getChannelable(true), getChannelable(true)},
+		fsubs:                         []*messagingv1.Subscription{getSubscription("fsub0", true), getSubscription("fsub1", true)},
+		subs:                          []*messagingv1.Subscription{getSubscription("sub0", true), getSubscription("sub1", true)},
+		markOIDCServiceAccountCreated: false,
+		want:                          false,
+	}, {
+		name:                          "ingress true, two channelables ready, two subscriptions ready, serviceAccount ready",
+		ichannel:                      getChannelable(true),
+		channels:                      []*eventingduckv1.Channelable{getChannelable(true), getChannelable(true)},
+		fsubs:                         []*messagingv1.Subscription{getSubscription("fsub0", true), getSubscription("fsub1", true)},
+		subs:                          []*messagingv1.Subscription{getSubscription("sub0", true), getSubscription("sub1", true)},
+		markOIDCServiceAccountCreated: true,
+		want:                          true,
 	}}
 
 	for _, test := range tests {
@@ -410,6 +446,11 @@ func TestParallelReady(t *testing.T) {
 			ps := ParallelStatus{}
 			ps.PropagateChannelStatuses(test.ichannel, test.channels)
 			ps.PropagateSubscriptionStatuses(test.fsubs, test.subs)
+			if test.markOIDCServiceAccountCreated {
+				ps.MarkOIDCIdentityCreatedSucceeded()
+			} else {
+				ps.MarkOIDCIdentityCreatedFailed("Unable to create serviceaccount", "")
+			}
 			got := ps.IsReady()
 			want := test.want
 			if want != got {
