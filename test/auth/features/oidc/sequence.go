@@ -27,16 +27,16 @@ import (
 )
 
 func SequenceHasAudienceOfInputChannel(sequenceName, sequenceNamespace string, channelGVR schema.GroupVersionResource, channelKind string) *feature.Feature {
-	f := feature.NewFeatureNamed("Parallel has audience of input channel")
+	f := feature.NewFeatureNamed("Sequence has audience of input channel")
 
-	f.Setup("Parallel goes ready", sequence.IsReady(sequenceName))
+	f.Setup("Sequence goes ready", sequence.IsReady(sequenceName))
 
 	expectedAudience := auth.GetAudience(channelGVR.GroupVersion().WithKind(channelKind), metav1.ObjectMeta{
 		Name:      resources.SequenceChannelName(sequenceName, 0),
 		Namespace: sequenceNamespace,
 	})
 
-	f.Alpha("Parallel").Must("has audience set", sequence.ValidateAddress(sequenceName, addressable.AssertAddressWithAudience(expectedAudience)))
+	f.Alpha("Sequence").Must("has audience set", sequence.ValidateAddress(sequenceName, addressable.AssertAddressWithAudience(expectedAudience)))
 
 	return f
 }
