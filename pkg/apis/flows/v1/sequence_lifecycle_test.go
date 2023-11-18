@@ -35,6 +35,8 @@ var sequenceConditionReady = apis.Condition{
 	Status: corev1.ConditionTrue,
 }
 
+var channelAudience = fmt.Sprintf("messaging.knative.dev/inmemorychannel/%s/%s", "testNS", "test-imc")
+
 func TestSequenceGetConditionSet(t *testing.T) {
 	r := &Sequence{}
 
@@ -371,7 +373,7 @@ func TestSequenceReady(t *testing.T) {
 func TestSequencePropagateSetAddress(t *testing.T) {
 	URL := apis.HTTP("example.com")
 	URL2 := apis.HTTP("another.example.com")
-	channelAudience := fmt.Sprintf("messaging.knative.dev/inmemorychannel/%s/%s", "testNS", "test-imc")
+
 	tests := []struct {
 		name         string
 		status       SequenceStatus
