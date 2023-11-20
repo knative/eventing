@@ -37,6 +37,7 @@ import (
 	"knative.dev/eventing/test/rekt/resources/channel_impl"
 	"knative.dev/eventing/test/rekt/resources/channel_template"
 	"knative.dev/eventing/test/rekt/resources/parallel"
+	"knative.dev/reconciler-test/pkg/eventshub"
 )
 
 func TestBrokerSupportsOIDC(t *testing.T) {
@@ -94,4 +95,20 @@ func TestParallelSupportsOIDC(t *testing.T) {
 	})))
 
 	env.Test(ctx, t, oidc.ParallelHasAudienceOfInputChannel(name, env.Namespace(), channel_impl.GVR(), channel_impl.GVK().Kind))
+}
+
+func TestApiserversourceSendEventWithJWT(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+		eventshub.WithTLS(t),
+		environment.WithPollTimings(4*time.Second, 12*time.Minute),
+	)
+
+	env.Test(ctx, t, oidc.ApiserversourceSendEventWithJWT())
 }
