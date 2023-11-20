@@ -132,8 +132,7 @@ func NewController(
 	}
 
 	c.WithContext = func(ctx context.Context, b psbinding.Bindable) (context.Context, error) {
-		ctx = v1.WithURIResolver(ctx, sbResolver)
-		return featureStore.ToContext(ctx), nil
+		return v1.WithURIResolver(ctx, sbResolver), nil
 	}
 	c.Tracker = impl.Tracker
 	c.Factory = &duck.CachedInformerFactory{
@@ -192,14 +191,10 @@ func ListAll(ctx context.Context, handler cache.ResourceEventHandler) psbinding.
 
 }
 
-func WithContextFactory(ctx context.Context, handler func(types.NamespacedName), cmw configmap.Watcher) psbinding.BindableContext {
+func WithContextFactory(ctx context.Context, handler func(types.NamespacedName)) psbinding.BindableContext {
 	r := resolver.NewURIResolverFromTracker(ctx, tracker.New(handler, controller.GetTrackerLease(ctx)))
 
-	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"))
-	featureStore.WatchConfigs(cmw)
-
 	return func(ctx context.Context, b psbinding.Bindable) (context.Context, error) {
-		ctx = featureStore.ToContext(ctx)
 		return v1.WithURIResolver(ctx, r), nil
 	}
 }

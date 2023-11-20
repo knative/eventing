@@ -27,7 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/pointer"
-	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
@@ -443,10 +442,11 @@ func TestSinkBindingDo(t *testing.T) {
 	overrides := duckv1.CloudEventOverrides{Extensions: map[string]string{"foo": "bar"}}
 
 	tests := []struct {
-		name string
-		in   *duckv1.WithPod
-		want *duckv1.WithPod
-		ctx  context.Context
+		name     string
+		in       *duckv1.WithPod
+		sbStatus *SinkBindingStatus
+		want     *duckv1.WithPod
+		ctx      context.Context
 	}{{
 		name: "nothing to add",
 		in: &duckv1.WithPod{
@@ -631,9 +631,6 @@ func TestSinkBindingDo(t *testing.T) {
 		},
 	}, {
 		name: "adds OIDC token volume",
-		ctx: feature.ToContext(context.Background(), feature.Flags{
-			feature.OIDCAuthentication: feature.Enabled,
-		}),
 		in: &duckv1.WithPod{
 			Spec: duckv1.WithPodSpec{
 				Template: duckv1.PodSpecable{
@@ -669,6 +666,9 @@ func TestSinkBindingDo(t *testing.T) {
 					},
 				},
 			},
+		},
+		sbStatus: &SinkBindingStatus{
+			OIDCTokenSecretName: pointer.String("oidc-token"),
 		},
 		want: &duckv1.WithPod{
 			Spec: duckv1.WithPodSpec{
@@ -749,9 +749,12 @@ func TestSinkBindingDo(t *testing.T) {
 						Sink:                destination,
 						CloudEventOverrides: &overrides,
 					}},
-				Status: SinkBindingStatus{
-					OIDCTokenSecretName: pointer.String("oidc-token"),
-				}}
+			}
+
+			if test.sbStatus != nil {
+				sb.Status = *test.sbStatus
+			}
+
 			sb.Do(ctx, got)
 
 			if !cmp.Equal(got, test.want) {

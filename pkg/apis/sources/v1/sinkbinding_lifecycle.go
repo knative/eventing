@@ -26,7 +26,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/apis/duck"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -195,9 +194,7 @@ func (sb *SinkBinding) Do(ctx context.Context, ps *duckv1.WithPod) {
 		})
 	}
 
-	featureFlags := feature.FromContext(ctx)
-	if featureFlags.IsOIDCAuthentication() && sb.Status.OIDCTokenSecretName != nil {
-
+	if sb.Status.OIDCTokenSecretName != nil {
 		ps.Spec.Template.Spec.Volumes = append(ps.Spec.Template.Spec.Volumes, corev1.Volume{
 			Name: oidcTokenVolumeName,
 			VolumeSource: corev1.VolumeSource{

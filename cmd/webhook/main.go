@@ -194,7 +194,7 @@ func NewConfigValidationController(ctx context.Context, _ configmap.Watcher) *co
 
 func NewSinkBindingWebhook(opts ...psbinding.ReconcilerOption) injection.ControllerConstructor {
 	return func(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
-		withContext := sinkbinding.WithContextFactory(ctx, func(types.NamespacedName) {}, cmw)
+		withContext := sinkbinding.WithContextFactory(ctx, func(types.NamespacedName) {})
 
 		return psbinding.NewAdmissionController(ctx,
 
