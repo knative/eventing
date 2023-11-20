@@ -23,6 +23,8 @@ import (
 
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/kmp"
+
+	"knative.dev/eventing/pkg/apis/config"
 )
 
 const (
@@ -30,7 +32,22 @@ const (
 )
 
 func (b *Broker) Validate(ctx context.Context) *apis.FieldError {
-	withNS := apis.AllowDifferentNamespace(apis.WithinParent(ctx, b.ObjectMeta))
+	ctx = apis.WithinParent(ctx, b.ObjectMeta)
+
+	cfg := config.FromContextOrDefaults(ctx)
+	var brConfig *config.ClassAndBrokerConfig
+	if cfg.Defaults != nil {
+		if c, ok := cfg.Defaults.NamespaceDefaultsConfig[b.GetNamespace()]; ok {
+			brConfig = c
+		} else {
+			brConfig = cfg.Defaults.ClusterDefault
+		}
+	}
+
+	withNS := ctx
+	if brConfig == nil || brConfig.DisallowDifferentNamespaceConfig == nil || !*brConfig.DisallowDifferentNamespaceConfig {
+		withNS = apis.AllowDifferentNamespace(ctx)
+	}
 
 	// Make sure a BrokerClassAnnotation exists
 	var errs *apis.FieldError

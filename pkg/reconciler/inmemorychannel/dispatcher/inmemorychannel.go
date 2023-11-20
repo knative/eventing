@@ -234,7 +234,7 @@ func newConfigForInMemoryChannel(ctx context.Context, imc *v1.InMemoryChannel) (
 		HostName:  imc.Status.Address.URL.Host,
 		Path:      fmt.Sprintf("%s/%s", imc.Namespace, imc.Name),
 		FanoutConfig: fanout.Config{
-			AsyncHandler:  true,
+			AsyncHandler:  false,
 			Subscriptions: subs,
 		},
 	}, nil

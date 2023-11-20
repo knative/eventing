@@ -35,9 +35,9 @@ spec:
   group: sources.knative.dev
   versions:
   - &version
-    name: v1beta2
+    name: v1
     served: true
-    storage: false
+    storage: true
     subresources:
       status: {}
     schema:
@@ -214,9 +214,14 @@ spec:
       type: string
       jsonPath: ".status.conditions[?(@.type=='Ready')].reason"
   - <<: *version
-    name: v1
+    name: v1beta2
     served: true
-    storage: true
+    storage: false
+    # This indicates the v1beta2 version of the custom resource is deprecated.
+    # API requests to this version receive a warning header in the server response.
+    deprecated: true
+    # This overrides the default warning returned to API clients making v1beta2 API requests.
+    deprecationWarning: "sources.knative.dev/v1beta2 PingSource is deprecated; see https://knative.dev/docs/eventing/sources/ping-source/ for instructions to migrate to sources.knative.dev/v1 PingSource"
     # v1 schema is identical to the v1beta2 schema
   names:
     categories:

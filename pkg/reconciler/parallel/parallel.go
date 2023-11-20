@@ -30,24 +30,30 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes"
 	duckapis "knative.dev/pkg/apis/duck"
 
 	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/logging"
 	pkgreconciler "knative.dev/pkg/reconciler"
 
+	corev1listers "k8s.io/client-go/listers/core/v1"
 	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	"knative.dev/eventing/pkg/apis/feature"
 	v1 "knative.dev/eventing/pkg/apis/flows/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
+	"knative.dev/eventing/pkg/auth"
 	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
 	parallelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/flows/v1/parallel"
 	listers "knative.dev/eventing/pkg/client/listers/flows/v1"
 	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1"
 	ducklib "knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/reconciler/parallel/resources"
+	duckv1knative "knative.dev/pkg/apis/duck/v1"
 )
 
 type Reconciler struct {
+	kubeclient kubernetes.Interface
 	// listers index properties about resources
 	parallelLister     listers.ParallelLister
 	channelableTracker ducklib.ListableTracker
@@ -57,7 +63,8 @@ type Reconciler struct {
 	eventingClientSet clientset.Interface
 
 	// dynamicClientSet allows us to configure pluggable Build objects
-	dynamicClientSet dynamic.Interface
+	dynamicClientSet     dynamic.Interface
+	serviceAccountLister corev1listers.ServiceAccountLister
 }
 
 // Check that our Reconciler implements parallelreconciler.Interface
@@ -71,6 +78,23 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, p *v1.Parallel) pkgrecon
 	//     2.2 create a Subscription to the filter Channel, subscribe the subscriber and send reply to
 	//         either the branch Reply. If not present, send reply to the global Reply. If not present, do not send reply.
 	// 3. Rinse and repeat step #2 above for each branch in the list
+	// OIDC authentication
+	featureFlags := feature.FromContext(ctx)
+	if featureFlags.IsOIDCAuthentication() {
+		saName := auth.GetOIDCServiceAccountNameForResource(v1.SchemeGroupVersion.WithKind("Parallel"), p.ObjectMeta)
+		p.Status.Auth = &duckv1knative.AuthStatus{
+			ServiceAccountName: &saName,
+		}
+		if err := auth.EnsureOIDCServiceAccountExistsForResource(ctx, r.serviceAccountLister, r.kubeclient, v1.SchemeGroupVersion.WithKind("Parallel"), p.ObjectMeta); err != nil {
+			p.Status.MarkOIDCIdentityCreatedFailed("Unable to resolve service account for OIDC authentication", "%v", err)
+			return err
+		}
+		p.Status.MarkOIDCIdentityCreatedSucceeded()
+	} else {
+		p.Status.Auth = nil
+		p.Status.MarkOIDCIdentityCreatedSucceededWithReason(fmt.Sprintf("%s feature disabled", feature.OIDCAuthentication), "")
+	}
+
 	if p.Status.BranchStatuses == nil {
 		p.Status.BranchStatuses = make([]v1.ParallelBranchStatus, 0)
 	}

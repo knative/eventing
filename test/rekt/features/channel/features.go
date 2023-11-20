@@ -358,14 +358,13 @@ func channelSubscriberUnreachable(createSubscriberFn func(ref *duckv1.KReference
 	f.Setup("channel is ready", channel_impl.IsReady(channelName))
 	f.Setup("channel is addressable", channel_impl.IsAddressable(channelName))
 	f.Setup("subscription is ready", subscription.IsReady(sub))
+	f.Setup("channel has dead letter sink uri", channel_impl.HasDeadLetterSinkURI(channelName, channel_impl.GVR()))
 
 	f.Requirement("install source", eventshub.Install(
 		sourceName,
 		eventshub.StartSenderToResource(channel_impl.GVR(), channelName),
 		eventshub.InputEvent(ev),
 	))
-
-	f.Requirement("Channel has dead letter sink uri", channel_impl.HasDeadLetterSinkURI(channelName, channel_impl.GVR()))
 
 	f.Assert("Receives dls extensions when subscriber is unreachable", eventasssert.OnStore(sink).
 		MatchEvent(
@@ -403,14 +402,13 @@ func channelSubscriberReturnedErrorNoData(createSubscriberFn func(ref *duckv1.KR
 	f.Setup("channel is ready", channel_impl.IsReady(channelName))
 	f.Setup("channel is addressable", channel_impl.IsAddressable(channelName))
 	f.Setup("subscription is ready", subscription.IsReady(sub))
+	f.Setup("channel has dead letter sink uri", channel_impl.HasDeadLetterSinkURI(channelName, channel_impl.GVR()))
 
 	f.Requirement("install source", eventshub.Install(
 		sourceName,
 		eventshub.StartSenderToResource(channel_impl.GVR(), channelName),
 		eventshub.InputEvent(ev),
 	))
-
-	f.Requirement("Channel has dead letter sink uri", channel_impl.HasDeadLetterSinkURI(channelName, channel_impl.GVR()))
 
 	f.Assert("Receives dls extensions without errordata", assertEnhancedWithKnativeErrorExtensions(
 		sink,
@@ -454,14 +452,13 @@ func channelSubscriberReturnedErrorWithData(createSubscriberFn func(ref *duckv1.
 	f.Setup("channel is ready", channel_impl.IsReady(channelName))
 	f.Setup("channel is addressable", channel_impl.IsAddressable(channelName))
 	f.Setup("subscription is ready", subscription.IsReady(sub))
+	f.Setup("channel has dead letter sink uri", channel_impl.HasDeadLetterSinkURI(channelName, channel_impl.GVR()))
 
 	f.Requirement("install source", eventshub.Install(
 		sourceName,
 		eventshub.StartSenderToResource(channel_impl.GVR(), channelName),
 		eventshub.InputEvent(ev),
 	))
-
-	f.Requirement("Channel has dead letter sink uri", channel_impl.HasDeadLetterSinkURI(channelName, channel_impl.GVR()))
 
 	f.Assert("Receives dls extensions with errordata Base64encoding", assertEnhancedWithKnativeErrorExtensions(
 		sink,

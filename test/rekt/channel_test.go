@@ -32,6 +32,7 @@ import (
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/knative"
 	"knative.dev/reconciler-test/pkg/manifest"
+	"knative.dev/reconciler-test/pkg/tracing"
 
 	"knative.dev/eventing/test/rekt/features/channel"
 	ch "knative.dev/eventing/test/rekt/resources/channel"
@@ -312,6 +313,7 @@ func TestChannelDeadLetterSinkExtensions(t *testing.T) {
 		knative.WithLoggingConfig,
 		knative.WithTracingConfig,
 		k8s.WithEventListener,
+		tracing.WithGatherer(t),
 		environment.Managed(t),
 	)
 
