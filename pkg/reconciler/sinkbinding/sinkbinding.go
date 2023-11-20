@@ -114,61 +114,48 @@ func (*SinkBindingSubResourcesReconciler) ReconcileDeletion(ctx context.Context,
 
 func (s *SinkBindingSubResourcesReconciler) reconcileOIDCTokenSecret(ctx context.Context, sb *v1.SinkBinding) error {
 	logger := logging.FromContext(ctx)
-	secretName := fmt.Sprintf("oidc-token-%s", sb.Name)
+	secretName := s.oidcTokenSecretName(sb)
 
 	if sb.Status.SinkAudience == nil {
 		return fmt.Errorf("sinkAudience must be set on %s/%s to generate a OIDC token secret", sb.Name, sb.Namespace)
 	}
 
-	var applyConfig *applyconfigurationcorev1.SecretApplyConfiguration
-
 	secret, err := s.secretLister.Secrets(sb.Namespace).Get(secretName)
 	if err != nil {
 		if apierrs.IsNotFound(err) {
 			// create new secret
-			apiVersion := fmt.Sprintf("%s/%s", v1.SchemeGroupVersion.Group, v1.SchemeGroupVersion.Version)
-			applyConfig = new(applyconfigurationcorev1.SecretApplyConfiguration).
-				WithName(secretName).
-				WithNamespace(sb.Namespace).
-				WithType(corev1.SecretTypeOpaque).
-				WithGeneration(1).
-				WithKind("Secret").
-				WithAPIVersion("v1").
-				WithOwnerReferences(&applyconfigurationmetav1.OwnerReferenceApplyConfiguration{
-					APIVersion:         &apiVersion,
-					Kind:               pointer.String("SinkBinding"),
-					Name:               &sb.Name,
-					UID:                &sb.UID,
-					Controller:         pointer.Bool(true),
-					BlockOwnerDeletion: pointer.Bool(false),
-				})
-
 			logger.Debugf("No OIDC token secret found for %s/%s sinkbinding. Will create a new secret", sb.Name, sb.Namespace)
-		} else {
-			return fmt.Errorf("could not check if secret %q exists already: %w", secretName, err)
-		}
-	} else {
-		// check if token needs to be renewed
-		expiry, err := auth.GetJWTExpiry(string(secret.Data["token"]))
-		if err != nil {
-			logger.Warnf("Could not get expiry date of OIDC token secret: %s. Will renew token.", err)
-		} else {
-			resyncAndBufferDuration := resyncPeriod + tokenExpiryBuffer
-			if expiry.After(time.Now().Add(resyncAndBufferDuration)) {
-				logger.Debugf("OIDC token secret for %s/%s sinkbinding still valid for > %s (expires %s). Will not update secret", sb.Name, sb.Namespace, resyncAndBufferDuration, expiry)
-				// token is still valid for resync period + buffer
-				return nil
-			}
-			logger.Debugf("OIDC token secret for %s/%s sinkbinding is valid for less than %s (expires %s). Will update secret", sb.Name, sb.Namespace, resyncAndBufferDuration, expiry)
 
-			applyConfig, err = applyconfigurationcorev1.ExtractSecret(secret, controllerAgentName)
-			if err != nil {
-				return fmt.Errorf("could not get apply config from secret: %w", err)
-			}
+			return s.renewOIDCTokenSecret(ctx, sb)
 		}
-		// increment generation
-		applyConfig.WithGeneration(secret.Generation + 1)
+
+		return fmt.Errorf("could not check if secret %q exists already: %w", secretName, err)
 	}
+
+	// check if token needs to be renewed
+	expiry, err := auth.GetJWTExpiry(string(secret.Data["token"]))
+	if err != nil {
+		logger.Warnf("Could not get expiry date of OIDC token secret: %s. Will renew token.", err)
+
+		return s.renewOIDCTokenSecret(ctx, sb)
+	}
+
+	resyncAndBufferDuration := resyncPeriod + tokenExpiryBuffer
+	if expiry.After(time.Now().Add(resyncAndBufferDuration)) {
+		logger.Debugf("OIDC token secret for %s/%s sinkbinding still valid for > %s (expires %s). Will not update secret", sb.Name, sb.Namespace, resyncAndBufferDuration, expiry)
+		// token is still valid for resync period + buffer --> we're fine
+
+		return nil
+	}
+
+	logger.Debugf("OIDC token secret for %s/%s sinkbinding is valid for less than %s (expires %s). Will update secret", sb.Name, sb.Namespace, resyncAndBufferDuration, expiry)
+
+	return s.renewOIDCTokenSecret(ctx, sb)
+}
+
+func (s *SinkBindingSubResourcesReconciler) renewOIDCTokenSecret(ctx context.Context, sb *v1.SinkBinding) error {
+	logger := logging.FromContext(ctx)
+	secretName := s.oidcTokenSecretName(sb)
 
 	token, err := s.tokenProvider.GetNewJWT(types.NamespacedName{
 		Namespace: sb.Namespace,
@@ -179,9 +166,24 @@ func (s *SinkBindingSubResourcesReconciler) reconcileOIDCTokenSecret(ctx context
 		return fmt.Errorf("could not create token for SinkBinding %s/%s: %w", sb.Name, sb.Namespace, err)
 	}
 
-	applyConfig = applyConfig.WithStringData(map[string]string{
-		"token": token,
-	})
+	apiVersion := fmt.Sprintf("%s/%s", v1.SchemeGroupVersion.Group, v1.SchemeGroupVersion.Version)
+	applyConfig := new(applyconfigurationcorev1.SecretApplyConfiguration).
+		WithName(secretName).
+		WithNamespace(sb.Namespace).
+		WithType(corev1.SecretTypeOpaque).
+		WithKind("Secret").
+		WithAPIVersion("v1").
+		WithOwnerReferences(&applyconfigurationmetav1.OwnerReferenceApplyConfiguration{
+			APIVersion:         &apiVersion,
+			Kind:               pointer.String("SinkBinding"),
+			Name:               &sb.Name,
+			UID:                &sb.UID,
+			Controller:         pointer.Bool(true),
+			BlockOwnerDeletion: pointer.Bool(false),
+		}).
+		WithStringData(map[string]string{
+			"token": token,
+		})
 
 	_, err = s.kubeclient.CoreV1().Secrets(sb.Namespace).Apply(ctx, applyConfig, metav1.ApplyOptions{FieldManager: controllerAgentName})
 	if err != nil {
@@ -193,4 +195,8 @@ func (s *SinkBindingSubResourcesReconciler) reconcileOIDCTokenSecret(ctx context
 	sb.Status.OIDCTokenSecretName = &secretName
 
 	return nil
+}
+
+func (s *SinkBindingSubResourcesReconciler) oidcTokenSecretName(sb *v1.SinkBinding) string {
+	return fmt.Sprintf("oidc-token-%s", sb.Name)
 }
