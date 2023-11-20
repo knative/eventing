@@ -210,6 +210,7 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1.ApiServer
 		Labels:        resources.Labels(src.Name),
 		CACerts:       sinkAddr.CACerts,
 		SinkURI:       sinkAddr.URL.String(),
+		Audience:      sinkAddr.Audience,
 		Configs:       r.configs,
 		Namespaces:    namespaces,
 		AllNamespaces: allNamespaces,

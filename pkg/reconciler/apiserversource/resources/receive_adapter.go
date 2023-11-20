@@ -44,6 +44,7 @@ type ReceiveAdapterArgs struct {
 	Image         string
 	Source        *v1.ApiServerSource
 	Labels        map[string]string
+	Audience      *string
 	SinkURI       string
 	CACerts       *string
 	Configs       reconcilersource.ConfigAccessor
@@ -153,6 +154,9 @@ func makeEnv(args *ReceiveAdapterArgs) ([]corev1.EnvVar, error) {
 	envs := []corev1.EnvVar{{
 		Name:  adapter.EnvConfigSink,
 		Value: args.SinkURI,
+	}, {
+		Name:  "K_AUDIENCE",
+		Value: *args.Audience,
 	}, {
 		Name:  "K_SOURCE_CONFIG",
 		Value: config,
