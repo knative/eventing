@@ -70,12 +70,12 @@ func (imc *InMemoryChannel) CheckSubscribersChangeAllowed(ctx context.Context, o
 	}
 
 	if !canChangeChannelSpecAuth(ctx) {
-		return imc.checkSubsciberSpecAuthChanged(original)
+		return imc.checkSubsciberSpecAuthChanged(original, ctx)
 	}
 	return nil
 }
 
-func (imc *InMemoryChannel) checkSubsciberSpecAuthChanged(original *InMemoryChannel) *apis.FieldError {
+func (imc *InMemoryChannel) checkSubsciberSpecAuthChanged(original *InMemoryChannel, ctx context.Context) *apis.FieldError {
 	if diff, err := kmp.ShortDiff(original.Spec.Subscribers, imc.Spec.Subscribers); err != nil {
 		return &apis.FieldError{
 			Message: "Failed to diff Channel.Spec.Subscribers",
@@ -84,7 +84,7 @@ func (imc *InMemoryChannel) checkSubsciberSpecAuthChanged(original *InMemoryChan
 		}
 	} else if diff != "" {
 		return &apis.FieldError{
-			Message: "Channel.Spec.Subscribers changed by a user which was not the eventing-controller service account",
+			Message: fmt.Sprintf("Channel.Spec.Subscribers changed by user %s which was not the eventing-controller service account", apis.GetUserInfo(ctx).Username),
 			Paths:   []string{"spec.subscribers"},
 			Details: diff,
 		}
