@@ -139,7 +139,7 @@ func TestInMemoryChannelValidation(t *testing.T) {
 		want: func() *apis.FieldError {
 			diff, _ := kmp.ShortDiff(validIMCSingleSubscriber.Spec.Subscribers, validIMCTwoSubscribers.Spec.Subscribers)
 			return &apis.FieldError{
-				Message: "Channel.Spec.Subscribers changed by user test-user which was not the eventing-controller service account",
+				Message: "Channel.Spec.Subscribers changed by user test-user which was not the system:serviceaccount:knative-eventing:eventing-controller service account",
 				Paths:   []string{"spec.subscribers"},
 				Details: diff,
 			}

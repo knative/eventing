@@ -26,7 +26,7 @@ import (
 	"knative.dev/eventing/pkg/apis/eventing"
 )
 
-const eventingControllerSAName = "eventing-controller"
+const eventingControllerSAName = "system:serviceaccount:knative-eventing:eventing-controller"
 
 func (imc *InMemoryChannel) Validate(ctx context.Context) *apis.FieldError {
 	errs := imc.Spec.Validate(ctx).ViaField("spec")
@@ -84,7 +84,7 @@ func (imc *InMemoryChannel) checkSubsciberSpecAuthChanged(original *InMemoryChan
 		}
 	} else if diff != "" {
 		return &apis.FieldError{
-			Message: fmt.Sprintf("Channel.Spec.Subscribers changed by user %s which was not the eventing-controller service account", apis.GetUserInfo(ctx).Username),
+			Message: fmt.Sprintf("Channel.Spec.Subscribers changed by user %s which was not the %s service account", apis.GetUserInfo(ctx).Username, eventingControllerSAName),
 			Paths:   []string{"spec.subscribers"},
 			Details: diff,
 		}
