@@ -19,7 +19,6 @@ package helpers
 import (
 	"context"
 	"fmt"
-	"knative.dev/eventing/test/lib/resources"
 	"testing"
 
 	"encoding/json"
@@ -32,6 +31,7 @@ import (
 
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	testlib "knative.dev/eventing/test/lib"
+	"knative.dev/eventing/test/lib/resources"
 	"knative.dev/pkg/apis"
 )
 
