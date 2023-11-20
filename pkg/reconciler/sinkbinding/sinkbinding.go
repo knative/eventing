@@ -102,6 +102,10 @@ func (s *SinkBindingSubResourcesReconciler) Reconcile(ctx context.Context, b psb
 		sb.Status.Auth = nil
 		sb.Status.MarkOIDCIdentityCreatedSucceededWithReason(fmt.Sprintf("%s feature disabled", feature.OIDCAuthentication), "")
 		sb.Status.MarkOIDCTokenSecretCreatedSuccceededWithReason(fmt.Sprintf("%s feature disabled", feature.OIDCAuthentication), "")
+
+		if err := s.removeOIDCTokenSecretEventually(ctx, sb); err != nil {
+			return err
+		}
 		sb.Status.OIDCTokenSecretName = nil
 	}
 
@@ -200,4 +204,17 @@ func (s *SinkBindingSubResourcesReconciler) renewOIDCTokenSecret(ctx context.Con
 
 func (s *SinkBindingSubResourcesReconciler) oidcTokenSecretName(sb *v1.SinkBinding) string {
 	return kmeta.ChildName(sb.Name, "-oidc-token")
+}
+
+func (s *SinkBindingSubResourcesReconciler) removeOIDCTokenSecretEventually(ctx context.Context, sb *v1.SinkBinding) error {
+	if sb.Status.OIDCTokenSecretName == nil {
+		return nil
+	}
+
+	_, err := s.secretLister.Secrets(sb.Namespace).Get(*sb.Status.OIDCTokenSecretName)
+	if apierrs.IsNotFound(err) {
+		return nil
+	}
+
+	return s.kubeclient.CoreV1().Secrets(sb.Namespace).Delete(ctx, *sb.Status.OIDCTokenSecretName, metav1.DeleteOptions{})
 }
