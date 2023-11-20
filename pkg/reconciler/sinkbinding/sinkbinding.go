@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"knative.dev/eventing/pkg/auth"
+	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/resolver"
 
 	corev1 "k8s.io/api/core/v1"
@@ -198,5 +199,5 @@ func (s *SinkBindingSubResourcesReconciler) renewOIDCTokenSecret(ctx context.Con
 }
 
 func (s *SinkBindingSubResourcesReconciler) oidcTokenSecretName(sb *v1.SinkBinding) string {
-	return fmt.Sprintf("oidc-token-%s", sb.Name)
+	return kmeta.ChildName(sb.Name, "-oidc-token")
 }

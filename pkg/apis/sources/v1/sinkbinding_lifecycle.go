@@ -196,7 +196,7 @@ func (sb *SinkBinding) Do(ctx context.Context, ps *duckv1.WithPod) {
 	}
 
 	featureFlags := feature.FromContext(ctx)
-	if featureFlags.IsOIDCAuthentication() {
+	if featureFlags.IsOIDCAuthentication() && sb.Status.OIDCTokenSecretName != nil {
 
 		ps.Spec.Template.Spec.Volumes = append(ps.Spec.Template.Spec.Volumes, corev1.Volume{
 			Name: oidcTokenVolumeName,
@@ -206,7 +206,7 @@ func (sb *SinkBinding) Do(ctx context.Context, ps *duckv1.WithPod) {
 						{
 							Secret: &corev1.SecretProjection{
 								LocalObjectReference: corev1.LocalObjectReference{
-									Name: "oidc-token-" + sb.Name,
+									Name: *sb.Status.OIDCTokenSecretName,
 								},
 							},
 						},

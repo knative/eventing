@@ -717,7 +717,7 @@ func TestSinkBindingDo(t *testing.T) {
 									Sources: []corev1.VolumeProjection{{
 										Secret: &corev1.SecretProjection{
 											LocalObjectReference: corev1.LocalObjectReference{
-												Name: "oidc-token-",
+												Name: "oidc-token",
 											},
 										},
 									}},
@@ -743,12 +743,15 @@ func TestSinkBindingDo(t *testing.T) {
 			}
 			ctx = WithURIResolver(ctx, r)
 
-			sb := &SinkBinding{Spec: SinkBindingSpec{
-				SourceSpec: duckv1.SourceSpec{
-					Sink:                destination,
-					CloudEventOverrides: &overrides,
-				},
-			}}
+			sb := &SinkBinding{
+				Spec: SinkBindingSpec{
+					SourceSpec: duckv1.SourceSpec{
+						Sink:                destination,
+						CloudEventOverrides: &overrides,
+					}},
+				Status: SinkBindingStatus{
+					OIDCTokenSecretName: pointer.String("oidc-token"),
+				}}
 			sb.Do(ctx, got)
 
 			if !cmp.Equal(got, test.want) {
