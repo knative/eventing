@@ -20,6 +20,9 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
+
+	"github.com/go-jose/go-jose/v3/jwt"
 )
 
 const (
@@ -39,4 +42,23 @@ func GetJWTFromHeader(header http.Header) string {
 // SetAuthHeader sets Authorization header with the given JWT
 func SetAuthHeader(jwt string, header http.Header) {
 	header.Set(AuthHeaderKey, fmt.Sprintf("Bearer %s", jwt))
+}
+
+// GetJWTExpiry returns the expiry time of the token in UTC
+func GetJWTExpiry(token string) (time.Time, error) {
+	t, err := jwt.ParseSigned(token)
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	var claims jwt.Claims
+	if err := t.UnsafeClaimsWithoutVerification(&claims); err != nil {
+		return time.Time{}, err
+	}
+
+	if claims.Expiry == nil {
+		return time.Time{}, fmt.Errorf("no expiry set in JWT")
+	}
+
+	return claims.Expiry.Time(), nil
 }
