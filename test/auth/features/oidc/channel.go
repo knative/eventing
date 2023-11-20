@@ -20,10 +20,10 @@ import (
 	"github.com/cloudevents/sdk-go/v2/test"
 	"knative.dev/eventing/test/rekt/resources/channel_impl"
 	"knative.dev/eventing/test/rekt/resources/subscription"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
+	"knative.dev/reconciler-test/pkg/resources/service"
 )
 
 func ChannelDispatcherAuthenticatesRequestsWithOIDC() *feature.Feature {
@@ -38,7 +38,7 @@ func ChannelDispatcherAuthenticatesRequestsWithOIDC() *feature.Feature {
 	f.Setup("install channel", channel_impl.Install(channelName))
 	f.Setup("channel is ready", channel_impl.IsReady(channelName))
 	f.Setup("install sink", eventshub.Install(sink, eventshub.OIDCReceiverAudience(receiverAudience), eventshub.StartReceiver))
-	f.Setup("install subscription", subscription.Install(subscriptionName, subscription.WithChannel(channel_impl.AsRef(channelName)), subscription.WithSubscriber(&duckv1.KReference{}, "", receiverAudience)))
+	f.Setup("install subscription", subscription.Install(subscriptionName, subscription.WithChannel(channel_impl.AsRef(channelName)), subscription.WithSubscriber(service.AsKReference(sink), "", receiverAudience)))
 	f.Setup("subscription is ready", subscription.IsReady(subscriptionName))
 
 	event := test.FullEvent()
