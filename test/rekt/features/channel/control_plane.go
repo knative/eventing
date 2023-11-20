@@ -19,7 +19,6 @@ package channel
 import (
 	"context"
 	"encoding/json"
-	"knative.dev/eventing/test/rekt/resources/subscription"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -35,6 +34,7 @@ import (
 	"knative.dev/eventing/test/rekt/resources/account_role"
 	"knative.dev/eventing/test/rekt/resources/channel_impl"
 	"knative.dev/eventing/test/rekt/resources/delivery"
+	"knative.dev/eventing/test/rekt/resources/subscription"
 )
 
 func ControlPlaneConformance(channelName string) *feature.FeatureSet {
