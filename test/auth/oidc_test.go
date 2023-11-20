@@ -96,7 +96,7 @@ func TestParallelSupportsOIDC(t *testing.T) {
 	env.Test(ctx, t, oidc.ParallelHasAudienceOfInputChannel(name, env.Namespace(), channel_impl.GVR(), channel_impl.GVK().Kind))
 }
 
-func TestChannelDispatcherAuthenticatesWithOID(t *testing.T) {
+func TestChannelDispatcherAuthenticatesWithOIDC(t *testing.T) {
 	t.Parallel()
 
 	ctx, env := global.Environment(
