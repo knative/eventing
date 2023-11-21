@@ -159,11 +159,13 @@ func channelHasAnnotations(ctx context.Context, t feature.T) {
 func channelAllowsSubscribersAndStatus(subscriptionURI string) feature.StepFn {
 	return func(ctx context.Context, t feature.T) {
 		var channelable *duckv1.Channelable
-		subscriptionURI, err := apis.ParseURL(subscriptionURI)
 		interval, timeout := environment.PollTimingsFromContext(ctx)
 		var want *duckv1.SubscriberSpec
-		err = wait.PollImmediate(interval, timeout, func() (bool, error) {
+		err := wait.PollImmediate(interval, timeout, func() (bool, error) {
 			channelable = getChannelable(ctx, t)
+			if channelable == nil {
+				t.Fatalf("channelable is nil")
+			}
 			if channelable.Status.ObservedGeneration < channelable.Generation {
 				// keep polling.
 				return false, nil
@@ -173,9 +175,14 @@ func channelAllowsSubscribersAndStatus(subscriptionURI string) feature.StepFn {
 				for _, got := range channelable.Spec.Subscribers {
 
 					// get the UID for the subscription we made
-					if got.SubscriberURI == subscriptionURI {
+					if got.SubscriberURI.String() == subscriptionURI {
 						want = &got
 					}
+				}
+
+				// keep polling
+				if want == nil {
+					return false, nil
 				}
 
 				for _, got := range channelable.Status.Subscribers {
@@ -188,6 +195,11 @@ func channelAllowsSubscribersAndStatus(subscriptionURI string) feature.StepFn {
 			// keep polling.
 			return false, nil
 		})
+
+		if want == nil {
+			t.Fatalf("could not get subscription with matching URI")
+		}
+
 		if err != nil {
 			t.Fatalf("failed waiting for channel subscribers to sync", err)
 		}
