@@ -31,7 +31,12 @@ import (
 
 	"knative.dev/eventing/test/auth/features/oidc"
 	brokerfeatures "knative.dev/eventing/test/rekt/features/broker"
+	"knative.dev/eventing/test/rekt/features/channel"
+	parallelfeatures "knative.dev/eventing/test/rekt/features/parallel"
 	"knative.dev/eventing/test/rekt/resources/broker"
+	"knative.dev/eventing/test/rekt/resources/channel_impl"
+	"knative.dev/eventing/test/rekt/resources/channel_template"
+	"knative.dev/eventing/test/rekt/resources/parallel"
 )
 
 func TestBrokerSupportsOIDC(t *testing.T) {
@@ -51,4 +56,42 @@ func TestBrokerSupportsOIDC(t *testing.T) {
 
 	env.TestSet(ctx, t, oidc.AddressableOIDCConformance(broker.GVR(), "Broker", name, env.Namespace()))
 	env.Test(ctx, t, oidc.BrokerSendEventWithOIDCToken())
+}
+
+func TestChannelImplSupportsOIDC(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+		environment.WithPollTimings(4*time.Second, 12*time.Minute),
+	)
+
+	name := feature.MakeRandomK8sName("channelimpl")
+	env.Prerequisite(ctx, t, channel.ImplGoesReady(name))
+
+	env.Test(ctx, t, oidc.AddressableHasAudiencePopulated(channel_impl.GVR(), channel_impl.GVK().Kind, name, env.Namespace()))
+}
+
+func TestParallelSupportsOIDC(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+	)
+
+	name := feature.MakeRandomK8sName("parallel")
+	env.Prerequisite(ctx, t, parallelfeatures.GoesReady(name, parallel.WithChannelTemplate(channel_template.ChannelTemplate{
+		TypeMeta: channel_impl.TypeMeta(),
+		Spec:     map[string]interface{}{},
+	})))
+
+	env.Test(ctx, t, oidc.ParallelHasAudienceOfInputChannel(name, env.Namespace(), channel_impl.GVR(), channel_impl.GVK().Kind))
 }

@@ -2417,7 +2417,8 @@ Resource Types:
 <h3 id="eventing.knative.dev/v1beta1.EventType">EventType
 </h3>
 <p>
-<p>EventType represents a type of event that can be consumed from a Broker.</p>
+<p>EventType represents a type of event that can be consumed from a Broker.
+Deprecated: use v1beta2.EventType instead.</p>
 </p>
 <table>
 <thead>
@@ -5955,6 +5956,18 @@ processed by the controller.
 state.
 * SinkURI - the current active sink URI that has been configured for the
 Source.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>oidcTokenSecretName</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>OIDCTokenSecretName is the name of the secret containing the token for
+this SinkBindings OIDC authentication</p>
 </td>
 </tr>
 </tbody>

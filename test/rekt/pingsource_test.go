@@ -103,3 +103,18 @@ func TestPingSourceWithSecondsInSchedule(t *testing.T) {
 
 	env.Test(ctx, t, pingsource.SendsEventsWithSecondsInSchedule())
 }
+
+func TestPingSourceDataPlane_BrokerAsSinkTLS(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+		eventshub.WithTLS(t),
+	)
+
+	env.Test(ctx, t, pingsource.SendsEventsWithBrokerAsSinkTLS())
+}

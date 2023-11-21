@@ -261,7 +261,7 @@ func Start(ctx context.Context, logs *eventshub.EventLogs, clientOpts ...eventsh
 }
 
 func createClient(ctx context.Context, env generator, logs *eventshub.EventLogs) (*nethttp.Client, *nethttp.Transport, error) {
-	if env.EnforceTLS {
+	if env.EnforceTLS || env.CACerts != "" {
 		caCertPool, err := x509.SystemCertPool()
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to create cert pool %s: %w", env.Sink, err)

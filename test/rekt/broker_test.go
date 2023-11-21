@@ -138,8 +138,8 @@ func TestBrokerConformance(t *testing.T) {
 
 	// Install and wait for a Ready Broker.
 	env.Prerequisite(ctx, t, broker.GoesReady("default", b.WithEnvConfig()...))
-	env.TestSet(ctx, t, broker.ControlPlaneConformance("default", b.WithEnvConfig()...))
 	env.TestSet(ctx, t, broker.DataPlaneConformance("default"))
+	env.TestSet(ctx, t, broker.ControlPlaneConformance("default", b.WithEnvConfig()...))
 }
 
 func TestBrokerDefaultDelivery(t *testing.T) {

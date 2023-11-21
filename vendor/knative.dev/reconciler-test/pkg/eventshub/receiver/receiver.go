@@ -29,10 +29,14 @@ import (
 	cloudeventshttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"github.com/kelseyhightower/envconfig"
 	"go.uber.org/zap"
+	authv1 "k8s.io/api/authentication/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 	"knative.dev/pkg/logging"
 
 	"knative.dev/reconciler-test/pkg/eventshub"
 
+	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/reconciler-test/pkg/eventshub/dropevents"
 )
 
@@ -53,6 +57,9 @@ type Receiver struct {
 	skipResponseHeaders map[string]string
 	skipResponseBody    string
 	EnforceTLS          bool
+	oidcAudience        string
+
+	kubeclient kubernetes.Interface
 }
 
 type envConfig struct {
@@ -61,6 +68,9 @@ type envConfig struct {
 
 	// EnforceTLS is used to enforce TLS.
 	EnforceTLS bool `envconfig:"ENFORCE_TLS" default:"false"`
+
+	// OIDCAudience is the audience required for OIDC tokens reaching the receiver
+	OIDCAudience string `envconfig:"OIDC_AUDIENCE" default:""`
 
 	// ResponseWaitTime is the seconds to wait for the eventshub to write any response
 	ResponseWaitTime int `envconfig:"RESPONSE_WAIT_TIME" default:"0" required:"false"`
@@ -143,6 +153,8 @@ func NewFromEnv(ctx context.Context, eventLogs *eventshub.EventLogs) *Receiver {
 		skipResponseCode:    env.SkipResponseCode,
 		skipResponseBody:    env.SkipResponseBody,
 		skipResponseHeaders: env.SkipResponseHeaders,
+		oidcAudience:        env.OIDCAudience,
+		kubeclient:          kubeclient.Get(ctx),
 	}
 }
 
@@ -206,9 +218,18 @@ func (o *Receiver) ServeHTTP(writer http.ResponseWriter, request *http.Request) 
 		return
 	}
 
+	var statusCode int
 	var rejectErr error
 	if o.EnforceTLS && !isTLS(request) {
 		rejectErr = fmt.Errorf("failed to enforce TLS connection for request %s", request.URL.String())
+		statusCode = http.StatusBadRequest
+	}
+
+	if o.oidcAudience != "" {
+		if err := o.validateJWT(request); err != nil {
+			rejectErr = err
+			statusCode = http.StatusUnauthorized
+		}
 	}
 
 	m := cloudeventshttp.NewMessageFromHttpRequest(request)
@@ -244,6 +265,10 @@ func (o *Receiver) ServeHTTP(writer http.ResponseWriter, request *http.Request) 
 		s = atomic.AddUint64(&o.seq, 1)
 	}
 
+	if shouldSkip {
+		statusCode = o.skipResponseCode
+	}
+
 	eventInfo := eventshub.EventInfo{
 		Error:       errString,
 		Event:       event,
@@ -254,6 +279,7 @@ func (o *Receiver) ServeHTTP(writer http.ResponseWriter, request *http.Request) 
 		Sequence:    s,
 		Kind:        kind,
 		Connection:  eventshub.TLSConnectionStateToConnection(request.TLS),
+		StatusCode:  statusCode,
 	}
 
 	if err := o.EventLogs.Vent(eventInfo); err != nil {
@@ -269,17 +295,54 @@ func (o *Receiver) ServeHTTP(writer http.ResponseWriter, request *http.Request) 
 		for headerKey, headerValue := range o.skipResponseHeaders {
 			writer.Header().Set(headerKey, headerValue)
 		}
-		writer.WriteHeader(http.StatusBadRequest)
+
+		writer.WriteHeader(statusCode)
 	} else if shouldSkip {
 		// Trigger a redelivery
 		for headerKey, headerValue := range o.skipResponseHeaders {
 			writer.Header().Set(headerKey, headerValue)
 		}
-		writer.WriteHeader(o.skipResponseCode)
+
+		writer.WriteHeader(statusCode)
 		_, _ = writer.Write([]byte(o.skipResponseBody))
 	} else {
 		o.replyFunc(o.ctx, writer, eventInfo)
 	}
+}
+
+func (o *Receiver) validateJWT(request *http.Request) error {
+	authHeader := request.Header.Get("Authorization")
+	if authHeader == "" {
+		return fmt.Errorf("could not get Authorization header")
+	}
+
+	token := strings.TrimPrefix(authHeader, "Bearer ")
+	if len(token) == len(authHeader) {
+		return fmt.Errorf("could not get Bearer token from header")
+	}
+
+	tokenReview, err := o.kubeclient.AuthenticationV1().TokenReviews().Create(o.ctx, &authv1.TokenReview{
+		Spec: authv1.TokenReviewSpec{
+			Token: token,
+			Audiences: []string{
+				o.oidcAudience,
+			},
+		},
+	}, metav1.CreateOptions{})
+
+	if err != nil {
+		return fmt.Errorf("could not get token review: %w", err)
+	}
+
+	if err := tokenReview.Status.Error; err != "" {
+		return fmt.Errorf(err)
+	}
+
+	if !tokenReview.Status.Authenticated {
+		return fmt.Errorf("user not authenticated")
+	}
+
+	return nil
 }
 
 func isTLS(request *http.Request) bool {

@@ -108,7 +108,11 @@ func (f *finishedStore) RegisterFinished(finished *Finished) {
 	log.Infof("waiting additional %v to be sure all events came", d)
 	time.Sleep(d)
 	receivedEvents := f.steps.Count()
-	if receivedEvents != finished.EventsSent {
+
+	if receivedEvents != finished.EventsSent &&
+		// If sending was interrupted, tolerate one more received
+		// event as there's no way to check if the last event is delivered or not.
+		!(finished.SendingInterrupted && receivedEvents == finished.EventsSent+1) {
 		f.errors.throwUnexpected("expecting to have %v unique events received, "+
 			"but received %v unique events", finished.EventsSent, receivedEvents)
 		f.reportViolations(finished)
