@@ -21,8 +21,10 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"knative.dev/reconciler-test/pkg/feature"
+	"knative.dev/reconciler-test/pkg/state"
 )
 
 var (
@@ -34,6 +36,9 @@ var (
 
 	ipFilePath     = new(string)
 	teardownOnFail = new(bool)
+
+	pollTimeout  = new(time.Duration)
+	pollInterval = new(time.Duration)
 )
 
 // InitFlags registers the requirement and state filter flags supported by the
@@ -62,7 +67,8 @@ func InitFlags(fs *flag.FlagSet) {
 
 	fs.StringVar(ipFilePath, "images.producer.file", "", "file path for file-based image producer")
 	fs.StringVar(testNamespace, "environment.namespace", "", "Test namespace")
-
+	fs.DurationVar(pollTimeout, "poll.timeout", state.DefaultPollTimeout, "Poll timeout")
+	fs.DurationVar(pollInterval, "poll.interval", state.DefaultPollInterval, "Poll interval")
 	fs.BoolVar(teardownOnFail, "teardown.on.fail", false, "Set this flag to do teardown even if test fails.")
 }
 
