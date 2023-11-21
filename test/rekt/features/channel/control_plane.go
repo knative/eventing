@@ -37,6 +37,10 @@ import (
 	"knative.dev/eventing/test/rekt/resources/subscription"
 )
 
+var (
+	subscriptionUri = "http://example.com"
+)
+
 func ControlPlaneConformance(channelName string) *feature.FeatureSet {
 	fs := &feature.FeatureSet{
 		Name: "Knative Channel Specification - Control Plane",
@@ -85,13 +89,13 @@ func ControlPlaneChannel(channelName string) *feature.Feature {
 		Should("each instance SHOULD have annotation: messaging.knative.dev/subscribable: v1",
 			channelHasAnnotations)
 	subscriptionName := feature.MakeRandomK8sName("subscription")
-	f.Setup("install subscriber", subscription.Install(subscriptionName, subscription.WithChannel(channel_impl.AsRef(channelName)), subscription.WithSubscriber(nil, "http://example.com", "")))
+	f.Setup("install subscriber", subscription.Install(subscriptionName, subscription.WithChannel(channel_impl.AsRef(channelName)), subscription.WithSubscriber(nil, subscriptionUri, "")))
 
 	f.Stable("Spec and Status Requirements for Subscribers").
 		Must("Each channel CRD MUST contain an array of subscribers: spec.subscribers. "+
 			"Each channel CRD MUST have a status subresource which contains [subscribers (as an array)]. "+
 			"The ready field of the subscriber identified by its uid MUST be set to True when the subscription is ready to be processed.",
-			channelAllowsSubscribersAndStatus(subscriptionName))
+			channelAllowsSubscribersAndStatus(subscriptionUri))
 	// Special note for Channel tests: The array of subscribers MUST NOT be
 	// set directly on the generic Channel custom object, but rather
 	// appended to the backing channel by the subscription itself.
