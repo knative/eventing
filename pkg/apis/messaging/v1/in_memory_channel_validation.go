@@ -83,8 +83,13 @@ func (imc *InMemoryChannel) checkSubsciberSpecAuthChanged(original *InMemoryChan
 			Details: err.Error(),
 		}
 	} else if diff != "" {
+		user := apis.GetUserInfo(ctx)
+		userName := ""
+		if user != nil {
+			userName = user.Username
+		}
 		return &apis.FieldError{
-			Message: fmt.Sprintf("Channel.Spec.Subscribers changed by user %s which was not the %s service account", apis.GetUserInfo(ctx).Username, eventingControllerSAName),
+			Message: fmt.Sprintf("Channel.Spec.Subscribers changed by user %s which was not the %s service account", userName, eventingControllerSAName),
 			Paths:   []string{"spec.subscribers"},
 			Details: diff,
 		}
