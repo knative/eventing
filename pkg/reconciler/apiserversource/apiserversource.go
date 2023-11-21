@@ -100,7 +100,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1.ApiServerSour
 
 	// OIDC authentication
 	featureFlags := feature.FromContext(ctx)
-	if err := auth.SetupOIDCServiceAccount(featureFlags, ctx, r.serviceAccountLister, r.kubeClientSet, v1.SchemeGroupVersion.WithKind("ApiServerSource"), source.ObjectMeta, &source.Status, func(as *duckv1.AuthStatus) {
+	if err := auth.SetupOIDCServiceAccount(ctx, featureFlags, r.serviceAccountLister, r.kubeClientSet, v1.SchemeGroupVersion.WithKind("ApiServerSource"), source.ObjectMeta, &source.Status, func(as *duckv1.AuthStatus) {
 		source.Status.Auth = as
 	}); err != nil {
 		return err

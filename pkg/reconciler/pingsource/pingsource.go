@@ -107,7 +107,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *sourcesv1.PingSo
 
 	// OIDC authentication
 	featureFlags := feature.FromContext(ctx)
-	if err := auth.SetupOIDCServiceAccount(featureFlags, ctx, r.serviceAccountLister, r.kubeClientSet, sourcesv1.SchemeGroupVersion.WithKind("PingSource"), source.ObjectMeta, &source.Status, func(as *duckv1.AuthStatus) {
+	if err := auth.SetupOIDCServiceAccount(ctx, featureFlags, r.serviceAccountLister, r.kubeClientSet, sourcesv1.SchemeGroupVersion.WithKind("PingSource"), source.ObjectMeta, &source.Status, func(as *duckv1.AuthStatus) {
 		source.Status.Auth = as
 	}); err != nil {
 		return err

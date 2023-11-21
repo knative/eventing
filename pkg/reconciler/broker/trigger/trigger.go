@@ -144,7 +144,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, t *eventingv1.Trigger) p
 	}
 
 	featureFlags := feature.FromContext(ctx)
-	if err = auth.SetupOIDCServiceAccount(featureFlags, ctx, r.serviceAccountLister, r.kubeclient, eventingv1.SchemeGroupVersion.WithKind("Trigger"), t.ObjectMeta, &t.Status, func(as *duckv1.AuthStatus) {
+	if err = auth.SetupOIDCServiceAccount(ctx, featureFlags, r.serviceAccountLister, r.kubeclient, eventingv1.SchemeGroupVersion.WithKind("Trigger"), t.ObjectMeta, &t.Status, func(as *duckv1.AuthStatus) {
 		t.Status.Auth = as
 	}); err != nil {
 		return err
