@@ -31,12 +31,12 @@ import (
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"knative.dev/eventing/pkg/apis/feature"
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/auth"
 	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
 	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1/containersource"
 	listers "knative.dev/eventing/pkg/client/listers/sources/v1"
 	"knative.dev/eventing/pkg/reconciler/containersource/resources"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
 	pkgreconciler "knative.dev/pkg/reconciler"
@@ -120,7 +120,7 @@ func (r *Reconciler) reconcileReceiveAdapter(ctx context.Context, source *v1.Con
 	} else if err != nil {
 		return nil, fmt.Errorf("getting Deployment: %v", err)
 	} else if !metav1.IsControlledBy(ra, source) {
-		return nil, fmt.Errorf("Deployment %q is not owned by ContainerSource %q", ra.Name, source.Name)
+		return nil, fmt.Errorf("deployment %q is not owned by ContainerSource %q", ra.Name, source.Name)
 	} else if r.podSpecChanged(&ra.Spec.Template.Spec, &expected.Spec.Template.Spec) {
 		ra.Spec.Template.Spec = expected.Spec.Template.Spec
 		ra, err = r.kubeClientSet.AppsV1().Deployments(expected.Namespace).Update(ctx, ra, metav1.UpdateOptions{})
