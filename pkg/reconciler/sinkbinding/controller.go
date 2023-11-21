@@ -18,7 +18,6 @@ package sinkbinding
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"knative.dev/eventing/pkg/auth"
@@ -199,47 +198,6 @@ func WithContextFactory(ctx context.Context, handler func(types.NamespacedName))
 		return v1.WithURIResolver(ctx, r), nil
 	}
 }
-
-
-func (s *SinkBindingSubResourcesReconciler) Reconcile(ctx context.Context, b psbinding.Bindable) error {
-	sb := b.(*v1.SinkBinding)
-	if s.res == nil {
-		err := errors.New("Resolver is nil")
-		logging.FromContext(ctx).Errorf("%w", err)
-		sb.Status.MarkBindingUnavailable("NoResolver", "No Resolver associated with context for sink")
-		return err
-	}
-	if sb.Spec.Sink.Ref != nil {
-		s.tracker.TrackReference(tracker.Reference{
-			APIVersion: sb.Spec.Sink.Ref.APIVersion,
-			Kind:       sb.Spec.Sink.Ref.Kind,
-			Namespace:  sb.Spec.Sink.Ref.Namespace,
-			Name:       sb.Spec.Sink.Ref.Name,
-		}, b)
-	}
-
-	featureFlags := s.featureStore.Load()
-	if err := auth.SetupOIDCServiceAccount(featureFlags, ctx, s.serviceAccountLister, s.kubeclient, v1.SchemeGroupVersion.WithKind("SinkBinding"), sb.ObjectMeta, &sb.Status, func(as *duckv1.AuthStatus) {
-		sb.Status.Auth = as
-	}); err != nil {
-		return err
-	}
-
-	addr, err := s.res.AddressableFromDestinationV1(ctx, sb.Spec.Sink, sb)
-	if err != nil {
-		logging.FromContext(ctx).Errorf("Failed to get Addressable from Destination: %w", err)
-		sb.Status.MarkBindingUnavailable("NoAddressable", "Addressable could not be extracted from destination")
-		return err
-	}
-	sb.Status.MarkSink(addr)
-	return nil
-}
-
-// I'm just here so I won't get fined
-func (*SinkBindingSubResourcesReconciler) ReconcileDeletion(ctx context.Context, b psbinding.Bindable) error {
-	return nil
-}
-
 
 func createRecorder(ctx context.Context, agentName string) record.EventRecorder {
 	logger := logging.FromContext(ctx)
