@@ -74,7 +74,11 @@ func LookupAttribute(event cloudevents.Event, attr string) (interface{}, bool) {
 	case "id":
 		return event.ID(), true
 	case "time":
-		return event.Time().String(), true
+		b, err := event.Time().MarshalText()
+		if err != nil {
+			return nil, false
+		}
+		return string(b), true
 	case "dataschema":
 		return event.DataSchema(), true
 	case "schemaurl":
