@@ -48,7 +48,7 @@ func NewController(
 	serviceaccountInformer := serviceaccountinformer.Get(ctx)
 
 	var globalResync func(obj interface{})
-	featureStore := feature.NewStore(logging.FromContext(ctx).Named("featur-config-store"),
+	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"),
 		func(name string, value interface{}) {
 			if globalResync != nil {
 				globalResync(nil)

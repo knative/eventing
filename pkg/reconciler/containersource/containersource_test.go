@@ -248,11 +248,11 @@ func TestAllCases(t *testing.T) {
 				makeSinkBinding(NewContainerSource(sourceName, testNS,
 					WithContainerSourceSpec(makeContainerSourceSpec(sinkDest)),
 					WithContainerSourceUID(sourceUID),
-				), nil),
+				), &conditionTrue),
 				makeDeployment(NewContainerSource(sourceName, testNS,
 					WithContainerSourceSpec(makeContainerSourceSpec(sinkDest)),
 					WithContainerSourceUID(sourceUID),
-				), nil),
+				), &conditionTrue),
 			},
 			WantErr: false,
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
@@ -263,10 +263,11 @@ func TestAllCases(t *testing.T) {
 					WithInitContainerSourceConditions,
 					WithContainerSourceStatusObservedGeneration(generation),
 					WithContainerSourceOIDCIdentityCreatedSucceeded(),
+					WithContainerSourcePropagateSinkbindingStatus(makeSinkBindingStatus(&conditionTrue)),
 					WithContainerSourcePropagateReceiveAdapterStatus(makeDeployment(NewContainerSource(sourceName, testNS,
 						WithContainerSourceSpec(makeContainerSourceSpec(sinkDest)),
 						WithContainerSourceUID(sourceUID),
-					), nil)),
+					), &conditionTrue)),
 				),
 			}},
 			WantCreates: []runtime.Object{
@@ -280,6 +281,10 @@ func TestAllCases(t *testing.T) {
 			}),
 			Objects: []runtime.Object{
 				makeContainerSourceOIDCServiceAccountWithoutOwnerRef(),
+				makeSinkBinding(NewContainerSource(sourceName, testNS,
+					WithContainerSourceSpec(makeContainerSourceSpec(sinkDest)),
+					WithContainerSourceUID(sourceUID),
+				), nil),
 				NewContainerSource(sourceName, testNS,
 					WithContainerSourceUID(sourceUID),
 					WithContainerSourceSpec(makeContainerSourceSpec(sinkDest)),
@@ -437,7 +442,7 @@ func makeSinkBindingStatus(ready *corev1.ConditionStatus) *sourcesv1.SinkBinding
 }
 
 func makeContainerSourceOIDCServiceAccount() *corev1.ServiceAccount {
-	return auth.GetOIDCServiceAccountForResource(sourcesv1.SchemeGroupVersion.WithKind("Source"), metav1.ObjectMeta{
+	return auth.GetOIDCServiceAccountForResource(sourcesv1.SchemeGroupVersion.WithKind("ContainerSource"), metav1.ObjectMeta{
 		Name:      sourceName,
 		Namespace: testNS,
 		UID:       sourceUID,
@@ -445,12 +450,7 @@ func makeContainerSourceOIDCServiceAccount() *corev1.ServiceAccount {
 }
 
 func makeContainerSourceOIDCServiceAccountWithoutOwnerRef() *corev1.ServiceAccount {
-	sa := auth.GetOIDCServiceAccountForResource(sourcesv1.SchemeGroupVersion.WithKind("Source"), metav1.ObjectMeta{
-		Name:      sourceName,
-		Namespace: testNS,
-		UID:       sourceUID,
-	})
+	sa := makeContainerSourceOIDCServiceAccount()
 	sa.OwnerReferences = nil
-
 	return sa
 }

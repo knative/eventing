@@ -82,12 +82,12 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1.ContainerSour
 
 	featureFlags := feature.FromContext(ctx)
 	if featureFlags.IsOIDCAuthentication() {
-		saName := auth.GetOIDCServiceAccountNameForResource(v1.SchemeGroupVersion.WithKind("Source"), source.ObjectMeta)
+		saName := auth.GetOIDCServiceAccountNameForResource(v1.SchemeGroupVersion.WithKind("ContainerSource"), source.ObjectMeta)
 		source.Status.Auth = &duckv1.AuthStatus{
 			ServiceAccountName: &saName,
 		}
 
-		if err := auth.EnsureOIDCServiceAccountExistsForResource(ctx, r.serviceAccountLister, r.kubeClientSet, v1.SchemeGroupVersion.WithKind("Source"), source.ObjectMeta); err != nil {
+		if err := auth.EnsureOIDCServiceAccountExistsForResource(ctx, r.serviceAccountLister, r.kubeClientSet, v1.SchemeGroupVersion.WithKind("ContainerSource"), source.ObjectMeta); err != nil {
 			source.Status.MarkOIDCIdentityCreatedFailed("Unable to resolve service account for OIDC authentication", "%v", err)
 			return err
 		}

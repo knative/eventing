@@ -115,7 +115,7 @@ func TestContainerSourceStatusIsReady(t *testing.T) {
 		wantConditionStatus: corev1.ConditionUnknown,
 		want:                false,
 	}, {
-		name: "mark ready sb and ra sa",
+		name: "mark ready sb and ra",
 		s: func() *ContainerSourceStatus {
 			s := &ContainerSourceStatus{}
 			s.InitializeConditions()
@@ -127,7 +127,7 @@ func TestContainerSourceStatusIsReady(t *testing.T) {
 		wantConditionStatus: corev1.ConditionTrue,
 		want:                true,
 	}, {
-		name: "mark ready sb and unavailable ra, sa not ready ",
+		name: "mark ready sb and unavailable ra ",
 		s: func() *ContainerSourceStatus {
 			s := &ContainerSourceStatus{}
 			s.InitializeConditions()
@@ -139,7 +139,7 @@ func TestContainerSourceStatusIsReady(t *testing.T) {
 		wantConditionStatus: corev1.ConditionFalse,
 		want:                false,
 	}, {
-		name: "mark ready sb and unknown ra and sa",
+		name: "mark ready sb and unknown ra",
 		s: func() *ContainerSourceStatus {
 			s := &ContainerSourceStatus{}
 			s.InitializeConditions()
@@ -151,7 +151,7 @@ func TestContainerSourceStatusIsReady(t *testing.T) {
 		wantConditionStatus: corev1.ConditionUnknown,
 		want:                false,
 	}, {
-		name: "mark ready sb and not deployed ra, sa",
+		name: "mark ready sb and not deployed ra",
 		s: func() *ContainerSourceStatus {
 			s := &ContainerSourceStatus{}
 			s.InitializeConditions()
@@ -163,7 +163,7 @@ func TestContainerSourceStatusIsReady(t *testing.T) {
 		wantConditionStatus: corev1.ConditionUnknown,
 		want:                false,
 	}, {
-		name: "mark ready sb and ra the no sb, sa",
+		name: "mark ready sb and ra the no sb",
 		s: func() *ContainerSourceStatus {
 			s := &ContainerSourceStatus{}
 			s.InitializeConditions()
@@ -295,7 +295,7 @@ func TestContainerSourceStatusGetCondition(t *testing.T) {
 			Status: corev1.ConditionUnknown,
 		},
 	}, {
-		name: "mark ready sb and ra, sa",
+		name: "mark ready sb and ra",
 		s: func() *ContainerSourceStatus {
 			s := &ContainerSourceStatus{}
 			s.InitializeConditions()
@@ -310,7 +310,7 @@ func TestContainerSourceStatusGetCondition(t *testing.T) {
 			Status: corev1.ConditionTrue,
 		},
 	}, {
-		name: "mark ready sb, sa, and ra then no sb ",
+		name: "mark ready sb and ra then no sb ",
 		s: func() *ContainerSourceStatus {
 			s := &ContainerSourceStatus{}
 			s.InitializeConditions()
@@ -328,7 +328,7 @@ func TestContainerSourceStatusGetCondition(t *testing.T) {
 			Message: "hi",
 		},
 	}, {
-		name: "mark ready sb, sa and ra then no ra",
+		name: "mark ready sb and ra then no ra",
 		s: func() *ContainerSourceStatus {
 			s := &ContainerSourceStatus{}
 			s.InitializeConditions()
@@ -360,7 +360,7 @@ func TestContainerSourceStatusGetCondition(t *testing.T) {
 			Status: corev1.ConditionFalse,
 		},
 	}, {
-		name: "mark not ready sb and ready ra and sa then ready sb",
+		name: "mark not ready sb and ready ra then ready sb",
 		s: func() *ContainerSourceStatus {
 			s := &ContainerSourceStatus{}
 			s.InitializeConditions()
