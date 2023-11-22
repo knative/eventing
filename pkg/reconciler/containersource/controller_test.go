@@ -29,6 +29,7 @@ import (
 	_ "knative.dev/eventing/pkg/client/injection/informers/sources/v1/containersource/fake"
 	_ "knative.dev/eventing/pkg/client/injection/informers/sources/v1/sinkbinding/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment/fake"
+	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount/fake"
 	_ "knative.dev/pkg/injection/clients/dynamicclient/fake"
 )
 
