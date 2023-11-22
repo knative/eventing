@@ -272,7 +272,7 @@ func TestAllCases(t *testing.T) {
 				),
 			}},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal,sourceReconciled,`ContainerSource reconciled: "%s/%s"`, testNS, sourceName),
+				Eventf(corev1.EventTypeNormal, sourceReconciled, `ContainerSource reconciled: "%s/%s"`, testNS, sourceName),
 			},
 			WantCreates: []runtime.Object{
 				makeContainerSourceOIDCServiceAccount(),
