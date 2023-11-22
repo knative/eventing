@@ -115,5 +115,5 @@ func TestSequenceSupportsOIDC(t *testing.T) {
 		Spec:     map[string]interface{}{},
 	})))
 
-	env.Test(ctx, t, oidc.SequenceHasAudienceOfInputChannel(sequence.GVR(), sequence.GVK().Kind, name, env.Namespace()))
+	env.Test(ctx, t, oidc.SequenceHasAudienceOfInputChannel(name, env.Namespace(), channel_impl.GVR(), channel_impl.GVK().Kind))
 }
