@@ -9,6 +9,7 @@ require (
 	github.com/cloudevents/sdk-go/sql/v2 v2.13.0
 	github.com/cloudevents/sdk-go/v2 v2.13.0
 	github.com/coreos/go-oidc/v3 v3.6.0
+	github.com/go-jose/go-jose/v3 v3.0.0
 	github.com/golang/protobuf v1.5.3
 	github.com/google/go-cmp v0.6.0
 	github.com/google/gofuzz v1.2.0
@@ -45,10 +46,10 @@ require (
 	k8s.io/apiserver v0.27.6
 	k8s.io/client-go v0.27.6
 	k8s.io/utils v0.0.0-20230209194617-a36077c30491
-	knative.dev/hack v0.0.0-20231109190034-5deaddeb51a7
-	knative.dev/hack/schema v0.0.0-20231109190034-5deaddeb51a7
-	knative.dev/pkg v0.0.0-20231115001034-97c7258e3a98
-	knative.dev/reconciler-test v0.0.0-20231109234136-36fcbd054949
+	knative.dev/hack v0.0.0-20231122182901-eb352426ecc1
+	knative.dev/hack/schema v0.0.0-20231122182901-eb352426ecc1
+	knative.dev/pkg v0.0.0-20231122190403-23f3ee2ee35b
+	knative.dev/reconciler-test v0.0.0-20231121121446-f747d069af11
 	sigs.k8s.io/yaml v1.4.0
 )
 
@@ -71,7 +72,6 @@ require (
 	github.com/emicklei/go-restful/v3 v3.9.0 // indirect
 	github.com/evanphx/json-patch v4.12.0+incompatible // indirect
 	github.com/evanphx/json-patch/v5 v5.7.0 // indirect
-	github.com/go-jose/go-jose/v3 v3.0.0 // indirect
 	github.com/go-kit/log v0.2.1 // indirect
 	github.com/go-logfmt/logfmt v0.5.1 // indirect
 	github.com/go-logr/logr v1.2.4 // indirect
@@ -122,7 +122,7 @@ require (
 	golang.org/x/tools v0.15.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
-	google.golang.org/api v0.150.0 // indirect
+	google.golang.org/api v0.151.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20231016165738-49dd2c1f3d0b // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20231016165738-49dd2c1f3d0b // indirect
