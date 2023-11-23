@@ -30,6 +30,7 @@ import (
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // EventType represents a type of event that can be consumed from a Broker.
+// Deprecated: use v1beta2.EventType instead.
 type EventType struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional

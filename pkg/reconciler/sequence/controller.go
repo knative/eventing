@@ -20,16 +20,20 @@ import (
 	"context"
 
 	"k8s.io/client-go/tools/cache"
+	"knative.dev/eventing/pkg/apis/feature"
 	v1 "knative.dev/eventing/pkg/apis/flows/v1"
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
+	"knative.dev/pkg/logging"
 
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
 	"knative.dev/eventing/pkg/client/injection/informers/flows/v1/sequence"
 	"knative.dev/eventing/pkg/client/injection/informers/messaging/v1/subscription"
 	sequencereconciler "knative.dev/eventing/pkg/client/injection/reconciler/flows/v1/sequence"
+	kubeclient "knative.dev/pkg/client/injection/kube/client"
+	serviceaccountinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount"
 	"knative.dev/pkg/injection/clients/dynamicclient"
 )
 
@@ -42,14 +46,34 @@ func NewController(
 
 	sequenceInformer := sequence.Get(ctx)
 	subscriptionInformer := subscription.Get(ctx)
+	serviceaccountInformer := serviceaccountinformer.Get(ctx)
+
+	var globalResync func(obj interface{})
+	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {
+		if globalResync != nil {
+			globalResync(nil)
+		}
+	})
+	featureStore.WatchConfigs(cmw)
 
 	r := &Reconciler{
-		sequenceLister:     sequenceInformer.Lister(),
-		subscriptionLister: subscriptionInformer.Lister(),
-		dynamicClientSet:   dynamicclient.Get(ctx),
-		eventingClientSet:  eventingclient.Get(ctx),
+		sequenceLister:       sequenceInformer.Lister(),
+		subscriptionLister:   subscriptionInformer.Lister(),
+		dynamicClientSet:     dynamicclient.Get(ctx),
+		eventingClientSet:    eventingclient.Get(ctx),
+		serviceAccountLister: serviceaccountInformer.Lister(),
+		kubeclient:           kubeclient.Get(ctx),
 	}
-	impl := sequencereconciler.NewImpl(ctx, r)
+
+	impl := sequencereconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
+		return controller.Options{
+			ConfigStore: featureStore,
+		}
+	})
+
+	globalResync = func(_ interface{}) {
+		impl.GlobalResync(sequenceInformer.Informer())
+	}
 
 	r.channelableTracker = duck.NewListableTrackerFromTracker(ctx, channelable.Get, impl.Tracker)
 	sequenceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
@@ -57,6 +81,12 @@ func NewController(
 	// Register handler for Subscriptions that are owned by Sequence, so that
 	// we get notified if they change.
 	subscriptionInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: controller.FilterController(&v1.Sequence{}),
+		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
+	})
+
+	// Reconcile Sequence when the OIDC service account changes
+	serviceaccountInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.FilterController(&v1.Sequence{}),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})

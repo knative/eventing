@@ -105,7 +105,7 @@ func WithTransformers(transformers ...binding.Transformer) SendOption {
 
 func WithOIDCAuthentication(serviceAccount *types.NamespacedName) SendOption {
 	return func(sc *senderConfig) error {
-		if serviceAccount != nil && serviceAccount.Name != "" && serviceAccount.Namespace == "" {
+		if serviceAccount != nil && serviceAccount.Name != "" && serviceAccount.Namespace != "" {
 			sc.oidcServiceAccount = serviceAccount
 			return nil
 		} else {
@@ -349,7 +349,7 @@ func (d *Dispatcher) createRequest(ctx context.Context, message binding.Message,
 			if err != nil {
 				return nil, fmt.Errorf("could not get JWT: %w", err)
 			}
-			request.Header.Set("Authorization", fmt.Sprintf("Bearer: %s", jwt))
+			request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", jwt))
 		}
 	}
 

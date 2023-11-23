@@ -27,11 +27,13 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/cache"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/utils/pointer"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/logging"
 )
 
 const (
+	TokenExpirationTime  = time.Hour
 	expirationBufferTime = 5 * time.Minute
 )
 
@@ -58,9 +60,16 @@ func (c *OIDCTokenProvider) GetJWT(serviceAccount types.NamespacedName, audience
 	}
 
 	// if not found in cache: request new token
+	return c.GetNewJWT(serviceAccount, audience)
+}
+
+// GetNewJWT returns a new JWT from the given service account for the given audience without using the token cache.
+func (c *OIDCTokenProvider) GetNewJWT(serviceAccount types.NamespacedName, audience string) (string, error) {
+	// request new token
 	tokenRequest := authv1.TokenRequest{
 		Spec: authv1.TokenRequestSpec{
-			Audiences: []string{audience},
+			Audiences:         []string{audience},
+			ExpirationSeconds: pointer.Int64(int64(TokenExpirationTime.Seconds())),
 		},
 	}
 
