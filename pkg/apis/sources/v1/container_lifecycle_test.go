@@ -160,10 +160,10 @@ func TestContainerSourceStatusIsReady(t *testing.T) {
 			s.MarkOIDCIdentityCreatedFailed("", "")
 			return s
 		}(),
-		wantConditionStatus: corev1.ConditionTrue,
-		want:                true,
+		wantConditionStatus: corev1.ConditionFalse,
+		want:                false,
 	}, {
-		name: "mark ready sb and ra no sa",
+		name: "mark ready sb, ra and sa unknown",
 		s: func() *ContainerSourceStatus {
 			s := &ContainerSourceStatus{}
 			s.InitializeConditions()
@@ -172,10 +172,10 @@ func TestContainerSourceStatusIsReady(t *testing.T) {
 			s.MarkOIDCIdentityCreatedUnknown("Unknown", "")
 			return s
 		}(),
-		wantConditionStatus: corev1.ConditionTrue,
-		want:                true,
+		wantConditionStatus: corev1.ConditionUnknown,
+		want:                false,
 	}, {
-		name: "mark ready sb and ra no sa",
+		name: "mark ready sb, ra and sa with reason",
 		s: func() *ContainerSourceStatus {
 			s := &ContainerSourceStatus{}
 			s.InitializeConditions()
