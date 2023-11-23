@@ -48,5 +48,5 @@ func PollTimingsFromContext(ctx context.Context) (time.Duration, time.Duration) 
 	if t, ok := ctx.Value(timingsKey{}).(timingsType); ok {
 		return t.interval, t.timeout
 	}
-	return DefaultPollInterval, DefaultPollTimeout
+	panic("no poll timings found in context")
 }

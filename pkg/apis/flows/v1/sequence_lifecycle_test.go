@@ -17,6 +17,7 @@ limitations under the License.
 package v1
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -33,6 +34,8 @@ var sequenceConditionReady = apis.Condition{
 	Type:   SequenceConditionReady,
 	Status: corev1.ConditionTrue,
 }
+
+var channelAudience = fmt.Sprintf("messaging.knative.dev/inmemorychannel/%s/%s", "testNS", "test-imc")
 
 func TestSequenceGetConditionSet(t *testing.T) {
 	r := &Sequence{}
@@ -69,6 +72,7 @@ func getSubscription(name string, ready bool) *messagingv1.Subscription {
 
 func getChannelable(ready bool) *eventingduckv1.Channelable {
 	URL := apis.HTTP("example.com")
+	channelAudience := fmt.Sprintf("messaging.knative.dev/inmemorychannel/%s/%s", "testNS", "test-imc")
 	c := eventingduckv1.Channelable{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "messaging.knative.dev/v1",
@@ -83,7 +87,7 @@ func getChannelable(ready bool) *eventingduckv1.Channelable {
 			Type:   apis.ConditionReady,
 			Status: corev1.ConditionTrue,
 		}})
-		c.Status.Address = &duckv1.Addressable{URL: URL}
+		c.Status.Address = &duckv1.Addressable{URL: URL, Audience: &channelAudience}
 	} else {
 		c.Status.SetConditions([]apis.Condition{{
 			Type:   apis.ConditionReady,
@@ -396,13 +400,15 @@ func TestSequenceReady(t *testing.T) {
 func TestSequencePropagateSetAddress(t *testing.T) {
 	URL := apis.HTTP("example.com")
 	URL2 := apis.HTTP("another.example.com")
+
 	tests := []struct {
-		name        string
-		status      SequenceStatus
-		address     *duckv1.Addressable
-		want        duckv1.Addressable
-		wantStatus  corev1.ConditionStatus
-		wantAddress string
+		name         string
+		status       SequenceStatus
+		address      *duckv1.Addressable
+		want         duckv1.Addressable
+		wantStatus   corev1.ConditionStatus
+		wantAddress  string
+		wantAudience *string
 	}{{
 		name:       "nil",
 		status:     SequenceStatus{},
@@ -449,6 +455,14 @@ func TestSequencePropagateSetAddress(t *testing.T) {
 		address:    &duckv1.Addressable{URL: nil},
 		want:       duckv1.Addressable{},
 		wantStatus: corev1.ConditionUnknown,
+	}, {
+		name:         "audience",
+		status:       SequenceStatus{},
+		address:      &duckv1.Addressable{URL: URL, Audience: &channelAudience},
+		want:         duckv1.Addressable{URL: URL, Audience: &channelAudience},
+		wantStatus:   corev1.ConditionTrue,
+		wantAddress:  "http://example.com",
+		wantAudience: &channelAudience,
 	}}
 
 	for _, tt := range tests {
@@ -467,8 +481,12 @@ func TestSequencePropagateSetAddress(t *testing.T) {
 			if got.URL != nil {
 				gotAddress = got.URL.String()
 			}
+
 			if diff := cmp.Diff(tt.wantAddress, gotAddress); diff != "" {
 				t.Error("unexpected address.url (-want, +got) =", diff)
+			}
+			if diff := cmp.Diff(tt.wantAudience, got.Audience); diff != "" {
+				t.Error("unexpected address.audience (-want, +got) =", diff)
 			}
 		})
 	}

@@ -194,7 +194,7 @@ func NewConfigValidationController(ctx context.Context, _ configmap.Watcher) *co
 
 func NewSinkBindingWebhook(opts ...psbinding.ReconcilerOption) injection.ControllerConstructor {
 	return func(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
-		sbresolver := sinkbinding.WithContextFactory(ctx, func(types.NamespacedName) {})
+		withContext := sinkbinding.WithContextFactory(ctx, func(types.NamespacedName) {})
 
 		return psbinding.NewAdmissionController(ctx,
 
@@ -208,7 +208,7 @@ func NewSinkBindingWebhook(opts ...psbinding.ReconcilerOption) injection.Control
 			sinkbinding.ListAll,
 
 			// How to setup the context prior to invoking Do/Undo.
-			sbresolver,
+			withContext,
 			opts...,
 		)
 	}

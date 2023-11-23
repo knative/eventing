@@ -81,6 +81,10 @@ const (
 	// SinkBindingConditionOIDCIdentityCreated is configured to indicate whether
 	// the OIDC identity has been created for the sink.
 	SinkBindingConditionOIDCIdentityCreated apis.ConditionType = "OIDCIdentityCreated"
+
+	// SinkBindingConditionOIDCTokenSecretCreated is configured to indicate whether
+	// the secret containing the OIDC token has been created for the sink.
+	SinkBindingConditionOIDCTokenSecretCreated apis.ConditionType = "OIDCTokenSecretCreated"
 )
 
 // SinkBindingStatus communicates the observed state of the SinkBinding (from the controller).
@@ -93,6 +97,10 @@ type SinkBindingStatus struct {
 	// * SinkURI - the current active sink URI that has been configured for the
 	//   Source.
 	duckv1.SourceStatus `json:",inline"`
+
+	// OIDCTokenSecretName is the name of the secret containing the token for
+	// this SinkBindings OIDC authentication
+	OIDCTokenSecretName *string `json:"oidcTokenSecretName,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
