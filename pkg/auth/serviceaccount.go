@@ -28,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
 	corev1listers "k8s.io/client-go/listers/core/v1"
+	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/ptr"
 )
@@ -35,8 +36,9 @@ import (
 // GetOIDCServiceAccountNameForResource returns the service account name to use
 // for OIDC authentication for the given resource.
 func GetOIDCServiceAccountNameForResource(gvk schema.GroupVersionKind, objectMeta metav1.ObjectMeta) string {
-	sa := fmt.Sprintf("oidc-%s-%s-%s", gvk.GroupKind().Group, gvk.GroupKind().Kind, objectMeta.GetName())
-
+	suffix := fmt.Sprintf("oidc-%s-%s", gvk.Group, gvk.Kind)
+	parent := objectMeta.GetName()
+	sa := kmeta.ChildName(parent, suffix)
 	return strings.ToLower(sa)
 }
 
