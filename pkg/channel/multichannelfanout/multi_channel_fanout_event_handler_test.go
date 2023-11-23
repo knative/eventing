@@ -123,7 +123,7 @@ func TestNewEventHandler(t *testing.T) {
 	if h != nil {
 		t.Errorf("Found handler for %q but not expected", handlerName)
 	}
-	f, err := fanout.NewFanoutEventHandler(logger, fanout.Config{}, reporter, nil, nil, nil, nil, dispatcher, nil, nil)
+	f, err := fanout.NewFanoutEventHandler(logger, fanout.Config{}, reporter, nil, nil, nil, dispatcher)
 	if err != nil {
 		t.Error("Failed to create FanoutMessagHandler: ", err)
 	}

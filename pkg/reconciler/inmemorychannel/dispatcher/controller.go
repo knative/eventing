@@ -128,6 +128,7 @@ func NewController(
 		eventingClient:           eventingclient.Get(ctx).EventingV1beta2(),
 		eventTypeLister:          eventtypeinformer.Get(ctx).Lister(),
 		eventDispatcher:          kncloudevents.NewDispatcher(oidcTokenProvider),
+		tokenVerifier:            auth.NewOIDCTokenVerifier(ctx),
 	}
 
 	impl := inmemorychannelreconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {

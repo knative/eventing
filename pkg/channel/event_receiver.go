@@ -20,12 +20,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"knative.dev/eventing/pkg/apis/feature"
-	"knative.dev/eventing/pkg/auth"
 	nethttp "net/http"
 	"time"
 
-	"knative.dev/eventing/pkg/channel/fanout"
+	"knative.dev/eventing/pkg/apis/feature"
+	"knative.dev/eventing/pkg/auth"
 
 	"github.com/cloudevents/sdk-go/v2/event"
 	"github.com/cloudevents/sdk-go/v2/protocol/http"
@@ -69,7 +68,9 @@ type EventReceiver struct {
 	hostToChannelFunc    ResolveChannelFromHostFunc
 	pathToChannelFunc    ResolveChannelFromPathFunc
 	reporter             StatsReporter
-	handler              *fanout.FanoutEventHandler
+	tokenVerifier        *auth.OIDCTokenVerifier
+	audience             string
+	withContext          func(context.Context) context.Context
 }
 
 // EventReceiverFunc is the function to be called for handling the event.
@@ -101,6 +102,21 @@ type ResolveChannelFromPathFunc func(string) (ChannelReference, error)
 func ResolveChannelFromPath(PathToChannelFunc ResolveChannelFromPathFunc) EventReceiverOptions {
 	return func(r *EventReceiver) error {
 		r.pathToChannelFunc = PathToChannelFunc
+		return nil
+	}
+}
+
+func OIDCTokenVerification(tokenVerifier *auth.OIDCTokenVerifier, audience string) EventReceiverOptions {
+	return func(r *EventReceiver) error {
+		r.tokenVerifier = tokenVerifier
+		r.audience = audience
+		return nil
+	}
+}
+
+func ReceiverWithContextFunc(fn func(context.Context) context.Context) EventReceiverOptions {
+	return func(r *EventReceiver) error {
+		r.withContext = fn
 		return nil
 	}
 }
@@ -158,8 +174,12 @@ func (r *EventReceiver) Start(ctx context.Context) error {
 }
 
 func (r *EventReceiver) ServeHTTP(response nethttp.ResponseWriter, request *nethttp.Request) {
-
 	ctx := request.Context()
+
+	if r.withContext != nil {
+		ctx = r.withContext(ctx)
+	}
+
 	response.Header().Set("Allow", "POST, OPTIONS")
 	if request.Method == nethttp.MethodOptions {
 		response.Header().Set("WebHook-Allowed-Origin", "*") // Accept from any Origin:
@@ -230,14 +250,6 @@ func (r *EventReceiver) ServeHTTP(response nethttp.ResponseWriter, request *neth
 	if features.IsOIDCAuthentication() {
 		r.logger.Debug("OIDC authentication is enabled")
 
-		channel := r.handler.GetChannelObject()
-
-		if channel.Status.Address.Audience == nil {
-			r.logger.Warn(fmt.Sprintf("Audience of channel %s/%s must not be nil, while feature %s is enabled", channel.Name, channel.Namespace, feature.OIDCAuthentication))
-			response.WriteHeader(nethttp.StatusInternalServerError)
-			return
-		}
-
 		token := auth.GetJWTFromHeader(request.Header)
 		if token == "" {
 			r.logger.Warn(fmt.Sprintf("No JWT in %s header provided while feature %s is enabled", auth.AuthHeaderKey, feature.OIDCAuthentication))
@@ -245,13 +257,15 @@ func (r *EventReceiver) ServeHTTP(response nethttp.ResponseWriter, request *neth
 			return
 		}
 
-		if _, err := r.handler.TokenVerifier.VerifyJWT(ctx, token, *channel.Status.Address.Audience); err != nil {
+		if _, err := r.tokenVerifier.VerifyJWT(ctx, token, r.audience); err != nil {
 			r.logger.Warn("no valid JWT provided", zap.Error(err))
 			response.WriteHeader(nethttp.StatusUnauthorized)
 			return
 		}
 
 		r.logger.Debug("Request contained a valid JWT. Continuing...")
+	} else {
+		r.logger.Debug("OIDC authentication is disabled")
 	}
 
 	err = r.receiverFunc(request.Context(), channel, *event, utils.PassThroughHeaders(request.Header))

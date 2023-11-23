@@ -74,7 +74,7 @@ func NewEventHandlerWithConfig(_ context.Context, logger *zap.Logger, conf Confi
 			if key == "" {
 				continue
 			}
-			handler, err := fanout.NewFanoutEventHandler(logger, cc.FanoutConfig, reporter, cc.EventTypeHandler, cc.ChannelAddressable, nil, cc.ChannelUID, eventDispatcher, nil, recvOptions...)
+			handler, err := fanout.NewFanoutEventHandler(logger, cc.FanoutConfig, reporter, cc.EventTypeHandler, cc.ChannelAddressable, cc.ChannelUID, eventDispatcher, recvOptions...)
 			if err != nil {
 				logger.Error("Failed creating new fanout handler.", zap.Error(err))
 				return nil, err

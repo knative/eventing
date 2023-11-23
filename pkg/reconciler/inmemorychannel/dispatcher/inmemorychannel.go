@@ -37,6 +37,7 @@ import (
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/apis/feature"
 	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
+	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/channel/fanout"
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
@@ -57,6 +58,7 @@ type Reconciler struct {
 	eventingClient           eventingv1beta2.EventingV1beta2Interface
 	featureStore             *feature.Store
 	eventDispatcher          *kncloudevents.Dispatcher
+	tokenVerifier            *auth.OIDCTokenVerifier
 }
 
 // Check the interfaces Reconciler should implement
@@ -111,6 +113,10 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1.InMemoryChannel) rec
 		UID = &imc.UID
 	}
 
+	wc := func(ctx context.Context) context.Context {
+		return r.featureStore.ToContext(ctx)
+	}
+
 	// First grab the host based MultiChannelFanoutMessage httpHandler
 	httpHandler := r.multiChannelEventHandler.GetChannelHandler(config.HostName)
 	if httpHandler == nil {
@@ -121,10 +127,10 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1.InMemoryChannel) rec
 			r.reporter,
 			eventTypeAutoHandler,
 			channelRef,
-			imc,
 			UID,
 			r.eventDispatcher,
-			nil,
+			channel.OIDCTokenVerification(r.tokenVerifier, audience(imc)),
+			channel.ReceiverWithContextFunc(wc),
 		)
 		if err != nil {
 			logging.FromContext(ctx).Error("Failed to create a new fanout.EventHandler", err)
@@ -152,11 +158,11 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1.InMemoryChannel) rec
 			r.reporter,
 			eventTypeAutoHandler,
 			channelRef,
-			imc,
 			UID,
 			r.eventDispatcher,
-			nil,
 			channel.ResolveChannelFromPath(channel.ParseChannelFromPath),
+			channel.OIDCTokenVerification(r.tokenVerifier, audience(imc)),
+			channel.ReceiverWithContextFunc(wc),
 		)
 		if err != nil {
 			logging.FromContext(ctx).Error("Failed to create a new fanout.EventHandler", err)
@@ -290,4 +296,8 @@ func toKReference(imc *v1.InMemoryChannel) *duckv1.KReference {
 		Name:       imc.Name,
 		Address:    imc.Status.Address.Name,
 	}
+}
+
+func audience(imc *v1.InMemoryChannel) string {
+	return auth.GetAudience(v1.SchemeGroupVersion.WithKind("InMemoryChannel"), imc.ObjectMeta)
 }

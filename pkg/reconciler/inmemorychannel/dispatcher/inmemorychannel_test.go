@@ -502,7 +502,7 @@ func TestReconciler_ReconcileKind(t *testing.T) {
 		dispatcher := kncloudevents.NewDispatcher(oidcTokenProvider)
 		// Just run the tests once with no existing handler (creates the handler) and once
 		// with an existing, so we exercise both paths at once.
-		fh, err := fanout.NewFanoutEventHandler(nil, fanout.Config{}, nil, nil, nil, nil, nil, dispatcher, nil)
+		fh, err := fanout.NewFanoutEventHandler(nil, fanout.Config{}, nil, nil, nil, nil, dispatcher)
 		if err != nil {
 			t.Error(err)
 		}
@@ -551,7 +551,7 @@ func TestReconciler_InvalidInputs(t *testing.T) {
 
 		oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
 		dispatcher := kncloudevents.NewDispatcher(oidcTokenProvider)
-		fh, err := fanout.NewFanoutEventHandler(nil, fanout.Config{}, nil, nil, nil, nil, nil, dispatcher, nil)
+		fh, err := fanout.NewFanoutEventHandler(nil, fanout.Config{}, nil, nil, nil, nil, dispatcher)
 		if err != nil {
 			t.Error(err)
 		}
@@ -585,7 +585,7 @@ func TestReconciler_Deletion(t *testing.T) {
 
 		oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
 		dispatcher := kncloudevents.NewDispatcher(oidcTokenProvider)
-		fh, err := fanout.NewFanoutEventHandler(nil, fanout.Config{}, nil, nil, nil, nil, nil, dispatcher, nil)
+		fh, err := fanout.NewFanoutEventHandler(nil, fanout.Config{}, nil, nil, nil, nil, dispatcher)
 		if err != nil {
 			t.Error(err)
 		}
