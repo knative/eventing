@@ -112,7 +112,7 @@ func NewFanoutEventHandler(
 		reporter:           reporter,
 		asyncHandler:       config.AsyncHandler,
 		eventTypeHandler:   eventTypeHandler,
-		channelAddressable: channelRef,
+		channelRef: channelRef,
 		channelUID:         channelUID,
 		eventDispatcher:    eventDispatcher,
 	}
