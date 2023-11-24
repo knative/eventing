@@ -32,7 +32,7 @@ func MakeRoleBinding(ns, name string, sa *corev1.ServiceAccount, roleName string
 		},
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
-			Kind:     "Role",
+			Kind:     "ClusterRole",
 			Name:     roleName,
 		},
 		Subjects: []rbacv1.Subject{
