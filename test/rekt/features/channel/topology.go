@@ -105,7 +105,7 @@ func createChannelTopology(f *feature.Feature, chName string, chDS *v1.DeliveryS
 
 		var opts []manifest.CfgFn
 		if sub.hasSub {
-			opts = append(opts, subscription.WithSubscriber(prober.AsKReference(sub.subName()), ""))
+			opts = append(opts, subscription.WithSubscriber(prober.AsKReference(sub.subName()), "", ""))
 		}
 
 		if sub.hasReply {

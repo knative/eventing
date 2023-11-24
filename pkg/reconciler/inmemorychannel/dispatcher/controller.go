@@ -130,9 +130,24 @@ func NewController(
 		eventDispatcher:          kncloudevents.NewDispatcher(oidcTokenProvider),
 	}
 
-	impl := inmemorychannelreconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
-		return controller.Options{SkipStatusUpdates: true, FinalizerName: finalizerName}
+	var globalResync func(obj interface{})
+
+	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(_ string, _ interface{}) {
+		if globalResync != nil {
+			globalResync(nil)
+		}
 	})
+	featureStore.WatchConfigs(cmw)
+
+	impl := inmemorychannelreconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
+		return controller.Options{SkipStatusUpdates: true, FinalizerName: finalizerName, ConfigStore: featureStore}
+	})
+
+	globalResync = func(_ interface{}) {
+		impl.GlobalResync(inmemorychannelInformer.Informer())
+	}
+
+	r.featureStore = featureStore
 
 	// Watch for inmemory channels.
 	inmemorychannelInformer.Informer().AddEventHandler(
@@ -143,13 +158,6 @@ func NewController(
 				UpdateFunc: controller.PassNew(impl.Enqueue),
 				DeleteFunc: r.deleteFunc,
 			}})
-
-	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {
-		impl.GlobalResync(inmemorychannelInformer.Informer())
-	})
-	featureStore.WatchConfigs(cmw)
-
-	r.featureStore = featureStore
 
 	httpArgs := &inmemorychannel.InMemoryEventDispatcherArgs{
 		Port:         httpPort,

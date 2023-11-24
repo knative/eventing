@@ -218,12 +218,12 @@ func EventTransformation() *feature.Feature {
 	f.Setup("install channel 2", channel_impl.Install(channel2))
 	f.Setup("install subscription 1", subscription.Install(subscription1,
 		subscription.WithChannel(channel_impl.AsRef(channel1)),
-		subscription.WithSubscriber(prober.AsKReference("transform"), ""),
+		subscription.WithSubscriber(prober.AsKReference("transform"), "", ""),
 		subscription.WithReply(channel_impl.AsRef(channel2), ""),
 	))
 	f.Setup("install subscription 2", subscription.Install(subscription2,
 		subscription.WithChannel(channel_impl.AsRef(channel2)),
-		subscription.WithSubscriber(prober.AsKReference("sink"), ""),
+		subscription.WithSubscriber(prober.AsKReference("sink"), "", ""),
 	))
 	f.Setup("subscription 1 is ready", subscription.IsReady(subscription1))
 	f.Setup("subscription 2 is ready", subscription.IsReady(subscription2))
@@ -264,7 +264,7 @@ func SingleEventWithEncoding(encoding binding.Encoding) *feature.Feature {
 	f.Setup("install channel", channel_impl.Install(channel))
 	f.Setup("install subscription", subscription.Install(sub,
 		subscription.WithChannel(channel_impl.AsRef(channel)),
-		subscription.WithSubscriber(prober.AsKReference("sink"), ""),
+		subscription.WithSubscriber(prober.AsKReference("sink"), "", ""),
 	))
 
 	f.Setup("subscription is ready", subscription.IsReady(sub))

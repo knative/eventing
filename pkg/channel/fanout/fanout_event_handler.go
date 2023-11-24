@@ -46,10 +46,11 @@ const (
 )
 
 type Subscription struct {
-	Subscriber  duckv1.Addressable
-	Reply       *duckv1.Addressable
-	DeadLetter  *duckv1.Addressable
-	RetryConfig *kncloudevents.RetryConfig
+	Subscriber     duckv1.Addressable
+	Reply          *duckv1.Addressable
+	DeadLetter     *duckv1.Addressable
+	RetryConfig    *kncloudevents.RetryConfig
+	ServiceAccount *types.NamespacedName
 }
 
 // Config for a fanout.EventHandler.
@@ -130,15 +131,17 @@ func NewFanoutEventHandler(
 
 func SubscriberSpecToFanoutConfig(sub eventingduckv1.SubscriberSpec) (*Subscription, error) {
 	destination := duckv1.Addressable{
-		URL:     sub.SubscriberURI,
-		CACerts: sub.SubscriberCACerts,
+		URL:      sub.SubscriberURI,
+		CACerts:  sub.SubscriberCACerts,
+		Audience: sub.SubscriberAudience,
 	}
 
 	var reply *duckv1.Addressable
 	if sub.ReplyURI != nil {
 		reply = &duckv1.Addressable{
-			URL:     sub.ReplyURI,
-			CACerts: sub.ReplyCACerts,
+			URL:      sub.ReplyURI,
+			CACerts:  sub.ReplyCACerts,
+			Audience: sub.ReplyAudience,
 		}
 	}
 
@@ -146,8 +149,9 @@ func SubscriberSpecToFanoutConfig(sub eventingduckv1.SubscriberSpec) (*Subscript
 	if sub.Delivery != nil && sub.Delivery.DeadLetterSink != nil && sub.Delivery.DeadLetterSink.URI != nil {
 		// Subscription reconcilers resolves the URI.
 		deadLetter = &duckv1.Addressable{
-			URL:     sub.Delivery.DeadLetterSink.URI,
-			CACerts: sub.Delivery.DeadLetterSink.CACerts,
+			URL:      sub.Delivery.DeadLetterSink.URI,
+			CACerts:  sub.Delivery.DeadLetterSink.CACerts,
+			Audience: sub.Delivery.DeadLetterSink.Audience,
 		}
 	}
 
@@ -317,11 +321,18 @@ func (f *FanoutEventHandler) dispatch(ctx context.Context, subs []Subscription, 
 // makeFanoutRequest sends the request to exactly one subscription. It handles both the `call` and
 // the `sink` portions of the subscription.
 func (f *FanoutEventHandler) makeFanoutRequest(ctx context.Context, event event.Event, additionalHeaders nethttp.Header, sub Subscription) (*kncloudevents.DispatchInfo, error) {
-	return f.eventDispatcher.SendEvent(ctx, event, sub.Subscriber,
+	dispatchOptions := []kncloudevents.SendOption{
 		kncloudevents.WithHeader(additionalHeaders),
 		kncloudevents.WithReply(sub.Reply),
 		kncloudevents.WithDeadLetterSink(sub.DeadLetter),
-		kncloudevents.WithRetryConfig(sub.RetryConfig))
+		kncloudevents.WithRetryConfig(sub.RetryConfig),
+	}
+
+	if sub.ServiceAccount != nil {
+		dispatchOptions = append(dispatchOptions, kncloudevents.WithOIDCAuthentication(sub.ServiceAccount))
+	}
+
+	return f.eventDispatcher.SendEvent(ctx, event, sub.Subscriber, dispatchOptions...)
 }
 
 type DispatchResult struct {

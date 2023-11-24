@@ -98,6 +98,20 @@ func TestParallelSupportsOIDC(t *testing.T) {
 	env.Test(ctx, t, oidc.ParallelHasAudienceOfInputChannel(name, env.Namespace(), channel_impl.GVR(), channel_impl.GVK().Kind))
 }
 
+func TestChannelDispatcherAuthenticatesWithOIDC(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+	)
+
+	env.Test(ctx, t, oidc.ChannelDispatcherAuthenticatesRequestsWithOIDC())
+}
+
 func TestSequenceSupportsOIDC(t *testing.T) {
 	t.Parallel()
 
