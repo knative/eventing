@@ -157,6 +157,13 @@ spec:
                     uid:
                       description: UID is used to understand the origin of the subscriber.
                       type: string
+                    auth:
+                      description: Auth provides the relevant information for OIDC authentication.
+                      type: object
+                      properties:
+                        serviceAccountName:
+                          description: ServiceAccountName is the name of the generated service account used for this components OIDC authentication.
+                          type: string
           status:
             description: Status represents the current state of the Channel. This data may be out of date.
             type: object

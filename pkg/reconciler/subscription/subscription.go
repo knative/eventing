@@ -473,7 +473,7 @@ func (r *Reconciler) patchSubscription(ctx context.Context, namespace string, ch
 	after := channel.DeepCopy()
 
 	if sub.DeletionTimestamp.IsZero() {
-		r.updateChannelAddSubscription(after, sub)
+		r.updateChannelAddSubscriptionSpec(after, sub)
 	} else {
 		r.updateChannelRemoveSubscription(after, sub)
 	}
@@ -513,7 +513,7 @@ func (r *Reconciler) updateChannelRemoveSubscription(channel *eventingduckv1.Cha
 	}
 }
 
-func (r *Reconciler) updateChannelAddSubscription(channel *eventingduckv1.Channelable, sub *v1.Subscription) {
+func (r *Reconciler) updateChannelAddSubscriptionSpec(channel *eventingduckv1.Channelable, sub *v1.Subscription) {
 	// Look to update subscriber.
 	for i, v := range channel.Spec.Subscribers {
 		if v.UID == sub.UID {
@@ -525,6 +525,7 @@ func (r *Reconciler) updateChannelAddSubscription(channel *eventingduckv1.Channe
 			channel.Spec.Subscribers[i].ReplyCACerts = sub.Status.PhysicalSubscription.ReplyCACerts
 			channel.Spec.Subscribers[i].ReplyAudience = sub.Status.PhysicalSubscription.ReplyAudience
 			channel.Spec.Subscribers[i].Delivery = deliverySpec(sub, channel)
+			channel.Spec.Subscribers[i].Auth = sub.Status.Auth
 			return
 		}
 	}
@@ -539,6 +540,7 @@ func (r *Reconciler) updateChannelAddSubscription(channel *eventingduckv1.Channe
 		ReplyCACerts:       sub.Status.PhysicalSubscription.ReplyCACerts,
 		ReplyAudience:      sub.Status.PhysicalSubscription.ReplyAudience,
 		Delivery:           deliverySpec(sub, channel),
+		Auth:               sub.Status.Auth,
 	}
 
 	// Must not have been found. Add it.

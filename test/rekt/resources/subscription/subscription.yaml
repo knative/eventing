@@ -44,6 +44,9 @@ spec:
     CACerts: |-
       {{ .subscriber.CACerts }}
     {{ end }}
+    {{ if .subscriber.audience }}
+    audience: {{ .subscriber.audience }}
+    {{ end }}
   {{ end }}
   {{if .reply }}
   reply:
