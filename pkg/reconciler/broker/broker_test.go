@@ -417,6 +417,36 @@ func TestReconcile(t *testing.T) {
 					WithDLSNotConfigured()),
 			}},
 		}, {
+			Name: "Successful Reconciliation with a Channel with Audience",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
+					WithBrokerConfig(config()),
+					WithInitBrokerConditions),
+				createChannel(withChannelReady, withChannelStatusAudience(channelAudience)),
+				imcConfigMap(),
+				NewEndpoints(filterServiceName, systemNS,
+					WithEndpointsLabels(FilterLabels()),
+					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
+				NewEndpoints(ingressServiceName, systemNS,
+					WithEndpointsLabels(IngressLabels()),
+					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
+					WithBrokerConfig(config()),
+					WithBrokerReady,
+					WithBrokerAddressURI(brokerAddress),
+					WithChannelAddressAnnotation(triggerChannelURL),
+					WithChannelAudienceAnnotation(channelAudience),
+					WithChannelAPIVersionAnnotation(triggerChannelAPIVersion),
+					WithChannelKindAnnotation(triggerChannelKind),
+					WithChannelNameAnnotation(triggerChannelName),
+					WithDLSNotConfigured()),
+			}},
+		}, {
 			Name: "Successful Reconciliation. Using legacy channel template config element.",
 			Key:  testKey,
 			Objects: []runtime.Object{
@@ -863,6 +893,15 @@ func withChannelStatusCACerts(caCerts string) unstructuredOption {
 	}
 }
 
+func withChannelStatusAudience(aud string) unstructuredOption {
+	return func(channel *unstructured.Unstructured) {
+		if err := unstructured.SetNestedField(channel.Object, aud,
+			"status", "address", "audience"); err != nil {
+			panic(err)
+		}
+	}
+}
+
 func withChannelReady(channel *unstructured.Unstructured) {
 	withChannelStatusAddress(triggerChannelURL)(channel)
 	withChannelStatusDeadLetterSinkURI(dls.URL.String())(channel)
@@ -1018,6 +1057,7 @@ s/wImGnMVk5RzpBVrq2VB9SkX/ThTVYEC/Sd9BQM364MCR+TA1l8/ptaLFLuwyw8
 O2dgzikq8iSy1BlRsVw=
 -----END CERTIFICATE-----
 `
+	channelAudience = "channel-audience"
 )
 
 func makeTLSSecret() *corev1.Secret {
