@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	"k8s.io/apimachinery/pkg/types"
 	"knative.dev/eventing/pkg/auth"
 	nethttp "net/http"
