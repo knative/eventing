@@ -23,7 +23,6 @@ import (
 	nethttp "net/http"
 	"time"
 
-	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/eventing/pkg/auth"
 
 	"github.com/cloudevents/sdk-go/v2/event"
@@ -246,27 +245,7 @@ func (r *EventReceiver) ServeHTTP(response nethttp.ResponseWriter, request *neth
 	}
 
 	/// Here we do the OIDC audience verification
-	features := feature.FromContext(ctx)
-	if features.IsOIDCAuthentication() {
-		r.logger.Debug("OIDC authentication is enabled")
-
-		token := auth.GetJWTFromHeader(request.Header)
-		if token == "" {
-			r.logger.Warn(fmt.Sprintf("No JWT in %s header provided while feature %s is enabled", auth.AuthHeaderKey, feature.OIDCAuthentication))
-			response.WriteHeader(nethttp.StatusUnauthorized)
-			return
-		}
-
-		if _, err := r.tokenVerifier.VerifyJWT(ctx, token, r.audience); err != nil {
-			r.logger.Warn("no valid JWT provided", zap.Error(err))
-			response.WriteHeader(nethttp.StatusUnauthorized)
-			return
-		}
-
-		r.logger.Debug("Request contained a valid JWT. Continuing...")
-	} else {
-		r.logger.Debug("OIDC authentication is disabled")
-	}
+	auth.ValidateEventAuthHeader(ctx, request)
 
 	err = r.receiverFunc(request.Context(), channel, *event, utils.PassThroughHeaders(request.Header))
 	if err != nil {
