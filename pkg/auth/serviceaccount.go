@@ -19,6 +19,7 @@ package auth
 import (
 	"context"
 	"fmt"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"strings"
 
 	"go.uber.org/zap"
@@ -92,5 +93,104 @@ func EnsureOIDCServiceAccountExistsForResource(ctx context.Context, serviceAccou
 		return fmt.Errorf("service account %s not owned by %s %s", sa.Name, gvk.Kind, objectMeta.Name)
 	}
 
+	return nil
+}
+
+// EnsureOIDCServiceAccountRoleBindingExistsForResource
+// makes sure the given resource has an OIDC service account role binding with
+// an owner reference to the resource set.
+func EnsureOIDCServiceAccountRoleBindingExistsForResource(ctx context.Context, kubeclient kubernetes.Interface, gvk schema.GroupVersionKind, objectMeta metav1.ObjectMeta) error {
+	roleName := fmt.Sprintf("create-oidc-token")
+	roleBindingName := fmt.Sprintf("create-oidc-token", objectMeta.GetName())
+	roleBinding, err := kubeclient.RbacV1().RoleBindings(objectMeta.Namespace).Get(ctx, roleBindingName, metav1.GetOptions{})
+
+	// If the resource doesn't exist, we'll create it.
+	if apierrs.IsNotFound(err) {
+		logging.FromContext(ctx).Debugw("Creating OIDC service account role binding", zap.Error(err))
+
+		// Create the "create-oidc-token" role
+		CreateRoleForServiceAccount(ctx, kubeclient, gvk, objectMeta)
+
+		roleBinding := &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      roleBindingName,
+				Namespace: objectMeta.GetNamespace(),
+				Annotations: map[string]string{
+					"description": fmt.Sprintf("Role Binding for OIDC Authentication for %s %q", gvk.GroupKind().Kind, objectMeta.Name),
+				},
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "Role",
+				Name:     roleName,
+			},
+			Subjects: []rbacv1.Subject{
+				{
+					Kind:      "ServiceAccount",
+					Namespace: objectMeta.GetNamespace(),
+					Name:      GetOIDCServiceAccountNameForResource(gvk, objectMeta),
+				},
+			},
+		}
+
+		_, err = kubeclient.RbacV1().RoleBindings(objectMeta.Namespace).Create(ctx, roleBinding, metav1.CreateOptions{})
+		if err != nil {
+			return fmt.Errorf("could not create OIDC service account role binding %s/%s for %s: %w", objectMeta.Name, objectMeta.Namespace, gvk.Kind, err)
+		}
+
+		return nil
+	}
+
+	if err != nil {
+		return fmt.Errorf("could not get OIDC service account role binding %s/%s for %s: %w", objectMeta.Name, objectMeta.Namespace, gvk.Kind, err)
+
+	}
+
+	if !metav1.IsControlledBy(&roleBinding.ObjectMeta, &objectMeta) {
+		return fmt.Errorf("role binding %s not owned by %s %s", roleBinding.Name, gvk.Kind, objectMeta.Name)
+	}
+
+	return nil
+}
+
+// Create the create-oidc-token role for the service account
+func CreateRoleForServiceAccount(ctx context.Context, kubeclient kubernetes.Interface, gvk schema.GroupVersionKind, objectMeta metav1.ObjectMeta) error {
+	roleName := fmt.Sprintf("create-oidc-token")
+	role, err := kubeclient.RbacV1().Roles(objectMeta.Namespace).Get(ctx, roleName, metav1.GetOptions{})
+
+	// If the resource doesn't exist, we'll create it.
+	if apierrs.IsNotFound(err) && role == nil {
+		logging.FromContext(ctx).Debugw("Creating OIDC service account role", zap.Error(err))
+
+		role := &rbacv1.Role{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      roleName,
+				Namespace: objectMeta.GetNamespace(),
+				Annotations: map[string]string{
+					"description": fmt.Sprintf("Role for OIDC Authentication for %s %q", gvk.GroupKind().Kind, objectMeta.Name),
+				},
+			},
+			Rules: []rbacv1.PolicyRule{
+				rbacv1.PolicyRule{
+					APIGroups:     []string{""},
+					ResourceNames: []string{objectMeta.Name},
+					Resources:     []string{"serviceaccounts/token"},
+					Verbs:         []string{"create"},
+				},
+			},
+		}
+
+		_, err = kubeclient.RbacV1().Roles(objectMeta.Namespace).Create(ctx, role, metav1.CreateOptions{})
+		if err != nil {
+			return fmt.Errorf("could not create OIDC service account role %s/%s for %s: %w", objectMeta.Name, objectMeta.Namespace, gvk.Kind, err)
+		}
+
+		return nil
+	}
+
+	if err != nil {
+		return fmt.Errorf("could not get OIDC service account role %s/%s for %s: %w", objectMeta.Name, objectMeta.Namespace, gvk.Kind, err)
+
+	}
 	return nil
 }
