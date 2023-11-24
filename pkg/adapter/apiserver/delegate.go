@@ -79,7 +79,7 @@ func (a *resourceDelegate) sendCloudEvent(ctx context.Context, event cloudevents
 	// ?? Question: where can we get the sink audience? As we don't specify the destination in the cloudevent
 
 	// If the sink has audience, then we need to request the JWT token
-	// In order to request the JWT token, we need to get the service account name and namespace from the sink
+	// In order to request the JWT token, we need to get the service account name and namespace from the source
 	// And also need to pass in OIDC token provider
 	// ?? Question again: where can we get the sink audience? And how to pass in OIDC token provider?
 
