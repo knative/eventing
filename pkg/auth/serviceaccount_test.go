@@ -60,7 +60,7 @@ func TestGetOIDCServiceAccountNameForResource(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := GetOIDCServiceAccountNameForResource(tt.gvk, tt.objectMeta); got != tt.want {
-				t.Errorf("GetServiceAccountName() = %v, want %v", got, tt.want)
+				t.Errorf("GetOIDCServiceAccountNameForResource() = %v, want %v", got, tt.want)
 			}
 		})
 	}
