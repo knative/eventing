@@ -36,7 +36,7 @@ import (
 // GetOIDCServiceAccountNameForResource returns the service account name to use
 // for OIDC authentication for the given resource.
 func GetOIDCServiceAccountNameForResource(gvk schema.GroupVersionKind, objectMeta metav1.ObjectMeta) string {
-	suffix := fmt.Sprintf("oidc-%s-%s", gvk.Group, gvk.Kind)
+	suffix := fmt.Sprintf("-oidc-%s-%s", gvk.Group, gvk.Kind)
 	parent := objectMeta.GetName()
 	sa := kmeta.ChildName(parent, suffix)
 	return strings.ToLower(sa)
