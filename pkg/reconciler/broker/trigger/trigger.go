@@ -133,10 +133,12 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, t *eventingv1.Trigger) p
 		t.Status.MarkSubscriberResolvedFailed("Unable to get the Subscriber's URI", "%v", err)
 		t.Status.SubscriberURI = nil
 		t.Status.SubscriberCACerts = nil
+		t.Status.SubscriberAudience = nil
 		return err
 	}
 	t.Status.SubscriberURI = subscriberAddr.URL
 	t.Status.SubscriberCACerts = subscriberAddr.CACerts
+	t.Status.SubscriberAudience = subscriberAddr.Audience
 	t.Status.MarkSubscriberResolvedSucceeded()
 
 	if err := r.resolveDeadLetterSink(ctx, b, t); err != nil {

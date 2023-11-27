@@ -100,6 +100,10 @@ func WithSubscriberFromDestination(dest *duckv1.Destination) manifest.CfgFn {
 			subscriber["CACerts"] = strings.ReplaceAll(*dest.CACerts, "\n", "\n      ")
 		}
 
+		if dest.Audience != nil {
+			subscriber["audience"] = *dest.Audience
+		}
+
 		if uri != nil {
 			subscriber["uri"] = uri.String()
 		}

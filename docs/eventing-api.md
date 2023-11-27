@@ -2388,6 +2388,18 @@ according to <a href="https://www.rfc-editor.org/rfc/rfc7468">https://www.rfc-ed
 </tr>
 <tr>
 <td>
+<code>subscriberAudience</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SubscriberAudience is the OIDC audience of the subscriber.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>DeliveryStatus</code><br/>
 <em>
 <a href="#duck.knative.dev/v1.DeliveryStatus">
