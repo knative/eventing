@@ -22,8 +22,6 @@ import (
 	"fmt"
 
 	v1 "k8s.io/client-go/listers/core/v1"
-	"knative.dev/eventing/pkg/apis/feature"
-	"knative.dev/eventing/pkg/auth"
 
 	"go.uber.org/zap"
 
@@ -45,7 +43,9 @@ import (
 
 	"knative.dev/eventing/pkg/adapter/mtping"
 	"knative.dev/eventing/pkg/adapter/v2"
+	"knative.dev/eventing/pkg/apis/feature"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
+	"knative.dev/eventing/pkg/auth"
 	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1/pingsource"
 	"knative.dev/eventing/pkg/reconciler/pingsource/resources"
 	reconcilersource "knative.dev/eventing/pkg/reconciler/source"
@@ -107,20 +107,10 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *sourcesv1.PingSo
 
 	// OIDC authentication
 	featureFlags := feature.FromContext(ctx)
-	if featureFlags.IsOIDCAuthentication() {
-		saName := auth.GetOIDCServiceAccountNameForResource(sourcesv1.SchemeGroupVersion.WithKind("PingSource"), source.ObjectMeta)
-		source.Status.Auth = &duckv1.AuthStatus{
-			ServiceAccountName: &saName,
-		}
-
-		if err := auth.EnsureOIDCServiceAccountExistsForResource(ctx, r.serviceAccountLister, r.kubeClientSet, sourcesv1.SchemeGroupVersion.WithKind("PingSource"), source.ObjectMeta); err != nil {
-			source.Status.MarkOIDCIdentityCreatedFailed("Unable to resolve service account for OIDC authentication", "%v", err)
-			return err
-		}
-		source.Status.MarkOIDCIdentityCreatedSucceeded()
-	} else {
-		source.Status.Auth = nil
-		source.Status.MarkOIDCIdentityCreatedSucceededWithReason(fmt.Sprintf("%s feature disabled", feature.OIDCAuthentication), "")
+	if err := auth.SetupOIDCServiceAccount(ctx, featureFlags, r.serviceAccountLister, r.kubeClientSet, sourcesv1.SchemeGroupVersion.WithKind("PingSource"), source.ObjectMeta, &source.Status, func(as *duckv1.AuthStatus) {
+		source.Status.Auth = as
+	}); err != nil {
+		return err
 	}
 
 	sinkAddr, err := r.sinkResolver.AddressableFromDestinationV1(ctx, *dest, source)
