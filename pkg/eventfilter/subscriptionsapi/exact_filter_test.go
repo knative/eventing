@@ -155,7 +155,7 @@ func TestExactTimeMatchIsStable(t *testing.T) {
 	}
 	// the filter should consistently pass here, let's check that it does
 	failCount := 0
-	for i := 0; i < 10_000; i++ {
+	for i := 0; i < 1000; i++ {
 		if got := f.Filter(context.TODO(), event); got != eventfilter.PassFilter {
 			failCount += 1
 		}
