@@ -17,14 +17,20 @@ limitations under the License.
 package auth
 
 import (
+	"context"
 	"testing"
+
+	kubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 
 	"github.com/google/go-cmp/cmp"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	rttestingv1 "knative.dev/eventing/pkg/reconciler/testing/v1"
 	"knative.dev/pkg/ptr"
+	rectesting "knative.dev/pkg/reconciler/testing"
 )
 
 func TestGetOIDCServiceAccountNameForResource(t *testing.T) {
@@ -99,4 +105,35 @@ func TestGetOIDCServiceAccountForResource(t *testing.T) {
 	if diff := cmp.Diff(*got, want); diff != "" {
 		t.Errorf("GetServiceAccount() = %+v, want %+v - diff %s", got, want, diff)
 	}
+}
+
+func TestEnsureOIDCServiceAccountExistsForResource(t *testing.T) {
+	ctx, _ := rectesting.SetupFakeContext(t)
+	gvk := eventingv1.SchemeGroupVersion.WithKind("Broker")
+	objectMeta := metav1.ObjectMeta{
+		Name:      "my-broker",
+		Namespace: "my-namespace",
+		UID:       "my-uuid",
+	}
+
+	eventtypes := make([]runtime.Object, 0, 10)
+	listers := rttestingv1.NewListers(eventtypes)
+
+	err := EnsureOIDCServiceAccountExistsForResource(ctx, listers.GetServiceAccountLister(), kubeclient.Get(ctx), gvk, objectMeta)
+	if err != nil {
+		t.Errorf("EnsureOIDCServiceAccountExistsForResource failed: %s", err)
+
+	}
+	expected := GetOIDCServiceAccountForResource(gvk, objectMeta)
+	sa, err := kubeclient.Get(ctx).CoreV1().ServiceAccounts(objectMeta.Namespace).Get(context.TODO(), expected.Name, metav1.GetOptions{})
+	if err != nil {
+		t.Errorf("get ServiceAccounts  failed: %s", err)
+	}
+	if sa == nil || sa.Name != expected.Name {
+		t.Errorf("EnsureOIDCServiceAccountExistsForResource create ServiceAccounts  failed: %s", err)
+	}
+}
+
+func TestSetupOIDCServiceAccount(t *testing.T) {
+
 }
