@@ -102,7 +102,7 @@ func NewHandler(logger *zap.Logger, triggerInformer v1.TriggerInformer, reporter
 
 	triggerInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			trigger, ok := obj.(eventingv1.Trigger)
+			trigger, ok := obj.(*eventingv1.Trigger)
 			if !ok {
 				return
 			}
@@ -112,7 +112,7 @@ func NewHandler(logger *zap.Logger, triggerInformer v1.TriggerInformer, reporter
 			})
 		},
 		UpdateFunc: func(_, obj interface{}) {
-			trigger, ok := obj.(eventingv1.Trigger)
+			trigger, ok := obj.(*eventingv1.Trigger)
 			if !ok {
 				return
 			}
@@ -122,7 +122,7 @@ func NewHandler(logger *zap.Logger, triggerInformer v1.TriggerInformer, reporter
 			})
 		},
 		DeleteFunc: func(obj interface{}) {
-			trigger, ok := obj.(eventingv1.Trigger)
+			trigger, ok := obj.(*eventingv1.Trigger)
 			if !ok {
 				return
 			}
