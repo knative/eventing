@@ -344,6 +344,11 @@ func (in *TriggerStatus) DeepCopyInto(out *TriggerStatus) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.SubscriberAudience != nil {
+		in, out := &in.SubscriberAudience, &out.SubscriberAudience
+		*out = new(string)
+		**out = **in
+	}
 	in.DeliveryStatus.DeepCopyInto(&out.DeliveryStatus)
 	if in.Auth != nil {
 		in, out := &in.Auth, &out.Auth
