@@ -66,6 +66,10 @@ const (
 	// https://www.rfc-editor.org/rfc/rfc7468
 	BrokerChannelCACertsStatusAnnotationKey = "knative.dev/channelCACerts"
 
+	// BrokerChannelAudienceStatusAnnotationKey is the broker status annotation
+	// key used to specify the channels OIDC audience.
+	BrokerChannelAudienceStatusAnnotationKey = "knative.dev/channelAudience"
+
 	// BrokerChannelAPIVersionStatusAnnotationKey is the broker status
 	// annotation key used to specify the APIVersion of the channel for
 	// the triggers to subscribe to.

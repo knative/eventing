@@ -17,14 +17,22 @@ limitations under the License.
 package auth
 
 import (
+	"context"
 	"testing"
+
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+	kubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 
 	"github.com/google/go-cmp/cmp"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	"knative.dev/eventing/pkg/apis/feature"
+	rttestingv1 "knative.dev/eventing/pkg/reconciler/testing/v1"
 	"knative.dev/pkg/ptr"
+	rectesting "knative.dev/pkg/reconciler/testing"
 )
 
 func TestGetOIDCServiceAccountNameForResource(t *testing.T) {
@@ -98,5 +106,99 @@ func TestGetOIDCServiceAccountForResource(t *testing.T) {
 
 	if diff := cmp.Diff(*got, want); diff != "" {
 		t.Errorf("GetServiceAccount() = %+v, want %+v - diff %s", got, want, diff)
+	}
+}
+
+func TestEnsureOIDCServiceAccountExistsForResource(t *testing.T) {
+	ctx, _ := rectesting.SetupFakeContext(t)
+	gvk := eventingv1.SchemeGroupVersion.WithKind("Broker")
+	objectMeta := metav1.ObjectMeta{
+		Name:      "my-broker",
+		Namespace: "my-namespace",
+		UID:       "my-uuid",
+	}
+
+	eventtypes := make([]runtime.Object, 0, 10)
+	listers := rttestingv1.NewListers(eventtypes)
+
+	err := EnsureOIDCServiceAccountExistsForResource(ctx, listers.GetServiceAccountLister(), kubeclient.Get(ctx), gvk, objectMeta)
+	if err != nil {
+		t.Errorf("EnsureOIDCServiceAccountExistsForResource failed: %s", err)
+
+	}
+	expected := GetOIDCServiceAccountForResource(gvk, objectMeta)
+	sa, err := kubeclient.Get(ctx).CoreV1().ServiceAccounts(objectMeta.Namespace).Get(context.TODO(), expected.Name, metav1.GetOptions{})
+	if err != nil {
+		t.Errorf("get ServiceAccounts  failed: %s", err)
+	}
+	if sa == nil || sa.Name != expected.Name {
+		t.Errorf("EnsureOIDCServiceAccountExistsForResource create ServiceAccounts  failed: %s", err)
+	}
+}
+
+func TestSetupOIDCServiceAccount(t *testing.T) {
+	ctx, _ := rectesting.SetupFakeContext(t)
+	gvk := eventingv1.SchemeGroupVersion.WithKind("Trigger")
+	objectMeta := metav1.ObjectMeta{
+		Name:      "my-trigger",
+		Namespace: "my-namespace",
+		UID:       "my-uuid",
+	}
+	eventtypes := make([]runtime.Object, 0, 10)
+	listers := rttestingv1.NewListers(eventtypes)
+	trigger := rttestingv1.NewTrigger("my-trigger", "my-namespace", "my-broker")
+	expected := GetOIDCServiceAccountForResource(gvk, objectMeta)
+	err := SetupOIDCServiceAccount(ctx, feature.Flags{
+		feature.OIDCAuthentication: feature.Enabled,
+	}, listers.GetServiceAccountLister(), kubeclient.Get(ctx), gvk, objectMeta, &trigger.Status, func(as *duckv1.AuthStatus) {
+		trigger.Status.Auth = as
+	})
+
+	if err != nil {
+		t.Errorf("SetupOIDCServiceAccount  failed: %s", err)
+	}
+	if trigger.Status.Auth == nil || *trigger.Status.Auth.ServiceAccountName != expected.Name {
+		t.Errorf("SetupOIDCServiceAccount setAuthStatus  failed")
+	}
+
+	// match OIDCIdentityCreated condition
+	matched := false
+	for _, condition := range trigger.Status.Conditions {
+		if condition.Type == eventingv1.TriggerConditionOIDCIdentityCreated {
+			if condition.Reason == "" {
+				matched = true
+			}
+		}
+	}
+	if !matched {
+		t.Errorf("SetupOIDCServiceAccount didn't set TriggerConditionOIDCIdentityCreated Status")
+	}
+
+	err = SetupOIDCServiceAccount(ctx, feature.Flags{
+		feature.OIDCAuthentication: feature.Disabled,
+	}, listers.GetServiceAccountLister(), kubeclient.Get(ctx), gvk, objectMeta, &trigger.Status, func(as *duckv1.AuthStatus) {
+		trigger.Status.Auth = as
+	})
+
+	if err != nil {
+		t.Errorf("SetupOIDCServiceAccount  failed: %s", err)
+	}
+
+	if trigger.Status.Auth != nil {
+		t.Errorf("SetupOIDCServiceAccount setAuthStatus  failed")
+	}
+
+	// match OIDCIdentityCreated condition
+	matched = false
+	for _, condition := range trigger.Status.Conditions {
+		if condition.Type == eventingv1.TriggerConditionOIDCIdentityCreated {
+			if condition.Reason == "authentication-oidc feature disabled" {
+				matched = true
+			}
+		}
+	}
+
+	if !matched {
+		t.Errorf("SetupOIDCServiceAccount didn't set TriggerConditionOIDCIdentityCreated Status")
 	}
 }

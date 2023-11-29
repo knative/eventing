@@ -193,7 +193,7 @@ func ManyTriggers() *feature.FeatureSet {
 
 func BrokerWorkFlowWithTransformation() *feature.FeatureSet {
 	createSubscriberFn := func(ref *v1.KReference, uri string) manifest.CfgFn {
-		return subscription.WithSubscriber(ref, uri)
+		return subscription.WithSubscriber(ref, uri, "")
 	}
 	fs := &feature.FeatureSet{
 		Name: "Knative Broker - Transformation - Channel flow and Trigger event flow",

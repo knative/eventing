@@ -80,19 +80,10 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, p *v1.Parallel) pkgrecon
 	// 3. Rinse and repeat step #2 above for each branch in the list
 	// OIDC authentication
 	featureFlags := feature.FromContext(ctx)
-	if featureFlags.IsOIDCAuthentication() {
-		saName := auth.GetOIDCServiceAccountNameForResource(v1.SchemeGroupVersion.WithKind("Parallel"), p.ObjectMeta)
-		p.Status.Auth = &duckv1knative.AuthStatus{
-			ServiceAccountName: &saName,
-		}
-		if err := auth.EnsureOIDCServiceAccountExistsForResource(ctx, r.serviceAccountLister, r.kubeclient, v1.SchemeGroupVersion.WithKind("Parallel"), p.ObjectMeta); err != nil {
-			p.Status.MarkOIDCIdentityCreatedFailed("Unable to resolve service account for OIDC authentication", "%v", err)
-			return err
-		}
-		p.Status.MarkOIDCIdentityCreatedSucceeded()
-	} else {
-		p.Status.Auth = nil
-		p.Status.MarkOIDCIdentityCreatedSucceededWithReason(fmt.Sprintf("%s feature disabled", feature.OIDCAuthentication), "")
+	if err := auth.SetupOIDCServiceAccount(ctx, featureFlags, r.serviceAccountLister, r.kubeclient, v1.SchemeGroupVersion.WithKind("Parallel"), p.ObjectMeta, &p.Status, func(as *duckv1knative.AuthStatus) {
+		p.Status.Auth = as
+	}); err != nil {
+		return err
 	}
 
 	if p.Status.BranchStatuses == nil {

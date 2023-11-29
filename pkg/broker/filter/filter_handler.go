@@ -33,6 +33,7 @@ import (
 	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"go.opencensus.io/trace"
 	"go.uber.org/zap"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/cache"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/logging"
@@ -231,8 +232,9 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	h.reportArrivalTime(event, reportArgs)
 
 	target := duckv1.Addressable{
-		URL:     t.Status.SubscriberURI,
-		CACerts: t.Status.SubscriberCACerts,
+		URL:      t.Status.SubscriberURI,
+		CACerts:  t.Status.SubscriberCACerts,
+		Audience: t.Status.SubscriberAudience,
 	}
 	h.send(ctx, writer, utils.PassThroughHeaders(request.Header), target, reportArgs, event, t, ttl)
 }
@@ -242,7 +244,18 @@ func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers 
 	additionalHeaders := headers.Clone()
 	additionalHeaders.Set(apis.KnNamespaceHeader, t.GetNamespace())
 
-	dispatchInfo, err := h.eventDispatcher.SendEvent(ctx, *event, target, kncloudevents.WithHeader(additionalHeaders))
+	opts := []kncloudevents.SendOption{
+		kncloudevents.WithHeader(additionalHeaders),
+	}
+
+	if t.Status.Auth != nil && t.Status.Auth.ServiceAccountName != nil {
+		opts = append(opts, kncloudevents.WithOIDCAuthentication(&types.NamespacedName{
+			Name:      *t.Status.Auth.ServiceAccountName,
+			Namespace: t.Namespace,
+		}))
+	}
+
+	dispatchInfo, err := h.eventDispatcher.SendEvent(ctx, *event, target, opts...)
 	if err != nil {
 		h.logger.Error("failed to send event", zap.Error(err))
 

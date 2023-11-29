@@ -88,7 +88,7 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1.InMemoryChannel) rec
 		return nil
 	}
 
-	config, err := newConfigForInMemoryChannel(imc)
+	config, err := newConfigForInMemoryChannel(ctx, imc)
 	if err != nil {
 		logging.FromContext(ctx).Error("Error creating config for in memory channels", zap.Error(err))
 		return err
@@ -209,11 +209,19 @@ func (r *Reconciler) patchSubscriberStatus(ctx context.Context, imc *v1.InMemory
 }
 
 // newConfigForInMemoryChannel creates a new Config for a single inmemory channel.
-func newConfigForInMemoryChannel(imc *v1.InMemoryChannel) (*multichannelfanout.ChannelConfig, error) {
+func newConfigForInMemoryChannel(ctx context.Context, imc *v1.InMemoryChannel) (*multichannelfanout.ChannelConfig, error) {
+	featureFlags := feature.FromContext(ctx)
+	isOIDCEnabled := featureFlags.IsOIDCAuthentication()
 	subs := make([]fanout.Subscription, len(imc.Spec.Subscribers))
 
 	for i, sub := range imc.Spec.Subscribers {
 		conf, err := fanout.SubscriberSpecToFanoutConfig(sub)
+		if isOIDCEnabled {
+			conf.ServiceAccount = &types.NamespacedName{
+				Name:      *sub.Auth.ServiceAccountName,
+				Namespace: imc.Namespace,
+			}
+		}
 		if err != nil {
 			return nil, err
 		}

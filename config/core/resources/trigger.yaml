@@ -196,6 +196,9 @@ spec:
               subscriberCACerts:
                 description: Certification Authority (CA) certificates in PEM format according to https://www.rfc-editor.org/rfc/rfc7468.
                 type: string
+              subscriberAudience:
+                description: OIDC audience of the subscriber.
+                type: string
   names:
     kind: Trigger
     plural: triggers

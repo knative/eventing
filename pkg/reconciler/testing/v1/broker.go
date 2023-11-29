@@ -183,6 +183,15 @@ func WithChannelCACertsAnnotation(caCerts string) BrokerOption {
 	}
 }
 
+func WithChannelAudienceAnnotation(audience string) BrokerOption {
+	return func(b *v1.Broker) {
+		if b.Status.Annotations == nil {
+			b.Status.Annotations = make(map[string]string, 1)
+		}
+		b.Status.Annotations[eventing.BrokerChannelAudienceStatusAnnotationKey] = audience
+	}
+}
+
 func WithBrokerStatusDLS(dls duckv1.Addressable) BrokerOption {
 	return func(b *v1.Broker) {
 		b.Status.MarkDeadLetterSinkResolvedSucceeded(eventingv1.NewDeliveryStatusFromAddressable(&dls))

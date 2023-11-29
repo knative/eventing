@@ -728,6 +728,20 @@ DeliverySpec
 <p>DeliverySpec contains options controlling the event delivery</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>auth</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#AuthStatus">
+knative.dev/pkg/apis/duck/v1.AuthStatus
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Auth contains the service account name for the subscription</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="duck.knative.dev/v1.SubscriberStatus">SubscriberStatus
@@ -2370,6 +2384,18 @@ string
 <em>(Optional)</em>
 <p>SubscriberCACerts is the Certification Authority (CA) certificates in PEM format
 according to <a href="https://www.rfc-editor.org/rfc/rfc7468">https://www.rfc-editor.org/rfc/rfc7468</a> of the receiver for this Trigger.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>subscriberAudience</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SubscriberAudience is the OIDC audience of the subscriber.</p>
 </td>
 </tr>
 <tr>
