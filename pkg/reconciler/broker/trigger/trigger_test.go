@@ -42,6 +42,7 @@ import (
 	"knative.dev/pkg/network"
 	"knative.dev/pkg/ptr"
 	"knative.dev/pkg/resolver"
+	"knative.dev/pkg/system"
 	"knative.dev/pkg/tracker"
 
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
@@ -299,7 +300,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerRetry(5, nil, nil)),
 			},
 			WantCreates: []runtime.Object{
-				resources.NewSubscription(makeTrigger(testNS), createTriggerChannelRef(), makeBrokerRef(), makeServiceURI(), makeDelivery(nil, ptr.Int32(5), nil, nil)),
+				resources.NewSubscription(makeTrigger(testNS), createTriggerChannelRef(), makeServiceURI(), makeBrokerRef(), makeDelivery(nil, ptr.Int32(5), nil, nil)),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewTrigger(triggerName, testNS, brokerName,
@@ -333,7 +334,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerDeadLeaderSink(duckv1.Destination{URI: dlsURL})),
 			},
 			WantCreates: []runtime.Object{
-				resources.NewSubscription(makeTrigger(testNS), createTriggerChannelRef(), makeBrokerRef(), makeServiceURI(), makeDelivery(&duckv1.Destination{URI: dlsURL}, nil, nil, nil)),
+				resources.NewSubscription(makeTrigger(testNS), createTriggerChannelRef(), makeServiceURI(), makeBrokerRef(), makeDelivery(&duckv1.Destination{URI: dlsURL}, nil, nil, nil)),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewTrigger(triggerName, testNS, brokerName,
@@ -377,8 +378,8 @@ func TestReconcile(t *testing.T) {
 				resources.NewSubscription(
 					makeTrigger(testNS),
 					createTriggerChannelRef(),
-					makeBrokerRef(),
 					makeServiceURI(),
+					makeBrokerRef(),
 					makeDelivery(&duckv1.Destination{URI: dlsURL, CACerts: pointer.String(string(eventingtlstesting.CA))}, nil, nil, nil),
 				),
 			},
@@ -439,8 +440,8 @@ func TestReconcile(t *testing.T) {
 				resources.NewSubscription(
 					makeTrigger(testNS),
 					createTriggerChannelRef(),
-					makeBrokerRef(),
 					makeServiceURIHTTPS(),
+					makeBrokerRef(),
 					makeDelivery(&duckv1.Destination{URI: dlsURL, CACerts: pointer.String(string(eventingtlstesting.CA))}, nil, nil, nil),
 				),
 			},
@@ -501,8 +502,8 @@ func TestReconcile(t *testing.T) {
 				resources.NewSubscription(
 					makeTrigger(testNS),
 					createTriggerChannelRef(),
-					makeBrokerRef(),
 					makeServiceURIHTTPS(),
+					makeBrokerRef(),
 					makeDelivery(&duckv1.Destination{URI: dlsURL, CACerts: pointer.String(string(eventingtlstesting.CA))}, nil, nil, nil),
 				),
 			},
@@ -563,8 +564,8 @@ func TestReconcile(t *testing.T) {
 				resources.NewSubscription(
 					makeTrigger(testNS),
 					createTriggerChannelRef(),
-					makeBrokerRef(),
 					makeServiceURI(),
+					makeBrokerRef(),
 					makeDelivery(&duckv1.Destination{URI: dlsURL, CACerts: pointer.String(string(eventingtlstesting.CA))}, nil, nil, nil),
 				),
 			},
@@ -962,8 +963,8 @@ func TestReconcile(t *testing.T) {
 				resources.NewSubscription(
 					makeTrigger(testNS),
 					createTriggerChannelRef(),
-					makeBrokerRef(),
 					makeServiceURI(),
+					makeBrokerRef(),
 					makeDelivery(&dlsSVCDest, nil, nil, nil),
 				),
 			},
@@ -1029,8 +1030,8 @@ func TestReconcile(t *testing.T) {
 				resources.NewSubscription(
 					makeTrigger(testNS),
 					createTriggerChannelRef(),
-					makeBrokerRef(),
 					makeServiceURI(),
+					makeBrokerRef(),
 					makeDelivery(&dlsSVCDest, nil, nil, nil),
 				),
 			},
@@ -1091,8 +1092,8 @@ func TestReconcile(t *testing.T) {
 				resources.NewSubscription(
 					makeTrigger(testNS),
 					createTriggerChannelRef(),
-					makeBrokerRef(),
 					makeServiceURI(),
+					makeBrokerRef(),
 					makeDelivery(&dlsSVCDest, nil, nil, nil),
 				),
 			},
@@ -1154,8 +1155,8 @@ func TestReconcile(t *testing.T) {
 				resources.NewSubscription(
 					makeTrigger(testNS),
 					createTriggerChannelRef(),
-					makeBrokerRef(),
 					makeServiceURI(),
+					makeBrokerRef(),
 					makeDelivery(&dlsSVCDest, nil, nil, nil),
 				),
 			},
@@ -1590,7 +1591,56 @@ func TestReconcile(t *testing.T) {
 				),
 			}},
 			WantCreates: []runtime.Object{
-				resources.NewSubscription(makeTrigger(testNS), createTriggerChannelRef(), makeBrokerRef(), makeServiceURIWithAudience(), makeEmptyDelivery()),
+				resources.NewSubscription(makeTrigger(testNS), createTriggerChannelRef(), makeServiceURIWithAudience(), makeReplyDestinationViaBrokerFilter(), makeEmptyDelivery()),
+			},
+			WantDeletes: []clientgotesting.DeleteActionImpl{{
+				ActionImpl: clientgotesting.ActionImpl{
+					Namespace: testNS,
+					Resource:  eventingduckv1.SchemeGroupVersion.WithResource("subscriptions"),
+				},
+				Name: subscriptionName,
+			}},
+		},
+		{
+			Name: "OIDC: Route reply & DLS via broker-filter",
+			Key:  testKey,
+			Ctx: feature.ToContext(context.Background(), feature.Flags{
+				feature.OIDCAuthentication: feature.Enabled,
+			}),
+			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
+				makeReadySubscription(testNS),
+				makeTriggerOIDCServiceAccount(),
+				NewTrigger(triggerName, testNS, brokerName,
+					WithTriggerUID(triggerUID),
+					WithTriggerSubscriberURI(subscriberURI),
+					WithInitTriggerConditions,
+					WithTriggerDeadLeaderSink(duckv1.Destination{URI: dlsURL}),
+					WithTriggerDeadLetterSinkResolvedSucceeded(),
+					WithTriggerStatusDeadLetterSinkURI(duckv1.Addressable{URL: dlsURL}),
+				)}...),
+			WantErr: false,
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewTrigger(triggerName, testNS, brokerName,
+					WithTriggerUID(triggerUID),
+					WithTriggerSubscriberURI(subscriberURI),
+					WithTriggerBrokerReady(),
+					// The first reconciliation will initialize the status conditions.
+					WithInitTriggerConditions,
+					WithTriggerDependencyReady(),
+					WithTriggerSubscribed(),
+					WithTriggerStatusSubscriberURI(subscriberURI),
+					WithTriggerSubscriberResolvedSucceeded(),
+					WithTriggerDeadLetterSinkNotConfigured(),
+					WithTriggerSubscriptionNotConfigured(),
+					WithTriggerOIDCIdentityCreatedSucceeded(),
+					WithTriggerOIDCServiceAccountName(makeTriggerOIDCServiceAccount().Name),
+					WithTriggerDeadLeaderSink(duckv1.Destination{URI: dlsURL}),
+					WithTriggerDeadLetterSinkResolvedSucceeded(),
+					WithTriggerStatusDeadLetterSinkURI(duckv1.Addressable{URL: dlsURL}),
+				),
+			}},
+			WantCreates: []runtime.Object{
+				resources.NewSubscription(makeTrigger(testNS), createTriggerChannelRef(), makeServiceURIWithAudience(), makeReplyDestinationViaBrokerFilter(), makeDLSViaBrokerFilter()),
 			},
 			WantDeletes: []clientgotesting.DeleteActionImpl{{
 				ActionImpl: clientgotesting.ActionImpl{
@@ -1759,7 +1809,7 @@ func makeServiceURIHTTPS() *duckv1.Destination {
 }
 
 func makeFilterSubscription(subscriberNamespace string) *messagingv1.Subscription {
-	return resources.NewSubscription(makeTrigger(subscriberNamespace), createTriggerChannelRef(), makeBrokerRef(), makeServiceURI(), makeEmptyDelivery())
+	return resources.NewSubscription(makeTrigger(subscriberNamespace), createTriggerChannelRef(), makeServiceURI(), makeBrokerRef(), makeEmptyDelivery())
 }
 
 func makeTrigger(subscriberNamespace string) *eventingv1.Trigger {
@@ -1790,12 +1840,25 @@ func makeTrigger(subscriberNamespace string) *eventingv1.Trigger {
 	}
 }
 
-func makeBrokerRef() *corev1.ObjectReference {
-	return &corev1.ObjectReference{
-		APIVersion: "eventing.knative.dev/v1",
-		Kind:       "Broker",
-		Namespace:  testNS,
-		Name:       brokerName,
+func makeBrokerRef() *duckv1.Destination {
+	return &duckv1.Destination{
+		Ref: &duckv1.KReference{
+			APIVersion: "eventing.knative.dev/v1",
+			Kind:       "Broker",
+			Namespace:  testNS,
+			Name:       brokerName,
+		},
+	}
+}
+
+func makeReplyDestinationViaBrokerFilter() *duckv1.Destination {
+	return &duckv1.Destination{
+		URI: &apis.URL{
+			Scheme: "http",
+			Host:   network.GetServiceHostname("broker-filter", system.Namespace()),
+			Path:   fmt.Sprintf("/triggers/%s/%s/%s/reply", testNS, triggerName, triggerUID),
+		},
+		Audience: pointer.String(filter.FilterAudience),
 	}
 }
 
@@ -1809,6 +1872,20 @@ func makeDelivery(dls *duckv1.Destination, retry *int32, backoffPolicy *eventing
 		BackoffPolicy:  backoffPolicy,
 		BackoffDelay:   backoffDelay,
 		DeadLetterSink: dls,
+	}
+	return ds
+}
+
+func makeDLSViaBrokerFilter() *eventingduckv1.DeliverySpec {
+	ds := &eventingduckv1.DeliverySpec{
+		DeadLetterSink: &duckv1.Destination{
+			URI: &apis.URL{
+				Scheme: "http",
+				Host:   network.GetServiceHostname("broker-filter", system.Namespace()),
+				Path:   fmt.Sprintf("/triggers/%s/%s/%s/dls", testNS, triggerName, triggerUID),
+			},
+			Audience: pointer.String(filter.FilterAudience),
+		},
 	}
 	return ds
 }
@@ -1861,6 +1938,7 @@ func makeReadySubscription(subscriberNamespace string) *messagingv1.Subscription
 func makeReadySubscriptionWithAudience(subscriberNamespace string) *messagingv1.Subscription {
 	s := makeReadySubscription(subscriberNamespace)
 	s.Spec.Subscriber.Audience = ptr.String(filter.FilterAudience)
+	s.Spec.Reply = makeReplyDestinationViaBrokerFilter() // for OIDC the reply requests get routed via the filter
 	return s
 }
 

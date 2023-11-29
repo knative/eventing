@@ -38,6 +38,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/broker"
@@ -46,6 +47,7 @@ import (
 	"knative.dev/pkg/logging"
 	reconcilertesting "knative.dev/pkg/reconciler/testing"
 
+	brokerinformerfake "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/broker/fake"
 	triggerinformerfake "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/trigger/fake"
 
 	// Fake injection client
@@ -416,6 +418,9 @@ func TestReceiver(t *testing.T) {
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
 			ctx, _ := reconcilertesting.SetupFakeContext(t)
+			ctx = feature.ToContext(ctx, feature.Flags{
+				feature.OIDCAuthentication: feature.Enabled,
+			})
 
 			fh := fakeHandler{
 				failRequest:            tc.requestFails,
@@ -433,8 +438,8 @@ func TestReceiver(t *testing.T) {
 			oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
 			oidcTokenVerifier := auth.NewOIDCTokenVerifier(ctx)
 
-			// Replace the SubscriberURI to point at our fake server.
 			for _, trig := range tc.triggers {
+				// Replace the SubscriberURI to point at our fake server.
 				if trig.Status.SubscriberURI != nil && trig.Status.SubscriberURI.String() == toBeReplaced {
 
 					url, err := apis.ParseURL(s.URL)
@@ -444,13 +449,24 @@ func TestReceiver(t *testing.T) {
 					trig.Status.SubscriberURI = url
 				}
 				triggerinformerfake.Get(ctx).Informer().GetStore().Add(trig)
+
+				// create the needed broker object
+				b := &v1.Broker{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      trig.Spec.Broker,
+						Namespace: trig.Namespace,
+					},
+				}
+				brokerinformerfake.Get(ctx).Informer().GetStore().Add(b)
 			}
+
 			reporter := &mockReporter{}
 			r, err := NewHandler(
 				logger,
 				oidcTokenVerifier,
 				oidcTokenProvider,
 				triggerinformerfake.Get(ctx),
+				brokerinformerfake.Get(ctx),
 				reporter,
 				func(ctx context.Context) context.Context {
 					return ctx
@@ -632,6 +648,15 @@ func TestReceiver_WithSubscriptionsAPI(t *testing.T) {
 				}
 				triggerinformerfake.Get(ctx).Informer().GetStore().Add(trig)
 				filtersMap.Set(trig, createSubscriptionsAPIFilters(logging.FromContext(ctx).Desugar(), trig))
+
+				// create the needed broker object
+				b := &v1.Broker{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      trig.Spec.Broker,
+						Namespace: trig.Namespace,
+					},
+				}
+				brokerinformerfake.Get(ctx).Informer().GetStore().Add(b)
 			}
 			reporter := &mockReporter{}
 			r, err := NewHandler(
@@ -639,6 +664,7 @@ func TestReceiver_WithSubscriptionsAPI(t *testing.T) {
 				oidcTokenVerifier,
 				oidcTokenProvider,
 				triggerinformerfake.Get(ctx),
+				brokerinformerfake.Get(ctx),
 				reporter,
 				func(ctx context.Context) context.Context {
 					return feature.ToContext(context.TODO(), feature.Flags{

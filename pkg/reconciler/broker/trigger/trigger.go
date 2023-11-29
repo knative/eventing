@@ -199,7 +199,7 @@ func (r *Reconciler) resolveDeadLetterSink(ctx context.Context, b *eventingv1.Br
 
 // subscribeToBrokerChannel subscribes service 'svc' to the Broker's channels.
 func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, b *eventingv1.Broker, t *eventingv1.Trigger, brokerTrigger *corev1.ObjectReference) (*messagingv1.Subscription, error) {
-	var dest *duckv1.Destination
+	var dest, reply, dls *duckv1.Destination
 	featureFlags := feature.FromContext(ctx)
 	if featureFlags.IsPermissiveTransportEncryption() || featureFlags.IsStrictTransportEncryption() {
 		caCerts, err := r.getCaCerts()
@@ -215,6 +215,24 @@ func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, b *eventingv1
 			},
 			CACerts: pointer.String(caCerts),
 		}
+
+		reply = &duckv1.Destination{
+			URI: &apis.URL{
+				Scheme: "https",
+				Host:   network.GetServiceHostname("broker-filter", system.Namespace()),
+				Path:   path.GenerateReply(t),
+			},
+			CACerts: pointer.String(caCerts),
+		}
+
+		dls = &duckv1.Destination{
+			URI: &apis.URL{
+				Scheme: "https",
+				Host:   network.GetServiceHostname("broker-filter", system.Namespace()),
+				Path:   path.GenerateDLS(t),
+			},
+			CACerts: pointer.String(caCerts),
+		}
 	} else {
 		dest = &duckv1.Destination{
 			URI: &apis.URL{
@@ -223,30 +241,57 @@ func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, b *eventingv1
 				Path:   path.Generate(t),
 			},
 		}
+
+		reply = &duckv1.Destination{
+			URI: &apis.URL{
+				Scheme: "http",
+				Host:   network.GetServiceHostname("broker-filter", system.Namespace()),
+				Path:   path.GenerateReply(t),
+			},
+		}
+
+		dls = &duckv1.Destination{
+			URI: &apis.URL{
+				Scheme: "http",
+				Host:   network.GetServiceHostname("broker-filter", system.Namespace()),
+				Path:   path.GenerateDLS(t),
+			},
+		}
 	}
 
-	if featureFlags.IsOIDCAuthentication() {
-		dest.Audience = pointer.String(filter.FilterAudience)
-	}
-
-	// Note that we have to hard code the brokerGKV stuff as sometimes typemeta is not
-	// filled in. So instead of b.TypeMeta.Kind and b.TypeMeta.APIVersion, we have to
-	// do it this way.
-	brokerObjRef := &corev1.ObjectReference{
-		Kind:       brokerGVK.Kind,
-		APIVersion: brokerGVK.GroupVersion().String(),
-		Name:       b.Name,
-		Namespace:  b.Namespace,
-	}
-
-	delivery := t.Spec.Delivery
+	delivery := t.Spec.Delivery.DeepCopy() // copy object to avoid in-place update bugs
 	if delivery == nil {
-		delivery = b.Spec.Delivery
+		delivery = b.Spec.Delivery.DeepCopy() // copy object to avoid in-place update bugs
 	}
 
 	recorder := controller.GetEventRecorder(ctx)
 
-	expected := resources.NewSubscription(t, brokerTrigger, brokerObjRef, dest, delivery)
+	var expected *messagingv1.Subscription
+	if featureFlags.IsOIDCAuthentication() {
+		dest.Audience = pointer.String(filter.FilterAudience)
+		reply.Audience = pointer.String(filter.FilterAudience)
+		dls.Audience = pointer.String(filter.FilterAudience)
+
+		if delivery != nil && delivery.DeadLetterSink != nil {
+			delivery.DeadLetterSink = dls
+		}
+
+		expected = resources.NewSubscription(t, brokerTrigger, dest, reply, delivery)
+	} else {
+		// in case OIDC is not enabled, we don't need to route everything throuh
+		// broker-filter because we need it only then to add the token from the
+		// trigger OIDC service account
+		reply = &duckv1.Destination{
+			Ref: &duckv1.KReference{
+				APIVersion: brokerGVK.GroupVersion().String(),
+				Kind:       brokerGVK.Kind,
+				Name:       b.Name,
+				Namespace:  b.Namespace,
+			},
+		}
+
+		expected = resources.NewSubscription(t, brokerTrigger, dest, reply, delivery)
+	}
 
 	sub, err := r.subscriptionLister.Subscriptions(t.Namespace).Get(expected.Name)
 	// If the resource doesn't exist, we'll create it.

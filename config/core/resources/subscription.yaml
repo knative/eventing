@@ -207,6 +207,9 @@ spec:
                   deadLetterSinkCACerts:
                     description: Certification Authority (CA) certificates in PEM format according to https://www.rfc-editor.org/rfc/rfc7468.
                     type: string
+                  deadLetterSinkAudience:
+                    description: OIDC audience of the dead letter sink.
+                    type: string
                   replyUri:
                     description: ReplyURI is the fully resolved URI for the spec.reply.
                     type: string

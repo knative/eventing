@@ -453,6 +453,18 @@ string
 according to <a href="https://www.rfc-editor.org/rfc/rfc7468">https://www.rfc-editor.org/rfc/rfc7468</a>.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>deadLetterSinkAudience</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>DeadLetterSinkAudience is the OIDC audience of the DeadLetterSink</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="duck.knative.dev/v1.Subscribable">Subscribable

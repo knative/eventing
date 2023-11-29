@@ -189,6 +189,11 @@ func (in *DeliveryStatus) DeepCopyInto(out *DeliveryStatus) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.DeadLetterSinkAudience != nil {
+		in, out := &in.DeadLetterSinkAudience, &out.DeadLetterSinkAudience
+		*out = new(string)
+		**out = **in
+	}
 	return
 }
 
