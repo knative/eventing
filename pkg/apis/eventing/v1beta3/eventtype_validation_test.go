@@ -163,7 +163,7 @@ func TestEventTypeImmutableFields(t *testing.T) {
 		want: &apis.FieldError{
 			Message: "Immutable fields changed (-old +new)",
 			Paths:   []string{"spec"},
-			Details: `{v1beta2.EventTypeSpec}.Reference.Name:
+			Details: `{v1beta3.EventTypeSpec}.Reference.Name:
 	-: "original-broker"
 	+: "test-broker"
 `,
@@ -195,7 +195,7 @@ func TestEventTypeImmutableFields(t *testing.T) {
 		want: &apis.FieldError{
 			Message: "Immutable fields changed (-old +new)",
 			Paths:   []string{"spec"},
-			Details: `{v1beta2.EventTypeSpec}.Type:
+			Details: `{v1beta3.EventTypeSpec}.Type:
 	-: "original-type"
 	+: "test-type"
 `,
@@ -227,7 +227,7 @@ func TestEventTypeImmutableFields(t *testing.T) {
 		want: &apis.FieldError{
 			Message: "Immutable fields changed (-old +new)",
 			Paths:   []string{"spec"},
-			Details: `{v1beta2.EventTypeSpec}.Source.Host:
+			Details: `{v1beta3.EventTypeSpec}.Source.Host:
 	-: "original-source"
 	+: "test-source"
 `,
@@ -261,7 +261,7 @@ func TestEventTypeImmutableFields(t *testing.T) {
 		want: &apis.FieldError{
 			Message: "Immutable fields changed (-old +new)",
 			Paths:   []string{"spec"},
-			Details: `{v1beta2.EventTypeSpec}.Schema.Host:
+			Details: `{v1beta3.EventTypeSpec}.Schema.Host:
 	-: "original-schema"
 	+: "test-schema"
 `,
@@ -297,7 +297,7 @@ func TestEventTypeImmutableFields(t *testing.T) {
 		want: &apis.FieldError{
 			Message: "Immutable fields changed (-old +new)",
 			Paths:   []string{"spec"},
-			Details: `{v1beta2.EventTypeSpec}.Description:
+			Details: `{v1beta3.EventTypeSpec}.Description:
 	-: "original-description"
 	+: "test-description"
 `,

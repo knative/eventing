@@ -25,7 +25,7 @@ import (
 )
 
 // SchemeGroupVersion is group version used to register these objects
-var SchemeGroupVersion = schema.GroupVersion{Group: eventing.GroupName, Version: "v1beta2"}
+var SchemeGroupVersion = schema.GroupVersion{Group: eventing.GroupName, Version: "v1beta3"}
 
 // Kind takes an unqualified kind and returns back a Group qualified GroupKind
 func Kind(kind string) schema.GroupKind {
