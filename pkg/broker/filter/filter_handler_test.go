@@ -48,8 +48,6 @@ import (
 
 	triggerinformerfake "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/trigger/fake"
 
-	subscriptioninformerfake "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/subscription/fake"
-
 	// Fake injection client
 	_ "knative.dev/pkg/client/injection/kube/client/fake"
 )
@@ -453,7 +451,6 @@ func TestReceiver(t *testing.T) {
 				oidcTokenVerifier,
 				oidcTokenProvider,
 				triggerinformerfake.Get(ctx),
-				subscriptioninformerfake.Get(ctx),
 				reporter,
 				func(ctx context.Context) context.Context {
 					return ctx
@@ -642,7 +639,6 @@ func TestReceiver_WithSubscriptionsAPI(t *testing.T) {
 				oidcTokenVerifier,
 				oidcTokenProvider,
 				triggerinformerfake.Get(ctx),
-				subscriptioninformerfake.Get(ctx),
 				reporter,
 				func(ctx context.Context) context.Context {
 					return feature.ToContext(context.TODO(), feature.Flags{
