@@ -24,6 +24,17 @@ rules:
     resources:
       - triggers
       - triggers/status
+      - brokers
+      - brokers/status
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - messaging.knative.dev
+    resources:
+      - subscriptions
+      - subscriptions/status
     verbs:
       - get
       - list
@@ -32,6 +43,7 @@ rules:
       - ""
     resources:
       - "configmaps"
+      - "serviceaccounts"
     verbs:
       - get
       - list
