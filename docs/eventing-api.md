@@ -19,6 +19,9 @@
 <a href="#eventing.knative.dev%2fv1beta2">eventing.knative.dev/v1beta2</a>
 </li>
 <li>
+<a href="#eventing.knative.dev%2fv1beta3">eventing.knative.dev/v1beta3</a>
+</li>
+<li>
 <a href="#flows.knative.dev%2fv1">flows.knative.dev/v1</a>
 </li>
 <li>
@@ -3056,6 +3059,335 @@ string
 </h3>
 <p>
 (<em>Appears on:</em><a href="#eventing.knative.dev/v1beta2.EventType">EventType</a>)
+</p>
+<p>
+<p>EventTypeStatus represents the current state of a EventType.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>Status</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#Status">
+knative.dev/pkg/apis/duck/v1.Status
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>Status</code> are embedded into this type.)
+</p>
+<p>inherits duck/v1 Status, which currently provides:
+* ObservedGeneration - the &lsquo;Generation&rsquo; of the Service that was last processed by the controller.
+* Conditions - the latest available observations of a resource&rsquo;s current state.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<hr/>
+<h2 id="eventing.knative.dev/v1beta3">eventing.knative.dev/v1beta3</h2>
+<p>
+<p>Package v1beta3 is the v1beta3 version of the API.</p>
+</p>
+Resource Types:
+<ul><li>
+<a href="#eventing.knative.dev/v1beta3.EventType">EventType</a>
+</li></ul>
+<h3 id="eventing.knative.dev/v1beta3.EventType">EventType
+</h3>
+<p>
+<p>EventType represents a type of event that can be consumed from a Broker.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>apiVersion</code><br/>
+string</td>
+<td>
+<code>
+eventing.knative.dev/v1beta3
+</code>
+</td>
+</tr>
+<tr>
+<td>
+<code>kind</code><br/>
+string
+</td>
+<td><code>EventType</code></td>
+</tr>
+<tr>
+<td>
+<code>metadata</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#objectmeta-v1-meta">
+Kubernetes meta/v1.ObjectMeta
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+Refer to the Kubernetes API documentation for the fields of the
+<code>metadata</code> field.
+</td>
+</tr>
+<tr>
+<td>
+<code>spec</code><br/>
+<em>
+<a href="#eventing.knative.dev/v1beta3.EventTypeSpec">
+EventTypeSpec
+</a>
+</em>
+</td>
+<td>
+<p>Spec defines the desired state of the EventType.</p>
+<br/>
+<br/>
+<table>
+<tr>
+<td>
+<code>type</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Type represents the CloudEvents type. It is authoritative.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>source</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis#URL">
+knative.dev/pkg/apis.URL
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Source is a URI, it represents the CloudEvents source.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>schema</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis#URL">
+knative.dev/pkg/apis.URL
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Schema is a URI, it represents the CloudEvents schemaurl extension attribute.
+It may be a JSON schema, a protobuf schema, etc. It is optional.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>schemaData</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SchemaData allows the CloudEvents schema to be stored directly in the
+EventType. Content is dependent on the encoding. Optional attribute.
+The contents are not validated or manipulated by the system.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>broker</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Broker refers to the Broker that can provide the EventType.
+Deprecated: This field is deprecated and will be removed in a future release.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>reference</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#KReference">
+knative.dev/pkg/apis/duck/v1.KReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Reference is a KReference to the belonging addressable.
+For example, this could be a pointer to a Broker.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>description</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Description is an optional field used to describe the EventType, in any meaningful way.</p>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+<tr>
+<td>
+<code>status</code><br/>
+<em>
+<a href="#eventing.knative.dev/v1beta3.EventTypeStatus">
+EventTypeStatus
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Status represents the current state of the EventType.
+This data may be out of date.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="eventing.knative.dev/v1beta3.EventTypeSpec">EventTypeSpec
+</h3>
+<p>
+(<em>Appears on:</em><a href="#eventing.knative.dev/v1beta3.EventType">EventType</a>)
+</p>
+<p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>type</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Type represents the CloudEvents type. It is authoritative.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>source</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis#URL">
+knative.dev/pkg/apis.URL
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Source is a URI, it represents the CloudEvents source.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>schema</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis#URL">
+knative.dev/pkg/apis.URL
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Schema is a URI, it represents the CloudEvents schemaurl extension attribute.
+It may be a JSON schema, a protobuf schema, etc. It is optional.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>schemaData</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SchemaData allows the CloudEvents schema to be stored directly in the
+EventType. Content is dependent on the encoding. Optional attribute.
+The contents are not validated or manipulated by the system.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>broker</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Broker refers to the Broker that can provide the EventType.
+Deprecated: This field is deprecated and will be removed in a future release.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>reference</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#KReference">
+knative.dev/pkg/apis/duck/v1.KReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Reference is a KReference to the belonging addressable.
+For example, this could be a pointer to a Broker.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>description</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Description is an optional field used to describe the EventType, in any meaningful way.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="eventing.knative.dev/v1beta3.EventTypeStatus">EventTypeStatus
+</h3>
+<p>
+(<em>Appears on:</em><a href="#eventing.knative.dev/v1beta3.EventType">EventType</a>)
 </p>
 <p>
 <p>EventTypeStatus represents the current state of a EventType.</p>
