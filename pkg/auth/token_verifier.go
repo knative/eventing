@@ -158,18 +158,3 @@ type openIDMetadata struct {
 	SubjectTypes  []string `json:"subject_types_supported"`
 	SigningAlgs   []string `json:"id_token_signing_alg_values_supported"`
 }
-
-func ValidateEventAuthHeader(ctx context.Context, request *http.Request) error {
-	features := feature.FromContext(ctx)
-	if features.IsOIDCAuthentication() {
-		token := GetJWTFromHeader(request.Header)
-		if token == "" {
-			return fmt.Errorf("no JWT in %s header provided while feature %s is enabled", AuthHeaderKey, feature.OIDCAuthentication)
-		}
-		tokenVerifier := NewOIDCTokenVerifier(ctx)
-		if _, err := tokenVerifier.VerifyJWT(ctx, token, "audience"); err != nil {
-			return fmt.Errorf("no valid JWT provided: %w", err)
-		}
-	}
-	return nil
-}
