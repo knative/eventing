@@ -50,7 +50,6 @@ import (
 	"knative.dev/eventing/pkg/eventfilter/attributes"
 	"knative.dev/eventing/pkg/eventfilter/subscriptionsapi"
 	"knative.dev/eventing/pkg/kncloudevents"
-	mttrigger "knative.dev/eventing/pkg/reconciler/broker/trigger"
 	"knative.dev/eventing/pkg/reconciler/sugar/trigger/path"
 	"knative.dev/eventing/pkg/tracing"
 )
@@ -64,6 +63,8 @@ const (
 	// based on what serving is doing. See https://github.com/knative/serving/blob/main/pkg/network/transports.go.
 	defaultMaxIdleConnections        = 1000
 	defaultMaxIdleConnectionsPerHost = 100
+
+	FilterAudience = "mt-broker-filter"
 )
 
 // Handler parses Cloud Events, determines if they pass a filter, and sends them to a subscriber.
@@ -216,7 +217,7 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 			return
 		}
 
-		if _, err := h.tokenVerifier.VerifyJWT(ctx, token, mttrigger.FilterAudience); err != nil {
+		if _, err := h.tokenVerifier.VerifyJWT(ctx, token, FilterAudience); err != nil {
 			h.logger.Warn("no valid JWT provided", zap.Error(err))
 			writer.WriteHeader(http.StatusUnauthorized)
 			return

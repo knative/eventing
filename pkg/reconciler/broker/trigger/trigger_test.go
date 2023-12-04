@@ -64,6 +64,7 @@ import (
 	_ "knative.dev/pkg/client/injection/ducks/duck/v1/addressable/fake"
 	. "knative.dev/pkg/reconciler/testing"
 
+	"knative.dev/eventing/pkg/broker/filter"
 	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/trigger/fake"
 	. "knative.dev/eventing/pkg/reconciler/testing/v1"
 	rtv1beta2 "knative.dev/eventing/pkg/reconciler/testing/v1beta2"
@@ -1741,7 +1742,7 @@ func makeServiceURI() *duckv1.Destination {
 
 func makeServiceURIWithAudience() *duckv1.Destination {
 	dst := makeServiceURI()
-	dst.Audience = ptr.String(FilterAudience)
+	dst.Audience = ptr.String(filter.FilterAudience)
 
 	return dst
 }
@@ -1859,7 +1860,7 @@ func makeReadySubscription(subscriberNamespace string) *messagingv1.Subscription
 
 func makeReadySubscriptionWithAudience(subscriberNamespace string) *messagingv1.Subscription {
 	s := makeReadySubscription(subscriberNamespace)
-	s.Spec.Subscriber.Audience = ptr.String(FilterAudience)
+	s.Spec.Subscriber.Audience = ptr.String(filter.FilterAudience)
 	return s
 }
 
