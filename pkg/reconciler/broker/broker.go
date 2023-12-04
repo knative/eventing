@@ -33,6 +33,7 @@ import (
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/utils/pointer"
 	"knative.dev/pkg/kmeta"
+	"knative.dev/pkg/resolver"
 
 	"knative.dev/pkg/apis"
 	duckapis "knative.dev/pkg/apis/duck"
@@ -73,6 +74,8 @@ type Reconciler struct {
 	secretLister       corev1listers.SecretLister
 
 	channelableTracker ducklib.ListableTracker
+
+	uriResolver *resolver.URIResolver
 
 	// If specified, only reconcile brokers with these labels
 	brokerClass string
@@ -186,11 +189,16 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 	b.Status.PropagateIngressAvailability(ingressEndpoints)
 
 	if b.Spec.Delivery != nil && b.Spec.Delivery.DeadLetterSink != nil {
-		if triggerChan.Status.DeliveryStatus.IsSet() {
-			b.Status.MarkDeadLetterSinkResolvedSucceeded(triggerChan.Status.DeliveryStatus)
-		} else {
-			b.Status.MarkDeadLetterSinkResolvedFailed(fmt.Sprintf("Channel %s didn't set status.deadLetterSinkURI", triggerChan.Name), "")
+		deadLetterSinkAddr, err := r.uriResolver.AddressableFromDestinationV1(ctx, *b.Spec.Delivery.DeadLetterSink, b)
+		logging.FromContext(ctx).Errorw("broker has deliver spec set. Will use it to mark dls status", zap.Any("dls-addr", deadLetterSinkAddr), zap.Any("broker.spec.delivery", b.Spec.Delivery))
+		if err != nil {
+			b.Status.DeliveryStatus = duckv1.DeliveryStatus{}
+			logging.FromContext(ctx).Errorw("Unable to get the dead letter sink's URI", zap.Error(err))
+			b.Status.MarkDeadLetterSinkResolvedFailed("Unable to get the dead letter sink's URI", "%v", err)
+			return err
 		}
+		ds := duckv1.NewDeliveryStatusFromAddressable(deadLetterSinkAddr)
+		b.Status.MarkDeadLetterSinkResolvedSucceeded(ds)
 	} else {
 		b.Status.MarkDeadLetterSinkNotConfigured()
 	}

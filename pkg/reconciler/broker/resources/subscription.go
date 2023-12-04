@@ -33,7 +33,7 @@ import (
 
 // NewSubscription returns a placeholder subscription for trigger 't', from brokerTrigger to 'dest'
 // replying to brokerIngress.
-func NewSubscription(t *eventingv1.Trigger, brokerTrigger, brokerRef *corev1.ObjectReference, dest *duckv1.Destination, delivery *eventingduckv1.DeliverySpec) *messagingv1.Subscription {
+func NewSubscription(t *eventingv1.Trigger, brokerTrigger *corev1.ObjectReference, dest, reply *duckv1.Destination, delivery *eventingduckv1.DeliverySpec) *messagingv1.Subscription {
 	return &messagingv1.Subscription{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: t.Namespace,
@@ -50,15 +50,8 @@ func NewSubscription(t *eventingv1.Trigger, brokerTrigger, brokerRef *corev1.Obj
 				Name:       brokerTrigger.Name,
 			},
 			Subscriber: dest,
-			Reply: &duckv1.Destination{
-				Ref: &duckv1.KReference{
-					APIVersion: brokerRef.APIVersion,
-					Kind:       brokerRef.Kind,
-					Name:       brokerRef.Name,
-					Namespace:  brokerRef.Namespace,
-				},
-			},
-			Delivery: delivery,
+			Reply:      reply,
+			Delivery:   delivery,
 		},
 	}
 }

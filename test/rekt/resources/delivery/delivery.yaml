@@ -31,6 +31,13 @@ spec:
       {{ if .delivery.deadLetterSink.uri }}
       uri: {{ .delivery.deadLetterSink.uri }}
       {{ end }}
+      {{ if .delivery.deadLetterSink.CACerts }}
+      CACerts: |-
+        {{ .delivery.deadLetterSink.CACerts }}
+      {{ end }}
+      {{ if .delivery.deadLetterSink.audience }}
+      audience: {{ .delivery.deadLetterSink.audience }}
+      {{ end }}
     {{ end }}
     {{ if .delivery.retry }}
     retry: {{ .delivery.retry}}

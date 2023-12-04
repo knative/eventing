@@ -17,6 +17,8 @@ limitations under the License.
 package delivery
 
 import (
+	"strings"
+
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/manifest"
 
@@ -48,6 +50,51 @@ func WithDeadLetterSink(ref *duckv1.KReference, uri string) manifest.CfgFn {
 				dref["namespace"] = ref.Namespace
 			}
 			dref["name"] = ref.Name
+		}
+	}
+}
+
+// WithDeadLetterSink adds the dead letter sink related config to the config.
+func WithDeadLetterSinkFromDestination(dest *duckv1.Destination) manifest.CfgFn {
+	return func(cfg map[string]interface{}) {
+		if _, set := cfg["delivery"]; !set {
+			cfg["delivery"] = map[string]interface{}{}
+		}
+
+		delivery := cfg["delivery"].(map[string]interface{})
+		if _, set := delivery["deadLetterSink"]; !set {
+			delivery["deadLetterSink"] = map[string]interface{}{}
+		}
+
+		uri := dest.URI
+		ref := dest.Ref
+
+		dls := delivery["deadLetterSink"].(map[string]interface{})
+		if uri != nil {
+			dls["uri"] = uri.String()
+		}
+
+		if ref != nil {
+			if _, set := dls["ref"]; !set {
+				dls["ref"] = map[string]interface{}{}
+			}
+			dref := dls["ref"].(map[string]interface{})
+			dref["apiVersion"] = ref.APIVersion
+			dref["kind"] = ref.Kind
+			if ref.Namespace != "" {
+				dref["namespace"] = ref.Namespace
+			}
+			dref["name"] = ref.Name
+		}
+
+		if dest.CACerts != nil {
+			// This is a multi-line string and should be indented accordingly.
+			// Replace "new line" with "new line + spaces".
+			dls["CACerts"] = strings.ReplaceAll(*dest.CACerts, "\n", "\n      ")
+		}
+
+		if dest.Audience != nil {
+			dls["audience"] = *dest.Audience
 		}
 	}
 }
