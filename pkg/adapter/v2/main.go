@@ -20,6 +20,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"knative.dev/eventing/pkg/auth"
 	"log"
 	"net/http"
 	"strconv"
@@ -215,10 +216,10 @@ func MainWithInformers(ctx context.Context, component string, env EnvConfigAcces
 	}
 
 	clientConfig := ClientConfig{
-		Context:             ctx,
 		Env:                 env,
 		Reporter:            reporter,
 		CrStatusEventClient: crStatusEventClient,
+		TokenProvider:       auth.NewOIDCTokenProvider(ctx),
 	}
 	ctx = withClientConfig(ctx, clientConfig)
 

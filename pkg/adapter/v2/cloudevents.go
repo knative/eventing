@@ -23,6 +23,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/types"
 	"knative.dev/eventing/pkg/auth"
+	"knative.dev/pkg/logging"
 	nethttp "net/http"
 	"net/url"
 	"time"
@@ -108,12 +109,12 @@ func NewCloudEventsClientCRStatus(env EnvConfigAccessor, reporter source.StatsRe
 }
 
 type ClientConfig struct {
-	Context             context.Context
 	Env                 EnvConfigAccessor
 	CeOverrides         *duckv1.CloudEventOverrides
 	Reporter            source.StatsReporter
 	CrStatusEventClient *crstatusevent.CRStatusEventClient
 	Options             []http.Option
+	TokenProvider       *auth.OIDCTokenProvider
 }
 
 type clientConfigKey struct{}
@@ -138,6 +139,8 @@ func NewClient(cfg ClientConfig) (Client, error) {
 
 	pOpts := make([]http.Option, 0)
 
+	//OIDCTokenProvider := auth.NewOIDCTokenProvider(cfg.Context)
+
 	ceOverrides := cfg.CeOverrides
 	if cfg.Env != nil {
 		if target := cfg.Env.GetSink(); len(target) > 0 {
@@ -146,6 +149,7 @@ func NewClient(cfg ClientConfig) (Client, error) {
 		if sinkWait := cfg.Env.GetSinktimeout(); sinkWait > 0 {
 			pOpts = append(pOpts, setTimeOut(time.Duration(sinkWait)*time.Second))
 		}
+
 		if eventingtls.IsHttpsSink(cfg.Env.GetSink()) {
 			var err error
 
@@ -165,6 +169,7 @@ func NewClient(cfg ClientConfig) (Client, error) {
 				Propagation: tracecontextb3.TraceContextEgress,
 			}
 		}
+
 		if ceOverrides == nil {
 			var err error
 			ceOverrides, err = cfg.Env.GetCloudEventOverrides()
@@ -193,14 +198,16 @@ func NewClient(cfg ClientConfig) (Client, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return &client{
 		ceClient:            ceClient,
 		closeIdler:          transport.Base.(*nethttp.Transport),
 		ceOverrides:         ceOverrides,
 		reporter:            cfg.Reporter,
 		crStatusEventClient: cfg.CrStatusEventClient,
-		oidcTokenProvider:   auth.NewOIDCTokenProvider(cfg.Context),
 		audience:            cfg.Env.GetAudience(),
+		serviceAccountName:  cfg.Env.GetServiceAccountName(),
+		oidcTokenProvider:   cfg.TokenProvider,
 	}, nil
 }
 
@@ -225,7 +232,7 @@ type client struct {
 	closeIdler          closeIdler
 
 	oidcTokenProvider  *auth.OIDCTokenProvider
-	audience           *string
+	audience           string
 	serviceAccountName types.NamespacedName
 }
 
@@ -239,10 +246,23 @@ var _ cloudevents.Client = (*client)(nil)
 func (c *client) Send(ctx context.Context, out event.Event) protocol.Result {
 	c.applyOverrides(&out)
 
+	logger := logging.FromContext(ctx)
+	logger.Errorf("haha send: trying to execute Send function")
+
+	logger.Errorf("haha send: print service account name: %s", c.serviceAccountName.Name)
+	logger.Errorf("haha send: print service account namespace: %s", c.serviceAccountName.Namespace)
+	//logger.Errorf("haha send: print audience: %s", c.audience)
+	//logger.Errorf("haha send: print the audience, and audience is a string pointer: %s", *c.audience)
+	logger.Errorf("haha send: conclude, now going to generate the jwt token")
+
 	// If the sink has audience, then we need to request the JWT token
-	if c.audience != nil {
+	if c.audience != "" {
 		// Request the JWT token for the given service account
-		jwt, err := c.oidcTokenProvider.GetJWT(c.serviceAccountName, *c.audience)
+		//jwt, err := c.oidcTokenProvider.GetJWT(c.serviceAccountName, *c.audience)
+		jwt, err := c.oidcTokenProvider.GetJWT(c.serviceAccountName, c.audience)
+
+		logger.Errorf("haha send: print jwt: %s", jwt)
+		logger.Errorf("haha send: print err: %s", err)
 
 		if err != nil {
 			return protocol.NewResult("%w", err)
@@ -250,7 +270,7 @@ func (c *client) Send(ctx context.Context, out event.Event) protocol.Result {
 
 		// Appending the auth token to the outgoing request
 		headers := http.HeaderFrom(ctx)
-		headers.Set("Authentication", fmt.Sprintf("Bearer %s", jwt))
+		headers.Set("Authorization", fmt.Sprintf("Bearer %s", jwt))
 		ctx = http.WithCustomHeader(ctx, headers)
 	}
 
@@ -264,19 +284,21 @@ func (c *client) Request(ctx context.Context, out event.Event) (*event.Event, pr
 	c.applyOverrides(&out)
 
 	// If the sink has audience, then we need to request the JWT token
-	if c.audience != nil {
-		// Request the JWT token for the given service account
-		jwt, err := c.oidcTokenProvider.GetJWT(c.serviceAccountName, *c.audience)
+	logger := logging.FromContext(ctx)
+	logger.Errorf("haha send: trying to execute Send function")
 
-		if err != nil {
-			return nil, protocol.NewResult("%w", err)
-		}
+	logger.Errorf("haha req: print service account name: %s", c.serviceAccountName.Name)
+	logger.Errorf("haha req: print service account namespace: %s", c.serviceAccountName.Namespace)
+	//logger.Errorf("haha req: print audience: %s", c.audience)
+	logger.Errorf("haha req: conclude, now going to generate the jwt token")
 
-		// Appending the auth token to the outgoing request
-		headers := http.HeaderFrom(ctx)
-		headers.Set("Authentication", fmt.Sprintf("Bearer %s", jwt))
-		ctx = http.WithCustomHeader(ctx, headers)
-	}
+	// If the sink has audience, then we need to request the JWT token
+	//if c.audience != nil{
+	// Request the JWT token for the given service account
+	jwt, err := c.oidcTokenProvider.GetJWT(c.serviceAccountName, "my-sink-audience")
+
+	logger.Errorf("haha send: print jwt: %s", jwt)
+	logger.Errorf("haha send: print err: %s", err)
 
 	resp, res := c.ceClient.Request(ctx, out)
 	c.reportMetrics(ctx, out, res)

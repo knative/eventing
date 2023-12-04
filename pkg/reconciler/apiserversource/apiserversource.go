@@ -106,12 +106,21 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1.ApiServerSour
 		return err
 	}
 
+	// Create the role and rolebinding
+	logging.FromContext(ctx).Errorw("haha: About to enter the role access granting stage Creating role and rolebinding")
+	auth.EnsureOIDCServiceAccountRoleBindingExistsForResource(ctx, r.kubeClientSet, v1.SchemeGroupVersion.WithKind("ApiServerSource"), source.ObjectMeta, source.Spec.ServiceAccountName)
+
+	logging.FromContext(ctx).Errorw("haha: finished About to enter the role access granting stage Creating role and rolebinding")
 	sinkAddr, err := r.sinkResolver.AddressableFromDestinationV1(ctx, *dest, source)
 	if err != nil {
 		source.Status.MarkNoSink("NotFound", "")
 		return newWarningSinkNotFound(dest)
 	}
 	source.Status.MarkSink(sinkAddr)
+
+	// The audience should already be specified
+	logging.FromContext(ctx).Errorw("haha: try to display source sink ref", zap.Any("audience is", source.Spec.Sink.Audience))
+	logging.FromContext(ctx).Errorw("haha try to display sinkAddr Audience", zap.Any("audience is", sinkAddr.Audience))
 
 	// resolve namespaces to watch
 	namespaces, err := r.namespacesFromSelector(source)
@@ -134,7 +143,11 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1.ApiServerSour
 		logging.FromContext(ctx).Errorw("Unable to create the receive adapter", zap.Error(err))
 		return err
 	}
+
+	logging.FromContext(ctx).Debugw("haha: Receive adapter created", zap.Any("receiveAdapter", ra))
 	source.Status.PropagateDeploymentAvailability(ra)
+
+	logging.FromContext(ctx).Debugw("haha: Creating CloudEventAttributes")
 
 	cloudEventAttributes, err := r.createCloudEventAttributes(source)
 	if err != nil {
@@ -199,13 +212,22 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1.ApiServer
 	fmt.Printf("haha sinkAddr.URL.String(): %v\n", sinkAddr.URL.String())
 	fmt.Printf("haha sinkAddr.audience: %v\n", sinkAddr.Audience)
 
+	var audience string
+	if sinkAddr.Audience != nil {
+		audience = *sinkAddr.Audience
+	} else {
+		audience = "ilovehaha"
+	}
+
+	// trying to figure out why audience is empty
+
 	adapterArgs := resources.ReceiveAdapterArgs{
 		Image:         r.receiveAdapterImage,
 		Source:        src,
 		Labels:        resources.Labels(src.Name),
 		CACerts:       sinkAddr.CACerts,
 		SinkURI:       sinkAddr.URL.String(),
-		Audience:      sinkAddr.Audience,
+		Audience:      audience,
 		Configs:       r.configs,
 		Namespaces:    namespaces,
 		AllNamespaces: allNamespaces,
@@ -262,10 +284,13 @@ func (r *Reconciler) runAccessCheck(ctx context.Context, src *v1.ApiServerSource
 		return nil
 	}
 
+	// Run the basic service account access check (This is not OIDC service account)
 	user := "system:serviceaccount:" + src.Namespace + ":"
 	if src.Spec.ServiceAccountName == "" {
+		logging.FromContext(ctx).Debugw("haha No ServiceAccountName specified, using default")
 		user += "default"
 	} else {
+		logging.FromContext(ctx).Debugw("haha Using ServiceAccountName", zap.String("ServiceAccountName", src.Spec.ServiceAccountName))
 		user += src.Spec.ServiceAccountName
 	}
 

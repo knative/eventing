@@ -17,8 +17,11 @@ package adapter
 
 import (
 	"encoding/json"
+	"fmt"
+	"k8s.io/apimachinery/pkg/types"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"go.uber.org/zap"
@@ -39,6 +42,7 @@ const (
 	EnvConfigName                 = "NAME"
 	EnvConfigResourceGroup        = "K_RESOURCE_GROUP"
 	EnvConfigSink                 = "K_SINK"
+	EnvConfigAudience             = "K_AUDIENCE"
 	EnvConfigCACert               = "K_CA_CERTS"
 	EnvConfigCEOverrides          = "K_CE_OVERRIDES"
 	EnvConfigMetricsConfig        = "K_METRICS_CONFIG"
@@ -67,7 +71,10 @@ type EnvConfig struct {
 	Sink string `envconfig:"K_SINK"`
 
 	// Audience is the audience of the target sink.
-	Audience *string `envconfig:"K_AUDIENCE"`
+	Audience string `envconfig:"K_AUDIENCE"`
+
+	// Service Account Name is the name of the service account to use for the adapter.
+	ServiceAccountName *string `envconfig:"K_OIDC_SERVICE_ACCOUNT"`
 
 	// CACerts are the Certification Authority (CA) certificates in PEM format
 	// according to https://www.rfc-editor.org/rfc/rfc7468.
@@ -117,7 +124,9 @@ type EnvConfigAccessor interface {
 	GetCACerts() *string
 
 	// Get the audience of the target sink.
-	GetAudience() *string
+	GetAudience() string
+
+	GetServiceAccountName() types.NamespacedName
 
 	// Get the namespace of the adapter.
 	GetNamespace() string
@@ -157,6 +166,24 @@ func (e *EnvConfig) GetMetricsConfig() (*metrics.ExporterOptions, error) {
 	return metricsConfig, err
 }
 
+func extractSinkName(url string) (string, error) {
+	// Check if URL contains http://, remove it for easier processing
+	if strings.HasPrefix(url, "http://") {
+		url = strings.TrimPrefix(url, "http://")
+	}
+
+	// Split the URL by '.' to isolate the components
+	parts := strings.Split(url, ".")
+	if len(parts) == 0 {
+		return "", fmt.Errorf("invalid URL format")
+	}
+
+	// The first part of the URL is expected to be the sink name
+	sinkName := parts[0]
+
+	return sinkName, nil
+}
+
 func (e *EnvConfig) GetLogger() *zap.SugaredLogger {
 	if e.logger == nil {
 		loggingConfig, err := logging.JSONToConfig(e.LoggingConfigJson)
@@ -178,11 +205,19 @@ func (e *EnvConfig) GetSink() string {
 	return e.Sink
 }
 
+func (e *EnvConfig) GetServiceAccountName() types.NamespacedName {
+
+	return types.NamespacedName{
+		Namespace: e.Namespace,
+		Name:      *e.ServiceAccountName,
+	}
+}
+
 func (e *EnvConfig) GetCACerts() *string {
 	return e.CACerts
 }
 
-func (e *EnvConfig) GetAudience() *string {
+func (e *EnvConfig) GetAudience() string {
 	return e.Audience
 }
 

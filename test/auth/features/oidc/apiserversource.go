@@ -21,8 +21,6 @@ import (
 	"github.com/cloudevents/sdk-go/v2/test"
 	rbacv1 "k8s.io/api/rbac/v1"
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
-	"knative.dev/eventing/test/rekt/features/featureflags"
-	"knative.dev/eventing/test/rekt/features/source"
 	"knative.dev/eventing/test/rekt/resources/account_role"
 	"knative.dev/eventing/test/rekt/resources/apiserversource"
 	"knative.dev/reconciler-test/pkg/eventshub"
@@ -43,17 +41,17 @@ func ApiserversourceSendEventWithJWT() *feature.Feature {
 	audience := "my-sink-audience"
 	sacmName := feature.MakeRandomK8sName("apiserversource")
 
-	f := feature.NewFeatureNamed("Send events to TLS sink")
+	f := feature.NewFeatureNamed("Send events to sink")
 
-	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
-	f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
+	//f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
+	//f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
 
 	f.Setup("deploy receiver", eventshub.Install(sink,
 		eventshub.StartReceiver,
 		eventshub.OIDCReceiverAudience(audience)))
-
+	//
 	f.Setup("Create Service Account for ApiServerSource with RBAC for v1.Event resources",
-		setupAccountAndRoleForPods(sacmName))
+		setupAccountAndRoleForApiserversource(sacmName))
 
 	cfg := []manifest.CfgFn{
 		apiserversource.WithServiceAccountName(sacmName),
@@ -66,7 +64,7 @@ func ApiserversourceSendEventWithJWT() *feature.Feature {
 
 	f.Requirement("install ApiServerSource", func(ctx context.Context, t feature.T) {
 		d := service.AsDestinationRef(sink)
-		d.CACerts = eventshub.GetCaCerts(ctx)
+		d.Audience = &audience
 
 		cfg = append(cfg, apiserversource.WithSink(d))
 		apiserversource.Install(src, cfg...)(ctx, t)
@@ -85,20 +83,20 @@ func ApiserversourceSendEventWithJWT() *feature.Feature {
 				Match(eventasssert.MatchKind(eventshub.EventReceived)).
 				MatchEvent(test.HasType("dev.knative.apiserver.resource.update")).
 				AtLeast(1),
-		).
-		Must("Set sinkURI to HTTPS endpoint", source.ExpectHTTPSSink(apiserversource.Gvr(), src)).
-		Must("Set sinkCACerts to non empty CA certs", source.ExpectCACerts(apiserversource.Gvr(), src))
+		)
+	//Must("Set sinkURI to HTTPS endpoint", source.ExpectHTTPSSink(apiserversource.Gvr(), src)).
+	//Must("Set sinkCACerts to non empty CA certs", source.ExpectCACerts(apiserversource.Gvr(), src))
 
 	return f
 }
 
-func setupAccountAndRoleForPods(sacmName string) feature.StepFn {
+func setupAccountAndRoleForApiserversource(sacmName string) feature.StepFn {
 	return account_role.Install(sacmName,
 		account_role.WithRole(sacmName+"-clusterrole"),
 		account_role.WithRules(rbacv1.PolicyRule{
 			APIGroups: []string{""},
-			Resources: []string{"events", "pods"},
-			Verbs:     []string{"get", "list", "watch"},
+			Resources: []string{"events"},
+			Verbs:     []string{"get", "list", "watch", "create"},
 		}),
 	)
 }

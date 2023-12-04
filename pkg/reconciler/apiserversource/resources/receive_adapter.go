@@ -19,14 +19,13 @@ package resources
 import (
 	"encoding/json"
 	"fmt"
-	"knative.dev/eventing/pkg/adapter/v2"
-
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"knative.dev/eventing/pkg/adapter/v2"
 
 	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/ptr"
@@ -43,7 +42,7 @@ type ReceiveAdapterArgs struct {
 	Image         string
 	Source        *v1.ApiServerSource
 	Labels        map[string]string
-	Audience      *string
+	Audience      string
 	SinkURI       string
 	CACerts       *string
 	Configs       reconcilersource.ConfigAccessor
@@ -173,7 +172,12 @@ func makeEnv(args *ReceiveAdapterArgs) ([]corev1.EnvVar, error) {
 	}, {
 		Name:  "METRICS_DOMAIN",
 		Value: "knative.dev/eventing",
-	}}
+	},
+		{
+			Name:  "K_OIDC_SERVICE_ACCOUNT",
+			Value: *args.Source.Status.Auth.ServiceAccountName,
+		},
+	}
 
 	if args.CACerts != nil {
 		envs = append(envs, corev1.EnvVar{
@@ -183,16 +187,12 @@ func makeEnv(args *ReceiveAdapterArgs) ([]corev1.EnvVar, error) {
 	}
 
 	fmt.Printf("haha receive_adapter: trying to add the k_audience env var\n")
-	if args.Audience != nil {
+	fmt.Printf("haha receive_adapter: args.Audience is %v\n", args.Audience)
+	if args.Audience != "" {
 		fmt.Printf("haha receive_adapter: adding the k_audience env var\n")
 		envs = append(envs, corev1.EnvVar{
 			Name:  "K_AUDIENCE",
-			Value: *args.Audience,
-		})
-	} else {
-		envs = append(envs, corev1.EnvVar{
-			Name:  "K_AUDIENCE",
-			Value: "0000",
+			Value: args.Audience,
 		})
 	}
 

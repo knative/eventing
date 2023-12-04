@@ -18,7 +18,7 @@ package apiserver
 
 import (
 	"context"
-	
+
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -73,7 +73,7 @@ func (a *resourceDelegate) sendCloudEvent(ctx context.Context, event cloudevents
 	defer a.logger.Debug("Finished sending cloudevent id: ", event.ID())
 	source := event.Context.GetSource()
 	subject := event.Context.GetSubject()
-	a.logger.Debugf("sending cloudevent id: %s, source: %s, subject: %s", event.ID(), source, subject)
+	a.logger.Info("sending cloudevent id: %s, source: %s, subject: %s", event.ID(), source, subject)
 
 	// Decide whether to request the JWT token or not
 	// Condition: if the sink has audience or not
@@ -105,7 +105,7 @@ func (a *resourceDelegate) sendCloudEvent(ctx context.Context, event cloudevents
 		a.logger.Errorw("failed to send cloudevent", zap.Error(result), zap.String("source", source),
 			zap.String("subject", subject), zap.String("id", event.ID()))
 	} else {
-		a.logger.Debugf("cloudevent sent id: %s, source: %s, subject: %s", event.ID(), source, subject)
+		a.logger.Info("cloudevent sent id: %s, source: %s, subject: %s", event.ID(), source, subject)
 	}
 }
 

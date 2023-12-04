@@ -39,7 +39,6 @@ import (
 	"knative.dev/eventing/test/rekt/resources/channel_template"
 	"knative.dev/eventing/test/rekt/resources/parallel"
 	"knative.dev/eventing/test/rekt/resources/sequence"
-	"knative.dev/reconciler-test/pkg/eventshub"
 )
 
 func TestBrokerSupportsOIDC(t *testing.T) {
@@ -142,7 +141,6 @@ func TestApiserversourceSendEventWithJWT(t *testing.T) {
 		knative.WithTracingConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
-		eventshub.WithTLS(t),
 		environment.WithPollTimings(4*time.Second, 12*time.Minute),
 	)
 
