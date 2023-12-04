@@ -20,6 +20,7 @@ import (
 	"github.com/cloudevents/sdk-go/v2/test"
 	"knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/eventing/test/rekt/resources/trigger"
+	v1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	eventassert "knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
@@ -33,6 +34,7 @@ func BrokerSendEventWithOIDCToken() *feature.Feature {
 	brokerName := feature.MakeRandomK8sName("broker")
 	sink := feature.MakeRandomK8sName("sink")
 	triggerName := feature.MakeRandomK8sName("triggerName")
+	sinkAudience := "sink-audience"
 
 	event := test.FullEvent()
 
@@ -42,13 +44,19 @@ func BrokerSendEventWithOIDCToken() *feature.Feature {
 	f.Setup("broker is addressable", broker.IsAddressable(brokerName))
 
 	// Install the sink
-	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
+	f.Setup("install sink", eventshub.Install(
+		sink,
+		eventshub.OIDCReceiverAudience(sinkAudience),
+		eventshub.StartReceiver))
 
 	// Install the trigger and Point the Trigger subscriber to the sink svc.
 	f.Setup("install trigger", trigger.Install(
 		triggerName,
 		brokerName,
-		trigger.WithSubscriber(service.AsKReference(sink), ""),
+		trigger.WithSubscriberFromDestination(&v1.Destination{
+			Ref:      service.AsKReference(sink),
+			Audience: &sinkAudience,
+		}),
 	))
 	f.Setup("trigger goes ready", trigger.IsReady(triggerName))
 
