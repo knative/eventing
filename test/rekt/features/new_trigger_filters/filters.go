@@ -23,7 +23,6 @@ import (
 	"knative.dev/reconciler-test/pkg/eventshub"
 	. "knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
-	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/manifest"
 	"knative.dev/reconciler-test/pkg/resources/service"
 
@@ -33,9 +32,10 @@ import (
 	"knative.dev/eventing/test/rekt/resources/trigger"
 )
 
-func newEventFilterFeature(eventContexts []CloudEventsContext, filters []eventingv1.SubscriptionsAPIFilter, f *feature.Feature, brokerName string) *feature.Feature {
+func createNewFiltersFeature(f *feature.Feature, eventContexts []CloudEventsContext, filters []eventingv1.SubscriptionsAPIFilter, installBroker InstallBrokerFunc) {
 	subscriberName := feature.MakeRandomK8sName("subscriber")
 	triggerName := feature.MakeRandomK8sName("trigger")
+	brokerName := installBroker(f)
 
 	f.Setup("Install trigger subscriber", eventshub.Install(subscriberName, eventshub.StartReceiver))
 
@@ -46,50 +46,47 @@ func newEventFilterFeature(eventContexts []CloudEventsContext, filters []eventin
 
 	f.Setup("Install trigger", trigger.Install(triggerName, brokerName, cfg...))
 	f.Setup("Wait for trigger to become ready", trigger.IsReady(triggerName))
-	f.Setup("Broker is addressable", k8s.IsAddressable(broker.GVR(), brokerName))
 
 	asserter := f.Beta("New filters")
 
 	for _, eventCtx := range eventContexts {
-		event := newEventFromEventContext(eventCtx)
+		e := newEventFromEventContext(eventCtx)
 		eventSender := feature.MakeRandomK8sName("sender")
 
 		f.Requirement(fmt.Sprintf("Install event sender %s", eventSender), eventshub.Install(eventSender,
 			eventshub.StartSenderToResource(broker.GVR(), brokerName),
-			eventshub.InputEvent(event),
+			eventshub.InputEvent(e),
 		))
 
 		if eventCtx.shouldDeliver {
-			asserter.Must("must deliver matched event", OnStore(subscriberName).MatchEvent(HasId(event.ID())).AtLeast(1))
+			asserter.Must("must deliver matched event", OnStore(subscriberName).MatchEvent(HasId(e.ID())).AtLeast(1))
 		} else {
-			asserter.MustNot("must not deliver unmatched event", OnStore(subscriberName).MatchEvent(HasId(event.ID())).Not())
+			asserter.MustNot("must not deliver unmatched event", OnStore(subscriberName).MatchEvent(HasId(e.ID())).Not())
 		}
 	}
-
-	return f
 }
 
 func newEventFromEventContext(eventCtx CloudEventsContext) event.Event {
-	event := MinEvent()
+	e := MinEvent()
 	// Ensure that each event has a unique ID
-	event.SetID(feature.MakeRandomK8sName("event"))
+	e.SetID(feature.MakeRandomK8sName("event"))
 	if eventCtx.eventType != "" {
-		event.SetType(eventCtx.eventType)
+		e.SetType(eventCtx.eventType)
 	}
 	if eventCtx.eventSource != "" {
-		event.SetSource(eventCtx.eventSource)
+		e.SetSource(eventCtx.eventSource)
 	}
 	if eventCtx.eventSubject != "" {
-		event.SetSubject(eventCtx.eventSubject)
+		e.SetSubject(eventCtx.eventSubject)
 	}
 	if eventCtx.eventID != "" {
-		event.SetID(eventCtx.eventID)
+		e.SetID(eventCtx.eventID)
 	}
 	if eventCtx.eventDataSchema != "" {
-		event.SetDataSchema(eventCtx.eventDataSchema)
+		e.SetDataSchema(eventCtx.eventDataSchema)
 	}
 	if eventCtx.eventDataContentType != "" {
-		event.SetDataContentType(eventCtx.eventDataContentType)
+		e.SetDataContentType(eventCtx.eventDataContentType)
 	}
-	return event
+	return e
 }

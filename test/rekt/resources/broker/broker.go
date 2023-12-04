@@ -277,3 +277,11 @@ func InstallMTBroker(name string) *feature.Feature {
 	f.Requirement("Broker is ready", IsReady(name))
 	return f
 }
+
+func InstallMTBrokerIntoFeature(f *feature.Feature) string {
+	brokerName := feature.MakeRandomK8sName("broker")
+	f.Setup(fmt.Sprintf("Install broker %q", brokerName), Install(brokerName, WithEnvConfig()...))
+	f.Setup("Broker is ready", IsReady(brokerName))
+	f.Setup("Broker is addressable", k8s.IsAddressable(GVR(), brokerName))
+	return brokerName
+}
