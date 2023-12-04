@@ -47,10 +47,10 @@ func AddressableOIDCTokenConformance(gvr schema.GroupVersionResource, kind, name
 	fs := feature.FeatureSet{
 		Name: fmt.Sprintf("%s handles requests with OIDC tokens correctly", kind),
 		Features: []*feature.Feature{
-			AddressableRejectInvalidAudience(gvr, kind, name),
-			AddressableRejectCorruptedSignature(gvr, kind, name),
-			AddressableRejectExpiredToken(gvr, kind, name),
-			AddressableAllowsValidRequest(gvr, kind, name),
+			addressableRejectInvalidAudience(gvr, kind, name),
+			addressableRejectCorruptedSignature(gvr, kind, name),
+			addressableRejectExpiredToken(gvr, kind, name),
+			addressableAllowsValidRequest(gvr, kind, name),
 		},
 	}
 
@@ -73,7 +73,7 @@ func AddressableHasAudiencePopulated(gvr schema.GroupVersionResource, kind, name
 	return f
 }
 
-func AddressableRejectInvalidAudience(gvr schema.GroupVersionResource, kind, name string) *feature.Feature {
+func addressableRejectInvalidAudience(gvr schema.GroupVersionResource, kind, name string) *feature.Feature {
 	f := feature.NewFeatureNamed(fmt.Sprintf("%s reject event for wrong OIDC audience", kind))
 
 	source := feature.MakeRandomK8sName("source")
@@ -97,7 +97,7 @@ func AddressableRejectInvalidAudience(gvr schema.GroupVersionResource, kind, nam
 	return f
 }
 
-func AddressableRejectExpiredToken(gvr schema.GroupVersionResource, kind, name string) *feature.Feature {
+func addressableRejectExpiredToken(gvr schema.GroupVersionResource, kind, name string) *feature.Feature {
 	f := feature.NewFeatureNamed(fmt.Sprintf("%s reject event with expired OIDC token", kind))
 
 	source := feature.MakeRandomK8sName("source")
@@ -121,7 +121,7 @@ func AddressableRejectExpiredToken(gvr schema.GroupVersionResource, kind, name s
 	return f
 }
 
-func AddressableRejectCorruptedSignature(gvr schema.GroupVersionResource, kind, name string) *feature.Feature {
+func addressableRejectCorruptedSignature(gvr schema.GroupVersionResource, kind, name string) *feature.Feature {
 	f := feature.NewFeatureNamed(fmt.Sprintf("%s reject event with corrupted OIDC token signature", kind))
 
 	source := feature.MakeRandomK8sName("source")
@@ -145,7 +145,7 @@ func AddressableRejectCorruptedSignature(gvr schema.GroupVersionResource, kind, 
 	return f
 }
 
-func AddressableAllowsValidRequest(gvr schema.GroupVersionResource, kind, name string) *feature.Feature {
+func addressableAllowsValidRequest(gvr schema.GroupVersionResource, kind, name string) *feature.Feature {
 	f := feature.NewFeatureNamed(fmt.Sprintf("%s handles event with valid OIDC token", kind))
 
 	source := feature.MakeRandomK8sName("source")

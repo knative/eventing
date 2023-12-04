@@ -58,6 +58,8 @@ type sender struct {
 	totalRequests int
 	// unavailablePeriods is an array for non-zero retries for each event
 	unavailablePeriods []event.UnavailablePeriod
+	// sendingInterrupted indicates whether sending last event was interrupted by shutdown
+	sendingInterrupted bool
 }
 
 func (s *sender) SendContinually() {
@@ -90,6 +92,7 @@ func (s *sender) SendContinually() {
 					Period:  time.Since(start),
 					LastErr: err.Error(),
 				})
+				s.sendingInterrupted = true
 			}
 			return
 		default:
@@ -100,7 +103,7 @@ func (s *sender) SendContinually() {
 				start = time.Now()
 			}
 			log.Warnf("Could not send step event %v, retrying (%d): %v",
-				s.eventsSent, retry, err)
+				currentStep.Number, retry, err)
 			retry++
 			lastErr = err
 		} else {
@@ -219,7 +222,12 @@ func (s *sender) sendFinished() {
 	if s.eventsSent == 0 {
 		return
 	}
-	finished := event.Finished{EventsSent: s.eventsSent, TotalRequests: s.totalRequests, UnavailablePeriods: s.unavailablePeriods}
+	finished := event.Finished{
+		EventsSent:         s.eventsSent,
+		TotalRequests:      s.totalRequests,
+		UnavailablePeriods: s.unavailablePeriods,
+		SendingInterrupted: s.sendingInterrupted,
+	}
 	endpoint := senderConfig.Address
 	ce := NewCloudEvent(finished, event.FinishedType)
 	ctx, span := PopulateSpanWithEvent(context.Background(), ce, Name)

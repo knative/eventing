@@ -33,6 +33,7 @@ import (
 	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"go.opencensus.io/trace"
 	"go.uber.org/zap"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/cache"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/logging"
@@ -63,6 +64,8 @@ const (
 	// based on what serving is doing. See https://github.com/knative/serving/blob/main/pkg/network/transports.go.
 	defaultMaxIdleConnections        = 1000
 	defaultMaxIdleConnectionsPerHost = 100
+
+	FilterAudience = "mt-broker-filter"
 )
 
 // Handler parses Cloud Events, determines if they pass a filter, and sends them to a subscriber.
@@ -76,10 +79,11 @@ type Handler struct {
 	logger        *zap.Logger
 	withContext   func(ctx context.Context) context.Context
 	filtersMap    *subscriptionsapi.FiltersMap
+	tokenVerifier *auth.OIDCTokenVerifier
 }
 
 // NewHandler creates a new Handler and its associated EventReceiver.
-func NewHandler(logger *zap.Logger, oidcTokenProvider *auth.OIDCTokenProvider, triggerInformer v1.TriggerInformer, reporter StatsReporter, wc func(ctx context.Context) context.Context) (*Handler, error) {
+func NewHandler(logger *zap.Logger, tokenVerifier *auth.OIDCTokenVerifier, oidcTokenProvider *auth.OIDCTokenProvider, triggerInformer v1.TriggerInformer, reporter StatsReporter, wc func(ctx context.Context) context.Context) (*Handler, error) {
 	kncloudevents.ConfigureConnectionArgs(&kncloudevents.ConnectionArgs{
 		MaxIdleConns:        defaultMaxIdleConnections,
 		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
@@ -131,6 +135,7 @@ func NewHandler(logger *zap.Logger, oidcTokenProvider *auth.OIDCTokenProvider, t
 		eventDispatcher: kncloudevents.NewDispatcher(oidcTokenProvider),
 		triggerLister:   triggerInformer.Lister(),
 		logger:          logger,
+		tokenVerifier:   tokenVerifier,
 		withContext:     wc,
 		filtersMap:      fm,
 	}, nil
@@ -203,6 +208,25 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	features := feature.FromContext(ctx)
+	if features.IsOIDCAuthentication() {
+		h.logger.Debug("OIDC authentication is enabled")
+		token := auth.GetJWTFromHeader(request.Header)
+		if token == "" {
+			h.logger.Warn(fmt.Sprintf("No JWT in %s header provided while feature %s is enabled", auth.AuthHeaderKey, feature.OIDCAuthentication))
+			writer.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+
+		if _, err := h.tokenVerifier.VerifyJWT(ctx, token, FilterAudience); err != nil {
+			h.logger.Warn("no valid JWT provided", zap.Error(err))
+			writer.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+
+		h.logger.Debug("Request contained a valid JWT. Continuing...")
+	}
+
 	reportArgs := &ReportArgs{
 		ns:         t.Namespace,
 		trigger:    t.Name,
@@ -231,8 +255,9 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	h.reportArrivalTime(event, reportArgs)
 
 	target := duckv1.Addressable{
-		URL:     t.Status.SubscriberURI,
-		CACerts: t.Status.SubscriberCACerts,
+		URL:      t.Status.SubscriberURI,
+		CACerts:  t.Status.SubscriberCACerts,
+		Audience: t.Status.SubscriberAudience,
 	}
 	h.send(ctx, writer, utils.PassThroughHeaders(request.Header), target, reportArgs, event, t, ttl)
 }
@@ -242,7 +267,18 @@ func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers 
 	additionalHeaders := headers.Clone()
 	additionalHeaders.Set(apis.KnNamespaceHeader, t.GetNamespace())
 
-	dispatchInfo, err := h.eventDispatcher.SendEvent(ctx, *event, target, kncloudevents.WithHeader(additionalHeaders))
+	opts := []kncloudevents.SendOption{
+		kncloudevents.WithHeader(additionalHeaders),
+	}
+
+	if t.Status.Auth != nil && t.Status.Auth.ServiceAccountName != nil {
+		opts = append(opts, kncloudevents.WithOIDCAuthentication(&types.NamespacedName{
+			Name:      *t.Status.Auth.ServiceAccountName,
+			Namespace: t.Namespace,
+		}))
+	}
+
+	dispatchInfo, err := h.eventDispatcher.SendEvent(ctx, *event, target, opts...)
 	if err != nil {
 		h.logger.Error("failed to send event", zap.Error(err))
 

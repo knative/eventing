@@ -52,6 +52,6 @@ data:
   # For more details: https://github.com/knative/eventing/issues/6909
   eventtype-auto-create: "disabled"
 
-  # ALPHA feature: The authentication.oidc flag allows you to use OIDC authentication for Eventing.
+  # ALPHA feature: The aauthentication-oidc flag allows you to use OIDC authentication for Eventing.
   # For more details: https://github.com/knative/eventing/issues/7174
-  authentication.oidc: "disabled"
+  authentication-oidc: "disabled"

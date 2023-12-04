@@ -77,6 +77,7 @@ func main() {
 	log.Printf("Registering %d informers", len(injection.Default.GetInformers()))
 
 	ctx, informers := injection.Default.SetupInformers(ctx, cfg)
+	ctx = injection.WithConfig(ctx, cfg)
 	kubeClient := kubeclient.Get(ctx)
 
 	loggingConfig, err := broker.GetLoggingConfig(ctx, system.Namespace(), logging.ConfigMapName())
@@ -123,7 +124,8 @@ func main() {
 	oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
 	// We are running both the receiver (takes messages in from the Broker) and the dispatcher (send
 	// the messages to the triggers' subscribers) in this binary.
-	handler, err := filter.NewHandler(logger, oidcTokenProvider, triggerinformer.Get(ctx), reporter, ctxFunc)
+	oidcTokenVerifier := auth.NewOIDCTokenVerifier(ctx)
+	handler, err := filter.NewHandler(logger, oidcTokenVerifier, oidcTokenProvider, triggerinformer.Get(ctx), reporter, ctxFunc)
 	if err != nil {
 		logger.Fatal("Error creating Handler", zap.Error(err))
 	}

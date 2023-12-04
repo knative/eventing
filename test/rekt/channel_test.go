@@ -32,6 +32,7 @@ import (
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/knative"
 	"knative.dev/reconciler-test/pkg/manifest"
+	"knative.dev/reconciler-test/pkg/tracing"
 
 	"knative.dev/eventing/test/rekt/features/channel"
 	ch "knative.dev/eventing/test/rekt/resources/channel"
@@ -47,6 +48,7 @@ func TestChannelConformance(t *testing.T) {
 		knative.WithTracingConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
+		environment.WithPollTimings(5*time.Second, 4*time.Minute),
 	)
 
 	channelName := "mychannelimpl"
@@ -120,7 +122,7 @@ func TestSmoke_ChannelWithSubscription(t *testing.T) {
 	for _, name := range names {
 		env.Test(ctx, t, channel.SubscriptionGoesReady(name,
 			subscription.WithChannel(chRef),
-			subscription.WithSubscriber(nil, "http://example.com")),
+			subscription.WithSubscriber(nil, "http://example.com", "")),
 		)
 	}
 }
@@ -148,7 +150,7 @@ func TestSmoke_ChannelImplWithSubscription(t *testing.T) {
 	for _, name := range names {
 		env.Test(ctx, t, channel.SubscriptionGoesReady(name,
 			subscription.WithChannel(chRef),
-			subscription.WithSubscriber(nil, "http://example.com")),
+			subscription.WithSubscriber(nil, "http://example.com", "")),
 		)
 	}
 }
@@ -170,7 +172,7 @@ func TestChannelChain(t *testing.T) {
 	)
 
 	createSubscriberFn := func(ref *duckv1.KReference, uri string) manifest.CfgFn {
-		return subscription.WithSubscriber(ref, uri)
+		return subscription.WithSubscriber(ref, uri, "")
 	}
 	env.Test(ctx, t, channel.ChannelChain(10, createSubscriberFn))
 }
@@ -193,7 +195,7 @@ func TestChannelDeadLetterSink(t *testing.T) {
 	)
 
 	createSubscriberFn := func(ref *duckv1.KReference, uri string) manifest.CfgFn {
-		return subscription.WithSubscriber(ref, uri)
+		return subscription.WithSubscriber(ref, uri, "")
 	}
 	env.Test(ctx, t, channel.DeadLetterSink(createSubscriberFn))
 }
@@ -212,7 +214,7 @@ func TestGenericChannelDeadLetterSink(t *testing.T) {
 	)
 
 	createSubscriberFn := func(ref *duckv1.KReference, uri string) manifest.CfgFn {
-		return subscription.WithSubscriber(ref, uri)
+		return subscription.WithSubscriber(ref, uri, "")
 	}
 	env.Test(ctx, t, channel.DeadLetterSinkGenericChannel(createSubscriberFn))
 	env.Test(ctx, t, channel.AsDeadLetterSink(createSubscriberFn))
@@ -297,7 +299,7 @@ func TestChannelPreferHeaderCheck(t *testing.T) {
 	)
 
 	createSubscriberFn := func(ref *duckv1.KReference, uri string) manifest.CfgFn {
-		return subscription.WithSubscriber(ref, uri)
+		return subscription.WithSubscriber(ref, uri, "")
 	}
 
 	env.Test(ctx, t, channel.ChannelPreferHeaderCheck(createSubscriberFn))
@@ -311,11 +313,12 @@ func TestChannelDeadLetterSinkExtensions(t *testing.T) {
 		knative.WithLoggingConfig,
 		knative.WithTracingConfig,
 		k8s.WithEventListener,
+		tracing.WithGatherer(t),
 		environment.Managed(t),
 	)
 
 	createSubscriberFn := func(ref *duckv1.KReference, uri string) manifest.CfgFn {
-		return subscription.WithSubscriber(ref, uri)
+		return subscription.WithSubscriber(ref, uri, "")
 	}
 
 	env.TestSet(ctx, t, channel.ChannelDeadLetterSinkExtensions(createSubscriberFn))

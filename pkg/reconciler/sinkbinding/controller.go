@@ -18,8 +18,7 @@ package sinkbinding
 
 import (
 	"context"
-	"errors"
-	"fmt"
+	"time"
 
 	"knative.dev/eventing/pkg/auth"
 	sbinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1/sinkbinding"
@@ -32,17 +31,15 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
-	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"knative.dev/eventing/pkg/apis/feature"
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/pkg/apis/duck"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
+	secretinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/secret"
 	serviceaccountinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
@@ -54,15 +51,14 @@ import (
 
 const (
 	controllerAgentName = "sinkbinding-controller"
-)
 
-type SinkBindingSubResourcesReconciler struct {
-	res                  *resolver.URIResolver
-	tracker              tracker.Interface
-	serviceAccountLister corev1listers.ServiceAccountLister
-	kubeclient           kubernetes.Interface
-	featureStore         *feature.Store
-}
+	// resyncPeriod defines the period in which SinkBindings will be reenqued
+	// (e.g. to check the validity of their OIDC token secret)
+	resyncPeriod = auth.TokenExpirationTime / 2
+	// tokenExpiryBuffer defines an additional buffer for the expiry of OIDC
+	// token secrets
+	tokenExpiryBuffer = 5 * time.Minute
+)
 
 // NewController returns a new SinkBinding reconciler.
 func NewController(
@@ -76,6 +72,17 @@ func NewController(
 	psInformerFactory := podspecable.Get(ctx)
 	namespaceInformer := namespace.Get(ctx)
 	serviceaccountInformer := serviceaccountinformer.Get(ctx)
+	secretInformer := secretinformer.Get(ctx)
+
+	var globalResync func()
+	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {
+		logger.Infof("feature config changed. name: %s, value: %v", name, value)
+
+		if globalResync != nil {
+			globalResync()
+		}
+	})
+	featureStore.WatchConfigs(cmw)
 
 	c := &psbinding.BaseReconciler{
 		LeaderAwareFuncs: reconciler.LeaderAwareFuncs{
@@ -106,11 +113,9 @@ func NewController(
 		Logger:        logger,
 	})
 
-	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {
+	globalResync = func() {
 		impl.GlobalResync(sbInformer.Informer())
-	})
-
-	featureStore.WatchConfigs(cmw)
+	}
 
 	sbInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 	namespaceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
@@ -121,7 +126,9 @@ func NewController(
 		tracker:              impl.Tracker,
 		kubeclient:           kubeclient.Get(ctx),
 		serviceAccountLister: serviceaccountInformer.Lister(),
+		secretLister:         secretInformer.Lister(),
 		featureStore:         featureStore,
+		tokenProvider:        auth.NewOIDCTokenProvider(ctx),
 	}
 
 	c.WithContext = func(ctx context.Context, b psbinding.Bindable) (context.Context, error) {
@@ -141,7 +148,27 @@ func NewController(
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 
+	// do a periodic reync of all sinkbindings to renew the token secrets eventually
+	go periodicResync(ctx, globalResync)
+
 	return impl
+}
+
+func periodicResync(ctx context.Context, globalResyncFunc func()) {
+	ticker := time.NewTicker(resyncPeriod)
+	logger := logging.FromContext(ctx)
+
+	logger.Infof("Starting global resync of SinkBindings every %s", resyncPeriod)
+	for {
+		select {
+		case <-ticker.C:
+			logger.Debug("Triggering global resync of SinkBindings")
+			globalResyncFunc()
+		case <-ctx.Done():
+			logger.Debug("Context finished. Stopping periodic resync of SinkBindings")
+			return
+		}
+	}
 }
 
 func ListAll(ctx context.Context, handler cache.ResourceEventHandler) psbinding.ListAll {
@@ -170,55 +197,6 @@ func WithContextFactory(ctx context.Context, handler func(types.NamespacedName))
 	return func(ctx context.Context, b psbinding.Bindable) (context.Context, error) {
 		return v1.WithURIResolver(ctx, r), nil
 	}
-}
-
-func (s *SinkBindingSubResourcesReconciler) Reconcile(ctx context.Context, b psbinding.Bindable) error {
-	sb := b.(*v1.SinkBinding)
-	if s.res == nil {
-		err := errors.New("Resolver is nil")
-		logging.FromContext(ctx).Errorf("%w", err)
-		sb.Status.MarkBindingUnavailable("NoResolver", "No Resolver associated with context for sink")
-		return err
-	}
-	if sb.Spec.Sink.Ref != nil {
-		s.tracker.TrackReference(tracker.Reference{
-			APIVersion: sb.Spec.Sink.Ref.APIVersion,
-			Kind:       sb.Spec.Sink.Ref.Kind,
-			Namespace:  sb.Spec.Sink.Ref.Namespace,
-			Name:       sb.Spec.Sink.Ref.Name,
-		}, b)
-	}
-
-	featureFlags := s.featureStore.Load()
-	if featureFlags.IsOIDCAuthentication() {
-		saName := auth.GetOIDCServiceAccountNameForResource(v1.SchemeGroupVersion.WithKind("SinkBinding"), sb.ObjectMeta)
-		sb.Status.Auth = &duckv1.AuthStatus{
-			ServiceAccountName: &saName,
-		}
-
-		if err := auth.EnsureOIDCServiceAccountExistsForResource(ctx, s.serviceAccountLister, s.kubeclient, v1.SchemeGroupVersion.WithKind("SinkBinding"), sb.ObjectMeta); err != nil {
-			sb.Status.MarkOIDCIdentityCreatedFailed("Unable to resolve service account for OIDC authentication", "%v", err)
-			return err
-		}
-		sb.Status.MarkOIDCIdentityCreatedSucceeded()
-	} else {
-		sb.Status.Auth = nil
-		sb.Status.MarkOIDCIdentityCreatedSucceededWithReason(fmt.Sprintf("%s feature disabled", feature.OIDCAuthentication), "")
-	}
-
-	addr, err := s.res.AddressableFromDestinationV1(ctx, sb.Spec.Sink, sb)
-	if err != nil {
-		logging.FromContext(ctx).Errorf("Failed to get Addressable from Destination: %w", err)
-		sb.Status.MarkBindingUnavailable("NoAddressable", "Addressable could not be extracted from destination")
-		return err
-	}
-	sb.Status.MarkSink(addr)
-	return nil
-}
-
-// I'm just here so I won't get fined
-func (*SinkBindingSubResourcesReconciler) ReconcileDeletion(ctx context.Context, b psbinding.Bindable) error {
-	return nil
 }
 
 func createRecorder(ctx context.Context, agentName string) record.EventRecorder {

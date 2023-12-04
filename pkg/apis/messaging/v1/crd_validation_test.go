@@ -29,12 +29,17 @@ type CRDTest struct {
 	name string
 	cr   resourcesemantics.GenericCRD
 	want *apis.FieldError
+	ctx  context.Context
 }
 
 func doValidateTest(t *testing.T, tests []CRDTest) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := test.cr.Validate(context.TODO())
+			ctx := test.ctx
+			if ctx == nil {
+				ctx = context.TODO()
+			}
+			got := test.cr.Validate(ctx)
 			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
 				t.Errorf("%s: validate (-want, +got) = %v", test.name, diff)
 			}

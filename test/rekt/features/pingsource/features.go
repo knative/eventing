@@ -19,18 +19,18 @@ package pingsource
 import (
 	"context"
 
+	"github.com/cloudevents/sdk-go/v2/test"
 	"k8s.io/apimachinery/pkg/util/sets"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
+	"knative.dev/eventing/test/rekt/resources/addressable"
 	"knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/eventing/test/rekt/resources/eventtype"
 	"knative.dev/eventing/test/rekt/resources/trigger"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
-	"knative.dev/reconciler-test/pkg/manifest"
-
-	"github.com/cloudevents/sdk-go/v2/test"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/feature"
+	"knative.dev/reconciler-test/pkg/manifest"
 	"knative.dev/reconciler-test/pkg/resources/service"
 
 	"knative.dev/reconciler-test/pkg/eventshub/assert"
@@ -190,4 +190,39 @@ func SendsEventsWithEventTypes() *feature.Feature {
 			eventtype.AssertPresent(expectedCeTypes)))
 
 	return f
+}
+
+func SendsEventsWithBrokerAsSinkTLS() *feature.Feature {
+	src := feature.MakeRandomK8sName("pingsource")
+	brokerName := feature.MakeRandomK8sName("broker")
+	sinkName := feature.MakeRandomK8sName("sink")
+	triggerName := feature.MakeRandomK8sName("trigger")
+	f := feature.NewFeature()
+
+	f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
+	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
+
+	f.Setup("install broker", broker.Install(brokerName, broker.WithEnvConfig()...))
+	f.Setup("broker is ready", broker.IsReady(brokerName))
+	f.Setup("broker is addressable", broker.IsAddressable(brokerName))
+	f.Setup("Broker has HTTPS address", broker.ValidateAddress(brokerName, addressable.AssertHTTPSAddress))
+
+	f.Setup("install sink", eventshub.Install(sinkName, eventshub.StartReceiverTLS))
+
+	f.Setup("install trigger", func(ctx context.Context, t feature.T) {
+		d := service.AsDestinationRef(sinkName)
+		d.CACerts = eventshub.GetCaCerts(ctx)
+		trigger.Install(triggerName, brokerName, trigger.WithSubscriberFromDestination(d))(ctx, t)
+	})
+	f.Setup("Wait for Trigger to become ready", trigger.IsReady(triggerName))
+
+	f.Requirement("install PingSource", pingsource.Install(src, pingsource.WithData("text/plain", "hello, world!"), pingsource.WithSink(broker.AsDestinationRef(brokerName))))
+	f.Requirement("PingSource goes ready", pingsource.IsReady(src))
+
+	f.Assert("PingSource has HTTPS sink address", source.ExpectHTTPSSink(pingsource.Gvr(), src))
+	f.Assert("PingSource as event source",
+		assert.OnStore(sinkName).MatchEvent(test.HasType("dev.knative.sources.ping")).AtLeast(1))
+
+	return f
+
 }

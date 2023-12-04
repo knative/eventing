@@ -26,6 +26,7 @@ import (
 	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	v1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	v1beta2 "knative.dev/eventing/pkg/apis/eventing/v1beta2"
+	v1beta3 "knative.dev/eventing/pkg/apis/eventing/v1beta3"
 	flowsv1 "knative.dev/eventing/pkg/apis/flows/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
@@ -71,6 +72,10 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		// Group=eventing.knative.dev, Version=v1beta2
 	case v1beta2.SchemeGroupVersion.WithResource("eventtypes"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Eventing().V1beta2().EventTypes().Informer()}, nil
+
+		// Group=eventing.knative.dev, Version=v1beta3
+	case v1beta3.SchemeGroupVersion.WithResource("eventtypes"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Eventing().V1beta3().EventTypes().Informer()}, nil
 
 		// Group=flows.knative.dev, Version=v1
 	case flowsv1.SchemeGroupVersion.WithResource("parallels"):

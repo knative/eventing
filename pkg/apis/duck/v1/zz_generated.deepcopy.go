@@ -347,6 +347,11 @@ func (in *SubscriberSpec) DeepCopyInto(out *SubscriberSpec) {
 		*out = new(DeliverySpec)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.Auth != nil {
+		in, out := &in.Auth, &out.Auth
+		*out = new(duckv1.AuthStatus)
+		(*in).DeepCopyInto(*out)
+	}
 	return
 }
 

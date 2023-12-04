@@ -32,10 +32,10 @@ import (
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/utils/pointer"
 
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/system"
 
 	"knative.dev/eventing/pkg/apis/eventing"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
@@ -148,15 +148,18 @@ func (h *Handler) getChannelAddress(broker *eventingv1.Broker) (*duckv1.Addressa
 		return nil, fmt.Errorf("failed to parse channel address url")
 	}
 
-	var caCerts *string
-	certs, present := broker.Status.Annotations[eventing.BrokerChannelCACertsStatusAnnotationKey]
-	if present && certs != "" {
-		caCerts = pointer.String(certs)
-	}
 	addr := &duckv1.Addressable{
-		URL:     url,
-		CACerts: caCerts,
+		URL: url,
 	}
+
+	if certs, ok := broker.Status.Annotations[eventing.BrokerChannelCACertsStatusAnnotationKey]; ok && certs != "" {
+		addr.CACerts = &certs
+	}
+
+	if audience, ok := broker.Status.Annotations[eventing.BrokerChannelAudienceStatusAnnotationKey]; ok && audience != "" {
+		addr.Audience = &audience
+	}
+
 	return addr, nil
 }
 
@@ -318,7 +321,15 @@ func (h *Handler) receive(ctx context.Context, headers http.Header, event *cloud
 		return http.StatusBadRequest, kncloudevents.NoDuration
 	}
 
-	dispatchInfo, err := h.eventDispatcher.SendEvent(ctx, *event, *channelAddress, kncloudevents.WithHeader(headers))
+	opts := []kncloudevents.SendOption{
+		kncloudevents.WithHeader(headers),
+		kncloudevents.WithOIDCAuthentication(&types.NamespacedName{
+			Name:      "mt-broker-ingress-oidc",
+			Namespace: system.Namespace(),
+		}),
+	}
+
+	dispatchInfo, err := h.eventDispatcher.SendEvent(ctx, *event, *channelAddress, opts...)
 	if err != nil {
 		h.Logger.Error("failed to dispatch event", zap.Error(err))
 		return http.StatusInternalServerError, kncloudevents.NoDuration

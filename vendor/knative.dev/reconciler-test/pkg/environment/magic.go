@@ -198,6 +198,7 @@ func (mr *MagicGlobalEnvironment) Environment(opts ...EnvOpts) (context.Context,
 	}
 
 	ctx := ContextWith(mr.c, env)
+	ctx = ContextWithPollTimings(ctx, *pollInterval, *pollTimeout)
 
 	for _, opt := range opts {
 		if nctx, err := opt(ctx, env); err != nil {

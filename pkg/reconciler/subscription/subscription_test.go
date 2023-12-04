@@ -2385,6 +2385,15 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionOIDCServiceAccountName(makeSubscriptionOIDCServiceAccount().Name),
 				),
 			}},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{{UID: subscriptionUID, Auth: &duckv1.AuthStatus{
+					ServiceAccountName: pointer.String(makeSubscriptionOIDCServiceAccount().GetName()),
+				}, SubscriberURI: subscriberURI,
+				}}),
+			},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "SubscriberSync", "Subscription was synchronized to channel %q", channelName),
+			},
 			WantCreates: []runtime.Object{
 				makeSubscriptionOIDCServiceAccount(),
 			},
@@ -2475,14 +2484,14 @@ func WithSubscriptionDeliverySpec(d *eventingduck.DeliverySpec) SubscriptionOpti
 	}
 }
 
-func patchSubscribers(namespace, name string, subscribers []eventingduck.SubscriberSpec) clientgotesting.PatchActionImpl {
+func patchSubscribers(namespace, name string, subscriberSpecs []eventingduck.SubscriberSpec) clientgotesting.PatchActionImpl {
 	action := clientgotesting.PatchActionImpl{}
 	action.Name = name
 	action.Namespace = namespace
 
 	var spec string
-	if subscribers != nil {
-		b, err := json.Marshal(subscribers)
+	if subscriberSpecs != nil {
+		b, err := json.Marshal(subscriberSpecs)
 		if err != nil {
 			return action
 		}
@@ -2501,6 +2510,7 @@ func patchSubscribers(namespace, name string, subscribers []eventingduck.Subscri
 	}
 
 	patch := `{"spec":` + spec + `}`
+
 	action.Patch = []byte(patch)
 	return action
 }

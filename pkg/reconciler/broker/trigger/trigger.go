@@ -46,6 +46,7 @@ import (
 	"knative.dev/eventing/pkg/apis/feature"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	"knative.dev/eventing/pkg/auth"
+	"knative.dev/eventing/pkg/broker/filter"
 	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1"
 	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1"
@@ -62,8 +63,6 @@ const (
 	subscriptionDeleteFailed = "SubscriptionDeleteFailed"
 	subscriptionCreateFailed = "SubscriptionCreateFailed"
 	subscriptionGetFailed    = "SubscriptionGetFailed"
-
-	FilterAudience = "mt-broker-filter"
 )
 
 type Reconciler struct {
@@ -133,10 +132,12 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, t *eventingv1.Trigger) p
 		t.Status.MarkSubscriberResolvedFailed("Unable to get the Subscriber's URI", "%v", err)
 		t.Status.SubscriberURI = nil
 		t.Status.SubscriberCACerts = nil
+		t.Status.SubscriberAudience = nil
 		return err
 	}
 	t.Status.SubscriberURI = subscriberAddr.URL
 	t.Status.SubscriberCACerts = subscriberAddr.CACerts
+	t.Status.SubscriberAudience = subscriberAddr.Audience
 	t.Status.MarkSubscriberResolvedSucceeded()
 
 	if err := r.resolveDeadLetterSink(ctx, b, t); err != nil {
@@ -144,20 +145,10 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, t *eventingv1.Trigger) p
 	}
 
 	featureFlags := feature.FromContext(ctx)
-	if featureFlags.IsOIDCAuthentication() {
-		saName := auth.GetOIDCServiceAccountNameForResource(eventingv1.SchemeGroupVersion.WithKind("Trigger"), t.ObjectMeta)
-		t.Status.Auth = &duckv1.AuthStatus{
-			ServiceAccountName: &saName,
-		}
-
-		if err := auth.EnsureOIDCServiceAccountExistsForResource(ctx, r.serviceAccountLister, r.kubeclient, eventingv1.SchemeGroupVersion.WithKind("Trigger"), t.ObjectMeta); err != nil {
-			t.Status.MarkOIDCIdentityCreatedFailed("Unable to resolve service account for OIDC authentication", "%v", err)
-			return err
-		}
-		t.Status.MarkOIDCIdentityCreatedSucceeded()
-	} else {
-		t.Status.Auth = nil
-		t.Status.MarkOIDCIdentityCreatedSucceededWithReason(fmt.Sprintf("%s feature disabled", feature.OIDCAuthentication), "")
+	if err = auth.SetupOIDCServiceAccount(ctx, featureFlags, r.serviceAccountLister, r.kubeclient, eventingv1.SchemeGroupVersion.WithKind("Trigger"), t.ObjectMeta, &t.Status, func(as *duckv1.AuthStatus) {
+		t.Status.Auth = as
+	}); err != nil {
+		return err
 	}
 
 	sub, err := r.subscribeToBrokerChannel(ctx, b, t, brokerTrigger)
@@ -235,7 +226,7 @@ func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, b *eventingv1
 	}
 
 	if featureFlags.IsOIDCAuthentication() {
-		dest.Audience = pointer.String(FilterAudience)
+		dest.Audience = pointer.String(filter.FilterAudience)
 	}
 
 	// Note that we have to hard code the brokerGKV stuff as sometimes typemeta is not

@@ -28,8 +28,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
 	corev1listers "k8s.io/client-go/listers/core/v1"
+	"knative.dev/eventing/pkg/apis/feature"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/ptr"
+	pkgreconciler "knative.dev/pkg/reconciler"
 )
 
 // GetOIDCServiceAccountNameForResource returns the service account name to use
@@ -92,5 +95,29 @@ func EnsureOIDCServiceAccountExistsForResource(ctx context.Context, serviceAccou
 		return fmt.Errorf("service account %s not owned by %s %s", sa.Name, gvk.Kind, objectMeta.Name)
 	}
 
+	return nil
+}
+
+type OIDCIdentityStatusMarker interface {
+	MarkOIDCIdentityCreatedSucceeded()
+	MarkOIDCIdentityCreatedSucceededWithReason(reason, messageFormat string, messageA ...interface{})
+	MarkOIDCIdentityCreatedFailed(reason, messageFormat string, messageA ...interface{})
+}
+
+func SetupOIDCServiceAccount(ctx context.Context, flags feature.Flags, serviceAccountLister corev1listers.ServiceAccountLister, kubeclient kubernetes.Interface, gvk schema.GroupVersionKind, objectMeta metav1.ObjectMeta, marker OIDCIdentityStatusMarker, setAuthStatus func(a *duckv1.AuthStatus)) pkgreconciler.Event {
+	if flags.IsOIDCAuthentication() {
+		saName := GetOIDCServiceAccountNameForResource(gvk, objectMeta)
+		setAuthStatus(&duckv1.AuthStatus{
+			ServiceAccountName: &saName,
+		})
+		if err := EnsureOIDCServiceAccountExistsForResource(ctx, serviceAccountLister, kubeclient, gvk, objectMeta); err != nil {
+			marker.MarkOIDCIdentityCreatedFailed("Unable to resolve service account for OIDC authentication", "%v", err)
+			return err
+		}
+		marker.MarkOIDCIdentityCreatedSucceeded()
+	} else {
+		setAuthStatus(nil)
+		marker.MarkOIDCIdentityCreatedSucceededWithReason(fmt.Sprintf("%s feature disabled", feature.OIDCAuthentication), "")
+	}
 	return nil
 }

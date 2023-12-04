@@ -218,12 +218,12 @@ func EventTransformation() *feature.Feature {
 	f.Setup("install channel 2", channel_impl.Install(channel2))
 	f.Setup("install subscription 1", subscription.Install(subscription1,
 		subscription.WithChannel(channel_impl.AsRef(channel1)),
-		subscription.WithSubscriber(prober.AsKReference("transform"), ""),
+		subscription.WithSubscriber(prober.AsKReference("transform"), "", ""),
 		subscription.WithReply(channel_impl.AsRef(channel2), ""),
 	))
 	f.Setup("install subscription 2", subscription.Install(subscription2,
 		subscription.WithChannel(channel_impl.AsRef(channel2)),
-		subscription.WithSubscriber(prober.AsKReference("sink"), ""),
+		subscription.WithSubscriber(prober.AsKReference("sink"), "", ""),
 	))
 	f.Setup("subscription 1 is ready", subscription.IsReady(subscription1))
 	f.Setup("subscription 2 is ready", subscription.IsReady(subscription2))
@@ -264,7 +264,7 @@ func SingleEventWithEncoding(encoding binding.Encoding) *feature.Feature {
 	f.Setup("install channel", channel_impl.Install(channel))
 	f.Setup("install subscription", subscription.Install(sub,
 		subscription.WithChannel(channel_impl.AsRef(channel)),
-		subscription.WithSubscriber(prober.AsKReference("sink"), ""),
+		subscription.WithSubscriber(prober.AsKReference("sink"), "", ""),
 	))
 
 	f.Setup("subscription is ready", subscription.IsReady(sub))
@@ -358,14 +358,13 @@ func channelSubscriberUnreachable(createSubscriberFn func(ref *duckv1.KReference
 	f.Setup("channel is ready", channel_impl.IsReady(channelName))
 	f.Setup("channel is addressable", channel_impl.IsAddressable(channelName))
 	f.Setup("subscription is ready", subscription.IsReady(sub))
+	f.Setup("channel has dead letter sink uri", channel_impl.HasDeadLetterSinkURI(channelName, channel_impl.GVR()))
 
 	f.Requirement("install source", eventshub.Install(
 		sourceName,
 		eventshub.StartSenderToResource(channel_impl.GVR(), channelName),
 		eventshub.InputEvent(ev),
 	))
-
-	f.Requirement("Channel has dead letter sink uri", channel_impl.HasDeadLetterSinkURI(channelName, channel_impl.GVR()))
 
 	f.Assert("Receives dls extensions when subscriber is unreachable", eventasssert.OnStore(sink).
 		MatchEvent(
@@ -403,14 +402,13 @@ func channelSubscriberReturnedErrorNoData(createSubscriberFn func(ref *duckv1.KR
 	f.Setup("channel is ready", channel_impl.IsReady(channelName))
 	f.Setup("channel is addressable", channel_impl.IsAddressable(channelName))
 	f.Setup("subscription is ready", subscription.IsReady(sub))
+	f.Setup("channel has dead letter sink uri", channel_impl.HasDeadLetterSinkURI(channelName, channel_impl.GVR()))
 
 	f.Requirement("install source", eventshub.Install(
 		sourceName,
 		eventshub.StartSenderToResource(channel_impl.GVR(), channelName),
 		eventshub.InputEvent(ev),
 	))
-
-	f.Requirement("Channel has dead letter sink uri", channel_impl.HasDeadLetterSinkURI(channelName, channel_impl.GVR()))
 
 	f.Assert("Receives dls extensions without errordata", assertEnhancedWithKnativeErrorExtensions(
 		sink,
@@ -454,14 +452,13 @@ func channelSubscriberReturnedErrorWithData(createSubscriberFn func(ref *duckv1.
 	f.Setup("channel is ready", channel_impl.IsReady(channelName))
 	f.Setup("channel is addressable", channel_impl.IsAddressable(channelName))
 	f.Setup("subscription is ready", subscription.IsReady(sub))
+	f.Setup("channel has dead letter sink uri", channel_impl.HasDeadLetterSinkURI(channelName, channel_impl.GVR()))
 
 	f.Requirement("install source", eventshub.Install(
 		sourceName,
 		eventshub.StartSenderToResource(channel_impl.GVR(), channelName),
 		eventshub.InputEvent(ev),
 	))
-
-	f.Requirement("Channel has dead letter sink uri", channel_impl.HasDeadLetterSinkURI(channelName, channel_impl.GVR()))
 
 	f.Assert("Receives dls extensions with errordata Base64encoding", assertEnhancedWithKnativeErrorExtensions(
 		sink,
