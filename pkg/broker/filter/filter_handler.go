@@ -64,6 +64,8 @@ const (
 	// based on what serving is doing. See https://github.com/knative/serving/blob/main/pkg/network/transports.go.
 	defaultMaxIdleConnections        = 1000
 	defaultMaxIdleConnectionsPerHost = 100
+
+	FilterAudience = "mt-broker-filter"
 )
 
 // Handler parses Cloud Events, determines if they pass a filter, and sends them to a subscriber.
@@ -77,10 +79,11 @@ type Handler struct {
 	logger        *zap.Logger
 	withContext   func(ctx context.Context) context.Context
 	filtersMap    *subscriptionsapi.FiltersMap
+	tokenVerifier *auth.OIDCTokenVerifier
 }
 
 // NewHandler creates a new Handler and its associated EventReceiver.
-func NewHandler(logger *zap.Logger, oidcTokenProvider *auth.OIDCTokenProvider, triggerInformer v1.TriggerInformer, reporter StatsReporter, wc func(ctx context.Context) context.Context) (*Handler, error) {
+func NewHandler(logger *zap.Logger, tokenVerifier *auth.OIDCTokenVerifier, oidcTokenProvider *auth.OIDCTokenProvider, triggerInformer v1.TriggerInformer, reporter StatsReporter, wc func(ctx context.Context) context.Context) (*Handler, error) {
 	kncloudevents.ConfigureConnectionArgs(&kncloudevents.ConnectionArgs{
 		MaxIdleConns:        defaultMaxIdleConnections,
 		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
@@ -132,6 +135,7 @@ func NewHandler(logger *zap.Logger, oidcTokenProvider *auth.OIDCTokenProvider, t
 		eventDispatcher: kncloudevents.NewDispatcher(oidcTokenProvider),
 		triggerLister:   triggerInformer.Lister(),
 		logger:          logger,
+		tokenVerifier:   tokenVerifier,
 		withContext:     wc,
 		filtersMap:      fm,
 	}, nil
@@ -202,6 +206,25 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 		h.logger.Info("Unable to get the Trigger", zap.Error(err), zap.Any("triggerRef", triggerRef))
 		writer.WriteHeader(http.StatusBadRequest)
 		return
+	}
+
+	features := feature.FromContext(ctx)
+	if features.IsOIDCAuthentication() {
+		h.logger.Debug("OIDC authentication is enabled")
+		token := auth.GetJWTFromHeader(request.Header)
+		if token == "" {
+			h.logger.Warn(fmt.Sprintf("No JWT in %s header provided while feature %s is enabled", auth.AuthHeaderKey, feature.OIDCAuthentication))
+			writer.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+
+		if _, err := h.tokenVerifier.VerifyJWT(ctx, token, FilterAudience); err != nil {
+			h.logger.Warn("no valid JWT provided", zap.Error(err))
+			writer.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+
+		h.logger.Debug("Request contained a valid JWT. Continuing...")
 	}
 
 	reportArgs := &ReportArgs{

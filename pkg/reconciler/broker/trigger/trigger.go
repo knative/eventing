@@ -46,6 +46,7 @@ import (
 	"knative.dev/eventing/pkg/apis/feature"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	"knative.dev/eventing/pkg/auth"
+	"knative.dev/eventing/pkg/broker/filter"
 	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1"
 	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1"
@@ -62,8 +63,6 @@ const (
 	subscriptionDeleteFailed = "SubscriptionDeleteFailed"
 	subscriptionCreateFailed = "SubscriptionCreateFailed"
 	subscriptionGetFailed    = "SubscriptionGetFailed"
-
-	FilterAudience = "mt-broker-filter"
 )
 
 type Reconciler struct {
@@ -227,7 +226,7 @@ func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, b *eventingv1
 	}
 
 	if featureFlags.IsOIDCAuthentication() {
-		dest.Audience = pointer.String(FilterAudience)
+		dest.Audience = pointer.String(filter.FilterAudience)
 	}
 
 	// Note that we have to hard code the brokerGKV stuff as sometimes typemeta is not
