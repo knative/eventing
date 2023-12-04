@@ -82,6 +82,17 @@ func WithSubscriberForSubscription(name string) SubscriptionOption {
 	}
 }
 
+// WithURIForSubscription returns an option that adds a URI for the given v1 Subscription
+func WithURIForSubscription(uri *apis.URL) SubscriptionOption {
+	return func(s *messagingv1.Subscription) {
+		if uri != nil {
+			s.Spec.Subscriber = &duckv1.Destination{
+				URI: uri,
+			}
+		}
+	}
+}
+
 // WithReplyForSubscription returns an options that adds a ReplyStrategy for the given v1 Subscription.
 func WithReplyForSubscription(name string, typemeta *metav1.TypeMeta) SubscriptionOption {
 	return func(s *messagingv1.Subscription) {

@@ -215,7 +215,7 @@ func ExampleWithSubscriber() {
 		Kind:       "subkind",
 		Name:       "subname",
 		APIVersion: "subversion",
-	}, "/extra/path")(cfg)
+	}, "/extra/path", "test-audience")(cfg)
 	files, err := manifest.ExecuteYAML(ctx, yaml, images, cfg)
 	if err != nil {
 		panic(err)
@@ -236,6 +236,7 @@ func ExampleWithSubscriber() {
 	//       name: subname
 	//       apiVersion: subversion
 	//     uri: /extra/path
+	//     audience: test-audience
 }
 
 func ExampleWithReply() {

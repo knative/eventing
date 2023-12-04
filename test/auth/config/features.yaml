@@ -18,4 +18,4 @@ metadata:
   name: config-features
   namespace: knative-eventing
 data:
-  authentication.oidc: "enabled"
+  authentication-oidc: "enabled"

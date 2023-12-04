@@ -20,7 +20,6 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"knative.dev/pkg/apis"
@@ -35,6 +34,11 @@ import (
 	"knative.dev/eventing/test/rekt/resources/account_role"
 	"knative.dev/eventing/test/rekt/resources/channel_impl"
 	"knative.dev/eventing/test/rekt/resources/delivery"
+	"knative.dev/eventing/test/rekt/resources/subscription"
+)
+
+var (
+	subscriptionUri = "http://example.com"
 )
 
 func ControlPlaneConformance(channelName string) *feature.FeatureSet {
@@ -84,12 +88,14 @@ func ControlPlaneChannel(channelName string) *feature.Feature {
 	f.Stable("Annotation Requirements").
 		Should("each instance SHOULD have annotation: messaging.knative.dev/subscribable: v1",
 			channelHasAnnotations)
+	subscriptionName := feature.MakeRandomK8sName("subscription")
+	f.Setup("install subscriber", subscription.Install(subscriptionName, subscription.WithChannel(channel_impl.AsRef(channelName)), subscription.WithSubscriber(nil, subscriptionUri, "")))
 
 	f.Stable("Spec and Status Requirements for Subscribers").
 		Must("Each channel CRD MUST contain an array of subscribers: spec.subscribers. "+
 			"Each channel CRD MUST have a status subresource which contains [subscribers (as an array)]. "+
 			"The ready field of the subscriber identified by its uid MUST be set to True when the subscription is ready to be processed.",
-			channelAllowsSubscribersAndStatus)
+			channelAllowsSubscribersAndStatus(subscriptionUri))
 	// Special note for Channel tests: The array of subscribers MUST NOT be
 	// set directly on the generic Channel custom object, but rather
 	// appended to the backing channel by the subscription itself.
@@ -154,72 +160,67 @@ func channelHasAnnotations(ctx context.Context, t feature.T) {
 	}
 }
 
-func channelAllowsSubscribersAndStatus(ctx context.Context, t feature.T) {
-	ch := getChannelable(ctx, t)
-	original := ch.DeepCopy()
+func channelAllowsSubscribersAndStatus(subscriptionURI string) feature.StepFn {
+	return func(ctx context.Context, t feature.T) {
+		var channelable *duckv1.Channelable
+		interval, timeout := environment.PollTimingsFromContext(ctx)
+		var want *duckv1.SubscriberSpec
+		err := wait.PollImmediate(interval, timeout, func() (bool, error) {
+			channelable = getChannelable(ctx, t)
+			if channelable == nil {
+				t.Fatalf("channelable is nil")
+			}
+			if channelable.Status.ObservedGeneration < channelable.Generation {
+				// keep polling.
+				return false, nil
+			}
 
-	u, _ := apis.ParseURL("http://example.com")
-	want := duckv1.SubscriberSpec{
-		UID:           "abc123",
-		Generation:    1,
-		SubscriberURI: u,
-	}
+			if len(channelable.Status.Subscribers) == len(channelable.Spec.Subscribers) {
+				for _, got := range channelable.Spec.Subscribers {
 
-	ch.Spec.Subscribers = append(ch.Spec.Subscribers, want)
+					// get the UID for the subscription we made
+					if got.SubscriberURI.String() == subscriptionURI {
+						want = &got
+					}
+				}
 
-	patchChannelable(ctx, t, original, ch)
+				// keep polling
+				if want == nil {
+					return false, nil
+				}
 
-	var updated *duckv1.Channelable
-	interval, timeout := environment.PollTimingsFromContext(ctx)
-	err := wait.PollImmediate(interval, timeout, func() (bool, error) {
-		updated = getChannelable(ctx, t)
-		if updated.Status.ObservedGeneration < updated.Generation {
-			// keep polling.
-			return false, nil
-		}
-		if len(updated.Status.Subscribers) == len(ch.Spec.Subscribers) {
-			for _, got := range updated.Status.Subscribers {
-				// want should be Ready.
-				if got.UID == want.UID {
-					if want := corev1.ConditionTrue; got.Ready == want {
-						// Synced!
+				for _, got := range channelable.Status.Subscribers {
+					// want should be Ready.
+					if got.UID == want.UID && got.Ready == corev1.ConditionTrue {
 						return true, nil
 					}
 				}
 			}
+			// keep polling.
+			return false, nil
+		})
+
+		if want == nil {
+			t.Fatalf("could not get subscription with matching URI")
 		}
-		// keep polling.
-		return false, nil
-	})
-	if err != nil {
-		t.Fatalf("failed waiting for channel subscribers to sync", err)
-	}
 
-	if len(updated.Spec.Subscribers) <= 0 {
-		t.Errorf("subscriber was not saved")
-	}
-
-	found := false
-	for _, got := range updated.Spec.Subscribers {
-		if got.UID == want.UID {
-			found = true
-			if diff := cmp.Diff(want, got); diff != "" {
-				t.Error("Round trip Subscriber has a delta, (-want, +got) =", diff)
-			}
+		if err != nil {
+			t.Fatalf("failed waiting for channel subscribers to sync", err)
 		}
-	}
-	if !found {
-		t.Error("Round trip Subscriber failed.")
-	}
 
-	if len(updated.Status.Subscribers) != 1 {
-		t.Error("Subscribers not in status.")
-	} else {
-		for _, got := range updated.Status.Subscribers {
-			// want should be Ready.
-			if got.UID == want.UID {
-				if want := corev1.ConditionTrue; got.Ready != want {
-					t.Error("Expected subscriber to be %q, got %q", want, got.Ready)
+		if len(channelable.Spec.Subscribers) <= 0 {
+			t.Errorf("subscriber was not saved")
+		}
+
+		if len(channelable.Status.Subscribers) != 1 {
+			t.Error("Subscribers not in status.")
+		} else {
+			for _, got := range channelable.Status.Subscribers {
+				// want should be Ready.
+				if got.UID == want.UID {
+					if want := corev1.ConditionTrue; got.Ready != want {
+						t.Error("Expected subscriber to be %q, got %q", want, got.Ready)
+					}
 				}
 			}
 		}

@@ -50,7 +50,7 @@ func AutoCreateEventTypesOnIMC() *feature.Feature {
 	f.Setup("install channel", channel_impl.Install(channelName))
 	f.Setup("install subscription", subscription.Install(sub,
 		subscription.WithChannel(channel_impl.AsRef(channelName)),
-		subscription.WithSubscriber(service.AsKReference(sink), ""),
+		subscription.WithSubscriber(service.AsKReference(sink), "", ""),
 	))
 
 	f.Setup("subscription is ready", subscription.IsReady(sub))

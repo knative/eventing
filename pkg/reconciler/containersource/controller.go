@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"k8s.io/client-go/tools/cache"
+	"knative.dev/eventing/pkg/apis/feature"
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	containersourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1/containersource"
@@ -27,8 +28,10 @@ import (
 	v1containersource "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1/containersource"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	deploymentinformer "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment"
+	serviceaccountinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
+	"knative.dev/pkg/logging"
 )
 
 // NewController creates a Reconciler for ContainerSource and returns the result of NewImpl.
@@ -42,6 +45,16 @@ func NewController(
 	containersourceInformer := containersourceinformer.Get(ctx)
 	sinkbindingInformer := sinkbindinginformer.Get(ctx)
 	deploymentInformer := deploymentinformer.Get(ctx)
+	serviceaccountInformer := serviceaccountinformer.Get(ctx)
+
+	var globalResync func(obj interface{})
+	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"),
+		func(name string, value interface{}) {
+			if globalResync != nil {
+				globalResync(nil)
+			}
+		})
+	featureStore.WatchConfigs(cmw)
 
 	r := &Reconciler{
 		kubeClientSet:         kubeClient,
@@ -49,8 +62,15 @@ func NewController(
 		containerSourceLister: containersourceInformer.Lister(),
 		deploymentLister:      deploymentInformer.Lister(),
 		sinkBindingLister:     sinkbindingInformer.Lister(),
+		serviceAccountLister:  serviceaccountInformer.Lister(),
 	}
-	impl := v1containersource.NewImpl(ctx, r)
+	impl := v1containersource.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
+		return controller.Options{ConfigStore: featureStore}
+	})
+
+	globalResync = func(_ interface{}) {
+		impl.GlobalResync(containersourceInformer.Informer())
+	}
 
 	containersourceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 

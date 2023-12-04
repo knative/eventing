@@ -172,7 +172,7 @@ func assertExpectedRoutedEvents(prober *eventshub.EventProber, expected map[stri
 			if len(want) != 0 && len(got) != 0 {
 				// ID is adjusted by eventshub.
 				except := []cmp.Option{
-					cmpopts.IgnoreFields(conformanceevent.ContextAttributes{}, "ID"),
+					cmpopts.IgnoreFields(conformanceevent.ContextAttributes{}, "ID", "Extensions"),
 					cmpopts.IgnoreMapEntries(func(k, v string) bool { return k == "knativearrivaltime" }),
 				}
 				if diff := cmp.Diff(want, got, except...); diff != "" {

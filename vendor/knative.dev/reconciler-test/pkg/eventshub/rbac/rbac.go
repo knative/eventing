@@ -21,6 +21,9 @@ import (
 	"embed"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kubeclient "knative.dev/pkg/client/injection/kube/client"
+	"knative.dev/reconciler-test/pkg/environment"
 
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
@@ -30,11 +33,33 @@ import (
 var templates embed.FS
 
 // Install creates the necessary ServiceAccount, Role, RoleBinding for the eventshub.
-// The resources are named according to the current namespace defined in the environment.
 func Install(cfg map[string]interface{}) feature.StepFn {
 	return func(ctx context.Context, t feature.T) {
+		WithPullSecrets(ctx, t)(cfg)
 		if _, err := manifest.InstallYamlFS(ctx, templates, cfg); err != nil && !apierrors.IsAlreadyExists(err) {
 			t.Fatal(err)
+		}
+	}
+}
+
+func WithPullSecrets(ctx context.Context, t feature.T) manifest.CfgFn {
+	namespace := environment.FromContext(ctx).Namespace()
+	serviceAccount, err := kubeclient.Get(ctx).CoreV1().ServiceAccounts(namespace).Get(ctx, "default", metav1.GetOptions{})
+	if err != nil {
+		t.Fatalf("Failed to read default SA in %s namespace: %v", namespace, err)
+	}
+
+	return func(cfg map[string]interface{}) {
+		if len(serviceAccount.ImagePullSecrets) == 0 {
+			return
+		}
+		if _, set := cfg["withPullSecrets"]; !set {
+			cfg["withPullSecrets"] = map[string]interface{}{}
+		}
+		withPullSecrets := cfg["withPullSecrets"].(map[string]interface{})
+		withPullSecrets["secrets"] = []string{}
+		for _, secret := range serviceAccount.ImagePullSecrets {
+			withPullSecrets["secrets"] = append(withPullSecrets["secrets"].([]string), secret.Name)
 		}
 	}
 }

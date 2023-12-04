@@ -93,20 +93,10 @@ var _ subscriptionreconciler.Finalizer = (*Reconciler)(nil)
 func (r *Reconciler) ReconcileKind(ctx context.Context, subscription *v1.Subscription) pkgreconciler.Event {
 	// OIDC authentication
 	featureFlags := feature.FromContext(ctx)
-	if featureFlags.IsOIDCAuthentication() {
-		saName := auth.GetOIDCServiceAccountNameForResource(v1.SchemeGroupVersion.WithKind("Subscription"), subscription.ObjectMeta)
-		subscription.Status.Auth = &duckv1.AuthStatus{
-			ServiceAccountName: &saName,
-		}
-
-		if err := auth.EnsureOIDCServiceAccountExistsForResource(ctx, r.serviceAccountLister, r.kubeclient, v1.SchemeGroupVersion.WithKind("Subscription"), subscription.ObjectMeta); err != nil {
-			subscription.Status.MarkOIDCIdentityCreatedFailed("Unable to resolve service account for OIDC authentication", "%v", err)
-			return err
-		}
-		subscription.Status.MarkOIDCIdentityCreatedSucceeded()
-	} else {
-		subscription.Status.Auth = nil
-		subscription.Status.MarkOIDCIdentityCreatedSucceededWithReason(fmt.Sprintf("%s feature disabled", feature.OIDCAuthentication), "")
+	if err := auth.SetupOIDCServiceAccount(ctx, featureFlags, r.serviceAccountLister, r.kubeclient, v1.SchemeGroupVersion.WithKind("Subscription"), subscription.ObjectMeta, &subscription.Status, func(as *duckv1.AuthStatus) {
+		subscription.Status.Auth = as
+	}); err != nil {
+		return err
 	}
 
 	// Find the channel for this subscription.
@@ -473,7 +463,7 @@ func (r *Reconciler) patchSubscription(ctx context.Context, namespace string, ch
 	after := channel.DeepCopy()
 
 	if sub.DeletionTimestamp.IsZero() {
-		r.updateChannelAddSubscription(after, sub)
+		r.updateChannelAddSubscriptionSpec(after, sub)
 	} else {
 		r.updateChannelRemoveSubscription(after, sub)
 	}
@@ -513,7 +503,7 @@ func (r *Reconciler) updateChannelRemoveSubscription(channel *eventingduckv1.Cha
 	}
 }
 
-func (r *Reconciler) updateChannelAddSubscription(channel *eventingduckv1.Channelable, sub *v1.Subscription) {
+func (r *Reconciler) updateChannelAddSubscriptionSpec(channel *eventingduckv1.Channelable, sub *v1.Subscription) {
 	// Look to update subscriber.
 	for i, v := range channel.Spec.Subscribers {
 		if v.UID == sub.UID {
@@ -525,6 +515,7 @@ func (r *Reconciler) updateChannelAddSubscription(channel *eventingduckv1.Channe
 			channel.Spec.Subscribers[i].ReplyCACerts = sub.Status.PhysicalSubscription.ReplyCACerts
 			channel.Spec.Subscribers[i].ReplyAudience = sub.Status.PhysicalSubscription.ReplyAudience
 			channel.Spec.Subscribers[i].Delivery = deliverySpec(sub, channel)
+			channel.Spec.Subscribers[i].Auth = sub.Status.Auth
 			return
 		}
 	}
@@ -539,6 +530,7 @@ func (r *Reconciler) updateChannelAddSubscription(channel *eventingduckv1.Channe
 		ReplyCACerts:       sub.Status.PhysicalSubscription.ReplyCACerts,
 		ReplyAudience:      sub.Status.PhysicalSubscription.ReplyAudience,
 		Delivery:           deliverySpec(sub, channel),
+		Auth:               sub.Status.Auth,
 	}
 
 	// Must not have been found. Add it.
