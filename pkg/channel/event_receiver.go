@@ -20,9 +20,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"knative.dev/eventing/pkg/apis/feature"
 	nethttp "net/http"
 	"time"
+
+	"knative.dev/eventing/pkg/apis/feature"
 
 	"knative.dev/eventing/pkg/auth"
 
