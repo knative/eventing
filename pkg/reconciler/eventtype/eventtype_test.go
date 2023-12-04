@@ -32,7 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgotesting "k8s.io/client-go/testing"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
-	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1beta2/eventtype"
+	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1beta3/eventtype"
 	. "knative.dev/eventing/pkg/reconciler/testing/v1"
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/configmap"

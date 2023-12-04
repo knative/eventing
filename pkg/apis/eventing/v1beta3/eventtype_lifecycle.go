@@ -60,6 +60,10 @@ func (et *EventTypeStatus) MarkReferenceDoesNotExist() {
 	eventTypeCondSet.Manage(et).MarkFalse(EventTypeConditionReferenceExists, "ResourceDoesNotExist", "Resource in spec.reference does not exist")
 }
 
+func (et *EventTypeStatus) MarkReferenceExistsNotSet() {
+	eventTypeCondSet.Manage(et).MarkTrueWithReason(EventTypeConditionReferenceExists, "ReferenceNotSet", "No reference set on the event type")
+}
+
 func (et *EventTypeStatus) MarkReferenceExistsUnknown(reason, messageFormat string, messageA ...interface{}) {
 	eventTypeCondSet.Manage(et).MarkUnknown(EventTypeConditionReferenceExists, reason, messageFormat, messageA...)
 }
