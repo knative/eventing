@@ -42,7 +42,7 @@ type ReceiveAdapterArgs struct {
 	Image         string
 	Source        *v1.ApiServerSource
 	Labels        map[string]string
-	Audience      string
+	Audience      *string
 	SinkURI       string
 	CACerts       *string
 	Configs       reconcilersource.ConfigAccessor
@@ -188,11 +188,11 @@ func makeEnv(args *ReceiveAdapterArgs) ([]corev1.EnvVar, error) {
 
 	fmt.Printf("haha receive_adapter: trying to add the k_audience env var\n")
 	fmt.Printf("haha receive_adapter: args.Audience is %v\n", args.Audience)
-	if args.Audience != "" {
+	if args.Audience != nil {
 		fmt.Printf("haha receive_adapter: adding the k_audience env var\n")
 		envs = append(envs, corev1.EnvVar{
 			Name:  "K_AUDIENCE",
-			Value: args.Audience,
+			Value: *args.Audience,
 		})
 	}
 

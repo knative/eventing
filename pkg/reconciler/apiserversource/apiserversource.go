@@ -122,6 +122,10 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1.ApiServerSour
 	logging.FromContext(ctx).Errorw("haha: try to display source sink ref", zap.Any("audience is", source.Spec.Sink.Audience))
 	logging.FromContext(ctx).Errorw("haha try to display sinkAddr Audience", zap.Any("audience is", sinkAddr.Audience))
 
+	// The service account should already be created too
+	logging.FromContext(ctx).Errorw("haha: try to display the source OIDC service account", zap.Any("OIDC SA is", source.Spec.ServiceAccountName))
+	logging.FromContext(ctx).Errorw("haha: try to display the source OIDC service account - Auth", zap.Any("OIDC SA is", source.Status.Auth.ServiceAccountName))
+
 	// resolve namespaces to watch
 	namespaces, err := r.namespacesFromSelector(source)
 	if err != nil {
@@ -212,12 +216,8 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1.ApiServer
 	fmt.Printf("haha sinkAddr.URL.String(): %v\n", sinkAddr.URL.String())
 	fmt.Printf("haha sinkAddr.audience: %v\n", sinkAddr.Audience)
 
-	var audience string
-	if sinkAddr.Audience != nil {
-		audience = *sinkAddr.Audience
-	} else {
-		audience = "ilovehaha"
-	}
+	fmt.Printf("haha show the OIDC service account name pointer: %v \n", src.Status.Auth.ServiceAccountName)
+	fmt.Printf("haha show the OIDC service account name string: %v \n", *src.Status.Auth.ServiceAccountName)
 
 	// trying to figure out why audience is empty
 
@@ -227,11 +227,12 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1.ApiServer
 		Labels:        resources.Labels(src.Name),
 		CACerts:       sinkAddr.CACerts,
 		SinkURI:       sinkAddr.URL.String(),
-		Audience:      audience,
+		Audience:      sinkAddr.Audience,
 		Configs:       r.configs,
 		Namespaces:    namespaces,
 		AllNamespaces: allNamespaces,
 	}
+
 	expected, err := resources.MakeReceiveAdapter(&adapterArgs)
 	if err != nil {
 		return nil, err

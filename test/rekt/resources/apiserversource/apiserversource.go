@@ -90,7 +90,6 @@ func WithSink(d *duckv1.Destination) manifest.CfgFn {
 
 		ref := d.Ref
 		uri := d.URI
-		//aud := d.Audience
 
 		if d.CACerts != nil {
 			// This is a multi-line string and should be indented accordingly.
@@ -102,7 +101,9 @@ func WithSink(d *duckv1.Destination) manifest.CfgFn {
 			sink["uri"] = uri.String()
 		}
 
-		sink["audience"] = "my-sink-audience"
+		if d.Audience != nil {
+			sink["audience"] = *d.Audience
+		}
 
 		if ref != nil {
 			if _, set := sink["ref"]; !set {
