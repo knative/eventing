@@ -111,7 +111,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1.ApiServerSour
 
 	if featureFlags.IsOIDCAuthentication() {
 		// Create the role
-		err := createOIDCRole(ctx, r.kubeClientSet, v1.SchemeGroupVersion.WithKind("ApiServerSource"), source.ObjectMeta)
+		err := r.createOIDCRole(ctx, source)
 
 		if err != nil {
 			logging.FromContext(ctx).Errorw("Failed when creating the OIDC Role for ApiServerSource", zap.Error(err))
@@ -119,7 +119,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1.ApiServerSour
 		}
 
 		// Create the rolebinding
-		err = createOIDCRoleBinding(ctx, r.kubeClientSet, v1.SchemeGroupVersion.WithKind("ApiServerSource"), source.ObjectMeta, source.Spec.ServiceAccountName)
+		err = r.createOIDCRoleBinding(ctx, source)
 		if err != nil {
 			logging.FromContext(ctx).Errorw("Failed when creating the OIDC RoleBinding for ApiServerSource", zap.Error(err))
 			return err
@@ -365,18 +365,18 @@ func (r *Reconciler) createCloudEventAttributes(src *v1.ApiServerSource) ([]duck
 
 // createOIDCRole: this function will call resources package to get the role object
 // and then pass to kubeclient to make the actual OIDC role
-func createOIDCRole(ctx context.Context, kubeclient kubernetes.Interface, gvk schema.GroupVersionKind, objectMeta metav1.ObjectMeta) error {
+func (r *Reconciler) createOIDCRole(ctx context.Context, source *v1.ApiServerSource) error {
 	roleName := "create-oidc-token"
 
 	//Call kubeclient and see whether the role exist or not
-	_, err := kubeclient.RbacV1().Roles(objectMeta.Namespace).Get(ctx, roleName, metav1.GetOptions{})
+	_, err := r.kubeClientSet.RbacV1().Roles(source.GetNamespace()).Get(ctx, roleName, metav1.GetOptions{})
 
 	if apierrs.IsNotFound(err) {
-		role, err := resources.MakeOIDCRole(gvk, objectMeta)
+		role, err := resources.MakeOIDCRole(source)
 		// If the role does not exist, we will call kubeclient to create it
-		_, err = kubeclient.RbacV1().Roles(objectMeta.Namespace).Create(ctx, role, metav1.CreateOptions{})
+		_, err = r.kubeClientSet.RbacV1().Roles(source.GetNamespace()).Create(ctx, role, metav1.CreateOptions{})
 		if err != nil {
-			return fmt.Errorf("could not create OIDC service account role %s/%s for %s: %w", objectMeta.Name, objectMeta.Namespace, gvk.Kind, err)
+			return fmt.Errorf("could not create OIDC service account role %s/%s for %s: %w", source.GetName(), source.GetNamespace(), "ApiServerSource", err)
 		}
 
 	}
@@ -387,18 +387,18 @@ func createOIDCRole(ctx context.Context, kubeclient kubernetes.Interface, gvk sc
 
 // createOIDCRoleBinding:  this function will call resources package to get the rolebinding object
 // and then pass to kubeclient to make the actual OIDC rolebinding
-func createOIDCRoleBinding(ctx context.Context, kubeclient kubernetes.Interface, gvk schema.GroupVersionKind, objectMeta metav1.ObjectMeta, saName string) error {
+func (r *Reconciler) createOIDCRoleBinding(ctx context.Context, source *v1.ApiServerSource) error {
 	roleBindingName := "create-oidc-token"
 
 	// Call kubeclient and see whether the roleBinding exist or not
-	_, err := kubeclient.RbacV1().RoleBindings(objectMeta.Namespace).Get(ctx, roleBindingName, metav1.GetOptions{})
+	_, err := r.kubeClientSet.RbacV1().RoleBindings(source.GetNamespace()).Get(ctx, roleBindingName, metav1.GetOptions{})
 
 	if apierrs.IsNotFound(err) {
-		roleBinding, err := resources.MakeOIDCRoleBinding(gvk, objectMeta, saName)
+		roleBinding, err := resources.MakeOIDCRoleBinding(source)
 		// If the role does not exist, we will call kubeclient to create it
-		_, err = kubeclient.RbacV1().RoleBindings(objectMeta.Namespace).Create(ctx, roleBinding, metav1.CreateOptions{})
+		_, err = r.kubeClientSet.RbacV1().RoleBindings(source.GetNamespace()).Create(ctx, roleBinding, metav1.CreateOptions{})
 		if err != nil {
-			return fmt.Errorf("could not create OIDC service account rolebinding %s/%s for %s: %w", objectMeta.Name, objectMeta.Namespace, gvk.Kind, err)
+			return fmt.Errorf("could not create OIDC service account rolebinding %s/%s for %s: %w", source.GetName(), source.GetNamespace(), "apiserversource", err)
 		}
 
 	}

@@ -42,6 +42,7 @@ const (
 	EnvConfigResourceGroup        = "K_RESOURCE_GROUP"
 	EnvConfigSink                 = "K_SINK"
 	EnvConfigAudience             = "K_AUDIENCE"
+	EnvConfigOIDCServiceAccount   = "K_OIDC_SERVICE_ACCOUNT"
 	EnvConfigCACert               = "K_CA_CERTS"
 	EnvConfigCEOverrides          = "K_CE_OVERRIDES"
 	EnvConfigMetricsConfig        = "K_METRICS_CONFIG"
@@ -125,6 +126,7 @@ type EnvConfigAccessor interface {
 	// Get the audience of the target sink.
 	GetAudience() *string
 
+	// Get the service account name to use for the adapter.
 	GetServiceAccountName() *types.NamespacedName
 
 	// Get the namespace of the adapter.

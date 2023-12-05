@@ -74,7 +74,7 @@ func (p *prober) deployReceiverService() {
 	p.client.CreateServiceOrFail(service)
 }
 
-func (p *prober) createReceiverDeployment() *appsv1.Deployment {
+func (p *prober) iverDeployment() *appsv1.Deployment {
 	var replicas int32 = 1
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{

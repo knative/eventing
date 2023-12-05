@@ -73,13 +73,13 @@ func (a *resourceDelegate) sendCloudEvent(ctx context.Context, event cloudevents
 	defer a.logger.Debug("Finished sending cloudevent id: ", event.ID())
 	source := event.Context.GetSource()
 	subject := event.Context.GetSubject()
-	a.logger.Info("sending cloudevent id: %s, source: %s, subject: %s", event.ID(), source, subject)
+	a.logger.Debugf("sending cloudevent id: %s, source: %s, subject: %s", event.ID(), source, subject)
 
 	if result := a.ce.Send(ctx, event); !cloudevents.IsACK(result) {
 		a.logger.Errorw("failed to send cloudevent", zap.Error(result), zap.String("source", source),
 			zap.String("subject", subject), zap.String("id", event.ID()))
 	} else {
-		a.logger.Info("cloudevent sent id: %s, source: %s, subject: %s", event.ID(), source, subject)
+		a.logger.Debugf("cloudevent sent id: %s, source: %s, subject: %s", event.ID(), source, subject)
 	}
 }
 
