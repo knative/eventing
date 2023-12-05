@@ -158,6 +158,9 @@ type DeliveryStatus struct {
 	// according to https://www.rfc-editor.org/rfc/rfc7468.
 	// +optional
 	DeadLetterSinkCACerts *string `json:"deadLetterSinkCACerts,omitempty"`
+	// DeadLetterSinkAudience is the OIDC audience of the DeadLetterSink
+	// +optional
+	DeadLetterSinkAudience *string `json:"deadLetterSinkAudience,omitempty"`
 }
 
 func (ds *DeliveryStatus) IsSet() bool {
@@ -166,14 +169,16 @@ func (ds *DeliveryStatus) IsSet() bool {
 
 func NewDeliveryStatusFromAddressable(addr *duckv1.Addressable) DeliveryStatus {
 	return DeliveryStatus{
-		DeadLetterSinkURI:     addr.URL,
-		DeadLetterSinkCACerts: addr.CACerts,
+		DeadLetterSinkURI:      addr.URL,
+		DeadLetterSinkCACerts:  addr.CACerts,
+		DeadLetterSinkAudience: addr.Audience,
 	}
 }
 
 func NewDestinationFromDeliveryStatus(status DeliveryStatus) duckv1.Destination {
 	return duckv1.Destination{
-		URI:     status.DeadLetterSinkURI,
-		CACerts: status.DeadLetterSinkCACerts,
+		URI:      status.DeadLetterSinkURI,
+		CACerts:  status.DeadLetterSinkCACerts,
+		Audience: status.DeadLetterSinkAudience,
 	}
 }

@@ -44,7 +44,7 @@ import (
 
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/pkg/apis/feature"
-	"knative.dev/eventing/pkg/broker"
+	eventingbroker "knative.dev/eventing/pkg/broker"
 	v1 "knative.dev/eventing/pkg/client/informers/externalversions/eventing/v1"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1"
 	"knative.dev/eventing/pkg/eventfilter"
@@ -64,6 +64,9 @@ const (
 	// based on what serving is doing. See https://github.com/knative/serving/blob/main/pkg/network/transports.go.
 	defaultMaxIdleConnections        = 1000
 	defaultMaxIdleConnectionsPerHost = 100
+
+	FilterAudience = "mt-broker-filter"
+	skipTTL        = -1
 )
 
 // Handler parses Cloud Events, determines if they pass a filter, and sends them to a subscriber.
@@ -74,13 +77,15 @@ type Handler struct {
 	eventDispatcher *kncloudevents.Dispatcher
 
 	triggerLister eventinglisters.TriggerLister
+	brokerLister  eventinglisters.BrokerLister
 	logger        *zap.Logger
 	withContext   func(ctx context.Context) context.Context
 	filtersMap    *subscriptionsapi.FiltersMap
+	tokenVerifier *auth.OIDCTokenVerifier
 }
 
 // NewHandler creates a new Handler and its associated EventReceiver.
-func NewHandler(logger *zap.Logger, oidcTokenProvider *auth.OIDCTokenProvider, triggerInformer v1.TriggerInformer, reporter StatsReporter, wc func(ctx context.Context) context.Context) (*Handler, error) {
+func NewHandler(logger *zap.Logger, tokenVerifier *auth.OIDCTokenVerifier, oidcTokenProvider *auth.OIDCTokenProvider, triggerInformer v1.TriggerInformer, brokerInformer v1.BrokerInformer, reporter StatsReporter, wc func(ctx context.Context) context.Context) (*Handler, error) {
 	kncloudevents.ConfigureConnectionArgs(&kncloudevents.ConnectionArgs{
 		MaxIdleConns:        defaultMaxIdleConnections,
 		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
@@ -131,19 +136,17 @@ func NewHandler(logger *zap.Logger, oidcTokenProvider *auth.OIDCTokenProvider, t
 		reporter:        reporter,
 		eventDispatcher: kncloudevents.NewDispatcher(oidcTokenProvider),
 		triggerLister:   triggerInformer.Lister(),
+		brokerLister:    brokerInformer.Lister(),
 		logger:          logger,
+		tokenVerifier:   tokenVerifier,
 		withContext:     wc,
 		filtersMap:      fm,
 	}, nil
 }
 
-// 1. validate request
-// 2. extract event from request
-// 3. get trigger from its trigger reference extracted from the request URI
-// 4. filter event
-// 5. send event to trigger's subscriber
-// 6. write the response
 func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
+	ctx := h.withContext(request.Context())
+
 	writer.Header().Set("Allow", "POST")
 
 	if request.Method != http.MethodPost {
@@ -158,7 +161,12 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	ctx := h.withContext(request.Context())
+	trigger, err := h.getTrigger(triggerRef)
+	if err != nil {
+		h.logger.Info("Unable to get the Trigger", zap.Error(err), zap.Any("triggerRef", triggerRef))
+		writer.WriteHeader(http.StatusBadRequest)
+		return
+	}
 
 	event, err := cehttp.NewEventFromHTTPRequest(request)
 	if err != nil {
@@ -166,6 +174,8 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 		writer.WriteHeader(http.StatusBadRequest)
 		return
 	}
+
+	h.logger.Debug("Received message", zap.Any("trigger", triggerRef.NamespacedName), zap.Stringer("event", event))
 
 	ctx, span := trace.StartSpan(ctx, tracing.TriggerMessagingDestination(triggerRef.NamespacedName))
 	defer span.End()
@@ -180,8 +190,105 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 		span.AddAttributes(opencensusclient.EventTraceAttributes(event)...)
 	}
 
+	features := feature.FromContext(ctx)
+	if features.IsOIDCAuthentication() {
+		h.logger.Debug("OIDC authentication is enabled")
+		token := auth.GetJWTFromHeader(request.Header)
+		if token == "" {
+			h.logger.Warn(fmt.Sprintf("No JWT in %s header provided while feature %s is enabled", auth.AuthHeaderKey, feature.OIDCAuthentication))
+			writer.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+
+		if _, err := h.tokenVerifier.VerifyJWT(ctx, token, FilterAudience); err != nil {
+			h.logger.Warn("no valid JWT provided", zap.Error(err))
+			writer.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+
+		h.logger.Debug("Request contained a valid JWT. Continuing...")
+	}
+
+	if triggerRef.IsReply {
+		h.handleDispatchToReplyRequest(ctx, trigger, writer, request, event)
+		return
+	}
+
+	if triggerRef.IsDLS {
+		h.handleDispatchToDLSRequest(ctx, trigger, writer, request, event)
+		return
+	}
+
+	h.handleDispatchToSubscriberRequest(ctx, trigger, writer, request, event)
+}
+
+func (h *Handler) handleDispatchToReplyRequest(ctx context.Context, trigger *eventingv1.Trigger, writer http.ResponseWriter, request *http.Request, event *event.Event) {
+	broker, err := h.brokerLister.Brokers(trigger.Namespace).Get(trigger.Spec.Broker)
+	if err != nil {
+		h.logger.Info("Unable to get the Broker", zap.Error(err))
+		writer.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	target := broker.Status.Address
+
+	reportArgs := &ReportArgs{
+		ns:          trigger.Namespace,
+		trigger:     trigger.Name,
+		broker:      trigger.Spec.Broker,
+		requestType: "reply_forward",
+	}
+
+	h.logger.Info("sending to reply", zap.Any("target", target))
+
+	// since the broker-filter acts here like a proxy, we don't filter headers
+	h.send(ctx, writer, request.Header, *target, reportArgs, event, trigger, skipTTL)
+}
+
+func (h *Handler) handleDispatchToDLSRequest(ctx context.Context, trigger *eventingv1.Trigger, writer http.ResponseWriter, request *http.Request, event *event.Event) {
+	broker, err := h.brokerLister.Brokers(trigger.Namespace).Get(trigger.Spec.Broker)
+	if err != nil {
+		h.logger.Info("Unable to get the Broker", zap.Error(err))
+		writer.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	var target *duckv1.Addressable
+	if trigger.Status.DeadLetterSinkURI != nil {
+		target = &duckv1.Addressable{
+			URL:      trigger.Status.DeadLetterSinkURI,
+			CACerts:  trigger.Status.DeadLetterSinkCACerts,
+			Audience: trigger.Status.DeadLetterSinkAudience,
+		}
+	} else if broker.Status.DeadLetterSinkURI != nil {
+		target = &duckv1.Addressable{
+			URL:      broker.Status.DeadLetterSinkURI,
+			CACerts:  broker.Status.DeadLetterSinkCACerts,
+			Audience: broker.Status.DeadLetterSinkAudience,
+		}
+	}
+
+	reportArgs := &ReportArgs{
+		ns:          trigger.Namespace,
+		trigger:     trigger.Name,
+		broker:      trigger.Spec.Broker,
+		requestType: "dls_forward",
+	}
+
+	h.logger.Info("sending to dls", zap.Any("target", target))
+
+	// since the broker-filter acts here like a proxy, we don't filter headers
+	h.send(ctx, writer, request.Header, *target, reportArgs, event, trigger, skipTTL)
+}
+
+func (h *Handler) handleDispatchToSubscriberRequest(ctx context.Context, trigger *eventingv1.Trigger, writer http.ResponseWriter, request *http.Request, event *event.Event) {
+	triggerRef := types.NamespacedName{
+		Name:      trigger.Name,
+		Namespace: trigger.Namespace,
+	}
+
 	// Remove the TTL attribute that is used by the Broker.
-	ttl, err := broker.GetTTL(event.Context)
+	ttl, err := eventingbroker.GetTTL(event.Context)
 	if err != nil {
 		// Only messages sent by the Broker should be here. If the attribute isn't here, then the
 		// event wasn't sent by the Broker, so we can drop it.
@@ -191,27 +298,19 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 		writer.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	if err := broker.DeleteTTL(event.Context); err != nil {
+	if err := eventingbroker.DeleteTTL(event.Context); err != nil {
 		h.logger.Warn("Failed to delete TTL.", zap.Error(err))
 	}
 
-	h.logger.Debug("Received message", zap.Any("triggerRef", triggerRef))
-
-	t, err := h.getTrigger(triggerRef)
-	if err != nil {
-		h.logger.Info("Unable to get the Trigger", zap.Error(err), zap.Any("triggerRef", triggerRef))
-		writer.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
 	reportArgs := &ReportArgs{
-		ns:         t.Namespace,
-		trigger:    t.Name,
-		broker:     t.Spec.Broker,
-		filterType: triggerFilterAttribute(t.Spec.Filter, "type"),
+		ns:          trigger.Namespace,
+		trigger:     trigger.Name,
+		broker:      trigger.Spec.Broker,
+		filterType:  triggerFilterAttribute(trigger.Spec.Filter, "type"),
+		requestType: "filter",
 	}
 
-	subscriberURI := t.Status.SubscriberURI
+	subscriberURI := trigger.Status.SubscriberURI
 	if subscriberURI == nil {
 		// Record the event count.
 		writer.WriteHeader(http.StatusBadRequest)
@@ -220,8 +319,8 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	// Check if the event should be sent.
-	ctx = logging.WithLogger(ctx, h.logger.Sugar().With(zap.String("trigger", fmt.Sprintf("%s/%s", t.GetNamespace(), t.GetName()))))
-	filterResult := h.filterEvent(ctx, t, *event)
+	ctx = logging.WithLogger(ctx, h.logger.Sugar().With(zap.String("trigger", fmt.Sprintf("%s/%s", trigger.GetNamespace(), trigger.GetName()))))
+	filterResult := h.filterEvent(ctx, trigger, *event)
 
 	if filterResult == eventfilter.FailFilter {
 		// We do not count the event. The event will be counted in the broker ingress.
@@ -232,11 +331,12 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	h.reportArrivalTime(event, reportArgs)
 
 	target := duckv1.Addressable{
-		URL:      t.Status.SubscriberURI,
-		CACerts:  t.Status.SubscriberCACerts,
-		Audience: t.Status.SubscriberAudience,
+		URL:      trigger.Status.SubscriberURI,
+		CACerts:  trigger.Status.SubscriberCACerts,
+		Audience: trigger.Status.SubscriberAudience,
 	}
-	h.send(ctx, writer, utils.PassThroughHeaders(request.Header), target, reportArgs, event, t, ttl)
+
+	h.send(ctx, writer, utils.PassThroughHeaders(request.Header), target, reportArgs, event, trigger, ttl)
 }
 
 func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers http.Header, target duckv1.Addressable, reportArgs *ReportArgs, event *cloudevents.Event, t *eventingv1.Trigger, ttl int32) {
@@ -272,7 +372,7 @@ func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers 
 		writer.WriteHeader(dispatchInfo.ResponseCode)
 
 		// Read Response body to responseErr
-		errExtensionInfo := broker.ErrExtensionInfo{
+		errExtensionInfo := eventingbroker.ErrExtensionInfo{
 			ErrDestination:  target.URL,
 			ErrResponseBody: dispatchInfo.ResponseBody,
 		}
@@ -336,10 +436,12 @@ func (h *Handler) writeResponse(ctx context.Context, writer http.ResponseWriter,
 		return http.StatusBadGateway, err
 	}
 
-	// Reattach the TTL (with the same value) to the response event before sending it to the Broker.
-	if err := broker.SetTTL(event.Context, ttl); err != nil {
-		writer.WriteHeader(http.StatusInternalServerError)
-		return http.StatusInternalServerError, fmt.Errorf("failed to reset TTL: %w", err)
+	if ttl != skipTTL {
+		// Reattach the TTL (with the same value) to the response event before sending it to the Broker.
+		if err := eventingbroker.SetTTL(event.Context, ttl); err != nil {
+			writer.WriteHeader(http.StatusInternalServerError)
+			return http.StatusInternalServerError, fmt.Errorf("failed to reset TTL: %w", err)
+		}
 	}
 
 	eventResponse := binding.ToMessage(event)
@@ -361,7 +463,7 @@ func (h *Handler) reportArrivalTime(event *event.Event, reportArgs *ReportArgs) 
 	// Record the event processing time. This might be off if the receiver and the filter pods are running in
 	// different nodes with different clocks.
 	var arrivalTimeStr string
-	if extErr := event.ExtensionAs(broker.EventArrivalTime, &arrivalTimeStr); extErr == nil {
+	if extErr := event.ExtensionAs(eventingbroker.EventArrivalTime, &arrivalTimeStr); extErr == nil {
 		arrivalTime, err := time.Parse(time.RFC3339, arrivalTimeStr)
 		if err == nil {
 			_ = h.reporter.ReportEventProcessingTime(reportArgs, time.Since(arrivalTime))

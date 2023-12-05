@@ -22,6 +22,8 @@ rules:
   - apiGroups:
       - eventing.knative.dev
     resources:
+      - brokers
+      - brokers/status
       - triggers
       - triggers/status
     verbs:

@@ -57,7 +57,20 @@ func TestBrokerSupportsOIDC(t *testing.T) {
 	env.Prerequisite(ctx, t, brokerfeatures.GoesReady(name, broker.WithEnvConfig()...))
 
 	env.TestSet(ctx, t, oidc.AddressableOIDCConformance(broker.GVR(), "Broker", name, env.Namespace()))
-	env.Test(ctx, t, oidc.BrokerSendEventWithOIDCToken())
+}
+
+func TestBrokerSendsEventsWithOIDCSupport(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+	)
+
+	env.TestSet(ctx, t, oidc.BrokerSendEventWithOIDC())
 }
 
 func TestChannelImplSupportsOIDC(t *testing.T) {
