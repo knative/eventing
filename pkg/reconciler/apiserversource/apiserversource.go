@@ -20,6 +20,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
+	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"sort"
 
 	"go.uber.org/zap"
@@ -106,9 +108,25 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1.ApiServerSour
 		return err
 	}
 
-	// Create the role and rolebinding
+	// Create the role
 	logging.FromContext(ctx).Errorw("haha: About to enter the role access granting stage Creating role and rolebinding")
-	auth.EnsureOIDCServiceAccountRoleBindingExistsForResource(ctx, r.kubeClientSet, v1.SchemeGroupVersion.WithKind("ApiServerSource"), source.ObjectMeta, source.Spec.ServiceAccountName)
+	err := createOIDCRole(ctx,r.kubeClientSet,v1.SchemeGroupVersion.WithKind("ApiServerSource"), source.ObjectMeta)
+
+	if err != nil{
+		logging.FromContext(ctx).Errorw("Failed when creating the OIDC Role for ApiServerSource", zap.Error(err))
+		return err
+	}
+
+	// Create the rolebinding
+
+	err = createOIDCRoleBinding(ctx,r.kubeClientSet,v1.SchemeGroupVersion.WithKind("ApiServerSource"),source.ObjectMeta, source.Spec.ServiceAccountName)
+	if err != nil{
+		logging.FromContext(ctx).Errorw("Failed when creating the OIDC RoleBinding for ApiServerSource", zap.Error(err))
+		return err
+	}
+
+
+
 
 	logging.FromContext(ctx).Errorw("haha: finished About to enter the role access granting stage Creating role and rolebinding")
 	sinkAddr, err := r.sinkResolver.AddressableFromDestinationV1(ctx, *dest, source)
@@ -372,3 +390,197 @@ func (r *Reconciler) createCloudEventAttributes(src *v1.ApiServerSource) ([]duck
 }
 
 // TODO: adding the rolebinding function to the resource folder and the role to the auth folder
+
+// createOIDCRole: this function will call resources package to get the role object
+// and then pass to kubeclient to make the actual OIDC role
+func createOIDCRole (ctx context.Context,kubeclient kubernetes.Interface , gvk schema.GroupVersionKind, objectMeta metav1.ObjectMeta) (error){
+
+	roleName := "create-oidc-token"
+	// First, create the role object
+
+	//Second, call kubeclient and see whether the role exist or not
+	role, err := kubeclient.RbacV1().Roles(objectMeta.Namespace).Get(ctx, roleName, metav1.GetOptions{})
+	logging.FromContext(ctx).Errorw("haha in the controller: role object %s", zap.Any("role",role))
+
+	if apierrs.IsNotFound(err) {
+		role,err := resources.MakeOIDCRole(ctx,gvk,objectMeta)
+		logging.FromContext(ctx).Errorw("haha in the controller: not found", zap.Error(err))
+		// If the role does not exist, we will call kubeclient to create it
+		_, err = kubeclient.RbacV1().Roles(objectMeta.Namespace).Create(ctx, role, metav1.CreateOptions{})
+				if err != nil {
+					return fmt.Errorf("could not create OIDC service account role %s/%s for %s: %w", objectMeta.Name, objectMeta.Namespace, gvk.Kind, err)
+				}
+
+	}
+
+	return nil
+
+}
+
+
+// createOIDCRoleBinding:  this function will call resources package to get the rolebinding object
+// and then pass to kubeclient to make the actual OIDC rolebinding
+func createOIDCRoleBinding (ctx context.Context, kubeclient kubernetes.Interface, gvk schema.GroupVersionKind, objectMeta metav1.ObjectMeta, saName string) (error) {
+	roleBindingName := "create-oidc-token"
+	// First, create the rolebinding object
+
+
+	// Second, call kubeclient and see whether the role exist or not
+	_, err := kubeclient.RbacV1().RoleBindings(objectMeta.Namespace).Get(ctx, roleBindingName, metav1.GetOptions{})
+
+	if apierrs.IsNotFound(err) {
+		roleBinding, err := resources.MakeOIDCRoleBinding(ctx, gvk, objectMeta, saName)
+		// If the role does not exist, we will call kubeclient to create it
+		_, err = kubeclient.RbacV1().RoleBindings(objectMeta.Namespace).Create(ctx, roleBinding, metav1.CreateOptions{})
+		if err != nil {
+			return fmt.Errorf("could not create OIDC service account rolebinding %s/%s for %s: %w", objectMeta.Name, objectMeta.Namespace, gvk.Kind, err)
+		}
+
+	}
+	return nil
+}
+
+
+
+
+
+
+// EnsureOIDCServiceAccountRoleBindingExistsForResource
+// makes sure the given resource has an OIDC service account role binding with
+// an owner reference to the resource set.
+//func EnsureOIDCServiceAccountRoleBindingExistsForResource(ctx context.Context, kubeclient kubernetes.Interface, gvk schema.GroupVersionKind, objectMeta metav1.ObjectMeta, saName string) error {
+//	logger := logging.FromContext(ctx)
+//	logger.Errorf("haha: Initializing")
+//
+//	roleName := fmt.Sprintf("create-oidc-token")
+//	roleBindingName := fmt.Sprintf("create-oidc-token")
+//
+//	logger.Errorf("haha: going to get role binding for %s", objectMeta.Name)
+//	logger.Errorf("haha: role name %s", roleName)
+//	logger.Errorf("haha: role binding name %s", roleBindingName)
+//
+//	roleBinding, err := kubeclient.RbacV1().RoleBindings(objectMeta.Namespace).Get(ctx, roleBindingName, metav1.GetOptions{})
+//
+//	logger.Errorf("haha: got role binding for %s", roleBinding)
+//
+//	logger.Errorf("haha: going to enter the if statement")
+//	// If the resource doesn't exist, we'll create it.
+//	if apierrs.IsNotFound(err) {
+//		logging.FromContext(ctx).Debugw("Creating OIDC service account role binding", zap.Error(err))
+//		logger.Errorf("haha: creating role binding")
+//
+//		// Create the "create-oidc-token" role
+//		CreateRoleForServiceAccount(ctx, kubeclient, gvk, objectMeta)
+//
+//		roleBinding = &rbacv1.RoleBinding{
+//			ObjectMeta: metav1.ObjectMeta{
+//				Name:      roleBindingName,
+//				Namespace: objectMeta.GetNamespace(),
+//				Annotations: map[string]string{
+//					"description": fmt.Sprintf("Role Binding for OIDC Authentication for %s %q", gvk.GroupKind().Kind, objectMeta.Name),
+//				},
+//			},
+//			RoleRef: rbacv1.RoleRef{
+//				APIGroup: "rbac.authorization.k8s.io",
+//				Kind:     "Role",
+//				//objectMeta.Name + roleName
+//				Name: fmt.Sprintf(roleName),
+//			},
+//			Subjects: []rbacv1.Subject{
+//				{
+//					Kind:      "ServiceAccount",
+//					Namespace: objectMeta.GetNamespace(),
+//					// apiServerSource service account name, it is in the source.Spec, NOT in source.Auth
+//					Name: saName,
+//				},
+//			},
+//		}
+//
+//		logger.Errorf("haha: role binding object created")
+//		logger.Errorf("haha: role binding object %s", roleBinding)
+//
+//		_, err = kubeclient.RbacV1().RoleBindings(objectMeta.Namespace).Create(ctx, roleBinding, metav1.CreateOptions{})
+//		if err != nil {
+//			logger.Errorf("haha: error creating role binding")
+//			logger.Errorf("haha: error %s", err)
+//			return fmt.Errorf("could not create OIDC service account role binding %s/%s for %s: %w", objectMeta.Name, objectMeta.Namespace, gvk.Kind, err)
+//		}
+//
+//		return nil
+//	}
+//
+//	if err != nil {
+//		logger.Errorf("haha: error getting role binding")
+//		logger.Errorf("haha: error %s", err)
+//		return fmt.Errorf("could not get OIDC service account role binding %s/%s for %s: %w", objectMeta.Name, objectMeta.Namespace, gvk.Kind, err)
+//
+//	}
+//
+//	if !metav1.IsControlledBy(&roleBinding.ObjectMeta, &objectMeta) {
+//		logger.Errorf("haha: role binding not owned by")
+//		logger.Errorf("haha: role binding %s", roleBinding)
+//		return fmt.Errorf("role binding %s not owned by %s %s", roleBinding.Name, gvk.Kind, objectMeta.Name)
+//	}
+//
+//	return nil
+//}
+//
+//// Create the create-oidc-token role for the service account
+//func CreateRoleForServiceAccount(ctx context.Context, kubeclient kubernetes.Interface, gvk schema.GroupVersionKind, objectMeta metav1.ObjectMeta) error {
+//
+//	logger := logging.FromContext(ctx)
+//	logger.Errorf("haha: Initializing create role for service account")
+//
+//	roleName := fmt.Sprintf("create-oidc-token")
+//	logger.Errorf("haha: role name %s", roleName)
+//
+//	role, err := kubeclient.RbacV1().Roles(objectMeta.Namespace).Get(ctx, roleName, metav1.GetOptions{})
+//	logger.Errorf("haha: got role %s", role)
+//
+//	// If the resource doesn't exist, we'll create it.
+//	if apierrs.IsNotFound(err) {
+//		logging.FromContext(ctx).Debugw("Creating OIDC service account role", zap.Error(err))
+//
+//		logger.Errorf("haha: creating role")
+//
+//		role = &rbacv1.Role{
+//			ObjectMeta: metav1.ObjectMeta{
+//				Name:      roleName,
+//				Namespace: objectMeta.GetNamespace(),
+//				Annotations: map[string]string{
+//					"description": fmt.Sprintf("Role for OIDC Authentication for %s %q", gvk.GroupKind().Kind, objectMeta.Name),
+//				},
+//			},
+//			Rules: []rbacv1.PolicyRule{
+//				rbacv1.PolicyRule{
+//					APIGroups: []string{""},
+//
+//					// serviceaccount name
+//					ResourceNames: []string{auth.GetOIDCServiceAccountNameForResource(gvk, objectMeta)},
+//					Resources:     []string{"serviceaccounts/token"},
+//					Verbs:         []string{"create"},
+//				},
+//			},
+//		}
+//
+//		logger.Errorf("haha: role object created")
+//		logger.Errorf("haha: role object %s", role)
+//
+//		_, err = kubeclient.RbacV1().Roles(objectMeta.Namespace).Create(ctx, role, metav1.CreateOptions{})
+//		if err != nil {
+//			logger.Errorf("haha: error creating role")
+//			logger.Errorf("haha: error %s", err)
+//			return fmt.Errorf("could not create OIDC service account role %s/%s for %s: %w", objectMeta.Name, objectMeta.Namespace, gvk.Kind, err)
+//		}
+//
+//		return nil
+//	}
+//
+//	if err != nil {
+//		logger.Errorf("haha: error getting role")
+//		logger.Errorf("haha: error getting role %s", err)
+//		return fmt.Errorf("could not get OIDC service account role %s/%s for %s: %w", objectMeta.Name, objectMeta.Namespace, gvk.Kind, err)
+//
+//	}
+//	return nil
+//}

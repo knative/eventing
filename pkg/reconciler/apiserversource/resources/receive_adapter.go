@@ -17,15 +17,19 @@ limitations under the License.
 package resources
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"knative.dev/eventing/pkg/adapter/v2"
+	"knative.dev/eventing/pkg/auth"
+	"knative.dev/pkg/logging"
 
 	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/ptr"
@@ -48,6 +52,84 @@ type ReceiveAdapterArgs struct {
 	Configs       reconcilersource.ConfigAccessor
 	Namespaces    []string
 	AllNamespaces bool
+}
+
+// MakeOIDCRole will return the role object config for generating the JWT token
+func MakeOIDCRole(ctx context.Context, gvk schema.GroupVersionKind, objectMeta metav1.ObjectMeta) (*rbacv1.Role, error) {
+	logger := logging.FromContext(ctx)
+	logger.Errorf("haha: Initializing create role for service account")
+
+	roleName := fmt.Sprintf("create-oidc-token")
+	logger.Errorf("haha: role name %s", roleName)
+
+	logger.Errorf("haha: creating role")
+
+	return &rbacv1.Role{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      roleName,
+						Namespace: objectMeta.GetNamespace(),
+						Annotations: map[string]string{
+							"description": fmt.Sprintf("Role for OIDC Authentication for %s %q", gvk.GroupKind().Kind, objectMeta.Name),
+						},
+					},
+					Rules: []rbacv1.PolicyRule{
+						rbacv1.PolicyRule{
+							APIGroups: []string{""},
+							ResourceNames: []string{auth.GetOIDCServiceAccountNameForResource(gvk, objectMeta)},
+							Resources:     []string{"serviceaccounts/token"},
+							Verbs:         []string{"create"},
+						},
+					},
+				}, nil
+
+
+}
+
+// MakeOIDCRoleBinding will return the rolebinding object for generating the JWT token
+// So that ApiServerSource's service account have access to create the JWT token for it's OIDC service account and the target audience
+// Note:  it is in the source.Spec, NOT in source.Auth
+func MakeOIDCRoleBinding(ctx context.Context, gvk schema.GroupVersionKind, objectMeta metav1.ObjectMeta, saName string) (*rbacv1.RoleBinding, error) {
+	logger := logging.FromContext(ctx)
+	logger.Errorf("haha: Initializing")
+
+	roleName := fmt.Sprintf("create-oidc-token")
+	roleBindingName := fmt.Sprintf("create-oidc-token")
+
+	logger.Errorf("haha: going to get role binding for %s", objectMeta.Name)
+	logger.Errorf("haha: role name %s", roleName)
+	logger.Errorf("haha: role binding name %s", roleBindingName)
+
+	logger.Errorf("haha: creating role binding")
+
+	roleBinding := &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      roleBindingName,
+			Namespace: objectMeta.GetNamespace(),
+			Annotations: map[string]string{
+				"description": fmt.Sprintf("Role Binding for OIDC Authentication for %s %q", gvk.GroupKind().Kind, objectMeta.Name),
+			},
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: "rbac.authorization.k8s.io",
+			Kind:     "Role",
+			//objectMeta.Name + roleName
+			Name: fmt.Sprintf(roleName),
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:      "ServiceAccount",
+				Namespace: objectMeta.GetNamespace(),
+				//Note: apiServerSource service account name, it is in the source.Spec, NOT in source.Auth
+				Name: saName,
+			},
+		},
+	}
+
+	logger.Errorf("haha: role binding object created")
+	logger.Errorf("haha: role binding object %s", roleBinding)
+
+	return roleBinding, nil
+
 }
 
 // MakeReceiveAdapter generates (but does not insert into K8s) the Receive Adapter Deployment for
@@ -172,11 +254,10 @@ func makeEnv(args *ReceiveAdapterArgs) ([]corev1.EnvVar, error) {
 	}, {
 		Name:  "METRICS_DOMAIN",
 		Value: "knative.dev/eventing",
+	}, {
+		Name:  "K_OIDC_SERVICE_ACCOUNT",
+		Value: *args.Source.Status.Auth.ServiceAccountName,
 	},
-		{
-			Name:  "K_OIDC_SERVICE_ACCOUNT",
-			Value: *args.Source.Status.Auth.ServiceAccountName,
-		},
 	}
 
 	if args.CACerts != nil {
