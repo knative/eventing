@@ -23,7 +23,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/types"
 	"knative.dev/eventing/pkg/auth"
-	"knative.dev/pkg/logging"
 	nethttp "net/http"
 	"net/url"
 	"time"
@@ -246,17 +245,10 @@ var _ cloudevents.Client = (*client)(nil)
 func (c *client) Send(ctx context.Context, out event.Event) protocol.Result {
 	c.applyOverrides(&out)
 
-	logger := logging.FromContext(ctx)
-
-	// If the sink has audience, then we need to request the JWT token
-	if c.audience != ""  && c.serviceAccountName != nil{
+	// If the sink has audience and the OIDC service account, then we need to request the JWT token
+	if c.audience != "" && c.serviceAccountName != nil {
 		// Request the JWT token for the given service account
-		//jwt, err := c.oidcTokenProvider.GetJWT(c.serviceAccountName, *c.audience)
 		jwt, err := c.oidcTokenProvider.GetJWT(*c.serviceAccountName, c.audience)
-
-		logger.Errorf("haha send: print jwt: %s", jwt)
-		logger.Errorf("haha send: print err: %s", err)
-
 		if err != nil {
 			return protocol.NewResult("%w", err)
 		}
@@ -276,22 +268,19 @@ func (c *client) Send(ctx context.Context, out event.Event) protocol.Result {
 func (c *client) Request(ctx context.Context, out event.Event) (*event.Event, protocol.Result) {
 	c.applyOverrides(&out)
 
-	// If the sink has audience, then we need to request the JWT token
-	logger := logging.FromContext(ctx)
-	logger.Errorf("haha send: trying to execute Send function")
+	// If the sink has audience and the OIDC service account, then we need to request the JWT token
+	if c.audience != "" && c.serviceAccountName != nil {
+		// Request the JWT token for the given service account
+		jwt, err := c.oidcTokenProvider.GetJWT(*c.serviceAccountName, c.audience)
+		if err != nil {
+			return nil, protocol.NewResult("%w", err)
+		}
 
-	logger.Errorf("haha req: print service account name: %s", c.serviceAccountName.Name)
-	logger.Errorf("haha req: print service account namespace: %s", c.serviceAccountName.Namespace)
-	//logger.Errorf("haha req: print audience: %s", c.audience)
-	logger.Errorf("haha req: conclude, now going to generate the jwt token")
-
-	// If the sink has audience, then we need to request the JWT token
-	//if c.audience != nil{
-	// Request the JWT token for the given service account
-	jwt, err := c.oidcTokenProvider.GetJWT(*c.serviceAccountName, "my-sink-audience")
-
-	logger.Errorf("haha send: print jwt: %s", jwt)
-	logger.Errorf("haha send: print err: %s", err)
+		// Appending the auth token to the outgoing request
+		headers := http.HeaderFrom(ctx)
+		headers.Set("Authorization", fmt.Sprintf("Bearer %s", jwt))
+		ctx = http.WithCustomHeader(ctx, headers)
+	}
 
 	resp, res := c.ceClient.Request(ctx, out)
 	c.reportMetrics(ctx, out, res)

@@ -212,7 +212,7 @@ func (e *EnvConfig) GetServiceAccountName() *types.NamespacedName {
 			Namespace: e.Namespace,
 			Name:      *e.ServiceAccountName,
 		}
-	}else {
+	} else {
 		return nil
 	}
 }

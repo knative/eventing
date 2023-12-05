@@ -29,8 +29,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"knative.dev/eventing/pkg/adapter/v2"
 	"knative.dev/eventing/pkg/auth"
-	"knative.dev/pkg/logging"
-
 	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/ptr"
 	"knative.dev/pkg/system"
@@ -56,32 +54,25 @@ type ReceiveAdapterArgs struct {
 
 // MakeOIDCRole will return the role object config for generating the JWT token
 func MakeOIDCRole(ctx context.Context, gvk schema.GroupVersionKind, objectMeta metav1.ObjectMeta) (*rbacv1.Role, error) {
-	logger := logging.FromContext(ctx)
-	logger.Errorf("haha: Initializing create role for service account")
-
 	roleName := fmt.Sprintf("create-oidc-token")
-	logger.Errorf("haha: role name %s", roleName)
-
-	logger.Errorf("haha: creating role")
 
 	return &rbacv1.Role{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      roleName,
-						Namespace: objectMeta.GetNamespace(),
-						Annotations: map[string]string{
-							"description": fmt.Sprintf("Role for OIDC Authentication for %s %q", gvk.GroupKind().Kind, objectMeta.Name),
-						},
-					},
-					Rules: []rbacv1.PolicyRule{
-						rbacv1.PolicyRule{
-							APIGroups: []string{""},
-							ResourceNames: []string{auth.GetOIDCServiceAccountNameForResource(gvk, objectMeta)},
-							Resources:     []string{"serviceaccounts/token"},
-							Verbs:         []string{"create"},
-						},
-					},
-				}, nil
-
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      roleName,
+			Namespace: objectMeta.GetNamespace(),
+			Annotations: map[string]string{
+				"description": fmt.Sprintf("Role for OIDC Authentication for %s %q", gvk.GroupKind().Kind, objectMeta.Name),
+			},
+		},
+		Rules: []rbacv1.PolicyRule{
+			rbacv1.PolicyRule{
+				APIGroups:     []string{""},
+				ResourceNames: []string{auth.GetOIDCServiceAccountNameForResource(gvk, objectMeta)},
+				Resources:     []string{"serviceaccounts/token"},
+				Verbs:         []string{"create"},
+			},
+		},
+	}, nil
 
 }
 
@@ -89,19 +80,10 @@ func MakeOIDCRole(ctx context.Context, gvk schema.GroupVersionKind, objectMeta m
 // So that ApiServerSource's service account have access to create the JWT token for it's OIDC service account and the target audience
 // Note:  it is in the source.Spec, NOT in source.Auth
 func MakeOIDCRoleBinding(ctx context.Context, gvk schema.GroupVersionKind, objectMeta metav1.ObjectMeta, saName string) (*rbacv1.RoleBinding, error) {
-	logger := logging.FromContext(ctx)
-	logger.Errorf("haha: Initializing")
-
 	roleName := fmt.Sprintf("create-oidc-token")
 	roleBindingName := fmt.Sprintf("create-oidc-token")
 
-	logger.Errorf("haha: going to get role binding for %s", objectMeta.Name)
-	logger.Errorf("haha: role name %s", roleName)
-	logger.Errorf("haha: role binding name %s", roleBindingName)
-
-	logger.Errorf("haha: creating role binding")
-
-	roleBinding := &rbacv1.RoleBinding{
+	return &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      roleBindingName,
 			Namespace: objectMeta.GetNamespace(),
@@ -112,8 +94,7 @@ func MakeOIDCRoleBinding(ctx context.Context, gvk schema.GroupVersionKind, objec
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
 			Kind:     "Role",
-			//objectMeta.Name + roleName
-			Name: fmt.Sprintf(roleName),
+			Name:     fmt.Sprintf(roleName),
 		},
 		Subjects: []rbacv1.Subject{
 			{
@@ -123,12 +104,7 @@ func MakeOIDCRoleBinding(ctx context.Context, gvk schema.GroupVersionKind, objec
 				Name: saName,
 			},
 		},
-	}
-
-	logger.Errorf("haha: role binding object created")
-	logger.Errorf("haha: role binding object %s", roleBinding)
-
-	return roleBinding, nil
+	}, nil
 
 }
 
@@ -201,7 +177,6 @@ func MakeReceiveAdapter(args *ReceiveAdapterArgs) (*appsv1.Deployment, error) {
 }
 
 func makeEnv(args *ReceiveAdapterArgs) ([]corev1.EnvVar, error) {
-	fmt.Printf("haha geting started make Env")
 	cfg := &apiserver.Config{
 		Namespaces:    args.Namespaces,
 		Resources:     make([]apiserver.ResourceWatch, 0, len(args.Source.Spec.Resources)),
@@ -264,10 +239,7 @@ func makeEnv(args *ReceiveAdapterArgs) ([]corev1.EnvVar, error) {
 		})
 	}
 
-	fmt.Printf("haha receive_adapter: trying to add the k_audience env var\n")
-	fmt.Printf("haha receive_adapter: args.Audience is %v\n", args.Audience)
 	if args.Audience != nil {
-		fmt.Printf("haha receive_adapter: adding the k_audience env var\n")
 		envs = append(envs, corev1.EnvVar{
 			Name:  "K_AUDIENCE",
 			Value: *args.Audience,
@@ -275,15 +247,11 @@ func makeEnv(args *ReceiveAdapterArgs) ([]corev1.EnvVar, error) {
 	}
 
 	if args.Source.Status.Auth != nil {
-		//, {
-		//Name:  "K_OIDC_SERVICE_ACCOUNT",
-		//	Value: *args.Source.Status.Auth.ServiceAccountName,
-		//},
 		envs = append(envs, corev1.EnvVar{
 			Name:  "K_OIDC_SERVICE_ACCOUNT",
 			Value: *args.Source.Status.Auth.ServiceAccountName,
 		})
-		}
+	}
 
 	envs = append(envs, args.Configs.ToEnvVars()...)
 

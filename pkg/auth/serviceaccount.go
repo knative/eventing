@@ -121,4 +121,3 @@ func SetupOIDCServiceAccount(ctx context.Context, flags feature.Flags, serviceAc
 	}
 	return nil
 }
-
