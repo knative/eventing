@@ -44,9 +44,6 @@ func ApiserversourceSendEventWithJWT() *feature.Feature {
 
 	f := feature.NewFeatureNamed("Send events to sink")
 
-	//f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
-	//f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
-
 	f.Setup("deploy receiver", eventshub.Install(sink,
 		eventshub.StartReceiver,
 		eventshub.OIDCReceiverAudience(audience)))
@@ -85,8 +82,6 @@ func ApiserversourceSendEventWithJWT() *feature.Feature {
 				MatchEvent(test.HasType("dev.knative.apiserver.resource.update")).
 				AtLeast(1),
 		)
-	//Must("Set sinkURI to HTTPS endpoint", source.ExpectHTTPSSink(apiserversource.Gvr(), src)).
-	//Must("Set sinkCACerts to non empty CA certs", source.ExpectCACerts(apiserversource.Gvr(), src))
 
 	return f
 }

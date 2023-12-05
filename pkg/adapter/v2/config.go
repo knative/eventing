@@ -17,10 +17,8 @@ package adapter
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"strconv"
-	"strings"
 	"time"
 
 	"k8s.io/apimachinery/pkg/types"
@@ -165,24 +163,6 @@ func (e *EnvConfig) GetMetricsConfig() (*metrics.ExporterOptions, error) {
 		return nil, err
 	}
 	return metricsConfig, err
-}
-
-func extractSinkName(url string) (string, error) {
-	// Check if URL contains http://, remove it for easier processing
-	if strings.HasPrefix(url, "http://") {
-		url = strings.TrimPrefix(url, "http://")
-	}
-
-	// Split the URL by '.' to isolate the components
-	parts := strings.Split(url, ".")
-	if len(parts) == 0 {
-		return "", fmt.Errorf("invalid URL format")
-	}
-
-	// The first part of the URL is expected to be the sink name
-	sinkName := parts[0]
-
-	return sinkName, nil
 }
 
 func (e *EnvConfig) GetLogger() *zap.SugaredLogger {

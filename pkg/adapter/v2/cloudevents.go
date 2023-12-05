@@ -139,8 +139,6 @@ func NewClient(cfg ClientConfig) (Client, error) {
 
 	pOpts := make([]http.Option, 0)
 
-	//OIDCTokenProvider := auth.NewOIDCTokenProvider(cfg.Context)
-
 	ceOverrides := cfg.CeOverrides
 	if cfg.Env != nil {
 		if target := cfg.Env.GetSink(); len(target) > 0 {

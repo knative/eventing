@@ -215,8 +215,6 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1.ApiServer
 	// 	return nil, err
 	// }
 
-	// trying to figure out why audience is empty
-
 	adapterArgs := resources.ReceiveAdapterArgs{
 		Image:         r.receiveAdapterImage,
 		Source:        src,
@@ -364,8 +362,6 @@ func (r *Reconciler) createCloudEventAttributes(src *v1.ApiServerSource) ([]duck
 	}
 	return ceAttributes, nil
 }
-
-// TODO: adding the rolebinding function to the resource folder and the role to the auth folder
 
 // createOIDCRole: this function will call resources package to get the role object
 // and then pass to kubeclient to make the actual OIDC role
