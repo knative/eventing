@@ -21,11 +21,12 @@ import (
 	"errors"
 	"fmt"
 
-	"k8s.io/apimachinery/pkg/types"
-	"knative.dev/eventing/pkg/auth"
 	nethttp "net/http"
 	"net/url"
 	"time"
+
+	"k8s.io/apimachinery/pkg/types"
+	"knative.dev/eventing/pkg/auth"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	ceclient "github.com/cloudevents/sdk-go/v2/client"

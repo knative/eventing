@@ -19,10 +19,11 @@ package auth
 import (
 	"context"
 	"fmt"
+	"strings"
+
 	"knative.dev/eventing/pkg/apis/feature"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	pkgreconciler "knative.dev/pkg/reconciler"
-	"strings"
 
 	"go.uber.org/zap"
 	v1 "k8s.io/api/core/v1"

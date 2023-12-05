@@ -18,6 +18,7 @@ package oidc
 
 import (
 	"context"
+
 	"github.com/cloudevents/sdk-go/v2/test"
 	rbacv1 "k8s.io/api/rbac/v1"
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
