@@ -47,7 +47,7 @@ func ApiserversourceSendEventWithJWT() *feature.Feature {
 	f.Setup("deploy receiver", eventshub.Install(sink,
 		eventshub.StartReceiver,
 		eventshub.OIDCReceiverAudience(audience)))
-	
+
 	f.Setup("Create Service Account for ApiServerSource with RBAC for v1.Event resources",
 		setupAccountAndRoleForApiserversource(sacmName))
 
@@ -77,8 +77,8 @@ func ApiserversourceSendEventWithJWT() *feature.Feature {
 
 	f.Stable("ApiServerSource as event source").
 		Must("delivers events on sink with ref",
-			eventasssert.OnStore(sink).
-				Match(eventasssert.MatchKind(eventshub.EventReceived)).
+			eventassert.OnStore(sink).
+				Match(eventassert.MatchKind(eventshub.EventReceived)).
 				MatchEvent(test.HasType("dev.knative.apiserver.resource.update")).
 				AtLeast(1),
 		)
