@@ -70,7 +70,7 @@ type EnvConfig struct {
 	Sink string `envconfig:"K_SINK"`
 
 	// Audience is the audience of the target sink.
-	Audience string `envconfig:"K_AUDIENCE"`
+	Audience *string `envconfig:"K_AUDIENCE"`
 
 	// Service Account Name is the name of the service account to use for the adapter.
 	ServiceAccountName *string `envconfig:"K_OIDC_SERVICE_ACCOUNT"`
@@ -123,7 +123,7 @@ type EnvConfigAccessor interface {
 	GetCACerts() *string
 
 	// Get the audience of the target sink.
-	GetAudience() string
+	GetAudience() *string
 
 	GetServiceAccountName() *types.NamespacedName
 
@@ -202,7 +202,7 @@ func (e *EnvConfig) GetCACerts() *string {
 	return e.CACerts
 }
 
-func (e *EnvConfig) GetAudience() string {
+func (e *EnvConfig) GetAudience() *string {
 	return e.Audience
 }
 

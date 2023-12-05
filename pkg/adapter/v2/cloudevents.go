@@ -197,16 +197,21 @@ func NewClient(cfg ClientConfig) (Client, error) {
 		return nil, err
 	}
 
-	return &client{
+	client := &client{
 		ceClient:            ceClient,
 		closeIdler:          transport.Base.(*nethttp.Transport),
 		ceOverrides:         ceOverrides,
 		reporter:            cfg.Reporter,
 		crStatusEventClient: cfg.CrStatusEventClient,
-		audience:            cfg.Env.GetAudience(),
-		serviceAccountName:  cfg.Env.GetServiceAccountName(),
-		oidcTokenProvider:   cfg.TokenProvider,
-	}, nil
+	}
+
+	if cfg.Env != nil {
+		client.audience = cfg.Env.GetAudience()
+		client.serviceAccountName = cfg.Env.GetServiceAccountName()
+		client.oidcTokenProvider = cfg.TokenProvider
+	}
+
+	return client, nil
 }
 
 func setTimeOut(duration time.Duration) http.Option {
@@ -230,7 +235,7 @@ type client struct {
 	closeIdler          closeIdler
 
 	oidcTokenProvider  *auth.OIDCTokenProvider
-	audience           string
+	audience           *string
 	serviceAccountName *types.NamespacedName
 }
 
@@ -245,9 +250,9 @@ func (c *client) Send(ctx context.Context, out event.Event) protocol.Result {
 	c.applyOverrides(&out)
 
 	// If the sink has audience and the OIDC service account, then we need to request the JWT token
-	if c.audience != "" && c.serviceAccountName != nil {
+	if c.audience != nil && c.serviceAccountName != nil {
 		// Request the JWT token for the given service account
-		jwt, err := c.oidcTokenProvider.GetJWT(*c.serviceAccountName, c.audience)
+		jwt, err := c.oidcTokenProvider.GetJWT(*c.serviceAccountName, *c.audience)
 		if err != nil {
 			return protocol.NewResult("%w", err)
 		}
@@ -268,9 +273,9 @@ func (c *client) Request(ctx context.Context, out event.Event) (*event.Event, pr
 	c.applyOverrides(&out)
 
 	// If the sink has audience and the OIDC service account, then we need to request the JWT token
-	if c.audience != "" && c.serviceAccountName != nil {
+	if c.audience != nil && c.serviceAccountName != nil {
 		// Request the JWT token for the given service account
-		jwt, err := c.oidcTokenProvider.GetJWT(*c.serviceAccountName, c.audience)
+		jwt, err := c.oidcTokenProvider.GetJWT(*c.serviceAccountName, *c.audience)
 		if err != nil {
 			return nil, protocol.NewResult("%w", err)
 		}

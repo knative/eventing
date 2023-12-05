@@ -17,7 +17,6 @@ limitations under the License.
 package resources
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 
@@ -54,8 +53,8 @@ type ReceiveAdapterArgs struct {
 }
 
 // MakeOIDCRole will return the role object config for generating the JWT token
-func MakeOIDCRole(ctx context.Context, gvk schema.GroupVersionKind, objectMeta metav1.ObjectMeta) (*rbacv1.Role, error) {
-	roleName := fmt.Sprintf("create-oidc-token")
+func MakeOIDCRole(gvk schema.GroupVersionKind, objectMeta metav1.ObjectMeta) (*rbacv1.Role, error) {
+	roleName := "create-oidc-token"
 
 	return &rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{
@@ -80,9 +79,9 @@ func MakeOIDCRole(ctx context.Context, gvk schema.GroupVersionKind, objectMeta m
 // MakeOIDCRoleBinding will return the rolebinding object for generating the JWT token
 // So that ApiServerSource's service account have access to create the JWT token for it's OIDC service account and the target audience
 // Note:  it is in the source.Spec, NOT in source.Auth
-func MakeOIDCRoleBinding(ctx context.Context, gvk schema.GroupVersionKind, objectMeta metav1.ObjectMeta, saName string) (*rbacv1.RoleBinding, error) {
-	roleName := fmt.Sprintf("create-oidc-token")
-	roleBindingName := fmt.Sprintf("create-oidc-token")
+func MakeOIDCRoleBinding(gvk schema.GroupVersionKind, objectMeta metav1.ObjectMeta, saName string) (*rbacv1.RoleBinding, error) {
+	roleName := "create-oidc-token"
+	roleBindingName := "create-oidc-token"
 
 	return &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
@@ -95,7 +94,7 @@ func MakeOIDCRoleBinding(ctx context.Context, gvk schema.GroupVersionKind, objec
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
 			Kind:     "Role",
-			Name:     fmt.Sprintf(roleName),
+			Name:     roleName,
 		},
 		Subjects: []rbacv1.Subject{
 			{

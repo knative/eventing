@@ -372,7 +372,7 @@ func createOIDCRole(ctx context.Context, kubeclient kubernetes.Interface, gvk sc
 	_, err := kubeclient.RbacV1().Roles(objectMeta.Namespace).Get(ctx, roleName, metav1.GetOptions{})
 
 	if apierrs.IsNotFound(err) {
-		role, err := resources.MakeOIDCRole(ctx, gvk, objectMeta)
+		role, err := resources.MakeOIDCRole(gvk, objectMeta)
 		// If the role does not exist, we will call kubeclient to create it
 		_, err = kubeclient.RbacV1().Roles(objectMeta.Namespace).Create(ctx, role, metav1.CreateOptions{})
 		if err != nil {
@@ -394,7 +394,7 @@ func createOIDCRoleBinding(ctx context.Context, kubeclient kubernetes.Interface,
 	_, err := kubeclient.RbacV1().RoleBindings(objectMeta.Namespace).Get(ctx, roleBindingName, metav1.GetOptions{})
 
 	if apierrs.IsNotFound(err) {
-		roleBinding, err := resources.MakeOIDCRoleBinding(ctx, gvk, objectMeta, saName)
+		roleBinding, err := resources.MakeOIDCRoleBinding(gvk, objectMeta, saName)
 		// If the role does not exist, we will call kubeclient to create it
 		_, err = kubeclient.RbacV1().RoleBindings(objectMeta.Namespace).Create(ctx, roleBinding, metav1.CreateOptions{})
 		if err != nil {

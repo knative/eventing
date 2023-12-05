@@ -79,8 +79,6 @@ func (c *OIDCTokenProvider) GetNewJWT(serviceAccount types.NamespacedName, audie
 		CreateToken(context.TODO(), serviceAccount.Name, &tokenRequest, metav1.CreateOptions{})
 
 	if err != nil {
-		fmt.Sprintf("could not request a token for %s: %w", serviceAccount, err)
-
 		return "", fmt.Errorf("could not request a token for %s: %w", serviceAccount, err)
 	}
 
