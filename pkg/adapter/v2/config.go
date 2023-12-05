@@ -126,7 +126,7 @@ type EnvConfigAccessor interface {
 	// Get the audience of the target sink.
 	GetAudience() string
 
-	GetServiceAccountName() types.NamespacedName
+	GetServiceAccountName() *types.NamespacedName
 
 	// Get the namespace of the adapter.
 	GetNamespace() string
@@ -205,11 +205,15 @@ func (e *EnvConfig) GetSink() string {
 	return e.Sink
 }
 
-func (e *EnvConfig) GetServiceAccountName() types.NamespacedName {
+func (e *EnvConfig) GetServiceAccountName() *types.NamespacedName {
 
-	return types.NamespacedName{
-		Namespace: e.Namespace,
-		Name:      *e.ServiceAccountName,
+	if e.ServiceAccountName != nil {
+		return &types.NamespacedName{
+			Namespace: e.Namespace,
+			Name:      *e.ServiceAccountName,
+		}
+	}else {
+		return nil
 	}
 }
 

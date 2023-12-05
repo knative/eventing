@@ -254,9 +254,6 @@ func makeEnv(args *ReceiveAdapterArgs) ([]corev1.EnvVar, error) {
 	}, {
 		Name:  "METRICS_DOMAIN",
 		Value: "knative.dev/eventing",
-	}, {
-		Name:  "K_OIDC_SERVICE_ACCOUNT",
-		Value: *args.Source.Status.Auth.ServiceAccountName,
 	},
 	}
 
@@ -276,6 +273,17 @@ func makeEnv(args *ReceiveAdapterArgs) ([]corev1.EnvVar, error) {
 			Value: *args.Audience,
 		})
 	}
+
+	if args.Source.Status.Auth != nil {
+		//, {
+		//Name:  "K_OIDC_SERVICE_ACCOUNT",
+		//	Value: *args.Source.Status.Auth.ServiceAccountName,
+		//},
+		envs = append(envs, corev1.EnvVar{
+			Name:  "K_OIDC_SERVICE_ACCOUNT",
+			Value: *args.Source.Status.Auth.ServiceAccountName,
+		})
+		}
 
 	envs = append(envs, args.Configs.ToEnvVars()...)
 

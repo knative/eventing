@@ -233,7 +233,7 @@ type client struct {
 
 	oidcTokenProvider  *auth.OIDCTokenProvider
 	audience           string
-	serviceAccountName types.NamespacedName
+	serviceAccountName *types.NamespacedName
 }
 
 func (c *client) CloseIdleConnections() {
@@ -247,19 +247,12 @@ func (c *client) Send(ctx context.Context, out event.Event) protocol.Result {
 	c.applyOverrides(&out)
 
 	logger := logging.FromContext(ctx)
-	logger.Errorf("haha send: trying to execute Send function")
-
-	logger.Errorf("haha send: print service account name: %s", c.serviceAccountName.Name)
-	logger.Errorf("haha send: print service account namespace: %s", c.serviceAccountName.Namespace)
-	//logger.Errorf("haha send: print audience: %s", c.audience)
-	//logger.Errorf("haha send: print the audience, and audience is a string pointer: %s", *c.audience)
-	logger.Errorf("haha send: conclude, now going to generate the jwt token")
 
 	// If the sink has audience, then we need to request the JWT token
-	if c.audience != "" {
+	if c.audience != ""  && c.serviceAccountName != nil{
 		// Request the JWT token for the given service account
 		//jwt, err := c.oidcTokenProvider.GetJWT(c.serviceAccountName, *c.audience)
-		jwt, err := c.oidcTokenProvider.GetJWT(c.serviceAccountName, c.audience)
+		jwt, err := c.oidcTokenProvider.GetJWT(*c.serviceAccountName, c.audience)
 
 		logger.Errorf("haha send: print jwt: %s", jwt)
 		logger.Errorf("haha send: print err: %s", err)
@@ -295,7 +288,7 @@ func (c *client) Request(ctx context.Context, out event.Event) (*event.Event, pr
 	// If the sink has audience, then we need to request the JWT token
 	//if c.audience != nil{
 	// Request the JWT token for the given service account
-	jwt, err := c.oidcTokenProvider.GetJWT(c.serviceAccountName, "my-sink-audience")
+	jwt, err := c.oidcTokenProvider.GetJWT(*c.serviceAccountName, "my-sink-audience")
 
 	logger.Errorf("haha send: print jwt: %s", jwt)
 	logger.Errorf("haha send: print err: %s", err)

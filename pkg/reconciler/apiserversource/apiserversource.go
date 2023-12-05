@@ -108,21 +108,23 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1.ApiServerSour
 		return err
 	}
 
-	// Create the role
-	logging.FromContext(ctx).Errorw("haha: About to enter the role access granting stage Creating role and rolebinding")
-	err := createOIDCRole(ctx,r.kubeClientSet,v1.SchemeGroupVersion.WithKind("ApiServerSource"), source.ObjectMeta)
+	if featureFlags.IsOIDCAuthentication() {
+		// Create the role
+		logging.FromContext(ctx).Errorw("haha: About to enter the role access granting stage Creating role and rolebinding")
+		err := createOIDCRole(ctx, r.kubeClientSet, v1.SchemeGroupVersion.WithKind("ApiServerSource"), source.ObjectMeta)
 
-	if err != nil{
-		logging.FromContext(ctx).Errorw("Failed when creating the OIDC Role for ApiServerSource", zap.Error(err))
-		return err
-	}
+		if err != nil {
+			logging.FromContext(ctx).Errorw("Failed when creating the OIDC Role for ApiServerSource", zap.Error(err))
+			return err
+		}
 
-	// Create the rolebinding
+		// Create the rolebinding
 
-	err = createOIDCRoleBinding(ctx,r.kubeClientSet,v1.SchemeGroupVersion.WithKind("ApiServerSource"),source.ObjectMeta, source.Spec.ServiceAccountName)
-	if err != nil{
-		logging.FromContext(ctx).Errorw("Failed when creating the OIDC RoleBinding for ApiServerSource", zap.Error(err))
-		return err
+		err = createOIDCRoleBinding(ctx, r.kubeClientSet, v1.SchemeGroupVersion.WithKind("ApiServerSource"), source.ObjectMeta, source.Spec.ServiceAccountName)
+		if err != nil {
+			logging.FromContext(ctx).Errorw("Failed when creating the OIDC RoleBinding for ApiServerSource", zap.Error(err))
+			return err
+		}
 	}
 
 
@@ -135,14 +137,6 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1.ApiServerSour
 		return newWarningSinkNotFound(dest)
 	}
 	source.Status.MarkSink(sinkAddr)
-
-	// The audience should already be specified
-	logging.FromContext(ctx).Errorw("haha: try to display source sink ref", zap.Any("audience is", source.Spec.Sink.Audience))
-	logging.FromContext(ctx).Errorw("haha try to display sinkAddr Audience", zap.Any("audience is", sinkAddr.Audience))
-
-	// The service account should already be created too
-	logging.FromContext(ctx).Errorw("haha: try to display the source OIDC service account", zap.Any("OIDC SA is", source.Spec.ServiceAccountName))
-	logging.FromContext(ctx).Errorw("haha: try to display the source OIDC service account - Auth", zap.Any("OIDC SA is", source.Status.Auth.ServiceAccountName))
 
 	// resolve namespaces to watch
 	namespaces, err := r.namespacesFromSelector(source)
@@ -228,14 +222,6 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1.ApiServer
 	// if err := checkResourcesStatus(src); err != nil {
 	// 	return nil, err
 	// }
-
-	fmt.Printf("haha sinkAddr: %v\n", sinkAddr)
-	fmt.Printf("haha sinkAddr.URL: %v\n", sinkAddr.URL)
-	fmt.Printf("haha sinkAddr.URL.String(): %v\n", sinkAddr.URL.String())
-	fmt.Printf("haha sinkAddr.audience: %v\n", sinkAddr.Audience)
-
-	fmt.Printf("haha show the OIDC service account name pointer: %v \n", src.Status.Auth.ServiceAccountName)
-	fmt.Printf("haha show the OIDC service account name string: %v \n", *src.Status.Auth.ServiceAccountName)
 
 	// trying to figure out why audience is empty
 
