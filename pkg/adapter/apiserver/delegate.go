@@ -75,32 +75,6 @@ func (a *resourceDelegate) sendCloudEvent(ctx context.Context, event cloudevents
 	subject := event.Context.GetSubject()
 	a.logger.Info("sending cloudevent id: %s, source: %s, subject: %s", event.ID(), source, subject)
 
-	// Decide whether to request the JWT token or not
-	// Condition: if the sink has audience or not
-	// ?? Question: where can we get the sink audience? As we don't specify the destination in the cloudevent
-
-	// If the sink has audience, then we need to request the JWT token
-	// In order to request the JWT token, we need to get the service account name and namespace from the source
-	// And also need to pass in OIDC token provider
-	// ?? Question again: where can we get the sink audience? And how to pass in OIDC token provider?
-
-	// If the sink doesn't have audience, then we don't need to request the JWT token
-
-	// If the sink has audience, and we have the JWT token, then we need to add the JWT token to the cloudevent
-	// Easy to do this, just add the JWT token as the bearer auth header to the cloudevent header
-
-	// Discovery:
-	// ReceiveAdapter -> ResourceDelegate -> MakeAddEvent -> MakeEvent -> MakeCloudEvent -> SendCloudEvent
-	// Receive adapter is the entry point of the adapter, it receives the k8s api event
-	// ResourceDelegate is the cache.Store, it receives the k8s api event from the receive adapter
-
-	//ApiServerSource will listen to the k8s api event, and then send the cloudevent to the sink when the k8s api event is created, updated or deleted
-
-	// Prepare the headers
-	//headers := http.HeaderFrom(ctx)
-	//jwt := auth.GetJWT(ctx)
-	//headers.Set("Authentication", fmt.Print("Bearer %s", jwt))
-
 	if result := a.ce.Send(ctx, event); !cloudevents.IsACK(result) {
 		a.logger.Errorw("failed to send cloudevent", zap.Error(result), zap.String("source", source),
 			zap.String("subject", subject), zap.String("id", event.ID()))

@@ -15,90 +15,90 @@
 apiVersion: messaging.knative.dev/v1
 kind: Subscription
 metadata:
-  name: { { .name } }
-  namespace: { { .namespace } }
+  name: {{ .name }}
+  namespace: {{ .namespace }}
 spec:
-  { { if .channel } }
+  {{ if .channel }}
   channel:
-    kind: { { .channel.kind } }
-    name: { { .channel.name } }
-    apiVersion: { { .channel.apiVersion } }
-  { { end } }
+    kind: {{ .channel.kind }}
+    name: {{ .channel.name }}
+    apiVersion: {{ .channel.apiVersion }}
+  {{ end }}
   {{if .subscriber }}
   subscriber:
-    { { if .subscriber.ref } }
+    {{ if .subscriber.ref }}
     ref:
-      kind: { { .subscriber.ref.kind } }
-      { { if .subscriber.ref.namespace } }
-      namespace: { { .subscriber.ref.namespace } }
-      { { else } }
-      namespace: { { .namespace } }
-      { { end } }
-      name: { { .subscriber.ref.name } }
-      apiVersion: { { .subscriber.ref.apiVersion } }
-    { { end } }
-    { { if .subscriber.uri } }
-    uri: { { .subscriber.uri } }
-    { { end } }
-    { { if .subscriber.CACerts } }
+      kind: {{ .subscriber.ref.kind }}
+      {{ if .subscriber.ref.namespace }}
+      namespace: {{ .subscriber.ref.namespace }}
+      {{ else }}
+      namespace: {{ .namespace }}
+      {{ end }}
+      name: {{ .subscriber.ref.name }}
+      apiVersion: {{ .subscriber.ref.apiVersion }}
+    {{ end }}
+    {{ if .subscriber.uri }}
+    uri: {{ .subscriber.uri }}
+    {{ end }}
+    {{ if .subscriber.CACerts }}
     CACerts: |-
       {{ .subscriber.CACerts }}
-    { { end } }
-    { { if .subscriber.audience } }
-    audience: { { .subscriber.audience } }
-    { { end } }
-  { { end } }
+    {{ end }}
+    {{ if .subscriber.audience }}
+    audience: {{ .subscriber.audience }}
+    {{ end }}
+  {{ end }}
   {{if .reply }}
   reply:
-    { { if .reply.ref } }
+    {{ if .reply.ref }}
     ref:
-      kind: { { .reply.ref.kind } }
-      { { if .reply.ref.namespace } }
-      namespace: { { .reply.ref.namespace } }
-      { { else } }
-      namespace: { { .namespace } }
-      { { end } }
-      name: { { .reply.ref.name } }
-      apiVersion: { { .reply.ref.apiVersion } }
-    { { end } }
-    { { if .reply.uri } }
-    uri: { { .reply.uri } }
-    { { end } }
-    { { if .reply.CACerts } }
+      kind: {{ .reply.ref.kind }}
+      {{ if .reply.ref.namespace }}
+      namespace: {{ .reply.ref.namespace }}
+      {{ else }}
+      namespace: {{ .namespace }}
+      {{ end }}
+      name: {{ .reply.ref.name }}
+      apiVersion: {{ .reply.ref.apiVersion }}
+    {{ end }}
+    {{ if .reply.uri }}
+    uri: {{ .reply.uri }}
+    {{ end }}
+    {{ if .reply.CACerts }}
     CACerts: |-
       {{ .reply.CACerts }}
-    { { end } }
-  { { end } }
-  { { if .delivery } }
+    {{ end }}
+  {{ end }}
+  {{ if .delivery }}
   delivery:
-    { { if .delivery.deadLetterSink } }
+    {{ if .delivery.deadLetterSink }}
     deadLetterSink:
-      { { if .delivery.deadLetterSink.ref } }
+      {{ if .delivery.deadLetterSink.ref }}
       ref:
-        kind: { { .delivery.deadLetterSink.ref.kind } }
-        { { if .delivery.deadLetterSink.ref.namespace } }
-        namespace: { { .delivery.deadLetterSink.ref.namespace } }
-        { { else } }
-        namespace: { { .namespace } }
-        { { end } }
-        name: { { .delivery.deadLetterSink.ref.name } }
-        apiVersion: { { .delivery.deadLetterSink.ref.apiVersion } }
-      { { end } }
-      { { if .delivery.deadLetterSink.uri } }
-      uri: { { .delivery.deadLetterSink.uri } }
-      { { end } }
-      { { if .delivery.deadLetterSink.CACerts } }
+        kind: {{ .delivery.deadLetterSink.ref.kind }}
+        {{ if .delivery.deadLetterSink.ref.namespace }}
+        namespace: {{ .delivery.deadLetterSink.ref.namespace }}
+        {{ else }}
+        namespace: {{ .namespace }}
+        {{ end }}
+        name: {{ .delivery.deadLetterSink.ref.name }}
+        apiVersion: {{ .delivery.deadLetterSink.ref.apiVersion }}
+      {{ end }}
+      {{ if .delivery.deadLetterSink.uri }}
+      uri: {{ .delivery.deadLetterSink.uri }}
+      {{ end }}
+      {{ if .delivery.deadLetterSink.CACerts }}
       CACerts: |-
         {{ .delivery.deadLetterSink.CACerts }}
-      { { end } }
-    { { end } }
-    { { if .delivery.retry } }
-    retry: { { .delivery.retry } }
-    { { end } }
-    { { if .delivery.backoffPolicy } }
-    backoffPolicy: { { .delivery.backoffPolicy } }
-    { { end } }
-    { { if .delivery.backoffDelay } }
+      {{ end }}
+    {{ end }}
+    {{ if .delivery.retry }}
+    retry: {{ .delivery.retry}}
+    {{ end }}
+    {{ if .delivery.backoffPolicy }}
+    backoffPolicy: {{ .delivery.backoffPolicy}}
+    {{ end }}
+    {{ if .delivery.backoffDelay }}
     backoffDelay: "{{ .delivery.backoffDelay}}"
-    { { end } }
-  { { end } }
+    {{ end }}
+  {{ end }}
