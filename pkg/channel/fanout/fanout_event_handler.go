@@ -88,11 +88,11 @@ type FanoutEventHandler struct {
 	// rather than a member variable.
 	timeout time.Duration
 
-	reporter           channel.StatsReporter
-	logger             *zap.Logger
-	eventTypeHandler   *eventtype.EventTypeAutoHandler
-	channelAddressable *duckv1.KReference
-	channelUID         *types.UID
+	reporter         channel.StatsReporter
+	logger           *zap.Logger
+	eventTypeHandler *eventtype.EventTypeAutoHandler
+	channelRef       *duckv1.KReference
+	channelUID       *types.UID
 }
 
 // NewFanoutEventHandler creates a new fanout.EventHandler.
@@ -101,20 +101,21 @@ func NewFanoutEventHandler(
 	config Config,
 	reporter channel.StatsReporter,
 	eventTypeHandler *eventtype.EventTypeAutoHandler,
-	channelAddressable *duckv1.KReference,
+	channelRef *duckv1.KReference,
 	channelUID *types.UID,
 	eventDispatcher *kncloudevents.Dispatcher,
 	receiverOpts ...channel.EventReceiverOptions,
+
 ) (*FanoutEventHandler, error) {
 	handler := &FanoutEventHandler{
-		logger:             logger,
-		timeout:            defaultTimeout,
-		reporter:           reporter,
-		asyncHandler:       config.AsyncHandler,
-		eventTypeHandler:   eventTypeHandler,
-		channelAddressable: channelAddressable,
-		channelUID:         channelUID,
-		eventDispatcher:    eventDispatcher,
+		logger:           logger,
+		timeout:          defaultTimeout,
+		reporter:         reporter,
+		asyncHandler:     config.AsyncHandler,
+		eventTypeHandler: eventTypeHandler,
+		channelRef:       channelRef,
+		channelUID:       channelUID,
+		eventDispatcher:  eventDispatcher,
 	}
 	handler.subscriptions = make([]Subscription, len(config.Subscriptions))
 	copy(handler.subscriptions, config.Subscriptions)
@@ -184,7 +185,7 @@ func (f *FanoutEventHandler) GetSubscriptions(ctx context.Context) []Subscriptio
 }
 
 func (f *FanoutEventHandler) autoCreateEventType(ctx context.Context, evnt event.Event) {
-	if f.channelAddressable == nil {
+	if f.channelRef == nil {
 		f.logger.Warn("No addressable for channel")
 		return
 	} else {
@@ -192,7 +193,7 @@ func (f *FanoutEventHandler) autoCreateEventType(ctx context.Context, evnt event
 			f.logger.Warn("No channelUID provided, unable to autocreate event type")
 			return
 		}
-		err := f.eventTypeHandler.AutoCreateEventType(ctx, &evnt, f.channelAddressable, *f.channelUID)
+		err := f.eventTypeHandler.AutoCreateEventType(ctx, &evnt, f.channelRef, *f.channelUID)
 		if err != nil {
 			f.logger.Warn("EventTypeCreate failed")
 			return
