@@ -88,7 +88,7 @@ func TestChannelImplSupportsOIDC(t *testing.T) {
 	name := feature.MakeRandomK8sName("channelimpl")
 	env.Prerequisite(ctx, t, channel.ImplGoesReady(name))
 
-	env.Test(ctx, t, oidc.AddressableHasAudiencePopulated(channel_impl.GVR(), channel_impl.GVK().Kind, name, env.Namespace()))
+	env.TestSet(ctx, t, oidc.AddressableOIDCConformance(channel_impl.GVR(), channel_impl.GVK().Kind, name, env.Namespace()))
 }
 
 func TestParallelSupportsOIDC(t *testing.T) {

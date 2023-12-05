@@ -23,6 +23,10 @@ import (
 	nethttp "net/http"
 	"time"
 
+	"knative.dev/eventing/pkg/apis/feature"
+
+	"knative.dev/eventing/pkg/auth"
+
 	"github.com/cloudevents/sdk-go/v2/event"
 	"github.com/cloudevents/sdk-go/v2/protocol/http"
 	"go.uber.org/zap"
@@ -65,6 +69,9 @@ type EventReceiver struct {
 	hostToChannelFunc    ResolveChannelFromHostFunc
 	pathToChannelFunc    ResolveChannelFromPathFunc
 	reporter             StatsReporter
+	tokenVerifier        *auth.OIDCTokenVerifier
+	audience             string
+	withContext          func(context.Context) context.Context
 }
 
 // EventReceiverFunc is the function to be called for handling the event.
@@ -96,6 +103,21 @@ type ResolveChannelFromPathFunc func(string) (ChannelReference, error)
 func ResolveChannelFromPath(PathToChannelFunc ResolveChannelFromPathFunc) EventReceiverOptions {
 	return func(r *EventReceiver) error {
 		r.pathToChannelFunc = PathToChannelFunc
+		return nil
+	}
+}
+
+func OIDCTokenVerification(tokenVerifier *auth.OIDCTokenVerifier, audience string) EventReceiverOptions {
+	return func(r *EventReceiver) error {
+		r.tokenVerifier = tokenVerifier
+		r.audience = audience
+		return nil
+	}
+}
+
+func ReceiverWithContextFunc(fn func(context.Context) context.Context) EventReceiverOptions {
+	return func(r *EventReceiver) error {
+		r.withContext = fn
 		return nil
 	}
 }
@@ -153,6 +175,12 @@ func (r *EventReceiver) Start(ctx context.Context) error {
 }
 
 func (r *EventReceiver) ServeHTTP(response nethttp.ResponseWriter, request *nethttp.Request) {
+	ctx := request.Context()
+
+	if r.withContext != nil {
+		ctx = r.withContext(ctx)
+	}
+
 	response.Header().Set("Allow", "POST, OPTIONS")
 	if request.Method == nethttp.MethodOptions {
 		response.Header().Set("WebHook-Allowed-Origin", "*") // Accept from any Origin:
@@ -216,6 +244,29 @@ func (r *EventReceiver) ServeHTTP(response nethttp.ResponseWriter, request *neth
 		r.logger.Warn("failed to validate extracted event", zap.Error(err))
 		response.WriteHeader(nethttp.StatusBadRequest)
 		return
+	}
+
+	/// Here we do the OIDC audience verification
+	features := feature.FromContext(ctx)
+	if features.IsOIDCAuthentication() {
+		r.logger.Debug("OIDC authentication is enabled")
+
+		token := auth.GetJWTFromHeader(request.Header)
+		if token == "" {
+			r.logger.Warn(fmt.Sprintf("No JWT in %s header provided while feature %s is enabled", auth.AuthHeaderKey, feature.OIDCAuthentication))
+			response.WriteHeader(nethttp.StatusUnauthorized)
+			return
+		}
+
+		if _, err := r.tokenVerifier.VerifyJWT(ctx, token, r.audience); err != nil {
+			r.logger.Warn("no valid JWT provided", zap.Error(err))
+			response.WriteHeader(nethttp.StatusUnauthorized)
+			return
+		}
+
+		r.logger.Debug("Request contained a valid JWT. Continuing...")
+	} else {
+		r.logger.Debug("OIDC authentication is disabled")
 	}
 
 	err = r.receiverFunc(request.Context(), channel, *event, utils.PassThroughHeaders(request.Header))
