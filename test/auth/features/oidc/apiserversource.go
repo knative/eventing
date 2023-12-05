@@ -47,7 +47,7 @@ func ApiserversourceSendEventWithJWT() *feature.Feature {
 	f.Setup("deploy receiver", eventshub.Install(sink,
 		eventshub.StartReceiver,
 		eventshub.OIDCReceiverAudience(audience)))
-	//
+	
 	f.Setup("Create Service Account for ApiServerSource with RBAC for v1.Event resources",
 		setupAccountAndRoleForApiserversource(sacmName))
 
