@@ -154,7 +154,6 @@ func TestApiserversourceSendEventWithJWT(t *testing.T) {
 		knative.WithTracingConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
-		environment.WithPollTimings(4*time.Second, 12*time.Minute),
 	)
 
 	env.Test(ctx, t, oidc.ApiserversourceSendEventWithJWT())

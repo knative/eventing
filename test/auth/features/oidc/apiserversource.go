@@ -25,7 +25,7 @@ import (
 	"knative.dev/eventing/test/rekt/resources/account_role"
 	"knative.dev/eventing/test/rekt/resources/apiserversource"
 	"knative.dev/reconciler-test/pkg/eventshub"
-	eventasssert "knative.dev/reconciler-test/pkg/eventshub/assert"
+	eventassert "knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
 	"knative.dev/reconciler-test/pkg/resources/pod"
@@ -42,7 +42,7 @@ func ApiserversourceSendEventWithJWT() *feature.Feature {
 	audience := "my-sink-audience"
 	sacmName := feature.MakeRandomK8sName("apiserversource")
 
-	f := feature.NewFeatureNamed("Send events to sink")
+	f := feature.NewFeatureNamed("ApiServerSource send events with OIDC authentication")
 
 	f.Setup("deploy receiver", eventshub.Install(sink,
 		eventshub.StartReceiver,
