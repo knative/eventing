@@ -126,8 +126,8 @@ type EnvConfigAccessor interface {
 	// GetAudience gets the audience of the target sink.
 	GetAudience() *string
 
-	// GetServiceAccountName gets the service account name to use for the adapter.
-	GetServiceAccountName() *types.NamespacedName
+	// GetOIDCServiceAccountName gets the service account name to use for the adapter.
+	GetOIDCServiceAccountName() *types.NamespacedName
 
 	// Get the namespace of the adapter.
 	GetNamespace() string
@@ -188,7 +188,7 @@ func (e *EnvConfig) GetSink() string {
 	return e.Sink
 }
 
-func (e *EnvConfig) GetServiceAccountName() *types.NamespacedName {
+func (e *EnvConfig) GetOIDCServiceAccountName() *types.NamespacedName {
 	if e.ServiceAccountName != nil {
 		return &types.NamespacedName{
 			Namespace: e.Namespace,

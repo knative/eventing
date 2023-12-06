@@ -208,7 +208,7 @@ func NewClient(cfg ClientConfig) (Client, error) {
 
 	if cfg.Env != nil {
 		client.audience = cfg.Env.GetAudience()
-		client.serviceAccountName = cfg.Env.GetServiceAccountName()
+		client.serviceAccountName = cfg.Env.GetOIDCServiceAccountName()
 	}
 
 	return client, nil
@@ -248,10 +248,13 @@ var _ cloudevents.Client = (*client)(nil)
 // Send implements client.Send
 func (c *client) Send(ctx context.Context, out event.Event) protocol.Result {
 	c.applyOverrides(&out)
+	var err error
 
-	err := c.appendAuthHeader(&ctx)
-	if err != nil {
-		return err
+	if c.audience != nil && c.serviceAccountName != nil {
+		ctx, err = c.appendAuthHeader(ctx)
+		if err != nil {
+			return err
+		}
 	}
 
 	res := c.ceClient.Send(ctx, out)
@@ -262,11 +265,15 @@ func (c *client) Send(ctx context.Context, out event.Event) protocol.Result {
 // Request implements client.Request
 func (c *client) Request(ctx context.Context, out event.Event) (*event.Event, protocol.Result) {
 	c.applyOverrides(&out)
+	var err error
 
-	err := c.appendAuthHeader(&ctx)
-	if err != nil {
-		return nil, err
+	if c.audience != nil && c.serviceAccountName != nil{
+		ctx, err = c.appendAuthHeader(ctx)
+		if err != nil {
+			return nil, err
+		}
 	}
+
 	resp, res := c.ceClient.Request(ctx, out)
 	c.reportMetrics(ctx, out, res)
 	return resp, res
@@ -396,20 +403,18 @@ func tracecontextMiddleware(h nethttp.Handler) nethttp.Handler {
 // When OIDC is enabled, appendAuthHeader will request the JWT token from the tokenProvider and append it to every request
 // it has interaction with, if source's OIDC service account (source.Status.Auth.ServiceAccountName) and destination's
 // audience are present.
-func (c *client) appendAuthHeader(ctx *context.Context) error {
-	// If the sink has audience and the OIDC service account, then we need to request the JWT token
-	if c.audience != nil && c.serviceAccountName != nil {
+func (c *client) appendAuthHeader(ctx context.Context) (context.Context,error) {
 		// Request the JWT token for the given service account
 		jwt, err := c.oidcTokenProvider.GetJWT(*c.serviceAccountName, *c.audience)
 		if err != nil {
-			return protocol.NewResult("%w", err)
+			return ctx, protocol.NewResult("Failed when appending the Authorization header to the outgoing request %w", err)
 		}
 
 		// Appending the auth token to the outgoing request
-		headers := http.HeaderFrom(*ctx)
+		headers := http.HeaderFrom(ctx)
 		headers.Set("Authorization", fmt.Sprintf("Bearer %s", jwt))
-		*ctx = http.WithCustomHeader(*ctx, headers)
-	}
+		ctx = http.WithCustomHeader(ctx, headers)
 
-	return nil
+
+	return ctx,nil
 }

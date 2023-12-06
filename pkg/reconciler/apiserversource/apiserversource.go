@@ -20,7 +20,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-
 	"sort"
 
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
@@ -366,10 +365,11 @@ func (r *Reconciler) createCloudEventAttributes(src *v1.ApiServerSource) ([]duck
 // createOIDCRole: this function will call resources package to get the role object
 // and then pass to kubeclient to make the actual OIDC role
 func (r *Reconciler) createOIDCRole(ctx context.Context, source *v1.ApiServerSource) error {
-	roleName := "create-oidc-token"
+	roleName := resources.CreateOIDCTokenRoleName(source)
 
 	//Call kubeclient and see whether the role exist or not
 	role, err := r.kubeClientSet.RbacV1().Roles(source.GetNamespace()).Get(ctx, roleName, metav1.GetOptions{})
+
 	expected, errMakeRole := resources.MakeOIDCRole(source)
 
 	if errMakeRole != nil {
@@ -407,7 +407,7 @@ func (r *Reconciler) createOIDCRole(ctx context.Context, source *v1.ApiServerSou
 // createOIDCRoleBinding:  this function will call resources package to get the rolebinding object
 // and then pass to kubeclient to make the actual OIDC rolebinding
 func (r *Reconciler) createOIDCRoleBinding(ctx context.Context, source *v1.ApiServerSource) error {
-	roleBindingName := "create-oidc-token"
+	roleBindingName := resources.CreateOIDCTokenRoleBindingName(source)
 
 	// Call kubeclient and see whether the roleBinding exist or not
 	roleBinding, err := r.kubeClientSet.RbacV1().RoleBindings(source.GetNamespace()).Get(ctx, roleBindingName, metav1.GetOptions{})

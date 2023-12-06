@@ -18,15 +18,27 @@ package resources
 
 import (
 	"fmt"
+	"knative.dev/pkg/kmeta"
 
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 )
 
+// createOIDCTokenRoleName will return the name of the role for creating the JWT token
+func CreateOIDCTokenRoleName (source *v1.ApiServerSource) (string){
+	return kmeta.ChildName(source.GetName(),"create-oidc-token-role")
+}
+
+// createOIDCTokenRoleBindingName will return the name of the rolebinding for creating the JWT token
+func CreateOIDCTokenRoleBindingName (source *v1.ApiServerSource) (string){
+	return kmeta.ChildName(source.GetName(),"create-oidc-token-rolebinding")
+}
+
+
 // MakeOIDCRole will return the role object config for generating the JWT token
 func MakeOIDCRole(source *v1.ApiServerSource) (*rbacv1.Role, error) {
-	roleName := "create-oidc-token"
+	roleName := CreateOIDCTokenRoleName(source)
 
 	if source.Status.Auth.ServiceAccountName == nil {
 		return nil, fmt.Errorf("Error when making OIDC Role for apiserversource, as the OIDC service account does not exist")
@@ -57,8 +69,8 @@ func MakeOIDCRole(source *v1.ApiServerSource) (*rbacv1.Role, error) {
 // So that ApiServerSource's service account have access to create the JWT token for it's OIDC service account and the target audience
 // Note:  it is in the source.Spec, NOT in source.Auth
 func MakeOIDCRoleBinding(source *v1.ApiServerSource) (*rbacv1.RoleBinding, error) {
-	roleName := "create-oidc-token"
-	roleBindingName := "create-oidc-token"
+	roleName := CreateOIDCTokenRoleName(source)
+	roleBindingName := CreateOIDCTokenRoleBindingName(source)
 
 	if source.Spec.ServiceAccountName == "" {
 		return nil, fmt.Errorf("Error when making OIDC RoleBinding for apiserversource, as the Spec service account does not exist")
