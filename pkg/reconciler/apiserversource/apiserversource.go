@@ -369,16 +369,35 @@ func (r *Reconciler) createOIDCRole(ctx context.Context, source *v1.ApiServerSou
 	roleName := "create-oidc-token"
 
 	//Call kubeclient and see whether the role exist or not
-	_, err := r.kubeClientSet.RbacV1().Roles(source.GetNamespace()).Get(ctx, roleName, metav1.GetOptions{})
+	role, err := r.kubeClientSet.RbacV1().Roles(source.GetNamespace()).Get(ctx, roleName, metav1.GetOptions{})
+	expected, errMakeRole := resources.MakeOIDCRole(source)
+
+	if errMakeRole != nil {
+		return fmt.Errorf("Cannot create OIDC role for ApiServerSource %s/%s: %w", source.GetName(), source.GetNamespace(), errMakeRole)
+	}
 
 	if apierrs.IsNotFound(err) {
-		role, err := resources.MakeOIDCRole(source)
 		// If the role does not exist, we will call kubeclient to create it
+		role = expected
 		_, err = r.kubeClientSet.RbacV1().Roles(source.GetNamespace()).Create(ctx, role, metav1.CreateOptions{})
 		if err != nil {
 			return fmt.Errorf("could not create OIDC service account role %s/%s for %s: %w", source.GetName(), source.GetNamespace(), "ApiServerSource", err)
 		}
 
+	} else {
+		// If the role does exist, we will check whether an update is needed
+		// By comparing the role's rule
+		if !equality.Semantic.DeepEqual(role.Rules, expected.Rules) {
+			// If the role's rules are not equal, we will update the role
+			role.Rules = expected.Rules
+			_, err = r.kubeClientSet.RbacV1().Roles(source.GetNamespace()).Update(ctx, role, metav1.UpdateOptions{})
+			if err != nil {
+				return fmt.Errorf("could not update OIDC service account role %s/%s for %s: %w", source.GetName(), source.GetNamespace(), "ApiServerSource", err)
+			}
+		} else {
+			// If the role does exist and no update is needed, we will just return
+			return nil
+		}
 	}
 
 	return nil
@@ -391,16 +410,37 @@ func (r *Reconciler) createOIDCRoleBinding(ctx context.Context, source *v1.ApiSe
 	roleBindingName := "create-oidc-token"
 
 	// Call kubeclient and see whether the roleBinding exist or not
-	_, err := r.kubeClientSet.RbacV1().RoleBindings(source.GetNamespace()).Get(ctx, roleBindingName, metav1.GetOptions{})
+	roleBinding, err := r.kubeClientSet.RbacV1().RoleBindings(source.GetNamespace()).Get(ctx, roleBindingName, metav1.GetOptions{})
+	expected, errMakeRoleBinding := resources.MakeOIDCRoleBinding(source)
+
+	if errMakeRoleBinding != nil {
+		return fmt.Errorf("Cannot create OIDC roleBinding for ApiServerSource %s/%s: %w", source.GetName(), source.GetNamespace(), errMakeRoleBinding)
+	}
 
 	if apierrs.IsNotFound(err) {
-		roleBinding, err := resources.MakeOIDCRoleBinding(source)
 		// If the role does not exist, we will call kubeclient to create it
+		roleBinding = expected
 		_, err = r.kubeClientSet.RbacV1().RoleBindings(source.GetNamespace()).Create(ctx, roleBinding, metav1.CreateOptions{})
 		if err != nil {
 			return fmt.Errorf("could not create OIDC service account rolebinding %s/%s for %s: %w", source.GetName(), source.GetNamespace(), "apiserversource", err)
 		}
 
+	} else {
+		// If the role does exist, we will check whether an update is needed
+		// By comparing the role's rule
+		if !equality.Semantic.DeepEqual(roleBinding.RoleRef, expected.RoleRef) || !equality.Semantic.DeepEqual(roleBinding.Subjects, expected.Subjects) {
+			// If the role's rules are not equal, we will update the role
+			roleBinding.RoleRef = expected.RoleRef
+			roleBinding.Subjects = expected.Subjects
+			_, err = r.kubeClientSet.RbacV1().RoleBindings(source.GetNamespace()).Update(ctx, roleBinding, metav1.UpdateOptions{})
+			if err != nil {
+				return fmt.Errorf("could not update OIDC service account rolebinding %s/%s for %s: %w", source.GetName(), source.GetNamespace(), "apiserversource", err)
+			}
+		} else {
+			// If the role does exist and no update is needed, we will just return
+			return nil
+		}
 	}
+
 	return nil
 }
