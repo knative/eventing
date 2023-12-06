@@ -37,7 +37,7 @@ func MakeOIDCRole(source *v1.ApiServerSource) (*rbacv1.Role, error) {
 			Name:      roleName,
 			Namespace: source.GetNamespace(),
 			Annotations: map[string]string{
-				"description": fmt.Sprintf("Role for OIDC Authentication for %s %q", "ApiServerSource", source.GetName()),
+				"description": fmt.Sprintf("Role for OIDC Authentication for ApiServerSource %q", source.GetName()),
 			},
 		},
 		Rules: []rbacv1.PolicyRule{
