@@ -263,20 +263,6 @@ func (c *client) Send(ctx context.Context, out event.Event) protocol.Result {
 func (c *client) Request(ctx context.Context, out event.Event) (*event.Event, protocol.Result) {
 	c.applyOverrides(&out)
 
-	//// If the sink has audience and the OIDC service account, then we need to request the JWT token
-	//if c.audience != nil && c.serviceAccountName != nil {
-	//	// Request the JWT token for the given service account
-	//	jwt, err := c.oidcTokenProvider.GetJWT(*c.serviceAccountName, *c.audience)
-	//	if err != nil {
-	//		return nil, protocol.NewResult("%w", err)
-	//	}
-	//
-	//	// Appending the auth token to the outgoing request
-	//	headers := http.HeaderFrom(ctx)
-	//	headers.Set("Authorization", fmt.Sprintf("Bearer %s", jwt))
-	//	ctx = http.WithCustomHeader(ctx, headers)
-	//}
-
 	err := c.appendAuthHeader(&ctx)
 	if err != nil {
 		return nil, err
