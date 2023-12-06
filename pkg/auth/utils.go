@@ -17,6 +17,7 @@ limitations under the License.
 package auth
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strings"
@@ -61,4 +62,20 @@ func GetJWTExpiry(token string) (time.Time, error) {
 	}
 
 	return claims.Expiry.Time(), nil
+}
+
+// VerifyJWTFromRequest will verify the incoming request contains the correct JWT token
+func VerifyJWTFromRequest (ctx context.Context, tokenVerifier OIDCTokenVerifier, r *http.Request, audience string, response http.ResponseWriter) error {
+	token := GetJWTFromHeader(r.Header)
+	if token == "" {
+		return fmt.Errorf("no JWT token found in request")
+	}
+
+	if _,err := tokenVerifier.VerifyJWT(ctx, token, audience); err != nil {
+		response.WriteHeader(http.StatusUnauthorized)
+		return fmt.Errorf("failed to verify JWT: %w", err)
+
+	}
+
+	return nil
 }
