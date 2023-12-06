@@ -123,7 +123,7 @@ type EnvConfigAccessor interface {
 	// GetCACerts gets the CACerts of the Sink.
 	GetCACerts() *string
 
-	// Get the audience of the target sink.
+	// GetAudience gets the audience of the target sink.
 	GetAudience() *string
 
 	// GetServiceAccountName gets the service account name to use for the adapter.
