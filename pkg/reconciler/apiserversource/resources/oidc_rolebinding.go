@@ -69,7 +69,7 @@ func MakeOIDCRoleBinding(source *v1.ApiServerSource) (*rbacv1.RoleBinding, error
 			Name:      roleBindingName,
 			Namespace: source.GetNamespace(),
 			Annotations: map[string]string{
-				"description": fmt.Sprintf("Role Binding for OIDC Authentication for %s %q", "ApiServerSource", source.GetName()),
+				"description": fmt.Sprintf("Role Binding for OIDC Authentication for ApiServerSource %q", source.GetName()),
 			},
 		},
 		RoleRef: rbacv1.RoleRef{
