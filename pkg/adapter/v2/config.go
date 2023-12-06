@@ -126,7 +126,7 @@ type EnvConfigAccessor interface {
 	// Get the audience of the target sink.
 	GetAudience() *string
 
-	// Get the service account name to use for the adapter.
+	// GetServiceAccountName gets the service account name to use for the adapter.
 	GetServiceAccountName() *types.NamespacedName
 
 	// Get the namespace of the adapter.
