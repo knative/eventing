@@ -189,7 +189,6 @@ func (e *EnvConfig) GetSink() string {
 }
 
 func (e *EnvConfig) GetServiceAccountName() *types.NamespacedName {
-
 	if e.ServiceAccountName != nil {
 		return &types.NamespacedName{
 			Namespace: e.Namespace,
