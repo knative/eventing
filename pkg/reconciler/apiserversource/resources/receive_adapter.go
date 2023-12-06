@@ -188,7 +188,7 @@ func makeEnv(args *ReceiveAdapterArgs) ([]corev1.EnvVar, error) {
 		})
 	}
 
-	if args.Source.Status.Auth != nil {
+	if args.Source.Status.Auth != nil && args.Source.Status.Auth.ServiceAccountName != nil {
 		envs = append(envs, corev1.EnvVar{
 			Name:  adapter.EnvConfigOIDCServiceAccount,
 			Value: *args.Source.Status.Auth.ServiceAccountName,
