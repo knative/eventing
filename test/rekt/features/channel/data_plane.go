@@ -102,6 +102,8 @@ func DataPlaneChannel(channelName string) *feature.Feature {
 		// messaging.protocol: the name of the underlying transport protocol
 		// messaging.message_id: the event ID
 
+	f.Teardown("cleanup created resources", f.DeleteResources)
+
 	return f
 }
 
