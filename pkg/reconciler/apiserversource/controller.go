@@ -38,6 +38,8 @@ import (
 	apiserversourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1/apiserversource"
 	apiserversourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1/apiserversource"
 	serviceaccountinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount"
+	roleinformer "knative.dev/pkg/client/injection/kube/informers/rbac/v1/role"
+	rolebindinginformer "knative.dev/pkg/client/injection/kube/informers/rbac/v1/rolebinding"
 )
 
 // envConfig will be used to extract the required environment variables using
@@ -59,6 +61,9 @@ func NewController(
 	namespaceInformer := namespace.Get(ctx)
 	serviceaccountInformer := serviceaccountinformer.Get(ctx)
 
+	roleInformer := roleinformer.Get(ctx)
+	rolebindingInformer := rolebindinginformer.Get(ctx)
+
 	var globalResync func(obj interface{})
 
 	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {
@@ -74,6 +79,8 @@ func NewController(
 		configs:              reconcilersource.WatchConfigurations(ctx, component, cmw),
 		namespaceLister:      namespaceInformer.Lister(),
 		serviceAccountLister: serviceaccountInformer.Lister(),
+		roleLister:           roleInformer.Lister(),
+		roleBindingLister:    rolebindingInformer.Lister(),
 	}
 
 	env := &envConfig{}

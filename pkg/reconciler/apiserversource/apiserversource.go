@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"sort"
 
+	rbacv1listers "k8s.io/client-go/listers/rbac/v1"
+
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 
 	"go.uber.org/zap"
@@ -77,6 +79,8 @@ type Reconciler struct {
 	namespaceLister clientv1.NamespaceLister
 
 	serviceAccountLister clientv1.ServiceAccountLister
+	roleLister           rbacv1listers.RoleLister
+	roleBindingLister    rbacv1listers.RoleBindingLister
 }
 
 var _ apiserversourcereconciler.Interface = (*Reconciler)(nil)
@@ -368,7 +372,7 @@ func (r *Reconciler) createOIDCRole(ctx context.Context, source *v1.ApiServerSou
 	roleName := resources.CreateOIDCTokenRoleName(source)
 
 	//Call kubeclient and see whether the role exist or not
-	role, err := r.kubeClientSet.RbacV1().Roles(source.GetNamespace()).Get(ctx, roleName, metav1.GetOptions{})
+	role, err := r.roleLister.Roles(source.GetNamespace()).Get(roleName)
 
 	expected, errMakeRole := resources.MakeOIDCRole(source)
 
@@ -410,7 +414,7 @@ func (r *Reconciler) createOIDCRoleBinding(ctx context.Context, source *v1.ApiSe
 	roleBindingName := resources.CreateOIDCTokenRoleBindingName(source)
 
 	// Call kubeclient and see whether the roleBinding exist or not
-	roleBinding, err := r.kubeClientSet.RbacV1().RoleBindings(source.GetNamespace()).Get(ctx, roleBindingName, metav1.GetOptions{})
+	roleBinding, err := r.roleBindingLister.RoleBindings(source.GetNamespace()).Get(roleBindingName)
 	expected, errMakeRoleBinding := resources.MakeOIDCRoleBinding(source)
 
 	if errMakeRoleBinding != nil {
