@@ -18,6 +18,7 @@ package resources
 
 import (
 	"fmt"
+
 	"knative.dev/pkg/kmeta"
 
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -26,15 +27,14 @@ import (
 )
 
 // createOIDCTokenRoleName will return the name of the role for creating the JWT token
-func CreateOIDCTokenRoleName (source *v1.ApiServerSource) (string){
-	return kmeta.ChildName(source.GetName(),"create-oidc-token-role")
+func CreateOIDCTokenRoleName(source *v1.ApiServerSource) string {
+	return kmeta.ChildName(source.GetName(), "create-oidc-token-role")
 }
 
 // createOIDCTokenRoleBindingName will return the name of the rolebinding for creating the JWT token
-func CreateOIDCTokenRoleBindingName (source *v1.ApiServerSource) (string){
-	return kmeta.ChildName(source.GetName(),"create-oidc-token-rolebinding")
+func CreateOIDCTokenRoleBindingName(source *v1.ApiServerSource) string {
+	return kmeta.ChildName(source.GetName(), "create-oidc-token-rolebinding")
 }
-
 
 // MakeOIDCRole will return the role object config for generating the JWT token
 func MakeOIDCRole(source *v1.ApiServerSource) (*rbacv1.Role, error) {

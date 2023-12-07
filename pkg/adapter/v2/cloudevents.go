@@ -267,7 +267,7 @@ func (c *client) Request(ctx context.Context, out event.Event) (*event.Event, pr
 	c.applyOverrides(&out)
 	var err error
 
-	if c.audience != nil && c.serviceAccountName != nil{
+	if c.audience != nil && c.serviceAccountName != nil {
 		ctx, err = c.appendAuthHeader(ctx)
 		if err != nil {
 			return nil, err
@@ -403,18 +403,17 @@ func tracecontextMiddleware(h nethttp.Handler) nethttp.Handler {
 // When OIDC is enabled, appendAuthHeader will request the JWT token from the tokenProvider and append it to every request
 // it has interaction with, if source's OIDC service account (source.Status.Auth.ServiceAccountName) and destination's
 // audience are present.
-func (c *client) appendAuthHeader(ctx context.Context) (context.Context,error) {
-		// Request the JWT token for the given service account
-		jwt, err := c.oidcTokenProvider.GetJWT(*c.serviceAccountName, *c.audience)
-		if err != nil {
-			return ctx, protocol.NewResult("Failed when appending the Authorization header to the outgoing request %w", err)
-		}
+func (c *client) appendAuthHeader(ctx context.Context) (context.Context, error) {
+	// Request the JWT token for the given service account
+	jwt, err := c.oidcTokenProvider.GetJWT(*c.serviceAccountName, *c.audience)
+	if err != nil {
+		return ctx, protocol.NewResult("Failed when appending the Authorization header to the outgoing request %w", err)
+	}
 
-		// Appending the auth token to the outgoing request
-		headers := http.HeaderFrom(ctx)
-		headers.Set("Authorization", fmt.Sprintf("Bearer %s", jwt))
-		ctx = http.WithCustomHeader(ctx, headers)
+	// Appending the auth token to the outgoing request
+	headers := http.HeaderFrom(ctx)
+	headers.Set("Authorization", fmt.Sprintf("Bearer %s", jwt))
+	ctx = http.WithCustomHeader(ctx, headers)
 
-
-	return ctx,nil
+	return ctx, nil
 }
