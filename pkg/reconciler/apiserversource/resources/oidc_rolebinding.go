@@ -40,7 +40,7 @@ func CreateOIDCTokenRoleBindingName (source *v1.ApiServerSource) (string){
 func MakeOIDCRole(source *v1.ApiServerSource) (*rbacv1.Role, error) {
 	roleName := CreateOIDCTokenRoleName(source)
 
-	if source.Status.Auth.ServiceAccountName == nil {
+	if source.Status.Auth == nil || source.Status.Auth.ServiceAccountName == nil {
 		return nil, fmt.Errorf("Error when making OIDC Role for apiserversource, as the OIDC service account does not exist")
 	}
 
