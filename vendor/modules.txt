@@ -1263,6 +1263,7 @@ knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount
 knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount/fake
 knative.dev/pkg/client/injection/kube/informers/factory
 knative.dev/pkg/client/injection/kube/informers/factory/fake
+knative.dev/pkg/client/injection/kube/informers/rbac/v1/role
 knative.dev/pkg/client/injection/kube/informers/rbac/v1/rolebinding
 knative.dev/pkg/client/injection/kube/informers/rbac/v1/rolebinding/fake
 knative.dev/pkg/client/injection/kube/reconciler/core/v1/namespace
