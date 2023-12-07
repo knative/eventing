@@ -83,7 +83,7 @@ func NewHandler(logger *zap.Logger, reporter StatsReporter, defaulter client.Eve
 
 	brokerInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			broker, ok := obj.(eventingv1.Broker)
+			broker, ok := obj.(*eventingv1.Broker)
 			if !ok {
 				return
 			}
@@ -93,7 +93,7 @@ func NewHandler(logger *zap.Logger, reporter StatsReporter, defaulter client.Eve
 			})
 		},
 		UpdateFunc: func(_, obj interface{}) {
-			broker, ok := obj.(eventingv1.Broker)
+			broker, ok := obj.(*eventingv1.Broker)
 			if !ok {
 				return
 			}
@@ -103,7 +103,7 @@ func NewHandler(logger *zap.Logger, reporter StatsReporter, defaulter client.Eve
 			})
 		},
 		DeleteFunc: func(obj interface{}) {
-			broker, ok := obj.(eventingv1.Broker)
+			broker, ok := obj.(*eventingv1.Broker)
 			if !ok {
 				return
 			}
