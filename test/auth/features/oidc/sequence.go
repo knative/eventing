@@ -17,13 +17,21 @@ limitations under the License.
 package oidc
 
 import (
+	"github.com/cloudevents/sdk-go/v2/test"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/reconciler/sequence/resources"
 	"knative.dev/eventing/test/rekt/resources/addressable"
+	"knative.dev/eventing/test/rekt/resources/channel_impl"
+	"knative.dev/eventing/test/rekt/resources/channel_template"
 	"knative.dev/eventing/test/rekt/resources/sequence"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/reconciler-test/pkg/eventshub"
+	"knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
+	"knative.dev/reconciler-test/pkg/manifest"
+	"knative.dev/reconciler-test/pkg/resources/service"
 )
 
 func SequenceHasAudienceOfInputChannel(sequenceName, sequenceNamespace string, channelGVR schema.GroupVersionResource, channelKind string) *feature.Feature {
@@ -37,6 +45,146 @@ func SequenceHasAudienceOfInputChannel(sequenceName, sequenceNamespace string, c
 	})
 
 	f.Alpha("Sequence").Must("has audience set", sequence.ValidateAddress(sequenceName, addressable.AssertAddressWithAudience(expectedAudience)))
+
+	return f
+}
+
+func SequenceSendsEventWithOIDC() *feature.FeatureSet {
+	return &feature.FeatureSet{
+		Name: "Sequence send events with OIDC support",
+		Features: []*feature.Feature{
+			SequenceSendsEventWithOIDCTokenToSteps(),
+			SequenceSendsEventWithOIDCTokenToReply(),
+		},
+	}
+}
+
+func SequenceSendsEventWithOIDCTokenToSteps() *feature.Feature {
+	f := feature.NewFeatureNamed("Sequence supports OIDC in internal flow between steps")
+
+	channelTemplate := channel_template.ChannelTemplate{
+		TypeMeta: channel_impl.TypeMeta(),
+		Spec:     map[string]interface{}{},
+	}
+
+	sequenceName := feature.MakeRandomK8sName("sequence")
+	step1Name := feature.MakeRandomK8sName("step1")
+	step2Name := feature.MakeRandomK8sName("step2")
+	sourceName := feature.MakeRandomK8sName("source")
+
+	step1Audience := "step1-aud"
+	step2Audience := "step2-aud"
+
+	step1Append := "-step1"
+	step2Append := "-step2"
+
+	f.Setup("install step 1", eventshub.Install(step1Name,
+		eventshub.ReplyWithAppendedData(step1Append),
+		eventshub.OIDCReceiverAudience(step1Audience),
+		eventshub.StartReceiver))
+	f.Setup("install step 2", eventshub.Install(step2Name,
+		eventshub.ReplyWithAppendedData(step2Append),
+		eventshub.OIDCReceiverAudience(step2Audience),
+		eventshub.StartReceiver))
+
+	cfg := []manifest.CfgFn{
+		sequence.WithChannelTemplate(channelTemplate),
+		sequence.WithStepFromDestination(&duckv1.Destination{
+			Ref:      service.AsKReference(step1Name),
+			Audience: &step1Audience,
+		}),
+		sequence.WithStepFromDestination(&duckv1.Destination{
+			Ref:      service.AsKReference(step2Name),
+			Audience: &step2Audience,
+		}),
+	}
+
+	f.Setup("Install Sequence", sequence.Install(sequenceName, cfg...))
+	f.Setup("Sequence goes ready", sequence.IsReady(sequenceName))
+
+	event := test.FullEvent()
+	event.SetData("text/plain", "hello")
+	f.Requirement("install source", eventshub.Install(sourceName,
+		eventshub.StartSenderToResource(sequence.GVR(), sequenceName),
+		eventshub.InputEvent(event)))
+
+	expectedMsg := string(event.Data())
+	expectedMsg += step1Append
+	f.Alpha("Sequence with steps having an OIDC audience").
+		Must("Delivers events correctly to steps",
+			assert.OnStore(step2Name).MatchEvent(
+				test.HasData([]byte(expectedMsg)),
+			).AtLeast(1))
+
+	return f
+}
+
+func SequenceSendsEventWithOIDCTokenToReply() *feature.Feature {
+	f := feature.NewFeatureNamed("Sequence supports OIDC for reply")
+
+	channelTemplate := channel_template.ChannelTemplate{
+		TypeMeta: channel_impl.TypeMeta(),
+		Spec:     map[string]interface{}{},
+	}
+
+	sequenceName := feature.MakeRandomK8sName("sequence")
+	step1Name := feature.MakeRandomK8sName("step1")
+	step2Name := feature.MakeRandomK8sName("step2")
+	replySinkName := feature.MakeRandomK8sName("reply-sink")
+	sourceName := feature.MakeRandomK8sName("source")
+
+	step1Audience := "step1-aud"
+	step2Audience := "step2-aud"
+	replySinkAudience := "reply-sink-aud"
+
+	step1Append := "-step1"
+	step2Append := "-step2"
+
+	f.Setup("install step 1", eventshub.Install(step1Name,
+		eventshub.ReplyWithAppendedData(step1Append),
+		eventshub.OIDCReceiverAudience(step1Audience),
+		eventshub.StartReceiver))
+	f.Setup("install step 2", eventshub.Install(step2Name,
+		eventshub.ReplyWithAppendedData(step2Append),
+		eventshub.OIDCReceiverAudience(step2Audience),
+		eventshub.StartReceiver))
+	f.Setup("install sink", eventshub.Install(replySinkName,
+		eventshub.OIDCReceiverAudience(replySinkAudience),
+		eventshub.StartReceiver))
+
+	cfg := []manifest.CfgFn{
+		sequence.WithChannelTemplate(channelTemplate),
+		sequence.WithReplyFromDestination(&duckv1.Destination{
+			Ref:      service.AsKReference(replySinkName),
+			Audience: &replySinkAudience,
+		}),
+		sequence.WithStepFromDestination(&duckv1.Destination{
+			Ref:      service.AsKReference(step1Name),
+			Audience: &step1Audience,
+		}),
+		sequence.WithStepFromDestination(&duckv1.Destination{
+			Ref:      service.AsKReference(step2Name),
+			Audience: &step2Audience,
+		}),
+	}
+
+	f.Setup("Install Sequence", sequence.Install(sequenceName, cfg...))
+	f.Setup("Sequence goes ready", sequence.IsReady(sequenceName))
+
+	event := test.FullEvent()
+	event.SetData("text/plain", "hello")
+	f.Requirement("install source", eventshub.Install(sourceName,
+		eventshub.StartSenderToResource(sequence.GVR(), sequenceName),
+		eventshub.InputEvent(event)))
+
+	expectedMsg := string(event.Data())
+	expectedMsg += step1Append
+	expectedMsg += step2Append
+	f.Alpha("Sequence with steps having an OIDC audience").
+		Must("Delivers events correctly to reply",
+			assert.OnStore(replySinkName).MatchEvent(
+				test.HasData([]byte(expectedMsg)),
+			).AtLeast(1))
 
 	return f
 }
