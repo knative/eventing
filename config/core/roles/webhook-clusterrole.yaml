@@ -29,6 +29,14 @@ rules:
       - "get"
       - "list"
       - "watch"
+  
+  # for checking if user has permissions to make a cross namespace broker
+  - apiGroups:
+      - "authorization.k8s.io"
+    resources:
+      - "subjectaccessreviews"
+    verbs:
+      - "create"
 
   # For manipulating certs into secrets.
   - apiGroups:

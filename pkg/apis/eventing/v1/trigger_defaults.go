@@ -28,14 +28,17 @@ const (
 
 func (t *Trigger) SetDefaults(ctx context.Context) {
 	withNS := apis.WithinParent(ctx, t.ObjectMeta)
-	t.Spec.SetDefaults(withNS)
+	t.Spec.SetDefaults(withNS, t.GetNamespace())
 	setLabels(t)
 }
 
-func (ts *TriggerSpec) SetDefaults(ctx context.Context) {
+func (ts *TriggerSpec) SetDefaults(ctx context.Context, BrokerNamespace string) {
 	// Make a default filter that allows anything.
 	if ts.Filter == nil {
 		ts.Filter = &TriggerFilter{}
+	}
+	if ts.BrokerNamespace == "" {
+		ts.BrokerNamespace = BrokerNamespace
 	}
 	// Default the Subscriber namespace
 	ts.Subscriber.SetDefaults(ctx)

@@ -24,8 +24,14 @@ import (
 
 	cesqlparser "github.com/cloudevents/sdk-go/sql/v2/parser"
 	"go.uber.org/zap"
+	authv1 "k8s.io/api/authorization/v1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+
+	//	"k8s.io/client-go/rest"
 	"knative.dev/pkg/apis"
+	"knative.dev/pkg/injection"
 	"knative.dev/pkg/kmp"
 	"knative.dev/pkg/logging"
 
@@ -42,6 +48,7 @@ func (t *Trigger) Validate(ctx context.Context) *apis.FieldError {
 	errs := t.Spec.Validate(apis.WithinSpec(ctx)).ViaField("spec")
 	errs = t.validateAnnotation(errs, DependencyAnnotation, t.validateDependencyAnnotation)
 	errs = t.validateAnnotation(errs, InjectionAnnotation, t.validateInjectionAnnotation)
+	errs = errs.Also(t.CheckBrokerNamespace(ctx))
 	if apis.IsInUpdate(ctx) {
 		original := apis.GetBaseline(ctx).(*Trigger)
 		errs = errs.Also(t.CheckImmutableFields(ctx, original))
@@ -64,6 +71,69 @@ func (ts *TriggerSpec) Validate(ctx context.Context) (errs *apis.FieldError) {
 	).Also(
 		ts.Delivery.Validate(ctx).ViaField("delivery"),
 	)
+}
+
+func (t *Trigger) CheckBrokerNamespace(ctx context.Context) *apis.FieldError {
+	if t.GetNamespace() == t.Spec.BrokerNamespace {
+		return nil
+	}
+
+	userInfo := apis.GetUserInfo(ctx)
+	if userInfo == nil {
+		return &apis.FieldError{
+			Paths:   []string{".spec.BrokerNamespace"},
+			Message: "failed to get userInfo, which is needed to validate triggers created with the namespace different than the broker's namespace",
+		}
+	}
+
+	config := injection.GetConfig(ctx)
+	logging.FromContext(ctx).Info("got config", zap.Any("config", config))
+	if config == nil {
+		return &apis.FieldError{
+			Paths:   []string{".spec.BrokerNamespace"},
+			Message: "failed to get config, which is needed to validate triggers created with the namespace different than the broker's namespace",
+		}
+	}
+
+	client, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return &apis.FieldError{
+			Paths:   []string{".spec.BrokerNamespace"},
+			Message: "failed to get k8s client, which is needed to validate triggers created with the namespace different than the broker's namespace",
+		}
+	}
+
+	action := authv1.ResourceAttributes{
+		Namespace: t.Spec.BrokerNamespace,
+		Verb:      "get",
+		Group:     "eventing.knative.dev",
+		Resource:  "brokers",
+	}
+
+	check := authv1.SubjectAccessReview{
+		Spec: authv1.SubjectAccessReviewSpec{
+			ResourceAttributes: &action,
+			User:               userInfo.Username,
+			Groups:             userInfo.Groups,
+		},
+	}
+
+	resp, err := client.AuthorizationV1().SubjectAccessReviews().Create(ctx, &check, metav1.CreateOptions{})
+	if err != nil {
+		return &apis.FieldError{
+			Paths:   []string{".spec.BrokerNamespace"},
+			Message: fmt.Sprintf("failed to make authorization request to see if user can get brokers in namespace: %s", err.Error()),
+		}
+	}
+
+	if !resp.Status.Allowed {
+		return &apis.FieldError{
+			Paths:   []string{".spec.BrokerNamespace"},
+			Message: fmt.Sprintf("user %s is not authorized to get brokers in namespace: %s", userInfo.Username, t.Spec.BrokerNamespace),
+		}
+	}
+
+	return nil
 }
 
 // CheckImmutableFields checks that any immutable fields were not changed.

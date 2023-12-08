@@ -145,9 +145,14 @@ func NewValidationAdmissionController(ctx context.Context, cmw configmap.Watcher
 	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"))
 	featureStore.WatchConfigs(cmw)
 
+	cfg := injection.GetConfig(ctx)
+	if cfg == nil {
+		panic("cfg was nil")
+	}
+
 	// Decorate contexts with the current state of the config.
 	ctxFunc := func(ctx context.Context) context.Context {
-		return featureStore.ToContext(channelStore.ToContext(pingstore.ToContext(store.ToContext(ctx))))
+		return injection.WithConfig(featureStore.ToContext(channelStore.ToContext(pingstore.ToContext(store.ToContext(ctx)))), cfg)
 	}
 
 	return validation.NewAdmissionController(ctx,
