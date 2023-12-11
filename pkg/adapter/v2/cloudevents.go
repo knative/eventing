@@ -208,7 +208,7 @@ func NewClient(cfg ClientConfig) (Client, error) {
 
 	if cfg.Env != nil {
 		client.audience = cfg.Env.GetAudience()
-		client.serviceAccountName = cfg.Env.GetOIDCServiceAccountName()
+		client.oidcServiceAccountName = cfg.Env.GetOIDCServiceAccountName()
 	}
 
 	return client, nil
@@ -234,8 +234,8 @@ type client struct {
 	crStatusEventClient *crstatusevent.CRStatusEventClient
 	closeIdler          closeIdler
 
-	oidcTokenProvider  *auth.OIDCTokenProvider
-	audience           *string
+	oidcTokenProvider      *auth.OIDCTokenProvider
+	audience               *string
 	oidcServiceAccountName *types.NamespacedName
 }
 
@@ -250,7 +250,7 @@ func (c *client) Send(ctx context.Context, out event.Event) protocol.Result {
 	c.applyOverrides(&out)
 	var err error
 
-	if c.audience != nil && c.serviceAccountName != nil {
+	if c.audience != nil && c.oidcServiceAccountName != nil {
 		ctx, err = c.withAuthHeader(ctx)
 		if err != nil {
 			return err
@@ -267,7 +267,7 @@ func (c *client) Request(ctx context.Context, out event.Event) (*event.Event, pr
 	c.applyOverrides(&out)
 	var err error
 
-	if c.audience != nil && c.serviceAccountName != nil {
+	if c.audience != nil && c.oidcServiceAccountName != nil {
 		ctx, err = c.withAuthHeader(ctx)
 		if err != nil {
 			return nil, err
@@ -405,7 +405,7 @@ func tracecontextMiddleware(h nethttp.Handler) nethttp.Handler {
 // audience are present.
 func (c *client) withAuthHeader(ctx context.Context) (context.Context, error) {
 	// Request the JWT token for the given service account
-	jwt, err := c.oidcTokenProvider.GetJWT(*c.serviceAccountName, *c.audience)
+	jwt, err := c.oidcTokenProvider.GetJWT(*c.oidcServiceAccountName, *c.audience)
 	if err != nil {
 		return ctx, protocol.NewResult("Failed when appending the Authorization header to the outgoing request %w", err)
 	}
