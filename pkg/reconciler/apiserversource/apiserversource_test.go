@@ -19,8 +19,9 @@ package apiserversource
 import (
 	"context"
 	"fmt"
-	rbacv1 "k8s.io/api/rbac/v1"
 	"testing"
+
+	rbacv1 "k8s.io/api/rbac/v1"
 
 	"github.com/stretchr/testify/require"
 
@@ -938,7 +939,7 @@ func TestReconcile(t *testing.T) {
 					// Status Update:
 					rttestingv1.WithInitApiServerSourceConditions,
 					rttestingv1.WithApiServerSourceDeployed,
-					rttestingv1.WithApiServerSourceSink(sinkURI),
+					rttestingv1.WithApiServerSourceSinkAddressable(sinkOIDCAddressable),
 					rttestingv1.WithApiServerSourceSufficientPermissions,
 					rttestingv1.WithApiServerSourceReferenceModeEventTypes(source),
 					rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
@@ -1055,7 +1056,7 @@ func TestReconcile(t *testing.T) {
 					// Status Update:
 					rttestingv1.WithInitApiServerSourceConditions,
 					rttestingv1.WithApiServerSourceDeployed,
-					rttestingv1.WithApiServerSourceSink(sinkURI),
+					rttestingv1.WithApiServerSourceSinkAddressable(sinkOIDCAddressable),
 					rttestingv1.WithApiServerSourceSufficientPermissions,
 					rttestingv1.WithApiServerSourceReferenceModeEventTypes(source),
 					rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
