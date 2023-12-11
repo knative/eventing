@@ -403,7 +403,7 @@ func tracecontextMiddleware(h nethttp.Handler) nethttp.Handler {
 // When OIDC is enabled, appendAuthHeader will request the JWT token from the tokenProvider and append it to every request
 // it has interaction with, if source's OIDC service account (source.Status.Auth.ServiceAccountName) and destination's
 // audience are present.
-func (c *client) appendAuthHeader(ctx context.Context) (context.Context, error) {
+func (c *client) withAuthHeader(ctx context.Context) (context.Context, error) {
 	// Request the JWT token for the given service account
 	jwt, err := c.oidcTokenProvider.GetJWT(*c.serviceAccountName, *c.audience)
 	if err != nil {

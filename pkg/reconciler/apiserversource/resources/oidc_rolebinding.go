@@ -26,13 +26,13 @@ import (
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 )
 
-// createOIDCTokenRoleName will return the name of the role for creating the JWT token
-func CreateOIDCTokenRoleName(source *v1.ApiServerSource) string {
+// GetOIDCTokenRoleName will return the name of the role for creating the JWT token
+func GetOIDCTokenRoleName(source *v1.ApiServerSource) string {
 	return kmeta.ChildName(source.GetName(), "create-oidc-token-role")
 }
 
-// createOIDCTokenRoleBindingName will return the name of the rolebinding for creating the JWT token
-func CreateOIDCTokenRoleBindingName(source *v1.ApiServerSource) string {
+// GetOIDCTokenRoleBindingName will return the name of the rolebinding for creating the JWT token
+func GetOIDCTokenRoleBindingName(source *v1.ApiServerSource) string {
 	return kmeta.ChildName(source.GetName(), "create-oidc-token-rolebinding")
 }
 
