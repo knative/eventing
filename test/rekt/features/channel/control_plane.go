@@ -128,6 +128,8 @@ func ControlPlaneChannel(channelName string) *feature.Feature {
 		Should("Set the Channel status.deadLetterSinkURI if there is a valid spec.delivery.deadLetterSink defined",
 			readyChannelWithDLSHaveStatusUpdated(cName))
 
+	f.Teardown("cleanup created resources", f.DeleteResources)
+
 	return f
 }
 
