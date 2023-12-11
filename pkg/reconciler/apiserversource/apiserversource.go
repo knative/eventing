@@ -369,7 +369,7 @@ func (r *Reconciler) createCloudEventAttributes(src *v1.ApiServerSource) ([]duck
 // createOIDCRole: this function will call resources package to get the role object
 // and then pass to kubeclient to make the actual OIDC role
 func (r *Reconciler) createOIDCRole(ctx context.Context, source *v1.ApiServerSource) error {
-	roleName := resources.CreateOIDCTokenRoleName(source)
+	roleName := resources.GetOIDCTokenRoleName(source)
 
 	//Call kubeclient and see whether the role exist or not
 	role, err := r.roleLister.Roles(source.GetNamespace()).Get(roleName)
@@ -411,7 +411,7 @@ func (r *Reconciler) createOIDCRole(ctx context.Context, source *v1.ApiServerSou
 // createOIDCRoleBinding:  this function will call resources package to get the rolebinding object
 // and then pass to kubeclient to make the actual OIDC rolebinding
 func (r *Reconciler) createOIDCRoleBinding(ctx context.Context, source *v1.ApiServerSource) error {
-	roleBindingName := resources.CreateOIDCTokenRoleBindingName(source)
+	roleBindingName := resources.GetOIDCTokenRoleBindingName(source)
 
 	// Call kubeclient and see whether the roleBinding exist or not
 	roleBinding, err := r.roleBindingLister.RoleBindings(source.GetNamespace()).Get(roleBindingName)

@@ -73,8 +73,8 @@ type EnvConfig struct {
 	// Audience is the audience of the target sink.
 	Audience *string `envconfig:"K_AUDIENCE"`
 
-	// Service Account Name is the name of the service account to use for the adapter.
-	ServiceAccountName *string `envconfig:"K_OIDC_SERVICE_ACCOUNT"`
+	// OIDCServiceAccount Name is the name of the service account to use for the adapter.
+	OIDCServiceAccountName *string `envconfig:"K_OIDC_SERVICE_ACCOUNT"`
 
 	// CACerts are the Certification Authority (CA) certificates in PEM format
 	// according to https://www.rfc-editor.org/rfc/rfc7468.
@@ -189,10 +189,10 @@ func (e *EnvConfig) GetSink() string {
 }
 
 func (e *EnvConfig) GetOIDCServiceAccountName() *types.NamespacedName {
-	if e.ServiceAccountName != nil {
+	if e.OIDCServiceAccountName != nil {
 		return &types.NamespacedName{
 			Namespace: e.Namespace,
-			Name:      *e.ServiceAccountName,
+			Name:      *e.OIDCServiceAccountName,
 		}
 	} else {
 		return nil

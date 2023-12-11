@@ -251,7 +251,7 @@ func (c *client) Send(ctx context.Context, out event.Event) protocol.Result {
 	var err error
 
 	if c.audience != nil && c.serviceAccountName != nil {
-		ctx, err = c.appendAuthHeader(ctx)
+		ctx, err = c.withAuthHeader(ctx)
 		if err != nil {
 			return err
 		}
@@ -268,7 +268,7 @@ func (c *client) Request(ctx context.Context, out event.Event) (*event.Event, pr
 	var err error
 
 	if c.audience != nil && c.serviceAccountName != nil {
-		ctx, err = c.appendAuthHeader(ctx)
+		ctx, err = c.withAuthHeader(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -400,7 +400,7 @@ func tracecontextMiddleware(h nethttp.Handler) nethttp.Handler {
 	}
 }
 
-// When OIDC is enabled, appendAuthHeader will request the JWT token from the tokenProvider and append it to every request
+// When OIDC is enabled, withAuthHeader will request the JWT token from the tokenProvider and append it to every request
 // it has interaction with, if source's OIDC service account (source.Status.Auth.ServiceAccountName) and destination's
 // audience are present.
 func (c *client) withAuthHeader(ctx context.Context) (context.Context, error) {

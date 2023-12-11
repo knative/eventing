@@ -38,7 +38,7 @@ func GetOIDCTokenRoleBindingName(source *v1.ApiServerSource) string {
 
 // MakeOIDCRole will return the role object config for generating the JWT token
 func MakeOIDCRole(source *v1.ApiServerSource) (*rbacv1.Role, error) {
-	roleName := CreateOIDCTokenRoleName(source)
+	roleName := GetOIDCTokenRoleName(source)
 
 	if source.Status.Auth == nil || source.Status.Auth.ServiceAccountName == nil {
 		return nil, fmt.Errorf("Error when making OIDC Role for apiserversource, as the OIDC service account does not exist")
@@ -69,8 +69,8 @@ func MakeOIDCRole(source *v1.ApiServerSource) (*rbacv1.Role, error) {
 // So that ApiServerSource's service account have access to create the JWT token for it's OIDC service account and the target audience
 // Note:  it is in the source.Spec, NOT in source.Auth
 func MakeOIDCRoleBinding(source *v1.ApiServerSource) (*rbacv1.RoleBinding, error) {
-	roleName := CreateOIDCTokenRoleName(source)
-	roleBindingName := CreateOIDCTokenRoleBindingName(source)
+	roleName := GetOIDCTokenRoleName(source)
+	roleBindingName := GetOIDCTokenRoleBindingName(source)
 
 	if source.Spec.ServiceAccountName == "" {
 		return nil, fmt.Errorf("Error when making OIDC RoleBinding for apiserversource, as the Spec service account does not exist")
