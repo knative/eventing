@@ -32,6 +32,7 @@ import (
 	"knative.dev/eventing/test/auth/features/oidc"
 	brokerfeatures "knative.dev/eventing/test/rekt/features/broker"
 	"knative.dev/eventing/test/rekt/features/channel"
+	containersource "knative.dev/eventing/test/rekt/features/containersource"
 	parallelfeatures "knative.dev/eventing/test/rekt/features/parallel"
 	sequencefeatures "knative.dev/eventing/test/rekt/features/sequence"
 	"knative.dev/eventing/test/rekt/resources/broker"
@@ -143,4 +144,18 @@ func TestSequenceSupportsOIDC(t *testing.T) {
 	})))
 
 	env.Test(ctx, t, oidc.SequenceHasAudienceOfInputChannel(name, env.Namespace(), channel_impl.GVR(), channel_impl.GVK().Kind))
+}
+
+func TestContainerSourceSendsEventsWithOIDCSupport(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+	)
+
+	env.Test(ctx, t, containersource.SendsEventsWithSinkRefOIDC())
 }
