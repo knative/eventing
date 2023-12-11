@@ -194,9 +194,8 @@ func (e *EnvConfig) GetOIDCServiceAccountName() *types.NamespacedName {
 			Namespace: e.Namespace,
 			Name:      *e.OIDCServiceAccountName,
 		}
-	} else {
-		return nil
 	}
+	return nil
 }
 
 func (e *EnvConfig) GetCACerts() *string {

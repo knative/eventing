@@ -387,7 +387,6 @@ func (r *Reconciler) createOIDCRole(ctx context.Context, source *v1.ApiServerSou
 		if err != nil {
 			return fmt.Errorf("could not create OIDC service account role %s/%s for %s: %w", source.GetName(), source.GetNamespace(), "ApiServerSource", err)
 		}
-
 	} else {
 		// If the role does exist, we will check whether an update is needed
 		// By comparing the role's rule
@@ -428,7 +427,6 @@ func (r *Reconciler) createOIDCRoleBinding(ctx context.Context, source *v1.ApiSe
 		if err != nil {
 			return fmt.Errorf("could not create OIDC service account rolebinding %s/%s for %s: %w", source.GetName(), source.GetNamespace(), "apiserversource", err)
 		}
-
 	} else {
 		// If the role does exist, we will check whether an update is needed
 		// By comparing the role's rule

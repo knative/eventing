@@ -236,7 +236,7 @@ type client struct {
 
 	oidcTokenProvider  *auth.OIDCTokenProvider
 	audience           *string
-	serviceAccountName *types.NamespacedName
+	oidcServiceAccountName *types.NamespacedName
 }
 
 func (c *client) CloseIdleConnections() {
