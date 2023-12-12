@@ -19,6 +19,7 @@ package sequence
 import (
 	"context"
 	"embed"
+	"strings"
 	"time"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -112,6 +113,48 @@ func WithStep(ref *duckv1.KReference, uri string) manifest.CfgFn {
 	}
 }
 
+func WithStepFromDestination(dest *duckv1.Destination) manifest.CfgFn {
+	return func(cfg map[string]interface{}) {
+		if _, set := cfg["steps"]; !set {
+			cfg["steps"] = []map[string]interface{}{}
+		}
+
+		step := map[string]interface{}{}
+
+		uri := dest.URI
+		ref := dest.Ref
+
+		if dest.CACerts != nil {
+			// This is a multi-line string and should be indented accordingly.
+			// Replace "new line" with "new line + spaces".
+			step["CACerts"] = strings.ReplaceAll(*dest.CACerts, "\n", "\n      ")
+		}
+
+		if dest.Audience != nil {
+			step["audience"] = *dest.Audience
+		}
+
+		if uri != nil {
+			step["uri"] = uri.String()
+		}
+		if ref != nil {
+			if _, set := step["ref"]; !set {
+				step["ref"] = map[string]interface{}{}
+			}
+			sref := step["ref"].(map[string]interface{})
+			sref["apiVersion"] = ref.APIVersion
+			sref["kind"] = ref.Kind
+			sref["namespace"] = ref.Namespace
+			sref["name"] = ref.Name
+		}
+
+		steps := cfg["steps"].([]map[string]interface{})
+		steps = append(steps, step)
+
+		cfg["steps"] = steps
+	}
+}
+
 // WithReply adds the top level reply config to a Parallel spec.
 func WithReply(ref *duckv1.KReference, uri string) manifest.CfgFn {
 	return func(cfg map[string]interface{}) {
@@ -122,6 +165,42 @@ func WithReply(ref *duckv1.KReference, uri string) manifest.CfgFn {
 
 		if uri != "" {
 			reply["uri"] = uri
+		}
+		if ref != nil {
+			if _, set := reply["ref"]; !set {
+				reply["ref"] = map[string]interface{}{}
+			}
+			rref := reply["ref"].(map[string]interface{})
+			rref["apiVersion"] = ref.APIVersion
+			rref["kind"] = ref.Kind
+			rref["namespace"] = ref.Namespace
+			rref["name"] = ref.Name
+		}
+	}
+}
+
+func WithReplyFromDestination(dest *duckv1.Destination) manifest.CfgFn {
+	return func(cfg map[string]interface{}) {
+		if _, set := cfg["reply"]; !set {
+			cfg["reply"] = map[string]interface{}{}
+		}
+		reply := cfg["reply"].(map[string]interface{})
+
+		uri := dest.URI
+		ref := dest.Ref
+
+		if dest.CACerts != nil {
+			// This is a multi-line string and should be indented accordingly.
+			// Replace "new line" with "new line + spaces".
+			reply["CACerts"] = strings.ReplaceAll(*dest.CACerts, "\n", "\n      ")
+		}
+
+		if dest.Audience != nil {
+			reply["audience"] = *dest.Audience
+		}
+
+		if uri != nil {
+			reply["uri"] = uri.String()
 		}
 		if ref != nil {
 			if _, set := reply["ref"]; !set {
