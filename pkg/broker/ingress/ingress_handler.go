@@ -228,7 +228,7 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	if features.IsOIDCAuthentication() {
 		h.Logger.Debug("OIDC authentication is enabled")
 
-		writer, err = auth.VerifyJWTFromRequest(ctx, h.tokenVerifier, request, *broker.Status.Address.Audience, writer)
+		writer, err = auth.VerifyJWTFromRequest(ctx, h.tokenVerifier, request, broker.Status.Address.Audience, writer)
 		if err != nil {
 			h.Logger.Warn("Error when validating the JWT token in the request", zap.Error(err))
 			return
