@@ -51,6 +51,13 @@ spec:
       {{ if .uri }}
       uri: {{ .uri }}
       {{ end }}
+      {{ if .CACerts }}
+      CACerts: |-
+        {{ .CACerts }}
+      {{ end }}
+      {{ if .audience }}
+      audience: {{ .audience }}
+      {{ end }}
   {{ end }}
   {{ if .reply }}
   reply:
@@ -63,5 +70,12 @@ spec:
     {{ end }}
     {{ if .reply.uri }}
     uri: {{ .reply.uri }}
+    {{ end }}
+    {{ if .reply.CACerts }}
+    CACerts: |-
+      {{ .reply.CACerts }}
+    {{ end }}
+    {{ if .reply.audience }}
+    audience: {{ .reply.audience }}
     {{ end }}
   {{ end }}
