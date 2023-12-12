@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	nethttp "net/http"
 	"strings"
 	"time"
 
@@ -65,17 +66,22 @@ func GetJWTExpiry(token string) (time.Time, error) {
 }
 
 // VerifyJWTFromRequest will verify the incoming request contains the correct JWT token
-func VerifyJWTFromRequest (ctx context.Context, tokenVerifier OIDCTokenVerifier, r *http.Request, audience string, response http.ResponseWriter) error {
+func VerifyJWTFromRequest(ctx context.Context, tokenVerifier *OIDCTokenVerifier, r *http.Request, audience string, response http.ResponseWriter) (http.ResponseWriter, error) {
 	token := GetJWTFromHeader(r.Header)
 	if token == "" {
-		return fmt.Errorf("no JWT token found in request")
+		response.WriteHeader(nethttp.StatusUnauthorized)
+		return response, fmt.Errorf("no JWT token found in request")
 	}
 
-	if _,err := tokenVerifier.VerifyJWT(ctx, token, audience); err != nil {
+	if audience == "" {
+		response.WriteHeader(nethttp.StatusInternalServerError)
+		return response, fmt.Errorf("no audience is provided")
+	}
+
+	if _, err := tokenVerifier.VerifyJWT(ctx, token, audience); err != nil {
 		response.WriteHeader(http.StatusUnauthorized)
-		return fmt.Errorf("failed to verify JWT: %w", err)
-
+		return response, fmt.Errorf("failed to verify JWT: %w", err)
 	}
 
-	return nil
+	return response, nil
 }
