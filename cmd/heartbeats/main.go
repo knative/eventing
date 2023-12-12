@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -125,6 +126,11 @@ func main() {
 		ceOverrides = &overrides
 	}
 
+	oidcToken, err := os.ReadFile("/oidc/token")
+	if err != nil {
+		log.Printf("Failed to read OIDC token, client will not send Authorization header: %v", err)
+	}
+
 	conf, err := config.JSONToTracingConfig(env.TracingConfig)
 	if err != nil {
 		log.Printf("Failed to read tracing config, using the no-op default: %v", err)
@@ -206,6 +212,12 @@ func main() {
 			log.Printf("failed to set cloudevents msg: %s", err.Error())
 		}
 
+		if oidcToken != nil {
+			ctx, err = withAuthHeader(ctx, oidcToken)
+			if err != nil {
+				log.Fatalf("Failed to set Authorization header: %v", err)
+			}
+		}
 		log.Printf("sending cloudevent to %s", sink)
 		if res := c.Send(ctx, event); !cloudevents.IsACK(res) {
 			log.Printf("failed to send cloudevent: %v", res)
@@ -229,4 +241,13 @@ func maybeQuitIstioProxy() {
 	if err != nil && !errors.Is(err, syscall.ECONNREFUSED) {
 		log.Println("[Ignore this warning if Istio proxy is not used on this pod]", err)
 	}
+}
+
+func withAuthHeader(ctx context.Context, oidcToken []byte) (context.Context, error) {
+	// Appending the auth token to the outgoing request
+	headers := cehttp.HeaderFrom(ctx)
+	headers.Set("Authorization", fmt.Sprintf("Bearer %s", oidcToken))
+	ctx = cehttp.WithCustomHeader(ctx, headers)
+
+	return ctx, nil
 }
