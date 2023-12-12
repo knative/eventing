@@ -213,11 +213,9 @@ func main() {
 		}
 
 		if oidcToken != nil {
-			ctx, err = withAuthHeader(ctx, oidcToken)
-			if err != nil {
-				log.Fatalf("Failed to set Authorization header: %v", err)
-			}
+			ctx = withAuthHeader(ctx, oidcToken)
 		}
+
 		log.Printf("sending cloudevent to %s", sink)
 		if res := c.Send(ctx, event); !cloudevents.IsACK(res) {
 			log.Printf("failed to send cloudevent: %v", res)
@@ -243,11 +241,9 @@ func maybeQuitIstioProxy() {
 	}
 }
 
-func withAuthHeader(ctx context.Context, oidcToken []byte) (context.Context, error) {
+func withAuthHeader(ctx context.Context, oidcToken []byte) context.Context {
 	// Appending the auth token to the outgoing request
 	headers := cehttp.HeaderFrom(ctx)
 	headers.Set("Authorization", fmt.Sprintf("Bearer %s", oidcToken))
-	ctx = cehttp.WithCustomHeader(ctx, headers)
-
-	return ctx, nil
+	return cehttp.WithCustomHeader(ctx, headers)
 }
