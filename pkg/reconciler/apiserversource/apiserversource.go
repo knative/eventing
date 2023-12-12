@@ -371,14 +371,14 @@ func (r *Reconciler) createCloudEventAttributes(src *v1.ApiServerSource) ([]duck
 func (r *Reconciler) createOIDCRole(ctx context.Context, source *v1.ApiServerSource) error {
 	roleName := resources.GetOIDCTokenRoleName(source.Name)
 
-	//Call kubeclient and see whether the role exist or not
-	role, err := r.roleLister.Roles(source.GetNamespace()).Get(roleName)
+	expected, err := resources.MakeOIDCRole(source)
 
-	expected, errMakeRole := resources.MakeOIDCRole(source)
-
-	if errMakeRole != nil {
-		return fmt.Errorf("Cannot create OIDC role for ApiServerSource %s/%s: %w", source.GetName(), source.GetNamespace(), errMakeRole)
+	if err != nil {
+		return fmt.Errorf("Cannot create OIDC role for ApiServerSource %s/%s: %w", source.GetName(), source.GetNamespace(), err)
 	}
+
+	// By querying roleLister to see whether the role exist or not
+	role, err := r.roleLister.Roles(source.GetNamespace()).Get(roleName)
 
 	if apierrs.IsNotFound(err) {
 		// If the role does not exist, we will call kubeclient to create it
@@ -412,14 +412,13 @@ func (r *Reconciler) createOIDCRole(ctx context.Context, source *v1.ApiServerSou
 func (r *Reconciler) createOIDCRoleBinding(ctx context.Context, source *v1.ApiServerSource) error {
 	roleBindingName := resources.GetOIDCTokenRoleBindingName(source.Name)
 
-	// Call kubeclient and see whether the roleBinding exist or not
-	roleBinding, err := r.roleBindingLister.RoleBindings(source.GetNamespace()).Get(roleBindingName)
-	expected, errMakeRoleBinding := resources.MakeOIDCRoleBinding(source)
-
-	if errMakeRoleBinding != nil {
-		return fmt.Errorf("Cannot create OIDC roleBinding for ApiServerSource %s/%s: %w", source.GetName(), source.GetNamespace(), errMakeRoleBinding)
+	expected, err := resources.MakeOIDCRoleBinding(source)
+	if err != nil {
+		return fmt.Errorf("Cannot create OIDC roleBinding for ApiServerSource %s/%s: %w", source.GetName(), source.GetNamespace(), err)
 	}
 
+	// By querying roleBindingLister to see whether the roleBinding exist or not
+	roleBinding, err := r.roleBindingLister.RoleBindings(source.GetNamespace()).Get(roleBindingName)
 	if apierrs.IsNotFound(err) {
 		// If the role does not exist, we will call kubeclient to create it
 		roleBinding = expected
