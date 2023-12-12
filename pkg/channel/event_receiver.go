@@ -250,7 +250,7 @@ func (r *EventReceiver) ServeHTTP(response nethttp.ResponseWriter, request *neth
 	features := feature.FromContext(ctx)
 	if features.IsOIDCAuthentication() {
 		r.logger.Debug("OIDC authentication is enabled")
-		response, err = auth.VerifyJWTFromRequest(ctx, r.tokenVerifier, request, &r.audience, response)
+		err = auth.VerifyJWTFromRequest(ctx, r.tokenVerifier, request, &r.audience, response)
 		if err != nil {
 			r.logger.Warn("Error when validating the JWT token in the request", zap.Error(err))
 			return

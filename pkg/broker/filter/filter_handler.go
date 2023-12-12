@@ -196,7 +196,7 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 
 		audience := FilterAudience
 
-		writer, err = auth.VerifyJWTFromRequest(ctx, h.tokenVerifier, request, &audience, writer)
+		err = auth.VerifyJWTFromRequest(ctx, h.tokenVerifier, request, &audience, writer)
 		if err != nil {
 			h.logger.Warn("Error when validating the JWT token in the request", zap.Error(err))
 			return

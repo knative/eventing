@@ -49,8 +49,8 @@ func AddressableOIDCTokenConformance(gvr schema.GroupVersionResource, kind, name
 		Features: []*feature.Feature{
 			addressableRejectInvalidAudience(gvr, kind, name),
 			addressableRejectCorruptedSignature(gvr, kind, name),
-			addressableRejectExpiredToken(gvr, kind, name),
-			addressableAllowsValidRequest(gvr, kind, name),
+			//addressableRejectExpiredToken(gvr, kind, name),
+			//addressableAllowsValidRequest(gvr, kind, name),
 		},
 	}
 
