@@ -19,6 +19,8 @@ package apiserversource
 import (
 	"context"
 
+	filtered "knative.dev/eventing/pkg/client/injection/informers/factory/filtered"
+
 	"knative.dev/eventing/pkg/apis/feature"
 
 	"github.com/kelseyhightower/envconfig"
@@ -63,6 +65,7 @@ func NewController(
 
 	// Create a selector string
 	selectorString := "role=oidc-token-creator"
+	ctx = filtered.WithSelectors(ctx, selectorString)
 	roleInformer := roleinformer.Get(ctx, selectorString)
 	rolebindingInformer := rolebindinginformer.Get(ctx, selectorString)
 
