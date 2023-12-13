@@ -84,7 +84,7 @@ func NewHandler(logger *zap.Logger, reporter StatsReporter, defaulter client.Eve
 	brokerInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			broker, ok := obj.(*eventingv1.Broker)
-			if !ok {
+			if !ok || broker == nil || broker.Status.Address == nil {
 				return
 			}
 			kncloudevents.AddOrUpdateAddressableHandler(duckv1.Addressable{
@@ -94,7 +94,7 @@ func NewHandler(logger *zap.Logger, reporter StatsReporter, defaulter client.Eve
 		},
 		UpdateFunc: func(_, obj interface{}) {
 			broker, ok := obj.(*eventingv1.Broker)
-			if !ok {
+			if !ok || broker == nil || broker.Status.Address == nil {
 				return
 			}
 			kncloudevents.AddOrUpdateAddressableHandler(duckv1.Addressable{
@@ -104,7 +104,7 @@ func NewHandler(logger *zap.Logger, reporter StatsReporter, defaulter client.Eve
 		},
 		DeleteFunc: func(obj interface{}) {
 			broker, ok := obj.(*eventingv1.Broker)
-			if !ok {
+			if !ok || broker == nil || broker.Status.Address == nil {
 				return
 			}
 			kncloudevents.DeleteAddressableHandler(duckv1.Addressable{
