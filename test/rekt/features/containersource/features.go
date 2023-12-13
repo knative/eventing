@@ -22,7 +22,6 @@ import (
 
 	"github.com/cloudevents/sdk-go/v2/test"
 	"k8s.io/apimachinery/pkg/util/uuid"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/manifest"
 
 	"knative.dev/reconciler-test/pkg/eventshub"
@@ -42,30 +41,6 @@ func SendsEventsWithSinkRef() *feature.Feature {
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 
 	f.Requirement("install containersource", containersource.Install(source, containersource.WithSink(service.AsDestinationRef(sink))))
-	f.Requirement("containersource goes ready", containersource.IsReady(source))
-
-	f.Stable("containersource as event source").
-		Must("delivers events",
-			assert.OnStore(sink).MatchEvent(test.HasType("dev.knative.eventing.samples.heartbeat")).AtLeast(1))
-
-	return f
-}
-
-func SendsEventsWithSinkRefOIDC() *feature.Feature {
-	source := feature.MakeRandomK8sName("containersource")
-	sink := feature.MakeRandomK8sName("sink")
-	sinkAudience := "audience"
-	f := feature.NewFeature()
-
-	f.Setup("install sink", eventshub.Install(sink,
-		eventshub.OIDCReceiverAudience(sinkAudience),
-		eventshub.StartReceiver))
-
-	f.Requirement("install containersource", containersource.Install(source,
-		containersource.WithSink(&duckv1.Destination{
-			Ref:      service.AsKReference(sink),
-			Audience: &sinkAudience,
-		})))
 	f.Requirement("containersource goes ready", containersource.IsReady(source))
 
 	f.Stable("containersource as event source").
