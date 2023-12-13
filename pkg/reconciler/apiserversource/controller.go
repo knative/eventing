@@ -38,8 +38,8 @@ import (
 	apiserversourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1/apiserversource"
 	apiserversourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1/apiserversource"
 	serviceaccountinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount"
-	roleinformer "knative.dev/pkg/client/injection/kube/informers/rbac/v1/role"
-	rolebindinginformer "knative.dev/pkg/client/injection/kube/informers/rbac/v1/rolebinding"
+	roleinformer "knative.dev/pkg/client/injection/kube/informers/rbac/v1/role/filtered"
+	rolebindinginformer "knative.dev/pkg/client/injection/kube/informers/rbac/v1/rolebinding/filtered"
 )
 
 // envConfig will be used to extract the required environment variables using
@@ -61,8 +61,10 @@ func NewController(
 	namespaceInformer := namespace.Get(ctx)
 	serviceaccountInformer := serviceaccountinformer.Get(ctx)
 
-	roleInformer := roleinformer.Get(ctx)
-	rolebindingInformer := rolebindinginformer.Get(ctx)
+	// Create a selector string
+	selectorString := "role=oidc-token-creator"
+	roleInformer := roleinformer.Get(ctx, selectorString)
+	rolebindingInformer := rolebindinginformer.Get(ctx, selectorString)
 
 	var globalResync func(obj interface{})
 
@@ -104,6 +106,16 @@ func NewController(
 	apiServerSourceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	deploymentInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: controller.FilterController(&v1.ApiServerSource{}),
+		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
+	})
+
+	roleInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: controller.FilterController(&v1.ApiServerSource{}),
+		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
+	})
+
+	rolebindingInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.FilterController(&v1.ApiServerSource{}),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})

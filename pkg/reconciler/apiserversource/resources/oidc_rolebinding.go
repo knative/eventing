@@ -51,6 +51,9 @@ func MakeOIDCRole(source *v1.ApiServerSource) (*rbacv1.Role, error) {
 			Annotations: map[string]string{
 				"description": fmt.Sprintf("Role for OIDC Authentication for ApiServerSource %q", source.GetName()),
 			},
+			Labels: map[string]string{
+				"role": "oidc-token-creator",
+			},
 		},
 		Rules: []rbacv1.PolicyRule{
 			rbacv1.PolicyRule{
@@ -82,6 +85,9 @@ func MakeOIDCRoleBinding(source *v1.ApiServerSource) (*rbacv1.RoleBinding, error
 			Namespace: source.GetNamespace(),
 			Annotations: map[string]string{
 				"description": fmt.Sprintf("Role Binding for OIDC Authentication for ApiServerSource %q", source.GetName()),
+			},
+			Labels: map[string]string{
+				"role": "oidc-token-creator",
 			},
 		},
 		RoleRef: rbacv1.RoleRef{
