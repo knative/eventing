@@ -172,3 +172,17 @@ func TestSequenceSendsEventsWithOIDCSupport(t *testing.T) {
 
 	env.TestSet(ctx, t, oidc.SequenceSendsEventWithOIDC())
 }
+
+func TestParallelTwoBranchesWithOIDCSupport(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+	)
+
+	env.Test(ctx, t, oidc.ParallelWithTwoBranchesOIDC(channel_template.ImmemoryChannelTemplate()))
+}
