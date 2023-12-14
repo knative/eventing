@@ -57,6 +57,9 @@ spec:
         CACerts: |-
           {{ .filter.CACerts }}
         {{ end }}
+        {{ if .filter.audience }}
+        audience: {{ .filter.audience }}
+        {{ end }}
       {{ end }}
       {{ if .subscriber }}
       subscriber:
@@ -73,6 +76,9 @@ spec:
         {{ if .subscriber.CACerts }}
         CACerts: |-
           {{ .subscriber.CACerts }}
+        {{ end }}
+        {{ if .subscriber.audience }}
+        audience: {{ .subscriber.audience }}
         {{ end }}
       {{ end }}
       {{ if .reply }}
@@ -91,6 +97,9 @@ spec:
         CACerts: |-
           {{ .reply.CACerts }}
         {{ end }}
+        {{ if .reply.audience }}
+        audience: {{ .reply.audience }}
+        {{ end }}
       {{ end }}
   {{ end }}
   {{ if .reply }}
@@ -108,5 +117,8 @@ spec:
     {{ if .reply.CACerts }}
     CACerts: |-
       {{ .reply.CACerts }}
+    {{ end }}
+    {{ if .reply.audience }}
+    audience: {{ .reply.audience }}
     {{ end }}
   {{ end }}
