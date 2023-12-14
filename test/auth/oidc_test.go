@@ -32,7 +32,6 @@ import (
 	"knative.dev/eventing/test/auth/features/oidc"
 	brokerfeatures "knative.dev/eventing/test/rekt/features/broker"
 	"knative.dev/eventing/test/rekt/features/channel"
-	"knative.dev/eventing/test/rekt/features/containersource"
 	parallelfeatures "knative.dev/eventing/test/rekt/features/parallel"
 	sequencefeatures "knative.dev/eventing/test/rekt/features/sequence"
 	"knative.dev/eventing/test/rekt/resources/broker"
@@ -171,7 +170,7 @@ func TestContainerSourceSendsEventsWithOIDCSupport(t *testing.T) {
 		environment.Managed(t),
 	)
 
-	env.Test(ctx, t, containersource.SendsEventsWithSinkRefOIDC())
+	env.Test(ctx, t, oidc.SendsEventsWithSinkRefOIDC())
 }
 
 func TestSequenceSendsEventsWithOIDCSupport(t *testing.T) {
@@ -186,4 +185,18 @@ func TestSequenceSendsEventsWithOIDCSupport(t *testing.T) {
 	)
 
 	env.TestSet(ctx, t, oidc.SequenceSendsEventWithOIDC())
+}
+
+func TestParallelTwoBranchesWithOIDCSupport(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+	)
+
+	env.Test(ctx, t, oidc.ParallelWithTwoBranchesOIDC(channel_template.ImmemoryChannelTemplate()))
 }

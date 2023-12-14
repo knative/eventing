@@ -193,16 +193,12 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	features := feature.FromContext(ctx)
 	if features.IsOIDCAuthentication() {
 		h.logger.Debug("OIDC authentication is enabled")
-		token := auth.GetJWTFromHeader(request.Header)
-		if token == "" {
-			h.logger.Warn(fmt.Sprintf("No JWT in %s header provided while feature %s is enabled", auth.AuthHeaderKey, feature.OIDCAuthentication))
-			writer.WriteHeader(http.StatusUnauthorized)
-			return
-		}
 
-		if _, err := h.tokenVerifier.VerifyJWT(ctx, token, FilterAudience); err != nil {
-			h.logger.Warn("no valid JWT provided", zap.Error(err))
-			writer.WriteHeader(http.StatusUnauthorized)
+		audience := FilterAudience
+
+		err = h.tokenVerifier.VerifyJWTFromRequest(ctx, request, &audience, writer)
+		if err != nil {
+			h.logger.Warn("Error when validating the JWT token in the request", zap.Error(err))
 			return
 		}
 
