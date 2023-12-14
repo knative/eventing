@@ -62,7 +62,6 @@ func NewController(
 	serviceaccountInformer := serviceaccountinformer.Get(ctx)
 
 	// Create a selector string
-
 	oidcSelectorString := "role=oidc-token-creator"
 	roleInformer := roleinformer.Get(ctx, oidcSelectorString)
 	rolebindingInformer := rolebindinginformer.Get(ctx, oidcSelectorString)

@@ -54,6 +54,9 @@ func MakeOIDCRole(source *v1.ApiServerSource) (*rbacv1.Role, error) {
 			Labels: map[string]string{
 				"role": "oidc-token-creator",
 			},
+			OwnerReferences: []metav1.OwnerReference{
+				*kmeta.NewControllerRef(source),
+			},
 		},
 		Rules: []rbacv1.PolicyRule{
 			rbacv1.PolicyRule{
@@ -88,6 +91,9 @@ func MakeOIDCRoleBinding(source *v1.ApiServerSource) (*rbacv1.RoleBinding, error
 			},
 			Labels: map[string]string{
 				"role": "oidc-token-creator",
+			},
+			OwnerReferences: []metav1.OwnerReference{
+				*kmeta.NewControllerRef(source),
 			},
 		},
 		RoleRef: rbacv1.RoleRef{
