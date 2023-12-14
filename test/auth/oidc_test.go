@@ -144,3 +144,31 @@ func TestSequenceSupportsOIDC(t *testing.T) {
 
 	env.Test(ctx, t, oidc.SequenceHasAudienceOfInputChannel(name, env.Namespace(), channel_impl.GVR(), channel_impl.GVK().Kind))
 }
+
+func TestContainerSourceSendsEventsWithOIDCSupport(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+	)
+
+	env.Test(ctx, t, oidc.SendsEventsWithSinkRefOIDC())
+}
+
+func TestSequenceSendsEventsWithOIDCSupport(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+	)
+
+	env.TestSet(ctx, t, oidc.SequenceSendsEventWithOIDC())
+}
