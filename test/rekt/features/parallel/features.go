@@ -132,7 +132,7 @@ func ParallelWithTwoBranchesTLS(channelTemplate channel_template.ChannelTemplate
 	f.Setup("install subscriber2", eventshub.Install(subscriber2, eventshub.ReplyWithAppendedData("appended data 2"), eventshub.StartReceiverTLS))
 
 	f.Setup("install filter1", eventshub.Install(filter1, eventshub.ReplyWithTransformedEvent(event.Type(), event.Source(), string(event.Data())), eventshub.StartReceiverTLS))
-	f.Setup("install filter1", eventshub.Install(filter2, eventshub.ReplyWithTransformedEvent(event.Type(), event.Source(), string(event.Data())), eventshub.StartReceiverTLS))
+	f.Setup("install filter2", eventshub.Install(filter2, eventshub.ReplyWithTransformedEvent(event.Type(), event.Source(), string(event.Data())), eventshub.StartReceiverTLS))
 
 	// Install a Parallel with two branches
 	f.Setup("install Parallel", func(ctx context.Context, t feature.T) {
