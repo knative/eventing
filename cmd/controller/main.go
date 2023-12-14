@@ -26,6 +26,7 @@ import (
 	"os"
 	"time"
 
+	filteredFactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
 	"knative.dev/pkg/injection/sharedmain"
 	"knative.dev/pkg/signals"
 
@@ -72,6 +73,9 @@ func main() {
 			log.Fatal(err)
 		}
 	}()
+
+	oidcSelector := "role=oidc-token-creator"
+	ctx = filteredFactory.WithSelectors(ctx, oidcSelector)
 
 	sharedmain.MainWithContext(ctx, "controller",
 		// Messaging
