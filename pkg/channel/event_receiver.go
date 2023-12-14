@@ -250,23 +250,12 @@ func (r *EventReceiver) ServeHTTP(response nethttp.ResponseWriter, request *neth
 	features := feature.FromContext(ctx)
 	if features.IsOIDCAuthentication() {
 		r.logger.Debug("OIDC authentication is enabled")
-
-		token := auth.GetJWTFromHeader(request.Header)
-		if token == "" {
-			r.logger.Warn(fmt.Sprintf("No JWT in %s header provided while feature %s is enabled", auth.AuthHeaderKey, feature.OIDCAuthentication))
-			response.WriteHeader(nethttp.StatusUnauthorized)
+		err = r.tokenVerifier.VerifyJWTFromRequest(ctx, request, &r.audience, response)
+		if err != nil {
+			r.logger.Warn("Error when validating the JWT token in the request", zap.Error(err))
 			return
 		}
-
-		if _, err := r.tokenVerifier.VerifyJWT(ctx, token, r.audience); err != nil {
-			r.logger.Warn("no valid JWT provided", zap.Error(err))
-			response.WriteHeader(nethttp.StatusUnauthorized)
-			return
-		}
-
 		r.logger.Debug("Request contained a valid JWT. Continuing...")
-	} else {
-		r.logger.Debug("OIDC authentication is disabled")
 	}
 
 	err = r.receiverFunc(request.Context(), channel, *event, utils.PassThroughHeaders(request.Header))

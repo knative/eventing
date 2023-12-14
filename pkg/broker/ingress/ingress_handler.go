@@ -228,22 +228,9 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	if features.IsOIDCAuthentication() {
 		h.Logger.Debug("OIDC authentication is enabled")
 
-		if broker.Status.Address.Audience == nil {
-			h.Logger.Warn(fmt.Sprintf("Audience of broker %s/%s must not be nil, while feature %s is enabled", broker.Name, broker.Namespace, feature.OIDCAuthentication))
-			writer.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		token := auth.GetJWTFromHeader(request.Header)
-		if token == "" {
-			h.Logger.Warn(fmt.Sprintf("No JWT in %s header provided while feature %s is enabled", auth.AuthHeaderKey, feature.OIDCAuthentication))
-			writer.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-
-		if _, err := h.tokenVerifier.VerifyJWT(ctx, token, *broker.Status.Address.Audience); err != nil {
-			h.Logger.Warn("no valid JWT provided", zap.Error(err))
-			writer.WriteHeader(http.StatusUnauthorized)
+		err = h.tokenVerifier.VerifyJWTFromRequest(ctx, request, broker.Status.Address.Audience, writer)
+		if err != nil {
+			h.Logger.Warn("Error when validating the JWT token in the request", zap.Error(err))
 			return
 		}
 

@@ -151,6 +151,27 @@ func (c *OIDCTokenVerifier) getKubernetesOIDCDiscovery() (*openIDMetadata, error
 	return openIdConfig, nil
 }
 
+// VerifyJWTFromRequest will verify the incoming request contains the correct JWT token
+func (tokenVerifier *OIDCTokenVerifier) VerifyJWTFromRequest(ctx context.Context, r *http.Request, audience *string, response http.ResponseWriter) error {
+	token := GetJWTFromHeader(r.Header)
+	if token == "" {
+		response.WriteHeader(http.StatusUnauthorized)
+		return fmt.Errorf("no JWT token found in request")
+	}
+
+	if audience == nil {
+		response.WriteHeader(http.StatusInternalServerError)
+		return fmt.Errorf("no audience is provided")
+	}
+
+	if _, err := tokenVerifier.VerifyJWT(ctx, token, *audience); err != nil {
+		response.WriteHeader(http.StatusUnauthorized)
+		return fmt.Errorf("failed to verify JWT: %w", err)
+	}
+
+	return nil
+}
+
 type openIDMetadata struct {
 	Issuer        string   `json:"issuer"`
 	JWKSURI       string   `json:"jwks_uri"`
