@@ -53,6 +53,10 @@ spec:
         {{ if .filter.uri }}
         uri: {{ .filter.uri }}
         {{ end }}
+        {{ if .filter.CACerts }}
+        CACerts: |-
+          {{ .filter.CACerts }}
+        {{ end }}
       {{ end }}
       {{ if .subscriber }}
       subscriber:
@@ -65,6 +69,10 @@ spec:
         {{ end }}
         {{ if .subscriber.uri }}
         uri: {{ .subscriber.uri }}
+        {{ end }}
+        {{ if .subscriber.CACerts }}
+        CACerts: |-
+          {{ .subscriber.CACerts }}
         {{ end }}
       {{ end }}
       {{ if .reply }}
@@ -79,6 +87,10 @@ spec:
         {{ if .reply.uri }}
         uri: {{ .reply.uri }}
         {{ end }}
+        {{ if .reply.CACerts }}
+        CACerts: |-
+          {{ .reply.CACerts }}
+        {{ end }}
       {{ end }}
   {{ end }}
   {{ if .reply }}
@@ -92,5 +104,9 @@ spec:
     {{ end }}
     {{ if .reply.uri }}
     uri: {{ .reply.uri }}
+    {{ end }}
+    {{ if .reply.CACerts }}
+    CACerts: |-
+      {{ .reply.CACerts }}
     {{ end }}
   {{ end }}

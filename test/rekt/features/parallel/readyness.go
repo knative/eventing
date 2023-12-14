@@ -34,7 +34,7 @@ func GoesReady(name string, cfg ...manifest.CfgFn) *feature.Feature {
 		reply := feature.MakeRandomK8sName("reply")
 		f.Setup("install a reply service", service.Install(reply,
 			service.WithSelectors(map[string]string{"app": "rekt"})))
-		cfg = append(cfg, parallel.WithReply(service.AsKReference(reply), ""))
+		cfg = append(cfg, parallel.WithReply(service.AsDestinationRef(reply)))
 	}
 
 	for i := 0; i < 3; i++ {
@@ -42,19 +42,19 @@ func GoesReady(name string, cfg ...manifest.CfgFn) *feature.Feature {
 		filter := feature.MakeRandomK8sName("subscriber" + strconv.Itoa(i))
 		f.Setup("install filter "+strconv.Itoa(i), service.Install(filter,
 			service.WithSelectors(map[string]string{"app": "rekt"})))
-		cfg = append(cfg, parallel.WithFilterAt(i, service.AsKReference(filter), ""))
+		cfg = append(cfg, parallel.WithFilterAt(i, service.AsDestinationRef(filter)))
 
 		// Subscriber
 		subscriber := feature.MakeRandomK8sName("subscriber" + strconv.Itoa(i))
 		f.Setup("install subscriber "+strconv.Itoa(i), service.Install(subscriber,
 			service.WithSelectors(map[string]string{"app": "rekt"})))
-		cfg = append(cfg, parallel.WithSubscriberAt(i, service.AsKReference(subscriber), ""))
+		cfg = append(cfg, parallel.WithSubscriberAt(i, service.AsDestinationRef(subscriber)))
 
 		// Reply
 		reply := feature.MakeRandomK8sName("reply" + strconv.Itoa(i))
 		f.Setup("install reply "+strconv.Itoa(i), service.Install(reply,
 			service.WithSelectors(map[string]string{"app": "rekt"})))
-		cfg = append(cfg, parallel.WithReplyAt(i, service.AsKReference(reply), ""))
+		cfg = append(cfg, parallel.WithReplyAt(i, service.AsDestinationRef(reply)))
 	}
 
 	f.Setup("install a Parallel", parallel.Install(name, cfg...))
@@ -74,7 +74,7 @@ func GoesReadyWithoutFilters(name string, cfg ...manifest.CfgFn) *feature.Featur
 	subscriber := feature.MakeRandomK8sName("subscriber")
 	f.Setup("install subscriber", service.Install(subscriber,
 		service.WithSelectors(map[string]string{"app": "rekt"})))
-	cfg = append(cfg, parallel.WithSubscriberAt(0, service.AsKReference(subscriber), ""))
+	cfg = append(cfg, parallel.WithSubscriberAt(0, service.AsDestinationRef(subscriber)))
 
 	f.Setup("install a Parallel", parallel.Install(name, cfg...))
 
