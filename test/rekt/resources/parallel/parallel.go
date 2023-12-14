@@ -63,11 +63,6 @@ func IsReady(name string, timing ...time.Duration) feature.StepFn {
 	return k8s.IsReady(GVR(), name, timing...)
 }
 
-// ValidateAddress validates the address retured by Address
-func ValidateAddress(name string, validate addressable.ValidateAddressFn, timings ...time.Duration) feature.StepFn {
-	return addressable.ValidateAddress(GVR(), name, validate, timings...)
-}
-
 // IsAddressable tests to see if a Parallel becomes addressable within the  time
 // given.
 func IsAddressable(name string, timing ...time.Duration) feature.StepFn {
