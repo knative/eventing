@@ -174,7 +174,7 @@ func AsDestinationRef(name string) *duckv1.Destination {
 var WithDeadLetterSink = delivery.WithDeadLetterSink
 
 // ValidateAddress validates the address retured by Address
-func ValidateAddress(name string, validate addressable.ValidateAddress, timings ...time.Duration) feature.StepFn {
+func ValidateAddress(name string, validate addressable.ValidateAddressFn, timings ...time.Duration) feature.StepFn {
 	return func(ctx context.Context, t feature.T) {
 		addr, err := Address(ctx, name, timings...)
 		if err != nil {
