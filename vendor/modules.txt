@@ -1241,7 +1241,6 @@ knative.dev/pkg/client/injection/ducks/duck/v1/source/fake
 knative.dev/pkg/client/injection/ducks/duck/v1alpha1/addressable
 knative.dev/pkg/client/injection/ducks/duck/v1beta1/addressable
 knative.dev/pkg/client/injection/ducks/duck/v1beta1/addressable/fake
-knative.dev/pkg/client/injection/informers/factory/filtered
 knative.dev/pkg/client/injection/kube/client
 knative.dev/pkg/client/injection/kube/client/fake
 knative.dev/pkg/client/injection/kube/informers/admissionregistration/v1/mutatingwebhookconfiguration

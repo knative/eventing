@@ -20,6 +20,8 @@ import (
 	"os"
 	"testing"
 
+	filteredFactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
+
 	"knative.dev/eventing/pkg/apis/feature"
 
 	corev1 "k8s.io/api/core/v1"
@@ -42,8 +44,13 @@ import (
 
 func TestNew(t *testing.T) {
 	ctx, _ := SetupFakeContext(t)
+
+	oidcSelector := "role=oidc-token-creator"
+	ctx = filteredFactory.WithSelectors(ctx, oidcSelector)
+
 	ctx = withCfgHost(ctx, &rest.Config{Host: "unit_test"})
 	ctx = addressable.WithDuck(ctx)
+
 	os.Setenv("METRICS_DOMAIN", "knative.dev/eventing")
 	os.Setenv("APISERVER_RA_IMAGE", "knative.dev/example")
 	c := NewController(ctx, configmap.NewStaticWatcher(&corev1.ConfigMap{
