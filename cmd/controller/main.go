@@ -21,11 +21,12 @@ import (
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
 	"errors"
-	"knative.dev/eventing/pkg/apis/sources"
 	"log"
 	"net/http"
 	"os"
 	"time"
+
+	"knative.dev/eventing/pkg/apis/sources"
 
 	filteredFactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
 	"knative.dev/pkg/injection/sharedmain"
