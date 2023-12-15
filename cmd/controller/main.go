@@ -21,6 +21,7 @@ import (
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
 	"errors"
+	"knative.dev/eventing/pkg/apis/sources"
 	"log"
 	"net/http"
 	"os"
@@ -74,8 +75,7 @@ func main() {
 		}
 	}()
 
-	oidcSelector := "role=oidc-token-creator"
-	ctx = filteredFactory.WithSelectors(ctx, oidcSelector)
+	ctx = filteredFactory.WithSelectors(ctx, sources.OIDCInformerSelector)
 
 	sharedmain.MainWithContext(ctx, "controller",
 		// Messaging

@@ -32,6 +32,9 @@ const (
 	// SourceDuckLabelValue is the label value to indicate
 	// the CRD is a Source duck type.
 	SourceDuckLabelValue = "true"
+
+	// OIDCInformerSelector is the label selector for the OIDC token creator role and rolebinding informers
+	OIDCInformerSelector = "role=oidc-token-creator"
 )
 
 var (

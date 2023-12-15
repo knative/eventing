@@ -1340,19 +1340,7 @@ func makeSubjectAccessReview(resource, verb, sa string) *authorizationv1.Subject
 
 func makeOIDCRole() *rbacv1.Role {
 	src := rttestingv1.NewApiServerSource(sourceName, testNS,
-		rttestingv1.WithApiServerSourceSpec(sourcesv1.ApiServerSourceSpec{
-			Resources: []sourcesv1.APIVersionKindSelector{{
-				APIVersion: "v1",
-				Kind:       "Namespace",
-			}},
-			EventMode:  sourcesv1.ResourceMode,
-			SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
-		}),
 		rttestingv1.WithApiServerSourceUID(sourceUID),
-		// Status Update:
-		rttestingv1.WithInitApiServerSourceConditions,
-		rttestingv1.WithApiServerSourceDeployed,
-		rttestingv1.WithApiServerSourceSink(sinkURI),
 	)
 	return &rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{
@@ -1382,19 +1370,7 @@ func makeOIDCRole() *rbacv1.Role {
 
 func makeOIDCRoleBinding() *rbacv1.RoleBinding {
 	src := rttestingv1.NewApiServerSource(sourceName, testNS,
-		rttestingv1.WithApiServerSourceSpec(sourcesv1.ApiServerSourceSpec{
-			Resources: []sourcesv1.APIVersionKindSelector{{
-				APIVersion: "v1",
-				Kind:       "Namespace",
-			}},
-			EventMode:  sourcesv1.ResourceMode,
-			SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
-		}),
 		rttestingv1.WithApiServerSourceUID(sourceUID),
-		// Status Update:
-		rttestingv1.WithInitApiServerSourceConditions,
-		rttestingv1.WithApiServerSourceDeployed,
-		rttestingv1.WithApiServerSourceSink(sinkURI),
 	)
 	return &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
