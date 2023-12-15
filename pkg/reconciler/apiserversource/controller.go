@@ -19,6 +19,8 @@ package apiserversource
 import (
 	"context"
 
+	"knative.dev/eventing/pkg/apis/sources"
+
 	"knative.dev/eventing/pkg/apis/feature"
 
 	"github.com/kelseyhightower/envconfig"
@@ -62,9 +64,8 @@ func NewController(
 	serviceaccountInformer := serviceaccountinformer.Get(ctx)
 
 	// Create a selector string
-	oidcSelectorString := "role=oidc-token-creator"
-	roleInformer := roleinformer.Get(ctx, oidcSelectorString)
-	rolebindingInformer := rolebindinginformer.Get(ctx, oidcSelectorString)
+	roleInformer := roleinformer.Get(ctx, sources.OIDCInformerSelector)
+	rolebindingInformer := rolebindinginformer.Get(ctx, sources.OIDCInformerSelector)
 
 	var globalResync func(obj interface{})
 
