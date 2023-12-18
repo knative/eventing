@@ -61,6 +61,14 @@ func TestCESQLFilter(t *testing.T) {
 			expression: fmt.Sprintf("(type = '%s') OR (source = '%s')", eventType, "some-other-source"),
 			want:       eventfilter.PassFilter,
 		},
+		"Missing attribute less than comparison": {
+			expression: fmt.Sprintf("missingattribute < %d", 5),
+			want:       eventfilter.FailFilter,
+		},
+		"Missing attribute equals comparison": {
+			expression: fmt.Sprintf("missingattribute = %s", "missinsvalue"),
+			want:       eventfilter.FailFilter,
+		},
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
