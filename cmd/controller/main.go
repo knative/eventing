@@ -76,7 +76,7 @@ func main() {
 		}
 	}()
 
-	ctx = filteredFactory.WithSelectors(ctx, sources.OIDCInformerSelector)
+	ctx = filteredFactory.WithSelectors(ctx, sources.OIDCTokenRoleLabelSelector)
 
 	sharedmain.MainWithContext(ctx, "controller",
 		// Messaging

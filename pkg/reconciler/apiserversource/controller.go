@@ -64,8 +64,8 @@ func NewController(
 	serviceaccountInformer := serviceaccountinformer.Get(ctx)
 
 	// Create a selector string
-	roleInformer := roleinformer.Get(ctx, sources.OIDCInformerSelector)
-	rolebindingInformer := rolebindinginformer.Get(ctx, sources.OIDCInformerSelector)
+	roleInformer := roleinformer.Get(ctx, sources.OIDCTokenRoleLabelSelector)
+	rolebindingInformer := rolebindinginformer.Get(ctx, sources.OIDCTokenRoleLabelSelector)
 
 	var globalResync func(obj interface{})
 

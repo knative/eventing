@@ -94,6 +94,6 @@ func TestNew(t *testing.T) {
 }
 
 func SetUpInformerSelector(ctx context.Context) context.Context {
-	ctx = filteredFactory.WithSelectors(ctx, sources.OIDCInformerSelector)
+	ctx = filteredFactory.WithSelectors(ctx, sources.OIDCTokenRoleLabelSelector)
 	return ctx
 }

@@ -19,6 +19,8 @@ package resources
 import (
 	"fmt"
 
+	"knative.dev/eventing/pkg/apis/sources"
+
 	"knative.dev/pkg/kmeta"
 
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -52,7 +54,7 @@ func MakeOIDCRole(source *v1.ApiServerSource) (*rbacv1.Role, error) {
 				"description": fmt.Sprintf("Role for OIDC Authentication for ApiServerSource %q", source.GetName()),
 			},
 			Labels: map[string]string{
-				"role": "oidc-token-creator",
+				sources.OIDCLabelKey: "",
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(source),
@@ -90,7 +92,7 @@ func MakeOIDCRoleBinding(source *v1.ApiServerSource) (*rbacv1.RoleBinding, error
 				"description": fmt.Sprintf("Role Binding for OIDC Authentication for ApiServerSource %q", source.GetName()),
 			},
 			Labels: map[string]string{
-				"role": "oidc-token-creator",
+				sources.OIDCLabelKey: "",
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(source),
