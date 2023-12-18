@@ -30,12 +30,12 @@ import (
 
 // GetOIDCTokenRoleName will return the name of the role for creating the JWT token
 func GetOIDCTokenRoleName(sourceName string) string {
-	return kmeta.ChildName(sourceName, "create-oidc-token")
+	return kmeta.ChildName(sourceName, "-create-oidc-token")
 }
 
 // GetOIDCTokenRoleBindingName will return the name of the rolebinding for creating the JWT token
 func GetOIDCTokenRoleBindingName(sourceName string) string {
-	return kmeta.ChildName(sourceName, "create-oidc-token")
+	return kmeta.ChildName(sourceName, "-create-oidc-token")
 }
 
 // MakeOIDCRole will return the role object config for generating the JWT token
