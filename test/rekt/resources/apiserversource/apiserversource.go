@@ -100,6 +100,11 @@ func WithSink(d *duckv1.Destination) manifest.CfgFn {
 		if uri != nil {
 			sink["uri"] = uri.String()
 		}
+
+		if d.Audience != nil {
+			sink["audience"] = *d.Audience
+		}
+
 		if ref != nil {
 			if _, set := sink["ref"]; !set {
 				sink["ref"] = map[string]interface{}{}

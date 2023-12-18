@@ -21,6 +21,10 @@ import (
 	"fmt"
 	"strings"
 
+	"knative.dev/eventing/pkg/apis/feature"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+	pkgreconciler "knative.dev/pkg/reconciler"
+
 	"go.uber.org/zap"
 	v1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
@@ -28,11 +32,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
 	corev1listers "k8s.io/client-go/listers/core/v1"
-	"knative.dev/eventing/pkg/apis/feature"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/ptr"
-	pkgreconciler "knative.dev/pkg/reconciler"
 )
 
 // GetOIDCServiceAccountNameForResource returns the service account name to use

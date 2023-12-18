@@ -26,6 +26,8 @@ import (
 	"sync"
 	"time"
 
+	"knative.dev/eventing/pkg/auth"
+
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/kelseyhightower/envconfig"
 	"go.uber.org/zap"
@@ -218,6 +220,7 @@ func MainWithInformers(ctx context.Context, component string, env EnvConfigAcces
 		Env:                 env,
 		Reporter:            reporter,
 		CrStatusEventClient: crStatusEventClient,
+		TokenProvider:       auth.NewOIDCTokenProvider(ctx),
 	}
 	ctx = withClientConfig(ctx, clientConfig)
 

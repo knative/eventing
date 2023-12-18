@@ -72,6 +72,12 @@ func WithApiServerSourceSink(uri *apis.URL) ApiServerSourceOption {
 	}
 }
 
+func WithApiServerSourceSinkAddressable(sinkAddr *duckv1.Addressable) ApiServerSourceOption {
+	return func(s *v1.ApiServerSource) {
+		s.Status.MarkSink(sinkAddr)
+	}
+}
+
 func WithApiServerSourceDeploymentUnavailable(s *v1.ApiServerSource) {
 	// The Deployment uses GenerateName, so its name is empty.
 	name := kmeta.ChildName(fmt.Sprintf("apiserversource-%s-", s.Name), string(s.GetUID()))

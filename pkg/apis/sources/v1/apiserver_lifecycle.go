@@ -84,6 +84,7 @@ func (s *ApiServerSourceStatus) MarkSink(addr *duckv1.Addressable) {
 	if addr != nil {
 		s.SinkURI = addr.URL
 		s.SinkCACerts = addr.CACerts
+		s.SinkAudience = addr.Audience
 		apiserverCondSet.Manage(s).MarkTrue(ApiServerConditionSinkProvided)
 	} else {
 		apiserverCondSet.Manage(s).MarkFalse(ApiServerConditionSinkProvided, "SinkEmpty", "Sink has resolved to empty.%s", "")

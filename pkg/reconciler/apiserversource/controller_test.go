@@ -17,8 +17,12 @@ limitations under the License.
 package apiserversource
 
 import (
+	"context"
 	"os"
 	"testing"
+
+	"knative.dev/eventing/pkg/apis/sources"
+	filteredFactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
 
 	"knative.dev/eventing/pkg/apis/feature"
 
@@ -37,13 +41,18 @@ import (
 	_ "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/namespace/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount/fake"
+	_ "knative.dev/pkg/client/injection/kube/informers/factory/filtered/fake"
+	_ "knative.dev/pkg/client/injection/kube/informers/rbac/v1/role/filtered/fake"
+	_ "knative.dev/pkg/client/injection/kube/informers/rbac/v1/rolebinding/filtered/fake"
 	. "knative.dev/pkg/reconciler/testing"
 )
 
 func TestNew(t *testing.T) {
-	ctx, _ := SetupFakeContext(t)
+	ctx, _ := SetupFakeContext(t, SetUpInformerSelector)
+
 	ctx = withCfgHost(ctx, &rest.Config{Host: "unit_test"})
 	ctx = addressable.WithDuck(ctx)
+
 	os.Setenv("METRICS_DOMAIN", "knative.dev/eventing")
 	os.Setenv("APISERVER_RA_IMAGE", "knative.dev/example")
 	c := NewController(ctx, configmap.NewStaticWatcher(&corev1.ConfigMap{
@@ -82,4 +91,9 @@ func TestNew(t *testing.T) {
 	if c == nil {
 		t.Fatal("Expected NewController to return a non-nil value")
 	}
+}
+
+func SetUpInformerSelector(ctx context.Context) context.Context {
+	ctx = filteredFactory.WithSelectors(ctx, sources.OIDCTokenRoleLabelSelector)
+	return ctx
 }

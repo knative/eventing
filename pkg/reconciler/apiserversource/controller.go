@@ -19,6 +19,8 @@ package apiserversource
 import (
 	"context"
 
+	"knative.dev/eventing/pkg/apis/sources"
+
 	"knative.dev/eventing/pkg/apis/feature"
 
 	"github.com/kelseyhightower/envconfig"
@@ -38,6 +40,8 @@ import (
 	apiserversourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1/apiserversource"
 	apiserversourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1/apiserversource"
 	serviceaccountinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount"
+	roleinformer "knative.dev/pkg/client/injection/kube/informers/rbac/v1/role/filtered"
+	rolebindinginformer "knative.dev/pkg/client/injection/kube/informers/rbac/v1/rolebinding/filtered"
 )
 
 // envConfig will be used to extract the required environment variables using
@@ -59,6 +63,10 @@ func NewController(
 	namespaceInformer := namespace.Get(ctx)
 	serviceaccountInformer := serviceaccountinformer.Get(ctx)
 
+	// Create a selector string
+	roleInformer := roleinformer.Get(ctx, sources.OIDCTokenRoleLabelSelector)
+	rolebindingInformer := rolebindinginformer.Get(ctx, sources.OIDCTokenRoleLabelSelector)
+
 	var globalResync func(obj interface{})
 
 	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {
@@ -74,6 +82,8 @@ func NewController(
 		configs:              reconcilersource.WatchConfigurations(ctx, component, cmw),
 		namespaceLister:      namespaceInformer.Lister(),
 		serviceAccountLister: serviceaccountInformer.Lister(),
+		roleLister:           roleInformer.Lister(),
+		roleBindingLister:    rolebindingInformer.Lister(),
 	}
 
 	env := &envConfig{}
@@ -97,6 +107,16 @@ func NewController(
 	apiServerSourceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	deploymentInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: controller.FilterController(&v1.ApiServerSource{}),
+		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
+	})
+
+	roleInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: controller.FilterController(&v1.ApiServerSource{}),
+		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
+	})
+
+	rolebindingInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.FilterController(&v1.ApiServerSource{}),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})

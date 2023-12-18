@@ -28,6 +28,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
+	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 	kubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/leaderelection"
@@ -50,7 +51,7 @@ type myAdapter struct {
 	blocking bool
 }
 
-func TestMainWithNothing(t *testing.T) {
+func TestMainWithContext(t *testing.T) {
 	os.Setenv("K_SINK", "http://sink")
 	os.Setenv("NAMESPACE", "ns")
 	os.Setenv("K_METRICS_CONFIG", "error config")
@@ -65,7 +66,10 @@ func TestMainWithNothing(t *testing.T) {
 		os.Unsetenv("MODE")
 	}()
 
-	Main("mycomponent",
+	ctx := context.TODO()
+	ctx, _ = fakekubeclient.With(ctx)
+
+	MainWithContext(ctx, "mycomponent",
 		func() EnvConfigAccessor { return &myEnvConfig{} },
 		func(ctx context.Context, processed EnvConfigAccessor, client cloudevents.Client) Adapter {
 			env := processed.(*myEnvConfig)
@@ -103,6 +107,7 @@ func TestMainWithInformerNoLeaderElection(t *testing.T) {
 	}()
 
 	ctx, cancel := context.WithCancel(context.TODO())
+	ctx, _ = fakekubeclient.With(ctx)
 	env := ConstructEnvOrDie(func() EnvConfigAccessor { return &myEnvConfig{} })
 	done := make(chan bool)
 	go func() {
@@ -161,6 +166,7 @@ func TestMain_MetricsConfig(t *testing.T) {
 	}()
 
 	ctx, cancel := context.WithCancel(context.TODO())
+	ctx, _ = fakekubeclient.With(ctx)
 	env := ConstructEnvOrDie(func() EnvConfigAccessor { return &myEnvConfig{} })
 	done := make(chan bool)
 	go func() {

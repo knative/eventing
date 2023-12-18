@@ -20,15 +20,13 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"knative.dev/eventing/pkg/adapter/v2"
-
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
-
+	"knative.dev/eventing/pkg/adapter/v2"
 	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/ptr"
 	"knative.dev/pkg/system"
@@ -44,6 +42,7 @@ type ReceiveAdapterArgs struct {
 	Image         string
 	Source        *v1.ApiServerSource
 	Labels        map[string]string
+	Audience      *string
 	SinkURI       string
 	CACerts       *string
 	Configs       reconcilersource.ConfigAccessor
@@ -172,12 +171,27 @@ func makeEnv(args *ReceiveAdapterArgs) ([]corev1.EnvVar, error) {
 	}, {
 		Name:  "METRICS_DOMAIN",
 		Value: "knative.dev/eventing",
-	}}
+	},
+	}
 
 	if args.CACerts != nil {
 		envs = append(envs, corev1.EnvVar{
 			Name:  adapter.EnvConfigCACert,
 			Value: *args.CACerts,
+		})
+	}
+
+	if args.Audience != nil {
+		envs = append(envs, corev1.EnvVar{
+			Name:  adapter.EnvConfigAudience,
+			Value: *args.Audience,
+		})
+	}
+
+	if args.Source.Status.Auth != nil && args.Source.Status.Auth.ServiceAccountName != nil {
+		envs = append(envs, corev1.EnvVar{
+			Name:  adapter.EnvConfigOIDCServiceAccount,
+			Value: *args.Source.Status.Auth.ServiceAccountName,
 		})
 	}
 

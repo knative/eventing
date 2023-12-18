@@ -21,6 +21,8 @@ import (
 	"strconv"
 	"time"
 
+	"k8s.io/apimachinery/pkg/types"
+
 	"go.uber.org/zap"
 
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -39,6 +41,8 @@ const (
 	EnvConfigName                 = "NAME"
 	EnvConfigResourceGroup        = "K_RESOURCE_GROUP"
 	EnvConfigSink                 = "K_SINK"
+	EnvConfigAudience             = "K_AUDIENCE"
+	EnvConfigOIDCServiceAccount   = "K_OIDC_SERVICE_ACCOUNT"
 	EnvConfigCACert               = "K_CA_CERTS"
 	EnvConfigCEOverrides          = "K_CE_OVERRIDES"
 	EnvConfigMetricsConfig        = "K_METRICS_CONFIG"
@@ -65,6 +69,12 @@ type EnvConfig struct {
 
 	// Sink is the URI messages will be sent.
 	Sink string `envconfig:"K_SINK"`
+
+	// Audience is the audience of the target sink.
+	Audience *string `envconfig:"K_AUDIENCE"`
+
+	// OIDCServiceAccount Name is the name of the service account to use for the adapter.
+	OIDCServiceAccountName *string `envconfig:"K_OIDC_SERVICE_ACCOUNT"`
 
 	// CACerts are the Certification Authority (CA) certificates in PEM format
 	// according to https://www.rfc-editor.org/rfc/rfc7468.
@@ -112,6 +122,12 @@ type EnvConfigAccessor interface {
 
 	// GetCACerts gets the CACerts of the Sink.
 	GetCACerts() *string
+
+	// GetAudience gets the audience of the target sink.
+	GetAudience() *string
+
+	// GetOIDCServiceAccountName gets the service account name to use for the adapter.
+	GetOIDCServiceAccountName() *types.NamespacedName
 
 	// Get the namespace of the adapter.
 	GetNamespace() string
@@ -172,8 +188,22 @@ func (e *EnvConfig) GetSink() string {
 	return e.Sink
 }
 
+func (e *EnvConfig) GetOIDCServiceAccountName() *types.NamespacedName {
+	if e.OIDCServiceAccountName != nil {
+		return &types.NamespacedName{
+			Namespace: e.Namespace,
+			Name:      *e.OIDCServiceAccountName,
+		}
+	}
+	return nil
+}
+
 func (e *EnvConfig) GetCACerts() *string {
 	return e.CACerts
+}
+
+func (e *EnvConfig) GetAudience() *string {
+	return e.Audience
 }
 
 func (e *EnvConfig) GetNamespace() string {

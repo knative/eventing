@@ -21,6 +21,12 @@ import (
 	"fmt"
 	"testing"
 
+	"knative.dev/eventing/pkg/apis/sources"
+
+	"knative.dev/pkg/kmeta"
+
+	rbacv1 "k8s.io/api/rbac/v1"
+
 	"github.com/stretchr/testify/require"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -53,6 +59,9 @@ import (
 	rttesting "knative.dev/eventing/pkg/reconciler/testing"
 	rttestingv1 "knative.dev/eventing/pkg/reconciler/testing/v1"
 	. "knative.dev/pkg/reconciler/testing"
+
+	_ "knative.dev/pkg/client/injection/kube/informers/rbac/v1/role/fake"
+	_ "knative.dev/pkg/client/injection/kube/informers/rbac/v1/rolebinding/fake"
 )
 
 var (
@@ -82,6 +91,21 @@ var (
 	sinkAddressable = &duckv1.Addressable{
 		Name: &sinkURL.Scheme,
 		URL:  sinkURL,
+	}
+
+	sinkAudience        = "sink-oidc-audience"
+	sinkOIDCAddressable = &duckv1.Addressable{
+		Name:     &sinkURL.Scheme,
+		URL:      sinkURL,
+		Audience: &sinkAudience,
+	}
+	sinkOIDCDest = duckv1.Destination{
+		Ref: &duckv1.KReference{
+			Name:       sinkName,
+			Kind:       "Channel",
+			APIVersion: "messaging.knative.dev/v1",
+		},
+		Audience: &sinkAudience,
 	}
 )
 
@@ -891,16 +915,18 @@ func TestReconcile(t *testing.T) {
 							APIVersion: "v1",
 							Kind:       "Namespace",
 						}},
-						SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
+						SourceSpec: duckv1.SourceSpec{Sink: sinkOIDCDest},
 					}),
 					rttestingv1.WithApiServerSourceUID(sourceUID),
 					rttestingv1.WithApiServerSourceObjectMetaGeneration(generation),
 				),
 				rttestingv1.NewChannel(sinkName, testNS,
 					rttestingv1.WithInitChannelConditions,
-					rttestingv1.WithChannelAddress(sinkAddressable),
+					rttestingv1.WithChannelAddress(sinkOIDCAddressable),
 				),
-				makeAvailableReceiveAdapter(t),
+				makeOIDCRole(),
+				makeOIDCRoleBinding(),
+				makeAvailableReceiveAdapterWithOIDC(t),
 			},
 			Key: testNS + "/" + sourceName,
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
@@ -910,14 +936,14 @@ func TestReconcile(t *testing.T) {
 							APIVersion: "v1",
 							Kind:       "Namespace",
 						}},
-						SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
+						SourceSpec: duckv1.SourceSpec{Sink: sinkOIDCDest},
 					}),
 					rttestingv1.WithApiServerSourceUID(sourceUID),
 					rttestingv1.WithApiServerSourceObjectMetaGeneration(generation),
 					// Status Update:
 					rttestingv1.WithInitApiServerSourceConditions,
 					rttestingv1.WithApiServerSourceDeployed,
-					rttestingv1.WithApiServerSourceSink(sinkURI),
+					rttestingv1.WithApiServerSourceSinkAddressable(sinkOIDCAddressable),
 					rttestingv1.WithApiServerSourceSufficientPermissions,
 					rttestingv1.WithApiServerSourceReferenceModeEventTypes(source),
 					rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
@@ -995,6 +1021,70 @@ func TestReconcile(t *testing.T) {
 			WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor(true)},
 			SkipNamespaceValidation: true, // SubjectAccessReview objects are cluster-scoped.
 		},
+		{
+			Name: "OIDC: creates role and rolebinding to create OIDC token",
+			Ctx: feature.ToContext(context.Background(), feature.Flags{
+				feature.OIDCAuthentication: feature.Enabled,
+			}),
+			Objects: []runtime.Object{
+				rttestingv1.NewApiServerSource(sourceName, testNS,
+					rttestingv1.WithApiServerSourceSpec(sourcesv1.ApiServerSourceSpec{
+						Resources: []sourcesv1.APIVersionKindSelector{{
+							APIVersion: "v1",
+							Kind:       "Namespace",
+						}},
+						SourceSpec: duckv1.SourceSpec{Sink: sinkOIDCDest},
+					}),
+					rttestingv1.WithApiServerSourceUID(sourceUID),
+					rttestingv1.WithApiServerSourceObjectMetaGeneration(generation),
+				),
+				rttestingv1.NewChannel(sinkName, testNS,
+					rttestingv1.WithInitChannelConditions,
+					rttestingv1.WithChannelAddress(sinkOIDCAddressable),
+				),
+				makeAvailableReceiveAdapterWithOIDC(t),
+				makeApiServerSourceOIDCServiceAccount(),
+			},
+			Key: testNS + "/" + sourceName,
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: rttestingv1.NewApiServerSource(sourceName, testNS,
+					rttestingv1.WithApiServerSourceSpec(sourcesv1.ApiServerSourceSpec{
+						Resources: []sourcesv1.APIVersionKindSelector{{
+							APIVersion: "v1",
+							Kind:       "Namespace",
+						}},
+						SourceSpec: duckv1.SourceSpec{Sink: sinkOIDCDest},
+					}),
+					rttestingv1.WithApiServerSourceUID(sourceUID),
+					rttestingv1.WithApiServerSourceObjectMetaGeneration(generation),
+					// Status Update:
+					rttestingv1.WithInitApiServerSourceConditions,
+					rttestingv1.WithApiServerSourceDeployed,
+					rttestingv1.WithApiServerSourceSinkAddressable(sinkOIDCAddressable),
+					rttestingv1.WithApiServerSourceSufficientPermissions,
+					rttestingv1.WithApiServerSourceReferenceModeEventTypes(source),
+					rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
+					rttestingv1.WithApiServerSourceStatusNamespaces([]string{testNS}),
+					rttestingv1.WithApiServerSourceOIDCIdentityCreatedSucceeded(),
+					rttestingv1.WithApiServerSourceOIDCServiceAccountName(makeApiServerSourceOIDCServiceAccount().Name),
+				),
+			}},
+			WantCreates: []runtime.Object{
+				makeOIDCRole(),
+				makeOIDCRoleBinding(),
+				makeSubjectAccessReview("namespaces", "get", "default"),
+				makeSubjectAccessReview("namespaces", "list", "default"),
+				makeSubjectAccessReview("namespaces", "watch", "default"),
+			},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", sourceName),
+			},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchFinalizers(sourceName, testNS),
+			},
+			WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor(true)},
+			SkipNamespaceValidation: true, // SubjectAccessReview objects are cluster-scoped.
+		},
 	}
 
 	logger := logtesting.TestLogger(t)
@@ -1008,6 +1098,8 @@ func TestReconcile(t *testing.T) {
 			configs:              &reconcilersource.EmptyVarsGenerator{},
 			namespaceLister:      listers.GetNamespaceLister(),
 			serviceAccountLister: listers.GetServiceAccountLister(),
+			roleBindingLister:    listers.GetRoleBindingLister(),
+			roleLister:           listers.GetRoleLister(),
 		}
 		return apiserversource.NewReconciler(ctx, logger,
 			fakeeventingclient.Get(ctx), listers.GetApiServerSourceLister(),
@@ -1051,6 +1143,50 @@ func makeReceiveAdapterWithName(t *testing.T, sourceName string) *appsv1.Deploym
 
 	ra, err := resources.MakeReceiveAdapter(&args)
 	require.NoError(t, err)
+
+	return ra
+}
+
+func makeReceiveAdapterWithOIDC(t *testing.T) *appsv1.Deployment {
+	t.Helper()
+
+	src := rttestingv1.NewApiServerSource(sourceName, testNS,
+		rttestingv1.WithApiServerSourceSpec(sourcesv1.ApiServerSourceSpec{
+			Resources: []sourcesv1.APIVersionKindSelector{{
+				APIVersion: "v1",
+				Kind:       "Namespace",
+			}},
+			SourceSpec: duckv1.SourceSpec{
+				Sink: sinkOIDCDest,
+			},
+		}),
+		rttestingv1.WithApiServerSourceUID(sourceUID),
+		// Status Update:
+		rttestingv1.WithInitApiServerSourceConditions,
+		rttestingv1.WithApiServerSourceDeployed,
+		rttestingv1.WithApiServerSourceSink(sinkURI),
+		rttestingv1.WithApiServerSourceOIDCServiceAccountName(makeApiServerSourceOIDCServiceAccount().Name),
+	)
+
+	args := resources.ReceiveAdapterArgs{
+		Image:      image,
+		Source:     src,
+		Labels:     resources.Labels(sourceName),
+		SinkURI:    sinkURI.String(),
+		Configs:    &reconcilersource.EmptyVarsGenerator{},
+		Namespaces: []string{testNS},
+		Audience:   &sinkAudience,
+	}
+
+	ra, err := resources.MakeReceiveAdapter(&args)
+	require.NoError(t, err)
+
+	return ra
+}
+
+func makeAvailableReceiveAdapterWithOIDC(t *testing.T) *appsv1.Deployment {
+	ra := makeReceiveAdapterWithOIDC(t)
+	rttesting.WithDeploymentAvailable()(ra)
 
 	return ra
 }
@@ -1202,6 +1338,69 @@ func makeNamespacedSubjectAccessReview(resource, verb, sa, ns string) *authoriza
 
 func makeSubjectAccessReview(resource, verb, sa string) *authorizationv1.SubjectAccessReview {
 	return makeNamespacedSubjectAccessReview(resource, verb, sa, testNS)
+}
+
+func makeOIDCRole() *rbacv1.Role {
+	src := rttestingv1.NewApiServerSource(sourceName, testNS,
+		rttestingv1.WithApiServerSourceUID(sourceUID),
+	)
+	return &rbacv1.Role{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      resources.GetOIDCTokenRoleName(sourceName),
+			Namespace: testNS,
+			Annotations: map[string]string{
+				"description": fmt.Sprintf("Role for OIDC Authentication for ApiServerSource %q", sourceName),
+			},
+			Labels: map[string]string{
+				sources.OIDCLabelKey: "",
+			},
+			OwnerReferences: []metav1.OwnerReference{
+				*kmeta.NewControllerRef(src),
+			},
+		},
+		Rules: []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{""},
+				// apiServerSource OIDC service account name, it is in the source.Status, NOT in source.Spec
+				ResourceNames: []string{makeApiServerSourceOIDCServiceAccount().Name},
+				Resources:     []string{"serviceaccounts/token"},
+				Verbs:         []string{"create"},
+			},
+		},
+	}
+}
+
+func makeOIDCRoleBinding() *rbacv1.RoleBinding {
+	src := rttestingv1.NewApiServerSource(sourceName, testNS,
+		rttestingv1.WithApiServerSourceUID(sourceUID),
+	)
+	return &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      resources.GetOIDCTokenRoleBindingName(sourceName),
+			Namespace: testNS,
+			Annotations: map[string]string{
+				"description": fmt.Sprintf("Role Binding for OIDC Authentication for ApiServerSource %q", sourceName),
+			},
+			Labels: map[string]string{
+				sources.OIDCLabelKey: "",
+			},
+			OwnerReferences: []metav1.OwnerReference{
+				*kmeta.NewControllerRef(src),
+			},
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: "rbac.authorization.k8s.io",
+			Kind:     "Role",
+			Name:     resources.GetOIDCTokenRoleName(sourceName),
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:      "ServiceAccount",
+				Namespace: testNS,
+				Name:      "default",
+			},
+		},
+	}
 }
 
 func subjectAccessReviewCreateReactor(allowed bool) clientgotesting.ReactionFunc {

@@ -249,6 +249,9 @@ spec:
               sinkCACerts:
                 description: CACerts is the Certification Authority (CA) certificates in PEM format that the source trusts when sending events to the sink.
                 type: string
+              sinkAudience:
+                description: Audience is the OIDC audience of the sink. This only needs to be set if the target is not an Addressable and thus the Audience can't be received from the Addressable itself. If the target is an Addressable and specifies an Audience, the target's Audience takes precedence.
+                type: string
               namespaces:
                 description: Namespaces show the namespaces currently watched by the ApiServerSource
                 type: array

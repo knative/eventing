@@ -20,9 +20,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	nethttp "net/http"
 	"net/url"
 	"time"
+
+	"k8s.io/apimachinery/pkg/types"
+	"knative.dev/eventing/pkg/auth"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	ceclient "github.com/cloudevents/sdk-go/v2/client"
@@ -110,6 +114,7 @@ type ClientConfig struct {
 	Reporter            source.StatsReporter
 	CrStatusEventClient *crstatusevent.CRStatusEventClient
 	Options             []http.Option
+	TokenProvider       *auth.OIDCTokenProvider
 }
 
 type clientConfigKey struct{}
@@ -142,6 +147,7 @@ func NewClient(cfg ClientConfig) (Client, error) {
 		if sinkWait := cfg.Env.GetSinktimeout(); sinkWait > 0 {
 			pOpts = append(pOpts, setTimeOut(time.Duration(sinkWait)*time.Second))
 		}
+
 		if eventingtls.IsHttpsSink(cfg.Env.GetSink()) {
 			var err error
 
@@ -161,6 +167,7 @@ func NewClient(cfg ClientConfig) (Client, error) {
 				Propagation: tracecontextb3.TraceContextEgress,
 			}
 		}
+
 		if ceOverrides == nil {
 			var err error
 			ceOverrides, err = cfg.Env.GetCloudEventOverrides()
@@ -189,13 +196,22 @@ func NewClient(cfg ClientConfig) (Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &client{
+
+	client := &client{
 		ceClient:            ceClient,
 		closeIdler:          transport.Base.(*nethttp.Transport),
 		ceOverrides:         ceOverrides,
 		reporter:            cfg.Reporter,
 		crStatusEventClient: cfg.CrStatusEventClient,
-	}, nil
+		oidcTokenProvider:   cfg.TokenProvider,
+	}
+
+	if cfg.Env != nil {
+		client.audience = cfg.Env.GetAudience()
+		client.oidcServiceAccountName = cfg.Env.GetOIDCServiceAccountName()
+	}
+
+	return client, nil
 }
 
 func setTimeOut(duration time.Duration) http.Option {
@@ -217,6 +233,10 @@ type client struct {
 	reporter            source.StatsReporter
 	crStatusEventClient *crstatusevent.CRStatusEventClient
 	closeIdler          closeIdler
+
+	oidcTokenProvider      *auth.OIDCTokenProvider
+	audience               *string
+	oidcServiceAccountName *types.NamespacedName
 }
 
 func (c *client) CloseIdleConnections() {
@@ -228,6 +248,15 @@ var _ cloudevents.Client = (*client)(nil)
 // Send implements client.Send
 func (c *client) Send(ctx context.Context, out event.Event) protocol.Result {
 	c.applyOverrides(&out)
+	var err error
+
+	if c.audience != nil && c.oidcServiceAccountName != nil {
+		ctx, err = c.withAuthHeader(ctx)
+		if err != nil {
+			return err
+		}
+	}
+
 	res := c.ceClient.Send(ctx, out)
 	c.reportMetrics(ctx, out, res)
 	return res
@@ -236,6 +265,15 @@ func (c *client) Send(ctx context.Context, out event.Event) protocol.Result {
 // Request implements client.Request
 func (c *client) Request(ctx context.Context, out event.Event) (*event.Event, protocol.Result) {
 	c.applyOverrides(&out)
+	var err error
+
+	if c.audience != nil && c.oidcServiceAccountName != nil {
+		ctx, err = c.withAuthHeader(ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	resp, res := c.ceClient.Request(ctx, out)
 	c.reportMetrics(ctx, out, res)
 	return resp, res
@@ -360,4 +398,22 @@ func tracecontextMiddleware(h nethttp.Handler) nethttp.Handler {
 		Handler:        h,
 		FormatSpanName: formatSpanName,
 	}
+}
+
+// When OIDC is enabled, withAuthHeader will request the JWT token from the tokenProvider and append it to every request
+// it has interaction with, if source's OIDC service account (source.Status.Auth.ServiceAccountName) and destination's
+// audience are present.
+func (c *client) withAuthHeader(ctx context.Context) (context.Context, error) {
+	// Request the JWT token for the given service account
+	jwt, err := c.oidcTokenProvider.GetJWT(*c.oidcServiceAccountName, *c.audience)
+	if err != nil {
+		return ctx, protocol.NewResult("Failed when appending the Authorization header to the outgoing request %w", err)
+	}
+
+	// Appending the auth token to the outgoing request
+	headers := http.HeaderFrom(ctx)
+	headers.Set("Authorization", fmt.Sprintf("Bearer %s", jwt))
+	ctx = http.WithCustomHeader(ctx, headers)
+
+	return ctx, nil
 }

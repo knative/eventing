@@ -32,6 +32,12 @@ const (
 	// SourceDuckLabelValue is the label value to indicate
 	// the CRD is a Source duck type.
 	SourceDuckLabelValue = "true"
+
+	//OIDCLabelKey is used to filter out all the informers that related to OIDC work
+	OIDCLabelKey = "oidc"
+
+	// OIDCTokenRoleLabelSelector is the label selector for the OIDC token creator role and rolebinding informers
+	OIDCTokenRoleLabelSelector = OIDCLabelKey
 )
 
 var (
