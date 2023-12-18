@@ -34,6 +34,7 @@ type CloudEventsContext struct {
 	eventID              string
 	eventDataSchema      string
 	eventDataContentType string
+	eventExtensions      map[string]interface{}
 	shouldDeliver        bool
 }
 
@@ -43,7 +44,7 @@ type CloudEventsContext struct {
 // broker implementations for testing.
 func NewFiltersFeatureSet(installBroker InstallBrokerFunc) *feature.FeatureSet {
 	features := SingleDialectFilterFeatures(installBroker)
-	features = append(features, AllFilterFeature(installBroker), AnyFilterFeature(installBroker), MultipleTriggersAndSinksFeature(installBroker))
+	features = append(features, AllFilterFeature(installBroker), AnyFilterFeature(installBroker), MultipleTriggersAndSinksFeature(installBroker), MissingAttributesFeature(installBroker))
 	return &feature.FeatureSet{
 		Name:     "New Trigger Filters",
 		Features: features,
@@ -327,6 +328,53 @@ func MultipleTriggersAndSinksFeature(installBroker InstallBrokerFunc) *feature.F
 
 	createNewFiltersFeature(f, eventContextsFirstSink, filtersFirstTrigger, fakeInstallBroker)
 	createNewFiltersFeature(f, eventContextsSecondSink, filtersSecondTrigger, fakeInstallBroker)
+
+	return f
+}
+
+func MissingAttributesFeature(installBroker InstallBrokerFunc) *feature.Feature {
+	f := feature.NewFeature()
+
+	eventContexts := []CloudEventsContext{
+		// this event will have no extension, so the filters should all fail
+		{
+			shouldDeliver: false,
+		},
+		// This event has the extension, so the filters shold all pass
+		{
+			eventExtensions: map[string]interface{}{
+				"extensionattribute": "extensionvalue",
+			},
+			shouldDeliver: true,
+		},
+	}
+
+	filters := []eventingv1.SubscriptionsAPIFilter{
+		{
+			All: []eventingv1.SubscriptionsAPIFilter{
+				{
+					Exact: map[string]string{
+						"extensionattribute": "extensionvalue",
+					},
+				},
+				{
+					Prefix: map[string]string{
+						"extensionattribute": "extension",
+					},
+				},
+				{
+					Suffix: map[string]string{
+						"extensionattribute": "value",
+					},
+				},
+				{
+					CESQL: "extensionattribute LIKE '%value'",
+				},
+			},
+		},
+	}
+
+	createNewFiltersFeature(f, eventContexts, filters, installBroker)
 
 	return f
 }

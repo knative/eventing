@@ -88,5 +88,10 @@ func newEventFromEventContext(eventCtx CloudEventsContext) event.Event {
 	if eventCtx.eventDataContentType != "" {
 		e.SetDataContentType(eventCtx.eventDataContentType)
 	}
+	if eventCtx.eventExtensions != nil {
+		for k, v := range eventCtx.eventExtensions {
+			e.SetExtension(k, v)
+		}
+	}
 	return e
 }
