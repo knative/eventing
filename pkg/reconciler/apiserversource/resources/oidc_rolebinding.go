@@ -61,7 +61,7 @@ func MakeOIDCRole(source *v1.ApiServerSource) (*rbacv1.Role, error) {
 			},
 		},
 		Rules: []rbacv1.PolicyRule{
-			rbacv1.PolicyRule{
+			{
 				APIGroups: []string{""},
 				// apiServerSource OIDC service account name, it is in the source.Status, NOT in source.Spec
 				ResourceNames: []string{*source.Status.Auth.ServiceAccountName},
