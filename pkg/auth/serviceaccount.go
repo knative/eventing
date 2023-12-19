@@ -23,6 +23,7 @@ import (
 
 	"knative.dev/eventing/pkg/apis/feature"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/kmeta"
 	pkgreconciler "knative.dev/pkg/reconciler"
 
 	"go.uber.org/zap"
@@ -39,8 +40,9 @@ import (
 // GetOIDCServiceAccountNameForResource returns the service account name to use
 // for OIDC authentication for the given resource.
 func GetOIDCServiceAccountNameForResource(gvk schema.GroupVersionKind, objectMeta metav1.ObjectMeta) string {
-	sa := fmt.Sprintf("oidc-%s-%s-%s", gvk.GroupKind().Group, gvk.GroupKind().Kind, objectMeta.GetName())
-
+	suffix := fmt.Sprintf("-oidc-%s-%s", gvk.Group, gvk.Kind)
+	parent := objectMeta.GetName()
+	sa := kmeta.ChildName(parent, suffix)
 	return strings.ToLower(sa)
 }
 
