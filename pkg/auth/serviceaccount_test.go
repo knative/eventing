@@ -53,7 +53,7 @@ func TestGetOIDCServiceAccountNameForResource(t *testing.T) {
 				Name:      "name",
 				Namespace: "namespace",
 			},
-			want: "oidc-group-kind-name",
+			want: "name-oidc-group-kind",
 		},
 		{
 			name: "should return SA name in lower case",
@@ -62,7 +62,16 @@ func TestGetOIDCServiceAccountNameForResource(t *testing.T) {
 				Name:      "my-Broker",
 				Namespace: "my-Namespace",
 			},
-			want: "oidc-eventing.knative.dev-broker-my-broker",
+			want: "my-broker-oidc-eventing.knative.dev-broker",
+		},
+		{
+			name: "long Broker name",
+			gvk:  eventingv1.SchemeGroupVersion.WithKind("Broker"),
+			objectMeta: metav1.ObjectMeta{
+				Name:      "my-loooooooooooooooooooooooooooooooooooooog-Broker",
+				Namespace: "my-Namespace",
+			},
+			want: "my-looooooooooooooooooooooooooo2dfc2a3825b8d82077b0f25518b36884",
 		},
 	}
 	for _, tt := range tests {
