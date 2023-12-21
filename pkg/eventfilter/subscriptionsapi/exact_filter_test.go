@@ -59,6 +59,11 @@ func TestExactMatchFilter(t *testing.T) {
 			event:     makeEventWithExtension(extensionName, extensionValue),
 			want:      eventfilter.PassFilter,
 		},
+		"Missing attribute": {
+			attribute: "missingattribute",
+			value:     "missingvalue",
+			want:      eventfilter.FailFilter,
+		},
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
