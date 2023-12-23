@@ -19,12 +19,14 @@ package mttrigger
 import (
 	"context"
 
+	"knative.dev/eventing/pkg/apis/sources"
+
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/source"
 	configmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap"
-	serviceaccountinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount"
+	//serviceaccountinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/injection/clients/dynamicclient"
@@ -45,6 +47,8 @@ import (
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1"
 	"knative.dev/eventing/pkg/duck"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
+
+	serviceaccountinformer "client/injection/kube/informers/core/v1/serviceaccount/filtered"
 )
 
 // NewController initializes the controller and is called by the generated code
@@ -59,7 +63,7 @@ func NewController(
 	subscriptionInformer := subscriptioninformer.Get(ctx)
 	configmapInformer := configmapinformer.Get(ctx)
 	secretInformer := secretinformer.Get(ctx)
-	serviceaccountInformer := serviceaccountinformer.Get(ctx)
+	serviceaccountInformer := serviceaccountinformer.Get(ctx, sources.OIDCTokenRoleLabelSelector)
 
 	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"))
 	featureStore.WatchConfigs(cmw)
@@ -113,7 +117,7 @@ func NewController(
 
 	// Reconciler Trigger when the OIDC service account changes
 	serviceaccountInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.FilterController(&eventing.Trigger{}),
+		FilterFunc: controller.FilterController(&eventing.Trigger{}), // replace with filtered informer
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 

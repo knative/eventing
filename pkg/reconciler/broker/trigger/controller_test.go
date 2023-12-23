@@ -17,8 +17,12 @@ limitations under the License.
 package mttrigger
 
 import (
+	"context"
 	"fmt"
 	"testing"
+
+	"knative.dev/eventing/pkg/apis/sources"
+	filteredFactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
 
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
@@ -45,16 +49,22 @@ import (
 	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/trigger/fake"
 	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/subscription/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount/fake"
+	_ "knative.dev/pkg/client/injection/kube/informers/factory/filtered/fake"
 )
 
 func TestNew(t *testing.T) {
-	ctx, _ := SetupFakeContext(t)
+	ctx, _ := SetupFakeContext(t, SetUpInformerSelector)
 
 	c := NewController(ctx, configmap.NewStaticWatcher(&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "config-features"}}))
 
 	if c == nil {
 		t.Fatal("Expected NewController to return a non-nil value")
 	}
+}
+
+func SetUpInformerSelector(ctx context.Context) context.Context {
+	ctx = filteredFactory.WithSelectors(ctx, sources.OIDCTokenRoleLabelSelector)
+	return ctx
 }
 
 func TestFilterTriggers(t *testing.T) {
