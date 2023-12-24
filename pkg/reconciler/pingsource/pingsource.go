@@ -245,6 +245,7 @@ func (r *Reconciler) createOIDCRole(ctx context.Context, source *sourcesv1.PingS
 		return fmt.Errorf("Cannot create OIDC role for PingSource %s/%s: %w", source.GetName(), source.GetNamespace(), err)
 	}
 	// By querying roleLister to see whether the role exist or not
+
 	role, err := r.roleLister.Roles(source.GetNamespace()).Get(roleName)
 
 	if apierrors.IsNotFound(err) {

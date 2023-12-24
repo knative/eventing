@@ -22,7 +22,9 @@ import (
 	"os"
 	"testing"
 
+	rbacv1 "k8s.io/api/rbac/v1"
 	"knative.dev/eventing/pkg/apis/feature"
+	"knative.dev/eventing/pkg/apis/sources"
 	"knative.dev/eventing/pkg/auth"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
@@ -41,6 +43,7 @@ import (
 	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
+	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/logging"
 	logtesting "knative.dev/pkg/logging/testing"
 	"knative.dev/pkg/network"
@@ -61,6 +64,7 @@ import (
 	. "knative.dev/pkg/reconciler/testing"
 
 	. "knative.dev/eventing/pkg/reconciler/testing"
+	rttestingv1 "knative.dev/eventing/pkg/reconciler/testing/v1"
 	rtv1 "knative.dev/eventing/pkg/reconciler/testing/v1"
 )
 
@@ -542,6 +546,8 @@ func TestAllCases(t *testing.T) {
 					rtv1.WithInitChannelConditions,
 					rtv1.WithChannelAddress(sinkAddressable),
 				),
+				makeOIDCRole(),
+				makeOIDCRoleBinding(),
 				makeAvailableMTAdapter(),
 			},
 			Key: testNS + "/" + sourceName,
@@ -641,6 +647,8 @@ func TestAllCases(t *testing.T) {
 			kubeClientSet:        fakekubeclient.Get(ctx),
 			tracker:              tracker.New(func(types.NamespacedName) {}, 0),
 			serviceAccountLister: listers.GetServiceAccountLister(),
+			roleBindingLister:    listers.GetRoleBindingLister(),
+			roleLister:           listers.GetRoleLister(),
 		}
 		r.sinkResolver = resolver.NewURIResolverFromTracker(ctx, tracker.New(func(types.NamespacedName) {}, 0))
 
@@ -717,4 +725,67 @@ func makePingSourceOIDCServiceAccountWithoutOwnerRef() *corev1.ServiceAccount {
 	sa.OwnerReferences = nil
 
 	return sa
+}
+
+func makeOIDCRole() *rbacv1.Role {
+	src := rttestingv1.NewPingSource(sourceName, testNS,
+		rttestingv1.WithPingSource(sourceUID),
+	)
+	return &rbacv1.Role{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      resources.GetOIDCTokenRoleName(sourceName),
+			Namespace: testNS,
+			Annotations: map[string]string{
+				"description": fmt.Sprintf("Role for OIDC Authentication for PingSource %q", sourceName),
+			},
+			Labels: map[string]string{
+				sources.OIDCLabelKey: "",
+			},
+			OwnerReferences: []metav1.OwnerReference{
+				*kmeta.NewControllerRef(src),
+			},
+		},
+		Rules: []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{""},
+				// apiServerSource OIDC service account name, it is in the source.Status, NOT in source.Spec
+				ResourceNames: []string{makePingSourceOIDCServiceAccount().Name},
+				Resources:     []string{"serviceaccounts/token"},
+				Verbs:         []string{"create"},
+			},
+		},
+	}
+}
+
+func makeOIDCRoleBinding() *rbacv1.RoleBinding {
+	src := rttestingv1.NewPingSource(sourceName, testNS,
+		rttestingv1.WithPingSource(sourceUID),
+	)
+	return &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      resources.GetOIDCTokenRoleBindingName(sourceName),
+			Namespace: testNS,
+			Annotations: map[string]string{
+				"description": fmt.Sprintf("Role Binding for OIDC Authentication for PingSource %q", sourceName),
+			},
+			Labels: map[string]string{
+				sources.OIDCLabelKey: "",
+			},
+			OwnerReferences: []metav1.OwnerReference{
+				*kmeta.NewControllerRef(src),
+			},
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: "rbac.authorization.k8s.io",
+			Kind:     "Role",
+			Name:     resources.GetOIDCTokenRoleName(sourceName),
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:      "ServiceAccount",
+				Namespace: testNS,
+				Name:      "test-ping-source-oidc-sources.knative.dev-pingsource",
+			},
+		},
+	}
 }
