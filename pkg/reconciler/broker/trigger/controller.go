@@ -48,7 +48,7 @@ import (
 	"knative.dev/eventing/pkg/duck"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 
-	serviceaccountinformer "client/injection/kube/informers/core/v1/serviceaccount/filtered"
+	serviceaccountinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount/filtered"
 )
 
 // NewController initializes the controller and is called by the generated code
