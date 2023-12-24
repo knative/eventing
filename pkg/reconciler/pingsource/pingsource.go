@@ -21,7 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	v1 "k8s.io/client-go/listers/core/v1"
+	clientv1 "k8s.io/client-go/listers/core/v1"
 
 	"go.uber.org/zap"
 
@@ -41,6 +41,7 @@ import (
 	"knative.dev/pkg/system"
 	"knative.dev/pkg/tracker"
 
+	rbacv1listers "k8s.io/client-go/listers/rbac/v1"
 	"knative.dev/eventing/pkg/adapter/mtping"
 	"knative.dev/eventing/pkg/adapter/v2"
 	"knative.dev/eventing/pkg/apis/feature"
@@ -79,7 +80,10 @@ type Reconciler struct {
 	// Leader election configuration for the mt receive adapter
 	leConfig string
 
-	serviceAccountLister v1.ServiceAccountLister
+	serviceAccountLister clientv1.ServiceAccountLister
+	roleLister           rbacv1listers.RoleLister
+	roleBindingLister    rbacv1listers.RoleBindingLister
+	namespaceLister      clientv1.NamespaceLister
 }
 
 // Check that our Reconciler implements ReconcileKind
@@ -111,6 +115,23 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *sourcesv1.PingSo
 		source.Status.Auth = as
 	}); err != nil {
 		return err
+	}
+
+	if featureFlags.IsOIDCAuthentication() {
+		// Create the role
+		err := r.createOIDCRole(ctx, source)
+
+		if err != nil {
+			logging.FromContext(ctx).Errorw("Failed when creating the OIDC Role for PingSource", zap.Error(err))
+			return err
+		}
+
+		// Create the rolebinding
+		err = r.createOIDCRoleBinding(ctx, source)
+		if err != nil {
+			logging.FromContext(ctx).Errorw("Failed when creating the OIDC RoleBinding for PingSource", zap.Error(err))
+			return err
+		}
 	}
 
 	sinkAddr, err := r.sinkResolver.AddressableFromDestinationV1(ctx, *dest, source)
@@ -213,4 +234,81 @@ func findContainer(podSpec *corev1.PodSpec, name string) *corev1.Container {
 
 func zero(i *int32) bool {
 	return i != nil && *i == 0
+}
+
+func (r *Reconciler) createOIDCRole(ctx context.Context, source *sourcesv1.PingSource) error {
+	roleName := resources.GetOIDCTokenRoleName(source.Name)
+
+	expected, err := resources.MakeOIDCRole(source)
+
+	if err != nil {
+		return fmt.Errorf("Cannot create OIDC role for PingSource %s/%s: %w", source.GetName(), source.GetNamespace(), err)
+	}
+	// By querying roleLister to see whether the role exist or not
+	role, err := r.roleLister.Roles(source.GetNamespace()).Get(roleName)
+
+	if apierrors.IsNotFound(err) {
+		// If the role does not exist, we will call kubeclient to create it
+		role = expected
+		_, err = r.kubeClientSet.RbacV1().Roles(source.GetNamespace()).Create(ctx, role, metav1.CreateOptions{})
+		if err != nil {
+			return fmt.Errorf("could not create OIDC service account role %s/%s for %s: %w", source.GetName(), source.GetNamespace(), "ApiServerSource", err)
+		}
+	} else {
+		// If the role does exist, we will check whether an update is needed
+		// By comparing the role's rule
+		if !equality.Semantic.DeepEqual(role.Rules, expected.Rules) {
+			// If the role's rules are not equal, we will update the role
+			role.Rules = expected.Rules
+			_, err = r.kubeClientSet.RbacV1().Roles(source.GetNamespace()).Update(ctx, role, metav1.UpdateOptions{})
+			if err != nil {
+				return fmt.Errorf("could not update OIDC service account role %s/%s for %s: %w", source.GetName(), source.GetNamespace(), "ApiServerSource", err)
+			}
+		} else {
+			// If the role does exist and no update is needed, we will just return
+			return nil
+		}
+	}
+
+	return nil
+
+}
+
+// createOIDCRoleBinding:  this function will call resources package to get the rolebinding object
+// and then pass to kubeclient to make the actual OIDC rolebinding
+func (r *Reconciler) createOIDCRoleBinding(ctx context.Context, source *sourcesv1.PingSource) error {
+	roleBindingName := resources.GetOIDCTokenRoleBindingName(source.Name)
+
+	expected, err := resources.MakeOIDCRoleBinding(source)
+	if err != nil {
+		return fmt.Errorf("Cannot create OIDC roleBinding for PingSource %s/%s: %w", source.GetName(), source.GetNamespace(), err)
+	}
+
+	// By querying roleBindingLister to see whether the roleBinding exist or not
+	roleBinding, err := r.roleBindingLister.RoleBindings(source.GetNamespace()).Get(roleBindingName)
+	if apierrors.IsNotFound(err) {
+		// If the role does not exist, we will call kubeclient to create it
+		roleBinding = expected
+		_, err = r.kubeClientSet.RbacV1().RoleBindings(source.GetNamespace()).Create(ctx, roleBinding, metav1.CreateOptions{})
+		if err != nil {
+			return fmt.Errorf("could not create OIDC service account rolebinding %s/%s for %s: %w", source.GetName(), source.GetNamespace(), "apiserversource", err)
+		}
+	} else {
+		// If the role does exist, we will check whether an update is needed
+		// By comparing the role's rule
+		if !equality.Semantic.DeepEqual(roleBinding.RoleRef, expected.RoleRef) || !equality.Semantic.DeepEqual(roleBinding.Subjects, expected.Subjects) {
+			// If the role's rules are not equal, we will update the role
+			roleBinding.RoleRef = expected.RoleRef
+			roleBinding.Subjects = expected.Subjects
+			_, err = r.kubeClientSet.RbacV1().RoleBindings(source.GetNamespace()).Update(ctx, roleBinding, metav1.UpdateOptions{})
+			if err != nil {
+				return fmt.Errorf("could not update OIDC service account rolebinding %s/%s for %s: %w", source.GetName(), source.GetNamespace(), "apiserversource", err)
+			}
+		} else {
+			// If the role does exist and no update is needed, we will just return
+			return nil
+		}
+	}
+
+	return nil
 }
