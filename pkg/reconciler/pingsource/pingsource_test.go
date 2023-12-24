@@ -87,6 +87,20 @@ var (
 		Name: &sinkURL.Scheme,
 		URL:  sinkURL,
 	}
+	sinkAudience        = "sink-oidc-audience"
+	sinkOIDCAddressable = &duckv1.Addressable{
+		Name:     &sinkURL.Scheme,
+		URL:      sinkURL,
+		Audience: &sinkAudience,
+	}
+	sinkOIDCDest = duckv1.Destination{
+		Ref: &duckv1.KReference{
+			Name:       sinkName,
+			Kind:       "Channel",
+			APIVersion: "messaging.knative.dev/v1",
+		},
+		Audience: &sinkAudience,
+	}
 )
 
 const (

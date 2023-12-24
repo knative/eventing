@@ -6232,6 +6232,16 @@ state.
 Source.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>namespaces</code><br/>
+<em>
+[]string
+</em>
+</td>
+<td>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="sources.knative.dev/v1.SinkBindingSpec">SinkBindingSpec

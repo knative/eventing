@@ -358,6 +358,11 @@ func (in *PingSourceSpec) DeepCopy() *PingSourceSpec {
 func (in *PingSourceStatus) DeepCopyInto(out *PingSourceStatus) {
 	*out = *in
 	in.SourceStatus.DeepCopyInto(&out.SourceStatus)
+	if in.Namespaces != nil {
+		in, out := &in.Namespaces, &out.Namespaces
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 
