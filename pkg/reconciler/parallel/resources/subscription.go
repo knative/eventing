@@ -23,6 +23,7 @@ import (
 	"knative.dev/pkg/kmeta"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	v1 "knative.dev/eventing/pkg/apis/flows/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 )
@@ -69,10 +70,8 @@ func NewFilterSubscription(branchNumber int, p *v1.Parallel) *messagingv1.Subscr
 			},
 		}
 	} else {
-		r.Spec.Subscriber = &duckv1.Destination{
-			Ref: p.Spec.Branches[branchNumber].Filter.Ref,
-			URI: p.Spec.Branches[branchNumber].Filter.URI,
-		}
+		r.Spec.Subscriber = p.Spec.Branches[branchNumber].Filter.DeepCopy()
+
 		r.Spec.Reply = &duckv1.Destination{
 			Ref: &duckv1.KReference{
 				APIVersion: p.Spec.ChannelTemplate.APIVersion,
@@ -105,24 +104,15 @@ func NewSubscription(branchNumber int, p *v1.Parallel) *messagingv1.Subscription
 				Kind:       p.Spec.ChannelTemplate.Kind,
 				Name:       ParallelBranchChannelName(p.Name, branchNumber),
 			},
-			Subscriber: &duckv1.Destination{
-				Ref: p.Spec.Branches[branchNumber].Subscriber.Ref,
-				URI: p.Spec.Branches[branchNumber].Subscriber.URI,
-			},
-			Delivery: p.Spec.Branches[branchNumber].Delivery,
+			Subscriber: p.Spec.Branches[branchNumber].Subscriber.DeepCopy(),
+			Delivery:   p.Spec.Branches[branchNumber].Delivery.DeepCopy(),
 		},
 	}
 
 	if p.Spec.Branches[branchNumber].Reply != nil {
-		r.Spec.Reply = &duckv1.Destination{
-			Ref: p.Spec.Branches[branchNumber].Reply.Ref,
-			URI: p.Spec.Branches[branchNumber].Reply.URI,
-		}
+		r.Spec.Reply = p.Spec.Branches[branchNumber].Reply.DeepCopy()
 	} else if p.Spec.Reply != nil {
-		r.Spec.Reply = &duckv1.Destination{
-			Ref: p.Spec.Reply.Ref,
-			URI: p.Spec.Reply.URI,
-		}
+		r.Spec.Reply = p.Spec.Reply.DeepCopy()
 	}
 	return r
 }
