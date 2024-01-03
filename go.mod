@@ -40,7 +40,7 @@ require (
 	golang.org/x/net v0.19.0
 	golang.org/x/sync v0.5.0
 	google.golang.org/grpc v1.60.1
-	google.golang.org/protobuf v1.31.0
+	google.golang.org/protobuf v1.32.0
 	k8s.io/api v0.27.6
 	k8s.io/apiextensions-apiserver v0.27.6
 	k8s.io/apimachinery v0.27.6
@@ -49,8 +49,8 @@ require (
 	k8s.io/utils v0.0.0-20230209194617-a36077c30491
 	knative.dev/hack v0.0.0-20231201014241-7030d5bf584d
 	knative.dev/hack/schema v0.0.0-20231201014241-7030d5bf584d
-	knative.dev/pkg v0.0.0-20231219072704-d513e487961e
-	knative.dev/reconciler-test v0.0.0-20231218144542-b67e75b2c1f0
+	knative.dev/pkg v0.0.0-20240103071102-dfa0a2c9e85b
+	knative.dev/reconciler-test v0.0.0-20240103013417-3d51eaf174fe
 	sigs.k8s.io/yaml v1.4.0
 )
 
@@ -103,10 +103,10 @@ require (
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/prometheus/client_golang v1.17.0 // indirect
-	github.com/prometheus/client_model v0.4.1-0.20230718164431-9a2bf3000d16 // indirect
+	github.com/prometheus/client_golang v1.18.0 // indirect
+	github.com/prometheus/client_model v0.5.0 // indirect
 	github.com/prometheus/common v0.45.0 // indirect
-	github.com/prometheus/procfs v0.11.1 // indirect
+	github.com/prometheus/procfs v0.12.0 // indirect
 	github.com/prometheus/statsd_exporter v0.22.7 // indirect
 	github.com/rickb777/plural v1.2.1 // indirect
 	github.com/rs/dnscache v0.0.0-20211102005908-e0241e321417 // indirect
