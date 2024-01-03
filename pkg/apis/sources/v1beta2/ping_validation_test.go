@@ -56,6 +56,24 @@ func TestPingSourceValidation(t *testing.T) {
 				},
 			},
 			want: nil,
+		},
+		{
+			name: "valid spec with schedule including seconds",
+			source: PingSource{
+				Spec: PingSourceSpec{
+					Schedule: "10 0/5 * * * ?",
+					SourceSpec: duckv1.SourceSpec{
+						Sink: duckv1.Destination{
+							Ref: &duckv1.KReference{
+								APIVersion: "v1",
+								Kind:       "broker",
+								Name:       "default",
+							},
+						},
+					},
+				},
+			},
+			want: nil,
 		}, {
 			name: "valid spec with timezone",
 			source: PingSource{
@@ -125,7 +143,7 @@ func TestPingSourceValidation(t *testing.T) {
 			},
 			want: func() *apis.FieldError {
 				var errs *apis.FieldError
-				fe := apis.ErrInvalidValue("expected exactly 5 fields, found 1: [2]", "spec.schedule")
+				fe := apis.ErrInvalidValue("expected 5 to 6 fields, found 1: [2]", "spec.schedule")
 				errs = errs.Also(fe)
 				return errs
 			}(),
