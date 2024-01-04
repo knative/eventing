@@ -36,7 +36,7 @@ func TestEventTypeDefaults(t *testing.T) {
 			initial: EventType{},
 			expected: EventType{
 				Spec: EventTypeSpec{
-					Broker: "default",
+					Broker: "",
 				},
 			},
 		},
@@ -53,7 +53,7 @@ func TestEventTypeDefaults(t *testing.T) {
 				Spec: EventTypeSpec{
 					Type:   "test-type",
 					Source: testSource,
-					Broker: "default",
+					Broker: "",
 					Schema: testSchema,
 				},
 			},
@@ -70,7 +70,25 @@ func TestEventTypeDefaults(t *testing.T) {
 				Spec: EventTypeSpec{
 					Type:   "test-type",
 					Source: testSource,
-					Broker: "default",
+					Broker: "",
+					Schema: testSchema,
+				},
+			},
+		},
+		"broker set": {
+			initial: EventType{
+				Spec: EventTypeSpec{
+					Type:   "test-type",
+					Source: testSource,
+					Schema: testSchema,
+					Broker: "my-broker",
+				},
+			},
+			expected: EventType{
+				Spec: EventTypeSpec{
+					Type:   "test-type",
+					Source: testSource,
+					Broker: "my-broker",
 					Schema: testSchema,
 				},
 			},
