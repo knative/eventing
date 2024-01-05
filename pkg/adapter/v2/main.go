@@ -26,12 +26,14 @@ import (
 	"sync"
 	"time"
 
-	"knative.dev/eventing/pkg/auth"
-
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/kelseyhightower/envconfig"
 	"go.uber.org/zap"
+	"k8s.io/client-go/informers"
+	corev1listers "k8s.io/client-go/listers/core/v1"
 	"knative.dev/pkg/tracing"
+
+	"knative.dev/eventing/pkg/auth"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -216,11 +218,38 @@ func MainWithInformers(ctx context.Context, component string, env EnvConfigAcces
 		logger.Errorw("Error building statsreporter", zap.Error(err))
 	}
 
+	var trustBundleConfigMapLister corev1listers.ConfigMapNamespaceLister
+	if IsConfigWatcherEnabled(ctx) {
+
+		logger.Info("ConfigMap watcher is enabled")
+
+		// Manually create a ConfigMap informer for the env.GetNamespace() namespace to have it
+		// optionally created when needed.
+		inf := informers.NewSharedInformerFactoryWithOptions(
+			kubeclient.Get(ctx),
+			controller.GetResyncPeriod(ctx),
+			informers.WithNamespace(env.GetNamespace()),
+		)
+		inf.Start(ctx.Done())
+
+		_ = inf.WaitForCacheSync(ctx.Done())
+
+		go func() {
+			select {
+			case <-ctx.Done():
+				inf.Shutdown()
+			}
+		}()
+
+		trustBundleConfigMapLister = inf.Core().V1().ConfigMaps().Lister().ConfigMaps(env.GetNamespace())
+	}
+
 	clientConfig := ClientConfig{
-		Env:                 env,
-		Reporter:            reporter,
-		CrStatusEventClient: crStatusEventClient,
-		TokenProvider:       auth.NewOIDCTokenProvider(ctx),
+		Env:                        env,
+		Reporter:                   reporter,
+		CrStatusEventClient:        crStatusEventClient,
+		TokenProvider:              auth.NewOIDCTokenProvider(ctx),
+		TrustBundleConfigMapLister: trustBundleConfigMapLister,
 	}
 	ctx = withClientConfig(ctx, clientConfig)
 

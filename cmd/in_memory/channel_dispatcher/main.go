@@ -22,10 +22,12 @@ import (
 
 	"os"
 
+	filteredFactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
 	"knative.dev/pkg/injection"
 	"knative.dev/pkg/injection/sharedmain"
 	"knative.dev/pkg/signals"
 
+	"knative.dev/eventing/pkg/eventingtls"
 	inmemorychannel "knative.dev/eventing/pkg/reconciler/inmemorychannel/dispatcher"
 )
 
@@ -35,6 +37,10 @@ func main() {
 	if ns != "" {
 		ctx = injection.WithNamespaceScope(ctx, ns)
 	}
+
+	ctx = filteredFactory.WithSelectors(ctx,
+		eventingtls.TrustBundleLabelSelector,
+	)
 
 	sharedmain.MainWithContext(ctx, "inmemorychannel-dispatcher",
 		inmemorychannel.NewController,

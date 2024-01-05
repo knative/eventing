@@ -23,8 +23,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
-	"knative.dev/eventing/pkg/apis/feature"
 
+	"knative.dev/eventing/pkg/apis/feature"
+	"knative.dev/eventing/pkg/eventingtls"
+
+	filteredFactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/injection"
@@ -54,7 +57,7 @@ import (
 	pingdefaultconfig "knative.dev/eventing/pkg/apis/sources/config"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	sourcesv1beta2 "knative.dev/eventing/pkg/apis/sources/v1beta2"
-	sugar "knative.dev/eventing/pkg/apis/sugar"
+	"knative.dev/eventing/pkg/apis/sugar"
 	"knative.dev/eventing/pkg/reconciler/sinkbinding"
 
 	versionedscheme "knative.dev/eventing/pkg/client/clientset/versioned/scheme"
@@ -280,6 +283,10 @@ func main() {
 		// SecretName must match the name of the Secret created in the configuration.
 		SecretName: "eventing-webhook-certs",
 	})
+
+	ctx = filteredFactory.WithSelectors(ctx,
+		eventingtls.TrustBundleLabelSelector,
+	)
 
 	sharedmain.WebhookMainWithContext(ctx, webhook.NameFromEnv(),
 		certificates.NewController,

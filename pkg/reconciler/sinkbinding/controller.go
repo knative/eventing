@@ -20,8 +20,12 @@ import (
 	"context"
 	"time"
 
+	"knative.dev/pkg/system"
+
 	"knative.dev/eventing/pkg/auth"
 	sbinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1/sinkbinding"
+	"knative.dev/eventing/pkg/eventingtls"
+
 	"knative.dev/pkg/client/injection/ducks/duck/v1/podspecable"
 	"knative.dev/pkg/client/injection/kube/informers/core/v1/namespace"
 	"knative.dev/pkg/reconciler"
@@ -35,10 +39,9 @@ import (
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
-	"knative.dev/eventing/pkg/apis/feature"
-	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/pkg/apis/duck"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
+	configmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap/filtered"
 	secretinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/secret"
 	serviceaccountinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount"
 	"knative.dev/pkg/configmap"
@@ -47,6 +50,11 @@ import (
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/tracker"
 	"knative.dev/pkg/webhook/psbinding"
+
+	"knative.dev/eventing/pkg/apis/feature"
+	v1 "knative.dev/eventing/pkg/apis/sources/v1"
+
+	eventingreconciler "knative.dev/eventing/pkg/reconciler"
 )
 
 const (
@@ -73,6 +81,7 @@ func NewController(
 	namespaceInformer := namespace.Get(ctx)
 	serviceaccountInformer := serviceaccountinformer.Get(ctx)
 	secretInformer := secretinformer.Get(ctx)
+	trustBundleConfigMapInformer := configmapinformer.Get(ctx, eventingtls.TrustBundleLabelSelector)
 
 	var globalResync func()
 	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {
@@ -122,13 +131,14 @@ func NewController(
 
 	sbResolver := resolver.NewURIResolverFromTracker(ctx, impl.Tracker)
 	c.SubResourcesReconciler = &SinkBindingSubResourcesReconciler{
-		res:                  sbResolver,
-		tracker:              impl.Tracker,
-		kubeclient:           kubeclient.Get(ctx),
-		serviceAccountLister: serviceaccountInformer.Lister(),
-		secretLister:         secretInformer.Lister(),
-		featureStore:         featureStore,
-		tokenProvider:        auth.NewOIDCTokenProvider(ctx),
+		res:                        sbResolver,
+		tracker:                    impl.Tracker,
+		kubeclient:                 kubeclient.Get(ctx),
+		serviceAccountLister:       serviceaccountInformer.Lister(),
+		secretLister:               secretInformer.Lister(),
+		featureStore:               featureStore,
+		tokenProvider:              auth.NewOIDCTokenProvider(ctx),
+		trustBundleConfigMapLister: trustBundleConfigMapInformer.Lister(),
 	}
 
 	c.WithContext = func(ctx context.Context, b psbinding.Bindable) (context.Context, error) {
@@ -150,6 +160,11 @@ func NewController(
 
 	// do a periodic reync of all sinkbindings to renew the token secrets eventually
 	go periodicResync(ctx, globalResync)
+
+	trustBundleConfigMapInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: eventingreconciler.FilterWithNamespace(system.Namespace()),
+		Handler:    controller.HandleAll(func(i interface{}) { globalResync() }),
+	})
 
 	return impl
 }
