@@ -126,7 +126,7 @@ func TestReconcile(t *testing.T) {
 			}},
 			WantErr: true,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "InternalError failed to get object test-namespace/test-channel:", `channels.messaging.knative.dev "test-channel" not found`),
+				Eventf(corev1.EventTypeWarning, "InternalError failed to get object test-namespace/test-channel:", `inmemorychannels.messaging.knative.dev "test-channel" not found`),
 			},
 		},
 		{
