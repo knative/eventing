@@ -40,7 +40,7 @@ import (
 	_ "knative.dev/eventing/pkg/client/injection/informers/sources/v1/apiserversource/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/namespace/fake"
-	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount/fake"
+	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount/filtered/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/factory/filtered/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/rbac/v1/role/filtered/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/rbac/v1/rolebinding/filtered/fake"
