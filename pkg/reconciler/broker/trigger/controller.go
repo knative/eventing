@@ -26,7 +26,6 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/source"
 	configmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap"
-	//serviceaccountinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/injection/clients/dynamicclient"
@@ -117,7 +116,7 @@ func NewController(
 
 	// Reconciler Trigger when the OIDC service account changes
 	serviceaccountInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.FilterController(&eventing.Trigger{}), // replace with filtered informer
+		FilterFunc: controller.FilterController(&eventing.Trigger{}), 
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 
