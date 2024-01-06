@@ -19,6 +19,8 @@ package subscription
 import (
 	"context"
 
+	"knative.dev/eventing/pkg/apis/sources"
+
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/pkg/client/injection/apiextensions/informers/apiextensions/v1/customresourcedefinition"
@@ -35,7 +37,7 @@ import (
 	subscriptionreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/subscription"
 	"knative.dev/eventing/pkg/duck"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
-	serviceaccountinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount"
+	serviceaccountinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount/filtered"
 	"knative.dev/pkg/injection/clients/dynamicclient"
 )
 
@@ -48,7 +50,7 @@ func NewController(
 
 	subscriptionInformer := subscription.Get(ctx)
 	channelInformer := channel.Get(ctx)
-	serviceaccountInformer := serviceaccountinformer.Get(ctx)
+	serviceaccountInformer := serviceaccountinformer.Get(ctx, sources.OIDCTokenRoleLabelSelector)
 
 	var globalResync func(obj interface{})
 
