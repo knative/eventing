@@ -19,12 +19,14 @@ package parallel
 import (
 	"context"
 
+	"knative.dev/eventing/pkg/apis/sources"
+
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/eventing/pkg/apis/feature"
 	v1 "knative.dev/eventing/pkg/apis/flows/v1"
 	"knative.dev/eventing/pkg/duck"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
-	serviceaccountinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount"
+	serviceaccountinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount/filtered"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/injection/clients/dynamicclient"
@@ -46,7 +48,7 @@ func NewController(
 
 	parallelInformer := parallel.Get(ctx)
 	subscriptionInformer := subscription.Get(ctx)
-	serviceaccountInformer := serviceaccountinformer.Get(ctx)
+	serviceaccountInformer := serviceaccountinformer.Get(ctx, sources.OIDCTokenRoleLabelSelector)
 
 	var globalResync func(obj interface{})
 	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {
