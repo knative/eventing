@@ -19,6 +19,8 @@ package oidc
 import (
 	"context"
 
+	"knative.dev/pkg/apis"
+
 	"github.com/cloudevents/sdk-go/v2/test"
 	"github.com/google/uuid"
 	"knative.dev/eventing/test/rekt/features/featureflags"
@@ -38,8 +40,8 @@ func BrokerSendEventWithOIDC() *feature.FeatureSet {
 		Name: "Broker send events with OIDC support",
 		Features: []*feature.Feature{
 			//BrokerSendEventWithOIDCTokenToSubscriberWithTLS(),
-			BrokerSendEventWithOIDCTokenToReplyWithTLS(),
-			//BrokerSendEventWithOIDCTokenToDLS(),
+			//BrokerSendEventWithOIDCTokenToReplyWithTLS(),
+			BrokerSendEventWithOIDCTokenToDLS(),
 		},
 	}
 }
@@ -96,6 +98,10 @@ func BrokerSendEventWithOIDCTokenToSubscriberWithTLS() *feature.Feature {
 func BrokerSendEventWithOIDCTokenToDLS() *feature.Feature {
 	f := feature.NewFeature()
 
+	// TLS is required for OIDC
+	f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
+	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
+
 	brokerName := feature.MakeRandomK8sName("broker")
 	dls := feature.MakeRandomK8sName("dls")
 	triggerName := feature.MakeRandomK8sName("trigger")
@@ -108,7 +114,7 @@ func BrokerSendEventWithOIDCTokenToDLS() *feature.Feature {
 	// Install DLS sink
 	f.Setup("install dead letter sink", eventshub.Install(dls,
 		eventshub.OIDCReceiverAudience(dlsAudience),
-		eventshub.StartReceiver))
+		eventshub.StartReceiverTLS))
 
 	// Install broker with DLS config
 	brokerConfig := append(
@@ -122,8 +128,20 @@ func BrokerSendEventWithOIDCTokenToDLS() *feature.Feature {
 	f.Setup("Broker is ready", broker.IsReady(brokerName))
 
 	// Install Trigger
-	f.Setup("install trigger", trigger.Install(triggerName, brokerName,
-		trigger.WithSubscriber(nil, "bad://uri")))
+	//f.Setup("install trigger", trigger.Install(triggerName, brokerName,
+	//	trigger.WithSubscriber(nil, "bad://uri")))
+
+	f.Setup("install the trigger and specify the CA cert of the destination", func(ctx context.Context, t feature.T) {
+		// create an empty destination ref
+		d := service.AsDestinationRef("")
+		d.CACerts = eventshub.GetCaCerts(ctx)
+		// uri is an addressable, create a new one and put the bad	uri in it
+		d.URI, _ = apis.ParseURL("bad://uri")
+		trigger.Install(triggerName, brokerName, trigger.WithSubscriberFromDestination(d))(ctx, t)
+
+		// FIXME: current progress left over here. Need to figure out why trigger cannot be initialized correctly.
+	})
+
 	f.Setup("trigger is ready", trigger.IsReady(triggerName))
 
 	// Send events after data plane is ready.
