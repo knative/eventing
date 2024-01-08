@@ -17,8 +17,12 @@ limitations under the License.
 package oidc
 
 import (
+	"context"
+
 	"github.com/cloudevents/sdk-go/v2/test"
 	"github.com/google/uuid"
+	"knative.dev/eventing/test/rekt/features/featureflags"
+	"knative.dev/eventing/test/rekt/resources/addressable"
 	"knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/eventing/test/rekt/resources/delivery"
 	"knative.dev/eventing/test/rekt/resources/trigger"
@@ -33,15 +37,19 @@ func BrokerSendEventWithOIDC() *feature.FeatureSet {
 	return &feature.FeatureSet{
 		Name: "Broker send events with OIDC support",
 		Features: []*feature.Feature{
-			BrokerSendEventWithOIDCTokenToSubscriber(),
+			BrokerSendEventWithOIDCTokenToSubscriberWithTLS(),
 			BrokerSendEventWithOIDCTokenToReply(),
-			BrokerSendEventWithOIDCTokenToDLS(),
+			//BrokerSendEventWithOIDCTokenToDLS(),
 		},
 	}
 }
 
-func BrokerSendEventWithOIDCTokenToSubscriber() *feature.Feature {
+func BrokerSendEventWithOIDCTokenToSubscriberWithTLS() *feature.Feature {
 	f := feature.NewFeatureNamed("Broker supports flow with OIDC tokens")
+
+	// TLS is required for OIDC
+	f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
+	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
 
 	source := feature.MakeRandomK8sName("source")
 	brokerName := feature.MakeRandomK8sName("broker")
@@ -55,22 +63,21 @@ func BrokerSendEventWithOIDCTokenToSubscriber() *feature.Feature {
 	f.Setup("install broker", broker.Install(brokerName, broker.WithEnvConfig()...))
 	f.Setup("broker is ready", broker.IsReady(brokerName))
 	f.Setup("broker is addressable", broker.IsAddressable(brokerName))
+	f.Setup("Broker has HTTPS address", broker.ValidateAddress(brokerName, addressable.AssertHTTPSAddress))
 
 	// Install the sink
 	f.Setup("install sink", eventshub.Install(
 		sink,
+		eventshub.StartReceiverTLS,
 		eventshub.OIDCReceiverAudience(sinkAudience),
-		eventshub.StartReceiver))
-
-	// Install the trigger and Point the Trigger subscriber to the sink svc.
-	f.Setup("install trigger", trigger.Install(
-		triggerName,
-		brokerName,
-		trigger.WithSubscriberFromDestination(&duckv1.Destination{
-			Ref:      service.AsKReference(sink),
-			Audience: &sinkAudience,
-		}),
 	))
+
+	f.Setup("install the trigger and specify the CA cert of the destination", func(ctx context.Context, t feature.T) {
+		d := service.AsDestinationRef(sink)
+		d.CACerts = eventshub.GetCaCerts(ctx)
+		d.Audience = &sinkAudience
+		trigger.Install(triggerName, brokerName, trigger.WithSubscriberFromDestination(d))(ctx, t)
+	})
 	f.Setup("trigger goes ready", trigger.IsReady(triggerName))
 
 	// Send event

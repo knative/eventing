@@ -23,6 +23,8 @@ import (
 	"testing"
 	"time"
 
+	"knative.dev/reconciler-test/pkg/eventshub"
+
 	"knative.dev/pkg/system"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"
@@ -64,6 +66,7 @@ func TestBrokerSendsEventsWithOIDCSupport(t *testing.T) {
 
 	ctx, env := global.Environment(
 		knative.WithKnativeNamespace(system.Namespace()),
+		eventshub.WithTLS(t),
 		knative.WithLoggingConfig,
 		knative.WithTracingConfig,
 		k8s.WithEventListener,
