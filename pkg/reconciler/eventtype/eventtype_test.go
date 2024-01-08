@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"testing"
 
+	"knative.dev/eventing/pkg/reconciler/sugar/resources"
+
 	"k8s.io/apimachinery/pkg/types"
 	"knative.dev/eventing/pkg/resolver"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/kresource"
@@ -46,6 +48,8 @@ const (
 	eventTypeName   = "test-eventtype"
 	eventTypeType   = "test-type"
 	eventTypeBroker = "test-broker"
+
+	eventTypeChannel = "test-channel"
 )
 
 var (
@@ -77,7 +81,7 @@ func TestReconcile(t *testing.T) {
 				WithEventTypeDeletionTimestamp),
 		},
 	}, {
-		Name: "Broker not found",
+		Name: "Reference broker not found",
 		Key:  testKey,
 		Objects: []runtime.Object{
 			NewEventType(eventTypeName, testNS,
@@ -95,11 +99,81 @@ func TestReconcile(t *testing.T) {
 				WithEventTypeResourceDoesNotExist,
 			),
 		}},
+
 		WantErr: true,
 		WantEvents: []string{
 			Eventf(corev1.EventTypeWarning, "InternalError failed to get object test-namespace/test-broker:", `brokers.eventing.knative.dev "test-broker" not found`),
 		},
-	}}
+	},
+		{
+			Name: "Reference Channel not found",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewEventType(eventTypeName, testNS,
+					WithEventTypeType(eventTypeType),
+					WithEventTypeSource(eventTypeSource),
+					WithEventTypeReference(channelReference(eventTypeChannel)),
+				),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewEventType(eventTypeName, testNS,
+					WithEventTypeType(eventTypeType),
+					WithEventTypeSource(eventTypeSource),
+					WithInitEventTypeConditions,
+					WithEventTypeReference(channelReference(eventTypeChannel)),
+					WithEventTypeResourceDoesNotExist,
+				),
+			}},
+			WantErr: true,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, "InternalError failed to get object test-namespace/test-channel:", `inmemorychannels.messaging.knative.dev "test-channel" not found`),
+			},
+		},
+		{
+			Name: "Reference broker found",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewEventType(eventTypeName, testNS,
+					WithEventTypeType(eventTypeType),
+					WithEventTypeSource(eventTypeSource),
+					WithEventTypeReference(brokerReference(eventTypeBroker)),
+				),
+				resources.MakeBroker(testNS, eventTypeBroker),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewEventType(eventTypeName, testNS,
+					WithEventTypeType(eventTypeType),
+					WithEventTypeSource(eventTypeSource),
+					WithInitEventTypeConditions,
+					WithEventTypeReference(brokerReference(eventTypeBroker)),
+					WithEventTypeResourceExists,
+				),
+			}},
+			WantErr: false,
+		},
+		{
+			Name: "Reference channel found",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewEventType(eventTypeName, testNS,
+					WithEventTypeType(eventTypeType),
+					WithEventTypeSource(eventTypeSource),
+					WithEventTypeReference(channelReference(eventTypeChannel)),
+				),
+				NewInMemoryChannel(eventTypeChannel, testNS),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewEventType(eventTypeName, testNS,
+					WithEventTypeType(eventTypeType),
+					WithEventTypeSource(eventTypeSource),
+					WithInitEventTypeConditions,
+					WithEventTypeReference(channelReference(eventTypeChannel)),
+					WithEventTypeResourceExists,
+				),
+			}},
+			WantErr: false,
+		},
+	}
 
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
@@ -121,6 +195,15 @@ func brokerReference(brokerName string) *duckv1.KReference {
 		APIVersion: "eventing.knative.dev/v1",
 		Kind:       "Broker",
 		Name:       brokerName,
+		Namespace:  testNS,
+	}
+}
+
+func channelReference(channelName string) *duckv1.KReference {
+	return &duckv1.KReference{
+		APIVersion: "messaging.knative.dev/v1",
+		Kind:       "InMemoryChannel",
+		Name:       channelName,
 		Namespace:  testNS,
 	}
 }
