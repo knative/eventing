@@ -31,6 +31,7 @@ import (
 	"knative.dev/reconciler-test/pkg/resources/service"
 
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
+	"knative.dev/eventing/pkg/eventingtls/eventingtlstesting"
 	"knative.dev/eventing/test/rekt/resources/addressable"
 	"knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/eventing/test/rekt/resources/eventtype"
@@ -103,7 +104,10 @@ func SendsEventsTLSTrustBundle() *feature.Feature {
 
 	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
 
-	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiverTLS))
+	f.Setup("install sink", eventshub.Install(sink,
+		eventshub.IssuerRef(eventingtlstesting.IssuerKind, eventingtlstesting.IssuerName),
+		eventshub.StartReceiverTLS,
+	))
 
 	f.Requirement("install pingsource", func(ctx context.Context, t feature.T) {
 		d := &duckv1.Destination{

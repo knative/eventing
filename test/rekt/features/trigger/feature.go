@@ -31,6 +31,7 @@ import (
 
 	"knative.dev/reconciler-test/pkg/eventshub/assert"
 
+	"knative.dev/eventing/pkg/eventingtls/eventingtlstesting"
 	"knative.dev/eventing/test/rekt/features/featureflags"
 	"knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/eventing/test/rekt/resources/pingsource"
@@ -154,7 +155,10 @@ func TriggerWithTLSSubscriberTrustBundle() *feature.Feature {
 	f.Setup("Broker is addressable", broker.IsAddressable(brokerName))
 
 	// Install Sink
-	f.Setup("Install Sink", eventshub.Install(sinkName, eventshub.StartReceiverTLS))
+	f.Setup("Install Sink", eventshub.Install(sinkName,
+		eventshub.IssuerRef(eventingtlstesting.IssuerKind, eventingtlstesting.IssuerName),
+		eventshub.StartReceiverTLS,
+	))
 
 	// Install Trigger
 	f.Setup("Install trigger", func(ctx context.Context, t feature.T) {

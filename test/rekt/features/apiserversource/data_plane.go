@@ -26,6 +26,7 @@ import (
 	"knative.dev/pkg/network"
 	"knative.dev/reconciler-test/pkg/environment"
 
+	"knative.dev/eventing/pkg/eventingtls/eventingtlstesting"
 	"knative.dev/eventing/test/rekt/resources/addressable"
 
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -228,7 +229,10 @@ func SendsEventsWithTLSTrustBundle() *feature.Feature {
 
 	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
 
-	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiverTLS))
+	f.Setup("install sink", eventshub.Install(sink,
+		eventshub.IssuerRef(eventingtlstesting.IssuerKind, eventingtlstesting.IssuerName),
+		eventshub.StartReceiverTLS,
+	))
 
 	sacmName := feature.MakeRandomK8sName("apiserversource")
 	f.Requirement("Create Service Account for ApiServerSource with RBAC for v1.Event resources",

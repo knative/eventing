@@ -35,6 +35,7 @@ import (
 	"knative.dev/reconciler-test/pkg/resources/deployment"
 	"knative.dev/reconciler-test/pkg/resources/service"
 
+	"knative.dev/eventing/pkg/eventingtls/eventingtlstesting"
 	"knative.dev/eventing/test/rekt/resources/addressable"
 	"knative.dev/eventing/test/rekt/resources/broker"
 
@@ -231,7 +232,10 @@ func SinkBindingV1DeploymentTLSTrustBundle(ctx context.Context) *feature.Feature
 	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
 
 	env := environment.FromContext(ctx)
-	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiverTLS))
+	f.Setup("install sink", eventshub.Install(sink,
+		eventshub.IssuerRef(eventingtlstesting.IssuerKind, eventingtlstesting.IssuerName),
+		eventshub.StartReceiverTLS,
+	))
 	f.Setup("install a deployment", deployment.Install(subject, heartbeatsImage,
 		deployment.WithEnvs(map[string]string{
 			"POD_NAME":      "heartbeats",

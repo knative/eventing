@@ -33,6 +33,7 @@ import (
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/resources/service"
 
+	"knative.dev/eventing/pkg/eventingtls/eventingtlstesting"
 	"knative.dev/eventing/test/rekt/features/featureflags"
 	"knative.dev/eventing/test/rekt/resources/containersource"
 )
@@ -159,15 +160,18 @@ func SendEventsWithTLSRecieverAsSinkTrustBundle() *feature.Feature {
 
 	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
 
-	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiverTLS))
+	f.Setup("install sink", eventshub.Install(sink,
+		eventshub.IssuerRef(eventingtlstesting.IssuerKind, eventingtlstesting.IssuerName),
+		eventshub.StartReceiverTLS,
+	))
 
 	f.Requirement("install ContainerSource", func(ctx context.Context, t feature.T) {
 		containersource.Install(source, containersource.WithSink(&duckv1.Destination{
-			URI:      &apis.URL{
-				Scheme:      "https", // Force using https
-				Host:        network.GetServiceHostname(sink, environment.FromContext(ctx).Namespace()),
+			URI: &apis.URL{
+				Scheme: "https", // Force using https
+				Host:   network.GetServiceHostname(sink, environment.FromContext(ctx).Namespace()),
 			},
-			CACerts:  nil, // CA certs are in the trust-bundle
+			CACerts: nil, // CA certs are in the trust-bundle
 		}))(ctx, t)
 	})
 	f.Requirement("containersource goes ready", containersource.IsReady(source))
