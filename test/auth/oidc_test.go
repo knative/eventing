@@ -173,6 +173,19 @@ func TestContainerSourceSendsEventsWithOIDCSupport(t *testing.T) {
 	env.Test(ctx, t, oidc.SendsEventsWithSinkRefOIDC())
 }
 
+func TestPingSourceSendsEventsWithOIDC(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+	)
+
+	env.Test(ctx, t, oidc.PingSourceSendEventWithSinkRefOIDC())
+}
 func TestSequenceSendsEventsWithOIDCSupport(t *testing.T) {
 	t.Parallel()
 
