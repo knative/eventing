@@ -21,9 +21,12 @@ import (
 	"fmt"
 
 	"github.com/cloudevents/sdk-go/v2/test"
-	"knative.dev/eventing/test/rekt/resources/addressable"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/network"
+	"knative.dev/reconciler-test/pkg/environment"
+
+	"knative.dev/eventing/test/rekt/resources/addressable"
 
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -216,6 +219,55 @@ func SendsEventsWithTLS() *feature.Feature {
 
 	return f
 }
+
+func SendsEventsWithTLSTrustBundle() *feature.Feature {
+	src := feature.MakeRandomK8sName("apiserversource")
+	sink := feature.MakeRandomK8sName("sink")
+
+	f := feature.NewFeatureNamed("Send events to TLS sink - trust bundle")
+
+	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
+
+	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiverTLS))
+
+	sacmName := feature.MakeRandomK8sName("apiserversource")
+	f.Requirement("Create Service Account for ApiServerSource with RBAC for v1.Event resources",
+		setupAccountAndRoleForPods(sacmName))
+
+	cfg := []manifest.CfgFn{
+		apiserversource.WithServiceAccountName(sacmName),
+		apiserversource.WithEventMode(v1.ResourceMode),
+		apiserversource.WithResources(v1.APIVersionKindSelector{
+			APIVersion: "v1",
+			Kind:       "Event",
+		}),
+	}
+
+	f.Requirement("install ApiServerSource", func(ctx context.Context, t feature.T) {
+		cfg = append(cfg, apiserversource.WithSink(&duckv1.Destination{
+			URI:      &apis.URL{
+				Scheme:      "https", // Force using https
+				Host:        network.GetServiceHostname(sink, environment.FromContext(ctx).Namespace()),
+			},
+			CACerts:  nil, // CA certs are in the trust-bundle
+		}))
+		apiserversource.Install(src, cfg...)(ctx, t)
+	})
+	f.Requirement("ApiServerSource goes ready", apiserversource.IsReady(src))
+
+	f.Stable("ApiServerSource as event source").
+		Must("delivers events on sink with ref",
+			eventasssert.OnStore(sink).
+				Match(eventasssert.MatchKind(eventshub.EventReceived)).
+				MatchEvent(test.HasType("dev.knative.apiserver.resource.update")).
+				AtLeast(1),
+		).
+		Must("Set sinkURI to HTTPS endpoint", source.ExpectHTTPSSink(apiserversource.Gvr(), src)).
+		Must("Set sinkCACerts to non empty CA certs", source.ExpectCACerts(apiserversource.Gvr(), src))
+
+	return f
+}
+
 
 // SendsEventsWithEventTypes tests apiserversource to a ready broker.
 func SendsEventsWithEventTypes() *feature.Feature {

@@ -22,6 +22,10 @@ import (
 
 	"github.com/cloudevents/sdk-go/v2/test"
 	"k8s.io/apimachinery/pkg/util/uuid"
+	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/network"
+	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/manifest"
 
 	"knative.dev/reconciler-test/pkg/eventshub"
@@ -134,6 +138,37 @@ func SendEventsWithTLSRecieverAsSink() *feature.Feature {
 		d.CACerts = eventshub.GetCaCerts(ctx)
 
 		containersource.Install(source, containersource.WithSink(d))(ctx, t)
+	})
+	f.Requirement("containersource goes ready", containersource.IsReady(source))
+
+	f.Stable("containersource as event source").
+		Must("delivers events",
+			assert.OnStore(sink).
+				Match(assert.MatchKind(eventshub.EventReceived)).
+				MatchEvent(test.HasType("dev.knative.eventing.samples.heartbeat")).
+				AtLeast(1),
+		)
+
+	return f
+}
+
+func SendEventsWithTLSRecieverAsSinkTrustBundle() *feature.Feature {
+	source := feature.MakeRandomK8sName("containersource")
+	sink := feature.MakeRandomK8sName("sink")
+	f := feature.NewFeature()
+
+	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
+
+	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiverTLS))
+
+	f.Requirement("install ContainerSource", func(ctx context.Context, t feature.T) {
+		containersource.Install(source, containersource.WithSink(&duckv1.Destination{
+			URI:      &apis.URL{
+				Scheme:      "https", // Force using https
+				Host:        network.GetServiceHostname(sink, environment.FromContext(ctx).Namespace()),
+			},
+			CACerts:  nil, // CA certs are in the trust-bundle
+		}))(ctx, t)
 	})
 	f.Requirement("containersource goes ready", containersource.IsReady(source))
 
