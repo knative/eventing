@@ -21,7 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	clientv1 "k8s.io/client-go/listers/core/v1"
+	v1 "k8s.io/client-go/listers/core/v1"
 
 	"go.uber.org/zap"
 
@@ -41,7 +41,6 @@ import (
 	"knative.dev/pkg/system"
 	"knative.dev/pkg/tracker"
 
-	rbacv1listers "k8s.io/client-go/listers/rbac/v1"
 	"knative.dev/eventing/pkg/adapter/mtping"
 	"knative.dev/eventing/pkg/adapter/v2"
 	"knative.dev/eventing/pkg/apis/feature"
@@ -80,10 +79,7 @@ type Reconciler struct {
 	// Leader election configuration for the mt receive adapter
 	leConfig string
 
-	serviceAccountLister clientv1.ServiceAccountLister
-	roleLister           rbacv1listers.RoleLister
-	roleBindingLister    rbacv1listers.RoleBindingLister
-	namespaceLister      clientv1.NamespaceLister
+	serviceAccountLister v1.ServiceAccountLister
 }
 
 // Check that our Reconciler implements ReconcileKind
