@@ -34,6 +34,7 @@ import (
 	"knative.dev/pkg/tracing"
 
 	"knative.dev/eventing/pkg/auth"
+	"knative.dev/eventing/pkg/eventingtls"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -225,21 +226,28 @@ func MainWithInformers(ctx context.Context, component string, env EnvConfigAcces
 
 		// Manually create a ConfigMap informer for the env.GetNamespace() namespace to have it
 		// optionally created when needed.
-		inf := informers.NewSharedInformerFactoryWithOptions(
+		infFactory := informers.NewSharedInformerFactoryWithOptions(
 			kubeclient.Get(ctx),
 			controller.GetResyncPeriod(ctx),
 			informers.WithNamespace(env.GetNamespace()),
+			informers.WithTweakListOptions(func(options *metav1.ListOptions) {
+				options.LabelSelector = eventingtls.TrustBundleLabelSelector
+			}),
 		)
-		inf.Start(ctx.Done())
-
-		_ = inf.WaitForCacheSync(ctx.Done())
 
 		go func() {
 			<-ctx.Done()
-			inf.Shutdown()
+			infFactory.Shutdown()
 		}()
 
-		trustBundleConfigMapLister = inf.Core().V1().ConfigMaps().Lister().ConfigMaps(env.GetNamespace())
+		inf := infFactory.Core().V1().ConfigMaps()
+
+		_ = inf.Informer() // Actually create informer
+
+		trustBundleConfigMapLister = inf.Lister().ConfigMaps(env.GetNamespace())
+
+		infFactory.Start(ctx.Done())
+		_ = infFactory.WaitForCacheSync(ctx.Done())
 	}
 
 	clientConfig := ClientConfig{
