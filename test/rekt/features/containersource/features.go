@@ -35,6 +35,7 @@ import (
 
 	"knative.dev/eventing/pkg/eventingtls/eventingtlstesting"
 	"knative.dev/eventing/test/rekt/features/featureflags"
+	"knative.dev/eventing/test/rekt/features/source"
 	"knative.dev/eventing/test/rekt/resources/containersource"
 )
 
@@ -126,7 +127,7 @@ func SendsEventsWithArgs() *feature.Feature {
 }
 
 func SendEventsWithTLSRecieverAsSink() *feature.Feature {
-	source := feature.MakeRandomK8sName("containersource")
+	src := feature.MakeRandomK8sName("containersource")
 	sink := feature.MakeRandomK8sName("sink")
 	f := feature.NewFeature()
 
@@ -138,9 +139,9 @@ func SendEventsWithTLSRecieverAsSink() *feature.Feature {
 		d := service.AsDestinationRef(sink)
 		d.CACerts = eventshub.GetCaCerts(ctx)
 
-		containersource.Install(source, containersource.WithSink(d))(ctx, t)
+		containersource.Install(src, containersource.WithSink(d))(ctx, t)
 	})
-	f.Requirement("containersource goes ready", containersource.IsReady(source))
+	f.Requirement("containersource goes ready", containersource.IsReady(src))
 
 	f.Stable("containersource as event source").
 		Must("delivers events",
@@ -148,13 +149,15 @@ func SendEventsWithTLSRecieverAsSink() *feature.Feature {
 				Match(assert.MatchKind(eventshub.EventReceived)).
 				MatchEvent(test.HasType("dev.knative.eventing.samples.heartbeat")).
 				AtLeast(1),
-		)
+		).
+		Must("Set sinkURI to HTTPS endpoint", source.ExpectHTTPSSink(containersource.Gvr(), src)).
+		Must("Set sinkCACerts to non empty CA certs", source.ExpectCACerts(containersource.Gvr(), src))
 
 	return f
 }
 
 func SendEventsWithTLSRecieverAsSinkTrustBundle() *feature.Feature {
-	source := feature.MakeRandomK8sName("containersource")
+	src := feature.MakeRandomK8sName("containersource")
 	sink := feature.MakeRandomK8sName("sink")
 	f := feature.NewFeature()
 
@@ -166,7 +169,7 @@ func SendEventsWithTLSRecieverAsSinkTrustBundle() *feature.Feature {
 	))
 
 	f.Requirement("install ContainerSource", func(ctx context.Context, t feature.T) {
-		containersource.Install(source, containersource.WithSink(&duckv1.Destination{
+		containersource.Install(src, containersource.WithSink(&duckv1.Destination{
 			URI: &apis.URL{
 				Scheme: "https", // Force using https
 				Host:   network.GetServiceHostname(sink, environment.FromContext(ctx).Namespace()),
@@ -174,7 +177,7 @@ func SendEventsWithTLSRecieverAsSinkTrustBundle() *feature.Feature {
 			CACerts: nil, // CA certs are in the trust-bundle
 		}))(ctx, t)
 	})
-	f.Requirement("containersource goes ready", containersource.IsReady(source))
+	f.Requirement("containersource goes ready", containersource.IsReady(src))
 
 	f.Stable("containersource as event source").
 		Must("delivers events",
@@ -182,7 +185,8 @@ func SendEventsWithTLSRecieverAsSinkTrustBundle() *feature.Feature {
 				Match(assert.MatchKind(eventshub.EventReceived)).
 				MatchEvent(test.HasType("dev.knative.eventing.samples.heartbeat")).
 				AtLeast(1),
-		)
+		).
+		Must("Set sinkURI to HTTPS endpoint", source.ExpectHTTPSSink(containersource.Gvr(), src))
 
 	return f
 }

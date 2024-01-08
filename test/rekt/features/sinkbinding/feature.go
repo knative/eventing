@@ -38,10 +38,10 @@ import (
 
 	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/eventingtls/eventingtlstesting"
+	"knative.dev/eventing/test/rekt/features/featureflags"
+	"knative.dev/eventing/test/rekt/features/source"
 	"knative.dev/eventing/test/rekt/resources/addressable"
 	"knative.dev/eventing/test/rekt/resources/broker"
-
-	"knative.dev/eventing/test/rekt/features/featureflags"
 	"knative.dev/eventing/test/rekt/resources/sinkbinding"
 )
 
@@ -218,7 +218,9 @@ func SinkBindingV1DeploymentTLS(ctx context.Context) *feature.Feature {
 				Match(eventasssert.MatchKind(eventshub.EventReceived)).
 				MatchEvent(test.HasExtension("sinkbinding", extensionSecret)).
 				AtLeast(1),
-		)
+		).
+		Must("Set sinkURI to HTTPS endpoint", source.ExpectHTTPSSink(sinkbinding.Gvr(), sbinding)).
+		Must("Set sinkCACerts to non empty CA certs", source.ExpectCACerts(sinkbinding.Gvr(), sbinding))
 
 	return f
 }
@@ -289,7 +291,8 @@ func SinkBindingV1DeploymentTLSTrustBundle(ctx context.Context) *feature.Feature
 				Match(eventasssert.MatchKind(eventshub.EventReceived)).
 				MatchEvent(test.HasExtension("sinkbinding", extensionSecret)).
 				AtLeast(1),
-		)
+		).
+		Must("Set sinkURI to HTTPS endpoint", source.ExpectHTTPSSink(sinkbinding.Gvr(), sbinding))
 
 	return f
 }

@@ -127,8 +127,7 @@ func SendsEventsTLSTrustBundle() *feature.Feature {
 			Match(eventassert.MatchKind(eventshub.EventReceived)).
 			MatchEvent(test.HasType("dev.knative.sources.ping")).
 			AtLeast(1)).
-		Must("Set sinkURI to HTTPS endpoint", source.ExpectHTTPSSink(pingsource.Gvr(), src)).
-		Must("Set sinkCACerts to non empty CA certs", source.ExpectCACerts(pingsource.Gvr(), src))
+		Must("Set sinkURI to HTTPS endpoint", source.ExpectHTTPSSink(pingsource.Gvr(), src))
 
 	return f
 }
