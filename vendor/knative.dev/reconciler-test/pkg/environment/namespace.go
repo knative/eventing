@@ -67,6 +67,10 @@ func (mr *MagicEnvironment) CreateNamespaceIfNeeded() error {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        mr.namespace,
 				Annotations: map[string]string{},
+				Labels: map[string]string{
+					"app.kubernetes.io/component": "reconciler-test",
+					"app.kubernetes.io/name":      "reconciler-test",
+				},
 			},
 		}
 

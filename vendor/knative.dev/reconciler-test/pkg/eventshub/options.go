@@ -114,6 +114,7 @@ func StartSenderToResourceTLS(gvr schema.GroupVersionResource, name string, caCe
 		if caCerts == nil && u.CACerts != nil {
 			caCerts = u.CACerts
 		}
+
 		return compose(StartSenderURLTLS(u.URL.String(), caCerts), oidcSinkAudience(u.Audience))(ctx, m)
 	}
 }
@@ -135,6 +136,13 @@ func StartSenderURLTLS(sink string, caCerts *string) EventsHubOption {
 			envs["SINK"] = sink
 			return nil
 		})
+}
+
+func IssuerRef(kind, name string) EventsHubOption {
+	return compose(
+		envAdditive(tlsIssuerKind, kind),
+		envAdditive(tlsIssuerName, name),
+	)
 }
 
 // --- Receiver options
