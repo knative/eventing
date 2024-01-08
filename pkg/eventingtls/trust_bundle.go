@@ -106,10 +106,10 @@ func PropagateTrustBundles(ctx context.Context, k8s kubernetes.Interface, trustB
 
 		expected := &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:            p.sysCM.Name,
-				Namespace:       obj.GetNamespace(),
-				Labels:          p.sysCM.Labels,
-				Annotations:     p.sysCM.Annotations,
+				Name:        p.sysCM.Name,
+				Namespace:   obj.GetNamespace(),
+				Labels:      p.sysCM.Labels,
+				Annotations: p.sysCM.Annotations,
 			},
 			Data:       p.sysCM.Data,
 			BinaryData: p.sysCM.BinaryData,

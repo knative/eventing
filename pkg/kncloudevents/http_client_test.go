@@ -56,22 +56,22 @@ O2dgzikq8iSy1BlRsVw=
 
 func Test_getClientForAddressable(t *testing.T) {
 	tests := []struct {
-		name                string
-		url                 string
-		caCert              *string
-		wantErr             bool
+		name    string
+		url     string
+		caCert  *string
+		wantErr bool
 	}{
 		{
-			name:                "Target with no CA certs",
-			url:                 "http://foo.bar",
-			caCert:              nil,
-			wantErr:             false,
+			name:    "Target with no CA certs",
+			url:     "http://foo.bar",
+			caCert:  nil,
+			wantErr: false,
 		},
 		{
-			name:                "Target with CA certs",
-			url:                 "https://foo.bar",
-			caCert:              &testCaCerts,
-			wantErr:             false,
+			name:    "Target with CA certs",
+			url:     "https://foo.bar",
+			caCert:  &testCaCerts,
+			wantErr: false,
 		},
 	}
 	for _, tt := range tests {

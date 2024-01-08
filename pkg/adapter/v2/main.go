@@ -235,10 +235,8 @@ func MainWithInformers(ctx context.Context, component string, env EnvConfigAcces
 		_ = inf.WaitForCacheSync(ctx.Done())
 
 		go func() {
-			select {
-			case <-ctx.Done():
-				inf.Shutdown()
-			}
+			<-ctx.Done()
+			inf.Shutdown()
 		}()
 
 		trustBundleConfigMapLister = inf.Core().V1().ConfigMaps().Lister().ConfigMaps(env.GetNamespace())

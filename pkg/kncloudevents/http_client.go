@@ -83,15 +83,17 @@ func getClientForAddressable(cfg eventingtls.ClientConfig, addressable duckv1.Ad
 func createNewClient(cfg eventingtls.ClientConfig, addressable duckv1.Addressable) (*nethttp.Client, error) {
 	var base = nethttp.DefaultTransport.(*nethttp.Transport).Clone()
 
-	clientConfig := eventingtls.ClientConfig{
-		CACerts:                    addressable.CACerts,
-		TrustBundleConfigMapLister: cfg.TrustBundleConfigMapLister,
-	}
+	if eventingtls.IsHttpsSink(addressable.URL.String()) {
+		clientConfig := eventingtls.ClientConfig{
+			CACerts:                    addressable.CACerts,
+			TrustBundleConfigMapLister: cfg.TrustBundleConfigMapLister,
+		}
 
-	var err error
-	base.TLSClientConfig, err = eventingtls.GetTLSClientConfig(clientConfig)
-	if err != nil {
-		return nil, err
+		var err error
+		base.TLSClientConfig, err = eventingtls.GetTLSClientConfig(clientConfig)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	clients.connectionArgs.configureTransport(base)

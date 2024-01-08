@@ -64,12 +64,12 @@ func NewController(
 	featureStore.WatchConfigs(cmw)
 
 	r := &Reconciler{
-		kubeClientSet:         kubeClient,
-		eventingClientSet:     eventingClient,
-		containerSourceLister: containersourceInformer.Lister(),
-		deploymentLister:      deploymentInformer.Lister(),
-		sinkBindingLister:     sinkbindingInformer.Lister(),
-		serviceAccountLister:  serviceaccountInformer.Lister(),
+		kubeClientSet:              kubeClient,
+		eventingClientSet:          eventingClient,
+		containerSourceLister:      containersourceInformer.Lister(),
+		deploymentLister:           deploymentInformer.Lister(),
+		sinkBindingLister:          sinkbindingInformer.Lister(),
+		serviceAccountLister:       serviceaccountInformer.Lister(),
 		trustBundleConfigMapLister: trustBundleConfigMapInformer.Lister(),
 	}
 	impl := v1containersource.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
