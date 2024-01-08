@@ -127,6 +127,12 @@ func Install(name string, options ...EventsHubOption) feature.StepFn {
 			"clusterDomain":  network.GetClusterDomainName(),
 		}
 
+		for k, v := range envs {
+			if strings.HasPrefix(k, "TLS_ISSUER") {
+				cfg[k] = v
+			}
+		}
+
 		if isOIDCEnabled && !isReceiver {
 			// install oidc sa
 			oidcSAName := fmt.Sprintf("oidc-%s", name)

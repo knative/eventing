@@ -48,6 +48,14 @@ spec:
     - 127.0.0.1
 
   issuerRef:
+    {{ if .TLS_ISSUER_NAME }}
+    name: {{ .TLS_ISSUER_NAME }}
+    {{ else }}
     name: selfsigned-ca-issuer
+    {{ end }}
+    {{ if .TLS_ISSUER_KIND }}
+    kind: {{ .TLS_ISSUER_KIND }}
+    {{ else }}
     kind: Issuer
+    {{ end }}
     group: cert-manager.io
