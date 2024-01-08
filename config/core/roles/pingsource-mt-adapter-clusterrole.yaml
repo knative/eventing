@@ -24,10 +24,21 @@ rules:
       - ""
     resources:
       - "configmaps"
+    verbs:
+      - "get"
+      - "list"
+      - "watch"
+  - apiGroups:
+      - ""
+    resources:
       - "serviceaccounts/token"
     verbs:
       - "get"
       - "list"
+      - "create"
+      - "update"
+      - "delete"
+      - "patch"
       - "watch"
   - apiGroups:
       - sources.knative.dev
@@ -39,19 +50,6 @@ rules:
       - list
       - watch
       - patch
-  - apiGroups:
-      - "rbac.authorization.k8s.io"
-    resources:
-      - "rolebindings"
-      - "roles"
-    verbs: 
-      - "get"
-      - "list"
-      - "create"
-      - "update"
-      - "delete"
-      - "patch"
-      - "watch"
   - apiGroups:
       - sources.knative.dev
     resources:
