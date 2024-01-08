@@ -111,11 +111,11 @@ func SendsEventsTLSTrustBundle() *feature.Feature {
 
 	f.Requirement("install pingsource", func(ctx context.Context, t feature.T) {
 		d := &duckv1.Destination{
-			URI:      &apis.URL{
-				Scheme:      "https", // Force using https
-				Host:        network.GetServiceHostname(sink, environment.FromContext(ctx).Namespace()),
+			URI: &apis.URL{
+				Scheme: "https", // Force using https
+				Host:   network.GetServiceHostname(sink, environment.FromContext(ctx).Namespace()),
 			},
-			CACerts:  nil, // CA certs are in the trust-bundle
+			CACerts: nil, // CA certs are in the trust-bundle
 		}
 
 		pingsource.Install(src, pingsource.WithSink(d))(ctx, t)

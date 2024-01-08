@@ -167,11 +167,11 @@ func SubscriptionTLSTrustBundle() *feature.Feature {
 	f.Setup("channel is ready", channel_impl.IsReady(channelName))
 	f.Setup("install subscription", func(ctx context.Context, t feature.T) {
 		d := &duckv1.Destination{
-			URI:      &apis.URL{
-				Scheme:      "https", // Force using https
-				Host:        network.GetServiceHostname(sink, environment.FromContext(ctx).Namespace()),
+			URI: &apis.URL{
+				Scheme: "https", // Force using https
+				Host:   network.GetServiceHostname(sink, environment.FromContext(ctx).Namespace()),
 			},
-			CACerts:  nil, // CA certs are in the trust-bundle
+			CACerts: nil, // CA certs are in the trust-bundle
 		}
 		subscription.Install(subscriptionName,
 			subscription.WithChannel(channel_impl.AsRef(channelName)),

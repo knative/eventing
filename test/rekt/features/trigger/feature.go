@@ -163,11 +163,11 @@ func TriggerWithTLSSubscriberTrustBundle() *feature.Feature {
 	// Install Trigger
 	f.Setup("Install trigger", func(ctx context.Context, t feature.T) {
 		subscriber := &duckv1.Destination{
-			URI:      &apis.URL{
-				Scheme:      "https", // Force using https
-				Host:        network.GetServiceHostname(sinkName, environment.FromContext(ctx).Namespace()),
+			URI: &apis.URL{
+				Scheme: "https", // Force using https
+				Host:   network.GetServiceHostname(sinkName, environment.FromContext(ctx).Namespace()),
 			},
-			CACerts:  nil, // CA certs are in the trust-bundle
+			CACerts: nil, // CA certs are in the trust-bundle
 		}
 
 		trigger.Install(triggerName, brokerName,

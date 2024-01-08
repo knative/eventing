@@ -249,11 +249,11 @@ func SendsEventsWithTLSTrustBundle() *feature.Feature {
 
 	f.Requirement("install ApiServerSource", func(ctx context.Context, t feature.T) {
 		cfg = append(cfg, apiserversource.WithSink(&duckv1.Destination{
-			URI:      &apis.URL{
-				Scheme:      "https", // Force using https
-				Host:        network.GetServiceHostname(sink, environment.FromContext(ctx).Namespace()),
+			URI: &apis.URL{
+				Scheme: "https", // Force using https
+				Host:   network.GetServiceHostname(sink, environment.FromContext(ctx).Namespace()),
 			},
-			CACerts:  nil, // CA certs are in the trust-bundle
+			CACerts: nil, // CA certs are in the trust-bundle
 		}))
 		apiserversource.Install(src, cfg...)(ctx, t)
 	})
@@ -271,7 +271,6 @@ func SendsEventsWithTLSTrustBundle() *feature.Feature {
 
 	return f
 }
-
 
 // SendsEventsWithEventTypes tests apiserversource to a ready broker.
 func SendsEventsWithEventTypes() *feature.Feature {

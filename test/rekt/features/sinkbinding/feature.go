@@ -252,11 +252,11 @@ func SinkBindingV1DeploymentTLSTrustBundle(ctx context.Context) *feature.Feature
 
 	f.Requirement("install SinkBinding", func(ctx context.Context, t feature.T) {
 		d := &duckv1.Destination{
-			URI:      &apis.URL{
-				Scheme:      "https", // Force using https
-				Host:        network.GetServiceHostname(sink, environment.FromContext(ctx).Namespace()),
+			URI: &apis.URL{
+				Scheme: "https", // Force using https
+				Host:   network.GetServiceHostname(sink, environment.FromContext(ctx).Namespace()),
 			},
-			CACerts:  nil, // CA certs are in the trust-bundle
+			CACerts: nil, // CA certs are in the trust-bundle
 		}
 		sinkbinding.Install(sbinding, d, deployment.AsTrackerReference(subject), cfg...)(ctx, t)
 	})
