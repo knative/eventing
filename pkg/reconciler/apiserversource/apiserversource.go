@@ -460,5 +460,10 @@ func (r *Reconciler) createOIDCRoleBinding(ctx context.Context, source *v1.ApiSe
 }
 
 func (r *Reconciler) propagateTrustBundles(ctx context.Context, source *v1.ApiServerSource) error {
-	return eventingtls.PropagateTrustBundles(ctx, r.kubeClientSet, r.trustBundleConfigMapLister, source)
+	gvk := schema.GroupVersionKind{
+		Group:   v1.SchemeGroupVersion.Group,
+		Version: v1.SchemeGroupVersion.Version,
+		Kind:    "ApiServerSource",
+	}
+	return eventingtls.PropagateTrustBundles(ctx, r.kubeClientSet, r.trustBundleConfigMapLister, gvk, source)
 }

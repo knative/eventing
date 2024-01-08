@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"time"
 
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/resolver"
 
@@ -230,5 +231,10 @@ func (s *SinkBindingSubResourcesReconciler) removeOIDCTokenSecretEventually(ctx 
 }
 
 func (s *SinkBindingSubResourcesReconciler) propagateTrustBundles(ctx context.Context, sb *v1.SinkBinding) error {
-	return eventingtls.PropagateTrustBundles(ctx, s.kubeclient, s.trustBundleConfigMapLister, sb)
+	gvk := schema.GroupVersionKind{
+		Group:   v1.SchemeGroupVersion.Group,
+		Version: v1.SchemeGroupVersion.Version,
+		Kind:    "SinkBinding",
+	}
+	return eventingtls.PropagateTrustBundles(ctx, s.kubeclient, s.trustBundleConfigMapLister, gvk, sb)
 }

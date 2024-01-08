@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
@@ -110,6 +111,9 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1.ContainerSour
 }
 
 func (r *Reconciler) reconcileReceiveAdapter(ctx context.Context, source *v1.ContainerSource) (*appsv1.Deployment, error) {
+	if err := r.propagateTrustBundles(ctx, source); err != nil {
+		return nil, fmt.Errorf("failed to propagate trust bundles in %q: %w", source.Namespace, err)
+	}
 
 	podTemplate, err := eventingtls.AddTrustBundleVolumes(r.trustBundleConfigMapLister, source, &source.Spec.Template)
 	if err != nil {
@@ -183,4 +187,13 @@ func (r *Reconciler) podSpecChanged(have *corev1.PodSpec, want *corev1.PodSpec) 
 
 func (r *Reconciler) sinkBindingSpecChanged(have *v1.SinkBindingSpec, want *v1.SinkBindingSpec) bool {
 	return !equality.Semantic.DeepDerivative(want, have)
+}
+
+func (r *Reconciler) propagateTrustBundles(ctx context.Context, cs *v1.ContainerSource) error {
+	gvk := schema.GroupVersionKind{
+		Group:   v1.SchemeGroupVersion.Group,
+		Version: v1.SchemeGroupVersion.Version,
+		Kind:    "ContainerSource",
+	}
+	return eventingtls.PropagateTrustBundles(ctx, r.kubeClientSet, r.trustBundleConfigMapLister, gvk, cs)
 }

@@ -26,6 +26,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"knative.dev/pkg/kmeta"
@@ -54,7 +55,7 @@ func init() {
 
 // PropagateTrustBundles propagates Trust bundles ConfigMaps from the system.Namespace() to the
 // obj namespace.
-func PropagateTrustBundles(ctx context.Context, k8s kubernetes.Interface, trustBundleConfigMapLister corev1listers.ConfigMapLister, obj kmeta.Accessor) error {
+func PropagateTrustBundles(ctx context.Context, k8s kubernetes.Interface, trustBundleConfigMapLister corev1listers.ConfigMapLister, gvk schema.GroupVersionKind, obj kmeta.Accessor) error {
 
 	systemNamespaceBundles, err := trustBundleConfigMapLister.ConfigMaps(system.Namespace()).List(TrustBundleSelector)
 	if err != nil {
@@ -117,7 +118,7 @@ func PropagateTrustBundles(ctx context.Context, k8s kubernetes.Interface, trustB
 
 		if p.userCm == nil {
 			// Update owner references
-			expected.OwnerReferences = withOwnerReferences(obj, []metav1.OwnerReference{})
+			expected.OwnerReferences = withOwnerReferences(obj, gvk, []metav1.OwnerReference{})
 
 			if err := createConfigMap(ctx, k8s, obj, expected); err != nil {
 				return err
@@ -126,7 +127,7 @@ func PropagateTrustBundles(ctx context.Context, k8s kubernetes.Interface, trustB
 		}
 
 		// Update owner references
-		expected.OwnerReferences = withOwnerReferences(obj, p.userCm.OwnerReferences)
+		expected.OwnerReferences = withOwnerReferences(obj, gvk, p.userCm.OwnerReferences)
 
 		if !equality.Semantic.DeepDerivative(expected, p.userCm) {
 			if err := updateConfigMap(ctx, k8s, obj, expected); err != nil {
@@ -168,10 +169,10 @@ func AddTrustBundleVolumes(trustBundleLister corev1listers.ConfigMapLister, obj 
 	return pt, nil
 }
 
-func withOwnerReferences(sb kmeta.Accessor, references []metav1.OwnerReference) []metav1.OwnerReference {
+func withOwnerReferences(sb kmeta.Accessor, gvk schema.GroupVersionKind, references []metav1.OwnerReference) []metav1.OwnerReference {
 	expected := metav1.OwnerReference{
-		APIVersion: sb.GroupVersionKind().GroupVersion().String(),
-		Kind:       sb.GroupVersionKind().Kind,
+		APIVersion: gvk.GroupVersion().String(),
+		Kind:       gvk.Kind,
 		Name:       sb.GetName(),
 	}
 	found := false
