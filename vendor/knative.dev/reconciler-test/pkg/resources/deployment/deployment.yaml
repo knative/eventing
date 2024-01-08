@@ -89,4 +89,22 @@ spec:
         {{ if .imagePullPolicy }}
         imagePullPolicy: {{ .imagePullPolicy }}
         {{ end }}
+        {{ if .volumes }}
+        volumeMounts:
+        {{ range $v := .volumeMounts }}
+        - name: {{ $v.Name }}
+          mountPath: {{ $v.MountPath }}
+        {{ end }}
+        {{ end }}
+
+      {{ if .volumes }}
+      volumes:
+      {{ range $v := .volumes }}
+      - name: {{ $v.Name }}
+        {{ if $v.VolumeSource.ConfigMap }}
+        configMap:
+          name: {{ $v.VolumeSource.ConfigMap.LocalObjectReference.Name }}
+        {{ end }}
+      {{ end }}
+      {{ end }}
 
