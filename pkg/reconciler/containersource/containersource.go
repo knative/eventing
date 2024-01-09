@@ -110,13 +110,13 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1.ContainerSour
 }
 
 func (r *Reconciler) reconcileReceiveAdapter(ctx context.Context, source *v1.ContainerSource) (*appsv1.Deployment, error) {
-	podTemplate, err := eventingtls.AddTrustBundleVolumes(r.trustBundleConfigMapLister, source, &source.Spec.Template)
+	podTemplate, err := eventingtls.AddTrustBundleVolumes(r.trustBundleConfigMapLister, source, &source.Spec.Template.Spec)
 	if err != nil {
 		return nil, fmt.Errorf("failed to add trust bundle volumes: %w", err)
 	}
 
 	updatedSource := source.DeepCopy() // Avoid update Spec of the given object
-	updatedSource.Spec.Template = *podTemplate
+	updatedSource.Spec.Template.Spec = *podTemplate
 	expected := resources.MakeDeployment(updatedSource)
 
 	ra, err := r.deploymentLister.Deployments(expected.Namespace).Get(expected.Name)

@@ -116,6 +116,9 @@ func NewController(
 		DynamicClient:   dc,
 		Recorder:        createRecorder(ctx, controllerAgentName),
 		NamespaceLister: namespaceInformer.Lister(),
+		WithContext: func(ctx context.Context, bindable psbinding.Bindable) (context.Context, error) {
+			return v1.WithTrustBundleConfigMapLister(ctx, trustBundleConfigMapInformer.Lister()), nil
+		},
 	}
 	impl := controller.NewContext(ctx, c, controller.ControllerOptions{
 		WorkQueueName: "SinkBindings",

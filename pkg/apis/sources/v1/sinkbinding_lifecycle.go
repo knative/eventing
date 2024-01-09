@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	"go.uber.org/zap"
+	corev1listers "k8s.io/client-go/listers/core/v1"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -31,6 +32,8 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/tracker"
+
+	"knative.dev/eventing/pkg/eventingtls"
 )
 
 const (
@@ -160,7 +163,7 @@ func (sb *SinkBinding) Do(ctx context.Context, ps *duckv1.WithPod) {
 		}
 	}
 
-	spec := ps.Spec.Template.Spec
+	spec := &ps.Spec.Template.Spec
 	for i := range spec.InitContainers {
 		spec.InitContainers[i].Env = append(spec.InitContainers[i].Env, corev1.EnvVar{
 			Name:  "K_SINK",
@@ -192,6 +195,12 @@ func (sb *SinkBinding) Do(ctx context.Context, ps *duckv1.WithPod) {
 			Name:  "K_CE_OVERRIDES",
 			Value: ceOverrides,
 		})
+	}
+
+	spec, err = eventingtls.AddTrustBundleVolumes(GetTrustBundleConfigMapLister(ctx), sb, spec)
+	if err != nil {
+		logging.FromContext(ctx).Errorw("Failed to add trust bundle volumes %s/%s: %+v", zap.Error(err))
+		return
 	}
 
 	if sb.Status.OIDCTokenSecretName != nil {
@@ -292,4 +301,18 @@ func (sb *SinkBinding) Undo(ctx context.Context, ps *duckv1.WithPod) {
 		}
 		ps.Spec.Template.Spec.Volumes = volumes
 	}
+}
+
+type configMapListerKey struct{}
+
+func WithTrustBundleConfigMapLister(ctx context.Context, lister corev1listers.ConfigMapLister) context.Context {
+	return context.WithValue(ctx, configMapListerKey{}, lister)
+}
+
+func GetTrustBundleConfigMapLister(ctx context.Context) corev1listers.ConfigMapLister {
+	value := ctx.Value(configMapListerKey{})
+	if value == nil {
+		panic("No ConfigMapLister found in context.")
+	}
+	return value.(corev1listers.ConfigMapLister)
 }

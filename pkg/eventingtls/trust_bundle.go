@@ -138,7 +138,7 @@ func PropagateTrustBundles(ctx context.Context, k8s kubernetes.Interface, trustB
 	return nil
 }
 
-func AddTrustBundleVolumes(trustBundleLister corev1listers.ConfigMapLister, obj kmeta.Accessor, pt *corev1.PodTemplateSpec) (*corev1.PodTemplateSpec, error) {
+func AddTrustBundleVolumes(trustBundleLister corev1listers.ConfigMapLister, obj kmeta.Accessor, pt *corev1.PodSpec) (*corev1.PodSpec, error) {
 	cms, err := trustBundleLister.ConfigMaps(obj.GetNamespace()).List(TrustBundleSelector)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list trust bundles ConfigMaps in %q: %w", obj.GetNamespace(), err)
@@ -146,7 +146,7 @@ func AddTrustBundleVolumes(trustBundleLister corev1listers.ConfigMapLister, obj 
 
 	pt = pt.DeepCopy()
 	for _, cm := range cms {
-		pt.Spec.Volumes = append(pt.Spec.Volumes, corev1.Volume{
+		pt.Volumes = append(pt.Volumes, corev1.Volume{
 			Name: cm.Name,
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{
@@ -157,8 +157,8 @@ func AddTrustBundleVolumes(trustBundleLister corev1listers.ConfigMapLister, obj 
 			},
 		})
 
-		for i := range pt.Spec.Containers {
-			pt.Spec.Containers[i].VolumeMounts = append(pt.Spec.Containers[i].VolumeMounts, corev1.VolumeMount{
+		for i := range pt.Containers {
+			pt.Containers[i].VolumeMounts = append(pt.Containers[i].VolumeMounts, corev1.VolumeMount{
 				Name:      cm.Name,
 				ReadOnly:  true,
 				MountPath: fmt.Sprintf("/%s/%s", TrustBundleMountPath, cm.Name),

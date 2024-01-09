@@ -242,11 +242,11 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1.ApiServer
 		return nil, err
 	}
 
-	podTemplate, err := eventingtls.AddTrustBundleVolumes(r.trustBundleConfigMapLister, src, &expected.Spec.Template)
+	podTemplate, err := eventingtls.AddTrustBundleVolumes(r.trustBundleConfigMapLister, src, &expected.Spec.Template.Spec)
 	if err != nil {
 		return nil, fmt.Errorf("failed to add trust bundle volumes: %w", err)
 	}
-	expected.Spec.Template = *podTemplate
+	expected.Spec.Template.Spec = *podTemplate
 
 	ra, err := r.kubeClientSet.AppsV1().Deployments(src.Namespace).Get(ctx, expected.Name, metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {

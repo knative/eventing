@@ -20,7 +20,6 @@ import (
 	"context"
 
 	"github.com/cloudevents/sdk-go/v2/test"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"knative.dev/pkg/apis"
@@ -36,7 +35,6 @@ import (
 	"knative.dev/reconciler-test/pkg/resources/deployment"
 	"knative.dev/reconciler-test/pkg/resources/service"
 
-	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/eventingtls/eventingtlstesting"
 	"knative.dev/eventing/test/rekt/features/featureflags"
 	"knative.dev/eventing/test/rekt/features/source"
@@ -245,24 +243,6 @@ func SinkBindingV1DeploymentTLSTrustBundle(ctx context.Context) *feature.Feature
 			"POD_NAME":      "heartbeats",
 			"POD_NAMESPACE": env.Namespace(),
 		}),
-		deployment.WithVolumes(
-			[]corev1.Volume{{
-				Name: "knative-eventing-bundle",
-				VolumeSource: corev1.VolumeSource{
-					ConfigMap: &corev1.ConfigMapVolumeSource{
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: "knative-eventing-bundle",
-						},
-					},
-				},
-			}},
-			[]corev1.VolumeMount{
-				{
-					Name:      "knative-eventing-bundle",
-					MountPath: eventingtls.TrustBundleMountPath,
-				},
-			},
-		),
 	))
 
 	extensions := map[string]string{
