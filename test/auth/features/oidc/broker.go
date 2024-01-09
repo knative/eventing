@@ -19,8 +19,6 @@ package oidc
 import (
 	"context"
 
-	"knative.dev/pkg/apis"
-
 	"github.com/cloudevents/sdk-go/v2/test"
 	"github.com/google/uuid"
 	"knative.dev/eventing/test/rekt/features/featureflags"
@@ -28,6 +26,7 @@ import (
 	"knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/eventing/test/rekt/resources/delivery"
 	"knative.dev/eventing/test/rekt/resources/trigger"
+	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	eventassert "knative.dev/reconciler-test/pkg/eventshub/assert"
@@ -116,15 +115,16 @@ func BrokerSendEventWithOIDCTokenToDLS() *feature.Feature {
 		eventshub.OIDCReceiverAudience(dlsAudience),
 		eventshub.StartReceiverTLS))
 
-	// Install broker with DLS config
-	brokerConfig := append(
-		broker.WithEnvConfig(),
-		delivery.WithDeadLetterSinkFromDestination(&duckv1.Destination{
-			Ref:      service.AsKReference(dls),
-			Audience: &dlsAudience,
-		}),
-	)
-	f.Setup("install broker", broker.Install(brokerName, brokerConfig...))
+	f.Setup("install broker", func(ctx context.Context, t feature.T) {
+		brokerConfig := append(broker.WithEnvConfig(),
+			delivery.WithDeadLetterSinkFromDestination(&duckv1.Destination{
+				Ref:      service.AsKReference(dls),
+				Audience: &dlsAudience,
+				//CACerts: eventshub.GetCaCerts(ctx),
+			}))
+		broker.Install(brokerName, brokerConfig...)(ctx, t)
+	})
+
 	f.Setup("Broker is ready", broker.IsReady(brokerName))
 
 	// Install Trigger
