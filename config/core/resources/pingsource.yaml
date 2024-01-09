@@ -197,6 +197,9 @@ spec:
               sinkCACerts:
                 description: CACerts is the Certification Authority (CA) certificates in PEM format that the source trusts when sending events to the sink.
                 type: string
+              sinkAudience:
+                description: sinkAudience is the OIDC audience of the sink.
+                type: string
     additionalPrinterColumns:
     - name: Sink
       type: string
