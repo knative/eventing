@@ -23,6 +23,8 @@ import (
 	"testing"
 	"time"
 
+	"knative.dev/reconciler-test/pkg/eventshub"
+
 	"knative.dev/pkg/system"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"
@@ -159,7 +161,7 @@ func TestApiserversourceSendEventWithJWT(t *testing.T) {
 	env.Test(ctx, t, oidc.ApiserversourceSendEventWithJWT())
 }
 
-func TestContainerSourceSendsEventsWithOIDCSupport(t *testing.T) {
+func TestContainerSourceSendsEventsWithOIDCSupportUnderTLS(t *testing.T) {
 	t.Parallel()
 
 	ctx, env := global.Environment(
@@ -168,6 +170,7 @@ func TestContainerSourceSendsEventsWithOIDCSupport(t *testing.T) {
 		knative.WithTracingConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
+		eventshub.WithTLS(t),
 	)
 
 	env.Test(ctx, t, oidc.SendsEventsWithSinkRefOIDC())

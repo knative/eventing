@@ -17,9 +17,11 @@ limitations under the License.
 package oidc
 
 import (
+	"context"
+
 	"github.com/cloudevents/sdk-go/v2/test"
+	"knative.dev/eventing/test/rekt/features/featureflags"
 	"knative.dev/eventing/test/rekt/resources/containersource"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
@@ -32,15 +34,22 @@ func SendsEventsWithSinkRefOIDC() *feature.Feature {
 	sinkAudience := "audience"
 	f := feature.NewFeature()
 
+	// TLS is required for OIDC
+	f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
+	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
+
 	f.Setup("install sink", eventshub.Install(sink,
 		eventshub.OIDCReceiverAudience(sinkAudience),
-		eventshub.StartReceiver))
+		eventshub.StartReceiverTLS))
 
-	f.Requirement("install containersource", containersource.Install(source,
-		containersource.WithSink(&duckv1.Destination{
-			Ref:      service.AsKReference(sink),
-			Audience: &sinkAudience,
-		})))
+	f.Requirement("install ContainerSource", func(ctx context.Context, t feature.T) {
+		d := service.AsDestinationRef(sink)
+		d.CACerts = eventshub.GetCaCerts(ctx)
+		d.Audience = &sinkAudience
+
+		containersource.Install(source, containersource.WithSink(d))(ctx, t)
+	})
+
 	f.Requirement("containersource goes ready", containersource.IsReady(source))
 
 	f.Stable("containersource as event source").
