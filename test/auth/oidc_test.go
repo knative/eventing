@@ -43,7 +43,7 @@ import (
 	"knative.dev/eventing/test/rekt/resources/sequence"
 )
 
-func TestBrokerSupportsOIDC(t *testing.T) {
+func TestBrokerSupportsOIDCUnderTLS(t *testing.T) {
 	t.Parallel()
 
 	ctx, env := global.Environment(
@@ -53,6 +53,7 @@ func TestBrokerSupportsOIDC(t *testing.T) {
 		k8s.WithEventListener,
 		environment.Managed(t),
 		environment.WithPollTimings(4*time.Second, 12*time.Minute),
+		eventshub.WithTLS(t),
 	)
 
 	name := feature.MakeRandomK8sName("broker")
@@ -61,16 +62,16 @@ func TestBrokerSupportsOIDC(t *testing.T) {
 	env.TestSet(ctx, t, oidc.AddressableOIDCConformance(broker.GVR(), "Broker", name, env.Namespace()))
 }
 
-func TestBrokerSendsEventsWithOIDCSupport(t *testing.T) {
+func TestBrokerSendsEventsWithOIDCSupportUnderTLS(t *testing.T) {
 	t.Parallel()
 
 	ctx, env := global.Environment(
 		knative.WithKnativeNamespace(system.Namespace()),
-		eventshub.WithTLS(t),
 		knative.WithLoggingConfig,
 		knative.WithTracingConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
+		eventshub.WithTLS(t),
 	)
 
 	env.TestSet(ctx, t, oidc.BrokerSendEventWithOIDC())

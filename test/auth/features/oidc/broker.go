@@ -19,6 +19,8 @@ package oidc
 import (
 	"context"
 
+	"knative.dev/pkg/apis"
+
 	"github.com/cloudevents/sdk-go/v2/test"
 	"github.com/google/uuid"
 	"knative.dev/eventing/test/rekt/features/featureflags"
@@ -26,7 +28,6 @@ import (
 	"knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/eventing/test/rekt/resources/delivery"
 	"knative.dev/eventing/test/rekt/resources/trigger"
-	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	eventassert "knative.dev/reconciler-test/pkg/eventshub/assert"
@@ -38,14 +39,14 @@ func BrokerSendEventWithOIDC() *feature.FeatureSet {
 	return &feature.FeatureSet{
 		Name: "Broker send events with OIDC support",
 		Features: []*feature.Feature{
-			//BrokerSendEventWithOIDCTokenToSubscriberWithTLS(),
-			//BrokerSendEventWithOIDCTokenToReplyWithTLS(),
+			BrokerSendEventWithOIDCTokenToSubscriber(),
+			BrokerSendEventWithOIDCTokenToReply(),
 			BrokerSendEventWithOIDCTokenToDLS(),
 		},
 	}
 }
 
-func BrokerSendEventWithOIDCTokenToSubscriberWithTLS() *feature.Feature {
+func BrokerSendEventWithOIDCTokenToSubscriber() *feature.Feature {
 	f := feature.NewFeatureNamed("Broker supports flow with OIDC tokens")
 
 	// TLS is required for OIDC
@@ -84,7 +85,7 @@ func BrokerSendEventWithOIDCTokenToSubscriberWithTLS() *feature.Feature {
 	// Send event
 	f.Requirement("install source", eventshub.Install(
 		source,
-		eventshub.StartSenderToResource(broker.GVR(), brokerName),
+		eventshub.StartSenderToResourceTLS(broker.GVR(), brokerName, nil),
 		eventshub.InputEvent(event),
 	))
 
@@ -127,6 +128,7 @@ func BrokerSendEventWithOIDCTokenToDLS() *feature.Feature {
 
 	f.Setup("Broker is ready", broker.IsReady(brokerName))
 
+	// FIXME: current progress left over here. Need to figure out why trigger cannot be initialized correctly.
 	// Install Trigger
 	//f.Setup("install trigger", trigger.Install(triggerName, brokerName,
 	//	trigger.WithSubscriber(nil, "bad://uri")))
@@ -139,14 +141,13 @@ func BrokerSendEventWithOIDCTokenToDLS() *feature.Feature {
 		d.URI, _ = apis.ParseURL("bad://uri")
 		trigger.Install(triggerName, brokerName, trigger.WithSubscriberFromDestination(d))(ctx, t)
 
-		// FIXME: current progress left over here. Need to figure out why trigger cannot be initialized correctly.
 	})
 
 	f.Setup("trigger is ready", trigger.IsReady(triggerName))
 
 	// Send events after data plane is ready.
 	f.Requirement("install source", eventshub.Install(source,
-		eventshub.StartSenderToResource(broker.GVR(), brokerName),
+		eventshub.StartSenderToResourceTLS(broker.GVR(), brokerName, nil),
 		eventshub.InputEvent(event),
 	))
 
@@ -157,7 +158,7 @@ func BrokerSendEventWithOIDCTokenToDLS() *feature.Feature {
 	return f
 }
 
-func BrokerSendEventWithOIDCTokenToReplyWithTLS() *feature.Feature {
+func BrokerSendEventWithOIDCTokenToReply() *feature.Feature {
 	//1. An event is sent to a broker.
 	//2. A trigger routes this event to a subscriber.
 	//3. The subscriber processes and replies to the event.
@@ -219,7 +220,7 @@ func BrokerSendEventWithOIDCTokenToReplyWithTLS() *feature.Feature {
 
 	// Send events after data plane is ready.
 	f.Requirement("install source", eventshub.Install(source,
-		eventshub.StartSenderToResource(broker.GVR(), brokerName),
+		eventshub.StartSenderToResourceTLS(broker.GVR(), brokerName, nil),
 		eventshub.InputEvent(event),
 	))
 

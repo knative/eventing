@@ -85,7 +85,7 @@ func addressableRejectInvalidAudience(gvr schema.GroupVersionResource, kind, nam
 
 	f.Requirement("install source", eventshub.Install(
 		source,
-		eventshub.StartSenderToResource(gvr, name),
+		eventshub.StartSenderToResourceTLS(gvr, name, nil),
 		eventshub.OIDCInvalidAudience(),
 		eventshub.InputEvent(event),
 	))
@@ -109,7 +109,7 @@ func addressableRejectExpiredToken(gvr schema.GroupVersionResource, kind, name s
 
 	f.Requirement("install source", eventshub.Install(
 		source,
-		eventshub.StartSenderToResource(gvr, name),
+		eventshub.StartSenderToResourceTLS(gvr, name, nil),
 		eventshub.OIDCExpiredToken(),
 		eventshub.InputEvent(event),
 	))
@@ -133,7 +133,7 @@ func addressableRejectCorruptedSignature(gvr schema.GroupVersionResource, kind, 
 
 	f.Requirement("install source", eventshub.Install(
 		source,
-		eventshub.StartSenderToResource(gvr, name),
+		eventshub.StartSenderToResourceTLS(gvr, name, nil),
 		eventshub.OIDCCorruptedSignature(),
 		eventshub.InputEvent(event),
 	))
@@ -157,7 +157,7 @@ func addressableAllowsValidRequest(gvr schema.GroupVersionResource, kind, name s
 
 	f.Requirement("install source", eventshub.Install(
 		source,
-		eventshub.StartSenderToResource(gvr, name),
+		eventshub.StartSenderToResourceTLS(gvr, name, nil),
 		eventshub.InputEvent(event),
 	))
 
