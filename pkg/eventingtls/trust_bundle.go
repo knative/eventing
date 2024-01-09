@@ -38,6 +38,8 @@ const (
 	TrustBundleLabelSelector = "networking.knative.dev/trust-bundle=true"
 
 	TrustBundleMountPath = "knative-custom-certs"
+
+	TrustBundleVolumeNamePrefix = "kne-bundle-"
 )
 
 var (
@@ -146,8 +148,12 @@ func AddTrustBundleVolumes(trustBundleLister corev1listers.ConfigMapLister, obj 
 
 	pt = pt.DeepCopy()
 	for _, cm := range cms {
+		volumeName := fmt.Sprintf("%s%s", TrustBundleVolumeNamePrefix, cm.Name)
+		if len(volumeName) > 63 { // 63 is the maximum name length (there isn't a constant for it)
+			volumeName = kmeta.ChildName(TrustBundleVolumeNamePrefix, cm.Name)
+		}
 		pt.Volumes = append(pt.Volumes, corev1.Volume{
-			Name: cm.Name,
+			Name: volumeName,
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{
 					LocalObjectReference: corev1.LocalObjectReference{
@@ -159,7 +165,14 @@ func AddTrustBundleVolumes(trustBundleLister corev1listers.ConfigMapLister, obj 
 
 		for i := range pt.Containers {
 			pt.Containers[i].VolumeMounts = append(pt.Containers[i].VolumeMounts, corev1.VolumeMount{
-				Name:      cm.Name,
+				Name:      volumeName,
+				ReadOnly:  true,
+				MountPath: fmt.Sprintf("/%s/%s", TrustBundleMountPath, cm.Name),
+			})
+		}
+		for i := range pt.InitContainers {
+			pt.InitContainers[i].VolumeMounts = append(pt.InitContainers[i].VolumeMounts, corev1.VolumeMount{
+				Name:      volumeName,
 				ReadOnly:  true,
 				MountPath: fmt.Sprintf("/%s/%s", TrustBundleMountPath, cm.Name),
 			})
