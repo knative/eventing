@@ -23,6 +23,8 @@ import (
 	"testing"
 	"time"
 
+	"knative.dev/reconciler-test/pkg/eventshub"
+
 	"knative.dev/pkg/system"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"
@@ -145,7 +147,7 @@ func TestSequenceSupportsOIDC(t *testing.T) {
 	env.Test(ctx, t, oidc.SequenceHasAudienceOfInputChannel(name, env.Namespace(), channel_impl.GVR(), channel_impl.GVK().Kind))
 }
 
-func TestApiserversourceSendEventWithJWT(t *testing.T) {
+func TestApiserversourceSendEventWithJWTUnderTLS(t *testing.T) {
 	t.Parallel()
 
 	ctx, env := global.Environment(
@@ -154,6 +156,7 @@ func TestApiserversourceSendEventWithJWT(t *testing.T) {
 		knative.WithTracingConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
+		eventshub.WithTLS(t),
 	)
 
 	env.Test(ctx, t, oidc.ApiserversourceSendEventWithJWT())

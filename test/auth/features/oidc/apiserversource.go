@@ -19,6 +19,8 @@ package oidc
 import (
 	"context"
 
+	"knative.dev/eventing/test/rekt/features/featureflags"
+
 	"github.com/cloudevents/sdk-go/v2/test"
 	rbacv1 "k8s.io/api/rbac/v1"
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
@@ -37,6 +39,7 @@ const (
 )
 
 func ApiserversourceSendEventWithJWT() *feature.Feature {
+
 	src := feature.MakeRandomK8sName("apiserversource")
 	sink := feature.MakeRandomK8sName("sink")
 	audience := "my-sink-audience"
@@ -44,8 +47,12 @@ func ApiserversourceSendEventWithJWT() *feature.Feature {
 
 	f := feature.NewFeatureNamed("ApiServerSource send events with OIDC authentication")
 
+	// TLS is required for OIDC
+	f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
+	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
+
 	f.Setup("deploy receiver", eventshub.Install(sink,
-		eventshub.StartReceiver,
+		eventshub.StartReceiverTLS,
 		eventshub.OIDCReceiverAudience(audience)))
 
 	f.Setup("Create Service Account for ApiServerSource with RBAC for v1.Event resources",
@@ -63,6 +70,7 @@ func ApiserversourceSendEventWithJWT() *feature.Feature {
 	f.Requirement("install ApiServerSource", func(ctx context.Context, t feature.T) {
 		d := service.AsDestinationRef(sink)
 		d.Audience = &audience
+		d.CACerts = eventshub.GetCaCerts(ctx)
 
 		cfg = append(cfg, apiserversource.WithSink(d))
 		apiserversource.Install(src, cfg...)(ctx, t)
