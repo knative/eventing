@@ -231,17 +231,17 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1.InMemoryChannel)
 	return nil
 }
 
-func (r *Reconciler) getCaCerts() (string, error) {
+func (r *Reconciler) getCaCerts() (*string, error) {
 	// Getting the secret called "imc-dispatcher-tls" from system namespace
 	secret, err := r.secretLister.Secrets(r.systemNamespace).Get(eventingtls.IMCDispatcherServerTLSSecretName)
 	if err != nil {
-		return "", fmt.Errorf("failed to get CA certs from %s/%s: %w", r.systemNamespace, eventingtls.IMCDispatcherServerTLSSecretName, err)
+		return nil, fmt.Errorf("failed to get CA certs from %s/%s: %w", r.systemNamespace, eventingtls.IMCDispatcherServerTLSSecretName, err)
 	}
 	caCerts, ok := secret.Data[caCertsSecretKey]
 	if !ok {
-		return "", fmt.Errorf("failed to get CA certs from %s/%s: missing %s key", r.systemNamespace, eventingtls.IMCDispatcherServerTLSSecretName, caCertsSecretKey)
+		return nil, nil
 	}
-	return string(caCerts), nil
+	return pointer.String(string(caCerts)), nil
 }
 
 func (r *Reconciler) httpAddress(svc *corev1.Service) duckv1.Addressable {
@@ -253,12 +253,12 @@ func (r *Reconciler) httpAddress(svc *corev1.Service) duckv1.Addressable {
 	return httpAddress
 }
 
-func (r *Reconciler) httpsAddress(caCerts string, imc *v1.InMemoryChannel) duckv1.Addressable {
+func (r *Reconciler) httpsAddress(caCerts *string, imc *v1.InMemoryChannel) duckv1.Addressable {
 	// https address uses path-based routing
 	httpsAddress := duckv1.Addressable{
 		Name:    pointer.String("https"),
 		URL:     apis.HTTPS(fmt.Sprintf("%s.%s.svc.%s", dispatcherName, r.systemNamespace, network.GetClusterDomainName())),
-		CACerts: pointer.String(caCerts),
+		CACerts: caCerts,
 	}
 	httpsAddress.URL.Path = fmt.Sprintf("/%s/%s", imc.Namespace, imc.Name)
 	return httpsAddress

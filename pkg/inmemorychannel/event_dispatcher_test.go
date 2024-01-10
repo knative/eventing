@@ -45,6 +45,7 @@ import (
 	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/channel/fanout"
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
+	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/kncloudevents"
 
 	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
@@ -114,7 +115,7 @@ func TestDispatcher_dispatch(t *testing.T) {
 
 	logger, err := zap.NewDevelopment(zap.AddStacktrace(zap.WarnLevel))
 	oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
-	dispatcher := kncloudevents.NewDispatcher(oidcTokenProvider)
+	dispatcher := kncloudevents.NewDispatcher(eventingtls.NewDefaultClientConfig(), oidcTokenProvider)
 	reporter := channel.NewStatsReporter("testcontainer", "testpod")
 	if err != nil {
 		t.Fatal(err)
@@ -269,7 +270,7 @@ func TestDispatcher_dispatch(t *testing.T) {
 	inMemoryDispatcher.WaitReady()
 
 	// Ok now everything should be ready to send the event
-	d := kncloudevents.NewDispatcher(oidcTokenProvider)
+	d := kncloudevents.NewDispatcher(eventingtls.NewDefaultClientConfig(), oidcTokenProvider)
 	dispatchInfo, err := d.SendEvent(context.TODO(), test.FullEvent(), *mustParseUrlToAddressable(t, channelAProxy.URL))
 	if err != nil {
 		t.Fatal(err)

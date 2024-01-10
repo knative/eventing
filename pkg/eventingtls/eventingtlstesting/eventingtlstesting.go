@@ -38,6 +38,11 @@ var (
 	Crt []byte
 )
 
+const (
+	IssuerKind = "ClusterIssuer"
+	IssuerName = "knative-eventing-ca-issuer"
+)
+
 func init() {
 	CA, Key, Crt = loadCerts()
 }

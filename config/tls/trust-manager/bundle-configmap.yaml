@@ -1,6 +1,4 @@
-#!/usr/bin/env bash
-
-# Copyright 2023 The Knative Authors
+# Copyright 2024 The Knative Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,20 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This script builds and installs Knative Eventing components from source for local development.
-
-set -e
-set -o errexit
-set -o nounset
-set -o pipefail
-set -x
-
-export SCALE_CHAOSDUCK_TO_ZERO=1
-export REPLICAS=1
-export KO_FLAGS=${KO_FLAGS:-"--platform="""} # Default to current OS and arch
-
-source "$(dirname "$0")/../test/e2e-common.sh"
-
-knative_setup || exit $?
-
-test_setup || exit $?
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: knative-eventing-bundle
+  namespace: knative-eventing
+  labels:
+    networking.knative.dev/trust-bundle: "true"
+    app.kubernetes.io/version: devel
+    app.kubernetes.io/name: knative-eventing

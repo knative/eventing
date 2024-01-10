@@ -14,10 +14,9 @@
 
 # This is the issuer that every Eventing component should use to issue their server's certs.
 apiVersion: cert-manager.io/v1
-kind: Issuer
+kind: ClusterIssuer
 metadata:
-  name: selfsigned-ca-issuer
-  namespace: knative-eventing
+  name: knative-eventing-ca-issuer
 spec:
   ca:
-    secretName: eventing-ca
+    secretName: knative-eventing-ca

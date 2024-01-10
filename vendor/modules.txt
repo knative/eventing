@@ -1277,6 +1277,8 @@ knative.dev/pkg/client/injection/kube/informers/apps/v1/statefulset
 knative.dev/pkg/client/injection/kube/informers/apps/v1/statefulset/fake
 knative.dev/pkg/client/injection/kube/informers/core/v1/configmap
 knative.dev/pkg/client/injection/kube/informers/core/v1/configmap/fake
+knative.dev/pkg/client/injection/kube/informers/core/v1/configmap/filtered
+knative.dev/pkg/client/injection/kube/informers/core/v1/configmap/filtered/fake
 knative.dev/pkg/client/injection/kube/informers/core/v1/endpoints
 knative.dev/pkg/client/injection/kube/informers/core/v1/endpoints/fake
 knative.dev/pkg/client/injection/kube/informers/core/v1/namespace

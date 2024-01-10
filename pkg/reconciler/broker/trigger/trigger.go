@@ -213,7 +213,7 @@ func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, b *eventingv1
 				Host:   network.GetServiceHostname("broker-filter", system.Namespace()),
 				Path:   path.Generate(t),
 			},
-			CACerts: pointer.String(caCerts),
+			CACerts: caCerts,
 		}
 
 		reply = &duckv1.Destination{
@@ -222,7 +222,7 @@ func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, b *eventingv1
 				Host:   network.GetServiceHostname("broker-filter", system.Namespace()),
 				Path:   path.GenerateReply(t),
 			},
-			CACerts: pointer.String(caCerts),
+			CACerts: caCerts,
 		}
 
 		dls = &duckv1.Destination{
@@ -231,7 +231,7 @@ func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, b *eventingv1
 				Host:   network.GetServiceHostname("broker-filter", system.Namespace()),
 				Path:   path.GenerateDLS(t),
 			},
-			CACerts: pointer.String(caCerts),
+			CACerts: caCerts,
 		}
 	} else {
 		dest = &duckv1.Destination{
@@ -410,14 +410,14 @@ func getBrokerChannelRef(b *eventingv1.Broker) (*corev1.ObjectReference, error) 
 	return nil, errors.New("Broker.Status.Annotations nil or missing values")
 }
 
-func (r *Reconciler) getCaCerts() (string, error) {
+func (r *Reconciler) getCaCerts() (*string, error) {
 	secret, err := r.secretLister.Secrets(system.Namespace()).Get(eventingtls.BrokerFilterServerTLSSecretName)
 	if err != nil {
-		return "", fmt.Errorf("failed to get CA certs from %s/%s: %w", system.Namespace(), eventingtls.BrokerFilterServerTLSSecretName, err)
+		return nil, fmt.Errorf("failed to get CA certs from %s/%s: %w", system.Namespace(), eventingtls.BrokerFilterServerTLSSecretName, err)
 	}
 	caCerts, ok := secret.Data[eventingtls.SecretCACert]
 	if !ok {
-		return "", fmt.Errorf("failed to get CA certs from %s/%s: missing %s key", system.Namespace(), eventingtls.BrokerFilterServerTLSSecretName, eventingtls.SecretCACert)
+		return nil, nil
 	}
-	return string(caCerts), nil
+	return pointer.String(string(caCerts)), nil
 }

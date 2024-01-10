@@ -19,7 +19,12 @@ package apiserversource
 import (
 	"context"
 
+	configmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap/filtered"
+	"knative.dev/pkg/system"
+
 	"knative.dev/eventing/pkg/apis/sources"
+	"knative.dev/eventing/pkg/eventingtls"
+	eventingreconciler "knative.dev/eventing/pkg/reconciler"
 
 	"knative.dev/eventing/pkg/apis/feature"
 
@@ -37,11 +42,12 @@ import (
 	deploymentinformer "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment"
 	"knative.dev/pkg/client/injection/kube/informers/core/v1/namespace"
 
-	apiserversourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1/apiserversource"
-	apiserversourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1/apiserversource"
 	serviceaccountinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount"
 	roleinformer "knative.dev/pkg/client/injection/kube/informers/rbac/v1/role/filtered"
 	rolebindinginformer "knative.dev/pkg/client/injection/kube/informers/rbac/v1/rolebinding/filtered"
+
+	apiserversourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1/apiserversource"
+	apiserversourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1/apiserversource"
 )
 
 // envConfig will be used to extract the required environment variables using
@@ -67,6 +73,8 @@ func NewController(
 	roleInformer := roleinformer.Get(ctx, sources.OIDCTokenRoleLabelSelector)
 	rolebindingInformer := rolebindinginformer.Get(ctx, sources.OIDCTokenRoleLabelSelector)
 
+	trustBundleConfigMapInformer := configmapinformer.Get(ctx, eventingtls.TrustBundleLabelSelector)
+
 	var globalResync func(obj interface{})
 
 	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {
@@ -77,13 +85,14 @@ func NewController(
 	featureStore.WatchConfigs(cmw)
 
 	r := &Reconciler{
-		kubeClientSet:        kubeclient.Get(ctx),
-		ceSource:             GetCfgHost(ctx),
-		configs:              reconcilersource.WatchConfigurations(ctx, component, cmw),
-		namespaceLister:      namespaceInformer.Lister(),
-		serviceAccountLister: serviceaccountInformer.Lister(),
-		roleLister:           roleInformer.Lister(),
-		roleBindingLister:    rolebindingInformer.Lister(),
+		kubeClientSet:              kubeclient.Get(ctx),
+		ceSource:                   GetCfgHost(ctx),
+		configs:                    reconcilersource.WatchConfigurations(ctx, component, cmw),
+		namespaceLister:            namespaceInformer.Lister(),
+		serviceAccountLister:       serviceaccountInformer.Lister(),
+		roleLister:                 roleInformer.Lister(),
+		roleBindingLister:          rolebindingInformer.Lister(),
+		trustBundleConfigMapLister: trustBundleConfigMapInformer.Lister(),
 	}
 
 	env := &envConfig{}
@@ -136,6 +145,11 @@ func NewController(
 	serviceaccountInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.FilterController(&v1.ApiServerSource{}),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
+	})
+
+	trustBundleConfigMapInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: eventingreconciler.FilterWithNamespace(system.Namespace()),
+		Handler:    controller.HandleAll(globalResync),
 	})
 
 	return impl
