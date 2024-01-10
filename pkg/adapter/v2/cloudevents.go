@@ -20,12 +20,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	nethttp "net/http"
 	"net/url"
 	"time"
 
 	"k8s.io/apimachinery/pkg/types"
 	corev1listers "k8s.io/client-go/listers/core/v1"
+	"knative.dev/pkg/network"
 
 	"knative.dev/eventing/pkg/auth"
 
@@ -152,19 +154,19 @@ func NewClient(cfg ClientConfig) (Client, error) {
 		}
 
 		if eventingtls.IsHttpsSink(cfg.Env.GetSink()) {
-			var err error
-
 			clientConfig := eventingtls.NewDefaultClientConfig()
 			clientConfig.CACerts = cfg.Env.GetCACerts()
 			clientConfig.TrustBundleConfigMapLister = cfg.TrustBundleConfigMapLister
 
-			tlsConfig, err := eventingtls.GetTLSClientConfig(clientConfig)
-			if err != nil {
-				return nil, err
-			}
-
 			httpsTransport := transport.Base.(*nethttp.Transport).Clone()
-			httpsTransport.TLSClientConfig = tlsConfig
+
+			httpsTransport.DialTLSContext = func(ctx context.Context, net, addr string) (net.Conn, error) {
+				tlsConfig, err := eventingtls.GetTLSClientConfig(clientConfig)
+				if err != nil {
+					return nil, err
+				}
+				return network.DialTLSWithBackOff(ctx, net, addr, tlsConfig)
+			}
 
 			transport = &ochttp.Transport{
 				Base:        httpsTransport,

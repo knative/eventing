@@ -19,12 +19,14 @@ package kncloudevents
 import (
 	"context"
 	"fmt"
+	"net"
 	nethttp "net/http"
 	"sync"
 	"time"
 
 	"go.opencensus.io/plugin/ochttp"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/network"
 	"knative.dev/pkg/tracing/propagation/tracecontextb3"
 
 	"knative.dev/eventing/pkg/eventingtls"
@@ -89,10 +91,12 @@ func createNewClient(cfg eventingtls.ClientConfig, addressable duckv1.Addressabl
 			TrustBundleConfigMapLister: cfg.TrustBundleConfigMapLister,
 		}
 
-		var err error
-		base.TLSClientConfig, err = eventingtls.GetTLSClientConfig(clientConfig)
-		if err != nil {
-			return nil, err
+		base.DialTLSContext = func(ctx context.Context, net, addr string) (net.Conn, error) {
+			tlsConfig, err := eventingtls.GetTLSClientConfig(clientConfig)
+			if err != nil {
+				return nil, err
+			}
+			return network.DialTLSWithBackOff(ctx, net, addr, tlsConfig)
 		}
 	}
 
