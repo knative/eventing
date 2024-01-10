@@ -89,6 +89,9 @@ func WithSink(dest *duckv1.Destination) manifest.CfgFn {
 			}
 			sref["name"] = ref.Name
 		}
+		if dest.Audience != nil {
+			sink["audience"] = *dest.Audience
+		}
 	}
 }
 

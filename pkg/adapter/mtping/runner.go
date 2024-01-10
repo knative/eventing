@@ -192,9 +192,11 @@ func (a *cronJobsRunner) newPingSourceClient(source *sourcesv1.PingSource) (adap
 	var env adapter.EnvConfig
 	if a.clientConfig.Env != nil {
 		env = adapter.EnvConfig{
-			Namespace:      source.GetNamespace(),
-			Name:           a.clientConfig.Env.GetName(),
-			EnvSinkTimeout: fmt.Sprintf("%d", a.clientConfig.Env.GetSinktimeout()),
+			Namespace:              source.GetNamespace(),
+			Name:                   a.clientConfig.Env.GetName(),
+			EnvSinkTimeout:         fmt.Sprintf("%d", a.clientConfig.Env.GetSinktimeout()),
+			Audience:               source.Status.SinkAudience,
+			OIDCServiceAccountName: source.Status.Auth.ServiceAccountName,
 		}
 	}
 
@@ -214,6 +216,7 @@ func (a *cronJobsRunner) newPingSourceClient(source *sourcesv1.PingSource) (adap
 		Reporter:            a.clientConfig.Reporter,
 		CrStatusEventClient: a.clientConfig.CrStatusEventClient,
 		Options:             a.clientConfig.Options,
+		TokenProvider:       a.clientConfig.TokenProvider,
 	}
 
 	return adapter.NewClient(cfg)

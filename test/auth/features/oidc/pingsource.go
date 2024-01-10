@@ -19,6 +19,7 @@ package oidc
 import (
 	"github.com/cloudevents/sdk-go/v2/test"
 	"knative.dev/eventing/test/rekt/resources/pingsource"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
@@ -35,7 +36,11 @@ func PingSourceSendEventWithSinkRefOIDC() *feature.Feature {
 		eventshub.OIDCReceiverAudience(sinkAudience),
 		eventshub.StartReceiver))
 
-	f.Requirement("install pingsource", pingsource.Install(source, pingsource.WithSink(service.AsDestinationRef(sink))))
+	f.Requirement("install pingsource",
+		pingsource.Install(source, pingsource.WithSink(&duckv1.Destination{
+			Ref:      service.AsKReference(sink),
+			Audience: &sinkAudience,
+		})))
 	f.Requirement("pingsource goes ready", pingsource.IsReady(source))
 
 	f.Stable("pingsource as event source").
