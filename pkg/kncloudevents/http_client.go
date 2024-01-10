@@ -19,14 +19,17 @@ package kncloudevents
 import (
 	"context"
 	"fmt"
+	"net"
 	nethttp "net/http"
 	"sync"
 	"time"
 
 	"go.opencensus.io/plugin/ochttp"
-	"knative.dev/eventing/pkg/eventingtls"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/network"
 	"knative.dev/pkg/tracing/propagation/tracecontextb3"
+
+	"knative.dev/eventing/pkg/eventingtls"
 )
 
 const (
@@ -58,7 +61,7 @@ func init() {
 	go cleanupClientsMap(ctx)
 }
 
-func getClientForAddressable(addressable duckv1.Addressable) (*nethttp.Client, error) {
+func getClientForAddressable(cfg eventingtls.ClientConfig, addressable duckv1.Addressable) (*nethttp.Client, error) {
 	clients.clientsMu.Lock()
 	defer clients.clientsMu.Unlock()
 
@@ -66,7 +69,7 @@ func getClientForAddressable(addressable duckv1.Addressable) (*nethttp.Client, e
 
 	client, ok := clients.clients[clientKey]
 	if !ok {
-		newClient, err := createNewClient(addressable)
+		newClient, err := createNewClient(cfg, addressable)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create new client for addressable: %w", err)
 		}
@@ -79,18 +82,21 @@ func getClientForAddressable(addressable duckv1.Addressable) (*nethttp.Client, e
 	return client, nil
 }
 
-func createNewClient(addressable duckv1.Addressable) (*nethttp.Client, error) {
+func createNewClient(cfg eventingtls.ClientConfig, addressable duckv1.Addressable) (*nethttp.Client, error) {
 	var base = nethttp.DefaultTransport.(*nethttp.Transport).Clone()
 
-	if addressable.CACerts != nil && *addressable.CACerts != "" {
-		var err error
+	if eventingtls.IsHttpsSink(addressable.URL.String()) {
+		clientConfig := eventingtls.ClientConfig{
+			CACerts:                    addressable.CACerts,
+			TrustBundleConfigMapLister: cfg.TrustBundleConfigMapLister,
+		}
 
-		clientConfig := eventingtls.NewDefaultClientConfig()
-		clientConfig.CACerts = addressable.CACerts
-
-		base.TLSClientConfig, err = eventingtls.GetTLSClientConfig(clientConfig)
-		if err != nil {
-			return nil, err
+		base.DialTLSContext = func(ctx context.Context, net, addr string) (net.Conn, error) {
+			tlsConfig, err := eventingtls.GetTLSClientConfig(clientConfig)
+			if err != nil {
+				return nil, err
+			}
+			return network.DialTLSWithBackOff(ctx, net, addr, tlsConfig)
 		}
 	}
 
@@ -106,13 +112,13 @@ func createNewClient(addressable duckv1.Addressable) (*nethttp.Client, error) {
 	return client, nil
 }
 
-func AddOrUpdateAddressableHandler(addressable duckv1.Addressable) {
+func AddOrUpdateAddressableHandler(cfg eventingtls.ClientConfig, addressable duckv1.Addressable) {
 	clients.clientsMu.Lock()
 	defer clients.clientsMu.Unlock()
 
 	clientKey := addressable.URL.String()
 
-	client, err := createNewClient(addressable)
+	client, err := createNewClient(cfg, addressable)
 	if err != nil {
 		fmt.Printf("failed to create new client: %v", err)
 		return

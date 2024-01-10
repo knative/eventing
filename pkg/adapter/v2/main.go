@@ -26,12 +26,15 @@ import (
 	"sync"
 	"time"
 
-	"knative.dev/eventing/pkg/auth"
-
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/kelseyhightower/envconfig"
 	"go.uber.org/zap"
+	"k8s.io/client-go/informers"
+	corev1listers "k8s.io/client-go/listers/core/v1"
 	"knative.dev/pkg/tracing"
+
+	"knative.dev/eventing/pkg/auth"
+	"knative.dev/eventing/pkg/eventingtls"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -216,11 +219,43 @@ func MainWithInformers(ctx context.Context, component string, env EnvConfigAcces
 		logger.Errorw("Error building statsreporter", zap.Error(err))
 	}
 
+	var trustBundleConfigMapLister corev1listers.ConfigMapNamespaceLister
+	if IsConfigWatcherEnabled(ctx) {
+
+		logger.Info("ConfigMap watcher is enabled")
+
+		// Manually create a ConfigMap informer for the env.GetNamespace() namespace to have it
+		// optionally created when needed.
+		infFactory := informers.NewSharedInformerFactoryWithOptions(
+			kubeclient.Get(ctx),
+			controller.GetResyncPeriod(ctx),
+			informers.WithNamespace(env.GetNamespace()),
+			informers.WithTweakListOptions(func(options *metav1.ListOptions) {
+				options.LabelSelector = eventingtls.TrustBundleLabelSelector
+			}),
+		)
+
+		go func() {
+			<-ctx.Done()
+			infFactory.Shutdown()
+		}()
+
+		inf := infFactory.Core().V1().ConfigMaps()
+
+		_ = inf.Informer() // Actually create informer
+
+		trustBundleConfigMapLister = inf.Lister().ConfigMaps(env.GetNamespace())
+
+		infFactory.Start(ctx.Done())
+		_ = infFactory.WaitForCacheSync(ctx.Done())
+	}
+
 	clientConfig := ClientConfig{
-		Env:                 env,
-		Reporter:            reporter,
-		CrStatusEventClient: crStatusEventClient,
-		TokenProvider:       auth.NewOIDCTokenProvider(ctx),
+		Env:                        env,
+		Reporter:                   reporter,
+		CrStatusEventClient:        crStatusEventClient,
+		TokenProvider:              auth.NewOIDCTokenProvider(ctx),
+		TrustBundleConfigMapLister: trustBundleConfigMapLister,
 	}
 	ctx = withClientConfig(ctx, clientConfig)
 

@@ -95,6 +95,7 @@ func (s *PingSourceStatus) MarkSink(uri *duckv1.Addressable) {
 	if uri != nil {
 		s.SinkURI = uri.URL
 		s.SinkCACerts = uri.CACerts
+		s.SinkAudience = uri.Audience
 		PingSourceCondSet.Manage(s).MarkTrue(PingSourceConditionSinkProvided)
 	} else {
 		PingSourceCondSet.Manage(s).MarkFalse(PingSourceConditionSinkProvided, "SinkEmpty", "Sink has resolved to empty.")

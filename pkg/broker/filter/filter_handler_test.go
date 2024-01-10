@@ -37,15 +37,17 @@ import (
 	"go.uber.org/zap/zaptest"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"knative.dev/pkg/apis"
+	configmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap/fake"
+	"knative.dev/pkg/logging"
+	reconcilertesting "knative.dev/pkg/reconciler/testing"
+
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/broker"
 	"knative.dev/eventing/pkg/eventfilter/subscriptionsapi"
-	"knative.dev/pkg/apis"
-	"knative.dev/pkg/logging"
-	reconcilertesting "knative.dev/pkg/reconciler/testing"
 
 	brokerinformerfake "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/broker/fake"
 	triggerinformerfake "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/trigger/fake"
@@ -468,6 +470,7 @@ func TestReceiver(t *testing.T) {
 				triggerinformerfake.Get(ctx),
 				brokerinformerfake.Get(ctx),
 				reporter,
+				configmapinformer.Get(ctx).Lister().ConfigMaps("ns"),
 				func(ctx context.Context) context.Context {
 					return ctx
 				},
@@ -666,6 +669,7 @@ func TestReceiver_WithSubscriptionsAPI(t *testing.T) {
 				triggerinformerfake.Get(ctx),
 				brokerinformerfake.Get(ctx),
 				reporter,
+				configmapinformer.Get(ctx).Lister().ConfigMaps("ns"),
 				func(ctx context.Context) context.Context {
 					return feature.ToContext(context.TODO(), feature.Flags{
 						feature.NewTriggerFilters: feature.Enabled,

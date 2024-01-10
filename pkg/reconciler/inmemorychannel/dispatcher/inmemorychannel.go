@@ -20,13 +20,12 @@ import (
 	"context"
 	"fmt"
 
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
-
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"go.uber.org/zap"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	"knative.dev/pkg/apis/duck"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -45,6 +44,7 @@ import (
 	messagingv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/messaging/v1"
 	reconcilerv1 "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/inmemorychannel"
 	"knative.dev/eventing/pkg/client/listers/eventing/v1beta2"
+	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/eventtype"
 	"knative.dev/eventing/pkg/kncloudevents"
 )
@@ -59,6 +59,8 @@ type Reconciler struct {
 	featureStore             *feature.Store
 	eventDispatcher          *kncloudevents.Dispatcher
 	tokenVerifier            *auth.OIDCTokenVerifier
+
+	clientConfig eventingtls.ClientConfig
 }
 
 // Check the interfaces Reconciler should implement
@@ -180,7 +182,9 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1.InMemoryChannel) rec
 		}
 	}
 
-	handleSubscribers(imc.Spec.Subscribers, kncloudevents.AddOrUpdateAddressableHandler)
+	handleSubscribers(imc.Spec.Subscribers, func(addressable duckv1.Addressable) {
+		kncloudevents.AddOrUpdateAddressableHandler(r.clientConfig, addressable)
+	})
 
 	return nil
 }

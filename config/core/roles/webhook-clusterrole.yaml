@@ -26,6 +26,9 @@ rules:
     resources:
       - "configmaps"
     verbs:
+      - "create"
+      - "update"
+      - "delete"
       - "get"
       - "list"
       - "watch"

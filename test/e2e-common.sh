@@ -388,8 +388,11 @@ function wait_for_file() {
 }
 
 function install_cert_manager() {
-  kubectl apply -f third_party/cert-manager/01-cert-manager.crds.yaml
-  kubectl apply -f third_party/cert-manager/02-cert-manager.yaml
+  kubectl apply -f third_party/cert-manager/00-namespace.yaml
 
+  timeout 600 bash -c 'until kubectl apply -f third_party/cert-manager/01-cert-manager.yaml; do sleep 5; done'
+  wait_until_pods_running "$CERT_MANAGER_NAMESPACE" || fail_test "Failed to install cert manager"
+
+  timeout 600 bash -c 'until kubectl apply -f third_party/cert-manager/02-trust-manager.yaml; do sleep 5; done'
   wait_until_pods_running "$CERT_MANAGER_NAMESPACE" || fail_test "Failed to install cert manager"
 }

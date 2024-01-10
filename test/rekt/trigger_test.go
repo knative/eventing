@@ -82,6 +82,8 @@ func TestTriggerDependencyAnnotation(t *testing.T) {
 }
 
 func TestTriggerTLSSubscriber(t *testing.T) {
+	t.Parallel()
+
 	ctx, env := global.Environment(
 		knative.WithKnativeNamespace(system.Namespace()),
 		knative.WithLoggingConfig,
@@ -91,5 +93,6 @@ func TestTriggerTLSSubscriber(t *testing.T) {
 		eventshub.WithTLS(t),
 	)
 
-	env.Test(ctx, t, trigger.TriggerWithTLSSubscriber())
+	env.ParallelTest(ctx, t, trigger.TriggerWithTLSSubscriber())
+	env.ParallelTest(ctx, t, trigger.TriggerWithTLSSubscriberTrustBundle())
 }
