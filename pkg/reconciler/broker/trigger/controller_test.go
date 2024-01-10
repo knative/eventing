@@ -68,8 +68,8 @@ func SetUpInformerSelector(ctx context.Context) context.Context {
 }
 
 func TestFilterTriggers(t *testing.T) {
-	ctx, _ := SetupFakeContext(t)
-
+	ctx, _ := SetupFakeContext(t, SetUpInformerSelector)
+	
 	tt := []struct {
 		name    string
 		trigger interface{}
