@@ -229,7 +229,7 @@ func (r *BaseReconciler) IsFinalizing(ctx context.Context, fb kmeta.Accessor) bo
 // form of this BaseReconciler's GVR's stringified GroupResource.
 func (r *BaseReconciler) EnsureFinalizer(ctx context.Context, fb kmeta.Accessor) error {
 	// If it has the finalizer, then we're done.
-	finalizers := sets.NewString(fb.GetFinalizers()...)
+	finalizers := sets.New[string](fb.GetFinalizers()...)
 	if finalizers.Has(r.GVR.GroupResource().String()) {
 		return nil
 	}
