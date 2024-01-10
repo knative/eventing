@@ -224,7 +224,7 @@ To run a single rekt test using the `e2e-debug.sh` script, follow these instruct
 
 3. The script will wait for Knative Eventing components to come up and then execute the specified test. If any failures occur during the test, relevant error messages will be displayed in the terminal.
 
-   **Important:** Make sure to provide a valid test name and test directory, or the script will fail.
+   **Important:** Make sure to provide a valid test name and test directory. The `<test_name>` parameter technically accepts a regex pattern, but in most cases, you can use the name of the test you want to run. If you wish, you can explore advanced use cases with regex patterns for more granular test selection.
 
 ## Iterating
 
