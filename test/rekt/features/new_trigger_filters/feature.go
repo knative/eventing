@@ -422,7 +422,7 @@ func FiltersOverrideAttributeFilterFeature(installBroker InstallBrokerFunc) *fea
 	eventContexts := []CloudEventsContext{
 		// This event matches the filters in subscriptionAPI and does not match filter attribute.
 		{
-			eventType:     "subscriptionAPI.filters.override.event.type",
+			eventType:     "subscriptionapi.filters.override.event.type",
 			shouldDeliver: true,
 		},
 		// This event matches the filter attribute and does not match filters in subscriptionAPI.
@@ -435,7 +435,7 @@ func FiltersOverrideAttributeFilterFeature(installBroker InstallBrokerFunc) *fea
 	filters := []eventingv1.SubscriptionsAPIFilter{
 		{
 			Exact: map[string]string{
-				"type": "subscriptionAPI.filters.override.event.type",
+				"type": "subscriptionapi.filters.override.event.type",
 			},
 		},
 	}
