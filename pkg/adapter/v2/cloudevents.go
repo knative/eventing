@@ -20,12 +20,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-
 	nethttp "net/http"
 	"net/url"
 	"time"
 
 	"k8s.io/apimachinery/pkg/types"
+	corev1listers "k8s.io/client-go/listers/core/v1"
+
 	"knative.dev/eventing/pkg/auth"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
@@ -115,6 +116,8 @@ type ClientConfig struct {
 	CrStatusEventClient *crstatusevent.CRStatusEventClient
 	Options             []http.Option
 	TokenProvider       *auth.OIDCTokenProvider
+
+	TrustBundleConfigMapLister corev1listers.ConfigMapNamespaceLister
 }
 
 type clientConfigKey struct{}
@@ -153,6 +156,7 @@ func NewClient(cfg ClientConfig) (Client, error) {
 
 			clientConfig := eventingtls.NewDefaultClientConfig()
 			clientConfig.CACerts = cfg.Env.GetCACerts()
+			clientConfig.TrustBundleConfigMapLister = cfg.TrustBundleConfigMapLister
 
 			tlsConfig, err := eventingtls.GetTLSClientConfig(clientConfig)
 			if err != nil {

@@ -29,11 +29,13 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/pointer"
-	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
-	"knative.dev/eventing/pkg/auth"
-	"knative.dev/eventing/pkg/kncloudevents"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/injection"
+
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	"knative.dev/eventing/pkg/auth"
+	"knative.dev/eventing/pkg/eventingtls"
+	"knative.dev/eventing/pkg/kncloudevents"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"
@@ -45,9 +47,10 @@ import (
 	"go.uber.org/zap"
 	"knative.dev/pkg/apis"
 
-	"knative.dev/eventing/pkg/channel"
 	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 	_ "knative.dev/pkg/system/testing"
+
+	"knative.dev/eventing/pkg/channel"
 )
 
 // Domains used in subscriptions, which will be replaced by the real domains of the started HTTP
@@ -372,7 +375,7 @@ func testFanoutEventHandler(t *testing.T, async bool, receiverFunc channel.Event
 	}
 
 	oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
-	dispatcher := kncloudevents.NewDispatcher(oidcTokenProvider)
+	dispatcher := kncloudevents.NewDispatcher(eventingtls.NewDefaultClientConfig(), oidcTokenProvider)
 
 	calledChan := make(chan bool, 1)
 	recvOptionFunc := func(*channel.EventReceiver) error {

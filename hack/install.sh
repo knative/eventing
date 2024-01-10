@@ -20,6 +20,7 @@ set -e
 set -o errexit
 set -o nounset
 set -o pipefail
+set -x
 
 export SCALE_CHAOSDUCK_TO_ZERO=1
 export REPLICAS=1

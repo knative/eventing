@@ -45,12 +45,14 @@ import (
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
+	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
+	_ "knative.dev/pkg/system/testing"
+
 	"knative.dev/eventing/pkg/auth"
+	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/eventingtls/eventingtlstesting"
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/utils"
-	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
-	_ "knative.dev/pkg/system/testing"
 )
 
 var (
@@ -789,7 +791,7 @@ func TestSendEvent(t *testing.T) {
 			ctx = injection.WithConfig(ctx, &rest.Config{})
 
 			oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
-			dispatcher := kncloudevents.NewDispatcher(oidcTokenProvider)
+			dispatcher := kncloudevents.NewDispatcher(eventingtls.NewDefaultClientConfig(), oidcTokenProvider)
 			destHandler := &fakeHandler{
 				t:        t,
 				response: tc.fakeResponse,
@@ -935,7 +937,7 @@ func TestDispatchMessageToTLSEndpoint(t *testing.T) {
 		time.Sleep(500 * time.Millisecond)
 	}()
 	oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
-	dispatcher := kncloudevents.NewDispatcher(oidcTokenProvider)
+	dispatcher := kncloudevents.NewDispatcher(eventingtls.NewDefaultClientConfig(), oidcTokenProvider)
 	eventToSend := test.FullEvent()
 
 	// destination
@@ -983,7 +985,7 @@ func TestDispatchMessageToTLSEndpointWithReply(t *testing.T) {
 		time.Sleep(500 * time.Millisecond)
 	}()
 	oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
-	dispatcher := kncloudevents.NewDispatcher(oidcTokenProvider)
+	dispatcher := kncloudevents.NewDispatcher(eventingtls.NewDefaultClientConfig(), oidcTokenProvider)
 
 	eventToSend := test.FullEvent()
 	eventToReply := test.FullEvent()
@@ -1048,7 +1050,7 @@ func TestDispatchMessageToTLSEndpointWithDeadLetterSink(t *testing.T) {
 		time.Sleep(500 * time.Millisecond)
 	}()
 	oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
-	dispatcher := kncloudevents.NewDispatcher(oidcTokenProvider)
+	dispatcher := kncloudevents.NewDispatcher(eventingtls.NewDefaultClientConfig(), oidcTokenProvider)
 	eventToSend := test.FullEvent()
 
 	// destination

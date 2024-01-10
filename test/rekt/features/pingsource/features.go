@@ -21,17 +21,21 @@ import (
 
 	"github.com/cloudevents/sdk-go/v2/test"
 	"k8s.io/apimachinery/pkg/util/sets"
-	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
-	"knative.dev/eventing/test/rekt/resources/addressable"
-	"knative.dev/eventing/test/rekt/resources/broker"
-	"knative.dev/eventing/test/rekt/resources/eventtype"
-	"knative.dev/eventing/test/rekt/resources/trigger"
+	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/network"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
 	"knative.dev/reconciler-test/pkg/resources/service"
+
+	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
+	"knative.dev/eventing/pkg/eventingtls/eventingtlstesting"
+	"knative.dev/eventing/test/rekt/resources/addressable"
+	"knative.dev/eventing/test/rekt/resources/broker"
+	"knative.dev/eventing/test/rekt/resources/eventtype"
+	"knative.dev/eventing/test/rekt/resources/trigger"
 
 	"knative.dev/reconciler-test/pkg/eventshub/assert"
 	eventassert "knative.dev/reconciler-test/pkg/eventshub/assert"
@@ -89,6 +93,41 @@ func SendsEventsTLS() *feature.Feature {
 			AtLeast(1)).
 		Must("Set sinkURI to HTTPS endpoint", source.ExpectHTTPSSink(pingsource.Gvr(), src)).
 		Must("Set sinkCACerts to non empty CA certs", source.ExpectCACerts(pingsource.Gvr(), src))
+
+	return f
+}
+
+func SendsEventsTLSTrustBundle() *feature.Feature {
+	src := feature.MakeRandomK8sName("pingsource")
+	sink := feature.MakeRandomK8sName("sink")
+	f := feature.NewFeature()
+
+	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
+
+	f.Setup("install sink", eventshub.Install(sink,
+		eventshub.IssuerRef(eventingtlstesting.IssuerKind, eventingtlstesting.IssuerName),
+		eventshub.StartReceiverTLS,
+	))
+
+	f.Requirement("install pingsource", func(ctx context.Context, t feature.T) {
+		d := &duckv1.Destination{
+			URI: &apis.URL{
+				Scheme: "https", // Force using https
+				Host:   network.GetServiceHostname(sink, environment.FromContext(ctx).Namespace()),
+			},
+			CACerts: nil, // CA certs are in the trust-bundle
+		}
+
+		pingsource.Install(src, pingsource.WithSink(d))(ctx, t)
+	})
+	f.Requirement("pingsource goes ready", pingsource.IsReady(src))
+
+	f.Stable("pingsource as event source").
+		Must("delivers events", assert.OnStore(sink).
+			Match(eventassert.MatchKind(eventshub.EventReceived)).
+			MatchEvent(test.HasType("dev.knative.sources.ping")).
+			AtLeast(1)).
+		Must("Set sinkURI to HTTPS endpoint", source.ExpectHTTPSSink(pingsource.Gvr(), src))
 
 	return f
 }
