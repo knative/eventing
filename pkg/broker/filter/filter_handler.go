@@ -34,12 +34,14 @@ import (
 	"go.opencensus.io/trace"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
+	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/logging"
 
 	"knative.dev/eventing/pkg/apis"
 	"knative.dev/eventing/pkg/auth"
+	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/utils"
 
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
@@ -85,13 +87,17 @@ type Handler struct {
 }
 
 // NewHandler creates a new Handler and its associated EventReceiver.
-func NewHandler(logger *zap.Logger, tokenVerifier *auth.OIDCTokenVerifier, oidcTokenProvider *auth.OIDCTokenProvider, triggerInformer v1.TriggerInformer, brokerInformer v1.BrokerInformer, reporter StatsReporter, wc func(ctx context.Context) context.Context) (*Handler, error) {
+func NewHandler(logger *zap.Logger, tokenVerifier *auth.OIDCTokenVerifier, oidcTokenProvider *auth.OIDCTokenProvider, triggerInformer v1.TriggerInformer, brokerInformer v1.BrokerInformer, reporter StatsReporter, trustBundleConfigMapLister corev1listers.ConfigMapNamespaceLister, wc func(ctx context.Context) context.Context) (*Handler, error) {
 	kncloudevents.ConfigureConnectionArgs(&kncloudevents.ConnectionArgs{
 		MaxIdleConns:        defaultMaxIdleConnections,
 		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
 	})
 
 	fm := subscriptionsapi.NewFiltersMap()
+
+	clientConfig := eventingtls.ClientConfig{
+		TrustBundleConfigMapLister: trustBundleConfigMapLister,
+	}
 
 	triggerInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
@@ -101,7 +107,7 @@ func NewHandler(logger *zap.Logger, tokenVerifier *auth.OIDCTokenVerifier, oidcT
 			}
 			logger.Debug("Adding filter to filtersMap")
 			fm.Set(trigger, createSubscriptionsAPIFilters(logger, trigger))
-			kncloudevents.AddOrUpdateAddressableHandler(duckv1.Addressable{
+			kncloudevents.AddOrUpdateAddressableHandler(clientConfig, duckv1.Addressable{
 				URL:     trigger.Status.SubscriberURI,
 				CACerts: trigger.Status.SubscriberCACerts,
 			})
@@ -113,7 +119,7 @@ func NewHandler(logger *zap.Logger, tokenVerifier *auth.OIDCTokenVerifier, oidcT
 			}
 			logger.Debug("Updating filter in filtersMap")
 			fm.Set(trigger, createSubscriptionsAPIFilters(logger, trigger))
-			kncloudevents.AddOrUpdateAddressableHandler(duckv1.Addressable{
+			kncloudevents.AddOrUpdateAddressableHandler(clientConfig, duckv1.Addressable{
 				URL:     trigger.Status.SubscriberURI,
 				CACerts: trigger.Status.SubscriberCACerts,
 			})
@@ -134,7 +140,7 @@ func NewHandler(logger *zap.Logger, tokenVerifier *auth.OIDCTokenVerifier, oidcT
 
 	return &Handler{
 		reporter:        reporter,
-		eventDispatcher: kncloudevents.NewDispatcher(oidcTokenProvider),
+		eventDispatcher: kncloudevents.NewDispatcher(clientConfig, oidcTokenProvider),
 		triggerLister:   triggerInformer.Lister(),
 		brokerLister:    brokerInformer.Lister(),
 		logger:          logger,

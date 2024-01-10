@@ -1,0 +1,43 @@
+# Copyright 2024 The Knative Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: trust.cert-manager.io/v1alpha1
+kind: Bundle
+metadata:
+  name: knative-eventing-bundle  # The bundle name will also be used for the target
+spec:
+  sources:
+    # Include a bundle of publicly trusted certificates which can be
+    # used to validate most TLS certificates on the internet, such as
+    # those issued by Let's Encrypt, Google, Amazon and others.
+    - useDefaultCAs: true
+
+    # A Secret in the "trust" namespace; see "Trust Namespace" below for further details
+    - secret:
+        name: "knative-eventing-ca"
+        key: "tls.crt"
+
+  target:
+
+    configMap:
+      key: "knative-eventing-bundle.pem"
+    additionalFormats:
+      jks:
+        key: "knative-eventing-bundle.jks"
+      pkcs12:
+        key: "knative-eventing-bundle.p12"
+
+    namespaceSelector:
+      matchLabels:
+        kubernetes.io/metadata.name: "knative-eventing"

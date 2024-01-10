@@ -36,14 +36,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	clientgotesting "k8s.io/client-go/testing"
+
 	"knative.dev/eventing/pkg/apis/feature"
 
-	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
-	"knative.dev/eventing/pkg/auth"
-	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
-	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1/apiserversource"
-	"knative.dev/eventing/pkg/reconciler/apiserversource/resources"
-	reconcilersource "knative.dev/eventing/pkg/reconciler/source"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
@@ -56,9 +51,17 @@ import (
 	"knative.dev/pkg/resolver"
 	"knative.dev/pkg/tracker"
 
+	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
+	"knative.dev/eventing/pkg/auth"
+	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
+	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1/apiserversource"
+	"knative.dev/eventing/pkg/reconciler/apiserversource/resources"
+	reconcilersource "knative.dev/eventing/pkg/reconciler/source"
+
+	. "knative.dev/pkg/reconciler/testing"
+
 	rttesting "knative.dev/eventing/pkg/reconciler/testing"
 	rttestingv1 "knative.dev/eventing/pkg/reconciler/testing/v1"
-	. "knative.dev/pkg/reconciler/testing"
 
 	_ "knative.dev/pkg/client/injection/kube/informers/rbac/v1/role/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/rbac/v1/rolebinding/fake"
@@ -1091,15 +1094,16 @@ func TestReconcile(t *testing.T) {
 	table.Test(t, rttestingv1.MakeFactory(func(ctx context.Context, listers *rttestingv1.Listers, cmw configmap.Watcher) controller.Reconciler {
 		ctx = addressable.WithDuck(ctx)
 		r := &Reconciler{
-			kubeClientSet:        fakekubeclient.Get(ctx),
-			ceSource:             source,
-			receiveAdapterImage:  image,
-			sinkResolver:         resolver.NewURIResolverFromTracker(ctx, tracker.New(func(types.NamespacedName) {}, 0)),
-			configs:              &reconcilersource.EmptyVarsGenerator{},
-			namespaceLister:      listers.GetNamespaceLister(),
-			serviceAccountLister: listers.GetServiceAccountLister(),
-			roleBindingLister:    listers.GetRoleBindingLister(),
-			roleLister:           listers.GetRoleLister(),
+			kubeClientSet:              fakekubeclient.Get(ctx),
+			ceSource:                   source,
+			receiveAdapterImage:        image,
+			sinkResolver:               resolver.NewURIResolverFromTracker(ctx, tracker.New(func(types.NamespacedName) {}, 0)),
+			configs:                    &reconcilersource.EmptyVarsGenerator{},
+			namespaceLister:            listers.GetNamespaceLister(),
+			serviceAccountLister:       listers.GetServiceAccountLister(),
+			roleBindingLister:          listers.GetRoleBindingLister(),
+			roleLister:                 listers.GetRoleLister(),
+			trustBundleConfigMapLister: listers.GetConfigMapLister(),
 		}
 		return apiserversource.NewReconciler(ctx, logger,
 			fakeeventingclient.Get(ctx), listers.GetApiServerSourceLister(),

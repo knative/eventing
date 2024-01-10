@@ -58,6 +58,24 @@ func TestPingSourceValidation(t *testing.T) {
 			want: nil,
 		},
 		{
+			name: "valid spec with schedule every 5 seconds",
+			source: PingSource{
+				Spec: PingSourceSpec{
+					Schedule: "0/5 * * * * *",
+					SourceSpec: duckv1.SourceSpec{
+						Sink: duckv1.Destination{
+							Ref: &duckv1.KReference{
+								APIVersion: "v1",
+								Kind:       "broker",
+								Name:       "default",
+							},
+						},
+					},
+				},
+			},
+			want: nil,
+		},
+		{
 			name: "valid spec with schedule including seconds",
 			source: PingSource{
 				Spec: PingSourceSpec{

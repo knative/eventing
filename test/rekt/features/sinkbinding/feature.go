@@ -22,8 +22,9 @@ import (
 	"github.com/cloudevents/sdk-go/v2/test"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
-	"knative.dev/eventing/test/rekt/resources/addressable"
-	"knative.dev/eventing/test/rekt/resources/broker"
+	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/network"
 	"knative.dev/pkg/tracker"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/eventshub"
@@ -34,7 +35,11 @@ import (
 	"knative.dev/reconciler-test/pkg/resources/deployment"
 	"knative.dev/reconciler-test/pkg/resources/service"
 
+	"knative.dev/eventing/pkg/eventingtls/eventingtlstesting"
 	"knative.dev/eventing/test/rekt/features/featureflags"
+	"knative.dev/eventing/test/rekt/features/source"
+	"knative.dev/eventing/test/rekt/resources/addressable"
+	"knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/eventing/test/rekt/resources/sinkbinding"
 )
 
@@ -211,7 +216,63 @@ func SinkBindingV1DeploymentTLS(ctx context.Context) *feature.Feature {
 				Match(eventasssert.MatchKind(eventshub.EventReceived)).
 				MatchEvent(test.HasExtension("sinkbinding", extensionSecret)).
 				AtLeast(1),
-		)
+		).
+		Must("Set sinkURI to HTTPS endpoint", source.ExpectHTTPSSink(sinkbinding.Gvr(), sbinding)).
+		Must("Set sinkCACerts to non empty CA certs", source.ExpectCACerts(sinkbinding.Gvr(), sbinding))
+
+	return f
+}
+
+func SinkBindingV1DeploymentTLSTrustBundle(ctx context.Context) *feature.Feature {
+	sbinding := feature.MakeRandomK8sName("sinkbinding")
+	sink := feature.MakeRandomK8sName("sink")
+	subject := feature.MakeRandomK8sName("subject")
+	extensionSecret := string(uuid.NewUUID())
+
+	f := feature.NewFeatureNamed("SinkBinding V1 Deployment test - trust bundle")
+
+	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
+
+	env := environment.FromContext(ctx)
+	f.Setup("install sink", eventshub.Install(sink,
+		eventshub.IssuerRef(eventingtlstesting.IssuerKind, eventingtlstesting.IssuerName),
+		eventshub.StartReceiverTLS,
+	))
+	f.Setup("install a deployment", deployment.Install(subject, heartbeatsImage,
+		deployment.WithEnvs(map[string]string{
+			"POD_NAME":      "heartbeats",
+			"POD_NAMESPACE": env.Namespace(),
+		}),
+	))
+
+	extensions := map[string]string{
+		"sinkbinding": extensionSecret,
+	}
+
+	cfg := []manifest.CfgFn{
+		sinkbinding.WithExtensions(extensions),
+	}
+
+	f.Requirement("install SinkBinding", func(ctx context.Context, t feature.T) {
+		d := &duckv1.Destination{
+			URI: &apis.URL{
+				Scheme: "https", // Force using https
+				Host:   network.GetServiceHostname(sink, environment.FromContext(ctx).Namespace()),
+			},
+			CACerts: nil, // CA certs are in the trust-bundle
+		}
+		sinkbinding.Install(sbinding, d, deployment.AsTrackerReference(subject), cfg...)(ctx, t)
+	})
+	f.Requirement("SinkBinding goes ready", sinkbinding.IsReady(sbinding))
+
+	f.Stable("Create a deployment as sinkbinding's subject").
+		Must("delivers events",
+			eventasssert.OnStore(sink).
+				Match(eventasssert.MatchKind(eventshub.EventReceived)).
+				MatchEvent(test.HasExtension("sinkbinding", extensionSecret)).
+				AtLeast(1),
+		).
+		Must("Set sinkURI to HTTPS endpoint", source.ExpectHTTPSSink(sinkbinding.Gvr(), sbinding))
 
 	return f
 }

@@ -36,6 +36,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
+	corev1listers "k8s.io/client-go/listers/core/v1"
 
 	clientv1 "k8s.io/client-go/listers/core/v1"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -49,6 +50,7 @@ import (
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/eventing/pkg/auth"
 	apiserversourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1/apiserversource"
+	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/reconciler/apiserversource/resources"
 	reconcilersource "knative.dev/eventing/pkg/reconciler/source"
 )
@@ -78,9 +80,10 @@ type Reconciler struct {
 	configs         reconcilersource.ConfigAccessor
 	namespaceLister clientv1.NamespaceLister
 
-	serviceAccountLister clientv1.ServiceAccountLister
-	roleLister           rbacv1listers.RoleLister
-	roleBindingLister    rbacv1listers.RoleBindingLister
+	serviceAccountLister       clientv1.ServiceAccountLister
+	roleLister                 rbacv1listers.RoleLister
+	roleBindingLister          rbacv1listers.RoleBindingLister
+	trustBundleConfigMapLister corev1listers.ConfigMapLister
 }
 
 var _ apiserversourcereconciler.Interface = (*Reconciler)(nil)
@@ -147,6 +150,10 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1.ApiServerSour
 	err = r.runAccessCheck(ctx, source, namespaces)
 	if err != nil {
 		logging.FromContext(ctx).Errorw("Not enough permission", zap.Error(err))
+		return err
+	}
+
+	if err := r.propagateTrustBundles(ctx, source); err != nil {
 		return err
 	}
 
@@ -234,6 +241,12 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1.ApiServer
 	if err != nil {
 		return nil, err
 	}
+
+	podTemplate, err := eventingtls.AddTrustBundleVolumes(r.trustBundleConfigMapLister, src, &expected.Spec.Template.Spec)
+	if err != nil {
+		return nil, fmt.Errorf("failed to add trust bundle volumes: %w", err)
+	}
+	expected.Spec.Template.Spec = *podTemplate
 
 	ra, err := r.kubeClientSet.AppsV1().Deployments(src.Namespace).Get(ctx, expected.Name, metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
@@ -444,4 +457,13 @@ func (r *Reconciler) createOIDCRoleBinding(ctx context.Context, source *v1.ApiSe
 	}
 
 	return nil
+}
+
+func (r *Reconciler) propagateTrustBundles(ctx context.Context, source *v1.ApiServerSource) error {
+	gvk := schema.GroupVersionKind{
+		Group:   v1.SchemeGroupVersion.Group,
+		Version: v1.SchemeGroupVersion.Version,
+		Kind:    "ApiServerSource",
+	}
+	return eventingtls.PropagateTrustBundles(ctx, r.kubeClientSet, r.trustBundleConfigMapLister, gvk, source)
 }

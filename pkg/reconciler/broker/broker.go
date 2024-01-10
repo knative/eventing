@@ -423,16 +423,16 @@ func TriggerChannelLabels(brokerName string) map[string]string {
 	}
 }
 
-func (r *Reconciler) getCaCerts() (string, error) {
+func (r *Reconciler) getCaCerts() (*string, error) {
 	secret, err := r.secretLister.Secrets(system.Namespace()).Get(ingressServerTLSSecretName)
 	if err != nil {
-		return "", fmt.Errorf("failed to get CA certs from %s/%s: %w", system.Namespace(), ingressServerTLSSecretName, err)
+		return nil, fmt.Errorf("failed to get CA certs from %s/%s: %w", system.Namespace(), ingressServerTLSSecretName, err)
 	}
 	caCerts, ok := secret.Data[caCertsSecretKey]
 	if !ok {
-		return "", fmt.Errorf("failed to get CA certs from %s/%s: missing %s key", system.Namespace(), ingressServerTLSSecretName, caCertsSecretKey)
+		return nil, nil
 	}
-	return string(caCerts), nil
+	return pointer.String(string(caCerts)), nil
 }
 
 func (r *Reconciler) httpAddress(b *eventingv1.Broker) pkgduckv1.Addressable {
@@ -445,12 +445,12 @@ func (r *Reconciler) httpAddress(b *eventingv1.Broker) pkgduckv1.Addressable {
 	return httpAddress
 }
 
-func (r *Reconciler) httpsAddress(caCerts string, b *eventingv1.Broker) pkgduckv1.Addressable {
+func (r *Reconciler) httpsAddress(caCerts *string, b *eventingv1.Broker) pkgduckv1.Addressable {
 	// https address uses path-based routing
 	httpsAddress := pkgduckv1.Addressable{
 		Name:    pointer.String("https"),
 		URL:     apis.HTTPS(fmt.Sprintf("%s.%s.svc.%s", names.BrokerIngressName, system.Namespace(), network.GetClusterDomainName())),
-		CACerts: pointer.String(caCerts),
+		CACerts: caCerts,
 	}
 	httpsAddress.URL.Path = fmt.Sprintf("/%s/%s", b.Namespace, b.Name)
 	return httpsAddress

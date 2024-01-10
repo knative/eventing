@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"time"
 
-	"knative.dev/eventing/pkg/auth"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/resolver"
 
@@ -35,22 +35,27 @@ import (
 	"k8s.io/client-go/kubernetes"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/utils/pointer"
-	"knative.dev/eventing/pkg/apis/feature"
-	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/tracker"
 	"knative.dev/pkg/webhook/psbinding"
+
+	"knative.dev/eventing/pkg/auth"
+	"knative.dev/eventing/pkg/eventingtls"
+
+	"knative.dev/eventing/pkg/apis/feature"
+	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 )
 
 type SinkBindingSubResourcesReconciler struct {
-	res                  *resolver.URIResolver
-	tracker              tracker.Interface
-	serviceAccountLister corev1listers.ServiceAccountLister
-	secretLister         corev1listers.SecretLister
-	kubeclient           kubernetes.Interface
-	featureStore         *feature.Store
-	tokenProvider        *auth.OIDCTokenProvider
+	res                        *resolver.URIResolver
+	tracker                    tracker.Interface
+	serviceAccountLister       corev1listers.ServiceAccountLister
+	secretLister               corev1listers.SecretLister
+	kubeclient                 kubernetes.Interface
+	featureStore               *feature.Store
+	tokenProvider              *auth.OIDCTokenProvider
+	trustBundleConfigMapLister corev1listers.ConfigMapLister
 }
 
 func (s *SinkBindingSubResourcesReconciler) Reconcile(ctx context.Context, b psbinding.Bindable) error {
@@ -61,6 +66,12 @@ func (s *SinkBindingSubResourcesReconciler) Reconcile(ctx context.Context, b psb
 		sb.Status.MarkBindingUnavailable("NoResolver", "No Resolver associated with context for sink")
 		return err
 	}
+
+	if err := s.propagateTrustBundles(ctx, sb); err != nil {
+		sb.Status.MarkBindingUnavailable("TrustBundlePropagation", err.Error())
+		return err
+	}
+
 	if sb.Spec.Sink.Ref != nil {
 		s.tracker.TrackReference(tracker.Reference{
 			APIVersion: sb.Spec.Sink.Ref.APIVersion,
@@ -217,4 +228,13 @@ func (s *SinkBindingSubResourcesReconciler) removeOIDCTokenSecretEventually(ctx 
 	}
 
 	return s.kubeclient.CoreV1().Secrets(sb.Namespace).Delete(ctx, *sb.Status.OIDCTokenSecretName, metav1.DeleteOptions{})
+}
+
+func (s *SinkBindingSubResourcesReconciler) propagateTrustBundles(ctx context.Context, sb *v1.SinkBinding) error {
+	gvk := schema.GroupVersionKind{
+		Group:   v1.SchemeGroupVersion.Group,
+		Version: v1.SchemeGroupVersion.Version,
+		Kind:    "SinkBinding",
+	}
+	return eventingtls.PropagateTrustBundles(ctx, s.kubeclient, s.trustBundleConfigMapLister, gvk, sb)
 }
