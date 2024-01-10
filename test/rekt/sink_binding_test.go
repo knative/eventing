@@ -58,7 +58,8 @@ func TestSinkBindingV1DeploymentTLS(t *testing.T) {
 		eventshub.WithTLS(t),
 	)
 
-	env.Test(ctx, t, sinkbinding.SinkBindingV1DeploymentTLS(ctx))
+	env.ParallelTest(ctx, t, sinkbinding.SinkBindingV1DeploymentTLS(ctx))
+	env.ParallelTest(ctx, t, sinkbinding.SinkBindingV1DeploymentTLSTrustBundle(ctx))
 }
 
 func TestSinkBindingV1Deployment_BrokerAsSinkTLS(t *testing.T) {

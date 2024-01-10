@@ -24,6 +24,8 @@ import (
 	"go.opencensus.io/plugin/ochttp"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+
+	"knative.dev/eventing/pkg/eventingtls"
 )
 
 var (
@@ -54,25 +56,22 @@ O2dgzikq8iSy1BlRsVw=
 
 func Test_getClientForAddressable(t *testing.T) {
 	tests := []struct {
-		name                string
-		url                 string
-		caCert              *string
-		wantTLSRootCAConfig bool
-		wantErr             bool
+		name    string
+		url     string
+		caCert  *string
+		wantErr bool
 	}{
 		{
-			name:                "Target with no CA certs",
-			url:                 "http://foo.bar",
-			caCert:              nil,
-			wantTLSRootCAConfig: false,
-			wantErr:             false,
+			name:    "Target with no CA certs",
+			url:     "http://foo.bar",
+			caCert:  nil,
+			wantErr: false,
 		},
 		{
-			name:                "Target with CA certs",
-			url:                 "https://foo.bar",
-			caCert:              &testCaCerts,
-			wantTLSRootCAConfig: true,
-			wantErr:             false,
+			name:    "Target with CA certs",
+			url:     "https://foo.bar",
+			caCert:  &testCaCerts,
+			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
@@ -83,15 +82,9 @@ func Test_getClientForAddressable(t *testing.T) {
 				URL:     url,
 				CACerts: tt.caCert,
 			}
-			got, err := getClientForAddressable(addressable)
+			_, err = getClientForAddressable(eventingtls.NewDefaultClientConfig(), addressable)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("getClientForAddressable() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-
-			clientTransport := castToTransport(got)
-			if tt.wantTLSRootCAConfig != (clientTransport.TLSClientConfig.RootCAs != nil) {
-				t.Errorf("wantTLSRootCAConfig = %v, but client has TLS client RootCAs config = %v", tt.wantTLSRootCAConfig, clientTransport.TLSClientConfig.RootCAs != nil)
 				return
 			}
 		})
@@ -108,7 +101,7 @@ func Test_ConfigureConnectionArgs(t *testing.T) {
 		MaxIdleConnsPerHost: 1000,
 		MaxIdleConns:        1000,
 	})
-	client1, err := getClientForAddressable(target)
+	client1, err := getClientForAddressable(eventingtls.NewDefaultClientConfig(), target)
 	require.Nil(t, err)
 
 	require.Equal(t, 1000, castToTransport(client1).MaxIdleConns)
@@ -119,7 +112,7 @@ func Test_ConfigureConnectionArgs(t *testing.T) {
 		MaxIdleConnsPerHost: 2000,
 		MaxIdleConns:        2000,
 	})
-	client2, err := getClientForAddressable(target)
+	client2, err := getClientForAddressable(eventingtls.NewDefaultClientConfig(), target)
 	require.Nil(t, err)
 
 	require.Equal(t, 2000, castToTransport(client2).MaxIdleConns)
@@ -130,13 +123,13 @@ func Test_ConfigureConnectionArgs(t *testing.T) {
 		MaxIdleConnsPerHost: 2000,
 		MaxIdleConns:        2000,
 	})
-	client2_2, err := getClientForAddressable(target)
+	client2_2, err := getClientForAddressable(eventingtls.NewDefaultClientConfig(), target)
 	require.Nil(t, err)
 	require.Same(t, client2_2, client2)
 
 	// Set back to nil
 	ConfigureConnectionArgs(nil)
-	client3, err := getClientForAddressable(target)
+	client3, err := getClientForAddressable(eventingtls.NewDefaultClientConfig(), target)
 	require.Nil(t, err)
 
 	require.Equal(t, nethttp.DefaultTransport.(*nethttp.Transport).MaxIdleConns, castToTransport(client3).MaxIdleConns)
