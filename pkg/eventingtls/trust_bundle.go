@@ -148,10 +148,7 @@ func AddTrustBundleVolumes(trustBundleLister corev1listers.ConfigMapLister, obj 
 
 	pt = pt.DeepCopy()
 	for _, cm := range cms {
-		volumeName := fmt.Sprintf("%s%s", TrustBundleVolumeNamePrefix, cm.Name)
-		if len(volumeName) > 63 { // 63 is the maximum name length (there isn't a constant for it)
-			volumeName = kmeta.ChildName(TrustBundleVolumeNamePrefix, cm.Name)
-		}
+		volumeName := kmeta.ChildName(TrustBundleVolumeNamePrefix, cm.Name)
 		pt.Volumes = append(pt.Volumes, corev1.Volume{
 			Name: volumeName,
 			VolumeSource: corev1.VolumeSource{
