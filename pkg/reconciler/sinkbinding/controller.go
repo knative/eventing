@@ -20,6 +20,7 @@ import (
 	"context"
 	"time"
 
+	corev1listers "k8s.io/client-go/listers/core/v1"
 	"knative.dev/pkg/system"
 
 	"knative.dev/eventing/pkg/auth"
@@ -82,6 +83,7 @@ func NewController(
 	serviceaccountInformer := serviceaccountinformer.Get(ctx)
 	secretInformer := secretinformer.Get(ctx)
 	trustBundleConfigMapInformer := configmapinformer.Get(ctx, eventingtls.TrustBundleLabelSelector)
+	trustBundleConfigMapLister := configmapinformer.Get(ctx, eventingtls.TrustBundleLabelSelector).Lister()
 
 	var globalResync func()
 	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {
@@ -116,9 +118,6 @@ func NewController(
 		DynamicClient:   dc,
 		Recorder:        createRecorder(ctx, controllerAgentName),
 		NamespaceLister: namespaceInformer.Lister(),
-		WithContext: func(ctx context.Context, bindable psbinding.Bindable) (context.Context, error) {
-			return v1.WithTrustBundleConfigMapLister(ctx, trustBundleConfigMapInformer.Lister()), nil
-		},
 	}
 	impl := controller.NewContext(ctx, c, controller.ControllerOptions{
 		WorkQueueName: "SinkBindings",
@@ -145,7 +144,7 @@ func NewController(
 	}
 
 	c.WithContext = func(ctx context.Context, b psbinding.Bindable) (context.Context, error) {
-		return v1.WithURIResolver(ctx, sbResolver), nil
+		return v1.WithTrustBundleConfigMapLister(v1.WithURIResolver(ctx, sbResolver), trustBundleConfigMapLister), nil
 	}
 	c.Tracker = impl.Tracker
 	c.Factory = &duck.CachedInformerFactory{
@@ -209,11 +208,11 @@ func ListAll(ctx context.Context, handler cache.ResourceEventHandler) psbinding.
 
 }
 
-func WithContextFactory(ctx context.Context, handler func(types.NamespacedName)) psbinding.BindableContext {
+func WithContextFactory(ctx context.Context, lister corev1listers.ConfigMapLister, handler func(types.NamespacedName)) psbinding.BindableContext {
 	r := resolver.NewURIResolverFromTracker(ctx, tracker.New(handler, controller.GetTrackerLease(ctx)))
 
 	return func(ctx context.Context, b psbinding.Bindable) (context.Context, error) {
-		return v1.WithURIResolver(ctx, r), nil
+		return v1.WithTrustBundleConfigMapLister(v1.WithURIResolver(ctx, r), lister), nil
 	}
 }
 

@@ -23,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
+	configmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap/filtered"
 
 	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/eventing/pkg/eventingtls"
@@ -197,7 +198,8 @@ func NewConfigValidationController(ctx context.Context, _ configmap.Watcher) *co
 
 func NewSinkBindingWebhook(opts ...psbinding.ReconcilerOption) injection.ControllerConstructor {
 	return func(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
-		withContext := sinkbinding.WithContextFactory(ctx, func(types.NamespacedName) {})
+		trustBundleConfigMapLister := configmapinformer.Get(ctx, eventingtls.TrustBundleLabelSelector).Lister()
+		withContext := sinkbinding.WithContextFactory(ctx, trustBundleConfigMapLister, func(types.NamespacedName) {})
 
 		return psbinding.NewAdmissionController(ctx,
 
