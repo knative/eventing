@@ -121,7 +121,7 @@ func BrokerSendEventWithOIDCTokenToDLS() *feature.Feature {
 			delivery.WithDeadLetterSinkFromDestination(&duckv1.Destination{
 				Ref:      service.AsKReference(dls),
 				Audience: &dlsAudience,
-				//CACerts: eventshub.GetCaCerts(ctx),
+				CACerts:  eventshub.GetCaCerts(ctx),
 			}))
 		broker.Install(brokerName, brokerConfig...)(ctx, t)
 	})

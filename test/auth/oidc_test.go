@@ -43,7 +43,7 @@ import (
 	"knative.dev/eventing/test/rekt/resources/sequence"
 )
 
-func TestBrokerSupportsOIDCUnderTLS(t *testing.T) {
+func TestBrokerSupportsOIDC(t *testing.T) {
 	t.Parallel()
 
 	ctx, env := global.Environment(
@@ -62,7 +62,7 @@ func TestBrokerSupportsOIDCUnderTLS(t *testing.T) {
 	env.TestSet(ctx, t, oidc.AddressableOIDCConformance(broker.GVR(), "Broker", name, env.Namespace()))
 }
 
-func TestBrokerSendsEventsWithOIDCSupportUnderTLS(t *testing.T) {
+func TestBrokerSendsEventsWithOIDCSupport(t *testing.T) {
 	t.Parallel()
 
 	ctx, env := global.Environment(
