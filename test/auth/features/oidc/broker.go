@@ -135,11 +135,11 @@ func BrokerSendEventWithOIDCTokenToDLS() *feature.Feature {
 
 	f.Setup("install the trigger and specify the CA cert of the destination", func(ctx context.Context, t feature.T) {
 		// create an empty destination ref
-		d := service.AsDestinationRef("")
+		d := duckv1.Destination{}
 		d.CACerts = eventshub.GetCaCerts(ctx)
 		// uri is an addressable, create a new one and put the bad	uri in it
 		d.URI, _ = apis.ParseURL("bad://uri")
-		trigger.Install(triggerName, brokerName, trigger.WithSubscriberFromDestination(d))(ctx, t)
+		trigger.Install(triggerName, brokerName, trigger.WithSubscriberFromDestination(&d))(ctx, t)
 
 	})
 
