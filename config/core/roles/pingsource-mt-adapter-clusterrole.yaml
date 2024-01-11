@@ -33,13 +33,7 @@ rules:
     resources:
       - "serviceaccounts/token"
     verbs:
-      - "get"
-      - "list"
       - "create"
-      - "update"
-      - "delete"
-      - "patch"
-      - "watch"
   - apiGroups:
       - sources.knative.dev
     resources:

@@ -191,13 +191,23 @@ func makeEvent(source *sourcesv1.PingSource) (cloudevents.Event, error) {
 func (a *cronJobsRunner) newPingSourceClient(source *sourcesv1.PingSource) (adapter.Client, error) {
 	var env adapter.EnvConfig
 	if a.clientConfig.Env != nil {
-		env = adapter.EnvConfig{
-			Namespace:              source.GetNamespace(),
-			Name:                   a.clientConfig.Env.GetName(),
-			EnvSinkTimeout:         fmt.Sprintf("%d", a.clientConfig.Env.GetSinktimeout()),
-			Audience:               source.Status.SinkAudience,
-			OIDCServiceAccountName: source.Status.Auth.ServiceAccountName,
+		if source.Status.Auth != nil {
+			env = adapter.EnvConfig{
+				Namespace:              source.GetNamespace(),
+				Name:                   a.clientConfig.Env.GetName(),
+				EnvSinkTimeout:         fmt.Sprintf("%d", a.clientConfig.Env.GetSinktimeout()),
+				Audience:               source.Status.SinkAudience,
+				OIDCServiceAccountName: source.Status.Auth.ServiceAccountName,
+			}
+		} else {
+			env = adapter.EnvConfig{
+				Namespace:      source.GetNamespace(),
+				Name:           a.clientConfig.Env.GetName(),
+				EnvSinkTimeout: fmt.Sprintf("%d", a.clientConfig.Env.GetSinktimeout()),
+				Audience:       source.Status.SinkAudience,
+			}
 		}
+
 	}
 
 	env.Sink = source.Status.SinkURI.String()
