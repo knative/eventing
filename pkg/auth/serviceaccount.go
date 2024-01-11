@@ -108,7 +108,7 @@ func DeleteOIDCServiceAccountIfExists(ctx context.Context, serviceAccountLister 
 	sa, err := serviceAccountLister.ServiceAccounts(objectMeta.Namespace).Get(saName)
 
 	// Service Account Found
-	if sa != nil {
+	if !apierrs.IsNotFound(err) {
 		logging.FromContext(ctx).Debugw("OIDC Service account already exists. Deleting OIDC service account")
 
 		err = kubeclient.CoreV1().ServiceAccounts(objectMeta.Namespace).Delete(ctx, sa.Name, metav1.DeleteOptions{})

@@ -221,22 +221,21 @@ func TestDeleteOIDCServiceAccountIfExists(t *testing.T) {
 		UID:       "my-uuid",
 	}
 
-	eventtypes := make([]runtime.Object, 0, 10)
-	listers := rttestingv1.NewListers(eventtypes)
-
-	err := EnsureOIDCServiceAccountExistsForResource(ctx, listers.GetServiceAccountLister(), kubeclient.Get(ctx), gvk, objectMeta)
+	expected := GetOIDCServiceAccountForResource(gvk, objectMeta)
+	serviceAccount, err := kubeclient.Get(ctx).CoreV1().ServiceAccounts(objectMeta.Namespace).Create(ctx, expected, metav1.CreateOptions{})
 	if err != nil {
-		t.Errorf("EnsureOIDCServiceAccountExistsForResource failed: %s", err)
+		t.Errorf("could not create OIDC service account %s/%s for %s: %s", objectMeta.Name, objectMeta.Namespace, gvk.Kind, err)
 	}
+
+	listers := rttestingv1.NewListers([]runtime.Object{serviceAccount})
 
 	err = DeleteOIDCServiceAccountIfExists(ctx, listers.GetServiceAccountLister(), kubeclient.Get(ctx), gvk, objectMeta)
 	if err != nil {
 		t.Errorf("DeleteOIDCServiceAccountIfExists failed: %s", err)
 	}
-	expected := GetOIDCServiceAccountForResource(gvk, objectMeta)
 
 	sa, err := kubeclient.Get(ctx).CoreV1().ServiceAccounts(objectMeta.Namespace).Get(context.TODO(), expected.Name, metav1.GetOptions{})
-	if sa != nil {
-		t.Errorf("DeleteOIDCServiceAccountIfExists delete ServiceAccounts  failed: %s \n %+v \n %+v", err, sa.ObjectMeta, expected)
+	if sa != nil || err == nil {
+		t.Errorf("DeleteOIDCServiceAccountIfExists failed to delete the serviceAccount: %+v", sa)
 	}
 }
