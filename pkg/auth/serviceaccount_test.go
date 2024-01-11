@@ -211,3 +211,32 @@ func TestSetupOIDCServiceAccount(t *testing.T) {
 		t.Errorf("SetupOIDCServiceAccount didn't set TriggerConditionOIDCIdentityCreated Status")
 	}
 }
+
+func TestDeleteOIDCServiceAccountIfExists(t *testing.T) {
+	ctx, _ := rectesting.SetupFakeContext(t)
+	gvk := eventingv1.SchemeGroupVersion.WithKind("Broker")
+	objectMeta := metav1.ObjectMeta{
+		Name:      "my-broker-unique",
+		Namespace: "my-namespace",
+		UID:       "my-uuid",
+	}
+
+	eventtypes := make([]runtime.Object, 0, 10)
+	listers := rttestingv1.NewListers(eventtypes)
+
+	err := EnsureOIDCServiceAccountExistsForResource(ctx, listers.GetServiceAccountLister(), kubeclient.Get(ctx), gvk, objectMeta)
+	if err != nil {
+		t.Errorf("EnsureOIDCServiceAccountExistsForResource failed: %s", err)
+	}
+
+	err = DeleteOIDCServiceAccountIfExists(ctx, listers.GetServiceAccountLister(), kubeclient.Get(ctx), gvk, objectMeta)
+	if err != nil {
+		t.Errorf("DeleteOIDCServiceAccountIfExists failed: %s", err)
+	}
+	expected := GetOIDCServiceAccountForResource(gvk, objectMeta)
+
+	sa, err := kubeclient.Get(ctx).CoreV1().ServiceAccounts(objectMeta.Namespace).Get(context.TODO(), expected.Name, metav1.GetOptions{})
+	if sa != nil {
+		t.Errorf("DeleteOIDCServiceAccountIfExists delete ServiceAccounts  failed: %s \n %+v \n %+v", err, sa.ObjectMeta, expected)
+	}
+}
