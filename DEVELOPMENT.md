@@ -198,6 +198,34 @@ to explicitly enable it.
 ko apply -f test/config/sugar.yaml
 ```
 
+## Running a Single Rekt Test with e2e-debug.sh
+
+To run a single rekt test using the `e2e-debug.sh` script, follow these instructions:
+
+1. Navigate to the project root directory.
+
+2. Execute the following command in your terminal:
+
+    ```bash
+    ./hack/e2e-debug.sh <test_name> <test_dir>
+    ```
+
+    Replace `<test_name>` with the name of the rekt test you want to run, and `<test_dir>` with the directory containing the test file.
+
+    **Example:**
+
+    ```bash
+    ./hack/e2e-debug.sh TestMyRektScenario test/rekt/scenarios
+    ```
+
+    This will run the specified rekt test (`TestMyRektScenario` in this case) from the provided directory (`test/rekt/scenarios`).
+
+    **Note:** Ensure that you have the necessary dependencies and configurations set up before running the test.
+
+3. The script will wait for Knative Eventing components to come up and then execute the specified test. If any failures occur during the test, relevant error messages will be displayed in the terminal.
+
+   **Important:** Make sure to provide a valid test name and test directory. The `<test_name>` parameter technically accepts a regex pattern, but in most cases, you can use the name of the test you want to run. If you wish, you can explore advanced use cases with regex patterns for more granular test selection.
+
 ## Iterating
 
 As you make changes to the code-base, there are two special cases to be aware
