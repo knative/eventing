@@ -12,7 +12,14 @@ function update_cert_manager() {
   mkdir -p third_party/cert-manager
 
   helm repo add jetstack https://charts.jetstack.io --force-update
-  kubectl create namespace --dry-run=client cert-manager -oyaml > third_party/cert-manager/00-namespace.yaml
+
+  cat > third_party/cert-manager/00-namespace.yaml <<EOF
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cert-manager
+EOF
+
   helm template -n cert-manager cert-manager jetstack/cert-manager --create-namespace --version "${cert_manager_version}" --set installCRDs=true > third_party/cert-manager/01-cert-manager.yaml
   helm template -n cert-manager cert-manager jetstack/trust-manager --create-namespace --version "${trust_manager_version}" --set installCRDs=true > third_party/cert-manager/02-trust-manager.yaml
 }
