@@ -109,7 +109,8 @@ func TestApiServerSourceDataPlaneTLS(t *testing.T) {
 		eventshub.WithTLS(t),
 	)
 
-	env.Test(ctx, t, apiserversourcefeatures.SendsEventsWithTLS())
+	env.ParallelTest(ctx, t, apiserversourcefeatures.SendsEventsWithTLS())
+	env.ParallelTest(ctx, t, apiserversourcefeatures.SendsEventsWithTLSTrustBundle())
 }
 
 func TestApiServerSourceDataPlane_EventModes(t *testing.T) {

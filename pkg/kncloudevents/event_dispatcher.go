@@ -41,6 +41,7 @@ import (
 
 	eventingapis "knative.dev/eventing/pkg/apis"
 	"knative.dev/eventing/pkg/auth"
+	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/utils"
 
 	"knative.dev/eventing/pkg/broker"
@@ -125,10 +126,12 @@ type senderConfig struct {
 
 type Dispatcher struct {
 	oidcTokenProvider *auth.OIDCTokenProvider
+	clientConfig      eventingtls.ClientConfig
 }
 
-func NewDispatcher(oidcTokenProvider *auth.OIDCTokenProvider) *Dispatcher {
+func NewDispatcher(clientConfig eventingtls.ClientConfig, oidcTokenProvider *auth.OIDCTokenProvider) *Dispatcher {
 	return &Dispatcher{
+		clientConfig:      clientConfig,
 		oidcTokenProvider: oidcTokenProvider,
 	}
 }
@@ -276,7 +279,7 @@ func (d *Dispatcher) executeRequest(ctx context.Context, target duckv1.Addressab
 		return ctx, nil, &dispatchInfo, fmt.Errorf("failed to create request: %w", err)
 	}
 
-	client, err := newClient(target)
+	client, err := newClient(d.clientConfig, target)
 	if err != nil {
 		return ctx, nil, &dispatchInfo, fmt.Errorf("failed to create http client: %w", err)
 	}
@@ -361,8 +364,8 @@ type client struct {
 	http.Client
 }
 
-func newClient(target duckv1.Addressable) (*client, error) {
-	c, err := getClientForAddressable(target)
+func newClient(cfg eventingtls.ClientConfig, target duckv1.Addressable) (*client, error) {
+	c, err := getClientForAddressable(cfg, target)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get http client for addressable: %w", err)
 	}

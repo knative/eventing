@@ -37,6 +37,7 @@ import (
 	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/channel/fanout"
+	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/kncloudevents"
 
 	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
@@ -81,7 +82,7 @@ func TestNewEventHandlerWithConfig(t *testing.T) {
 			logger := zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller()))
 			oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
 
-			dispatcher := kncloudevents.NewDispatcher(oidcTokenProvider)
+			dispatcher := kncloudevents.NewDispatcher(eventingtls.NewDefaultClientConfig(), oidcTokenProvider)
 			_, err := NewEventHandlerWithConfig(
 				context.TODO(),
 				logger,
@@ -113,7 +114,7 @@ func TestNewEventHandler(t *testing.T) {
 	logger := zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller()))
 
 	oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
-	dispatcher := kncloudevents.NewDispatcher(oidcTokenProvider)
+	dispatcher := kncloudevents.NewDispatcher(eventingtls.NewDefaultClientConfig(), oidcTokenProvider)
 
 	handler := NewEventHandler(context.TODO(), logger)
 	h := handler.GetChannelHandler(handlerName)
@@ -338,7 +339,7 @@ func TestServeHTTPEventHandler(t *testing.T) {
 			logger := zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller()))
 			reporter := channel.NewStatsReporter("testcontainer", "testpod")
 			oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
-			dispatcher := kncloudevents.NewDispatcher(oidcTokenProvider)
+			dispatcher := kncloudevents.NewDispatcher(eventingtls.NewDefaultClientConfig(), oidcTokenProvider)
 			h, err := NewEventHandlerWithConfig(context.TODO(), logger, tc.config, reporter, dispatcher, tc.recvOptions...)
 			if err != nil {
 				t.Fatalf("Unexpected NewHandler error: '%v'", err)

@@ -29,21 +29,23 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgotesting "k8s.io/client-go/testing"
-	"knative.dev/eventing/pkg/auth"
-	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/pkg/apis"
 	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 	"knative.dev/pkg/logging"
 
-	"knative.dev/eventing/pkg/apis/feature"
-	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
-	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1/containersource"
-	"knative.dev/eventing/pkg/reconciler/containersource/resources"
+	"knative.dev/eventing/pkg/auth"
+	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
+
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
 	_ "knative.dev/pkg/client/injection/ducks/duck/v1/addressable/fake"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
+
+	"knative.dev/eventing/pkg/apis/feature"
+	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
+	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1/containersource"
+	"knative.dev/eventing/pkg/reconciler/containersource/resources"
 
 	logtesting "knative.dev/pkg/logging/testing"
 	. "knative.dev/pkg/reconciler/testing"
@@ -317,12 +319,13 @@ func TestAllCases(t *testing.T) {
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		ctx = addressable.WithDuck(ctx)
 		r := &Reconciler{
-			kubeClientSet:         fakekubeclient.Get(ctx),
-			eventingClientSet:     fakeeventingclient.Get(ctx),
-			containerSourceLister: listers.GetContainerSourceLister(),
-			deploymentLister:      listers.GetDeploymentLister(),
-			sinkBindingLister:     listers.GetSinkBindingLister(),
-			serviceAccountLister:  listers.GetServiceAccountLister(),
+			kubeClientSet:              fakekubeclient.Get(ctx),
+			eventingClientSet:          fakeeventingclient.Get(ctx),
+			containerSourceLister:      listers.GetContainerSourceLister(),
+			deploymentLister:           listers.GetDeploymentLister(),
+			sinkBindingLister:          listers.GetSinkBindingLister(),
+			serviceAccountLister:       listers.GetServiceAccountLister(),
+			trustBundleConfigMapLister: listers.GetConfigMapLister(),
 		}
 		return containersource.NewReconciler(ctx, logging.FromContext(ctx), fakeeventingclient.Get(ctx), listers.GetContainerSourceLister(), controller.GetEventRecorder(ctx), r)
 	},

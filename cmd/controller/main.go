@@ -26,10 +26,12 @@ import (
 	"os"
 	"time"
 
+	"knative.dev/pkg/injection/sharedmain"
+
 	"knative.dev/eventing/pkg/apis/sources"
+	"knative.dev/eventing/pkg/eventingtls"
 
 	filteredFactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
-	"knative.dev/pkg/injection/sharedmain"
 	"knative.dev/pkg/signals"
 
 	"knative.dev/eventing/pkg/reconciler/apiserversource"
@@ -76,7 +78,10 @@ func main() {
 		}
 	}()
 
-	ctx = filteredFactory.WithSelectors(ctx, sources.OIDCTokenRoleLabelSelector)
+	ctx = filteredFactory.WithSelectors(ctx,
+		sources.OIDCTokenRoleLabelSelector,
+		eventingtls.TrustBundleLabelSelector,
+	)
 
 	sharedmain.MainWithContext(ctx, "controller",
 		// Messaging

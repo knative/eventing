@@ -211,12 +211,13 @@ func (a *cronJobsRunner) newPingSourceClient(source *sourcesv1.PingSource) (adap
 	)
 
 	cfg := adapter.ClientConfig{
-		Env:                 &env,
-		CeOverrides:         source.Spec.CloudEventOverrides,
-		Reporter:            a.clientConfig.Reporter,
-		CrStatusEventClient: a.clientConfig.CrStatusEventClient,
-		Options:             a.clientConfig.Options,
-		TokenProvider:       a.clientConfig.TokenProvider,
+		Env:                        &env,
+		CeOverrides:                source.Spec.CloudEventOverrides,
+		Reporter:                   a.clientConfig.Reporter,
+		CrStatusEventClient:        a.clientConfig.CrStatusEventClient,
+		Options:                    a.clientConfig.Options,
+		TrustBundleConfigMapLister: a.clientConfig.TrustBundleConfigMapLister,
+    TokenProvider:              a.clientConfig.TokenProvider,
 	}
 
 	return adapter.NewClient(cfg)
