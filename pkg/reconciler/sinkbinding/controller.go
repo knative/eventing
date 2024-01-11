@@ -20,6 +20,8 @@ import (
 	"context"
 	"time"
 
+	"knative.dev/eventing/pkg/apis/sources"
+
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"knative.dev/pkg/system"
 
@@ -44,7 +46,7 @@ import (
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	configmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap/filtered"
 	secretinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/secret"
-	serviceaccountinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount"
+	serviceaccountinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount/filtered"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/injection/clients/dynamicclient"
@@ -80,7 +82,7 @@ func NewController(
 	dc := dynamicclient.Get(ctx)
 	psInformerFactory := podspecable.Get(ctx)
 	namespaceInformer := namespace.Get(ctx)
-	serviceaccountInformer := serviceaccountinformer.Get(ctx)
+	serviceaccountInformer := serviceaccountinformer.Get(ctx, sources.OIDCTokenRoleLabelSelector)
 	secretInformer := secretinformer.Get(ctx)
 	trustBundleConfigMapInformer := configmapinformer.Get(ctx, eventingtls.TrustBundleLabelSelector)
 	trustBundleConfigMapLister := configmapinformer.Get(ctx, eventingtls.TrustBundleLabelSelector).Lister()
