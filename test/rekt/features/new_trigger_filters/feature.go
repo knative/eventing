@@ -44,7 +44,15 @@ type CloudEventsContext struct {
 // broker implementations for testing.
 func NewFiltersFeatureSet(installBroker InstallBrokerFunc) *feature.FeatureSet {
 	features := SingleDialectFilterFeatures(installBroker)
-	features = append(features, AllFilterFeature(installBroker), AnyFilterFeature(installBroker), MultipleTriggersAndSinksFeature(installBroker), MissingAttributesFeature(installBroker))
+	features = append(
+		features,
+		AllFilterFeature(installBroker),
+		AnyFilterFeature(installBroker),
+		MultipleTriggersAndSinksFeature(installBroker),
+		MissingAttributesFeature(installBroker),
+		FilterAttributeWithEmptyFiltersFeature(installBroker),
+		FiltersOverrideAttributeFilterFeature(installBroker),
+	)
 	return &feature.FeatureSet{
 		Name:     "New Trigger Filters",
 		Features: features,
@@ -117,7 +125,7 @@ func SingleDialectFilterFeatures(installBroker InstallBrokerFunc) []*feature.Fea
 
 	for name, fs := range tests {
 		f := feature.NewFeatureNamed(name)
-		createNewFiltersFeature(f, eventContexts, fs.filters, installBroker)
+		createNewFiltersFeature(f, eventContexts, fs.filters, eventingv1.TriggerFilter{}, installBroker)
 		features = append(features, f)
 	}
 
@@ -184,7 +192,7 @@ func AnyFilterFeature(installBroker InstallBrokerFunc) *feature.Feature {
 		},
 	}
 
-	createNewFiltersFeature(f, eventContexts, filters, installBroker)
+	createNewFiltersFeature(f, eventContexts, filters, eventingv1.TriggerFilter{}, installBroker)
 
 	return f
 }
@@ -240,7 +248,7 @@ func AllFilterFeature(installBroker InstallBrokerFunc) *feature.Feature {
 		},
 	}
 
-	createNewFiltersFeature(f, eventContexts, filters, installBroker)
+	createNewFiltersFeature(f, eventContexts, filters, eventingv1.TriggerFilter{}, installBroker)
 
 	return f
 }
@@ -326,8 +334,8 @@ func MultipleTriggersAndSinksFeature(installBroker InstallBrokerFunc) *feature.F
 		return brokerName
 	}
 
-	createNewFiltersFeature(f, eventContextsFirstSink, filtersFirstTrigger, fakeInstallBroker)
-	createNewFiltersFeature(f, eventContextsSecondSink, filtersSecondTrigger, fakeInstallBroker)
+	createNewFiltersFeature(f, eventContextsFirstSink, filtersFirstTrigger, eventingv1.TriggerFilter{}, fakeInstallBroker)
+	createNewFiltersFeature(f, eventContextsSecondSink, filtersSecondTrigger, eventingv1.TriggerFilter{}, fakeInstallBroker)
 
 	return f
 }
@@ -374,7 +382,71 @@ func MissingAttributesFeature(installBroker InstallBrokerFunc) *feature.Feature 
 		},
 	}
 
-	createNewFiltersFeature(f, eventContexts, filters, installBroker)
+	createNewFiltersFeature(f, eventContexts, filters, eventingv1.TriggerFilter{}, installBroker)
+
+	return f
+}
+
+// Empty SubscriptionAPI Filters do not override Filter Attributes
+func FilterAttributeWithEmptyFiltersFeature(installBroker InstallBrokerFunc) *feature.Feature {
+	f := feature.NewFeature()
+
+	eventContexts := []CloudEventsContext{
+		// This event matches the filter attribute
+		{
+			eventType:     "filter.attribute.event.type",
+			shouldDeliver: true,
+		},
+		// This event matches no filter attribute
+		{
+			eventType:     "some.other.type",
+			shouldDeliver: false,
+		},
+	}
+
+	filter := eventingv1.TriggerFilter{
+		Attributes: map[string]string{
+			"type": "filter.attribute.event.type",
+		},
+	}
+
+	createNewFiltersFeature(f, eventContexts, []eventingv1.SubscriptionsAPIFilter{}, filter, installBroker)
+
+	return f
+}
+
+// SubscriptionAPI filters override filter attributes
+func FiltersOverrideAttributeFilterFeature(installBroker InstallBrokerFunc) *feature.Feature {
+	f := feature.NewFeature()
+
+	eventContexts := []CloudEventsContext{
+		// This event matches the filters in subscriptionAPI and does not match filter attribute.
+		{
+			eventType:     "subscriptionapi.filters.override.event.type",
+			shouldDeliver: true,
+		},
+		// This event matches the filter attribute and does not match filters in subscriptionAPI.
+		{
+			eventType:     "filter.check.event.type",
+			shouldDeliver: false,
+		},
+	}
+
+	filters := []eventingv1.SubscriptionsAPIFilter{
+		{
+			Exact: map[string]string{
+				"type": "subscriptionapi.filters.override.event.type",
+			},
+		},
+	}
+
+	filter := eventingv1.TriggerFilter{
+		Attributes: map[string]string{
+			"type": "filter.check.event.type",
+		},
+	}
+
+	createNewFiltersFeature(f, eventContexts, filters, filter, installBroker)
 
 	return f
 }
