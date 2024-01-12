@@ -40,6 +40,7 @@ import (
 
 	"knative.dev/eventing/cmd/broker"
 	"knative.dev/eventing/pkg/apis/feature"
+	"knative.dev/eventing/pkg/apis/sources"
 	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/broker/filter"
 	brokerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/broker"
@@ -81,6 +82,7 @@ func main() {
 	log.Printf("Registering %d informers", len(injection.Default.GetInformers()))
 
 	ctx = filteredFactory.WithSelectors(ctx,
+		sources.OIDCTokenRoleLabelSelector,
 		eventingtls.TrustBundleLabelSelector,
 	)
 
