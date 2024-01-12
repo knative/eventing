@@ -52,6 +52,7 @@ func NewFiltersFeatureSet(installBroker InstallBrokerFunc) *feature.FeatureSet {
 		MissingAttributesFeature(installBroker),
 		FilterAttributeWithEmptyFiltersFeature(installBroker),
 		FiltersOverrideAttributeFilterFeature(installBroker),
+		MultipleFiltersFeature(installBroker),
 	)
 	return &feature.FeatureSet{
 		Name:     "New Trigger Filters",
@@ -447,6 +448,59 @@ func FiltersOverrideAttributeFilterFeature(installBroker InstallBrokerFunc) *fea
 	}
 
 	createNewFiltersFeature(f, eventContexts, filters, filter, installBroker)
+
+	return f
+}
+
+// Multiple filters are specified without All or Any option.
+func MultipleFiltersFeature(installBroker InstallBrokerFunc) *feature.Feature {
+	f := feature.NewFeature()
+
+	eventContexts := []CloudEventsContext{
+		// This event matches no filters.
+		{
+			eventType:     "not.event.type",
+			shouldDeliver: false,
+		},
+		// This event matches 2 filters: prefix and CESQL.
+		{
+			eventType:     "exact.prefix.suffix.event",
+			shouldDeliver: false, // This should not get delivered as not all filters match.
+		},
+		// This event matches 3 filters: CESQL, Prefix, and Suffix.
+		{
+			eventType:     "exact.prefix.suffix.event.suffix.event.type",
+			shouldDeliver: false, // This should not get delivered as not all filters match.
+		},
+		// This event will match all 4 filters.
+		{
+			eventType:     "exact.prefix.suffix.event.type",
+			shouldDeliver: true,
+		},
+	}
+
+	filters := []eventingv1.SubscriptionsAPIFilter{
+		{
+			Exact: map[string]string{
+				"type": "exact.prefix.suffix.event.type",
+			},
+		},
+		{
+			Prefix: map[string]string{
+				"type": "exact.prefix",
+			},
+		},
+		{
+			Suffix: map[string]string{
+				"type": "suffix.event.type",
+			},
+		},
+		{
+			CESQL: "type LIKE 'exact.prefix.suffix%'",
+		},
+	}
+
+	createNewFiltersFeature(f, eventContexts, filters, eventingv1.TriggerFilter{}, installBroker)
 
 	return f
 }
