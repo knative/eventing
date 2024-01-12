@@ -25,6 +25,7 @@ import (
 	filteredFactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
 	"knative.dev/pkg/configmap"
 	. "knative.dev/pkg/reconciler/testing"
+	"knative.dev/eventing/pkg/apis/sources"
 
 	// Fake injection informers
 	_ "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment/fake"
@@ -56,6 +57,6 @@ func TestNew(t *testing.T) {
 }
 
 func SetUpInformerSelector(ctx context.Context) context.Context {
-	ctx = filteredFactory.WithSelectors(ctx, eventingtls.TrustBundleLabelSelector)
+	ctx = filteredFactory.WithSelectors(ctx, sources.OIDCTokenRoleLabelSelector, eventingtls.TrustBundleLabelSelector)
 	return ctx
 }
