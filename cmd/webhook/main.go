@@ -287,6 +287,7 @@ func main() {
 	})
 
 	ctx = filteredFactory.WithSelectors(ctx,
+		sources.OIDCTokenRoleLabelSelector,
 		eventingtls.TrustBundleLabelSelector,
 	)
 
