@@ -19,9 +19,10 @@ package pingsource
 import (
 	"context"
 
+	"knative.dev/eventing/pkg/apis/sources"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 
-	serviceaccountinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount"
+	serviceaccountinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount/filtered"
 
 	"go.uber.org/zap"
 
@@ -77,7 +78,7 @@ func NewController(
 
 	deploymentInformer := deploymentinformer.Get(ctx)
 	pingSourceInformer := pingsourceinformer.Get(ctx)
-	serviceaccountInformer := serviceaccountinformer.Get(ctx)
+	serviceaccountInformer := serviceaccountinformer.Get(ctx, sources.OIDCTokenRoleLabelSelector)
 
 	r := &Reconciler{
 		kubeClientSet:        kubeclient.Get(ctx),
