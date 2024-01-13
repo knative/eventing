@@ -32,7 +32,7 @@ import (
 	"knative.dev/eventing/test/rekt/resources/trigger"
 )
 
-func createNewFiltersFeature(f *feature.Feature, eventContexts []CloudEventsContext, filters []eventingv1.SubscriptionsAPIFilter, installBroker InstallBrokerFunc) {
+func createNewFiltersFeature(f *feature.Feature, eventContexts []CloudEventsContext, filters []eventingv1.SubscriptionsAPIFilter, filter eventingv1.TriggerFilter, installBroker InstallBrokerFunc) {
 	subscriberName := feature.MakeRandomK8sName("subscriber")
 	triggerName := feature.MakeRandomK8sName("trigger")
 	brokerName := installBroker(f)
@@ -42,6 +42,7 @@ func createNewFiltersFeature(f *feature.Feature, eventContexts []CloudEventsCont
 	cfg := []manifest.CfgFn{
 		trigger.WithSubscriber(service.AsKReference(subscriberName), ""),
 		trigger.WithNewFilters(filters),
+		trigger.WithFilter(filter.Attributes),
 	}
 
 	f.Setup("Install trigger", trigger.Install(triggerName, brokerName, cfg...))
