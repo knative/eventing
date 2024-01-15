@@ -28,33 +28,30 @@ func (e Event) Type() string {
 	return ""
 }
 
-// Scheme implements EventReader.Scheme
-func (e Event) Scheme() string {
-	if e.Context != nil {
-		return e.Source()
-	}
-	return ""
-}
-
 func extractScheme(sourceURL string) (string, error) {
 	parsedURL, err := url.Parse(sourceURL)
 	if err != nil {
 		return "", err
 	}
-	if parsedURL.Scheme == "" {
-		return "http", nil
-	}
 	return parsedURL.Scheme, nil
 }
 
-// Source implements EventReader.Source
-func (e Event) Source() string {
+// Scheme implements EventReader.Scheme
+func (e Event) Scheme() string {
 	if e.Context != nil {
 		scheme , err := extractScheme(e.Context.GetSource())
 		if err != nil {
 			return ""
 		}
 		return scheme
+	}
+	return ""
+}
+
+// Source implements EventReader.Source
+func (e Event) Source() string {
+	if e.Context != nil {
+		return e.Context.GetSource()
 	}
 	return ""
 }
