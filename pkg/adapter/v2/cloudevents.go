@@ -302,6 +302,13 @@ func (c *client) reportMetrics(ctx context.Context, event cloudevents.Event, res
 	if c.reporter == nil {
 		return
 	}
+	var scheme string
+	parsedUrl , err := url.Parse(event.Source())
+	if err != nil {
+		scheme = "unknown"
+	}
+	scheme = parsedUrl.Scheme
+	
 	tags := MetricTagFromContext(ctx)
 	reportArgs := &source.ReportArgs{
 		Namespace:     tags.Namespace,
@@ -309,7 +316,7 @@ func (c *client) reportMetrics(ctx context.Context, event cloudevents.Event, res
 		EventType:     event.Type(),
 		Name:          tags.Name,
 		ResourceGroup: tags.ResourceGroup,
-		EventScheme:   event.Scheme(),
+		EventScheme:   scheme,
 	}
 
 	var rres *http.RetriesResult

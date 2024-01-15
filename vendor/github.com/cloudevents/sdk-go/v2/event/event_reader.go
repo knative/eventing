@@ -6,7 +6,6 @@
 package event
 
 import (
-	"net/url"
 	"time"
 )
 
@@ -28,26 +27,6 @@ func (e Event) Type() string {
 	return ""
 }
 
-func extractScheme(sourceURL string) (string, error) {
-	parsedURL, err := url.Parse(sourceURL)
-	if err != nil {
-		return "", err
-	}
-	return parsedURL.Scheme, nil
-}
-
-// Scheme implements EventReader.Scheme
-func (e Event) Scheme() string {
-	if e.Context != nil {
-		scheme , err := extractScheme(e.Context.GetSource())
-		if err != nil {
-			return ""
-		}
-		return scheme
-	}
-	return ""
-}
-
 // Source implements EventReader.Source
 func (e Event) Source() string {
 	if e.Context != nil {
@@ -63,7 +42,6 @@ func (e Event) Subject() string {
 	}
 	return ""
 }
-
 
 // ID implements EventReader.ID
 func (e Event) ID() string {
