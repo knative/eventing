@@ -42,6 +42,14 @@ func (ec EventContextV03) GetType() string {
 	return ec.Type
 }
 
+// GetScheme implements EventContextReader.GetScheme
+func (ec EventContextV03) GetScheme() string {
+	if ec.Source.Scheme == "" {
+		return "http"
+	}
+	return ec.Source.Scheme
+}
+
 // GetSource implements EventContextReader.GetSource
 func (ec EventContextV03) GetSource() string {
 	return ec.Source.String()

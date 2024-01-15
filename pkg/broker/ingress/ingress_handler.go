@@ -260,6 +260,7 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 		ns:        brokerNamespace,
 		broker:    brokerName,
 		eventType: event.Type(),
+		eventScheme: event.Scheme(),
 	}
 
 	statusCode, dispatchTime := h.receive(ctx, utils.PassThroughHeaders(request.Header), event, broker)

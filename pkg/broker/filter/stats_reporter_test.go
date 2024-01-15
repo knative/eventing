@@ -100,6 +100,7 @@ func TestReporterEmptySourceAndTypeFilter(t *testing.T) {
 		trigger:    "testtrigger",
 		broker:     "testbroker",
 		filterType: "",
+		requestScheme: "http",
 	}
 
 	r := NewStatsReporter("testcontainer", "testpod")
@@ -110,6 +111,7 @@ func TestReporterEmptySourceAndTypeFilter(t *testing.T) {
 		metrics.LabelResponseCodeClass: "2xx",
 		broker.LabelContainerName:      "testcontainer",
 		broker.LabelUniqueName:         "testpod",
+		metrics.LabelEventScheme:       "http",
 	}
 
 	resource := resource.Resource{

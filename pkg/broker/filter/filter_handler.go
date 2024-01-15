@@ -239,6 +239,7 @@ func (h *Handler) handleDispatchToReplyRequest(ctx context.Context, trigger *eve
 		trigger:     trigger.Name,
 		broker:      trigger.Spec.Broker,
 		requestType: "reply_forward",
+		requestScheme: request.URL.Scheme,
 	}
 
 	h.logger.Info("sending to reply", zap.Any("target", target))
@@ -275,6 +276,7 @@ func (h *Handler) handleDispatchToDLSRequest(ctx context.Context, trigger *event
 		trigger:     trigger.Name,
 		broker:      trigger.Spec.Broker,
 		requestType: "dls_forward",
+		requestScheme: request.URL.Scheme,
 	}
 
 	h.logger.Info("sending to dls", zap.Any("target", target))
@@ -310,6 +312,7 @@ func (h *Handler) handleDispatchToSubscriberRequest(ctx context.Context, trigger
 		broker:      trigger.Spec.Broker,
 		filterType:  triggerFilterAttribute(trigger.Spec.Filter, "type"),
 		requestType: "filter",
+		requestScheme: request.URL.Scheme,
 	}
 
 	subscriberURI := trigger.Status.SubscriberURI

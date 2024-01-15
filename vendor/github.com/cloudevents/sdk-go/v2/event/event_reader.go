@@ -27,6 +27,14 @@ func (e Event) Type() string {
 	return ""
 }
 
+// Scheme implements EventReader.Scheme
+func (e Event) Scheme() string {
+	if e.Context != nil {
+		return e.Context.GetScheme() 
+	}
+	return ""
+}
+
 // Source implements EventReader.Source
 func (e Event) Source() string {
 	if e.Context != nil {

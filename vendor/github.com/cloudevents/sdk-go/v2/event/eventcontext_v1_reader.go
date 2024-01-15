@@ -41,6 +41,13 @@ func (ec EventContextV1) GetDataMediaType() (string, error) {
 func (ec EventContextV1) GetType() string {
 	return ec.Type
 }
+// GetType implements EventContextReader.GetType
+func (ec EventContextV1) GetScheme() string {
+	if ec.Source.Scheme == "" {
+		return "http"
+	}
+	return ec.Source.Scheme
+}
 
 // GetSource implements EventContextReader.GetSource
 func (ec EventContextV1) GetSource() string {

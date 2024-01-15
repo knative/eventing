@@ -309,6 +309,7 @@ func (c *client) reportMetrics(ctx context.Context, event cloudevents.Event, res
 		EventType:     event.Type(),
 		Name:          tags.Name,
 		ResourceGroup: tags.ResourceGroup,
+		EventScheme:   event.Scheme(),
 	}
 
 	var rres *http.RetriesResult

@@ -29,8 +29,9 @@ import (
 func TestStatsReporter(t *testing.T) {
 	setup()
 	args := &ReportArgs{
-		Ns:        "testns",
-		EventType: "testeventtype",
+		Ns:          "testns",
+		EventType:   "testeventtype",
+		EventScheme: "http",
 	}
 
 	r := NewStatsReporter("testcontainer", "testpod")
@@ -42,6 +43,7 @@ func TestStatsReporter(t *testing.T) {
 		metrics.LabelResponseCodeClass: "2xx",
 		LabelUniqueName:                "testpod",
 		LabelContainerName:             "testcontainer",
+		metrics.LabelEventScheme:       "http",
 	}
 
 	// test ReportEventCount

@@ -15,6 +15,8 @@ type EventContextReader interface {
 	GetSpecVersion() string
 	// GetType returns the CloudEvents type from the context.
 	GetType() string
+	// GetScheme returns the CloudEvents scheme from the context.
+	GetScheme() string
 	// GetSource returns the CloudEvents source from the context.
 	GetSource() string
 	// GetSubject returns the CloudEvents subject from the context.
