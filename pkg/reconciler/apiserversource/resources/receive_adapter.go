@@ -82,7 +82,6 @@ func MakeReceiveAdapter(args *ReceiveAdapterArgs) (*appsv1.Deployment, error) {
 					Labels: args.Labels,
 				},
 				Spec: corev1.PodSpec{
-					// NodeSelector: 	 args.Source.Spec.NodeSelector,
 					ServiceAccountName: args.Source.Spec.ServiceAccountName,
 					EnableServiceLinks: ptr.Bool(false),
 					Containers: []corev1.Container{
