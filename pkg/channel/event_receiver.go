@@ -231,6 +231,12 @@ func (r *EventReceiver) ServeHTTP(response nethttp.ResponseWriter, request *neth
 
 	args.Ns = channel.Namespace
 
+	args.EventScheme = request.URL.Scheme
+
+	if args.EventScheme == "" {
+		args.EventScheme = "http"
+	}
+
 	event, err := http.NewEventFromHTTPRequest(request)
 	if err != nil {
 		r.logger.Warn("failed to extract event from request", zap.Error(err))

@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
@@ -257,18 +256,15 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 		span.AddAttributes(opencensusclient.EventTraceAttributes(event)...)
 	}
 
-	var scheme string
-	parsedUrl, err := url.Parse(event.Source())
-	if err != nil {
-		scheme = "unknown"
-	}
-	scheme = parsedUrl.Scheme
-
 	reporterArgs := &ReportArgs{
 		ns:          brokerNamespace,
 		broker:      brokerName,
 		eventType:   event.Type(),
-		eventScheme: scheme,
+		eventScheme: request.URL.Scheme,
+	}
+
+	if reporterArgs.eventScheme == "" {
+		reporterArgs.eventScheme = "http"
 	}
 
 	statusCode, dispatchTime := h.receive(ctx, utils.PassThroughHeaders(request.Header), event, broker)

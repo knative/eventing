@@ -235,11 +235,15 @@ func (h *Handler) handleDispatchToReplyRequest(ctx context.Context, trigger *eve
 	target := broker.Status.Address
 
 	reportArgs := &ReportArgs{
-		ns:          trigger.Namespace,
-		trigger:     trigger.Name,
-		broker:      trigger.Spec.Broker,
-		requestType: "reply_forward",
+		ns:            trigger.Namespace,
+		trigger:       trigger.Name,
+		broker:        trigger.Spec.Broker,
+		requestType:   "reply_forward",
 		requestScheme: request.URL.Scheme,
+	}
+
+	if reportArgs.requestScheme == "" {
+		reportArgs.requestScheme = "http"
 	}
 
 	h.logger.Info("sending to reply", zap.Any("target", target))
@@ -272,11 +276,15 @@ func (h *Handler) handleDispatchToDLSRequest(ctx context.Context, trigger *event
 	}
 
 	reportArgs := &ReportArgs{
-		ns:          trigger.Namespace,
-		trigger:     trigger.Name,
-		broker:      trigger.Spec.Broker,
-		requestType: "dls_forward",
+		ns:            trigger.Namespace,
+		trigger:       trigger.Name,
+		broker:        trigger.Spec.Broker,
+		requestType:   "dls_forward",
 		requestScheme: request.URL.Scheme,
+	}
+
+	if reportArgs.requestScheme == "" {
+		reportArgs.requestScheme = "http"
 	}
 
 	h.logger.Info("sending to dls", zap.Any("target", target))
@@ -307,12 +315,16 @@ func (h *Handler) handleDispatchToSubscriberRequest(ctx context.Context, trigger
 	}
 
 	reportArgs := &ReportArgs{
-		ns:          trigger.Namespace,
-		trigger:     trigger.Name,
-		broker:      trigger.Spec.Broker,
-		filterType:  triggerFilterAttribute(trigger.Spec.Filter, "type"),
-		requestType: "filter",
+		ns:            trigger.Namespace,
+		trigger:       trigger.Name,
+		broker:        trigger.Spec.Broker,
+		filterType:    triggerFilterAttribute(trigger.Spec.Filter, "type"),
+		requestType:   "filter",
 		requestScheme: request.URL.Scheme,
+	}
+
+	if reportArgs.requestScheme == "" {
+		reportArgs.requestScheme = "http"
 	}
 
 	subscriberURI := trigger.Status.SubscriberURI
@@ -345,7 +357,6 @@ func (h *Handler) handleDispatchToSubscriberRequest(ctx context.Context, trigger
 }
 
 func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers http.Header, target duckv1.Addressable, reportArgs *ReportArgs, event *cloudevents.Event, t *eventingv1.Trigger, ttl int32) {
-
 	additionalHeaders := headers.Clone()
 	additionalHeaders.Set(apis.KnNamespaceHeader, t.GetNamespace())
 

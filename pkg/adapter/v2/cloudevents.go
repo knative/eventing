@@ -234,12 +234,12 @@ func setTimeOut(duration time.Duration) http.Option {
 }
 
 type client struct {
-	ceClient            cloudevents.Client
-	ceOverrides         *duckv1.CloudEventOverrides
-	reporter            source.StatsReporter
-	crStatusEventClient *crstatusevent.CRStatusEventClient
-	closeIdler          closeIdler
-
+	ceClient               cloudevents.Client
+	ceOverrides            *duckv1.CloudEventOverrides
+	reporter               source.StatsReporter
+	crStatusEventClient    *crstatusevent.CRStatusEventClient
+	closeIdler             closeIdler
+	cfg                    ClientConfig
 	oidcTokenProvider      *auth.OIDCTokenProvider
 	audience               *string
 	oidcServiceAccountName *types.NamespacedName
@@ -303,12 +303,12 @@ func (c *client) reportMetrics(ctx context.Context, event cloudevents.Event, res
 		return
 	}
 	var scheme string
-	parsedUrl , err := url.Parse(event.Source())
+	parsedUrl, err := url.Parse(c.cfg.Env.GetSink())
 	if err != nil {
-		scheme = "unknown"
+		scheme = "http"
 	}
 	scheme = parsedUrl.Scheme
-	
+
 	tags := MetricTagFromContext(ctx)
 	reportArgs := &source.ReportArgs{
 		Namespace:     tags.Namespace,
