@@ -115,9 +115,11 @@ func DeleteOIDCServiceAccountIfExists(ctx context.Context, serviceAccountLister 
 		if err != nil {
 			return fmt.Errorf("could not delete OIDC service account %s/%s for %s: %w", objectMeta.Name, objectMeta.Namespace, gvk.Kind, err)
 		}
+	} else if apierrs.IsNotFound(err) {
+		return nil
 	}
 
-	return nil
+	return err
 }
 
 type OIDCIdentityStatusMarker interface {
