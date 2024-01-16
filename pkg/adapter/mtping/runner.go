@@ -39,6 +39,7 @@ import (
 	"knative.dev/eventing/pkg/observability"
 )
 
+// testing
 type CronJobRunner interface {
 	Start(stopCh <-chan struct{})
 	Stop()
@@ -227,7 +228,7 @@ func (a *cronJobsRunner) newPingSourceClient(source *sourcesv1.PingSource) (adap
 		CrStatusEventClient:        a.clientConfig.CrStatusEventClient,
 		Options:                    a.clientConfig.Options,
 		TrustBundleConfigMapLister: a.clientConfig.TrustBundleConfigMapLister,
-    TokenProvider:              a.clientConfig.TokenProvider,
+		TokenProvider:              a.clientConfig.TokenProvider,
 	}
 
 	return adapter.NewClient(cfg)
