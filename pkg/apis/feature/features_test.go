@@ -56,10 +56,12 @@ func TestGetFlags(t *testing.T) {
 	require.True(t, flags.IsAllowed("my-enabled-flag"))
 	require.True(t, flags.IsAllowed("my-allowed-flag"))
 	require.False(t, flags.IsAllowed("non-disabled-flag"))
+
+	nodeSelector := flags.NodeSelector()
+	require.Equal(t, map[string]string{"testkey": "testvalue"}, nodeSelector)
 }
 
 func TestShouldNotOverrideDefaults(t *testing.T) {
-
 	f, err := NewFlagsConfigFromMap(map[string]string{})
 	require.Nil(t, err)
 	require.NotNil(t, f)
