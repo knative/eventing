@@ -590,7 +590,7 @@ func TestAllCases(t *testing.T) {
 						ContentType: testContentType,
 						Data:        testData,
 						SourceSpec: duckv1.SourceSpec{
-							Sink: sinkOIDCDest,
+							Sink: sinkDest,
 						},
 					}),
 					rtv1.WithPingSource(sourceUID),
@@ -598,7 +598,7 @@ func TestAllCases(t *testing.T) {
 				),
 				rtv1.NewChannel(sinkName, testNS,
 					rtv1.WithInitChannelConditions,
-					rtv1.WithChannelAddress(sinkOIDCAddressable),
+					rtv1.WithChannelAddress(sinkAddressable),
 				),
 				makeAvailableMTAdapter(),
 			},
@@ -610,7 +610,7 @@ func TestAllCases(t *testing.T) {
 						ContentType: testContentType,
 						Data:        testData,
 						SourceSpec: duckv1.SourceSpec{
-							Sink: sinkOIDCDest,
+							Sink: sinkDest,
 						},
 					}),
 					rtv1.WithPingSource(sourceUID),
