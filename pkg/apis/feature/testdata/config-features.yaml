@@ -25,5 +25,5 @@ data:
     my-enabled-flag: "enabled"
     my-disabled-flag: "disabled"
     my-allowed-flag: "allowed"
-    apiserversources.nodeselecto: testkey:testvalue
+    apiserversources.nodeselector: testkey:testvalue
   
