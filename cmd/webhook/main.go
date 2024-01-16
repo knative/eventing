@@ -51,6 +51,7 @@ import (
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	eventingv1beta2 "knative.dev/eventing/pkg/apis/eventing/v1beta2"
+	eventingv1beta3 "knative.dev/eventing/pkg/apis/eventing/v1beta3"
 	flowsv1 "knative.dev/eventing/pkg/apis/flows/v1"
 	channeldefaultconfig "knative.dev/eventing/pkg/apis/messaging/config"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
@@ -74,6 +75,8 @@ var ourTypes = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
 	eventingv1beta1.SchemeGroupVersion.WithKind("EventType"): &eventingv1beta1.EventType{},
 	// v1beta2
 	eventingv1beta2.SchemeGroupVersion.WithKind("EventType"): &eventingv1beta2.EventType{},
+	// v1beta3
+	eventingv1beta3.SchemeGroupVersion.WithKind("EventType"): &eventingv1beta3.EventType{},
 	// v1
 	eventingv1.SchemeGroupVersion.WithKind("Broker"):  &eventingv1.Broker{},
 	eventingv1.SchemeGroupVersion.WithKind("Trigger"): &eventingv1.Trigger{},
@@ -240,6 +243,7 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 		sourcesv1_       = sourcesv1.SchemeGroupVersion.Version
 		eventingv1beta1_ = eventingv1beta1.SchemeGroupVersion.Version
 		eventingv1beta2_ = eventingv1beta2.SchemeGroupVersion.Version
+		eventingv1beta3_ = eventingv1beta3.SchemeGroupVersion.Version
 	)
 
 	return conversion.NewConversionController(ctx,
@@ -264,6 +268,14 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 				Zygotes: map[string]conversion.ConvertibleObject{
 					eventingv1beta1_: &eventingv1beta1.EventType{},
 					eventingv1beta2_: &eventingv1beta2.EventType{},
+				},
+			},
+			eventingv1beta3.Kind("EventType"): {
+				DefinitionName: eventing.EventTypesResource.String(),
+				HubVersion:     eventingv1beta2_,
+				Zygotes: map[string]conversion.ConvertibleObject{
+					eventingv1beta2_: &eventingv1beta2.EventType{},
+					eventingv1beta3_: &eventingv1beta3.EventType{},
 				},
 			},
 		},

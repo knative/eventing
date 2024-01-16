@@ -164,6 +164,11 @@ spec:
     # This overrides the default warning returned to API clients making v1beta1 API requests.
     deprecationWarning: "eventing.knative.dev/v1beta1 EventType is deprecated; see https://knative.dev/docs/eventing/event-registry/ for instructions to migrate to eventing.knative.dev/v1beta2 EventType"
     # v1beta1 schema is identical to the v1beta2 schema
+  - <<: *version
+    name: v1beta3
+    served: true
+    storage: false
+    # v1beta3 schema is identical to the v1beta2 schema, but different defaulting behaviour
   names:
     kind: EventType
     plural: eventtypes
