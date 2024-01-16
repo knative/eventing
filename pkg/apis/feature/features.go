@@ -61,7 +61,6 @@ func newDefaults() Flags {
 		TransportEncryption: Disabled,
 		OIDCAuthentication:  Disabled,
 		EvenTypeAutoCreate:  Disabled,
-		NodeSelectorLabel:   "",
 	}
 }
 
@@ -105,22 +104,20 @@ func (e Flags) String() string {
 
 func (e Flags) NodeSelector() map[string]string {
 	// Check if NodeSelector is not nil
-	if string(e[NodeSelectorLabel]) == "" {
+	if e == nil {
 		return map[string]string{}
 	}
 
-	// Convert NodeSelector to a string
-	nodeSelectorString := string(e[NodeSelectorLabel])
-
-	// Split the string into key-value pairs
-	pairs := strings.Split(nodeSelectorString, ":")
-
-	// Create a map to store key-value pairs
 	nodeSelectorMap := make(map[string]string)
 
-	key := strings.TrimSpace(pairs[0])
-	value := strings.TrimSpace(pairs[1])
-	nodeSelectorMap[key] = value
+	for k, v := range e {
+		if strings.Contains(k, NodeSelectorLabel) {
+			key := strings.TrimPrefix(k, NodeSelectorLabel)
+			fmt.Println("value of k is",key)
+			value := strings.TrimSpace(string(v))
+			nodeSelectorMap[key] = value
+		}
+	}
 
 	return nodeSelectorMap
 }
@@ -145,7 +142,7 @@ func NewFlagsConfigFromMap(data map[string]string) (Flags, error) {
 			flags[sanitizedKey] = Permissive
 		} else if k == TransportEncryption && strings.EqualFold(v, string(Strict)) {
 			flags[sanitizedKey] = Strict
-		} else if k == NodeSelectorLabel {
+		} else if strings.Contains(k, NodeSelectorLabel) {
 			flags[sanitizedKey] = Flag(v)
 		} else {
 			return flags, fmt.Errorf("cannot parse the feature flag '%s' = '%s'", k, v)
