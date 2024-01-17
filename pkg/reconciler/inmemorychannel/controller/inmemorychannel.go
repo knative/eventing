@@ -23,6 +23,7 @@ import (
 
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/utils/pointer"
+	"knative.dev/eventing/pkg/auth"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/network"
 
@@ -46,7 +47,6 @@ import (
 	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/feature"
 	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
-	"knative.dev/eventing/pkg/auth"
 	inmemorychannelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/inmemorychannel"
 	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/reconciler/inmemorychannel/controller/config"
@@ -218,9 +218,15 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1.InMemoryChannel)
 
 		logging.FromContext(ctx).Debugw("Setting the imc audience", zap.String("audience", audience))
 		imc.Status.Address.Audience = &audience
+		for i := range imc.Status.Addresses {
+			imc.Status.Addresses[i].Audience = &audience
+		}
 	} else {
 		logging.FromContext(ctx).Debug("Clearing the imc audience as OIDC is not enabled")
 		imc.Status.Address.Audience = nil
+		for i := range imc.Status.Addresses {
+			imc.Status.Addresses[i].Audience = nil
+		}
 	}
 
 	imc.GetConditionSet().Manage(imc.GetStatus()).MarkTrue(v1.InMemoryChannelConditionAddressable)
