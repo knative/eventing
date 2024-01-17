@@ -243,9 +243,15 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 		audience := auth.GetAudience(eventingv1.SchemeGroupVersion.WithKind("Broker"), b.ObjectMeta)
 		logging.FromContext(ctx).Debugw("Setting the brokers audience", zap.String("audience", audience))
 		b.Status.Address.Audience = &audience
+		for i := range b.Status.Addresses {
+			b.Status.Addresses[i].Audience = &audience
+		}
 	} else {
 		logging.FromContext(ctx).Debug("Clearing the brokers audience as OIDC is not enabled")
 		b.Status.Address.Audience = nil
+		for i := range b.Status.Addresses {
+			b.Status.Addresses[i].Audience = nil
+		}
 	}
 
 	b.GetConditionSet().Manage(b.GetStatus()).MarkTrue(eventingv1.BrokerConditionAddressable)
