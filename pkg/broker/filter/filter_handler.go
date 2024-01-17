@@ -243,7 +243,11 @@ func (h *Handler) handleDispatchToReplyRequest(ctx context.Context, trigger *eve
 	}
 
 	if reportArgs.requestScheme == "" {
-		reportArgs.requestScheme = "http"
+		if request.TLS != nil {
+			reportArgs.requestScheme = "https"
+		} else {
+			reportArgs.requestScheme = "http"
+		}
 	}
 
 	h.logger.Info("sending to reply", zap.Any("target", target))
@@ -284,7 +288,11 @@ func (h *Handler) handleDispatchToDLSRequest(ctx context.Context, trigger *event
 	}
 
 	if reportArgs.requestScheme == "" {
-		reportArgs.requestScheme = "http"
+		if request.TLS != nil {
+			reportArgs.requestScheme = "https"
+		} else {
+			reportArgs.requestScheme = "http"
+		}
 	}
 
 	h.logger.Info("sending to dls", zap.Any("target", target))
@@ -324,7 +332,11 @@ func (h *Handler) handleDispatchToSubscriberRequest(ctx context.Context, trigger
 	}
 
 	if reportArgs.requestScheme == "" {
-		reportArgs.requestScheme = "http"
+		if request.TLS != nil {
+			reportArgs.requestScheme = "https"
+		} else {
+			reportArgs.requestScheme = "http"
+		}
 	}
 
 	subscriberURI := trigger.Status.SubscriberURI

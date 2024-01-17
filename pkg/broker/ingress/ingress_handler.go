@@ -264,7 +264,11 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	if reporterArgs.eventScheme == "" {
-		reporterArgs.eventScheme = "http"
+		if request.TLS != nil {
+			reporterArgs.eventScheme = "https"
+		} else {
+			reporterArgs.eventScheme = "http"
+		}
 	}
 
 	statusCode, dispatchTime := h.receive(ctx, utils.PassThroughHeaders(request.Header), event, broker)

@@ -215,7 +215,7 @@ func NewClient(cfg ClientConfig) (Client, error) {
 	if cfg.Env != nil {
 		client.audience = cfg.Env.GetAudience()
 		client.oidcServiceAccountName = cfg.Env.GetOIDCServiceAccountName()
-		client.sink = cfg.Env.GetSink()
+		client.sinkURI = cfg.Env.GetSink()
 	}
 
 	return client, nil
@@ -240,7 +240,7 @@ type client struct {
 	reporter               source.StatsReporter
 	crStatusEventClient    *crstatusevent.CRStatusEventClient
 	closeIdler             closeIdler
-	sink                   string
+	sinkURI                   string
 	oidcTokenProvider      *auth.OIDCTokenProvider
 	audience               *string
 	oidcServiceAccountName *types.NamespacedName
@@ -304,10 +304,10 @@ func (c *client) reportMetrics(ctx context.Context, event cloudevents.Event, res
 		return
 	}
 	var scheme string
-	if c.sink == "" {
+	if c.sinkURI == "" {
 		scheme = "http"
 	} else {
-		parsedUrl, err := url.Parse(c.sink)
+		parsedUrl, err := url.Parse(c.sinkURI)
 		if err != nil {
 			scheme = "http"
 		}

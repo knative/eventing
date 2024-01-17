@@ -234,7 +234,11 @@ func (r *EventReceiver) ServeHTTP(response nethttp.ResponseWriter, request *neth
 	args.EventScheme = request.URL.Scheme
 
 	if args.EventScheme == "" {
-		args.EventScheme = "http"
+		if request.TLS != nil {
+			args.EventScheme = "https"
+		} else {
+			args.EventScheme = "http"
+		}
 	}
 
 	event, err := http.NewEventFromHTTPRequest(request)

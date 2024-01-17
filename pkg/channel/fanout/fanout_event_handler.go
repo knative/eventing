@@ -218,8 +218,11 @@ func createEventReceiverFunction(f *FanoutEventHandler) func(context.Context, ch
 			reportArgs := channel.ReportArgs{}
 			reportArgs.EventType = evnt.Type()
 			reportArgs.Ns = ref.Namespace
-			reportArgs.EventScheme = "http"
-
+			if subs[0].Subscriber.URL.Scheme != "" {
+				reportArgs.EventScheme = subs[0].Subscriber.URL.Scheme
+			} else {
+				reportArgs.EventScheme = "http"
+			}
 			go func(e event.Event, h nethttp.Header, s *trace.Span, r *channel.StatsReporter, args *channel.ReportArgs) {
 				// Run async dispatch with background context.
 				ctx = trace.NewContext(context.Background(), s)
