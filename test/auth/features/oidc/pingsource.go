@@ -36,7 +36,10 @@ func PingSourceSendEventWithSinkRefOIDC() *feature.Feature {
 		eventshub.StartReceiver))
 
 	f.Requirement("install pingsource",
-		pingsource.Install(source, pingsource.WithSink(service.AsDestinationRef(sink))))
+		pingsource.Install(source, pingsource.WithSink(&duckv1.Destination{
+			Ref:      service.AsKReference(sink),
+			Audience: &sinkAudience,
+		})))
 	f.Requirement("pingsource goes ready", pingsource.IsReady(source))
 
 	f.Stable("pingsource as event source").
