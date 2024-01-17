@@ -19,11 +19,11 @@ package oidc
 import (
 	"github.com/cloudevents/sdk-go/v2/test"
 	"knative.dev/eventing/test/rekt/resources/pingsource"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/resources/service"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 func PingSourceSendEventWithSinkRefOIDC() *feature.Feature {
