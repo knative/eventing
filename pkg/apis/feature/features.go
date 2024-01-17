@@ -113,7 +113,6 @@ func (e Flags) NodeSelector() map[string]string {
 	for k, v := range e {
 		if strings.Contains(k, NodeSelectorLabel) {
 			key := strings.TrimPrefix(k, NodeSelectorLabel)
-			fmt.Println("value of k is",key)
 			value := strings.TrimSpace(string(v))
 			nodeSelectorMap[key] = value
 		}
