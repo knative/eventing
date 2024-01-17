@@ -186,6 +186,7 @@ func TestSequenceSendsEventsWithOIDCSupport(t *testing.T) {
 		knative.WithTracingConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
+		eventshub.WithTLS(t),
 	)
 
 	env.TestSet(ctx, t, oidc.SequenceSendsEventWithOIDC())
