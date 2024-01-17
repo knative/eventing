@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/utils/pointer"
 	"knative.dev/eventing/pkg/auth"
