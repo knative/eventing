@@ -187,8 +187,8 @@ func (ss *SequenceStatus) setAddress(address *duckv1.Addressable) {
 		sCondSet.Manage(ss).MarkUnknown(SequenceConditionAddressable, "emptyAddress", "addressable is nil")
 	} else {
 		ss.Address = duckv1.Addressable{
-			URL:      address.URL,
-			CACerts:  address.CACerts,
+			URL:     address.URL,
+			CACerts: address.CACerts,
 		}
 		sCondSet.Manage(ss).MarkTrue(SequenceConditionAddressable)
 	}
