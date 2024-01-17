@@ -23,6 +23,7 @@ import (
 	"knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/resources/service"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 func PingSourceSendEventWithSinkRefOIDC() *feature.Feature {
