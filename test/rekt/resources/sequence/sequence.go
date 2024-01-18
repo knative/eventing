@@ -127,7 +127,7 @@ func WithStepFromDestination(dest *duckv1.Destination) manifest.CfgFn {
 		if dest.CACerts != nil {
 			// This is a multi-line string and should be indented accordingly.
 			// Replace "new line" with "new line + spaces".
-			step["CACerts"] = strings.ReplaceAll(*dest.CACerts, "\n", "\n      ")
+			step["CACerts"] = strings.ReplaceAll(*dest.CACerts, "\n", "\n        ")
 		}
 
 		if dest.Audience != nil {

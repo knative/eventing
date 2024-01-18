@@ -20,6 +20,8 @@ import (
 	"context"
 	"strconv"
 
+	"knative.dev/eventing/test/rekt/features/featureflags"
+
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/test"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -55,6 +57,9 @@ func ParallelHasAudienceOfInputChannel(parallelName, parallelNamespace string, c
 func ParallelWithTwoBranchesOIDC(channelTemplate channel_template.ChannelTemplate) *feature.Feature {
 	f := feature.NewFeatureNamed("Parallel test.")
 
+	f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
+	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
+
 	parallelName := feature.MakeRandomK8sName("parallel1")
 	source := feature.MakeRandomK8sName("source1")
 	sink := feature.MakeRandomK8sName("sink1")
@@ -80,23 +85,23 @@ func ParallelWithTwoBranchesOIDC(channelTemplate channel_template.ChannelTemplat
 
 	f.Setup("install sink", eventshub.Install(sink,
 		eventshub.OIDCReceiverAudience(sinkAudience),
-		eventshub.StartReceiver))
+		eventshub.StartReceiverTLS))
 
 	// Install Subscribers for both branches.
 	f.Setup("install subscriber1", eventshub.Install(subscriber1,
 		eventshub.ReplyWithAppendedData("appended data 1"),
 		eventshub.OIDCReceiverAudience(subscriber1Audience),
-		eventshub.StartReceiver))
+		eventshub.StartReceiverTLS))
 	f.Setup("install subscriber2", eventshub.Install(subscriber2,
 		eventshub.ReplyWithAppendedData("appended data 2"),
 		eventshub.OIDCReceiverAudience(subscriber2Audience),
-		eventshub.StartReceiver))
+		eventshub.StartReceiverTLS))
 
 	// Install Filter only for first branch.
 	f.Setup("install filter1", eventshub.Install(filter1,
 		eventshub.ReplyWithTransformedEvent(event.Type(), event.Source(), string(event.Data())),
 		eventshub.OIDCReceiverAudience(filter1Audience),
-		eventshub.StartReceiver))
+		eventshub.StartReceiverTLS))
 
 	// Install a Parallel with two branches
 	f.Setup("install Parallel", func(ctx context.Context, t feature.T) {
@@ -104,24 +109,31 @@ func ParallelWithTwoBranchesOIDC(channelTemplate channel_template.ChannelTemplat
 			parallel.WithReply(&duckv1.Destination{
 				Ref:      service.AsKReference(sink),
 				Audience: &sinkAudience,
+				CACerts:  eventshub.GetCaCerts(ctx),
 			}),
 			parallel.WithSubscriberAt(branch1Num, &duckv1.Destination{
 				Ref:      service.AsKReference(subscriber1),
 				Audience: &subscriber1Audience,
+				CACerts:  eventshub.GetCaCerts(ctx),
 			}),
 			parallel.WithSubscriberAt(branch2Num, &duckv1.Destination{
 				Ref:      service.AsKReference(subscriber2),
 				Audience: &subscriber2Audience,
+				CACerts:  eventshub.GetCaCerts(ctx),
 			}),
 			parallel.WithFilterAt(branch1Num, &duckv1.Destination{
 				Ref:      service.AsKReference(filter1),
 				Audience: &filter1Audience,
+				CACerts:  eventshub.GetCaCerts(ctx),
 			}),
 			parallel.WithReplyAt(branch1Num, nil),
+			parallel.WithReplyAt(branch2Num, nil),
+
 			// The Reply for second branch is same as global reply.
 			parallel.WithReplyAt(branch2Num, &duckv1.Destination{
 				Ref:      service.AsKReference(sink),
 				Audience: &sinkAudience,
+				CACerts:  eventshub.GetCaCerts(ctx),
 			}),
 		)
 
@@ -132,7 +144,7 @@ func ParallelWithTwoBranchesOIDC(channelTemplate channel_template.ChannelTemplat
 
 	f.Requirement("install source", eventshub.Install(
 		source,
-		eventshub.StartSenderToResource(parallel.GVR(), parallelName),
+		eventshub.StartSenderToResourceTLS(parallel.GVR(), parallelName, nil),
 		eventshub.InputEvent(event),
 	))
 

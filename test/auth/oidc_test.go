@@ -23,6 +23,8 @@ import (
 	"testing"
 	"time"
 
+	"knative.dev/reconciler-test/pkg/eventshub"
+
 	"knative.dev/pkg/system"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"
@@ -51,6 +53,7 @@ func TestBrokerSupportsOIDC(t *testing.T) {
 		k8s.WithEventListener,
 		environment.Managed(t),
 		environment.WithPollTimings(4*time.Second, 12*time.Minute),
+		eventshub.WithTLS(t),
 	)
 
 	name := feature.MakeRandomK8sName("broker")
@@ -68,6 +71,7 @@ func TestBrokerSendsEventsWithOIDCSupport(t *testing.T) {
 		knative.WithTracingConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
+		eventshub.WithTLS(t),
 	)
 
 	env.TestSet(ctx, t, oidc.BrokerSendEventWithOIDC())
@@ -120,6 +124,7 @@ func TestChannelDispatcherAuthenticatesWithOIDC(t *testing.T) {
 		knative.WithTracingConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
+		eventshub.WithTLS(t),
 	)
 
 	env.Test(ctx, t, oidc.ChannelDispatcherAuthenticatesRequestsWithOIDC())
@@ -154,6 +159,7 @@ func TestApiserversourceSendEventWithJWT(t *testing.T) {
 		knative.WithTracingConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
+		eventshub.WithTLS(t),
 	)
 
 	env.Test(ctx, t, oidc.ApiserversourceSendEventWithJWT())
@@ -168,6 +174,7 @@ func TestContainerSourceSendsEventsWithOIDCSupport(t *testing.T) {
 		knative.WithTracingConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
+		eventshub.WithTLS(t),
 	)
 
 	env.Test(ctx, t, oidc.SendsEventsWithSinkRefOIDC())
@@ -182,6 +189,7 @@ func TestPingSourceSendsEventsWithOIDC(t *testing.T) {
 		knative.WithTracingConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
+		eventshub.WithTLS(t),
 	)
 
 	env.Test(ctx, t, oidc.PingSourceSendEventWithSinkRefOIDC())
@@ -195,6 +203,7 @@ func TestSequenceSendsEventsWithOIDCSupport(t *testing.T) {
 		knative.WithTracingConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
+		eventshub.WithTLS(t),
 	)
 
 	env.TestSet(ctx, t, oidc.SequenceSendsEventWithOIDC())
@@ -209,6 +218,7 @@ func TestParallelTwoBranchesWithOIDCSupport(t *testing.T) {
 		knative.WithTracingConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
+		eventshub.WithTLS(t),
 	)
 
 	env.Test(ctx, t, oidc.ParallelWithTwoBranchesOIDC(channel_template.ImmemoryChannelTemplate()))
