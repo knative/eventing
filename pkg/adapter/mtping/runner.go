@@ -39,7 +39,6 @@ import (
 	"knative.dev/eventing/pkg/observability"
 )
 
-// testing
 type CronJobRunner interface {
 	Start(stopCh <-chan struct{})
 	Stop()
