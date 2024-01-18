@@ -19,6 +19,7 @@ package sequence
 import (
 	"context"
 	"fmt"
+
 	"github.com/cloudevents/sdk-go/v2/test"
 	"github.com/google/uuid"
 	"knative.dev/eventing/test/rekt/features/featureflags"
