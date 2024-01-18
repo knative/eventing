@@ -303,15 +303,13 @@ func (c *client) reportMetrics(ctx context.Context, event cloudevents.Event, res
 	if c.reporter == nil {
 		return
 	}
-	var scheme string
-	if c.sinkURI == "" {
-		scheme = "http"
-	} else {
+	scheme := "http" // Default value
+
+	if c.sinkURI != "" {
 		parsedUrl, err := url.Parse(c.sinkURI)
-		if err != nil {
-			scheme = "http"
+		if err == nil {
+			scheme = parsedUrl.Scheme
 		}
-		scheme = parsedUrl.Scheme
 	}
 
 	tags := MetricTagFromContext(ctx)
