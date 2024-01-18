@@ -149,7 +149,7 @@ func ParallelWithTwoBranchesOIDC(channelTemplate channel_template.ChannelTemplat
 		eventshub.InputEvent(event),
 	))
 
-	f.Stable("test Parallel with two branches and 1 filter, and with TLS enabled").
+	f.Stable("test Parallel with two branches and 1 filter").
 		Must("deliver event to subscriber1", eventasssert.OnStore(subscriber1).MatchEvent(test.HasId(event.ID())).AtLeast(1)).
 		Must("deliver event to subscriber2", eventasssert.OnStore(subscriber2).MatchEvent(test.HasId(event.ID())).AtLeast(1)).
 		Must("deliver event to filter1", eventasssert.OnStore(filter1).MatchEvent(test.HasId(event.ID())).AtLeast(1)).
