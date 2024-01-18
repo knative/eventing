@@ -19,6 +19,8 @@ package oidc
 import (
 	"context"
 
+	"knative.dev/eventing/test/rekt/features/featureflags"
+
 	"github.com/cloudevents/sdk-go/v2/test"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -56,13 +58,16 @@ func SequenceSendsEventWithOIDC() *feature.FeatureSet {
 		Name: "Sequence send events with OIDC support",
 		Features: []*feature.Feature{
 			SequenceSendsEventWithOIDCTokenToSteps(),
-			//SequenceSendsEventWithOIDCTokenToReply(),
+			SequenceSendsEventWithOIDCTokenToReply(),
 		},
 	}
 }
 
 func SequenceSendsEventWithOIDCTokenToSteps() *feature.Feature {
 	f := feature.NewFeatureNamed("Sequence supports OIDC in internal flow between steps")
+
+	f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
+	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
 
 	channelTemplate := channel_template.ChannelTemplate{
 		TypeMeta: channel_impl.TypeMeta(),
@@ -129,6 +134,9 @@ func SequenceSendsEventWithOIDCTokenToSteps() *feature.Feature {
 func SequenceSendsEventWithOIDCTokenToReply() *feature.Feature {
 	f := feature.NewFeatureNamed("Sequence supports OIDC for reply")
 
+	f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
+	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
+
 	channelTemplate := channel_template.ChannelTemplate{
 		TypeMeta: channel_impl.TypeMeta(),
 		Spec:     map[string]interface{}{},
@@ -150,38 +158,44 @@ func SequenceSendsEventWithOIDCTokenToReply() *feature.Feature {
 	f.Setup("install step 1", eventshub.Install(step1Name,
 		eventshub.ReplyWithAppendedData(step1Append),
 		eventshub.OIDCReceiverAudience(step1Audience),
-		eventshub.StartReceiver))
+		eventshub.StartReceiverTLS))
 	f.Setup("install step 2", eventshub.Install(step2Name,
 		eventshub.ReplyWithAppendedData(step2Append),
 		eventshub.OIDCReceiverAudience(step2Audience),
-		eventshub.StartReceiver))
+		eventshub.StartReceiverTLS))
+
 	f.Setup("install sink", eventshub.Install(replySinkName,
 		eventshub.OIDCReceiverAudience(replySinkAudience),
-		eventshub.StartReceiver))
+		eventshub.StartReceiverTLS))
 
-	cfg := []manifest.CfgFn{
-		sequence.WithChannelTemplate(channelTemplate),
-		sequence.WithReplyFromDestination(&duckv1.Destination{
-			Ref:      service.AsKReference(replySinkName),
-			Audience: &replySinkAudience,
-		}),
-		sequence.WithStepFromDestination(&duckv1.Destination{
-			Ref:      service.AsKReference(step1Name),
-			Audience: &step1Audience,
-		}),
-		sequence.WithStepFromDestination(&duckv1.Destination{
-			Ref:      service.AsKReference(step2Name),
-			Audience: &step2Audience,
-		}),
-	}
+	f.Setup("Install Sequence", func(ctx context.Context, t feature.T) {
+		cfg := []manifest.CfgFn{
+			sequence.WithChannelTemplate(channelTemplate),
+			sequence.WithReplyFromDestination(&duckv1.Destination{
+				Ref:      service.AsKReference(replySinkName),
+				Audience: &replySinkAudience,
+				CACerts:  eventshub.GetCaCerts(ctx),
+			}),
+			sequence.WithStepFromDestination(&duckv1.Destination{
+				Ref:      service.AsKReference(step1Name),
+				Audience: &step1Audience,
+				CACerts:  eventshub.GetCaCerts(ctx),
+			}),
+			sequence.WithStepFromDestination(&duckv1.Destination{
+				Ref:      service.AsKReference(step2Name),
+				Audience: &step2Audience,
+				CACerts:  eventshub.GetCaCerts(ctx),
+			}),
+		}
 
-	f.Setup("Install Sequence", sequence.Install(sequenceName, cfg...))
+		sequence.Install(sequenceName, cfg...)(ctx, t)
+	})
 	f.Setup("Sequence goes ready", sequence.IsReady(sequenceName))
 
 	event := test.FullEvent()
 	event.SetData("text/plain", "hello")
 	f.Requirement("install source", eventshub.Install(sourceName,
-		eventshub.StartSenderToResource(sequence.GVR(), sequenceName),
+		eventshub.StartSenderToResourceTLS(sequence.GVR(), sequenceName, nil),
 		eventshub.InputEvent(event)))
 
 	expectedMsg := string(event.Data())
