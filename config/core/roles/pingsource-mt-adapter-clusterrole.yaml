@@ -29,6 +29,12 @@ rules:
       - "list"
       - "watch"
   - apiGroups:
+      - ""
+    resources:
+      - "serviceaccounts/token"
+    verbs:
+      - "create"
+  - apiGroups:
       - sources.knative.dev
     resources:
       - pingsources
