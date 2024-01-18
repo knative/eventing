@@ -149,6 +149,12 @@ function install_knative_eventing() {
       -f "${EVENTING_CORE_NAME}" || return 1
     UNINSTALL_LIST+=( "${EVENTING_CORE_NAME}" )
 
+    local EVENTING_POST_INSTALL_NAME=${TMP_DIR}/${EVENTING_POST_INSTALL_YAML##*/}
+    sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" "${EVENTING_POST_INSTALL_YAML}" > "${EVENTING_POST_INSTALL_NAME=}"
+    kubectl create \
+          -f "${EVENTING_POST_INSTALL_NAME}" || return 1
+    UNINSTALL_LIST+=( "${EVENTING_POST_INSTALL_NAME}" )
+
     local EVENTING_TLS_REPLACES=${TMP_DIR}/${EVENTING_TLS_YAML##*/}
     sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" "${EVENTING_TLS_YAML}" > "${EVENTING_TLS_REPLACES}"
     if [[ ! -z "${CLUSTER_SUFFIX:-}" ]]; then
