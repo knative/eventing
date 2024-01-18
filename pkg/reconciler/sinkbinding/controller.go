@@ -83,7 +83,7 @@ func NewController(
 	serviceaccountInformer := serviceaccountinformer.Get(ctx)
 	secretInformer := secretinformer.Get(ctx)
 	trustBundleConfigMapInformer := configmapinformer.Get(ctx, eventingtls.TrustBundleLabelSelector)
-	trustBundleConfigMapLister := configmapinformer.Get(ctx, eventingtls.TrustBundleLabelSelector).Lister()
+	trustBundleConfigMapLister := trustBundleConfigMapInformer.Lister()
 
 	var globalResync func()
 	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {
@@ -140,7 +140,7 @@ func NewController(
 		secretLister:               secretInformer.Lister(),
 		featureStore:               featureStore,
 		tokenProvider:              auth.NewOIDCTokenProvider(ctx),
-		trustBundleConfigMapLister: trustBundleConfigMapInformer.Lister(),
+		trustBundleConfigMapLister: trustBundleConfigMapLister,
 	}
 
 	c.WithContext = func(ctx context.Context, b psbinding.Bindable) (context.Context, error) {
