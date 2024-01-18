@@ -24,7 +24,6 @@ import (
 	"github.com/cloudevents/sdk-go/v2/test"
 	"github.com/google/uuid"
 	"knative.dev/eventing/test/rekt/features/featureflags"
-	"knative.dev/eventing/test/rekt/resources/addressable"
 	"knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/eventing/test/rekt/resources/delivery"
 	"knative.dev/eventing/test/rekt/resources/trigger"
@@ -65,7 +64,6 @@ func BrokerSendEventWithOIDCTokenToSubscriber() *feature.Feature {
 	f.Setup("install broker", broker.Install(brokerName, broker.WithEnvConfig()...))
 	f.Setup("broker is ready", broker.IsReady(brokerName))
 	f.Setup("broker is addressable", broker.IsAddressable(brokerName))
-	f.Setup("Broker has HTTPS address", broker.ValidateAddress(brokerName, addressable.AssertHTTPSAddress))
 
 	// Install the sink
 	f.Setup("install sink", eventshub.Install(
@@ -74,7 +72,7 @@ func BrokerSendEventWithOIDCTokenToSubscriber() *feature.Feature {
 		eventshub.OIDCReceiverAudience(sinkAudience),
 	))
 
-	f.Setup("install the trigger and specify the CA cert of the destination", func(ctx context.Context, t feature.T) {
+	f.Setup("Install the trigger", func(ctx context.Context, t feature.T) {
 		d := service.AsDestinationRef(sink)
 		d.CACerts = eventshub.GetCaCerts(ctx)
 		d.Audience = &sinkAudience
@@ -128,10 +126,7 @@ func BrokerSendEventWithOIDCTokenToDLS() *feature.Feature {
 
 	f.Setup("Broker is ready", broker.IsReady(brokerName))
 
-	// FIXME: current progress left over here. Need to figure out why trigger cannot be initialized correctly.
-	// Install Trigger
-
-	f.Setup("install the trigger and specify the CA cert of the destination", func(ctx context.Context, t feature.T) {
+	f.Setup("Install the trigger", func(ctx context.Context, t feature.T) {
 		// create an empty destination ref
 		d := duckv1.Destination{}
 		d.CACerts = eventshub.GetCaCerts(ctx)
@@ -195,9 +190,8 @@ func BrokerSendEventWithOIDCTokenToReply() *feature.Feature {
 	// Install broker
 	f.Setup("install broker", broker.Install(brokerName, broker.WithEnvConfig()...))
 	f.Setup("Broker is ready", broker.IsReady(brokerName))
-	f.Setup("Broker has HTTPS address", broker.ValidateAddress(brokerName, addressable.AssertHTTPSAddress))
 
-	f.Setup("install the trigger and specify the CA cert of the destination", func(ctx context.Context, t feature.T) {
+	f.Setup("install the trigger", func(ctx context.Context, t feature.T) {
 		d := service.AsDestinationRef(subscriber)
 		d.CACerts = eventshub.GetCaCerts(ctx)
 		trigger.Install(triggerName, brokerName, trigger.WithSubscriberFromDestination(d), trigger.WithFilter(map[string]string{

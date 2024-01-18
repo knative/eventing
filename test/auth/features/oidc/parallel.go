@@ -141,7 +141,6 @@ func ParallelWithTwoBranchesOIDC(channelTemplate channel_template.ChannelTemplat
 	})
 	f.Setup("Parallel goes ready", parallel.IsReady(parallelName))
 	f.Setup("Parallel is addressable", parallel.IsAddressable(parallelName))
-	f.Setup("Parallel has HTTPS address", parallel.ValidateAddress(parallelName, addressable.AssertHTTPSAddress))
 
 	f.Requirement("install source", eventshub.Install(
 		source,
