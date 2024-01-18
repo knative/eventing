@@ -72,5 +72,21 @@ func AssertPresent(expectedCeTypes sets.Set[string]) EventType {
 			return clonedExpectedCeTypes.Len() == 0, nil
 		},
 	}
+}
 
+func AssertExactPresent(expectedCeTypes sets.Set[string]) EventType {
+	return EventType{
+		Name: "test eventtypes match or not",
+		EventTypes: func(etl eventingv1beta2.EventTypeList) (bool, error) {
+			// Clone the expectedCeTypes
+			clonedExpectedCeTypes := expectedCeTypes.Clone()
+			for _, et := range etl.Items {
+				if !clonedExpectedCeTypes.Has(et.Spec.Type) {
+					return false, nil
+				}
+				clonedExpectedCeTypes.Delete(et.Spec.Type) // remove from the cloned set
+			}
+			return clonedExpectedCeTypes.Len() == 0, nil
+		},
+	}
 }
