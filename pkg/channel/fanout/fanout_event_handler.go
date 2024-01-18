@@ -218,8 +218,22 @@ func createEventReceiverFunction(f *FanoutEventHandler) func(context.Context, ch
 			reportArgs := channel.ReportArgs{}
 			reportArgs.EventType = evnt.Type()
 			reportArgs.Ns = ref.Namespace
-			if subs[0].Subscriber.URL.Scheme != "" {
-				reportArgs.EventScheme = subs[0].Subscriber.URL.Scheme
+
+			var (
+				httpCount  int = 0
+				httpsCount int = 0
+			)
+
+			for _, sub := range subs {
+				if sub.Subscriber.URL.Scheme == "https" {
+					httpsCount++
+				} else {
+					httpCount++
+				}
+			}
+
+			if httpsCount > 0 {
+				reportArgs.EventScheme = "https"
 			} else {
 				reportArgs.EventScheme = "http"
 			}
@@ -230,6 +244,10 @@ func createEventReceiverFunction(f *FanoutEventHandler) func(context.Context, ch
 				// Any returned error is already logged in f.dispatch().
 				dispatchResultForFanout := f.dispatch(ctx, subs, e, h)
 				_ = ParseDispatchResultAndReportMetrics(dispatchResultForFanout, *r, *args)
+				if httpCount > 0 && httpsCount > 0 {
+					reportArgs.EventScheme = "http"
+					_ = ParseDispatchResultAndReportMetrics(dispatchResultForFanout, *r, *args)
+				}
 			}(evnt, additionalHeaders, parentSpan, &f.reporter, &reportArgs)
 			return nil
 		}
@@ -238,6 +256,11 @@ func createEventReceiverFunction(f *FanoutEventHandler) func(context.Context, ch
 		if f.eventTypeHandler != nil {
 			f.autoCreateEventType(ctx, event)
 		}
+
+		var (
+			httpCount  int = 0
+			httpsCount int = 0
+		)
 
 		subs := f.GetSubscriptions(ctx)
 		if len(subs) == 0 {
@@ -248,9 +271,29 @@ func createEventReceiverFunction(f *FanoutEventHandler) func(context.Context, ch
 		reportArgs := channel.ReportArgs{}
 		reportArgs.EventType = event.Type()
 		reportArgs.Ns = ref.Namespace
+
+		for _, sub := range subs {
+			if sub.Subscriber.URL.Scheme == "https" {
+				httpsCount++
+			} else {
+				httpCount++
+			}
+		}
+
+		if httpsCount > 0 {
+			reportArgs.EventScheme = "https"
+		} else {
+			reportArgs.EventScheme = "http"
+		}
+
 		additionalHeaders.Set(apis.KnNamespaceHeader, ref.Namespace)
 		dispatchResultForFanout := f.dispatch(ctx, subs, event, additionalHeaders)
-		return ParseDispatchResultAndReportMetrics(dispatchResultForFanout, f.reporter, reportArgs)
+		err := ParseDispatchResultAndReportMetrics(dispatchResultForFanout, f.reporter, reportArgs)
+		if httpCount > 0 && httpsCount > 0 {
+			reportArgs.EventScheme = "http"
+			err = ParseDispatchResultAndReportMetrics(dispatchResultForFanout, f.reporter, reportArgs)
+		}
+		return err
 	}
 }
 
