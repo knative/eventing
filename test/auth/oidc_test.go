@@ -188,6 +188,7 @@ func TestPingSourceSendsEventsWithOIDC(t *testing.T) {
 		knative.WithTracingConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
+		eventshub.WithTLS(t),
 	)
 
 	env.Test(ctx, t, oidc.PingSourceSendEventWithSinkRefOIDC())
