@@ -189,7 +189,7 @@ func BrokerSendEventWithOIDCTokenToReply() *feature.Feature {
 	// Install sink for reply
 	// Hint: we don't need to require OIDC auth at the reply sink, because the
 	// actual reply is sent to the broker ingress, which must support OIDC. This
-	// reply sink is only to check that the reply as sent and routed correctly.
+	// reply sink is only to check that the reply was sent and routed correctly.
 	f.Setup("install sink for reply", eventshub.Install(reply,
 		eventshub.StartReceiverTLS))
 
