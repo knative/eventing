@@ -130,8 +130,6 @@ func BrokerSendEventWithOIDCTokenToDLS() *feature.Feature {
 
 	// FIXME: current progress left over here. Need to figure out why trigger cannot be initialized correctly.
 	// Install Trigger
-	//f.Setup("install trigger", trigger.Install(triggerName, brokerName,
-	//	trigger.WithSubscriber(nil, "bad://uri")))
 
 	f.Setup("install the trigger and specify the CA cert of the destination", func(ctx context.Context, t feature.T) {
 		// create an empty destination ref
