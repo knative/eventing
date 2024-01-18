@@ -210,12 +210,19 @@ func NewClient(cfg ClientConfig) (Client, error) {
 		reporter:            cfg.Reporter,
 		crStatusEventClient: cfg.CrStatusEventClient,
 		oidcTokenProvider:   cfg.TokenProvider,
+		scheme:              "http",
 	}
 
 	if cfg.Env != nil {
 		client.audience = cfg.Env.GetAudience()
 		client.oidcServiceAccountName = cfg.Env.GetOIDCServiceAccountName()
-		client.sinkURI = cfg.Env.GetSink()
+		sinkURI := cfg.Env.GetSink()
+		if sinkURI != "" {
+			parsedUrl, err := url.Parse(sinkURI)
+			if err == nil {
+				client.scheme = parsedUrl.Scheme
+			}
+		}
 	}
 
 	return client, nil
@@ -240,7 +247,7 @@ type client struct {
 	reporter               source.StatsReporter
 	crStatusEventClient    *crstatusevent.CRStatusEventClient
 	closeIdler             closeIdler
-	sinkURI                string
+	scheme                 string
 	oidcTokenProvider      *auth.OIDCTokenProvider
 	audience               *string
 	oidcServiceAccountName *types.NamespacedName
@@ -303,14 +310,6 @@ func (c *client) reportMetrics(ctx context.Context, event cloudevents.Event, res
 	if c.reporter == nil {
 		return
 	}
-	scheme := "http" // Default value
-
-	if c.sinkURI != "" {
-		parsedUrl, err := url.Parse(c.sinkURI)
-		if err == nil {
-			scheme = parsedUrl.Scheme
-		}
-	}
 
 	tags := MetricTagFromContext(ctx)
 	reportArgs := &source.ReportArgs{
@@ -319,7 +318,7 @@ func (c *client) reportMetrics(ctx context.Context, event cloudevents.Event, res
 		EventType:     event.Type(),
 		Name:          tags.Name,
 		ResourceGroup: tags.ResourceGroup,
-		EventScheme:   scheme,
+		EventScheme:   c.scheme,
 	}
 
 	var rres *http.RetriesResult
