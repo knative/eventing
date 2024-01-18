@@ -34,7 +34,7 @@ func TestStatsReporter(t *testing.T) {
 		EventSource:   "unit-test",
 		Name:          "testsource",
 		ResourceGroup: "testresourcegroup",
-		EventScheme:  "http",
+		EventScheme:   "http",
 	}
 
 	r, err := NewStatsReporter()
@@ -88,7 +88,7 @@ func TestBadValues(t *testing.T) {
 	}
 
 	args := &ReportArgs{
-		Namespace: "😀",
+		Namespace:   "😀",
 		EventScheme: "http",
 	}
 

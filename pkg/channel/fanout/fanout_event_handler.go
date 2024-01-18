@@ -225,7 +225,7 @@ func createEventReceiverFunction(f *FanoutEventHandler) func(context.Context, ch
 			)
 
 			for _, sub := range subs {
-				if sub.Subscriber.URL.Scheme == "https" {
+				if sub.Subscriber.URL != nil && sub.Subscriber.URL.Scheme == "https" {
 					httpsCount++
 				} else {
 					httpCount++
@@ -273,7 +273,7 @@ func createEventReceiverFunction(f *FanoutEventHandler) func(context.Context, ch
 		reportArgs.Ns = ref.Namespace
 
 		for _, sub := range subs {
-			if sub.Subscriber.URL.Scheme == "https" {
+			if sub.Subscriber.URL != nil && sub.Subscriber.URL.Scheme == "https" {
 				httpsCount++
 			} else {
 				httpCount++

@@ -240,7 +240,7 @@ type client struct {
 	reporter               source.StatsReporter
 	crStatusEventClient    *crstatusevent.CRStatusEventClient
 	closeIdler             closeIdler
-	sinkURI                   string
+	sinkURI                string
 	oidcTokenProvider      *auth.OIDCTokenProvider
 	audience               *string
 	oidcServiceAccountName *types.NamespacedName

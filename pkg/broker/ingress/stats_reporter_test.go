@@ -32,9 +32,9 @@ func TestStatsReporter(t *testing.T) {
 	setup()
 
 	args := &ReportArgs{
-		ns:        "testns",
-		broker:    "testbroker",
-		eventType: "testeventtype",
+		ns:          "testns",
+		broker:      "testbroker",
+		eventType:   "testeventtype",
 		eventScheme: "http",
 	}
 

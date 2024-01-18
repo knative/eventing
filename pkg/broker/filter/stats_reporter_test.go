@@ -96,10 +96,10 @@ func TestReporterEmptySourceAndTypeFilter(t *testing.T) {
 	setup()
 
 	args := &ReportArgs{
-		ns:         "testns",
-		trigger:    "testtrigger",
-		broker:     "testbroker",
-		filterType: "",
+		ns:            "testns",
+		trigger:       "testtrigger",
+		broker:        "testbroker",
+		filterType:    "",
 		requestScheme: "http",
 	}
 
