@@ -52,8 +52,9 @@ func NewSubscription(stepNumber int, s *v1.Sequence) *messagingv1.Subscription {
 				Name:       SequenceChannelName(s.Name, stepNumber),
 			},
 			Subscriber: &duckv1.Destination{
-				Ref: s.Spec.Steps[stepNumber].Destination.Ref,
-				URI: s.Spec.Steps[stepNumber].Destination.URI,
+				Ref:     s.Spec.Steps[stepNumber].Destination.Ref,
+				URI:     s.Spec.Steps[stepNumber].Destination.URI,
+				CACerts: s.Spec.Steps[stepNumber].Destination.CACerts,
 			},
 			Delivery: s.Spec.Steps[stepNumber].Delivery,
 		},
@@ -71,8 +72,9 @@ func NewSubscription(stepNumber int, s *v1.Sequence) *messagingv1.Subscription {
 		}
 	} else if s.Spec.Reply != nil {
 		r.Spec.Reply = &duckv1.Destination{
-			Ref: s.Spec.Reply.Ref,
-			URI: s.Spec.Reply.URI,
+			Ref:     s.Spec.Reply.Ref,
+			URI:     s.Spec.Reply.URI,
+			CACerts: s.Spec.Reply.CACerts,
 		}
 	}
 	return r
