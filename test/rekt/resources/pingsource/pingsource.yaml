@@ -50,4 +50,7 @@ spec:
     CACerts: |-
       {{ .sink.CACerts }}
     {{ end }}
+    {{if .sink.audience }}
+    audience: {{ .sink.audience}}
+    {{ end }}
   {{ end }}

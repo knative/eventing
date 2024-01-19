@@ -19,3 +19,5 @@ metadata:
   namespace: knative-eventing
 data:
   authentication-oidc: "enabled"
+  transport-encryption: "strict"
+

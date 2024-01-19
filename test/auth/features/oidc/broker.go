@@ -17,8 +17,13 @@ limitations under the License.
 package oidc
 
 import (
+	"context"
+
+	"knative.dev/pkg/apis"
+
 	"github.com/cloudevents/sdk-go/v2/test"
 	"github.com/google/uuid"
+	"knative.dev/eventing/test/rekt/features/featureflags"
 	"knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/eventing/test/rekt/resources/delivery"
 	"knative.dev/eventing/test/rekt/resources/trigger"
@@ -43,6 +48,10 @@ func BrokerSendEventWithOIDC() *feature.FeatureSet {
 func BrokerSendEventWithOIDCTokenToSubscriber() *feature.Feature {
 	f := feature.NewFeatureNamed("Broker supports flow with OIDC tokens")
 
+	// TLS is required for OIDC
+	f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
+	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
+
 	source := feature.MakeRandomK8sName("source")
 	brokerName := feature.MakeRandomK8sName("broker")
 	sink := feature.MakeRandomK8sName("sink")
@@ -59,24 +68,22 @@ func BrokerSendEventWithOIDCTokenToSubscriber() *feature.Feature {
 	// Install the sink
 	f.Setup("install sink", eventshub.Install(
 		sink,
+		eventshub.StartReceiverTLS,
 		eventshub.OIDCReceiverAudience(sinkAudience),
-		eventshub.StartReceiver))
-
-	// Install the trigger and Point the Trigger subscriber to the sink svc.
-	f.Setup("install trigger", trigger.Install(
-		triggerName,
-		brokerName,
-		trigger.WithSubscriberFromDestination(&duckv1.Destination{
-			Ref:      service.AsKReference(sink),
-			Audience: &sinkAudience,
-		}),
 	))
+
+	f.Setup("Install the trigger", func(ctx context.Context, t feature.T) {
+		d := service.AsDestinationRef(sink)
+		d.CACerts = eventshub.GetCaCerts(ctx)
+		d.Audience = &sinkAudience
+		trigger.Install(triggerName, brokerName, trigger.WithSubscriberFromDestination(d))(ctx, t)
+	})
 	f.Setup("trigger goes ready", trigger.IsReady(triggerName))
 
 	// Send event
 	f.Requirement("install source", eventshub.Install(
 		source,
-		eventshub.StartSenderToResource(broker.GVR(), brokerName),
+		eventshub.StartSenderToResourceTLS(broker.GVR(), brokerName, nil),
 		eventshub.InputEvent(event),
 	))
 
@@ -88,6 +95,10 @@ func BrokerSendEventWithOIDCTokenToSubscriber() *feature.Feature {
 
 func BrokerSendEventWithOIDCTokenToDLS() *feature.Feature {
 	f := feature.NewFeature()
+
+	// TLS is required for OIDC
+	f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
+	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
 
 	brokerName := feature.MakeRandomK8sName("broker")
 	dls := feature.MakeRandomK8sName("dls")
@@ -101,27 +112,34 @@ func BrokerSendEventWithOIDCTokenToDLS() *feature.Feature {
 	// Install DLS sink
 	f.Setup("install dead letter sink", eventshub.Install(dls,
 		eventshub.OIDCReceiverAudience(dlsAudience),
-		eventshub.StartReceiver))
+		eventshub.StartReceiverTLS))
 
-	// Install broker with DLS config
-	brokerConfig := append(
-		broker.WithEnvConfig(),
-		delivery.WithDeadLetterSinkFromDestination(&duckv1.Destination{
-			Ref:      service.AsKReference(dls),
-			Audience: &dlsAudience,
-		}),
-	)
-	f.Setup("install broker", broker.Install(brokerName, brokerConfig...))
+	f.Setup("install broker", func(ctx context.Context, t feature.T) {
+		brokerConfig := append(broker.WithEnvConfig(),
+			delivery.WithDeadLetterSinkFromDestination(&duckv1.Destination{
+				Ref:      service.AsKReference(dls),
+				Audience: &dlsAudience,
+				CACerts:  eventshub.GetCaCerts(ctx),
+			}))
+		broker.Install(brokerName, brokerConfig...)(ctx, t)
+	})
+
 	f.Setup("Broker is ready", broker.IsReady(brokerName))
 
-	// Install Trigger
-	f.Setup("install trigger", trigger.Install(triggerName, brokerName,
-		trigger.WithSubscriber(nil, "bad://uri")))
+	f.Setup("Install the trigger", func(ctx context.Context, t feature.T) {
+		// create an empty destination ref
+		d := duckv1.Destination{}
+		d.CACerts = eventshub.GetCaCerts(ctx)
+		d.URI, _ = apis.ParseURL("bad://uri")
+		trigger.Install(triggerName, brokerName, trigger.WithSubscriberFromDestination(&d))(ctx, t)
+
+	})
+
 	f.Setup("trigger is ready", trigger.IsReady(triggerName))
 
 	// Send events after data plane is ready.
 	f.Requirement("install source", eventshub.Install(source,
-		eventshub.StartSenderToResource(broker.GVR(), brokerName),
+		eventshub.StartSenderToResourceTLS(broker.GVR(), brokerName, nil),
 		eventshub.InputEvent(event),
 	))
 
@@ -133,7 +151,16 @@ func BrokerSendEventWithOIDCTokenToDLS() *feature.Feature {
 }
 
 func BrokerSendEventWithOIDCTokenToReply() *feature.Feature {
+	//1. An event is sent to a broker.
+	//2. A trigger routes this event to a subscriber.
+	//3. The subscriber processes and replies to the event.
+	//4. A helper trigger routes the reply to a designated sink.
+	//5. The test verifies that the reply reaches the sink with the expected modifications.
 	f := feature.NewFeature()
+
+	// TLS is required for OIDC
+	f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
+	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
 
 	brokerName := feature.MakeRandomK8sName("broker")
 	subscriber := feature.MakeRandomK8sName("subscriber")
@@ -151,38 +178,40 @@ func BrokerSendEventWithOIDCTokenToReply() *feature.Feature {
 	// Install subscriber
 	f.Setup("install subscriber", eventshub.Install(subscriber,
 		eventshub.ReplyWithTransformedEvent(replyEventType, replyEventSource, ""),
-		eventshub.StartReceiver))
+		eventshub.StartReceiverTLS))
 
 	// Install sink for reply
 	// Hint: we don't need to require OIDC auth at the reply sink, because the
 	// actual reply is sent to the broker ingress, which must support OIDC. This
-	// reply sink is only to check that the reply as sent and routed correctly.
+	// reply sink is only to check that the reply was sent and routed correctly.
 	f.Setup("install sink for reply", eventshub.Install(reply,
-		eventshub.StartReceiver))
+		eventshub.StartReceiverTLS))
 
 	// Install broker
 	f.Setup("install broker", broker.Install(brokerName, broker.WithEnvConfig()...))
 	f.Setup("Broker is ready", broker.IsReady(brokerName))
 
-	// Install Trigger
-	f.Setup("install trigger", trigger.Install(triggerName, brokerName,
-		trigger.WithSubscriber(service.AsKReference(subscriber), ""),
-		trigger.WithFilter(map[string]string{
+	f.Setup("install the trigger", func(ctx context.Context, t feature.T) {
+		d := service.AsDestinationRef(subscriber)
+		d.CACerts = eventshub.GetCaCerts(ctx)
+		trigger.Install(triggerName, brokerName, trigger.WithSubscriberFromDestination(d), trigger.WithFilter(map[string]string{
 			"type": event.Type(),
-		})))
+		}))(ctx, t)
+	})
+
 	f.Setup("trigger is ready", trigger.IsReady(triggerName))
 
-	// Install helper trigger to route replys to reply-sink
-	f.Setup("install helper trigger", trigger.Install(helperTriggerName, brokerName,
-		trigger.WithSubscriber(service.AsKReference(reply), ""),
-		trigger.WithFilter(map[string]string{
+	f.Setup("install the trigger and specify the CA cert of the destination", func(ctx context.Context, t feature.T) {
+		d := service.AsDestinationRef(reply)
+		d.CACerts = eventshub.GetCaCerts(ctx)
+		trigger.Install(helperTriggerName, brokerName, trigger.WithSubscriberFromDestination(d), trigger.WithFilter(map[string]string{
 			"type": replyEventType,
-		})))
-	f.Setup("helper trigger is ready", trigger.IsReady(helperTriggerName))
+		}))(ctx, t)
+	})
 
 	// Send events after data plane is ready.
 	f.Requirement("install source", eventshub.Install(source,
-		eventshub.StartSenderToResource(broker.GVR(), brokerName),
+		eventshub.StartSenderToResourceTLS(broker.GVR(), brokerName, nil),
 		eventshub.InputEvent(event),
 	))
 

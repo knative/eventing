@@ -4,7 +4,7 @@ This doc explains how to setup a development environment so you can get started
 [contributing](https://www.knative.dev/contributing/) to `Knative Eventing`.
 Also take a look at:
 
-- [The pull request workflow](https://www.knative.dev/contributing/contributing/#pull-requests)
+- [The pull request workflow](https://knative.dev/docs/community/contributing/)
 - [Quick full build and install](#quick-full-build-and-install)
 - [How to add and run tests](./test/README.md)
 - [Iterating](#iterating)
@@ -215,7 +215,7 @@ To run a single rekt test using the `e2e-debug.sh` script, follow these instruct
     **Example:**
 
     ```bash
-    ./hack/e2e-debug.sh TestMyRektScenario test/rekt/scenarios
+    ./hack/e2e-debug.sh TestPingSourceWithSinkRef ./test/rekt
     ```
 
     This will run the specified rekt test (`TestMyRektScenario` in this case) from the provided directory (`test/rekt/scenarios`).

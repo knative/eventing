@@ -87,6 +87,20 @@ var (
 		Name: &sinkURL.Scheme,
 		URL:  sinkURL,
 	}
+	sinkAudience        = "sink-oidc-audience"
+	sinkOIDCAddressable = &duckv1.Addressable{
+		Name:     &sinkURL.Scheme,
+		URL:      sinkURL,
+		Audience: &sinkAudience,
+	}
+	sinkOIDCDest = duckv1.Destination{
+		Ref: &duckv1.KReference{
+			Name:       sinkName,
+			Kind:       "Channel",
+			APIVersion: "messaging.knative.dev/v1",
+		},
+		Audience: &sinkAudience,
+	}
 )
 
 const (
@@ -518,7 +532,7 @@ func TestAllCases(t *testing.T) {
 						ContentType: testContentType,
 						Data:        testData,
 						SourceSpec: duckv1.SourceSpec{
-							Sink: sinkDest,
+							Sink: sinkOIDCDest,
 						},
 					}),
 					rtv1.WithPingSource(sourceUID),
@@ -526,7 +540,7 @@ func TestAllCases(t *testing.T) {
 				),
 				rtv1.NewChannel(sinkName, testNS,
 					rtv1.WithInitChannelConditions,
-					rtv1.WithChannelAddress(sinkAddressable),
+					rtv1.WithChannelAddress(sinkOIDCAddressable),
 				),
 				makeAvailableMTAdapter(),
 			},
@@ -538,7 +552,7 @@ func TestAllCases(t *testing.T) {
 						ContentType: testContentType,
 						Data:        testData,
 						SourceSpec: duckv1.SourceSpec{
-							Sink: sinkDest,
+							Sink: sinkOIDCDest,
 						},
 					}),
 					rtv1.WithPingSource(sourceUID),
@@ -546,7 +560,7 @@ func TestAllCases(t *testing.T) {
 					// Status Update:
 					rtv1.WithInitPingSourceConditions,
 					rtv1.WithPingSourceDeployed,
-					rtv1.WithPingSourceSink(sinkAddressable),
+					rtv1.WithPingSourceSink(sinkOIDCAddressable),
 					rtv1.WithPingSourceCloudEventAttributes,
 					rtv1.WithPingSourceStatusObservedGeneration(generation),
 					rtv1.WithPingSourceOIDCIdentityCreatedSucceeded(),

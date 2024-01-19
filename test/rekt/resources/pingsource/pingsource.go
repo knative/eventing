@@ -73,7 +73,9 @@ func WithSink(dest *duckv1.Destination) manifest.CfgFn {
 			// Replace "new line" with "new line + spaces".
 			sink["CACerts"] = strings.ReplaceAll(*dest.CACerts, "\n", "\n      ")
 		}
-
+		if dest.Audience != nil {
+			sink["audience"] = *dest.Audience
+		}
 		if uri != nil {
 			sink["uri"] = uri.String()
 		}
@@ -89,6 +91,7 @@ func WithSink(dest *duckv1.Destination) manifest.CfgFn {
 			}
 			sref["name"] = ref.Name
 		}
+
 	}
 }
 
