@@ -22,10 +22,10 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/eventing/pkg/apis/sources"
 	filteredFactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
 	"knative.dev/pkg/configmap"
 	. "knative.dev/pkg/reconciler/testing"
-	"knative.dev/eventing/pkg/apis/sources"
 
 	// Fake injection informers
 	_ "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment/fake"

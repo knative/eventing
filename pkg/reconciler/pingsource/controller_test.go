@@ -24,20 +24,20 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/pkg/apis/feature"
 
-	filteredFactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
 	"knative.dev/eventing/pkg/apis/sources"
+	filteredFactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/tracing/config"
 
 	// Fake injection informers
-	_ "knative.dev/pkg/client/injection/kube/informers/factory/filtered/fake"
 	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta2/eventtype/fake"
 	_ "knative.dev/eventing/pkg/client/injection/informers/sources/v1/pingsource/fake"
 	_ "knative.dev/pkg/client/injection/ducks/duck/v1/addressable/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount/filtered/fake"
+	_ "knative.dev/pkg/client/injection/kube/informers/factory/filtered/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/rbac/v1/rolebinding/fake"
 	. "knative.dev/pkg/reconciler/testing"
 )

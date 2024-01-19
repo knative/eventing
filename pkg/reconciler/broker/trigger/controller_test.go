@@ -45,11 +45,11 @@ import (
 	_ "knative.dev/pkg/injection/clients/namespacedkube/informers/core/v1/secret/fake"
 
 	// Fake injection informers
-	_ "knative.dev/pkg/client/injection/kube/informers/factory/filtered/fake"
 	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/broker/fake"
 	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/trigger/fake"
 	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/subscription/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount/filtered/fake"
+	_ "knative.dev/pkg/client/injection/kube/informers/factory/filtered/fake"
 )
 
 func TestNew(t *testing.T) {
@@ -69,7 +69,7 @@ func SetUpInformerSelector(ctx context.Context) context.Context {
 
 func TestFilterTriggers(t *testing.T) {
 	ctx, _ := SetupFakeContext(t, SetUpInformerSelector)
-	
+
 	tt := []struct {
 		name    string
 		trigger interface{}

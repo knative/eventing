@@ -31,13 +31,13 @@ import (
 	"knative.dev/eventing/pkg/apis/feature"
 
 	// Fake injection informers
-	_ "knative.dev/pkg/client/injection/kube/informers/factory/filtered/fake"
 	_ "knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable/fake"
 	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/channel/fake"
 	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/subscription/fake"
 	_ "knative.dev/pkg/client/injection/apiextensions/informers/apiextensions/v1/customresourcedefinition/fake"
 	_ "knative.dev/pkg/client/injection/ducks/duck/v1/addressable/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount/filtered/fake"
+	_ "knative.dev/pkg/client/injection/kube/informers/factory/filtered/fake"
 )
 
 func TestNew(t *testing.T) {

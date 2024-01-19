@@ -116,7 +116,7 @@ func NewController(
 
 	// Reconciler Trigger when the OIDC service account changes
 	serviceaccountInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.FilterController(&eventing.Trigger{}), 
+		FilterFunc: controller.FilterController(&eventing.Trigger{}),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 
