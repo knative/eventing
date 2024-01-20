@@ -260,16 +260,13 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 		ns:          brokerNamespace,
 		broker:      brokerName,
 		eventType:   event.Type(),
-		eventScheme: request.URL.Scheme,
 	}
 
-	if reporterArgs.eventScheme == "" {
 		if request.TLS != nil {
 			reporterArgs.eventScheme = "https"
 		} else {
 			reporterArgs.eventScheme = "http"
 		}
-	}
 
 	statusCode, dispatchTime := h.receive(ctx, utils.PassThroughHeaders(request.Header), event, broker)
 	if dispatchTime > kncloudevents.NoDuration {

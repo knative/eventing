@@ -93,6 +93,8 @@ type FanoutEventHandler struct {
 	eventTypeHandler *eventtype.EventTypeAutoHandler
 	channelRef       *duckv1.KReference
 	channelUID       *types.UID
+	hasHttpSubs      bool
+	hasHttpsSubs     bool
 }
 
 // NewFanoutEventHandler creates a new fanout.EventHandler.
@@ -118,6 +120,15 @@ func NewFanoutEventHandler(
 	}
 	handler.subscriptions = make([]Subscription, len(config.Subscriptions))
 	copy(handler.subscriptions, config.Subscriptions)
+
+	for _, sub := range handler.subscriptions {
+		if sub.Subscriber.URL != nil && sub.Subscriber.URL.Scheme == "https" {
+			handler.hasHttpsSubs = true
+		} else {
+			handler.hasHttpSubs = true
+		}
+	}
+
 	// The receiver function needs to point back at the handler itself, so set it up after
 	// initialization.
 	receiver, err := channel.NewEventReceiver(createEventReceiverFunction(handler), logger, reporter, receiverOpts...)
@@ -219,20 +230,7 @@ func createEventReceiverFunction(f *FanoutEventHandler) func(context.Context, ch
 			reportArgs.EventType = evnt.Type()
 			reportArgs.Ns = ref.Namespace
 
-			var (
-				httpCount  int = 0
-				httpsCount int = 0
-			)
-
-			for _, sub := range subs {
-				if sub.Subscriber.URL != nil && sub.Subscriber.URL.Scheme == "https" {
-					httpsCount++
-				} else {
-					httpCount++
-				}
-			}
-
-			if httpsCount > 0 {
+			if f.hasHttpsSubs {
 				reportArgs.EventScheme = "https"
 			} else {
 				reportArgs.EventScheme = "http"
@@ -244,7 +242,8 @@ func createEventReceiverFunction(f *FanoutEventHandler) func(context.Context, ch
 				// Any returned error is already logged in f.dispatch().
 				dispatchResultForFanout := f.dispatch(ctx, subs, e, h)
 				_ = ParseDispatchResultAndReportMetrics(dispatchResultForFanout, *r, *args)
-				if httpCount > 0 && httpsCount > 0 {
+				// If there are both http and https subscribers, we need to report the metrics for both of the type.
+				if f.hasHttpSubs && f.hasHttpsSubs {
 					reportArgs.EventScheme = "http"
 					_ = ParseDispatchResultAndReportMetrics(dispatchResultForFanout, *r, *args)
 				}
@@ -257,11 +256,6 @@ func createEventReceiverFunction(f *FanoutEventHandler) func(context.Context, ch
 			f.autoCreateEventType(ctx, event)
 		}
 
-		var (
-			httpCount  int = 0
-			httpsCount int = 0
-		)
-
 		subs := f.GetSubscriptions(ctx)
 		if len(subs) == 0 {
 			// Nothing to do here
@@ -272,15 +266,8 @@ func createEventReceiverFunction(f *FanoutEventHandler) func(context.Context, ch
 		reportArgs.EventType = event.Type()
 		reportArgs.Ns = ref.Namespace
 
-		for _, sub := range subs {
-			if sub.Subscriber.URL != nil && sub.Subscriber.URL.Scheme == "https" {
-				httpsCount++
-			} else {
-				httpCount++
-			}
-		}
 
-		if httpsCount > 0 {
+		if f.hasHttpSubs {
 			reportArgs.EventScheme = "https"
 		} else {
 			reportArgs.EventScheme = "http"
@@ -289,7 +276,8 @@ func createEventReceiverFunction(f *FanoutEventHandler) func(context.Context, ch
 		additionalHeaders.Set(apis.KnNamespaceHeader, ref.Namespace)
 		dispatchResultForFanout := f.dispatch(ctx, subs, event, additionalHeaders)
 		err := ParseDispatchResultAndReportMetrics(dispatchResultForFanout, f.reporter, reportArgs)
-		if httpCount > 0 && httpsCount > 0 {
+		// If there are both http and https subscribers, we need to report the metrics for both of the type.
+		if f.hasHttpSubs && f.hasHttpsSubs {
 			reportArgs.EventScheme = "http"
 			err = ParseDispatchResultAndReportMetrics(dispatchResultForFanout, f.reporter, reportArgs)
 		}

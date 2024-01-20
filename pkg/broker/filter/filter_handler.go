@@ -235,19 +235,16 @@ func (h *Handler) handleDispatchToReplyRequest(ctx context.Context, trigger *eve
 	target := broker.Status.Address
 
 	reportArgs := &ReportArgs{
-		ns:            trigger.Namespace,
-		trigger:       trigger.Name,
-		broker:        trigger.Spec.Broker,
-		requestType:   "reply_forward",
-		requestScheme: request.URL.Scheme,
+		ns:          trigger.Namespace,
+		trigger:     trigger.Name,
+		broker:      trigger.Spec.Broker,
+		requestType: "reply_forward",
 	}
 
-	if reportArgs.requestScheme == "" {
-		if request.TLS != nil {
-			reportArgs.requestScheme = "https"
-		} else {
-			reportArgs.requestScheme = "http"
-		}
+	if request.TLS != nil {
+		reportArgs.requestScheme = "https"
+	} else {
+		reportArgs.requestScheme = "http"
 	}
 
 	h.logger.Info("sending to reply", zap.Any("target", target))
@@ -280,11 +277,10 @@ func (h *Handler) handleDispatchToDLSRequest(ctx context.Context, trigger *event
 	}
 
 	reportArgs := &ReportArgs{
-		ns:            trigger.Namespace,
-		trigger:       trigger.Name,
-		broker:        trigger.Spec.Broker,
-		requestType:   "dls_forward",
-		requestScheme: request.URL.Scheme,
+		ns:          trigger.Namespace,
+		trigger:     trigger.Name,
+		broker:      trigger.Spec.Broker,
+		requestType: "dls_forward",
 	}
 
 	if reportArgs.requestScheme == "" {
@@ -323,20 +319,17 @@ func (h *Handler) handleDispatchToSubscriberRequest(ctx context.Context, trigger
 	}
 
 	reportArgs := &ReportArgs{
-		ns:            trigger.Namespace,
-		trigger:       trigger.Name,
-		broker:        trigger.Spec.Broker,
-		filterType:    triggerFilterAttribute(trigger.Spec.Filter, "type"),
-		requestType:   "filter",
-		requestScheme: request.URL.Scheme,
+		ns:          trigger.Namespace,
+		trigger:     trigger.Name,
+		broker:      trigger.Spec.Broker,
+		filterType:  triggerFilterAttribute(trigger.Spec.Filter, "type"),
+		requestType: "filter",
 	}
 
-	if reportArgs.requestScheme == "" {
-		if request.TLS != nil {
-			reportArgs.requestScheme = "https"
-		} else {
-			reportArgs.requestScheme = "http"
-		}
+	if request.TLS != nil {
+		reportArgs.requestScheme = "https"
+	} else {
+		reportArgs.requestScheme = "http"
 	}
 
 	subscriberURI := trigger.Status.SubscriberURI
