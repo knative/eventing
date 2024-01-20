@@ -283,12 +283,10 @@ func (h *Handler) handleDispatchToDLSRequest(ctx context.Context, trigger *event
 		requestType: "dls_forward",
 	}
 
-	if reportArgs.requestScheme == "" {
-		if request.TLS != nil {
-			reportArgs.requestScheme = "https"
-		} else {
-			reportArgs.requestScheme = "http"
-		}
+	if request.TLS != nil {
+		reportArgs.requestScheme = "https"
+	} else {
+		reportArgs.requestScheme = "http"
 	}
 
 	h.logger.Info("sending to dls", zap.Any("target", target))
