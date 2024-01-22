@@ -19,6 +19,9 @@ package oidc
 import (
 	"context"
 
+	"knative.dev/eventing/test/rekt/features/featureflags"
+	"knative.dev/eventing/test/rekt/features/source"
+
 	"github.com/cloudevents/sdk-go/v2/test"
 	rbacv1 "k8s.io/api/rbac/v1"
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
@@ -44,8 +47,11 @@ func ApiserversourceSendEventWithJWT() *feature.Feature {
 
 	f := feature.NewFeatureNamed("ApiServerSource send events with OIDC authentication")
 
+	f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
+	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
+
 	f.Setup("deploy receiver", eventshub.Install(sink,
-		eventshub.StartReceiver,
+		eventshub.StartReceiverTLS,
 		eventshub.OIDCReceiverAudience(audience)))
 
 	f.Setup("Create Service Account for ApiServerSource with RBAC for v1.Event resources",
@@ -63,6 +69,7 @@ func ApiserversourceSendEventWithJWT() *feature.Feature {
 	f.Requirement("install ApiServerSource", func(ctx context.Context, t feature.T) {
 		d := service.AsDestinationRef(sink)
 		d.Audience = &audience
+		d.CACerts = eventshub.GetCaCerts(ctx)
 
 		cfg = append(cfg, apiserversource.WithSink(d))
 		apiserversource.Install(src, cfg...)(ctx, t)
@@ -81,7 +88,8 @@ func ApiserversourceSendEventWithJWT() *feature.Feature {
 				Match(eventassert.MatchKind(eventshub.EventReceived)).
 				MatchEvent(test.HasType("dev.knative.apiserver.resource.update")).
 				AtLeast(1),
-		)
+		).Must("Set sinkURI to HTTPS endpoint", source.ExpectHTTPSSink(apiserversource.Gvr(), src)).
+		Must("Set sinkCACerts to non empty CA certs", source.ExpectCACerts(apiserversource.Gvr(), src))
 
 	return f
 }

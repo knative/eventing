@@ -90,7 +90,7 @@ func WithDeadLetterSinkFromDestination(dest *duckv1.Destination) manifest.CfgFn 
 		if dest.CACerts != nil {
 			// This is a multi-line string and should be indented accordingly.
 			// Replace "new line" with "new line + spaces".
-			dls["CACerts"] = strings.ReplaceAll(*dest.CACerts, "\n", "\n      ")
+			dls["CACerts"] = strings.ReplaceAll(*dest.CACerts, "\n", "\n        ")
 		}
 
 		if dest.Audience != nil {
