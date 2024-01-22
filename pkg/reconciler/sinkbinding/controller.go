@@ -82,7 +82,7 @@ func NewController(
 	dc := dynamicclient.Get(ctx)
 	psInformerFactory := podspecable.Get(ctx)
 	namespaceInformer := namespace.Get(ctx)
-	oidcServiceaccountInformer := Serviceaccountinformer.Get(ctx, sources.OIDCTokenRoleLabelSelector)
+	oidcServiceaccountInformer := serviceaccountinformer.Get(ctx, sources.OIDCTokenRoleLabelSelector)
 	secretInformer := secretinformer.Get(ctx)
 	trustBundleConfigMapInformer := configmapinformer.Get(ctx, eventingtls.TrustBundleLabelSelector)
 	trustBundleConfigMapLister := configmapinformer.Get(ctx, eventingtls.TrustBundleLabelSelector).Lister()
