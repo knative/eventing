@@ -107,9 +107,8 @@ func DeleteOIDCServiceAccountIfExists(ctx context.Context, serviceAccountLister 
 	saName := GetOIDCServiceAccountNameForResource(gvk, objectMeta)
 	sa, err := serviceAccountLister.ServiceAccounts(objectMeta.Namespace).Get(saName)
 
-	// Service Account Found
 	if err == nil && metav1.IsControlledBy(&sa.ObjectMeta, &objectMeta) {
-		logging.FromContext(ctx).Debugw("OIDC Service account already exists. Deleting OIDC service account")
+		logging.FromContext(ctx).Debugf("OIDC Service account exists and has correct owner (%s/%s). Deleting OIDC service account", objectMeta.Name, objectMeta.Namespace)
 
 		err = kubeclient.CoreV1().ServiceAccounts(objectMeta.Namespace).Delete(ctx, sa.Name, metav1.DeleteOptions{})
 		if err != nil {
