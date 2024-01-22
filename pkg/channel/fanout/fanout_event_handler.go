@@ -118,16 +118,8 @@ func NewFanoutEventHandler(
 		channelUID:       channelUID,
 		eventDispatcher:  eventDispatcher,
 	}
-	handler.subscriptions = make([]Subscription, len(config.Subscriptions))
-	copy(handler.subscriptions, config.Subscriptions)
 
-	for _, sub := range handler.subscriptions {
-		if sub.Subscriber.URL != nil && sub.Subscriber.URL.Scheme == "https" {
-			handler.hasHttpsSubs = true
-		} else {
-			handler.hasHttpSubs = true
-		}
-	}
+	handler.SetSubscriptions(context.Background(), config.Subscriptions)
 
 	// The receiver function needs to point back at the handler itself, so set it up after
 	// initialization.
@@ -184,14 +176,27 @@ func (f *FanoutEventHandler) SetSubscriptions(ctx context.Context, subs []Subscr
 	s := make([]Subscription, len(subs))
 	copy(s, subs)
 	f.subscriptions = s
+
+	for _, sub := range f.subscriptions {
+		if sub.Subscriber.URL != nil && sub.Subscriber.URL.Scheme == "https" {
+			f.hasHttpsSubs = true
+		} else {
+			f.hasHttpSubs = true
+		}
+	}
 }
 
 func (f *FanoutEventHandler) GetSubscriptions(ctx context.Context) []Subscription {
+	ret, _, _ := f.getSubscriptionsWithScheme(ctx)
+	return ret
+}
+
+func (f *FanoutEventHandler) getSubscriptionsWithScheme(ctx context.Context) (ret []Subscription, hasHttpSubs bool, hasHttpsSubs bool) {
 	f.subscriptionsMutex.RLock()
 	defer f.subscriptionsMutex.RUnlock()
-	ret := make([]Subscription, len(f.subscriptions))
+	ret = make([]Subscription, len(f.subscriptions))
 	copy(ret, f.subscriptions)
-	return ret
+	return ret, f.hasHttpSubs, f.hasHttpsSubs
 }
 
 func (f *FanoutEventHandler) autoCreateEventType(ctx context.Context, evnt event.Event) {
@@ -218,7 +223,7 @@ func createEventReceiverFunction(f *FanoutEventHandler) func(context.Context, ch
 				f.autoCreateEventType(ctx, evnt)
 			}
 
-			subs := f.GetSubscriptions(ctx)
+			subs, hasHttpSubs, hasHttpsSubs := f.getSubscriptionsWithScheme(ctx)
 
 			if len(subs) == 0 {
 				// Nothing to do here
@@ -230,11 +235,6 @@ func createEventReceiverFunction(f *FanoutEventHandler) func(context.Context, ch
 			reportArgs.EventType = evnt.Type()
 			reportArgs.Ns = ref.Namespace
 
-			if f.hasHttpsSubs {
-				reportArgs.EventScheme = "https"
-			} else {
-				reportArgs.EventScheme = "http"
-			}
 			go func(e event.Event, h nethttp.Header, s *trace.Span, r *channel.StatsReporter, args *channel.ReportArgs) {
 				// Run async dispatch with background context.
 				ctx = trace.NewContext(context.Background(), s)
@@ -243,9 +243,12 @@ func createEventReceiverFunction(f *FanoutEventHandler) func(context.Context, ch
 				dispatchResultForFanout := f.dispatch(ctx, subs, e, h)
 				_ = ParseDispatchResultAndReportMetrics(dispatchResultForFanout, *r, *args)
 				// If there are both http and https subscribers, we need to report the metrics for both of the type
-				// In this case we report http metrics because above we checked first for https and reported it so the left over metric to report is for http
-				if f.hasHttpSubs && f.hasHttpsSubs {
+				if hasHttpSubs {
 					reportArgs.EventScheme = "http"
+					_ = ParseDispatchResultAndReportMetrics(dispatchResultForFanout, *r, *args)
+				}
+				if hasHttpsSubs {
+					reportArgs.EventScheme = "https"
 					_ = ParseDispatchResultAndReportMetrics(dispatchResultForFanout, *r, *args)
 				}
 			}(evnt, additionalHeaders, parentSpan, &f.reporter, &reportArgs)
@@ -257,7 +260,7 @@ func createEventReceiverFunction(f *FanoutEventHandler) func(context.Context, ch
 			f.autoCreateEventType(ctx, event)
 		}
 
-		subs := f.GetSubscriptions(ctx)
+		subs, hasHttpSubs, hasHttpsSubs := f.getSubscriptionsWithScheme(ctx)
 		if len(subs) == 0 {
 			// Nothing to do here
 			return nil
@@ -267,20 +270,17 @@ func createEventReceiverFunction(f *FanoutEventHandler) func(context.Context, ch
 		reportArgs.EventType = event.Type()
 		reportArgs.Ns = ref.Namespace
 
-
-		if f.hasHttpSubs {
-			reportArgs.EventScheme = "https"
-		} else {
-			reportArgs.EventScheme = "http"
-		}
-
 		additionalHeaders.Set(apis.KnNamespaceHeader, ref.Namespace)
 		dispatchResultForFanout := f.dispatch(ctx, subs, event, additionalHeaders)
 		err := ParseDispatchResultAndReportMetrics(dispatchResultForFanout, f.reporter, reportArgs)
 		// If there are both http and https subscribers, we need to report the metrics for both of the type
 		// In this case we report http metrics because above we checked first for https and reported it so the left over metric to report is for http
-		if f.hasHttpSubs && f.hasHttpsSubs {
+		if hasHttpSubs {
 			reportArgs.EventScheme = "http"
+			err = ParseDispatchResultAndReportMetrics(dispatchResultForFanout, f.reporter, reportArgs)
+		}
+		if hasHttpsSubs {
+			reportArgs.EventScheme = "https"
 			err = ParseDispatchResultAndReportMetrics(dispatchResultForFanout, f.reporter, reportArgs)
 		}
 		return err
