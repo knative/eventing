@@ -1087,7 +1087,7 @@ func TestReconcile(t *testing.T) {
 			},
 			WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor(true)},
 			SkipNamespaceValidation: true, // SubjectAccessReview objects are cluster-scoped.
-		},{
+		}, {
 			Name: "Valid with nodeSelector",
 
 			Ctx: feature.ToContext(context.Background(), feature.Flags{
@@ -1140,7 +1140,7 @@ func TestReconcile(t *testing.T) {
 				makeSubjectAccessReview("namespaces", "list", "default"),
 				makeSubjectAccessReview("namespaces", "watch", "default"),
 			},
-		
+
 			WantUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: makeAvailableReceiveAdapterWithNodeSelector(t, map[string]string{
 					"testkey1": "testvalue1",
@@ -1534,13 +1534,13 @@ func makeAvailableReceiveAdapterWithNodeSelector(t *testing.T, selector map[stri
 	)
 
 	args := resources.ReceiveAdapterArgs{
-		Image:         image,
-		Source:        src,
-		Labels:        resources.Labels(sourceName),
-		SinkURI:       sinkURI.String(),
-		Configs:       &reconcilersource.EmptyVarsGenerator{},
+		Image:        image,
+		Source:       src,
+		Labels:       resources.Labels(sourceName),
+		SinkURI:      sinkURI.String(),
+		Configs:      &reconcilersource.EmptyVarsGenerator{},
 		NodeSelector: selector,
-		Namespaces: []string{testNS},
+		Namespaces:   []string{testNS},
 	}
 
 	ra, err := resources.MakeReceiveAdapter(&args)

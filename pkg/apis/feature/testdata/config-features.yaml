@@ -28,4 +28,3 @@ data:
     apiserversources.nodeselector.testkey: testvalue
     apiserversources.nodeselector.testkey1: testvalue1
     apiserversources.nodeselector.testkey2: testvalue2
-  
