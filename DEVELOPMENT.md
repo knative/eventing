@@ -481,7 +481,7 @@ telepresence quit
   volumes from local controller) are not tested
 - This method can also be used in production, but proceed with caution.
 
-### Commonly faced issues when setting up with Ubuntu (WSL)
+### Common issues when setting up with Ubuntu (WSL)
 
 - Go version mismatch - Use [this method](https://www.digitalocean.com/community/tutorials/how-to-install-go-on-ubuntu-20-04) to install instead of `sudo apt-get install golang-go`
 - Use `go install` to install any additional gotools such as `goimports`
