@@ -68,7 +68,7 @@ func NewController(
 	deploymentInformer := deploymentinformer.Get(ctx)
 	apiServerSourceInformer := apiserversourceinformer.Get(ctx)
 	namespaceInformer := namespace.Get(ctx)
-	serviceaccountInformer := serviceaccountinformer.Get(ctx, sources.OIDCTokenRoleLabelSelector)
+	oidcServiceaccountInformer := serviceaccountinformer.Get(ctx, sources.OIDCTokenRoleLabelSelector)
 
 	// Create a selector string
 	roleInformer := roleinformer.Get(ctx, sources.OIDCTokenRoleLabelSelector)
@@ -90,7 +90,7 @@ func NewController(
 		ceSource:                   GetCfgHost(ctx),
 		configs:                    reconcilersource.WatchConfigurations(ctx, component, cmw),
 		namespaceLister:            namespaceInformer.Lister(),
-		serviceAccountLister:       serviceaccountInformer.Lister(),
+		serviceAccountLister:       oidcServiceaccountInformer.Lister(),
 		roleLister:                 roleInformer.Lister(),
 		roleBindingLister:          rolebindingInformer.Lister(),
 		trustBundleConfigMapLister: trustBundleConfigMapInformer.Lister(),
@@ -143,7 +143,7 @@ func NewController(
 	})
 
 	// Reconciler ApiServerSource when the OIDC service account changes
-	serviceaccountInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+	oidcServiceaccountInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.FilterController(&v1.ApiServerSource{}),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
