@@ -51,6 +51,10 @@ spec:
       {{ if .uri }}
       uri: {{ .uri }}
       {{ end }}
+      {{ if .CACerts }}
+      CACerts: |-
+        {{ .CACerts }}
+      {{ end }}
   {{ end }}
   {{ if .reply }}
   reply:
@@ -63,5 +67,9 @@ spec:
     {{ end }}
     {{ if .reply.uri }}
     uri: {{ .reply.uri }}
+    {{ end }}
+    {{ if .reply.CACerts }}
+    CACerts: |-
+      {{ .reply.CACerts }}
     {{ end }}
   {{ end }}
