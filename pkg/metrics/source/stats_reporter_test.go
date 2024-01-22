@@ -34,6 +34,7 @@ func TestStatsReporter(t *testing.T) {
 		EventSource:   "unit-test",
 		Name:          "testsource",
 		ResourceGroup: "testresourcegroup",
+		EventScheme:   "http",
 	}
 
 	r, err := NewStatsReporter()
@@ -49,6 +50,7 @@ func TestStatsReporter(t *testing.T) {
 		metrics.LabelResourceGroup:     "testresourcegroup",
 		metrics.LabelResponseCode:      "202",
 		metrics.LabelResponseCodeClass: "2xx",
+		metrics.LabelEventScheme:       "http",
 	}
 
 	retryWantTags := map[string]string{
@@ -59,6 +61,7 @@ func TestStatsReporter(t *testing.T) {
 		metrics.LabelResourceGroup:     "testresourcegroup",
 		metrics.LabelResponseCode:      "503",
 		metrics.LabelResponseCodeClass: "5xx",
+		metrics.LabelEventScheme:       "http",
 	}
 
 	// test ReportEventCount and ReportRetryEventCount
@@ -85,7 +88,8 @@ func TestBadValues(t *testing.T) {
 	}
 
 	args := &ReportArgs{
-		Namespace: "😀",
+		Namespace:   "😀",
+		EventScheme: "http",
 	}
 
 	if err := r.ReportEventCount(args, 200); err == nil {

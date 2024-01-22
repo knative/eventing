@@ -241,6 +241,12 @@ func (h *Handler) handleDispatchToReplyRequest(ctx context.Context, trigger *eve
 		requestType: "reply_forward",
 	}
 
+	if request.TLS != nil {
+		reportArgs.requestScheme = "https"
+	} else {
+		reportArgs.requestScheme = "http"
+	}
+
 	h.logger.Info("sending to reply", zap.Any("target", target))
 
 	// since the broker-filter acts here like a proxy, we don't filter headers
@@ -275,6 +281,12 @@ func (h *Handler) handleDispatchToDLSRequest(ctx context.Context, trigger *event
 		trigger:     trigger.Name,
 		broker:      trigger.Spec.Broker,
 		requestType: "dls_forward",
+	}
+
+	if request.TLS != nil {
+		reportArgs.requestScheme = "https"
+	} else {
+		reportArgs.requestScheme = "http"
 	}
 
 	h.logger.Info("sending to dls", zap.Any("target", target))
@@ -312,6 +324,12 @@ func (h *Handler) handleDispatchToSubscriberRequest(ctx context.Context, trigger
 		requestType: "filter",
 	}
 
+	if request.TLS != nil {
+		reportArgs.requestScheme = "https"
+	} else {
+		reportArgs.requestScheme = "http"
+	}
+
 	subscriberURI := trigger.Status.SubscriberURI
 	if subscriberURI == nil {
 		// Record the event count.
@@ -342,7 +360,6 @@ func (h *Handler) handleDispatchToSubscriberRequest(ctx context.Context, trigger
 }
 
 func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers http.Header, target duckv1.Addressable, reportArgs *ReportArgs, event *cloudevents.Event, t *eventingv1.Trigger, ttl int32) {
-
 	additionalHeaders := headers.Clone()
 	additionalHeaders.Set(apis.KnNamespaceHeader, t.GetNamespace())
 
