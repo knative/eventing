@@ -48,7 +48,7 @@ func NewController(
 
 	sequenceInformer := sequence.Get(ctx)
 	subscriptionInformer := subscription.Get(ctx)
-	serviceaccountInformer := serviceaccountinformer.Get(ctx, sources.OIDCTokenRoleLabelSelector)
+	oidcServiceaccountInformer := serviceaccountinformer.Get(ctx, sources.OIDCTokenRoleLabelSelector)
 
 	var globalResync func(obj interface{})
 	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {
@@ -63,7 +63,7 @@ func NewController(
 		subscriptionLister:   subscriptionInformer.Lister(),
 		dynamicClientSet:     dynamicclient.Get(ctx),
 		eventingClientSet:    eventingclient.Get(ctx),
-		serviceAccountLister: serviceaccountInformer.Lister(),
+		serviceAccountLister: oidcServiceaccountInformer.Lister(),
 		kubeclient:           kubeclient.Get(ctx),
 	}
 
@@ -88,7 +88,7 @@ func NewController(
 	})
 
 	// Reconcile Sequence when the OIDC service account changes
-	serviceaccountInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+	oidcServiceaccountInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.FilterController(&v1.Sequence{}),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})

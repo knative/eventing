@@ -78,13 +78,13 @@ func NewController(
 
 	deploymentInformer := deploymentinformer.Get(ctx)
 	pingSourceInformer := pingsourceinformer.Get(ctx)
-	serviceaccountInformer := serviceaccountinformer.Get(ctx, sources.OIDCTokenRoleLabelSelector)
+	oidcServiceaccountInformer := serviceaccountinformer.Get(ctx, sources.OIDCTokenRoleLabelSelector)
 
 	r := &Reconciler{
 		kubeClientSet:        kubeclient.Get(ctx),
 		leConfig:             leConfig,
 		configAcc:            reconcilersource.WatchConfigurations(ctx, component, cmw),
-		serviceAccountLister: serviceaccountInformer.Lister(),
+		serviceAccountLister: oidcServiceaccountInformer.Lister(),
 	}
 
 	impl := pingsourcereconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
@@ -114,7 +114,7 @@ func NewController(
 			)),
 	})
 
-	serviceaccountInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+	oidcServiceaccountInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.FilterController(&sourcesv1.PingSource{}),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})

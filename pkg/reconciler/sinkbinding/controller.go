@@ -82,7 +82,7 @@ func NewController(
 	dc := dynamicclient.Get(ctx)
 	psInformerFactory := podspecable.Get(ctx)
 	namespaceInformer := namespace.Get(ctx)
-	serviceaccountInformer := serviceaccountinformer.Get(ctx, sources.OIDCTokenRoleLabelSelector)
+	oidcServiceaccountInformer := Serviceaccountinformer.Get(ctx, sources.OIDCTokenRoleLabelSelector)
 	secretInformer := secretinformer.Get(ctx)
 	trustBundleConfigMapInformer := configmapinformer.Get(ctx, eventingtls.TrustBundleLabelSelector)
 	trustBundleConfigMapLister := configmapinformer.Get(ctx, eventingtls.TrustBundleLabelSelector).Lister()
@@ -138,7 +138,7 @@ func NewController(
 		res:                        sbResolver,
 		tracker:                    impl.Tracker,
 		kubeclient:                 kubeclient.Get(ctx),
-		serviceAccountLister:       serviceaccountInformer.Lister(),
+		serviceAccountLister:       oidcServiceaccountInformer.Lister(),
 		secretLister:               secretInformer.Lister(),
 		featureStore:               featureStore,
 		tokenProvider:              auth.NewOIDCTokenProvider(ctx),
@@ -157,7 +157,7 @@ func NewController(
 	}
 
 	// Reconcile SinkBinding when the OIDC service account changes
-	serviceaccountInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+	oidcServiceaccountInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.FilterController(&v1.SinkBinding{}),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})

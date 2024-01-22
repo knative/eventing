@@ -52,7 +52,7 @@ func NewController(
 	containersourceInformer := containersourceinformer.Get(ctx)
 	sinkbindingInformer := sinkbindinginformer.Get(ctx)
 	deploymentInformer := deploymentinformer.Get(ctx)
-	serviceaccountInformer := serviceaccountinformer.Get(ctx, sources.OIDCTokenRoleLabelSelector)
+	oidcServiceaccountInformer := serviceaccountinformer.Get(ctx, sources.OIDCTokenRoleLabelSelector)
 	trustBundleConfigMapInformer := configmapinformer.Get(ctx, eventingtls.TrustBundleLabelSelector)
 
 	var globalResync func(obj interface{})
@@ -70,7 +70,7 @@ func NewController(
 		containerSourceLister:      containersourceInformer.Lister(),
 		deploymentLister:           deploymentInformer.Lister(),
 		sinkBindingLister:          sinkbindingInformer.Lister(),
-		serviceAccountLister:       serviceaccountInformer.Lister(),
+		serviceAccountLister:       oidcServiceaccountInformer.Lister(),
 		trustBundleConfigMapLister: trustBundleConfigMapInformer.Lister(),
 	}
 	impl := v1containersource.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {

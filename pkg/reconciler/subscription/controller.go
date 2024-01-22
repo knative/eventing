@@ -50,7 +50,7 @@ func NewController(
 
 	subscriptionInformer := subscription.Get(ctx)
 	channelInformer := channel.Get(ctx)
-	serviceaccountInformer := serviceaccountinformer.Get(ctx, sources.OIDCTokenRoleLabelSelector)
+	oidcServiceaccountInformer := serviceaccountinformer.Get(ctx, sources.OIDCTokenRoleLabelSelector)
 
 	var globalResync func(obj interface{})
 
@@ -67,7 +67,7 @@ func NewController(
 		kreferenceResolver:   kref.NewKReferenceResolver(customresourcedefinition.Get(ctx).Lister()),
 		subscriptionLister:   subscriptionInformer.Lister(),
 		channelLister:        channelInformer.Lister(),
-		serviceAccountLister: serviceaccountInformer.Lister(),
+		serviceAccountLister: oidcServiceaccountInformer.Lister(),
 	}
 	impl := subscriptionreconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
 		return controller.Options{
@@ -99,7 +99,7 @@ func NewController(
 	))
 
 	// Reconciler Subscription when the OIDC service account changes
-	serviceaccountInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+	oidcServiceaccountInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.FilterController(&messagingv1.Subscription{}),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
