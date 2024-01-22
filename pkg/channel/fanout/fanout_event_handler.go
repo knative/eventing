@@ -187,11 +187,11 @@ func (f *FanoutEventHandler) SetSubscriptions(ctx context.Context, subs []Subscr
 }
 
 func (f *FanoutEventHandler) GetSubscriptions(ctx context.Context) []Subscription {
-	ret, _, _ := f.getSubscriptionsWithScheme(ctx)
+	ret, _, _ := f.getSubscriptionsWithScheme()
 	return ret
 }
 
-func (f *FanoutEventHandler) getSubscriptionsWithScheme(ctx context.Context) (ret []Subscription, hasHttpSubs bool, hasHttpsSubs bool) {
+func (f *FanoutEventHandler) getSubscriptionsWithScheme() (ret []Subscription, hasHttpSubs bool, hasHttpsSubs bool) {
 	f.subscriptionsMutex.RLock()
 	defer f.subscriptionsMutex.RUnlock()
 	ret = make([]Subscription, len(f.subscriptions))
@@ -223,7 +223,7 @@ func createEventReceiverFunction(f *FanoutEventHandler) func(context.Context, ch
 				f.autoCreateEventType(ctx, evnt)
 			}
 
-			subs, hasHttpSubs, hasHttpsSubs := f.getSubscriptionsWithScheme(ctx)
+			subs, hasHttpSubs, hasHttpsSubs := f.getSubscriptionsWithScheme()
 
 			if len(subs) == 0 {
 				// Nothing to do here
@@ -260,7 +260,7 @@ func createEventReceiverFunction(f *FanoutEventHandler) func(context.Context, ch
 			f.autoCreateEventType(ctx, event)
 		}
 
-		subs, hasHttpSubs, hasHttpsSubs := f.getSubscriptionsWithScheme(ctx)
+		subs, hasHttpSubs, hasHttpsSubs := f.getSubscriptionsWithScheme()
 		if len(subs) == 0 {
 			// Nothing to do here
 			return nil
