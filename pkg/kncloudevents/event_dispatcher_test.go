@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -944,9 +945,9 @@ func TestDispatchMessageToTLSEndpoint(t *testing.T) {
 	destinationEventsChan := make(chan cloudevents.Event, 10)
 	destinationReceivedEvents := make([]cloudevents.Event, 0, 10)
 	destinationHandler := eventingtlstesting.EventChannelHandler(destinationEventsChan)
-	destinationCA := eventingtlstesting.StartServer(ctx, t, 8334, destinationHandler, kncloudevents.WithDrainQuietPeriod(time.Millisecond))
+	destinationCA := eventingtlstesting.StartServer(ctx, t, 0, destinationHandler, kncloudevents.WithDrainQuietPeriod(time.Millisecond))
 	destination := duckv1.Addressable{
-		URL:     apis.HTTPS("localhost:8334"),
+		URL:     apis.HTTPS(fmt.Sprintf("localhost:%d", destinationCA.Port())),
 		CACerts: &destinationCA,
 	}
 
