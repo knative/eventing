@@ -157,6 +157,8 @@ func TestSetupOIDCServiceAccount(t *testing.T) {
 	listers := rttestingv1.NewListers(eventtypes)
 	trigger := rttestingv1.NewTrigger("my-trigger", "my-namespace", "my-broker")
 	expected := GetOIDCServiceAccountForResource(gvk, objectMeta)
+
+	// authentication-oidc feature enabled
 	err := SetupOIDCServiceAccount(ctx, feature.Flags{
 		feature.OIDCAuthentication: feature.Enabled,
 	}, listers.GetServiceAccountLister(), kubeclient.Get(ctx), gvk, objectMeta, &trigger.Status, func(as *duckv1.AuthStatus) {
@@ -183,6 +185,51 @@ func TestSetupOIDCServiceAccount(t *testing.T) {
 		t.Errorf("SetupOIDCServiceAccount didn't set TriggerConditionOIDCIdentityCreated Status")
 	}
 
+	// authentication-oidc feature disabled, after enabling so service account was created.
+	// expected serviceAccount was created when SetupOIDCServiceAccount was called with feature enabled.
+	listers = rttestingv1.NewListers([]runtime.Object{expected})
+
+	// Verifies that serviceAccount still exists.
+	sa, err := kubeclient.Get(ctx).CoreV1().ServiceAccounts(objectMeta.Namespace).Get(context.TODO(), expected.Name, metav1.GetOptions{})
+	if sa == nil || err != nil {
+		t.Errorf("ServiceAccount does not exist: %+v: %s", sa, err)
+	}
+	err = SetupOIDCServiceAccount(ctx, feature.Flags{
+		feature.OIDCAuthentication: feature.Disabled,
+	}, listers.GetServiceAccountLister(), kubeclient.Get(ctx), gvk, objectMeta, &trigger.Status, func(as *duckv1.AuthStatus) {
+		trigger.Status.Auth = as
+	})
+
+	if err != nil {
+		t.Errorf("SetupOIDCServiceAccount  failed: %s", err)
+	}
+
+	// Checks whether the created serviceAccount still exists or not.
+	sa, err = kubeclient.Get(ctx).CoreV1().ServiceAccounts(objectMeta.Namespace).Get(context.TODO(), expected.Name, metav1.GetOptions{})
+	if sa != nil || err == nil {
+		t.Errorf("DeleteOIDCServiceAccountIfExists failed to delete the serviceAccount: %+v", sa)
+	}
+
+	if trigger.Status.Auth != nil {
+		t.Errorf("SetupOIDCServiceAccount setAuthStatus  failed")
+	}
+
+	// match OIDCIdentityCreated condition
+	matched = false
+	for _, condition := range trigger.Status.Conditions {
+		if condition.Type == eventingv1.TriggerConditionOIDCIdentityCreated {
+			if condition.Reason == "authentication-oidc feature disabled" {
+				matched = true
+			}
+		}
+	}
+
+	if !matched {
+		t.Errorf("SetupOIDCServiceAccount didn't set TriggerConditionOIDCIdentityCreated Status")
+	}
+
+	// authentication-oidc feature disabled.
+	listers = rttestingv1.NewListers(eventtypes)
 	err = SetupOIDCServiceAccount(ctx, feature.Flags{
 		feature.OIDCAuthentication: feature.Disabled,
 	}, listers.GetServiceAccountLister(), kubeclient.Get(ctx), gvk, objectMeta, &trigger.Status, func(as *duckv1.AuthStatus) {
@@ -209,5 +256,33 @@ func TestSetupOIDCServiceAccount(t *testing.T) {
 
 	if !matched {
 		t.Errorf("SetupOIDCServiceAccount didn't set TriggerConditionOIDCIdentityCreated Status")
+	}
+}
+
+func TestDeleteOIDCServiceAccountIfExists(t *testing.T) {
+	ctx, _ := rectesting.SetupFakeContext(t)
+	gvk := eventingv1.SchemeGroupVersion.WithKind("Broker")
+	objectMeta := metav1.ObjectMeta{
+		Name:      "my-broker-unique",
+		Namespace: "my-namespace",
+		UID:       "my-uuid",
+	}
+
+	expected := GetOIDCServiceAccountForResource(gvk, objectMeta)
+	serviceAccount, err := kubeclient.Get(ctx).CoreV1().ServiceAccounts(objectMeta.Namespace).Create(ctx, expected, metav1.CreateOptions{})
+	if err != nil {
+		t.Errorf("could not create OIDC service account %s/%s for %s: %s", objectMeta.Name, objectMeta.Namespace, gvk.Kind, err)
+	}
+
+	listers := rttestingv1.NewListers([]runtime.Object{serviceAccount})
+
+	err = DeleteOIDCServiceAccountIfExists(ctx, listers.GetServiceAccountLister(), kubeclient.Get(ctx), gvk, objectMeta)
+	if err != nil {
+		t.Errorf("DeleteOIDCServiceAccountIfExists failed: %s", err)
+	}
+
+	sa, err := kubeclient.Get(ctx).CoreV1().ServiceAccounts(objectMeta.Namespace).Get(context.TODO(), expected.Name, metav1.GetOptions{})
+	if sa != nil || err == nil {
+		t.Errorf("DeleteOIDCServiceAccountIfExists failed to delete the serviceAccount: %+v", sa)
 	}
 }
