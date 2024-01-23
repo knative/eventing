@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	opencensusclient "github.com/cloudevents/sdk-go/observability/opencensus/v2/client"
@@ -70,6 +71,12 @@ const (
 	FilterAudience = "mt-broker-filter"
 	skipTTL        = -1
 )
+
+// HeaderProxyAllowList contains the headers that are proxied from the reply; other than the CloudEvents headers.
+// Other headers are not proxied because of security concerns.
+var HeaderProxyAllowList = map[string]struct{}{
+	strings.ToLower("Retry-After"): {},
+}
 
 // Handler parses Cloud Events, determines if they pass a filter, and sends them to a subscriber.
 type Handler struct {
@@ -440,7 +447,8 @@ func (h *Handler) writeResponse(ctx context.Context, writer http.ResponseWriter,
 			writer.WriteHeader(http.StatusBadGateway)
 			return http.StatusBadGateway, errors.New("received a non-empty response not recognized as CloudEvent. The response MUST be either empty or a valid CloudEvent")
 		}
-		writeHeaders(dispatchInfo.ResponseHeader, writer) // Proxy original Response Headers for downstream use
+
+		proxyHeaders(dispatchInfo.ResponseHeader, writer) // Proxy original Response Headers for downstream use
 		h.logger.Debug("Response doesn't contain a CloudEvent, replying with an empty response", zap.Any("target", target))
 		writer.WriteHeader(dispatchInfo.ResponseCode)
 		return dispatchInfo.ResponseCode, nil
@@ -467,7 +475,7 @@ func (h *Handler) writeResponse(ctx context.Context, writer http.ResponseWriter,
 	defer eventResponse.Finish(nil)
 
 	// Proxy the original Response Headers for downstream use
-	writeHeaders(dispatchInfo.ResponseHeader, writer)
+	proxyHeaders(dispatchInfo.ResponseHeader, writer)
 
 	if err := cehttp.WriteResponseWriter(ctx, eventResponse, dispatchInfo.ResponseCode, writer); err != nil {
 		return http.StatusInternalServerError, fmt.Errorf("failed to write response event: %w", err)
@@ -610,4 +618,20 @@ func writeHeaders(httpHeader http.Header, writer http.ResponseWriter) {
 			writer.Header().Add(headerKey, headerValue)
 		}
 	}
+}
+
+func proxyHeaders(httpHeader http.Header, writer http.ResponseWriter) {
+	for headerKey, headerValues := range httpHeader {
+		// *Only* proxy some headers because of security reasons
+		if isInProxyHeaderAllowList(headerKey) {
+			for _, headerValue := range headerValues {
+				writer.Header().Add(headerKey, headerValue)
+			}
+		}
+	}
+}
+
+func isInProxyHeaderAllowList(headerKey string) bool {
+	_, exists := HeaderProxyAllowList[strings.ToLower(headerKey)]
+	return exists
 }
