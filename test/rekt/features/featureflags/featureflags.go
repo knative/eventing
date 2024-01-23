@@ -60,6 +60,20 @@ func TransportEncryptionStrict() feature.ShouldRun {
 	}
 }
 
+func AuthenticationOIDCEnabled() feature.ShouldRun {
+	return func(ctx context.Context, t feature.T) (feature.PrerequisiteResult, error) {
+		flags, err := getFeatureFlags(ctx, "config-features")
+		if err != nil {
+			return feature.PrerequisiteResult{}, err
+		}
+
+		return feature.PrerequisiteResult{
+			ShouldRun: flags.IsOIDCAuthentication(),
+			Reason:    flags.String(),
+		}, nil
+	}
+}
+
 func IstioDisabled() feature.ShouldRun {
 	return func(ctx context.Context, t feature.T) (feature.PrerequisiteResult, error) {
 		flags, err := getFeatureFlags(ctx, "config-features")
