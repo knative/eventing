@@ -480,3 +480,9 @@ telepresence quit
 - Networking works fine, but volumes (i.e. being able to access Kubernetes
   volumes from local controller) are not tested
 - This method can also be used in production, but proceed with caution.
+
+### Common issues when setting up with Ubuntu (WSL)
+
+- Go version mismatch: `sudo apt-get install golang-go` installs an older version of Go (1.18), which is too outdated for installing Ko and Kubectl
+   - Use [this method](https://www.digitalocean.com/community/tutorials/how-to-install-go-on-ubuntu-20-04) instead to manually install go using the .tar file
+- Use `go install` to install any additional gotools such as `goimports`
