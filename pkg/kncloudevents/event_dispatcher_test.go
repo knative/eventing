@@ -929,50 +929,52 @@ func TestSendEvent(t *testing.T) {
 }
 
 func TestDispatchMessageToTLSEndpoint(t *testing.T) {
-	var wg sync.WaitGroup
-	ctx, _ := rectesting.SetupFakeContext(t)
-	ctx, cancel := context.WithCancel(ctx)
-	defer func() {
-		cancel()
-		// give the servers a bit time to fully shutdown to prevent port clashes
-		time.Sleep(500 * time.Millisecond)
-	}()
-	oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
-	dispatcher := kncloudevents.NewDispatcher(eventingtls.NewDefaultClientConfig(), oidcTokenProvider)
-	eventToSend := test.FullEvent()
+    var wg sync.WaitGroup
+    ctx, _ := rectesting.SetupFakeContext(t)
+    ctx, cancel := context.WithCancel(ctx)
+    defer func() {
+        cancel()
+        // give the servers a bit time to fully shutdown to prevent port clashes
+        time.Sleep(500 * time.Millisecond)
+    }()
+    oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
+    dispatcher := kncloudevents.NewDispatcher(eventingtls.NewDefaultClientConfig(), oidcTokenProvider)
+    eventToSend := test.FullEvent()
 
-	// destination
-	destinationEventsChan := make(chan cloudevents.Event, 10)
-	destinationReceivedEvents := make([]cloudevents.Event, 0, 10)
-	destinationHandler := eventingtlstesting.EventChannelHandler(destinationEventsChan)
-	destinationCA := eventingtlstesting.StartServer(ctx, t, 0, destinationHandler, kncloudevents.WithDrainQuietPeriod(time.Millisecond))
-	destination := duckv1.Addressable{
-		URL:     apis.HTTPS(fmt.Sprintf("localhost:%d", destinationCA.Port())),
-		CACerts: &destinationCA,
-	}
+    // destination
+    destinationEventsChan := make(chan cloudevents.Event, 10)
+    destinationReceivedEvents := make([]cloudevents.Event, 0, 10)
+    
+    // Use the updated StartServer function
+    listener, port, _ := eventingtlstesting.StartServer(ctx, t, 0, destinationHandler, kncloudevents.WithDrainQuietPeriod(time.Millisecond))
+    destination := duckv1.Addressable{
+        URL:     apis.HTTPS(fmt.Sprintf("localhost:%d", port)),
+        CACerts: &destinationCA,
+    }
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		for event := range destinationEventsChan {
-			destinationReceivedEvents = append(destinationReceivedEvents, event)
-		}
-	}()
+    wg.Add(1)
+    go func() {
+        defer wg.Done()
+        for event := range destinationEventsChan {
+            destinationReceivedEvents = append(destinationReceivedEvents, event)
+        }
+    }()
 
-	// send event
-	message := binding.ToMessage(&eventToSend)
-	info, err := dispatcher.SendMessage(ctx, message, destination)
-	require.Nil(t, err)
-	require.Equal(t, 200, info.ResponseCode)
+    // send event
+    message := binding.ToMessage(&eventToSend)
+    info, err := dispatcher.SendMessage(ctx, message, destination)
+    require.Nil(t, err)
+    require.Equal(t, 200, info.ResponseCode)
 
-	// check received events
-	close(destinationEventsChan)
-	wg.Wait()
+    // check received events
+    close(destinationEventsChan)
+    wg.Wait()
 
-	require.Len(t, destinationReceivedEvents, 1)
-	require.Equal(t, eventToSend.ID(), destinationReceivedEvents[0].ID())
-	require.Equal(t, eventToSend.Data(), destinationReceivedEvents[0].Data())
+    require.Len(t, destinationReceivedEvents, 1)
+    require.Equal(t, eventToSend.ID(), destinationReceivedEvents[0].ID())
+    require.Equal(t, eventToSend.Data(), destinationReceivedEvents[0].Data())
 }
+
 
 func TestDispatchMessageToTLSEndpointWithReply(t *testing.T) {
 	var wg sync.WaitGroup
