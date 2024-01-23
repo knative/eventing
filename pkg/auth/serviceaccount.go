@@ -101,6 +101,26 @@ func EnsureOIDCServiceAccountExistsForResource(ctx context.Context, serviceAccou
 	return nil
 }
 
+// DeleteOIDCServiceAccountIfExists makes sure the given resource does not have an OIDC service account.
+// If it does that service account is deleted.
+func DeleteOIDCServiceAccountIfExists(ctx context.Context, serviceAccountLister corev1listers.ServiceAccountLister, kubeclient kubernetes.Interface, gvk schema.GroupVersionKind, objectMeta metav1.ObjectMeta) error {
+	saName := GetOIDCServiceAccountNameForResource(gvk, objectMeta)
+	sa, err := serviceAccountLister.ServiceAccounts(objectMeta.Namespace).Get(saName)
+
+	if err == nil && metav1.IsControlledBy(&sa.ObjectMeta, &objectMeta) {
+		logging.FromContext(ctx).Debugf("OIDC Service account exists and has correct owner (%s/%s). Deleting OIDC service account", objectMeta.Name, objectMeta.Namespace)
+
+		err = kubeclient.CoreV1().ServiceAccounts(objectMeta.Namespace).Delete(ctx, sa.Name, metav1.DeleteOptions{})
+		if err != nil {
+			return fmt.Errorf("could not delete OIDC service account %s/%s for %s: %w", objectMeta.Name, objectMeta.Namespace, gvk.Kind, err)
+		}
+	} else if apierrs.IsNotFound(err) {
+		return nil
+	}
+
+	return err
+}
+
 type OIDCIdentityStatusMarker interface {
 	MarkOIDCIdentityCreatedSucceeded()
 	MarkOIDCIdentityCreatedSucceededWithReason(reason, messageFormat string, messageA ...interface{})
@@ -119,6 +139,9 @@ func SetupOIDCServiceAccount(ctx context.Context, flags feature.Flags, serviceAc
 		}
 		marker.MarkOIDCIdentityCreatedSucceeded()
 	} else {
+		if err := DeleteOIDCServiceAccountIfExists(ctx, serviceAccountLister, kubeclient, gvk, objectMeta); err != nil {
+			return err
+		}
 		setAuthStatus(nil)
 		marker.MarkOIDCIdentityCreatedSucceededWithReason(fmt.Sprintf("%s feature disabled", feature.OIDCAuthentication), "")
 	}
