@@ -27,11 +27,14 @@ import (
 	"testing"
 
 	"knative.dev/pkg/system"
+	pkgtest "knative.dev/pkg/test"
 
 	"knative.dev/eventing/test"
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/setupclientoptions"
 	"knative.dev/pkg/test/zipkin"
+
+	"knative.dev/reconciler-test/pkg/environment"
 )
 
 const (
@@ -43,6 +46,8 @@ var channelTestRunner testlib.ComponentsTestRunner
 var sourcesTestRunner testlib.ComponentsTestRunner
 var brokerTestRunner testlib.ComponentsTestRunner
 var brokerClass string
+
+var global environment.GlobalEnvironment
 
 func TestMain(m *testing.M) {
 	os.Exit(func() int {
@@ -64,6 +69,12 @@ func TestMain(m *testing.M) {
 			ComponentNamespace:  test.EventingFlags.BrokerNamespace,
 		}
 		brokerClass = test.BrokerClass
+
+		cfg, err := pkgtest.Flags.GetRESTConfig()
+		if err != nil {
+			panic("failed to get rest config")
+		}
+		global = environment.NewGlobalEnvironmentWithRestConfig(cfg)
 
 		addSourcesInitializers()
 		// Any tests may SetupZipkinTracing, it will only actually be done once. This should be the ONLY
