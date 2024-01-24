@@ -20,9 +20,10 @@ limitations under the License.
 package rekt
 
 import (
-	"knative.dev/reconciler-test/pkg/feature"
 	"testing"
 	"time"
+
+	"knative.dev/reconciler-test/pkg/feature"
 
 	"github.com/cloudevents/sdk-go/v2/binding"
 	duckv1 "knative.dev/pkg/apis/duck/v1"

@@ -18,6 +18,7 @@ package oidc
 
 import (
 	"fmt"
+
 	"knative.dev/eventing/test/rekt/features/featureflags"
 
 	"github.com/cloudevents/sdk-go/v2/test"
