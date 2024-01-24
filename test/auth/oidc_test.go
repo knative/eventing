@@ -33,11 +33,7 @@ import (
 
 	"knative.dev/eventing/test/auth/features/oidc"
 	brokerfeatures "knative.dev/eventing/test/rekt/features/broker"
-	sequencefeatures "knative.dev/eventing/test/rekt/features/sequence"
 	"knative.dev/eventing/test/rekt/resources/broker"
-	"knative.dev/eventing/test/rekt/resources/channel_impl"
-	"knative.dev/eventing/test/rekt/resources/channel_template"
-	"knative.dev/eventing/test/rekt/resources/sequence"
 )
 
 func TestBrokerSupportsOIDC(t *testing.T) {
@@ -72,39 +68,4 @@ func TestBrokerSendsEventsWithOIDCSupport(t *testing.T) {
 	)
 
 	env.TestSet(ctx, t, oidc.BrokerSendEventWithOIDC())
-}
-
-func TestSequenceSupportsOIDC(t *testing.T) {
-	t.Parallel()
-
-	ctx, env := global.Environment(
-		knative.WithKnativeNamespace(system.Namespace()),
-		knative.WithLoggingConfig,
-		knative.WithTracingConfig,
-		k8s.WithEventListener,
-		environment.Managed(t),
-	)
-
-	name := feature.MakeRandomK8sName("sequence")
-	env.Prerequisite(ctx, t, sequencefeatures.GoesReady(name, sequence.WithChannelTemplate(channel_template.ChannelTemplate{
-		TypeMeta: channel_impl.TypeMeta(),
-		Spec:     map[string]interface{}{},
-	})))
-
-	env.Test(ctx, t, oidc.SequenceHasAudienceOfInputChannel(name, env.Namespace(), channel_impl.GVR(), channel_impl.GVK().Kind))
-}
-
-func TestSequenceSendsEventsWithOIDCSupport(t *testing.T) {
-	t.Parallel()
-
-	ctx, env := global.Environment(
-		knative.WithKnativeNamespace(system.Namespace()),
-		knative.WithLoggingConfig,
-		knative.WithTracingConfig,
-		k8s.WithEventListener,
-		environment.Managed(t),
-		eventshub.WithTLS(t),
-	)
-
-	env.TestSet(ctx, t, oidc.SequenceSendsEventWithOIDC())
 }

@@ -60,3 +60,38 @@ func TestSequenceTLS(t *testing.T) {
 
 	env.Test(ctx, t, sequence.SequenceTestTLS(channel_template.ImmemoryChannelTemplate()))
 }
+
+func TestSequenceSupportsOIDC(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+	)
+
+	name := feature.MakeRandomK8sName("sequence")
+	env.Prerequisite(ctx, t, sequencefeatures.GoesReady(name, sequence.WithChannelTemplate(channel_template.ChannelTemplate{
+		TypeMeta: channel_impl.TypeMeta(),
+		Spec:     map[string]interface{}{},
+	})))
+
+	env.Test(ctx, t, sequence.SequenceHasAudienceOfInputChannel(name, env.Namespace(), channel_impl.GVR(), channel_impl.GVK().Kind))
+}
+
+func TestSequenceSendsEventsOIDC(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+		eventshub.WithTLS(t),
+	)
+
+	env.TestSet(ctx, t, sequence.SequenceSendsEventWithOIDC())
+}
