@@ -44,4 +44,10 @@ kubectl apply -Rf "$(dirname "$0")/config-transport-encryption"
 
 go_test_e2e -timeout=1h ./test/rekt -run TLS || fail_test
 
+echo "Running E2E OIDC Reconciler Tests"
+
+kubectl apply -Rf "$(dirname "$0")/config-authentication-oidc"
+
+go_test_e2e -timeout=1h ./test/rekt -run OIDC || fail_test
+
 success
