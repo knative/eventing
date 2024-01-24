@@ -111,7 +111,7 @@ func TestGetOIDCServiceAccountForResource(t *testing.T) {
 				"description": "Service Account for OIDC Authentication for Broker \"my-broker\"",
 			},
 			Labels: map[string]string{
-				sources.OIDCLabelKey: "",
+				sources.OIDCLabelKey: "OIDC label",
 			},
 		},
 	}

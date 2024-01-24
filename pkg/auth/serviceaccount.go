@@ -69,7 +69,7 @@ func GetOIDCServiceAccountForResource(gvk schema.GroupVersionKind, objectMeta me
 				"description": fmt.Sprintf("Service Account for OIDC Authentication for %s %q", gvk.GroupKind().Kind, objectMeta.Name),
 			},
 			Labels: map[string]string{
-				sources.OIDCLabelKey: "",
+				sources.OIDCLabelKey: "OIDC label",
 			},
 		},
 	}
