@@ -38,7 +38,7 @@ import (
 	"knative.dev/reconciler-test/pkg/manifest"
 	"knative.dev/reconciler-test/pkg/resources/service"
 
-	eventasssert "knative.dev/reconciler-test/pkg/eventshub/assert"
+	eventassert "knative.dev/reconciler-test/pkg/eventshub/assert"
 
 	"knative.dev/reconciler-test/pkg/resources/pod"
 
@@ -133,7 +133,7 @@ func SendsEventsWithSinkRef() *feature.Feature {
 
 	f.Stable("ApiServerSource as event source").
 		Must("delivers events on sink with ref",
-			eventasssert.OnStore(sink).MatchEvent(test.HasType("dev.knative.apiserver.resource.update")).AtLeast(1))
+			eventassert.OnStore(sink).MatchEvent(test.HasType("dev.knative.apiserver.resource.update")).AtLeast(1))
 
 	return f
 }
@@ -171,7 +171,7 @@ func SendsEventsWithSinkUri() *feature.Feature {
 
 	f.Stable("ApiServerSource as event source").
 		Must("delivers events on sink with URI",
-			eventasssert.OnStore(sink).MatchEvent(test.HasType("dev.knative.apiserver.resource.update")).AtLeast(1))
+			eventassert.OnStore(sink).MatchEvent(test.HasType("dev.knative.apiserver.resource.update")).AtLeast(1))
 
 	return f
 }
@@ -210,8 +210,8 @@ func SendsEventsWithTLS() *feature.Feature {
 
 	f.Stable("ApiServerSource as event source").
 		Must("delivers events on sink with ref",
-			eventasssert.OnStore(sink).
-				Match(eventasssert.MatchKind(eventshub.EventReceived)).
+			eventassert.OnStore(sink).
+				Match(eventassert.MatchKind(eventshub.EventReceived)).
 				MatchEvent(test.HasType("dev.knative.apiserver.resource.update")).
 				AtLeast(1),
 		).
@@ -261,8 +261,8 @@ func SendsEventsWithTLSTrustBundle() *feature.Feature {
 
 	f.Stable("ApiServerSource as event source").
 		Must("delivers events on sink with ref",
-			eventasssert.OnStore(sink).
-				Match(eventasssert.MatchKind(eventshub.EventReceived)).
+			eventassert.OnStore(sink).
+				Match(eventassert.MatchKind(eventshub.EventReceived)).
 				MatchEvent(test.HasType("dev.knative.apiserver.resource.update")).
 				AtLeast(1),
 		).
@@ -314,7 +314,7 @@ func SendsEventsWithEventTypes() *feature.Feature {
 
 	f.Stable("ApiServerSource as event source").
 		Must("delivers events on broker with URI",
-			eventasssert.OnStore(sink).MatchEvent(test.HasType("dev.knative.apiserver.resource.update")).AtLeast(1)).
+			eventassert.OnStore(sink).MatchEvent(test.HasType("dev.knative.apiserver.resource.update")).AtLeast(1)).
 		Must("ApiServerSource test eventtypes match",
 			eventtype.WaitForEventType(eventtype.AssertPresent(expectedCeTypes)))
 
@@ -354,7 +354,7 @@ func SendsEventsWithObjectReferencePayload() *feature.Feature {
 
 	f.Stable("ApiServerSource as event source").
 		Must("delivers events",
-			eventasssert.OnStore(sink).MatchEvent(
+			eventassert.OnStore(sink).MatchEvent(
 				test.HasType("dev.knative.apiserver.ref.add"),
 				test.HasExtensions(map[string]interface{}{"apiversion": "v1"}),
 				test.DataContains(`"kind":"Pod"`),
@@ -397,7 +397,7 @@ func SendsEventsWithResourceEventPayload() *feature.Feature {
 
 	f.Stable("ApiServerSource as event source").
 		Must("delivers events",
-			eventasssert.OnStore(sink).MatchEvent(
+			eventassert.OnStore(sink).MatchEvent(
 				test.HasType("dev.knative.apiserver.resource.add"),
 				test.HasExtensions(map[string]interface{}{"apiversion": "v1"}),
 				test.DataContains(`"kind":"Pod"`),
@@ -440,7 +440,7 @@ func SendsEventsForAllResources() *feature.Feature {
 
 	f.Stable("ApiServerSource as event source").
 		Must("delivers events",
-			eventasssert.OnStore(sink).MatchEvent(
+			eventassert.OnStore(sink).MatchEvent(
 				test.HasType("dev.knative.apiserver.ref.add"),
 				test.DataContains(`"kind":"Pod"`),
 				test.DataContains(fmt.Sprintf(`"name":"%s"`, examplePodName)),
@@ -499,21 +499,21 @@ func SendsEventsForAllResourcesWithNamespaceSelector() *feature.Feature {
 
 	f.Stable("ApiServerSource as event source").
 		Must("delivers events from matching namespace",
-			eventasssert.OnStore(sink).MatchEvent(
+			eventassert.OnStore(sink).MatchEvent(
 				test.HasType("dev.knative.apiserver.ref.add"),
 				test.DataContains(`"kind":"Pod"`),
 				test.DataContains(fmt.Sprintf(`"name":"%s"`, pod1)),
 			).Exact(1))
 	f.Stable("ApiServerSource as event source").
 		Must("delivers events from matching namespace",
-			eventasssert.OnStore(sink).MatchEvent(
+			eventassert.OnStore(sink).MatchEvent(
 				test.HasType("dev.knative.apiserver.ref.add"),
 				test.DataContains(`"kind":"Pod"`),
 				test.DataContains(fmt.Sprintf(`"name":"%s"`, pod2)),
 			).Exact(1))
 	f.Stable("ApiServerSource as event source").
 		MustNot("must not deliver events from non-matching namespace",
-			eventasssert.OnStore(sink).MatchEvent(
+			eventassert.OnStore(sink).MatchEvent(
 				test.HasType("dev.knative.apiserver.ref.add"),
 				test.DataContains(`"kind":"Pod"`),
 				test.DataContains(fmt.Sprintf(`"name":"%s"`, pod3)),
@@ -573,14 +573,14 @@ func SendsEventsForAllResourcesWithEmptyNamespaceSelector() *feature.Feature {
 
 	f.Stable("ApiServerSource as event source").
 		Must("delivers events from new namespace",
-			eventasssert.OnStore(sink).MatchEvent(
+			eventassert.OnStore(sink).MatchEvent(
 				test.HasType("dev.knative.apiserver.ref.add"),
 				test.DataContains(`"kind":"PingSource"`),
 				test.DataContains(fmt.Sprintf(`"name":"%s"`, pingSource1)),
 			).Exact(1))
 	f.Stable("ApiServerSource as event source").
 		Must("delivers events from new namespace",
-			eventasssert.OnStore(sink).MatchEvent(
+			eventassert.OnStore(sink).MatchEvent(
 				test.HasType("dev.knative.apiserver.ref.add"),
 				test.DataContains(`"kind":"PingSource"`),
 				test.DataContains(fmt.Sprintf(`"name":"%s"`, pingSource2)),
@@ -628,13 +628,80 @@ func SendsEventsForLabelMatchingResources() *feature.Feature {
 
 	f.Stable("ApiServerSource as event source").
 		Must("delivers events",
-			eventasssert.OnStore(sink).MatchEvent(
+			eventassert.OnStore(sink).MatchEvent(
 				test.HasType("dev.knative.apiserver.ref.update"),
 				test.DataContains(`"kind":"Pod"`),
 				test.DataContains(fmt.Sprintf(`"name":"%s"`, examplePodName)),
 			).AtLeast(1))
 
 	return f
+}
+
+func ApiserversourceSendEventWithJWT() *feature.Feature {
+	src := feature.MakeRandomK8sName("apiserversource")
+	sink := feature.MakeRandomK8sName("sink")
+	audience := "my-sink-audience"
+	sacmName := feature.MakeRandomK8sName("apiserversource")
+
+	f := feature.NewFeatureNamed("ApiServerSource send events with OIDC authentication")
+
+	f.Prerequisite("OIDC authentication is enabled", featureflags.AuthenticationOIDCEnabled())
+	f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
+	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
+
+	f.Setup("deploy receiver", eventshub.Install(sink,
+		eventshub.StartReceiverTLS,
+		eventshub.OIDCReceiverAudience(audience)))
+
+	f.Setup("Create Service Account for ApiServerSource with RBAC for v1.Event resources",
+		setupAccountAndRoleForApiserversource(sacmName))
+
+	cfg := []manifest.CfgFn{
+		apiserversource.WithServiceAccountName(sacmName),
+		apiserversource.WithEventMode(v1.ResourceMode),
+		apiserversource.WithResources(v1.APIVersionKindSelector{
+			APIVersion: "v1",
+			Kind:       "Event",
+		}),
+	}
+
+	f.Requirement("install ApiServerSource", func(ctx context.Context, t feature.T) {
+		d := service.AsDestinationRef(sink)
+		d.Audience = &audience
+		d.CACerts = eventshub.GetCaCerts(ctx)
+
+		cfg = append(cfg, apiserversource.WithSink(d))
+		apiserversource.Install(src, cfg...)(ctx, t)
+	})
+	f.Requirement("ApiServerSource goes ready", apiserversource.IsReady(src))
+
+	examplePodName := feature.MakeRandomK8sName("example")
+	// create a pod so that ApiServerSource delivers an event to its sink
+	// event body is similar to this:
+	// {"kind":"Pod","namespace":"test-wmbcixlv","name":"example-axvlzbvc","apiVersion":"v1"}
+	f.Requirement("install example pod", pod.Install(examplePodName, exampleImage))
+
+	f.Stable("ApiServerSource as event source").
+		Must("delivers events on sink with ref",
+			eventassert.OnStore(sink).
+				Match(eventassert.MatchKind(eventshub.EventReceived)).
+				MatchEvent(test.HasType("dev.knative.apiserver.resource.update")).
+				AtLeast(1),
+		).Must("Set sinkURI to HTTPS endpoint", source.ExpectHTTPSSink(apiserversource.Gvr(), src)).
+		Must("Set sinkCACerts to non empty CA certs", source.ExpectCACerts(apiserversource.Gvr(), src))
+
+	return f
+}
+
+func setupAccountAndRoleForApiserversource(sacmName string) feature.StepFn {
+	return account_role.Install(sacmName,
+		account_role.WithRole(sacmName+"-clusterrole"),
+		account_role.WithRules(rbacv1.PolicyRule{
+			APIGroups: []string{""},
+			Resources: []string{"events"},
+			Verbs:     []string{"get", "list", "watch", "create"},
+		}),
+	)
 }
 
 // THIS TEST DOES NOT WORK
@@ -679,7 +746,7 @@ func SendsEventsForLabelMatchingResources() *feature.Feature {
 //			// sleep some time to make sure the sink doesn't actually receive events
 //			// not because reaction time was too short.
 //			time.Sleep(10 * time.Second)
-//			eventasssert.OnStore(sink).MatchEvent(any()).Not()(ctx, t)
+//			eventassert.OnStore(sink).MatchEvent(any()).Not()(ctx, t)
 //		})
 //
 //	return f
@@ -722,7 +789,7 @@ func SendEventsForLabelExpressionMatchingResources() *feature.Feature {
 
 	f.Stable("ApiServerSource as event source").
 		Must("delivers events",
-			eventasssert.OnStore(sink).MatchEvent(
+			eventassert.OnStore(sink).MatchEvent(
 				test.HasType("dev.knative.apiserver.ref.add"),
 				test.DataContains(`"kind":"Pod"`),
 				test.DataContains(fmt.Sprintf(`"name":"%s"`, examplePodName)),
@@ -811,9 +878,9 @@ func SendsEventsWithRetries() *feature.Feature {
 
 	f.Stable("ApiServerSource as event source").
 		Must("delivers events",
-			eventasssert.OnStore(sink).Match(
-				eventasssert.MatchKind(eventasssert.EventReceived),
-				eventasssert.MatchEvent(
+			eventassert.OnStore(sink).Match(
+				eventassert.MatchKind(eventassert.EventReceived),
+				eventassert.MatchEvent(
 					test.HasType("dev.knative.apiserver.ref.add"),
 					test.DataContains(`"kind":"Pod"`),
 					test.DataContains(fmt.Sprintf(`"name":"%s"`, examplePodName)),
@@ -891,11 +958,11 @@ func SendsEventsWithBrokerAsSinkTLS() *feature.Feature {
 
 	f.Stable("ApiServerSource as event source").
 		Must("delivers events",
-			eventasssert.OnStore(sinkName).MatchEvent(
+			eventassert.OnStore(sinkName).MatchEvent(
 				test.HasType(sources.ApiServerSourceUpdateEventType),
 			).AtLeast(1),
 		)
-	eventasssert.MatchEvent(
+	eventassert.MatchEvent(
 		test.HasType("dev.knative.apiserver.ref.add"),
 		test.DataContains(`"kind":"Pod"`),
 		test.DataContains(fmt.Sprintf(`"name":"%s"`, examplePodName)),
