@@ -20,6 +20,7 @@ limitations under the License.
 package rekt
 
 import (
+	"knative.dev/reconciler-test/pkg/feature"
 	"testing"
 	"time"
 
@@ -37,7 +38,7 @@ import (
 	"knative.dev/eventing/test/rekt/features/channel"
 	"knative.dev/eventing/test/rekt/features/oidc"
 	ch "knative.dev/eventing/test/rekt/resources/channel"
-	chimpl "knative.dev/eventing/test/rekt/resources/channel_impl"
+	"knative.dev/eventing/test/rekt/resources/channel_impl"
 	"knative.dev/eventing/test/rekt/resources/subscription"
 )
 
@@ -139,7 +140,7 @@ func TestSmoke_ChannelImplWithSubscription(t *testing.T) {
 
 	// Install and wait for a Ready Channel.
 	env.Prerequisite(ctx, t, channel.ImplGoesReady(channelName))
-	chRef := chimpl.AsRef(channelName)
+	chRef := channel_impl.AsRef(channelName)
 
 	names := []string{
 		"customname",

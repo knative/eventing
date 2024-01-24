@@ -20,10 +20,13 @@ limitations under the License.
 package rekt
 
 import (
+	"knative.dev/reconciler-test/pkg/feature"
 	"testing"
 
 	"knative.dev/eventing/test/rekt/features/sequence"
+	"knative.dev/eventing/test/rekt/resources/channel_impl"
 	"knative.dev/eventing/test/rekt/resources/channel_template"
+	sequenceresources "knative.dev/eventing/test/rekt/resources/sequence"
 	"knative.dev/pkg/system"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/eventshub"
@@ -73,7 +76,7 @@ func TestSequenceSupportsOIDC(t *testing.T) {
 	)
 
 	name := feature.MakeRandomK8sName("sequence")
-	env.Prerequisite(ctx, t, sequencefeatures.GoesReady(name, sequence.WithChannelTemplate(channel_template.ChannelTemplate{
+	env.Prerequisite(ctx, t, sequence.GoesReady(name, sequenceresources.WithChannelTemplate(channel_template.ChannelTemplate{
 		TypeMeta: channel_impl.TypeMeta(),
 		Spec:     map[string]interface{}{},
 	})))
