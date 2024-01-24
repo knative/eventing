@@ -18,6 +18,7 @@ package oidc
 
 import (
 	"fmt"
+	"knative.dev/eventing/test/rekt/features/featureflags"
 
 	"github.com/cloudevents/sdk-go/v2/test"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -60,6 +61,10 @@ func AddressableOIDCTokenConformance(gvr schema.GroupVersionResource, kind, name
 func AddressableHasAudiencePopulated(gvr schema.GroupVersionResource, kind, name, namespace string) *feature.Feature {
 	f := feature.NewFeatureNamed(fmt.Sprintf("%s populates its .status.address.audience correctly", kind))
 
+	f.Prerequisite("OIDC authentication is enabled", featureflags.AuthenticationOIDCEnabled())
+	f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
+	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
+
 	f.Requirement(fmt.Sprintf("%s is ready", kind), k8s.IsReady(gvr, name))
 	f.Requirement(fmt.Sprintf("%s is addressable", kind), k8s.IsAddressable(gvr, name))
 
@@ -75,6 +80,10 @@ func AddressableHasAudiencePopulated(gvr schema.GroupVersionResource, kind, name
 
 func addressableRejectInvalidAudience(gvr schema.GroupVersionResource, kind, name string) *feature.Feature {
 	f := feature.NewFeatureNamed(fmt.Sprintf("%s reject event for wrong OIDC audience", kind))
+
+	f.Prerequisite("OIDC authentication is enabled", featureflags.AuthenticationOIDCEnabled())
+	f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
+	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
 
 	source := feature.MakeRandomK8sName("source")
 
@@ -100,6 +109,10 @@ func addressableRejectInvalidAudience(gvr schema.GroupVersionResource, kind, nam
 func addressableRejectExpiredToken(gvr schema.GroupVersionResource, kind, name string) *feature.Feature {
 	f := feature.NewFeatureNamed(fmt.Sprintf("%s reject event with expired OIDC token", kind))
 
+	f.Prerequisite("OIDC authentication is enabled", featureflags.AuthenticationOIDCEnabled())
+	f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
+	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
+
 	source := feature.MakeRandomK8sName("source")
 
 	event := test.FullEvent()
@@ -124,6 +137,10 @@ func addressableRejectExpiredToken(gvr schema.GroupVersionResource, kind, name s
 func addressableRejectCorruptedSignature(gvr schema.GroupVersionResource, kind, name string) *feature.Feature {
 	f := feature.NewFeatureNamed(fmt.Sprintf("%s reject event with corrupted OIDC token signature", kind))
 
+	f.Prerequisite("OIDC authentication is enabled", featureflags.AuthenticationOIDCEnabled())
+	f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
+	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
+
 	source := feature.MakeRandomK8sName("source")
 
 	event := test.FullEvent()
@@ -147,6 +164,10 @@ func addressableRejectCorruptedSignature(gvr schema.GroupVersionResource, kind, 
 
 func addressableAllowsValidRequest(gvr schema.GroupVersionResource, kind, name string) *feature.Feature {
 	f := feature.NewFeatureNamed(fmt.Sprintf("%s handles event with valid OIDC token", kind))
+
+	f.Prerequisite("OIDC authentication is enabled", featureflags.AuthenticationOIDCEnabled())
+	f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
+	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
 
 	source := feature.MakeRandomK8sName("source")
 

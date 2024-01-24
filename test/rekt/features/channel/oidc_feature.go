@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package oidc
+package channel
 
 import (
 	"context"
@@ -29,9 +29,10 @@ import (
 	"knative.dev/reconciler-test/pkg/resources/service"
 )
 
-func ChannelDispatcherAuthenticatesRequestsWithOIDC() *feature.Feature {
+func DispatcherAuthenticatesRequestsWithOIDC() *feature.Feature {
 	f := feature.NewFeatureNamed("Channel dispatcher authenticates requests with OIDC")
 
+	f.Prerequisite("OIDC authentication is enabled", featureflags.AuthenticationOIDCEnabled())
 	f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
 	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
 

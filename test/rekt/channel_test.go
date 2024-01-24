@@ -35,6 +35,7 @@ import (
 	"knative.dev/reconciler-test/pkg/tracing"
 
 	"knative.dev/eventing/test/rekt/features/channel"
+	"knative.dev/eventing/test/rekt/features/oidc"
 	ch "knative.dev/eventing/test/rekt/resources/channel"
 	chimpl "knative.dev/eventing/test/rekt/resources/channel_impl"
 	"knative.dev/eventing/test/rekt/resources/subscription"
@@ -355,4 +356,37 @@ func TestInMemoryChannelTLS(t *testing.T) {
 
 	env.ParallelTest(ctx, t, channel.SubscriptionTLS())
 	env.ParallelTest(ctx, t, channel.SubscriptionTLSTrustBundle())
+}
+
+func TestChannelImplDispatcherAuthenticatesWithOIDC(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+		eventshub.WithTLS(t),
+	)
+
+	env.Test(ctx, t, channel.DispatcherAuthenticatesRequestsWithOIDC())
+}
+
+func TestChannelImplSupportsOIDC(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+		environment.WithPollTimings(4*time.Second, 12*time.Minute),
+	)
+
+	name := feature.MakeRandomK8sName("channelimpl")
+	env.Prerequisite(ctx, t, channel.ImplGoesReady(name))
+
+	env.TestSet(ctx, t, oidc.AddressableOIDCConformance(channel_impl.GVR(), channel_impl.GVK().Kind, name, env.Namespace()))
 }
