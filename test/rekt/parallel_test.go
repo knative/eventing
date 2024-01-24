@@ -20,6 +20,8 @@ limitations under the License.
 package rekt
 
 import (
+	"knative.dev/eventing/test/rekt/resources/channel_impl"
+	"knative.dev/reconciler-test/pkg/feature"
 	"testing"
 
 	"knative.dev/pkg/system"
@@ -30,6 +32,7 @@ import (
 
 	"knative.dev/eventing/test/rekt/features/parallel"
 	"knative.dev/eventing/test/rekt/resources/channel_template"
+	parallelresources "knative.dev/eventing/test/rekt/resources/parallel"
 )
 
 func TestParallel(t *testing.T) {
@@ -76,7 +79,7 @@ func TestParallelSupportsOIDC(t *testing.T) {
 	)
 
 	name := feature.MakeRandomK8sName("parallel")
-	env.Prerequisite(ctx, t, parallelfeatures.GoesReady(name, parallel.WithChannelTemplate(channel_template.ChannelTemplate{
+	env.Prerequisite(ctx, t, parallel.GoesReady(name, parallelresources.WithChannelTemplate(channel_template.ChannelTemplate{
 		TypeMeta: channel_impl.TypeMeta(),
 		Spec:     map[string]interface{}{},
 	})))
