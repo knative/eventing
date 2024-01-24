@@ -210,11 +210,19 @@ func NewClient(cfg ClientConfig) (Client, error) {
 		reporter:            cfg.Reporter,
 		crStatusEventClient: cfg.CrStatusEventClient,
 		oidcTokenProvider:   cfg.TokenProvider,
+		scheme:              "http",
 	}
 
 	if cfg.Env != nil {
 		client.audience = cfg.Env.GetAudience()
 		client.oidcServiceAccountName = cfg.Env.GetOIDCServiceAccountName()
+		sinkURI := cfg.Env.GetSink()
+		if sinkURI != "" {
+			parsedUrl, err := url.Parse(sinkURI)
+			if err == nil {
+				client.scheme = parsedUrl.Scheme
+			}
+		}
 	}
 
 	return client, nil
@@ -234,12 +242,12 @@ func setTimeOut(duration time.Duration) http.Option {
 }
 
 type client struct {
-	ceClient            cloudevents.Client
-	ceOverrides         *duckv1.CloudEventOverrides
-	reporter            source.StatsReporter
-	crStatusEventClient *crstatusevent.CRStatusEventClient
-	closeIdler          closeIdler
-
+	ceClient               cloudevents.Client
+	ceOverrides            *duckv1.CloudEventOverrides
+	reporter               source.StatsReporter
+	crStatusEventClient    *crstatusevent.CRStatusEventClient
+	closeIdler             closeIdler
+	scheme                 string
 	oidcTokenProvider      *auth.OIDCTokenProvider
 	audience               *string
 	oidcServiceAccountName *types.NamespacedName
@@ -302,6 +310,7 @@ func (c *client) reportMetrics(ctx context.Context, event cloudevents.Event, res
 	if c.reporter == nil {
 		return
 	}
+
 	tags := MetricTagFromContext(ctx)
 	reportArgs := &source.ReportArgs{
 		Namespace:     tags.Namespace,
@@ -309,6 +318,7 @@ func (c *client) reportMetrics(ctx context.Context, event cloudevents.Event, res
 		EventType:     event.Type(),
 		Name:          tags.Name,
 		ResourceGroup: tags.ResourceGroup,
+		EventScheme:   c.scheme,
 	}
 
 	var rres *http.RetriesResult

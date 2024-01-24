@@ -26,6 +26,7 @@ func GitHead() pkgupgrade.Operation {
 			"install_head",
 			"install_channel_crds",
 			"install_mt_broker",
+			"install_post_install_job",
 			"enable_sugar",
 		}
 		for _, shellfunc := range ops {

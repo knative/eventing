@@ -221,7 +221,7 @@ function install_mt_broker() {
   if [[ -z "${EVENTING_MT_CHANNEL_BROKER_YAML:-}" ]]; then
     build_knative_from_source
   else
-    echo "use exist EVENTING_MT_CHANNEL_BROKER_YAML"
+    echo "use existing EVENTING_MT_CHANNEL_BROKER_YAML"
   fi
   local EVENTING_MT_CHANNEL_BROKER_NAME=${TMP_DIR}/${EVENTING_MT_CHANNEL_BROKER_YAML##*/}
   sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" "${EVENTING_MT_CHANNEL_BROKER_YAML}" > "${EVENTING_MT_CHANNEL_BROKER_NAME}"
@@ -231,6 +231,20 @@ function install_mt_broker() {
   scale_controlplane mt-broker-controller
 
   wait_until_pods_running "${SYSTEM_NAMESPACE}" || fail_test "Knative Eventing with MT Broker did not come up"
+}
+
+function install_post_install_job() {
+    # Var defined and populated by generate-yaml.sh
+    if [[ -z "${EVENTING_POST_INSTALL_YAML:-}" ]]; then
+        build_knative_from_source
+      else
+        echo "use existing EVENTING_POST_INSTALL_YAML"
+      fi
+    local EVENTING_POST_INSTALL_NAME=${TMP_DIR}/${EVENTING_POST_INSTALL_YAML##*/}
+    sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" "${EVENTING_POST_INSTALL_YAML}" > "${EVENTING_POST_INSTALL_NAME=}"
+    kubectl create \
+      -f "${EVENTING_POST_INSTALL_NAME}" || return 1
+    UNINSTALL_LIST+=( "${EVENTING_POST_INSTALL_NAME}" )
 }
 
 function enable_sugar() {

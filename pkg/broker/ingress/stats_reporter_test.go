@@ -32,9 +32,10 @@ func TestStatsReporter(t *testing.T) {
 	setup()
 
 	args := &ReportArgs{
-		ns:        "testns",
-		broker:    "testbroker",
-		eventType: "testeventtype",
+		ns:          "testns",
+		broker:      "testbroker",
+		eventType:   "testeventtype",
+		eventScheme: "http",
 	}
 
 	r := NewStatsReporter("testcontainer", "testpod")
@@ -45,6 +46,7 @@ func TestStatsReporter(t *testing.T) {
 		metrics.LabelResponseCodeClass: "2xx",
 		broker.LabelUniqueName:         "testpod",
 		broker.LabelContainerName:      "testcontainer",
+		metrics.LabelEventScheme:       "http",
 	}
 
 	resource := resource.Resource{
