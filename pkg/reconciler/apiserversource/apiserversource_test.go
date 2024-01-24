@@ -1087,6 +1087,75 @@ func TestReconcile(t *testing.T) {
 			},
 			WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor(true)},
 			SkipNamespaceValidation: true, // SubjectAccessReview objects are cluster-scoped.
+		}, {
+			Name: "Valid with nodeSelector",
+
+			Ctx: feature.ToContext(context.Background(), feature.Flags{
+				"apiserversources.nodeselector.testkey1": "testvalue1",
+				"apiserversources.nodeselector.testkey2": "testvalue2",
+			}),
+			Objects: []runtime.Object{
+				rttestingv1.NewApiServerSource(sourceName, testNS,
+					rttestingv1.WithApiServerSourceSpec(sourcesv1.ApiServerSourceSpec{
+						Resources: []sourcesv1.APIVersionKindSelector{{
+							APIVersion: "v1",
+							Kind:       "Namespace",
+						}},
+						SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
+					}),
+					rttestingv1.WithApiServerSourceUID(sourceUID),
+					rttestingv1.WithApiServerSourceObjectMetaGeneration(generation),
+				),
+				rttestingv1.NewChannel(sinkName, testNS,
+					rttestingv1.WithInitChannelConditions,
+					rttestingv1.WithChannelAddress(sinkAddressable),
+				),
+				makeAvailableReceiveAdapter(t),
+			},
+			Key: testNS + "/" + sourceName,
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: rttestingv1.NewApiServerSource(sourceName, testNS,
+					rttestingv1.WithApiServerSourceSpec(sourcesv1.ApiServerSourceSpec{
+						Resources: []sourcesv1.APIVersionKindSelector{{
+							APIVersion: "v1",
+							Kind:       "Namespace",
+						}},
+						SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
+					}),
+					rttestingv1.WithApiServerSourceUID(sourceUID),
+					rttestingv1.WithApiServerSourceObjectMetaGeneration(generation),
+					// Status Update:
+					rttestingv1.WithInitApiServerSourceConditions,
+					rttestingv1.WithApiServerSourceDeployed,
+					rttestingv1.WithApiServerSourceSink(sinkURI),
+					rttestingv1.WithApiServerSourceSufficientPermissions,
+					rttestingv1.WithApiServerSourceReferenceModeEventTypes(source),
+					rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
+					rttestingv1.WithApiServerSourceStatusNamespaces([]string{testNS}),
+					rttestingv1.WithApiServerSourceOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
+				),
+			}},
+			WantCreates: []runtime.Object{
+				makeSubjectAccessReview("namespaces", "get", "default"),
+				makeSubjectAccessReview("namespaces", "list", "default"),
+				makeSubjectAccessReview("namespaces", "watch", "default"),
+			},
+
+			WantUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: makeAvailableReceiveAdapterWithNodeSelector(t, map[string]string{
+					"testkey1": "testvalue1",
+					"testkey2": "testvalue2",
+				}),
+			}},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", sourceName),
+				Eventf(corev1.EventTypeNormal, "ApiServerSourceDeploymentUpdated", `Deployment "apiserversource-test-apiserver-source-1234" updated`),
+			},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchFinalizers(sourceName, testNS),
+			},
+			WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor(true)},
+			SkipNamespaceValidation: true, // SubjectAccessReview objects are cluster-scoped.
 		},
 	}
 
@@ -1444,4 +1513,39 @@ func makeApiServerSourceOIDCServiceAccountWithoutOwnerRef() *corev1.ServiceAccou
 	sa.OwnerReferences = nil
 
 	return sa
+}
+
+func makeAvailableReceiveAdapterWithNodeSelector(t *testing.T, selector map[string]string) *appsv1.Deployment {
+	t.Helper()
+
+	src := rttestingv1.NewApiServerSource(sourceName, testNS,
+		rttestingv1.WithApiServerSourceSpec(sourcesv1.ApiServerSourceSpec{
+			Resources: []sourcesv1.APIVersionKindSelector{{
+				APIVersion: "v1",
+				Kind:       "Namespace",
+			}},
+			SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
+		}),
+		rttestingv1.WithApiServerSourceUID(sourceUID),
+		// Status Update:
+		rttestingv1.WithInitApiServerSourceConditions,
+		rttestingv1.WithApiServerSourceDeployed,
+		rttestingv1.WithApiServerSourceSink(sinkURI),
+	)
+
+	args := resources.ReceiveAdapterArgs{
+		Image:        image,
+		Source:       src,
+		Labels:       resources.Labels(sourceName),
+		SinkURI:      sinkURI.String(),
+		Configs:      &reconcilersource.EmptyVarsGenerator{},
+		NodeSelector: selector,
+		Namespaces:   []string{testNS},
+	}
+
+	ra, err := resources.MakeReceiveAdapter(&args)
+	require.NoError(t, err)
+
+	rttesting.WithDeploymentAvailable()(ra)
+	return ra
 }
