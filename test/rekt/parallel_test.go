@@ -62,3 +62,25 @@ func TestParallelTLS(t *testing.T) {
 
 	env.Test(ctx, t, parallel.ParallelWithTwoBranchesTLS(channel_template.ImmemoryChannelTemplate()))
 }
+
+func TestParallelSupportsOIDC(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+		eventshub.WithTLS(t),
+	)
+
+	name := feature.MakeRandomK8sName("parallel")
+	env.Prerequisite(ctx, t, parallelfeatures.GoesReady(name, parallel.WithChannelTemplate(channel_template.ChannelTemplate{
+		TypeMeta: channel_impl.TypeMeta(),
+		Spec:     map[string]interface{}{},
+	})))
+
+	env.Test(ctx, t, parallel.ParallelHasAudienceOfInputChannel(name, env.Namespace(), channel_impl.GVR(), channel_impl.GVK().Kind))
+	env.Test(ctx, t, parallel.ParallelWithTwoBranchesOIDC(channel_template.ImmemoryChannelTemplate()))
+}
