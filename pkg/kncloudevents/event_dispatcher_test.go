@@ -929,52 +929,61 @@ func TestSendEvent(t *testing.T) {
 }
 
 func TestDispatchMessageToTLSEndpoint(t *testing.T) {
-    var wg sync.WaitGroup
-    ctx, _ := rectesting.SetupFakeContext(t)
-    ctx, cancel := context.WithCancel(ctx)
-    defer func() {
-        cancel()
-        // give the servers a bit time to fully shutdown to prevent port clashes
-        time.Sleep(500 * time.Millisecond)
-    }()
-    oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
-    dispatcher := kncloudevents.NewDispatcher(eventingtls.NewDefaultClientConfig(), oidcTokenProvider)
-    eventToSend := test.FullEvent()
+	// Initialize wait group and context
+	var wg sync.WaitGroup
+	ctx, _ := rectesting.SetupFakeContext(t)
+	ctx, cancel := context.WithCancel(ctx)
+	defer func() {
+		cancel()
+		// give the servers a bit of time to fully shut down to prevent port clashes
+		time.Sleep(500 * time.Millisecond)
+	}()
+	// Initialize OIDC token provider and dispatcher
+	oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
+	dispatcher := kncloudevents.NewDispatcher(eventingtls.NewDefaultClientConfig(), oidcTokenProvider)
+	// Create a full event for testing
+	eventToSend := test.FullEvent()
 
-    // destination
-    destinationEventsChan := make(chan cloudevents.Event, 10)
-    destinationReceivedEvents := make([]cloudevents.Event, 0, 10)
-    
-    // Use the updated StartServer function
-    listener, port, _ := eventingtlstesting.StartServer(ctx, t, 0, destinationHandler, kncloudevents.WithDrainQuietPeriod(time.Millisecond))
-    destination := duckv1.Addressable{
-        URL:     apis.HTTPS(fmt.Sprintf("localhost:%d", port)),
-        CACerts: &destinationCA,
-    }
+	// destination
+	destinationEventsChan := make(chan cloudevents.Event, 10)
+	destinationReceivedEvents := make([]cloudevents.Event, 0, 10)
 
-    wg.Add(1)
-    go func() {
-        defer wg.Done()
-        for event := range destinationEventsChan {
-            destinationReceivedEvents = append(destinationReceivedEvents, event)
-        }
-    }()
+	// Mock destinationHandler
+	destinationHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Implement your custom handler logic here
+	})
 
-    // send event
-    message := binding.ToMessage(&eventToSend)
-    info, err := dispatcher.SendMessage(ctx, message, destination)
-    require.Nil(t, err)
-    require.Equal(t, 200, info.ResponseCode)
+	// Use the updated StartServer function to get CA certificate and assigned port
+	destinationCA, port := eventingtlstesting.StartServer(ctx, t, 0, destinationHandler, kncloudevents.WithDrainQuietPeriod(time.Millisecond))
+	destination := duckv1.Addressable{
+		URL:     apis.HTTPS(fmt.Sprintf("localhost:%d", port)),
+		CACerts: &destinationCA,
+	}
 
-    // check received events
-    close(destinationEventsChan)
-    wg.Wait()
+	// Start goroutine to receive events
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for event := range destinationEventsChan {
+			destinationReceivedEvents = append(destinationReceivedEvents, event)
+		}
+	}()
 
-    require.Len(t, destinationReceivedEvents, 1)
-    require.Equal(t, eventToSend.ID(), destinationReceivedEvents[0].ID())
-    require.Equal(t, eventToSend.Data(), destinationReceivedEvents[0].Data())
+	// Send event
+	message := binding.ToMessage(&eventToSend)
+	info, err := dispatcher.SendMessage(ctx, message, destination)
+	require.Nil(t, err)
+	require.Equal(t, 200, info.ResponseCode)
+
+	// Check received events
+	close(destinationEventsChan)
+	wg.Wait()
+
+	// Assertions on received events
+	require.Len(t, destinationReceivedEvents, 1)
+	require.Equal(t, eventToSend.ID(), destinationReceivedEvents[0].ID())
+	require.Equal(t, eventToSend.Data(), destinationReceivedEvents[0].Data())
 }
-
 
 func TestDispatchMessageToTLSEndpointWithReply(t *testing.T) {
 	var wg sync.WaitGroup
@@ -1002,7 +1011,7 @@ func TestDispatchMessageToTLSEndpointWithReply(t *testing.T) {
 		w.Write(eventToReply.Data())
 	})
 
-	destinationCA := eventingtlstesting.StartServer(ctxDestination, t, 8334, destinationHandler, kncloudevents.WithDrainQuietPeriod(time.Millisecond))
+	destinationCA, _ := eventingtlstesting.StartServer(ctxDestination, t, 8334, destinationHandler, kncloudevents.WithDrainQuietPeriod(time.Millisecond))
 	destination := duckv1.Addressable{
 		URL:     apis.HTTPS("localhost:8334"),
 		CACerts: &destinationCA,
@@ -1012,7 +1021,7 @@ func TestDispatchMessageToTLSEndpointWithReply(t *testing.T) {
 	replyEventChan := make(chan cloudevents.Event, 10)
 	replyHandler := eventingtlstesting.EventChannelHandler(replyEventChan)
 	replyReceivedEvents := make([]cloudevents.Event, 0, 10)
-	replyCA := eventingtlstesting.StartServer(ctxReply, t, 8335, replyHandler, kncloudevents.WithDrainQuietPeriod(time.Millisecond))
+	replyCA, _ := eventingtlstesting.StartServer(ctxReply, t, 8335, replyHandler, kncloudevents.WithDrainQuietPeriod(time.Millisecond))
 	reply := duckv1.Addressable{
 		URL:     apis.HTTPS("localhost:8335"),
 		CACerts: &replyCA,
@@ -1062,7 +1071,7 @@ func TestDispatchMessageToTLSEndpointWithDeadLetterSink(t *testing.T) {
 		w.WriteHeader(http.StatusInternalServerError)
 	})
 
-	destinationCA := eventingtlstesting.StartServer(ctxDestination, t, 8334, destinationHandler, kncloudevents.WithDrainQuietPeriod(time.Millisecond))
+	destinationCA, _ := eventingtlstesting.StartServer(ctxDestination, t, 8334, destinationHandler, kncloudevents.WithDrainQuietPeriod(time.Millisecond))
 	destination := duckv1.Addressable{
 		URL:     apis.HTTPS("localhost:8334"),
 		CACerts: &destinationCA,
@@ -1072,7 +1081,7 @@ func TestDispatchMessageToTLSEndpointWithDeadLetterSink(t *testing.T) {
 	dlsEventChan := make(chan cloudevents.Event, 10)
 	dlsHandler := eventingtlstesting.EventChannelHandler(dlsEventChan)
 	dlsReceivedEvents := make([]cloudevents.Event, 0, 10)
-	dlsCA := eventingtlstesting.StartServer(ctxDls, t, 8335, dlsHandler, kncloudevents.WithDrainQuietPeriod(time.Millisecond))
+	dlsCA, _ := eventingtlstesting.StartServer(ctxDls, t, 8335, dlsHandler, kncloudevents.WithDrainQuietPeriod(time.Millisecond))
 	dls := duckv1.Addressable{
 		URL:     apis.HTTPS("localhost:8335"),
 		CACerts: &dlsCA,

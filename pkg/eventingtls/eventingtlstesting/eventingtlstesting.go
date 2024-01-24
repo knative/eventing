@@ -87,7 +87,6 @@ func StartServer(ctx context.Context, t *testing.T, port int, handler http.Handl
 	return string(CA), port
 }
 
-
 func loadCerts() ([]byte, []byte, []byte) {
 	/*
 		Provisioned using:
