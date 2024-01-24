@@ -31,7 +31,7 @@ spec:
     schema:
       openAPIV3Schema:
         type: object
-        description: 'EventType represents a type of event that can be consumed from a Broker.'
+        description: 'EventType represents a type of event that can be consumed from a resource.'
         properties:
           spec:
             description: 'Spec defines the desired state of the EventType.'
@@ -40,7 +40,7 @@ spec:
               broker:
                 type: string
               reference:
-                description: Reference Broker. For example
+                description: Reference a resource. For example, Broker.
                 type: object
                 properties:
                   apiVersion:
