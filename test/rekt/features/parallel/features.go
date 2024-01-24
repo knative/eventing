@@ -183,8 +183,6 @@ func ParallelHasAudienceOfInputChannel(parallelName, parallelNamespace string, c
 	f := feature.NewFeatureNamed("Parallel has audience of input channel")
 
 	f.Prerequisite("OIDC Authentication is enabled", featureflags.AuthenticationOIDCEnabled())
-	f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
-	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
 
 	f.Setup("Parallel goes ready", parallel.IsReady(parallelName))
 

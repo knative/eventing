@@ -62,8 +62,6 @@ func AddressableHasAudiencePopulated(gvr schema.GroupVersionResource, kind, name
 	f := feature.NewFeatureNamed(fmt.Sprintf("%s populates its .status.address.audience correctly", kind))
 
 	f.Prerequisite("OIDC authentication is enabled", featureflags.AuthenticationOIDCEnabled())
-	f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
-	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
 
 	f.Requirement(fmt.Sprintf("%s is ready", kind), k8s.IsReady(gvr, name))
 	f.Requirement(fmt.Sprintf("%s is addressable", kind), k8s.IsAddressable(gvr, name))
