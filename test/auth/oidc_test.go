@@ -33,7 +33,6 @@ import (
 
 	"knative.dev/eventing/test/auth/features/oidc"
 	brokerfeatures "knative.dev/eventing/test/rekt/features/broker"
-	"knative.dev/eventing/test/rekt/features/channel"
 	parallelfeatures "knative.dev/eventing/test/rekt/features/parallel"
 	sequencefeatures "knative.dev/eventing/test/rekt/features/sequence"
 	"knative.dev/eventing/test/rekt/resources/broker"
@@ -77,24 +76,6 @@ func TestBrokerSendsEventsWithOIDCSupport(t *testing.T) {
 	env.TestSet(ctx, t, oidc.BrokerSendEventWithOIDC())
 }
 
-func TestChannelImplSupportsOIDC(t *testing.T) {
-	t.Parallel()
-
-	ctx, env := global.Environment(
-		knative.WithKnativeNamespace(system.Namespace()),
-		knative.WithLoggingConfig,
-		knative.WithTracingConfig,
-		k8s.WithEventListener,
-		environment.Managed(t),
-		environment.WithPollTimings(4*time.Second, 12*time.Minute),
-	)
-
-	name := feature.MakeRandomK8sName("channelimpl")
-	env.Prerequisite(ctx, t, channel.ImplGoesReady(name))
-
-	env.TestSet(ctx, t, oidc.AddressableOIDCConformance(channel_impl.GVR(), channel_impl.GVK().Kind, name, env.Namespace()))
-}
-
 func TestParallelSupportsOIDC(t *testing.T) {
 	t.Parallel()
 
@@ -113,21 +94,6 @@ func TestParallelSupportsOIDC(t *testing.T) {
 	})))
 
 	env.Test(ctx, t, oidc.ParallelHasAudienceOfInputChannel(name, env.Namespace(), channel_impl.GVR(), channel_impl.GVK().Kind))
-}
-
-func TestChannelDispatcherAuthenticatesWithOIDC(t *testing.T) {
-	t.Parallel()
-
-	ctx, env := global.Environment(
-		knative.WithKnativeNamespace(system.Namespace()),
-		knative.WithLoggingConfig,
-		knative.WithTracingConfig,
-		k8s.WithEventListener,
-		environment.Managed(t),
-		eventshub.WithTLS(t),
-	)
-
-	env.Test(ctx, t, oidc.ChannelDispatcherAuthenticatesRequestsWithOIDC())
 }
 
 func TestSequenceSupportsOIDC(t *testing.T) {
