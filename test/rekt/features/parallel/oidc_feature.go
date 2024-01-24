@@ -15,6 +15,8 @@ package parallel
 
 import (
 	"context"
+	"strconv"
+
 	v2 "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/test"
 	v12 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,7 +33,6 @@ import (
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
 	"knative.dev/reconciler-test/pkg/resources/service"
-	"strconv"
 )
 
 func ParallelWithTwoBranchesOIDC(channelTemplate channel_template.ChannelTemplate) *feature.Feature {

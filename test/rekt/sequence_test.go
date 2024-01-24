@@ -20,8 +20,9 @@ limitations under the License.
 package rekt
 
 import (
-	"knative.dev/reconciler-test/pkg/feature"
 	"testing"
+
+	"knative.dev/reconciler-test/pkg/feature"
 
 	"knative.dev/eventing/test/rekt/features/sequence"
 	"knative.dev/eventing/test/rekt/resources/channel_impl"

@@ -15,9 +15,10 @@ package apiserversource
 
 import (
 	"context"
+
 	"github.com/cloudevents/sdk-go/v2/test"
 	rbacv1 "k8s.io/api/rbac/v1"
-	"knative.dev/eventing/pkg/apis/sources/v1"
+	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/eventing/test/rekt/features/featureflags"
 	"knative.dev/eventing/test/rekt/features/source"
 	"knative.dev/eventing/test/rekt/resources/account_role"

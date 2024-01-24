@@ -20,9 +20,10 @@ limitations under the License.
 package rekt
 
 import (
-	"knative.dev/reconciler-test/pkg/feature"
 	"testing"
 	"time"
+
+	"knative.dev/reconciler-test/pkg/feature"
 
 	"knative.dev/pkg/system"
 	_ "knative.dev/pkg/system/testing"
