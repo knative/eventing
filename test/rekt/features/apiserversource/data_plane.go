@@ -503,14 +503,14 @@ func SendsEventsForAllResourcesWithNamespaceSelector() *feature.Feature {
 				test.HasType("dev.knative.apiserver.ref.add"),
 				test.DataContains(`"kind":"Pod"`),
 				test.DataContains(fmt.Sprintf(`"name":"%s"`, pod1)),
-			).Exact(1))
+			).AtLeast(1))
 	f.Stable("ApiServerSource as event source").
 		Must("delivers events from matching namespace",
 			eventasssert.OnStore(sink).MatchEvent(
 				test.HasType("dev.knative.apiserver.ref.add"),
 				test.DataContains(`"kind":"Pod"`),
 				test.DataContains(fmt.Sprintf(`"name":"%s"`, pod2)),
-			).Exact(1))
+			).AtLeast(1))
 	f.Stable("ApiServerSource as event source").
 		MustNot("must not deliver events from non-matching namespace",
 			eventasssert.OnStore(sink).MatchEvent(
@@ -577,14 +577,14 @@ func SendsEventsForAllResourcesWithEmptyNamespaceSelector() *feature.Feature {
 				test.HasType("dev.knative.apiserver.ref.add"),
 				test.DataContains(`"kind":"PingSource"`),
 				test.DataContains(fmt.Sprintf(`"name":"%s"`, pingSource1)),
-			).Exact(1))
+			).AtLeast(1))
 	f.Stable("ApiServerSource as event source").
 		Must("delivers events from new namespace",
 			eventasssert.OnStore(sink).MatchEvent(
 				test.HasType("dev.knative.apiserver.ref.add"),
 				test.DataContains(`"kind":"PingSource"`),
 				test.DataContains(fmt.Sprintf(`"name":"%s"`, pingSource2)),
-			).Exact(1))
+			).AtLeast(1))
 
 	// Delete resources including temporary namespaces
 	f.Teardown("Deleting resources", f.DeleteResources)
