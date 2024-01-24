@@ -103,3 +103,18 @@ func TestContainerSourceWithTLS(t *testing.T) {
 	env.ParallelTest(ctx, t, containersource.SendEventsWithTLSRecieverAsSink())
 	env.ParallelTest(ctx, t, containersource.SendEventsWithTLSRecieverAsSinkTrustBundle())
 }
+
+func TestContainerSourceSendsEventsWithOIDC(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+		eventshub.WithTLS(t),
+	)
+
+	env.Test(ctx, t, containersource.SendsEventsWithSinkRefOIDC())
+}
