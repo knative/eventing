@@ -42,8 +42,6 @@ func SequenceHasAudienceOfInputChannel(sequenceName, sequenceNamespace string, c
 	f := feature.NewFeatureNamed("Sequence has audience of input channel")
 
 	f.Prerequisite("OIDC Authentication is enabled", featureflags.AuthenticationOIDCEnabled())
-	f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
-	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
 
 	f.Setup("Sequence goes ready", sequence.IsReady(sequenceName))
 
