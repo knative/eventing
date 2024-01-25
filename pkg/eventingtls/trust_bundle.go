@@ -37,7 +37,7 @@ const (
 	// TrustBundleLabelSelector is the ConfigMap label selector for trust bundles.
 	TrustBundleLabelSelector = "networking.knative.dev/trust-bundle=true"
 
-	TrustBundleMountPath = "knative-custom-certs"
+	TrustBundleMountPath = "/knative-custom-certs"
 
 	TrustBundleVolumeNamePrefix = "kne-bundle-"
 )
@@ -147,31 +147,72 @@ func AddTrustBundleVolumes(trustBundleLister corev1listers.ConfigMapLister, obj 
 	}
 
 	pt = pt.DeepCopy()
+	sources := make([]corev1.VolumeProjection, 0, len(cms))
 	for _, cm := range cms {
-		volumeName := kmeta.ChildName(TrustBundleVolumeNamePrefix, cm.Name)
-		pt.Volumes = append(pt.Volumes, corev1.Volume{
-			Name: volumeName,
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: cm.Name,
-					},
+		sources = append(sources, corev1.VolumeProjection{
+			ConfigMap: &corev1.ConfigMapProjection{
+				LocalObjectReference: corev1.LocalObjectReference{
+					Name: cm.Name,
 				},
 			},
 		})
+	}
+	if len(sources) == 0 {
+		return pt, nil
+	}
 
-		for i := range pt.Containers {
+	volumeName := fmt.Sprintf("%s%s", TrustBundleVolumeNamePrefix, "volume")
+	vs := corev1.VolumeSource{
+		Projected: &corev1.ProjectedVolumeSource{
+			Sources: sources,
+		},
+	}
+
+	found := false
+	for i, v := range pt.Volumes {
+		if v.Name == volumeName {
+			found = true
+			pt.Volumes[i].VolumeSource = vs
+			break
+		}
+	}
+	if !found {
+		pt.Volumes = append(pt.Volumes, corev1.Volume{
+			Name:         volumeName,
+			VolumeSource: vs,
+		})
+	}
+
+	for i := range pt.Containers {
+		found = false
+		for _, v := range pt.Containers[i].VolumeMounts {
+			if v.Name == volumeName {
+				found = true
+				break
+			}
+		}
+		if !found {
 			pt.Containers[i].VolumeMounts = append(pt.Containers[i].VolumeMounts, corev1.VolumeMount{
 				Name:      volumeName,
 				ReadOnly:  true,
-				MountPath: fmt.Sprintf("/%s/%s", TrustBundleMountPath, cm.Name),
+				MountPath: TrustBundleMountPath,
 			})
 		}
-		for i := range pt.InitContainers {
+	}
+
+	for i := range pt.InitContainers {
+		found = false
+		for _, v := range pt.InitContainers[i].VolumeMounts {
+			if v.Name == volumeName {
+				found = true
+				break
+			}
+		}
+		if !found {
 			pt.InitContainers[i].VolumeMounts = append(pt.InitContainers[i].VolumeMounts, corev1.VolumeMount{
 				Name:      volumeName,
 				ReadOnly:  true,
-				MountPath: fmt.Sprintf("/%s/%s", TrustBundleMountPath, cm.Name),
+				MountPath: TrustBundleMountPath,
 			})
 		}
 	}

@@ -301,6 +301,23 @@ func TestSinkBindingUndo(t *testing.T) {
 									},
 								},
 							},
+							{
+								Name: "kne-bundle-volume",
+								VolumeSource: corev1.VolumeSource{
+									Projected: &corev1.ProjectedVolumeSource{
+										Sources: []corev1.VolumeProjection{
+											{
+												ConfigMap: &corev1.ConfigMapProjection{
+													LocalObjectReference: corev1.LocalObjectReference{
+														Name: "knative-eventing-bundle",
+													},
+												},
+											},
+										},
+										DefaultMode: nil,
+									},
+								},
+							},
 						},
 						Containers: []corev1.Container{{
 							Name:  "blah",
@@ -309,6 +326,11 @@ func TestSinkBindingUndo(t *testing.T) {
 								{
 									Name:      "kne-bundle-knative-eventing-bundle" + strings.Repeat("a", 29),
 									MountPath: "/knative-custom-certs/knative-eventing-bundle" + strings.Repeat("a", 29),
+									ReadOnly:  true,
+								},
+								{
+									Name:      "kne-bundle-volume",
+									MountPath: "/knative-custom-certs",
 									ReadOnly:  true,
 								},
 							},
@@ -554,12 +576,19 @@ func TestSinkBindingDo(t *testing.T) {
 					Spec: corev1.PodSpec{
 						Volumes: []corev1.Volume{
 							{
-								Name: "kne-bundle-knative-eventing-bundle" + strings.Repeat("a", 29),
+								Name: "kne-bundle-volume",
 								VolumeSource: corev1.VolumeSource{
-									ConfigMap: &corev1.ConfigMapVolumeSource{
-										LocalObjectReference: corev1.LocalObjectReference{
-											Name: "knative-eventing-bundle" + strings.Repeat("a", 29),
+									Projected: &corev1.ProjectedVolumeSource{
+										Sources: []corev1.VolumeProjection{
+											{
+												ConfigMap: &corev1.ConfigMapProjection{
+													LocalObjectReference: corev1.LocalObjectReference{
+														Name: "knative-eventing-bundle",
+													},
+												},
+											},
 										},
+										DefaultMode: nil,
 									},
 								},
 							},
@@ -579,8 +608,8 @@ func TestSinkBindingDo(t *testing.T) {
 							}},
 							VolumeMounts: []corev1.VolumeMount{
 								{
-									Name:      "kne-bundle-knative-eventing-bundle" + strings.Repeat("a", 29),
-									MountPath: "/knative-custom-certs/knative-eventing-bundle" + strings.Repeat("a", 29),
+									Name:      "kne-bundle-volume",
+									MountPath: "/knative-custom-certs",
 									ReadOnly:  true,
 								},
 							},
@@ -616,88 +645,7 @@ func TestSinkBindingDo(t *testing.T) {
 				TypeMeta: metav1.TypeMeta{},
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "knative-eventing",
-					Name:      "knative-eventing-bundle" + strings.Repeat("a", 29),
-					Labels: map[string]string{
-						"networking.knative.dev/trust-bundle": "true",
-					},
-				},
-				Immutable: nil,
-				Data: map[string]string{
-					"knative-eventing-bundle.pem": "something",
-				},
-			},
-		},
-	}, {
-		name: "add trust bundles - long CM name",
-		want: &duckv1.WithPod{
-			Spec: duckv1.WithPodSpec{
-				Template: duckv1.PodSpecable{
-					Spec: corev1.PodSpec{
-						Volumes: []corev1.Volume{
-							{
-								Name: "kne-bundle-7840a1e43e73e2ce40d1180208cba2a6knative-eventing-bun",
-								VolumeSource: corev1.VolumeSource{
-									ConfigMap: &corev1.ConfigMapVolumeSource{
-										LocalObjectReference: corev1.LocalObjectReference{
-											Name: "knative-eventing-bundle" + strings.Repeat("a", 30),
-										},
-									},
-								},
-							},
-						},
-						Containers: []corev1.Container{{
-							Name:  "blah",
-							Image: "busybox",
-							Env: []corev1.EnvVar{{
-								Name:  "K_SINK",
-								Value: destination.URI.String(),
-							}, {
-								Name:  "K_CA_CERTS",
-								Value: caCert,
-							}, {
-								Name:  "K_CE_OVERRIDES",
-								Value: `{"extensions":{"foo":"bar"}}`,
-							}},
-							VolumeMounts: []corev1.VolumeMount{
-								{
-									Name:      "kne-bundle-7840a1e43e73e2ce40d1180208cba2a6knative-eventing-bun",
-									MountPath: "/knative-custom-certs/knative-eventing-bundle" + strings.Repeat("a", 30),
-									ReadOnly:  true,
-								},
-							},
-						}},
-					},
-				},
-			},
-		},
-		in: &duckv1.WithPod{
-			Spec: duckv1.WithPodSpec{
-				Template: duckv1.PodSpecable{
-					Spec: corev1.PodSpec{
-						Containers: []corev1.Container{{
-							Name:  "blah",
-							Image: "busybox",
-							Env: []corev1.EnvVar{{
-								Name:  "K_SINK",
-								Value: destination.URI.String(),
-							}, {
-								Name:  "K_CA_CERTS",
-								Value: caCert,
-							}, {
-								Name:  "K_CE_OVERRIDES",
-								Value: `{"extensions":{"foo":"bar"}}`,
-							}},
-						}},
-					},
-				},
-			},
-		},
-		configMaps: []*corev1.ConfigMap{
-			{
-				TypeMeta: metav1.TypeMeta{},
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "knative-eventing",
-					Name:      "knative-eventing-bundle" + strings.Repeat("a", 30),
+					Name:      "knative-eventing-bundle",
 					Labels: map[string]string{
 						"networking.knative.dev/trust-bundle": "true",
 					},
