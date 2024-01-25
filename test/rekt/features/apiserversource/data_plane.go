@@ -26,6 +26,7 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	client "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/network"
+	"knative.dev/pkg/system"
 	"knative.dev/reconciler-test/pkg/environment"
 
 	"knative.dev/eventing/pkg/eventingtls/eventingtlstesting"
@@ -874,7 +875,7 @@ func deployAPIServerSauceAndTestLabels(ctxParam context.Context, ns string) feat
 		source := &v1.ApiServerSource{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "example-deployment",
-				Namespace: ns,
+				Namespace: system.Namespace(),
 				UID:       sourceUID,
 			},
 			Spec: v1.ApiServerSourceSpec{
@@ -893,7 +894,7 @@ func deployAPIServerSauceAndTestLabels(ctxParam context.Context, ns string) feat
 			Labels:        resources.Labels(sourceName),
 			SinkURI:       sinkURI.String(),
 			Configs:       &reconcilersource.EmptyVarsGenerator{},
-			Namespaces:    []string{ns},
+			Namespaces:    []string{system.Namespace()},
 			AllNamespaces: false,
 			Audience:      &sinkAudience,
 			NodeSelector:  featureFlags.NodeSelector(),

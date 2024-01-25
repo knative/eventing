@@ -25,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	cfgFeat "knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/pkg/client/injection/kube/client"
+	"knative.dev/pkg/system"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/manifest"
@@ -56,7 +57,7 @@ func Install(ctxParam context.Context, ns string, name string, opts ...manifest.
 			t.Fatal(err)
 		}
 
-		configM, _ := client.Get(ctx).CoreV1().ConfigMaps(ns).Get(ctx, name, metav1.GetOptions{})
+		configM, _ := client.Get(ctx).CoreV1().ConfigMaps(system.Namespace()).Get(ctx, name, metav1.GetOptions{})
 
 		flags, err := cfgFeat.NewFlagsConfigFromConfigMap(configM)
 		if err != nil {

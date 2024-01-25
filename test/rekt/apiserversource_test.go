@@ -84,16 +84,14 @@ func TestApiServerSourceDataPlane_SinkTypes(t *testing.T) {
 func TestApiServerSourceDeployement(t *testing.T) {
 	t.Parallel()
 
-	ns := "eventing"
-
 	ctx, env := global.Environment(
-		knative.WithKnativeNamespace(ns),
+		knative.WithKnativeNamespace(system.Namespace()),
 		k8s.WithEventListener,
 		environment.Managed(t),
 		environment.WithPollTimings(5*time.Second, 2*time.Minute),
 	)
 
-	env.Test(ctx, t, apiserversourcefeatures.DeployAPIServerSauceWithNodeSelector(ns))
+	env.Test(ctx, t, apiserversourcefeatures.DeployAPIServerSauceWithNodeSelector(system.Namespace()))
 }
 
 func TestApiServerSourceDataPlane_BrokerAsSinkTLS(t *testing.T) {
@@ -104,7 +102,7 @@ func TestApiServerSourceDataPlane_BrokerAsSinkTLS(t *testing.T) {
 		knative.WithLoggingConfig,
 		knative.WithTracingConfig,
 		k8s.WithEventListener,
-		//environment.Managed(t),
+		// environment.Managed(t),
 		eventshub.WithTLS(t),
 		environment.WithPollTimings(5*time.Second, 2*time.Minute),
 	)
