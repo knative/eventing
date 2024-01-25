@@ -44,7 +44,7 @@ func IsReady(name string, timing ...time.Duration) feature.StepFn {
 }
 
 // Install will create a configmap resource and will load the configmap to the context.
-func Install(ctxParam context.Context, ns string, name string, opts ...manifest.CfgFn) feature.StepFn {
+func Install(ctxParam context.Context, name string, opts ...manifest.CfgFn) feature.StepFn {
 	cfg := map[string]interface{}{
 		"name": name,
 	}

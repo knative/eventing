@@ -872,7 +872,7 @@ func setupNodeLabels(ctxParam context.Context) feature.StepFn {
 	}
 }
 
-func deployAPIServerSauceAndTestLabels(ctxParam context.Context, ns string) feature.StepFn {
+func deployAPIServerSauceAndTestLabels(ctxParam context.Context) feature.StepFn {
 	featureFlags := cfgFeat.FromContext(ctxParam)
 	return func(ctx context.Context, t feature.T) {
 		kubeClient := client.Get(ctx)
@@ -926,13 +926,13 @@ func deployAPIServerSauceAndTestLabels(ctxParam context.Context, ns string) feat
 	}
 }
 
-func DeployAPIServerSauceWithNodeSelector(ns string) *feature.Feature {
+func DeployAPIServerSauceWithNodeSelector() *feature.Feature {
 	f := feature.NewFeature()
 	ctx := context.Background()
 
-	f.Requirement("setup config-features and load into context", configmap.Install(ctx, ns, "config-features"))
+	f.Requirement("setup config-features and load into context", configmap.Install(ctx, "config-features"))
 	f.Requirement("setup node labels", setupNodeLabels(ctx))
-	f.Assert("deploy the apiserversauce", deployAPIServerSauceAndTestLabels(ctx, ns))
+	f.Assert("deploy the apiserversauce", deployAPIServerSauceAndTestLabels(ctx))
 
 	return f
 }
