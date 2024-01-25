@@ -19,20 +19,27 @@ package apiserversource
 import (
 	"context"
 	"fmt"
+	"math/rand"
+	"time"
 
 	"github.com/cloudevents/sdk-go/v2/test"
+	reconcilersource "knative.dev/eventing/pkg/reconciler/source"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	client "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/network"
 	"knative.dev/reconciler-test/pkg/environment"
 
 	"knative.dev/eventing/pkg/eventingtls/eventingtlstesting"
+	"knative.dev/eventing/pkg/reconciler/apiserversource/resources"
 	"knative.dev/eventing/test/rekt/resources/addressable"
+	"knative.dev/eventing/test/rekt/resources/configmap"
 
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/apimachinery/pkg/util/sets"
+	cfgFeat "knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
@@ -43,6 +50,7 @@ import (
 	"knative.dev/reconciler-test/pkg/resources/pod"
 
 	"knative.dev/eventing/pkg/apis/sources"
+	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/eventing/test/rekt/features/featureflags"
 	"knative.dev/eventing/test/rekt/features/source"
@@ -57,6 +65,24 @@ import (
 
 const (
 	exampleImage = "ko://knative.dev/eventing/test/test_images/print"
+	image        = "github.com/knative/test/image"
+	sourceName   = "test-apiserver-source"
+	sourceUID    = "1234"
+	sinkName     = "testsink"
+)
+
+var (
+	sinkDest = duckv1.Destination{
+		Ref: &duckv1.KReference{
+			Name:       sinkName,
+			Kind:       "Channel",
+			APIVersion: "messaging.knative.dev/v1",
+		},
+	}
+	sinkDNS      = "sink.mynamespace.svc." + network.GetClusterDomainName()
+	sinkURI      = apis.HTTP(sinkDNS)
+	sinkURL      = apis.HTTP(sinkDNS)
+	sinkAudience = "sink-oidc-audience"
 )
 
 func DataPlane_SinkTypes() *feature.FeatureSet {
@@ -279,7 +305,7 @@ func SendsEventsWithEventTypes() *feature.Feature {
 
 	f := new(feature.Feature)
 
-	//Install the broker
+	// Install the broker
 	brokerName := feature.MakeRandomK8sName("broker")
 	f.Setup("install broker", broker.Install(brokerName, broker.WithEnvConfig()...))
 	f.Setup("broker is ready", broker.IsReady(brokerName))
@@ -822,6 +848,97 @@ func SendsEventsWithRetries() *feature.Feature {
 	return f
 }
 
+func setupNodeLabels() feature.StepFn {
+	return func(ctx context.Context, t feature.T) {
+		nodes, err := client.Get(ctx).CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+		if err != nil {
+			t.Fail()
+		}
+
+		// Select a random node
+		rand.Seed(time.Now().UnixNano())
+		randomIndex := rand.Intn(len(nodes.Items))
+		randomNode := &nodes.Items[randomIndex]
+
+		// Apply the label to the node
+		randomNodeLabels := map[string]string{"testkey": "testvalue"}
+		randomNode.Labels = randomNodeLabels
+
+		// Update the node with the new labels
+		_, err = client.Get(ctx).CoreV1().Nodes().Update(ctx, randomNode, metav1.UpdateOptions{})
+
+		if err != nil {
+			t.Fail()
+		}
+	}
+}
+
+func deployAPIServerSauceAndTestLabels(ctxParam context.Context, ns string) feature.StepFn {
+	featureFlags := cfgFeat.FromContext(ctxParam)
+	return func(ctx context.Context, t feature.T) {
+		kubeClient := client.Get(ctx)
+
+		source := &v1.ApiServerSource{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example-deployment",
+				Namespace: ns,
+				UID:       sourceUID,
+			},
+			Spec: v1.ApiServerSourceSpec{
+				Resources: []sourcesv1.APIVersionKindSelector{{
+					APIVersion: "v1",
+					Kind:       "Namespace",
+				}},
+
+				SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
+			},
+		}
+
+		args := resources.ReceiveAdapterArgs{
+			Image:         image,
+			Source:        source,
+			Labels:        resources.Labels(sourceName),
+			SinkURI:       sinkURI.String(),
+			Configs:       &reconcilersource.EmptyVarsGenerator{},
+			Namespaces:    []string{ns},
+			AllNamespaces: false,
+			Audience:      &sinkAudience,
+			NodeSelector:  featureFlags.NodeSelector(),
+		}
+
+		dep, err := resources.MakeReceiveAdapter(&args)
+		if err != nil {
+			fmt.Printf("Error applying Unstructured object: %v\n", err)
+			t.Fail()
+		}
+
+		_, err = kubeClient.AppsV1().Deployments(dep.Namespace).Create(ctx, dep, metav1.CreateOptions{})
+		if err != nil {
+			t.Fail()
+		}
+
+		newDep, err := kubeClient.AppsV1().Deployments(dep.Namespace).Get(ctx, dep.ObjectMeta.Name, metav1.GetOptions{})
+		if err != nil {
+			t.Fail()
+		}
+
+		if newDep.Spec.Template.Spec.NodeSelector["testkey"] != featureFlags.NodeSelector()["testkey"] {
+			t.Fail()
+		}
+	}
+}
+
+func DeployAPIServerSauceWithNodeSelector(ns string) *feature.Feature {
+	f := feature.NewFeature()
+	ctx := context.Background()
+
+	f.Requirement("setup node labels", setupNodeLabels())
+	f.Requirement("setup config-features and context", configmap.Install(ctx, ns, "config-features"))
+	f.Requirement("deploy the apiserversauce", deployAPIServerSauceAndTestLabels(ctx, ns))
+
+	return f
+}
+
 func SendsEventsWithBrokerAsSinkTLS() *feature.Feature {
 	src := feature.MakeRandomK8sName("apiserversource")
 	sacmName := feature.MakeRandomK8sName("apiserversource")
@@ -902,5 +1019,4 @@ func SendsEventsWithBrokerAsSinkTLS() *feature.Feature {
 	)
 
 	return f
-
 }
