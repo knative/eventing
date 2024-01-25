@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-http://www.apache.org/licenses/LICENSE-2.0
+    http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -45,7 +45,7 @@ func IsReady(name string, timing ...time.Duration) feature.StepFn {
 // Install will create a configmap resource and will load the configmap to the context.
 func Install(ctxParam context.Context, ns string, name string, opts ...manifest.CfgFn) feature.StepFn {
 	cfg := map[string]interface{}{
-		"name":      name,
+		"name": name,
 	}
 	for _, fn := range opts {
 		fn(cfg)
