@@ -854,7 +854,6 @@ func setupNodeLabels() feature.StepFn {
 
 		randomNode := &nodes.Items[0]
 
-		// Apply the label to the node
 		randomNodeLabels := map[string]string{"testkey": "testvalue"}
 		randomNode.Labels = randomNodeLabels
 
@@ -927,8 +926,8 @@ func DeployAPIServerSauceWithNodeSelector(ns string) *feature.Feature {
 	ctx := context.Background()
 
 	f.Requirement("setup node labels", setupNodeLabels())
-	f.Requirement("setup config-features and context", configmap.Install(ctx, ns, "config-features"))
-	f.Requirement("deploy the apiserversauce", deployAPIServerSauceAndTestLabels(ctx, ns))
+	f.Requirement("setup config-features and load into context", configmap.Install(ctx, ns, "config-features"))
+	f.Assert("deploy the apiserversauce", deployAPIServerSauceAndTestLabels(ctx, ns))
 
 	return f
 }

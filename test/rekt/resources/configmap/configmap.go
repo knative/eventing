@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -37,16 +37,15 @@ func Gvr() schema.GroupVersionResource {
 	return schema.GroupVersionResource{Group: "sources.knative.dev", Version: "v1", Resource: "containersources"}
 }
 
-// IsReady tests to see if a ContainerSource becomes ready within the time given.
+// IsReady tests to see if a Configmap becomes ready within the time given.
 func IsReady(name string, timing ...time.Duration) feature.StepFn {
 	return k8s.IsReady(Gvr(), name, timing...)
 }
 
-// Install will create a configmap resource, augmented with the config fn options.
+// Install will create a configmap resource and will load the configmap to the context.
 func Install(ctxParam context.Context, ns string, name string, opts ...manifest.CfgFn) feature.StepFn {
 	cfg := map[string]interface{}{
 		"name":      name,
-		"namespace": ns,
 	}
 	for _, fn := range opts {
 		fn(cfg)
