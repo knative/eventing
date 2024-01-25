@@ -81,8 +81,6 @@ func TestApiServerSourceDataPlane_SinkTypes(t *testing.T) {
 	env.TestSet(ctx, t, apiserversourcefeatures.DataPlane_SinkTypes())
 }
 
-type knativeNamespaceConfig struct{}
-
 func TestApiServerSourceDeployement(t *testing.T) {
 	t.Parallel()
 

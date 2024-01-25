@@ -19,8 +19,6 @@ package apiserversource
 import (
 	"context"
 	"fmt"
-	"math/rand"
-	"time"
 
 	"github.com/cloudevents/sdk-go/v2/test"
 	reconcilersource "knative.dev/eventing/pkg/reconciler/source"
@@ -81,7 +79,6 @@ var (
 	}
 	sinkDNS      = "sink.mynamespace.svc." + network.GetClusterDomainName()
 	sinkURI      = apis.HTTP(sinkDNS)
-	sinkURL      = apis.HTTP(sinkDNS)
 	sinkAudience = "sink-oidc-audience"
 )
 
@@ -855,10 +852,7 @@ func setupNodeLabels() feature.StepFn {
 			t.Fail()
 		}
 
-		// Select a random node
-		rand.Seed(time.Now().UnixNano())
-		randomIndex := rand.Intn(len(nodes.Items))
-		randomNode := &nodes.Items[randomIndex]
+		randomNode := &nodes.Items[0]
 
 		// Apply the label to the node
 		randomNodeLabels := map[string]string{"testkey": "testvalue"}
