@@ -1,5 +1,5 @@
 /*
-Copyright 2023 The Knative Authors
+Copyright 2024 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package oidc
+package sequence
 
 import (
 	"context"
@@ -41,6 +41,8 @@ import (
 func SequenceHasAudienceOfInputChannel(sequenceName, sequenceNamespace string, channelGVR schema.GroupVersionResource, channelKind string) *feature.Feature {
 	f := feature.NewFeatureNamed("Sequence has audience of input channel")
 
+	f.Prerequisite("OIDC Authentication is enabled", featureflags.AuthenticationOIDCEnabled())
+
 	f.Setup("Sequence goes ready", sequence.IsReady(sequenceName))
 
 	expectedAudience := auth.GetAudience(channelGVR.GroupVersion().WithKind(channelKind), metav1.ObjectMeta{
@@ -66,6 +68,7 @@ func SequenceSendsEventWithOIDC() *feature.FeatureSet {
 func SequenceSendsEventWithOIDCTokenToSteps() *feature.Feature {
 	f := feature.NewFeatureNamed("Sequence supports OIDC in internal flow between steps")
 
+	f.Prerequisite("OIDC Authentication is enabled", featureflags.AuthenticationOIDCEnabled())
 	f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
 	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
 
@@ -134,6 +137,7 @@ func SequenceSendsEventWithOIDCTokenToSteps() *feature.Feature {
 func SequenceSendsEventWithOIDCTokenToReply() *feature.Feature {
 	f := feature.NewFeatureNamed("Sequence supports OIDC for reply")
 
+	f.Prerequisite("OIDC Authentication is enabled", featureflags.AuthenticationOIDCEnabled())
 	f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
 	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
 
