@@ -31,6 +31,7 @@ import (
 
 	"knative.dev/eventing/pkg/eventingtls/eventingtlstesting"
 	"knative.dev/eventing/pkg/reconciler/apiserversource/resources"
+	"knative.dev/eventing/test/rekt/helpers"
 	"knative.dev/eventing/test/rekt/resources/addressable"
 	"knative.dev/eventing/test/rekt/resources/configmap"
 
@@ -846,7 +847,8 @@ func SendsEventsWithRetries() *feature.Feature {
 	return f
 }
 
-func setupNodeLabels() feature.StepFn {
+func setupNodeLabels(ctxParam context.Context) feature.StepFn {
+	featureFlags := cfgFeat.FromContext(ctxParam)
 	return func(ctx context.Context, t feature.T) {
 		nodes, err := client.Get(ctx).CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 		if err != nil {
@@ -855,8 +857,7 @@ func setupNodeLabels() feature.StepFn {
 
 		randomNode := &nodes.Items[0]
 
-		randomNodeLabels := map[string]string{"testkey": "testvalue"}
-		randomNode.Labels = randomNodeLabels
+		randomNode.Labels = featureFlags.NodeSelector()
 
 		// Update the node with the new labels
 		_, err = client.Get(ctx).CoreV1().Nodes().Update(ctx, randomNode, metav1.UpdateOptions{})
@@ -916,7 +917,7 @@ func deployAPIServerSauceAndTestLabels(ctxParam context.Context, ns string) feat
 			t.Fail()
 		}
 
-		if newDep.Spec.Template.Spec.NodeSelector["testkey"] != featureFlags.NodeSelector()["testkey"] {
+		if !helpers.MatchLabels(newDep.Spec.Template.Spec.NodeSelector, featureFlags.NodeSelector()) {
 			t.Fail()
 		}
 	}
@@ -926,8 +927,8 @@ func DeployAPIServerSauceWithNodeSelector(ns string) *feature.Feature {
 	f := feature.NewFeature()
 	ctx := context.Background()
 
-	f.Requirement("setup node labels", setupNodeLabels())
 	f.Requirement("setup config-features and load into context", configmap.Install(ctx, ns, "config-features"))
+	f.Requirement("setup node labels", setupNodeLabels(ctx))
 	f.Assert("deploy the apiserversauce", deployAPIServerSauceAndTestLabels(ctx, ns))
 
 	return f
