@@ -104,7 +104,7 @@ func TestApiServerSourceDataPlane_BrokerAsSinkTLS(t *testing.T) {
 		knative.WithLoggingConfig,
 		knative.WithTracingConfig,
 		k8s.WithEventListener,
-		// environment.Managed(t),
+		//environment.Managed(t),
 		eventshub.WithTLS(t),
 		environment.WithPollTimings(5*time.Second, 2*time.Minute),
 	)
