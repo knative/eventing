@@ -20,9 +20,9 @@ import (
 	"context"
 	"strconv"
 
-	v2 "github.com/cloudevents/sdk-go/v2"
+	cloudeventsv2 "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/test"
-	v12 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/reconciler/parallel/resources"
@@ -30,7 +30,7 @@ import (
 	"knative.dev/eventing/test/rekt/resources/addressable"
 	"knative.dev/eventing/test/rekt/resources/channel_template"
 	"knative.dev/eventing/test/rekt/resources/parallel"
-	v1 "knative.dev/pkg/apis/duck/v1"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
@@ -55,7 +55,7 @@ func ParallelWithTwoBranchesOIDC(channelTemplate channel_template.ChannelTemplat
 
 	eventBody := `{"msg":"test msg"}`
 	event := test.FullEvent()
-	_ = event.SetData(v2.ApplicationJSON, []byte(eventBody))
+	_ = event.SetData(cloudeventsv2.ApplicationJSON, []byte(eventBody))
 
 	cfg := []manifest.CfgFn{
 		parallel.WithChannelTemplate(channelTemplate),
@@ -91,22 +91,22 @@ func ParallelWithTwoBranchesOIDC(channelTemplate channel_template.ChannelTemplat
 	// Install a Parallel with two branches
 	f.Setup("install Parallel", func(ctx context.Context, t feature.T) {
 		cfg = append(cfg,
-			parallel.WithReply(&v1.Destination{
+			parallel.WithReply(&duckv1.Destination{
 				Ref:      service.AsKReference(sink),
 				Audience: &sinkAudience,
 				CACerts:  eventshub.GetCaCerts(ctx),
 			}),
-			parallel.WithSubscriberAt(branch1Num, &v1.Destination{
+			parallel.WithSubscriberAt(branch1Num, &duckv1.Destination{
 				Ref:      service.AsKReference(subscriber1),
 				Audience: &subscriber1Audience,
 				CACerts:  eventshub.GetCaCerts(ctx),
 			}),
-			parallel.WithSubscriberAt(branch2Num, &v1.Destination{
+			parallel.WithSubscriberAt(branch2Num, &duckv1.Destination{
 				Ref:      service.AsKReference(subscriber2),
 				Audience: &subscriber2Audience,
 				CACerts:  eventshub.GetCaCerts(ctx),
 			}),
-			parallel.WithFilterAt(branch1Num, &v1.Destination{
+			parallel.WithFilterAt(branch1Num, &duckv1.Destination{
 				Ref:      service.AsKReference(filter1),
 				Audience: &filter1Audience,
 				CACerts:  eventshub.GetCaCerts(ctx),
@@ -115,7 +115,7 @@ func ParallelWithTwoBranchesOIDC(channelTemplate channel_template.ChannelTemplat
 			parallel.WithReplyAt(branch2Num, nil),
 
 			// The Reply for second branch is same as global reply.
-			parallel.WithReplyAt(branch2Num, &v1.Destination{
+			parallel.WithReplyAt(branch2Num, &duckv1.Destination{
 				Ref:      service.AsKReference(sink),
 				Audience: &sinkAudience,
 				CACerts:  eventshub.GetCaCerts(ctx),
@@ -156,7 +156,7 @@ func ParallelHasAudienceOfInputChannel(parallelName, parallelNamespace string, c
 
 	f.Setup("Parallel goes ready", parallel.IsReady(parallelName))
 
-	expectedAudience := auth.GetAudience(channelGVR.GroupVersion().WithKind(channelKind), v12.ObjectMeta{
+	expectedAudience := auth.GetAudience(channelGVR.GroupVersion().WithKind(channelKind), metav1.ObjectMeta{
 		Name:      resources.ParallelChannelName(parallelName),
 		Namespace: parallelNamespace,
 	})
