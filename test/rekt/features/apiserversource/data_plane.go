@@ -852,7 +852,11 @@ func setupNodeLabels(ctxParam context.Context) feature.StepFn {
 	return func(ctx context.Context, t feature.T) {
 		nodes, err := client.Get(ctx).CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 		if err != nil {
-			t.Fail()
+			t.Fatalf("Could not list nodes: %v", err)
+		}
+
+		if len(nodes.Items) == 0 {
+			t.Fatal("No nodes found")
 		}
 
 		randomNode := &nodes.Items[0]
@@ -863,7 +867,7 @@ func setupNodeLabels(ctxParam context.Context) feature.StepFn {
 		_, err = client.Get(ctx).CoreV1().Nodes().Update(ctx, randomNode, metav1.UpdateOptions{})
 
 		if err != nil {
-			t.Fail()
+			t.Fatalf("Could not update node: %v", err)
 		}
 	}
 }
@@ -903,22 +907,21 @@ func deployAPIServerSauceAndTestLabels(ctxParam context.Context, ns string) feat
 
 		dep, err := resources.MakeReceiveAdapter(&args)
 		if err != nil {
-			fmt.Printf("Error applying Unstructured object: %v\n", err)
-			t.Fail()
+			t.Fatalf("error calling MakeReceiveAdapter: %v", err)
 		}
 
 		_, err = kubeClient.AppsV1().Deployments(dep.Namespace).Create(ctx, dep, metav1.CreateOptions{})
 		if err != nil {
-			t.Fail()
+			t.Fatalf("error creating deployment: %v", err)
 		}
 
 		newDep, err := kubeClient.AppsV1().Deployments(dep.Namespace).Get(ctx, dep.ObjectMeta.Name, metav1.GetOptions{})
 		if err != nil {
-			t.Fail()
+			t.Fatalf("error getting deployment: %v", err)
 		}
 
 		if !helpers.MatchLabels(newDep.Spec.Template.Spec.NodeSelector, featureFlags.NodeSelector()) {
-			t.Fail()
+			t.Fatalf("NodeSelector labels do not match: %v", newDep.Spec.Template.Spec.NodeSelector)
 		}
 	}
 }
