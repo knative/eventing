@@ -850,14 +850,12 @@ func setupNodeLabels(nodeLabels map[string]string) feature.StepFn {
 func DeployAPIServerSourceWithNodeSelector() *feature.Feature {
 	f := feature.NewFeatureNamed("deploy")
 
-	// same labels as in the configmap
-
-	f.Requirement("setup config-features and load into context", func(ctx context.Context, t feature.T) {
+	f.Setup("setup config-features", func(ctx context.Context, t feature.T) {
 		env := environment.FromContext(ctx)
 		ns := env.Namespace()
 		configmap.Install("config-features", ns)
 	})
-	f.Requirement("setup node labels", setupNodeLabels(apiserversource.TestLabels()))
+	f.Setup("setup node labels", setupNodeLabels(apiserversource.TestLabels()))
 
 	source := feature.MakeRandomK8sName("apiserversource")
 	sink := feature.MakeRandomK8sName("sink")
@@ -882,8 +880,8 @@ func DeployAPIServerSourceWithNodeSelector() *feature.Feature {
 		}),
 	}
 
-	f.Setup("install ApiServerSource", apiserversource.Install(source, cfg...))
-	f.Setup("ApiServerSource goes ready", apiserversource.IsReady(source))
+	f.Requirement("install ApiServerSource", apiserversource.Install(source, cfg...))
+	f.Requirement("ApiServerSource goes ready", apiserversource.IsReady(source))
 
 	f.Stable("ApiServerSource using nodeSelector").Must("must use it from config-features", apiserversource.VerifyNodeSelectorDeployment(source))
 
