@@ -20,7 +20,7 @@ import (
 	"context"
 	"testing"
 
-	"knative.dev/eventing/pkg/apis/sources"
+	"knative.dev/eventing/pkg/auth"
 	filteredFactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
 
 	corev1 "k8s.io/api/core/v1"
@@ -57,6 +57,6 @@ func TestNew(t *testing.T) {
 }
 
 func SetUpInformerSelector(ctx context.Context) context.Context {
-	ctx = filteredFactory.WithSelectors(ctx, sources.OIDCTokenRoleLabelSelector)
+	ctx = filteredFactory.WithSelectors(ctx, auth.OIDCLabelSelector)
 	return ctx
 }

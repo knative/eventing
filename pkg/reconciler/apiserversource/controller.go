@@ -22,7 +22,7 @@ import (
 	configmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap/filtered"
 	"knative.dev/pkg/system"
 
-	"knative.dev/eventing/pkg/apis/sources"
+	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/eventingtls"
 	eventingreconciler "knative.dev/eventing/pkg/reconciler"
 
@@ -68,11 +68,11 @@ func NewController(
 	deploymentInformer := deploymentinformer.Get(ctx)
 	apiServerSourceInformer := apiserversourceinformer.Get(ctx)
 	namespaceInformer := namespace.Get(ctx)
-	oidcServiceaccountInformer := serviceaccountinformer.Get(ctx, sources.OIDCTokenRoleLabelSelector)
+	oidcServiceaccountInformer := serviceaccountinformer.Get(ctx, auth.OIDCLabelSelector)
 
 	// Create a selector string
-	roleInformer := roleinformer.Get(ctx, sources.OIDCTokenRoleLabelSelector)
-	rolebindingInformer := rolebindinginformer.Get(ctx, sources.OIDCTokenRoleLabelSelector)
+	roleInformer := roleinformer.Get(ctx, auth.OIDCLabelSelector)
+	rolebindingInformer := rolebindinginformer.Get(ctx, auth.OIDCLabelSelector)
 
 	trustBundleConfigMapInformer := configmapinformer.Get(ctx, eventingtls.TrustBundleLabelSelector)
 

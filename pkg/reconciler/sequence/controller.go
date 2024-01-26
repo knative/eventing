@@ -19,7 +19,7 @@ package sequence
 import (
 	"context"
 
-	"knative.dev/eventing/pkg/apis/sources"
+	"knative.dev/eventing/pkg/auth"
 
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/eventing/pkg/apis/feature"
@@ -48,7 +48,7 @@ func NewController(
 
 	sequenceInformer := sequence.Get(ctx)
 	subscriptionInformer := subscription.Get(ctx)
-	oidcServiceaccountInformer := serviceaccountinformer.Get(ctx, sources.OIDCTokenRoleLabelSelector)
+	oidcServiceaccountInformer := serviceaccountinformer.Get(ctx, auth.OIDCLabelSelector)
 
 	var globalResync func(obj interface{})
 	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {

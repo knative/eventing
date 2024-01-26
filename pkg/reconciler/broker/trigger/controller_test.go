@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"testing"
 
-	"knative.dev/eventing/pkg/apis/sources"
+	"knative.dev/eventing/pkg/auth"
 	filteredFactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
 
 	"github.com/stretchr/testify/assert"
@@ -63,7 +63,7 @@ func TestNew(t *testing.T) {
 }
 
 func SetUpInformerSelector(ctx context.Context) context.Context {
-	ctx = filteredFactory.WithSelectors(ctx, sources.OIDCTokenRoleLabelSelector)
+	ctx = filteredFactory.WithSelectors(ctx, auth.OIDCLabelSelector)
 	return ctx
 }
 

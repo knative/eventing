@@ -19,7 +19,7 @@ package subscription
 import (
 	"context"
 
-	"knative.dev/eventing/pkg/apis/sources"
+	"knative.dev/eventing/pkg/auth"
 
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/eventing/pkg/apis/feature"
@@ -50,7 +50,7 @@ func NewController(
 
 	subscriptionInformer := subscription.Get(ctx)
 	channelInformer := channel.Get(ctx)
-	oidcServiceaccountInformer := serviceaccountinformer.Get(ctx, sources.OIDCTokenRoleLabelSelector)
+	oidcServiceaccountInformer := serviceaccountinformer.Get(ctx, auth.OIDCLabelSelector)
 
 	var globalResync func(obj interface{})
 

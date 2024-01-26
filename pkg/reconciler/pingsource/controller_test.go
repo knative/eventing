@@ -24,7 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/pkg/apis/feature"
 
-	"knative.dev/eventing/pkg/apis/sources"
+	"knative.dev/eventing/pkg/auth"
 	filteredFactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/logging"
@@ -96,6 +96,6 @@ func TestNew(t *testing.T) {
 }
 
 func SetUpInformerSelector(ctx context.Context) context.Context {
-	ctx = filteredFactory.WithSelectors(ctx, sources.OIDCTokenRoleLabelSelector)
+	ctx = filteredFactory.WithSelectors(ctx, auth.OIDCLabelSelector)
 	return ctx
 }

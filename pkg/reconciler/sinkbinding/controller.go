@@ -20,8 +20,6 @@ import (
 	"context"
 	"time"
 
-	"knative.dev/eventing/pkg/apis/sources"
-
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"knative.dev/pkg/system"
 
@@ -82,7 +80,7 @@ func NewController(
 	dc := dynamicclient.Get(ctx)
 	psInformerFactory := podspecable.Get(ctx)
 	namespaceInformer := namespace.Get(ctx)
-	oidcServiceaccountInformer := serviceaccountinformer.Get(ctx, sources.OIDCTokenRoleLabelSelector)
+	oidcServiceaccountInformer := serviceaccountinformer.Get(ctx, auth.OIDCLabelSelector)
 	secretInformer := secretinformer.Get(ctx)
 	trustBundleConfigMapInformer := configmapinformer.Get(ctx, eventingtls.TrustBundleLabelSelector)
 	trustBundleConfigMapLister := configmapinformer.Get(ctx, eventingtls.TrustBundleLabelSelector).Lister()

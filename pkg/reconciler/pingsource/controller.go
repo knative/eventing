@@ -19,7 +19,7 @@ package pingsource
 import (
 	"context"
 
-	"knative.dev/eventing/pkg/apis/sources"
+	"knative.dev/eventing/pkg/auth"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 
 	serviceaccountinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount/filtered"
@@ -78,7 +78,7 @@ func NewController(
 
 	deploymentInformer := deploymentinformer.Get(ctx)
 	pingSourceInformer := pingsourceinformer.Get(ctx)
-	oidcServiceaccountInformer := serviceaccountinformer.Get(ctx, sources.OIDCTokenRoleLabelSelector)
+	oidcServiceaccountInformer := serviceaccountinformer.Get(ctx, auth.OIDCLabelSelector)
 
 	r := &Reconciler{
 		kubeClientSet:        kubeclient.Get(ctx),

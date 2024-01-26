@@ -22,7 +22,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/eventing/pkg/apis/sources"
+	"knative.dev/eventing/pkg/auth"
 	filteredFactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
 	"knative.dev/pkg/configmap"
 	. "knative.dev/pkg/reconciler/testing"
@@ -57,6 +57,6 @@ func TestNew(t *testing.T) {
 }
 
 func SetUpInformerSelector(ctx context.Context) context.Context {
-	ctx = filteredFactory.WithSelectors(ctx, sources.OIDCTokenRoleLabelSelector, eventingtls.TrustBundleLabelSelector)
+	ctx = filteredFactory.WithSelectors(ctx, auth.OIDCLabelSelector, eventingtls.TrustBundleLabelSelector)
 	return ctx
 }

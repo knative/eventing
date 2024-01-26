@@ -19,7 +19,7 @@ package mttrigger
 import (
 	"context"
 
-	"knative.dev/eventing/pkg/apis/sources"
+	"knative.dev/eventing/pkg/auth"
 
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/labels"
@@ -62,7 +62,7 @@ func NewController(
 	subscriptionInformer := subscriptioninformer.Get(ctx)
 	configmapInformer := configmapinformer.Get(ctx)
 	secretInformer := secretinformer.Get(ctx)
-	oidcServiceaccountInformer := serviceaccountinformer.Get(ctx, sources.OIDCTokenRoleLabelSelector)
+	oidcServiceaccountInformer := serviceaccountinformer.Get(ctx, auth.OIDCLabelSelector)
 
 	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"))
 	featureStore.WatchConfigs(cmw)

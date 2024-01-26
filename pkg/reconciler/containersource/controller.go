@@ -24,7 +24,7 @@ import (
 	"knative.dev/pkg/system"
 
 	"knative.dev/eventing/pkg/apis/feature"
-	"knative.dev/eventing/pkg/apis/sources"
+	"knative.dev/eventing/pkg/auth"
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	containersourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1/containersource"
@@ -52,7 +52,7 @@ func NewController(
 	containersourceInformer := containersourceinformer.Get(ctx)
 	sinkbindingInformer := sinkbindinginformer.Get(ctx)
 	deploymentInformer := deploymentinformer.Get(ctx)
-	oidcServiceaccountInformer := serviceaccountinformer.Get(ctx, sources.OIDCTokenRoleLabelSelector)
+	oidcServiceaccountInformer := serviceaccountinformer.Get(ctx, auth.OIDCLabelSelector)
 	trustBundleConfigMapInformer := configmapinformer.Get(ctx, eventingtls.TrustBundleLabelSelector)
 
 	var globalResync func(obj interface{})
