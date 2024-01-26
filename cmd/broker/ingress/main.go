@@ -44,7 +44,6 @@ import (
 
 	cmdbroker "knative.dev/eventing/cmd/broker"
 	"knative.dev/eventing/pkg/apis/feature"
-	"knative.dev/eventing/pkg/apis/sources"
 	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/broker"
 	"knative.dev/eventing/pkg/broker/ingress"
@@ -104,7 +103,7 @@ func main() {
 	log.Printf("Registering %d informers", len(injection.Default.GetInformers()))
 
 	ctx = filteredFactory.WithSelectors(ctx,
-		sources.OIDCTokenRoleLabelSelector,
+		auth.OIDCLabelSelector,
 		eventingtls.TrustBundleLabelSelector,
 	)
 

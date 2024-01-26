@@ -20,9 +20,9 @@ import (
 	filteredFactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
 	"knative.dev/pkg/signals"
 
+	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/adapter/apiserver"
 	"knative.dev/eventing/pkg/adapter/v2"
-	"knative.dev/eventing/pkg/apis/sources"
 	"knative.dev/eventing/pkg/eventingtls"
 )
 
@@ -35,7 +35,7 @@ func main() {
 	ctx = adapter.WithInjectorEnabled(ctx)
 
 	ctx = filteredFactory.WithSelectors(ctx,
-		sources.OIDCTokenRoleLabelSelector,
+		auth.OIDCLabelSelector,
 		eventingtls.TrustBundleLabelSelector,
 	)
 

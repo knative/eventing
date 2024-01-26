@@ -22,7 +22,7 @@ import (
 
 	"context"
 
-	"knative.dev/eventing/pkg/apis/sources"
+	"knative.dev/eventing/pkg/auth"
 	"knative.dev/pkg/injection/sharedmain"
 
 	filteredFactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
@@ -40,7 +40,7 @@ func main() {
 	ctx := signals.NewContext()
 
 	ctx = filteredFactory.WithSelectors(ctx,
-		sources.OIDCTokenRoleLabelSelector)
+		auth.OIDCLabelSelector)
 
 	sharedmain.MainWithContext(ctx,
 		component,
