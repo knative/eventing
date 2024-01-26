@@ -18,9 +18,11 @@ package eventingtls
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sort"
 
+	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -30,6 +32,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"knative.dev/pkg/kmeta"
+	"knative.dev/pkg/logging"
 	"knative.dev/pkg/system"
 )
 
@@ -55,6 +58,11 @@ func init() {
 	}
 }
 
+type pair struct {
+	SysCM  *corev1.ConfigMap
+	UserCm *corev1.ConfigMap
+}
+
 // PropagateTrustBundles propagates Trust bundles ConfigMaps from the system.Namespace() to the
 // obj namespace.
 func PropagateTrustBundles(ctx context.Context, k8s kubernetes.Interface, trustBundleConfigMapLister corev1listers.ConfigMapLister, gvk schema.GroupVersionKind, obj kmeta.Accessor) error {
@@ -69,39 +77,36 @@ func PropagateTrustBundles(ctx context.Context, k8s kubernetes.Interface, trustB
 		return fmt.Errorf("failed to list trust bundles ConfigMaps in %q: %w", obj.GetNamespace(), err)
 	}
 
-	type Pair struct {
-		sysCM  *corev1.ConfigMap
-		userCm *corev1.ConfigMap
-	}
+	logger := logging.FromContext(ctx)
 
-	state := make(map[string]Pair, len(systemNamespaceBundles)+len(userNamespaceBundles))
+	state := make(map[string]pair, len(systemNamespaceBundles)+len(userNamespaceBundles))
 
 	for _, cm := range systemNamespaceBundles {
 		if p, ok := state[cm.Name]; !ok {
-			state[cm.Name] = Pair{sysCM: cm}
+			state[cm.Name] = pair{SysCM: cm}
 		} else {
-			state[cm.Name] = Pair{
-				sysCM:  cm,
-				userCm: p.userCm,
+			state[cm.Name] = pair{
+				SysCM:  cm,
+				UserCm: p.UserCm,
 			}
 		}
 	}
 
 	for _, cm := range userNamespaceBundles {
 		if p, ok := state[cm.Name]; !ok {
-			state[cm.Name] = Pair{userCm: cm}
+			state[cm.Name] = pair{UserCm: cm}
 		} else {
-			state[cm.Name] = Pair{
-				sysCM:  p.sysCM,
-				userCm: cm,
+			state[cm.Name] = pair{
+				SysCM:  p.SysCM,
+				UserCm: cm,
 			}
 		}
 	}
 
 	for _, p := range state {
 
-		if p.sysCM == nil {
-			if err := deleteConfigMap(ctx, k8s, obj, p.userCm); err != nil {
+		if p.SysCM == nil {
+			if err := deleteConfigMap(ctx, k8s, obj, p.UserCm); err != nil {
 				return err
 			}
 			continue
@@ -109,31 +114,35 @@ func PropagateTrustBundles(ctx context.Context, k8s kubernetes.Interface, trustB
 
 		expected := &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:        p.sysCM.Name,
+				Name:        p.SysCM.Name,
 				Namespace:   obj.GetNamespace(),
-				Labels:      p.sysCM.Labels,
-				Annotations: p.sysCM.Annotations,
+				Labels:      p.SysCM.Labels,
+				Annotations: p.SysCM.Annotations,
 			},
-			Data:       p.sysCM.Data,
-			BinaryData: p.sysCM.BinaryData,
+			Data:       p.SysCM.Data,
+			BinaryData: p.SysCM.BinaryData,
 		}
 
-		if p.userCm == nil {
+		if p.UserCm == nil {
 			// Update owner references
 			expected.OwnerReferences = withOwnerReferences(obj, gvk, []metav1.OwnerReference{})
 
 			if err := createConfigMap(ctx, k8s, expected); err != nil {
-				return err
+				sBytes, _ := json.Marshal(state)
+				logger.Debugw("PropagateTrustBundles", zap.String("state", string(sBytes)))
+				return fmt.Errorf("%w\n%s", err, string(sBytes))
 			}
 			continue
 		}
 
 		// Update owner references
-		expected.OwnerReferences = withOwnerReferences(obj, gvk, p.userCm.OwnerReferences)
+		expected.OwnerReferences = withOwnerReferences(obj, gvk, p.UserCm.OwnerReferences)
 
-		if !equality.Semantic.DeepDerivative(expected, p.userCm) {
+		if !equality.Semantic.DeepDerivative(expected, p.UserCm) {
 			if err := updateConfigMap(ctx, k8s, expected); err != nil {
-				return err
+				sBytes, _ := json.Marshal(state)
+				logger.Debugw("PropagateTrustBundles", zap.String("state", string(sBytes)))
+				return fmt.Errorf("%w\n%s", err, string(sBytes))
 			}
 		}
 	}
