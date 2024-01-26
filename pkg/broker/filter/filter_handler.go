@@ -440,7 +440,8 @@ func (h *Handler) writeResponse(ctx context.Context, writer http.ResponseWriter,
 			writer.WriteHeader(http.StatusBadGateway)
 			return http.StatusBadGateway, errors.New("received a non-empty response not recognized as CloudEvent. The response MUST be either empty or a valid CloudEvent")
 		}
-		writeHeaders(dispatchInfo.ResponseHeader, writer) // Proxy original Response Headers for downstream use
+
+		writeHeaders(utils.PassThroughHeaders(dispatchInfo.ResponseHeader), writer) // Proxy original Response Headers for downstream use
 		h.logger.Debug("Response doesn't contain a CloudEvent, replying with an empty response", zap.Any("target", target))
 		writer.WriteHeader(dispatchInfo.ResponseCode)
 		return dispatchInfo.ResponseCode, nil
@@ -467,7 +468,7 @@ func (h *Handler) writeResponse(ctx context.Context, writer http.ResponseWriter,
 	defer eventResponse.Finish(nil)
 
 	// Proxy the original Response Headers for downstream use
-	writeHeaders(dispatchInfo.ResponseHeader, writer)
+	writeHeaders(utils.PassThroughHeaders(dispatchInfo.ResponseHeader), writer)
 
 	if err := cehttp.WriteResponseWriter(ctx, eventResponse, dispatchInfo.ResponseCode, writer); err != nil {
 		return http.StatusInternalServerError, fmt.Errorf("failed to write response event: %w", err)
