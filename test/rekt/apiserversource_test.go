@@ -210,5 +210,5 @@ func TestApiServerSourceDeployement(t *testing.T) {
 		environment.WithPollTimings(5*time.Second, 2*time.Minute),
 	)
 
-	env.Test(ctx, t, apiserversourcefeatures.DeployAPIServerSauceWithNodeSelector())
+	env.Test(ctx, t, apiserversourcefeatures.DeployAPIServerSourceWithNodeSelector())
 }

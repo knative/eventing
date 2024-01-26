@@ -847,7 +847,7 @@ func setupNodeLabels(nodeLabels map[string]string) feature.StepFn {
 	}
 }
 
-func DeployAPIServerSauceWithNodeSelector() *feature.Feature {
+func DeployAPIServerSourceWithNodeSelector() *feature.Feature {
 	f := feature.NewFeatureNamed("deploy")
 
 	// same labels as in the configmap
@@ -885,7 +885,7 @@ func DeployAPIServerSauceWithNodeSelector() *feature.Feature {
 	f.Setup("install ApiServerSource", apiserversource.Install(source, cfg...))
 	f.Setup("ApiServerSource goes ready", apiserversource.IsReady(source))
 
-	f.Stable("ApiServerSauce using nodeSelector").Must("must use it from config-features", apiserversource.VerifyNodeSelectorDeployment(source))
+	f.Stable("ApiServerSource using nodeSelector").Must("must use it from config-features", apiserversource.VerifyNodeSelectorDeployment(source))
 
 	return f
 }

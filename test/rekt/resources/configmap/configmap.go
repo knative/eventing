@@ -19,28 +19,13 @@ package configmap
 import (
 	"context"
 	"embed"
-	"time"
 
-	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	// cfgFeat "knative.dev/eventing/pkg/apis/feature"
-	// "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/reconciler-test/pkg/feature"
-	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/manifest"
 )
 
 //go:embed *.yaml
 var yaml embed.FS
-
-func Gvr() schema.GroupVersionResource {
-	return schema.GroupVersionResource{Group: "sources.knative.dev", Version: "v1", Resource: "containersources"}
-}
-
-// IsReady tests to see if a Configmap becomes ready within the time given.
-func IsReady(name string, timing ...time.Duration) feature.StepFn {
-	return k8s.IsReady(Gvr(), name, timing...)
-}
 
 // Install will create a configmap resource and will load the configmap to the context.
 func Install(name string, ns string, opts ...manifest.CfgFn) feature.StepFn {
