@@ -1,5 +1,5 @@
 /*
-Copyright 2021 The Knative Authors
+Copyright 2024 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,26 +14,28 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package oidc
+package containersource
 
 import (
 	"context"
 
 	"github.com/cloudevents/sdk-go/v2/test"
 	"knative.dev/eventing/test/rekt/features/featureflags"
-	"knative.dev/eventing/test/rekt/resources/pingsource"
+	"knative.dev/eventing/test/rekt/features/source"
+	"knative.dev/eventing/test/rekt/resources/containersource"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/resources/service"
 )
 
-func PingSourceSendEventWithSinkRefOIDC() *feature.Feature {
-	source := feature.MakeRandomK8sName("pingsource")
+func SendsEventsWithSinkRefOIDC() *feature.Feature {
+	src := feature.MakeRandomK8sName("containersource")
 	sink := feature.MakeRandomK8sName("sink")
 	sinkAudience := "audience"
 	f := feature.NewFeature()
 
+	f.Prerequisite("OIDC authentication is enabled", featureflags.AuthenticationOIDCEnabled())
 	f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
 	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
 
@@ -41,19 +43,20 @@ func PingSourceSendEventWithSinkRefOIDC() *feature.Feature {
 		eventshub.OIDCReceiverAudience(sinkAudience),
 		eventshub.StartReceiverTLS))
 
-	f.Requirement("Install pingsource", func(ctx context.Context, t feature.T) {
+	f.Requirement("install ContainerSource", func(ctx context.Context, t feature.T) {
 		d := service.AsDestinationRef(sink)
 		d.CACerts = eventshub.GetCaCerts(ctx)
 		d.Audience = &sinkAudience
 
-		pingsource.Install(source, pingsource.WithSink(d))(ctx, t)
+		containersource.Install(src, containersource.WithSink(d))(ctx, t)
 	})
 
-	f.Requirement("pingsource goes ready", pingsource.IsReady(source))
+	f.Requirement("containersource goes ready", containersource.IsReady(src))
 
-	f.Stable("pingsource as event source").
+	f.Stable("containersource as event source").
 		Must("delivers events",
-			assert.OnStore(sink).MatchEvent(test.HasType("dev.knative.sources.ping")).AtLeast(1))
-
+			assert.OnStore(sink).MatchEvent(test.HasType("dev.knative.eventing.samples.heartbeat")).AtLeast(1)).
+		Must("Set sinkURI to HTTPS endpoint", source.ExpectHTTPSSink(containersource.Gvr(), src)).
+		Must("Set sinkCACerts to non empty CA certs", source.ExpectCACerts(containersource.Gvr(), src))
 	return f
 }

@@ -203,7 +203,7 @@ func loadCertPool(config ClientConfig) (*x509.CertPool, error) {
 		return nil, err
 	}
 
-	_ = filepath.WalkDir(fmt.Sprintf("/%s", TrustBundleMountPath), func(path string, d fs.DirEntry, err error) error {
+	_ = filepath.WalkDir(TrustBundleMountPath, func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() {
 			return nil
 		}

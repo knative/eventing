@@ -67,18 +67,20 @@ var (
 	// go.opencensus.io/tag/validate.go. Currently those restrictions are:
 	// - length between 1 and 255 inclusive
 	// - characters are printable US-ASCII
-	triggerFilterTypeKey        = tag.MustNewKey(eventingmetrics.LabelFilterType)
-	triggerFilterRequestTypeKey = tag.MustNewKey("filter_request_type")
-	responseCodeKey             = tag.MustNewKey(eventingmetrics.LabelResponseCode)
-	responseCodeClassKey        = tag.MustNewKey(eventingmetrics.LabelResponseCodeClass)
+	triggerFilterTypeKey          = tag.MustNewKey(eventingmetrics.LabelFilterType)
+	triggerFilterRequestTypeKey   = tag.MustNewKey("filter_request_type")
+	triggerFilterRequestSchemeKey = tag.MustNewKey(eventingmetrics.LabelEventScheme)
+	responseCodeKey               = tag.MustNewKey(eventingmetrics.LabelResponseCode)
+	responseCodeClassKey          = tag.MustNewKey(eventingmetrics.LabelResponseCodeClass)
 )
 
 type ReportArgs struct {
-	ns          string
-	trigger     string
-	broker      string
-	filterType  string
-	requestType string
+	ns            string
+	trigger       string
+	broker        string
+	filterType    string
+	requestType   string
+	requestScheme string
 }
 
 func init() {
@@ -116,19 +118,19 @@ func register() {
 			Description: eventCountM.Description(),
 			Measure:     eventCountM,
 			Aggregation: view.Count(),
-			TagKeys:     []tag.Key{triggerFilterTypeKey, triggerFilterRequestTypeKey, responseCodeKey, responseCodeClassKey, broker.UniqueTagKey, broker.ContainerTagKey},
+			TagKeys:     []tag.Key{triggerFilterTypeKey, triggerFilterRequestTypeKey, triggerFilterRequestSchemeKey, responseCodeKey, responseCodeClassKey, broker.UniqueTagKey, broker.ContainerTagKey},
 		},
 		&view.View{
 			Description: dispatchTimeInMsecM.Description(),
 			Measure:     dispatchTimeInMsecM,
 			Aggregation: view.Distribution(metrics.Buckets125(1, 10000)...), // 1, 2, 5, 10, 20, 50, 100, 1000, 5000, 10000
-			TagKeys:     []tag.Key{triggerFilterTypeKey, triggerFilterRequestTypeKey, responseCodeKey, responseCodeClassKey, broker.UniqueTagKey, broker.ContainerTagKey},
+			TagKeys:     []tag.Key{triggerFilterTypeKey, triggerFilterRequestTypeKey, triggerFilterRequestSchemeKey, responseCodeKey, responseCodeClassKey, broker.UniqueTagKey, broker.ContainerTagKey},
 		},
 		&view.View{
 			Description: processingTimeInMsecM.Description(),
 			Measure:     processingTimeInMsecM,
 			Aggregation: view.Distribution(metrics.Buckets125(1, 10000)...), // 1, 2, 5, 10, 20, 50, 100, 1000, 5000, 10000
-			TagKeys:     []tag.Key{triggerFilterTypeKey, triggerFilterRequestTypeKey, broker.UniqueTagKey, broker.ContainerTagKey},
+			TagKeys:     []tag.Key{triggerFilterTypeKey, triggerFilterRequestTypeKey, triggerFilterRequestSchemeKey, broker.UniqueTagKey, broker.ContainerTagKey},
 		},
 	)
 	if err != nil {
@@ -190,6 +192,7 @@ func (r *reporter) generateTag(args *ReportArgs, tags ...tag.Mutator) (context.C
 			tag.Insert(broker.UniqueTagKey, r.uniqueName),
 			tag.Insert(triggerFilterTypeKey, valueOrAny(args.filterType)),
 			tag.Insert(triggerFilterRequestTypeKey, args.requestType),
+			tag.Insert(triggerFilterRequestSchemeKey, args.requestScheme),
 		)...)
 	return ctx, err
 }

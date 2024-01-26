@@ -102,7 +102,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1.ApiServerSour
 		// no Namespace defined in dest.Ref, we will use the Namespace of the source
 		// as the Namespace of dest.Ref.
 		if dest.Ref.Namespace == "" {
-			//TODO how does this work with deprecated fields
+			// TODO how does this work with deprecated fields
 			dest.Ref.Namespace = source.GetNamespace()
 		}
 	}
@@ -118,7 +118,6 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1.ApiServerSour
 	if featureFlags.IsOIDCAuthentication() {
 		// Create the role
 		err := r.createOIDCRole(ctx, source)
-
 		if err != nil {
 			logging.FromContext(ctx).Errorw("Failed when creating the OIDC Role for ApiServerSource", zap.Error(err))
 			return err
@@ -225,6 +224,8 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1.ApiServer
 	// 	return nil, err
 	// }
 
+	featureFlags := feature.FromContext(ctx)
+
 	adapterArgs := resources.ReceiveAdapterArgs{
 		Image:         r.receiveAdapterImage,
 		Source:        src,
@@ -235,6 +236,7 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1.ApiServer
 		Configs:       r.configs,
 		Namespaces:    namespaces,
 		AllNamespaces: allNamespaces,
+		NodeSelector:  featureFlags.NodeSelector(),
 	}
 
 	expected, err := resources.MakeReceiveAdapter(&adapterArgs)
@@ -357,7 +359,6 @@ func (r *Reconciler) runAccessCheck(ctx context.Context, src *v1.ApiServerSource
 
 	src.Status.MarkNoSufficientPermissions(lastReason, "User %s cannot %s", user, missing)
 	return fmt.Errorf("insufficient permissions: User %s cannot %s", user, missing)
-
 }
 
 func (r *Reconciler) createCloudEventAttributes(src *v1.ApiServerSource) ([]duckv1.CloudEventAttributes, error) {
@@ -385,7 +386,6 @@ func (r *Reconciler) createOIDCRole(ctx context.Context, source *v1.ApiServerSou
 	roleName := resources.GetOIDCTokenRoleName(source.Name)
 
 	expected, err := resources.MakeOIDCRole(source)
-
 	if err != nil {
 		return fmt.Errorf("Cannot create OIDC role for ApiServerSource %s/%s: %w", source.GetName(), source.GetNamespace(), err)
 	}
@@ -417,7 +417,6 @@ func (r *Reconciler) createOIDCRole(ctx context.Context, source *v1.ApiServerSou
 	}
 
 	return nil
-
 }
 
 // createOIDCRoleBinding:  this function will call resources package to get the rolebinding object

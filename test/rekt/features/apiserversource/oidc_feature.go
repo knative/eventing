@@ -1,5 +1,5 @@
 /*
-Copyright 2023 The Knative Authors
+Copyright 2024 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,29 +14,24 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package oidc
+package apiserversource
 
 import (
 	"context"
 
-	"knative.dev/eventing/test/rekt/features/featureflags"
-	"knative.dev/eventing/test/rekt/features/source"
-
 	"github.com/cloudevents/sdk-go/v2/test"
 	rbacv1 "k8s.io/api/rbac/v1"
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
+	"knative.dev/eventing/test/rekt/features/featureflags"
+	"knative.dev/eventing/test/rekt/features/source"
 	"knative.dev/eventing/test/rekt/resources/account_role"
 	"knative.dev/eventing/test/rekt/resources/apiserversource"
 	"knative.dev/reconciler-test/pkg/eventshub"
-	eventassert "knative.dev/reconciler-test/pkg/eventshub/assert"
+	"knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
 	"knative.dev/reconciler-test/pkg/resources/pod"
 	"knative.dev/reconciler-test/pkg/resources/service"
-)
-
-const (
-	exampleImage = "ko://knative.dev/eventing/test/test_images/print"
 )
 
 func ApiserversourceSendEventWithJWT() *feature.Feature {
@@ -47,6 +42,7 @@ func ApiserversourceSendEventWithJWT() *feature.Feature {
 
 	f := feature.NewFeatureNamed("ApiServerSource send events with OIDC authentication")
 
+	f.Prerequisite("OIDC authentication is enabled", featureflags.AuthenticationOIDCEnabled())
 	f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
 	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
 
@@ -84,8 +80,8 @@ func ApiserversourceSendEventWithJWT() *feature.Feature {
 
 	f.Stable("ApiServerSource as event source").
 		Must("delivers events on sink with ref",
-			eventassert.OnStore(sink).
-				Match(eventassert.MatchKind(eventshub.EventReceived)).
+			assert.OnStore(sink).
+				Match(assert.MatchKind(eventshub.EventReceived)).
 				MatchEvent(test.HasType("dev.knative.apiserver.resource.update")).
 				AtLeast(1),
 		).Must("Set sinkURI to HTTPS endpoint", source.ExpectHTTPSSink(apiserversource.Gvr(), src)).

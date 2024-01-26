@@ -48,6 +48,7 @@ type ReceiveAdapterArgs struct {
 	Configs       reconcilersource.ConfigAccessor
 	Namespaces    []string
 	AllNamespaces bool
+	NodeSelector  map[string]string
 }
 
 // MakeReceiveAdapter generates (but does not insert into K8s) the Receive Adapter Deployment for
@@ -82,6 +83,7 @@ func MakeReceiveAdapter(args *ReceiveAdapterArgs) (*appsv1.Deployment, error) {
 					Labels: args.Labels,
 				},
 				Spec: corev1.PodSpec{
+					NodeSelector:       args.NodeSelector,
 					ServiceAccountName: args.Source.Spec.ServiceAccountName,
 					EnableServiceLinks: ptr.Bool(false),
 					Containers: []corev1.Container{
@@ -149,29 +151,30 @@ func makeEnv(args *ReceiveAdapterArgs) ([]corev1.EnvVar, error) {
 		config = string(b)
 	}
 
-	envs := []corev1.EnvVar{{
-		Name:  adapter.EnvConfigSink,
-		Value: args.SinkURI,
-	}, {
-		Name:  "K_SOURCE_CONFIG",
-		Value: config,
-	}, {
-		Name:  "SYSTEM_NAMESPACE",
-		Value: system.Namespace(),
-	}, {
-		Name: adapter.EnvConfigNamespace,
-		ValueFrom: &corev1.EnvVarSource{
-			FieldRef: &corev1.ObjectFieldSelector{
-				FieldPath: "metadata.namespace",
+	envs := []corev1.EnvVar{
+		{
+			Name:  adapter.EnvConfigSink,
+			Value: args.SinkURI,
+		}, {
+			Name:  "K_SOURCE_CONFIG",
+			Value: config,
+		}, {
+			Name:  "SYSTEM_NAMESPACE",
+			Value: system.Namespace(),
+		}, {
+			Name: adapter.EnvConfigNamespace,
+			ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{
+					FieldPath: "metadata.namespace",
+				},
 			},
+		}, {
+			Name:  adapter.EnvConfigName,
+			Value: args.Source.Name,
+		}, {
+			Name:  "METRICS_DOMAIN",
+			Value: "knative.dev/eventing",
 		},
-	}, {
-		Name:  adapter.EnvConfigName,
-		Value: args.Source.Name,
-	}, {
-		Name:  "METRICS_DOMAIN",
-		Value: "knative.dev/eventing",
-	},
 	}
 
 	if args.CACerts != nil {

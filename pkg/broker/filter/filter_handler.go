@@ -241,6 +241,12 @@ func (h *Handler) handleDispatchToReplyRequest(ctx context.Context, trigger *eve
 		requestType: "reply_forward",
 	}
 
+	if request.TLS != nil {
+		reportArgs.requestScheme = "https"
+	} else {
+		reportArgs.requestScheme = "http"
+	}
+
 	h.logger.Info("sending to reply", zap.Any("target", target))
 
 	// since the broker-filter acts here like a proxy, we don't filter headers
@@ -275,6 +281,12 @@ func (h *Handler) handleDispatchToDLSRequest(ctx context.Context, trigger *event
 		trigger:     trigger.Name,
 		broker:      trigger.Spec.Broker,
 		requestType: "dls_forward",
+	}
+
+	if request.TLS != nil {
+		reportArgs.requestScheme = "https"
+	} else {
+		reportArgs.requestScheme = "http"
 	}
 
 	h.logger.Info("sending to dls", zap.Any("target", target))
@@ -312,6 +324,12 @@ func (h *Handler) handleDispatchToSubscriberRequest(ctx context.Context, trigger
 		requestType: "filter",
 	}
 
+	if request.TLS != nil {
+		reportArgs.requestScheme = "https"
+	} else {
+		reportArgs.requestScheme = "http"
+	}
+
 	subscriberURI := trigger.Status.SubscriberURI
 	if subscriberURI == nil {
 		// Record the event count.
@@ -342,7 +360,6 @@ func (h *Handler) handleDispatchToSubscriberRequest(ctx context.Context, trigger
 }
 
 func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers http.Header, target duckv1.Addressable, reportArgs *ReportArgs, event *cloudevents.Event, t *eventingv1.Trigger, ttl int32) {
-
 	additionalHeaders := headers.Clone()
 	additionalHeaders.Set(apis.KnNamespaceHeader, t.GetNamespace())
 
@@ -423,7 +440,8 @@ func (h *Handler) writeResponse(ctx context.Context, writer http.ResponseWriter,
 			writer.WriteHeader(http.StatusBadGateway)
 			return http.StatusBadGateway, errors.New("received a non-empty response not recognized as CloudEvent. The response MUST be either empty or a valid CloudEvent")
 		}
-		writeHeaders(dispatchInfo.ResponseHeader, writer) // Proxy original Response Headers for downstream use
+
+		writeHeaders(utils.PassThroughHeaders(dispatchInfo.ResponseHeader), writer) // Proxy original Response Headers for downstream use
 		h.logger.Debug("Response doesn't contain a CloudEvent, replying with an empty response", zap.Any("target", target))
 		writer.WriteHeader(dispatchInfo.ResponseCode)
 		return dispatchInfo.ResponseCode, nil
@@ -450,7 +468,7 @@ func (h *Handler) writeResponse(ctx context.Context, writer http.ResponseWriter,
 	defer eventResponse.Finish(nil)
 
 	// Proxy the original Response Headers for downstream use
-	writeHeaders(dispatchInfo.ResponseHeader, writer)
+	writeHeaders(utils.PassThroughHeaders(dispatchInfo.ResponseHeader), writer)
 
 	if err := cehttp.WriteResponseWriter(ctx, eventResponse, dispatchInfo.ResponseCode, writer); err != nil {
 		return http.StatusInternalServerError, fmt.Errorf("failed to write response event: %w", err)
