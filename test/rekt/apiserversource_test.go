@@ -81,21 +81,6 @@ func TestApiServerSourceDataPlane_SinkTypes(t *testing.T) {
 	env.TestSet(ctx, t, apiserversourcefeatures.DataPlane_SinkTypes())
 }
 
-func TestApiServerSourceDeployement(t *testing.T) {
-	t.Parallel()
-
-	ctx, env := global.Environment(
-		knative.WithKnativeNamespace(system.Namespace()),
-		knative.WithLoggingConfig,
-		knative.WithTracingConfig,
-		k8s.WithEventListener,
-		environment.Managed(t),
-		environment.WithPollTimings(5*time.Second, 2*time.Minute),
-	)
-
-	env.Test(ctx, t, apiserversourcefeatures.DeployAPIServerSauceWithNodeSelector())
-}
-
 func TestApiServerSourceDataPlane_BrokerAsSinkTLS(t *testing.T) {
 	t.Parallel()
 
@@ -104,7 +89,7 @@ func TestApiServerSourceDataPlane_BrokerAsSinkTLS(t *testing.T) {
 		knative.WithLoggingConfig,
 		knative.WithTracingConfig,
 		k8s.WithEventListener,
-		// environment.Managed(t),
+		environment.Managed(t),
 		eventshub.WithTLS(t),
 		environment.WithPollTimings(5*time.Second, 2*time.Minute),
 	)
@@ -120,7 +105,7 @@ func TestApiServerSourceDataPlaneTLS(t *testing.T) {
 		knative.WithLoggingConfig,
 		knative.WithTracingConfig,
 		k8s.WithEventListener,
-		environment.Managed(t),
+		//environment.Managed(t),
 		eventshub.WithTLS(t),
 	)
 
@@ -198,7 +183,7 @@ func TestApiServerSourceDataPlane_MultipleNamespacesEmptySelector(t *testing.T) 
 	env.Test(ctx, t, apiserversourcefeatures.SendsEventsForAllResourcesWithEmptyNamespaceSelector())
 }
 
-func TestApiserversourceSendEventWithJWTOIDC(t *testing.T) {
+func TestApiServerSourceDeployement(t *testing.T) {
 	t.Parallel()
 
 	ctx, env := global.Environment(
@@ -207,8 +192,8 @@ func TestApiserversourceSendEventWithJWTOIDC(t *testing.T) {
 		knative.WithTracingConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
-		eventshub.WithTLS(t),
+		environment.WithPollTimings(5*time.Second, 2*time.Minute),
 	)
 
-	env.Test(ctx, t, apiserversourcefeatures.ApiserversourceSendEventWithJWT())
+	env.Test(ctx, t, apiserversourcefeatures.DeployAPIServerSauceWithNodeSelector())
 }
