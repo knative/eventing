@@ -58,23 +58,6 @@ import (
 
 const (
 	exampleImage = "ko://knative.dev/eventing/test/test_images/print"
-	image        = "github.com/knative/test/image"
-	sourceName   = "test-apiserver-source"
-	sourceUID    = "1234"
-	sinkName     = "testsink"
-)
-
-var (
-	sinkDest = duckv1.Destination{
-		Ref: &duckv1.KReference{
-			Name:       sinkName,
-			Kind:       "Channel",
-			APIVersion: "messaging.knative.dev/v1",
-		},
-	}
-	sinkDNS      = "sink.mynamespace.svc." + network.GetClusterDomainName()
-	sinkURI      = apis.HTTP(sinkDNS)
-	sinkAudience = "sink-oidc-audience"
 )
 
 func DataPlane_SinkTypes() *feature.FeatureSet {
