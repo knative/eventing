@@ -26,8 +26,6 @@ import (
 	"knative.dev/pkg/kmeta"
 	pkgreconciler "knative.dev/pkg/reconciler"
 
-	"knative.dev/eventing/pkg/auth"
-
 	"go.uber.org/zap"
 	v1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
@@ -77,7 +75,7 @@ func GetOIDCServiceAccountForResource(gvk schema.GroupVersionKind, objectMeta me
 				"description": fmt.Sprintf("Service Account for OIDC Authentication for %s %q", gvk.GroupKind().Kind, objectMeta.Name),
 			},
 			Labels: map[string]string{
-				auth.OIDCLabelKey: "enabled",
+				OIDCLabelKey: "enabled",
 			},
 		},
 	}
