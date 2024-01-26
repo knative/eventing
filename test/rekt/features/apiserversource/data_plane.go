@@ -24,16 +24,13 @@ import (
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	client "knative.dev/pkg/client/injection/kube/client"
-	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/network"
 	"knative.dev/reconciler-test/pkg/environment"
 
 	"knative.dev/eventing/pkg/eventingtls/eventingtlstesting"
-	"knative.dev/eventing/test/rekt/helpers"
 	"knative.dev/eventing/test/rekt/resources/addressable"
 	"knative.dev/eventing/test/rekt/resources/configmap"
 
-	appsv1 "k8s.io/api/apps/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -871,18 +868,13 @@ func DeployAPIServerSauceWithNodeSelector() *feature.Feature {
 	f := feature.NewFeatureNamed("deploy")
 
 	// same labels as in the configmap
-	nodeLabels := map[string]string{
-		"testkey":  "testvalue",
-		"testkey1": "testvalue1",
-		"testkey2": "testvalue2",
-	}
 
 	f.Requirement("setup config-features and load into context", func(ctx context.Context, t feature.T) {
 		env := environment.FromContext(ctx)
 		ns := env.Namespace()
 		configmap.Install("config-features", ns)
 	})
-	f.Requirement("setup node labels", setupNodeLabels(nodeLabels))
+	f.Requirement("setup node labels", setupNodeLabels(apiserversource.TestLabels()))
 
 	source := feature.MakeRandomK8sName("apiserversource")
 	sink := feature.MakeRandomK8sName("sink")
@@ -910,29 +902,7 @@ func DeployAPIServerSauceWithNodeSelector() *feature.Feature {
 	f.Setup("install ApiServerSource", apiserversource.Install(source, cfg...))
 	f.Setup("ApiServerSource goes ready", apiserversource.IsReady(source))
 
-	f.Assert("deployed in correct nodeSelector", func(ctx context.Context, t feature.T) {
-		env := environment.FromContext(ctx)
-		ns := env.Namespace()
-
-		kubeClient := client.Get(ctx)
-
-		deps, err := kubeClient.AppsV1().Deployments(ns).List(ctx, metav1.ListOptions{})
-		if err != nil {
-			t.Fatalf("error getting deployment: %v", err)
-		}
-
-		var dep appsv1.Deployment
-
-		for _, d := range deps.Items {
-			if kmeta.ChildName(fmt.Sprintf("apiserversource-%s-", source), string(d.GetUID())) == d.Name {
-				dep = d
-			}
-		}
-
-		if !helpers.MatchLabels(dep.Spec.Template.Spec.NodeSelector, nodeLabels) {
-			t.Fatalf("NodeSelector labels do not match: %v", dep.Spec.Template.Spec.NodeSelector)
-		}
-	})
+	f.Stable("ApiServerSauce using nodeSelector").Must("must use it from config-features", apiserversource.VerifyNodeSelectorDeployment(source))
 
 	return f
 }
