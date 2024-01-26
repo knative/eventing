@@ -26,7 +26,7 @@ import (
 	"knative.dev/pkg/kmeta"
 	pkgreconciler "knative.dev/pkg/reconciler"
 
-	"knative.dev/eventing/pkg/apis/sources"
+	"knative.dev/eventing/pkg/auth"
 
 	"go.uber.org/zap"
 	v1 "k8s.io/api/core/v1"
@@ -37,6 +37,14 @@ import (
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/ptr"
+)
+
+const (
+		//OIDCLabelKey is used to filter out all the informers that related to OIDC work
+		OIDCLabelKey = "oidc"
+
+		// OIDCTokenRoleLabelSelector is the label selector for the OIDC token creator role and rolebinding informers
+		OIDCLabelSelector = OIDCLabelKey
 )
 
 // GetOIDCServiceAccountNameForResource returns the service account name to use
@@ -69,7 +77,7 @@ func GetOIDCServiceAccountForResource(gvk schema.GroupVersionKind, objectMeta me
 				"description": fmt.Sprintf("Service Account for OIDC Authentication for %s %q", gvk.GroupKind().Kind, objectMeta.Name),
 			},
 			Labels: map[string]string{
-				sources.OIDCLabelKey: "enabled",
+				auth.OIDCLabelKey: "enabled",
 			},
 		},
 	}
