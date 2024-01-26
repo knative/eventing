@@ -21,11 +21,10 @@ import (
 	"embed"
 	"time"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	cfgFeat "knative.dev/eventing/pkg/apis/feature"
-	"knative.dev/pkg/client/injection/kube/client"
-	"knative.dev/pkg/system"
+	// cfgFeat "knative.dev/eventing/pkg/apis/feature"
+	// "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/manifest"
@@ -44,10 +43,12 @@ func IsReady(name string, timing ...time.Duration) feature.StepFn {
 }
 
 // Install will create a configmap resource and will load the configmap to the context.
-func Install(ctxParam context.Context, name string, opts ...manifest.CfgFn) feature.StepFn {
+func Install(name string, ns string, opts ...manifest.CfgFn) feature.StepFn {
 	cfg := map[string]interface{}{
-		"name": name,
+		"name":      name,
+		"namespace": ns,
 	}
+
 	for _, fn := range opts {
 		fn(cfg)
 	}
@@ -56,16 +57,5 @@ func Install(ctxParam context.Context, name string, opts ...manifest.CfgFn) feat
 		if _, err := manifest.InstallYamlFS(ctx, yaml, cfg); err != nil {
 			t.Fatal(err)
 		}
-
-		configM, _ := client.Get(ctx).CoreV1().ConfigMaps(system.Namespace()).Get(ctx, name, metav1.GetOptions{})
-
-		flags, err := cfgFeat.NewFlagsConfigFromConfigMap(configM)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		ctx = cfgFeat.ToContext(ctx, flags)
-
-		ctxParam = ctx
 	}
 }

@@ -86,6 +86,8 @@ func TestApiServerSourceDeployement(t *testing.T) {
 
 	ctx, env := global.Environment(
 		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
 		environment.WithPollTimings(5*time.Second, 2*time.Minute),

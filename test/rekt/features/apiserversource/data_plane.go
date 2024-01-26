@@ -21,25 +21,22 @@ import (
 	"fmt"
 
 	"github.com/cloudevents/sdk-go/v2/test"
-	reconcilersource "knative.dev/eventing/pkg/reconciler/source"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	client "knative.dev/pkg/client/injection/kube/client"
+	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/network"
-	"knative.dev/pkg/system"
 	"knative.dev/reconciler-test/pkg/environment"
 
 	"knative.dev/eventing/pkg/eventingtls/eventingtlstesting"
-	"knative.dev/eventing/pkg/reconciler/apiserversource/resources"
 	"knative.dev/eventing/test/rekt/helpers"
 	"knative.dev/eventing/test/rekt/resources/addressable"
 	"knative.dev/eventing/test/rekt/resources/configmap"
 
+	appsv1 "k8s.io/api/apps/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"k8s.io/apimachinery/pkg/util/sets"
-	cfgFeat "knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
@@ -50,7 +47,6 @@ import (
 	"knative.dev/reconciler-test/pkg/resources/pod"
 
 	"knative.dev/eventing/pkg/apis/sources"
-	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/eventing/test/rekt/features/featureflags"
 	"knative.dev/eventing/test/rekt/features/source"
@@ -847,8 +843,7 @@ func SendsEventsWithRetries() *feature.Feature {
 	return f
 }
 
-func setupNodeLabels(ctxParam context.Context) feature.StepFn {
-	featureFlags := cfgFeat.FromContext(ctxParam)
+func setupNodeLabels(nodeLabels map[string]string) feature.StepFn {
 	return func(ctx context.Context, t feature.T) {
 		nodes, err := client.Get(ctx).CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 		if err != nil {
@@ -861,7 +856,7 @@ func setupNodeLabels(ctxParam context.Context) feature.StepFn {
 
 		randomNode := &nodes.Items[0]
 
-		randomNode.Labels = featureFlags.NodeSelector()
+		randomNode.Labels = nodeLabels
 
 		// Update the node with the new labels
 		_, err = client.Get(ctx).CoreV1().Nodes().Update(ctx, randomNode, metav1.UpdateOptions{})
@@ -872,67 +867,72 @@ func setupNodeLabels(ctxParam context.Context) feature.StepFn {
 	}
 }
 
-func deployAPIServerSauceAndTestLabels(ctxParam context.Context) feature.StepFn {
-	featureFlags := cfgFeat.FromContext(ctxParam)
-	return func(ctx context.Context, t feature.T) {
+func DeployAPIServerSauceWithNodeSelector() *feature.Feature {
+	f := feature.NewFeatureNamed("deploy")
+
+	// same labels as in the configmap
+	nodeLabels := map[string]string{
+		"testkey":  "testvalue",
+		"testkey1": "testvalue1",
+		"testkey2": "testvalue2",
+	}
+
+	f.Requirement("setup config-features and load into context", func(ctx context.Context, t feature.T) {
+		env := environment.FromContext(ctx)
+		ns := env.Namespace()
+		configmap.Install("config-features", ns)
+	})
+	f.Requirement("setup node labels", setupNodeLabels(nodeLabels))
+
+	source := feature.MakeRandomK8sName("apiserversource")
+	sink := feature.MakeRandomK8sName("sink")
+
+	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
+
+	sacmName := feature.MakeRandomK8sName("apiserversource")
+	f.Setup("Create Service Account for ApiServerSource with RBAC for sources.knative.dev/v1 PingSources",
+		setupAccountAndRoleForPingSources(sacmName))
+
+	cfg := []manifest.CfgFn{
+		apiserversource.WithServiceAccountName(sacmName),
+		apiserversource.WithEventMode("Reference"),
+		apiserversource.WithSink(service.AsDestinationRef(sink)),
+		apiserversource.WithResources(v1.APIVersionKindSelector{
+			APIVersion: "sources.knative.dev/v1",
+			Kind:       "PingSource",
+		}),
+		apiserversource.WithNamespaceSelector(&metav1.LabelSelector{
+			MatchLabels:      map[string]string{},
+			MatchExpressions: []metav1.LabelSelectorRequirement{},
+		}),
+	}
+
+	f.Setup("install ApiServerSource", apiserversource.Install(source, cfg...))
+	f.Setup("ApiServerSource goes ready", apiserversource.IsReady(source))
+
+	f.Assert("deployed in correct nodeSelector", func(ctx context.Context, t feature.T) {
+		env := environment.FromContext(ctx)
+		ns := env.Namespace()
+
 		kubeClient := client.Get(ctx)
 
-		source := &v1.ApiServerSource{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "example-deployment",
-				Namespace: system.Namespace(),
-				UID:       sourceUID,
-			},
-			Spec: v1.ApiServerSourceSpec{
-				Resources: []sourcesv1.APIVersionKindSelector{{
-					APIVersion: "v1",
-					Kind:       "Namespace",
-				}},
-
-				SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
-			},
-		}
-
-		args := resources.ReceiveAdapterArgs{
-			Image:         image,
-			Source:        source,
-			Labels:        resources.Labels(sourceName),
-			SinkURI:       sinkURI.String(),
-			Configs:       &reconcilersource.EmptyVarsGenerator{},
-			Namespaces:    []string{system.Namespace()},
-			AllNamespaces: false,
-			Audience:      &sinkAudience,
-			NodeSelector:  featureFlags.NodeSelector(),
-		}
-
-		dep, err := resources.MakeReceiveAdapter(&args)
-		if err != nil {
-			t.Fatalf("error calling MakeReceiveAdapter: %v", err)
-		}
-
-		_, err = kubeClient.AppsV1().Deployments(dep.Namespace).Create(ctx, dep, metav1.CreateOptions{})
-		if err != nil {
-			t.Fatalf("error creating deployment: %v", err)
-		}
-
-		newDep, err := kubeClient.AppsV1().Deployments(dep.Namespace).Get(ctx, dep.ObjectMeta.Name, metav1.GetOptions{})
+		deps, err := kubeClient.AppsV1().Deployments(ns).List(ctx, metav1.ListOptions{})
 		if err != nil {
 			t.Fatalf("error getting deployment: %v", err)
 		}
 
-		if !helpers.MatchLabels(newDep.Spec.Template.Spec.NodeSelector, featureFlags.NodeSelector()) {
-			t.Fatalf("NodeSelector labels do not match: %v", newDep.Spec.Template.Spec.NodeSelector)
+		var dep appsv1.Deployment
+
+		for _, d := range deps.Items {
+			if kmeta.ChildName(fmt.Sprintf("apiserversource-%s-", source), string(d.GetUID())) == d.Name {
+				dep = d
+			}
 		}
-	}
-}
 
-func DeployAPIServerSauceWithNodeSelector() *feature.Feature {
-	f := feature.NewFeature()
-	ctx := context.Background()
-
-	f.Requirement("setup config-features and load into context", configmap.Install(ctx, "config-features"))
-	f.Requirement("setup node labels", setupNodeLabels(ctx))
-	f.Assert("deploy the apiserversauce", deployAPIServerSauceAndTestLabels(ctx))
+		if !helpers.MatchLabels(dep.Spec.Template.Spec.NodeSelector, nodeLabels) {
+			t.Fatalf("NodeSelector labels do not match: %v", dep.Spec.Template.Spec.NodeSelector)
+		}
+	})
 
 	return f
 }
