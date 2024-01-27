@@ -420,57 +420,39 @@ func backingChannelObjRef() *duckv1.KReference {
 }
 
 func createChannel(namespace, name string, ready bool) *unstructured.Unstructured {
-	var hostname string
-	var url string
+	channel := map[string]interface{}{
+		"apiVersion": "messaging.knative.dev/v1",
+		"kind":       "InMemoryChannel",
+		"metadata": map[string]interface{}{
+			"creationTimestamp": nil,
+			"namespace":         namespace,
+			"name":              name,
+			"ownerReferences": []interface{}{
+				map[string]interface{}{
+					"apiVersion":         "messaging.knative.dev/v1",
+					"blockOwnerDeletion": true,
+					"controller":         true,
+					"kind":               "Channel",
+					"name":               name,
+					"uid":                "",
+				},
+			},
+		},
+	}
+
 	if ready {
-		return &unstructured.Unstructured{
-			Object: map[string]interface{}{
-				"apiVersion": "messaging.knative.dev/v1",
-				"kind":       "InMemoryChannel",
-				"metadata": map[string]interface{}{
-					"creationTimestamp": nil,
-					"namespace":         namespace,
-					"name":              name,
-					"ownerReferences": []interface{}{
-						map[string]interface{}{
-							"apiVersion":         "messaging.knative.dev/v1",
-							"blockOwnerDeletion": true,
-							"controller":         true,
-							"kind":               "Channel",
-							"name":               name,
-							"uid":                "",
-						},
-					},
-				},
-				"status": map[string]interface{}{
-					"address": map[string]interface{}{
-						"hostname": hostname,
-						"url":      url,
-					},
-				},
+		hostname := "" // Define hostname based on your logic
+		url := ""      // Define url based on your logic
+
+		channel["status"] = map[string]interface{}{
+			"address": map[string]interface{}{
+				"hostname": hostname,
+				"url":      url,
 			},
 		}
 	}
 
 	return &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"apiVersion": "messaging.knative.dev/v1",
-			"kind":       "InMemoryChannel",
-			"metadata": map[string]interface{}{
-				"creationTimestamp": nil,
-				"namespace":         namespace,
-				"name":              name,
-				"ownerReferences": []interface{}{
-					map[string]interface{}{
-						"apiVersion":         "messaging.knative.dev/v1",
-						"blockOwnerDeletion": true,
-						"controller":         true,
-						"kind":               "Channel",
-						"name":               name,
-						"uid":                "",
-					},
-				},
-			},
-		},
+		Object: channel,
 	}
 }
