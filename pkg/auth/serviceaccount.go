@@ -38,11 +38,11 @@ import (
 )
 
 const (
-		//OIDCLabelKey is used to filter out all the informers that related to OIDC work
-		OIDCLabelKey = "oidc"
+	//OIDCLabelKey is used to filter out all the informers that related to OIDC work
+	OIDCLabelKey = "oidc"
 
-		// OIDCTokenRoleLabelSelector is the label selector for the OIDC token creator role and rolebinding informers
-		OIDCLabelSelector = OIDCLabelKey
+	// OIDCTokenRoleLabelSelector is the label selector for the OIDC token creator role and rolebinding informers
+	OIDCLabelSelector = OIDCLabelKey
 )
 
 // GetOIDCServiceAccountNameForResource returns the service account name to use

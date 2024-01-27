@@ -28,7 +28,7 @@ import (
 
 	"knative.dev/pkg/injection/sharedmain"
 
-	"knative.dev/eventing/pkg/auth"	
+	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/eventingtls"
 
 	filteredFactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"

@@ -19,8 +19,8 @@ package pingsource
 import (
 	"context"
 
-	"knative.dev/eventing/pkg/auth"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
+	"knative.dev/eventing/pkg/auth"
 
 	serviceaccountinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount/filtered"
 

@@ -31,7 +31,7 @@ const (
 
 	// SourceDuckLabelValue is the label value to indicate
 	// the CRD is a Source duck type.
-	SourceDuckLabelValue = "true"	
+	SourceDuckLabelValue = "true"
 )
 
 var (
