@@ -54,7 +54,7 @@ func MakeOIDCRole(source *v1.ApiServerSource) (*rbacv1.Role, error) {
 				"description": fmt.Sprintf("Role for OIDC Authentication for ApiServerSource %q", source.GetName()),
 			},
 			Labels: map[string]string{
-				auth.OIDCLabelKey: "",
+				auth.OIDCLabelKey: "enabled",
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(source),
@@ -92,7 +92,7 @@ func MakeOIDCRoleBinding(source *v1.ApiServerSource) (*rbacv1.RoleBinding, error
 				"description": fmt.Sprintf("Role Binding for OIDC Authentication for ApiServerSource %q", source.GetName()),
 			},
 			Labels: map[string]string{
-				auth.OIDCLabelKey: "",
+				auth.OIDCLabelKey: "enabled",
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(source),
