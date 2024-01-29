@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"github.com/cloudevents/sdk-go/v2/test"
+	"k8s.io/utils/pointer"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/network"
@@ -31,6 +32,7 @@ import (
 
 	"knative.dev/reconciler-test/pkg/eventshub/assert"
 
+	eventingv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/eventingtls/eventingtlstesting"
 	"knative.dev/eventing/test/rekt/features/featureflags"
 	"knative.dev/eventing/test/rekt/resources/broker"
@@ -101,6 +103,8 @@ func TriggerWithTLSSubscriber() *feature.Feature {
 	sourceName := feature.MakeRandomK8sName("source")
 	sinkName := feature.MakeRandomK8sName("sink")
 	triggerName := feature.MakeRandomK8sName("trigger")
+	dlsName := feature.MakeRandomK8sName("dls")
+	dlsTriggerName := feature.MakeRandomK8sName("dls-trigger")
 
 	eventToSend := test.FullEvent()
 
@@ -111,6 +115,7 @@ func TriggerWithTLSSubscriber() *feature.Feature {
 
 	// Install Sink
 	f.Setup("Install Sink", eventshub.Install(sinkName, eventshub.StartReceiverTLS))
+	f.Setup("Install dead letter sink service", eventshub.Install(dlsName, eventshub.StartReceiverTLS))
 
 	// Install Trigger
 	f.Setup("Install trigger", func(ctx context.Context, t feature.T) {
@@ -122,6 +127,18 @@ func TriggerWithTLSSubscriber() *feature.Feature {
 	})
 	f.Setup("Wait for Trigger to become ready", trigger.IsReady(triggerName))
 
+	f.Setup("Install failing trigger", func(ctx context.Context, t feature.T) {
+		dls := service.AsDestinationRef(dlsName)
+		dls.CACerts = eventshub.GetCaCerts(ctx)
+
+		linear := eventingv1.BackoffPolicyLinear
+		trigger.Install(dlsTriggerName, brokerName,
+			trigger.WithRetry(2, &linear, pointer.String("PT1S")),
+			trigger.WithDeadLetterSinkFromDestination(dls),
+			trigger.WithSubscriber(nil, "http://127.0.0.1:2468"))(ctx, t)
+	})
+	f.Setup("Wait for failing Trigger to become ready", trigger.IsReady(dlsTriggerName))
+
 	// Install Source
 	f.Requirement("Install Source", eventshub.Install(
 		sourceName,
@@ -130,8 +147,10 @@ func TriggerWithTLSSubscriber() *feature.Feature {
 	))
 
 	f.Assert("Trigger delivers events to TLS subscriber", assert.OnStore(sinkName).
-		MatchEvent(test.HasId(eventToSend.ID())).
-		Match(assert.MatchKind(eventshub.EventReceived)).
+		MatchReceivedEvent(test.HasId(eventToSend.ID())).
+		AtLeast(1))
+	f.Assert("Trigger delivers events to TLS dead letter sink", assert.OnStore(dlsName).
+		MatchReceivedEvent(test.HasId(eventToSend.ID())).
 		AtLeast(1))
 
 	return f
@@ -146,6 +165,8 @@ func TriggerWithTLSSubscriberTrustBundle() *feature.Feature {
 	sourceName := feature.MakeRandomK8sName("source")
 	sinkName := feature.MakeRandomK8sName("sink")
 	triggerName := feature.MakeRandomK8sName("trigger")
+	dlsName := feature.MakeRandomK8sName("dls")
+	dlsTriggerName := feature.MakeRandomK8sName("dls-trigger")
 
 	eventToSend := test.FullEvent()
 
@@ -156,6 +177,10 @@ func TriggerWithTLSSubscriberTrustBundle() *feature.Feature {
 
 	// Install Sink
 	f.Setup("Install Sink", eventshub.Install(sinkName,
+		eventshub.IssuerRef(eventingtlstesting.IssuerKind, eventingtlstesting.IssuerName),
+		eventshub.StartReceiverTLS,
+	))
+	f.Setup("Install dead letter sink service", eventshub.Install(dlsName,
 		eventshub.IssuerRef(eventingtlstesting.IssuerKind, eventingtlstesting.IssuerName),
 		eventshub.StartReceiverTLS,
 	))
@@ -175,6 +200,23 @@ func TriggerWithTLSSubscriberTrustBundle() *feature.Feature {
 	})
 	f.Setup("Wait for Trigger to become ready", trigger.IsReady(triggerName))
 
+	f.Setup("Install failing trigger", func(ctx context.Context, t feature.T) {
+		dls := &duckv1.Destination{
+			URI: &apis.URL{
+				Scheme: "https", // Force using https
+				Host:   network.GetServiceHostname(dlsName, environment.FromContext(ctx).Namespace()),
+			},
+			CACerts: nil, // CA certs are in the trust-bundle
+		}
+
+		linear := eventingv1.BackoffPolicyLinear
+		trigger.Install(dlsTriggerName, brokerName,
+			trigger.WithRetry(2, &linear, pointer.String("PT1S")),
+			trigger.WithDeadLetterSinkFromDestination(dls),
+			trigger.WithSubscriber(nil, "http://127.0.0.1:2468"))(ctx, t)
+	})
+	f.Setup("Wait for failing Trigger to become ready", trigger.IsReady(dlsTriggerName))
+
 	// Install Source
 	f.Requirement("Install Source", eventshub.Install(
 		sourceName,
@@ -183,6 +225,10 @@ func TriggerWithTLSSubscriberTrustBundle() *feature.Feature {
 	))
 
 	f.Assert("Trigger delivers events to TLS subscriber", assert.OnStore(sinkName).
+		MatchEvent(test.HasId(eventToSend.ID())).
+		Match(assert.MatchKind(eventshub.EventReceived)).
+		AtLeast(1))
+	f.Assert("Trigger delivers events to TLS dead letter sink", assert.OnStore(dlsName).
 		MatchEvent(test.HasId(eventToSend.ID())).
 		Match(assert.MatchKind(eventshub.EventReceived)).
 		AtLeast(1))
