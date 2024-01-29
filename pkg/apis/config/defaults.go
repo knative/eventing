@@ -119,6 +119,33 @@ func (d *Defaults) GetBrokerConfig(ns string, brokerClassName string) (*BrokerCo
 		return nil, errors.New("Defaults are nil")
 	}
 
+	// Check if the brokerClassName is empty
+	if brokerClassName == "" {
+		// We don't have the brokerClassName, check if we have the namespace default config
+		if d.NamespaceDefaultsConfig != nil {
+			// We have the namespace default config, check if we have the default broker class config for this namespace
+			value, present := d.NamespaceDefaultsConfig.NameSpaces[ns]
+			if present && value != nil {
+				// We have the default broker class config for this namespace, return the config
+				brokerClassName = value.DefaultBrokerClass
+			} else {
+				// We don't have the default broker class config for this namespace, check if we have the cluster default config
+				if d.ClusterDefaultConfig != nil && d.ClusterDefaultConfig.DefaultBrokerClassConfig != nil {
+					brokerClassName = d.ClusterDefaultConfig.DefaultBrokerClass
+				} else {
+					return nil, errors.New("Broker class name is empty and Defaults for Broker Configurations have not been set up. Cannot proceed further.")
+				}
+			}
+		} else {
+			// We don't have the namespace default config, check if we have the cluster default config
+			if d.ClusterDefaultConfig != nil && d.ClusterDefaultConfig.DefaultBrokerClassConfig != nil {
+				return d.ClusterDefaultConfig.DefaultBrokerClassConfig, nil
+			} else {
+				return nil, errors.New("Defaults for Broker Configurations have not been set up.")
+			}
+		}
+	}
+
 	value, present := d.NamespaceDefaultsConfig.NameSpaces[ns]
 	if present && value != nil {
 		// We have the namespace specific config
@@ -167,7 +194,7 @@ func (d *Defaults) GetBrokerConfig(ns string, brokerClassName string) (*BrokerCo
 	if d.ClusterDefaultConfig != nil && d.ClusterDefaultConfig.DefaultBrokerClassConfig != nil {
 		return d.ClusterDefaultConfig.DefaultBrokerClassConfig, nil
 	}
-	return nil, errors.New("Defaults for Broker Configurations have not been set up.")
+	return nil, errors.New("The given broker class name cannout be found in the namespace defaults config or cluster default config.")
 
 }
 
