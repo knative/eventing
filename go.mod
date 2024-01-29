@@ -47,7 +47,7 @@ require (
 	k8s.io/apiserver v0.28.5
 	k8s.io/client-go v0.28.5
 	k8s.io/utils v0.0.0-20230406110748-d93618cff8a2
-	knative.dev/hack v0.0.0-20240123162936-f3f03ac0ab1a
+	knative.dev/hack v0.0.0-20240123160146-ab9b69024c39
 	knative.dev/hack/schema v0.0.0-20240123162936-f3f03ac0ab1a
 	knative.dev/pkg v0.0.0-20240116073220-b488e7be5902
 	knative.dev/reconciler-test v0.0.0-20240116084801-50276dfba7b3
