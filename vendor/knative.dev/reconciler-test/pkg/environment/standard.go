@@ -53,8 +53,16 @@ type ConfigurationOption func(Configuration) Configuration
 // standard way. The Kube client will be initialized within the
 // context.Context for later use.
 func NewStandardGlobalEnvironment(opts ...ConfigurationOption) GlobalEnvironment {
+	return NewStandardGlobalEnvironmentWithRestConfig(nil, opts...)
+}
+
+// NewStandardGlobalEnvironment will create a new global environment in a
+// standard way. The Kube client will be initialized within the
+// context.Context for later use. It uses the provided rest config
+// when creating the informers.
+func NewStandardGlobalEnvironmentWithRestConfig(cfg *rest.Config, opts ...ConfigurationOption) GlobalEnvironment {
 	opts = append(opts, initIstioFlags())
-	config := resolveConfiguration(opts)
+	config := resolveConfiguration(opts, cfg)
 	ctx := testlog.NewContext(config.Context)
 
 	// environment.InitFlags registers state, level and feature filter flags.
@@ -86,11 +94,11 @@ func NewStandardGlobalEnvironment(opts ...ConfigurationOption) GlobalEnvironment
 	return NewGlobalEnvironment(ctx, startInformers)
 }
 
-func resolveConfiguration(opts []ConfigurationOption) Configuration {
+func resolveConfiguration(opts []ConfigurationOption, restCfg *rest.Config) Configuration {
 	cfg := Configuration{
 		Flags:   commandlineFlags{},
 		Context: signals.NewContext(),
-		Config:  nil,
+		Config:  restCfg,
 	}
 	for _, opt := range opts {
 		cfg = opt(cfg)
