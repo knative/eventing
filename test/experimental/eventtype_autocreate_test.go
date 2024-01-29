@@ -16,6 +16,8 @@ limitations under the License.
 
 package experimental
 
+//go:generate go.work
+
 import (
 	"testing"
 
@@ -71,4 +73,18 @@ func TestPingSourceEventTypeMatch(t *testing.T) {
 	)
 
 	env.Test(ctx, t, eventtype_autocreate.AutoCreateEventTypeEventsFromPingSource())
+}
+
+func TestContainerSourceEventTypeAutoCreate(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+	)
+
+	env.Test(ctx, t, eventtype_autocreate.AutoCreateEventTypesOnContainerSource())
 }
