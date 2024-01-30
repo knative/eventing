@@ -81,10 +81,10 @@ data:
 
       namespaceDefaults:
         namespace-1:
-          brokerClass: default-namespace-1-class
+          brokerClass: namespace-1-class
           apiVersion: v1
           kind: ConfigMap
-          name: config-default-namespace-1-class
+          name: config-namespace-1-class
           namespace: namespace-1
           delivery:
             retry: 5
@@ -97,7 +97,7 @@ data:
             backoffPolicy: linear
             backoffDelay: 5s
           brokerClasses:
-            default-namespace-1-class-2:
+            namespace-1-class-2:
               delivery:
                 retry: 3
                 deadLetterSink:
@@ -111,7 +111,7 @@ data:
 
               apiVersion: v1
               kind: ConfigMap
-              name: config-default-namespace-1-class-2
+              name: config-namespace-1-class-2
               namespace: knative-eventing
 
             shared-class:
