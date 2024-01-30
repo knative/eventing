@@ -42,6 +42,7 @@ You must install these tools:
    default bash is too old, you can use [Homebrew](https://brew.sh) to install a
    later version. For running some automations, such as dependencies updates and
    code generators.
+1. [`helm`](https://helm.sh/docs/intro/install/): v3.14 or higher for Kubernetes package managing.
 
 ### Create a cluster and a repo
 
