@@ -108,6 +108,9 @@ func TestGetOIDCServiceAccountForResource(t *testing.T) {
 			Annotations: map[string]string{
 				"description": "Service Account for OIDC Authentication for Broker \"my-broker\"",
 			},
+			Labels: map[string]string{
+				OIDCLabelKey: "enabled",
+			},
 		},
 	}
 

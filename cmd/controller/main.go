@@ -28,7 +28,7 @@ import (
 
 	"knative.dev/pkg/injection/sharedmain"
 
-	"knative.dev/eventing/pkg/apis/sources"
+	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/eventingtls"
 
 	filteredFactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
@@ -79,7 +79,7 @@ func main() {
 	}()
 
 	ctx = filteredFactory.WithSelectors(ctx,
-		sources.OIDCTokenRoleLabelSelector,
+		auth.OIDCLabelSelector,
 		eventingtls.TrustBundleLabelSelector,
 	)
 

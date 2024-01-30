@@ -19,6 +19,8 @@ package sequence
 import (
 	"context"
 
+	"knative.dev/eventing/pkg/auth"
+
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/eventing/pkg/apis/feature"
 	v1 "knative.dev/eventing/pkg/apis/flows/v1"
@@ -33,7 +35,7 @@ import (
 	"knative.dev/eventing/pkg/client/injection/informers/messaging/v1/subscription"
 	sequencereconciler "knative.dev/eventing/pkg/client/injection/reconciler/flows/v1/sequence"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
-	serviceaccountinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount"
+	serviceaccountinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount/filtered"
 	"knative.dev/pkg/injection/clients/dynamicclient"
 )
 
@@ -46,7 +48,7 @@ func NewController(
 
 	sequenceInformer := sequence.Get(ctx)
 	subscriptionInformer := subscription.Get(ctx)
-	serviceaccountInformer := serviceaccountinformer.Get(ctx)
+	oidcServiceaccountInformer := serviceaccountinformer.Get(ctx, auth.OIDCLabelSelector)
 
 	var globalResync func(obj interface{})
 	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {
@@ -61,7 +63,7 @@ func NewController(
 		subscriptionLister:   subscriptionInformer.Lister(),
 		dynamicClientSet:     dynamicclient.Get(ctx),
 		eventingClientSet:    eventingclient.Get(ctx),
-		serviceAccountLister: serviceaccountInformer.Lister(),
+		serviceAccountLister: oidcServiceaccountInformer.Lister(),
 		kubeclient:           kubeclient.Get(ctx),
 	}
 
@@ -86,7 +88,7 @@ func NewController(
 	})
 
 	// Reconcile Sequence when the OIDC service account changes
-	serviceaccountInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+	oidcServiceaccountInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.FilterController(&v1.Sequence{}),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})

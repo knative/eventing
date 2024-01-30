@@ -27,6 +27,7 @@ import (
 	"knative.dev/pkg/injection/sharedmain"
 	"knative.dev/pkg/signals"
 
+	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/eventingtls"
 	inmemorychannel "knative.dev/eventing/pkg/reconciler/inmemorychannel/dispatcher"
 )
@@ -39,6 +40,7 @@ func main() {
 	}
 
 	ctx = filteredFactory.WithSelectors(ctx,
+		auth.OIDCLabelSelector,
 		eventingtls.TrustBundleLabelSelector,
 	)
 

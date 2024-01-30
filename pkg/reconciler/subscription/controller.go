@@ -19,6 +19,8 @@ package subscription
 import (
 	"context"
 
+	"knative.dev/eventing/pkg/auth"
+
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/pkg/client/injection/apiextensions/informers/apiextensions/v1/customresourcedefinition"
@@ -35,7 +37,7 @@ import (
 	subscriptionreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/subscription"
 	"knative.dev/eventing/pkg/duck"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
-	serviceaccountinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount"
+	serviceaccountinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount/filtered"
 	"knative.dev/pkg/injection/clients/dynamicclient"
 )
 
@@ -48,7 +50,7 @@ func NewController(
 
 	subscriptionInformer := subscription.Get(ctx)
 	channelInformer := channel.Get(ctx)
-	serviceaccountInformer := serviceaccountinformer.Get(ctx)
+	oidcServiceaccountInformer := serviceaccountinformer.Get(ctx, auth.OIDCLabelSelector)
 
 	var globalResync func(obj interface{})
 
@@ -65,7 +67,7 @@ func NewController(
 		kreferenceResolver:   kref.NewKReferenceResolver(customresourcedefinition.Get(ctx).Lister()),
 		subscriptionLister:   subscriptionInformer.Lister(),
 		channelLister:        channelInformer.Lister(),
-		serviceAccountLister: serviceaccountInformer.Lister(),
+		serviceAccountLister: oidcServiceaccountInformer.Lister(),
 	}
 	impl := subscriptionreconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
 		return controller.Options{
@@ -97,7 +99,7 @@ func NewController(
 	))
 
 	// Reconciler Subscription when the OIDC service account changes
-	serviceaccountInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+	oidcServiceaccountInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.FilterController(&messagingv1.Subscription{}),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})

@@ -22,7 +22,7 @@ import (
 	configmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap/filtered"
 	"knative.dev/pkg/system"
 
-	"knative.dev/eventing/pkg/apis/sources"
+	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/eventingtls"
 	eventingreconciler "knative.dev/eventing/pkg/reconciler"
 
@@ -42,7 +42,8 @@ import (
 	deploymentinformer "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment"
 	"knative.dev/pkg/client/injection/kube/informers/core/v1/namespace"
 
-	serviceaccountinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount"
+	serviceaccountinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount/filtered"
+
 	roleinformer "knative.dev/pkg/client/injection/kube/informers/rbac/v1/role/filtered"
 	rolebindinginformer "knative.dev/pkg/client/injection/kube/informers/rbac/v1/rolebinding/filtered"
 
@@ -67,11 +68,11 @@ func NewController(
 	deploymentInformer := deploymentinformer.Get(ctx)
 	apiServerSourceInformer := apiserversourceinformer.Get(ctx)
 	namespaceInformer := namespace.Get(ctx)
-	serviceaccountInformer := serviceaccountinformer.Get(ctx)
+	oidcServiceaccountInformer := serviceaccountinformer.Get(ctx, auth.OIDCLabelSelector)
 
 	// Create a selector string
-	roleInformer := roleinformer.Get(ctx, sources.OIDCTokenRoleLabelSelector)
-	rolebindingInformer := rolebindinginformer.Get(ctx, sources.OIDCTokenRoleLabelSelector)
+	roleInformer := roleinformer.Get(ctx, auth.OIDCLabelSelector)
+	rolebindingInformer := rolebindinginformer.Get(ctx, auth.OIDCLabelSelector)
 
 	trustBundleConfigMapInformer := configmapinformer.Get(ctx, eventingtls.TrustBundleLabelSelector)
 
@@ -89,7 +90,7 @@ func NewController(
 		ceSource:                   GetCfgHost(ctx),
 		configs:                    reconcilersource.WatchConfigurations(ctx, component, cmw),
 		namespaceLister:            namespaceInformer.Lister(),
-		serviceAccountLister:       serviceaccountInformer.Lister(),
+		serviceAccountLister:       oidcServiceaccountInformer.Lister(),
 		roleLister:                 roleInformer.Lister(),
 		roleBindingLister:          rolebindingInformer.Lister(),
 		trustBundleConfigMapLister: trustBundleConfigMapInformer.Lister(),
@@ -142,7 +143,7 @@ func NewController(
 	})
 
 	// Reconciler ApiServerSource when the OIDC service account changes
-	serviceaccountInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+	oidcServiceaccountInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.FilterController(&v1.ApiServerSource{}),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
