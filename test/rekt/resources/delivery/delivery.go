@@ -54,7 +54,7 @@ func WithDeadLetterSink(ref *duckv1.KReference, uri string) manifest.CfgFn {
 	}
 }
 
-// WithDeadLetterSink adds the dead letter sink related config to the config.
+// WithDeadLetterSinkFromDestination adds the dead letter sink related config to the config.
 func WithDeadLetterSinkFromDestination(dest *duckv1.Destination) manifest.CfgFn {
 	return func(cfg map[string]interface{}) {
 		if _, set := cfg["delivery"]; !set {

@@ -108,6 +108,8 @@ func SubscriptionTLS() *feature.Feature {
 	subscriptionName := feature.MakeRandomK8sName("sub")
 	sink := feature.MakeRandomK8sName("sink")
 	source := feature.MakeRandomK8sName("source")
+	dlsName := feature.MakeRandomK8sName("dls")
+	dlsSubscriptionName := feature.MakeRandomK8sName("dls-sub")
 
 	f := feature.NewFeature()
 
@@ -115,6 +117,7 @@ func SubscriptionTLS() *feature.Feature {
 	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiverTLS))
+	f.Setup("install dead letter sink", eventshub.Install(dlsName, eventshub.StartReceiverTLS))
 	f.Setup("install channel", channel_impl.Install(channelName))
 	f.Setup("channel is ready", channel_impl.IsReady(channelName))
 	f.Setup("install subscription", func(ctx context.Context, t feature.T) {
@@ -125,6 +128,15 @@ func SubscriptionTLS() *feature.Feature {
 			subscription.WithSubscriberFromDestination(d))(ctx, t)
 	})
 	f.Setup("subscription is ready", subscription.IsReady(subscriptionName))
+	f.Setup("install dead letter subscription", func(ctx context.Context, t feature.T) {
+		d := service.AsDestinationRef(dlsName)
+		d.CACerts = eventshub.GetCaCerts(ctx)
+		subscription.Install(dlsSubscriptionName,
+			subscription.WithChannel(channel_impl.AsRef(channelName)),
+			subscription.WithDeadLetterSinkFromDestination(d),
+			subscription.WithSubscriber(nil, "http://127.0.0.1:2468", ""))(ctx, t)
+	})
+	f.Setup("subscription dead letter is ready", subscription.IsReady(dlsSubscriptionName))
 	f.Setup("Channel has HTTPS address", channel_impl.ValidateAddress(channelName, addressable.AssertHTTPSAddress))
 
 	event := cetest.FullEvent()
@@ -139,7 +151,11 @@ func SubscriptionTLS() *feature.Feature {
 		MatchSentEvent(cetest.HasId(event.ID())).
 		AtLeast(1),
 	)
-	f.Assert("Event received", assert.OnStore(sink).
+	f.Assert("Event received in sink", assert.OnStore(sink).
+		MatchReceivedEvent(cetest.HasId(event.ID())).
+		AtLeast(1),
+	)
+	f.Assert("Event received in dead letter sink", assert.OnStore(dlsName).
 		MatchReceivedEvent(cetest.HasId(event.ID())).
 		AtLeast(1),
 	)
@@ -153,6 +169,8 @@ func SubscriptionTLSTrustBundle() *feature.Feature {
 	subscriptionName := feature.MakeRandomK8sName("sub")
 	sink := feature.MakeRandomK8sName("sink")
 	source := feature.MakeRandomK8sName("source")
+	dlsName := feature.MakeRandomK8sName("dls")
+	dlsSubscriptionName := feature.MakeRandomK8sName("dls-sub")
 
 	f := feature.NewFeature()
 
@@ -160,6 +178,10 @@ func SubscriptionTLSTrustBundle() *feature.Feature {
 	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
 
 	f.Setup("install sink", eventshub.Install(sink,
+		eventshub.IssuerRef(eventingtlstesting.IssuerKind, eventingtlstesting.IssuerName),
+		eventshub.StartReceiverTLS,
+	))
+	f.Setup("install sink", eventshub.Install(dlsName,
 		eventshub.IssuerRef(eventingtlstesting.IssuerKind, eventingtlstesting.IssuerName),
 		eventshub.StartReceiverTLS,
 	))
@@ -178,6 +200,21 @@ func SubscriptionTLSTrustBundle() *feature.Feature {
 			subscription.WithSubscriberFromDestination(d))(ctx, t)
 	})
 	f.Setup("subscription is ready", subscription.IsReady(subscriptionName))
+	f.Setup("install dead letter subscription", func(ctx context.Context, t feature.T) {
+		d := &duckv1.Destination{
+			URI: &apis.URL{
+				Scheme: "https", // Force using https
+				Host:   network.GetServiceHostname(dlsName, environment.FromContext(ctx).Namespace()),
+			},
+			CACerts: nil, // CA certs are in the trust-bundle
+		}
+
+		subscription.Install(dlsSubscriptionName,
+			subscription.WithChannel(channel_impl.AsRef(channelName)),
+			subscription.WithDeadLetterSinkFromDestination(d),
+			subscription.WithSubscriber(nil, "http://127.0.0.1:2468", ""))(ctx, t)
+	})
+	f.Setup("subscription dead letter is ready", subscription.IsReady(dlsSubscriptionName))
 	f.Setup("Channel has HTTPS address", channel_impl.ValidateAddress(channelName, addressable.AssertHTTPSAddress))
 
 	event := cetest.FullEvent()
@@ -195,7 +232,11 @@ func SubscriptionTLSTrustBundle() *feature.Feature {
 		MatchSentEvent(cetest.HasId(event.ID())).
 		AtLeast(1),
 	)
-	f.Assert("Event received", assert.OnStore(sink).
+	f.Assert("Event received in sink", assert.OnStore(sink).
+		MatchReceivedEvent(cetest.HasId(event.ID())).
+		AtLeast(1),
+	)
+	f.Assert("Event received in dead letter sink", assert.OnStore(dlsName).
 		MatchReceivedEvent(cetest.HasId(event.ID())).
 		AtLeast(1),
 	)

@@ -24,12 +24,13 @@ import (
 	"time"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/manifest"
 	"sigs.k8s.io/yaml"
+
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 
 	"knative.dev/eventing/test/rekt/resources/delivery"
 )
@@ -162,6 +163,9 @@ func WithExtensions(extensions map[string]interface{}) manifest.CfgFn {
 
 // WithDeadLetterSink adds the dead letter sink related config to a Trigger spec.
 var WithDeadLetterSink = delivery.WithDeadLetterSink
+
+// WithDeadLetterSinkFromDestination adds the dead letter sink related config to the config.
+var WithDeadLetterSinkFromDestination = delivery.WithDeadLetterSinkFromDestination
 
 // WithRetry adds the retry related config to a Trigger spec.
 var WithRetry = delivery.WithRetry
