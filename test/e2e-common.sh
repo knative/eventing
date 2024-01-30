@@ -276,14 +276,16 @@ function knative_teardown() {
   echo ">> Stopping Knative Eventing"
   for i in "${!UNINSTALL_LIST[@]}"; do
     # We uninstall elements in the reverse of the order they were installed.
-    local YAML="${UNINSTALL_LIST[$(( ${#array[@]} - $i ))]}"
+    local YAML="${UNINSTALL_LIST[$(( ${#UNINSTALL_LIST[@]} - 1 - $i ))]}"
     echo ">> Bringing down YAML: ${YAML}"
     kubectl delete --ignore-not-found=true -f "${YAML}" || return 1
   done
+  kubectl delete --ignore-not-found=true namespace "${CERT_MANAGER_NAMESPACE}"
+  wait_until_object_does_not_exist namespaces "${CERT_MANAGER_NAMESPACE}" ""
   kubectl delete --ignore-not-found=true namespace "${SYSTEM_NAMESPACE}"
-  wait_until_object_does_not_exist namespaces "${SYSTEM_NAMESPACE}"
+  wait_until_object_does_not_exist namespaces "${SYSTEM_NAMESPACE}" ""
   kubectl delete --ignore-not-found=true namespace 'knative-monitoring'
-  wait_until_object_does_not_exist namespaces 'knative-monitoring'
+  wait_until_object_does_not_exist namespaces 'knative-monitoring' ""
 }
 
 # Add function call to trap
@@ -409,4 +411,7 @@ function install_cert_manager() {
 
   timeout 600 bash -c 'until kubectl apply -f third_party/cert-manager/02-trust-manager.yaml; do sleep 5; done'
   wait_until_pods_running "$CERT_MANAGER_NAMESPACE" || fail_test "Failed to install cert manager"
+
+  UNINSTALL_LIST+=( "third_party/cert-manager/01-cert-manager.yaml" )
+  UNINSTALL_LIST+=( "third_party/cert-manager/02-trust-manager.yaml" )
 }
