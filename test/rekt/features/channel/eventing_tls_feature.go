@@ -117,6 +117,7 @@ func SubscriptionTLS() *feature.Feature {
 	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiverTLS))
+	f.Setup("install dead letter sink", eventshub.Install(dlsName, eventshub.StartReceiverTLS))
 	f.Setup("install channel", channel_impl.Install(channelName))
 	f.Setup("channel is ready", channel_impl.IsReady(channelName))
 	f.Setup("install subscription", func(ctx context.Context, t feature.T) {
@@ -177,6 +178,10 @@ func SubscriptionTLSTrustBundle() *feature.Feature {
 	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
 
 	f.Setup("install sink", eventshub.Install(sink,
+		eventshub.IssuerRef(eventingtlstesting.IssuerKind, eventingtlstesting.IssuerName),
+		eventshub.StartReceiverTLS,
+	))
+	f.Setup("install sink", eventshub.Install(dlsName,
 		eventshub.IssuerRef(eventingtlstesting.IssuerKind, eventingtlstesting.IssuerName),
 		eventshub.StartReceiverTLS,
 	))
