@@ -20,8 +20,9 @@ import (
 	"context"
 
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
+	"knative.dev/eventing/pkg/auth"
 
-	serviceaccountinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount"
+	serviceaccountinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount/filtered"
 
 	"go.uber.org/zap"
 
@@ -77,13 +78,13 @@ func NewController(
 
 	deploymentInformer := deploymentinformer.Get(ctx)
 	pingSourceInformer := pingsourceinformer.Get(ctx)
-	serviceaccountInformer := serviceaccountinformer.Get(ctx)
+	oidcServiceaccountInformer := serviceaccountinformer.Get(ctx, auth.OIDCLabelSelector)
 
 	r := &Reconciler{
 		kubeClientSet:        kubeclient.Get(ctx),
 		leConfig:             leConfig,
 		configAcc:            reconcilersource.WatchConfigurations(ctx, component, cmw),
-		serviceAccountLister: serviceaccountInformer.Lister(),
+		serviceAccountLister: oidcServiceaccountInformer.Lister(),
 	}
 
 	impl := pingsourcereconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
@@ -113,7 +114,7 @@ func NewController(
 			)),
 	})
 
-	serviceaccountInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+	oidcServiceaccountInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.FilterController(&sourcesv1.PingSource{}),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})

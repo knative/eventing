@@ -37,6 +37,14 @@ import (
 	"knative.dev/pkg/ptr"
 )
 
+const (
+	//OIDCLabelKey is used to filter out all the informers that related to OIDC work
+	OIDCLabelKey = "oidc"
+
+	// OIDCTokenRoleLabelSelector is the label selector for the OIDC token creator role and rolebinding informers
+	OIDCLabelSelector = OIDCLabelKey
+)
+
 // GetOIDCServiceAccountNameForResource returns the service account name to use
 // for OIDC authentication for the given resource.
 func GetOIDCServiceAccountNameForResource(gvk schema.GroupVersionKind, objectMeta metav1.ObjectMeta) string {
@@ -65,6 +73,9 @@ func GetOIDCServiceAccountForResource(gvk schema.GroupVersionKind, objectMeta me
 			},
 			Annotations: map[string]string{
 				"description": fmt.Sprintf("Service Account for OIDC Authentication for %s %q", gvk.GroupKind().Kind, objectMeta.Name),
+			},
+			Labels: map[string]string{
+				OIDCLabelKey: "enabled",
 			},
 		},
 	}

@@ -17,12 +17,15 @@ limitations under the License.
 package pingsource
 
 import (
+	"context"
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/pkg/apis/feature"
 
+	"knative.dev/eventing/pkg/auth"
+	filteredFactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
@@ -33,13 +36,14 @@ import (
 	_ "knative.dev/eventing/pkg/client/injection/informers/sources/v1/pingsource/fake"
 	_ "knative.dev/pkg/client/injection/ducks/duck/v1/addressable/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment/fake"
-	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount/fake"
+	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount/filtered/fake"
+	_ "knative.dev/pkg/client/injection/kube/informers/factory/filtered/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/rbac/v1/rolebinding/fake"
 	. "knative.dev/pkg/reconciler/testing"
 )
 
 func TestNew(t *testing.T) {
-	ctx, _ := SetupFakeContext(t)
+	ctx, _ := SetupFakeContext(t, SetUpInformerSelector)
 	c := NewController(ctx, configmap.NewStaticWatcher(
 		&corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
@@ -89,4 +93,9 @@ func TestNew(t *testing.T) {
 	if c == nil {
 		t.Fatal("Expected NewController to return a non-nil value")
 	}
+}
+
+func SetUpInformerSelector(ctx context.Context) context.Context {
+	ctx = filteredFactory.WithSelectors(ctx, auth.OIDCLabelSelector)
+	return ctx
 }

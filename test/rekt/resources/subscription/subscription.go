@@ -113,6 +113,9 @@ func WithReply(ref *duckv1.KReference, uri string) manifest.CfgFn {
 // WithDeadLetterSink adds the dead letter sink related config to a Subscription spec.
 var WithDeadLetterSink = delivery.WithDeadLetterSink
 
+// WithDeadLetterSinkFromDestination adds the dead letter sink related config to the config.
+var WithDeadLetterSinkFromDestination = delivery.WithDeadLetterSinkFromDestination
+
 // WithRetry adds the retry related config to a Subscription spec.
 var WithRetry = delivery.WithRetry
 

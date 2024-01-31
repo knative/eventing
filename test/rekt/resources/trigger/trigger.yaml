@@ -75,6 +75,10 @@ spec:
       {{ if .delivery.deadLetterSink.uri }}
       uri: {{ .delivery.deadLetterSink.uri }}
       {{ end }}
+      {{ if .delivery.deadLetterSink.CACerts }}
+      CACerts: |-
+        {{ .delivery.deadLetterSink.CACerts }}
+      {{ end }}
     {{ end }}
     {{ if .delivery.retry }}
     retry: {{ .delivery.retry}}

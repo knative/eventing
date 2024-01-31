@@ -22,6 +22,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/eventing/pkg/auth"
 	filteredFactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
 	"knative.dev/pkg/configmap"
 	. "knative.dev/pkg/reconciler/testing"
@@ -29,7 +30,7 @@ import (
 	// Fake injection informers
 	_ "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap/filtered/fake"
-	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount/fake"
+	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount/filtered/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/factory/filtered/fake"
 	_ "knative.dev/pkg/injection/clients/dynamicclient/fake"
 
@@ -56,6 +57,6 @@ func TestNew(t *testing.T) {
 }
 
 func SetUpInformerSelector(ctx context.Context) context.Context {
-	ctx = filteredFactory.WithSelectors(ctx, eventingtls.TrustBundleLabelSelector)
+	ctx = filteredFactory.WithSelectors(ctx, auth.OIDCLabelSelector, eventingtls.TrustBundleLabelSelector)
 	return ctx
 }
