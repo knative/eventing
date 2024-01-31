@@ -69,8 +69,8 @@ func TestEnabled(t *testing.T) {
 	// Context with DefaultConfig
 	c := config.Config{
 		Defaults: &config.Defaults{
-			ClusterDefault: &config.ClassAndBrokerConfig{
-				BrokerClass: "AValidBrokerClass",
+			ClusterDefaultConfig: &config.DefaultConfig{
+				DefaultBrokerClass: "AValidBrokerClass",
 			},
 		},
 	}

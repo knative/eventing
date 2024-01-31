@@ -38,7 +38,7 @@ var (
 		Defaults: &config.Defaults{
 			// NamespaceDefaultsConfig are the default Broker Configs for each namespace.
 			// Namespace is the key, the value is the KReference to the config.
-			NamespaceDefaultsConfig: map[string]*config.ClassAndBrokerConfig{
+			NamespaceDefaultsConfig: map[string]*config.DefaultConfig{
 				"mynamespace": {
 					BrokerConfig: &config.BrokerConfig{
 						KReference: &duckv1.KReference{
@@ -63,7 +63,7 @@ var (
 					},
 				},
 				"mynamespace2": {
-					BrokerClass: "mynamespace2class",
+					DefaultBrokerClass: "mynamespace2class",
 					BrokerConfig: &config.BrokerConfig{
 						KReference: &duckv1.KReference{
 							APIVersion: "v1",
@@ -87,7 +87,7 @@ var (
 					},
 				},
 				"mynamespace3": {
-					BrokerClass: "mynamespace3class",
+					DefaultBrokerClass: "mynamespace3class",
 					BrokerConfig: &config.BrokerConfig{
 						KReference: &duckv1.KReference{
 							APIVersion: "v1",
@@ -110,8 +110,8 @@ var (
 					},
 				},
 			},
-			ClusterDefault: &config.ClassAndBrokerConfig{
-				BrokerClass: eventing.MTChannelBrokerClassValue,
+			ClusterDefaultConfig: &config.DefaultConfig{
+				DefaultBrokerClass: eventing.MTChannelBrokerClassValue,
 				BrokerConfig: &config.BrokerConfig{
 					KReference: &duckv1.KReference{
 						APIVersion: "v1",
