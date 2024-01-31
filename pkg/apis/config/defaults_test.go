@@ -268,6 +268,16 @@ func TestDefaultsConfiguration(t *testing.T) {
 						},
 						Delivery: nil,
 					},
+					BrokerClasses: map[string]*BrokerConfig{
+						"somensbrokerclass": {
+							KReference: &duckv1.KReference{
+								APIVersion: "v1",
+								Kind:       "ConfigMap",
+								Name:       "someothernsname",
+								Namespace:  "somenamespace",
+							},
+						},
+					},
 				},
 				"some-namespace-too": {
 					DefaultBrokerClass: "somenamespaceclasstoo",
@@ -293,8 +303,20 @@ func TestDefaultsConfiguration(t *testing.T) {
 					},
 					Delivery: nil,
 				},
+				BrokerClasses: map[string]*BrokerConfig{
+					"somebrokerclass": {
+						KReference: &duckv1.KReference{
+							Kind:       "ConfigMap",
+							APIVersion: "v1",
+							Namespace:  "someothernamespace",
+							Name:       "someothername",
+						},
+						Delivery: nil,
+					},
+				},
 			},
 		},
+
 		config: &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: system.Namespace(),
@@ -302,30 +324,42 @@ func TestDefaultsConfiguration(t *testing.T) {
 			},
 			Data: map[string]string{
 				"default-br-config": `
-     clusterDefault:
-       brokerClass: clusterbrokerclass
-       apiVersion: v1
-       kind: ConfigMap
-       name: somename
-       namespace: knative-eventing
-     namespaceDefaults:
-       some-namespace:
-         brokerClass: somenamespaceclass
-         apiVersion: v1
-         kind: ConfigMap
-         name: someothername
-         namespace: someothernamespace
-       some-namespace-too:
-         brokerClass: somenamespaceclasstoo
-         apiVersion: v1
-         kind: ConfigMap
-         name: someothernametoo
-         namespace: someothernamespacetoo
+clusterDefault:
+  brokerClass: clusterbrokerclass
+  apiVersion: v1
+  kind: ConfigMap
+  name: somename
+  namespace: knative-eventing
+  brokerClasses:
+    somebrokerclass:
+      apiVersion: v1
+      kind: ConfigMap
+      name: someothername
+      namespace: someothernamespace
+namespaceDefaults:
+  some-namespace:
+    brokerClass: somenamespaceclass
+    apiVersion: v1
+    kind: ConfigMap
+    name: someothername
+    namespace: someothernamespace
+    brokerClasses:
+      somensbrokerclass:
+        apiVersion: v1
+        kind: ConfigMap
+        name: someothernsname
+        namespace: somenamespace
+  some-namespace-too:
+    brokerClass: somenamespaceclasstoo
+    apiVersion: v1
+    kind: ConfigMap
+    name: someothernametoo
+    namespace: someothernamespacetoo
 `,
 			},
 		},
 	}, {
-		name:    "only clusterdefault specified values",
+		name:    "only clusterdefault specified values without brokerClasses",
 		wantErr: false,
 		wantDefaults: &Defaults{
 			//			NamespaceDefaultsConfig: map[string]*duckv1.KReference{},
@@ -349,17 +383,67 @@ func TestDefaultsConfiguration(t *testing.T) {
 			},
 			Data: map[string]string{
 				"default-br-config": `
-     clusterDefault:
-       brokerClass: clusterbrokerclass
-       apiVersion: v1
-       kind: ConfigMap
-       name: somename
-       namespace: knative-eventing
+clusterDefault:
+  brokerClass: clusterbrokerclass
+  apiVersion: v1
+  kind: ConfigMap
+  name: somename
+  namespace: knative-eventing
 `,
 			},
 		},
 	}, {
-		name:    "only namespace defaults",
+		name:    "only clusterdefault specified values",
+		wantErr: false,
+		wantDefaults: &Defaults{
+			//			NamespaceDefaultsConfig: map[string]*duckv1.KReference{},
+			ClusterDefaultConfig: &DefaultConfig{
+				DefaultBrokerClass: "clusterbrokerclass",
+				BrokerConfig: &BrokerConfig{
+					KReference: &duckv1.KReference{
+						Kind:       "ConfigMap",
+						APIVersion: "v1",
+						Namespace:  "knative-eventing",
+						Name:       "somename",
+					},
+					Delivery: nil,
+				},
+				BrokerClasses: map[string]*BrokerConfig{
+					"somebrokerclass": {
+						KReference: &duckv1.KReference{
+							Kind:       "ConfigMap",
+							APIVersion: "v1",
+							Namespace:  "someothernamespace",
+							Name:       "someothername",
+						},
+					},
+				},
+			},
+		},
+		config: &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: system.Namespace(),
+				Name:      DefaultsConfigName,
+			},
+			Data: map[string]string{
+				"default-br-config": `
+clusterDefault:
+  brokerClass: clusterbrokerclass
+  apiVersion: v1
+  kind: ConfigMap
+  name: somename
+  namespace: knative-eventing
+  brokerClasses:
+    somebrokerclass:
+      apiVersion: v1
+      kind: ConfigMap
+      name: someothername
+      namespace: someothernamespace
+`,
+			},
+		},
+	}, {
+		name:    "only namespace defaults without brokerClasses",
 		wantErr: false,
 		wantDefaults: &Defaults{
 			NamespaceDefaultsConfig: map[string]*DefaultConfig{
@@ -413,14 +497,12 @@ func TestDefaultsConfiguration(t *testing.T) {
 			},
 		},
 	}, {
-		name:    "only namespace config default, cluster brokerclass",
+		name:    "only namespace defaults",
 		wantErr: false,
 		wantDefaults: &Defaults{
-			ClusterDefaultConfig: &DefaultConfig{
-				DefaultBrokerClass: "clusterbrokerclass",
-			},
 			NamespaceDefaultsConfig: map[string]*DefaultConfig{
 				"some-namespace": {
+					DefaultBrokerClass: "brokerclassnamespace",
 					BrokerConfig: &BrokerConfig{
 						KReference: &duckv1.KReference{
 							APIVersion: "v1",
@@ -430,8 +512,19 @@ func TestDefaultsConfiguration(t *testing.T) {
 						},
 						Delivery: nil,
 					},
+					BrokerClasses: map[string]*BrokerConfig{
+						"somebrokerclass": {
+							KReference: &duckv1.KReference{
+								APIVersion: "v1",
+								Kind:       "ConfigMap",
+								Name:       "someothername",
+								Namespace:  "someothernamespace",
+							},
+						},
+					},
 				},
 				"some-namespace-too": {
+					DefaultBrokerClass: "brokerclassnamespacetoo",
 					BrokerConfig: &BrokerConfig{
 						KReference: &duckv1.KReference{
 							APIVersion: "v1",
@@ -451,24 +544,117 @@ func TestDefaultsConfiguration(t *testing.T) {
 			},
 			Data: map[string]string{
 				"default-br-config": `
-     clusterDefault:
-       brokerClass: clusterbrokerclass
-     namespaceDefaults:
-       some-namespace:
-         apiVersion: v1
-         kind: ConfigMap
-         name: someothername
-         namespace: someothernamespace
-       some-namespace-too:
-         apiVersion: v1
-         kind: ConfigMap
-         name: someothernametoo
-         namespace: someothernamespacetoo
+namespaceDefaults:
+  some-namespace:
+    brokerClass: brokerclassnamespace
+    apiVersion: v1
+    kind: ConfigMap
+    name: someothername
+    namespace: someothernamespace
+    brokerClasses:
+      somebrokerclass:
+        apiVersion: v1
+        kind: ConfigMap
+        name: someothername
+        namespace: someothernamespace
+  some-namespace-too:
+    brokerClass: brokerclassnamespacetoo
+    apiVersion: v1
+    kind: ConfigMap
+    name: someothernametoo
+    namespace: someothernamespacetoo
 `,
 			},
 		},
 	}, {
-		name:    "one namespace config default, namespace config default with class, cluster brokerclass",
+		name:    "only namespace config default, cluster brokerclass",
+		wantErr: false,
+		wantDefaults: &Defaults{
+			ClusterDefaultConfig: &DefaultConfig{
+				DefaultBrokerClass: "clusterbrokerclass",
+			},
+			NamespaceDefaultsConfig: map[string]*DefaultConfig{
+				"some-namespace": {
+					BrokerConfig: &BrokerConfig{
+						KReference: &duckv1.KReference{
+							APIVersion: "v1",
+							Kind:       "ConfigMap",
+							Name:       "someothername",
+							Namespace:  "someothernamespace",
+						},
+						Delivery: nil,
+					},
+					BrokerClasses: map[string]*BrokerConfig{
+						"somebrokerclass": {
+							KReference: &duckv1.KReference{
+								APIVersion: "v1",
+								Kind:       "ConfigMap",
+								Name:       "someothername",
+								Namespace:  "someothernamespace",
+							},
+						},
+					},
+				},
+				"some-namespace-too": {
+					BrokerConfig: &BrokerConfig{
+						KReference: &duckv1.KReference{
+							APIVersion: "v1",
+							Kind:       "ConfigMap",
+							Name:       "someothernametoo",
+							Namespace:  "someothernamespacetoo",
+						},
+						Delivery: nil,
+					},
+					BrokerClasses: map[string]*BrokerConfig{
+						"somebrokerclass": {
+							KReference: &duckv1.KReference{
+								APIVersion: "v1",
+								Kind:       "ConfigMap",
+								Name:       "someothername",
+								Namespace:  "someothernamespace",
+							},
+						},
+					},
+				},
+			},
+		},
+		config: &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: system.Namespace(),
+				Name:      DefaultsConfigName,
+			},
+			Data: map[string]string{
+				"default-br-config": `
+clusterDefault:
+  brokerClass: clusterbrokerclass
+namespaceDefaults:
+  some-namespace:
+    apiVersion: v1
+    kind: ConfigMap
+    name: someothername
+    namespace: someothernamespace
+    brokerClasses:
+      somebrokerclass:
+        apiVersion: v1
+        kind: ConfigMap
+        name: someothername
+        namespace: someothernamespace
+  some-namespace-too:
+    apiVersion: v1
+    kind: ConfigMap
+    name: someothernametoo
+    namespace: someothernamespacetoo
+    brokerClasses:
+      somebrokerclass:
+        apiVersion: v1
+        kind: ConfigMap
+        name: someothername
+        namespace: someothernamespace
+`,
+			},
+		},
+	}, {
+		name:    "one namespace config default, namespace config default with class, cluster brokerclass, without brokerClasses",
 		wantErr: false,
 		wantDefaults: &Defaults{
 			ClusterDefaultConfig: &DefaultConfig{
@@ -524,7 +710,88 @@ func TestDefaultsConfiguration(t *testing.T) {
 `,
 			},
 		},
-	}}
+	}, {
+		name:    "complex broken YAML structure",
+		wantErr: true,
+		config: &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: system.Namespace(),
+				Name:      DefaultsConfigName,
+			},
+			Data: map[string]string{
+				"default-br-config": `
+    clusterDefault:
+      brokerClass: clusterbrokerclass
+      apiVersion: v1
+      kind: ConfigMap
+      name: somename
+      namespace: knative-eventing
+    - invalid yaml
+    namespaceDefaults:
+      some-namespace:
+        brokerClass: somenamespaceclass`,
+			},
+		},
+	}, {
+		// FIXME: Wondering that how should we handle the empty string in critical fields
+		name:    "empty strings in critical fields",
+		wantErr: false,
+		wantDefaults: &Defaults{
+			ClusterDefaultConfig: &DefaultConfig{
+				DefaultBrokerClass: "",
+			},
+			NamespaceDefaultsConfig: map[string]*DefaultConfig{
+				"some-namespace": {
+					DefaultBrokerClass: "",
+					BrokerConfig: &BrokerConfig{
+						KReference: &duckv1.KReference{
+							APIVersion: "v1",
+							Kind:       "ConfigMap",
+							Name:       "",
+							Namespace:  "",
+						},
+						Delivery: nil,
+					},
+				},
+				"some-namespace-too": {
+					BrokerConfig: &BrokerConfig{
+						KReference: &duckv1.KReference{
+							APIVersion: "v1",
+							Kind:       "ConfigMap",
+							Name:       "",
+							Namespace:  "",
+						},
+						Delivery: nil,
+					},
+				},
+			},
+		},
+		config: &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: system.Namespace(),
+				Name:      DefaultsConfigName,
+			},
+			Data: map[string]string{
+				"default-br-config": `
+     clusterDefault:
+       brokerClass: 
+     namespaceDefaults:
+       some-namespace:
+         brokerClass: 
+         apiVersion: v1
+         kind: ConfigMap
+         name: 
+         namespace: 
+       some-namespace-too:
+         apiVersion: v1
+         kind: ConfigMap
+         name: 
+         namespace: 
+`,
+			},
+		},
+	},
+	}
 
 	for _, tt := range configTests {
 		t.Run(tt.name, func(t *testing.T) {
