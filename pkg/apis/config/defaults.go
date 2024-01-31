@@ -169,34 +169,22 @@ func (d *Defaults) getClusterDefaultBrokerConfig(brokerClassName string) (*Broke
 // that doesn't exist, return a Cluster Default and if that doesn't exist
 // return an error.
 func (d *Defaults) GetBrokerClass(ns string) (string, error) {
-
 	if d == nil {
 		return "", errors.New("Defaults are nil")
 	}
 
-	//value, present := d.NamespaceDefaultsConfig.NameSpaces[ns]
-	//if present && value != nil {
-	//	// We have the namespace specific config
-	//	// Now check whether the brokerClassName is the default broker class for this namespace
-	//	if value.DefaultBrokerClass != "" {
-	//		// return the default broker class for this namespace
-	//		return value.DefaultBrokerClass, nil
-	//	} else {
-	//		// If the brokerClassName is not set for this namespace, we will check for the cluster default config
-	//		if d.ClusterDefaultConfig != nil && d.ClusterDefaultConfig.DefaultBrokerClass != "" {
-	//			return d.ClusterDefaultConfig.DefaultBrokerClass, nil
-	//		} else {
-	//			return "", errors.New("Defaults for Broker Configurations have not been set up.")
-	//		}
-	//	}
-	//} else {
-	//	// We don't have the namespace specific config, check for the cluster default config
-	//	if d.ClusterDefaultConfig != nil && d.ClusterDefaultConfig.DefaultBrokerClass != "" {
-	//		return d.ClusterDefaultConfig.DefaultBrokerClass, nil
-	//	} else {
-	//		return "", errors.New("Defaults for Broker Configurations have not been set up.")
-	//	}
-	//}
+	// Check if the namespace has a specific configuration
+	if nsConfig, ok := d.NamespaceDefaultsConfig[ns]; ok && nsConfig != nil {
+		if nsConfig.DefaultBrokerClass != "" {
+			return nsConfig.DefaultBrokerClass, nil
+		}
+	}
 
-	return "", errors.New("The given namespace cannout be found in the namespace defaults config or cluster default config.")
+	// Fallback to cluster default configuration if namespace specific configuration is not set
+	if d.ClusterDefaultConfig != nil && d.ClusterDefaultConfig.DefaultBrokerClass != "" {
+		return d.ClusterDefaultConfig.DefaultBrokerClass, nil
+	}
+
+	// If neither namespace specific nor cluster default broker class is found
+	return "", fmt.Errorf("Defaults are nil")
 }

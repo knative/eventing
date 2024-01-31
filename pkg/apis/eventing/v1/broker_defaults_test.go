@@ -40,6 +40,7 @@ var (
 			// Namespace is the key, the value is the KReference to the config.
 			NamespaceDefaultsConfig: map[string]*config.DefaultConfig{
 				"mynamespace": {
+					DefaultBrokerClass: "MTChannelBasedBroker",
 					BrokerConfig: &config.BrokerConfig{
 						KReference: &duckv1.KReference{
 							APIVersion: "v1",
