@@ -359,6 +359,167 @@ namespaceDefaults:
 			},
 		},
 	}, {
+		name:    "all specified values with multiple brokerClasses",
+		wantErr: false,
+		wantDefaults: &Defaults{
+			NamespaceDefaultsConfig: map[string]*DefaultConfig{
+				"some-namespace": {
+					DefaultBrokerClass: "somenamespaceclass",
+					BrokerConfig: &BrokerConfig{
+						KReference: &duckv1.KReference{
+							APIVersion: "v1",
+							Kind:       "ConfigMap",
+							Name:       "someothername",
+							Namespace:  "someothernamespace",
+						},
+						Delivery: nil,
+					},
+					BrokerClasses: map[string]*BrokerConfig{
+						"somensbrokerclass": {
+							KReference: &duckv1.KReference{
+								APIVersion: "v1",
+								Kind:       "ConfigMap",
+								Name:       "someothernsname",
+								Namespace:  "somenamespace",
+							},
+						},
+						"somebrokerclass2": {
+							KReference: &duckv1.KReference{
+								APIVersion: "v1",
+								Kind:       "ConfigMap",
+								Name:       "someothername",
+								Namespace:  "someothernamespace",
+							},
+						},
+					},
+				},
+				"some-namespace-too": {
+					DefaultBrokerClass: "somenamespaceclasstoo",
+					BrokerConfig: &BrokerConfig{
+						KReference: &duckv1.KReference{
+							APIVersion: "v1",
+							Kind:       "ConfigMap",
+							Name:       "someothernametoo",
+							Namespace:  "someothernamespacetoo",
+						},
+						Delivery: nil,
+					},
+					BrokerClasses: map[string]*BrokerConfig{
+						"somensbrokerclass": {
+							KReference: &duckv1.KReference{
+								APIVersion: "v1",
+								Kind:       "ConfigMap",
+								Name:       "someothernsname",
+								Namespace:  "somenamespace",
+							},
+						},
+						"somebrokerclass2": {
+							KReference: &duckv1.KReference{
+								APIVersion: "v1",
+								Kind:       "ConfigMap",
+								Name:       "someothername",
+								Namespace:  "someothernamespace",
+							},
+						},
+					},
+				},
+			},
+			ClusterDefaultConfig: &DefaultConfig{
+				DefaultBrokerClass: "clusterbrokerclass",
+				BrokerConfig: &BrokerConfig{
+					KReference: &duckv1.KReference{
+						Kind:       "ConfigMap",
+						APIVersion: "v1",
+						Namespace:  "knative-eventing",
+						Name:       "somename",
+					},
+					Delivery: nil,
+				},
+				BrokerClasses: map[string]*BrokerConfig{
+					"somebrokerclass": {
+						KReference: &duckv1.KReference{
+							Kind:       "ConfigMap",
+							APIVersion: "v1",
+							Namespace:  "someothernamespace",
+							Name:       "someothername",
+						},
+						Delivery: nil,
+					},
+					"somebrokerclass2": {
+						KReference: &duckv1.KReference{
+							Kind:       "ConfigMap",
+							APIVersion: "v1",
+							Namespace:  "someothernamespace",
+							Name:       "someothername",
+						},
+					},
+				},
+			},
+		},
+
+		config: &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: system.Namespace(),
+				Name:      DefaultsConfigName,
+			},
+			Data: map[string]string{
+				"default-br-config": `
+clusterDefault:
+  brokerClass: clusterbrokerclass
+  apiVersion: v1
+  kind: ConfigMap
+  name: somename
+  namespace: knative-eventing
+  brokerClasses:
+    somebrokerclass:
+      apiVersion: v1
+      kind: ConfigMap
+      name: someothername
+      namespace: someothernamespace
+    somebrokerclass2:
+      apiVersion: v1
+      kind: ConfigMap
+      name: someothername
+      namespace: someothernamespace
+namespaceDefaults:
+  some-namespace:
+    brokerClass: somenamespaceclass
+    apiVersion: v1
+    kind: ConfigMap
+    name: someothername
+    namespace: someothernamespace
+    brokerClasses:
+      somensbrokerclass:
+        apiVersion: v1
+        kind: ConfigMap
+        name: someothernsname
+        namespace: somenamespace
+      somebrokerclass2:
+        apiVersion: v1
+        kind: ConfigMap
+        name: someothername
+        namespace: someothernamespace
+  some-namespace-too:
+    brokerClass: somenamespaceclasstoo
+    apiVersion: v1
+    kind: ConfigMap
+    name: someothernametoo
+    namespace: someothernamespacetoo
+    brokerClasses:
+      somensbrokerclass:
+        apiVersion: v1
+        kind: ConfigMap
+        name: someothernsname
+        namespace: somenamespace
+      somebrokerclass2:
+        apiVersion: v1
+        kind: ConfigMap
+        name: someothername
+        namespace: someothernamespace
+`,
+			},
+		},
+	}, {
 		name:    "only clusterdefault specified values without brokerClasses",
 		wantErr: false,
 		wantDefaults: &Defaults{
@@ -646,6 +807,119 @@ namespaceDefaults:
     namespace: someothernamespacetoo
     brokerClasses:
       somebrokerclass:
+        apiVersion: v1
+        kind: ConfigMap
+        name: someothername
+        namespace: someothernamespace
+`,
+			},
+		},
+	}, {
+		name:    "only namespace config default, cluster brokerclass, with multiple brokerClasses",
+		wantErr: false,
+		wantDefaults: &Defaults{
+			ClusterDefaultConfig: &DefaultConfig{
+				DefaultBrokerClass: "clusterbrokerclass",
+			},
+			NamespaceDefaultsConfig: map[string]*DefaultConfig{
+				"some-namespace": {
+					BrokerConfig: &BrokerConfig{
+						KReference: &duckv1.KReference{
+							APIVersion: "v1",
+							Kind:       "ConfigMap",
+							Name:       "someothername",
+							Namespace:  "someothernamespace",
+						},
+						Delivery: nil,
+					},
+					BrokerClasses: map[string]*BrokerConfig{
+						"somebrokerclass": {
+							KReference: &duckv1.KReference{
+								APIVersion: "v1",
+								Kind:       "ConfigMap",
+								Name:       "someothername",
+								Namespace:  "someothernamespace",
+							},
+						},
+						"somebrokerclass2": {
+							KReference: &duckv1.KReference{
+								APIVersion: "v1",
+								Kind:       "ConfigMap",
+								Name:       "someothername",
+								Namespace:  "someothernamespace",
+							},
+						},
+					},
+				},
+				"some-namespace-too": {
+					BrokerConfig: &BrokerConfig{
+						KReference: &duckv1.KReference{
+							APIVersion: "v1",
+							Kind:       "ConfigMap",
+							Name:       "someothernametoo",
+							Namespace:  "someothernamespacetoo",
+						},
+						Delivery: nil,
+					},
+					BrokerClasses: map[string]*BrokerConfig{
+						"somebrokerclass": {
+							KReference: &duckv1.KReference{
+								APIVersion: "v1",
+								Kind:       "ConfigMap",
+								Name:       "someothername",
+								Namespace:  "someothernamespace",
+							},
+						},
+						"somebrokerclass2": {
+							KReference: &duckv1.KReference{
+								APIVersion: "v1",
+								Kind:       "ConfigMap",
+								Name:       "someothername",
+								Namespace:  "someothernamespace",
+							},
+						},
+					},
+				},
+			},
+		},
+		config: &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: system.Namespace(),
+				Name:      DefaultsConfigName,
+			},
+			Data: map[string]string{
+				"default-br-config": `
+clusterDefault:
+  brokerClass: clusterbrokerclass
+namespaceDefaults:
+  some-namespace:
+    apiVersion: v1
+    kind: ConfigMap
+    name: someothername
+    namespace: someothernamespace
+    brokerClasses:
+      somebrokerclass:
+        apiVersion: v1
+        kind: ConfigMap
+        name: someothername
+        namespace: someothernamespace
+      somebrokerclass2:
+        apiVersion: v1
+        kind: ConfigMap
+        name: someothername
+        namespace: someothernamespace
+  some-namespace-too:
+    apiVersion: v1
+    kind: ConfigMap
+    name: someothernametoo
+    namespace: someothernamespacetoo
+    brokerClasses:
+      somebrokerclass:
+        apiVersion: v1
+        kind: ConfigMap
+        name: someothername
+        namespace: someothernamespace
+      somebrokerclass2:
         apiVersion: v1
         kind: ConfigMap
         name: someothername

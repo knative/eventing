@@ -62,6 +62,24 @@ var (
 							BackoffDelay:  pointer.String("5s"),
 						},
 					},
+					BrokerClasses: map[string]*config.BrokerConfig{
+						"mynamespaceclass": {
+							KReference: &duckv1.KReference{
+								APIVersion: "v1",
+								Kind:       "ConfigMap",
+								Namespace:  "knative-eventing",
+								Name:       "kafka-channel",
+							},
+						},
+						"mynamespaceclass2": {
+							KReference: &duckv1.KReference{
+								APIVersion: "v1",
+								Kind:       "ConfigMap",
+								Namespace:  "knative-eventing",
+								Name:       "kafka-channel",
+							},
+						},
+					},
 				},
 				"mynamespace2": {
 					DefaultBrokerClass: "mynamespace2class",
@@ -84,6 +102,16 @@ var (
 							Retry:         pointer.Int32(3),
 							BackoffPolicy: (*eventingduckv1.BackoffPolicyType)(pointer.String("exponential")),
 							BackoffDelay:  pointer.String("3s"),
+						},
+					},
+					BrokerClasses: map[string]*config.BrokerConfig{
+						"mynamespaceclass": {
+							KReference: &duckv1.KReference{
+								APIVersion: "v1",
+								Kind:       "ConfigMap",
+								Namespace:  "knative-eventing",
+								Name:       "natss-channel",
+							},
 						},
 					},
 				},
@@ -138,6 +166,8 @@ var (
 		},
 	}
 )
+
+/// FIXME: add the broker classes consideration into the test cases in this file
 
 func TestBrokerSetDefaults(t *testing.T) {
 	testCases := map[string]struct {
