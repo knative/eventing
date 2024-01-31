@@ -35,12 +35,12 @@ func (b *Broker) Validate(ctx context.Context) *apis.FieldError {
 	ctx = apis.WithinParent(ctx, b.ObjectMeta)
 
 	cfg := config.FromContextOrDefaults(ctx)
-	var brConfig *config.ClassAndBrokerConfig
+	var brConfig *config.DefaultConfig
 	if cfg.Defaults != nil {
 		if c, ok := cfg.Defaults.NamespaceDefaultsConfig[b.GetNamespace()]; ok {
 			brConfig = c
 		} else {
-			brConfig = cfg.Defaults.ClusterDefault
+			brConfig = cfg.Defaults.ClusterDefaultConfig
 		}
 	}
 

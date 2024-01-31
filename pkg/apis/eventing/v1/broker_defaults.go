@@ -36,7 +36,7 @@ func (b *Broker) SetDefaults(ctx context.Context) {
 
 func (bs *BrokerSpec) SetDefaults(ctx context.Context) {
 	cfg := config.FromContextOrDefaults(ctx)
-	c, err := cfg.Defaults.GetBrokerConfig(apis.ParentMeta(ctx).Namespace)
+	c, err := cfg.Defaults.GetBrokerConfig(apis.ParentMeta(ctx).Namespace, "")
 	if err == nil {
 		if bs.Config == nil {
 			bs.Config = c.KReference
