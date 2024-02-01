@@ -214,3 +214,51 @@ func VerifyNodeSelectorDeployment(source string) feature.StepFn {
 		}
 	}
 }
+
+func SetupNodeLabels() feature.StepFn {
+	return func(ctx context.Context, t feature.T) {
+		nodes, err := client.Get(ctx).CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+		if err != nil {
+			t.Fatalf("Could not list nodes: %v", err)
+		}
+
+		if len(nodes.Items) == 0 {
+			t.Fatal("No nodes found")
+		}
+
+		node := &nodes.Items[0]
+
+		node.Labels["testkey"] = "testvalue"
+		node.Labels["testkey1"] = "testvalue1"
+		node.Labels["testkey2"] = "testvalue2"
+
+		_, err = client.Get(ctx).CoreV1().Nodes().Update(ctx, node, metav1.UpdateOptions{})
+
+		if err != nil {
+			t.Fatalf("Could not update node: %v", err)
+		}
+	}
+}
+
+func ResetNodeLabels(ctx context.Context, t feature.T) {
+	nodes, err := client.Get(ctx).CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		t.Fatalf("Could not list nodes: %v", err)
+	}
+
+	if len(nodes.Items) == 0 {
+		t.Fatal("No nodes found")
+	}
+
+	node := &nodes.Items[0]
+
+	delete(node.Labels, "testkey")
+	delete(node.Labels, "testkey1")
+	delete(node.Labels, "testkey2")
+
+	_, err = client.Get(ctx).CoreV1().Nodes().Update(ctx, node, metav1.UpdateOptions{})
+
+	if err != nil {
+		t.Fatalf("Could not update node: %v", err)
+	}
+}

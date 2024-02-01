@@ -23,7 +23,6 @@ import (
 	"github.com/cloudevents/sdk-go/v2/test"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
-	client "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/network"
 	"knative.dev/reconciler-test/pkg/environment"
 
@@ -823,30 +822,6 @@ func SendsEventsWithRetries() *feature.Feature {
 	return f
 }
 
-func setupNodeLabels(nodeLabels map[string]string) feature.StepFn {
-	return func(ctx context.Context, t feature.T) {
-		nodes, err := client.Get(ctx).CoreV1().Nodes().List(ctx, metav1.ListOptions{})
-		if err != nil {
-			t.Fatalf("Could not list nodes: %v", err)
-		}
-
-		if len(nodes.Items) == 0 {
-			t.Fatal("No nodes found")
-		}
-
-		randomNode := &nodes.Items[0]
-
-		randomNode.Labels = nodeLabels
-
-		// Update the node with the new labels
-		_, err = client.Get(ctx).CoreV1().Nodes().Update(ctx, randomNode, metav1.UpdateOptions{})
-
-		if err != nil {
-			t.Fatalf("Could not update node: %v", err)
-		}
-	}
-}
-
 func DeployAPIServerSourceWithNodeSelector() *feature.Feature {
 	f := feature.NewFeatureNamed("deploy")
 
@@ -855,7 +830,7 @@ func DeployAPIServerSourceWithNodeSelector() *feature.Feature {
 		ns := env.Namespace()
 		configmap.Install("config-features", ns)
 	})
-	f.Setup("setup node labels", setupNodeLabels(apiserversource.TestLabels()))
+	f.Setup("setup node labels", apiserversource.SetupNodeLabels())
 
 	source := feature.MakeRandomK8sName("apiserversource")
 	sink := feature.MakeRandomK8sName("sink")
@@ -884,6 +859,11 @@ func DeployAPIServerSourceWithNodeSelector() *feature.Feature {
 	f.Requirement("ApiServerSource goes ready", apiserversource.IsReady(source))
 
 	f.Stable("ApiServerSource using nodeSelector").Must("must use it from config-features", apiserversource.VerifyNodeSelectorDeployment(source))
+
+	f.Teardown("reset resources", func(ctx context.Context, t feature.T) {
+		f.DeleteResources(ctx, t)
+		apiserversource.ResetNodeLabels(ctx, t)
+	})
 
 	return f
 }
