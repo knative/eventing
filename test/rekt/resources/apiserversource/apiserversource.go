@@ -241,7 +241,9 @@ func SetupNodeLabels() feature.StepFn {
 }
 
 func ResetNodeLabels(ctx context.Context, t feature.T) {
-	nodes, err := client.Get(ctx).CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+	nodes, err := client.Get(ctx).CoreV1().Nodes().List(ctx, metav1.ListOptions{
+		LabelSelector: "testkey=testvalue,testkey1=testvalue1,testkey2=testvalue2",
+	})
 	if err != nil {
 		t.Fatalf("Could not list nodes: %v", err)
 	}
