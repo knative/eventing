@@ -28,10 +28,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
-	clientappsv1 "k8s.io/client-go/kubernetes/typed/apps/v1"
 	"knative.dev/pkg/reconciler"
 
-	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/logging"
 
 	"knative.dev/eventing/pkg/scheduler"
@@ -57,13 +55,13 @@ type Autoscaler interface {
 }
 
 type autoscaler struct {
-	statefulSetClient clientappsv1.StatefulSetInterface
-	statefulSetName   string
-	vpodLister        scheduler.VPodLister
-	logger            *zap.SugaredLogger
-	stateAccessor     st.StateAccessor
-	trigger           chan struct{}
-	evictor           scheduler.Evictor
+	statefulSetCache *scheduler.ScaleCache
+	statefulSetName  string
+	vpodLister       scheduler.VPodLister
+	logger           *zap.SugaredLogger
+	stateAccessor    st.StateAccessor
+	trigger          chan struct{}
+	evictor          scheduler.Evictor
 
 	// capacity is the total number of virtual replicas available per pod.
 	capacity int32
@@ -92,6 +90,8 @@ func (a *autoscaler) Promote(b reconciler.Bucket, _ func(reconciler.Bucket, type
 	if b.Has(ephemeralLeaderElectionObject) {
 		// The promoted bucket has the ephemeralLeaderElectionObject, so we are leader.
 		a.isLeader.Store(true)
+		// reset the cache to be empty so that when we access state as the leader it is always the newest values
+		a.statefulSetCache.Reset()
 	}
 	return nil
 }
@@ -104,20 +104,20 @@ func (a *autoscaler) Demote(b reconciler.Bucket) {
 	}
 }
 
-func newAutoscaler(ctx context.Context, cfg *Config, stateAccessor st.StateAccessor) *autoscaler {
+func newAutoscaler(ctx context.Context, cfg *Config, stateAccessor st.StateAccessor, statefulSetCache *scheduler.ScaleCache) *autoscaler {
 	return &autoscaler{
-		logger:            logging.FromContext(ctx).With(zap.String("component", "autoscaler")),
-		statefulSetClient: kubeclient.Get(ctx).AppsV1().StatefulSets(cfg.StatefulSetNamespace),
-		statefulSetName:   cfg.StatefulSetName,
-		vpodLister:        cfg.VPodLister,
-		stateAccessor:     stateAccessor,
-		evictor:           cfg.Evictor,
-		trigger:           make(chan struct{}, 1),
-		capacity:          cfg.PodCapacity,
-		refreshPeriod:     cfg.RefreshPeriod,
-		lock:              new(sync.Mutex),
-		isLeader:          atomic.Bool{},
-		getReserved:       cfg.getReserved,
+		logger:           logging.FromContext(ctx).With(zap.String("component", "autoscaler")),
+		statefulSetCache: statefulSetCache,
+		statefulSetName:  cfg.StatefulSetName,
+		vpodLister:       cfg.VPodLister,
+		stateAccessor:    stateAccessor,
+		evictor:          cfg.Evictor,
+		trigger:          make(chan struct{}, 1),
+		capacity:         cfg.PodCapacity,
+		refreshPeriod:    cfg.RefreshPeriod,
+		lock:             new(sync.Mutex),
+		isLeader:         atomic.Bool{},
+		getReserved:      cfg.getReserved,
 		// Anything that is less than now() - refreshPeriod, so that we will try to compact
 		// as soon as we start.
 		lastCompactAttempt: time.Now().
@@ -183,7 +183,7 @@ func (a *autoscaler) doautoscale(ctx context.Context, attemptScaleDown bool) err
 		return err
 	}
 
-	scale, err := a.statefulSetClient.GetScale(ctx, a.statefulSetName, metav1.GetOptions{})
+	scale, err := a.statefulSetCache.GetScale(ctx, a.statefulSetName, metav1.GetOptions{})
 	if err != nil {
 		// skip a beat
 		a.logger.Infow("failed to get scale subresource", zap.Error(err))
@@ -236,7 +236,7 @@ func (a *autoscaler) doautoscale(ctx context.Context, attemptScaleDown bool) err
 		scale.Spec.Replicas = newreplicas
 		a.logger.Infow("updating adapter replicas", zap.Int32("replicas", scale.Spec.Replicas))
 
-		_, err = a.statefulSetClient.UpdateScale(ctx, a.statefulSetName, scale, metav1.UpdateOptions{})
+		_, err = a.statefulSetCache.UpdateScale(ctx, a.statefulSetName, scale, metav1.UpdateOptions{})
 		if err != nil {
 			a.logger.Errorw("updating scale subresource failed", zap.Error(err))
 			return err
