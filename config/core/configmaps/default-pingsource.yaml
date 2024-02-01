@@ -17,7 +17,6 @@ kind: ConfigMap
 metadata:
   name: config-ping-defaults
   namespace: knative-eventing
-  labels:
   annotations:
     knative.dev/example-checksum: "9185c153"
     app.kubernetes.io/version: devel
