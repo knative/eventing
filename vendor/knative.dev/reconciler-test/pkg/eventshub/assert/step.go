@@ -1,8 +1,10 @@
 package assert
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 
 	cetest "github.com/cloudevents/sdk-go/v2/test"
@@ -144,13 +146,40 @@ func MatchPeerCertificatesFromSecret(namespace, name string, key string) eventsh
 			return fmt.Errorf("failed to match peer certificates, connection is not TLS")
 		}
 
-		for _, cert := range info.Connection.TLS.PemPeerCertificates {
-			if cert == string(value) {
-				return nil
+		// secret value can, in general, be a certificate chain (a sequence of PEM-encoded certificate blocks)
+		valueBlock, valueRest := pem.Decode(value)
+		if valueBlock == nil {
+			// error if there's not even a single certificate in the value
+			return fmt.Errorf("failed to decode secret certificate:\n%s", string(value))
+		}
+		// for each certificate in the chain, check if it's present in info.Connection.TLS.PemPeerCertificates
+		for valueBlock != nil {
+			found := false
+			for _, cert := range info.Connection.TLS.PemPeerCertificates {
+				certBlock, _ := pem.Decode([]byte(cert))
+				if certBlock == nil {
+					return fmt.Errorf("failed to decode peer certificate:\n%s", cert)
+				}
+
+				if certBlock.Type == valueBlock.Type && string(certBlock.Bytes) == string(valueBlock.Bytes) {
+					found = true
+					break
+				}
 			}
+
+			if !found {
+				pemBytes, _ := json.MarshalIndent(info.Connection.TLS.PemPeerCertificates, "", "  ")
+				return fmt.Errorf("failed to find peer certificate with value\n%s\nin:\n%s", string(value), string(pemBytes))
+			}
+
+			valueBlock, valueRest = pem.Decode(valueRest)
 		}
 
-		bytes, _ := json.MarshalIndent(info.Connection.TLS.PemPeerCertificates, "", "  ")
-		return fmt.Errorf("failed to find peer certificate with value\n%s\nin:\n%s", string(value), string(bytes))
+		// any non-whitespace suffix not parsed as a PEM is suspicious, so we treat it as an error:
+		if "" != string(bytes.TrimSpace(valueRest)) {
+			return fmt.Errorf("failed to decode secret certificate starting with\n%s\nin:\n%s", string(valueRest), string(value))
+		}
+
+		return nil
 	}
 }
