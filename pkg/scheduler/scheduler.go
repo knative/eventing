@@ -18,6 +18,7 @@ package scheduler
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -124,6 +125,7 @@ type VPod interface {
 }
 
 type ScaleCache struct {
+	lock                 sync.RWMutex //protects access to entries, entries itself is concurrency safe, so we only need to ensure that we correctly access the pointer
 	entries              *cache.Expiring
 	statefulSetClient    clientappsv1.StatefulSetInterface
 	statefulSetNamespace string
@@ -143,6 +145,9 @@ func NewScaleCache(ctx context.Context, namespace string) *ScaleCache {
 }
 
 func (sc *ScaleCache) GetScale(ctx context.Context, statefulSetName string, options metav1.GetOptions) (*autoscalingv1.Scale, error) {
+	sc.lock.RLock()
+	defer sc.lock.RUnlock()
+
 	if entry, ok := sc.entries.Get(statefulSetName); ok {
 		entry := entry.(scaleEntry)
 		return &autoscalingv1.Scale{
@@ -170,6 +175,9 @@ func (sc *ScaleCache) GetScale(ctx context.Context, statefulSetName string, opti
 }
 
 func (sc *ScaleCache) UpdateScale(ctx context.Context, statefulSetName string, scale *autoscalingv1.Scale, opts metav1.UpdateOptions) (*autoscalingv1.Scale, error) {
+	sc.lock.RLock()
+	defer sc.lock.RUnlock()
+
 	updatedScale, err := sc.statefulSetClient.UpdateScale(ctx, statefulSetName, scale, opts)
 	if err != nil {
 		return updatedScale, err
@@ -181,6 +189,9 @@ func (sc *ScaleCache) UpdateScale(ctx context.Context, statefulSetName string, s
 }
 
 func (sc *ScaleCache) Reset() {
+	sc.lock.Lock()
+	defer sc.lock.Unlock()
+
 	sc.entries = cache.NewExpiring()
 }
 
