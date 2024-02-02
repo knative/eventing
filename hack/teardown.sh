@@ -14,25 +14,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This script builds and installs Knative Eventing components from source for local development.
+# This script tears down the installed Knative Eventing components from source for local development.
 
 set -e
 set -o errexit
 set -o nounset
 set -o pipefail
-set -x
-
-export SCALE_CHAOSDUCK_TO_ZERO=1
-export REPLICAS=1
-export KO_FLAGS=${KO_FLAGS:-"--platform="""} # Default to current OS and arch
 
 source "$(dirname "$0")/../test/e2e-common.sh"
 
-knative_setup || exit $?
-
-test_setup || exit $?
-
-if [[ ! -e $(dirname "$0")/../tmp ]]; then
-    mkdir $(dirname "$0")/../tmp
+if [[ -e $(dirname "$0")/../tmp/uninstall_list.txt ]]; then
+    read -a UNINSTALL_LIST < $(dirname "$0")/../tmp/uninstall_list.txt
+else
+    echo "install.sh failed to create ./tmp/uninstall_list.txt delete namespaces and crds manually if created" && exit
 fi
-echo "${UNINSTALL_LIST[@]}" > $(dirname "$0")/../tmp/uninstall_list.txt
+
+knative_teardown || exit $?
+
+rm -f $(dirname "$0")/../tmp/uninstall_list.txt
