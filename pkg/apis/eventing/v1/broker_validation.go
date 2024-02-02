@@ -35,17 +35,14 @@ func (b *Broker) Validate(ctx context.Context) *apis.FieldError {
 	ctx = apis.WithinParent(ctx, b.ObjectMeta)
 
 	cfg := config.FromContextOrDefaults(ctx)
-	var brConfig *config.DefaultConfig
+	var brConfig *config.Defaults
 	if cfg.Defaults != nil {
-		if c, ok := cfg.Defaults.NamespaceDefaultsConfig[b.GetNamespace()]; ok {
-			brConfig = c
-		} else {
-			brConfig = cfg.Defaults.ClusterDefaultConfig
-		}
+		brConfig = cfg.Defaults
 	}
 
 	withNS := ctx
-	if brConfig == nil || brConfig.DisallowDifferentNamespaceConfig == nil || !*brConfig.DisallowDifferentNamespaceConfig {
+	if !(brConfig != nil && ((brConfig.NamespaceDefaultsConfig != nil && brConfig.NamespaceDefaultsConfig[b.GetNamespace()] != nil && *brConfig.NamespaceDefaultsConfig[b.GetNamespace()].DisallowDifferentNamespaceConfig) || (brConfig.ClusterDefaultConfig != nil && *brConfig.ClusterDefaultConfig.DisallowDifferentNamespaceConfig))) {
+		// Apply the AllowDifferentNamespace setting if different namespace configurations are allowed.
 		withNS = apis.AllowDifferentNamespace(ctx)
 	}
 
