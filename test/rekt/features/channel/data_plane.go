@@ -59,38 +59,13 @@ func DataPlaneChannel(channelName string) *feature.Feature {
 	f.Requirement("Channel is Ready", channel_impl.IsReady(channelName))
 
 	f.Stable("Input").
-		Must("Every Channel MUST expose either an HTTP or HTTPS endpoint.", func(ctx context.Context, t feature.T) {
-			b := getChannelable(ctx, t)
-			addr := b.Status.AddressStatus.Address.URL
-			if addr == nil {
-				addr = new(apis.URL)
-			}
-			if addr.Scheme != "http" && addr.Scheme != "https" {
-				t.Fatalf("expected channel scheme to be HTTP or HTTPS, found: %s", addr.Scheme)
-			}
-		}).
+		Must("Every Channel MUST expose either an HTTP or HTTPS endpoint.", checkChannelEnpoint).
 		Must("The endpoint(s) MUST conform to 0.3 or 1.0 CloudEvents specification.",
 			channelAcceptsCEVersions).
-		MustNot("The Channel MUST NOT perform an upgrade of the passed in version. It MUST emit the event with the same version.", func(ctx context.Context, t feature.T) {
-			c := getChannelable(ctx, t)
-			ShouldNotUpdateVersion(ctx, t, c)
-		}).
-		Must("It MUST support both Binary Content Mode and Structured Content Mode of the HTTP Protocol Binding for CloudEvents.", func(ctx context.Context, t feature.T) {
-			channelAcceptsBinaryContentMode(ctx, t, channelName)
-			channelAcceptsStructuredContentMode(ctx, t, channelName)
-		}).
-		May("Channels MAY expose other, non-HTTP endpoints in addition to HTTP at their discretion.", func(ctx context.Context, t feature.T) {
-			b := getChannelable(ctx, t)
-
-			for _, addr := range b.Status.AddressStatus.Addresses {
-				if addr.URL == nil {
-					addr.URL = new(apis.URL)
-				}
-				if addr.URL.Scheme != "http" && addr.URL.Scheme != "https" {
-					t.Fatalf("expected channel scheme to be HTTP or HTTPS as addons with each other but got: %s", addr.URL.Scheme)
-				}
-			}
-		})
+		MustNot("The Channel MUST NOT perform an upgrade of the passed in version. It MUST emit the event with the same version.", ShouldNotUpdateVersion).
+		Must("It MUST support Binary Content Mode of the HTTP Protocol Binding for CloudEvents.", channelAcceptsBinaryContentMode).
+		Must("It MUST support Structured Content Mode of the HTTP Protocol Binding for CloudEvents.", channelAcceptsStructuredContentMode).
+		May("Channels MAY expose other, non-HTTP endpoints in addition to HTTP at their discretion.", checkChannelEnpoints)
 
 	f.Stable("Generic").
 		Must("If a Channel receives an event queueing request and is unable to parse a valid CloudEvent, then it MUST reject the request.", channelRejectsMalformedCE)
@@ -130,6 +105,30 @@ func DataPlaneChannel(channelName string) *feature.Feature {
 	f.Teardown("cleanup created resources", f.DeleteResources)
 
 	return f
+}
+
+func checkChannelEnpoint(ctx context.Context, t feature.T) {
+	b := getChannelable(ctx, t)
+	addr := b.Status.AddressStatus.Address.URL
+	if addr == nil {
+		addr = new(apis.URL)
+	}
+	if addr.Scheme != "http" && addr.Scheme != "https" {
+		t.Fatalf("expected channel scheme to be HTTP or HTTPS, found: %s", addr.Scheme)
+	}
+}
+
+func checkChannelEnpoints(ctx context.Context, t feature.T) {
+	b := getChannelable(ctx, t)
+
+	for _, addr := range b.Status.AddressStatus.Addresses {
+		if addr.URL == nil {
+			addr.URL = new(apis.URL)
+		}
+		if addr.URL.Scheme != "http" && addr.URL.Scheme != "https" {
+			t.Fatalf("expected channel scheme to be HTTP or HTTPS as addons with each other but got: %s", addr.URL.Scheme)
+		}
+	}
 }
 
 func channelRejectsMalformedCE(ctx context.Context, t feature.T) {
@@ -291,7 +290,8 @@ func addControlPlaneDelivery(fs *feature.FeatureSet) {
 	}
 }
 
-func channelAcceptsBinaryContentMode(ctx context.Context, t feature.T, channelName string) {
+func channelAcceptsBinaryContentMode(ctx context.Context, t feature.T) {
+	channelName := "mychannelimpl"
 	contenttypes := []string{
 		"application/vnd.apache.thrift.binary",
 		"application/xml",
@@ -320,7 +320,8 @@ func channelAcceptsBinaryContentMode(ctx context.Context, t feature.T, channelNa
 	}
 }
 
-func channelAcceptsStructuredContentMode(ctx context.Context, t feature.T, channelName string) {
+func channelAcceptsStructuredContentMode(ctx context.Context, t feature.T) {
+	channelName := "mychannelimpl"
 	contenttype := "application/cloudevents+json"
 	bodycontent := `{
     "specversion" : "1.0",
@@ -350,13 +351,13 @@ func channelAcceptsStructuredContentMode(ctx context.Context, t feature.T, chann
 	}
 }
 
-func ShouldNotUpdateVersion(ctx context.Context, t feature.T, channel *v1.Channelable) {
+func ShouldNotUpdateVersion(ctx context.Context, t feature.T) {
+	channel := getChannelable(ctx, t)
 	source := feature.MakeRandomK8sName("source")
 	sink := feature.MakeRandomK8sName("sink")
 
 	event := test.FullEvent()
 
-	// Creating sink
 	eventshub.Install(sink, eventshub.StartReceiver)(ctx, t)
 
 	eventshub.Install(source,
