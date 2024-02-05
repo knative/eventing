@@ -55,9 +55,6 @@ func (bs *BrokerSpec) SetDefaults(ctx context.Context) {
 			bs.Config.SetDefaults(ctx)
 		}
 		bs.Delivery.SetDefaults(ctx)
-	} else {
-		// raise error panic
-		panic(err)
 	}
 
 }
