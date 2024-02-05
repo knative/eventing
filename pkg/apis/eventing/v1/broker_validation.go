@@ -41,8 +41,15 @@ func (b *Broker) Validate(ctx context.Context) *apis.FieldError {
 	}
 
 	withNS := ctx
-	if !(brConfig != nil && ((brConfig.NamespaceDefaultsConfig != nil && brConfig.NamespaceDefaultsConfig[b.GetNamespace()] != nil && *brConfig.NamespaceDefaultsConfig[b.GetNamespace()].DisallowDifferentNamespaceConfig) || (brConfig.ClusterDefaultConfig != nil && *brConfig.ClusterDefaultConfig.DisallowDifferentNamespaceConfig))) {
-		// Apply the AllowDifferentNamespace setting if different namespace configurations are allowed.
+
+	// Apply the DisallowDifferentNamespaceConfig setting if different namespace configurations are disallowed.
+	// Do the pre-screening to avoid the cost of the AllowDifferentNamespace setting.
+	// if no NameSpace default or Cluster default is set, then the default is to allow different namespace, we will not check the AllowDifferentNamespace setting.
+	if brConfig == nil || (brConfig.NamespaceDefaultsConfig == nil && brConfig.ClusterDefaultConfig == nil) {
+		withNS = apis.AllowDifferentNamespace(ctx)
+	} else if !(brConfig.NamespaceDefaultsConfig[apis.ParentMeta(ctx).Namespace] != nil && brConfig.NamespaceDefaultsConfig[apis.ParentMeta(ctx).Namespace].DisallowDifferentNamespaceConfig != nil && *brConfig.NamespaceDefaultsConfig[apis.ParentMeta(ctx).Namespace].DisallowDifferentNamespaceConfig) {
+		withNS = apis.AllowDifferentNamespace(ctx)
+	} else if !(brConfig.ClusterDefaultConfig != nil && brConfig.ClusterDefaultConfig.DisallowDifferentNamespaceConfig != nil && *brConfig.ClusterDefaultConfig.DisallowDifferentNamespaceConfig) {
 		withNS = apis.AllowDifferentNamespace(ctx)
 	}
 
