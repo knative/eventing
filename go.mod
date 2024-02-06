@@ -49,7 +49,7 @@ require (
 	k8s.io/utils v0.0.0-20230406110748-d93618cff8a2
 	knative.dev/hack v0.0.0-20240201013652-f3881d90c189
 	knative.dev/hack/schema v0.0.0-20240201013652-f3881d90c189
-	knative.dev/pkg v0.0.0-20240201013110-e85c3cf6d5f1
+	knative.dev/pkg v0.0.0-20240205092023-4104e4237f6a
 	knative.dev/reconciler-test v0.0.0-20240202062219-3bf004cddd5c
 	sigs.k8s.io/yaml v1.4.0
 )
@@ -125,7 +125,7 @@ require (
 	golang.org/x/time v0.5.0 // indirect
 	golang.org/x/tools v0.17.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
-	google.golang.org/api v0.159.0 // indirect
+	google.golang.org/api v0.161.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/genproto v0.0.0-20240116215550-a9fa1716bcac // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240122161410-6c6643bf1457 // indirect
