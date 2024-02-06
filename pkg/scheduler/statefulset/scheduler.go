@@ -64,6 +64,7 @@ type Config struct {
 	StatefulSetNamespace string `json:"statefulSetNamespace"`
 	StatefulSetName      string `json:"statefulSetName"`
 
+	ScaleCacheConfig scheduler.ScaleCacheConfig `json:"scaleCacheConfig"`
 	// PodCapacity max capacity for each StatefulSet's pod.
 	PodCapacity int32 `json:"podCapacity"`
 	// Autoscaler refresh period
@@ -87,14 +88,16 @@ func New(ctx context.Context, cfg *Config) (scheduler.Scheduler, error) {
 	podInformer := podinformer.Get(ctx)
 	podLister := podInformer.Lister().Pods(cfg.StatefulSetNamespace)
 
-	stateAccessor := st.NewStateBuilder(ctx, cfg.StatefulSetNamespace, cfg.StatefulSetName, cfg.VPodLister, cfg.PodCapacity, cfg.SchedulerPolicy, cfg.SchedPolicy, cfg.DeschedPolicy, podLister, cfg.NodeLister)
+	scaleCache := scheduler.NewScaleCache(ctx, cfg.StatefulSetNamespace, kubeclient.Get(ctx).AppsV1().StatefulSets(cfg.StatefulSetNamespace), cfg.ScaleCacheConfig)
+
+	stateAccessor := st.NewStateBuilder(ctx, cfg.StatefulSetNamespace, cfg.StatefulSetName, cfg.VPodLister, cfg.PodCapacity, cfg.SchedulerPolicy, cfg.SchedPolicy, cfg.DeschedPolicy, podLister, cfg.NodeLister, scaleCache)
 
 	var getReserved GetReserved
 	cfg.getReserved = func() map[types.NamespacedName]map[string]int32 {
 		return getReserved()
 	}
 
-	autoscaler := newAutoscaler(ctx, cfg, stateAccessor)
+	autoscaler := newAutoscaler(ctx, cfg, stateAccessor, scaleCache)
 
 	var wg sync.WaitGroup
 	wg.Add(1)
