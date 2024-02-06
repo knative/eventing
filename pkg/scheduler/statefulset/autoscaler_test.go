@@ -449,7 +449,7 @@ func TestAutoscaler(t *testing.T) {
 				lsnn = lsn.GetNodeLister()
 			}
 
-			scaleCache := scheduler.NewScaleCache(ctx, testNs)
+			scaleCache := scheduler.NewScaleCache(ctx, testNs, kubeclient.Get(ctx).AppsV1().StatefulSets(testNs), scheduler.ScaleCacheConfig{RefreshPeriod: time.Minute * 5})
 
 			stateAccessor := state.NewStateBuilder(ctx, testNs, sfsName, vpodClient.List, 10, tc.schedulerPolicyType, tc.schedulerPolicy, tc.deschedulerPolicy, lspp, lsnn, scaleCache)
 
@@ -511,7 +511,7 @@ func TestAutoscalerScaleDownToZero(t *testing.T) {
 
 	vpodClient := tscheduler.NewVPodClient()
 	ls := listers.NewListers(nil)
-	scaleCache := scheduler.NewScaleCache(ctx, testNs)
+	scaleCache := scheduler.NewScaleCache(ctx, testNs, kubeclient.Get(ctx).AppsV1().StatefulSets(testNs), scheduler.ScaleCacheConfig{RefreshPeriod: time.Minute * 5})
 	stateAccessor := state.NewStateBuilder(ctx, testNs, sfsName, vpodClient.List, 10, scheduler.MAXFILLUP, &scheduler.SchedulerPolicy{}, &scheduler.SchedulerPolicy{}, nil, ls.GetNodeLister(), scaleCache)
 
 	sfsClient := kubeclient.Get(ctx).AppsV1().StatefulSets(testNs)
@@ -949,7 +949,7 @@ func TestCompactor(t *testing.T) {
 
 			lsp := listers.NewListers(podlist)
 			lsn := listers.NewListers(nodelist)
-			scaleCache := scheduler.NewScaleCache(ctx, testNs)
+			scaleCache := scheduler.NewScaleCache(ctx, testNs, kubeclient.Get(ctx).AppsV1().StatefulSets(testNs), scheduler.ScaleCacheConfig{RefreshPeriod: time.Minute * 5})
 			stateAccessor := state.NewStateBuilder(ctx, testNs, sfsName, vpodClient.List, 10, tc.schedulerPolicyType, tc.schedulerPolicy, tc.deschedulerPolicy, lsp.GetPodLister().Pods(testNs), lsn.GetNodeLister(), scaleCache)
 
 			evictions := make(map[types.NamespacedName][]duckv1alpha1.Placement)

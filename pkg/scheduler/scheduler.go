@@ -26,10 +26,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/cache"
-	clientappsv1 "k8s.io/client-go/kubernetes/typed/apps/v1"
 
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
-	kubeclient "knative.dev/pkg/client/injection/kube/client"
 )
 
 type SchedulerPolicyType string
@@ -124,11 +122,21 @@ type VPod interface {
 	GetResourceVersion() string
 }
 
+type ScaleClient interface {
+	GetScale(ctx context.Context, name string, options metav1.GetOptions) (*autoscalingv1.Scale, error)
+	UpdateScale(ctx context.Context, name string, scale *autoscalingv1.Scale, options metav1.UpdateOptions) (*autoscalingv1.Scale, error)
+}
+
+type ScaleCacheConfig struct {
+	RefreshPeriod time.Duration `json:"refreshPeriod"`
+}
+
 type ScaleCache struct {
-	lock                 sync.RWMutex //protects access to entries, entries itself is concurrency safe, so we only need to ensure that we correctly access the pointer
+	entriesMu            sync.RWMutex // protects access to entries, entries itself is concurrency safe, so we only need to ensure that we correctly access the pointer
 	entries              *cache.Expiring
-	statefulSetClient    clientappsv1.StatefulSetInterface
+	scaleClient          ScaleClient
 	statefulSetNamespace string
+	config               ScaleCacheConfig
 }
 
 type scaleEntry struct {
@@ -136,17 +144,18 @@ type scaleEntry struct {
 	statReplicas int32
 }
 
-func NewScaleCache(ctx context.Context, namespace string) *ScaleCache {
+func NewScaleCache(ctx context.Context, namespace string, scaleClient ScaleClient, config ScaleCacheConfig) *ScaleCache {
 	return &ScaleCache{
 		entries:              cache.NewExpiring(),
-		statefulSetClient:    kubeclient.Get(ctx).AppsV1().StatefulSets(namespace),
+		scaleClient:          scaleClient,
 		statefulSetNamespace: namespace,
+		config:               config,
 	}
 }
 
 func (sc *ScaleCache) GetScale(ctx context.Context, statefulSetName string, options metav1.GetOptions) (*autoscalingv1.Scale, error) {
-	sc.lock.RLock()
-	defer sc.lock.RUnlock()
+	sc.entriesMu.RLock()
+	defer sc.entriesMu.RUnlock()
 
 	if entry, ok := sc.entries.Get(statefulSetName); ok {
 		entry := entry.(scaleEntry)
@@ -164,7 +173,7 @@ func (sc *ScaleCache) GetScale(ctx context.Context, statefulSetName string, opti
 		}, nil
 	}
 
-	scale, err := sc.statefulSetClient.GetScale(ctx, statefulSetName, options)
+	scale, err := sc.scaleClient.GetScale(ctx, statefulSetName, options)
 	if err != nil {
 		return scale, err
 	}
@@ -175,10 +184,10 @@ func (sc *ScaleCache) GetScale(ctx context.Context, statefulSetName string, opti
 }
 
 func (sc *ScaleCache) UpdateScale(ctx context.Context, statefulSetName string, scale *autoscalingv1.Scale, opts metav1.UpdateOptions) (*autoscalingv1.Scale, error) {
-	sc.lock.RLock()
-	defer sc.lock.RUnlock()
+	sc.entriesMu.RLock()
+	defer sc.entriesMu.RUnlock()
 
-	updatedScale, err := sc.statefulSetClient.UpdateScale(ctx, statefulSetName, scale, opts)
+	updatedScale, err := sc.scaleClient.UpdateScale(ctx, statefulSetName, scale, opts)
 	if err != nil {
 		return updatedScale, err
 	}
@@ -189,8 +198,8 @@ func (sc *ScaleCache) UpdateScale(ctx context.Context, statefulSetName string, s
 }
 
 func (sc *ScaleCache) Reset() {
-	sc.lock.Lock()
-	defer sc.lock.Unlock()
+	sc.entriesMu.Lock()
+	defer sc.entriesMu.Unlock()
 
 	sc.entries = cache.NewExpiring()
 }
@@ -201,5 +210,5 @@ func (sc *ScaleCache) setScale(name string, scale *autoscalingv1.Scale) {
 		statReplicas: scale.Status.Replicas,
 	}
 
-	sc.entries.Set(name, entry, time.Minute*5)
+	sc.entries.Set(name, entry, sc.config.RefreshPeriod)
 }
