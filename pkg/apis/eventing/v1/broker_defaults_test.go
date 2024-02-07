@@ -167,8 +167,6 @@ var (
 	}
 )
 
-/// FIXME: add the broker classes consideration into the test cases in this file
-
 func TestBrokerSetDefaults(t *testing.T) {
 	testCases := map[string]struct {
 		initial  Broker

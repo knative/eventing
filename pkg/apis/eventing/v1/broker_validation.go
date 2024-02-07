@@ -55,13 +55,19 @@ func (b *Broker) Validate(ctx context.Context) *apis.FieldError {
 
 // Determine if the namespace allowance based on the given configuration
 func determineNamespaceAllowance(ctx context.Context, brConfig *config.Defaults) context.Context {
+
+	// If there is no configurations set, allow different namespace by default
 	if brConfig == nil || (brConfig.NamespaceDefaultsConfig == nil && brConfig.ClusterDefaultConfig == nil) {
 		return apis.AllowDifferentNamespace(ctx)
 	}
 	namespace := apis.ParentMeta(ctx).Namespace
 	nsConfig := brConfig.NamespaceDefaultsConfig[namespace]
+
+	// Check if the namespace disallows different namespace first
 	if nsConfig == nil || nsConfig.DisallowDifferentNamespaceConfig == nil || !*nsConfig.DisallowDifferentNamespaceConfig {
+		// If there is no namespace specific configuration or DisallowDifferentNamespaceConfig is false, check the cluster level configuration
 		if brConfig.ClusterDefaultConfig == nil || brConfig.ClusterDefaultConfig.DisallowDifferentNamespaceConfig == nil || !*brConfig.ClusterDefaultConfig.DisallowDifferentNamespaceConfig {
+			// If there is no cluster level configuration or DisallowDifferentNamespaceConfig in cluster level is false, allow different namespace
 			return apis.AllowDifferentNamespace(ctx)
 		}
 	}
