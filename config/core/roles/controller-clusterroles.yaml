@@ -32,7 +32,7 @@ rules:
       - "serviceaccounts"
       - "pods"
       - "serviceaccounts/token"
-    verbs: &everything
+    verbs:
       - "get"
       - "list"
       - "create"
@@ -46,7 +46,14 @@ rules:
       - "apps"
     resources:
       - "deployments"
-    verbs: *everything
+    verbs:
+      - "get"
+      - "list"
+      - "create"
+      - "update"
+      - "delete"
+      - "patch"
+      - "watch"
 
   # PingSource controller manipulates Deployment owner reference
   - apiGroups:
@@ -62,7 +69,14 @@ rules:
     resources:
       - "rolebindings"
       - "roles"
-    verbs: *everything
+    verbs:
+      - "get"
+      - "list"
+      - "create"
+      - "update"
+      - "delete"
+      - "patch"
+      - "watch"
 
   # Our own resources and statuses we care about.
   - apiGroups:
@@ -74,7 +88,14 @@ rules:
       - "triggers/status"
       - "eventtypes"
       - "eventtypes/status"
-    verbs: *everything
+    verbs:
+      - "get"
+      - "list"
+      - "create"
+      - "update"
+      - "delete"
+      - "patch"
+      - "watch"
 
   # Eventing resources and finalizers we care about.
   - apiGroups:
@@ -97,7 +118,14 @@ rules:
       - "parallels/status"
       - "subscriptions"
       - "subscriptions/status"
-    verbs: *everything
+    verbs:
+      - "get"
+      - "list"
+      - "create"
+      - "update"
+      - "delete"
+      - "patch"
+      - "watch"
 
   # Flow resources and statuses we care about.
   - apiGroups:
@@ -107,7 +135,14 @@ rules:
       - "sequences/status"
       - "parallels"
       - "parallels/status"
-    verbs: *everything
+    verbs:
+      - "get"
+      - "list"
+      - "create"
+      - "update"
+      - "delete"
+      - "patch"
+      - "watch"
 
   # Messaging resources and finalizers we care about.
   - apiGroups:
@@ -143,4 +178,11 @@ rules:
       - "coordination.k8s.io"
     resources:
       - "leases"
-    verbs: *everything
+    verbs:
+      - "get"
+      - "list"
+      - "create"
+      - "update"
+      - "delete"
+      - "patch"
+      - "watch"

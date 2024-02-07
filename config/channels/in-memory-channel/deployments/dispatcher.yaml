@@ -24,13 +24,14 @@ metadata:
     app.kubernetes.io/name: knative-eventing
 spec:
   selector:
-    matchLabels: &labels
+    matchLabels:
       messaging.knative.dev/channel: in-memory-channel
       messaging.knative.dev/role: dispatcher
   template:
     metadata:
       labels:
-        <<: *labels
+        messaging.knative.dev/channel: in-memory-channel
+        messaging.knative.dev/role: dispatcher
         app.kubernetes.io/component: imc-dispatcher
         app.kubernetes.io/version: devel
         app.kubernetes.io/name: knative-eventing
@@ -40,7 +41,9 @@ spec:
           preferredDuringSchedulingIgnoredDuringExecution:
           - podAffinityTerm:
               labelSelector:
-                matchLabels: *labels
+                matchLabels:
+                  messaging.knative.dev/channel: in-memory-channel
+                  messaging.knative.dev/role: dispatcher
               topologyKey: kubernetes.io/hostname
             weight: 100
       serviceAccountName: imc-dispatcher
@@ -48,7 +51,7 @@ spec:
       containers:
       - name: dispatcher
         image: ko://knative.dev/eventing/cmd/in_memory/channel_dispatcher
-        readinessProbe: &probe
+        readinessProbe:
           failureThreshold: 3
           httpGet:
             path: /healthz
@@ -58,7 +61,14 @@ spec:
           successThreshold: 1
           timeoutSeconds: 1
         livenessProbe:
-          <<: *probe
+          failureThreshold: 3
+          httpGet:
+            path: /healthz
+            port: 8080
+            scheme: HTTP
+          periodSeconds: 2
+          successThreshold: 1
+          timeoutSeconds: 1
           initialDelaySeconds: 5
         env:
           - name: CONFIG_LOGGING_NAME
