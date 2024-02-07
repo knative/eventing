@@ -31,10 +31,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
-	clientappsv1 "k8s.io/client-go/kubernetes/typed/apps/v1"
 	corev1 "k8s.io/client-go/listers/core/v1"
 
-	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/logging"
 
 	"knative.dev/eventing/pkg/scheduler"
@@ -154,34 +152,34 @@ func (s *State) IsSchedulablePod(ordinal int32) bool {
 
 // stateBuilder reconstruct the state from scratch, by listing vpods
 type stateBuilder struct {
-	ctx               context.Context
-	logger            *zap.SugaredLogger
-	vpodLister        scheduler.VPodLister
-	capacity          int32
-	schedulerPolicy   scheduler.SchedulerPolicyType
-	nodeLister        corev1.NodeLister
-	statefulSetClient clientappsv1.StatefulSetInterface
-	statefulSetName   string
-	podLister         corev1.PodNamespaceLister
-	schedPolicy       *scheduler.SchedulerPolicy
-	deschedPolicy     *scheduler.SchedulerPolicy
+	ctx              context.Context
+	logger           *zap.SugaredLogger
+	vpodLister       scheduler.VPodLister
+	capacity         int32
+	schedulerPolicy  scheduler.SchedulerPolicyType
+	nodeLister       corev1.NodeLister
+	statefulSetCache *scheduler.ScaleCache
+	statefulSetName  string
+	podLister        corev1.PodNamespaceLister
+	schedPolicy      *scheduler.SchedulerPolicy
+	deschedPolicy    *scheduler.SchedulerPolicy
 }
 
 // NewStateBuilder returns a StateAccessor recreating the state from scratch each time it is requested
-func NewStateBuilder(ctx context.Context, namespace, sfsname string, lister scheduler.VPodLister, podCapacity int32, schedulerPolicy scheduler.SchedulerPolicyType, schedPolicy *scheduler.SchedulerPolicy, deschedPolicy *scheduler.SchedulerPolicy, podlister corev1.PodNamespaceLister, nodeLister corev1.NodeLister) StateAccessor {
+func NewStateBuilder(ctx context.Context, namespace, sfsname string, lister scheduler.VPodLister, podCapacity int32, schedulerPolicy scheduler.SchedulerPolicyType, schedPolicy *scheduler.SchedulerPolicy, deschedPolicy *scheduler.SchedulerPolicy, podlister corev1.PodNamespaceLister, nodeLister corev1.NodeLister, statefulSetCache *scheduler.ScaleCache) StateAccessor {
 
 	return &stateBuilder{
-		ctx:               ctx,
-		logger:            logging.FromContext(ctx),
-		vpodLister:        lister,
-		capacity:          podCapacity,
-		schedulerPolicy:   schedulerPolicy,
-		nodeLister:        nodeLister,
-		statefulSetClient: kubeclient.Get(ctx).AppsV1().StatefulSets(namespace),
-		statefulSetName:   sfsname,
-		podLister:         podlister,
-		schedPolicy:       schedPolicy,
-		deschedPolicy:     deschedPolicy,
+		ctx:              ctx,
+		logger:           logging.FromContext(ctx),
+		vpodLister:       lister,
+		capacity:         podCapacity,
+		schedulerPolicy:  schedulerPolicy,
+		nodeLister:       nodeLister,
+		statefulSetCache: statefulSetCache,
+		statefulSetName:  sfsname,
+		podLister:        podlister,
+		schedPolicy:      schedPolicy,
+		deschedPolicy:    deschedPolicy,
 	}
 }
 
@@ -191,7 +189,7 @@ func (s *stateBuilder) State(reserved map[types.NamespacedName]map[string]int32)
 		return nil, err
 	}
 
-	scale, err := s.statefulSetClient.GetScale(s.ctx, s.statefulSetName, metav1.GetOptions{})
+	scale, err := s.statefulSetCache.GetScale(s.ctx, s.statefulSetName, metav1.GetOptions{})
 	if err != nil {
 		s.logger.Infow("failed to get statefulset", zap.Error(err))
 		return nil, err
