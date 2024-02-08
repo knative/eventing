@@ -26,7 +26,7 @@ rules:
       - "secrets"
       - "configmaps"
       - "services"
-    verbs: &everything
+    verbs:
       - "get"
       - "list"
       - "create"
@@ -40,7 +40,15 @@ rules:
       - "apps"
     resources:
       - "deployments"
-    verbs: *everything
+    verbs:
+      - "get"
+      - "list"
+      - "create"
+      - "update"
+      - "delete"
+      - "patch"
+      - "watch"
+
 
   # Source resources and statuses we care about.
   - apiGroups:
@@ -58,28 +66,60 @@ rules:
       - "containersources"
       - "containersources/status"
       - "containersources/finalizers"
-    verbs: *everything
+    verbs:
+      - "get"
+      - "list"
+      - "create"
+      - "update"
+      - "delete"
+      - "patch"
+      - "watch"
+
 
   # Knative Services admin
   - apiGroups:
       - serving.knative.dev
     resources:
       - services
-    verbs: *everything
+    verbs:
+      - "get"
+      - "list"
+      - "create"
+      - "update"
+      - "delete"
+      - "patch"
+      - "watch"
+
 
   # EventTypes admin
   - apiGroups:
       - eventing.knative.dev
     resources:
       - eventtypes
-    verbs: *everything
+    verbs:
+      - "get"
+      - "list"
+      - "create"
+      - "update"
+      - "delete"
+      - "patch"
+      - "watch"
+
 
   # Events admin
   - apiGroups:
       - ""
     resources:
       - events
-    verbs: *everything
+    verbs:
+      - "get"
+      - "list"
+      - "create"
+      - "update"
+      - "delete"
+      - "patch"
+      - "watch"
+
 
   # Authorization checker
   - apiGroups:

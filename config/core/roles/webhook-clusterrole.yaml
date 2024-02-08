@@ -75,7 +75,7 @@ rules:
     resources:
       - "mutatingwebhookconfigurations"
       - "validatingwebhookconfigurations"
-    verbs: &everything
+    verbs:
       - "get"
       - "list"
       - "create"
@@ -91,14 +91,30 @@ rules:
       - "sinkbindings"
       - "sinkbindings/status"
       - "sinkbindings/finalizers"
-    verbs: *everything
+    verbs:
+      - "get"
+      - "list"
+      - "create"
+      - "update"
+      - "delete"
+      - "patch"
+      - "watch"
+
 
   # For leader election
   - apiGroups:
       - "coordination.k8s.io"
     resources:
       - "leases"
-    verbs: *everything
+    verbs:
+      - "get"
+      - "list"
+      - "create"
+      - "update"
+      - "delete"
+      - "patch"
+      - "watch"
+
 
   # For creating events
   - apiGroups:
@@ -117,7 +133,15 @@ rules:
       - ""
     resources:
       - "serviceaccounts"
-    verbs: *everything
+    verbs:
+      - "get"
+      - "list"
+      - "create"
+      - "update"
+      - "delete"
+      - "patch"
+      - "watch"
+
   # For the SinkBinding reconciler creating the sinkbinding token secret
   - apiGroups:
       - ""
@@ -129,7 +153,15 @@ rules:
       - ""
     resources:
       - "secrets"
-    verbs: *everything
+    verbs:
+      - "get"
+      - "list"
+      - "create"
+      - "update"
+      - "delete"
+      - "patch"
+      - "watch"
+
 
   # Necessary for conversion webhook. These are copied from the serving
   # TODO: Do we really need all these permissions?
