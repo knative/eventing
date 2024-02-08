@@ -198,7 +198,7 @@ func TestApiserversourceSendEventWithJWTOIDC(t *testing.T) {
 	env.Test(ctx, t, apiserversourcefeatures.ApiserversourceSendEventWithJWT())
 }
 
-func TestApiServerSourceDeployement(t *testing.T) {
+func TestApiServerSourceDeployment(t *testing.T) {
 	t.Parallel()
 
 	ctx, env := global.Environment(

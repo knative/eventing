@@ -823,7 +823,7 @@ func SendsEventsWithRetries() *feature.Feature {
 }
 
 func DeployAPIServerSourceWithNodeSelector() *feature.Feature {
-	f := feature.NewFeatureNamed("deploy")
+	f := feature.NewFeature()
 
 	f.Setup("setup config-features", func(ctx context.Context, t feature.T) {
 		env := environment.FromContext(ctx)
@@ -848,10 +848,6 @@ func DeployAPIServerSourceWithNodeSelector() *feature.Feature {
 		apiserversource.WithResources(v1.APIVersionKindSelector{
 			APIVersion: "sources.knative.dev/v1",
 			Kind:       "PingSource",
-		}),
-		apiserversource.WithNamespaceSelector(&metav1.LabelSelector{
-			MatchLabels:      map[string]string{},
-			MatchExpressions: []metav1.LabelSelectorRequirement{},
 		}),
 	}
 
