@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"sync"
 
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -62,6 +63,9 @@ type pair struct {
 	SysCM  *corev1.ConfigMap
 	UserCm *corev1.ConfigMap
 }
+
+var alreadyExistsCounter = 0
+var alreadyExistsCounterMu = sync.Mutex{}
 
 // PropagateTrustBundles propagates Trust bundles ConfigMaps from the system.Namespace() to the
 // obj namespace.
@@ -128,9 +132,17 @@ func PropagateTrustBundles(ctx context.Context, k8s kubernetes.Interface, trustB
 			expected.OwnerReferences = withOwnerReferences(obj, gvk, []metav1.OwnerReference{})
 
 			if err := createConfigMap(ctx, k8s, expected); err != nil {
+				alreadyExistsCounterMu.Lock()
+
+				alreadyExistsCounter++
 				sBytes, _ := json.Marshal(state)
-				logger.Debugw("PropagateTrustBundles", zap.String("state", string(sBytes)))
-				return fmt.Errorf("%w\n%s", err, string(sBytes))
+				logger.Debugw("PropagateTrustBundles", zap.Int("counter", alreadyExistsCounter), zap.String("state", string(sBytes)))
+
+				err := fmt.Errorf("%w (counter %d)\n%s", err, alreadyExistsCounter, string(sBytes))
+
+				alreadyExistsCounterMu.Unlock()
+
+				return err
 			}
 			continue
 		}
