@@ -19,18 +19,23 @@ package apiserversource
 import (
 	"context"
 	"embed"
+	"fmt"
 	"strings"
 	"time"
 
+	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/k8s"
 
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
+	"knative.dev/pkg/client/injection/kube/client"
 
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/kmeta"
 	"knative.dev/reconciler-test/pkg/manifest"
 )
 
@@ -165,4 +170,97 @@ func labelSelectorToStringMap(selector *metav1.LabelSelector) map[string]interfa
 	}
 
 	return r
+}
+
+func MatchLabels(labels1 map[string]string, labels2 map[string]string) bool {
+	for k, v := range labels1 {
+		if labels2[k] != v {
+			return false
+		}
+	}
+	return true
+}
+
+func TestLabels() map[string]string {
+	return map[string]string{
+		"testkey":  "testvalue",
+		"testkey1": "testvalue1",
+		"testkey2": "testvalue2",
+	}
+}
+
+func VerifyNodeSelectorDeployment(source string) feature.StepFn {
+	return func(ctx context.Context, t feature.T) {
+		env := environment.FromContext(ctx)
+		ns := env.Namespace()
+
+		kubeClient := client.Get(ctx)
+
+		deps, err := kubeClient.AppsV1().Deployments(ns).List(ctx, metav1.ListOptions{})
+		if err != nil {
+			t.Fatalf("error getting deployment: %v", err)
+		}
+
+		var dep appsv1.Deployment
+
+		for _, d := range deps.Items {
+			if kmeta.ChildName(fmt.Sprintf("apiserversource-%s-", source), string(d.GetUID())) == d.Name {
+				dep = d
+			}
+		}
+
+		if !MatchLabels(dep.Spec.Template.Spec.NodeSelector, TestLabels()) {
+			t.Fatalf("NodeSelector labels do not match: %v", dep.Spec.Template.Spec.NodeSelector)
+		}
+	}
+}
+
+func SetupNodeLabels() feature.StepFn {
+	return func(ctx context.Context, t feature.T) {
+		nodes, err := client.Get(ctx).CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+		if err != nil {
+			t.Fatalf("Could not list nodes: %v", err)
+		}
+
+		if len(nodes.Items) == 0 {
+			t.Fatal("No nodes found")
+		}
+
+		node := &nodes.Items[0]
+
+		node.Labels["testkey"] = "testvalue"
+		node.Labels["testkey1"] = "testvalue1"
+		node.Labels["testkey2"] = "testvalue2"
+
+		_, err = client.Get(ctx).CoreV1().Nodes().Update(ctx, node, metav1.UpdateOptions{})
+
+		if err != nil {
+			t.Fatalf("Could not update node: %v", err)
+		}
+	}
+}
+
+func ResetNodeLabels(ctx context.Context, t feature.T) {
+	nodes, err := client.Get(ctx).CoreV1().Nodes().List(ctx, metav1.ListOptions{
+		LabelSelector: "testkey=testvalue,testkey1=testvalue1,testkey2=testvalue2",
+	})
+	if err != nil {
+		t.Fatalf("Could not list nodes: %v", err)
+	}
+
+	if len(nodes.Items) == 0 {
+		t.Fatal("No nodes found")
+	}
+
+	node := &nodes.Items[0]
+
+	delete(node.Labels, "testkey")
+	delete(node.Labels, "testkey1")
+	delete(node.Labels, "testkey2")
+
+	_, err = client.Get(ctx).CoreV1().Nodes().Update(ctx, node, metav1.UpdateOptions{})
+
+	if err != nil {
+		t.Fatalf("Could not update node: %v", err)
+	}
 }
