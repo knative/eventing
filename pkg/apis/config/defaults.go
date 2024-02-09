@@ -109,8 +109,8 @@ func (d *Defaults) GetBrokerConfig(ns string, brokerClassName *string) (*BrokerC
 	}
 
 	// Early return if brokerClassName is provided and valid
-	if brokerClassName != "" {
-		return d.getBrokerConfigByClassName(ns, brokerClassName)
+	if brokerClassName != nil {
+		return d.getBrokerConfigByClassName(ns, *brokerClassName)
 	}
 
 	// Handling empty brokerClassName

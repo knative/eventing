@@ -36,143 +36,266 @@ func TestDefaultsConfigurationFromFile(t *testing.T) {
 	}
 }
 
+//func TestGetBrokerConfig(t *testing.T) {
+//	_, example := ConfigMapsFromTestFile(t, DefaultsConfigName)
+//	defaults, err := NewDefaultsConfigFromConfigMap(example)
+//	if err != nil {
+//		t.Error("NewDefaultsConfigFromConfigMap(example) =", err)
+//	}
+//
+//	// Test cluster default, without given broker class name
+//	// Will use cluster default broker class, as no default namespace config for ns "rando"
+//	// The name should be config-default-cluster-class
+//	c, err := defaults.GetBrokerConfig("rando", nil)
+//	if err != nil {
+//		t.Error("GetBrokerConfig Failed =", err)
+//	}
+//	if c.Name != "config-default-cluster-class" {
+//		t.Error("GetBrokerConfig Failed, wanted config-default-cluster-class, got:", c.Name)
+//	}
+//
+//	// Test cluster default, with given broker class name: cluster-class-2
+//	// Will use the given broker class name with the correspond config from cluster brokerClasses, as no default namespace config for ns "rando"
+//	// The name for the config should be config-cluster-class-2
+//	c, err = defaults.GetBrokerConfig("rando", "cluster-class-2")
+//	if err != nil {
+//		t.Error("GetBrokerConfig Failed =", err)
+//	}
+//	if c.Name != "config-cluster-class-2" {
+//		t.Error("GetBrokerConfig Failed, wanted config-cluster-class-2, got:", c.Name)
+//	}
+//
+//	// Test namespace default, without given broker class name
+//	// Will use the namespace default broker class, and the config exist for this namespace
+//	// The config name should be config-default-namespace-1-class
+//	c, err = defaults.GetBrokerConfig("namespace-1", nil)
+//	if err != nil {
+//		t.Error("GetBrokerConfig Failed =", err)
+//	}
+//	if c.Name != "config-namespace-1-class" {
+//		t.Error("GetBrokerConfig Failed, wanted config-namespace-1-class, got:", c.Name)
+//	}
+//
+//	// Test namespace default, with given broker class name: namespace-1-class-2
+//	// Will use the given broker class name with the correspond config from namespace brokerClasses
+//	// The config name should be config-namespace-1-class-2
+//	c, err = defaults.GetBrokerConfig("namespace-1", "namespace-1-class-2")
+//	if err != nil {
+//		t.Error("GetBrokerConfig Failed =", err)
+//	}
+//	if c.Name != "config-namespace-1-class-2" {
+//		t.Error("GetBrokerConfig Failed, wanted config-namespace-1-class-2, got:", c.Name)
+//	}
+//
+//	// Test namespace default, with given broker class name that doesn't have config in this namespace's brokerClasses
+//	// Will use the cluster config for this broker class. i.e will looking for the config in cluster brokerClasses
+//	// The config name should be config-cluster-class-2
+//	c, err = defaults.GetBrokerConfig("namespace-1", "cluster-class-2")
+//	if err != nil {
+//		t.Error("GetBrokerConfig Failed =", err)
+//	}
+//	if c.Name != "config-cluster-class-2" {
+//		t.Error("GetBrokerConfig Failed, wanted config-cluster-class-2, got:", c.Name)
+//	}
+//
+//	// Test namespace default, specify a broker class name that doesn't exist in this namespace's brokerClasses, but it is cluster's default broker class
+//	// Will use the cluster default broker class config, as no default broker class config is set for this namespace
+//	// The config name should be config-default-cluster-class
+//	c, err = defaults.GetBrokerConfig("namespace-1", "default-cluster-class")
+//	if err != nil {
+//		t.Error("GetBrokerConfig Failed =", err)
+//	}
+//	if c.Name != "config-default-cluster-class" {
+//		t.Error("GetBrokerConfig Failed, wanted config-default-cluster-class, got:", c.Name)
+//	}
+//
+//	// Shared config
+//	// Test namespace default, with given broker class name both have config in this namespace's brokerClasses and cluster brokerClasses
+//	// Will use the given broker class name with the correspond config from namespace brokerClasses. i.e namespace will override cluster config
+//	// The config name should be config-shared-class-in-namespace-1
+//	c, err = defaults.GetBrokerConfig("namespace-1", "shared-class")
+//	if err != nil {
+//		t.Error("GetBrokerConfig Failed =", err)
+//	}
+//	if c.Name != "config-shared-class-in-namespace-1" {
+//		t.Error("GetBrokerConfig Failed, wanted config-shared-class-in-namespace-1, got:", c.Name)
+//	}
+//
+//	// Test namespace default, with given broker class name that doesn't have config in this namespace's brokerClasses, and also doesn't have config in cluster brokerClasses
+//	// Should return the cluster default
+//	// The config name should be config-default-cluster-class
+//	c, err = defaults.GetBrokerConfig("namespace-1", "cluster-class-3")
+//	if err != nil {
+//		t.Error("GetBrokerConfig Failed =", err)
+//	}
+//	if c.Name != "config-default-cluster-class" {
+//		t.Error("GetBrokerConfig Failed, wanted config-default-cluster-class, got:", c.Name)
+//	}
+//
+//	// Test namespace default, without specifying broker class name, and the namespace default broker class's config is not set
+//	// Will use the cluster default broker class config, as no default broker class config is set for this namespace
+//	// The config name should be config-default-cluster-class
+//	c, err = defaults.GetBrokerConfig("namespace-2", nil)
+//	if err != nil {
+//		t.Error("GetBrokerConfig Failed =", err)
+//	}
+//	if c.Name != "config-default-cluster-class" {
+//		t.Error("GetBrokerConfig Failed, wanted config-default-cluster-class, got:", c.Name)
+//	}
+//
+//	// Test namespace default, without specifying broker class name, and nothing for this namespace is set
+//	// Will use the cluster default broker class config, as nothing is setted for this namespace
+//	// The config name should be config-default-cluster-class
+//	c, err = defaults.GetBrokerConfig("namespace-3", nil)
+//	if err != nil {
+//		t.Error("GetBrokerConfig Failed =", err)
+//	}
+//	if c.Name != "config-default-cluster-class" {
+//		t.Error("GetBrokerConfig Failed, wanted config-default-cluster-class, got:", c.Name)
+//	}
+//
+//	// Nil and empty tests
+//	var nilDefaults *Defaults
+//	_, err = nilDefaults.GetBrokerConfig("rando", nil)
+//	if err == nil {
+//		t.Errorf("GetBrokerConfig did not fail with nil")
+//	}
+//	if err.Error() != "Defaults are nil" {
+//		t.Error("GetBrokerConfig did not fail with nil msg, got", err)
+//	}
+//
+//	emptyDefaults := Defaults{}
+//	_, err = emptyDefaults.GetBrokerConfig("rando", nil)
+//	if err == nil {
+//		t.Errorf("GetBrokerConfig did not fail with empty")
+//	}
+//
+//	if err.Error() != "Defaults for Broker Configurations have not been set up." {
+//		t.Error("GetBrokerConfig did not fail with non-setup msg, got", err)
+//	}
+//}
+
 func TestGetBrokerConfig(t *testing.T) {
 	_, example := ConfigMapsFromTestFile(t, DefaultsConfigName)
 	defaults, err := NewDefaultsConfigFromConfigMap(example)
 	if err != nil {
-		t.Error("NewDefaultsConfigFromConfigMap(example) =", err)
+		t.Fatal("NewDefaultsConfigFromConfigMap(example) failed:", err)
 	}
 
-	// Test cluster default, without given broker class name
-	// Will use cluster default broker class, as no default namespace config for ns "rando"
-	// The name should be config-default-cluster-class
-	c, err := defaults.GetBrokerConfig("rando", "")
-	if err != nil {
-		t.Error("GetBrokerConfig Failed =", err)
-	}
-	if c.Name != "config-default-cluster-class" {
-		t.Error("GetBrokerConfig Failed, wanted config-default-cluster-class, got:", c.Name)
-	}
-
-	// Test cluster default, with given broker class name: cluster-class-2
-	// Will use the given broker class name with the correspond config from cluster brokerClasses, as no default namespace config for ns "rando"
-	// The name for the config should be config-cluster-class-2
-	c, err = defaults.GetBrokerConfig("rando", "cluster-class-2")
-	if err != nil {
-		t.Error("GetBrokerConfig Failed =", err)
-	}
-	if c.Name != "config-cluster-class-2" {
-		t.Error("GetBrokerConfig Failed, wanted config-cluster-class-2, got:", c.Name)
-	}
-
-	// Test namespace default, without given broker class name
-	// Will use the namespace default broker class, and the config exist for this namespace
-	// The config name should be config-default-namespace-1-class
-	c, err = defaults.GetBrokerConfig("namespace-1", "")
-	if err != nil {
-		t.Error("GetBrokerConfig Failed =", err)
-	}
-	if c.Name != "config-namespace-1-class" {
-		t.Error("GetBrokerConfig Failed, wanted config-namespace-1-class, got:", c.Name)
-	}
-
-	// Test namespace default, with given broker class name: namespace-1-class-2
-	// Will use the given broker class name with the correspond config from namespace brokerClasses
-	// The config name should be config-namespace-1-class-2
-	c, err = defaults.GetBrokerConfig("namespace-1", "namespace-1-class-2")
-	if err != nil {
-		t.Error("GetBrokerConfig Failed =", err)
-	}
-	if c.Name != "config-namespace-1-class-2" {
-		t.Error("GetBrokerConfig Failed, wanted config-namespace-1-class-2, got:", c.Name)
-	}
-
-	// Test namespace default, with given broker class name that doesn't have config in this namespace's brokerClasses
-	// Will use the cluster config for this broker class. i.e will looking for the config in cluster brokerClasses
-	// The config name should be config-cluster-class-2
-	c, err = defaults.GetBrokerConfig("namespace-1", "cluster-class-2")
-	if err != nil {
-		t.Error("GetBrokerConfig Failed =", err)
-	}
-	if c.Name != "config-cluster-class-2" {
-		t.Error("GetBrokerConfig Failed, wanted config-cluster-class-2, got:", c.Name)
-	}
-
-	// Test namespace default, specify a broker class name that doesn't exist in this namespace's brokerClasses, but it is cluster's default broker class
-	// Will use the cluster default broker class config, as no default broker class config is set for this namespace
-	// The config name should be config-default-cluster-class
-	c, err = defaults.GetBrokerConfig("namespace-1", "default-cluster-class")
-	if err != nil {
-		t.Error("GetBrokerConfig Failed =", err)
-	}
-	if c.Name != "config-default-cluster-class" {
-		t.Error("GetBrokerConfig Failed, wanted config-default-cluster-class, got:", c.Name)
-	}
-
-	// Shared config
-	// Test namespace default, with given broker class name both have config in this namespace's brokerClasses and cluster brokerClasses
-	// Will use the given broker class name with the correspond config from namespace brokerClasses. i.e namespace will override cluster config
-	// The config name should be config-shared-class-in-namespace-1
-	c, err = defaults.GetBrokerConfig("namespace-1", "shared-class")
-	if err != nil {
-		t.Error("GetBrokerConfig Failed =", err)
-	}
-	if c.Name != "config-shared-class-in-namespace-1" {
-		t.Error("GetBrokerConfig Failed, wanted config-shared-class-in-namespace-1, got:", c.Name)
+	tests := []struct {
+		name            string
+		namespace       string
+		brokerClassName *string
+		wantConfigName  string
+		wantErrMessage  string
+	}{
+		{
+			name:           "Cluster default without broker class name",
+			namespace:      "rando",
+			wantConfigName: "config-default-cluster-class",
+		},
+		{
+			name:            "Cluster default with given broker class name",
+			namespace:       "rando",
+			brokerClassName: stringPtr("cluster-class-2"),
+			wantConfigName:  "config-cluster-class-2",
+		},
+		{
+			name:           "Namespace default without broker class name",
+			namespace:      "namespace-1",
+			wantConfigName: "config-namespace-1-class",
+		},
+		{
+			name:            "Namespace default with given broker class name: namespace-1-class-2",
+			namespace:       "namespace-1",
+			brokerClassName: stringPtr("namespace-1-class-2"),
+			wantConfigName:  "config-namespace-1-class-2",
+		},
+		{
+			name:            "Namespace default with given broker class name that doesn't have config but cluster does have",
+			namespace:       "namespace-1",
+			brokerClassName: stringPtr("cluster-class-2"),
+			wantConfigName:  "config-cluster-class-2",
+		},
+		{
+			name:            "Namespace default, specify a broker class name that is cluster's default",
+			namespace:       "namespace-1",
+			brokerClassName: stringPtr("default-cluster-class"),
+			wantConfigName:  "config-default-cluster-class",
+		},
+		{
+			name:            "Shared config in namespace overrides cluster",
+			namespace:       "namespace-1",
+			brokerClassName: stringPtr("shared-class"),
+			wantConfigName:  "config-shared-class-in-namespace-1",
+		},
+		{
+			name:            "Namespace default with non-existent broker class name",
+			namespace:       "namespace-1",
+			brokerClassName: stringPtr("cluster-class-3"),
+			wantConfigName:  "config-default-cluster-class",
+		},
+		{
+			name:           "Namespace without specifying broker class name, default config not set",
+			namespace:      "namespace-2",
+			wantConfigName: "config-default-cluster-class",
+		},
+		{
+			name:           "Namespace without specifying broker class name, nothing set for namespace",
+			namespace:      "namespace-3",
+			wantConfigName: "config-default-cluster-class",
+		},
+		{
+			name:           "Nil Defaults",
+			wantErrMessage: "Defaults are nil",
+		},
+		{
+			name:           "Empty Defaults",
+			namespace:      "rando",
+			wantErrMessage: "Defaults for Broker Configurations have not been set up.",
+		},
 	}
 
-	// Test namespace default, with given broker class name that doesn't have config in this namespace's brokerClasses, and also doesn't have config in cluster brokerClasses
-	// Should return the cluster default
-	// The config name should be config-default-cluster-class
-	c, err = defaults.GetBrokerConfig("namespace-1", "cluster-class-3")
-	if err != nil {
-		t.Error("GetBrokerConfig Failed =", err)
-	}
-	if c.Name != "config-default-cluster-class" {
-		t.Error("GetBrokerConfig Failed, wanted config-default-cluster-class, got:", c.Name)
-	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var c *BrokerConfig
+			var err error
 
-	// Test namespace default, without specifying broker class name, and the namespace default broker class's config is not set
-	// Will use the cluster default broker class config, as no default broker class config is set for this namespace
-	// The config name should be config-default-cluster-class
-	c, err = defaults.GetBrokerConfig("namespace-2", "")
-	if err != nil {
-		t.Error("GetBrokerConfig Failed =", err)
-	}
-	if c.Name != "config-default-cluster-class" {
-		t.Error("GetBrokerConfig Failed, wanted config-default-cluster-class, got:", c.Name)
-	}
+			// Special handling for the nil and empty defaults test cases
+			if tt.wantErrMessage != "" {
+				if tt.wantErrMessage == "Defaults are nil" {
+					var nilDefaults *Defaults
+					c, err = nilDefaults.GetBrokerConfig(tt.namespace, tt.brokerClassName)
+				} else {
+					emptyDefaults := Defaults{}
+					c, err = emptyDefaults.GetBrokerConfig(tt.namespace, tt.brokerClassName)
+				}
+			} else {
+				c, err = defaults.GetBrokerConfig(tt.namespace, tt.brokerClassName)
+			}
 
-	// Test namespace default, without specifying broker class name, and nothing for this namespace is set
-	// Will use the cluster default broker class config, as nothing is setted for this namespace
-	// The config name should be config-default-cluster-class
-	c, err = defaults.GetBrokerConfig("namespace-3", "")
-	if err != nil {
-		t.Error("GetBrokerConfig Failed =", err)
-	}
-	if c.Name != "config-default-cluster-class" {
-		t.Error("GetBrokerConfig Failed, wanted config-default-cluster-class, got:", c.Name)
-	}
+			// Check for expected errors
+			if tt.wantErrMessage != "" {
+				if err == nil || err.Error() != tt.wantErrMessage {
+					t.Errorf("Expected error %q, got %q", tt.wantErrMessage, err)
+				}
+				return
+			}
 
-	// Nil and empty tests
-	var nilDefaults *Defaults
-	_, err = nilDefaults.GetBrokerConfig("rando", "")
-	if err == nil {
-		t.Errorf("GetBrokerConfig did not fail with nil")
-	}
-	if err.Error() != "Defaults are nil" {
-		t.Error("GetBrokerConfig did not fail with nil msg, got", err)
-	}
+			if err != nil {
+				t.Errorf("Unexpected error: %v", err)
+				return
+			}
 
-	emptyDefaults := Defaults{}
-	_, err = emptyDefaults.GetBrokerConfig("rando", "")
-	if err == nil {
-		t.Errorf("GetBrokerConfig did not fail with empty")
+			if c.Name != tt.wantConfigName {
+				t.Errorf("Got config name %q, want %q", c.Name, tt.wantConfigName)
+			}
+		})
 	}
+}
 
-	if err.Error() != "Defaults for Broker Configurations have not been set up." {
-		t.Error("GetBrokerConfig did not fail with non-setup msg, got", err)
-	}
+func stringPtr(s string) *string {
+	return &s
 }
 
 func TestGetBrokerClass(t *testing.T) {
