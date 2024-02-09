@@ -132,7 +132,7 @@ type ScaleCacheConfig struct {
 }
 
 func (c ScaleCacheConfig) withDefaults() ScaleCacheConfig {
-	n := ScaleCacheConfig{}
+	n := ScaleCacheConfig{RefreshPeriod: c.RefreshPeriod}
 	if c.RefreshPeriod == 0 {
 		n.RefreshPeriod = 5 * time.Minute
 	}
