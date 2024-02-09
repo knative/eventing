@@ -25,13 +25,14 @@ spec:
   # when set to 0 (and only 0) will be set to 1 when the first PingSource is created.
   replicas: 0
   selector:
-    matchLabels: &labels
+    matchLabels:
       eventing.knative.dev/source: ping-source-controller
       sources.knative.dev/role: adapter
   template:
     metadata:
       labels:
-        <<: *labels
+        eventing.knative.dev/source: ping-source-controller
+        sources.knative.dev/role: adapter
         app.kubernetes.io/component: pingsource-mt-adapter
         app.kubernetes.io/version: devel
         app.kubernetes.io/name: knative-eventing
@@ -41,7 +42,9 @@ spec:
           preferredDuringSchedulingIgnoredDuringExecution:
           - podAffinityTerm:
               labelSelector:
-                matchLabels: *labels
+                matchLabels:
+                  eventing.knative.dev/source: ping-source-controller
+                  sources.knative.dev/role: adapter
               topologyKey: kubernetes.io/hostname
             weight: 100
       enableServiceLinks: false

@@ -24,13 +24,14 @@ metadata:
     app.kubernetes.io/name: knative-eventing
 spec:
   selector:
-    matchLabels: &labels
+    matchLabels:
       messaging.knative.dev/channel: in-memory-channel
       messaging.knative.dev/role: controller
   template:
     metadata:
       labels:
-        <<: *labels
+        messaging.knative.dev/channel: in-memory-channel
+        messaging.knative.dev/role: controller
         app.kubernetes.io/component: imc-controller
         app.kubernetes.io/version: devel
         app.kubernetes.io/name: knative-eventing
@@ -40,7 +41,9 @@ spec:
           preferredDuringSchedulingIgnoredDuringExecution:
           - podAffinityTerm:
               labelSelector:
-                matchLabels: *labels
+                matchLabels:
+                  messaging.knative.dev/channel: in-memory-channel
+                  messaging.knative.dev/role: controller
               topologyKey: kubernetes.io/hostname
             weight: 100
       serviceAccountName: imc-controller
@@ -88,7 +91,7 @@ spec:
         - name: https-webhook
           containerPort: 8443
 
-        readinessProbe: &probe
+        readinessProbe:
           periodSeconds: 1
           httpGet:
             scheme: HTTPS
@@ -97,7 +100,13 @@ spec:
               - name: k-kubelet-probe
                 value: "webhook"
         livenessProbe:
-          <<: *probe
+          periodSeconds: 1
+          httpGet:
+            scheme: HTTPS
+            port: 8443
+            httpHeaders:
+              - name: k-kubelet-probe
+                value: "webhook"
           initialDelaySeconds: 120
 
       # Our webhook should gracefully terminate by lame ducking first, set this to a sufficiently

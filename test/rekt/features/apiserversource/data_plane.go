@@ -28,10 +28,10 @@ import (
 
 	"knative.dev/eventing/pkg/eventingtls/eventingtlstesting"
 	"knative.dev/eventing/test/rekt/resources/addressable"
+	"knative.dev/eventing/test/rekt/resources/configmap"
 
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"k8s.io/apimachinery/pkg/util/sets"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/feature"
@@ -279,7 +279,7 @@ func SendsEventsWithEventTypes() *feature.Feature {
 
 	f := new(feature.Feature)
 
-	//Install the broker
+	// Install the broker
 	brokerName := feature.MakeRandomK8sName("broker")
 	f.Setup("install broker", broker.Install(brokerName, broker.WithEnvConfig()...))
 	f.Setup("broker is ready", broker.IsReady(brokerName))
@@ -822,6 +822,48 @@ func SendsEventsWithRetries() *feature.Feature {
 	return f
 }
 
+func DeployAPIServerSourceWithNodeSelector() *feature.Feature {
+	f := feature.NewFeature()
+
+	f.Setup("setup config-features", func(ctx context.Context, t feature.T) {
+		env := environment.FromContext(ctx)
+		ns := env.Namespace()
+		configmap.Install("config-features", ns)
+	})
+	f.Setup("setup node labels", apiserversource.SetupNodeLabels())
+
+	source := feature.MakeRandomK8sName("apiserversource")
+	sink := feature.MakeRandomK8sName("sink")
+
+	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
+
+	sacmName := feature.MakeRandomK8sName("apiserversource")
+	f.Setup("Create Service Account for ApiServerSource with RBAC for sources.knative.dev/v1 PingSources",
+		setupAccountAndRoleForPingSources(sacmName))
+
+	cfg := []manifest.CfgFn{
+		apiserversource.WithServiceAccountName(sacmName),
+		apiserversource.WithEventMode("Reference"),
+		apiserversource.WithSink(service.AsDestinationRef(sink)),
+		apiserversource.WithResources(v1.APIVersionKindSelector{
+			APIVersion: "sources.knative.dev/v1",
+			Kind:       "PingSource",
+		}),
+	}
+
+	f.Requirement("install ApiServerSource", apiserversource.Install(source, cfg...))
+	f.Requirement("ApiServerSource goes ready", apiserversource.IsReady(source))
+
+	f.Stable("ApiServerSource using nodeSelector").Must("must use it from config-features", apiserversource.VerifyNodeSelectorDeployment(source))
+
+	f.Teardown("reset resources", func(ctx context.Context, t feature.T) {
+		f.DeleteResources(ctx, t)
+		apiserversource.ResetNodeLabels(ctx, t)
+	})
+
+	return f
+}
+
 func SendsEventsWithBrokerAsSinkTLS() *feature.Feature {
 	src := feature.MakeRandomK8sName("apiserversource")
 	sacmName := feature.MakeRandomK8sName("apiserversource")
@@ -902,5 +944,4 @@ func SendsEventsWithBrokerAsSinkTLS() *feature.Feature {
 	)
 
 	return f
-
 }

@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .name }}
+  namespace: {{ .namespace }}
+  labels:
+    knative.dev/config-propagation: original
+    knative.dev/config-category: eventing
+data:
+  _example: |
+    my-enabled-flag: "enabled"
+    my-disabled-flag: "disabled"
+    my-allowed-flag: "allowed"
+    apiserversources.nodeselector.testkey: testvalue
+    apiserversources.nodeselector.testkey1: testvalue1
+    apiserversources.nodeselector.testkey2: testvalue2
+

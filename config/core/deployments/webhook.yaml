@@ -23,13 +23,14 @@ metadata:
     app.kubernetes.io/name: knative-eventing
 spec:
   selector:
-    matchLabels: &labels
+    matchLabels:
       app: eventing-webhook
       role: eventing-webhook
   template:
     metadata:
       labels:
-        <<: *labels
+        app: eventing-webhook
+        role: eventing-webhook
         app.kubernetes.io/component: eventing-webhook
         app.kubernetes.io/version: devel
         app.kubernetes.io/name: knative-eventing
@@ -110,7 +111,7 @@ spec:
         - name: profiling
           containerPort: 8008
 
-        readinessProbe: &probe
+        readinessProbe:
           periodSeconds: 1
           httpGet:
             scheme: HTTPS
@@ -119,7 +120,13 @@ spec:
             - name: k-kubelet-probe
               value: "webhook"
         livenessProbe:
-          <<: *probe
+          periodSeconds: 1
+          httpGet:
+            scheme: HTTPS
+            port: 8443
+            httpHeaders:
+              - name: k-kubelet-probe
+                value: "webhook"
           initialDelaySeconds: 120
 
       # Our webhook should gracefully terminate by lame ducking first, set this to a sufficiently
