@@ -158,6 +158,11 @@ func (d *Defaults) getClusterDefaultBrokerConfig(brokerClassName string) (*Broke
 		return d.ClusterDefaultConfig.BrokerConfig, nil
 	}
 
+	// Check if the brokerClassName is the default broker class for the whole cluster
+	if d.ClusterDefaultConfig.DefaultBrokerClass == brokerClassName {
+		return d.ClusterDefaultConfig.BrokerConfig, nil
+	}
+
 	if config, ok := d.ClusterDefaultConfig.BrokerClasses[brokerClassName]; ok && config != nil {
 		return config, nil
 	}
