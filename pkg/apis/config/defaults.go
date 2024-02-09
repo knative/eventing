@@ -103,7 +103,7 @@ type BrokerConfig struct {
 	Delivery           *eventingduckv1.DeliverySpec `json:"delivery,omitempty"`
 }
 
-func (d *Defaults) GetBrokerConfig(ns string, brokerClassName string) (*BrokerConfig, error) {
+func (d *Defaults) GetBrokerConfig(ns string, brokerClassName *string) (*BrokerConfig, error) {
 	if d == nil {
 		return nil, errors.New("Defaults are nil")
 	}
