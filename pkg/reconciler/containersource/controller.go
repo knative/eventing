@@ -19,9 +19,19 @@ package containersource
 import (
 	"context"
 
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/cache"
 	configmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap/filtered"
+	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/system"
+
+	kubeclient "knative.dev/pkg/client/injection/kube/client"
+	deploymentinformer "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment"
+	serviceaccountinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount/filtered"
+	"knative.dev/pkg/configmap"
+	"knative.dev/pkg/controller"
+	"knative.dev/pkg/logging"
 
 	"knative.dev/eventing/pkg/apis/feature"
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
@@ -31,14 +41,6 @@ import (
 	sinkbindinginformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1/sinkbinding"
 	v1containersource "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1/containersource"
 	"knative.dev/eventing/pkg/eventingtls"
-	eventingreconciler "knative.dev/eventing/pkg/reconciler"
-
-	kubeclient "knative.dev/pkg/client/injection/kube/client"
-	deploymentinformer "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment"
-	serviceaccountinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount/filtered"
-	"knative.dev/pkg/configmap"
-	"knative.dev/pkg/controller"
-	"knative.dev/pkg/logging"
 )
 
 // NewController creates a Reconciler for ContainerSource and returns the result of NewImpl.
@@ -94,8 +96,28 @@ func NewController(
 	})
 
 	trustBundleConfigMapInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: eventingreconciler.FilterWithNamespace(system.Namespace()),
-		Handler:    controller.HandleAll(globalResync),
+		Handler: controller.HandleAll(func(i interface{}) {
+
+			obj, err := kmeta.DeletionHandlingAccessor(i)
+			if err != nil {
+				return
+			}
+			if obj.GetNamespace() == system.Namespace() {
+				globalResync(i)
+				return
+			}
+
+			sources, err := containersourceInformer.Lister().ContainerSources(obj.GetNamespace()).List(labels.Everything())
+			if err != nil {
+				return
+			}
+			for _, src := range sources {
+				impl.EnqueueKey(types.NamespacedName{
+					Namespace: src.Namespace,
+					Name:      src.Name,
+				})
+			}
+		}),
 	})
 
 	return impl
