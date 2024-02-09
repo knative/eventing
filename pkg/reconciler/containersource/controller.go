@@ -95,30 +95,27 @@ func NewController(
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 
-	trustBundleConfigMapInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		Handler: controller.HandleAll(func(i interface{}) {
+	trustBundleConfigMapInformer.Informer().AddEventHandler(controller.HandleAll(func(i interface{}) {
+		obj, err := kmeta.DeletionHandlingAccessor(i)
+		if err != nil {
+			return
+		}
+		if obj.GetNamespace() == system.Namespace() {
+			globalResync(i)
+			return
+		}
 
-			obj, err := kmeta.DeletionHandlingAccessor(i)
-			if err != nil {
-				return
-			}
-			if obj.GetNamespace() == system.Namespace() {
-				globalResync(i)
-				return
-			}
-
-			sources, err := containersourceInformer.Lister().ContainerSources(obj.GetNamespace()).List(labels.Everything())
-			if err != nil {
-				return
-			}
-			for _, src := range sources {
-				impl.EnqueueKey(types.NamespacedName{
-					Namespace: src.Namespace,
-					Name:      src.Name,
-				})
-			}
-		}),
-	})
+		sources, err := containersourceInformer.Lister().ContainerSources(obj.GetNamespace()).List(labels.Everything())
+		if err != nil {
+			return
+		}
+		for _, src := range sources {
+			impl.EnqueueKey(types.NamespacedName{
+				Namespace: src.Namespace,
+				Name:      src.Name,
+			})
+		}
+	}))
 
 	return impl
 }

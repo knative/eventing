@@ -162,29 +162,27 @@ func NewController(
 	// do a periodic reync of all sinkbindings to renew the token secrets eventually
 	go periodicResync(ctx, globalResync)
 
-	trustBundleConfigMapInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		Handler: controller.HandleAll(func(i interface{}) {
-			obj, err := kmeta.DeletionHandlingAccessor(i)
-			if err != nil {
-				return
-			}
-			if obj.GetNamespace() == system.Namespace() {
-				globalResync()
-				return
-			}
+	trustBundleConfigMapInformer.Informer().AddEventHandler(controller.HandleAll(func(i interface{}) {
+		obj, err := kmeta.DeletionHandlingAccessor(i)
+		if err != nil {
+			return
+		}
+		if obj.GetNamespace() == system.Namespace() {
+			globalResync()
+			return
+		}
 
-			sbs, err := sbInformer.Lister().SinkBindings(obj.GetNamespace()).List(labels.Everything())
-			if err != nil {
-				return
-			}
-			for _, sb := range sbs {
-				impl.EnqueueKey(types.NamespacedName{
-					Namespace: sb.Namespace,
-					Name:      sb.Name,
-				})
-			}
-		}),
-	})
+		sbs, err := sbInformer.Lister().SinkBindings(obj.GetNamespace()).List(labels.Everything())
+		if err != nil {
+			return
+		}
+		for _, sb := range sbs {
+			impl.EnqueueKey(types.NamespacedName{
+				Namespace: sb.Namespace,
+				Name:      sb.Name,
+			})
+		}
+	}))
 
 	return impl
 }
