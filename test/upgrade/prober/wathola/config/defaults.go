@@ -57,6 +57,7 @@ func defaultValues() *Config {
 			Port: port,
 			Teardown: ReceiverTeardownConfig{
 				Duration: 3 * time.Second,
+				Interval: 1 * time.Second,
 			},
 			Progress: ReceiverProgressConfig{
 				Duration: time.Second,
