@@ -111,9 +111,7 @@ func (f *finishedStore) RegisterFinished(finished *Finished) {
 
 	log.Infof("waiting additional %v to be sure all events came", timeout)
 
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-	if err := wait.PollUntilContextCancel(ctx, interval, true /*immediate*/, func(context.Context) (bool, error) {
+	if err := wait.PollUntilContextTimeout(context.Background(), interval, timeout, true /*immediate*/, func(context.Context) (bool, error) {
 		return f.steps.Count() == finished.EventsSent ||
 			// If sending was interrupted, tolerate one more received
 			// event as there's no way to check if the last event is delivered or not.
