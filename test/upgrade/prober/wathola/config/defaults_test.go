@@ -26,4 +26,7 @@ func TestDefaultValues(t *testing.T) {
 	assert.Condition(t, func() (success bool) {
 		return Instance.Receiver.Teardown.Duration.Seconds() >= 1
 	})
+	assert.Condition(t, func() (success bool) {
+		return Instance.Receiver.Teardown.Interval.Seconds() >= 1
+	})
 }
