@@ -152,9 +152,8 @@ func AutoCreateEventTypesOnContainerSource() *feature.Feature {
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 
-	kref := service.AsKReference(sink)
 	destination := &duckv1.Destination{
-		Ref: kref,
+		Ref: service.AsKReference(sink),
 	}
 	f.Setup("install containersource", containersource.Install(sourceName, containersource.WithSink(destination)))
 

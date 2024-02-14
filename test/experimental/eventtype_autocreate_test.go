@@ -16,7 +16,6 @@ limitations under the License.
 
 package experimental
 
-//go:generate go.work
 
 import (
 	"testing"
