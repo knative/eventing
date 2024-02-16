@@ -17,7 +17,7 @@ limitations under the License.
 package graph
 
 import (
-	eventingv1beta2 "knative.dev/eventing/pkg/apis/eventing/v1beta2"
+	eventingv1beta3 "knative.dev/eventing/pkg/apis/eventing/v1beta3"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
@@ -39,10 +39,12 @@ type Edge struct {
 	to        *Vertex
 }
 
-type TransformFunction func(et *eventingv1beta2.EventType, tfc TransformFunctionContext) (*eventingv1beta2.EventType, TransformFunctionContext)
+type TransformFunction func(et *eventingv1beta3.EventType, tfc TransformFunctionContext) (*eventingv1beta3.EventType, TransformFunctionContext)
 
 // TODO(cali0707): flesh this out more, know we need it, not sure what needs to be in it yet
-type TransformFunctionContext interface{}
+type TransformFunctionContext struct{}
+
+func (t TransformFunctionContext) DeepCopy() TransformFunctionContext { return t } // TODO(cali0707) implement this once we have fleshed out the transform function context struct
 
 func (g *Graph) Vertices() []*Vertex {
 	return g.vertices
@@ -97,7 +99,7 @@ func (v *Vertex) AddEdge(to *Vertex, edgeRef *duckv1.KReference, transform Trans
 
 }
 
-func (e *Edge) Transform(et *eventingv1beta2.EventType, tfc TransformFunctionContext) (*eventingv1beta2.EventType, TransformFunctionContext) {
+func (e *Edge) Transform(et *eventingv1beta3.EventType, tfc TransformFunctionContext) (*eventingv1beta3.EventType, TransformFunctionContext) {
 	if et == nil {
 		return nil, tfc
 	}
@@ -117,6 +119,6 @@ func (e *Edge) Reference() *duckv1.KReference {
 	return e.self
 }
 
-func NoTransform(et *eventingv1beta2.EventType, tfc TransformFunctionContext) (*eventingv1beta2.EventType, TransformFunctionContext) {
+func NoTransform(et *eventingv1beta3.EventType, tfc TransformFunctionContext) (*eventingv1beta3.EventType, TransformFunctionContext) {
 	return et, tfc
 }

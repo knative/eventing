@@ -17,26 +17,31 @@ limitations under the License.
 package graph
 
 import (
-	eventingv1beta2 "knative.dev/eventing/pkg/apis/eventing/v1beta2"
+	eventingv1beta3 "knative.dev/eventing/pkg/apis/eventing/v1beta3"
 )
 
 // computes the lineage from the given vertex with the given input eventtype
-func (v *Vertex) Lineage(et *eventingv1beta2.EventType, tfc TransformFunctionContext) *Vertex {
+func (v *Vertex) Lineage(et *eventingv1beta3.EventType, tfc TransformFunctionContext) *Vertex {
 	toExplore := v.OutEdges()
 	v.Visit()
 	res := v.NewWithSameRef()
 	for i := 0; i < len(toExplore); i++ {
-		e := toExplore[i]
-		if e.To().Visited() {
+		edge := toExplore[i]
+		if edge.To().Visited() {
+			res.AddEdge(edge.To().NewWithSameRef(), edge.Reference(), NoTransform)
 			continue
 		}
 
 		// transform -> nil implies that the path can't be traversed with the current transform and/or context
-		if et, tfc := e.Transform(et, tfc); et != nil {
-			res.AddEdge(e.To().Lineage(et, tfc), e.Reference(), NoTransform)
+		if et, tfc := edge.Transform(et, tfc); et != nil {
+			res.AddEdge(edge.To().Lineage(et.DeepCopy(), tfc.DeepCopy()), edge.Reference(), NoTransform)
 		}
 	}
 	// the narrowed eventtype and/or transform function context could be different from a different path, so we have to unvisit before exploring another path
 	v.Unvisit()
 	return res
+}
+
+func MakeEmptyEventType() *eventingv1beta3.EventType {
+	return &eventingv1beta3.EventType{}
 }
