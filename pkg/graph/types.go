@@ -26,7 +26,7 @@ type Graph struct {
 }
 
 type Vertex struct {
-	self     *duckv1.KReference
+	self     *duckv1.Destination
 	inEdges  []*Edge
 	outEdges []*Edge
 	visited  bool
@@ -34,7 +34,7 @@ type Vertex struct {
 
 type Edge struct {
 	transform TransformFunction
-	self      *duckv1.KReference
+	self      *duckv1.Destination
 	from      *Vertex
 	to        *Vertex
 }
@@ -64,7 +64,7 @@ func (v *Vertex) OutDegree() int {
 	return len(v.outEdges)
 }
 
-func (v *Vertex) Reference() *duckv1.KReference {
+func (v *Vertex) Reference() *duckv1.Destination {
 	return v.self
 }
 
@@ -94,7 +94,7 @@ func (v *Vertex) NewWithSameRef() *Vertex {
 	}
 }
 
-func (v *Vertex) AddEdge(to *Vertex, edgeRef *duckv1.KReference, transform TransformFunction) {
+func (v *Vertex) AddEdge(to *Vertex, edgeRef *duckv1.Destination, transform TransformFunction) {
 	v.outEdges = append(v.outEdges, &Edge{from: v, to: to, transform: transform, self: edgeRef})
 
 }
@@ -115,7 +115,7 @@ func (e *Edge) To() *Vertex {
 	return e.to
 }
 
-func (e *Edge) Reference() *duckv1.KReference {
+func (e *Edge) Reference() *duckv1.Destination {
 	return e.self
 }
 
