@@ -20,8 +20,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"time"
+
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/pkg/kmeta"
