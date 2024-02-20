@@ -9,11 +9,9 @@ require (
 	github.com/cloudevents/sdk-go/sql/v2 v2.15.2
 	github.com/cloudevents/sdk-go/v2 v2.15.2
 	github.com/coreos/go-oidc/v3 v3.9.0
-	github.com/go-jose/go-jose/v3 v3.0.3
-	github.com/golang/protobuf v1.5.4
+	github.com/go-jose/go-jose/v3 v3.0.1
 	github.com/google/go-cmp v0.6.0
 	github.com/google/gofuzz v1.2.0
-	github.com/google/mako v0.0.0-20190821191249-122f8dcef9e3
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.1
 	github.com/hashicorp/go-cleanhttp v0.5.1
@@ -27,9 +25,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/rickb777/date v1.13.0
 	github.com/robfig/cron/v3 v3.0.1
-	github.com/rogpeppe/fastuuid v1.2.0
 	github.com/stretchr/testify v1.8.4
-	github.com/tsenart/vegeta/v12 v12.11.1
 	github.com/wavesoftware/go-ensure v1.0.0
 	go.opencensus.io v0.24.0
 	go.opentelemetry.io/otel v1.24.0
@@ -39,18 +35,16 @@ require (
 	go.uber.org/zap v1.27.0
 	golang.org/x/net v0.22.0
 	golang.org/x/sync v0.6.0
-	google.golang.org/grpc v1.62.1
-	google.golang.org/protobuf v1.33.0
-	k8s.io/api v0.29.2
-	k8s.io/apiextensions-apiserver v0.29.2
-	k8s.io/apimachinery v0.29.2
-	k8s.io/apiserver v0.29.2
-	k8s.io/client-go v0.29.2
-	k8s.io/utils v0.0.0-20240102154912-e7106e64919e
-	knative.dev/hack v0.0.0-20240318013248-424e75ed769a
-	knative.dev/hack/schema v0.0.0-20240318013248-424e75ed769a
-	knative.dev/pkg v0.0.0-20240325103648-fd7cc2153e6a
-	knative.dev/reconciler-test v0.0.0-20240319090330-d3a0ae3bd1ba
+	k8s.io/api v0.28.5
+	k8s.io/apiextensions-apiserver v0.28.5
+	k8s.io/apimachinery v0.28.5
+	k8s.io/apiserver v0.28.5
+	k8s.io/client-go v0.28.5
+	k8s.io/utils v0.0.0-20230406110748-d93618cff8a2
+	knative.dev/hack v0.0.0-20240214131420-999d7e6b8495
+	knative.dev/hack/schema v0.0.0-20240214131420-999d7e6b8495
+	knative.dev/pkg v0.0.0-20240219120257-9227ebb57a4e
+	knative.dev/reconciler-test v0.0.0-20240215131156-9b4f572397fe
 	sigs.k8s.io/yaml v1.4.0
 )
 
@@ -83,18 +77,15 @@ require (
 	github.com/go-openapi/swag v0.22.3 // indirect
 	github.com/gobuffalo/flect v1.0.2 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
-	github.com/golang/glog v1.2.0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
+	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/gnostic-models v0.6.8 // indirect
-	github.com/google/go-github/v27 v27.0.6 // indirect
-	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/google/s2a-go v0.1.7 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.2 // indirect
 	github.com/googleapis/gax-go/v2 v2.12.3 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.16.0 // indirect
 	github.com/imdario/mergo v0.3.9 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/influxdata/tdigest v0.0.1 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
@@ -108,7 +99,6 @@ require (
 	github.com/prometheus/procfs v0.12.0 // indirect
 	github.com/prometheus/statsd_exporter v0.22.7 // indirect
 	github.com/rickb777/plural v1.2.1 // indirect
-	github.com/rs/dnscache v0.0.0-20211102005908-e0241e321417 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/spf13/cobra v1.7.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
@@ -130,6 +120,8 @@ require (
 	google.golang.org/genproto v0.0.0-20240213162025-012b6fc9bca9 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240311132316-a219d84964c2 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240314234333-6e1732d8331c // indirect
+	google.golang.org/grpc v1.62.1 // indirect
+	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
