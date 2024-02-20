@@ -43,42 +43,86 @@ func TestEventTypeDefaults(t *testing.T) {
 		"broker empty": {
 			initial: EventType{
 				Spec: EventTypeSpec{
-					Type:   "test-type",
-					Source: testSource,
 					Reference: &duckv1.KReference{
 						APIVersion: "eventing.knative.dev/v1",
 						Kind:       "Broker",
 						Name:       "default",
 					},
-					Schema: testSchema,
+					Attributes: map[string]EventAttributeDefinition{
+						"type": EventAttributeDefinition{
+							Value:    "test-type",
+							Required: true,
+						},
+						"source": EventAttributeDefinition{
+							Value:    testSource.String(),
+							Required: true,
+						},
+						"schema": EventAttributeDefinition{
+							Value:    testSchema.String(),
+							Required: true,
+						},
+					},
 				},
 			},
 			expected: EventType{
 				Spec: EventTypeSpec{
-					Type:   "test-type",
-					Source: testSource,
 					Reference: &duckv1.KReference{
 						APIVersion: "eventing.knative.dev/v1",
 						Kind:       "Broker",
 						Name:       "default",
 					},
-					Schema: testSchema,
+					Attributes: map[string]EventAttributeDefinition{
+						"type": EventAttributeDefinition{
+							Value:    "test-type",
+							Required: true,
+						},
+						"source": EventAttributeDefinition{
+							Value:    testSource.String(),
+							Required: true,
+						},
+						"schema": EventAttributeDefinition{
+							Value:    testSchema.String(),
+							Required: true,
+						},
+					},
 				},
 			},
 		},
 		"broker not set": {
 			initial: EventType{
 				Spec: EventTypeSpec{
-					Type:   "test-type",
-					Source: testSource,
-					Schema: testSchema,
+					Attributes: map[string]EventAttributeDefinition{
+						"type": EventAttributeDefinition{
+							Value:    "test-type",
+							Required: true,
+						},
+						"source": EventAttributeDefinition{
+							Value:    testSource.String(),
+							Required: true,
+						},
+						"schema": EventAttributeDefinition{
+							Value:    testSchema.String(),
+							Required: true,
+						},
+					},
 				},
 			},
 			expected: EventType{
 				Spec: EventTypeSpec{
-					Type:   "test-type",
-					Source: testSource,
-					Schema: testSchema,
+					Attributes: map[string]EventAttributeDefinition{
+						"type": EventAttributeDefinition{
+							Value:    "test-type",
+							Required: true,
+						},
+						"source": EventAttributeDefinition{
+							Value:    testSource.String(),
+							Required: true,
+						},
+						"schema": EventAttributeDefinition{
+							Value:    testSchema.String(),
+							Required: true,
+						},
+					},
 				},
 			},
 		},
