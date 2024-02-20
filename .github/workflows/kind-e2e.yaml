@@ -25,7 +25,6 @@ jobs:
         - ./test/e2e
         - ./test/conformance
         - ./test/experimental
-        - ./test/auth
 
         # Map between K8s and KinD versions.
         # This is attempting to make it a bit clearer what's being tested.
@@ -110,11 +109,6 @@ jobs:
       if: matrix.test-suite == './test/experimental'
       run: |
         kubectl apply -f ./test/experimental/config
-
-    - name: Apply auth features config
-      if: matrix.test-suite == './test/auth'
-      run: |
-        kubectl apply -f ./test/auth/config
 
     - name: Wait for things to be up
       run: |

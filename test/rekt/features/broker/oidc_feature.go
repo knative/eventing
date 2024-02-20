@@ -1,5 +1,5 @@
 /*
-Copyright 2023 The Knative Authors
+Copyright 2024 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package oidc
+package broker
 
 import (
 	"context"
@@ -48,7 +48,7 @@ func BrokerSendEventWithOIDC() *feature.FeatureSet {
 func BrokerSendEventWithOIDCTokenToSubscriber() *feature.Feature {
 	f := feature.NewFeatureNamed("Broker supports flow with OIDC tokens")
 
-	// TLS is required for OIDC
+	f.Prerequisite("OIDC Authentication is enabled", featureflags.AuthenticationOIDCEnabled())
 	f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
 	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
 
@@ -96,7 +96,7 @@ func BrokerSendEventWithOIDCTokenToSubscriber() *feature.Feature {
 func BrokerSendEventWithOIDCTokenToDLS() *feature.Feature {
 	f := feature.NewFeature()
 
-	// TLS is required for OIDC
+	f.Prerequisite("OIDC Authentication is enabled", featureflags.AuthenticationOIDCEnabled())
 	f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
 	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
 
@@ -158,7 +158,7 @@ func BrokerSendEventWithOIDCTokenToReply() *feature.Feature {
 	//5. The test verifies that the reply reaches the sink with the expected modifications.
 	f := feature.NewFeature()
 
-	// TLS is required for OIDC
+	f.Prerequisite("OIDC Authentication is enabled", featureflags.AuthenticationOIDCEnabled())
 	f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
 	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
 

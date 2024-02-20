@@ -1,5 +1,5 @@
 /*
-Copyright 2023 The Knative Authors
+Copyright 2024 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,49 +14,34 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package oidc
+package parallel
 
 import (
 	"context"
 	"strconv"
 
-	"knative.dev/eventing/test/rekt/features/featureflags"
-
-	cloudevents "github.com/cloudevents/sdk-go/v2"
+	cloudeventsv2 "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/test"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/reconciler/parallel/resources"
+	"knative.dev/eventing/test/rekt/features/featureflags"
 	"knative.dev/eventing/test/rekt/resources/addressable"
 	"knative.dev/eventing/test/rekt/resources/channel_template"
 	"knative.dev/eventing/test/rekt/resources/parallel"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/eventshub"
-	eventasssert "knative.dev/reconciler-test/pkg/eventshub/assert"
+	"knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
 	"knative.dev/reconciler-test/pkg/resources/service"
 )
 
-func ParallelHasAudienceOfInputChannel(parallelName, parallelNamespace string, channelGVR schema.GroupVersionResource, channelKind string) *feature.Feature {
-	f := feature.NewFeatureNamed("Parallel has audience of input channel")
-
-	f.Setup("Parallel goes ready", parallel.IsReady(parallelName))
-
-	expectedAudience := auth.GetAudience(channelGVR.GroupVersion().WithKind(channelKind), metav1.ObjectMeta{
-		Name:      resources.ParallelChannelName(parallelName),
-		Namespace: parallelNamespace,
-	})
-
-	f.Alpha("Parallel").Must("has audience set", parallel.ValidateAddress(parallelName, addressable.AssertAddressWithAudience(expectedAudience)))
-
-	return f
-}
-
 func ParallelWithTwoBranchesOIDC(channelTemplate channel_template.ChannelTemplate) *feature.Feature {
 	f := feature.NewFeatureNamed("Parallel test.")
 
+	f.Prerequisite("OIDC Authentication is enabled", featureflags.AuthenticationOIDCEnabled())
 	f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
 	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
 
@@ -70,7 +55,7 @@ func ParallelWithTwoBranchesOIDC(channelTemplate channel_template.ChannelTemplat
 
 	eventBody := `{"msg":"test msg"}`
 	event := test.FullEvent()
-	_ = event.SetData(cloudevents.ApplicationJSON, []byte(eventBody))
+	_ = event.SetData(cloudeventsv2.ApplicationJSON, []byte(eventBody))
 
 	cfg := []manifest.CfgFn{
 		parallel.WithChannelTemplate(channelTemplate),
@@ -149,17 +134,34 @@ func ParallelWithTwoBranchesOIDC(channelTemplate channel_template.ChannelTemplat
 	))
 
 	f.Stable("test Parallel with two branches and 1 filter").
-		Must("deliver event to subscriber1", eventasssert.OnStore(subscriber1).MatchEvent(test.HasId(event.ID())).AtLeast(1)).
-		Must("deliver event to subscriber2", eventasssert.OnStore(subscriber2).MatchEvent(test.HasId(event.ID())).AtLeast(1)).
-		Must("deliver event to filter1", eventasssert.OnStore(filter1).MatchEvent(test.HasId(event.ID())).AtLeast(1)).
-		Must("deliver event from subscriber 1 to reply", eventasssert.OnStore(sink).
+		Must("deliver event to subscriber1", assert.OnStore(subscriber1).MatchEvent(test.HasId(event.ID())).AtLeast(1)).
+		Must("deliver event to subscriber2", assert.OnStore(subscriber2).MatchEvent(test.HasId(event.ID())).AtLeast(1)).
+		Must("deliver event to filter1", assert.OnStore(filter1).MatchEvent(test.HasId(event.ID())).AtLeast(1)).
+		Must("deliver event from subscriber 1 to reply", assert.OnStore(sink).
 			MatchEvent(test.HasId(event.ID()), test.HasData([]byte("appended data 1"))).
 			AtLeast(1),
 		).
-		Must("deliver event from subscriber 2 to reply", eventasssert.OnStore(sink).
+		Must("deliver event from subscriber 2 to reply", assert.OnStore(sink).
 			MatchEvent(test.HasId(event.ID()), test.HasData([]byte("appended data 2"))).
 			AtLeast(1),
 		)
+
+	return f
+}
+
+func ParallelHasAudienceOfInputChannel(parallelName, parallelNamespace string, channelGVR schema.GroupVersionResource, channelKind string) *feature.Feature {
+	f := feature.NewFeatureNamed("Parallel has audience of input channel")
+
+	f.Prerequisite("OIDC Authentication is enabled", featureflags.AuthenticationOIDCEnabled())
+
+	f.Setup("Parallel goes ready", parallel.IsReady(parallelName))
+
+	expectedAudience := auth.GetAudience(channelGVR.GroupVersion().WithKind(channelKind), metav1.ObjectMeta{
+		Name:      resources.ParallelChannelName(parallelName),
+		Namespace: parallelNamespace,
+	})
+
+	f.Alpha("Parallel").Must("has audience set", parallel.ValidateAddress(parallelName, addressable.AssertAddressWithAudience(expectedAudience)))
 
 	return f
 }
