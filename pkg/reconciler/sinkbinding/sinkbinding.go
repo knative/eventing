@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"time"
 
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/resolver"
@@ -35,7 +37,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/utils/pointer"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/tracker"
 	"knative.dev/pkg/webhook/psbinding"
@@ -91,24 +92,30 @@ func (s *SinkBindingSubResourcesReconciler) Reconcile(ctx context.Context, b psb
 
 	featureFlags := s.featureStore.Load()
 	if featureFlags.IsOIDCAuthentication() {
-		saName := auth.GetOIDCServiceAccountNameForResource(v1.SchemeGroupVersion.WithKind("SinkBinding"), sb.ObjectMeta)
-		sb.Status.Auth = &duckv1.AuthStatus{
-			ServiceAccountName: &saName,
-		}
+		if sb.Status.SinkAudience != nil {
+			saName := auth.GetOIDCServiceAccountNameForResource(v1.SchemeGroupVersion.WithKind("SinkBinding"), sb.ObjectMeta)
+			sb.Status.Auth = &duckv1.AuthStatus{
+				ServiceAccountName: &saName,
+			}
 
-		if err := auth.EnsureOIDCServiceAccountExistsForResource(ctx, s.serviceAccountLister, s.kubeclient, v1.SchemeGroupVersion.WithKind("SinkBinding"), sb.ObjectMeta); err != nil {
-			sb.Status.MarkOIDCIdentityCreatedFailed("Unable to resolve service account for OIDC authentication", "%v", err)
-			return err
-		}
-		sb.Status.MarkOIDCIdentityCreatedSucceeded()
+			if err := auth.EnsureOIDCServiceAccountExistsForResource(ctx, s.serviceAccountLister, s.kubeclient, v1.SchemeGroupVersion.WithKind("SinkBinding"), sb.ObjectMeta); err != nil {
+				sb.Status.MarkOIDCIdentityCreatedFailed("Unable to resolve service account for OIDC authentication", "%v", err)
+				return err
+			}
+			sb.Status.MarkOIDCIdentityCreatedSucceeded()
 
-		err := s.reconcileOIDCTokenSecret(ctx, sb)
-		if err != nil {
-			sb.Status.MarkOIDCTokenSecretCreatedFailed("Unable to reconcile OIDC token secret", "%v", err)
-			return err
+			err := s.reconcileOIDCTokenSecret(ctx, sb)
+			if err != nil {
+				sb.Status.MarkOIDCTokenSecretCreatedFailed("Unable to reconcile OIDC token secret", "%v", err)
+				return err
+			}
+			sb.Status.MarkOIDCTokenSecretCreatedSuccceeded()
+		} else {
+			// sink has no audience set -> don't create token secret
+			sb.Status.MarkOIDCIdentityCreatedSucceededWithReason("Sink has no audience defined", "")
+			sb.Status.MarkOIDCTokenSecretCreatedSuccceededWithReason("Sink has no audience defined", "")
+			sb.Status.OIDCTokenSecretName = nil
 		}
-		sb.Status.MarkOIDCTokenSecretCreatedSuccceeded()
-
 	} else {
 		sb.Status.Auth = nil
 		sb.Status.MarkOIDCIdentityCreatedSucceededWithReason(fmt.Sprintf("%s feature disabled", feature.OIDCAuthentication), "")
@@ -131,10 +138,6 @@ func (*SinkBindingSubResourcesReconciler) ReconcileDeletion(ctx context.Context,
 func (s *SinkBindingSubResourcesReconciler) reconcileOIDCTokenSecret(ctx context.Context, sb *v1.SinkBinding) error {
 	logger := logging.FromContext(ctx)
 	secretName := s.oidcTokenSecretName(sb)
-
-	if sb.Status.SinkAudience == nil {
-		return fmt.Errorf("sinkAudience must be set on %s/%s to generate a OIDC token secret", sb.Name, sb.Namespace)
-	}
 
 	secret, err := s.secretLister.Secrets(sb.Namespace).Get(secretName)
 	if err != nil {
