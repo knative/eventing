@@ -24,7 +24,7 @@ import (
 	"knative.dev/pkg/apis"
 )
 
-func TestPingSourceValidation(t *testing.T) {
+func TestValidation(t *testing.T) {
 	tests := []struct {
 		name   string
 		source JobSink

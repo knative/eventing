@@ -23,7 +23,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-func TestPingSourceSetDefaults(t *testing.T) {
+func TestSetDefaults(t *testing.T) {
 	testCases := map[string]struct {
 		initial  JobSink
 		expected JobSink

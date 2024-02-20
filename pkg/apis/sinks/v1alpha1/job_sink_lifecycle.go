@@ -17,9 +17,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"fmt"
-
-	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/pkg/apis"
 )
@@ -28,26 +25,16 @@ const (
 	// JobSinkConditionReady has status True when the JobSink is ready to send events.
 	JobSinkConditionReady = apis.ConditionReady
 
-	JobSinkConditionAddressable            apis.ConditionType = "Addressable"
+	JobSinkConditionAddressable apis.ConditionType = "Addressable"
 )
 
 var JobSinkCondSet = apis.NewLivingConditionSet(
 	JobSinkConditionAddressable,
 )
 
-const (
-	// PingSourceEventType is the default JobSink CloudEvent type.
-	PingSourceEventType = "dev.knative.sources.ping"
-)
-
 // GetConditionSet retrieves the condition set for this resource. Implements the KRShaped interface.
 func (*JobSink) GetConditionSet() apis.ConditionSet {
 	return JobSinkCondSet
-}
-
-// PingSourceSource returns the JobSink CloudEvent source.
-func PingSourceSource(namespace, name string) string {
-	return fmt.Sprintf("/apis/v1/namespaces/%s/pingsources/%s", namespace, name)
 }
 
 // GetUntypedSpec returns the spec of the JobSink.
@@ -78,12 +65,4 @@ func (s *JobSinkStatus) IsReady() bool {
 // InitializeConditions sets relevant unset conditions to Unknown state.
 func (s *JobSinkStatus) InitializeConditions() {
 	JobSinkCondSet.Manage(s).InitializeConditions()
-}
-
-func (s *JobSinkStatus) PropagateJobStatus(job *batchv1.Job) {
-	if job == nil {
-		return
-	}
-	js := job.Status.DeepCopy()
-	s.FailedJobs = append(s.FailedJobs, *js)
 }

@@ -5326,10 +5326,28 @@ knative.dev/pkg/apis/duck/v1.Status
 </tr>
 <tr>
 <td>
-<code>job</code><br/>
+<code>AddressStatus</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#AddressStatus">
+knative.dev/pkg/apis/duck/v1.AddressStatus
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>AddressStatus</code> are embedded into this type.)
+</p>
+<em>(Optional)</em>
+<p>AddressStatus is the part where the JobSink fulfills the Addressable contract.
+It exposes the endpoint as an URI to get events delivered.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>failedJobs</code><br/>
 <em>
 <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#jobstatus-v1-batch">
-Kubernetes batch/v1.JobStatus
+[]Kubernetes batch/v1.JobStatus
 </a>
 </em>
 </td>

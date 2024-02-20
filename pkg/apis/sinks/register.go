@@ -25,8 +25,8 @@ const (
 )
 
 var (
-	// ApiServerSourceResource respresents a Knative Eventing sink JobSink
-	ApiServerSourceResource = schema.GroupResource{
+	// JobSinkResource respresents a Knative Eventing sink JobSink
+	JobSinkResource = schema.GroupResource{
 		Group:    GroupName,
 		Resource: "jobsinks",
 	}

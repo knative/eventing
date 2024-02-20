@@ -112,10 +112,13 @@ func (in *JobSinkSpec) DeepCopy() *JobSinkSpec {
 func (in *JobSinkStatus) DeepCopyInto(out *JobSinkStatus) {
 	*out = *in
 	in.Status.DeepCopyInto(&out.Status)
-	if in.Job != nil {
-		in, out := &in.Job, &out.Job
-		*out = new(v1.JobStatus)
-		(*in).DeepCopyInto(*out)
+	in.AddressStatus.DeepCopyInto(&out.AddressStatus)
+	if in.FailedJobs != nil {
+		in, out := &in.FailedJobs, &out.FailedJobs
+		*out = make([]v1.JobStatus, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
 	}
 	return
 }
