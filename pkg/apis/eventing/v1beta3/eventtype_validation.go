@@ -29,13 +29,9 @@ func (et *EventType) Validate(ctx context.Context) *apis.FieldError {
 
 func (ets *EventTypeSpec) Validate(ctx context.Context) *apis.FieldError {
 	var errs *apis.FieldError
-	if ets.Type == "" {
-		fe := apis.ErrMissingField("type")
-		errs = errs.Also(fe)
-	}
-	// TODO validate Source is a valid URI.
-	// TODO validate Schema is a valid URI.
-	// There is no validation of the SchemaData, it is application specific data.
+	// TODO: validate attribute with name=source is a valid URI
+	// TODO: validate attribute with name=schema is a valid URI
+	errs = errs.Also(ets.ValidateAttributes())
 	return errs
 }
 
@@ -59,4 +55,30 @@ func (et *EventType) CheckImmutableFields(ctx context.Context, original *EventTy
 		}
 	}
 	return nil
+}
+
+func (ets *EventTypeSpec) ValidateAttributes() *apis.FieldError {
+	var errs *apis.FieldError
+	if _, ok := ets.Attributes["type"]; !ok {
+		errs = errs.Also(&apis.FieldError{
+			Message: "type must be set as an attribute",
+		})
+	}
+	if _, ok := ets.Attributes["source"]; !ok {
+		errs = errs.Also(&apis.FieldError{
+			Message: "source must be set as an attribute",
+		})
+	}
+	if _, ok := ets.Attributes["specversion"]; !ok {
+		errs = errs.Also(&apis.FieldError{
+			Message: "specversion must be set as an attribute",
+		})
+	}
+	if _, ok := ets.Attributes["id"]; !ok {
+		errs = errs.Also(&apis.FieldError{
+			Message: "id must be set as an attribute",
+		})
+	}
+
+	return errs.ViaField("attributes")
 }

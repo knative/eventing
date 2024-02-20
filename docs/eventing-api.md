@@ -3173,73 +3173,6 @@ EventTypeSpec
 <table>
 <tr>
 <td>
-<code>type</code><br/>
-<em>
-string
-</em>
-</td>
-<td>
-<p>Type represents the CloudEvents type. It is authoritative.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>source</code><br/>
-<em>
-<a href="https://pkg.go.dev/knative.dev/pkg/apis#URL">
-knative.dev/pkg/apis.URL
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Source is a URI, it represents the CloudEvents source.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>schema</code><br/>
-<em>
-<a href="https://pkg.go.dev/knative.dev/pkg/apis#URL">
-knative.dev/pkg/apis.URL
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Schema is a URI, it represents the CloudEvents schemaurl extension attribute.
-It may be a JSON schema, a protobuf schema, etc. It is optional.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>schemaData</code><br/>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>SchemaData allows the CloudEvents schema to be stored directly in the
-EventType. Content is dependent on the encoding. Optional attribute.
-The contents are not validated or manipulated by the system.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>broker</code><br/>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Broker refers to the Broker that can provide the EventType.
-Deprecated: This field is deprecated and will be removed in a future release.</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>reference</code><br/>
 <em>
 <a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#KReference">
@@ -3263,6 +3196,19 @@ string
 <td>
 <em>(Optional)</em>
 <p>Description is an optional field used to describe the EventType, in any meaningful way.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>attributes</code><br/>
+<em>
+<a href="#eventing.knative.dev/v1beta3.EventAttributeDefinition">
+map[string]knative.dev/eventing/pkg/apis/eventing/v1beta3.EventAttributeDefinition
+</a>
+</em>
+</td>
+<td>
+<p>Attributes is an array of CloudEvent attributes and extension attributes.</p>
 </td>
 </tr>
 </table>
@@ -3285,6 +3231,49 @@ This data may be out of date.</p>
 </tr>
 </tbody>
 </table>
+<h3 id="eventing.knative.dev/v1beta3.EventAttributeDefinition">EventAttributeDefinition
+</h3>
+<p>
+(<em>Appears on:</em><a href="#eventing.knative.dev/v1beta3.EventTypeSpec">EventTypeSpec</a>)
+</p>
+<p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>required</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Required determines whether this attribute must be set on corresponding CloudEvents.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>value</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Value is a string representing the allowable values for the EventType attribute.
+It may be a single value such as &ldquo;/apis/v1/namespaces/default/pingsource/ps&rdquo;, or it could be a template
+for the allowed values, such as &ldquo;/apis/v1/namespaces/{namespace}/pingsource/{sourceName}.
+To specify a section of the string value which may change between different CloudEvents
+you can use curly brackets {} and optionally a variable name between them.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="eventing.knative.dev/v1beta3.EventTypeSpec">EventTypeSpec
 </h3>
 <p>
@@ -3300,73 +3289,6 @@ This data may be out of date.</p>
 </tr>
 </thead>
 <tbody>
-<tr>
-<td>
-<code>type</code><br/>
-<em>
-string
-</em>
-</td>
-<td>
-<p>Type represents the CloudEvents type. It is authoritative.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>source</code><br/>
-<em>
-<a href="https://pkg.go.dev/knative.dev/pkg/apis#URL">
-knative.dev/pkg/apis.URL
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Source is a URI, it represents the CloudEvents source.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>schema</code><br/>
-<em>
-<a href="https://pkg.go.dev/knative.dev/pkg/apis#URL">
-knative.dev/pkg/apis.URL
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Schema is a URI, it represents the CloudEvents schemaurl extension attribute.
-It may be a JSON schema, a protobuf schema, etc. It is optional.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>schemaData</code><br/>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>SchemaData allows the CloudEvents schema to be stored directly in the
-EventType. Content is dependent on the encoding. Optional attribute.
-The contents are not validated or manipulated by the system.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>broker</code><br/>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Broker refers to the Broker that can provide the EventType.
-Deprecated: This field is deprecated and will be removed in a future release.</p>
-</td>
-</tr>
 <tr>
 <td>
 <code>reference</code><br/>
@@ -3392,6 +3314,19 @@ string
 <td>
 <em>(Optional)</em>
 <p>Description is an optional field used to describe the EventType, in any meaningful way.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>attributes</code><br/>
+<em>
+<a href="#eventing.knative.dev/v1beta3.EventAttributeDefinition">
+map[string]knative.dev/eventing/pkg/apis/eventing/v1beta3.EventAttributeDefinition
+</a>
+</em>
+</td>
+<td>
+<p>Attributes is an array of CloudEvent attributes and extension attributes.</p>
 </td>
 </tr>
 </tbody>
