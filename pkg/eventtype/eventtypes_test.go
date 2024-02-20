@@ -20,6 +20,7 @@ import (
 	"context"
 	"reflect"
 	"testing"
+	"time"
 
 	v2 "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/event"
@@ -94,14 +95,8 @@ func TestEventTypeAutoHandler_AutoCreateEventType(t *testing.T) {
 
 		for i, event := range tc.events {
 
-			err := handler.AutoCreateEventType(ctx, &event, tc.addressable, ownerUID)
-			if err != nil {
-				if tc.expectedError == err {
-					t.Errorf("test case '%s', expected '%s', got '%s'", tc.name, tc.expectedError, err)
-				} else {
-					t.Error(err)
-				}
-			}
+			handler.AutoCreateEventType(ctx, &event, tc.addressable, ownerUID)
+			time.Sleep(time.Millisecond * 500) // autocreate runs in a different goroutine, need to wait for it to finish
 
 			etName := generateEventTypeName(tc.addressable.Name, tc.addressable.Namespace, event.Type(), event.Source())
 			et, err := eventingClient.EventingV1beta2().EventTypes(tc.addressable.Namespace).Get(ctx, etName, metav1.GetOptions{})

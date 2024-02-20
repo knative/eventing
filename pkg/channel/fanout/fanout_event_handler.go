@@ -208,11 +208,7 @@ func (f *FanoutEventHandler) autoCreateEventType(ctx context.Context, evnt event
 			f.logger.Warn("No channelUID provided, unable to autocreate event type")
 			return
 		}
-		err := f.eventTypeHandler.AutoCreateEventType(ctx, &evnt, f.channelRef, *f.channelUID)
-		if err != nil {
-			f.logger.Warn("EventTypeCreate failed")
-			return
-		}
+		f.eventTypeHandler.AutoCreateEventType(ctx, &evnt, f.channelRef, *f.channelUID)
 	}
 }
 
