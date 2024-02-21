@@ -110,6 +110,5 @@ func (h *EventTypeAutoHandler) AutoCreateEventType(ctx context.Context, event *e
 			return
 		}
 		cancel()
-		return
 	}()
 }
