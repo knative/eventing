@@ -30,7 +30,7 @@ source "$(dirname "$0")/e2e-common.sh"
 
 # Script entry point.
 
-initialize "$@" --num-nodes=4
+initialize --cluster-version=${K8S_CLUSTER_VERSION} --num-nodes=4 "$@"
 
 export SKIP_UPLOAD_TEST_IMAGES="true"
 

@@ -39,7 +39,7 @@ function uninstall_test_resources {
   true
 }
 
-initialize "$@"
+initialize --cluster-version=${K8S_CLUSTER_VERSION} "$@"
 
 TIMEOUT=${TIMEOUT:-60m}
 
