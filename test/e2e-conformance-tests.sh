@@ -30,7 +30,7 @@ source "$(dirname "$0")/e2e-common.sh"
 
 # Script entry point.
 
-initialize "$@"
+initialize --cluster-version=${K8S_CLUSTER_VERSION} "$@"
 
 echo "Running Conformance tests for: Multi Tenant Channel Based Broker (v1), Channel (v1), InMemoryChannel (v1) , ApiServerSource (v1), ContainerSource (v1) and PingSource (v1beta2)"
 go_test_e2e -timeout=30m -parallel=12 ./test/conformance \
