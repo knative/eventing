@@ -32,7 +32,7 @@ if [ "$(uname)" == "Darwin" ]; then
 fi
 
 # GKE cluster version
-readonly K8S_CLUSTER_VERSION=1.28
+readonly K8S_CLUSTER_VERSION=1.29
 
 # Eventing main config.
 readonly EVENTING_CONFIG="config/"
