@@ -61,13 +61,22 @@ func DataPlaneChannel(channelName string) *feature.Feature {
 	f.Requirement("Channel is Ready", channel_impl.IsReady(channelName))
 
 	f.Stable("Input").
-		Must("Every Channel MUST expose either an HTTP or HTTPS endpoint.", checkChannelEnpoint).
+		Must("Every Channel MUST expose either an HTTP or HTTPS endpoint.", func(ctx context.Context, t feature.T) {
+			c := getChannelable(ctx, t)
+			addr := *c.Status.AddressStatus.Address
+			checkScheme(t, addr)
+		}).
 		Must("The endpoint(s) MUST conform to 0.3 or 1.0 CloudEvents specification.",
 			channelAcceptsCEVersions).
 		MustNot("The Channel MUST NOT perform an upgrade of the passed in version. It MUST emit the event with the same version.", ShouldNotUpdateVersion).
 		Must("It MUST support Binary Content Mode of the HTTP Protocol Binding for CloudEvents.", channelAcceptsBinaryContentMode).
 		Must("It MUST support Structured Content Mode of the HTTP Protocol Binding for CloudEvents.", channelAcceptsStructuredContentMode).
-		May("Channels MAY expose other, non-HTTP endpoints in addition to HTTP at their discretion.", checkChannelEnpoints).
+		May("Channels MAY expose other, non-HTTP endpoints in addition to HTTP at their discretion.", func(ctx context.Context, t feature.T) {
+			c := getChannelable(ctx, t)
+			for _, addr := range c.Status.AddressStatus.Addresses {
+				checkScheme(t, addr)
+			}
+		}).
 		May("When dispatching the event, the channel MAY use a different HTTP Message mode of the one used by the event.", todo).
 		May("The HTTP(S) endpoint MAY be on any port, not just the standard 80 and 443.", todo)
 
@@ -111,27 +120,12 @@ func DataPlaneChannel(channelName string) *feature.Feature {
 	return f
 }
 
-func checkChannelEnpoint(ctx context.Context, t feature.T) {
-	c := getChannelable(ctx, t)
-	addr := c.Status.AddressStatus.Address.URL
-	if addr == nil {
-		addr = new(apis.URL)
+func checkScheme(t feature.T, addr duckv1.Addressable) {
+	if addr.URL == nil {
+		addr.URL = new(apis.URL)
 	}
-	if addr.Scheme != "http" && addr.Scheme != "https" {
-		t.Fatalf("expected channel scheme to be HTTP or HTTPS, found: %s", addr.Scheme)
-	}
-}
-
-func checkChannelEnpoints(ctx context.Context, t feature.T) {
-	c := getChannelable(ctx, t)
-
-	for _, addr := range c.Status.AddressStatus.Addresses {
-		if addr.URL == nil {
-			addr.URL = new(apis.URL)
-		}
-		if addr.URL.Scheme != "http" && addr.URL.Scheme != "https" {
-			t.Fatalf("expected channel scheme to be HTTP or HTTPS as addons with each other but got: %s", addr.URL.Scheme)
-		}
+	if addr.URL.Scheme != "http" && addr.URL.Scheme != "https" {
+		t.Fatalf("expected channel scheme to be HTTP or HTTPS as addons with each other but got: %s", addr.URL.Scheme)
 	}
 }
 
