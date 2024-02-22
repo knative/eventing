@@ -31,11 +31,13 @@ import (
 	"knative.dev/reconciler-test/pkg/eventshub"
 	eventasssert "knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
+	"knative.dev/reconciler-test/pkg/resources/service"
 	"knative.dev/reconciler-test/pkg/state"
 
 	v1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/test/rekt/features/knconf"
 	"knative.dev/eventing/test/rekt/resources/channel_impl"
+	"knative.dev/eventing/test/rekt/resources/subscription"
 )
 
 func DataPlaneConformance(channelName string) *feature.FeatureSet {
@@ -65,7 +67,9 @@ func DataPlaneChannel(channelName string) *feature.Feature {
 		MustNot("The Channel MUST NOT perform an upgrade of the passed in version. It MUST emit the event with the same version.", ShouldNotUpdateVersion).
 		Must("It MUST support Binary Content Mode of the HTTP Protocol Binding for CloudEvents.", channelAcceptsBinaryContentMode).
 		Must("It MUST support Structured Content Mode of the HTTP Protocol Binding for CloudEvents.", channelAcceptsStructuredContentMode).
-		May("Channels MAY expose other, non-HTTP endpoints in addition to HTTP at their discretion.", checkChannelEnpoints)
+		May("Channels MAY expose other, non-HTTP endpoints in addition to HTTP at their discretion.", checkChannelEnpoints).
+		May("When dispatching the event, the channel MAY use a different HTTP Message mode of the one used by the event.", todo).
+		May("The HTTP(S) endpoint MAY be on any port, not just the standard 80 and 443.", todo)
 
 	f.Stable("Generic").
 		Must("If a Channel receives an event queueing request and is unable to parse a valid CloudEvent, then it MUST reject the request.", channelRejectsMalformedCE)
@@ -108,8 +112,8 @@ func DataPlaneChannel(channelName string) *feature.Feature {
 }
 
 func checkChannelEnpoint(ctx context.Context, t feature.T) {
-	b := getChannelable(ctx, t)
-	addr := b.Status.AddressStatus.Address.URL
+	c := getChannelable(ctx, t)
+	addr := c.Status.AddressStatus.Address.URL
 	if addr == nil {
 		addr = new(apis.URL)
 	}
@@ -119,9 +123,9 @@ func checkChannelEnpoint(ctx context.Context, t feature.T) {
 }
 
 func checkChannelEnpoints(ctx context.Context, t feature.T) {
-	b := getChannelable(ctx, t)
+	c := getChannelable(ctx, t)
 
-	for _, addr := range b.Status.AddressStatus.Addresses {
+	for _, addr := range c.Status.AddressStatus.Addresses {
 		if addr.URL == nil {
 			addr.URL = new(apis.URL)
 		}
@@ -334,6 +338,8 @@ func channelAcceptsStructuredContentMode(ctx context.Context, t feature.T) {
         "message" : "helloworld"
     }
 }`
+	sink := feature.MakeRandomK8sName("sink")
+	eventshub.Install(sink, eventshub.StartReceiver)(ctx, t)
 	source := feature.MakeRandomK8sName("source")
 	eventshub.Install(source,
 		eventshub.StartSenderToResource(channel_impl.GVR(), channelName),
@@ -352,33 +358,29 @@ func channelAcceptsStructuredContentMode(ctx context.Context, t feature.T) {
 }
 
 func ShouldNotUpdateVersion(ctx context.Context, t feature.T) {
-	channel := getChannelable(ctx, t)
+	f := feature.NewFeature()
+	c := getChannelable(ctx, t)
 	source := feature.MakeRandomK8sName("source")
+	sub := feature.MakeRandomK8sName("subscription")
 	sink := feature.MakeRandomK8sName("sink")
 
 	event := test.FullEvent()
 
-	eventshub.Install(sink, eventshub.StartReceiver)(ctx, t)
+	event.SetSpecVersion("0.3")
+
+	f.Setup("install subscription", subscription.Install(sub,
+		subscription.WithChannel(channel_impl.AsRef(c.Name)),
+		subscription.WithSubscriber(service.AsKReference(sink), "", ""),
+	))
+
+	f.Setup("ready", channel_impl.IsReady(c.Name))
+
+	eventshub.Install(sink, eventshub.StartReceiver)
 
 	eventshub.Install(source,
-		eventshub.StartSenderToResource(channel_impl.GVR(), channel.Name),
+		eventshub.StartSenderToResource(channel_impl.GVR(), c.Name),
 		eventshub.InputEvent(event),
 	)(ctx, t)
 
-	store := eventshub.StoreFromContext(ctx, sink)
-
-	events := knconf.Correlate(store.AssertAtLeast(ctx, t, 1, eventasssert.MatchKind(eventshub.EventReceived)))
-
-	for _, e := range events {
-		// Make sure HTTP response code is 405
-		if e.Response.StatusCode != 405 {
-			t.Errorf("Expected statuscode 405 for sequence %d got %d", e.Response.Sequence, e.Response.StatusCode)
-		}
-	}
-
-	passedEvent := events[0].Sent.Event
-
-	if passedEvent.SpecVersion() != event.SpecVersion() {
-		t.Errorf("Expected SpecVersion to be %s but got %s", event.SpecVersion(), passedEvent.SpecVersion)
-	}
+	eventasssert.OnStore(sink).MatchEvent(test.HasSpecVersion("0.3")).AtLeast(1)
 }
