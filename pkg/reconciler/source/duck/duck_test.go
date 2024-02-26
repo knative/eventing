@@ -31,10 +31,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	clientgotesting "k8s.io/client-go/testing"
-	v1 "knative.dev/eventing/pkg/apis/duck/v1"
-	"knative.dev/eventing/pkg/apis/eventing"
-	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
-	"knative.dev/eventing/pkg/reconciler/source/duck/resources"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/source"
@@ -43,8 +39,14 @@ import (
 	logtesting "knative.dev/pkg/logging/testing"
 	"knative.dev/pkg/ptr"
 
-	. "knative.dev/eventing/pkg/reconciler/testing/v1beta2"
+	v1 "knative.dev/eventing/pkg/apis/duck/v1"
+	"knative.dev/eventing/pkg/apis/eventing"
+	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
+	"knative.dev/eventing/pkg/reconciler/source/duck/resources"
+
 	. "knative.dev/pkg/reconciler/testing"
+
+	. "knative.dev/eventing/pkg/reconciler/testing/v1beta2"
 )
 
 const (
@@ -250,6 +252,50 @@ func TestAllCases(t *testing.T) {
 			WantCreates: []runtime.Object{
 				makeEventType("my-type-1", "http://my-source-1"),
 			},
+		}, {
+			Name: "no op",
+			Objects: []runtime.Object{
+				makeSource([]duckv1.CloudEventAttributes{{
+					Type:   "my-type-1",
+					Source: "http://my-source-1",
+				}}),
+				func() runtime.Object {
+					s := makeSourceCRD([]eventTypeEntry{{
+						Type:        "my-type-1",
+						Schema:      "/some-schema-from-crd",
+						Description: "This came from the annotation in a crd for the source.",
+					}})
+					s.Annotations[eventing.EventTypesAnnotationKey] = "something that is not valid json"
+					return s
+				}(),
+				makeEventType("my-type-1", "http://my-source-1"),
+			},
+			Key:         testNS + "/" + sourceName,
+			WantCreates: []runtime.Object{},
+		}, {
+			Name: "no op with namespace",
+			Objects: []runtime.Object{
+				makeSource([]duckv1.CloudEventAttributes{{
+					Type:   "my-type-1",
+					Source: "http://my-source-1",
+				}}),
+				func() runtime.Object {
+					s := makeSourceCRD([]eventTypeEntry{{
+						Type:        "my-type-1",
+						Schema:      "/some-schema-from-crd",
+						Description: "This came from the annotation in a crd for the source.",
+					}})
+					s.Annotations[eventing.EventTypesAnnotationKey] = "something that is not valid json"
+					return s
+				}(),
+				func() runtime.Object {
+					et := makeEventType("my-type-1", "http://my-source-1")
+					et.Spec.Reference.Namespace = testNS
+					return et
+				}(),
+			},
+			Key:         testNS + "/" + sourceName,
+			WantCreates: []runtime.Object{},
 		}}
 
 	logger := logtesting.TestLogger(t)
@@ -340,14 +386,11 @@ func makeSourceCRD(eventTypes []eventTypeEntry) *apix1.CustomResourceDefinition 
 }
 
 func makeEventType(ceType, ceSource string) *v1beta2.EventType {
-	return makeEventTypeWithReference(ceType, ceSource, brokerDest.Ref)
+	return makeEventTypeWithReference(ceType, ceSource, brokerDest.Ref.DeepCopy())
 }
 
 func makeEventTypeWithReference(ceType, ceSource string, ref *duckv1.KReference) *v1beta2.EventType {
 	ceSourceURL, _ := apis.ParseURL(ceSource)
-	if ref.Namespace == "" {
-		ref.Namespace = "default"
-	}
 	return &v1beta2.EventType{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%x", md5.Sum([]byte(ceType+ceSource+sourceUID))),
