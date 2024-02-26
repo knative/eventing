@@ -270,7 +270,7 @@ func TestAllCases(t *testing.T) {
 				}(),
 				makeEventType("my-type-1", "http://my-source-1"),
 			},
-			Key: testNS + "/" + sourceName,
+			Key:         testNS + "/" + sourceName,
 			WantCreates: []runtime.Object{},
 		}, {
 			Name: "no op with namespace",
