@@ -215,9 +215,6 @@ func (r *Reconciler) makeEventTypes(ctx context.Context, src *duckv1.Source) []v
 			CeSchema:    schemaURL,
 			Description: description,
 		})
-		if eventType.Spec.Reference.Namespace == "" {
-			eventType.Spec.Reference.Namespace = defaultNamespace
-		}
 		eventTypes = append(eventTypes, *eventType)
 	}
 	return eventTypes
@@ -235,7 +232,7 @@ func (r *Reconciler) computeDiff(current []v1beta2.EventType, expected []v1beta2
 		if c, ok := currentMap[keyFromEventType(&e)]; !ok {
 			toCreate = append(toCreate, e)
 		} else {
-			if !equality.Semantic.DeepEqual(e.Spec, c.Spec) {
+			if !equality.Semantic.DeepDerivative(e.Spec, c.Spec) {
 				toDelete = append(toDelete, c)
 				toCreate = append(toCreate, e)
 			}
