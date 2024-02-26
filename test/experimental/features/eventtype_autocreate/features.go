@@ -101,6 +101,40 @@ func AutoCreateEventTypesOnBroker(brokerName string) *feature.Feature {
 	return f
 }
 
+func AutoCreateEventTypesOnTrigger(brokerName string) *feature.Feature {
+	f := feature.NewFeature()
+
+	event := cetest.FullEvent()
+	event.SetType("test.broker.custom.event.type")
+
+	source := feature.MakeRandomK8sName("source")
+	triggerName := feature.MakeRandomK8sName("trigger")
+	sink := feature.MakeRandomK8sName("sink")
+
+	replyType := "reply-type"
+	replySource := "reply-source"
+	replyData := ""
+
+	f.Setup("install sink", eventshub.Install(sink, eventshub.ReplyWithTransformedEvent(replyType, replySource, replyData), eventshub.StartReceiver))
+	f.Setup("install trigger", trigger.Install(triggerName, brokerName, trigger.WithSubscriberFromDestination(service.AsDestinationRef(sink)), trigger.WithFilter(map[string]string{
+		"type": event.Type(),
+	})))
+
+	f.Setup("trigger is ready", trigger.IsReady(triggerName))
+	f.Setup("broker is addressable", k8s.IsAddressable(broker.GVR(), brokerName))
+
+	f.Requirement("install source", eventshub.Install(source,
+		eventshub.StartSenderToResource(broker.GVR(), brokerName),
+		eventshub.InputEvent(event),
+	))
+
+	f.Alpha("broker").
+		Must("deliver events to subscriber", assert.OnStore(sink).MatchEvent(cetest.HasId(event.ID())).AtLeast(1)).
+		Must("create event type referencing the trigger", eventtype.WaitForEventType(eventtype.AssertReferencePresent(trigger.AsKReference(triggerName))))
+
+	return f
+}
+
 func AutoCreateEventTypeEventsFromPingSource() *feature.Feature {
 	source := feature.MakeRandomK8sName("source")
 	sink := feature.MakeRandomK8sName("sink")

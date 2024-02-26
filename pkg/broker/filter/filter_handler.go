@@ -52,6 +52,7 @@ import (
 	"knative.dev/eventing/pkg/eventfilter"
 	"knative.dev/eventing/pkg/eventfilter/attributes"
 	"knative.dev/eventing/pkg/eventfilter/subscriptionsapi"
+	"knative.dev/eventing/pkg/eventtype"
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/reconciler/sugar/trigger/path"
 	"knative.dev/eventing/pkg/tracing"
@@ -78,12 +79,13 @@ type Handler struct {
 
 	eventDispatcher *kncloudevents.Dispatcher
 
-	triggerLister eventinglisters.TriggerLister
-	brokerLister  eventinglisters.BrokerLister
-	logger        *zap.Logger
-	withContext   func(ctx context.Context) context.Context
-	filtersMap    *subscriptionsapi.FiltersMap
-	tokenVerifier *auth.OIDCTokenVerifier
+	triggerLister    eventinglisters.TriggerLister
+	brokerLister     eventinglisters.BrokerLister
+	logger           *zap.Logger
+	withContext      func(ctx context.Context) context.Context
+	filtersMap       *subscriptionsapi.FiltersMap
+	tokenVerifier    *auth.OIDCTokenVerifier
+	EventTypeCreator *eventtype.EventTypeAutoHandler
 }
 
 // NewHandler creates a new Handler and its associated EventReceiver.
@@ -167,6 +169,8 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	h.logger.Info("received event for ref", zap.Any("triggerRef", triggerRef))
+
 	trigger, err := h.getTrigger(triggerRef)
 	if err != nil {
 		h.logger.Info("Unable to get the Trigger", zap.Error(err), zap.Any("triggerRef", triggerRef))
@@ -225,6 +229,7 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 }
 
 func (h *Handler) handleDispatchToReplyRequest(ctx context.Context, trigger *eventingv1.Trigger, writer http.ResponseWriter, request *http.Request, event *event.Event) {
+	h.logger.Info("handling Reply")
 	broker, err := h.brokerLister.Brokers(trigger.Namespace).Get(trigger.Spec.Broker)
 	if err != nil {
 		h.logger.Info("Unable to get the Broker", zap.Error(err))
@@ -248,6 +253,8 @@ func (h *Handler) handleDispatchToReplyRequest(ctx context.Context, trigger *eve
 	}
 
 	h.logger.Info("sending to reply", zap.Any("target", target))
+
+	h.autoCreatEventType(ctx, event, trigger)
 
 	// since the broker-filter acts here like a proxy, we don't filter headers
 	h.send(ctx, writer, request.Header, *target, reportArgs, event, trigger, skipTTL)
@@ -359,6 +366,17 @@ func (h *Handler) handleDispatchToSubscriberRequest(ctx context.Context, trigger
 	h.send(ctx, writer, utils.PassThroughHeaders(request.Header), target, reportArgs, event, trigger, ttl)
 }
 
+func (h *Handler) autoCreatEventType(ctx context.Context, event *cloudevents.Event, t *eventingv1.Trigger) {
+	if h.EventTypeCreator != nil {
+		h.EventTypeCreator.AutoCreateEventType(ctx, event, &duckv1.KReference{
+			Name:       t.GetName(),
+			Namespace:  t.GetNamespace(),
+			APIVersion: "eventing.knative.dev/v1",
+			Kind:       "Trigger"},
+			t.GetUID())
+	}
+}
+
 func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers http.Header, target duckv1.Addressable, reportArgs *ReportArgs, event *cloudevents.Event, t *eventingv1.Trigger, ttl int32) {
 	additionalHeaders := headers.Clone()
 	additionalHeaders.Set(apis.KnNamespaceHeader, t.GetNamespace())
@@ -414,7 +432,7 @@ func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers 
 	h.reporter.ReportEventDispatchTime(reportArgs, dispatchInfo.ResponseCode, dispatchInfo.Duration)
 
 	// If there is an event in the response write it to the response
-	statusCode, err := h.writeResponse(ctx, writer, dispatchInfo, ttl, target.URL.String())
+	statusCode, err := h.writeResponse(ctx, writer, dispatchInfo, ttl, target.URL.String(), t)
 	if err != nil {
 		h.logger.Error("failed to write response", zap.Error(err))
 	}
@@ -422,7 +440,7 @@ func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers 
 }
 
 // The return values are the status
-func (h *Handler) writeResponse(ctx context.Context, writer http.ResponseWriter, dispatchInfo *kncloudevents.DispatchInfo, ttl int32, target string) (int, error) {
+func (h *Handler) writeResponse(ctx context.Context, writer http.ResponseWriter, dispatchInfo *kncloudevents.DispatchInfo, ttl int32, target string, t *eventingv1.Trigger) (int, error) {
 	response := cehttp.NewMessage(dispatchInfo.ResponseHeader, io.NopCloser(bytes.NewReader(dispatchInfo.ResponseBody)))
 	defer response.Finish(nil)
 
@@ -473,6 +491,10 @@ func (h *Handler) writeResponse(ctx context.Context, writer http.ResponseWriter,
 	if err := cehttp.WriteResponseWriter(ctx, eventResponse, dispatchInfo.ResponseCode, writer); err != nil {
 		return http.StatusInternalServerError, fmt.Errorf("failed to write response event: %w", err)
 	}
+
+	h.autoCreatEventType(ctx, event, t)
+
+	h.logger.Info("sending reply", zap.Any("event", event))
 
 	h.logger.Debug("Replied with a CloudEvent response", zap.Any("target", target))
 
