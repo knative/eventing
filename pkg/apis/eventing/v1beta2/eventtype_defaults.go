@@ -18,18 +18,17 @@ package v1beta2
 
 import (
 	"context"
+
+	"knative.dev/pkg/apis"
 )
 
 func (et *EventType) SetDefaults(ctx context.Context) {
+	ctx = apis.WithinParent(ctx, et.ObjectMeta)
 	et.Spec.SetDefaults(ctx)
-	setReferenceNs(et)
 }
 
 func (ets *EventTypeSpec) SetDefaults(ctx context.Context) {
-}
-
-func setReferenceNs(et *EventType) {
-	if et.Spec.Reference != nil && et.Spec.Reference.Namespace == "" {
-		et.Spec.Reference.Namespace = et.GetNamespace()
+	if ets.Reference != nil {
+		ets.Reference.SetDefaults(ctx)
 	}
 }
