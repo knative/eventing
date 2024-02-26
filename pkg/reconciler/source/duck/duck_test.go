@@ -294,7 +294,7 @@ func TestAllCases(t *testing.T) {
 					return et
 				}(),
 			},
-			Key: testNS + "/" + sourceName,
+			Key:         testNS + "/" + sourceName,
 			WantCreates: []runtime.Object{},
 		}}
 
