@@ -107,4 +107,5 @@ func TestTriggerTLSSubscriber(t *testing.T) {
 
 	env.ParallelTest(ctx, t, trigger.TriggerWithTLSSubscriber())
 	env.ParallelTest(ctx, t, trigger.TriggerWithTLSSubscriberTrustBundle())
+	env.ParallelTest(ctx, t, trigger.TriggerWithTLSSubscriberWithAdditionalCATrustBundles())
 }

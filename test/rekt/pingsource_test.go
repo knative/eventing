@@ -61,6 +61,7 @@ func TestPingSourceTLS(t *testing.T) {
 
 	env.ParallelTest(ctx, t, pingsource.SendsEventsTLS())
 	env.ParallelTest(ctx, t, pingsource.SendsEventsTLSTrustBundle())
+	env.ParallelTest(ctx, t, pingsource.SendsEventsTLSWithAdditionalTrustBundle())
 }
 
 func TestPingSourceWithSinkURI(t *testing.T) {

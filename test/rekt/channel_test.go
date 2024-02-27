@@ -382,6 +382,7 @@ func TestInMemoryChannelTLS(t *testing.T) {
 
 	env.ParallelTest(ctx, t, channel.SubscriptionTLS())
 	env.ParallelTest(ctx, t, channel.SubscriptionTLSTrustBundle())
+	env.ParallelTest(ctx, t, channel.SubscriptionTLSWithAdditionalTrustBundle())
 }
 
 func TestChannelImplDispatcherAuthenticatesWithOIDC(t *testing.T) {
