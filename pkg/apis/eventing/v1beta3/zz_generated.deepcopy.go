@@ -113,10 +113,8 @@ func (in *EventTypeSpec) DeepCopyInto(out *EventTypeSpec) {
 	}
 	if in.Attributes != nil {
 		in, out := &in.Attributes, &out.Attributes
-		*out = make(map[string]EventAttributeDefinition, len(*in))
-		for key, val := range *in {
-			(*out)[key] = val
-		}
+		*out = make([]EventAttributeDefinition, len(*in))
+		copy(*out, *in)
 	}
 	return
 }

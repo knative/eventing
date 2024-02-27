@@ -58,17 +58,22 @@ func (et *EventType) CheckImmutableFields(ctx context.Context, original *EventTy
 }
 
 func (ets *EventTypeSpec) ValidateAttributes() *apis.FieldError {
+	attributes := make(map[string]EventAttributeDefinition, len(ets.Attributes))
+	for _, attr := range ets.Attributes {
+		attributes[attr.Name] = attr
+	}
+
 	missingFields := []string{}
-	if _, ok := ets.Attributes["type"]; !ok {
+	if _, ok := attributes["type"]; !ok {
 		missingFields = append(missingFields, "type")
 	}
-	if _, ok := ets.Attributes["source"]; !ok {
+	if _, ok := attributes["source"]; !ok {
 		missingFields = append(missingFields, "source")
 	}
-	if _, ok := ets.Attributes["specversion"]; !ok {
+	if _, ok := attributes["specversion"]; !ok {
 		missingFields = append(missingFields, "specversion")
 	}
-	if _, ok := ets.Attributes["id"]; !ok {
+	if _, ok := attributes["id"]; !ok {
 		missingFields = append(missingFields, "id")
 	}
 

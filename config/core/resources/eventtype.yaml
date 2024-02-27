@@ -58,16 +58,21 @@ spec:
                 type: string
               attributes:
                 description: "CloudEvent attribute and extension attributes."
-                type: object
-                additionalProperties:
+                type: array 
+                items:
                   type: object
+                  required:
+                    - name
                   properties:
-                    required:
-                      description: "Indicates whether the attribute is required."
-                      type: boolean
-                    value:
-                      description: "Value of the attribute. May be a template string using curly brackets {} to represent variable sections of the string."
+                    name:
                       type: string
+                      description: "Name of the CloudEvent attribute."
+                    required:
+                      type: boolean
+                      description: "Indicates whether the attribute is required."
+                    value:
+                      type: string
+                      description: "Value of the attribute. May be a template string using curly brackets {} to represent variable sections of the string."
           status:
             description: 'Status represents the current state of the EventType. This data
                 may be out of date.'

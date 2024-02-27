@@ -48,16 +48,16 @@ func TestEventTypeDefaults(t *testing.T) {
 						Kind:       "Broker",
 						Name:       "default",
 					},
-					Attributes: map[string]EventAttributeDefinition{
-						"type": EventAttributeDefinition{
+					Attributes: []EventAttributeDefinition{
+						EventAttributeDefinition{
 							Value:    "test-type",
 							Required: true,
 						},
-						"source": EventAttributeDefinition{
+						EventAttributeDefinition{
 							Value:    testSource.String(),
 							Required: true,
 						},
-						"schema": EventAttributeDefinition{
+						EventAttributeDefinition{
 							Value:    testSchema.String(),
 							Required: true,
 						},
@@ -71,16 +71,16 @@ func TestEventTypeDefaults(t *testing.T) {
 						Kind:       "Broker",
 						Name:       "default",
 					},
-					Attributes: map[string]EventAttributeDefinition{
-						"type": EventAttributeDefinition{
+					Attributes: []EventAttributeDefinition{
+						EventAttributeDefinition{
 							Value:    "test-type",
 							Required: true,
 						},
-						"source": EventAttributeDefinition{
+						EventAttributeDefinition{
 							Value:    testSource.String(),
 							Required: true,
 						},
-						"schema": EventAttributeDefinition{
+						EventAttributeDefinition{
 							Value:    testSchema.String(),
 							Required: true,
 						},
@@ -91,16 +91,16 @@ func TestEventTypeDefaults(t *testing.T) {
 		"broker not set": {
 			initial: EventType{
 				Spec: EventTypeSpec{
-					Attributes: map[string]EventAttributeDefinition{
-						"type": EventAttributeDefinition{
+					Attributes: []EventAttributeDefinition{
+						EventAttributeDefinition{
 							Value:    "test-type",
 							Required: true,
 						},
-						"source": EventAttributeDefinition{
+						EventAttributeDefinition{
 							Value:    testSource.String(),
 							Required: true,
 						},
-						"schema": EventAttributeDefinition{
+						EventAttributeDefinition{
 							Value:    testSchema.String(),
 							Required: true,
 						},
@@ -109,16 +109,16 @@ func TestEventTypeDefaults(t *testing.T) {
 			},
 			expected: EventType{
 				Spec: EventTypeSpec{
-					Attributes: map[string]EventAttributeDefinition{
-						"type": EventAttributeDefinition{
+					Attributes: []EventAttributeDefinition{
+						EventAttributeDefinition{
 							Value:    "test-type",
 							Required: true,
 						},
-						"source": EventAttributeDefinition{
+						EventAttributeDefinition{
 							Value:    testSource.String(),
 							Required: true,
 						},
-						"schema": EventAttributeDefinition{
+						EventAttributeDefinition{
 							Value:    testSchema.String(),
 							Required: true,
 						},

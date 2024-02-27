@@ -3203,7 +3203,7 @@ string
 <code>attributes</code><br/>
 <em>
 <a href="#eventing.knative.dev/v1beta3.EventAttributeDefinition">
-map[string]knative.dev/eventing/pkg/apis/eventing/v1beta3.EventAttributeDefinition
+[]EventAttributeDefinition
 </a>
 </em>
 </td>
@@ -3246,6 +3246,17 @@ This data may be out of date.</p>
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+<code>name</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Name is the name of the CloudEvents attribute.</p>
+</td>
+</tr>
 <tr>
 <td>
 <code>required</code><br/>
@@ -3321,7 +3332,7 @@ string
 <code>attributes</code><br/>
 <em>
 <a href="#eventing.knative.dev/v1beta3.EventAttributeDefinition">
-map[string]knative.dev/eventing/pkg/apis/eventing/v1beta3.EventAttributeDefinition
+[]EventAttributeDefinition
 </a>
 </em>
 </td>

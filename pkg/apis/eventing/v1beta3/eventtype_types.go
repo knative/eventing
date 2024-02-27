@@ -70,10 +70,12 @@ type EventTypeSpec struct {
 	// +optional
 	Description string `json:"description,omitempty"`
 	// Attributes is an array of CloudEvent attributes and extension attributes.
-	Attributes map[string]EventAttributeDefinition `json:"attributes"`
+	Attributes []EventAttributeDefinition `json:"attributes"`
 }
 
 type EventAttributeDefinition struct {
+	// Name is the name of the CloudEvents attribute.
+	Name string `json:"name"`
 	// Required determines whether this attribute must be set on corresponding CloudEvents.
 	Required bool `json:"required"`
 	// Value is a string representing the allowable values for the EventType attribute.

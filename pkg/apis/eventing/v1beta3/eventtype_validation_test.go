@@ -64,20 +64,24 @@ func TestEventTypeSpecValidation(t *testing.T) {
 				Kind:       "Broker",
 				Name:       "test-broker",
 			},
-			Attributes: map[string]EventAttributeDefinition{
-				"type": {
+			Attributes: []EventAttributeDefinition{
+				{
+					Name:     "type",
 					Value:    "event-type",
 					Required: true,
 				},
-				"source": {
+				{
+					Name:     "source",
 					Value:    testSource.String(),
 					Required: true,
 				},
-				"specversion": {
+				{
+					Name:     "specversion",
 					Value:    "v1",
 					Required: true,
 				},
-				"id": {
+				{
+					Name:     "id",
 					Required: true,
 				},
 			},
@@ -111,20 +115,24 @@ func TestEventTypeImmutableFields(t *testing.T) {
 					Kind:       "Broker",
 					Name:       "test-broker",
 				},
-				Attributes: map[string]EventAttributeDefinition{
-					"type": {
+				Attributes: []EventAttributeDefinition{
+					{
+						Name:     "type",
 						Value:    "test-type",
 						Required: true,
 					},
-					"source": {
+					{
+						Name:     "source",
 						Value:    testSource.String(),
 						Required: true,
 					},
-					"specversion": {
+					{
+						Name:     "specversion",
 						Value:    "v1",
 						Required: true,
 					},
-					"id": {
+					{
+						Name:     "id",
 						Required: true,
 					},
 				},
@@ -137,20 +145,24 @@ func TestEventTypeImmutableFields(t *testing.T) {
 					Kind:       "Broker",
 					Name:       "test-broker",
 				},
-				Attributes: map[string]EventAttributeDefinition{
-					"type": {
+				Attributes: []EventAttributeDefinition{
+					{
+						Name:     "type",
 						Value:    "test-type",
 						Required: true,
 					},
-					"source": {
+					{
+						Name:     "source",
 						Value:    testSource.String(),
 						Required: true,
 					},
-					"specversion": {
+					{
+						Name:     "specversion",
 						Value:    "v1",
 						Required: true,
 					},
-					"id": {
+					{
+						Name:     "id",
 						Required: true,
 					},
 				},
@@ -166,20 +178,24 @@ func TestEventTypeImmutableFields(t *testing.T) {
 					Kind:       "Broker",
 					Name:       "test-broker",
 				},
-				Attributes: map[string]EventAttributeDefinition{
-					"type": {
+				Attributes: []EventAttributeDefinition{
+					{
+						Name:     "type",
 						Value:    "test-type",
 						Required: true,
 					},
-					"source": {
+					{
+						Name:     "source",
 						Value:    testSource.String(),
 						Required: true,
 					},
-					"specversion": {
+					{
+						Name:     "specversion",
 						Value:    "v1",
 						Required: true,
 					},
-					"id": {
+					{
+						Name:     "id",
 						Required: true,
 					},
 				},
@@ -196,20 +212,24 @@ func TestEventTypeImmutableFields(t *testing.T) {
 					Kind:       "Broker",
 					Name:       "test-broker",
 				},
-				Attributes: map[string]EventAttributeDefinition{
-					"type": {
+				Attributes: []EventAttributeDefinition{
+					{
+						Name:     "type",
 						Value:    "test-type",
 						Required: true,
 					},
-					"source": {
+					{
+						Name:     "source",
 						Value:    testSource.String(),
 						Required: true,
 					},
-					"specversion": {
+					{
+						Name:     "specversion",
 						Value:    "v1",
 						Required: true,
 					},
-					"id": {
+					{
+						Name:     "id",
 						Required: true,
 					},
 				},
@@ -222,20 +242,24 @@ func TestEventTypeImmutableFields(t *testing.T) {
 					Kind:       "Broker",
 					Name:       "original-broker",
 				},
-				Attributes: map[string]EventAttributeDefinition{
-					"type": {
+				Attributes: []EventAttributeDefinition{
+					{
+						Name:     "type",
 						Value:    "test-type",
 						Required: true,
 					},
-					"source": {
+					{
+						Name:     "source",
 						Value:    testSource.String(),
 						Required: true,
 					},
-					"specversion": {
+					{
+						Name:     "specversion",
 						Value:    "v1",
 						Required: true,
 					},
-					"id": {
+					{
+						Name:     "id",
 						Required: true,
 					},
 				},
@@ -258,20 +282,24 @@ func TestEventTypeImmutableFields(t *testing.T) {
 					Kind:       "Broker",
 					Name:       "test-broker",
 				},
-				Attributes: map[string]EventAttributeDefinition{
-					"type": {
+				Attributes: []EventAttributeDefinition{
+					{
+						Name:     "type",
 						Value:    "test-type",
 						Required: true,
 					},
-					"source": {
+					{
+						Name:     "source",
 						Value:    testSource.String(),
 						Required: true,
 					},
-					"specversion": {
+					{
+						Name:     "specversion",
 						Value:    "v1",
 						Required: true,
 					},
-					"id": {
+					{
+						Name:     "id",
 						Required: true,
 					},
 				},
@@ -284,20 +312,24 @@ func TestEventTypeImmutableFields(t *testing.T) {
 					Kind:       "Broker",
 					Name:       "test-broker",
 				},
-				Attributes: map[string]EventAttributeDefinition{
-					"type": {
+				Attributes: []EventAttributeDefinition{
+					{
+						Name:     "type",
 						Value:    "original-type",
 						Required: true,
 					},
-					"source": {
+					{
+						Name:     "source",
 						Value:    testSource.String(),
 						Required: true,
 					},
-					"specversion": {
+					{
+						Name:     "specversion",
 						Value:    "v1",
 						Required: true,
 					},
-					"id": {
+					{
+						Name:     "id",
 						Required: true,
 					},
 				},
@@ -306,7 +338,7 @@ func TestEventTypeImmutableFields(t *testing.T) {
 		want: &apis.FieldError{
 			Message: "Immutable fields changed (-old +new)",
 			Paths:   []string{"spec"},
-			Details: `{v1beta3.EventTypeSpec}.Attributes["type"].Value:
+			Details: `{v1beta3.EventTypeSpec}.Attributes[0].Value:
 	-: "original-type"
 	+: "test-type"
 `,
@@ -320,20 +352,24 @@ func TestEventTypeImmutableFields(t *testing.T) {
 					Kind:       "Broker",
 					Name:       "test-broker",
 				},
-				Attributes: map[string]EventAttributeDefinition{
-					"type": {
+				Attributes: []EventAttributeDefinition{
+					{
+						Name:     "type",
 						Value:    "test-type",
 						Required: true,
 					},
-					"source": {
+					{
+						Name:     "source",
 						Value:    testSource.String(),
 						Required: true,
 					},
-					"specversion": {
+					{
+						Name:     "specversion",
 						Value:    "v1",
 						Required: true,
 					},
-					"id": {
+					{
+						Name:     "id",
 						Required: true,
 					},
 				},
@@ -347,20 +383,24 @@ func TestEventTypeImmutableFields(t *testing.T) {
 					Kind:       "Broker",
 					Name:       "test-broker",
 				},
-				Attributes: map[string]EventAttributeDefinition{
-					"type": {
+				Attributes: []EventAttributeDefinition{
+					{
+						Name:     "type",
 						Value:    "test-type",
 						Required: true,
 					},
-					"source": {
+					{
+						Name:     "source",
 						Value:    testSource.String(),
 						Required: true,
 					},
-					"specversion": {
+					{
+						Name:     "specversion",
 						Value:    "v1",
 						Required: true,
 					},
-					"id": {
+					{
+						Name:     "id",
 						Required: true,
 					},
 				},
