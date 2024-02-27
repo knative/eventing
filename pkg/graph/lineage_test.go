@@ -64,11 +64,18 @@ func TestSingleVertexLineage(t *testing.T) {
 
 	a.AddEdge(b, nil, NoTransform)
 	b.AddEdge(c, nil, func(et *eventingv1beta3.EventType, tfc TransformFunctionContext) (*eventingv1beta3.EventType, TransformFunctionContext) {
-		if et.Spec.Type == "" {
-			et.Spec.Type = "example.type"
+		eventType := ""
+		for _, attr := range et.Spec.Attributes {
+			if attr.Name == "type" {
+				eventType = attr.Value
+			}
+		}
+		if eventType == "" {
+			eventType = "example.type"
+			et.Spec.Attributes = append(et.Spec.Attributes, eventingv1beta3.EventAttributeDefinition{Name: "type", Value: eventType, Required: true})
 		}
 
-		if et.Spec.Type != "example.type" {
+		if eventType != "example.type" {
 			return nil, tfc
 		}
 
@@ -76,11 +83,18 @@ func TestSingleVertexLineage(t *testing.T) {
 	})
 	b.AddEdge(d, nil, NoTransform)
 	c.AddEdge(d, nil, func(et *eventingv1beta3.EventType, tfc TransformFunctionContext) (*eventingv1beta3.EventType, TransformFunctionContext) {
-		if et.Spec.Type == "" {
-			et.Spec.Type = "some.other.type"
+		eventType := ""
+		for _, attr := range et.Spec.Attributes {
+			if attr.Name == "type" {
+				eventType = attr.Value
+			}
+		}
+		if eventType == "" {
+			eventType = "some.other.type"
+			et.Spec.Attributes = append(et.Spec.Attributes, eventingv1beta3.EventAttributeDefinition{Name: "type", Value: eventType, Required: true})
 		}
 
-		if et.Spec.Type != "some.other.type" {
+		if eventType != "some.other.type" {
 			return nil, tfc
 		}
 
