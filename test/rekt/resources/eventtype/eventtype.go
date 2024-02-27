@@ -18,16 +18,17 @@ package eventtype
 
 import (
 	"context"
-	"time"
+	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
-	eventingv1beta2 "knative.dev/eventing/pkg/apis/eventing/v1beta2"
-	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/k8s"
+
+	eventingv1beta2 "knative.dev/eventing/pkg/apis/eventing/v1beta2"
+	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 )
 
 type EventType struct {
@@ -35,12 +36,29 @@ type EventType struct {
 	EventTypes func(etl eventingv1beta2.EventTypeList) (bool, error)
 }
 
-func WaitForEventType(eventtype EventType, timing ...time.Duration) feature.StepFn {
+func (et EventType) And(eventType EventType) EventType {
+	return EventType{
+		Name: fmt.Sprintf("%s and %s", et.Name, eventType.Name),
+		EventTypes: func(etl eventingv1beta2.EventTypeList) (bool, error) {
+			v, err := et.EventTypes(etl)
+			if err != nil || !v {
+				return v, err
+			}
+			return eventType.EventTypes(etl)
+		},
+	}
+}
+
+func WaitForEventType(eventtypes ...EventType) feature.StepFn {
 	return func(ctx context.Context, t feature.T) {
 		env := environment.FromContext(ctx)
-		interval, timeout := k8s.PollTimings(ctx, timing)
+		interval, timeout := k8s.PollTimings(ctx, nil)
 		var lastErr error
 		var lastEtl *eventingv1beta2.EventTypeList
+		eventType := eventtypes[0] // It's fine to panic when is empty
+		for _, et := range eventtypes[1:] {
+			eventType = eventType.And(et)
+		}
 		err := wait.PollImmediate(interval, timeout, func() (done bool, err error) {
 			etl, err := eventingclient.Get(ctx).
 				EventingV1beta2().
@@ -51,10 +69,10 @@ func WaitForEventType(eventtype EventType, timing ...time.Duration) feature.Step
 				return false, nil
 			}
 			lastEtl = etl
-			return eventtype.EventTypes(*etl)
+			return eventType.EventTypes(*etl)
 		})
 		if err != nil {
-			t.Fatalf("failed to verify eventtype %s %v: %v\n%+v\n", eventtype.Name, err, lastErr, lastEtl)
+			t.Fatalf("failed to verify eventtype %s %v: %v\n%+v\n", eventType.Name, err, lastErr, lastEtl)
 		}
 
 	}
@@ -62,7 +80,7 @@ func WaitForEventType(eventtype EventType, timing ...time.Duration) feature.Step
 
 func AssertPresent(expectedCeTypes sets.Set[string]) EventType {
 	return EventType{
-		Name: "test eventtypes match or not",
+		Name: "test expected EventTypes",
 		EventTypes: func(etl eventingv1beta2.EventTypeList) (bool, error) {
 			// Clone the expectedCeTypes
 			clonedExpectedCeTypes := expectedCeTypes.Clone()
@@ -70,6 +88,20 @@ func AssertPresent(expectedCeTypes sets.Set[string]) EventType {
 				clonedExpectedCeTypes.Delete(et.Spec.Type) // remove from the cloned set
 			}
 			return clonedExpectedCeTypes.Len() == 0, nil
+		},
+	}
+}
+
+func AssertReady(expectedCeTypes sets.Set[string]) EventType {
+	return EventType{
+		Name: "test EventTypes ready",
+		EventTypes: func(etl eventingv1beta2.EventTypeList) (bool, error) {
+			for _, et := range etl.Items {
+				if expectedCeTypes.Has(et.Spec.Type) && !et.Status.IsReady() {
+					return false, nil
+				}
+			}
+			return true, nil
 		},
 	}
 }

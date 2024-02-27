@@ -20,8 +20,8 @@ set -o nounset
 set -o pipefail
 
 CLUSTER_SUFFIX=${CLUSTER_SUFFIX:-"cluster.local"}
-NODE_VERSION=${NODE_VERSION:-"v1.27.3"}
-NODE_SHA=${NODE_SHA:-"sha256:3966ac761ae0136263ffdb6cfd4db23ef8a83cba8a463690e98317add2c9ba72"}
+NODE_VERSION=${NODE_VERSION:-"v1.28.7"}
+NODE_SHA=${NODE_SHA:-"sha256:9bc6c451a289cf96ad0bbaf33d416901de6fd632415b076ab05f5fa7e4f65c58"}
 
 cat <<EOF | kind create cluster --config=-
 apiVersion: kind.x-k8s.io/v1alpha4

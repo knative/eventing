@@ -70,6 +70,9 @@ func convertLikePatternToRegex(pattern string) (*regexp.Regexp, error) {
 				chunk.Reset()
 				i++
 				continue
+			} else {
+				// if there is an actual literal \ character, we need to include that in the string
+				chunk.WriteRune('\\')
 			}
 		} else if pattern[i] == '_' {
 			// replace with .

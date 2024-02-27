@@ -13,7 +13,8 @@ import (
 
 type logicExpression struct {
 	baseBinaryExpression
-	fn func(x, y bool) bool
+	fn   func(x, y bool) bool
+	verb string
 }
 
 func (s logicExpression) Evaluate(event cloudevents.Event) (interface{}, error) {
@@ -22,12 +23,20 @@ func (s logicExpression) Evaluate(event cloudevents.Event) (interface{}, error) 
 		return nil, err
 	}
 
-	rightVal, err := s.right.Evaluate(event)
+	leftVal, err = utils.Cast(leftVal, cesql.BooleanType)
 	if err != nil {
 		return nil, err
 	}
 
-	leftVal, err = utils.Cast(leftVal, cesql.BooleanType)
+	// Don't bother to check the other expression unless we need to
+	if s.verb == "AND" && leftVal.(bool) == false {
+		return false, nil
+	}
+	if s.verb == "OR" && leftVal.(bool) == true {
+		return true, nil
+	}
+
+	rightVal, err := s.right.Evaluate(event)
 	if err != nil {
 		return nil, err
 	}
@@ -49,6 +58,7 @@ func NewAndExpression(left cesql.Expression, right cesql.Expression) cesql.Expre
 		fn: func(x, y bool) bool {
 			return x && y
 		},
+		verb: "AND",
 	}
 }
 
@@ -61,6 +71,7 @@ func NewOrExpression(left cesql.Expression, right cesql.Expression) cesql.Expres
 		fn: func(x, y bool) bool {
 			return x || y
 		},
+		verb: "OR",
 	}
 }
 
@@ -73,5 +84,6 @@ func NewXorExpression(left cesql.Expression, right cesql.Expression) cesql.Expre
 		fn: func(x, y bool) bool {
 			return x != y
 		},
+		verb: "XOR",
 	}
 }
