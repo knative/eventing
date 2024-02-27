@@ -169,8 +169,6 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	h.logger.Info("received event for ref", zap.Any("triggerRef", triggerRef))
-
 	trigger, err := h.getTrigger(triggerRef)
 	if err != nil {
 		h.logger.Info("Unable to get the Trigger", zap.Error(err), zap.Any("triggerRef", triggerRef))
@@ -229,7 +227,6 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 }
 
 func (h *Handler) handleDispatchToReplyRequest(ctx context.Context, trigger *eventingv1.Trigger, writer http.ResponseWriter, request *http.Request, event *event.Event) {
-	h.logger.Info("handling Reply")
 	broker, err := h.brokerLister.Brokers(trigger.Namespace).Get(trigger.Spec.Broker)
 	if err != nil {
 		h.logger.Info("Unable to get the Broker", zap.Error(err))
@@ -493,8 +490,6 @@ func (h *Handler) writeResponse(ctx context.Context, writer http.ResponseWriter,
 	}
 
 	h.autoCreatEventType(ctx, event, t)
-
-	h.logger.Info("sending reply", zap.Any("event", event))
 
 	h.logger.Debug("Replied with a CloudEvent response", zap.Any("target", target))
 
