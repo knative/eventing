@@ -39,7 +39,7 @@ require (
 	go.uber.org/zap v1.27.0
 	golang.org/x/net v0.21.0
 	golang.org/x/sync v0.6.0
-	google.golang.org/grpc v1.61.1
+	google.golang.org/grpc v1.62.0
 	google.golang.org/protobuf v1.32.0
 	k8s.io/api v0.29.2
 	k8s.io/apiextensions-apiserver v0.29.2
@@ -49,8 +49,8 @@ require (
 	k8s.io/utils v0.0.0-20240102154912-e7106e64919e
 	knative.dev/hack v0.0.0-20240222141347-5f0998e65262
 	knative.dev/hack/schema v0.0.0-20240222141347-5f0998e65262
-	knative.dev/pkg v0.0.0-20240226072014-32e13c4925ed
-	knative.dev/reconciler-test v0.0.0-20240226112256-310e7fb72b6c
+	knative.dev/pkg v0.0.0-20240227021706-97fb318ab987
+	knative.dev/reconciler-test v0.0.0-20240226163820-6aae49bb7940
 	sigs.k8s.io/yaml v1.4.0
 )
 
@@ -83,7 +83,7 @@ require (
 	github.com/go-openapi/swag v0.22.3 // indirect
 	github.com/gobuffalo/flect v1.0.2 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
-	github.com/golang/glog v1.1.2 // indirect
+	github.com/golang/glog v1.2.0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/google/gnostic-models v0.6.8 // indirect
 	github.com/google/go-github/v27 v27.0.6 // indirect
