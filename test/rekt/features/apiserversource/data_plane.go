@@ -316,7 +316,9 @@ func SendsEventsWithEventTypes() *feature.Feature {
 		Must("delivers events on broker with URI",
 			eventassert.OnStore(sink).MatchEvent(test.HasType("dev.knative.apiserver.resource.update")).AtLeast(1)).
 		Must("ApiServerSource test eventtypes match",
-			eventtype.WaitForEventType(eventtype.AssertPresent(expectedCeTypes)))
+			eventtype.WaitForEventType(
+				eventtype.AssertReady(expectedCeTypes),
+				eventtype.AssertPresent(expectedCeTypes)))
 
 	return f
 }

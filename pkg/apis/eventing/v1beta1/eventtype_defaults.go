@@ -16,14 +16,22 @@ limitations under the License.
 
 package v1beta1
 
-import "context"
+import (
+	"context"
+
+	"knative.dev/pkg/apis"
+)
 
 func (et *EventType) SetDefaults(ctx context.Context) {
+	ctx = apis.WithinParent(ctx, et.ObjectMeta)
 	et.Spec.SetDefaults(ctx)
 }
 
 func (ets *EventTypeSpec) SetDefaults(ctx context.Context) {
 	if ets.Reference == nil && ets.Broker == "" {
 		ets.Broker = "default"
+	}
+	if ets.Reference != nil {
+		ets.Reference.SetDefaults(ctx)
 	}
 }
