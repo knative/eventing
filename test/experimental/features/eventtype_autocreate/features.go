@@ -74,6 +74,39 @@ func AutoCreateEventTypesOnIMC() *feature.Feature {
 	return f
 }
 
+func AutoCreateEventTypesOnSubscription() *feature.Feature {
+	f := feature.NewFeature()
+
+	event := cetest.FullEvent()
+	event.SetType("test.imc.custom.event.type")
+
+	sender := feature.MakeRandomK8sName("sender")
+	sub := feature.MakeRandomK8sName("subscription")
+	channelName := feature.MakeRandomK8sName("channel")
+	sink := feature.MakeRandomK8sName("sink")
+
+	f.Setup("install sink", eventshub.Install(sink, eventshub.EchoEvent, eventshub.StartReceiver))
+	f.Setup("install channel", channel_impl.Install(channelName))
+	f.Setup("install subscription", subscription.Install(sub,
+		subscription.WithChannel(channel_impl.AsRef(channelName)),
+		subscription.WithSubscriber(service.AsKReference(sink), "", ""),
+	))
+
+	f.Setup("subscription is ready", subscription.IsReady(sub))
+	f.Setup("channel is ready", channel_impl.IsReady(channelName))
+
+	f.Requirement("install event sender", eventshub.Install(sender,
+		eventshub.StartSenderToResource(channel_impl.GVR(), channelName),
+		eventshub.InputEvent(event),
+	))
+
+	f.Alpha("imc").
+		Must("deliver events to subscriber", assert.OnStore(sink).MatchEvent(cetest.HasId(event.ID())).AtLeast(1)).
+		Must("create event type", eventtype.WaitForEventType(eventtype.AssertReferencePresent(subscription.AsKReference(sub))))
+
+	return f
+}
+
 func AutoCreateEventTypesOnBroker(brokerName string) *feature.Feature {
 	f := feature.NewFeature()
 
@@ -102,6 +135,40 @@ func AutoCreateEventTypesOnBroker(brokerName string) *feature.Feature {
 		Must("create event type", eventtype.WaitForEventType(
 			eventtype.AssertReady(expectedTypes),
 			eventtype.AssertExactPresent(expectedTypes)))
+
+	return f
+}
+
+func AutoCreateEventTypesOnTrigger(brokerName string) *feature.Feature {
+	f := feature.NewFeature()
+
+	event := cetest.FullEvent()
+	event.SetType("test.broker.custom.event.type")
+
+	source := feature.MakeRandomK8sName("source")
+	triggerName := feature.MakeRandomK8sName("trigger")
+	sink := feature.MakeRandomK8sName("sink")
+
+	replyType := "reply-type"
+	replySource := "reply-source"
+	replyData := ""
+
+	f.Setup("install sink", eventshub.Install(sink, eventshub.ReplyWithTransformedEvent(replyType, replySource, replyData), eventshub.StartReceiver))
+	f.Setup("install trigger", trigger.Install(triggerName, brokerName, trigger.WithSubscriberFromDestination(service.AsDestinationRef(sink)), trigger.WithFilter(map[string]string{
+		"type": event.Type(),
+	})))
+
+	f.Setup("trigger is ready", trigger.IsReady(triggerName))
+	f.Setup("broker is addressable", k8s.IsAddressable(broker.GVR(), brokerName))
+
+	f.Requirement("install source", eventshub.Install(source,
+		eventshub.StartSenderToResource(broker.GVR(), brokerName),
+		eventshub.InputEvent(event),
+	))
+
+	f.Alpha("broker").
+		Must("deliver events to subscriber", assert.OnStore(sink).MatchEvent(cetest.HasId(event.ID())).AtLeast(1)).
+		Must("create event type referencing the trigger", eventtype.WaitForEventType(eventtype.AssertReferencePresent(trigger.AsKReference(triggerName))))
 
 	return f
 }

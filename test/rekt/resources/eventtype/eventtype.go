@@ -23,6 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/k8s"
@@ -119,6 +120,21 @@ func AssertExactPresent(expectedCeTypes sets.Set[string]) EventType {
 				clonedExpectedCeTypes.Delete(et.Spec.Type) // remove from the cloned set
 			}
 			return clonedExpectedCeTypes.Len() == 0, nil
+		},
+	}
+}
+
+func AssertReferencePresent(expectedReference *duckv1.KReference) EventType {
+	return EventType{
+		Name: "test eventtypes have reference",
+		EventTypes: func(etl eventingv1beta2.EventTypeList) (bool, error) {
+			for _, et := range etl.Items {
+				ref := et.Spec.Reference
+				if ref.APIVersion == expectedReference.APIVersion && ref.Name == expectedReference.Name && ref.Kind == expectedReference.Kind {
+					return true, nil
+				}
+			}
+			return false, nil
 		},
 	}
 }
