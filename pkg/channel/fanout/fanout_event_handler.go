@@ -51,6 +51,9 @@ type Subscription struct {
 	DeadLetter     *duckv1.Addressable
 	RetryConfig    *kncloudevents.RetryConfig
 	ServiceAccount *types.NamespacedName
+	Name           string
+	Namespace      string
+	UID            types.UID
 }
 
 // Config for a fanout.EventHandler.
@@ -167,7 +170,17 @@ func SubscriberSpecToFanoutConfig(sub eventingduckv1.SubscriberSpec) (*Subscript
 		}
 	}
 
-	return &Subscription{Subscriber: destination, Reply: reply, DeadLetter: deadLetter, RetryConfig: retryConfig}, nil
+	s := &Subscription{Subscriber: destination, Reply: reply, DeadLetter: deadLetter, RetryConfig: retryConfig, UID: sub.UID}
+
+	if sub.Name != nil {
+		s.Name = *sub.Name
+	}
+
+	if sub.Namespace != nil {
+		s.Namespace = *sub.Namespace
+	}
+
+	return s, nil
 }
 
 func (f *FanoutEventHandler) SetSubscriptions(ctx context.Context, subs []Subscription) {
@@ -363,6 +376,19 @@ func (f *FanoutEventHandler) makeFanoutRequest(ctx context.Context, event event.
 		kncloudevents.WithReply(sub.Reply),
 		kncloudevents.WithDeadLetterSink(sub.DeadLetter),
 		kncloudevents.WithRetryConfig(sub.RetryConfig),
+	}
+
+	if f.eventTypeHandler != nil && sub.Name != "" && sub.Namespace != "" && sub.UID != types.UID("") {
+		dispatchOptions = append(dispatchOptions, kncloudevents.WithEventTypeAutoHandler(
+			f.eventTypeHandler,
+			&duckv1.KReference{
+				Name:       sub.Name,
+				Namespace:  sub.Namespace,
+				APIVersion: "messaging.knative.dev/v1",
+				Kind:       "Subscription",
+			},
+			sub.UID,
+		))
 	}
 
 	if sub.ServiceAccount != nil {
