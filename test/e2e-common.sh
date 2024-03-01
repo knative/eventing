@@ -31,9 +31,6 @@ if [ "$(uname)" == "Darwin" ]; then
   grep=ggrep
 fi
 
-# GKE cluster version
-readonly K8S_CLUSTER_VERSION=1.28
-
 # Eventing main config.
 readonly EVENTING_CONFIG="config/"
 
