@@ -527,7 +527,7 @@ func TestReconciler_ReconcileKind(t *testing.T) {
 				if channelHandler == nil {
 					t.Errorf("Did not get handler for %s", channelServiceAddress.URL.Host)
 				}
-				if diff := cmp.Diff(tc.wantSubs, channelHandler.GetSubscriptions(context.TODO()), cmpopts.IgnoreFields(kncloudevents.RetryConfig{}, "Backoff", "CheckRetry")); diff != "" {
+				if diff := cmp.Diff(tc.wantSubs, channelHandler.GetSubscriptions(context.TODO()), cmpopts.IgnoreFields(kncloudevents.RetryConfig{}, "Backoff", "CheckRetry"), cmpopts.IgnoreFields(fanout.Subscription{}, "UID")); diff != "" {
 					t.Error("unexpected subs (+want/-got)", diff)
 				}
 			})

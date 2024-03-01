@@ -234,12 +234,14 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelReady(channelDNS),
 					WithInMemoryChannelSubscribers([]eventingduck.SubscriberSpec{{
 						Name:          pointer.String(subscriptionName),
+						Namespace:     pointer.String(testNS),
 						UID:           subscriptionUID,
 						Generation:    0,
 						SubscriberURI: subscriberURI,
 						ReplyURI:      replyURI,
 					}, {
 						Name:          pointer.String(subscriptionName),
+						Namespace:     pointer.String(testNS),
 						UID:           "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
 						Generation:    1,
 						SubscriberURI: apis.HTTP("call2"),
@@ -303,12 +305,14 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelReady(channelDNS),
 					WithInMemoryChannelSubscribers([]eventingduck.SubscriberSpec{{
 						Name:          pointer.String(subscriptionName),
+						Namespace:     pointer.String(testNS),
 						UID:           subscriptionUID,
 						Generation:    0,
 						SubscriberURI: subscriberURI,
 						ReplyURI:      replyURI,
 					}, {
 						Name:          pointer.String(subscriptionName),
+						Namespace:     pointer.String(testNS),
 						UID:           "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
 						Generation:    1,
 						SubscriberURI: apis.HTTP("call2"),
@@ -372,12 +376,14 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelReady(channelDNS),
 					WithInMemoryChannelSubscribers([]eventingduck.SubscriberSpec{{
 						Name:          pointer.String(subscriptionName),
+						Namespace:     pointer.String(testNS),
 						UID:           subscriptionUID,
 						Generation:    0,
 						SubscriberURI: subscriberURI,
 						ReplyURI:      replyURI,
 					}, {
 						Name:          pointer.String(subscriptionName),
+						Namespace:     pointer.String(testNS),
 						UID:           "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
 						Generation:    1,
 						SubscriberURI: apis.HTTP("call2"),
@@ -444,12 +450,14 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelReady(channelDNS),
 					WithInMemoryChannelSubscribers([]eventingduck.SubscriberSpec{{
 						Name:          pointer.String(subscriptionName),
+						Namespace:     pointer.String(testNS),
 						UID:           subscriptionUID,
 						Generation:    0,
 						SubscriberURI: subscriberURI,
 						ReplyURI:      replyURI,
 					}, {
 						Name:          pointer.String(subscriptionName),
+						Namespace:     pointer.String(testNS),
 						UID:           "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
 						Generation:    1,
 						SubscriberURI: apis.HTTP("call2"),
@@ -526,12 +534,14 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelReady(channelDNS),
 					WithInMemoryChannelSubscribers([]eventingduck.SubscriberSpec{{
 						Name:          pointer.String(subscriptionName),
+						Namespace:     pointer.String(testNS),
 						UID:           subscriptionUID,
 						Generation:    0,
 						SubscriberURI: subscriberURI,
 						ReplyURI:      replyURI,
 					}, {
 						Name:          pointer.String(subscriptionName),
+						Namespace:     pointer.String(testNS),
 						UID:           "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
 						Generation:    1,
 						SubscriberURI: apis.HTTP("call2"),
@@ -608,12 +618,14 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelReady(channelDNS),
 					WithInMemoryChannelSubscribers([]eventingduck.SubscriberSpec{{
 						Name:          pointer.String(subscriptionName),
+						Namespace:     pointer.String(testNS),
 						UID:           subscriptionUID,
 						Generation:    0,
 						SubscriberURI: subscriberURI,
 						ReplyURI:      replyURI,
 					}, {
 						Name:          pointer.String(subscriptionName),
+						Namespace:     pointer.String(testNS),
 						UID:           "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
 						Generation:    1,
 						SubscriberURI: apis.HTTP("call2"),
@@ -698,12 +710,14 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelReady(channelDNS),
 					WithInMemoryChannelSubscribers([]eventingduck.SubscriberSpec{{
 						Name:          pointer.String(subscriptionName),
+						Namespace:     pointer.String(testNS),
 						UID:           subscriptionUID,
 						Generation:    0,
 						SubscriberURI: subscriberURI,
 						ReplyURI:      replyURI,
 					}, {
 						Name:          pointer.String(subscriptionName),
+						Namespace:     pointer.String(testNS),
 						UID:           "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
 						Generation:    1,
 						SubscriberURI: apis.HTTP("call2"),
@@ -801,6 +815,7 @@ func TestAllCases(t *testing.T) {
 				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
 					{
 						Name:              pointer.String(subscriptionName),
+						Namespace:         pointer.String(testNS),
 						SubscriberURI:     tlsSubscriberURI,
 						SubscriberCACerts: &tlsSubscriberCACerts,
 					},
@@ -865,6 +880,7 @@ func TestAllCases(t *testing.T) {
 				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
 					{
 						Name:          pointer.String(subscriptionName),
+						Namespace:     pointer.String(testNS),
 						SubscriberURI: subscriberURI,
 						ReplyURI:      tlsSubscriberURI,
 						ReplyCACerts:  &tlsSubscriberCACerts,
@@ -917,6 +933,7 @@ func TestAllCases(t *testing.T) {
 				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
 					{
 						Name:               pointer.String(subscriptionName),
+						Namespace:          pointer.String(testNS),
 						SubscriberURI:      audienceSubscriberURI,
 						SubscriberAudience: &audienceSubscriberAudience,
 					},
@@ -981,6 +998,7 @@ func TestAllCases(t *testing.T) {
 				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
 					{
 						Name:          pointer.String(subscriptionName),
+						Namespace:     pointer.String(testNS),
 						SubscriberURI: subscriberURI,
 						ReplyURI:      audienceSubscriberURI,
 						ReplyAudience: &audienceSubscriberAudience,
@@ -1010,6 +1028,7 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelReady(channelDNS),
 					WithInMemoryChannelSubscribers([]eventingduck.SubscriberSpec{{
 						Name:          pointer.String(subscriptionName),
+						Namespace:     pointer.String(testNS),
 						UID:           subscriptionUID,
 						SubscriberURI: tlsSubscriberURI,
 					}}),
@@ -1280,7 +1299,7 @@ func TestAllCases(t *testing.T) {
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
-					{UID: subscriptionUID, SubscriberURI: subscriberURI, Name: pointer.String(subscriptionName)},
+					{UID: subscriptionUID, SubscriberURI: subscriberURI, Name: pointer.String(subscriptionName), Namespace: pointer.String(testNS)},
 				}),
 				patchFinalizers(testNS, subscriptionName),
 			},
@@ -1368,7 +1387,7 @@ func TestAllCases(t *testing.T) {
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
-					{Name: pointer.String(subscriptionName), UID: subscriptionUID, SubscriberURI: subscriberURI, Delivery: &eventingduck.DeliverySpec{DeadLetterSink: &duckv1.Destination{URI: apis.HTTP("dls.mynamespace.svc.cluster.local")}}},
+					{Name: pointer.String(subscriptionName), Namespace: pointer.String(testNS), UID: subscriptionUID, SubscriberURI: subscriberURI, Delivery: &eventingduck.DeliverySpec{DeadLetterSink: &duckv1.Destination{URI: apis.HTTP("dls.mynamespace.svc.cluster.local")}}},
 				}),
 				patchFinalizers(testNS, subscriptionName),
 			},
@@ -1418,7 +1437,7 @@ func TestAllCases(t *testing.T) {
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
-					{UID: subscriptionUID, SubscriberURI: subscriberURI, Name: pointer.String(subscriptionName)},
+					{Namespace: pointer.String(testNS), UID: subscriptionUID, SubscriberURI: subscriberURI, Name: pointer.String(subscriptionName)},
 				}),
 				patchFinalizers(testNS, subscriptionName),
 			},
@@ -1509,7 +1528,7 @@ func TestAllCases(t *testing.T) {
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
-					{UID: subscriptionUID, ReplyURI: replyURI, SubscriberURI: subscriberURI, Name: pointer.String(subscriptionName)},
+					{UID: subscriptionUID, ReplyURI: replyURI, SubscriberURI: subscriberURI, Name: pointer.String(subscriptionName), Namespace: pointer.String(testNS)},
 				}),
 				patchFinalizers(testNS, subscriptionName),
 			},
@@ -1558,7 +1577,7 @@ func TestAllCases(t *testing.T) {
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
-					{UID: subscriptionUID, SubscriberURI: subscriberURI, ReplyURI: replyURI, Name: pointer.String(subscriptionName)},
+					{UID: subscriptionUID, SubscriberURI: subscriberURI, ReplyURI: replyURI, Name: pointer.String(subscriptionName), Namespace: pointer.String(testNS)},
 				}),
 				patchFinalizers(testNS, subscriptionName),
 			},
@@ -1608,7 +1627,7 @@ func TestAllCases(t *testing.T) {
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
-					{UID: subscriptionUID, Generation: subscriptionGeneration, SubscriberURI: subscriberURI, Name: pointer.String(subscriptionName)},
+					{UID: subscriptionUID, Generation: subscriptionGeneration, SubscriberURI: subscriberURI, Name: pointer.String(subscriptionName), Namespace: pointer.String(testNS)},
 				}),
 			},
 		}, {
@@ -1647,7 +1666,7 @@ func TestAllCases(t *testing.T) {
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
-					{UID: subscriptionUID, SubscriberURI: serviceURI, Name: pointer.String(subscriptionName)},
+					{UID: subscriptionUID, SubscriberURI: serviceURI, Name: pointer.String(subscriptionName), Namespace: pointer.String(testNS)},
 				}),
 				patchFinalizers(testNS, subscriptionName),
 			},
@@ -1697,7 +1716,7 @@ func TestAllCases(t *testing.T) {
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
-					{UID: "a-" + subscriptionUID, SubscriberURI: serviceURI, Name: pointer.String("a-" + subscriptionName)},
+					{UID: "a-" + subscriptionUID, SubscriberURI: serviceURI, Name: pointer.String("a-" + subscriptionName), Namespace: pointer.String(testNS)},
 				}),
 				patchFinalizers(testNS, "a-"+subscriptionName),
 			},
@@ -1757,7 +1776,7 @@ func TestAllCases(t *testing.T) {
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
-					{Name: pointer.String("a-" + subscriptionName), UID: "a-" + subscriptionUID, SubscriberURI: serviceURI, Delivery: &eventingduck.DeliverySpec{DeadLetterSink: &duckv1.Destination{URI: apis.HTTP("dls.mynamespace.svc.cluster.local")}}},
+					{Name: pointer.String("a-" + subscriptionName), Namespace: pointer.String(testNS), UID: "a-" + subscriptionUID, SubscriberURI: serviceURI, Delivery: &eventingduck.DeliverySpec{DeadLetterSink: &duckv1.Destination{URI: apis.HTTP("dls.mynamespace.svc.cluster.local")}}},
 				}),
 				patchFinalizers(testNS, "a-"+subscriptionName),
 			},
@@ -1841,7 +1860,8 @@ func TestAllCases(t *testing.T) {
 							BackoffPolicy: &linear,
 							BackoffDelay:  pointer.String("PT1S"),
 						},
-						Name: pointer.String("a-" + subscriptionName),
+						Name:      pointer.String("a-" + subscriptionName),
+						Namespace: pointer.String(testNS),
 					},
 				}),
 				patchFinalizers(testNS, "a-"+subscriptionName),
@@ -1913,7 +1933,8 @@ func TestAllCases(t *testing.T) {
 							BackoffPolicy: &linear,
 							BackoffDelay:  pointer.String("PT1S"),
 						},
-						Name: pointer.String("a-" + subscriptionName),
+						Name:      pointer.String("a-" + subscriptionName),
+						Namespace: pointer.String(testNS),
 					},
 				}),
 				patchFinalizers(testNS, "a-"+subscriptionName),
@@ -1975,7 +1996,8 @@ func TestAllCases(t *testing.T) {
 							Timeout:       pointer.String("PT1S"),
 							RetryAfterMax: pointer.String("PT2S"),
 						},
-						Name: pointer.String("a-" + subscriptionName),
+						Name:      pointer.String("a-" + subscriptionName),
+						Namespace: pointer.String(testNS),
 					},
 				}),
 				patchFinalizers(testNS, "a-"+subscriptionName),
@@ -2025,6 +2047,7 @@ func TestAllCases(t *testing.T) {
 						UID:           "a-" + subscriptionUID,
 						SubscriberURI: serviceURI,
 						Name:          pointer.String("a-" + subscriptionName),
+						Namespace:     pointer.String(testNS),
 					},
 				}),
 				patchFinalizers(testNS, "a-"+subscriptionName),
@@ -2177,7 +2200,8 @@ func TestAllCases(t *testing.T) {
 							BackoffPolicy: &linear,
 							BackoffDelay:  pointer.String("PT1S"),
 						},
-						Name: pointer.String("a-" + subscriptionName),
+						Name:      pointer.String("a-" + subscriptionName),
+						Namespace: pointer.String(testNS),
 					},
 				}),
 				patchFinalizers(testNS, "a-"+subscriptionName),
@@ -2249,7 +2273,8 @@ func TestAllCases(t *testing.T) {
 							Timeout:       pointer.String("PT1S"),
 							RetryAfterMax: pointer.String("PT2S"),
 						},
-						Name: pointer.String("a-" + subscriptionName),
+						Name:      pointer.String("a-" + subscriptionName),
+						Namespace: pointer.String(testNS),
 					},
 				}),
 				patchFinalizers(testNS, "a-"+subscriptionName),
@@ -2414,7 +2439,8 @@ func TestAllCases(t *testing.T) {
 				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{{UID: subscriptionUID, Auth: &duckv1.AuthStatus{
 					ServiceAccountName: pointer.String(makeSubscriptionOIDCServiceAccount().GetName()),
 				}, SubscriberURI: subscriberURI,
-					Name: pointer.String(subscriptionName),
+					Name:      pointer.String(subscriptionName),
+					Namespace: pointer.String(testNS),
 				}}),
 			},
 			WantEvents: []string{
