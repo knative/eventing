@@ -278,9 +278,7 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 
 	// EventType auto-create feature handling
 	if h.EvenTypeHandler != nil {
-		if err := h.EvenTypeHandler.AutoCreateEventType(ctx, event, toKReference(broker), broker.GetUID()); err != nil {
-			h.Logger.Error("Even type auto create failed", zap.Error(err))
-		}
+		h.EvenTypeHandler.AutoCreateEventType(ctx, event, toKReference(broker), broker.GetUID())
 	}
 }
 
