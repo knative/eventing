@@ -17,9 +17,9 @@ limitations under the License.
 package graph
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
