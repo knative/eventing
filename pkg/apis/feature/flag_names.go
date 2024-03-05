@@ -25,5 +25,5 @@ const (
 	TransportEncryption = "transport-encryption"
 	EvenTypeAutoCreate  = "eventtype-auto-create"
 	OIDCAuthentication  = "authentication-oidc"
-	NodeSelectorLabel   = "apiserversources.nodeselector."
+	NodeSelectorLabel   = "apiserversources-nodeselector-"
 )
