@@ -22,8 +22,8 @@ function usage() {
 	echo "   release                                           Release new version"
 	echo "   teardown                                          Teardown installed components for local dev"
 	echo "   update-checksums                                  Update checksums"
-	echo "   update-codegen              											 Update codegen"
-	echo "   update-deps                    									 Update deps"
+	echo "   update-codegen                                    Update codegen"
+	echo "   update-deps                                       Update deps"
 	echo "   verify-codegen                                    Verify codegen"
 	echo ""
 }
