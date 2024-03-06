@@ -123,18 +123,146 @@ func TestAddBroker(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewGraph()
 			g.AddBroker(test.broker)
-			assert.Len(t, g.vertices, len(test.expected))
-			for k, expected := range test.expected {
-				actual, ok := g.vertices[k]
-				assert.True(t, ok)
-				// assert.Equal can't do equality on function values, which edges have, so we need to do a more complicated check
-				assert.Equal(t, actual.self, expected.self)
-				assert.Len(t, actual.inEdges, len(expected.inEdges))
-				assert.Subset(t, makeComparableEdges(actual.inEdges), makeComparableEdges(expected.inEdges))
-				assert.Len(t, actual.outEdges, len(expected.outEdges))
-				assert.Subset(t, makeComparableEdges(actual.outEdges), makeComparableEdges(expected.outEdges))
-			}
+			checkTestResult(t, g.vertices, test.expected)
 		})
+	}
+}
+
+func TestAddTrigger(t *testing.T) {
+	tests := []struct {
+		name     string
+		brokers  []eventingv1.Broker
+		triggers []eventingv1.Trigger
+		expected map[comparableDestination]*Vertex
+	}{
+		{
+			name: "One Trigger, One Broker, no DLS",
+			brokers: []eventingv1.Broker{{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-broker",
+					Namespace: "default",
+				},
+			}},
+			triggers: []eventingv1.Trigger{{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-trigger",
+					Namespace: "default",
+				},
+				Spec: eventingv1.TriggerSpec{
+					Broker: "my-broker",
+					Subscriber: duckv1.Destination{
+						URI: sampleUri,
+					},
+				},
+			}},
+			expected: map[comparableDestination]*Vertex{
+				{
+					Ref: duckv1.KReference{
+						Name:       "my-broker",
+						Namespace:  "default",
+						APIVersion: "eventing.knative.dev/v1",
+						Kind:       "Broker",
+					},
+				}: {
+					self: &duckv1.Destination{
+						Ref: &duckv1.KReference{
+							Name:       "my-broker",
+							Namespace:  "default",
+							APIVersion: "eventing.knative.dev/v1",
+							Kind:       "Broker",
+						},
+					},
+					outEdges: []*Edge{
+						{
+							self: &duckv1.Destination{
+								Ref: &duckv1.KReference{
+									Name:       "my-trigger",
+									Namespace:  "default",
+									APIVersion: "eventing.knative.dev/v1",
+									Kind:       "Trigger",
+								},
+							},
+							to: &Vertex{
+								self: &duckv1.Destination{
+									URI: sampleUri,
+								},
+							},
+							from: &Vertex{
+								self: &duckv1.Destination{
+									Ref: &duckv1.KReference{
+										Name:       "my-broker",
+										Namespace:  "default",
+										APIVersion: "eventing.knative.dev/v1",
+										Kind:       "Broker",
+									},
+								},
+							},
+						},
+					},
+				},
+				{
+					URI: *sampleUri,
+				}: {
+					self: &duckv1.Destination{
+						URI: sampleUri,
+					},
+					inEdges: []*Edge{
+						{
+							self: &duckv1.Destination{
+								Ref: &duckv1.KReference{
+									Name:       "my-trigger",
+									Namespace:  "default",
+									APIVersion: "eventing.knative.dev/v1",
+									Kind:       "Trigger",
+								},
+							},
+							to: &Vertex{
+								self: &duckv1.Destination{
+									URI: sampleUri,
+								},
+							},
+							from: &Vertex{
+								self: &duckv1.Destination{
+									Ref: &duckv1.KReference{
+										Name:       "my-broker",
+										Namespace:  "default",
+										APIVersion: "eventing.knative.dev/v1",
+										Kind:       "Broker",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewGraph()
+			for _, broker := range test.brokers {
+				g.AddBroker(broker)
+			}
+			for _, trigger := range test.triggers {
+				g.AddTrigger(trigger)
+			}
+			checkTestResult(t, g.vertices, test.expected)
+		})
+	}
+}
+
+func checkTestResult(t *testing.T, actualVertices map[comparableDestination]*Vertex, expectedVertices map[comparableDestination]*Vertex) {
+	assert.Len(t, actualVertices, len(expectedVertices))
+	for k, expected := range expectedVertices {
+		actual, ok := actualVertices[k]
+		assert.True(t, ok)
+		// assert.Equal can't do equality on function values, which edges have, so we need to do a more complicated check
+		assert.Equal(t, actual.self, expected.self)
+		assert.Len(t, actual.inEdges, len(expected.inEdges))
+		assert.Subset(t, makeComparableEdges(actual.inEdges), makeComparableEdges(expected.inEdges))
+		assert.Len(t, actual.outEdges, len(expected.outEdges))
+		assert.Subset(t, makeComparableEdges(actual.outEdges), makeComparableEdges(expected.outEdges))
 	}
 }
 
