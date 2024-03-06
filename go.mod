@@ -49,7 +49,7 @@ require (
 	k8s.io/utils v0.0.0-20240102154912-e7106e64919e
 	knative.dev/hack v0.0.0-20240302114326-e6dedc74dc47
 	knative.dev/hack/schema v0.0.0-20240302114326-e6dedc74dc47
-	knative.dev/pkg v0.0.0-20240304225122-181596eba93a
+	knative.dev/pkg v0.0.0-20240305144923-6b13f01ae5f7
 	knative.dev/reconciler-test v0.0.0-20240304074532-57fea69da0a1
 	sigs.k8s.io/yaml v1.4.0
 )
@@ -103,8 +103,8 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_golang v1.19.0 // indirect
-	github.com/prometheus/client_model v0.5.0 // indirect
-	github.com/prometheus/common v0.48.0 // indirect
+	github.com/prometheus/client_model v0.6.0 // indirect
+	github.com/prometheus/common v0.49.0 // indirect
 	github.com/prometheus/procfs v0.12.0 // indirect
 	github.com/prometheus/statsd_exporter v0.22.7 // indirect
 	github.com/rickb777/plural v1.2.1 // indirect
