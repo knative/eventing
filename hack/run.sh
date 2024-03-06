@@ -10,28 +10,25 @@ function usage() {
 	cmd="$1"
 
 	echo ""
-	echo "Usage                                                      for more information read DEVELOPMENT.md"
+	echo "Usage                                                for more information read DEVELOPMENT.md"
 	echo "$cmd <command>"
 	echo ""
 	echo "command:"
-	echo "   create-kind-cluster                                     Create a new kind cluster"
-	echo "   install                                         				 Quick full build and install"
-	echo "   e2e-debug <test-name> <test-dir>                  			 Quick debug"
-	echo "   update-cert-manager <cert-manager> <trust-manager>      Update manager"
-	echo "   generate-yamls <repo-root-dir> <output-file>            Generate all repo yamls "
-	echo "   update-reference-docs                                   Update reference docs"
-	echo "   release                                                 Release new version"
-	echo "   teardown                                        				 Clean up and uninstall"
-	echo "   update-checksums                                        Update checksums"
-	echo "   update-codegen              													 	 Update codegen"
-	echo "   update-deps                    												 Update deps"
-	echo "   verify-codegen                                          Verify codegen"
+	echo "   install                                           Install Knative components for local dev"
+	echo "   e2e-debug <test-name> <test-dir>                  Quick debug"
+	echo "   update-cert-manager                               Update Cert manager"
+	echo "   generate-yamls <repo-root-dir> <output-file>      Generate all repo yamls "
+	echo "   update-reference-docs                             Update reference docs"
+	echo "   release                                           Release new version"
+	echo "   teardown                                          Teardown installed components for local dev"
+	echo "   update-checksums                                  Update checksums"
+	echo "   update-codegen              											 Update codegen"
+	echo "   update-deps                    									 Update deps"
+	echo "   verify-codegen                                    Verify codegen"
 	echo ""
 }
 
-if [[ "$action" == "create-kind-cluster" ]]; then
-	source "${ROOT_DIR}"/hack/create-kind-cluster.sh 
-elif [[ "${action}" == "install" ]]; then
+if [[ "${action}" == "install" ]]; then
 	source "${ROOT_DIR}"/hack/install.sh 
 elif [[ "${action}" == "update-cert-manager" ]]; then
 	source "${ROOT_DIR}"/hack/update-cert-manager.sh "$2" "$3"
