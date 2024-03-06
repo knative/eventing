@@ -24,6 +24,7 @@ import (
 
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
@@ -123,18 +124,120 @@ func TestAddBroker(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewGraph()
 			g.AddBroker(test.broker)
-			assert.Len(t, g.vertices, len(test.expected))
-			for k, expected := range test.expected {
-				actual, ok := g.vertices[k]
-				assert.True(t, ok)
-				// assert.Equal can't do equality on function values, which edges have, so we need to do a more complicated check
-				assert.Equal(t, actual.self, expected.self)
-				assert.Len(t, actual.inEdges, len(expected.inEdges))
-				assert.Subset(t, makeComparableEdges(actual.inEdges), makeComparableEdges(expected.inEdges))
-				assert.Len(t, actual.outEdges, len(expected.outEdges))
-				assert.Subset(t, makeComparableEdges(actual.outEdges), makeComparableEdges(expected.outEdges))
-			}
+			checkTestResult(t, g.vertices, test.expected)
 		})
+	}
+}
+
+func TestAddChannel(t *testing.T) {
+	channelWithEdge := &Vertex{
+		self: &duckv1.Destination{
+			Ref: &duckv1.KReference{
+				Name:       "my-channel",
+				Namespace:  "default",
+				APIVersion: "messaging.knative.dev/v1",
+				Kind:       "Channel",
+			},
+		},
+	}
+	destinationWithEdge := &Vertex{
+		self: &duckv1.Destination{
+			URI: sampleUri,
+		},
+	}
+	channelWithEdge.AddEdge(destinationWithEdge, &duckv1.Destination{
+		Ref: &duckv1.KReference{
+			Name:       "my-channel",
+			Namespace:  "default",
+			APIVersion: "messaging.knative.dev/v1",
+			Kind:       "Channel",
+		},
+	}, NoTransform)
+	tests := []struct {
+		name     string
+		channel  messagingv1.Channel
+		expected map[comparableDestination]*Vertex
+	}{
+		{
+			name: "no DLS",
+			channel: messagingv1.Channel{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-channel",
+					Namespace: "default",
+				},
+			},
+			expected: map[comparableDestination]*Vertex{
+				{
+					Ref: duckv1.KReference{
+						Name:       "my-channel",
+						Namespace:  "default",
+						APIVersion: "messaging.knative.dev/v1",
+						Kind:       "Channel",
+					},
+				}: {
+					self: &duckv1.Destination{
+						Ref: &duckv1.KReference{
+							Name:       "my-channel",
+							Namespace:  "default",
+							APIVersion: "messaging.knative.dev/v1",
+							Kind:       "Channel",
+						},
+					},
+				},
+			},
+		}, {
+			name: "DLS",
+			channel: messagingv1.Channel{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-channel",
+					Namespace: "default",
+				},
+				Spec: messagingv1.ChannelSpec{
+					ChannelableSpec: eventingduckv1.ChannelableSpec{
+						Delivery: &eventingduckv1.DeliverySpec{
+							DeadLetterSink: &duckv1.Destination{
+								URI: sampleUri,
+							},
+						},
+					},
+				},
+			},
+			expected: map[comparableDestination]*Vertex{
+				{
+					Ref: duckv1.KReference{
+						Name:       "my-channel",
+						Namespace:  "default",
+						APIVersion: "messaging.knative.dev/v1",
+						Kind:       "Channel",
+					},
+				}: channelWithEdge,
+				{
+					URI: *sampleUri,
+				}: destinationWithEdge,
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewGraph()
+			g.AddChannel(test.channel)
+			checkTestResult(t, g.vertices, test.expected)
+		})
+	}
+}
+
+func checkTestResult(t *testing.T, actualVertices map[comparableDestination]*Vertex, expectedVertices map[comparableDestination]*Vertex) {
+	assert.Len(t, actualVertices, len(expectedVertices))
+	for k, expected := range expectedVertices {
+		actual, ok := actualVertices[k]
+		assert.True(t, ok)
+		// assert.Equal can't do equality on function values, which edges have, so we need to do a more complicated check
+		assert.Equal(t, actual.self, expected.self)
+		assert.Len(t, actual.inEdges, len(expected.inEdges))
+		assert.Subset(t, makeComparableEdges(actual.inEdges), makeComparableEdges(expected.inEdges))
+		assert.Len(t, actual.outEdges, len(expected.outEdges))
+		assert.Subset(t, makeComparableEdges(actual.outEdges), makeComparableEdges(expected.outEdges))
 	}
 }
 
