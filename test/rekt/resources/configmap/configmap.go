@@ -19,6 +19,7 @@ package configmap
 import (
 	"context"
 	"embed"
+	"strings"
 
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
@@ -42,5 +43,17 @@ func Install(name string, ns string, opts ...manifest.CfgFn) feature.StepFn {
 		if _, err := manifest.InstallYamlFS(ctx, yaml, cfg); err != nil {
 			t.Fatal(err)
 		}
+	}
+}
+
+var WithLabels = manifest.WithLabels
+
+func WithData(key, value string) manifest.CfgFn {
+	return func(m map[string]interface{}) {
+		if _, ok := m["data"]; !ok {
+			m["data"] = map[string]string{}
+		}
+		value = strings.ReplaceAll(value, "\n", "\n    ")
+		m["data"].(map[string]string)[key] = value
 	}
 }
