@@ -30,6 +30,7 @@ import (
 
 var (
 	sampleUri, _ = apis.ParseURL("https://knative.dev")
+	secondUri, _ = apis.ParseURL("https://google.com")
 )
 
 func TestAddBroker(t *testing.T) {
@@ -134,6 +135,7 @@ func TestAddTrigger(t *testing.T) {
 		brokers  []eventingv1.Broker
 		triggers []eventingv1.Trigger
 		expected map[comparableDestination]*Vertex
+		wantErr  bool
 	}{
 		{
 			name: "One Trigger, One Broker, no DLS",
@@ -236,6 +238,244 @@ func TestAddTrigger(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "One Trigger, One Broker, both with DLS",
+			brokers: []eventingv1.Broker{{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-broker",
+					Namespace: "default",
+				},
+				Spec: eventingv1.BrokerSpec{
+					Delivery: &eventingduckv1.DeliverySpec{
+						DeadLetterSink: &duckv1.Destination{
+							URI: secondUri,
+						},
+					},
+				},
+			}},
+			triggers: []eventingv1.Trigger{{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-trigger",
+					Namespace: "default",
+				},
+				Spec: eventingv1.TriggerSpec{
+					Broker: "my-broker",
+					Subscriber: duckv1.Destination{
+						URI: sampleUri,
+					},
+					Delivery: &eventingduckv1.DeliverySpec{
+						DeadLetterSink: &duckv1.Destination{
+							URI: secondUri,
+						},
+					},
+				},
+			}},
+			expected: map[comparableDestination]*Vertex{
+				{
+					Ref: duckv1.KReference{
+						Name:       "my-broker",
+						Namespace:  "default",
+						APIVersion: "eventing.knative.dev/v1",
+						Kind:       "Broker",
+					},
+				}: {
+					self: &duckv1.Destination{
+						Ref: &duckv1.KReference{
+							Name:       "my-broker",
+							Namespace:  "default",
+							APIVersion: "eventing.knative.dev/v1",
+							Kind:       "Broker",
+						},
+					},
+					outEdges: []*Edge{
+						{
+							self: &duckv1.Destination{
+								Ref: &duckv1.KReference{
+									Name:       "my-trigger",
+									Namespace:  "default",
+									APIVersion: "eventing.knative.dev/v1",
+									Kind:       "Trigger",
+								},
+							},
+							to: &Vertex{
+								self: &duckv1.Destination{
+									URI: sampleUri,
+								},
+							},
+							from: &Vertex{
+								self: &duckv1.Destination{
+									Ref: &duckv1.KReference{
+										Name:       "my-broker",
+										Namespace:  "default",
+										APIVersion: "eventing.knative.dev/v1",
+										Kind:       "Broker",
+									},
+								},
+							},
+						},
+						{
+							self: &duckv1.Destination{
+								Ref: &duckv1.KReference{
+									Name:       "my-trigger",
+									Namespace:  "default",
+									APIVersion: "eventing.knative.dev/v1",
+									Kind:       "Trigger",
+								},
+							},
+							to: &Vertex{
+								self: &duckv1.Destination{
+									URI: secondUri,
+								},
+							},
+							from: &Vertex{
+								self: &duckv1.Destination{
+									Ref: &duckv1.KReference{
+										Name:       "my-broker",
+										Namespace:  "default",
+										APIVersion: "eventing.knative.dev/v1",
+										Kind:       "Broker",
+									},
+								},
+							},
+						},
+						{
+							self: &duckv1.Destination{
+								Ref: &duckv1.KReference{
+									Name:       "my-broker",
+									Namespace:  "default",
+									APIVersion: "eventing.knative.dev/v1",
+									Kind:       "Broker",
+								},
+							},
+							to: &Vertex{
+								self: &duckv1.Destination{
+									URI: secondUri,
+								},
+							},
+							from: &Vertex{
+								self: &duckv1.Destination{
+									Ref: &duckv1.KReference{
+										Name:       "my-broker",
+										Namespace:  "default",
+										APIVersion: "eventing.knative.dev/v1",
+										Kind:       "Broker",
+									},
+								},
+							},
+						},
+					},
+				},
+				{
+					URI: *sampleUri,
+				}: {
+					self: &duckv1.Destination{
+						URI: sampleUri,
+					},
+					inEdges: []*Edge{
+						{
+							self: &duckv1.Destination{
+								Ref: &duckv1.KReference{
+									Name:       "my-trigger",
+									Namespace:  "default",
+									APIVersion: "eventing.knative.dev/v1",
+									Kind:       "Trigger",
+								},
+							},
+							to: &Vertex{
+								self: &duckv1.Destination{
+									URI: sampleUri,
+								},
+							},
+							from: &Vertex{
+								self: &duckv1.Destination{
+									Ref: &duckv1.KReference{
+										Name:       "my-broker",
+										Namespace:  "default",
+										APIVersion: "eventing.knative.dev/v1",
+										Kind:       "Broker",
+									},
+								},
+							},
+						},
+					},
+				},
+				{
+					URI: *secondUri,
+				}: {
+					self: &duckv1.Destination{
+						URI: secondUri,
+					},
+					inEdges: []*Edge{
+						{
+							self: &duckv1.Destination{
+								Ref: &duckv1.KReference{
+									Name:       "my-trigger",
+									Namespace:  "default",
+									APIVersion: "eventing.knative.dev/v1",
+									Kind:       "Trigger",
+								},
+							},
+							to: &Vertex{
+								self: &duckv1.Destination{
+									URI: secondUri,
+								},
+							},
+							from: &Vertex{
+								self: &duckv1.Destination{
+									Ref: &duckv1.KReference{
+										Name:       "my-broker",
+										Namespace:  "default",
+										APIVersion: "eventing.knative.dev/v1",
+										Kind:       "Broker",
+									},
+								},
+							},
+						},
+						{
+							self: &duckv1.Destination{
+								Ref: &duckv1.KReference{
+									Name:       "my-broker",
+									Namespace:  "default",
+									APIVersion: "eventing.knative.dev/v1",
+									Kind:       "Broker",
+								},
+							},
+							to: &Vertex{
+								self: &duckv1.Destination{
+									URI: secondUri,
+								},
+							},
+							from: &Vertex{
+								self: &duckv1.Destination{
+									Ref: &duckv1.KReference{
+										Name:       "my-broker",
+										Namespace:  "default",
+										APIVersion: "eventing.knative.dev/v1",
+										Kind:       "Broker",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name:    "no broker",
+			brokers: []eventingv1.Broker{},
+			triggers: []eventingv1.Trigger{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "my-trigger",
+						Namespace: "default",
+					},
+					Spec: eventingv1.TriggerSpec{
+						Broker: "my-broker",
+					},
+				},
+			},
+			wantErr: true,
+		},
 	}
 
 	for _, test := range tests {
@@ -245,7 +485,11 @@ func TestAddTrigger(t *testing.T) {
 				g.AddBroker(broker)
 			}
 			for _, trigger := range test.triggers {
-				g.AddTrigger(trigger)
+				err := g.AddTrigger(trigger)
+				if err != nil {
+					assert.True(t, test.wantErr)
+					return
+				}
 			}
 			checkTestResult(t, g.vertices, test.expected)
 		})
