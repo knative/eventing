@@ -18,6 +18,7 @@ package graph
 
 import (
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
@@ -51,6 +52,44 @@ func (g *Graph) AddBroker(broker eventingv1.Broker) {
 			self: broker.Spec.Delivery.DeadLetterSink,
 		}
 		g.vertices[makeComparableDestination(broker.Spec.Delivery.DeadLetterSink)] = to
+	}
+
+	v.AddEdge(to, dest, NoTransform)
+}
+
+func (g *Graph) AddChannel(channel messagingv1.Channel) {
+	if channel.Kind == "" {
+		channel.Kind = "Channel"
+	}
+
+	ref := &duckv1.KReference{
+		Name:       channel.Name,
+		Namespace:  channel.Namespace,
+		APIVersion: "messaging.knative.dev/v1",
+		Kind:       channel.Kind,
+	}
+	dest := &duckv1.Destination{Ref: ref}
+
+	v, ok := g.vertices[makeComparableDestination(dest)]
+	if !ok {
+		v = &Vertex{
+			self: dest,
+		}
+		g.vertices[makeComparableDestination(dest)] = v
+	}
+
+	if channel.Spec.Delivery == nil || channel.Spec.Delivery.DeadLetterSink == nil {
+		// no DLS, we are done
+		return
+	}
+
+	// channel has a DLS, we need to add an edge to that
+	to, ok := g.vertices[makeComparableDestination(channel.Spec.Delivery.DeadLetterSink)]
+	if !ok {
+		to = &Vertex{
+			self: channel.Spec.Delivery.DeadLetterSink,
+		}
+		g.vertices[makeComparableDestination(channel.Spec.Delivery.DeadLetterSink)] = to
 	}
 
 	v.AddEdge(to, dest, NoTransform)
