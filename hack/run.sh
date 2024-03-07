@@ -19,7 +19,6 @@ function usage() {
 	echo "   update-cert-manager                               Update Cert manager"
 	echo "   generate-yamls <repo-root-dir> <output-file>      Generate all repo yamls "
 	echo "   update-reference-docs                             Update reference docs"
-	echo "   release                                           Release new version"
 	echo "   teardown                                          Teardown installed components for local dev"
 	echo "   update-checksums                                  Update checksums"
 	echo "   update-codegen                                    Update codegen"
@@ -38,8 +37,6 @@ elif [[ "${action}" == "generate-yamls" ]]; then
 	source "${ROOT_DIR}"/hack/generate-yamls.sh "$2" "$3"
 elif [[ "${action}" == "update-reference-docs" ]]; then
 	source "${ROOT_DIR}"/hack/update-reference-docs.sh
-elif [[ "${action}" == "release" ]]; then
-	source "${ROOT_DIR}"/hack/release.sh
 elif [[ "${action}" == "teardown" ]]; then
 	source "${ROOT_DIR}"/hack/teardown.sh
 elif [[ "${action}" == "update-checksums" ]]; then
