@@ -9,7 +9,6 @@ import (
 	"bytes"
 	"context"
 	"io"
-	"io/ioutil"
 	"testing"
 
 	"github.com/cloudevents/sdk-go/v2/binding"
@@ -49,7 +48,7 @@ func (s *MockStructuredMessage) Finish(error) error { return nil }
 
 func (s *MockStructuredMessage) SetStructuredEvent(ctx context.Context, format format.Format, event io.Reader) (err error) {
 	s.Format = format
-	s.Bytes, err = ioutil.ReadAll(event)
+	s.Bytes, err = io.ReadAll(event)
 	if err != nil {
 		return
 	}
@@ -57,5 +56,7 @@ func (s *MockStructuredMessage) SetStructuredEvent(ctx context.Context, format f
 	return nil
 }
 
-var _ binding.Message = (*MockStructuredMessage)(nil)
-var _ binding.StructuredWriter = (*MockStructuredMessage)(nil)
+var (
+	_ binding.Message          = (*MockStructuredMessage)(nil)
+	_ binding.StructuredWriter = (*MockStructuredMessage)(nil)
+)

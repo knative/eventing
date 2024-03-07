@@ -9,7 +9,6 @@ import (
 	"bytes"
 	"context"
 	"io"
-	"io/ioutil"
 
 	"github.com/cloudevents/sdk-go/v2/binding"
 	"github.com/cloudevents/sdk-go/v2/binding/spec"
@@ -121,7 +120,7 @@ func (bm *MockBinaryMessage) SetExtension(name string, value interface{}) error 
 }
 
 func (bm *MockBinaryMessage) SetData(data io.Reader) (err error) {
-	bm.Body, err = ioutil.ReadAll(data)
+	bm.Body, err = io.ReadAll(data)
 	return err
 }
 
@@ -129,6 +128,8 @@ func (bm *MockBinaryMessage) End(ctx context.Context) error {
 	return nil
 }
 
-var _ binding.Message = (*MockBinaryMessage)(nil)
-var _ binding.MessageMetadataReader = (*MockBinaryMessage)(nil)
-var _ binding.BinaryWriter = (*MockBinaryMessage)(nil)
+var (
+	_ binding.Message               = (*MockBinaryMessage)(nil)
+	_ binding.MessageMetadataReader = (*MockBinaryMessage)(nil)
+	_ binding.BinaryWriter          = (*MockBinaryMessage)(nil)
+)
