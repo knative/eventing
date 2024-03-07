@@ -184,6 +184,18 @@ func HasExtensions(ext map[string]interface{}) EventMatcher {
 	}
 }
 
+// HasExtensionKeys checks if the event contains the provided keys from its extensions
+func HasExtensionKeys(keys []string) EventMatcher {
+	return func(have event.Event) error {
+		for _, k := range keys {
+			if _, ok := have.Extensions()[k]; !ok {
+				return fmt.Errorf("expecting extension key %q", k)
+			}
+		}
+		return nil
+	}
+}
+
 // HasExtension checks if the event contains the provided extension
 func HasExtension(key string, value interface{}) EventMatcher {
 	return HasExtensions(map[string]interface{}{key: value})
@@ -277,7 +289,6 @@ func HasAttributeKind(kind spec.Kind, value interface{}) EventMatcher {
 // LICENSE: MIT License
 
 func isEmpty(object interface{}) bool {
-
 	// get nil case out of the way
 	if object == nil {
 		return true
