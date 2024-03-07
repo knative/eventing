@@ -11,14 +11,17 @@ import "errors"
 type Encoding int
 
 const (
-	// Binary encoding as specified in https://github.com/cloudevents/spec/blob/master/spec.md#message
+	// Binary encoding as specified in https://github.com/cloudevents/spec/blob/main/cloudevents/spec.md#message
 	EncodingBinary Encoding = iota
-	// Structured encoding as specified in https://github.com/cloudevents/spec/blob/master/spec.md#message
+	// Structured encoding as specified in https://github.com/cloudevents/spec/blob/main/cloudevents/spec.md#message
 	EncodingStructured
 	// Message is an instance of EventMessage or it contains EventMessage nested (through MessageWrapper)
 	EncodingEvent
 	// When the encoding is unknown (which means that the message is a non-event)
 	EncodingUnknown
+
+	// EncodingBatch is an instance of JSON Batched Events
+	EncodingBatch
 )
 
 func (e Encoding) String() string {
@@ -29,6 +32,8 @@ func (e Encoding) String() string {
 		return "structured"
 	case EncodingEvent:
 		return "event"
+	case EncodingBatch:
+		return "batch"
 	case EncodingUnknown:
 		return "unknown"
 	}
