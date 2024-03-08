@@ -16,10 +16,12 @@
 package event
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"time"
 
+	"k8s.io/apimachinery/pkg/util/wait"
 	"knative.dev/eventing/test/upgrade/prober/wathola/config"
 )
 
@@ -104,23 +106,26 @@ func (f *finishedStore) RegisterFinished(finished *Finished) {
 	f.eventsSent = finished.EventsSent
 	f.totalRequests = finished.TotalRequests
 	log.Infof("finish event received, expecting %d event ware propagated", finished.EventsSent)
-	d := config.Instance.Receiver.Teardown.Duration
-	log.Infof("waiting additional %v to be sure all events came", d)
-	time.Sleep(d)
-	receivedEvents := f.steps.Count()
+	timeout := config.Instance.Receiver.Teardown.Duration
+	interval := config.Instance.Receiver.Teardown.Interval
 
-	if receivedEvents != finished.EventsSent &&
-		// If sending was interrupted, tolerate one more received
-		// event as there's no way to check if the last event is delivered or not.
-		!(finished.SendingInterrupted && receivedEvents == finished.EventsSent+1) {
+	log.Infof("waiting additional %v to be sure all events came", timeout)
+
+	if err := wait.PollUntilContextTimeout(context.Background(), interval, timeout, true /*immediate*/, func(context.Context) (bool, error) {
+		return f.steps.Count() == finished.EventsSent ||
+			// If sending was interrupted, tolerate one more received
+			// event as there's no way to check if the last event is delivered or not.
+			(finished.SendingInterrupted && f.steps.Count() == finished.EventsSent+1), nil
+	}); err != nil {
 		f.errors.throwUnexpected("expecting to have %v unique events received, "+
-			"but received %v unique events", finished.EventsSent, receivedEvents)
+			"but received %v unique events", finished.EventsSent, f.steps.Count())
 		f.reportViolations(finished)
 		f.errors.state = Failed
 	} else {
-		log.Infof("properly received %d unique events", receivedEvents)
+		log.Infof("properly received %d unique events", f.steps.Count())
 		f.errors.state = Success
 	}
+
 	// check down time
 	for _, unavailablePeriod := range finished.UnavailablePeriods {
 		if unavailablePeriod.Period > config.Instance.Receiver.Errors.UnavailablePeriodToReport {

@@ -23,6 +23,7 @@ import (
 // ReceiverTeardownConfig holds config receiver teardown
 type ReceiverTeardownConfig struct {
 	Duration time.Duration
+	Interval time.Duration
 }
 
 // ReceiverProgressConfig holds config receiver progress reporting

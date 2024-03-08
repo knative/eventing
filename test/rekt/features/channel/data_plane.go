@@ -21,18 +21,23 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/cloudevents/sdk-go/v2/test"
 	"github.com/google/uuid"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/ptr"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/eventshub"
+	eventasssert "knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
+	"knative.dev/reconciler-test/pkg/resources/service"
 	"knative.dev/reconciler-test/pkg/state"
 
 	v1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/test/rekt/features/knconf"
 	"knative.dev/eventing/test/rekt/resources/channel_impl"
+	"knative.dev/eventing/test/rekt/resources/subscription"
 )
 
 func DataPlaneConformance(channelName string) *feature.FeatureSet {
@@ -56,16 +61,15 @@ func DataPlaneChannel(channelName string) *feature.Feature {
 	f.Requirement("Channel is Ready", channel_impl.IsReady(channelName))
 
 	f.Stable("Input").
-		Must("Every Channel MUST expose either an HTTP or HTTPS endpoint.", todo).
+		Must("Every Channel MUST expose either an HTTP or HTTPS endpoint.", checkEndpoint).
 		Must("The endpoint(s) MUST conform to 0.3 or 1.0 CloudEvents specification.",
 			channelAcceptsCEVersions).
-		MustNot("The Channel MUST NOT perform an upgrade of the passed in version. It MUST emit the event with the same version.", todo).
-		Must("It MUST support both Binary Content Mode and Structured Content Mode of the HTTP Protocol Binding for CloudEvents.", todo).
+		MustNot("The Channel MUST NOT perform an upgrade of the passed in version. It MUST emit the event with the same version.", ShouldNotUpdateVersion).
+		Must("It MUST support Binary Content Mode of the HTTP Protocol Binding for CloudEvents.", channelAcceptsBinaryContentMode).
+		Must("It MUST support Structured Content Mode of the HTTP Protocol Binding for CloudEvents.", channelAcceptsStructuredContentMode).
+		May("Channels MAY expose other, non-HTTP endpoints in addition to HTTP at their discretion.", checkEndpoints).
 		May("When dispatching the event, the channel MAY use a different HTTP Message mode of the one used by the event.", todo).
-		// For example, It MAY receive an event in Structured Content Mode and dispatch in Binary Content Mode.
-		May("The HTTP(S) endpoint MAY be on any port, not just the standard 80 and 443.", todo).
-		May("Channels MAY expose other, non-HTTP endpoints in addition to HTTP at their discretion.", todo)
-		// (e.g. expose a gRPC endpoint to accept events)
+		May("The HTTP(S) endpoint MAY be on any port, not just the standard 80 and 443.", todo)
 
 	f.Stable("Generic").
 		Must("If a Channel receives an event queueing request and is unable to parse a valid CloudEvent, then it MUST reject the request.", channelRejectsMalformedCE)
@@ -105,6 +109,28 @@ func DataPlaneChannel(channelName string) *feature.Feature {
 	f.Teardown("cleanup created resources", f.DeleteResources)
 
 	return f
+}
+
+func checkEndpoint(ctx context.Context, t feature.T) {
+	c := getChannelable(ctx, t)
+	addr := *c.Status.AddressStatus.Address
+	checkScheme(t, addr)
+}
+
+func checkEndpoints(ctx context.Context, t feature.T) {
+	c := getChannelable(ctx, t)
+	for _, addr := range c.Status.AddressStatus.Addresses {
+		checkScheme(t, addr)
+	}
+}
+
+func checkScheme(t feature.T, addr duckv1.Addressable) {
+	if addr.URL == nil {
+		addr.URL = new(apis.URL)
+	}
+	if addr.URL.Scheme != "http" && addr.URL.Scheme != "https" {
+		t.Fatalf("expected channel scheme to be HTTP or HTTPS as addons with each other but got: %s", addr.URL.Scheme)
+	}
 }
 
 func channelRejectsMalformedCE(ctx context.Context, t feature.T) {
@@ -157,10 +183,10 @@ func channelAcceptsCEVersions(ctx context.Context, t feature.T) {
 }
 
 func addControlPlaneDelivery(fs *feature.FeatureSet) {
-	//Should("Channels SHOULD retry resending CloudEvents when they fail to either connect or send CloudEvents to subscribers.", todo).
-	//Should("Channels SHOULD support various retry configuration parameters: [the maximum number of retries]", todo).
-	//Should("Channels SHOULD support various retry configuration parameters: [the time in-between retries]", todo).
-	//Should("Channels SHOULD support various retry configuration parameters: [the backoff rate]", todo)
+	// Should("Channels SHOULD retry resending CloudEvents when they fail to either connect or send CloudEvents to subscribers.", todo).
+	// Should("Channels SHOULD support various retry configuration parameters: [the maximum number of retries]", todo).
+	// Should("Channels SHOULD support various retry configuration parameters: [the time in-between retries]", todo).
+	// Should("Channels SHOULD support various retry configuration parameters: [the backoff rate]", todo)
 
 	for i, tt := range []struct {
 		name string
@@ -231,7 +257,7 @@ func addControlPlaneDelivery(fs *feature.FeatureSet) {
 		f := feature.NewFeatureNamed("Delivery Spec " + strconv.Itoa(i))
 
 		chName := fmt.Sprintf("dlq-test-%d", i)
-		f.Setup("Set Broker Name", setChannelableName(chName))
+		f.Setup("Set channel Name", setChannelableName(chName))
 
 		prober := createChannelTopology(f, chName, tt.chDS, tt.subs)
 
@@ -264,4 +290,95 @@ func addControlPlaneDelivery(fs *feature.FeatureSet) {
 		// Add this feature to the feature set.
 		fs.Features = append(fs.Features, f)
 	}
+}
+
+func channelAcceptsBinaryContentMode(ctx context.Context, t feature.T) {
+	channelName := "mychannelimpl"
+	contenttypes := []string{
+		"application/vnd.apache.thrift.binary",
+		"application/xml",
+		"application/json",
+	}
+	for _, contenttype := range contenttypes {
+		source := feature.MakeRandomK8sName("source")
+		eventshub.Install(source,
+			eventshub.StartSenderToResource(channel_impl.GVR(), channelName),
+			eventshub.InputHeader("ce-specversion", "1.0"),
+			eventshub.InputHeader("ce-type", "sometype"),
+			eventshub.InputHeader("ce-source", "200.request.sender.test.knative.dev"),
+			eventshub.InputHeader("ce-id", uuid.New().String()),
+			eventshub.InputHeader("content-type", contenttype),
+			eventshub.InputBody("{}"),
+			eventshub.InputMethod("POST"),
+		)(ctx, t)
+
+		store := eventshub.StoreFromContext(ctx, source)
+		events := knconf.Correlate(store.AssertAtLeast(ctx, t, 2, knconf.SentEventMatcher("")))
+		for _, e := range events {
+			if e.Response.StatusCode < 200 || e.Response.StatusCode > 299 {
+				t.Errorf("Expected statuscode 2XX for sequence %d got %d", e.Response.Sequence, e.Response.StatusCode)
+			}
+		}
+	}
+}
+
+func channelAcceptsStructuredContentMode(ctx context.Context, t feature.T) {
+	channelName := "mychannelimpl"
+	contenttype := "application/cloudevents+json"
+	bodycontent := `{
+    "specversion" : "1.0",
+    "type" : "sometype",
+    "source" : "json.request.sender.test.knative.dev",
+    "id" : "2222-4444-6666",
+    "time" : "2020-07-06T09:23:12Z",
+    "datacontenttype" : "application/json",
+    "data" : {
+        "message" : "helloworld"
+    }
+}`
+	sink := feature.MakeRandomK8sName("sink")
+	eventshub.Install(sink, eventshub.StartReceiver)(ctx, t)
+	source := feature.MakeRandomK8sName("source")
+	eventshub.Install(source,
+		eventshub.StartSenderToResource(channel_impl.GVR(), channelName),
+		eventshub.InputHeader("content-type", contenttype),
+		eventshub.InputBody(bodycontent),
+		eventshub.InputMethod("POST"),
+	)(ctx, t)
+
+	store := eventshub.StoreFromContext(ctx, source)
+	events := knconf.Correlate(store.AssertAtLeast(ctx, t, 2, knconf.SentEventMatcher("")))
+	for _, e := range events {
+		if e.Response.StatusCode < 200 || e.Response.StatusCode > 299 {
+			t.Errorf("Expected statuscode 2XX for sequence %d got %d", e.Response.Sequence, e.Response.StatusCode)
+		}
+	}
+}
+
+func ShouldNotUpdateVersion(ctx context.Context, t feature.T) {
+	f := feature.NewFeature()
+	c := getChannelable(ctx, t)
+	source := feature.MakeRandomK8sName("source")
+	sub := feature.MakeRandomK8sName("subscription")
+	sink := feature.MakeRandomK8sName("sink")
+
+	event := test.FullEvent()
+
+	event.SetSpecVersion("0.3")
+
+	f.Setup("install subscription", subscription.Install(sub,
+		subscription.WithChannel(channel_impl.AsRef(c.Name)),
+		subscription.WithSubscriber(service.AsKReference(sink), "", ""),
+	))
+
+	f.Setup("ready", channel_impl.IsReady(c.Name))
+
+	eventshub.Install(sink, eventshub.StartReceiver)
+
+	eventshub.Install(source,
+		eventshub.StartSenderToResource(channel_impl.GVR(), c.Name),
+		eventshub.InputEvent(event),
+	)(ctx, t)
+
+	eventasssert.OnStore(sink).MatchEvent(test.HasSpecVersion("0.3")).AtLeast(1)
 }

@@ -131,6 +131,14 @@ type ScaleCacheConfig struct {
 	RefreshPeriod time.Duration `json:"refreshPeriod"`
 }
 
+func (c ScaleCacheConfig) withDefaults() ScaleCacheConfig {
+	n := ScaleCacheConfig{RefreshPeriod: c.RefreshPeriod}
+	if c.RefreshPeriod == 0 {
+		n.RefreshPeriod = 5 * time.Minute
+	}
+	return n
+}
+
 type ScaleCache struct {
 	entriesMu            sync.RWMutex // protects access to entries, entries itself is concurrency safe, so we only need to ensure that we correctly access the pointer
 	entries              *cache.Expiring
@@ -149,7 +157,7 @@ func NewScaleCache(ctx context.Context, namespace string, scaleClient ScaleClien
 		entries:              cache.NewExpiring(),
 		scaleClient:          scaleClient,
 		statefulSetNamespace: namespace,
-		config:               config,
+		config:               config.withDefaults(),
 	}
 }
 

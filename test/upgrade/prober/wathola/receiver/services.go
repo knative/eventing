@@ -70,6 +70,7 @@ func (r receiver) receiveEvent(ctx context.Context, e cloudevents.Event) {
 		if err != nil {
 			log.Fatal(err)
 		}
+		span.AddAttributes(trace.Int64Attribute("step", int64(step.Number)))
 		r.step.RegisterStep(step)
 	}
 	if t == event.FinishedType {
