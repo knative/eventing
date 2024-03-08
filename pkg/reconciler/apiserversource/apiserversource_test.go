@@ -1089,8 +1089,8 @@ func TestReconcile(t *testing.T) {
 			Name: "Valid with nodeSelector",
 
 			Ctx: feature.ToContext(context.Background(), feature.Flags{
-				"apiserversources.nodeselector.testkey1": "testvalue1",
-				"apiserversources.nodeselector.testkey2": "testvalue2",
+				"apiserversources-nodeselector-testkey1": "testvalue1",
+				"apiserversources-nodeselector-testkey2": "testvalue2",
 			}),
 			Objects: []runtime.Object{
 				rttestingv1.NewApiServerSource(sourceName, testNS,

@@ -24,6 +24,7 @@ import (
 
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
@@ -491,6 +492,104 @@ func TestAddTrigger(t *testing.T) {
 					return
 				}
 			}
+			checkTestResult(t, g.vertices, test.expected)
+		})
+	}
+}
+
+func TestAddChannel(t *testing.T) {
+	channelWithEdge := &Vertex{
+		self: &duckv1.Destination{
+			Ref: &duckv1.KReference{
+				Name:       "my-channel",
+				Namespace:  "default",
+				APIVersion: "messaging.knative.dev/v1",
+				Kind:       "Channel",
+			},
+		},
+	}
+	destinationWithEdge := &Vertex{
+		self: &duckv1.Destination{
+			URI: sampleUri,
+		},
+	}
+	channelWithEdge.AddEdge(destinationWithEdge, &duckv1.Destination{
+		Ref: &duckv1.KReference{
+			Name:       "my-channel",
+			Namespace:  "default",
+			APIVersion: "messaging.knative.dev/v1",
+			Kind:       "Channel",
+		},
+	}, NoTransform)
+	tests := []struct {
+		name     string
+		channel  messagingv1.Channel
+		expected map[comparableDestination]*Vertex
+	}{
+		{
+			name: "no DLS",
+			channel: messagingv1.Channel{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-channel",
+					Namespace: "default",
+				},
+			},
+			expected: map[comparableDestination]*Vertex{
+				{
+					Ref: duckv1.KReference{
+						Name:       "my-channel",
+						Namespace:  "default",
+						APIVersion: "messaging.knative.dev/v1",
+						Kind:       "Channel",
+					},
+				}: {
+					self: &duckv1.Destination{
+						Ref: &duckv1.KReference{
+							Name:       "my-channel",
+							Namespace:  "default",
+							APIVersion: "messaging.knative.dev/v1",
+							Kind:       "Channel",
+						},
+					},
+				},
+			},
+		}, {
+			name: "DLS",
+			channel: messagingv1.Channel{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-channel",
+					Namespace: "default",
+				},
+				Spec: messagingv1.ChannelSpec{
+					ChannelableSpec: eventingduckv1.ChannelableSpec{
+						Delivery: &eventingduckv1.DeliverySpec{
+							DeadLetterSink: &duckv1.Destination{
+								URI: sampleUri,
+							},
+						},
+					},
+				},
+			},
+			expected: map[comparableDestination]*Vertex{
+				{
+					Ref: duckv1.KReference{
+						Name:       "my-channel",
+						Namespace:  "default",
+						APIVersion: "messaging.knative.dev/v1",
+						Kind:       "Channel",
+					},
+				}: channelWithEdge,
+				{
+					URI: *sampleUri,
+				}: destinationWithEdge,
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewGraph()
+			g.AddChannel(test.channel)
 			checkTestResult(t, g.vertices, test.expected)
 		})
 	}
