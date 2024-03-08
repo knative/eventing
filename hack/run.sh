@@ -28,25 +28,25 @@ function usage() {
 }
 
 if [[ "${action}" == "install" ]]; then
-	source "${ROOT_DIR}"/hack/install.sh 
+	./"${ROOT_DIR}"/hack/install.sh 
 elif [[ "${action}" == "update-cert-manager" ]]; then
-	source "${ROOT_DIR}"/hack/update-cert-manager.sh "$2" "$3"
+	./"${ROOT_DIR}"/hack/update-cert-manager.sh "$2" "$3"
 elif [[ "${action}" == "e2e-debug" ]]; then
-	source "${ROOT_DIR}"/hack/e2e-debug.sh "$2" "$3"
+	./"${ROOT_DIR}"/hack/e2e-debug.sh "$2" "$3"
 elif [[ "${action}" == "generate-yamls" ]]; then
-	source "${ROOT_DIR}"/hack/generate-yamls.sh "$2" "$3"
+	./"${ROOT_DIR}"/hack/generate-yamls.sh "$2" "$3"
 elif [[ "${action}" == "update-reference-docs" ]]; then
-	source "${ROOT_DIR}"/hack/update-reference-docs.sh
+	./"${ROOT_DIR}"/hack/update-reference-docs.sh
 elif [[ "${action}" == "teardown" ]]; then
-	source "${ROOT_DIR}"/hack/teardown.sh
+	./"${ROOT_DIR}"/hack/teardown.sh
 elif [[ "${action}" == "update-checksums" ]]; then
-	source "${ROOT_DIR}"/hack/update-checksums.sh
+	./"${ROOT_DIR}"/hack/update-checksums.sh
 elif [[ "${action}" == "update-codegen" ]]; then
-	source "${ROOT_DIR}"/hack/update-codegen.sh
+	./"${ROOT_DIR}"/hack/update-codegen.sh
 elif [[ "${action}" == "update-deps" ]]; then
-	source "${ROOT_DIR}"/hack/update-deps.sh 
+	./"${ROOT_DIR}"/hack/update-deps.sh 
 elif [[ "${action}" == "verify-codegen" ]]; then
-	source "${ROOT_DIR}"/hack/verify-codegen.sh
+	./"${ROOT_DIR}"/hack/verify-codegen.sh
 else
 	echo "Unrecognized action ${action}"
 	usage "$0"
