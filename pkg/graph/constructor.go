@@ -32,13 +32,7 @@ func (g *Graph) AddBroker(broker eventingv1.Broker) {
 	dest := &duckv1.Destination{Ref: ref}
 
 	// check if this vertex already exists
-	v, ok := g.vertices[makeComparableDestination(dest)]
-	if !ok {
-		v = &Vertex{
-			self: dest,
-		}
-		g.vertices[makeComparableDestination(dest)] = v
-	}
+	v := g.getOrCreateVertex(dest)
 
 	if broker.Spec.Delivery == nil || broker.Spec.Delivery.DeadLetterSink == nil {
 		// no DLS, we are done
@@ -46,13 +40,7 @@ func (g *Graph) AddBroker(broker eventingv1.Broker) {
 	}
 
 	// broker has a DLS, we need to add an edge to that
-	to, ok := g.vertices[makeComparableDestination(broker.Spec.Delivery.DeadLetterSink)]
-	if !ok {
-		to = &Vertex{
-			self: broker.Spec.Delivery.DeadLetterSink,
-		}
-		g.vertices[makeComparableDestination(broker.Spec.Delivery.DeadLetterSink)] = to
-	}
+	to := g.getOrCreateVertex(broker.Spec.Delivery.DeadLetterSink)
 
 	v.AddEdge(to, dest, NoTransform)
 }
@@ -70,6 +58,20 @@ func (g *Graph) AddChannel(channel messagingv1.Channel) {
 	}
 	dest := &duckv1.Destination{Ref: ref}
 
+	v := g.getOrCreateVertex(dest)
+
+	if channel.Spec.Delivery == nil || channel.Spec.Delivery.DeadLetterSink == nil {
+		// no DLS, we are done
+		return
+	}
+
+	// channel has a DLS, we need to add an edge to that
+	to := g.getOrCreateVertex(channel.Spec.Delivery.DeadLetterSink)
+
+	v.AddEdge(to, dest, NoTransform)
+}
+
+func (g *Graph) getOrCreateVertex(dest *duckv1.Destination) *Vertex {
 	v, ok := g.vertices[makeComparableDestination(dest)]
 	if !ok {
 		v = &Vertex{
@@ -78,19 +80,5 @@ func (g *Graph) AddChannel(channel messagingv1.Channel) {
 		g.vertices[makeComparableDestination(dest)] = v
 	}
 
-	if channel.Spec.Delivery == nil || channel.Spec.Delivery.DeadLetterSink == nil {
-		// no DLS, we are done
-		return
-	}
-
-	// channel has a DLS, we need to add an edge to that
-	to, ok := g.vertices[makeComparableDestination(channel.Spec.Delivery.DeadLetterSink)]
-	if !ok {
-		to = &Vertex{
-			self: channel.Spec.Delivery.DeadLetterSink,
-		}
-		g.vertices[makeComparableDestination(channel.Spec.Delivery.DeadLetterSink)] = to
-	}
-
-	v.AddEdge(to, dest, NoTransform)
+	return v
 }
