@@ -167,7 +167,7 @@ func channelAllowsSubscribersAndStatus(subscriptionURI string) feature.StepFn {
 		var channelable *duckv1.Channelable
 		interval, timeout := environment.PollTimingsFromContext(ctx)
 		var want *duckv1.SubscriberSpec
-		err := wait.PollImmediate(interval, timeout, func() (bool, error) {
+		err := wait.PollUntilContextTimeout(ctx, interval, timeout, true, func(ctx context.Context) (bool, error) {
 			channelable = getChannelable(ctx, t)
 			if channelable == nil {
 				t.Fatalf("channelable is nil")
@@ -234,7 +234,7 @@ func readyChannelIsAddressable(ctx context.Context, t feature.T) {
 
 	// Poll for a ready channel.
 	interval, timeout := environment.PollTimingsFromContext(ctx)
-	err := wait.PollImmediate(interval, timeout, func() (bool, error) {
+	err := wait.PollUntilContextTimeout(ctx, interval, timeout, true, func(ctx context.Context) (bool, error) {
 		ch = getChannelable(ctx, t)
 		if c := ch.Status.GetCondition(apis.ConditionReady); c.IsTrue() {
 			return true, nil

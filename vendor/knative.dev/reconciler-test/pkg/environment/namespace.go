@@ -91,7 +91,7 @@ func (mr *MagicEnvironment) CreateNamespaceIfNeeded() error {
 		// https://github.com/kubernetes/kubernetes/issues/66689
 		// We can only start creating pods after the default ServiceAccount is created by the kube-controller-manager.
 		var sa *corev1.ServiceAccount
-		if err := wait.PollImmediate(interval, timeout, func() (bool, error) {
+		if err := wait.PollUntilContextTimeout(context.Background(), interval, timeout, true, func(ctx context.Context) (bool, error) {
 			sas := c.CoreV1().ServiceAccounts(mr.namespace)
 			if sa, err = sas.Get(context.Background(), "default", metav1.GetOptions{}); err == nil {
 				return true, nil

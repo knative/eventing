@@ -59,7 +59,7 @@ func WaitForEventType(eventtypes ...EventType) feature.StepFn {
 		for _, et := range eventtypes[1:] {
 			eventType = eventType.And(et)
 		}
-		err := wait.PollImmediate(interval, timeout, func() (done bool, err error) {
+		err := wait.PollUntilContextTimeout(ctx, interval, timeout, true, func(ctx context.Context) (done bool, err error) {
 			etl, err := eventingclient.Get(ctx).
 				EventingV1beta2().
 				EventTypes(env.Namespace()).

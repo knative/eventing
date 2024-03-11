@@ -59,7 +59,7 @@ func WaitForJobCondition(ctx context.Context, t feature.T, name string, isCondit
 	kube := kubeclient.Get(ctx)
 	jobs := kube.BatchV1().Jobs(namespace)
 
-	err := wait.PollImmediate(interval, timeout, func() (bool, error) {
+	err := wait.PollUntilContextTimeout(ctx, interval, timeout, true, func(ctx context.Context) (bool, error) {
 		job, err := jobs.Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			if apierrors.IsNotFound(err) {
@@ -94,7 +94,7 @@ func WaitForJobTerminationMessage(ctx context.Context, t feature.T, name string,
 	namespace := environment.FromContext(ctx).Namespace()
 
 	// poll until the pod is terminated.
-	err := wait.PollImmediate(interval, timeout, func() (bool, error) {
+	err := wait.PollUntilContextTimeout(ctx, interval, timeout, true, func(ctx context.Context) (bool, error) {
 		pod, err := GetJobPodByJobName(ctx, name)
 		if err != nil {
 			if apierrors.IsNotFound(err) {

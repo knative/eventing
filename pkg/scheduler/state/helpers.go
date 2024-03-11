@@ -17,6 +17,7 @@ limitations under the License.
 package state
 
 import (
+	"context"
 	"math"
 	"strconv"
 	"strings"
@@ -54,7 +55,7 @@ func SatisfyZoneAvailability(feasiblePods []int32, states *State) bool {
 	var zoneName string
 	var err error
 	for _, podID := range feasiblePods {
-		wait.PollImmediate(50*time.Millisecond, 5*time.Second, func() (bool, error) {
+		wait.PollUntilContextTimeout(context.Background(), 50*time.Millisecond, 5*time.Second, true, func(ctx context.Context) (bool, error) {
 			zoneName, _, err = states.GetPodInfo(PodNameFromOrdinal(states.StatefulSetName, podID))
 			return err == nil, nil
 		})
@@ -68,7 +69,7 @@ func SatisfyNodeAvailability(feasiblePods []int32, states *State) bool {
 	var nodeName string
 	var err error
 	for _, podID := range feasiblePods {
-		wait.PollImmediate(50*time.Millisecond, 5*time.Second, func() (bool, error) {
+		wait.PollUntilContextTimeout(context.Background(), 50*time.Millisecond, 5*time.Second, true, func(ctx context.Context) (bool, error) {
 			_, nodeName, err = states.GetPodInfo(PodNameFromOrdinal(states.StatefulSetName, podID))
 			return err == nil, nil
 		})

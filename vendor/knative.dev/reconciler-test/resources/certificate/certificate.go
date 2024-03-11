@@ -62,7 +62,7 @@ func Rotate(rotate RotateCertificate) feature.StepFn {
 
 func issueRotation(ctx context.Context, t feature.T, rotate RotateCertificate) {
 	var lastErr error
-	err := wait.PollImmediate(time.Second, time.Minute, func() (bool, error) {
+	err := wait.PollUntilContextTimeout(ctx, time.Second, time.Minute, true, func(ctx context.Context) (bool, error) {
 		err := rotateCertificate(ctx, rotate)
 		if err == nil {
 			return true, nil
@@ -142,7 +142,7 @@ func rotateCertificate(ctx context.Context, rotate RotateCertificate) error {
 
 func waitForRotation(ctx context.Context, t feature.T, rotate RotateCertificate, before *corev1.Secret) {
 	keys := []string{"tls.key", "tls.crt"}
-	err := wait.PollImmediate(time.Second, time.Minute, func() (bool, error) {
+	err := wait.PollUntilContextTimeout(ctx, time.Second, time.Minute, true, func(ctx context.Context) (bool, error) {
 		current := getSecret(ctx, t, rotate)
 		for _, key := range keys {
 			if bytes.Equal(before.Data[key], current.Data[key]) {

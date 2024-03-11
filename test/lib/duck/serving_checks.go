@@ -50,7 +50,7 @@ func WaitForKServiceScales(ctx context.Context, client resources.ServingClient, 
 
 func waitForKServiceDeploymentName(client resources.ServingClient, name, namespace string) (string, error) {
 	var deploymentName string
-	err := wait.PollImmediate(interval, timeout, func() (bool, error) {
+	err := wait.PollUntilContextTimeout(context.Background(), interval, timeout, true, func(ctx context.Context) (bool, error) {
 		dn, found, err := resources.KServiceDeploymentName(client, name, namespace)
 		if found {
 			deploymentName = dn

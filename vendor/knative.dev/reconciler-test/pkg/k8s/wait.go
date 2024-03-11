@@ -127,7 +127,7 @@ func WaitForResourceCondition(ctx context.Context, t feature.T, namespace, name 
 	interval, timeout := PollTimings(ctx, timing)
 
 	like := &duckv1.KResource{}
-	return wait.PollImmediate(interval, timeout, func() (bool, error) {
+	return wait.PollUntilContextTimeout(ctx, interval, timeout, true, func(ctx context.Context) (bool, error) {
 		client := dynamicclient.Get(ctx)
 
 		us, err := client.Resource(gvr).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
@@ -249,7 +249,7 @@ func WaitForServiceEndpoints(ctx context.Context, t feature.T, name string, numb
 	interval, timeout := PollTimings(ctx, nil)
 	endpoints := kubeclient.Get(ctx).CoreV1().Endpoints(ns)
 	services := kubeclient.Get(ctx).CoreV1().Services(ns)
-	if err := wait.PollImmediate(interval, timeout, func() (bool, error) {
+	if err := wait.PollUntilContextTimeout(ctx, interval, timeout, true, func(ctx context.Context) (bool, error) {
 		svc, err := services.Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			if apierrors.IsNotFound(err) {
@@ -268,7 +268,7 @@ func WaitForServiceEndpoints(ctx context.Context, t feature.T, name string, numb
 			ErrWaitingForServiceEndpoints, numberOfExpectedEndpoints,
 			ns, name, errors.WithStack(err))
 	}
-	if err := wait.PollImmediate(interval, timeout, func() (bool, error) {
+	if err := wait.PollUntilContextTimeout(ctx, interval, timeout, true, func(ctx context.Context) (bool, error) {
 		endpoint, err := endpoints.Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			if apierrors.IsNotFound(err) {
@@ -398,7 +398,7 @@ func WaitForPodReadyOrSucceededOrFail(ctx context.Context, t feature.T, podName 
 	podClient := kubeclient.Get(ctx).CoreV1().Pods(ns)
 	p := podClient
 	interval, timeout := PollTimings(ctx, nil)
-	err := wait.PollImmediate(interval, timeout, func() (bool, error) {
+	err := wait.PollUntilContextTimeout(ctx, interval, timeout, true, func(ctx context.Context) (bool, error) {
 		p, err := p.Get(ctx, podName, metav1.GetOptions{})
 		if err != nil {
 			if apierrors.IsNotFound(err) {
@@ -463,7 +463,7 @@ func WaitForAddress(ctx context.Context, gvr schema.GroupVersionResource, name s
 	interval, timeout := PollTimings(ctx, timing)
 
 	var addr *duckv1.Addressable
-	err := wait.PollImmediate(interval, timeout, func() (bool, error) {
+	err := wait.PollUntilContextTimeout(ctx, interval, timeout, true, func(ctx context.Context) (bool, error) {
 		var err error
 		addr, err = Address(ctx, gvr, name)
 		if err == nil && addr == nil {

@@ -64,7 +64,7 @@ func IsPresentInNamespace(name string, ns string, assertions ...Assertion) featu
 		interval, timeout := environment.PollTimingsFromContext(ctx)
 
 		var lastErr error
-		err := wait.PollImmediate(interval, timeout, func() (bool, error) {
+		err := wait.PollUntilContextTimeout(ctx, interval, timeout, true, func(ctx context.Context) (bool, error) {
 			_, err := kubeclient.Get(ctx).CoreV1().
 				Secrets(ns).
 				Get(ctx, name, metav1.GetOptions{})

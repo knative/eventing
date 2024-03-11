@@ -171,7 +171,7 @@ func Start(ctx context.Context, logs *eventshub.EventLogs, clientOpts ...eventsh
 	if env.ProbeSink {
 		probingTimeout := time.Duration(env.ProbeSinkTimeout) * time.Second
 		// Probe the sink for up to a minute.
-		if err := wait.PollImmediate(100*time.Millisecond, probingTimeout, func() (bool, error) {
+		if err := wait.PollUntilContextTimeout(ctx, 100*time.Millisecond, probingTimeout, true, func(ctx context.Context) (bool, error) {
 			req, err := nethttp.NewRequest(nethttp.MethodHead, env.Sink, nil)
 			if err != nil {
 				return false, err

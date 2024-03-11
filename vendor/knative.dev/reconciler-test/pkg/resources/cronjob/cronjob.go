@@ -81,7 +81,7 @@ func getJobNameFromCronJobName(ctx context.Context, t feature.T, name string) st
 	})
 
 	interval, timeout := environment.PollTimingsFromContext(ctx)
-	err := wait.PollImmediate(interval, timeout, func() (done bool, err error) {
+	err := wait.PollUntilContextTimeout(ctx, interval, timeout, true, func(ctx context.Context) (done bool, err error) {
 
 		jobs, err := kubeclient.Get(ctx).BatchV1().
 			Jobs(environment.FromContext(ctx).Namespace()).

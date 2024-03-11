@@ -216,7 +216,7 @@ func (ei *Store) waitAtLeastNMatch(ctx context.Context, f EventInfoMatcher, min 
 
 	retryInterval, retryTimeout := environment.PollTimingsFromContext(ctx)
 
-	wait.PollImmediate(retryInterval, retryTimeout, func() (bool, error) {
+	wait.PollUntilContextTimeout(ctx, retryInterval, retryTimeout, true, func(ctx context.Context) (bool, error) {
 		allMatch, sInfo, matchErrs, err := ei.Find(f)
 		if err != nil {
 			internalErr = fmt.Errorf("FAIL MATCHING: unexpected error during find: %v", err)

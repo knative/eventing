@@ -67,7 +67,7 @@ func IsAddressable(gvr schema.GroupVersionResource, name string, timing ...time.
 	return func(ctx context.Context, t feature.T) {
 		interval, timeout := PollTimings(ctx, timing)
 		var lastError error
-		err := wait.PollImmediate(interval, timeout, func() (bool, error) {
+		err := wait.PollUntilContextTimeout(ctx, interval, timeout, true, func(ctx context.Context) (bool, error) {
 			addr, err := Address(ctx, gvr, name)
 			if err != nil {
 				lastError = err
