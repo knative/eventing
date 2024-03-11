@@ -98,6 +98,10 @@ func (e Flags) IsOIDCAuthentication() bool {
 	return e != nil && e[OIDCAuthentication] == Enabled
 }
 
+func (e Flags) IsCrossNamespaceEventLinks() bool {
+	return e != nil && e[CrossNamespaceEventLinks] == Enabled
+}
+
 func (e Flags) String() string {
 	return fmt.Sprintf("%+v", map[string]Flag(e))
 }
