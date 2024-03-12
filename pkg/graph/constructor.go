@@ -17,7 +17,10 @@ limitations under the License.
 package graph
 
 import (
+	"fmt"
+
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	eventingv1beta3 "knative.dev/eventing/pkg/apis/eventing/v1beta3"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
@@ -42,7 +45,7 @@ func (g *Graph) AddBroker(broker eventingv1.Broker) {
 	// broker has a DLS, we need to add an edge to that
 	to := g.getOrCreateVertex(broker.Spec.Delivery.DeadLetterSink)
 
-	v.AddEdge(to, dest, NoTransform)
+	v.AddEdge(to, dest, NoTransform{}, true)
 }
 
 func (g *Graph) AddChannel(channel messagingv1.Channel) {
@@ -68,14 +71,43 @@ func (g *Graph) AddChannel(channel messagingv1.Channel) {
 	// channel has a DLS, we need to add an edge to that
 	to := g.getOrCreateVertex(channel.Spec.Delivery.DeadLetterSink)
 
-	v.AddEdge(to, dest, NoTransform)
+	v.AddEdge(to, dest, NoTransform{}, true)
+}
+
+func (g *Graph) AddEventType(et *eventingv1beta3.EventType) error {
+	ref := &duckv1.KReference{
+		Name:       et.Name,
+		Namespace:  et.Namespace,
+		APIVersion: "eventing.knative.dev/v1beta3",
+		Kind:       "EventType",
+	}
+	dest := &duckv1.Destination{Ref: ref}
+
+	if et.Spec.Reference.Kind == "Subscription" || et.Spec.Reference.Kind == "Trigger" {
+		outEdge := g.GetPrimaryOutEdgeWithRef(et.Spec.Reference)
+		if outEdge == nil {
+			return fmt.Errorf("trigger/subscription must have a primary outward edge, but had none")
+		}
+
+		outEdge.To().AddEdge(outEdge.From(), dest, EventTypeTransform{EventType: et}, false)
+
+		return nil
+	}
+
+	from := g.getOrCreateVertex(dest)
+	to := g.getOrCreateVertex(&duckv1.Destination{Ref: et.Spec.Reference})
+
+	from.AddEdge(to, dest, EventTypeTransform{EventType: et}, false)
+
+	return nil
 }
 
 func (g *Graph) getOrCreateVertex(dest *duckv1.Destination) *Vertex {
 	v, ok := g.vertices[makeComparableDestination(dest)]
 	if !ok {
 		v = &Vertex{
-			self: dest,
+			self:   dest,
+			parent: g,
 		}
 		g.vertices[makeComparableDestination(dest)] = v
 	}
