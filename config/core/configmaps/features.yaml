@@ -55,3 +55,8 @@ data:
   # ALPHA feature: The aauthentication-oidc flag allows you to use OIDC authentication for Eventing.
   # For more details: https://github.com/knative/eventing/issues/7174
   authentication-oidc: "disabled"
+
+  # ALPHA feature: The cross-namespace-event-links flag allows you to use cross-namespace referencing for Eventing.
+  # For more details: https://github.com/knative/eventing/issues/7739
+  cross-namespace-event-links: "disabled"
+

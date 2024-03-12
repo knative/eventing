@@ -26,6 +26,7 @@ import (
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
+	"github.com/cloudevents/sdk-go/v2/binding"
 	cloudeventsbindings "github.com/cloudevents/sdk-go/v2/binding"
 	"go.opencensus.io/trace"
 	"go.uber.org/zap"
@@ -170,6 +171,11 @@ func (o *Forwarder) ServeHTTP(writer http.ResponseWriter, request *http.Request)
 		logging.FromContext(o.ctx).Fatalw("Unable to parse sink URL", zap.Error(err))
 	}
 	req.URL = u
+
+	err = cehttp.WriteRequest(requestCtx, binding.ToMessage(event), req)
+	if err != nil {
+		logging.FromContext(o.ctx).Error("Cannot write the event to request: ", err)
+	}
 
 	eventString := "unknown"
 	if event != nil {
