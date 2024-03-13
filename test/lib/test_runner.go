@@ -353,7 +353,7 @@ func SetupPullSecret(t *testing.T, client *Client) {
 
 // waitForServiceAccountExists waits until the ServiceAccount exists.
 func waitForServiceAccountExists(client *Client, name, namespace string) error {
-	return wait.PollImmediate(1*time.Second, 2*time.Minute, func() (bool, error) {
+	return wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 2*time.Minute, true, func(ctx context.Context) (bool, error) {
 		sas := client.Kube.CoreV1().ServiceAccounts(namespace)
 		if _, err := sas.Get(context.Background(), name, metav1.GetOptions{}); err == nil {
 			return true, nil
