@@ -359,7 +359,7 @@ func flush(logger *zap.SugaredLogger) {
 //
 // The context is expected to be initialized with injection and namespace.
 func GetConfigMapByPolling(ctx context.Context, name string) (cm *corev1.ConfigMap, err error) {
-	err = wait.PollImmediate(1*time.Second, 5*time.Second, func() (bool, error) {
+	err = wait.PollUntilContextTimeout(ctx, 1*time.Second, 5*time.Second, true, func(ctx context.Context) (bool, error) {
 		cm, err = kubeclient.Get(ctx).
 			CoreV1().ConfigMaps(NamespaceFromContext(ctx)).
 			Get(ctx, name, metav1.GetOptions{})

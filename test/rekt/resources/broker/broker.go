@@ -195,7 +195,7 @@ func WaitForCondition(name string, condition Condition, timing ...time.Duration)
 		interval, timeout := k8s.PollTimings(ctx, timing)
 		var lastErr error
 		var lastBroker *eventingv1.Broker
-		err := wait.PollImmediate(interval, timeout, func() (done bool, err error) {
+		err := wait.PollUntilContextTimeout(ctx, interval, timeout, true, func(ctx context.Context) (done bool, err error) {
 			br, err := eventingclient.Get(ctx).
 				EventingV1().
 				Brokers(env.Namespace()).

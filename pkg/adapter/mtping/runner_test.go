@@ -389,7 +389,7 @@ func TestStartStopCronDelayWait(t *testing.T) {
 }
 
 func validateSent(t *testing.T, events []cloudevents.Event, wantData []byte, wantContentType string, extensions map[string]string) {
-	err := wait.PollImmediate(time.Second, time.Minute, func() (done bool, err error) {
+	err := wait.PollUntilContextTimeout(context.Background(), time.Second, time.Minute, true, func(ctx context.Context) (done bool, err error) {
 		return len(events) == 1, nil
 	})
 	if err != nil {
