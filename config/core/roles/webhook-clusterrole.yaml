@@ -33,14 +33,6 @@ rules:
       - "list"
       - "watch"
 
-   # For checking if user has permissions to make a cross namespace reference
-  - apiGroups:
-      - "authorization.k8s.io"
-    resources:
-      - "subjectaccessreviews"
-    verbs:
-      - "create"
-
   # For manipulating certs into secrets.
   - apiGroups:
       - ""
