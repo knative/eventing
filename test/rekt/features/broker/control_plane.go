@@ -384,7 +384,7 @@ func addControlPlaneDelivery(fs *feature.FeatureSet, brokerOpts ...manifest.CfgF
 
 		f.Requirement("wait until done", func(ctx context.Context, t feature.T) {
 			interval, timeout := environment.PollTimingsFromContext(ctx)
-			err := wait.PollImmediate(interval, timeout, func() (bool, error) {
+			err := wait.PollUntilContextTimeout(ctx, interval, timeout, true, func(ctx context.Context) (bool, error) {
 				gtg := true
 				for prefix, want := range expectedEvents {
 					events := prober.ReceivedOrRejectedBy(ctx, prefix)
@@ -530,7 +530,7 @@ func addControlPlaneEventRouting(fs *feature.FeatureSet, brokerOpts ...manifest.
 
 		f.Requirement("wait until done", func(ctx context.Context, t feature.T) {
 			interval, timeout := environment.PollTimingsFromContext(ctx)
-			err := wait.PollImmediate(interval, timeout, func() (bool, error) {
+			err := wait.PollUntilContextTimeout(ctx, interval, timeout, true, func(ctx context.Context) (bool, error) {
 				gtg := true
 				for prefix, want := range expectedEvents {
 					events := prober.ReceivedOrRejectedBy(ctx, prefix)

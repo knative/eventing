@@ -64,7 +64,7 @@ func KResourceHasObservedGeneration(gvr schema.GroupVersionResource, name string
 		var err error
 
 		interval, timeout := environment.PollTimingsFromContext(ctx)
-		err = wait.PollImmediate(interval, timeout, func() (bool, error) {
+		err = wait.PollUntilContextTimeout(ctx, interval, timeout, true, func(ctx context.Context) (bool, error) {
 			kr, err = get()
 			if err != nil {
 				// break out if not a "not found" error.
@@ -106,7 +106,7 @@ func KResourceHasReadyInConditions(gvr schema.GroupVersionResource, name string)
 		var err error
 
 		interval, timeout := environment.PollTimingsFromContext(ctx)
-		err = wait.PollImmediate(interval, timeout, func() (bool, error) {
+		err = wait.PollUntilContextTimeout(ctx, interval, timeout, true, func(ctx context.Context) (bool, error) {
 			kr, err = get()
 			if err != nil {
 				// break out if not a "not found" error.

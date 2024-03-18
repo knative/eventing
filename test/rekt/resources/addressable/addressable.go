@@ -35,7 +35,7 @@ type ValidateAddressFn func(addressable *duckv1.Addressable) error
 func Address(ctx context.Context, gvr schema.GroupVersionResource, name string, timings ...time.Duration) (*duckv1.Addressable, error) {
 	interval, timeout := k8s.PollTimings(ctx, timings)
 	var addr *duckv1.Addressable
-	err := wait.PollImmediate(interval, timeout, func() (bool, error) {
+	err := wait.PollUntilContextTimeout(ctx, interval, timeout, true, func(ctx context.Context) (bool, error) {
 		var err error
 		addr, err = k8s.Address(ctx, gvr, name)
 		if err == nil && addr == nil {

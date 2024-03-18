@@ -236,7 +236,7 @@ func (s *stateBuilder) State(reserved map[types.NamespacedName]map[string]int32)
 
 	for podId := int32(0); podId < scale.Spec.Replicas && s.podLister != nil; podId++ {
 		var pod *v1.Pod
-		wait.PollImmediate(50*time.Millisecond, 5*time.Second, func() (bool, error) {
+		wait.PollUntilContextTimeout(context.Background(), 50*time.Millisecond, 5*time.Second, true, func(ctx context.Context) (bool, error) {
 			pod, err = s.podLister.Get(PodNameFromOrdinal(s.statefulSetName, podId))
 			return err == nil, nil
 		})
@@ -291,7 +291,7 @@ func (s *stateBuilder) State(reserved map[types.NamespacedName]map[string]int32)
 			withPlacement[vpod.GetKey()][podName] = true
 
 			var pod *v1.Pod
-			wait.PollImmediate(50*time.Millisecond, 5*time.Second, func() (bool, error) {
+			wait.PollUntilContextTimeout(context.Background(), 50*time.Millisecond, 5*time.Second, true, func(ctx context.Context) (bool, error) {
 				pod, err = s.podLister.Get(podName)
 				return err == nil, nil
 			})
@@ -316,7 +316,7 @@ func (s *stateBuilder) State(reserved map[types.NamespacedName]map[string]int32)
 				}
 
 				var pod *v1.Pod
-				wait.PollImmediate(50*time.Millisecond, 5*time.Second, func() (bool, error) {
+				wait.PollUntilContextTimeout(context.Background(), 50*time.Millisecond, 5*time.Second, true, func(ctx context.Context) (bool, error) {
 					pod, err = s.podLister.Get(podName)
 					return err == nil, nil
 				})
