@@ -49,15 +49,18 @@ func TestEventTypeDefaults(t *testing.T) {
 						Name:       "default",
 					},
 					Attributes: []EventAttributeDefinition{
-						EventAttributeDefinition{
+						{
+							Name:     "type",
 							Value:    "test-type",
 							Required: true,
 						},
-						EventAttributeDefinition{
+						{
+							Name:     "source",
 							Value:    testSource.String(),
 							Required: true,
 						},
-						EventAttributeDefinition{
+						{
+							Name:     "schema",
 							Value:    testSchema.String(),
 							Required: true,
 						},
@@ -72,15 +75,18 @@ func TestEventTypeDefaults(t *testing.T) {
 						Name:       "default",
 					},
 					Attributes: []EventAttributeDefinition{
-						EventAttributeDefinition{
+						{
+							Name:     "type",
 							Value:    "test-type",
 							Required: true,
 						},
-						EventAttributeDefinition{
+						{
+							Name:     "source",
 							Value:    testSource.String(),
 							Required: true,
 						},
-						EventAttributeDefinition{
+						{
+							Name:     "schema",
 							Value:    testSchema.String(),
 							Required: true,
 						},
