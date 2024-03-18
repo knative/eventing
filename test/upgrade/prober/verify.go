@@ -62,7 +62,7 @@ func (p *prober) Verify() (eventErrs []error, eventsSent int) {
 	}
 	p.log.Info("Waiting for complete report from receiver...")
 	start := time.Now()
-	if err := wait.PollImmediate(jobWaitInterval, jobWaitTimeout, func() (bool, error) {
+	if err := wait.PollUntilContextTimeout(context.Background(), jobWaitInterval, jobWaitTimeout, true, func(ctx context.Context) (bool, error) {
 		var err error
 		report, err = p.fetchReport()
 		if err != nil {
@@ -326,7 +326,7 @@ func waitForJobToComplete(ctx context.Context, client kubernetes.Interface, jobN
 	span := logging.GetEmitableSpan(ctx, fmt.Sprint("waitForJobToComplete/", jobName))
 	defer span.End()
 
-	return wait.PollImmediate(jobWaitInterval, jobWaitTimeout, func() (bool, error) {
+	return wait.PollUntilContextTimeout(ctx, jobWaitInterval, jobWaitTimeout, true, func(ctx context.Context) (bool, error) {
 		j, err := jobs.Get(ctx, jobName, metav1.GetOptions{})
 		if err != nil {
 			return true, err

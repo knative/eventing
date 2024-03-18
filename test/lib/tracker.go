@@ -137,7 +137,7 @@ func (t *Tracker) Clean(awaitDeletion bool) error {
 			logf("Failed to clean the resource %q : %v", deleter.Name, err)
 		} else if awaitDeletion {
 			logf("Waiting for %s to be deleted", deleter.Name)
-			if err := wait.PollImmediate(interval, timeout, func() (bool, error) {
+			if err := wait.PollUntilContextTimeout(context.Background(), interval, timeout, true, func(ctx context.Context) (bool, error) {
 				if _, err := deleter.Resource.Get(context.Background(), deleter.Name, metav1.GetOptions{}); err != nil {
 					return true, nil
 				}
