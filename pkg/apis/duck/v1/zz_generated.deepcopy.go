@@ -322,11 +322,6 @@ func (in *SubscriberSpec) DeepCopyInto(out *SubscriberSpec) {
 		*out = new(string)
 		**out = **in
 	}
-	if in.Namespace != nil {
-		in, out := &in.Namespace, &out.Namespace
-		*out = new(string)
-		**out = **in
-	}
 	if in.SubscriberURI != nil {
 		in, out := &in.SubscriberURI, &out.SubscriberURI
 		*out = new(apis.URL)

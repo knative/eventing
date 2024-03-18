@@ -161,9 +161,6 @@ spec:
                     name:
                       description: The name of the subscription
                       type: string
-                    namespace:
-                      description: The namespace of the subscription
-                      type: string
                     replyUri:
                       description: ReplyURI is the endpoint for the reply
                       type: string

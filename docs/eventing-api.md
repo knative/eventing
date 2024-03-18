@@ -637,18 +637,6 @@ string
 </tr>
 <tr>
 <td>
-<code>namespace</code><br/>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Namespace is used to identify the namespace of the original subscription object.</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>uid</code><br/>
 <em>
 <a href="https://godoc.org/k8s.io/apimachinery/pkg/types#UID">

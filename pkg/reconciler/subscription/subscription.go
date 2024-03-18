@@ -508,7 +508,6 @@ func (r *Reconciler) updateChannelAddSubscriptionSpec(channel *eventingduckv1.Ch
 	for i, v := range channel.Spec.Subscribers {
 		if v.UID == sub.UID {
 			channel.Spec.Subscribers[i].Name = &sub.Name
-			channel.Spec.Subscribers[i].Namespace = &sub.Namespace
 			channel.Spec.Subscribers[i].Generation = sub.Generation
 			channel.Spec.Subscribers[i].SubscriberURI = sub.Status.PhysicalSubscription.SubscriberURI
 			channel.Spec.Subscribers[i].SubscriberCACerts = sub.Status.PhysicalSubscription.SubscriberCACerts
@@ -524,7 +523,6 @@ func (r *Reconciler) updateChannelAddSubscriptionSpec(channel *eventingduckv1.Ch
 
 	toAdd := eventingduckv1.SubscriberSpec{
 		Name:               &sub.Name,
-		Namespace:          &sub.Namespace,
 		UID:                sub.UID,
 		Generation:         sub.Generation,
 		SubscriberURI:      sub.Status.PhysicalSubscription.SubscriberURI,

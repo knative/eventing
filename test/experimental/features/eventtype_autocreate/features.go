@@ -16,7 +16,6 @@ package eventtype_autocreate
 import (
 	"context"
 
-	"github.com/cloudevents/sdk-go/v2/test"
 	cetest "github.com/cloudevents/sdk-go/v2/test"
 	"k8s.io/apimachinery/pkg/util/sets"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -78,7 +77,7 @@ func AutoCreateEventTypesOnSubscription() *feature.Feature {
 	f := feature.NewFeature()
 
 	event := cetest.FullEvent()
-	event.SetType("test.imc.custom.event.type")
+	event.SetType("test.imc.custom.event.type.reply")
 
 	sender := feature.MakeRandomK8sName("sender")
 	sub := feature.MakeRandomK8sName("subscription")
@@ -102,7 +101,10 @@ func AutoCreateEventTypesOnSubscription() *feature.Feature {
 
 	f.Alpha("imc").
 		Must("deliver events to subscriber", assert.OnStore(sink).MatchEvent(cetest.HasId(event.ID())).AtLeast(1)).
-		Must("create event type", eventtype.WaitForEventType(eventtype.AssertReferencePresent(subscription.AsKReference(sub))))
+		Must("create event type", eventtype.WaitForEventType(
+			eventtype.AssertReferencePresent(subscription.AsKReference(sub)).
+				And(eventtype.AssertPresent(sets.New[string](event.Type()))),
+		))
 
 	return f
 }
@@ -143,7 +145,7 @@ func AutoCreateEventTypesOnTrigger(brokerName string) *feature.Feature {
 	f := feature.NewFeature()
 
 	event := cetest.FullEvent()
-	event.SetType("test.broker.custom.event.type")
+	event.SetType("test.broker.custom.event.type.reply")
 
 	source := feature.MakeRandomK8sName("source")
 	triggerName := feature.MakeRandomK8sName("trigger")
@@ -168,7 +170,11 @@ func AutoCreateEventTypesOnTrigger(brokerName string) *feature.Feature {
 
 	f.Alpha("broker").
 		Must("deliver events to subscriber", assert.OnStore(sink).MatchEvent(cetest.HasId(event.ID())).AtLeast(1)).
-		Must("create event type referencing the trigger", eventtype.WaitForEventType(eventtype.AssertReferencePresent(trigger.AsKReference(triggerName))))
+		Must("create event type referencing the trigger", eventtype.WaitForEventType(
+			eventtype.AssertReferencePresent(
+				trigger.AsKReference(triggerName)).
+				And(eventtype.AssertPresent(sets.New[string](event.Type()))),
+		))
 
 	return f
 }
@@ -206,7 +212,7 @@ func AutoCreateEventTypeEventsFromPingSource() *feature.Feature {
 
 	f.Stable("pingsource as event source").
 		Must("delivers events on broker with URI", assert.OnStore(sink).MatchEvent(
-			test.HasType(sourcesv1.PingSourceEventType)).AtLeast(1)).
+			cetest.HasType(sourcesv1.PingSourceEventType)).AtLeast(1)).
 		Must("PingSource test eventtypes match", eventtype.WaitForEventType(
 			eventtype.AssertReady(expectedCeTypes),
 			eventtype.AssertPresent(expectedCeTypes)))

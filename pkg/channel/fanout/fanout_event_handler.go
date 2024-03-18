@@ -176,10 +176,6 @@ func SubscriberSpecToFanoutConfig(sub eventingduckv1.SubscriberSpec) (*Subscript
 		s.Name = *sub.Name
 	}
 
-	if sub.Namespace != nil {
-		s.Namespace = *sub.Namespace
-	}
-
 	return s, nil
 }
 
