@@ -17,6 +17,8 @@ limitations under the License.
 package graph
 
 import (
+	"fmt"
+
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -93,4 +95,54 @@ func (g *Graph) AddChannel(channel messagingv1.Channel) {
 	}
 
 	v.AddEdge(to, dest, NoTransform)
+}
+
+func (g *Graph) AddTrigger(trigger eventingv1.Trigger) error {
+	brokerRef := &duckv1.KReference{
+		Name:       trigger.Spec.Broker,
+		Namespace:  trigger.Namespace,
+		APIVersion: "eventing.knative.dev/v1",
+		Kind:       "Broker",
+	}
+	brokerDest := &duckv1.Destination{Ref: brokerRef}
+	broker, ok := g.vertices[makeComparableDestination(brokerDest)]
+	if !ok {
+		return fmt.Errorf("trigger refers to a non existent broker, can't add it to the graph")
+	}
+
+	triggerRef := &duckv1.KReference{
+		Name:       trigger.Name,
+		Namespace:  trigger.Namespace,
+		APIVersion: "eventing.knative.dev/v1",
+		Kind:       "Trigger",
+	}
+	triggerDest := &duckv1.Destination{Ref: triggerRef}
+
+	to, ok := g.vertices[makeComparableDestination(&trigger.Spec.Subscriber)]
+	if !ok {
+		to = &Vertex{
+			self: &trigger.Spec.Subscriber,
+		}
+		g.vertices[makeComparableDestination(&trigger.Spec.Subscriber)] = to
+	}
+
+	//TODO: the transform function should be set according to the trigger filter - there are multiple open issues to address this later
+	broker.AddEdge(to, triggerDest, NoTransform)
+
+	if trigger.Spec.Delivery == nil || trigger.Spec.Delivery.DeadLetterSink == nil {
+		return nil
+	}
+
+	dls, ok := g.vertices[makeComparableDestination(trigger.Spec.Delivery.DeadLetterSink)]
+	if !ok {
+		dls = &Vertex{
+			self: trigger.Spec.Delivery.DeadLetterSink,
+		}
+		g.vertices[makeComparableDestination(trigger.Spec.Delivery.DeadLetterSink)] = dls
+	}
+
+	broker.AddEdge(dls, triggerDest, NoTransform)
+
+	return nil
+
 }
