@@ -1875,6 +1875,7 @@ string
 </em>
 </td>
 <td>
+<p>BrokerNamespace is the namespace of the broker that the trigger receives events from.</p>
 </td>
 </tr>
 <tr>
@@ -2290,6 +2291,7 @@ string
 </em>
 </td>
 <td>
+<p>BrokerNamespace is the namespace of the broker that the trigger receives events from.</p>
 </td>
 </tr>
 <tr>
