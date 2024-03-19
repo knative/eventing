@@ -18,12 +18,17 @@ package apiserver
 
 import (
 	"context"
+	"sync"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/eventing/pkg/adapter/apiserver/events"
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	brokerfilter "knative.dev/eventing/pkg/broker/filter"
+	"knative.dev/eventing/pkg/eventfilter"
+	"knative.dev/eventing/pkg/eventfilter/subscriptionsapi"
 )
 
 type resourceDelegate struct {
@@ -31,38 +36,51 @@ type resourceDelegate struct {
 	source              string
 	ref                 bool
 	apiServerSourceName string
+	filters             []eventingv1.SubscriptionsAPIFilter
 
 	logger *zap.SugaredLogger
 }
 
 var _ cache.Store = (*resourceDelegate)(nil)
+var filterSync sync.Once
+var filter eventfilter.Filter
 
 func (a *resourceDelegate) Add(obj interface{}) error {
-	ctx, event, err := events.MakeAddEvent(a.source, a.apiServerSourceName, obj, a.ref)
+	return a.handleKubernetesObject(events.MakeAddEvent, obj)
+}
+
+func (a *resourceDelegate) Update(obj interface{}) error {
+	return a.handleKubernetesObject(events.MakeUpdateEvent, obj)
+}
+
+func (a *resourceDelegate) Delete(obj interface{}) error {
+	return a.handleKubernetesObject(events.MakeDeleteEvent, obj)
+
+}
+
+// makeEventFunc represents the signature of the functions `events.Make*Event` so they can
+// be passed as a parameter
+type makeEventFunc func(string, string, interface{}, bool) (context.Context, cloudevents.Event, error)
+
+func (a *resourceDelegate) handleKubernetesObject(makeEvent makeEventFunc, obj interface{}) error {
+	ctx, event, err := makeEvent(a.source, a.apiServerSourceName, obj, a.ref)
+
 	if err != nil {
 		a.logger.Infow("event creation failed", zap.Error(err))
 		return err
 	}
-	a.sendCloudEvent(ctx, event)
-	return nil
-}
 
-func (a *resourceDelegate) Update(obj interface{}) error {
-	ctx, event, err := events.MakeUpdateEvent(a.source, a.apiServerSourceName, obj, a.ref)
-	if err != nil {
-		a.logger.Info("event creation failed", zap.Error(err))
-		return err
-	}
-	a.sendCloudEvent(ctx, event)
-	return nil
-}
+	filterSync.Do(func() {
+		a.logger.Debug("initializing filters once")
+		filter = subscriptionsapi.NewAllFilter(brokerfilter.MaterializeFiltersList(a.logger.Desugar(), a.filters)...)
+	})
 
-func (a *resourceDelegate) Delete(obj interface{}) error {
-	ctx, event, err := events.MakeDeleteEvent(a.source, a.apiServerSourceName, obj, a.ref)
-	if err != nil {
-		a.logger.Info("event creation failed", zap.Error(err))
-		return err
+	filterResult := filter.Filter(ctx, event)
+	if filterResult == eventfilter.FailFilter {
+		a.logger.Debugf("event type %s filtered out", event.Type())
+		return nil
 	}
+
 	a.sendCloudEvent(ctx, event)
 	return nil
 }

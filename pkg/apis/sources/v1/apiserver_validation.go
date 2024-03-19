@@ -22,6 +22,8 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/pkg/apis"
 )
 
@@ -73,5 +75,22 @@ func (cs *ApiServerSourceSpec) Validate(ctx context.Context) *apis.FieldError {
 		}
 	}
 	errs = errs.Also(cs.SourceSpec.Validate(ctx))
+	errs = errs.Also(validateSubscriptionAPIFiltersList(ctx, cs.Filters).ViaField("filters"))
+	return errs
+}
+
+func validateSubscriptionAPIFiltersList(ctx context.Context, filters []eventingv1.SubscriptionsAPIFilter) (errs *apis.FieldError) {
+	if !feature.FromContext(ctx).IsEnabled(feature.NewAPIServerFilters) {
+		if len(filters) != 0 {
+			return errs.Also(apis.ErrGeneric("Filters is not empty but the NewAPIServerFilters feature is disabled."))
+		}
+
+		return nil
+	}
+
+	for i, f := range filters {
+		f := f
+		errs = errs.Also(eventingv1.ValidateSubscriptionAPIFilter(ctx, &f)).ViaIndex(i)
+	}
 	return errs
 }
