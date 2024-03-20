@@ -1869,6 +1869,17 @@ string
 </tr>
 <tr>
 <td>
+<code>brokerNamespace</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>BrokerNamespace is the namespace of the broker that the trigger receives events from.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>filter</code><br/>
 <em>
 <a href="#eventing.knative.dev/v1.TriggerFilter">
@@ -2270,6 +2281,17 @@ string
 </td>
 <td>
 <p>Broker is the broker that this trigger receives events from.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>brokerNamespace</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>BrokerNamespace is the namespace of the broker that the trigger receives events from.</p>
 </td>
 </tr>
 <tr>
