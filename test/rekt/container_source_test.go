@@ -22,12 +22,13 @@ package rekt
 import (
 	"testing"
 
-	"knative.dev/eventing/test/rekt/features/containersource"
 	"knative.dev/pkg/system"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/knative"
+
+	"knative.dev/eventing/test/rekt/features/containersource"
 )
 
 func TestContainerSourceWithSinkRef(t *testing.T) {
@@ -99,5 +100,21 @@ func TestContainerSourceWithTLS(t *testing.T) {
 		eventshub.WithTLS(t),
 	)
 
-	env.Test(ctx, t, containersource.SendEventsWithTLSRecieverAsSink())
+	env.ParallelTest(ctx, t, containersource.SendEventsWithTLSRecieverAsSink())
+	env.ParallelTest(ctx, t, containersource.SendEventsWithTLSRecieverAsSinkTrustBundle())
+}
+
+func TestContainerSourceSendsEventsWithOIDC(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+		eventshub.WithTLS(t),
+	)
+
+	env.Test(ctx, t, containersource.SendsEventsWithSinkRefOIDC())
 }

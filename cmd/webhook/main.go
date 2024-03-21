@@ -23,8 +23,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
-	"knative.dev/eventing/pkg/apis/feature"
+	configmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap/filtered"
 
+	"knative.dev/eventing/pkg/apis/feature"
+	"knative.dev/eventing/pkg/auth"
+	"knative.dev/eventing/pkg/eventingtls"
+
+	filteredFactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/injection"
@@ -54,7 +59,7 @@ import (
 	pingdefaultconfig "knative.dev/eventing/pkg/apis/sources/config"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	sourcesv1beta2 "knative.dev/eventing/pkg/apis/sources/v1beta2"
-	sugar "knative.dev/eventing/pkg/apis/sugar"
+	"knative.dev/eventing/pkg/apis/sugar"
 	"knative.dev/eventing/pkg/reconciler/sinkbinding"
 
 	versionedscheme "knative.dev/eventing/pkg/client/clientset/versioned/scheme"
@@ -194,7 +199,8 @@ func NewConfigValidationController(ctx context.Context, _ configmap.Watcher) *co
 
 func NewSinkBindingWebhook(opts ...psbinding.ReconcilerOption) injection.ControllerConstructor {
 	return func(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
-		sbresolver := sinkbinding.WithContextFactory(ctx, func(types.NamespacedName) {})
+		trustBundleConfigMapLister := configmapinformer.Get(ctx, eventingtls.TrustBundleLabelSelector).Lister()
+		withContext := sinkbinding.WithContextFactory(ctx, trustBundleConfigMapLister, func(types.NamespacedName) {})
 
 		return psbinding.NewAdmissionController(ctx,
 
@@ -208,7 +214,7 @@ func NewSinkBindingWebhook(opts ...psbinding.ReconcilerOption) injection.Control
 			sinkbinding.ListAll,
 
 			// How to setup the context prior to invoking Do/Undo.
-			sbresolver,
+			withContext,
 			opts...,
 		)
 	}
@@ -280,6 +286,11 @@ func main() {
 		// SecretName must match the name of the Secret created in the configuration.
 		SecretName: "eventing-webhook-certs",
 	})
+
+	ctx = filteredFactory.WithSelectors(ctx,
+		auth.OIDCLabelSelector,
+		eventingtls.TrustBundleLabelSelector,
+	)
 
 	sharedmain.WebhookMainWithContext(ctx, webhook.NameFromEnv(),
 		certificates.NewController,

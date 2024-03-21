@@ -30,6 +30,7 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	"knative.dev/pkg/kmeta"
 
+	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
 	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/kncloudevents"
@@ -37,6 +38,7 @@ import (
 	"knative.dev/pkg/logging"
 
 	"go.uber.org/zap"
+	filteredconfigmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap/filtered"
 	"knative.dev/pkg/configmap"
 	configmapinformer "knative.dev/pkg/configmap/informer"
 	"knative.dev/pkg/controller"
@@ -45,15 +47,17 @@ import (
 	"knative.dev/pkg/tracing"
 	tracingconfig "knative.dev/pkg/tracing/config"
 
+	kubeclient "knative.dev/pkg/client/injection/kube/client"
+	secretinformer "knative.dev/pkg/injection/clients/namespacedkube/informers/core/v1/secret"
+
 	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/eventing/pkg/channel"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
+	eventtypeinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta2/eventtype"
 	inmemorychannelinformer "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/inmemorychannel"
 	inmemorychannelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/inmemorychannel"
 	"knative.dev/eventing/pkg/inmemorychannel"
-	kubeclient "knative.dev/pkg/client/injection/kube/client"
-	secretinformer "knative.dev/pkg/injection/clients/namespacedkube/informers/core/v1/secret"
 )
 
 const (
@@ -62,7 +66,6 @@ const (
 	httpPort      = 8080
 	httpsPort     = 8443
 	finalizerName = "imc-dispatcher"
-	tlsSecretName = "imc-dispatcher-server-tls"
 )
 
 type envConfig struct {
@@ -83,6 +86,8 @@ func NewController(
 	cmw configmap.Watcher,
 ) *controller.Impl {
 	logger := logging.FromContext(ctx)
+
+	trustBundleConfigMapInformer := filteredconfigmapinformer.Get(ctx, eventingtls.TrustBundleLabelSelector)
 
 	// Setup trace publishing.
 	iw := cmw.(*configmapinformer.InformedWatcher)
@@ -109,7 +114,7 @@ func NewController(
 
 	reporter := channel.NewStatsReporter(env.ContainerName, kmeta.ChildName(env.PodName, uuid.New().String()))
 
-	sh := multichannelfanout.NewMessageHandler(ctx, logger.Desugar())
+	sh := multichannelfanout.NewEventHandler(ctx, logger.Desugar())
 
 	inmemorychannelInformer := inmemorychannelinformer.Get(ctx)
 
@@ -118,14 +123,41 @@ func NewController(
 		chMsgHandler: sh,
 	}
 
-	r := &Reconciler{
-		multiChannelMessageHandler: sh,
-		reporter:                   reporter,
-		messagingClientSet:         eventingclient.Get(ctx).MessagingV1(),
+	oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
+
+	clientConfig := eventingtls.ClientConfig{
+		TrustBundleConfigMapLister: trustBundleConfigMapInformer.Lister().ConfigMaps(system.Namespace()),
 	}
-	impl := inmemorychannelreconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
-		return controller.Options{SkipStatusUpdates: true, FinalizerName: finalizerName}
+
+	r := &Reconciler{
+		multiChannelEventHandler: sh,
+		reporter:                 reporter,
+		messagingClientSet:       eventingclient.Get(ctx).MessagingV1(),
+		eventingClient:           eventingclient.Get(ctx).EventingV1beta2(),
+		eventTypeLister:          eventtypeinformer.Get(ctx).Lister(),
+		eventDispatcher:          kncloudevents.NewDispatcher(clientConfig, oidcTokenProvider),
+		tokenVerifier:            auth.NewOIDCTokenVerifier(ctx),
+		clientConfig:             clientConfig,
+	}
+
+	var globalResync func(obj interface{})
+
+	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(_ string, _ interface{}) {
+		if globalResync != nil {
+			globalResync(nil)
+		}
 	})
+	featureStore.WatchConfigs(cmw)
+
+	impl := inmemorychannelreconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
+		return controller.Options{SkipStatusUpdates: true, FinalizerName: finalizerName, ConfigStore: featureStore}
+	})
+
+	globalResync = func(_ interface{}) {
+		impl.GlobalResync(inmemorychannelInformer.Informer())
+	}
+
+	r.featureStore = featureStore
 
 	// Watch for inmemory channels.
 	inmemorychannelInformer.Informer().AddEventHandler(
@@ -137,28 +169,23 @@ func NewController(
 				DeleteFunc: r.deleteFunc,
 			}})
 
-	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {
-		impl.GlobalResync(inmemorychannelInformer.Informer())
-	})
-	featureStore.WatchConfigs(cmw)
-
-	httpArgs := &inmemorychannel.InMemoryMessageDispatcherArgs{
+	httpArgs := &inmemorychannel.InMemoryEventDispatcherArgs{
 		Port:         httpPort,
 		ReadTimeout:  readTimeout,
 		WriteTimeout: writeTimeout,
 		Handler:      sh,
 		Logger:       logger.Desugar(),
 
-		HTTPMessageReceiverOptions: []kncloudevents.HTTPMessageReceiverOption{
+		HTTPEventReceiverOptions: []kncloudevents.HTTPEventReceiverOption{
 			kncloudevents.WithChecker(readinessCheckerHTTPHandler(readinessChecker)),
 		},
 	}
-	httpDispatcher := inmemorychannel.NewMessageDispatcher(httpArgs)
+	httpDispatcher := inmemorychannel.NewEventDispatcher(httpArgs)
 	httpReceiver := httpDispatcher.GetReceiver()
 
 	secret := types.NamespacedName{
 		Namespace: system.Namespace(),
-		Name:      tlsSecretName,
+		Name:      eventingtls.IMCDispatcherServerTLSSecretName,
 	}
 	serverTLSConfig := eventingtls.NewDefaultServerConfig()
 	serverTLSConfig.GetCertificate = eventingtls.GetCertificateFromSecret(ctx, secretinformer.Get(ctx), kubeclient.Get(ctx), secret)
@@ -166,16 +193,16 @@ func NewController(
 	if err != nil {
 		logger.Panicf("unable to get tls config: %s", err)
 	}
-	httpsArgs := &inmemorychannel.InMemoryMessageDispatcherArgs{
+	httpsArgs := &inmemorychannel.InMemoryEventDispatcherArgs{
 		Port:         httpsPort,
 		ReadTimeout:  readTimeout,
 		WriteTimeout: writeTimeout,
 		Handler:      sh,
 		Logger:       logger.Desugar(),
 
-		HTTPMessageReceiverOptions: []kncloudevents.HTTPMessageReceiverOption{kncloudevents.WithTLSConfig(tlsConfig)},
+		HTTPEventReceiverOptions: []kncloudevents.HTTPEventReceiverOption{kncloudevents.WithTLSConfig(tlsConfig)},
 	}
-	httpsDispatcher := inmemorychannel.NewMessageDispatcher(httpsArgs)
+	httpsDispatcher := inmemorychannel.NewEventDispatcher(httpsArgs)
 	httpsReceiver := httpsDispatcher.GetReceiver()
 
 	s, err := eventingtls.NewServerManager(ctx, &httpReceiver, &httpsReceiver, httpDispatcher.GetHandler(ctx), cmw)

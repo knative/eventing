@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -62,7 +63,7 @@ func TestStateBuilder(t *testing.T) {
 			name:                "no vpods",
 			replicas:            int32(0),
 			vpods:               [][]duckv1alpha1.Placement{},
-			expected:            State{Capacity: 10, FreeCap: []int32{}, SchedulablePods: []int32{}, LastOrdinal: -1, SchedulerPolicy: scheduler.MAXFILLUP, SchedPolicy: &scheduler.SchedulerPolicy{}, DeschedPolicy: &scheduler.SchedulerPolicy{}, StatefulSetName: sfsName},
+			expected:            State{Capacity: 10, FreeCap: []int32{}, SchedulablePods: []int32{}, LastOrdinal: -1, SchedulerPolicy: scheduler.MAXFILLUP, SchedPolicy: &scheduler.SchedulerPolicy{}, DeschedPolicy: &scheduler.SchedulerPolicy{}, StatefulSetName: sfsName, Pending: map[types.NamespacedName]int32{}, ExpectedVReplicaByVPod: map[types.NamespacedName]int32{}},
 			freec:               int32(0),
 			schedulerPolicyType: scheduler.MAXFILLUP,
 		},
@@ -86,6 +87,12 @@ func TestStateBuilder(t *testing.T) {
 					{Name: vpodName + "-0", Namespace: vpodNs + "-0"}: {
 						"zone-0": 1,
 					},
+				},
+				Pending: map[types.NamespacedName]int32{
+					{Name: "vpod-name-0", Namespace: "vpod-ns-0"}: 0,
+				},
+				ExpectedVReplicaByVPod: map[types.NamespacedName]int32{
+					{Name: "vpod-name-0", Namespace: "vpod-ns-0"}: 1,
 				},
 			},
 			freec:               int32(9),
@@ -141,6 +148,16 @@ func TestStateBuilder(t *testing.T) {
 						"zone-1": 3,
 					},
 				},
+				Pending: map[types.NamespacedName]int32{
+					{Name: "vpod-name-0", Namespace: "vpod-ns-0"}: 0,
+					{Name: "vpod-name-1", Namespace: "vpod-ns-1"}: 0,
+					{Name: "vpod-name-2", Namespace: "vpod-ns-2"}: 0,
+				},
+				ExpectedVReplicaByVPod: map[types.NamespacedName]int32{
+					{Name: "vpod-name-0", Namespace: "vpod-ns-0"}: 1,
+					{Name: "vpod-name-1", Namespace: "vpod-ns-1"}: 1,
+					{Name: "vpod-name-2", Namespace: "vpod-ns-2"}: 1,
+				},
 			},
 			freec:               int32(18),
 			schedulerPolicyType: scheduler.MAXFILLUP,
@@ -190,6 +207,16 @@ func TestStateBuilder(t *testing.T) {
 						"zone-1": 3,
 					},
 				},
+				Pending: map[types.NamespacedName]int32{
+					{Name: "vpod-name-0", Namespace: "vpod-ns-0"}: 0,
+					{Name: "vpod-name-1", Namespace: "vpod-ns-1"}: 0,
+					{Name: "vpod-name-2", Namespace: "vpod-ns-2"}: 0,
+				},
+				ExpectedVReplicaByVPod: map[types.NamespacedName]int32{
+					{Name: "vpod-name-0", Namespace: "vpod-ns-0"}: 1,
+					{Name: "vpod-name-1", Namespace: "vpod-ns-1"}: 1,
+					{Name: "vpod-name-2", Namespace: "vpod-ns-2"}: 1,
+				},
 			},
 			freec:               int32(10),
 			schedulerPolicyType: scheduler.MAXFILLUP,
@@ -203,7 +230,7 @@ func TestStateBuilder(t *testing.T) {
 				{{PodName: "statefulset-name-1", VReplicas: 0}},
 				{{PodName: "statefulset-name-1", VReplicas: 0}, {PodName: "statefulset-name-3", VReplicas: 0}},
 			},
-			expected: State{Capacity: 10, FreeCap: []int32{int32(9), int32(10), int32(5), int32(10)}, SchedulablePods: []int32{int32(0), int32(1), int32(2), int32(3)}, LastOrdinal: 2, Replicas: 4, NumNodes: 4, NumZones: 3, SchedulerPolicy: scheduler.MAXFILLUP, SchedPolicy: &scheduler.SchedulerPolicy{}, DeschedPolicy: &scheduler.SchedulerPolicy{}, StatefulSetName: sfsName,
+			expected: State{Capacity: 10, FreeCap: []int32{int32(9), int32(10), int32(5), int32(10)}, SchedulablePods: []int32{int32(0), int32(1), int32(2), int32(3)}, LastOrdinal: 3, Replicas: 4, NumNodes: 4, NumZones: 3, SchedulerPolicy: scheduler.MAXFILLUP, SchedPolicy: &scheduler.SchedulerPolicy{}, DeschedPolicy: &scheduler.SchedulerPolicy{}, StatefulSetName: sfsName,
 				NodeToZoneMap: map[string]string{"node-0": "zone-0", "node-1": "zone-1", "node-2": "zone-2", "node-3": "zone-0"},
 				PodSpread: map[types.NamespacedName]map[string]int32{
 					{Name: vpodName + "-0", Namespace: vpodNs + "-0"}: {
@@ -244,6 +271,16 @@ func TestStateBuilder(t *testing.T) {
 						"zone-1": 0,
 					},
 				},
+				Pending: map[types.NamespacedName]int32{
+					{Name: "vpod-name-0", Namespace: "vpod-ns-0"}: 0,
+					{Name: "vpod-name-1", Namespace: "vpod-ns-1"}: 1,
+					{Name: "vpod-name-2", Namespace: "vpod-ns-2"}: 1,
+				},
+				ExpectedVReplicaByVPod: map[types.NamespacedName]int32{
+					{Name: "vpod-name-0", Namespace: "vpod-ns-0"}: 1,
+					{Name: "vpod-name-1", Namespace: "vpod-ns-1"}: 1,
+					{Name: "vpod-name-2", Namespace: "vpod-ns-2"}: 1,
+				},
 			},
 			freec:               int32(34),
 			schedulerPolicyType: scheduler.MAXFILLUP,
@@ -257,7 +294,7 @@ func TestStateBuilder(t *testing.T) {
 				{{PodName: "statefulset-name-1", VReplicas: 0}},
 				{{PodName: "statefulset-name-1", VReplicas: 0}, {PodName: "statefulset-name-3", VReplicas: 0}},
 			},
-			expected: State{Capacity: 10, FreeCap: []int32{int32(3), int32(10), int32(5), int32(10)}, SchedulablePods: []int32{int32(0), int32(1), int32(2), int32(3)}, LastOrdinal: 2, Replicas: 4, NumNodes: 4, NumZones: 3, SchedulerPolicy: scheduler.MAXFILLUP, SchedPolicy: &scheduler.SchedulerPolicy{}, DeschedPolicy: &scheduler.SchedulerPolicy{}, StatefulSetName: sfsName,
+			expected: State{Capacity: 10, FreeCap: []int32{int32(3), int32(10), int32(5), int32(10)}, SchedulablePods: []int32{int32(0), int32(1), int32(2), int32(3)}, LastOrdinal: 3, Replicas: 4, NumNodes: 4, NumZones: 3, SchedulerPolicy: scheduler.MAXFILLUP, SchedPolicy: &scheduler.SchedulerPolicy{}, DeschedPolicy: &scheduler.SchedulerPolicy{}, StatefulSetName: sfsName,
 				NodeToZoneMap: map[string]string{"node-0": "zone-0", "node-1": "zone-1", "node-2": "zone-2", "node-3": "zone-0"},
 				PodSpread: map[types.NamespacedName]map[string]int32{
 					{Name: vpodName + "-0", Namespace: vpodNs + "-0"}: {
@@ -297,6 +334,16 @@ func TestStateBuilder(t *testing.T) {
 						"zone-0": 0,
 						"zone-1": 0,
 					},
+				},
+				Pending: map[types.NamespacedName]int32{
+					{Name: "vpod-name-0", Namespace: "vpod-ns-0"}: 0,
+					{Name: "vpod-name-1", Namespace: "vpod-ns-1"}: 1,
+					{Name: "vpod-name-2", Namespace: "vpod-ns-2"}: 1,
+				},
+				ExpectedVReplicaByVPod: map[types.NamespacedName]int32{
+					{Name: "vpod-name-0", Namespace: "vpod-ns-0"}: 1,
+					{Name: "vpod-name-1", Namespace: "vpod-ns-1"}: 1,
+					{Name: "vpod-name-2", Namespace: "vpod-ns-2"}: 1,
 				},
 			},
 			freec: int32(28),
@@ -360,6 +407,16 @@ func TestStateBuilder(t *testing.T) {
 						"zone-0": 0,
 						"zone-1": 0,
 					},
+				},
+				Pending: map[types.NamespacedName]int32{
+					{Name: "vpod-name-0", Namespace: "vpod-ns-0"}: 0,
+					{Name: "vpod-name-1", Namespace: "vpod-ns-1"}: 1,
+					{Name: "vpod-name-2", Namespace: "vpod-ns-2"}: 1,
+				},
+				ExpectedVReplicaByVPod: map[types.NamespacedName]int32{
+					{Name: "vpod-name-0", Namespace: "vpod-ns-0"}: 1,
+					{Name: "vpod-name-1", Namespace: "vpod-ns-1"}: 1,
+					{Name: "vpod-name-2", Namespace: "vpod-ns-2"}: 1,
 				},
 			},
 			freec: int32(26),
@@ -427,6 +484,16 @@ func TestStateBuilder(t *testing.T) {
 						"zone-1": 0,
 					},
 				},
+				Pending: map[types.NamespacedName]int32{
+					{Name: "vpod-name-0", Namespace: "vpod-ns-0"}: 0,
+					{Name: "vpod-name-1", Namespace: "vpod-ns-1"}: 1,
+					{Name: "vpod-name-2", Namespace: "vpod-ns-2"}: 1,
+				},
+				ExpectedVReplicaByVPod: map[types.NamespacedName]int32{
+					{Name: "vpod-name-0", Namespace: "vpod-ns-0"}: 1,
+					{Name: "vpod-name-1", Namespace: "vpod-ns-1"}: 1,
+					{Name: "vpod-name-2", Namespace: "vpod-ns-2"}: 1,
+				},
 			},
 			freec: int32(28),
 			reserved: map[types.NamespacedName]map[string]int32{
@@ -462,6 +529,12 @@ func TestStateBuilder(t *testing.T) {
 						"zone-0": 1,
 					},
 				},
+				Pending: map[types.NamespacedName]int32{
+					{Name: "vpod-name-0", Namespace: "vpod-ns-0"}: 0,
+				},
+				ExpectedVReplicaByVPod: map[types.NamespacedName]int32{
+					{Name: "vpod-name-0", Namespace: "vpod-ns-0"}: 1,
+				},
 			},
 			freec:               int32(9),
 			schedulerPolicyType: scheduler.MAXFILLUP,
@@ -487,6 +560,12 @@ func TestStateBuilder(t *testing.T) {
 					{Name: vpodName + "-0", Namespace: vpodNs + "-0"}: {
 						"zone-0": 1,
 					},
+				},
+				Pending: map[types.NamespacedName]int32{
+					{Name: "vpod-name-0", Namespace: "vpod-ns-0"}: 0,
+				},
+				ExpectedVReplicaByVPod: map[types.NamespacedName]int32{
+					{Name: "vpod-name-0", Namespace: "vpod-ns-0"}: 1,
 				},
 			},
 			freec: int32(9),
@@ -564,7 +643,9 @@ func TestStateBuilder(t *testing.T) {
 			lsp := listers.NewListers(podlist)
 			lsn := listers.NewListers(nodelist)
 
-			stateBuilder := NewStateBuilder(ctx, testNs, sfsName, vpodClient.List, int32(10), tc.schedulerPolicyType, &scheduler.SchedulerPolicy{}, &scheduler.SchedulerPolicy{}, lsp.GetPodLister().Pods(testNs), lsn.GetNodeLister())
+			scaleCache := scheduler.NewScaleCache(ctx, testNs, kubeclient.Get(ctx).AppsV1().StatefulSets(testNs), scheduler.ScaleCacheConfig{RefreshPeriod: time.Minute * 5})
+
+			stateBuilder := NewStateBuilder(ctx, testNs, sfsName, vpodClient.List, int32(10), tc.schedulerPolicyType, &scheduler.SchedulerPolicy{}, &scheduler.SchedulerPolicy{}, lsp.GetPodLister().Pods(testNs), lsn.GetNodeLister(), scaleCache)
 			state, err := stateBuilder.State(tc.reserved)
 			if err != nil {
 				t.Fatal("unexpected error", err)

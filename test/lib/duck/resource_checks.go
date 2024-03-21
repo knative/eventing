@@ -20,6 +20,7 @@ limitations under the License.
 package duck
 
 import (
+	"context"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -42,14 +43,14 @@ const (
 // every interval until isResourceReady returns `true` indicating
 // it is done, returns an error or timeout.
 func WaitForResourceReady(dynamicClient dynamic.Interface, obj *resources.MetaResource) error {
-	return wait.PollImmediate(interval, timeout, func() (bool, error) {
+	return wait.PollUntilContextTimeout(context.Background(), interval, timeout, true, func(ctx context.Context) (bool, error) {
 		return checkResourceReady(dynamicClient, obj)
 	})
 }
 
 // WaitForResourcesReady waits until all the specified resources in the given namespace are ready.
 func WaitForResourcesReady(dynamicClient dynamic.Interface, objList *resources.MetaResourceList) error {
-	return wait.PollImmediate(interval, timeout, func() (bool, error) {
+	return wait.PollUntilContextTimeout(context.Background(), interval, timeout, true, func(ctx context.Context) (bool, error) {
 		return checkResourcesReady(dynamicClient, objList)
 
 	})

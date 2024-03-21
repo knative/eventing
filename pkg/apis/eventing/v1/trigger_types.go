@@ -76,6 +76,8 @@ var (
 type TriggerSpec struct {
 	// Broker is the broker that this trigger receives events from.
 	Broker string `json:"broker,omitempty"`
+	// BrokerNamespace is the namespace of the broker that the trigger receives events from.
+	BrokerNamespace string `json:"brokerNamespace,omitempty"`
 
 	// Filter is the filter to apply against all events from the Broker. Only events that pass this
 	// filter will be sent to the Subscriber. If not specified, will default to allowing all events.
@@ -196,9 +198,17 @@ type TriggerStatus struct {
 	// +optional
 	SubscriberCACerts *string `json:"subscriberCACerts,omitempty"`
 
+	// SubscriberAudience is the OIDC audience of the subscriber.
+	// +optional
+	SubscriberAudience *string `json:"subscriberAudience,omitempty"`
+
 	// DeliveryStatus contains a resolved URL to the dead letter sink address, and any other
 	// resolved delivery options.
 	eventingduckv1.DeliveryStatus `json:",inline"`
+
+	// Auth provides the relevant information for OIDC authentication.
+	// +optional
+	Auth *duckv1.AuthStatus `json:"auth,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

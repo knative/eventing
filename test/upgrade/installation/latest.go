@@ -24,7 +24,7 @@ func LatestStable() pkgupgrade.Operation {
 	return pkgupgrade.NewOperation("EventingLatestRelease", func(c pkgupgrade.Context) {
 		shellfunc := "install_latest_release"
 		c.Log.Info("Running shell function: ", shellfunc)
-		err := callShellFunction(shellfunc)
+		err := callShellFunction(shellfunc, c.T)
 		if err != nil {
 			c.T.Error(err)
 			return

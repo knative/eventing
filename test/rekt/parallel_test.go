@@ -22,12 +22,18 @@ package rekt
 import (
 	"testing"
 
-	"knative.dev/eventing/test/rekt/features/parallel"
-	"knative.dev/eventing/test/rekt/resources/channel_template"
+	"knative.dev/eventing/test/rekt/resources/channel_impl"
+	"knative.dev/reconciler-test/pkg/feature"
+
 	"knative.dev/pkg/system"
 	"knative.dev/reconciler-test/pkg/environment"
+	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/knative"
+
+	"knative.dev/eventing/test/rekt/features/parallel"
+	"knative.dev/eventing/test/rekt/resources/channel_template"
+	parallelresources "knative.dev/eventing/test/rekt/resources/parallel"
 )
 
 func TestParallel(t *testing.T) {
@@ -43,4 +49,56 @@ func TestParallel(t *testing.T) {
 	t.Cleanup(env.Finish)
 
 	env.Test(ctx, t, parallel.ParallelWithTwoBranches(channel_template.ImmemoryChannelTemplate()))
+}
+
+func TestParallelTLS(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+		eventshub.WithTLS(t),
+	)
+	t.Cleanup(env.Finish)
+
+	env.Test(ctx, t, parallel.ParallelWithTwoBranchesTLS(channel_template.ImmemoryChannelTemplate()))
+}
+
+func TestParallelSupportsOIDC(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+		eventshub.WithTLS(t),
+	)
+
+	name := feature.MakeRandomK8sName("parallel")
+	env.Prerequisite(ctx, t, parallel.GoesReady(name, parallelresources.WithChannelTemplate(channel_template.ChannelTemplate{
+		TypeMeta: channel_impl.TypeMeta(),
+		Spec:     map[string]interface{}{},
+	})))
+
+	env.Test(ctx, t, parallel.ParallelHasAudienceOfInputChannel(name, env.Namespace(), channel_impl.GVR(), channel_impl.GVK().Kind))
+}
+
+func TestParallelTwoBranchesWithOIDC(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+		eventshub.WithTLS(t),
+	)
+
+	env.Test(ctx, t, parallel.ParallelWithTwoBranchesOIDC(channel_template.ImmemoryChannelTemplate()))
 }

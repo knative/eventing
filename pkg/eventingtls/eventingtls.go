@@ -21,6 +21,9 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"io/fs"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync/atomic"
 
@@ -30,6 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	coreinformersv1 "k8s.io/client-go/informers/core/v1"
 	"k8s.io/client-go/kubernetes"
+	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/controller"
@@ -45,12 +49,21 @@ const (
 	DefaultMinTLSVersion = tls.VersionTLS12
 	// SecretCACrt is the name of the CA Cert in the secret
 	SecretCACert = "ca.crt"
+	// IMCDispatcherServerTLSSecretName is the name of the tls secret for the imc dispatcher server
+	IMCDispatcherServerTLSSecretName = "imc-dispatcher-server-tls" //nolint:gosec // This is not a hardcoded credential
+	// BrokerFilterServerTLSSecretName is the name of the tls secret for the broker filter server
+	BrokerFilterServerTLSSecretName = "mt-broker-filter-server-tls" //nolint:gosec // This is not a hardcoded credential
+	// BrokerIngressServerTLSSecretName is the name of the tls secret for the broker ingress server
+	BrokerIngressServerTLSSecretName = "mt-broker-ingress-server-tls" //nolint:gosec // This is not a hardcoded credential
 )
 
 type ClientConfig struct {
 	// CACerts are Certification Authority (CA) certificates in PEM format
 	// according to https://www.rfc-editor.org/rfc/rfc7468.
 	CACerts *string
+
+	// TrustBundleConfigMapLister is a ConfigMap lister to list trust bundles ConfigMaps.
+	TrustBundleConfigMapLister corev1listers.ConfigMapNamespaceLister
 }
 
 type ServerConfig struct {
@@ -149,7 +162,7 @@ func NewDefaultClientConfig() ClientConfig {
 
 // GetTLSClientConfig returns tls.Config based on the given ClientConfig.
 func GetTLSClientConfig(config ClientConfig) (*tls.Config, error) {
-	pool, err := certPool(config.CACerts)
+	pool, err := loadCertPool(config)
 	if err != nil {
 		return nil, err
 	}
@@ -182,18 +195,48 @@ func IsHttpsSink(sink string) bool {
 
 // certPool returns a x509.CertPool with the combined certs from:
 // - the system cert pool
+// - the knative trust bundle in TrustBundleMountPath
 // - the given CA certificates
-func certPool(caCerts *string) (*x509.CertPool, error) {
+func loadCertPool(config ClientConfig) (*x509.CertPool, error) {
 	p, err := x509.SystemCertPool()
 	if err != nil {
 		return nil, err
 	}
 
-	if caCerts == nil || *caCerts == "" {
+	_ = filepath.WalkDir(TrustBundleMountPath, func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return nil
+		}
+
+		b, err := os.ReadFile(path)
+		if err != nil {
+			return fmt.Errorf("failed to read file %q: %w", path, err)
+		}
+		p.AppendCertsFromPEM(b)
+
+		return nil
+	})
+
+	if config.TrustBundleConfigMapLister != nil {
+		cms, err := config.TrustBundleConfigMapLister.List(TrustBundleSelector)
+		if err != nil {
+			return p, fmt.Errorf("failed to list trust bundle ConfigMaps: %w", err)
+		}
+		for _, cm := range cms {
+			for _, v := range cm.Data {
+				p.AppendCertsFromPEM([]byte(v))
+			}
+			for _, v := range cm.BinaryData {
+				p.AppendCertsFromPEM(v)
+			}
+		}
+	}
+
+	if config.CACerts == nil || *config.CACerts == "" {
 		return p, nil
 	}
 
-	if ok := p.AppendCertsFromPEM([]byte(*caCerts)); !ok {
+	if ok := p.AppendCertsFromPEM([]byte(*config.CACerts)); !ok {
 		return p, fmt.Errorf("failed to append CA certs from PEM")
 	}
 

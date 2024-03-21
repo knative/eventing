@@ -18,6 +18,7 @@ package helpers
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"encoding/json"
@@ -30,6 +31,7 @@ import (
 
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	testlib "knative.dev/eventing/test/lib"
+	"knative.dev/eventing/test/lib/resources"
 	"knative.dev/pkg/apis"
 )
 
@@ -98,6 +100,7 @@ func channelSpecAllowsSubscribersArray(t *testing.T, client *testlib.Client, cha
 			t.Fatalf("Error unmarshaling %s: %s", u, err)
 		}
 
+		// the admission webhook should deny attempts to modify spec.subscribers directly from anything other than eventing-controller
 		err = client.RetryWebhookErrors(func(attempt int) error {
 			_, e := client.Dynamic.Resource(gvr).Namespace(client.Namespace).Update(context.Background(), u, metav1.UpdateOptions{})
 			if e != nil {
@@ -105,6 +108,18 @@ func channelSpecAllowsSubscribersArray(t *testing.T, client *testlib.Client, cha
 			}
 			return e
 		})
+		if err == nil {
+			return fmt.Errorf("channel validation should prevent direct updates to spec.subcribers except when made by eventing-controller")
+		}
+		subscriptionName := names.SimpleNameGenerator.GenerateName("channel-spec-subscribers-")
+		subscriberUrl, _ := apis.ParseURL("http://localhost")
+		client.CreateSubscriptionOrFail(subscriptionName, channelName, &channel, resources.WithURIForSubscription(subscriberUrl))
+		client.WaitForResourceReadyOrFail(subscriptionName, testlib.SubscriptionTypeMeta)
+		client.WaitForResourceReadyOrFail(channelName, &channel)
+		channelable, err = getChannelAsChannelable(channelName, client, channel)
+		if len(channelable.Spec.Subscribers) != 1 {
+			return fmt.Errorf("channel.Spec.Subscribers was not updated by the subscription reconciler")
+		}
 		return err
 	})
 	if err != nil {

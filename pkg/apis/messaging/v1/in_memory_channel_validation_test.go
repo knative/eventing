@@ -19,11 +19,43 @@ package v1
 import (
 	"testing"
 
+	"golang.org/x/net/context"
+	authenticationv1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/apis"
+	"knative.dev/pkg/kmp"
 
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/apis/eventing"
+)
+
+var (
+	validIMCSingleSubscriber = &InMemoryChannel{
+		Spec: InMemoryChannelSpec{
+			ChannelableSpec: eventingduck.ChannelableSpec{
+				SubscribableSpec: eventingduck.SubscribableSpec{
+					Subscribers: []eventingduck.SubscriberSpec{{
+						SubscriberURI: apis.HTTP("subscriberendpoint"),
+						ReplyURI:      apis.HTTP("resultendpoint"),
+					}},
+				}},
+		},
+	}
+
+	validIMCTwoSubscribers = &InMemoryChannel{
+		Spec: InMemoryChannelSpec{
+			ChannelableSpec: eventingduck.ChannelableSpec{
+				SubscribableSpec: eventingduck.SubscribableSpec{
+					Subscribers: []eventingduck.SubscriberSpec{{
+						SubscriberURI: apis.HTTP("subscriberendpoint"),
+						ReplyURI:      apis.HTTP("resultendpoint"),
+					}, {
+						SubscriberURI: apis.HTTP("subscriberendpoint2"),
+						ReplyURI:      apis.HTTP("resultendpoint2"),
+					}},
+				}},
+		},
+	}
 )
 
 func TestInMemoryChannelValidation(t *testing.T) {
@@ -101,6 +133,18 @@ func TestInMemoryChannelValidation(t *testing.T) {
 			fe.Details = "expected either 'cluster' or 'namespace'"
 			return fe
 		}(),
+	}, {
+		name: "invalid user for spec.subscribers update",
+		cr:   validIMCTwoSubscribers,
+		want: func() *apis.FieldError {
+			diff, _ := kmp.ShortDiff(validIMCSingleSubscriber.Spec.Subscribers, validIMCTwoSubscribers.Spec.Subscribers)
+			return &apis.FieldError{
+				Message: "Channel.Spec.Subscribers changed by user test-user which was not the system:serviceaccount:knative-eventing:eventing-controller service account",
+				Paths:   []string{"spec.subscribers"},
+				Details: diff,
+			}
+		}(),
+		ctx: apis.WithUserInfo(apis.WithinUpdate(context.TODO(), validIMCSingleSubscriber), &authenticationv1.UserInfo{Username: "test-user"}),
 	}}
 
 	doValidateTest(t, tests)

@@ -21,15 +21,20 @@ aliases:
   docs-reviewers:
   - nainaz
   - pmbanugo
+  - retocode
+  - skonto
   - snneji
   docs-wg-leads:
   - snneji
   docs-writers:
   - csantanapr
-  - psschwei
+  - retocode
+  - skonto
   - snneji
   eventing-reviewers:
+  - Leo6Leo
   - aslom
+  - cali0707
   - creydr
   eventing-triage:
   - lberk
@@ -37,6 +42,8 @@ aliases:
   - pierDipi
   eventing-writers:
   - aliok
+  - cali0707
+  - creydr
   - lberk
   - lionelvillard
   - matzew
@@ -46,19 +53,24 @@ aliases:
   - jrangelramos
   - nainaz
   func-writers:
+  - gauron99
   - jrangelramos
   - lance
   - lkingland
   - matejvasek
+  - matzew
   - salaboy
-  - zroubalik
   functions-wg-leads:
-  - lance
+  - lkingland
   - salaboy
   knative-admin:
-  - Vishal-Chdhry
+  - Cali0707
+  - Leo6Leo
+  - ReToCode
+  - aliok
+  - cardil
   - creydr
-  - csantanapr
+  - davidhadas
   - dprotaso
   - dsimansk
   - evankanderson
@@ -67,20 +79,17 @@ aliases:
   - knative-prow-robot
   - knative-prow-updater-robot
   - knative-test-reporter-robot
-  - kvmware
-  - lance
-  - mchmarny
+  - krsna-m
   - nainaz
   - pierDipi
   - psschwei
-  - puerco
   - salaboy
   - skonto
-  - smoser-ibm
   - upodroid
-  - zroubalik
   knative-release-leads:
-  - Vishal-Chdhry
+  - Cali0707
+  - Leo6Leo
+  - ReToCode
   - creydr
   - dsimansk
   - pierDipi
@@ -104,18 +113,17 @@ aliases:
   - matzew
   - maximilien
   productivity-leads:
-  - kvmware
+  - cardil
   - upodroid
   productivity-reviewers:
   - evankanderson
   - mgencur
   productivity-wg-leads:
-  - kvmware
+  - cardil
   - upodroid
   productivity-writers:
   - cardil
-  - kvmware
-  - psschwei
+  - krsna-m
   - upodroid
   security-wg-leads:
   - davidhadas
@@ -124,45 +132,40 @@ aliases:
   - davidhadas
   - evankanderson
   serving-approvers:
-  - nak3
   - psschwei
   - skonto
   serving-reviewers:
-  - KauzClay
-  - jsanin-vmw
-  - kauana
-  - kvmware
+  - izabelacg
   - retocode
   - skonto
-  - xtreme-vikram-yadav
   serving-triage:
-  - KauzClay
+  - izabelacg
   - retocode
   - skonto
   serving-wg-leads:
   - dprotaso
   serving-writers:
   - dprotaso
-  - nak3
   - psschwei
   - skonto
   steering-committee:
-  - csantanapr
-  - lance
+  - aliok
+  - evankanderson
   - nainaz
-  - puerco
   - salaboy
   technical-oversight-committee:
+  - davidhadas
   - dprotaso
   - dsimansk
-  - kvmware
+  - krsna-m
   - psschwei
-  - zroubalik
-  trademark-committee:
-  - evankanderson
-  - mchmarny
-  - smoser-ibm
   ux-wg-leads:
-  - snneji
+  - cali0707
+  - leo6leo
+  - mmejia02
+  - zainabhusain227
   ux-writers:
-  - snneji
+  - cali0707
+  - leo6leo
+  - mmejia02
+  - zainabhusain227

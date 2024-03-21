@@ -454,6 +454,11 @@ func (in *SinkBindingSpec) DeepCopy() *SinkBindingSpec {
 func (in *SinkBindingStatus) DeepCopyInto(out *SinkBindingStatus) {
 	*out = *in
 	in.SourceStatus.DeepCopyInto(&out.SourceStatus)
+	if in.OIDCTokenSecretName != nil {
+		in, out := &in.OIDCTokenSecretName, &out.OIDCTokenSecretName
+		*out = new(string)
+		**out = **in
+	}
 	return
 }
 

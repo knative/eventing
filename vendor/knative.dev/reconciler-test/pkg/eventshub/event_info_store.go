@@ -23,25 +23,36 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"knative.dev/pkg/logging"
 
+	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/k8s"
 )
 
-const (
-	// The interval and timeout used for checking events
-	retryInterval = 4 * time.Second
-	retryTimeout  = 4 * time.Minute
-)
-
 // EventInfoMatcher returns an error if the input event info doesn't match the criteria
 type EventInfoMatcher func(EventInfo) error
+
+// WithContext transforms EventInfoMatcher to EventInfoMatcherCtx.
+func (m EventInfoMatcher) WithContext() EventInfoMatcherCtx {
+	return func(ctx context.Context, info EventInfo) error {
+		return m(info)
+	}
+}
+
+// EventInfoMatcherCtx returns an error if the input event info doesn't match the criteria
+type EventInfoMatcherCtx func(context.Context, EventInfo) error
+
+// WithContext transforms EventInfoMatcherCtx to EventInfoMatcher.
+func (m EventInfoMatcherCtx) WithContext(ctx context.Context) EventInfoMatcher {
+	return func(info EventInfo) error {
+		return m(ctx, info)
+	}
+}
 
 // Stateful store of events published by eventshub pod it is pointed at.
 // Implements k8s.EventHandler
@@ -154,8 +165,8 @@ func (ei *Store) Find(matchers ...EventInfoMatcher) ([]EventInfo, SearchedInfo, 
 
 // AssertAtLeast assert that there are at least min number of match for the provided matchers.
 // This method fails the test if the assert is not fulfilled.
-func (ei *Store) AssertAtLeast(t feature.T, min int, matchers ...EventInfoMatcher) []EventInfo {
-	events, err := ei.waitAtLeastNMatch(allOf(matchers...), min)
+func (ei *Store) AssertAtLeast(ctx context.Context, t feature.T, min int, matchers ...EventInfoMatcher) []EventInfo {
+	events, err := ei.waitAtLeastNMatch(ctx, allOf(matchers...), min)
 	if err != nil {
 		t.Fatalf("Timeout waiting for at least %d matches.\nError: %+v", min, errors.WithStack(err))
 	}
@@ -164,8 +175,8 @@ func (ei *Store) AssertAtLeast(t feature.T, min int, matchers ...EventInfoMatche
 
 // AssertInRange asserts that there are at least min number of matches and at most max number of matches for the provided matchers.
 // This method fails the test if the assert is not fulfilled.
-func (ei *Store) AssertInRange(t feature.T, min int, max int, matchers ...EventInfoMatcher) []EventInfo {
-	events := ei.AssertAtLeast(t, min, matchers...)
+func (ei *Store) AssertInRange(ctx context.Context, t feature.T, min int, max int, matchers ...EventInfoMatcher) []EventInfo {
+	events := ei.AssertAtLeast(ctx, t, min, matchers...)
 	if max > 0 && len(events) > max {
 		t.Fatalf("Assert in range failed: %+v", errors.WithStack(fmt.Errorf("expected <= %d events, saw %d", max, len(events))))
 	}
@@ -190,8 +201,8 @@ func (ei *Store) AssertNot(t feature.T, matchers ...EventInfoMatcher) []EventInf
 
 // AssertExact assert that there are exactly n matches for the provided matchers.
 // This method fails the test if the assert is not fulfilled.
-func (ei *Store) AssertExact(t feature.T, n int, matchers ...EventInfoMatcher) []EventInfo {
-	events := ei.AssertInRange(t, n, n, matchers...)
+func (ei *Store) AssertExact(ctx context.Context, t feature.T, n int, matchers ...EventInfoMatcher) []EventInfo {
+	events := ei.AssertInRange(ctx, t, n, n, matchers...)
 	return events
 }
 
@@ -199,9 +210,11 @@ func (ei *Store) AssertExact(t feature.T, n int, matchers ...EventInfoMatcher) [
 // five events. The matching events are returned if we find at least n. If the
 // function times out, an error is returned.
 // If you need to perform assert on the result (aka you want to fail if error != nil), then use AssertAtLeast
-func (ei *Store) waitAtLeastNMatch(f EventInfoMatcher, min int) ([]EventInfo, error) {
+func (ei *Store) waitAtLeastNMatch(ctx context.Context, f EventInfoMatcher, min int) ([]EventInfo, error) {
 	var matchRet []EventInfo
 	var internalErr error
+
+	retryInterval, retryTimeout := environment.PollTimingsFromContext(ctx)
 
 	wait.PollImmediate(retryInterval, retryTimeout, func() (bool, error) {
 		allMatch, sInfo, matchErrs, err := ei.Find(f)

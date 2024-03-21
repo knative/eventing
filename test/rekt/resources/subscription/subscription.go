@@ -19,14 +19,16 @@ package subscription
 import (
 	"context"
 	"embed"
+	"strings"
 	"time"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"knative.dev/eventing/test/rekt/resources/delivery"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/manifest"
+
+	"knative.dev/eventing/test/rekt/resources/delivery"
 )
 
 //go:embed *.yaml
@@ -54,7 +56,7 @@ func WithChannel(ref *duckv1.KReference) manifest.CfgFn {
 }
 
 // WithSubscriber adds the subscriber related config to a Subscription spec.
-func WithSubscriber(ref *duckv1.KReference, uri string) manifest.CfgFn {
+func WithSubscriber(ref *duckv1.KReference, uri, audience string) manifest.CfgFn {
 	return func(cfg map[string]interface{}) {
 		if _, set := cfg["subscriber"]; !set {
 			cfg["subscriber"] = map[string]interface{}{}
@@ -64,6 +66,9 @@ func WithSubscriber(ref *duckv1.KReference, uri string) manifest.CfgFn {
 		if uri != "" {
 			subscriber["uri"] = uri
 		}
+		if audience != "" {
+			subscriber["audience"] = audience
+		}
 		if ref != nil {
 			if _, set := subscriber["ref"]; !set {
 				subscriber["ref"] = map[string]interface{}{}
@@ -71,7 +76,9 @@ func WithSubscriber(ref *duckv1.KReference, uri string) manifest.CfgFn {
 			sref := subscriber["ref"].(map[string]interface{})
 			sref["apiVersion"] = ref.APIVersion
 			sref["kind"] = ref.Kind
-			// skip namespace
+			if ref.Namespace != "" {
+				sref["namespace"] = ref.Namespace
+			}
 			sref["name"] = ref.Name
 		}
 	}
@@ -95,7 +102,9 @@ func WithReply(ref *duckv1.KReference, uri string) manifest.CfgFn {
 			sref := reply["ref"].(map[string]interface{})
 			sref["apiVersion"] = ref.APIVersion
 			sref["kind"] = ref.Kind
-			// skip namespace
+			if ref.Namespace != "" {
+				sref["namespace"] = ref.Namespace
+			}
 			sref["name"] = ref.Name
 		}
 	}
@@ -103,6 +112,9 @@ func WithReply(ref *duckv1.KReference, uri string) manifest.CfgFn {
 
 // WithDeadLetterSink adds the dead letter sink related config to a Subscription spec.
 var WithDeadLetterSink = delivery.WithDeadLetterSink
+
+// WithDeadLetterSinkFromDestination adds the dead letter sink related config to the config.
+var WithDeadLetterSinkFromDestination = delivery.WithDeadLetterSinkFromDestination
 
 // WithRetry adds the retry related config to a Subscription spec.
 var WithRetry = delivery.WithRetry
@@ -125,4 +137,41 @@ func Install(name string, opts ...manifest.CfgFn) feature.StepFn {
 // IsReady tests to see if a Subscription becomes ready within the time given.
 func IsReady(name string, timing ...time.Duration) feature.StepFn {
 	return k8s.IsReady(gvr(), name, timing...)
+}
+
+// WithSubscriberFromDestination adds the subscriber related config to a Trigger spec.
+func WithSubscriberFromDestination(dest *duckv1.Destination) manifest.CfgFn {
+	return func(cfg map[string]interface{}) {
+		if _, set := cfg["subscriber"]; !set {
+			cfg["subscriber"] = map[string]interface{}{}
+		}
+		subscriber := cfg["subscriber"].(map[string]interface{})
+
+		uri := dest.URI
+		ref := dest.Ref
+
+		if dest.CACerts != nil {
+			// This is a multi-line string and should be indented accordingly.
+			// Replace "new line" with "new line + spaces".
+			subscriber["CACerts"] = strings.ReplaceAll(*dest.CACerts, "\n", "\n      ")
+		}
+
+		if dest.Audience != nil {
+			subscriber["audience"] = *dest.Audience
+		}
+
+		if uri != nil {
+			subscriber["uri"] = uri.String()
+		}
+		if ref != nil {
+			if _, set := subscriber["ref"]; !set {
+				subscriber["ref"] = map[string]interface{}{}
+			}
+			sref := subscriber["ref"].(map[string]interface{})
+			sref["apiVersion"] = ref.APIVersion
+			sref["kind"] = ref.Kind
+			// skip namespace
+			sref["name"] = ref.Name
+		}
+	}
 }

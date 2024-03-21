@@ -90,6 +90,9 @@ spec:
                       CACerts:
                         description: Certification Authority (CA) certificates in PEM format that the source trusts when sending events to the sink.
                         type: string
+                      audience:
+                        description: Audience is the OIDC audience. This only needs to be set if the target is not an Addressable and thus the Audience can't be received from the target itself. If specified, it takes precedence over the target's Audience.
+                        type: string
                   retry:
                     description: Retry is the minimum number of retries the sender should attempt when sending an event before moving it to the dead letter sink.
                     type: integer
@@ -103,8 +106,28 @@ spec:
                 description: Broker is Addressable. It exposes the endpoint as an URI to get events delivered into the Broker mesh.
                 type: object
                 properties:
+                  name:
+                    type: string
                   url:
                     type: string
+                  CACerts:
+                    type: string
+                  audience:
+                    type: string
+              addresses:
+                description: Broker is Addressable. It exposes the endpoints as URIs to get events delivered into the Broker mesh.
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    url:
+                      type: string
+                    CACerts:
+                      type: string
+                    audience:
+                      type: string
               annotations:
                 description: Annotations is additional Status fields for the Resource to save some additional State as well as convey more information to the user. This is roughly akin to Annotations on any k8s resource, just the reconciler conveying richer information outwards.
                 type: object
@@ -141,6 +164,9 @@ spec:
                 type: string
               deadLetterSinkCACerts:
                 description: Certification Authority (CA) certificates in PEM format according to https://www.rfc-editor.org/rfc/rfc7468.
+                type: string
+              deadLetterSinkAudience:
+                description: OIDC audience of the dead letter sink.
                 type: string
               observedGeneration:
                 description: ObservedGeneration is the 'Generation' of the Service that was last processed by the controller.

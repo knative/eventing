@@ -88,7 +88,12 @@ func StartSenderToResource(gvr schema.GroupVersionResource, name string) EventsH
 		if u == nil {
 			return fmt.Errorf("resource %v named %s is not addressable", gvr, name)
 		}
-		return StartSenderURL(u.URL.String())(ctx, envs)
+
+		if u.URL.Scheme == "https" {
+			return compose(StartSenderURLTLS(u.URL.String(), u.CACerts), oidcSinkAudience(u.Audience))(ctx, envs)
+		}
+
+		return compose(StartSenderURL(u.URL.String()), oidcSinkAudience(u.Audience))(ctx, envs)
 	}
 }
 
@@ -109,7 +114,8 @@ func StartSenderToResourceTLS(gvr schema.GroupVersionResource, name string, caCe
 		if caCerts == nil && u.CACerts != nil {
 			caCerts = u.CACerts
 		}
-		return StartSenderURLTLS(u.URL.String(), caCerts)(ctx, m)
+
+		return compose(StartSenderURLTLS(u.URL.String(), caCerts), oidcSinkAudience(u.Audience))(ctx, m)
 	}
 }
 
@@ -130,6 +136,13 @@ func StartSenderURLTLS(sink string, caCerts *string) EventsHubOption {
 			envs["SINK"] = sink
 			return nil
 		})
+}
+
+func IssuerRef(kind, name string) EventsHubOption {
+	return compose(
+		envAdditive(tlsIssuerKind, kind),
+		envAdditive(tlsIssuerName, name),
+	)
 }
 
 // --- Receiver options
@@ -197,6 +210,11 @@ func DropEventsResponseHeaders(headers map[string]string) EventsHubOption {
 	)
 }
 
+// OIDCReceiverAudience sets the expected audience for received OIDC tokens on the receiver side
+func OIDCReceiverAudience(aud string) EventsHubOption {
+	return compose(envOption(OIDCReceiverAudienceEnv, aud), envOIDCEnabled())
+}
+
 // --- Sender options
 
 // InitialSenderDelay defines how much the sender has to wait (in millisecond), when started, before start sending events.
@@ -261,6 +279,45 @@ func InputBody(b string) EventsHubOption {
 // InputMethod overrides which http method to use when sending events (default is POST)
 func InputMethod(method string) EventsHubOption {
 	return envOption("INPUT_METHOD", method)
+}
+
+// OIDCExpiredToken adds an expired OIDC token to the request. As the minimal
+// expiry for JWTs from Kubernetes are 10 minutes, the sender will delay the
+// send by 10 + 1 minutes.
+// This should be used in combination of an increase of the poll timout (via
+// environment.PollTimingsFromContext()) to not run in the default 2 minutes
+// timeout while waiting for an event which is send after 10 + 1 minutes.
+func OIDCExpiredToken() EventsHubOption {
+	return compose(envOption(OIDCGenerateExpiredTokenEnv, "true"), InitialSenderDelay(time.Minute*(OIDCTokenExpiryMinutes+1)), envOIDCEnabled())
+}
+
+// OIDCInvalidAudience creates an OIDC token with an invalid audience
+func OIDCInvalidAudience() EventsHubOption {
+	return compose(envOption(OIDCGenerateInvalidAudienceTokenEnv, "true"), envOIDCEnabled())
+}
+
+// OIDCSinkAudience sets the Audience of the Sink
+func OIDCSinkAudience(aud string) EventsHubOption {
+	return oidcSinkAudience(&aud)
+}
+
+func oidcSinkAudience(aud *string) EventsHubOption {
+	if aud != nil && *aud != "" {
+		// if the sink has an audience set, we enable OIDC to get a token added
+		return compose(envOption(OIDCSinkAudienceEnv, *aud), envOIDCEnabled())
+	}
+
+	return noop
+}
+
+// OIDCCorruptedSignature adds an OIDC token with an invalid signature to the request.
+func OIDCCorruptedSignature() EventsHubOption {
+	return compose(envOption(OIDCGenerateCorruptedSignatureTokenEnv, "true"), envOIDCEnabled())
+}
+
+// OIDCToken adds the given token used for OIDC authentication to the request.
+func OIDCToken(jwt string) EventsHubOption {
+	return compose(envOption(OIDCTokenEnv, jwt), envOIDCEnabled())
 }
 
 // AddTracing adds tracing headers when sending events.
@@ -342,4 +399,8 @@ func envCACerts(caCerts *string) EventsHubOption {
 		}
 		return nil
 	}
+}
+
+func envOIDCEnabled() EventsHubOption {
+	return envOption(OIDCEnabledEnv, "true")
 }

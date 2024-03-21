@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"strconv"
 	"testing"
 	"time"
 
@@ -29,6 +30,16 @@ import (
 	"knative.dev/pkg/ptr"
 
 	v1 "knative.dev/eventing/pkg/apis/duck/v1"
+)
+
+// RetryAfterFormat Enum
+type RetryAfterFormat int
+
+const (
+	None RetryAfterFormat = iota // RetryAfter Format Enum Values
+	Seconds
+	Date
+	Invalid
 )
 
 // Test The NoRetries() Functionality
@@ -362,4 +373,243 @@ func TestRetryConfigFromDeliverySpecCheckRetry(t *testing.T) {
 			}
 		})
 	}
+}
+
+/*
+ * Test TestGenerateBackoffFnWithRetryAfter
+ *
+ * This test validates that generateBackoffFn() is correctly enforcing
+ * the Retry-After headers based on RetryConfig.RetryAfterMaxDuration.
+ * This is tested directly, rather than indirectly via SendWithRetries(),
+ * due to the complexity in ensuring timing checks of sequential requests.
+ * The CI pipeline is not reliable enough to consistently ensure any
+ * specific response times, making the tests inherently flaky during slow
+ * test runs. This version is also much faster to execute as it doesn't
+ * to stand-up test servers.
+ */
+func TestGenerateBackoffFnWithRetryAfter(t *testing.T) {
+
+	// Test Data
+	retryBackoffDuration := 2 * time.Second        // The standard constant (non Retry-After) backoff Duration.
+	retryAfterDuration := 30 * time.Second         // The Retry-After header Duration to use in HTTP Response.
+	smallRetryAfterMaxDuration := 10 * time.Second // Value must exceed retryBackoffDuration while being less than retryAfterDuration to force use of retryAfterMax value.
+	largeRetryAfterMaxDuration := 90 * time.Second // Value must exceed retryBackoffDuration and retryAfterDuration so that Retry-After header is used.
+
+	// Define The TestCases
+	testCases := []struct {
+		name            string
+		retryAfterMax   *time.Duration
+		statusCode      int
+		format          RetryAfterFormat
+		expectedBackoff time.Duration
+	}{
+		// Nil Max Tests (opt-in / opt-out)
+
+		{
+			name:            "nil max 429 without Retry-After",
+			retryAfterMax:   nil,
+			statusCode:      http.StatusTooManyRequests,
+			format:          None,
+			expectedBackoff: retryBackoffDuration, // Uses Standard Backoff
+		},
+		{
+			name:            "nil max 429 with Retry-After seconds",
+			retryAfterMax:   nil,
+			statusCode:      http.StatusTooManyRequests,
+			format:          Seconds,
+			expectedBackoff: retryBackoffDuration, // Uses Standard Backoff
+		},
+		{
+			name:            "nil max 429 with Retry-After date",
+			retryAfterMax:   nil,
+			statusCode:      http.StatusTooManyRequests,
+			format:          Date,
+			expectedBackoff: retryBackoffDuration, // Uses Standard Backoff
+		},
+		{
+			name:            "nil max 429 with invalid Retry-After",
+			retryAfterMax:   nil,
+			statusCode:      http.StatusTooManyRequests,
+			format:          Invalid,
+			expectedBackoff: retryBackoffDuration, // Uses Standard Backoff
+		},
+		{
+			name:            "nil max 503 with Retry-After seconds",
+			retryAfterMax:   nil,
+			statusCode:      http.StatusServiceUnavailable,
+			format:          Seconds,
+			expectedBackoff: retryBackoffDuration, // Uses Standard Backoff
+		},
+		{
+			name:            "nil max 500 without Retry-After",
+			retryAfterMax:   nil,
+			statusCode:      http.StatusInternalServerError,
+			format:          None,
+			expectedBackoff: retryBackoffDuration, // Uses Standard Backoff
+		},
+
+		// Large Max Tests (Greater Than Retry-After Value)
+
+		{
+			name:            "large max 429 without Retry-After",
+			retryAfterMax:   nil,
+			statusCode:      http.StatusTooManyRequests,
+			format:          None,
+			expectedBackoff: retryBackoffDuration, // Uses Standard Backoff
+		},
+		{
+			name:            "large max 429 with Retry-After seconds",
+			retryAfterMax:   &largeRetryAfterMaxDuration,
+			statusCode:      http.StatusTooManyRequests,
+			format:          Seconds,
+			expectedBackoff: retryAfterDuration, // Respects Retry-After Header
+		},
+		{
+			name:            "large max 429 with Retry-After date",
+			retryAfterMax:   &largeRetryAfterMaxDuration,
+			statusCode:      http.StatusTooManyRequests,
+			format:          Date,
+			expectedBackoff: retryAfterDuration, // Respects Retry-After Header
+		},
+		{
+			name:            "large max 429 with invalid Retry-After",
+			retryAfterMax:   &largeRetryAfterMaxDuration,
+			statusCode:      http.StatusTooManyRequests,
+			format:          Invalid,
+			expectedBackoff: retryBackoffDuration, // Uses Standard Backoff
+		},
+		{
+			name:            "large max 503 with Retry-After seconds",
+			retryAfterMax:   &largeRetryAfterMaxDuration,
+			statusCode:      http.StatusServiceUnavailable,
+			format:          Seconds,
+			expectedBackoff: retryAfterDuration, // Respects Retry-After Header
+		},
+		{
+			name:            "large max 500 without Retry-After",
+			retryAfterMax:   &largeRetryAfterMaxDuration,
+			statusCode:      http.StatusInternalServerError,
+			format:          None,
+			expectedBackoff: retryBackoffDuration, // Uses Standard Backoff
+		},
+
+		// Small Max Tests (Less Than Retry-After Value)
+
+		{
+			name:            "small max 429 without Retry-After",
+			retryAfterMax:   nil,
+			statusCode:      http.StatusTooManyRequests,
+			format:          None,
+			expectedBackoff: retryBackoffDuration, // Uses Standard Backoff
+		},
+		{
+			name:            "small max 429 with Retry-After seconds",
+			retryAfterMax:   &smallRetryAfterMaxDuration,
+			statusCode:      http.StatusTooManyRequests,
+			format:          Seconds,
+			expectedBackoff: smallRetryAfterMaxDuration, // Respects RetryAfterMax Config
+		},
+		{
+			name:            "small max 429 with Retry-After date",
+			retryAfterMax:   &smallRetryAfterMaxDuration,
+			statusCode:      http.StatusTooManyRequests,
+			format:          Date,
+			expectedBackoff: smallRetryAfterMaxDuration, // Respects RetryAfterMax Config
+		},
+		{
+			name:            "small max 429 with invalid Retry-After",
+			retryAfterMax:   &smallRetryAfterMaxDuration,
+			statusCode:      http.StatusTooManyRequests,
+			format:          Invalid,
+			expectedBackoff: retryBackoffDuration, // Uses Standard Backoff
+		},
+		{
+			name:            "small max 503 with Retry-After seconds",
+			retryAfterMax:   &smallRetryAfterMaxDuration,
+			statusCode:      http.StatusServiceUnavailable,
+			format:          Seconds,
+			expectedBackoff: smallRetryAfterMaxDuration, // Respects RetryAfterMax Config
+		},
+		{
+			name:            "small max 500 without Retry-After",
+			retryAfterMax:   &smallRetryAfterMaxDuration,
+			statusCode:      http.StatusInternalServerError,
+			format:          None,
+			expectedBackoff: retryBackoffDuration, // Uses Standard Backoff
+		},
+	}
+
+	// Loop Over The TestCases
+	for _, testCase := range testCases {
+
+		// Capture Range Variable For Parallel Execution
+		tc := testCase
+
+		// Execute The Individual TestCase
+		t.Run(tc.name, func(t *testing.T) {
+
+			// Run TestCases In Parallel
+			t.Parallel()
+
+			// Create RetryConfig With RetryAfterMax From TestCase
+			retryConfig := &RetryConfig{
+				RetryMax:              1,
+				CheckRetry:            SelectiveRetry,
+				Backoff:               func(_ int, _ *http.Response) time.Duration { return retryBackoffDuration },
+				RetryAfterMaxDuration: tc.retryAfterMax,
+			}
+
+			// Generate An HTTP Response Based On TestCase Specification
+			response := generateRetryAfterHttpResponse(t, tc.statusCode, tc.format, retryAfterDuration)
+
+			// Generate The Backoff Function To Test
+			backoffFn := generateBackoffFn(retryConfig)
+
+			// Perform The Test
+			startTime := time.Now()
+			actualBackoff := backoffFn(0, 999, 1, response)
+			stopTime := time.Now()
+
+			// Verify Results
+			if tc.format == Date {
+				// The "time.Until()" operation is difficult to test on inconsistent/slow build
+				// infrastructure, and so we have to gate the check of the lower-bounds in Date
+				// format tests.  This should perform the comparison most of the time, but will
+				// prevent false-positive failures on slow execution runs.
+				if tc.retryAfterMax != nil && stopTime.Sub(startTime) < retryAfterDuration {
+					assert.Greater(t, actualBackoff, retryBackoffDuration)
+				}
+				assert.LessOrEqual(t, actualBackoff, tc.expectedBackoff)
+			} else {
+				assert.Equal(t, tc.expectedBackoff, actualBackoff)
+			}
+		})
+	}
+}
+
+// generateRetryAfterHttpResponse is a utility function for generating tst HTTP Responses with Retry-After headers.
+func generateRetryAfterHttpResponse(t *testing.T, statusCode int, format RetryAfterFormat, duration time.Duration) *http.Response {
+
+	// Create The Http Response With Specified StatusCode
+	response := &http.Response{
+		StatusCode: statusCode,
+		Header:     map[string][]string{},
+	}
+
+	// Add Retry-After Header To Response Based On Configured Format
+	switch format {
+	case None:
+		// Don't Write Any Headers ;)
+	case Seconds:
+		response.Header["Retry-After"] = []string{strconv.Itoa(int(duration.Seconds()))}
+	case Date:
+		response.Header["Retry-After"] = []string{time.Now().Add(duration).Format(time.RFC850)} // RFC850 Drops Millis
+	case Invalid:
+		response.Header["Retry-After"] = []string{"FOO"}
+	default:
+		assert.Fail(t, "TestCase with unsupported ResponseFormat '%v'", format)
+	}
+
+	// Return The HTTP Response
+	return response
 }

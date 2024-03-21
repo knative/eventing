@@ -20,15 +20,13 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"knative.dev/eventing/pkg/adapter/v2"
-
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
-
+	"knative.dev/eventing/pkg/adapter/v2"
 	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/ptr"
 	"knative.dev/pkg/system"
@@ -44,11 +42,13 @@ type ReceiveAdapterArgs struct {
 	Image         string
 	Source        *v1.ApiServerSource
 	Labels        map[string]string
+	Audience      *string
 	SinkURI       string
 	CACerts       *string
 	Configs       reconcilersource.ConfigAccessor
 	Namespaces    []string
 	AllNamespaces bool
+	NodeSelector  map[string]string
 }
 
 // MakeReceiveAdapter generates (but does not insert into K8s) the Receive Adapter Deployment for
@@ -83,6 +83,7 @@ func MakeReceiveAdapter(args *ReceiveAdapterArgs) (*appsv1.Deployment, error) {
 					Labels: args.Labels,
 				},
 				Spec: corev1.PodSpec{
+					NodeSelector:       args.NodeSelector,
 					ServiceAccountName: args.Source.Spec.ServiceAccountName,
 					EnableServiceLinks: ptr.Bool(false),
 					Containers: []corev1.Container{
@@ -150,34 +151,50 @@ func makeEnv(args *ReceiveAdapterArgs) ([]corev1.EnvVar, error) {
 		config = string(b)
 	}
 
-	envs := []corev1.EnvVar{{
-		Name:  adapter.EnvConfigSink,
-		Value: args.SinkURI,
-	}, {
-		Name:  "K_SOURCE_CONFIG",
-		Value: config,
-	}, {
-		Name:  "SYSTEM_NAMESPACE",
-		Value: system.Namespace(),
-	}, {
-		Name: adapter.EnvConfigNamespace,
-		ValueFrom: &corev1.EnvVarSource{
-			FieldRef: &corev1.ObjectFieldSelector{
-				FieldPath: "metadata.namespace",
+	envs := []corev1.EnvVar{
+		{
+			Name:  adapter.EnvConfigSink,
+			Value: args.SinkURI,
+		}, {
+			Name:  "K_SOURCE_CONFIG",
+			Value: config,
+		}, {
+			Name:  "SYSTEM_NAMESPACE",
+			Value: system.Namespace(),
+		}, {
+			Name: adapter.EnvConfigNamespace,
+			ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{
+					FieldPath: "metadata.namespace",
+				},
 			},
+		}, {
+			Name:  adapter.EnvConfigName,
+			Value: args.Source.Name,
+		}, {
+			Name:  "METRICS_DOMAIN",
+			Value: "knative.dev/eventing",
 		},
-	}, {
-		Name:  adapter.EnvConfigName,
-		Value: args.Source.Name,
-	}, {
-		Name:  "METRICS_DOMAIN",
-		Value: "knative.dev/eventing",
-	}}
+	}
 
 	if args.CACerts != nil {
 		envs = append(envs, corev1.EnvVar{
 			Name:  adapter.EnvConfigCACert,
 			Value: *args.CACerts,
+		})
+	}
+
+	if args.Audience != nil {
+		envs = append(envs, corev1.EnvVar{
+			Name:  adapter.EnvConfigAudience,
+			Value: *args.Audience,
+		})
+	}
+
+	if args.Source.Status.Auth != nil && args.Source.Status.Auth.ServiceAccountName != nil {
+		envs = append(envs, corev1.EnvVar{
+			Name:  adapter.EnvConfigOIDCServiceAccount,
+			Value: *args.Source.Status.Auth.ServiceAccountName,
 		})
 	}
 

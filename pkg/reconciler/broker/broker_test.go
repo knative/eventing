@@ -33,6 +33,7 @@ import (
 	clientgotesting "k8s.io/client-go/testing"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	v1addr "knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
 	v1a1addr "knative.dev/pkg/client/injection/ducks/duck/v1alpha1/addressable"
 	v1b1addr "knative.dev/pkg/client/injection/ducks/duck/v1beta1/addressable"
 	"knative.dev/pkg/configmap"
@@ -40,10 +41,13 @@ import (
 	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
 	logtesting "knative.dev/pkg/logging/testing"
 	"knative.dev/pkg/network"
+	"knative.dev/pkg/resolver"
 	"knative.dev/pkg/tracker"
 
 	"knative.dev/eventing/pkg/apis/eventing"
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/pkg/apis/feature"
+	"knative.dev/eventing/pkg/auth"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
 	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/broker"
@@ -91,6 +95,11 @@ var (
 		Host:   network.GetServiceHostname(ingressServiceName, systemNS),
 		Path:   fmt.Sprintf("/%s/%s", testNS, brokerName),
 	}
+
+	brokerAudience = auth.GetAudience(eventingv1.SchemeGroupVersion.WithKind("Broker"), metav1.ObjectMeta{
+		Name:      brokerName,
+		Namespace: testNS,
+	})
 
 	brokerDestv1 = duckv1.Destination{
 		Ref: &duckv1.KReference{
@@ -410,6 +419,36 @@ func TestReconcile(t *testing.T) {
 					WithDLSNotConfigured()),
 			}},
 		}, {
+			Name: "Successful Reconciliation with a Channel with Audience",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
+					WithBrokerConfig(config()),
+					WithInitBrokerConditions),
+				createChannel(withChannelReady, withChannelStatusAudience(channelAudience)),
+				imcConfigMap(),
+				NewEndpoints(filterServiceName, systemNS,
+					WithEndpointsLabels(FilterLabels()),
+					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
+				NewEndpoints(ingressServiceName, systemNS,
+					WithEndpointsLabels(IngressLabels()),
+					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
+					WithBrokerConfig(config()),
+					WithBrokerReady,
+					WithBrokerAddressURI(brokerAddress),
+					WithChannelAddressAnnotation(triggerChannelURL),
+					WithChannelAudienceAnnotation(channelAudience),
+					WithChannelAPIVersionAnnotation(triggerChannelAPIVersion),
+					WithChannelKindAnnotation(triggerChannelKind),
+					WithChannelNameAnnotation(triggerChannelName),
+					WithDLSNotConfigured()),
+			}},
+		}, {
 			Name: "Successful Reconciliation. Using legacy channel template config element.",
 			Key:  testKey,
 			Objects: []runtime.Object{
@@ -703,6 +742,47 @@ func TestReconcile(t *testing.T) {
 				feature.TransportEncryption: feature.Strict,
 			}),
 		},
+		{
+			Name: "Should provision audience if authentication enabled",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				makeDLSServiceAsUnstructured(),
+				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
+					WithBrokerConfig(config()),
+					WithDeadLeaderSink(sinkSVCDest),
+					WithInitBrokerConditions),
+				createChannel(withChannelReady, withChannelDeadLetterSink(sinkSVCDest)),
+				imcConfigMap(),
+				NewEndpoints(filterServiceName, systemNS,
+					WithEndpointsLabels(FilterLabels()),
+					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
+				NewEndpoints(ingressServiceName, systemNS,
+					WithEndpointsLabels(IngressLabels()),
+					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
+			},
+			WantErr: false,
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
+					WithBrokerConfig(config()),
+					WithBrokerReadyWithDLS,
+					WithDeadLeaderSink(sinkSVCDest),
+					WithBrokerAddress(&duckv1.Addressable{
+						URL:      brokerAddress,
+						Audience: &brokerAudience,
+					}),
+					WithBrokerStatusDLS(dls),
+					WithChannelAddressAnnotation(triggerChannelURL),
+					WithChannelAPIVersionAnnotation(triggerChannelAPIVersion),
+					WithChannelKindAnnotation(triggerChannelKind),
+					WithChannelNameAnnotation(triggerChannelName),
+				),
+			}},
+			Ctx: feature.ToContext(context.Background(), feature.Flags{
+				feature.OIDCAuthentication: feature.Enabled,
+			}),
+		},
 	}
 
 	logger := logtesting.TestLogger(t)
@@ -710,6 +790,7 @@ func TestReconcile(t *testing.T) {
 		ctx = channelable.WithDuck(ctx)
 		ctx = v1a1addr.WithDuck(ctx)
 		ctx = v1b1addr.WithDuck(ctx)
+		ctx = v1addr.WithDuck(ctx)
 
 		cm, err := listers.GetConfigMapLister().ConfigMaps(testNS).Get("config-features")
 		if err == nil {
@@ -728,6 +809,7 @@ func TestReconcile(t *testing.T) {
 			configmapLister:    listers.GetConfigMapLister(),
 			secretLister:       listers.GetSecretLister(),
 			channelableTracker: duck.NewListableTrackerFromTracker(ctx, channelable.Get, tracker.New(func(types.NamespacedName) {}, 0)),
+			uriResolver:        resolver.NewURIResolverFromTracker(ctx, tracker.New(func(types.NamespacedName) {}, 0)),
 		}
 		return broker.NewReconciler(ctx, logger,
 			fakeeventingclient.Get(ctx), listers.GetBrokerLister(),
@@ -810,6 +892,15 @@ func withChannelStatusCACerts(caCerts string) unstructuredOption {
 	return func(channel *unstructured.Unstructured) {
 		if err := unstructured.SetNestedField(channel.Object, caCerts,
 			"status", "address", "caCerts"); err != nil {
+			panic(err)
+		}
+	}
+}
+
+func withChannelStatusAudience(aud string) unstructuredOption {
+	return func(channel *unstructured.Unstructured) {
+		if err := unstructured.SetNestedField(channel.Object, aud,
+			"status", "address", "audience"); err != nil {
 			panic(err)
 		}
 	}
@@ -970,6 +1061,7 @@ s/wImGnMVk5RzpBVrq2VB9SkX/ThTVYEC/Sd9BQM364MCR+TA1l8/ptaLFLuwyw8
 O2dgzikq8iSy1BlRsVw=
 -----END CERTIFICATE-----
 `
+	channelAudience = "channel-audience"
 )
 
 func makeTLSSecret() *corev1.Secret {

@@ -1,4 +1,6 @@
-# Knative Eventing
+# Knative Eventing - The Event-driven application platform for Kubernetes
+
+_Secure event processing and discovery with CloudEvents_
 
 [![go.dev reference](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white)](https://pkg.go.dev/knative.dev/eventing)
 [![Go Report Card](https://goreportcard.com/badge/knative/eventing)](https://goreportcard.com/report/knative/eventing)
@@ -10,7 +12,20 @@
 [![Slack](https://img.shields.io/badge/%23eventing-white.svg?logo=slack&color=522a5e)](https://knative.slack.com/archives/C9JP909F0)
 [![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/5913/badge)](https://bestpractices.coreinfrastructure.org/projects/5913)
 
-This repository contains a work-in-progress eventing system that is designed to
+## What is Knative Eventing?
+
+Knative Eventing is a collection of APIs that enable you to use an [event-driven architecture](https://en.wikipedia.org/wiki/Event-driven_architecture) with your applications. You can use these APIs to create components that route events from event producers (known as sources) to event consumers (known as sinks) that receive events. Sinks can also be configured to respond to HTTP requests by sending a response event.
+
+Knative Eventing is a standalone platform that provides support for various types of workloads, including standard Kubernetes Services and Knative Serving Services.
+
+Knative Eventing uses standard HTTP requests to route events from event producers to event consumers, following the rules set by the [CloudEvents specification](https://cloudevents.io/). This is a standard set up by the CNCF that has wide support for many programming languages, making it easy to create, understand, send, and receive events.
+
+Knative Eventing components are loosely coupled, and can be developed and deployed independently of each other. Any producer can generate events before there are active event consumers that are listening for those events. Any event consumer can express interest in a class of events before there are producers that are creating those events.
+
+
+## What to expect here?
+
+This repository contains an eventing system that is designed to
 address a common need for cloud native development:
 
 1. Services are loosely coupled during development and deployed independently
@@ -22,6 +37,8 @@ address a common need for cloud native development:
    - with the ability to select a specific subset of events from a particular
      producer.
 
+## More on Knative Eventing
+
 The high level mission of Knative Eventing is: **Enable asynchronous application
 development through event delivery from anywhere.**
 
@@ -32,7 +49,7 @@ For complete Knative Eventing documentation, see
 [Knative eventing](https://www.knative.dev/docs/eventing/) or
 [Knative docs](https://www.knative.dev/docs/) to learn about Knative.
 
-If you are interested in contributing, see [CONTRIBUTING.md](./CONTRIBUTING.md),
+If you are interested in contributing, see [the ready to work issues](https://clotributor.dev/search?ts_query_web=knative+eventing&page=1), [CONTRIBUTING.md](./CONTRIBUTING.md),
 [DEVELOPMENT.md](./DEVELOPMENT.md) and
 [Knative working groups](https://knative.dev/community/contributing/working-groups/working-groups/#eventing).
 

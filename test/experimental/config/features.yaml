@@ -25,3 +25,4 @@ data:
   delivery-retryafter: "enabled"
   delivery-timeout: "enabled"
   new-trigger-filters: "enabled"
+  eventtype-auto-create: "enabled"

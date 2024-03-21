@@ -30,12 +30,24 @@ source "$(dirname "$0")/e2e-common.sh"
 
 # Script entry point.
 
-initialize $@ --skip-istio-addon --min-nodes=4 --max-nodes=4
+initialize "$@" --num-nodes=4
 
 export SKIP_UPLOAD_TEST_IMAGES="true"
 
 echo "Running E2E Reconciler Tests"
 
 go_test_e2e -timeout=1h ./test/rekt || fail_test
+
+echo "Running E2E Reconciler Tests with strict transport encryption"
+
+kubectl apply -Rf "$(dirname "$0")/config-transport-encryption"
+
+go_test_e2e -timeout=1h ./test/rekt -run TLS || fail_test
+
+echo "Running E2E OIDC Reconciler Tests"
+
+kubectl apply -Rf "$(dirname "$0")/config-authentication-oidc"
+
+go_test_e2e -timeout=1h ./test/rekt -run OIDC || fail_test
 
 success

@@ -4,7 +4,8 @@ This doc explains how to setup a development environment so you can get started
 [contributing](https://www.knative.dev/contributing/) to `Knative Eventing`.
 Also take a look at:
 
-- [The pull request workflow](https://www.knative.dev/contributing/contributing/#pull-requests)
+- [The pull request workflow](https://knative.dev/docs/community/contributing/)
+- [Quick full build and install](#quick-full-build-and-install)
 - [How to add and run tests](./test/README.md)
 - [Iterating](#iterating)
 
@@ -21,7 +22,7 @@ Also take a look at:
 > :information_source: If you intend to use event sinks based on Knative
 > Services as described in some of our examples, consider installing
 > [Knative Serving](http://github.com/knative/serving). A few
-> [Knative Sandbox](https://github.com/knative-sandbox/?q=eventing&type=&language=)
+> [Knative Extensions](https://github.com/knative-extensions/?q=eventing&type=&language=)
 > projects also have a dependency on Serving.
 
 Before submitting a PR, see also [contribution guidelines](./CONTRIBUTING.md).
@@ -41,6 +42,7 @@ You must install these tools:
    default bash is too old, you can use [Homebrew](https://brew.sh) to install a
    later version. For running some automations, such as dependencies updates and
    code generators.
+1. [`helm`](https://helm.sh/docs/intro/install/): v3.14 or higher for Kubernetes package managing.
 
 ### Create a cluster and a repo
 
@@ -109,6 +111,23 @@ _Adding the `upstream` remote sets you up nicely for regularly
 
 Once you reach this point you are ready to do a full build and deploy as
 follows.
+
+## Quick full build and install
+
+Eventing components are pluggable, and you can install specific components depending on your
+needs, however, for a full build and install, you can run:
+
+```shell
+./hack/install.sh
+```
+
+By default, it will build container images for the architecture of your local machine, if you need
+to build images for a different platform (OS and architecture), you can provide `KO_FLAGS` as
+follow:
+
+```shell
+KO_FLAGS=--platform="linux/amd64" ./hack/install.sh
+```
 
 ## Starting Eventing Controller
 
@@ -179,6 +198,34 @@ to explicitly enable it.
 ```shell
 ko apply -f test/config/sugar.yaml
 ```
+
+## Running a Single Rekt Test with e2e-debug.sh
+
+To run a single rekt test using the `e2e-debug.sh` script, follow these instructions:
+
+1. Navigate to the project root directory.
+
+2. Execute the following command in your terminal:
+
+    ```bash
+    ./hack/e2e-debug.sh <test_name> <test_dir>
+    ```
+
+    Replace `<test_name>` with the name of the rekt test you want to run, and `<test_dir>` with the directory containing the test file.
+
+    **Example:**
+
+    ```bash
+    ./hack/e2e-debug.sh TestPingSourceWithSinkRef ./test/rekt
+    ```
+
+    This will run the specified rekt test (`TestMyRektScenario` in this case) from the provided directory (`test/rekt/scenarios`).
+
+    **Note:** Ensure that you have the necessary dependencies and configurations set up before running the test.
+
+3. The script will wait for Knative Eventing components to come up and then execute the specified test. If any failures occur during the test, relevant error messages will be displayed in the terminal.
+
+   **Important:** Make sure to provide a valid test name and test directory. The `<test_name>` parameter technically accepts a regex pattern, but in most cases, you can use the name of the test you want to run. If you wish, you can explore advanced use cases with regex patterns for more granular test selection.
 
 ## Iterating
 
@@ -434,3 +481,9 @@ telepresence quit
 - Networking works fine, but volumes (i.e. being able to access Kubernetes
   volumes from local controller) are not tested
 - This method can also be used in production, but proceed with caution.
+
+### Common issues when setting up with Ubuntu (WSL)
+
+- Go version mismatch: `sudo apt-get install golang-go` installs an older version of Go (1.18), which is too outdated for installing Ko and Kubectl
+   - Use [this method](https://www.digitalocean.com/community/tutorials/how-to-install-go-on-ubuntu-20-04) instead to manually install go using the .tar file
+- Use `go install` to install any additional gotools such as `goimports`

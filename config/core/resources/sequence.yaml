@@ -74,6 +74,12 @@ spec:
                   uri:
                     description: URI can be an absolute URL(non-empty scheme and non-empty host) pointing to the target or a relative URI. Relative URIs will be resolved using the base URI retrieved from Ref.
                     type: string
+                  CACerts:
+                    type: string
+                    description: Certification Authority (CA) certificates in PEM format that the source trusts when sending events to the reply.
+                  audience:
+                    description: Audience is the OIDC audience of the reply. This only needs to be set if the target is not an Addressable and thus the Audience can't be received from the target itself. If specified, it takes precedence over the target's Audience.
+                    type: string
               steps:
                 description: Steps is the list of Destinations (processors / functions) that will be called in the order provided. Each step has its own delivery options
                 type: array
@@ -116,6 +122,9 @@ spec:
                             CACerts:
                               description: Certification Authority (CA) certificates in PEM format that the source trusts when sending events to the sink.
                               type: string
+                            audience:
+                              description: Audience is the OIDC audience. This only needs to be set if the target is not an Addressable and thus the Audience can't be received from the target itself. If specified, it takes precedence over the target's Audience.
+                              type: string
                         retry:
                           description: Retry is the minimum number of retries the sender should attempt when sending an event before moving it to the dead letter sink.
                           type: integer
@@ -143,19 +152,50 @@ spec:
                     CACerts:
                       description: Certification Authority (CA) certificates in PEM format that the source trusts when sending events to the sink.
                       type: string
+                    audience:
+                      description: Audience is the OIDC audience. This only needs to be set if the target is not an Addressable and thus the Audience can't be received from the Addressable itself. If the target is an Addressable and specifies an Audience, the target's Audience takes precedence.
+                      type: string
           status:
             description: Status represents the current state of the Sequence. This data may be out of date.
             type: object
             properties:
               address:
+                description: Sequence is Addressable. It exposes the endpoint as an URI to get events delivered into the Sequence.
                 type: object
                 properties:
+                  name:
+                    type: string
                   url:
                     type: string
+                  CACerts:
+                    type: string
+                  audience:
+                    type: string
+              addresses:
+                description: Sequence is Addressable. It exposes the endpoints as URIs to get events delivered into the Sequence.
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    url:
+                      type: string
+                    CACerts:
+                      type: string
+                    audience:
+                      type: string
               annotations:
                 description: Annotations is additional Status fields for the Resource to save some additional State as well as convey more information to the user. This is roughly akin to Annotations on any k8s resource, just the reconciler conveying richer information outwards.
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
+              auth:
+                description: Auth provides the relevant information for OIDC authentication.
+                type: object
+                properties:
+                  serviceAccountName:
+                    description: ServiceAccountName is the name of the generated service account used for this components OIDC authentication.
+                    type: string
               channelStatuses:
                 description: ChannelStatuses is an array of corresponding Channel statuses. Matches the Spec.Steps array in the order.
                 type: array

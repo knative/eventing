@@ -93,7 +93,7 @@ func Example_full() {
 	//   sink:
 	//     ref:
 	//       kind: sinkkind
-	//       namespace: bar
+	//       namespace: sinknamespace
 	//       name: sinkname
 	//       apiVersion: sinkversion
 	//     uri: uri/parts
@@ -139,10 +139,55 @@ func Example_fullbase64() {
 	//   sink:
 	//     ref:
 	//       kind: sinkkind
-	//       namespace: bar
+	//       namespace: sinknamespace
 	//       name: sinkname
 	//       apiVersion: sinkversion
 	//     uri: uri/parts
 	//     CACerts: |-
 	//       xyz
+}
+
+func Example_schedule_with_secs() {
+	ctx := testlog.NewContext()
+	images := map[string]string{}
+	cfg := map[string]interface{}{
+		"name":        "foo",
+		"namespace":   "bar",
+		"schedule":    "10 0/5 * * * ?",
+		"contentType": "application/json",
+		"data":        `{"message": "Hello world!"}`,
+		"sink": map[string]interface{}{
+			"ref": map[string]string{
+				"kind":       "sinkkind",
+				"namespace":  "sinknamespace",
+				"name":       "sinkname",
+				"apiVersion": "sinkversion",
+			},
+			"uri": "uri/parts",
+		},
+	}
+
+	files, err := manifest.ExecuteYAML(ctx, yaml, images, cfg)
+	if err != nil {
+		panic(err)
+	}
+
+	manifest.OutputYAML(os.Stdout, files)
+	// Output:
+	// apiVersion: sources.knative.dev/v1
+	// kind: PingSource
+	// metadata:
+	//   name: foo
+	//   namespace: bar
+	// spec:
+	//   schedule: '10 0/5 * * * ?'
+	//   contentType: 'application/json'
+	//   data: '{"message": "Hello world!"}'
+	//   sink:
+	//     ref:
+	//       kind: sinkkind
+	//       namespace: sinknamespace
+	//       name: sinkname
+	//       apiVersion: sinkversion
+	//     uri: uri/parts
 }

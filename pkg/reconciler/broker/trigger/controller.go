@@ -19,6 +19,8 @@ package mttrigger
 import (
 	"context"
 
+	"knative.dev/eventing/pkg/auth"
+
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
@@ -43,6 +45,9 @@ import (
 	triggerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/trigger"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1"
 	"knative.dev/eventing/pkg/duck"
+	kubeclient "knative.dev/pkg/client/injection/kube/client"
+
+	serviceaccountinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount/filtered"
 )
 
 // NewController initializes the controller and is called by the generated code
@@ -57,19 +62,22 @@ func NewController(
 	subscriptionInformer := subscriptioninformer.Get(ctx)
 	configmapInformer := configmapinformer.Get(ctx)
 	secretInformer := secretinformer.Get(ctx)
+	oidcServiceaccountInformer := serviceaccountinformer.Get(ctx, auth.OIDCLabelSelector)
 
 	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"))
 	featureStore.WatchConfigs(cmw)
 
 	triggerLister := triggerInformer.Lister()
 	r := &Reconciler{
-		eventingClientSet:  eventingclient.Get(ctx),
-		dynamicClientSet:   dynamicclient.Get(ctx),
-		subscriptionLister: subscriptionInformer.Lister(),
-		brokerLister:       brokerInformer.Lister(),
-		triggerLister:      triggerLister,
-		configmapLister:    configmapInformer.Lister(),
-		secretLister:       secretInformer.Lister(),
+		eventingClientSet:    eventingclient.Get(ctx),
+		dynamicClientSet:     dynamicclient.Get(ctx),
+		kubeclient:           kubeclient.Get(ctx),
+		subscriptionLister:   subscriptionInformer.Lister(),
+		brokerLister:         brokerInformer.Lister(),
+		triggerLister:        triggerLister,
+		configmapLister:      configmapInformer.Lister(),
+		secretLister:         secretInformer.Lister(),
+		serviceAccountLister: oidcServiceaccountInformer.Lister(),
 	}
 	impl := triggerreconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
 		return controller.Options{
@@ -102,6 +110,12 @@ func NewController(
 
 	// Reconcile Trigger when my Subscription changes
 	subscriptionInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: controller.FilterController(&eventing.Trigger{}),
+		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
+	})
+
+	// Reconciler Trigger when the OIDC service account changes
+	oidcServiceaccountInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.FilterController(&eventing.Trigger{}),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})

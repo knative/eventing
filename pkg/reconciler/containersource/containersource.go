@@ -28,14 +28,20 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
-	v1 "knative.dev/eventing/pkg/apis/sources/v1"
-	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
-	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1/containersource"
-	listers "knative.dev/eventing/pkg/client/listers/sources/v1"
-	"knative.dev/eventing/pkg/reconciler/containersource/resources"
+	corev1listers "k8s.io/client-go/listers/core/v1"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
 	pkgreconciler "knative.dev/pkg/reconciler"
+
+	"knative.dev/eventing/pkg/apis/feature"
+	v1 "knative.dev/eventing/pkg/apis/sources/v1"
+	"knative.dev/eventing/pkg/auth"
+	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
+	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1/containersource"
+	listers "knative.dev/eventing/pkg/client/listers/sources/v1"
+	"knative.dev/eventing/pkg/eventingtls"
+	"knative.dev/eventing/pkg/reconciler/containersource/resources"
 )
 
 const (
@@ -59,9 +65,11 @@ type Reconciler struct {
 	eventingClientSet clientset.Interface
 
 	// listers index properties about resources
-	containerSourceLister listers.ContainerSourceLister
-	sinkBindingLister     listers.SinkBindingLister
-	deploymentLister      appsv1listers.DeploymentLister
+	containerSourceLister      listers.ContainerSourceLister
+	sinkBindingLister          listers.SinkBindingLister
+	deploymentLister           appsv1listers.DeploymentLister
+	serviceAccountLister       corev1listers.ServiceAccountLister
+	trustBundleConfigMapLister corev1listers.ConfigMapLister
 }
 
 // Check that our Reconciler implements Interface
@@ -75,6 +83,23 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1.ContainerSour
 		return err
 	}
 
+	featureFlags := feature.FromContext(ctx)
+	if featureFlags.IsOIDCAuthentication() {
+		saName := auth.GetOIDCServiceAccountNameForResource(v1.SchemeGroupVersion.WithKind("ContainerSource"), source.ObjectMeta)
+		source.Status.Auth = &duckv1.AuthStatus{
+			ServiceAccountName: &saName,
+		}
+
+		if err := auth.EnsureOIDCServiceAccountExistsForResource(ctx, r.serviceAccountLister, r.kubeClientSet, v1.SchemeGroupVersion.WithKind("ContainerSource"), source.ObjectMeta); err != nil {
+			source.Status.MarkOIDCIdentityCreatedFailed("Unable to resolve service account for OIDC authentication", "%v", err)
+			return err
+		}
+		source.Status.MarkOIDCIdentityCreatedSucceeded()
+	} else {
+		source.Status.Auth = nil
+		source.Status.MarkOIDCIdentityCreatedSucceededWithReason(fmt.Sprintf("%s feature disabled", feature.OIDCAuthentication), "")
+	}
+
 	_, err = r.reconcileReceiveAdapter(ctx, source)
 	if err != nil {
 		logging.FromContext(ctx).Errorw("Error reconciling ReceiveAdapter", zap.Error(err))
@@ -85,8 +110,14 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1.ContainerSour
 }
 
 func (r *Reconciler) reconcileReceiveAdapter(ctx context.Context, source *v1.ContainerSource) (*appsv1.Deployment, error) {
+	podTemplate, err := eventingtls.AddTrustBundleVolumes(r.trustBundleConfigMapLister, source, &source.Spec.Template.Spec)
+	if err != nil {
+		return nil, fmt.Errorf("failed to add trust bundle volumes: %w", err)
+	}
 
-	expected := resources.MakeDeployment(source)
+	updatedSource := source.DeepCopy() // Avoid update Spec of the given object
+	updatedSource.Spec.Template.Spec = *podTemplate
+	expected := resources.MakeDeployment(updatedSource)
 
 	ra, err := r.deploymentLister.Deployments(expected.Namespace).Get(expected.Name)
 	if apierrors.IsNotFound(err) {
@@ -98,7 +129,7 @@ func (r *Reconciler) reconcileReceiveAdapter(ctx context.Context, source *v1.Con
 	} else if err != nil {
 		return nil, fmt.Errorf("getting Deployment: %v", err)
 	} else if !metav1.IsControlledBy(ra, source) {
-		return nil, fmt.Errorf("Deployment %q is not owned by ContainerSource %q", ra.Name, source.Name)
+		return nil, fmt.Errorf("deployment %q is not owned by ContainerSource %q", ra.Name, source.Name)
 	} else if r.podSpecChanged(&ra.Spec.Template.Spec, &expected.Spec.Template.Spec) {
 		ra.Spec.Template.Spec = expected.Spec.Template.Spec
 		ra, err = r.kubeClientSet.AppsV1().Deployments(expected.Namespace).Update(ctx, ra, metav1.UpdateOptions{})

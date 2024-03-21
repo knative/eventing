@@ -34,6 +34,7 @@ import (
 
 	"knative.dev/eventing/pkg/apis/feature"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
+	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/eventingtls/eventingtlstesting"
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/reconciler/inmemorychannel/controller/config"
@@ -81,6 +82,8 @@ var (
 		Name: pointer.String("http"),
 		URL:  apis.HTTP("test-imc-kn-channel.test-namespace.svc.cluster.local"),
 	}
+
+	channelAudience = fmt.Sprintf("messaging.knative.dev/inmemorychannel/%s/%s", testNS, imcName)
 
 	imcDest = duckv1.Destination{
 		Ref: &duckv1.KReference{
@@ -590,8 +593,43 @@ func TestAllCases(t *testing.T) {
 			Ctx: feature.ToContext(context.Background(), feature.Flags{
 				feature.TransportEncryption: feature.Strict,
 			}),
-		},
-	}
+		}, {
+			Name: "Should provision audience if authentication enabled",
+			Key:  imcKey,
+			Objects: []runtime.Object{
+				makeDLSServiceAsUnstructured(),
+				makeReadyDeployment(),
+				makeService(),
+				makeReadyEndpoints(),
+				NewInMemoryChannel(imcName, testNS,
+					WithDeadLetterSink(imcDest),
+					WithInMemoryChannelGeneration(imcGeneration),
+				),
+				makeChannelService(NewInMemoryChannel(imcName, testNS)),
+			},
+			WantErr: false,
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewInMemoryChannel(imcName, testNS,
+					WithInitInMemoryChannelConditions,
+					WithInMemoryChannelDeploymentReady(),
+					WithInMemoryChannelGeneration(imcGeneration),
+					WithInMemoryChannelStatusObservedGeneration(imcGeneration),
+					WithInMemoryChannelServiceReady(),
+					WithInMemoryChannelEndpointsReady(),
+					WithInMemoryChannelChannelServiceReady(),
+					WithInMemoryChannelAddress(channelServiceAddress),
+					WithDeadLetterSink(imcDest),
+					WithInMemoryChannelStatusDLS(dlsStatus),
+					WithInMemoryChannelAddress(duckv1.Addressable{
+						URL:      channelServiceAddress.URL,
+						Audience: &channelAudience,
+					}),
+				),
+			}},
+			Ctx: feature.ToContext(context.Background(), feature.Flags{
+				feature.OIDCAuthentication: feature.Enabled,
+			}),
+		}}
 
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
@@ -942,7 +980,7 @@ func makeTLSSecret() *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: testNS,
-			Name:      "imc-dispatcher-tls",
+			Name:      eventingtls.IMCDispatcherServerTLSSecretName,
 		},
 		Data: map[string][]byte{
 			"ca.crt": []byte(testCaCerts),

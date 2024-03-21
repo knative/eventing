@@ -45,6 +45,9 @@ const (
 	// LabelEventType is the label for the name of the event type.
 	LabelEventType = "event_type"
 
+	// LabelEventType is the label for the name of the event type.
+	LabelEventScheme = "event_scheme"
+
 	// LabelEventSource is the label for the name of the event source.
 	LabelEventSource = "event_source"
 

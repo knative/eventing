@@ -17,10 +17,13 @@ limitations under the License.
 package main
 
 import (
+	filteredFactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
 	"knative.dev/pkg/signals"
 
 	"knative.dev/eventing/pkg/adapter/apiserver"
 	"knative.dev/eventing/pkg/adapter/v2"
+	"knative.dev/eventing/pkg/auth"
+	"knative.dev/eventing/pkg/eventingtls"
 )
 
 const (
@@ -30,5 +33,11 @@ const (
 func main() {
 	ctx := signals.NewContext()
 	ctx = adapter.WithInjectorEnabled(ctx)
+
+	ctx = filteredFactory.WithSelectors(ctx,
+		auth.OIDCLabelSelector,
+		eventingtls.TrustBundleLabelSelector,
+	)
+
 	adapter.MainWithContext(ctx, component, apiserver.NewEnvConfig, apiserver.NewAdapter)
 }

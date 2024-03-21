@@ -22,8 +22,9 @@ import (
 	"github.com/stretchr/testify/require"
 	_ "knative.dev/pkg/system/testing"
 
-	. "knative.dev/eventing/pkg/apis/feature"
 	. "knative.dev/pkg/configmap/testing"
+
+	. "knative.dev/eventing/pkg/apis/feature"
 )
 
 func TestFlags_IsEnabled_NilMap(t *testing.T) {
@@ -55,4 +56,21 @@ func TestGetFlags(t *testing.T) {
 	require.True(t, flags.IsAllowed("my-enabled-flag"))
 	require.True(t, flags.IsAllowed("my-allowed-flag"))
 	require.False(t, flags.IsAllowed("non-disabled-flag"))
+
+	nodeSelector := flags.NodeSelector()
+	expectedNodeSelector := map[string]string{"testkey": "testvalue", "testkey1": "testvalue1", "testkey2": "testvalue2"}
+	require.Equal(t, expectedNodeSelector, nodeSelector)
+}
+
+func TestShouldNotOverrideDefaults(t *testing.T) {
+	f, err := NewFlagsConfigFromMap(map[string]string{})
+	require.Nil(t, err)
+	require.NotNil(t, f)
+
+	if !f.IsDisabled(KReferenceGroup) && !f.IsEnabled(KReferenceGroup) {
+		t.Errorf("Expected default value for %s in flags %+v", KReferenceGroup, f)
+	}
+	if !f.IsEnabled(NewTriggerFilters) {
+		t.Errorf("Expected default value for %s to be %s in flags %+v", NewTriggerFilters, Enabled, f)
+	}
 }

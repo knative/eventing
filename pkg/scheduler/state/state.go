@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"math"
 	"strconv"
 	"time"
 
@@ -30,10 +31,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
-	clientappsv1 "k8s.io/client-go/kubernetes/typed/apps/v1"
 	corev1 "k8s.io/client-go/listers/core/v1"
 
-	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/logging"
 
 	"knative.dev/eventing/pkg/scheduler"
@@ -95,6 +94,13 @@ type State struct {
 
 	// Stores for each vpod, a map of zonename to total number of vreplicas placed on all pods located in that zone currently
 	ZoneSpread map[types.NamespacedName]map[string]int32
+
+	// Pending tracks the number of virtual replicas that haven't been scheduled yet
+	// because there wasn't enough free capacity.
+	Pending map[types.NamespacedName]int32
+
+	// ExpectedVReplicaByVPod is the expected virtual replicas for each vpod key
+	ExpectedVReplicaByVPod map[types.NamespacedName]int32
 }
 
 // Free safely returns the free capacity at the given ordinal
@@ -146,34 +152,34 @@ func (s *State) IsSchedulablePod(ordinal int32) bool {
 
 // stateBuilder reconstruct the state from scratch, by listing vpods
 type stateBuilder struct {
-	ctx               context.Context
-	logger            *zap.SugaredLogger
-	vpodLister        scheduler.VPodLister
-	capacity          int32
-	schedulerPolicy   scheduler.SchedulerPolicyType
-	nodeLister        corev1.NodeLister
-	statefulSetClient clientappsv1.StatefulSetInterface
-	statefulSetName   string
-	podLister         corev1.PodNamespaceLister
-	schedPolicy       *scheduler.SchedulerPolicy
-	deschedPolicy     *scheduler.SchedulerPolicy
+	ctx              context.Context
+	logger           *zap.SugaredLogger
+	vpodLister       scheduler.VPodLister
+	capacity         int32
+	schedulerPolicy  scheduler.SchedulerPolicyType
+	nodeLister       corev1.NodeLister
+	statefulSetCache *scheduler.ScaleCache
+	statefulSetName  string
+	podLister        corev1.PodNamespaceLister
+	schedPolicy      *scheduler.SchedulerPolicy
+	deschedPolicy    *scheduler.SchedulerPolicy
 }
 
 // NewStateBuilder returns a StateAccessor recreating the state from scratch each time it is requested
-func NewStateBuilder(ctx context.Context, namespace, sfsname string, lister scheduler.VPodLister, podCapacity int32, schedulerPolicy scheduler.SchedulerPolicyType, schedPolicy *scheduler.SchedulerPolicy, deschedPolicy *scheduler.SchedulerPolicy, podlister corev1.PodNamespaceLister, nodeLister corev1.NodeLister) StateAccessor {
+func NewStateBuilder(ctx context.Context, namespace, sfsname string, lister scheduler.VPodLister, podCapacity int32, schedulerPolicy scheduler.SchedulerPolicyType, schedPolicy *scheduler.SchedulerPolicy, deschedPolicy *scheduler.SchedulerPolicy, podlister corev1.PodNamespaceLister, nodeLister corev1.NodeLister, statefulSetCache *scheduler.ScaleCache) StateAccessor {
 
 	return &stateBuilder{
-		ctx:               ctx,
-		logger:            logging.FromContext(ctx),
-		vpodLister:        lister,
-		capacity:          podCapacity,
-		schedulerPolicy:   schedulerPolicy,
-		nodeLister:        nodeLister,
-		statefulSetClient: kubeclient.Get(ctx).AppsV1().StatefulSets(namespace),
-		statefulSetName:   sfsname,
-		podLister:         podlister,
-		schedPolicy:       schedPolicy,
-		deschedPolicy:     deschedPolicy,
+		ctx:              ctx,
+		logger:           logging.FromContext(ctx),
+		vpodLister:       lister,
+		capacity:         podCapacity,
+		schedulerPolicy:  schedulerPolicy,
+		nodeLister:       nodeLister,
+		statefulSetCache: statefulSetCache,
+		statefulSetName:  sfsname,
+		podLister:        podlister,
+		schedPolicy:      schedPolicy,
+		deschedPolicy:    deschedPolicy,
 	}
 }
 
@@ -183,13 +189,15 @@ func (s *stateBuilder) State(reserved map[types.NamespacedName]map[string]int32)
 		return nil, err
 	}
 
-	scale, err := s.statefulSetClient.GetScale(s.ctx, s.statefulSetName, metav1.GetOptions{})
+	scale, err := s.statefulSetCache.GetScale(s.ctx, s.statefulSetName, metav1.GetOptions{})
 	if err != nil {
 		s.logger.Infow("failed to get statefulset", zap.Error(err))
 		return nil, err
 	}
 
 	free := make([]int32, 0)
+	pending := make(map[types.NamespacedName]int32, 4)
+	expectedVReplicasByVPod := make(map[types.NamespacedName]int32, len(vpods))
 	schedulablePods := sets.NewInt32()
 	last := int32(-1)
 
@@ -228,7 +236,7 @@ func (s *stateBuilder) State(reserved map[types.NamespacedName]map[string]int32)
 
 	for podId := int32(0); podId < scale.Spec.Replicas && s.podLister != nil; podId++ {
 		var pod *v1.Pod
-		wait.PollImmediate(50*time.Millisecond, 5*time.Second, func() (bool, error) {
+		wait.PollUntilContextTimeout(context.Background(), 50*time.Millisecond, 5*time.Second, true, func(ctx context.Context) (bool, error) {
 			pod, err = s.podLister.Get(PodNameFromOrdinal(s.statefulSetName, podId))
 			return err == nil, nil
 		})
@@ -255,9 +263,16 @@ func (s *stateBuilder) State(reserved map[types.NamespacedName]map[string]int32)
 		}
 	}
 
+	for _, p := range schedulablePods.List() {
+		free, last = s.updateFreeCapacity(free, last, PodNameFromOrdinal(s.statefulSetName, p), 0)
+	}
+
 	// Getting current state from existing placements for all vpods
 	for _, vpod := range vpods {
 		ps := vpod.GetPlacements()
+
+		pending[vpod.GetKey()] = pendingFromVPod(vpod)
+		expectedVReplicasByVPod[vpod.GetKey()] = vpod.GetVReplicas()
 
 		withPlacement[vpod.GetKey()] = make(map[string]bool)
 		podSpread[vpod.GetKey()] = make(map[string]int32)
@@ -276,7 +291,7 @@ func (s *stateBuilder) State(reserved map[types.NamespacedName]map[string]int32)
 			withPlacement[vpod.GetKey()][podName] = true
 
 			var pod *v1.Pod
-			wait.PollImmediate(50*time.Millisecond, 5*time.Second, func() (bool, error) {
+			wait.PollUntilContextTimeout(context.Background(), 50*time.Millisecond, 5*time.Second, true, func(ctx context.Context) (bool, error) {
 				pod, err = s.podLister.Get(podName)
 				return err == nil, nil
 			})
@@ -301,7 +316,7 @@ func (s *stateBuilder) State(reserved map[types.NamespacedName]map[string]int32)
 				}
 
 				var pod *v1.Pod
-				wait.PollImmediate(50*time.Millisecond, 5*time.Second, func() (bool, error) {
+				wait.PollUntilContextTimeout(context.Background(), 50*time.Millisecond, 5*time.Second, true, func(ctx context.Context) (bool, error) {
 					pod, err = s.podLister.Get(podName)
 					return err == nil, nil
 				})
@@ -321,11 +336,18 @@ func (s *stateBuilder) State(reserved map[types.NamespacedName]map[string]int32)
 
 	state := &State{FreeCap: free, SchedulablePods: schedulablePods.List(), LastOrdinal: last, Capacity: s.capacity, Replicas: scale.Spec.Replicas, NumZones: int32(len(zoneMap)), NumNodes: int32(len(nodeToZoneMap)),
 		SchedulerPolicy: s.schedulerPolicy, SchedPolicy: s.schedPolicy, DeschedPolicy: s.deschedPolicy, NodeToZoneMap: nodeToZoneMap, StatefulSetName: s.statefulSetName, PodLister: s.podLister,
-		PodSpread: podSpread, NodeSpread: nodeSpread, ZoneSpread: zoneSpread}
+		PodSpread: podSpread, NodeSpread: nodeSpread, ZoneSpread: zoneSpread, Pending: pending, ExpectedVReplicaByVPod: expectedVReplicasByVPod}
 
 	s.logger.Infow("cluster state info", zap.Any("state", state), zap.Any("reserved", toJSONable(reserved)))
 
 	return state, nil
+}
+
+func pendingFromVPod(vpod scheduler.VPod) int32 {
+	expected := vpod.GetVReplicas()
+	scheduled := scheduler.GetTotalVReplicas(vpod.GetPlacements())
+
+	return int32(math.Max(float64(0), float64(expected-scheduled)))
 }
 
 func (s *stateBuilder) updateFreeCapacity(free []int32, last int32, podName string, vreplicas int32) ([]int32, int32) {
@@ -337,14 +359,30 @@ func (s *stateBuilder) updateFreeCapacity(free []int32, last int32, podName stri
 	// Assert the pod is not overcommitted
 	if free[ordinal] < 0 {
 		// This should not happen anymore. Log as an error but do not interrupt the current scheduling.
-		s.logger.Errorw("pod is overcommitted", zap.String("podName", podName), zap.Int32("free", free[ordinal]))
+		s.logger.Warnw("pod is overcommitted", zap.String("podName", podName), zap.Int32("free", free[ordinal]))
 	}
 
-	if ordinal > last && free[ordinal] != s.capacity {
+	if ordinal > last {
 		last = ordinal
 	}
 
 	return free, last
+}
+
+func (s *State) TotalPending() int32 {
+	t := int32(0)
+	for _, p := range s.Pending {
+		t += p
+	}
+	return t
+}
+
+func (s *State) TotalExpectedVReplicas() int32 {
+	t := int32(0)
+	for _, v := range s.ExpectedVReplicaByVPod {
+		t += v
+	}
+	return t
 }
 
 func grow(slice []int32, ordinal int32, def int32) []int32 {
@@ -435,6 +473,7 @@ func (s *State) MarshalJSON() ([]byte, error) {
 		SchedulerPolicy scheduler.SchedulerPolicyType `json:"schedulerPolicy"`
 		SchedPolicy     *scheduler.SchedulerPolicy    `json:"schedPolicy"`
 		DeschedPolicy   *scheduler.SchedulerPolicy    `json:"deschedPolicy"`
+		Pending         map[string]int32              `json:"pending"`
 	}
 
 	sj := S{
@@ -453,6 +492,7 @@ func (s *State) MarshalJSON() ([]byte, error) {
 		SchedulerPolicy: s.SchedulerPolicy,
 		SchedPolicy:     s.SchedPolicy,
 		DeschedPolicy:   s.DeschedPolicy,
+		Pending:         toJSONablePending(s.Pending),
 	}
 
 	return json.Marshal(sj)
@@ -464,4 +504,13 @@ func toJSONable(ps map[types.NamespacedName]map[string]int32) map[string]map[str
 		r[k.String()] = v
 	}
 	return r
+}
+
+func toJSONablePending(pending map[types.NamespacedName]int32) map[string]int32 {
+	r := make(map[string]int32, len(pending))
+	for k, v := range pending {
+		r[k.String()] = v
+	}
+	return r
+
 }

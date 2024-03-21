@@ -27,8 +27,10 @@ import (
 	"github.com/google/uuid"
 	"github.com/kelseyhightower/envconfig"
 	"go.uber.org/zap"
+	configmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap/filtered"
 
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
+	filteredFactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
 	configmap "knative.dev/pkg/configmap/informer"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/injection"
@@ -42,11 +44,14 @@ import (
 
 	cmdbroker "knative.dev/eventing/cmd/broker"
 	"knative.dev/eventing/pkg/apis/feature"
-	broker "knative.dev/eventing/pkg/broker"
+	"knative.dev/eventing/pkg/auth"
+	"knative.dev/eventing/pkg/broker"
 	"knative.dev/eventing/pkg/broker/ingress"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	brokerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/broker"
 	eventtypeinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta2/eventtype"
+	"knative.dev/eventing/pkg/eventingtls"
+	"knative.dev/eventing/pkg/eventtype"
 	"knative.dev/eventing/pkg/reconciler/names"
 )
 
@@ -81,6 +86,7 @@ func main() {
 	metrics.MemStatsOrDie(ctx)
 
 	cfg := injection.ParseAndGetRESTConfigOrDie()
+	ctx = injection.WithConfig(ctx, cfg)
 
 	var env envConfig
 	if err := envconfig.Process("", &env); err != nil {
@@ -96,7 +102,13 @@ func main() {
 	log.Printf("Registering %d informer factories", len(injection.Default.GetInformerFactories()))
 	log.Printf("Registering %d informers", len(injection.Default.GetInformers()))
 
+	ctx = filteredFactory.WithSelectors(ctx,
+		auth.OIDCLabelSelector,
+		eventingtls.TrustBundleLabelSelector,
+	)
+
 	ctx, informers := injection.Default.SetupInformers(ctx, cfg)
+	ctx = injection.WithConfig(ctx, cfg)
 	loggingConfig, err := cmdbroker.GetLoggingConfig(ctx, system.Namespace(), logging.ConfigMapName())
 	if err != nil {
 		log.Fatal("Error loading/parsing logging configuration:", err)
@@ -130,12 +142,34 @@ func main() {
 		logger.Fatal("Error setting up trace publishing", zap.Error(err))
 	}
 
-	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"))
+	var featureStore *feature.Store
+	var handler *ingress.Handler
+
+	featureStore = feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {
+		featureFlags := value.(feature.Flags)
+		if featureFlags.IsEnabled(feature.EvenTypeAutoCreate) && featureStore != nil && handler != nil {
+			autoCreate := &eventtype.EventTypeAutoHandler{
+				EventTypeLister: eventtypeinformer.Get(ctx).Lister(),
+				EventingClient:  eventingclient.Get(ctx).EventingV1beta2(),
+				FeatureStore:    featureStore,
+				Logger:          logger,
+			}
+			handler.EvenTypeHandler = autoCreate
+		}
+	})
 	featureStore.WatchConfigs(configMapWatcher)
+
+	// Decorate contexts with the current state of the feature config.
+	ctxFunc := func(ctx context.Context) context.Context {
+		return featureStore.ToContext(ctx)
+	}
 
 	reporter := ingress.NewStatsReporter(env.ContainerName, kmeta.ChildName(env.PodName, uuid.New().String()))
 
-	handler, err := ingress.NewHandler(logger, reporter, broker.TTLDefaulter(logger, int32(env.MaxTTL)), brokerInformer)
+	oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
+	oidcTokenVerifier := auth.NewOIDCTokenVerifier(ctx)
+	trustBundleConfigMapInformer := configmapinformer.Get(ctx, eventingtls.TrustBundleLabelSelector).Lister().ConfigMaps(system.Namespace())
+	handler, err = ingress.NewHandler(logger, reporter, broker.TTLDefaulter(logger, int32(env.MaxTTL)), brokerInformer, oidcTokenVerifier, oidcTokenProvider, trustBundleConfigMapInformer, ctxFunc)
 	if err != nil {
 		logger.Fatal("Error creating Handler", zap.Error(err))
 	}
@@ -152,7 +186,7 @@ func main() {
 
 	// Init auto-create only if enabled, after ConfigMap watcher is started
 	if featureStore.IsEnabled(feature.EvenTypeAutoCreate) {
-		autoCreate := &broker.EventTypeAutoHandler{
+		autoCreate := &eventtype.EventTypeAutoHandler{
 			EventTypeLister: eventtypeinformer.Get(ctx).Lister(),
 			EventingClient:  eventingclient.Get(ctx).EventingV1beta2(),
 			FeatureStore:    featureStore,

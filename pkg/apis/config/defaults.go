@@ -85,6 +85,8 @@ type Defaults struct {
 type ClassAndBrokerConfig struct {
 	BrokerClass   string `json:"brokerClass,omitempty"`
 	*BrokerConfig `json:",inline"`
+
+	DisallowDifferentNamespaceConfig *bool `json:"disallowDifferentNamespaceConfig,omitempty"`
 }
 
 // BrokerConfig contains configuration for a given namespace for broker. Allows

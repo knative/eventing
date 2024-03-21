@@ -21,19 +21,25 @@ package rekt
 
 import (
 	"testing"
+	"time"
+
+	"knative.dev/reconciler-test/pkg/feature"
 
 	"github.com/cloudevents/sdk-go/v2/binding"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/system"
 	_ "knative.dev/pkg/system/testing"
 	"knative.dev/reconciler-test/pkg/environment"
+	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/knative"
 	"knative.dev/reconciler-test/pkg/manifest"
+	"knative.dev/reconciler-test/pkg/tracing"
 
 	"knative.dev/eventing/test/rekt/features/channel"
+	"knative.dev/eventing/test/rekt/features/oidc"
 	ch "knative.dev/eventing/test/rekt/resources/channel"
-	chimpl "knative.dev/eventing/test/rekt/resources/channel_impl"
+	"knative.dev/eventing/test/rekt/resources/channel_impl"
 	"knative.dev/eventing/test/rekt/resources/subscription"
 )
 
@@ -45,6 +51,7 @@ func TestChannelConformance(t *testing.T) {
 		knative.WithTracingConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
+		environment.WithPollTimings(5*time.Second, 4*time.Minute),
 	)
 
 	channelName := "mychannelimpl"
@@ -118,7 +125,7 @@ func TestSmoke_ChannelWithSubscription(t *testing.T) {
 	for _, name := range names {
 		env.Test(ctx, t, channel.SubscriptionGoesReady(name,
 			subscription.WithChannel(chRef),
-			subscription.WithSubscriber(nil, "http://example.com")),
+			subscription.WithSubscriber(nil, "http://example.com", "")),
 		)
 	}
 }
@@ -134,7 +141,7 @@ func TestSmoke_ChannelImplWithSubscription(t *testing.T) {
 
 	// Install and wait for a Ready Channel.
 	env.Prerequisite(ctx, t, channel.ImplGoesReady(channelName))
-	chRef := chimpl.AsRef(channelName)
+	chRef := channel_impl.AsRef(channelName)
 
 	names := []string{
 		"customname",
@@ -146,7 +153,7 @@ func TestSmoke_ChannelImplWithSubscription(t *testing.T) {
 	for _, name := range names {
 		env.Test(ctx, t, channel.SubscriptionGoesReady(name,
 			subscription.WithChannel(chRef),
-			subscription.WithSubscriber(nil, "http://example.com")),
+			subscription.WithSubscriber(nil, "http://example.com", "")),
 		)
 	}
 }
@@ -168,7 +175,7 @@ func TestChannelChain(t *testing.T) {
 	)
 
 	createSubscriberFn := func(ref *duckv1.KReference, uri string) manifest.CfgFn {
-		return subscription.WithSubscriber(ref, uri)
+		return subscription.WithSubscriber(ref, uri, "")
 	}
 	env.Test(ctx, t, channel.ChannelChain(10, createSubscriberFn))
 }
@@ -191,7 +198,7 @@ func TestChannelDeadLetterSink(t *testing.T) {
 	)
 
 	createSubscriberFn := func(ref *duckv1.KReference, uri string) manifest.CfgFn {
-		return subscription.WithSubscriber(ref, uri)
+		return subscription.WithSubscriber(ref, uri, "")
 	}
 	env.Test(ctx, t, channel.DeadLetterSink(createSubscriberFn))
 }
@@ -210,7 +217,7 @@ func TestGenericChannelDeadLetterSink(t *testing.T) {
 	)
 
 	createSubscriberFn := func(ref *duckv1.KReference, uri string) manifest.CfgFn {
-		return subscription.WithSubscriber(ref, uri)
+		return subscription.WithSubscriber(ref, uri, "")
 	}
 	env.Test(ctx, t, channel.DeadLetterSinkGenericChannel(createSubscriberFn))
 	env.Test(ctx, t, channel.AsDeadLetterSink(createSubscriberFn))
@@ -295,7 +302,7 @@ func TestChannelPreferHeaderCheck(t *testing.T) {
 	)
 
 	createSubscriberFn := func(ref *duckv1.KReference, uri string) manifest.CfgFn {
-		return subscription.WithSubscriber(ref, uri)
+		return subscription.WithSubscriber(ref, uri, "")
 	}
 
 	env.Test(ctx, t, channel.ChannelPreferHeaderCheck(createSubscriberFn))
@@ -309,12 +316,79 @@ func TestChannelDeadLetterSinkExtensions(t *testing.T) {
 		knative.WithLoggingConfig,
 		knative.WithTracingConfig,
 		k8s.WithEventListener,
+		tracing.WithGatherer(t),
 		environment.Managed(t),
 	)
 
 	createSubscriberFn := func(ref *duckv1.KReference, uri string) manifest.CfgFn {
-		return subscription.WithSubscriber(ref, uri)
+		return subscription.WithSubscriber(ref, uri, "")
 	}
 
 	env.TestSet(ctx, t, channel.ChannelDeadLetterSinkExtensions(createSubscriberFn))
+}
+
+func TestInMemoryChannelRotateIngressTLSCertificate(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+		eventshub.WithTLS(t),
+		environment.WithPollTimings(5*time.Second, 4*time.Minute),
+	)
+
+	env.Test(ctx, t, channel.RotateDispatcherTLSCertificate())
+}
+
+func TestInMemoryChannelTLS(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+		eventshub.WithTLS(t),
+		environment.WithPollTimings(5*time.Second, 4*time.Minute),
+	)
+
+	env.ParallelTest(ctx, t, channel.SubscriptionTLS())
+	env.ParallelTest(ctx, t, channel.SubscriptionTLSTrustBundle())
+}
+
+func TestChannelImplDispatcherAuthenticatesWithOIDC(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+		eventshub.WithTLS(t),
+	)
+
+	env.Test(ctx, t, channel.DispatcherAuthenticatesRequestsWithOIDC())
+}
+
+func TestChannelImplSupportsOIDC(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+		environment.WithPollTimings(4*time.Second, 12*time.Minute),
+	)
+
+	name := feature.MakeRandomK8sName("channelimpl")
+	env.Prerequisite(ctx, t, channel.ImplGoesReady(name))
+
+	env.TestSet(ctx, t, oidc.AddressableOIDCConformance(channel_impl.GVR(), channel_impl.GVK().Kind, name, env.Namespace()))
 }

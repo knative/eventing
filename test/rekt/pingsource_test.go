@@ -21,7 +21,6 @@ package rekt
 
 import (
 	"testing"
-	"time"
 
 	"knative.dev/pkg/system"
 	"knative.dev/reconciler-test/pkg/environment"
@@ -48,7 +47,6 @@ func TestPingSourceWithSinkRef(t *testing.T) {
 }
 
 func TestPingSourceTLS(t *testing.T) {
-	t.Skip("seems flaky")
 	t.Parallel()
 
 	ctx, env := global.Environment(
@@ -61,7 +59,8 @@ func TestPingSourceTLS(t *testing.T) {
 	)
 	t.Cleanup(env.Finish)
 
-	env.Test(ctx, t, pingsource.SendsEventsTLS())
+	env.ParallelTest(ctx, t, pingsource.SendsEventsTLS())
+	env.ParallelTest(ctx, t, pingsource.SendsEventsTLSTrustBundle())
 }
 
 func TestPingSourceWithSinkURI(t *testing.T) {
@@ -92,7 +91,7 @@ func TestPingSourceWithCloudEventData(t *testing.T) {
 	env.Test(ctx, t, pingsource.SendsEventsWithCloudEventData())
 }
 
-func TestPingSourceWithEventTypes(t *testing.T) {
+func TestPingSourceWithSecondsInSchedule(t *testing.T) {
 	t.Parallel()
 
 	ctx, env := global.Environment(
@@ -101,8 +100,37 @@ func TestPingSourceWithEventTypes(t *testing.T) {
 		knative.WithTracingConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
-		environment.WithPollTimings(5*time.Second, 2*time.Minute),
 	)
 
-	env.Test(ctx, t, pingsource.SendsEventsWithEventTypes())
+	env.Test(ctx, t, pingsource.SendsEventsWithSecondsInSchedule())
+}
+
+func TestPingSourceDataPlane_BrokerAsSinkTLS(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+		eventshub.WithTLS(t),
+	)
+
+	env.Test(ctx, t, pingsource.SendsEventsWithBrokerAsSinkTLS())
+}
+
+func TestPingSourceSendsEventsOIDC(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+		eventshub.WithTLS(t),
+	)
+
+	env.Test(ctx, t, pingsource.PingSourceSendEventOIDC())
 }

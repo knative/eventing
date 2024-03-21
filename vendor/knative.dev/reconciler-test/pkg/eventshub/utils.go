@@ -38,7 +38,17 @@ const (
 	EventGeneratorsEnv = "EVENT_GENERATORS"
 	EventLogsEnv       = "EVENT_LOGS"
 
-	EnforceTLS = "ENFORCE_TLS"
+	OIDCEnabledEnv                         = "ENABLE_OIDC_AUTH"
+	OIDCGenerateExpiredTokenEnv            = "OIDC_GENERATE_EXPIRED_TOKEN"
+	OIDCGenerateInvalidAudienceTokenEnv    = "OIDC_GENERATE_INVALID_AUDIENCE_TOKEN"
+	OIDCGenerateCorruptedSignatureTokenEnv = "OIDC_GENERATE_CORRUPTED_SIG_TOKEN"
+	OIDCSinkAudienceEnv                    = "OIDC_SINK_AUDIENCE"
+	OIDCReceiverAudienceEnv                = "OIDC_AUDIENCE"
+	OIDCTokenEnv                           = "OIDC_TOKEN"
+
+	EnforceTLS    = "ENFORCE_TLS"
+	tlsIssuerKind = "TLS_ISSUER_KIND"
+	tlsIssuerName = "TLS_ISSUER_NAME"
 )
 
 func ParseHeaders(serializedHeaders string) http.Header {

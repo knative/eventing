@@ -27,6 +27,7 @@ import (
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/utils/pointer"
 	"knative.dev/pkg/apis"
@@ -44,6 +45,8 @@ import (
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/pkg/apis/feature"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
+	"knative.dev/eventing/pkg/auth"
+	"knative.dev/eventing/pkg/broker/filter"
 	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1"
 	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1"
@@ -57,22 +60,23 @@ var brokerGVK = eventingv1.SchemeGroupVersion.WithKind("Broker")
 
 const (
 	// Name of the corev1.Events emitted from the Trigger reconciliation process.
-	subscriptionDeleteFailed  = "SubscriptionDeleteFailed"
-	subscriptionCreateFailed  = "SubscriptionCreateFailed"
-	subscriptionGetFailed     = "SubscriptionGetFailed"
-	filterServerTLSSecretName = "mt-broker-filter-server-tls" //nolint:gosec // This is not a hardcoded credential
+	subscriptionDeleteFailed = "SubscriptionDeleteFailed"
+	subscriptionCreateFailed = "SubscriptionCreateFailed"
+	subscriptionGetFailed    = "SubscriptionGetFailed"
 )
 
 type Reconciler struct {
 	eventingClientSet clientset.Interface
 	dynamicClientSet  dynamic.Interface
+	kubeclient        kubernetes.Interface
 
 	// listers index properties about resources
-	subscriptionLister messaginglisters.SubscriptionLister
-	brokerLister       eventinglisters.BrokerLister
-	triggerLister      eventinglisters.TriggerLister
-	configmapLister    corev1listers.ConfigMapLister
-	secretLister       corev1listers.SecretLister
+	subscriptionLister   messaginglisters.SubscriptionLister
+	brokerLister         eventinglisters.BrokerLister
+	triggerLister        eventinglisters.TriggerLister
+	configmapLister      corev1listers.ConfigMapLister
+	secretLister         corev1listers.SecretLister
+	serviceAccountLister corev1listers.ServiceAccountLister
 
 	// Dynamic tracker to track Sources. In particular, it tracks the dependency between Triggers and Sources.
 	sourceTracker duck.ListableTracker
@@ -128,13 +132,22 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, t *eventingv1.Trigger) p
 		t.Status.MarkSubscriberResolvedFailed("Unable to get the Subscriber's URI", "%v", err)
 		t.Status.SubscriberURI = nil
 		t.Status.SubscriberCACerts = nil
+		t.Status.SubscriberAudience = nil
 		return err
 	}
 	t.Status.SubscriberURI = subscriberAddr.URL
 	t.Status.SubscriberCACerts = subscriberAddr.CACerts
+	t.Status.SubscriberAudience = subscriberAddr.Audience
 	t.Status.MarkSubscriberResolvedSucceeded()
 
 	if err := r.resolveDeadLetterSink(ctx, b, t); err != nil {
+		return err
+	}
+
+	featureFlags := feature.FromContext(ctx)
+	if err = auth.SetupOIDCServiceAccount(ctx, featureFlags, r.serviceAccountLister, r.kubeclient, eventingv1.SchemeGroupVersion.WithKind("Trigger"), t.ObjectMeta, &t.Status, func(as *duckv1.AuthStatus) {
+		t.Status.Auth = as
+	}); err != nil {
 		return err
 	}
 
@@ -186,9 +199,9 @@ func (r *Reconciler) resolveDeadLetterSink(ctx context.Context, b *eventingv1.Br
 
 // subscribeToBrokerChannel subscribes service 'svc' to the Broker's channels.
 func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, b *eventingv1.Broker, t *eventingv1.Trigger, brokerTrigger *corev1.ObjectReference) (*messagingv1.Subscription, error) {
-	var dest *duckv1.Destination
-	transportEncryptionFlags := feature.FromContext(ctx)
-	if transportEncryptionFlags.IsPermissiveTransportEncryption() || transportEncryptionFlags.IsStrictTransportEncryption() {
+	var dest, reply, dls *duckv1.Destination
+	featureFlags := feature.FromContext(ctx)
+	if featureFlags.IsPermissiveTransportEncryption() || featureFlags.IsStrictTransportEncryption() {
 		caCerts, err := r.getCaCerts()
 		if err != nil {
 			return nil, fmt.Errorf("failed to get CA certs: %w", err)
@@ -200,7 +213,25 @@ func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, b *eventingv1
 				Host:   network.GetServiceHostname("broker-filter", system.Namespace()),
 				Path:   path.Generate(t),
 			},
-			CACerts: pointer.String(caCerts),
+			CACerts: caCerts,
+		}
+
+		reply = &duckv1.Destination{
+			URI: &apis.URL{
+				Scheme: "https",
+				Host:   network.GetServiceHostname("broker-filter", system.Namespace()),
+				Path:   path.GenerateReply(t),
+			},
+			CACerts: caCerts,
+		}
+
+		dls = &duckv1.Destination{
+			URI: &apis.URL{
+				Scheme: "https",
+				Host:   network.GetServiceHostname("broker-filter", system.Namespace()),
+				Path:   path.GenerateDLS(t),
+			},
+			CACerts: caCerts,
 		}
 	} else {
 		dest = &duckv1.Destination{
@@ -210,26 +241,57 @@ func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, b *eventingv1
 				Path:   path.Generate(t),
 			},
 		}
+
+		reply = &duckv1.Destination{
+			URI: &apis.URL{
+				Scheme: "http",
+				Host:   network.GetServiceHostname("broker-filter", system.Namespace()),
+				Path:   path.GenerateReply(t),
+			},
+		}
+
+		dls = &duckv1.Destination{
+			URI: &apis.URL{
+				Scheme: "http",
+				Host:   network.GetServiceHostname("broker-filter", system.Namespace()),
+				Path:   path.GenerateDLS(t),
+			},
+		}
 	}
 
-	// Note that we have to hard code the brokerGKV stuff as sometimes typemeta is not
-	// filled in. So instead of b.TypeMeta.Kind and b.TypeMeta.APIVersion, we have to
-	// do it this way.
-	brokerObjRef := &corev1.ObjectReference{
-		Kind:       brokerGVK.Kind,
-		APIVersion: brokerGVK.GroupVersion().String(),
-		Name:       b.Name,
-		Namespace:  b.Namespace,
-	}
-
-	delivery := t.Spec.Delivery
+	delivery := t.Spec.Delivery.DeepCopy() // copy object to avoid in-place update bugs
 	if delivery == nil {
-		delivery = b.Spec.Delivery
+		delivery = b.Spec.Delivery.DeepCopy() // copy object to avoid in-place update bugs
 	}
 
 	recorder := controller.GetEventRecorder(ctx)
 
-	expected := resources.NewSubscription(t, brokerTrigger, brokerObjRef, dest, delivery)
+	var expected *messagingv1.Subscription
+	if featureFlags.IsOIDCAuthentication() {
+		dest.Audience = pointer.String(filter.FilterAudience)
+		reply.Audience = pointer.String(filter.FilterAudience)
+		dls.Audience = pointer.String(filter.FilterAudience)
+
+		if delivery != nil && delivery.DeadLetterSink != nil {
+			delivery.DeadLetterSink = dls
+		}
+
+		expected = resources.NewSubscription(t, brokerTrigger, dest, reply, delivery)
+	} else {
+		// in case OIDC is not enabled, we don't need to route everything throuh
+		// broker-filter because we need it only then to add the token from the
+		// trigger OIDC service account
+		reply = &duckv1.Destination{
+			Ref: &duckv1.KReference{
+				APIVersion: brokerGVK.GroupVersion().String(),
+				Kind:       brokerGVK.Kind,
+				Name:       b.Name,
+				Namespace:  b.Namespace,
+			},
+		}
+
+		expected = resources.NewSubscription(t, brokerTrigger, dest, reply, delivery)
+	}
 
 	sub, err := r.subscriptionLister.Subscriptions(t.Namespace).Get(expected.Name)
 	// If the resource doesn't exist, we'll create it.
@@ -348,14 +410,14 @@ func getBrokerChannelRef(b *eventingv1.Broker) (*corev1.ObjectReference, error) 
 	return nil, errors.New("Broker.Status.Annotations nil or missing values")
 }
 
-func (r *Reconciler) getCaCerts() (string, error) {
-	secret, err := r.secretLister.Secrets(system.Namespace()).Get(filterServerTLSSecretName)
+func (r *Reconciler) getCaCerts() (*string, error) {
+	secret, err := r.secretLister.Secrets(system.Namespace()).Get(eventingtls.BrokerFilterServerTLSSecretName)
 	if err != nil {
-		return "", fmt.Errorf("failed to get CA certs from %s/%s: %w", system.Namespace(), filterServerTLSSecretName, err)
+		return nil, fmt.Errorf("failed to get CA certs from %s/%s: %w", system.Namespace(), eventingtls.BrokerFilterServerTLSSecretName, err)
 	}
 	caCerts, ok := secret.Data[eventingtls.SecretCACert]
 	if !ok {
-		return "", fmt.Errorf("failed to get CA certs from %s/%s: missing %s key", system.Namespace(), filterServerTLSSecretName, eventingtls.SecretCACert)
+		return nil, nil
 	}
-	return string(caCerts), nil
+	return pointer.String(string(caCerts)), nil
 }

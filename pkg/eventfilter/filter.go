@@ -23,42 +23,29 @@ import (
 )
 
 const (
-	PassFilter FilterResult = "pass"
-	FailFilter FilterResult = "fail"
-	NoFilter   FilterResult = "no_filter"
+	PassFilter FilterResult = iota
+	FailFilter
+	NoFilter
 )
 
 // FilterResult has the result of the filtering operation.
-type FilterResult string
+type FilterResult int
 
-func (x FilterResult) And(y FilterResult) FilterResult {
-	if x == NoFilter {
-		return y
+func (x FilterResult) String() string {
+	switch x {
+	case PassFilter:
+		return "PassFilter"
+	case FailFilter:
+		return "FailFilter"
+	default:
+		return "NoFilter"
 	}
-	if y == NoFilter {
-		return x
-	}
-	if x == PassFilter && y == PassFilter {
-		return PassFilter
-	}
-	return FailFilter
-}
-
-func (x FilterResult) Or(y FilterResult) FilterResult {
-	if x == NoFilter {
-		return y
-	}
-	if y == NoFilter {
-		return x
-	}
-	if x == PassFilter || y == PassFilter {
-		return PassFilter
-	}
-	return FailFilter
 }
 
 // Filter is an interface representing an event filter of the trigger filter
 type Filter interface {
 	// Filter compute the predicate on the provided event and returns the result of the matching
 	Filter(ctx context.Context, event cloudevents.Event) FilterResult
+	// Cleanup cleans up any resources/goroutines used by the filter
+	Cleanup()
 }

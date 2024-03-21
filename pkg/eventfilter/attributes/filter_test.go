@@ -172,6 +172,7 @@ func TestAllSupportedAttributeFieldsV1(t *testing.T) {
 	e.SetDataSchema("wow")
 	e.SetSubject("cool")
 	e.SetDataContentType("cheers;mate")
+	timeBytes, _ := e.Time().MarshalText()
 
 	attributes := map[string]string{
 		"specversion":     e.SpecVersion(),
@@ -179,7 +180,7 @@ func TestAllSupportedAttributeFieldsV1(t *testing.T) {
 		"source":          e.Source(),
 		"subject":         e.Subject(),
 		"id":              e.ID(),
-		"time":            e.Time().String(),
+		"time":            string(timeBytes),
 		"dataschema":      e.DataSchema(),
 		"schemaurl":       e.DataSchema(),
 		"datacontenttype": e.DataContentType(),

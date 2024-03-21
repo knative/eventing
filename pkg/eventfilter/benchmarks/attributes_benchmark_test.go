@@ -19,6 +19,7 @@ package benchmarks
 import (
 	"testing"
 
+	cloudevents "github.com/cloudevents/sdk-go/v2"
 	cetest "github.com/cloudevents/sdk-go/v2/test"
 
 	"knative.dev/eventing/pkg/eventfilter"
@@ -33,9 +34,9 @@ func BenchmarkAttributesFilter(b *testing.B) {
 			return attributes.NewAttributesFilter(i.(map[string]string))
 		},
 		FilterBenchmark{
-			name:  "Pass with exact match of id",
-			arg:   map[string]string{"id": event.ID()},
-			event: event,
+			name:   "Pass with exact match of id",
+			arg:    map[string]string{"id": event.ID()},
+			events: []cloudevents.Event{event},
 		},
 		FilterBenchmark{
 			// We don't test time because the exact match on the string apparently doesn't work well,
@@ -49,7 +50,7 @@ func BenchmarkAttributesFilter(b *testing.B) {
 				"datacontenttype": event.DataContentType(),
 				"subject":         event.Subject(),
 			},
-			event: event,
+			events: []cloudevents.Event{event},
 		},
 		FilterBenchmark{
 			name: "No pass with exact match of id and source",
@@ -57,7 +58,7 @@ func BenchmarkAttributesFilter(b *testing.B) {
 				"id":     "qwertyuiopasdfghjklzxcvbnm",
 				"source": "qwertyuiopasdfghjklzxcvbnm",
 			},
-			event: event,
+			events: []cloudevents.Event{event},
 		},
 	)
 }

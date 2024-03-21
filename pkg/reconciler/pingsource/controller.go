@@ -19,6 +19,11 @@ package pingsource
 import (
 	"context"
 
+	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
+	"knative.dev/eventing/pkg/auth"
+
+	serviceaccountinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount/filtered"
+
 	"go.uber.org/zap"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -60,18 +65,26 @@ func NewController(
 		logger.Fatalw("Error converting leader election configuration to JSON", zap.Error(err))
 	}
 
-	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"))
+	var globalResync func(obj interface{})
+
+	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {
+		if globalResync != nil {
+			globalResync(nil)
+		}
+	})
 	featureStore.WatchConfigs(cmw)
 
 	// Configure the reconciler
 
 	deploymentInformer := deploymentinformer.Get(ctx)
 	pingSourceInformer := pingsourceinformer.Get(ctx)
+	oidcServiceaccountInformer := serviceaccountinformer.Get(ctx, auth.OIDCLabelSelector)
 
 	r := &Reconciler{
-		kubeClientSet: kubeclient.Get(ctx),
-		leConfig:      leConfig,
-		configAcc:     reconcilersource.WatchConfigurations(ctx, component, cmw),
+		kubeClientSet:        kubeclient.Get(ctx),
+		leConfig:             leConfig,
+		configAcc:            reconcilersource.WatchConfigurations(ctx, component, cmw),
+		serviceAccountLister: oidcServiceaccountInformer.Lister(),
 	}
 
 	impl := pingsourcereconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
@@ -79,6 +92,10 @@ func NewController(
 			ConfigStore: featureStore,
 		}
 	})
+
+	globalResync = func(interface{}) {
+		impl.GlobalResync(pingSourceInformer.Informer())
+	}
 
 	r.sinkResolver = resolver.NewURIResolver(ctx, cmw, impl.Tracker)
 
@@ -95,6 +112,11 @@ func NewController(
 				r.tracker.OnChanged,
 				appsv1.SchemeGroupVersion.WithKind("Deployment"),
 			)),
+	})
+
+	oidcServiceaccountInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: controller.FilterController(&sourcesv1.PingSource{}),
+		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 
 	return impl

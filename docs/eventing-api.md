@@ -19,6 +19,9 @@
 <a href="#eventing.knative.dev%2fv1beta2">eventing.knative.dev/v1beta2</a>
 </li>
 <li>
+<a href="#eventing.knative.dev%2fv1beta3">eventing.knative.dev/v1beta3</a>
+</li>
+<li>
 <a href="#flows.knative.dev%2fv1">flows.knative.dev/v1</a>
 </li>
 <li>
@@ -450,6 +453,18 @@ string
 according to <a href="https://www.rfc-editor.org/rfc/rfc7468">https://www.rfc-editor.org/rfc/rfc7468</a>.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>deadLetterSinkAudience</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>DeadLetterSinkAudience is the OIDC audience of the DeadLetterSink</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="duck.knative.dev/v1.Subscribable">Subscribable
@@ -664,6 +679,18 @@ subscriberUri</p>
 </tr>
 <tr>
 <td>
+<code>subscriberAudience</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SubscriberAudience is the OIDC audience for the subscriberUri.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>replyUri</code><br/>
 <em>
 <a href="https://pkg.go.dev/knative.dev/pkg/apis#URL">
@@ -692,6 +719,18 @@ replyUri.</p>
 </tr>
 <tr>
 <td>
+<code>replyAudience</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ReplyAudience is the OIDC audience for the replyUri.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>delivery</code><br/>
 <em>
 <a href="#duck.knative.dev/v1.DeliverySpec">
@@ -702,6 +741,20 @@ DeliverySpec
 <td>
 <em>(Optional)</em>
 <p>DeliverySpec contains options controlling the event delivery</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>auth</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#AuthStatus">
+knative.dev/pkg/apis/duck/v1.AuthStatus
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Auth contains the service account name for the subscription</p>
 </td>
 </tr>
 </tbody>
@@ -771,6 +824,20 @@ string
 <td>
 <em>(Optional)</em>
 <p>A human readable message indicating details of Ready status.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>auth</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#AuthStatus">
+knative.dev/pkg/apis/duck/v1.AuthStatus
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Auth provides the relevant information for OIDC authentication.</p>
 </td>
 </tr>
 </tbody>
@@ -1802,6 +1869,17 @@ string
 </tr>
 <tr>
 <td>
+<code>brokerNamespace</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>BrokerNamespace is the namespace of the broker that the trigger receives events from.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>filter</code><br/>
 <em>
 <a href="#eventing.knative.dev/v1.TriggerFilter">
@@ -2207,6 +2285,17 @@ string
 </tr>
 <tr>
 <td>
+<code>brokerNamespace</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>BrokerNamespace is the namespace of the broker that the trigger receives events from.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>filter</code><br/>
 <em>
 <a href="#eventing.knative.dev/v1.TriggerFilter">
@@ -2336,6 +2425,18 @@ according to <a href="https://www.rfc-editor.org/rfc/rfc7468">https://www.rfc-ed
 </tr>
 <tr>
 <td>
+<code>subscriberAudience</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SubscriberAudience is the OIDC audience of the subscriber.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>DeliveryStatus</code><br/>
 <em>
 <a href="#duck.knative.dev/v1.DeliveryStatus">
@@ -2349,6 +2450,20 @@ DeliveryStatus
 </p>
 <p>DeliveryStatus contains a resolved URL to the dead letter sink address, and any other
 resolved delivery options.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>auth</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#AuthStatus">
+knative.dev/pkg/apis/duck/v1.AuthStatus
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Auth provides the relevant information for OIDC authentication.</p>
 </td>
 </tr>
 </tbody>
@@ -2365,7 +2480,8 @@ Resource Types:
 <h3 id="eventing.knative.dev/v1beta1.EventType">EventType
 </h3>
 <p>
-<p>EventType represents a type of event that can be consumed from a Broker.</p>
+<p>EventType represents a type of event that can be consumed from a Broker.
+Deprecated: use v1beta2.EventType instead.</p>
 </p>
 <table>
 <thead>
@@ -3010,6 +3126,335 @@ knative.dev/pkg/apis/duck/v1.Status
 </tbody>
 </table>
 <hr/>
+<h2 id="eventing.knative.dev/v1beta3">eventing.knative.dev/v1beta3</h2>
+<p>
+<p>Package v1beta3 is the v1beta3 version of the API.</p>
+</p>
+Resource Types:
+<ul><li>
+<a href="#eventing.knative.dev/v1beta3.EventType">EventType</a>
+</li></ul>
+<h3 id="eventing.knative.dev/v1beta3.EventType">EventType
+</h3>
+<p>
+<p>EventType represents a type of event that can be consumed from a Broker.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>apiVersion</code><br/>
+string</td>
+<td>
+<code>
+eventing.knative.dev/v1beta3
+</code>
+</td>
+</tr>
+<tr>
+<td>
+<code>kind</code><br/>
+string
+</td>
+<td><code>EventType</code></td>
+</tr>
+<tr>
+<td>
+<code>metadata</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#objectmeta-v1-meta">
+Kubernetes meta/v1.ObjectMeta
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+Refer to the Kubernetes API documentation for the fields of the
+<code>metadata</code> field.
+</td>
+</tr>
+<tr>
+<td>
+<code>spec</code><br/>
+<em>
+<a href="#eventing.knative.dev/v1beta3.EventTypeSpec">
+EventTypeSpec
+</a>
+</em>
+</td>
+<td>
+<p>Spec defines the desired state of the EventType.</p>
+<br/>
+<br/>
+<table>
+<tr>
+<td>
+<code>type</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Type represents the CloudEvents type. It is authoritative.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>source</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis#URL">
+knative.dev/pkg/apis.URL
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Source is a URI, it represents the CloudEvents source.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>schema</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis#URL">
+knative.dev/pkg/apis.URL
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Schema is a URI, it represents the CloudEvents schemaurl extension attribute.
+It may be a JSON schema, a protobuf schema, etc. It is optional.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>schemaData</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SchemaData allows the CloudEvents schema to be stored directly in the
+EventType. Content is dependent on the encoding. Optional attribute.
+The contents are not validated or manipulated by the system.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>broker</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Broker refers to the Broker that can provide the EventType.
+Deprecated: This field is deprecated and will be removed in a future release.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>reference</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#KReference">
+knative.dev/pkg/apis/duck/v1.KReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Reference is a KReference to the belonging addressable.
+For example, this could be a pointer to a Broker.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>description</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Description is an optional field used to describe the EventType, in any meaningful way.</p>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+<tr>
+<td>
+<code>status</code><br/>
+<em>
+<a href="#eventing.knative.dev/v1beta3.EventTypeStatus">
+EventTypeStatus
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Status represents the current state of the EventType.
+This data may be out of date.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="eventing.knative.dev/v1beta3.EventTypeSpec">EventTypeSpec
+</h3>
+<p>
+(<em>Appears on:</em><a href="#eventing.knative.dev/v1beta3.EventType">EventType</a>)
+</p>
+<p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>type</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Type represents the CloudEvents type. It is authoritative.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>source</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis#URL">
+knative.dev/pkg/apis.URL
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Source is a URI, it represents the CloudEvents source.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>schema</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis#URL">
+knative.dev/pkg/apis.URL
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Schema is a URI, it represents the CloudEvents schemaurl extension attribute.
+It may be a JSON schema, a protobuf schema, etc. It is optional.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>schemaData</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SchemaData allows the CloudEvents schema to be stored directly in the
+EventType. Content is dependent on the encoding. Optional attribute.
+The contents are not validated or manipulated by the system.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>broker</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Broker refers to the Broker that can provide the EventType.
+Deprecated: This field is deprecated and will be removed in a future release.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>reference</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#KReference">
+knative.dev/pkg/apis/duck/v1.KReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Reference is a KReference to the belonging addressable.
+For example, this could be a pointer to a Broker.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>description</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Description is an optional field used to describe the EventType, in any meaningful way.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="eventing.knative.dev/v1beta3.EventTypeStatus">EventTypeStatus
+</h3>
+<p>
+(<em>Appears on:</em><a href="#eventing.knative.dev/v1beta3.EventType">EventType</a>)
+</p>
+<p>
+<p>EventTypeStatus represents the current state of a EventType.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>Status</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#Status">
+knative.dev/pkg/apis/duck/v1.Status
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>Status</code> are embedded into this type.)
+</p>
+<p>inherits duck/v1 Status, which currently provides:
+* ObservedGeneration - the &lsquo;Generation&rsquo; of the Service that was last processed by the controller.
+* Conditions - the latest available observations of a resource&rsquo;s current state.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<hr/>
 <h2 id="flows.knative.dev/v1">flows.knative.dev/v1</h2>
 <p>
 <p>Package v1 is the v1 version of the API.</p>
@@ -3435,6 +3880,20 @@ will target the first subscriber.
 It generally has the form {channel}.{namespace}.svc.{cluster domain name}</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>auth</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#AuthStatus">
+knative.dev/pkg/apis/duck/v1.AuthStatus
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Auth provides the relevant information for OIDC authentication.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="flows.knative.dev/v1.ParallelSubscriptionStatus">ParallelSubscriptionStatus
@@ -3767,6 +4226,20 @@ knative.dev/pkg/apis/duck/v1.Addressable
 <p>Address is the starting point to this Sequence. Sending to this
 will target the first subscriber.
 It generally has the form {channel}.{namespace}.svc.{cluster domain name}</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>auth</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#AuthStatus">
+knative.dev/pkg/apis/duck/v1.AuthStatus
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Auth provides the relevant information for OIDC authentication.</p>
 </td>
 </tr>
 </tbody>
@@ -4590,6 +5063,20 @@ SubscriptionStatusPhysicalSubscription
 <p>PhysicalSubscription is the fully resolved values that this Subscription represents.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>auth</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#AuthStatus">
+knative.dev/pkg/apis/duck/v1.AuthStatus
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Auth provides the relevant information for OIDC authentication.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="messaging.knative.dev/v1.SubscriptionStatusPhysicalSubscription">SubscriptionStatusPhysicalSubscription
@@ -4639,6 +5126,19 @@ resolved URI for spec.subscriber.</p>
 </tr>
 <tr>
 <td>
+<code>subscriberAudience</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SubscriberAudience is the OIDC audience for the the resolved URI for
+spec.subscriber.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>replyUri</code><br/>
 <em>
 <a href="https://pkg.go.dev/knative.dev/pkg/apis#URL">
@@ -4663,6 +5163,19 @@ string
 <p>ReplyCACerts is the Certification Authority (CA) certificates in PEM
 format according to <a href="https://www.rfc-editor.org/rfc/rfc7468">https://www.rfc-editor.org/rfc/rfc7468</a> for the
 resolved URI for the spec.reply.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>replyAudience</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ReplyAudience is the OIDC audience for the the resolved URI for
+spec.reply.</p>
 </td>
 </tr>
 <tr>
@@ -5835,6 +6348,18 @@ processed by the controller.
 state.
 * SinkURI - the current active sink URI that has been configured for the
 Source.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>oidcTokenSecretName</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>OIDCTokenSecretName is the name of the secret containing the token for
+this SinkBindings OIDC authentication</p>
 </td>
 </tr>
 </tbody>

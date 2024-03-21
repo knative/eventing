@@ -56,6 +56,8 @@ func (attrs attributesFilter) Filter(ctx context.Context, event cloudevents.Even
 	return eventfilter.PassFilter
 }
 
+func (attrs attributesFilter) Cleanup() {}
+
 func LookupAttribute(event cloudevents.Event, attr string) (interface{}, bool) {
 	// Set standard context attributes. The attributes available may not be
 	// exactly the same as the attributes defined in the current version of the
@@ -72,7 +74,11 @@ func LookupAttribute(event cloudevents.Event, attr string) (interface{}, bool) {
 	case "id":
 		return event.ID(), true
 	case "time":
-		return event.Time().String(), true
+		b, err := event.Time().MarshalText()
+		if err != nil {
+			return nil, false
+		}
+		return string(b), true
 	case "dataschema":
 		return event.DataSchema(), true
 	case "schemaurl":

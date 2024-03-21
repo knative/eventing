@@ -85,6 +85,9 @@ spec:
                       CACerts:
                         description: Certification Authority (CA) certificates in PEM format that the source trusts when sending events to the sink.
                         type: string
+                      audience:
+                        description: Audience is the OIDC audience. This only needs to be set if the target is not an Addressable and thus the Audience can't be received from the target itself. If specified, it takes precedence over the target's Audience.
+                        type: string
                   retry:
                     description: Retry is the minimum number of retries the sender should attempt when sending an event before moving it to the dead letter sink.
                     type: integer
@@ -116,6 +119,9 @@ spec:
                   CACerts:
                     description: Certification Authority (CA) certificates in PEM format that the source trusts when sending events to the sink.
                     type: string
+                  audience:
+                    description: Audience is the OIDC audience. This only needs to be set if the target is not an Addressable and thus the Audience can't be received from the target itself. If specified, it takes precedence over the target's Audience.
+                    type: string
               subscriber:
                 description: Subscriber is reference to (optional) function for processing events. Events from the Channel will be delivered here and replies are sent to a Destination as specified by the Reply.
                 type: object
@@ -140,6 +146,12 @@ spec:
                   uri:
                     description: URI can be an absolute URL(non-empty scheme and non-empty host) pointing to the target or a relative URI. Relative URIs will be resolved using the base URI retrieved from Ref.
                     type: string
+                  CACerts:
+                    description: Certification Authority (CA) certificates in PEM format that the subscription trusts when sending events to the sink.
+                    type: string
+                  audience:
+                    description: Audience is the OIDC audience. This only needs to be set if the target is not an Addressable and thus the Audience can't be received from the target itself. If specified, it takes precedence over the target's Audience.
+                    type: string
           status:
             type: object
             properties:
@@ -147,6 +159,13 @@ spec:
                 description: Annotations is additional Status fields for the Resource to save some additional State as well as convey more information to the user. This is roughly akin to Annotations on any k8s resource, just the reconciler conveying richer information outwards.
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
+              auth:
+                description: Auth provides the relevant information for OIDC authentication.
+                type: object
+                properties:
+                  serviceAccountName:
+                    description: ServiceAccountName is the name of the generated service account used for this components OIDC authentication.
+                    type: string
               conditions:
                 description: Conditions the latest available observations of a resource's current state.
                 type: array
@@ -188,17 +207,26 @@ spec:
                   deadLetterSinkCACerts:
                     description: Certification Authority (CA) certificates in PEM format according to https://www.rfc-editor.org/rfc/rfc7468.
                     type: string
+                  deadLetterSinkAudience:
+                    description: OIDC audience of the dead letter sink.
+                    type: string
                   replyUri:
                     description: ReplyURI is the fully resolved URI for the spec.reply.
                     type: string
                   replyCACerts:
                     description: Certification Authority (CA) certificates in PEM format according to https://www.rfc-editor.org/rfc/rfc7468.
                     type: string
+                  replyAudience:
+                    description: ReplyAudience is the OIDC audience for the replyUri.
+                    type: string
                   subscriberUri:
                     description: SubscriberURI is the fully resolved URI for spec.subscriber.
                     type: string
                   subscriberCACerts:
                     description: Certification Authority (CA) certificates in PEM format according to https://www.rfc-editor.org/rfc/rfc7468.
+                    type: string
+                  subscriberAudience:
+                    description: SubscriberAudience is the OIDC audience for the subscriberUri.
                     type: string
     additionalPrinterColumns:
     - name: Age

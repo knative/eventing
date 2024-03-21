@@ -20,8 +20,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"go.uber.org/zap"
+	corev1listers "k8s.io/client-go/listers/core/v1"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -31,10 +33,18 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/tracker"
+
+	"knative.dev/eventing/pkg/eventingtls"
+)
+
+const (
+	oidcTokenVolumeName = "oidc-token"
 )
 
 var sbCondSet = apis.NewLivingConditionSet(
 	SinkBindingConditionSinkProvided,
+	SinkBindingConditionOIDCIdentityCreated,
+	SinkBindingConditionOIDCTokenSecretCreated,
 )
 
 // GetConditionSet retrieves the condition set for this resource. Implements the KRShaped interface.
@@ -89,10 +99,43 @@ func (sbs *SinkBindingStatus) MarkSink(addr *duckv1.Addressable) {
 	if addr != nil {
 		sbs.SinkURI = addr.URL
 		sbs.SinkCACerts = addr.CACerts
+		sbs.SinkAudience = addr.Audience
 		sbCondSet.Manage(sbs).MarkTrue(SinkBindingConditionSinkProvided)
 	} else {
 		sbCondSet.Manage(sbs).MarkFalse(SinkBindingConditionSinkProvided, "SinkEmpty", "Sink has resolved to empty.%s", "")
 	}
+}
+
+func (sbs *SinkBindingStatus) MarkOIDCIdentityCreatedSucceeded() {
+	sbCondSet.Manage(sbs).MarkTrue(SinkBindingConditionOIDCIdentityCreated)
+}
+
+func (sbs *SinkBindingStatus) MarkOIDCIdentityCreatedSucceededWithReason(reason, messageFormat string, messageA ...interface{}) {
+	sbCondSet.Manage(sbs).MarkTrueWithReason(SinkBindingConditionOIDCIdentityCreated, reason, messageFormat, messageA...)
+}
+
+func (sbs *SinkBindingStatus) MarkOIDCIdentityCreatedFailed(reason, messageFormat string, messageA ...interface{}) {
+	sbCondSet.Manage(sbs).MarkFalse(SinkBindingConditionOIDCIdentityCreated, reason, messageFormat, messageA...)
+}
+
+func (sbs *SinkBindingStatus) MarkOIDCIdentityCreatedUnknown(reason, messageFormat string, messageA ...interface{}) {
+	sbCondSet.Manage(sbs).MarkUnknown(SinkBindingConditionOIDCIdentityCreated, reason, messageFormat, messageA...)
+}
+
+func (sbs *SinkBindingStatus) MarkOIDCTokenSecretCreatedSuccceeded() {
+	sbCondSet.Manage(sbs).MarkTrue(SinkBindingConditionOIDCTokenSecretCreated)
+}
+
+func (sbs *SinkBindingStatus) MarkOIDCTokenSecretCreatedSuccceededWithReason(reason, messageFormat string, messageA ...interface{}) {
+	sbCondSet.Manage(sbs).MarkTrueWithReason(SinkBindingConditionOIDCTokenSecretCreated, reason, messageFormat, messageA...)
+}
+
+func (sbs *SinkBindingStatus) MarkOIDCTokenSecretCreatedFailed(reason, messageFormat string, messageA ...interface{}) {
+	sbCondSet.Manage(sbs).MarkFalse(SinkBindingConditionOIDCTokenSecretCreated, reason, messageFormat, messageA...)
+}
+
+func (sbs *SinkBindingStatus) MarkOIDCTokenSecretCreatedUnknown(reason, messageFormat string, messageA ...interface{}) {
+	sbCondSet.Manage(sbs).MarkUnknown(SinkBindingConditionOIDCTokenSecretCreated, reason, messageFormat, messageA...)
 }
 
 // Do implements psbinding.Bindable
@@ -121,71 +164,162 @@ func (sb *SinkBinding) Do(ctx context.Context, ps *duckv1.WithPod) {
 		}
 	}
 
-	spec := ps.Spec.Template.Spec
-	for i := range spec.InitContainers {
-		spec.InitContainers[i].Env = append(spec.InitContainers[i].Env, corev1.EnvVar{
+	for i := range ps.Spec.Template.Spec.InitContainers {
+		ps.Spec.Template.Spec.InitContainers[i].Env = append(ps.Spec.Template.Spec.InitContainers[i].Env, corev1.EnvVar{
 			Name:  "K_SINK",
 			Value: addr.URL.String(),
 		})
 		if addr.CACerts != nil {
-			spec.InitContainers[i].Env = append(spec.InitContainers[i].Env, corev1.EnvVar{
+			ps.Spec.Template.Spec.InitContainers[i].Env = append(ps.Spec.Template.Spec.InitContainers[i].Env, corev1.EnvVar{
 				Name:  "K_CA_CERTS",
 				Value: *addr.CACerts,
 			})
 		}
-		spec.InitContainers[i].Env = append(spec.InitContainers[i].Env, corev1.EnvVar{
+		ps.Spec.Template.Spec.InitContainers[i].Env = append(ps.Spec.Template.Spec.InitContainers[i].Env, corev1.EnvVar{
 			Name:  "K_CE_OVERRIDES",
 			Value: ceOverrides,
 		})
 	}
-	for i := range spec.Containers {
-		spec.Containers[i].Env = append(spec.Containers[i].Env, corev1.EnvVar{
+	for i := range ps.Spec.Template.Spec.Containers {
+		ps.Spec.Template.Spec.Containers[i].Env = append(ps.Spec.Template.Spec.Containers[i].Env, corev1.EnvVar{
 			Name:  "K_SINK",
 			Value: addr.URL.String(),
 		})
 		if addr.CACerts != nil {
-			spec.Containers[i].Env = append(spec.Containers[i].Env, corev1.EnvVar{
+			ps.Spec.Template.Spec.Containers[i].Env = append(ps.Spec.Template.Spec.Containers[i].Env, corev1.EnvVar{
 				Name:  "K_CA_CERTS",
 				Value: *addr.CACerts,
 			})
 		}
-		spec.Containers[i].Env = append(spec.Containers[i].Env, corev1.EnvVar{
+		ps.Spec.Template.Spec.Containers[i].Env = append(ps.Spec.Template.Spec.Containers[i].Env, corev1.EnvVar{
 			Name:  "K_CE_OVERRIDES",
 			Value: ceOverrides,
 		})
+	}
+
+	pss, err := eventingtls.AddTrustBundleVolumes(GetTrustBundleConfigMapLister(ctx), sb, &ps.Spec.Template.Spec)
+	if err != nil {
+		logging.FromContext(ctx).Errorw("Failed to add trust bundle volumes %s/%s: %+v", zap.Error(err))
+		return
+	}
+	ps.Spec.Template.Spec = *pss
+
+	if sb.Status.OIDCTokenSecretName != nil {
+		ps.Spec.Template.Spec.Volumes = append(ps.Spec.Template.Spec.Volumes, corev1.Volume{
+			Name: oidcTokenVolumeName,
+			VolumeSource: corev1.VolumeSource{
+				Projected: &corev1.ProjectedVolumeSource{
+					Sources: []corev1.VolumeProjection{
+						{
+							Secret: &corev1.SecretProjection{
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: *sb.Status.OIDCTokenSecretName,
+								},
+							},
+						},
+					},
+				},
+			},
+		})
+
+		for i := range ps.Spec.Template.Spec.Containers {
+			ps.Spec.Template.Spec.Containers[i].VolumeMounts = append(ps.Spec.Template.Spec.Containers[i].VolumeMounts, corev1.VolumeMount{
+				Name:      oidcTokenVolumeName,
+				MountPath: "/oidc",
+			})
+		}
+		for i := range ps.Spec.Template.Spec.InitContainers {
+			ps.Spec.Template.Spec.InitContainers[i].VolumeMounts = append(ps.Spec.Template.Spec.InitContainers[i].VolumeMounts, corev1.VolumeMount{
+				Name:      oidcTokenVolumeName,
+				MountPath: "/oidc",
+			})
+		}
 	}
 }
 
 func (sb *SinkBinding) Undo(ctx context.Context, ps *duckv1.WithPod) {
-	spec := ps.Spec.Template.Spec
-	for i, c := range spec.InitContainers {
-		if len(c.Env) == 0 {
-			continue
-		}
-		env := make([]corev1.EnvVar, 0, len(spec.InitContainers[i].Env))
-		for j, ev := range c.Env {
-			switch ev.Name {
-			case "K_SINK", "K_CE_OVERRIDES", "K_CA_CERTS":
-				continue
-			default:
-				env = append(env, spec.InitContainers[i].Env[j])
+	for i, c := range ps.Spec.Template.Spec.InitContainers {
+		if len(c.Env) > 0 {
+			env := make([]corev1.EnvVar, 0, len(ps.Spec.Template.Spec.InitContainers[i].Env))
+			for j, ev := range c.Env {
+				switch ev.Name {
+				case "K_SINK", "K_CE_OVERRIDES", "K_CA_CERTS":
+					continue
+				default:
+					env = append(env, ps.Spec.Template.Spec.InitContainers[i].Env[j])
+				}
 			}
+			ps.Spec.Template.Spec.InitContainers[i].Env = env
 		}
-		spec.InitContainers[i].Env = env
-	}
-	for i, c := range spec.Containers {
-		if len(c.Env) == 0 {
-			continue
-		}
-		env := make([]corev1.EnvVar, 0, len(spec.Containers[i].Env))
-		for j, ev := range c.Env {
-			switch ev.Name {
-			case "K_SINK", "K_CE_OVERRIDES", "K_CA_CERTS":
-				continue
-			default:
-				env = append(env, spec.Containers[i].Env[j])
+
+		if len(ps.Spec.Template.Spec.InitContainers[i].VolumeMounts) > 0 {
+			volumeMounts := make([]corev1.VolumeMount, 0, len(ps.Spec.Template.Spec.InitContainers[i].VolumeMounts))
+			for j, vol := range c.VolumeMounts {
+				if vol.Name == oidcTokenVolumeName {
+					continue
+				}
+				if strings.HasPrefix(vol.Name, eventingtls.TrustBundleVolumeNamePrefix) {
+					continue
+				}
+				volumeMounts = append(volumeMounts, ps.Spec.Template.Spec.InitContainers[i].VolumeMounts[j])
 			}
+			ps.Spec.Template.Spec.InitContainers[i].VolumeMounts = volumeMounts
 		}
-		spec.Containers[i].Env = env
 	}
+	for i, c := range ps.Spec.Template.Spec.Containers {
+		if len(c.Env) > 0 {
+			env := make([]corev1.EnvVar, 0, len(ps.Spec.Template.Spec.Containers[i].Env))
+			for j, ev := range c.Env {
+				switch ev.Name {
+				case "K_SINK", "K_CE_OVERRIDES", "K_CA_CERTS":
+					continue
+				default:
+					env = append(env, ps.Spec.Template.Spec.Containers[i].Env[j])
+				}
+			}
+			ps.Spec.Template.Spec.Containers[i].Env = env
+		}
+
+		if len(ps.Spec.Template.Spec.Containers[i].VolumeMounts) > 0 {
+			volumeMounts := make([]corev1.VolumeMount, 0, len(ps.Spec.Template.Spec.Containers[i].VolumeMounts))
+			for j, vol := range c.VolumeMounts {
+				if vol.Name == oidcTokenVolumeName {
+					continue
+				}
+				if strings.HasPrefix(vol.Name, eventingtls.TrustBundleVolumeNamePrefix) {
+					continue
+				}
+				volumeMounts = append(volumeMounts, ps.Spec.Template.Spec.Containers[i].VolumeMounts[j])
+			}
+			ps.Spec.Template.Spec.Containers[i].VolumeMounts = volumeMounts
+		}
+	}
+
+	if len(ps.Spec.Template.Spec.Volumes) > 0 {
+		volumes := make([]corev1.Volume, 0, len(ps.Spec.Template.Spec.Volumes))
+		for i, vol := range ps.Spec.Template.Spec.Volumes {
+			if vol.Name == oidcTokenVolumeName {
+				continue
+			}
+			if strings.HasPrefix(vol.Name, eventingtls.TrustBundleVolumeNamePrefix) {
+				continue
+			}
+			volumes = append(volumes, ps.Spec.Template.Spec.Volumes[i])
+		}
+		ps.Spec.Template.Spec.Volumes = volumes
+	}
+}
+
+type configMapListerKey struct{}
+
+func WithTrustBundleConfigMapLister(ctx context.Context, lister corev1listers.ConfigMapLister) context.Context {
+	return context.WithValue(ctx, configMapListerKey{}, lister)
+}
+
+func GetTrustBundleConfigMapLister(ctx context.Context) corev1listers.ConfigMapLister {
+	value := ctx.Value(configMapListerKey{})
+	if value == nil {
+		panic("No ConfigMapLister found in context.")
+	}
+	return value.(corev1listers.ConfigMapLister)
 }

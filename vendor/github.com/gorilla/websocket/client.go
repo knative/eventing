@@ -9,14 +9,18 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
+	"fmt"
 	"io"
-	"io/ioutil"
+	"log"
+
 	"net"
 	"net/http"
 	"net/http/httptrace"
 	"net/url"
 	"strings"
 	"time"
+
+	"golang.org/x/net/proxy"
 )
 
 // ErrBadHandshake is returned when the server response to opening handshake is
@@ -48,14 +52,22 @@ func NewClient(netConn net.Conn, u *url.URL, requestHeader http.Header, readBufS
 }
 
 // A Dialer contains options for connecting to WebSocket server.
+//
+// It is safe to call Dialer's methods concurrently.
 type Dialer struct {
 	// NetDial specifies the dial function for creating TCP connections. If
 	// NetDial is nil, net.Dial is used.
 	NetDial func(network, addr string) (net.Conn, error)
 
 	// NetDialContext specifies the dial function for creating TCP connections. If
-	// NetDialContext is nil, net.DialContext is used.
+	// NetDialContext is nil, NetDial is used.
 	NetDialContext func(ctx context.Context, network, addr string) (net.Conn, error)
+
+	// NetDialTLSContext specifies the dial function for creating TLS/TCP connections. If
+	// NetDialTLSContext is nil, NetDialContext is used.
+	// If NetDialTLSContext is set, Dial assumes the TLS handshake is done there and
+	// TLSClientConfig is ignored.
+	NetDialTLSContext func(ctx context.Context, network, addr string) (net.Conn, error)
 
 	// Proxy specifies a function to return a proxy for a given
 	// Request. If the function returns a non-nil error, the
@@ -65,6 +77,8 @@ type Dialer struct {
 
 	// TLSClientConfig specifies the TLS configuration to use with tls.Client.
 	// If nil, the default configuration is used.
+	// If either NetDialTLS or NetDialTLSContext are set, Dial assumes the TLS handshake
+	// is done there and TLSClientConfig is ignored.
 	TLSClientConfig *tls.Config
 
 	// HandshakeTimeout specifies the duration for the handshake to complete.
@@ -176,7 +190,7 @@ func (d *Dialer) DialContext(ctx context.Context, urlStr string, requestHeader h
 	}
 
 	req := &http.Request{
-		Method:     "GET",
+		Method:     http.MethodGet,
 		URL:        u,
 		Proto:      "HTTP/1.1",
 		ProtoMajor: 1,
@@ -214,6 +228,7 @@ func (d *Dialer) DialContext(ctx context.Context, urlStr string, requestHeader h
 			k == "Connection" ||
 			k == "Sec-Websocket-Key" ||
 			k == "Sec-Websocket-Version" ||
+			//#nosec G101 (CWE-798): Potential HTTP request smuggling via parameter pollution
 			k == "Sec-Websocket-Extensions" ||
 			(k == "Sec-Websocket-Protocol" && len(d.Subprotocols) > 0):
 			return nil, nil, errors.New("websocket: duplicate header not allowed: " + k)
@@ -237,13 +252,32 @@ func (d *Dialer) DialContext(ctx context.Context, urlStr string, requestHeader h
 	// Get network dial function.
 	var netDial func(network, add string) (net.Conn, error)
 
-	if d.NetDialContext != nil {
-		netDial = func(network, addr string) (net.Conn, error) {
-			return d.NetDialContext(ctx, network, addr)
+	switch u.Scheme {
+	case "http":
+		if d.NetDialContext != nil {
+			netDial = func(network, addr string) (net.Conn, error) {
+				return d.NetDialContext(ctx, network, addr)
+			}
+		} else if d.NetDial != nil {
+			netDial = d.NetDial
 		}
-	} else if d.NetDial != nil {
-		netDial = d.NetDial
-	} else {
+	case "https":
+		if d.NetDialTLSContext != nil {
+			netDial = func(network, addr string) (net.Conn, error) {
+				return d.NetDialTLSContext(ctx, network, addr)
+			}
+		} else if d.NetDialContext != nil {
+			netDial = func(network, addr string) (net.Conn, error) {
+				return d.NetDialContext(ctx, network, addr)
+			}
+		} else if d.NetDial != nil {
+			netDial = d.NetDial
+		}
+	default:
+		return nil, nil, errMalformedURL
+	}
+
+	if netDial == nil {
 		netDialer := &net.Dialer{}
 		netDial = func(network, addr string) (net.Conn, error) {
 			return netDialer.DialContext(ctx, network, addr)
@@ -260,7 +294,9 @@ func (d *Dialer) DialContext(ctx context.Context, urlStr string, requestHeader h
 			}
 			err = c.SetDeadline(deadline)
 			if err != nil {
-				c.Close()
+				if err := c.Close(); err != nil {
+					log.Printf("websocket: failed to close network connection: %v", err)
+				}
 				return nil, err
 			}
 			return c, nil
@@ -274,7 +310,7 @@ func (d *Dialer) DialContext(ctx context.Context, urlStr string, requestHeader h
 			return nil, nil, err
 		}
 		if proxyURL != nil {
-			dialer, err := proxy_FromURL(proxyURL, netDialerFunc(netDial))
+			dialer, err := proxy.FromURL(proxyURL, netDialerFunc(netDial))
 			if err != nil {
 				return nil, nil, err
 			}
@@ -289,22 +325,26 @@ func (d *Dialer) DialContext(ctx context.Context, urlStr string, requestHeader h
 	}
 
 	netConn, err := netDial("tcp", hostPort)
+	if err != nil {
+		return nil, nil, err
+	}
 	if trace != nil && trace.GotConn != nil {
 		trace.GotConn(httptrace.GotConnInfo{
 			Conn: netConn,
 		})
 	}
-	if err != nil {
-		return nil, nil, err
-	}
 
 	defer func() {
 		if netConn != nil {
-			netConn.Close()
+			if err := netConn.Close(); err != nil {
+				log.Printf("websocket: failed to close network connection: %v", err)
+			}
 		}
 	}()
 
-	if u.Scheme == "https" {
+	if u.Scheme == "https" && d.NetDialTLSContext == nil {
+		// If NetDialTLSContext is set, assume that the TLS handshake has already been done
+
 		cfg := cloneTLSConfig(d.TLSClientConfig)
 		if cfg.ServerName == "" {
 			cfg.ServerName = hostNoPort
@@ -312,11 +352,12 @@ func (d *Dialer) DialContext(ctx context.Context, urlStr string, requestHeader h
 		tlsConn := tls.Client(netConn, cfg)
 		netConn = tlsConn
 
-		var err error
-		if trace != nil {
-			err = doHandshakeWithTrace(trace, tlsConn, cfg)
-		} else {
-			err = doHandshake(tlsConn, cfg)
+		if trace != nil && trace.TLSHandshakeStart != nil {
+			trace.TLSHandshakeStart()
+		}
+		err := doHandshake(ctx, tlsConn, cfg)
+		if trace != nil && trace.TLSHandshakeDone != nil {
+			trace.TLSHandshakeDone(tlsConn.ConnectionState(), err)
 		}
 
 		if err != nil {
@@ -338,6 +379,17 @@ func (d *Dialer) DialContext(ctx context.Context, urlStr string, requestHeader h
 
 	resp, err := http.ReadResponse(conn.br, req)
 	if err != nil {
+		if d.TLSClientConfig != nil {
+			for _, proto := range d.TLSClientConfig.NextProtos {
+				if proto != "http/1.1" {
+					return nil, nil, fmt.Errorf(
+						"websocket: protocol %q was given but is not supported;"+
+							"sharing tls.Config with net/http Transport can cause this error: %w",
+						proto, err,
+					)
+				}
+			}
+		}
 		return nil, nil, err
 	}
 
@@ -348,15 +400,15 @@ func (d *Dialer) DialContext(ctx context.Context, urlStr string, requestHeader h
 	}
 
 	if resp.StatusCode != 101 ||
-		!strings.EqualFold(resp.Header.Get("Upgrade"), "websocket") ||
-		!strings.EqualFold(resp.Header.Get("Connection"), "upgrade") ||
+		!tokenListContainsValue(resp.Header, "Upgrade", "websocket") ||
+		!tokenListContainsValue(resp.Header, "Connection", "upgrade") ||
 		resp.Header.Get("Sec-Websocket-Accept") != computeAcceptKey(challengeKey) {
 		// Before closing the network connection on return from this
 		// function, slurp up some of the response to aid application
 		// debugging.
 		buf := make([]byte, 1024)
 		n, _ := io.ReadFull(resp.Body, buf)
-		resp.Body = ioutil.NopCloser(bytes.NewReader(buf[:n]))
+		resp.Body = io.NopCloser(bytes.NewReader(buf[:n]))
 		return nil, resp, ErrBadHandshake
 	}
 
@@ -374,22 +426,19 @@ func (d *Dialer) DialContext(ctx context.Context, urlStr string, requestHeader h
 		break
 	}
 
-	resp.Body = ioutil.NopCloser(bytes.NewReader([]byte{}))
+	resp.Body = io.NopCloser(bytes.NewReader([]byte{}))
 	conn.subprotocol = resp.Header.Get("Sec-Websocket-Protocol")
 
-	netConn.SetDeadline(time.Time{})
+	if err := netConn.SetDeadline(time.Time{}); err != nil {
+		return nil, nil, err
+	}
 	netConn = nil // to avoid close in defer.
 	return conn, resp, nil
 }
 
-func doHandshake(tlsConn *tls.Conn, cfg *tls.Config) error {
-	if err := tlsConn.Handshake(); err != nil {
-		return err
+func cloneTLSConfig(cfg *tls.Config) *tls.Config {
+	if cfg == nil {
+		return &tls.Config{MinVersion: tls.VersionTLS12}
 	}
-	if !cfg.InsecureSkipVerify {
-		if err := tlsConn.VerifyHostname(cfg.ServerName); err != nil {
-			return err
-		}
-	}
-	return nil
+	return cfg.Clone()
 }

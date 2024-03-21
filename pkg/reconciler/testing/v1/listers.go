@@ -180,6 +180,10 @@ func (l *Listers) GetServiceLister() corev1listers.ServiceLister {
 	return corev1listers.NewServiceLister(l.indexerFor(&corev1.Service{}))
 }
 
+func (l *Listers) GetRoleLister() rbacv1listers.RoleLister {
+	return rbacv1listers.NewRoleLister(l.indexerFor(&rbacv1.Role{}))
+}
+
 func (l *Listers) GetRoleBindingLister() rbacv1listers.RoleBindingLister {
 	return rbacv1listers.NewRoleBindingLister(l.indexerFor(&rbacv1.RoleBinding{}))
 }

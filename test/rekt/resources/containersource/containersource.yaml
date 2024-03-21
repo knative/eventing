@@ -31,7 +31,11 @@ spec:
     {{ if .sink.ref }}
     ref:
       kind: {{ .sink.ref.kind }}
+      {{ if .sink.ref.namespace }}
       namespace: {{ .sink.ref.namespace }}
+      {{ else }}
+      namespace: {{ .namespace }}
+      {{ end }}
       name: {{ .sink.ref.name }}
       apiVersion: {{ .sink.ref.apiVersion }}
     {{ end }}
@@ -41,6 +45,9 @@ spec:
     {{ if .sink.CACerts }}
     CACerts: |-
       {{ .sink.CACerts }}
+    {{ end }}
+    {{ if .sink.audience }}
+    audience: {{ .sink.audience }}
     {{ end }}
   template:
     {{ if .podannotations }}

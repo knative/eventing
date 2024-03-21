@@ -734,6 +734,32 @@ func TestStatefulsetScheduler(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:      "two replicas, 12 vreplicas, already scheduled on overcommitted pod, remove replicas",
+			vreplicas: 12,
+			replicas:  int32(2),
+			placements: []duckv1alpha1.Placement{
+				{PodName: "statefulset-name-0", VReplicas: 12},
+			},
+			expected: []duckv1alpha1.Placement{
+				{PodName: "statefulset-name-0", VReplicas: 10},
+				{PodName: "statefulset-name-1", VReplicas: 2},
+			},
+			schedulerPolicyType: scheduler.MAXFILLUP,
+		},
+		{
+			name:      "one replica, 12 vreplicas, already scheduled on overcommitted pod, remove replicas",
+			vreplicas: 12,
+			replicas:  int32(1),
+			placements: []duckv1alpha1.Placement{
+				{PodName: "statefulset-name-0", VReplicas: 12},
+			},
+			expected: []duckv1alpha1.Placement{
+				{PodName: "statefulset-name-0", VReplicas: 10},
+			},
+			err:                 controller.NewRequeueAfter(5 * time.Second),
+			schedulerPolicyType: scheduler.MAXFILLUP,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -777,19 +803,17 @@ func TestStatefulsetScheduler(t *testing.T) {
 			}
 			lsp := listers.NewListers(podlist)
 			lsn := listers.NewListers(nodelist)
-			sa := state.NewStateBuilder(ctx, testNs, sfsName, vpodClient.List, 10, tc.schedulerPolicyType, tc.schedulerPolicy, tc.deschedulerPolicy, lsp.GetPodLister().Pods(testNs), lsn.GetNodeLister())
+			scaleCache := scheduler.NewScaleCache(ctx, testNs, kubeclient.Get(ctx).AppsV1().StatefulSets(testNs), scheduler.ScaleCacheConfig{RefreshPeriod: time.Minute * 5})
+			sa := state.NewStateBuilder(ctx, testNs, sfsName, vpodClient.List, 10, tc.schedulerPolicyType, tc.schedulerPolicy, tc.deschedulerPolicy, lsp.GetPodLister().Pods(testNs), lsn.GetNodeLister(), scaleCache)
 			cfg := &Config{
 				StatefulSetNamespace: testNs,
 				StatefulSetName:      sfsName,
 				VPodLister:           vpodClient.List,
 			}
 			s := newStatefulSetScheduler(ctx, cfg, sa, nil, lsp.GetPodLister().Pods(testNs))
-			if tc.pending != nil {
-				s.pending = tc.pending
-			}
 
 			// Give some time for the informer to notify the scheduler and set the number of replicas
-			err = wait.PollImmediate(200*time.Millisecond, time.Second, func() (bool, error) {
+			err = wait.PollUntilContextTimeout(ctx, 200*time.Millisecond, time.Second, true, func(ctx context.Context) (bool, error) {
 				s.lock.Lock()
 				defer s.lock.Unlock()
 				return s.replicas == tc.replicas, nil
@@ -907,7 +931,7 @@ type fakeAutoscaler struct {
 func (f *fakeAutoscaler) Start(ctx context.Context) {
 }
 
-func (f *fakeAutoscaler) Autoscale(ctx context.Context, attemptScaleDown bool, pending int32) {
+func (f *fakeAutoscaler) Autoscale(ctx context.Context) {
 }
 
 func newFakeAutoscaler() *fakeAutoscaler {

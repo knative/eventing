@@ -27,6 +27,11 @@ import (
 	"time"
 
 	"knative.dev/pkg/injection/sharedmain"
+
+	"knative.dev/eventing/pkg/auth"
+	"knative.dev/eventing/pkg/eventingtls"
+
+	filteredFactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
 	"knative.dev/pkg/signals"
 
 	"knative.dev/eventing/pkg/reconciler/apiserversource"
@@ -72,6 +77,11 @@ func main() {
 			log.Fatal(err)
 		}
 	}()
+
+	ctx = filteredFactory.WithSelectors(ctx,
+		auth.OIDCLabelSelector,
+		eventingtls.TrustBundleLabelSelector,
+	)
 
 	sharedmain.MainWithContext(ctx, "controller",
 		// Messaging

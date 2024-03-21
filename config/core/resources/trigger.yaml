@@ -57,6 +57,9 @@ spec:
               broker:
                 description: Broker is the broker that this trigger receives events from.
                 type: string
+              brokerNamespace:
+                description: Namespace of the broker that the trigger receives events from.
+                type: string
               delivery:
                 description: Delivery contains the delivery spec for this specific trigger.
                 type: object
@@ -93,6 +96,9 @@ spec:
                         type: string
                       CACerts:
                         description: Certification Authority (CA) certificates in PEM format that the source trusts when sending events to the sink.
+                        type: string
+                      audience:
+                        description: Audience is the OIDC audience. This only needs to be set if the target is not an Addressable and thus the Audience can't be received from the target itself. If specified, it takes precedence over the target's Audience.
                         type: string
                   retry:
                     description: Retry is the minimum number of retries the sender should attempt when sending an event before moving it to the dead letter sink.
@@ -132,6 +138,9 @@ spec:
                   CACerts:
                     description: Certification Authority (CA) certificates in PEM format that the source trusts when sending events to the sink.
                     type: string
+                  audience:
+                    description: Audience is the OIDC audience. This only needs to be set if the target is not an Addressable and thus the Audience can't be received from the target itself. If specified, it takes precedence over the target's Audience.
+                    type: string
           status:
             description: Status represents the current state of the Trigger. This data may be out of date.
             type: object
@@ -140,6 +149,13 @@ spec:
                 description: Annotations is additional Status fields for the Resource to save some additional State as well as convey more information to the user. This is roughly akin to Annotations on any k8s resource, just the reconciler conveying richer information outwards.
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
+              auth:
+                description: Auth provides the relevant information for OIDC authentication.
+                type: object
+                properties:
+                  serviceAccountName:
+                    description: ServiceAccountName is the name of the generated service account used for this components OIDC authentication.
+                    type: string
               conditions:
                 description: Conditions the latest available observations of a resource's current state.
                 type: array
@@ -173,6 +189,9 @@ spec:
               deadLetterSinkCACerts:
                 description: Certification Authority (CA) certificates in PEM format according to https://www.rfc-editor.org/rfc/rfc7468.
                 type: string
+              deadLetterSinkAudience:
+                description: OIDC audience of the dead letter sink.
+                type: string
               observedGeneration:
                 description: ObservedGeneration is the 'Generation' of the Service that was last processed by the controller.
                 type: integer
@@ -182,6 +201,9 @@ spec:
                 type: string
               subscriberCACerts:
                 description: Certification Authority (CA) certificates in PEM format according to https://www.rfc-editor.org/rfc/rfc7468.
+                type: string
+              subscriberAudience:
+                description: OIDC audience of the subscriber.
                 type: string
   names:
     kind: Trigger

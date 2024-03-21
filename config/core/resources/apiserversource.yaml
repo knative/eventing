@@ -23,15 +23,33 @@ metadata:
     app.kubernetes.io/version: devel
     app.kubernetes.io/name: knative-eventing
   annotations:
-    # TODO add schemas and descriptions
+    # TODO add schemas
     registry.knative.dev/eventTypes: |
       [
-        { "type": "dev.knative.apiserver.resource.add" },
-        { "type": "dev.knative.apiserver.resource.delete" },
-        { "type": "dev.knative.apiserver.resource.update" },
-        { "type": "dev.knative.apiserver.ref.add" },
-        { "type": "dev.knative.apiserver.ref.delete" },
-        { "type": "dev.knative.apiserver.ref.update" }
+        {
+          "type": "dev.knative.apiserver.resource.add",
+          "description": "CloudEvent type used for add operations when in Resource mode"
+        },
+        {
+          "type": "dev.knative.apiserver.resource.delete",
+          "description": "CloudEvent type used for delete operations when in Resource mode"
+        },
+        {
+          "type": "dev.knative.apiserver.resource.update",
+          "description": "CloudEvent type used for update operations when in Resource mode"
+        },
+        {
+          "type": "dev.knative.apiserver.ref.add",
+          "description": "CloudEvent type used for add operations when in Reference mode"
+        },
+        {
+          "type": "dev.knative.apiserver.ref.delete",
+          "description": "CloudEvent type used for delete operations when in Reference mode"
+        },
+        {
+          "type": "dev.knative.apiserver.ref.update",
+          "description": "CloudEvent type used for update operations when in Reference mode"
+        }
       ]
   name: apiserversources.sources.knative.dev
 spec:
@@ -139,6 +157,9 @@ spec:
                   CACerts:
                     description: CACerts is the Certification Authority (CA) certificates in PEM format that the source trusts when sending events to the sink.
                     type: string
+                  audience:
+                    description: Audience is the OIDC audience. This only needs to be set if the target is not an Addressable and thus the Audience can't be received from the target itself. If specified, it takes precedence over the target's Audience.
+                    type: string
               namespaceSelector:
                 description: NamespaceSelector is a label selector to capture the namespaces that should be watched by the source.
                 type: object
@@ -172,6 +193,13 @@ spec:
                 description: Annotations is additional Status fields for the Resource to save some additional State as well as convey more information to the user. This is roughly akin to Annotations on any k8s resource, just the reconciler conveying richer information outwards.
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
+              auth:
+                description: Auth provides the relevant information for OIDC authentication.
+                type: object
+                properties:
+                  serviceAccountName:
+                    description: ServiceAccountName is the name of the generated service account used for this components OIDC authentication.
+                    type: string
               ceAttributes:
                 description: CloudEventAttributes are the specific attributes that the Source uses as part of its CloudEvents.
                 type: array
@@ -220,6 +248,9 @@ spec:
                 type: string
               sinkCACerts:
                 description: CACerts is the Certification Authority (CA) certificates in PEM format that the source trusts when sending events to the sink.
+                type: string
+              sinkAudience:
+                description: Audience is the OIDC audience of the sink. This only needs to be set if the target is not an Addressable and thus the Audience can't be received from the Addressable itself. If the target is an Addressable and specifies an Audience, the target's Audience takes precedence.
                 type: string
               namespaces:
                 description: Namespaces show the namespaces currently watched by the ApiServerSource

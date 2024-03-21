@@ -41,6 +41,10 @@ import (
 	"knative.dev/eventing/pkg/reconciler/source/duck/resources"
 )
 
+const (
+	defaultNamespace = "default"
+)
+
 type Reconciler struct {
 	// eventingClientSet allows us to configure Eventing objects
 	eventingClientSet clientset.Interface
@@ -228,7 +232,7 @@ func (r *Reconciler) computeDiff(current []v1beta2.EventType, expected []v1beta2
 		if c, ok := currentMap[keyFromEventType(&e)]; !ok {
 			toCreate = append(toCreate, e)
 		} else {
-			if !equality.Semantic.DeepEqual(e.Spec, c.Spec) {
+			if !equality.Semantic.DeepDerivative(e.Spec, c.Spec) {
 				toDelete = append(toDelete, c)
 				toCreate = append(toCreate, e)
 			}

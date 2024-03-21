@@ -18,8 +18,12 @@ package pingsource
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"testing"
+
+	"knative.dev/eventing/pkg/apis/feature"
+	"knative.dev/eventing/pkg/auth"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"k8s.io/utils/pointer"
@@ -83,6 +87,20 @@ var (
 		Name: &sinkURL.Scheme,
 		URL:  sinkURL,
 	}
+	sinkAudience        = "sink-oidc-audience"
+	sinkOIDCAddressable = &duckv1.Addressable{
+		Name:     &sinkURL.Scheme,
+		URL:      sinkURL,
+		Audience: &sinkAudience,
+	}
+	sinkOIDCDest = duckv1.Destination{
+		Ref: &duckv1.KReference{
+			Name:       sinkName,
+			Kind:       "Channel",
+			APIVersion: "messaging.knative.dev/v1",
+		},
+		Audience: &sinkAudience,
+	}
 )
 
 const (
@@ -141,11 +159,16 @@ func TestAllCases(t *testing.T) {
 					rtv1.WithInitPingSourceConditions,
 					rtv1.WithPingSourceStatusObservedGeneration(generation),
 					rtv1.WithPingSourceSinkNotFound,
+					rtv1.WithPingSourceOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 				),
 			}},
 			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", sourceName),
 				Eventf(corev1.EventTypeWarning, "SinkNotFound",
 					`Sink not found: {"ref":{"kind":"Channel","namespace":"testnamespace","name":"testsink","apiVersion":"messaging.knative.dev/v1"}}`),
+			},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchFinalizers(sourceName, testNS),
 			},
 		}, {
 			Name: "sink ref has no namespace",
@@ -180,11 +203,16 @@ func TestAllCases(t *testing.T) {
 					rtv1.WithInitPingSourceConditions,
 					rtv1.WithPingSourceStatusObservedGeneration(generation),
 					rtv1.WithPingSourceSinkNotFound,
+					rtv1.WithPingSourceOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 				),
 			}},
 			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", sourceName),
 				Eventf(corev1.EventTypeWarning, "SinkNotFound",
 					`Sink not found: {"ref":{"kind":"Channel","namespace":"testnamespace","name":"testsink","apiVersion":"messaging.knative.dev/v1"}}`),
+			},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchFinalizers(sourceName, testNS),
 			},
 		}, {
 			Name: "error creating deployment",
@@ -208,7 +236,11 @@ func TestAllCases(t *testing.T) {
 			},
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", sourceName),
 				Eventf(corev1.EventTypeWarning, "InternalError", "deployments.apps \"pingsource-mt-adapter\" not found"),
+			},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchFinalizers(sourceName, testNS),
 			},
 			WantErr: true,
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
@@ -227,6 +259,7 @@ func TestAllCases(t *testing.T) {
 					rtv1.WithInitPingSourceConditions,
 					rtv1.WithPingSourceSink(sinkAddressable),
 					rtv1.WithPingSourceStatusObservedGeneration(generation),
+					rtv1.WithPingSourceOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 				),
 			}},
 		}, {
@@ -269,8 +302,15 @@ func TestAllCases(t *testing.T) {
 					rtv1.WithPingSourceSink(sinkAddressable),
 					rtv1.WithPingSourceCloudEventAttributes,
 					rtv1.WithPingSourceStatusObservedGeneration(generation),
+					rtv1.WithPingSourceOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 				),
 			}},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", sourceName),
+			},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchFinalizers(sourceName, testNS),
+			},
 		}, {
 			Name: "Propagate CA certs",
 			Objects: []runtime.Object{
@@ -319,8 +359,15 @@ func TestAllCases(t *testing.T) {
 					}),
 					rtv1.WithPingSourceCloudEventAttributes,
 					rtv1.WithPingSourceStatusObservedGeneration(generation),
+					rtv1.WithPingSourceOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 				),
 			}},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", sourceName),
+			},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchFinalizers(sourceName, testNS),
+			},
 		}, {
 			Name: "deployment update due to env",
 			Objects: []runtime.Object{
@@ -344,7 +391,11 @@ func TestAllCases(t *testing.T) {
 			},
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", sourceName),
 				Eventf(corev1.EventTypeNormal, pingSourceDeploymentUpdated, `PingSource adapter deployment updated`),
+			},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchFinalizers(sourceName, testNS),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: rtv1.NewPingSource(sourceName, testNS,
@@ -364,6 +415,7 @@ func TestAllCases(t *testing.T) {
 					rtv1.WithPingSourceSink(sinkAddressable),
 					rtv1.WithPingSourceCloudEventAttributes,
 					rtv1.WithPingSourceStatusObservedGeneration(generation),
+					rtv1.WithPingSourceOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 				),
 			}},
 			WantUpdates: []clientgotesting.UpdateActionImpl{{
@@ -409,8 +461,15 @@ func TestAllCases(t *testing.T) {
 					rtv1.WithPingSourceSink(sinkAddressable),
 					rtv1.WithPingSourceCloudEventAttributes,
 					rtv1.WithPingSourceStatusObservedGeneration(generation),
+					rtv1.WithPingSourceOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 				),
 			}},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", sourceName),
+			},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchFinalizers(sourceName, testNS),
+			},
 		}, {
 			Name: "valid with dataBase64",
 			Objects: []runtime.Object{
@@ -451,8 +510,126 @@ func TestAllCases(t *testing.T) {
 					rtv1.WithPingSourceSink(sinkAddressable),
 					rtv1.WithPingSourceCloudEventAttributes,
 					rtv1.WithPingSourceStatusObservedGeneration(generation),
+					rtv1.WithPingSourceOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 				),
 			}},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", sourceName),
+			},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchFinalizers(sourceName, testNS),
+			},
+		},
+		{
+			Name: "OIDC: creates OIDC service account",
+			Ctx: feature.ToContext(context.Background(), feature.Flags{
+				feature.OIDCAuthentication: feature.Enabled,
+			}),
+			Objects: []runtime.Object{
+				rtv1.NewPingSource(sourceName, testNS,
+					rtv1.WithPingSourceSpec(sourcesv1.PingSourceSpec{
+						Schedule:    testSchedule,
+						ContentType: testContentType,
+						Data:        testData,
+						SourceSpec: duckv1.SourceSpec{
+							Sink: sinkOIDCDest,
+						},
+					}),
+					rtv1.WithPingSource(sourceUID),
+					rtv1.WithPingSourceObjectMetaGeneration(generation),
+				),
+				rtv1.NewChannel(sinkName, testNS,
+					rtv1.WithInitChannelConditions,
+					rtv1.WithChannelAddress(sinkOIDCAddressable),
+				),
+				makeAvailableMTAdapter(),
+			},
+			Key: testNS + "/" + sourceName,
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: rtv1.NewPingSource(sourceName, testNS,
+					rtv1.WithPingSourceSpec(sourcesv1.PingSourceSpec{
+						Schedule:    testSchedule,
+						ContentType: testContentType,
+						Data:        testData,
+						SourceSpec: duckv1.SourceSpec{
+							Sink: sinkOIDCDest,
+						},
+					}),
+					rtv1.WithPingSource(sourceUID),
+					rtv1.WithPingSourceObjectMetaGeneration(generation),
+					// Status Update:
+					rtv1.WithInitPingSourceConditions,
+					rtv1.WithPingSourceDeployed,
+					rtv1.WithPingSourceSink(sinkOIDCAddressable),
+					rtv1.WithPingSourceCloudEventAttributes,
+					rtv1.WithPingSourceStatusObservedGeneration(generation),
+					rtv1.WithPingSourceOIDCIdentityCreatedSucceeded(),
+					rtv1.WithPingSourceOIDCServiceAccountName(makePingSourceOIDCServiceAccount().Name),
+				),
+			}},
+			WantCreates: []runtime.Object{
+				makePingSourceOIDCServiceAccount(),
+			},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", sourceName),
+			},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchFinalizers(sourceName, testNS),
+			},
+		},
+		{
+			Name: "OIDC: PingSource not ready on invalid OIDC service account",
+			Ctx: feature.ToContext(context.Background(), feature.Flags{
+				feature.OIDCAuthentication: feature.Enabled,
+			}),
+			Objects: []runtime.Object{
+				makePingSourceOIDCServiceAccountWithoutOwnerRef(),
+				rtv1.NewPingSource(sourceName, testNS,
+					rtv1.WithPingSourceSpec(sourcesv1.PingSourceSpec{
+						Schedule:    testSchedule,
+						ContentType: testContentType,
+						Data:        testData,
+						SourceSpec: duckv1.SourceSpec{
+							Sink: sinkDest,
+						},
+					}),
+					rtv1.WithPingSource(sourceUID),
+					rtv1.WithPingSourceObjectMetaGeneration(generation),
+				),
+				rtv1.NewChannel(sinkName, testNS,
+					rtv1.WithInitChannelConditions,
+					rtv1.WithChannelAddress(sinkAddressable),
+				),
+				makeAvailableMTAdapter(),
+			},
+			Key: testNS + "/" + sourceName,
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: rtv1.NewPingSource(sourceName, testNS,
+					rtv1.WithPingSourceSpec(sourcesv1.PingSourceSpec{
+						Schedule:    testSchedule,
+						ContentType: testContentType,
+						Data:        testData,
+						SourceSpec: duckv1.SourceSpec{
+							Sink: sinkDest,
+						},
+					}),
+					rtv1.WithPingSource(sourceUID),
+					rtv1.WithPingSourceObjectMetaGeneration(generation),
+					// Status Update:
+					rtv1.WithInitPingSourceConditions,
+					rtv1.WithPingSourceStatusObservedGeneration(generation),
+					rtv1.WithPingSourceOIDCIdentityCreatedFailed("Unable to resolve service account for OIDC authentication", fmt.Sprintf("service account %s not owned by PingSource %s", makePingSourceOIDCServiceAccountWithoutOwnerRef().Name, sourceName)),
+					rtv1.WithPingSourceOIDCServiceAccountName(makePingSourceOIDCServiceAccount().Name),
+				),
+			}},
+			WantErr: true,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", sourceName),
+				Eventf(corev1.EventTypeWarning, "InternalError", fmt.Sprintf("service account %s not owned by PingSource %s", makePingSourceOIDCServiceAccountWithoutOwnerRef().Name, sourceName)),
+			},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchFinalizers(sourceName, testNS),
+			},
 		},
 	}
 
@@ -460,9 +637,10 @@ func TestAllCases(t *testing.T) {
 	table.Test(t, rtv1.MakeFactory(func(ctx context.Context, listers *rtv1.Listers, cmw configmap.Watcher) controller.Reconciler {
 		ctx = addressable.WithDuck(ctx)
 		r := &Reconciler{
-			configAcc:     &reconcilersource.EmptyVarsGenerator{},
-			kubeClientSet: fakekubeclient.Get(ctx),
-			tracker:       tracker.New(func(types.NamespacedName) {}, 0),
+			configAcc:            &reconcilersource.EmptyVarsGenerator{},
+			kubeClientSet:        fakekubeclient.Get(ctx),
+			tracker:              tracker.New(func(types.NamespacedName) {}, 0),
+			serviceAccountLister: listers.GetServiceAccountLister(),
 		}
 		r.sinkResolver = resolver.NewURIResolverFromTracker(ctx, tracker.New(func(types.NamespacedName) {}, 0))
 
@@ -511,4 +689,32 @@ func makeAvailableMTAdapterWithDifferentEnv() *appsv1.Deployment {
 	os.Unsetenv("K_SINK_TIMEOUT")
 	WithDeploymentAvailable()(ma)
 	return ma
+}
+
+func patchFinalizers(name, namespace string) clientgotesting.PatchActionImpl {
+	action := clientgotesting.PatchActionImpl{}
+	action.Name = name
+	action.Namespace = namespace
+	patch := `{"metadata":{"finalizers":["pingsources.sources.knative.dev"],"resourceVersion":""}}`
+	action.Patch = []byte(patch)
+	return action
+}
+
+func makePingSourceOIDCServiceAccount() *corev1.ServiceAccount {
+	return auth.GetOIDCServiceAccountForResource(sourcesv1.SchemeGroupVersion.WithKind("PingSource"), metav1.ObjectMeta{
+		Name:      sourceName,
+		Namespace: testNS,
+		UID:       sourceUID,
+	})
+}
+
+func makePingSourceOIDCServiceAccountWithoutOwnerRef() *corev1.ServiceAccount {
+	sa := auth.GetOIDCServiceAccountForResource(sourcesv1.SchemeGroupVersion.WithKind("PingSource"), metav1.ObjectMeta{
+		Name:      sourceName,
+		Namespace: testNS,
+		UID:       sourceUID,
+	})
+	sa.OwnerReferences = nil
+
+	return sa
 }

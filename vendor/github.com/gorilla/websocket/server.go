@@ -8,6 +8,7 @@ import (
 	"bufio"
 	"errors"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -23,6 +24,8 @@ func (e HandshakeError) Error() string { return e.message }
 
 // Upgrader specifies parameters for upgrading an HTTP connection to a
 // WebSocket connection.
+//
+// It is safe to call Upgrader's methods concurrently.
 type Upgrader struct {
 	// HandshakeTimeout specifies the duration for the handshake to complete.
 	HandshakeTimeout time.Duration
@@ -115,8 +118,8 @@ func (u *Upgrader) selectSubprotocol(r *http.Request, responseHeader http.Header
 // Upgrade upgrades the HTTP server connection to the WebSocket protocol.
 //
 // The responseHeader is included in the response to the client's upgrade
-// request. Use the responseHeader to specify cookies (Set-Cookie) and the
-// application negotiated subprotocol (Sec-WebSocket-Protocol).
+// request. Use the responseHeader to specify cookies (Set-Cookie). To specify
+// subprotocols supported by the server, set Upgrader.Subprotocols directly.
 //
 // If the upgrade fails, then Upgrade replies to the client with an HTTP error
 // response.
@@ -131,7 +134,7 @@ func (u *Upgrader) Upgrade(w http.ResponseWriter, r *http.Request, responseHeade
 		return u.returnError(w, r, http.StatusBadRequest, badHandshake+"'websocket' token not found in 'Upgrade' header")
 	}
 
-	if r.Method != "GET" {
+	if r.Method != http.MethodGet {
 		return u.returnError(w, r, http.StatusMethodNotAllowed, badHandshake+"request method is not GET")
 	}
 
@@ -152,8 +155,8 @@ func (u *Upgrader) Upgrade(w http.ResponseWriter, r *http.Request, responseHeade
 	}
 
 	challengeKey := r.Header.Get("Sec-Websocket-Key")
-	if challengeKey == "" {
-		return u.returnError(w, r, http.StatusBadRequest, "websocket: not a websocket handshake: 'Sec-WebSocket-Key' header is missing or blank")
+	if !isValidChallengeKey(challengeKey) {
+		return u.returnError(w, r, http.StatusBadRequest, "websocket: not a websocket handshake: 'Sec-WebSocket-Key' header must be Base64 encoded value of 16-byte in length")
 	}
 
 	subprotocol := u.selectSubprotocol(r, responseHeader)
@@ -181,7 +184,9 @@ func (u *Upgrader) Upgrade(w http.ResponseWriter, r *http.Request, responseHeade
 	}
 
 	if brw.Reader.Buffered() > 0 {
-		netConn.Close()
+		if err := netConn.Close(); err != nil {
+			log.Printf("websocket: failed to close network connection: %v", err)
+		}
 		return nil, errors.New("websocket: client sent data before handshake is complete")
 	}
 
@@ -246,17 +251,34 @@ func (u *Upgrader) Upgrade(w http.ResponseWriter, r *http.Request, responseHeade
 	p = append(p, "\r\n"...)
 
 	// Clear deadlines set by HTTP server.
-	netConn.SetDeadline(time.Time{})
+	if err := netConn.SetDeadline(time.Time{}); err != nil {
+		if err := netConn.Close(); err != nil {
+			log.Printf("websocket: failed to close network connection: %v", err)
+		}
+		return nil, err
+	}
 
 	if u.HandshakeTimeout > 0 {
-		netConn.SetWriteDeadline(time.Now().Add(u.HandshakeTimeout))
+		if err := netConn.SetWriteDeadline(time.Now().Add(u.HandshakeTimeout)); err != nil {
+			if err := netConn.Close(); err != nil {
+				log.Printf("websocket: failed to close network connection: %v", err)
+			}
+			return nil, err
+		}
 	}
 	if _, err = netConn.Write(p); err != nil {
-		netConn.Close()
+		if err := netConn.Close(); err != nil {
+			log.Printf("websocket: failed to close network connection: %v", err)
+		}
 		return nil, err
 	}
 	if u.HandshakeTimeout > 0 {
-		netConn.SetWriteDeadline(time.Time{})
+		if err := netConn.SetWriteDeadline(time.Time{}); err != nil {
+			if err := netConn.Close(); err != nil {
+				log.Printf("websocket: failed to close network connection: %v", err)
+			}
+			return nil, err
+		}
 	}
 
 	return c, nil
@@ -354,8 +376,12 @@ func bufioWriterBuffer(originalWriter io.Writer, bw *bufio.Writer) []byte {
 	// bufio.Writer's underlying writer.
 	var wh writeHook
 	bw.Reset(&wh)
-	bw.WriteByte(0)
-	bw.Flush()
+	if err := bw.WriteByte(0); err != nil {
+		panic(err)
+	}
+	if err := bw.Flush(); err != nil {
+		log.Printf("websocket: bufioWriterBuffer: Flush: %v", err)
+	}
 
 	bw.Reset(originalWriter)
 

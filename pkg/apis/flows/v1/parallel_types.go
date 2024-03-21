@@ -119,6 +119,10 @@ type ParallelStatus struct {
 	// will target the first subscriber.
 	// It generally has the form {channel}.{namespace}.svc.{cluster domain name}
 	duckv1.AddressStatus `json:",inline"`
+
+	// Auth provides the relevant information for OIDC authentication.
+	// +optional
+	Auth *duckv1.AuthStatus `json:"auth,omitempty"`
 }
 
 // ParallelBranchStatus represents the current state of a Parallel branch

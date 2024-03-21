@@ -37,12 +37,16 @@ const (
 
 	// ApiServerConditionSufficientPermissions has status True when the ApiServerSource has sufficient permissions to access resources.
 	ApiServerConditionSufficientPermissions apis.ConditionType = "SufficientPermissions"
+
+	// ApiServerConditionOIDCIdentityCreated has status True when the ApiServerSource has created an OIDC identity.
+	ApiServerConditionOIDCIdentityCreated apis.ConditionType = "OIDCIdentityCreated"
 )
 
 var apiserverCondSet = apis.NewLivingConditionSet(
 	ApiServerConditionSinkProvided,
 	ApiServerConditionDeployed,
 	ApiServerConditionSufficientPermissions,
+	ApiServerConditionOIDCIdentityCreated,
 )
 
 // GetConditionSet retrieves the condition set for this resource. Implements the KRShaped interface.
@@ -80,6 +84,7 @@ func (s *ApiServerSourceStatus) MarkSink(addr *duckv1.Addressable) {
 	if addr != nil {
 		s.SinkURI = addr.URL
 		s.SinkCACerts = addr.CACerts
+		s.SinkAudience = addr.Audience
 		apiserverCondSet.Manage(s).MarkTrue(ApiServerConditionSinkProvided)
 	} else {
 		apiserverCondSet.Manage(s).MarkFalse(ApiServerConditionSinkProvided, "SinkEmpty", "Sink has resolved to empty.%s", "")
@@ -125,4 +130,20 @@ func (s *ApiServerSourceStatus) MarkNoSufficientPermissions(reason, messageForma
 // IsReady returns true if the resource is ready overall.
 func (s *ApiServerSourceStatus) IsReady() bool {
 	return apiserverCondSet.Manage(s).IsHappy()
+}
+
+func (s *ApiServerSourceStatus) MarkOIDCIdentityCreatedSucceeded() {
+	apiserverCondSet.Manage(s).MarkTrue(ApiServerConditionOIDCIdentityCreated)
+}
+
+func (s *ApiServerSourceStatus) MarkOIDCIdentityCreatedSucceededWithReason(reason, messageFormat string, messageA ...interface{}) {
+	apiserverCondSet.Manage(s).MarkTrueWithReason(ApiServerConditionOIDCIdentityCreated, reason, messageFormat, messageA...)
+}
+
+func (s *ApiServerSourceStatus) MarkOIDCIdentityCreatedFailed(reason, messageFormat string, messageA ...interface{}) {
+	apiserverCondSet.Manage(s).MarkFalse(ApiServerConditionOIDCIdentityCreated, reason, messageFormat, messageA...)
+}
+
+func (s *ApiServerSourceStatus) MarkOIDCIdentityCreatedUnknown(reason, messageFormat string, messageA ...interface{}) {
+	apiserverCondSet.Manage(s).MarkUnknown(ApiServerConditionOIDCIdentityCreated, reason, messageFormat, messageA...)
 }

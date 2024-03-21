@@ -25,6 +25,8 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	"go.uber.org/zap"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
+	configmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap/filtered"
+	filteredFactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
 	configmap "knative.dev/pkg/configmap/informer"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/injection"
@@ -38,8 +40,11 @@ import (
 
 	"knative.dev/eventing/cmd/broker"
 	"knative.dev/eventing/pkg/apis/feature"
+	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/broker/filter"
+	brokerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/broker"
 	triggerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/trigger"
+	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/reconciler/names"
 )
 
@@ -64,6 +69,7 @@ func main() {
 	metrics.MemStatsOrDie(ctx)
 
 	cfg := injection.ParseAndGetRESTConfigOrDie()
+	ctx = injection.WithConfig(ctx, cfg)
 
 	var env envConfig
 	if err := envconfig.Process("", &env); err != nil {
@@ -74,7 +80,13 @@ func main() {
 	log.Printf("Registering %d informer factories", len(injection.Default.GetInformerFactories()))
 	log.Printf("Registering %d informers", len(injection.Default.GetInformers()))
 
+	ctx = filteredFactory.WithSelectors(ctx,
+		auth.OIDCLabelSelector,
+		eventingtls.TrustBundleLabelSelector,
+	)
+
 	ctx, informers := injection.Default.SetupInformers(ctx, cfg)
+	ctx = injection.WithConfig(ctx, cfg)
 	kubeClient := kubeclient.Get(ctx)
 
 	loggingConfig, err := broker.GetLoggingConfig(ctx, system.Namespace(), logging.ConfigMapName())
@@ -118,9 +130,12 @@ func main() {
 
 	reporter := filter.NewStatsReporter(env.ContainerName, kmeta.ChildName(env.PodName, uuid.New().String()))
 
+	oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
 	// We are running both the receiver (takes messages in from the Broker) and the dispatcher (send
 	// the messages to the triggers' subscribers) in this binary.
-	handler, err := filter.NewHandler(logger, triggerinformer.Get(ctx), reporter, ctxFunc)
+	oidcTokenVerifier := auth.NewOIDCTokenVerifier(ctx)
+	trustBundleConfigMapInformer := configmapinformer.Get(ctx, eventingtls.TrustBundleLabelSelector).Lister().ConfigMaps(system.Namespace())
+	handler, err := filter.NewHandler(logger, oidcTokenVerifier, oidcTokenProvider, triggerinformer.Get(ctx), brokerinformer.Get(ctx), reporter, trustBundleConfigMapInformer, ctxFunc)
 	if err != nil {
 		logger.Fatal("Error creating Handler", zap.Error(err))
 	}

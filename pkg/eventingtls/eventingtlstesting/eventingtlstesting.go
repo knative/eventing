@@ -38,11 +38,16 @@ var (
 	Crt []byte
 )
 
+const (
+	IssuerKind = "ClusterIssuer"
+	IssuerName = "knative-eventing-ca-issuer"
+)
+
 func init() {
 	CA, Key, Crt = loadCerts()
 }
 
-func StartServer(ctx context.Context, t *testing.T, port int, handler http.Handler, receiverOptions ...kncloudevents.HTTPMessageReceiverOption) string {
+func StartServer(ctx context.Context, t *testing.T, port int, handler http.Handler, receiverOptions ...kncloudevents.HTTPEventReceiverOption) string {
 	secret := types.NamespacedName{
 		Namespace: "knative-tests",
 		Name:      "tls-secret",
@@ -65,7 +70,7 @@ func StartServer(ctx context.Context, t *testing.T, port int, handler http.Handl
 	tlsConfig, err := eventingtls.GetTLSServerConfig(serverTLSConfig)
 	assert.Nil(t, err)
 
-	receiver := kncloudevents.NewHTTPMessageReceiver(port,
+	receiver := kncloudevents.NewHTTPEventReceiver(port,
 		append(receiverOptions,
 			kncloudevents.WithTLSConfig(tlsConfig),
 		)...,

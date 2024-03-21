@@ -54,6 +54,12 @@ type Assertion func(s *corev1.Secret) error
 
 func IsPresent(name string, assertions ...Assertion) feature.StepFn {
 	return func(ctx context.Context, t feature.T) {
+		IsPresentInNamespace(name, environment.FromContext(ctx).Namespace(), assertions...)(ctx, t)
+	}
+}
+
+func IsPresentInNamespace(name string, ns string, assertions ...Assertion) feature.StepFn {
+	return func(ctx context.Context, t feature.T) {
 		ns := environment.FromContext(ctx).Namespace()
 		interval, timeout := environment.PollTimingsFromContext(ctx)
 

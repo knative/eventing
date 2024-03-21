@@ -22,6 +22,10 @@ import (
 	"fmt"
 	"sort"
 
+	rbacv1listers "k8s.io/client-go/listers/rbac/v1"
+
+	apierrs "k8s.io/apimachinery/pkg/api/errors"
+
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
 	authorizationv1 "k8s.io/api/authorization/v1"
@@ -32,6 +36,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
+	corev1listers "k8s.io/client-go/listers/core/v1"
 
 	clientv1 "k8s.io/client-go/listers/core/v1"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -40,9 +45,12 @@ import (
 	pkgreconciler "knative.dev/pkg/reconciler"
 	"knative.dev/pkg/resolver"
 
+	"knative.dev/eventing/pkg/apis/feature"
 	apisources "knative.dev/eventing/pkg/apis/sources"
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
+	"knative.dev/eventing/pkg/auth"
 	apiserversourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1/apiserversource"
+	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/reconciler/apiserversource/resources"
 	reconcilersource "knative.dev/eventing/pkg/reconciler/source"
 )
@@ -71,6 +79,11 @@ type Reconciler struct {
 
 	configs         reconcilersource.ConfigAccessor
 	namespaceLister clientv1.NamespaceLister
+
+	serviceAccountLister       clientv1.ServiceAccountLister
+	roleLister                 rbacv1listers.RoleLister
+	roleBindingLister          rbacv1listers.RoleBindingLister
+	trustBundleConfigMapLister corev1listers.ConfigMapLister
 }
 
 var _ apiserversourcereconciler.Interface = (*Reconciler)(nil)
@@ -89,8 +102,32 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1.ApiServerSour
 		// no Namespace defined in dest.Ref, we will use the Namespace of the source
 		// as the Namespace of dest.Ref.
 		if dest.Ref.Namespace == "" {
-			//TODO how does this work with deprecated fields
+			// TODO how does this work with deprecated fields
 			dest.Ref.Namespace = source.GetNamespace()
+		}
+	}
+
+	// OIDC authentication
+	featureFlags := feature.FromContext(ctx)
+	if err := auth.SetupOIDCServiceAccount(ctx, featureFlags, r.serviceAccountLister, r.kubeClientSet, v1.SchemeGroupVersion.WithKind("ApiServerSource"), source.ObjectMeta, &source.Status, func(as *duckv1.AuthStatus) {
+		source.Status.Auth = as
+	}); err != nil {
+		return err
+	}
+
+	if featureFlags.IsOIDCAuthentication() {
+		// Create the role
+		err := r.createOIDCRole(ctx, source)
+		if err != nil {
+			logging.FromContext(ctx).Errorw("Failed when creating the OIDC Role for ApiServerSource", zap.Error(err))
+			return err
+		}
+
+		// Create the rolebinding
+		err = r.createOIDCRoleBinding(ctx, source)
+		if err != nil {
+			logging.FromContext(ctx).Errorw("Failed when creating the OIDC RoleBinding for ApiServerSource", zap.Error(err))
+			return err
 		}
 	}
 
@@ -115,6 +152,10 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1.ApiServerSour
 		return err
 	}
 
+	if err := r.propagateTrustBundles(ctx, source); err != nil {
+		return err
+	}
+
 	// An empty selector targets all namespaces.
 	allNamespaces := isEmptySelector(source.Spec.NamespaceSelector)
 	ra, err := r.createReceiveAdapter(ctx, source, sinkAddr, namespaces, allNamespaces)
@@ -122,6 +163,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1.ApiServerSour
 		logging.FromContext(ctx).Errorw("Unable to create the receive adapter", zap.Error(err))
 		return err
 	}
+
 	source.Status.PropagateDeploymentAvailability(ra)
 
 	cloudEventAttributes, err := r.createCloudEventAttributes(source)
@@ -131,6 +173,13 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1.ApiServerSour
 	}
 	source.Status.CloudEventAttributes = cloudEventAttributes
 
+	return nil
+}
+
+func (r *Reconciler) FinalizeKind(ctx context.Context, source *v1.ApiServerSource) pkgreconciler.Event {
+	logging.FromContext(ctx).Info("Deleting source")
+	// Allow for eventtypes to be cleaned up
+	source.Status.CloudEventAttributes = []duckv1.CloudEventAttributes{}
 	return nil
 }
 
@@ -175,20 +224,31 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1.ApiServer
 	// 	return nil, err
 	// }
 
+	featureFlags := feature.FromContext(ctx)
+
 	adapterArgs := resources.ReceiveAdapterArgs{
 		Image:         r.receiveAdapterImage,
 		Source:        src,
 		Labels:        resources.Labels(src.Name),
 		CACerts:       sinkAddr.CACerts,
 		SinkURI:       sinkAddr.URL.String(),
+		Audience:      sinkAddr.Audience,
 		Configs:       r.configs,
 		Namespaces:    namespaces,
 		AllNamespaces: allNamespaces,
+		NodeSelector:  featureFlags.NodeSelector(),
 	}
+
 	expected, err := resources.MakeReceiveAdapter(&adapterArgs)
 	if err != nil {
 		return nil, err
 	}
+
+	podTemplate, err := eventingtls.AddTrustBundleVolumes(r.trustBundleConfigMapLister, src, &expected.Spec.Template.Spec)
+	if err != nil {
+		return nil, fmt.Errorf("failed to add trust bundle volumes: %w", err)
+	}
+	expected.Spec.Template.Spec = *podTemplate
 
 	ra, err := r.kubeClientSet.AppsV1().Deployments(src.Namespace).Get(ctx, expected.Name, metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
@@ -237,6 +297,7 @@ func (r *Reconciler) runAccessCheck(ctx context.Context, src *v1.ApiServerSource
 		return nil
 	}
 
+	// Run the basic service account access check (This is not OIDC service account)
 	user := "system:serviceaccount:" + src.Namespace + ":"
 	if src.Spec.ServiceAccountName == "" {
 		user += "default"
@@ -298,7 +359,6 @@ func (r *Reconciler) runAccessCheck(ctx context.Context, src *v1.ApiServerSource
 
 	src.Status.MarkNoSufficientPermissions(lastReason, "User %s cannot %s", user, missing)
 	return fmt.Errorf("insufficient permissions: User %s cannot %s", user, missing)
-
 }
 
 func (r *Reconciler) createCloudEventAttributes(src *v1.ApiServerSource) ([]duckv1.CloudEventAttributes, error) {
@@ -318,4 +378,91 @@ func (r *Reconciler) createCloudEventAttributes(src *v1.ApiServerSource) ([]duck
 		})
 	}
 	return ceAttributes, nil
+}
+
+// createOIDCRole: this function will call resources package to get the role object
+// and then pass to kubeclient to make the actual OIDC role
+func (r *Reconciler) createOIDCRole(ctx context.Context, source *v1.ApiServerSource) error {
+	roleName := resources.GetOIDCTokenRoleName(source.Name)
+
+	expected, err := resources.MakeOIDCRole(source)
+	if err != nil {
+		return fmt.Errorf("Cannot create OIDC role for ApiServerSource %s/%s: %w", source.GetName(), source.GetNamespace(), err)
+	}
+
+	// By querying roleLister to see whether the role exist or not
+	role, err := r.roleLister.Roles(source.GetNamespace()).Get(roleName)
+
+	if apierrs.IsNotFound(err) {
+		// If the role does not exist, we will call kubeclient to create it
+		role = expected
+		_, err = r.kubeClientSet.RbacV1().Roles(source.GetNamespace()).Create(ctx, role, metav1.CreateOptions{})
+		if err != nil {
+			return fmt.Errorf("could not create OIDC service account role %s/%s for %s: %w", source.GetName(), source.GetNamespace(), "ApiServerSource", err)
+		}
+	} else {
+		// If the role does exist, we will check whether an update is needed
+		// By comparing the role's rule
+		if !equality.Semantic.DeepEqual(role.Rules, expected.Rules) {
+			// If the role's rules are not equal, we will update the role
+			role.Rules = expected.Rules
+			_, err = r.kubeClientSet.RbacV1().Roles(source.GetNamespace()).Update(ctx, role, metav1.UpdateOptions{})
+			if err != nil {
+				return fmt.Errorf("could not update OIDC service account role %s/%s for %s: %w", source.GetName(), source.GetNamespace(), "ApiServerSource", err)
+			}
+		} else {
+			// If the role does exist and no update is needed, we will just return
+			return nil
+		}
+	}
+
+	return nil
+}
+
+// createOIDCRoleBinding:  this function will call resources package to get the rolebinding object
+// and then pass to kubeclient to make the actual OIDC rolebinding
+func (r *Reconciler) createOIDCRoleBinding(ctx context.Context, source *v1.ApiServerSource) error {
+	roleBindingName := resources.GetOIDCTokenRoleBindingName(source.Name)
+
+	expected, err := resources.MakeOIDCRoleBinding(source)
+	if err != nil {
+		return fmt.Errorf("Cannot create OIDC roleBinding for ApiServerSource %s/%s: %w", source.GetName(), source.GetNamespace(), err)
+	}
+
+	// By querying roleBindingLister to see whether the roleBinding exist or not
+	roleBinding, err := r.roleBindingLister.RoleBindings(source.GetNamespace()).Get(roleBindingName)
+	if apierrs.IsNotFound(err) {
+		// If the role does not exist, we will call kubeclient to create it
+		roleBinding = expected
+		_, err = r.kubeClientSet.RbacV1().RoleBindings(source.GetNamespace()).Create(ctx, roleBinding, metav1.CreateOptions{})
+		if err != nil {
+			return fmt.Errorf("could not create OIDC service account rolebinding %s/%s for %s: %w", source.GetName(), source.GetNamespace(), "apiserversource", err)
+		}
+	} else {
+		// If the role does exist, we will check whether an update is needed
+		// By comparing the role's rule
+		if !equality.Semantic.DeepEqual(roleBinding.RoleRef, expected.RoleRef) || !equality.Semantic.DeepEqual(roleBinding.Subjects, expected.Subjects) {
+			// If the role's rules are not equal, we will update the role
+			roleBinding.RoleRef = expected.RoleRef
+			roleBinding.Subjects = expected.Subjects
+			_, err = r.kubeClientSet.RbacV1().RoleBindings(source.GetNamespace()).Update(ctx, roleBinding, metav1.UpdateOptions{})
+			if err != nil {
+				return fmt.Errorf("could not update OIDC service account rolebinding %s/%s for %s: %w", source.GetName(), source.GetNamespace(), "apiserversource", err)
+			}
+		} else {
+			// If the role does exist and no update is needed, we will just return
+			return nil
+		}
+	}
+
+	return nil
+}
+
+func (r *Reconciler) propagateTrustBundles(ctx context.Context, source *v1.ApiServerSource) error {
+	gvk := schema.GroupVersionKind{
+		Group:   v1.SchemeGroupVersion.Group,
+		Version: v1.SchemeGroupVersion.Version,
+		Kind:    "ApiServerSource",
+	}
+	return eventingtls.PropagateTrustBundles(ctx, r.kubeClientSet, r.trustBundleConfigMapLister, gvk, source)
 }

@@ -184,7 +184,7 @@ func WithEmitter(emitter milestone.Emitter) EnvOpts {
 }
 
 func (mr *MagicGlobalEnvironment) Environment(opts ...EnvOpts) (context.Context, Environment) {
-	opts = append([]EnvOpts{inNamespace()}, opts...)
+	opts = append(opts, inNamespace())
 
 	env := &MagicEnvironment{
 		c:              mr.c,
@@ -198,6 +198,7 @@ func (mr *MagicGlobalEnvironment) Environment(opts ...EnvOpts) (context.Context,
 	}
 
 	ctx := ContextWith(mr.c, env)
+	ctx = ContextWithPollTimings(ctx, *pollInterval, *pollTimeout)
 
 	for _, opt := range opts {
 		if nctx, err := opt(ctx, env); err != nil {

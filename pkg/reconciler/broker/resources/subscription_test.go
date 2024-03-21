@@ -47,12 +47,6 @@ func TestNewSubscription(t *testing.T) {
 		Kind:       "tc-kind",
 		APIVersion: "tc-apiVersion",
 	}
-	brokerRef := &corev1.ObjectReference{
-		Name:       "broker-name",
-		Namespace:  "t-namespace",
-		Kind:       "broker-kind",
-		APIVersion: "broker-apiVersion",
-	}
 	delivery := &eventingduckv1.DeliverySpec{
 		DeadLetterSink: &duckv1.Destination{
 			URI: apis.HTTP("dlc.example.com"),
@@ -61,7 +55,15 @@ func TestNewSubscription(t *testing.T) {
 	dest := &duckv1.Destination{
 		URI: apis.HTTP("example.com"),
 	}
-	got := NewSubscription(trigger, triggerChannelRef, brokerRef, dest, delivery)
+	reply := &duckv1.Destination{
+		Ref: &duckv1.KReference{
+			Name:       "broker-name",
+			Namespace:  "t-namespace",
+			Kind:       "broker-kind",
+			APIVersion: "broker-apiVersion",
+		},
+	}
+	got := NewSubscription(trigger, triggerChannelRef, dest, reply, delivery)
 	want := &messagingv1.Subscription{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "t-namespace",

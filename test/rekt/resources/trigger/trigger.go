@@ -19,6 +19,7 @@ package trigger
 import (
 	"context"
 	"embed"
+	"encoding/json"
 	"strings"
 	"time"
 
@@ -27,12 +28,15 @@ import (
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/manifest"
+	"sigs.k8s.io/yaml"
+
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 
 	"knative.dev/eventing/test/rekt/resources/delivery"
 )
 
 //go:embed *.yaml
-var yaml embed.FS
+var yamlEmbed embed.FS
 
 func GVR() schema.GroupVersionResource {
 	return schema.GroupVersionResource{Group: "eventing.knative.dev", Version: "v1", Resource: "triggers"}
@@ -97,6 +101,10 @@ func WithSubscriberFromDestination(dest *duckv1.Destination) manifest.CfgFn {
 			subscriber["CACerts"] = strings.ReplaceAll(*dest.CACerts, "\n", "\n      ")
 		}
 
+		if dest.Audience != nil {
+			subscriber["audience"] = *dest.Audience
+		}
+
 		if uri != nil {
 			subscriber["uri"] = uri.String()
 		}
@@ -156,6 +164,9 @@ func WithExtensions(extensions map[string]interface{}) manifest.CfgFn {
 // WithDeadLetterSink adds the dead letter sink related config to a Trigger spec.
 var WithDeadLetterSink = delivery.WithDeadLetterSink
 
+// WithDeadLetterSinkFromDestination adds the dead letter sink related config to the config.
+var WithDeadLetterSinkFromDestination = delivery.WithDeadLetterSinkFromDestination
+
 // WithRetry adds the retry related config to a Trigger spec.
 var WithRetry = delivery.WithRetry
 
@@ -174,7 +185,7 @@ func Install(name, brokerName string, opts ...manifest.CfgFn) feature.StepFn {
 		fn(cfg)
 	}
 	return func(ctx context.Context, t feature.T) {
-		if _, err := manifest.InstallYamlFS(ctx, yaml, cfg); err != nil {
+		if _, err := manifest.InstallYamlFS(ctx, yamlEmbed, cfg); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -183,4 +194,28 @@ func Install(name, brokerName string, opts ...manifest.CfgFn) feature.StepFn {
 // IsReady tests to see if a Trigger becomes ready within the time given.
 func IsReady(name string, timing ...time.Duration) feature.StepFn {
 	return k8s.IsReady(GVR(), name, timing...)
+}
+
+func WithNewFilters(filters []eventingv1.SubscriptionsAPIFilter) manifest.CfgFn {
+	jsonBytes, err := json.Marshal(filters)
+	if err != nil {
+		panic(err)
+	}
+
+	yamlBytes, err := yaml.JSONToYAML(jsonBytes)
+	if err != nil {
+		panic(err)
+	}
+
+	filtersYaml := string(yamlBytes)
+
+	lines := strings.Split(filtersYaml, "\n")
+	out := make([]string, 0, len(lines))
+	for i := range lines {
+		out = append(out, "    "+lines[i])
+	}
+
+	return func(m map[string]interface{}) {
+		m["filters"] = strings.Join(out, "\n")
+	}
 }

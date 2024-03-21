@@ -20,13 +20,12 @@ import (
 	"context"
 	"fmt"
 
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
-
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"go.uber.org/zap"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	"knative.dev/pkg/apis/duck"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -35,20 +34,33 @@ import (
 	"knative.dev/pkg/reconciler"
 
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	"knative.dev/eventing/pkg/apis/feature"
 	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
+	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/channel/fanout"
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
+	eventingv1beta2 "knative.dev/eventing/pkg/client/clientset/versioned/typed/eventing/v1beta2"
 	messagingv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/messaging/v1"
 	reconcilerv1 "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/inmemorychannel"
+	"knative.dev/eventing/pkg/client/listers/eventing/v1beta2"
+	"knative.dev/eventing/pkg/eventingtls"
+	"knative.dev/eventing/pkg/eventtype"
 	"knative.dev/eventing/pkg/kncloudevents"
 )
 
 // Reconciler reconciles InMemory Channels.
 type Reconciler struct {
-	multiChannelMessageHandler multichannelfanout.MultiChannelMessageHandler
-	reporter                   channel.StatsReporter
-	messagingClientSet         messagingv1.MessagingV1Interface
+	multiChannelEventHandler multichannelfanout.MultiChannelEventHandler
+	reporter                 channel.StatsReporter
+	messagingClientSet       messagingv1.MessagingV1Interface
+	eventTypeLister          v1beta2.EventTypeLister
+	eventingClient           eventingv1beta2.EventingV1beta2Interface
+	featureStore             *feature.Store
+	eventDispatcher          *kncloudevents.Dispatcher
+	tokenVerifier            *auth.OIDCTokenVerifier
+
+	clientConfig eventingtls.ClientConfig
 }
 
 // Check the interfaces Reconciler should implement
@@ -80,27 +92,53 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1.InMemoryChannel) rec
 		return nil
 	}
 
-	config, err := newConfigForInMemoryChannel(imc)
+	config, err := newConfigForInMemoryChannel(ctx, imc)
 	if err != nil {
 		logging.FromContext(ctx).Error("Error creating config for in memory channels", zap.Error(err))
 		return err
 	}
+	var eventTypeAutoHandler *eventtype.EventTypeAutoHandler
+	var channelRef *duckv1.KReference
+	var UID *types.UID
+	if ownerReferences := imc.GetOwnerReferences(); r.featureStore.IsEnabled(feature.EvenTypeAutoCreate) &&
+		(len(ownerReferences) == 0 ||
+			ownerReferences[0].Kind != "Broker") {
+		logging.FromContext(ctx).Info("EventType autocreate is enabled, creating handler")
+		eventTypeAutoHandler = &eventtype.EventTypeAutoHandler{
+			EventTypeLister: r.eventTypeLister,
+			EventingClient:  r.eventingClient,
+			FeatureStore:    r.featureStore,
+			Logger:          logging.FromContext(ctx).Desugar(),
+		}
+
+		channelRef = toKReference(imc)
+		UID = &imc.UID
+	}
+
+	wc := func(ctx context.Context) context.Context {
+		return r.featureStore.ToContext(ctx)
+	}
 
 	// First grab the host based MultiChannelFanoutMessage httpHandler
-	httpHandler := r.multiChannelMessageHandler.GetChannelHandler(config.HostName)
+	httpHandler := r.multiChannelEventHandler.GetChannelHandler(config.HostName)
 	if httpHandler == nil {
 		// No handler yet, create one.
-		fanoutHandler, err := fanout.NewFanoutMessageHandler(
+		fanoutHandler, err := fanout.NewFanoutEventHandler(
 			logging.FromContext(ctx).Desugar(),
-			channel.NewMessageDispatcher(logging.FromContext(ctx).Desugar()),
 			config.FanoutConfig,
 			r.reporter,
+			eventTypeAutoHandler,
+			channelRef,
+			UID,
+			r.eventDispatcher,
+			channel.OIDCTokenVerification(r.tokenVerifier, audience(imc)),
+			channel.ReceiverWithContextFunc(wc),
 		)
 		if err != nil {
-			logging.FromContext(ctx).Error("Failed to create a new fanout.MessageHandler", err)
+			logging.FromContext(ctx).Error("Failed to create a new fanout.EventHandler", err)
 			return err
 		}
-		r.multiChannelMessageHandler.SetChannelHandler(config.HostName, fanoutHandler)
+		r.multiChannelEventHandler.SetChannelHandler(config.HostName, fanoutHandler)
 	} else {
 		// Just update the config if necessary.
 		haveSubs := httpHandler.GetSubscriptions(ctx)
@@ -113,21 +151,26 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1.InMemoryChannel) rec
 	}
 
 	// Look for an https handler that's configured to use paths
-	httpsHandler := r.multiChannelMessageHandler.GetChannelHandler(config.Path)
+	httpsHandler := r.multiChannelEventHandler.GetChannelHandler(config.Path)
 	if httpsHandler == nil {
 		// No handler yet, create one.
-		fanoutHandler, err := fanout.NewFanoutMessageHandler(
+		fanoutHandler, err := fanout.NewFanoutEventHandler(
 			logging.FromContext(ctx).Desugar(),
-			channel.NewMessageDispatcher(logging.FromContext(ctx).Desugar()),
 			config.FanoutConfig,
 			r.reporter,
-			channel.ResolveMessageChannelFromPath(channel.ParseChannelFromPath),
+			eventTypeAutoHandler,
+			channelRef,
+			UID,
+			r.eventDispatcher,
+			channel.ResolveChannelFromPath(channel.ParseChannelFromPath),
+			channel.OIDCTokenVerification(r.tokenVerifier, audience(imc)),
+			channel.ReceiverWithContextFunc(wc),
 		)
 		if err != nil {
-			logging.FromContext(ctx).Error("Failed to create a new fanout.MessageHandler", err)
+			logging.FromContext(ctx).Error("Failed to create a new fanout.EventHandler", err)
 			return err
 		}
-		r.multiChannelMessageHandler.SetChannelHandler(config.Path, fanoutHandler)
+		r.multiChannelEventHandler.SetChannelHandler(config.Path, fanoutHandler)
 	} else {
 		// Just update the config if necessary.
 		haveSubs := httpsHandler.GetSubscriptions(ctx)
@@ -139,7 +182,9 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1.InMemoryChannel) rec
 		}
 	}
 
-	handleSubscribers(imc.Spec.Subscribers, kncloudevents.AddOrUpdateAddressableHandler)
+	handleSubscribers(imc.Spec.Subscribers, func(addressable duckv1.Addressable) {
+		kncloudevents.AddOrUpdateAddressableHandler(r.clientConfig, addressable)
+	})
 
 	return nil
 }
@@ -178,11 +223,19 @@ func (r *Reconciler) patchSubscriberStatus(ctx context.Context, imc *v1.InMemory
 }
 
 // newConfigForInMemoryChannel creates a new Config for a single inmemory channel.
-func newConfigForInMemoryChannel(imc *v1.InMemoryChannel) (*multichannelfanout.ChannelConfig, error) {
+func newConfigForInMemoryChannel(ctx context.Context, imc *v1.InMemoryChannel) (*multichannelfanout.ChannelConfig, error) {
+	featureFlags := feature.FromContext(ctx)
+	isOIDCEnabled := featureFlags.IsOIDCAuthentication()
 	subs := make([]fanout.Subscription, len(imc.Spec.Subscribers))
 
 	for i, sub := range imc.Spec.Subscribers {
 		conf, err := fanout.SubscriberSpecToFanoutConfig(sub)
+		if isOIDCEnabled {
+			conf.ServiceAccount = &types.NamespacedName{
+				Name:      *sub.Auth.ServiceAccountName,
+				Namespace: imc.Namespace,
+			}
+		}
 		if err != nil {
 			return nil, err
 		}
@@ -195,7 +248,7 @@ func newConfigForInMemoryChannel(imc *v1.InMemoryChannel) (*multichannelfanout.C
 		HostName:  imc.Status.Address.URL.Host,
 		Path:      fmt.Sprintf("%s/%s", imc.Namespace, imc.Name),
 		FanoutConfig: fanout.Config{
-			AsyncHandler:  true,
+			AsyncHandler:  false,
 			Subscriptions: subs,
 		},
 	}, nil
@@ -215,7 +268,7 @@ func (r *Reconciler) deleteFunc(obj interface{}) {
 	}
 	if imc.Status.Address != nil && imc.Status.Address.URL != nil {
 		if hostName := imc.Status.Address.URL.Host; hostName != "" {
-			r.multiChannelMessageHandler.DeleteChannelHandler(hostName)
+			r.multiChannelEventHandler.DeleteChannelHandler(hostName)
 		}
 	}
 
@@ -243,4 +296,20 @@ func handleSubscribers(subscribers []eventingduckv1.SubscriberSpec, handle func(
 			})
 		}
 	}
+}
+
+func toKReference(imc *v1.InMemoryChannel) *duckv1.KReference {
+	return &duckv1.KReference{
+		// Need to set Kind and APIVersion manually as the TypeMeta is not currently properly set https://github.com/knative/eventing/issues/7091
+		// TODO: refactor this to use imc.Kind and imc.TypeMeta once #7091 is resolved
+		Kind:       "InMemoryChannel",
+		APIVersion: "messaging.knative.dev/v1",
+		Namespace:  imc.Namespace,
+		Name:       imc.Name,
+		Address:    imc.Status.Address.Name,
+	}
+}
+
+func audience(imc *v1.InMemoryChannel) string {
+	return auth.GetAudience(v1.SchemeGroupVersion.WithKind("InMemoryChannel"), imc.ObjectMeta)
 }

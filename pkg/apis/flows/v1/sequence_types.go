@@ -131,6 +131,10 @@ type SequenceStatus struct {
 	// It generally has the form {channel}.{namespace}.svc.{cluster domain name}
 	// +optional
 	Address duckv1.Addressable `json:"address,omitempty"`
+
+	// Auth provides the relevant information for OIDC authentication.
+	// +optional
+	Auth *duckv1.AuthStatus `json:"auth,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

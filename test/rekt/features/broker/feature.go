@@ -37,6 +37,7 @@ import (
 	"knative.dev/eventing/test/rekt/resources/trigger"
 
 	v1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/network"
 	"knative.dev/pkg/ptr"
 
 	"knative.dev/reconciler-test/pkg/eventshub"
@@ -192,7 +193,7 @@ func ManyTriggers() *feature.FeatureSet {
 
 func BrokerWorkFlowWithTransformation() *feature.FeatureSet {
 	createSubscriberFn := func(ref *v1.KReference, uri string) manifest.CfgFn {
-		return subscription.WithSubscriber(ref, uri)
+		return subscription.WithSubscriber(ref, uri, "")
 	}
 	fs := &feature.FeatureSet{
 		Name: "Knative Broker - Transformation - Channel flow and Trigger event flow",
@@ -667,6 +668,8 @@ func brokerSubscriberUnreachable() *feature.Feature {
 	event.SetSource(eventSource)
 	event.SetData(cloudevents.ApplicationJSON, []byte(eventBody))
 
+	subscriberUri := fmt.Sprintf("http://fake.svc.%s", network.GetClusterDomainName())
+
 	//Install the broker
 	brokerName := feature.MakeRandomK8sName("broker")
 	f.Setup("install broker", broker.Install(brokerName, broker.WithEnvConfig()...))
@@ -679,7 +682,7 @@ func brokerSubscriberUnreachable() *feature.Feature {
 	f.Setup("install trigger", trigger.Install(
 		triggerName,
 		brokerName,
-		trigger.WithSubscriber(nil, "http://fake.svc.cluster.local"),
+		trigger.WithSubscriber(nil, subscriberUri),
 		trigger.WithDeadLetterSink(service.AsKReference(sink), ""),
 	))
 	f.Setup("trigger goes ready", trigger.IsReady(triggerName))
@@ -695,7 +698,7 @@ func brokerSubscriberUnreachable() *feature.Feature {
 			eventasssert.OnStore(sink).
 				Match(features.HasKnNamespaceHeader(environment.FromContext(ctx).Namespace())).
 				MatchEvent(
-					test.HasExtension("knativeerrordest", "http://fake.svc.cluster.local"),
+					test.HasExtension("knativeerrordest", subscriberUri),
 				).
 				AtLeast(1)(ctx, t)
 		},
@@ -835,6 +838,7 @@ func assertEnhancedWithKnativeErrorExtensions(sinkName string, matcherfns ...fun
 			matchers[i] = fn(ctx)
 		}
 		_ = eventshub.StoreFromContext(ctx, sinkName).AssertExact(
+			ctx,
 			t,
 			1,
 			eventasssert.MatchKind(eventshub.EventReceived),

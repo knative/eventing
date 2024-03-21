@@ -19,10 +19,12 @@ package v1
 import (
 	"context"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -30,9 +32,12 @@ import (
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
+	configmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap/fake"
 	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
 	"knative.dev/pkg/resolver"
 	"knative.dev/pkg/tracker"
+
+	. "knative.dev/eventing/pkg/scheduler/testing"
 )
 
 var (
@@ -171,9 +176,71 @@ func TestSinkBindingStatusIsReady(t *testing.T) {
 			s.InitializeConditions()
 			s.MarkSink(sink)
 			s.MarkBindingAvailable()
+			s.MarkOIDCIdentityCreatedSucceeded()
+			s.MarkOIDCTokenSecretCreatedSuccceeded()
 			return s
 		}(),
 		want: true,
+	}, {
+		name: "mark OIDC identity created",
+		s: func() *SinkBindingStatus {
+			s := &SinkBindingStatus{}
+			s.InitializeConditions()
+			s.MarkSink(sink)
+			s.MarkBindingAvailable()
+			s.MarkOIDCIdentityCreatedSucceeded()
+			s.MarkOIDCTokenSecretCreatedSuccceeded()
+			return s
+		}(),
+		want: true,
+	}, {
+		name: "mark OIDC identity created with reason",
+		s: func() *SinkBindingStatus {
+			s := &SinkBindingStatus{}
+			s.InitializeConditions()
+			s.MarkSink(sink)
+			s.MarkBindingAvailable()
+			s.MarkOIDCIdentityCreatedSucceededWithReason("TheReason", "feature is disabled")
+			s.MarkOIDCTokenSecretCreatedSuccceeded()
+			return s
+		}(),
+		want: true,
+	}, {
+		name: "mark OIDC identity created failed",
+		s: func() *SinkBindingStatus {
+			s := &SinkBindingStatus{}
+			s.InitializeConditions()
+			s.MarkSink(sink)
+			s.MarkBindingAvailable()
+			s.MarkOIDCIdentityCreatedFailed("TheReason", "this is a message")
+			s.MarkOIDCTokenSecretCreatedSuccceeded()
+			return s
+		}(),
+		want: false,
+	}, {
+		name: "mark OIDC token secret created",
+		s: func() *SinkBindingStatus {
+			s := &SinkBindingStatus{}
+			s.InitializeConditions()
+			s.MarkSink(sink)
+			s.MarkBindingAvailable()
+			s.MarkOIDCIdentityCreatedSucceeded()
+			s.MarkOIDCTokenSecretCreatedSuccceeded()
+			return s
+		}(),
+		want: true,
+	}, {
+		name: "mark OIDC token secret failed",
+		s: func() *SinkBindingStatus {
+			s := &SinkBindingStatus{}
+			s.InitializeConditions()
+			s.MarkSink(sink)
+			s.MarkBindingAvailable()
+			s.MarkOIDCIdentityCreatedSucceeded()
+			s.MarkOIDCTokenSecretCreatedFailed("Some", "reason")
+			return s
+		}(),
+		want: false,
 	}}
 
 	for _, test := range tests {
@@ -218,6 +285,75 @@ func TestSinkBindingUndo(t *testing.T) {
 			},
 		},
 	}, {
+		name: "Remove trust bundle volumes",
+		in: &duckv1.WithPod{
+			Spec: duckv1.WithPodSpec{
+				Template: duckv1.PodSpecable{
+					Spec: corev1.PodSpec{
+						Volumes: []corev1.Volume{
+							{
+								Name: "kne-bundle-knative-eventing-bundle" + strings.Repeat("a", 29),
+								VolumeSource: corev1.VolumeSource{
+									ConfigMap: &corev1.ConfigMapVolumeSource{
+										LocalObjectReference: corev1.LocalObjectReference{
+											Name: "knative-eventing-bundle" + strings.Repeat("a", 29),
+										},
+									},
+								},
+							},
+							{
+								Name: "kne-bundle-volume",
+								VolumeSource: corev1.VolumeSource{
+									Projected: &corev1.ProjectedVolumeSource{
+										Sources: []corev1.VolumeProjection{
+											{
+												ConfigMap: &corev1.ConfigMapProjection{
+													LocalObjectReference: corev1.LocalObjectReference{
+														Name: "knative-eventing-bundle",
+													},
+												},
+											},
+										},
+										DefaultMode: nil,
+									},
+								},
+							},
+						},
+						Containers: []corev1.Container{{
+							Name:  "blah",
+							Image: "busybox",
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      "kne-bundle-knative-eventing-bundle" + strings.Repeat("a", 29),
+									MountPath: "/knative-custom-certs/knative-eventing-bundle" + strings.Repeat("a", 29),
+									ReadOnly:  true,
+								},
+								{
+									Name:      "kne-bundle-volume",
+									MountPath: "/knative-custom-certs",
+									ReadOnly:  true,
+								},
+							},
+						}},
+					},
+				},
+			},
+		},
+		want: &duckv1.WithPod{
+			Spec: duckv1.WithPodSpec{
+				Template: duckv1.PodSpecable{
+					Spec: corev1.PodSpec{
+						Volumes: []corev1.Volume{},
+						Containers: []corev1.Container{{
+							Name:         "blah",
+							Image:        "busybox",
+							VolumeMounts: []corev1.VolumeMount{},
+						}},
+					},
+				},
+			},
+		},
+	}, {
 		name: "lots to remove",
 		in: &duckv1.WithPod{
 			Spec: duckv1.WithPodSpec{
@@ -242,6 +378,11 @@ func TestSinkBindingUndo(t *testing.T) {
 								Name:  "K_CE_OVERRIDES",
 								Value: `{"extensions":{"foo":"bar"}}`,
 							}},
+							VolumeMounts: []corev1.VolumeMount{{
+								Name: "foo",
+							}, {
+								Name: oidcTokenVolumeName,
+							}},
 						}},
 						Containers: []corev1.Container{{
 							Name:  "blah",
@@ -262,6 +403,11 @@ func TestSinkBindingUndo(t *testing.T) {
 								Name:  "K_CE_OVERRIDES",
 								Value: `{"extensions":{"foo":"bar"}}`,
 							}},
+							VolumeMounts: []corev1.VolumeMount{{
+								Name: "foo",
+							}, {
+								Name: oidcTokenVolumeName,
+							}},
 						}, {
 							Name:  "sidecar",
 							Image: "busybox",
@@ -278,6 +424,16 @@ func TestSinkBindingUndo(t *testing.T) {
 								Name:  "K_CE_OVERRIDES",
 								Value: `{"extensions":{"foo":"bar"}}`,
 							}},
+							VolumeMounts: []corev1.VolumeMount{{
+								Name: "foo",
+							}, {
+								Name: oidcTokenVolumeName,
+							}},
+						}},
+						Volumes: []corev1.Volume{{
+							Name: "foo",
+						}, {
+							Name: oidcTokenVolumeName,
 						}},
 					},
 				},
@@ -297,6 +453,9 @@ func TestSinkBindingUndo(t *testing.T) {
 								Name:  "BAZ",
 								Value: "INGA",
 							}},
+							VolumeMounts: []corev1.VolumeMount{{
+								Name: "foo",
+							}},
 						}},
 						Containers: []corev1.Container{{
 							Name:  "blah",
@@ -308,6 +467,9 @@ func TestSinkBindingUndo(t *testing.T) {
 								Name:  "BAZ",
 								Value: "INGA",
 							}},
+							VolumeMounts: []corev1.VolumeMount{{
+								Name: "foo",
+							}},
 						}, {
 							Name:  "sidecar",
 							Image: "busybox",
@@ -315,6 +477,12 @@ func TestSinkBindingUndo(t *testing.T) {
 								Name:  "BAZ",
 								Value: "INGA",
 							}},
+							VolumeMounts: []corev1.VolumeMount{{
+								Name: "foo",
+							}},
+						}},
+						Volumes: []corev1.Volume{{
+							Name: "foo",
 						}},
 					},
 				},
@@ -348,9 +516,12 @@ func TestSinkBindingDo(t *testing.T) {
 	overrides := duckv1.CloudEventOverrides{Extensions: map[string]string{"foo": "bar"}}
 
 	tests := []struct {
-		name string
-		in   *duckv1.WithPod
-		want *duckv1.WithPod
+		name       string
+		in         *duckv1.WithPod
+		configMaps []*corev1.ConfigMap
+		sbStatus   *SinkBindingStatus
+		want       *duckv1.WithPod
+		ctx        context.Context
 	}{{
 		name: "nothing to add",
 		in: &duckv1.WithPod{
@@ -394,6 +565,94 @@ func TestSinkBindingDo(t *testing.T) {
 							}},
 						}},
 					},
+				},
+			},
+		},
+	}, {
+		name: "add trust bundles",
+		want: &duckv1.WithPod{
+			Spec: duckv1.WithPodSpec{
+				Template: duckv1.PodSpecable{
+					Spec: corev1.PodSpec{
+						Volumes: []corev1.Volume{
+							{
+								Name: "kne-bundle-volume",
+								VolumeSource: corev1.VolumeSource{
+									Projected: &corev1.ProjectedVolumeSource{
+										Sources: []corev1.VolumeProjection{
+											{
+												ConfigMap: &corev1.ConfigMapProjection{
+													LocalObjectReference: corev1.LocalObjectReference{
+														Name: "knative-eventing-bundle",
+													},
+												},
+											},
+										},
+										DefaultMode: nil,
+									},
+								},
+							},
+						},
+						Containers: []corev1.Container{{
+							Name:  "blah",
+							Image: "busybox",
+							Env: []corev1.EnvVar{{
+								Name:  "K_SINK",
+								Value: destination.URI.String(),
+							}, {
+								Name:  "K_CA_CERTS",
+								Value: caCert,
+							}, {
+								Name:  "K_CE_OVERRIDES",
+								Value: `{"extensions":{"foo":"bar"}}`,
+							}},
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      "kne-bundle-volume",
+									MountPath: "/knative-custom-certs",
+									ReadOnly:  true,
+								},
+							},
+						}},
+					},
+				},
+			},
+		},
+		in: &duckv1.WithPod{
+			Spec: duckv1.WithPodSpec{
+				Template: duckv1.PodSpecable{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{{
+							Name:  "blah",
+							Image: "busybox",
+							Env: []corev1.EnvVar{{
+								Name:  "K_SINK",
+								Value: destination.URI.String(),
+							}, {
+								Name:  "K_CA_CERTS",
+								Value: caCert,
+							}, {
+								Name:  "K_CE_OVERRIDES",
+								Value: `{"extensions":{"foo":"bar"}}`,
+							}},
+						}},
+					},
+				},
+			},
+		},
+		configMaps: []*corev1.ConfigMap{
+			{
+				TypeMeta: metav1.TypeMeta{},
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "knative-eventing",
+					Name:      "knative-eventing-bundle",
+					Labels: map[string]string{
+						"networking.knative.dev/trust-bundle": "true",
+					},
+				},
+				Immutable: nil,
+				Data: map[string]string{
+					"knative-eventing-bundle.pem": "something",
 				},
 			},
 		},
@@ -533,22 +792,137 @@ func TestSinkBindingDo(t *testing.T) {
 				},
 			},
 		},
+	}, {
+		name: "adds OIDC token volume",
+		in: &duckv1.WithPod{
+			Spec: duckv1.WithPodSpec{
+				Template: duckv1.PodSpecable{
+					Spec: corev1.PodSpec{
+						InitContainers: []corev1.Container{{
+							Name:  "init",
+							Image: "busybox",
+							Env: []corev1.EnvVar{{
+								Name:  "K_SINK",
+								Value: destination.URI.String(),
+							}, {
+								Name:  "K_CA_CERTS",
+								Value: caCert,
+							}, {
+								Name:  "K_CE_OVERRIDES",
+								Value: `{"extensions":{"foo":"bar"}}`,
+							}},
+						}},
+						Containers: []corev1.Container{{
+							Name:  "blah",
+							Image: "busybox",
+							Env: []corev1.EnvVar{{
+								Name:  "K_SINK",
+								Value: destination.URI.String(),
+							}, {
+								Name:  "K_CA_CERTS",
+								Value: caCert,
+							}, {
+								Name:  "K_CE_OVERRIDES",
+								Value: `{"extensions":{"foo":"bar"}}`,
+							}},
+						}},
+					},
+				},
+			},
+		},
+		sbStatus: &SinkBindingStatus{
+			OIDCTokenSecretName: pointer.String("oidc-token"),
+		},
+		want: &duckv1.WithPod{
+			Spec: duckv1.WithPodSpec{
+				Template: duckv1.PodSpecable{
+					Spec: corev1.PodSpec{
+						InitContainers: []corev1.Container{{
+							Name:  "init",
+							Image: "busybox",
+							Env: []corev1.EnvVar{{
+								Name:  "K_SINK",
+								Value: destination.URI.String(),
+							}, {
+								Name:  "K_CA_CERTS",
+								Value: caCert,
+							}, {
+								Name:  "K_CE_OVERRIDES",
+								Value: `{"extensions":{"foo":"bar"}}`,
+							}},
+							VolumeMounts: []corev1.VolumeMount{{
+								Name:      oidcTokenVolumeName,
+								MountPath: "/oidc",
+							}},
+						}},
+						Containers: []corev1.Container{{
+							Name:  "blah",
+							Image: "busybox",
+							Env: []corev1.EnvVar{{
+								Name:  "K_SINK",
+								Value: destination.URI.String(),
+							}, {
+								Name:  "K_CA_CERTS",
+								Value: caCert,
+							}, {
+								Name:  "K_CE_OVERRIDES",
+								Value: `{"extensions":{"foo":"bar"}}`,
+							}},
+							VolumeMounts: []corev1.VolumeMount{{
+								Name:      oidcTokenVolumeName,
+								MountPath: "/oidc",
+							}},
+						}},
+						Volumes: []corev1.Volume{{
+							Name: oidcTokenVolumeName,
+							VolumeSource: corev1.VolumeSource{
+								Projected: &corev1.ProjectedVolumeSource{
+									Sources: []corev1.VolumeProjection{{
+										Secret: &corev1.SecretProjection{
+											LocalObjectReference: corev1.LocalObjectReference{
+												Name: "oidc-token",
+											},
+										},
+									}},
+								},
+							},
+						}},
+					},
+				},
+			},
+		},
 	}}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			got := test.in
-			ctx, _ := fakedynamicclient.With(context.Background(), scheme.Scheme, got)
-			ctx = addressable.WithDuck(ctx)
-			r := resolver.NewURIResolverFromTracker(ctx, tracker.New(func(types.NamespacedName) {}, 0))
-			ctx = WithURIResolver(context.Background(), r)
+			applicationContext, _ := fakedynamicclient.With(context.Background(), scheme.Scheme, got)
+			applicationContext = addressable.WithDuck(applicationContext)
+			r := resolver.NewURIResolverFromTracker(applicationContext, tracker.New(func(types.NamespacedName) {}, 0))
 
-			sb := &SinkBinding{Spec: SinkBindingSpec{
-				SourceSpec: duckv1.SourceSpec{
-					Sink:                destination,
-					CloudEventOverrides: &overrides,
-				},
-			}}
+			ctx, _ := SetupFakeContext(t)
+			if test.ctx != nil {
+				ctx = test.ctx
+			}
+			ctx = WithURIResolver(ctx, r)
+			ctx = WithTrustBundleConfigMapLister(ctx, configmapinformer.Get(ctx).Lister())
+
+			for _, cm := range test.configMaps {
+				_ = configmapinformer.Get(ctx).Informer().GetIndexer().Add(cm)
+			}
+
+			sb := &SinkBinding{
+				Spec: SinkBindingSpec{
+					SourceSpec: duckv1.SourceSpec{
+						Sink:                destination,
+						CloudEventOverrides: &overrides,
+					}},
+			}
+
+			if test.sbStatus != nil {
+				sb.Status = *test.sbStatus
+			}
+
 			sb.Do(ctx, got)
 
 			if !cmp.Equal(got, test.want) {

@@ -61,7 +61,7 @@ func WrapOptions(zapOpts ...zap.Option) LoggerOption {
 // NewLogger builds a new Logger that logs all messages to the given
 // testing.TB.
 //
-//   logger := zaptest.NewLogger(t)
+//	logger := zaptest.NewLogger(t)
 //
 // Use this with a *testing.T or *testing.B to get logs which get printed only
 // if a test fails or if you ran go test -v.
@@ -69,11 +69,11 @@ func WrapOptions(zapOpts ...zap.Option) LoggerOption {
 // The returned logger defaults to logging debug level messages and above.
 // This may be changed by passing a zaptest.Level during construction.
 //
-//   logger := zaptest.NewLogger(t, zaptest.Level(zap.WarnLevel))
+//	logger := zaptest.NewLogger(t, zaptest.Level(zap.WarnLevel))
 //
 // You may also pass zap.Option's to customize test logger.
 //
-//   logger := zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller()))
+//	logger := zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller()))
 func NewLogger(t TestingT, opts ...LoggerOption) *zap.Logger {
 	cfg := loggerOptions{
 		Level: zapcore.DebugLevel,
@@ -82,7 +82,7 @@ func NewLogger(t TestingT, opts ...LoggerOption) *zap.Logger {
 		o.applyLoggerOption(&cfg)
 	}
 
-	writer := newTestingWriter(t)
+	writer := NewTestingWriter(t)
 	zapOptions := []zap.Option{
 		// Send zap errors to the same writer and mark the test as failed if
 		// that happens.
@@ -100,27 +100,43 @@ func NewLogger(t TestingT, opts ...LoggerOption) *zap.Logger {
 	)
 }
 
-// testingWriter is a WriteSyncer that writes to the given testing.TB.
-type testingWriter struct {
+// TestingWriter is a WriteSyncer that writes to the given testing.TB.
+type TestingWriter struct {
 	t TestingT
 
-	// If true, the test will be marked as failed if this testingWriter is
+	// If true, the test will be marked as failed if this TestingWriter is
 	// ever used.
 	markFailed bool
 }
 
-func newTestingWriter(t TestingT) testingWriter {
-	return testingWriter{t: t}
+// NewTestingWriter builds a new TestingWriter that writes to the given
+// testing.TB.
+//
+// Use this if you need more flexibility when creating *zap.Logger
+// than zaptest.NewLogger() provides.
+//
+// E.g., if you want to use custom core with zaptest.TestingWriter:
+//
+//	encoder := newCustomEncoder()
+//	writer := zaptest.NewTestingWriter(t)
+//	level := zap.NewAtomicLevelAt(zapcore.DebugLevel)
+//
+//	core := newCustomCore(encoder, writer, level)
+//
+//	logger := zap.New(core, zap.AddCaller())
+func NewTestingWriter(t TestingT) TestingWriter {
+	return TestingWriter{t: t}
 }
 
-// WithMarkFailed returns a copy of this testingWriter with markFailed set to
+// WithMarkFailed returns a copy of this TestingWriter with markFailed set to
 // the provided value.
-func (w testingWriter) WithMarkFailed(v bool) testingWriter {
+func (w TestingWriter) WithMarkFailed(v bool) TestingWriter {
 	w.markFailed = v
 	return w
 }
 
-func (w testingWriter) Write(p []byte) (n int, err error) {
+// Write writes bytes from p to the underlying testing.TB.
+func (w TestingWriter) Write(p []byte) (n int, err error) {
 	n = len(p)
 
 	// Strip trailing newline because t.Log always adds one.
@@ -135,6 +151,7 @@ func (w testingWriter) Write(p []byte) (n int, err error) {
 	return n, nil
 }
 
-func (w testingWriter) Sync() error {
+// Sync commits the current contents (a no-op for TestingWriter).
+func (w TestingWriter) Sync() error {
 	return nil
 }

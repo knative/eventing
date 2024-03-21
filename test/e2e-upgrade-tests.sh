@@ -26,8 +26,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/e2e-common.sh"
 # Overrides
 
 function knative_setup {
-  # Nothing to do at setup
-  true
+  install_cert_manager || return $?
 }
 
 function install_test_resources {
@@ -40,7 +39,7 @@ function uninstall_test_resources {
   true
 }
 
-initialize "$@" --skip-istio-addon
+initialize "$@"
 
 TIMEOUT=${TIMEOUT:-60m}
 

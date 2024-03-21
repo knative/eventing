@@ -38,13 +38,22 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"knative.dev/pkg/apis"
-
-	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
-	"knative.dev/eventing/pkg/apis/feature"
-	"knative.dev/eventing/pkg/broker"
+	configmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap/fake"
+	"knative.dev/pkg/logging"
 	reconcilertesting "knative.dev/pkg/reconciler/testing"
 
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	"knative.dev/eventing/pkg/apis/feature"
+	"knative.dev/eventing/pkg/auth"
+	"knative.dev/eventing/pkg/broker"
+	"knative.dev/eventing/pkg/eventfilter/subscriptionsapi"
+
+	brokerinformerfake "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/broker/fake"
 	triggerinformerfake "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/trigger/fake"
+
+	// Fake injection client
+	_ "knative.dev/pkg/client/injection/kube/client/fake"
 )
 
 const (
@@ -411,6 +420,9 @@ func TestReceiver(t *testing.T) {
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
 			ctx, _ := reconcilertesting.SetupFakeContext(t)
+			ctx = feature.ToContext(ctx, feature.Flags{
+				feature.OIDCAuthentication: feature.Enabled,
+			})
 
 			fh := fakeHandler{
 				failRequest:            tc.requestFails,
@@ -424,8 +436,12 @@ func TestReceiver(t *testing.T) {
 			s := httptest.NewServer(&fh)
 			defer s.Close()
 
-			// Replace the SubscriberURI to point at our fake server.
+			logger := zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller()))
+			oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
+			oidcTokenVerifier := auth.NewOIDCTokenVerifier(ctx)
+
 			for _, trig := range tc.triggers {
+				// Replace the SubscriberURI to point at our fake server.
 				if trig.Status.SubscriberURI != nil && trig.Status.SubscriberURI.String() == toBeReplaced {
 
 					url, err := apis.ParseURL(s.URL)
@@ -435,12 +451,26 @@ func TestReceiver(t *testing.T) {
 					trig.Status.SubscriberURI = url
 				}
 				triggerinformerfake.Get(ctx).Informer().GetStore().Add(trig)
+
+				// create the needed broker object
+				b := &v1.Broker{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      trig.Spec.Broker,
+						Namespace: trig.Namespace,
+					},
+				}
+				brokerinformerfake.Get(ctx).Informer().GetStore().Add(b)
 			}
+
 			reporter := &mockReporter{}
 			r, err := NewHandler(
-				zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())),
+				logger,
+				oidcTokenVerifier,
+				oidcTokenProvider,
 				triggerinformerfake.Get(ctx),
+				brokerinformerfake.Get(ctx),
 				reporter,
+				configmapinformer.Get(ctx).Lister().ConfigMaps("ns"),
 				func(ctx context.Context) context.Context {
 					return ctx
 				},
@@ -508,7 +538,7 @@ func TestReceiver(t *testing.T) {
 				return
 			}
 			if err != nil || event == nil {
-				t.Fatalf("Expected response event, actually nil")
+				t.Fatalf("Expected response event, actually nil (err: %+v)", err)
 			}
 
 			// The TTL will be added again.
@@ -583,6 +613,15 @@ func TestReceiver_WithSubscriptionsAPI(t *testing.T) {
 			expectedEventCount:        true,
 			expectedEventDispatchTime: true,
 		},
+		"Dispatch failed - empty SubscriptionsAPI filter does not override Attributes Filter": {
+			triggers: []*eventingv1.Trigger{
+				makeTrigger(
+					withAttributesFilter(&eventingv1.TriggerFilter{
+						Attributes: map[string]string{"type": "some-other-type", "source": "some-other-source"},
+					})),
+			},
+			expectedEventCount: false,
+		},
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
@@ -593,6 +632,12 @@ func TestReceiver_WithSubscriptionsAPI(t *testing.T) {
 			}
 			s := httptest.NewServer(&fh)
 			defer s.Close()
+
+			filtersMap := subscriptionsapi.NewFiltersMap()
+
+			logger := zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller()))
+			oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
+			oidcTokenVerifier := auth.NewOIDCTokenVerifier(ctx)
 
 			// Replace the SubscriberURI to point at our fake server.
 			for _, trig := range tc.triggers {
@@ -605,12 +650,26 @@ func TestReceiver_WithSubscriptionsAPI(t *testing.T) {
 					trig.Status.SubscriberURI = url
 				}
 				triggerinformerfake.Get(ctx).Informer().GetStore().Add(trig)
+				filtersMap.Set(trig, createSubscriptionsAPIFilters(logging.FromContext(ctx).Desugar(), trig))
+
+				// create the needed broker object
+				b := &v1.Broker{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      trig.Spec.Broker,
+						Namespace: trig.Namespace,
+					},
+				}
+				brokerinformerfake.Get(ctx).Informer().GetStore().Add(b)
 			}
 			reporter := &mockReporter{}
 			r, err := NewHandler(
-				zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())),
+				logger,
+				oidcTokenVerifier,
+				oidcTokenProvider,
 				triggerinformerfake.Get(ctx),
+				brokerinformerfake.Get(ctx),
 				reporter,
+				configmapinformer.Get(ctx).Lister().ConfigMaps("ns"),
 				func(ctx context.Context) context.Context {
 					return feature.ToContext(context.TODO(), feature.Flags{
 						feature.NewTriggerFilters: feature.Enabled,
@@ -619,6 +678,8 @@ func TestReceiver_WithSubscriptionsAPI(t *testing.T) {
 			if err != nil {
 				t.Fatal("Unable to create receiver:", err)
 			}
+
+			r.filtersMap = filtersMap
 
 			e := tc.event
 			if e == nil {

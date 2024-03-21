@@ -38,11 +38,13 @@ import (
 	. "knative.dev/pkg/reconciler/testing"
 
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	"knative.dev/eventing/pkg/apis/feature"
 	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
-	"knative.dev/eventing/pkg/channel"
+	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/channel/fanout"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/inmemorychannel"
+	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/kncloudevents"
 	. "knative.dev/eventing/pkg/reconciler/testing/v1"
 
@@ -50,11 +52,11 @@ import (
 )
 
 const (
-	testNS                            = "test-namespace"
-	imcName                           = "test-imc"
-	twoSubscriberPatch                = `[{"op":"add","path":"/status/subscribers","value":[{"observedGeneration":1,"ready":"True","uid":"2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1"},{"observedGeneration":2,"ready":"True","uid":"34c5aec8-deb6-11e8-9f32-f2801f1b9fd1"}]}]`
-	oneSubscriberPatch                = `[{"op":"add","path":"/status/subscribers","value":[{"observedGeneration":1,"ready":"True","uid":"2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1"}]}]`
-	oneSubscriberRemovedOneAddedPatch = `[{"op":"add","path":"/status/subscribers/2","value":{"observedGeneration":2,"ready":"True","uid":"34c5aec8-deb6-11e8-9f32-f2801f1b9fd1"}},{"op":"remove","path":"/status/subscribers/0"}]`
+	testNS                = "test-namespace"
+	imcName               = "test-imc"
+	twoSubscriberPatch    = `[{"op":"add","path":"/status/subscribers","value":[{"observedGeneration":1,"ready":"True","uid":"2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1"},{"observedGeneration":2,"ready":"True","uid":"34c5aec8-deb6-11e8-9f32-f2801f1b9fd1"}]}]`
+	oneSubscriberPatch    = `[{"op":"add","path":"/status/subscribers","value":[{"observedGeneration":1,"ready":"True","uid":"2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1"}]}]`
+	oneSubscriberReplaced = `[{"op":"replace","path":"/status/subscribers/1/uid","value":"34c5aec8-deb6-11e8-9f32-f2801f1b9fd1"}]`
 )
 
 var (
@@ -191,7 +193,7 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelAddress(channelServiceAddress)),
 			},
 		}, {
-			Name: "with subscribers, one removed one added to status",
+			Name: "with subscribers, one replaced to status",
 			Key:  imcKey,
 			Objects: []runtime.Object{
 				NewInMemoryChannel(imcName, testNS,
@@ -201,12 +203,12 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelEndpointsReady(),
 					WithInMemoryChannelChannelServiceReady(),
 					WithInMemoryChannelSubscribers(subscribers),
-					WithInMemoryChannelReadySubscriberAndGeneration(string(subscriber3UID), subscriber3Generation),
 					WithInMemoryChannelReadySubscriberAndGeneration(string(subscriber1UID), subscriber1Generation),
+					WithInMemoryChannelReadySubscriberAndGeneration(string(subscriber3UID), subscriber3Generation),
 					WithInMemoryChannelAddress(channelServiceAddress)),
 			},
 			WantPatches: []clientgotesting.PatchActionImpl{
-				makePatch(testNS, imcName, oneSubscriberRemovedOneAddedPatch),
+				makePatch(testNS, imcName, oneSubscriberReplaced),
 			},
 		}, {
 			Name: "subscriber with delivery spec",
@@ -310,8 +312,8 @@ func TestAllCases(t *testing.T) {
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		ctx = v1addr.WithDuck(ctx)
 		r := &Reconciler{
-			multiChannelMessageHandler: newFakeMultiChannelHandler(),
-			messagingClientSet:         fakeeventingclient.Get(ctx).MessagingV1(),
+			multiChannelEventHandler: newFakeMultiChannelHandler(),
+			messagingClientSet:       fakeeventingclient.Get(ctx).MessagingV1(),
 		}
 		return inmemorychannel.NewReconciler(ctx, logger,
 			fakeeventingclient.Get(ctx), listers.GetInMemoryChannelLister(),
@@ -491,14 +493,21 @@ func TestReconciler_ReconcileKind(t *testing.T) {
 		},
 	}
 	for n, tc := range testCases {
-		ctx, fakeEventingClient := fakeeventingclient.With(context.Background(), tc.imc)
+		ctx, _ := SetupFakeContext(t, SetUpInformerSelector)
+		ctx, fakeEventingClient := fakeeventingclient.With(ctx, tc.imc)
+		feature.ToContext(ctx, feature.Flags{
+			feature.EvenTypeAutoCreate: feature.Disabled,
+		})
+
+		oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
+		dispatcher := kncloudevents.NewDispatcher(eventingtls.ClientConfig{}, oidcTokenProvider)
 		// Just run the tests once with no existing handler (creates the handler) and once
 		// with an existing, so we exercise both paths at once.
-		fh, err := fanout.NewFanoutMessageHandler(nil, channel.NewMessageDispatcher(nil), fanout.Config{}, nil)
+		fh, err := fanout.NewFanoutEventHandler(nil, fanout.Config{}, nil, nil, nil, nil, dispatcher)
 		if err != nil {
 			t.Error(err)
 		}
-		for _, fanoutHandler := range []fanout.MessageHandler{nil, fh} {
+		for _, fanoutHandler := range []fanout.EventHandler{nil, fh} {
 			t.Run("handler-"+n, func(t *testing.T) {
 				handler := newFakeMultiChannelHandler()
 				if fanoutHandler != nil {
@@ -506,8 +515,9 @@ func TestReconciler_ReconcileKind(t *testing.T) {
 					handler.SetChannelHandler(channelServiceAddress.URL.String(), fanoutHandler)
 				}
 				r := &Reconciler{
-					multiChannelMessageHandler: handler,
-					messagingClientSet:         fakeEventingClient.MessagingV1(),
+					multiChannelEventHandler: handler,
+					messagingClientSet:       fakeEventingClient.MessagingV1(),
+					featureStore:             feature.NewStore(logtesting.TestLogger(t)),
 				}
 				e := r.ReconcileKind(ctx, tc.imc)
 				if e != tc.wantResult {
@@ -538,18 +548,22 @@ func TestReconciler_InvalidInputs(t *testing.T) {
 		},
 	}
 	for n, tc := range testCases {
-		fh, err := fanout.NewFanoutMessageHandler(nil, channel.NewMessageDispatcher(nil), fanout.Config{}, nil)
+		ctx, _ := SetupFakeContext(t, SetUpInformerSelector)
+
+		oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
+		dispatcher := kncloudevents.NewDispatcher(eventingtls.ClientConfig{}, oidcTokenProvider)
+		fh, err := fanout.NewFanoutEventHandler(nil, fanout.Config{}, nil, nil, nil, nil, dispatcher)
 		if err != nil {
 			t.Error(err)
 		}
-		for _, fanoutHandler := range []fanout.MessageHandler{nil, fh} {
+		for _, fanoutHandler := range []fanout.EventHandler{nil, fh} {
 			t.Run("handler-"+n, func(t *testing.T) {
 				handler := newFakeMultiChannelHandler()
 				if fanoutHandler != nil {
 					handler.SetChannelHandler(channelServiceAddress.URL.String(), fanoutHandler)
 				}
 				r := &Reconciler{
-					multiChannelMessageHandler: handler,
+					multiChannelEventHandler: handler,
 				}
 				r.deleteFunc(tc.imc)
 			})
@@ -568,18 +582,22 @@ func TestReconciler_Deletion(t *testing.T) {
 		},
 	}
 	for n, tc := range testCases {
-		fh, err := fanout.NewFanoutMessageHandler(nil, channel.NewMessageDispatcher(nil), fanout.Config{}, nil)
+		ctx, _ := SetupFakeContext(t, SetUpInformerSelector)
+
+		oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
+		dispatcher := kncloudevents.NewDispatcher(eventingtls.ClientConfig{}, oidcTokenProvider)
+		fh, err := fanout.NewFanoutEventHandler(nil, fanout.Config{}, nil, nil, nil, nil, dispatcher)
 		if err != nil {
 			t.Error(err)
 		}
-		for _, fanoutHandler := range []fanout.MessageHandler{nil, fh} {
+		for _, fanoutHandler := range []fanout.EventHandler{nil, fh} {
 			t.Run("handler-"+n, func(t *testing.T) {
 				handler := newFakeMultiChannelHandler()
 				if fanoutHandler != nil {
 					handler.SetChannelHandler(channelServiceAddress.URL.Host, fanoutHandler)
 				}
 				r := &Reconciler{
-					multiChannelMessageHandler: handler,
+					multiChannelEventHandler: handler,
 				}
 				r.deleteFunc(tc.imc)
 				if handler.GetChannelHandler(channelServiceAddress.URL.Host) != nil {
@@ -601,16 +619,16 @@ func makePatch(namespace, name, patch string) clientgotesting.PatchActionImpl {
 }
 
 type fakeMultiChannelHandler struct {
-	handlers map[string]fanout.MessageHandler
+	handlers map[string]fanout.EventHandler
 }
 
 func newFakeMultiChannelHandler() *fakeMultiChannelHandler {
-	return &fakeMultiChannelHandler{handlers: make(map[string]fanout.MessageHandler, 2)}
+	return &fakeMultiChannelHandler{handlers: make(map[string]fanout.EventHandler, 2)}
 }
 
 func (f *fakeMultiChannelHandler) ServeHTTP(response http.ResponseWriter, request *http.Request) {}
 
-func (f *fakeMultiChannelHandler) SetChannelHandler(host string, handler fanout.MessageHandler) {
+func (f *fakeMultiChannelHandler) SetChannelHandler(host string, handler fanout.EventHandler) {
 	f.handlers[host] = handler
 }
 
@@ -618,7 +636,7 @@ func (f *fakeMultiChannelHandler) DeleteChannelHandler(host string) {
 	delete(f.handlers, host)
 }
 
-func (f *fakeMultiChannelHandler) GetChannelHandler(host string) fanout.MessageHandler {
+func (f *fakeMultiChannelHandler) GetChannelHandler(host string) fanout.EventHandler {
 	return f.handlers[host]
 }
 

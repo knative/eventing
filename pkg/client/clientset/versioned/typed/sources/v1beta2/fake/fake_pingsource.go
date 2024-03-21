@@ -23,7 +23,6 @@ import (
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
-	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	testing "k8s.io/client-go/testing"
@@ -36,9 +35,9 @@ type FakePingSources struct {
 	ns   string
 }
 
-var pingsourcesResource = schema.GroupVersionResource{Group: "sources.knative.dev", Version: "v1beta2", Resource: "pingsources"}
+var pingsourcesResource = v1beta2.SchemeGroupVersion.WithResource("pingsources")
 
-var pingsourcesKind = schema.GroupVersionKind{Group: "sources.knative.dev", Version: "v1beta2", Kind: "PingSource"}
+var pingsourcesKind = v1beta2.SchemeGroupVersion.WithKind("PingSource")
 
 // Get takes name of the pingSource, and returns the corresponding pingSource object, and an error if there is any.
 func (c *FakePingSources) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta2.PingSource, err error) {

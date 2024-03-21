@@ -33,6 +33,7 @@ import (
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/utils/pointer"
 	"knative.dev/pkg/kmeta"
+	"knative.dev/pkg/resolver"
 
 	"knative.dev/pkg/apis"
 	duckapis "knative.dev/pkg/apis/duck"
@@ -47,6 +48,7 @@ import (
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/pkg/apis/feature"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
+	"knative.dev/eventing/pkg/auth"
 	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
 	brokerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/broker"
 	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1"
@@ -72,6 +74,8 @@ type Reconciler struct {
 	secretLister       corev1listers.SecretLister
 
 	channelableTracker ducklib.ListableTracker
+
+	uriResolver *resolver.URIResolver
 
 	// If specified, only reconcile brokers with these labels
 	brokerClass string
@@ -157,6 +161,10 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 		b.Status.Annotations[eventing.BrokerChannelCACertsStatusAnnotationKey] = *caCerts
 	}
 
+	if audience := triggerChan.Status.Address.Audience; audience != nil && *audience != "" {
+		b.Status.Annotations[eventing.BrokerChannelAudienceStatusAnnotationKey] = *audience
+	}
+
 	channelStatus := &duckv1.ChannelableStatus{
 		AddressStatus:  triggerChan.Status.AddressStatus,
 		DeliveryStatus: triggerChan.Status.DeliveryStatus,
@@ -181,19 +189,24 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 	b.Status.PropagateIngressAvailability(ingressEndpoints)
 
 	if b.Spec.Delivery != nil && b.Spec.Delivery.DeadLetterSink != nil {
-		if triggerChan.Status.DeliveryStatus.IsSet() {
-			b.Status.MarkDeadLetterSinkResolvedSucceeded(triggerChan.Status.DeliveryStatus)
-		} else {
-			b.Status.MarkDeadLetterSinkResolvedFailed(fmt.Sprintf("Channel %s didn't set status.deadLetterSinkURI", triggerChan.Name), "")
+		deadLetterSinkAddr, err := r.uriResolver.AddressableFromDestinationV1(ctx, *b.Spec.Delivery.DeadLetterSink, b)
+		logging.FromContext(ctx).Errorw("broker has deliver spec set. Will use it to mark dls status", zap.Any("dls-addr", deadLetterSinkAddr), zap.Any("broker.spec.delivery", b.Spec.Delivery))
+		if err != nil {
+			b.Status.DeliveryStatus = duckv1.DeliveryStatus{}
+			logging.FromContext(ctx).Errorw("Unable to get the dead letter sink's URI", zap.Error(err))
+			b.Status.MarkDeadLetterSinkResolvedFailed("Unable to get the dead letter sink's URI", "%v", err)
+			return err
 		}
+		ds := duckv1.NewDeliveryStatusFromAddressable(deadLetterSinkAddr)
+		b.Status.MarkDeadLetterSinkResolvedSucceeded(ds)
 	} else {
 		b.Status.MarkDeadLetterSinkNotConfigured()
 	}
 
 	// Route everything to shared ingress, just tack on the namespace/name as path
 	// so we can route there appropriately.
-	transportEncryptionFlags := feature.FromContext(ctx)
-	if transportEncryptionFlags.IsPermissiveTransportEncryption() {
+	featureFlags := feature.FromContext(ctx)
+	if featureFlags.IsPermissiveTransportEncryption() {
 		caCerts, err := r.getCaCerts()
 		if err != nil {
 			return err
@@ -208,7 +221,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 		//   - http address with path-based routing
 		b.Status.Addresses = []pkgduckv1.Addressable{httpsAddress, httpAddress}
 		b.Status.Address = &httpAddress
-	} else if transportEncryptionFlags.IsStrictTransportEncryption() {
+	} else if featureFlags.IsStrictTransportEncryption() {
 		// Strict mode: (only https addresses)
 		// - status.address https address with path-based routing
 		// - status.addresses:
@@ -224,6 +237,21 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 	} else {
 		httpAddress := r.httpAddress(b)
 		b.Status.Address = &httpAddress
+	}
+
+	if featureFlags.IsOIDCAuthentication() {
+		audience := auth.GetAudience(eventingv1.SchemeGroupVersion.WithKind("Broker"), b.ObjectMeta)
+		logging.FromContext(ctx).Debugw("Setting the brokers audience", zap.String("audience", audience))
+		b.Status.Address.Audience = &audience
+		for i := range b.Status.Addresses {
+			b.Status.Addresses[i].Audience = &audience
+		}
+	} else {
+		logging.FromContext(ctx).Debug("Clearing the brokers audience as OIDC is not enabled")
+		b.Status.Address.Audience = nil
+		for i := range b.Status.Addresses {
+			b.Status.Addresses[i].Audience = nil
+		}
 	}
 
 	b.GetConditionSet().Manage(b.GetStatus()).MarkTrue(eventingv1.BrokerConditionAddressable)
@@ -401,16 +429,16 @@ func TriggerChannelLabels(brokerName string) map[string]string {
 	}
 }
 
-func (r *Reconciler) getCaCerts() (string, error) {
+func (r *Reconciler) getCaCerts() (*string, error) {
 	secret, err := r.secretLister.Secrets(system.Namespace()).Get(ingressServerTLSSecretName)
 	if err != nil {
-		return "", fmt.Errorf("failed to get CA certs from %s/%s: %w", system.Namespace(), ingressServerTLSSecretName, err)
+		return nil, fmt.Errorf("failed to get CA certs from %s/%s: %w", system.Namespace(), ingressServerTLSSecretName, err)
 	}
 	caCerts, ok := secret.Data[caCertsSecretKey]
 	if !ok {
-		return "", fmt.Errorf("failed to get CA certs from %s/%s: missing %s key", system.Namespace(), ingressServerTLSSecretName, caCertsSecretKey)
+		return nil, nil
 	}
-	return string(caCerts), nil
+	return pointer.String(string(caCerts)), nil
 }
 
 func (r *Reconciler) httpAddress(b *eventingv1.Broker) pkgduckv1.Addressable {
@@ -423,12 +451,12 @@ func (r *Reconciler) httpAddress(b *eventingv1.Broker) pkgduckv1.Addressable {
 	return httpAddress
 }
 
-func (r *Reconciler) httpsAddress(caCerts string, b *eventingv1.Broker) pkgduckv1.Addressable {
+func (r *Reconciler) httpsAddress(caCerts *string, b *eventingv1.Broker) pkgduckv1.Addressable {
 	// https address uses path-based routing
 	httpsAddress := pkgduckv1.Addressable{
 		Name:    pointer.String("https"),
 		URL:     apis.HTTPS(fmt.Sprintf("%s.%s.svc.%s", names.BrokerIngressName, system.Namespace(), network.GetClusterDomainName())),
-		CACerts: pointer.String(caCerts),
+		CACerts: caCerts,
 	}
 	httpsAddress.URL.Path = fmt.Sprintf("/%s/%s", b.Namespace, b.Name)
 	return httpsAddress

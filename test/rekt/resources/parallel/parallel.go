@@ -19,6 +19,7 @@ package parallel
 import (
 	"context"
 	"embed"
+	"strings"
 	"time"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -84,7 +85,7 @@ func AsRef(name string) *duckv1.KReference {
 }
 
 // WithSubscriberAt adds the subscriber related config to a Parallel spec at branches[`index`].
-func WithSubscriberAt(index int, ref *duckv1.KReference, uri string) manifest.CfgFn {
+func WithSubscriberAt(index int, d *duckv1.Destination) manifest.CfgFn {
 	return func(cfg map[string]interface{}) {
 		if _, set := cfg["branches"]; !set {
 			cfg["branches"] = []map[string]interface{}{}
@@ -102,18 +103,26 @@ func WithSubscriberAt(index int, ref *duckv1.KReference, uri string) manifest.Cf
 		}
 		subscriber := branch["subscriber"].(map[string]interface{})
 
-		if uri != "" {
-			subscriber["uri"] = uri
+		if d.URI != nil {
+			subscriber["uri"] = d.URI.String()
 		}
-		if ref != nil {
+		if d.Ref != nil {
 			if _, set := subscriber["ref"]; !set {
 				subscriber["ref"] = map[string]interface{}{}
 			}
 			sref := subscriber["ref"].(map[string]interface{})
-			sref["apiVersion"] = ref.APIVersion
-			sref["kind"] = ref.Kind
-			sref["namespace"] = ref.Namespace
-			sref["name"] = ref.Name
+			sref["apiVersion"] = d.Ref.APIVersion
+			sref["kind"] = d.Ref.Kind
+			sref["namespace"] = d.Ref.Namespace
+			sref["name"] = d.Ref.Name
+		}
+		if d.CACerts != nil {
+			// This is a multi-line string and should be indented accordingly.
+			// Replace "new line" with "new line + spaces".
+			subscriber["CACerts"] = strings.ReplaceAll(*d.CACerts, "\n", "\n          ")
+		}
+		if d.Audience != nil {
+			subscriber["audience"] = *d.Audience
 		}
 
 		cfg["branches"] = branches
@@ -121,7 +130,7 @@ func WithSubscriberAt(index int, ref *duckv1.KReference, uri string) manifest.Cf
 }
 
 // WithFilterAt adds the filter related config to a Parallel spec at branches[`index`].
-func WithFilterAt(index int, ref *duckv1.KReference, uri string) manifest.CfgFn {
+func WithFilterAt(index int, d *duckv1.Destination) manifest.CfgFn {
 	return func(cfg map[string]interface{}) {
 		if _, set := cfg["branches"]; !set {
 			cfg["branches"] = []map[string]interface{}{}
@@ -139,18 +148,30 @@ func WithFilterAt(index int, ref *duckv1.KReference, uri string) manifest.CfgFn 
 		}
 		filter := branch["filter"].(map[string]interface{})
 
-		if uri != "" {
-			filter["uri"] = uri
+		if d == nil {
+			return
 		}
-		if ref != nil {
+
+		if d.URI != nil {
+			filter["uri"] = d.URI.String()
+		}
+		if d.Ref != nil {
 			if _, set := filter["ref"]; !set {
 				filter["ref"] = map[string]interface{}{}
 			}
 			fref := filter["ref"].(map[string]interface{})
-			fref["apiVersion"] = ref.APIVersion
-			fref["kind"] = ref.Kind
-			fref["namespace"] = ref.Namespace
-			fref["name"] = ref.Name
+			fref["apiVersion"] = d.Ref.APIVersion
+			fref["kind"] = d.Ref.Kind
+			fref["namespace"] = d.Ref.Namespace
+			fref["name"] = d.Ref.Name
+		}
+		if d.CACerts != nil {
+			// This is a multi-line string and should be indented accordingly.
+			// Replace "new line" with "new line + spaces".
+			filter["CACerts"] = strings.ReplaceAll(*d.CACerts, "\n", "\n          ")
+		}
+		if d.Audience != nil {
+			filter["audience"] = *d.Audience
 		}
 
 		cfg["branches"] = branches
@@ -158,7 +179,7 @@ func WithFilterAt(index int, ref *duckv1.KReference, uri string) manifest.CfgFn 
 }
 
 // WithReplyAt adds the reply related config to a Parallel spec at branches[`index`].
-func WithReplyAt(index int, ref *duckv1.KReference, uri string) manifest.CfgFn {
+func WithReplyAt(index int, d *duckv1.Destination) manifest.CfgFn {
 	return func(cfg map[string]interface{}) {
 		if _, set := cfg["branches"]; !set {
 			cfg["branches"] = []map[string]interface{}{}
@@ -176,18 +197,30 @@ func WithReplyAt(index int, ref *duckv1.KReference, uri string) manifest.CfgFn {
 		}
 		reply := branch["reply"].(map[string]interface{})
 
-		if uri != "" {
-			reply["uri"] = uri
+		if d == nil {
+			return
 		}
-		if ref != nil {
+
+		if d.URI != nil {
+			reply["uri"] = d.URI.String()
+		}
+		if d.Ref != nil {
 			if _, set := reply["ref"]; !set {
 				reply["ref"] = map[string]interface{}{}
 			}
 			rref := reply["ref"].(map[string]interface{})
-			rref["apiVersion"] = ref.APIVersion
-			rref["kind"] = ref.Kind
-			rref["namespace"] = ref.Namespace
-			rref["name"] = ref.Name
+			rref["apiVersion"] = d.Ref.APIVersion
+			rref["kind"] = d.Ref.Kind
+			rref["namespace"] = d.Ref.Namespace
+			rref["name"] = d.Ref.Name
+		}
+		if d.CACerts != nil {
+			// This is a multi-line string and should be indented accordingly.
+			// Replace "new line" with "new line + spaces".
+			reply["CACerts"] = strings.ReplaceAll(*d.CACerts, "\n", "\n          ")
+		}
+		if d.Audience != nil {
+			reply["audience"] = *d.Audience
 		}
 
 		cfg["branches"] = branches
@@ -195,25 +228,38 @@ func WithReplyAt(index int, ref *duckv1.KReference, uri string) manifest.CfgFn {
 }
 
 // WithReply adds the top level reply config to a Parallel spec.
-func WithReply(ref *duckv1.KReference, uri string) manifest.CfgFn {
+func WithReply(d *duckv1.Destination) manifest.CfgFn {
 	return func(cfg map[string]interface{}) {
 		if _, set := cfg["reply"]; !set {
 			cfg["reply"] = map[string]interface{}{}
 		}
 		reply := cfg["reply"].(map[string]interface{})
 
-		if uri != "" {
-			reply["uri"] = uri
+		if d == nil {
+			return
 		}
-		if ref != nil {
+
+		if d.URI != nil {
+			reply["uri"] = d.URI.String()
+		}
+		if d.Ref != nil {
 			if _, set := reply["ref"]; !set {
 				reply["ref"] = map[string]interface{}{}
 			}
 			rref := reply["ref"].(map[string]interface{})
-			rref["apiVersion"] = ref.APIVersion
-			rref["kind"] = ref.Kind
-			rref["namespace"] = ref.Namespace
-			rref["name"] = ref.Name
+			rref["apiVersion"] = d.Ref.APIVersion
+			rref["kind"] = d.Ref.Kind
+			rref["namespace"] = d.Ref.Namespace
+			rref["name"] = d.Ref.Name
+
+		}
+		if d.CACerts != nil {
+			// This is a multi-line string and should be indented accordingly.
+			// Replace "new line" with "new line + spaces".
+			reply["CACerts"] = strings.ReplaceAll(*d.CACerts, "\n", "\n      ")
+		}
+		if d.Audience != nil {
+			reply["audience"] = *d.Audience
 		}
 	}
 }
@@ -231,4 +277,9 @@ func WithChannelTemplate(template channel_template.ChannelTemplate) manifest.Cfg
 
 		channelTemplate["spec"] = template.Spec
 	}
+}
+
+// ValidateAddress validates the address retured by Address
+func ValidateAddress(name string, validate addressable.ValidateAddressFn, timings ...time.Duration) feature.StepFn {
+	return addressable.ValidateAddress(GVR(), name, validate, timings...)
 }
