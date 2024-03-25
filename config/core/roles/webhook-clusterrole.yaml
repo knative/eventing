@@ -162,6 +162,13 @@ rules:
       - "patch"
       - "watch"
 
+  # For checking if user has permissions to make a cross namespace resource
+  - apiGroups:
+      - "authorization.k8s.io"
+    resources:
+      - "subjectaccessreviews"
+    verbs:
+      - "create"
 
   # Necessary for conversion webhook. These are copied from the serving
   # TODO: Do we really need all these permissions?
