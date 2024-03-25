@@ -47,7 +47,8 @@ func CheckNamespace(ctx context.Context, r ResourceInfo, flag *feature.Store) *a
 	group := r.GroupVersionKind().Group
 	name := r.GetName()
 	namespace := r.GetNamespace()
-	tName, tNamespace := r.GetTargetInfo()
+	targetName := r.GetCrossNamespaceRef().Name
+	targetNamespace := r.GetCrossNamespaceRef().Namespace
 	fieldName := fmt.Sprintf("spec.%sNamespace", kind)
 
 	// GetUserInfo accesses the UserInfo attached to the webhook context.
@@ -85,10 +86,10 @@ func CheckNamespace(ctx context.Context, r ResourceInfo, flag *feature.Store) *a
 	// SubjectAccessReview checks if the user is authorized to perform an action.
 	// Define the action
 	action := authv1.ResourceAttributes{
-		Namespace: tNamespace,
+		Namespace: targetNamespace,
 		Verb:      "get",
 		Group:     group,
-		Resource:  tName,
+		Resource:  targetName,
 	}
 
 	// Create the SubjectAccessReview
