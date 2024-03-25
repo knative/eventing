@@ -129,10 +129,10 @@ spec:
     additionalPrinterColumns:
     - name: Type
       type: string
-      jsonPath: ".spec.attributes.type.value"
+      jsonPath: ".spec.attributes[?(@.name='type')].value"
     - name: Source
       type: string
-      jsonPath: ".spec.attributeds.source.value"
+      jsonPath: ".spec.attributes[?(@.name='source')].value"
     - name: Reference Name
       type: string
       jsonPath: ".spec.reference.name"
