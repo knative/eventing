@@ -14,18 +14,18 @@ import (
 	"knative.dev/pkg/logging"
 )
 
-type ResourceInfo struct {
-	Kind            string
-	Name            string
-	Namespace       string
-	Target          string
-	TargetName      string
-	TargetNamespace string
-	TargetGroup     string
-	FeatureStore    *feature.Store
-}
+// type ResourceInfo struct {
+// 	Kind            string
+// 	Name            string
+// 	Namespace       string
+// 	Target          string
+// 	TargetName      string
+// 	TargetNamespace string
+// 	TargetGroup     string
+// 	FeatureStore    *feature.Store
+// }
 
-type Resource interface {
+type ResourceInfo interface {
 	GetNamespace() string
 	GetName() string
 	GetTargetInfo() (kind string, name string, namespace string, group string) // target kind and target name
