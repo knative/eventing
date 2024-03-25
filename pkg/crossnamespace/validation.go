@@ -34,7 +34,7 @@ import (
 
 type ResourceInfo interface {
 	duckv1.KRShaped
-	GetTargetInfo() (name string, namespace string)
+	GetCrossNamespaceRef() duckv1.KReference
 }
 
 func CheckNamespace(ctx context.Context, r ResourceInfo, flag *feature.Store) *apis.FieldError {
