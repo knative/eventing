@@ -100,7 +100,6 @@ func CheckNamespace(ctx context.Context, r ResourceInfo, flag *feature.Store) *a
 		},
 	}
 
-	// Make the request to the server.
 	resp, err := client.AuthorizationV1().SubjectAccessReviews().Create(ctx, &check, metav1.CreateOptions{})
 
 	if err != nil {
