@@ -10,6 +10,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/injection"
 	"knative.dev/pkg/logging"
 )
@@ -25,20 +26,29 @@ import (
 // 	FeatureStore    *feature.Store
 // }
 
+// type ResourceInfo interface {
+// 	GetNamespace() string
+// 	GetName() string
+// 	GetTargetInfo() (kind string, name string, namespace string, group string) // target kind and target name
+// }
+
 type ResourceInfo interface {
-	GetNamespace() string
-	GetName() string
-	GetTargetInfo() (kind string, name string, namespace string, group string) // target kind and target name
+	duckv1.KRShaped
+	GetTargetInfo() (name string, namespace string)
 }
 
-func CheckNamespace(ctx context.Context, r Resource, flag *feature.Store) *apis.FieldError {
+func CheckNamespace(ctx context.Context, r ResourceInfo, flag *feature.Store) *apis.FieldError {
 	if !flag.IsEnabled(feature.CrossNamespaceEventLinks) {
 		logging.FromContext(ctx).Debug("Cross-namespace referencing is disabled")
 		return nil
 	}
 
-	t_kind, t_name, t_namespace, t_group := r.GetTargetInfo()
-	fieldName := fmt.Sprintf("spec.%sNamespace", t_namespace)
+	kind := r.GroupVersionKind().Kind
+	group := r.GroupVersionKind().Group
+	name := r.GetName()
+	namespace := r.GetNamespace()
+	tName, tNamespace := r.GetTargetInfo()
+	fieldName := fmt.Sprintf("spec.%sNamespace", kind)
 
 	// GetUserInfo accesses the UserInfo attached to the webhook context.
 	userInfo := apis.GetUserInfo(ctx)
@@ -75,10 +85,10 @@ func CheckNamespace(ctx context.Context, r Resource, flag *feature.Store) *apis.
 	// SubjectAccessReview checks if the user is authorized to perform an action.
 	// Define the action
 	action := authv1.ResourceAttributes{
-		Namespace: t_namespace,
+		Namespace: tNamespace,
 		Verb:      "get",
-		Group:     t_group,
-		Resource:  t_name,
+		Group:     group,
+		Resource:  tName,
 	}
 
 	// Create the SubjectAccessReview
@@ -93,7 +103,6 @@ func CheckNamespace(ctx context.Context, r Resource, flag *feature.Store) *apis.
 	// Make the request to the server.
 	resp, err := client.AuthorizationV1().SubjectAccessReviews().Create(ctx, &check, metav1.CreateOptions{})
 
-	// If the request fails, return an error.
 	if err != nil {
 		return &apis.FieldError{
 			Paths:   []string{fieldName},
@@ -101,7 +110,6 @@ func CheckNamespace(ctx context.Context, r Resource, flag *feature.Store) *apis.
 		}
 	}
 
-	// If the request is not allowed, return an error.
 	if !resp.Status.Allowed {
 		return &apis.FieldError{
 			Paths:   []string{fieldName},
