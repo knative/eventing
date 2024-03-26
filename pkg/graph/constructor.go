@@ -136,30 +136,18 @@ func (g *Graph) AddTrigger(trigger eventingv1.Trigger) error {
 	}
 	triggerDest := &duckv1.Destination{Ref: triggerRef}
 
-	to, ok := g.vertices[makeComparableDestination(&trigger.Spec.Subscriber)]
-	if !ok {
-		to = &Vertex{
-			self: &trigger.Spec.Subscriber,
-		}
-		g.vertices[makeComparableDestination(&trigger.Spec.Subscriber)] = to
-	}
+	to := g.getOrCreateVertex(&trigger.Spec.Subscriber)
 
 	//TODO: the transform function should be set according to the trigger filter - there are multiple open issues to address this later
-	broker.AddEdge(to, triggerDest, NoTransform)
+	broker.AddEdge(to, triggerDest, NoTransform{}, false)
 
 	if trigger.Spec.Delivery == nil || trigger.Spec.Delivery.DeadLetterSink == nil {
 		return nil
 	}
 
-	dls, ok := g.vertices[makeComparableDestination(trigger.Spec.Delivery.DeadLetterSink)]
-	if !ok {
-		dls = &Vertex{
-			self: trigger.Spec.Delivery.DeadLetterSink,
-		}
-		g.vertices[makeComparableDestination(trigger.Spec.Delivery.DeadLetterSink)] = dls
-	}
+	dls := g.getOrCreateVertex(trigger.Spec.Delivery.DeadLetterSink)
 
-	broker.AddEdge(dls, triggerDest, NoTransform)
+	broker.AddEdge(dls, triggerDest, NoTransform{}, true)
 
 	return nil
 

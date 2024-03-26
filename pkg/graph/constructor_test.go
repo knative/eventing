@@ -201,6 +201,7 @@ func TestAddTrigger(t *testing.T) {
 									},
 								},
 							},
+							transform: NoTransform{},
 						},
 					},
 				},
@@ -235,6 +236,7 @@ func TestAddTrigger(t *testing.T) {
 									},
 								},
 							},
+							transform: NoTransform{},
 						},
 					},
 				},
@@ -314,6 +316,7 @@ func TestAddTrigger(t *testing.T) {
 									},
 								},
 							},
+							transform: NoTransform{},
 						},
 						{
 							self: &duckv1.Destination{
@@ -339,6 +342,7 @@ func TestAddTrigger(t *testing.T) {
 									},
 								},
 							},
+							transform: NoTransform{},
 						},
 						{
 							self: &duckv1.Destination{
@@ -364,6 +368,7 @@ func TestAddTrigger(t *testing.T) {
 									},
 								},
 							},
+							transform: NoTransform{},
 						},
 					},
 				},
@@ -398,6 +403,7 @@ func TestAddTrigger(t *testing.T) {
 									},
 								},
 							},
+							transform: NoTransform{},
 						},
 					},
 				},
@@ -432,6 +438,7 @@ func TestAddTrigger(t *testing.T) {
 									},
 								},
 							},
+							transform: NoTransform{},
 						},
 						{
 							self: &duckv1.Destination{
@@ -457,6 +464,7 @@ func TestAddTrigger(t *testing.T) {
 									},
 								},
 							},
+							transform: NoTransform{},
 						},
 					},
 				},
