@@ -78,7 +78,7 @@ type TriggerSpec struct {
 	Broker string `json:"broker,omitempty"`
 
 	// BrokerRef is the broker that is used for cross-namespace referencing.
-	BrokerRef duckv1.KReference `json:"brokerRef,omitempty"`
+	BrokerRef *duckv1.KReference `json:"brokerRef,omitempty"`
 
 	// Filter is the filter to apply against all events from the Broker. Only events that pass this
 	// filter will be sent to the Subscriber. If not specified, will default to allowing all events.
