@@ -165,6 +165,8 @@ func (o *Forwarder) ServeHTTP(writer http.ResponseWriter, request *http.Request)
 	req := request.Clone(requestCtx)
 	// It is an error to set this field in an HTTP client request.
 	req.RequestURI = ""
+	// We don't want to use the original request Host header, so drop it from the clone
+	req.Host = ""
 
 	u, err := url.Parse(o.Sink)
 	if err != nil {

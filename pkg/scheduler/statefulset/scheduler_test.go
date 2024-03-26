@@ -813,7 +813,7 @@ func TestStatefulsetScheduler(t *testing.T) {
 			s := newStatefulSetScheduler(ctx, cfg, sa, nil, lsp.GetPodLister().Pods(testNs))
 
 			// Give some time for the informer to notify the scheduler and set the number of replicas
-			err = wait.PollImmediate(200*time.Millisecond, time.Second, func() (bool, error) {
+			err = wait.PollUntilContextTimeout(ctx, 200*time.Millisecond, time.Second, true, func(ctx context.Context) (bool, error) {
 				s.lock.Lock()
 				defer s.lock.Unlock()
 				return s.replicas == tc.replicas, nil

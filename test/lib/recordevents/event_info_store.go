@@ -222,7 +222,7 @@ func (ei *EventInfoStore) waitAtLeastNMatch(f EventInfoMatcher, min int) ([]Even
 	var matchRet []EventInfo
 	var internalErr error
 
-	wait.PollImmediate(retryInterval, retryTimeout, func() (bool, error) {
+	wait.PollUntilContextTimeout(context.Background(), retryInterval, retryTimeout, true, func(ctx context.Context) (bool, error) {
 		allMatch, sInfo, matchErrs, err := ei.Find(f)
 		if err != nil {
 			internalErr = fmt.Errorf("FAIL MATCHING: unexpected error during find: %v", err)

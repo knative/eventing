@@ -85,6 +85,8 @@ export PATH="${PATH}:${GOPATH}/bin"
 export KO_DOCKER_REPO='gcr.io/my-gcloud-project-id'
 ```
 
+> :information_source: You can use the command `export KO_DEFAULTPLATFORMS=linux/amd64, arm64` to set the correct architecture according to your local machine.
+
 ### Checkout your fork
 
 The Go tools require that you clone the repository to the
@@ -128,6 +130,8 @@ follow:
 ```shell
 KO_FLAGS=--platform="linux/amd64" ./hack/install.sh
 ```
+
+> :information_source: If you are getting the error `No resources found in cert-manager namespace`, you need to install [cert-manager](https://cert-manager.io/docs/installation/) manually before running the quick full build and install command. 
 
 ## Starting Eventing Controller
 

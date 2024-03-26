@@ -76,6 +76,8 @@ var (
 type TriggerSpec struct {
 	// Broker is the broker that this trigger receives events from.
 	Broker string `json:"broker,omitempty"`
+	// BrokerNamespace is the namespace of the broker that the trigger receives events from.
+	BrokerNamespace string `json:"brokerNamespace,omitempty"`
 
 	// Filter is the filter to apply against all events from the Broker. Only events that pass this
 	// filter will be sent to the Subscriber. If not specified, will default to allowing all events.

@@ -57,6 +57,9 @@ spec:
               broker:
                 description: Broker is the broker that this trigger receives events from.
                 type: string
+              brokerNamespace:
+                description: Namespace of the broker that the trigger receives events from.
+                type: string
               delivery:
                 description: Delivery contains the delivery spec for this specific trigger.
                 type: object
