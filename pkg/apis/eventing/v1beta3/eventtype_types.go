@@ -62,24 +62,6 @@ var (
 )
 
 type EventTypeSpec struct {
-	// Type represents the CloudEvents type. It is authoritative.
-	Type string `json:"type"`
-	// Source is a URI, it represents the CloudEvents source.
-	// +optional
-	Source *apis.URL `json:"source,omitempty"`
-	// Schema is a URI, it represents the CloudEvents schemaurl extension attribute.
-	// It may be a JSON schema, a protobuf schema, etc. It is optional.
-	// +optional
-	Schema *apis.URL `json:"schema,omitempty"`
-	// SchemaData allows the CloudEvents schema to be stored directly in the
-	// EventType. Content is dependent on the encoding. Optional attribute.
-	// The contents are not validated or manipulated by the system.
-	// +optional
-	SchemaData string `json:"schemaData,omitempty"`
-	// Broker refers to the Broker that can provide the EventType.
-	// Deprecated: This field is deprecated and will be removed in a future release.
-	// +optional
-	Broker string `json:"broker,omitempty"`
 	// Reference is a KReference to the belonging addressable.
 	//For example, this could be a pointer to a Broker.
 	// +optional
@@ -87,6 +69,21 @@ type EventTypeSpec struct {
 	// Description is an optional field used to describe the EventType, in any meaningful way.
 	// +optional
 	Description string `json:"description,omitempty"`
+	// Attributes is an array of CloudEvent attributes and extension attributes.
+	Attributes []EventAttributeDefinition `json:"attributes"`
+}
+
+type EventAttributeDefinition struct {
+	// Name is the name of the CloudEvents attribute.
+	Name string `json:"name"`
+	// Required determines whether this attribute must be set on corresponding CloudEvents.
+	Required bool `json:"required"`
+	// Value is a string representing the allowable values for the EventType attribute.
+	// It may be a single value such as "/apis/v1/namespaces/default/pingsource/ps", or it could be a template
+	// for the allowed values, such as "/apis/v1/namespaces/{namespace}/pingsource/{sourceName}.
+	// To specify a section of the string value which may change between different CloudEvents
+	// you can use curly brackets {} and optionally a variable name between them.
+	Value string `json:"value,omitempty"`
 }
 
 // EventTypeStatus represents the current state of a EventType.
