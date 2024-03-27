@@ -24,6 +24,7 @@ import (
 
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	eventingv1beta3 "knative.dev/eventing/pkg/apis/eventing/v1beta3"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -57,7 +58,7 @@ func TestAddBroker(t *testing.T) {
 			APIVersion: "eventing.knative.dev/v1",
 			Kind:       "Broker",
 		},
-	}, NoTransform)
+	}, NoTransform{}, true)
 	tests := []struct {
 		name     string
 		broker   eventingv1.Broker
@@ -200,6 +201,7 @@ func TestAddTrigger(t *testing.T) {
 									},
 								},
 							},
+							transform: NoTransform{},
 						},
 					},
 				},
@@ -234,6 +236,7 @@ func TestAddTrigger(t *testing.T) {
 									},
 								},
 							},
+							transform: NoTransform{},
 						},
 					},
 				},
@@ -313,6 +316,7 @@ func TestAddTrigger(t *testing.T) {
 									},
 								},
 							},
+							transform: NoTransform{},
 						},
 						{
 							self: &duckv1.Destination{
@@ -338,6 +342,7 @@ func TestAddTrigger(t *testing.T) {
 									},
 								},
 							},
+							transform: NoTransform{},
 						},
 						{
 							self: &duckv1.Destination{
@@ -363,6 +368,7 @@ func TestAddTrigger(t *testing.T) {
 									},
 								},
 							},
+							transform: NoTransform{},
 						},
 					},
 				},
@@ -397,6 +403,7 @@ func TestAddTrigger(t *testing.T) {
 									},
 								},
 							},
+							transform: NoTransform{},
 						},
 					},
 				},
@@ -431,6 +438,7 @@ func TestAddTrigger(t *testing.T) {
 									},
 								},
 							},
+							transform: NoTransform{},
 						},
 						{
 							self: &duckv1.Destination{
@@ -456,6 +464,7 @@ func TestAddTrigger(t *testing.T) {
 									},
 								},
 							},
+							transform: NoTransform{},
 						},
 					},
 				},
@@ -520,7 +529,7 @@ func TestAddChannel(t *testing.T) {
 			APIVersion: "messaging.knative.dev/v1",
 			Kind:       "Channel",
 		},
-	}, NoTransform)
+	}, NoTransform{}, true)
 	tests := []struct {
 		name     string
 		channel  messagingv1.Channel
@@ -595,6 +604,90 @@ func TestAddChannel(t *testing.T) {
 	}
 }
 
+// TODO(Cali0707): add tests for event types on replies once trigger and subscriptions are merged
+func TestAddEventType(t *testing.T) {
+	tests := []struct {
+		name     string
+		et       *eventingv1beta3.EventType
+		expected map[comparableDestination]*Vertex
+	}{
+		{
+			name: "ET references source",
+			et: &eventingv1beta3.EventType{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-EventType",
+					Namespace: "default",
+				},
+				Spec: eventingv1beta3.EventTypeSpec{
+					Reference: &duckv1.KReference{
+						Name:       "my-source",
+						Namespace:  "default",
+						APIVersion: "sources.knative.dev/v1",
+						Kind:       "PingSource",
+					},
+				},
+			},
+			expected: map[comparableDestination]*Vertex{
+				{
+					Ref: duckv1.KReference{Name: "my-EventType", Namespace: "default", APIVersion: "eventing.knative.dev/v1beta3", Kind: "EventType"},
+				}: {
+					self: &duckv1.Destination{
+						Ref: &duckv1.KReference{Name: "my-EventType", Namespace: "default", APIVersion: "eventing.knative.dev/v1beta3", Kind: "EventType"},
+					},
+					outEdges: []*Edge{{
+						from: &Vertex{
+							self: &duckv1.Destination{
+								Ref: &duckv1.KReference{Name: "my-EventType", Namespace: "default", APIVersion: "eventing.knative.dev/v1beta3", Kind: "EventType"},
+							},
+						},
+						to: &Vertex{
+							self: &duckv1.Destination{
+								Ref: &duckv1.KReference{Name: "my-source", Namespace: "default", APIVersion: "sources.knative.dev/v1", Kind: "PingSource"},
+							},
+						},
+						self: &duckv1.Destination{
+							Ref: &duckv1.KReference{Name: "my-EventType", Namespace: "default", APIVersion: "eventing.knative.dev/v1beta3", Kind: "EventType"},
+						},
+						transform: EventTypeTransform{},
+					}},
+				},
+				{
+					Ref: duckv1.KReference{Name: "my-source", Namespace: "default", APIVersion: "sources.knative.dev/v1", Kind: "PingSource"},
+				}: {
+					self: &duckv1.Destination{
+						Ref: &duckv1.KReference{Name: "my-source", Namespace: "default", APIVersion: "sources.knative.dev/v1", Kind: "PingSource"},
+					},
+					inEdges: []*Edge{{
+						from: &Vertex{
+							self: &duckv1.Destination{
+								Ref: &duckv1.KReference{Name: "my-EventType", Namespace: "default", APIVersion: "eventing.knative.dev/v1beta3", Kind: "EventType"},
+							},
+						},
+						to: &Vertex{
+							self: &duckv1.Destination{
+								Ref: &duckv1.KReference{Name: "my-source", Namespace: "default", APIVersion: "sources.knative.dev/v1", Kind: "PingSource"},
+							},
+						},
+						self: &duckv1.Destination{
+							Ref: &duckv1.KReference{Name: "my-EventType", Namespace: "default", APIVersion: "eventing.knative.dev/v1beta3", Kind: "EventType"},
+						},
+						transform: EventTypeTransform{},
+					}},
+				},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewGraph()
+			g.AddEventType(test.et)
+			checkTestResult(t, g.vertices, test.expected)
+		})
+
+	}
+}
+
 func checkTestResult(t *testing.T, actualVertices map[comparableDestination]*Vertex, expectedVertices map[comparableDestination]*Vertex) {
 	assert.Len(t, actualVertices, len(expectedVertices))
 	for k, expected := range expectedVertices {
@@ -610,13 +703,18 @@ func checkTestResult(t *testing.T, actualVertices map[comparableDestination]*Ver
 }
 
 func makeComparableEdges(edges []*Edge) []comparableEdge {
-	res := make([]comparableEdge, len(edges))
+	if len(edges) == 0 {
+		return []comparableEdge{}
+	}
+
+	res := make([]comparableEdge, 0, len(edges))
 
 	for _, e := range edges {
 		res = append(res, comparableEdge{
-			self: makeComparableDestination(e.self),
-			to:   makeComparableDestination(e.to.self),
-			from: makeComparableDestination(e.from.self),
+			self:          makeComparableDestination(e.self),
+			to:            makeComparableDestination(e.to.self),
+			from:          makeComparableDestination(e.from.self),
+			transformName: e.transform.Name(),
 		})
 	}
 
@@ -624,7 +722,8 @@ func makeComparableEdges(edges []*Edge) []comparableEdge {
 }
 
 type comparableEdge struct {
-	self comparableDestination
-	to   comparableDestination
-	from comparableDestination
+	self          comparableDestination
+	to            comparableDestination
+	from          comparableDestination
+	transformName string
 }
