@@ -1869,13 +1869,15 @@ string
 </tr>
 <tr>
 <td>
-<code>brokerNamespace</code><br/>
+<code>brokerRef</code><br/>
 <em>
-string
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#KReference">
+knative.dev/pkg/apis/duck/v1.KReference
+</a>
 </em>
 </td>
 <td>
-<p>BrokerNamespace is the namespace of the broker that the trigger receives events from.</p>
+<p>BrokerRef is the broker that is used for cross-namespace referencing.</p>
 </td>
 </tr>
 <tr>
@@ -2285,13 +2287,15 @@ string
 </tr>
 <tr>
 <td>
-<code>brokerNamespace</code><br/>
+<code>brokerRef</code><br/>
 <em>
-string
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#KReference">
+knative.dev/pkg/apis/duck/v1.KReference
+</a>
 </em>
 </td>
 <td>
-<p>BrokerNamespace is the namespace of the broker that the trigger receives events from.</p>
+<p>BrokerRef is the broker that is used for cross-namespace referencing.</p>
 </td>
 </tr>
 <tr>
