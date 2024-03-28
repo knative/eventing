@@ -4578,6 +4578,7 @@ You can specify only the following fields of the KReference:
 - Kind
 - APIVersion
 - Name
+- Namespace
 The resource pointed by this KReference must meet the
 contract to the ChannelableSpec duck type. If the resource does not
 meet this contract it will be reflected in the Subscription&rsquo;s status.</p>
@@ -4908,6 +4909,7 @@ You can specify only the following fields of the KReference:
 - Kind
 - APIVersion
 - Name
+- Namespace
 The resource pointed by this KReference must meet the
 contract to the ChannelableSpec duck type. If the resource does not
 meet this contract it will be reflected in the Subscription&rsquo;s status.</p>
