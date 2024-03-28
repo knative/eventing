@@ -71,6 +71,7 @@ func (a *apiServerAdapter) start(ctx context.Context, stopCh <-chan struct{}) er
 		logger:              a.logger,
 		ref:                 a.config.EventMode == v1.ReferenceMode,
 		apiServerSourceName: a.name,
+		filters:             a.config.Filters,
 	}
 	if a.config.ResourceOwner != nil {
 		a.logger.Infow("will be filtered",
