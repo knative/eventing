@@ -98,15 +98,15 @@ func TestEventTypeDefaults(t *testing.T) {
 			initial: EventType{
 				Spec: EventTypeSpec{
 					Attributes: []EventAttributeDefinition{
-						EventAttributeDefinition{
+						{
 							Value:    "test-type",
 							Required: true,
 						},
-						EventAttributeDefinition{
+						{
 							Value:    testSource.String(),
 							Required: true,
 						},
-						EventAttributeDefinition{
+						{
 							Value:    testSchema.String(),
 							Required: true,
 						},
@@ -116,15 +116,15 @@ func TestEventTypeDefaults(t *testing.T) {
 			expected: EventType{
 				Spec: EventTypeSpec{
 					Attributes: []EventAttributeDefinition{
-						EventAttributeDefinition{
+						{
 							Value:    "test-type",
 							Required: true,
 						},
-						EventAttributeDefinition{
+						{
 							Value:    testSource.String(),
 							Required: true,
 						},
-						EventAttributeDefinition{
+						{
 							Value:    testSchema.String(),
 							Required: true,
 						},
