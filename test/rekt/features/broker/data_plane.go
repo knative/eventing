@@ -19,12 +19,21 @@ package broker
 import (
 	"context"
 
+	cloudevents "github.com/cloudevents/sdk-go/v2"
+	test "github.com/cloudevents/sdk-go/v2/test"
+
 	"github.com/google/uuid"
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/test/rekt/features/knconf"
 	"knative.dev/eventing/test/rekt/resources/broker"
+	"knative.dev/eventing/test/rekt/resources/trigger"
 	"knative.dev/pkg/apis"
 	"knative.dev/reconciler-test/pkg/eventshub"
+	"knative.dev/reconciler-test/pkg/eventshub/assert"
+	eventassert "knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
+	"knative.dev/reconciler-test/pkg/manifest"
+	"knative.dev/reconciler-test/pkg/resources/service"
 	"knative.dev/reconciler-test/pkg/state"
 )
 
@@ -106,21 +115,21 @@ func addDataPlaneDelivery(brokerName string, fs *feature.FeatureSet) {
 
 	f.Stable("Conformance").
 		Must("Delivered events MUST conform to the CloudEvents specification.",
-			todo).
+			deliveredCESpecs).
 		Should("All CloudEvent attributes set by the producer, including the data and specversion attributes, SHOULD be received at the subscriber identical to how they were received by the Broker.",
-			todo).
+			recievedCEAttributes).
 		Should("The Broker SHOULD support delivering events via Binary Content Mode or Structured Content Mode of the HTTP Protocol Binding for CloudEvents.",
-			todo).
+			brokerAcceptsBinaryandStructuredContentMode).
 		Should("Events accepted by the Broker SHOULD be delivered at least once to all subscribers of all Triggers*.",
-			todo).
+			allSubscribersRecieveCE).
 		//*
 		//1. are Ready when the produce request was received,
 		//1. specify filters that match the event, and
 		//1. exist when the event is able to be delivered.
 		May("Events MAY additionally be delivered to Triggers that become Ready after the event was accepted.",
-			todo).
+			triggerBecameReadyLater).
 		May("Events MAY be enqueued or delayed between acceptance from a producer and delivery to a subscriber.",
-			todo).
+			eventEnqueuedLater).
 		May("The Broker MAY choose not to deliver an event due to persistent unavailability of a subscriber or limitations such as storage capacity.",
 			icebox).
 		Should("The Broker SHOULD attempt to notify the operator in this case.",
@@ -128,17 +137,15 @@ func addDataPlaneDelivery(brokerName string, fs *feature.FeatureSet) {
 		May("The Broker MAY forward these events to an alternate endpoint or storage mechanism such as a dead letter queue.",
 			icebox).
 		May("If no ready Trigger would match an accepted event, the Broker MAY drop that event without notifying the producer.",
-			todo).
+			noTriggersAvailable).
 		May("If multiple Triggers reference the same subscriber, the subscriber MAY be expected to acknowledge successful delivery of an event multiple times.",
-			todo).
+			multipleTriggerSameSink).
 		Should("Events contained in delivery responses SHOULD be published to the Broker ingress and processed as if the event had been produced to the Broker's addressable endpoint.",
-			todo).
-		Should("Events contained in delivery responses that are malformed SHOULD be treated as if the event delivery had failed.",
-			todo).
+			replyEventDeliveredToSource).
 		May("The subscriber MAY receive a confirmation that a reply event was accepted by the Broker.",
 			todo).
 		Should("If the reply event was not accepted, the initial event SHOULD be redelivered to the subscriber.",
-			todo)
+			replyEventNotAccepted)
 
 	fs.Features = append(fs.Features, f)
 
@@ -406,4 +413,349 @@ func brokerEventVersionNotUpgraded(ctx context.Context, t feature.T) {
 	// brokerName := state.GetStringOrFail(ctx, t, "brokerName")
 
 	// Create a trigger,
+}
+
+func deliveredCESpecs(ctx context.Context, t feature.T) {
+	brokerName := state.GetStringOrFail(ctx, t, "brokerName")
+	knconf.AcceptsCEVersions(ctx, t, broker.GVR(), brokerName)
+	knconf.RejectsWrongCEVersions(ctx, t, broker.GVR(), brokerName)
+}
+
+func recievedCEAttributes(ctx context.Context, t feature.T) {
+	brokerName := state.GetStringOrFail(ctx, t, "brokerName")
+
+	source := feature.MakeRandomK8sName("source")
+	sink := feature.MakeRandomK8sName("sink")
+	triggerName := feature.MakeRandomK8sName("trigger")
+	event := test.FullEvent()
+
+	// Creating sink
+	eventshub.Install(sink, eventshub.StartReceiver)(ctx, t)
+
+	// Point the Trigger subscriber to the sink svc.
+	cfg := []manifest.CfgFn{trigger.WithSubscriber(service.AsKReference(sink), "")}
+
+	// Creating trigger
+	trigger.Install(triggerName, brokerName, cfg...)(ctx, t)
+
+	eventshub.Install(source,
+		eventshub.StartSenderToResource(broker.GVR(), brokerName),
+		eventshub.InputEvent(event),
+	)(ctx, t)
+
+	assert.OnStore(sink).MatchEvent(test.HasId(event.ID()),
+		test.HasData(event.Data()), test.HasExactlyAttributesEqualTo(event.Context)).Exact(1)(ctx, t)
+}
+
+func brokerAcceptsBinaryandStructuredContentMode(ctx context.Context, t feature.T) {
+	brokerAcceptsBinaryContentMode(ctx, t)
+	brokerAcceptsStructuredContentMode(ctx, t)
+}
+
+func allSubscribersRecieveCE(ctx context.Context, t feature.T) {
+	brokerName := state.GetStringOrFail(ctx, t, "brokerName")
+
+	source := feature.MakeRandomK8sName("source")
+
+	sink1 := feature.MakeRandomK8sName("sink1")
+	sink2 := feature.MakeRandomK8sName("sink2")
+	sink3 := feature.MakeRandomK8sName("sink3")
+	sink4 := feature.MakeRandomK8sName("sink4")
+
+	triggerName1 := feature.MakeRandomK8sName("trigger1")
+	triggerName2 := feature.MakeRandomK8sName("trigger2")
+	triggerName3 := feature.MakeRandomK8sName("trigger3")
+	triggerName4 := feature.MakeRandomK8sName("trigger4")
+
+	// Creating event
+	event := test.FullEvent()
+
+	// Creating sink
+	eventshub.Install(sink1, eventshub.StartReceiver)(ctx, t)
+	eventshub.Install(sink2, eventshub.StartReceiver)(ctx, t)
+	eventshub.Install(sink3, eventshub.StartReceiver)(ctx, t)
+	eventshub.Install(sink4, eventshub.StartReceiver)(ctx, t)
+
+	// Creating trigger
+	trigger.Install(triggerName1, brokerName, trigger.WithSubscriber(service.AsKReference(sink1), ""))(ctx, t)
+	trigger.Install(triggerName2, brokerName, trigger.WithSubscriber(service.AsKReference(sink2), ""))(ctx, t)
+	trigger.Install(triggerName3, brokerName, trigger.WithSubscriber(service.AsKReference(sink3), ""))(ctx, t)
+	trigger.Install(triggerName4, brokerName, trigger.WithSubscriber(service.AsKReference(sink4), ""))(ctx, t)
+
+	eventshub.Install(source,
+		eventshub.StartSenderToResource(broker.GVR(), brokerName),
+		eventshub.InputEvent(event),
+	)(ctx, t)
+
+	assert.OnStore(sink1).MatchEvent(test.HasId(event.ID())).Exact(1)(ctx, t)
+	assert.OnStore(sink2).MatchEvent(test.HasId(event.ID())).Exact(1)(ctx, t)
+	assert.OnStore(sink3).MatchEvent(test.HasId(event.ID())).Exact(1)(ctx, t)
+	assert.OnStore(sink4).MatchEvent(test.HasId(event.ID())).Exact(1)(ctx, t)
+}
+
+func multipleTriggerSameSink(ctx context.Context, t feature.T) {
+	brokerName := state.GetStringOrFail(ctx, t, "brokerName")
+
+	source := feature.MakeRandomK8sName("source")
+	sink := feature.MakeRandomK8sName("sink")
+	triggerName1 := feature.MakeRandomK8sName("trigger1")
+	triggerName2 := feature.MakeRandomK8sName("trigger2")
+	event := test.FullEvent()
+
+	// Creating sink
+	eventshub.Install(sink, eventshub.StartReceiver)(ctx, t)
+
+	// Point the Trigger subscriber to the sink svc.
+	cfg := []manifest.CfgFn{trigger.WithSubscriber(service.AsKReference(sink), "")}
+
+	// Creating trigger
+	trigger.Install(triggerName1, brokerName, cfg...)(ctx, t)
+	trigger.Install(triggerName2, brokerName, cfg...)(ctx, t)
+
+	eventshub.Install(source,
+		eventshub.StartSenderToResource(broker.GVR(), brokerName),
+		eventshub.InputEvent(event),
+	)(ctx, t)
+
+	// Since there are two triggers, there should be exactly two events
+	assert.OnStore(sink).MatchEvent(test.HasId(event.ID())).Exact(2)(ctx, t)
+}
+
+func triggerBecameReadyLater(ctx context.Context, t feature.T) {
+	brokerName := state.GetStringOrFail(ctx, t, "brokerName")
+
+	source := feature.MakeRandomK8sName("source")
+	sink := feature.MakeRandomK8sName("sink")
+	triggerName := feature.MakeRandomK8sName("trigger")
+	event := test.FullEvent()
+
+	eventshub.Install(sink, eventshub.StartReceiver)(ctx, t)
+
+	// Point the Trigger subscriber to the sink svc.
+	cfg := []manifest.CfgFn{trigger.WithSubscriber(service.AsKReference(sink), "")}
+
+	// Install the trigger
+	trigger.Install(triggerName, brokerName, cfg...)(ctx, t)
+
+	eventshub.Install(source,
+		eventshub.StartSenderToResource(broker.GVR(), brokerName),
+		eventshub.InputEvent(event),
+	)(ctx, t)
+
+	trigger.IsReady(triggerName)(ctx, t)
+
+	assert.OnStore(sink).MatchEvent(test.HasId(event.ID())).Exact(1)(ctx, t)
+}
+
+func eventEnqueuedLater(ctx context.Context, t feature.T) {
+	brokerName := state.GetStringOrFail(ctx, t, "brokerName")
+
+	source := feature.MakeRandomK8sName("source")
+	sink := feature.MakeRandomK8sName("sink")
+	triggerName := feature.MakeRandomK8sName("trigger")
+	event1 := test.FullEvent()
+	event2 := test.FullEvent()
+
+	eventshub.Install(sink, eventshub.StartReceiver)(ctx, t)
+
+	// Point the Trigger subscriber to the sink svc.
+	cfg := []manifest.CfgFn{trigger.WithSubscriber(service.AsKReference(sink), "")}
+
+	// Install the trigger
+	trigger.Install(triggerName, brokerName, cfg...)(ctx, t)
+
+	trigger.IsReady(triggerName)(ctx, t)
+
+	eventshub.Install(source,
+		eventshub.StartSenderToResource(broker.GVR(), brokerName),
+		eventshub.InputEvent(event1),
+	)(ctx, t)
+
+	eventshub.Install(source,
+		eventshub.InputEvent(event2),
+	)(ctx, t)
+
+	assert.OnStore(sink).MatchEvent(test.HasId(event1.ID())).Exact(1)(ctx, t)
+
+	assert.OnStore(sink).MatchEvent(test.HasId(event2.ID())).Exact(1)(ctx, t)
+}
+
+func noTriggersAvailable(ctx context.Context, t feature.T) {
+	brokerName := state.GetStringOrFail(ctx, t, "brokerName")
+
+	source := feature.MakeRandomK8sName("source")
+	sink := feature.MakeRandomK8sName("sink")
+	event := test.FullEvent()
+
+	// Creating sink
+	eventshub.Install(sink, eventshub.StartReceiver)(ctx, t)
+
+	eventshub.Install(source,
+		eventshub.StartSenderToResource(broker.GVR(), brokerName),
+		eventshub.InputEvent(event),
+	)(ctx, t)
+
+	// Since there are no triggers, there should be no events
+	assert.OnStore(sink).Exact(0)(ctx, t)
+
+	// TODO: Check if source is notified or not
+}
+
+func replyEventDeliveredToSource(ctx context.Context, t feature.T) {
+	brokerName := state.GetStringOrFail(ctx, t, "brokerName")
+
+	source := feature.MakeRandomK8sName("source")
+	sink1 := feature.MakeRandomK8sName("sink1")
+	sink2 := feature.MakeRandomK8sName("sink2")
+
+	trigger1 := feature.MakeRandomK8sName("trigger1")
+	trigger2 := feature.MakeRandomK8sName("trigger2")
+
+	// Construct original cloudevent message
+	eventType := "type1"
+	eventSource := "http://source1.com"
+	eventBody := `{"msg":"e2e-brokerchannel-body"}`
+
+	// Construct reply event
+	replyEventType := "type2"
+	replyEventSource := "http://source2.com"
+	replyBody := `{"msg":"reply body"}`
+
+	// Construct eventToSend
+	eventToSend := cloudevents.NewEvent()
+	eventToSend.SetID(uuid.New().String())
+	eventToSend.SetType(eventType)
+	eventToSend.SetSource(eventSource)
+	eventToSend.SetData(cloudevents.ApplicationJSON, []byte(eventBody))
+
+	eventshub.Install(sink1,
+		eventshub.ReplyWithTransformedEvent(replyEventType, replyEventSource, replyBody),
+		eventshub.StartReceiver)(ctx, t)
+
+	eventshub.Install(sink2, eventshub.StartReceiver)(ctx, t)
+
+	// filter1 filters the original events
+	filter1 := eventingv1.TriggerFilterAttributes{
+		"type":   eventType,
+		"source": eventSource,
+	}
+	// filter2 filters events after transformation
+	filter2 := eventingv1.TriggerFilterAttributes{
+		"type":   replyEventType,
+		"source": replyEventSource,
+	}
+
+	trigger.Install(
+		trigger1,
+		brokerName,
+		trigger.WithFilter(filter1),
+		trigger.WithSubscriber(service.AsKReference(sink1), ""),
+	)(ctx, t)
+
+	trigger.Install(
+		trigger2,
+		brokerName,
+		trigger.WithFilter(filter2),
+		trigger.WithSubscriber(service.AsKReference(sink2), ""),
+	)(ctx, t)
+
+	eventshub.Install(
+		source,
+		eventshub.StartSenderToResource(broker.GVR(), brokerName),
+		eventshub.InputEvent(eventToSend),
+	)(ctx, t)
+
+	eventMatcher := eventassert.MatchEvent(
+		test.HasSource(eventSource),
+		test.HasType(eventType),
+		test.HasData([]byte(eventBody)),
+	)
+	transformEventMatcher := eventassert.MatchEvent(
+		test.HasSource(replyEventSource),
+		test.HasType(replyEventType),
+		test.HasData([]byte(replyBody)),
+	)
+
+	eventassert.OnStore(sink2).Match(transformEventMatcher).AtLeast(1)(ctx, t)
+	eventassert.OnStore(sink1).Match(eventMatcher).AtLeast(1)(ctx, t)
+	eventassert.OnStore(sink2).Match(eventMatcher).Not()(ctx, t)
+}
+
+func replyEventNotAccepted(ctx context.Context, t feature.T) {
+	brokerName := state.GetStringOrFail(ctx, t, "brokerName")
+
+	source := feature.MakeRandomK8sName("source")
+	sink1 := feature.MakeRandomK8sName("sink1")
+	sink2 := feature.MakeRandomK8sName("sink2")
+
+	trigger1 := feature.MakeRandomK8sName("trigger1")
+	trigger2 := feature.MakeRandomK8sName("trigger2")
+
+	// Construct original cloudevent message
+	eventType := "type1"
+	eventSource := "http://source1.com"
+	eventBody := `{"msg":"e2e-brokerchannel-body"}`
+
+	// Construct reply event
+	malformedReplyEventType := ""
+	malformedReplyEventSource := ""
+	malformedReplyBody := ``
+
+	// Construct eventToSend
+	eventToSend := cloudevents.NewEvent()
+	eventToSend.SetID(uuid.New().String())
+	eventToSend.SetType(eventType)
+	eventToSend.SetSource(eventSource)
+	eventToSend.SetData(cloudevents.ApplicationJSON, []byte(eventBody))
+
+	eventshub.Install(sink1,
+		eventshub.ReplyWithTransformedEvent(malformedReplyEventType, malformedReplyEventSource, malformedReplyBody),
+		eventshub.StartReceiver)(ctx, t)
+
+	eventshub.Install(sink2, eventshub.StartReceiver)(ctx, t)
+
+	// filter1 filters the original events
+	filter1 := eventingv1.TriggerFilterAttributes{
+		"type":   eventType,
+		"source": eventSource,
+	}
+
+	trigger.Install(
+		trigger1,
+		brokerName,
+		trigger.WithFilter(filter1),
+		trigger.WithSubscriber(service.AsKReference(sink1), ""),
+	)(ctx, t)
+
+	trigger.Install(
+		trigger2,
+		brokerName,
+		trigger.WithSubscriber(service.AsKReference(sink2), ""),
+	)(ctx, t)
+
+	eventshub.Install(
+		source,
+		eventshub.StartSenderToResource(broker.GVR(), brokerName),
+		eventshub.InputEvent(eventToSend),
+	)(ctx, t)
+
+	transformEventMatcher := eventassert.MatchEvent(
+		test.HasSource(malformedReplyEventSource),
+		test.HasType(malformedReplyEventType),
+		test.HasData([]byte(malformedReplyBody)),
+		test.IsInvalid(),
+	)
+
+	eventMatcher := eventassert.MatchEvent(
+		test.HasSource(eventSource),
+		test.HasType(eventType),
+		test.HasData([]byte(eventBody)),
+		test.IsInvalid(),
+	)
+
+	eventassert.OnStore(sink2).Match(transformEventMatcher).AtLeast(1)(ctx, t)
+
+	// Since the reply event was invalid, there should be atleast 2 events
+	eventassert.OnStore(sink1).Match(eventMatcher).AtLeast(2)(ctx, t)
+	eventassert.OnStore(sink2).Match(eventMatcher).Not()(ctx, t)
 }

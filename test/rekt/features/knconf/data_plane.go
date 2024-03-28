@@ -64,6 +64,42 @@ func AcceptsCEVersions(ctx context.Context, t feature.T, gvr schema.GroupVersion
 	}
 }
 
+func RejectsWrongCEVersions(ctx context.Context, t feature.T, gvr schema.GroupVersionResource, name string) {
+	u, err := addressable.Address(ctx, gvr, name)
+	if err != nil || u == nil {
+		t.Error("failed to get the address of the resource", gvr, name, err)
+	}
+
+	opts := []eventshub.EventsHubOption{eventshub.StartSenderToResource(gvr, name)}
+
+	uuids := map[string]string{
+		uuid.New().String(): "1.1",
+		uuid.New().String(): "0.5",
+	}
+	for id, version := range uuids {
+		// We need to use a different source name, otherwise, it will try to update
+		// the pod, which is immutable.
+		source := feature.MakeRandomK8sName("source")
+		event := FullEvent()
+		event.SetID(id)
+		event.SetSpecVersion(version)
+		opts = append(opts, eventshub.InputEvent(event))
+
+		eventshub.Install(source, opts...)(ctx, t)
+		store := eventshub.StoreFromContext(ctx, source)
+		// We are looking for two events, one of them is the sent event and the other
+		// is Response, so correlate them first. We want to make sure the event was sent and that the
+		// response was what was expected.
+		events := Correlate(store.AssertAtLeast(t, 2, SentEventMatcher(id)))
+		for _, e := range events {
+			// Make sure HTTP response code is 2XX
+			if e.Response.StatusCode < 400 || e.Response.StatusCode > 499 {
+				t.Errorf("Expected statuscode 2XX for sequence %d got %d", e.Response.Sequence, e.Response.StatusCode)
+			}
+		}
+	}
+}
+
 type EventInfoCombined struct {
 	Sent     eventshub.EventInfo
 	Response eventshub.EventInfo
