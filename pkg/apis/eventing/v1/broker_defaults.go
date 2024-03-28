@@ -36,7 +36,12 @@ func (b *Broker) SetDefaults(ctx context.Context) {
 
 func (bs *BrokerSpec) SetDefaults(ctx context.Context) {
 	cfg := config.FromContextOrDefaults(ctx)
-	c, err := cfg.Defaults.GetBrokerConfig(apis.ParentMeta(ctx).Namespace)
+	c, err := cfg.Defaults.GetBrokerConfig(apis.ParentMeta(ctx).Namespace, nil)
+
+	if bs.Config != nil {
+		c, err = cfg.Defaults.GetBrokerConfig(apis.ParentMeta(ctx).Namespace, &bs.Config.Kind)
+	}
+
 	if err == nil {
 		if bs.Config == nil {
 			bs.Config = c.KReference
@@ -49,10 +54,11 @@ func (bs *BrokerSpec) SetDefaults(ctx context.Context) {
 				BackoffDelay:   c.Delivery.BackoffDelay,
 			}
 		}
+		// Default the namespace if not given
+		if bs.Config != nil {
+			bs.Config.SetDefaults(ctx)
+		}
+		bs.Delivery.SetDefaults(ctx)
 	}
-	// Default the namespace if not given
-	if bs.Config != nil {
-		bs.Config.SetDefaults(ctx)
-	}
-	bs.Delivery.SetDefaults(ctx)
+
 }

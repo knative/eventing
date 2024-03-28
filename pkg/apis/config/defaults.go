@@ -71,23 +71,29 @@ func NewDefaultsConfigFromConfigMap(config *corev1.ConfigMap) (*Defaults, error)
 // Defaults includes the default values to be populated by the webhook.
 type Defaults struct {
 	// NamespaceDefaultsConfig are the default Broker Configs for each namespace.
-	// Namespace is the key, the value is the KReference to the config.
-	NamespaceDefaultsConfig map[string]*ClassAndBrokerConfig `json:"namespaceDefaults,omitempty"`
+	// Namespace is the key, the value is the NamespaceDefaultConfig
+	NamespaceDefaultsConfig map[string]*DefaultConfig `json:"namespaceDefaults,omitempty"`
 
-	// ClusterDefaultBrokerConfig is the default broker config for all the namespaces that
-	// are not in NamespaceDefaultBrokerConfigs.
-	ClusterDefault *ClassAndBrokerConfig `json:"clusterDefault,omitempty"`
+	// ClusterDefaultConfig is the default broker config for all the namespaces that
+	// are not in NamespaceDefaultBrokerConfigs. Different broker class could have
+	// different default config.
+	ClusterDefaultConfig *DefaultConfig `json:"clusterDefault,omitempty"`
 }
 
-// ClassAndBrokerConfig contains configuration for a given namespace for broker. Allows
-// configuring the Class of the Broker, the reference to the
-// config it should use and it's delivery.
-type ClassAndBrokerConfig struct {
-	BrokerClass   string `json:"brokerClass,omitempty"`
-	*BrokerConfig `json:",inline"`
+// DefaultConfig struct contains the default configuration for the cluster and namespace.
+type DefaultConfig struct {
+	// DefaultBrokerClass and DefaultBrokerClassConfig are the default broker class for the whole cluster
+	// Users have to specify both of them
+	DefaultBrokerClass string `json:"brokerClass,omitempty"`
+	*BrokerConfig      `json:",inline"`
+
+	// BrokerClasses are the default broker classes' config for the whole cluster
+	BrokerClasses map[string]*BrokerConfig `json:"brokerClasses,omitempty"`
 
 	DisallowDifferentNamespaceConfig *bool `json:"disallowDifferentNamespaceConfig,omitempty"`
 }
+
+// NamespaceDefaultsConfig struct contains the default configuration for the namespace.
 
 // BrokerConfig contains configuration for a given namespace for broker. Allows
 // configuring the reference to the
@@ -97,21 +103,71 @@ type BrokerConfig struct {
 	Delivery           *eventingduckv1.DeliverySpec `json:"delivery,omitempty"`
 }
 
-// GetBrokerConfig returns a namespace specific Broker Configuration, and if
-// that doesn't exist, return a Cluster Default and if that doesn't exist
-// return an error.
-func (d *Defaults) GetBrokerConfig(ns string) (*BrokerConfig, error) {
+func (d *Defaults) GetBrokerConfig(ns string, brokerClassName *string) (*BrokerConfig, error) {
 	if d == nil {
 		return nil, errors.New("Defaults are nil")
 	}
-	value, present := d.NamespaceDefaultsConfig[ns]
-	if present && value.BrokerConfig != nil {
-		return value.BrokerConfig, nil
+
+	// Early return if brokerClassName is provided and valid
+	if brokerClassName != nil {
+		return d.getBrokerConfigByClassName(ns, *brokerClassName)
 	}
-	if d.ClusterDefault != nil && d.ClusterDefault.BrokerConfig != nil {
-		return d.ClusterDefault.BrokerConfig, nil
+
+	// Handling empty brokerClassName
+	return d.getBrokerConfigForEmptyClassName(ns)
+}
+
+func (d *Defaults) getBrokerConfigByClassName(ns string, brokerClassName string) (*BrokerConfig, error) {
+	// Check namespace specific configuration
+	if nsConfig, ok := d.NamespaceDefaultsConfig[ns]; ok && nsConfig != nil {
+		// check if the brokerClassName is the default broker class for this namespace
+		if nsConfig.DefaultBrokerClass == brokerClassName {
+			if nsConfig.BrokerConfig == nil {
+				// as no default broker class config is set for this namespace, should get the cluster default config
+				return d.getClusterDefaultBrokerConfig(brokerClassName)
+			}
+			return nsConfig.BrokerConfig, nil
+		}
+		if config, ok := nsConfig.BrokerClasses[brokerClassName]; ok && config != nil {
+			return config, nil
+		}
 	}
-	return nil, errors.New("Defaults for Broker Configurations have not been set up.")
+
+	// Check cluster default configuration
+	return d.getClusterDefaultBrokerConfig(brokerClassName)
+}
+
+func (d *Defaults) getBrokerConfigForEmptyClassName(ns string) (*BrokerConfig, error) {
+	// Check if namespace has a default broker class
+	if nsConfig, ok := d.NamespaceDefaultsConfig[ns]; ok && nsConfig != nil {
+		if nsConfig.DefaultBrokerClass != "" {
+			return d.getBrokerConfigByClassName(ns, nsConfig.DefaultBrokerClass)
+		}
+	}
+
+	// Fallback to cluster default configuration
+	return d.getClusterDefaultBrokerConfig("")
+}
+
+func (d *Defaults) getClusterDefaultBrokerConfig(brokerClassName string) (*BrokerConfig, error) {
+	if d.ClusterDefaultConfig == nil || d.ClusterDefaultConfig.BrokerConfig == nil {
+		return nil, errors.New("Defaults for Broker Configurations have not been set up.")
+	}
+
+	if brokerClassName == "" {
+		return d.ClusterDefaultConfig.BrokerConfig, nil
+	}
+
+	// Check if the brokerClassName is the default broker class for the whole cluster
+	if d.ClusterDefaultConfig.DefaultBrokerClass == brokerClassName {
+		return d.ClusterDefaultConfig.BrokerConfig, nil
+	}
+
+	if config, ok := d.ClusterDefaultConfig.BrokerClasses[brokerClassName]; ok && config != nil {
+		return config, nil
+	}
+
+	return d.ClusterDefaultConfig.BrokerConfig, nil
 }
 
 // GetBrokerClass returns a namespace specific Broker Class, and if
@@ -121,12 +177,19 @@ func (d *Defaults) GetBrokerClass(ns string) (string, error) {
 	if d == nil {
 		return "", errors.New("Defaults are nil")
 	}
-	value, present := d.NamespaceDefaultsConfig[ns]
-	if present && value.BrokerClass != "" {
-		return value.BrokerClass, nil
+
+	// Check if the namespace has a specific configuration
+	if nsConfig, ok := d.NamespaceDefaultsConfig[ns]; ok && nsConfig != nil {
+		if nsConfig.DefaultBrokerClass != "" {
+			return nsConfig.DefaultBrokerClass, nil
+		}
 	}
-	if d.ClusterDefault != nil && d.ClusterDefault.BrokerClass != "" {
-		return d.ClusterDefault.BrokerClass, nil
+
+	// Fallback to cluster default configuration if namespace specific configuration is not set
+	if d.ClusterDefaultConfig != nil && d.ClusterDefaultConfig.DefaultBrokerClass != "" {
+		return d.ClusterDefaultConfig.DefaultBrokerClass, nil
 	}
-	return "", errors.New("Defaults for Broker Configurations have not been set up.")
+
+	// If neither namespace specific nor cluster default broker class is found
+	return "", fmt.Errorf("Defaults are nil")
 }
