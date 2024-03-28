@@ -18,17 +18,17 @@ package v1beta2
 
 import (
 	"context"
-	"fmt"
+	"knative.dev/eventing/pkg/apis/eventing/v1beta3"
 
 	"knative.dev/pkg/apis"
 )
 
 // ConvertTo implements apis.Convertible
 func (source *EventType) ConvertTo(ctx context.Context, to apis.Convertible) error {
-	return fmt.Errorf("v1beta2 is the highest known version, got: %T", to)
+	return apis.ConvertToViaProxy(ctx, source, &v1beta3.EventType{}, to)
 }
 
 // ConvertFrom implements apis.Convertible
 func (sink *EventType) ConvertFrom(ctx context.Context, from apis.Convertible) error {
-	return fmt.Errorf("v1beta2 is the highest known version, got: %T", from)
+	return apis.ConvertFromViaProxy(ctx, from, &v1beta3.EventType{}, sink)
 }
