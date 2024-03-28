@@ -309,7 +309,7 @@ func TestTLS(t *testing.T) {
 	ctx, cancel := context.WithCancel(ctx)
 	t.Cleanup(cancel)
 
-	ca := eventingtlstesting.StartServer(ctx, t, 8333, nethttp.HandlerFunc(func(writer nethttp.ResponseWriter, request *nethttp.Request) {
+	ca, _ := eventingtlstesting.StartServer(ctx, t, 8333, nethttp.HandlerFunc(func(writer nethttp.ResponseWriter, request *nethttp.Request) {
 		if request.TLS == nil {
 			// It's not on TLS, fail request
 			writer.WriteHeader(nethttp.StatusInternalServerError)

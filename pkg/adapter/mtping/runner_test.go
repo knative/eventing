@@ -213,7 +213,7 @@ func TestSendEventsTLS(t *testing.T) {
 	eventsChan := make(chan cloudevents.Event, 10)
 	handler := eventingtlstesting.EventChannelHandler(eventsChan)
 	events := make([]cloudevents.Event, 0, 8)
-	ca := eventingtlstesting.StartServer(ctx, t, 8500, handler)
+	ca, _ := eventingtlstesting.StartServer(ctx, t, 8500, handler)
 	hostString := "localhost:8500"
 
 	var wg sync.WaitGroup
