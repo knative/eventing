@@ -219,3 +219,11 @@ func WithNewFilters(filters []eventingv1.SubscriptionsAPIFilter) manifest.CfgFn 
 		m["filters"] = strings.Join(out, "\n")
 	}
 }
+
+func AsKReference(name string) *duckv1.KReference {
+	return &duckv1.KReference{
+		Kind:       "Trigger",
+		Name:       name,
+		APIVersion: "eventing.knative.dev/v1",
+	}
+}

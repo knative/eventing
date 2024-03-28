@@ -175,3 +175,11 @@ func WithSubscriberFromDestination(dest *duckv1.Destination) manifest.CfgFn {
 		}
 	}
 }
+
+func AsKReference(subscriptionName string) *duckv1.KReference {
+	return &duckv1.KReference{
+		Name:       subscriptionName,
+		APIVersion: "messaging.knative.dev/v1",
+		Kind:       "Subscription",
+	}
+}

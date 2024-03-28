@@ -625,6 +625,18 @@ section of the resource.</p>
 <tbody>
 <tr>
 <td>
+<code>name</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Name is used to identify the original subscription object.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>uid</code><br/>
 <em>
 <a href="https://godoc.org/k8s.io/apimachinery/pkg/types#UID">

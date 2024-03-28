@@ -354,13 +354,16 @@ func TestReconciler_ReconcileKind(t *testing.T) {
 				Reply: &duckv1.Addressable{
 					URL: apis.HTTP("sink2"),
 				},
+				Namespace: testNS,
 			}, {
 				Subscriber: duckv1.Addressable{
 					URL: apis.HTTP("call2"),
 				},
 				Reply: &duckv1.Addressable{
 					URL: apis.HTTP("sink2"),
-				}},
+				},
+				Namespace: testNS,
+			},
 			},
 		},
 		"with one subscriber, one added": {
@@ -375,12 +378,14 @@ func TestReconciler_ReconcileKind(t *testing.T) {
 				WithInMemoryChannelDLSUnknown()),
 			subs: []fanout.Subscription{*subscription1},
 			wantSubs: []fanout.Subscription{{
+				Namespace: testNS,
 				Subscriber: duckv1.Addressable{
 					URL: apis.HTTP("call1"),
 				},
 				Reply: &duckv1.Addressable{
 					URL: apis.HTTP("sink2"),
 				}}, {
+				Namespace: testNS,
 				Subscriber: duckv1.Addressable{
 					URL: apis.HTTP("call2"),
 				},
@@ -401,12 +406,14 @@ func TestReconciler_ReconcileKind(t *testing.T) {
 				WithInMemoryChannelDLSUnknown()),
 			subs: []fanout.Subscription{*subscription1, *subscription2},
 			wantSubs: []fanout.Subscription{{
+				Namespace: testNS,
 				Subscriber: duckv1.Addressable{
 					URL: apis.HTTP("call1"),
 				},
 				Reply: &duckv1.Addressable{
 					URL: apis.HTTP("sink2"),
 				}}, {
+				Namespace: testNS,
 				Subscriber: duckv1.Addressable{
 					URL: apis.HTTP("call2"),
 				},
@@ -428,6 +435,7 @@ func TestReconciler_ReconcileKind(t *testing.T) {
 			subs: []fanout.Subscription{*subscription1, *subscription2},
 			wantSubs: []fanout.Subscription{
 				{
+					Namespace: testNS,
 					Subscriber: duckv1.Addressable{
 						URL: apis.HTTP("call1"),
 					},
@@ -449,12 +457,14 @@ func TestReconciler_ReconcileKind(t *testing.T) {
 			subs: []fanout.Subscription{*subscription1, *subscription2},
 			wantSubs: []fanout.Subscription{
 				{
+					Namespace: testNS,
 					Subscriber: duckv1.Addressable{
 						URL: apis.HTTP("call1"),
 					},
 					Reply: &duckv1.Addressable{
 						URL: apis.HTTP("sink2"),
 					}}, {
+					Namespace: testNS,
 					Subscriber: duckv1.Addressable{
 						URL: apis.HTTP("call3"),
 					},
@@ -482,9 +492,11 @@ func TestReconciler_ReconcileKind(t *testing.T) {
 				},
 				RetryConfig: &kncloudevents.RetryConfig{RetryMax: 2, BackoffPolicy: &exponential}}},
 			wantSubs: []fanout.Subscription{
-				{Subscriber: duckv1.Addressable{
-					URL: apis.HTTP("call1"),
-				},
+				{
+					Namespace: testNS,
+					Subscriber: duckv1.Addressable{
+						URL: apis.HTTP("call1"),
+					},
 					Reply: &duckv1.Addressable{
 						URL: apis.HTTP("sink2"),
 					},
@@ -527,7 +539,7 @@ func TestReconciler_ReconcileKind(t *testing.T) {
 				if channelHandler == nil {
 					t.Errorf("Did not get handler for %s", channelServiceAddress.URL.Host)
 				}
-				if diff := cmp.Diff(tc.wantSubs, channelHandler.GetSubscriptions(context.TODO()), cmpopts.IgnoreFields(kncloudevents.RetryConfig{}, "Backoff", "CheckRetry")); diff != "" {
+				if diff := cmp.Diff(tc.wantSubs, channelHandler.GetSubscriptions(context.TODO()), cmpopts.IgnoreFields(kncloudevents.RetryConfig{}, "Backoff", "CheckRetry"), cmpopts.IgnoreFields(fanout.Subscription{}, "UID")); diff != "" {
 					t.Error("unexpected subs (+want/-got)", diff)
 				}
 			})

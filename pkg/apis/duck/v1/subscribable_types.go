@@ -35,6 +35,9 @@ var _ duck.Implementable = (*Subscribable)(nil)
 //
 // At least one of SubscriberURI and ReplyURI must be present
 type SubscriberSpec struct {
+	// Name is used to identify the original subscription object.
+	// +optional
+	Name *string `json:"name,omitempty"`
 	// UID is used to understand the origin of the subscriber.
 	// +optional
 	UID types.UID `json:"uid,omitempty"`

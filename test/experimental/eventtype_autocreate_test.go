@@ -43,6 +43,20 @@ func TestIMCEventTypeAutoCreate(t *testing.T) {
 	env.Test(ctx, t, eventtype_autocreate.AutoCreateEventTypesOnIMC())
 }
 
+func TestSubscriptionEventTypeAutoCreate(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+	)
+
+	env.Test(ctx, t, eventtype_autocreate.AutoCreateEventTypesOnSubscription())
+}
+
 func TestBrokerEventTypeAutoCreate(t *testing.T) {
 	t.Parallel()
 
@@ -57,6 +71,22 @@ func TestBrokerEventTypeAutoCreate(t *testing.T) {
 
 	env.Prerequisite(ctx, t, broker.InstallMTBroker(brokerName))
 	env.Test(ctx, t, eventtype_autocreate.AutoCreateEventTypesOnBroker(brokerName))
+}
+
+func TestTriggerEventTypeAutoCreate(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+	)
+	brokerName := feature.MakeRandomK8sName("broker")
+
+	env.Prerequisite(ctx, t, broker.InstallMTBroker(brokerName))
+	env.Test(ctx, t, eventtype_autocreate.AutoCreateEventTypesOnTrigger(brokerName))
 }
 
 func TestPingSourceEventTypeMatch(t *testing.T) {
