@@ -33,6 +33,8 @@ type Vertex struct {
 	visited  bool
 }
 
+type Vertices []*Vertex
+
 type Edge struct {
 	transform TransformFunction
 	self      *duckv1.Destination
@@ -64,7 +66,7 @@ func NewGraph() *Graph {
 	}
 }
 
-func (g *Graph) Vertices() []*Vertex {
+func (g *Graph) Vertices() Vertices {
 	vertices := make([]*Vertex, len(g.vertices))
 	for _, v := range g.vertices {
 		vertices = append(vertices, v)
@@ -76,6 +78,19 @@ func (g *Graph) UnvisitAll() {
 	for _, v := range g.vertices {
 		v.visited = false
 	}
+}
+
+// Sources returns all of the sources vertices in a graph
+// A source vertex is defined as a graph with an in degree of 0 and an out degree >= 1
+// This means that there are only outward edges from the vertex, and no inward edges
+func (g *Graph) Sources() Vertices {
+	sources := Vertices{}
+	for _, v := range g.vertices {
+		if v.InDegree() == 0 && v.OutDegree() >= 1 {
+			sources = append(sources, v)
+		}
+	}
+	return sources
 }
 
 func (v *Vertex) InDegree() int {

@@ -20,6 +20,16 @@ import (
 	eventingv1beta3 "knative.dev/eventing/pkg/apis/eventing/v1beta3"
 )
 
+func (g *Graph) Lineage() []*Vertex {
+	sources := g.Sources()
+	lineagePaths := make(Vertices, len(sources))
+	for _, s := range sources {
+		lineagePaths = append(lineagePaths, s.Lineage(EmptyEventType(), TransformFunctionContext{}))
+	}
+
+	return lineagePaths
+}
+
 // computes the lineage from the given vertex with the given input eventtype
 func (v *Vertex) Lineage(et *eventingv1beta3.EventType, tfc TransformFunctionContext) *Vertex {
 	toExplore := v.OutEdges()
@@ -42,6 +52,6 @@ func (v *Vertex) Lineage(et *eventingv1beta3.EventType, tfc TransformFunctionCon
 	return res
 }
 
-func MakeEmptyEventType() *eventingv1beta3.EventType {
+func EmptyEventType() *eventingv1beta3.EventType {
 	return &eventingv1beta3.EventType{}
 }
