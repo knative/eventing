@@ -21,6 +21,7 @@ import (
 	"time"
 
 	corev1listers "k8s.io/client-go/listers/core/v1"
+	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/system"
 
 	"knative.dev/eventing/pkg/auth"
@@ -54,8 +55,6 @@ import (
 
 	"knative.dev/eventing/pkg/apis/feature"
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
-
-	eventingreconciler "knative.dev/eventing/pkg/reconciler"
 )
 
 const (
@@ -83,6 +82,7 @@ func NewController(
 	oidcServiceaccountInformer := serviceaccountinformer.Get(ctx, auth.OIDCLabelSelector)
 	secretInformer := secretinformer.Get(ctx)
 	trustBundleConfigMapInformer := configmapinformer.Get(ctx, eventingtls.TrustBundleLabelSelector)
+	trustBundleConfigMapLister := trustBundleConfigMapInformer.Lister()
 
 	var globalResync func()
 	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {
@@ -139,11 +139,11 @@ func NewController(
 		secretLister:               secretInformer.Lister(),
 		featureStore:               featureStore,
 		tokenProvider:              auth.NewOIDCTokenProvider(ctx),
-		trustBundleConfigMapLister: trustBundleConfigMapInformer.Lister(),
+		trustBundleConfigMapLister: trustBundleConfigMapLister,
 	}
 
 	c.WithContext = func(ctx context.Context, b psbinding.Bindable) (context.Context, error) {
-		return v1.WithTrustBundleConfigMapLister(v1.WithURIResolver(ctx, sbResolver), trustBundleConfigMapInformer.Lister()), nil
+		return v1.WithTrustBundleConfigMapLister(v1.WithURIResolver(ctx, sbResolver), trustBundleConfigMapLister), nil
 	}
 	c.Tracker = impl.Tracker
 	c.Factory = &duck.CachedInformerFactory{
@@ -162,10 +162,27 @@ func NewController(
 	// do a periodic reync of all sinkbindings to renew the token secrets eventually
 	go periodicResync(ctx, globalResync)
 
-	trustBundleConfigMapInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: eventingreconciler.FilterWithNamespace(system.Namespace()),
-		Handler:    controller.HandleAll(func(i interface{}) { globalResync() }),
-	})
+	trustBundleConfigMapInformer.Informer().AddEventHandler(controller.HandleAll(func(i interface{}) {
+		obj, err := kmeta.DeletionHandlingAccessor(i)
+		if err != nil {
+			return
+		}
+		if obj.GetNamespace() == system.Namespace() {
+			globalResync()
+			return
+		}
+
+		sbs, err := sbInformer.Lister().SinkBindings(obj.GetNamespace()).List(labels.Everything())
+		if err != nil {
+			return
+		}
+		for _, sb := range sbs {
+			impl.EnqueueKey(types.NamespacedName{
+				Namespace: sb.Namespace,
+				Name:      sb.Name,
+			})
+		}
+	}))
 
 	return impl
 }

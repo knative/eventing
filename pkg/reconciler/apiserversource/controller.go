@@ -19,14 +19,15 @@ package apiserversource
 import (
 	"context"
 
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
 	configmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap/filtered"
+	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/system"
 
+	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/eventingtls"
-	eventingreconciler "knative.dev/eventing/pkg/reconciler"
-
-	"knative.dev/eventing/pkg/apis/feature"
 
 	"github.com/kelseyhightower/envconfig"
 	"k8s.io/client-go/tools/cache"
@@ -148,10 +149,27 @@ func NewController(
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 
-	trustBundleConfigMapInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: eventingreconciler.FilterWithNamespace(system.Namespace()),
-		Handler:    controller.HandleAll(globalResync),
-	})
+	trustBundleConfigMapInformer.Informer().AddEventHandler(controller.HandleAll(func(i interface{}) {
+		obj, err := kmeta.DeletionHandlingAccessor(i)
+		if err != nil {
+			return
+		}
+		if obj.GetNamespace() == system.Namespace() {
+			globalResync(i)
+			return
+		}
+
+		sources, err := apiServerSourceInformer.Lister().ApiServerSources(obj.GetNamespace()).List(labels.Everything())
+		if err != nil {
+			return
+		}
+		for _, src := range sources {
+			impl.EnqueueKey(types.NamespacedName{
+				Namespace: src.Namespace,
+				Name:      src.Name,
+			})
+		}
+	}))
 
 	return impl
 }
