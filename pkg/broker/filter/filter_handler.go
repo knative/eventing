@@ -375,7 +375,7 @@ func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers 
 			&duckv1.KReference{
 				Name:       t.Name,
 				Namespace:  t.Namespace,
-				APIVersion: "eventing.knative.dev/v1",
+				APIVersion: eventingv1.SchemeGroupVersion.String(),
 				Kind:       "Trigger",
 			},
 			t.UID,

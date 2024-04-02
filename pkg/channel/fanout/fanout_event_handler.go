@@ -36,6 +36,7 @@ import (
 
 	"knative.dev/eventing/pkg/apis"
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/eventtype"
 	"knative.dev/eventing/pkg/kncloudevents"
@@ -376,7 +377,7 @@ func (f *FanoutEventHandler) makeFanoutRequest(ctx context.Context, event event.
 			&duckv1.KReference{
 				Name:       sub.Name,
 				Namespace:  sub.Namespace,
-				APIVersion: "messaging.knative.dev/v1",
+				APIVersion: messagingv1.SchemeGroupVersion.String(),
 				Kind:       "Subscription",
 			},
 			sub.UID,
