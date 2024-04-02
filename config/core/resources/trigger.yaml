@@ -57,9 +57,22 @@ spec:
               broker:
                 description: Broker is the broker that this trigger receives events from.
                 type: string
-              brokerNamespace:
-                description: Namespace of the broker that the trigger receives events from.
-                type: string
+              brokerRef:
+                description: 'Reference to a broker that is enabled for cross-namespace referencing. You can specify only the following fields of the KReference: kind, apiVersion, name and namespace.'
+                type: object
+                properties:
+                  apiVersion:
+                    description: API version of the referent.
+                    type: string
+                  kind:
+                    description: 'Kind of the referent. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                    type: string
+                  name:
+                    description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                    type: string
+                  namespace:
+                    description: 'Namespace of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/'
+                    type: string
               delivery:
                 description: Delivery contains the delivery spec for this specific trigger.
                 type: object

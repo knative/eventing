@@ -128,13 +128,21 @@ type typeEqualityTransform struct {
 }
 
 func (t typeEqualityTransform) Apply(et *eventingv1beta3.EventType, tfc TransformFunctionContext) (*eventingv1beta3.EventType, TransformFunctionContext) {
-	if et.Spec.Type == "" {
-		et.Spec.Type = t.eventType
+	for _, attr := range et.Spec.Attributes {
+		if attr.Name == "type" {
+			if attr.Value == "" {
+				attr.Value = t.eventType
+			}
+
+			if attr.Value != t.eventType {
+				return nil, tfc
+			}
+
+			return et, tfc
+		}
 	}
 
-	if et.Spec.Type != t.eventType {
-		return nil, tfc
-	}
+	et.Spec.Attributes = append(et.Spec.Attributes, eventingv1beta3.EventAttributeDefinition{Name: "type", Value: t.eventType})
 
 	return et, tfc
 }
