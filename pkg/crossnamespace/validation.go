@@ -45,8 +45,8 @@ func CheckNamespace(ctx context.Context, r ResourceInfo, flag *feature.Store) *a
 
 	kind := r.GroupVersionKind().Kind
 	group := r.GroupVersionKind().Group
-	name := r.GetName()
-	namespace := r.GetNamespace()
+	// name := r.GetName()
+	// namespace := r.GetNamespace()
 	targetName := r.GetCrossNamespaceRef().Name
 	targetNamespace := r.GetCrossNamespaceRef().Namespace
 	fieldName := fmt.Sprintf("spec.%sNamespace", kind)
@@ -113,7 +113,7 @@ func CheckNamespace(ctx context.Context, r ResourceInfo, flag *feature.Store) *a
 	if !resp.Status.Allowed {
 		return &apis.FieldError{
 			Paths:   []string{fieldName},
-			Message: fmt.Sprintf("user %s is not authorized to get target resource in namespace: %s", userInfo.Username, r.TargetNamespace),
+			Message: fmt.Sprintf("user %s is not authorized to get target resource in namespace: %s", userInfo.Username, targetNamespace),
 		}
 	}
 
