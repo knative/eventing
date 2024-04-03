@@ -158,6 +158,9 @@ spec:
                       description: Generation of the origin of the subscriber with uid:UID.
                       type: integer
                       format: int64
+                    name:
+                      description: The name of the subscription
+                      type: string
                     replyUri:
                       description: ReplyURI is the endpoint for the reply
                       type: string
