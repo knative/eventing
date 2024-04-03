@@ -29,13 +29,9 @@ func (et *EventType) Validate(ctx context.Context) *apis.FieldError {
 
 func (ets *EventTypeSpec) Validate(ctx context.Context) *apis.FieldError {
 	var errs *apis.FieldError
-	if ets.Type == "" {
-		fe := apis.ErrMissingField("type")
-		errs = errs.Also(fe)
-	}
-	// TODO validate Source is a valid URI.
-	// TODO validate Schema is a valid URI.
-	// There is no validation of the SchemaData, it is application specific data.
+	// TODO: validate attribute with name=source is a valid URI
+	// TODO: validate attribute with name=schema is a valid URI
+	errs = errs.Also(ets.ValidateAttributes().ViaField("attributes"))
 	return errs
 }
 
@@ -58,5 +54,32 @@ func (et *EventType) CheckImmutableFields(ctx context.Context, original *EventTy
 			Details: diff,
 		}
 	}
+	return nil
+}
+
+func (ets *EventTypeSpec) ValidateAttributes() *apis.FieldError {
+	attributes := make(map[string]EventAttributeDefinition, len(ets.Attributes))
+	for _, attr := range ets.Attributes {
+		attributes[attr.Name] = attr
+	}
+
+	missingFields := []string{}
+	if _, ok := attributes["type"]; !ok {
+		missingFields = append(missingFields, "type")
+	}
+	if _, ok := attributes["source"]; !ok {
+		missingFields = append(missingFields, "source")
+	}
+	if _, ok := attributes["specversion"]; !ok {
+		missingFields = append(missingFields, "specversion")
+	}
+	if _, ok := attributes["id"]; !ok {
+		missingFields = append(missingFields, "id")
+	}
+
+	if len(missingFields) > 0 {
+		return apis.ErrMissingField(missingFields...)
+	}
+
 	return nil
 }

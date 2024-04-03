@@ -26,10 +26,11 @@ metadata:
 spec:
   template:
     {{ if .podannotations }}
-    annotations:
-      {{ range $key, $value := .podannotations }}
-        {{ $key }}: "{{ $value }}"
-        {{ end }}
+    metadata:
+      annotations:
+        {{ range $key, $value := .podannotations }}
+          {{ $key }}: "{{ $value }}"
+          {{ end }}
     {{ end }}
     spec:
       serviceAccountName: "{{ .name }}"
