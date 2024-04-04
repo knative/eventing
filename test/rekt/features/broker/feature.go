@@ -118,32 +118,40 @@ func ManyTriggers() *feature.FeatureSet {
 
 	for _, testcase := range tests {
 
+		testcase := testcase // capture variable
 		f := feature.NewFeatureNamed(testcase.name)
 
 		// Create the broker
 		brokerName := feature.MakeRandomK8sName("broker")
-		f.Setup("install broker", broker.Install(brokerName, broker.WithEnvConfig()...))
-		f.Setup("broker is ready", broker.IsReady(brokerName))
-		f.Setup("broker is addressable", broker.IsAddressable(brokerName))
 
-		for sink, eventFilter := range testcase.eventFilters {
-			f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
-			filter := eventingv1.TriggerFilterAttributes{
-				"type":   eventFilter.Type,
-				"source": eventFilter.Source,
+		f.Setup("install broker, sinks and triggers", func(ctx context.Context, t feature.T) {
+			broker.Install(brokerName, broker.WithEnvConfig()...)(ctx, t)
+
+			for sink, eventFilter := range testcase.eventFilters {
+				eventshub.Install(sink, eventshub.StartReceiver)(ctx, t)
+
+				filter := eventingv1.TriggerFilterAttributes{
+					"type":   eventFilter.Type,
+					"source": eventFilter.Source,
+				}
+
+				// Point the Trigger subscriber to the sink svc.
+				cfg := []manifest.CfgFn{
+					trigger.WithSubscriber(service.AsKReference(sink), ""),
+					trigger.WithFilter(filter),
+					trigger.WithExtensions(eventFilter.Extensions),
+				}
+
+				trigger.Install(sink, brokerName, cfg...)(ctx, t)
 			}
 
-			// Point the Trigger subscriber to the sink svc.
-			cfg := []manifest.CfgFn{
-				trigger.WithSubscriber(service.AsKReference(sink), ""),
-				trigger.WithFilter(filter),
-				trigger.WithExtensions(eventFilter.Extensions),
-			}
+			broker.IsReady(brokerName)(ctx, t)
+			broker.IsAddressable(brokerName)(ctx, t)
 
-			// Install the trigger
-			f.Setup("install trigger", trigger.Install(sink, brokerName, cfg...))
-			f.Setup("trigger goes ready", trigger.IsReady(sink))
-		}
+			for sink := range testcase.eventFilters {
+				trigger.IsReady(sink)(ctx, t)
+			}
+		})
 
 		for _, event := range testcase.eventsToSend {
 			eventToSend := cloudevents.NewEvent()
