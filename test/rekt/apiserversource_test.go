@@ -214,7 +214,6 @@ func TestApiServerSourceDeployment(t *testing.T) {
 }
 
 func TestApiServerSourceSendEventsWithEventType(t *testing.T) {
-	
 	t.Parallel()
 
 	ctx, env := global.Environment(
