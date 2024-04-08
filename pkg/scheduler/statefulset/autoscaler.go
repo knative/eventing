@@ -18,6 +18,7 @@ package statefulset
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"sync"
 	"sync/atomic"
@@ -323,12 +324,20 @@ func (a *autoscaler) compact(s *st.State, scaleUpFactor int32) error {
 				ordinal := st.OrdinalFromPodName(placements[i].PodName)
 
 				if ordinal == s.LastOrdinal-j {
-					wait.PollUntilContextTimeout(context.Background(), 50*time.Millisecond, 5*time.Second, true, func(ctx context.Context) (bool, error) {
+					err = wait.PollUntilContextTimeout(context.Background(), 50*time.Millisecond, 5*time.Second, true, func(ctx context.Context) (bool, error) {
 						if s.PodLister != nil {
 							pod, err = s.PodLister.Get(placements[i].PodName)
 						}
 						return err == nil, nil
 					})
+
+					if err != nil {
+						return err
+					}
+
+					if pod == nil {
+						return fmt.Errorf("no pod found to evict")
+					}
 
 					err = a.evictor(pod, vpod, &placements[i])
 					if err != nil {
