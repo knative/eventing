@@ -332,11 +332,11 @@ func (a *autoscaler) compact(s *st.State, scaleUpFactor int32) error {
 					})
 
 					if err != nil {
-						return err
+						return fmt.Errorf("failed to get pod %q to evict resources: %w", placements[i].PodName, err)
 					}
 
 					if pod == nil {
-						return fmt.Errorf("no pod found to evict")
+						return fmt.Errorf("pod %q not found to evict resources", placements[i].PodName)
 					}
 
 					err = a.evictor(pod, vpod, &placements[i])
