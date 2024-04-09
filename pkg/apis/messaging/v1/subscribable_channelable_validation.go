@@ -21,7 +21,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/equality"
 	"knative.dev/eventing/pkg/apis/feature"
-	cn "knative.dev/eventing/pkg/crossnamespace"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
@@ -34,14 +33,7 @@ func isChannelEmpty(f duckv1.KReference) bool {
 func isValidChannel(ctx context.Context, f duckv1.KReference) *apis.FieldError {
 	errs := f.Validate(ctx)
 
-	if feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) {
-		var resourceInfo cn.ResourceInfo
-		var flag *feature.Store
-		crossNamespaceError := cn.CheckNamespace(ctx, resourceInfo, flag)
-		if crossNamespaceError != nil {
-			errs = errs.Also(crossNamespaceError)
-		}
-	} else {
+	if !feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) {
 		// Only name, apiVersion and kind are supported fields when feature.CrossNamespaceEventLinks is disabled
 		if f.Namespace != "" {
 			fe := apis.ErrDisallowedFields("namespace")
