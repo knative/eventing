@@ -25,6 +25,7 @@ import (
 	cesqlparser "github.com/cloudevents/sdk-go/sql/v2/parser"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
+	cn "knative.dev/eventing/pkg/crossnamespace"
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/kmp"
 	"knative.dev/pkg/logging"
@@ -45,6 +46,13 @@ func (t *Trigger) Validate(ctx context.Context) *apis.FieldError {
 	if apis.IsInUpdate(ctx) {
 		original := apis.GetBaseline(ctx).(*Trigger)
 		errs = errs.Also(t.CheckImmutableFields(ctx, original))
+	}
+	if feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) {
+		flag := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"))
+		crossNamespaceError := cn.CheckNamespace(ctx, t, flag)
+		if crossNamespaceError != nil {
+			errs = errs.Also(crossNamespaceError)
+		}
 	}
 	return errs
 }
