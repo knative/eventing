@@ -182,8 +182,8 @@ func (s *Subscription) GetStatus() *duckv1.Status {
 	return &s.Status.Status
 }
 
-func (s *Subscription) GetCrossNamespaceRef() *duckv1.KReference {
-	return &duckv1.KReference{
+func (s *Subscription) GetCrossNamespaceRef() duckv1.KReference {
+	return duckv1.KReference{
 		APIVersion: s.APIVersion,
 		Kind:       s.Kind,
 		Name:       s.Name,
