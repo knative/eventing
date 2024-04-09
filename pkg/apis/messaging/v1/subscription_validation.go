@@ -21,9 +21,12 @@ import (
 
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"k8s.io/apimachinery/pkg/api/equality"
+	"knative.dev/eventing/pkg/apis/feature"
+	cn "knative.dev/eventing/pkg/crossnamespace"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/kmp"
+	"knative.dev/pkg/logging"
 )
 
 func (s *Subscription) Validate(ctx context.Context) *apis.FieldError {
@@ -31,6 +34,13 @@ func (s *Subscription) Validate(ctx context.Context) *apis.FieldError {
 	if apis.IsInUpdate(ctx) {
 		original := apis.GetBaseline(ctx).(*Subscription)
 		errs = errs.Also(s.CheckImmutableFields(ctx, original))
+	}
+	if feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) {
+		flag := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"))
+		crossNamespaceError := cn.CheckNamespace(ctx, s, flag)
+		if crossNamespaceError != nil {
+			errs = errs.Also(crossNamespaceError)
+		}
 	}
 	return errs
 }
@@ -45,6 +55,7 @@ func (ss *SubscriptionSpec) Validate(ctx context.Context) *apis.FieldError {
 		fe.Details = "the Subscription must reference a channel"
 		return fe
 	} else if fe := isValidChannel(ctx, ss.Channel); fe != nil {
+		// only handle if ur allowed to set the namespace
 		errs = errs.Also(fe.ViaField("channel"))
 	}
 
