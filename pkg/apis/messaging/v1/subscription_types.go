@@ -183,6 +183,6 @@ func (s *Subscription) GetStatus() *duckv1.Status {
 	return &s.Status.Status
 }
 
-func (s *SubscriptionSpec) GetCrossNamespaceRef() duckv1.KReference {
-	return s.Channel
+func (s *SubscriptionSpec) GetCrossNamespaceRef() *duckv1.KReference {
+	return &s.Channel
 }
