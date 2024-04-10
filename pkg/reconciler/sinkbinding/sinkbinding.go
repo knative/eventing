@@ -114,6 +114,10 @@ func (s *SinkBindingSubResourcesReconciler) Reconcile(ctx context.Context, b psb
 			// sink has no audience set -> don't create token secret
 			sb.Status.MarkOIDCIdentityCreatedSucceededWithReason("Sink has no audience defined", "")
 			sb.Status.MarkOIDCTokenSecretCreatedSuccceededWithReason("Sink has no audience defined", "")
+
+			if err := s.removeOIDCTokenSecretEventually(ctx, sb); err != nil {
+				return err
+			}
 			sb.Status.OIDCTokenSecretName = nil
 		}
 	} else {
