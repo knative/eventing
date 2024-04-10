@@ -114,6 +114,10 @@ func (s *SinkBindingSubResourcesReconciler) Reconcile(ctx context.Context, b psb
 			// sink has no audience set -> don't create token secret
 			sb.Status.MarkOIDCIdentityCreatedSucceededWithReason("Sink has no audience defined", "")
 			sb.Status.MarkOIDCTokenSecretCreatedSuccceededWithReason("Sink has no audience defined", "")
+
+			if err := s.removeOIDCTokenSecretEventually(ctx, sb); err != nil {
+				return err
+			}
 			sb.Status.OIDCTokenSecretName = nil
 		}
 	} else {
@@ -163,6 +167,8 @@ func (s *SinkBindingSubResourcesReconciler) reconcileOIDCTokenSecret(ctx context
 	if expiry.After(time.Now().Add(resyncAndBufferDuration)) {
 		logger.Debugf("OIDC token secret for %s/%s sinkbinding still valid for > %s (expires %s). Will not update secret", sb.Name, sb.Namespace, resyncAndBufferDuration, expiry)
 		// token is still valid for resync period + buffer --> we're fine
+
+		sb.Status.OIDCTokenSecretName = &secretName
 
 		return nil
 	}
