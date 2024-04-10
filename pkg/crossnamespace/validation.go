@@ -110,7 +110,3 @@ func CheckNamespace(ctx context.Context, r ResourceInfo) *apis.FieldError {
 
 	return nil
 }
-
-// separate function checking the new things i made, such as subjectaccessreview ...
-// pull out logic and data manipulation; trust calls to kubernetes work; do end to end testing (entire logic)
-// test the logic in the function; this code
