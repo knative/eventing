@@ -26,22 +26,24 @@ import (
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/kmp"
-	"knative.dev/pkg/logging"
 )
 
 func (s *Subscription) Validate(ctx context.Context) *apis.FieldError {
+	// s.Validate(ctx) because krshaped is defined on the entire subscription, not just the spec
 	errs := s.Spec.Validate(ctx).ViaField("spec")
 	if apis.IsInUpdate(ctx) {
 		original := apis.GetBaseline(ctx).(*Subscription)
 		errs = errs.Also(s.CheckImmutableFields(ctx, original))
 	}
 	if feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) {
-		flag := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"))
-		crossNamespaceError := cn.CheckNamespace(ctx, s, flag)
+		crossNamespaceError := cn.CheckNamespace(ctx, s)
 		if crossNamespaceError != nil {
 			errs = errs.Also(crossNamespaceError)
 		}
 	}
+	// validate whether or not the permissions are all correct
+	// check if interface works
+	// validate namespace
 	return errs
 }
 

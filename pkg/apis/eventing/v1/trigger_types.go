@@ -227,6 +227,6 @@ func (t *Trigger) GetStatus() *duckv1.Status {
 	return &t.Status.Status
 }
 
-func (t *TriggerSpec) GetCrossNamespaceRef() duckv1.KReference {
-	return *t.BrokerRef
+func (t *Trigger) GetCrossNamespaceRef() duckv1.KReference {
+	return *t.Spec.BrokerRef
 }

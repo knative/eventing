@@ -48,8 +48,7 @@ func (t *Trigger) Validate(ctx context.Context) *apis.FieldError {
 		errs = errs.Also(t.CheckImmutableFields(ctx, original))
 	}
 	if feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) {
-		flag := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"))
-		crossNamespaceError := cn.CheckNamespace(ctx, t, flag)
+		crossNamespaceError := cn.CheckNamespace(ctx, t)
 		if crossNamespaceError != nil {
 			errs = errs.Also(crossNamespaceError)
 		}
