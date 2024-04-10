@@ -49,7 +49,7 @@ require (
 	k8s.io/utils v0.0.0-20240102154912-e7106e64919e
 	knative.dev/hack v0.0.0-20240327150553-47368d631660
 	knative.dev/hack/schema v0.0.0-20240327150553-47368d631660
-	knative.dev/pkg v0.0.0-20240401190221-03bf3de6e2bc
+	knative.dev/pkg v0.0.0-20240402144403-fef5da99bd14
 	knative.dev/reconciler-test v0.0.0-20240327131444-6346b918a853
 	sigs.k8s.io/yaml v1.4.0
 )
@@ -112,6 +112,7 @@ require (
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/spf13/cobra v1.7.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
+	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.49.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.49.0 // indirect
 	go.opentelemetry.io/otel/metric v1.24.0 // indirect

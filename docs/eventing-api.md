@@ -625,6 +625,18 @@ section of the resource.</p>
 <tbody>
 <tr>
 <td>
+<code>name</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Name is used to identify the original subscription object.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>uid</code><br/>
 <em>
 <a href="https://godoc.org/k8s.io/apimachinery/pkg/types#UID">
@@ -4578,6 +4590,7 @@ You can specify only the following fields of the KReference:
 - Kind
 - APIVersion
 - Name
+- Namespace
 The resource pointed by this KReference must meet the
 contract to the ChannelableSpec duck type. If the resource does not
 meet this contract it will be reflected in the Subscription&rsquo;s status.</p>
@@ -4908,6 +4921,7 @@ You can specify only the following fields of the KReference:
 - Kind
 - APIVersion
 - Name
+- Namespace
 The resource pointed by this KReference must meet the
 contract to the ChannelableSpec duck type. If the resource does not
 meet this contract it will be reflected in the Subscription&rsquo;s status.</p>

@@ -77,6 +77,7 @@ type SubscriptionSpec struct {
 	//   - Kind
 	//   - APIVersion
 	//   - Name
+	//   - Namespace
 	// The resource pointed by this KReference must meet the
 	// contract to the ChannelableSpec duck type. If the resource does not
 	// meet this contract it will be reflected in the Subscription's status.

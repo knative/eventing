@@ -62,47 +62,13 @@ func TestSingleVertexLineage(t *testing.T) {
 		},
 	}
 
-	a.AddEdge(b, nil, NoTransform)
-	b.AddEdge(c, nil, func(et *eventingv1beta3.EventType, tfc TransformFunctionContext) (*eventingv1beta3.EventType, TransformFunctionContext) {
-		eventType := ""
-		for _, attr := range et.Spec.Attributes {
-			if attr.Name == "type" {
-				eventType = attr.Value
-			}
-		}
-		if eventType == "" {
-			eventType = "example.type"
-			et.Spec.Attributes = append(et.Spec.Attributes, eventingv1beta3.EventAttributeDefinition{Name: "type", Value: eventType, Required: true})
-		}
-
-		if eventType != "example.type" {
-			return nil, tfc
-		}
-
-		return et, tfc
-	})
-	b.AddEdge(d, nil, NoTransform)
-	c.AddEdge(d, nil, func(et *eventingv1beta3.EventType, tfc TransformFunctionContext) (*eventingv1beta3.EventType, TransformFunctionContext) {
-		eventType := ""
-		for _, attr := range et.Spec.Attributes {
-			if attr.Name == "type" {
-				eventType = attr.Value
-			}
-		}
-		if eventType == "" {
-			eventType = "some.other.type"
-			et.Spec.Attributes = append(et.Spec.Attributes, eventingv1beta3.EventAttributeDefinition{Name: "type", Value: eventType, Required: true})
-		}
-
-		if eventType != "some.other.type" {
-			return nil, tfc
-		}
-
-		return et, tfc
-	})
-	c.AddEdge(e, nil, NoTransform)
-	d.AddEdge(e, nil, NoTransform)
-	e.AddEdge(c, nil, NoTransform)
+	a.AddEdge(b, nil, NoTransform{}, false)
+	b.AddEdge(c, nil, typeEqualityTransform{eventType: "event.type"}, false)
+	b.AddEdge(d, nil, NoTransform{}, false)
+	c.AddEdge(d, nil, typeEqualityTransform{"some.other.type"}, false)
+	c.AddEdge(e, nil, NoTransform{}, false)
+	d.AddEdge(e, nil, NoTransform{}, false)
+	e.AddEdge(c, nil, NoTransform{}, false)
 
 	lineageFromA := a.Lineage(MakeEmptyEventType(), TransformFunctionContext{})
 	assert.Equal(t, "A", lineageFromA.Reference().Ref.Name)
@@ -155,4 +121,32 @@ func TestSingleVertexLineage(t *testing.T) {
 		idx := slices.Index(expectedVertices, edge.To().Reference().Ref.Name)
 		expectedVertices = slices.Delete(expectedVertices, idx, idx+1)
 	}
+}
+
+type typeEqualityTransform struct {
+	eventType string
+}
+
+func (t typeEqualityTransform) Apply(et *eventingv1beta3.EventType, tfc TransformFunctionContext) (*eventingv1beta3.EventType, TransformFunctionContext) {
+	for _, attr := range et.Spec.Attributes {
+		if attr.Name == "type" {
+			if attr.Value == "" {
+				attr.Value = t.eventType
+			}
+
+			if attr.Value != t.eventType {
+				return nil, tfc
+			}
+
+			return et, tfc
+		}
+	}
+
+	et.Spec.Attributes = append(et.Spec.Attributes, eventingv1beta3.EventAttributeDefinition{Name: "type", Value: t.eventType})
+
+	return et, tfc
+}
+
+func (t typeEqualityTransform) Name() string {
+	return "type-equality"
 }

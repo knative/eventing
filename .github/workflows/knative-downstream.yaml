@@ -34,8 +34,6 @@ jobs:
             org: knative-extensions
           - repo: eventing-gitlab
             org: knative-extensions
-          - repo: eventing-kafka
-            org: knative-extensions
           - repo: eventing-kafka-broker
             org: knative-extensions
           - repo: eventing-rabbitmq

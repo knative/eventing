@@ -230,15 +230,18 @@ func newConfigForInMemoryChannel(ctx context.Context, imc *v1.InMemoryChannel) (
 
 	for i, sub := range imc.Spec.Subscribers {
 		conf, err := fanout.SubscriberSpecToFanoutConfig(sub)
+		if err != nil {
+			return nil, err
+		}
+
+		conf.Namespace = imc.Namespace
 		if isOIDCEnabled {
 			conf.ServiceAccount = &types.NamespacedName{
 				Name:      *sub.Auth.ServiceAccountName,
 				Namespace: imc.Namespace,
 			}
 		}
-		if err != nil {
-			return nil, err
-		}
+
 		subs[i] = *conf
 	}
 

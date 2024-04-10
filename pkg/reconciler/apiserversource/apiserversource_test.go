@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"knative.dev/pkg/kmeta"
+	"knative.dev/pkg/system"
 
 	rbacv1 "k8s.io/api/rbac/v1"
 
@@ -36,6 +37,7 @@ import (
 	clientgotesting "k8s.io/client-go/testing"
 
 	"knative.dev/eventing/pkg/apis/feature"
+	"knative.dev/eventing/pkg/eventingtls"
 
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -178,6 +180,319 @@ func TestReconcile(t *testing.T) {
 			patchFinalizers(sourceName, testNS),
 		},
 		WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor(false)},
+		SkipNamespaceValidation: true, // SubjectAccessReview objects are cluster-scoped.
+	}, {
+		Name: "trust bundle propagation",
+		Objects: []runtime.Object{
+			rttestingv1.NewApiServerSource(sourceName, testNS,
+				rttestingv1.WithApiServerSourceSpec(sourcesv1.ApiServerSourceSpec{
+					Resources: []sourcesv1.APIVersionKindSelector{{
+						APIVersion: "v1",
+						Kind:       "Namespace",
+					}},
+					SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
+				}),
+				rttestingv1.WithApiServerSourceUID(sourceUID),
+				rttestingv1.WithApiServerSourceObjectMetaGeneration(generation),
+			),
+			rttestingv1.NewChannel(sinkName, testNS,
+				rttestingv1.WithInitChannelConditions,
+				rttestingv1.WithChannelAddress(sinkAddressable),
+			),
+			makeAvailableReceiveAdapter(t),
+			rttestingv1.NewConfigMap("bundle", system.Namespace(),
+				rttestingv1.WithConfigMapData(map[string]string{"a": "a"}),
+				rttestingv1.WithConfigMapLabels(metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						eventingtls.TrustBundleLabelKey: eventingtls.TrustBundleLabelValue,
+						"x":                             "y",
+					},
+				}),
+			),
+		},
+		Key: testNS + "/" + sourceName,
+		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: rttestingv1.NewApiServerSource(sourceName, testNS,
+				rttestingv1.WithApiServerSourceSpec(sourcesv1.ApiServerSourceSpec{
+					Resources: []sourcesv1.APIVersionKindSelector{{
+						APIVersion: "v1",
+						Kind:       "Namespace",
+					}},
+					SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
+				}),
+				rttestingv1.WithApiServerSourceUID(sourceUID),
+				rttestingv1.WithApiServerSourceObjectMetaGeneration(generation),
+				// Status Update:
+				rttestingv1.WithInitApiServerSourceConditions,
+				rttestingv1.WithApiServerSourceDeployed,
+				rttestingv1.WithApiServerSourceSink(sinkURI),
+				rttestingv1.WithApiServerSourceSufficientPermissions,
+				rttestingv1.WithApiServerSourceReferenceModeEventTypes(source),
+				rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
+				rttestingv1.WithApiServerSourceStatusNamespaces([]string{testNS}),
+				rttestingv1.WithApiServerSourceOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
+			),
+		}},
+		WantCreates: []runtime.Object{
+			makeSubjectAccessReview("namespaces", "get", "default"),
+			makeSubjectAccessReview("namespaces", "list", "default"),
+			makeSubjectAccessReview("namespaces", "watch", "default"),
+			rttestingv1.NewConfigMap("bundle"+eventingtls.TrustBundleConfigMapNameSuffix, testNS,
+				rttestingv1.WithConfigMapData(map[string]string{"a": "a"}),
+				func(configMap *corev1.ConfigMap) {
+					configMap.OwnerReferences = append(configMap.OwnerReferences, metav1.OwnerReference{
+						APIVersion: sourcesv1.SchemeGroupVersion.String(),
+						Kind:       "ApiServerSource",
+						Name:       sourceName,
+						UID:        sourceUID,
+					})
+				},
+				rttestingv1.WithConfigMapLabels(metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						eventingtls.TrustBundleLabelKey: eventingtls.TrustBundleLabelValue,
+					},
+				}),
+			),
+		},
+		WantEvents: []string{
+			Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", sourceName),
+		},
+		WantPatches: []clientgotesting.PatchActionImpl{
+			patchFinalizers(sourceName, testNS),
+		},
+		WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor(true)},
+		SkipNamespaceValidation: true, // SubjectAccessReview objects are cluster-scoped.
+	}, {
+		Name: "trust bundle propagation - update RA",
+		Objects: []runtime.Object{
+			rttestingv1.NewApiServerSource(sourceName, testNS,
+				rttestingv1.WithApiServerSourceSpec(sourcesv1.ApiServerSourceSpec{
+					Resources: []sourcesv1.APIVersionKindSelector{{
+						APIVersion: "v1",
+						Kind:       "Namespace",
+					}},
+					SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
+				}),
+				rttestingv1.WithApiServerSourceUID(sourceUID),
+				rttestingv1.WithApiServerSourceObjectMetaGeneration(generation),
+			),
+			rttestingv1.NewChannel(sinkName, testNS,
+				rttestingv1.WithInitChannelConditions,
+				rttestingv1.WithChannelAddress(sinkAddressable),
+			),
+			makeAvailableReceiveAdapter(t),
+			rttestingv1.NewConfigMap("bundle", system.Namespace(),
+				rttestingv1.WithConfigMapData(map[string]string{"a": "a"}),
+				rttestingv1.WithConfigMapLabels(metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						eventingtls.TrustBundleLabelKey: eventingtls.TrustBundleLabelValue,
+						"x":                             "y",
+					},
+				}),
+			),
+			rttestingv1.NewConfigMap("bundle"+eventingtls.TrustBundleConfigMapNameSuffix, testNS,
+				rttestingv1.WithConfigMapData(map[string]string{"a": "a"}),
+				func(configMap *corev1.ConfigMap) {
+					configMap.OwnerReferences = append(configMap.OwnerReferences, metav1.OwnerReference{
+						APIVersion: sourcesv1.SchemeGroupVersion.String(),
+						Kind:       "ApiServerSource",
+						Name:       sourceName,
+						UID:        sourceUID,
+					})
+				},
+				rttestingv1.WithConfigMapLabels(metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						eventingtls.TrustBundleLabelKey: eventingtls.TrustBundleLabelValue,
+					},
+				}),
+			),
+		},
+		Key: testNS + "/" + sourceName,
+		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: rttestingv1.NewApiServerSource(sourceName, testNS,
+				rttestingv1.WithApiServerSourceSpec(sourcesv1.ApiServerSourceSpec{
+					Resources: []sourcesv1.APIVersionKindSelector{{
+						APIVersion: "v1",
+						Kind:       "Namespace",
+					}},
+					SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
+				}),
+				rttestingv1.WithApiServerSourceUID(sourceUID),
+				rttestingv1.WithApiServerSourceObjectMetaGeneration(generation),
+				// Status Update:
+				rttestingv1.WithInitApiServerSourceConditions,
+				rttestingv1.WithApiServerSourceDeployed,
+				rttestingv1.WithApiServerSourceSink(sinkURI),
+				rttestingv1.WithApiServerSourceSufficientPermissions,
+				rttestingv1.WithApiServerSourceReferenceModeEventTypes(source),
+				rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
+				rttestingv1.WithApiServerSourceStatusNamespaces([]string{testNS}),
+				rttestingv1.WithApiServerSourceOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
+			),
+		}},
+		WantUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: makeAvailableReceiveAdapter(t, func(deployment *appsv1.Deployment) {
+
+				volumeName := fmt.Sprintf("%s%s", eventingtls.TrustBundleVolumeNamePrefix, "volume")
+				deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
+					Name: volumeName,
+					VolumeSource: corev1.VolumeSource{
+						Projected: &corev1.ProjectedVolumeSource{
+							Sources: []corev1.VolumeProjection{
+								{
+									ConfigMap: &corev1.ConfigMapProjection{
+										LocalObjectReference: corev1.LocalObjectReference{
+											Name: "bundle" + eventingtls.TrustBundleConfigMapNameSuffix,
+										},
+									},
+								},
+							},
+						},
+					},
+				})
+
+				deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+					Name:      volumeName,
+					ReadOnly:  true,
+					MountPath: eventingtls.TrustBundleMountPath,
+				})
+			}),
+		}},
+		WantCreates: []runtime.Object{
+			makeSubjectAccessReview("namespaces", "get", "default"),
+			makeSubjectAccessReview("namespaces", "list", "default"),
+			makeSubjectAccessReview("namespaces", "watch", "default"),
+		},
+		WantEvents: []string{
+			Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", sourceName),
+			Eventf(corev1.EventTypeNormal, "ApiServerSourceDeploymentUpdated", `Deployment "apiserversource-test-apiserver-source-1234" updated`),
+		},
+		WantPatches: []clientgotesting.PatchActionImpl{
+			patchFinalizers(sourceName, testNS),
+		},
+		WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor(true)},
+		SkipNamespaceValidation: true, // SubjectAccessReview objects are cluster-scoped.
+	}, {
+		Name: "trust bundle propagation - update trust bundle",
+		Objects: []runtime.Object{
+			rttestingv1.NewApiServerSource(sourceName, testNS,
+				rttestingv1.WithApiServerSourceSpec(sourcesv1.ApiServerSourceSpec{
+					Resources: []sourcesv1.APIVersionKindSelector{{
+						APIVersion: "v1",
+						Kind:       "Namespace",
+					}},
+					SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
+				}),
+				rttestingv1.WithApiServerSourceUID(sourceUID),
+				rttestingv1.WithApiServerSourceObjectMetaGeneration(generation),
+			),
+			rttestingv1.NewChannel(sinkName, testNS,
+				rttestingv1.WithInitChannelConditions,
+				rttestingv1.WithChannelAddress(sinkAddressable),
+			),
+			makeAvailableReceiveAdapter(t),
+			rttestingv1.NewConfigMap("bundle", system.Namespace(),
+				rttestingv1.WithConfigMapData(map[string]string{"a": "a"}),
+				rttestingv1.WithConfigMapLabels(metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						eventingtls.TrustBundleLabelKey: eventingtls.TrustBundleLabelValue,
+						"x":                             "y",
+					},
+				}),
+			),
+			rttestingv1.NewConfigMap("bundle"+eventingtls.TrustBundleConfigMapNameSuffix, testNS,
+				rttestingv1.WithConfigMapData(map[string]string{"a": "a"}),
+				rttestingv1.WithConfigMapLabels(metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						eventingtls.TrustBundleLabelKey: eventingtls.TrustBundleLabelValue,
+					},
+				}),
+			),
+		},
+		Key: testNS + "/" + sourceName,
+		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: rttestingv1.NewApiServerSource(sourceName, testNS,
+				rttestingv1.WithApiServerSourceSpec(sourcesv1.ApiServerSourceSpec{
+					Resources: []sourcesv1.APIVersionKindSelector{{
+						APIVersion: "v1",
+						Kind:       "Namespace",
+					}},
+					SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
+				}),
+				rttestingv1.WithApiServerSourceUID(sourceUID),
+				rttestingv1.WithApiServerSourceObjectMetaGeneration(generation),
+				// Status Update:
+				rttestingv1.WithInitApiServerSourceConditions,
+				rttestingv1.WithApiServerSourceDeployed,
+				rttestingv1.WithApiServerSourceSink(sinkURI),
+				rttestingv1.WithApiServerSourceSufficientPermissions,
+				rttestingv1.WithApiServerSourceReferenceModeEventTypes(source),
+				rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
+				rttestingv1.WithApiServerSourceStatusNamespaces([]string{testNS}),
+				rttestingv1.WithApiServerSourceOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
+			),
+		}},
+		WantUpdates: []clientgotesting.UpdateActionImpl{
+			{
+				Object: rttestingv1.NewConfigMap("bundle"+eventingtls.TrustBundleConfigMapNameSuffix, testNS,
+					rttestingv1.WithConfigMapData(map[string]string{"a": "a"}),
+					func(configMap *corev1.ConfigMap) {
+						configMap.OwnerReferences = append(configMap.OwnerReferences, metav1.OwnerReference{
+							APIVersion: sourcesv1.SchemeGroupVersion.String(),
+							Kind:       "ApiServerSource",
+							Name:       sourceName,
+							UID:        sourceUID,
+						})
+					},
+					rttestingv1.WithConfigMapLabels(metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							eventingtls.TrustBundleLabelKey: eventingtls.TrustBundleLabelValue,
+						},
+					}),
+				),
+			},
+			{
+				Object: makeAvailableReceiveAdapter(t, func(deployment *appsv1.Deployment) {
+
+					volumeName := fmt.Sprintf("%s%s", eventingtls.TrustBundleVolumeNamePrefix, "volume")
+					deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
+						Name: volumeName,
+						VolumeSource: corev1.VolumeSource{
+							Projected: &corev1.ProjectedVolumeSource{
+								Sources: []corev1.VolumeProjection{
+									{
+										ConfigMap: &corev1.ConfigMapProjection{
+											LocalObjectReference: corev1.LocalObjectReference{
+												Name: "bundle" + eventingtls.TrustBundleConfigMapNameSuffix,
+											},
+										},
+									},
+								},
+							},
+						},
+					})
+
+					deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+						Name:      volumeName,
+						ReadOnly:  true,
+						MountPath: eventingtls.TrustBundleMountPath,
+					})
+				}),
+			},
+		},
+		WantCreates: []runtime.Object{
+			makeSubjectAccessReview("namespaces", "get", "default"),
+			makeSubjectAccessReview("namespaces", "list", "default"),
+			makeSubjectAccessReview("namespaces", "watch", "default"),
+		},
+		WantEvents: []string{
+			Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", sourceName),
+			Eventf(corev1.EventTypeNormal, "ApiServerSourceDeploymentUpdated", `Deployment "apiserversource-test-apiserver-source-1234" updated`),
+		},
+		WantPatches: []clientgotesting.PatchActionImpl{
+			patchFinalizers(sourceName, testNS),
+		},
+		WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor(true)},
 		SkipNamespaceValidation: true, // SubjectAccessReview objects are cluster-scoped.
 	}, {
 		Name: "valid",
@@ -1181,11 +1496,11 @@ func TestReconcile(t *testing.T) {
 	))
 }
 
-func makeReceiveAdapter(t *testing.T) *appsv1.Deployment {
-	return makeReceiveAdapterWithName(t, sourceName)
+func makeReceiveAdapter(t *testing.T, option ...rttestingv1.DeploymentOption) *appsv1.Deployment {
+	return makeReceiveAdapterWithName(t, sourceName, option...)
 }
 
-func makeReceiveAdapterWithName(t *testing.T, sourceName string) *appsv1.Deployment {
+func makeReceiveAdapterWithName(t *testing.T, sourceName string, options ...rttestingv1.DeploymentOption) *appsv1.Deployment {
 	t.Helper()
 
 	src := rttestingv1.NewApiServerSource(sourceName, testNS,
@@ -1214,6 +1529,10 @@ func makeReceiveAdapterWithName(t *testing.T, sourceName string) *appsv1.Deploym
 
 	ra, err := resources.MakeReceiveAdapter(&args)
 	require.NoError(t, err)
+
+	for _, op := range options {
+		op(ra)
+	}
 
 	return ra
 }
@@ -1262,8 +1581,8 @@ func makeAvailableReceiveAdapterWithOIDC(t *testing.T) *appsv1.Deployment {
 	return ra
 }
 
-func makeAvailableReceiveAdapter(t *testing.T) *appsv1.Deployment {
-	ra := makeReceiveAdapter(t)
+func makeAvailableReceiveAdapter(t *testing.T, options ...rttestingv1.DeploymentOption) *appsv1.Deployment {
+	ra := makeReceiveAdapter(t, options...)
 	rttesting.WithDeploymentAvailable()(ra)
 	return ra
 }

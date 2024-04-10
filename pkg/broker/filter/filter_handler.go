@@ -52,6 +52,7 @@ import (
 	"knative.dev/eventing/pkg/eventfilter"
 	"knative.dev/eventing/pkg/eventfilter/attributes"
 	"knative.dev/eventing/pkg/eventfilter/subscriptionsapi"
+	"knative.dev/eventing/pkg/eventtype"
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/reconciler/sugar/trigger/path"
 	"knative.dev/eventing/pkg/tracing"
@@ -78,12 +79,13 @@ type Handler struct {
 
 	eventDispatcher *kncloudevents.Dispatcher
 
-	triggerLister eventinglisters.TriggerLister
-	brokerLister  eventinglisters.BrokerLister
-	logger        *zap.Logger
-	withContext   func(ctx context.Context) context.Context
-	filtersMap    *subscriptionsapi.FiltersMap
-	tokenVerifier *auth.OIDCTokenVerifier
+	triggerLister    eventinglisters.TriggerLister
+	brokerLister     eventinglisters.BrokerLister
+	logger           *zap.Logger
+	withContext      func(ctx context.Context) context.Context
+	filtersMap       *subscriptionsapi.FiltersMap
+	tokenVerifier    *auth.OIDCTokenVerifier
+	EventTypeCreator *eventtype.EventTypeAutoHandler
 }
 
 // NewHandler creates a new Handler and its associated EventReceiver.
@@ -365,6 +367,19 @@ func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers 
 
 	opts := []kncloudevents.SendOption{
 		kncloudevents.WithHeader(additionalHeaders),
+	}
+
+	if h.EventTypeCreator != nil {
+		opts = append(opts, kncloudevents.WithEventTypeAutoHandler(
+			h.EventTypeCreator,
+			&duckv1.KReference{
+				Name:       t.Name,
+				Namespace:  t.Namespace,
+				APIVersion: eventingv1.SchemeGroupVersion.String(),
+				Kind:       "Trigger",
+			},
+			t.UID,
+		))
 	}
 
 	if t.Status.Auth != nil && t.Status.Auth.ServiceAccountName != nil {
