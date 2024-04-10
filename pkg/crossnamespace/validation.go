@@ -30,42 +30,23 @@ import (
 	"knative.dev/pkg/logging"
 )
 
-// type ResourceInfo struct {
-// 	Kind            string
-// 	Name            string
-// 	Namespace       string
-// 	Target          string
-// 	TargetName      string
-// 	TargetNamespace string
-// 	TargetGroup     string
-// 	FeatureStore    *feature.Store
-// }
-
-// type ResourceInfo interface {
-// 	GetNamespace() string
-// 	GetName() string
-// 	GetTargetInfo() (kind string, name string, namespace string, group string) // target kind and target name
-// }
-
 type ResourceInfo interface {
 	duckv1.KRShaped
-	GetCrossNamespaceRef() duckv1.KReference //need to be implemented
+	GetCrossNamespaceRef() duckv1.KReference
 }
 
 func CheckNamespace(ctx context.Context, r ResourceInfo) *apis.FieldError {
-	kind := r.GroupVersionKind().Kind
-	group := r.GroupVersionKind().Group
-	// name := r.GetName()
-	// namespace := r.GetNamespace()
+	targetKind := r.GroupVersionKind().Kind
+	targetGroup := r.GroupVersionKind().Group
 	targetName := r.GetCrossNamespaceRef().Name
 	targetNamespace := r.GetCrossNamespaceRef().Namespace
-	fieldName := fmt.Sprintf("spec.%sNamespace", kind)
+	targetFieldName := fmt.Sprintf("spec.%sNamespace", targetKind)
 
 	// GetUserInfo accesses the UserInfo attached to the webhook context.
 	userInfo := apis.GetUserInfo(ctx)
 	if userInfo == nil {
 		return &apis.FieldError{
-			Paths:   []string{fieldName},
+			Paths:   []string{targetFieldName},
 			Message: "failed to get userInfo, which is needed to validate access to the target namespace",
 		}
 	}
@@ -75,7 +56,7 @@ func CheckNamespace(ctx context.Context, r ResourceInfo) *apis.FieldError {
 	logging.FromContext(ctx).Info("got config", zap.Any("config", config))
 	if config == nil {
 		return &apis.FieldError{
-			Paths:   []string{fieldName},
+			Paths:   []string{targetFieldName},
 			Message: "failed to get config, which is needed to validate the resources created with the namespace different than the target's namespace",
 		}
 	}
@@ -88,18 +69,18 @@ func CheckNamespace(ctx context.Context, r ResourceInfo) *apis.FieldError {
 	client, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		return &apis.FieldError{
-			Paths:   []string{fieldName},
+			Paths:   []string{targetFieldName},
 			Message: "failed to get k8s client, which is needed to validate the resources created with the namespace different than the target's namespace",
 		}
 	}
 
 	// SubjectAccessReview checks if the user is authorized to perform an action.
 	action := authv1.ResourceAttributes{
+		Name:      targetName,
 		Namespace: targetNamespace,
 		Verb:      "get",
-		Group:     group,
-		Resource:  targetName,
-		// add target name and target namespace
+		Group:     targetGroup,
+		Resource:  targetKind,
 	}
 
 	// Create the SubjectAccessReview
@@ -108,7 +89,6 @@ func CheckNamespace(ctx context.Context, r ResourceInfo) *apis.FieldError {
 			ResourceAttributes: &action,
 			User:               userInfo.Username,
 			Groups:             userInfo.Groups,
-			// add target name and target namespace
 		},
 	}
 
@@ -116,14 +96,14 @@ func CheckNamespace(ctx context.Context, r ResourceInfo) *apis.FieldError {
 
 	if err != nil {
 		return &apis.FieldError{
-			Paths:   []string{fieldName},
+			Paths:   []string{targetFieldName},
 			Message: fmt.Sprintf("failed to make authorization request to see if user can get brokers in namespace: %s", err.Error()),
 		}
 	}
 
 	if !resp.Status.Allowed {
 		return &apis.FieldError{
-			Paths:   []string{fieldName},
+			Paths:   []string{targetFieldName},
 			Message: fmt.Sprintf("user %s is not authorized to get target resource in namespace: %s", userInfo.Username, targetNamespace),
 		}
 	}
