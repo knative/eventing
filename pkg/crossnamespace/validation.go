@@ -8,7 +8,6 @@ import (
 	authv1 "k8s.io/api/authorization/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/injection"
@@ -34,15 +33,10 @@ import (
 
 type ResourceInfo interface {
 	duckv1.KRShaped
-	GetCrossNamespaceRef() duckv1.KReference
+	GetCrossNamespaceRef() duckv1.KReference //need to be implemented
 }
 
-func CheckNamespace(ctx context.Context, r ResourceInfo, flag *feature.Store) *apis.FieldError {
-	if !flag.IsEnabled(feature.CrossNamespaceEventLinks) {
-		logging.FromContext(ctx).Debug("Cross-namespace referencing is disabled")
-		return nil
-	}
-
+func CheckNamespace(ctx context.Context, r ResourceInfo) *apis.FieldError {
 	kind := r.GroupVersionKind().Kind
 	group := r.GroupVersionKind().Group
 	// name := r.GetName()
@@ -84,12 +78,12 @@ func CheckNamespace(ctx context.Context, r ResourceInfo, flag *feature.Store) *a
 	}
 
 	// SubjectAccessReview checks if the user is authorized to perform an action.
-	// Define the action
 	action := authv1.ResourceAttributes{
 		Namespace: targetNamespace,
 		Verb:      "get",
 		Group:     group,
 		Resource:  targetName,
+		// add target name and target namespace
 	}
 
 	// Create the SubjectAccessReview
@@ -98,6 +92,7 @@ func CheckNamespace(ctx context.Context, r ResourceInfo, flag *feature.Store) *a
 			ResourceAttributes: &action,
 			User:               userInfo.Username,
 			Groups:             userInfo.Groups,
+			// add target name and target namespace
 		},
 	}
 
@@ -119,3 +114,7 @@ func CheckNamespace(ctx context.Context, r ResourceInfo, flag *feature.Store) *a
 
 	return nil
 }
+
+// separate function checking the new things i made, such as subjectaccessreview ...
+// pull out logic and data manipulation; trust calls to kubernetes work; do end to end testing (entire logic)
+// test the logic in the function; this code
