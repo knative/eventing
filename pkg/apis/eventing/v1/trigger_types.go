@@ -228,5 +228,8 @@ func (t *Trigger) GetStatus() *duckv1.Status {
 }
 
 func (t *Trigger) GetCrossNamespaceRef() duckv1.KReference {
-	return *t.Spec.BrokerRef
+	if t.Spec.BrokerRef != nil {
+		return *t.Spec.BrokerRef
+	}
+	return duckv1.KReference{}
 }
