@@ -168,6 +168,8 @@ func (s *SinkBindingSubResourcesReconciler) reconcileOIDCTokenSecret(ctx context
 		logger.Debugf("OIDC token secret for %s/%s sinkbinding still valid for > %s (expires %s). Will not update secret", sb.Name, sb.Namespace, resyncAndBufferDuration, expiry)
 		// token is still valid for resync period + buffer --> we're fine
 
+		sb.Status.OIDCTokenSecretName = &secretName
+
 		return nil
 	}
 
