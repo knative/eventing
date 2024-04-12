@@ -70,7 +70,7 @@ func TestSingleVertexLineage(t *testing.T) {
 	d.AddEdge(e, nil, NoTransform{}, false)
 	e.AddEdge(c, nil, NoTransform{}, false)
 
-	lineageFromA := a.Lineage(MakeEmptyEventType(), TransformFunctionContext{})
+	lineageFromA := a.Lineage(EmptyEventType(), TransformFunctionContext{})
 	assert.Equal(t, "A", lineageFromA.Reference().Ref.Name)
 	assert.Equal(t, 1, lineageFromA.OutDegree())
 
