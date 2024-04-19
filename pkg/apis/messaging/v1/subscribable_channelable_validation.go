@@ -37,7 +37,7 @@ func isValidChannel(ctx context.Context, f duckv1.KReference) *apis.FieldError {
 		// Only name, apiVersion and kind are supported fields when feature.CrossNamespaceEventLinks is disabled
 		if f.Namespace != "" {
 			fe := apis.ErrDisallowedFields("namespace")
-			fe.Details = "only name, apiVersion and kind are supported fields"
+			fe.Details = "only name, apiVersion and kind are supported fields when feature.CrossNamespaceEventLinks is disabled"
 			errs = errs.Also(fe)
 		}
 	}
