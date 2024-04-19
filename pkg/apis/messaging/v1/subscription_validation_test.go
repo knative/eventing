@@ -34,6 +34,7 @@ const (
 	routeKind           = "Route"
 	routeAPIVersion     = "serving.knative.dev/v1"
 	channelName         = "subscribedChannel"
+	channelNamespace    = "subscribedChannelNamespace"
 	replyChannelName    = "toChannel"
 	subscriberName      = "subscriber"
 	namespace           = "namespace"
@@ -46,6 +47,7 @@ const (
 func getValidChannelRef() duckv1.KReference {
 	return duckv1.KReference{
 		Name:       channelName,
+		Namespace:  channelNamespace,
 		Kind:       channelKind,
 		APIVersion: channelAPIVersion,
 	}
@@ -487,7 +489,7 @@ func TestSubscriptionValidationSpecWithCrossNamespaceEventLinksFeatureEnabled(t 
 		name: "missing name in Channel",
 		c: &SubscriptionSpec{
 			Channel: duckv1.KReference{
-				Namespace:  namespace,
+				Namespace:  channelNamespace,
 				Kind:       channelKind,
 				APIVersion: channelAPIVersion,
 			},
