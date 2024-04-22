@@ -21,7 +21,8 @@ import (
 	"fmt"
 	"testing"
 
-	"k8s.io/utils/pointer"
+	"knative.dev/pkg/ptr"
+
 	triggerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/trigger"
 
 	"knative.dev/eventing/pkg/auth"
@@ -90,7 +91,7 @@ func TestFilterOIDCServiceAccounts(t *testing.T) {
 						APIVersion: eventing.SchemeGroupVersion.String(),
 						Kind:       "Trigger",
 						Name:       "tr",
-						Controller: pointer.Bool(true),
+						Controller: ptr.Bool(true),
 					},
 				},
 			},
@@ -125,7 +126,7 @@ func TestFilterOIDCServiceAccounts(t *testing.T) {
 						APIVersion: eventing.SchemeGroupVersion.String(),
 						Kind:       "Trigger",
 						Name:       "tr",
-						Controller: pointer.Bool(true),
+						Controller: ptr.Bool(true),
 					},
 				},
 			},
