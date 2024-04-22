@@ -19,9 +19,10 @@ package mttrigger
 import (
 	"context"
 	"fmt"
+	"testing"
+
 	"k8s.io/utils/pointer"
 	triggerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/trigger"
-	"testing"
 
 	"knative.dev/eventing/pkg/auth"
 	filteredFactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
