@@ -279,7 +279,7 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 			Subscriber: getValidDestination(),
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrDisallowedFields("namespace")
+			fe := apis.ErrDisallowedFields("channel.namespace")
 			fe.Details = "only name, apiVersion and kind are supported fields when feature.CrossNamespaceEventLinks is disabled"
 			return fe
 		}(),
@@ -624,6 +624,18 @@ func TestSubscriptionValidationSpecWithCrossNamespaceEventLinksFeatureEnabled(t 
 			Delivery:   getDelivery(backoffDelayInvalid),
 		},
 		want: apis.ErrInvalidValue(backoffDelayInvalid, "delivery.backoffDelay"),
+	}, {
+		name: "valid empty channel namespace",
+		c: &SubscriptionSpec{
+			Channel: duckv1.KReference{
+				Name:       channelName,
+				Namespace:  "",
+				Kind:       channelKind,
+				APIVersion: channelAPIVersion,
+			},
+			Subscriber: getValidDestination(),
+		},
+		want: nil,
 	}, {
 		name: "valid cross namespace referencing",
 		c: &SubscriptionSpec{
