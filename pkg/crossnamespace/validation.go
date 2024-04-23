@@ -42,6 +42,11 @@ func CheckNamespace(ctx context.Context, r ResourceInfo) *apis.FieldError {
 	targetNamespace := r.GetCrossNamespaceRef().Namespace
 	targetFieldName := fmt.Sprintf("spec.%sNamespace", targetKind)
 
+	// If the target namespace is empty or the same as the object namespace, this function is skipped
+	if targetNamespace == "" || targetNamespace == r.GetNamespace() {
+		return nil
+	}
+
 	// GetUserInfo accesses the UserInfo attached to the webhook context.
 	userInfo := apis.GetUserInfo(ctx)
 	if userInfo == nil {
