@@ -844,7 +844,7 @@ func TestValidChannel(t *testing.T) {
 		},
 		want: func() *apis.FieldError {
 			fe := apis.ErrDisallowedFields("namespace")
-			fe.Details = "only name, apiVersion and kind are supported fields"
+			fe.Details = "only name, apiVersion and kind are supported fields when feature.CrossNamespaceEventLinks is disabled"
 			return fe
 		}(),
 	}, {
