@@ -29,12 +29,12 @@ import (
 )
 
 func (s *Subscription) Validate(ctx context.Context) *apis.FieldError {
-	// s.Validate(ctx) because krshaped is defined on the entire subscription, not just the spec
 	errs := s.Spec.Validate(ctx).ViaField("spec")
 	if apis.IsInUpdate(ctx) {
 		original := apis.GetBaseline(ctx).(*Subscription)
 		errs = errs.Also(s.CheckImmutableFields(ctx, original))
 	}
+	// s.Validate(ctx) because krshaped is defined on the entire subscription, not just the spec
 	if feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) {
 		crossNamespaceError := cn.CheckNamespace(ctx, s)
 		if crossNamespaceError != nil {
