@@ -567,7 +567,7 @@ func TestSubscriptionValidationSpecWithCrossNamespaceEventLinksFeatureEnabled(t 
 			return fe
 		}(),
 	}, {
-		name: "missing name and namespace in channel, and missing subscriber",
+		name: "missing name in channel, and missing subscriber",
 		c: &SubscriptionSpec{
 			Channel: duckv1.KReference{
 				Kind:       channelKind,
@@ -577,7 +577,7 @@ func TestSubscriptionValidationSpecWithCrossNamespaceEventLinksFeatureEnabled(t 
 		want: func() *apis.FieldError {
 			fe := apis.ErrMissingField("subscriber")
 			fe.Details = "the Subscription must reference a subscriber"
-			return apis.ErrMissingField("channel.name and channel.namespace").Also(fe)
+			return apis.ErrMissingField("channel.name").Also(fe)
 		}(),
 	}, {
 		name: "empty",
@@ -628,7 +628,7 @@ func TestSubscriptionValidationSpecWithCrossNamespaceEventLinksFeatureEnabled(t 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			ctx := feature.ToContext(context.TODO(), feature.Flags{
-				feature.CrossNamespaceEventLinks: feature.Allowed,
+				feature.CrossNamespaceEventLinks: feature.Enabled,
 			})
 			got := test.c.Validate(ctx)
 			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {

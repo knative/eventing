@@ -56,12 +56,8 @@ func (ss *SubscriptionSpec) Validate(ctx context.Context) *apis.FieldError {
 		fe := apis.ErrMissingField("channel")
 		fe.Details = "the Subscription must reference a channel"
 		return fe
-	}
-
-	if feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) {
-		if fe := isValidChannel(ctx, ss.Channel); fe != nil {
-			errs = errs.Also(fe.ViaField("channel"))
-		}
+	} else if fe := isValidChannel(ctx, ss.Channel); fe != nil {
+		errs = errs.Also(fe.ViaField("channel"))
 	}
 
 	// Check if we follow the spec and have a valid reference to a subscriber
