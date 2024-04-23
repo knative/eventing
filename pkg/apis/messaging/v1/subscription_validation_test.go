@@ -47,7 +47,6 @@ const (
 func getValidChannelRef() duckv1.KReference {
 	return duckv1.KReference{
 		Name:       channelName,
-		Namespace:  channelNamespace,
 		Kind:       channelKind,
 		APIVersion: channelAPIVersion,
 	}
@@ -268,6 +267,22 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 			Delivery:   getDelivery(backoffDelayInvalid),
 		},
 		want: apis.ErrInvalidValue(backoffDelayInvalid, "delivery.backoffDelay"),
+	}, {
+		name: "non-empty Channel namespace",
+		c: &SubscriptionSpec{
+			Channel: duckv1.KReference{
+				Kind:       channelKind,
+				APIVersion: channelAPIVersion,
+				Name:       channelName,
+				Namespace:  channelNamespace,
+			},
+			Subscriber: getValidDestination(),
+		},
+		want: func() *apis.FieldError {
+			fe := apis.ErrDisallowedFields("namespace")
+			fe.Details = "only name, apiVersion and kind are supported fields when feature.CrossNamespaceEventLinks is disabled"
+			return fe
+		}(),
 	}}
 
 	for _, test := range tests {
@@ -500,20 +515,6 @@ func TestSubscriptionValidationSpecWithCrossNamespaceEventLinksFeatureEnabled(t 
 			return fe
 		}(),
 	}, {
-		name: "missing namespace in Channel",
-		c: &SubscriptionSpec{
-			Channel: duckv1.KReference{
-				Name:       channelName,
-				Kind:       channelKind,
-				APIVersion: channelAPIVersion,
-			},
-			Subscriber: getValidDestination(),
-		},
-		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("channel.namespace")
-			return fe
-		}(),
-	}, {
 		name: "missing Subscriber and Reply",
 		c: &SubscriptionSpec{
 			Channel: getValidChannelRef(),
@@ -623,6 +624,18 @@ func TestSubscriptionValidationSpecWithCrossNamespaceEventLinksFeatureEnabled(t 
 			Delivery:   getDelivery(backoffDelayInvalid),
 		},
 		want: apis.ErrInvalidValue(backoffDelayInvalid, "delivery.backoffDelay"),
+	}, {
+		name: "valid cross namespace referencing",
+		c: &SubscriptionSpec{
+			Channel: duckv1.KReference{
+				Name:       channelName,
+				Namespace:  channelNamespace,
+				Kind:       channelKind,
+				APIVersion: channelAPIVersion,
+			},
+			Subscriber: getValidDestination(),
+		},
+		want: nil,
 	}}
 
 	for _, test := range tests {
