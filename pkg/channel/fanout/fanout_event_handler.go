@@ -247,14 +247,14 @@ func createEventReceiverFunction(f *FanoutEventHandler) func(context.Context, ch
 				h.Set(apis.KnNamespaceHeader, ref.Namespace)
 				// Any returned error is already logged in f.dispatch().
 				dispatchResultForFanout := f.dispatch(ctx, subs, e, h)
-				_ = ParseDispatchResultAndReportMetrics(dispatchResultForFanout, *r, *args)
+
 				// If there are both http and https subscribers, we need to report the metrics for both of the type
 				if hasHttpSubs {
-					reportArgs.EventScheme = "http"
+					args.EventScheme = "http"
 					_ = ParseDispatchResultAndReportMetrics(dispatchResultForFanout, *r, *args)
 				}
 				if hasHttpsSubs {
-					reportArgs.EventScheme = "https"
+					args.EventScheme = "https"
 					_ = ParseDispatchResultAndReportMetrics(dispatchResultForFanout, *r, *args)
 				}
 			}(evnt, additionalHeaders, parentSpan, &f.reporter, &reportArgs)
@@ -278,9 +278,9 @@ func createEventReceiverFunction(f *FanoutEventHandler) func(context.Context, ch
 
 		additionalHeaders.Set(apis.KnNamespaceHeader, ref.Namespace)
 		dispatchResultForFanout := f.dispatch(ctx, subs, event, additionalHeaders)
-		err := ParseDispatchResultAndReportMetrics(dispatchResultForFanout, f.reporter, reportArgs)
 		// If there are both http and https subscribers, we need to report the metrics for both of the type
 		// In this case we report http metrics because above we checked first for https and reported it so the left over metric to report is for http
+		var err error
 		if hasHttpSubs {
 			reportArgs.EventScheme = "http"
 			err = ParseDispatchResultAndReportMetrics(dispatchResultForFanout, f.reporter, reportArgs)
