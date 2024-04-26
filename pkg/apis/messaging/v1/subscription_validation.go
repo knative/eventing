@@ -41,9 +41,6 @@ func (s *Subscription) Validate(ctx context.Context) *apis.FieldError {
 			errs = errs.Also(crossNamespaceError)
 		}
 	}
-	// validate whether or not the permissions are all correct
-	// check if interface works
-	// validate namespace
 	return errs
 }
 
