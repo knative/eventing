@@ -47,7 +47,7 @@ func (t *Trigger) Validate(ctx context.Context) *apis.FieldError {
 		original := apis.GetBaseline(ctx).(*Trigger)
 		errs = errs.Also(t.CheckImmutableFields(ctx, original))
 	}
-	if feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) {
+	if feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) && t.Spec.BrokerRef != nil {
 		crossNamespaceError := cn.CheckNamespace(ctx, t)
 		if crossNamespaceError != nil {
 			errs = errs.Also(crossNamespaceError)
