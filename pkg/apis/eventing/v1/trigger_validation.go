@@ -58,8 +58,10 @@ func (t *Trigger) Validate(ctx context.Context) *apis.FieldError {
 
 // Validate the TriggerSpec.
 func (ts *TriggerSpec) Validate(ctx context.Context) (errs *apis.FieldError) {
-	if ts.Broker == "" {
+	if ts.BrokerRef == nil && ts.Broker == "" {
 		errs = errs.Also(apis.ErrMissingField("broker"))
+	} else if ts.BrokerRef != nil && ts.Broker != "" {
+		errs = errs.Also(apis.ErrMultipleOneOf("broker", "brokerRef"))
 	}
 
 	return errs.Also(
