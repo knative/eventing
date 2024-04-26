@@ -64,6 +64,14 @@ func (ts *TriggerSpec) Validate(ctx context.Context) (errs *apis.FieldError) {
 		errs = errs.Also(apis.ErrMultipleOneOf("broker", "brokerRef"))
 	}
 
+	if !feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) && ts.BrokerRef != nil {
+		if ts.BrokerRef.Namespace != "" {
+			fe := apis.ErrDisallowedFields("namespace")
+			fe.Details = "only name, apiVersion and kind are supported fields when feature.CrossNamespaceEventLinks is disabled"
+			errs = errs.Also(fe)
+		}
+	}
+
 	return errs.Also(
 		ValidateAttributeFilters(ts.Filter).ViaField("filter"),
 	).Also(

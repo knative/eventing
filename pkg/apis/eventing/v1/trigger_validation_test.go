@@ -484,6 +484,21 @@ func TestTriggerSpecValidation(t *testing.T) {
 			Subscriber: validSubscriber,
 		},
 		want: apis.ErrMissingField("broker"),
+	}, {
+		name: "BrokerRef has different namespace",
+		ts: &TriggerSpec{
+			BrokerRef: &duckv1.KReference{
+				Name:      "test-broker",
+				Namespace: "test-broker-ns",
+			},
+			Filter:     validTriggerFilter,
+			Subscriber: validSubscriber,
+		},
+		want: func() *apis.FieldError {
+			fe := apis.ErrDisallowedFields("namespace")
+			fe.Details = "only name, apiVersion and kind are supported fields when feature.CrossNamespaceEventLinks is disabled"
+			return fe
+		}(),
 	}}
 
 	for _, test := range tests {
