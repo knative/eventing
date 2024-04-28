@@ -182,3 +182,8 @@ func (s *Subscription) GetUntypedSpec() interface{} {
 func (s *Subscription) GetStatus() *duckv1.Status {
 	return &s.Status.Status
 }
+
+// GetCrossNamespaceRef returns the Channel reference for the Subscription. Implements the ResourceInfo interface.
+func (s *Subscription) GetCrossNamespaceRef() duckv1.KReference {
+	return s.Spec.Channel
+}

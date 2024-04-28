@@ -34,6 +34,7 @@ const (
 	routeKind           = "Route"
 	routeAPIVersion     = "serving.knative.dev/v1"
 	channelName         = "subscribedChannel"
+	channelNamespace    = "subscribedChannelNamespace"
 	replyChannelName    = "toChannel"
 	subscriberName      = "subscriber"
 	namespace           = "namespace"
@@ -266,6 +267,22 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 			Delivery:   getDelivery(backoffDelayInvalid),
 		},
 		want: apis.ErrInvalidValue(backoffDelayInvalid, "delivery.backoffDelay"),
+	}, {
+		name: "non-empty Channel namespace",
+		c: &SubscriptionSpec{
+			Channel: duckv1.KReference{
+				Kind:       channelKind,
+				APIVersion: channelAPIVersion,
+				Name:       channelName,
+				Namespace:  channelNamespace,
+			},
+			Subscriber: getValidDestination(),
+		},
+		want: func() *apis.FieldError {
+			fe := apis.ErrDisallowedFields("channel.namespace")
+			fe.Details = "only name, apiVersion and kind are supported fields when feature.CrossNamespaceEventLinks is disabled"
+			return fe
+		}(),
 	}}
 
 	for _, test := range tests {
@@ -436,6 +453,207 @@ func TestSubscriptionSpecValidationWithKRefGroupFeatureEnabled(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			ctx := feature.ToContext(context.TODO(), feature.Flags{
 				feature.KReferenceGroup: feature.Allowed,
+			})
+			got := test.c.Validate(ctx)
+			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
+				t.Errorf("%s: validateChannel (-want, +got) = %v", test.name, diff)
+			}
+		})
+	}
+}
+
+func TestSubscriptionValidationSpecWithCrossNamespaceEventLinksFeatureEnabled(t *testing.T) {
+	tests := []struct {
+		name string
+		c    *SubscriptionSpec
+		want *apis.FieldError
+	}{{
+		name: "valid",
+		c: &SubscriptionSpec{
+			Channel:    getValidChannelRef(),
+			Subscriber: getValidDestination(),
+		},
+		want: nil,
+	}, {
+		name: "valid with reply",
+		c: &SubscriptionSpec{
+			Channel:    getValidChannelRef(),
+			Subscriber: getValidDestination(),
+			Reply:      getValidReply(),
+		},
+		want: nil,
+	}, {
+		name: "valid with delivery",
+		c: &SubscriptionSpec{
+			Channel:    getValidChannelRef(),
+			Subscriber: getValidDestination(),
+			Delivery:   getDelivery(backoffDelayValid),
+		},
+		want: nil,
+	}, {
+		name: "empty Channel",
+		c: &SubscriptionSpec{
+			Channel: duckv1.KReference{},
+		},
+		want: func() *apis.FieldError {
+			fe := apis.ErrMissingField("channel")
+			fe.Details = "the Subscription must reference a channel"
+			return fe
+		}(),
+	}, {
+		name: "missing name in Channel",
+		c: &SubscriptionSpec{
+			Channel: duckv1.KReference{
+				Namespace:  channelNamespace,
+				Kind:       channelKind,
+				APIVersion: channelAPIVersion,
+			},
+			Subscriber: getValidDestination(),
+		},
+		want: func() *apis.FieldError {
+			fe := apis.ErrMissingField("channel.name")
+			return fe
+		}(),
+	}, {
+		name: "missing Subscriber and Reply",
+		c: &SubscriptionSpec{
+			Channel: getValidChannelRef(),
+		},
+		want: func() *apis.FieldError {
+			fe := apis.ErrMissingField("subscriber")
+			fe.Details = "the Subscription must reference a subscriber"
+			return fe
+		}(),
+	}, {
+		name: "empty Subscriber and Reply",
+		c: &SubscriptionSpec{
+			Channel:    getValidChannelRef(),
+			Subscriber: &duckv1.Destination{},
+			Reply:      &duckv1.Destination{},
+		},
+		want: func() *apis.FieldError {
+			fe := apis.ErrMissingField("subscriber")
+			fe.Details = "the Subscription must reference a subscriber"
+			return fe
+		}(),
+	}, {
+		name: "empty Reply",
+		c: &SubscriptionSpec{
+			Channel:    getValidChannelRef(),
+			Subscriber: getValidDestination(),
+			Reply:      &duckv1.Destination{},
+		},
+		want: nil,
+	}, {
+		name: "missing Subscriber",
+		c: &SubscriptionSpec{
+			Channel: getValidChannelRef(),
+			Reply:   getValidReply(),
+		},
+		want: func() *apis.FieldError {
+			fe := apis.ErrMissingField("subscriber")
+			fe.Details = "the Subscription must reference a subscriber"
+			return fe
+		}(),
+	}, {
+		name: "empty Subscriber",
+		c: &SubscriptionSpec{
+			Channel:    getValidChannelRef(),
+			Subscriber: &duckv1.Destination{},
+			Reply:      getValidReply(),
+		},
+		want: func() *apis.FieldError {
+			fe := apis.ErrMissingField("subscriber")
+			fe.Details = "the Subscription must reference a subscriber"
+			return fe
+		}(),
+	}, {
+		name: "missing name in channel, and missing subscriber",
+		c: &SubscriptionSpec{
+			Channel: duckv1.KReference{
+				Kind:       channelKind,
+				APIVersion: channelAPIVersion,
+			},
+		},
+		want: func() *apis.FieldError {
+			fe := apis.ErrMissingField("subscriber")
+			fe.Details = "the Subscription must reference a subscriber"
+			return apis.ErrMissingField("channel.name").Also(fe)
+		}(),
+	}, {
+		name: "empty",
+		c:    &SubscriptionSpec{},
+		want: func() *apis.FieldError {
+			fe := apis.ErrMissingField("channel")
+			fe.Details = "the Subscription must reference a channel"
+			return fe
+		}(),
+	}, {
+		name: "missing name in Subscriber.Ref",
+		c: &SubscriptionSpec{
+			Channel: getValidChannelRef(),
+			Subscriber: &duckv1.Destination{
+				Ref: &duckv1.KReference{
+					Namespace:  namespace,
+					Kind:       channelKind,
+					APIVersion: channelAPIVersion,
+				},
+			},
+		},
+		want: apis.ErrMissingField("subscriber.ref.name"),
+	}, {
+		name: "missing name in Subscriber.Ref",
+		c: &SubscriptionSpec{
+			Channel:    getValidChannelRef(),
+			Subscriber: getValidDestination(),
+			Reply: &duckv1.Destination{
+				Ref: &duckv1.KReference{
+					Namespace:  namespace,
+					Name:       "",
+					Kind:       channelKind,
+					APIVersion: channelAPIVersion,
+				},
+			},
+		},
+		want: apis.ErrMissingField("reply.ref.name"),
+	}, {
+		name: "invalid Delivery",
+		c: &SubscriptionSpec{
+			Channel:    getValidChannelRef(),
+			Subscriber: getValidDestination(),
+			Delivery:   getDelivery(backoffDelayInvalid),
+		},
+		want: apis.ErrInvalidValue(backoffDelayInvalid, "delivery.backoffDelay"),
+	}, {
+		name: "valid empty channel namespace",
+		c: &SubscriptionSpec{
+			Channel: duckv1.KReference{
+				Name:       channelName,
+				Namespace:  "",
+				Kind:       channelKind,
+				APIVersion: channelAPIVersion,
+			},
+			Subscriber: getValidDestination(),
+		},
+		want: nil,
+	}, {
+		name: "valid cross namespace referencing",
+		c: &SubscriptionSpec{
+			Channel: duckv1.KReference{
+				Name:       channelName,
+				Namespace:  channelNamespace,
+				Kind:       channelKind,
+				APIVersion: channelAPIVersion,
+			},
+			Subscriber: getValidDestination(),
+		},
+		want: nil,
+	}}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctx := feature.ToContext(context.TODO(), feature.Flags{
+				feature.CrossNamespaceEventLinks: feature.Enabled,
 			})
 			got := test.c.Validate(ctx)
 			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
@@ -626,7 +844,7 @@ func TestValidChannel(t *testing.T) {
 		},
 		want: func() *apis.FieldError {
 			fe := apis.ErrDisallowedFields("namespace")
-			fe.Details = "only name, apiVersion and kind are supported fields"
+			fe.Details = "only name, apiVersion and kind are supported fields when feature.CrossNamespaceEventLinks is disabled"
 			return fe
 		}(),
 	}, {
