@@ -113,7 +113,6 @@ func (g *Graph) AddSource(source duckv1.Source) {
 
 	v := g.getOrCreateVertex(dest)
 
-	// channel has a DLS, we need to add an edge to that
 	to := g.getOrCreateVertex(&source.Spec.Sink)
 
 	v.AddEdge(to, dest, CloudEventOverridesTransform{Overrides: source.Spec.CloudEventOverrides}, true)
