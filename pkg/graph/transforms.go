@@ -18,6 +18,7 @@ package graph
 
 import (
 	eventingv1beta3 "knative.dev/eventing/pkg/apis/eventing/v1beta3"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 type NoTransform struct{}
@@ -44,4 +45,41 @@ func (ett EventTypeTransform) Apply(et *eventingv1beta3.EventType, tfc Transform
 
 func (ett EventTypeTransform) Name() string {
 	return "eventtype-transform"
+}
+
+type CloudEventOverridesTransform struct {
+	Overrides *duckv1.CloudEventOverrides
+}
+
+var _ Transform = CloudEventOverridesTransform{}
+
+func (cet CloudEventOverridesTransform) Apply(et *eventingv1beta3.EventType, tfc TransformFunctionContext) (*eventingv1beta3.EventType, TransformFunctionContext) {
+	etAttributes := make(map[string]*eventingv1beta3.EventAttributeDefinition)
+	for _, v := range et.Spec.Attributes {
+		etAttributes[v.Name] = &v
+	}
+
+	for k, v := range cet.Overrides.Extensions {
+		if etAttributes[k].Value == "" {
+			etAttributes[k].Value = v
+		}
+
+		if etAttributes[k].Value != v {
+			return nil, tfc
+		}
+
+	}
+
+	updatedAttributes := make([]eventingv1beta3.EventAttributeDefinition, 0, len(et.Spec.Attributes))
+	for _, v := range etAttributes {
+		updatedAttributes = append(updatedAttributes, *v)
+	}
+
+	et.Spec.Attributes = updatedAttributes
+
+	return et, tfc
+}
+
+func (cet CloudEventOverridesTransform) Name() string {
+	return "source-ce-overrides-transform"
 }
