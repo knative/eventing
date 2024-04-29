@@ -472,7 +472,7 @@ func TestAddTrigger(t *testing.T) {
 			},
 		},
 		{
-			name:    "no channel",
+			name:    "no broker",
 			brokers: []eventingv1.Broker{},
 			triggers: []eventingv1.Trigger{
 				{
