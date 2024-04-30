@@ -391,6 +391,11 @@ func (r *Reconciler) getChannel(ctx context.Context, sub *v1.Subscription) (*eve
 	// to have a "backing" channel that is what we need to actually operate on
 	// as well as keep track of.
 	if v1ChannelGVK.Group == gvk.Group && v1ChannelGVK.Kind == gvk.Kind {
+		if feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) && sub.Spec.Channel.Namespace != "" {
+			channelNamespace = sub.Spec.Channel.Namespace
+		} else {
+			channelNamespace = sub.Namespace
+		}
 		// Track changes on Channel.
 		// Ref: https://github.com/knative/eventing/issues/2641
 		// NOTE: There is a race condition with using the channelableTracker
@@ -401,25 +406,12 @@ func (r *Reconciler) getChannel(ctx context.Context, sub *v1.Subscription) (*eve
 		// re-sync therefore we have to track Channels using a tracker linked
 		// to the cache we intend to use to pull the Channel from. This linkage
 		// is setup in NewController for r.tracker.
-		err := r.tracker.TrackReference(tracker.Reference{
+		if err := r.tracker.TrackReference(tracker.Reference{
 			APIVersion: "messaging.knative.dev/v1",
 			Kind:       "Channel",
-			Namespace:  sub.Namespace,
+			Namespace:  channelNamespace,
 			Name:       sub.Spec.Channel.Name,
-		}, sub)
-
-		// If there's an error and cross-namespace links are allowed, try tracking using the channel's own namespace.
-		if err != nil && feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) {
-			err = r.tracker.TrackReference(tracker.Reference{
-				APIVersion: "messaging.knative.dev/v1",
-				Kind:       "Channel",
-				Namespace:  sub.Spec.Channel.Namespace,
-				Name:       sub.Spec.Channel.Name,
-			}, sub)
-		}
-
-		// Log an error if tracking failed after both attempts.
-		if err != nil {
+		}, sub); err != nil {
 			logging.FromContext(ctx).Infow("TrackReference for Channel failed", zap.Any("channel", sub.Spec.Channel), zap.Error(err))
 			return nil, err
 		}
