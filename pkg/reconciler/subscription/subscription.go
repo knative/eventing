@@ -62,7 +62,8 @@ const (
 )
 
 var (
-	v1ChannelGVK = v1.SchemeGroupVersion.WithKind("Channel")
+	v1ChannelGVK     = v1.SchemeGroupVersion.WithKind("Channel")
+	channelNamespace string
 )
 
 type Reconciler struct {
@@ -400,12 +401,25 @@ func (r *Reconciler) getChannel(ctx context.Context, sub *v1.Subscription) (*eve
 		// re-sync therefore we have to track Channels using a tracker linked
 		// to the cache we intend to use to pull the Channel from. This linkage
 		// is setup in NewController for r.tracker.
-		if err := r.tracker.TrackReference(tracker.Reference{
+		err := r.tracker.TrackReference(tracker.Reference{
 			APIVersion: "messaging.knative.dev/v1",
 			Kind:       "Channel",
 			Namespace:  sub.Namespace,
 			Name:       sub.Spec.Channel.Name,
-		}, sub); err != nil {
+		}, sub)
+
+		// If there's an error and cross-namespace links are allowed, try tracking using the channel's own namespace.
+		if err != nil && feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) {
+			err = r.tracker.TrackReference(tracker.Reference{
+				APIVersion: "messaging.knative.dev/v1",
+				Kind:       "Channel",
+				Namespace:  sub.Spec.Channel.Namespace,
+				Name:       sub.Spec.Channel.Name,
+			}, sub)
+		}
+
+		// Log an error if tracking failed after both attempts.
+		if err != nil {
 			logging.FromContext(ctx).Infow("TrackReference for Channel failed", zap.Any("channel", sub.Spec.Channel), zap.Error(err))
 			return nil, err
 		}
@@ -425,7 +439,13 @@ func (r *Reconciler) getChannel(ctx context.Context, sub *v1.Subscription) (*eve
 			return nil, fmt.Errorf("channel is not ready.")
 		}
 
-		statCh := duckv1.KReference{Name: channel.Status.Channel.Name, Namespace: sub.Namespace, Kind: channel.Status.Channel.Kind, APIVersion: channel.Status.Channel.APIVersion}
+		// if cross namespace referencing is enabled, namespace is updated to be the channel's namespace
+		if feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) && sub.Spec.Channel.Namespace != "" {
+			channelNamespace = sub.Spec.Channel.Namespace
+		} else {
+			channelNamespace = sub.Namespace
+		}
+		statCh := duckv1.KReference{Name: channel.Status.Channel.Name, Namespace: channelNamespace, Kind: channel.Status.Channel.Kind, APIVersion: channel.Status.Channel.APIVersion}
 		obj, err = r.trackAndFetchChannel(ctx, sub, statCh)
 		if err != nil {
 			return nil, err
@@ -448,7 +468,12 @@ func isNilOrEmptyDestination(destination *duckv1.Destination) bool {
 
 func (r *Reconciler) syncPhysicalChannel(ctx context.Context, sub *v1.Subscription, channel *eventingduckv1.Channelable, isDeleted bool) (bool, error) {
 	logging.FromContext(ctx).Debugw("Reconciling physical from Channel", zap.Any("sub", sub))
-	if patched, patchErr := r.patchSubscription(ctx, sub.Namespace, channel, sub); patchErr != nil {
+	if feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) && sub.Spec.Channel.Namespace != "" {
+		channelNamespace = sub.Spec.Channel.Namespace
+	} else {
+		channelNamespace = sub.Namespace
+	}
+	if patched, patchErr := r.patchSubscription(ctx, channelNamespace, channel, sub); patchErr != nil {
 		if isDeleted && apierrors.IsNotFound(patchErr) {
 			logging.FromContext(ctx).Warnw("Could not find Channel", zap.Any("channel", sub.Spec.Channel))
 			return false, nil
