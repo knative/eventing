@@ -53,21 +53,24 @@ type CloudEventOverridesTransform struct {
 
 var _ Transform = CloudEventOverridesTransform{}
 
+// Apply applies the CloudEventOverrides for a given event source
 func (cet CloudEventOverridesTransform) Apply(et *eventingv1beta3.EventType, tfc TransformFunctionContext) (*eventingv1beta3.EventType, TransformFunctionContext) {
 	etAttributes := make(map[string]*eventingv1beta3.EventAttributeDefinition)
-	for _, v := range et.Spec.Attributes {
-		etAttributes[v.Name] = &v
+	for i := range et.Spec.Attributes {
+		// don't use a loop var, as the memory ref would point to the loop variable rather than the element in the array
+		etAttributes[et.Spec.Attributes[i].Name] = &et.Spec.Attributes[i]
 	}
 
 	for k, v := range cet.Overrides.Extensions {
-		if etAttributes[k].Value == "" {
-			etAttributes[k].Value = v
+		if attribute, ok := etAttributes[k]; ok {
+			attribute.Value = v
+		} else {
+			etAttributes[k] = &eventingv1beta3.EventAttributeDefinition{
+				Name:     k,
+				Value:    v,
+				Required: true,
+			}
 		}
-
-		if etAttributes[k].Value != v {
-			return nil, tfc
-		}
-
 	}
 
 	updatedAttributes := make([]eventingv1beta3.EventAttributeDefinition, 0, len(et.Spec.Attributes))
