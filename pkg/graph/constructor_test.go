@@ -522,11 +522,19 @@ func TestAddSubscription(t *testing.T) {
 					Name:      "my-channel",
 					Namespace: "default",
 				},
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "messaging.knative.dev/v1",
+					Kind:       "Channel",
+				},
 			}},
 			subscriptions: []messagingv1.Subscription{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "my-subscription",
 					Namespace: "default",
+				},
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "messaging.knative.dev/v1",
+					Kind:       "Subscription",
 				},
 				Spec: messagingv1.SubscriptionSpec{
 					Channel: duckv1.KReference{
@@ -629,6 +637,10 @@ func TestAddSubscription(t *testing.T) {
 					Name:      "my-channel",
 					Namespace: "default",
 				},
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "messaging.knative.dev/v1",
+					Kind:       "Channel",
+				},
 				Spec: messagingv1.ChannelSpec{ChannelableSpec: eventingduckv1.ChannelableSpec{
 					Delivery: &eventingduckv1.DeliverySpec{
 						DeadLetterSink: &duckv1.Destination{
@@ -641,6 +653,10 @@ func TestAddSubscription(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "my-subscription",
 					Namespace: "default",
+				},
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "messaging.knative.dev/v1",
+					Kind:       "Subscription",
 				},
 				Spec: messagingv1.SubscriptionSpec{
 					Channel: duckv1.KReference{
@@ -861,6 +877,10 @@ func TestAddSubscription(t *testing.T) {
 					Name:      "my-channel",
 					Namespace: "default",
 				},
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "messaging.knative.dev/v1",
+					Kind:       "Channel",
+				},
 				Spec: messagingv1.ChannelSpec{ChannelableSpec: eventingduckv1.ChannelableSpec{
 					Delivery: &eventingduckv1.DeliverySpec{
 						DeadLetterSink: &duckv1.Destination{
@@ -873,6 +893,10 @@ func TestAddSubscription(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "my-subscription",
 					Namespace: "default",
+				},
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "messaging.knative.dev/v1",
+					Kind:       "Subscription",
 				},
 				Spec: messagingv1.SubscriptionSpec{
 					Channel: duckv1.KReference{
@@ -1157,6 +1181,10 @@ func TestAddSubscription(t *testing.T) {
 					Name:      "my-channel",
 					Namespace: "default",
 				},
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "messaging.knative.dev/v1",
+					Kind:       "Channel",
+				},
 				Spec: messagingv1.ChannelSpec{ChannelableSpec: eventingduckv1.ChannelableSpec{
 					Delivery: &eventingduckv1.DeliverySpec{
 						DeadLetterSink: &duckv1.Destination{
@@ -1169,6 +1197,10 @@ func TestAddSubscription(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "my-subscription",
 					Namespace: "default",
+				},
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "messaging.knative.dev/v1",
+					Kind:       "Subscription",
 				},
 				Spec: messagingv1.SubscriptionSpec{
 					Channel: duckv1.KReference{
@@ -1396,11 +1428,19 @@ func TestAddSubscription(t *testing.T) {
 					Name:      "my-channel",
 					Namespace: "default",
 				},
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "messaging.knative.dev/v1",
+					Kind:       "Channel",
+				},
 			}},
 			subscriptions: []messagingv1.Subscription{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "my-subscription",
 					Namespace: "default",
+				},
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "messaging.knative.dev/v1",
+					Kind:       "Subscription",
 				},
 				Spec: messagingv1.SubscriptionSpec{
 					Channel: duckv1.KReference{
@@ -1634,6 +1674,10 @@ func TestAddSubscription(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "my-subscription",
 						Namespace: "default",
+					},
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "messaging.knative.dev/v1",
+						Kind:       "Subscription",
 					},
 					Spec: messagingv1.SubscriptionSpec{
 						Channel: duckv1.KReference{
