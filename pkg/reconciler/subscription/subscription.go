@@ -19,6 +19,7 @@ package subscription
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -362,7 +363,14 @@ func (r *Reconciler) trackAndFetchChannel(ctx context.Context, sub *v1.Subscript
 		logging.FromContext(ctx).Errorw("Error getting lister for Channel", zap.Any("channel", ref), zap.Error(err))
 		return nil, err
 	}
-	obj, err := chLister.ByNamespace(sub.Namespace).Get(ref.Name)
+	if feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) && sub.Spec.Channel.Namespace != "" {
+		channelNamespace = sub.Spec.Channel.Namespace
+	} else {
+		channelNamespace = sub.Namespace
+	}
+	log.Printf("Using channel namespace: %s", sub.Spec.Channel.Namespace)
+
+	obj, err := chLister.ByNamespace(channelNamespace).Get(ref.Name)
 	if err != nil {
 		logging.FromContext(ctx).Errorw("Error getting channel from lister", zap.Any("channel", ref), zap.Error(err))
 		return nil, err
@@ -396,6 +404,7 @@ func (r *Reconciler) getChannel(ctx context.Context, sub *v1.Subscription) (*eve
 		} else {
 			channelNamespace = sub.Namespace
 		}
+		log.Printf("Using channel namespaceeee: %s", sub.Spec.Channel.Namespace)
 		// Track changes on Channel.
 		// Ref: https://github.com/knative/eventing/issues/2641
 		// NOTE: There is a race condition with using the channelableTracker
@@ -421,7 +430,7 @@ func (r *Reconciler) getChannel(ctx context.Context, sub *v1.Subscription) (*eve
 		// the status of it will not have the extra bits we need (namely, pointer
 		// and status of the actual "backing" channel), we fetch it using typed
 		// lister so that we get those bits.
-		channel, err := r.channelLister.Channels(sub.Namespace).Get(sub.Spec.Channel.Name)
+		channel, err := r.channelLister.Channels(channelNamespace).Get(sub.Spec.Channel.Name)
 		if err != nil {
 			return nil, err
 		}
@@ -431,12 +440,6 @@ func (r *Reconciler) getChannel(ctx context.Context, sub *v1.Subscription) (*eve
 			return nil, fmt.Errorf("channel is not ready.")
 		}
 
-		// if cross namespace referencing is enabled, namespace is updated to be the channel's namespace
-		if feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) && sub.Spec.Channel.Namespace != "" {
-			channelNamespace = sub.Spec.Channel.Namespace
-		} else {
-			channelNamespace = sub.Namespace
-		}
 		statCh := duckv1.KReference{Name: channel.Status.Channel.Name, Namespace: channelNamespace, Kind: channel.Status.Channel.Kind, APIVersion: channel.Status.Channel.APIVersion}
 		obj, err = r.trackAndFetchChannel(ctx, sub, statCh)
 		if err != nil {
