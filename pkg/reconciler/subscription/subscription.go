@@ -404,7 +404,6 @@ func (r *Reconciler) getChannel(ctx context.Context, sub *v1.Subscription) (*eve
 		} else {
 			channelNamespace = sub.Namespace
 		}
-		log.Printf("Using channel namespaceeee: %s", sub.Spec.Channel.Namespace)
 		// Track changes on Channel.
 		// Ref: https://github.com/knative/eventing/issues/2641
 		// NOTE: There is a race condition with using the channelableTracker
