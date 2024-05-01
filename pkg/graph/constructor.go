@@ -156,7 +156,7 @@ func (g *Graph) AddSubscription(subscription messagingv1.Subscription) error {
 	channelRef := &duckv1.KReference{
 		Name:       subscription.Spec.Channel.Name,
 		Namespace:  subscription.Namespace,
-		APIVersion: "messaging.knative.dev/v1",
+		APIVersion: subscription.Spec.Channel.APIVersion,
 		Kind:       subscription.Spec.Channel.Kind,
 	}
 	channelDest := &duckv1.Destination{Ref: channelRef}
@@ -169,7 +169,7 @@ func (g *Graph) AddSubscription(subscription messagingv1.Subscription) error {
 	subscriptionRef := &duckv1.KReference{
 		Name:       subscription.Name,
 		Namespace:  subscription.Namespace,
-		APIVersion: "messaging.knative.dev/v1",
+		APIVersion: subscription.APIVersion,
 		Kind:       "Subscription",
 	}
 	subscriptionDest := &duckv1.Destination{Ref: subscriptionRef}
