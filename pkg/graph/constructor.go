@@ -102,6 +102,22 @@ func (g *Graph) AddEventType(et *eventingv1beta3.EventType) error {
 	return nil
 }
 
+func (g *Graph) AddSource(source duckv1.Source) {
+	ref := &duckv1.KReference{
+		Name:       source.Name,
+		Namespace:  source.Namespace,
+		APIVersion: source.APIVersion,
+		Kind:       source.Kind,
+	}
+	dest := &duckv1.Destination{Ref: ref}
+
+	v := g.getOrCreateVertex(dest)
+
+	to := g.getOrCreateVertex(&source.Spec.Sink)
+
+	v.AddEdge(to, dest, CloudEventOverridesTransform{Overrides: source.Spec.CloudEventOverrides}, true)
+}
+
 func (g *Graph) getOrCreateVertex(dest *duckv1.Destination) *Vertex {
 	v, ok := g.vertices[makeComparableDestination(dest)]
 	if !ok {
