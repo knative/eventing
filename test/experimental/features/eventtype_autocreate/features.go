@@ -136,7 +136,9 @@ func AutoCreateEventTypesOnBroker(brokerName string) *feature.Feature {
 		Must("deliver events to subscriber", assert.OnStore(sink).MatchEvent(cetest.HasId(event.ID())).AtLeast(1)).
 		Must("create event type", eventtype.WaitForEventType(
 			eventtype.AssertReady(expectedTypes),
-			eventtype.AssertExactPresent(expectedTypes)))
+			eventtype.AssertExactPresent(expectedTypes),
+			eventtype.AssertReferencePresent(broker.AsKReference(brokerName))),
+	)
 
 	return f
 }
