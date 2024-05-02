@@ -19,6 +19,7 @@ package apiserversource
 import (
 	"context"
 	"embed"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -27,6 +28,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/k8s"
@@ -37,6 +39,8 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/kmeta"
 	"knative.dev/reconciler-test/pkg/manifest"
+
+	yamllib "sigs.k8s.io/yaml"
 )
 
 //go:embed *.yaml
@@ -262,5 +266,28 @@ func ResetNodeLabels(ctx context.Context, t feature.T) {
 
 	if err != nil {
 		t.Fatalf("Could not update node: %v", err)
+	}
+}
+
+func WithFilters(filters []eventingv1.SubscriptionsAPIFilter) manifest.CfgFn {
+	jsonBytes, err := json.Marshal(filters)
+	if err != nil {
+		panic(err)
+	}
+
+	yamlBytes, err := yamllib.JSONToYAML(jsonBytes)
+	if err != nil {
+		panic(err)
+	}
+
+	filtersYaml := string(yamlBytes)
+	lines := strings.Split(filtersYaml, "\n")
+	out := make([]string, 0, len(lines))
+	for i := range lines {
+		out = append(out, "    "+lines[i])
+	}
+
+	return func(cfg map[string]interface{}) {
+		cfg["filters"] = strings.Join(out, "\n")
 	}
 }
