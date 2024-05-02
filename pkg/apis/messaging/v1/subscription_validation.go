@@ -18,6 +18,7 @@ package v1
 
 import (
 	"context"
+	"log"
 
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -34,6 +35,11 @@ func (s *Subscription) Validate(ctx context.Context) *apis.FieldError {
 		original := apis.GetBaseline(ctx).(*Subscription)
 		errs = errs.Also(s.CheckImmutableFields(ctx, original))
 	}
+
+	///////////////////THIS IS EMPTY//////////////////////
+	log.Printf("validate kind1: %s", s.GroupVersionKind().Kind)
+	///////////////////THIS IS EMPTY//////////////////////
+
 	// s.Validate(ctx) because krshaped is defined on the entire subscription, not just the spec
 	if feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) {
 		crossNamespaceError := cn.CheckNamespace(ctx, s)
@@ -48,6 +54,7 @@ func (ss *SubscriptionSpec) Validate(ctx context.Context) *apis.FieldError {
 	// We require always Channel.
 	// Also at least one of 'subscriber' and 'reply' must be defined (non-nil and non-empty).
 
+	log.Printf("validate kind2: %s", ss.Channel.Kind)
 	var errs *apis.FieldError
 	if isChannelEmpty(ss.Channel) {
 		fe := apis.ErrMissingField("channel")

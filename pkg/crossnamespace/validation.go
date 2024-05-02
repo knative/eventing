@@ -19,6 +19,7 @@ package crossnamespace
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"go.uber.org/zap"
 	authv1 "k8s.io/api/authorization/v1"
@@ -36,12 +37,13 @@ type ResourceInfo interface {
 }
 
 func CheckNamespace(ctx context.Context, r ResourceInfo) *apis.FieldError {
-	targetKind := r.GroupVersionKind().Kind
-	targetGroup := r.GroupVersionKind().Group
+	targetKind := r.GetCrossNamespaceRef().Kind
+	targetGroup := r.GetCrossNamespaceRef().Group
 	targetName := r.GetCrossNamespaceRef().Name
 	targetNamespace := r.GetCrossNamespaceRef().Namespace
 	targetFieldName := fmt.Sprintf("spec.%sNamespace", targetKind)
 
+	log.Printf("target namespace: %s, target kind: %s", targetNamespace, targetKind)
 	// If the target namespace is empty or the same as the object namespace, this function is skipped
 	if targetNamespace == "" || targetNamespace == r.GetNamespace() {
 		return nil
@@ -88,16 +90,21 @@ func CheckNamespace(ctx context.Context, r ResourceInfo) *apis.FieldError {
 		Resource:  targetKind,
 	}
 
+	log.Printf("targetName: %s, targetNamespace: %s, targetKind: %s, targetGroup: %s, user name: %s", targetName, targetNamespace, targetKind, targetGroup, userInfo.Username)
+
 	// Create the SubjectAccessReview
 	check := authv1.SubjectAccessReview{
 		Spec: authv1.SubjectAccessReviewSpec{
 			ResourceAttributes: &action,
 			User:               userInfo.Username,
-			Groups:             userInfo.Groups,
+			// Groups:             userInfo.Groups,
 		},
 	}
+	log.Printf("Checking if user %s can get target resource in namespace %s, actions: %s", userInfo.Username, targetNamespace, action.String())
 
 	resp, err := client.AuthorizationV1().SubjectAccessReviews().Create(ctx, &check, metav1.CreateOptions{})
+
+	log.Printf("Current API server: %s", config.Host)
 
 	if err != nil {
 		return &apis.FieldError{
