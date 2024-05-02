@@ -17,6 +17,7 @@ limitations under the License.
 package graph
 
 import (
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	eventingv1beta3 "knative.dev/eventing/pkg/apis/eventing/v1beta3"
 )
 
@@ -31,6 +32,31 @@ func (nt NoTransform) Apply(et *eventingv1beta3.EventType, tfc TransformFunction
 func (nt NoTransform) Name() string {
 	return "no-transform"
 }
+
+type AttributesFilterTransform struct {
+	Filter *eventingv1.TriggerFilter
+}
+
+var _ Transform = &AttributesFilterTransform{}
+
+func (aft *AttributesFilterTransform) Apply(et *eventingv1beta3.EventType, tfc TransformFunctionContext) (*eventingv1beta3.EventType, TransformFunctionContext) {
+	etAttributes := make(map[string]*eventingv1beta3.EventAttributeDefinition)
+	for i := range et.Spec.Attributes {
+		etAttributes[et.Spec.Attributes[i].Name] = &et.Spec.Attributes[i]
+	}
+
+	for k, v := range aft.Filter.Attributes {
+		if attribute, ok := etAttributes[k]; ok {
+			if attribute != v {
+				return nil, tfc
+			}
+
+		}
+
+	}
+}
+
+func (aft *AttributesFilterTransform) Name() string {}
 
 type EventTypeTransform struct {
 	EventType *eventingv1beta3.EventType
