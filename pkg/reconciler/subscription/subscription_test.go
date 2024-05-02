@@ -46,6 +46,7 @@ import (
 	"knative.dev/pkg/resolver"
 	"knative.dev/pkg/tracker"
 
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/apis/feature"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
@@ -56,6 +57,7 @@ import (
 	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/inmemorychannel/fake"
 	"knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/subscription"
 	"knative.dev/eventing/pkg/duck"
+	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
 	. "knative.dev/eventing/pkg/reconciler/testing/v1"
 	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 )
@@ -198,7 +200,7 @@ Vw==
 )
 
 func TestAllCases(t *testing.T) {
-	// linear := eventingduck.BackoffPolicyLinear
+	linear := eventingduck.BackoffPolicyLinear
 
 	table := TableTest{
 		{
@@ -2667,7 +2669,7 @@ func settingCtxforCrossNamespaceEventLinks(username string) context.Context {
 	}
 	ctx = apis.WithUserInfo(ctx, userInfo)
 
-	cfg := &rest.Config{Host: fakeHost}
+	cfg := &rest.Config{}
 	ctx = injection.WithConfig(ctx, cfg)
 
 	return ctx
