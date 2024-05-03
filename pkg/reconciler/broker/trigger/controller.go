@@ -163,7 +163,15 @@ func filterTriggers(lister eventinglisters.BrokerLister) func(interface{}) bool 
 			return false
 		}
 
-		b, err := lister.Brokers(trigger.Namespace).Get(trigger.Spec.Broker)
+		if trigger.Spec.BrokerRef != nil {
+			broker = trigger.Spec.BrokerRef.Name
+			brokerNamespace = trigger.Spec.BrokerRef.Namespace
+		} else {
+			broker = trigger.Spec.Broker
+			brokerNamespace = trigger.Namespace
+		}
+
+		b, err := lister.Brokers(brokerNamespace).Get(broker)
 		if err != nil {
 			return false
 		}
