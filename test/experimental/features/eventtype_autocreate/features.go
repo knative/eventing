@@ -138,7 +138,7 @@ func AutoCreateEventTypesOnBroker(brokerName string) *feature.Feature {
 			eventtype.AssertReady(expectedTypes),
 			eventtype.AssertExactPresent(expectedTypes),
 			eventtype.AssertReferencePresent(broker.AsKReference(brokerName))),
-	)
+		)
 
 	return f
 }
