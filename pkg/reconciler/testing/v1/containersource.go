@@ -18,6 +18,7 @@ package testing
 
 import (
 	"context"
+
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"

@@ -19,10 +19,11 @@ package containersource
 import (
 	"context"
 	"fmt"
+	"testing"
+
 	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/eventing/pkg/auth"
 	"knative.dev/pkg/ptr"
-	"testing"
 
 	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/tracker"
