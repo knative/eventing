@@ -545,7 +545,7 @@ func createSubscriptionsAPIFilters(logger *zap.Logger, trigger *eventingv1.Trigg
 		logger.Debug("Found no filters for trigger", zap.Any("trigger.Spec", trigger.Spec))
 		return subscriptionsapi.NewNoFilter()
 	}
-	return subscriptionsapi.NewAllFilter(materializeFiltersList(logger, trigger.Spec.Filters)...)
+	return subscriptionsapi.NewAllFilter(MaterializeFiltersList(logger, trigger.Spec.Filters)...)
 }
 
 func materializeSubscriptionsAPIFilter(logger *zap.Logger, filter eventingv1.SubscriptionsAPIFilter) eventfilter.Filter {
@@ -574,9 +574,9 @@ func materializeSubscriptionsAPIFilter(logger *zap.Logger, filter eventingv1.Sub
 			return nil
 		}
 	case len(filter.All) > 0:
-		materializedFilter = subscriptionsapi.NewAllFilter(materializeFiltersList(logger, filter.All)...)
+		materializedFilter = subscriptionsapi.NewAllFilter(MaterializeFiltersList(logger, filter.All)...)
 	case len(filter.Any) > 0:
-		materializedFilter = subscriptionsapi.NewAnyFilter(materializeFiltersList(logger, filter.Any)...)
+		materializedFilter = subscriptionsapi.NewAnyFilter(MaterializeFiltersList(logger, filter.Any)...)
 	case filter.Not != nil:
 		materializedFilter = subscriptionsapi.NewNotFilter(materializeSubscriptionsAPIFilter(logger, *filter.Not))
 	case filter.CESQL != "":
@@ -589,7 +589,8 @@ func materializeSubscriptionsAPIFilter(logger *zap.Logger, filter eventingv1.Sub
 	return materializedFilter
 }
 
-func materializeFiltersList(logger *zap.Logger, filters []eventingv1.SubscriptionsAPIFilter) []eventfilter.Filter {
+// MaterialzieFilterList allows any component that supports `SubscriptionsAPIFilter` to process them
+func MaterializeFiltersList(logger *zap.Logger, filters []eventingv1.SubscriptionsAPIFilter) []eventfilter.Filter {
 	materializedFilters := make([]eventfilter.Filter, 0, len(filters))
 	for _, f := range filters {
 		f := materializeSubscriptionsAPIFilter(logger, f)

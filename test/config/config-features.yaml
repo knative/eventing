@@ -1,4 +1,4 @@
-# Copyright 2021 The Knative Authors
+# Copyright 2024 The Knative Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,10 +18,6 @@ metadata:
   name: config-features
   namespace: knative-eventing
   labels:
-    knative.dev/config-propagation: original
-    knative.dev/config-category: eventing
-    app.kubernetes.io/version: devel
-    app.kubernetes.io/name: knative-eventing
 data:
   # ALPHA feature: The kreference-group allows you to use the Group field in KReferences.
   # For more details: https://github.com/knative/eventing/issues/5086
@@ -43,7 +39,7 @@ data:
   # in Trigger objects with its rich filtering capabilities.
   # For more details: https://github.com/knative/eventing/issues/5204
   new-trigger-filters: "enabled"
-  
+
   # ALPHA feature: The transport-encryption flag allows you to encrypt events in transit using the transport layer security (TLS) protocol.
   # For more details: https://github.com/knative/eventing/issues/5957
   transport-encryption: "disabled"
@@ -62,4 +58,4 @@ data:
 
   # ALPHA feature: The new-apiserversource-filters flag allows you to use the new `filters` field
   # in APIServerSource objects with its rich filtering capabilities.
-  new-apiserversource-filters: "disabled"
+  new-apiserversource-filters: "enabled"

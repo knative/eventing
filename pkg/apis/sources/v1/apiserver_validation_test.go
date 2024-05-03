@@ -23,9 +23,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
 	"github.com/google/go-cmp/cmp"
+	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/pkg/apis"
 )
 
@@ -265,4 +267,83 @@ func TestAPIServerValidationCallsSpecValidation(t *testing.T) {
 
 	err := source.Validate(context.TODO())
 	assert.EqualError(t, err, "missing field(s): spec.resources", "Spec is not validated!")
+}
+
+func TestAPIServerFiltersValidation(t *testing.T) {
+	tests := []struct {
+		name         string
+		featureState feature.Flag
+		want         error
+		filters      []eventingv1.SubscriptionsAPIFilter
+	}{{
+		name:         "an error is raised if the feature is disabled but filters are specified",
+		featureState: feature.Disabled,
+		filters: []eventingv1.SubscriptionsAPIFilter{{
+			Prefix: map[string]string{
+				"invALID": "abc",
+			},
+		}},
+		want: apis.ErrGeneric("Filters is not empty but the NewAPIServerFilters feature is disabled."),
+	}, {
+		name:         "filters are validated when the feature is enabled",
+		featureState: feature.Enabled,
+		filters: []eventingv1.SubscriptionsAPIFilter{{
+			Prefix: map[string]string{
+				"invALID": "abc",
+			},
+		}},
+		want: apis.ErrInvalidKeyName("invALID", apis.CurrentField,
+			"Attribute name must start with a letter and can only contain "+
+				"lowercase alphanumeric").ViaFieldKey("prefix", "invALID").ViaFieldIndex("filters", 0),
+	}, {
+		name:         "validation works for valid filters",
+		featureState: feature.Enabled,
+		filters: []eventingv1.SubscriptionsAPIFilter{{
+			Exact: map[string]string{"myattr": "myval"},
+		}},
+		want: nil,
+	}, {
+		name:         "validation works for empty filters",
+		featureState: feature.Enabled,
+		filters:      []eventingv1.SubscriptionsAPIFilter{},
+		want:         nil,
+	}, {
+		name:         "validation does not work for empty filters",
+		featureState: feature.Disabled,
+		filters:      []eventingv1.SubscriptionsAPIFilter{},
+		want:         nil,
+	}}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			featureContext := feature.ToContext(context.TODO(), feature.Flags{
+				feature.NewAPIServerFilters: test.featureState,
+			})
+			apiserversource := &ApiServerSourceSpec{
+				Filters:   test.filters,
+				EventMode: "Resource",
+				Resources: []APIVersionKindSelector{{
+					APIVersion: "v1",
+					Kind:       "Foo",
+				}},
+				SourceSpec: duckv1.SourceSpec{
+					Sink: duckv1.Destination{
+						Ref: &duckv1.KReference{
+							APIVersion: "v1",
+							Kind:       "broker",
+							Name:       "default",
+						},
+					},
+				},
+			}
+			got := apiserversource.Validate(featureContext)
+			if test.want != nil {
+				if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
+					t.Errorf("APIServerSourceSpec.Validate (-want, +got) = %v", diff)
+				}
+			} else if got != nil {
+				t.Errorf("APIServerSourceSpec.Validate wanted nil, got = %v", got.Error())
+			}
+		})
+	}
 }
