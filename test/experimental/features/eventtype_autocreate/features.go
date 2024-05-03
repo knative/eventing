@@ -217,7 +217,8 @@ func AutoCreateEventTypeEventsFromPingSource() *feature.Feature {
 			cetest.HasType(sourcesv1.PingSourceEventType)).AtLeast(1)).
 		Must("PingSource test eventtypes match", eventtype.WaitForEventType(
 			eventtype.AssertReady(expectedCeTypes),
-			eventtype.AssertPresent(expectedCeTypes)))
+			eventtype.AssertPresent(expectedCeTypes),
+			eventtype.AssertReferencePresent(broker.AsKReference(brokerName))))
 
 	return f
 }
