@@ -18,11 +18,10 @@ package testing
 
 import (
 	"context"
-	"fmt"
 
-	"knative.dev/eventing/pkg/apis/feature"
-	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+
+	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -93,24 +92,6 @@ func WithContainerUnobservedGeneration() ContainerSourceOption {
 		condSet := c.GetConditionSet()
 		condSet.Manage(&c.Status).MarkUnknown(
 			condSet.GetTopLevelConditionType(), "NewObservedGenFailure", "unsuccessfully observed a new generation")
-	}
-}
-
-func WithContainerSourceOIDCIdentityCreatedSucceeded() ContainerSourceOption {
-	return func(c *v1.ContainerSource) {
-		c.Status.MarkOIDCIdentityCreatedSucceeded()
-	}
-}
-
-func WithContainerSourceOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled() ContainerSourceOption {
-	return func(c *v1.ContainerSource) {
-		c.Status.MarkOIDCIdentityCreatedSucceededWithReason(fmt.Sprintf("%s feature disabled", feature.OIDCAuthentication), "")
-	}
-}
-
-func WithContainerSourceOIDCIdentityCreatedFailed(reason, message string) ContainerSourceOption {
-	return func(c *v1.ContainerSource) {
-		c.Status.MarkOIDCIdentityCreatedFailed(reason, message)
 	}
 }
 
