@@ -17,8 +17,16 @@ limitations under the License.
 package assert
 
 import (
+	"context"
 	"fmt"
 	"strings"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/injection/clients/dynamicclient"
+	"knative.dev/reconciler-test/pkg/environment"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	cetest "github.com/cloudevents/sdk-go/v2/test"
@@ -110,6 +118,59 @@ func MatchStatusCode(statusCode int) eventshub.EventInfoMatcher {
 		if info.StatusCode != statusCode {
 			return fmt.Errorf("event status code don't match. Expected: '%d', Actual: '%d'", statusCode, info.StatusCode)
 		}
+		return nil
+	}
+}
+
+// MatchOIDCUser matches the OIDC username used for the request
+func MatchOIDCUser(username string) eventshub.EventInfoMatcher {
+	return func(info eventshub.EventInfo) error {
+		if info.OIDCUserInfo == nil {
+			return fmt.Errorf("event OIDC usernames don't match: Expected %q, but no OIDC user info in the event", username)
+		}
+		if info.OIDCUserInfo.Username != username {
+			return fmt.Errorf("event OIDC usernames don't match. Expected: %q, Actual: %q", username, info.OIDCUserInfo.Username)
+		}
+
+		return nil
+	}
+}
+
+// MatchOIDCUserFromResource matches the given resources OIDC identifier
+func MatchOIDCUserFromResource(gvr schema.GroupVersionResource, resourceName string) eventshub.EventInfoMatcherCtx {
+
+	type AuthenticatableType struct {
+		metav1.TypeMeta   `json:",inline"`
+		metav1.ObjectMeta `json:"metadata,omitempty"`
+
+		Status struct {
+			Auth *duckv1.AuthStatus `json:"auth,omitempty"`
+		} `json:"status"`
+	}
+
+	return func(ctx context.Context, info eventshub.EventInfo) error {
+
+		env := environment.FromContext(ctx)
+
+		us, err := dynamicclient.Get(ctx).Resource(gvr).Namespace(env.Namespace()).Get(ctx, resourceName, metav1.GetOptions{})
+		if err != nil {
+			return fmt.Errorf("error getting resource: %w", err)
+		}
+
+		obj := &AuthenticatableType{}
+		if err = runtime.DefaultUnstructuredConverter.FromUnstructured(us.Object, obj); err != nil {
+			return fmt.Errorf("error from DefaultUnstructured.Dynamiconverter: %w", err)
+		}
+
+		if obj.Status.Auth == nil || obj.Status.Auth.ServiceAccountName == nil {
+			return fmt.Errorf("resource does not have an OIDC service account set")
+		}
+
+		objFullSAName := fmt.Sprintf("system:serviceaccount:%s:%s", obj.GetNamespace(), *obj.Status.Auth.ServiceAccountName)
+		if objFullSAName != info.OIDCUserInfo.Username {
+			return fmt.Errorf("OIDC identity in event does not match identity of resource. Event: %q, resource: %q", info.OIDCUserInfo.Username, objFullSAName)
+		}
+
 		return nil
 	}
 }
