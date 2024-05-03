@@ -57,6 +57,8 @@ import (
 )
 
 var brokerGVK = eventingv1.SchemeGroupVersion.WithKind("Broker")
+var brokerNamespace string
+var broker string
 
 const (
 	// Name of the corev1.Events emitted from the Trigger reconciliation process.
@@ -89,15 +91,23 @@ type Reconciler struct {
 func (r *Reconciler) ReconcileKind(ctx context.Context, t *eventingv1.Trigger) pkgreconciler.Event {
 	logging.FromContext(ctx).Infow("Reconciling", zap.Any("Trigger", t))
 
-	b, err := r.brokerLister.Brokers(t.Namespace).Get(t.Spec.Broker)
+	if t.Spec.BrokerRef != nil && feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) {
+		broker = t.Spec.BrokerRef.Name
+		brokerNamespace = t.Spec.BrokerRef.Namespace
+	} else {
+		broker = t.Spec.Broker
+		brokerNamespace = t.Namespace
+	}
+
+	b, err := r.brokerLister.Brokers(brokerNamespace).Get(broker)
 	if err != nil {
 		if apierrs.IsNotFound(err) {
-			logging.FromContext(ctx).Errorw(fmt.Sprintf("Trigger %s/%s has no broker %q", t.Namespace, t.Name, t.Spec.Broker))
-			t.Status.MarkBrokerFailed("BrokerDoesNotExist", "Broker %q does not exist", t.Spec.Broker)
+			logging.FromContext(ctx).Errorw(fmt.Sprintf("Trigger %s/%s has no broker %q", t.Namespace, t.Name, broker))
+			t.Status.MarkBrokerFailed("BrokerDoesNotExist", "Broker %q does not exist", broker)
 			// Ok to return nil here. Once the Broker comes available, or Trigger changes, we get requeued.
 			return nil
 		} else {
-			t.Status.MarkBrokerFailed("FailedToGetBroker", "Failed to get broker %q : %s", t.Spec.Broker, err)
+			t.Status.MarkBrokerFailed("FailedToGetBroker", "Failed to get broker %q : %s", broker, err)
 			return err
 		}
 	}
