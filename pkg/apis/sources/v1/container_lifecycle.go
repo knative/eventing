@@ -63,7 +63,7 @@ func (s *ContainerSourceStatus) InitializeConditions() {
 	containerCondSet.Manage(s).InitializeConditions()
 }
 
-// PropagateSinkBindingStatus uses the availability of the provided Deployment to determine if
+// PropagateSinkBindingStatus uses the SinkBinding to determine if
 // ContainerSourceConditionSinkBindingReady should be marked as true, false or unknown.
 func (s *ContainerSourceStatus) PropagateSinkBindingStatus(status *SinkBindingStatus) {
 	// Do not copy conditions nor observedGeneration
@@ -86,6 +86,9 @@ func (s *ContainerSourceStatus) PropagateSinkBindingStatus(status *SinkBindingSt
 	default:
 		containerCondSet.Manage(s).MarkUnknown(ContainerSourceConditionSinkBindingReady, cond.Reason, cond.Message)
 	}
+
+	// Propagate SinkBindings AuthStatus to containersources AuthStatus
+	s.Auth = status.Auth
 }
 
 // PropagateReceiveAdapterStatus uses the availability of the provided Deployment to determine if
