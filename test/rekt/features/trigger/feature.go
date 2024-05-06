@@ -54,7 +54,7 @@ func TriggerDependencyAnnotation() *feature.Feature {
 	f.Setup("broker is addressable", broker.IsAddressable(brokerName))
 
 	psourcename := "test-ping-source-annotation"
-	dependencyAnnotation := `{"kind":"PingSource","name":"test-ping-source-annotation","apiVersion":"sources.knative.dev/v1"}`
+	dependencyAnnotation := `'{"kind":"PingSource","name":"test-ping-source-annotation","apiVersion":"sources.knative.dev/v1"}'`
 	annotations := map[string]interface{}{
 		"knative.dev/dependency": dependencyAnnotation,
 	}
@@ -69,7 +69,8 @@ func TriggerDependencyAnnotation() *feature.Feature {
 	// Install the trigger
 	f.Setup("install trigger", trigger.Install(triggerName, brokerName, cfg...))
 
-	f.Setup("trigger goes ready", trigger.IsReady(triggerName))
+	// trigger won't go ready until after the pingsource exists, because of the dependency annotation
+	f.Requirement("trigger goes ready", trigger.IsReady(triggerName))
 
 	f.Requirement("install pingsource", func(ctx context.Context, t feature.T) {
 		brokeruri, err := broker.Address(ctx, brokerName)
