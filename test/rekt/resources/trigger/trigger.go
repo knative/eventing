@@ -125,13 +125,13 @@ func WithSubscriberFromDestination(dest *duckv1.Destination) manifest.CfgFn {
 func WithAnnotations(annotations map[string]interface{}) manifest.CfgFn {
 	return func(cfg map[string]interface{}) {
 		if _, set := cfg["annotations"]; !set {
-			cfg["annotations"] = map[string]interface{}{}
+			cfg["annotations"] = map[string]string{}
 		}
 
 		if annotations != nil {
-			annotation := cfg["annotations"].(map[string]interface{})
+			annotation := cfg["annotations"].(map[string]string)
 			for k, v := range annotations {
-				annotation[k] = v
+				annotation[k] = v.(string)
 			}
 		}
 	}
