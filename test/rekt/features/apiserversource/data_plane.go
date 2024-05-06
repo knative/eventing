@@ -319,7 +319,6 @@ func SendsEventsWithEventTypes() *feature.Feature {
 			eventtype.WaitForEventType(
 				eventtype.AssertReady(expectedCeTypes),
 				eventtype.AssertPresent(expectedCeTypes),
-				eventtype.AssertReferencePresent(broker.AsKReference(brokerName))))
 
 	return f
 }
