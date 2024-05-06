@@ -29,14 +29,11 @@ import (
 	"k8s.io/client-go/kubernetes"
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
 	pkgreconciler "knative.dev/pkg/reconciler"
 
-	"knative.dev/eventing/pkg/apis/feature"
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
-	"knative.dev/eventing/pkg/auth"
 	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
 	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1/containersource"
 	listers "knative.dev/eventing/pkg/client/listers/sources/v1"
@@ -68,7 +65,6 @@ type Reconciler struct {
 	containerSourceLister      listers.ContainerSourceLister
 	sinkBindingLister          listers.SinkBindingLister
 	deploymentLister           appsv1listers.DeploymentLister
-	serviceAccountLister       corev1listers.ServiceAccountLister
 	trustBundleConfigMapLister corev1listers.ConfigMapLister
 }
 
@@ -81,23 +77,6 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1.ContainerSour
 	if err != nil {
 		logging.FromContext(ctx).Errorw("Error reconciling SinkBinding", zap.Error(err))
 		return err
-	}
-
-	featureFlags := feature.FromContext(ctx)
-	if featureFlags.IsOIDCAuthentication() {
-		saName := auth.GetOIDCServiceAccountNameForResource(v1.SchemeGroupVersion.WithKind("ContainerSource"), source.ObjectMeta)
-		source.Status.Auth = &duckv1.AuthStatus{
-			ServiceAccountName: &saName,
-		}
-
-		if err := auth.EnsureOIDCServiceAccountExistsForResource(ctx, r.serviceAccountLister, r.kubeClientSet, v1.SchemeGroupVersion.WithKind("ContainerSource"), source.ObjectMeta); err != nil {
-			source.Status.MarkOIDCIdentityCreatedFailed("Unable to resolve service account for OIDC authentication", "%v", err)
-			return err
-		}
-		source.Status.MarkOIDCIdentityCreatedSucceeded()
-	} else {
-		source.Status.Auth = nil
-		source.Status.MarkOIDCIdentityCreatedSucceededWithReason(fmt.Sprintf("%s feature disabled", feature.OIDCAuthentication), "")
 	}
 
 	_, err = r.reconcileReceiveAdapter(ctx, source)
