@@ -60,7 +60,11 @@ func DispatcherAuthenticatesRequestsWithOIDC() *feature.Feature {
 	event := test.FullEvent()
 	f.Requirement("install source", eventshub.Install(source, eventshub.InputEvent(event), eventshub.StartSenderToResourceTLS(channel_impl.GVR(), channelName, nil)))
 
-	f.Alpha("channel dispatcher").Must("authenticate requests with OIDC", assert.OnStore(sink).MatchReceivedEvent(test.HasId(event.ID())).AtLeast(1))
+	f.Alpha("channel dispatcher").
+		Must("authenticate requests with OIDC", assert.OnStore(sink).MatchReceivedEvent(test.HasId(event.ID())).AtLeast(1)).
+		Must("uses subscriptions identity for OIDC", assert.OnStore(sink).MatchWithContext(
+			assert.MatchKind(eventshub.EventReceived).WithContext(),
+			assert.MatchOIDCUserFromResource(subscription.GVR(), subscriptionName)).Exact(1))
 
 	return f
 }
