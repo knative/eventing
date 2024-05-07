@@ -80,6 +80,7 @@ func (ps *ParallelStatus) PropagateSubscriptionStatuses(filterSubscriptions []*m
 	if ps.BranchStatuses == nil || len(subscriptions) != len(ps.BranchStatuses) {
 		ps.BranchStatuses = make([]ParallelBranchStatus, len(subscriptions))
 	}
+	ps.Auth = nil
 	allReady := true
 	// If there are no subscriptions, treat that as a False branch. Could go either way, but this seems right.
 	if len(subscriptions) == 0 {
@@ -125,6 +126,19 @@ func (ps *ParallelStatus) PropagateSubscriptionStatuses(filterSubscriptions []*m
 			allReady = false
 		}
 
+		if fs.Status.Auth != nil && fs.Status.Auth.ServiceAccountName != nil {
+			if ps.Auth == nil {
+				ps.Auth = &pkgduckv1.AuthStatus{}
+			}
+			ps.Auth.ServiceAccountNames = append(ps.Auth.ServiceAccountNames, *fs.Status.Auth.ServiceAccountName)
+		}
+
+		if s.Status.Auth != nil && s.Status.Auth.ServiceAccountName != nil {
+			if ps.Auth == nil {
+				ps.Auth = &pkgduckv1.AuthStatus{}
+			}
+			ps.Auth.ServiceAccountNames = append(ps.Auth.ServiceAccountNames, *s.Status.Auth.ServiceAccountName)
+		}
 	}
 	if allReady {
 		pCondSet.Manage(ps).MarkTrue(ParallelConditionSubscriptionsReady)
