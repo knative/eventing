@@ -37,12 +37,6 @@ import (
 	v1containersource "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1/containersource"
 	"knative.dev/eventing/pkg/eventingtls"
 	eventingreconciler "knative.dev/eventing/pkg/reconciler"
-
-	kubeclient "knative.dev/pkg/client/injection/kube/client"
-	deploymentinformer "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment"
-	"knative.dev/pkg/configmap"
-	"knative.dev/pkg/controller"
-	"knative.dev/pkg/logging"
 )
 
 // NewController creates a Reconciler for ContainerSource and returns the result of NewImpl.
