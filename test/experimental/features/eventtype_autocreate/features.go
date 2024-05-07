@@ -68,7 +68,8 @@ func AutoCreateEventTypesOnIMC() *feature.Feature {
 		Must("deliver events to subscriber", assert.OnStore(sink).MatchEvent(cetest.HasId(event.ID())).AtLeast(1)).
 		Must("create event type", eventtype.WaitForEventType(
 			eventtype.AssertReady(expectedTypes),
-			eventtype.AssertPresent(expectedTypes)))
+			eventtype.AssertPresent(expectedTypes),
+			eventtype.AssertReferencePresent(channel_impl.AsRef(channelName))))
 
 	return f
 }
@@ -247,7 +248,8 @@ func AutoCreateEventTypesOnContainerSource() *feature.Feature {
 		Must("delivers events to subscriber", assert.OnStore(sink).MatchEvent(cetest.HasId(event.ID())).AtLeast(1)).
 		Must("create event type", eventtype.WaitForEventType(
 			eventtype.AssertReady(expectedTypes),
-			eventtype.AssertExactPresent(expectedTypes)))
+			eventtype.AssertExactPresent(expectedTypes),
+			eventtype.AssertReferencePresent(service.AsKReference(sink))))
 
 	return f
 }
