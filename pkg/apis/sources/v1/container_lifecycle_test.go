@@ -105,35 +105,23 @@ func TestContainerSourceStatusIsReady(t *testing.T) {
 		wantConditionStatus: corev1.ConditionUnknown,
 		want:                false,
 	}, {
-		name: "mark ready sa",
-		s: func() *ContainerSourceStatus {
-			s := &ContainerSourceStatus{}
-			s.InitializeConditions()
-			s.MarkOIDCIdentityCreatedSucceeded()
-			return s
-		}(),
-		wantConditionStatus: corev1.ConditionUnknown,
-		want:                false,
-	}, {
 		name: "mark ready sb and ra",
 		s: func() *ContainerSourceStatus {
 			s := &ContainerSourceStatus{}
 			s.InitializeConditions()
 			s.PropagateSinkBindingStatus(&readySinkBinding.Status)
 			s.PropagateReceiveAdapterStatus(availableDeployment)
-			s.MarkOIDCIdentityCreatedSucceeded()
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionTrue,
 		want:                true,
 	}, {
-		name: "mark ready sb and unavailable ra ",
+		name: "mark ready sb and unavailable ra",
 		s: func() *ContainerSourceStatus {
 			s := &ContainerSourceStatus{}
 			s.InitializeConditions()
 			s.PropagateSinkBindingStatus(&readySinkBinding.Status)
 			s.PropagateReceiveAdapterStatus(unavailableDeployment)
-			s.MarkOIDCIdentityCreatedSucceeded()
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionFalse,
@@ -145,47 +133,10 @@ func TestContainerSourceStatusIsReady(t *testing.T) {
 			s.InitializeConditions()
 			s.PropagateSinkBindingStatus(&readySinkBinding.Status)
 			s.PropagateReceiveAdapterStatus(unknownDeployment)
-			s.MarkOIDCIdentityCreatedSucceeded()
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionUnknown,
 		want:                false,
-	}, {
-		name: "mark ready sb and ra no sa",
-		s: func() *ContainerSourceStatus {
-			s := &ContainerSourceStatus{}
-			s.InitializeConditions()
-			s.PropagateSinkBindingStatus(&readySinkBinding.Status)
-			s.PropagateReceiveAdapterStatus(availableDeployment)
-			s.MarkOIDCIdentityCreatedFailed("", "")
-			return s
-		}(),
-		wantConditionStatus: corev1.ConditionFalse,
-		want:                false,
-	}, {
-		name: "mark ready sb, ra and sa unknown",
-		s: func() *ContainerSourceStatus {
-			s := &ContainerSourceStatus{}
-			s.InitializeConditions()
-			s.PropagateSinkBindingStatus(&readySinkBinding.Status)
-			s.PropagateReceiveAdapterStatus(availableDeployment)
-			s.MarkOIDCIdentityCreatedUnknown("Unknown", "")
-			return s
-		}(),
-		wantConditionStatus: corev1.ConditionUnknown,
-		want:                false,
-	}, {
-		name: "mark ready sb, ra and sa with reason",
-		s: func() *ContainerSourceStatus {
-			s := &ContainerSourceStatus{}
-			s.InitializeConditions()
-			s.PropagateSinkBindingStatus(&readySinkBinding.Status)
-			s.PropagateReceiveAdapterStatus(availableDeployment)
-			s.MarkOIDCIdentityCreatedSucceededWithReason("Created", "")
-			return s
-		}(),
-		wantConditionStatus: corev1.ConditionTrue,
-		want:                true,
 	}, {
 		name: "mark ready sb and not deployed ra",
 		s: func() *ContainerSourceStatus {
@@ -193,7 +144,6 @@ func TestContainerSourceStatusIsReady(t *testing.T) {
 			s.InitializeConditions()
 			s.PropagateSinkBindingStatus(&readySinkBinding.Status)
 			s.PropagateReceiveAdapterStatus(&appsv1.Deployment{})
-			s.MarkOIDCIdentityCreatedSucceeded()
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionUnknown,
@@ -206,7 +156,6 @@ func TestContainerSourceStatusIsReady(t *testing.T) {
 			s.PropagateSinkBindingStatus(&readySinkBinding.Status)
 			s.PropagateReceiveAdapterStatus(availableDeployment)
 			s.PropagateSinkBindingStatus(&notReadySinkBinding.Status)
-			s.MarkOIDCIdentityCreatedSucceeded()
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionFalse,
@@ -219,7 +168,6 @@ func TestContainerSourceStatusIsReady(t *testing.T) {
 			s.PropagateReceiveAdapterStatus(availableDeployment)
 			s.PropagateSinkBindingStatus(&notReadySinkBinding.Status)
 			s.PropagateReceiveAdapterStatus(unavailableDeployment)
-			s.MarkOIDCIdentityCreatedSucceeded()
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionFalse,
@@ -231,7 +179,6 @@ func TestContainerSourceStatusIsReady(t *testing.T) {
 			s.InitializeConditions()
 			s.PropagateSinkBindingStatus(&notReadySinkBinding.Status)
 			s.PropagateReceiveAdapterStatus(availableDeployment)
-			s.MarkOIDCIdentityCreatedSucceeded()
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionFalse,
@@ -244,7 +191,6 @@ func TestContainerSourceStatusIsReady(t *testing.T) {
 			s.PropagateSinkBindingStatus(&notReadySinkBinding.Status)
 			s.PropagateReceiveAdapterStatus(availableDeployment)
 			s.PropagateSinkBindingStatus(&readySinkBinding.Status)
-			s.MarkOIDCIdentityCreatedSucceeded()
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionTrue,
@@ -258,7 +204,6 @@ func TestContainerSourceStatusIsReady(t *testing.T) {
 				if gotConditionStatus != test.wantConditionStatus {
 					t.Errorf("unexpected condition status: want %v, got %v", test.wantConditionStatus, gotConditionStatus)
 				}
-
 			}
 			got := test.s.IsReady()
 			if got != test.want {
@@ -318,26 +263,12 @@ func TestContainerSourceStatusGetCondition(t *testing.T) {
 			Status: corev1.ConditionUnknown,
 		},
 	}, {
-		name: "mark ready sa",
-		s: func() *ContainerSourceStatus {
-			s := &ContainerSourceStatus{}
-			s.InitializeConditions()
-			s.MarkOIDCIdentityCreatedSucceeded()
-			return s
-		}(),
-		condQuery: ContainerSourceConditionReady,
-		want: &apis.Condition{
-			Type:   ContainerSourceConditionReady,
-			Status: corev1.ConditionUnknown,
-		},
-	}, {
 		name: "mark ready sb and ra",
 		s: func() *ContainerSourceStatus {
 			s := &ContainerSourceStatus{}
 			s.InitializeConditions()
 			s.PropagateSinkBindingStatus(&readySinkBinding.Status)
 			s.PropagateReceiveAdapterStatus(availableDeployment)
-			s.MarkOIDCIdentityCreatedSucceeded()
 			return s
 		}(),
 		condQuery: ContainerSourceConditionReady,
@@ -353,7 +284,6 @@ func TestContainerSourceStatusGetCondition(t *testing.T) {
 			s.PropagateSinkBindingStatus(&readySinkBinding.Status)
 			s.PropagateReceiveAdapterStatus(availableDeployment)
 			s.PropagateSinkBindingStatus(&notReadySinkBinding.Status)
-			s.MarkOIDCIdentityCreatedSucceeded()
 			return s
 		}(),
 		condQuery: ContainerSourceConditionReady,
@@ -364,22 +294,6 @@ func TestContainerSourceStatusGetCondition(t *testing.T) {
 			Message: "hi",
 		},
 	}, {
-		name: "mark ready sb, ra and sa unknown",
-		s: func() *ContainerSourceStatus {
-			s := &ContainerSourceStatus{}
-			s.InitializeConditions()
-			s.PropagateSinkBindingStatus(&readySinkBinding.Status)
-			s.PropagateReceiveAdapterStatus(availableDeployment)
-			s.MarkOIDCIdentityCreatedUnknown("Unknown", "")
-			return s
-		}(),
-		condQuery: ContainerSourceConditionReady,
-		want: &apis.Condition{
-			Type:   ContainerSourceConditionReady,
-			Status: corev1.ConditionUnknown,
-			Reason: "Unknown",
-		},
-	}, {
 		name: "mark ready sb and ra then no ra",
 		s: func() *ContainerSourceStatus {
 			s := &ContainerSourceStatus{}
@@ -387,44 +301,12 @@ func TestContainerSourceStatusGetCondition(t *testing.T) {
 			s.PropagateSinkBindingStatus(&readySinkBinding.Status)
 			s.PropagateReceiveAdapterStatus(availableDeployment)
 			s.PropagateReceiveAdapterStatus(unavailableDeployment)
-			s.MarkOIDCIdentityCreatedSucceeded()
 			return s
 		}(),
 		condQuery: ContainerSourceConditionReady,
 		want: &apis.Condition{
 			Type:   ContainerSourceConditionReady,
 			Status: corev1.ConditionFalse,
-		},
-	}, {
-		name: "mark ready sb, sa and ra then no sa",
-		s: func() *ContainerSourceStatus {
-			s := &ContainerSourceStatus{}
-			s.InitializeConditions()
-			s.PropagateSinkBindingStatus(&readySinkBinding.Status)
-			s.PropagateReceiveAdapterStatus(availableDeployment)
-			s.MarkOIDCIdentityCreatedSucceeded()
-			s.MarkOIDCIdentityCreatedFailed("", "")
-			return s
-		}(),
-		condQuery: ContainerSourceConditionReady,
-		want: &apis.Condition{
-			Type:   ContainerSourceConditionReady,
-			Status: corev1.ConditionFalse,
-		},
-	}, {
-		name: "mark ready sb, ra and sa with reason",
-		s: func() *ContainerSourceStatus {
-			s := &ContainerSourceStatus{}
-			s.InitializeConditions()
-			s.PropagateSinkBindingStatus(&readySinkBinding.Status)
-			s.PropagateReceiveAdapterStatus(availableDeployment)
-			s.MarkOIDCIdentityCreatedSucceededWithReason("Created", "")
-			return s
-		}(),
-		condQuery: ContainerSourceConditionReady,
-		want: &apis.Condition{
-			Type:   ContainerSourceConditionReady,
-			Status: corev1.ConditionTrue,
 		},
 	}, {
 		name: "mark not ready sb and ready ra then ready sb",
@@ -434,7 +316,6 @@ func TestContainerSourceStatusGetCondition(t *testing.T) {
 			s.PropagateSinkBindingStatus(&notReadySinkBinding.Status)
 			s.PropagateReceiveAdapterStatus(availableDeployment)
 			s.PropagateSinkBindingStatus(&readySinkBinding.Status)
-			s.MarkOIDCIdentityCreatedSucceeded()
 			return s
 		}(),
 		condQuery: ContainerSourceConditionReady,
