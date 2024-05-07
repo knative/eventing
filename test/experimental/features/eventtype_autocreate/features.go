@@ -245,7 +245,7 @@ func AutoCreateEventTypesOnContainerSource() *feature.Feature {
 	expectedTypes := sets.New(event.Type())
 
 	f.Stable("containersource").
-		Must("delivers events to subscriber", assert.OnStore(sink).MatchEvent(cetest.HasId(event.ID())).AtLeast(1)).
+		Must("delivers events to subscriber", assert.OnStore(sink).MatchEvent(cetest.HasType(event.Type())).AtLeast(1)).
 		Must("create event type", eventtype.WaitForEventType(
 			eventtype.AssertReady(expectedTypes),
 			eventtype.AssertExactPresent(expectedTypes),
