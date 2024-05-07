@@ -162,16 +162,25 @@ func MatchOIDCUserFromResource(gvr schema.GroupVersionResource, resourceName str
 			return fmt.Errorf("error from DefaultUnstructured.Dynamiconverter: %w", err)
 		}
 
-		if obj.Status.Auth == nil || obj.Status.Auth.ServiceAccountName == nil {
+		if obj.Status.Auth == nil || (obj.Status.Auth.ServiceAccountName == nil && len(obj.Status.Auth.ServiceAccountNames) == 0) {
 			return fmt.Errorf("resource does not have an OIDC service account set")
 		}
 
-		objFullSAName := fmt.Sprintf("system:serviceaccount:%s:%s", obj.GetNamespace(), *obj.Status.Auth.ServiceAccountName)
-		if objFullSAName != info.OIDCUserInfo.Username {
-			return fmt.Errorf("OIDC identity in event does not match identity of resource. Event: %q, resource: %q", info.OIDCUserInfo.Username, objFullSAName)
+		objSAs := obj.Status.Auth.ServiceAccountNames
+		if obj.Status.Auth.ServiceAccountName != nil {
+			objSAs = append(objSAs, *obj.Status.Auth.ServiceAccountName)
 		}
 
-		return nil
+		for _, sa := range objSAs {
+			objFullSAName := fmt.Sprintf("system:serviceaccount:%s:%s", obj.GetNamespace(), sa)
+
+			if objFullSAName == info.OIDCUserInfo.Username {
+				// found
+				return nil
+			}
+		}
+
+		return fmt.Errorf("OIDC identity in event does not match identity/identities of resource. Event: %q, resource: %q", info.OIDCUserInfo.Username, strings.Join(objSAs, ", "))
 	}
 }
 
