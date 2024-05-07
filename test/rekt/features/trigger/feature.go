@@ -54,7 +54,7 @@ func TriggerDependencyAnnotation() *feature.Feature {
 	f.Setup("broker is addressable", broker.IsAddressable(brokerName))
 
 	psourcename := "test-ping-source-annotation"
-	dependencyAnnotation := `'{"kind":"PingSource","name":"test-ping-source-annotation","apiVersion":"sources.knative.dev/v1"}'`
+	dependencyAnnotation := `{"kind":"PingSource","name":"test-ping-source-annotation","apiVersion":"sources.knative.dev/v1"}`
 	annotations := map[string]interface{}{
 		"knative.dev/dependency": dependencyAnnotation,
 	}
