@@ -21,14 +21,11 @@ import (
 	"fmt"
 	"log"
 
-	"go.uber.org/zap"
 	authv1 "k8s.io/api/authorization/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
-	"knative.dev/pkg/injection"
-	"knative.dev/pkg/logging"
+	kubeclient "knative.dev/pkg/client/injection/kube/client"
 )
 
 type ResourceInfo interface {
@@ -58,34 +55,13 @@ func CheckNamespace(ctx context.Context, r ResourceInfo) *apis.FieldError {
 		}
 	}
 
-	// GetConfig gets the current config from the context.
-	config := injection.GetConfig(ctx)
-	logging.FromContext(ctx).Info("got config", zap.Any("config", config))
-	if config == nil {
-		return &apis.FieldError{
-			Paths:   []string{targetFieldName},
-			Message: "failed to get config, which is needed to validate the resources created with the namespace different than the target's namespace",
-		}
-	}
-
-	// NewForConfig creates a new Clientset for the given config.
-	// If config's RateLimiter is not set and QPS and Burst are acceptable,
-	// NewForConfig will generate a rate-limiter in configShallowCopy.
-	// NewForConfig is equivalent to NewForConfigAndClient(c, httpClient),
-	// where httpClient was generated with rest.HTTPClientFor(c).
-	client, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return &apis.FieldError{
-			Paths:   []string{targetFieldName},
-			Message: "failed to get k8s client, which is needed to validate the resources created with the namespace different than the target's namespace",
-		}
-	}
+	client := kubeclient.Get(ctx)
 
 	// SubjectAccessReview checks if the user is authorized to perform an action.
 	action := authv1.ResourceAttributes{
 		Name:      targetName,
 		Namespace: targetNamespace,
-		Verb:      "get",
+		Verb:      "knsubscribe",
 		Group:     targetGroup,
 		Resource:  targetKind,
 	}
@@ -104,8 +80,7 @@ func CheckNamespace(ctx context.Context, r ResourceInfo) *apis.FieldError {
 
 	resp, err := client.AuthorizationV1().SubjectAccessReviews().Create(ctx, &check, metav1.CreateOptions{})
 
-	log.Printf("Current API server: %s", config.Host)
-
+	log.Printf("authorization result for user %s: %v", userInfo.Username, resp)
 	if err != nil {
 		return &apis.FieldError{
 			Paths:   []string{targetFieldName},
