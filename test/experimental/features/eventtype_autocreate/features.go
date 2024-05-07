@@ -227,8 +227,7 @@ func AutoCreateEventTypeEventsFromPingSource() *feature.Feature {
 func AutoCreateEventTypesOnContainerSource() *feature.Feature {
 	f := feature.NewFeature()
 
-	event := cetest.FullEvent()
-	event.SetType("test.containersource.custom.event.type")
+	csEventType := "dev.knative.eventing.samples.heartbeat"
 
 	sourceName := feature.MakeRandomK8sName("containersource")
 	sink := feature.MakeRandomK8sName("sink")
@@ -242,10 +241,10 @@ func AutoCreateEventTypesOnContainerSource() *feature.Feature {
 
 	f.Setup("containersource is ready", containersource.IsReady(sourceName))
 
-	expectedTypes := sets.New(event.Type())
+	expectedTypes := sets.New(csEventType)
 
 	f.Stable("containersource").
-		Must("delivers events to subscriber", assert.OnStore(sink).MatchEvent(cetest.HasType(event.Type())).AtLeast(1)).
+		Must("delivers events to subscriber", assert.OnStore(sink).MatchEvent(cetest.HasType(csEventType)).AtLeast(1)).
 		Must("create event type", eventtype.WaitForEventType(
 			eventtype.AssertReady(expectedTypes),
 			eventtype.AssertExactPresent(expectedTypes),
