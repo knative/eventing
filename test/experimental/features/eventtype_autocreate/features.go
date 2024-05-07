@@ -29,7 +29,6 @@ import (
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/eventing/test/rekt/resources/channel_impl"
-	"knative.dev/eventing/test/rekt/resources/containersource"
 	"knative.dev/eventing/test/rekt/resources/eventtype"
 	"knative.dev/eventing/test/rekt/resources/pingsource"
 	"knative.dev/eventing/test/rekt/resources/subscription"
@@ -220,35 +219,6 @@ func AutoCreateEventTypeEventsFromPingSource() *feature.Feature {
 			eventtype.AssertReady(expectedCeTypes),
 			eventtype.AssertPresent(expectedCeTypes),
 			eventtype.AssertReferencePresent(broker.AsKReference(brokerName))))
-
-	return f
-}
-
-func AutoCreateEventTypesOnContainerSource() *feature.Feature {
-	f := feature.NewFeature()
-
-	csEventType := "dev.knative.eventing.samples.heartbeat"
-
-	sourceName := feature.MakeRandomK8sName("containersource")
-	sink := feature.MakeRandomK8sName("sink")
-
-	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
-
-	destination := &duckv1.Destination{
-		Ref: service.AsKReference(sink),
-	}
-	f.Setup("install containersource", containersource.Install(sourceName, containersource.WithSink(destination)))
-
-	f.Setup("containersource is ready", containersource.IsReady(sourceName))
-
-	expectedTypes := sets.New(csEventType)
-
-	f.Stable("containersource").
-		Must("delivers events to subscriber", assert.OnStore(sink).MatchEvent(cetest.HasType(csEventType)).AtLeast(1)).
-		Must("create event type", eventtype.WaitForEventType(
-			eventtype.AssertReady(expectedTypes),
-			eventtype.AssertExactPresent(expectedTypes),
-			eventtype.AssertReferencePresent(service.AsKReference(sink))))
 
 	return f
 }
