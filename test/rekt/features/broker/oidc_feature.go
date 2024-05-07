@@ -27,6 +27,7 @@ import (
 	"knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/eventing/test/rekt/resources/delivery"
 	"knative.dev/eventing/test/rekt/resources/trigger"
+	triggerresources "knative.dev/eventing/test/rekt/resources/trigger"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	eventassert "knative.dev/reconciler-test/pkg/eventshub/assert"
@@ -88,7 +89,10 @@ func BrokerSendEventWithOIDCTokenToSubscriber() *feature.Feature {
 	))
 
 	f.Alpha("Broker").
-		Must("handles event with valid OIDC token", eventassert.OnStore(sink).MatchReceivedEvent(test.HasId(event.ID())).Exact(1))
+		Must("handles event with valid OIDC token", eventassert.OnStore(sink).MatchReceivedEvent(test.HasId(event.ID())).Exact(1)).
+		Must("uses triggers identity for OIDC", eventassert.OnStore(sink).MatchWithContext(
+			eventassert.MatchKind(eventshub.EventReceived).WithContext(),
+			eventassert.MatchOIDCUserFromResource(triggerresources.GVR(), triggerName)).Exact(1))
 
 	return f
 }
@@ -145,7 +149,10 @@ func BrokerSendEventWithOIDCTokenToDLS() *feature.Feature {
 
 	// Assert events ended up where we expected.
 	f.Stable("broker with DLS").
-		Must("deliver event to DLQ", eventassert.OnStore(dls).MatchReceivedEvent(test.HasId(event.ID())).AtLeast(1))
+		Must("deliver event to DLQ", eventassert.OnStore(dls).MatchReceivedEvent(test.HasId(event.ID())).AtLeast(1)).
+		Must("uses triggers identity for OIDC", eventassert.OnStore(dls).MatchWithContext(
+			eventassert.MatchKind(eventshub.EventReceived).WithContext(),
+			eventassert.MatchOIDCUserFromResource(triggerresources.GVR(), triggerName)).Exact(1))
 
 	return f
 }

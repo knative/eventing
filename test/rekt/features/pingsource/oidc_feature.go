@@ -18,7 +18,6 @@ package pingsource
 
 import (
 	"context"
-
 	"github.com/cloudevents/sdk-go/v2/test"
 	"knative.dev/eventing/test/rekt/features/featureflags"
 	"knative.dev/eventing/test/rekt/resources/pingsource"
@@ -54,7 +53,10 @@ func PingSourceSendEventOIDC() *feature.Feature {
 
 	f.Stable("pingsource as event source").
 		Must("delivers events",
-			assert.OnStore(sink).MatchEvent(test.HasType("dev.knative.sources.ping")).AtLeast(1))
+			assert.OnStore(sink).MatchEvent(test.HasType("dev.knative.sources.ping")).AtLeast(1)).
+		Must("uses pingsources identity for OIDC", assert.OnStore(sink).MatchWithContext(
+			assert.MatchKind(eventshub.EventReceived).WithContext(),
+			assert.MatchOIDCUserFromResource(pingsource.Gvr(), source)).Exact(1))
 
 	return f
 }
