@@ -36,10 +36,6 @@ func (s *Subscription) Validate(ctx context.Context) *apis.FieldError {
 		errs = errs.Also(s.CheckImmutableFields(ctx, original))
 	}
 
-	///////////////////THIS IS EMPTY//////////////////////
-	log.Printf("validate kind1: %s", s.GroupVersionKind().Kind)
-	///////////////////THIS IS EMPTY//////////////////////
-
 	// s.Validate(ctx) because krshaped is defined on the entire subscription, not just the spec
 	if feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) {
 		crossNamespaceError := cn.CheckNamespace(ctx, s)
