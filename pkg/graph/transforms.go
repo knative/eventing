@@ -17,6 +17,10 @@ limitations under the License.
 package graph
 
 import (
+	"fmt"
+	"regexp"
+	"strings"
+
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	eventingv1beta3 "knative.dev/eventing/pkg/apis/eventing/v1beta3"
 )
@@ -47,16 +51,57 @@ func (aft *AttributesFilterTransform) Apply(et *eventingv1beta3.EventType, tfc T
 
 	for k, v := range aft.Filter.Attributes {
 		if attribute, ok := etAttributes[k]; ok {
-			if attribute != v {
-				return nil, tfc
+			if attribute.Value != v {
+				regexp, err := buildRegexForAttribute(attribute.Value)
+				if err != nil {
+					return nil, tfc
+				}
+
+				if regexp.MatchString(v) {
+					attribute.Value = v
+				} else {
+					return nil, tfc
+				}
 			}
-
 		}
-
 	}
+
+	updatedAttributes := make([]eventingv1beta3.EventAttributeDefinition, 0, len(et.Spec.Attributes))
+	for _, v := range etAttributes {
+		updatedAttributes = append(updatedAttributes, *v)
+	}
+
+	et.Spec.Attributes = updatedAttributes
+
+	return et, tfc
 }
 
-func (aft *AttributesFilterTransform) Name() string {}
+func (aft *AttributesFilterTransform) Name() string {
+	return "attributes-filter"
+}
+
+func buildRegexForAttribute(attribute string) (*regexp.Regexp, error) {
+	chunks := []string{"^"}
+
+	var chunk strings.Builder
+	for i := 0; i < len(attribute); {
+		if attribute[i] == '{' {
+			chunks = append(chunks, chunk.String(), "[a-zA-Z]+")
+			chunk.Reset()
+			i = strings.Index(attribute[i:], "}")
+			if i == -1 {
+				return nil, fmt.Errorf("no closing bracket for variable")
+			}
+		}
+
+		chunk.WriteByte(attribute[i])
+		i++
+	}
+
+	chunks = append(chunks, chunk.String(), "$")
+
+	return regexp.Compile(strings.Join(chunks, ""))
+}
 
 type EventTypeTransform struct {
 	EventType *eventingv1beta3.EventType
