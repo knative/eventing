@@ -139,7 +139,7 @@ func (g *Graph) AddTrigger(trigger eventingv1.Trigger) error {
 	to := g.getOrCreateVertex(&trigger.Spec.Subscriber)
 
 	//TODO: the transform function should be set according to the trigger filter - there are multiple open issues to address this later
-	broker.AddEdge(to, triggerDest, NoTransform{}, false)
+	broker.AddEdge(to, triggerDest, getTransformForTrigger(trigger), false)
 
 	if trigger.Spec.Delivery == nil || trigger.Spec.Delivery.DeadLetterSink == nil {
 		return nil
@@ -151,4 +151,12 @@ func (g *Graph) AddTrigger(trigger eventingv1.Trigger) error {
 
 	return nil
 
+}
+
+func getTransformForTrigger(trigger eventingv1.Trigger) Transform {
+	if len(trigger.Spec.Filters) == 0 && trigger.Spec.Filter != nil {
+		return &AttributesFilterTransform{Filter: trigger.Spec.Filter}
+	}
+
+	return NoTransform{}
 }
