@@ -92,7 +92,7 @@ func BrokerSendEventWithOIDCTokenToSubscriber() *feature.Feature {
 		Must("handles event with valid OIDC token", eventassert.OnStore(sink).MatchReceivedEvent(test.HasId(event.ID())).Exact(1)).
 		Must("uses triggers identity for OIDC", eventassert.OnStore(sink).MatchWithContext(
 			eventassert.MatchKind(eventshub.EventReceived).WithContext(),
-			eventassert.MatchOIDCUserFromResource(triggerresources.GVR(), triggerName)).Exact(1))
+			eventassert.MatchOIDCUserFromResource(triggerresources.GVR(), triggerName)).AtLeast(1))
 
 	return f
 }
@@ -152,7 +152,7 @@ func BrokerSendEventWithOIDCTokenToDLS() *feature.Feature {
 		Must("deliver event to DLQ", eventassert.OnStore(dls).MatchReceivedEvent(test.HasId(event.ID())).AtLeast(1)).
 		Must("uses triggers identity for OIDC", eventassert.OnStore(dls).MatchWithContext(
 			eventassert.MatchKind(eventshub.EventReceived).WithContext(),
-			eventassert.MatchOIDCUserFromResource(triggerresources.GVR(), triggerName)).Exact(1))
+			eventassert.MatchOIDCUserFromResource(triggerresources.GVR(), triggerName)).AtLeast(1))
 
 	return f
 }

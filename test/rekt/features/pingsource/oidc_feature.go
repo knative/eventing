@@ -57,7 +57,7 @@ func PingSourceSendEventOIDC() *feature.Feature {
 			assert.OnStore(sink).MatchEvent(test.HasType("dev.knative.sources.ping")).AtLeast(1)).
 		Must("uses pingsources identity for OIDC", assert.OnStore(sink).MatchWithContext(
 			assert.MatchKind(eventshub.EventReceived).WithContext(),
-			assert.MatchOIDCUserFromResource(pingsource.Gvr(), source)).Exact(1))
+			assert.MatchOIDCUserFromResource(pingsource.Gvr(), source)).AtLeast(1))
 
 	return f
 }

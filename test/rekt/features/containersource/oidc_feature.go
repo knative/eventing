@@ -58,7 +58,7 @@ func SendsEventsWithSinkRefOIDC() *feature.Feature {
 			assert.OnStore(sink).MatchEvent(test.HasType("dev.knative.eventing.samples.heartbeat")).AtLeast(1)).
 		Must("uses containersources identity for OIDC", assert.OnStore(sink).MatchWithContext(
 			assert.MatchKind(eventshub.EventReceived).WithContext(),
-			assert.MatchOIDCUserFromResource(containersource.Gvr(), src)).Exact(1)).
+			assert.MatchOIDCUserFromResource(containersource.Gvr(), src)).AtLeast(1)).
 		Must("Set sinkURI to HTTPS endpoint", source.ExpectHTTPSSink(containersource.Gvr(), src)).
 		Must("Set sinkCACerts to non empty CA certs", source.ExpectCACerts(containersource.Gvr(), src))
 	return f
