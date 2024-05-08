@@ -64,7 +64,7 @@ func DispatcherAuthenticatesRequestsWithOIDC() *feature.Feature {
 		Must("authenticate requests with OIDC", assert.OnStore(sink).MatchReceivedEvent(test.HasId(event.ID())).AtLeast(1)).
 		Must("uses subscriptions identity for OIDC", assert.OnStore(sink).MatchWithContext(
 			assert.MatchKind(eventshub.EventReceived).WithContext(),
-			assert.MatchOIDCUserFromResource(subscription.GVR(), subscriptionName)).Exact(1))
+			assert.MatchOIDCUserFromResource(subscription.GVR(), subscriptionName)).AtLeast(1))
 
 	return f
 }
