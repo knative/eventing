@@ -63,6 +63,12 @@ func (aft *AttributesFilterTransform) Apply(et *eventingv1beta3.EventType, tfc T
 					return nil, tfc
 				}
 			}
+		} else {
+			etAttributes[k] = &eventingv1beta3.EventAttributeDefinition{
+				Name:     k,
+				Value:    v,
+				Required: true,
+			}
 		}
 	}
 
