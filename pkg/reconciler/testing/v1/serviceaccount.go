@@ -18,26 +18,13 @@ package testing
 
 import (
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func CreateRoleBinding(namespace, roleName string, sa *corev1.ServiceAccount) *v1.RoleBinding {
-	return &v1.RoleBinding{
+func NewServiceAccount(saName string) *corev1.ServiceAccount {
+	return &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      roleName + "-binding",
-			Namespace: namespace,
-		},
-		Subjects: []v1.Subject{
-			{
-				Kind: "ServiceAccount",
-				Name: sa.Name,
-			},
-		},
-		RoleRef: v1.RoleRef{
-			APIGroup: "rbac.authorization.k8s.io",
-			Kind:     "Role",
-			Name:     roleName,
+			Name: saName,
 		},
 	}
 }
