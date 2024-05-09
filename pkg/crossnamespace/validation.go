@@ -71,8 +71,6 @@ func CheckNamespace(ctx context.Context, r ResourceInfo) *apis.FieldError {
 		Resource:  targetKind,
 	}
 
-	log.Printf("targetName: %s, targetNamespace: %s, targetKind: %s, targetGroup: %s, user name: %s", targetName, targetNamespace, targetKind, targetGroup, userInfo.Username)
-
 	// Create the SubjectAccessReview
 	check := authv1.SubjectAccessReview{
 		Spec: authv1.SubjectAccessReviewSpec{
@@ -81,11 +79,9 @@ func CheckNamespace(ctx context.Context, r ResourceInfo) *apis.FieldError {
 			// Groups:             userInfo.Groups,
 		},
 	}
-	log.Printf("Checking if user %s can get target resource in namespace %s, actions: %s", userInfo.Username, targetNamespace, action.String())
 
 	resp, err := client.AuthorizationV1().SubjectAccessReviews().Create(ctx, &check, metav1.CreateOptions{})
 
-	log.Printf("authorization result for user %s: %v", userInfo.Username, resp)
 	if err != nil {
 		return &apis.FieldError{
 			Paths:   []string{targetFieldName},
