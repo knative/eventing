@@ -19,7 +19,6 @@ package subscription
 import (
 	"context"
 	"fmt"
-	"log"
 
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -368,7 +367,6 @@ func (r *Reconciler) trackAndFetchChannel(ctx context.Context, sub *v1.Subscript
 	} else {
 		channelNamespace = sub.Namespace
 	}
-	log.Printf("Using channel namespace: %s", sub.Spec.Channel.Namespace)
 
 	obj, err := chLister.ByNamespace(channelNamespace).Get(ref.Name)
 	if err != nil {
