@@ -18,7 +18,6 @@ package v1
 
 import (
 	"context"
-	"log"
 
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -50,7 +49,6 @@ func (ss *SubscriptionSpec) Validate(ctx context.Context) *apis.FieldError {
 	// We require always Channel.
 	// Also at least one of 'subscriber' and 'reply' must be defined (non-nil and non-empty).
 
-	log.Printf("validate kind2: %s", ss.Channel.Kind)
 	var errs *apis.FieldError
 	if isChannelEmpty(ss.Channel) {
 		fe := apis.ErrMissingField("channel")
