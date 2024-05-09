@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	authenticationv1 "k8s.io/api/authentication/v1"
+	authv1 "k8s.io/api/authorization/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -491,6 +492,9 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 				),
 			}},
+			WantCreates: []runtime.Object{
+				makeSubjectAccessReview("test-user", makeResourceAttributes(channelNS, channelName, "knsubscribe", "messaging.knative.dev", "InMemoryChannel")),
+			},
 		}, {
 			Name: "subscription goes ready without api version",
 			Ctx: feature.ToContext(context.TODO(), feature.Flags{
@@ -2676,4 +2680,23 @@ func settingCtxforCrossNamespaceEventLinks(username string) context.Context {
 	ctx = injection.WithConfig(ctx, cfg)
 
 	return ctx
+}
+
+func makeResourceAttributes(namespace, name, verb, group, resource string) authv1.ResourceAttributes {
+	return authv1.ResourceAttributes{
+		Namespace: namespace,
+		Name:      name,
+		Verb:      verb,
+		Group:     group,
+		Resource:  resource,
+	}
+}
+
+func makeSubjectAccessReview(username string, action authv1.ResourceAttributes) *authv1.SubjectAccessReview {
+	return &authv1.SubjectAccessReview{
+		Spec: authv1.SubjectAccessReviewSpec{
+			ResourceAttributes: &action,
+			User:               username,
+		},
+	}
 }
