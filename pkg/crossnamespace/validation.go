@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 
 	authv1 "k8s.io/api/authorization/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -39,6 +40,10 @@ func CheckNamespace(ctx context.Context, r ResourceInfo) *apis.FieldError {
 	targetName := r.GetCrossNamespaceRef().Name
 	targetNamespace := r.GetCrossNamespaceRef().Namespace
 	targetFieldName := fmt.Sprintf("spec.%sNamespace", targetKind)
+
+	if targetGroup == "" {
+		targetGroup = strings.Split(r.GetCrossNamespaceRef().APIVersion, "/")[0]
+	}
 
 	log.Printf("target namespace: %s, target kind: %s", targetNamespace, targetKind)
 	// If the target namespace is empty or the same as the object namespace, this function is skipped
