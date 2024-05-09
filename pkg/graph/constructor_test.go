@@ -688,6 +688,274 @@ func TestAddEventType(t *testing.T) {
 	}
 }
 
+func TestAddSource(t *testing.T) {
+	tests := []struct {
+		name     string
+		source   duckv1.Source
+		expected map[comparableDestination]*Vertex
+	}{
+		{
+			name: "no CE Overrides",
+			source: duckv1.Source{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-source",
+					Namespace: "default",
+				},
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "sources.knative.dev/v1",
+					Kind:       "PingSource",
+				},
+				Spec: duckv1.SourceSpec{
+					Sink: duckv1.Destination{
+						Ref: &duckv1.KReference{
+							Name:       "my-broker",
+							Namespace:  "default",
+							APIVersion: "eventing.knative.dev/v1",
+							Kind:       "Broker",
+						},
+					},
+				},
+			},
+			expected: map[comparableDestination]*Vertex{
+				{
+					Ref: duckv1.KReference{
+						Name:       "my-broker",
+						Namespace:  "default",
+						APIVersion: "eventing.knative.dev/v1",
+						Kind:       "Broker",
+					},
+				}: {
+					self: &duckv1.Destination{
+						Ref: &duckv1.KReference{
+							Name:       "my-broker",
+							Namespace:  "default",
+							APIVersion: "eventing.knative.dev/v1",
+							Kind:       "Broker",
+						},
+					},
+					inEdges: []*Edge{
+						{
+							from: &Vertex{
+								self: &duckv1.Destination{
+									Ref: &duckv1.KReference{
+										Name:       "my-source",
+										Namespace:  "default",
+										APIVersion: "sources.knative.dev/v1",
+										Kind:       "PingSource",
+									},
+								},
+							},
+							to: &Vertex{
+								self: &duckv1.Destination{
+									Ref: &duckv1.KReference{
+										Name:       "my-broker",
+										Namespace:  "default",
+										APIVersion: "eventing.knative.dev/v1",
+										Kind:       "Broker",
+									},
+								},
+							},
+							self: &duckv1.Destination{
+								Ref: &duckv1.KReference{
+									Name:       "my-source",
+									Namespace:  "default",
+									APIVersion: "sources.knative.dev/v1",
+									Kind:       "PingSource",
+								},
+							},
+							transform: CloudEventOverridesTransform{},
+						},
+					},
+				},
+				{
+					Ref: duckv1.KReference{
+						Name:       "my-source",
+						Namespace:  "default",
+						APIVersion: "sources.knative.dev/v1",
+						Kind:       "PingSource",
+					},
+				}: {
+					self: &duckv1.Destination{
+						Ref: &duckv1.KReference{
+							Name:       "my-source",
+							Namespace:  "default",
+							APIVersion: "sources.knative.dev/v1",
+							Kind:       "PingSource",
+						},
+					},
+					outEdges: []*Edge{
+						{
+							from: &Vertex{
+								self: &duckv1.Destination{
+									Ref: &duckv1.KReference{
+										Name:       "my-source",
+										Namespace:  "default",
+										APIVersion: "sources.knative.dev/v1",
+										Kind:       "PingSource",
+									},
+								},
+							},
+							to: &Vertex{
+								self: &duckv1.Destination{
+									Ref: &duckv1.KReference{
+										Name:       "my-broker",
+										Namespace:  "default",
+										APIVersion: "eventing.knative.dev/v1",
+										Kind:       "Broker",
+									},
+								},
+							},
+							self: &duckv1.Destination{
+								Ref: &duckv1.KReference{
+									Name:       "my-source",
+									Namespace:  "default",
+									APIVersion: "sources.knative.dev/v1",
+									Kind:       "PingSource",
+								},
+							},
+							transform: CloudEventOverridesTransform{},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "CE Overrides",
+			source: duckv1.Source{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-source",
+					Namespace: "default",
+				},
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "sources.knative.dev/v1",
+					Kind:       "PingSource",
+				},
+				Spec: duckv1.SourceSpec{
+					Sink: duckv1.Destination{
+						Ref: &duckv1.KReference{
+							Name:       "my-broker",
+							Namespace:  "default",
+							APIVersion: "eventing.knative.dev/v1",
+							Kind:       "Broker",
+						},
+					},
+					CloudEventOverrides: &duckv1.CloudEventOverrides{Extensions: map[string]string{"someextension": "somevalue"}},
+				},
+			},
+			expected: map[comparableDestination]*Vertex{
+				{
+					Ref: duckv1.KReference{
+						Name:       "my-broker",
+						Namespace:  "default",
+						APIVersion: "eventing.knative.dev/v1",
+						Kind:       "Broker",
+					},
+				}: {
+					self: &duckv1.Destination{
+						Ref: &duckv1.KReference{
+							Name:       "my-broker",
+							Namespace:  "default",
+							APIVersion: "eventing.knative.dev/v1",
+							Kind:       "Broker",
+						},
+					},
+					inEdges: []*Edge{
+						{
+							from: &Vertex{
+								self: &duckv1.Destination{
+									Ref: &duckv1.KReference{
+										Name:       "my-source",
+										Namespace:  "default",
+										APIVersion: "sources.knative.dev/v1",
+										Kind:       "PingSource",
+									},
+								},
+							},
+							to: &Vertex{
+								self: &duckv1.Destination{
+									Ref: &duckv1.KReference{
+										Name:       "my-broker",
+										Namespace:  "default",
+										APIVersion: "eventing.knative.dev/v1",
+										Kind:       "Broker",
+									},
+								},
+							},
+							self: &duckv1.Destination{
+								Ref: &duckv1.KReference{
+									Name:       "my-source",
+									Namespace:  "default",
+									APIVersion: "sources.knative.dev/v1",
+									Kind:       "PingSource",
+								},
+							},
+							transform: CloudEventOverridesTransform{Overrides: &duckv1.CloudEventOverrides{Extensions: map[string]string{"someextension": "somevalue"}}},
+						},
+					},
+				},
+				{
+					Ref: duckv1.KReference{
+						Name:       "my-source",
+						Namespace:  "default",
+						APIVersion: "sources.knative.dev/v1",
+						Kind:       "PingSource",
+					},
+				}: {
+					self: &duckv1.Destination{
+						Ref: &duckv1.KReference{
+							Name:       "my-source",
+							Namespace:  "default",
+							APIVersion: "sources.knative.dev/v1",
+							Kind:       "PingSource",
+						},
+					},
+					outEdges: []*Edge{
+						{
+							from: &Vertex{
+								self: &duckv1.Destination{
+									Ref: &duckv1.KReference{
+										Name:       "my-source",
+										Namespace:  "default",
+										APIVersion: "sources.knative.dev/v1",
+										Kind:       "PingSource",
+									},
+								},
+							},
+							to: &Vertex{
+								self: &duckv1.Destination{
+									Ref: &duckv1.KReference{
+										Name:       "my-broker",
+										Namespace:  "default",
+										APIVersion: "eventing.knative.dev/v1",
+										Kind:       "Broker",
+									},
+								},
+							},
+							self: &duckv1.Destination{
+								Ref: &duckv1.KReference{
+									Name:       "my-source",
+									Namespace:  "default",
+									APIVersion: "sources.knative.dev/v1",
+									Kind:       "PingSource",
+								},
+							},
+							transform: CloudEventOverridesTransform{Overrides: &duckv1.CloudEventOverrides{Extensions: map[string]string{"someextension": "somevalue"}}},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewGraph()
+			g.AddSource(test.source)
+			checkTestResult(t, g.vertices, test.expected)
+		})
+	}
+}
+
 func checkTestResult(t *testing.T, actualVertices map[comparableDestination]*Vertex, expectedVertices map[comparableDestination]*Vertex) {
 	assert.Len(t, actualVertices, len(expectedVertices))
 	for k, expected := range expectedVertices {

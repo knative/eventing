@@ -2101,7 +2101,7 @@ resolved delivery options.</p>
 <h3 id="eventing.knative.dev/v1.SubscriptionsAPIFilter">SubscriptionsAPIFilter
 </h3>
 <p>
-(<em>Appears on:</em><a href="#eventing.knative.dev/v1.SubscriptionsAPIFilter">SubscriptionsAPIFilter</a>, <a href="#eventing.knative.dev/v1.TriggerSpec">TriggerSpec</a>)
+(<em>Appears on:</em><a href="#eventing.knative.dev/v1.SubscriptionsAPIFilter">SubscriptionsAPIFilter</a>, <a href="#eventing.knative.dev/v1.TriggerSpec">TriggerSpec</a>, <a href="#sources.knative.dev/v1.ApiServerSourceSpec">ApiServerSourceSpec</a>)
 </p>
 <p>
 <p>SubscriptionsAPIFilter allows defining a filter expression using CloudEvents
@@ -5327,6 +5327,25 @@ Kubernetes meta/v1.LabelSelector
 should be watched by the source.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>filters</code><br/>
+<em>
+<a href="#eventing.knative.dev/v1.SubscriptionsAPIFilter">
+[]SubscriptionsAPIFilter
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Filters is an experimental field that conforms to the CNCF CloudEvents Subscriptions
+API. It&rsquo;s an array of filter expressions that evaluate to true or false.
+If any filter expression in the array evaluates to false, the event MUST
+NOT be sent to the Sink. If all the filter expressions in the array
+evaluate to true, the event MUST be attempted to be delivered. Absence of
+a filter or empty array implies a value of true.</p>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -5932,6 +5951,25 @@ Kubernetes meta/v1.LabelSelector
 <em>(Optional)</em>
 <p>NamespaceSelector is a label selector to capture the namespaces that
 should be watched by the source.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>filters</code><br/>
+<em>
+<a href="#eventing.knative.dev/v1.SubscriptionsAPIFilter">
+[]SubscriptionsAPIFilter
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Filters is an experimental field that conforms to the CNCF CloudEvents Subscriptions
+API. It&rsquo;s an array of filter expressions that evaluate to true or false.
+If any filter expression in the array evaluates to false, the event MUST
+NOT be sent to the Sink. If all the filter expressions in the array
+evaluate to true, the event MUST be attempted to be delivered. Absence of
+a filter or empty array implies a value of true.</p>
 </td>
 </tr>
 </tbody>

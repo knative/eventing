@@ -136,7 +136,9 @@ func AutoCreateEventTypesOnBroker(brokerName string) *feature.Feature {
 		Must("deliver events to subscriber", assert.OnStore(sink).MatchEvent(cetest.HasId(event.ID())).AtLeast(1)).
 		Must("create event type", eventtype.WaitForEventType(
 			eventtype.AssertReady(expectedTypes),
-			eventtype.AssertExactPresent(expectedTypes)))
+			eventtype.AssertExactPresent(expectedTypes),
+			eventtype.AssertReferencePresent(broker.AsKReference(brokerName))),
+		)
 
 	return f
 }
@@ -215,7 +217,8 @@ func AutoCreateEventTypeEventsFromPingSource() *feature.Feature {
 			cetest.HasType(sourcesv1.PingSourceEventType)).AtLeast(1)).
 		Must("PingSource test eventtypes match", eventtype.WaitForEventType(
 			eventtype.AssertReady(expectedCeTypes),
-			eventtype.AssertPresent(expectedCeTypes)))
+			eventtype.AssertPresent(expectedCeTypes),
+			eventtype.AssertReferencePresent(broker.AsKReference(brokerName))))
 
 	return f
 }

@@ -20,7 +20,7 @@ metadata:
   {{ if .annotations }}
   annotations:
   {{ range $key, $value := .annotations }}
-    {{ $key }}: {{ $value }}
+    {{ $key }}: '{{ $value }}'
   {{ end }}
   {{ end }}
 spec:

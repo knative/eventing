@@ -61,6 +61,7 @@ func newDefaults() Flags {
 		TransportEncryption: Disabled,
 		OIDCAuthentication:  Disabled,
 		EvenTypeAutoCreate:  Disabled,
+		NewAPIServerFilters: Disabled,
 	}
 }
 

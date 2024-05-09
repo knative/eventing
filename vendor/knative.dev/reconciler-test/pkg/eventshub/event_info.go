@@ -24,6 +24,8 @@ import (
 	"strings"
 	"time"
 
+	v1 "k8s.io/api/authentication/v1"
+
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 )
 
@@ -87,6 +89,9 @@ type EventInfo struct {
 
 	// AdditionalInfo can be used by event generator implementations to add more event details
 	AdditionalInfo map[string]interface{} `json:"additionalInfo"`
+
+	// OIDCUserInfo is the user info of the subject of the OIDC token used in the request
+	OIDCUserInfo *v1.UserInfo `json:"oidcUserInfo,omitempty"`
 }
 
 // Pretty print the event. Meant for debugging.

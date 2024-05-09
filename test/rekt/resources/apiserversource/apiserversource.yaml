@@ -87,3 +87,7 @@ spec:
     audience: {{ .sink.audience }}
     {{ end }}
   {{ end }}
+  {{ if .filters }}
+  filters:
+{{ .filters }}
+  {{ end }}

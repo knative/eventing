@@ -135,13 +135,32 @@ func PropagateTrustBundles(ctx context.Context, k8s kubernetes.Interface, trustB
 		if p.userCm == nil {
 			// Update owner references
 			expected.OwnerReferences = withOwnerReferences(obj, gvk, []metav1.OwnerReference{})
-
-			if err := createConfigMap(ctx, k8s, expected); err != nil {
+			err := createConfigMap(ctx, k8s, expected)
+			if err != nil && !apierrors.IsAlreadyExists(err) {
 				return err
+			}
+			if apierrors.IsAlreadyExists(err) {
+				// Update existing ConfigMap
+				cm, getErr := k8s.CoreV1().
+					ConfigMaps(obj.GetNamespace()).
+					Get(ctx, userCMName(p.sysCM.Name), metav1.GetOptions{})
+				if getErr != nil {
+					return err // return original error
+				}
+
+				cm.ObjectMeta.DeepCopyInto(&expected.ObjectMeta)
+				expected.OwnerReferences = withOwnerReferences(obj, gvk, cm.OwnerReferences)
+
+				if !equality.Semantic.DeepDerivative(expected, cm) {
+					if err := updateConfigMap(ctx, k8s, expected); err != nil {
+						return err
+					}
+				}
 			}
 			continue
 		}
 
+		p.userCm.ObjectMeta.DeepCopyInto(&expected.ObjectMeta)
 		// Update owner references
 		expected.OwnerReferences = withOwnerReferences(obj, gvk, p.userCm.OwnerReferences)
 

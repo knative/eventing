@@ -60,3 +60,6 @@ data:
   # For more details: https://github.com/knative/eventing/issues/7739
   cross-namespace-event-links: "disabled"
 
+  # ALPHA feature: The new-apiserversource-filters flag allows you to use the new `filters` field
+  # in APIServerSource objects with its rich filtering capabilities.
+  new-apiserversource-filters: "disabled"

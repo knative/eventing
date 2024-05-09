@@ -17,6 +17,8 @@ package apiserver
 
 import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
+
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 )
 
@@ -56,4 +58,14 @@ type Config struct {
 	// Defaults to `Reference`
 	// +optional
 	EventMode string `json:"mode,omitempty"`
+
+	// Filters is an experimental field that conforms to the CNCF CloudEvents Subscriptions
+	// API. It's an array of filter expressions that evaluate to true or false.
+	// If any filter expression in the array evaluates to false, the event MUST
+	// NOT be sent to the Sink. If all the filter expressions in the array
+	// evaluate to true, the event MUST be attempted to be delivered. Absence of
+	// a filter or empty array implies a value of true.
+	//
+	// +optional
+	Filters []eventingv1.SubscriptionsAPIFilter `json:"filters,omitempty"`
 }

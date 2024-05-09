@@ -31,14 +31,11 @@ const (
 
 	// ContainerSourceConditionReceiveAdapterReady has status True when the ContainerSource's ReceiveAdapter is ready.
 	ContainerSourceConditionReceiveAdapterReady apis.ConditionType = "ReceiveAdapterReady"
-
-	ContainerConditionOIDCIdentityCreated apis.ConditionType = "OIDCIdentityCreated"
 )
 
 var containerCondSet = apis.NewLivingConditionSet(
 	ContainerSourceConditionSinkBindingReady,
 	ContainerSourceConditionReceiveAdapterReady,
-	ContainerConditionOIDCIdentityCreated,
 )
 
 // GetConditionSet retrieves the condition set for this resource. Implements the KRShaped interface.
@@ -66,23 +63,7 @@ func (s *ContainerSourceStatus) InitializeConditions() {
 	containerCondSet.Manage(s).InitializeConditions()
 }
 
-func (s *ContainerSourceStatus) MarkOIDCIdentityCreatedSucceeded() {
-	containerCondSet.Manage(s).MarkTrue(ContainerConditionOIDCIdentityCreated)
-}
-
-func (s *ContainerSourceStatus) MarkOIDCIdentityCreatedSucceededWithReason(reason, messageFormat string, messageA ...interface{}) {
-	containerCondSet.Manage(s).MarkTrueWithReason(ContainerConditionOIDCIdentityCreated, reason, messageFormat, messageA...)
-}
-
-func (s *ContainerSourceStatus) MarkOIDCIdentityCreatedFailed(reason, messageFormat string, messageA ...interface{}) {
-	containerCondSet.Manage(s).MarkFalse(ContainerConditionOIDCIdentityCreated, reason, messageFormat, messageA...)
-}
-
-func (s *ContainerSourceStatus) MarkOIDCIdentityCreatedUnknown(reason, messageFormat string, messageA ...interface{}) {
-	containerCondSet.Manage(s).MarkUnknown(ContainerConditionOIDCIdentityCreated, reason, messageFormat, messageA...)
-}
-
-// PropagateSinkBindingStatus uses the availability of the provided Deployment to determine if
+// PropagateSinkBindingStatus uses the SinkBinding to determine if
 // ContainerSourceConditionSinkBindingReady should be marked as true, false or unknown.
 func (s *ContainerSourceStatus) PropagateSinkBindingStatus(status *SinkBindingStatus) {
 	// Do not copy conditions nor observedGeneration
@@ -105,6 +86,9 @@ func (s *ContainerSourceStatus) PropagateSinkBindingStatus(status *SinkBindingSt
 	default:
 		containerCondSet.Manage(s).MarkUnknown(ContainerSourceConditionSinkBindingReady, cond.Reason, cond.Message)
 	}
+
+	// Propagate SinkBindings AuthStatus to containersources AuthStatus
+	s.Auth = status.Auth
 }
 
 // PropagateReceiveAdapterStatus uses the availability of the provided Deployment to determine if
