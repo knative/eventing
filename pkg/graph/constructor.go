@@ -196,8 +196,7 @@ func (g *Graph) AddSubscription(subscription messagingv1.Subscription) error {
 	// If the subscription has a reply field set, there should be another Edge struct.
 	if subscription.Spec.Reply != nil {
 		reply := g.getOrCreateVertex(subscription.Spec.Reply)
-		subscriber := g.getOrCreateVertex(subscriptionDest)
-		subscriber.AddEdge(reply, subscriptionDest, NoTransform{}, false)
+		to.AddEdge(reply, subscriptionDest, NoTransform{}, false)
 	}
 
 	// If the subscription has the deadLetterSink property set on the delivery field, then another Edge should be constructed.
