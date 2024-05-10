@@ -138,6 +138,35 @@ var (
 						},
 					},
 				},
+				"customns": {
+					DefaultBrokerClass: "MTChannelBasedBroker",
+					BrokerConfig: &config.BrokerConfig{
+						KReference: &duckv1.KReference{
+							APIVersion: "v1",
+							Kind:       "ConfigMap",
+							Namespace:  "haha-ns",
+							Name:       "haha-config",
+						},
+					},
+					BrokerClasses: map[string]*config.BrokerConfig{
+						"mynamespaceclass": {
+							KReference: &duckv1.KReference{
+								APIVersion: "v1",
+								Kind:       "ConfigMap",
+								Namespace:  "knative-eventing",
+								Name:       "kafka-channel",
+							},
+						},
+						"mynamespaceclass2": {
+							KReference: &duckv1.KReference{
+								APIVersion: "v1",
+								Kind:       "ConfigMap",
+								Namespace:  "knative-eventing",
+								Name:       "kafka-channel",
+							},
+						},
+					},
+				},
 				"custom": {
 					DefaultBrokerClass: "haha-broker",
 					BrokerConfig: &config.BrokerConfig{
@@ -476,7 +505,7 @@ func TestBrokerSetDefaults(t *testing.T) {
 		},
 		"missing deadLetterSink.ref.namespace, defaulted": {
 			initial: Broker{
-				ObjectMeta: metav1.ObjectMeta{Name: "broker", Namespace: "custom"},
+				ObjectMeta: metav1.ObjectMeta{Name: "broker", Namespace: "customns"},
 				Spec: BrokerSpec{
 					Config: &duckv1.KReference{
 						Kind:       "ConfigMap",
@@ -501,7 +530,7 @@ func TestBrokerSetDefaults(t *testing.T) {
 			expected: Broker{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "broker",
-					Namespace: "custom",
+					Namespace: "customns",
 					Annotations: map[string]string{
 						eventing.BrokerClassKey: "MTChannelBasedBroker",
 					},
@@ -517,7 +546,7 @@ func TestBrokerSetDefaults(t *testing.T) {
 						DeadLetterSink: &duckv1.Destination{
 							Ref: &duckv1.KReference{
 								Kind:       "Service",
-								Namespace:  "custom",
+								Namespace:  "customns",
 								Name:       "handle-error",
 								APIVersion: "serving.knative.dev/v1",
 							},
