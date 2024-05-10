@@ -30,13 +30,13 @@ import (
 func (b *Broker) SetDefaults(ctx context.Context) {
 	// Default Spec fields.
 	withNS := apis.WithinParent(ctx, b.ObjectMeta)
-	b.Spec.SetDefaults(withNS)
+	b.Spec.SetDefaults(withNS, b.Annotations["eventing.knative.dev/broker.class"])
 	eventing.DefaultBrokerClassIfUnset(withNS, &b.ObjectMeta)
 }
 
-func (bs *BrokerSpec) SetDefaults(ctx context.Context) {
+func (bs *BrokerSpec) SetDefaults(ctx context.Context, brokerClass string) {
 	cfg := config.FromContextOrDefaults(ctx)
-	c, err := cfg.Defaults.GetBrokerConfig(apis.ParentMeta(ctx).Namespace, nil)
+	c, err := cfg.Defaults.GetBrokerConfig(apis.ParentMeta(ctx).Namespace, &brokerClass)
 
 	if bs.Config != nil {
 		c, err = cfg.Defaults.GetBrokerConfig(apis.ParentMeta(ctx).Namespace, &bs.Config.Kind)
