@@ -2672,7 +2672,7 @@ func settingCtxforCrossNamespaceEventLinks(username string) context.Context {
 
 	userInfo := &authenticationv1.UserInfo{
 		Username: username,
-		Groups:   nil,
+		Groups:   []string{"system:authenticatedforcrossnamespacelinks"},
 	}
 	ctx = apis.WithUserInfo(ctx, userInfo)
 
@@ -2697,6 +2697,7 @@ func makeSubjectAccessReview(username string, action authv1.ResourceAttributes) 
 		Spec: authv1.SubjectAccessReviewSpec{
 			ResourceAttributes: &action,
 			User:               username,
+			Groups:             []string{"system:authenticatedforcrossnamespacelinks"},
 		},
 	}
 }
