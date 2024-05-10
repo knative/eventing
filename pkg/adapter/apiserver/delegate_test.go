@@ -18,7 +18,12 @@ package apiserver
 import (
 	"testing"
 
+	"go.uber.org/zap"
+	adaptertest "knative.dev/eventing/pkg/adapter/v2/test"
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/pkg/apis/sources"
+	brokerfilter "knative.dev/eventing/pkg/broker/filter"
+	"knative.dev/eventing/pkg/eventfilter/subscriptionsapi"
 )
 
 func TestResourceAddEvent(t *testing.T) {
@@ -67,4 +72,41 @@ func TestResourceStub(t *testing.T) {
 	d.GetByKey("")
 	d.Replace(nil, "")
 	d.Resync()
+}
+
+func TestFilterFails(t *testing.T) {
+	ce := adaptertest.NewTestClient()
+	filters := []eventingv1.SubscriptionsAPIFilter{{
+		Exact: map[string]string{
+			"type": "dev.knative.apiserver.resource.add",
+		},
+	}}
+	logger := zap.NewExample().Sugar()
+	delegate := &resourceDelegate{
+		ce:                  ce,
+		source:              "unit-test",
+		apiServerSourceName: apiServerSourceNameTest,
+		logger:              logger,
+		filter:              subscriptionsapi.NewAllFilter(brokerfilter.MaterializeFiltersList(logger.Desugar(), filters)...),
+	}
+
+	delegate.Update(simplePod("unit", "test"))
+	validateNotSent(t, ce, sources.ApiServerSourceUpdateEventType)
+}
+
+func TestEmptyFiltersList(t *testing.T) {
+	ce := adaptertest.NewTestClient()
+	filters := []eventingv1.SubscriptionsAPIFilter{}
+
+	logger := zap.NewExample().Sugar()
+	delegate := &resourceDelegate{
+		ce:                  ce,
+		source:              "unit-test",
+		apiServerSourceName: apiServerSourceNameTest,
+		logger:              logger,
+		filter:              subscriptionsapi.NewAllFilter(brokerfilter.MaterializeFiltersList(logger.Desugar(), filters)...),
+	}
+
+	delegate.Update(simplePod("unit", "test"))
+	validateSent(t, ce, sources.ApiServerSourceUpdateEventType)
 }

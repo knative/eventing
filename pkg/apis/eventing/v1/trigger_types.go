@@ -77,6 +77,9 @@ type TriggerSpec struct {
 	// Broker is the broker that this trigger receives events from.
 	Broker string `json:"broker,omitempty"`
 
+	// BrokerRef is the broker that is used for cross-namespace referencing.
+	BrokerRef *duckv1.KReference `json:"brokerRef,omitempty"`
+
 	// Filter is the filter to apply against all events from the Broker. Only events that pass this
 	// filter will be sent to the Subscriber. If not specified, will default to allowing all events.
 	//
@@ -222,4 +225,12 @@ type TriggerList struct {
 // GetStatus retrieves the status of the Trigger. Implements the KRShaped interface.
 func (t *Trigger) GetStatus() *duckv1.Status {
 	return &t.Status.Status
+}
+
+// GetCrossNamespaceRef returns the Broker reference for the Trigger. Implements the ResourceInfo interface.
+func (t *Trigger) GetCrossNamespaceRef() duckv1.KReference {
+	if t.Spec.BrokerRef != nil {
+		return *t.Spec.BrokerRef
+	}
+	return duckv1.KReference{}
 }

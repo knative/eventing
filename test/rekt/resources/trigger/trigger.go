@@ -124,18 +124,14 @@ func WithSubscriberFromDestination(dest *duckv1.Destination) manifest.CfgFn {
 // WithAnnotations adds annotations to the trigger
 func WithAnnotations(annotations map[string]interface{}) manifest.CfgFn {
 	return func(cfg map[string]interface{}) {
-		if _, set := cfg["ceOverrides"]; !set {
-			cfg["ceOverrides"] = map[string]interface{}{}
+		if _, set := cfg["annotations"]; !set {
+			cfg["annotations"] = map[string]string{}
 		}
-		ceOverrides := cfg["ceOverrides"].(map[string]interface{})
 
 		if annotations != nil {
-			if _, set := ceOverrides["annotations"]; !set {
-				ceOverrides["annotations"] = map[string]interface{}{}
-			}
-			ceExt := ceOverrides["annotations"].(map[string]interface{})
+			annotation := cfg["annotations"].(map[string]string)
 			for k, v := range annotations {
-				ceExt[k] = v
+				annotation[k] = v.(string)
 			}
 		}
 	}
@@ -217,5 +213,13 @@ func WithNewFilters(filters []eventingv1.SubscriptionsAPIFilter) manifest.CfgFn 
 
 	return func(m map[string]interface{}) {
 		m["filters"] = strings.Join(out, "\n")
+	}
+}
+
+func AsKReference(name string) *duckv1.KReference {
+	return &duckv1.KReference{
+		Kind:       "Trigger",
+		Name:       name,
+		APIVersion: "eventing.knative.dev/v1",
 	}
 }

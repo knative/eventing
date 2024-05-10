@@ -28,6 +28,7 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"
+	"github.com/cloudevents/sdk-go/v2/binding/buffering"
 	"github.com/cloudevents/sdk-go/v2/event"
 	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"github.com/hashicorp/go-retryablehttp"
@@ -42,6 +43,7 @@ import (
 	eventingapis "knative.dev/eventing/pkg/apis"
 	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/eventingtls"
+	"knative.dev/eventing/pkg/eventtype"
 	"knative.dev/eventing/pkg/utils"
 
 	"knative.dev/eventing/pkg/broker"
@@ -115,13 +117,29 @@ func WithOIDCAuthentication(serviceAccount *types.NamespacedName) SendOption {
 	}
 }
 
+func WithEventTypeAutoHandler(handler *eventtype.EventTypeAutoHandler, ref *duckv1.KReference, ownerUID types.UID) SendOption {
+	return func(sc *senderConfig) error {
+		if handler != nil && (ref == nil || ownerUID == types.UID("")) {
+			return fmt.Errorf("addressable and ownerUID must be provided if using the eventtype auto handler")
+		}
+		sc.eventTypeAutoHandler = handler
+		sc.eventTypeRef = ref
+		sc.eventTypeOnwerUID = ownerUID
+
+		return nil
+	}
+}
+
 type senderConfig struct {
-	reply              *duckv1.Addressable
-	deadLetterSink     *duckv1.Addressable
-	additionalHeaders  http.Header
-	retryConfig        *RetryConfig
-	transformers       binding.Transformers
-	oidcServiceAccount *types.NamespacedName
+	reply                *duckv1.Addressable
+	deadLetterSink       *duckv1.Addressable
+	additionalHeaders    http.Header
+	retryConfig          *RetryConfig
+	transformers         binding.Transformers
+	oidcServiceAccount   *types.NamespacedName
+	eventTypeAutoHandler *eventtype.EventTypeAutoHandler
+	eventTypeRef         *duckv1.KReference
+	eventTypeOnwerUID    types.UID
 }
 
 type Dispatcher struct {
@@ -229,6 +247,10 @@ func (d *Dispatcher) send(ctx context.Context, message binding.Message, destinat
 
 	messagesToFinish = append(messagesToFinish, responseMessage)
 
+	if config.eventTypeAutoHandler != nil {
+		d.handleAutocreate(ctx, responseMessage, config)
+	}
+
 	if config.reply == nil {
 		return dispatchExecutionInfo, nil
 	}
@@ -330,6 +352,22 @@ func (d *Dispatcher) executeRequest(ctx context.Context, target duckv1.Addressab
 	}
 
 	return ctx, responseMessage, &dispatchInfo, nil
+}
+
+func (d *Dispatcher) handleAutocreate(ctx context.Context, responseMessage binding.Message, config *senderConfig) {
+	// messages can only be read once, so we need to make a copy of it
+	messageCopy, err := buffering.CopyMessage(ctx, responseMessage)
+	if err != nil {
+		return
+	}
+	defer responseMessage.Finish(nil)
+
+	responseEvent, err := binding.ToEvent(ctx, messageCopy)
+	if err != nil {
+		return
+	}
+
+	config.eventTypeAutoHandler.AutoCreateEventType(ctx, responseEvent, config.eventTypeRef, config.eventTypeOnwerUID)
 }
 
 func (d *Dispatcher) createRequest(ctx context.Context, message binding.Message, target duckv1.Addressable, additionalHeaders http.Header, oidcServiceAccount *types.NamespacedName, transformers ...binding.Transformer) (*http.Request, error) {

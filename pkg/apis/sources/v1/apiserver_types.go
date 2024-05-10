@@ -19,6 +19,7 @@ package v1
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/kmeta"
@@ -85,6 +86,16 @@ type ApiServerSourceSpec struct {
 	// should be watched by the source.
 	// +optional
 	NamespaceSelector *metav1.LabelSelector `json:"namespaceSelector,omitempty"`
+
+	// Filters is an experimental field that conforms to the CNCF CloudEvents Subscriptions
+	// API. It's an array of filter expressions that evaluate to true or false.
+	// If any filter expression in the array evaluates to false, the event MUST
+	// NOT be sent to the Sink. If all the filter expressions in the array
+	// evaluate to true, the event MUST be attempted to be delivered. Absence of
+	// a filter or empty array implies a value of true.
+	//
+	// +optional
+	Filters []eventingv1.SubscriptionsAPIFilter `json:"filters,omitempty"`
 }
 
 // ApiServerSourceStatus defines the observed state of ApiServerSource

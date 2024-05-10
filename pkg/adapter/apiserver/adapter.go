@@ -34,6 +34,8 @@ import (
 
 	"knative.dev/eventing/pkg/adapter/v2"
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
+	brokerfilter "knative.dev/eventing/pkg/broker/filter"
+	"knative.dev/eventing/pkg/eventfilter/subscriptionsapi"
 )
 
 type envConfig struct {
@@ -71,6 +73,7 @@ func (a *apiServerAdapter) start(ctx context.Context, stopCh <-chan struct{}) er
 		logger:              a.logger,
 		ref:                 a.config.EventMode == v1.ReferenceMode,
 		apiServerSourceName: a.name,
+		filter:              subscriptionsapi.NewAllFilter(brokerfilter.MaterializeFiltersList(a.logger.Desugar(), a.config.Filters)...),
 	}
 	if a.config.ResourceOwner != nil {
 		a.logger.Infow("will be filtered",

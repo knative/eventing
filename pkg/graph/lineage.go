@@ -20,6 +20,16 @@ import (
 	eventingv1beta3 "knative.dev/eventing/pkg/apis/eventing/v1beta3"
 )
 
+func (g *Graph) Lineage() []*Vertex {
+	sources := g.Sources()
+	lineagePaths := make(Vertices, len(sources))
+	for _, s := range sources {
+		lineagePaths = append(lineagePaths, s.Lineage(EmptyEventType(), TransformFunctionContext{}))
+	}
+
+	return lineagePaths
+}
+
 // computes the lineage from the given vertex with the given input eventtype
 func (v *Vertex) Lineage(et *eventingv1beta3.EventType, tfc TransformFunctionContext) *Vertex {
 	toExplore := v.OutEdges()
@@ -28,13 +38,13 @@ func (v *Vertex) Lineage(et *eventingv1beta3.EventType, tfc TransformFunctionCon
 	for i := 0; i < len(toExplore); i++ {
 		edge := toExplore[i]
 		if edge.To().Visited() {
-			res.AddEdge(edge.To().NewWithSameRef(), edge.Reference(), NoTransform)
+			res.AddEdge(edge.To().NewWithSameRef(), edge.Reference(), NoTransform{}, edge.isDLS)
 			continue
 		}
 
 		// transform -> nil implies that the path can't be traversed with the current transform and/or context
 		if et, tfc := edge.Transform(et, tfc); et != nil {
-			res.AddEdge(edge.To().Lineage(et.DeepCopy(), tfc.DeepCopy()), edge.Reference(), NoTransform)
+			res.AddEdge(edge.To().Lineage(et.DeepCopy(), tfc.DeepCopy()), edge.Reference(), NoTransform{}, edge.isDLS)
 		}
 	}
 	// the narrowed eventtype and/or transform function context could be different from a different path, so we have to unvisit before exploring another path
@@ -42,6 +52,6 @@ func (v *Vertex) Lineage(et *eventingv1beta3.EventType, tfc TransformFunctionCon
 	return res
 }
 
-func MakeEmptyEventType() *eventingv1beta3.EventType {
+func EmptyEventType() *eventingv1beta3.EventType {
 	return &eventingv1beta3.EventType{}
 }

@@ -16,6 +16,7 @@
 package prober
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -107,7 +108,7 @@ func (p *prober) removeSender() {
 	p.ensureNoError(err)
 
 	var d *appsv1.Deployment
-	pollErr := wait.PollImmediate(time.Second, time.Minute, func() (done bool, err error) {
+	pollErr := wait.PollUntilContextTimeout(context.Background(), time.Second, time.Minute, true, func(ctx context.Context) (done bool, err error) {
 		// Save err and deployment for error reporting.
 		d, err = p.client.Kube.AppsV1().
 			Deployments(p.client.Namespace).

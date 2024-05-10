@@ -21,6 +21,8 @@ import (
 
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"k8s.io/apimachinery/pkg/api/equality"
+	"knative.dev/eventing/pkg/apis/feature"
+	cn "knative.dev/eventing/pkg/crossnamespace"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/kmp"
@@ -31,6 +33,13 @@ func (s *Subscription) Validate(ctx context.Context) *apis.FieldError {
 	if apis.IsInUpdate(ctx) {
 		original := apis.GetBaseline(ctx).(*Subscription)
 		errs = errs.Also(s.CheckImmutableFields(ctx, original))
+	}
+	// s.Validate(ctx) because krshaped is defined on the entire subscription, not just the spec
+	if feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) {
+		crossNamespaceError := cn.CheckNamespace(ctx, s)
+		if crossNamespaceError != nil {
+			errs = errs.Also(crossNamespaceError)
+		}
 	}
 	return errs
 }

@@ -17,13 +17,15 @@ limitations under the License.
 package feature
 
 const (
-	KReferenceGroup     = "kreference-group"
-	DeliveryRetryAfter  = "delivery-retryafter"
-	DeliveryTimeout     = "delivery-timeout"
-	KReferenceMapping   = "kreference-mapping"
-	NewTriggerFilters   = "new-trigger-filters"
-	TransportEncryption = "transport-encryption"
-	EvenTypeAutoCreate  = "eventtype-auto-create"
-	OIDCAuthentication  = "authentication-oidc"
-	NodeSelectorLabel   = "apiserversources-nodeselector-"
+	KReferenceGroup          = "kreference-group"
+	DeliveryRetryAfter       = "delivery-retryafter"
+	DeliveryTimeout          = "delivery-timeout"
+	KReferenceMapping        = "kreference-mapping"
+	NewTriggerFilters        = "new-trigger-filters"
+	TransportEncryption      = "transport-encryption"
+	EvenTypeAutoCreate       = "eventtype-auto-create"
+	OIDCAuthentication       = "authentication-oidc"
+	NodeSelectorLabel        = "apiserversources-nodeselector-"
+	CrossNamespaceEventLinks = "cross-namespace-event-links"
+	NewAPIServerFilters      = "new-apiserversource-filters"
 )

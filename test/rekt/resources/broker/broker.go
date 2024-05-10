@@ -195,7 +195,7 @@ func WaitForCondition(name string, condition Condition, timing ...time.Duration)
 		interval, timeout := k8s.PollTimings(ctx, timing)
 		var lastErr error
 		var lastBroker *eventingv1.Broker
-		err := wait.PollImmediate(interval, timeout, func() (done bool, err error) {
+		err := wait.PollUntilContextTimeout(ctx, interval, timeout, true, func(ctx context.Context) (done bool, err error) {
 			br, err := eventingclient.Get(ctx).
 				EventingV1().
 				Brokers(env.Namespace()).
@@ -278,10 +278,6 @@ func InstallMTBroker(name string) *feature.Feature {
 	return f
 }
 
-func InstallMTBrokerIntoFeature(f *feature.Feature) string {
-	brokerName := feature.MakeRandomK8sName("broker")
-	f.Setup(fmt.Sprintf("Install broker %q", brokerName), Install(brokerName, WithEnvConfig()...))
-	f.Setup("Broker is ready", IsReady(brokerName))
-	f.Setup("Broker is addressable", k8s.IsAddressable(GVR(), brokerName))
-	return brokerName
+func InstallMTBrokerStepFn(brokerName string) feature.StepFn {
+	return Install(brokerName, WithEnvConfig()...)
 }

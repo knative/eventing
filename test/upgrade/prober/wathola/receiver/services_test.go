@@ -68,7 +68,7 @@ func TestMain(m *testing.M) {
 }
 
 func waitUntilFinished(r *receiver) error {
-	return wait.PollImmediate(5*time.Millisecond, 30*time.Second, func() (done bool, err error) {
+	return wait.PollUntilContextTimeout(context.Background(), 5*time.Millisecond, 30*time.Second, true, func(ctx context.Context) (done bool, err error) {
 		state := r.finished.State()
 		return state != event.Active, nil
 	})

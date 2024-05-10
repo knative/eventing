@@ -31,7 +31,7 @@ func TestEventTypeValidation(t *testing.T) {
 	et := &EventType{Spec: EventTypeSpec{}}
 
 	want := &apis.FieldError{
-		Paths:   []string{"spec.type"},
+		Paths:   []string{"spec.attributes.id", "spec.attributes.source", "spec.attributes.specversion", "spec.attributes.type"},
 		Message: "missing field(s)",
 	}
 
@@ -53,18 +53,37 @@ func TestEventTypeSpecValidation(t *testing.T) {
 		name: "invalid eventtype type",
 		ets:  &EventTypeSpec{},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("type")
+			fe := apis.ErrMissingField("attributes.id", "attributes.source", "attributes.specversion", "attributes.type")
 			return fe
 		}(),
 	}, {
 		name: "valid eventtype",
 		ets: &EventTypeSpec{
-			Type:   "test-type",
-			Source: testSource,
 			Reference: &duckv1.KReference{
 				APIVersion: "eventing.knative.dev/v1",
 				Kind:       "Broker",
 				Name:       "test-broker",
+			},
+			Attributes: []EventAttributeDefinition{
+				{
+					Name:     "type",
+					Value:    "event-type",
+					Required: true,
+				},
+				{
+					Name:     "source",
+					Value:    testSource.String(),
+					Required: true,
+				},
+				{
+					Name:     "specversion",
+					Value:    "v1",
+					Required: true,
+				},
+				{
+					Name:     "id",
+					Required: true,
+				},
 			},
 		},
 	},
@@ -81,11 +100,7 @@ func TestEventTypeSpecValidation(t *testing.T) {
 }
 
 func TestEventTypeImmutableFields(t *testing.T) {
-	differentSource := apis.HTTP("original-source")
 	testSource := apis.HTTP("test-source")
-	testSchema := apis.HTTP("test-schema")
-	testSchemaData := `{"data": "awesome"}`
-	differentSchema := apis.HTTP("original-schema")
 	tests := []struct {
 		name     string
 		current  *EventType
@@ -95,28 +110,62 @@ func TestEventTypeImmutableFields(t *testing.T) {
 		name: "good (no change)",
 		current: &EventType{
 			Spec: EventTypeSpec{
-				Type:   "test-type",
-				Source: testSource,
 				Reference: &duckv1.KReference{
 					APIVersion: "eventing.knative.dev/v1",
 					Kind:       "Broker",
 					Name:       "test-broker",
 				},
-				Schema:     testSchema,
-				SchemaData: testSchemaData,
+				Attributes: []EventAttributeDefinition{
+					{
+						Name:     "type",
+						Value:    "test-type",
+						Required: true,
+					},
+					{
+						Name:     "source",
+						Value:    testSource.String(),
+						Required: true,
+					},
+					{
+						Name:     "specversion",
+						Value:    "v1",
+						Required: true,
+					},
+					{
+						Name:     "id",
+						Required: true,
+					},
+				},
 			},
 		},
 		original: &EventType{
 			Spec: EventTypeSpec{
-				Type:   "test-type",
-				Source: testSource,
 				Reference: &duckv1.KReference{
 					APIVersion: "eventing.knative.dev/v1",
 					Kind:       "Broker",
 					Name:       "test-broker",
 				},
-				Schema:     testSchema,
-				SchemaData: testSchemaData,
+				Attributes: []EventAttributeDefinition{
+					{
+						Name:     "type",
+						Value:    "test-type",
+						Required: true,
+					},
+					{
+						Name:     "source",
+						Value:    testSource.String(),
+						Required: true,
+					},
+					{
+						Name:     "specversion",
+						Value:    "v1",
+						Required: true,
+					},
+					{
+						Name:     "id",
+						Required: true,
+					},
+				},
 			},
 		},
 		want: nil,
@@ -124,39 +173,95 @@ func TestEventTypeImmutableFields(t *testing.T) {
 		name: "new nil is ok",
 		current: &EventType{
 			Spec: EventTypeSpec{
-				Type:   "test-type",
-				Source: testSource,
 				Reference: &duckv1.KReference{
 					APIVersion: "eventing.knative.dev/v1",
 					Kind:       "Broker",
 					Name:       "test-broker",
 				},
-				Schema: testSchema,
+				Attributes: []EventAttributeDefinition{
+					{
+						Name:     "type",
+						Value:    "test-type",
+						Required: true,
+					},
+					{
+						Name:     "source",
+						Value:    testSource.String(),
+						Required: true,
+					},
+					{
+						Name:     "specversion",
+						Value:    "v1",
+						Required: true,
+					},
+					{
+						Name:     "id",
+						Required: true,
+					},
+				},
 			},
 		},
 		original: nil,
 		want:     nil,
 	}, {
-		name: "bad (broker change)",
+		name: "bad (reference change)",
 		current: &EventType{
 			Spec: EventTypeSpec{
-				Type:   "test-type",
-				Source: testSource,
 				Reference: &duckv1.KReference{
 					APIVersion: "eventing.knative.dev/v1",
 					Kind:       "Broker",
 					Name:       "test-broker",
 				},
+				Attributes: []EventAttributeDefinition{
+					{
+						Name:     "type",
+						Value:    "test-type",
+						Required: true,
+					},
+					{
+						Name:     "source",
+						Value:    testSource.String(),
+						Required: true,
+					},
+					{
+						Name:     "specversion",
+						Value:    "v1",
+						Required: true,
+					},
+					{
+						Name:     "id",
+						Required: true,
+					},
+				},
 			},
 		},
 		original: &EventType{
 			Spec: EventTypeSpec{
-				Type:   "test-type",
-				Source: testSource,
 				Reference: &duckv1.KReference{
 					APIVersion: "eventing.knative.dev/v1",
 					Kind:       "Broker",
 					Name:       "original-broker",
+				},
+				Attributes: []EventAttributeDefinition{
+					{
+						Name:     "type",
+						Value:    "test-type",
+						Required: true,
+					},
+					{
+						Name:     "source",
+						Value:    testSource.String(),
+						Required: true,
+					},
+					{
+						Name:     "specversion",
+						Value:    "v1",
+						Required: true,
+					},
+					{
+						Name:     "id",
+						Required: true,
+					},
 				},
 			},
 		},
@@ -169,128 +274,136 @@ func TestEventTypeImmutableFields(t *testing.T) {
 `,
 		},
 	}, {
-		name: "bad (type change)",
+		name: "bad (attributes change)",
 		current: &EventType{
 			Spec: EventTypeSpec{
-				Type:   "test-type",
-				Source: testSource,
 				Reference: &duckv1.KReference{
 					APIVersion: "eventing.knative.dev/v1",
 					Kind:       "Broker",
 					Name:       "test-broker",
 				},
+				Attributes: []EventAttributeDefinition{
+					{
+						Name:     "type",
+						Value:    "test-type",
+						Required: true,
+					},
+					{
+						Name:     "source",
+						Value:    testSource.String(),
+						Required: true,
+					},
+					{
+						Name:     "specversion",
+						Value:    "v1",
+						Required: true,
+					},
+					{
+						Name:     "id",
+						Required: true,
+					},
+				},
 			},
 		},
 		original: &EventType{
 			Spec: EventTypeSpec{
-				Type:   "original-type",
-				Source: testSource,
 				Reference: &duckv1.KReference{
 					APIVersion: "eventing.knative.dev/v1",
 					Kind:       "Broker",
 					Name:       "test-broker",
+				},
+				Attributes: []EventAttributeDefinition{
+					{
+						Name:     "type",
+						Value:    "original-type",
+						Required: true,
+					},
+					{
+						Name:     "source",
+						Value:    testSource.String(),
+						Required: true,
+					},
+					{
+						Name:     "specversion",
+						Value:    "v1",
+						Required: true,
+					},
+					{
+						Name:     "id",
+						Required: true,
+					},
 				},
 			},
 		},
 		want: &apis.FieldError{
 			Message: "Immutable fields changed (-old +new)",
 			Paths:   []string{"spec"},
-			Details: `{v1beta3.EventTypeSpec}.Type:
+			Details: `{v1beta3.EventTypeSpec}.Attributes[0].Value:
 	-: "original-type"
 	+: "test-type"
-`,
-		},
-	}, {
-		name: "bad (source change)",
-		current: &EventType{
-			Spec: EventTypeSpec{
-				Type:   "test-type",
-				Source: testSource,
-				Reference: &duckv1.KReference{
-					APIVersion: "eventing.knative.dev/v1",
-					Kind:       "Broker",
-					Name:       "test-broker",
-				},
-			},
-		},
-		original: &EventType{
-			Spec: EventTypeSpec{
-				Type:   "test-type",
-				Source: differentSource,
-				Reference: &duckv1.KReference{
-					APIVersion: "eventing.knative.dev/v1",
-					Kind:       "Broker",
-					Name:       "test-broker",
-				},
-			},
-		},
-		want: &apis.FieldError{
-			Message: "Immutable fields changed (-old +new)",
-			Paths:   []string{"spec"},
-			Details: `{v1beta3.EventTypeSpec}.Source.Host:
-	-: "original-source"
-	+: "test-source"
-`,
-		},
-	}, {
-		name: "bad (schema change)",
-		current: &EventType{
-			Spec: EventTypeSpec{
-				Type:   "test-type",
-				Source: testSource,
-				Reference: &duckv1.KReference{
-					APIVersion: "eventing.knative.dev/v1",
-					Kind:       "Broker",
-					Name:       "test-broker",
-				},
-				Schema: testSchema,
-			},
-		},
-		original: &EventType{
-			Spec: EventTypeSpec{
-				Type:   "test-type",
-				Source: testSource,
-				Reference: &duckv1.KReference{
-					APIVersion: "eventing.knative.dev/v1",
-					Kind:       "Broker",
-					Name:       "test-broker",
-				},
-				Schema: differentSchema,
-			},
-		},
-		want: &apis.FieldError{
-			Message: "Immutable fields changed (-old +new)",
-			Paths:   []string{"spec"},
-			Details: `{v1beta3.EventTypeSpec}.Schema.Host:
-	-: "original-schema"
-	+: "test-schema"
 `,
 		},
 	}, {
 		name: "bad (description change)",
 		current: &EventType{
 			Spec: EventTypeSpec{
-				Type:   "test-type",
-				Source: testSource,
 				Reference: &duckv1.KReference{
 					APIVersion: "eventing.knative.dev/v1",
 					Kind:       "Broker",
 					Name:       "test-broker",
 				},
-				Schema:      testSchema,
+				Attributes: []EventAttributeDefinition{
+					{
+						Name:     "type",
+						Value:    "test-type",
+						Required: true,
+					},
+					{
+						Name:     "source",
+						Value:    testSource.String(),
+						Required: true,
+					},
+					{
+						Name:     "specversion",
+						Value:    "v1",
+						Required: true,
+					},
+					{
+						Name:     "id",
+						Required: true,
+					},
+				},
 				Description: "test-description",
 			},
 		},
 		original: &EventType{
 			Spec: EventTypeSpec{
-				Type:   "test-type",
-				Source: testSource,
 				Reference: &duckv1.KReference{
 					APIVersion: "eventing.knative.dev/v1",
 					Kind:       "Broker",
 					Name:       "test-broker",
 				},
-				Schema:      testSchema,
+				Attributes: []EventAttributeDefinition{
+					{
+						Name:     "type",
+						Value:    "test-type",
+						Required: true,
+					},
+					{
+						Name:     "source",
+						Value:    testSource.String(),
+						Required: true,
+					},
+					{
+						Name:     "specversion",
+						Value:    "v1",
+						Required: true,
+					},
+					{
+						Name:     "id",
+						Required: true,
+					},
+				},
 				Description: "original-description",
 			},
 		},

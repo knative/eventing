@@ -36,6 +36,7 @@ import (
 
 	"knative.dev/eventing/pkg/apis"
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/eventtype"
 	"knative.dev/eventing/pkg/kncloudevents"
@@ -51,6 +52,9 @@ type Subscription struct {
 	DeadLetter     *duckv1.Addressable
 	RetryConfig    *kncloudevents.RetryConfig
 	ServiceAccount *types.NamespacedName
+	Name           string
+	Namespace      string
+	UID            types.UID
 }
 
 // Config for a fanout.EventHandler.
@@ -167,7 +171,13 @@ func SubscriberSpecToFanoutConfig(sub eventingduckv1.SubscriberSpec) (*Subscript
 		}
 	}
 
-	return &Subscription{Subscriber: destination, Reply: reply, DeadLetter: deadLetter, RetryConfig: retryConfig}, nil
+	s := &Subscription{Subscriber: destination, Reply: reply, DeadLetter: deadLetter, RetryConfig: retryConfig, UID: sub.UID}
+
+	if sub.Name != nil {
+		s.Name = *sub.Name
+	}
+
+	return s, nil
 }
 
 func (f *FanoutEventHandler) SetSubscriptions(ctx context.Context, subs []Subscription) {
@@ -237,14 +247,14 @@ func createEventReceiverFunction(f *FanoutEventHandler) func(context.Context, ch
 				h.Set(apis.KnNamespaceHeader, ref.Namespace)
 				// Any returned error is already logged in f.dispatch().
 				dispatchResultForFanout := f.dispatch(ctx, subs, e, h)
-				_ = ParseDispatchResultAndReportMetrics(dispatchResultForFanout, *r, *args)
+
 				// If there are both http and https subscribers, we need to report the metrics for both of the type
 				if hasHttpSubs {
-					reportArgs.EventScheme = "http"
+					args.EventScheme = "http"
 					_ = ParseDispatchResultAndReportMetrics(dispatchResultForFanout, *r, *args)
 				}
 				if hasHttpsSubs {
-					reportArgs.EventScheme = "https"
+					args.EventScheme = "https"
 					_ = ParseDispatchResultAndReportMetrics(dispatchResultForFanout, *r, *args)
 				}
 			}(evnt, additionalHeaders, parentSpan, &f.reporter, &reportArgs)
@@ -268,9 +278,9 @@ func createEventReceiverFunction(f *FanoutEventHandler) func(context.Context, ch
 
 		additionalHeaders.Set(apis.KnNamespaceHeader, ref.Namespace)
 		dispatchResultForFanout := f.dispatch(ctx, subs, event, additionalHeaders)
-		err := ParseDispatchResultAndReportMetrics(dispatchResultForFanout, f.reporter, reportArgs)
 		// If there are both http and https subscribers, we need to report the metrics for both of the type
 		// In this case we report http metrics because above we checked first for https and reported it so the left over metric to report is for http
+		var err error
 		if hasHttpSubs {
 			reportArgs.EventScheme = "http"
 			err = ParseDispatchResultAndReportMetrics(dispatchResultForFanout, f.reporter, reportArgs)
@@ -359,6 +369,19 @@ func (f *FanoutEventHandler) makeFanoutRequest(ctx context.Context, event event.
 		kncloudevents.WithReply(sub.Reply),
 		kncloudevents.WithDeadLetterSink(sub.DeadLetter),
 		kncloudevents.WithRetryConfig(sub.RetryConfig),
+	}
+
+	if f.eventTypeHandler != nil && sub.Name != "" && sub.Namespace != "" && sub.UID != types.UID("") {
+		dispatchOptions = append(dispatchOptions, kncloudevents.WithEventTypeAutoHandler(
+			f.eventTypeHandler,
+			&duckv1.KReference{
+				Name:       sub.Name,
+				Namespace:  sub.Namespace,
+				APIVersion: messagingv1.SchemeGroupVersion.String(),
+				Kind:       "Subscription",
+			},
+			sub.UID,
+		))
 	}
 
 	if sub.ServiceAccount != nil {

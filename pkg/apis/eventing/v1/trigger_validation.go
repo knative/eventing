@@ -25,6 +25,7 @@ import (
 	cesqlparser "github.com/cloudevents/sdk-go/sql/v2/parser"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
+	cn "knative.dev/eventing/pkg/crossnamespace"
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/kmp"
 	"knative.dev/pkg/logging"
@@ -46,13 +47,29 @@ func (t *Trigger) Validate(ctx context.Context) *apis.FieldError {
 		original := apis.GetBaseline(ctx).(*Trigger)
 		errs = errs.Also(t.CheckImmutableFields(ctx, original))
 	}
+	if feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) && t.Spec.BrokerRef != nil {
+		crossNamespaceError := cn.CheckNamespace(ctx, t)
+		if crossNamespaceError != nil {
+			errs = errs.Also(crossNamespaceError)
+		}
+	}
 	return errs
 }
 
 // Validate the TriggerSpec.
 func (ts *TriggerSpec) Validate(ctx context.Context) (errs *apis.FieldError) {
-	if ts.Broker == "" {
+	if ts.BrokerRef == nil && ts.Broker == "" {
 		errs = errs.Also(apis.ErrMissingField("broker"))
+	} else if ts.BrokerRef != nil && ts.Broker != "" {
+		errs = errs.Also(apis.ErrMultipleOneOf("broker", "brokerRef"))
+	}
+
+	if !feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) && ts.BrokerRef != nil {
+		if ts.BrokerRef.Namespace != "" {
+			fe := apis.ErrDisallowedFields("namespace")
+			fe.Details = "only name, apiVersion and kind are supported fields when feature.CrossNamespaceEventLinks is disabled"
+			errs = errs.Also(fe)
+		}
 	}
 
 	return errs.Also(

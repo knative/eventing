@@ -625,6 +625,18 @@ section of the resource.</p>
 <tbody>
 <tr>
 <td>
+<code>name</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Name is used to identify the original subscription object.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>uid</code><br/>
 <em>
 <a href="https://godoc.org/k8s.io/apimachinery/pkg/types#UID">
@@ -1869,6 +1881,19 @@ string
 </tr>
 <tr>
 <td>
+<code>brokerRef</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#KReference">
+knative.dev/pkg/apis/duck/v1.KReference
+</a>
+</em>
+</td>
+<td>
+<p>BrokerRef is the broker that is used for cross-namespace referencing.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>filter</code><br/>
 <em>
 <a href="#eventing.knative.dev/v1.TriggerFilter">
@@ -2076,7 +2101,7 @@ resolved delivery options.</p>
 <h3 id="eventing.knative.dev/v1.SubscriptionsAPIFilter">SubscriptionsAPIFilter
 </h3>
 <p>
-(<em>Appears on:</em><a href="#eventing.knative.dev/v1.SubscriptionsAPIFilter">SubscriptionsAPIFilter</a>, <a href="#eventing.knative.dev/v1.TriggerSpec">TriggerSpec</a>)
+(<em>Appears on:</em><a href="#eventing.knative.dev/v1.SubscriptionsAPIFilter">SubscriptionsAPIFilter</a>, <a href="#eventing.knative.dev/v1.TriggerSpec">TriggerSpec</a>, <a href="#sources.knative.dev/v1.ApiServerSourceSpec">ApiServerSourceSpec</a>)
 </p>
 <p>
 <p>SubscriptionsAPIFilter allows defining a filter expression using CloudEvents
@@ -2270,6 +2295,19 @@ string
 </td>
 <td>
 <p>Broker is the broker that this trigger receives events from.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>brokerRef</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#KReference">
+knative.dev/pkg/apis/duck/v1.KReference
+</a>
+</em>
+</td>
+<td>
+<p>BrokerRef is the broker that is used for cross-namespace referencing.</p>
 </td>
 </tr>
 <tr>
@@ -3173,73 +3211,6 @@ EventTypeSpec
 <table>
 <tr>
 <td>
-<code>type</code><br/>
-<em>
-string
-</em>
-</td>
-<td>
-<p>Type represents the CloudEvents type. It is authoritative.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>source</code><br/>
-<em>
-<a href="https://pkg.go.dev/knative.dev/pkg/apis#URL">
-knative.dev/pkg/apis.URL
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Source is a URI, it represents the CloudEvents source.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>schema</code><br/>
-<em>
-<a href="https://pkg.go.dev/knative.dev/pkg/apis#URL">
-knative.dev/pkg/apis.URL
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Schema is a URI, it represents the CloudEvents schemaurl extension attribute.
-It may be a JSON schema, a protobuf schema, etc. It is optional.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>schemaData</code><br/>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>SchemaData allows the CloudEvents schema to be stored directly in the
-EventType. Content is dependent on the encoding. Optional attribute.
-The contents are not validated or manipulated by the system.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>broker</code><br/>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Broker refers to the Broker that can provide the EventType.
-Deprecated: This field is deprecated and will be removed in a future release.</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>reference</code><br/>
 <em>
 <a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#KReference">
@@ -3263,6 +3234,19 @@ string
 <td>
 <em>(Optional)</em>
 <p>Description is an optional field used to describe the EventType, in any meaningful way.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>attributes</code><br/>
+<em>
+<a href="#eventing.knative.dev/v1beta3.EventAttributeDefinition">
+[]EventAttributeDefinition
+</a>
+</em>
+</td>
+<td>
+<p>Attributes is an array of CloudEvent attributes and extension attributes.</p>
 </td>
 </tr>
 </table>
@@ -3285,6 +3269,60 @@ This data may be out of date.</p>
 </tr>
 </tbody>
 </table>
+<h3 id="eventing.knative.dev/v1beta3.EventAttributeDefinition">EventAttributeDefinition
+</h3>
+<p>
+(<em>Appears on:</em><a href="#eventing.knative.dev/v1beta3.EventTypeSpec">EventTypeSpec</a>)
+</p>
+<p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>name</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Name is the name of the CloudEvents attribute.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>required</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Required determines whether this attribute must be set on corresponding CloudEvents.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>value</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Value is a string representing the allowable values for the EventType attribute.
+It may be a single value such as &ldquo;/apis/v1/namespaces/default/pingsource/ps&rdquo;, or it could be a template
+for the allowed values, such as &ldquo;/apis/v1/namespaces/{namespace}/pingsource/{sourceName}.
+To specify a section of the string value which may change between different CloudEvents
+you can use curly brackets {} and optionally a variable name between them.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="eventing.knative.dev/v1beta3.EventTypeSpec">EventTypeSpec
 </h3>
 <p>
@@ -3300,73 +3338,6 @@ This data may be out of date.</p>
 </tr>
 </thead>
 <tbody>
-<tr>
-<td>
-<code>type</code><br/>
-<em>
-string
-</em>
-</td>
-<td>
-<p>Type represents the CloudEvents type. It is authoritative.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>source</code><br/>
-<em>
-<a href="https://pkg.go.dev/knative.dev/pkg/apis#URL">
-knative.dev/pkg/apis.URL
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Source is a URI, it represents the CloudEvents source.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>schema</code><br/>
-<em>
-<a href="https://pkg.go.dev/knative.dev/pkg/apis#URL">
-knative.dev/pkg/apis.URL
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Schema is a URI, it represents the CloudEvents schemaurl extension attribute.
-It may be a JSON schema, a protobuf schema, etc. It is optional.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>schemaData</code><br/>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>SchemaData allows the CloudEvents schema to be stored directly in the
-EventType. Content is dependent on the encoding. Optional attribute.
-The contents are not validated or manipulated by the system.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>broker</code><br/>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Broker refers to the Broker that can provide the EventType.
-Deprecated: This field is deprecated and will be removed in a future release.</p>
-</td>
-</tr>
 <tr>
 <td>
 <code>reference</code><br/>
@@ -3392,6 +3363,19 @@ string
 <td>
 <em>(Optional)</em>
 <p>Description is an optional field used to describe the EventType, in any meaningful way.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>attributes</code><br/>
+<em>
+<a href="#eventing.knative.dev/v1beta3.EventAttributeDefinition">
+[]EventAttributeDefinition
+</a>
+</em>
+</td>
+<td>
+<p>Attributes is an array of CloudEvent attributes and extension attributes.</p>
 </td>
 </tr>
 </tbody>
@@ -4606,6 +4590,7 @@ You can specify only the following fields of the KReference:
 - Kind
 - APIVersion
 - Name
+- Namespace
 The resource pointed by this KReference must meet the
 contract to the ChannelableSpec duck type. If the resource does not
 meet this contract it will be reflected in the Subscription&rsquo;s status.</p>
@@ -4936,6 +4921,7 @@ You can specify only the following fields of the KReference:
 - Kind
 - APIVersion
 - Name
+- Namespace
 The resource pointed by this KReference must meet the
 contract to the ChannelableSpec duck type. If the resource does not
 meet this contract it will be reflected in the Subscription&rsquo;s status.</p>
@@ -5339,6 +5325,25 @@ Kubernetes meta/v1.LabelSelector
 <em>(Optional)</em>
 <p>NamespaceSelector is a label selector to capture the namespaces that
 should be watched by the source.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>filters</code><br/>
+<em>
+<a href="#eventing.knative.dev/v1.SubscriptionsAPIFilter">
+[]SubscriptionsAPIFilter
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Filters is an experimental field that conforms to the CNCF CloudEvents Subscriptions
+API. It&rsquo;s an array of filter expressions that evaluate to true or false.
+If any filter expression in the array evaluates to false, the event MUST
+NOT be sent to the Sink. If all the filter expressions in the array
+evaluate to true, the event MUST be attempted to be delivered. Absence of
+a filter or empty array implies a value of true.</p>
 </td>
 </tr>
 </table>
@@ -5946,6 +5951,25 @@ Kubernetes meta/v1.LabelSelector
 <em>(Optional)</em>
 <p>NamespaceSelector is a label selector to capture the namespaces that
 should be watched by the source.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>filters</code><br/>
+<em>
+<a href="#eventing.knative.dev/v1.SubscriptionsAPIFilter">
+[]SubscriptionsAPIFilter
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Filters is an experimental field that conforms to the CNCF CloudEvents Subscriptions
+API. It&rsquo;s an array of filter expressions that evaluate to true or false.
+If any filter expression in the array evaluates to false, the event MUST
+NOT be sent to the Sink. If all the filter expressions in the array
+evaluate to true, the event MUST be attempted to be delivered. Absence of
+a filter or empty array implies a value of true.</p>
 </td>
 </tr>
 </tbody>

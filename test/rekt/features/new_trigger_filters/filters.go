@@ -17,39 +17,49 @@ limitations under the License.
 package new_trigger_filters
 
 import (
+	"context"
 	"fmt"
 
+	"github.com/cloudevents/sdk-go/v2/event"
 	. "github.com/cloudevents/sdk-go/v2/test"
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	"knative.dev/eventing/test/rekt/resources/broker"
+	"knative.dev/eventing/test/rekt/resources/trigger"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	. "knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
 	"knative.dev/reconciler-test/pkg/resources/service"
-
-	"github.com/cloudevents/sdk-go/v2/event"
-	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
-	"knative.dev/eventing/test/rekt/resources/broker"
-	"knative.dev/eventing/test/rekt/resources/trigger"
 )
 
 func createNewFiltersFeature(f *feature.Feature, eventContexts []CloudEventsContext, filters []eventingv1.SubscriptionsAPIFilter, filter eventingv1.TriggerFilter, installBroker InstallBrokerFunc) {
 	subscriberName := feature.MakeRandomK8sName("subscriber")
 	triggerName := feature.MakeRandomK8sName("trigger")
-	brokerName := installBroker(f)
+	brokerName := feature.MakeRandomK8sName("broker")
 
-	f.Setup("Install trigger subscriber", eventshub.Install(subscriberName, eventshub.StartReceiver))
+	f.Setup("Install Sink, Broker, Trigger", func(ctx context.Context, t feature.T) {
+		installBroker(brokerName)(ctx, t)
 
-	cfg := []manifest.CfgFn{
-		trigger.WithSubscriber(service.AsKReference(subscriberName), ""),
-		trigger.WithNewFilters(filters),
-		trigger.WithFilter(filter.Attributes),
-	}
+		eventshub.Install(subscriberName, eventshub.StartReceiver)(ctx, t)
 
-	f.Setup("Install trigger", trigger.Install(triggerName, brokerName, cfg...))
-	f.Setup("Wait for trigger to become ready", trigger.IsReady(triggerName))
+		triggerCfg := []manifest.CfgFn{
+			trigger.WithSubscriber(service.AsKReference(subscriberName), ""),
+			trigger.WithNewFilters(filters),
+			trigger.WithFilter(filter.Attributes),
+		}
 
+		trigger.Install(triggerName, brokerName, triggerCfg...)(ctx, t)
+
+		broker.IsReady(brokerName)(ctx, t)
+		broker.IsAddressable(brokerName)(ctx, t)
+		trigger.IsReady(triggerName)(ctx, t)
+	})
+
+	assertDelivery(f, brokerName, subscriberName, eventContexts)
+}
+
+func assertDelivery(f *feature.Feature, brokerName, subscriberName string, eventContexts []CloudEventsContext) {
 	asserter := f.Beta("New filters")
-
 	for _, eventCtx := range eventContexts {
 		e := newEventFromEventContext(eventCtx)
 		eventSender := feature.MakeRandomK8sName("sender")

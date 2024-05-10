@@ -19,6 +19,9 @@ package mttrigger
 import (
 	"context"
 
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"knative.dev/eventing/pkg/auth"
 
 	"go.uber.org/zap"
@@ -116,11 +119,39 @@ func NewController(
 
 	// Reconciler Trigger when the OIDC service account changes
 	oidcServiceaccountInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.FilterController(&eventing.Trigger{}),
+		FilterFunc: filterOIDCServiceAccounts(triggerInformer.Lister(), brokerInformer.Lister()),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 
 	return impl
+}
+
+// filterOIDCServiceAccounts returns a function that returns true if the resource passed
+// is a service account, which is owned by a trigger pointing to a MTChannelBased broker.
+func filterOIDCServiceAccounts(triggerLister eventinglisters.TriggerLister, brokerLister eventinglisters.BrokerLister) func(interface{}) bool {
+	return func(obj interface{}) bool {
+		controlledByTrigger := controller.FilterController(&eventing.Trigger{})(obj)
+		if !controlledByTrigger {
+			return false
+		}
+
+		sa, ok := obj.(*corev1.ServiceAccount)
+		if !ok {
+			return false
+		}
+
+		owner := metav1.GetControllerOf(sa)
+		if owner == nil {
+			return false
+		}
+
+		trigger, err := triggerLister.Triggers(sa.Namespace).Get(owner.Name)
+		if err != nil {
+			return false
+		}
+
+		return filterTriggers(brokerLister)(trigger)
+	}
 }
 
 // filterTriggers returns a function that returns true if the resource passed

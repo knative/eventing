@@ -17,8 +17,10 @@ limitations under the License.
 package forwarder
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -26,7 +28,6 @@ import (
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
-	"github.com/cloudevents/sdk-go/v2/binding"
 	cloudeventsbindings "github.com/cloudevents/sdk-go/v2/binding"
 	"go.opencensus.io/trace"
 	"go.uber.org/zap"
@@ -127,10 +128,21 @@ func (o *Forwarder) ServeHTTP(writer http.ResponseWriter, request *http.Request)
 	requestCtx, span := trace.StartSpan(request.Context(), "eventshub-forwarder")
 	defer span.End()
 
+	body, err := io.ReadAll(request.Body)
+	if err != nil {
+		writer.WriteHeader(http.StatusInternalServerError)
+		logging.FromContext(o.ctx).Errorw("Failed to read request body", zap.Error(err))
+		return
+	}
+	_ = request.Body.Close()
+	request.Body = io.NopCloser(bytes.NewBuffer(body))
+
 	m := cloudeventshttp.NewMessageFromHttpRequest(request)
 	defer m.Finish(nil)
 
 	event, eventErr := cloudeventsbindings.ToEvent(context.TODO(), m)
+	request.Body = io.NopCloser(bytes.NewBuffer(body)) // reset body
+
 	receivedHeaders := make(http.Header)
 	for k, v := range request.Header {
 		if !strings.HasPrefix(k, "Ce-") {
@@ -165,17 +177,14 @@ func (o *Forwarder) ServeHTTP(writer http.ResponseWriter, request *http.Request)
 	req := request.Clone(requestCtx)
 	// It is an error to set this field in an HTTP client request.
 	req.RequestURI = ""
+	// We don't want to use the original request Host header, so drop it from the clone
+	req.Host = ""
 
 	u, err := url.Parse(o.Sink)
 	if err != nil {
 		logging.FromContext(o.ctx).Fatalw("Unable to parse sink URL", zap.Error(err))
 	}
 	req.URL = u
-
-	err = cehttp.WriteRequest(requestCtx, binding.ToMessage(event), req)
-	if err != nil {
-		logging.FromContext(o.ctx).Error("Cannot write the event to request: ", err)
-	}
 
 	eventString := "unknown"
 	if event != nil {
@@ -200,7 +209,7 @@ func (o *Forwarder) ServeHTTP(writer http.ResponseWriter, request *http.Request)
 		}
 	}
 
-	writer.WriteHeader(http.StatusAccepted)
+	writer.WriteHeader(res.StatusCode)
 }
 
 func (o *Forwarder) sentInfo(event *cloudevents.Event, req *http.Request, err error) eventshub.EventInfo {

@@ -24,6 +24,7 @@ import (
 
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	eventingv1beta3 "knative.dev/eventing/pkg/apis/eventing/v1beta3"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -31,6 +32,7 @@ import (
 
 var (
 	sampleUri, _ = apis.ParseURL("https://knative.dev")
+	secondUri, _ = apis.ParseURL("https://google.com")
 )
 
 func TestAddBroker(t *testing.T) {
@@ -56,7 +58,7 @@ func TestAddBroker(t *testing.T) {
 			APIVersion: "eventing.knative.dev/v1",
 			Kind:       "Broker",
 		},
-	}, NoTransform)
+	}, NoTransform{}, true)
 	tests := []struct {
 		name     string
 		broker   eventingv1.Broker
@@ -129,6 +131,381 @@ func TestAddBroker(t *testing.T) {
 	}
 }
 
+func TestAddTrigger(t *testing.T) {
+	tests := []struct {
+		name     string
+		brokers  []eventingv1.Broker
+		triggers []eventingv1.Trigger
+		expected map[comparableDestination]*Vertex
+		wantErr  bool
+	}{
+		{
+			name: "One Trigger, One Broker, no DLS",
+			brokers: []eventingv1.Broker{{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-broker",
+					Namespace: "default",
+				},
+			}},
+			triggers: []eventingv1.Trigger{{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-trigger",
+					Namespace: "default",
+				},
+				Spec: eventingv1.TriggerSpec{
+					Broker: "my-broker",
+					Subscriber: duckv1.Destination{
+						URI: sampleUri,
+					},
+				},
+			}},
+			expected: map[comparableDestination]*Vertex{
+				{
+					Ref: duckv1.KReference{
+						Name:       "my-broker",
+						Namespace:  "default",
+						APIVersion: "eventing.knative.dev/v1",
+						Kind:       "Broker",
+					},
+				}: {
+					self: &duckv1.Destination{
+						Ref: &duckv1.KReference{
+							Name:       "my-broker",
+							Namespace:  "default",
+							APIVersion: "eventing.knative.dev/v1",
+							Kind:       "Broker",
+						},
+					},
+					outEdges: []*Edge{
+						{
+							self: &duckv1.Destination{
+								Ref: &duckv1.KReference{
+									Name:       "my-trigger",
+									Namespace:  "default",
+									APIVersion: "eventing.knative.dev/v1",
+									Kind:       "Trigger",
+								},
+							},
+							to: &Vertex{
+								self: &duckv1.Destination{
+									URI: sampleUri,
+								},
+							},
+							from: &Vertex{
+								self: &duckv1.Destination{
+									Ref: &duckv1.KReference{
+										Name:       "my-broker",
+										Namespace:  "default",
+										APIVersion: "eventing.knative.dev/v1",
+										Kind:       "Broker",
+									},
+								},
+							},
+							transform: NoTransform{},
+						},
+					},
+				},
+				{
+					URI: *sampleUri,
+				}: {
+					self: &duckv1.Destination{
+						URI: sampleUri,
+					},
+					inEdges: []*Edge{
+						{
+							self: &duckv1.Destination{
+								Ref: &duckv1.KReference{
+									Name:       "my-trigger",
+									Namespace:  "default",
+									APIVersion: "eventing.knative.dev/v1",
+									Kind:       "Trigger",
+								},
+							},
+							to: &Vertex{
+								self: &duckv1.Destination{
+									URI: sampleUri,
+								},
+							},
+							from: &Vertex{
+								self: &duckv1.Destination{
+									Ref: &duckv1.KReference{
+										Name:       "my-broker",
+										Namespace:  "default",
+										APIVersion: "eventing.knative.dev/v1",
+										Kind:       "Broker",
+									},
+								},
+							},
+							transform: NoTransform{},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "One Trigger, One Broker, both with DLS",
+			brokers: []eventingv1.Broker{{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-broker",
+					Namespace: "default",
+				},
+				Spec: eventingv1.BrokerSpec{
+					Delivery: &eventingduckv1.DeliverySpec{
+						DeadLetterSink: &duckv1.Destination{
+							URI: secondUri,
+						},
+					},
+				},
+			}},
+			triggers: []eventingv1.Trigger{{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-trigger",
+					Namespace: "default",
+				},
+				Spec: eventingv1.TriggerSpec{
+					Broker: "my-broker",
+					Subscriber: duckv1.Destination{
+						URI: sampleUri,
+					},
+					Delivery: &eventingduckv1.DeliverySpec{
+						DeadLetterSink: &duckv1.Destination{
+							URI: secondUri,
+						},
+					},
+				},
+			}},
+			expected: map[comparableDestination]*Vertex{
+				{
+					Ref: duckv1.KReference{
+						Name:       "my-broker",
+						Namespace:  "default",
+						APIVersion: "eventing.knative.dev/v1",
+						Kind:       "Broker",
+					},
+				}: {
+					self: &duckv1.Destination{
+						Ref: &duckv1.KReference{
+							Name:       "my-broker",
+							Namespace:  "default",
+							APIVersion: "eventing.knative.dev/v1",
+							Kind:       "Broker",
+						},
+					},
+					outEdges: []*Edge{
+						{
+							self: &duckv1.Destination{
+								Ref: &duckv1.KReference{
+									Name:       "my-trigger",
+									Namespace:  "default",
+									APIVersion: "eventing.knative.dev/v1",
+									Kind:       "Trigger",
+								},
+							},
+							to: &Vertex{
+								self: &duckv1.Destination{
+									URI: sampleUri,
+								},
+							},
+							from: &Vertex{
+								self: &duckv1.Destination{
+									Ref: &duckv1.KReference{
+										Name:       "my-broker",
+										Namespace:  "default",
+										APIVersion: "eventing.knative.dev/v1",
+										Kind:       "Broker",
+									},
+								},
+							},
+							transform: NoTransform{},
+						},
+						{
+							self: &duckv1.Destination{
+								Ref: &duckv1.KReference{
+									Name:       "my-trigger",
+									Namespace:  "default",
+									APIVersion: "eventing.knative.dev/v1",
+									Kind:       "Trigger",
+								},
+							},
+							to: &Vertex{
+								self: &duckv1.Destination{
+									URI: secondUri,
+								},
+							},
+							from: &Vertex{
+								self: &duckv1.Destination{
+									Ref: &duckv1.KReference{
+										Name:       "my-broker",
+										Namespace:  "default",
+										APIVersion: "eventing.knative.dev/v1",
+										Kind:       "Broker",
+									},
+								},
+							},
+							transform: NoTransform{},
+						},
+						{
+							self: &duckv1.Destination{
+								Ref: &duckv1.KReference{
+									Name:       "my-broker",
+									Namespace:  "default",
+									APIVersion: "eventing.knative.dev/v1",
+									Kind:       "Broker",
+								},
+							},
+							to: &Vertex{
+								self: &duckv1.Destination{
+									URI: secondUri,
+								},
+							},
+							from: &Vertex{
+								self: &duckv1.Destination{
+									Ref: &duckv1.KReference{
+										Name:       "my-broker",
+										Namespace:  "default",
+										APIVersion: "eventing.knative.dev/v1",
+										Kind:       "Broker",
+									},
+								},
+							},
+							transform: NoTransform{},
+						},
+					},
+				},
+				{
+					URI: *sampleUri,
+				}: {
+					self: &duckv1.Destination{
+						URI: sampleUri,
+					},
+					inEdges: []*Edge{
+						{
+							self: &duckv1.Destination{
+								Ref: &duckv1.KReference{
+									Name:       "my-trigger",
+									Namespace:  "default",
+									APIVersion: "eventing.knative.dev/v1",
+									Kind:       "Trigger",
+								},
+							},
+							to: &Vertex{
+								self: &duckv1.Destination{
+									URI: sampleUri,
+								},
+							},
+							from: &Vertex{
+								self: &duckv1.Destination{
+									Ref: &duckv1.KReference{
+										Name:       "my-broker",
+										Namespace:  "default",
+										APIVersion: "eventing.knative.dev/v1",
+										Kind:       "Broker",
+									},
+								},
+							},
+							transform: NoTransform{},
+						},
+					},
+				},
+				{
+					URI: *secondUri,
+				}: {
+					self: &duckv1.Destination{
+						URI: secondUri,
+					},
+					inEdges: []*Edge{
+						{
+							self: &duckv1.Destination{
+								Ref: &duckv1.KReference{
+									Name:       "my-trigger",
+									Namespace:  "default",
+									APIVersion: "eventing.knative.dev/v1",
+									Kind:       "Trigger",
+								},
+							},
+							to: &Vertex{
+								self: &duckv1.Destination{
+									URI: secondUri,
+								},
+							},
+							from: &Vertex{
+								self: &duckv1.Destination{
+									Ref: &duckv1.KReference{
+										Name:       "my-broker",
+										Namespace:  "default",
+										APIVersion: "eventing.knative.dev/v1",
+										Kind:       "Broker",
+									},
+								},
+							},
+							transform: NoTransform{},
+						},
+						{
+							self: &duckv1.Destination{
+								Ref: &duckv1.KReference{
+									Name:       "my-broker",
+									Namespace:  "default",
+									APIVersion: "eventing.knative.dev/v1",
+									Kind:       "Broker",
+								},
+							},
+							to: &Vertex{
+								self: &duckv1.Destination{
+									URI: secondUri,
+								},
+							},
+							from: &Vertex{
+								self: &duckv1.Destination{
+									Ref: &duckv1.KReference{
+										Name:       "my-broker",
+										Namespace:  "default",
+										APIVersion: "eventing.knative.dev/v1",
+										Kind:       "Broker",
+									},
+								},
+							},
+							transform: NoTransform{},
+						},
+					},
+				},
+			},
+		},
+		{
+			name:    "no broker",
+			brokers: []eventingv1.Broker{},
+			triggers: []eventingv1.Trigger{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "my-trigger",
+						Namespace: "default",
+					},
+					Spec: eventingv1.TriggerSpec{
+						Broker: "my-broker",
+					},
+				},
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewGraph()
+			for _, broker := range test.brokers {
+				g.AddBroker(broker)
+			}
+			for _, trigger := range test.triggers {
+				err := g.AddTrigger(trigger)
+				if err != nil {
+					assert.True(t, test.wantErr)
+					return
+				}
+			}
+			checkTestResult(t, g.vertices, test.expected)
+		})
+	}
+}
+
 func TestAddChannel(t *testing.T) {
 	channelWithEdge := &Vertex{
 		self: &duckv1.Destination{
@@ -152,7 +529,7 @@ func TestAddChannel(t *testing.T) {
 			APIVersion: "messaging.knative.dev/v1",
 			Kind:       "Channel",
 		},
-	}, NoTransform)
+	}, NoTransform{}, true)
 	tests := []struct {
 		name     string
 		channel  messagingv1.Channel
@@ -227,6 +604,358 @@ func TestAddChannel(t *testing.T) {
 	}
 }
 
+// TODO(Cali0707): add tests for event types on replies once trigger and subscriptions are merged
+func TestAddEventType(t *testing.T) {
+	tests := []struct {
+		name     string
+		et       *eventingv1beta3.EventType
+		expected map[comparableDestination]*Vertex
+	}{
+		{
+			name: "ET references source",
+			et: &eventingv1beta3.EventType{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-EventType",
+					Namespace: "default",
+				},
+				Spec: eventingv1beta3.EventTypeSpec{
+					Reference: &duckv1.KReference{
+						Name:       "my-source",
+						Namespace:  "default",
+						APIVersion: "sources.knative.dev/v1",
+						Kind:       "PingSource",
+					},
+				},
+			},
+			expected: map[comparableDestination]*Vertex{
+				{
+					Ref: duckv1.KReference{Name: "my-EventType", Namespace: "default", APIVersion: "eventing.knative.dev/v1beta3", Kind: "EventType"},
+				}: {
+					self: &duckv1.Destination{
+						Ref: &duckv1.KReference{Name: "my-EventType", Namespace: "default", APIVersion: "eventing.knative.dev/v1beta3", Kind: "EventType"},
+					},
+					outEdges: []*Edge{{
+						from: &Vertex{
+							self: &duckv1.Destination{
+								Ref: &duckv1.KReference{Name: "my-EventType", Namespace: "default", APIVersion: "eventing.knative.dev/v1beta3", Kind: "EventType"},
+							},
+						},
+						to: &Vertex{
+							self: &duckv1.Destination{
+								Ref: &duckv1.KReference{Name: "my-source", Namespace: "default", APIVersion: "sources.knative.dev/v1", Kind: "PingSource"},
+							},
+						},
+						self: &duckv1.Destination{
+							Ref: &duckv1.KReference{Name: "my-EventType", Namespace: "default", APIVersion: "eventing.knative.dev/v1beta3", Kind: "EventType"},
+						},
+						transform: EventTypeTransform{},
+					}},
+				},
+				{
+					Ref: duckv1.KReference{Name: "my-source", Namespace: "default", APIVersion: "sources.knative.dev/v1", Kind: "PingSource"},
+				}: {
+					self: &duckv1.Destination{
+						Ref: &duckv1.KReference{Name: "my-source", Namespace: "default", APIVersion: "sources.knative.dev/v1", Kind: "PingSource"},
+					},
+					inEdges: []*Edge{{
+						from: &Vertex{
+							self: &duckv1.Destination{
+								Ref: &duckv1.KReference{Name: "my-EventType", Namespace: "default", APIVersion: "eventing.knative.dev/v1beta3", Kind: "EventType"},
+							},
+						},
+						to: &Vertex{
+							self: &duckv1.Destination{
+								Ref: &duckv1.KReference{Name: "my-source", Namespace: "default", APIVersion: "sources.knative.dev/v1", Kind: "PingSource"},
+							},
+						},
+						self: &duckv1.Destination{
+							Ref: &duckv1.KReference{Name: "my-EventType", Namespace: "default", APIVersion: "eventing.knative.dev/v1beta3", Kind: "EventType"},
+						},
+						transform: EventTypeTransform{},
+					}},
+				},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewGraph()
+			g.AddEventType(test.et)
+			checkTestResult(t, g.vertices, test.expected)
+		})
+
+	}
+}
+
+func TestAddSource(t *testing.T) {
+	tests := []struct {
+		name     string
+		source   duckv1.Source
+		expected map[comparableDestination]*Vertex
+	}{
+		{
+			name: "no CE Overrides",
+			source: duckv1.Source{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-source",
+					Namespace: "default",
+				},
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "sources.knative.dev/v1",
+					Kind:       "PingSource",
+				},
+				Spec: duckv1.SourceSpec{
+					Sink: duckv1.Destination{
+						Ref: &duckv1.KReference{
+							Name:       "my-broker",
+							Namespace:  "default",
+							APIVersion: "eventing.knative.dev/v1",
+							Kind:       "Broker",
+						},
+					},
+				},
+			},
+			expected: map[comparableDestination]*Vertex{
+				{
+					Ref: duckv1.KReference{
+						Name:       "my-broker",
+						Namespace:  "default",
+						APIVersion: "eventing.knative.dev/v1",
+						Kind:       "Broker",
+					},
+				}: {
+					self: &duckv1.Destination{
+						Ref: &duckv1.KReference{
+							Name:       "my-broker",
+							Namespace:  "default",
+							APIVersion: "eventing.knative.dev/v1",
+							Kind:       "Broker",
+						},
+					},
+					inEdges: []*Edge{
+						{
+							from: &Vertex{
+								self: &duckv1.Destination{
+									Ref: &duckv1.KReference{
+										Name:       "my-source",
+										Namespace:  "default",
+										APIVersion: "sources.knative.dev/v1",
+										Kind:       "PingSource",
+									},
+								},
+							},
+							to: &Vertex{
+								self: &duckv1.Destination{
+									Ref: &duckv1.KReference{
+										Name:       "my-broker",
+										Namespace:  "default",
+										APIVersion: "eventing.knative.dev/v1",
+										Kind:       "Broker",
+									},
+								},
+							},
+							self: &duckv1.Destination{
+								Ref: &duckv1.KReference{
+									Name:       "my-source",
+									Namespace:  "default",
+									APIVersion: "sources.knative.dev/v1",
+									Kind:       "PingSource",
+								},
+							},
+							transform: CloudEventOverridesTransform{},
+						},
+					},
+				},
+				{
+					Ref: duckv1.KReference{
+						Name:       "my-source",
+						Namespace:  "default",
+						APIVersion: "sources.knative.dev/v1",
+						Kind:       "PingSource",
+					},
+				}: {
+					self: &duckv1.Destination{
+						Ref: &duckv1.KReference{
+							Name:       "my-source",
+							Namespace:  "default",
+							APIVersion: "sources.knative.dev/v1",
+							Kind:       "PingSource",
+						},
+					},
+					outEdges: []*Edge{
+						{
+							from: &Vertex{
+								self: &duckv1.Destination{
+									Ref: &duckv1.KReference{
+										Name:       "my-source",
+										Namespace:  "default",
+										APIVersion: "sources.knative.dev/v1",
+										Kind:       "PingSource",
+									},
+								},
+							},
+							to: &Vertex{
+								self: &duckv1.Destination{
+									Ref: &duckv1.KReference{
+										Name:       "my-broker",
+										Namespace:  "default",
+										APIVersion: "eventing.knative.dev/v1",
+										Kind:       "Broker",
+									},
+								},
+							},
+							self: &duckv1.Destination{
+								Ref: &duckv1.KReference{
+									Name:       "my-source",
+									Namespace:  "default",
+									APIVersion: "sources.knative.dev/v1",
+									Kind:       "PingSource",
+								},
+							},
+							transform: CloudEventOverridesTransform{},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "CE Overrides",
+			source: duckv1.Source{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-source",
+					Namespace: "default",
+				},
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "sources.knative.dev/v1",
+					Kind:       "PingSource",
+				},
+				Spec: duckv1.SourceSpec{
+					Sink: duckv1.Destination{
+						Ref: &duckv1.KReference{
+							Name:       "my-broker",
+							Namespace:  "default",
+							APIVersion: "eventing.knative.dev/v1",
+							Kind:       "Broker",
+						},
+					},
+					CloudEventOverrides: &duckv1.CloudEventOverrides{Extensions: map[string]string{"someextension": "somevalue"}},
+				},
+			},
+			expected: map[comparableDestination]*Vertex{
+				{
+					Ref: duckv1.KReference{
+						Name:       "my-broker",
+						Namespace:  "default",
+						APIVersion: "eventing.knative.dev/v1",
+						Kind:       "Broker",
+					},
+				}: {
+					self: &duckv1.Destination{
+						Ref: &duckv1.KReference{
+							Name:       "my-broker",
+							Namespace:  "default",
+							APIVersion: "eventing.knative.dev/v1",
+							Kind:       "Broker",
+						},
+					},
+					inEdges: []*Edge{
+						{
+							from: &Vertex{
+								self: &duckv1.Destination{
+									Ref: &duckv1.KReference{
+										Name:       "my-source",
+										Namespace:  "default",
+										APIVersion: "sources.knative.dev/v1",
+										Kind:       "PingSource",
+									},
+								},
+							},
+							to: &Vertex{
+								self: &duckv1.Destination{
+									Ref: &duckv1.KReference{
+										Name:       "my-broker",
+										Namespace:  "default",
+										APIVersion: "eventing.knative.dev/v1",
+										Kind:       "Broker",
+									},
+								},
+							},
+							self: &duckv1.Destination{
+								Ref: &duckv1.KReference{
+									Name:       "my-source",
+									Namespace:  "default",
+									APIVersion: "sources.knative.dev/v1",
+									Kind:       "PingSource",
+								},
+							},
+							transform: CloudEventOverridesTransform{Overrides: &duckv1.CloudEventOverrides{Extensions: map[string]string{"someextension": "somevalue"}}},
+						},
+					},
+				},
+				{
+					Ref: duckv1.KReference{
+						Name:       "my-source",
+						Namespace:  "default",
+						APIVersion: "sources.knative.dev/v1",
+						Kind:       "PingSource",
+					},
+				}: {
+					self: &duckv1.Destination{
+						Ref: &duckv1.KReference{
+							Name:       "my-source",
+							Namespace:  "default",
+							APIVersion: "sources.knative.dev/v1",
+							Kind:       "PingSource",
+						},
+					},
+					outEdges: []*Edge{
+						{
+							from: &Vertex{
+								self: &duckv1.Destination{
+									Ref: &duckv1.KReference{
+										Name:       "my-source",
+										Namespace:  "default",
+										APIVersion: "sources.knative.dev/v1",
+										Kind:       "PingSource",
+									},
+								},
+							},
+							to: &Vertex{
+								self: &duckv1.Destination{
+									Ref: &duckv1.KReference{
+										Name:       "my-broker",
+										Namespace:  "default",
+										APIVersion: "eventing.knative.dev/v1",
+										Kind:       "Broker",
+									},
+								},
+							},
+							self: &duckv1.Destination{
+								Ref: &duckv1.KReference{
+									Name:       "my-source",
+									Namespace:  "default",
+									APIVersion: "sources.knative.dev/v1",
+									Kind:       "PingSource",
+								},
+							},
+							transform: CloudEventOverridesTransform{Overrides: &duckv1.CloudEventOverrides{Extensions: map[string]string{"someextension": "somevalue"}}},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewGraph()
+			g.AddSource(test.source)
+			checkTestResult(t, g.vertices, test.expected)
+		})
+	}
+}
+
 func checkTestResult(t *testing.T, actualVertices map[comparableDestination]*Vertex, expectedVertices map[comparableDestination]*Vertex) {
 	assert.Len(t, actualVertices, len(expectedVertices))
 	for k, expected := range expectedVertices {
@@ -242,13 +971,18 @@ func checkTestResult(t *testing.T, actualVertices map[comparableDestination]*Ver
 }
 
 func makeComparableEdges(edges []*Edge) []comparableEdge {
-	res := make([]comparableEdge, len(edges))
+	if len(edges) == 0 {
+		return []comparableEdge{}
+	}
+
+	res := make([]comparableEdge, 0, len(edges))
 
 	for _, e := range edges {
 		res = append(res, comparableEdge{
-			self: makeComparableDestination(e.self),
-			to:   makeComparableDestination(e.to.self),
-			from: makeComparableDestination(e.from.self),
+			self:          makeComparableDestination(e.self),
+			to:            makeComparableDestination(e.to.self),
+			from:          makeComparableDestination(e.from.self),
+			transformName: e.transform.Name(),
 		})
 	}
 
@@ -256,7 +990,8 @@ func makeComparableEdges(edges []*Edge) []comparableEdge {
 }
 
 type comparableEdge struct {
-	self comparableDestination
-	to   comparableDestination
-	from comparableDestination
+	self          comparableDestination
+	to            comparableDestination
+	from          comparableDestination
+	transformName string
 }

@@ -323,7 +323,7 @@ func (a *autoscaler) compact(s *st.State, scaleUpFactor int32) error {
 				ordinal := st.OrdinalFromPodName(placements[i].PodName)
 
 				if ordinal == s.LastOrdinal-j {
-					wait.PollImmediate(50*time.Millisecond, 5*time.Second, func() (bool, error) {
+					wait.PollUntilContextTimeout(context.Background(), 50*time.Millisecond, 5*time.Second, true, func(ctx context.Context) (bool, error) {
 						if s.PodLister != nil {
 							pod, err = s.PodLister.Get(placements[i].PodName)
 						}

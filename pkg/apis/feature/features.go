@@ -61,6 +61,7 @@ func newDefaults() Flags {
 		TransportEncryption: Disabled,
 		OIDCAuthentication:  Disabled,
 		EvenTypeAutoCreate:  Disabled,
+		NewAPIServerFilters: Disabled,
 	}
 }
 
@@ -96,6 +97,10 @@ func (e Flags) IsDisabledTransportEncryption() bool {
 
 func (e Flags) IsOIDCAuthentication() bool {
 	return e != nil && e[OIDCAuthentication] == Enabled
+}
+
+func (e Flags) IsCrossNamespaceEventLinks() bool {
+	return e != nil && e[CrossNamespaceEventLinks] == Enabled
 }
 
 func (e Flags) String() string {

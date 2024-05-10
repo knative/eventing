@@ -270,7 +270,7 @@ func addControlPlaneDelivery(fs *feature.FeatureSet) {
 
 		f.Requirement("wait until done", func(ctx context.Context, t feature.T) {
 			interval, timeout := environment.PollTimingsFromContext(ctx)
-			err := wait.PollImmediate(interval, timeout, func() (bool, error) {
+			err := wait.PollUntilContextTimeout(ctx, interval, timeout, true, func(ctx context.Context) (bool, error) {
 				gtg := true
 				for prefix, want := range expected {
 					events := prober.ReceivedOrRejectedBy(ctx, prefix)
