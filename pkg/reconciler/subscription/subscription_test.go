@@ -80,7 +80,6 @@ const (
 	subscriptionGeneration = 1
 
 	finalizerName = "subscriptions.messaging.knative.dev"
-	fakeHost      = "unit-test-k8s-host"
 )
 
 // subscriptions have: channel -> SUB -> subscriber -viaSub-> reply
@@ -2673,7 +2672,7 @@ func settingCtxforCrossNamespaceEventLinks(username string) context.Context {
 
 	userInfo := &authenticationv1.UserInfo{
 		Username: username,
-		Groups:   []string{"system:authenticated"},
+		Groups:   nil,
 	}
 	ctx = apis.WithUserInfo(ctx, userInfo)
 
