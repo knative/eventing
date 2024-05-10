@@ -483,7 +483,7 @@ func TestAllCases(t *testing.T) {
 							WithSubjectKind("ServiceAccount"),
 							WithSubjectName("test-user"))),
 					WithRoleBindingRoleRef(
-						*WithRoleRef(
+						WithRoleRef(
 							WithRoleRefAPIGroup("rbac.authorization.k8s.io"),
 							WithRoleRefKind("Role"),
 							WithRoleRefName("test-role")))),

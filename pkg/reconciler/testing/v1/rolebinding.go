@@ -71,9 +71,9 @@ func WithSubjectName(name string) SubjectOption {
 	}
 }
 
-func WithRoleBindingRoleRef(roleRef v1.RoleRef) RoleBindingOption {
+func WithRoleBindingRoleRef(roleRef *v1.RoleRef) RoleBindingOption {
 	return func(rb *v1.RoleBinding) {
-		rb.RoleRef = roleRef
+		rb.RoleRef = *roleRef
 	}
 }
 
