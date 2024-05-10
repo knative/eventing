@@ -40,9 +40,13 @@ func CreateRole(name, namespace string, o ...RoleOption) *v1.Role {
 	return r
 }
 
-func WithRoleRules(rules ...v1.PolicyRule) RoleOption {
+func WithRoleRules(rules ...*v1.PolicyRule) RoleOption {
+	roleRules := make([]v1.PolicyRule, 0, len(rules))
+	for _, rule := range rules {
+		roleRules = append(roleRules, *rule)
+	}
 	return func(r *v1.Role) {
-		r.Rules = rules
+		r.Rules = roleRules
 	}
 }
 

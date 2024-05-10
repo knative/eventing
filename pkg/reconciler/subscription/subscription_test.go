@@ -472,7 +472,7 @@ func TestAllCases(t *testing.T) {
 				// Role
 				CreateRole(channelNS, "test-role",
 					WithRoleRules(
-						*WithPolicyRule(
+						WithPolicyRule(
 							WithAPIGroups([]string{"messaging.knative.dev"}),
 							WithResources("InMemoryChannel"),
 							WithVerbs("knsubscribe")))),
