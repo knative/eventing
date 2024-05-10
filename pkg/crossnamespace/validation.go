@@ -74,7 +74,7 @@ func CheckNamespace(ctx context.Context, r ResourceInfo) *apis.FieldError {
 		Spec: authv1.SubjectAccessReviewSpec{
 			ResourceAttributes: &action,
 			User:               userInfo.Username,
-			// Groups:             userInfo.Groups,
+			Groups:             userInfo.Groups,
 		},
 	}
 
