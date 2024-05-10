@@ -35,7 +35,7 @@ import (
 func createNewFiltersFeature(f *feature.Feature, eventContexts []CloudEventsContext, filters []eventingv1.SubscriptionsAPIFilter, filter eventingv1.TriggerFilter, installBroker InstallBrokerFunc) {
 	subscriberName := feature.MakeRandomK8sName("subscriber")
 	triggerName := feature.MakeRandomK8sName("trigger")
-	brokerName := feature.MakeRandomK8sName("trigger")
+	brokerName := feature.MakeRandomK8sName("broker")
 
 	f.Setup("Install Sink, Broker, Trigger", func(ctx context.Context, t feature.T) {
 		installBroker(brokerName)(ctx, t)
