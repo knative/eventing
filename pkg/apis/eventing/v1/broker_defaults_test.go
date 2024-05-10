@@ -192,15 +192,14 @@ var (
 					},
 				},
 				BrokerClasses: map[string]*config.BrokerConfig{
-				 "clusterBrokerClass1": {
-					 KReference: &duckv1.KReference{
-						 APIVersion: "v1",
-						 Kind:       "ConfigMap",
-						 Namespace:  "knative-eventing",
-						 Name:       "imc-channel-haha",
-					 },
-
-				 },
+					"clusterBrokerClass1": {
+						KReference: &duckv1.KReference{
+							APIVersion: "v1",
+							Kind:       "ConfigMap",
+							Namespace:  "knative-eventing",
+							Name:       "imc-channel-haha",
+						},
+					},
 				},
 			},
 		},
