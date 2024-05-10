@@ -83,7 +83,7 @@ func CheckNamespace(ctx context.Context, r ResourceInfo) *apis.FieldError {
 	if err != nil {
 		return &apis.FieldError{
 			Paths:   []string{targetFieldName},
-			Message: fmt.Sprintf("failed to make authorization request to see if user can get resources in namespace: %s", err.Error()),
+			Message: fmt.Sprintf("failed to make authorization request to see if user can subscribe to resources in namespace: %s", err.Error()),
 		}
 	}
 
