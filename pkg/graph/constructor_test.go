@@ -990,32 +990,6 @@ func TestAddSubscription(t *testing.T) {
 						{
 							self: &duckv1.Destination{
 								Ref: &duckv1.KReference{
-									Name:       "my-subscription",
-									Namespace:  "default",
-									APIVersion: "messaging.knative.dev/v1",
-									Kind:       "Subscription",
-								},
-							},
-							to: &Vertex{
-								self: &duckv1.Destination{
-									URI: thirdUri,
-								},
-							},
-							from: &Vertex{
-								self: &duckv1.Destination{
-									Ref: &duckv1.KReference{
-										Name:       "my-channel",
-										Namespace:  "default",
-										APIVersion: "messaging.knative.dev/v1",
-										Kind:       "Channel",
-									},
-								},
-							},
-							transform: NoTransform{},
-						},
-						{
-							self: &duckv1.Destination{
-								Ref: &duckv1.KReference{
 									Name:       "my-channel",
 									Namespace:  "default",
 									APIVersion: "messaging.knative.dev/v1",
@@ -1070,6 +1044,29 @@ func TestAddSubscription(t *testing.T) {
 										APIVersion: "messaging.knative.dev/v1",
 										Kind:       "Channel",
 									},
+								},
+							},
+							transform: NoTransform{},
+						},
+					},
+					outEdges: []*Edge{
+						{
+							self: &duckv1.Destination{
+								Ref: &duckv1.KReference{
+									Name:       "my-subscription",
+									Namespace:  "default",
+									APIVersion: "messaging.knative.dev/v1",
+									Kind:       "Subscription",
+								},
+							},
+							to: &Vertex{
+								self: &duckv1.Destination{
+									URI: thirdUri,
+								},
+							},
+							from: &Vertex{
+								self: &duckv1.Destination{
+									URI: sampleUri,
 								},
 							},
 							transform: NoTransform{},
@@ -1160,12 +1157,7 @@ func TestAddSubscription(t *testing.T) {
 							},
 							from: &Vertex{
 								self: &duckv1.Destination{
-									Ref: &duckv1.KReference{
-										Name:       "my-channel",
-										Namespace:  "default",
-										APIVersion: "messaging.knative.dev/v1",
-										Kind:       "Channel",
-									},
+									URI: sampleUri,
 								},
 							},
 							transform: NoTransform{},
@@ -1263,32 +1255,6 @@ func TestAddSubscription(t *testing.T) {
 						{
 							self: &duckv1.Destination{
 								Ref: &duckv1.KReference{
-									Name:       "my-subscription",
-									Namespace:  "default",
-									APIVersion: "messaging.knative.dev/v1",
-									Kind:       "Subscription",
-								},
-							},
-							to: &Vertex{
-								self: &duckv1.Destination{
-									URI: thirdUri,
-								},
-							},
-							from: &Vertex{
-								self: &duckv1.Destination{
-									Ref: &duckv1.KReference{
-										Name:       "my-channel",
-										Namespace:  "default",
-										APIVersion: "messaging.knative.dev/v1",
-										Kind:       "Channel",
-									},
-								},
-							},
-							transform: NoTransform{},
-						},
-						{
-							self: &duckv1.Destination{
-								Ref: &duckv1.KReference{
 									Name:       "my-channel",
 									Namespace:  "default",
 									APIVersion: "messaging.knative.dev/v1",
@@ -1343,6 +1309,29 @@ func TestAddSubscription(t *testing.T) {
 										APIVersion: "messaging.knative.dev/v1",
 										Kind:       "Channel",
 									},
+								},
+							},
+							transform: NoTransform{},
+						},
+					},
+					outEdges: []*Edge{
+						{
+							self: &duckv1.Destination{
+								Ref: &duckv1.KReference{
+									Name:       "my-subscription",
+									Namespace:  "default",
+									APIVersion: "messaging.knative.dev/v1",
+									Kind:       "Subscription",
+								},
+							},
+							to: &Vertex{
+								self: &duckv1.Destination{
+									URI: thirdUri,
+								},
+							},
+							from: &Vertex{
+								self: &duckv1.Destination{
+									URI: sampleUri,
 								},
 							},
 							transform: NoTransform{},
@@ -1407,12 +1396,7 @@ func TestAddSubscription(t *testing.T) {
 							},
 							from: &Vertex{
 								self: &duckv1.Destination{
-									Ref: &duckv1.KReference{
-										Name:       "my-channel",
-										Namespace:  "default",
-										APIVersion: "messaging.knative.dev/v1",
-										Kind:       "Channel",
-									},
+									URI: sampleUri,
 								},
 							},
 							transform: NoTransform{},
@@ -1531,32 +1515,6 @@ func TestAddSubscription(t *testing.T) {
 							},
 							transform: NoTransform{},
 						},
-						{
-							self: &duckv1.Destination{
-								Ref: &duckv1.KReference{
-									Name:       "my-subscription",
-									Namespace:  "default",
-									APIVersion: "messaging.knative.dev/v1",
-									Kind:       "Subscription",
-								},
-							},
-							to: &Vertex{
-								self: &duckv1.Destination{
-									URI: thirdUri,
-								},
-							},
-							from: &Vertex{
-								self: &duckv1.Destination{
-									Ref: &duckv1.KReference{
-										Name:       "my-channel",
-										Namespace:  "default",
-										APIVersion: "messaging.knative.dev/v1",
-										Kind:       "Channel",
-									},
-								},
-							},
-							transform: NoTransform{},
-						},
 					},
 				},
 				{
@@ -1588,6 +1546,29 @@ func TestAddSubscription(t *testing.T) {
 										APIVersion: "messaging.knative.dev/v1",
 										Kind:       "Channel",
 									},
+								},
+							},
+							transform: NoTransform{},
+						},
+					},
+					outEdges: []*Edge{
+						{
+							self: &duckv1.Destination{
+								Ref: &duckv1.KReference{
+									Name:       "my-subscription",
+									Namespace:  "default",
+									APIVersion: "messaging.knative.dev/v1",
+									Kind:       "Subscription",
+								},
+							},
+							to: &Vertex{
+								self: &duckv1.Destination{
+									URI: thirdUri,
+								},
+							},
+							from: &Vertex{
+								self: &duckv1.Destination{
+									URI: sampleUri,
 								},
 							},
 							transform: NoTransform{},
@@ -1652,12 +1633,7 @@ func TestAddSubscription(t *testing.T) {
 							},
 							from: &Vertex{
 								self: &duckv1.Destination{
-									Ref: &duckv1.KReference{
-										Name:       "my-channel",
-										Namespace:  "default",
-										APIVersion: "messaging.knative.dev/v1",
-										Kind:       "Channel",
-									},
+									URI: sampleUri,
 								},
 							},
 							transform: NoTransform{},
