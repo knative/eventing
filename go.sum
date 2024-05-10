@@ -90,6 +90,8 @@ github.com/cloudevents/conformance v0.2.0 h1:NvSXOKlagcsOWMEbi8U7Ex/0oQ4JZE1HQ45
 github.com/cloudevents/conformance v0.2.0/go.mod h1:rHKDwylBH89Rns6U3wL9ww8bg9/4GbwRCDNuyoC6bcc=
 github.com/cloudevents/sdk-go/observability/opencensus/v2 v2.15.2 h1:AbtPqiUDzKup5JpTZzO297/QXgL/TAdpdXQCNwLzlaM=
 github.com/cloudevents/sdk-go/observability/opencensus/v2 v2.15.2/go.mod h1:ZbYLE+yaEQ2j4vbRc9qzvGmg30A9LhwFt/1bSebNnbU=
+github.com/cloudevents/sdk-go/protocol/mqtt_paho/v2 v2.0.0-20240508060731-1ed9471c98bd h1:MGVlnkCz/b0vjfkM5tSVLD+4oaUnYuVEjiW6lAMJ9IM=
+github.com/cloudevents/sdk-go/protocol/mqtt_paho/v2 v2.0.0-20240508060731-1ed9471c98bd/go.mod h1:s+KZsVZst0bVW6vuKYb8CH49CcSJDO09+ZiIeKzJmqE=
 github.com/cloudevents/sdk-go/sql/v2 v2.15.2 h1:TNaTeWIbDaci89xgXbmmNVGccawQOvEfWYLWrr7Fk/k=
 github.com/cloudevents/sdk-go/sql/v2 v2.15.2/go.mod h1:us+PSk8OXdk8pDbRfvxy5w8ub5goKE7UP9PjKDY7TPw=
 github.com/cloudevents/sdk-go/v2 v2.15.2 h1:54+I5xQEnI73RBhWHxbI1XJcqOFOVJN85vb41+8mHUc=
@@ -111,6 +113,8 @@ github.com/dgryski/go-gk v0.0.0-20200319235926-a69029f61654/go.mod h1:qm+vckxRlD
 github.com/eapache/go-resiliency v1.1.0/go.mod h1:kFI+JgMyC7bLPUVY133qvEBtVayf5mFgVsvEsIPBvNs=
 github.com/eapache/go-xerial-snappy v0.0.0-20180814174437-776d5712da21/go.mod h1:+020luEh2TKB4/GOp8oxxtq0Daoen/Cii55CzbTV6DU=
 github.com/eapache/queue v1.1.0/go.mod h1:6eCeP0CKFpHLu8blIFXhExK/dRa7WDZfr6jVFPTqq+I=
+github.com/eclipse/paho.golang v0.12.0 h1:EXQFJbJklDnUqW6lyAknMWRhM2NgpHxwrrL8riUmp3Q=
+github.com/eclipse/paho.golang v0.12.0/go.mod h1:TSDCUivu9JnoR9Hl+H7sQMcHkejWH2/xKK1NJGtLbIE=
 github.com/emicklei/go-restful/v3 v3.11.0 h1:rAQeMHw1c7zTmncogyy8VvRZwtkmkZ4FxERmMY4rD+g=
 github.com/emicklei/go-restful/v3 v3.11.0/go.mod h1:6n3XBCmQQb25CM2LCACGz8ukIrRry+4bhvbpWn3mrbc=
 github.com/envoyproxy/go-control-plane v0.6.9/go.mod h1:SBwIajubJHhxtWwsL9s8ss4safvEdbitLhGGK48rN6g=
