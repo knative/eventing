@@ -18,6 +18,7 @@ package apiserversource_newfilters
 
 import (
 	"fmt"
+
 	rbacv1 "k8s.io/api/rbac/v1"
 	"knative.dev/eventing/test/rekt/resources/account_role"
 
