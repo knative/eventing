@@ -41,9 +41,13 @@ func CreateRoleBinding(roleName, namespace string, o ...RoleBindingOption) *v1.R
 	return rb
 }
 
-func WithRoleBindingSubjects(subject ...v1.Subject) RoleBindingOption {
+func WithRoleBindingSubjects(subjects ...*v1.Subject) RoleBindingOption {
+	s := make([]v1.Subject, 0, len(subjects))
+	for _, subject := range subjects {
+		s = append(s, *subject)
+	}
 	return func(rb *v1.RoleBinding) {
-		rb.Subjects = subject
+		rb.Subjects = s
 	}
 }
 

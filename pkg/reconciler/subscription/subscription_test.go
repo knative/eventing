@@ -479,7 +479,7 @@ func TestAllCases(t *testing.T) {
 				// Rolebinding
 				CreateRoleBinding(channelNS, "test-role",
 					WithRoleBindingSubjects(
-						*WithSubjects(
+						WithSubjects(
 							WithSubjectKind("ServiceAccount"),
 							WithSubjectName("test-user"))),
 					WithRoleBindingRoleRef(
