@@ -470,9 +470,23 @@ func TestAllCases(t *testing.T) {
 					}}),
 				),
 				// Role
-				CreateRole(channelNS, "test-role", "knsubscribe", "InMemoryChannel", "messaging.knative.dev"),
+				CreateRole(channelNS, "test-role",
+					WithRoleRules(
+						*WithPolicyRule(
+							WithAPIGroups([]string{"messaging.knative.dev"}),
+							WithResources("InMemoryChannel"),
+							WithVerbs("knsubscribe")))),
 				// Rolebinding
-				CreateRoleBinding(channelNS, "test-role", NewServiceAccount("test-user")),
+				CreateRoleBinding(channelNS, "test-role",
+					WithRoleBindingSubjects(
+						*WithSubjects(
+							WithSubjectKind("ServiceAccount"),
+							WithSubjectName("test-user"))),
+					WithRoleBindingRoleRef(
+						*WithRoleRef(
+							WithRoleRefAPIGroup("rbac.authorization.k8s.io"),
+							WithRoleRefKind("Role"),
+							WithRoleRefName("test-role")))),
 			},
 			Key:                     testNS + "/" + subscriptionName,
 			SkipNamespaceValidation: true,
