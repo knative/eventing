@@ -475,8 +475,9 @@ func TestAllCases(t *testing.T) {
 				// Rolebinding
 				CreateRoleBinding(channelNS, "test-role", NewServiceAccount("test-user")),
 			},
-			Key:     testNS + "/" + subscriptionName,
-			WantErr: false,
+			Key:                     testNS + "/" + subscriptionName,
+			SkipNamespaceValidation: true,
+			WantErr:                 false,
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
