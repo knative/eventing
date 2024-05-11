@@ -20,8 +20,8 @@ var (
 	eventType   string
 	eventSource string
 
-	topic    		string
-	clientid		string
+	topic    string
+	clientid string
 )
 
 func init() {
@@ -39,24 +39,24 @@ func main() {
 
 	k_sink := os.Getenv("K_SINK")
 	if k_sink != "" {
-			sink = k_sink
+		sink = k_sink
 	}
 
 	// "source" flag must not be empty for operation.
 	if source == "" {
-			log.Fatal("A valid MQTT broker URL must be defined.")
+		log.Fatal("A valid MQTT broker URL must be defined.")
 	}
 
 	// The event's source defaults to the MQTT broker URL.
 	if eventSource == "" {
-			eventSource = source
+		eventSource = source
 	}
 
 	ctx := cloudevents.ContextWithTarget(context.Background(), sink)
 
 	conn, err := net.Dial("tcp", source)
 	if err != nil {
-			log.Fatalf("failed to connect to MQTT broker: %s", err.Error())
+		log.Fatalf("failed to connect to MQTT broker: %s", err.Error())
 	}
 
 	config := &paho.ClientConfig{
@@ -65,10 +65,10 @@ func main() {
 	}
 
 	subscribeOpt := &paho.Subscribe{
-			Subscriptions: []paho.SubscribeOptions{
-					{Topic: topic, 
-						QoS: 0},
-			},
+		Subscriptions: []paho.SubscribeOptions{
+			{Topic: topic,
+				QoS: 0},
+		},
 	}
 
 	p, err := mqtt_paho.New(ctx, config, mqtt_paho.WithSubscribe(subscribeOpt))
@@ -84,8 +84,8 @@ func main() {
 
 	log.Printf("MQTT source start consuming messages from %s\n", source)
 	err = c.StartReceiver(ctx, func(ctx context.Context, event cloudevents.Event) {
-    receive(ctx, event, c)
-})
+		receive(ctx, event, c)
+	})
 	if err != nil {
 		log.Fatalf("failed to start receiver: %s", err)
 	} else {
@@ -96,13 +96,12 @@ func main() {
 
 func receive(ctx context.Context, event cloudevents.Event, c cloudevents.Client) {
 	log.Printf("%s", event)
-	data := event.Data() 
+	data := event.Data()
 	newEvent := cloudevents.NewEvent(cloudevents.VersionV1)
 	newEvent.SetType(eventType)
-  newEvent.SetSource(eventSource)
-   _ = newEvent.SetData(cloudevents.ApplicationJSON, data)
+	newEvent.SetSource(eventSource)
+	_ = newEvent.SetData(cloudevents.ApplicationJSON, data)
 	if result := c.Send(ctx, newEvent); !cloudevents.IsACK(result) {
 		log.Printf("sending event to channel failed: %v", result)
+	}
 }
-}
-
