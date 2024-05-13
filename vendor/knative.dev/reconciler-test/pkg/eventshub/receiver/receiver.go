@@ -225,8 +225,11 @@ func (o *Receiver) ServeHTTP(writer http.ResponseWriter, request *http.Request) 
 		statusCode = http.StatusBadRequest
 	}
 
+	var oidcUser *authv1.UserInfo
 	if o.oidcAudience != "" {
-		if err := o.validateJWT(request); err != nil {
+		var err error
+		oidcUser, err = o.verifyJWT(request)
+		if err != nil {
 			rejectErr = err
 			statusCode = http.StatusUnauthorized
 		}
@@ -270,16 +273,17 @@ func (o *Receiver) ServeHTTP(writer http.ResponseWriter, request *http.Request) 
 	}
 
 	eventInfo := eventshub.EventInfo{
-		Error:       errString,
-		Event:       event,
-		HTTPHeaders: headers,
-		Origin:      request.RemoteAddr,
-		Observer:    o.Name,
-		Time:        time.Now(),
-		Sequence:    s,
-		Kind:        kind,
-		Connection:  eventshub.TLSConnectionStateToConnection(request.TLS),
-		StatusCode:  statusCode,
+		Error:        errString,
+		Event:        event,
+		HTTPHeaders:  headers,
+		Origin:       request.RemoteAddr,
+		Observer:     o.Name,
+		Time:         time.Now(),
+		Sequence:     s,
+		Kind:         kind,
+		Connection:   eventshub.TLSConnectionStateToConnection(request.TLS),
+		StatusCode:   statusCode,
+		OIDCUserInfo: oidcUser,
 	}
 
 	if err := o.EventLogs.Vent(eventInfo); err != nil {
@@ -310,15 +314,24 @@ func (o *Receiver) ServeHTTP(writer http.ResponseWriter, request *http.Request) 
 	}
 }
 
-func (o *Receiver) validateJWT(request *http.Request) error {
+func (o *Receiver) getJWTFromRequest(request *http.Request) (string, error) {
 	authHeader := request.Header.Get("Authorization")
 	if authHeader == "" {
-		return fmt.Errorf("could not get Authorization header")
+		return "", fmt.Errorf("could not get Authorization header")
 	}
 
 	token := strings.TrimPrefix(authHeader, "Bearer ")
 	if len(token) == len(authHeader) {
-		return fmt.Errorf("could not get Bearer token from header")
+		return "", fmt.Errorf("could not get Bearer token from header")
+	}
+
+	return token, nil
+}
+
+func (o *Receiver) verifyJWT(request *http.Request) (*authv1.UserInfo, error) {
+	token, err := o.getJWTFromRequest(request)
+	if err != nil {
+		return nil, err
 	}
 
 	tokenReview, err := o.kubeclient.AuthenticationV1().TokenReviews().Create(o.ctx, &authv1.TokenReview{
@@ -331,18 +344,18 @@ func (o *Receiver) validateJWT(request *http.Request) error {
 	}, metav1.CreateOptions{})
 
 	if err != nil {
-		return fmt.Errorf("could not get token review: %w", err)
+		return nil, fmt.Errorf("could not get token review: %w", err)
 	}
 
 	if err := tokenReview.Status.Error; err != "" {
-		return fmt.Errorf(err)
+		return nil, fmt.Errorf(err)
 	}
 
 	if !tokenReview.Status.Authenticated {
-		return fmt.Errorf("user not authenticated")
+		return nil, fmt.Errorf("user not authenticated")
 	}
 
-	return nil
+	return &tokenReview.Status.User, nil
 }
 
 func isTLS(request *http.Request) bool {

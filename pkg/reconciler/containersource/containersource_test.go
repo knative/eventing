@@ -21,6 +21,10 @@ import (
 	"fmt"
 	"testing"
 
+	"knative.dev/eventing/pkg/apis/feature"
+	"knative.dev/eventing/pkg/auth"
+	"knative.dev/pkg/ptr"
+
 	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/tracker"
 
@@ -29,23 +33,19 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgotesting "k8s.io/client-go/testing"
+	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/pkg/apis"
 	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 	"knative.dev/pkg/logging"
 
-	"knative.dev/eventing/pkg/auth"
-	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
-
+	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
+	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1/containersource"
+	"knative.dev/eventing/pkg/reconciler/containersource/resources"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
 	_ "knative.dev/pkg/client/injection/ducks/duck/v1/addressable/fake"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
-
-	"knative.dev/eventing/pkg/apis/feature"
-	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
-	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1/containersource"
-	"knative.dev/eventing/pkg/reconciler/containersource/resources"
 
 	logtesting "knative.dev/pkg/logging/testing"
 	. "knative.dev/pkg/reconciler/testing"
@@ -146,7 +146,6 @@ func TestAllCases(t *testing.T) {
 					WithContainerSourceSpec(makeContainerSourceSpec(sinkDest)),
 					WithContainerSourceObjectMetaGeneration(generation),
 					WithInitContainerSourceConditions,
-					WithContainerSourceOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 					WithContainerSourceStatusObservedGeneration(generation),
 				),
 			}},
@@ -181,7 +180,6 @@ func TestAllCases(t *testing.T) {
 					WithContainerSourceSpec(makeContainerSourceSpec(sinkDest)),
 					WithContainerSourceObjectMetaGeneration(generation),
 					WithInitContainerSourceConditions,
-					WithContainerSourceOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 					WithContainerSourceStatusObservedGeneration(generation),
 					WithContainerSourcePropagateReceiveAdapterStatus(makeDeployment(NewContainerSource(sourceName, testNS,
 						WithContainerSourceSpec(makeContainerSourceSpec(sinkDest)),
@@ -224,7 +222,6 @@ func TestAllCases(t *testing.T) {
 				Object: NewContainerSource(sourceName, testNS,
 					WithContainerSourceUID(sourceUID),
 					WithContainerSourceSpec(makeContainerSourceSpec(sinkDest)),
-					WithContainerSourceOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 					WithContainerSourceObjectMetaGeneration(generation),
 					WithInitContainerSourceConditions,
 					WithContainerSourceStatusObservedGeneration(generation),
@@ -236,7 +233,7 @@ func TestAllCases(t *testing.T) {
 				),
 			}},
 		}, {
-			Name: "OIDC: creates OIDC service account",
+			Name: "OIDC: Containersource uses OIDC service account of sinkbinding",
 			Key:  testNS + "/" + sourceName,
 			Ctx: feature.ToContext(context.Background(), feature.Flags{
 				feature.OIDCAuthentication: feature.Enabled,
@@ -247,7 +244,7 @@ func TestAllCases(t *testing.T) {
 					WithContainerSourceSpec(makeContainerSourceSpec(sinkDest)),
 					WithContainerSourceObjectMetaGeneration(generation),
 				),
-				makeSinkBinding(NewContainerSource(sourceName, testNS,
+				makeSinkBindingOIDC(NewContainerSource(sourceName, testNS,
 					WithContainerSourceSpec(makeContainerSourceSpec(sinkDest)),
 					WithContainerSourceUID(sourceUID),
 				), &conditionTrue),
@@ -264,53 +261,17 @@ func TestAllCases(t *testing.T) {
 					WithContainerSourceObjectMetaGeneration(generation),
 					WithInitContainerSourceConditions,
 					WithContainerSourceStatusObservedGeneration(generation),
-					WithContainerSourcePropagateSinkbindingStatus(makeSinkBindingStatus(&conditionTrue)),
+					WithContainerSourcePropagateSinkbindingStatus(makeSinkBindingStatusOIDC(&conditionTrue)),
 					WithContainerSourcePropagateReceiveAdapterStatus(makeDeployment(NewContainerSource(sourceName, testNS,
 						WithContainerSourceSpec(makeContainerSourceSpec(sinkDest)),
 						WithContainerSourceUID(sourceUID),
 					), &conditionTrue)),
-					WithContainerSourceOIDCIdentityCreatedSucceeded(),
-					WithContainerSourceOIDCServiceAccountName(makeContainerSourceOIDCServiceAccount().Name),
+					WithInitContainerSourceConditions,
+					WithContainerSourceOIDCServiceAccountName(getOIDCServiceAccountNameForSinkbinding()),
 				),
 			}},
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, sourceReconciled, `ContainerSource reconciled: "%s/%s"`, testNS, sourceName),
-			},
-			WantCreates: []runtime.Object{
-				makeContainerSourceOIDCServiceAccount(),
-			},
-		}, {
-			Name: "OIDC: Containersource not ready on invalid OIDC service account",
-			Key:  testNS + "/" + sourceName,
-			Ctx: feature.ToContext(context.Background(), feature.Flags{
-				feature.OIDCAuthentication: feature.Enabled,
-			}),
-			Objects: []runtime.Object{
-				makeContainerSourceOIDCServiceAccountWithoutOwnerRef(),
-				makeSinkBinding(NewContainerSource(sourceName, testNS,
-					WithContainerSourceSpec(makeContainerSourceSpec(sinkDest)),
-					WithContainerSourceUID(sourceUID),
-				), nil),
-				NewContainerSource(sourceName, testNS,
-					WithContainerSourceUID(sourceUID),
-					WithContainerSourceSpec(makeContainerSourceSpec(sinkDest)),
-					WithContainerSourceObjectMetaGeneration(generation),
-				),
-			},
-			WantErr: true,
-			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewContainerSource(sourceName, testNS,
-					WithContainerSourceStatusObservedGeneration(generation),
-					WithContainerSourceObjectMetaGeneration(generation),
-					WithContainerSourceUID(sourceUID),
-					WithContainerSourceSpec(makeContainerSourceSpec(sinkDest)),
-					WithInitContainerSourceConditions,
-					WithContainerSourceOIDCIdentityCreatedFailed("Unable to resolve service account for OIDC authentication", fmt.Sprintf("service account %s not owned by ContainerSource %s", makeContainerSourceOIDCServiceAccountWithoutOwnerRef().Name, sourceName)),
-					WithContainerSourceOIDCServiceAccountName(makeContainerSourceOIDCServiceAccountWithoutOwnerRef().Name),
-				),
-			}},
-			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "InternalError", fmt.Sprintf("service account %s not owned by ContainerSource %s", makeContainerSourceOIDCServiceAccountWithoutOwnerRef().Name, sourceName)),
 			},
 		},
 	}
@@ -324,7 +285,6 @@ func TestAllCases(t *testing.T) {
 			containerSourceLister:      listers.GetContainerSourceLister(),
 			deploymentLister:           listers.GetDeploymentLister(),
 			sinkBindingLister:          listers.GetSinkBindingLister(),
-			serviceAccountLister:       listers.GetServiceAccountLister(),
 			trustBundleConfigMapLister: listers.GetConfigMapLister(),
 		}
 		return containersource.NewReconciler(ctx, logging.FromContext(ctx), fakeeventingclient.Get(ctx), listers.GetContainerSourceLister(), controller.GetEventRecorder(ctx), r)
@@ -358,6 +318,13 @@ func makeSinkBinding(source *sourcesv1.ContainerSource, ready *corev1.ConditionS
 	if ready != nil {
 		sb.Status = *makeSinkBindingStatus(ready)
 	}
+	return sb
+}
+
+func makeSinkBindingOIDC(source *sourcesv1.ContainerSource, ready *corev1.ConditionStatus) *sourcesv1.SinkBinding {
+	sb := makeSinkBinding(source, ready)
+	sb.Status = *makeSinkBindingStatusOIDC(ready)
+
 	return sb
 }
 
@@ -448,16 +415,18 @@ func makeSinkBindingStatus(ready *corev1.ConditionStatus) *sourcesv1.SinkBinding
 	}
 }
 
-func makeContainerSourceOIDCServiceAccount() *corev1.ServiceAccount {
-	return auth.GetOIDCServiceAccountForResource(sourcesv1.SchemeGroupVersion.WithKind("ContainerSource"), metav1.ObjectMeta{
-		Name:      sourceName,
-		Namespace: testNS,
-		UID:       sourceUID,
-	})
+func makeSinkBindingStatusOIDC(ready *corev1.ConditionStatus) *sourcesv1.SinkBindingStatus {
+	sbs := makeSinkBindingStatus(ready)
+	sbs.Auth = &duckv1.AuthStatus{
+		ServiceAccountName: ptr.String(getOIDCServiceAccountNameForSinkbinding()),
+	}
+
+	return sbs
 }
 
-func makeContainerSourceOIDCServiceAccountWithoutOwnerRef() *corev1.ServiceAccount {
-	sa := makeContainerSourceOIDCServiceAccount()
-	sa.OwnerReferences = nil
-	return sa
+func getOIDCServiceAccountNameForSinkbinding() string {
+	return auth.GetOIDCServiceAccountNameForResource(sourcesv1.SchemeGroupVersion.WithKind("SinkBinding"), metav1.ObjectMeta{
+		Name:      sinkBindingName,
+		Namespace: testNS,
+	})
 }
