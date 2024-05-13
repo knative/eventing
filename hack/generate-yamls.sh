@@ -97,7 +97,7 @@ ko resolve ${KO_YAML_FLAGS} -f config/brokers/mt-channel-broker/ | "${LABEL_YAML
 ko resolve ${KO_YAML_FLAGS} -Rf config/channels/in-memory-channel/ | "${LABEL_YAML_CMD[@]}" > "${EVENTING_IN_MEMORY_CHANNEL_YAML}"
 
 # Create eventing TLS yaml
-ko resolve ${KO_YAML_FLAGS} -Rf config/tls/ \
+ko resolve ${KO_YAML_FLAGS} \
   -Rf config/channels/in-memory-channel-tls/ \
   -Rf config/brokers/mt-channel-broker-tls/ \
   | "${LABEL_YAML_CMD[@]}" > "${EVENTING_TLS_YAML}"

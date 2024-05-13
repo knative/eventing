@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	"github.com/cloudevents/sdk-go/v2/test"
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/network"
@@ -944,6 +945,71 @@ func SendsEventsWithBrokerAsSinkTLS() *feature.Feature {
 		test.DataContains(`"kind":"Pod"`),
 		test.DataContains(fmt.Sprintf(`"name":"%s"`, examplePodName)),
 	)
+
+	return f
+}
+
+func NewFiltersFeature() *feature.FeatureSet {
+	fs := &feature.FeatureSet{
+		Name: "Knative ApiServerSource - Features - New Filter",
+		Features: []*feature.Feature{
+			EventsAreFilteredOut(),
+		},
+	}
+	return fs
+}
+
+func EventsAreFilteredOut() *feature.Feature {
+	source := feature.MakeRandomK8sName("apiserversource")
+	sink := feature.MakeRandomK8sName("sink")
+	f := feature.NewFeatureNamed("Filters properly the messages")
+
+	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
+
+	sacmName := feature.MakeRandomK8sName("apiserversource")
+	f.Setup("Create Service Account for ApiServerSource with RBAC for v1.Pod resources",
+		setupAccountAndRoleForPods(sacmName))
+
+	cfg := []manifest.CfgFn{
+		apiserversource.WithServiceAccountName(sacmName),
+		apiserversource.WithEventMode(v1.ResourceMode),
+		apiserversource.WithSink(service.AsDestinationRef(sink)),
+		apiserversource.WithFilters([]eventingv1.SubscriptionsAPIFilter{{
+			Exact: map[string]string{
+				"type": "dev.knative.apiserver.resource.update",
+			},
+		}}),
+		apiserversource.WithResources(v1.APIVersionKindSelector{
+			APIVersion: "v1",
+			Kind:       "Pod",
+		}),
+	}
+
+	f.Setup("install ApiServerSource", apiserversource.Install(source, cfg...))
+	f.Setup("ApiServerSource goes ready", apiserversource.IsReady(source))
+
+	examplePodName := feature.MakeRandomK8sName("example")
+
+	// create a pod so that ApiServerSource delivers an event to its sink
+	// event body is similar to this:
+	// {"kind":"Pod","namespace":"test-wmbcixlv","name":"example-axvlzbvc","apiVersion":"v1"}
+	f.Requirement("install example pod", pod.Install(examplePodName, exampleImage))
+
+	f.Stable("ApiServerSource as event source").
+		Must("delivers events",
+			eventassert.OnStore(sink).MatchEvent(
+				test.HasType("dev.knative.apiserver.resource.add"),
+				test.HasExtensions(map[string]interface{}{"apiversion": "v1"}),
+				test.DataContains(`"kind":"Pod"`),
+				test.DataContains(fmt.Sprintf(`"name":"%s"`, examplePodName)),
+			).Exact(0)).
+		Must("delivers events",
+			eventassert.OnStore(sink).MatchEvent(
+				test.HasType("dev.knative.apiserver.resource.update"),
+				test.HasExtensions(map[string]interface{}{"apiversion": "v1"}),
+				test.DataContains(`"kind":"Pod"`),
+				test.DataContains(fmt.Sprintf(`"name":"%s"`, examplePodName)),
+			).AtLeast(1))
 
 	return f
 }

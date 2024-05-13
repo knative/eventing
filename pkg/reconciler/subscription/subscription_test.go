@@ -22,19 +22,24 @@ import (
 	"fmt"
 	"testing"
 
+	authenticationv1 "k8s.io/api/authentication/v1"
+	authv1 "k8s.io/api/authorization/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/rest"
 	clientgotesting "k8s.io/client-go/testing"
 	"k8s.io/utils/pointer"
 
+	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
+	"knative.dev/pkg/injection"
 	"knative.dev/pkg/injection/clients/dynamicclient"
 	"knative.dev/pkg/kref"
 	logtesting "knative.dev/pkg/logging/testing"
@@ -53,7 +58,6 @@ import (
 	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/inmemorychannel/fake"
 	"knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/subscription"
 	"knative.dev/eventing/pkg/duck"
-	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
 	. "knative.dev/eventing/pkg/reconciler/testing/v1"
 	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 )
@@ -72,6 +76,7 @@ const (
 	subscriptionUID        = subscriptionName + "-abc-123"
 	subscriptionName       = "testsubscription"
 	testNS                 = "testnamespace"
+	channelNS              = "channelnamespace"
 	subscriptionGeneration = 1
 
 	finalizerName = "subscriptions.messaging.knative.dev"
@@ -185,6 +190,7 @@ Vw==
 		Namespace:  testNS,
 		Name:       channelName,
 	}
+
 	sinkURL = apis.HTTP("example.com")
 	sink    = &duckv1.Addressable{
 		Name: &sinkURL.Scheme,
@@ -411,6 +417,84 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 				),
 			}},
+		}, {
+			Name: "subscription goes ready with channel in different namespace",
+			Ctx:  settingCtxforCrossNamespaceEventLinks("test-user"),
+			Objects: []runtime.Object{
+				NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannelRef(imcV1GVK, channelName, channelNS),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
+					WithSubscriptionReply(imcV1GVK, replyName, testNS),
+					WithInitSubscriptionConditions,
+					WithSubscriptionFinalizers(finalizerName),
+					MarkReferencesResolved,
+					MarkAddedToChannel,
+					WithSubscriptionPhysicalSubscriptionSubscriber(&subscriber),
+					WithSubscriptionPhysicalSubscriptionReply(&reply),
+				),
+				// Subscriber
+				NewUnstructured(subscriberGVK, subscriberName, testNS,
+					WithUnstructuredAddressable(subscriber),
+				),
+				// Reply
+				NewInMemoryChannel(replyName, testNS,
+					WithInitInMemoryChannelConditions,
+					WithInMemoryChannelAddress(reply),
+				),
+				// Channel
+				NewInMemoryChannel(channelName, channelNS,
+					WithInitInMemoryChannelConditions,
+					WithInMemoryChannelReady(channelDNS),
+					WithInMemoryChannelSubscribers([]eventingduck.SubscriberSpec{{
+						Name:          pointer.String(subscriptionName),
+						UID:           subscriptionUID,
+						Generation:    0,
+						SubscriberURI: subscriberURI,
+						ReplyURI:      replyURI,
+					}, {
+						Name:          pointer.String(subscriptionName),
+						UID:           "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
+						Generation:    1,
+						SubscriberURI: apis.HTTP("call2"),
+						ReplyURI:      apis.HTTP("sink2"),
+					}}),
+					WithInMemoryChannelStatusSubscribers([]eventingduck.SubscriberStatus{{
+						UID:                subscriptionUID,
+						ObservedGeneration: 0,
+						Ready:              "True",
+					}, {
+						UID:                "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
+						ObservedGeneration: 1,
+						Ready:              "True",
+					}}),
+				),
+				// Role
+				CreateRole(channelNS, "test-role", "knsubscribe", "InMemoryChannel", "messaging.knative.dev"),
+				// Rolebinding
+				CreateRoleBinding(channelNS, "test-role", NewServiceAccount("test-user")),
+			},
+			Key:                     testNS + "/" + subscriptionName,
+			SkipNamespaceValidation: true,
+			WantErr:                 false,
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannelRef(imcV1GVK, channelName, channelNS),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
+					WithSubscriptionReply(imcV1GVK, replyName, testNS),
+					WithInitSubscriptionConditions,
+					WithSubscriptionFinalizers(finalizerName),
+					WithSubscriptionPhysicalSubscriptionSubscriber(&subscriber),
+					WithSubscriptionPhysicalSubscriptionReply(&reply),
+					// - Status Update -
+					MarkSubscriptionReady,
+					WithSubscriptionOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
+				),
+			}},
+			WantCreates: []runtime.Object{
+				makeSubjectAccessReview("test-user", makeResourceAttributes(channelNS, channelName, "knsubscribe", "messaging.knative.dev", "InMemoryChannel")),
+			},
 		}, {
 			Name: "subscription goes ready without api version",
 			Ctx: feature.ToContext(context.TODO(), feature.Flags{
@@ -755,7 +839,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 				),
 			}},
-		}, {
+		}, {}, {
 			Name: "subscriber with CA certs",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
@@ -2576,4 +2660,44 @@ func makeSubscriptionOIDCServiceAccountWithoutOwnerRef() *corev1.ServiceAccount 
 	sa.OwnerReferences = nil
 
 	return sa
+}
+
+func settingCtxforCrossNamespaceEventLinks(username string) context.Context {
+	ctx := context.TODO()
+
+	flags := feature.Flags{
+		feature.CrossNamespaceEventLinks: feature.Enabled,
+	}
+	ctx = feature.ToContext(ctx, flags)
+
+	userInfo := &authenticationv1.UserInfo{
+		Username: username,
+		Groups:   []string{"system:authenticatedforcrossnamespacelinks"},
+	}
+	ctx = apis.WithUserInfo(ctx, userInfo)
+
+	cfg := &rest.Config{}
+	ctx = injection.WithConfig(ctx, cfg)
+
+	return ctx
+}
+
+func makeResourceAttributes(namespace, name, verb, group, resource string) authv1.ResourceAttributes {
+	return authv1.ResourceAttributes{
+		Namespace: namespace,
+		Name:      name,
+		Verb:      verb,
+		Group:     group,
+		Resource:  resource,
+	}
+}
+
+func makeSubjectAccessReview(username string, action authv1.ResourceAttributes) *authv1.SubjectAccessReview {
+	return &authv1.SubjectAccessReview{
+		Spec: authv1.SubjectAccessReviewSpec{
+			ResourceAttributes: &action,
+			User:               username,
+			Groups:             []string{"system:authenticatedforcrossnamespacelinks"},
+		},
+	}
 }

@@ -1,0 +1,61 @@
+# Copyright 2024 The Knative Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config-features
+  namespace: knative-eventing
+  labels:
+data:
+  # ALPHA feature: The kreference-group allows you to use the Group field in KReferences.
+  # For more details: https://github.com/knative/eventing/issues/5086
+  kreference-group: "disabled"
+
+  # ALPHA feature: The delivery-retryafter allows you to use the RetryAfter field in DeliverySpec.
+  # For more details: https://github.com/knative/eventing/issues/5811
+  delivery-retryafter: "disabled"
+
+  # BETA feature: The delivery-timeout allows you to use the Timeout field in DeliverySpec.
+  # For more details: https://github.com/knative/eventing/issues/5148
+  delivery-timeout: "enabled"
+
+  # ALPHA feature: The kreference-mapping allows you to map kreference onto templated URI
+  # For more details: https://github.com/knative/eventing/issues/5593
+  kreference-mapping: "disabled"
+
+  # BETA feature: The new-trigger-filters flag allows you to use the new `filters` field
+  # in Trigger objects with its rich filtering capabilities.
+  # For more details: https://github.com/knative/eventing/issues/5204
+  new-trigger-filters: "enabled"
+
+  # ALPHA feature: The transport-encryption flag allows you to encrypt events in transit using the transport layer security (TLS) protocol.
+  # For more details: https://github.com/knative/eventing/issues/5957
+  transport-encryption: "disabled"
+
+  # ALPHA feature: The eventtype-auto-create flag allows automatic creation of Even Type instances based on Event's type being processed.
+  # For more details: https://github.com/knative/eventing/issues/6909
+  eventtype-auto-create: "disabled"
+
+  # ALPHA feature: The aauthentication-oidc flag allows you to use OIDC authentication for Eventing.
+  # For more details: https://github.com/knative/eventing/issues/7174
+  authentication-oidc: "disabled"
+
+  # ALPHA feature: The cross-namespace-event-links flag allows you to use cross-namespace referencing for Eventing.
+  # For more details: https://github.com/knative/eventing/issues/7739
+  cross-namespace-event-links: "disabled"
+
+  # ALPHA feature: The new-apiserversource-filters flag allows you to use the new `filters` field
+  # in APIServerSource objects with its rich filtering capabilities.
+  new-apiserversource-filters: "enabled"
