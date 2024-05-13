@@ -22,11 +22,14 @@ import (
 	"testing"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
+	authenticationv1 "k8s.io/api/authentication/v1"
+	authv1 "k8s.io/api/authorization/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/rest"
 	clientgotesting "k8s.io/client-go/testing"
 	"k8s.io/utils/pointer"
 	"knative.dev/pkg/apis"
@@ -37,6 +40,7 @@ import (
 	v1b1addr "knative.dev/pkg/client/injection/ducks/duck/v1beta1/addressable"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
+	"knative.dev/pkg/injection"
 	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
 	logtesting "knative.dev/pkg/logging/testing"
 	"knative.dev/pkg/network"
@@ -72,10 +76,14 @@ import (
 )
 
 const (
-	systemNS   = "knative-testing"
-	testNS     = "test-namespace"
-	brokerName = "test-broker"
-	dlsName    = "test-dls"
+	systemNS      = "knative-testing"
+	testNS        = "test-namespace"
+	brokerName    = "test-broker"
+	brokerNS      = "test-broker-namespace"
+	brokerGroup   = "eventing.knative.dev"
+	brokerKind    = "Broker"
+	brokerVersion = "v1"
+	dlsName       = "test-dls"
 
 	configMapName = "test-configmap"
 
@@ -136,6 +144,13 @@ var (
 		Version: "v1",
 		Kind:    "Service",
 	}
+
+	brokerrefGVK = metav1.GroupVersionKind{
+		Group:   brokerGroup,
+		Version: brokerVersion,
+		Kind:    brokerKind,
+	}
+
 	brokerDestv1 = duckv1.Destination{
 		Ref: &duckv1.KReference{
 			Name:       sinkName,
@@ -248,6 +263,54 @@ func TestReconcile(t *testing.T) {
 					WithInitTriggerConditions,
 					WithTriggerSubscriberURI(subscriberURI),
 					WithTriggerBrokerFailed("nofilter", "NoFilter")),
+			},
+		}, {
+			Name: "Broker cross-namespace reference",
+			Key:  testKey,
+			Ctx:  settingCtxforCrossNamespaceEventLinks("test-user"),
+			Objects: []runtime.Object{
+				NewBroker(brokerName, brokerNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
+					WithBrokerConfig(config()),
+					WithInitBrokerConditions),
+				NewTriggerWithBrokerRef(triggerName, testNS,
+					WithTriggerBrokerRef(brokerrefGVK, brokerName, brokerNS),
+					WithInitTriggerConditions,
+					WithTriggerSubscriberURI(subscriberURI)),
+				CreateRole("test-role", brokerNS,
+					WithRoleRules(
+						WithPolicyRule(
+							WithAPIGroups([]string{"eventing.knative.dev"}),
+							WithResources("Broker"),
+							WithVerbs("knsubscribe")))),
+				CreateRoleBinding("test-role", brokerNS,
+					WithRoleBindingSubjects(
+						WithSubjects(
+							WithSubjectKind("ServiceAccount"),
+							WithSubjectName("test-user"))),
+					WithRoleBindingRoleRef(
+						WithRoleRef(
+							WithRoleRefAPIGroup("rbac.authorization.k8s.io"),
+							WithRoleRefKind("Role"),
+							WithRoleRefName("test-role")))),
+			},
+			WantErr: false,
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewTrigger(triggerName, testNS, brokerName,
+					WithTriggerUID(triggerUID),
+					WithTriggerSubscriberRef(subscriberGVK, subscriberName, testNS),
+					WithInitTriggerConditions,
+					WithTriggerBrokerReady(),
+					WithTriggerSubscriptionNotConfigured(),
+					WithTriggerStatusSubscriberURI(subscriberURI),
+					WithTriggerSubscriberResolvedSucceeded(),
+					WithTriggerDeadLetterSinkNotConfigured(),
+					WithTriggerDependencyReady(),
+					WithTriggerOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
+				),
+			}},
+			WantCreates: []runtime.Object{
+				makeSubjectAccessReview("test-user", makeResourceAttributes(brokerNS, brokerName, "knsubscribe", "eventing.knative.dev", "Broker")),
 			},
 		}, {
 			Name: "Creates subscription",
@@ -776,8 +839,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerSubscriberResolvedSucceeded(),
 					WithTriggerDeadLetterSinkNotConfigured(),
 					WithTriggerStatusSubscriberURI(subscriberURI),
-					WithTriggerNotSubscribed("NotSubscribed", "inducing failure for create subscriptions"),
-					WithTriggerOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled()),
+					WithTriggerNotSubscribed("NotSubscribed", "inducing failure for create subscriptions")),
 			}},
 			WantEvents: []string{
 				Eventf(corev1.EventTypeWarning, "SubscriptionCreateFailed", `Create Trigger's subscription failed: inducing failure for create subscriptions`),
@@ -2070,4 +2132,44 @@ func makeTriggerOIDCServiceAccountWithoutOwnerRef() *corev1.ServiceAccount {
 	sa.OwnerReferences = nil
 
 	return sa
+}
+
+func settingCtxforCrossNamespaceEventLinks(username string) context.Context {
+	ctx := context.TODO()
+
+	flags := feature.Flags{
+		feature.CrossNamespaceEventLinks: feature.Enabled,
+	}
+	ctx = feature.ToContext(ctx, flags)
+
+	userInfo := &authenticationv1.UserInfo{
+		Username: username,
+		Groups:   []string{"system:authenticatedforcrossnamespacelinks"},
+	}
+	ctx = apis.WithUserInfo(ctx, userInfo)
+
+	cfg := &rest.Config{}
+	ctx = injection.WithConfig(ctx, cfg)
+
+	return ctx
+}
+
+func makeResourceAttributes(namespace, name, verb, group, resource string) authv1.ResourceAttributes {
+	return authv1.ResourceAttributes{
+		Namespace: namespace,
+		Name:      name,
+		Verb:      verb,
+		Group:     group,
+		Resource:  resource,
+	}
+}
+
+func makeSubjectAccessReview(username string, action authv1.ResourceAttributes) *authv1.SubjectAccessReview {
+	return &authv1.SubjectAccessReview{
+		Spec: authv1.SubjectAccessReviewSpec{
+			ResourceAttributes: &action,
+			User:               username,
+			Groups:             []string{"system:authenticatedforcrossnamespacelinks"},
+		},
+	}
 }
