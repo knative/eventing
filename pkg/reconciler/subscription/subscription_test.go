@@ -470,14 +470,14 @@ func TestAllCases(t *testing.T) {
 					}}),
 				),
 				// Role
-				CreateRole(channelNS, "test-role",
+				CreateRole("test-role", channelNS,
 					WithRoleRules(
 						WithPolicyRule(
 							WithAPIGroups([]string{"messaging.knative.dev"}),
 							WithResources("InMemoryChannel"),
 							WithVerbs("knsubscribe")))),
 				// Rolebinding
-				CreateRoleBinding(channelNS, "test-role",
+				CreateRoleBinding("test-role", channelNS,
 					WithRoleBindingSubjects(
 						WithSubjects(
 							WithSubjectKind("ServiceAccount"),
