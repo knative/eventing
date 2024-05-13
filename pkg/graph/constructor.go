@@ -168,3 +168,44 @@ func (g *Graph) AddTrigger(trigger eventingv1.Trigger) error {
 	return nil
 
 }
+func (g *Graph) AddSubscription(subscription messagingv1.Subscription) error {
+	channelRef := &duckv1.KReference{
+		Name:       subscription.Spec.Channel.Name,
+		Namespace:  subscription.Namespace,
+		APIVersion: subscription.Spec.Channel.APIVersion,
+		Kind:       subscription.Spec.Channel.Kind,
+	}
+	channelDest := &duckv1.Destination{Ref: channelRef}
+	channel, ok := g.vertices[makeComparableDestination(channelDest)]
+
+	if !ok {
+		return fmt.Errorf("subscription refers to a non existent channel, can't add it to the graph")
+	}
+
+	subscriptionRef := &duckv1.KReference{
+		Name:       subscription.Name,
+		Namespace:  subscription.Namespace,
+		APIVersion: subscription.APIVersion,
+		Kind:       "Subscription",
+	}
+	subscriptionDest := &duckv1.Destination{Ref: subscriptionRef}
+
+	to := g.getOrCreateVertex(subscription.Spec.Subscriber)
+	channel.AddEdge(to, subscriptionDest, NoTransform{}, false)
+
+	// If the subscription has a reply field set, there should be another Edge struct.
+	if subscription.Spec.Reply != nil {
+		reply := g.getOrCreateVertex(subscription.Spec.Reply)
+		to.AddEdge(reply, subscriptionDest, NoTransform{}, false)
+	}
+
+	// If the subscription has the deadLetterSink property set on the delivery field, then another Edge should be constructed.
+	if subscription.Spec.Delivery == nil || subscription.Spec.Delivery.DeadLetterSink == nil {
+		return nil
+	}
+	dls := g.getOrCreateVertex(subscription.Spec.Delivery.DeadLetterSink)
+	channel.AddEdge(dls, subscriptionDest, NoTransform{}, true)
+
+	return nil
+
+}
