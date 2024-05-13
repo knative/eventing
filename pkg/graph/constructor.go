@@ -17,13 +17,153 @@ limitations under the License.
 package graph
 
 import (
+	"context"
 	"fmt"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	eventingv1beta3 "knative.dev/eventing/pkg/apis/eventing/v1beta3"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
+	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
+
+func ConstructGraph(ctx context.Context, filterFunc func(obj interface{}) bool) (*Graph, error) {
+	eventingClient := eventingclient.Get(ctx)
+
+	g := NewGraph()
+
+	brokers, err := eventingClient.EventingV1().Brokers("").List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	for _, broker := range brokers.Items {
+		if filterFunc(broker) {
+			g.AddBroker(broker)
+		}
+	}
+
+	channels, err := eventingClient.MessagingV1().Channels("").List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	for _, channel := range channels.Items {
+		if filterFunc(channel) {
+			g.AddChannel(channel)
+		}
+	}
+
+	apiServerSources, err := eventingClient.SourcesV1().ApiServerSources("").List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	for _, apiServerSource := range apiServerSources.Items {
+		if filterFunc(apiServerSource) {
+			g.AddSource(duckv1.Source{
+				ObjectMeta: apiServerSource.ObjectMeta,
+				TypeMeta:   apiServerSource.TypeMeta,
+				Spec:       apiServerSource.Spec.SourceSpec,
+				Status:     apiServerSource.Status.SourceStatus,
+			})
+		}
+	}
+
+	containerSources, err := eventingClient.SourcesV1().ContainerSources("").List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	for _, containerSource := range containerSources.Items {
+		if filterFunc(containerSource) {
+			g.AddSource(duckv1.Source{
+				ObjectMeta: containerSource.ObjectMeta,
+				TypeMeta:   containerSource.TypeMeta,
+				Spec:       containerSource.Spec.SourceSpec,
+				Status:     containerSource.Status.SourceStatus,
+			})
+		}
+	}
+
+	pingSources, err := eventingClient.SourcesV1().PingSources("").List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	for _, pingSource := range pingSources.Items {
+		if filterFunc(pingSource) {
+			g.AddSource(duckv1.Source{
+				ObjectMeta: pingSource.ObjectMeta,
+				TypeMeta:   pingSource.TypeMeta,
+				Spec:       pingSource.Spec.SourceSpec,
+				Status:     pingSource.Status.SourceStatus,
+			})
+		}
+	}
+
+	sinkBindings, err := eventingClient.SourcesV1().SinkBindings("").List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	for _, sinkBinding := range sinkBindings.Items {
+		if filterFunc(sinkBinding) {
+			g.AddSource(duckv1.Source{
+				ObjectMeta: sinkBinding.ObjectMeta,
+				TypeMeta:   sinkBinding.TypeMeta,
+				Spec:       sinkBinding.Spec.SourceSpec,
+				Status:     sinkBinding.Status.SourceStatus,
+			})
+		}
+	}
+
+	triggers, err := eventingClient.EventingV1().Triggers("").List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	for _, trigger := range triggers.Items {
+		if filterFunc(trigger) {
+			err := g.AddTrigger(trigger)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	subscriptions, err := eventingClient.MessagingV1().Subscriptions("").List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	for _, subscription := range subscriptions.Items {
+		if filterFunc(subscription) {
+			err := g.AddSubscription(subscription)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	eventTypes, err := eventingClient.EventingV1beta3().EventTypes("").List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	for _, eventType := range eventTypes.Items {
+		if filterFunc(eventType) {
+			err := g.AddEventType(eventType)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return g, nil
+}
 
 func (g *Graph) AddBroker(broker eventingv1.Broker) {
 	ref := &duckv1.KReference{
@@ -74,7 +214,7 @@ func (g *Graph) AddChannel(channel messagingv1.Channel) {
 	v.AddEdge(to, dest, NoTransform{}, true)
 }
 
-func (g *Graph) AddEventType(et *eventingv1beta3.EventType) error {
+func (g *Graph) AddEventType(et eventingv1beta3.EventType) error {
 	ref := &duckv1.KReference{
 		Name:       et.Name,
 		Namespace:  et.Namespace,
@@ -89,7 +229,7 @@ func (g *Graph) AddEventType(et *eventingv1beta3.EventType) error {
 			return fmt.Errorf("trigger/subscription must have a primary outward edge, but had none")
 		}
 
-		outEdge.To().AddEdge(outEdge.From(), dest, EventTypeTransform{EventType: et}, false)
+		outEdge.To().AddEdge(outEdge.From(), dest, EventTypeTransform{EventType: &et}, false)
 
 		return nil
 	}
@@ -97,7 +237,7 @@ func (g *Graph) AddEventType(et *eventingv1beta3.EventType) error {
 	from := g.getOrCreateVertex(dest)
 	to := g.getOrCreateVertex(&duckv1.Destination{Ref: et.Spec.Reference})
 
-	from.AddEdge(to, dest, EventTypeTransform{EventType: et}, false)
+	from.AddEdge(to, dest, EventTypeTransform{EventType: &et}, false)
 
 	return nil
 }
