@@ -282,7 +282,7 @@ func TestReconcile(t *testing.T) {
 				NewTriggerWithBrokerRef(triggerName, testNS,
 					WithTriggerBrokerRef(brokerrefGVK, brokerName, brokerNS),
 					WithTriggerUID(triggerUID),
-					WithTriggerSubscriberRef(subscriberGVK, subscriberName, testNS),
+					WithTriggerSubscriberRef(subscriberGVK, subscriberName, brokerNS),
 					WithInitTriggerConditions,
 					WithTriggerSubscriberURI(subscriberURI)),
 				CreateRole("test-role", brokerNS,
@@ -307,7 +307,8 @@ func TestReconcile(t *testing.T) {
 				Object: NewTriggerWithBrokerRef(triggerName, testNS,
 					WithTriggerBrokerRef(brokerrefGVK, brokerName, brokerNS),
 					WithTriggerUID(triggerUID),
-					WithTriggerSubscriberRef(subscriberGVK, subscriberName, testNS),
+					WithTriggerSubscriberURI(subscriberURI),
+					WithTriggerSubscriberRef(subscriberGVK, subscriberName, brokerNS),
 					WithInitTriggerConditions,
 					WithTriggerBrokerReady(),
 					WithTriggerSubscriptionNotConfigured(),
@@ -319,6 +320,7 @@ func TestReconcile(t *testing.T) {
 				),
 			}},
 			WantCreates: []runtime.Object{
+				makeFilterSubscription(brokerNS),
 				makeSubjectAccessReview("test-user", makeResourceAttributes(brokerNS, brokerName, "knsubscribe", "eventing.knative.dev", "Broker")),
 			},
 		}, {
