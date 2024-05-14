@@ -19,6 +19,8 @@ package v1
 import (
 	"testing"
 
+	"knative.dev/pkg/ptr"
+
 	"knative.dev/pkg/apis"
 
 	"github.com/google/go-cmp/cmp"
@@ -233,6 +235,112 @@ func TestParallelPropagateSubscriptionStatuses(t *testing.T) {
 			want := test.want
 			if want != got {
 				t.Errorf("unexpected conditions (-want, +got) = %v %v", want, got)
+			}
+		})
+	}
+}
+
+func TestParallelPropagateSubscriptionOIDCServiceAccounts(t *testing.T) {
+	tests := []struct {
+		name        string
+		filterSubs  []*messagingv1.Subscription
+		subs        []*messagingv1.Subscription
+		wantOIDCSAs []string
+	}{{
+		name:       "empty",
+		filterSubs: []*messagingv1.Subscription{},
+		subs:       []*messagingv1.Subscription{},
+	}, {
+		name: "both subscriptions with OIDC SAs",
+		filterSubs: []*messagingv1.Subscription{{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "messaging.knative.dev/v1",
+				Kind:       "Subscription",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "sub",
+				Namespace: "testns",
+			},
+			Status: messagingv1.SubscriptionStatus{
+				Auth: &duckv1.AuthStatus{
+					ServiceAccountName: ptr.String("filterSub-oidc-sa"),
+				},
+			},
+		}}, subs: []*messagingv1.Subscription{{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "messaging.knative.dev/v1",
+				Kind:       "Subscription",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "sub",
+				Namespace: "testns",
+			},
+			Status: messagingv1.SubscriptionStatus{
+				Auth: &duckv1.AuthStatus{
+					ServiceAccountName: ptr.String("sub-oidc-sa"),
+				},
+			},
+		}},
+		wantOIDCSAs: []string{
+			"filterSub-oidc-sa",
+			"sub-oidc-sa",
+		},
+	}, {
+		name:       "filter subscription without OIDC SA",
+		filterSubs: []*messagingv1.Subscription{getSubscription("fsub0", false)},
+		subs: []*messagingv1.Subscription{{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "messaging.knative.dev/v1",
+				Kind:       "Subscription",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "sub",
+				Namespace: "testns",
+			},
+			Status: messagingv1.SubscriptionStatus{
+				Auth: &duckv1.AuthStatus{
+					ServiceAccountName: ptr.String("sub-oidc-sa"),
+				},
+			},
+		}},
+		wantOIDCSAs: []string{
+			"sub-oidc-sa",
+		},
+	}, {
+		name: "subscriber subscription without OIDC SA",
+		filterSubs: []*messagingv1.Subscription{{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "messaging.knative.dev/v1",
+				Kind:       "Subscription",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "sub",
+				Namespace: "testns",
+			},
+			Status: messagingv1.SubscriptionStatus{
+				Auth: &duckv1.AuthStatus{
+					ServiceAccountName: ptr.String("filterSub-oidc-sa"),
+				},
+			},
+		}},
+		subs: []*messagingv1.Subscription{getSubscription("sub0", false)},
+		wantOIDCSAs: []string{
+			"filterSub-oidc-sa",
+		},
+	}}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ps := ParallelStatus{}
+			ps.PropagateSubscriptionStatuses(test.filterSubs, test.subs)
+
+			var got []string
+			if ps.Auth != nil {
+				got = ps.Auth.ServiceAccountNames
+			}
+
+			if diff := cmp.Diff(test.wantOIDCSAs, got); diff != "" {
+				t.Errorf("unexpected OIDC service accounts (-want, +got) = %v", diff)
 			}
 		})
 	}
