@@ -3,9 +3,11 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"net"
 	"os"
+	"time"
 
 	mqtt_paho "github.com/cloudevents/sdk-go/protocol/mqtt_paho/v2"
 	cloudevents "github.com/cloudevents/sdk-go/v2"
@@ -26,7 +28,7 @@ var (
 
 func init() {
 	flag.StringVar(&sink, "sink", "", "the host url to send messages to")
-	flag.StringVar(&source, "source", "", "the url to get messages from")
+	flag.StringVar(&source, "source", "localhost:1883", "the url to get messages from")
 	flag.StringVar(&eventType, "eventType", "mqtt-event", "the event-type (CloudEvents)")
 	flag.StringVar(&eventSource, "eventSource", "", "the event-source (CloudEvents)")
 
@@ -71,20 +73,25 @@ func main() {
 		},
 	}
 
-	p, err := mqtt_paho.New(ctx, config, mqtt_paho.WithSubscribe(subscribeOpt))
+	p_receive, err := mqtt_paho.New(ctx, config, mqtt_paho.WithSubscribe(subscribeOpt))
 	if err != nil {
 		log.Fatalf("failed to create protocol: %s", err.Error())
 	}
-	defer p.Close(ctx)
+	defer p_receive.Close(ctx)
 
-	c, err := cloudevents.NewClient(p)
+	c_receive, err := cloudevents.NewClient(p_receive)
 	if err != nil {
 		log.Fatalf("failed to create client: %v", err)
 	}
 
+	c_send, err := cloudevents.NewClientHTTP()
+	if err != nil {
+		log.Fatalf("Failed to create a http cloudevent client: %s", err.Error())
+	}
+
 	log.Printf("MQTT source start consuming messages from %s\n", source)
-	err = c.StartReceiver(ctx, func(ctx context.Context, event cloudevents.Event) {
-		receive(ctx, event, c)
+	err = c_receive.StartReceiver(ctx, func(ctx context.Context, event cloudevents.Event) {
+		receive(ctx, event, c_send)
 	})
 	if err != nil {
 		log.Fatalf("failed to start receiver: %s", err)
@@ -95,13 +102,15 @@ func main() {
 }
 
 func receive(ctx context.Context, event cloudevents.Event, c cloudevents.Client) {
-	log.Printf("%s", event)
+	fmt.Printf("%s", event)
 	data := event.Data()
 	newEvent := cloudevents.NewEvent(cloudevents.VersionV1)
 	newEvent.SetType(eventType)
 	newEvent.SetSource(eventSource)
+	newEvent.SetID(event.ID())
 	_ = newEvent.SetData(cloudevents.ApplicationJSON, data)
 	if result := c.Send(ctx, newEvent); !cloudevents.IsACK(result) {
 		log.Printf("sending event to channel failed: %v", result)
 	}
+	time.Sleep(1 * time.Second)
 }
