@@ -17,6 +17,7 @@ limitations under the License.
 package resources
 
 import (
+	"context"
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
@@ -33,10 +34,9 @@ import (
 
 // NewSubscription returns a placeholder subscription for trigger 't', from brokerTrigger to 'dest'
 // replying to brokerIngress.
-func NewSubscription(t *eventingv1.Trigger, brokerTrigger *corev1.ObjectReference, dest, reply *duckv1.Destination, delivery *eventingduckv1.DeliverySpec) *messagingv1.Subscription {
+func NewSubscription(ctx context.Context, t *eventingv1.Trigger, brokerTrigger *corev1.ObjectReference, dest, reply *duckv1.Destination, delivery *eventingduckv1.DeliverySpec) *messagingv1.Subscription {
 	var broker string
-	var featureStore *feature.Store
-	if t.Spec.BrokerRef != nil && featureStore.IsEnabled(feature.CrossNamespaceEventLinks) {
+	if t.Spec.BrokerRef != nil && feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) {
 		broker = t.Spec.BrokerRef.Name
 	} else {
 		broker = t.Spec.Broker
@@ -48,7 +48,7 @@ func NewSubscription(t *eventingv1.Trigger, brokerTrigger *corev1.ObjectReferenc
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(t),
 			},
-			Labels: SubscriptionLabels(t),
+			Labels: SubscriptionLabels(ctx, t),
 		},
 		Spec: messagingv1.SubscriptionSpec{
 			Channel: duckv1.KReference{
@@ -65,7 +65,7 @@ func NewSubscription(t *eventingv1.Trigger, brokerTrigger *corev1.ObjectReferenc
 
 // SubscriptionLabels generates the labels present on the Subscription linking this Trigger to the
 // Broker's Channels.
-func SubscriptionLabels(t *eventingv1.Trigger) map[string]string {
+func SubscriptionLabels(ctx context.Context, t *eventingv1.Trigger) map[string]string {
 	var broker string
 	var featureStore *feature.Store
 	if t.Spec.BrokerRef != nil && featureStore.IsEnabled(feature.CrossNamespaceEventLinks) {
