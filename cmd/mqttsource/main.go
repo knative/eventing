@@ -3,11 +3,9 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"log"
 	"net"
 	"os"
-	"time"
 
 	mqtt_paho "github.com/cloudevents/sdk-go/protocol/mqtt_paho/v2"
 	cloudevents "github.com/cloudevents/sdk-go/v2"
@@ -28,7 +26,7 @@ var (
 
 func init() {
 	flag.StringVar(&sink, "sink", "", "the host url to send messages to")
-	flag.StringVar(&source, "source", "localhost:1883", "the url to get messages from")
+	flag.StringVar(&source, "source", "", "the url to get messages from")
 	flag.StringVar(&eventType, "eventType", "mqtt-event", "the event-type (CloudEvents)")
 	flag.StringVar(&eventSource, "eventSource", "", "the event-source (CloudEvents)")
 
@@ -102,7 +100,7 @@ func main() {
 }
 
 func receive(ctx context.Context, event cloudevents.Event, c cloudevents.Client) {
-	fmt.Printf("%s", event)
+	log.Printf("%s", event)
 	data := event.Data()
 	newEvent := cloudevents.NewEvent(cloudevents.VersionV1)
 	newEvent.SetType(eventType)
@@ -112,5 +110,4 @@ func receive(ctx context.Context, event cloudevents.Event, c cloudevents.Client)
 	if result := c.Send(ctx, newEvent); !cloudevents.IsACK(result) {
 		log.Printf("sending event to channel failed: %v", result)
 	}
-	time.Sleep(1 * time.Second)
 }
