@@ -23,13 +23,8 @@ set -o pipefail
 
 export SCALE_CHAOSDUCK_TO_ZERO=1
 export REPLICAS=1
-# Map 'uname -m' output to the expected architecture name for 'ko'
-ARCH=$(uname -m)
-case "$ARCH" in
-    x86_64) KO_ARCH="amd64" ;;
-    arm64) KO_ARCH="arm64" ;;
-    *) echo "Unsupported architecture: $ARCH" && exit 1 ;;
-esac
+
+KO_ARCH=$(go env | grep GOARCH | awk -F\' '{print $2}')
 
 export KO_FLAGS=${KO_FLAGS:-"--platform=linux/$KO_ARCH"}
 
