@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"testing"
 
-	"knative.dev/eventing/pkg/auth"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
 	"knative.dev/pkg/tracker"
@@ -48,11 +47,9 @@ import (
 
 	v1 "knative.dev/eventing/pkg/apis/flows/v1"
 
-	"knative.dev/eventing/pkg/apis/feature"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	"knative.dev/eventing/pkg/reconciler/parallel/resources"
 	. "knative.dev/eventing/pkg/reconciler/testing/v1"
-	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 )
 
 const (
@@ -140,7 +137,6 @@ func TestAllBranches(t *testing.T) {
 					WithFlowsParallelAddressableNotReady("emptyAddress", "addressable is nil"),
 					WithFlowsParallelSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
 					WithFlowsParallelIngressChannelStatus(createParallelChannelStatus(parallelName, corev1.ConditionFalse)),
-					WithFlowsParallelOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 					WithFlowsParallelBranchStatuses([]v1.ParallelBranchStatus{{
 						FilterSubscriptionStatus: createParallelFilterSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
 						FilterChannelStatus:      createParallelBranchChannelStatus(parallelName, 0, corev1.ConditionFalse),
@@ -177,7 +173,6 @@ func TestAllBranches(t *testing.T) {
 					WithFlowsParallelAddressableNotReady("emptyAddress", "addressable is nil"),
 					WithFlowsParallelSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
 					WithFlowsParallelIngressChannelStatus(createParallelChannelStatus(parallelName, corev1.ConditionFalse)),
-					WithFlowsParallelOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 					WithFlowsParallelBranchStatuses([]v1.ParallelBranchStatus{{
 						FilterSubscriptionStatus: createParallelFilterSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
 						FilterChannelStatus:      createParallelBranchChannelStatus(parallelName, 0, corev1.ConditionFalse),
@@ -214,7 +209,6 @@ func TestAllBranches(t *testing.T) {
 					WithFlowsParallelAddressableNotReady("emptyAddress", "addressable is nil"),
 					WithFlowsParallelSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
 					WithFlowsParallelIngressChannelStatus(createParallelChannelStatus(parallelName, corev1.ConditionFalse)),
-					WithFlowsParallelOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 					WithFlowsParallelBranchStatuses([]v1.ParallelBranchStatus{{
 						FilterSubscriptionStatus: createParallelFilterSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
 						FilterChannelStatus:      createParallelBranchChannelStatus(parallelName, 0, corev1.ConditionFalse),
@@ -255,7 +249,6 @@ func TestAllBranches(t *testing.T) {
 					WithFlowsParallelChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
 					WithFlowsParallelSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
 					WithFlowsParallelIngressChannelStatus(createParallelChannelStatus(parallelName, corev1.ConditionFalse)),
-					WithFlowsParallelOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 					WithFlowsParallelBranchStatuses([]v1.ParallelBranchStatus{{
 						FilterSubscriptionStatus: createParallelFilterSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
 						FilterChannelStatus:      createParallelBranchChannelStatus(parallelName, 0, corev1.ConditionFalse),
@@ -296,7 +289,6 @@ func TestAllBranches(t *testing.T) {
 					WithFlowsParallelChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
 					WithFlowsParallelSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
 					WithFlowsParallelIngressChannelStatus(createParallelChannelStatus(parallelName, corev1.ConditionFalse)),
-					WithFlowsParallelOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 					WithFlowsParallelBranchStatuses([]v1.ParallelBranchStatus{{
 						FilterSubscriptionStatus: createParallelFilterSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
 						FilterChannelStatus:      createParallelBranchChannelStatus(parallelName, 0, corev1.ConditionFalse),
@@ -347,7 +339,6 @@ func TestAllBranches(t *testing.T) {
 					WithFlowsParallelAddressableNotReady("emptyAddress", "addressable is nil"),
 					WithFlowsParallelSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
 					WithFlowsParallelIngressChannelStatus(createParallelChannelStatus(parallelName, corev1.ConditionFalse)),
-					WithFlowsParallelOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 					WithFlowsParallelBranchStatuses([]v1.ParallelBranchStatus{
 						{
 							FilterSubscriptionStatus: createParallelFilterSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
@@ -407,7 +398,6 @@ func TestAllBranches(t *testing.T) {
 					WithFlowsParallelAddressableNotReady("emptyAddress", "addressable is nil"),
 					WithFlowsParallelSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
 					WithFlowsParallelIngressChannelStatus(createParallelChannelStatus(parallelName, corev1.ConditionFalse)),
-					WithFlowsParallelOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 					WithFlowsParallelBranchStatuses([]v1.ParallelBranchStatus{
 						{
 							FilterSubscriptionStatus: createParallelFilterSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
@@ -463,7 +453,6 @@ func TestAllBranches(t *testing.T) {
 					WithFlowsParallelAddressableNotReady("emptyAddress", "addressable is nil"),
 					WithFlowsParallelSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
 					WithFlowsParallelIngressChannelStatus(createParallelChannelStatus(parallelName, corev1.ConditionFalse)),
-					WithFlowsParallelOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 					WithFlowsParallelBranchStatuses([]v1.ParallelBranchStatus{{
 						FilterSubscriptionStatus: createParallelFilterSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
 						FilterChannelStatus:      createParallelBranchChannelStatus(parallelName, 0, corev1.ConditionFalse),
@@ -485,7 +474,6 @@ func TestAllBranches(t *testing.T) {
 					WithFlowsParallelAddressableNotReady("emptyAddress", "addressable is nil"),
 					WithFlowsParallelSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
 					WithFlowsParallelIngressChannelStatus(createParallelChannelStatus(parallelName, corev1.ConditionFalse)),
-					WithFlowsParallelOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 					WithFlowsParallelBranchStatuses([]v1.ParallelBranchStatus{
 						{
 							FilterSubscriptionStatus: createParallelFilterSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
@@ -562,104 +550,24 @@ func TestAllBranches(t *testing.T) {
 					WithFlowsParallelAddressableNotReady("emptyAddress", "addressable is nil"),
 					WithFlowsParallelSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
 					WithFlowsParallelIngressChannelStatus(createParallelChannelStatus(parallelName, corev1.ConditionFalse)),
-					WithFlowsParallelOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 					WithFlowsParallelBranchStatuses([]v1.ParallelBranchStatus{{
 						FilterSubscriptionStatus: createParallelFilterSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
 						FilterChannelStatus:      createParallelBranchChannelStatus(parallelName, 0, corev1.ConditionFalse),
 						SubscriptionStatus:       createParallelSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
 					}})),
 			}},
-		}, {
-			Name: "OIDC: creates OIDC service account",
-			Key:  pKey,
-			Ctx: feature.ToContext(context.Background(), feature.Flags{
-				feature.OIDCAuthentication: feature.Enabled,
-			}),
-			Objects: []runtime.Object{
-				NewFlowsParallel(parallelName, testNS,
-					WithInitFlowsParallelConditions,
-					WithFlowsParallelChannelTemplateSpec(imc),
-					WithFlowsParallelBranches([]v1.ParallelBranch{
-						{Subscriber: createSubscriber(0)},
-					})),
-				createChannel(parallelName),
-				createBranchChannel(parallelName, 0),
-				resources.NewFilterSubscription(0, NewFlowsParallel(parallelName, testNS,
-					WithFlowsParallelChannelTemplateSpec(imc),
-					WithFlowsParallelBranches([]v1.ParallelBranch{
-						{Subscriber: createSubscriber(0)},
-					}))),
-				resources.NewSubscription(0, NewFlowsParallel(parallelName, testNS,
-					WithFlowsParallelChannelTemplateSpec(imc),
-					WithFlowsParallelBranches([]v1.ParallelBranch{
-						{Subscriber: createSubscriber(0)},
-					}))),
-			},
-			WantErr: false,
-			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewFlowsParallel(parallelName, testNS,
-					WithInitFlowsParallelConditions,
-					WithFlowsParallelChannelTemplateSpec(imc),
-					WithFlowsParallelBranches([]v1.ParallelBranch{{Subscriber: createSubscriber(0)}}),
-					WithFlowsParallelChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
-					WithFlowsParallelAddressableNotReady("emptyAddress", "addressable is nil"),
-					WithFlowsParallelSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
-					WithFlowsParallelIngressChannelStatus(createParallelChannelStatus(parallelName, corev1.ConditionFalse)),
-					WithFlowsParallelOIDCServiceAccountName(makeFlowParallelOIDCServiceAccount().Name),
-					WithFlowsParallelOIDCIdentityCreatedSucceeded(),
-					WithFlowsParallelBranchStatuses([]v1.ParallelBranchStatus{{
-						FilterSubscriptionStatus: createParallelFilterSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
-						FilterChannelStatus:      createParallelBranchChannelStatus(parallelName, 0, corev1.ConditionFalse),
-						SubscriptionStatus:       createParallelSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
-					}})),
-			}},
-			WantCreates: []runtime.Object{
-				makeFlowParallelOIDCServiceAccount(),
-			},
-		}, {
-			Name: "OIDC: Parallel not ready on invalid OIDC service account",
-			Key:  pKey,
-			Ctx: feature.ToContext(context.Background(), feature.Flags{
-				feature.OIDCAuthentication: feature.Enabled,
-			}),
-			Objects: []runtime.Object{
-				makeFlowParallelOIDCServiceAccountWithoutOwnerRef(),
-				NewFlowsParallel(parallelName, testNS,
-					WithInitFlowsParallelConditions,
-					WithFlowsParallelChannelTemplateSpec(imc),
-					WithFlowsParallelBranches([]v1.ParallelBranch{
-						{Subscriber: createSubscriber(0)},
-					}))},
-			WantErr: true,
-			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewFlowsParallel(parallelName, testNS,
-					WithInitFlowsParallelConditions,
-					WithFlowsParallelChannelTemplateSpec(imc),
-					WithFlowsParallelBranches([]v1.ParallelBranch{{Subscriber: createSubscriber(0)}}),
-					// WithFlowsParallelChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
-					// WithFlowsParallelAddressableNotReady("emptyAddress", "addressable is nil"),
-					// WithFlowsParallelSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
-					// WithFlowsParallelIngressChannelStatus(createParallelChannelStatus(parallelName, corev1.ConditionFalse)),
-					WithFlowsParallelOIDCIdentityCreatedFailed("Unable to resolve service account for OIDC authentication", fmt.Sprintf("service account %s not owned by Parallel %s", makeFlowParallelOIDCServiceAccountWithoutOwnerRef().Name, parallelName)),
-					WithFlowsParallelOIDCServiceAccountName(makeFlowParallelOIDCServiceAccountWithoutOwnerRef().Name),
-				),
-			}},
-			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "InternalError", fmt.Sprintf("service account %s not owned by Parallel %s", makeFlowParallelOIDCServiceAccountWithoutOwnerRef().Name, parallelName)),
-			}},
+		},
 	}
 
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		ctx = channelable.WithDuck(ctx)
 		r := &Reconciler{
-			parallelLister:       listers.GetParallelLister(),
-			channelableTracker:   duck.NewListableTrackerFromTracker(ctx, channelable.Get, tracker.New(func(types.NamespacedName) {}, 0)),
-			subscriptionLister:   listers.GetSubscriptionLister(),
-			eventingClientSet:    fakeeventingclient.Get(ctx),
-			kubeclient:           fakekubeclient.Get(ctx),
-			dynamicClientSet:     fakedynamicclient.Get(ctx),
-			serviceAccountLister: listers.GetServiceAccountLister(),
+			parallelLister:     listers.GetParallelLister(),
+			channelableTracker: duck.NewListableTrackerFromTracker(ctx, channelable.Get, tracker.New(func(types.NamespacedName) {}, 0)),
+			subscriptionLister: listers.GetSubscriptionLister(),
+			eventingClientSet:  fakeeventingclient.Get(ctx),
+			dynamicClientSet:   fakedynamicclient.Get(ctx),
 		}
 		return parallel.NewReconciler(ctx, logging.FromContext(ctx),
 			fakeeventingclient.Get(ctx), listers.GetParallelLister(),
@@ -828,21 +736,4 @@ func createDelivery(gvk metav1.GroupVersionKind, name, namespace string) *eventi
 			},
 		},
 	}
-}
-
-func makeFlowParallelOIDCServiceAccount() *corev1.ServiceAccount {
-	return auth.GetOIDCServiceAccountForResource(v1.SchemeGroupVersion.WithKind("Parallel"), metav1.ObjectMeta{
-		Name:      parallelName,
-		Namespace: testNS,
-	})
-}
-
-func makeFlowParallelOIDCServiceAccountWithoutOwnerRef() *corev1.ServiceAccount {
-	sa := auth.GetOIDCServiceAccountForResource(v1.SchemeGroupVersion.WithKind("Parallel"), metav1.ObjectMeta{
-		Name:      parallelName,
-		Namespace: testNS,
-	})
-	sa.OwnerReferences = nil
-
-	return sa
 }
