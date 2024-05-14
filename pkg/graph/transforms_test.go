@@ -135,6 +135,34 @@ func TestAttributeFilterTransform(t *testing.T) {
 			},
 		},
 		{
+			name: "one attribute, with variable at end",
+			input: &eventingv1beta3.EventType{
+				Spec: eventingv1beta3.EventTypeSpec{
+					Attributes: []eventingv1beta3.EventAttributeDefinition{
+						{
+							Name:     "type",
+							Value:    "example.event.{variable}",
+							Required: true,
+						},
+					},
+				},
+			},
+			expected: &eventingv1beta3.EventType{
+				Spec: eventingv1beta3.EventTypeSpec{
+					Attributes: []eventingv1beta3.EventAttributeDefinition{
+						{
+							Name:     "type",
+							Value:    "example.event.type",
+							Required: true,
+						},
+					},
+				},
+			},
+			filterAttributes: eventingv1.TriggerFilterAttributes{
+				"type": "example.event.type",
+			},
+		},
+		{
 			name: "one attribute, with invalid variable (no closing bracket)",
 			input: &eventingv1beta3.EventType{
 				Spec: eventingv1beta3.EventTypeSpec{

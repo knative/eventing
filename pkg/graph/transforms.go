@@ -95,10 +95,14 @@ func buildRegexForAttribute(attribute string) (*regexp.Regexp, error) {
 		if attribute[i] == '{' {
 			chunks = append(chunks, chunk.String(), "[a-zA-Z]+")
 			chunk.Reset()
-			i += strings.Index(attribute[i:], "}") + 1
-			if i == -1 {
+
+			offset := strings.Index(attribute[i:], "}")
+			if offset == -1 {
 				return nil, fmt.Errorf("no closing bracket for variable")
 			}
+
+			i += offset + 1
+			continue
 		}
 
 		chunk.WriteByte(attribute[i])
