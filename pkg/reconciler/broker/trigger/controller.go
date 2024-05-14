@@ -157,13 +157,14 @@ func filterOIDCServiceAccounts(triggerLister eventinglisters.TriggerLister, brok
 // filterTriggers returns a function that returns true if the resource passed
 // is a trigger pointing to a MTChannelBroker.
 func filterTriggers(lister eventinglisters.BrokerLister) func(interface{}) bool {
+	var featureStore *feature.Store
 	return func(obj interface{}) bool {
 		trigger, ok := obj.(*eventing.Trigger)
 		if !ok {
 			return false
 		}
 
-		if trigger.Spec.BrokerRef != nil {
+		if featureStore.IsEnabled(feature.CrossNamespaceEventLinks) && trigger.Spec.BrokerRef != nil {
 			broker = trigger.Spec.BrokerRef.Name
 			brokerNamespace = trigger.Spec.BrokerRef.Namespace
 		} else {

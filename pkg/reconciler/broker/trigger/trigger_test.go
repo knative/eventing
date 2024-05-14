@@ -121,7 +121,6 @@ kind: "InMemoryChannel"
 )
 
 var (
-	ctx              = context.Background()
 	subscriberURL, _ = apis.ParseURL(subscriberURI)
 
 	testKey = fmt.Sprintf("%s/%s", testNS, triggerName)
@@ -322,6 +321,7 @@ func TestReconcile(t *testing.T) {
 			WantCreates: []runtime.Object{
 				makeFilterSubscription(brokerNS),
 				makeSubjectAccessReview("test-user", makeResourceAttributes(brokerNS, brokerName, "knsubscribe", "eventing.knative.dev", "Broker")),
+				resources.NewSubscription(makeTrigger(testNS), createTriggerChannelRef(), makeServiceURI(), makeBrokerRef(), makeDelivery(&duckv1.Destination{URI: dlsURL}, nil, nil, nil)),
 			},
 		}, {
 			Name: "Creates subscription",
@@ -374,7 +374,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerRetry(5, nil, nil)),
 			},
 			WantCreates: []runtime.Object{
-				resources.NewSubscription(ctx, makeTrigger(testNS), createTriggerChannelRef(), makeServiceURI(), makeBrokerRef(), makeDelivery(nil, ptr.Int32(5), nil, nil)),
+				resources.NewSubscription(makeTrigger(testNS), createTriggerChannelRef(), makeServiceURI(), makeBrokerRef(), makeDelivery(nil, ptr.Int32(5), nil, nil)),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewTrigger(triggerName, testNS, brokerName,
@@ -408,7 +408,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerDeadLeaderSink(duckv1.Destination{URI: dlsURL})),
 			},
 			WantCreates: []runtime.Object{
-				resources.NewSubscription(ctx, makeTrigger(testNS), createTriggerChannelRef(), makeServiceURI(), makeBrokerRef(), makeDelivery(&duckv1.Destination{URI: dlsURL}, nil, nil, nil)),
+				resources.NewSubscription(makeTrigger(testNS), createTriggerChannelRef(), makeServiceURI(), makeBrokerRef(), makeDelivery(&duckv1.Destination{URI: dlsURL}, nil, nil, nil)),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewTrigger(triggerName, testNS, brokerName,
@@ -450,7 +450,6 @@ func TestReconcile(t *testing.T) {
 			},
 			WantCreates: []runtime.Object{
 				resources.NewSubscription(
-					ctx,
 					makeTrigger(testNS),
 					createTriggerChannelRef(),
 					makeServiceURI(),
@@ -484,7 +483,7 @@ func TestReconcile(t *testing.T) {
 		}, {
 			Name: "TLS: Creates subscription with TLS subscriber (permissive)",
 			Key:  testKey,
-			Ctx: feature.ToContext(ctx, feature.Flags{
+			Ctx: feature.ToContext(context.Background(), feature.Flags{
 				feature.TransportEncryption: feature.Permissive,
 			}),
 			Objects: []runtime.Object{
@@ -513,7 +512,6 @@ func TestReconcile(t *testing.T) {
 			},
 			WantCreates: []runtime.Object{
 				resources.NewSubscription(
-					ctx,
 					makeTrigger(testNS),
 					createTriggerChannelRef(),
 					makeServiceURIHTTPS(),
@@ -547,7 +545,7 @@ func TestReconcile(t *testing.T) {
 		}, {
 			Name: "TLS: Creates subscription with TLS subscriber (strict)",
 			Key:  testKey,
-			Ctx: feature.ToContext(ctx, feature.Flags{
+			Ctx: feature.ToContext(context.Background(), feature.Flags{
 				feature.TransportEncryption: feature.Strict,
 			}),
 			Objects: []runtime.Object{
@@ -576,7 +574,6 @@ func TestReconcile(t *testing.T) {
 			},
 			WantCreates: []runtime.Object{
 				resources.NewSubscription(
-					ctx,
 					makeTrigger(testNS),
 					createTriggerChannelRef(),
 					makeServiceURIHTTPS(),
@@ -639,7 +636,6 @@ func TestReconcile(t *testing.T) {
 			},
 			WantCreates: []runtime.Object{
 				resources.NewSubscription(
-					ctx,
 					makeTrigger(testNS),
 					createTriggerChannelRef(),
 					makeServiceURI(),
@@ -1038,7 +1034,6 @@ func TestReconcile(t *testing.T) {
 			}},
 			WantCreates: []runtime.Object{
 				resources.NewSubscription(
-					ctx,
 					makeTrigger(testNS),
 					createTriggerChannelRef(),
 					makeServiceURI(),
@@ -1106,7 +1101,6 @@ func TestReconcile(t *testing.T) {
 			WantErr: false,
 			WantCreates: []runtime.Object{
 				resources.NewSubscription(
-					ctx,
 					makeTrigger(testNS),
 					createTriggerChannelRef(),
 					makeServiceURI(),
@@ -1169,7 +1163,6 @@ func TestReconcile(t *testing.T) {
 			WantErr: false,
 			WantCreates: []runtime.Object{
 				resources.NewSubscription(
-					ctx,
 					makeTrigger(testNS),
 					createTriggerChannelRef(),
 					makeServiceURI(),
@@ -1233,7 +1226,6 @@ func TestReconcile(t *testing.T) {
 			WantErr: false,
 			WantCreates: []runtime.Object{
 				resources.NewSubscription(
-					ctx,
 					makeTrigger(testNS),
 					createTriggerChannelRef(),
 					makeServiceURI(),
@@ -1572,7 +1564,7 @@ func TestReconcile(t *testing.T) {
 		{
 			Name: "OIDC: creates OIDC service account",
 			Key:  testKey,
-			Ctx: feature.ToContext(ctx, feature.Flags{
+			Ctx: feature.ToContext(context.Background(), feature.Flags{
 				feature.OIDCAuthentication: feature.Enabled,
 			}),
 			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
@@ -1606,7 +1598,7 @@ func TestReconcile(t *testing.T) {
 		{
 			Name: "OIDC: Trigger not ready on invalid OIDC service account",
 			Key:  testKey,
-			Ctx: feature.ToContext(ctx, feature.Flags{
+			Ctx: feature.ToContext(context.Background(), feature.Flags{
 				feature.OIDCAuthentication: feature.Enabled,
 			}),
 			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
@@ -1642,7 +1634,7 @@ func TestReconcile(t *testing.T) {
 		{
 			Name: "OIDC: set Audience of broker-filter in Subscription",
 			Key:  testKey,
-			Ctx: feature.ToContext(ctx, feature.Flags{
+			Ctx: feature.ToContext(context.Background(), feature.Flags{
 				feature.OIDCAuthentication: feature.Enabled,
 			}),
 			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
@@ -1672,7 +1664,7 @@ func TestReconcile(t *testing.T) {
 				),
 			}},
 			WantCreates: []runtime.Object{
-				resources.NewSubscription(ctx, makeTrigger(testNS), createTriggerChannelRef(), makeServiceURIWithAudience(), makeReplyDestinationViaBrokerFilter(), makeEmptyDelivery()),
+				resources.NewSubscription(makeTrigger(testNS), createTriggerChannelRef(), makeServiceURIWithAudience(), makeReplyDestinationViaBrokerFilter(), makeEmptyDelivery()),
 			},
 			WantDeletes: []clientgotesting.DeleteActionImpl{{
 				ActionImpl: clientgotesting.ActionImpl{
@@ -1685,7 +1677,7 @@ func TestReconcile(t *testing.T) {
 		{
 			Name: "OIDC: Route reply & DLS via broker-filter",
 			Key:  testKey,
-			Ctx: feature.ToContext(ctx, feature.Flags{
+			Ctx: feature.ToContext(context.Background(), feature.Flags{
 				feature.OIDCAuthentication: feature.Enabled,
 			}),
 			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
@@ -1721,7 +1713,7 @@ func TestReconcile(t *testing.T) {
 				),
 			}},
 			WantCreates: []runtime.Object{
-				resources.NewSubscription(ctx, makeTrigger(testNS), createTriggerChannelRef(), makeServiceURIWithAudience(), makeReplyDestinationViaBrokerFilter(), makeDLSViaBrokerFilter()),
+				resources.NewSubscription(makeTrigger(testNS), createTriggerChannelRef(), makeServiceURIWithAudience(), makeReplyDestinationViaBrokerFilter(), makeDLSViaBrokerFilter()),
 			},
 			WantDeletes: []clientgotesting.DeleteActionImpl{{
 				ActionImpl: clientgotesting.ActionImpl{
@@ -1890,7 +1882,7 @@ func makeServiceURIHTTPS() *duckv1.Destination {
 }
 
 func makeFilterSubscription(subscriberNamespace string) *messagingv1.Subscription {
-	return resources.NewSubscription(ctx, makeTrigger(subscriberNamespace), createTriggerChannelRef(), makeServiceURI(), makeBrokerRef(), makeEmptyDelivery())
+	return resources.NewSubscription(makeTrigger(subscriberNamespace), createTriggerChannelRef(), makeServiceURI(), makeBrokerRef(), makeEmptyDelivery())
 }
 
 func makeTrigger(subscriberNamespace string) *eventingv1.Trigger {
@@ -2155,7 +2147,6 @@ func makeTriggerOIDCServiceAccountWithoutOwnerRef() *corev1.ServiceAccount {
 
 func settingCtxforCrossNamespaceEventLinks(username string) context.Context {
 	ctx := context.TODO()
-
 	flags := feature.Flags{
 		feature.CrossNamespaceEventLinks: feature.Enabled,
 	}

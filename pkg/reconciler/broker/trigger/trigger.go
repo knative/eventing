@@ -286,7 +286,7 @@ func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, b *eventingv1
 			delivery.DeadLetterSink = dls
 		}
 
-		expected = resources.NewSubscription(ctx, t, brokerTrigger, dest, reply, delivery)
+		expected = resources.NewSubscription(t, brokerTrigger, dest, reply, delivery)
 	} else {
 		// in case OIDC is not enabled, we don't need to route everything throuh
 		// broker-filter because we need it only then to add the token from the
@@ -300,7 +300,7 @@ func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, b *eventingv1
 			},
 		}
 
-		expected = resources.NewSubscription(ctx, t, brokerTrigger, dest, reply, delivery)
+		expected = resources.NewSubscription(t, brokerTrigger, dest, reply, delivery)
 	}
 
 	sub, err := r.subscriptionLister.Subscriptions(t.Namespace).Get(expected.Name)

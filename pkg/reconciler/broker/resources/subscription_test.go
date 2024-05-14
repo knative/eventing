@@ -17,7 +17,6 @@ limitations under the License.
 package resources
 
 import (
-	"context"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -64,7 +63,7 @@ func TestNewSubscription(t *testing.T) {
 			APIVersion: "broker-apiVersion",
 		},
 	}
-	got := NewSubscription(context.Background(), trigger, triggerChannelRef, dest, reply, delivery)
+	got := NewSubscription(trigger, triggerChannelRef, dest, reply, delivery)
 	want := &messagingv1.Subscription{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "t-namespace",
