@@ -62,6 +62,7 @@ type DispatchInfo struct {
 	ResponseCode   int
 	ResponseHeader http.Header
 	ResponseBody   []byte
+	Scheme         string
 }
 
 type SendOption func(*senderConfig) error
@@ -287,6 +288,7 @@ func (d *Dispatcher) executeRequest(ctx context.Context, target duckv1.Addressab
 		Duration:       NoDuration,
 		ResponseCode:   NoResponse,
 		ResponseHeader: make(http.Header),
+		Scheme:         target.URL.Scheme,
 	}
 
 	ctx, span := trace.StartSpan(ctx, "knative.dev", trace.WithSpanKind(trace.SpanKindClient))

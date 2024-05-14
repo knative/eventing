@@ -28,8 +28,7 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
-var sCondSet = apis.NewLivingConditionSet(SequenceConditionReady, SequenceConditionChannelsReady, SequenceConditionSubscriptionsReady, SequenceConditionAddressable,
-	SequenceConditionOIDCIdentityCreated)
+var sCondSet = apis.NewLivingConditionSet(SequenceConditionReady, SequenceConditionChannelsReady, SequenceConditionSubscriptionsReady, SequenceConditionAddressable)
 
 const (
 	// SequenceConditionReady has status True when all subconditions below have been set to True.
@@ -46,10 +45,6 @@ const (
 	// SequenceConditionAddressable has status true when this Sequence meets
 	// the Addressable contract and has a non-empty hostname.
 	SequenceConditionAddressable apis.ConditionType = "Addressable"
-
-	// SequenceConditionOIDCIdentityCreated has status True when the OIDCIdentity has been created.
-	// This condition is only relevant if the OIDC feature is enabled.
-	SequenceConditionOIDCIdentityCreated apis.ConditionType = "OIDCIdentityCreated"
 )
 
 // GetConditionSet retrieves the condition set for this resource. Implements the KRShaped interface.
@@ -86,12 +81,13 @@ func (ss *SequenceStatus) InitializeConditions() {
 // the status of the incoming subscriptions.
 func (ss *SequenceStatus) PropagateSubscriptionStatuses(subscriptions []*messagingv1.Subscription) {
 	ss.SubscriptionStatuses = make([]SequenceSubscriptionStatus, len(subscriptions))
+	ss.Auth = nil
 	allReady := true
 	// If there are no subscriptions, treat that as a False case. Could go either way, but this seems right.
 	if len(subscriptions) == 0 {
 		allReady = false
-
 	}
+
 	for i, s := range subscriptions {
 		ss.SubscriptionStatuses[i] = SequenceSubscriptionStatus{
 			Subscription: corev1.ObjectReference{
@@ -118,6 +114,13 @@ func (ss *SequenceStatus) PropagateSubscriptionStatuses(subscriptions []*messagi
 			allReady = false
 		}
 
+		if s.Status.Auth != nil && s.Status.Auth.ServiceAccountName != nil {
+			if ss.Auth == nil {
+				ss.Auth = &duckv1.AuthStatus{}
+			}
+
+			ss.Auth.ServiceAccountNames = append(ss.Auth.ServiceAccountNames, *s.Status.Auth.ServiceAccountName)
+		}
 	}
 	if allReady {
 		sCondSet.Manage(ss).MarkTrue(SequenceConditionSubscriptionsReady)
@@ -198,24 +201,4 @@ func (ss *SequenceStatus) setAddress(address *duckv1.Addressable) {
 		}
 		sCondSet.Manage(ss).MarkTrue(SequenceConditionAddressable)
 	}
-}
-
-// MarkOIDCIdentityCreatedSucceeded marks the OIDCIdentityCreated condition as true.
-func (ss *SequenceStatus) MarkOIDCIdentityCreatedSucceeded() {
-	sCondSet.Manage(ss).MarkTrue(SequenceConditionOIDCIdentityCreated)
-}
-
-// MarkOIDCIdentityCreatedSucceededWithReason marks the OIDCIdentityCreated condition as true with the given reason.
-func (ss *SequenceStatus) MarkOIDCIdentityCreatedSucceededWithReason(reason, messageFormat string, messageA ...interface{}) {
-	sCondSet.Manage(ss).MarkTrueWithReason(SequenceConditionOIDCIdentityCreated, reason, messageFormat, messageA...)
-}
-
-// MarkOIDCIdentityCreatedFailed marks the OIDCIdentityCreated condition as false with the given reason.
-func (ss *SequenceStatus) MarkOIDCIdentityCreatedFailed(reason, messageFormat string, messageA ...interface{}) {
-	sCondSet.Manage(ss).MarkFalse(SequenceConditionOIDCIdentityCreated, reason, messageFormat, messageA...)
-}
-
-// MarkOIDCIdentityCreatedUnknown marks the OIDCIdentityCreated condition as unknown with the given reason.
-func (ss *SequenceStatus) MarkOIDCIdentityCreatedUnknown(reason, messageFormat string, messageA ...interface{}) {
-	sCondSet.Manage(ss).MarkUnknown(SequenceConditionOIDCIdentityCreated, reason, messageFormat, messageA...)
 }
