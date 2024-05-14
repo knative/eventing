@@ -109,8 +109,7 @@ func (d *Defaults) GetBrokerConfig(ns string, brokerClassName *string) (*BrokerC
 	}
 
 	// Early return if brokerClassName is provided and valid
-	// FIXME: might cause segfault
-	if *brokerClassName != "" {
+	if brokerClassName != nil && *brokerClassName != "" {
 		return d.getBrokerConfigByClassName(ns, *brokerClassName)
 	}
 
