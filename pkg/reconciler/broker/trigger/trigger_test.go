@@ -302,7 +302,8 @@ func TestReconcile(t *testing.T) {
 			},
 			WantErr: false,
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewTrigger(triggerName, testNS, brokerName,
+				Object: NewTriggerWithBrokerRef(triggerName, testNS,
+					WithTriggerBrokerRef(brokerrefGVK, brokerName, brokerNS),
 					WithTriggerUID(triggerUID),
 					WithTriggerSubscriberRef(subscriberGVK, subscriberName, testNS),
 					WithInitTriggerConditions,
