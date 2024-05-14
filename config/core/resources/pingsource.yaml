@@ -135,6 +135,11 @@ spec:
                   serviceAccountName:
                     description: ServiceAccountName is the name of the generated service account used for this components OIDC authentication.
                     type: string
+                  serviceAccountNames:
+                    description: ServiceAccountNames is the list of names of the generated service accounts used for this components OIDC authentication.
+                    type: array
+                    items:
+                      type: string
               ceAttributes:
                 description: 'CloudEventAttributes are the specific attributes that
                           the Source uses as part of its CloudEvents.'
@@ -316,6 +321,11 @@ spec:
                   serviceAccountName:
                     description: ServiceAccountName is the name of the generated service account used for this components OIDC authentication.
                     type: string
+                  serviceAccountNames:
+                    description: ServiceAccountNames is the list of names of the generated service accounts used for this components OIDC authentication.
+                    type: array
+                    items:
+                      type: string
               ceAttributes:
                 description: 'CloudEventAttributes are the specific attributes that
                         the Source uses as part of its CloudEvents.'
