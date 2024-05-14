@@ -281,6 +281,8 @@ func TestReconcile(t *testing.T) {
 					WithChannelNameAnnotation(triggerChannelName)),
 				NewTriggerWithBrokerRef(triggerName, testNS,
 					WithTriggerBrokerRef(brokerrefGVK, brokerName, brokerNS),
+					WithTriggerUID(triggerUID),
+					WithTriggerSubscriberRef(subscriberGVK, subscriberName, testNS),
 					WithInitTriggerConditions,
 					WithTriggerSubscriberURI(subscriberURI)),
 				CreateRole("test-role", brokerNS,
