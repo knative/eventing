@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"testing"
 
+	"knative.dev/pkg/logging"
 	"knative.dev/pkg/ptr"
 
 	triggerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/trigger"
@@ -38,6 +39,7 @@ import (
 
 	apiseventing "knative.dev/eventing/pkg/apis/eventing"
 	eventing "knative.dev/eventing/pkg/apis/eventing/v1"
+	"knative.dev/eventing/pkg/apis/feature"
 	brokerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/broker"
 	v1lister "knative.dev/eventing/pkg/client/listers/eventing/v1"
 	testingv1 "knative.dev/eventing/pkg/reconciler/testing/v1"
@@ -192,7 +194,8 @@ func TestFilterOIDCServiceAccounts(t *testing.T) {
 			err := triggerInformer.Informer().GetStore().Add(tc.trigger)
 			assert.NoError(t, err)
 
-			filter := filterOIDCServiceAccounts(triggerInformer.Lister(), brokerInformer.Lister())
+			featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"))
+			filter := filterOIDCServiceAccounts(featureStore, triggerInformer.Lister(), brokerInformer.Lister())
 			pass := filter(tc.sa)
 			assert.Equal(t, tc.pass, pass)
 		})
@@ -270,7 +273,8 @@ func TestFilterTriggers(t *testing.T) {
 			for _, obj := range tc.brokers {
 				_ = brokerInformer.Informer().GetStore().Add(obj)
 			}
-			filter := filterTriggers(brokerInformer.Lister())
+			featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"))
+			filter := filterTriggers(featureStore, brokerInformer.Lister())
 			pass := filter(tc.trigger)
 			assert.Equal(t, tc.pass, pass)
 		})
