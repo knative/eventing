@@ -67,8 +67,7 @@ func NewSubscription(ctx context.Context, t *eventingv1.Trigger, brokerTrigger *
 // Broker's Channels.
 func SubscriptionLabels(ctx context.Context, t *eventingv1.Trigger) map[string]string {
 	var broker string
-	var featureStore *feature.Store
-	if t.Spec.BrokerRef != nil && featureStore.IsEnabled(feature.CrossNamespaceEventLinks) {
+	if t.Spec.BrokerRef != nil && feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) {
 		broker = t.Spec.BrokerRef.Name
 	} else {
 		broker = t.Spec.Broker
