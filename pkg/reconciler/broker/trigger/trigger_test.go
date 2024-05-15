@@ -308,7 +308,6 @@ func TestReconcile(t *testing.T) {
 					WithTriggerBrokerRef(brokerrefGVK, brokerName, brokerNS),
 					WithTriggerUID(triggerUID),
 					WithTriggerSubscriberURI(subscriberURI),
-					WithTriggerSubscriberRef(subscriberGVK, subscriberName, testNS),
 					WithInitTriggerConditions,
 					WithTriggerBrokerReady(),
 					WithTriggerSubscriptionNotConfigured(),
@@ -323,6 +322,7 @@ func TestReconcile(t *testing.T) {
 				makeFilterSubscriptionWithBrokerRef(brokerNS),
 				makeSubjectAccessReview("test-user", makeResourceAttributes(brokerNS, brokerName, "knsubscribe", "eventing.knative.dev", "Broker")),
 			},
+			SkipNamespaceValidation: true,
 		}, {
 			Name: "Creates subscription",
 			Key:  testKey,
@@ -854,7 +854,8 @@ func TestReconcile(t *testing.T) {
 					WithTriggerSubscriberResolvedSucceeded(),
 					WithTriggerDeadLetterSinkNotConfigured(),
 					WithTriggerStatusSubscriberURI(subscriberURI),
-					WithTriggerNotSubscribed("NotSubscribed", "inducing failure for create subscriptions")),
+					WithTriggerNotSubscribed("NotSubscribed", "inducing failure for create subscriptions"),
+					WithTriggerOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled()),
 			}},
 			WantEvents: []string{
 				Eventf(corev1.EventTypeWarning, "SubscriptionCreateFailed", `Create Trigger's subscription failed: inducing failure for create subscriptions`),
