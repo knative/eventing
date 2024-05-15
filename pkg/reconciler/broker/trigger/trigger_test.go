@@ -320,9 +320,8 @@ func TestReconcile(t *testing.T) {
 				),
 			}},
 			WantCreates: []runtime.Object{
-				makeFilterSubscription(brokerNS),
+				makeFilterSubscriptionWithBrokerRef(brokerNS),
 				makeSubjectAccessReview("test-user", makeResourceAttributes(brokerNS, brokerName, "knsubscribe", "eventing.knative.dev", "Broker")),
-				resources.NewSubscription(ctx, makeTrigger(testNS), createTriggerChannelRef(), makeServiceURI(), makeBrokerRef(), makeDelivery(&duckv1.Destination{URI: dlsURL}, nil, nil, nil)),
 			},
 		}, {
 			Name: "Creates subscription",
@@ -1894,6 +1893,10 @@ func makeFilterSubscription(subscriberNamespace string) *messagingv1.Subscriptio
 	return resources.NewSubscription(ctx, makeTrigger(subscriberNamespace), createTriggerChannelRef(), makeServiceURI(), makeBrokerRef(), makeEmptyDelivery())
 }
 
+func makeFilterSubscriptionWithBrokerRef(subscriberNamespace string) *messagingv1.Subscription {
+	return resources.NewSubscription(settingCtxforCrossNamespaceEventLinks("test-user"), makeTriggerWithBrokerRef(subscriberNamespace), createTriggerChannelRef(), makeServiceURI(), makeBrokerRefInDifferentNamespace(), makeEmptyDelivery())
+}
+
 func makeTrigger(subscriberNamespace string) *eventingv1.Trigger {
 	return &eventingv1.Trigger{
 		TypeMeta: metav1.TypeMeta{
@@ -1922,12 +1925,54 @@ func makeTrigger(subscriberNamespace string) *eventingv1.Trigger {
 	}
 }
 
+func makeTriggerWithBrokerRef(subscriberNamespace string) *eventingv1.Trigger {
+	return &eventingv1.Trigger{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "eventing.knative.dev/v1",
+			Kind:       "Trigger",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: testNS,
+			Name:      triggerName,
+			UID:       triggerUID,
+		},
+		Spec: eventingv1.TriggerSpec{
+			BrokerRef: &duckv1.KReference{
+				Name:      brokerName,
+				Namespace: brokerNS,
+			},
+			Filter: &eventingv1.TriggerFilter{
+				Attributes: map[string]string{"Source": "Any", "Type": "Any"},
+			},
+			Subscriber: duckv1.Destination{
+				Ref: &duckv1.KReference{
+					Name:       subscriberName,
+					Namespace:  subscriberNamespace,
+					Kind:       subscriberKind,
+					APIVersion: subscriberAPIVersion,
+				},
+			},
+		},
+	}
+}
+
 func makeBrokerRef() *duckv1.Destination {
 	return &duckv1.Destination{
 		Ref: &duckv1.KReference{
 			APIVersion: "eventing.knative.dev/v1",
 			Kind:       "Broker",
 			Namespace:  testNS,
+			Name:       brokerName,
+		},
+	}
+}
+
+func makeBrokerRefInDifferentNamespace() *duckv1.Destination {
+	return &duckv1.Destination{
+		Ref: &duckv1.KReference{
+			APIVersion: "eventing.knative.dev/v1",
+			Kind:       "Broker",
+			Namespace:  brokerNS,
 			Name:       brokerName,
 		},
 	}

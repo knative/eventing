@@ -19,6 +19,7 @@ package resources
 import (
 	"context"
 	"fmt"
+	"log"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,12 +36,19 @@ import (
 // NewSubscription returns a placeholder subscription for trigger 't', from brokerTrigger to 'dest'
 // replying to brokerIngress.
 func NewSubscription(ctx context.Context, t *eventingv1.Trigger, brokerTrigger *corev1.ObjectReference, dest, reply *duckv1.Destination, delivery *eventingduckv1.DeliverySpec) *messagingv1.Subscription {
-	var broker string
+	var broker, brokerNamespace string
+	fmt.Printf("t.Spec.BrokerRef: %v\n", t.Spec.BrokerRef)
+	if feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) {
+		fmt.Println("Flag is enabled")
+	}
 	if t.Spec.BrokerRef != nil && feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) {
 		broker = t.Spec.BrokerRef.Name
+		brokerNamespace = t.Spec.BrokerRef.Namespace
 	} else {
 		broker = t.Spec.Broker
+		brokerNamespace = t.Namespace
 	}
+	log.Printf("broker name: %s broker namespace: %s", broker, brokerNamespace)
 	return &messagingv1.Subscription{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: t.Namespace,
