@@ -327,7 +327,13 @@ func TriggerWithTLSSubscriberWithAdditionalCATrustBundles() *feature.Feature {
 	f.Setup("Wait for Trigger to become ready", trigger.IsReady(triggerName))
 
 	f.Setup("Install failing trigger", func(ctx context.Context, t feature.T) {
-		dls := service.AsDestinationRef(dlsName)
+		dls := &duckv1.Destination{
+			URI: &apis.URL{
+				Scheme: "https", // Force using https
+				Host:   network.GetServiceHostname(dlsName, environment.FromContext(ctx).Namespace()),
+			},
+			CACerts: nil, // CA certs are in the new trust-bundle
+		}
 
 		linear := eventingv1.BackoffPolicyLinear
 		trigger.Install(dlsTriggerName, brokerName,
