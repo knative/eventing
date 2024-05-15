@@ -171,7 +171,7 @@ func filterTriggers(featureStore *feature.Store, lister eventinglisters.BrokerLi
 			brokerNamespace = trigger.Namespace
 		}
 
-		b, err := lister.Brokers(brokerNamespace).Get(trigger.Spec.Broker)
+		b, err := lister.Brokers(brokerNamespace).Get(broker)
 		if err != nil {
 			return false
 		}
