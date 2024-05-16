@@ -93,6 +93,7 @@ const (
 	triggerChannelAPIVersion = "messaging.knative.dev/v1"
 	triggerChannelKind       = "InMemoryChannel"
 	triggerChannelName       = "test-broker-kne-trigger"
+	triggerChannelNamespace  = "test-broker-namespace"
 
 	subscriberURI           = "http://example.com/subscriber/"
 	subscriberKind          = "Service"
@@ -278,7 +279,8 @@ func TestReconcile(t *testing.T) {
 					WithChannelAddressAnnotation(triggerChannelURL),
 					WithChannelAPIVersionAnnotation(triggerChannelAPIVersion),
 					WithChannelKindAnnotation(triggerChannelKind),
-					WithChannelNameAnnotation(triggerChannelName)),
+					WithChannelNameAnnotation(triggerChannelName),
+					WithChannelNamespaceAnnotation(triggerChannelNamespace)),
 				NewTriggerWithBrokerRef(triggerName, testNS,
 					WithTriggerBrokerRef(brokerrefGVK, brokerName, brokerNS),
 					WithTriggerUID(triggerUID),
@@ -1862,6 +1864,15 @@ func createTriggerChannelRef() *corev1.ObjectReference {
 	}
 }
 
+func createTriggerChannelRefInDifferentNamespace() *corev1.ObjectReference {
+	return &corev1.ObjectReference{
+		APIVersion: "messaging.knative.dev/v1",
+		Kind:       "InMemoryChannel",
+		Namespace:  brokerNS,
+		Name:       fmt.Sprintf("%s-kne-trigger", brokerName),
+	}
+}
+
 func makeServiceURI() *duckv1.Destination {
 	return &duckv1.Destination{
 		URI: &apis.URL{
@@ -1895,7 +1906,7 @@ func makeFilterSubscription(subscriberNamespace string) *messagingv1.Subscriptio
 }
 
 func makeFilterSubscriptionWithBrokerRef(subscriberNamespace string) *messagingv1.Subscription {
-	return resources.NewSubscription(settingCtxforCrossNamespaceEventLinks("test-user"), makeTriggerWithBrokerRef(subscriberNamespace), createTriggerChannelRef(), makeServiceURI(), makeBrokerRefInDifferentNamespace(), makeEmptyDelivery())
+	return resources.NewSubscription(settingCtxforCrossNamespaceEventLinks("test-user"), makeTriggerWithBrokerRef(subscriberNamespace), createTriggerChannelRefInDifferentNamespace(), makeServiceURI(), makeBrokerRefInDifferentNamespace(), makeEmptyDelivery())
 }
 
 func makeTrigger(subscriberNamespace string) *eventingv1.Trigger {
