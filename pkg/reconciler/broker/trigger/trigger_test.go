@@ -325,6 +325,7 @@ func TestReconcile(t *testing.T) {
 			}},
 			WantCreates: []runtime.Object{
 				makeFilterSubscriptionWithBrokerRef(brokerNS),
+				makeSubjectAccessReview("test-user", makeResourceAttributes(brokerNS, triggerChannelName, "knsubscribe", "messaging.knative.dev", "InMemoryChannel")),
 				makeSubjectAccessReview("test-user", makeResourceAttributes(brokerNS, brokerName, "knsubscribe", "eventing.knative.dev", "Broker")),
 			},
 			SkipNamespaceValidation: true,
