@@ -144,7 +144,19 @@ func ParallelWithTwoBranchesOIDC(channelTemplate channel_template.ChannelTemplat
 		Must("deliver event from subscriber 2 to reply", assert.OnStore(sink).
 			MatchEvent(test.HasId(event.ID()), test.HasData([]byte("appended data 2"))).
 			AtLeast(1),
-		)
+		).
+		Must("use parallels identity for OIDC to subscriber1", assert.OnStore(subscriber1).MatchWithContext(
+			assert.MatchKind(eventshub.EventReceived).WithContext(),
+			assert.MatchOIDCUserFromResource(parallel.GVR(), parallelName)).AtLeast(1)).
+		Must("use parallels identity for OIDC to subscriber2", assert.OnStore(subscriber2).MatchWithContext(
+			assert.MatchKind(eventshub.EventReceived).WithContext(),
+			assert.MatchOIDCUserFromResource(parallel.GVR(), parallelName)).AtLeast(1)).
+		Must("use parallels identity for OIDC to filter1", assert.OnStore(filter1).MatchWithContext(
+			assert.MatchKind(eventshub.EventReceived).WithContext(),
+			assert.MatchOIDCUserFromResource(parallel.GVR(), parallelName)).AtLeast(1)).
+		Must("use parallels identity for OIDC to sink", assert.OnStore(sink).MatchWithContext(
+			assert.MatchKind(eventshub.EventReceived).WithContext(),
+			assert.MatchOIDCUserFromResource(parallel.GVR(), parallelName)).AtLeast(1))
 
 	return f
 }

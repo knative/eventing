@@ -29,7 +29,6 @@ import (
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/eventing/test/rekt/resources/channel_impl"
-	"knative.dev/eventing/test/rekt/resources/containersource"
 	"knative.dev/eventing/test/rekt/resources/eventtype"
 	"knative.dev/eventing/test/rekt/resources/pingsource"
 	"knative.dev/eventing/test/rekt/resources/subscription"
@@ -68,7 +67,8 @@ func AutoCreateEventTypesOnIMC() *feature.Feature {
 		Must("deliver events to subscriber", assert.OnStore(sink).MatchEvent(cetest.HasId(event.ID())).AtLeast(1)).
 		Must("create event type", eventtype.WaitForEventType(
 			eventtype.AssertReady(expectedTypes),
-			eventtype.AssertPresent(expectedTypes)))
+			eventtype.AssertPresent(expectedTypes),
+			eventtype.AssertReferencePresent(channel_impl.AsRef(channelName))))
 
 	return f
 }
@@ -219,35 +219,6 @@ func AutoCreateEventTypeEventsFromPingSource() *feature.Feature {
 			eventtype.AssertReady(expectedCeTypes),
 			eventtype.AssertPresent(expectedCeTypes),
 			eventtype.AssertReferencePresent(broker.AsKReference(brokerName))))
-
-	return f
-}
-
-func AutoCreateEventTypesOnContainerSource() *feature.Feature {
-	f := feature.NewFeature()
-
-	event := cetest.FullEvent()
-	event.SetType("test.containersource.custom.event.type")
-
-	sourceName := feature.MakeRandomK8sName("containersource")
-	sink := feature.MakeRandomK8sName("sink")
-
-	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
-
-	destination := &duckv1.Destination{
-		Ref: service.AsKReference(sink),
-	}
-	f.Setup("install containersource", containersource.Install(sourceName, containersource.WithSink(destination)))
-
-	f.Setup("containersource is ready", containersource.IsReady(sourceName))
-
-	expectedTypes := sets.New(event.Type())
-
-	f.Stable("containersource").
-		Must("delivers events to subscriber", assert.OnStore(sink).MatchEvent(cetest.HasId(event.ID())).AtLeast(1)).
-		Must("create event type", eventtype.WaitForEventType(
-			eventtype.AssertReady(expectedTypes),
-			eventtype.AssertExactPresent(expectedTypes)))
 
 	return f
 }

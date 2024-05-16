@@ -42,6 +42,8 @@ readonly MT_CHANNEL_BASED_BROKER_CONFIG_DIR="config/brokers/mt-channel-broker"
 # MT Channel Based Broker config.
 readonly MT_CHANNEL_BASED_BROKER_DEFAULT_CONFIG="config/core/configmaps/default-broker.yaml"
 
+readonly EVENTING_TLS_TEST_CONFIG_DIR="test/config/tls"
+
 # Config tracing config.
 readonly CONFIG_TRACING_CONFIG="test/config/config-tracing.yaml"
 
@@ -182,6 +184,8 @@ function install_knative_eventing() {
   local TMP_CONFIG_TRACING_CONFIG=${TMP_DIR}/${CONFIG_TRACING_CONFIG##*/}
   sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" "${CONFIG_TRACING_CONFIG}" > "${TMP_CONFIG_TRACING_CONFIG}"
   kubectl replace -f "${TMP_CONFIG_TRACING_CONFIG}"
+
+  kubectl apply -Rf "${EVENTING_TLS_TEST_CONFIG_DIR}"
 
   scale_controlplane eventing-webhook eventing-controller
 
