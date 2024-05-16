@@ -35,13 +35,13 @@ import (
 // NewSubscription returns a placeholder subscription for trigger 't', from brokerTrigger to 'dest'
 // replying to brokerIngress.
 func NewSubscription(ctx context.Context, t *eventingv1.Trigger, brokerTrigger *corev1.ObjectReference, dest, reply *duckv1.Destination, delivery *eventingduckv1.DeliverySpec) *messagingv1.Subscription {
-	var broker, brokerNamespace string
+	var broker, channelNamespace string
 	if t.Spec.BrokerRef != nil && feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) {
 		broker = t.Spec.BrokerRef.Name
-		brokerNamespace = t.Spec.BrokerRef.Namespace
+		channelNamespace = t.Spec.BrokerRef.Namespace
 	} else {
 		broker = t.Spec.Broker
-		brokerNamespace = t.Namespace
+		channelNamespace = ""
 	}
 	return &messagingv1.Subscription{
 		ObjectMeta: metav1.ObjectMeta{
@@ -57,7 +57,7 @@ func NewSubscription(ctx context.Context, t *eventingv1.Trigger, brokerTrigger *
 				APIVersion: brokerTrigger.APIVersion,
 				Kind:       brokerTrigger.Kind,
 				Name:       brokerTrigger.Name,
-				Namespace:  brokerNamespace,
+				Namespace:  channelNamespace,
 			},
 			Subscriber: dest,
 			Reply:      reply,
