@@ -93,7 +93,6 @@ const (
 	triggerChannelAPIVersion = "messaging.knative.dev/v1"
 	triggerChannelKind       = "InMemoryChannel"
 	triggerChannelName       = "test-broker-kne-trigger"
-	triggerChannelNamespace  = "test-broker-namespace"
 
 	subscriberURI           = "http://example.com/subscriber/"
 	subscriberKind          = "Service"
@@ -280,7 +279,7 @@ func TestReconcile(t *testing.T) {
 					WithChannelAPIVersionAnnotation(triggerChannelAPIVersion),
 					WithChannelKindAnnotation(triggerChannelKind),
 					WithChannelNameAnnotation(triggerChannelName),
-					WithChannelNamespaceAnnotation(triggerChannelNamespace)),
+					WithChannelNamespaceAnnotation(brokerNS)),
 				NewTriggerWithBrokerRef(triggerName, testNS,
 					WithTriggerBrokerRef(brokerrefGVK, brokerName, brokerNS),
 					WithTriggerUID(triggerUID),
@@ -289,6 +288,10 @@ func TestReconcile(t *testing.T) {
 					WithTriggerSubscriberURI(subscriberURI)),
 				CreateRole("test-role", brokerNS,
 					WithRoleRules(
+						WithPolicyRule(
+							WithAPIGroups([]string{"messaging.knative.dev"}),
+							WithResources("InMemoryChannel"),
+							WithVerbs("knsubscribe")),
 						WithPolicyRule(
 							WithAPIGroups([]string{"eventing.knative.dev"}),
 							WithResources("Broker"),
