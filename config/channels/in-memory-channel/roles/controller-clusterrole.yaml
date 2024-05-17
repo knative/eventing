@@ -30,6 +30,7 @@ rules:
       - list
       - watch
       - update
+      - knsubscribe
   - apiGroups:
       - messaging.knative.dev
     resources:
