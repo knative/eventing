@@ -54,6 +54,22 @@ func NewTrigger(name, namespace, broker string, to ...TriggerOption) *v1.Trigger
 	return t
 }
 
+func NewTriggerWithBrokerRef(name, namespace string, to ...TriggerOption) *v1.Trigger {
+	t := &v1.Trigger{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+	}
+
+	for _, opt := range to {
+		opt(t)
+	}
+
+	t.SetDefaults(context.Background())
+	return t
+}
+
 func WithTriggerSubscriberURI(rawurl string) TriggerOption {
 	uri, _ := apis.ParseURL(rawurl)
 	return func(t *v1.Trigger) {
@@ -160,6 +176,17 @@ func WithTriggerBrokerNotConfigured() TriggerOption {
 func WithTriggerBrokerUnknown(reason, message string) TriggerOption {
 	return func(t *v1.Trigger) {
 		t.Status.MarkBrokerUnknown(reason, message)
+	}
+}
+
+func WithTriggerBrokerRef(gvk metav1.GroupVersionKind, name string, namespace string) TriggerOption {
+	return func(t *v1.Trigger) {
+		t.Spec.BrokerRef = &duckv1.KReference{
+			APIVersion: apiVersion(gvk),
+			Kind:       gvk.Kind,
+			Name:       name,
+			Namespace:  namespace,
+		}
 	}
 }
 
