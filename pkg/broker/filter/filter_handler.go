@@ -72,11 +72,6 @@ const (
 	skipTTL        = -1
 )
 
-var (
-	brokerNamespace string
-	brokerRef       string
-)
-
 // Handler parses Cloud Events, determines if they pass a filter, and sends them to a subscriber.
 type Handler struct {
 	// reporter reports stats of status code and dispatch time
@@ -232,6 +227,7 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 }
 
 func (h *Handler) handleDispatchToReplyRequest(ctx context.Context, trigger *eventingv1.Trigger, writer http.ResponseWriter, request *http.Request, event *event.Event) {
+	var brokerRef, brokerNamespace string
 	if feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) && trigger.Spec.BrokerRef.Namespace != "" {
 		brokerRef = trigger.Spec.BrokerRef.Name
 		brokerNamespace = trigger.Spec.BrokerRef.Namespace
