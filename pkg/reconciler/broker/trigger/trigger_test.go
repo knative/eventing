@@ -290,11 +290,11 @@ func TestReconcile(t *testing.T) {
 					WithRoleRules(
 						WithPolicyRule(
 							WithAPIGroups([]string{"messaging.knative.dev"}),
-							WithResources("InMemoryChannel"),
+							WithResources("InMemoryChannels"),
 							WithVerbs("knsubscribe")),
 						WithPolicyRule(
 							WithAPIGroups([]string{"eventing.knative.dev"}),
-							WithResources("Broker"),
+							WithResources("Brokers"),
 							WithVerbs("knsubscribe")))),
 				CreateRoleBinding("test-role", brokerNS,
 					WithRoleBindingSubjects(
@@ -325,8 +325,8 @@ func TestReconcile(t *testing.T) {
 			}},
 			WantCreates: []runtime.Object{
 				makeFilterSubscriptionWithBrokerRef(brokerNS),
-				makeSubjectAccessReview("test-user", makeResourceAttributes(brokerNS, triggerChannelName, "knsubscribe", "messaging.knative.dev", "InMemoryChannel")),
-				makeSubjectAccessReview("test-user", makeResourceAttributes(brokerNS, brokerName, "knsubscribe", "eventing.knative.dev", "Broker")),
+				makeSubjectAccessReview("test-user", makeResourceAttributes(brokerNS, triggerChannelName, "knsubscribe", "messaging.knative.dev", "inmemorychannels")),
+				makeSubjectAccessReview("test-user", makeResourceAttributes(brokerNS, brokerName, "knsubscribe", "eventing.knative.dev", "brokers")),
 			},
 			SkipNamespaceValidation: true,
 		}, {
