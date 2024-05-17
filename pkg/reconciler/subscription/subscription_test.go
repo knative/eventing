@@ -474,7 +474,7 @@ func TestAllCases(t *testing.T) {
 					WithRoleRules(
 						WithPolicyRule(
 							WithAPIGroups([]string{"messaging.knative.dev"}),
-							WithResources("InMemoryChannel"),
+							WithResources("InMemoryChannels"),
 							WithVerbs("knsubscribe")))),
 				// Rolebinding
 				CreateRoleBinding("test-role", channelNS,
@@ -507,7 +507,7 @@ func TestAllCases(t *testing.T) {
 				),
 			}},
 			WantCreates: []runtime.Object{
-				makeSubjectAccessReview("test-user", makeResourceAttributes(channelNS, channelName, "knsubscribe", "messaging.knative.dev", "InMemoryChannel")),
+				makeSubjectAccessReview("test-user", makeResourceAttributes(channelNS, channelName, "knsubscribe", "messaging.knative.dev", "inmemorychannels")),
 			},
 		}, {
 			Name: "subscription goes ready without api version",
