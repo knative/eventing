@@ -49,6 +49,9 @@ func CheckNamespace(ctx context.Context, r ResourceInfo) *apis.FieldError {
 		return nil
 	}
 
+	// convert the kind (Broker or Channel) into a resource (brokers or channels)
+	targetResource := strings.ToLower(targetKind) + "s"
+
 	// GetUserInfo accesses the UserInfo attached to the webhook context.
 	userInfo := apis.GetUserInfo(ctx)
 	if userInfo == nil {
@@ -66,7 +69,7 @@ func CheckNamespace(ctx context.Context, r ResourceInfo) *apis.FieldError {
 		Namespace: targetNamespace,
 		Verb:      "knsubscribe",
 		Group:     targetGroup,
-		Resource:  targetKind,
+		Resource:  targetResource,
 	}
 
 	// Create the SubjectAccessReview

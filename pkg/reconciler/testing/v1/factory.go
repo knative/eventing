@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"slices"
+	"strings"
 	"testing"
 
 	authv1 "k8s.io/api/authorization/v1"
@@ -136,8 +137,12 @@ func MakeFactory(ctor Ctor, unstructured bool, logger *zap.SugaredLogger) Factor
 							continue
 						}
 						for _, rule := range role.Rules {
+							resources := make([]string, 0, len(rule.Resources))
+							for _, resource := range rule.Resources {
+								resources = append(resources, strings.ToLower(resource))
+							}
 							if slices.Contains(rule.APIGroups, sar.Spec.ResourceAttributes.Group) &&
-								(slices.Contains(rule.Resources, "*") || slices.Contains(rule.Resources, sar.Spec.ResourceAttributes.Resource)) &&
+								(slices.Contains(rule.Resources, "*") || slices.Contains(resources, strings.ToLower(sar.Spec.ResourceAttributes.Resource))) &&
 								slices.Contains(rule.Verbs, sar.Spec.ResourceAttributes.Verb) {
 								res := sar.DeepCopy()
 								res.Status.Allowed = true
