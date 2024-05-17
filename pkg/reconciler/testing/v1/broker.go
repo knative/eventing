@@ -225,6 +225,15 @@ func WithChannelNameAnnotation(name string) BrokerOption {
 	}
 }
 
+func WithChannelNamespaceAnnotation(namespace string) BrokerOption {
+	return func(b *v1.Broker) {
+		if b.Status.Annotations == nil {
+			b.Status.Annotations = make(map[string]string, 1)
+		}
+		b.Status.Annotations[eventing.BrokerChannelNamespaceStatusAnnotationKey] = namespace
+	}
+}
+
 func WithDeadLeaderSink(d duckv1.Destination) BrokerOption {
 	return func(b *v1.Broker) {
 		if b.Spec.Delivery == nil {

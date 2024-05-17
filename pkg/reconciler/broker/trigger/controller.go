@@ -85,7 +85,7 @@ func NewController(
 	impl := triggerreconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
 		return controller.Options{
 			ConfigStore:       featureStore,
-			PromoteFilterFunc: filterTriggers(r.brokerLister),
+			PromoteFilterFunc: filterTriggers(featureStore, r.brokerLister),
 		}
 	})
 	r.impl = impl
@@ -94,7 +94,7 @@ func NewController(
 	r.uriResolver = resolver.NewURIResolverFromTracker(ctx, impl.Tracker)
 
 	triggerInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: filterTriggers(r.brokerLister),
+		FilterFunc: filterTriggers(featureStore, r.brokerLister),
 		Handler:    controller.HandleAll(impl.Enqueue),
 	})
 
@@ -119,7 +119,7 @@ func NewController(
 
 	// Reconciler Trigger when the OIDC service account changes
 	oidcServiceaccountInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: filterOIDCServiceAccounts(triggerInformer.Lister(), brokerInformer.Lister()),
+		FilterFunc: filterOIDCServiceAccounts(featureStore, triggerInformer.Lister(), brokerInformer.Lister()),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 
@@ -128,7 +128,7 @@ func NewController(
 
 // filterOIDCServiceAccounts returns a function that returns true if the resource passed
 // is a service account, which is owned by a trigger pointing to a MTChannelBased broker.
-func filterOIDCServiceAccounts(triggerLister eventinglisters.TriggerLister, brokerLister eventinglisters.BrokerLister) func(interface{}) bool {
+func filterOIDCServiceAccounts(featureStore *feature.Store, triggerLister eventinglisters.TriggerLister, brokerLister eventinglisters.BrokerLister) func(interface{}) bool {
 	return func(obj interface{}) bool {
 		controlledByTrigger := controller.FilterController(&eventing.Trigger{})(obj)
 		if !controlledByTrigger {
@@ -150,20 +150,28 @@ func filterOIDCServiceAccounts(triggerLister eventinglisters.TriggerLister, brok
 			return false
 		}
 
-		return filterTriggers(brokerLister)(trigger)
+		return filterTriggers(featureStore, brokerLister)(trigger)
 	}
 }
 
 // filterTriggers returns a function that returns true if the resource passed
 // is a trigger pointing to a MTChannelBroker.
-func filterTriggers(lister eventinglisters.BrokerLister) func(interface{}) bool {
+func filterTriggers(featureStore *feature.Store, lister eventinglisters.BrokerLister) func(interface{}) bool {
 	return func(obj interface{}) bool {
 		trigger, ok := obj.(*eventing.Trigger)
 		if !ok {
 			return false
 		}
 
-		b, err := lister.Brokers(trigger.Namespace).Get(trigger.Spec.Broker)
+		if featureStore.IsEnabled(feature.CrossNamespaceEventLinks) && trigger.Spec.BrokerRef != nil {
+			broker = trigger.Spec.BrokerRef.Name
+			brokerNamespace = trigger.Spec.BrokerRef.Namespace
+		} else {
+			broker = trigger.Spec.Broker
+			brokerNamespace = trigger.Namespace
+		}
+
+		b, err := lister.Brokers(brokerNamespace).Get(broker)
 		if err != nil {
 			return false
 		}

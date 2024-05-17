@@ -19,18 +19,12 @@ package parallel
 import (
 	"context"
 
-	"knative.dev/eventing/pkg/auth"
-
 	"k8s.io/client-go/tools/cache"
-	"knative.dev/eventing/pkg/apis/feature"
 	v1 "knative.dev/eventing/pkg/apis/flows/v1"
 	"knative.dev/eventing/pkg/duck"
-	kubeclient "knative.dev/pkg/client/injection/kube/client"
-	serviceaccountinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount/filtered"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/injection/clients/dynamicclient"
-	"knative.dev/pkg/logging"
 
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
@@ -48,33 +42,14 @@ func NewController(
 
 	parallelInformer := parallel.Get(ctx)
 	subscriptionInformer := subscription.Get(ctx)
-	oidcServiceaccountInformer := serviceaccountinformer.Get(ctx, auth.OIDCLabelSelector)
-
-	var globalResync func(obj interface{})
-	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {
-		if globalResync != nil {
-			globalResync(nil)
-		}
-	})
-	featureStore.WatchConfigs(cmw)
 
 	r := &Reconciler{
-		parallelLister:       parallelInformer.Lister(),
-		subscriptionLister:   subscriptionInformer.Lister(),
-		serviceAccountLister: oidcServiceaccountInformer.Lister(),
-		kubeclient:           kubeclient.Get(ctx),
-		dynamicClientSet:     dynamicclient.Get(ctx),
-		eventingClientSet:    eventingclient.Get(ctx),
+		parallelLister:     parallelInformer.Lister(),
+		subscriptionLister: subscriptionInformer.Lister(),
+		dynamicClientSet:   dynamicclient.Get(ctx),
+		eventingClientSet:  eventingclient.Get(ctx),
 	}
-	impl := parallelreconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
-		return controller.Options{
-			ConfigStore: featureStore,
-		}
-	})
-
-	globalResync = func(_ interface{}) {
-		impl.GlobalResync(parallelInformer.Informer())
-	}
+	impl := parallelreconciler.NewImpl(ctx, r)
 
 	r.channelableTracker = duck.NewListableTrackerFromTracker(ctx, channelable.Get, impl.Tracker)
 	parallelInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
@@ -82,11 +57,6 @@ func NewController(
 	// Register handler for Subscriptions that are owned by Parallel, so that
 	// we get notified if they change.
 	subscriptionInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.FilterController(&v1.Parallel{}),
-		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
-	})
-	// Reconcile Parallel when the OIDC service account changes
-	oidcServiceaccountInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.FilterController(&v1.Parallel{}),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})

@@ -189,6 +189,11 @@ spec:
                         serviceAccountName:
                           description: ServiceAccountName is the name of the generated service account used for this components OIDC authentication.
                           type: string
+                        serviceAccountNames:
+                          description: ServiceAccountNames is the list of names of the generated service accounts used for this components OIDC authentication.
+                          type: array
+                          items:
+                            type: string
           status:
             description: Status represents the current state of the Channel. This data may be out of date.
             type: object
@@ -321,6 +326,11 @@ spec:
                         serviceAccountName:
                           description: ServiceAccountName is the name of the generated service account used for this components OIDC authentication.
                           type: string
+                        serviceAccountNames:
+                          description: ServiceAccountNames is the list of names of the generated service accounts used for this components OIDC authentication.
+                          type: array
+                          items:
+                            type: string
   names:
     kind: Channel
     plural: channels

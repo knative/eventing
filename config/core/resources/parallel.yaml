@@ -345,6 +345,11 @@ spec:
                   serviceAccountName:
                     description: ServiceAccountName is the name of the generated service account used for this components OIDC authentication.
                     type: string
+                  serviceAccountNames:
+                    description: ServiceAccountNames is the list of names of the generated service accounts used for this components OIDC authentication.
+                    type: array
+                    items:
+                      type: string
               branchStatuses:
                 description: BranchStatuses is an array of corresponding to branch
                     statuses. Matches the Spec.Branches array in the order.

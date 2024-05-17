@@ -22,11 +22,14 @@ import (
 	"testing"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
+	authenticationv1 "k8s.io/api/authentication/v1"
+	authv1 "k8s.io/api/authorization/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/rest"
 	clientgotesting "k8s.io/client-go/testing"
 	"k8s.io/utils/pointer"
 	"knative.dev/pkg/apis"
@@ -37,6 +40,7 @@ import (
 	v1b1addr "knative.dev/pkg/client/injection/ducks/duck/v1beta1/addressable"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
+	"knative.dev/pkg/injection"
 	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
 	logtesting "knative.dev/pkg/logging/testing"
 	"knative.dev/pkg/network"
@@ -72,10 +76,14 @@ import (
 )
 
 const (
-	systemNS   = "knative-testing"
-	testNS     = "test-namespace"
-	brokerName = "test-broker"
-	dlsName    = "test-dls"
+	systemNS      = "knative-testing"
+	testNS        = "test-namespace"
+	brokerName    = "test-broker"
+	brokerNS      = "test-broker-namespace"
+	brokerGroup   = "eventing.knative.dev"
+	brokerKind    = "Broker"
+	brokerVersion = "v1"
+	dlsName       = "test-dls"
 
 	configMapName = "test-configmap"
 
@@ -113,6 +121,7 @@ kind: "InMemoryChannel"
 )
 
 var (
+	ctx              = context.Background()
 	subscriberURL, _ = apis.ParseURL(subscriberURI)
 
 	testKey = fmt.Sprintf("%s/%s", testNS, triggerName)
@@ -136,6 +145,13 @@ var (
 		Version: "v1",
 		Kind:    "Service",
 	}
+
+	brokerrefGVK = metav1.GroupVersionKind{
+		Group:   brokerGroup,
+		Version: brokerVersion,
+		Kind:    brokerKind,
+	}
+
 	brokerDestv1 = duckv1.Destination{
 		Ref: &duckv1.KReference{
 			Name:       sinkName,
@@ -250,6 +266,70 @@ func TestReconcile(t *testing.T) {
 					WithTriggerBrokerFailed("nofilter", "NoFilter")),
 			},
 		}, {
+			Name: "Broker cross-namespace reference",
+			Key:  testKey,
+			Ctx:  settingCtxforCrossNamespaceEventLinks("test-user"),
+			Objects: []runtime.Object{
+				NewBroker(brokerName, brokerNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
+					WithBrokerConfig(config()),
+					WithInitBrokerConditions,
+					WithBrokerReady,
+					WithChannelAddressAnnotation(triggerChannelURL),
+					WithChannelAPIVersionAnnotation(triggerChannelAPIVersion),
+					WithChannelKindAnnotation(triggerChannelKind),
+					WithChannelNameAnnotation(triggerChannelName),
+					WithChannelNamespaceAnnotation(brokerNS)),
+				NewTriggerWithBrokerRef(triggerName, testNS,
+					WithTriggerBrokerRef(brokerrefGVK, brokerName, brokerNS),
+					WithTriggerUID(triggerUID),
+					WithTriggerSubscriberRef(subscriberGVK, subscriberName, testNS),
+					WithInitTriggerConditions,
+					WithTriggerSubscriberURI(subscriberURI)),
+				CreateRole("test-role", brokerNS,
+					WithRoleRules(
+						WithPolicyRule(
+							WithAPIGroups([]string{"messaging.knative.dev"}),
+							WithResources("InMemoryChannels"),
+							WithVerbs("knsubscribe")),
+						WithPolicyRule(
+							WithAPIGroups([]string{"eventing.knative.dev"}),
+							WithResources("Brokers"),
+							WithVerbs("knsubscribe")))),
+				CreateRoleBinding("test-role", brokerNS,
+					WithRoleBindingSubjects(
+						WithSubjects(
+							WithSubjectKind("ServiceAccount"),
+							WithSubjectName("test-user"))),
+					WithRoleBindingRoleRef(
+						WithRoleRef(
+							WithRoleRefAPIGroup("rbac.authorization.k8s.io"),
+							WithRoleRefKind("Role"),
+							WithRoleRefName("test-role")))),
+			},
+			WantErr: false,
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewTriggerWithBrokerRef(triggerName, testNS,
+					WithTriggerBrokerRef(brokerrefGVK, brokerName, brokerNS),
+					WithTriggerUID(triggerUID),
+					WithTriggerSubscriberURI(subscriberURI),
+					WithInitTriggerConditions,
+					WithTriggerBrokerReady(),
+					WithTriggerSubscriptionNotConfigured(),
+					WithTriggerStatusSubscriberURI(subscriberURI),
+					WithTriggerSubscriberResolvedSucceeded(),
+					WithTriggerDeadLetterSinkNotConfigured(),
+					WithTriggerDependencyReady(),
+					WithTriggerOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
+				),
+			}},
+			WantCreates: []runtime.Object{
+				makeFilterSubscriptionWithBrokerRef(brokerNS),
+				makeSubjectAccessReview("test-user", makeResourceAttributes(brokerNS, triggerChannelName, "knsubscribe", "messaging.knative.dev", "inmemorychannels")),
+				makeSubjectAccessReview("test-user", makeResourceAttributes(brokerNS, brokerName, "knsubscribe", "eventing.knative.dev", "brokers")),
+			},
+			SkipNamespaceValidation: true,
+		}, {
 			Name: "Creates subscription",
 			Key:  testKey,
 			Objects: []runtime.Object{
@@ -300,7 +380,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerRetry(5, nil, nil)),
 			},
 			WantCreates: []runtime.Object{
-				resources.NewSubscription(makeTrigger(testNS), createTriggerChannelRef(), makeServiceURI(), makeBrokerRef(), makeDelivery(nil, ptr.Int32(5), nil, nil)),
+				resources.NewSubscription(ctx, makeTrigger(testNS), createTriggerChannelRef(), makeServiceURI(), makeBrokerRef(), makeDelivery(nil, ptr.Int32(5), nil, nil)),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewTrigger(triggerName, testNS, brokerName,
@@ -334,7 +414,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerDeadLeaderSink(duckv1.Destination{URI: dlsURL})),
 			},
 			WantCreates: []runtime.Object{
-				resources.NewSubscription(makeTrigger(testNS), createTriggerChannelRef(), makeServiceURI(), makeBrokerRef(), makeDelivery(&duckv1.Destination{URI: dlsURL}, nil, nil, nil)),
+				resources.NewSubscription(ctx, makeTrigger(testNS), createTriggerChannelRef(), makeServiceURI(), makeBrokerRef(), makeDelivery(&duckv1.Destination{URI: dlsURL}, nil, nil, nil)),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewTrigger(triggerName, testNS, brokerName,
@@ -376,6 +456,7 @@ func TestReconcile(t *testing.T) {
 			},
 			WantCreates: []runtime.Object{
 				resources.NewSubscription(
+					ctx,
 					makeTrigger(testNS),
 					createTriggerChannelRef(),
 					makeServiceURI(),
@@ -438,6 +519,7 @@ func TestReconcile(t *testing.T) {
 			},
 			WantCreates: []runtime.Object{
 				resources.NewSubscription(
+					ctx,
 					makeTrigger(testNS),
 					createTriggerChannelRef(),
 					makeServiceURIHTTPS(),
@@ -500,6 +582,7 @@ func TestReconcile(t *testing.T) {
 			},
 			WantCreates: []runtime.Object{
 				resources.NewSubscription(
+					ctx,
 					makeTrigger(testNS),
 					createTriggerChannelRef(),
 					makeServiceURIHTTPS(),
@@ -562,6 +645,7 @@ func TestReconcile(t *testing.T) {
 			},
 			WantCreates: []runtime.Object{
 				resources.NewSubscription(
+					ctx,
 					makeTrigger(testNS),
 					createTriggerChannelRef(),
 					makeServiceURI(),
@@ -961,6 +1045,7 @@ func TestReconcile(t *testing.T) {
 			}},
 			WantCreates: []runtime.Object{
 				resources.NewSubscription(
+					ctx,
 					makeTrigger(testNS),
 					createTriggerChannelRef(),
 					makeServiceURI(),
@@ -1028,6 +1113,7 @@ func TestReconcile(t *testing.T) {
 			WantErr: false,
 			WantCreates: []runtime.Object{
 				resources.NewSubscription(
+					ctx,
 					makeTrigger(testNS),
 					createTriggerChannelRef(),
 					makeServiceURI(),
@@ -1090,6 +1176,7 @@ func TestReconcile(t *testing.T) {
 			WantErr: false,
 			WantCreates: []runtime.Object{
 				resources.NewSubscription(
+					ctx,
 					makeTrigger(testNS),
 					createTriggerChannelRef(),
 					makeServiceURI(),
@@ -1153,6 +1240,7 @@ func TestReconcile(t *testing.T) {
 			WantErr: false,
 			WantCreates: []runtime.Object{
 				resources.NewSubscription(
+					ctx,
 					makeTrigger(testNS),
 					createTriggerChannelRef(),
 					makeServiceURI(),
@@ -1591,7 +1679,7 @@ func TestReconcile(t *testing.T) {
 				),
 			}},
 			WantCreates: []runtime.Object{
-				resources.NewSubscription(makeTrigger(testNS), createTriggerChannelRef(), makeServiceURIWithAudience(), makeReplyDestinationViaBrokerFilter(), makeEmptyDelivery()),
+				resources.NewSubscription(ctx, makeTrigger(testNS), createTriggerChannelRef(), makeServiceURIWithAudience(), makeReplyDestinationViaBrokerFilter(), makeEmptyDelivery()),
 			},
 			WantDeletes: []clientgotesting.DeleteActionImpl{{
 				ActionImpl: clientgotesting.ActionImpl{
@@ -1640,7 +1728,7 @@ func TestReconcile(t *testing.T) {
 				),
 			}},
 			WantCreates: []runtime.Object{
-				resources.NewSubscription(makeTrigger(testNS), createTriggerChannelRef(), makeServiceURIWithAudience(), makeReplyDestinationViaBrokerFilter(), makeDLSViaBrokerFilter()),
+				resources.NewSubscription(ctx, makeTrigger(testNS), createTriggerChannelRef(), makeServiceURIWithAudience(), makeReplyDestinationViaBrokerFilter(), makeDLSViaBrokerFilter()),
 			},
 			WantDeletes: []clientgotesting.DeleteActionImpl{{
 				ActionImpl: clientgotesting.ActionImpl{
@@ -1780,6 +1868,15 @@ func createTriggerChannelRef() *corev1.ObjectReference {
 	}
 }
 
+func createTriggerChannelRefInDifferentNamespace() *corev1.ObjectReference {
+	return &corev1.ObjectReference{
+		APIVersion: "messaging.knative.dev/v1",
+		Kind:       "InMemoryChannel",
+		Namespace:  brokerNS,
+		Name:       fmt.Sprintf("%s-kne-trigger", brokerName),
+	}
+}
+
 func makeServiceURI() *duckv1.Destination {
 	return &duckv1.Destination{
 		URI: &apis.URL{
@@ -1809,7 +1906,11 @@ func makeServiceURIHTTPS() *duckv1.Destination {
 }
 
 func makeFilterSubscription(subscriberNamespace string) *messagingv1.Subscription {
-	return resources.NewSubscription(makeTrigger(subscriberNamespace), createTriggerChannelRef(), makeServiceURI(), makeBrokerRef(), makeEmptyDelivery())
+	return resources.NewSubscription(ctx, makeTrigger(subscriberNamespace), createTriggerChannelRef(), makeServiceURI(), makeBrokerRef(), makeEmptyDelivery())
+}
+
+func makeFilterSubscriptionWithBrokerRef(subscriberNamespace string) *messagingv1.Subscription {
+	return resources.NewSubscription(settingCtxforCrossNamespaceEventLinks("test-user"), makeTriggerWithBrokerRef(subscriberNamespace), createTriggerChannelRefInDifferentNamespace(), makeServiceURI(), makeBrokerRefInDifferentNamespace(), makeEmptyDelivery())
 }
 
 func makeTrigger(subscriberNamespace string) *eventingv1.Trigger {
@@ -1840,12 +1941,54 @@ func makeTrigger(subscriberNamespace string) *eventingv1.Trigger {
 	}
 }
 
+func makeTriggerWithBrokerRef(subscriberNamespace string) *eventingv1.Trigger {
+	return &eventingv1.Trigger{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "eventing.knative.dev/v1",
+			Kind:       "Trigger",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: testNS,
+			Name:      triggerName,
+			UID:       triggerUID,
+		},
+		Spec: eventingv1.TriggerSpec{
+			BrokerRef: &duckv1.KReference{
+				Name:      brokerName,
+				Namespace: brokerNS,
+			},
+			Filter: &eventingv1.TriggerFilter{
+				Attributes: map[string]string{"Source": "Any", "Type": "Any"},
+			},
+			Subscriber: duckv1.Destination{
+				Ref: &duckv1.KReference{
+					Name:       subscriberName,
+					Namespace:  subscriberNamespace,
+					Kind:       subscriberKind,
+					APIVersion: subscriberAPIVersion,
+				},
+			},
+		},
+	}
+}
+
 func makeBrokerRef() *duckv1.Destination {
 	return &duckv1.Destination{
 		Ref: &duckv1.KReference{
 			APIVersion: "eventing.knative.dev/v1",
 			Kind:       "Broker",
 			Namespace:  testNS,
+			Name:       brokerName,
+		},
+	}
+}
+
+func makeBrokerRefInDifferentNamespace() *duckv1.Destination {
+	return &duckv1.Destination{
+		Ref: &duckv1.KReference{
+			APIVersion: "eventing.knative.dev/v1",
+			Kind:       "Broker",
+			Namespace:  brokerNS,
 			Name:       brokerName,
 		},
 	}
@@ -2070,4 +2213,43 @@ func makeTriggerOIDCServiceAccountWithoutOwnerRef() *corev1.ServiceAccount {
 	sa.OwnerReferences = nil
 
 	return sa
+}
+
+func settingCtxforCrossNamespaceEventLinks(username string) context.Context {
+	ctx := context.TODO()
+	flags := feature.Flags{
+		feature.CrossNamespaceEventLinks: feature.Enabled,
+	}
+	ctx = feature.ToContext(ctx, flags)
+
+	userInfo := &authenticationv1.UserInfo{
+		Username: username,
+		Groups:   []string{"system:authenticatedforcrossnamespacelinks"},
+	}
+	ctx = apis.WithUserInfo(ctx, userInfo)
+
+	cfg := &rest.Config{}
+	ctx = injection.WithConfig(ctx, cfg)
+
+	return ctx
+}
+
+func makeResourceAttributes(namespace, name, verb, group, resource string) authv1.ResourceAttributes {
+	return authv1.ResourceAttributes{
+		Namespace: namespace,
+		Name:      name,
+		Verb:      verb,
+		Group:     group,
+		Resource:  resource,
+	}
+}
+
+func makeSubjectAccessReview(username string, action authv1.ResourceAttributes) *authv1.SubjectAccessReview {
+	return &authv1.SubjectAccessReview{
+		Spec: authv1.SubjectAccessReviewSpec{
+			ResourceAttributes: &action,
+			User:               username,
+			Groups:             []string{"system:authenticatedforcrossnamespacelinks"},
+		},
+	}
 }

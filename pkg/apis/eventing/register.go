@@ -84,6 +84,11 @@ const (
 	// annotation key used to specify the name of the channel for
 	// the triggers to subscribe to.
 	BrokerChannelNameStatusAnnotationKey = "knative.dev/channelName"
+
+	// BrokerChannelNamespaceStatusAnnotationKey is the broker status
+	// annotation key used to specify the namespace of the channel for
+	// the triggers to subscribe to.
+	BrokerChannelNamespaceStatusAnnotationKey = "knative.dev/channelNamespace"
 )
 
 var (

@@ -17,15 +17,21 @@ limitations under the License.
 package new_trigger_filters
 
 import (
+	"context"
 	"fmt"
 
 	. "github.com/cloudevents/sdk-go/v2/test"
+	"knative.dev/eventing/test/rekt/resources/broker"
+	"knative.dev/eventing/test/rekt/resources/trigger"
+	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/feature"
+	"knative.dev/reconciler-test/pkg/manifest"
+	"knative.dev/reconciler-test/pkg/resources/service"
 
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 )
 
-type InstallBrokerFunc func(f *feature.Feature) string
+type InstallBrokerFunc func(brokerName string) feature.StepFn
 
 type CloudEventsContext struct {
 	eventType            string
@@ -329,14 +335,40 @@ func MultipleTriggersAndSinksFeature(installBroker InstallBrokerFunc) *feature.F
 		},
 	}
 
-	// We need to create the broker here and mock it later so that the test uses the same broker for both filters
-	brokerName := installBroker(f)
-	fakeInstallBroker := func(_ *feature.Feature) string {
-		return brokerName
-	}
+	subscriberName1 := feature.MakeRandomK8sName("subscriber1")
+	subscriberName2 := feature.MakeRandomK8sName("subscriber2")
+	triggerName1 := feature.MakeRandomK8sName("trigger1")
+	triggerName2 := feature.MakeRandomK8sName("trigger2")
+	brokerName := feature.MakeRandomK8sName("broker")
 
-	createNewFiltersFeature(f, eventContextsFirstSink, filtersFirstTrigger, eventingv1.TriggerFilter{}, fakeInstallBroker)
-	createNewFiltersFeature(f, eventContextsSecondSink, filtersSecondTrigger, eventingv1.TriggerFilter{}, fakeInstallBroker)
+	f.Setup("Install Broker, Sinks, Triggers", func(ctx context.Context, t feature.T) {
+		installBroker(brokerName)(ctx, t)
+
+		eventshub.Install(subscriberName1, eventshub.StartReceiver)(ctx, t)
+		eventshub.Install(subscriberName2, eventshub.StartReceiver)(ctx, t)
+
+		triggerCfg1 := []manifest.CfgFn{
+			trigger.WithSubscriber(service.AsKReference(subscriberName1), ""),
+			trigger.WithNewFilters(filtersFirstTrigger),
+			trigger.WithFilter(eventingv1.TriggerFilter{}.Attributes),
+		}
+		trigger.Install(triggerName1, brokerName, triggerCfg1...)(ctx, t)
+
+		triggerCfg2 := []manifest.CfgFn{
+			trigger.WithSubscriber(service.AsKReference(subscriberName2), ""),
+			trigger.WithNewFilters(filtersSecondTrigger),
+			trigger.WithFilter(eventingv1.TriggerFilter{}.Attributes),
+		}
+		trigger.Install(triggerName2, brokerName, triggerCfg2...)(ctx, t)
+
+		broker.IsReady(brokerName)(ctx, t)
+		broker.IsAddressable(brokerName)(ctx, t)
+		trigger.IsReady(triggerName1)(ctx, t)
+		trigger.IsReady(triggerName2)(ctx, t)
+	})
+
+	assertDelivery(f, brokerName, subscriberName1, eventContextsFirstSink)
+	assertDelivery(f, brokerName, subscriberName2, eventContextsSecondSink)
 
 	return f
 }

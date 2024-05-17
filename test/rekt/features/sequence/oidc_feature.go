@@ -129,7 +129,10 @@ func SequenceSendsEventWithOIDCTokenToSteps() *feature.Feature {
 		Must("Delivers events correctly to steps",
 			assert.OnStore(step2Name).MatchEvent(
 				test.HasData([]byte(expectedMsg)),
-			).AtLeast(1))
+			).AtLeast(1)).
+		Must("use sequences identity for OIDC", assert.OnStore(step2Name).MatchWithContext(
+			assert.MatchKind(eventshub.EventReceived).WithContext(),
+			assert.MatchOIDCUserFromResource(sequence.GVR(), sequenceName)).Exact(1))
 
 	return f
 }
@@ -209,7 +212,10 @@ func SequenceSendsEventWithOIDCTokenToReply() *feature.Feature {
 		Must("Delivers events correctly to reply",
 			assert.OnStore(replySinkName).MatchEvent(
 				test.HasData([]byte(expectedMsg)),
-			).AtLeast(1))
+			).AtLeast(1)).
+		Must("use sequences identity for OIDC", assert.OnStore(replySinkName).MatchWithContext(
+			assert.MatchKind(eventshub.EventReceived).WithContext(),
+			assert.MatchOIDCUserFromResource(sequence.GVR(), sequenceName)).Exact(1))
 
 	return f
 }

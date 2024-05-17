@@ -17,42 +17,23 @@ limitations under the License.
 package sequence
 
 import (
-	"context"
 	"testing"
 
-	"knative.dev/eventing/pkg/auth"
-	filteredFactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
-
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/configmap"
 	. "knative.dev/pkg/reconciler/testing"
 
 	// Fake injection informers
-	"knative.dev/eventing/pkg/apis/feature"
 	_ "knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable/fake"
 	_ "knative.dev/eventing/pkg/client/injection/informers/flows/v1/sequence/fake"
 	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/subscription/fake"
-	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount/filtered/fake"
-	_ "knative.dev/pkg/client/injection/kube/informers/factory/filtered/fake"
 )
 
 func TestNew(t *testing.T) {
-	ctx, _ := SetupFakeContext(t, SetUpInformerSelector)
+	ctx, _ := SetupFakeContext(t)
 
-	c := NewController(ctx, configmap.NewStaticWatcher(
-		&corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: feature.FlagsConfigName,
-			},
-		}))
+	c := NewController(ctx, configmap.NewStaticWatcher())
 
 	if c == nil {
 		t.Fatal("Expected NewController to return a non-nil value")
 	}
-}
-
-func SetUpInformerSelector(ctx context.Context) context.Context {
-	ctx = filteredFactory.WithSelectors(ctx, auth.OIDCLabelSelector)
-	return ctx
 }

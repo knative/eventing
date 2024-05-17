@@ -127,6 +127,7 @@ func makeEnv(args *ReceiveAdapterArgs) ([]corev1.EnvVar, error) {
 		ResourceOwner: args.Source.Spec.ResourceOwner,
 		EventMode:     args.Source.Spec.EventMode,
 		AllNamespaces: args.AllNamespaces,
+		Filters:       args.Source.Spec.Filters,
 	}
 
 	for _, r := range args.Source.Spec.Resources {

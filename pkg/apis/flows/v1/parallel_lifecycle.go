@@ -25,7 +25,7 @@ import (
 	pkgduckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
-var pCondSet = apis.NewLivingConditionSet(ParallelConditionReady, ParallelConditionChannelsReady, ParallelConditionSubscriptionsReady, ParallelConditionAddressable, ParallelConditionOIDCIdentityCreated)
+var pCondSet = apis.NewLivingConditionSet(ParallelConditionReady, ParallelConditionChannelsReady, ParallelConditionSubscriptionsReady, ParallelConditionAddressable)
 
 const (
 	// ParallelConditionReady has status True when all subconditions below have been set to True.
@@ -41,8 +41,7 @@ const (
 
 	// ParallelConditionAddressable has status true when this Parallel meets
 	// the Addressable contract and has a non-empty hostname.
-	ParallelConditionAddressable         apis.ConditionType = "Addressable"
-	ParallelConditionOIDCIdentityCreated apis.ConditionType = "OIDCIdentityCreated"
+	ParallelConditionAddressable apis.ConditionType = "Addressable"
 )
 
 // GetConditionSet retrieves the condition set for this resource. Implements the KRShaped interface.
@@ -81,6 +80,7 @@ func (ps *ParallelStatus) PropagateSubscriptionStatuses(filterSubscriptions []*m
 	if ps.BranchStatuses == nil || len(subscriptions) != len(ps.BranchStatuses) {
 		ps.BranchStatuses = make([]ParallelBranchStatus, len(subscriptions))
 	}
+	ps.Auth = nil
 	allReady := true
 	// If there are no subscriptions, treat that as a False branch. Could go either way, but this seems right.
 	if len(subscriptions) == 0 {
@@ -126,6 +126,19 @@ func (ps *ParallelStatus) PropagateSubscriptionStatuses(filterSubscriptions []*m
 			allReady = false
 		}
 
+		if fs.Status.Auth != nil && fs.Status.Auth.ServiceAccountName != nil {
+			if ps.Auth == nil {
+				ps.Auth = &pkgduckv1.AuthStatus{}
+			}
+			ps.Auth.ServiceAccountNames = append(ps.Auth.ServiceAccountNames, *fs.Status.Auth.ServiceAccountName)
+		}
+
+		if s.Status.Auth != nil && s.Status.Auth.ServiceAccountName != nil {
+			if ps.Auth == nil {
+				ps.Auth = &pkgduckv1.AuthStatus{}
+			}
+			ps.Auth.ServiceAccountNames = append(ps.Auth.ServiceAccountNames, *s.Status.Auth.ServiceAccountName)
+		}
 	}
 	if allReady {
 		pCondSet.Manage(ps).MarkTrue(ParallelConditionSubscriptionsReady)
@@ -194,22 +207,6 @@ func (ps *ParallelStatus) MarkSubscriptionsNotReady(reason, messageFormat string
 
 func (ps *ParallelStatus) MarkAddressableNotReady(reason, messageFormat string, messageA ...interface{}) {
 	pCondSet.Manage(ps).MarkFalse(ParallelConditionAddressable, reason, messageFormat, messageA...)
-}
-
-func (ps *ParallelStatus) MarkOIDCIdentityCreatedSucceeded() {
-	pCondSet.Manage(ps).MarkTrue(ParallelConditionOIDCIdentityCreated)
-}
-
-func (ps *ParallelStatus) MarkOIDCIdentityCreatedSucceededWithReason(reason, messageFormat string, messageA ...interface{}) {
-	pCondSet.Manage(ps).MarkTrueWithReason(ParallelConditionOIDCIdentityCreated, reason, messageFormat, messageA...)
-}
-
-func (ps *ParallelStatus) MarkOIDCIdentityCreatedFailed(reason, messageFormat string, messageA ...interface{}) {
-	pCondSet.Manage(ps).MarkFalse(ParallelConditionOIDCIdentityCreated, reason, messageFormat, messageA...)
-}
-
-func (ps *ParallelStatus) MarkOIDCIdentityCreatedUnknown(reason, messageFormat string, messageA ...interface{}) {
-	pCondSet.Manage(ps).MarkUnknown(ParallelConditionOIDCIdentityCreated, reason, messageFormat, messageA...)
 }
 
 func (ps *ParallelStatus) setAddress(address *pkgduckv1.Addressable) {

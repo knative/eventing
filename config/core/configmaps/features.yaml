@@ -44,7 +44,7 @@ data:
   # For more details: https://github.com/knative/eventing/issues/5204
   new-trigger-filters: "enabled"
   
-  # ALPHA feature: The transport-encryption flag allows you to encrypt events in transit using the transport layer security (TLS) protocol.
+  # BETA feature: The transport-encryption flag allows you to encrypt events in transit using the transport layer security (TLS) protocol.
   # For more details: https://github.com/knative/eventing/issues/5957
   transport-encryption: "disabled"
 
@@ -60,3 +60,6 @@ data:
   # For more details: https://github.com/knative/eventing/issues/7739
   cross-namespace-event-links: "disabled"
 
+  # ALPHA feature: The new-apiserversource-filters flag allows you to use the new `filters` field
+  # in APIServerSource objects with its rich filtering capabilities.
+  new-apiserversource-filters: "disabled"

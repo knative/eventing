@@ -62,7 +62,8 @@ const (
 )
 
 var (
-	v1ChannelGVK = v1.SchemeGroupVersion.WithKind("Channel")
+	v1ChannelGVK     = v1.SchemeGroupVersion.WithKind("Channel")
+	channelNamespace string
 )
 
 type Reconciler struct {
@@ -361,7 +362,13 @@ func (r *Reconciler) trackAndFetchChannel(ctx context.Context, sub *v1.Subscript
 		logging.FromContext(ctx).Errorw("Error getting lister for Channel", zap.Any("channel", ref), zap.Error(err))
 		return nil, err
 	}
-	obj, err := chLister.ByNamespace(sub.Namespace).Get(ref.Name)
+	if feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) && sub.Spec.Channel.Namespace != "" {
+		channelNamespace = sub.Spec.Channel.Namespace
+	} else {
+		channelNamespace = sub.Namespace
+	}
+
+	obj, err := chLister.ByNamespace(channelNamespace).Get(ref.Name)
 	if err != nil {
 		logging.FromContext(ctx).Errorw("Error getting channel from lister", zap.Any("channel", ref), zap.Error(err))
 		return nil, err
@@ -390,6 +397,11 @@ func (r *Reconciler) getChannel(ctx context.Context, sub *v1.Subscription) (*eve
 	// to have a "backing" channel that is what we need to actually operate on
 	// as well as keep track of.
 	if v1ChannelGVK.Group == gvk.Group && v1ChannelGVK.Kind == gvk.Kind {
+		if feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) && sub.Spec.Channel.Namespace != "" {
+			channelNamespace = sub.Spec.Channel.Namespace
+		} else {
+			channelNamespace = sub.Namespace
+		}
 		// Track changes on Channel.
 		// Ref: https://github.com/knative/eventing/issues/2641
 		// NOTE: There is a race condition with using the channelableTracker
@@ -403,7 +415,7 @@ func (r *Reconciler) getChannel(ctx context.Context, sub *v1.Subscription) (*eve
 		if err := r.tracker.TrackReference(tracker.Reference{
 			APIVersion: "messaging.knative.dev/v1",
 			Kind:       "Channel",
-			Namespace:  sub.Namespace,
+			Namespace:  channelNamespace,
 			Name:       sub.Spec.Channel.Name,
 		}, sub); err != nil {
 			logging.FromContext(ctx).Infow("TrackReference for Channel failed", zap.Any("channel", sub.Spec.Channel), zap.Error(err))
@@ -415,7 +427,7 @@ func (r *Reconciler) getChannel(ctx context.Context, sub *v1.Subscription) (*eve
 		// the status of it will not have the extra bits we need (namely, pointer
 		// and status of the actual "backing" channel), we fetch it using typed
 		// lister so that we get those bits.
-		channel, err := r.channelLister.Channels(sub.Namespace).Get(sub.Spec.Channel.Name)
+		channel, err := r.channelLister.Channels(channelNamespace).Get(sub.Spec.Channel.Name)
 		if err != nil {
 			return nil, err
 		}
@@ -425,7 +437,7 @@ func (r *Reconciler) getChannel(ctx context.Context, sub *v1.Subscription) (*eve
 			return nil, fmt.Errorf("channel is not ready.")
 		}
 
-		statCh := duckv1.KReference{Name: channel.Status.Channel.Name, Namespace: sub.Namespace, Kind: channel.Status.Channel.Kind, APIVersion: channel.Status.Channel.APIVersion}
+		statCh := duckv1.KReference{Name: channel.Status.Channel.Name, Namespace: channelNamespace, Kind: channel.Status.Channel.Kind, APIVersion: channel.Status.Channel.APIVersion}
 		obj, err = r.trackAndFetchChannel(ctx, sub, statCh)
 		if err != nil {
 			return nil, err
@@ -448,7 +460,12 @@ func isNilOrEmptyDestination(destination *duckv1.Destination) bool {
 
 func (r *Reconciler) syncPhysicalChannel(ctx context.Context, sub *v1.Subscription, channel *eventingduckv1.Channelable, isDeleted bool) (bool, error) {
 	logging.FromContext(ctx).Debugw("Reconciling physical from Channel", zap.Any("sub", sub))
-	if patched, patchErr := r.patchSubscription(ctx, sub.Namespace, channel, sub); patchErr != nil {
+	if feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) && sub.Spec.Channel.Namespace != "" {
+		channelNamespace = sub.Spec.Channel.Namespace
+	} else {
+		channelNamespace = sub.Namespace
+	}
+	if patched, patchErr := r.patchSubscription(ctx, channelNamespace, channel, sub); patchErr != nil {
 		if isDeleted && apierrors.IsNotFound(patchErr) {
 			logging.FromContext(ctx).Warnw("Could not find Channel", zap.Any("channel", sub.Spec.Channel))
 			return false, nil
