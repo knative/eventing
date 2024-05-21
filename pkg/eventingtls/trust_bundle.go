@@ -79,10 +79,10 @@ func PropagateTrustBundles(ctx context.Context, k8s kubernetes.Interface, trustB
 	for _, cm := range systemNamespaceBundles {
 		name := userCMName(cm.Name)
 		if p, ok := state[name]; !ok {
-			state[name] = Pair{sysCM: cm}
+			state[name] = Pair{sysCM: cm.DeepCopy()}
 		} else {
 			state[name] = Pair{
-				sysCM:  cm,
+				sysCM:  cm.DeepCopy(),
 				userCm: p.userCm,
 			}
 		}
@@ -90,11 +90,11 @@ func PropagateTrustBundles(ctx context.Context, k8s kubernetes.Interface, trustB
 
 	for _, cm := range userNamespaceBundles {
 		if p, ok := state[cm.Name]; !ok {
-			state[cm.Name] = Pair{userCm: cm}
+			state[cm.Name] = Pair{userCm: cm.DeepCopy()}
 		} else {
 			state[cm.Name] = Pair{
 				sysCM:  p.sysCM,
-				userCm: cm,
+				userCm: cm.DeepCopy(),
 			}
 		}
 	}
@@ -107,26 +107,26 @@ func PropagateTrustBundles(ctx context.Context, k8s kubernetes.Interface, trustB
 				APIVersion: gvk.GroupVersion().String(),
 				Kind:       gvk.Kind,
 				Name:       obj.GetName(),
+				UID:        obj.GetUID(),
 			}
 
 			for _, or := range p.userCm.OwnerReferences {
+				// Only delete the ConfigMap if the object owns it
 				if equality.Semantic.DeepDerivative(expectedOr, or) {
 					if err := deleteConfigMap(ctx, k8s, obj, p.userCm); err != nil {
 						return err
 					}
 				}
 			}
-
 			continue
 		}
 
 		expected := &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      userCMName(p.sysCM.Name),
-				Namespace: obj.GetNamespace(),
-				Labels: map[string]string{
-					TrustBundleLabelKey: TrustBundleLabelValue,
-				},
+				Name:        userCMName(p.sysCM.Name),
+				Namespace:   obj.GetNamespace(),
+				Labels:      p.sysCM.Labels,
+				Annotations: p.sysCM.Annotations,
 			},
 			Data:       p.sysCM.Data,
 			BinaryData: p.sysCM.BinaryData,
@@ -135,32 +135,14 @@ func PropagateTrustBundles(ctx context.Context, k8s kubernetes.Interface, trustB
 		if p.userCm == nil {
 			// Update owner references
 			expected.OwnerReferences = withOwnerReferences(obj, gvk, []metav1.OwnerReference{})
-			err := createConfigMap(ctx, k8s, expected)
-			if err != nil && !apierrors.IsAlreadyExists(err) {
+			if err := createConfigMap(ctx, k8s, expected); err != nil {
 				return err
-			}
-			if apierrors.IsAlreadyExists(err) {
-				// Update existing ConfigMap
-				cm, getErr := k8s.CoreV1().
-					ConfigMaps(obj.GetNamespace()).
-					Get(ctx, userCMName(p.sysCM.Name), metav1.GetOptions{})
-				if getErr != nil {
-					return err // return original error
-				}
-
-				cm.ObjectMeta.DeepCopyInto(&expected.ObjectMeta)
-				expected.OwnerReferences = withOwnerReferences(obj, gvk, cm.OwnerReferences)
-
-				if !equality.Semantic.DeepDerivative(expected, cm) {
-					if err := updateConfigMap(ctx, k8s, expected); err != nil {
-						return err
-					}
-				}
 			}
 			continue
 		}
 
-		p.userCm.ObjectMeta.DeepCopyInto(&expected.ObjectMeta)
+		expected.Generation = p.userCm.Generation
+		expected.ResourceVersion = p.userCm.ResourceVersion
 		// Update owner references
 		expected.OwnerReferences = withOwnerReferences(obj, gvk, p.userCm.OwnerReferences)
 
@@ -277,26 +259,15 @@ func withOwnerReferences(sb kmeta.Accessor, gvk schema.GroupVersionKind, referen
 }
 
 func deleteConfigMap(ctx context.Context, k8s kubernetes.Interface, sb kmeta.Accessor, cm *corev1.ConfigMap) error {
-	expectedOr := metav1.OwnerReference{
-		APIVersion: sb.GroupVersionKind().GroupVersion().String(),
-		Kind:       sb.GroupVersionKind().Kind,
-		Name:       sb.GetName(),
-	}
-	// Only delete the ConfigMap if the object owns it
-	for _, or := range cm.OwnerReferences {
-		if equality.Semantic.DeepDerivative(expectedOr, or) {
-			err := k8s.CoreV1().ConfigMaps(sb.GetNamespace()).Delete(ctx, cm.Name, metav1.DeleteOptions{
-				TypeMeta: metav1.TypeMeta{},
-				Preconditions: &metav1.Preconditions{
-					UID: &cm.UID,
-				},
-			})
-			if err != nil && !apierrors.IsNotFound(err) {
-				return fmt.Errorf("failed to delete ConfigMap %s/%s: %w", cm.Namespace, cm.Name, err)
-			}
-
-			return nil
-		}
+	err := k8s.CoreV1().ConfigMaps(sb.GetNamespace()).Delete(ctx, cm.Name, metav1.DeleteOptions{
+		TypeMeta: metav1.TypeMeta{},
+		Preconditions: &metav1.Preconditions{
+			UID:             &cm.UID,
+			ResourceVersion: &cm.ResourceVersion,
+		},
+	})
+	if err != nil && !apierrors.IsNotFound(err) {
+		return fmt.Errorf("failed to delete ConfigMap %s/%s: %w", cm.Namespace, cm.Name, err)
 	}
 
 	return nil
