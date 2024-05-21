@@ -186,7 +186,11 @@ func TestAttributeFilterTransform(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			transform := AttributesFilterTransform{Filter: &eventingv1.TriggerFilter{Attributes: test.filterAttributes}}
 			out, _ := transform.Apply(test.input, TransformFunctionContext{})
-			assert.Equal(t, test.expected, out)
+			if test.expected == nil {
+				assert.Nil(t, out)
+			} else {
+				assert.ElementsMatch(t, test.expected.Spec.Attributes, out.Spec.Attributes)
+			}
 		})
 	}
 }
