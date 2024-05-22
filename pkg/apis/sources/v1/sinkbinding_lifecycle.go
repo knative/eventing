@@ -23,8 +23,8 @@ import (
 	"strings"
 
 	"go.uber.org/zap"
+	"k8s.io/client-go/kubernetes"
 	corev1listers "k8s.io/client-go/listers/core/v1"
-	kubeclient "knative.dev/pkg/client/injection/kube/client"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -220,7 +220,7 @@ func (sb *SinkBinding) Do(ctx context.Context, ps *duckv1.WithPod) {
 		Version: SchemeGroupVersion.Version,
 		Kind:    "SinkBinding",
 	}
-	bundles, err := eventingtls.PropagateTrustBundles(ctx, kubeclient.Get(ctx), GetTrustBundleConfigMapLister(ctx), gvk, sb)
+	bundles, err := eventingtls.PropagateTrustBundles(ctx, getKubeClient(ctx), GetTrustBundleConfigMapLister(ctx), gvk, sb)
 	if err != nil {
 		logging.FromContext(ctx).Errorw("Failed to propagate trust bundles", zap.Error(err))
 	}
@@ -344,6 +344,20 @@ func (sb *SinkBinding) Undo(ctx context.Context, ps *duckv1.WithPod) {
 		}
 		ps.Spec.Template.Spec.Volumes = volumes
 	}
+}
+
+type kubeClientKey struct{}
+
+func WithKubeClient(ctx context.Context, k kubernetes.Interface) context.Context {
+	return context.WithValue(ctx, kubeClientKey{}, k)
+}
+
+func getKubeClient(ctx context.Context) kubernetes.Interface {
+	k := ctx.Value(kubeClientKey{})
+	if k == nil {
+		panic("No Kube client found in context.")
+	}
+	return k.(kubernetes.Interface)
 }
 
 type configMapListerKey struct{}
