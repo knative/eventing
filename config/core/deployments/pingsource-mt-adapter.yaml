@@ -21,6 +21,7 @@ metadata:
     app.kubernetes.io/component: pingsource-mt-adapter
     app.kubernetes.io/version: devel
     app.kubernetes.io/name: knative-eventing
+    bindings.knative.dev/exclude: "true"
 spec:
   # when set to 0 (and only 0) will be set to 1 when the first PingSource is created.
   replicas: 0
