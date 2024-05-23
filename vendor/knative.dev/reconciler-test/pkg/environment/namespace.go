@@ -51,6 +51,38 @@ func getNamespace(ctx context.Context) string {
 	return ns.(string)
 }
 
+type namespaceTransformFuncsKey struct{}
+
+type NamespaceTransformFunc func(ns *corev1.Namespace) error
+
+func WithNamespaceTransformFuncs(transforms ...NamespaceTransformFunc) EnvOpts {
+	return func(ctx context.Context, env Environment) (context.Context, error) {
+		return withNamespaceTransformFunc(ctx, transforms...), nil
+	}
+}
+
+func getNamespaceTransformFuncs(ctx context.Context) []NamespaceTransformFunc {
+	r := ctx.Value(namespaceTransformFuncsKey{})
+	if r == nil {
+		return nil
+	}
+	return r.([]NamespaceTransformFunc)
+}
+
+func withNamespaceTransformFunc(ctx context.Context, transforms ...NamespaceTransformFunc) context.Context {
+	t := ctx.Value(namespaceTransformFuncsKey{})
+	if t == nil {
+		t = []NamespaceTransformFunc{}
+	}
+	existings := t.([]NamespaceTransformFunc)
+
+	r := make([]NamespaceTransformFunc, 0, len(existings)+len(transforms))
+	r = append(r, existings...)
+	r = append(r, transforms...)
+
+	return context.WithValue(ctx, namespaceTransformFuncsKey{}, r)
+}
+
 // CreateNamespaceIfNeeded creates a new namespace if it does not exist.
 func (mr *MagicEnvironment) CreateNamespaceIfNeeded() error {
 	c := kubeclient.Get(mr.c)
@@ -76,6 +108,12 @@ func (mr *MagicEnvironment) CreateNamespaceIfNeeded() error {
 
 		if cfg := GetIstioConfig(mr.c); cfg.Enabled {
 			withIstioNamespaceLabel(nsSpec)
+		}
+
+		for _, nsTransform := range getNamespaceTransformFuncs(mr.c) {
+			if err := nsTransform(nsSpec); err != nil {
+				return fmt.Errorf("namespace transform function failed: %w", err)
+			}
 		}
 
 		_, err = c.CoreV1().Namespaces().Create(context.Background(), nsSpec, metav1.CreateOptions{})
