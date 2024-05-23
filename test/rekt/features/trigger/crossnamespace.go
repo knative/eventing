@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package crossnamespace
+package trigger
 
 import (
 	"context"
@@ -30,7 +30,7 @@ import (
 	"knative.dev/eventing/test/rekt/resources/broker"
 )
 
-func TriggerSendsEventsToBroker(brokerNamespace, brokerName, triggerNamespace, triggerName string) *feature.Feature {
+func CrossNamespaceEventLinks(ctx context.Context, brokerNamespace, brokerName, triggerNamespace, triggerName string) *feature.Feature {
 	f := feature.NewFeature()
 
 	sourceName := feature.MakeRandomK8sName("source")

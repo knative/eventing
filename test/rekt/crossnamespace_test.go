@@ -26,20 +26,12 @@ import (
 	"knative.dev/reconciler-test/pkg/knative"
 
 	"knative.dev/eventing/test/rekt/features/broker"
-	cn "knative.dev/eventing/test/rekt/features/crossnamespace"
 	"knative.dev/eventing/test/rekt/features/featureflags"
+	"knative.dev/eventing/test/rekt/features/trigger"
 )
 
 func TestBrokerTriggerCrossNamespaceReference(t *testing.T) {
 	t.Parallel()
-
-	ctx, env := global.Environment(
-		knative.WithKnativeNamespace(system.Namespace()),
-		knative.WithLoggingConfig,
-		knative.WithTracingConfig,
-		k8s.WithEventListener,
-		environment.Managed(t),
-	)
 
 	// namespaces and names for the broker and trigger
 	brokerNamespace := feature.MakeRandomK8sName("broker-namespace")
@@ -47,12 +39,26 @@ func TestBrokerTriggerCrossNamespaceReference(t *testing.T) {
 	brokerName := feature.MakeRandomK8sName("broker")
 	triggerName := feature.MakeRandomK8sName("trigger")
 
-	env.Prerequisite("Cross Namespace Event Links is enabled", featureflags.CrossEventLinksEnabled())
-	// namespaces for the broker and trigger if they do not exist
-	env.Prerequisite(ctx, t, env.CreateNamespaceIfNeeded(brokerNamespace))
-	env.Prerequisite(ctx, t, env.CreateNamespaceIfNeeded(triggerNamespace))
+	brokerEnvCtx, brokerEnv := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+	)
 
-	env.Test(ctx, t, broker.GoesReadyInDifferentNamespace(brokerName, brokerNamespace))
-	env.Test(ctx, t, broker.TriggerGoesReady(triggerName, brokerName))
-	env.Test(ctx, t, cn.TriggerSendsEventsToBroker(brokerNamespace, brokerName, triggerNamespace, triggerName))
+	triggerEnvCtx, triggerEnv := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+	)
+
+	triggerEnv.Prerequisite("Cross Namespace Event Links is enabled", featureflags.CrossEventLinksEnabled())
+	brokerEnv.Prerequisite("Cross Namespace Event Links is enabled", featureflags.CrossEventLinksEnabled())
+
+	brokerEnv.Test(brokerEnvCtx, t, broker.GoesReadyInDifferentNamespace(brokerName, brokerNamespace))
+	brokerEnv.Test(brokerEnvCtx, t, broker.TriggerGoesReady(triggerName, brokerName))
+	triggerEnv.Test(triggerEnvCtx, t, trigger.CrossNamespaceEventLinks(brokerEnvCtx, brokerNamespace, brokerName, triggerNamespace, triggerName))
 }
