@@ -27,11 +27,14 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
+	"knative.dev/eventing/test/rekt/features/featureflags"
 	"knative.dev/eventing/test/rekt/resources/broker"
 )
 
 func CrossNamespaceEventLinks(ctx context.Context, brokerNamespace, brokerName, triggerNamespace, triggerName string) *feature.Feature {
 	f := feature.NewFeature()
+
+	f.Prerequisite("Cross Namespace Event Links is enabled", featureflags.CrossEventLinksEnabled())
 
 	sourceName := feature.MakeRandomK8sName("source")
 	subscriberName := feature.MakeRandomK8sName("subscriber")

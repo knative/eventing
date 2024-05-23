@@ -19,6 +19,7 @@ package broker
 import (
 	"fmt"
 
+	"knative.dev/eventing/test/rekt/features/featureflags"
 	"knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
@@ -26,6 +27,7 @@ import (
 
 func GoesReadyInDifferentNamespace(name, namespace string, cfg ...manifest.CfgFn) *feature.Feature {
 	f := new(feature.Feature)
+	f.Prerequisite("Cross Namespace Event Links is enabled", featureflags.CrossEventLinksEnabled())
 
 	// Add the namespace configuration
 	namespaceCfg := broker.WithConfigNamespace(namespace)
