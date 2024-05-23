@@ -31,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/injection/clients/dynamicclient"
+
 	"knative.dev/reconciler-test/pkg/state"
 )
 
@@ -42,6 +43,8 @@ type Feature struct {
 	// Contains all the resources created as part of this Feature.
 	refs   []corev1.ObjectReference
 	refsMu sync.Mutex
+
+	groups []*Feature
 }
 
 func (f *Feature) MarshalJSON() ([]byte, error) {
@@ -316,6 +319,26 @@ func (f *Feature) Setup(name string, fn StepFn) {
 	})
 }
 
+// Group add a new group to the feature, groups are executed in the order they are inserted and
+// before the feature steps.
+func (f *Feature) Group(name string, group func(f *Feature)) {
+
+	other := &Feature{
+		Name:  name,
+		State: f.State,
+	}
+
+	group(other)
+
+	f.GroupF(other)
+}
+
+// GroupF add a new sub Feature to the feature, groups are executed in the order they are inserted
+// and before the feature steps.
+func (f *Feature) GroupF(other *Feature) {
+	f.groups = append(f.groups, other)
+}
+
 // Requirement adds a step function to the feature set at the Requirement timing phase.
 func (f *Feature) Requirement(name string, fn StepFn) {
 	f.AddStep(Step{
@@ -364,6 +387,11 @@ func (f *Feature) Teardown(name string, fn StepFn) {
 // AddStep appends one or more steps to the Feature.
 func (f *Feature) AddStep(step ...Step) {
 	f.Steps = append(f.Steps, step...)
+}
+
+// GetGroups returns sub-features, this is for rekt internal use only.
+func (f *Feature) GetGroups() []*Feature {
+	return f.groups
 }
 
 // Assertable is a fluent interface based on Levels for creating an Assert step.
