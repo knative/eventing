@@ -127,6 +127,20 @@ rules:
       - "patch"
       - "watch"
 
+  # cross namespace link permissions
+  - apiGroups:
+      - "messaging.knative.dev"
+    resources:
+      - "inmemorychannels"
+    verbs:
+      - "knsubscribe"
+  - apiGroups:
+      - "eventing.knative.dev"
+    resources:
+      - "brokers"
+    verbs:
+      - "knsubscribe"
+
   # Flow resources and statuses we care about.
   - apiGroups:
       - "flows.knative.dev"
