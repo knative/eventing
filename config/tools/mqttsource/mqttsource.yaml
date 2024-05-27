@@ -12,7 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This is a very simple Knative Eventing Source that produces periodic CloudEvents.
+# This is a very simple Knative Eventing Source that receive messages
+# from MQTT brokers and send to sink as Cloudevents
 apiVersion: sources.knative.dev/v1
 kind: ContainerSource
 metadata:

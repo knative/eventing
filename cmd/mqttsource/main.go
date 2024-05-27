@@ -116,7 +116,7 @@ func main() {
 }
 
 func receive(ctx context.Context, event cloudevents.Event, c cloudevents.Client) {
-	log.Printf("%s", event)
+	log.Printf("Received event: %s", event)
 	data := event.Data()
 	newEvent := cloudevents.NewEvent(cloudevents.VersionV1)
 	newEvent.SetType(eventType)
@@ -124,6 +124,6 @@ func receive(ctx context.Context, event cloudevents.Event, c cloudevents.Client)
 	newEvent.SetID(event.ID())
 	_ = newEvent.SetData(cloudevents.ApplicationJSON, data)
 	if result := c.Send(ctx, newEvent); !cloudevents.IsACK(result) {
-		log.Printf("sending event to channel failed: %v", result)
+		log.Printf("Sending event to sink failed: %v", result)
 	}
 }
