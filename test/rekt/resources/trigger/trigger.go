@@ -157,9 +157,19 @@ func WithExtensions(extensions map[string]interface{}) manifest.CfgFn {
 	}
 }
 
-func WithBrokerRef(broker map[string]interface{}) manifest.CfgFn {
+func WithBrokerName(brokerName string) manifest.CfgFn {
 	return func(cfg map[string]interface{}) {
-		cfg["brokerRef"] = broker
+		if brokerName != "" {
+			cfg["brokerName"] = brokerName
+		}
+	}
+}
+
+func WithBrokerNamespace(brokerNamespace string) manifest.CfgFn {
+	return func(cfg map[string]interface{}) {
+		if brokerNamespace != "" {
+			cfg["brokerNamespace"] = brokerNamespace
+		}
 	}
 }
 
@@ -176,12 +186,9 @@ var WithRetry = delivery.WithRetry
 var WithTimeout = delivery.WithTimeout
 
 // Install will create a Trigger resource, augmented with the config fn options.
-func Install(name, brokerName string, opts ...manifest.CfgFn) feature.StepFn {
+func Install(name string, opts ...manifest.CfgFn) feature.StepFn {
 	cfg := map[string]interface{}{
 		"name": name,
-	}
-	if len(brokerName) > 0 {
-		cfg["brokerName"] = brokerName
 	}
 	for _, fn := range opts {
 		fn(cfg)

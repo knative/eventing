@@ -37,10 +37,10 @@ func TriggerGoesReady(name, brokerName string, cfg ...manifest.CfgFn) *feature.F
 	f.Setup("install a service", service.Install(sub,
 		service.WithSelectors(map[string]string{"app": "rekt"})))
 	// Append user-provided cfg to the end, in case they are providing their own subscriber.
-	cfg = append([]manifest.CfgFn{trigger.WithSubscriber(service.AsKReference(sub), "")}, cfg...)
+	cfg = append([]manifest.CfgFn{trigger.WithSubscriber(service.AsKReference(sub), ""), trigger.WithBrokerName(brokerName)}, cfg...)
 
 	// Install the trigger
-	f.Setup(fmt.Sprintf("install trigger %q", name), trigger.Install(name, brokerName, cfg...))
+	f.Setup(fmt.Sprintf("install trigger %q", name), trigger.Install(name, cfg...))
 
 	// Wait for a ready broker.
 	f.Setup("Broker is ready", broker.IsReady(brokerName))

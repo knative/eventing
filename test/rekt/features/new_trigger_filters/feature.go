@@ -351,15 +351,16 @@ func MultipleTriggersAndSinksFeature(installBroker InstallBrokerFunc) *feature.F
 			trigger.WithSubscriber(service.AsKReference(subscriberName1), ""),
 			trigger.WithNewFilters(filtersFirstTrigger),
 			trigger.WithFilter(eventingv1.TriggerFilter{}.Attributes),
+			trigger.WithBrokerName(brokerName),
 		}
-		trigger.Install(triggerName1, brokerName, triggerCfg1...)(ctx, t)
+		trigger.Install(triggerName1, triggerCfg1...)(ctx, t)
 
 		triggerCfg2 := []manifest.CfgFn{
 			trigger.WithSubscriber(service.AsKReference(subscriberName2), ""),
 			trigger.WithNewFilters(filtersSecondTrigger),
 			trigger.WithFilter(eventingv1.TriggerFilter{}.Attributes),
 		}
-		trigger.Install(triggerName2, brokerName, triggerCfg2...)(ctx, t)
+		trigger.Install(triggerName2, triggerCfg2...)(ctx, t)
 
 		broker.IsReady(brokerName)(ctx, t)
 		broker.IsAddressable(brokerName)(ctx, t)
