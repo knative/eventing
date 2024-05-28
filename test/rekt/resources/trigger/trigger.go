@@ -157,12 +157,9 @@ func WithExtensions(extensions map[string]interface{}) manifest.CfgFn {
 	}
 }
 
-func WithBrokerRef(brokerName, brokerNamespace string) manifest.CfgFn {
+func WithBrokerRef(broker map[string]interface{}) manifest.CfgFn {
 	return func(cfg map[string]interface{}) {
-		cfg["brokerRef"] = map[string]interface{}{
-			"name":      brokerName,
-			"namespace": brokerNamespace,
-		}
+		cfg["brokerRef"] = broker
 	}
 }
 

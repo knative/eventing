@@ -47,7 +47,11 @@ func CrossNamespaceEventLinks(brokerEnvCtx context.Context, triggerNamespace str
 	f.Setup("install subscriber", eventshub.Install(subscriberName, eventshub.StartReceiver))
 	f.Setup("install event source", eventshub.Install(sourceName, eventshub.StartSenderToResource(broker.GVR(), brokerName), eventshub.InputEvent(ev)))
 
-	f.Setup("install trigger", trigger.Install(triggerName, trigger.WithBrokerRef(brokerName, brokerNamespace)))
+	broker := map[string]interface{}{
+		"name":      brokerName,
+		"namespace": brokerNamespace,
+	}
+	f.Setup("install trigger", trigger.Install(triggerName, trigger.WithBrokerRef(broker)))
 	f.Setup("trigger is ready", trigger.IsReady(triggerName))
 
 	f.Assert("event is received by subscriber", assert.OnStore(subscriberName).MatchEvent(cetest.HasId(ev.ID())).Exact(1))
