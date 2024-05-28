@@ -31,7 +31,7 @@ import (
 	"knative.dev/eventing/test/rekt/resources/broker"
 )
 
-func CrossNamespaceEventLinks(ctx context.Context, brokerNamespace, brokerName, triggerNamespace, triggerName string) *feature.Feature {
+func CrossNamespaceEventLinks(brokerEnvCtx context.Context, brokerNamespace, brokerName, triggerNamespace, triggerName string) *feature.Feature {
 	f := feature.NewFeature()
 
 	f.Prerequisite("Cross Namespace Event Links is enabled", featureflags.CrossEventLinksEnabled())
