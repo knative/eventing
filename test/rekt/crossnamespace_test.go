@@ -22,6 +22,7 @@ package rekt
 import (
 	"testing"
 
+	"knative.dev/pkg/system"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/k8s"
@@ -41,7 +42,7 @@ func TestBrokerTriggerCrossNamespaceReference(t *testing.T) {
 	triggerName := feature.MakeRandomK8sName("trigger")
 
 	brokerEnvCtx, brokerEnv := global.Environment(
-		knative.WithKnativeNamespace(brokerNamespace),
+		knative.WithKnativeNamespace(system.Namespace()),
 		knative.WithLoggingConfig,
 		knative.WithTracingConfig,
 		k8s.WithEventListener,
@@ -49,14 +50,14 @@ func TestBrokerTriggerCrossNamespaceReference(t *testing.T) {
 	)
 
 	triggerEnvCtx, triggerEnv := global.Environment(
-		knative.WithKnativeNamespace(triggerNamespace),
+		knative.WithKnativeNamespace(system.Namespace()),
 		knative.WithLoggingConfig,
 		knative.WithTracingConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
 	)
 
-	brokerEnv.Test(brokerEnvCtx, t, broker.GoesReadyInDifferentNamespace(brokerName, brokerNamespace))
+	brokerEnv.Test(brokerEnvCtx, t, broker.GoesReady(brokerName))
 	brokerEnv.Test(brokerEnvCtx, t, broker.TriggerGoesReady(triggerName, brokerName))
 	triggerEnv.Test(triggerEnvCtx, t, trigger.CrossNamespaceEventLinks(brokerEnvCtx, brokerNamespace, brokerName, triggerNamespace, triggerName))
 }
