@@ -36,10 +36,8 @@ func TestBrokerTriggerCrossNamespaceReference(t *testing.T) {
 	t.Parallel()
 
 	// namespaces and names for the broker and trigger
-	brokerNamespace := feature.MakeRandomK8sName("broker-namespace")
 	triggerNamespace := feature.MakeRandomK8sName("trigger-namespace")
 	brokerName := feature.MakeRandomK8sName("broker")
-	triggerName := feature.MakeRandomK8sName("trigger")
 
 	brokerEnvCtx, brokerEnv := global.Environment(
 		knative.WithKnativeNamespace(system.Namespace()),
