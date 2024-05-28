@@ -887,18 +887,15 @@ func TestAllCases(t *testing.T) {
 				WithSequenceSteps([]v1.SequenceStep{{Destination: createDestination(0)}}))),
 		},
 		WantErr: false,
-		WantDeletes: []clientgotesting.DeleteActionImpl{{
+		WantUpdates: []clientgotesting.UpdateActionImpl{{
 			ActionImpl: clientgotesting.ActionImpl{
 				Namespace: testNS,
 				Resource:  v1.SchemeGroupVersion.WithResource("subscriptions"),
 			},
-			Name: resources.SequenceChannelName(sequenceName, 0),
-		}},
-		WantCreates: []runtime.Object{
-			resources.NewSubscription(0, NewSequence(sequenceName, testNS,
+			Object: resources.NewSubscription(0, NewSequence(sequenceName, testNS,
 				WithSequenceChannelTemplateSpec(imc),
 				WithSequenceSteps([]v1.SequenceStep{{Destination: createDestination(1)}}))),
-		},
+		}},
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 			Object: NewSequence(sequenceName, testNS,
 				WithInitSequenceConditions,
@@ -991,6 +988,18 @@ func TestAllCases(t *testing.T) {
 				Name: resources.SequenceChannelName(sequenceName, 2),
 			},
 		},
+		WantUpdates: []clientgotesting.UpdateActionImpl{{
+			ActionImpl: clientgotesting.ActionImpl{
+				Namespace: testNS,
+				Resource:  v1.SchemeGroupVersion.WithResource("subscriptions"),
+			},
+			Object: resources.NewSubscription(1, NewSequence(sequenceName, testNS,
+				WithSequenceChannelTemplateSpec(imc),
+				WithSequenceSteps([]v1.SequenceStep{
+					{Destination: createDestination(0)},
+					{Destination: createDestination(1)}},
+				))),
+		}},
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 			Object: NewSequence(sequenceName, testNS,
 				WithInitSequenceConditions,
@@ -1120,6 +1129,18 @@ func TestAllCases(t *testing.T) {
 				Name: resources.SequenceChannelName(sequenceName, 2),
 			},
 		},
+		WantUpdates: []clientgotesting.UpdateActionImpl{{
+			ActionImpl: clientgotesting.ActionImpl{
+				Namespace: testNS,
+				Resource:  v1.SchemeGroupVersion.WithResource("subscriptions"),
+			},
+			Object: resources.NewSubscription(1, NewSequence(sequenceName, testNS,
+				WithSequenceChannelTemplateSpec(imc),
+				WithSequenceSteps([]v1.SequenceStep{
+					{Destination: createDestination(0)},
+					{Destination: createDestination(1)}},
+				))),
+		}},
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 			Object: NewSequence(sequenceName, testNS,
 				WithInitSequenceConditions,
@@ -1233,6 +1254,18 @@ func TestAllCases(t *testing.T) {
 		WantEvents: []string{
 			Eventf(corev1.EventTypeWarning, "InternalError", "inducing failure for delete inmemorychannels"),
 		},
+		WantUpdates: []clientgotesting.UpdateActionImpl{{
+			ActionImpl: clientgotesting.ActionImpl{
+				Namespace: testNS,
+				Resource:  v1.SchemeGroupVersion.WithResource("subscriptions"),
+			},
+			Object: resources.NewSubscription(1, NewSequence(sequenceName, testNS,
+				WithSequenceChannelTemplateSpec(imc),
+				WithSequenceSteps([]v1.SequenceStep{
+					{Destination: createDestination(0)},
+					{Destination: createDestination(1)}},
+				))),
+		}},
 
 		WantDeletes: []clientgotesting.DeleteActionImpl{
 			{
