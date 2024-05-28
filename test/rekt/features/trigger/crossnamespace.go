@@ -51,6 +51,12 @@ func CrossNamespaceEventLinks(brokerEnvCtx context.Context, brokerNamespace, bro
 		require.Equal(t, trig.Status.IsReady(), true)
 	})
 
+	triggerName := feature.MakeRandomK8sName("trigger")
+	brokerNamespace := environment.FromContext(brokerEnvCtx).Namespace() // To be passed to WithBrokerRef
+
+	f.Setup("install trigger", trigger.Install(triggerName, ..., /* add a new trigger option to specific broker reference */ trigger.WithBrokerRef(...))
+	f.Setup("trigger is ready", trigger.IsReady(triggerName))
+
 	f.Assert("event is received by subscriber", assert.OnStore(subscriberName).MatchEvent(cetest.HasId(ev.ID())).Exact(1))
 
 	return f
