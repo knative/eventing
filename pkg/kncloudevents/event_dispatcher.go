@@ -289,11 +289,18 @@ func (d *Dispatcher) send(ctx context.Context, message binding.Message, destinat
 }
 
 func (d *Dispatcher) executeRequest(ctx context.Context, target duckv1.Addressable, message cloudevents.Message, additionalHeaders http.Header, retryConfig *RetryConfig, oidcServiceAccount *types.NamespacedName, transformers ...binding.Transformer) (context.Context, cloudevents.Message, *DispatchInfo, error) {
+	var scheme string
+	if target.URL != nil {
+		scheme = target.URL.Scheme
+	} else {
+		// assume that the scheme is http by default
+		scheme = "http"
+	}
 	dispatchInfo := DispatchInfo{
 		Duration:       NoDuration,
 		ResponseCode:   NoResponse,
 		ResponseHeader: make(http.Header),
-		Scheme:         target.URL.Scheme,
+		Scheme:         scheme,
 	}
 
 	ctx, span := trace.StartSpan(ctx, "knative.dev", trace.WithSpanKind(trace.SpanKindClient))
