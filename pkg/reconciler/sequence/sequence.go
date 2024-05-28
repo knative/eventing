@@ -20,9 +20,9 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/equality"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -43,6 +43,7 @@ import (
 	listers "knative.dev/eventing/pkg/client/listers/flows/v1"
 	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1"
 	"knative.dev/eventing/pkg/duck"
+	"knative.dev/pkg/kmp"
 
 	"knative.dev/eventing/pkg/reconciler/sequence/resources"
 )
@@ -174,6 +175,7 @@ func (r *Reconciler) reconcileSubscription(ctx context.Context, step int, p *v1.
 	subName := resources.SequenceSubscriptionName(p.Name, step)
 	sub, err := r.subscriptionLister.Subscriptions(p.Namespace).Get(subName)
 
+	ignoreArguments := cmpopts.IgnoreFields(messagingv1.SubscriptionSpec{}, "Subscriber", "Reply", "Delivery")
 	// If the resource doesn't exist, we'll create it.
 	if apierrs.IsNotFound(err) {
 		sub = expected
@@ -190,7 +192,7 @@ func (r *Reconciler) reconcileSubscription(ctx context.Context, step int, p *v1.
 		// TODO: Send events here, or elsewhere?
 		//r.Recorder.Eventf(p, corev1.EventTypeWarning, subscriptionCreateFailed, "Create Sequences's subscription failed: %v", err)
 		return nil, fmt.Errorf("failed to get subscription: %s", err)
-	} else if !equality.Semantic.DeepDerivative(expected.Spec, sub.Spec) {
+	} else if equal, err := kmp.SafeEqual(sub.Spec, expected.Spec, ignoreArguments); !equal || err != nil {
 		// Given that spec.channel is immutable, we cannot just update the subscription. We delete
 		// it instead, and re-create it.
 		err = r.eventingClientSet.MessagingV1().Subscriptions(sub.Namespace).Delete(ctx, sub.Name, metav1.DeleteOptions{})
@@ -204,6 +206,14 @@ func (r *Reconciler) reconcileSubscription(ctx context.Context, step int, p *v1.
 			return nil, err
 		}
 		return newSub, nil
+	} else if equal, err := kmp.SafeEqual(sub.Spec, expected.Spec); !equal || err != nil {
+		// only the mutable fields were changed, so we can update the subscription
+		updatedSub, err := r.eventingClientSet.MessagingV1().Subscriptions(sub.Namespace).Update(ctx, expected, metav1.UpdateOptions{})
+		if err != nil {
+			logging.FromContext(ctx).Infow("Cannot update subscription", zap.Error(err))
+			return nil, err
+		}
+		return updatedSub, nil
 	}
 	return sub, nil
 }
