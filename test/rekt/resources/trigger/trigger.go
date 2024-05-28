@@ -157,6 +157,15 @@ func WithExtensions(extensions map[string]interface{}) manifest.CfgFn {
 	}
 }
 
+func WithBrokerRef(brokerName, brokerNamespace string) manifest.CfgFn {
+	return func(cfg map[string]interface{}) {
+		cfg["brokerRef"] = map[string]interface{}{
+			"name":      brokerName,
+			"namespace": brokerNamespace,
+		}
+	}
+}
+
 // WithDeadLetterSink adds the dead letter sink related config to a Trigger spec.
 var WithDeadLetterSink = delivery.WithDeadLetterSink
 

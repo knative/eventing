@@ -20,18 +20,17 @@ import (
 	"context"
 
 	cetest "github.com/cloudevents/sdk-go/v2/test"
-	"github.com/stretchr/testify/require"
+	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	"knative.dev/eventing/test/rekt/features/featureflags"
 	"knative.dev/eventing/test/rekt/resources/broker"
+	"knative.dev/eventing/test/rekt/resources/trigger"
 )
 
-func CrossNamespaceEventLinks(brokerEnvCtx context.Context, brokerNamespace, brokerName, triggerNamespace, triggerName string) *feature.Feature {
+func CrossNamespaceEventLinks(brokerEnvCtx context.Context, triggerNamespace string) *feature.Feature {
 	f := feature.NewFeature()
 
 	f.Prerequisite("Cross Namespace Event Links is enabled", featureflags.CrossEventLinksEnabled())
@@ -41,20 +40,14 @@ func CrossNamespaceEventLinks(brokerEnvCtx context.Context, brokerNamespace, bro
 
 	ev := cetest.FullEvent()
 
+	triggerName := feature.MakeRandomK8sName("trigger")
+	brokerName := feature.MakeRandomK8sName("broker")
+	brokerNamespace := environment.FromContext(brokerEnvCtx).Namespace() // To be passed to WithBrokerRef
+
 	f.Setup("install subscriber", eventshub.Install(subscriberName, eventshub.StartReceiver))
 	f.Setup("install event source", eventshub.Install(sourceName, eventshub.StartSenderToResource(broker.GVR(), brokerName), eventshub.InputEvent(ev)))
 
-	f.Requirement("trigger is ready", func(ctx context.Context, t feature.T) {
-		client := eventingclient.Get(ctx)
-		trig, err := client.EventingV1().Triggers(triggerNamespace).Get(ctx, triggerName, metav1.GetOptions{})
-		require.NoError(t, err)
-		require.Equal(t, trig.Status.IsReady(), true)
-	})
-
-	triggerName := feature.MakeRandomK8sName("trigger")
-	brokerNamespace := environment.FromContext(brokerEnvCtx).Namespace() // To be passed to WithBrokerRef
-
-	f.Setup("install trigger", trigger.Install(triggerName, ..., /* add a new trigger option to specific broker reference */ trigger.WithBrokerRef(...))
+	f.Setup("install trigger", trigger.Install(triggerName, trigger.WithBrokerRef(brokerName, brokerNamespace)))
 	f.Setup("trigger is ready", trigger.IsReady(triggerName))
 
 	f.Assert("event is received by subscriber", assert.OnStore(subscriberName).MatchEvent(cetest.HasId(ev.ID())).Exact(1))
