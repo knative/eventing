@@ -136,11 +136,13 @@ spec:
                       type: array
                       items:
                         type: object
+                        x-kubernetes-preserve-unknown-fields: true
                     any:
                       description: 'Any evaluates to true if at least one of the nested expressions evaluates to true. It must contain at least one filter expression. '
                       type: array
                       items:
                         type: object
+                        x-kubernetes-preserve-unknown-fields: true
                     cesql:
                       description: 'CESQL is a CloudEvents SQL expression that will be evaluated to true or false against each CloudEvent. '
                       type: string
@@ -151,6 +153,7 @@ spec:
                     not:
                       description: 'Not evaluates to true if the nested expression evaluates to false. '
                       type: object
+                      x-kubernetes-preserve-unknown-fields: true
                     prefix:
                       description: 'Prefix evaluates to true if the values of the matching CloudEvents attributes MUST all start with the associated value String specified (case sensitive). The keys are the names of the CloudEvents attributes to be matched, and their values are the String values to use in the comparison. The attribute name and value specified in the filter express MUST NOT be empty strings. '
                       type: object
