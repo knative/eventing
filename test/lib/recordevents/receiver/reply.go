@@ -60,7 +60,7 @@ func ReplyTransformerFunc(replyEventType string, replyEventSource string, replyE
 			outputEvent.SetType(replyEventType)
 		}
 		if replyEventData != "" {
-			logging.FromContext(ctx).Infof("Setting reply event data '%s'", replyAppendData)
+			logging.FromContext(ctx).Infof("Setting reply event data '%s'", replyEventData)
 			if err := outputEvent.SetData(cloudevents.ApplicationJSON, []byte(replyEventData)); err != nil {
 				logging.FromContext(ctx).Warn("Cannot set the event data")
 			}

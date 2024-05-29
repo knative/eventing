@@ -46,7 +46,7 @@ data:
 
   # ALPHA feature: The eventtype-auto-create flag allows automatic creation of Even Type instances based on Event's type being processed.
   # For more details: https://github.com/knative/eventing/issues/6909
-  eventtype-auto-create: "disabled"
+  eventtype-auto-create: "enabled"
 
   # ALPHA feature: The aauthentication-oidc flag allows you to use OIDC authentication for Eventing.
   # For more details: https://github.com/knative/eventing/issues/7174

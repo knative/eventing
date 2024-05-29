@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"testing"
 
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/system"
 
@@ -250,9 +251,91 @@ func TestReconcile(t *testing.T) {
 				rttestingv1.WithConfigMapLabels(metav1.LabelSelector{
 					MatchLabels: map[string]string{
 						eventingtls.TrustBundleLabelKey: eventingtls.TrustBundleLabelValue,
+						"x":                             "y",
 					},
 				}),
 			),
+		},
+		WantEvents: []string{
+			Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", sourceName),
+		},
+		WantPatches: []clientgotesting.PatchActionImpl{
+			patchFinalizers(sourceName, testNS),
+		},
+		WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor(true)},
+		SkipNamespaceValidation: true, // SubjectAccessReview objects are cluster-scoped.
+	}, {
+		Name: "trust bundle propagation - delete config map",
+		Objects: []runtime.Object{
+			rttestingv1.NewApiServerSource(sourceName, testNS,
+				rttestingv1.WithApiServerSourceSpec(sourcesv1.ApiServerSourceSpec{
+					Resources: []sourcesv1.APIVersionKindSelector{{
+						APIVersion: "v1",
+						Kind:       "Namespace",
+					}},
+					SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
+				}),
+				rttestingv1.WithApiServerSourceUID(sourceUID),
+				rttestingv1.WithApiServerSourceObjectMetaGeneration(generation),
+			),
+			rttestingv1.NewChannel(sinkName, testNS,
+				rttestingv1.WithInitChannelConditions,
+				rttestingv1.WithChannelAddress(sinkAddressable),
+			),
+			makeAvailableReceiveAdapter(t, withTrustBundle("bundle")),
+			rttestingv1.NewConfigMap("bundle"+eventingtls.TrustBundleConfigMapNameSuffix, testNS,
+				rttestingv1.WithConfigMapData(map[string]string{"a": "a"}),
+				func(cm *corev1.ConfigMap) {
+					cm.OwnerReferences = append(cm.OwnerReferences, metav1.OwnerReference{
+						APIVersion: "sources.knative.dev/v1",
+						Kind:       "ApiServerSource",
+						Name:       sourceName,
+						UID:        sourceUID,
+					})
+				},
+				rttestingv1.WithConfigMapLabels(metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						eventingtls.TrustBundleLabelKey: eventingtls.TrustBundleLabelValue,
+					},
+				}),
+			),
+		},
+		Key: testNS + "/" + sourceName,
+		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: rttestingv1.NewApiServerSource(sourceName, testNS,
+				rttestingv1.WithApiServerSourceSpec(sourcesv1.ApiServerSourceSpec{
+					Resources: []sourcesv1.APIVersionKindSelector{{
+						APIVersion: "v1",
+						Kind:       "Namespace",
+					}},
+					SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
+				}),
+				rttestingv1.WithApiServerSourceUID(sourceUID),
+				rttestingv1.WithApiServerSourceObjectMetaGeneration(generation),
+				// Status Update:
+				rttestingv1.WithInitApiServerSourceConditions,
+				rttestingv1.WithApiServerSourceDeployed,
+				rttestingv1.WithApiServerSourceSink(sinkURI),
+				rttestingv1.WithApiServerSourceSufficientPermissions,
+				rttestingv1.WithApiServerSourceReferenceModeEventTypes(source),
+				rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
+				rttestingv1.WithApiServerSourceStatusNamespaces([]string{testNS}),
+				rttestingv1.WithApiServerSourceOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
+			),
+		}},
+		WantCreates: []runtime.Object{
+			makeSubjectAccessReview("namespaces", "get", "default"),
+			makeSubjectAccessReview("namespaces", "list", "default"),
+			makeSubjectAccessReview("namespaces", "watch", "default"),
+		},
+		WantDeletes: []clientgotesting.DeleteActionImpl{
+			{
+				ActionImpl: clientgotesting.ActionImpl{
+					Resource:  schema.GroupVersionResource{Group: "", Version: "v1", Resource: "configmaps"},
+					Namespace: system.Namespace(),
+				},
+				Name: "bundle" + eventingtls.TrustBundleConfigMapNameSuffix,
+			},
 		},
 		WantEvents: []string{
 			Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", sourceName),
@@ -303,6 +386,7 @@ func TestReconcile(t *testing.T) {
 				rttestingv1.WithConfigMapLabels(metav1.LabelSelector{
 					MatchLabels: map[string]string{
 						eventingtls.TrustBundleLabelKey: eventingtls.TrustBundleLabelValue,
+						"x":                             "y",
 					},
 				}),
 			),
@@ -331,32 +415,7 @@ func TestReconcile(t *testing.T) {
 			),
 		}},
 		WantUpdates: []clientgotesting.UpdateActionImpl{{
-			Object: makeAvailableReceiveAdapter(t, func(deployment *appsv1.Deployment) {
-
-				volumeName := fmt.Sprintf("%s%s", eventingtls.TrustBundleVolumeNamePrefix, "volume")
-				deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
-					Name: volumeName,
-					VolumeSource: corev1.VolumeSource{
-						Projected: &corev1.ProjectedVolumeSource{
-							Sources: []corev1.VolumeProjection{
-								{
-									ConfigMap: &corev1.ConfigMapProjection{
-										LocalObjectReference: corev1.LocalObjectReference{
-											Name: "bundle" + eventingtls.TrustBundleConfigMapNameSuffix,
-										},
-									},
-								},
-							},
-						},
-					},
-				})
-
-				deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
-					Name:      volumeName,
-					ReadOnly:  true,
-					MountPath: eventingtls.TrustBundleMountPath,
-				})
-			}),
+			Object: makeAvailableReceiveAdapter(t, withTrustBundle("bundle")),
 		}},
 		WantCreates: []runtime.Object{
 			makeSubjectAccessReview("namespaces", "get", "default"),
@@ -447,6 +506,7 @@ func TestReconcile(t *testing.T) {
 					rttestingv1.WithConfigMapLabels(metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							eventingtls.TrustBundleLabelKey: eventingtls.TrustBundleLabelValue,
+							"x":                             "y",
 						},
 					}),
 				),
@@ -1494,6 +1554,35 @@ func TestReconcile(t *testing.T) {
 		true,
 		logger,
 	))
+}
+
+func withTrustBundle(name string) rttestingv1.DeploymentOption {
+	return func(deployment *appsv1.Deployment) {
+
+		volumeName := fmt.Sprintf("%s%s", eventingtls.TrustBundleVolumeNamePrefix, "volume")
+		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
+			Name: volumeName,
+			VolumeSource: corev1.VolumeSource{
+				Projected: &corev1.ProjectedVolumeSource{
+					Sources: []corev1.VolumeProjection{
+						{
+							ConfigMap: &corev1.ConfigMapProjection{
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: name + eventingtls.TrustBundleConfigMapNameSuffix,
+								},
+							},
+						},
+					},
+				},
+			},
+		})
+
+		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+			Name:      volumeName,
+			ReadOnly:  true,
+			MountPath: eventingtls.TrustBundleMountPath,
+		})
+	}
 }
 
 func makeReceiveAdapter(t *testing.T, option ...rttestingv1.DeploymentOption) *appsv1.Deployment {

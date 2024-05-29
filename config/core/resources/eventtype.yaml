@@ -52,6 +52,9 @@ spec:
                   namespace:
                     description: 'Namespace of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/ This is an optional field, it gets defaulted to the object holding it if left out.'
                     type: string
+                  address:
+                    description: 'Address points to a specific Address Name'
+                    type: string
               description:
                 description: 'Description is an optional field used to describe the
                     EventType, in any meaningful way.'
@@ -179,6 +182,9 @@ spec:
                     type: string
                   namespace:
                     description: 'Namespace of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/ This is an optional field, it gets defaulted to the object holding it if left out.'
+                    type: string
+                  address:
+                    description: 'Address points to a specific Address Name'
                     type: string
               description:
                 description: 'Description is an optional field used to describe the
@@ -310,6 +316,9 @@ spec:
                     type: string
                   namespace:
                     description: 'Namespace of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/ This is an optional field, it gets defaulted to the object holding it if left out.'
+                    type: string
+                  address:
+                    description: 'Address points to a specific Address Name'
                     type: string
               description:
                 description: 'Description is an optional field used to describe the
