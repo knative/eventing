@@ -23,7 +23,7 @@ import (
 	"net"
 	"os"
 
-	mqtt_paho "github.com/cloudevents/sdk-go/protocol/mqtt_paho/v2"
+	mqttv2 "github.com/cloudevents/sdk-go/protocol/mqtt_paho/v2"
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/eclipse/paho.golang/paho"
 )
@@ -33,9 +33,8 @@ var (
 	source string
 
 	// CloudEvents specific parameters
-	eventType   string
 	eventSource string
-
+	
 	topic    string
 	clientid string
 )
@@ -43,7 +42,6 @@ var (
 func init() {
 	flag.StringVar(&sink, "sink", "", "the host url to send messages to")
 	flag.StringVar(&source, "source", "", "the url to get messages from")
-	flag.StringVar(&eventType, "eventType", "mqtt-event", "the event-type (CloudEvents)")
 	flag.StringVar(&eventSource, "eventSource", "", "the event-source (CloudEvents)")
 
 	flag.StringVar(&topic, "topic", "mqtt-topic", "MQTT topic subscribe to")
@@ -53,9 +51,9 @@ func init() {
 func main() {
 	flag.Parse()
 
-	k_sink := os.Getenv("K_SINK")
-	if k_sink != "" {
-		sink = k_sink
+	kSink := os.Getenv("K_SINK")
+	if kSink != "" {
+		sink = kSink
 	}
 
 	// "source" flag must not be empty for operation.
@@ -87,25 +85,25 @@ func main() {
 		},
 	}
 
-	p_receive, err := mqtt_paho.New(ctx, config, mqtt_paho.WithSubscribe(subscribeOpt))
+	mqttReceiver, err := mqttv2.New(ctx, config, mqttv2.WithSubscribe(subscribeOpt))
 	if err != nil {
 		log.Fatalf("failed to create protocol: %s", err.Error())
 	}
-	defer p_receive.Close(ctx)
+	defer mqttReceiver.Close(ctx)
 
-	c_receive, err := cloudevents.NewClient(p_receive)
+	ceReceiver, err := cloudevents.NewClient(mqttReceiver)
 	if err != nil {
 		log.Fatalf("failed to create client: %v", err)
 	}
 
-	c_send, err := cloudevents.NewClientHTTP()
+	ceClient, err := cloudevents.NewClientHTTP()
 	if err != nil {
 		log.Fatalf("Failed to create a http cloudevent client: %s", err.Error())
 	}
 
 	log.Printf("MQTT source start consuming messages from %s\n", source)
-	err = c_receive.StartReceiver(ctx, func(ctx context.Context, event cloudevents.Event) {
-		receive(ctx, event, c_send)
+	err = ceReceiver.StartReceiver(ctx, func(ctx context.Context, event cloudevents.Event) {
+		receive(ctx, event, ceClient)
 	})
 	if err != nil {
 		log.Fatalf("failed to start receiver: %s", err)
@@ -119,10 +117,14 @@ func receive(ctx context.Context, event cloudevents.Event, c cloudevents.Client)
 	log.Printf("Received event: %s", event)
 	data := event.Data()
 	newEvent := cloudevents.NewEvent(cloudevents.VersionV1)
-	newEvent.SetType(eventType)
+	newEvent.SetType(event.Type())
 	newEvent.SetSource(eventSource)
 	newEvent.SetID(event.ID())
-	_ = newEvent.SetData(cloudevents.ApplicationJSON, data)
+	err := newEvent.SetData(cloudevents.ApplicationJSON, data)
+	if err != nil {
+		log.Printf("Error setting event data: %v", err)
+		return
+	}
 	if result := c.Send(ctx, newEvent); !cloudevents.IsACK(result) {
 		log.Printf("Sending event to sink failed: %v", result)
 	}
