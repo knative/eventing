@@ -34,7 +34,7 @@ var (
 
 	// CloudEvents specific parameters
 	eventSource string
-	
+
 	topic    string
 	clientid string
 )
