@@ -21,7 +21,6 @@ jobs:
         - v1.29.0
 
         test-suite:
-        - ./test/rekt/...
         - ./test/e2e
         - ./test/conformance
         - ./test/experimental

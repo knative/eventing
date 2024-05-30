@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"regexp"
 	"sync"
 	"testing"
@@ -364,6 +365,15 @@ func (mr *MagicEnvironment) ParallelTest(ctx context.Context, originalT *testing
 // apply it to the Context.
 func (mr *MagicEnvironment) test(ctx context.Context, originalT *testing.T, f *feature.Feature) {
 	originalT.Helper() // Helper marks the calling function as a test helper function.
+
+	for i, g := range f.GetGroups() {
+		originalT.Run(fmt.Sprintf("group-%d", i+1), func(t *testing.T) {
+			mr.test(ctx, t, g)
+		})
+		if originalT.Failed() { // If a group fails, return
+			return
+		}
+	}
 
 	log := logging.FromContext(ctx)
 	f.DumpWith(log.Debug)

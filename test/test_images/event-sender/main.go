@@ -155,9 +155,9 @@ func main() {
 			log.Printf("send returned an error: %v\n", responseResult)
 		} else {
 			if responseEvent != nil {
-				log.Printf("Got response from %s\n%s\n%s\n", sink, responseResult, *responseEvent)
+				log.Printf("Got response from %q\nresult: %q\nresponse event: %q\n", sink, responseResult, *responseEvent)
 			} else {
-				log.Printf("Got response from %s\n%s\n", sink, responseResult)
+				log.Printf("Got response from %q\nresult: %q\n", sink, responseResult)
 			}
 
 			if responseSink != "" {
