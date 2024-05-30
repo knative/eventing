@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/google/go-cmp/cmp/cmpopts"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
@@ -175,7 +174,6 @@ func (r *Reconciler) reconcileSubscription(ctx context.Context, step int, p *v1.
 	subName := resources.SequenceSubscriptionName(p.Name, step)
 	sub, err := r.subscriptionLister.Subscriptions(p.Namespace).Get(subName)
 
-	ignoreArguments := cmpopts.IgnoreFields(messagingv1.SubscriptionSpec{}, "Subscriber", "Reply", "Delivery")
 	// If the resource doesn't exist, we'll create it.
 	if apierrs.IsNotFound(err) {
 		sub = expected
@@ -192,7 +190,7 @@ func (r *Reconciler) reconcileSubscription(ctx context.Context, step int, p *v1.
 		// TODO: Send events here, or elsewhere?
 		//r.Recorder.Eventf(p, corev1.EventTypeWarning, subscriptionCreateFailed, "Create Sequences's subscription failed: %v", err)
 		return nil, fmt.Errorf("failed to get subscription: %s", err)
-	} else if equal, err := kmp.SafeEqual(sub.Spec, expected.Spec, ignoreArguments); !equal || err != nil {
+	} else if immutableFieldsChanged := expected.CheckImmutableFields(ctx, sub); immutableFieldsChanged != nil {
 		// Given that spec.channel is immutable, we cannot just update the subscription. We delete
 		// it instead, and re-create it.
 		err = r.eventingClientSet.MessagingV1().Subscriptions(sub.Namespace).Delete(ctx, sub.Name, metav1.DeleteOptions{})
