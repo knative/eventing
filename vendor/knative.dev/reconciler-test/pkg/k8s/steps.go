@@ -61,6 +61,18 @@ func IsNotReady(gvr schema.GroupVersionResource, name string, timing ...time.Dur
 	}
 }
 
+// IsDependencyDoesNotExist return a reusable feature.StepFn to assert if a dependency in not ready.
+// within the time given. Timing is optional but if provided is [interval, timeout].
+func IsDependencyDoesNotExist(gvr schema.GroupVersionResource, name string, timing ...time.Duration) feature.StepFn {
+	return func(ctx context.Context, t feature.T) {
+		interval, timeout := PollTimings(ctx, timing)
+		env := environment.FromContext(ctx)
+		if err := WaitForResourceNotReady(ctx, t, env.Namespace(), name, gvr, interval, timeout); err != nil {
+			t.Error(gvr, "DependencyDoesNotExist,", err)
+		}
+	}
+}
+
 // IsAddressable tests to see if a resource becomes Addressable within the time
 // given. Timing is optional but if provided is [interval, timeout].
 func IsAddressable(gvr schema.GroupVersionResource, name string, timing ...time.Duration) feature.StepFn {
