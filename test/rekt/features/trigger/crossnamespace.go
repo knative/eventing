@@ -20,14 +20,16 @@ import (
 	"context"
 
 	cetest "github.com/cloudevents/sdk-go/v2/test"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/rest"
+	eventingv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/eventing/v1"
+	"knative.dev/eventing/test/rekt/features/featureflags"
+	"knative.dev/eventing/test/rekt/resources/trigger"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
-
-	"knative.dev/eventing/test/rekt/features/featureflags"
-	"knative.dev/eventing/test/rekt/resources/broker"
-	"knative.dev/eventing/test/rekt/resources/trigger"
 )
 
 func CrossNamespaceEventLinks(brokerEnvCtx context.Context) *feature.Feature {
@@ -45,7 +47,21 @@ func CrossNamespaceEventLinks(brokerEnvCtx context.Context) *feature.Feature {
 	brokerNamespace := environment.FromContext(brokerEnvCtx).Namespace() // To be passed to WithBrokerRef
 
 	f.Setup("install subscriber", eventshub.Install(subscriberName, eventshub.StartReceiver))
-	f.Setup("install event source", eventshub.Install(sourceName, eventshub.StartSenderToResource(broker.GVR(), brokerName), eventshub.InputEvent(ev)))
+	f.Setup("install event source", func(ctx context.Context, t feature.T) {
+		config, err := rest.InClusterConfig()
+		if err != nil {
+			t.Fatal(err)
+		}
+		eventingClient, err := eventingv1.NewForConfig(config)
+		if err != nil {
+			t.Fatal(err)
+		}
+		brokerURL, err := ResolveBrokerURL(ctx, brokerNamespace, brokerName, eventingClient)
+		if err != nil {
+			t.Fatal(err)
+		}
+		eventshub.Install(sourceName, eventshub.StartSenderURL(brokerURL), eventshub.InputEvent(ev))(ctx, t)
+	})
 
 	f.Setup("install trigger", trigger.Install(triggerName, trigger.WithBrokerName(brokerName), trigger.WithBrokerNamespace(brokerNamespace)))
 	f.Setup("trigger is ready", trigger.IsReady(triggerName))
@@ -53,4 +69,21 @@ func CrossNamespaceEventLinks(brokerEnvCtx context.Context) *feature.Feature {
 	f.Assert("event is received by subscriber", assert.OnStore(subscriberName).MatchEvent(cetest.HasId(ev.ID())).Exact(1))
 
 	return f
+}
+
+func ResolveBrokerURL(ctx context.Context, brokerNamespace, brokerName string, client eventingv1.EventingV1Interface) (string, error) {
+	var brokerURL string
+	interval, timeout := environment.PollTimingsFromContext(ctx)
+	err := wait.PollUntilContextTimeout(ctx, interval, timeout, true, func(ctx context.Context) (bool, error) {
+		broker, err := client.Brokers(brokerNamespace).Get(ctx, brokerName, metav1.GetOptions{})
+		if err != nil {
+			return false, err
+		}
+		if broker.Status.Address == nil || broker.Status.Address.URL == nil {
+			return false, nil
+		}
+		brokerURL = broker.Status.Address.URL.String()
+		return true, nil
+	})
+	return brokerURL, err
 }
