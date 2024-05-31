@@ -42,11 +42,11 @@ func TestEventTypeConversionHighestVersion(t *testing.T) {
 
 func TestEventTypeConversionV1Beta3(t *testing.T) {
 	in := &EventType{
-		TypeMeta:   metav1.TypeMeta{},
+		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:                       "my-name",
-			Namespace:                  "my-ns",
-			UID:                        "1234",
+			Name:      "my-name",
+			Namespace: "my-ns",
+			UID:       "1234",
 		},
 		Spec: EventTypeSpec{
 			Type:   "t1",
@@ -68,11 +68,11 @@ func TestEventTypeConversionV1Beta3(t *testing.T) {
 	}
 
 	expected := &v1beta3.EventType{
-		TypeMeta:   metav1.TypeMeta{},
+		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:                       "my-name",
-			Namespace:                  "my-ns",
-			UID:                        "1234",
+			Name:      "my-name",
+			Namespace: "my-ns",
+			UID:       "1234",
 		},
 		Spec: v1beta3.EventTypeSpec{
 			Reference:   in.Spec.Reference.DeepCopy(),
