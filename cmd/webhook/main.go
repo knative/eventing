@@ -25,6 +25,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	configmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap/filtered"
 
+	eventingv1beta3 "knative.dev/eventing/pkg/apis/eventing/v1beta3"
 	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/eventingtls"
@@ -241,6 +242,7 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 		sourcesv1_       = sourcesv1.SchemeGroupVersion.Version
 		eventingv1beta1_ = eventingv1beta1.SchemeGroupVersion.Version
 		eventingv1beta2_ = eventingv1beta2.SchemeGroupVersion.Version
+		eventingv1beta3_ = eventingv1beta3.SchemeGroupVersion.Version
 	)
 
 	return conversion.NewConversionController(ctx,
@@ -265,6 +267,7 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 				Zygotes: map[string]conversion.ConvertibleObject{
 					eventingv1beta1_: &eventingv1beta1.EventType{},
 					eventingv1beta2_: &eventingv1beta2.EventType{},
+					eventingv1beta3_: &eventingv1beta3.EventType{},
 				},
 			},
 		},
