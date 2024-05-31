@@ -41,7 +41,7 @@ func CrossNamespaceEventLinks(brokerEnvCtx context.Context) *feature.Feature {
 
 	triggerName := feature.MakeRandomK8sName("trigger")
 	brokerName := feature.MakeRandomK8sName("broker")
-	brokerNamespace := environment.FromContext(brokerEnvCtx).Namespace() // To be passed to WithBrokerRef
+	brokerNamespace := environment.FromContext(brokerEnvCtx).Namespace()
 
 	f.Setup("install subscriber", eventshub.Install(subscriberName, eventshub.StartReceiver))
 	f.Setup("install event source", eventshub.Install(sourceName, eventshub.StartSenderToNamespacedResource(broker.GVR(), brokerName, brokerNamespace), eventshub.InputEvent(ev)))
