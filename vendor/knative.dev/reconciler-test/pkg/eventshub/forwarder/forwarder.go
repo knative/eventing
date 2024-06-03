@@ -308,7 +308,6 @@ func (o *Forwarder) forwardFromFile(f string) {
 	}
 
 	eventInfo := eventshub.EventInfo{
-		Error:    err.Error(),
 		Event:    event,
 		Observer: o.Name,
 		Origin:   f,
