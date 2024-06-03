@@ -23,26 +23,8 @@ metadata:
 aggregationRule:
   clusterRoleSelectors:
   - matchLabels:
-     duck.knative.dev/subscribable: "true"
+      duck.knative.dev/crossnamespace-subscribable: "true"
 rules: [] # rules are automatically filled in by the controller manager.
-
----
-
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: imc-subscriber
-  labels:
-    duck.knative.dev/subscribable: "true"
-    app.kubernetes.io/version: devel
-    app.kubernetes.io/name: knative-eventing
-rules:
-- apiGroups:
-  - messaging.knative.dev
-  resources:
-  - inmemorychannels
-  verbs:
-  - knsubscribe
 
 ---
 
@@ -51,7 +33,7 @@ kind: ClusterRole
 metadata:
   name: channel-subscriber
   labels:
-    duck.knative.dev/subscribable: "true"
+    duck.knative.dev/crossnamespace-subscribable: "true"
     app.kubernetes.io/version: devel
     app.kubernetes.io/name: knative-eventing
 rules:
@@ -69,7 +51,7 @@ kind: ClusterRole
 metadata:
   name: broker-subscriber
   labels:
-    duck.knative.dev/subscribable: "true"
+    duck.knative.dev/crossnamespace-subscribable: "true"
     app.kubernetes.io/version: devel
     app.kubernetes.io/name: knative-eventing
 rules:
