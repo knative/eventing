@@ -21,6 +21,7 @@ import (
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
 	"context"
+	"crypto/md5"
 	"crypto/tls"
 	"fmt"
 	"log"
@@ -32,20 +33,19 @@ import (
 	"go.uber.org/zap"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apiserver/pkg/storage/names"
-	applycorev1 "k8s.io/client-go/applyconfigurations/core/v1"
-	applyconfigurationmetav1 "k8s.io/client-go/applyconfigurations/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/utils/pointer"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	configmap "knative.dev/pkg/configmap/informer"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/injection"
 	secretinformer "knative.dev/pkg/injection/clients/namespacedkube/informers/core/v1/secret"
+	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
+	"knative.dev/pkg/ptr"
 	"knative.dev/pkg/system"
 	"knative.dev/pkg/tracing"
 	tracingconfig "knative.dev/pkg/tracing/config"
@@ -53,12 +53,15 @@ import (
 	"knative.dev/pkg/signals"
 
 	cmdbroker "knative.dev/eventing/cmd/broker"
+	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/eventing/pkg/apis/sinks"
 	sinksv "knative.dev/eventing/pkg/apis/sinks/v1alpha1"
+	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/client/injection/informers/sinks/v1alpha1/jobsink"
 	sinkslister "knative.dev/eventing/pkg/client/listers/sinks/v1alpha1"
 	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/kncloudevents"
+	"knative.dev/eventing/pkg/utils"
 )
 
 const component = "job-sink"
@@ -101,9 +104,24 @@ func main() {
 		logger.Fatal("Error setting up trace publishing", zap.Error(err))
 	}
 
-	logger.Info("Starting the Broker Ingress")
+	logger.Info("Starting the JobSink Ingress")
 
-	h := &Handler{k8s: kubeclient.Get(ctx), lister: jobsink.Get(ctx).Lister(), logger: logger}
+	var featureStore *feature.Store
+	featureStore = feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {})
+	featureStore.WatchConfigs(configMapWatcher)
+
+	// Decorate contexts with the current state of the feature config.
+	ctxFunc := func(ctx context.Context) context.Context {
+		return featureStore.ToContext(ctx)
+	}
+
+	h := &Handler{
+		k8s:               kubeclient.Get(ctx),
+		lister:            jobsink.Get(ctx).Lister(),
+		logger:            logger,
+		withContext:       ctxFunc,
+		oidcTokenVerifier: auth.NewOIDCTokenVerifier(ctx),
+	}
 
 	tlsConfig, err := getServerTLSConfig(ctx)
 	if err != nil {
@@ -112,7 +130,8 @@ func main() {
 
 	sm, err := eventingtls.NewServerManager(ctx,
 		kncloudevents.NewHTTPEventReceiver(8080),
-		kncloudevents.NewHTTPEventReceiver(8443, kncloudevents.WithTLSConfig(tlsConfig)),
+		kncloudevents.NewHTTPEventReceiver(8443,
+			kncloudevents.WithTLSConfig(tlsConfig)),
 		h,
 		configMapWatcher,
 	)
@@ -140,9 +159,11 @@ func main() {
 }
 
 type Handler struct {
-	k8s    kubernetes.Interface
-	lister sinkslister.JobSinkLister
-	logger *zap.Logger
+	k8s               kubernetes.Interface
+	lister            sinkslister.JobSinkLister
+	logger            *zap.Logger
+	withContext       func(ctx context.Context) context.Context
+	oidcTokenVerifier *auth.OIDCTokenVerifier
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -171,6 +192,21 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	h.logger.Debug("Handling POST request", zap.String("URI", r.RequestURI))
 
+	ctx := h.withContext(r.Context())
+	features := feature.FromContext(ctx)
+	if features.IsOIDCAuthentication() {
+		h.logger.Debug("OIDC authentication is enabled")
+
+		audience := auth.GetAudienceDirect(sinksv.SchemeGroupVersion.WithKind("JobSink"), ref.Namespace, ref.Name)
+
+		err := h.oidcTokenVerifier.VerifyJWTFromRequest(ctx, r, &audience, w)
+		if err != nil {
+			h.logger.Warn("Error when validating the JWT token in the request", zap.Error(err))
+			return
+		}
+		h.logger.Debug("Request contained a valid JWT. Continuing...")
+	}
+
 	message := cehttp.NewMessageFromHttpRequest(r)
 	defer message.Finish(nil)
 
@@ -194,8 +230,11 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	id := toIdHashLabelValue(event.Source(), event.ID())
+	h.logger.Debug("Getting job for event", zap.String("URI", r.RequestURI), zap.String("id", id))
+
 	jobs, err := h.k8s.BatchV1().Jobs(js.GetNamespace()).List(r.Context(), metav1.ListOptions{
-		LabelSelector: jobLabelSelector(ref, event.Source(), event.ID()),
+		LabelSelector: jobLabelSelector(ref, id),
 		Limit:         1,
 	})
 	if err != nil {
@@ -211,59 +250,100 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	eventBytes, err := event.MarshalJSON()
 	if err != nil {
+		h.logger.Info("Failed to marshal event", zap.Error(err))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	jobName := names.SimpleNameGenerator.GenerateName(fmt.Sprintf("%s-%s", event.Source(), event.ID()))
+	jobName := kmeta.ChildName(ref.Name, id)
+
+	h.logger.Debug("Creating secret for event", zap.String("URI", r.RequestURI), zap.String("jobName", jobName))
 
 	jobSinkUID := js.GetUID()
-	h.k8s.CoreV1().Secrets(ref.Namespace).Apply(r.Context(), &applycorev1.SecretApplyConfiguration{
-		TypeMetaApplyConfiguration: applyconfigurationmetav1.TypeMetaApplyConfiguration{},
-		ObjectMetaApplyConfiguration: &applyconfigurationmetav1.ObjectMetaApplyConfiguration{
-			Name:      pointer.String(jobName),
-			Namespace: pointer.String(ref.Namespace),
+
+	or := metav1.OwnerReference{
+		APIVersion:         sinksv.SchemeGroupVersion.String(),
+		Kind:               sinks.JobSinkResource.Resource,
+		Name:               js.GetName(),
+		UID:                jobSinkUID,
+		Controller:         ptr.Bool(true),
+		BlockOwnerDeletion: ptr.Bool(false),
+	}
+
+	secret := &corev1.Secret{
+		TypeMeta: metav1.TypeMeta{},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      jobName,
+			Namespace: ref.Namespace,
 			Labels: map[string]string{
-				sinks.JobSinkSourceLabel: event.Source(),
-				sinks.JobSinkIDLabel:     event.ID(),
-				sinks.JobSinkNameLabel:   ref.Name,
+				sinks.JobSinkIDLabel:   id,
+				sinks.JobSinkNameLabel: ref.Name,
 			},
-			Annotations: nil,
-			OwnerReferences: []applyconfigurationmetav1.OwnerReferenceApplyConfiguration{
-				{
-					APIVersion:         pointer.String(sinksv.SchemeGroupVersion.String()),
-					Kind:               pointer.String(sinks.JobSinkResource.Resource),
-					Name:               pointer.String(js.GetName()),
-					UID:                &jobSinkUID,
-					Controller:         pointer.Bool(true),
-					BlockOwnerDeletion: pointer.Bool(true),
-				},
-			},
+			OwnerReferences: []metav1.OwnerReference{or},
 		},
-		Immutable: pointer.Bool(true),
+		Immutable: ptr.Bool(true),
 		Data:      map[string][]byte{"event": eventBytes},
-	}, metav1.ApplyOptions{})
+		Type:      corev1.SecretTypeOpaque,
+	}
+
+	_, err = h.k8s.CoreV1().Secrets(ref.Namespace).Create(r.Context(), secret, metav1.CreateOptions{})
+	if err != nil && !apierrors.IsAlreadyExists(err) {
+		h.logger.Warn("Failed to create secret", zap.Error(err))
+
+		w.Header().Add("Reason", err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	h.logger.Debug("Creating job for event", zap.String("URI", r.RequestURI), zap.String("jobName", jobName))
 
 	job := js.Spec.Job.DeepCopy()
 	job.Name = jobName
 	if job.Labels == nil {
 		job.Labels = make(map[string]string, 4)
 	}
-	job.Labels[sinks.JobSinkSourceLabel] = event.Source()
-	job.Labels[sinks.JobSinkIDLabel] = event.ID()
+	job.Labels[sinks.JobSinkIDLabel] = id
 	job.Labels[sinks.JobSinkNameLabel] = ref.Name
+	job.OwnerReferences = append(job.OwnerReferences, or)
 
-	job.OwnerReferences = append(job.OwnerReferences, metav1.OwnerReference{
-		APIVersion:         sinksv.SchemeGroupVersion.String(),
-		Kind:               sinks.JobSinkResource.Resource,
-		Name:               js.GetName(),
-		UID:                js.GetUID(),
-		Controller:         pointer.Bool(true),
-		BlockOwnerDeletion: pointer.Bool(true),
-	})
+	for i := range job.Spec.Template.Spec.Containers {
+		found := false
+		for j := range job.Spec.Template.Spec.Containers[i].VolumeMounts {
+			if job.Spec.Template.Spec.Containers[i].VolumeMounts[j].Name == "jobsink-event" {
+				found = true
+				break
+			}
+		}
+		if !found {
+			job.Spec.Template.Spec.Containers[i].VolumeMounts = append(job.Spec.Template.Spec.Containers[i].VolumeMounts, corev1.VolumeMount{
+				Name:      "jobsink-event",
+				ReadOnly:  true,
+				MountPath: "/etc/jobsink-event",
+			})
+		}
+	}
+
+	found := false
+	for i := range job.Spec.Template.Spec.Volumes {
+		if job.Spec.Template.Spec.Volumes[i].Name == "jobsink-event" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		job.Spec.Template.Spec.Volumes = append(job.Spec.Template.Spec.Volumes, corev1.Volume{
+			Name: "jobsink-event",
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{SecretName: jobName},
+			},
+		})
+	}
 
 	_, err = h.k8s.BatchV1().Jobs(ref.Namespace).Create(r.Context(), job, metav1.CreateOptions{})
 	if err != nil {
+		h.logger.Warn("Failed to create job", zap.Error(err))
+
+		w.Header().Add("Reason", err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -287,11 +367,27 @@ func (h *Handler) handleGet(w http.ResponseWriter, r *http.Request) {
 
 	h.logger.Debug("Handling GET request", zap.String("URI", r.RequestURI))
 
+	ctx := h.withContext(r.Context())
+	features := feature.FromContext(ctx)
+	if features.IsOIDCAuthentication() {
+		h.logger.Debug("OIDC authentication is enabled")
+
+		audience := auth.GetAudienceDirect(sinksv.SchemeGroupVersion.WithKind("JobSink"), ref.Namespace, ref.Name)
+
+		err := h.oidcTokenVerifier.VerifyJWTFromRequest(ctx, r, &audience, w)
+		if err != nil {
+			h.logger.Warn("Error when validating the JWT token in the request", zap.Error(err))
+			return
+		}
+		h.logger.Debug("Request contained a valid JWT. Continuing...")
+	}
+
 	source := parts[6]
 	id := parts[8]
 
+	idHash := toIdHashLabelValue(source, id)
 	jobs, err := h.k8s.BatchV1().Jobs(ref.Namespace).List(r.Context(), metav1.ListOptions{
-		LabelSelector: jobLabelSelector(ref, source, id),
+		LabelSelector: jobLabelSelector(ref, idHash),
 		Limit:         1,
 	})
 	if err != nil {
@@ -348,6 +444,10 @@ func locationHeader(ref types.NamespacedName, source, id string) string {
 	return fmt.Sprintf("/namespaces/%s/name/%s/sources/%s/ids/%s", ref.Namespace, ref.Name, source, id)
 }
 
-func jobLabelSelector(ref types.NamespacedName, source string, id string) string {
-	return fmt.Sprintf("%s=%s,%s=%s,%s=%s", sinks.JobSinkSourceLabel, source, sinks.JobSinkIDLabel, id, sinks.JobSinkNameLabel, ref.Name)
+func jobLabelSelector(ref types.NamespacedName, id string) string {
+	return fmt.Sprintf("%s=%s,%s=%s", sinks.JobSinkIDLabel, id, sinks.JobSinkNameLabel, ref.Name)
+}
+
+func toIdHashLabelValue(source, id string) string {
+	return utils.ToDNS1123Subdomain(fmt.Sprintf("%s", md5.Sum([]byte(fmt.Sprintf("%s-%s", source, id)))))
 }

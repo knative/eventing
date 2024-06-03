@@ -21,19 +21,23 @@ import (
 	"fmt"
 	"sort"
 
+	"go.uber.org/zap"
 	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/kubernetes"
 	batchlisters "k8s.io/client-go/listers/batch/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/utils/pointer"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/logging"
 	"knative.dev/pkg/network"
 	"knative.dev/pkg/reconciler"
 
 	"knative.dev/eventing/pkg/apis/feature"
 	sinksc "knative.dev/eventing/pkg/apis/sinks"
 	sinks "knative.dev/eventing/pkg/apis/sinks/v1alpha1"
+	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/eventingtls"
 )
 
@@ -44,6 +48,7 @@ const (
 type Reconciler struct {
 	jobLister       batchlisters.JobLister
 	secretLister    corev1listers.SecretLister
+	k8s             kubernetes.Interface
 	systemNamespace string
 }
 
@@ -132,6 +137,22 @@ func (r *Reconciler) reconcileAddress(ctx context.Context, js *sinks.JobSink) er
 		js.Status.Address = &httpAddress
 	}
 
+	if featureFlags.IsOIDCAuthentication() {
+		audience := auth.GetAudience(sinks.SchemeGroupVersion.WithKind("JobSink"), js.ObjectMeta)
+
+		logging.FromContext(ctx).Debugw("Setting the audience", zap.String("audience", audience))
+		js.Status.Address.Audience = &audience
+		for i := range js.Status.Addresses {
+			js.Status.Addresses[i].Audience = &audience
+		}
+	} else {
+		logging.FromContext(ctx).Debug("Clearing the imc audience as OIDC is not enabled")
+		js.Status.Address.Audience = nil
+		for i := range js.Status.Addresses {
+			js.Status.Addresses[i].Audience = nil
+		}
+	}
+
 	js.GetConditionSet().Manage(js.GetStatus()).MarkTrue(sinks.JobSinkConditionAddressable)
 
 	return nil
@@ -143,7 +164,7 @@ func (r *Reconciler) httpAddress(js *sinks.JobSink) duckv1.Addressable {
 		Name: pointer.String("http"),
 		URL: &apis.URL{
 			Scheme: "http",
-			Host:   network.GetServiceHostname("job-sink-dispatcher", r.systemNamespace),
+			Host:   network.GetServiceHostname("job-sink", r.systemNamespace),
 			Path:   fmt.Sprintf("/%s/%s", js.GetNamespace(), js.GetName()),
 		},
 	}

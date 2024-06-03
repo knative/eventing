@@ -19,6 +19,5 @@ package sinks
 const (
 	JobSinkJobsLabelSelector = "sinks.knative.dev/job-sink=true"
 	JobSinkNameLabel         = "sinks.knative.dev/job-sink-name"
-	JobSinkSourceLabel       = "sinks.knative.dev/job-sink-source"
 	JobSinkIDLabel           = "sinks.knative.dev/job-sink-id"
 )
