@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -140,11 +140,11 @@ func WithForwarderJob(sink string, options ...func(*batchv1.Job)) manifest.CfgFn
 										Value: "/etc/jobsink-event/event",
 									},
 									{
-										Name: eventshub.ConfigLoggingEnv,
+										Name:  eventshub.ConfigLoggingEnv,
 										Value: cfg[eventshub.ConfigLoggingEnv].(string),
 									},
 									{
-										Name: eventshub.ConfigTracingEnv,
+										Name:  eventshub.ConfigTracingEnv,
 										Value: cfg[eventshub.ConfigTracingEnv].(string),
 									},
 								},
