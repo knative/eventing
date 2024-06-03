@@ -95,16 +95,21 @@ func IsAddressable(gvr schema.GroupVersionResource, name string, timing ...time.
 // resource is found but not Addressable, Address will return (nil, nil).
 func Address(ctx context.Context, gvr schema.GroupVersionResource, name string) (*duckv1.Addressable, error) {
 	env := environment.FromContext(ctx)
+	return NamespacedAddress(ctx, gvr, name, env.Namespace())
+}
 
+// NamespacedAddress attempts to resolve an Addressable address in a specific namespace into a URL. If the
+// resource is found but not Addressable, Address will return (nil, nil).
+func NamespacedAddress(ctx context.Context, gvr schema.GroupVersionResource, name, namespace string) (*duckv1.Addressable, error) {
 	// Special case Service.
 	if gvr.Group == "" && gvr.Version == "v1" && gvr.Resource == "services" {
-		u := "http://" + network.GetServiceHostname(name, env.Namespace())
+		u := "http://" + network.GetServiceHostname(name, namespace)
 		url, err := apis.ParseURL(u)
 		return &duckv1.Addressable{URL: url}, err
 	}
 
 	like := &duckv1.AddressableType{}
-	us, err := dynamicclient.Get(ctx).Resource(gvr).Namespace(env.Namespace()).Get(ctx, name, metav1.GetOptions{})
+	us, err := dynamicclient.Get(ctx).Resource(gvr).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
