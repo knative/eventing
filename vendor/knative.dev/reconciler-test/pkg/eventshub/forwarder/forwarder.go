@@ -120,11 +120,6 @@ func (o *Forwarder) Start(ctx context.Context) error {
 		return nil
 	}
 
-	if o.FromFiles != "" {
-		o.forwardFromFiles()
-		return nil
-	}
-
 	server := &http.Server{Addr: ":8080", Handler: handler}
 
 	var err error
@@ -313,7 +308,6 @@ func (o *Forwarder) forwardFromFile(f string) {
 	}
 
 	eventInfo := eventshub.EventInfo{
-		Error:    err.Error(),
 		Event:    event,
 		Observer: o.Name,
 		Origin:   f,
