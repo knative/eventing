@@ -26,8 +26,8 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/utils/pointer"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/ptr"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/feature"
@@ -104,9 +104,9 @@ func WithForwarderJob(sink string, options ...func(*batchv1.Job)) manifest.CfgFn
 	return func(cfg map[string]interface{}) {
 		j := batchv1.Job{
 			Spec: batchv1.JobSpec{
-				Parallelism:  pointer.Int32(1),
-				Completions:  pointer.Int32(1),
-				BackoffLimit: pointer.Int32(10),
+				Parallelism:  ptr.Int32(1),
+				Completions:  ptr.Int32(1),
+				BackoffLimit: ptr.Int32(10),
 				Template: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						RestartPolicy: corev1.RestartPolicyOnFailure,

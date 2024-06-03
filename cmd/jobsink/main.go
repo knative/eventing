@@ -17,11 +17,8 @@ limitations under the License.
 package main
 
 import (
-	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
-	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
-
 	"context"
-	"crypto/md5"
+	"crypto/md5" //#nosec G505 -- not used for security reasons
 	"crypto/tls"
 	"fmt"
 	"log"
@@ -106,8 +103,7 @@ func main() {
 
 	logger.Info("Starting the JobSink Ingress")
 
-	var featureStore *feature.Store
-	featureStore = feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {})
+	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {})
 	featureStore.WatchConfigs(configMapWatcher)
 
 	// Decorate contexts with the current state of the feature config.
@@ -382,46 +378,37 @@ func (h *Handler) handleGet(w http.ResponseWriter, r *http.Request) {
 		h.logger.Debug("Request contained a valid JWT. Continuing...")
 	}
 
-	source := parts[6]
-	id := parts[8]
+	eventSource := parts[6]
+	eventID := parts[8]
 
-	idHash := toIdHashLabelValue(source, id)
-	jobs, err := h.k8s.BatchV1().Jobs(ref.Namespace).List(r.Context(), metav1.ListOptions{
-		LabelSelector: jobLabelSelector(ref, idHash),
-		Limit:         1,
-	})
+	id := toIdHashLabelValue(eventSource, eventID)
+	jobName := kmeta.ChildName(ref.Name, id)
+
+	job, err := h.k8s.BatchV1().Jobs(ref.Namespace).Get(r.Context(), jobName, metav1.GetOptions{})
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	if len(jobs.Items) == 0 {
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
 
-	for _, j := range jobs.Items {
-
-		for _, c := range j.Status.Conditions {
-			if c.Type == batchv1.JobFailed {
-				if c.Status == corev1.ConditionTrue {
-					w.Header().Add("Reason", "Failed")
-					w.WriteHeader(http.StatusBadRequest)
-					return
-				}
-			}
-			if c.Type == batchv1.JobComplete {
-				if c.Status == corev1.ConditionTrue {
-					w.Header().Add("Reason", "Complete")
-					w.WriteHeader(http.StatusOK)
-					return
-				}
+	for _, c := range job.Status.Conditions {
+		if c.Type == batchv1.JobFailed {
+			if c.Status == corev1.ConditionTrue {
+				w.Header().Add("Reason", "Failed")
+				w.WriteHeader(http.StatusBadRequest)
+				return
 			}
 		}
-
-		w.Header().Add("Location", locationHeader(ref, source, id))
-		w.WriteHeader(http.StatusAccepted)
-		return
+		if c.Type == batchv1.JobComplete {
+			if c.Status == corev1.ConditionTrue {
+				w.Header().Add("Reason", "Complete")
+				w.WriteHeader(http.StatusOK)
+				return
+			}
+		}
 	}
+
+	w.Header().Add("Location", locationHeader(ref, eventSource, eventID))
+	w.WriteHeader(http.StatusAccepted)
 }
 
 func flush(logger *zap.SugaredLogger) {

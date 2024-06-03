@@ -24,10 +24,9 @@ import (
 	"go.uber.org/zap"
 	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/kubernetes"
 	batchlisters "k8s.io/client-go/listers/batch/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/logging"
@@ -48,7 +47,6 @@ const (
 type Reconciler struct {
 	jobLister       batchlisters.JobLister
 	secretLister    corev1listers.SecretLister
-	k8s             kubernetes.Interface
 	systemNamespace string
 }
 
@@ -98,7 +96,7 @@ func (r *Reconciler) getCaCerts() (*string, error) {
 	if !ok {
 		return nil, nil
 	}
-	return pointer.String(string(caCerts)), nil
+	return ptr.To(string(caCerts)), nil
 }
 
 func (r *Reconciler) reconcileAddress(ctx context.Context, js *sinks.JobSink) error {
@@ -161,7 +159,7 @@ func (r *Reconciler) reconcileAddress(ctx context.Context, js *sinks.JobSink) er
 func (r *Reconciler) httpAddress(js *sinks.JobSink) duckv1.Addressable {
 	// http address uses host-based routing
 	httpAddress := duckv1.Addressable{
-		Name: pointer.String("http"),
+		Name: ptr.To("http"),
 		URL: &apis.URL{
 			Scheme: "http",
 			Host:   network.GetServiceHostname("job-sink", r.systemNamespace),

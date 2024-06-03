@@ -147,7 +147,7 @@ func AtLeastOneJobIsComplete(jobSinkName string) feature.StepFn {
 			return
 		}
 
-		bytes, err := json.MarshalIndent(jobs.Items, "", "  ")
+		bytes, _ := json.MarshalIndent(jobs.Items, "", "  ")
 		t.Errorf("No job is complete:\n%v", string(bytes))
 	}
 }
