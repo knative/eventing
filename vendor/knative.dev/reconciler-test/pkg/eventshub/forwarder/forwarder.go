@@ -56,9 +56,6 @@ type Forwarder struct {
 	// FromFiles allows forwarding JSON-formatted events that are present on specified files (comma separated list of file paths)
 	FromFiles string
 
-	// FromFiles allows forwarding JSON-formatted events that are present on specified files (comma separated list of file paths)
-	FromFiles string
-
 	// EventLogs is the list of EventLogger implementors to vent observed events.
 	EventLogs *eventshub.EventLogs
 
@@ -80,9 +77,6 @@ type envConfig struct {
 
 	// FromFiles allows forwarding JSON-formatted events that are present on specified files (comma separated list of file paths)
 	FromFiles string `envconfig:"FROM_FILES" required:"false"`
-
-	// FromFiles allows forwarding JSON-formatted events that are present on specified files (comma separated list of file paths)
-	FromFiles string `envconfig:"FROM_FILES" required:"false"`
 }
 
 func NewFromEnv(ctx context.Context, eventLogs *eventshub.EventLogs, handlerFuncs []eventshub.HandlerFunc, clientOpts []eventshub.ClientOption) *Forwarder {
@@ -97,7 +91,6 @@ func NewFromEnv(ctx context.Context, eventLogs *eventshub.EventLogs, handlerFunc
 		Name:         env.Name,
 		Namespace:    env.Namespace,
 		Sink:         env.Sink,
-		FromFiles:    env.FromFiles,
 		FromFiles:    env.FromFiles,
 		EventLogs:    eventLogs,
 		ctx:          ctx,
