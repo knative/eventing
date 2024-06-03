@@ -1,11 +1,11 @@
-# cloud.google.com/go v0.113.0
-## explicit; go 1.19
+# cloud.google.com/go v0.114.0
+## explicit; go 1.20
 cloud.google.com/go/internal
 cloud.google.com/go/internal/optional
 cloud.google.com/go/internal/trace
 cloud.google.com/go/internal/version
-# cloud.google.com/go/auth v0.4.1
-## explicit; go 1.19
+# cloud.google.com/go/auth v0.4.2
+## explicit; go 1.20
 cloud.google.com/go/auth
 cloud.google.com/go/auth/credentials
 cloud.google.com/go/auth/credentials/internal/externalaccount
@@ -559,7 +559,7 @@ golang.org/x/tools/internal/stdlib
 # gomodules.xyz/jsonpatch/v2 v2.4.0
 ## explicit; go 1.20
 gomodules.xyz/jsonpatch/v2
-# google.golang.org/api v0.181.0
+# google.golang.org/api v0.182.0
 ## explicit; go 1.20
 google.golang.org/api/googleapi
 google.golang.org/api/googleapi/transport
@@ -582,13 +582,13 @@ google.golang.org/api/transport/http/internal/propagation
 ## explicit; go 1.19
 google.golang.org/genproto/googleapis/type/date
 google.golang.org/genproto/googleapis/type/expr
-# google.golang.org/genproto/googleapis/api v0.0.0-20240506185236-b8a5c65736ae
+# google.golang.org/genproto/googleapis/api v0.0.0-20240513163218-0867130af1f8
 ## explicit; go 1.19
 google.golang.org/genproto/googleapis/api
 google.golang.org/genproto/googleapis/api/annotations
 google.golang.org/genproto/googleapis/api/httpbody
-# google.golang.org/genproto/googleapis/rpc v0.0.0-20240513163218-0867130af1f8
-## explicit; go 1.19
+# google.golang.org/genproto/googleapis/rpc v0.0.0-20240521202816-d264139d666e
+## explicit; go 1.20
 google.golang.org/genproto/googleapis/rpc/code
 google.golang.org/genproto/googleapis/rpc/errdetails
 google.golang.org/genproto/googleapis/rpc/status
@@ -1252,7 +1252,7 @@ knative.dev/hack/schema/commands
 knative.dev/hack/schema/docs
 knative.dev/hack/schema/registry
 knative.dev/hack/schema/schema
-# knative.dev/pkg v0.0.0-20240602234151-229e527a1366
+# knative.dev/pkg v0.0.0-20240603080447-170996133132
 ## explicit; go 1.21
 knative.dev/pkg/apiextensions/storageversion
 knative.dev/pkg/apiextensions/storageversion/cmd/migrate
