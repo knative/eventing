@@ -43,9 +43,7 @@ type Reconciler struct {
 }
 
 func (r *Reconciler) ReconcileKind(ctx context.Context, js *sinks.JobSink) reconciler.Event {
-	if err := r.reconcileJob(js); err != nil {
-		return fmt.Errorf("failed to reconcile job: %w", err)
-	}
+	r.reconcileJob(js)
 
 	if err := r.reconcileAddress(ctx, js); err != nil {
 		return fmt.Errorf("failed to reconcile address: %w", err)
@@ -144,11 +142,9 @@ func (r *Reconciler) httpsAddress(certs *string, js *sinks.JobSink) duckv1.Addre
 	return addr
 }
 
-func (r *Reconciler) reconcileJob(js *sinks.JobSink) error {
+func (r *Reconciler) reconcileJob(js *sinks.JobSink) {
 	if js.Spec.Job == nil {
-		return nil
+		return
 	}
-
 	js.SetJobStatusSelector()
-	return nil
 }
