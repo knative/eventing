@@ -46,7 +46,7 @@ func GVR() schema.GroupVersionResource {
 	return schema.GroupVersionResource{Group: "sinks.knative.dev", Version: "v1alpha1", Resource: "jobsinks"}
 }
 
-// WithAnnotations adds annotations to the broker
+// WithAnnotations adds annotations to the JobSink.
 func WithAnnotations(annotations map[string]interface{}) manifest.CfgFn {
 	return func(cfg map[string]interface{}) {
 		if annotations != nil {
@@ -163,17 +163,17 @@ func WithForwarderJob(sink string, options ...func(*batchv1.Job)) manifest.CfgFn
 	}
 }
 
-// IsReady tests to see if a Broker becomes ready within the time given.
+// IsReady tests to see if a JobSink becomes ready within the time given.
 func IsReady(name string, timing ...time.Duration) feature.StepFn {
 	return k8s.IsReady(GVR(), name, timing...)
 }
 
-// IsNotReady tests to see if a Broker becomes NotReady within the time given.
+// IsNotReady tests to see if a JobSink becomes NotReady within the time given.
 func IsNotReady(name string, timing ...time.Duration) feature.StepFn {
 	return k8s.IsNotReady(GVR(), name, timing...)
 }
 
-// IsAddressable tests to see if a Broker becomes addressable within the  time
+// IsAddressable tests to see if a JobSink becomes addressable within the  time
 // given.
 func IsAddressable(name string, timings ...time.Duration) feature.StepFn {
 	return k8s.IsAddressable(GVR(), name, timings...)
@@ -184,7 +184,7 @@ func ValidateAddress(name string, validate addressable.ValidateAddressFn, timing
 	return addressable.ValidateAddress(GVR(), name, validate, timings...)
 }
 
-// Address returns a broker's address.
+// Address returns a JobSink's address.
 func Address(ctx context.Context, name string, timings ...time.Duration) (*duckv1.Addressable, error) {
 	return addressable.Address(ctx, GVR(), name, timings...)
 }
@@ -195,11 +195,11 @@ func AsDestinationRef(name string) *duckv1.Destination {
 	}
 }
 
-// AsKReference returns a KReference for a Broker without namespace.
+// AsKReference returns a KReference for a JobSink without namespace.
 func AsKReference(name string) *duckv1.KReference {
 	return &duckv1.KReference{
 		Kind:       "JobSink",
 		Name:       name,
-		APIVersion: "sinks.knative.dev/" + GVR().Version,
+		APIVersion: GVR().GroupVersion().String(),
 	}
 }
