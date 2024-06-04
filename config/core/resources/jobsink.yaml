@@ -72,11 +72,12 @@ spec:
                         type: string
                       audience:
                         type: string
-                failedJobs:
-                  type: array
-                  items:
-                    type: object
-                    x-kubernetes-preserve-unknown-fields: true
+                job:
+                  type: object
+                  properties:
+                    selector:
+                      type: string
+                      description: Label selector for all scheduled jobs
                 annotations:
                   description: Annotations is additional Status fields for the Resource to save some additional State as well as convey more information to the user. This is roughly akin to Annotations on any k8s resource, just the reconciler conveying richer information outwards.
                   type: object

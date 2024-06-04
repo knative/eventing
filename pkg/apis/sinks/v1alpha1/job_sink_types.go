@@ -67,7 +67,11 @@ type JobSinkStatus struct {
 	duckv1.AddressStatus `json:",inline"`
 
 	// +optional
-	FailedJobs []batchv1.JobStatus `json:"failedJobs,omitempty"`
+	JobStatus JobStatus `json:"job,omitempty"`
+}
+
+type JobStatus struct {
+	Selector string `json:"selector,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

@@ -17,8 +17,12 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"fmt"
+
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/pkg/apis"
+
+	"knative.dev/eventing/pkg/apis/sinks"
 )
 
 const (
@@ -65,4 +69,10 @@ func (s *JobSinkStatus) IsReady() bool {
 // InitializeConditions sets relevant unset conditions to Unknown state.
 func (s *JobSinkStatus) InitializeConditions() {
 	JobSinkCondSet.Manage(s).InitializeConditions()
+}
+
+func (e *JobSink) SetJobStatusSelector() {
+	if e.Spec.Job != nil {
+		e.Status.JobStatus.Selector = fmt.Sprintf("%s=%s", sinks.JobSinkNameLabel, e.GetName())
+	}
 }

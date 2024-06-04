@@ -19,11 +19,8 @@ package jobsink
 import (
 	"context"
 	"fmt"
-	"sort"
 
 	"go.uber.org/zap"
-	batchv1 "k8s.io/api/batch/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	batchlisters "k8s.io/client-go/listers/batch/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/utils/ptr"
@@ -34,14 +31,9 @@ import (
 	"knative.dev/pkg/reconciler"
 
 	"knative.dev/eventing/pkg/apis/feature"
-	sinksc "knative.dev/eventing/pkg/apis/sinks"
 	sinks "knative.dev/eventing/pkg/apis/sinks/v1alpha1"
 	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/eventingtls"
-)
-
-const (
-	maxFailedJobs = 10
 )
 
 type Reconciler struct {
@@ -51,36 +43,12 @@ type Reconciler struct {
 }
 
 func (r *Reconciler) ReconcileKind(ctx context.Context, js *sinks.JobSink) reconciler.Event {
-	if err := r.propagateJobsStatus(js); err != nil {
-		return fmt.Errorf("failed to reconcile spec.job: %w", err)
+	if err := r.reconcileJob(js); err != nil {
+		return fmt.Errorf("failed to reconcile job: %w", err)
 	}
 
 	if err := r.reconcileAddress(ctx, js); err != nil {
 		return fmt.Errorf("failed to reconcile address: %w", err)
-	}
-
-	return nil
-}
-
-func (r *Reconciler) propagateJobsStatus(js *sinks.JobSink) error {
-	jobs, err := r.jobLister.Jobs(js.GetNamespace()).List(labels.SelectorFromSet(map[string]string{sinksc.JobSinkNameLabel: js.GetName()}))
-	if err != nil {
-		return fmt.Errorf("failed to list jobs: %w", err)
-	}
-	sort.SliceStable(jobs, func(i, j int) bool {
-		// Reverse order, from the latest
-		return jobs[i].Status.StartTime.Time.After(jobs[j].Status.StartTime.Time)
-	})
-
-	for _, job := range jobs {
-
-		if len(js.Status.FailedJobs) <= maxFailedJobs {
-			for _, c := range job.Status.Conditions {
-				if c.Type == batchv1.JobFailed {
-					js.Status.FailedJobs = append(js.Status.FailedJobs, job.Status)
-				}
-			}
-		}
 	}
 
 	return nil
@@ -174,4 +142,13 @@ func (r *Reconciler) httpsAddress(certs *string, js *sinks.JobSink) duckv1.Addre
 	addr.URL.Scheme = "https"
 	addr.CACerts = certs
 	return addr
+}
+
+func (r *Reconciler) reconcileJob(js *sinks.JobSink) error {
+	if js.Spec.Job == nil {
+		return nil
+	}
+
+	js.SetJobStatusSelector()
+	return nil
 }
