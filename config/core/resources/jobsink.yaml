@@ -38,15 +38,16 @@ spec:
               description: Spec defines the desired state of the JobSink.
               type: object
               properties:
-                  job:
-                    type: object
-                    x-kubernetes-preserve-unknown-fields: true
+                job:
+                  type: object
+                  description: Full Job resource object, see https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#job-v1-batch for more details.
+                  x-kubernetes-preserve-unknown-fields: true
             status:
-              description: Status represents the current state of the Broker. This data may be out of date.
+              description: Status represents the current state of the JobSink. This data may be out of date.
               type: object
               properties:
                 address:
-                  description: Broker is Addressable. It exposes the endpoint as an URI to get events delivered into the Broker mesh.
+                  description: JobSink is Addressable. It exposes the endpoint as an URI to schedule long running jobs when an even occurs.
                   type: object
                   properties:
                     name:
@@ -58,7 +59,7 @@ spec:
                     audience:
                       type: string
                 addresses:
-                  description: Broker is Addressable. It exposes the endpoints as URIs to get events delivered into the Broker mesh.
+                  description: JobSink is Addressable. It exposes the endpoint as an URI to schedule long running jobs when an even occurs.
                   type: array
                   items:
                     type: object
