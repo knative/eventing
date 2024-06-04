@@ -5344,15 +5344,42 @@ It exposes the endpoint as an URI to get events delivered.</p>
 </tr>
 <tr>
 <td>
-<code>failedJobs</code><br/>
+<code>job</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#jobstatus-v1-batch">
-[]Kubernetes batch/v1.JobStatus
+<a href="#sinks.knative.dev/v1alpha1.JobStatus">
+JobStatus
 </a>
 </em>
 </td>
 <td>
 <em>(Optional)</em>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="sinks.knative.dev/v1alpha1.JobStatus">JobStatus
+</h3>
+<p>
+(<em>Appears on:</em><a href="#sinks.knative.dev/v1alpha1.JobSinkStatus">JobSinkStatus</a>)
+</p>
+<p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>selector</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
 </td>
 </tr>
 </tbody>
