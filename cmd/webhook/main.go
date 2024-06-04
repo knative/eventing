@@ -23,10 +23,12 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
+	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	configmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap/filtered"
 
 	eventingv1beta3 "knative.dev/eventing/pkg/apis/eventing/v1beta3"
 	"knative.dev/eventing/pkg/apis/feature"
+	"knative.dev/eventing/pkg/apis/sinks"
 	sinksv1alpha1 "knative.dev/eventing/pkg/apis/sinks/v1alpha1"
 	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/eventingtls"
@@ -156,9 +158,17 @@ func NewValidationAdmissionController(ctx context.Context, cmw configmap.Watcher
 	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"))
 	featureStore.WatchConfigs(cmw)
 
+	k8s := kubeclient.Get(ctx)
+
 	// Decorate contexts with the current state of the config.
 	ctxFunc := func(ctx context.Context) context.Context {
-		return featureStore.ToContext(channelStore.ToContext(pingstore.ToContext(store.ToContext(ctx))))
+		return sinks.WithConfig(
+			featureStore.ToContext(
+				channelStore.ToContext(
+					pingstore.ToContext(store.ToContext(ctx)))),
+			&sinks.Config{
+				KubeClient: k8s,
+			})
 	}
 
 	return validation.NewAdmissionController(ctx,
