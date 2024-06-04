@@ -18,7 +18,7 @@ package main
 
 import (
 	"context"
-	"crypto/md5" //#nosec G505 -- not used for security reasons
+	"crypto/md5" //nolint:gosec
 	"crypto/tls"
 	"fmt"
 	"log"
@@ -436,5 +436,5 @@ func jobLabelSelector(ref types.NamespacedName, id string) string {
 }
 
 func toIdHashLabelValue(source, id string) string {
-	return utils.ToDNS1123Subdomain(fmt.Sprintf("%s", md5.Sum([]byte(fmt.Sprintf("%s-%s", source, id)))))
+	return utils.ToDNS1123Subdomain(fmt.Sprintf("%s", md5.Sum([]byte(fmt.Sprintf("%s-%s", source, id))))) //nolint:gosec
 }
