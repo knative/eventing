@@ -151,7 +151,7 @@ spec:
                       type: object
                       x-kubernetes-preserve-unknown-fields: true
                     not:
-                      description: 'Not evaluates to true if the nested expression evaluates to false. '
+                      description: 'Not evaluates to true if the nested expression evaluates to false.'
                       type: object
                       x-kubernetes-preserve-unknown-fields: true
                     prefix:
