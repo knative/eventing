@@ -135,10 +135,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if err := controller.StartInformers(ctx.Done(), informers...); err != nil {
-		logger.Fatal("Failed to start informers", zap.Error(err))
-	}
-
 	// Start informers and wait for them to sync.
 	logger.Info("Starting informers.")
 	if err := controller.StartInformers(ctx.Done(), informers...); err != nil {
