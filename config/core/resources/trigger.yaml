@@ -159,7 +159,7 @@ spec:
                       type: object
                       x-kubernetes-preserve-unknown-fields: true
                     suffix:
-                      description: 'Suffix evaluates to true if the values of the matching CloudEvents attributes MUST all end with the associated value String specified (case sensitive). The keys are the names of the CloudEvents attributes to be matched, and their values are the String values to use in the comparison. The attribute name and value specified in the filter express MUST NOT be empty strings. '
+                      description: 'Suffix evaluates to true if the values of the matching CloudEvents attributes all end with the associated value String specified (case sensitive). The keys are the names of the CloudEvents attributes to be matched, and their values are the String values to use in the comparison. The attribute name and value specified in the filter express MUST NOT be empty strings.'
                       type: object
                       x-kubernetes-preserve-unknown-fields: true
               subscriber:
