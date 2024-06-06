@@ -27,6 +27,7 @@ import (
 
 	eventingv1beta3 "knative.dev/eventing/pkg/apis/eventing/v1beta3"
 	"knative.dev/eventing/pkg/apis/feature"
+	sinksv1alpha1 "knative.dev/eventing/pkg/apis/sinks/v1alpha1"
 	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/eventingtls"
 
@@ -93,6 +94,10 @@ var ourTypes = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
 	sourcesv1.SchemeGroupVersion.WithKind("PingSource"):      &sourcesv1.PingSource{},
 	sourcesv1.SchemeGroupVersion.WithKind("SinkBinding"):     &sourcesv1.SinkBinding{},
 	sourcesv1.SchemeGroupVersion.WithKind("ContainerSource"): &sourcesv1.ContainerSource{},
+
+	// For group sinks.knative.dev.
+	// v1alpha1
+	sinksv1alpha1.SchemeGroupVersion.WithKind("JobSink"): &sinksv1alpha1.JobSink{},
 
 	// For group flows.knative.dev
 	// v1

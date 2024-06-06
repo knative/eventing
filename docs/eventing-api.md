@@ -28,6 +28,9 @@
 <a href="#messaging.knative.dev%2fv1">messaging.knative.dev/v1</a>
 </li>
 <li>
+<a href="#sinks.knative.dev%2fv1alpha1">sinks.knative.dev/v1alpha1</a>
+</li>
+<li>
 <a href="#sources.knative.dev%2fv1">sources.knative.dev/v1</a>
 </li>
 <li>
@@ -5157,6 +5160,226 @@ DeliveryStatus
 </p>
 <p>DeliveryStatus contains a resolved URL to the dead letter sink address, and any other
 resolved delivery options.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<hr/>
+<h2 id="sinks.knative.dev/v1alpha1">sinks.knative.dev/v1alpha1</h2>
+<p>
+<p>Package v1alpha1 contains API Schema definitions for the sources v1alpha1 API group.</p>
+</p>
+Resource Types:
+<ul><li>
+<a href="#sinks.knative.dev/v1alpha1.JobSink">JobSink</a>
+</li></ul>
+<h3 id="sinks.knative.dev/v1alpha1.JobSink">JobSink
+</h3>
+<p>
+<p>JobSink is the Schema for the JobSink API.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>apiVersion</code><br/>
+string</td>
+<td>
+<code>
+sinks.knative.dev/v1alpha1
+</code>
+</td>
+</tr>
+<tr>
+<td>
+<code>kind</code><br/>
+string
+</td>
+<td><code>JobSink</code></td>
+</tr>
+<tr>
+<td>
+<code>metadata</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#objectmeta-v1-meta">
+Kubernetes meta/v1.ObjectMeta
+</a>
+</em>
+</td>
+<td>
+Refer to the Kubernetes API documentation for the fields of the
+<code>metadata</code> field.
+</td>
+</tr>
+<tr>
+<td>
+<code>spec</code><br/>
+<em>
+<a href="#sinks.knative.dev/v1alpha1.JobSinkSpec">
+JobSinkSpec
+</a>
+</em>
+</td>
+<td>
+<br/>
+<br/>
+<table>
+<tr>
+<td>
+<code>job</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#job-v1-batch">
+Kubernetes batch/v1.Job
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Job to run when an event occur.</p>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+<tr>
+<td>
+<code>status</code><br/>
+<em>
+<a href="#sinks.knative.dev/v1alpha1.JobSinkStatus">
+JobSinkStatus
+</a>
+</em>
+</td>
+<td>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="sinks.knative.dev/v1alpha1.JobSinkSpec">JobSinkSpec
+</h3>
+<p>
+(<em>Appears on:</em><a href="#sinks.knative.dev/v1alpha1.JobSink">JobSink</a>)
+</p>
+<p>
+<p>JobSinkSpec defines the desired state of the JobSink.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>job</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#job-v1-batch">
+Kubernetes batch/v1.Job
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Job to run when an event occur.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="sinks.knative.dev/v1alpha1.JobSinkStatus">JobSinkStatus
+</h3>
+<p>
+(<em>Appears on:</em><a href="#sinks.knative.dev/v1alpha1.JobSink">JobSink</a>)
+</p>
+<p>
+<p>JobSinkStatus defines the observed state of JobSink.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>Status</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#Status">
+knative.dev/pkg/apis/duck/v1.Status
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>Status</code> are embedded into this type.)
+</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>AddressStatus</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#AddressStatus">
+knative.dev/pkg/apis/duck/v1.AddressStatus
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>AddressStatus</code> are embedded into this type.)
+</p>
+<em>(Optional)</em>
+<p>AddressStatus is the part where the JobSink fulfills the Addressable contract.
+It exposes the endpoint as an URI to get events delivered.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>job</code><br/>
+<em>
+<a href="#sinks.knative.dev/v1alpha1.JobStatus">
+JobStatus
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="sinks.knative.dev/v1alpha1.JobStatus">JobStatus
+</h3>
+<p>
+(<em>Appears on:</em><a href="#sinks.knative.dev/v1alpha1.JobSinkStatus">JobSinkStatus</a>)
+</p>
+<p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>selector</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
 </td>
 </tr>
 </tbody>

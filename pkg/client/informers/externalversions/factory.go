@@ -32,6 +32,7 @@ import (
 	flows "knative.dev/eventing/pkg/client/informers/externalversions/flows"
 	internalinterfaces "knative.dev/eventing/pkg/client/informers/externalversions/internalinterfaces"
 	messaging "knative.dev/eventing/pkg/client/informers/externalversions/messaging"
+	sinks "knative.dev/eventing/pkg/client/informers/externalversions/sinks"
 	sources "knative.dev/eventing/pkg/client/informers/externalversions/sources"
 )
 
@@ -259,6 +260,7 @@ type SharedInformerFactory interface {
 	Eventing() eventing.Interface
 	Flows() flows.Interface
 	Messaging() messaging.Interface
+	Sinks() sinks.Interface
 	Sources() sources.Interface
 }
 
@@ -272,6 +274,10 @@ func (f *sharedInformerFactory) Flows() flows.Interface {
 
 func (f *sharedInformerFactory) Messaging() messaging.Interface {
 	return messaging.New(f, f.namespace, f.tweakListOptions)
+}
+
+func (f *sharedInformerFactory) Sinks() sinks.Interface {
+	return sinks.New(f, f.namespace, f.tweakListOptions)
 }
 
 func (f *sharedInformerFactory) Sources() sources.Interface {
