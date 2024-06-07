@@ -18,7 +18,6 @@ package trigger
 
 import (
 	"context"
-	"log"
 
 	cetest "github.com/cloudevents/sdk-go/v2/test"
 	"knative.dev/eventing/test/rekt/features/featureflags"
@@ -44,22 +43,13 @@ func CrossNamespaceEventLinks(brokerEnvCtx context.Context) *feature.Feature {
 	brokerName := feature.MakeRandomK8sName("broker")
 	brokerNamespace := environment.FromContext(brokerEnvCtx).Namespace()
 
-	log.Printf("Setting up subscriber: %s", subscriberName)
 	f.Setup("install subscriber", eventshub.Install(subscriberName, eventshub.StartReceiver))
-
-	log.Printf("Setting up event source: %s", sourceName)
 	f.Setup("install event source", eventshub.Install(sourceName, eventshub.StartSenderToNamespacedResource(broker.GVR(), brokerName, brokerNamespace), eventshub.InputEvent(ev)))
 
-	log.Printf("Setting up broker: %s in namespace: %s", brokerName, brokerNamespace)
-	log.Printf("Setting up trigger: %s for broker: %s", triggerName, brokerName)
 	f.Setup("install trigger", trigger.Install(triggerName, trigger.WithBrokerName(brokerName), trigger.WithBrokerNamespace(brokerNamespace)))
-
-	log.Printf("Waiting for trigger to be ready: %s", triggerName)
 	f.Setup("trigger is ready", trigger.IsReady(triggerName))
 
-	log.Printf("Asserting event is received by subscriber: %s", subscriberName)
 	f.Assert("event is received by subscriber", assert.OnStore(subscriberName).MatchEvent(cetest.HasId(ev.ID())).Exact(1))
 
-	return f
 	return f
 }
