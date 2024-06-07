@@ -165,10 +165,18 @@ func WithBrokerName(brokerName string) manifest.CfgFn {
 	}
 }
 
-func WithBrokerNamespace(brokerNamespace string) manifest.CfgFn {
+func WithBrokerRefName(brokerName string) manifest.CfgFn {
+	return func(cfg map[string]interface{}) {
+		if brokerName != "" {
+			cfg["brokerRefName"] = brokerName
+		}
+	}
+}
+
+func WithBrokerRefNamespace(brokerNamespace string) manifest.CfgFn {
 	return func(cfg map[string]interface{}) {
 		if brokerNamespace != "" {
-			cfg["brokerNamespace"] = brokerNamespace
+			cfg["brokerRefNamespace"] = brokerNamespace
 		}
 	}
 }
