@@ -228,7 +228,7 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 
 func (h *Handler) handleDispatchToReplyRequest(ctx context.Context, trigger *eventingv1.Trigger, writer http.ResponseWriter, request *http.Request, event *event.Event) {
 	var brokerRef, brokerNamespace string
-	if feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) && trigger.Spec.BrokerRef.Namespace != "" {
+	if feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) && trigger.Spec.BrokerRef != nil && trigger.Spec.BrokerRef.Namespace != "" {
 		brokerRef = trigger.Spec.BrokerRef.Name
 		brokerNamespace = trigger.Spec.BrokerRef.Namespace
 	} else {
@@ -266,7 +266,7 @@ func (h *Handler) handleDispatchToReplyRequest(ctx context.Context, trigger *eve
 
 func (h *Handler) handleDispatchToDLSRequest(ctx context.Context, trigger *eventingv1.Trigger, writer http.ResponseWriter, request *http.Request, event *event.Event) {
 	var brokerRef, brokerNamespace string
-	if feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) && trigger.Spec.BrokerRef.Namespace != "" {
+	if feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) && trigger.Spec.BrokerRef != nil && trigger.Spec.BrokerRef.Namespace != "" {
 		brokerRef = trigger.Spec.BrokerRef.Name
 		brokerNamespace = trigger.Spec.BrokerRef.Namespace
 	} else {
@@ -317,7 +317,7 @@ func (h *Handler) handleDispatchToDLSRequest(ctx context.Context, trigger *event
 
 func (h *Handler) handleDispatchToSubscriberRequest(ctx context.Context, trigger *eventingv1.Trigger, writer http.ResponseWriter, request *http.Request, event *event.Event) {
 	var brokerRef string
-	if feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) && trigger.Spec.BrokerRef.Namespace != "" {
+	if feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) && trigger.Spec.BrokerRef != nil && trigger.Spec.BrokerRef.Namespace != "" {
 		brokerRef = trigger.Spec.BrokerRef.Name
 	} else {
 		brokerRef = trigger.Spec.Broker
