@@ -297,12 +297,13 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	job.Labels[sinks.JobSinkIDLabel] = id
 	job.Labels[sinks.JobSinkNameLabel] = ref.Name
 	job.OwnerReferences = append(job.OwnerReferences, or)
-
+	var mountPathName string
 	for i := range job.Spec.Template.Spec.Containers {
 		found := false
 		for j := range job.Spec.Template.Spec.Containers[i].VolumeMounts {
 			if job.Spec.Template.Spec.Containers[i].VolumeMounts[j].Name == "jobsink-event" {
 				found = true
+				mountPathName = job.Spec.Template.Spec.Containers[i].VolumeMounts[j].MountPath
 				break
 			}
 		}
@@ -312,7 +313,12 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				ReadOnly:  true,
 				MountPath: "/etc/jobsink-event",
 			})
+			mountPathName = "/etc/jobsink-event"
 		}
+		job.Spec.Template.Spec.Containers[i].Env = append(job.Spec.Template.Spec.Containers[i].Env, corev1.EnvVar{
+			Name:  "K_EVENT_PATH",
+			Value: mountPathName,
+		})
 	}
 
 	found := false
