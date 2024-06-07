@@ -313,6 +313,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				MountPath: "/etc/jobsink-event",
 			})
 		}
+		job.Spec.Template.Spec.Containers[i].Env = append(job.Spec.Template.Spec.Containers[i].Env, corev1.EnvVar{
+			Name:  "K_EVENT_PATH",
+			Value: "/etc/jobsink-event",
+		})
 	}
 
 	found := false
