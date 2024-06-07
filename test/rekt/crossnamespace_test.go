@@ -24,7 +24,6 @@ import (
 
 	"knative.dev/pkg/system"
 	"knative.dev/reconciler-test/pkg/environment"
-	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/knative"
 
@@ -34,10 +33,7 @@ import (
 func TestBrokerTriggerCrossNamespaceReference(t *testing.T) {
 	t.Parallel()
 
-	// namespaces and names for the broker and trigger
-	brokerName := feature.MakeRandomK8sName("broker")
-
-	brokerEnvCtx, brokerEnv := global.Environment(
+	brokerEnvCtx, _ := global.Environment(
 		knative.WithKnativeNamespace(system.Namespace()),
 		knative.WithLoggingConfig,
 		knative.WithTracingConfig,
