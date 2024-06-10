@@ -25,7 +25,9 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	configmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap/filtered"
 
+	eventingv1beta3 "knative.dev/eventing/pkg/apis/eventing/v1beta3"
 	"knative.dev/eventing/pkg/apis/feature"
+	sinksv1alpha1 "knative.dev/eventing/pkg/apis/sinks/v1alpha1"
 	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/eventingtls"
 
@@ -92,6 +94,10 @@ var ourTypes = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
 	sourcesv1.SchemeGroupVersion.WithKind("PingSource"):      &sourcesv1.PingSource{},
 	sourcesv1.SchemeGroupVersion.WithKind("SinkBinding"):     &sourcesv1.SinkBinding{},
 	sourcesv1.SchemeGroupVersion.WithKind("ContainerSource"): &sourcesv1.ContainerSource{},
+
+	// For group sinks.knative.dev.
+	// v1alpha1
+	sinksv1alpha1.SchemeGroupVersion.WithKind("JobSink"): &sinksv1alpha1.JobSink{},
 
 	// For group flows.knative.dev
 	// v1
@@ -241,6 +247,7 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 		sourcesv1_       = sourcesv1.SchemeGroupVersion.Version
 		eventingv1beta1_ = eventingv1beta1.SchemeGroupVersion.Version
 		eventingv1beta2_ = eventingv1beta2.SchemeGroupVersion.Version
+		eventingv1beta3_ = eventingv1beta3.SchemeGroupVersion.Version
 	)
 
 	return conversion.NewConversionController(ctx,
@@ -265,6 +272,7 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 				Zygotes: map[string]conversion.ConvertibleObject{
 					eventingv1beta1_: &eventingv1beta1.EventType{},
 					eventingv1beta2_: &eventingv1beta2.EventType{},
+					eventingv1beta3_: &eventingv1beta3.EventType{},
 				},
 			},
 		},

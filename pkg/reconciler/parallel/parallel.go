@@ -22,7 +22,6 @@ import (
 
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/equality"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -45,6 +44,7 @@ import (
 	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1"
 	ducklib "knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/reconciler/parallel/resources"
+	"knative.dev/pkg/kmp"
 )
 
 type Reconciler struct {
@@ -216,7 +216,7 @@ func (r *Reconciler) reconcileSubscription(ctx context.Context, branchNumber int
 		// TODO: Send events here, or elsewhere?
 		//r.Recorder.Eventf(p, corev1.EventTypeWarning, subscriptionCreateFailed, "Create Parallels's subscription failed: %v", err)
 		return nil, fmt.Errorf("failed to get Subscription: %s", err)
-	} else if !equality.Semantic.DeepDerivative(expected.Spec, sub.Spec) {
+	} else if immutableFieldsChanged := expected.CheckImmutableFields(ctx, sub); immutableFieldsChanged != nil {
 		// Given that spec.channel is immutable, we cannot just update the subscription. We delete
 		// it instead, and re-create it.
 		err = r.eventingClientSet.MessagingV1().Subscriptions(sub.Namespace).Delete(ctx, sub.Name, metav1.DeleteOptions{})
@@ -230,6 +230,13 @@ func (r *Reconciler) reconcileSubscription(ctx context.Context, branchNumber int
 			return nil, err
 		}
 		return newSub, nil
+	} else if equal, err := kmp.SafeEqual(sub.Spec, expected.Spec); !equal || err != nil {
+		updatedSub, err := r.eventingClientSet.MessagingV1().Subscriptions(sub.Namespace).Update(ctx, expected, metav1.UpdateOptions{})
+		if err != nil {
+			logging.FromContext(ctx).Infow("Cannot update subscription", zap.Error(err))
+			return nil, err
+		}
+		return updatedSub, nil
 	}
 	return sub, nil
 }

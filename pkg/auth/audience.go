@@ -30,3 +30,10 @@ func GetAudience(gvk schema.GroupVersionKind, objectMeta metav1.ObjectMeta) stri
 
 	return strings.ToLower(aud)
 }
+
+// GetAudienceDirect returns the audience string for the given object in the format <group>/<kind>/<namespace>/<name>
+func GetAudienceDirect(gvk schema.GroupVersionKind, ns, name string) string {
+	aud := fmt.Sprintf("%s/%s/%s/%s", gvk.Group, gvk.Kind, ns, name)
+
+	return strings.ToLower(aud)
+}

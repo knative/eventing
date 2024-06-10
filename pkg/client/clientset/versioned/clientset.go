@@ -31,6 +31,7 @@ import (
 	eventingv1beta3 "knative.dev/eventing/pkg/client/clientset/versioned/typed/eventing/v1beta3"
 	flowsv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/flows/v1"
 	messagingv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/messaging/v1"
+	sinksv1alpha1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/sinks/v1alpha1"
 	sourcesv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/sources/v1"
 	sourcesv1beta2 "knative.dev/eventing/pkg/client/clientset/versioned/typed/sources/v1beta2"
 )
@@ -43,6 +44,7 @@ type Interface interface {
 	EventingV1() eventingv1.EventingV1Interface
 	FlowsV1() flowsv1.FlowsV1Interface
 	MessagingV1() messagingv1.MessagingV1Interface
+	SinksV1alpha1() sinksv1alpha1.SinksV1alpha1Interface
 	SourcesV1beta2() sourcesv1beta2.SourcesV1beta2Interface
 	SourcesV1() sourcesv1.SourcesV1Interface
 }
@@ -56,6 +58,7 @@ type Clientset struct {
 	eventingV1      *eventingv1.EventingV1Client
 	flowsV1         *flowsv1.FlowsV1Client
 	messagingV1     *messagingv1.MessagingV1Client
+	sinksV1alpha1   *sinksv1alpha1.SinksV1alpha1Client
 	sourcesV1beta2  *sourcesv1beta2.SourcesV1beta2Client
 	sourcesV1       *sourcesv1.SourcesV1Client
 }
@@ -88,6 +91,11 @@ func (c *Clientset) FlowsV1() flowsv1.FlowsV1Interface {
 // MessagingV1 retrieves the MessagingV1Client
 func (c *Clientset) MessagingV1() messagingv1.MessagingV1Interface {
 	return c.messagingV1
+}
+
+// SinksV1alpha1 retrieves the SinksV1alpha1Client
+func (c *Clientset) SinksV1alpha1() sinksv1alpha1.SinksV1alpha1Interface {
+	return c.sinksV1alpha1
 }
 
 // SourcesV1beta2 retrieves the SourcesV1beta2Client
@@ -168,6 +176,10 @@ func NewForConfigAndClient(c *rest.Config, httpClient *http.Client) (*Clientset,
 	if err != nil {
 		return nil, err
 	}
+	cs.sinksV1alpha1, err = sinksv1alpha1.NewForConfigAndClient(&configShallowCopy, httpClient)
+	if err != nil {
+		return nil, err
+	}
 	cs.sourcesV1beta2, err = sourcesv1beta2.NewForConfigAndClient(&configShallowCopy, httpClient)
 	if err != nil {
 		return nil, err
@@ -203,6 +215,7 @@ func New(c rest.Interface) *Clientset {
 	cs.eventingV1 = eventingv1.New(c)
 	cs.flowsV1 = flowsv1.New(c)
 	cs.messagingV1 = messagingv1.New(c)
+	cs.sinksV1alpha1 = sinksv1alpha1.New(c)
 	cs.sourcesV1beta2 = sourcesv1beta2.New(c)
 	cs.sourcesV1 = sourcesv1.New(c)
 

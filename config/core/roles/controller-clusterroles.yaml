@@ -55,6 +55,15 @@ rules:
       - "patch"
       - "watch"
 
+  - apiGroups:
+      - "batch"
+    resources:
+      - "jobs"
+    verbs:
+      - "get"
+      - "list"
+      - "watch"
+
   # PingSource controller manipulates Deployment owner reference
   - apiGroups:
       - "apps"
@@ -97,12 +106,33 @@ rules:
       - "patch"
       - "watch"
 
+  - apiGroups:
+      - "sinks.knative.dev"
+    resources:
+      - "jobsinks"
+      - "jobsinks/status"
+    verbs:
+      - "get"
+      - "list"
+      - "create"
+      - "update"
+      - "delete"
+      - "patch"
+      - "watch"
+
   # Eventing resources and finalizers we care about.
   - apiGroups:
       - "eventing.knative.dev"
     resources:
       - "brokers/finalizers"
       - "triggers/finalizers"
+    verbs:
+      - "update"
+
+  - apiGroups:
+      - "sinks.knative.dev"
+    resources:
+      - "jobsinks/finalizers"
     verbs:
       - "update"
 
