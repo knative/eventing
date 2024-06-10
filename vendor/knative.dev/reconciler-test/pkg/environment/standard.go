@@ -87,6 +87,22 @@ func NewStandardGlobalEnvironmentWithRestConfig(cfg *rest.Config, opts ...Config
 	// features to pull Kubernetes clients or the test environment out of the
 	// context passed in the features.
 	var startInformers func()
+
+	if config.Config == nil {
+		config.Config = injection.ParseAndGetRESTConfigOrDie()
+	}
+	// Respect user provided settings, but if omitted customize the default behavior.
+	//
+	// Use 20 times the default QPS and Burst to speed up testing since this client is used by
+	// every running test.
+	multiplier := 20
+	if config.Config.QPS == 0 {
+		config.Config.QPS = rest.DefaultQPS * float32(multiplier)
+	}
+	if config.Config.Burst == 0 {
+		config.Config.Burst = rest.DefaultBurst * multiplier
+	}
+
 	ctx, startInformers = injection.EnableInjectionOrDie(ctx, config.Config)
 
 	// global is used to make instances of Environments, NewGlobalEnvironment

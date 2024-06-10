@@ -51,6 +51,8 @@ const (
 	SecretCACert = "ca.crt"
 	// IMCDispatcherServerTLSSecretName is the name of the tls secret for the imc dispatcher server
 	IMCDispatcherServerTLSSecretName = "imc-dispatcher-server-tls" //nolint:gosec // This is not a hardcoded credential
+	// JobSinkDispatcherServerTLSSecretName is the name of the tls secret for the job sink dispatcher server
+	JobSinkDispatcherServerTLSSecretName = "job-sink-server-tls" //nolint:gosec // This is not a hardcoded credential
 	// BrokerFilterServerTLSSecretName is the name of the tls secret for the broker filter server
 	BrokerFilterServerTLSSecretName = "mt-broker-filter-server-tls" //nolint:gosec // This is not a hardcoded credential
 	// BrokerIngressServerTLSSecretName is the name of the tls secret for the broker ingress server

@@ -28,11 +28,13 @@ import (
 
 	"knative.dev/pkg/injection/sharedmain"
 
-	"knative.dev/eventing/pkg/auth"
-	"knative.dev/eventing/pkg/eventingtls"
-
 	filteredFactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
 	"knative.dev/pkg/signals"
+
+	"knative.dev/eventing/pkg/apis/sinks"
+	"knative.dev/eventing/pkg/auth"
+	"knative.dev/eventing/pkg/eventingtls"
+	"knative.dev/eventing/pkg/reconciler/jobsink"
 
 	"knative.dev/eventing/pkg/reconciler/apiserversource"
 	"knative.dev/eventing/pkg/reconciler/channel"
@@ -81,6 +83,7 @@ func main() {
 	ctx = filteredFactory.WithSelectors(ctx,
 		auth.OIDCLabelSelector,
 		eventingtls.TrustBundleLabelSelector,
+		sinks.JobSinkJobsLabelSelector,
 	)
 
 	sharedmain.MainWithContext(ctx, "controller",
@@ -101,6 +104,9 @@ func main() {
 		containersource.NewController,
 		// Sources CRD
 		sourcecrd.NewController,
+
+		// Sinks
+		jobsink.NewController,
 
 		// Sugar
 		sugarnamespace.NewController,

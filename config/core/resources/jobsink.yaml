@@ -1,0 +1,134 @@
+# Copyright 2020 The Knative Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: jobsinks.sinks.knative.dev
+  labels:
+    knative.dev/crd-install: "true"
+    duck.knative.dev/addressable: "true"
+    app.kubernetes.io/version: devel
+    app.kubernetes.io/name: knative-eventing
+spec:
+  group: sinks.knative.dev
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      subresources:
+        status: { }
+      schema:
+        openAPIV3Schema:
+          description: 'JobSink triggers long-running jobs when an event occur.'
+          type: object
+          properties:
+            spec:
+              description: Spec defines the desired state of the JobSink.
+              type: object
+              properties:
+                job:
+                  type: object
+                  description: Full Job resource object, see https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#job-v1-batch for more details.
+                  x-kubernetes-preserve-unknown-fields: true
+            status:
+              description: Status represents the current state of the JobSink. This data may be out of date.
+              type: object
+              properties:
+                address:
+                  description: JobSink is Addressable. It exposes the endpoint as an URI to schedule long running jobs when an even occurs.
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    url:
+                      type: string
+                    CACerts:
+                      type: string
+                    audience:
+                      type: string
+                addresses:
+                  description: JobSink is Addressable. It exposes the endpoint as an URI to schedule long running jobs when an even occurs.
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      url:
+                        type: string
+                      CACerts:
+                        type: string
+                      audience:
+                        type: string
+                job:
+                  type: object
+                  properties:
+                    selector:
+                      type: string
+                      description: Label selector for all scheduled jobs
+                annotations:
+                  description: Annotations is additional Status fields for the Resource to save some additional State as well as convey more information to the user. This is roughly akin to Annotations on any k8s resource, just the reconciler conveying richer information outwards.
+                  type: object
+                  x-kubernetes-preserve-unknown-fields: true
+                conditions:
+                  description: Conditions the latest available observations of a resource's current state.
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - type
+                      - status
+                    properties:
+                      lastTransitionTime:
+                        description: 'LastTransitionTime is the last time the condition transitioned from one status to another. We use VolatileTime in place of metav1.Time to exclude this from creating equality.Semantic differences (all other things held constant).'
+                        type: string
+                      message:
+                        description: 'A human readable message indicating details about the transition.'
+                        type: string
+                      reason:
+                        description: 'The reason for the condition''s last transition.'
+                        type: string
+                      severity:
+                        description: 'Severity with which to treat failures of this type of condition. When this is not specified, it defaults to Error.'
+                        type: string
+                      status:
+                        description: 'Status of the condition, one of True, False, Unknown.'
+                        type: string
+                      type:
+                        description: 'Type of condition.'
+                        type: string
+      additionalPrinterColumns:
+        - name: URL
+          type: string
+          jsonPath: .status.address.url
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+        - name: Ready
+          type: string
+          jsonPath: ".status.conditions[?(@.type==\"Ready\")].status"
+        - name: Reason
+          type: string
+          jsonPath: ".status.conditions[?(@.type==\"Ready\")].reason"
+  names:
+    kind: JobSink
+    plural: jobsinks
+    singular: jobsink
+    categories:
+      - all
+      - knative
+      - eventing
+      - sink
+  scope: Namespaced
