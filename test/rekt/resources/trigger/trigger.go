@@ -165,21 +165,42 @@ func WithBrokerName(brokerName string) manifest.CfgFn {
 	}
 }
 
-func WithBrokerRefName(brokerName string) manifest.CfgFn {
+// WithBrokerRef adds the brokerRef related config to a Trigger spec.
+func WithBrokerRef(ref *duckv1.KReference) manifest.CfgFn {
 	return func(cfg map[string]interface{}) {
-		if brokerName != "" {
-			cfg["brokerRefName"] = brokerName
+		if _, set := cfg["brokerRef"]; !set {
+			cfg["brokerRef"] = map[string]interface{}{}
+		}
+		brokerRef := cfg["brokerRef"].(map[string]interface{})
+
+		if ref != nil {
+			if _, set := brokerRef["ref"]; !set {
+				brokerRef["ref"] = map[string]interface{}{}
+			}
+			brokerRef := brokerRef["ref"].(map[string]interface{})
+			brokerRef["apiVersion"] = ref.APIVersion
+			brokerRef["kind"] = ref.Kind
+			brokerRef["name"] = ref.Name
+			brokerRef["namespace"] = ref.Namespace
 		}
 	}
 }
 
-func WithBrokerRefNamespace(brokerNamespace string) manifest.CfgFn {
-	return func(cfg map[string]interface{}) {
-		if brokerNamespace != "" {
-			cfg["brokerRefNamespace"] = brokerNamespace
-		}
-	}
-}
+// func WithBrokerRefName(brokerName string) manifest.CfgFn {
+// 	return func(cfg map[string]interface{}) {
+// 		if brokerName != "" {
+// 			cfg["brokerRefName"] = brokerName
+// 		}
+// 	}
+// }
+
+// func WithBrokerRefNamespace(brokerNamespace string) manifest.CfgFn {
+// 	return func(cfg map[string]interface{}) {
+// 		if brokerNamespace != "" {
+// 			cfg["brokerRefNamespace"] = brokerNamespace
+// 		}
+// 	}
+// }
 
 // WithDeadLetterSink adds the dead letter sink related config to a Trigger spec.
 var WithDeadLetterSink = delivery.WithDeadLetterSink

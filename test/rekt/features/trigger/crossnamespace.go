@@ -23,6 +23,7 @@ import (
 	"knative.dev/eventing/test/rekt/features/featureflags"
 	"knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/eventing/test/rekt/resources/trigger"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/eventshub/assert"
@@ -45,10 +46,16 @@ func CrossNamespaceEventLinks(brokerEnvCtx context.Context) *feature.Feature {
 	brokerName := feature.MakeRandomK8sName("broker")
 	brokerNamespace := environment.FromContext(brokerEnvCtx).Namespace()
 
+	brokerRef := &duckv1.KReference{
+		APIVersion: "eventing.knative.dev/v1",
+		Kind:       "Broker",
+		Name:       brokerName,
+		Namespace:  brokerNamespace,
+	}
+
 	triggerCfg := []manifest.CfgFn{
 		trigger.WithSubscriber(service.AsKReference(subscriberName), ""),
-		trigger.WithBrokerRefName(brokerName),
-		trigger.WithBrokerRefNamespace(brokerNamespace),
+		trigger.WithBrokerRef(brokerRef),
 	}
 
 	f.Setup("install broker", broker.Install(brokerName, broker.WithNamespace(brokerNamespace)))
