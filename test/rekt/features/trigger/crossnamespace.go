@@ -27,6 +27,8 @@ import (
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
+	"knative.dev/reconciler-test/pkg/manifest"
+	"knative.dev/reconciler-test/pkg/resources/service"
 )
 
 func CrossNamespaceEventLinks(brokerEnvCtx context.Context) *feature.Feature {
@@ -43,9 +45,14 @@ func CrossNamespaceEventLinks(brokerEnvCtx context.Context) *feature.Feature {
 	brokerName := feature.MakeRandomK8sName("broker")
 	brokerNamespace := environment.FromContext(brokerEnvCtx).Namespace()
 
-	f.Setup("install trigger", trigger.Install(triggerName, trigger.WithBrokerRefName(brokerName), trigger.WithBrokerRefNamespace(brokerNamespace)))
-	f.Setup("trigger is ready", trigger.IsReady(triggerName))
+	triggerCfg := []manifest.CfgFn{
+		trigger.WithSubscriber(service.AsKReference(subscriberName), ""),
+		trigger.WithBrokerRefName(brokerName),
+		trigger.WithBrokerRefNamespace(brokerNamespace),
+	}
+
 	f.Setup("install broker", broker.Install(brokerName, broker.WithNamespace(brokerNamespace)))
+	f.Setup("install trigger", trigger.Install(triggerName, triggerCfg...))
 
 	f.Setup("install subscriber", eventshub.Install(subscriberName, eventshub.StartReceiver))
 	f.Setup("install event source", eventshub.Install(sourceName, eventshub.StartSenderToNamespacedResource(broker.GVR(), brokerName, brokerNamespace), eventshub.InputEvent(ev)))
