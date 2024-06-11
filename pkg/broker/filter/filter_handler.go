@@ -306,7 +306,7 @@ func (h *Handler) handleDispatchToDLSRequest(ctx context.Context, trigger *event
 	reportArgs := &ReportArgs{
 		ns:          trigger.Namespace,
 		trigger:     trigger.Name,
-		broker:      trigger.Spec.Broker,
+		broker:      brokerName,
 		requestType: "dls_forward",
 	}
 
