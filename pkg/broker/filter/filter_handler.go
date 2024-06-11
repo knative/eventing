@@ -265,16 +265,23 @@ func (h *Handler) handleDispatchToReplyRequest(ctx context.Context, trigger *eve
 }
 
 func (h *Handler) handleDispatchToDLSRequest(ctx context.Context, trigger *eventingv1.Trigger, writer http.ResponseWriter, request *http.Request, event *event.Event) {
-	var brokerRef, brokerNamespace string
-	if feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) && trigger.Spec.BrokerRef != nil && trigger.Spec.BrokerRef.Namespace != "" {
-		brokerRef = trigger.Spec.BrokerRef.Name
-		brokerNamespace = trigger.Spec.BrokerRef.Namespace
+	var brokerName, brokerNamespace string
+	if feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) && trigger.Spec.BrokerRef != nil {
+		if trigger.Spec.BrokerRef.Name != "" {
+			brokerName = trigger.Spec.BrokerRef.Name
+		} else {
+			brokerName = trigger.Spec.Broker
+		}
+		if trigger.Spec.BrokerRef.Namespace != "" {
+			brokerNamespace = trigger.Spec.BrokerRef.Namespace
+		} else {
+			brokerNamespace = trigger.Namespace
+		}
 	} else {
-		brokerRef = trigger.Spec.Broker
+		brokerName = trigger.Spec.Broker
 		brokerNamespace = trigger.Namespace
 	}
-
-	broker, err := h.brokerLister.Brokers(brokerNamespace).Get(brokerRef)
+	broker, err := h.brokerLister.Brokers(brokerNamespace).Get(brokerName)
 	if err != nil {
 		h.logger.Info("Unable to get the Broker", zap.Error(err))
 		writer.WriteHeader(http.StatusBadRequest)
