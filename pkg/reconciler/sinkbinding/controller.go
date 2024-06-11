@@ -142,8 +142,9 @@ func NewController(
 		trustBundleConfigMapLister: trustBundleConfigMapLister,
 	}
 
+	k8s := kubeclient.Get(ctx)
 	c.WithContext = func(ctx context.Context, b psbinding.Bindable) (context.Context, error) {
-		return v1.WithTrustBundleConfigMapLister(v1.WithURIResolver(ctx, sbResolver), trustBundleConfigMapLister), nil
+		return v1.WithKubeClient(v1.WithTrustBundleConfigMapLister(v1.WithURIResolver(ctx, sbResolver), trustBundleConfigMapLister), k8s), nil
 	}
 	c.Tracker = impl.Tracker
 	c.Factory = &duck.CachedInformerFactory{
@@ -226,9 +227,10 @@ func ListAll(ctx context.Context, handler cache.ResourceEventHandler) psbinding.
 
 func WithContextFactory(ctx context.Context, lister corev1listers.ConfigMapLister, handler func(types.NamespacedName)) psbinding.BindableContext {
 	r := resolver.NewURIResolverFromTracker(ctx, tracker.New(handler, controller.GetTrackerLease(ctx)))
+	k := kubeclient.Get(ctx)
 
 	return func(ctx context.Context, b psbinding.Bindable) (context.Context, error) {
-		return v1.WithTrustBundleConfigMapLister(v1.WithURIResolver(ctx, r), lister), nil
+		return v1.WithKubeClient(v1.WithTrustBundleConfigMapLister(v1.WithURIResolver(ctx, r), lister), k), nil
 	}
 }
 
