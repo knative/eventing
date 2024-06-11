@@ -20,6 +20,7 @@ import (
 	"context"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apiserver/pkg/storage/names"
 	"knative.dev/pkg/apis"
 
 	"knative.dev/eventing/pkg/apis/sinks"
@@ -39,7 +40,7 @@ func (sink *JobSinkSpec) Validate(ctx context.Context) *apis.FieldError {
 
 	if sink.Job != nil {
 		job := sink.Job.DeepCopy()
-		job.Name = "temporary-job-name"
+		job.Name = names.SimpleNameGenerator.GenerateName(apis.ParentMeta(ctx).Name)
 		_, err := sinks.GetConfig(ctx).KubeClient.
 			BatchV1().
 			Jobs(apis.ParentMeta(ctx).Namespace).
