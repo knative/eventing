@@ -323,11 +323,15 @@ func (h *Handler) handleDispatchToDLSRequest(ctx context.Context, trigger *event
 }
 
 func (h *Handler) handleDispatchToSubscriberRequest(ctx context.Context, trigger *eventingv1.Trigger, writer http.ResponseWriter, request *http.Request, event *event.Event) {
-	var brokerRef string
-	if feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) && trigger.Spec.BrokerRef != nil && trigger.Spec.BrokerRef.Namespace != "" {
-		brokerRef = trigger.Spec.BrokerRef.Name
+	var brokerName string
+	if feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) && trigger.Spec.BrokerRef != nil {
+		if trigger.Spec.BrokerRef.Name != "" {
+			brokerName = trigger.Spec.BrokerRef.Name
+		} else {
+			brokerName = trigger.Spec.Broker
+		}
 	} else {
-		brokerRef = trigger.Spec.Broker
+		brokerName = trigger.Spec.Broker
 	}
 
 	triggerRef := types.NamespacedName{
@@ -353,7 +357,7 @@ func (h *Handler) handleDispatchToSubscriberRequest(ctx context.Context, trigger
 	reportArgs := &ReportArgs{
 		ns:          trigger.Namespace,
 		trigger:     trigger.Name,
-		broker:      brokerRef,
+		broker:      brokerName,
 		filterType:  triggerFilterAttribute(trigger.Spec.Filter, "type"),
 		requestType: "filter",
 	}
