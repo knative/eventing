@@ -1,0 +1,21 @@
+apiVersion: sinks.knative.dev/v1alpha1
+kind: JobSink
+metadata:
+  name: job-sink-invalid
+spec:
+  job:
+    apiVersion: batch/v1
+    kind: Job
+    spec:
+      completions: 12
+      parallelism: 3
+      template:
+        spec:
+          # restartPolicy: Never -> missing field
+          containers:
+            - name: main
+              image: docker.io/library/bash:5
+              command: [ "bash" ]        # example command simulating a bug which triggers the FailJob action
+              args:
+                - -c
+                - echo "Hello world!" && sleep 5
