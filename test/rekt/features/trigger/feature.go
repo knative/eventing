@@ -337,7 +337,7 @@ func TriggerWithTLSSubscriberWithAdditionalCATrustBundles() *feature.Feature {
 
 		linear := eventingv1.BackoffPolicyLinear
 		trigger.Install(dlsTriggerName, brokerName,
-			trigger.WithRetry(10, &linear, pointer.String("PT1S")),
+			trigger.WithRetry(2, &linear, pointer.String("PT1S")),
 			trigger.WithDeadLetterSinkFromDestination(dls),
 			trigger.WithSubscriber(nil, "http://127.0.0.1:2468"))(ctx, t)
 	})
