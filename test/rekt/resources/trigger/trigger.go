@@ -174,10 +174,6 @@ func WithBrokerRef(ref *duckv1.KReference) manifest.CfgFn {
 		brokerRef := cfg["brokerRef"].(map[string]interface{})
 
 		if ref != nil {
-			if _, set := brokerRef["ref"]; !set {
-				brokerRef["ref"] = map[string]interface{}{}
-			}
-			brokerRef := brokerRef["ref"].(map[string]interface{})
 			brokerRef["apiVersion"] = ref.APIVersion
 			brokerRef["kind"] = ref.Kind
 			brokerRef["name"] = ref.Name
