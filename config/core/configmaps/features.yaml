@@ -56,6 +56,12 @@ data:
   # For more details: https://github.com/knative/eventing/issues/7174
   authentication-oidc: "disabled"
 
+  # ALPHA feature: The default-authorization-mode flag allows you to change the default
+  # authorization mode for resources that have no EventPolicy associated with them.
+  #
+  # This feature flag is only used when "authentication-oidc" is enabled.
+  default-authorization-mode: "allow-same-namespace"
+
   # ALPHA feature: The cross-namespace-event-links flag allows you to use cross-namespace referencing for Eventing.
   # For more details: https://github.com/knative/eventing/issues/7739
   cross-namespace-event-links: "disabled"

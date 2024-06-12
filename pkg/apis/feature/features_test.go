@@ -56,6 +56,7 @@ func TestGetFlags(t *testing.T) {
 	require.True(t, flags.IsAllowed("my-enabled-flag"))
 	require.True(t, flags.IsAllowed("my-allowed-flag"))
 	require.False(t, flags.IsAllowed("non-disabled-flag"))
+	require.True(t, flags.IsAuthorizationDefaultModeSameNamespace())
 
 	nodeSelector := flags.NodeSelector()
 	expectedNodeSelector := map[string]string{"testkey": "testvalue", "testkey1": "testvalue1", "testkey2": "testvalue2"}

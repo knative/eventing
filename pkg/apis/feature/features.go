@@ -45,6 +45,24 @@ const (
 	// - Addressables should advertise both HTTP and HTTPS endpoints
 	// - Producers should prefer to send events to HTTPS endpoints, if available
 	Permissive Flag = "Permissive"
+
+	// AuthorizationAllowAll is a value for AuthorizationDefaultMode that indicates to allow all
+	// OIDC subjects by default.
+	// This configuration is applied when there is no EventPolicy with a "to" referencing a given
+	// resource.
+	AuthorizationAllowAll Flag = "Allow-All"
+
+	// AuthorizationDenyAll is a value for AuthorizationDefaultMode that indicates to deny all
+	// OIDC subjects by default.
+	// This configuration is applied when there is no EventPolicy with a "to" referencing a given
+	// resource.
+	AuthorizationDenyAll Flag = "Deny-All"
+
+	// AuthorizationAllowSameNamespace is a value for AuthorizationDefaultMode that indicates to allow
+	// OIDC subjects with the same namespace as a given resource.
+	// This configuration is applied when there is no EventPolicy with a "to" referencing a given
+	// resource.
+	AuthorizationAllowSameNamespace Flag = "Allow-Same-Namespace"
 )
 
 // Flags is a map containing all the enabled/disabled flags for the experimental features.
@@ -53,15 +71,16 @@ type Flags map[string]Flag
 
 func newDefaults() Flags {
 	return map[string]Flag{
-		KReferenceGroup:     Disabled,
-		DeliveryRetryAfter:  Disabled,
-		DeliveryTimeout:     Enabled,
-		KReferenceMapping:   Disabled,
-		NewTriggerFilters:   Enabled,
-		TransportEncryption: Disabled,
-		OIDCAuthentication:  Disabled,
-		EvenTypeAutoCreate:  Disabled,
-		NewAPIServerFilters: Disabled,
+		KReferenceGroup:          Disabled,
+		DeliveryRetryAfter:       Disabled,
+		DeliveryTimeout:          Enabled,
+		KReferenceMapping:        Disabled,
+		NewTriggerFilters:        Enabled,
+		TransportEncryption:      Disabled,
+		OIDCAuthentication:       Disabled,
+		EvenTypeAutoCreate:       Disabled,
+		NewAPIServerFilters:      Disabled,
+		AuthorizationDefaultMode: AuthorizationAllowSameNamespace,
 	}
 }
 
@@ -103,6 +122,18 @@ func (e Flags) IsCrossNamespaceEventLinks() bool {
 	return e != nil && e[CrossNamespaceEventLinks] == Enabled
 }
 
+func (e Flags) IsAuthorizationDefaultModeAllowAll() bool {
+	return e != nil && e[AuthorizationDefaultMode] == AuthorizationAllowAll
+}
+
+func (e Flags) IsAuthorizationDefaultModeDenyAll() bool {
+	return e != nil && e[AuthorizationDefaultMode] == AuthorizationDenyAll
+}
+
+func (e Flags) IsAuthorizationDefaultModeSameNamespace() bool {
+	return e != nil && e[AuthorizationDefaultMode] == AuthorizationAllowSameNamespace
+}
+
 func (e Flags) String() string {
 	return fmt.Sprintf("%+v", map[string]Flag(e))
 }
@@ -142,10 +173,16 @@ func NewFlagsConfigFromMap(data map[string]string) (Flags, error) {
 			flags[sanitizedKey] = Disabled
 		} else if strings.EqualFold(v, string(Enabled)) {
 			flags[sanitizedKey] = Enabled
-		} else if k == TransportEncryption && strings.EqualFold(v, string(Permissive)) {
+		} else if sanitizedKey == TransportEncryption && strings.EqualFold(v, string(Permissive)) {
 			flags[sanitizedKey] = Permissive
-		} else if k == TransportEncryption && strings.EqualFold(v, string(Strict)) {
+		} else if sanitizedKey == TransportEncryption && strings.EqualFold(v, string(Strict)) {
 			flags[sanitizedKey] = Strict
+		} else if sanitizedKey == AuthorizationDefaultMode && strings.EqualFold(v, string(AuthorizationAllowAll)) {
+			flags[sanitizedKey] = AuthorizationAllowAll
+		} else if sanitizedKey == AuthorizationDefaultMode && strings.EqualFold(v, string(AuthorizationDenyAll)) {
+			flags[sanitizedKey] = AuthorizationDenyAll
+		} else if sanitizedKey == AuthorizationDefaultMode && strings.EqualFold(v, string(AuthorizationAllowSameNamespace)) {
+			flags[sanitizedKey] = AuthorizationAllowSameNamespace
 		} else if strings.Contains(k, NodeSelectorLabel) {
 			flags[sanitizedKey] = Flag(v)
 		} else {
