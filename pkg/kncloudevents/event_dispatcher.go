@@ -339,7 +339,7 @@ func (d *Dispatcher) executeRequest(ctx context.Context, target duckv1.Addressab
 	if isFailure(response.StatusCode) {
 		// Read response body into dispatchInfo for failures
 		if readErr != nil && readErr != io.EOF {
-			dispatchInfo.ResponseBody = []byte(fmt.Sprintf("dispatch resulted in status \"%s\". Could not read response body: error: %s", response.Status, err.Error()))
+			dispatchInfo.ResponseBody = []byte(fmt.Sprintf("dispatch resulted in status \"%s\". Could not read response body: error: %s", response.Status, readErr.Error()))
 		} else {
 			dispatchInfo.ResponseBody = body.Bytes()
 		}
@@ -351,7 +351,7 @@ func (d *Dispatcher) executeRequest(ctx context.Context, target duckv1.Addressab
 
 	var responseMessageBody []byte
 	if readErr != nil && readErr != io.EOF {
-		responseMessageBody = []byte(fmt.Sprintf("Failed to read response body: %s", err.Error()))
+		responseMessageBody = []byte(fmt.Sprintf("Failed to read response body: %s", readErr.Error()))
 	} else {
 		responseMessageBody = body.Bytes()
 		dispatchInfo.ResponseBody = responseMessageBody
