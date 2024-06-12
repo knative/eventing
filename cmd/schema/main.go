@@ -23,6 +23,7 @@ import (
 	"knative.dev/hack/schema/registry"
 
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	flowsv1 "knative.dev/eventing/pkg/apis/flows/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
@@ -47,6 +48,7 @@ func main() {
 	// Flows
 	registry.Register(&flowsv1.Sequence{})
 	registry.Register(&flowsv1.Parallel{})
+	registry.Register(&eventingv1alpha1.EventPolicy{})
 
 	if err := commands.New("knative.dev/eventing").Execute(); err != nil {
 		log.Fatal("Error during command execution: ", err)
