@@ -64,8 +64,8 @@ This type is intended to be embedded into a status struct.</p>
 <td>
 <code>policies</code><br/>
 <em>
-<a href="#duck.knative.dev/v1.AppliedEventPoliciesStatusPolicy">
-[]AppliedEventPoliciesStatusPolicy
+<a href="#duck.knative.dev/v1.AppliedEventPolicyRef">
+[]AppliedEventPolicyRef
 </a>
 </em>
 </td>
@@ -76,13 +76,13 @@ This type is intended to be embedded into a status struct.</p>
 </tr>
 </tbody>
 </table>
-<h3 id="duck.knative.dev/v1.AppliedEventPoliciesStatusPolicy">AppliedEventPoliciesStatusPolicy
+<h3 id="duck.knative.dev/v1.AppliedEventPolicyRef">AppliedEventPolicyRef
 </h3>
 <p>
 (<em>Appears on:</em><a href="#duck.knative.dev/v1.AppliedEventPoliciesStatus">AppliedEventPoliciesStatus</a>)
 </p>
 <p>
-<p>AppliedEventPoliciesStatusPolicy is the reference to a EventPolicy</p>
+<p>AppliedEventPolicyRef is the reference to a EventPolicy</p>
 </p>
 <table>
 <thead>

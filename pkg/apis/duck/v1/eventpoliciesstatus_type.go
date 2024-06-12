@@ -21,11 +21,11 @@ package v1
 type AppliedEventPoliciesStatus struct {
 	// Policies holds the list of applied EventPolicies
 	// +optional
-	Policies []AppliedEventPoliciesStatusPolicy `json:"policies,omitempty"`
+	Policies []AppliedEventPolicyRef `json:"policies,omitempty"`
 }
 
-// AppliedEventPoliciesStatusPolicy is the reference to a EventPolicy
-type AppliedEventPoliciesStatusPolicy struct {
+// AppliedEventPolicyRef is the reference to an EventPolicy
+type AppliedEventPolicyRef struct {
 	// APIVersion of the applied EventPolicy.
 	// This indicates, which version of EventPolicy is supported by the resource.
 	APIVersion string `json:"apiVersion"`
