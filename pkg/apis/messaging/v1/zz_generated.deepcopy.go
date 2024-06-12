@@ -245,6 +245,7 @@ func (in *InMemoryChannelSpec) DeepCopy() *InMemoryChannelSpec {
 func (in *InMemoryChannelStatus) DeepCopyInto(out *InMemoryChannelStatus) {
 	*out = *in
 	in.ChannelableStatus.DeepCopyInto(&out.ChannelableStatus)
+	in.AppliedEventPoliciesStatus.DeepCopyInto(&out.AppliedEventPoliciesStatus)
 	return
 }
 
