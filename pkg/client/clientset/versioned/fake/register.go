@@ -25,6 +25,7 @@ import (
 	serializer "k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	eventingv1beta2 "knative.dev/eventing/pkg/apis/eventing/v1beta2"
 	eventingv1beta3 "knative.dev/eventing/pkg/apis/eventing/v1beta3"
@@ -39,6 +40,7 @@ var scheme = runtime.NewScheme()
 var codecs = serializer.NewCodecFactory(scheme)
 
 var localSchemeBuilder = runtime.SchemeBuilder{
+	eventingv1alpha1.AddToScheme,
 	eventingv1beta1.AddToScheme,
 	eventingv1beta2.AddToScheme,
 	eventingv1beta3.AddToScheme,
