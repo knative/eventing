@@ -98,6 +98,7 @@ type BrokerStatus struct {
 	eventingduckv1.DeliveryStatus `json:",inline"`
 
 	// AppliedEventPoliciesStatus contains the list of EventPolicies which apply to this Broker
+	// +optional
 	eventingduckv1.AppliedEventPoliciesStatus `json:",inline"`
 }
 

@@ -2186,6 +2186,7 @@ AppliedEventPoliciesStatus
 <p>
 (Members of <code>AppliedEventPoliciesStatus</code> are embedded into this type.)
 </p>
+<em>(Optional)</em>
 <p>AppliedEventPoliciesStatus contains the list of EventPolicies which apply to this Broker</p>
 </td>
 </tr>
@@ -3962,6 +3963,7 @@ AppliedEventPoliciesStatus
 <p>
 (Members of <code>AppliedEventPoliciesStatus</code> are embedded into this type.)
 </p>
+<em>(Optional)</em>
 <p>AppliedEventPoliciesStatus contains the list of EventPolicies which apply to this Broker</p>
 </td>
 </tr>
@@ -4326,6 +4328,7 @@ AppliedEventPoliciesStatus
 <p>
 (Members of <code>AppliedEventPoliciesStatus</code> are embedded into this type.)
 </p>
+<em>(Optional)</em>
 <p>AppliedEventPoliciesStatus contains the list of EventPolicies which apply to this Broker</p>
 </td>
 </tr>
@@ -5015,6 +5018,7 @@ AppliedEventPoliciesStatus
 <p>
 (Members of <code>AppliedEventPoliciesStatus</code> are embedded into this type.)
 </p>
+<em>(Optional)</em>
 <p>AppliedEventPoliciesStatus contains the list of EventPolicies which apply to this Broker</p>
 </td>
 </tr>

@@ -124,6 +124,7 @@ type ParallelStatus struct {
 	Auth *duckv1.AuthStatus `json:"auth,omitempty"`
 
 	// AppliedEventPoliciesStatus contains the list of EventPolicies which apply to this Broker
+	// +optional
 	eventingduckv1.AppliedEventPoliciesStatus `json:",inline"`
 }
 
