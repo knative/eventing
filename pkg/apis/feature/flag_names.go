@@ -28,4 +28,5 @@ const (
 	NodeSelectorLabel        = "apiserversources-nodeselector-"
 	CrossNamespaceEventLinks = "cross-namespace-event-links"
 	NewAPIServerFilters      = "new-apiserversource-filters"
+	AuthorizationDefaultMode = "default-authorization-mode"
 )
