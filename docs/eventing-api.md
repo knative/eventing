@@ -13,6 +13,9 @@
 <a href="#eventing.knative.dev%2fv1">eventing.knative.dev/v1</a>
 </li>
 <li>
+<a href="#eventing.knative.dev%2fv1alpha1">eventing.knative.dev/v1alpha1</a>
+</li>
+<li>
 <a href="#eventing.knative.dev%2fv1beta1">eventing.knative.dev/v1beta1</a>
 </li>
 <li>
@@ -2483,6 +2486,457 @@ knative.dev/pkg/apis/duck/v1.AuthStatus
 <td>
 <em>(Optional)</em>
 <p>Auth provides the relevant information for OIDC authentication.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<hr/>
+<h2 id="eventing.knative.dev/v1alpha1">eventing.knative.dev/v1alpha1</h2>
+<p>
+<p>Package v1alpha1 is the v1alpha1 version of the API.</p>
+</p>
+Resource Types:
+<ul><li>
+<a href="#eventing.knative.dev/v1alpha1.EventPolicy">EventPolicy</a>
+</li></ul>
+<h3 id="eventing.knative.dev/v1alpha1.EventPolicy">EventPolicy
+</h3>
+<p>
+<p>EventPolicy represents a policy for addressable resources (Broker, Channel, sinks).</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>apiVersion</code><br/>
+string</td>
+<td>
+<code>
+eventing.knative.dev/v1alpha1
+</code>
+</td>
+</tr>
+<tr>
+<td>
+<code>kind</code><br/>
+string
+</td>
+<td><code>EventPolicy</code></td>
+</tr>
+<tr>
+<td>
+<code>metadata</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#objectmeta-v1-meta">
+Kubernetes meta/v1.ObjectMeta
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+Refer to the Kubernetes API documentation for the fields of the
+<code>metadata</code> field.
+</td>
+</tr>
+<tr>
+<td>
+<code>spec</code><br/>
+<em>
+<a href="#eventing.knative.dev/v1alpha1.EventPolicySpec">
+EventPolicySpec
+</a>
+</em>
+</td>
+<td>
+<p>Spec defines the desired state of the EventPolicy.</p>
+<br/>
+<br/>
+<table>
+<tr>
+<td>
+<code>to</code><br/>
+<em>
+<a href="#eventing.knative.dev/v1alpha1.EventPolicySpecTo">
+[]EventPolicySpecTo
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>To lists all resources for which this policy applies.
+Resources in this list must act like an ingress and have an audience.
+The resources are part of the same namespace as the EventPolicy.
+An empty list means it applies to all resources in the EventPolicies namespace</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>from</code><br/>
+<em>
+<a href="#eventing.knative.dev/v1alpha1.EventPolicySpecFrom">
+[]EventPolicySpecFrom
+</a>
+</em>
+</td>
+<td>
+<p>From is the list of sources or oidc identities, which are allowed to send events to the targets (.spec.to).</p>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+<tr>
+<td>
+<code>status</code><br/>
+<em>
+<a href="#eventing.knative.dev/v1alpha1.EventPolicyStatus">
+EventPolicyStatus
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Status represents the current state of the EventPolicy.
+This data may be out of date.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="eventing.knative.dev/v1alpha1.EventPolicyFromReference">EventPolicyFromReference
+</h3>
+<p>
+(<em>Appears on:</em><a href="#eventing.knative.dev/v1alpha1.EventPolicySpecFrom">EventPolicySpecFrom</a>)
+</p>
+<p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>apiVersion</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>API version of the referent.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>kind</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Kind of the referent.
+More info: <a href="https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds">https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds</a></p>
+</td>
+</tr>
+<tr>
+<td>
+<code>name</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Name of the referent.
+More info: <a href="https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names">https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names</a></p>
+</td>
+</tr>
+<tr>
+<td>
+<code>namespace</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Namespace of the referent.
+More info: <a href="https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/">https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/</a>
+This is optional field, it gets defaulted to the object holding it if left out.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="eventing.knative.dev/v1alpha1.EventPolicySelector">EventPolicySelector
+</h3>
+<p>
+(<em>Appears on:</em><a href="#eventing.knative.dev/v1alpha1.EventPolicySpecTo">EventPolicySpecTo</a>)
+</p>
+<p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>LabelSelector</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#labelselector-v1-meta">
+Kubernetes meta/v1.LabelSelector
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>LabelSelector</code> are embedded into this type.)
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="eventing.knative.dev/v1alpha1.EventPolicySpec">EventPolicySpec
+</h3>
+<p>
+(<em>Appears on:</em><a href="#eventing.knative.dev/v1alpha1.EventPolicy">EventPolicy</a>)
+</p>
+<p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>to</code><br/>
+<em>
+<a href="#eventing.knative.dev/v1alpha1.EventPolicySpecTo">
+[]EventPolicySpecTo
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>To lists all resources for which this policy applies.
+Resources in this list must act like an ingress and have an audience.
+The resources are part of the same namespace as the EventPolicy.
+An empty list means it applies to all resources in the EventPolicies namespace</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>from</code><br/>
+<em>
+<a href="#eventing.knative.dev/v1alpha1.EventPolicySpecFrom">
+[]EventPolicySpecFrom
+</a>
+</em>
+</td>
+<td>
+<p>From is the list of sources or oidc identities, which are allowed to send events to the targets (.spec.to).</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="eventing.knative.dev/v1alpha1.EventPolicySpecFrom">EventPolicySpecFrom
+</h3>
+<p>
+(<em>Appears on:</em><a href="#eventing.knative.dev/v1alpha1.EventPolicySpec">EventPolicySpec</a>)
+</p>
+<p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>ref</code><br/>
+<em>
+<a href="#eventing.knative.dev/v1alpha1.EventPolicyFromReference">
+EventPolicyFromReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Ref contains a direct reference to a resource which is allowed to send events to the target.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>sub</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Sub sets the OIDC identity name to be allowed to send events to the target.
+It is also possible to set a glob-like pattern to match any suffix.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="eventing.knative.dev/v1alpha1.EventPolicySpecTo">EventPolicySpecTo
+</h3>
+<p>
+(<em>Appears on:</em><a href="#eventing.knative.dev/v1alpha1.EventPolicySpec">EventPolicySpec</a>)
+</p>
+<p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>ref</code><br/>
+<em>
+<a href="#eventing.knative.dev/v1alpha1.EventPolicyToReference">
+EventPolicyToReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Ref contains the direct reference to a target</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>selector</code><br/>
+<em>
+<a href="#eventing.knative.dev/v1alpha1.EventPolicySelector">
+EventPolicySelector
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Selector contains a selector to group targets</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="eventing.knative.dev/v1alpha1.EventPolicyStatus">EventPolicyStatus
+</h3>
+<p>
+(<em>Appears on:</em><a href="#eventing.knative.dev/v1alpha1.EventPolicy">EventPolicy</a>)
+</p>
+<p>
+<p>EventPolicyStatus represents the current state of a EventPolicy.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>Status</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#Status">
+knative.dev/pkg/apis/duck/v1.Status
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>Status</code> are embedded into this type.)
+</p>
+<p>inherits duck/v1 Status, which currently provides:
+* ObservedGeneration - the &lsquo;Generation&rsquo; of the Service that was last processed by the controller.
+* Conditions - the latest available observations of a resource&rsquo;s current state.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>from</code><br/>
+<em>
+[]string
+</em>
+</td>
+<td>
+<p>From is the list of resolved oidc identities from .spec.from</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="eventing.knative.dev/v1alpha1.EventPolicyToReference">EventPolicyToReference
+</h3>
+<p>
+(<em>Appears on:</em><a href="#eventing.knative.dev/v1alpha1.EventPolicySpecTo">EventPolicySpecTo</a>)
+</p>
+<p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>apiVersion</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>API version of the referent.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>kind</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Kind of the referent.
+More info: <a href="https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds">https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds</a></p>
+</td>
+</tr>
+<tr>
+<td>
+<code>name</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Name of the referent.
+More info: <a href="https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names">https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names</a></p>
 </td>
 </tr>
 </tbody>
