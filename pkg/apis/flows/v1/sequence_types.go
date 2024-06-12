@@ -20,6 +20,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -135,6 +136,9 @@ type SequenceStatus struct {
 	// Auth provides the relevant information for OIDC authentication.
 	// +optional
 	Auth *duckv1.AuthStatus `json:"auth,omitempty"`
+
+	// AppliedEventPoliciesStatus contains the list of EventPolicies which apply to this Broker
+	eventingv1.AppliedEventPoliciesStatus `json:",inline"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
