@@ -82,7 +82,7 @@ This type is intended to be embedded into a status struct.</p>
 (<em>Appears on:</em><a href="#duck.knative.dev/v1.AppliedEventPoliciesStatus">AppliedEventPoliciesStatus</a>)
 </p>
 <p>
-<p>AppliedEventPolicyRef is the reference to a EventPolicy</p>
+<p>AppliedEventPolicyRef is the reference to an EventPolicy</p>
 </p>
 <table>
 <thead>
