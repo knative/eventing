@@ -98,7 +98,7 @@ type BrokerStatus struct {
 	eventingduckv1.DeliveryStatus `json:",inline"`
 
 	// AppliedEventPoliciesStatus contains the list of EventPolicies which apply to this Broker
-	AppliedEventPoliciesStatus `json:",inline"`
+	eventingduckv1.AppliedEventPoliciesStatus `json:",inline"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

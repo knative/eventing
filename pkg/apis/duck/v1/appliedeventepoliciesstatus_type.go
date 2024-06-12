@@ -16,7 +16,8 @@ limitations under the License.
 
 package v1
 
-// AppliedEventPoliciesStatus contains the list of policies which apply to a resource
+// AppliedEventPoliciesStatus contains the list of policies which apply to a resource.
+// This type is intended to be embedded into a status struct.
 type AppliedEventPoliciesStatus struct {
 	// Policies holds the list of applied EventPolicies
 	// +optional

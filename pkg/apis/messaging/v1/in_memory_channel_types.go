@@ -20,7 +20,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
-	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/kmeta"
@@ -76,7 +75,7 @@ type InMemoryChannelStatus struct {
 	eventingduckv1.ChannelableStatus `json:",inline"`
 
 	// AppliedEventPoliciesStatus contains the list of EventPolicies which apply to this Broker
-	eventingv1.AppliedEventPoliciesStatus `json:",inline"`
+	eventingduckv1.AppliedEventPoliciesStatus `json:",inline"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
