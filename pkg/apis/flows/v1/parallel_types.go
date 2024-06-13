@@ -20,7 +20,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	"knative.dev/pkg/apis"
@@ -123,6 +122,10 @@ type ParallelStatus struct {
 	// Auth provides the relevant information for OIDC authentication.
 	// +optional
 	Auth *duckv1.AuthStatus `json:"auth,omitempty"`
+
+	// AppliedEventPoliciesStatus contains the list of EventPolicies which apply to this Broker
+	// +optional
+	eventingduckv1.AppliedEventPoliciesStatus `json:",inline"`
 }
 
 // ParallelBranchStatus represents the current state of a Parallel branch

@@ -46,6 +46,80 @@
 </p>
 Resource Types:
 <ul></ul>
+<h3 id="duck.knative.dev/v1.AppliedEventPoliciesStatus">AppliedEventPoliciesStatus
+</h3>
+<p>
+(<em>Appears on:</em><a href="#eventing.knative.dev/v1.BrokerStatus">BrokerStatus</a>, <a href="#flows.knative.dev/v1.ParallelStatus">ParallelStatus</a>, <a href="#flows.knative.dev/v1.SequenceStatus">SequenceStatus</a>, <a href="#messaging.knative.dev/v1.InMemoryChannelStatus">InMemoryChannelStatus</a>)
+</p>
+<p>
+<p>AppliedEventPoliciesStatus contains the list of policies which apply to a resource.
+This type is intended to be embedded into a status struct.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>policies</code><br/>
+<em>
+<a href="#duck.knative.dev/v1.AppliedEventPolicyRef">
+[]AppliedEventPolicyRef
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Policies holds the list of applied EventPolicies</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="duck.knative.dev/v1.AppliedEventPolicyRef">AppliedEventPolicyRef
+</h3>
+<p>
+(<em>Appears on:</em><a href="#duck.knative.dev/v1.AppliedEventPoliciesStatus">AppliedEventPoliciesStatus</a>)
+</p>
+<p>
+<p>AppliedEventPolicyRef is the reference to an EventPolicy</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>apiVersion</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>APIVersion of the applied EventPolicy.
+This indicates, which version of EventPolicy is supported by the resource.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>name</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Name of the applied EventPolicy</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="duck.knative.dev/v1.BackoffPolicyType">BackoffPolicyType
 (<code>string</code> alias)</p></h3>
 <p>
@@ -2100,6 +2174,23 @@ DeliveryStatus
 </p>
 <p>DeliveryStatus contains a resolved URL to the dead letter sink address, and any other
 resolved delivery options.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>AppliedEventPoliciesStatus</code><br/>
+<em>
+<a href="#duck.knative.dev/v1.AppliedEventPoliciesStatus">
+AppliedEventPoliciesStatus
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>AppliedEventPoliciesStatus</code> are embedded into this type.)
+</p>
+<em>(Optional)</em>
+<p>AppliedEventPoliciesStatus contains the list of EventPolicies which apply to this Broker</p>
 </td>
 </tr>
 </tbody>
@@ -4313,6 +4404,23 @@ knative.dev/pkg/apis/duck/v1.AuthStatus
 <p>Auth provides the relevant information for OIDC authentication.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>AppliedEventPoliciesStatus</code><br/>
+<em>
+<a href="#duck.knative.dev/v1.AppliedEventPoliciesStatus">
+AppliedEventPoliciesStatus
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>AppliedEventPoliciesStatus</code> are embedded into this type.)
+</p>
+<em>(Optional)</em>
+<p>AppliedEventPoliciesStatus contains the list of EventPolicies which apply to this Broker</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="flows.knative.dev/v1.ParallelSubscriptionStatus">ParallelSubscriptionStatus
@@ -4659,6 +4767,23 @@ knative.dev/pkg/apis/duck/v1.AuthStatus
 <td>
 <em>(Optional)</em>
 <p>Auth provides the relevant information for OIDC authentication.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>AppliedEventPoliciesStatus</code><br/>
+<em>
+<a href="#duck.knative.dev/v1.AppliedEventPoliciesStatus">
+AppliedEventPoliciesStatus
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>AppliedEventPoliciesStatus</code> are embedded into this type.)
+</p>
+<em>(Optional)</em>
+<p>AppliedEventPoliciesStatus contains the list of EventPolicies which apply to this Broker</p>
 </td>
 </tr>
 </tbody>
@@ -5332,6 +5457,23 @@ ChannelableStatus
 (Members of <code>ChannelableStatus</code> are embedded into this type.)
 </p>
 <p>Channel conforms to Duck type ChannelableStatus.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>AppliedEventPoliciesStatus</code><br/>
+<em>
+<a href="#duck.knative.dev/v1.AppliedEventPoliciesStatus">
+AppliedEventPoliciesStatus
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>AppliedEventPoliciesStatus</code> are embedded into this type.)
+</p>
+<em>(Optional)</em>
+<p>AppliedEventPoliciesStatus contains the list of EventPolicies which apply to this Broker</p>
 </td>
 </tr>
 </tbody>
