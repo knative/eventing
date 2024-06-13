@@ -1,12 +1,20 @@
 package auth
 
 import (
+	"context"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/strings/slices"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
+	"knative.dev/eventing/pkg/client/clientset/versioned/scheme"
 	eventpolicyinformerfake "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventpolicy/fake"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
+	"knative.dev/pkg/ptr"
 	reconcilertesting "knative.dev/pkg/reconciler/testing"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -369,6 +377,79 @@ func TestGetEventPoliciesForResource(t *testing.T) {
 				if !slices.Contains(gotNames, wantName) {
 					t.Errorf("GetEventPoliciesForResource() got = %q, want %q. Missing %q", strings.Join(gotNames, ","), strings.Join(tt.want, ","), wantName)
 				}
+			}
+		})
+	}
+}
+
+func TestResolveSubjects(t *testing.T) {
+	namespace := "my-ns"
+
+	tests := []struct {
+		name    string
+		froms   []v1alpha1.EventPolicySpecFrom
+		objects []runtime.Object
+		want    []string
+		wantErr bool
+	}{
+		{
+			name: "simple",
+			froms: []v1alpha1.EventPolicySpecFrom{
+				{
+					Ref: &v1alpha1.EventPolicyFromReference{
+						APIVersion: "sources.knative.dev/v1",
+						Kind:       "ApiServerSource",
+						Name:       "my-source",
+						Namespace:  namespace,
+					},
+				}, {
+					Sub: ptr.String("system:serviceaccount:my-ns:my-app"),
+				}, {
+					Sub: ptr.String("system:serviceaccount:my-ns:my-app-2"),
+				},
+			},
+			objects: []runtime.Object{
+				&sourcesv1.ApiServerSource{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "my-source",
+						Namespace: namespace,
+					},
+					Status: sourcesv1.ApiServerSourceStatus{
+						SourceStatus: duckv1.SourceStatus{
+							Auth: &duckv1.AuthStatus{
+								ServiceAccountName: ptr.String("my-apiserversource-oidc-sa"),
+							},
+						},
+					},
+				},
+				&eventingv1.Broker{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "my-broker",
+						Namespace: namespace,
+					},
+					Status: eventingv1.BrokerStatus{},
+				},
+			},
+			want: []string{
+				"system:serviceaccount:my-ns:my-apiserversource-oidc-sa",
+				"system:serviceaccount:my-ns:my-app",
+				"system:serviceaccount:my-ns:my-app-2",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.TODO()
+
+			ctx, dynamicClient := fakedynamicclient.With(ctx, scheme.Scheme, tt.objects...)
+
+			got, err := ResolveSubjects(ctx, dynamicClient, tt.froms, namespace)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ResolveSubjects() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("ResolveSubjects() got = %v, want %v", got, tt.want)
 			}
 		})
 	}
