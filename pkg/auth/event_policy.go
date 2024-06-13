@@ -18,28 +18,29 @@ package auth
 
 import (
 	"fmt"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	eventingv1alpha1 "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
-	"knative.dev/pkg/kmeta"
 )
 
-func GetEventPoliciesForResource(lister eventingv1alpha1.EventPolicyLister, resource kmeta.Accessor) ([]*v1alpha1.EventPolicy, error) {
-	policies, err := lister.EventPolicies(resource.GetNamespace()).List(labels.Everything())
+func GetEventPoliciesForResource(lister eventingv1alpha1.EventPolicyLister, resourceGVK schema.GroupVersionKind, resourceObjectMeta metav1.ObjectMeta) ([]*v1alpha1.EventPolicy, error) {
+	policies, err := lister.EventPolicies(resourceObjectMeta.GetNamespace()).List(labels.Everything())
 	if err != nil {
 		return nil, fmt.Errorf("failed to list eventpolicies: %w", err)
 	}
 
 	relevantPolicies := []*v1alpha1.EventPolicy{}
-	resourceAPIVersion := fmt.Sprintf("%s/%s", resource.GroupVersionKind().Group, resource.GroupVersionKind().Version)
+	resourceAPIVersion := fmt.Sprintf("%s/%s", resourceGVK.Group, resourceGVK.Version)
 
 	for _, policy := range policies {
 		for _, to := range policy.Spec.To {
 
 			if to.Ref != nil &&
-				to.Ref.Name == resource.GetName() &&
+				to.Ref.Name == resourceObjectMeta.GetName() &&
 				to.Ref.APIVersion == resourceAPIVersion &&
-				to.Ref.Kind == resource.GroupVersionKind().Kind {
+				to.Ref.Kind == resourceGVK.Kind {
 
 				relevantPolicies = append(relevantPolicies, policy)
 				break // no need to check the other .spec.to's from this policy
@@ -47,11 +48,11 @@ func GetEventPoliciesForResource(lister eventingv1alpha1.EventPolicyLister, reso
 
 			if to.Selector != nil &&
 				to.Selector.APIVersion == resourceAPIVersion &&
-				to.Selector.Kind == resource.GroupVersionKind().Kind {
+				to.Selector.Kind == resourceGVK.Kind {
 
 				requiredLabelsMatch := true
 				for requiredLabelKey, requiredLabelVal := range to.Selector.MatchLabels {
-					resourceLabels := resource.GetLabels()
+					resourceLabels := resourceObjectMeta.GetLabels()
 					if resourceLabels[requiredLabelKey] != requiredLabelVal {
 						// required label not found
 						requiredLabelsMatch = false

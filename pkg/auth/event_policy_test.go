@@ -3,10 +3,9 @@ package auth
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/strings/slices"
-	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	eventpolicyinformerfake "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventpolicy/fake"
-	"knative.dev/pkg/kmeta"
 	reconcilertesting "knative.dev/pkg/reconciler/testing"
 	"strings"
 	"testing"
@@ -15,23 +14,17 @@ import (
 func TestGetEventPoliciesForResource(t *testing.T) {
 
 	tests := []struct {
-		name             string
-		resource         kmeta.Accessor
-		existingPolicies []v1alpha1.EventPolicy
-		want             []string
-		wantErr          bool
+		name               string
+		resourceObjectMeta metav1.ObjectMeta
+		existingPolicies   []v1alpha1.EventPolicy
+		want               []string
+		wantErr            bool
 	}{
 		{
 			name: "No match",
-			resource: &v1.Broker{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Broker",
-					APIVersion: "eventing.knative.dev/v1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "my-broker",
-					Namespace: "my-namespace",
-				},
+			resourceObjectMeta: metav1.ObjectMeta{
+				Name:      "my-broker",
+				Namespace: "my-namespace",
 			},
 			existingPolicies: []v1alpha1.EventPolicy{
 				{
@@ -55,15 +48,9 @@ func TestGetEventPoliciesForResource(t *testing.T) {
 			want: []string{},
 		}, {
 			name: "No match (different namespace)",
-			resource: &v1.Broker{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Broker",
-					APIVersion: "eventing.knative.dev/v1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "my-broker",
-					Namespace: "my-namespace",
-				},
+			resourceObjectMeta: metav1.ObjectMeta{
+				Name:      "my-broker",
+				Namespace: "my-namespace",
 			},
 			existingPolicies: []v1alpha1.EventPolicy{
 				{
@@ -87,15 +74,9 @@ func TestGetEventPoliciesForResource(t *testing.T) {
 			want: []string{},
 		}, {
 			name: "Match all (empty .spec.to)",
-			resource: &v1.Broker{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Broker",
-					APIVersion: "eventing.knative.dev/v1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "my-broker",
-					Namespace: "my-namespace",
-				},
+			resourceObjectMeta: metav1.ObjectMeta{
+				Name:      "my-broker",
+				Namespace: "my-namespace",
 			},
 			existingPolicies: []v1alpha1.EventPolicy{
 				{
@@ -113,15 +94,9 @@ func TestGetEventPoliciesForResource(t *testing.T) {
 			},
 		}, {
 			name: "Direct reference to resource",
-			resource: &v1.Broker{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Broker",
-					APIVersion: "eventing.knative.dev/v1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "my-broker",
-					Namespace: "my-namespace",
-				},
+			resourceObjectMeta: metav1.ObjectMeta{
+				Name:      "my-broker",
+				Namespace: "my-namespace",
 			},
 			existingPolicies: []v1alpha1.EventPolicy{
 				{
@@ -147,17 +122,11 @@ func TestGetEventPoliciesForResource(t *testing.T) {
 			},
 		}, {
 			name: "Reference via selector to resource",
-			resource: &v1.Broker{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Broker",
-					APIVersion: "eventing.knative.dev/v1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "my-broker",
-					Namespace: "my-namespace",
-					Labels: map[string]string{
-						"key": "value",
-					},
+			resourceObjectMeta: metav1.ObjectMeta{
+				Name:      "my-broker",
+				Namespace: "my-namespace",
+				Labels: map[string]string{
+					"key": "value",
 				},
 			},
 			existingPolicies: []v1alpha1.EventPolicy{
@@ -212,17 +181,11 @@ func TestGetEventPoliciesForResource(t *testing.T) {
 			},
 		}, {
 			name: "Reference via selector to resource (multiple policies)",
-			resource: &v1.Broker{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Broker",
-					APIVersion: "eventing.knative.dev/v1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "my-broker",
-					Namespace: "my-namespace",
-					Labels: map[string]string{
-						"key": "value",
-					},
+			resourceObjectMeta: metav1.ObjectMeta{
+				Name:      "my-broker",
+				Namespace: "my-namespace",
+				Labels: map[string]string{
+					"key": "value",
 				},
 			},
 			existingPolicies: []v1alpha1.EventPolicy{
@@ -294,17 +257,11 @@ func TestGetEventPoliciesForResource(t *testing.T) {
 			},
 		}, {
 			name: "Reference via selector to resource (multiple policies - not all matching)",
-			resource: &v1.Broker{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Broker",
-					APIVersion: "eventing.knative.dev/v1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "my-broker",
-					Namespace: "my-namespace",
-					Labels: map[string]string{
-						"key": "value",
-					},
+			resourceObjectMeta: metav1.ObjectMeta{
+				Name:      "my-broker",
+				Namespace: "my-namespace",
+				Labels: map[string]string{
+					"key": "value",
 				},
 			},
 			existingPolicies: []v1alpha1.EventPolicy{
@@ -392,7 +349,8 @@ func TestGetEventPoliciesForResource(t *testing.T) {
 				}
 			}
 
-			got, err := GetEventPoliciesForResource(eventpolicyinformerfake.Get(ctx).Lister(), tt.resource)
+			brokerGVK := eventingv1.SchemeGroupVersion.WithKind("Broker")
+			got, err := GetEventPoliciesForResource(eventpolicyinformerfake.Get(ctx).Lister(), brokerGVK, tt.resourceObjectMeta)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetEventPoliciesForResource() error = %v, wantErr %v", err, tt.wantErr)
 				return
