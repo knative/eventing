@@ -69,7 +69,7 @@ func Success() *feature.Feature {
 		AtLeast(1),
 	)
 	f.Assert("Source sent the event", assert.OnStore(source).
-		MatchSentEvent(cetest.HasId(event.ID())).
+		MatchResponseEvent().
 		Match(assert.MatchStatusCode(202)).
 		AtLeast(1),
 	)
@@ -91,6 +91,7 @@ func SuccessTLS() *feature.Feature {
 	event.SetID(uuid.NewString())
 
 	f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
+	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
 
 	f.Setup("install forwarder sink", eventshub.Install(sink, eventshub.StartReceiver))
 	f.Setup("install job sink", jobsink.Install(jobSink, jobsink.WithForwarderJob(sinkURL.String())))
@@ -108,7 +109,7 @@ func SuccessTLS() *feature.Feature {
 		AtLeast(1),
 	)
 	f.Assert("Source sent the event", assert.OnStore(source).
-		MatchSentEvent(cetest.HasId(event.ID())).
+		MatchResponseEvent().
 		Match(assert.MatchStatusCode(202)).
 		AtLeast(1),
 	)
@@ -133,7 +134,9 @@ func OIDC() *feature.Feature {
 	eventNoAudience := cetest.FullEvent()
 	eventNoAudience.SetID(uuid.NewString())
 
-	f.Prerequisite("transport encryption is strict", featureflags.AuthenticationOIDCEnabled())
+	f.Prerequisite("OIDC authentication is enabled", featureflags.AuthenticationOIDCEnabled())
+	f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
+	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
 
 	f.Setup("install forwarder sink", eventshub.Install(sink, eventshub.StartReceiver))
 	f.Setup("install job sink", jobsink.Install(jobSink, jobsink.WithForwarderJob(sinkURL.String())))
@@ -167,12 +170,12 @@ func OIDC() *feature.Feature {
 		)(ctx, t)
 	})
 	f.Assert("Source sent the event with audience", assert.OnStore(source).
-		MatchSentEvent(cetest.HasId(event.ID())).
+		MatchResponseEvent().
 		Match(assert.MatchStatusCode(202)).
 		AtLeast(1),
 	)
 	f.Assert("Source sent the event without audience", assert.OnStore(sourceNoAudience).
-		MatchSentEvent(cetest.HasId(eventNoAudience.ID())).
+		MatchResponseEvent().
 		Match(assert.MatchStatusCode(401)).
 		AtLeast(1),
 	)
