@@ -25,6 +25,7 @@ import (
 	eventingv1alpha1 "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 )
 
+// GetEventPoliciesForResource returns the applying EventPolicies for a given resource
 func GetEventPoliciesForResource(lister eventingv1alpha1.EventPolicyLister, resourceGVK schema.GroupVersionKind, resourceObjectMeta metav1.ObjectMeta) ([]*v1alpha1.EventPolicy, error) {
 	policies, err := lister.EventPolicies(resourceObjectMeta.GetNamespace()).List(labels.Everything())
 	if err != nil {
