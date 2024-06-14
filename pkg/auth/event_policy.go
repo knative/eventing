@@ -40,8 +40,12 @@ func GetEventPoliciesForResource(lister listerseventingv1alpha1.EventPolicyListe
 	resourceAPIVersion := fmt.Sprintf("%s/%s", resourceGVK.Group, resourceGVK.Version)
 
 	for _, policy := range policies {
-		for _, to := range policy.Spec.To {
+		if len(policy.Spec.To) == 0 {
+			// policy applies to all resources in namespace
+			relevantPolicies = append(relevantPolicies, policy)
+		}
 
+		for _, to := range policy.Spec.To {
 			if to.Ref != nil &&
 				strings.EqualFold(to.Ref.Name, resourceObjectMeta.GetName()) &&
 				strings.EqualFold(to.Ref.APIVersion, resourceAPIVersion) &&
@@ -65,11 +69,6 @@ func GetEventPoliciesForResource(lister listerseventingv1alpha1.EventPolicyListe
 					break // no need to check the other .spec.to's from this policy
 				}
 			}
-		}
-
-		if len(policy.Spec.To) == 0 {
-			// policy applies to all resources in namespace
-			relevantPolicies = append(relevantPolicies, policy)
 		}
 	}
 
