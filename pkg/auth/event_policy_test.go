@@ -439,6 +439,93 @@ func TestResolveSubjects(t *testing.T) {
 				"system:serviceaccount:my-ns:my-app",
 				"system:serviceaccount:my-ns:my-app-2",
 			},
+		}, {
+			name: "multiple references",
+			froms: []v1alpha1.EventPolicySpecFrom{
+				{
+					Ref: &v1alpha1.EventPolicyFromReference{
+						APIVersion: "sources.knative.dev/v1",
+						Kind:       "ApiServerSource",
+						Name:       "my-source",
+						Namespace:  namespace,
+					},
+				}, {
+					Ref: &v1alpha1.EventPolicyFromReference{
+						APIVersion: "sources.knative.dev/v1",
+						Kind:       "PingSource",
+						Name:       "my-pingsource",
+						Namespace:  namespace,
+					},
+				}, {
+					Sub: ptr.String("system:serviceaccount:my-ns:my-app"),
+				}, {
+					Sub: ptr.String("system:serviceaccount:my-ns:my-app-2"),
+				},
+			},
+			objects: []runtime.Object{
+				&sourcesv1.ApiServerSource{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "my-source",
+						Namespace: namespace,
+					},
+					Status: sourcesv1.ApiServerSourceStatus{
+						SourceStatus: duckv1.SourceStatus{
+							Auth: &duckv1.AuthStatus{
+								ServiceAccountName: ptr.String("my-apiserversource-oidc-sa"),
+							},
+						},
+					},
+				},
+				&sourcesv1.PingSource{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "my-pingsource",
+						Namespace: namespace,
+					},
+					Status: sourcesv1.PingSourceStatus{
+						SourceStatus: duckv1.SourceStatus{
+							Auth: &duckv1.AuthStatus{
+								ServiceAccountName: ptr.String("my-pingsource-oidc-sa"),
+							},
+						},
+					},
+				},
+				&eventingv1.Broker{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "my-broker",
+						Namespace: namespace,
+					},
+					Status: eventingv1.BrokerStatus{},
+				},
+			},
+			want: []string{
+				"system:serviceaccount:my-ns:my-apiserversource-oidc-sa",
+				"system:serviceaccount:my-ns:my-pingsource-oidc-sa",
+				"system:serviceaccount:my-ns:my-app",
+				"system:serviceaccount:my-ns:my-app-2",
+			},
+		}, {
+			name: "reference has not auth status",
+			froms: []v1alpha1.EventPolicySpecFrom{
+				{
+					Ref: &v1alpha1.EventPolicyFromReference{
+						APIVersion: "eventing.knative.dev/v1",
+						Kind:       "Broker",
+						Name:       "my-broker",
+						Namespace:  namespace,
+					},
+				},
+			},
+			objects: []runtime.Object{
+				&eventingv1.Broker{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "my-broker",
+						Namespace: namespace,
+					},
+					Status: eventingv1.BrokerStatus{},
+				},
+			},
+			want:    nil,
+			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
