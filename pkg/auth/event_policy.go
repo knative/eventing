@@ -127,3 +127,20 @@ func resolveSubjectsFromReference(resolver *resolver.AuthenticatableResolver, re
 
 	return objFullSANames, nil
 }
+
+// SubjectContained checks if the given sub is contained in the list of allowedSubs
+// or if it matches a prefix pattern in subs (e.g. system:serviceaccounts:my-ns:*)
+func SubjectContained(sub string, allowedSubs []string) bool {
+	for _, s := range allowedSubs {
+		if strings.EqualFold(s, sub) {
+			return true
+		}
+
+		if strings.HasSuffix(s, "*") &&
+			strings.HasPrefix(strings.ToLower(sub), strings.TrimSuffix(s, "*")) {
+			return true
+		}
+	}
+
+	return false
+}

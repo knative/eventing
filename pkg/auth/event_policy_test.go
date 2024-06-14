@@ -557,3 +557,80 @@ func TestResolveSubjects(t *testing.T) {
 		})
 	}
 }
+
+func TestSubjectContained(t *testing.T) {
+
+	tests := []struct {
+		name        string
+		sub         string
+		allowedSubs []string
+		want        bool
+	}{
+		{
+			name: "simple 1:1 match",
+			sub:  "system:serviceaccounts:my-ns:my-sa",
+			allowedSubs: []string{
+				"system:serviceaccounts:my-ns:my-sa",
+			},
+			want: true,
+		}, {
+			name: "simple 1:n match",
+			sub:  "system:serviceaccounts:my-ns:my-sa",
+			allowedSubs: []string{
+				"system:serviceaccounts:my-ns:another-sa",
+				"system:serviceaccounts:my-ns:my-sa",
+				"system:serviceaccounts:my-ns:yet-another-sa",
+			},
+			want: true,
+		}, {
+			name: "pattern match (all)",
+			sub:  "system:serviceaccounts:my-ns:my-sa",
+			allowedSubs: []string{
+				"*",
+			},
+			want: true,
+		}, {
+			name: "pattern match (namespace)",
+			sub:  "system:serviceaccounts:my-ns:my-sa",
+			allowedSubs: []string{
+				"system:serviceaccounts:my-ns:*",
+			},
+			want: true,
+		}, {
+			name: "pattern match (different namespace)",
+			sub:  "system:serviceaccounts:my-ns-2:my-sa",
+			allowedSubs: []string{
+				"system:serviceaccounts:my-ns:*",
+			},
+			want: false,
+		}, {
+			name: "pattern match (namespace prefix)",
+			sub:  "system:serviceaccounts:my-ns:my-sa",
+			allowedSubs: []string{
+				"system:serviceaccounts:my-ns*",
+			},
+			want: true,
+		}, {
+			name: "pattern match (namespace prefix 2)",
+			sub:  "system:serviceaccounts:my-ns-2:my-sa",
+			allowedSubs: []string{
+				"system:serviceaccounts:my-ns*",
+			},
+			want: true,
+		}, {
+			name: "pattern match (middle)",
+			sub:  "system:serviceaccounts:my-ns:my-sa",
+			allowedSubs: []string{
+				"system:serviceaccounts:*:my-sa",
+			},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := SubjectContained(tt.sub, tt.allowedSubs); got != tt.want {
+				t.Errorf("SubjectContained(%q, '%v') = %v, want %v", tt.sub, tt.allowedSubs, got, tt.want)
+			}
+		})
+	}
+}
