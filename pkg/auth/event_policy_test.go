@@ -278,11 +278,37 @@ func TestGetEventPoliciesForResource(t *testing.T) {
 							},
 						},
 					},
+				}, {
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "another-policy-3",
+						Namespace: "my-namespace",
+					},
+					Spec: v1alpha1.EventPolicySpec{
+						To: []v1alpha1.EventPolicySpecTo{
+							{
+								Selector: &v1alpha1.EventPolicySelector{
+									LabelSelector: &metav1.LabelSelector{
+										MatchExpressions: []metav1.LabelSelectorRequirement{
+											{
+												Key:      "key",
+												Operator: metav1.LabelSelectorOpExists,
+											},
+										},
+									},
+									TypeMeta: &metav1.TypeMeta{
+										Kind:       "Broker",
+										APIVersion: "eventing.knative.dev/v1",
+									},
+								},
+							},
+						},
+					},
 				},
 			},
 			want: []string{
 				"my-policy-1",
 				"another-policy",
+				"another-policy-3",
 			},
 		}, {
 			name: "Reference via selector to resource (multiple policies - not all matching)",

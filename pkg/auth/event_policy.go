@@ -55,17 +55,12 @@ func GetEventPoliciesForResource(lister listerseventingv1alpha1.EventPolicyListe
 				strings.EqualFold(to.Selector.APIVersion, resourceAPIVersion) &&
 				strings.EqualFold(to.Selector.Kind, resourceGVK.Kind) {
 
-				requiredLabelsMatch := true
-				for requiredLabelKey, requiredLabelVal := range to.Selector.MatchLabels {
-					resourceLabels := resourceObjectMeta.GetLabels()
-					if resourceLabels[requiredLabelKey] != requiredLabelVal {
-						// required label not found
-						requiredLabelsMatch = false
-						break
-					}
+				selector, err := metav1.LabelSelectorAsSelector(to.Selector.LabelSelector)
+				if err != nil {
+					return nil, fmt.Errorf("failed to parse selector: %w", err)
 				}
 
-				if requiredLabelsMatch {
+				if selector.Matches(labels.Set(resourceObjectMeta.Labels)) {
 					relevantPolicies = append(relevantPolicies, policy)
 					break // no need to check the other .spec.to's from this policy
 				}
