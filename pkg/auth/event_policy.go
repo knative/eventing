@@ -17,18 +17,14 @@ limitations under the License.
 package auth
 
 import (
-	"context"
 	"fmt"
-	"k8s.io/apimachinery/pkg/api/meta"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/dynamic"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	listerseventingv1alpha1 "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/resolver"
 	"strings"
 )
 
@@ -85,11 +81,11 @@ func GetEventPoliciesForResource(lister listerseventingv1alpha1.EventPolicyListe
 }
 
 // ResolveSubjects returns the OIDC service accounts names for the objects referenced in the EventPolicySpecFrom.
-func ResolveSubjects(ctx context.Context, dynamicClient dynamic.Interface, froms []v1alpha1.EventPolicySpecFrom, namespace string) ([]string, error) {
+func ResolveSubjects(resolver *resolver.AuthenticatableResolver, eventPolicy *v1alpha1.EventPolicy) ([]string, error) {
 	allSAs := []string{}
-	for _, from := range froms {
+	for _, from := range eventPolicy.Spec.From {
 		if from.Ref != nil {
-			sas, err := resolveSubjectsFromReference(ctx, dynamicClient, *from.Ref, namespace)
+			sas, err := resolveSubjectsFromReference(resolver, *from.Ref, eventPolicy)
 			if err != nil {
 				return nil, fmt.Errorf("could not resolve subjects from reference: %w", err)
 			}
@@ -102,53 +98,31 @@ func ResolveSubjects(ctx context.Context, dynamicClient dynamic.Interface, froms
 	return allSAs, nil
 }
 
-func resolveSubjectsFromReference(ctx context.Context, dynamicClient dynamic.Interface, reference v1alpha1.EventPolicyFromReference, namespace string) ([]string, error) {
+func resolveSubjectsFromReference(resolver *resolver.AuthenticatableResolver, reference v1alpha1.EventPolicyFromReference, trackingEventPolicy *v1alpha1.EventPolicy) ([]string, error) {
 	parts := strings.Split(reference.APIVersion, "/")
 	if len(parts) != 2 {
 		return nil, fmt.Errorf("cannot split apiVersion into group and version: %s", reference.APIVersion)
 	}
 
-	gvr, _ := meta.UnsafeGuessKindToResource(schema.GroupVersionKind{
-		Group:   parts[0],
-		Version: parts[1],
-		Kind:    reference.Kind,
-	})
+	authStatus, err := resolver.AuthStatusFromObjectReference(&corev1.ObjectReference{
+		APIVersion: reference.APIVersion,
+		Kind:       reference.Kind,
+		Namespace:  reference.Namespace,
+		Name:       reference.Name,
+	}, trackingEventPolicy)
 
-	unstructured, err := dynamicClient.Resource(gvr).Namespace(namespace).Get(ctx, reference.Name, metav1.GetOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("failed to resolve reference: %w", err)
+		return nil, fmt.Errorf("could not resolve auth status: %w", err)
 	}
 
-	return getOIDCSAsFromUnstructured(unstructured)
-}
-
-func getOIDCSAsFromUnstructured(unstructured *unstructured.Unstructured) ([]string, error) {
-	type AuthenticatableType struct {
-		metav1.TypeMeta   `json:",inline"`
-		metav1.ObjectMeta `json:"metadata,omitempty"`
-
-		Status struct {
-			Auth *duckv1.AuthStatus `json:"auth,omitempty"`
-		} `json:"status"`
-	}
-
-	obj := &AuthenticatableType{}
-	if err := runtime.DefaultUnstructuredConverter.FromUnstructured(unstructured.Object, obj); err != nil {
-		return nil, fmt.Errorf("error from DefaultUnstructured.Dynamiconverter: %w", err)
-	}
-
-	if obj.Status.Auth == nil || (obj.Status.Auth.ServiceAccountName == nil && len(obj.Status.Auth.ServiceAccountNames) == 0) {
-		return nil, fmt.Errorf("resource does not have an OIDC service account set")
-	}
-
-	objSAs := obj.Status.Auth.ServiceAccountNames
-	if obj.Status.Auth.ServiceAccountName != nil {
-		objSAs = append(objSAs, *obj.Status.Auth.ServiceAccountName)
+	objSAs := authStatus.ServiceAccountNames
+	if authStatus.ServiceAccountName != nil {
+		objSAs = append(objSAs, *authStatus.ServiceAccountName)
 	}
 
 	objFullSANames := make([]string, 0, len(objSAs))
 	for _, sa := range objSAs {
-		objFullSANames = append(objFullSANames, fmt.Sprintf("system:serviceaccount:%s:%s", obj.GetNamespace(), sa))
+		objFullSANames = append(objFullSANames, fmt.Sprintf("system:serviceaccount:%s:%s", reference.Namespace, sa))
 	}
 
 	return objFullSANames, nil

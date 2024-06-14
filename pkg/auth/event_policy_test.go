@@ -2,8 +2,10 @@ package auth
 
 import (
 	"context"
+	"github.com/google/go-cmp/cmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/strings/slices"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
@@ -11,10 +13,12 @@ import (
 	"knative.dev/eventing/pkg/client/clientset/versioned/scheme"
 	eventpolicyinformerfake "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventpolicy/fake"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/client/injection/ducks/duck/v1/authstatus"
 	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
 	"knative.dev/pkg/ptr"
 	reconcilertesting "knative.dev/pkg/reconciler/testing"
-	"reflect"
+	"knative.dev/pkg/resolver"
+	"knative.dev/pkg/tracker"
 	"strings"
 	"testing"
 )
@@ -439,17 +443,29 @@ func TestResolveSubjects(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx := context.TODO()
 
-			ctx, dynamicClient := fakedynamicclient.With(ctx, scheme.Scheme, tt.objects...)
+			ctx, _ := fakedynamicclient.With(context.Background(), scheme.Scheme, tt.objects...)
+			ctx = authstatus.WithDuck(ctx)
+			r := resolver.NewAuthenticatableResolverFromTracker(ctx, tracker.New(func(types.NamespacedName) {}, 0))
 
-			got, err := ResolveSubjects(ctx, dynamicClient, tt.froms, namespace)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ResolveSubjects() error = %v, wantErr %v", err, tt.wantErr)
+			ep := &v1alpha1.EventPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-policy",
+					Namespace: "my-ns",
+				},
+				Spec: v1alpha1.EventPolicySpec{
+					From: tt.froms,
+				},
+			}
+
+			got, gotErr := ResolveSubjects(r, ep)
+			if (gotErr != nil) != tt.wantErr {
+				t.Errorf("ResolveSubjects() error = %v, wantErr %v", gotErr, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("ResolveSubjects() got = %v, want %v", got, tt.want)
+
+			if !cmp.Equal(got, tt.want) {
+				t.Errorf("Unexpected object (-want, +got) =\n%s", cmp.Diff(got, tt.want))
 			}
 		})
 	}
