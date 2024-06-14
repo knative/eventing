@@ -18,6 +18,8 @@ package auth
 
 import (
 	"fmt"
+	"strings"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -25,7 +27,6 @@ import (
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	listerseventingv1alpha1 "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 	"knative.dev/pkg/resolver"
-	"strings"
 )
 
 // GetEventPoliciesForResource returns the applying EventPolicies for a given resource

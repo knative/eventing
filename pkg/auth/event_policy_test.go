@@ -18,6 +18,9 @@ package auth
 
 import (
 	"context"
+	"strings"
+	"testing"
+
 	"github.com/google/go-cmp/cmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -35,8 +38,6 @@ import (
 	reconcilertesting "knative.dev/pkg/reconciler/testing"
 	"knative.dev/pkg/resolver"
 	"knative.dev/pkg/tracker"
-	"strings"
-	"testing"
 )
 
 func TestGetEventPoliciesForResource(t *testing.T) {
