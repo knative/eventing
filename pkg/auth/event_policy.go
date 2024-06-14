@@ -42,17 +42,17 @@ func GetEventPoliciesForResource(lister listerseventingv1alpha1.EventPolicyListe
 		for _, to := range policy.Spec.To {
 
 			if to.Ref != nil &&
-				to.Ref.Name == resourceObjectMeta.GetName() &&
-				to.Ref.APIVersion == resourceAPIVersion &&
-				to.Ref.Kind == resourceGVK.Kind {
+				strings.EqualFold(to.Ref.Name, resourceObjectMeta.GetName()) &&
+				strings.EqualFold(to.Ref.APIVersion, resourceAPIVersion) &&
+				strings.EqualFold(to.Ref.Kind, resourceGVK.Kind) {
 
 				relevantPolicies = append(relevantPolicies, policy)
 				break // no need to check the other .spec.to's from this policy
 			}
 
 			if to.Selector != nil &&
-				to.Selector.APIVersion == resourceAPIVersion &&
-				to.Selector.Kind == resourceGVK.Kind {
+				strings.EqualFold(to.Selector.APIVersion, resourceAPIVersion) &&
+				strings.EqualFold(to.Selector.Kind, resourceGVK.Kind) {
 
 				requiredLabelsMatch := true
 				for requiredLabelKey, requiredLabelVal := range to.Selector.MatchLabels {
