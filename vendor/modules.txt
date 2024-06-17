@@ -1252,7 +1252,7 @@ knative.dev/hack/schema/commands
 knative.dev/hack/schema/docs
 knative.dev/hack/schema/registry
 knative.dev/hack/schema/schema
-# knative.dev/pkg v0.0.0-20240610120318-15e6cdf2f386
+# knative.dev/pkg v0.0.0-20240614135239-339c22b8218c
 ## explicit; go 1.21
 knative.dev/pkg/apiextensions/storageversion
 knative.dev/pkg/apiextensions/storageversion/cmd/migrate
@@ -1274,6 +1274,7 @@ knative.dev/pkg/client/injection/apiextensions/informers/factory/fake
 knative.dev/pkg/client/injection/apiextensions/reconciler/apiextensions/v1/customresourcedefinition
 knative.dev/pkg/client/injection/ducks/duck/v1/addressable
 knative.dev/pkg/client/injection/ducks/duck/v1/addressable/fake
+knative.dev/pkg/client/injection/ducks/duck/v1/authstatus
 knative.dev/pkg/client/injection/ducks/duck/v1/conditions
 knative.dev/pkg/client/injection/ducks/duck/v1/conditions/fake
 knative.dev/pkg/client/injection/ducks/duck/v1/kresource
@@ -1405,7 +1406,7 @@ knative.dev/pkg/webhook/resourcesemantics
 knative.dev/pkg/webhook/resourcesemantics/conversion
 knative.dev/pkg/webhook/resourcesemantics/defaulting
 knative.dev/pkg/webhook/resourcesemantics/validation
-# knative.dev/reconciler-test v0.0.0-20240607131348-2023469d1158
+# knative.dev/reconciler-test v0.0.0-20240611155001-199a5264927d
 ## explicit; go 1.21
 knative.dev/reconciler-test/cmd/eventshub
 knative.dev/reconciler-test/pkg/environment
