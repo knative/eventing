@@ -46,13 +46,13 @@ func GetEventPoliciesForResource(lister listerseventingv1alpha1.EventPolicyListe
 
 		for _, to := range policy.Spec.To {
 			if to.Ref != nil {
-				parts := strings.Split(to.Ref.APIVersion, "/")
-				if len(parts) != 2 {
+				refGV, err := schema.ParseGroupVersion(to.Ref.APIVersion)
+				if err != nil {
 					return nil, fmt.Errorf("cannot split apiVersion into group and version: %s", to.Ref.APIVersion)
 				}
 
 				if strings.EqualFold(to.Ref.Name, resourceObjectMeta.GetName()) &&
-					strings.EqualFold(parts[0], resourceGVK.Group) &&
+					strings.EqualFold(refGV.Group, resourceGVK.Group) &&
 					strings.EqualFold(to.Ref.Kind, resourceGVK.Kind) {
 
 					relevantPolicies = append(relevantPolicies, policy)
@@ -61,12 +61,12 @@ func GetEventPoliciesForResource(lister listerseventingv1alpha1.EventPolicyListe
 			}
 
 			if to.Selector != nil {
-				parts := strings.Split(to.Selector.APIVersion, "/")
-				if len(parts) != 2 {
+				selectorGV, err := schema.ParseGroupVersion(to.Selector.APIVersion)
+				if err != nil {
 					return nil, fmt.Errorf("cannot split apiVersion into group and version: %s", to.Selector.APIVersion)
 				}
 
-				if strings.EqualFold(parts[0], resourceGVK.Group) &&
+				if strings.EqualFold(selectorGV.Group, resourceGVK.Group) &&
 					strings.EqualFold(to.Selector.Kind, resourceGVK.Kind) {
 
 					selector, err := metav1.LabelSelectorAsSelector(to.Selector.LabelSelector)
