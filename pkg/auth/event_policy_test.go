@@ -391,6 +391,93 @@ func TestGetEventPoliciesForResource(t *testing.T) {
 			want: []string{
 				"my-policy-1",
 			},
+		}, {
+			name: "Match (ignore ref.APIVersion version)",
+			resourceObjectMeta: metav1.ObjectMeta{
+				Name:      "my-broker",
+				Namespace: "my-namespace",
+			},
+			existingPolicies: []v1alpha1.EventPolicy{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "my-policy-1",
+						Namespace: "my-namespace",
+					},
+					Spec: v1alpha1.EventPolicySpec{
+						To: []v1alpha1.EventPolicySpecTo{
+							{
+								Ref: &v1alpha1.EventPolicyToReference{
+									Name:       "my-broker",
+									Kind:       "Broker",
+									APIVersion: "eventing.knative.dev/v12345",
+								},
+							},
+						},
+					},
+				},
+			},
+			want: []string{
+				"my-policy-1",
+			},
+		}, {
+			name: "Match (ignore selector.APIVersion version)",
+			resourceObjectMeta: metav1.ObjectMeta{
+				Name:      "my-broker",
+				Namespace: "my-namespace",
+				Labels: map[string]string{
+					"key": "value",
+				},
+			},
+			existingPolicies: []v1alpha1.EventPolicy{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "my-policy-1",
+						Namespace: "my-namespace",
+					},
+					Spec: v1alpha1.EventPolicySpec{
+						To: []v1alpha1.EventPolicySpecTo{
+							{
+								Selector: &v1alpha1.EventPolicySelector{
+									LabelSelector: &metav1.LabelSelector{
+										MatchLabels: map[string]string{
+											"key": "value",
+										},
+									},
+									TypeMeta: &metav1.TypeMeta{
+										Kind:       "Broker",
+										APIVersion: "eventing.knative.dev/v12345",
+									},
+								},
+							},
+						},
+					},
+				}, {
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "another-policy",
+						Namespace: "my-namespace",
+					},
+					Spec: v1alpha1.EventPolicySpec{
+						To: []v1alpha1.EventPolicySpecTo{
+							{
+								Selector: &v1alpha1.EventPolicySelector{
+									LabelSelector: &metav1.LabelSelector{
+										MatchLabels: map[string]string{
+											"another-key": "value",
+										},
+									},
+									TypeMeta: &metav1.TypeMeta{
+										Kind:       "Broker",
+										APIVersion: "eventing.knative.dev/v1",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			want: []string{
+				"my-policy-1",
+			},
 		},
 	}
 	for _, tt := range tests {

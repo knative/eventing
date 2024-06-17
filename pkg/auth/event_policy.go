@@ -37,7 +37,6 @@ func GetEventPoliciesForResource(lister listerseventingv1alpha1.EventPolicyListe
 	}
 
 	relevantPolicies := []*v1alpha1.EventPolicy{}
-	resourceAPIVersion := fmt.Sprintf("%s/%s", resourceGVK.Group, resourceGVK.Version)
 
 	for _, policy := range policies {
 		if len(policy.Spec.To) == 0 {
@@ -46,27 +45,39 @@ func GetEventPoliciesForResource(lister listerseventingv1alpha1.EventPolicyListe
 		}
 
 		for _, to := range policy.Spec.To {
-			if to.Ref != nil &&
-				strings.EqualFold(to.Ref.Name, resourceObjectMeta.GetName()) &&
-				strings.EqualFold(to.Ref.APIVersion, resourceAPIVersion) &&
-				strings.EqualFold(to.Ref.Kind, resourceGVK.Kind) {
-
-				relevantPolicies = append(relevantPolicies, policy)
-				break // no need to check the other .spec.to's from this policy
-			}
-
-			if to.Selector != nil &&
-				strings.EqualFold(to.Selector.APIVersion, resourceAPIVersion) &&
-				strings.EqualFold(to.Selector.Kind, resourceGVK.Kind) {
-
-				selector, err := metav1.LabelSelectorAsSelector(to.Selector.LabelSelector)
-				if err != nil {
-					return nil, fmt.Errorf("failed to parse selector: %w", err)
+			if to.Ref != nil {
+				parts := strings.Split(to.Ref.APIVersion, "/")
+				if len(parts) != 2 {
+					return nil, fmt.Errorf("cannot split apiVersion into group and version: %s", to.Ref.APIVersion)
 				}
 
-				if selector.Matches(labels.Set(resourceObjectMeta.Labels)) {
+				if strings.EqualFold(to.Ref.Name, resourceObjectMeta.GetName()) &&
+					strings.EqualFold(parts[0], resourceGVK.Group) &&
+					strings.EqualFold(to.Ref.Kind, resourceGVK.Kind) {
+
 					relevantPolicies = append(relevantPolicies, policy)
 					break // no need to check the other .spec.to's from this policy
+				}
+			}
+
+			if to.Selector != nil {
+				parts := strings.Split(to.Selector.APIVersion, "/")
+				if len(parts) != 2 {
+					return nil, fmt.Errorf("cannot split apiVersion into group and version: %s", to.Selector.APIVersion)
+				}
+
+				if strings.EqualFold(parts[0], resourceGVK.Group) &&
+					strings.EqualFold(to.Selector.Kind, resourceGVK.Kind) {
+
+					selector, err := metav1.LabelSelectorAsSelector(to.Selector.LabelSelector)
+					if err != nil {
+						return nil, fmt.Errorf("failed to parse selector: %w", err)
+					}
+
+					if selector.Matches(labels.Set(resourceObjectMeta.Labels)) {
+						relevantPolicies = append(relevantPolicies, policy)
+						break // no need to check the other .spec.to's from this policy
+					}
 				}
 			}
 		}
