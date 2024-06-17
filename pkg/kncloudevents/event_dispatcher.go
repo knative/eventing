@@ -185,7 +185,6 @@ func (d *Dispatcher) SendMessage(ctx context.Context, message binding.Message, d
 }
 
 func (d *Dispatcher) send(ctx context.Context, message binding.Message, destination duckv1.Addressable, config *senderConfig) (*DispatchInfo, error) {
-	dispatchExecutionInfo := &DispatchInfo{}
 
 	// All messages that should be finished at the end of this function
 	// are placed in this slice
@@ -197,7 +196,7 @@ func (d *Dispatcher) send(ctx context.Context, message binding.Message, destinat
 	}()
 
 	if destination.URL == nil {
-		return dispatchExecutionInfo, fmt.Errorf("can not dispatch message to nil destination.URL")
+		return &DispatchInfo{}, fmt.Errorf("can not dispatch message to nil destination.URL")
 	}
 
 	// sanitize eventual host-only URLs
@@ -329,39 +328,31 @@ func (d *Dispatcher) executeRequest(ctx context.Context, target duckv1.Addressab
 
 		return ctx, nil, &dispatchInfo, err
 	}
+	defer response.Body.Close()
 
 	dispatchInfo.ResponseCode = response.StatusCode
 	dispatchInfo.ResponseHeader = response.Header
 
 	body := new(bytes.Buffer)
 	_, err = body.ReadFrom(response.Body)
+	if err != nil {
+		dispatchInfo.ResponseBody = []byte(fmt.Sprintf("dispatch resulted in status \"%s\". Could not read response body: error: %s", response.Status, err.Error()))
+		if !isFailure(response.StatusCode) {
+			dispatchInfo.ResponseCode = http.StatusInternalServerError
+		}
+		return ctx, nil, &dispatchInfo, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	dispatchInfo.ResponseBody = body.Bytes()
 
 	if isFailure(response.StatusCode) {
-		// Read response body into dispatchInfo for failures
-		if err != nil && err != io.EOF {
-			dispatchInfo.ResponseBody = []byte(fmt.Sprintf("dispatch resulted in status \"%s\". Could not read response body: error: %s", response.Status, err.Error()))
-		} else {
-			dispatchInfo.ResponseBody = body.Bytes()
-		}
-		response.Body.Close()
-
 		// Reject non-successful responses.
 		return ctx, nil, &dispatchInfo, fmt.Errorf("unexpected HTTP response, expected 2xx, got %d", response.StatusCode)
 	}
 
-	var responseMessageBody []byte
-	if err != nil && err != io.EOF {
-		responseMessageBody = []byte(fmt.Sprintf("Failed to read response body: %s", err.Error()))
-	} else {
-		responseMessageBody = body.Bytes()
-		dispatchInfo.ResponseBody = responseMessageBody
-	}
-	responseMessage := cehttp.NewMessage(response.Header, io.NopCloser(bytes.NewReader(responseMessageBody)))
-
+	responseMessage := cehttp.NewMessage(response.Header, io.NopCloser(bytes.NewReader(dispatchInfo.ResponseBody)))
 	if responseMessage.ReadEncoding() == binding.EncodingUnknown {
 		// Response is a non event, discard it
-		response.Body.Close()
-		responseMessage.BodyReader.Close()
 		return ctx, nil, &dispatchInfo, nil
 	}
 
