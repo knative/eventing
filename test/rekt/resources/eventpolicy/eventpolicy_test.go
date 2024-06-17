@@ -82,7 +82,7 @@ func Example_full() {
 	}
 
 	cfgFn := []manifest.CfgFn{
-		eventpolicy.WithTos([]v1alpha1.EventPolicySpecTo{
+		eventpolicy.WithTo([]v1alpha1.EventPolicySpecTo{
 			{
 				Ref: &v1alpha1.EventPolicyToReference{
 					Name:       "my-broker",
@@ -111,8 +111,8 @@ func Example_full() {
 					},
 				},
 			},
-		}),
-		eventpolicy.WithFroms([]v1alpha1.EventPolicySpecFrom{
+		}...),
+		eventpolicy.WithFrom([]v1alpha1.EventPolicySpecFrom{
 			{
 				Ref: &v1alpha1.EventPolicyFromReference{
 					APIVersion: "eventing.knative.dev/v1",
@@ -124,7 +124,7 @@ func Example_full() {
 			{
 				Sub: ptr.String("my-sub"),
 			},
-		}),
+		}...),
 	}
 
 	for _, fn := range cfgFn {

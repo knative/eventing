@@ -52,82 +52,70 @@ func Install(name string, opts ...manifest.CfgFn) feature.StepFn {
 	}
 }
 
-func WithTos(tos []eventingv1alpha1.EventPolicySpecTo) manifest.CfgFn {
-	return func(cfg map[string]interface{}) {
-		for _, to := range tos {
-			WithTo(to)(cfg)
-		}
-	}
-}
-
-func WithTo(ref eventingv1alpha1.EventPolicySpecTo) manifest.CfgFn {
+func WithTo(tos ...eventingv1alpha1.EventPolicySpecTo) manifest.CfgFn {
 	return func(cfg map[string]interface{}) {
 		if _, set := cfg["to"]; !set {
 			cfg["to"] = []map[string]interface{}{}
 		}
 
-		to := map[string]interface{}{}
-		if ref.Ref != nil {
-			to = map[string]interface{}{
-				"ref": map[string]interface{}{
-					"apiVersion": ref.Ref.APIVersion,
-					"kind":       ref.Ref.Kind,
-					"name":       ref.Ref.Name,
-				}}
-		}
-
-		if ref.Selector != nil {
-			selector := labelSelectorToStringMap(ref.Selector.LabelSelector)
-			selector["apiVersion"] = ref.Selector.APIVersion
-			selector["kind"] = ref.Selector.Kind
-
-			to = map[string]interface{}{
-				"selector": selector,
+		res := cfg["to"].([]map[string]interface{})
+		for _, ref := range tos {
+			to := map[string]interface{}{}
+			if ref.Ref != nil {
+				to = map[string]interface{}{
+					"ref": map[string]interface{}{
+						"apiVersion": ref.Ref.APIVersion,
+						"kind":       ref.Ref.Kind,
+						"name":       ref.Ref.Name,
+					}}
 			}
+
+			if ref.Selector != nil {
+				selector := labelSelectorToStringMap(ref.Selector.LabelSelector)
+				selector["apiVersion"] = ref.Selector.APIVersion
+				selector["kind"] = ref.Selector.Kind
+
+				to = map[string]interface{}{
+					"selector": selector,
+				}
+			}
+
+			res = append(res, to)
 		}
 
-		tos := cfg["to"].([]map[string]interface{})
-		tos = append(tos, to)
-
-		cfg["to"] = tos
+		cfg["to"] = res
 	}
 }
 
-func WithFroms(froms []eventingv1alpha1.EventPolicySpecFrom) manifest.CfgFn {
-	return func(cfg map[string]interface{}) {
-		for _, from := range froms {
-			WithFrom(from)(cfg)
-		}
-	}
-}
-
-func WithFrom(ref eventingv1alpha1.EventPolicySpecFrom) manifest.CfgFn {
+func WithFrom(froms ...eventingv1alpha1.EventPolicySpecFrom) manifest.CfgFn {
 	return func(cfg map[string]interface{}) {
 		if _, set := cfg["from"]; !set {
 			cfg["from"] = []map[string]interface{}{}
 		}
 
-		from := map[string]interface{}{}
-		if ref.Ref != nil {
-			from = map[string]interface{}{
-				"ref": map[string]interface{}{
-					"apiVersion": ref.Ref.APIVersion,
-					"kind":       ref.Ref.Kind,
-					"name":       ref.Ref.Name,
-					"namespace":  ref.Ref.Namespace,
-				}}
-		}
-
-		if ref.Sub != nil && *ref.Sub != "" {
-			from = map[string]interface{}{
-				"sub": *ref.Sub,
+		res := cfg["from"].([]map[string]interface{})
+		for _, ref := range froms {
+			from := map[string]interface{}{}
+			if ref.Ref != nil {
+				from = map[string]interface{}{
+					"ref": map[string]interface{}{
+						"apiVersion": ref.Ref.APIVersion,
+						"kind":       ref.Ref.Kind,
+						"name":       ref.Ref.Name,
+						"namespace":  ref.Ref.Namespace,
+					}}
 			}
+
+			if ref.Sub != nil && *ref.Sub != "" {
+				from = map[string]interface{}{
+					"sub": *ref.Sub,
+				}
+			}
+
+			res = append(res, from)
 		}
 
-		froms := cfg["from"].([]map[string]interface{})
-		froms = append(froms, from)
-
-		cfg["from"] = froms
+		cfg["from"] = res
 	}
 }
 
