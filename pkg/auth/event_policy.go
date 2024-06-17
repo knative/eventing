@@ -94,11 +94,6 @@ func ResolveSubjects(resolver *resolver.AuthenticatableResolver, eventPolicy *v1
 }
 
 func resolveSubjectsFromReference(resolver *resolver.AuthenticatableResolver, reference v1alpha1.EventPolicyFromReference, trackingEventPolicy *v1alpha1.EventPolicy) ([]string, error) {
-	parts := strings.Split(reference.APIVersion, "/")
-	if len(parts) != 2 {
-		return nil, fmt.Errorf("cannot split apiVersion into group and version: %s", reference.APIVersion)
-	}
-
 	authStatus, err := resolver.AuthStatusFromObjectReference(&corev1.ObjectReference{
 		APIVersion: reference.APIVersion,
 		Kind:       reference.Kind,
