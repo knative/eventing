@@ -352,6 +352,7 @@ func (d *Dispatcher) executeRequest(ctx context.Context, target duckv1.Addressab
 	var responseMessageBody []byte
 	if err != nil && err != io.EOF {
 		responseMessageBody = []byte(fmt.Sprintf("Failed to read response body: %s", err.Error()))
+		dispatchInfo.ResponseCode = http.StatusInternalServerError
 	} else {
 		responseMessageBody = body.Bytes()
 		dispatchInfo.ResponseBody = responseMessageBody
