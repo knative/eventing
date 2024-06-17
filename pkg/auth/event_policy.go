@@ -138,7 +138,7 @@ func SubjectContained(sub string, allowedSubs []string) bool {
 		}
 
 		if strings.HasSuffix(s, "*") &&
-			strings.HasPrefix(strings.ToLower(sub), strings.TrimSuffix(s, "*")) {
+			strings.HasPrefix(sub, strings.TrimSuffix(s, "*")) {
 			return true
 		}
 	}
