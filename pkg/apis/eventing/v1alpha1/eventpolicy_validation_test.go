@@ -196,6 +196,58 @@ func TestEventPolicySpecValidation(t *testing.T) {
 				return apis.ErrMissingField("apiVersion").ViaField("ref").ViaFieldIndex("to", 0).ViaField("spec")
 			}(),
 		},
+		{
+			name: "invalid, from.sub '*' set as infix",
+			ep: &EventPolicy{
+				Spec: EventPolicySpec{
+					From: []EventPolicySpecFrom{{
+						Sub: ptr.String("a*c"),
+					}},
+				},
+			},
+			want: func() *apis.FieldError {
+				return apis.ErrInvalidValue("a*c", "sub", "'*' is only allowed as suffix").ViaFieldIndex("from", 0).ViaField("spec")
+			}(),
+		},
+		{
+			name: "invalid, from.sub '*' set as prefix",
+			ep: &EventPolicy{
+				Spec: EventPolicySpec{
+					From: []EventPolicySpecFrom{{
+						Sub: ptr.String("*a"),
+					}},
+				},
+			},
+			want: func() *apis.FieldError {
+				return apis.ErrInvalidValue("*a", "sub", "'*' is only allowed as suffix").ViaFieldIndex("from", 0).ViaField("spec")
+			}(),
+		},
+		{
+			name: "valid, from.sub '*' set as suffix",
+			ep: &EventPolicy{
+				Spec: EventPolicySpec{
+					From: []EventPolicySpecFrom{{
+						Sub: ptr.String("a*"),
+					}},
+				},
+			},
+			want: func() *apis.FieldError {
+				return nil
+			}(),
+		},
+		{
+			name: "valid, from.sub exactly '*'",
+			ep: &EventPolicy{
+				Spec: EventPolicySpec{
+					From: []EventPolicySpecFrom{{
+						Sub: ptr.String("*"),
+					}},
+				},
+			},
+			want: func() *apis.FieldError {
+				return nil
+			}(),
+		},
 	}
 
 	for _, test := range tests {

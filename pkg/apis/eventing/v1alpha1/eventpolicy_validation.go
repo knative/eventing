@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	"context"
+	"strings"
 
 	"knative.dev/pkg/apis"
 )
@@ -36,6 +37,7 @@ func (ets *EventPolicySpec) Validate(ctx context.Context) *apis.FieldError {
 			err = err.Also(apis.ErrMultipleOneOf("ref", "sub").ViaFieldIndex("from", i))
 		}
 		err = err.Also(f.Ref.Validate().ViaField("ref").ViaFieldIndex("from", i))
+		err = err.Also(validateSub(f.Sub).ViaField("sub").ViaFieldIndex("from", i))
 	}
 
 	for i, t := range ets.To {
@@ -51,6 +53,20 @@ func (ets *EventPolicySpec) Validate(ctx context.Context) *apis.FieldError {
 	}
 
 	return err
+}
+
+func validateSub(sub *string) *apis.FieldError {
+	if sub == nil || len(*sub) <= 1 {
+		return nil
+	}
+
+	lastInvalidIdx := len(*sub) - 2
+	firstInvalidIdx := 0
+	if idx := strings.IndexRune(*sub, '*'); idx >= firstInvalidIdx && idx <= lastInvalidIdx {
+		return apis.ErrInvalidValue(*sub, "", "'*' is only allowed as suffix")
+	}
+
+	return nil
 }
 
 func (r *EventPolicyFromReference) Validate() *apis.FieldError {
