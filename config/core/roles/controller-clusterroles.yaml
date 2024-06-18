@@ -97,6 +97,8 @@ rules:
       - "triggers/status"
       - "eventtypes"
       - "eventtypes/status"
+      - "eventpolicies"
+      - "eventpolicies/status"
     verbs:
       - "get"
       - "list"

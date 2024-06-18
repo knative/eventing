@@ -25,6 +25,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/dynamic"
+	"knative.dev/eventing/pkg/apis/feature"
+	"knative.dev/eventing/pkg/auth"
 	"knative.dev/pkg/kmeta"
 
 	duckapis "knative.dev/pkg/apis/duck"
@@ -35,6 +37,7 @@ import (
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	channelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/channel"
+	eventingv1alpha1listers "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 	listers "knative.dev/eventing/pkg/client/listers/messaging/v1"
 	ducklib "knative.dev/eventing/pkg/duck"
 	eventingduck "knative.dev/eventing/pkg/duck"
@@ -47,6 +50,8 @@ type Reconciler struct {
 
 	// dynamicClientSet allows us to configure pluggable Build objects
 	dynamicClientSet dynamic.Interface
+
+	eventPolicyLister eventingv1alpha1listers.EventPolicyLister
 }
 
 // Check that our Reconciler implements Interface
@@ -54,6 +59,8 @@ var _ channelreconciler.Interface = (*Reconciler)(nil)
 
 // ReconcileKind implements Interface.ReconcileKind.
 func (r *Reconciler) ReconcileKind(ctx context.Context, c *v1.Channel) pkgreconciler.Event {
+	featureFlags := feature.FromContext(ctx)
+
 	// 1. Create the backing Channel CRD, if it doesn't exist.
 	// 2. Propagate the backing Channel CRD Status, Address, and SubscribableStatus into this Channel.
 
@@ -94,6 +101,11 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, c *v1.Channel) pkgreconc
 		}
 	} else {
 		c.Status.MarkDeadLetterSinkNotConfigured()
+	}
+
+	err = auth.UpdateStatusWithEventPolicies(featureFlags, &c.Status.AppliedEventPoliciesStatus, &c.Status, r.eventPolicyLister, v1.SchemeGroupVersion.WithKind("Channel"), c.ObjectMeta)
+	if err != nil {
+		return fmt.Errorf("could not update channel status with EventPolicies: %v", err)
 	}
 
 	return nil

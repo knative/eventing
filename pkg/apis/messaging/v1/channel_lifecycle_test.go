@@ -109,6 +109,9 @@ func TestChannelInitializeConditions(t *testing.T) {
 						Type:   ChannelConditionDeadLetterSinkResolved,
 						Status: corev1.ConditionUnknown,
 					}, {
+						Type:   ChannelConditionEventPoliciesReady,
+						Status: corev1.ConditionUnknown,
+					}, {
 						Type:   ChannelConditionReady,
 						Status: corev1.ConditionUnknown,
 					}},
@@ -138,6 +141,9 @@ func TestChannelInitializeConditions(t *testing.T) {
 						Status: corev1.ConditionUnknown,
 					}, {
 						Type:   ChannelConditionDeadLetterSinkResolved,
+						Status: corev1.ConditionUnknown,
+					}, {
+						Type:   ChannelConditionEventPoliciesReady,
 						Status: corev1.ConditionUnknown,
 					}, {
 						Type:   ChannelConditionReady,
@@ -171,6 +177,9 @@ func TestChannelInitializeConditions(t *testing.T) {
 						Type:   ChannelConditionDeadLetterSinkResolved,
 						Status: corev1.ConditionUnknown,
 					}, {
+						Type:   ChannelConditionEventPoliciesReady,
+						Status: corev1.ConditionUnknown,
+					}, {
 						Type:   ChannelConditionReady,
 						Status: corev1.ConditionUnknown,
 					}},
@@ -198,33 +207,45 @@ func TestChannelConditionStatus(t *testing.T) {
 		address              *duckv1.Addressable
 		backingChannelStatus corev1.ConditionStatus
 		DLSResolved          corev1.ConditionStatus
+		eventPolicyStatus    corev1.ConditionStatus
 		wantConditionStatus  corev1.ConditionStatus
 	}{{
 		name:                 "all happy",
 		address:              validAddress,
 		backingChannelStatus: corev1.ConditionTrue,
 		DLSResolved:          corev1.ConditionTrue,
+		eventPolicyStatus:    corev1.ConditionTrue,
 		wantConditionStatus:  corev1.ConditionTrue,
 	}, {
 		name:                 "address not set",
 		address:              &duckv1.Addressable{},
 		backingChannelStatus: corev1.ConditionTrue,
+		eventPolicyStatus:    corev1.ConditionTrue,
 		wantConditionStatus:  corev1.ConditionFalse,
 	},
 		{
 			name:                 "nil address",
 			address:              nil,
 			backingChannelStatus: corev1.ConditionTrue,
+			eventPolicyStatus:    corev1.ConditionTrue,
 			wantConditionStatus:  corev1.ConditionFalse,
 		}, {
 			name:                 "backing channel with unknown status",
 			address:              validAddress,
 			backingChannelStatus: corev1.ConditionUnknown,
+			eventPolicyStatus:    corev1.ConditionTrue,
 			wantConditionStatus:  corev1.ConditionUnknown,
 		}, {
 			name:                 "backing channel with false status",
 			address:              validAddress,
 			backingChannelStatus: corev1.ConditionFalse,
+			eventPolicyStatus:    corev1.ConditionTrue,
+			wantConditionStatus:  corev1.ConditionFalse,
+		}, {
+			name:                 "EventPolicies not Ready",
+			address:              validAddress,
+			backingChannelStatus: corev1.ConditionTrue,
+			eventPolicyStatus:    corev1.ConditionFalse,
 			wantConditionStatus:  corev1.ConditionFalse,
 		}}
 	for _, test := range tests {
@@ -238,6 +259,14 @@ func TestChannelConditionStatus(t *testing.T) {
 				cs.MarkBackingChannelFailed("ChannelFailure", "testing")
 			} else {
 				cs.MarkBackingChannelUnknown("ChannelUnknown", "testing")
+			}
+
+			if test.eventPolicyStatus == corev1.ConditionTrue {
+				cs.MarkEventPoliciesTrue()
+			} else if test.eventPolicyStatus == corev1.ConditionFalse {
+				cs.MarkEventPoliciesFailed("EventPolicyFailure", "testing")
+			} else {
+				cs.MarkEventPoliciesUnknown("EventPolicyFailure", "testing")
 			}
 
 			if test.DLSResolved == corev1.ConditionTrue {
@@ -421,6 +450,7 @@ func TestChannelPropagateStatuses(t *testing.T) {
 			cs := &ChannelStatus{}
 			cs.PropagateStatuses(tc.channelableStatus)
 			cs.MarkDeadLetterSinkNotConfigured()
+			cs.MarkEventPoliciesTrue()
 			got := cs.GetTopLevelCondition().Status
 			if tc.wantConditionStatus != got {
 				t.Errorf("unexpected readiness: want %v, got %v", tc.wantConditionStatus, got)

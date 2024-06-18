@@ -319,6 +319,7 @@ func TestReconcile(t *testing.T) {
 			dynamicClientSet:   fakedynamicclient.Get(ctx),
 			channelLister:      listers.GetMessagingChannelLister(),
 			channelableTracker: &fakeListableTracker{duck.NewListableTrackerFromTracker(ctx, channelable.Get, tracker.New(func(types.NamespacedName) {}, 0))},
+			eventPolicyLister:  listers.GetEventPolicyLister(),
 		}
 		return channelreconciler.NewReconciler(ctx, logger,
 			fakeeventingclient.Get(ctx), listers.GetMessagingChannelLister(),

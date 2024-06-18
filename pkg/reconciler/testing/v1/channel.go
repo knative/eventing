@@ -159,6 +159,12 @@ func WithChannelDLSUnknown() ChannelOption {
 	}
 }
 
+func WithChannelEventPoliciesReady() ChannelOption {
+	return func(c *eventingv1.Channel) {
+		c.Status.MarkEventPoliciesTrue()
+	}
+}
+
 func WithChannelDLSResolvedFailed() ChannelOption {
 	return func(c *eventingv1.Channel) {
 		c.Status.MarkDeadLetterSinkResolvedFailed(

@@ -19,11 +19,18 @@ package channel
 import (
 	"context"
 
+	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
+	"knative.dev/eventing/pkg/auth"
+
+	"knative.dev/eventing/pkg/apis/feature"
+	"knative.dev/pkg/logging"
+
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/injection/clients/dynamicclient"
 
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
+	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventpolicy"
 	channelinformer "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/channel"
 	channelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/channel"
 	"knative.dev/eventing/pkg/duck"
@@ -36,12 +43,14 @@ func NewController(
 	cmw configmap.Watcher,
 ) *controller.Impl {
 	channelInformer := channelinformer.Get(ctx)
+	eventPolicyInformer := eventpolicy.Get(ctx)
 
 	r := &Reconciler{
-		dynamicClientSet: dynamicclient.Get(ctx),
-		channelLister:    channelInformer.Lister(),
+		dynamicClientSet:  dynamicclient.Get(ctx),
+		channelLister:     channelInformer.Lister(),
+		eventPolicyLister: eventPolicyInformer.Lister(),
 	}
-	impl := channelreconciler.NewImpl(ctx, r)
+
 	var globalResync func()
 	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {
 		if globalResync != nil {
@@ -63,6 +72,12 @@ func NewController(
 	}
 
 	channelInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
+
+	channelGK := messagingv1.SchemeGroupVersion.WithKind("Channel").GroupKind()
+
+	// Enqueue the Channel, if we have an EventPolicy which was referencing
+	// or got updated and now is referencing the Channel
+	eventPolicyInformer.Informer().AddEventHandler(auth.EventPolicyEventHandler(channelInformer.Informer().GetIndexer(), channelGK, impl.EnqueueKey))
 
 	return impl
 }
