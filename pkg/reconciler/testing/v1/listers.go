@@ -31,12 +31,14 @@ import (
 	"k8s.io/client-go/tools/cache"
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	eventingv1beta2 "knative.dev/eventing/pkg/apis/eventing/v1beta2"
 	flowsv1 "knative.dev/eventing/pkg/apis/flows/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	fakeeventingclientset "knative.dev/eventing/pkg/client/clientset/versioned/fake"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1"
+	eventingv1alpha1listers "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 	eventingv1beta2listers "knative.dev/eventing/pkg/client/listers/eventing/v1beta2"
 	flowslisters "knative.dev/eventing/pkg/client/listers/flows/v1"
 	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1"
@@ -110,6 +112,10 @@ func (l *Listers) GetAllObjects() []runtime.Object {
 
 func (l *Listers) GetEventTypeLister() eventingv1beta2listers.EventTypeLister {
 	return eventingv1beta2listers.NewEventTypeLister(l.indexerFor(&eventingv1beta2.EventType{}))
+}
+
+func (l *Listers) GetEventPolicyLister() eventingv1alpha1listers.EventPolicyLister {
+	return eventingv1alpha1listers.NewEventPolicyLister(l.indexerFor(&eventingv1alpha1.EventPolicy{}))
 }
 
 func (l *Listers) GetPingSourceLister() sourcelisters.PingSourceLister {
