@@ -1032,19 +1032,19 @@ namespaceDefaults:
 			Data: map[string]string{
 				"default-br-config": `
      clusterDefault:
-       brokerClass: 
+       brokerClass:
      namespaceDefaults:
        some-namespace:
-         brokerClass: 
+         brokerClass:
          apiVersion: v1
          kind: ConfigMap
-         name: 
-         namespace: 
+         name:
+         namespace:
        some-namespace-too:
          apiVersion: v1
          kind: ConfigMap
-         name: 
-         namespace: 
+         name:
+         namespace:
 `,
 			},
 		},
