@@ -31,6 +31,7 @@ import (
 	"knative.dev/pkg/resolver"
 
 	"knative.dev/eventing/pkg/apis/feature"
+	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventpolicy"
 	"knative.dev/eventing/pkg/client/injection/informers/messaging/v1/inmemorychannel"
 	inmemorychannelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/inmemorychannel"
 	"knative.dev/eventing/pkg/eventingtls"
@@ -139,6 +140,8 @@ func NewController(
 		FilterFunc: controller.FilterWithName(eventingtls.IMCDispatcherServerTLSSecretName),
 		Handler:    controller.HandleAll(globalResync),
 	})
+
+	eventPolicyInformer.Informer().AddEventHandler(controller.HandleAll(globalResync))
 
 	// Setup the watch on the config map of dispatcher config
 	configStore := config.NewEventDispatcherConfigStore(logging.FromContext(ctx))
