@@ -19,6 +19,9 @@ import (
 	"fmt"
 	"testing"
 
+	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -48,6 +51,9 @@ import (
 const (
 	testNS      = "test-namespace"
 	channelName = "test-channel"
+
+	readyEventPolicyName   = "test-event-policy-ready"
+	unreadyEventPolicyName = "test-event-policy-unready"
 )
 
 var (
@@ -60,6 +66,12 @@ var (
 	backingChannelAddressable = duckv1.Addressable{
 		Name: pointer.String("http"),
 		URL:  apis.HTTP(network.GetServiceHostname("foo", "bar")),
+	}
+
+	channelV1GVK = metav1.GroupVersionKind{
+		Group:   "messaging.knative.dev",
+		Version: "v1",
+		Kind:    "Channel",
 	}
 )
 
@@ -145,7 +157,8 @@ func TestReconcile(t *testing.T) {
 				WithBackingChannelObjRef(backingChannelObjRef()),
 				WithBackingChannelReady,
 				WithChannelDLSUnknown(),
-				WithChannelAddress(&backingChannelAddressable)),
+				WithChannelAddress(&backingChannelAddressable),
+				WithChannelEventPoliciesReadyBecauseOIDCDisabled()),
 		}},
 	}, {
 		Name: "Already reconciled",
@@ -157,7 +170,8 @@ func TestReconcile(t *testing.T) {
 				WithBackingChannelObjRef(backingChannelObjRef()),
 				WithBackingChannelReady,
 				WithChannelAddress(&backingChannelAddressable),
-				WithChannelDLSUnknown()),
+				WithChannelDLSUnknown(),
+				WithChannelEventPoliciesReadyBecauseOIDCDisabled()),
 			NewInMemoryChannel(channelName, testNS,
 				WithInitInMemoryChannelConditions,
 				WithInMemoryChannelDeploymentReady(),
@@ -190,7 +204,8 @@ func TestReconcile(t *testing.T) {
 				WithBackingChannelObjRef(backingChannelObjRef()),
 				WithChannelNoAddress(),
 				WithChannelDLSUnknown(),
-				WithBackingChannelUnknown("BackingChannelNotConfigured", "BackingChannel has not yet been reconciled.")),
+				WithBackingChannelUnknown("BackingChannelNotConfigured", "BackingChannel has not yet been reconciled."),
+				WithChannelEventPoliciesReadyBecauseOIDCDisabled()),
 		}},
 	}, {
 		Name: "Backing channel created with delivery",
@@ -240,7 +255,8 @@ func TestReconcile(t *testing.T) {
 				WithChannelNoAddress(),
 				WithChannelDelivery(deliverySpec),
 				WithChannelDLSUnknown(),
-				WithBackingChannelUnknown("BackingChannelNotConfigured", "BackingChannel has not yet been reconciled.")),
+				WithBackingChannelUnknown("BackingChannelNotConfigured", "BackingChannel has not yet been reconciled."),
+				WithChannelEventPoliciesReadyBecauseOIDCDisabled()),
 		}},
 	}, {
 		Name: "Generation Bump",
@@ -274,7 +290,8 @@ func TestReconcile(t *testing.T) {
 				WithChannelAddress(&backingChannelAddressable),
 				WithChannelGeneration(42),
 				// Updates
-				WithChannelObservedGeneration(42)),
+				WithChannelObservedGeneration(42),
+				WithChannelEventPoliciesReadyBecauseOIDCDisabled()),
 		}},
 	}, {
 		Name: "Updating subscribers statuses",
@@ -285,7 +302,8 @@ func TestReconcile(t *testing.T) {
 				WithInitChannelConditions,
 				WithBackingChannelObjRef(backingChannelObjRef()),
 				WithBackingChannelReady,
-				WithChannelAddress(&backingChannelAddressable)),
+				WithChannelAddress(&backingChannelAddressable),
+				WithChannelEventPoliciesReady()),
 			NewInMemoryChannel(channelName, testNS,
 				WithInitInMemoryChannelConditions,
 				WithInMemoryChannelDuckAnnotationV1Beta1,
@@ -307,7 +325,107 @@ func TestReconcile(t *testing.T) {
 				WithBackingChannelReady,
 				WithChannelAddress(&backingChannelAddressable),
 				WithChannelSubscriberStatuses(subscriberStatuses()),
-				WithChannelDLSUnknown()),
+				WithChannelDLSUnknown(),
+				WithChannelEventPoliciesReadyBecauseOIDCDisabled()),
+		}},
+	}, {
+		Name: "Should provision applying EventPolicies",
+		Key:  testKey,
+		Objects: []runtime.Object{
+			NewChannel(channelName, testNS,
+				WithChannelTemplate(channelCRD()),
+				WithInitChannelConditions),
+			NewInMemoryChannel(channelName, testNS,
+				WithInitInMemoryChannelConditions,
+				WithInMemoryChannelDeploymentReady(),
+				WithInMemoryChannelServiceReady(),
+				WithInMemoryChannelEndpointsReady(),
+				WithInMemoryChannelChannelServiceReady(),
+				WithInMemoryChannelAddress(backingChannelAddressable),
+				WithInMemoryChannelDLSUnknown(),
+				WithInMemoryChannelEventPoliciesReady()),
+			NewEventPolicy(readyEventPolicyName, testNS,
+				WithReadyEventPolicyCondition,
+				WithEventPolicyToRef(channelV1GVK, channelName),
+			),
+		},
+		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: NewChannel(channelName, testNS,
+				WithChannelTemplate(channelCRD()),
+				WithInitChannelConditions,
+				WithBackingChannelObjRef(backingChannelObjRef()),
+				WithBackingChannelReady,
+				WithChannelDLSUnknown(),
+				WithChannelAddress(&backingChannelAddressable),
+				WithChannelEventPoliciesReady(),
+				WithChannelEventPoliciesListed(readyEventPolicyName)),
+		}},
+	}, {
+		Name: "Should mark as NotReady on unready EventPolicies",
+		Key:  testKey,
+		Objects: []runtime.Object{
+			NewChannel(channelName, testNS,
+				WithChannelTemplate(channelCRD()),
+				WithInitChannelConditions),
+			NewInMemoryChannel(channelName, testNS,
+				WithInitInMemoryChannelConditions,
+				WithInMemoryChannelDeploymentReady(),
+				WithInMemoryChannelServiceReady(),
+				WithInMemoryChannelEndpointsReady(),
+				WithInMemoryChannelChannelServiceReady(),
+				WithInMemoryChannelAddress(backingChannelAddressable),
+				WithInMemoryChannelDLSUnknown(),
+				WithInMemoryChannelEventPoliciesReady()),
+			NewEventPolicy(unreadyEventPolicyName, testNS,
+				WithUnreadyEventPolicyCondition,
+				WithEventPolicyToRef(channelV1GVK, channelName),
+			),
+		},
+		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: NewChannel(channelName, testNS,
+				WithChannelTemplate(channelCRD()),
+				WithInitChannelConditions,
+				WithBackingChannelObjRef(backingChannelObjRef()),
+				WithBackingChannelReady,
+				WithChannelDLSUnknown(),
+				WithChannelAddress(&backingChannelAddressable),
+				WithChannelEventPoliciesNotReady("EventPoliciesNotReady", fmt.Sprintf("event policies %s are not ready", unreadyEventPolicyName))),
+		}},
+	}, {
+		Name: "should list only Ready EventPolicies",
+		Key:  testKey,
+		Objects: []runtime.Object{
+			NewChannel(channelName, testNS,
+				WithChannelTemplate(channelCRD()),
+				WithInitChannelConditions),
+			NewInMemoryChannel(channelName, testNS,
+				WithInitInMemoryChannelConditions,
+				WithInMemoryChannelDeploymentReady(),
+				WithInMemoryChannelServiceReady(),
+				WithInMemoryChannelEndpointsReady(),
+				WithInMemoryChannelChannelServiceReady(),
+				WithInMemoryChannelAddress(backingChannelAddressable),
+				WithInMemoryChannelDLSUnknown(),
+				WithInMemoryChannelEventPoliciesReady()),
+			NewEventPolicy(readyEventPolicyName, testNS,
+				WithReadyEventPolicyCondition,
+				WithEventPolicyToRef(channelV1GVK, channelName),
+			),
+			NewEventPolicy(unreadyEventPolicyName, testNS,
+				WithUnreadyEventPolicyCondition,
+				WithEventPolicyToRef(channelV1GVK, channelName),
+			),
+		},
+		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: NewChannel(channelName, testNS,
+				WithChannelTemplate(channelCRD()),
+				WithInitChannelConditions,
+				WithBackingChannelObjRef(backingChannelObjRef()),
+				WithBackingChannelReady,
+				WithChannelDLSUnknown(),
+				WithChannelAddress(&backingChannelAddressable),
+				WithChannelEventPoliciesNotReady("EventPoliciesNotReady", fmt.Sprintf("event policies %s are not ready", unreadyEventPolicyName)),
+				WithChannelEventPoliciesListed(readyEventPolicyName)),
 		}},
 	}}
 
@@ -478,4 +596,41 @@ func createChannel(namespace, name string, ready bool) *unstructured.Unstructure
 			},
 		},
 	}
+}
+
+func makeEventPolicy(eventPolicyName string) *v1alpha1.EventPolicy {
+	return &v1alpha1.EventPolicy{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "eventing.knative.dev/v1alpha1",
+			Kind:       "EventPolicy",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: testNS,
+			Name:      eventPolicyName,
+		},
+		Spec: v1alpha1.EventPolicySpec{
+			To: []v1alpha1.EventPolicySpecTo{
+				{
+					Ref: &v1alpha1.EventPolicyToReference{
+						APIVersion: v1.SchemeGroupVersion.String(),
+						Kind:       "Channel",
+						Name:       channelName,
+					},
+				},
+			},
+		},
+		Status: v1alpha1.EventPolicyStatus{},
+	}
+}
+
+func makeReadyEventPolicy() *v1alpha1.EventPolicy {
+	policy := makeEventPolicy(readyEventPolicyName)
+	policy.Status.Conditions = []apis.Condition{{Type: v1alpha1.EventPolicyConditionReady, Status: corev1.ConditionTrue}}
+	return policy
+}
+
+func makeUnreadyEventPolicy() *v1alpha1.EventPolicy {
+	policy := makeEventPolicy(unreadyEventPolicyName)
+	policy.Status.Conditions = []apis.Condition{{Type: v1alpha1.EventPolicyConditionReady, Status: corev1.ConditionFalse}}
+	return policy
 }
