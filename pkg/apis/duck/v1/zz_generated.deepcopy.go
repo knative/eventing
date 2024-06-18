@@ -154,6 +154,7 @@ func (in *ChannelableStatus) DeepCopyInto(out *ChannelableStatus) {
 	in.AddressStatus.DeepCopyInto(&out.AddressStatus)
 	in.SubscribableStatus.DeepCopyInto(&out.SubscribableStatus)
 	in.DeliveryStatus.DeepCopyInto(&out.DeliveryStatus)
+	in.AppliedEventPoliciesStatus.DeepCopyInto(&out.AppliedEventPoliciesStatus)
 	return
 }
 

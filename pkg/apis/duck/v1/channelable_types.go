@@ -67,6 +67,9 @@ type ChannelableStatus struct {
 	// resolved delivery options.
 	// +optional
 	DeliveryStatus `json:",inline"`
+	// AppliedEventPoliciesStatus contains the list of EventPolicies which apply to this Channel
+	// +optional
+	AppliedEventPoliciesStatus `json:",inline"`
 }
 
 var (
