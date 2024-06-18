@@ -69,7 +69,7 @@ func Success() *feature.Feature {
 		AtLeast(1),
 	)
 	f.Assert("Source sent the event", assert.OnStore(source).
-		MatchResponseEvent().
+		Match(assert.MatchKind(eventshub.EventResponse)).
 		Match(assert.MatchStatusCode(202)).
 		AtLeast(1),
 	)
@@ -109,7 +109,7 @@ func SuccessTLS() *feature.Feature {
 		AtLeast(1),
 	)
 	f.Assert("Source sent the event", assert.OnStore(source).
-		MatchResponseEvent().
+		Match(assert.MatchKind(eventshub.EventResponse)).
 		Match(assert.MatchStatusCode(202)).
 		AtLeast(1),
 	)
@@ -155,7 +155,7 @@ func OIDC() *feature.Feature {
 			return
 		}
 		eventshub.Install(sourceNoAudience,
-			eventshub.StartSenderURL(addr.URL.String()),
+			eventshub.StartSenderURLTLS(addr.URL.String(), addr.CACerts),
 			eventshub.InputEvent(eventNoAudience))(ctx, t)
 	})
 
@@ -170,12 +170,12 @@ func OIDC() *feature.Feature {
 		)(ctx, t)
 	})
 	f.Assert("Source sent the event with audience", assert.OnStore(source).
-		MatchResponseEvent().
+		Match(assert.MatchKind(eventshub.EventResponse)).
 		Match(assert.MatchStatusCode(202)).
 		AtLeast(1),
 	)
 	f.Assert("Source sent the event without audience", assert.OnStore(sourceNoAudience).
-		MatchResponseEvent().
+		Match(assert.MatchKind(eventshub.EventResponse)).
 		Match(assert.MatchStatusCode(401)).
 		AtLeast(1),
 	)
