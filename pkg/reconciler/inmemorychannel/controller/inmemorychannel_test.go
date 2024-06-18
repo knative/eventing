@@ -78,7 +78,8 @@ const (
 
 	imcGeneration = 7
 
-	eventPolicyName = "test-event-policy"
+	readyEventPolicyName   = "test-event-policy-ready"
+	unreadyEventPolicyName = "test-event-policy-unready"
 )
 
 var (
@@ -676,7 +677,7 @@ func TestAllCases(t *testing.T) {
 				),
 			}},
 		}, {
-			Name: "Should mark NotReady on unread EventPolicy",
+			Name: "Should mark NotReady on unready EventPolicy",
 			Key:  imcKey,
 			Objects: []runtime.Object{
 				makeDLSServiceAsUnstructured(),
@@ -703,8 +704,40 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelAddress(channelServiceAddress),
 					WithDeadLetterSink(imcDest),
 					WithInMemoryChannelStatusDLS(dlsStatus),
-					WithInMemoryChannelEventPoliciesNotReady("NotReady", fmt.Sprintf("event policies %s are not ready", eventPolicyName)),
-					WithInMemoryChannelEventPoliciesListed(makeUnreadyEventPolicy()),
+					WithInMemoryChannelEventPoliciesNotReady("NotReady", fmt.Sprintf("event policies %s are not ready", makeUnreadyEventPolicy().Name)),
+				),
+			}},
+		}, {
+			Name: "Should list only Ready EventPolicy",
+			Key:  imcKey,
+			Objects: []runtime.Object{
+				makeDLSServiceAsUnstructured(),
+				makeReadyDeployment(),
+				makeService(),
+				makeReadyEndpoints(),
+				NewInMemoryChannel(imcName, testNS,
+					WithDeadLetterSink(imcDest),
+					WithInMemoryChannelGeneration(imcGeneration),
+				),
+				makeChannelService(NewInMemoryChannel(imcName, testNS)),
+				makeReadyEventPolicy(),
+				makeUnreadyEventPolicy(),
+			},
+			WantErr: false,
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewInMemoryChannel(imcName, testNS,
+					WithInitInMemoryChannelConditions,
+					WithInMemoryChannelDeploymentReady(),
+					WithInMemoryChannelGeneration(imcGeneration),
+					WithInMemoryChannelStatusObservedGeneration(imcGeneration),
+					WithInMemoryChannelServiceReady(),
+					WithInMemoryChannelEndpointsReady(),
+					WithInMemoryChannelChannelServiceReady(),
+					WithInMemoryChannelAddress(channelServiceAddress),
+					WithDeadLetterSink(imcDest),
+					WithInMemoryChannelStatusDLS(dlsStatus),
+					WithInMemoryChannelEventPoliciesNotReady("NotReady", fmt.Sprintf("event policies %s are not ready", makeUnreadyEventPolicy().Name)),
+					WithInMemoryChannelEventPoliciesListed(makeReadyEventPolicy()),
 				),
 			}},
 		}}
@@ -889,7 +922,7 @@ func makeUnknownDeployment() *appsv1.Deployment {
 	return d
 }
 
-func makeEventPolicy() *v1alpha1.EventPolicy {
+func makeEventPolicy(eventPolicyName string) *v1alpha1.EventPolicy {
 	return &v1alpha1.EventPolicy{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "eventing.knative.dev/v1alpha1",
@@ -915,13 +948,13 @@ func makeEventPolicy() *v1alpha1.EventPolicy {
 }
 
 func makeReadyEventPolicy() *v1alpha1.EventPolicy {
-	policy := makeEventPolicy()
+	policy := makeEventPolicy(readyEventPolicyName)
 	policy.Status.Conditions = []apis.Condition{{Type: v1alpha1.EventPolicyConditionReady, Status: corev1.ConditionTrue}}
 	return policy
 }
 
 func makeUnreadyEventPolicy() *v1alpha1.EventPolicy {
-	policy := makeEventPolicy()
+	policy := makeEventPolicy(unreadyEventPolicyName)
 	policy.Status.Conditions = []apis.Condition{{Type: v1alpha1.EventPolicyConditionReady, Status: corev1.ConditionFalse}}
 	return policy
 }

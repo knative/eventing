@@ -248,13 +248,14 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1.InMemoryChannel)
 	if len(applyingEvenPolicies) > 0 {
 		unreadyEventPolicies := []string{}
 		for _, policy := range applyingEvenPolicies {
-			imc.Status.Policies = append(imc.Status.Policies, eventingduck.AppliedEventPolicyRef{
-				Name:       policy.Name,
-				APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
-			})
-
 			if !policy.Status.IsReady() {
 				unreadyEventPolicies = append(unreadyEventPolicies, policy.Name)
+			} else {
+				// only add Ready policies to the list
+				imc.Status.Policies = append(imc.Status.Policies, eventingduck.AppliedEventPolicyRef{
+					Name:       policy.Name,
+					APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
+				})
 			}
 		}
 
