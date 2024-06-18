@@ -151,6 +151,10 @@ func TestSequenceInitializeConditions(t *testing.T) {
 				}, {
 					Type:   SequenceConditionSubscriptionsReady,
 					Status: corev1.ConditionUnknown,
+				},
+				{
+					Type:   SequenceConditionEventPoliciesReady,
+					Status: corev1.ConditionUnknown,
 				}},
 			},
 		},
@@ -177,6 +181,10 @@ func TestSequenceInitializeConditions(t *testing.T) {
 					Status: corev1.ConditionUnknown,
 				}, {
 					Type:   SequenceConditionSubscriptionsReady,
+					Status: corev1.ConditionUnknown,
+				},
+				{
+					Type:   SequenceConditionEventPoliciesReady,
 					Status: corev1.ConditionUnknown,
 				}},
 			},
@@ -205,6 +213,10 @@ func TestSequenceInitializeConditions(t *testing.T) {
 				}, {
 					Type:   SequenceConditionSubscriptionsReady,
 					Status: corev1.ConditionTrue,
+				},
+				{
+					Type:   SequenceConditionEventPoliciesReady,
+					Status: corev1.ConditionUnknown,
 				}},
 			},
 		},
