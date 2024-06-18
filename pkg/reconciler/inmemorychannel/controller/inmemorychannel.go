@@ -262,7 +262,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1.InMemoryChannel)
 		if len(unreadyEventPolicies) == 0 {
 			imc.Status.MarkEventPoliciesTrue()
 		} else {
-			imc.Status.MarkEventPoliciesFailed("NotReady", "event policies %s are not ready", strings.Join(unreadyEventPolicies, ", "))
+			imc.Status.MarkEventPoliciesFailed("EventPoliciesNotReady", "event policies %s are not ready", strings.Join(unreadyEventPolicies, ", "))
 		}
 
 	} else {

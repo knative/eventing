@@ -704,7 +704,7 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelAddress(channelServiceAddress),
 					WithDeadLetterSink(imcDest),
 					WithInMemoryChannelStatusDLS(dlsStatus),
-					WithInMemoryChannelEventPoliciesNotReady("NotReady", fmt.Sprintf("event policies %s are not ready", makeUnreadyEventPolicy().Name)),
+					WithInMemoryChannelEventPoliciesNotReady("EventPoliciesNotReady", fmt.Sprintf("event policies %s are not ready", makeUnreadyEventPolicy().Name)),
 				),
 			}},
 		}, {
@@ -736,7 +736,7 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelAddress(channelServiceAddress),
 					WithDeadLetterSink(imcDest),
 					WithInMemoryChannelStatusDLS(dlsStatus),
-					WithInMemoryChannelEventPoliciesNotReady("NotReady", fmt.Sprintf("event policies %s are not ready", makeUnreadyEventPolicy().Name)),
+					WithInMemoryChannelEventPoliciesNotReady("EventPoliciesNotReady", fmt.Sprintf("event policies %s are not ready", makeUnreadyEventPolicy().Name)),
 					WithInMemoryChannelEventPoliciesListed(makeReadyEventPolicy()),
 				),
 			}},
