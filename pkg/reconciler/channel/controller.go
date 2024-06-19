@@ -29,6 +29,7 @@ import (
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/injection/clients/dynamicclient"
 
+	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
 	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventpolicy"
 	channelinformer "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/channel"
@@ -49,6 +50,7 @@ func NewController(
 		dynamicClientSet:  dynamicclient.Get(ctx),
 		channelLister:     channelInformer.Lister(),
 		eventPolicyLister: eventPolicyInformer.Lister(),
+		eventingClientSet: eventingclient.Get(ctx),
 	}
 
 	var globalResync func()

@@ -16,9 +16,10 @@ package testing
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/apis/feature"
-	"time"
 
 	"k8s.io/apimachinery/pkg/types"
 

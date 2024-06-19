@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"testing"
 
-	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
 
 	corev1 "k8s.io/api/core/v1"
@@ -29,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	clientgotesting "k8s.io/client-go/testing"
 	"k8s.io/utils/pointer"
+	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	v1addr "knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
@@ -41,7 +41,6 @@ import (
 	"knative.dev/pkg/tracker"
 
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
-	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
 	channelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/channel"
 	"knative.dev/eventing/pkg/duck"
@@ -72,6 +71,12 @@ var (
 		Group:   "messaging.knative.dev",
 		Version: "v1",
 		Kind:    "Channel",
+	}
+
+	imcV1GVK = metav1.GroupVersionKind{
+		Group:   "messaging.knative.dev",
+		Version: "v1",
+		Kind:    "InMemoryChannel",
 	}
 )
 
@@ -348,6 +353,24 @@ func TestReconcile(t *testing.T) {
 				WithReadyEventPolicyCondition,
 				WithEventPolicyToRef(channelV1GVK, channelName),
 			),
+			NewEventPolicy(fmt.Sprintf("%s-%s", readyEventPolicyName, channelName), testNS,
+				WithEventPolicyToRef(imcV1GVK, channelName),
+				WithEventPolicyOwnerReferences([]metav1.OwnerReference{
+					{
+						APIVersion: v1.SchemeGroupVersion.String(),
+						Kind:       "InMemoryChannel",
+						Name:       channelName,
+					}, {
+						Name: readyEventPolicyName,
+					},
+				}...),
+				WithEventPolicyLabels(map[string]string{
+					"messaging.knative.dev/channel-group":   v1.SchemeGroupVersion.Group,
+					"messaging.knative.dev/channel-version": v1.SchemeGroupVersion.Version,
+					"messaging.knative.dev/channel-kind":    "InMemoryChannel",
+					"messaging.knative.dev/channel-name":    channelName,
+				}),
+			),
 		},
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 			Object: NewChannel(channelName, testNS,
@@ -379,6 +402,24 @@ func TestReconcile(t *testing.T) {
 			NewEventPolicy(unreadyEventPolicyName, testNS,
 				WithUnreadyEventPolicyCondition,
 				WithEventPolicyToRef(channelV1GVK, channelName),
+			),
+			NewEventPolicy(fmt.Sprintf("%s-%s", unreadyEventPolicyName, channelName), testNS,
+				WithEventPolicyToRef(imcV1GVK, channelName),
+				WithEventPolicyOwnerReferences([]metav1.OwnerReference{
+					{
+						APIVersion: v1.SchemeGroupVersion.String(),
+						Kind:       "InMemoryChannel",
+						Name:       channelName,
+					}, {
+						Name: unreadyEventPolicyName,
+					},
+				}...),
+				WithEventPolicyLabels(map[string]string{
+					"messaging.knative.dev/channel-group":   v1.SchemeGroupVersion.Group,
+					"messaging.knative.dev/channel-version": v1.SchemeGroupVersion.Version,
+					"messaging.knative.dev/channel-kind":    "InMemoryChannel",
+					"messaging.knative.dev/channel-name":    channelName,
+				}),
 			),
 		},
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
@@ -415,6 +456,42 @@ func TestReconcile(t *testing.T) {
 				WithUnreadyEventPolicyCondition,
 				WithEventPolicyToRef(channelV1GVK, channelName),
 			),
+			NewEventPolicy(fmt.Sprintf("%s-%s", readyEventPolicyName, channelName), testNS,
+				WithEventPolicyToRef(imcV1GVK, channelName),
+				WithEventPolicyOwnerReferences([]metav1.OwnerReference{
+					{
+						APIVersion: v1.SchemeGroupVersion.String(),
+						Kind:       "InMemoryChannel",
+						Name:       channelName,
+					}, {
+						Name: readyEventPolicyName,
+					},
+				}...),
+				WithEventPolicyLabels(map[string]string{
+					"messaging.knative.dev/channel-group":   v1.SchemeGroupVersion.Group,
+					"messaging.knative.dev/channel-version": v1.SchemeGroupVersion.Version,
+					"messaging.knative.dev/channel-kind":    "InMemoryChannel",
+					"messaging.knative.dev/channel-name":    channelName,
+				}),
+			),
+			NewEventPolicy(fmt.Sprintf("%s-%s", unreadyEventPolicyName, channelName), testNS,
+				WithEventPolicyToRef(imcV1GVK, channelName),
+				WithEventPolicyOwnerReferences([]metav1.OwnerReference{
+					{
+						APIVersion: v1.SchemeGroupVersion.String(),
+						Kind:       "InMemoryChannel",
+						Name:       channelName,
+					}, {
+						Name: unreadyEventPolicyName,
+					},
+				}...),
+				WithEventPolicyLabels(map[string]string{
+					"messaging.knative.dev/channel-group":   v1.SchemeGroupVersion.Group,
+					"messaging.knative.dev/channel-version": v1.SchemeGroupVersion.Version,
+					"messaging.knative.dev/channel-kind":    "InMemoryChannel",
+					"messaging.knative.dev/channel-name":    channelName,
+				}),
+			),
 		},
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 			Object: NewChannel(channelName, testNS,
@@ -427,6 +504,60 @@ func TestReconcile(t *testing.T) {
 				WithChannelEventPoliciesNotReady("EventPoliciesNotReady", fmt.Sprintf("event policies %s are not ready", unreadyEventPolicyName)),
 				WithChannelEventPoliciesListed(readyEventPolicyName)),
 		}},
+	}, {
+		Name: "should create EventPolicies for backing channel",
+		Key:  testKey,
+		Objects: []runtime.Object{
+			NewChannel(channelName, testNS,
+				WithChannelTemplate(channelCRD()),
+				WithInitChannelConditions,
+				WithChannelEventPoliciesReady(),
+				WithChannelEventPoliciesListed(readyEventPolicyName)),
+			NewInMemoryChannel(channelName, testNS,
+				WithInitInMemoryChannelConditions,
+				WithInMemoryChannelDeploymentReady(),
+				WithInMemoryChannelServiceReady(),
+				WithInMemoryChannelEndpointsReady(),
+				WithInMemoryChannelChannelServiceReady(),
+				WithInMemoryChannelAddress(backingChannelAddressable),
+				WithInMemoryChannelDLSUnknown(),
+				WithInMemoryChannelEventPoliciesReady()),
+			NewEventPolicy(readyEventPolicyName, testNS,
+				WithReadyEventPolicyCondition,
+				WithEventPolicyToRef(channelV1GVK, channelName),
+			),
+		},
+		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: NewChannel(channelName, testNS,
+				WithChannelTemplate(channelCRD()),
+				WithInitChannelConditions,
+				WithBackingChannelObjRef(backingChannelObjRef()),
+				WithBackingChannelReady,
+				WithChannelDLSUnknown(),
+				WithChannelAddress(&backingChannelAddressable),
+				WithChannelEventPoliciesReady(),
+				WithChannelEventPoliciesListed(readyEventPolicyName)),
+		}},
+		WantCreates: []runtime.Object{
+			NewEventPolicy(fmt.Sprintf("%s-%s", readyEventPolicyName, channelName), testNS,
+				WithEventPolicyToRef(imcV1GVK, channelName),
+				WithEventPolicyOwnerReferences([]metav1.OwnerReference{
+					{
+						APIVersion: v1.SchemeGroupVersion.String(),
+						Kind:       "InMemoryChannel",
+						Name:       channelName,
+					}, {
+						Name: readyEventPolicyName,
+					},
+				}...),
+				WithEventPolicyLabels(map[string]string{
+					"messaging.knative.dev/channel-group":   v1.SchemeGroupVersion.Group,
+					"messaging.knative.dev/channel-version": v1.SchemeGroupVersion.Version,
+					"messaging.knative.dev/channel-kind":    "InMemoryChannel",
+					"messaging.knative.dev/channel-name":    channelName,
+				}),
+			),
+		},
 	}}
 
 	logger := logtesting.TestLogger(t)
@@ -438,6 +569,7 @@ func TestReconcile(t *testing.T) {
 			channelLister:      listers.GetMessagingChannelLister(),
 			channelableTracker: &fakeListableTracker{duck.NewListableTrackerFromTracker(ctx, channelable.Get, tracker.New(func(types.NamespacedName) {}, 0))},
 			eventPolicyLister:  listers.GetEventPolicyLister(),
+			eventingClientSet:  fakeeventingclient.Get(ctx),
 		}
 		return channelreconciler.NewReconciler(ctx, logger,
 			fakeeventingclient.Get(ctx), listers.GetMessagingChannelLister(),
@@ -596,41 +728,4 @@ func createChannel(namespace, name string, ready bool) *unstructured.Unstructure
 			},
 		},
 	}
-}
-
-func makeEventPolicy(eventPolicyName string) *v1alpha1.EventPolicy {
-	return &v1alpha1.EventPolicy{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "eventing.knative.dev/v1alpha1",
-			Kind:       "EventPolicy",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: testNS,
-			Name:      eventPolicyName,
-		},
-		Spec: v1alpha1.EventPolicySpec{
-			To: []v1alpha1.EventPolicySpecTo{
-				{
-					Ref: &v1alpha1.EventPolicyToReference{
-						APIVersion: v1.SchemeGroupVersion.String(),
-						Kind:       "Channel",
-						Name:       channelName,
-					},
-				},
-			},
-		},
-		Status: v1alpha1.EventPolicyStatus{},
-	}
-}
-
-func makeReadyEventPolicy() *v1alpha1.EventPolicy {
-	policy := makeEventPolicy(readyEventPolicyName)
-	policy.Status.Conditions = []apis.Condition{{Type: v1alpha1.EventPolicyConditionReady, Status: corev1.ConditionTrue}}
-	return policy
-}
-
-func makeUnreadyEventPolicy() *v1alpha1.EventPolicy {
-	policy := makeEventPolicy(unreadyEventPolicyName)
-	policy.Status.Conditions = []apis.Condition{{Type: v1alpha1.EventPolicyConditionReady, Status: corev1.ConditionFalse}}
-	return policy
 }

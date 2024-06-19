@@ -97,10 +97,8 @@ func WithEventPolicyLabels(labels map[string]string) EventPolicyOption {
 	}
 }
 
-func WithEventPolicyOwnerReference(ownerRef metav1.OwnerReference) EventPolicyOption {
+func WithEventPolicyOwnerReferences(ownerRefs ...metav1.OwnerReference) EventPolicyOption {
 	return func(ep *v1alpha1.EventPolicy) {
-		ep.ObjectMeta.OwnerReferences = []metav1.OwnerReference{
-			ownerRef,
-		}
+		ep.ObjectMeta.OwnerReferences = append(ep.ObjectMeta.OwnerReferences, ownerRefs...)
 	}
 }
