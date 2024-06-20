@@ -21,6 +21,7 @@ metadata:
     app.kubernetes.io/component: eventing-webhook
     app.kubernetes.io/version: devel
     app.kubernetes.io/name: knative-eventing
+    bindings.knative.dev/exclude: "true"
 spec:
   selector:
     matchLabels:

@@ -24,20 +24,25 @@ import (
 
 type Graph struct {
 	vertices map[comparableDestination]*Vertex
+	edges    map[comparableDestination][]*Edge // more than one edge may have the same reference (for example in the case where there is a DLS)
 }
 
 type Vertex struct {
+	parent   *Graph
 	self     *duckv1.Destination
 	inEdges  []*Edge
 	outEdges []*Edge
 	visited  bool
 }
 
+type Vertices []*Vertex
+
 type Edge struct {
-	transform TransformFunction
+	transform Transform
 	self      *duckv1.Destination
 	from      *Vertex
 	to        *Vertex
+	isDLS     bool
 }
 
 // comparableDestination is a modified version of duckv1.Destination that is comparable (no pointers).
@@ -51,7 +56,10 @@ type comparableDestination struct {
 	// +optional
 	URI apis.URL `json:"uri,omitempty"`
 }
-type TransformFunction func(et *eventingv1beta3.EventType, tfc TransformFunctionContext) (*eventingv1beta3.EventType, TransformFunctionContext)
+type Transform interface {
+	Apply(et *eventingv1beta3.EventType, tfc TransformFunctionContext) (*eventingv1beta3.EventType, TransformFunctionContext)
+	Name() string
+}
 
 // TODO(cali0707): flesh this out more, know we need it, not sure what needs to be in it yet
 type TransformFunctionContext struct{}
@@ -61,10 +69,11 @@ func (t TransformFunctionContext) DeepCopy() TransformFunctionContext { return t
 func NewGraph() *Graph {
 	return &Graph{
 		vertices: make(map[comparableDestination]*Vertex),
+		edges:    map[comparableDestination][]*Edge{},
 	}
 }
 
-func (g *Graph) Vertices() []*Vertex {
+func (g *Graph) Vertices() Vertices {
 	vertices := make([]*Vertex, len(g.vertices))
 	for _, v := range g.vertices {
 		vertices = append(vertices, v)
@@ -76,6 +85,19 @@ func (g *Graph) UnvisitAll() {
 	for _, v := range g.vertices {
 		v.visited = false
 	}
+}
+
+// Sources returns all of the sources vertices in a graph
+// A source vertex is defined as a graph with an in degree of 0 and an out degree >= 1
+// This means that there are only outward edges from the vertex, and no inward edges
+func (g *Graph) Sources() Vertices {
+	sources := Vertices{}
+	for _, v := range g.vertices {
+		if v.InDegree() == 0 && v.OutDegree() >= 1 {
+			sources = append(sources, v)
+		}
+	}
+	return sources
 }
 
 func (v *Vertex) InDegree() int {
@@ -116,11 +138,32 @@ func (v *Vertex) NewWithSameRef() *Vertex {
 	}
 }
 
-func (v *Vertex) AddEdge(to *Vertex, edgeRef *duckv1.Destination, transform TransformFunction) {
-	edge := &Edge{from: v, to: to, transform: transform, self: edgeRef}
+func (v *Vertex) AddEdge(to *Vertex, edgeRef *duckv1.Destination, transform Transform, isDLS bool) {
+	edge := &Edge{from: v, to: to, transform: transform, self: edgeRef, isDLS: isDLS}
 	v.outEdges = append(v.outEdges, edge)
 	to.inEdges = append(to.inEdges, edge)
 
+	if v.parent == nil {
+		return
+	}
+
+	if _, ok := v.parent.edges[makeComparableDestination(edgeRef)]; !ok {
+		v.parent.edges[makeComparableDestination(edgeRef)] = []*Edge{}
+	}
+
+	v.parent.edges[makeComparableDestination(edgeRef)] = append(v.parent.edges[makeComparableDestination(edgeRef)], edge)
+}
+
+func (g *Graph) GetPrimaryOutEdgeWithRef(edgeRef *duckv1.KReference) *Edge {
+	if edges, ok := g.edges[makeComparableDestination(&duckv1.Destination{Ref: edgeRef})]; ok {
+		for _, e := range edges {
+			if !e.isDLS {
+				return e
+			}
+		}
+	}
+
+	return nil
 }
 
 func (e *Edge) Transform(et *eventingv1beta3.EventType, tfc TransformFunctionContext) (*eventingv1beta3.EventType, TransformFunctionContext) {
@@ -128,7 +171,7 @@ func (e *Edge) Transform(et *eventingv1beta3.EventType, tfc TransformFunctionCon
 		return nil, tfc
 	}
 
-	return e.transform(et, tfc)
+	return e.transform.Apply(et, tfc)
 }
 
 func (e *Edge) From() *Vertex {
@@ -141,10 +184,6 @@ func (e *Edge) To() *Vertex {
 
 func (e *Edge) Reference() *duckv1.Destination {
 	return e.self
-}
-
-func NoTransform(et *eventingv1beta3.EventType, tfc TransformFunctionContext) (*eventingv1beta3.EventType, TransformFunctionContext) {
-	return et, tfc
 }
 
 func makeComparableDestination(dest *duckv1.Destination) comparableDestination {

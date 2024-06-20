@@ -44,7 +44,7 @@ data:
   # For more details: https://github.com/knative/eventing/issues/5204
   new-trigger-filters: "enabled"
   
-  # ALPHA feature: The transport-encryption flag allows you to encrypt events in transit using the transport layer security (TLS) protocol.
+  # BETA feature: The transport-encryption flag allows you to encrypt events in transit using the transport layer security (TLS) protocol.
   # For more details: https://github.com/knative/eventing/issues/5957
   transport-encryption: "disabled"
 
@@ -56,7 +56,16 @@ data:
   # For more details: https://github.com/knative/eventing/issues/7174
   authentication-oidc: "disabled"
 
+  # ALPHA feature: The default-authorization-mode flag allows you to change the default
+  # authorization mode for resources that have no EventPolicy associated with them.
+  #
+  # This feature flag is only used when "authentication-oidc" is enabled.
+  default-authorization-mode: "allow-same-namespace"
+
   # ALPHA feature: The cross-namespace-event-links flag allows you to use cross-namespace referencing for Eventing.
   # For more details: https://github.com/knative/eventing/issues/7739
   cross-namespace-event-links: "disabled"
 
+  # ALPHA feature: The new-apiserversource-filters flag allows you to use the new `filters` field
+  # in APIServerSource objects with its rich filtering capabilities.
+  new-apiserversource-filters: "disabled"

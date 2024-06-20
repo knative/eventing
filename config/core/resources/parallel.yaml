@@ -345,6 +345,11 @@ spec:
                   serviceAccountName:
                     description: ServiceAccountName is the name of the generated service account used for this components OIDC authentication.
                     type: string
+                  serviceAccountNames:
+                    description: ServiceAccountNames is the list of names of the generated service accounts used for this components OIDC authentication.
+                    type: array
+                    items:
+                      type: string
               branchStatuses:
                 description: BranchStatuses is an array of corresponding to branch
                     statuses. Matches the Spec.Branches array in the order.
@@ -584,6 +589,18 @@ spec:
                                 description: 'UID of the referent. More
                                     info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids'
                                 type: string
+              policies:
+                description: List of applied EventPolicies
+                type: array
+                items:
+                  type: object
+                  properties:
+                    apiVersion:
+                      description: The API version of the applied EventPolicy. This indicates, which version of EventPolicy is supported by the resource.
+                      type: string
+                    name:
+                      description: The name of the applied EventPolicy
+                      type: string
               conditions:
                 description: Conditions the latest available observations of a resource's
                     current state.

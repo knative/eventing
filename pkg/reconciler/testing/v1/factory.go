@@ -19,9 +19,13 @@ package testing
 import (
 	"context"
 	"encoding/json"
+	"slices"
+	"strings"
 	"testing"
 
+	authv1 "k8s.io/api/authorization/v1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/logging"
 
@@ -29,6 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	clientgotesting "k8s.io/client-go/testing"
 
 	"k8s.io/client-go/tools/record"
 
@@ -105,6 +110,51 @@ func MakeFactory(ctor Ctor, unstructured bool, logger *zap.SugaredLogger) Factor
 		})
 		client.PrependReactor("update", "*", func(action ktesting.Action) (handled bool, ret runtime.Object, err error) {
 			return ValidateUpdates(ctx, action)
+		})
+
+		kubeClient.PrependReactor("create", "subjectaccessreviews", func(action ktesting.Action) (handled bool, ret runtime.Object, err error) {
+			obj := action.(clientgotesting.CreateAction).GetObject()
+			sar, ok := obj.(*authv1.SubjectAccessReview)
+			if !ok {
+				return false, nil, nil
+			}
+
+			// need a new kubeclient because otherwise we will deadlock
+			ctx, kubeClient := fakekubeclient.With(ctx, ls.GetKubeObjects()...)
+
+			roleBindings, err := kubeClient.RbacV1().RoleBindings(sar.Spec.ResourceAttributes.Namespace).List(ctx, metav1.ListOptions{})
+			logger.Infof("rolebindings: %+v", roleBindings)
+			if err != nil {
+				return false, nil, nil
+			}
+
+			for _, rb := range roleBindings.Items {
+				for _, s := range rb.Subjects {
+					if (s.Name == sar.Spec.User && (s.Kind == "User" || s.Kind == "ServiceAccount")) || (slices.Contains(sar.Spec.Groups, s.Name) && s.Kind == "Group") {
+						role, err := kubeClient.RbacV1().Roles(sar.Spec.ResourceAttributes.Namespace).Get(ctx, rb.RoleRef.Name, metav1.GetOptions{})
+						if err != nil {
+							// let's keep trying for other roles, no reason to fail here
+							continue
+						}
+						for _, rule := range role.Rules {
+							resources := make([]string, 0, len(rule.Resources))
+							for _, resource := range rule.Resources {
+								resources = append(resources, strings.ToLower(resource))
+							}
+							if slices.Contains(rule.APIGroups, sar.Spec.ResourceAttributes.Group) &&
+								(slices.Contains(rule.Resources, "*") || slices.Contains(resources, strings.ToLower(sar.Spec.ResourceAttributes.Resource))) &&
+								slices.Contains(rule.Verbs, sar.Spec.ResourceAttributes.Verb) {
+								res := sar.DeepCopy()
+								res.Status.Allowed = true
+								return true, res, nil
+							}
+
+						}
+					}
+				}
+			}
+
+			return true, sar, nil
 		})
 
 		for _, reactor := range r.WithReactors {

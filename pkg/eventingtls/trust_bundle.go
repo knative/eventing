@@ -34,26 +34,26 @@ import (
 )
 
 const (
+	// TrustBundleLabelKey is the label key for trust bundles configmaps.
+	TrustBundleLabelKey = "networking.knative.dev/trust-bundle"
+	// TrustBundleLabelValue is the label value for trust bundles configmaps.
+	TrustBundleLabelValue = "true"
 	// TrustBundleLabelSelector is the ConfigMap label selector for trust bundles.
-	TrustBundleLabelSelector = "networking.knative.dev/trust-bundle=true"
+	TrustBundleLabelSelector = TrustBundleLabelKey + "=" + TrustBundleLabelValue
 
 	TrustBundleMountPath = "/knative-custom-certs"
 
 	TrustBundleVolumeNamePrefix = "kne-bundle-"
+
+	TrustBundleConfigMapNameSuffix = "kne-bundle"
 )
 
 var (
 	// TrustBundleSelector is a selector for trust bundle ConfigMaps.
-	TrustBundleSelector labels.Selector
+	TrustBundleSelector = labels.SelectorFromSet(map[string]string{
+		TrustBundleLabelKey: TrustBundleLabelValue,
+	})
 )
-
-func init() {
-	var err error
-	TrustBundleSelector, err = labels.Parse(TrustBundleLabelSelector)
-	if err != nil {
-		panic(err)
-	}
-}
 
 // PropagateTrustBundles propagates Trust bundles ConfigMaps from the system.Namespace() to the
 // obj namespace.
@@ -77,11 +77,12 @@ func PropagateTrustBundles(ctx context.Context, k8s kubernetes.Interface, trustB
 	state := make(map[string]Pair, len(systemNamespaceBundles)+len(userNamespaceBundles))
 
 	for _, cm := range systemNamespaceBundles {
-		if p, ok := state[cm.Name]; !ok {
-			state[cm.Name] = Pair{sysCM: cm}
+		name := userCMName(cm.Name)
+		if p, ok := state[name]; !ok {
+			state[name] = Pair{sysCM: cm.DeepCopy()}
 		} else {
-			state[cm.Name] = Pair{
-				sysCM:  cm,
+			state[name] = Pair{
+				sysCM:  cm.DeepCopy(),
 				userCm: p.userCm,
 			}
 		}
@@ -89,11 +90,11 @@ func PropagateTrustBundles(ctx context.Context, k8s kubernetes.Interface, trustB
 
 	for _, cm := range userNamespaceBundles {
 		if p, ok := state[cm.Name]; !ok {
-			state[cm.Name] = Pair{userCm: cm}
+			state[cm.Name] = Pair{userCm: cm.DeepCopy()}
 		} else {
 			state[cm.Name] = Pair{
 				sysCM:  p.sysCM,
-				userCm: cm,
+				userCm: cm.DeepCopy(),
 			}
 		}
 	}
@@ -101,15 +102,28 @@ func PropagateTrustBundles(ctx context.Context, k8s kubernetes.Interface, trustB
 	for _, p := range state {
 
 		if p.sysCM == nil {
-			if err := deleteConfigMap(ctx, k8s, obj, p.userCm); err != nil {
-				return err
+
+			expectedOr := metav1.OwnerReference{
+				APIVersion: gvk.GroupVersion().String(),
+				Kind:       gvk.Kind,
+				Name:       obj.GetName(),
+				UID:        obj.GetUID(),
+			}
+
+			for _, or := range p.userCm.OwnerReferences {
+				// Only delete the ConfigMap if the object owns it
+				if equality.Semantic.DeepDerivative(expectedOr, or) {
+					if err := deleteConfigMap(ctx, k8s, obj, p.userCm); err != nil {
+						return err
+					}
+				}
 			}
 			continue
 		}
 
 		expected := &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:        p.sysCM.Name,
+				Name:        userCMName(p.sysCM.Name),
 				Namespace:   obj.GetNamespace(),
 				Labels:      p.sysCM.Labels,
 				Annotations: p.sysCM.Annotations,
@@ -121,13 +135,14 @@ func PropagateTrustBundles(ctx context.Context, k8s kubernetes.Interface, trustB
 		if p.userCm == nil {
 			// Update owner references
 			expected.OwnerReferences = withOwnerReferences(obj, gvk, []metav1.OwnerReference{})
-
 			if err := createConfigMap(ctx, k8s, expected); err != nil {
 				return err
 			}
 			continue
 		}
 
+		expected.Generation = p.userCm.Generation
+		expected.ResourceVersion = p.userCm.ResourceVersion
 		// Update owner references
 		expected.OwnerReferences = withOwnerReferences(obj, gvk, p.userCm.OwnerReferences)
 
@@ -244,26 +259,15 @@ func withOwnerReferences(sb kmeta.Accessor, gvk schema.GroupVersionKind, referen
 }
 
 func deleteConfigMap(ctx context.Context, k8s kubernetes.Interface, sb kmeta.Accessor, cm *corev1.ConfigMap) error {
-	expectedOr := metav1.OwnerReference{
-		APIVersion: sb.GroupVersionKind().GroupVersion().String(),
-		Kind:       sb.GroupVersionKind().Kind,
-		Name:       sb.GetName(),
-	}
-	// Only delete the ConfigMap if the object owns it
-	for _, or := range cm.OwnerReferences {
-		if equality.Semantic.DeepDerivative(expectedOr, or) {
-			err := k8s.CoreV1().ConfigMaps(sb.GetNamespace()).Delete(ctx, cm.Name, metav1.DeleteOptions{
-				TypeMeta: metav1.TypeMeta{},
-				Preconditions: &metav1.Preconditions{
-					UID: &cm.UID,
-				},
-			})
-			if err != nil && !apierrors.IsNotFound(err) {
-				return fmt.Errorf("failed to delete ConfigMap %s/%s: %w", cm.Namespace, cm.Name, err)
-			}
-
-			return nil
-		}
+	err := k8s.CoreV1().ConfigMaps(sb.GetNamespace()).Delete(ctx, cm.Name, metav1.DeleteOptions{
+		TypeMeta: metav1.TypeMeta{},
+		Preconditions: &metav1.Preconditions{
+			UID:             &cm.UID,
+			ResourceVersion: &cm.ResourceVersion,
+		},
+	})
+	if err != nil && !apierrors.IsNotFound(err) {
+		return fmt.Errorf("failed to delete ConfigMap %s/%s: %w", cm.Namespace, cm.Name, err)
 	}
 
 	return nil
@@ -283,4 +287,8 @@ func createConfigMap(ctx context.Context, k8s kubernetes.Interface, expected *co
 		return fmt.Errorf("failed to create ConfigMap %s/%s: %w", expected.Namespace, expected.Name, err)
 	}
 	return nil
+}
+
+func userCMName(name string) string {
+	return kmeta.ChildName(name, TrustBundleConfigMapNameSuffix)
 }

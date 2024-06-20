@@ -20,11 +20,13 @@ set -e
 set -o errexit
 set -o nounset
 set -o pipefail
-set -x
 
 export SCALE_CHAOSDUCK_TO_ZERO=1
 export REPLICAS=1
-export KO_FLAGS=${KO_FLAGS:-"--platform="""} # Default to current OS and arch
+
+KO_ARCH=$(go env | grep GOARCH | awk -F\' '{print $2}')
+
+export KO_FLAGS=${KO_FLAGS:-"--platform=linux/$KO_ARCH"}
 
 source "$(dirname "$0")/../test/e2e-common.sh"
 

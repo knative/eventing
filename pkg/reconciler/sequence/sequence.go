@@ -22,14 +22,12 @@ import (
 
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/equality"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/kubernetes"
 	"knative.dev/pkg/kmeta"
 
 	duckapis "knative.dev/pkg/apis/duck"
@@ -37,19 +35,16 @@ import (
 	pkgreconciler "knative.dev/pkg/reconciler"
 
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
-	"knative.dev/eventing/pkg/apis/feature"
 	v1 "knative.dev/eventing/pkg/apis/flows/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
-	"knative.dev/eventing/pkg/auth"
 	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
 	sequencereconciler "knative.dev/eventing/pkg/client/injection/reconciler/flows/v1/sequence"
 	listers "knative.dev/eventing/pkg/client/listers/flows/v1"
 	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1"
 	"knative.dev/eventing/pkg/duck"
+	"knative.dev/pkg/kmp"
 
-	corev1listers "k8s.io/client-go/listers/core/v1"
 	"knative.dev/eventing/pkg/reconciler/sequence/resources"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 type Reconciler struct {
@@ -62,9 +57,7 @@ type Reconciler struct {
 	eventingClientSet clientset.Interface
 
 	// dynamicClientSet allows us to configure pluggable Build objects
-	dynamicClientSet     dynamic.Interface
-	serviceAccountLister corev1listers.ServiceAccountLister
-	kubeclient           kubernetes.Interface
+	dynamicClientSet dynamic.Interface
 }
 
 // Check that our Reconciler implements sequencereconciler.Interface
@@ -126,13 +119,6 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, s *v1.Sequence) pkgrecon
 	// If a sequence is modified resulting in the number of steps decreasing, there will be
 	// leftover channels and subscriptions that need to be removed.
 	if err := r.removeUnwantedChannels(ctx, channelResourceInterface, s, channels); err != nil {
-		return err
-	}
-
-	featureFlags := feature.FromContext(ctx)
-	if err := auth.SetupOIDCServiceAccount(ctx, featureFlags, r.serviceAccountLister, r.kubeclient, v1.SchemeGroupVersion.WithKind("Sequence"), s.ObjectMeta, &s.Status, func(as *duckv1.AuthStatus) {
-		s.Status.Auth = as
-	}); err != nil {
 		return err
 	}
 
@@ -204,7 +190,7 @@ func (r *Reconciler) reconcileSubscription(ctx context.Context, step int, p *v1.
 		// TODO: Send events here, or elsewhere?
 		//r.Recorder.Eventf(p, corev1.EventTypeWarning, subscriptionCreateFailed, "Create Sequences's subscription failed: %v", err)
 		return nil, fmt.Errorf("failed to get subscription: %s", err)
-	} else if !equality.Semantic.DeepDerivative(expected.Spec, sub.Spec) {
+	} else if immutableFieldsChanged := expected.CheckImmutableFields(ctx, sub); immutableFieldsChanged != nil {
 		// Given that spec.channel is immutable, we cannot just update the subscription. We delete
 		// it instead, and re-create it.
 		err = r.eventingClientSet.MessagingV1().Subscriptions(sub.Namespace).Delete(ctx, sub.Name, metav1.DeleteOptions{})
@@ -218,6 +204,14 @@ func (r *Reconciler) reconcileSubscription(ctx context.Context, step int, p *v1.
 			return nil, err
 		}
 		return newSub, nil
+	} else if equal, err := kmp.SafeEqual(sub.Spec, expected.Spec); !equal || err != nil {
+		// only the mutable fields were changed, so we can update the subscription
+		updatedSub, err := r.eventingClientSet.MessagingV1().Subscriptions(sub.Namespace).Update(ctx, expected, metav1.UpdateOptions{})
+		if err != nil {
+			logging.FromContext(ctx).Infow("Cannot update subscription", zap.Error(err))
+			return nil, err
+		}
+		return updatedSub, nil
 	}
 	return sub, nil
 }

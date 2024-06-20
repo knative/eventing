@@ -52,6 +52,7 @@ import (
 	"knative.dev/eventing/pkg/eventfilter"
 	"knative.dev/eventing/pkg/eventfilter/attributes"
 	"knative.dev/eventing/pkg/eventfilter/subscriptionsapi"
+	"knative.dev/eventing/pkg/eventtype"
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/reconciler/sugar/trigger/path"
 	"knative.dev/eventing/pkg/tracing"
@@ -78,12 +79,13 @@ type Handler struct {
 
 	eventDispatcher *kncloudevents.Dispatcher
 
-	triggerLister eventinglisters.TriggerLister
-	brokerLister  eventinglisters.BrokerLister
-	logger        *zap.Logger
-	withContext   func(ctx context.Context) context.Context
-	filtersMap    *subscriptionsapi.FiltersMap
-	tokenVerifier *auth.OIDCTokenVerifier
+	triggerLister    eventinglisters.TriggerLister
+	brokerLister     eventinglisters.BrokerLister
+	logger           *zap.Logger
+	withContext      func(ctx context.Context) context.Context
+	filtersMap       *subscriptionsapi.FiltersMap
+	tokenVerifier    *auth.OIDCTokenVerifier
+	EventTypeCreator *eventtype.EventTypeAutoHandler
 }
 
 // NewHandler creates a new Handler and its associated EventReceiver.
@@ -225,7 +227,16 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 }
 
 func (h *Handler) handleDispatchToReplyRequest(ctx context.Context, trigger *eventingv1.Trigger, writer http.ResponseWriter, request *http.Request, event *event.Event) {
-	broker, err := h.brokerLister.Brokers(trigger.Namespace).Get(trigger.Spec.Broker)
+	var brokerRef, brokerNamespace string
+	if feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) && trigger.Spec.BrokerRef.Namespace != "" {
+		brokerRef = trigger.Spec.BrokerRef.Name
+		brokerNamespace = trigger.Spec.BrokerRef.Namespace
+	} else {
+		brokerRef = trigger.Spec.Broker
+		brokerNamespace = trigger.Namespace
+	}
+
+	broker, err := h.brokerLister.Brokers(brokerNamespace).Get(brokerRef)
 	if err != nil {
 		h.logger.Info("Unable to get the Broker", zap.Error(err))
 		writer.WriteHeader(http.StatusBadRequest)
@@ -237,7 +248,7 @@ func (h *Handler) handleDispatchToReplyRequest(ctx context.Context, trigger *eve
 	reportArgs := &ReportArgs{
 		ns:          trigger.Namespace,
 		trigger:     trigger.Name,
-		broker:      trigger.Spec.Broker,
+		broker:      brokerRef,
 		requestType: "reply_forward",
 	}
 
@@ -254,7 +265,16 @@ func (h *Handler) handleDispatchToReplyRequest(ctx context.Context, trigger *eve
 }
 
 func (h *Handler) handleDispatchToDLSRequest(ctx context.Context, trigger *eventingv1.Trigger, writer http.ResponseWriter, request *http.Request, event *event.Event) {
-	broker, err := h.brokerLister.Brokers(trigger.Namespace).Get(trigger.Spec.Broker)
+	var brokerRef, brokerNamespace string
+	if feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) && trigger.Spec.BrokerRef.Namespace != "" {
+		brokerRef = trigger.Spec.BrokerRef.Name
+		brokerNamespace = trigger.Spec.BrokerRef.Namespace
+	} else {
+		brokerRef = trigger.Spec.Broker
+		brokerNamespace = trigger.Namespace
+	}
+
+	broker, err := h.brokerLister.Brokers(brokerNamespace).Get(brokerRef)
 	if err != nil {
 		h.logger.Info("Unable to get the Broker", zap.Error(err))
 		writer.WriteHeader(http.StatusBadRequest)
@@ -296,6 +316,13 @@ func (h *Handler) handleDispatchToDLSRequest(ctx context.Context, trigger *event
 }
 
 func (h *Handler) handleDispatchToSubscriberRequest(ctx context.Context, trigger *eventingv1.Trigger, writer http.ResponseWriter, request *http.Request, event *event.Event) {
+	var brokerRef string
+	if feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) && trigger.Spec.BrokerRef.Namespace != "" {
+		brokerRef = trigger.Spec.BrokerRef.Name
+	} else {
+		brokerRef = trigger.Spec.Broker
+	}
+
 	triggerRef := types.NamespacedName{
 		Name:      trigger.Name,
 		Namespace: trigger.Namespace,
@@ -319,7 +346,7 @@ func (h *Handler) handleDispatchToSubscriberRequest(ctx context.Context, trigger
 	reportArgs := &ReportArgs{
 		ns:          trigger.Namespace,
 		trigger:     trigger.Name,
-		broker:      trigger.Spec.Broker,
+		broker:      brokerRef,
 		filterType:  triggerFilterAttribute(trigger.Spec.Filter, "type"),
 		requestType: "filter",
 	}
@@ -365,6 +392,19 @@ func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers 
 
 	opts := []kncloudevents.SendOption{
 		kncloudevents.WithHeader(additionalHeaders),
+	}
+
+	if h.EventTypeCreator != nil {
+		opts = append(opts, kncloudevents.WithEventTypeAutoHandler(
+			h.EventTypeCreator,
+			&duckv1.KReference{
+				Name:       t.Name,
+				Namespace:  t.Namespace,
+				APIVersion: eventingv1.SchemeGroupVersion.String(),
+				Kind:       "Trigger",
+			},
+			t.UID,
+		))
 	}
 
 	if t.Status.Auth != nil && t.Status.Auth.ServiceAccountName != nil {
@@ -530,7 +570,7 @@ func createSubscriptionsAPIFilters(logger *zap.Logger, trigger *eventingv1.Trigg
 		logger.Debug("Found no filters for trigger", zap.Any("trigger.Spec", trigger.Spec))
 		return subscriptionsapi.NewNoFilter()
 	}
-	return subscriptionsapi.NewAllFilter(materializeFiltersList(logger, trigger.Spec.Filters)...)
+	return subscriptionsapi.NewAllFilter(MaterializeFiltersList(logger, trigger.Spec.Filters)...)
 }
 
 func materializeSubscriptionsAPIFilter(logger *zap.Logger, filter eventingv1.SubscriptionsAPIFilter) eventfilter.Filter {
@@ -559,9 +599,9 @@ func materializeSubscriptionsAPIFilter(logger *zap.Logger, filter eventingv1.Sub
 			return nil
 		}
 	case len(filter.All) > 0:
-		materializedFilter = subscriptionsapi.NewAllFilter(materializeFiltersList(logger, filter.All)...)
+		materializedFilter = subscriptionsapi.NewAllFilter(MaterializeFiltersList(logger, filter.All)...)
 	case len(filter.Any) > 0:
-		materializedFilter = subscriptionsapi.NewAnyFilter(materializeFiltersList(logger, filter.Any)...)
+		materializedFilter = subscriptionsapi.NewAnyFilter(MaterializeFiltersList(logger, filter.Any)...)
 	case filter.Not != nil:
 		materializedFilter = subscriptionsapi.NewNotFilter(materializeSubscriptionsAPIFilter(logger, *filter.Not))
 	case filter.CESQL != "":
@@ -574,7 +614,8 @@ func materializeSubscriptionsAPIFilter(logger *zap.Logger, filter eventingv1.Sub
 	return materializedFilter
 }
 
-func materializeFiltersList(logger *zap.Logger, filters []eventingv1.SubscriptionsAPIFilter) []eventfilter.Filter {
+// MaterialzieFilterList allows any component that supports `SubscriptionsAPIFilter` to process them
+func MaterializeFiltersList(logger *zap.Logger, filters []eventingv1.SubscriptionsAPIFilter) []eventfilter.Filter {
 	materializedFilters := make([]eventfilter.Filter, 0, len(filters))
 	for _, f := range filters {
 		f := materializeSubscriptionsAPIFilter(logger, f)

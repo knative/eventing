@@ -23,9 +23,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
+	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	configmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap/filtered"
 
+	eventingv1beta3 "knative.dev/eventing/pkg/apis/eventing/v1beta3"
 	"knative.dev/eventing/pkg/apis/feature"
+	"knative.dev/eventing/pkg/apis/sinks"
+	sinksv1alpha1 "knative.dev/eventing/pkg/apis/sinks/v1alpha1"
 	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/eventingtls"
 
@@ -93,6 +97,10 @@ var ourTypes = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
 	sourcesv1.SchemeGroupVersion.WithKind("SinkBinding"):     &sourcesv1.SinkBinding{},
 	sourcesv1.SchemeGroupVersion.WithKind("ContainerSource"): &sourcesv1.ContainerSource{},
 
+	// For group sinks.knative.dev.
+	// v1alpha1
+	sinksv1alpha1.SchemeGroupVersion.WithKind("JobSink"): &sinksv1alpha1.JobSink{},
+
 	// For group flows.knative.dev
 	// v1
 	flowsv1.SchemeGroupVersion.WithKind("Parallel"): &flowsv1.Parallel{},
@@ -150,9 +158,17 @@ func NewValidationAdmissionController(ctx context.Context, cmw configmap.Watcher
 	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"))
 	featureStore.WatchConfigs(cmw)
 
+	k8s := kubeclient.Get(ctx)
+
 	// Decorate contexts with the current state of the config.
 	ctxFunc := func(ctx context.Context) context.Context {
-		return featureStore.ToContext(channelStore.ToContext(pingstore.ToContext(store.ToContext(ctx))))
+		return sinks.WithConfig(
+			featureStore.ToContext(
+				channelStore.ToContext(
+					pingstore.ToContext(store.ToContext(ctx)))),
+			&sinks.Config{
+				KubeClient: k8s,
+			})
 	}
 
 	return validation.NewAdmissionController(ctx,
@@ -241,6 +257,7 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 		sourcesv1_       = sourcesv1.SchemeGroupVersion.Version
 		eventingv1beta1_ = eventingv1beta1.SchemeGroupVersion.Version
 		eventingv1beta2_ = eventingv1beta2.SchemeGroupVersion.Version
+		eventingv1beta3_ = eventingv1beta3.SchemeGroupVersion.Version
 	)
 
 	return conversion.NewConversionController(ctx,
@@ -265,6 +282,7 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 				Zygotes: map[string]conversion.ConvertibleObject{
 					eventingv1beta1_: &eventingv1beta1.EventType{},
 					eventingv1beta2_: &eventingv1beta2.EventType{},
+					eventingv1beta3_: &eventingv1beta3.EventType{},
 				},
 			},
 		},

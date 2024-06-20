@@ -121,6 +121,7 @@ func (in *BrokerStatus) DeepCopyInto(out *BrokerStatus) {
 	in.Status.DeepCopyInto(&out.Status)
 	in.AddressStatus.DeepCopyInto(&out.AddressStatus)
 	in.DeliveryStatus.DeepCopyInto(&out.DeliveryStatus)
+	in.AppliedEventPoliciesStatus.DeepCopyInto(&out.AppliedEventPoliciesStatus)
 	return
 }
 

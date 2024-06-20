@@ -73,6 +73,10 @@ type InMemoryChannelSpec struct {
 type InMemoryChannelStatus struct {
 	// Channel conforms to Duck type ChannelableStatus.
 	eventingduckv1.ChannelableStatus `json:",inline"`
+
+	// AppliedEventPoliciesStatus contains the list of EventPolicies which apply to this Broker
+	// +optional
+	eventingduckv1.AppliedEventPoliciesStatus `json:",inline"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

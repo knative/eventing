@@ -31,6 +31,7 @@ import (
 	"golang.org/x/tools/internal/event"
 	"golang.org/x/tools/internal/gocommand"
 	"golang.org/x/tools/internal/gopathwalk"
+	"golang.org/x/tools/internal/stdlib"
 )
 
 // importToGroup is a list of functions which map from an import path to
@@ -103,7 +104,10 @@ type packageInfo struct {
 
 // parseOtherFiles parses all the Go files in srcDir except filename, including
 // test files if filename looks like a test.
-func parseOtherFiles(fset *token.FileSet, srcDir, filename string) []*ast.File {
+//
+// It returns an error only if ctx is cancelled. Files with parse errors are
+// ignored.
+func parseOtherFiles(ctx context.Context, fset *token.FileSet, srcDir, filename string) ([]*ast.File, error) {
 	// This could use go/packages but it doesn't buy much, and it fails
 	// with https://golang.org/issue/26296 in LoadFiles mode in some cases.
 	considerTests := strings.HasSuffix(filename, "_test.go")
@@ -111,11 +115,14 @@ func parseOtherFiles(fset *token.FileSet, srcDir, filename string) []*ast.File {
 	fileBase := filepath.Base(filename)
 	packageFileInfos, err := os.ReadDir(srcDir)
 	if err != nil {
-		return nil
+		return nil, ctx.Err()
 	}
 
 	var files []*ast.File
 	for _, fi := range packageFileInfos {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
 		if fi.Name() == fileBase || !strings.HasSuffix(fi.Name(), ".go") {
 			continue
 		}
@@ -131,7 +138,7 @@ func parseOtherFiles(fset *token.FileSet, srcDir, filename string) []*ast.File {
 		files = append(files, f)
 	}
 
-	return files
+	return files, ctx.Err()
 }
 
 // addGlobals puts the names of package vars into the provided map.
@@ -300,6 +307,20 @@ func (p *pass) loadPackageNames(imports []*ImportInfo) error {
 	return nil
 }
 
+// if there is a trailing major version, remove it
+func withoutVersion(nm string) string {
+	if v := path.Base(nm); len(v) > 0 && v[0] == 'v' {
+		if _, err := strconv.Atoi(v[1:]); err == nil {
+			// this is, for instance, called with rand/v2 and returns rand
+			if len(v) < len(nm) {
+				xnm := nm[:len(nm)-len(v)-1]
+				return path.Base(xnm)
+			}
+		}
+	}
+	return nm
+}
+
 // importIdentifier returns the identifier that imp will introduce. It will
 // guess if the package name has not been loaded, e.g. because the source
 // is not available.
@@ -309,7 +330,7 @@ func (p *pass) importIdentifier(imp *ImportInfo) string {
 	}
 	known := p.knownPackages[imp.ImportPath]
 	if known != nil && known.name != "" {
-		return known.name
+		return withoutVersion(known.name)
 	}
 	return ImportPathToAssumedName(imp.ImportPath)
 }
@@ -511,9 +532,9 @@ func (p *pass) assumeSiblingImportsValid() {
 		}
 		for left, rights := range refs {
 			if imp, ok := importsByName[left]; ok {
-				if m, ok := stdlib[imp.ImportPath]; ok {
+				if m, ok := stdlib.PackageSymbols[imp.ImportPath]; ok {
 					// We have the stdlib in memory; no need to guess.
-					rights = copyExports(m)
+					rights = symbolNameSet(m)
 				}
 				p.addCandidate(imp, &packageInfo{
 					// no name; we already know it.
@@ -542,12 +563,7 @@ func (p *pass) addCandidate(imp *ImportInfo, pkg *packageInfo) {
 
 // fixImports adds and removes imports from f so that all its references are
 // satisfied and there are no unused imports.
-//
-// This is declared as a variable rather than a function so goimports can
-// easily be extended by adding a file with an init function.
-var fixImports = fixImportsDefault
-
-func fixImportsDefault(fset *token.FileSet, f *ast.File, filename string, env *ProcessEnv) error {
+func fixImports(fset *token.FileSet, f *ast.File, filename string, env *ProcessEnv) error {
 	fixes, err := getFixes(context.Background(), fset, f, filename, env)
 	if err != nil {
 		return err
@@ -577,7 +593,10 @@ func getFixes(ctx context.Context, fset *token.FileSet, f *ast.File, filename st
 		return fixes, nil
 	}
 
-	otherFiles := parseOtherFiles(fset, srcDir, filename)
+	otherFiles, err := parseOtherFiles(ctx, fset, srcDir, filename)
+	if err != nil {
+		return nil, err
+	}
 
 	// Second pass: add information from other files in the same package,
 	// like their package vars and imports.
@@ -641,7 +660,7 @@ func getCandidatePkgs(ctx context.Context, wrappedCallback *scanCallback, filena
 	dupCheck := map[string]struct{}{}
 
 	// Start off with the standard library.
-	for importPath, exports := range stdlib {
+	for importPath, symbols := range stdlib.PackageSymbols {
 		p := &pkg{
 			dir:             filepath.Join(goenv["GOROOT"], "src", importPath),
 			importPathShort: importPath,
@@ -650,6 +669,13 @@ func getCandidatePkgs(ctx context.Context, wrappedCallback *scanCallback, filena
 		}
 		dupCheck[importPath] = struct{}{}
 		if notSelf(p) && wrappedCallback.dirFound(p) && wrappedCallback.packageNameLoaded(p) {
+			var exports []stdlib.Symbol
+			for _, sym := range symbols {
+				switch sym.Kind {
+				case stdlib.Func, stdlib.Type, stdlib.Var, stdlib.Const:
+					exports = append(exports, sym)
+				}
+			}
 			wrappedCallback.exportsLoaded(p, exports)
 		}
 	}
@@ -670,7 +696,7 @@ func getCandidatePkgs(ctx context.Context, wrappedCallback *scanCallback, filena
 			dupCheck[pkg.importPathShort] = struct{}{}
 			return notSelf(pkg) && wrappedCallback.packageNameLoaded(pkg)
 		},
-		exportsLoaded: func(pkg *pkg, exports []string) {
+		exportsLoaded: func(pkg *pkg, exports []stdlib.Symbol) {
 			// If we're an x_test, load the package under test's test variant.
 			if strings.HasSuffix(filePkg, "_test") && pkg.dir == filepath.Dir(filename) {
 				var err error
@@ -795,7 +821,7 @@ func GetImportPaths(ctx context.Context, wrapped func(ImportFix), searchPrefix, 
 // A PackageExport is a package and its exports.
 type PackageExport struct {
 	Fix     *ImportFix
-	Exports []string
+	Exports []stdlib.Symbol
 }
 
 // GetPackageExports returns all known packages with name pkg and their exports.
@@ -810,8 +836,8 @@ func GetPackageExports(ctx context.Context, wrapped func(PackageExport), searchP
 		packageNameLoaded: func(pkg *pkg) bool {
 			return pkg.packageName == searchPkg
 		},
-		exportsLoaded: func(pkg *pkg, exports []string) {
-			sort.Strings(exports)
+		exportsLoaded: func(pkg *pkg, exports []stdlib.Symbol) {
+			sortSymbols(exports)
 			wrapped(PackageExport{
 				Fix: &ImportFix{
 					StmtInfo: ImportInfo{
@@ -988,8 +1014,10 @@ func (e *ProcessEnv) GetResolver() (Resolver, error) {
 		// already know the view type.
 		if len(e.Env["GOMOD"]) == 0 && len(e.Env["GOWORK"]) == 0 {
 			e.resolver = newGopathResolver(e)
+		} else if r, err := newModuleResolver(e, e.ModCache); err != nil {
+			e.resolverErr = err
 		} else {
-			e.resolver, e.resolverErr = newModuleResolver(e, e.ModCache)
+			e.resolver = Resolver(r)
 		}
 	}
 
@@ -1049,24 +1077,40 @@ func addStdlibCandidates(pass *pass, refs references) error {
 	if err != nil {
 		return err
 	}
+	localbase := func(nm string) string {
+		ans := path.Base(nm)
+		if ans[0] == 'v' {
+			// this is called, for instance, with math/rand/v2 and returns rand/v2
+			if _, err := strconv.Atoi(ans[1:]); err == nil {
+				ix := strings.LastIndex(nm, ans)
+				more := path.Base(nm[:ix])
+				ans = path.Join(more, ans)
+			}
+		}
+		return ans
+	}
 	add := func(pkg string) {
 		// Prevent self-imports.
 		if path.Base(pkg) == pass.f.Name.Name && filepath.Join(goenv["GOROOT"], "src", pkg) == pass.srcDir {
 			return
 		}
-		exports := copyExports(stdlib[pkg])
+		exports := symbolNameSet(stdlib.PackageSymbols[pkg])
 		pass.addCandidate(
 			&ImportInfo{ImportPath: pkg},
-			&packageInfo{name: path.Base(pkg), exports: exports})
+			&packageInfo{name: localbase(pkg), exports: exports})
 	}
 	for left := range refs {
 		if left == "rand" {
-			// Make sure we try crypto/rand before math/rand.
+			// Make sure we try crypto/rand before any version of math/rand as both have Int()
+			// and our policy is to recommend crypto
 			add("crypto/rand")
-			add("math/rand")
+			// if the user's no later than go1.21, this should be "math/rand"
+			// but we have no way of figuring out what the user is using
+			// TODO: investigate using the toolchain version to disambiguate in the stdlib
+			add("math/rand/v2")
 			continue
 		}
-		for importPath := range stdlib {
+		for importPath := range stdlib.PackageSymbols {
 			if path.Base(importPath) == left {
 				add(importPath)
 			}
@@ -1085,7 +1129,7 @@ type Resolver interface {
 
 	// loadExports returns the set of exported symbols in the package at dir.
 	// loadExports may be called concurrently.
-	loadExports(ctx context.Context, pkg *pkg, includeTest bool) (string, []string, error)
+	loadExports(ctx context.Context, pkg *pkg, includeTest bool) (string, []stdlib.Symbol, error)
 
 	// scoreImportPath returns the relevance for an import path.
 	scoreImportPath(ctx context.Context, path string) float64
@@ -1114,7 +1158,7 @@ type scanCallback struct {
 	// If it returns true, the package's exports will be loaded.
 	packageNameLoaded func(pkg *pkg) bool
 	// exportsLoaded is called when a package's exports have been loaded.
-	exportsLoaded func(pkg *pkg, exports []string)
+	exportsLoaded func(pkg *pkg, exports []stdlib.Symbol)
 }
 
 func addExternalCandidates(ctx context.Context, pass *pass, refs references, filename string) error {
@@ -1152,7 +1196,7 @@ func addExternalCandidates(ctx context.Context, pass *pass, refs references, fil
 	if err != nil {
 		return err
 	}
-	if err = resolver.scan(context.Background(), callback); err != nil {
+	if err = resolver.scan(ctx, callback); err != nil {
 		return err
 	}
 
@@ -1163,7 +1207,7 @@ func addExternalCandidates(ctx context.Context, pass *pass, refs references, fil
 	}
 	results := make(chan result, len(refs))
 
-	ctx, cancel := context.WithCancel(context.TODO())
+	ctx, cancel := context.WithCancel(ctx)
 	var wg sync.WaitGroup
 	defer func() {
 		cancel()
@@ -1295,7 +1339,7 @@ func (r *gopathResolver) loadPackageNames(importPaths []string, srcDir string) (
 // importPathToName finds out the actual package name, as declared in its .go files.
 func importPathToName(bctx *build.Context, importPath, srcDir string) string {
 	// Fast path for standard library without going to disk.
-	if _, ok := stdlib[importPath]; ok {
+	if stdlib.HasPackage(importPath) {
 		return path.Base(importPath) // stdlib packages always match their paths.
 	}
 
@@ -1493,7 +1537,7 @@ func (r *gopathResolver) scan(ctx context.Context, callback *scanCallback) error
 }
 
 func (r *gopathResolver) scoreImportPath(ctx context.Context, path string) float64 {
-	if _, ok := stdlib[path]; ok {
+	if stdlib.HasPackage(path) {
 		return MaxRelevance
 	}
 	return MaxRelevance - 1
@@ -1510,7 +1554,7 @@ func filterRoots(roots []gopathwalk.Root, include func(gopathwalk.Root) bool) []
 	return result
 }
 
-func (r *gopathResolver) loadExports(ctx context.Context, pkg *pkg, includeTest bool) (string, []string, error) {
+func (r *gopathResolver) loadExports(ctx context.Context, pkg *pkg, includeTest bool) (string, []stdlib.Symbol, error) {
 	if info, ok := r.cache.Load(pkg.dir); ok && !includeTest {
 		return r.cache.CacheExports(ctx, r.env, info)
 	}
@@ -1530,7 +1574,7 @@ func VendorlessPath(ipath string) string {
 	return ipath
 }
 
-func loadExportsFromFiles(ctx context.Context, env *ProcessEnv, dir string, includeTest bool) (string, []string, error) {
+func loadExportsFromFiles(ctx context.Context, env *ProcessEnv, dir string, includeTest bool) (string, []stdlib.Symbol, error) {
 	// Look for non-test, buildable .go files which could provide exports.
 	all, err := os.ReadDir(dir)
 	if err != nil {
@@ -1554,7 +1598,7 @@ func loadExportsFromFiles(ctx context.Context, env *ProcessEnv, dir string, incl
 	}
 
 	var pkgName string
-	var exports []string
+	var exports []stdlib.Symbol
 	fset := token.NewFileSet()
 	for _, fi := range files {
 		select {
@@ -1581,19 +1625,39 @@ func loadExportsFromFiles(ctx context.Context, env *ProcessEnv, dir string, incl
 			continue
 		}
 		pkgName = f.Name.Name
-		for name := range f.Scope.Objects {
+		for name, obj := range f.Scope.Objects {
 			if ast.IsExported(name) {
-				exports = append(exports, name)
+				var kind stdlib.Kind
+				switch obj.Kind {
+				case ast.Con:
+					kind = stdlib.Const
+				case ast.Typ:
+					kind = stdlib.Type
+				case ast.Var:
+					kind = stdlib.Var
+				case ast.Fun:
+					kind = stdlib.Func
+				}
+				exports = append(exports, stdlib.Symbol{
+					Name:    name,
+					Kind:    kind,
+					Version: 0, // unknown; be permissive
+				})
 			}
 		}
 	}
+	sortSymbols(exports)
 
 	if env.Logf != nil {
-		sortedExports := append([]string(nil), exports...)
-		sort.Strings(sortedExports)
-		env.Logf("loaded exports in dir %v (package %v): %v", dir, pkgName, strings.Join(sortedExports, ", "))
+		env.Logf("loaded exports in dir %v (package %v): %v", dir, pkgName, exports)
 	}
 	return pkgName, exports, nil
+}
+
+func sortSymbols(syms []stdlib.Symbol) {
+	sort.Slice(syms, func(i, j int) bool {
+		return syms[i].Name < syms[j].Name
+	})
 }
 
 // findImport searches for a package with the given symbols.
@@ -1662,7 +1726,7 @@ func findImport(ctx context.Context, pass *pass, candidates []pkgDistance, pkgNa
 
 				exportsMap := make(map[string]bool, len(exports))
 				for _, sym := range exports {
-					exportsMap[sym] = true
+					exportsMap[sym.Name] = true
 				}
 
 				// If it doesn't have the right
@@ -1820,10 +1884,13 @@ func (fn visitFn) Visit(node ast.Node) ast.Visitor {
 	return fn(node)
 }
 
-func copyExports(pkg []string) map[string]bool {
-	m := make(map[string]bool, len(pkg))
-	for _, v := range pkg {
-		m[v] = true
+func symbolNameSet(symbols []stdlib.Symbol) map[string]bool {
+	names := make(map[string]bool)
+	for _, sym := range symbols {
+		switch sym.Kind {
+		case stdlib.Const, stdlib.Var, stdlib.Type, stdlib.Func:
+			names[sym.Name] = true
+		}
 	}
-	return m
+	return names
 }

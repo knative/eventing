@@ -27,4 +27,6 @@ const (
 	OIDCAuthentication       = "authentication-oidc"
 	NodeSelectorLabel        = "apiserversources-nodeselector-"
 	CrossNamespaceEventLinks = "cross-namespace-event-links"
+	NewAPIServerFilters      = "new-apiserversource-filters"
+	AuthorizationDefaultMode = "default-authorization-mode"
 )

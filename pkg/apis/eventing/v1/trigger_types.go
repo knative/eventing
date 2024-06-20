@@ -226,3 +226,11 @@ type TriggerList struct {
 func (t *Trigger) GetStatus() *duckv1.Status {
 	return &t.Status.Status
 }
+
+// GetCrossNamespaceRef returns the Broker reference for the Trigger. Implements the ResourceInfo interface.
+func (t *Trigger) GetCrossNamespaceRef() duckv1.KReference {
+	if t.Spec.BrokerRef != nil {
+		return *t.Spec.BrokerRef
+	}
+	return duckv1.KReference{}
+}

@@ -6,20 +6,16 @@ aliases:
   - itsmurugappan
   client-wg-leads:
   - dsimansk
-  - navidshaikh
   - rhuss
   client-writers:
   - dsimansk
   - maximilien
-  - navidshaikh
   - rhuss
   - vyasgun
   docs-reviewers:
   - nainaz
-  - pmbanugo
   - retocode
   - skonto
-  - snneji
   docs-writers:
   - csantanapr
   - retocode
@@ -37,7 +33,6 @@ aliases:
   - creydr
   - lionelvillard
   - matzew
-  - odacremolbap
   - pierDipi
   func-reviewers:
   - jrangelramos
@@ -54,12 +49,8 @@ aliases:
   - lkingland
   - salaboy
   knative-admin:
-  - Cali0707
-  - Leo6Leo
-  - ReToCode
   - aliok
   - cardil
-  - creydr
   - davidhadas
   - dprotaso
   - dsimansk
@@ -69,21 +60,11 @@ aliases:
   - knative-prow-robot
   - knative-prow-updater-robot
   - knative-test-reporter-robot
-  - krsna-m
   - nainaz
-  - pierDipi
   - psschwei
   - salaboy
-  - skonto
   - upodroid
-  knative-release-leads:
-  - Cali0707
-  - Leo6Leo
-  - ReToCode
-  - creydr
-  - dsimansk
-  - pierDipi
-  - skonto
+  knative-release-leads: []
   knative-robots:
   - knative-automation
   - knative-prow-releaser-robot
@@ -113,7 +94,6 @@ aliases:
   - upodroid
   productivity-writers:
   - cardil
-  - krsna-m
   - upodroid
   security-wg-leads:
   - davidhadas
@@ -122,7 +102,7 @@ aliases:
   - davidhadas
   - evankanderson
   serving-approvers:
-  - psschwei
+  - ReToCode
   - skonto
   serving-reviewers:
   - izabelacg
@@ -135,8 +115,8 @@ aliases:
   serving-wg-leads:
   - dprotaso
   serving-writers:
+  - ReToCode
   - dprotaso
-  - psschwei
   - skonto
   steering-committee:
   - aliok
@@ -147,7 +127,6 @@ aliases:
   - davidhadas
   - dprotaso
   - dsimansk
-  - krsna-m
   - psschwei
   ux-wg-leads:
   - cali0707

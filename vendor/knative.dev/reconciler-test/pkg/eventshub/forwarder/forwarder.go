@@ -17,16 +17,19 @@ limitations under the License.
 package forwarder
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
-	"github.com/cloudevents/sdk-go/v2/binding"
 	cloudeventsbindings "github.com/cloudevents/sdk-go/v2/binding"
 	"go.opencensus.io/trace"
 	"go.uber.org/zap"
@@ -50,6 +53,9 @@ type Forwarder struct {
 	// Sink
 	Sink string
 
+	// FromFiles allows forwarding JSON-formatted events that are present on specified files (comma separated list of file paths)
+	FromFiles string
+
 	// EventLogs is the list of EventLogger implementors to vent observed events.
 	EventLogs *eventshub.EventLogs
 
@@ -68,6 +74,9 @@ type envConfig struct {
 
 	// Sink url for the message destination
 	Sink string `envconfig:"SINK" required:"true"`
+
+	// FromFiles allows forwarding JSON-formatted events that are present on specified files (comma separated list of file paths)
+	FromFiles string `envconfig:"FROM_FILES" required:"false"`
 }
 
 func NewFromEnv(ctx context.Context, eventLogs *eventshub.EventLogs, handlerFuncs []eventshub.HandlerFunc, clientOpts []eventshub.ClientOption) *Forwarder {
@@ -82,6 +91,7 @@ func NewFromEnv(ctx context.Context, eventLogs *eventshub.EventLogs, handlerFunc
 		Name:         env.Name,
 		Namespace:    env.Namespace,
 		Sink:         env.Sink,
+		FromFiles:    env.FromFiles,
 		EventLogs:    eventLogs,
 		ctx:          ctx,
 		handlerFuncs: handlerFuncs,
@@ -103,6 +113,11 @@ func (o *Forwarder) Start(ctx context.Context) error {
 
 	for _, dec := range o.handlerFuncs {
 		handler = dec(handler)
+	}
+
+	if o.FromFiles != "" {
+		o.forwardFromFiles()
+		return nil
 	}
 
 	server := &http.Server{Addr: ":8080", Handler: handler}
@@ -127,10 +142,21 @@ func (o *Forwarder) ServeHTTP(writer http.ResponseWriter, request *http.Request)
 	requestCtx, span := trace.StartSpan(request.Context(), "eventshub-forwarder")
 	defer span.End()
 
+	body, err := io.ReadAll(request.Body)
+	if err != nil {
+		writer.WriteHeader(http.StatusInternalServerError)
+		logging.FromContext(o.ctx).Errorw("Failed to read request body", zap.Error(err))
+		return
+	}
+	_ = request.Body.Close()
+	request.Body = io.NopCloser(bytes.NewBuffer(body))
+
 	m := cloudeventshttp.NewMessageFromHttpRequest(request)
 	defer m.Finish(nil)
 
 	event, eventErr := cloudeventsbindings.ToEvent(context.TODO(), m)
+	request.Body = io.NopCloser(bytes.NewBuffer(body)) // reset body
+
 	receivedHeaders := make(http.Header)
 	for k, v := range request.Header {
 		if !strings.HasPrefix(k, "Ce-") {
@@ -174,11 +200,6 @@ func (o *Forwarder) ServeHTTP(writer http.ResponseWriter, request *http.Request)
 	}
 	req.URL = u
 
-	err = cehttp.WriteRequest(requestCtx, binding.ToMessage(event), req)
-	if err != nil {
-		logging.FromContext(o.ctx).Error("Cannot write the event to request: ", err)
-	}
-
 	eventString := "unknown"
 	if event != nil {
 		eventString = event.String()
@@ -202,7 +223,7 @@ func (o *Forwarder) ServeHTTP(writer http.ResponseWriter, request *http.Request)
 		}
 	}
 
-	writer.WriteHeader(http.StatusAccepted)
+	writer.WriteHeader(res.StatusCode)
 }
 
 func (o *Forwarder) sentInfo(event *cloudevents.Event, req *http.Request, err error) eventshub.EventInfo {
@@ -269,4 +290,67 @@ func (o *Forwarder) responseInfo(res *http.Response, event *cloudevents.Event) e
 		}
 	}
 	return responseInfo
+}
+
+func (o *Forwarder) forwardFromFile(f string) {
+	b, err := os.ReadFile(f)
+	if err != nil {
+		logging.FromContext(o.ctx).Fatalw("Failed to read the file",
+			zap.String("file", f),
+			zap.Error(err))
+	}
+
+	event := &cloudevents.Event{}
+	if err := json.Unmarshal(b, event); err != nil {
+		logging.FromContext(o.ctx).Fatalw("Failed to unmarshal the event",
+			zap.String("file", f),
+			zap.Error(err))
+	}
+
+	eventInfo := eventshub.EventInfo{
+		Event:    event,
+		Observer: o.Name,
+		Origin:   f,
+		Time:     time.Now(),
+		Kind:     eventshub.EventSent,
+	}
+
+	// Log the event that is being forwarded
+	if err := o.EventLogs.Vent(eventInfo); err != nil {
+		logging.FromContext(o.ctx).Fatalw("Failed to vent the event",
+			zap.String("file", f),
+			zap.Error(err))
+	}
+
+	req, err := http.NewRequest("POST", o.Sink, nil)
+	if err != nil {
+		logging.FromContext(o.ctx).Fatalw("Failed to create the client request",
+			zap.String("file", f),
+			zap.Error(err))
+	}
+	if err := cehttp.WriteRequest(context.Background(), cloudevents.ToMessage(event), req); err != nil {
+		logging.FromContext(o.ctx).Fatalw("Failed to write the client request",
+			zap.String("file", f),
+			zap.Error(err))
+	}
+
+	res, err := o.httpClient.Do(req)
+	if err != nil {
+		logging.FromContext(o.ctx).Fatalw("Failed to forward the event",
+			zap.String("file", f),
+			zap.Error(err))
+	}
+
+	// Vent the response info
+	if err := o.EventLogs.Vent(o.responseInfo(res, event)); err != nil {
+		logging.FromContext(o.ctx).Errorw("Failed to log response for forwarded event",
+			zap.String("file", f),
+			zap.Error(err))
+	}
+}
+
+func (o *Forwarder) forwardFromFiles() {
+	for _, f := range strings.Split(o.FromFiles, ",") {
+		o.forwardFromFile(f)
+	}
 }

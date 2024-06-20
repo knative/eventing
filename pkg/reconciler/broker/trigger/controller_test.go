@@ -21,6 +21,11 @@ import (
 	"fmt"
 	"testing"
 
+	"knative.dev/pkg/logging"
+	"knative.dev/pkg/ptr"
+
+	triggerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/trigger"
+
 	"knative.dev/eventing/pkg/auth"
 	filteredFactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
 
@@ -34,6 +39,7 @@ import (
 
 	apiseventing "knative.dev/eventing/pkg/apis/eventing"
 	eventing "knative.dev/eventing/pkg/apis/eventing/v1"
+	"knative.dev/eventing/pkg/apis/feature"
 	brokerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/broker"
 	v1lister "knative.dev/eventing/pkg/client/listers/eventing/v1"
 	testingv1 "knative.dev/eventing/pkg/reconciler/testing/v1"
@@ -65,6 +71,135 @@ func TestNew(t *testing.T) {
 func SetUpInformerSelector(ctx context.Context) context.Context {
 	ctx = filteredFactory.WithSelectors(ctx, auth.OIDCLabelSelector)
 	return ctx
+}
+
+func TestFilterOIDCServiceAccounts(t *testing.T) {
+	ctx, _ := SetupFakeContext(t, SetUpInformerSelector)
+
+	tt := []struct {
+		name    string
+		sa      *corev1.ServiceAccount
+		trigger *eventing.Trigger
+		brokers []*eventing.Broker
+		pass    bool
+	}{{
+		name: "matching owner reference",
+		sa: &corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "ns",
+				Name:      "sa",
+				OwnerReferences: []metav1.OwnerReference{
+					{
+						APIVersion: eventing.SchemeGroupVersion.String(),
+						Kind:       "Trigger",
+						Name:       "tr",
+						Controller: ptr.Bool(true),
+					},
+				},
+			},
+		},
+		trigger: &eventing.Trigger{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "ns",
+				Name:      "tr",
+			},
+			Spec: eventing.TriggerSpec{
+				Broker: "br",
+			},
+		},
+		brokers: []*eventing.Broker{{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "ns",
+				Name:      "br",
+				Annotations: map[string]string{
+					eventing.BrokerClassAnnotationKey: apiseventing.MTChannelBrokerClassValue,
+				},
+			},
+		}},
+		pass: true,
+	}, {
+		name: "references trigger for wrong broker class",
+		sa: &corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "ns",
+				Name:      "sa",
+				OwnerReferences: []metav1.OwnerReference{
+					{
+						APIVersion: eventing.SchemeGroupVersion.String(),
+						Kind:       "Trigger",
+						Name:       "tr",
+						Controller: ptr.Bool(true),
+					},
+				},
+			},
+		},
+		trigger: &eventing.Trigger{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "ns",
+				Name:      "tr",
+			},
+			Spec: eventing.TriggerSpec{
+				Broker: "br",
+			},
+		},
+		brokers: []*eventing.Broker{{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "ns",
+				Name:      "br",
+				Annotations: map[string]string{
+					eventing.BrokerClassAnnotationKey: "another-broker-class",
+				},
+			},
+		}},
+		pass: false,
+	}, {
+		name: "no owner reference",
+		sa: &corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "ns",
+				Name:      "sa",
+			},
+		},
+		trigger: &eventing.Trigger{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "ns",
+				Name:      "tr",
+			},
+			Spec: eventing.TriggerSpec{
+				Broker: "br",
+			},
+		},
+		brokers: []*eventing.Broker{{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "ns",
+				Name:      "br",
+				Annotations: map[string]string{
+					eventing.BrokerClassAnnotationKey: apiseventing.MTChannelBrokerClassValue,
+				},
+			},
+		}},
+		pass: false,
+	}}
+
+	for _, tc := range tt {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			brokerInformer := brokerinformer.Get(ctx)
+			for _, obj := range tc.brokers {
+				err := brokerInformer.Informer().GetStore().Add(obj)
+				assert.NoError(t, err)
+			}
+
+			triggerInformer := triggerinformer.Get(ctx)
+			err := triggerInformer.Informer().GetStore().Add(tc.trigger)
+			assert.NoError(t, err)
+
+			featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"))
+			filter := filterOIDCServiceAccounts(featureStore, triggerInformer.Lister(), brokerInformer.Lister())
+			pass := filter(tc.sa)
+			assert.Equal(t, tc.pass, pass)
+		})
+	}
 }
 
 func TestFilterTriggers(t *testing.T) {
@@ -138,7 +273,8 @@ func TestFilterTriggers(t *testing.T) {
 			for _, obj := range tc.brokers {
 				_ = brokerInformer.Informer().GetStore().Add(obj)
 			}
-			filter := filterTriggers(brokerInformer.Lister())
+			featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"))
+			filter := filterTriggers(featureStore, brokerInformer.Lister())
 			pass := filter(tc.trigger)
 			assert.Equal(t, tc.pass, pass)
 		})

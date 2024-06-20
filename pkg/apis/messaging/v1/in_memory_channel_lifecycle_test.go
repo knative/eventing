@@ -150,7 +150,7 @@ func TestInMemoryChannelInitializeConditions(t *testing.T) {
 	}, {
 		name: "one false",
 		cs: &InMemoryChannelStatus{
-			eventingduckv1.ChannelableStatus{
+			ChannelableStatus: eventingduckv1.ChannelableStatus{
 				Status: duckv1.Status{
 					Conditions: []apis.Condition{{
 						Type:   InMemoryChannelConditionDispatcherReady,
@@ -160,7 +160,7 @@ func TestInMemoryChannelInitializeConditions(t *testing.T) {
 			},
 		},
 		want: &InMemoryChannelStatus{
-			eventingduckv1.ChannelableStatus{
+			ChannelableStatus: eventingduckv1.ChannelableStatus{
 				Status: duckv1.Status{
 					Conditions: []apis.Condition{{
 						Type:   InMemoryChannelConditionAddressable,

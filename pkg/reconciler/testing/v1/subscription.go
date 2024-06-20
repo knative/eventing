@@ -127,6 +127,17 @@ func WithSubscriptionChannel(gvk metav1.GroupVersionKind, name string) Subscript
 	}
 }
 
+func WithSubscriptionChannelRef(gvk metav1.GroupVersionKind, name string, namespace string) SubscriptionOption {
+	return func(s *v1.Subscription) {
+		s.Spec.Channel = duckv1.KReference{
+			APIVersion: apiVersion(gvk),
+			Kind:       gvk.Kind,
+			Name:       name,
+			Namespace:  namespace,
+		}
+	}
+}
+
 func WithSubscriptionChannelUsingGroup(gvk metav1.GroupVersionKind, name string) SubscriptionOption {
 	return func(s *v1.Subscription) {
 		s.Spec.Channel = duckv1.KReference{
@@ -144,6 +155,29 @@ func WithSubscriptionChannelUsingApiVersionAndGroup(gvk metav1.GroupVersionKind,
 			Group:      gvk.Group,
 			Kind:       gvk.Kind,
 			Name:       name,
+		}
+	}
+}
+
+func WithSubscriptionChannelRefUsingGroup(gvk metav1.GroupVersionKind, name string, namespace string) SubscriptionOption {
+	return func(s *v1.Subscription) {
+		s.Spec.Channel = duckv1.KReference{
+			Group:     gvk.Group,
+			Kind:      gvk.Kind,
+			Name:      name,
+			Namespace: namespace,
+		}
+	}
+}
+
+func WithSubscriptionChannelRefUsingApiVersionAndGroup(gvk metav1.GroupVersionKind, name string, namespace string) SubscriptionOption {
+	return func(s *v1.Subscription) {
+		s.Spec.Channel = duckv1.KReference{
+			APIVersion: apiVersion(gvk),
+			Group:      gvk.Group,
+			Kind:       gvk.Kind,
+			Name:       name,
+			Namespace:  namespace,
 		}
 	}
 }
