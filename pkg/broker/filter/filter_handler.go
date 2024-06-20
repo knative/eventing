@@ -207,6 +207,26 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 		err = h.tokenVerifier.VerifyJWTFromRequest(ctx, request, &audience, writer)
 		if err != nil {
 			h.logger.Warn("Error when validating the JWT token in the request", zap.Error(err))
+
+			// If the error is due to the absence of a JWT token, report it as an unauthenticated request.
+			// The error message is "no JWT token found in request"
+			if errors.Is(err, auth.ErrNoJWTTokenFound) {
+				_ = h.reporter.ReportUnauthenticatedRequest(&ReportArgs{
+					ns:          trigger.Namespace,
+					trigger:     trigger.Name,
+					broker:      trigger.Spec.Broker,
+					requestType: "filter",
+				})
+			} else {
+				// If the error is due to an invalid JWT token, report it as an invalid token request.
+				_ = h.reporter.ReportInvalidTokenRequest(&ReportArgs{
+					ns:          trigger.Namespace,
+					trigger:     trigger.Name,
+					broker:      trigger.Spec.Broker,
+					requestType: "filter",
+				})
+			}
+
 			return
 		}
 

@@ -46,6 +46,20 @@ var (
 		stats.UnitDimensionless,
 	)
 
+	// unauthenticatedRequestsM records the number of unauthenticated requests. (Without the JWT token in the header)
+	unauthenticatedRequestsM = stats.Int64(
+		"unauthenticated_requests",
+		"Number of unauthenticated requests (No JWT token found in the header)",
+		stats.UnitDimensionless,
+	)
+
+	// invalidTokenRequestsM records the number of requests with invalid tokens.
+	invalidTokenRequestsM = stats.Int64(
+		"invalid_token_requests",
+		"Number of requests with invalid tokens",
+		stats.UnitDimensionless,
+	)
+
 	// dispatchTimeInMsecM records the time spent dispatching an event to
 	// a Trigger subscriber, in milliseconds.
 	dispatchTimeInMsecM = stats.Float64(
@@ -90,6 +104,8 @@ func init() {
 // StatsReporter defines the interface for sending filter metrics.
 type StatsReporter interface {
 	ReportEventCount(args *ReportArgs, responseCode int) error
+	ReportUnauthenticatedRequest(args *ReportArgs) error
+	ReportInvalidTokenRequest(args *ReportArgs) error
 	ReportEventDispatchTime(args *ReportArgs, responseCode int, d time.Duration) error
 	ReportEventProcessingTime(args *ReportArgs, d time.Duration) error
 }
@@ -121,6 +137,18 @@ func register() {
 			TagKeys:     []tag.Key{triggerFilterTypeKey, triggerFilterRequestTypeKey, triggerFilterRequestSchemeKey, responseCodeKey, responseCodeClassKey, broker.UniqueTagKey, broker.ContainerTagKey},
 		},
 		&view.View{
+			Description: unauthenticatedRequestsM.Description(),
+			Measure:     unauthenticatedRequestsM,
+			Aggregation: view.Count(),
+			TagKeys:     []tag.Key{triggerFilterTypeKey, triggerFilterRequestTypeKey, triggerFilterRequestSchemeKey, broker.UniqueTagKey, broker.ContainerTagKey},
+		},
+		&view.View{
+			Description: invalidTokenRequestsM.Description(),
+			Measure:     invalidTokenRequestsM,
+			Aggregation: view.Count(),
+			TagKeys:     []tag.Key{triggerFilterTypeKey, triggerFilterRequestTypeKey, triggerFilterRequestSchemeKey, broker.UniqueTagKey, broker.ContainerTagKey},
+		},
+		&view.View{
 			Description: dispatchTimeInMsecM.Description(),
 			Measure:     dispatchTimeInMsecM,
 			Aggregation: view.Distribution(metrics.Buckets125(1, 10000)...), // 1, 2, 5, 10, 20, 50, 100, 1000, 5000, 10000
@@ -147,6 +175,26 @@ func (r *reporter) ReportEventCount(args *ReportArgs, responseCode int) error {
 		return err
 	}
 	metrics.Record(ctx, eventCountM.M(1))
+	return nil
+}
+
+// ReportUnauthenticatedRequest captures unauthenticated requests. (The requests that do not have JWT token in the header)
+func (r *reporter) ReportUnauthenticatedRequest(args *ReportArgs) error {
+	ctx, err := r.generateTag(args)
+	if err != nil {
+		return err
+	}
+	metrics.Record(ctx, unauthenticatedRequestsM.M(1))
+	return nil
+}
+
+// ReportInvalidTokenRequest captures requests with invalid tokens.
+func (r *reporter) ReportInvalidTokenRequest(args *ReportArgs) error {
+	ctx, err := r.generateTag(args)
+	if err != nil {
+		return err
+	}
+	metrics.Record(ctx, invalidTokenRequestsM.M(1))
 	return nil
 }
 

@@ -19,6 +19,7 @@ package auth
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -34,6 +35,11 @@ import (
 
 const (
 	kubernetesOIDCDiscoveryBaseURL = "https://kubernetes.default.svc"
+)
+
+var (
+	ErrNoJWTTokenFound = errors.New("no JWT token found in request")
+	ErrInvalidJWTToken = errors.New("invalid JWT token")
 )
 
 type OIDCTokenVerifier struct {
