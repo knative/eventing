@@ -34,7 +34,7 @@ import (
 var yaml embed.FS
 
 func GVR() schema.GroupVersionResource {
-	return schema.GroupVersionResource{Group: "messaging.knative.dev", Version: "v1", Resource: "eventpolicies"}
+	return schema.GroupVersionResource{Group: "eventing.knative.dev", Version: "v1alpha1", Resource: "eventpolicies"}
 }
 
 // Install will create an EventPolicy resource, augmented with the config fn options.
