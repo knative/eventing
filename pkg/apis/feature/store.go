@@ -40,12 +40,12 @@ func FromContext(ctx context.Context) Flags {
 }
 
 // FromContextOrDefaults is like FromContext, but when no Flags is attached it
-// returns an empty Flags.
+// returns default Flags.
 func FromContextOrDefaults(ctx context.Context) Flags {
 	if cfg := FromContext(ctx); cfg != nil {
 		return cfg
 	}
-	return Flags{}
+	return newDefaults()
 }
 
 // ToContext attaches the provided Flags to the provided context, returning the
