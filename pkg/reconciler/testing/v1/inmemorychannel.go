@@ -154,12 +154,12 @@ func WithInMemoryChannelEventPoliciesNotReady(reason, message string) InMemoryCh
 	}
 }
 
-func WithInMemoryChannelEventPoliciesListed(policy ...*v1alpha1.EventPolicy) InMemoryChannelOption {
+func WithInMemoryChannelEventPoliciesListed(policyNames ...string) InMemoryChannelOption {
 	return func(imc *v1.InMemoryChannel) {
-		for _, p := range policy {
+		for _, names := range policyNames {
 			imc.Status.Policies = append(imc.Status.Policies, eventingduckv1.AppliedEventPolicyRef{
-				APIVersion: p.APIVersion,
-				Name:       p.Name,
+				APIVersion: v1alpha1.SchemeGroupVersion.String(),
+				Name:       names,
 			})
 		}
 	}

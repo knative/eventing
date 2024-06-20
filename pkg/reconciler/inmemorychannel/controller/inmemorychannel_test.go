@@ -657,7 +657,14 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelGeneration(imcGeneration),
 				),
 				makeChannelService(NewInMemoryChannel(imcName, testNS)),
-				makeReadyEventPolicy(),
+				NewEventPolicy(readyEventPolicyName, testNS,
+					WithReadyEventPolicyCondition,
+					WithEventPolicyToRef(v1alpha1.EventPolicyToReference{
+						APIVersion: v1.SchemeGroupVersion.String(),
+						Kind:       "InMemoryChannel",
+						Name:       imcName,
+					}),
+				),
 			},
 			WantErr: false,
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
@@ -673,7 +680,7 @@ func TestAllCases(t *testing.T) {
 					WithDeadLetterSink(imcDest),
 					WithInMemoryChannelStatusDLS(dlsStatus),
 					WithInMemoryChannelEventPoliciesReady(),
-					WithInMemoryChannelEventPoliciesListed(makeReadyEventPolicy()),
+					WithInMemoryChannelEventPoliciesListed(readyEventPolicyName),
 				),
 			}},
 		}, {
@@ -689,7 +696,14 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelGeneration(imcGeneration),
 				),
 				makeChannelService(NewInMemoryChannel(imcName, testNS)),
-				makeUnreadyEventPolicy(),
+				NewEventPolicy(unreadyEventPolicyName, testNS,
+					WithUnreadyEventPolicyCondition,
+					WithEventPolicyToRef(v1alpha1.EventPolicyToReference{
+						APIVersion: v1.SchemeGroupVersion.String(),
+						Kind:       "InMemoryChannel",
+						Name:       imcName,
+					}),
+				),
 			},
 			WantErr: false,
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
@@ -704,7 +718,7 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelAddress(channelServiceAddress),
 					WithDeadLetterSink(imcDest),
 					WithInMemoryChannelStatusDLS(dlsStatus),
-					WithInMemoryChannelEventPoliciesNotReady("EventPoliciesNotReady", fmt.Sprintf("event policies %s are not ready", makeUnreadyEventPolicy().Name)),
+					WithInMemoryChannelEventPoliciesNotReady("EventPoliciesNotReady", fmt.Sprintf("event policies %s are not ready", unreadyEventPolicyName)),
 				),
 			}},
 		}, {
@@ -720,8 +734,22 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelGeneration(imcGeneration),
 				),
 				makeChannelService(NewInMemoryChannel(imcName, testNS)),
-				makeReadyEventPolicy(),
-				makeUnreadyEventPolicy(),
+				NewEventPolicy(readyEventPolicyName, testNS,
+					WithReadyEventPolicyCondition,
+					WithEventPolicyToRef(v1alpha1.EventPolicyToReference{
+						APIVersion: v1.SchemeGroupVersion.String(),
+						Kind:       "InMemoryChannel",
+						Name:       imcName,
+					}),
+				),
+				NewEventPolicy(unreadyEventPolicyName, testNS,
+					WithUnreadyEventPolicyCondition,
+					WithEventPolicyToRef(v1alpha1.EventPolicyToReference{
+						APIVersion: v1.SchemeGroupVersion.String(),
+						Kind:       "InMemoryChannel",
+						Name:       imcName,
+					}),
+				),
 			},
 			WantErr: false,
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
@@ -736,8 +764,8 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelAddress(channelServiceAddress),
 					WithDeadLetterSink(imcDest),
 					WithInMemoryChannelStatusDLS(dlsStatus),
-					WithInMemoryChannelEventPoliciesNotReady("EventPoliciesNotReady", fmt.Sprintf("event policies %s are not ready", makeUnreadyEventPolicy().Name)),
-					WithInMemoryChannelEventPoliciesListed(makeReadyEventPolicy()),
+					WithInMemoryChannelEventPoliciesNotReady("EventPoliciesNotReady", fmt.Sprintf("event policies %s are not ready", unreadyEventPolicyName)),
+					WithInMemoryChannelEventPoliciesListed(readyEventPolicyName),
 				),
 			}},
 		}}
@@ -920,43 +948,6 @@ func makeUnknownDeployment() *appsv1.Deployment {
 	d := makeDeployment()
 	d.Status.Conditions = []appsv1.DeploymentCondition{{Type: appsv1.DeploymentAvailable, Status: corev1.ConditionUnknown, Reason: "Deployment Unknown", Message: "Deployment Unknown"}}
 	return d
-}
-
-func makeEventPolicy(eventPolicyName string) *v1alpha1.EventPolicy {
-	return &v1alpha1.EventPolicy{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "eventing.knative.dev/v1alpha1",
-			Kind:       "EventPolicy",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: testNS,
-			Name:      eventPolicyName,
-		},
-		Spec: v1alpha1.EventPolicySpec{
-			To: []v1alpha1.EventPolicySpecTo{
-				{
-					Ref: &v1alpha1.EventPolicyToReference{
-						APIVersion: v1.SchemeGroupVersion.String(),
-						Kind:       "InMemoryChannel",
-						Name:       imcName,
-					},
-				},
-			},
-		},
-		Status: v1alpha1.EventPolicyStatus{},
-	}
-}
-
-func makeReadyEventPolicy() *v1alpha1.EventPolicy {
-	policy := makeEventPolicy(readyEventPolicyName)
-	policy.Status.Conditions = []apis.Condition{{Type: v1alpha1.EventPolicyConditionReady, Status: corev1.ConditionTrue}}
-	return policy
-}
-
-func makeUnreadyEventPolicy() *v1alpha1.EventPolicy {
-	policy := makeEventPolicy(unreadyEventPolicyName)
-	policy.Status.Conditions = []apis.Condition{{Type: v1alpha1.EventPolicyConditionReady, Status: corev1.ConditionFalse}}
-	return policy
 }
 
 func makeService() *corev1.Service {
