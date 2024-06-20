@@ -95,43 +95,56 @@ func GetEventPoliciesForResource(lister listerseventingv1alpha1.EventPolicyListe
 // This function is kind of the "inverse" of GetEventPoliciesForResource.
 func GetApplyingResourcesOfEventPolicyForGK(eventPolicy *v1alpha1.EventPolicy, gk schema.GroupKind, gkIndexer cache.Indexer) ([]string, error) {
 	applyingResources := []string{}
-	for _, to := range eventPolicy.Spec.To {
-		if to.Ref != nil {
-			toGV, err := schema.ParseGroupVersion(to.Ref.APIVersion)
-			if err != nil {
-				return nil, fmt.Errorf("could not parse group version of %q: %w", to.Ref.APIVersion, err)
-			}
 
-			if strings.EqualFold(toGV.Group, gk.Group) &&
-				strings.EqualFold(to.Ref.Kind, gk.Kind) {
+	if eventPolicy.Spec.To == nil {
+		// empty .spec.to matches everything in namespace
 
-				applyingResources = append(applyingResources, to.Ref.Name)
-			}
+		err := cache.ListAllByNamespace(gkIndexer, eventPolicy.Namespace, labels.Everything(), func(i interface{}) {
+			applyingResources = append(applyingResources, i.(metav1.Object).GetName())
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to list all %s %s resources in %s: %w", gk.Group, gk.Kind, eventPolicy.Namespace, err)
 		}
-
-		if to.Selector != nil {
-			selectorGV, err := schema.ParseGroupVersion(to.Selector.APIVersion)
-			if err != nil {
-				return nil, fmt.Errorf("could not parse group version of %q: %w", to.Selector.APIVersion, err)
-			}
-
-			if strings.EqualFold(selectorGV.Group, gk.Group) &&
-				strings.EqualFold(to.Selector.Kind, gk.Kind) {
-
-				selector, err := metav1.LabelSelectorAsSelector(to.Selector.LabelSelector)
+	} else {
+		for _, to := range eventPolicy.Spec.To {
+			if to.Ref != nil {
+				toGV, err := schema.ParseGroupVersion(to.Ref.APIVersion)
 				if err != nil {
-					return nil, fmt.Errorf("could not parse label selector %v: %w", to.Selector.LabelSelector, err)
+					return nil, fmt.Errorf("could not parse group version of %q: %w", to.Ref.APIVersion, err)
 				}
 
-				err = cache.ListAllByNamespace(gkIndexer, eventPolicy.Namespace, selector, func(i interface{}) {
-					applyingResources = append(applyingResources, i.(metav1.Object).GetName())
-				})
+				if strings.EqualFold(toGV.Group, gk.Group) &&
+					strings.EqualFold(to.Ref.Kind, gk.Kind) {
+
+					applyingResources = append(applyingResources, to.Ref.Name)
+				}
+			}
+
+			if to.Selector != nil {
+				selectorGV, err := schema.ParseGroupVersion(to.Selector.APIVersion)
 				if err != nil {
-					return nil, fmt.Errorf("could not list resources of GK in %q namespace for selector %v: %w", eventPolicy.Namespace, selector, err)
+					return nil, fmt.Errorf("could not parse group version of %q: %w", to.Selector.APIVersion, err)
+				}
+
+				if strings.EqualFold(selectorGV.Group, gk.Group) &&
+					strings.EqualFold(to.Selector.Kind, gk.Kind) {
+
+					selector, err := metav1.LabelSelectorAsSelector(to.Selector.LabelSelector)
+					if err != nil {
+						return nil, fmt.Errorf("could not parse label selector %v: %w", to.Selector.LabelSelector, err)
+					}
+
+					err = cache.ListAllByNamespace(gkIndexer, eventPolicy.Namespace, selector, func(i interface{}) {
+						applyingResources = append(applyingResources, i.(metav1.Object).GetName())
+					})
+					if err != nil {
+						return nil, fmt.Errorf("could not list resources of GK in %q namespace for selector %v: %w", eventPolicy.Namespace, selector, err)
+					}
 				}
 			}
 		}
 	}
+
 	return applyingResources, nil
 }
 

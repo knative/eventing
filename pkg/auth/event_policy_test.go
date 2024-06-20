@@ -899,6 +899,27 @@ func TestGetApplyingResourcesOfEventPolicyForGK(t *testing.T) {
 				},
 			},
 			want: []string{},
+		}, {
+			name:              "Empty .spec.to matches everything in namespace",
+			eventPolicySpecTo: nil,
+			gk: schema.GroupKind{
+				Group: "eventing.knative.dev",
+				Kind:  "Broker",
+			},
+			brokerObjects: []*eventingv1.Broker{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "my-broker",
+						Namespace: "my-ns",
+						Labels: map[string]string{
+							"key": "value",
+						},
+					},
+				},
+			},
+			want: []string{
+				"my-broker",
+			},
 		},
 	}
 	for _, tt := range tests {
