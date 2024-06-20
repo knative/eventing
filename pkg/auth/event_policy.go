@@ -94,13 +94,14 @@ func GetEventPoliciesForResource(lister listerseventingv1alpha1.EventPolicyListe
 //
 // This function is kind of the "inverse" of GetEventPoliciesForResource.
 func GetApplyingResourcesOfEventPolicyForGK(eventPolicy *v1alpha1.EventPolicy, gk schema.GroupKind, gkIndexer cache.Indexer) ([]string, error) {
-	applyingResources := []string{}
+	applyingResources := map[string]struct{}{}
 
 	if eventPolicy.Spec.To == nil {
 		// empty .spec.to matches everything in namespace
 
 		err := cache.ListAllByNamespace(gkIndexer, eventPolicy.Namespace, labels.Everything(), func(i interface{}) {
-			applyingResources = append(applyingResources, i.(metav1.Object).GetName())
+			name := i.(metav1.Object).GetName()
+			applyingResources[name] = struct{}{}
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to list all %s %s resources in %s: %w", gk.Group, gk.Kind, eventPolicy.Namespace, err)
@@ -116,7 +117,7 @@ func GetApplyingResourcesOfEventPolicyForGK(eventPolicy *v1alpha1.EventPolicy, g
 				if strings.EqualFold(toGV.Group, gk.Group) &&
 					strings.EqualFold(to.Ref.Kind, gk.Kind) {
 
-					applyingResources = append(applyingResources, to.Ref.Name)
+					applyingResources[to.Ref.Name] = struct{}{}
 				}
 			}
 
@@ -135,7 +136,8 @@ func GetApplyingResourcesOfEventPolicyForGK(eventPolicy *v1alpha1.EventPolicy, g
 					}
 
 					err = cache.ListAllByNamespace(gkIndexer, eventPolicy.Namespace, selector, func(i interface{}) {
-						applyingResources = append(applyingResources, i.(metav1.Object).GetName())
+						name := i.(metav1.Object).GetName()
+						applyingResources[name] = struct{}{}
 					})
 					if err != nil {
 						return nil, fmt.Errorf("could not list resources of GK in %q namespace for selector %v: %w", eventPolicy.Namespace, selector, err)
@@ -145,7 +147,11 @@ func GetApplyingResourcesOfEventPolicyForGK(eventPolicy *v1alpha1.EventPolicy, g
 		}
 	}
 
-	return applyingResources, nil
+	res := []string{}
+	for name := range applyingResources {
+		res = append(res, name)
+	}
+	return res, nil
 }
 
 // ResolveSubjects returns the OIDC service accounts names for the objects referenced in the EventPolicySpecFrom.

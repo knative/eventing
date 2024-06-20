@@ -920,6 +920,48 @@ func TestGetApplyingResourcesOfEventPolicyForGK(t *testing.T) {
 			want: []string{
 				"my-broker",
 			},
+		}, {
+			name: "Returns elements only once in slice",
+			eventPolicySpecTo: []v1alpha1.EventPolicySpecTo{
+				{
+					Ref: &v1alpha1.EventPolicyToReference{
+						APIVersion: eventingv1.SchemeGroupVersion.String(),
+						Kind:       "Broker",
+						Name:       "my-broker",
+					},
+				},
+				{
+					Selector: &v1alpha1.EventPolicySelector{
+						LabelSelector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								"key": "value",
+							},
+						},
+						TypeMeta: &metav1.TypeMeta{
+							APIVersion: eventingv1.SchemeGroupVersion.String(),
+							Kind:       "Broker",
+						},
+					},
+				},
+			},
+			gk: schema.GroupKind{
+				Group: "eventing.knative.dev",
+				Kind:  "Broker",
+			},
+			brokerObjects: []*eventingv1.Broker{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "my-broker",
+						Namespace: "my-ns",
+						Labels: map[string]string{
+							"key": "value",
+						},
+					},
+				},
+			},
+			want: []string{
+				"my-broker",
+			},
 		},
 	}
 	for _, tt := range tests {
