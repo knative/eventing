@@ -18,11 +18,11 @@ package controller
 
 import (
 	"context"
+	"knative.dev/eventing/pkg/auth"
 
 	"github.com/kelseyhightower/envconfig"
 	"k8s.io/client-go/tools/cache"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
-	"knative.dev/eventing/pkg/reconciler"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
@@ -144,11 +144,11 @@ func NewController(
 		Handler:    controller.HandleAll(globalResync),
 	})
 
-	imcGVK := messagingv1.SchemeGroupVersion.WithKind("InMemoryChannel")
+	imcGK := messagingv1.SchemeGroupVersion.WithKind("InMemoryChannel").GroupKind()
 
 	// Enqueue the InMemoryChannel, if we have an EventPolicy which was referencing
 	// or got updated and now is referencing the InMemoryChannel
-	eventPolicyInformer.Informer().AddEventHandler(reconciler.EventPolicyEventHandler(inmemorychannelInformer.Informer().GetIndexer(), imcGVK, impl.EnqueueKey))
+	eventPolicyInformer.Informer().AddEventHandler(auth.EventPolicyEventHandler(inmemorychannelInformer.Informer().GetIndexer(), imcGK, impl.EnqueueKey))
 
 	// Setup the watch on the config map of dispatcher config
 	configStore := config.NewEventDispatcherConfigStore(logging.FromContext(ctx))
