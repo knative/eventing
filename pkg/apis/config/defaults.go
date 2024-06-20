@@ -82,20 +82,18 @@ type Defaults struct {
 
 // DefaultConfig struct contains the default configuration for the cluster and namespace.
 type DefaultConfig struct {
-	// DefaultBrokerClass and DefaultBrokerClassConfig are the default broker class for the whole cluster
+	// DefaultBrokerClass and DefaultBrokerClassConfig are the default broker class for the whole cluster/namespace.
 	// Users have to specify both of them
 	DefaultBrokerClass string `json:"brokerClass,omitempty"`
 	*BrokerConfig      `json:",inline"`
 
-	// BrokerClasses are the default broker classes' config for the whole cluster
+	// Optional: BrokerClasses are the default broker classes' config for the whole cluster
 	BrokerClasses map[string]*BrokerConfig `json:"brokerClasses,omitempty"`
 
 	DisallowDifferentNamespaceConfig *bool `json:"disallowDifferentNamespaceConfig,omitempty"`
 }
 
-// NamespaceDefaultsConfig struct contains the default configuration for the namespace.
-
-// BrokerConfig contains configuration for a given namespace for broker. Allows
+// BrokerConfig contains configuration for a given broker. Allows
 // configuring the reference to the
 // config it should use and it's delivery.
 type BrokerConfig struct {
@@ -103,6 +101,8 @@ type BrokerConfig struct {
 	Delivery           *eventingduckv1.DeliverySpec `json:"delivery,omitempty"`
 }
 
+// GetBrokerConfig returns a namespace specific Broker Config, and if
+// that doesn't exist, return a Cluster Default and if that doesn't exist
 func (d *Defaults) GetBrokerConfig(ns string, brokerClassName *string) (*BrokerConfig, error) {
 	if d == nil {
 		return nil, errors.New("Defaults are nil")
@@ -117,6 +117,8 @@ func (d *Defaults) GetBrokerConfig(ns string, brokerClassName *string) (*BrokerC
 	return d.getBrokerConfigForEmptyClassName(ns)
 }
 
+//  getBrokerConfigByClassName returns the BrokerConfig for the given brokerClassName.
+//  It first checks the namespace specific configuration, then the cluster default configuration.
 func (d *Defaults) getBrokerConfigByClassName(ns string, brokerClassName string) (*BrokerConfig, error) {
 	// Check namespace specific configuration
 	if nsConfig, ok := d.NamespaceDefaultsConfig[ns]; ok && nsConfig != nil {
@@ -137,6 +139,8 @@ func (d *Defaults) getBrokerConfigByClassName(ns string, brokerClassName string)
 	return d.getClusterDefaultBrokerConfig(brokerClassName)
 }
 
+// getBrokerConfigForEmptyClassName returns the BrokerConfig for the given namespace when brokerClassName is empty.
+// It first checks the namespace specific configuration, then the cluster default configuration.
 func (d *Defaults) getBrokerConfigForEmptyClassName(ns string) (*BrokerConfig, error) {
 	// Check if namespace has a default broker class
 	if nsConfig, ok := d.NamespaceDefaultsConfig[ns]; ok && nsConfig != nil {
@@ -149,6 +153,7 @@ func (d *Defaults) getBrokerConfigForEmptyClassName(ns string) (*BrokerConfig, e
 	return d.getClusterDefaultBrokerConfig("")
 }
 
+// getClusterDefaultBrokerConfig returns the BrokerConfig for the given brokerClassName.
 func (d *Defaults) getClusterDefaultBrokerConfig(brokerClassName string) (*BrokerConfig, error) {
 	if d.ClusterDefaultConfig == nil || d.ClusterDefaultConfig.BrokerConfig == nil {
 		return nil, errors.New("Defaults for Broker Configurations have not been set up.")
@@ -171,7 +176,7 @@ func (d *Defaults) getClusterDefaultBrokerConfig(brokerClassName string) (*Broke
 }
 
 // GetBrokerClass returns a namespace specific Broker Class, and if
-// that doesn't exist, return a Cluster Default and if that doesn't exist
+// that doesn't exist, return a Cluster Default and if the defaults doesn't exist
 // return an error.
 func (d *Defaults) GetBrokerClass(ns string) (string, error) {
 	if d == nil {
