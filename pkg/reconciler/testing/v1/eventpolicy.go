@@ -68,9 +68,7 @@ func WithUnreadyEventPolicyCondition(ep *v1alpha1.EventPolicy) {
 
 func WithEventPolicyTo(tos ...v1alpha1.EventPolicySpecTo) EventPolicyOption {
 	return func(ep *v1alpha1.EventPolicy) {
-		for _, to := range tos {
-			ep.Spec.To = append(ep.Spec.To, to)
-		}
+		ep.Spec.To = append(ep.Spec.To, tos...)
 	}
 }
 
@@ -84,9 +82,7 @@ func WithEventPolicyToRef(ref v1alpha1.EventPolicyToReference) EventPolicyOption
 
 func WithEventPolicyFrom(froms ...v1alpha1.EventPolicySpecFrom) EventPolicyOption {
 	return func(ep *v1alpha1.EventPolicy) {
-		for _, from := range froms {
-			ep.Spec.From = append(ep.Spec.From, from)
-		}
+		ep.Spec.From = append(ep.Spec.From, froms...)
 	}
 }
 
