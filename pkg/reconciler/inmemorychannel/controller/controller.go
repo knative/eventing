@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+
 	"knative.dev/eventing/pkg/auth"
 
 	"github.com/kelseyhightower/envconfig"
