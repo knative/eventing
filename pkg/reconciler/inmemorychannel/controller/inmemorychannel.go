@@ -20,6 +20,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
+
+	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
+	"knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/utils/pointer"
@@ -93,6 +98,8 @@ type Reconciler struct {
 	eventDispatcherConfigStore *config.EventDispatcherConfigStore
 
 	uriResolver *resolver.URIResolver
+
+	eventPolicyLister v1alpha1.EventPolicyLister
 }
 
 // Check that our Reconciler implements Interface
@@ -230,6 +237,44 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1.InMemoryChannel)
 	}
 
 	imc.GetConditionSet().Manage(imc.GetStatus()).MarkTrue(v1.InMemoryChannelConditionAddressable)
+
+	imc.Status.Policies = nil
+	applyingEvenPolicies, err := auth.GetEventPoliciesForResource(r.eventPolicyLister, messagingv1.SchemeGroupVersion.WithKind("InMemoryChannel"), imc.ObjectMeta)
+	if err != nil {
+		logging.FromContext(ctx).Errorw("Unable to get applying event policies for InMemoryChannel", zap.Error(err))
+		imc.Status.MarkEventPoliciesFailed("EventPoliciesGetFailed", "Failed to get applying event policies")
+	}
+
+	if len(applyingEvenPolicies) > 0 {
+		unreadyEventPolicies := []string{}
+		for _, policy := range applyingEvenPolicies {
+			if !policy.Status.IsReady() {
+				unreadyEventPolicies = append(unreadyEventPolicies, policy.Name)
+			} else {
+				// only add Ready policies to the list
+				imc.Status.Policies = append(imc.Status.Policies, eventingduck.AppliedEventPolicyRef{
+					Name:       policy.Name,
+					APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
+				})
+			}
+		}
+
+		if len(unreadyEventPolicies) == 0 {
+			imc.Status.MarkEventPoliciesTrue()
+		} else {
+			imc.Status.MarkEventPoliciesFailed("EventPoliciesNotReady", "event policies %s are not ready", strings.Join(unreadyEventPolicies, ", "))
+		}
+
+	} else {
+		// we have no applying event policy. So we set the EP condition to True
+		if featureFlags.IsOIDCAuthentication() {
+			// in case of OIDC auth, we also set the message with the default authorization mode
+			imc.Status.MarkEventPoliciesTrueWithReason("DefaultAuthorizationMode", "Default authz mode is %q", featureFlags[feature.AuthorizationDefaultMode])
+		} else {
+			// in case OIDC is disabled, we set EP condition to true too, but give some message that authz (EPs) require OIDC
+			imc.Status.MarkEventPoliciesTrueWithReason("OIDCDisabled", "Feature %q must be enabled to support Authorization", feature.OIDCAuthentication)
+		}
+	}
 
 	// Ok, so now the Dispatcher Deployment & Service have been created, we're golden since the
 	// dispatcher watches the Channel and where it needs to dispatch events to.

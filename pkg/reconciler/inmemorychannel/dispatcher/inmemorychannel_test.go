@@ -268,7 +268,8 @@ func TestAllCases(t *testing.T) {
 						},
 					}),
 					WithInMemoryChannelAddress(channelServiceAddress),
-					WithInMemoryChannelDLSUnknown()),
+					WithInMemoryChannelDLSUnknown(),
+					WithInMemoryChannelEventPoliciesReady()),
 			},
 			WantEvents: []string{
 				Eventf(corev1.EventTypeWarning, "InternalError", "failed to parse Spec.BackoffDelay: expected 'P' period mark at the start: garbage"),
@@ -346,7 +347,8 @@ func TestReconciler_ReconcileKind(t *testing.T) {
 				WithInMemoryChannelChannelServiceReady(),
 				WithInMemoryChannelSubscribers(subscribers),
 				WithInMemoryChannelAddress(channelServiceAddress),
-				WithInMemoryChannelDLSUnknown()),
+				WithInMemoryChannelDLSUnknown(),
+				WithInMemoryChannelEventPoliciesReady()),
 			wantSubs: []fanout.Subscription{{
 				Subscriber: duckv1.Addressable{
 					URL: apis.HTTP("call1"),
@@ -375,7 +377,8 @@ func TestReconciler_ReconcileKind(t *testing.T) {
 				WithInMemoryChannelChannelServiceReady(),
 				WithInMemoryChannelSubscribers(subscribers),
 				WithInMemoryChannelAddress(channelServiceAddress),
-				WithInMemoryChannelDLSUnknown()),
+				WithInMemoryChannelDLSUnknown(),
+				WithInMemoryChannelEventPoliciesReady()),
 			subs: []fanout.Subscription{*subscription1},
 			wantSubs: []fanout.Subscription{{
 				Namespace: testNS,
@@ -403,7 +406,8 @@ func TestReconciler_ReconcileKind(t *testing.T) {
 				WithInMemoryChannelChannelServiceReady(),
 				WithInMemoryChannelSubscribers(subscribers),
 				WithInMemoryChannelAddress(channelServiceAddress),
-				WithInMemoryChannelDLSUnknown()),
+				WithInMemoryChannelDLSUnknown(),
+				WithInMemoryChannelEventPoliciesReady()),
 			subs: []fanout.Subscription{*subscription1, *subscription2},
 			wantSubs: []fanout.Subscription{{
 				Namespace: testNS,
@@ -431,7 +435,8 @@ func TestReconciler_ReconcileKind(t *testing.T) {
 				WithInMemoryChannelChannelServiceReady(),
 				WithInMemoryChannelSubscribers([]eventingduckv1.SubscriberSpec{subscriber1}),
 				WithInMemoryChannelAddress(channelServiceAddress),
-				WithInMemoryChannelDLSUnknown()),
+				WithInMemoryChannelDLSUnknown(),
+				WithInMemoryChannelEventPoliciesReady()),
 			subs: []fanout.Subscription{*subscription1, *subscription2},
 			wantSubs: []fanout.Subscription{
 				{
@@ -453,7 +458,8 @@ func TestReconciler_ReconcileKind(t *testing.T) {
 				WithInMemoryChannelChannelServiceReady(),
 				WithInMemoryChannelSubscribers([]eventingduckv1.SubscriberSpec{subscriber1, subscriber3}),
 				WithInMemoryChannelAddress(channelServiceAddress),
-				WithInMemoryChannelDLSUnknown()),
+				WithInMemoryChannelDLSUnknown(),
+				WithInMemoryChannelEventPoliciesReady()),
 			subs: []fanout.Subscription{*subscription1, *subscription2},
 			wantSubs: []fanout.Subscription{
 				{
@@ -482,7 +488,8 @@ func TestReconciler_ReconcileKind(t *testing.T) {
 				WithInMemoryChannelChannelServiceReady(),
 				WithInMemoryChannelSubscribers([]eventingduckv1.SubscriberSpec{subscriber1WithLinearRetry}),
 				WithInMemoryChannelAddress(channelServiceAddress),
-				WithInMemoryChannelDLSUnknown()),
+				WithInMemoryChannelDLSUnknown(),
+				WithInMemoryChannelEventPoliciesReady()),
 			subs: []fanout.Subscription{{
 				Subscriber: duckv1.Addressable{
 					URL: apis.HTTP("call1"),
@@ -537,7 +544,7 @@ func TestReconciler_ReconcileKind(t *testing.T) {
 				}
 				channelHandler := handler.GetChannelHandler(channelServiceAddress.URL.Host)
 				if channelHandler == nil {
-					t.Errorf("Did not get handler for %s", channelServiceAddress.URL.Host)
+					t.Fatalf("Did not get handler for %s", channelServiceAddress.URL.Host)
 				}
 				if diff := cmp.Diff(tc.wantSubs, channelHandler.GetSubscriptions(context.TODO()), cmpopts.IgnoreFields(kncloudevents.RetryConfig{}, "Backoff", "CheckRetry"), cmpopts.IgnoreFields(fanout.Subscription{}, "UID")); diff != "" {
 					t.Error("unexpected subs (+want/-got)", diff)

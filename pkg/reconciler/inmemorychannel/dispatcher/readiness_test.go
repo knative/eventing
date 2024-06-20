@@ -40,6 +40,7 @@ func TestReadinessChecker(t *testing.T) {
 			WithInMemoryChannelChannelServiceReady(),
 			WithInMemoryChannelAddress(duckv1.Addressable{URL: apis.HTTP("fake-address")}),
 			WithInMemoryChannelDLSUnknown(),
+			WithInMemoryChannelEventPoliciesReady(),
 		),
 	})
 
