@@ -62,6 +62,7 @@ func WithUnreadyEventPolicyCondition(ep *v1alpha1.EventPolicy) {
 		{
 			Type:   v1alpha1.EventPolicyConditionReady,
 			Status: corev1.ConditionFalse,
+			Reason: "Error resolving from[].refs",
 		},
 	}
 }
@@ -100,5 +101,11 @@ func WithEventPolicyLabels(labels map[string]string) EventPolicyOption {
 func WithEventPolicyOwnerReferences(ownerRefs ...metav1.OwnerReference) EventPolicyOption {
 	return func(ep *v1alpha1.EventPolicy) {
 		ep.ObjectMeta.OwnerReferences = append(ep.ObjectMeta.OwnerReferences, ownerRefs...)
+	}
+}
+
+func WithEventPolicyStatusFromSub(subs []string) EventPolicyOption {
+	return func(ep *v1alpha1.EventPolicy) {
+		ep.Status.From = append(ep.Status.From, subs...)
 	}
 }

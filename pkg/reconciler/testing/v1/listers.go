@@ -110,12 +110,12 @@ func (l *Listers) GetAllObjects() []runtime.Object {
 	return all
 }
 
-func (l *Listers) GetEventTypeLister() eventingv1beta2listers.EventTypeLister {
-	return eventingv1beta2listers.NewEventTypeLister(l.indexerFor(&eventingv1beta2.EventType{}))
-}
-
 func (l *Listers) GetEventPolicyLister() eventingv1alpha1listers.EventPolicyLister {
 	return eventingv1alpha1listers.NewEventPolicyLister(l.indexerFor(&eventingv1alpha1.EventPolicy{}))
+}
+
+func (l *Listers) GetEventTypeLister() eventingv1beta2listers.EventTypeLister {
+	return eventingv1beta2listers.NewEventTypeLister(l.indexerFor(&eventingv1beta2.EventType{}))
 }
 
 func (l *Listers) GetPingSourceLister() sourcelisters.PingSourceLister {
