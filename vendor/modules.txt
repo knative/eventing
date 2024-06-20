@@ -30,8 +30,8 @@ cloud.google.com/go/compute/metadata
 ## explicit; go 1.19
 cloud.google.com/go/iam
 cloud.google.com/go/iam/apiv1/iampb
-# cloud.google.com/go/storage v1.41.0
-## explicit; go 1.19
+# cloud.google.com/go/storage v1.42.0
+## explicit; go 1.20
 cloud.google.com/go/storage
 cloud.google.com/go/storage/internal
 cloud.google.com/go/storage/internal/apiv2
@@ -359,9 +359,6 @@ github.com/spf13/pflag
 ## explicit; go 1.17
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/require
-# github.com/tsenart/vegeta/v12 v12.11.1
-## explicit; go 1.20
-github.com/tsenart/vegeta/v12/lib
 # github.com/valyala/bytebufferpool v1.0.0
 ## explicit
 github.com/valyala/bytebufferpool
@@ -486,7 +483,6 @@ golang.org/x/oauth2/jwt
 ## explicit; go 1.18
 golang.org/x/sync/errgroup
 golang.org/x/sync/semaphore
-golang.org/x/sync/singleflight
 # golang.org/x/sys v0.21.0
 ## explicit; go 1.18
 golang.org/x/sys/cpu
@@ -543,7 +539,7 @@ google.golang.org/api/transport/http/internal/propagation
 ## explicit; go 1.20
 google.golang.org/genproto/googleapis/type/date
 google.golang.org/genproto/googleapis/type/expr
-# google.golang.org/genproto/googleapis/api v0.0.0-20240521202816-d264139d666e
+# google.golang.org/genproto/googleapis/api v0.0.0-20240604185151-ef581f913117
 ## explicit; go 1.20
 google.golang.org/genproto/googleapis/api
 google.golang.org/genproto/googleapis/api/annotations
@@ -1213,7 +1209,7 @@ knative.dev/hack/schema/commands
 knative.dev/hack/schema/docs
 knative.dev/hack/schema/registry
 knative.dev/hack/schema/schema
-# knative.dev/pkg v0.0.0-20240614135239-339c22b8218c
+# knative.dev/pkg v0.0.0-20240620153518-fe2597ab85a0
 ## explicit; go 1.21
 knative.dev/pkg/apiextensions/storageversion
 knative.dev/pkg/apiextensions/storageversion/cmd/migrate
@@ -1358,7 +1354,7 @@ knative.dev/pkg/webhook/resourcesemantics
 knative.dev/pkg/webhook/resourcesemantics/conversion
 knative.dev/pkg/webhook/resourcesemantics/defaulting
 knative.dev/pkg/webhook/resourcesemantics/validation
-# knative.dev/reconciler-test v0.0.0-20240611155001-199a5264927d
+# knative.dev/reconciler-test v0.0.0-20240618170853-5bf0b86114f8
 ## explicit; go 1.21
 knative.dev/reconciler-test/cmd/eventshub
 knative.dev/reconciler-test/pkg/environment
