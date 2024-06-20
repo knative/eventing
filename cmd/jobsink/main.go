@@ -103,18 +103,19 @@ func main() {
 
 	logger.Info("Starting the JobSink Ingress")
 
-	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {})
+	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {
+		logger.Info("Updated", zap.String("name", name), zap.Any("value", value))
+	})
 	featureStore.WatchConfigs(configMapWatcher)
 
 	// Decorate contexts with the current state of the feature config.
 	ctxFunc := func(ctx context.Context) context.Context {
-		return featureStore.ToContext(ctx)
+		return logging.WithLogger(featureStore.ToContext(ctx), sl)
 	}
 
 	h := &Handler{
 		k8s:               kubeclient.Get(ctx),
 		lister:            jobsink.Get(ctx).Lister(),
-		logger:            logger,
 		withContext:       ctxFunc,
 		oidcTokenVerifier: auth.NewOIDCTokenVerifier(ctx),
 	}
@@ -135,6 +136,12 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// configMapWatcher does not block, so start it first.
+	logger.Info("Starting ConfigMap watcher")
+	if err = configMapWatcher.Start(ctx.Done()); err != nil {
+		logger.Fatal("Failed to start ConfigMap watcher", zap.Error(err))
+	}
+
 	// Start informers and wait for them to sync.
 	logger.Info("Starting informers.")
 	if err := controller.StartInformers(ctx.Done(), informers...); err != nil {
@@ -153,26 +160,28 @@ func main() {
 type Handler struct {
 	k8s               kubernetes.Interface
 	lister            sinkslister.JobSinkLister
-	logger            *zap.Logger
 	withContext       func(ctx context.Context) context.Context
 	oidcTokenVerifier *auth.OIDCTokenVerifier
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	ctx := h.withContext(r.Context())
+	logger := logging.FromContext(ctx).Desugar()
+
 	if r.Method == http.MethodGet {
-		h.handleGet(w, r)
+		h.handleGet(ctx, w, r)
 		return
 	}
 
 	if r.Method != http.MethodPost {
-		h.logger.Info("Unexpected HTTP method", zap.String("method", r.Method))
+		logger.Info("Unexpected HTTP method", zap.String("method", r.Method))
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	parts := strings.Split(strings.TrimSuffix(r.RequestURI, "/"), "/")
 	if len(parts) != 3 {
-		h.logger.Info("Malformed uri", zap.String("URI", r.RequestURI), zap.Any("parts", parts))
+		logger.Info("Malformed uri", zap.String("URI", r.RequestURI), zap.Any("parts", parts))
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -182,21 +191,22 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Name:      parts[2],
 	}
 
-	h.logger.Debug("Handling POST request", zap.String("URI", r.RequestURI))
+	logger.Debug("Handling POST request", zap.String("URI", r.RequestURI))
 
-	ctx := h.withContext(r.Context())
 	features := feature.FromContext(ctx)
+	logger.Debug("features", zap.Any("features", features))
+
 	if features.IsOIDCAuthentication() {
-		h.logger.Debug("OIDC authentication is enabled")
+		logger.Debug("OIDC authentication is enabled")
 
 		audience := auth.GetAudienceDirect(sinksv.SchemeGroupVersion.WithKind("JobSink"), ref.Namespace, ref.Name)
 
 		err := h.oidcTokenVerifier.VerifyJWTFromRequest(ctx, r, &audience, w)
 		if err != nil {
-			h.logger.Warn("Error when validating the JWT token in the request", zap.Error(err))
+			logger.Warn("Error when validating the JWT token in the request", zap.Error(err))
 			return
 		}
-		h.logger.Debug("Request contained a valid JWT. Continuing...")
+		logger.Debug("Request contained a valid JWT. Continuing...")
 	}
 
 	message := cehttp.NewMessageFromHttpRequest(r)
@@ -204,33 +214,33 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	event, err := binding.ToEvent(r.Context(), message)
 	if err != nil {
-		h.logger.Warn("failed to extract event from request", zap.Error(err))
+		logger.Warn("failed to extract event from request", zap.Error(err))
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	if err := event.Validate(); err != nil {
-		h.logger.Info("failed to validate event from request", zap.Error(err))
+		logger.Info("failed to validate event from request", zap.Error(err))
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	js, err := h.lister.JobSinks(ref.Namespace).Get(ref.Name)
 	if err != nil {
-		h.logger.Warn("Failed to retrieve jobsink", zap.String("ref", ref.String()), zap.Error(err))
+		logger.Warn("Failed to retrieve jobsink", zap.String("ref", ref.String()), zap.Error(err))
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	id := toIdHashLabelValue(event.Source(), event.ID())
-	h.logger.Debug("Getting job for event", zap.String("URI", r.RequestURI), zap.String("id", id))
+	logger.Debug("Getting job for event", zap.String("URI", r.RequestURI), zap.String("id", id))
 
 	jobs, err := h.k8s.BatchV1().Jobs(js.GetNamespace()).List(r.Context(), metav1.ListOptions{
 		LabelSelector: jobLabelSelector(ref, id),
 		Limit:         1,
 	})
 	if err != nil {
-		h.logger.Warn("Failed to retrieve job", zap.Error(err))
+		logger.Warn("Failed to retrieve job", zap.Error(err))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -242,14 +252,14 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	eventBytes, err := event.MarshalJSON()
 	if err != nil {
-		h.logger.Info("Failed to marshal event", zap.Error(err))
+		logger.Info("Failed to marshal event", zap.Error(err))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	jobName := kmeta.ChildName(ref.Name, id)
 
-	h.logger.Debug("Creating secret for event", zap.String("URI", r.RequestURI), zap.String("jobName", jobName))
+	logger.Debug("Creating secret for event", zap.String("URI", r.RequestURI), zap.String("jobName", jobName))
 
 	jobSinkUID := js.GetUID()
 
@@ -280,14 +290,14 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	_, err = h.k8s.CoreV1().Secrets(ref.Namespace).Create(r.Context(), secret, metav1.CreateOptions{})
 	if err != nil && !apierrors.IsAlreadyExists(err) {
-		h.logger.Warn("Failed to create secret", zap.Error(err))
+		logger.Warn("Failed to create secret", zap.Error(err))
 
 		w.Header().Add("Reason", err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	h.logger.Debug("Creating job for event", zap.String("URI", r.RequestURI), zap.String("jobName", jobName))
+	logger.Debug("Creating job for event", zap.String("URI", r.RequestURI), zap.String("jobName", jobName))
 
 	job := js.Spec.Job.DeepCopy()
 	job.Name = jobName
@@ -339,7 +349,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	_, err = h.k8s.BatchV1().Jobs(ref.Namespace).Create(r.Context(), job, metav1.CreateOptions{})
 	if err != nil {
-		h.logger.Warn("Failed to create job", zap.Error(err))
+		logger.Warn("Failed to create job", zap.Error(err))
 
 		w.Header().Add("Reason", err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
@@ -350,10 +360,11 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusAccepted)
 }
 
-func (h *Handler) handleGet(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) handleGet(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	logger := logging.FromContext(ctx)
 	parts := strings.Split(strings.TrimSuffix(r.RequestURI, "/"), "/")
 	if len(parts) != 9 {
-		h.logger.Info("Malformed uri", zap.String("URI", r.RequestURI))
+		logger.Info("Malformed uri", zap.String("URI", r.RequestURI))
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -363,21 +374,20 @@ func (h *Handler) handleGet(w http.ResponseWriter, r *http.Request) {
 		Name:      parts[4],
 	}
 
-	h.logger.Debug("Handling GET request", zap.String("URI", r.RequestURI))
+	logger.Debug("Handling GET request", zap.String("URI", r.RequestURI))
 
-	ctx := h.withContext(r.Context())
 	features := feature.FromContext(ctx)
 	if features.IsOIDCAuthentication() {
-		h.logger.Debug("OIDC authentication is enabled")
+		logger.Debug("OIDC authentication is enabled")
 
 		audience := auth.GetAudienceDirect(sinksv.SchemeGroupVersion.WithKind("JobSink"), ref.Namespace, ref.Name)
 
 		err := h.oidcTokenVerifier.VerifyJWTFromRequest(ctx, r, &audience, w)
 		if err != nil {
-			h.logger.Warn("Error when validating the JWT token in the request", zap.Error(err))
+			logger.Warn("Error when validating the JWT token in the request", zap.Error(err))
 			return
 		}
-		h.logger.Debug("Request contained a valid JWT. Continuing...")
+		logger.Debug("Request contained a valid JWT. Continuing...")
 	}
 
 	eventSource := parts[6]
