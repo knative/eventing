@@ -237,7 +237,6 @@ func handleApplyingResourcesOfEventPolicy(eventPolicy *v1alpha1.EventPolicy, gk 
 // EventPolicyEventHandler returns an ResourceEventHandler, which passes the referencing resources of the EventPolicy
 // to the enqueueFn if the EventPolicy was referencing or got updated and now is referencing the resource of the given GVK.
 func EventPolicyEventHandler(indexer cache.Indexer, gk schema.GroupKind, enqueueFn func(key types.NamespacedName)) cache.ResourceEventHandler {
-
 	return cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			eventPolicy, ok := obj.(*v1alpha1.EventPolicy)

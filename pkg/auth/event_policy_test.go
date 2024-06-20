@@ -770,7 +770,6 @@ func TestSubjectContained(t *testing.T) {
 }
 
 func TestGetApplyingResourcesOfEventPolicyForGK(t *testing.T) {
-
 	tests := []struct {
 		name              string
 		eventPolicySpecTo []v1alpha1.EventPolicySpecTo
@@ -995,5 +994,143 @@ func TestGetApplyingResourcesOfEventPolicyForGK(t *testing.T) {
 				t.Errorf("GetApplyingResourcesOfEventPolicyForGK() got = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestEventPolicyEventHandler_AddAndDelete(t *testing.T) {
+	eventPolicy := &v1alpha1.EventPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "my-policy",
+			Namespace: "my-ns",
+		},
+		Spec: v1alpha1.EventPolicySpec{
+			To: []v1alpha1.EventPolicySpecTo{
+				{
+					Ref: &v1alpha1.EventPolicyToReference{
+						APIVersion: eventingv1.SchemeGroupVersion.String(),
+						Kind:       "Broker",
+						Name:       "my-broker",
+					},
+				},
+			},
+		},
+	}
+
+	gk := schema.GroupKind{
+		Group: eventingv1.SchemeGroupVersion.Group,
+		Kind:  "Broker",
+	}
+
+	wantCalls := []string{
+		"my-broker",
+	}
+
+	calls := map[string]int{}
+	callbackFn := func(key types.NamespacedName) {
+		calls[key.Name]++
+	}
+
+	handler := EventPolicyEventHandler(nil, gk, callbackFn)
+	handler.OnAdd(eventPolicy, false)
+
+	if len(calls) != len(wantCalls) {
+		t.Errorf("EventPolicyEventHandler() callback in ADD was called on wrong resources. Want to be called on %v, but was called on %v", wantCalls, calls)
+	}
+	for _, wantCallForResource := range wantCalls {
+		num, ok := calls[wantCallForResource]
+		if !ok {
+			t.Errorf("EventPolicyEventHandler() callback in ADD was called on %s 0 times. Expected to be called only once", wantCallForResource)
+		}
+
+		if num != 1 {
+			t.Errorf("EventPolicyEventHandler() callback in ADD was called on %s %d times. Expected to be called only once", wantCallForResource, num)
+		}
+	}
+
+	// do the same for OnDelete
+	calls = map[string]int{}
+	handler.OnDelete(eventPolicy)
+
+	if len(calls) != len(wantCalls) {
+		t.Errorf("EventPolicyEventHandler() callback in DELETE was called on wrong resources. Want to be called on %v, but was called on %v", wantCalls, calls)
+	}
+	for _, wantCallForResource := range wantCalls {
+		num, ok := calls[wantCallForResource]
+		if !ok {
+			t.Errorf("EventPolicyEventHandler() callback in DELETE was called on %s 0 times. Expected to be called only once", wantCallForResource)
+		}
+
+		if num != 1 {
+			t.Errorf("EventPolicyEventHandler() callback in DELETE was called on %s %d times. Expected to be called only once", wantCallForResource, num)
+		}
+	}
+
+}
+
+func TestEventPolicyEventHandler_Update(t *testing.T) {
+	oldEventPolicy := &v1alpha1.EventPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "my-policy",
+			Namespace: "my-ns",
+		},
+		Spec: v1alpha1.EventPolicySpec{
+			To: []v1alpha1.EventPolicySpecTo{
+				{
+					Ref: &v1alpha1.EventPolicyToReference{
+						APIVersion: eventingv1.SchemeGroupVersion.String(),
+						Kind:       "Broker",
+						Name:       "my-broker",
+					},
+				},
+			},
+		},
+	}
+	newEventPolicy := &v1alpha1.EventPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "my-policy",
+			Namespace: "my-ns",
+		},
+		Spec: v1alpha1.EventPolicySpec{
+			To: []v1alpha1.EventPolicySpecTo{
+				{
+					Ref: &v1alpha1.EventPolicyToReference{
+						APIVersion: eventingv1.SchemeGroupVersion.String(),
+						Kind:       "Broker",
+						Name:       "my-broker",
+					},
+				},
+			},
+		},
+	}
+
+	gk := schema.GroupKind{
+		Group: eventingv1.SchemeGroupVersion.Group,
+		Kind:  "Broker",
+	}
+
+	wantCalls := []string{
+		"my-broker",
+	}
+
+	calls := map[string]int{}
+	callbackFn := func(key types.NamespacedName) {
+		calls[key.Name]++
+	}
+
+	handler := EventPolicyEventHandler(nil, gk, callbackFn)
+	handler.OnUpdate(oldEventPolicy, newEventPolicy)
+
+	if len(calls) != len(wantCalls) {
+		t.Errorf("EventPolicyEventHandler() callback in UPDATE was called on wrong resources. Want to be called on %v, but was called on %v", wantCalls, calls)
+	}
+	for _, wantCallForResource := range wantCalls {
+		num, ok := calls[wantCallForResource]
+		if !ok {
+			t.Errorf("EventPolicyEventHandler() callback in UPDATE was called on %s 0 times. Expected to be called only once", wantCallForResource)
+		}
+
+		if num != 1 {
+			t.Errorf("EventPolicyEventHandler() callback in UPDATE was called on %s %d times. Expected to be called only once", wantCallForResource, num)
+		}
 	}
 }
