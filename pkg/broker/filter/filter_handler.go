@@ -205,7 +205,7 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 		audience := FilterAudience
 
 		reportArgs := &ReportArgs{
-			Ns:          trigger.Namespace,
+			ns:          trigger.Namespace,
 			trigger:     trigger.Name,
 			broker:      trigger.Spec.Broker,
 			requestType: "filter",
@@ -254,7 +254,7 @@ func (h *Handler) handleDispatchToReplyRequest(ctx context.Context, trigger *eve
 	target := broker.Status.Address
 
 	reportArgs := &ReportArgs{
-		Ns:          trigger.Namespace,
+		ns:          trigger.Namespace,
 		trigger:     trigger.Name,
 		broker:      brokerRef,
 		requestType: "reply_forward",
@@ -305,7 +305,7 @@ func (h *Handler) handleDispatchToDLSRequest(ctx context.Context, trigger *event
 	}
 
 	reportArgs := &ReportArgs{
-		Ns:          trigger.Namespace,
+		ns:          trigger.Namespace,
 		trigger:     trigger.Name,
 		broker:      trigger.Spec.Broker,
 		requestType: "dls_forward",
@@ -352,7 +352,7 @@ func (h *Handler) handleDispatchToSubscriberRequest(ctx context.Context, trigger
 	}
 
 	reportArgs := &ReportArgs{
-		Ns:          trigger.Namespace,
+		ns:          trigger.Namespace,
 		trigger:     trigger.Name,
 		broker:      brokerRef,
 		filterType:  triggerFilterAttribute(trigger.Spec.Filter, "type"),

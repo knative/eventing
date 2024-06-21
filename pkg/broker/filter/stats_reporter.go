@@ -89,7 +89,7 @@ var (
 )
 
 type ReportArgs struct {
-	Ns            string
+	ns            string
 	trigger       string
 	broker        string
 	filterType    string
@@ -227,7 +227,7 @@ func (r *reporter) generateTag(args *ReportArgs, tags ...tag.Mutator) (context.C
 	ctx := metricskey.WithResource(emptyContext, resource.Resource{
 		Type: eventingmetrics.ResourceTypeKnativeTrigger,
 		Labels: map[string]string{
-			eventingmetrics.LabelNamespaceName: args.Ns,
+			eventingmetrics.LabelNamespaceName: args.ns,
 			eventingmetrics.LabelBrokerName:    args.broker,
 			eventingmetrics.LabelTriggerName:   args.trigger,
 		},
