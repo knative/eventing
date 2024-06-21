@@ -175,14 +175,14 @@ func TestCreateExpectedEventPatterns(t *testing.T) {
 			DeadLetterSink: dlqSink,
 		},
 		t0FailCount: 0,
-		t1FailCount: 1,
+		t1FailCount: 2,
 		want: map[string]knconf.EventPattern{
 			"t0": {
 				Success:  []bool{true},
 				Interval: []uint{0},
 			},
 			"t1": {
-				Success:  []bool{false, true},
+				Success:  []bool{false, false},
 				Interval: []uint{0, 0},
 			},
 			"t0dlq":     noEvents,
@@ -214,7 +214,7 @@ func TestCreateExpectedEventPatterns(t *testing.T) {
 		},
 	}} {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+			//t.Parallel()
 			cfg := []triggerCfg{{
 				delivery:  tt.t0DS,
 				failCount: tt.t0FailCount,
