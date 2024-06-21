@@ -138,6 +138,9 @@ func TestInMemoryChannelInitializeConditions(t *testing.T) {
 						Type:   InMemoryChannelConditionEndpointsReady,
 						Status: corev1.ConditionUnknown,
 					}, {
+						Type:   InMemoryChannelConditionEventPoliciesReady,
+						Status: corev1.ConditionUnknown,
+					}, {
 						Type:   InMemoryChannelConditionReady,
 						Status: corev1.ConditionUnknown,
 					}, {
@@ -176,6 +179,9 @@ func TestInMemoryChannelInitializeConditions(t *testing.T) {
 						Status: corev1.ConditionFalse,
 					}, {
 						Type:   InMemoryChannelConditionEndpointsReady,
+						Status: corev1.ConditionUnknown,
+					}, {
+						Type:   InMemoryChannelConditionEventPoliciesReady,
 						Status: corev1.ConditionUnknown,
 					}, {
 						Type:   InMemoryChannelConditionReady,
@@ -218,6 +224,9 @@ func TestInMemoryChannelInitializeConditions(t *testing.T) {
 						Type:   InMemoryChannelConditionEndpointsReady,
 						Status: corev1.ConditionUnknown,
 					}, {
+						Type:   InMemoryChannelConditionEventPoliciesReady,
+						Status: corev1.ConditionUnknown,
+					}, {
 						Type:   InMemoryChannelConditionReady,
 						Status: corev1.ConditionUnknown,
 					}, {
@@ -244,6 +253,7 @@ func TestInMemoryChannelIsReady(t *testing.T) {
 		name                    string
 		markServiceReady        bool
 		markChannelServiceReady bool
+		markEventPolicyReady    bool
 		setAddress              bool
 		markEndpointsReady      bool
 		DLSResolved             *bool
@@ -253,6 +263,7 @@ func TestInMemoryChannelIsReady(t *testing.T) {
 		name:                    "all happy",
 		markServiceReady:        true,
 		markChannelServiceReady: true,
+		markEventPolicyReady:    true,
 		markEndpointsReady:      true,
 		dispatcherStatus:        deploymentStatusReady,
 		setAddress:              true,
@@ -262,6 +273,7 @@ func TestInMemoryChannelIsReady(t *testing.T) {
 		name:                    "service not ready",
 		markServiceReady:        false,
 		markChannelServiceReady: false,
+		markEventPolicyReady:    true,
 		markEndpointsReady:      true,
 		dispatcherStatus:        deploymentStatusReady,
 		setAddress:              true,
@@ -271,6 +283,7 @@ func TestInMemoryChannelIsReady(t *testing.T) {
 		name:                    "endpoints not ready",
 		markServiceReady:        true,
 		markChannelServiceReady: false,
+		markEventPolicyReady:    true,
 		markEndpointsReady:      false,
 		dispatcherStatus:        deploymentStatusReady,
 		setAddress:              true,
@@ -281,6 +294,7 @@ func TestInMemoryChannelIsReady(t *testing.T) {
 		markServiceReady:        true,
 		markEndpointsReady:      true,
 		markChannelServiceReady: false,
+		markEventPolicyReady:    true,
 		dispatcherStatus:        deploymentStatusNotReady,
 		setAddress:              true,
 		wantReady:               false,
@@ -289,6 +303,7 @@ func TestInMemoryChannelIsReady(t *testing.T) {
 		name:                    "address not set",
 		markServiceReady:        true,
 		markChannelServiceReady: false,
+		markEventPolicyReady:    true,
 		markEndpointsReady:      true,
 		dispatcherStatus:        deploymentStatusReady,
 		setAddress:              false,
@@ -298,6 +313,7 @@ func TestInMemoryChannelIsReady(t *testing.T) {
 		name:                    "channel service not ready",
 		markServiceReady:        true,
 		markChannelServiceReady: false,
+		markEventPolicyReady:    true,
 		markEndpointsReady:      true,
 		dispatcherStatus:        deploymentStatusReady,
 		setAddress:              true,
@@ -307,6 +323,7 @@ func TestInMemoryChannelIsReady(t *testing.T) {
 		name:                    "dls sad",
 		markServiceReady:        true,
 		markChannelServiceReady: false,
+		markEventPolicyReady:    true,
 		markEndpointsReady:      true,
 		dispatcherStatus:        deploymentStatusReady,
 		setAddress:              true,
@@ -316,6 +333,17 @@ func TestInMemoryChannelIsReady(t *testing.T) {
 		name:                    "dls not configured",
 		markServiceReady:        true,
 		markChannelServiceReady: false,
+		markEventPolicyReady:    true,
+		markEndpointsReady:      true,
+		dispatcherStatus:        deploymentStatusReady,
+		setAddress:              true,
+		wantReady:               false,
+		DLSResolved:             &trueVal,
+	}, {
+		name:                    "EventPolicy not ready",
+		markServiceReady:        true,
+		markChannelServiceReady: true,
+		markEventPolicyReady:    false,
 		markEndpointsReady:      true,
 		dispatcherStatus:        deploymentStatusReady,
 		setAddress:              true,
@@ -335,6 +363,11 @@ func TestInMemoryChannelIsReady(t *testing.T) {
 				cs.MarkChannelServiceTrue()
 			} else {
 				cs.MarkChannelServiceFailed("NotReadyChannelService", "testing")
+			}
+			if test.markEventPolicyReady {
+				cs.MarkEventPoliciesTrue()
+			} else {
+				cs.MarkEndpointsFailed("NotReadyEventPolicy", "testing")
 			}
 			if test.setAddress {
 				cs.SetAddress(&duckv1.Addressable{URL: &apis.URL{Scheme: "http", Host: "foo.bar"}})
@@ -437,6 +470,7 @@ func TestInMemoryChannelStatus_SetAddressable(t *testing.T) {
 func ReadyBrokerStatusWithoutDLS() *InMemoryChannelStatus {
 	imcs := &InMemoryChannelStatus{}
 	imcs.MarkChannelServiceTrue()
+	imcs.MarkEventPoliciesTrue()
 	imcs.MarkDeadLetterSinkNotConfigured()
 	imcs.MarkEndpointsTrue()
 	imcs.SetAddress(&duckv1.Addressable{URL: apis.HTTP("example.com")})

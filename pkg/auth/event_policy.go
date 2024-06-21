@@ -20,6 +20,9 @@ import (
 	"fmt"
 	"strings"
 
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/cache"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -86,6 +89,71 @@ func GetEventPoliciesForResource(lister listerseventingv1alpha1.EventPolicyListe
 	return relevantPolicies, nil
 }
 
+// GetApplyingResourcesOfEventPolicyForGK returns all applying resource names of GK of the given event policy.
+// It returns only the names, as the resources are part of the same namespace as the event policy.
+//
+// This function is kind of the "inverse" of GetEventPoliciesForResource.
+func GetApplyingResourcesOfEventPolicyForGK(eventPolicy *v1alpha1.EventPolicy, gk schema.GroupKind, gkIndexer cache.Indexer) ([]string, error) {
+	applyingResources := map[string]struct{}{}
+
+	if eventPolicy.Spec.To == nil {
+		// empty .spec.to matches everything in namespace
+
+		err := cache.ListAllByNamespace(gkIndexer, eventPolicy.Namespace, labels.Everything(), func(i interface{}) {
+			name := i.(metav1.Object).GetName()
+			applyingResources[name] = struct{}{}
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to list all %s %s resources in %s: %w", gk.Group, gk.Kind, eventPolicy.Namespace, err)
+		}
+	} else {
+		for _, to := range eventPolicy.Spec.To {
+			if to.Ref != nil {
+				toGV, err := schema.ParseGroupVersion(to.Ref.APIVersion)
+				if err != nil {
+					return nil, fmt.Errorf("could not parse group version of %q: %w", to.Ref.APIVersion, err)
+				}
+
+				if strings.EqualFold(toGV.Group, gk.Group) &&
+					strings.EqualFold(to.Ref.Kind, gk.Kind) {
+
+					applyingResources[to.Ref.Name] = struct{}{}
+				}
+			}
+
+			if to.Selector != nil {
+				selectorGV, err := schema.ParseGroupVersion(to.Selector.APIVersion)
+				if err != nil {
+					return nil, fmt.Errorf("could not parse group version of %q: %w", to.Selector.APIVersion, err)
+				}
+
+				if strings.EqualFold(selectorGV.Group, gk.Group) &&
+					strings.EqualFold(to.Selector.Kind, gk.Kind) {
+
+					selector, err := metav1.LabelSelectorAsSelector(to.Selector.LabelSelector)
+					if err != nil {
+						return nil, fmt.Errorf("could not parse label selector %v: %w", to.Selector.LabelSelector, err)
+					}
+
+					err = cache.ListAllByNamespace(gkIndexer, eventPolicy.Namespace, selector, func(i interface{}) {
+						name := i.(metav1.Object).GetName()
+						applyingResources[name] = struct{}{}
+					})
+					if err != nil {
+						return nil, fmt.Errorf("could not list resources of GK in %q namespace for selector %v: %w", eventPolicy.Namespace, selector, err)
+					}
+				}
+			}
+		}
+	}
+
+	res := []string{}
+	for name := range applyingResources {
+		res = append(res, name)
+	}
+	return res, nil
+}
+
 // ResolveSubjects returns the OIDC service accounts names for the objects referenced in the EventPolicySpecFrom.
 func ResolveSubjects(resolver *resolver.AuthenticatableResolver, eventPolicy *v1alpha1.EventPolicy) ([]string, error) {
 	allSAs := []string{}
@@ -144,4 +212,78 @@ func SubjectContained(sub string, allowedSubs []string) bool {
 	}
 
 	return false
+}
+
+func handleApplyingResourcesOfEventPolicy(eventPolicy *v1alpha1.EventPolicy, gk schema.GroupKind, indexer cache.Indexer, handlerFn func(key types.NamespacedName) error) error {
+	applyingResources, err := GetApplyingResourcesOfEventPolicyForGK(eventPolicy, gk, indexer)
+	if err != nil {
+		return fmt.Errorf("could not get applying resources of eventpolicy: %w", err)
+	}
+
+	for _, resourceName := range applyingResources {
+		err := handlerFn(types.NamespacedName{
+			Namespace: eventPolicy.Namespace,
+			Name:      resourceName,
+		})
+
+		if err != nil {
+			return fmt.Errorf("could not handle resource %q: %w", resourceName, err)
+		}
+	}
+
+	return nil
+}
+
+// EventPolicyEventHandler returns an ResourceEventHandler, which passes the referencing resources of the EventPolicy
+// to the enqueueFn if the EventPolicy was referencing or got updated and now is referencing the resource of the given GVK.
+func EventPolicyEventHandler(indexer cache.Indexer, gk schema.GroupKind, enqueueFn func(key types.NamespacedName)) cache.ResourceEventHandler {
+	return cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			eventPolicy, ok := obj.(*v1alpha1.EventPolicy)
+			if !ok {
+				return
+			}
+
+			handleApplyingResourcesOfEventPolicy(eventPolicy, gk, indexer, func(key types.NamespacedName) error {
+				enqueueFn(key)
+				return nil
+			})
+		},
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			// Here we need to check if the old or the new EventPolicy was referencing the given GVK
+			oldEventPolicy, ok := oldObj.(*v1alpha1.EventPolicy)
+			if !ok {
+				return
+			}
+			newEventPolicy, ok := newObj.(*v1alpha1.EventPolicy)
+			if !ok {
+				return
+			}
+
+			// make sure, we handle the keys only once
+			toHandle := map[types.NamespacedName]struct{}{}
+			addToHandleList := func(key types.NamespacedName) error {
+				toHandle[key] = struct{}{}
+				return nil
+			}
+
+			handleApplyingResourcesOfEventPolicy(oldEventPolicy, gk, indexer, addToHandleList)
+			handleApplyingResourcesOfEventPolicy(newEventPolicy, gk, indexer, addToHandleList)
+
+			for k := range toHandle {
+				enqueueFn(k)
+			}
+		},
+		DeleteFunc: func(obj interface{}) {
+			eventPolicy, ok := obj.(*v1alpha1.EventPolicy)
+			if !ok {
+				return
+			}
+
+			handleApplyingResourcesOfEventPolicy(eventPolicy, gk, indexer, func(key types.NamespacedName) error {
+				enqueueFn(key)
+				return nil
+			})
+		},
+	}
 }

@@ -18,8 +18,11 @@ package auth
 
 import (
 	"context"
+	"reflect"
 	"strings"
 	"testing"
+
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/google/go-cmp/cmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -30,6 +33,7 @@ import (
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/eventing/pkg/client/clientset/versioned/scheme"
+	brokerinformerfake "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/broker/fake"
 	eventpolicyinformerfake "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventpolicy/fake"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/authstatus"
@@ -762,5 +766,371 @@ func TestSubjectContained(t *testing.T) {
 				t.Errorf("SubjectContained(%q, '%v') = %v, want %v", tt.sub, tt.allowedSubs, got, tt.want)
 			}
 		})
+	}
+}
+
+func TestGetApplyingResourcesOfEventPolicyForGK(t *testing.T) {
+	tests := []struct {
+		name              string
+		eventPolicySpecTo []v1alpha1.EventPolicySpecTo
+		gk                schema.GroupKind
+		brokerObjects     []*eventingv1.Broker
+		want              []string
+		wantErr           bool
+	}{
+		{
+			name: "Returns resource from direct reference",
+			eventPolicySpecTo: []v1alpha1.EventPolicySpecTo{
+				{
+					Ref: &v1alpha1.EventPolicyToReference{
+						APIVersion: eventingv1.SchemeGroupVersion.String(),
+						Kind:       "Broker",
+						Name:       "my-broker",
+					},
+				},
+			},
+			gk: schema.GroupKind{
+				Group: "eventing.knative.dev",
+				Kind:  "Broker",
+			},
+			brokerObjects: []*eventingv1.Broker{}, //for a direct reference, we don't need the indexer later
+			want: []string{
+				"my-broker",
+			},
+		}, {
+			name: "Ignores resources of other Group&Kind in direct reference",
+			eventPolicySpecTo: []v1alpha1.EventPolicySpecTo{
+				{
+					Ref: &v1alpha1.EventPolicyToReference{
+						APIVersion: eventingv1.SchemeGroupVersion.String(),
+						Kind:       "Broker",
+						Name:       "my-broker",
+					},
+				}, {
+					Ref: &v1alpha1.EventPolicyToReference{
+						APIVersion: eventingv1.SchemeGroupVersion.String(),
+						Kind:       "Another-Kind",
+						Name:       "another-res",
+					},
+				},
+			},
+			gk: schema.GroupKind{
+				Group: "eventing.knative.dev",
+				Kind:  "Broker",
+			},
+			brokerObjects: []*eventingv1.Broker{},
+			want: []string{
+				"my-broker",
+			},
+		}, {
+			name: "Returns object which match selector",
+			eventPolicySpecTo: []v1alpha1.EventPolicySpecTo{
+				{
+					Selector: &v1alpha1.EventPolicySelector{
+						LabelSelector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								"key": "value",
+							},
+						},
+						TypeMeta: &metav1.TypeMeta{
+							APIVersion: eventingv1.SchemeGroupVersion.String(),
+							Kind:       "Broker",
+						},
+					},
+				},
+			},
+			gk: schema.GroupKind{
+				Group: "eventing.knative.dev",
+				Kind:  "Broker",
+			},
+			brokerObjects: []*eventingv1.Broker{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "my-broker",
+						Namespace: "my-ns",
+						Labels: map[string]string{
+							"key": "value",
+						},
+					},
+				}, {
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "my-other-broker",
+						Namespace: "my-ns",
+						Labels: map[string]string{
+							"other-key": "other-value",
+						},
+					},
+				},
+			},
+			want: []string{
+				"my-broker",
+			},
+		}, {
+			name: "Checks on GKs on selector match",
+			eventPolicySpecTo: []v1alpha1.EventPolicySpecTo{
+				{
+					Selector: &v1alpha1.EventPolicySelector{
+						LabelSelector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								"key": "value",
+							},
+						},
+						TypeMeta: &metav1.TypeMeta{
+							APIVersion: eventingv1.SchemeGroupVersion.String(),
+							Kind:       "Broker",
+						},
+					},
+				},
+			},
+			gk: schema.GroupKind{
+				Group: "eventing.knative.dev",
+				Kind:  "Other-Kind",
+			},
+			brokerObjects: []*eventingv1.Broker{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "my-broker",
+						Namespace: "my-ns",
+						Labels: map[string]string{
+							"key": "value",
+						},
+					},
+				},
+			},
+			want: []string{},
+		}, {
+			name:              "Empty .spec.to matches everything in namespace",
+			eventPolicySpecTo: nil,
+			gk: schema.GroupKind{
+				Group: "eventing.knative.dev",
+				Kind:  "Broker",
+			},
+			brokerObjects: []*eventingv1.Broker{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "my-broker",
+						Namespace: "my-ns",
+						Labels: map[string]string{
+							"key": "value",
+						},
+					},
+				},
+			},
+			want: []string{
+				"my-broker",
+			},
+		}, {
+			name: "Returns elements only once in slice",
+			eventPolicySpecTo: []v1alpha1.EventPolicySpecTo{
+				{
+					Ref: &v1alpha1.EventPolicyToReference{
+						APIVersion: eventingv1.SchemeGroupVersion.String(),
+						Kind:       "Broker",
+						Name:       "my-broker",
+					},
+				},
+				{
+					Selector: &v1alpha1.EventPolicySelector{
+						LabelSelector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								"key": "value",
+							},
+						},
+						TypeMeta: &metav1.TypeMeta{
+							APIVersion: eventingv1.SchemeGroupVersion.String(),
+							Kind:       "Broker",
+						},
+					},
+				},
+			},
+			gk: schema.GroupKind{
+				Group: "eventing.knative.dev",
+				Kind:  "Broker",
+			},
+			brokerObjects: []*eventingv1.Broker{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "my-broker",
+						Namespace: "my-ns",
+						Labels: map[string]string{
+							"key": "value",
+						},
+					},
+				},
+			},
+			want: []string{
+				"my-broker",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx, _ := reconcilertesting.SetupFakeContext(t)
+
+			brokerIndexer := brokerinformerfake.Get(ctx).Informer().GetIndexer()
+			for _, b := range tt.brokerObjects {
+				err := brokerIndexer.Add(b)
+				if err != nil {
+					t.Fatalf("could not add broker object to indexer: %v", err)
+				}
+			}
+
+			eventPolicy := &v1alpha1.EventPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-policy",
+					Namespace: "my-ns",
+				},
+				Spec: v1alpha1.EventPolicySpec{
+					To: tt.eventPolicySpecTo,
+				},
+			}
+
+			got, err := GetApplyingResourcesOfEventPolicyForGK(eventPolicy, tt.gk, brokerIndexer)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("GetApplyingResourcesOfEventPolicyForGK() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetApplyingResourcesOfEventPolicyForGK() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestEventPolicyEventHandler_AddAndDelete(t *testing.T) {
+	eventPolicy := &v1alpha1.EventPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "my-policy",
+			Namespace: "my-ns",
+		},
+		Spec: v1alpha1.EventPolicySpec{
+			To: []v1alpha1.EventPolicySpecTo{
+				{
+					Ref: &v1alpha1.EventPolicyToReference{
+						APIVersion: eventingv1.SchemeGroupVersion.String(),
+						Kind:       "Broker",
+						Name:       "my-broker",
+					},
+				},
+			},
+		},
+	}
+
+	gk := schema.GroupKind{
+		Group: eventingv1.SchemeGroupVersion.Group,
+		Kind:  "Broker",
+	}
+
+	wantCalls := []string{
+		"my-broker",
+	}
+
+	calls := map[string]int{}
+	callbackFn := func(key types.NamespacedName) {
+		calls[key.Name]++
+	}
+
+	handler := EventPolicyEventHandler(nil, gk, callbackFn)
+	handler.OnAdd(eventPolicy, false)
+
+	if len(calls) != len(wantCalls) {
+		t.Errorf("EventPolicyEventHandler() callback in ADD was called on wrong resources. Want to be called on %v, but was called on %v", wantCalls, calls)
+	}
+	for _, wantCallForResource := range wantCalls {
+		num, ok := calls[wantCallForResource]
+		if !ok {
+			t.Errorf("EventPolicyEventHandler() callback in ADD was called on %s 0 times. Expected to be called only once", wantCallForResource)
+		}
+
+		if num != 1 {
+			t.Errorf("EventPolicyEventHandler() callback in ADD was called on %s %d times. Expected to be called only once", wantCallForResource, num)
+		}
+	}
+
+	// do the same for OnDelete
+	calls = map[string]int{}
+	handler.OnDelete(eventPolicy)
+
+	if len(calls) != len(wantCalls) {
+		t.Errorf("EventPolicyEventHandler() callback in DELETE was called on wrong resources. Want to be called on %v, but was called on %v", wantCalls, calls)
+	}
+	for _, wantCallForResource := range wantCalls {
+		num, ok := calls[wantCallForResource]
+		if !ok {
+			t.Errorf("EventPolicyEventHandler() callback in DELETE was called on %s 0 times. Expected to be called only once", wantCallForResource)
+		}
+
+		if num != 1 {
+			t.Errorf("EventPolicyEventHandler() callback in DELETE was called on %s %d times. Expected to be called only once", wantCallForResource, num)
+		}
+	}
+
+}
+
+func TestEventPolicyEventHandler_Update(t *testing.T) {
+	oldEventPolicy := &v1alpha1.EventPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "my-policy",
+			Namespace: "my-ns",
+		},
+		Spec: v1alpha1.EventPolicySpec{
+			To: []v1alpha1.EventPolicySpecTo{
+				{
+					Ref: &v1alpha1.EventPolicyToReference{
+						APIVersion: eventingv1.SchemeGroupVersion.String(),
+						Kind:       "Broker",
+						Name:       "my-broker",
+					},
+				},
+			},
+		},
+	}
+	newEventPolicy := &v1alpha1.EventPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "my-policy",
+			Namespace: "my-ns",
+		},
+		Spec: v1alpha1.EventPolicySpec{
+			To: []v1alpha1.EventPolicySpecTo{
+				{
+					Ref: &v1alpha1.EventPolicyToReference{
+						APIVersion: eventingv1.SchemeGroupVersion.String(),
+						Kind:       "Broker",
+						Name:       "my-broker",
+					},
+				},
+			},
+		},
+	}
+
+	gk := schema.GroupKind{
+		Group: eventingv1.SchemeGroupVersion.Group,
+		Kind:  "Broker",
+	}
+
+	wantCalls := []string{
+		"my-broker",
+	}
+
+	calls := map[string]int{}
+	callbackFn := func(key types.NamespacedName) {
+		calls[key.Name]++
+	}
+
+	handler := EventPolicyEventHandler(nil, gk, callbackFn)
+	handler.OnUpdate(oldEventPolicy, newEventPolicy)
+
+	if len(calls) != len(wantCalls) {
+		t.Errorf("EventPolicyEventHandler() callback in UPDATE was called on wrong resources. Want to be called on %v, but was called on %v", wantCalls, calls)
+	}
+	for _, wantCallForResource := range wantCalls {
+		num, ok := calls[wantCallForResource]
+		if !ok {
+			t.Errorf("EventPolicyEventHandler() callback in UPDATE was called on %s 0 times. Expected to be called only once", wantCallForResource)
+		}
+
+		if num != 1 {
+			t.Errorf("EventPolicyEventHandler() callback in UPDATE was called on %s %d times. Expected to be called only once", wantCallForResource, num)
+		}
 	}
 }
