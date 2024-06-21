@@ -31,7 +31,7 @@ import (
 func TestStatsReporter(t *testing.T) {
 	setup()
 	args := &ReportArgs{
-		Ns:         "testns",
+		ns:         "testns",
 		trigger:    "testtrigger",
 		broker:     "testbroker",
 		filterType: "testeventtype",
@@ -96,7 +96,7 @@ func TestReporterEmptySourceAndTypeFilter(t *testing.T) {
 	setup()
 
 	args := &ReportArgs{
-		Ns:            "testns",
+		ns:            "testns",
 		trigger:       "testtrigger",
 		broker:        "testbroker",
 		filterType:    "",
