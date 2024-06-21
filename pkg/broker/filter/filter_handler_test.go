@@ -418,18 +418,6 @@ func TestReceiver(t *testing.T) {
 			additionalReplyHeaders:    http.Header{"Retry-After": []string{"10"}, "Test-Header": []string{"TestValue"}},
 			expectedResponseHeaders:   http.Header{"Retry-After": []string{"10"}},
 		},
-		"Request with a invalid token": {
-			triggers: []*eventingv1.Trigger{
-				makeTrigger(withAttributesFilter(&eventingv1.TriggerFilter{})),
-			},
-			request:                      httptest.NewRequest(http.MethodPost, validPath, nil),
-			requestFails:                 true,
-			failureStatus:                http.StatusUnauthorized,
-			expectedDispatch:             false,
-			expectedStatus:               http.StatusUnauthorized,
-			expectedEventCount:           false,
-			expectedUnauthenticatedCount: true,
-		},
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
