@@ -29,6 +29,7 @@ import (
 	"go.uber.org/zap"
 	"k8s.io/client-go/rest"
 	"knative.dev/eventing/pkg/apis/feature"
+	"knative.dev/eventing/pkg/broker/filter"
 	"knative.dev/pkg/injection"
 	"knative.dev/pkg/logging"
 )
@@ -43,9 +44,10 @@ var (
 )
 
 type OIDCTokenVerifier struct {
-	logger     *zap.SugaredLogger
-	restConfig *rest.Config
-	provider   *oidc.Provider
+	logger        *zap.SugaredLogger
+	restConfig    *rest.Config
+	provider      *oidc.Provider
+	statsReporter filter.StatsReporter
 }
 
 type IDToken struct {
@@ -57,10 +59,11 @@ type IDToken struct {
 	AccessTokenHash string
 }
 
-func NewOIDCTokenVerifier(ctx context.Context) *OIDCTokenVerifier {
+func NewOIDCTokenVerifier(ctx context.Context, statsReporter filter.StatsReporter) *OIDCTokenVerifier {
 	tokenHandler := &OIDCTokenVerifier{
-		logger:     logging.FromContext(ctx).With("component", "oidc-token-handler"),
-		restConfig: injection.GetConfig(ctx),
+		logger:        logging.FromContext(ctx).With("component", "oidc-token-handler"),
+		restConfig:    injection.GetConfig(ctx),
+		statsReporter: statsReporter,
 	}
 
 	if err := tokenHandler.initOIDCProvider(ctx); err != nil {
@@ -158,10 +161,16 @@ func (c *OIDCTokenVerifier) getKubernetesOIDCDiscovery() (*openIDMetadata, error
 }
 
 // VerifyJWTFromRequest will verify the incoming request contains the correct JWT token
-func (tokenVerifier *OIDCTokenVerifier) VerifyJWTFromRequest(ctx context.Context, r *http.Request, audience *string, response http.ResponseWriter) error {
+func (tokenVerifier *OIDCTokenVerifier) VerifyJWTFromRequest(ctx context.Context, r *http.Request, audience *string, response http.ResponseWriter, reportArgs *filter.ReportArgs) error {
 	token := GetJWTFromHeader(r.Header)
+
 	if token == "" {
 		response.WriteHeader(http.StatusUnauthorized)
+
+		if tokenVerifier.statsReporter != nil {
+			tokenVerifier.statsReporter.ReportUnauthenticatedRequest(reportArgs)
+		}
+
 		return fmt.Errorf("no JWT token found in request")
 	}
 
@@ -172,6 +181,10 @@ func (tokenVerifier *OIDCTokenVerifier) VerifyJWTFromRequest(ctx context.Context
 
 	if _, err := tokenVerifier.VerifyJWT(ctx, token, *audience); err != nil {
 		response.WriteHeader(http.StatusUnauthorized)
+
+		if tokenVerifier.statsReporter != nil {
+			tokenVerifier.statsReporter.ReportInvalidTokenRequest(reportArgs)
+		}
 		return fmt.Errorf("failed to verify JWT: %w", err)
 	}
 

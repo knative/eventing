@@ -117,7 +117,7 @@ func main() {
 		k8s:               kubeclient.Get(ctx),
 		lister:            jobsink.Get(ctx).Lister(),
 		withContext:       ctxFunc,
-		oidcTokenVerifier: auth.NewOIDCTokenVerifier(ctx),
+		oidcTokenVerifier: auth.NewOIDCTokenVerifier(ctx, nil),
 	}
 
 	tlsConfig, err := getServerTLSConfig(ctx)
@@ -201,7 +201,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		audience := auth.GetAudienceDirect(sinksv.SchemeGroupVersion.WithKind("JobSink"), ref.Namespace, ref.Name)
 
-		err := h.oidcTokenVerifier.VerifyJWTFromRequest(ctx, r, &audience, w)
+		err := h.oidcTokenVerifier.VerifyJWTFromRequest(ctx, r, &audience, w, nil)
 		if err != nil {
 			logger.Warn("Error when validating the JWT token in the request", zap.Error(err))
 			return
@@ -382,7 +382,7 @@ func (h *Handler) handleGet(ctx context.Context, w http.ResponseWriter, r *http.
 
 		audience := auth.GetAudienceDirect(sinksv.SchemeGroupVersion.WithKind("JobSink"), ref.Namespace, ref.Name)
 
-		err := h.oidcTokenVerifier.VerifyJWTFromRequest(ctx, r, &audience, w)
+		err := h.oidcTokenVerifier.VerifyJWTFromRequest(ctx, r, &audience, w, nil)
 		if err != nil {
 			logger.Warn("Error when validating the JWT token in the request", zap.Error(err))
 			return
