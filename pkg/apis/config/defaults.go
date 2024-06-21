@@ -68,6 +68,58 @@ func NewDefaultsConfigFromConfigMap(config *corev1.ConfigMap) (*Defaults, error)
 	return NewDefaultsConfigFromMap(config.Data)
 }
 
+/*
+The priority precedence for determining the broker class and configuration is as follows:
+
+1. If a specific broker class is provided:
+   a. Check namespace-specific configuration for the given broker class
+   b. If not found, check cluster-wide configuration for the given broker class
+   c. If still not found, use the cluster-wide default configuration
+
+2. If no specific broker class is provided:
+   a. Check namespace-specific default broker class
+   b. If found, use its configuration (following step 1)
+   c. If not found, use cluster-wide default broker class and configuration
+
+3. If no default cluster configuration is set, return an error
+
+This can be represented as a flow chart:
+
+                    Start
+                      |
+                      v
+          Is broker class provided?
+                 /            \
+               Yes            No
+               /                \
+   Check namespace config    Check namespace
+   for provided class        default class
+         |                        |
+         v                        v
+    Found?                    Found?
+     /    \                    /    \
+   Yes    No                 Yes    No
+   |       |                 |       |
+   |       |                 |       |
+   |       v                 |       v
+   |   Check cluster         |   Use cluster
+   |   config for class      |   default class
+   |       |                 |   and config
+   |       v                 |
+   |    Found?               |
+   |    /    \               |
+   |  Yes    No              |
+   |   |      |              |
+   |   |      v              |
+   |   |   Use cluster       |
+   |   |   default config    |
+   v   v                     v
+ Use found configuration
+
+The system prioritizes namespace-specific configurations over cluster-wide defaults,
+and explicitly provided broker classes over default classes.
+*/
+
 // Defaults includes the default values to be populated by the webhook.
 type Defaults struct {
 	// NamespaceDefaultsConfig are the default Broker Configs for each namespace.
@@ -87,7 +139,7 @@ type DefaultConfig struct {
 	DefaultBrokerClass string `json:"brokerClass,omitempty"`
 	*BrokerConfig      `json:",inline"`
 
-	// Optional: BrokerClasses are the default broker classes' config for the whole cluster
+	// Optional: BrokerClasses are the default broker classes' config. The key is the broker class name, and the value is the config for that broker class.
 	BrokerClasses map[string]*BrokerConfig `json:"brokerClasses,omitempty"`
 
 	DisallowDifferentNamespaceConfig *bool `json:"disallowDifferentNamespaceConfig,omitempty"`
@@ -117,8 +169,8 @@ func (d *Defaults) GetBrokerConfig(ns string, brokerClassName *string) (*BrokerC
 	return d.getBrokerConfigForEmptyClassName(ns)
 }
 
-//  getBrokerConfigByClassName returns the BrokerConfig for the given brokerClassName.
-//  It first checks the namespace specific configuration, then the cluster default configuration.
+// getBrokerConfigByClassName returns the BrokerConfig for the given brokerClassName.
+// It first checks the namespace specific configuration, then the cluster default configuration.
 func (d *Defaults) getBrokerConfigByClassName(ns string, brokerClassName string) (*BrokerConfig, error) {
 	// Check namespace specific configuration
 	if nsConfig, ok := d.NamespaceDefaultsConfig[ns]; ok && nsConfig != nil {
