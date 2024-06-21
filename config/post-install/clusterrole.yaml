@@ -110,6 +110,19 @@ rules:
       - "patch"
       - "watch"
   - apiGroups:
+      - "sinks.knative.dev"
+    resources:
+      - "jobsinks"
+      - "jobsinks/finalizers"
+      - "jobsinks/status"
+    verbs:
+      - "get"
+      - "list"
+      - "create"
+      - "update"
+      - "patch"
+      - "watch"
+  - apiGroups:
       - ""
     resources:
       - "namespaces"
