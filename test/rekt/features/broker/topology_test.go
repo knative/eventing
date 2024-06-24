@@ -399,7 +399,7 @@ func TestCreateExpectedEventDeliveryMap(t *testing.T) {
 		},
 		want: map[string][]conformanceevent.Event{},
 	}, {
-		name: "Two triggers, matches the second one (t0), not first (t0)",
+		name: "Two triggers, matches the second one (t1), not first (t0)",
 		inevents: []conformanceevent.Event{
 			{
 				Attributes: conformanceevent.ContextAttributes{
@@ -424,7 +424,7 @@ func TestCreateExpectedEventDeliveryMap(t *testing.T) {
 			},
 		},
 		want: map[string][]conformanceevent.Event{
-			"t0": {
+			"t1": {
 				{
 					Attributes: conformanceevent.ContextAttributes{
 						Type: "eventtype",
