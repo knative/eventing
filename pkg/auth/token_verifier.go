@@ -29,7 +29,6 @@ import (
 	"go.uber.org/zap"
 	"k8s.io/client-go/rest"
 	"knative.dev/eventing/pkg/apis/feature"
-	"knative.dev/eventing/pkg/broker/filter"
 	"knative.dev/pkg/injection"
 	"knative.dev/pkg/logging"
 )
@@ -47,7 +46,7 @@ type OIDCTokenVerifier struct {
 	logger        *zap.SugaredLogger
 	restConfig    *rest.Config
 	provider      *oidc.Provider
-	statsReporter filter.StatsReporter
+	statsReporter AuthStatsReporter
 }
 
 type IDToken struct {
@@ -59,15 +58,42 @@ type IDToken struct {
 	AccessTokenHash string
 }
 
-func NewOIDCTokenVerifier(ctx context.Context, statsReporter filter.StatsReporter) *OIDCTokenVerifier {
+type AuthStatsReporter interface {
+	ReportUnauthenticatedRequest(args *ReportArgs)
+	ReportInvalidTokenRequest(args *ReportArgs)
+}
+
+type ReportArgs struct {
+	Ns            string
+	Trigger       string
+	Broker        string
+	Channel       string
+	FilterType    string
+	RequestType   string
+	RequestScheme string
+}
+
+// TokenVeridierOption enables further configuration of a TokenVerifier.
+type TokenVerifierOption func(*OIDCTokenVerifier)
+
+func WithStatsReporter(reporter AuthStatsReporter) TokenVerifierOption {
+	return func(t *OIDCTokenVerifier) {
+		t.statsReporter = reporter
+	}
+}
+
+func NewOIDCTokenVerifier(ctx context.Context, o ...TokenVerifierOption) *OIDCTokenVerifier {
 	tokenHandler := &OIDCTokenVerifier{
-		logger:        logging.FromContext(ctx).With("component", "oidc-token-handler"),
-		restConfig:    injection.GetConfig(ctx),
-		statsReporter: statsReporter,
+		logger:     logging.FromContext(ctx).With("component", "oidc-token-handler"),
+		restConfig: injection.GetConfig(ctx),
 	}
 
 	if err := tokenHandler.initOIDCProvider(ctx); err != nil {
 		tokenHandler.logger.Error(fmt.Sprintf("could not initialize provider. You can ignore this message, when the %s feature is disabled", feature.OIDCAuthentication), zap.Error(err))
+	}
+
+	for _, opt := range o {
+		opt(tokenHandler)
 	}
 
 	return tokenHandler
@@ -161,7 +187,7 @@ func (c *OIDCTokenVerifier) getKubernetesOIDCDiscovery() (*openIDMetadata, error
 }
 
 // VerifyJWTFromRequest will verify the incoming request contains the correct JWT token
-func (tokenVerifier *OIDCTokenVerifier) VerifyJWTFromRequest(ctx context.Context, r *http.Request, audience *string, response http.ResponseWriter, reportArgs *filter.ReportArgs) error {
+func (tokenVerifier *OIDCTokenVerifier) VerifyJWTFromRequest(ctx context.Context, r *http.Request, audience *string, response http.ResponseWriter, reportArgs *ReportArgs) error {
 	token := GetJWTFromHeader(r.Header)
 
 	if token == "" {
