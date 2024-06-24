@@ -1,0 +1,69 @@
+# Copyright 2020 The Knative Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: eventing.knative.dev/v1alpha1
+kind: EventPolicy
+metadata:
+  name: {{ .name }}
+  namespace: {{ .namespace }}
+spec:
+  {{ if .to }}
+  to:
+  {{ range $to := .to }}
+    {{ if $to.ref }}
+    - ref:
+        apiVersion: {{ $to.ref.apiVersion }}
+        kind: {{ $to.ref.kind }}
+        name: {{ $to.ref.name }}
+    {{ end }} #end if $to.ref
+
+    {{ if $to.selector }}
+    - selector:
+        apiVersion: {{ $to.selector.apiVersion }}
+        kind: {{ $to.selector.kind }}
+        {{ if $to.selector.matchLabels }}
+        matchLabels:
+          {{ range $key, $value := $to.selector.matchLabels }}
+          {{ $key }}: {{ $value }}
+          {{ end }}
+        {{ end }} #end if to.matchLabels
+
+        {{ if $to.selector.matchExpressions }}
+        matchExpressions:
+          {{ range $expr := $to.selector.matchExpressions }}
+          - key: {{ $expr.key }}
+            operator: {{ $expr.operator }}
+            values:
+            {{ range $exprValue := $expr.values }}
+            - {{ $exprValue }}
+            {{ end }}
+          {{ end }} #end matchExpressions range
+        {{ end }} # end if matchExpressions
+      {{ end }} #end if $to.selector
+    {{ end }} #end "range $to"
+  {{ end }} #end "if .to"
+
+  from:
+  {{ range $from := .from }}
+    {{ if $from.ref }}
+    - ref:
+        apiVersion: {{ $from.ref.apiVersion }}
+        kind: {{ $from.ref.kind }}
+        name: {{ $from.ref.name }}
+        namespace: {{ $from.ref.namespace }}
+    {{ end }}
+    {{ if $from.sub }}
+    - sub: {{ $from.sub }}
+    {{ end }}
+  {{ end }}
