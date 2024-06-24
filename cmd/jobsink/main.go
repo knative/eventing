@@ -117,7 +117,7 @@ func main() {
 		k8s:               kubeclient.Get(ctx),
 		lister:            jobsink.Get(ctx).Lister(),
 		withContext:       ctxFunc,
-		oidcTokenVerifier: auth.NewOIDCTokenVerifier(ctx, nil),
+		oidcTokenVerifier: auth.NewOIDCTokenVerifier(ctx),
 	}
 
 	tlsConfig, err := getServerTLSConfig(ctx)

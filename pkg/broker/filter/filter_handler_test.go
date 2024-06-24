@@ -645,7 +645,7 @@ func TestReceiver_WithSubscriptionsAPI(t *testing.T) {
 
 			logger := zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller()))
 			oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
-			oidcTokenVerifier := auth.NewOIDCTokenVerifier(ctx, nil)
+			oidcTokenVerifier := auth.NewOIDCTokenVerifier(ctx)
 
 			// Replace the SubscriberURI to point at our fake server.
 			for _, trig := range tc.triggers {
