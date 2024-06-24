@@ -66,23 +66,28 @@ func WithUnreadyEventPolicyCondition(ep *v1alpha1.EventPolicy) {
 	}
 }
 
-func WithEventPolicyTo(tos ...v1alpha1.EventPolicySpecTo) EventPolicyOption {
-	return func(ep *v1alpha1.EventPolicy) {
-		ep.Spec.To = append(ep.Spec.To, tos...)
-	}
-}
-
-func WithEventPolicyToRef(ref v1alpha1.EventPolicyToReference) EventPolicyOption {
+func WithEventPolicyToRef(gvk metav1.GroupVersionKind, name string) EventPolicyOption {
 	return func(ep *v1alpha1.EventPolicy) {
 		ep.Spec.To = append(ep.Spec.To, v1alpha1.EventPolicySpecTo{
-			Ref: &ref,
+			Ref: &v1alpha1.EventPolicyToReference{
+				APIVersion: apiVersion(gvk),
+				Kind:       gvk.Kind,
+				Name:       name,
+			},
 		})
 	}
 }
 
-func WithEventPolicyFrom(froms ...v1alpha1.EventPolicySpecFrom) EventPolicyOption {
+func WithEventPolicyFrom(gvk metav1.GroupVersionKind, name, namespace string) EventPolicyOption {
 	return func(ep *v1alpha1.EventPolicy) {
-		ep.Spec.From = append(ep.Spec.From, froms...)
+		ep.Spec.From = append(ep.Spec.From, v1alpha1.EventPolicySpecFrom{
+			Ref: &v1alpha1.EventPolicyFromReference{
+				APIVersion: apiVersion(gvk),
+				Kind:       gvk.Kind,
+				Name:       name,
+				Namespace:  namespace,
+			},
+		})
 	}
 }
 
@@ -92,10 +97,8 @@ func WithEventPolicyLabels(labels map[string]string) EventPolicyOption {
 	}
 }
 
-func WithEventPolicyOwnerReference(ownerRef metav1.OwnerReference) EventPolicyOption {
+func WithEventPolicyOwnerReferences(ownerRefs ...metav1.OwnerReference) EventPolicyOption {
 	return func(ep *v1alpha1.EventPolicy) {
-		ep.ObjectMeta.OwnerReferences = []metav1.OwnerReference{
-			ownerRef,
-		}
+		ep.ObjectMeta.OwnerReferences = append(ep.ObjectMeta.OwnerReferences, ownerRefs...)
 	}
 }

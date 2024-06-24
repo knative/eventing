@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"testing"
 
+	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -26,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	clientgotesting "k8s.io/client-go/testing"
 	"k8s.io/utils/pointer"
+	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	v1addr "knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
@@ -38,7 +41,6 @@ import (
 	"knative.dev/pkg/tracker"
 
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
-	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
 	channelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/channel"
 	"knative.dev/eventing/pkg/duck"
@@ -48,6 +50,9 @@ import (
 const (
 	testNS      = "test-namespace"
 	channelName = "test-channel"
+
+	readyEventPolicyName   = "test-event-policy-ready"
+	unreadyEventPolicyName = "test-event-policy-unready"
 )
 
 var (
@@ -60,6 +65,18 @@ var (
 	backingChannelAddressable = duckv1.Addressable{
 		Name: pointer.String("http"),
 		URL:  apis.HTTP(network.GetServiceHostname("foo", "bar")),
+	}
+
+	channelV1GVK = metav1.GroupVersionKind{
+		Group:   "messaging.knative.dev",
+		Version: "v1",
+		Kind:    "Channel",
+	}
+
+	imcV1GVK = metav1.GroupVersionKind{
+		Group:   "messaging.knative.dev",
+		Version: "v1",
+		Kind:    "InMemoryChannel",
 	}
 )
 
@@ -145,7 +162,8 @@ func TestReconcile(t *testing.T) {
 				WithBackingChannelObjRef(backingChannelObjRef()),
 				WithBackingChannelReady,
 				WithChannelDLSUnknown(),
-				WithChannelAddress(&backingChannelAddressable)),
+				WithChannelAddress(&backingChannelAddressable),
+				WithChannelEventPoliciesReadyBecauseOIDCDisabled()),
 		}},
 	}, {
 		Name: "Already reconciled",
@@ -157,7 +175,8 @@ func TestReconcile(t *testing.T) {
 				WithBackingChannelObjRef(backingChannelObjRef()),
 				WithBackingChannelReady,
 				WithChannelAddress(&backingChannelAddressable),
-				WithChannelDLSUnknown()),
+				WithChannelDLSUnknown(),
+				WithChannelEventPoliciesReadyBecauseOIDCDisabled()),
 			NewInMemoryChannel(channelName, testNS,
 				WithInitInMemoryChannelConditions,
 				WithInMemoryChannelDeploymentReady(),
@@ -190,7 +209,8 @@ func TestReconcile(t *testing.T) {
 				WithBackingChannelObjRef(backingChannelObjRef()),
 				WithChannelNoAddress(),
 				WithChannelDLSUnknown(),
-				WithBackingChannelUnknown("BackingChannelNotConfigured", "BackingChannel has not yet been reconciled.")),
+				WithBackingChannelUnknown("BackingChannelNotConfigured", "BackingChannel has not yet been reconciled."),
+				WithChannelEventPoliciesReadyBecauseOIDCDisabled()),
 		}},
 	}, {
 		Name: "Backing channel created with delivery",
@@ -240,7 +260,8 @@ func TestReconcile(t *testing.T) {
 				WithChannelNoAddress(),
 				WithChannelDelivery(deliverySpec),
 				WithChannelDLSUnknown(),
-				WithBackingChannelUnknown("BackingChannelNotConfigured", "BackingChannel has not yet been reconciled.")),
+				WithBackingChannelUnknown("BackingChannelNotConfigured", "BackingChannel has not yet been reconciled."),
+				WithChannelEventPoliciesReadyBecauseOIDCDisabled()),
 		}},
 	}, {
 		Name: "Generation Bump",
@@ -274,7 +295,8 @@ func TestReconcile(t *testing.T) {
 				WithChannelAddress(&backingChannelAddressable),
 				WithChannelGeneration(42),
 				// Updates
-				WithChannelObservedGeneration(42)),
+				WithChannelObservedGeneration(42),
+				WithChannelEventPoliciesReadyBecauseOIDCDisabled()),
 		}},
 	}, {
 		Name: "Updating subscribers statuses",
@@ -285,7 +307,8 @@ func TestReconcile(t *testing.T) {
 				WithInitChannelConditions,
 				WithBackingChannelObjRef(backingChannelObjRef()),
 				WithBackingChannelReady,
-				WithChannelAddress(&backingChannelAddressable)),
+				WithChannelAddress(&backingChannelAddressable),
+				WithChannelEventPoliciesReady()),
 			NewInMemoryChannel(channelName, testNS,
 				WithInitInMemoryChannelConditions,
 				WithInMemoryChannelDuckAnnotationV1Beta1,
@@ -307,8 +330,234 @@ func TestReconcile(t *testing.T) {
 				WithBackingChannelReady,
 				WithChannelAddress(&backingChannelAddressable),
 				WithChannelSubscriberStatuses(subscriberStatuses()),
-				WithChannelDLSUnknown()),
+				WithChannelDLSUnknown(),
+				WithChannelEventPoliciesReadyBecauseOIDCDisabled()),
 		}},
+	}, {
+		Name: "Should provision applying EventPolicies",
+		Key:  testKey,
+		Objects: []runtime.Object{
+			NewChannel(channelName, testNS,
+				WithChannelTemplate(channelCRD()),
+				WithInitChannelConditions),
+			NewInMemoryChannel(channelName, testNS,
+				WithInitInMemoryChannelConditions,
+				WithInMemoryChannelDeploymentReady(),
+				WithInMemoryChannelServiceReady(),
+				WithInMemoryChannelEndpointsReady(),
+				WithInMemoryChannelChannelServiceReady(),
+				WithInMemoryChannelAddress(backingChannelAddressable),
+				WithInMemoryChannelDLSUnknown(),
+				WithInMemoryChannelEventPoliciesReady()),
+			NewEventPolicy(readyEventPolicyName, testNS,
+				WithReadyEventPolicyCondition,
+				WithEventPolicyToRef(channelV1GVK, channelName),
+			),
+			NewEventPolicy(fmt.Sprintf("%s-%s", readyEventPolicyName, channelName), testNS,
+				WithEventPolicyToRef(imcV1GVK, channelName),
+				WithEventPolicyOwnerReferences([]metav1.OwnerReference{
+					{
+						APIVersion: v1.SchemeGroupVersion.String(),
+						Kind:       "InMemoryChannel",
+						Name:       channelName,
+					}, {
+						Name: readyEventPolicyName,
+					},
+				}...),
+				WithEventPolicyLabels(map[string]string{
+					"messaging.knative.dev/channel-group":   v1.SchemeGroupVersion.Group,
+					"messaging.knative.dev/channel-version": v1.SchemeGroupVersion.Version,
+					"messaging.knative.dev/channel-kind":    "InMemoryChannel",
+					"messaging.knative.dev/channel-name":    channelName,
+				}),
+			),
+		},
+		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: NewChannel(channelName, testNS,
+				WithChannelTemplate(channelCRD()),
+				WithInitChannelConditions,
+				WithBackingChannelObjRef(backingChannelObjRef()),
+				WithBackingChannelReady,
+				WithChannelDLSUnknown(),
+				WithChannelAddress(&backingChannelAddressable),
+				WithChannelEventPoliciesReady(),
+				WithChannelEventPoliciesListed(readyEventPolicyName)),
+		}},
+	}, {
+		Name: "Should mark as NotReady on unready EventPolicies",
+		Key:  testKey,
+		Objects: []runtime.Object{
+			NewChannel(channelName, testNS,
+				WithChannelTemplate(channelCRD()),
+				WithInitChannelConditions),
+			NewInMemoryChannel(channelName, testNS,
+				WithInitInMemoryChannelConditions,
+				WithInMemoryChannelDeploymentReady(),
+				WithInMemoryChannelServiceReady(),
+				WithInMemoryChannelEndpointsReady(),
+				WithInMemoryChannelChannelServiceReady(),
+				WithInMemoryChannelAddress(backingChannelAddressable),
+				WithInMemoryChannelDLSUnknown(),
+				WithInMemoryChannelEventPoliciesReady()),
+			NewEventPolicy(unreadyEventPolicyName, testNS,
+				WithUnreadyEventPolicyCondition,
+				WithEventPolicyToRef(channelV1GVK, channelName),
+			),
+			NewEventPolicy(fmt.Sprintf("%s-%s", unreadyEventPolicyName, channelName), testNS,
+				WithEventPolicyToRef(imcV1GVK, channelName),
+				WithEventPolicyOwnerReferences([]metav1.OwnerReference{
+					{
+						APIVersion: v1.SchemeGroupVersion.String(),
+						Kind:       "InMemoryChannel",
+						Name:       channelName,
+					}, {
+						Name: unreadyEventPolicyName,
+					},
+				}...),
+				WithEventPolicyLabels(map[string]string{
+					"messaging.knative.dev/channel-group":   v1.SchemeGroupVersion.Group,
+					"messaging.knative.dev/channel-version": v1.SchemeGroupVersion.Version,
+					"messaging.knative.dev/channel-kind":    "InMemoryChannel",
+					"messaging.knative.dev/channel-name":    channelName,
+				}),
+			),
+		},
+		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: NewChannel(channelName, testNS,
+				WithChannelTemplate(channelCRD()),
+				WithInitChannelConditions,
+				WithBackingChannelObjRef(backingChannelObjRef()),
+				WithBackingChannelReady,
+				WithChannelDLSUnknown(),
+				WithChannelAddress(&backingChannelAddressable),
+				WithChannelEventPoliciesNotReady("EventPoliciesNotReady", fmt.Sprintf("event policies %s are not ready", unreadyEventPolicyName))),
+		}},
+	}, {
+		Name: "should list only Ready EventPolicies",
+		Key:  testKey,
+		Objects: []runtime.Object{
+			NewChannel(channelName, testNS,
+				WithChannelTemplate(channelCRD()),
+				WithInitChannelConditions),
+			NewInMemoryChannel(channelName, testNS,
+				WithInitInMemoryChannelConditions,
+				WithInMemoryChannelDeploymentReady(),
+				WithInMemoryChannelServiceReady(),
+				WithInMemoryChannelEndpointsReady(),
+				WithInMemoryChannelChannelServiceReady(),
+				WithInMemoryChannelAddress(backingChannelAddressable),
+				WithInMemoryChannelDLSUnknown(),
+				WithInMemoryChannelEventPoliciesReady()),
+			NewEventPolicy(readyEventPolicyName, testNS,
+				WithReadyEventPolicyCondition,
+				WithEventPolicyToRef(channelV1GVK, channelName),
+			),
+			NewEventPolicy(unreadyEventPolicyName, testNS,
+				WithUnreadyEventPolicyCondition,
+				WithEventPolicyToRef(channelV1GVK, channelName),
+			),
+			NewEventPolicy(fmt.Sprintf("%s-%s", readyEventPolicyName, channelName), testNS,
+				WithEventPolicyToRef(imcV1GVK, channelName),
+				WithEventPolicyOwnerReferences([]metav1.OwnerReference{
+					{
+						APIVersion: v1.SchemeGroupVersion.String(),
+						Kind:       "InMemoryChannel",
+						Name:       channelName,
+					}, {
+						Name: readyEventPolicyName,
+					},
+				}...),
+				WithEventPolicyLabels(map[string]string{
+					"messaging.knative.dev/channel-group":   v1.SchemeGroupVersion.Group,
+					"messaging.knative.dev/channel-version": v1.SchemeGroupVersion.Version,
+					"messaging.knative.dev/channel-kind":    "InMemoryChannel",
+					"messaging.knative.dev/channel-name":    channelName,
+				}),
+			),
+			NewEventPolicy(fmt.Sprintf("%s-%s", unreadyEventPolicyName, channelName), testNS,
+				WithEventPolicyToRef(imcV1GVK, channelName),
+				WithEventPolicyOwnerReferences([]metav1.OwnerReference{
+					{
+						APIVersion: v1.SchemeGroupVersion.String(),
+						Kind:       "InMemoryChannel",
+						Name:       channelName,
+					}, {
+						Name: unreadyEventPolicyName,
+					},
+				}...),
+				WithEventPolicyLabels(map[string]string{
+					"messaging.knative.dev/channel-group":   v1.SchemeGroupVersion.Group,
+					"messaging.knative.dev/channel-version": v1.SchemeGroupVersion.Version,
+					"messaging.knative.dev/channel-kind":    "InMemoryChannel",
+					"messaging.knative.dev/channel-name":    channelName,
+				}),
+			),
+		},
+		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: NewChannel(channelName, testNS,
+				WithChannelTemplate(channelCRD()),
+				WithInitChannelConditions,
+				WithBackingChannelObjRef(backingChannelObjRef()),
+				WithBackingChannelReady,
+				WithChannelDLSUnknown(),
+				WithChannelAddress(&backingChannelAddressable),
+				WithChannelEventPoliciesNotReady("EventPoliciesNotReady", fmt.Sprintf("event policies %s are not ready", unreadyEventPolicyName)),
+				WithChannelEventPoliciesListed(readyEventPolicyName)),
+		}},
+	}, {
+		Name: "should create EventPolicies for backing channel",
+		Key:  testKey,
+		Objects: []runtime.Object{
+			NewChannel(channelName, testNS,
+				WithChannelTemplate(channelCRD()),
+				WithInitChannelConditions,
+				WithChannelEventPoliciesReady(),
+				WithChannelEventPoliciesListed(readyEventPolicyName)),
+			NewInMemoryChannel(channelName, testNS,
+				WithInitInMemoryChannelConditions,
+				WithInMemoryChannelDeploymentReady(),
+				WithInMemoryChannelServiceReady(),
+				WithInMemoryChannelEndpointsReady(),
+				WithInMemoryChannelChannelServiceReady(),
+				WithInMemoryChannelAddress(backingChannelAddressable),
+				WithInMemoryChannelDLSUnknown(),
+				WithInMemoryChannelEventPoliciesReady()),
+			NewEventPolicy(readyEventPolicyName, testNS,
+				WithReadyEventPolicyCondition,
+				WithEventPolicyToRef(channelV1GVK, channelName),
+			),
+		},
+		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: NewChannel(channelName, testNS,
+				WithChannelTemplate(channelCRD()),
+				WithInitChannelConditions,
+				WithBackingChannelObjRef(backingChannelObjRef()),
+				WithBackingChannelReady,
+				WithChannelDLSUnknown(),
+				WithChannelAddress(&backingChannelAddressable),
+				WithChannelEventPoliciesReady(),
+				WithChannelEventPoliciesListed(readyEventPolicyName)),
+		}},
+		WantCreates: []runtime.Object{
+			NewEventPolicy(fmt.Sprintf("%s-%s", readyEventPolicyName, channelName), testNS,
+				WithEventPolicyToRef(imcV1GVK, channelName),
+				WithEventPolicyOwnerReferences([]metav1.OwnerReference{
+					{
+						APIVersion: v1.SchemeGroupVersion.String(),
+						Kind:       "InMemoryChannel",
+						Name:       channelName,
+					}, {
+						Name: readyEventPolicyName,
+					},
+				}...),
+				WithEventPolicyLabels(map[string]string{
+					"messaging.knative.dev/channel-group":   v1.SchemeGroupVersion.Group,
+					"messaging.knative.dev/channel-version": v1.SchemeGroupVersion.Version,
+					"messaging.knative.dev/channel-kind":    "InMemoryChannel",
+					"messaging.knative.dev/channel-name":    channelName,
+				}),
+			),
+		},
 	}}
 
 	logger := logtesting.TestLogger(t)
@@ -319,6 +568,8 @@ func TestReconcile(t *testing.T) {
 			dynamicClientSet:   fakedynamicclient.Get(ctx),
 			channelLister:      listers.GetMessagingChannelLister(),
 			channelableTracker: &fakeListableTracker{duck.NewListableTrackerFromTracker(ctx, channelable.Get, tracker.New(func(types.NamespacedName) {}, 0))},
+			eventPolicyLister:  listers.GetEventPolicyLister(),
+			eventingClientSet:  fakeeventingclient.Get(ctx),
 		}
 		return channelreconciler.NewReconciler(ctx, logger,
 			fakeeventingclient.Get(ctx), listers.GetMessagingChannelLister(),

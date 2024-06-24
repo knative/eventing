@@ -49,7 +49,7 @@ Resource Types:
 <h3 id="duck.knative.dev/v1.AppliedEventPoliciesStatus">AppliedEventPoliciesStatus
 </h3>
 <p>
-(<em>Appears on:</em><a href="#eventing.knative.dev/v1.BrokerStatus">BrokerStatus</a>, <a href="#flows.knative.dev/v1.ParallelStatus">ParallelStatus</a>, <a href="#flows.knative.dev/v1.SequenceStatus">SequenceStatus</a>, <a href="#messaging.knative.dev/v1.InMemoryChannelStatus">InMemoryChannelStatus</a>)
+(<em>Appears on:</em><a href="#duck.knative.dev/v1.ChannelableStatus">ChannelableStatus</a>, <a href="#eventing.knative.dev/v1.BrokerStatus">BrokerStatus</a>, <a href="#flows.knative.dev/v1.ParallelStatus">ParallelStatus</a>, <a href="#flows.knative.dev/v1.SequenceStatus">SequenceStatus</a>)
 </p>
 <p>
 <p>AppliedEventPoliciesStatus contains the list of policies which apply to a resource.
@@ -366,6 +366,23 @@ DeliveryStatus
 <em>(Optional)</em>
 <p>DeliveryStatus contains a resolved URL to the dead letter sink address, and any other
 resolved delivery options.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>AppliedEventPoliciesStatus</code><br/>
+<em>
+<a href="#duck.knative.dev/v1.AppliedEventPoliciesStatus">
+AppliedEventPoliciesStatus
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>AppliedEventPoliciesStatus</code> are embedded into this type.)
+</p>
+<em>(Optional)</em>
+<p>AppliedEventPoliciesStatus contains the list of EventPolicies which apply to this Channel</p>
 </td>
 </tr>
 </tbody>
@@ -5457,23 +5474,6 @@ ChannelableStatus
 (Members of <code>ChannelableStatus</code> are embedded into this type.)
 </p>
 <p>Channel conforms to Duck type ChannelableStatus.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>AppliedEventPoliciesStatus</code><br/>
-<em>
-<a href="#duck.knative.dev/v1.AppliedEventPoliciesStatus">
-AppliedEventPoliciesStatus
-</a>
-</em>
-</td>
-<td>
-<p>
-(Members of <code>AppliedEventPoliciesStatus</code> are embedded into this type.)
-</p>
-<em>(Optional)</em>
-<p>AppliedEventPoliciesStatus contains the list of EventPolicies which apply to this Broker</p>
 </td>
 </tr>
 </tbody>

@@ -22,8 +22,6 @@ import (
 	"strconv"
 	"testing"
 
-	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
@@ -104,6 +102,12 @@ var (
 	dlsStatus = &duckv1.Addressable{
 		URL:     dlsURI,
 		CACerts: nil,
+	}
+
+	imcV1GVK = metav1.GroupVersionKind{
+		Group:   "messaging.knative.dev",
+		Version: "v1",
+		Kind:    "InMemoryChannel",
 	}
 )
 
@@ -659,11 +663,7 @@ func TestAllCases(t *testing.T) {
 				makeChannelService(NewInMemoryChannel(imcName, testNS)),
 				NewEventPolicy(readyEventPolicyName, testNS,
 					WithReadyEventPolicyCondition,
-					WithEventPolicyToRef(v1alpha1.EventPolicyToReference{
-						APIVersion: v1.SchemeGroupVersion.String(),
-						Kind:       "InMemoryChannel",
-						Name:       imcName,
-					}),
+					WithEventPolicyToRef(imcV1GVK, imcName),
 				),
 			},
 			WantErr: false,
@@ -698,11 +698,7 @@ func TestAllCases(t *testing.T) {
 				makeChannelService(NewInMemoryChannel(imcName, testNS)),
 				NewEventPolicy(unreadyEventPolicyName, testNS,
 					WithUnreadyEventPolicyCondition,
-					WithEventPolicyToRef(v1alpha1.EventPolicyToReference{
-						APIVersion: v1.SchemeGroupVersion.String(),
-						Kind:       "InMemoryChannel",
-						Name:       imcName,
-					}),
+					WithEventPolicyToRef(imcV1GVK, imcName),
 				),
 			},
 			WantErr: false,
@@ -736,19 +732,11 @@ func TestAllCases(t *testing.T) {
 				makeChannelService(NewInMemoryChannel(imcName, testNS)),
 				NewEventPolicy(readyEventPolicyName, testNS,
 					WithReadyEventPolicyCondition,
-					WithEventPolicyToRef(v1alpha1.EventPolicyToReference{
-						APIVersion: v1.SchemeGroupVersion.String(),
-						Kind:       "InMemoryChannel",
-						Name:       imcName,
-					}),
+					WithEventPolicyToRef(imcV1GVK, imcName),
 				),
 				NewEventPolicy(unreadyEventPolicyName, testNS,
 					WithUnreadyEventPolicyCondition,
-					WithEventPolicyToRef(v1alpha1.EventPolicyToReference{
-						APIVersion: v1.SchemeGroupVersion.String(),
-						Kind:       "InMemoryChannel",
-						Name:       imcName,
-					}),
+					WithEventPolicyToRef(imcV1GVK, imcName),
 				),
 			},
 			WantErr: false,

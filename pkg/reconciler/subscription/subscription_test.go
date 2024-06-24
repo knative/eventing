@@ -1487,6 +1487,7 @@ func TestAllCases(t *testing.T) {
 					WithBackingChannelReady,
 					WithChannelAddress(sink),
 					WithChannelDLSUnknown(),
+					WithChannelEventPoliciesReady(),
 				),
 				NewInMemoryChannel(channelName, testNS,
 					WithInitInMemoryChannelConditions,
