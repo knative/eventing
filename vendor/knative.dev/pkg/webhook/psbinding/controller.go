@@ -78,7 +78,6 @@ func NewAdmissionController(
 	withContext BindableContext,
 	reconcilerOptions ...ReconcilerOption,
 ) *controller.Impl {
-
 	// Extract the assorted things from our context.
 	client := kubeclient.Get(ctx)
 	mwhInformer := mwhinformer.Get(ctx)
