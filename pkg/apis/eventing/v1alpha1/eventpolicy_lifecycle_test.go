@@ -86,10 +86,19 @@ func TestEventPolicyInitializeConditions(t *testing.T) {
 			ets:  &EventPolicyStatus{},
 			want: &EventPolicyStatus{
 				Status: duckv1.Status{
-					Conditions: []apis.Condition{{
-						Type:   EventPolicyConditionReady,
-						Status: corev1.ConditionUnknown,
-					},
+					Conditions: []apis.Condition{
+						{
+							Type:   EventPolicyConditionAuthnEnabled,
+							Status: corev1.ConditionUnknown,
+						},
+						{
+							Type:   EventPolicyConditionReady,
+							Status: corev1.ConditionUnknown,
+						},
+						{
+							Type:   EventPolicyConditionSubjectsResolved,
+							Status: corev1.ConditionUnknown,
+						},
 					},
 				},
 			},
