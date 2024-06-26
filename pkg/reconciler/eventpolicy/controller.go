@@ -35,9 +35,7 @@ func NewController(
 	// Access informers
 	eventPolicyInformer := eventpolicyinformer.Get(ctx)
 
-	r := &Reconciler{
-		eventPolicyLister: eventPolicyInformer.Lister(),
-	}
+	r := &Reconciler{}
 	impl := eventpolicyreconciler.NewImpl(ctx, r)
 
 	r.fromRefResolver = resolver.NewAuthenticatableResolverFromTracker(ctx, impl.Tracker)

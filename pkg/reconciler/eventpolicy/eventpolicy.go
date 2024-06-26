@@ -18,37 +18,38 @@ package eventpolicy
 
 import (
 	"context"
+	"fmt"
 
-	"go.uber.org/zap"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/eventing/pkg/auth"
-	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
-	"knative.dev/pkg/logging"
 	pkgreconciler "knative.dev/pkg/reconciler"
 	"knative.dev/pkg/resolver"
 )
 
 type Reconciler struct {
-	eventPolicyLister eventinglisters.EventPolicyLister
-	fromRefResolver   *resolver.AuthenticatableResolver
+	fromRefResolver *resolver.AuthenticatableResolver
 }
 
 // ReconcileKind implements Interface.ReconcileKind.
 // 1. Verify the Reference exists.
 func (r *Reconciler) ReconcileKind(ctx context.Context, ep *v1alpha1.EventPolicy) pkgreconciler.Event {
-	logger := logging.FromContext(ctx)
-	logger.Infow("Reconciling", zap.Any("EventPolicy", ep))
-	// We reconcile the status of the EventPolicy by looking at:
-	// 1. All from[].refs have subjects
+	featureFlags := feature.FromContext(ctx)
+	if featureFlags.IsOIDCAuthentication() {
+		ep.GetConditionSet().Manage(ep.GetStatus()).MarkTrue(v1alpha1.EventPolicyConditionAuthnEnabled)
+	} else {
+		ep.GetConditionSet().Manage(ep.GetStatus()).MarkFalse(v1alpha1.EventPolicyConditionAuthnEnabled, "AuthOIDCFeatureNotEnabled", "")
+		return nil
+	}
+	// We reconcile the status of the EventPolicy
+	// by looking at all from[].refs have subjects
+	// and accordingly set the eventpolicy status
 	serverAccts, err := auth.ResolveSubjects(r.fromRefResolver, ep)
 	if err != nil {
-		logger.Errorw("Error resolving from[].refs", zap.Error(err))
-		ep.GetConditionSet().Manage(ep.GetStatus()).MarkFalse(v1alpha1.EventPolicyConditionReady, "Error resolving from[].refs", "")
-	} else {
-		logger.Debug("All from[].refs resolved", zap.Error(err))
-		ep.GetConditionSet().Manage(ep.GetStatus()).MarkTrue(v1alpha1.EventPolicyConditionReady)
+		ep.GetConditionSet().Manage(ep.GetStatus()).MarkFalse(v1alpha1.EventPolicyConditionSubjectsResolved, "FromSubjectsNotResolved", "")
+		return fmt.Errorf("failed to resolve from[].ref: %w", err)
 	}
+	ep.GetConditionSet().Manage(ep.GetStatus()).MarkTrue(v1alpha1.EventPolicyConditionSubjectsResolved)
 	ep.Status.From = serverAccts
-	logger.Debugw("Reconciled EventPolicy", zap.Any("EventPolicy", ep))
 	return nil
 }

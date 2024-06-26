@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -25,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	clientgotesting "k8s.io/client-go/testing"
+	"knative.dev/eventing/pkg/apis/feature"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1alpha1/eventpolicy"
@@ -49,6 +50,8 @@ const (
 var (
 	pingSourceWithServiceAccount      = NewPingSource(pingSourceName, testNS, WithPingSourceOIDCServiceAccountName(serviceAccountname))
 	apiServerSourceWithServiceAccount = NewApiServerSource(apiServerSourceName, testNS, WithApiServerSourceOIDCServiceAccountName((serviceAccountname)))
+	pingSourceGVK                     = v1.GroupVersionKind(sourcesv1.SchemeGroupVersion.WithKind("PingSource"))
+	apiServerSourceGVK                = v1.GroupVersionKind(sourcesv1.SchemeGroupVersion.WithKind("APIServerSource"))
 )
 
 func TestReconcile(t *testing.T) {
@@ -58,83 +61,134 @@ func TestReconcile(t *testing.T) {
 			// Make sure Reconcile handles bad keys.
 			Key: "too/many/parts",
 		},
+		// test cases for authentication-oidc feature disabled
 		{
-			Name: "subject not found, status set to NotReady",
-			Key:  testNS + "/" + eventPolicyName,
+			Name: "with oidc disabled, status set to NotReady",
+			Ctx: feature.ToContext(context.TODO(), feature.Flags{
+				feature.OIDCAuthentication: feature.Disabled,
+			}),
+			Key: testNS + "/" + eventPolicyName,
 			Objects: []runtime.Object{
 				NewEventPolicy(eventPolicyName, testNS,
 					WithInitEventPolicyConditions,
-					WithEventPolicyFrom(v1.GroupVersionKind(sourcesv1.SchemeGroupVersion.WithKind("PingSource")), pingSourceName, testNS),
+					WithEventPolicyFrom(pingSourceGVK, pingSourceName, testNS),
 				),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{
 				{
 					Object: NewEventPolicy(eventPolicyName, testNS,
-						WithEventPolicyFrom(v1.GroupVersionKind(sourcesv1.SchemeGroupVersion.WithKind("PingSource")), pingSourceName, testNS),
-						WithUnreadyEventPolicyCondition),
+						WithEventPolicyFrom(pingSourceGVK, pingSourceName, testNS),
+						WithFalseAuthenticationEnabledCondition,
+						WithUnreadyEventPolicyCondition("AuthOIDCFeatureNotEnabled", ""),
+						WithUnknownSubjectsResolvedCondition,
+					),
 				},
 			},
 			WantErr: false,
 		},
+
+		// test cases for authentication-oidc feature enabled
 		{
-			Name: "subject found for pingsource, status set to Ready",
-			Key:  testNS + "/" + eventPolicyName,
+			Name: "subject not found, status set to NotReady",
+			Ctx: feature.ToContext(context.TODO(), feature.Flags{
+				feature.OIDCAuthentication: feature.Enabled,
+			}),
+			Key: testNS + "/" + eventPolicyName,
 			Objects: []runtime.Object{
-				pingSourceWithServiceAccount,
 				NewEventPolicy(eventPolicyName, testNS,
 					WithInitEventPolicyConditions,
-					WithEventPolicyFrom(v1.GroupVersionKind(sourcesv1.SchemeGroupVersion.WithKind("PingSource")), pingSourceName, testNS)),
+					WithEventPolicyFrom(pingSourceGVK, pingSourceName, testNS),
+				),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{
 				{
 					Object: NewEventPolicy(eventPolicyName, testNS,
-						WithInitEventPolicyConditions,
-						WithEventPolicyFrom(v1.GroupVersionKind(sourcesv1.SchemeGroupVersion.WithKind("PingSource")), pingSourceName, testNS),
+						WithEventPolicyFrom(pingSourceGVK, pingSourceName, testNS),
+						WithTrueAuthenticationEnabledCondition,
+						WithUnreadyEventPolicyCondition("FromSubjectsNotResolved", ""),
+						WithFalseSubjectsResolvedCondition,
+					),
+				},
+			},
+			WantEvents: []string{fmt.Sprintf("Warning InternalError failed to resolve from[].ref: could not resolve subjects from reference: could not resolve auth status: failed to get authenticatable %s/%s: failed to get object test-namespace/test-pingsource: pingsources.sources.knative.dev \"%s\" not found", testNS, pingSourceName, pingSourceName)},
+			WantErr:    true,
+		},
+		{
+			Name: "subject found for pingsource, status set to Ready",
+			Ctx: feature.ToContext(context.TODO(), feature.Flags{
+				feature.OIDCAuthentication: feature.Enabled,
+			}),
+			Key: testNS + "/" + eventPolicyName,
+			Objects: []runtime.Object{
+				pingSourceWithServiceAccount,
+				NewEventPolicy(eventPolicyName, testNS,
+					WithInitEventPolicyConditions,
+					WithEventPolicyFrom(pingSourceGVK, pingSourceName, testNS)),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{
+				{
+					Object: NewEventPolicy(eventPolicyName, testNS,
+						WithEventPolicyFrom(pingSourceGVK, pingSourceName, testNS),
 						WithEventPolicyStatusFromSub([]string{fmt.Sprintf("system:serviceaccount:%s:%s", testNS, serviceAccountname)}),
-						WithReadyEventPolicyCondition),
+						WithTrueAuthenticationEnabledCondition,
+						WithReadyEventPolicyCondition,
+						WithTrueSubjectsResolvedCondition,
+					),
 				},
 			},
 			WantErr: false,
 		},
 		{
 			Name: "subject found for apiserversource, status set to Ready",
-			Key:  testNS + "/" + eventPolicyName,
+			Ctx: feature.ToContext(context.TODO(), feature.Flags{
+				feature.OIDCAuthentication: feature.Enabled,
+			}),
+			Key: testNS + "/" + eventPolicyName,
 			Objects: []runtime.Object{
 				apiServerSourceWithServiceAccount,
 				NewEventPolicy(eventPolicyName, testNS,
-					WithInitEventPolicyConditions, WithEventPolicyFrom(v1.GroupVersionKind(sourcesv1.SchemeGroupVersion.WithKind("APIServerSource")), apiServerSourceName, testNS)),
+					WithInitEventPolicyConditions, WithEventPolicyFrom(apiServerSourceGVK, apiServerSourceName, testNS)),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{
 				{
 					Object: NewEventPolicy(eventPolicyName, testNS,
-						WithEventPolicyFrom(v1.GroupVersionKind(sourcesv1.SchemeGroupVersion.WithKind("APIServerSource")), apiServerSourceName, testNS),
+						WithEventPolicyFrom(apiServerSourceGVK, apiServerSourceName, testNS),
 						WithEventPolicyStatusFromSub([]string{fmt.Sprintf("system:serviceaccount:%s:%s", testNS, serviceAccountname)}),
-						WithReadyEventPolicyCondition),
+						WithTrueAuthenticationEnabledCondition,
+						WithReadyEventPolicyCondition,
+						WithTrueSubjectsResolvedCondition,
+					),
 				},
 			},
 			WantErr: false,
 		},
 		{
 			Name: "Multiple subjects found, status set to Ready",
-			Key:  testNS + "/" + eventPolicyName,
+			Ctx: feature.ToContext(context.TODO(), feature.Flags{
+				feature.OIDCAuthentication: feature.Enabled,
+			}),
+			Key: testNS + "/" + eventPolicyName,
 			Objects: []runtime.Object{
 				apiServerSourceWithServiceAccount,
 				pingSourceWithServiceAccount,
 				NewEventPolicy(eventPolicyName, testNS,
 					WithInitEventPolicyConditions,
-					WithEventPolicyFrom(v1.GroupVersionKind(sourcesv1.SchemeGroupVersion.WithKind("PingSource")), pingSourceName, testNS),
-					WithEventPolicyFrom(v1.GroupVersionKind(sourcesv1.SchemeGroupVersion.WithKind("APIServerSource")), apiServerSourceName, testNS)),
+					WithEventPolicyFrom(pingSourceGVK, pingSourceName, testNS),
+					WithEventPolicyFrom(apiServerSourceGVK, apiServerSourceName, testNS)),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{
 				{
 					Object: NewEventPolicy(eventPolicyName, testNS,
-						WithEventPolicyFrom(v1.GroupVersionKind(sourcesv1.SchemeGroupVersion.WithKind("PingSource")), pingSourceName, testNS),
-						WithEventPolicyFrom(v1.GroupVersionKind(sourcesv1.SchemeGroupVersion.WithKind("APIServerSource")), apiServerSourceName, testNS),
+						WithEventPolicyFrom(pingSourceGVK, pingSourceName, testNS),
+						WithEventPolicyFrom(apiServerSourceGVK, apiServerSourceName, testNS),
 						WithEventPolicyStatusFromSub([]string{
 							fmt.Sprintf("system:serviceaccount:%s:%s", testNS, serviceAccountname),
 							fmt.Sprintf("system:serviceaccount:%s:%s", testNS, serviceAccountname),
 						}),
-						WithReadyEventPolicyCondition),
+						WithTrueAuthenticationEnabledCondition,
+						WithReadyEventPolicyCondition,
+						WithTrueSubjectsResolvedCondition,
+					),
 				},
 			},
 			WantErr: false,

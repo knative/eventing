@@ -44,26 +44,69 @@ func NewEventPolicy(name, namespace string, o ...EventPolicyOption) *v1alpha1.Ev
 	return ep
 }
 
-func WithInitEventPolicyConditions(et *v1alpha1.EventPolicy) {
-	et.Status.InitializeConditions()
+func WithInitEventPolicyConditions(ep *v1alpha1.EventPolicy) {
+	ep.Status.InitializeConditions()
+}
+
+func WithTrueAuthenticationEnabledCondition(ep *v1alpha1.EventPolicy) {
+	ep.Status.Conditions = append(ep.Status.Conditions,
+		apis.Condition{
+			Type:   v1alpha1.EventPolicyConditionAuthnEnabled,
+			Status: corev1.ConditionTrue,
+		})
+}
+
+func WithFalseAuthenticationEnabledCondition(ep *v1alpha1.EventPolicy) {
+	ep.Status.Conditions = append(ep.Status.Conditions,
+		apis.Condition{
+			Type:   v1alpha1.EventPolicyConditionAuthnEnabled,
+			Status: corev1.ConditionFalse,
+			Reason: "AuthOIDCFeatureNotEnabled",
+		})
+}
+
+func WithTrueSubjectsResolvedCondition(ep *v1alpha1.EventPolicy) {
+	ep.Status.Conditions = append(ep.Status.Conditions,
+		apis.Condition{
+			Type:   v1alpha1.EventPolicyConditionSubjectsResolved,
+			Status: corev1.ConditionTrue,
+		})
+}
+
+func WithFalseSubjectsResolvedCondition(ep *v1alpha1.EventPolicy) {
+	ep.Status.Conditions = append(ep.Status.Conditions,
+		apis.Condition{
+			Type:   v1alpha1.EventPolicyConditionSubjectsResolved,
+			Status: corev1.ConditionFalse,
+			Reason: "FromSubjectsNotResolved",
+		})
+}
+
+func WithUnknownSubjectsResolvedCondition(ep *v1alpha1.EventPolicy) {
+	ep.Status.Conditions = append(ep.Status.Conditions,
+		apis.Condition{
+			Type:   v1alpha1.EventPolicyConditionSubjectsResolved,
+			Status: corev1.ConditionUnknown,
+		})
 }
 
 func WithReadyEventPolicyCondition(ep *v1alpha1.EventPolicy) {
-	ep.Status.Conditions = []apis.Condition{
-		{
+	ep.Status.Conditions = append(ep.Status.Conditions,
+		apis.Condition{
 			Type:   v1alpha1.EventPolicyConditionReady,
 			Status: corev1.ConditionTrue,
-		},
-	}
+		})
 }
 
-func WithUnreadyEventPolicyCondition(ep *v1alpha1.EventPolicy) {
-	ep.Status.Conditions = []apis.Condition{
-		{
-			Type:   v1alpha1.EventPolicyConditionReady,
-			Status: corev1.ConditionFalse,
-			Reason: "Error resolving from[].refs",
-		},
+func WithUnreadyEventPolicyCondition(reason, message string) EventPolicyOption {
+	return func(ep *v1alpha1.EventPolicy) {
+		ep.Status.Conditions = append(ep.Status.Conditions,
+			apis.Condition{
+				Type:    v1alpha1.EventPolicyConditionReady,
+				Status:  corev1.ConditionFalse,
+				Reason:  reason,
+				Message: message,
+			})
 	}
 }
 

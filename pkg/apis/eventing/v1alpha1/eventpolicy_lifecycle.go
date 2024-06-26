@@ -1,5 +1,5 @@
 /*
-Copyright 2020 The Knative Authors
+Copyright 2024 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -20,10 +20,12 @@ import (
 	"knative.dev/pkg/apis"
 )
 
-var eventPolicyCondSet = apis.NewLivingConditionSet()
+var eventPolicyCondSet = apis.NewLivingConditionSet(EventPolicyConditionAuthnEnabled, EventPolicyConditionSubjectsResolved)
 
 const (
-	EventPolicyConditionReady = apis.ConditionReady
+	EventPolicyConditionReady                               = apis.ConditionReady
+	EventPolicyConditionAuthnEnabled     apis.ConditionType = "AuthenticationEnabled"
+	EventPolicyConditionSubjectsResolved apis.ConditionType = "SubjectsResolved"
 )
 
 // GetConditionSet retrieves the condition set for this resource. Implements the KRShaped interface.
