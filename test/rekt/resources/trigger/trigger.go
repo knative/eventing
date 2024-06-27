@@ -179,6 +179,8 @@ func WithBrokerRef(ref *duckv1.KReference) manifest.CfgFn {
 			brokerRef["name"] = ref.Name
 			brokerRef["namespace"] = ref.Namespace
 		}
+
+		cfg["brokerRef"] = brokerRef
 	}
 }
 

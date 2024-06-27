@@ -20,6 +20,8 @@ import (
 	"context"
 
 	cetest "github.com/cloudevents/sdk-go/v2/test"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	"knative.dev/eventing/test/rekt/features/featureflags"
 	"knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/eventing/test/rekt/resources/trigger"
@@ -62,9 +64,18 @@ func CrossNamespaceEventLinks(brokerEnvCtx context.Context) *feature.Feature {
 	f.Setup("install trigger", trigger.Install(triggerName, triggerCfg...))
 
 	f.Setup("install subscriber", eventshub.Install(subscriberName, eventshub.StartReceiver))
-	f.Setup("install event source", eventshub.Install(sourceName, eventshub.StartSenderToNamespacedResource(broker.GVR(), brokerName, brokerNamespace), eventshub.InputEvent(ev)))
+
+	// <resource>.IsReady uses the environment in the context to find the resource, hence we can only check the trigger
+	// However, the trigger being ready implies the broker is ready, so we are okay
+	f.Setup("trigger is ready", trigger.IsReady(triggerName))
+	f.Requirement("install event source", eventshub.Install(sourceName, eventshub.StartSenderToNamespacedResource(broker.GVR(), brokerName, brokerNamespace), eventshub.InputEvent(ev)))
 
 	f.Assert("event is received by subscriber", assert.OnStore(subscriberName).MatchEvent(cetest.HasId(ev.ID())).Exact(1))
+
+	f.Teardown("delete trigger", func(ctx context.Context, t feature.T) {
+		env := environment.FromContext(ctx)
+		eventingclient.Get(ctx).EventingV1().Triggers(env.Namespace()).Delete(ctx, triggerName, metav1.DeleteOptions{})
+	})
 
 	return f
 }
