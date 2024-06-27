@@ -48,7 +48,7 @@ func WithInitEventPolicyConditions(ep *v1alpha1.EventPolicy) {
 	ep.Status.InitializeConditions()
 }
 
-func WithTrueAuthenticationEnabledCondition(ep *v1alpha1.EventPolicy) {
+func WithEventPolicyAuthenticationEnabledCondition(ep *v1alpha1.EventPolicy) {
 	ep.Status.Conditions = append(ep.Status.Conditions,
 		apis.Condition{
 			Type:   v1alpha1.EventPolicyConditionAuthenticationEnabled,
@@ -56,16 +56,16 @@ func WithTrueAuthenticationEnabledCondition(ep *v1alpha1.EventPolicy) {
 		})
 }
 
-func WithFalseAuthenticationEnabledCondition(ep *v1alpha1.EventPolicy) {
+func WithEventPolicyAuthenticationDisabledCondition(ep *v1alpha1.EventPolicy) {
 	ep.Status.Conditions = append(ep.Status.Conditions,
 		apis.Condition{
 			Type:   v1alpha1.EventPolicyConditionAuthenticationEnabled,
 			Status: corev1.ConditionFalse,
-			Reason: "AuthOIDCFeatureNotEnabled",
+			Reason: "OIDCAuthenticationDisabled",
 		})
 }
 
-func WithTrueSubjectsResolvedCondition(ep *v1alpha1.EventPolicy) {
+func WithEventPolicySubjectsResolvedSucceeded(ep *v1alpha1.EventPolicy) {
 	ep.Status.Conditions = append(ep.Status.Conditions,
 		apis.Condition{
 			Type:   v1alpha1.EventPolicyConditionSubjectsResolved,
@@ -73,7 +73,7 @@ func WithTrueSubjectsResolvedCondition(ep *v1alpha1.EventPolicy) {
 		})
 }
 
-func WithFalseSubjectsResolvedCondition(reason, message string) EventPolicyOption {
+func WithEventPolicySubjectsResolvedFailed(reason, message string) EventPolicyOption {
 	return func(ep *v1alpha1.EventPolicy) {
 		ep.Status.Conditions = append(ep.Status.Conditions,
 			apis.Condition{
@@ -85,7 +85,7 @@ func WithFalseSubjectsResolvedCondition(reason, message string) EventPolicyOptio
 	}
 }
 
-func WithUnknownSubjectsResolvedCondition(ep *v1alpha1.EventPolicy) {
+func WithEventPolicySubjectsResolvedUnknown(ep *v1alpha1.EventPolicy) {
 	ep.Status.Conditions = append(ep.Status.Conditions,
 		apis.Condition{
 			Type:   v1alpha1.EventPolicyConditionSubjectsResolved,

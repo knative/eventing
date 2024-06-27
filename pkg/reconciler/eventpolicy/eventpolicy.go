@@ -38,7 +38,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, ep *v1alpha1.EventPolicy
 	if featureFlags.IsOIDCAuthentication() {
 		ep.Status.MarkOIDCAuthenticationEnabled()
 	} else {
-		ep.Status.MarkOIDCAuthenticationNotEnabled("AuthOIDCFeatureNotEnabled", "")
+		ep.Status.MarkOIDCAuthenticationDisabled("OIDCAuthenticationDisabled", "")
 		return nil
 	}
 	// We reconcile the status of the EventPolicy
@@ -46,10 +46,10 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, ep *v1alpha1.EventPolicy
 	// and accordingly set the eventpolicy status
 	subjects, err := auth.ResolveSubjects(r.authResolver, ep)
 	if err != nil {
-		ep.Status.MarkSubjectsNotResolved("SubjectsNotResolved", err.Error())
+		ep.Status.MarkSubjectsResolvedFailed("SubjectsNotResolved", err.Error())
 		return fmt.Errorf("failed to resolve .spec.from[].ref: %w", err)
 	}
-	ep.Status.MarkSubjectsResolved()
+	ep.Status.MarkSubjectsResolvedSucceeded()
 	ep.Status.From = subjects
 	return nil
 }

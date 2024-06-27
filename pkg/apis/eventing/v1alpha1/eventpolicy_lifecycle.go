@@ -58,17 +58,17 @@ func (ep *EventPolicyStatus) MarkOIDCAuthenticationEnabled() {
 	eventPolicyCondSet.Manage(ep).MarkTrue(EventPolicyConditionAuthenticationEnabled)
 }
 
-// MarkOIDCAuthenticationNotEnabled sets EventPolicyConditionAuthenticationEnabled condition to false.
-func (ep *EventPolicyStatus) MarkOIDCAuthenticationNotEnabled(reason, messageFormat string, messageA ...interface{}) {
+// MarkOIDCAuthenticationDisabled sets EventPolicyConditionAuthenticationEnabled condition to false.
+func (ep *EventPolicyStatus) MarkOIDCAuthenticationDisabled(reason, messageFormat string, messageA ...interface{}) {
 	eventPolicyCondSet.Manage(ep).MarkFalse(EventPolicyConditionAuthenticationEnabled, reason, messageFormat, messageA...)
 }
 
-// MarkSubjectsResolved sets EventPolicyConditionAuthenticationEnabled condition to true.
-func (ep *EventPolicyStatus) MarkSubjectsResolved() {
+// MarkSubjectsResolved sets EventPolicyConditionSubjectsResolved condition to true.
+func (ep *EventPolicyStatus) MarkSubjectsResolvedSucceeded() {
 	eventPolicyCondSet.Manage(ep).MarkTrue(EventPolicyConditionSubjectsResolved)
 }
 
-// MarkSubjectsNotResolved sets EventPolicyConditionAuthenticationEnabled condition to false.
-func (ep *EventPolicyStatus) MarkSubjectsNotResolved(reason, messageFormat string, messageA ...interface{}) {
+// MarkSubjectsNotResolved sets EventPolicyConditionSubjectsResolved condition to false.
+func (ep *EventPolicyStatus) MarkSubjectsResolvedFailed(reason, messageFormat string, messageA ...interface{}) {
 	eventPolicyCondSet.Manage(ep).MarkFalse(EventPolicyConditionSubjectsResolved, reason, messageFormat, messageA...)
 }
