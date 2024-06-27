@@ -257,6 +257,18 @@ spec:
                         type:
                           description: Type of condition.
                           type: string
+              policies:
+                description: List of applied EventPolicies
+                type: array
+                items:
+                  type: object
+                  properties:
+                    apiVersion:
+                      description: The API version of the applied EventPolicy. This indicates, which version of EventPolicy is supported by the resource.
+                      type: string
+                    name:
+                      description: The name of the applied EventPolicy
+                      type: string
               conditions:
                 description: Conditions the latest available observations of a resource's current state.
                 type: array

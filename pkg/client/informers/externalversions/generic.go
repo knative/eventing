@@ -24,12 +24,13 @@ import (
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
 	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	v1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	v1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	v1beta2 "knative.dev/eventing/pkg/apis/eventing/v1beta2"
 	v1beta3 "knative.dev/eventing/pkg/apis/eventing/v1beta3"
 	flowsv1 "knative.dev/eventing/pkg/apis/flows/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
-	v1alpha1 "knative.dev/eventing/pkg/apis/sinks/v1alpha1"
+	sinksv1alpha1 "knative.dev/eventing/pkg/apis/sinks/v1alpha1"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	sourcesv1beta2 "knative.dev/eventing/pkg/apis/sources/v1beta2"
 )
@@ -66,6 +67,10 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 	case v1.SchemeGroupVersion.WithResource("triggers"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Eventing().V1().Triggers().Informer()}, nil
 
+		// Group=eventing.knative.dev, Version=v1alpha1
+	case v1alpha1.SchemeGroupVersion.WithResource("eventpolicies"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Eventing().V1alpha1().EventPolicies().Informer()}, nil
+
 		// Group=eventing.knative.dev, Version=v1beta1
 	case v1beta1.SchemeGroupVersion.WithResource("eventtypes"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Eventing().V1beta1().EventTypes().Informer()}, nil
@@ -93,7 +98,7 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Messaging().V1().Subscriptions().Informer()}, nil
 
 		// Group=sinks.knative.dev, Version=v1alpha1
-	case v1alpha1.SchemeGroupVersion.WithResource("jobsinks"):
+	case sinksv1alpha1.SchemeGroupVersion.WithResource("jobsinks"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Sinks().V1alpha1().JobSinks().Informer()}, nil
 
 		// Group=sources.knative.dev, Version=v1

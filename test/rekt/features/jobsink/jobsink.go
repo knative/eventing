@@ -25,6 +25,7 @@ import (
 	"github.com/google/uuid"
 	batchv1 "k8s.io/api/batch/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"knative.dev/pkg/apis"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
@@ -35,6 +36,7 @@ import (
 	"knative.dev/reconciler-test/pkg/k8s"
 
 	"knative.dev/eventing/pkg/apis/sinks"
+	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/test/rekt/features/featureflags"
 	"knative.dev/eventing/test/rekt/resources/addressable"
 	"knative.dev/eventing/test/rekt/resources/jobsink"
@@ -66,6 +68,11 @@ func Success() *feature.Feature {
 		MatchReceivedEvent(cetest.HasId(event.ID())).
 		AtLeast(1),
 	)
+	f.Assert("Source sent the event", assert.OnStore(source).
+		Match(assert.MatchKind(eventshub.EventResponse)).
+		Match(assert.MatchStatusCode(202)).
+		AtLeast(1),
+	)
 	f.Assert("At least one Job is complete", AtLeastOneJobIsComplete(jobSink))
 
 	return f
@@ -84,6 +91,7 @@ func SuccessTLS() *feature.Feature {
 	event.SetID(uuid.NewString())
 
 	f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
+	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
 
 	f.Setup("install forwarder sink", eventshub.Install(sink, eventshub.StartReceiver))
 	f.Setup("install job sink", jobsink.Install(jobSink, jobsink.WithForwarderJob(sinkURL.String())))
@@ -96,6 +104,81 @@ func SuccessTLS() *feature.Feature {
 		eventshub.InputEvent(event)))
 
 	f.Assert("JobSink has https address", addressable.ValidateAddress(jobsink.GVR(), jobSink, addressable.AssertHTTPSAddress))
+	f.Assert("Job is created with the mounted event", assert.OnStore(sink).
+		MatchReceivedEvent(cetest.HasId(event.ID())).
+		AtLeast(1),
+	)
+	f.Assert("Source sent the event", assert.OnStore(source).
+		Match(assert.MatchKind(eventshub.EventResponse)).
+		Match(assert.MatchStatusCode(202)).
+		AtLeast(1),
+	)
+	f.Assert("At least one Job is complete", AtLeastOneJobIsComplete(jobSink))
+
+	return f
+}
+
+func OIDC() *feature.Feature {
+	f := feature.NewFeature()
+
+	sink := feature.MakeRandomK8sName("sink")
+	jobSink := feature.MakeRandomK8sName("jobsink")
+	source := feature.MakeRandomK8sName("source")
+	sourceNoAudience := feature.MakeRandomK8sName("source-no-audience")
+
+	sinkURL := &apis.URL{Scheme: "http", Host: sink}
+
+	event := cetest.FullEvent()
+	event.SetID(uuid.NewString())
+
+	eventNoAudience := cetest.FullEvent()
+	eventNoAudience.SetID(uuid.NewString())
+
+	f.Prerequisite("OIDC authentication is enabled", featureflags.AuthenticationOIDCEnabled())
+	f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
+	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
+
+	f.Setup("install forwarder sink", eventshub.Install(sink, eventshub.StartReceiver))
+	f.Setup("install job sink", jobsink.Install(jobSink, jobsink.WithForwarderJob(sinkURL.String())))
+
+	f.Setup("jobsink is addressable", jobsink.IsAddressable(jobSink))
+	f.Setup("jobsink is ready", jobsink.IsAddressable(jobSink))
+
+	f.Requirement("install source", eventshub.Install(source,
+		eventshub.StartSenderToResource(jobsink.GVR(), jobSink),
+		eventshub.InputEvent(event)))
+
+	f.Requirement("install source no audience", func(ctx context.Context, t feature.T) {
+		addr, err := jobsink.Address(ctx, jobSink)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		eventshub.Install(sourceNoAudience,
+			eventshub.StartSenderURLTLS(addr.URL.String(), addr.CACerts),
+			eventshub.InputEvent(eventNoAudience))(ctx, t)
+	})
+
+	f.Assert("JobSink has audience in address", func(ctx context.Context, t feature.T) {
+		gvk := schema.GroupVersionKind{
+			Group:   jobsink.GVR().Group,
+			Version: jobsink.GVR().Version,
+			Kind:    "JobSink",
+		}
+		addressable.ValidateAddress(jobsink.GVR(), jobSink, addressable.AssertAddressWithAudience(
+			auth.GetAudienceDirect(gvk, environment.FromContext(ctx).Namespace(), jobSink)),
+		)(ctx, t)
+	})
+	f.Assert("Source sent the event with audience", assert.OnStore(source).
+		Match(assert.MatchKind(eventshub.EventResponse)).
+		Match(assert.MatchStatusCode(202)).
+		AtLeast(1),
+	)
+	f.Assert("Source sent the event without audience", assert.OnStore(sourceNoAudience).
+		Match(assert.MatchKind(eventshub.EventResponse)).
+		Match(assert.MatchStatusCode(401)).
+		AtLeast(1),
+	)
 	f.Assert("Job is created with the mounted event", assert.OnStore(sink).
 		MatchReceivedEvent(cetest.HasId(event.ID())).
 		AtLeast(1),

@@ -20,11 +20,20 @@ import (
 	"context"
 	"fmt"
 
+	"knative.dev/eventing/pkg/reconciler/channel/resources"
+
+	"k8s.io/apimachinery/pkg/api/equality"
+	"k8s.io/apimachinery/pkg/labels"
+	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	eventingclientset "knative.dev/eventing/pkg/client/clientset/versioned"
+
 	"go.uber.org/zap"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/dynamic"
+	"knative.dev/eventing/pkg/apis/feature"
+	"knative.dev/eventing/pkg/auth"
 	"knative.dev/pkg/kmeta"
 
 	duckapis "knative.dev/pkg/apis/duck"
@@ -35,6 +44,7 @@ import (
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	channelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/channel"
+	eventingv1alpha1listers "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 	listers "knative.dev/eventing/pkg/client/listers/messaging/v1"
 	ducklib "knative.dev/eventing/pkg/duck"
 	eventingduck "knative.dev/eventing/pkg/duck"
@@ -47,6 +57,10 @@ type Reconciler struct {
 
 	// dynamicClientSet allows us to configure pluggable Build objects
 	dynamicClientSet dynamic.Interface
+
+	eventPolicyLister eventingv1alpha1listers.EventPolicyLister
+
+	eventingClientSet eventingclientset.Interface
 }
 
 // Check that our Reconciler implements Interface
@@ -54,6 +68,8 @@ var _ channelreconciler.Interface = (*Reconciler)(nil)
 
 // ReconcileKind implements Interface.ReconcileKind.
 func (r *Reconciler) ReconcileKind(ctx context.Context, c *v1.Channel) pkgreconciler.Event {
+	featureFlags := feature.FromContext(ctx)
+
 	// 1. Create the backing Channel CRD, if it doesn't exist.
 	// 2. Propagate the backing Channel CRD Status, Address, and SubscribableStatus into this Channel.
 
@@ -96,7 +112,95 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, c *v1.Channel) pkgreconc
 		c.Status.MarkDeadLetterSinkNotConfigured()
 	}
 
+	err = auth.UpdateStatusWithEventPolicies(featureFlags, &c.Status.AppliedEventPoliciesStatus, &c.Status, r.eventPolicyLister, v1.SchemeGroupVersion.WithKind("Channel"), c.ObjectMeta)
+	if err != nil {
+		return fmt.Errorf("could not update channel status with EventPolicies: %v", err)
+	}
+
+	err = r.reconcileBackingChannelEventPolicies(ctx, c, backingChannel)
+	if err != nil {
+		return fmt.Errorf("could not reconcile backing channels (%s/%s) event policies: %w", backingChannel.Namespace, backingChannel.Name, err)
+	}
+
 	return nil
+}
+
+func (r *Reconciler) reconcileBackingChannelEventPolicies(ctx context.Context, channel *v1.Channel, backingChannel *eventingduckv1.Channelable) error {
+	applyingEventPoliciesForChannel, err := auth.GetEventPoliciesForResource(r.eventPolicyLister, v1.SchemeGroupVersion.WithKind("Channel"), channel.ObjectMeta)
+	if err != nil {
+		return fmt.Errorf("could not get applying EventPolicies for for channel %s/%s: %w", channel.Namespace, channel.Name, err)
+	}
+
+	for _, policy := range applyingEventPoliciesForChannel {
+		err := r.reconcileBackingChannelEventPolicy(ctx, backingChannel, policy)
+		if err != nil {
+			return fmt.Errorf("could not reconcile EventPolicy %s/%s for backing channel %s/%s: %w", policy.Namespace, policy.Name, backingChannel.Namespace, backingChannel.Name, err)
+		}
+	}
+
+	// Check, if we have old EP for the backing channel, which are not relevant anymore
+	applyingEventPoliciesForBackingChannel, err := auth.GetEventPoliciesForResource(r.eventPolicyLister, backingChannel.GroupVersionKind(), backingChannel.ObjectMeta)
+	if err != nil {
+		return fmt.Errorf("could not get applying EventPolicies for for backing channel %s/%s: %w", channel.Namespace, channel.Name, err)
+	}
+
+	selector, err := labels.ValidatedSelectorFromSet(resources.LabelsForBackingChannelsEventPolicy(backingChannel))
+	if err != nil {
+		return fmt.Errorf("could not get valid selector for backing channels EventPolicy %s/%s: %w", backingChannel.Namespace, backingChannel.Name, err)
+	}
+
+	existingEventPoliciesForBackingChannel, err := r.eventPolicyLister.EventPolicies(backingChannel.Namespace).List(selector)
+	if err != nil {
+		return fmt.Errorf("could not get existing EventPolicies in backing channels namespace %q: %w", backingChannel.Namespace, err)
+	}
+
+	for _, policy := range existingEventPoliciesForBackingChannel {
+		if !r.containsPolicy(policy.Name, applyingEventPoliciesForBackingChannel) {
+
+			// the existing policy is not in the list of applying policies anymore --> is outdated --> delete it
+			err := r.eventingClientSet.EventingV1alpha1().EventPolicies(policy.Namespace).Delete(ctx, policy.Name, metav1.DeleteOptions{})
+			if err != nil && apierrs.IsNotFound(err) {
+				return fmt.Errorf("could not delete old EventPolicy %s/%s: %w", policy.Namespace, policy.Name, err)
+			}
+		}
+	}
+
+	return nil
+}
+
+func (r *Reconciler) reconcileBackingChannelEventPolicy(ctx context.Context, backingChannel *eventingduckv1.Channelable, eventpolicy *eventingv1alpha1.EventPolicy) error {
+	expected := resources.MakeEventPolicyForBackingChannel(backingChannel, eventpolicy)
+
+	foundEP, err := r.eventPolicyLister.EventPolicies(expected.Namespace).Get(expected.Name)
+	if apierrs.IsNotFound(err) {
+		_, err := r.eventingClientSet.EventingV1alpha1().EventPolicies(expected.Namespace).Create(ctx, expected, metav1.CreateOptions{})
+		if err != nil {
+			return fmt.Errorf("could not create EventPolicy %s/%s: %w", expected.Namespace, expected.Name, err)
+		}
+	} else if err != nil {
+		return fmt.Errorf("could not get EventPolicy %s/%s: %w", expected.Namespace, expected.Name, err)
+	} else if r.policyNeedsUpdate(foundEP, expected) {
+		expected.SetResourceVersion(foundEP.ResourceVersion)
+		_, err := r.eventingClientSet.EventingV1alpha1().EventPolicies(expected.Namespace).Update(ctx, expected, metav1.UpdateOptions{})
+		if err != nil {
+			return fmt.Errorf("could not update EventPolicy %s/%s: %w", expected.Namespace, expected.Name, err)
+		}
+	}
+
+	return nil
+}
+
+func (r *Reconciler) containsPolicy(name string, policies []*eventingv1alpha1.EventPolicy) bool {
+	for _, policy := range policies {
+		if policy.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
+func (r *Reconciler) policyNeedsUpdate(foundEP, expected *eventingv1alpha1.EventPolicy) bool {
+	return !equality.Semantic.DeepDerivative(expected, foundEP)
 }
 
 // reconcileBackingChannel reconciles Channel's 'c' underlying CRD channel.
