@@ -113,7 +113,7 @@ func (r *BaseReconciler) Reconcile(ctx context.Context, key string) error {
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
 		logging.FromContext(ctx).Error("invalid resource key: ", key)
-		return nil
+		return nil //nolint:nilerr
 	}
 
 	// Only the leader should reconcile binding resources.
@@ -391,7 +391,6 @@ func (r *BaseReconciler) ReconcileSubject(ctx context.Context, fb Bindable, muta
 	// For each of the referents, apply the mutation.
 	eg := errgroup.Group{}
 	for _, ps := range referents {
-		ps := ps
 		eg.Go(func() error {
 			// Do the binding to the pod specable.
 			orig := ps.DeepCopy()
