@@ -18,6 +18,7 @@ package feature
 
 import (
 	"fmt"
+	"log"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -148,7 +149,8 @@ func NewFlagsConfigFromMap(data map[string]string) (Flags, error) {
 		} else if strings.Contains(k, NodeSelectorLabel) {
 			flags[sanitizedKey] = Flag(v)
 		} else {
-			return flags, fmt.Errorf("cannot parse the feature flag '%s' = '%s'", k, v)
+			flags[k] = Flag(v)
+			log.Printf("Warning: unknown feature flag value %q=%q\n", k, v)
 		}
 	}
 
