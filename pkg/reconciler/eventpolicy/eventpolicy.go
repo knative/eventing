@@ -28,7 +28,7 @@ import (
 )
 
 type Reconciler struct {
-	fromRefResolver *resolver.AuthenticatableResolver
+	authResolver *resolver.AuthenticatableResolver
 }
 
 // ReconcileKind implements Interface.ReconcileKind.
@@ -36,20 +36,20 @@ type Reconciler struct {
 func (r *Reconciler) ReconcileKind(ctx context.Context, ep *v1alpha1.EventPolicy) pkgreconciler.Event {
 	featureFlags := feature.FromContext(ctx)
 	if featureFlags.IsOIDCAuthentication() {
-		ep.GetConditionSet().Manage(ep.GetStatus()).MarkTrue(v1alpha1.EventPolicyConditionAuthnEnabled)
+		ep.Status.MarkOIDCAuthenticationEnabled()
 	} else {
-		ep.GetConditionSet().Manage(ep.GetStatus()).MarkFalse(v1alpha1.EventPolicyConditionAuthnEnabled, "AuthOIDCFeatureNotEnabled", "")
+		ep.Status.MarkOIDCAuthenticationNotEnabled("AuthOIDCFeatureNotEnabled", "")
 		return nil
 	}
 	// We reconcile the status of the EventPolicy
-	// by looking at all from[].refs have subjects
+	// by looking at all .spec.from[].refs have subjects
 	// and accordingly set the eventpolicy status
-	serverAccts, err := auth.ResolveSubjects(r.fromRefResolver, ep)
+	subjects, err := auth.ResolveSubjects(r.authResolver, ep)
 	if err != nil {
-		ep.GetConditionSet().Manage(ep.GetStatus()).MarkFalse(v1alpha1.EventPolicyConditionSubjectsResolved, "FromSubjectsNotResolved", "")
-		return fmt.Errorf("failed to resolve from[].ref: %w", err)
+		ep.Status.MarkSubjectsNotResolved("SubjectsNotResolved", err.Error())
+		return fmt.Errorf("failed to resolve .spec.from[].ref: %w", err)
 	}
-	ep.GetConditionSet().Manage(ep.GetStatus()).MarkTrue(v1alpha1.EventPolicyConditionSubjectsResolved)
-	ep.Status.From = serverAccts
+	ep.Status.MarkSubjectsResolved()
+	ep.Status.From = subjects
 	return nil
 }

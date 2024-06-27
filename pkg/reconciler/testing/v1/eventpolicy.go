@@ -51,7 +51,7 @@ func WithInitEventPolicyConditions(ep *v1alpha1.EventPolicy) {
 func WithTrueAuthenticationEnabledCondition(ep *v1alpha1.EventPolicy) {
 	ep.Status.Conditions = append(ep.Status.Conditions,
 		apis.Condition{
-			Type:   v1alpha1.EventPolicyConditionAuthnEnabled,
+			Type:   v1alpha1.EventPolicyConditionAuthenticationEnabled,
 			Status: corev1.ConditionTrue,
 		})
 }
@@ -59,7 +59,7 @@ func WithTrueAuthenticationEnabledCondition(ep *v1alpha1.EventPolicy) {
 func WithFalseAuthenticationEnabledCondition(ep *v1alpha1.EventPolicy) {
 	ep.Status.Conditions = append(ep.Status.Conditions,
 		apis.Condition{
-			Type:   v1alpha1.EventPolicyConditionAuthnEnabled,
+			Type:   v1alpha1.EventPolicyConditionAuthenticationEnabled,
 			Status: corev1.ConditionFalse,
 			Reason: "AuthOIDCFeatureNotEnabled",
 		})
@@ -73,13 +73,16 @@ func WithTrueSubjectsResolvedCondition(ep *v1alpha1.EventPolicy) {
 		})
 }
 
-func WithFalseSubjectsResolvedCondition(ep *v1alpha1.EventPolicy) {
-	ep.Status.Conditions = append(ep.Status.Conditions,
-		apis.Condition{
-			Type:   v1alpha1.EventPolicyConditionSubjectsResolved,
-			Status: corev1.ConditionFalse,
-			Reason: "FromSubjectsNotResolved",
-		})
+func WithFalseSubjectsResolvedCondition(reason, message string) EventPolicyOption {
+	return func(ep *v1alpha1.EventPolicy) {
+		ep.Status.Conditions = append(ep.Status.Conditions,
+			apis.Condition{
+				Type:    v1alpha1.EventPolicyConditionSubjectsResolved,
+				Status:  corev1.ConditionFalse,
+				Reason:  reason,
+				Message: message,
+			})
+	}
 }
 
 func WithUnknownSubjectsResolvedCondition(ep *v1alpha1.EventPolicy) {

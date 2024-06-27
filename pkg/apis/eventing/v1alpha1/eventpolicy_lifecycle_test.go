@@ -88,7 +88,7 @@ func TestEventPolicyInitializeConditions(t *testing.T) {
 				Status: duckv1.Status{
 					Conditions: []apis.Condition{
 						{
-							Type:   EventPolicyConditionAuthnEnabled,
+							Type:   EventPolicyConditionAuthenticationEnabled,
 							Status: corev1.ConditionUnknown,
 						},
 						{

@@ -38,7 +38,7 @@ func NewController(
 	r := &Reconciler{}
 	impl := eventpolicyreconciler.NewImpl(ctx, r)
 
-	r.fromRefResolver = resolver.NewAuthenticatableResolverFromTracker(ctx, impl.Tracker)
+	r.authResolver = resolver.NewAuthenticatableResolverFromTracker(ctx, impl.Tracker)
 
 	// Set up event handlers
 	eventPolicyInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))

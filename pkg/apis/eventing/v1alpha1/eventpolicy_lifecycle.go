@@ -20,12 +20,12 @@ import (
 	"knative.dev/pkg/apis"
 )
 
-var eventPolicyCondSet = apis.NewLivingConditionSet(EventPolicyConditionAuthnEnabled, EventPolicyConditionSubjectsResolved)
+var eventPolicyCondSet = apis.NewLivingConditionSet(EventPolicyConditionAuthenticationEnabled, EventPolicyConditionSubjectsResolved)
 
 const (
-	EventPolicyConditionReady                               = apis.ConditionReady
-	EventPolicyConditionAuthnEnabled     apis.ConditionType = "AuthenticationEnabled"
-	EventPolicyConditionSubjectsResolved apis.ConditionType = "SubjectsResolved"
+	EventPolicyConditionReady                                    = apis.ConditionReady
+	EventPolicyConditionAuthenticationEnabled apis.ConditionType = "AuthenticationEnabled"
+	EventPolicyConditionSubjectsResolved      apis.ConditionType = "SubjectsResolved"
 )
 
 // GetConditionSet retrieves the condition set for this resource. Implements the KRShaped interface.
@@ -34,21 +34,41 @@ func (*EventPolicy) GetConditionSet() apis.ConditionSet {
 }
 
 // GetCondition returns the condition currently associated with the given type, or nil.
-func (et *EventPolicyStatus) GetCondition(t apis.ConditionType) *apis.Condition {
-	return eventPolicyCondSet.Manage(et).GetCondition(t)
+func (ep *EventPolicyStatus) GetCondition(t apis.ConditionType) *apis.Condition {
+	return eventPolicyCondSet.Manage(ep).GetCondition(t)
 }
 
 // IsReady returns true if the resource is ready overall.
-func (et *EventPolicyStatus) IsReady() bool {
-	return et.GetTopLevelCondition().IsTrue()
+func (ep *EventPolicyStatus) IsReady() bool {
+	return ep.GetTopLevelCondition().IsTrue()
 }
 
 // GetTopLevelCondition returns the top level Condition.
-func (et *EventPolicyStatus) GetTopLevelCondition() *apis.Condition {
-	return eventPolicyCondSet.Manage(et).GetTopLevelCondition()
+func (ep *EventPolicyStatus) GetTopLevelCondition() *apis.Condition {
+	return eventPolicyCondSet.Manage(ep).GetTopLevelCondition()
 }
 
 // InitializeConditions sets relevant unset conditions to Unknown state.
-func (et *EventPolicyStatus) InitializeConditions() {
-	eventPolicyCondSet.Manage(et).InitializeConditions()
+func (ep *EventPolicyStatus) InitializeConditions() {
+	eventPolicyCondSet.Manage(ep).InitializeConditions()
+}
+
+// MarkOIDCAuthenticationEnabled sets EventPolicyConditionAuthenticationEnabled condition to true.
+func (ep *EventPolicyStatus) MarkOIDCAuthenticationEnabled() {
+	eventPolicyCondSet.Manage(ep).MarkTrue(EventPolicyConditionAuthenticationEnabled)
+}
+
+// MarkOIDCAuthenticationNotEnabled sets EventPolicyConditionAuthenticationEnabled condition to false.
+func (ep *EventPolicyStatus) MarkOIDCAuthenticationNotEnabled(reason, messageFormat string, messageA ...interface{}) {
+	eventPolicyCondSet.Manage(ep).MarkFalse(EventPolicyConditionAuthenticationEnabled, reason, messageFormat, messageA...)
+}
+
+// MarkSubjectsResolved sets EventPolicyConditionAuthenticationEnabled condition to true.
+func (ep *EventPolicyStatus) MarkSubjectsResolved() {
+	eventPolicyCondSet.Manage(ep).MarkTrue(EventPolicyConditionSubjectsResolved)
+}
+
+// MarkSubjectsNotResolved sets EventPolicyConditionAuthenticationEnabled condition to false.
+func (ep *EventPolicyStatus) MarkSubjectsNotResolved(reason, messageFormat string, messageA ...interface{}) {
+	eventPolicyCondSet.Manage(ep).MarkFalse(EventPolicyConditionSubjectsResolved, reason, messageFormat, messageA...)
 }

@@ -52,6 +52,8 @@ var (
 	apiServerSourceWithServiceAccount = NewApiServerSource(apiServerSourceName, testNS, WithApiServerSourceOIDCServiceAccountName((serviceAccountname)))
 	pingSourceGVK                     = v1.GroupVersionKind(sourcesv1.SchemeGroupVersion.WithKind("PingSource"))
 	apiServerSourceGVK                = v1.GroupVersionKind(sourcesv1.SchemeGroupVersion.WithKind("APIServerSource"))
+	SubjectsNotResolvedErrorMessage   = fmt.Sprintf("could not resolve subjects from reference: could not resolve auth status: failed to get authenticatable %s/%s: failed to get object %s/%s: pingsources.sources.knative.dev \"%s\" not found", testNS, pingSourceName, testNS, pingSourceName, pingSourceName)
+	SubjectsNotResolvedEventMessage   = fmt.Sprintf("Warning InternalError failed to resolve .spec.from[].ref: could not resolve subjects from reference: could not resolve auth status: failed to get authenticatable %s/%s: failed to get object %s/%s: pingsources.sources.knative.dev \"%s\" not found", testNS, pingSourceName, testNS, pingSourceName, pingSourceName)
 )
 
 func TestReconcile(t *testing.T) {
@@ -105,12 +107,12 @@ func TestReconcile(t *testing.T) {
 					Object: NewEventPolicy(eventPolicyName, testNS,
 						WithEventPolicyFrom(pingSourceGVK, pingSourceName, testNS),
 						WithTrueAuthenticationEnabledCondition,
-						WithUnreadyEventPolicyCondition("FromSubjectsNotResolved", ""),
-						WithFalseSubjectsResolvedCondition,
+						WithUnreadyEventPolicyCondition("SubjectsNotResolved", SubjectsNotResolvedErrorMessage),
+						WithFalseSubjectsResolvedCondition("SubjectsNotResolved", SubjectsNotResolvedErrorMessage),
 					),
 				},
 			},
-			WantEvents: []string{fmt.Sprintf("Warning InternalError failed to resolve from[].ref: could not resolve subjects from reference: could not resolve auth status: failed to get authenticatable %s/%s: failed to get object test-namespace/test-pingsource: pingsources.sources.knative.dev \"%s\" not found", testNS, pingSourceName, pingSourceName)},
+			WantEvents: []string{SubjectsNotResolvedEventMessage},
 			WantErr:    true,
 		},
 		{
@@ -193,12 +195,40 @@ func TestReconcile(t *testing.T) {
 			},
 			WantErr: false,
 		},
+
+		// test cases for authentication-oidc feature disabled afterwards
+		{
+			Name: "Ready status EventPolicy updated to NotReady",
+			Ctx: feature.ToContext(context.TODO(), feature.Flags{
+				feature.OIDCAuthentication: feature.Disabled,
+			}),
+			Key: testNS + "/" + eventPolicyName,
+			Objects: []runtime.Object{
+				pingSourceWithServiceAccount,
+				NewEventPolicy(eventPolicyName, testNS,
+					WithReadyEventPolicyCondition,
+					WithTrueAuthenticationEnabledCondition,
+					WithTrueSubjectsResolvedCondition,
+					WithEventPolicyFrom(pingSourceGVK, pingSourceName, testNS)),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{
+				{
+					Object: NewEventPolicy(eventPolicyName, testNS,
+						WithEventPolicyFrom(pingSourceGVK, pingSourceName, testNS),
+						WithFalseAuthenticationEnabledCondition,
+						WithUnreadyEventPolicyCondition("AuthOIDCFeatureNotEnabled", ""),
+						WithTrueSubjectsResolvedCondition,
+					),
+				},
+			},
+			WantErr: false,
+		},
 	}
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		ctx = duckv1authstatus.WithDuck(ctx)
 		r := &Reconciler{
-			fromRefResolver: resolver.NewAuthenticatableResolverFromTracker(ctx, tracker.New(func(types.NamespacedName) {}, 0))}
+			authResolver: resolver.NewAuthenticatableResolverFromTracker(ctx, tracker.New(func(types.NamespacedName) {}, 0))}
 		return eventpolicy.NewReconciler(ctx, logger,
 			fakeeventingclient.Get(ctx), listers.GetEventPolicyLister(),
 			controller.GetEventRecorder(ctx), r)
