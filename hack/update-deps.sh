@@ -18,8 +18,9 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-source $(dirname "$0")/../vendor/knative.dev/hack/library.sh
-
-$(dirname $0)/update-cert-manager.sh
+# shellcheck disable=SC1090
+source "$(go run knative.dev/hack/cmd/script library.sh)"
 
 go_update_deps "$@"
+
+"$(dirname $0)/update-cert-manager.sh"

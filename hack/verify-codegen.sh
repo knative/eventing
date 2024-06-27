@@ -20,7 +20,8 @@ set -o pipefail
 
 export GO111MODULE=on
 
-source $(dirname $0)/../vendor/knative.dev/hack/library.sh
+# shellcheck disable=SC1090
+source "$(go run knative.dev/hack/cmd/script library.sh)"
 
 readonly TMP_DIFFROOT="$(mktemp -d ${REPO_ROOT_DIR}/tmpdiffroot.XXXXXX)"
 
@@ -40,7 +41,6 @@ cp -aR \
   "${REPO_ROOT_DIR}/go.mod" \
   "${REPO_ROOT_DIR}/pkg" \
   "${REPO_ROOT_DIR}/third_party" \
-  "${REPO_ROOT_DIR}/vendor" \
   "${TMP_DIFFROOT}"
 
 "${REPO_ROOT_DIR}/hack/update-codegen.sh"
@@ -59,15 +59,11 @@ diff -Naupr --no-dereference \
 diff -Naupr --no-dereference \
   "${REPO_ROOT_DIR}/third_party" "${TMP_DIFFROOT}/third_party" || ret=1
 
-diff -Naupr --no-dereference \
-  "${REPO_ROOT_DIR}/vendor" "${TMP_DIFFROOT}/vendor" || ret=1
-
 # Restore working tree state
 rm -fr \
   "${REPO_ROOT_DIR}/go.sum" \
   "${REPO_ROOT_DIR}/pkg" \
-  "${REPO_ROOT_DIR}/third_party" \
-  "${REPO_ROOT_DIR}/vendor"
+  "${REPO_ROOT_DIR}/third_party"
 
 cp -aR "${TMP_DIFFROOT}"/* "${REPO_ROOT_DIR}"
 
