@@ -40,7 +40,7 @@ func TestEventTypeDefaults(t *testing.T) {
 				Spec: EventTypeSpec{},
 			},
 		},
-		"broker empty": {
+		"default broker reference": {
 			initial: EventType{
 				Spec: EventTypeSpec{
 					Reference: &duckv1.KReference{
@@ -115,6 +115,7 @@ func TestEventTypeDefaults(t *testing.T) {
 			},
 			expected: EventType{
 				Spec: EventTypeSpec{
+					Reference: nil,
 					Attributes: []EventAttributeDefinition{
 						{
 							Value:    "test-type",

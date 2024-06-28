@@ -44,9 +44,7 @@ jobs:
       GOPATH: ${{ github.workspace }}
     steps:
     - name: Set up Go
-      uses: actions/setup-go@v2
-      with:
-        go-version: 1.21.x
+      uses: knative/actions/setup-go@main
     - name: Install Dependencies
       run: |
         go install github.com/google/go-licenses@latest

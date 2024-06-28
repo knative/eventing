@@ -59,16 +59,14 @@ jobs:
 
     steps:
     - name: Set up Go
-      uses: actions/setup-go@v2
-      with:
-        go-version: 1.21.x
+      uses: knative/actions/setup-go@main
 
     # Install the latest release of ko
     - name: Install ko
       uses: ko-build/setup-ko@v0.6
 
     - name: Check out code onto GOPATH
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
 
     - name: Install KinD
       run: |
@@ -112,7 +110,7 @@ jobs:
     - name: Wait for things to be up
       run: |
         set -e
-        source ./vendor/knative.dev/hack/infra-library.sh
+        source "$(go run knative.dev/hack/cmd/script infra-library.sh)"
         wait_until_pods_running ${SYSTEM_NAMESPACE}
 
     - name: Run e2e Tests

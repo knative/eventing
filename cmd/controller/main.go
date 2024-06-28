@@ -34,6 +34,7 @@ import (
 	"knative.dev/eventing/pkg/apis/sinks"
 	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/eventingtls"
+	"knative.dev/eventing/pkg/reconciler/eventpolicy"
 	"knative.dev/eventing/pkg/reconciler/jobsink"
 
 	"knative.dev/eventing/pkg/reconciler/apiserversource"
@@ -93,6 +94,7 @@ func main() {
 
 		// Eventing
 		eventtype.NewController,
+		eventpolicy.NewController,
 
 		// Flows
 		parallel.NewController,
