@@ -49,12 +49,12 @@ func TestEventPolicyGetConditionSet(t *testing.T) {
 func TestEventPolicyGetCondition(t *testing.T) {
 	tests := []struct {
 		name      string
-		ets       *EventPolicyStatus
+		eps       *EventPolicyStatus
 		condQuery apis.ConditionType
 		want      *apis.Condition
 	}{{
 		name: "single condition",
-		ets: &EventPolicyStatus{
+		eps: &EventPolicyStatus{
 			Status: duckv1.Status{
 				Conditions: []apis.Condition{
 					eventPolicyConditionReady,
@@ -67,7 +67,7 @@ func TestEventPolicyGetCondition(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := test.ets.GetCondition(test.condQuery)
+			got := test.eps.GetCondition(test.condQuery)
 			if diff := cmp.Diff(test.want, got); diff != "" {
 				t.Error("unexpected condition (-want, +got) =", diff)
 			}
@@ -78,18 +78,27 @@ func TestEventPolicyGetCondition(t *testing.T) {
 func TestEventPolicyInitializeConditions(t *testing.T) {
 	tests := []struct {
 		name string
-		ets  *EventPolicyStatus
+		eps  *EventPolicyStatus
 		want *EventPolicyStatus
 	}{
 		{
 			name: "empty",
-			ets:  &EventPolicyStatus{},
+			eps:  &EventPolicyStatus{},
 			want: &EventPolicyStatus{
 				Status: duckv1.Status{
-					Conditions: []apis.Condition{{
-						Type:   EventPolicyConditionReady,
-						Status: corev1.ConditionUnknown,
-					},
+					Conditions: []apis.Condition{
+						{
+							Type:   EventPolicyConditionAuthenticationEnabled,
+							Status: corev1.ConditionUnknown,
+						},
+						{
+							Type:   EventPolicyConditionReady,
+							Status: corev1.ConditionUnknown,
+						},
+						{
+							Type:   EventPolicyConditionSubjectsResolved,
+							Status: corev1.ConditionUnknown,
+						},
 					},
 				},
 			},
@@ -98,9 +107,99 @@ func TestEventPolicyInitializeConditions(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			test.ets.InitializeConditions()
-			if diff := cmp.Diff(test.want, test.ets, ignoreAllButTypeAndStatus); diff != "" {
+			test.eps.InitializeConditions()
+			if diff := cmp.Diff(test.want, test.eps, ignoreAllButTypeAndStatus); diff != "" {
 				t.Error("unexpected conditions (-want, +got) =", diff)
+			}
+		})
+	}
+}
+
+func TestEventPolicyReadyCondition(t *testing.T) {
+	tests := []struct {
+		name                          string
+		eps                           *EventPolicyStatus
+		markOIDCAuthenticationEnabled bool
+		markSubjectsResolvedSucceeded bool
+		wantReady                     bool
+	}{
+		{
+			name: "Initially everything is Unknown, Auth&SubjectsResolved marked as true, EP should become Ready",
+			eps: &EventPolicyStatus{
+				Status: duckv1.Status{
+					Conditions: []apis.Condition{
+						{Type: EventPolicyConditionReady, Status: corev1.ConditionUnknown},
+						{Type: EventPolicyConditionAuthenticationEnabled, Status: corev1.ConditionUnknown},
+						{Type: EventPolicyConditionSubjectsResolved, Status: corev1.ConditionUnknown},
+					},
+				},
+			},
+			markOIDCAuthenticationEnabled: true,
+			markSubjectsResolvedSucceeded: true,
+			wantReady:                     true,
+		},
+		{
+			name: "Initially everything is True, Auth&SubjectsResolved stay true, EP should stay Ready",
+			eps: &EventPolicyStatus{
+				Status: duckv1.Status{
+					Conditions: []apis.Condition{
+						{Type: EventPolicyConditionReady, Status: corev1.ConditionTrue},
+						{Type: EventPolicyConditionAuthenticationEnabled, Status: corev1.ConditionTrue},
+						{Type: EventPolicyConditionSubjectsResolved, Status: corev1.ConditionTrue},
+					},
+				},
+			},
+			markOIDCAuthenticationEnabled: true,
+			markSubjectsResolvedSucceeded: true,
+			wantReady:                     true,
+		},
+		{
+			name: "Initially everything is True, then AuthenticationEnabled marked as False, EP should become NotReady",
+			eps: &EventPolicyStatus{
+				Status: duckv1.Status{
+					Conditions: []apis.Condition{
+						{Type: EventPolicyConditionReady, Status: corev1.ConditionTrue},
+						{Type: EventPolicyConditionAuthenticationEnabled, Status: corev1.ConditionTrue},
+						{Type: EventPolicyConditionSubjectsResolved, Status: corev1.ConditionTrue},
+					},
+				},
+			},
+			markOIDCAuthenticationEnabled: false,
+			markSubjectsResolvedSucceeded: true,
+			wantReady:                     false,
+		},
+		{
+			name: "Initially everything is True, then SubjectsResolved marked as False, EP should become NotReady",
+			eps: &EventPolicyStatus{
+				Status: duckv1.Status{
+					Conditions: []apis.Condition{
+						{Type: EventPolicyConditionReady, Status: corev1.ConditionTrue},
+						{Type: EventPolicyConditionAuthenticationEnabled, Status: corev1.ConditionTrue},
+						{Type: EventPolicyConditionSubjectsResolved, Status: corev1.ConditionTrue},
+					},
+				},
+			},
+			markOIDCAuthenticationEnabled: true,
+			markSubjectsResolvedSucceeded: false,
+			wantReady:                     false,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if test.markOIDCAuthenticationEnabled {
+				test.eps.MarkOIDCAuthenticationEnabled()
+			} else {
+				test.eps.MarkOIDCAuthenticationDisabled("OIDCAuthenticationDisabled", "")
+			}
+			if test.markSubjectsResolvedSucceeded {
+				test.eps.MarkSubjectsResolvedSucceeded()
+			} else {
+				test.eps.MarkSubjectsResolvedFailed("SubjectsNotResolved", "")
+			}
+			ep := EventPolicy{Status: *test.eps}
+			got := ep.GetConditionSet().Manage(test.eps).IsHappy()
+			if test.wantReady != got {
+				t.Errorf("unexpected readiness: want %v, got %v", test.wantReady, got)
 			}
 		})
 	}

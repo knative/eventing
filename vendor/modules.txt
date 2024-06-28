@@ -1081,6 +1081,7 @@ knative.dev/pkg/client/injection/apiextensions/reconciler/apiextensions/v1/custo
 knative.dev/pkg/client/injection/ducks/duck/v1/addressable
 knative.dev/pkg/client/injection/ducks/duck/v1/addressable/fake
 knative.dev/pkg/client/injection/ducks/duck/v1/authstatus
+knative.dev/pkg/client/injection/ducks/duck/v1/authstatus/fake
 knative.dev/pkg/client/injection/ducks/duck/v1/conditions
 knative.dev/pkg/client/injection/ducks/duck/v1/conditions/fake
 knative.dev/pkg/client/injection/ducks/duck/v1/kresource
