@@ -61,8 +61,8 @@ github.com/blang/semver/v4 v4.0.0 h1:1PFHFE6yCCTv8C1TeyNNarDzntLi7wMI5i/pzqYIsAM
 github.com/blang/semver/v4 v4.0.0/go.mod h1:IbckMUScFkM3pff0VJDNKRiT6TG/YpiHIM2yvyW5YoQ=
 github.com/blendle/zapdriver v1.3.1 h1:C3dydBOWYRiOk+B8X9IVZ5IOe+7cl+tGOexN4QqHfpE=
 github.com/blendle/zapdriver v1.3.1/go.mod h1:mdXfREi6u5MArG4j9fewC+FGnXaBR+T4Ox4J2u4eHCc=
-github.com/cardil/knative-hack v0.0.0-20240627155243-4b5dad135546 h1:sbjR3wfWYfIEfJx1Th2rxdBDhUyzlHRDjFCkpnSP86M=
-github.com/cardil/knative-hack v0.0.0-20240627155243-4b5dad135546/go.mod h1:yk2OjGDsbEnQjfxdm0/HJKS2WqTLEFg/N6nUs6Rqx3Q=
+github.com/cardil/knative-hack v0.0.0-20240709153708-bc2fe4ea0e35 h1:VsOr85OYA4TrKh+GrGrmWlOx2nz/VzsWhzQQLO1T8UA=
+github.com/cardil/knative-hack v0.0.0-20240709153708-bc2fe4ea0e35/go.mod h1:R0ritgYtjLDO9527h5vb5X6gfvt5LCrJ55BNbVDsWiY=
 github.com/census-instrumentation/opencensus-proto v0.2.1/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=
 github.com/census-instrumentation/opencensus-proto v0.4.1 h1:iKLQ0xPNFxR/2hzXZMrBo8f1j86j5WHzznCCQxV/b8g=
 github.com/census-instrumentation/opencensus-proto v0.4.1/go.mod h1:4T9NM4+4Vw91VeyqjLS6ao50K5bOcLKN6Q42XnYaRYw=
@@ -842,8 +842,8 @@ k8s.io/utils v0.0.0-20240102154912-e7106e64919e h1:eQ/4ljkx21sObifjzXwlPKpdGLrCf
 k8s.io/utils v0.0.0-20240102154912-e7106e64919e/go.mod h1:OLgZIPagt7ERELqWJFomSt595RzquPNLL48iOWgYOg0=
 knative.dev/hack/schema v0.0.0-20240607132042-09143140a254 h1:b9hFHGtxx0Kpm4EEjSD72lL0jms91To3OEVBTbqfOYI=
 knative.dev/hack/schema v0.0.0-20240607132042-09143140a254/go.mod h1:3pWwBLnTZSM9psSgCAvhKOHIPTzqfEMlWRpDu6IYhK0=
-knative.dev/pkg v0.0.0-20240621201938-fc0720b7a660 h1:SYPUGNPA/egS+u6oa6q1kN3Ec+z+we/hPrWie7qhLUg=
-knative.dev/pkg v0.0.0-20240621201938-fc0720b7a660/go.mod h1:Wikg4u73T6vk9TctrxZt60VXzqmGEQIx0iKfk1+9o4c=
+knative.dev/pkg v0.0.0-20240626134149-3f6a546ac3a4 h1:slPKf3UKdBFZlz+hFy+KXzTgY9yOePLzRuEhKzgc5a4=
+knative.dev/pkg v0.0.0-20240626134149-3f6a546ac3a4/go.mod h1:Wikg4u73T6vk9TctrxZt60VXzqmGEQIx0iKfk1+9o4c=
 knative.dev/reconciler-test v0.0.0-20240618170853-5bf0b86114f8 h1:A+rsitEiTX3GudM51g7zUMza+Ripj+boncmlJ2jZp50=
 knative.dev/reconciler-test v0.0.0-20240618170853-5bf0b86114f8/go.mod h1:2uUx3U6kdIzgJgMGgrGmdDdcFrFiex/DjuI2gM7Tte8=
 rsc.io/binaryregexp v0.2.0/go.mod h1:qTv7/COck+e2FymRvadv62gMdZztPaShugOCi3I+8D8=

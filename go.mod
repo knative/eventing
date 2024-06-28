@@ -45,12 +45,12 @@ require (
 	k8s.io/utils v0.0.0-20240102154912-e7106e64919e
 	knative.dev/hack v0.0.0-20240607132042-09143140a254
 	knative.dev/hack/schema v0.0.0-20240607132042-09143140a254
-	knative.dev/pkg v0.0.0-20240621201938-fc0720b7a660
+	knative.dev/pkg v0.0.0-20240626134149-3f6a546ac3a4
 	knative.dev/reconciler-test v0.0.0-20240618170853-5bf0b86114f8
 	sigs.k8s.io/yaml v1.4.0
 )
 
-replace knative.dev/hack => github.com/cardil/knative-hack v0.0.0-20240627155243-4b5dad135546
+replace knative.dev/hack => github.com/cardil/knative-hack v0.0.0-20240709153708-bc2fe4ea0e35
 
 require (
 	contrib.go.opencensus.io/exporter/ocagent v0.7.1-0.20200907061046-05415f1de66d // indirect
@@ -122,9 +122,4 @@ require (
 	k8s.io/kube-openapi v0.0.0-20231010175941-2dd684a91f00 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
-)
-
-replace (
-	github.com/dgrijalva/jwt-go => github.com/form3tech-oss/jwt-go v0.0.0-20210511163231-5b2d2b5f6c34
-	github.com/miekg/dns v1.0.14 => github.com/miekg/dns v1.1.25
 )
