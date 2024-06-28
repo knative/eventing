@@ -20,9 +20,10 @@ set -o pipefail
 
 export GO111MODULE=on
 
-source $(dirname $0)/../vendor/knative.dev/hack/library.sh
+# shellcheck disable=SC1090
+source "$(go run knative.dev/hack/cmd/script library.sh)"
 
-readonly TMP_DIFFROOT="$(mktemp -d ${REPO_ROOT_DIR}/tmpdiffroot.XXXXXX)"
+readonly TMP_DIFFROOT="$(mktemp -d "${REPO_ROOT_DIR}/tmpdiffroot.XXXXXX")"
 
 cleanup() {
   rm -rf "${TMP_DIFFROOT}"

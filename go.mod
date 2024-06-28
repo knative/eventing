@@ -50,6 +50,8 @@ require (
 	sigs.k8s.io/yaml v1.4.0
 )
 
+replace knative.dev/hack => github.com/cardil/knative-hack v0.0.0-20240709153708-bc2fe4ea0e35
+
 require (
 	contrib.go.opencensus.io/exporter/ocagent v0.7.1-0.20200907061046-05415f1de66d // indirect
 	contrib.go.opencensus.io/exporter/prometheus v0.4.2 // indirect

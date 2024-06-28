@@ -24,11 +24,12 @@ if [ -z "${GOPATH:-}" ]; then
   export GOPATH=$(go env GOPATH)
 fi
 
-source $(dirname $0)/../vendor/knative.dev/hack/library.sh
+# shellcheck disable=SC1090
+source "$(go run knative.dev/hack/cmd/script library.sh)"
 
 (
-  cd ${REPO_ROOT_DIR}
-  go run "${REPO_ROOT_DIR}/vendor/github.com/ahmetb/gen-crd-api-reference-docs" \
+  cd "${REPO_ROOT_DIR}"
+  go run github.com/ahmetb/gen-crd-api-reference-docs \
     -out-file "docs/eventing-api.md" \
     -api-dir "knative.dev/eventing/pkg/apis" \
     -template-dir "${REPO_ROOT_DIR}/vendor/github.com/ahmetb/gen-crd-api-reference-docs/template" \
