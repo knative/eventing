@@ -124,7 +124,22 @@ func TestEventPolicyReadyCondition(t *testing.T) {
 		wantReady                     bool
 	}{
 		{
-			name: "authenticationenabled and subjectresolved marked to true for a ready status ep",
+			name: "Initially everything is Unknown, Auth&SubjectsResolved marked as true, EP should become Ready",
+			eps: &EventPolicyStatus{
+				Status: duckv1.Status{
+					Conditions: []apis.Condition{
+						{Type: EventPolicyConditionReady, Status: corev1.ConditionUnknown},
+						{Type: EventPolicyConditionAuthenticationEnabled, Status: corev1.ConditionUnknown},
+						{Type: EventPolicyConditionSubjectsResolved, Status: corev1.ConditionUnknown},
+					},
+				},
+			},
+			markOIDCAuthenticationEnabled: true,
+			markSubjectsResolvedSucceeded: true,
+			wantReady:                     true,
+		},
+		{
+			name: "Initially everything is True, Auth&SubjectsResolved stay true, EP should stay Ready",
 			eps: &EventPolicyStatus{
 				Status: duckv1.Status{
 					Conditions: []apis.Condition{
@@ -139,7 +154,7 @@ func TestEventPolicyReadyCondition(t *testing.T) {
 			wantReady:                     true,
 		},
 		{
-			name: "authenticationenabled condition marked to false for a ready status ep",
+			name: "Initially everything is True, then AuthenticationEnabled marked as False, EP should become NotReady",
 			eps: &EventPolicyStatus{
 				Status: duckv1.Status{
 					Conditions: []apis.Condition{
@@ -154,7 +169,7 @@ func TestEventPolicyReadyCondition(t *testing.T) {
 			wantReady:                     false,
 		},
 		{
-			name: "authenticationenabled condition marked to false for a ready status ep",
+			name: "Initially everything is True, then SubjectsResolved marked as False, EP should become NotReady",
 			eps: &EventPolicyStatus{
 				Status: duckv1.Status{
 					Conditions: []apis.Condition{
@@ -167,36 +182,6 @@ func TestEventPolicyReadyCondition(t *testing.T) {
 			markOIDCAuthenticationEnabled: true,
 			markSubjectsResolvedSucceeded: false,
 			wantReady:                     false,
-		},
-		{
-			name: "authenticationenabled condition marked to true for a not ready status ep",
-			eps: &EventPolicyStatus{
-				Status: duckv1.Status{
-					Conditions: []apis.Condition{
-						{Type: EventPolicyConditionReady, Status: corev1.ConditionFalse},
-						{Type: EventPolicyConditionAuthenticationEnabled, Status: corev1.ConditionFalse},
-						{Type: EventPolicyConditionSubjectsResolved, Status: corev1.ConditionTrue},
-					},
-				},
-			},
-			markOIDCAuthenticationEnabled: true,
-			markSubjectsResolvedSucceeded: true,
-			wantReady:                     true,
-		},
-		{
-			name: "subjectresolved condition marked to true for a not ready status ep",
-			eps: &EventPolicyStatus{
-				Status: duckv1.Status{
-					Conditions: []apis.Condition{
-						{Type: EventPolicyConditionReady, Status: corev1.ConditionFalse},
-						{Type: EventPolicyConditionAuthenticationEnabled, Status: corev1.ConditionTrue},
-						{Type: EventPolicyConditionSubjectsResolved, Status: corev1.ConditionFalse},
-					},
-				},
-			},
-			markOIDCAuthenticationEnabled: true,
-			markSubjectsResolvedSucceeded: true,
-			wantReady:                     true,
 		},
 	}
 	for _, test := range tests {
