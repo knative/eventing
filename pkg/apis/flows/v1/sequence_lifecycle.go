@@ -29,9 +29,9 @@ import (
 )
 
 var sCondSet = apis.NewLivingConditionSet(
-	SequenceConditionReady, 
-	SequenceConditionChannelsReady, 
-	SequenceConditionSubscriptionsReady, 
+	SequenceConditionReady,
+	SequenceConditionChannelsReady,
+	SequenceConditionSubscriptionsReady,
 	SequenceConditionAddressable,
 	SequenceConditionEventPoliciesReady,
 )

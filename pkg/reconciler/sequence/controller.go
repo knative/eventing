@@ -26,8 +26,8 @@ import (
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 
-	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
+	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
 	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventpolicy"
 	"knative.dev/eventing/pkg/client/injection/informers/flows/v1/sequence"

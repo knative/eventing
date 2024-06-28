@@ -80,7 +80,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, s *v1.Sequence) pkgrecon
 	// 4. If there's a Reply, then the last Subscription will be configured to send the reply to that.
 
 	featureFlags := feature.FromContext(ctx)
-	
+
 	gvr, _ := meta.UnsafeGuessKindToResource(s.Spec.ChannelTemplate.GetObjectKind().GroupVersionKind())
 	channelResourceInterface := r.dynamicClientSet.Resource(gvr).Namespace(s.Namespace)
 	if channelResourceInterface == nil {
