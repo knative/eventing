@@ -35,13 +35,15 @@ import (
 	pkgreconciler "knative.dev/pkg/reconciler"
 
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	"knative.dev/eventing/pkg/apis/feature"
 	v1 "knative.dev/eventing/pkg/apis/flows/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
+	"knative.dev/eventing/pkg/auth"
 	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
 	sequencereconciler "knative.dev/eventing/pkg/client/injection/reconciler/flows/v1/sequence"
+	eventingv1alpha1listers "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 	listers "knative.dev/eventing/pkg/client/listers/flows/v1"
 	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1"
-	eventingv1alpha1listers "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/pkg/kmp"
 
@@ -77,6 +79,8 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, s *v1.Sequence) pkgrecon
 	// 3. Rinse and repeat step #2 above for each Step in the list
 	// 4. If there's a Reply, then the last Subscription will be configured to send the reply to that.
 
+	featureFlags := feature.FromContext(ctx)
+	
 	gvr, _ := meta.UnsafeGuessKindToResource(s.Spec.ChannelTemplate.GetObjectKind().GroupVersionKind())
 	channelResourceInterface := r.dynamicClientSet.Resource(gvr).Namespace(s.Namespace)
 	if channelResourceInterface == nil {
@@ -123,6 +127,11 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, s *v1.Sequence) pkgrecon
 	// leftover channels and subscriptions that need to be removed.
 	if err := r.removeUnwantedChannels(ctx, channelResourceInterface, s, channels); err != nil {
 		return err
+	}
+
+	err := auth.UpdateStatusWithEventPolicies(featureFlags, &s.Status.AppliedEventPoliciesStatus, &s.Status, r.eventPolicyLister, v1.SchemeGroupVersion.WithKind("Sequence"), s.ObjectMeta)
+	if err != nil {
+		return fmt.Errorf("could not update channel status with EventPolicies: %v", err)
 	}
 
 	return r.removeUnwantedSubscriptions(ctx, s, subs)
