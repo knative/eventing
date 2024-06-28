@@ -4,7 +4,7 @@ coverage:
   status:
     project:
       default:
-        target: 80
+        target: auto # Reject the coverage drop of more than 1%
         threshold: 1%
     patch:
       # Disable the coverage threshold of the patch, so that PRs are
