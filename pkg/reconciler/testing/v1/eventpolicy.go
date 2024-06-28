@@ -44,25 +44,72 @@ func NewEventPolicy(name, namespace string, o ...EventPolicyOption) *v1alpha1.Ev
 	return ep
 }
 
-func WithInitEventPolicyConditions(et *v1alpha1.EventPolicy) {
-	et.Status.InitializeConditions()
+func WithInitEventPolicyConditions(ep *v1alpha1.EventPolicy) {
+	ep.Status.InitializeConditions()
 }
 
-func WithReadyEventPolicyCondition(ep *v1alpha1.EventPolicy) {
-	ep.Status.Conditions = []apis.Condition{
-		{
-			Type:   v1alpha1.EventPolicyConditionReady,
+func WithEventPolicyAuthenticationEnabledCondition(ep *v1alpha1.EventPolicy) {
+	ep.Status.Conditions = append(ep.Status.Conditions,
+		apis.Condition{
+			Type:   v1alpha1.EventPolicyConditionAuthenticationEnabled,
 			Status: corev1.ConditionTrue,
-		},
+		})
+}
+
+func WithEventPolicyAuthenticationDisabledCondition(ep *v1alpha1.EventPolicy) {
+	ep.Status.Conditions = append(ep.Status.Conditions,
+		apis.Condition{
+			Type:   v1alpha1.EventPolicyConditionAuthenticationEnabled,
+			Status: corev1.ConditionFalse,
+			Reason: "OIDCAuthenticationDisabled",
+		})
+}
+
+func WithEventPolicySubjectsResolvedSucceeded(ep *v1alpha1.EventPolicy) {
+	ep.Status.Conditions = append(ep.Status.Conditions,
+		apis.Condition{
+			Type:   v1alpha1.EventPolicyConditionSubjectsResolved,
+			Status: corev1.ConditionTrue,
+		})
+}
+
+func WithEventPolicySubjectsResolvedFailed(reason, message string) EventPolicyOption {
+	return func(ep *v1alpha1.EventPolicy) {
+		ep.Status.Conditions = append(ep.Status.Conditions,
+			apis.Condition{
+				Type:    v1alpha1.EventPolicyConditionSubjectsResolved,
+				Status:  corev1.ConditionFalse,
+				Reason:  reason,
+				Message: message,
+			})
 	}
 }
 
-func WithUnreadyEventPolicyCondition(ep *v1alpha1.EventPolicy) {
-	ep.Status.Conditions = []apis.Condition{
-		{
+func WithEventPolicySubjectsResolvedUnknown(ep *v1alpha1.EventPolicy) {
+	ep.Status.Conditions = append(ep.Status.Conditions,
+		apis.Condition{
+			Type:   v1alpha1.EventPolicyConditionSubjectsResolved,
+			Status: corev1.ConditionUnknown,
+		})
+}
+
+func WithReadyEventPolicyCondition(ep *v1alpha1.EventPolicy) {
+	ep.Status.Conditions = append(ep.Status.Conditions,
+		apis.Condition{
 			Type:   v1alpha1.EventPolicyConditionReady,
-			Status: corev1.ConditionFalse,
-		},
+			Status: corev1.ConditionTrue,
+		})
+}
+
+func WithUnreadyEventPolicyCondition(reason, message string) EventPolicyOption {
+	return func(ep *v1alpha1.EventPolicy) {
+		ep.Status.Conditions = append(ep.Status.Conditions,
+			apis.Condition{
+				Type:    v1alpha1.EventPolicyConditionReady,
+				Status:  corev1.ConditionFalse,
+				Reason:  reason,
+				Message: message,
+			})
 	}
 }
 
@@ -100,5 +147,11 @@ func WithEventPolicyLabels(labels map[string]string) EventPolicyOption {
 func WithEventPolicyOwnerReferences(ownerRefs ...metav1.OwnerReference) EventPolicyOption {
 	return func(ep *v1alpha1.EventPolicy) {
 		ep.ObjectMeta.OwnerReferences = append(ep.ObjectMeta.OwnerReferences, ownerRefs...)
+	}
+}
+
+func WithEventPolicyStatusFromSub(subs []string) EventPolicyOption {
+	return func(ep *v1alpha1.EventPolicy) {
+		ep.Status.From = append(ep.Status.From, subs...)
 	}
 }
