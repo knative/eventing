@@ -146,16 +146,15 @@ func TestSequenceInitializeConditions(t *testing.T) {
 					Type:   SequenceConditionChannelsReady,
 					Status: corev1.ConditionUnknown,
 				}, {
+					Type:   SequenceConditionEventPoliciesReady,
+					Status: corev1.ConditionUnknown,
+				}, {
 					Type:   SequenceConditionReady,
 					Status: corev1.ConditionUnknown,
 				}, {
 					Type:   SequenceConditionSubscriptionsReady,
 					Status: corev1.ConditionUnknown,
-				},
-					{
-						Type:   SequenceConditionEventPoliciesReady,
-						Status: corev1.ConditionUnknown,
-					}},
+				}},
 			},
 		},
 	}, {
@@ -177,16 +176,15 @@ func TestSequenceInitializeConditions(t *testing.T) {
 					Type:   SequenceConditionChannelsReady,
 					Status: corev1.ConditionFalse,
 				}, {
+					Type:   SequenceConditionEventPoliciesReady,
+					Status: corev1.ConditionUnknown,
+				}, {
 					Type:   SequenceConditionReady,
 					Status: corev1.ConditionUnknown,
 				}, {
 					Type:   SequenceConditionSubscriptionsReady,
 					Status: corev1.ConditionUnknown,
-				},
-					{
-						Type:   SequenceConditionEventPoliciesReady,
-						Status: corev1.ConditionUnknown,
-					}},
+				}},
 			},
 		},
 	}, {
@@ -208,16 +206,15 @@ func TestSequenceInitializeConditions(t *testing.T) {
 					Type:   SequenceConditionChannelsReady,
 					Status: corev1.ConditionUnknown,
 				}, {
+					Type:   SequenceConditionEventPoliciesReady,
+					Status: corev1.ConditionUnknown,
+				}, {
 					Type:   SequenceConditionReady,
 					Status: corev1.ConditionUnknown,
 				}, {
 					Type:   SequenceConditionSubscriptionsReady,
 					Status: corev1.ConditionTrue,
-				},
-					{
-						Type:   SequenceConditionEventPoliciesReady,
-						Status: corev1.ConditionUnknown,
-					}},
+				}},
 			},
 		},
 	}}
