@@ -70,7 +70,6 @@ func NewController(
 
 	// Enqueue the Sequence, if we have an EventPolicy which was referencing
 	// or got updated and now is referencing the Sequence
-
 	eventPolicyInformer.Informer().AddEventHandler(auth.EventPolicyEventHandler(
 		sequenceInformer.Informer().GetIndexer(),
 		sequenceGK,
