@@ -19,6 +19,10 @@ package eventpolicy
 import (
 	"testing"
 
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/eventing/pkg/apis/feature"
+
 	"knative.dev/pkg/configmap"
 
 	. "knative.dev/pkg/reconciler/testing"
@@ -31,7 +35,12 @@ import (
 func TestNew(t *testing.T) {
 	ctx, _ := SetupFakeContext(t)
 
-	c := NewController(ctx, configmap.NewStaticWatcher())
+	c := NewController(ctx, configmap.NewStaticWatcher(&corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      feature.FlagsConfigName,
+			Namespace: "knative-eventing",
+		},
+	}))
 
 	if c == nil {
 		t.Fatal("Expected NewController to return a non-nil value")
