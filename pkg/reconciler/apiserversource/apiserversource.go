@@ -464,5 +464,6 @@ func (r *Reconciler) propagateTrustBundles(ctx context.Context, source *v1.ApiSe
 		Version: v1.SchemeGroupVersion.Version,
 		Kind:    "ApiServerSource",
 	}
-	return eventingtls.PropagateTrustBundles(ctx, r.kubeClientSet, r.trustBundleConfigMapLister, gvk, source)
+	_, err := eventingtls.PropagateTrustBundles(ctx, r.kubeClientSet, r.trustBundleConfigMapLister, gvk, source)
+	return err
 }
