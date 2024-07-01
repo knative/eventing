@@ -88,15 +88,17 @@ func TestReceiver(t *testing.T) {
 		additionalReplyHeaders http.Header
 
 		// expectations
-		expectedResponseEvent       *cloudevents.Event
-		expectedResponse            *http.Response
-		expectedDispatch            bool
-		expectedStatus              int
-		expectedHeaders             http.Header
-		expectedEventCount          bool
-		expectedEventDispatchTime   bool
-		expectedEventProcessingTime bool
-		expectedResponseHeaders     http.Header
+		expectedResponseEvent        *cloudevents.Event
+		expectedResponse             *http.Response
+		expectedDispatch             bool
+		expectedStatus               int
+		expectedHeaders              http.Header
+		expectedEventCount           bool
+		expectedUnauthenticatedCount bool
+		expectedInvalidTokenCount    bool
+		expectedEventDispatchTime    bool
+		expectedEventProcessingTime  bool
+		expectedResponseHeaders      http.Header
 	}{
 		"Not POST": {
 			request:        httptest.NewRequest(http.MethodGet, validPath, nil),
@@ -517,6 +519,12 @@ func TestReceiver(t *testing.T) {
 			if tc.expectedEventCount != reporter.eventCountReported {
 				t.Errorf("Incorrect event count reported metric. Expected %v, Actual %v", tc.expectedEventCount, reporter.eventCountReported)
 			}
+			if tc.expectedUnauthenticatedCount != reporter.unauthenticatedCountReported {
+				t.Errorf("Incorrect unauthenticated count reported metric. Expected %v, Actual %v", tc.expectedUnauthenticatedCount, reporter.unauthenticatedCountReported)
+			}
+			if tc.expectedInvalidTokenCount != reporter.invalidTokenCountReported {
+				t.Errorf("Incorrect invalid token count reported metric. Expected %v, Actual %v", tc.expectedInvalidTokenCount, reporter.invalidTokenCountReported)
+			}
 			if tc.expectedEventDispatchTime != reporter.eventDispatchTimeReported {
 				t.Errorf("Incorrect event dispatch time reported metric. Expected %v, Actual %v", tc.expectedEventDispatchTime, reporter.eventDispatchTimeReported)
 			}
@@ -742,13 +750,25 @@ func (r *responseWriterWithInvocationsCheck) WriteHeader(statusCode int) {
 }
 
 type mockReporter struct {
-	eventCountReported          bool
-	eventDispatchTimeReported   bool
-	eventProcessingTimeReported bool
+	eventCountReported           bool
+	unauthenticatedCountReported bool
+	invalidTokenCountReported    bool
+	eventDispatchTimeReported    bool
+	eventProcessingTimeReported  bool
 }
 
 func (r *mockReporter) ReportEventCount(args *ReportArgs, responseCode int) error {
 	r.eventCountReported = true
+	return nil
+}
+
+func (r *mockReporter) ReportUnauthenticatedRequest(args *ReportArgs) error {
+	r.unauthenticatedCountReported = true
+	return nil
+}
+
+func (r *mockReporter) ReportInvalidTokenRequest(args *ReportArgs) error {
+	r.invalidTokenCountReported = true
 	return nil
 }
 

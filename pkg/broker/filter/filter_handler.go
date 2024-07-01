@@ -26,6 +26,8 @@ import (
 	"net/http"
 	"time"
 
+	"knative.dev/eventing/pkg/auth"
+
 	opencensusclient "github.com/cloudevents/sdk-go/observability/opencensus/v2/client"
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"
@@ -40,7 +42,6 @@ import (
 	"knative.dev/pkg/logging"
 
 	"knative.dev/eventing/pkg/apis"
-	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/utils"
 
@@ -152,6 +153,42 @@ func NewHandler(logger *zap.Logger, tokenVerifier *auth.OIDCTokenVerifier, oidcT
 	}, nil
 }
 
+type authStatsReporterAdapter struct {
+	reporter StatsReporter
+}
+
+func (a *authStatsReporterAdapter) ReportUnauthenticatedRequest(args *auth.ReportArgs) {
+	err := a.reporter.ReportUnauthenticatedRequest(&ReportArgs{
+		ns:            args.Ns,
+		trigger:       args.Trigger,
+		broker:        args.Broker,
+		filterType:    args.FilterType,
+		requestType:   args.RequestType,
+		requestScheme: args.RequestScheme,
+	})
+	if err != nil {
+		return
+	}
+}
+
+func (a *authStatsReporterAdapter) ReportInvalidTokenRequest(args *auth.ReportArgs) {
+	err := a.reporter.ReportInvalidTokenRequest(&ReportArgs{
+		ns:            args.Ns,
+		trigger:       args.Trigger,
+		broker:        args.Broker,
+		filterType:    args.FilterType,
+		requestType:   args.RequestType,
+		requestScheme: args.RequestScheme,
+	})
+	if err != nil {
+		return
+	}
+}
+
+func NewAuthStatsReporterAdapter(reporter StatsReporter) auth.AuthStatsReporter {
+	return &authStatsReporterAdapter{reporter: reporter}
+}
+
 func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	ctx := h.withContext(request.Context())
 
@@ -204,7 +241,15 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 
 		audience := FilterAudience
 
-		err = h.tokenVerifier.VerifyJWTFromRequest(ctx, request, &audience, writer)
+		reportArgs := &auth.ReportArgs{
+			Ns:          trigger.Namespace,
+			Trigger:     trigger.Name,
+			Broker:      trigger.Spec.Broker,
+			RequestType: "filter",
+		}
+
+		err = h.tokenVerifier.VerifyJWTFromRequest(ctx, request, &audience, writer, reportArgs)
+
 		if err != nil {
 			h.logger.Warn("Error when validating the JWT token in the request", zap.Error(err))
 			return
