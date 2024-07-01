@@ -192,6 +192,11 @@ func IsReady(name string, timing ...time.Duration) feature.StepFn {
 	return k8s.IsReady(GVR(), name, timing...)
 }
 
+// IsDependencyDoesNotExist tests to see if a Trigger not become ready with Dependency.
+func IsDependencyDoesNotExist(name string, timing ...time.Duration) feature.StepFn {
+	return k8s.IsDependencyDoesNotExist(GVR(), name, timing...)
+}
+
 func WithNewFilters(filters []eventingv1.SubscriptionsAPIFilter) manifest.CfgFn {
 	jsonBytes, err := json.Marshal(filters)
 	if err != nil {
