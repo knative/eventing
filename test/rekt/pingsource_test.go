@@ -46,23 +46,6 @@ func TestPingSourceWithSinkRef(t *testing.T) {
 	env.Test(ctx, t, pingsource.SendsEventsWithSinkRef())
 }
 
-func TestPingSourceTLS(t *testing.T) {
-	t.Parallel()
-
-	ctx, env := global.Environment(
-		knative.WithKnativeNamespace(system.Namespace()),
-		knative.WithLoggingConfig,
-		knative.WithTracingConfig,
-		k8s.WithEventListener,
-		environment.Managed(t),
-		eventshub.WithTLS(t),
-	)
-	t.Cleanup(env.Finish)
-
-	env.ParallelTest(ctx, t, pingsource.SendsEventsTLS())
-	env.ParallelTest(ctx, t, pingsource.SendsEventsTLSTrustBundle())
-}
-
 func TestPingSourceWithSinkURI(t *testing.T) {
 	t.Parallel()
 
@@ -120,17 +103,27 @@ func TestPingSourceDataPlane_BrokerAsSinkTLS(t *testing.T) {
 	env.Test(ctx, t, pingsource.SendsEventsWithBrokerAsSinkTLS())
 }
 
-func TestPingSourceSendsEventsOIDC(t *testing.T) {
-	t.Parallel()
+func TestPingSourceTLSAndOIDC(t *testing.T) {
+    t.Parallel()
 
-	ctx, env := global.Environment(
-		knative.WithKnativeNamespace(system.Namespace()),
-		knative.WithLoggingConfig,
-		knative.WithTracingConfig,
-		k8s.WithEventListener,
-		environment.Managed(t),
-		eventshub.WithTLS(t),
-	)
+    ctx, env := global.Environment(
+        knative.WithKnativeNamespace(system.Namespace()),
+        knative.WithLoggingConfig,
+        knative.WithTracingConfig,
+        k8s.WithEventListener,
+        environment.Managed(t),
+        eventshub.WithTLS(t),
+    )
+    t.Cleanup(env.Finish)
 
-	env.Test(ctx, t, pingsource.PingSourceSendEventOIDC())
+    t.Run("SendsEventsTLS", func(t *testing.T) {
+        t.Parallel()
+        env.ParallelTest(ctx, t, pingsource.SendsEventsTLS())
+        env.ParallelTest(ctx, t, pingsource.SendsEventsTLSTrustBundle())
+    })
+
+    t.Run("SendsEventsOIDC", func(t *testing.T) {
+        t.Parallel()
+        env.Test(ctx, t, pingsource.PingSourceSendEventOIDC())
+    })
 }
