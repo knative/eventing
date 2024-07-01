@@ -117,6 +117,12 @@ func WithSequenceAddressableNotReady(reason, message string) SequenceOption {
 	}
 }
 
+func WithSequenceEventPoliciesReady() SequenceOption {
+	return func(p *flowsv1.Sequence) {
+		p.Status.MarkEventPoliciesTrue()
+	}
+}
+
 func WithSequenceEventPoliciesNotReady(reason, message string) SequenceOption {
 	return func(p *flowsv1.Sequence) {
 		p.Status.MarkEventPoliciesFailed(reason, message)

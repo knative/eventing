@@ -19,10 +19,10 @@ package sequence
 import (
 	"testing"
 
-	"knative.dev/pkg/configmap"
-	. "knative.dev/pkg/reconciler/testing"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/pkg/configmap"
+	. "knative.dev/pkg/reconciler/testing"
 
 	// Fake injection informers
 	"knative.dev/eventing/pkg/apis/feature"
