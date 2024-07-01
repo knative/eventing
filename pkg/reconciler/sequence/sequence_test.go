@@ -53,11 +53,12 @@ import (
 )
 
 const (
-	testNS               = "test-namespace"
-	sequenceName         = "test-sequence"
-	replyChannelName     = "reply-channel"
-	sequenceGeneration   = 7
-	readyEventPolicyName = "test-event-policy-ready"
+	testNS                 = "test-namespace"
+	sequenceName           = "test-sequence"
+	replyChannelName       = "reply-channel"
+	sequenceGeneration     = 7
+	readyEventPolicyName   = "test-event-policy-ready"
+	unreadyEventPolicyName = "test-event-policy-unready"
 )
 
 var (
@@ -68,7 +69,7 @@ var (
 	}
 
 	sequenceGVK = metav1.GroupVersionKind{
-		Group:   "messaging.knative.dev",
+		Group:   "flows.knative.dev",
 		Version: "v1",
 		Kind:    "Sequence",
 	}
@@ -1424,6 +1425,138 @@ func TestAllCases(t *testing.T) {
 					},
 				}),
 				WithSequenceEventPoliciesReady(),
+				WithSequenceEventPoliciesListed(readyEventPolicyName),
+			),
+		}},
+	}, {
+		Name: "Should mark as NotReady on unready EventPolicies",
+		Key:  pKey,
+		Objects: []runtime.Object{
+			NewSequence(sequenceName, testNS,
+				WithInitSequenceConditions,
+				WithSequenceChannelTemplateSpec(imc),
+				WithSequenceSteps([]v1.SequenceStep{{Destination: createDestination(0)}})),
+			NewEventPolicy(unreadyEventPolicyName, testNS,
+				WithUnreadyEventPolicyCondition,
+				WithEventPolicyToRef(sequenceGVK, sequenceName),
+			),
+		},
+		WantErr: false,
+		WantCreates: []runtime.Object{
+			createChannel(sequenceName, 0),
+			resources.NewSubscription(0,
+				NewSequence(sequenceName, testNS,
+					WithSequenceChannelTemplateSpec(imc),
+					WithSequenceSteps([]v1.SequenceStep{{Destination: createDestination(0)}}))),
+		},
+		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: NewSequence(sequenceName, testNS,
+				WithInitSequenceConditions,
+				WithSequenceChannelTemplateSpec(imc),
+				WithSequenceSteps([]v1.SequenceStep{{Destination: createDestination(0)}}),
+				WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
+				WithSequenceAddressableNotReady("emptyAddress", "addressable is nil"),
+				WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+				WithSequenceChannelStatuses([]v1.SequenceChannelStatus{
+					{
+						Channel: corev1.ObjectReference{
+							APIVersion: "messaging.knative.dev/v1",
+							Kind:       "InMemoryChannel",
+							Name:       resources.SequenceChannelName(sequenceName, 0),
+							Namespace:  testNS,
+						},
+						ReadyCondition: apis.Condition{
+							Type:    apis.ConditionReady,
+							Status:  corev1.ConditionUnknown,
+							Reason:  "NoReady",
+							Message: "Channel does not have Ready condition",
+						},
+					},
+				}),
+				WithSequenceSubscriptionStatuses([]v1.SequenceSubscriptionStatus{
+					{
+						Subscription: corev1.ObjectReference{
+							APIVersion: "messaging.knative.dev/v1",
+							Kind:       "Subscription",
+							Name:       resources.SequenceSubscriptionName(sequenceName, 0),
+							Namespace:  testNS,
+						},
+						ReadyCondition: apis.Condition{
+							Type:    apis.ConditionReady,
+							Status:  corev1.ConditionUnknown,
+							Reason:  "NoReady",
+							Message: "Subscription does not have Ready condition",
+						},
+					},
+				}),
+				WithSequenceEventPoliciesNotReady("EventPoliciesNotReady", fmt.Sprintf("event policies %s are not ready", unreadyEventPolicyName))),
+		}},
+	}, {
+		Name: "should list only Ready EventPolicies",
+		Key:  pKey,
+		Objects: []runtime.Object{
+			NewSequence(sequenceName, testNS,
+				WithInitSequenceConditions,
+				WithSequenceChannelTemplateSpec(imc),
+				WithSequenceSteps([]v1.SequenceStep{{Destination: createDestination(0)}})),
+			NewEventPolicy(unreadyEventPolicyName, testNS,
+				WithUnreadyEventPolicyCondition,
+				WithEventPolicyToRef(sequenceGVK, sequenceName),
+			),
+			NewEventPolicy(readyEventPolicyName, testNS,
+				WithReadyEventPolicyCondition,
+				WithEventPolicyToRef(sequenceGVK, sequenceName),
+			),
+		},
+		WantErr: false,
+		WantCreates: []runtime.Object{
+			createChannel(sequenceName, 0),
+			resources.NewSubscription(0,
+				NewSequence(sequenceName, testNS,
+					WithSequenceChannelTemplateSpec(imc),
+					WithSequenceSteps([]v1.SequenceStep{{Destination: createDestination(0)}}))),
+		},
+		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: NewSequence(sequenceName, testNS,
+				WithInitSequenceConditions,
+				WithSequenceChannelTemplateSpec(imc),
+				WithSequenceSteps([]v1.SequenceStep{{Destination: createDestination(0)}}),
+				WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
+				WithSequenceAddressableNotReady("emptyAddress", "addressable is nil"),
+				WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+				WithSequenceChannelStatuses([]v1.SequenceChannelStatus{
+					{
+						Channel: corev1.ObjectReference{
+							APIVersion: "messaging.knative.dev/v1",
+							Kind:       "InMemoryChannel",
+							Name:       resources.SequenceChannelName(sequenceName, 0),
+							Namespace:  testNS,
+						},
+						ReadyCondition: apis.Condition{
+							Type:    apis.ConditionReady,
+							Status:  corev1.ConditionUnknown,
+							Reason:  "NoReady",
+							Message: "Channel does not have Ready condition",
+						},
+					},
+				}),
+				WithSequenceSubscriptionStatuses([]v1.SequenceSubscriptionStatus{
+					{
+						Subscription: corev1.ObjectReference{
+							APIVersion: "messaging.knative.dev/v1",
+							Kind:       "Subscription",
+							Name:       resources.SequenceSubscriptionName(sequenceName, 0),
+							Namespace:  testNS,
+						},
+						ReadyCondition: apis.Condition{
+							Type:    apis.ConditionReady,
+							Status:  corev1.ConditionUnknown,
+							Reason:  "NoReady",
+							Message: "Subscription does not have Ready condition",
+						},
+					},
+				}),
+				WithSequenceEventPoliciesNotReady("EventPoliciesNotReady", fmt.Sprintf("event policies %s are not ready", unreadyEventPolicyName)),
 				WithSequenceEventPoliciesListed(readyEventPolicyName),
 			),
 		}},

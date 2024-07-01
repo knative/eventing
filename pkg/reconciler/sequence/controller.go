@@ -26,7 +26,7 @@ import (
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 
-	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
+	flowsv1 "knative.dev/eventing/pkg/apis/flows/v1"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
 	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventpolicy"
@@ -66,7 +66,7 @@ func NewController(
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 
-	sequenceGK := messagingv1.SchemeGroupVersion.WithKind("Sequence").GroupKind()
+	sequenceGK := flowsv1.SchemeGroupVersion.WithKind("Sequence").GroupKind()
 
 	// Enqueue the Sequence, if we have an EventPolicy which was referencing
 	// or got updated and now is referencing the Sequence
