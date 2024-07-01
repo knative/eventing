@@ -1788,12 +1788,12 @@ func TestAddChannel(t *testing.T) {
 func TestAddEventType(t *testing.T) {
 	tests := []struct {
 		name     string
-		et       *eventingv1beta3.EventType
+		et       eventingv1beta3.EventType
 		expected map[comparableDestination]*Vertex
 	}{
 		{
 			name: "ET references source",
-			et: &eventingv1beta3.EventType{
+			et: eventingv1beta3.EventType{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "my-EventType",
 					Namespace: "default",
