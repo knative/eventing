@@ -11,6 +11,7 @@ _Secure event processing and discovery with CloudEvents_
 [![Slack](https://img.shields.io/badge/Signup-Knative_Slack-white.svg?logo=slack)](https://slack.cncf.io/)
 [![Slack](https://img.shields.io/badge/%23eventing-white.svg?logo=slack&color=522a5e)](https://knative.slack.com/archives/C9JP909F0)
 [![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/5913/badge)](https://bestpractices.coreinfrastructure.org/projects/5913)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fknative%2Feventing.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fknative%2Feventing?ref=badge_shield)
 
 ## What is Knative Eventing?
 
@@ -55,3 +56,7 @@ If you are interested in contributing, see [the ready to work issues](https://cl
 
 Interested users should join
 [knative-users](https://groups.google.com/forum/#!forum/knative-users).
+
+
+## License
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fknative%2Feventing.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fknative%2Feventing?ref=badge_large)
