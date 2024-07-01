@@ -57,8 +57,6 @@ import (
 )
 
 var brokerGVK = eventingv1.SchemeGroupVersion.WithKind("Broker")
-var brokerNamespace string
-var broker string
 
 const (
 	// Name of the corev1.Events emitted from the Trigger reconciliation process.
@@ -91,6 +89,8 @@ type Reconciler struct {
 func (r *Reconciler) ReconcileKind(ctx context.Context, t *eventingv1.Trigger) pkgreconciler.Event {
 	logging.FromContext(ctx).Infow("Reconciling", zap.Any("Trigger", t))
 
+	var broker string
+	var brokerNamespace string
 	if t.Spec.BrokerRef != nil && feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) {
 		broker = t.Spec.BrokerRef.Name
 		brokerNamespace = t.Spec.BrokerRef.Namespace

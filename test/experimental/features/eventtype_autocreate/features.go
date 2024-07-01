@@ -120,7 +120,7 @@ func AutoCreateEventTypesOnBroker(brokerName string) *feature.Feature {
 	sink := feature.MakeRandomK8sName("sink")
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
-	f.Setup("install subscription", trigger.Install(triggerName, brokerName, trigger.WithSubscriber(service.AsKReference(sink), "")))
+	f.Setup("install subscription", trigger.Install(triggerName, trigger.WithBrokerName(brokerName), trigger.WithSubscriber(service.AsKReference(sink), "")))
 
 	f.Setup("trigger is ready", trigger.IsReady(triggerName))
 	f.Setup("broker is addressable", k8s.IsAddressable(broker.GVR(), brokerName))
@@ -158,7 +158,7 @@ func AutoCreateEventTypesOnTrigger(brokerName string) *feature.Feature {
 	replyData := ""
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.ReplyWithTransformedEvent(replyType, replySource, replyData), eventshub.StartReceiver))
-	f.Setup("install trigger", trigger.Install(triggerName, brokerName, trigger.WithSubscriberFromDestination(service.AsDestinationRef(sink)), trigger.WithFilter(map[string]string{
+	f.Setup("install trigger", trigger.Install(triggerName, trigger.WithBrokerName(brokerName), trigger.WithSubscriberFromDestination(service.AsDestinationRef(sink)), trigger.WithFilter(map[string]string{
 		"type": event.Type(),
 	})))
 
@@ -194,7 +194,7 @@ func AutoCreateEventTypeEventsFromPingSource() *feature.Feature {
 	f.Setup("broker is ready", broker.IsReady(brokerName))
 	f.Setup("broker is addressable", broker.IsAddressable(brokerName))
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
-	f.Setup("install trigger", trigger.Install(via, brokerName, trigger.WithSubscriber(service.AsKReference(sink), "")))
+	f.Setup("install trigger", trigger.Install(via, trigger.WithBrokerName(brokerName), trigger.WithSubscriber(service.AsKReference(sink), "")))
 	f.Setup("trigger goes ready", trigger.IsReady(via))
 
 	f.Requirement("install pingsource", func(ctx context.Context, t feature.T) {

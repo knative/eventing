@@ -46,9 +46,10 @@ func createNewFiltersFeature(f *feature.Feature, eventContexts []CloudEventsCont
 			trigger.WithSubscriber(service.AsKReference(subscriberName), ""),
 			trigger.WithNewFilters(filters),
 			trigger.WithFilter(filter.Attributes),
+			trigger.WithBrokerName(brokerName),
 		}
 
-		trigger.Install(triggerName, brokerName, triggerCfg...)(ctx, t)
+		trigger.Install(triggerName, triggerCfg...)(ctx, t)
 
 		broker.IsReady(brokerName)(ctx, t)
 		broker.IsAddressable(brokerName)(ctx, t)

@@ -163,6 +163,8 @@ func filterTriggers(featureStore *feature.Store, lister eventinglisters.BrokerLi
 			return false
 		}
 
+		var broker string
+		var brokerNamespace string
 		if featureStore.IsEnabled(feature.CrossNamespaceEventLinks) && trigger.Spec.BrokerRef != nil {
 			broker = trigger.Spec.BrokerRef.Name
 			brokerNamespace = trigger.Spec.BrokerRef.Namespace
