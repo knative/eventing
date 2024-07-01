@@ -189,6 +189,7 @@ func TestAllCases(t *testing.T) {
 				WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
 				WithSequenceAddressableNotReady("emptyAddress", "addressable is nil"),
 				WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+				WithSequenceEventPoliciesReadyBecauseOIDCDisabled(),
 				WithSequenceChannelStatuses([]v1.SequenceChannelStatus{
 					{
 						Channel: corev1.ObjectReference{
@@ -429,6 +430,7 @@ func TestAllCases(t *testing.T) {
 				WithSequenceAddressableNotReady("emptyAddress", "addressable is nil"),
 				WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
 				WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+				WithSequenceEventPoliciesReadyBecauseOIDCDisabled(),
 				WithSequenceChannelStatuses([]v1.SequenceChannelStatus{
 					{
 						Channel: corev1.ObjectReference{
@@ -508,6 +510,7 @@ func TestAllCases(t *testing.T) {
 					{Destination: createDestination(2)}}),
 				WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
 				WithSequenceAddressableNotReady("emptyAddress", "addressable is nil"),
+				WithSequenceEventPoliciesReadyBecauseOIDCDisabled(),
 				WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
 				WithSequenceChannelStatuses([]v1.SequenceChannelStatus{
 					{
@@ -645,6 +648,7 @@ func TestAllCases(t *testing.T) {
 				WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
 				WithSequenceAddressableNotReady("emptyAddress", "addressable is nil"),
 				WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+				WithSequenceEventPoliciesReadyBecauseOIDCDisabled(),
 				WithSequenceChannelStatuses([]v1.SequenceChannelStatus{
 					{
 						Channel: corev1.ObjectReference{
@@ -784,6 +788,7 @@ func TestAllCases(t *testing.T) {
 				WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
 				WithSequenceAddressableNotReady("emptyAddress", "addressable is nil"),
 				WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+				WithSequenceEventPoliciesReadyBecauseOIDCDisabled(),
 				WithSequenceChannelStatuses([]v1.SequenceChannelStatus{
 					{
 						Channel: corev1.ObjectReference{
@@ -904,6 +909,7 @@ func TestAllCases(t *testing.T) {
 				WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
 				WithSequenceAddressableNotReady("emptyAddress", "addressable is nil"),
 				WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+				WithSequenceEventPoliciesReadyBecauseOIDCDisabled(),
 				WithSequenceChannelStatuses([]v1.SequenceChannelStatus{
 					{
 						Channel: corev1.ObjectReference{
@@ -1010,6 +1016,7 @@ func TestAllCases(t *testing.T) {
 				WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
 				WithSequenceAddressableNotReady("emptyAddress", "addressable is nil"),
 				WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+				WithSequenceEventPoliciesReadyBecauseOIDCDisabled(),
 				WithSequenceChannelStatuses([]v1.SequenceChannelStatus{
 					{
 						Channel: corev1.ObjectReference{
@@ -1151,6 +1158,7 @@ func TestAllCases(t *testing.T) {
 				WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
 				WithSequenceAddressableNotReady("emptyAddress", "addressable is nil"),
 				WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+				WithSequenceEventPoliciesReadyBecauseOIDCDisabled(),
 				WithSequenceChannelStatuses([]v1.SequenceChannelStatus{
 					{
 						Channel: corev1.ObjectReference{
