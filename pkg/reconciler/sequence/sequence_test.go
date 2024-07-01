@@ -1359,6 +1359,7 @@ func TestAllCases(t *testing.T) {
 			subscriptionLister: listers.GetSubscriptionLister(),
 			eventingClientSet:  fakeeventingclient.Get(ctx),
 			dynamicClientSet:   fakedynamicclient.Get(ctx),
+			eventPolicyLister:  listers.GetEventPolicyLister(),
 		}
 		return sequence.NewReconciler(ctx, logging.FromContext(ctx),
 			fakeeventingclient.Get(ctx), listers.GetSequenceLister(),
