@@ -51,6 +51,7 @@ import (
 	"knative.dev/eventing/pkg/auth"
 	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
 	brokerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/broker"
+	eventingv1alpha1listers "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1"
 	ducklib "knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/eventingtls"
@@ -79,6 +80,8 @@ type Reconciler struct {
 
 	// If specified, only reconcile brokers with these labels
 	brokerClass string
+
+	eventPolicyLister eventingv1alpha1listers.EventPolicyLister
 }
 
 // Check that our Reconciler implements Interface
@@ -255,6 +258,11 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 	}
 
 	b.GetConditionSet().Manage(b.GetStatus()).MarkTrue(eventingv1.BrokerConditionAddressable)
+
+	err = auth.UpdateStatusWithEventPolicies(featureFlags, &b.Status.AppliedEventPoliciesStatus, &b.Status, r.eventPolicyLister, eventingv1.SchemeGroupVersion.WithKind("Broker"), b.ObjectMeta)
+	if err != nil {
+		return fmt.Errorf("could not update broker status with EventPolicies: %v", err)
+	}
 
 	// So, at this point the Broker is ready and everything should be solid
 	// for the triggers to act upon.

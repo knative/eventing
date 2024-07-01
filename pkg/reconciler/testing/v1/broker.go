@@ -18,10 +18,14 @@ import (
 	"fmt"
 	"time"
 
+	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/pkg/apis/feature"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	eventingv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/apis/eventing"
 	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
@@ -286,5 +290,40 @@ func WithBrokersAddresses(addresses []duckv1.Addressable) BrokerOption {
 	return func(b *v1.Broker) {
 		b.Status.Addresses = addresses
 		b.GetConditionSet().Manage(b.GetStatus()).MarkTrue(v1.BrokerConditionAddressable)
+	}
+}
+
+func WithBrokerEventPoliciesReady() BrokerOption {
+	return func(b *v1.Broker) {
+		b.Status.MarkEventPoliciesTrue()
+	}
+}
+
+func WithBrokerEventPoliciesNotReady(reason, message string) BrokerOption {
+	return func(b *v1.Broker) {
+		b.Status.MarkEventPoliciesFailed(reason, message)
+	}
+}
+
+func WithBrokerEventPoliciesListed(policyNames ...string) BrokerOption {
+	return func(b *v1.Broker) {
+		for _, name := range policyNames {
+			b.Status.Policies = append(b.Status.Policies, eventingduckv1.AppliedEventPolicyRef{
+				APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
+				Name:       name,
+			})
+		}
+	}
+}
+
+func WithBrokerEventPoliciesReadyBecauseOIDCDisabled() BrokerOption {
+	return func(b *v1.Broker) {
+		b.Status.MarkEventPoliciesTrueWithReason("OIDCDisabled", "Feature %q must be enabled to support Authorization", feature.OIDCAuthentication)
+	}
+}
+
+func WithBrokerEventPoliciesReadyBecauseNoPolicyAndOIDCEnabled() BrokerOption {
+	return func(b *v1.Broker) {
+		b.Status.MarkEventPoliciesTrueWithReason("DefaultAuthorizationMode", "Default authz mode is %q", feature.AuthorizationAllowSameNamespace)
 	}
 }
