@@ -38,8 +38,9 @@ var (
 		Defaults: &config.Defaults{
 			// NamespaceDefaultsConfig are the default Broker Configs for each namespace.
 			// Namespace is the key, the value is the KReference to the config.
-			NamespaceDefaultsConfig: map[string]*config.ClassAndBrokerConfig{
+			NamespaceDefaultsConfig: map[string]*config.DefaultConfig{
 				"mynamespace": {
+					DefaultBrokerClass: "MTChannelBasedBroker",
 					BrokerConfig: &config.BrokerConfig{
 						KReference: &duckv1.KReference{
 							APIVersion: "v1",
@@ -61,9 +62,27 @@ var (
 							BackoffDelay:  pointer.String("5s"),
 						},
 					},
+					BrokerClasses: map[string]*config.BrokerConfig{
+						"mynamespaceclass": {
+							KReference: &duckv1.KReference{
+								APIVersion: "v1",
+								Kind:       "ConfigMap",
+								Namespace:  "knative-eventing",
+								Name:       "kafka-channel",
+							},
+						},
+						"mynamespaceclass2": {
+							KReference: &duckv1.KReference{
+								APIVersion: "v1",
+								Kind:       "ConfigMap",
+								Namespace:  "knative-eventing",
+								Name:       "kafka-channel",
+							},
+						},
+					},
 				},
 				"mynamespace2": {
-					BrokerClass: "mynamespace2class",
+					DefaultBrokerClass: "mynamespace2class",
 					BrokerConfig: &config.BrokerConfig{
 						KReference: &duckv1.KReference{
 							APIVersion: "v1",
@@ -85,9 +104,19 @@ var (
 							BackoffDelay:  pointer.String("3s"),
 						},
 					},
+					BrokerClasses: map[string]*config.BrokerConfig{
+						"mynamespaceclass": {
+							KReference: &duckv1.KReference{
+								APIVersion: "v1",
+								Kind:       "ConfigMap",
+								Namespace:  "knative-eventing",
+								Name:       "natss-channel",
+							},
+						},
+					},
 				},
 				"mynamespace3": {
-					BrokerClass: "mynamespace3class",
+					DefaultBrokerClass: "mynamespace3class",
 					BrokerConfig: &config.BrokerConfig{
 						KReference: &duckv1.KReference{
 							APIVersion: "v1",
@@ -109,9 +138,67 @@ var (
 						},
 					},
 				},
+				"customns": {
+					DefaultBrokerClass: "MTChannelBasedBroker",
+					BrokerConfig: &config.BrokerConfig{
+						KReference: &duckv1.KReference{
+							APIVersion: "v1",
+							Kind:       "ConfigMap",
+							Namespace:  "haha-ns",
+							Name:       "haha-config",
+						},
+					},
+					BrokerClasses: map[string]*config.BrokerConfig{
+						"mynamespaceclass": {
+							KReference: &duckv1.KReference{
+								APIVersion: "v1",
+								Kind:       "ConfigMap",
+								Namespace:  "knative-eventing",
+								Name:       "kafka-channel",
+							},
+						},
+						"mynamespaceclass2": {
+							KReference: &duckv1.KReference{
+								APIVersion: "v1",
+								Kind:       "ConfigMap",
+								Namespace:  "knative-eventing",
+								Name:       "kafka-channel",
+							},
+						},
+					},
+				},
+				"custom": {
+					DefaultBrokerClass: "haha-broker",
+					BrokerConfig: &config.BrokerConfig{
+						KReference: &duckv1.KReference{
+							APIVersion: "v1",
+							Kind:       "ConfigMap",
+							Namespace:  "haha-ns",
+							Name:       "haha-config",
+						},
+					},
+					BrokerClasses: map[string]*config.BrokerConfig{
+						"mynamespaceclass": {
+							KReference: &duckv1.KReference{
+								APIVersion: "v1",
+								Kind:       "ConfigMap",
+								Namespace:  "knative-eventing",
+								Name:       "kafka-channel",
+							},
+						},
+						"mynamespaceclass2": {
+							KReference: &duckv1.KReference{
+								APIVersion: "v1",
+								Kind:       "ConfigMap",
+								Namespace:  "knative-eventing",
+								Name:       "kafka-channel",
+							},
+						},
+					},
+				},
 			},
-			ClusterDefault: &config.ClassAndBrokerConfig{
-				BrokerClass: eventing.MTChannelBrokerClassValue,
+			ClusterDefaultConfig: &config.DefaultConfig{
+				DefaultBrokerClass: eventing.MTChannelBrokerClassValue,
 				BrokerConfig: &config.BrokerConfig{
 					KReference: &duckv1.KReference{
 						APIVersion: "v1",
@@ -131,6 +218,16 @@ var (
 						Retry:         pointer.Int32(3),
 						BackoffPolicy: (*eventingduckv1.BackoffPolicyType)(pointer.String("exponential")),
 						BackoffDelay:  pointer.String("5s"),
+					},
+				},
+				BrokerClasses: map[string]*config.BrokerConfig{
+					"clusterBrokerClass1": {
+						KReference: &duckv1.KReference{
+							APIVersion: "v1",
+							Kind:       "ConfigMap",
+							Namespace:  "knative-eventing",
+							Name:       "imc-channel-haha",
+						},
 					},
 				},
 			},
@@ -408,7 +505,7 @@ func TestBrokerSetDefaults(t *testing.T) {
 		},
 		"missing deadLetterSink.ref.namespace, defaulted": {
 			initial: Broker{
-				ObjectMeta: metav1.ObjectMeta{Name: "broker", Namespace: "custom"},
+				ObjectMeta: metav1.ObjectMeta{Name: "broker", Namespace: "customns"},
 				Spec: BrokerSpec{
 					Config: &duckv1.KReference{
 						Kind:       "ConfigMap",
@@ -433,7 +530,7 @@ func TestBrokerSetDefaults(t *testing.T) {
 			expected: Broker{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "broker",
-					Namespace: "custom",
+					Namespace: "customns",
 					Annotations: map[string]string{
 						eventing.BrokerClassKey: "MTChannelBasedBroker",
 					},
@@ -449,7 +546,7 @@ func TestBrokerSetDefaults(t *testing.T) {
 						DeadLetterSink: &duckv1.Destination{
 							Ref: &duckv1.KReference{
 								Kind:       "Service",
-								Namespace:  "custom",
+								Namespace:  "customns",
 								Name:       "handle-error",
 								APIVersion: "serving.knative.dev/v1",
 							},
@@ -457,6 +554,53 @@ func TestBrokerSetDefaults(t *testing.T) {
 						Retry:         pointer.Int32(5),
 						BackoffPolicy: (*eventingduckv1.BackoffPolicyType)(pointer.String("linear")),
 						BackoffDelay:  pointer.String("5s"),
+					},
+				},
+			},
+		},
+		"try to use the config from the brokerclasses": {
+			initial: Broker{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						eventing.BrokerClassKey: "clusterBrokerClass1",
+					},
+				},
+			},
+			expected: Broker{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "",
+					Annotations: map[string]string{
+						eventing.BrokerClassKey: "clusterBrokerClass1",
+					},
+				},
+				Spec: BrokerSpec{
+					Config: &duckv1.KReference{
+						Kind:       "ConfigMap",
+						Namespace:  "knative-eventing",
+						Name:       "imc-channel-haha",
+						APIVersion: "v1",
+					},
+				},
+			},
+		},
+		"test and validate namespace broker config": {
+			initial: Broker{
+				ObjectMeta: metav1.ObjectMeta{Name: "broker", Namespace: "custom"},
+			},
+			expected: Broker{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "broker",
+					Namespace: "custom",
+					Annotations: map[string]string{
+						eventing.BrokerClassKey: "haha-broker",
+					},
+				},
+				Spec: BrokerSpec{
+					Config: &duckv1.KReference{
+						Kind:       "ConfigMap",
+						Namespace:  "haha-ns",
+						Name:       "haha-config",
+						APIVersion: "v1",
 					},
 				},
 			},

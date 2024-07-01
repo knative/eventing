@@ -28,10 +28,10 @@ data:
     ################################
     default-br-config: |
       clusterDefault:
-        brokerClass: MTChannelBasedBroker
+        brokerClass: default-cluster-class
         apiVersion: v1
         kind: ConfigMap
-        name: somename
+        name: config-default-cluster-class
         namespace: knative-eventing
         delivery:
           retry: 3
@@ -39,18 +39,53 @@ data:
             ref:
               apiVersion: serving.knative.dev/v1
               kind: Service
-              name: handle-error
+              name: mt-handle-error
               namespace: knative-eventing
           backoffPolicy: exponential
           backoffDelay: 3s
+        brokerClasses:
+          cluster-class-2:
+            delivery:
+              retry: 3
+              deadLetterSink:
+                ref:
+                  apiVersion: serving.knative.dev/v1
+                  kind: Service
+                  name: mt-handle-error
+                  namespace: knative-eventing
+              backoffPolicy: exponential
+              backoffDelay: 3s
+
+            apiVersion: v1
+            kind: ConfigMap
+            name: config-cluster-class-2
+            namespace: knative-eventing
+
+          shared-class:
+            delivery:
+              retry: 3
+              deadLetterSink:
+                ref:
+                  apiVersion: serving.knative.dev/v1
+                  kind: Service
+                  name: kafka-handle-error
+                  namespace: knative-eventing
+              backoffPolicy: exponential
+              backoffDelay: 3s
+
+            apiVersion: v1
+            kind: ConfigMap
+            name: config-shared-class
+            namespace: knative-eventing
+
 
       namespaceDefaults:
-        some-namespace:
-          brokerClass: someotherbrokerclass
+        namespace-1:
+          brokerClass: namespace-1-class
           apiVersion: v1
           kind: ConfigMap
-          name: someothername
-          namespace: someothernamespace
+          name: config-namespace-1-class
+          namespace: namespace-1
           delivery:
             retry: 5
             deadLetterSink:
@@ -58,6 +93,46 @@ data:
                 apiVersion: serving.knative.dev/v1
                 kind: Service
                 name: someother-handle-error
-                namespace: someothernamespace
+                namespace: knative-eventing
             backoffPolicy: linear
             backoffDelay: 5s
+          brokerClasses:
+            namespace-1-class-2:
+              delivery:
+                retry: 3
+                deadLetterSink:
+                  ref:
+                    apiVersion: serving.knative.dev/v1
+                    kind: Service
+                    name: mt-handle-error
+                    namespace: knative-eventing
+                backoffPolicy: exponential
+                backoffDelay: 3s
+
+              apiVersion: v1
+              kind: ConfigMap
+              name: config-namespace-1-class-2
+              namespace: knative-eventing
+
+            shared-class:
+              delivery:
+                retry: 3
+                deadLetterSink:
+                  ref:
+                    apiVersion: serving.knative.dev/v1
+                    kind: Service
+                    name: kafka-handle-error
+                    namespace: knative-eventing
+                backoffPolicy: exponential
+                backoffDelay: 3s
+
+              apiVersion: v1
+              kind: ConfigMap
+              name: config-shared-class-in-namespace-1
+              namespace: knative-eventing
+
+        namespace-2:
+          brokerClass: default-namespace-2-class
+
+
+        namespace-3:
