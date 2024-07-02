@@ -24,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/kmeta"
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 )
 
 // +genclient
@@ -68,6 +69,10 @@ type JobSinkStatus struct {
 
 	// +optional
 	JobStatus JobStatus `json:"job,omitempty"`
+
+	// AppliedEventPoliciesStatus contains the list of EventPolicies which apply to this JobSink
+	// +optional
+	eventingduckv1.AppliedEventPoliciesStatus `json:",inline"`
 }
 
 type JobStatus struct {
