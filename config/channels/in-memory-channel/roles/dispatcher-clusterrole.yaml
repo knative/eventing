@@ -76,8 +76,14 @@ rules:
       - eventing.knative.dev
     resources:
       - eventtypes
+      - eventpolicies
     verbs:
-      - create
       - get
       - list
       - watch
+  - apiGroups:
+      - eventing.knative.dev
+    resources:
+      - eventtypes
+    verbs:
+      - create

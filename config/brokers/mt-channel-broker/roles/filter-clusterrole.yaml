@@ -26,6 +26,7 @@ rules:
       - brokers/status
       - triggers
       - triggers/status
+      - eventpolicies
     verbs:
       - get
       - list
