@@ -43,8 +43,8 @@ func MakeEventPolicyForBackingChannel(backingChannel *eventingduckv1.Channelable
 					Name:       backingChannel.Name,
 					UID:        backingChannel.UID,
 				}, {
-					APIVersion: parentPolicy.APIVersion,
-					Kind:       parentPolicy.Kind,
+					APIVersion: parentPolicy.GetGroupVersionKind().GroupVersion().String(),
+					Kind:       parentPolicy.GetGroupVersionKind().Kind,
 					Name:       parentPolicy.Name,
 					UID:        parentPolicy.UID,
 				},
