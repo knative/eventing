@@ -187,8 +187,8 @@ func filterTriggers(featureStore *feature.Store, lister eventinglisters.BrokerLi
 // of failures.
 func getTriggersForBroker(logger *zap.SugaredLogger, triggerLister eventinglisters.TriggerLister, broker *eventing.Broker) []*eventing.Trigger {
 	r := make([]*eventing.Trigger, 0)
-	selector := labels.SelectorFromSet(map[string]string{apiseventing.BrokerLabelKey: broker.Name})
-	triggers, err := triggerLister.Triggers(broker.Namespace).List(selector)
+	selector := labels.SelectorFromSet(map[string]string{apiseventing.BrokerLabelKey: broker.Name, apiseventing.BrokerNamespaceKey: broker.Namespace})
+	triggers, err := triggerLister.Triggers(metav1.NamespaceAll).List(selector)
 	if err != nil {
 		logger.Warn("Failed to list triggers", zap.Any("broker", broker), zap.Error(err))
 		return r

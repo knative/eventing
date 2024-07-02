@@ -25,6 +25,10 @@ const (
 	// to indicate to which Broker they belong to.
 	BrokerLabelKey = GroupName + "/broker"
 
+	// BrokerNamespaceKey is the label kee on Triggers and Subscriptions
+	// to indicate which namespace the Broker they belong to lives in
+	BrokerNamespaceKey = GroupName + "/brokerNamespace"
+
 	// BrokerClassKey is the annotation key on Brokers to indicate
 	// which Controller is responsible for them.
 	BrokerClassKey = GroupName + "/broker.class"

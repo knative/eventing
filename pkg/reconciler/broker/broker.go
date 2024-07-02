@@ -116,7 +116,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(b),
 			},
-			Labels:      TriggerChannelLabels(b.Name),
+			Labels:      TriggerChannelLabels(b.Name, b.Namespace),
 			Annotations: map[string]string{eventing.ScopeAnnotationKey: eventing.ScopeCluster},
 		},
 		ducklib.WithChannelableSpec(tmpChannelableSpec),
@@ -422,9 +422,10 @@ func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterf
 
 // TriggerChannelLabels are all the labels placed on the Trigger Channel for the given brokerName. This
 // should only be used by Broker and Trigger code.
-func TriggerChannelLabels(brokerName string) map[string]string {
+func TriggerChannelLabels(brokerName, brokerNamespace string) map[string]string {
 	return map[string]string{
 		eventing.BrokerLabelKey:                 brokerName,
+		eventing.BrokerNamespaceKey:             brokerNamespace,
 		"eventing.knative.dev/brokerEverything": "true",
 	}
 }

@@ -933,6 +933,7 @@ func createChannel(opts ...unstructuredOption) *unstructured.Unstructured {
 				},
 				"labels": map[string]interface{}{
 					eventing.BrokerLabelKey:                 brokerName,
+					eventing.BrokerNamespaceKey:             testNS,
 					"eventing.knative.dev/brokerEverything": "true",
 				},
 				"annotations": map[string]interface{}{
@@ -953,6 +954,7 @@ func createChannelNoHostInUrl(namespace string) *unstructured.Unstructured {
 	name := fmt.Sprintf("%s-kne-trigger", brokerName)
 	labels := map[string]interface{}{
 		eventing.BrokerLabelKey:                 brokerName,
+		eventing.BrokerNamespaceKey:             namespace,
 		"eventing.knative.dev/brokerEverything": "true",
 	}
 	annotations := map[string]interface{}{

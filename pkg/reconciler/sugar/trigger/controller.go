@@ -66,7 +66,7 @@ func NewController(
 	// Watch brokers.
 	brokerInformer.Informer().AddEventHandler(controller.HandleAll(func(obj interface{}) {
 		if b, ok := obj.(*v1.Broker); ok {
-			triggers, err := triggerInformer.Lister().Triggers(b.Namespace).List(labels.SelectorFromSet(map[string]string{eventing.BrokerLabelKey: b.Name}))
+			triggers, err := triggerInformer.Lister().Triggers("").List(labels.SelectorFromSet(map[string]string{eventing.BrokerLabelKey: b.Name, eventing.BrokerNamespaceKey: b.Namespace}))
 			if err != nil {
 				logging.FromContext(ctx).Warnw("Failed to list triggers", zap.String("Namespace", b.Namespace), zap.String("Broker", b.Name))
 				return

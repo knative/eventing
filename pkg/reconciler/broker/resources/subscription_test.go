@@ -78,6 +78,7 @@ func TestNewSubscription(t *testing.T) {
 			}},
 			Labels: map[string]string{
 				eventing.BrokerLabelKey:        "broker-name",
+				eventing.BrokerNamespaceKey:    "t-namespace",
 				"eventing.knative.dev/trigger": "t-name",
 			},
 		},
