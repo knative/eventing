@@ -33,20 +33,29 @@ import (
 	"knative.dev/eventing/pkg/apis/feature"
 	sinks "knative.dev/eventing/pkg/apis/sinks/v1alpha1"
 	"knative.dev/eventing/pkg/auth"
+	eventingv1alpha1listers "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/eventingtls"
 )
 
 type Reconciler struct {
-	jobLister       batchlisters.JobLister
-	secretLister    corev1listers.SecretLister
-	systemNamespace string
+	jobLister         batchlisters.JobLister
+	secretLister      corev1listers.SecretLister
+	eventPolicyLister eventingv1alpha1listers.EventPolicyLister
+	systemNamespace   string
 }
 
 func (r *Reconciler) ReconcileKind(ctx context.Context, js *sinks.JobSink) reconciler.Event {
+	featureFlags := feature.FromContext(ctx)
+
 	r.reconcileJob(js)
 
 	if err := r.reconcileAddress(ctx, js); err != nil {
 		return fmt.Errorf("failed to reconcile address: %w", err)
+	}
+
+	err := auth.UpdateStatusWithEventPolicies(featureFlags, &js.Status.AppliedEventPoliciesStatus, &js.Status, r.eventPolicyLister, sinks.SchemeGroupVersion.WithKind("JobSink"), js.ObjectMeta)
+	if err != nil {
+		return fmt.Errorf("could not update JobSink status with EventPolicies: %v", err)
 	}
 
 	return nil

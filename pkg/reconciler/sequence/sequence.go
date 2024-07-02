@@ -131,7 +131,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, s *v1.Sequence) pkgrecon
 
 	err := auth.UpdateStatusWithEventPolicies(featureFlags, &s.Status.AppliedEventPoliciesStatus, &s.Status, r.eventPolicyLister, v1.SchemeGroupVersion.WithKind("Sequence"), s.ObjectMeta)
 	if err != nil {
-		return fmt.Errorf("could not update channel status with EventPolicies: %v", err)
+		return fmt.Errorf("could not update Sequence status with EventPolicies: %v", err)
 	}
 
 	return r.removeUnwantedSubscriptions(ctx, s, subs)
