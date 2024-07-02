@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,28 +19,24 @@ package main
 import (
 	"fmt"
 	"log"
-	"path/filepath"
 
 	"knative.dev/pkg/version"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/client-go/util/homedir"
+	"knative.dev/pkg/test"
 )
 
 func main() {
-	// Build the kubeconfig from the default location
-	kubeconfig := filepath.Join(homedir.HomeDir(), ".kube", "config")
-	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
+	config, err := test.Flags.GetRESTConfig()
 	if err != nil {
-		log.Fatalf("Error building kubeconfig: %v", err)
+		log.Fatalf("Failed to create REST config: %v\n", err)
 	}
 
-	clientset, err := kubernetes.NewForConfig(config)
+	kubeClient, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		log.Fatalf("Error creating Kubernetes clientset: %v", err)
+		log.Fatalf("Failed to create Kubernetes client: %v\n", err)
 	}
 
-	err = version.CheckMinimumVersion(clientset.Discovery())
+	err = version.CheckMinimumVersion(kubeClient.Discovery())
 	if err != nil {
 		log.Fatalf("Error: %v", err)
 	}

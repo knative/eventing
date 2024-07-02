@@ -21,7 +21,7 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-go run "$(dirname "$0")/check_k8s_version.go"
+go run "$(dirname "$0")/../test/version_check/check_k8s_version.go"
 if [[ $? -ne 0 ]]; then
     echo "Kubernetes version check failed. Exiting."
     exit 1
