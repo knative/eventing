@@ -33,6 +33,9 @@ import (
 
 	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/eventing/pkg/apis/sinks"
+	sinksv1alpha1 "knative.dev/eventing/pkg/apis/sinks/v1alpha1"
+	"knative.dev/eventing/pkg/auth"
+	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventpolicy"
 	"knative.dev/eventing/pkg/client/injection/informers/sinks/v1alpha1/jobsink"
 	jobsinkreconciler "knative.dev/eventing/pkg/client/injection/reconciler/sinks/v1alpha1/jobsink"
 	"knative.dev/eventing/pkg/eventingtls"
@@ -47,11 +50,13 @@ func NewController(
 	jobSinkInformer := jobsink.Get(ctx)
 	secretInformer := secretinformer.Get(ctx)
 	jobInformer := jobinformer.Get(ctx, sinks.JobSinkJobsLabelSelector)
+	eventPolicyInformer := eventpolicy.Get(ctx)
 
 	r := &Reconciler{
 		systemNamespace: system.Namespace(),
 		secretLister:    secretInformer.Lister(),
 		jobLister:       jobInformer.Lister(),
+		eventPolicyLister: eventPolicyInformer.Lister(),
 	}
 
 	var globalResync func(obj interface{})
@@ -93,6 +98,16 @@ func NewController(
 			Name:      name,
 		})
 	}))
+
+	jobSinkGK := sinksv1alpha1.SchemeGroupVersion.WithKind("JobSink").GroupKind()
+
+	// Enqueue the JobSink, if we have an EventPolicy which was referencing
+	// or got updated and now is referencing the JobSink.
+	eventPolicyInformer.Informer().AddEventHandler(auth.EventPolicyEventHandler(
+		jobSinkInformer.Informer().GetIndexer(),
+		jobSinkGK,
+		impl.EnqueueKey,
+	))
 
 	return impl
 }
