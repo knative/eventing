@@ -33,15 +33,15 @@ import (
 	"knative.dev/eventing/pkg/apis/feature"
 	sinks "knative.dev/eventing/pkg/apis/sinks/v1alpha1"
 	"knative.dev/eventing/pkg/auth"
-	"knative.dev/eventing/pkg/eventingtls"
 	eventingv1alpha1listers "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
+	"knative.dev/eventing/pkg/eventingtls"
 )
 
 type Reconciler struct {
-	jobLister       batchlisters.JobLister
-	secretLister    corev1listers.SecretLister
+	jobLister         batchlisters.JobLister
+	secretLister      corev1listers.SecretLister
 	eventPolicyLister eventingv1alpha1listers.EventPolicyLister
-	systemNamespace string
+	systemNamespace   string
 }
 
 func (r *Reconciler) ReconcileKind(ctx context.Context, js *sinks.JobSink) reconciler.Event {

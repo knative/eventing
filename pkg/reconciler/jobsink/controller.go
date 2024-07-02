@@ -53,9 +53,9 @@ func NewController(
 	eventPolicyInformer := eventpolicy.Get(ctx)
 
 	r := &Reconciler{
-		systemNamespace: system.Namespace(),
-		secretLister:    secretInformer.Lister(),
-		jobLister:       jobInformer.Lister(),
+		systemNamespace:   system.Namespace(),
+		secretLister:      secretInformer.Lister(),
+		jobLister:         jobInformer.Lister(),
 		eventPolicyLister: eventPolicyInformer.Lister(),
 	}
 

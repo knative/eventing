@@ -101,4 +101,3 @@ func (e *JobSink) SetJobStatusSelector() {
 		e.Status.JobStatus.Selector = fmt.Sprintf("%s=%s", sinks.JobSinkNameLabel, e.GetName())
 	}
 }
-
