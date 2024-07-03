@@ -47,10 +47,11 @@ func TestTriggerDefaults(t *testing.T) {
 			expected: defaultTrigger,
 		},
 		"nil filter": {
-			initial: Trigger{Spec: TriggerSpec{Broker: otherBroker}},
+			initial: Trigger{Spec: TriggerSpec{Broker: otherBroker}, ObjectMeta: metav1.ObjectMeta{Namespace: namespace}},
 			expected: Trigger{
 				ObjectMeta: v1.ObjectMeta{
-					Labels: map[string]string{brokerLabel: otherBroker},
+					Labels:    map[string]string{brokerLabel: otherBroker, brokerNamespaceLabel: namespace},
+					Namespace: namespace,
 				},
 				Spec: TriggerSpec{Broker: otherBroker, Filter: emptyTriggerFilter}},
 		},
@@ -69,7 +70,7 @@ func TestTriggerDefaults(t *testing.T) {
 			expected: Trigger{
 				ObjectMeta: v1.ObjectMeta{
 					Namespace: namespace,
-					Labels:    map[string]string{brokerLabel: otherBroker},
+					Labels:    map[string]string{brokerLabel: otherBroker, brokerNamespaceLabel: namespace},
 				},
 				Spec: TriggerSpec{
 					Broker: otherBroker,
@@ -105,7 +106,7 @@ func TestTriggerDefaults(t *testing.T) {
 			expected: Trigger{
 				ObjectMeta: v1.ObjectMeta{
 					Namespace: "custom",
-					Labels:    map[string]string{brokerLabel: otherBroker},
+					Labels:    map[string]string{brokerLabel: otherBroker, brokerNamespaceLabel: "custom"},
 				},
 				Spec: TriggerSpec{
 					Broker: otherBroker,
@@ -133,14 +134,17 @@ func TestTriggerDefaults(t *testing.T) {
 		"with broker and label": {
 			initial: Trigger{
 				ObjectMeta: v1.ObjectMeta{
-					Labels: map[string]string{"otherLabel": "my-other-label"},
+					Namespace: namespace,
+					Labels:    map[string]string{"otherLabel": "my-other-label"},
 				},
 				Spec: TriggerSpec{Broker: defaultBroker}},
 			expected: Trigger{
 				ObjectMeta: v1.ObjectMeta{
+					Namespace: namespace,
 					Labels: map[string]string{
-						"otherLabel": "my-other-label",
-						brokerLabel:  defaultBroker},
+						"otherLabel":         "my-other-label",
+						brokerNamespaceLabel: namespace,
+						brokerLabel:          defaultBroker},
 				},
 				Spec: TriggerSpec{Broker: defaultBroker, Filter: emptyTriggerFilter}},
 		},
