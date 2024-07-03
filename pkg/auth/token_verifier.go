@@ -19,6 +19,7 @@ package auth
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -36,10 +37,16 @@ const (
 	kubernetesOIDCDiscoveryBaseURL = "https://kubernetes.default.svc"
 )
 
+var (
+	ErrNoJWTTokenFound = errors.New("no JWT token found in request")
+	ErrInvalidJWTToken = errors.New("invalid JWT token")
+)
+
 type OIDCTokenVerifier struct {
-	logger     *zap.SugaredLogger
-	restConfig *rest.Config
-	provider   *oidc.Provider
+	logger        *zap.SugaredLogger
+	restConfig    *rest.Config
+	provider      *oidc.Provider
+	statsReporter AuthStatsReporter
 }
 
 type IDToken struct {
@@ -51,7 +58,31 @@ type IDToken struct {
 	AccessTokenHash string
 }
 
-func NewOIDCTokenVerifier(ctx context.Context) *OIDCTokenVerifier {
+type AuthStatsReporter interface {
+	ReportUnauthenticatedRequest(args *ReportArgs)
+	ReportInvalidTokenRequest(args *ReportArgs)
+}
+
+type ReportArgs struct {
+	Ns            string
+	Trigger       string
+	Broker        string
+	Channel       string
+	FilterType    string
+	RequestType   string
+	RequestScheme string
+}
+
+// TokenVeridierOption enables further configuration of a TokenVerifier.
+type TokenVerifierOption func(*OIDCTokenVerifier)
+
+func WithStatsReporter(reporter AuthStatsReporter) TokenVerifierOption {
+	return func(t *OIDCTokenVerifier) {
+		t.statsReporter = reporter
+	}
+}
+
+func NewOIDCTokenVerifier(ctx context.Context, o ...TokenVerifierOption) *OIDCTokenVerifier {
 	tokenHandler := &OIDCTokenVerifier{
 		logger:     logging.FromContext(ctx).With("component", "oidc-token-handler"),
 		restConfig: injection.GetConfig(ctx),
@@ -59,6 +90,10 @@ func NewOIDCTokenVerifier(ctx context.Context) *OIDCTokenVerifier {
 
 	if err := tokenHandler.initOIDCProvider(ctx); err != nil {
 		tokenHandler.logger.Error(fmt.Sprintf("could not initialize provider. You can ignore this message, when the %s feature is disabled", feature.OIDCAuthentication), zap.Error(err))
+	}
+
+	for _, opt := range o {
+		opt(tokenHandler)
 	}
 
 	return tokenHandler
@@ -152,10 +187,16 @@ func (c *OIDCTokenVerifier) getKubernetesOIDCDiscovery() (*openIDMetadata, error
 }
 
 // VerifyJWTFromRequest will verify the incoming request contains the correct JWT token
-func (tokenVerifier *OIDCTokenVerifier) VerifyJWTFromRequest(ctx context.Context, r *http.Request, audience *string, response http.ResponseWriter) error {
+func (tokenVerifier *OIDCTokenVerifier) VerifyJWTFromRequest(ctx context.Context, r *http.Request, audience *string, response http.ResponseWriter, reportArgs *ReportArgs) error {
 	token := GetJWTFromHeader(r.Header)
+
 	if token == "" {
 		response.WriteHeader(http.StatusUnauthorized)
+
+		if tokenVerifier.statsReporter != nil {
+			tokenVerifier.statsReporter.ReportUnauthenticatedRequest(reportArgs)
+		}
+
 		return fmt.Errorf("no JWT token found in request")
 	}
 
@@ -166,6 +207,10 @@ func (tokenVerifier *OIDCTokenVerifier) VerifyJWTFromRequest(ctx context.Context
 
 	if _, err := tokenVerifier.VerifyJWT(ctx, token, *audience); err != nil {
 		response.WriteHeader(http.StatusUnauthorized)
+
+		if tokenVerifier.statsReporter != nil {
+			tokenVerifier.statsReporter.ReportInvalidTokenRequest(reportArgs)
+		}
 		return fmt.Errorf("failed to verify JWT: %w", err)
 	}
 
