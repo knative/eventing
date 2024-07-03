@@ -27,7 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgotesting "k8s.io/client-go/testing"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
-	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
 	jobsinkreconciler "knative.dev/eventing/pkg/client/injection/reconciler/sinks/v1alpha1/jobsink"
 	. "knative.dev/eventing/pkg/reconciler/testing/v1"
 	. "knative.dev/eventing/pkg/reconciler/testing/v1alpha1"
@@ -73,17 +72,19 @@ func TestReconcile(t *testing.T) {
 					WithJobSinkJob(testJob()),
 					WithInitJobSinkConditions),
 			},
-			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewJobSink(testNamespace, jobSinkName,
-					WithInitJobSinkConditions,
-					WithJobSinkJob(testJob()),
-					WithJobSinkEventPoliciesReadyBecauseOIDCDisabled()),
-			}},
+			WantErr: false,
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{
+				{
+					Object: NewJobSink(jobSinkName, testNamespace,
+						WithInitJobSinkConditions,
+						WithJobSinkJob(testJob()),
+						WithJobSinkEventPoliciesReadyBecauseOIDCDisabled()),
+				},
+		},
 		}}
 
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
-		ctx = channelable.WithDuck(ctx)
 		ctx = v1a1addr.WithDuck(ctx)
 		r := &Reconciler{
 			jobLister:         listers.GetJobLister(),
