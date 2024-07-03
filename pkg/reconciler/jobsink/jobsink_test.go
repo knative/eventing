@@ -26,7 +26,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilrand "k8s.io/apimachinery/pkg/util/rand"
-	"k8s.io/apiserver/pkg/storage/names"
 	clientgotesting "k8s.io/client-go/testing"
 	"k8s.io/utils/pointer"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
@@ -64,15 +63,19 @@ var (
 			Path:   fmt.Sprintf("/%s/%s", testNamespace, jobSinkName),
 		},
 	}
+
+	jobSinkGVK = metav1.GroupVersionKind{
+		Group:   "sinks.knative.dev",
+		Version: "v1alpha1",
+		Kind:    "JobSink",
+	}
 )
 
-func init() {
+func TestReconcile(t *testing.T) {
 	// Seed the random number generator for deterministic results
 	seed := int64(42)
 	utilrand.Seed(seed)
-}
 
-func TestReconcile(t *testing.T) {
 	table := TableTest{
 		{
 			Name: "bad work queue key",
@@ -90,24 +93,112 @@ func TestReconcile(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewJobSink(jobSinkName, testNamespace,
-					WithJobSinkJob(testJob()),
+					WithJobSinkJob(testJob("")),
 					WithInitJobSinkConditions),
 			},
 			WantErr: false,
 			WantCreates: []runtime.Object{
-				testJob(),
+				testJob("test-jobSinkzdfkp"),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{
 				{
 					Object: NewJobSink(jobSinkName, testNamespace,
-						WithJobSinkJob(testJob()),
+						WithJobSinkJob(testJob("")),
 						WithJobSinkAddressableReady(),
 						WithJobSinkJobStatusSelector(),
 						WithJobSinkAddress(&jobSinkAddressable),
 						WithJobSinkEventPoliciesReadyBecauseOIDCDisabled()),
 				},
 			},
-		}}
+		}, {
+			Name: "Should provision applying EventPolicies",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewJobSink(jobSinkName, testNamespace,
+					WithJobSinkJob(testJob("")),
+					WithInitJobSinkConditions),
+				NewEventPolicy(readyEventPolicyName, testNamespace,
+					WithReadyEventPolicyCondition,
+					WithEventPolicyToRef(jobSinkGVK, jobSinkName),
+				),
+			},
+			WantErr: false,
+			WantCreates: []runtime.Object{
+				testJob("test-jobSink7h6ts"),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{
+				{
+					Object: NewJobSink(jobSinkName, testNamespace,
+						WithJobSinkJob(testJob("")),
+						WithJobSinkAddressableReady(),
+						WithJobSinkJobStatusSelector(),
+						WithJobSinkAddress(&jobSinkAddressable),
+						WithJobSinkEventPoliciesReady(),
+						WithJobSinkEventPoliciesListed(readyEventPolicyName),
+					),
+				},
+			},
+		}, {
+			Name: "Should mark as NotReady on unready EventPolicies",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewJobSink(jobSinkName, testNamespace,
+					WithJobSinkJob(testJob("")),
+					WithInitJobSinkConditions),
+				NewEventPolicy(unreadyEventPolicyName, testNamespace,
+					WithUnreadyEventPolicyCondition("", ""),
+					WithEventPolicyToRef(jobSinkGVK, jobSinkName),
+				),
+			},
+			WantErr: false,
+			WantCreates: []runtime.Object{
+				testJob("test-jobSinklk6hn"),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{
+				{
+					Object: NewJobSink(jobSinkName, testNamespace,
+						WithJobSinkJob(testJob("")),
+						WithJobSinkAddressableReady(),
+						WithJobSinkJobStatusSelector(),
+						WithJobSinkAddress(&jobSinkAddressable),
+						WithJobSinkEventPoliciesNotReady("EventPoliciesNotReady", fmt.Sprintf("event policies %s are not ready", unreadyEventPolicyName)),
+					),
+				},
+			},
+		}, {
+			Name: "Should list only ready EventPolicies",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewJobSink(jobSinkName, testNamespace,
+					WithJobSinkJob(testJob("")),
+					WithInitJobSinkConditions),
+				NewEventPolicy(unreadyEventPolicyName, testNamespace,
+					WithUnreadyEventPolicyCondition("", ""),
+					WithEventPolicyToRef(jobSinkGVK, jobSinkName),
+				),
+				NewEventPolicy(readyEventPolicyName, testNamespace,
+					WithReadyEventPolicyCondition,
+					WithEventPolicyToRef(jobSinkGVK, jobSinkName),
+				),
+			},
+			WantErr: false,
+			WantCreates: []runtime.Object{
+				testJob("test-jobSinkmlxzr"),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{
+				{
+					Object: NewJobSink(jobSinkName, testNamespace,
+						WithJobSinkJob(testJob("")),
+						WithJobSinkAddressableReady(),
+						WithJobSinkJobStatusSelector(),
+						WithJobSinkAddress(&jobSinkAddressable),
+						WithJobSinkEventPoliciesNotReady("EventPoliciesNotReady", fmt.Sprintf("event policies %s are not ready", unreadyEventPolicyName)),
+						WithJobSinkEventPoliciesListed(readyEventPolicyName),
+					),
+				},
+			},
+		},
+	}
 
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
@@ -128,10 +219,10 @@ func TestReconcile(t *testing.T) {
 	))
 }
 
-func testJob() *batchv1.Job {
+func testJob(name string) *batchv1.Job {
 	return &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      names.SimpleNameGenerator.GenerateName(jobSinkName),
+			Name:      name,
 			Namespace: testNamespace,
 		},
 		Spec: batchv1.JobSpec{
