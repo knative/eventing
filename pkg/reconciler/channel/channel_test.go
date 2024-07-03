@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"testing"
 
+	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+
 	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
 
 	corev1 "k8s.io/api/core/v1"
@@ -361,7 +363,9 @@ func TestReconcile(t *testing.T) {
 						Kind:       "InMemoryChannel",
 						Name:       channelName,
 					}, {
-						Name: readyEventPolicyName,
+						APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
+						Kind:       "EventPolicy",
+						Name:       readyEventPolicyName,
 					},
 				}...),
 				WithEventPolicyLabels(map[string]string{
@@ -411,7 +415,9 @@ func TestReconcile(t *testing.T) {
 						Kind:       "InMemoryChannel",
 						Name:       channelName,
 					}, {
-						Name: unreadyEventPolicyName,
+						APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
+						Kind:       "EventPolicy",
+						Name:       unreadyEventPolicyName,
 					},
 				}...),
 				WithEventPolicyLabels(map[string]string{
@@ -464,7 +470,9 @@ func TestReconcile(t *testing.T) {
 						Kind:       "InMemoryChannel",
 						Name:       channelName,
 					}, {
-						Name: readyEventPolicyName,
+						APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
+						Kind:       "EventPolicy",
+						Name:       readyEventPolicyName,
 					},
 				}...),
 				WithEventPolicyLabels(map[string]string{
@@ -482,7 +490,9 @@ func TestReconcile(t *testing.T) {
 						Kind:       "InMemoryChannel",
 						Name:       channelName,
 					}, {
-						Name: unreadyEventPolicyName,
+						APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
+						Kind:       "EventPolicy",
+						Name:       unreadyEventPolicyName,
 					},
 				}...),
 				WithEventPolicyLabels(map[string]string{
@@ -547,7 +557,9 @@ func TestReconcile(t *testing.T) {
 						Kind:       "InMemoryChannel",
 						Name:       channelName,
 					}, {
-						Name: readyEventPolicyName,
+						APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
+						Kind:       "EventPolicy",
+						Name:       readyEventPolicyName,
 					},
 				}...),
 				WithEventPolicyLabels(map[string]string{
