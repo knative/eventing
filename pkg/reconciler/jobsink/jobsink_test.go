@@ -25,6 +25,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	utilrand "k8s.io/apimachinery/pkg/util/rand"
+	"k8s.io/apiserver/pkg/storage/names"
 	clientgotesting "k8s.io/client-go/testing"
 	"k8s.io/utils/pointer"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
@@ -56,9 +58,19 @@ var (
 
 	jobSinkAddressable = duckv1.Addressable{
 		Name: pointer.String("http"),
-		URL:  apis.HTTP(network.GetServiceHostname("job-sink", testNamespace)),
+		URL: &apis.URL{
+			Scheme: "http",
+			Host:   network.GetServiceHostname("job-sink", testNamespace),
+			Path:   fmt.Sprintf("/%s/%s", testNamespace, jobSinkName),
+		},
 	}
 )
+
+func init() {
+	// Seed the random number generator for deterministic results
+	seed := int64(42)
+	utilrand.Seed(seed)
+}
 
 func TestReconcile(t *testing.T) {
 	table := TableTest{
@@ -82,6 +94,9 @@ func TestReconcile(t *testing.T) {
 					WithInitJobSinkConditions),
 			},
 			WantErr: false,
+			WantCreates: []runtime.Object{
+				testJob(),
+			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{
 				{
 					Object: NewJobSink(jobSinkName, testNamespace,
@@ -116,7 +131,7 @@ func TestReconcile(t *testing.T) {
 func testJob() *batchv1.Job {
 	return &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-job",
+			Name:      names.SimpleNameGenerator.GenerateName(jobSinkName),
 			Namespace: testNamespace,
 		},
 		Spec: batchv1.JobSpec{
