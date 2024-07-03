@@ -107,6 +107,7 @@ function scale_controlplane() {
 }
 
 function create_knsubscribe_rolebinding() {
+  kubectl delete clusterrolebinding knsubscribe-test-rb --ignore-not-found=true
   kubectl create clusterrolebinding knsubscribe-test-rb --user=$(kubectl auth whoami -ojson | jq .status.userInfo.username -r) --clusterrole=crossnamespace=subscriber
 }
 
