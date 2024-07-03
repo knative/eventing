@@ -25,6 +25,7 @@ import (
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/apis/feature"
 	sinksv1alpha1 "knative.dev/eventing/pkg/apis/sinks/v1alpha1"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 // JobSinkOption enables further configuration of a JobSink.
@@ -75,6 +76,18 @@ func WithJobSinkJob(job *batchv1.Job) JobSinkOption {
 	}
 }
 
+func WithJobSinkAddressableReady() JobSinkOption {
+	return func(js *sinksv1alpha1.JobSink) {
+		js.Status.MarkAddressableReady()
+	}
+}
+
+func WithJobSinkJobStatusSelector() JobSinkOption {
+	return func(js *sinksv1alpha1.JobSink) {
+		js.SetJobStatusSelector()
+	}
+}
+
 // WithJobSinkEventPoliciesReady sets the JobSink's EventPoliciesReady condition to true.
 func WithJobSinkEventPoliciesReady() JobSinkOption {
 	return func(js *sinksv1alpha1.JobSink) {
@@ -104,7 +117,7 @@ func WithJobSinkEventPoliciesListed(policyNames ...string) JobSinkOption {
 // WithJobSinkEventPoliciesReadyBecauseNoPolicy() sets the JobSink's EventPoliciesReady condition to true with reason.
 func WithJobSinkEventPoliciesReadyBecauseOIDCDisabled() JobSinkOption {
 	return func(js *sinksv1alpha1.JobSink) {
-		js.Status.DeepCopy().MarkEventPoliciesTrueWithReason("OIDCDisabled", "Feature %q must be enabled to support Authorization", feature.OIDCAuthentication)
+		js.Status.MarkEventPoliciesTrueWithReason("OIDCDisabled", "Feature %q must be enabled to support Authorization", feature.OIDCAuthentication)
 	}
 }
 
@@ -112,5 +125,11 @@ func WithJobSinkEventPoliciesReadyBecauseOIDCDisabled() JobSinkOption {
 func WithJobSinkEventPoliciesReadyBecauseNoPolicyAndOIDCEnabled() JobSinkOption {
 	return func(js *sinksv1alpha1.JobSink) {
 		js.Status.MarkEventPoliciesTrueWithReason("DefaultAuthorizationMode", "Default authz mode is %q", feature.AuthorizationAllowSameNamespace)
+	}
+}
+
+func WithJobSinkAddress(addr *duckv1.Addressable) JobSinkOption {
+	return func(js *sinksv1alpha1.JobSink) {
+		js.Status.SetAddress(addr)
 	}
 }

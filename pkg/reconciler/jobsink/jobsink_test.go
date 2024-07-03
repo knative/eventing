@@ -26,14 +26,18 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgotesting "k8s.io/client-go/testing"
+	"k8s.io/utils/pointer"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	jobsinkreconciler "knative.dev/eventing/pkg/client/injection/reconciler/sinks/v1alpha1/jobsink"
 	. "knative.dev/eventing/pkg/reconciler/testing/v1"
 	. "knative.dev/eventing/pkg/reconciler/testing/v1alpha1"
-	v1a1addr "knative.dev/pkg/client/injection/ducks/duck/v1alpha1/addressable"
+	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+	v1 "knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	logtesting "knative.dev/pkg/logging/testing"
+	"knative.dev/pkg/network"
 	. "knative.dev/pkg/reconciler/testing"
 )
 
@@ -49,6 +53,11 @@ const (
 
 var (
 	testKey = fmt.Sprintf("%s/%s", testNamespace, jobSinkName)
+
+	jobSinkAddressable = duckv1.Addressable{
+		Name: pointer.String("http"),
+		URL:  apis.HTTP(network.GetServiceHostname("job-sink", testNamespace)),
+	}
 )
 
 func TestReconcile(t *testing.T) {
@@ -68,7 +77,7 @@ func TestReconcile(t *testing.T) {
 			Name: "Successful reconciliation",
 			Key:  testKey,
 			Objects: []runtime.Object{
-				NewJobSink(testNamespace, jobSinkName,
+				NewJobSink(jobSinkName, testNamespace,
 					WithJobSinkJob(testJob()),
 					WithInitJobSinkConditions),
 			},
@@ -76,16 +85,18 @@ func TestReconcile(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{
 				{
 					Object: NewJobSink(jobSinkName, testNamespace,
-						WithInitJobSinkConditions,
 						WithJobSinkJob(testJob()),
+						WithJobSinkAddressableReady(),
+						WithJobSinkJobStatusSelector(),
+						WithJobSinkAddress(&jobSinkAddressable),
 						WithJobSinkEventPoliciesReadyBecauseOIDCDisabled()),
 				},
-		},
+			},
 		}}
 
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
-		ctx = v1a1addr.WithDuck(ctx)
+		ctx = v1.WithDuck(ctx)
 		r := &Reconciler{
 			jobLister:         listers.GetJobLister(),
 			secretLister:      listers.GetSecretLister(),
