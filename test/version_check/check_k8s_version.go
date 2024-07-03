@@ -20,9 +20,9 @@ import (
 	"fmt"
 	"log"
 
-	"knative.dev/pkg/version"
 	"k8s.io/client-go/kubernetes"
 	"knative.dev/pkg/test"
+	"knative.dev/pkg/version"
 )
 
 func main() {
