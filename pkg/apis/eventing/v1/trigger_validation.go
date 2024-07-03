@@ -186,7 +186,7 @@ func ValidateAttributesNames(attrs map[string]string) (errs *apis.FieldError) {
 }
 
 func ValidateSubscriptionAPIFiltersList(ctx context.Context, filters []SubscriptionsAPIFilter) (errs *apis.FieldError) {
-	if filters == nil || !feature.FromContext(ctx).IsEnabled(feature.NewTriggerFilters) {
+	if filters == nil {
 		return nil
 	}
 

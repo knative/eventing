@@ -76,7 +76,6 @@ func newDefaults() Flags {
 		DeliveryRetryAfter:       Disabled,
 		DeliveryTimeout:          Enabled,
 		KReferenceMapping:        Disabled,
-		NewTriggerFilters:        Enabled,
 		TransportEncryption:      Disabled,
 		OIDCAuthentication:       Disabled,
 		EvenTypeAutoCreate:       Disabled,
