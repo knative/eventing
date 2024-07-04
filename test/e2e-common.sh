@@ -92,7 +92,7 @@ function knative_setup() {
 
   install_feature_cm || fail_test "Could not install features configmap"
 
-  create_knsubscribe_rolebinding || fail_test "Could not create knsusbcribe rolebinding"
+  create_knsubscribe_rolebinding || fail_test "Could not create knsubscribe rolebinding"
 }
 
 function scale_controlplane() {
