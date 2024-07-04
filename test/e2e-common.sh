@@ -92,7 +92,7 @@ function knative_setup() {
 
   install_feature_cm || fail_test "Could not install features configmap"
 
-  create_knsubscribe_rolebinding || fail_test "Could not create knsusbcribe rolebinding"
+  create_knsubscribe_rolebinding || fail_test "Could not create knsubscribe rolebinding"
 }
 
 function scale_controlplane() {
@@ -107,6 +107,7 @@ function scale_controlplane() {
 }
 
 function create_knsubscribe_rolebinding() {
+  kubectl delete clusterrolebinding knsubscribe-test-rb --ignore-not-found=true
   kubectl create clusterrolebinding knsubscribe-test-rb --user=$(kubectl auth whoami -ojson | jq .status.userInfo.username -r) --clusterrole=crossnamespace=subscriber
 }
 
