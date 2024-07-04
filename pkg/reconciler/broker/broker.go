@@ -425,7 +425,6 @@ func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterf
 func TriggerChannelLabels(brokerName, brokerNamespace string) map[string]string {
 	return map[string]string{
 		eventing.BrokerLabelKey:                 brokerName,
-		eventing.BrokerNamespaceKey:             brokerNamespace,
 		"eventing.knative.dev/brokerEverything": "true",
 	}
 }

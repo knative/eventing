@@ -84,7 +84,6 @@ func WithBrokerLabels(brokerName, brokerNamespace string) TriggerOption {
 			t.Labels = make(map[string]string)
 		}
 		t.Labels[apiseventing.BrokerLabelKey] = brokerName
-		t.Labels[apiseventing.BrokerNamespaceKey] = brokerNamespace
 	}
 }
 

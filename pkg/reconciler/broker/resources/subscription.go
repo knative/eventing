@@ -70,17 +70,13 @@ func NewSubscription(ctx context.Context, t *eventingv1.Trigger, brokerTrigger *
 // Broker's Channels.
 func SubscriptionLabels(ctx context.Context, t *eventingv1.Trigger) map[string]string {
 	var broker string
-	var brokerNamespace string
 	if t.Spec.BrokerRef != nil && feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) {
 		broker = t.Spec.BrokerRef.Name
-		brokerNamespace = t.Spec.BrokerRef.Namespace
 	} else {
 		broker = t.Spec.Broker
-		brokerNamespace = t.Namespace
 	}
 	return map[string]string{
 		eventing.BrokerLabelKey:        broker,
-		eventing.BrokerNamespaceKey:    brokerNamespace,
 		"eventing.knative.dev/trigger": t.Name,
 	}
 }

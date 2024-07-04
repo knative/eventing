@@ -29,6 +29,7 @@ import (
 
 	"knative.dev/eventing/pkg/apis/eventing"
 	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	"knative.dev/eventing/pkg/apis/feature"
 	sugarconfig "knative.dev/eventing/pkg/apis/sugar"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1/broker"
@@ -66,13 +67,17 @@ func NewController(
 	// Watch brokers.
 	brokerInformer.Informer().AddEventHandler(controller.HandleAll(func(obj interface{}) {
 		if b, ok := obj.(*v1.Broker); ok {
-			triggers, err := triggerInformer.Lister().Triggers("").List(labels.SelectorFromSet(map[string]string{eventing.BrokerLabelKey: b.Name, eventing.BrokerNamespaceKey: b.Namespace}))
+			triggers, err := triggerInformer.Lister().Triggers("").List(labels.SelectorFromSet(map[string]string{eventing.BrokerLabelKey: b.Name}))
 			if err != nil {
 				logging.FromContext(ctx).Warnw("Failed to list triggers", zap.String("Namespace", b.Namespace), zap.String("Broker", b.Name))
 				return
 			}
 			for _, t := range triggers {
-				impl.Enqueue(t)
+				if feature.FromContext(ctx).IsCrossNamespaceEventLinks() && t.Spec.BrokerRef != nil && t.Spec.BrokerRef.Namespace == b.Namespace {
+					impl.Enqueue(t)
+				} else if t.Namespace == b.Namespace {
+					impl.Enqueue(t)
+				}
 			}
 		}
 	}))

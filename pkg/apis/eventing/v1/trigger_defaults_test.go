@@ -50,7 +50,7 @@ func TestTriggerDefaults(t *testing.T) {
 			initial: Trigger{Spec: TriggerSpec{Broker: otherBroker}, ObjectMeta: metav1.ObjectMeta{Namespace: namespace}},
 			expected: Trigger{
 				ObjectMeta: v1.ObjectMeta{
-					Labels:    map[string]string{brokerLabel: otherBroker, brokerNamespaceLabel: namespace},
+					Labels:    map[string]string{brokerLabel: otherBroker},
 					Namespace: namespace,
 				},
 				Spec: TriggerSpec{Broker: otherBroker, Filter: emptyTriggerFilter}},
@@ -70,7 +70,7 @@ func TestTriggerDefaults(t *testing.T) {
 			expected: Trigger{
 				ObjectMeta: v1.ObjectMeta{
 					Namespace: namespace,
-					Labels:    map[string]string{brokerLabel: otherBroker, brokerNamespaceLabel: namespace},
+					Labels:    map[string]string{brokerLabel: otherBroker},
 				},
 				Spec: TriggerSpec{
 					Broker: otherBroker,
@@ -106,7 +106,7 @@ func TestTriggerDefaults(t *testing.T) {
 			expected: Trigger{
 				ObjectMeta: v1.ObjectMeta{
 					Namespace: "custom",
-					Labels:    map[string]string{brokerLabel: otherBroker, brokerNamespaceLabel: "custom"},
+					Labels:    map[string]string{brokerLabel: otherBroker},
 				},
 				Spec: TriggerSpec{
 					Broker: otherBroker,
@@ -142,9 +142,8 @@ func TestTriggerDefaults(t *testing.T) {
 				ObjectMeta: v1.ObjectMeta{
 					Namespace: namespace,
 					Labels: map[string]string{
-						"otherLabel":         "my-other-label",
-						brokerNamespaceLabel: namespace,
-						brokerLabel:          defaultBroker},
+						"otherLabel": "my-other-label",
+						brokerLabel:  defaultBroker},
 				},
 				Spec: TriggerSpec{Broker: defaultBroker, Filter: emptyTriggerFilter}},
 		},
