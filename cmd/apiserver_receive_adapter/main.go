@@ -22,6 +22,7 @@ import (
 
 	"knative.dev/eventing/pkg/adapter/apiserver"
 	"knative.dev/eventing/pkg/adapter/v2"
+	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/eventingtls"
 )
 
@@ -34,6 +35,7 @@ func main() {
 	ctx = adapter.WithInjectorEnabled(ctx)
 
 	ctx = filteredFactory.WithSelectors(ctx,
+		auth.OIDCLabelSelector,
 		eventingtls.TrustBundleLabelSelector,
 	)
 
