@@ -27,7 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	utilrand "k8s.io/apimachinery/pkg/util/rand"
 	clientgotesting "k8s.io/client-go/testing"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	jobsinkreconciler "knative.dev/eventing/pkg/client/injection/reconciler/sinks/v1alpha1/jobsink"
 	. "knative.dev/eventing/pkg/reconciler/testing/v1"
@@ -56,7 +56,7 @@ var (
 	testKey = fmt.Sprintf("%s/%s", testNamespace, jobSinkName)
 
 	jobSinkAddressable = duckv1.Addressable{
-		Name: pointer.String("http"),
+		Name: ptr.To("http"),
 		URL: &apis.URL{
 			Scheme: "http",
 			Host:   network.GetServiceHostname("job-sink", testNamespace),
