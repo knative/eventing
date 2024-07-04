@@ -37,6 +37,7 @@ import (
 	"go.uber.org/zap/zaptest"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"knative.dev/eventing/pkg/metrics"
 	"knative.dev/pkg/apis"
 	configmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap/fake"
 	"knative.dev/pkg/logging"
@@ -515,14 +516,14 @@ func TestReceiver(t *testing.T) {
 			if tc.expectedDispatch != fh.requestReceived {
 				t.Errorf("Incorrect dispatch. Expected %v, Actual %v", tc.expectedDispatch, fh.requestReceived)
 			}
-			if tc.expectedEventCount != reporter.eventCountReported {
-				t.Errorf("Incorrect event count reported metric. Expected %v, Actual %v", tc.expectedEventCount, reporter.eventCountReported)
+			if tc.expectedEventCount != reporter.EventCountReported {
+				t.Errorf("Incorrect event count reported metric. Expected %v, Actual %v", tc.expectedEventCount, reporter.EventCountReported)
 			}
-			if tc.expectedEventDispatchTime != reporter.eventDispatchTimeReported {
-				t.Errorf("Incorrect event dispatch time reported metric. Expected %v, Actual %v", tc.expectedEventDispatchTime, reporter.eventDispatchTimeReported)
+			if tc.expectedEventDispatchTime != reporter.EventDispatchTimeReported {
+				t.Errorf("Incorrect event dispatch time reported metric. Expected %v, Actual %v", tc.expectedEventDispatchTime, reporter.EventDispatchTimeReported)
 			}
-			if tc.expectedEventProcessingTime != reporter.eventProcessingTimeReported {
-				t.Errorf("Incorrect event processing time reported metric. Expected %v, Actual %v", tc.expectedEventProcessingTime, reporter.eventProcessingTimeReported)
+			if tc.expectedEventProcessingTime != reporter.EventProcessingTimeReported {
+				t.Errorf("Incorrect event processing time reported metric. Expected %v, Actual %v", tc.expectedEventProcessingTime, reporter.EventProcessingTimeReported)
 			}
 			if tc.expectedResponseEvent != nil {
 				if tc.expectedResponseEvent.SpecVersion() != event.CloudEventsVersionV1 {
@@ -705,11 +706,11 @@ func TestReceiver_WithSubscriptionsAPI(t *testing.T) {
 			if tc.expectedDispatch != fh.requestReceived {
 				t.Errorf("Incorrect dispatch. Expected %v, Actual %v", tc.expectedDispatch, fh.requestReceived)
 			}
-			if tc.expectedEventCount != reporter.eventCountReported {
-				t.Errorf("Incorrect event count reported metric. Expected %v, Actual %v", tc.expectedEventCount, reporter.eventCountReported)
+			if tc.expectedEventCount != reporter.EventCountReported {
+				t.Errorf("Incorrect event count reported metric. Expected %v, Actual %v", tc.expectedEventCount, reporter.EventCountReported)
 			}
-			if tc.expectedEventDispatchTime != reporter.eventDispatchTimeReported {
-				t.Errorf("Incorrect event dispatch time reported metric. Expected %v, Actual %v", tc.expectedEventDispatchTime, reporter.eventDispatchTimeReported)
+			if tc.expectedEventDispatchTime != reporter.EventDispatchTimeReported {
+				t.Errorf("Incorrect event dispatch time reported metric. Expected %v, Actual %v", tc.expectedEventDispatchTime, reporter.EventDispatchTimeReported)
 			}
 			// Compare the returned event.
 			message := cehttp.NewMessageFromHttpResponse(response)
@@ -743,23 +744,23 @@ func (r *responseWriterWithInvocationsCheck) WriteHeader(statusCode int) {
 }
 
 type mockReporter struct {
-	eventCountReported          bool
-	eventDispatchTimeReported   bool
-	eventProcessingTimeReported bool
+	EventCountReported          bool
+	EventDispatchTimeReported   bool
+	EventProcessingTimeReported bool
 }
 
-func (r *mockReporter) ReportEventCount(args *ReportArgs, responseCode int) error {
-	r.eventCountReported = true
+func (r *mockReporter) ReportEventCount(args *metrics.ReportArgs, responseCode int) error {
+	r.EventCountReported = true
 	return nil
 }
 
-func (r *mockReporter) ReportEventDispatchTime(args *ReportArgs, responseCode int, d time.Duration) error {
-	r.eventDispatchTimeReported = true
+func (r *mockReporter) ReportEventDispatchTime(args *metrics.ReportArgs, responseCode int, d time.Duration) error {
+	r.EventDispatchTimeReported = true
 	return nil
 }
 
-func (r *mockReporter) ReportEventProcessingTime(args *ReportArgs, d time.Duration) error {
-	r.eventProcessingTimeReported = true
+func (r *mockReporter) ReportEventProcessingTime(args *metrics.ReportArgs, d time.Duration) error {
+	r.EventProcessingTimeReported = true
 	return nil
 }
 

@@ -30,14 +30,14 @@ import (
 
 func TestStatsReporter(t *testing.T) {
 	setup()
-	args := &ReportArgs{
-		ns:         "testns",
-		trigger:    "testtrigger",
-		broker:     "testbroker",
-		filterType: "testeventtype",
+	args := &metrics.ReportArgs{
+		Ns:         "testns",
+		Trigger:    "testtrigger",
+		Broker:     "testbroker",
+		FilterType: "testeventtype",
 	}
 
-	r := NewStatsReporter("testcontainer", "testpod")
+	r := metrics.NewStatsReporter("testcontainer", "testpod")
 
 	wantTags := map[string]string{
 		metrics.LabelFilterType:   "testeventtype",
@@ -95,18 +95,18 @@ func TestStatsReporter(t *testing.T) {
 func TestReporterEmptySourceAndTypeFilter(t *testing.T) {
 	setup()
 
-	args := &ReportArgs{
-		ns:            "testns",
-		trigger:       "testtrigger",
-		broker:        "testbroker",
-		filterType:    "",
-		requestScheme: "http",
+	args := &metrics.ReportArgs{
+		Ns:            "testns",
+		Trigger:       "testtrigger",
+		Broker:        "testbroker",
+		FilterType:    "",
+		RequestScheme: "http",
 	}
 
-	r := NewStatsReporter("testcontainer", "testpod")
+	r := metrics.NewStatsReporter("testcontainer", "testpod")
 
 	wantTags := map[string]string{
-		metrics.LabelFilterType:        anyValue,
+		metrics.LabelFilterType:        metrics.AnyValue,
 		metrics.LabelResponseCode:      "202",
 		metrics.LabelResponseCodeClass: "2xx",
 		broker.LabelContainerName:      "testcontainer",
@@ -156,5 +156,5 @@ func resetMetrics() {
 		"event_count",
 		"event_dispatch_latencies",
 		"event_processing_latencies")
-	register()
+	metrics.Register()
 }

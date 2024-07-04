@@ -26,6 +26,8 @@ import (
 	"net/http"
 	"time"
 
+	"knative.dev/eventing/pkg/metrics"
+
 	opencensusclient "github.com/cloudevents/sdk-go/observability/opencensus/v2/client"
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"
@@ -75,7 +77,7 @@ const (
 // Handler parses Cloud Events, determines if they pass a filter, and sends them to a subscriber.
 type Handler struct {
 	// reporter reports stats of status code and dispatch time
-	reporter StatsReporter
+	reporter metrics.StatsReporter
 
 	eventDispatcher *kncloudevents.Dispatcher
 
@@ -89,7 +91,7 @@ type Handler struct {
 }
 
 // NewHandler creates a new Handler and its associated EventReceiver.
-func NewHandler(logger *zap.Logger, tokenVerifier *auth.OIDCTokenVerifier, oidcTokenProvider *auth.OIDCTokenProvider, triggerInformer v1.TriggerInformer, brokerInformer v1.BrokerInformer, reporter StatsReporter, trustBundleConfigMapLister corev1listers.ConfigMapNamespaceLister, wc func(ctx context.Context) context.Context) (*Handler, error) {
+func NewHandler(logger *zap.Logger, tokenVerifier *auth.OIDCTokenVerifier, oidcTokenProvider *auth.OIDCTokenProvider, triggerInformer v1.TriggerInformer, brokerInformer v1.BrokerInformer, reporter metrics.StatsReporter, trustBundleConfigMapLister corev1listers.ConfigMapNamespaceLister, wc func(ctx context.Context) context.Context) (*Handler, error) {
 	kncloudevents.ConfigureConnectionArgs(&kncloudevents.ConnectionArgs{
 		MaxIdleConns:        defaultMaxIdleConnections,
 		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
@@ -245,17 +247,17 @@ func (h *Handler) handleDispatchToReplyRequest(ctx context.Context, trigger *eve
 
 	target := broker.Status.Address
 
-	reportArgs := &ReportArgs{
-		ns:          trigger.Namespace,
-		trigger:     trigger.Name,
-		broker:      brokerRef,
-		requestType: "reply_forward",
+	reportArgs := &metrics.ReportArgs{
+		Ns:          trigger.Namespace,
+		Trigger:     trigger.Name,
+		Broker:      brokerRef,
+		RequestType: "reply_forward",
 	}
 
 	if request.TLS != nil {
-		reportArgs.requestScheme = "https"
+		reportArgs.RequestScheme = "https"
 	} else {
-		reportArgs.requestScheme = "http"
+		reportArgs.RequestScheme = "http"
 	}
 
 	h.logger.Info("sending to reply", zap.Any("target", target))
@@ -296,17 +298,17 @@ func (h *Handler) handleDispatchToDLSRequest(ctx context.Context, trigger *event
 		}
 	}
 
-	reportArgs := &ReportArgs{
-		ns:          trigger.Namespace,
-		trigger:     trigger.Name,
-		broker:      trigger.Spec.Broker,
-		requestType: "dls_forward",
+	reportArgs := &metrics.ReportArgs{
+		Ns:          trigger.Namespace,
+		Trigger:     trigger.Name,
+		Broker:      trigger.Spec.Broker,
+		RequestType: "dls_forward",
 	}
 
 	if request.TLS != nil {
-		reportArgs.requestScheme = "https"
+		reportArgs.RequestScheme = "https"
 	} else {
-		reportArgs.requestScheme = "http"
+		reportArgs.RequestScheme = "http"
 	}
 
 	h.logger.Info("sending to dls", zap.Any("target", target))
@@ -343,18 +345,18 @@ func (h *Handler) handleDispatchToSubscriberRequest(ctx context.Context, trigger
 		h.logger.Warn("Failed to delete TTL.", zap.Error(err))
 	}
 
-	reportArgs := &ReportArgs{
-		ns:          trigger.Namespace,
-		trigger:     trigger.Name,
-		broker:      brokerRef,
-		filterType:  triggerFilterAttribute(trigger.Spec.Filter, "type"),
-		requestType: "filter",
+	reportArgs := &metrics.ReportArgs{
+		Ns:          trigger.Namespace,
+		Trigger:     trigger.Name,
+		Broker:      brokerRef,
+		FilterType:  triggerFilterAttribute(trigger.Spec.Filter, "type"),
+		RequestType: "filter",
 	}
 
 	if request.TLS != nil {
-		reportArgs.requestScheme = "https"
+		reportArgs.RequestScheme = "https"
 	} else {
-		reportArgs.requestScheme = "http"
+		reportArgs.RequestScheme = "http"
 	}
 
 	subscriberURI := trigger.Status.SubscriberURI
@@ -386,7 +388,7 @@ func (h *Handler) handleDispatchToSubscriberRequest(ctx context.Context, trigger
 	h.send(ctx, writer, utils.PassThroughHeaders(request.Header), target, reportArgs, event, trigger, ttl)
 }
 
-func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers http.Header, target duckv1.Addressable, reportArgs *ReportArgs, event *cloudevents.Event, t *eventingv1.Trigger, ttl int32) {
+func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers http.Header, target duckv1.Addressable, reportArgs *metrics.ReportArgs, event *cloudevents.Event, t *eventingv1.Trigger, ttl int32) {
 	additionalHeaders := headers.Clone()
 	additionalHeaders.Set(apis.KnNamespaceHeader, t.GetNamespace())
 
@@ -519,7 +521,7 @@ func (h *Handler) writeResponse(ctx context.Context, writer http.ResponseWriter,
 	return dispatchInfo.ResponseCode, nil
 }
 
-func (h *Handler) reportArrivalTime(event *event.Event, reportArgs *ReportArgs) {
+func (h *Handler) reportArrivalTime(event *event.Event, reportArgs *metrics.ReportArgs) {
 	// Record the event processing time. This might be off if the receiver and the filter pods are running in
 	// different nodes with different clocks.
 	var arrivalTimeStr string

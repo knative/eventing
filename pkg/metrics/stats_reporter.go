@@ -1,5 +1,5 @@
 /*
-Copyright 2020 The Knative Authors
+Copyright 2024 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package filter
+package metrics
 
 import (
 	"context"
@@ -22,19 +22,18 @@ import (
 	"strconv"
 	"time"
 
+	"knative.dev/pkg/metrics"
+	"knative.dev/pkg/metrics/metricskey"
+
 	"go.opencensus.io/resource"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
-	broker "knative.dev/eventing/pkg/broker"
-	eventingmetrics "knative.dev/eventing/pkg/metrics"
-	"knative.dev/pkg/metrics"
-	"knative.dev/pkg/metrics/metricskey"
 )
 
 const (
 	// anyValue is the default value if the trigger filter attributes are empty.
-	anyValue = "any"
+	AnyValue = "any"
 )
 
 var (
@@ -67,24 +66,24 @@ var (
 	// go.opencensus.io/tag/validate.go. Currently those restrictions are:
 	// - length between 1 and 255 inclusive
 	// - characters are printable US-ASCII
-	triggerFilterTypeKey          = tag.MustNewKey(eventingmetrics.LabelFilterType)
+	triggerFilterTypeKey          = tag.MustNewKey(LabelFilterType)
 	triggerFilterRequestTypeKey   = tag.MustNewKey("filter_request_type")
-	triggerFilterRequestSchemeKey = tag.MustNewKey(eventingmetrics.LabelEventScheme)
-	responseCodeKey               = tag.MustNewKey(eventingmetrics.LabelResponseCode)
-	responseCodeClassKey          = tag.MustNewKey(eventingmetrics.LabelResponseCodeClass)
+	triggerFilterRequestSchemeKey = tag.MustNewKey(LabelEventScheme)
+	responseCodeKey               = tag.MustNewKey(LabelResponseCode)
+	responseCodeClassKey          = tag.MustNewKey(LabelResponseCodeClass)
 )
 
 type ReportArgs struct {
-	ns            string
-	trigger       string
-	broker        string
-	filterType    string
-	requestType   string
-	requestScheme string
+	Ns            string
+	Trigger       string
+	Broker        string
+	FilterType    string
+	RequestType   string
+	RequestScheme string
 }
 
 func init() {
-	register()
+	Register()
 }
 
 // StatsReporter defines the interface for sending filter metrics.
@@ -111,26 +110,26 @@ func NewStatsReporter(container, uniqueName string) StatsReporter {
 	}
 }
 
-func register() {
+func Register() {
 	// Create view to see our measurements.
 	err := metrics.RegisterResourceView(
 		&view.View{
 			Description: eventCountM.Description(),
 			Measure:     eventCountM,
 			Aggregation: view.Count(),
-			TagKeys:     []tag.Key{triggerFilterTypeKey, triggerFilterRequestTypeKey, triggerFilterRequestSchemeKey, responseCodeKey, responseCodeClassKey, broker.UniqueTagKey, broker.ContainerTagKey},
+			TagKeys:     []tag.Key{triggerFilterTypeKey, triggerFilterRequestTypeKey, triggerFilterRequestSchemeKey, responseCodeKey, responseCodeClassKey, tag.MustNewKey("unique_name"), tag.MustNewKey("container_name")},
 		},
 		&view.View{
 			Description: dispatchTimeInMsecM.Description(),
 			Measure:     dispatchTimeInMsecM,
 			Aggregation: view.Distribution(metrics.Buckets125(1, 10000)...), // 1, 2, 5, 10, 20, 50, 100, 1000, 5000, 10000
-			TagKeys:     []tag.Key{triggerFilterTypeKey, triggerFilterRequestTypeKey, triggerFilterRequestSchemeKey, responseCodeKey, responseCodeClassKey, broker.UniqueTagKey, broker.ContainerTagKey},
+			TagKeys:     []tag.Key{triggerFilterTypeKey, triggerFilterRequestTypeKey, triggerFilterRequestSchemeKey, responseCodeKey, responseCodeClassKey, tag.MustNewKey("unique_name"), tag.MustNewKey("container_name")},
 		},
 		&view.View{
 			Description: processingTimeInMsecM.Description(),
 			Measure:     processingTimeInMsecM,
 			Aggregation: view.Distribution(metrics.Buckets125(1, 10000)...), // 1, 2, 5, 10, 20, 50, 100, 1000, 5000, 10000
-			TagKeys:     []tag.Key{triggerFilterTypeKey, triggerFilterRequestTypeKey, triggerFilterRequestSchemeKey, broker.UniqueTagKey, broker.ContainerTagKey},
+			TagKeys:     []tag.Key{triggerFilterTypeKey, triggerFilterRequestTypeKey, triggerFilterRequestSchemeKey, tag.MustNewKey("unique_name"), tag.MustNewKey("container_name")},
 		},
 	)
 	if err != nil {
@@ -177,22 +176,22 @@ func (r *reporter) ReportEventProcessingTime(args *ReportArgs, d time.Duration) 
 
 func (r *reporter) generateTag(args *ReportArgs, tags ...tag.Mutator) (context.Context, error) {
 	ctx := metricskey.WithResource(emptyContext, resource.Resource{
-		Type: eventingmetrics.ResourceTypeKnativeTrigger,
+		Type: ResourceTypeKnativeTrigger,
 		Labels: map[string]string{
-			eventingmetrics.LabelNamespaceName: args.ns,
-			eventingmetrics.LabelBrokerName:    args.broker,
-			eventingmetrics.LabelTriggerName:   args.trigger,
+			LabelNamespaceName: args.Ns,
+			LabelBrokerName:    args.Broker,
+			LabelTriggerName:   args.Trigger,
 		},
 	})
 	// Note that filterType and filterSource can be empty strings, so they need a special treatment.
 	ctx, err := tag.New(
 		ctx,
 		append(tags,
-			tag.Insert(broker.ContainerTagKey, r.container),
-			tag.Insert(broker.UniqueTagKey, r.uniqueName),
-			tag.Insert(triggerFilterTypeKey, valueOrAny(args.filterType)),
-			tag.Insert(triggerFilterRequestTypeKey, args.requestType),
-			tag.Insert(triggerFilterRequestSchemeKey, args.requestScheme),
+			tag.Insert(tag.MustNewKey("container_name"), r.container),
+			tag.Insert(tag.MustNewKey("unique_name"), r.uniqueName),
+			tag.Insert(triggerFilterTypeKey, valueOrAny(args.FilterType)),
+			tag.Insert(triggerFilterRequestTypeKey, args.RequestType),
+			tag.Insert(triggerFilterRequestSchemeKey, args.RequestScheme),
 		)...)
 	return ctx, err
 }
@@ -201,5 +200,5 @@ func valueOrAny(v string) string {
 	if v != "" {
 		return v
 	}
-	return anyValue
+	return AnyValue
 }
