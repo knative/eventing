@@ -46,6 +46,7 @@ import (
 	brokerinformerfake "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/broker/fake"
 
 	// Fake injection client
+	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventpolicy/fake"
 	_ "knative.dev/pkg/client/injection/kube/client/fake"
 )
 
