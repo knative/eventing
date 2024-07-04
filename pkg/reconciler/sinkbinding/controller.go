@@ -136,7 +136,7 @@ func NewController(
 		res:                        sbResolver,
 		tracker:                    impl.Tracker,
 		kubeclient:                 kubeclient.Get(ctx),
-		serviceAccountLister:       serviceaccountInformer.Lister(),
+		serviceAccountLister:       oidcServiceaccountInformer.Lister(),
 		secretLister:               secretInformer.Lister(),
 		featureStore:               featureStore,
 		tokenProvider:              auth.NewOIDCTokenProvider(ctx),
@@ -155,7 +155,7 @@ func NewController(
 	}
 
 	// Reconcile SinkBinding when the OIDC service account changes
-	serviceaccountInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+	oidcServiceaccountInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.FilterController(&v1.SinkBinding{}),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
