@@ -43,11 +43,11 @@ import (
 )
 
 const (
-	// TestNamespace is the namespace used for testing.
+	// testNamespace is the namespace used for testing.
 	testNamespace = "test-namespace"
-	// TestName is the name used for testing.
+	// jobSinkName is the name of JobSink used for testing.
 	jobSinkName = "test-jobSink"
-
+	// readyEventPolicyName and unreadyEventPolicyName are the names of EventPolicies used for testing.
 	readyEventPolicyName   = "ready-event-policy"
 	unreadyEventPolicyName = "unready-event-policy"
 )
