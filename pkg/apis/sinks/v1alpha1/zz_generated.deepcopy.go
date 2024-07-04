@@ -114,6 +114,7 @@ func (in *JobSinkStatus) DeepCopyInto(out *JobSinkStatus) {
 	in.Status.DeepCopyInto(&out.Status)
 	in.AddressStatus.DeepCopyInto(&out.AddressStatus)
 	out.JobStatus = in.JobStatus
+	in.AppliedEventPoliciesStatus.DeepCopyInto(&out.AppliedEventPoliciesStatus)
 	return
 }
 

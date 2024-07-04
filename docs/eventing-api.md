@@ -49,7 +49,7 @@ Resource Types:
 <h3 id="duck.knative.dev/v1.AppliedEventPoliciesStatus">AppliedEventPoliciesStatus
 </h3>
 <p>
-(<em>Appears on:</em><a href="#duck.knative.dev/v1.ChannelableStatus">ChannelableStatus</a>, <a href="#eventing.knative.dev/v1.BrokerStatus">BrokerStatus</a>, <a href="#flows.knative.dev/v1.ParallelStatus">ParallelStatus</a>, <a href="#flows.knative.dev/v1.SequenceStatus">SequenceStatus</a>)
+(<em>Appears on:</em><a href="#duck.knative.dev/v1.ChannelableStatus">ChannelableStatus</a>, <a href="#eventing.knative.dev/v1.BrokerStatus">BrokerStatus</a>, <a href="#flows.knative.dev/v1.ParallelStatus">ParallelStatus</a>, <a href="#flows.knative.dev/v1.SequenceStatus">SequenceStatus</a>, <a href="#sinks.knative.dev/v1alpha1.JobSinkStatus">JobSinkStatus</a>)
 </p>
 <p>
 <p>AppliedEventPoliciesStatus contains the list of policies which apply to a resource.
@@ -5949,6 +5949,23 @@ JobStatus
 </td>
 <td>
 <em>(Optional)</em>
+</td>
+</tr>
+<tr>
+<td>
+<code>AppliedEventPoliciesStatus</code><br/>
+<em>
+<a href="#duck.knative.dev/v1.AppliedEventPoliciesStatus">
+AppliedEventPoliciesStatus
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>AppliedEventPoliciesStatus</code> are embedded into this type.)
+</p>
+<em>(Optional)</em>
+<p>AppliedEventPoliciesStatus contains the list of EventPolicies which apply to this JobSink</p>
 </td>
 </tr>
 </tbody>
