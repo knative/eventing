@@ -21,10 +21,12 @@ import (
 	"fmt"
 	"strings"
 
-	"knative.dev/eventing/pkg/apis/feature"
+	"k8s.io/apimachinery/pkg/api/equality"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/kmeta"
 	pkgreconciler "knative.dev/pkg/reconciler"
+
+	"knative.dev/eventing/pkg/apis/feature"
 
 	"go.uber.org/zap"
 	v1 "k8s.io/api/core/v1"
@@ -38,10 +40,10 @@ import (
 )
 
 const (
-	//OIDCLabelKey is used to filter out all the informers that related to OIDC work
-	OIDCLabelKey = "oidc"
+	// OIDCLabelKey is used to filter out all the informers that related to OIDC work
+	OIDCLabelKey = "eventing.knative.dev/oidc"
 
-	// OIDCTokenRoleLabelSelector is the label selector for the OIDC token creator role and rolebinding informers
+	// OIDCLabelSelector is the label selector for the OIDC resources
 	OIDCLabelSelector = OIDCLabelKey
 )
 
@@ -87,26 +89,36 @@ func EnsureOIDCServiceAccountExistsForResource(ctx context.Context, serviceAccou
 	saName := GetOIDCServiceAccountNameForResource(gvk, objectMeta)
 	sa, err := serviceAccountLister.ServiceAccounts(objectMeta.Namespace).Get(saName)
 
+	expected := GetOIDCServiceAccountForResource(gvk, objectMeta)
+
 	// If the resource doesn't exist, we'll create it.
 	if apierrs.IsNotFound(err) {
 		logging.FromContext(ctx).Debugw("Creating OIDC service account", zap.Error(err))
 
-		expected := GetOIDCServiceAccountForResource(gvk, objectMeta)
-
 		_, err = kubeclient.CoreV1().ServiceAccounts(objectMeta.Namespace).Create(ctx, expected, metav1.CreateOptions{})
 		if err != nil {
-			return fmt.Errorf("could not create OIDC service account %s/%s for %s: %w", objectMeta.Name, objectMeta.Namespace, gvk.Kind, err)
+			return fmt.Errorf("could not create OIDC service account %s/%s for %s: %w", objectMeta.Namespace, objectMeta.Name, gvk.Kind, err)
 		}
 
 		return nil
 	}
-
 	if err != nil {
-		return fmt.Errorf("could not get OIDC service account %s/%s for %s: %w", objectMeta.Name, objectMeta.Namespace, gvk.Kind, err)
+		return fmt.Errorf("could not get OIDC service account %s/%s for %s: %w", objectMeta.Namespace, objectMeta.Name, gvk.Kind, err)
 	}
-
 	if !metav1.IsControlledBy(&sa.ObjectMeta, &objectMeta) {
 		return fmt.Errorf("service account %s not owned by %s %s", sa.Name, gvk.Kind, objectMeta.Name)
+	}
+
+	if !equality.Semantic.DeepDerivative(expected, sa) {
+		expected.ResourceVersion = sa.ResourceVersion
+
+		_, err = kubeclient.CoreV1().ServiceAccounts(objectMeta.Namespace).Update(ctx, expected, metav1.UpdateOptions{})
+		if err != nil {
+			return fmt.Errorf("could not update OIDC service account %s/%s for %s: %w", objectMeta.Namespace, objectMeta.Name, gvk.Kind, err)
+		}
+
+		return nil
+
 	}
 
 	return nil
