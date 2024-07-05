@@ -104,7 +104,7 @@ func NewController(
 		FilterFunc: brokerFilter,
 		Handler: controller.HandleAll(func(obj interface{}) {
 			if broker, ok := obj.(*eventing.Broker); ok {
-				for _, t := range getTriggersForBroker(ctx, logger, triggerLister, broker) {
+				for _, t := range getTriggersForBroker(logger, triggerLister, broker, featureStore.Load()) {
 					impl.Enqueue(t)
 				}
 			}
@@ -187,7 +187,7 @@ func filterTriggers(featureStore *feature.Store, lister eventinglisters.BrokerLi
 // the Triggers belonging to it. As there is no way to return failures in the
 // Informers EventHandler, errors are logged, and an empty array is returned in case
 // of failures.
-func getTriggersForBroker(ctx context.Context, logger *zap.SugaredLogger, triggerLister eventinglisters.TriggerLister, broker *eventing.Broker) []*eventing.Trigger {
+func getTriggersForBroker(logger *zap.SugaredLogger, triggerLister eventinglisters.TriggerLister, broker *eventing.Broker, features feature.Flags) []*eventing.Trigger {
 	r := make([]*eventing.Trigger, 0)
 	selector := labels.SelectorFromSet(map[string]string{apiseventing.BrokerLabelKey: broker.Name})
 	triggers, err := triggerLister.Triggers(metav1.NamespaceAll).List(selector)
@@ -196,10 +196,9 @@ func getTriggersForBroker(ctx context.Context, logger *zap.SugaredLogger, trigge
 		return r
 	}
 	for _, t := range triggers {
-		if feature.FromContext(ctx).IsCrossNamespaceEventLinks() && t.Spec.BrokerRef != nil && t.Spec.BrokerRef.Namespace == broker.Namespace {
+		if features.IsCrossNamespaceEventLinks() && t.Spec.BrokerRef != nil && t.Spec.BrokerRef.Namespace == broker.Namespace {
 			r = append(r, t)
-		}
-		if t.Namespace == broker.Namespace {
+		} else if t.Namespace == broker.Namespace {
 			r = append(r, t)
 		}
 	}

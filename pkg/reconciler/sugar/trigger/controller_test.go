@@ -48,6 +48,12 @@ func TestNew(t *testing.T) {
 				"_example": "test-config",
 			},
 		},
+		&corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "config-features",
+				Namespace: "knative-eventing",
+			},
+		},
 	))
 
 	if c == nil {
