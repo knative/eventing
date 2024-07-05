@@ -85,7 +85,7 @@ type DeliverySpec struct {
 	//Format supports more destinations of cloudevents (which may require a specific event format)
 	// +optional
 
-	Format *string `json:"format, omityempty"`
+	Format *string `json:"format,omitempty"`
 }
 
 func (ds *DeliverySpec) Validate(ctx context.Context) *apis.FieldError {
