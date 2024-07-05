@@ -81,6 +81,11 @@ type DeliverySpec struct {
 	//
 	// +optional
 	RetryAfterMax *string `json:"retryAfterMax,omitempty"`
+
+	//Format supports more destinations of cloudevents (which may require a specific event format)
+	// +optional
+
+	Format *string `json:"format, omityempty"`
 }
 
 func (ds *DeliverySpec) Validate(ctx context.Context) *apis.FieldError {
@@ -120,6 +125,17 @@ func (ds *DeliverySpec) Validate(ctx context.Context) *apis.FieldError {
 		_, te := period.Parse(*ds.BackoffDelay)
 		if te != nil {
 			errs = errs.Also(apis.ErrInvalidValue(*ds.BackoffDelay, "backoffDelay"))
+		}
+	}
+
+	if ds.Format != nil {
+		validFormats := map[string]bool{
+			"structured": true,
+			"binary":     true,
+			"ingress":    true,
+		}
+		if !validFormats[*ds.Format] {
+			errs = errs.Also(apis.ErrInvalidValue(*ds.Format, "format"))
 		}
 	}
 
