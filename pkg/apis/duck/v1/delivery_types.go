@@ -135,7 +135,7 @@ func (ds *DeliverySpec) Validate(ctx context.Context) *apis.FieldError {
 
 	if ds.Format != nil {
 		validFormats := map[string]bool{
-			"JSON":    true,
+			"json":    true,
 			"binary":  true,
 			"ingress": true,
 		}

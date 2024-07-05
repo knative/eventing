@@ -141,7 +141,27 @@ func TestDeliverySpecValidation(t *testing.T) {
 		want: func() *apis.FieldError {
 			return apis.ErrDisallowedFields("retryAfterMax")
 		}(),
-	}}
+	},
+		{
+			name: "valid format JSON",
+			spec: &DeliverySpec{Format: pointer.String("json")},
+			want: nil,
+		},
+		{
+			name: "vaalid format binary",
+			spec: &DeliverySpec{Format: pointer.String("binary")},
+			want: nil,
+		}, {
+			name: "valid format ingress",
+			spec: &DeliverySpec{Format: pointer.String("ingress")},
+			want: nil,
+		}, {
+			name: "invalid format",
+			spec: &DeliverySpec{Format: pointer.String("invalid")},
+			want: func() *apis.FieldError {
+				return apis.ErrInvalidValue("invalid", "format")
+			}(),
+		}}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
