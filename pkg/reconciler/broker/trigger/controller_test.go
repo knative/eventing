@@ -305,7 +305,8 @@ func TestGetTriggersForBroker(t *testing.T) {
 			ls := testingv1.NewListers(tt.in)
 			logger := logtesting.TestLogger(t)
 			triggerLister := ls.GetTriggerLister()
-			triggers := getTriggersForBroker(logger, triggerLister, ReadyBroker())
+			ctx := feature.ToContext(context.TODO(), feature.FromContextOrDefaults(context.TODO()))
+			triggers := getTriggersForBroker(ctx, logger, triggerLister, ReadyBroker())
 			var found []string
 			for _, want := range tt.out {
 				for _, got := range triggers {
@@ -347,7 +348,8 @@ func (failer *TriggerNamespaceListerFailer) Get(name string) (*eventing.Trigger,
 func TestListFailure(t *testing.T) {
 	logger := logtesting.TestLogger(t)
 	triggerListerFailer := &TriggerListerFailer{}
-	if len(getTriggersForBroker(logger, triggerListerFailer, ReadyBroker())) != 0 {
+	ctx := feature.ToContext(context.TODO(), feature.FromContextOrDefaults(context.TODO()))
+	if len(getTriggersForBroker(ctx, logger, triggerListerFailer, ReadyBroker())) != 0 {
 		t.Fatalf("Got back triggers when not expecting any")
 	}
 }

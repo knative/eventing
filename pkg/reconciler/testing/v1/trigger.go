@@ -29,6 +29,7 @@ import (
 	"knative.dev/pkg/ptr"
 
 	eventingv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	apiseventing "knative.dev/eventing/pkg/apis/eventing"
 	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/pkg/apis/feature"
 )
@@ -74,6 +75,15 @@ func WithTriggerSubscriberURI(rawurl string) TriggerOption {
 	uri, _ := apis.ParseURL(rawurl)
 	return func(t *v1.Trigger) {
 		t.Spec.Subscriber = duckv1.Destination{URI: uri}
+	}
+}
+
+func WithBrokerLabels(brokerName, brokerNamespace string) TriggerOption {
+	return func(t *v1.Trigger) {
+		if t.Labels == nil {
+			t.Labels = make(map[string]string)
+		}
+		t.Labels[apiseventing.BrokerLabelKey] = brokerName
 	}
 }
 
