@@ -21,6 +21,9 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/pkg/apis/feature"
 	flowsv1 "knative.dev/eventing/pkg/apis/flows/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -111,5 +114,40 @@ func WithSequenceSubscriptionsNotReady(reason, message string) SequenceOption {
 func WithSequenceAddressableNotReady(reason, message string) SequenceOption {
 	return func(p *flowsv1.Sequence) {
 		p.Status.MarkAddressableNotReady(reason, message)
+	}
+}
+
+func WithSequenceEventPoliciesReady() SequenceOption {
+	return func(p *flowsv1.Sequence) {
+		p.Status.MarkEventPoliciesTrue()
+	}
+}
+
+func WithSequenceEventPoliciesNotReady(reason, message string) SequenceOption {
+	return func(p *flowsv1.Sequence) {
+		p.Status.MarkEventPoliciesFailed(reason, message)
+	}
+}
+
+func WithSequenceEventPoliciesListed(policyNames ...string) SequenceOption {
+	return func(p *flowsv1.Sequence) {
+		for _, name := range policyNames {
+			p.Status.Policies = append(p.Status.Policies, eventingduckv1.AppliedEventPolicyRef{
+				APIVersion: v1alpha1.SchemeGroupVersion.String(),
+				Name:       name,
+			})
+		}
+	}
+}
+
+func WithSequenceEventPoliciesReadyBecauseOIDCDisabled() SequenceOption {
+	return func(p *flowsv1.Sequence) {
+		p.Status.MarkEventPoliciesTrueWithReason("OIDCDisabled", "Feature %q must be enabled to support Authorization", feature.OIDCAuthentication)
+	}
+}
+
+func WithSequenceEventPoliciesReadyBecauseNoPolicyAndOIDCEnabled() SequenceOption {
+	return func(p *flowsv1.Sequence) {
+		p.Status.MarkEventPoliciesTrueWithReason("DefaultAuthorizationMode", "Default authz mode is %q", feature.AuthorizationAllowSameNamespace)
 	}
 }

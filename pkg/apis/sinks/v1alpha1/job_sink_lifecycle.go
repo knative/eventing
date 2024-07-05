@@ -23,6 +23,7 @@ import (
 	"knative.dev/pkg/apis"
 
 	"knative.dev/eventing/pkg/apis/sinks"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 const (
@@ -30,10 +31,15 @@ const (
 	JobSinkConditionReady = apis.ConditionReady
 
 	JobSinkConditionAddressable apis.ConditionType = "Addressable"
+
+	// JobSinkConditionEventPoliciesReady has status True when all the applying EventPolicies for this
+	// JobSink are ready.
+	JobSinkConditionEventPoliciesReady apis.ConditionType = "EventPoliciesReady"
 )
 
 var JobSinkCondSet = apis.NewLivingConditionSet(
 	JobSinkConditionAddressable,
+	JobSinkConditionEventPoliciesReady,
 )
 
 // GetConditionSet retrieves the condition set for this resource. Implements the KRShaped interface.
@@ -71,8 +77,43 @@ func (s *JobSinkStatus) InitializeConditions() {
 	JobSinkCondSet.Manage(s).InitializeConditions()
 }
 
+// MarkAddressableReady marks the Addressable condition to True.
+func (s *JobSinkStatus) MarkAddressableReady() {
+	JobSinkCondSet.Manage(s).MarkTrue(JobSinkConditionAddressable)
+}
+
+// MarkEventPoliciesFailed marks the EventPoliciesReady condition to False with the given reason and message.
+func (s *JobSinkStatus) MarkEventPoliciesFailed(reason, messageFormat string, messageA ...interface{}) {
+	JobSinkCondSet.Manage(s).MarkFalse(JobSinkConditionEventPoliciesReady, reason, messageFormat, messageA...)
+}
+
+// MarkEventPoliciesUnknown marks the EventPoliciesReady condition to Unknown with the given reason and message.
+func (s *JobSinkStatus) MarkEventPoliciesUnknown(reason, messageFormat string, messageA ...interface{}) {
+	JobSinkCondSet.Manage(s).MarkUnknown(JobSinkConditionEventPoliciesReady, reason, messageFormat, messageA...)
+}
+
+// MarkEventPoliciesTrue marks the EventPoliciesReady condition to True.
+func (s *JobSinkStatus) MarkEventPoliciesTrue() {
+	JobSinkCondSet.Manage(s).MarkTrue(JobSinkConditionEventPoliciesReady)
+}
+
+// MarkEventPoliciesTrueWithReason marks the EventPoliciesReady condition to True with the given reason and message.
+func (s *JobSinkStatus) MarkEventPoliciesTrueWithReason(reason, messageFormat string, messageA ...interface{}) {
+	JobSinkCondSet.Manage(s).MarkTrueWithReason(JobSinkConditionEventPoliciesReady, reason, messageFormat, messageA...)
+}
+
 func (e *JobSink) SetJobStatusSelector() {
 	if e.Spec.Job != nil {
 		e.Status.JobStatus.Selector = fmt.Sprintf("%s=%s", sinks.JobSinkNameLabel, e.GetName())
+	}
+}
+
+func (s *JobSinkStatus) SetAddress(address *duckv1.Addressable) {
+	s.Address = address
+	if address == nil || address.URL.IsEmpty() {
+		JobSinkCondSet.Manage(s).MarkFalse(JobSinkConditionAddressable, "EmptyHostname", "hostname is the empty string")
+	} else {
+		JobSinkCondSet.Manage(s).MarkTrue(JobSinkConditionAddressable)
+
 	}
 }
