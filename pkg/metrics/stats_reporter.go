@@ -22,13 +22,10 @@ import (
 	"strconv"
 	"time"
 
-	"knative.dev/pkg/metrics"
-	"knative.dev/pkg/metrics/metricskey"
-
-	"go.opencensus.io/resource"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
+	"knative.dev/pkg/metrics"
 )
 
 const (
@@ -73,13 +70,14 @@ var (
 	responseCodeClassKey          = tag.MustNewKey(LabelResponseCodeClass)
 )
 
-type ReportArgs struct {
-	Ns            string
-	Trigger       string
-	Broker        string
-	FilterType    string
-	RequestType   string
-	RequestScheme string
+type MetricArgs interface {
+	//Ns            string
+	//Trigger       string
+	//Broker        string
+	//FilterType    string
+	//RequestType   string
+	//RequestScheme string
+	GenerateTag(tags ...tag.Mutator) (context.Context, error)
 }
 
 func init() {
@@ -88,13 +86,13 @@ func init() {
 
 // StatsReporter defines the interface for sending filter metrics.
 type StatsReporter interface {
-	ReportEventCount(args *ReportArgs, responseCode int) error
-	ReportEventDispatchTime(args *ReportArgs, responseCode int, d time.Duration) error
-	ReportEventProcessingTime(args *ReportArgs, d time.Duration) error
+	ReportEventCount(args MetricArgs, responseCode int) error
+	ReportEventDispatchTime(args MetricArgs, responseCode int, d time.Duration) error
+	ReportEventProcessingTime(args MetricArgs, d time.Duration) error
 }
 
 var _ StatsReporter = (*reporter)(nil)
-var emptyContext = context.Background()
+var EmptyContext = context.Background()
 
 // reporter holds cached metric objects to report filter metrics.
 type reporter struct {
@@ -138,8 +136,8 @@ func Register() {
 }
 
 // ReportEventCount captures the event count.
-func (r *reporter) ReportEventCount(args *ReportArgs, responseCode int) error {
-	ctx, err := r.generateTag(args,
+func (r *reporter) ReportEventCount(args MetricArgs, responseCode int) error {
+	ctx, err := args.GenerateTag(
 		tag.Insert(responseCodeKey, strconv.Itoa(responseCode)),
 		tag.Insert(responseCodeClassKey, metrics.ResponseCodeClass(responseCode)))
 	if err != nil {
@@ -150,8 +148,8 @@ func (r *reporter) ReportEventCount(args *ReportArgs, responseCode int) error {
 }
 
 // ReportEventDispatchTime captures dispatch times.
-func (r *reporter) ReportEventDispatchTime(args *ReportArgs, responseCode int, d time.Duration) error {
-	ctx, err := r.generateTag(args,
+func (r *reporter) ReportEventDispatchTime(args MetricArgs, responseCode int, d time.Duration) error {
+	ctx, err := args.GenerateTag(
 		tag.Insert(responseCodeKey, strconv.Itoa(responseCode)),
 		tag.Insert(responseCodeClassKey, metrics.ResponseCodeClass(responseCode)))
 	if err != nil {
@@ -163,8 +161,8 @@ func (r *reporter) ReportEventDispatchTime(args *ReportArgs, responseCode int, d
 }
 
 // ReportEventProcessingTime captures event processing times.
-func (r *reporter) ReportEventProcessingTime(args *ReportArgs, d time.Duration) error {
-	ctx, err := r.generateTag(args)
+func (r *reporter) ReportEventProcessingTime(args MetricArgs, d time.Duration) error {
+	ctx, err := args.GenerateTag()
 	if err != nil {
 		return err
 	}
@@ -174,29 +172,7 @@ func (r *reporter) ReportEventProcessingTime(args *ReportArgs, d time.Duration) 
 	return nil
 }
 
-func (r *reporter) generateTag(args *ReportArgs, tags ...tag.Mutator) (context.Context, error) {
-	ctx := metricskey.WithResource(emptyContext, resource.Resource{
-		Type: ResourceTypeKnativeTrigger,
-		Labels: map[string]string{
-			LabelNamespaceName: args.Ns,
-			LabelBrokerName:    args.Broker,
-			LabelTriggerName:   args.Trigger,
-		},
-	})
-	// Note that filterType and filterSource can be empty strings, so they need a special treatment.
-	ctx, err := tag.New(
-		ctx,
-		append(tags,
-			tag.Insert(tag.MustNewKey("container_name"), r.container),
-			tag.Insert(tag.MustNewKey("unique_name"), r.uniqueName),
-			tag.Insert(triggerFilterTypeKey, valueOrAny(args.FilterType)),
-			tag.Insert(triggerFilterRequestTypeKey, args.RequestType),
-			tag.Insert(triggerFilterRequestSchemeKey, args.RequestScheme),
-		)...)
-	return ctx, err
-}
-
-func valueOrAny(v string) string {
+func ValueOrAny(v string) string {
 	if v != "" {
 		return v
 	}

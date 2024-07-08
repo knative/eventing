@@ -749,17 +749,17 @@ type mockReporter struct {
 	EventProcessingTimeReported bool
 }
 
-func (r *mockReporter) ReportEventCount(args *metrics.ReportArgs, responseCode int) error {
+func (r *mockReporter) ReportEventCount(args metrics.MetricArgs, responseCode int) error {
 	r.EventCountReported = true
 	return nil
 }
 
-func (r *mockReporter) ReportEventDispatchTime(args *metrics.ReportArgs, responseCode int, d time.Duration) error {
+func (r *mockReporter) ReportEventDispatchTime(args metrics.MetricArgs, responseCode int, d time.Duration) error {
 	r.EventDispatchTimeReported = true
 	return nil
 }
 
-func (r *mockReporter) ReportEventProcessingTime(args *metrics.ReportArgs, d time.Duration) error {
+func (r *mockReporter) ReportEventProcessingTime(args metrics.MetricArgs, d time.Duration) error {
 	r.EventProcessingTimeReported = true
 	return nil
 }
