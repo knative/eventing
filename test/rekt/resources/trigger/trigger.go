@@ -157,6 +157,33 @@ func WithExtensions(extensions map[string]interface{}) manifest.CfgFn {
 	}
 }
 
+func WithBrokerName(brokerName string) manifest.CfgFn {
+	return func(cfg map[string]interface{}) {
+		if brokerName != "" {
+			cfg["brokerName"] = brokerName
+		}
+	}
+}
+
+// WithBrokerRef adds the brokerRef related config to a Trigger spec.
+func WithBrokerRef(ref *duckv1.KReference) manifest.CfgFn {
+	return func(cfg map[string]interface{}) {
+		if _, set := cfg["brokerRef"]; !set {
+			cfg["brokerRef"] = map[string]interface{}{}
+		}
+		brokerRef := cfg["brokerRef"].(map[string]interface{})
+
+		if ref != nil {
+			brokerRef["apiVersion"] = ref.APIVersion
+			brokerRef["kind"] = ref.Kind
+			brokerRef["name"] = ref.Name
+			brokerRef["namespace"] = ref.Namespace
+		}
+
+		cfg["brokerRef"] = brokerRef
+	}
+}
+
 // WithDeadLetterSink adds the dead letter sink related config to a Trigger spec.
 var WithDeadLetterSink = delivery.WithDeadLetterSink
 
@@ -170,12 +197,9 @@ var WithRetry = delivery.WithRetry
 var WithTimeout = delivery.WithTimeout
 
 // Install will create a Trigger resource, augmented with the config fn options.
-func Install(name, brokerName string, opts ...manifest.CfgFn) feature.StepFn {
+func Install(name string, opts ...manifest.CfgFn) feature.StepFn {
 	cfg := map[string]interface{}{
 		"name": name,
-	}
-	if len(brokerName) > 0 {
-		cfg["brokerName"] = brokerName
 	}
 	for _, fn := range opts {
 		fn(cfg)
