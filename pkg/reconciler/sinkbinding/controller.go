@@ -43,7 +43,7 @@ import (
 	"knative.dev/pkg/apis/duck"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	configmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap/filtered"
-	secretinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/secret"
+	secretinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/secret/filtered"
 	serviceaccountinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
@@ -80,8 +80,8 @@ func NewController(
 	dc := dynamicclient.Get(ctx)
 	psInformerFactory := podspecable.Get(ctx)
 	namespaceInformer := namespace.Get(ctx)
-	serviceaccountInformer := serviceaccountinformer.Get(ctx)
-	secretInformer := secretinformer.Get(ctx)
+	oidcServiceaccountInformer := serviceaccountinformer.Get(ctx)
+	secretInformer := secretinformer.Get(ctx, auth.OIDCLabelSelector)
 	trustBundleConfigMapInformer := configmapinformer.Get(ctx, eventingtls.TrustBundleLabelSelector)
 	trustBundleConfigMapLister := configmapinformer.Get(ctx, eventingtls.TrustBundleLabelSelector).Lister()
 
@@ -136,7 +136,7 @@ func NewController(
 		res:                        sbResolver,
 		tracker:                    impl.Tracker,
 		kubeclient:                 kubeclient.Get(ctx),
-		serviceAccountLister:       serviceaccountInformer.Lister(),
+		serviceAccountLister:       oidcServiceaccountInformer.Lister(),
 		secretLister:               secretInformer.Lister(),
 		featureStore:               featureStore,
 		tokenProvider:              auth.NewOIDCTokenProvider(ctx),
@@ -155,7 +155,7 @@ func NewController(
 	}
 
 	// Reconcile SinkBinding when the OIDC service account changes
-	serviceaccountInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+	oidcServiceaccountInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.FilterController(&v1.SinkBinding{}),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})

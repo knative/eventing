@@ -22,8 +22,11 @@ import (
 
 	"context"
 
+	filteredfactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
 	"knative.dev/pkg/injection/sharedmain"
+	"knative.dev/pkg/signals"
 
+	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/reconciler/broker"
 	mttrigger "knative.dev/eventing/pkg/reconciler/broker/trigger"
 )
@@ -33,7 +36,11 @@ const (
 )
 
 func main() {
-	sharedmain.Main(
+	ctx := signals.NewContext()
+
+	ctx = filteredfactory.WithSelectors(ctx, auth.OIDCLabelSelector)
+
+	sharedmain.MainWithContext(ctx,
 		component,
 
 		broker.NewController,

@@ -26,6 +26,7 @@ import (
 	configmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap/filtered"
 
 	"knative.dev/eventing/pkg/apis/feature"
+	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/eventingtls"
 
 	filteredFactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
@@ -287,6 +288,7 @@ func main() {
 	})
 
 	ctx = filteredFactory.WithSelectors(ctx,
+		auth.OIDCLabelSelector,
 		eventingtls.TrustBundleLabelSelector,
 	)
 

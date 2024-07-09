@@ -81,6 +81,7 @@ func main() {
 	log.Printf("Registering %d informers", len(injection.Default.GetInformers()))
 
 	ctx = filteredFactory.WithSelectors(ctx,
+		auth.OIDCLabelSelector,
 		eventingtls.TrustBundleLabelSelector,
 	)
 
