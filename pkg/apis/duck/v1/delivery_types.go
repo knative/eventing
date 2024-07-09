@@ -18,6 +18,7 @@ package v1
 
 import (
 	"context"
+	"strings"
 
 	"github.com/rickb777/date/period"
 	"knative.dev/pkg/apis"
@@ -81,6 +82,15 @@ type DeliverySpec struct {
 	//
 	// +optional
 	RetryAfterMax *string `json:"retryAfterMax,omitempty"`
+
+	// format specifies the desired event format for the cloud event.
+	// It can be one of the following values:
+	// - nil: default value, no specific format required.
+	// - "JSON": indicates the event should be in structured mode.
+	// - "binary": indicates the event should be in binary mode.
+	// - "ingress": indicates the event should be in ingress mode.
+	//+optional
+	Format *string `json:"format,omitempty"`
 }
 
 func (ds *DeliverySpec) Validate(ctx context.Context) *apis.FieldError {
@@ -120,6 +130,17 @@ func (ds *DeliverySpec) Validate(ctx context.Context) *apis.FieldError {
 		_, te := period.Parse(*ds.BackoffDelay)
 		if te != nil {
 			errs = errs.Also(apis.ErrInvalidValue(*ds.BackoffDelay, "backoffDelay"))
+		}
+	}
+
+	if ds.Format != nil {
+		validFormats := map[string]bool{
+			"json":    true,
+			"binary":  true,
+			"ingress": true,
+		}
+		if _, ok := validFormats[strings.ToLower(*ds.Format)]; !ok {
+			errs = errs.Also(apis.ErrInvalidValue(*ds.Format, "format"))
 		}
 	}
 

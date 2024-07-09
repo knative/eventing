@@ -504,6 +504,23 @@ For more details: <a href="https://github.com/knative/eventing/issues/5811">http
 - <a href="https://en.wikipedia.org/wiki/ISO_8601">https://en.wikipedia.org/wiki/ISO_8601</a></p>
 </td>
 </tr>
+<tr>
+<td>
+<code>format</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>format specifies the desired event format for the cloud event.
+It can be one of the following values:
+- nil: default value, no specific format required.
+- &ldquo;JSON&rdquo;: indicates the event should be in structured mode.
+- &ldquo;binary&rdquo;: indicates the event should be in binary mode.
+- &ldquo;ingress&rdquo;: indicates the event should be in ingress mode.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="duck.knative.dev/v1.DeliveryStatus">DeliveryStatus

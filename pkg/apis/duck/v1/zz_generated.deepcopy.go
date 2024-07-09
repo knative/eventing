@@ -201,6 +201,11 @@ func (in *DeliverySpec) DeepCopyInto(out *DeliverySpec) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.Format != nil {
+		in, out := &in.Format, &out.Format
+		*out = new(string)
+		**out = **in
+	}
 	return
 }
 
