@@ -184,22 +184,6 @@ func WithBrokerRef(ref *duckv1.KReference) manifest.CfgFn {
 	}
 }
 
-// func WithBrokerRefName(brokerName string) manifest.CfgFn {
-// 	return func(cfg map[string]interface{}) {
-// 		if brokerName != "" {
-// 			cfg["brokerRefName"] = brokerName
-// 		}
-// 	}
-// }
-
-// func WithBrokerRefNamespace(brokerNamespace string) manifest.CfgFn {
-// 	return func(cfg map[string]interface{}) {
-// 		if brokerNamespace != "" {
-// 			cfg["brokerRefNamespace"] = brokerNamespace
-// 		}
-// 	}
-// }
-
 // WithDeadLetterSink adds the dead letter sink related config to a Trigger spec.
 var WithDeadLetterSink = delivery.WithDeadLetterSink
 
