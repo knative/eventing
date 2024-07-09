@@ -203,7 +203,7 @@ func (in *DeliverySpec) DeepCopyInto(out *DeliverySpec) {
 	}
 	if in.Format != nil {
 		in, out := &in.Format, &out.Format
-		*out = new(string)
+		*out = new(FormatType)
 		**out = **in
 	}
 	return
