@@ -51,6 +51,7 @@ import (
 	"knative.dev/eventing/pkg/auth"
 	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
 	brokerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/broker"
+	eventingv1alpha1listers "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1"
 	ducklib "knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/eventingtls"
@@ -79,6 +80,8 @@ type Reconciler struct {
 
 	// If specified, only reconcile brokers with these labels
 	brokerClass string
+
+	eventPolicyLister eventingv1alpha1listers.EventPolicyLister
 }
 
 // Check that our Reconciler implements Interface
@@ -116,7 +119,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(b),
 			},
-			Labels:      TriggerChannelLabels(b.Name),
+			Labels:      TriggerChannelLabels(b.Name, b.Namespace),
 			Annotations: map[string]string{eventing.ScopeAnnotationKey: eventing.ScopeCluster},
 		},
 		ducklib.WithChannelableSpec(tmpChannelableSpec),
@@ -255,6 +258,11 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 	}
 
 	b.GetConditionSet().Manage(b.GetStatus()).MarkTrue(eventingv1.BrokerConditionAddressable)
+
+	err = auth.UpdateStatusWithEventPolicies(featureFlags, &b.Status.AppliedEventPoliciesStatus, &b.Status, r.eventPolicyLister, eventingv1.SchemeGroupVersion.WithKind("Broker"), b.ObjectMeta)
+	if err != nil {
+		return fmt.Errorf("could not update broker status with EventPolicies: %v", err)
+	}
 
 	// So, at this point the Broker is ready and everything should be solid
 	// for the triggers to act upon.
@@ -422,7 +430,7 @@ func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterf
 
 // TriggerChannelLabels are all the labels placed on the Trigger Channel for the given brokerName. This
 // should only be used by Broker and Trigger code.
-func TriggerChannelLabels(brokerName string) map[string]string {
+func TriggerChannelLabels(brokerName, brokerNamespace string) map[string]string {
 	return map[string]string{
 		eventing.BrokerLabelKey:                 brokerName,
 		"eventing.knative.dev/brokerEverything": "true",

@@ -35,6 +35,10 @@ import (
 	"knative.dev/pkg/resolver"
 )
 
+const (
+	kubernetesServiceAccountPrefix = "system:serviceaccount"
+)
+
 // GetEventPoliciesForResource returns the applying EventPolicies for a given resource
 func GetEventPoliciesForResource(lister listerseventingv1alpha1.EventPolicyLister, resourceGVK schema.GroupVersionKind, resourceObjectMeta metav1.ObjectMeta) ([]*v1alpha1.EventPolicy, error) {
 	policies, err := lister.EventPolicies(resourceObjectMeta.GetNamespace()).List(labels.Everything())
@@ -194,7 +198,7 @@ func resolveSubjectsFromReference(resolver *resolver.AuthenticatableResolver, re
 
 	objFullSANames := make([]string, 0, len(objSAs))
 	for _, sa := range objSAs {
-		objFullSANames = append(objFullSANames, fmt.Sprintf("system:serviceaccount:%s:%s", reference.Namespace, sa))
+		objFullSANames = append(objFullSANames, fmt.Sprintf("%s:%s:%s", kubernetesServiceAccountPrefix, reference.Namespace, sa))
 	}
 
 	return objFullSANames, nil

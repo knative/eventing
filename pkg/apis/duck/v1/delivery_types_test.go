@@ -21,6 +21,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
@@ -141,7 +142,23 @@ func TestDeliverySpecValidation(t *testing.T) {
 		want: func() *apis.FieldError {
 			return apis.ErrDisallowedFields("retryAfterMax")
 		}(),
-	}}
+	},
+		{
+			name: "valid format JSON",
+			spec: &DeliverySpec{Format: ptr.To(DeliveryFormatJson)},
+			want: nil,
+		},
+		{
+			name: "vaalid format binary",
+			spec: &DeliverySpec{Format: ptr.To(DeliveryFormatBinary)},
+			want: nil,
+		}, {
+			name: "invalid format",
+			spec: &DeliverySpec{Format: ptr.To(FormatType("invalid"))},
+			want: func() *apis.FieldError {
+				return apis.ErrInvalidValue("invalid", "format")
+			}(),
+		}}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

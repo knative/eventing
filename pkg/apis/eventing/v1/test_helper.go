@@ -66,6 +66,7 @@ func (t testHelper) ReadyBrokerStatus() *BrokerStatus {
 		URL: apis.HTTP("example.com"),
 	})
 	bs.MarkDeadLetterSinkResolvedSucceeded(eventingduckv1.DeliveryStatus{})
+	bs.MarkEventPoliciesTrue()
 	return bs
 }
 
@@ -77,6 +78,7 @@ func (t testHelper) ReadyBrokerStatusWithoutDLS() *BrokerStatus {
 	bs.SetAddress(&duckv1.Addressable{
 		URL: apis.HTTP("example.com"),
 	})
+	bs.MarkEventPoliciesTrue()
 	bs.MarkDeadLetterSinkNotConfigured()
 	return bs
 }

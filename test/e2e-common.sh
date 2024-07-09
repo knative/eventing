@@ -92,6 +92,8 @@ function knative_setup() {
   unleash_duck || fail_test "Could not unleash the chaos duck"
 
   install_feature_cm || fail_test "Could not install features configmap"
+
+  create_knsubscribe_rolebinding || fail_test "Could not create knsubscribe rolebinding"
 }
 
 function scale_controlplane() {
@@ -103,6 +105,11 @@ function scale_controlplane() {
     # Scale up components for HA tests
     kubectl -n "${SYSTEM_NAMESPACE}" scale deployment "$deployment" --replicas="${REPLICAS}" || failed=1
   done
+}
+
+function create_knsubscribe_rolebinding() {
+  kubectl delete clusterrolebinding knsubscribe-test-rb --ignore-not-found=true
+  kubectl create clusterrolebinding knsubscribe-test-rb --user=$(kubectl auth whoami -ojson | jq .status.userInfo.username -r) --clusterrole=crossnamespace=subscriber
 }
 
 # Install Knative Monitoring in the current cluster.

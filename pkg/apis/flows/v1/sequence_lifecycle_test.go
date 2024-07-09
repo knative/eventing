@@ -146,6 +146,9 @@ func TestSequenceInitializeConditions(t *testing.T) {
 					Type:   SequenceConditionChannelsReady,
 					Status: corev1.ConditionUnknown,
 				}, {
+					Type:   SequenceConditionEventPoliciesReady,
+					Status: corev1.ConditionUnknown,
+				}, {
 					Type:   SequenceConditionReady,
 					Status: corev1.ConditionUnknown,
 				}, {
@@ -173,6 +176,9 @@ func TestSequenceInitializeConditions(t *testing.T) {
 					Type:   SequenceConditionChannelsReady,
 					Status: corev1.ConditionFalse,
 				}, {
+					Type:   SequenceConditionEventPoliciesReady,
+					Status: corev1.ConditionUnknown,
+				}, {
 					Type:   SequenceConditionReady,
 					Status: corev1.ConditionUnknown,
 				}, {
@@ -198,6 +204,9 @@ func TestSequenceInitializeConditions(t *testing.T) {
 					Status: corev1.ConditionUnknown,
 				}, {
 					Type:   SequenceConditionChannelsReady,
+					Status: corev1.ConditionUnknown,
+				}, {
+					Type:   SequenceConditionEventPoliciesReady,
 					Status: corev1.ConditionUnknown,
 				}, {
 					Type:   SequenceConditionReady,
@@ -396,45 +405,59 @@ func TestSequencePropagateChannelStatuses(t *testing.T) {
 
 func TestSequenceReady(t *testing.T) {
 	tests := []struct {
-		name     string
-		subs     []*messagingv1.Subscription
-		channels []*eventingduckv1.Channelable
-		want     bool
+		name               string
+		subs               []*messagingv1.Subscription
+		channels           []*eventingduckv1.Channelable
+		eventPoliciesReady bool
+		want               bool
 	}{{
-		name:     "empty",
-		subs:     []*messagingv1.Subscription{},
-		channels: []*eventingduckv1.Channelable{},
-		want:     false,
+		name:               "empty",
+		subs:               []*messagingv1.Subscription{},
+		channels:           []*eventingduckv1.Channelable{},
+		eventPoliciesReady: true,
+		want:               false,
 	}, {
-		name:     "one channelable not ready, one subscription ready",
-		channels: []*eventingduckv1.Channelable{getChannelable(false)},
-		subs:     []*messagingv1.Subscription{getSubscription("sub0", true)},
-		want:     false,
+		name:               "one channelable not ready, one subscription ready",
+		channels:           []*eventingduckv1.Channelable{getChannelable(false)},
+		subs:               []*messagingv1.Subscription{getSubscription("sub0", true)},
+		eventPoliciesReady: true,
+		want:               false,
 	}, {
-		name:     "one channelable ready, one subscription not ready",
-		channels: []*eventingduckv1.Channelable{getChannelable(true)},
-		subs:     []*messagingv1.Subscription{getSubscription("sub0", false)},
-		want:     false,
+		name:               "one channelable ready, one subscription not ready",
+		channels:           []*eventingduckv1.Channelable{getChannelable(true)},
+		subs:               []*messagingv1.Subscription{getSubscription("sub0", false)},
+		eventPoliciesReady: true,
+		want:               false,
 	}, {
-		name:     "one channelable ready, one subscription ready",
-		channels: []*eventingduckv1.Channelable{getChannelable(true)},
-		subs:     []*messagingv1.Subscription{getSubscription("sub0", true)},
-		want:     true,
+		name:               "one channelable ready, one subscription ready, event policy ready",
+		channels:           []*eventingduckv1.Channelable{getChannelable(true)},
+		subs:               []*messagingv1.Subscription{getSubscription("sub0", true)},
+		eventPoliciesReady: true,
+		want:               true,
 	}, {
-		name:     "one channelable ready, one not, two subscriptions ready",
-		channels: []*eventingduckv1.Channelable{getChannelable(true), getChannelable(false)},
-		subs:     []*messagingv1.Subscription{getSubscription("sub0", true), getSubscription("sub1", true)},
-		want:     false,
+		name:               "one channelable ready, one subscription ready, event policy not ready",
+		channels:           []*eventingduckv1.Channelable{getChannelable(true)},
+		subs:               []*messagingv1.Subscription{getSubscription("sub0", true)},
+		eventPoliciesReady: false,
+		want:               false,
 	}, {
-		name:     "two channelables ready, one subscription ready, one not",
-		channels: []*eventingduckv1.Channelable{getChannelable(true), getChannelable(true)},
-		subs:     []*messagingv1.Subscription{getSubscription("sub0", true), getSubscription("sub1", false)},
-		want:     false,
+		name:               "one channelable ready, one not, two subscriptions ready",
+		channels:           []*eventingduckv1.Channelable{getChannelable(true), getChannelable(false)},
+		subs:               []*messagingv1.Subscription{getSubscription("sub0", true), getSubscription("sub1", true)},
+		eventPoliciesReady: true,
+		want:               false,
 	}, {
-		name:     "two channelables ready, two subscriptions ready",
-		channels: []*eventingduckv1.Channelable{getChannelable(true), getChannelable(true)},
-		subs:     []*messagingv1.Subscription{getSubscription("sub0", true), getSubscription("sub1", true)},
-		want:     true,
+		name:               "two channelables ready, one subscription ready, one not",
+		channels:           []*eventingduckv1.Channelable{getChannelable(true), getChannelable(true)},
+		subs:               []*messagingv1.Subscription{getSubscription("sub0", true), getSubscription("sub1", false)},
+		eventPoliciesReady: true,
+		want:               false,
+	}, {
+		name:               "two channelables ready, two subscriptions ready",
+		channels:           []*eventingduckv1.Channelable{getChannelable(true), getChannelable(true)},
+		subs:               []*messagingv1.Subscription{getSubscription("sub0", true), getSubscription("sub1", true)},
+		eventPoliciesReady: true,
+		want:               true,
 	}}
 
 	for _, test := range tests {
@@ -442,6 +465,13 @@ func TestSequenceReady(t *testing.T) {
 			ps := SequenceStatus{}
 			ps.PropagateChannelStatuses(test.channels)
 			ps.PropagateSubscriptionStatuses(test.subs)
+
+			if test.eventPoliciesReady {
+				ps.MarkEventPoliciesTrue()
+			} else {
+				ps.MarkEventPoliciesFailed("", "")
+			}
+
 			got := ps.IsReady()
 			want := test.want
 			if want != got {

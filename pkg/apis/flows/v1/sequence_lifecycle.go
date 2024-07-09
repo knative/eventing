@@ -28,7 +28,13 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
-var sCondSet = apis.NewLivingConditionSet(SequenceConditionReady, SequenceConditionChannelsReady, SequenceConditionSubscriptionsReady, SequenceConditionAddressable)
+var sCondSet = apis.NewLivingConditionSet(
+	SequenceConditionReady,
+	SequenceConditionChannelsReady,
+	SequenceConditionSubscriptionsReady,
+	SequenceConditionAddressable,
+	SequenceConditionEventPoliciesReady,
+)
 
 const (
 	// SequenceConditionReady has status True when all subconditions below have been set to True.
@@ -45,6 +51,10 @@ const (
 	// SequenceConditionAddressable has status true when this Sequence meets
 	// the Addressable contract and has a non-empty hostname.
 	SequenceConditionAddressable apis.ConditionType = "Addressable"
+
+	// SequenceConditionEventPoliciesReady has status True when all the applying EventPolicies for this
+	// Sequence are ready.
+	SequenceConditionEventPoliciesReady apis.ConditionType = "EventPoliciesReady"
 )
 
 // GetConditionSet retrieves the condition set for this resource. Implements the KRShaped interface.
@@ -187,6 +197,22 @@ func (ss *SequenceStatus) MarkSubscriptionsNotReady(reason, messageFormat string
 
 func (ss *SequenceStatus) MarkAddressableNotReady(reason, messageFormat string, messageA ...interface{}) {
 	sCondSet.Manage(ss).MarkUnknown(SequenceConditionAddressable, reason, messageFormat, messageA...)
+}
+
+func (ss *SequenceStatus) MarkEventPoliciesFailed(reason, messageFormat string, messageA ...interface{}) {
+	sCondSet.Manage(ss).MarkFalse(SequenceConditionEventPoliciesReady, reason, messageFormat, messageA...)
+}
+
+func (ss *SequenceStatus) MarkEventPoliciesUnknown(reason, messageFormat string, messageA ...interface{}) {
+	sCondSet.Manage(ss).MarkUnknown(SequenceConditionEventPoliciesReady, reason, messageFormat, messageA...)
+}
+
+func (ss *SequenceStatus) MarkEventPoliciesTrue() {
+	sCondSet.Manage(ss).MarkTrue(SequenceConditionEventPoliciesReady)
+}
+
+func (ss *SequenceStatus) MarkEventPoliciesTrueWithReason(reason, messageFormat string, messageA ...interface{}) {
+	sCondSet.Manage(ss).MarkTrueWithReason(SequenceConditionEventPoliciesReady, reason, messageFormat, messageA...)
 }
 
 func (ss *SequenceStatus) setAddress(address *duckv1.Addressable) {

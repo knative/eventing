@@ -118,13 +118,50 @@ spec:
                     type: integer
                     format: int32
               filter:
-                description: 'Filter is the filter to apply against all events from the Broker. Only events that pass this filter will be sent to the Subscriber. If not specified, will default to allowing all events. '
+                description: 'Filter is the filter to apply against all events from the Broker. Only events that pass this filter will be sent to the Subscriber. If not specified, will default to allowing all events.'
                 type: object
                 properties:
                   attributes:
-                    description: 'Attributes filters events by exact match on event context attributes. Each key in the map is compared with the equivalent key in the event context. An event passes the filter if all values are equal to the specified values.  Nested context attributes are not supported as keys. Only string values are supported. '
+                    description: 'Attributes filters events by exact match on event context attributes. Each key in the map is compared with the equivalent key in the event context. An event passes the filter if all values are equal to the specified values.  Nested context attributes are not supported as keys. Only string values are supported.'
                     type: object
                     x-kubernetes-preserve-unknown-fields: true
+              filters:
+                description: 'Filters is an array of SubscriptionsAPIFilter that evaluate to true or false. If any filter expression in the array evaluates to false, the event must not be sent to the Subscriber. If all the filter expressions in the array evaluate to true, the event must be attempted to be delivered. Absence of a filter or empty array implies a value of true. In the event of users specifying both Filter and Filters, then the latter will override the former. This will allow users to try out the effect of the new Filters field without compromising the existing attribute-based Filter and try it out on existing Trigger objects.'
+                type: array
+                items:
+                  type: object
+                  properties:
+                    all:
+                      description: 'All evaluates to true if all the nested expressions evaluate to true. It must contain at least one filter expression.'
+                      type: array
+                      items:
+                        type: object
+                        x-kubernetes-preserve-unknown-fields: true
+                    any:
+                      description: 'Any evaluates to true if at least one of the nested expressions evaluates to true. It must contain at least one filter expression.'
+                      type: array
+                      items:
+                        type: object
+                        x-kubernetes-preserve-unknown-fields: true
+                    cesql:
+                      description: 'CESQL is a CloudEvents SQL expression that will be evaluated to true or false against each CloudEvent.'
+                      type: string
+                    exact:
+                      description: 'Exact evaluates to true if the values of the matching CloudEvents attributes all exactly match with the associated value String specified (case-sensitive). The keys are the names of the CloudEvents attributes to be matched, and their values are the String values to use in the comparison. The attribute name and value specified in the filter express must not be empty strings.'
+                      type: object
+                      x-kubernetes-preserve-unknown-fields: true
+                    not:
+                      description: 'Not evaluates to true if the nested expression evaluates to false.'
+                      type: object
+                      x-kubernetes-preserve-unknown-fields: true
+                    prefix:
+                      description: 'Prefix evaluates to true if the values of the matching CloudEvents attributes all start with the associated value String specified (case sensitive). The keys are the names of the CloudEvents attributes to be matched, and their values are the String values to use in the comparison. The attribute name and value specified in the filter express must not be empty strings.'
+                      type: object
+                      x-kubernetes-preserve-unknown-fields: true
+                    suffix:
+                      description: 'Suffix evaluates to true if the values of the matching CloudEvents attributes all end with the associated value String specified (case sensitive). The keys are the names of the CloudEvents attributes to be matched, and their values are the String values to use in the comparison. The attribute name and value specified in the filter express must not be empty strings.'
+                      type: object
+                      x-kubernetes-preserve-unknown-fields: true
               subscriber:
                 description: Subscriber is the addressable that receives events from the Broker that pass the Filter. It is required.
                 type: object
