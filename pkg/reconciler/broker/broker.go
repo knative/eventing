@@ -28,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 	corev1listers "k8s.io/client-go/listers/core/v1"
@@ -63,6 +64,7 @@ import (
 const (
 	ingressServerTLSSecretName = "mt-broker-ingress-server-tls" //nolint:gosec // This is not a hardcoded credential
 	caCertsSecretKey           = eventingtls.SecretCACert
+	oidcBrokerSub              = "system:serviceaccount:knative-eventing:mt-broker-ingress-oidc"
 )
 
 type Reconciler struct {
@@ -447,11 +449,8 @@ func (r *Reconciler) reconcileEventPolicy(ctx context.Context, b *eventingv1.Bro
 		case apierrs.IsNotFound(err):
 			// create the EventPolicy if it doesn't exists.
 			logging.FromContext(ctx).Info("Creating EventPolicy for Broker %s", eventPolicyObjRef.Name)
-			eventPolicy, err := r.getEventPolicyForBroker(b, chanMan)
-			if err != nil {
-				return fmt.Errorf("failed to create EventPolicy for Broker %s: %w", eventPolicyObjRef.Name, err)
-			}
-			_, err = r.eventingClientSet.EventingV1alpha1().EventPolicies(eventPolicyObjRef.Namespace).Create(ctx, eventPolicy, metav1.CreateOptions{})
+
+			_, err = r.eventingClientSet.EventingV1alpha1().EventPolicies(eventPolicyObjRef.Namespace).Create(ctx, r.getEventPolicyForBroker(b, chanMan), metav1.CreateOptions{})
 			if err != nil {
 				return fmt.Errorf("failed to create EventPolicy for Broker %s: %w", eventPolicyObjRef.Name, err)
 			}
@@ -460,13 +459,20 @@ func (r *Reconciler) reconcileEventPolicy(ctx context.Context, b *eventingv1.Bro
 			return fmt.Errorf("failed to get EventPolicy for Broker %s: %w", eventPolicyObjRef.Name, err)
 		}
 	} else {
-		// list the eventpolicy, delete if exists.
-		err := r.eventingClientSet.EventingV1alpha1().EventPolicies(eventPolicyObjRef.Namespace).Delete(ctx, eventPolicyObjRef.Name, metav1.DeleteOptions{})
-		switch {
-		case apierrs.IsNotFound(err):
-			logging.FromContext(ctx).Info("EventPolicy for Broker %s does not exist", eventPolicyObjRef.Name)
-		case err != nil:
-			return fmt.Errorf("failed to delete EventPolicy for Broker %s: %w", eventPolicyObjRef.Name, err)
+		// list all the orphaned eventpolicies that have owner reference set to the broker and delete them.
+		eventPolicies, err := r.eventPolicyLister.EventPolicies(b.Namespace).List(labels.Everything())
+		if err != nil {
+			return fmt.Errorf("failed to list EventPolicies for Broker %s: %w", eventPolicyObjRef.Name, err)
+		}
+		for _, ep := range eventPolicies {
+			if metav1.IsControlledBy(ep, b) {
+				logging.FromContext(ctx).Info("Deleting EventPolicy for Broker %s", eventPolicyObjRef.Name)
+				err := r.eventingClientSet.EventingV1alpha1().EventPolicies(ep.Namespace).Delete(ctx, ep.Name, metav1.DeleteOptions{})
+				if err != nil {
+					return fmt.Errorf("failed to delete EventPolicy for Broker %s: %w", eventPolicyObjRef.Name, err)
+				}
+				logging.FromContext(ctx).Info("Deleted EventPolicy for Broker %s", eventPolicyObjRef.Name)
+			}
 		}
 	}
 	return nil
@@ -515,15 +521,17 @@ func (r *Reconciler) httpsAddress(caCerts *string, b *eventingv1.Broker) pkgduck
 }
 
 // getEventPolicyForBroker returns the EventPolicy for the Broker.
-func (r *Reconciler) getEventPolicyForBroker(b *eventingv1.Broker, chanMan *channelTemplate) (*eventingv1alpha1.EventPolicy, error) {
-	oidcBrokerSub := "system:serviceaccount:knative-eventing:mt-broker-ingress-oidc"
-	ep := &eventingv1alpha1.EventPolicy{
+func (r *Reconciler) getEventPolicyForBroker(b *eventingv1.Broker, chanMan *channelTemplate) *eventingv1alpha1.EventPolicy {
+	return &eventingv1alpha1.EventPolicy{
 		ObjectMeta: metav1.ObjectMeta{
-			// TODO: This is a temporary name, we need to come up with a better name for the EventPolicy.
+			// TODO: what should the name of the EventPolicy be? Should it be the same as the Broker?
 			Name:      b.Name,
 			Namespace: b.Namespace,
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(b),
+			},
+			Labels: map[string]string{
+				eventing.BrokerLabelKey: b.Name,
 			},
 		},
 		Spec: eventingv1alpha1.EventPolicySpec{
@@ -538,10 +546,13 @@ func (r *Reconciler) getEventPolicyForBroker(b *eventingv1.Broker, chanMan *chan
 			},
 			From: []eventingv1alpha1.EventPolicySpecFrom{
 				{
-					Sub: &oidcBrokerSub,
+					Sub: toStrPtr(oidcBrokerSub),
 				},
 			},
 		},
 	}
-	return ep, nil
+}
+
+func toStrPtr(s string) *string {
+	return &s
 }
