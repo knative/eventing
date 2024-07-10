@@ -44,7 +44,7 @@ const (
 	ParallelConditionAddressable apis.ConditionType = "Addressable"
 
 	// ParallelConditionEventPoliciesReady has status True when applying EventPolicies for this
-	// Parallel are ready.
+	// Parallel are ready or if there are no EventPolicies.
 	ParallelConditionEventPoliciesReady apis.ConditionType = "EventPoliciesReady"
 )
 
