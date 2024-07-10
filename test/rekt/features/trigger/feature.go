@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -64,10 +64,11 @@ func TriggerDependencyAnnotation() *feature.Feature {
 	cfg := []manifest.CfgFn{
 		trigger.WithSubscriber(service.AsKReference(sink), ""),
 		trigger.WithAnnotations(annotations),
+		trigger.WithBrokerName(brokerName),
 	}
 
 	// Install the trigger
-	f.Setup("install trigger", trigger.Install(triggerName, brokerName, cfg...))
+	f.Setup("install trigger", trigger.Install(triggerName, cfg...))
 
 	// trigger won't go ready until after the pingsource exists, because of the dependency annotation
 	f.Requirement("trigger goes ready", trigger.IsReady(triggerName))
@@ -123,7 +124,7 @@ func TriggerWithTLSSubscriber() *feature.Feature {
 		subscriber := service.AsDestinationRef(sinkName)
 		subscriber.CACerts = eventshub.GetCaCerts(ctx)
 
-		trigger.Install(triggerName, brokerName,
+		trigger.Install(triggerName, trigger.WithBrokerName(brokerName),
 			trigger.WithSubscriberFromDestination(subscriber))(ctx, t)
 	})
 	f.Setup("Wait for Trigger to become ready", trigger.IsReady(triggerName))
@@ -133,7 +134,7 @@ func TriggerWithTLSSubscriber() *feature.Feature {
 		dls.CACerts = eventshub.GetCaCerts(ctx)
 
 		linear := eventingv1.BackoffPolicyLinear
-		trigger.Install(dlsTriggerName, brokerName,
+		trigger.Install(dlsTriggerName, trigger.WithBrokerName(brokerName),
 			trigger.WithRetry(2, &linear, pointer.String("PT1S")),
 			trigger.WithDeadLetterSinkFromDestination(dls),
 			trigger.WithSubscriber(nil, "http://127.0.0.1:2468"))(ctx, t)
@@ -196,7 +197,7 @@ func TriggerWithTLSSubscriberTrustBundle() *feature.Feature {
 			CACerts: nil, // CA certs are in the trust-bundle
 		}
 
-		trigger.Install(triggerName, brokerName,
+		trigger.Install(triggerName, trigger.WithBrokerName(brokerName),
 			trigger.WithSubscriberFromDestination(subscriber))(ctx, t)
 	})
 	f.Setup("Wait for Trigger to become ready", trigger.IsReady(triggerName))
@@ -211,7 +212,7 @@ func TriggerWithTLSSubscriberTrustBundle() *feature.Feature {
 		}
 
 		linear := eventingv1.BackoffPolicyLinear
-		trigger.Install(dlsTriggerName, brokerName,
+		trigger.Install(dlsTriggerName, trigger.WithBrokerName(brokerName),
 			trigger.WithRetry(2, &linear, pointer.String("PT1S")),
 			trigger.WithDeadLetterSinkFromDestination(dls),
 			trigger.WithSubscriber(nil, "http://127.0.0.1:2468"))(ctx, t)

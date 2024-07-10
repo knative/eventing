@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -88,7 +88,7 @@ func createBrokerTriggerTopology(f *feature.Feature, brokerName string, brokerDS
 		f.Setup("install recorder for "+name, prober.ReceiverInstall(name, nameOpts...))
 		f.Setup("install recorder for "+dlqName, prober.ReceiverInstall(dlqName))
 
-		tOpts := []manifest.CfgFn{triggerresources.WithSubscriber(prober.AsKReference(name), "")}
+		tOpts := []manifest.CfgFn{triggerresources.WithSubscriber(prober.AsKReference(name), ""), triggerresources.WithBrokerName(brokerName)}
 
 		if t.delivery != nil {
 			if t.delivery.DeadLetterSink != nil {
@@ -104,7 +104,7 @@ func createBrokerTriggerTopology(f *feature.Feature, brokerName string, brokerDS
 
 		triggerName := feature.MakeRandomK8sName(name)
 		f.Setup("Create Trigger"+strconv.Itoa(i)+" with recorder",
-			triggerresources.Install(triggerName, brokerName, tOpts...))
+			triggerresources.Install(triggerName, tOpts...))
 
 		f.Setup("Trigger"+strconv.Itoa(i)+" is ready",
 			triggerresources.IsReady(triggerName))

@@ -12,7 +12,7 @@ Also take a look at:
 ## Getting started
 
 1. [Create and checkout a repo fork](#checkout-your-fork)
-2. [Make sure all the requirements are fullfilled](#requirements)
+2. [Make sure all the requirements are fulfilled](#requirements)
 3. [Create a cluster and Linux Container repo](#create-a-cluster-and-a-repo)
 4. [Set up the environment variables](#setup-your-environment)
 5. [Start eventing controller](#starting-eventing-controller)
@@ -131,7 +131,7 @@ follow:
 KO_FLAGS=--platform="linux/amd64" ./hack/install.sh
 ```
 
-> :information_source: If you are getting the error `No resources found in cert-manager namespace`, you need to install [cert-manager](https://cert-manager.io/docs/installation/) manually before running the quick full build and install command. 
+> :information_source: If you are getting the error `No resources found in cert-manager namespace`, you need to install [cert-manager](https://cert-manager.io/docs/installation/) manually before running the quick full build and install command.
 
 ## Starting Eventing Controller
 
@@ -491,3 +491,4 @@ telepresence quit
 - Go version mismatch: `sudo apt-get install golang-go` installs an older version of Go (1.18), which is too outdated for installing Ko and Kubectl
    - Use [this method](https://www.digitalocean.com/community/tutorials/how-to-install-go-on-ubuntu-20-04) instead to manually install go using the .tar file
 - Use `go install` to install any additional gotools such as `goimports`
+

@@ -4,7 +4,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -21,6 +21,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
@@ -144,20 +145,16 @@ func TestDeliverySpecValidation(t *testing.T) {
 	},
 		{
 			name: "valid format JSON",
-			spec: &DeliverySpec{Format: pointer.String("json")},
+			spec: &DeliverySpec{Format: ptr.To(DeliveryFormatJson)},
 			want: nil,
 		},
 		{
 			name: "vaalid format binary",
-			spec: &DeliverySpec{Format: pointer.String("binary")},
-			want: nil,
-		}, {
-			name: "valid format ingress",
-			spec: &DeliverySpec{Format: pointer.String("ingress")},
+			spec: &DeliverySpec{Format: ptr.To(DeliveryFormatBinary)},
 			want: nil,
 		}, {
 			name: "invalid format",
-			spec: &DeliverySpec{Format: pointer.String("invalid")},
+			spec: &DeliverySpec{Format: ptr.To(FormatType("invalid"))},
 			want: func() *apis.FieldError {
 				return apis.ErrInvalidValue("invalid", "format")
 			}(),
