@@ -20,6 +20,7 @@ import (
 	"context"
 	"strings"
 
+	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/pkg/apis"
 )
 
@@ -28,6 +29,9 @@ func (ep *EventPolicy) Validate(ctx context.Context) *apis.FieldError {
 }
 
 func (ets *EventPolicySpec) Validate(ctx context.Context) *apis.FieldError {
+	if !feature.FromContext(ctx).IsOIDCAuthentication() {
+		return apis.ErrGeneric("oidc-authentication feature not enabled")
+	}
 	var err *apis.FieldError
 	for i, f := range ets.From {
 		if f.Ref == nil && (f.Sub == nil || *f.Sub == "") {
