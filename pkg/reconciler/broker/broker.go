@@ -64,7 +64,6 @@ import (
 const (
 	ingressServerTLSSecretName = "mt-broker-ingress-server-tls" //nolint:gosec // This is not a hardcoded credential
 	caCertsSecretKey           = eventingtls.SecretCACert
-	oidcBrokerSub              = "system:serviceaccount:knative-eventing:mt-broker-ingress-oidc"
 )
 
 type Reconciler struct {
@@ -268,7 +267,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 	}
 
 	// Reconcile the EventPolicy for the Broker.
-	if err := r.reconcileEventPolicy(ctx, b, chanMan, featureFlags); err != nil {
+	if err := r.reconcileBrokerChannelEventPolicies(ctx, b, triggerChan, featureFlags); err != nil {
 		return fmt.Errorf("failed to reconcile EventPolicy for Broker %s: %w", b.Name, err)
 	}
 
@@ -436,46 +435,53 @@ func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterf
 	return channelable, nil
 }
 
-func (r *Reconciler) reconcileEventPolicy(ctx context.Context, b *eventingv1.Broker, chanMan *channelTemplate, featureFlags feature.Flags) error {
-	eventPolicyObjRef := &corev1.ObjectReference{
-		Name:      b.Name,
-		Namespace: b.Namespace,
-	}
+func (r *Reconciler) reconcileBrokerChannelEventPolicies(ctx context.Context, b *eventingv1.Broker, triggerChan *duckv1.Channelable, featureFlags feature.Flags) error {
+	expected := resources.MakeEventPolicyForBackingChannel(b, triggerChan)
 
 	if featureFlags.IsOIDCAuthentication() {
 		// get the eventpolicy , create if not exists.
-		_, err := r.eventPolicyLister.EventPolicies(b.Namespace).Get(b.Name)
-		switch {
-		case apierrs.IsNotFound(err):
+		foundEP, err := r.eventPolicyLister.EventPolicies(expected.Namespace).Get(expected.Name)
+		if apierrs.IsNotFound(err) {
 			// create the EventPolicy if it doesn't exists.
-			logging.FromContext(ctx).Info("Creating EventPolicy for Broker %s", eventPolicyObjRef.Name)
+			logging.FromContext(ctx).Info("Creating EventPolicy for Broker %s", expected.Name)
 
-			_, err = r.eventingClientSet.EventingV1alpha1().EventPolicies(eventPolicyObjRef.Namespace).Create(ctx, r.getEventPolicyForBroker(b, chanMan), metav1.CreateOptions{})
+			_, err = r.eventingClientSet.EventingV1alpha1().EventPolicies(expected.Namespace).Create(ctx, expected, metav1.CreateOptions{})
 			if err != nil {
-				return fmt.Errorf("failed to create EventPolicy for Broker %s: %w", eventPolicyObjRef.Name, err)
+				return fmt.Errorf("failed to create EventPolicy for Broker %s: %w", expected.Name, err)
 			}
-			logging.FromContext(ctx).Info("Created EventPolicy for Broker %s", eventPolicyObjRef.Name)
-		case err != nil:
-			return fmt.Errorf("failed to get EventPolicy for Broker %s: %w", eventPolicyObjRef.Name, err)
+		} else if err != nil {
+			return fmt.Errorf("failed to get EventPolicy for Broker %s: %w", expected.Name, err)
+		} else if r.policyNeedsUpdate(foundEP, expected) {
+			// update the EventPolicy if it exists and needs update.
+			logging.FromContext(ctx).Info("Updating EventPolicy for Broker %s", expected.Name)
+			expected.SetResourceVersion(foundEP.GetResourceVersion())
+			_, err = r.eventingClientSet.EventingV1alpha1().EventPolicies(expected.Namespace).Update(ctx, expected, metav1.UpdateOptions{})
+			if err != nil {
+				return fmt.Errorf("failed to update EventPolicy for Broker %s: %w", expected.Name, err)
+			}
 		}
 	} else {
 		// list all the orphaned eventpolicies that have owner reference set to the broker and delete them.
-		eventPolicies, err := r.eventPolicyLister.EventPolicies(b.Namespace).List(labels.Everything())
+		eventPolicies, err := r.eventPolicyLister.EventPolicies(expected.Namespace).List(labels.Everything())
 		if err != nil {
-			return fmt.Errorf("failed to list EventPolicies for Broker %s: %w", eventPolicyObjRef.Name, err)
+			return fmt.Errorf("failed to list EventPolicies for Broker %s: %w", expected.Name, err)
 		}
 		for _, ep := range eventPolicies {
 			if metav1.IsControlledBy(ep, b) {
-				logging.FromContext(ctx).Info("Deleting EventPolicy for Broker %s", eventPolicyObjRef.Name)
+				logging.FromContext(ctx).Info("Deleting EventPolicy for Broker %s", expected.Name)
 				err := r.eventingClientSet.EventingV1alpha1().EventPolicies(ep.Namespace).Delete(ctx, ep.Name, metav1.DeleteOptions{})
 				if err != nil {
-					return fmt.Errorf("failed to delete EventPolicy for Broker %s: %w", eventPolicyObjRef.Name, err)
+					return fmt.Errorf("failed to delete EventPolicy for Broker %s: %w", expected.Name, err)
 				}
-				logging.FromContext(ctx).Info("Deleted EventPolicy for Broker %s", eventPolicyObjRef.Name)
+				logging.FromContext(ctx).Info("Deleted EventPolicy for Broker %s", expected.Name)
 			}
 		}
 	}
 	return nil
+}
+
+func (r *Reconciler) policyNeedsUpdate(foundEP, expected *eventingv1alpha1.EventPolicy) bool {
+	return !equality.Semantic.DeepDerivative(expected, foundEP)
 }
 
 // TriggerChannelLabels are all the labels placed on the Trigger Channel for the given brokerName. This
@@ -518,41 +524,4 @@ func (r *Reconciler) httpsAddress(caCerts *string, b *eventingv1.Broker) pkgduck
 	}
 	httpsAddress.URL.Path = fmt.Sprintf("/%s/%s", b.Namespace, b.Name)
 	return httpsAddress
-}
-
-// getEventPolicyForBroker returns the EventPolicy for the Broker.
-func (r *Reconciler) getEventPolicyForBroker(b *eventingv1.Broker, chanMan *channelTemplate) *eventingv1alpha1.EventPolicy {
-	return &eventingv1alpha1.EventPolicy{
-		ObjectMeta: metav1.ObjectMeta{
-			// TODO: what should the name of the EventPolicy be? Should it be the same as the Broker?
-			Name:      b.Name,
-			Namespace: b.Namespace,
-			OwnerReferences: []metav1.OwnerReference{
-				*kmeta.NewControllerRef(b),
-			},
-			Labels: map[string]string{
-				eventing.BrokerLabelKey: b.Name,
-			},
-		},
-		Spec: eventingv1alpha1.EventPolicySpec{
-			To: []eventingv1alpha1.EventPolicySpecTo{
-				{
-					Ref: &eventingv1alpha1.EventPolicyToReference{
-						APIVersion: chanMan.template.APIVersion,
-						Kind:       chanMan.template.Kind,
-						Name:       chanMan.ref.Name,
-					},
-				},
-			},
-			From: []eventingv1alpha1.EventPolicySpecFrom{
-				{
-					Sub: toStrPtr(oidcBrokerSub),
-				},
-			},
-		},
-	}
-}
-
-func toStrPtr(s string) *string {
-	return &s
 }
