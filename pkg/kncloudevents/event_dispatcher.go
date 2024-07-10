@@ -26,10 +26,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/cloudevents/sdk-go/v2/binding/buffering"
-
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"
+	"github.com/cloudevents/sdk-go/v2/binding/buffering"
 	"github.com/cloudevents/sdk-go/v2/event"
 	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"github.com/hashicorp/go-retryablehttp"
@@ -66,7 +65,21 @@ type DispatchInfo struct {
 	Scheme         string
 }
 
+type EventFormat string
+
+const (
+	Binary EventFormat = "binary"
+	Json   EventFormat = "json"
+)
+
 type SendOption func(*senderConfig) error
+
+func WithEventFormat(format *EventFormat) SendOption {
+	return func(sc *senderConfig) error {
+		sc.eventFormat = format
+		return nil
+	}
+}
 
 func WithReply(reply *duckv1.Addressable) SendOption {
 	return func(sc *senderConfig) error {
@@ -142,6 +155,7 @@ type senderConfig struct {
 	eventTypeAutoHandler *eventtype.EventTypeAutoHandler
 	eventTypeRef         *duckv1.KReference
 	eventTypeOnwerUID    types.UID
+	eventFormat          *EventFormat
 }
 
 type Dispatcher struct {
@@ -205,21 +219,29 @@ func (d *Dispatcher) send(ctx context.Context, message binding.Message, destinat
 	config.reply = sanitizeAddressable(config.reply)
 	config.deadLetterSink = sanitizeAddressable(config.deadLetterSink)
 
-	// send to destination
-
-	// Add `Prefer: reply` header no matter if a reply destination is provided. Discussion: https://github.com/knative/eventing/pull/5764
+	// Add `Prefer: reply` header no matter if a reply destination is provided.
 	additionalHeadersForDestination := http.Header{}
 	if config.additionalHeaders != nil {
 		additionalHeadersForDestination = config.additionalHeaders.Clone()
 	}
 	additionalHeadersForDestination.Set("Prefer", "reply")
 
-	ctx, responseMessage, dispatchExecutionInfo, err := d.executeRequest(ctx, destination, message, additionalHeadersForDestination, config.retryConfig, config.oidcServiceAccount, config.transformers)
+	// Handle the new event format option
+	if config.eventFormat != nil {
+		switch *config.eventFormat {
+		case Binary:
+			ctx = binding.WithForceBinary(ctx)
+		case Json:
+			ctx = binding.WithForceStructured(ctx)
+		}
+	}
+
+	ctx, responseMessage, dispatchExecutionInfo, err := d.executeRequest(ctx, destination, message, additionalHeadersForDestination, config.retryConfig, config.oidcServiceAccount, config.transformers...)
 	if err != nil {
 		// If DeadLetter is configured, then send original message with knative error extensions
 		if config.deadLetterSink != nil {
 			dispatchTransformers := dispatchExecutionInfoTransformers(destination.URL, dispatchExecutionInfo)
-			_, deadLetterResponse, dispatchExecutionInfo, deadLetterErr := d.executeRequest(ctx, *config.deadLetterSink, message, config.additionalHeaders, config.retryConfig, config.oidcServiceAccount, append(config.transformers, dispatchTransformers))
+			_, deadLetterResponse, dispatchExecutionInfo, deadLetterErr := d.executeRequest(ctx, *config.deadLetterSink, message, config.additionalHeaders, config.retryConfig, config.oidcServiceAccount, append(config.transformers, dispatchTransformers...))
 			if deadLetterErr != nil {
 				return dispatchExecutionInfo, fmt.Errorf("unable to complete request to either %s (%v) or %s (%v)", destination.URL, err, config.deadLetterSink.URL, deadLetterErr)
 			}
@@ -262,13 +284,12 @@ func (d *Dispatcher) send(ctx context.Context, message binding.Message, destinat
 	}
 
 	// send reply
-
-	ctx, responseResponseMessage, dispatchExecutionInfo, err := d.executeRequest(ctx, *config.reply, responseMessage, responseAdditionalHeaders, config.retryConfig, config.oidcServiceAccount, config.transformers)
+	ctx, responseResponseMessage, dispatchExecutionInfo, err := d.executeRequest(ctx, *config.reply, responseMessage, responseAdditionalHeaders, config.retryConfig, config.oidcServiceAccount, config.transformers...)
 	if err != nil {
 		// If DeadLetter is configured, then send original message with knative error extensions
 		if config.deadLetterSink != nil {
 			dispatchTransformers := dispatchExecutionInfoTransformers(config.reply.URL, dispatchExecutionInfo)
-			_, deadLetterResponse, dispatchExecutionInfo, deadLetterErr := d.executeRequest(ctx, *config.deadLetterSink, message, responseAdditionalHeaders, config.retryConfig, config.oidcServiceAccount, append(config.transformers, dispatchTransformers))
+			_, deadLetterResponse, dispatchExecutionInfo, deadLetterErr := d.executeRequest(ctx, *config.deadLetterSink, message, responseAdditionalHeaders, config.retryConfig, config.oidcServiceAccount, append(config.transformers, dispatchTransformers...))
 			if deadLetterErr != nil {
 				return dispatchExecutionInfo, fmt.Errorf("failed to forward reply to %s (%v) and failed to send it to the dead letter sink %s (%v)", config.reply.URL, err, config.deadLetterSink.URL, deadLetterErr)
 			}
