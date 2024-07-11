@@ -443,7 +443,7 @@ func (r *Reconciler) reconcileBrokerChannelEventPolicies(ctx context.Context, b 
 		foundEP, err := r.eventPolicyLister.EventPolicies(expected.Namespace).Get(expected.Name)
 		if apierrs.IsNotFound(err) {
 			// Create the EventPolicy since it doesn't exist.
-			logging.FromContext(ctx).Info("Creating EventPolicy for Broker %s", expected.Name)
+			logging.FromContext(ctx).Debugw("Creating EventPolicy for Broker %s", expected.Name)
 
 			_, err = r.eventingClientSet.EventingV1alpha1().EventPolicies(expected.Namespace).Create(ctx, expected, metav1.CreateOptions{})
 			if err != nil {
@@ -456,7 +456,7 @@ func (r *Reconciler) reconcileBrokerChannelEventPolicies(ctx context.Context, b 
 		}
 		if policyNeedsUpdate(foundEP, expected) {
 			// Update the EventPolicy since it exists and needs update.
-			logging.FromContext(ctx).Info("Updating EventPolicy for Broker %s", expected.Name)
+			logging.FromContext(ctx).Debugw("Updating EventPolicy for Broker %s", expected.Name)
 			expected.SetResourceVersion(foundEP.GetResourceVersion())
 			_, err = r.eventingClientSet.EventingV1alpha1().EventPolicies(expected.Namespace).Update(ctx, expected, metav1.UpdateOptions{})
 			if err != nil {
@@ -473,12 +473,12 @@ func (r *Reconciler) reconcileBrokerChannelEventPolicies(ctx context.Context, b 
 	}
 	for _, ep := range eventPolicies {
 		if metav1.IsControlledBy(ep, b) {
-			logging.FromContext(ctx).Info("Deleting EventPolicy for Broker %s", expected.Name)
+			logging.FromContext(ctx).Debugw("Deleting EventPolicy for Broker %s", expected.Name)
 			err := r.eventingClientSet.EventingV1alpha1().EventPolicies(ep.Namespace).Delete(ctx, ep.Name, metav1.DeleteOptions{})
 			if err != nil {
 				return fmt.Errorf("failed to delete EventPolicy for Broker %s: %w", expected.Name, err)
 			}
-			logging.FromContext(ctx).Info("Deleted EventPolicy for Broker %s", expected.Name)
+			logging.FromContext(ctx).Debugw("Deleted EventPolicy for Broker %s", expected.Name)
 		}
 	}
 	return nil
