@@ -55,7 +55,6 @@ type Subscription struct {
 	Name           string
 	Namespace      string
 	UID            types.UID
-	EventFormat    *kncloudevents.EventFormat
 }
 
 // Config for a fanout.EventHandler.
@@ -347,7 +346,6 @@ func (f *FanoutEventHandler) makeFanoutRequest(ctx context.Context, event event.
 		kncloudevents.WithReply(sub.Reply),
 		kncloudevents.WithDeadLetterSink(sub.DeadLetter),
 		kncloudevents.WithRetryConfig(sub.RetryConfig),
-		kncloudevents.WithEventFormat(sub.EventFormat),
 	}
 
 	if f.eventTypeHandler != nil && sub.Name != "" && sub.Namespace != "" && sub.UID != types.UID("") {

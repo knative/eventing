@@ -927,13 +927,8 @@ func TestSendEvent(t *testing.T) {
 		})
 	}
 }
-func TestDispatchMessageWithEventFormat(t *testing.T) {
-	t.Run("Binary format", testBinaryFormat)
-	t.Run("Json format", testJsonFormat)
-}
 
-func testBinaryFormat(t *testing.T) {
-	binary := kncloudevents.Binary
+func testEventFormat(t *testing.T, format kncloudevents.EventFormat, contentType string, port int) {
 	var wg sync.WaitGroup
 	ctx, _ := rectesting.SetupFakeContext(t)
 	ctx, cancel := context.WithCancel(ctx)
@@ -945,10 +940,9 @@ func testBinaryFormat(t *testing.T) {
 	dispatcher := kncloudevents.NewDispatcher(eventingtls.NewDefaultClientConfig(), oidcTokenProvider)
 
 	eventToSend := test.FullEvent()
-	eventToSend.SetDataContentType("text/json")
+	eventToSend.SetDataContentType(contentType)
 
 	// Destination setup
-	port := 8335
 	destinationEventsChan := make(chan cloudevents.Event, 10)
 	destinationReceivedEvents := make([]cloudevents.Event, 0, 10)
 	destinationHandler := eventingtlstesting.EventChannelHandler(destinationEventsChan)
@@ -967,11 +961,10 @@ func testBinaryFormat(t *testing.T) {
 	}()
 
 	// Set the event format
-	dispatcherOpts := kncloudevents.WithEventFormat(&binary)
+	dispatcherOpts := kncloudevents.WithEventFormat(&format)
 
 	// Send event
-	message := binding.ToMessage(&eventToSend)
-	info, err := dispatcher.SendMessage(ctx, message, destination, dispatcherOpts)
+	info, err := dispatcher.SendEvent(ctx, test.FullEvent(), destination, dispatcherOpts)
 	require.Nil(t, err)
 	require.Equal(t, 200, info.ResponseCode)
 
@@ -988,67 +981,19 @@ func testBinaryFormat(t *testing.T) {
 	t.Logf("Received content type: %s", actualContentType)
 
 	// Additional checks to ensure the event format
-	require.Equal(t, "text/json", actualContentType)
+	require.Equal(t, contentType, actualContentType)
 }
 
-func testJsonFormat(t *testing.T) {
-	json := kncloudevents.Json
-	var wg sync.WaitGroup
-	ctx, _ := rectesting.SetupFakeContext(t)
-	ctx, cancel := context.WithCancel(ctx)
-	defer func() {
-		cancel()
-		time.Sleep(500 * time.Millisecond)
-	}()
-	oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
-	dispatcher := kncloudevents.NewDispatcher(eventingtls.NewDefaultClientConfig(), oidcTokenProvider)
+func TestEventFormats(t *testing.T) {
+	t.Run("BinaryFormat", func(t *testing.T) {
+		testEventFormat(t, kncloudevents.Binary, "text/json", 8335)
+	})
 
-	eventToSend := test.FullEvent()
-	eventToSend.SetDataContentType("application/cloudevents+json")
-
-	// Destination setup
-	port := 8336
-	destinationEventsChan := make(chan cloudevents.Event, 10)
-	destinationReceivedEvents := make([]cloudevents.Event, 0, 10)
-	destinationHandler := eventingtlstesting.EventChannelHandler(destinationEventsChan)
-	destinationCA := eventingtlstesting.StartServer(ctx, t, port, destinationHandler, kncloudevents.WithDrainQuietPeriod(time.Millisecond))
-	destination := duckv1.Addressable{
-		URL:     apis.HTTPS(fmt.Sprintf("localhost:%d", port)),
-		CACerts: &destinationCA,
-	}
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		for event := range destinationEventsChan {
-			destinationReceivedEvents = append(destinationReceivedEvents, event)
-		}
-	}()
-
-	// Set the event format
-	dispatcherOpts := kncloudevents.WithEventFormat(&json)
-
-	// Send event
-	message := binding.ToMessage(&eventToSend)
-	info, err := dispatcher.SendMessage(ctx, message, destination, dispatcherOpts)
-	require.Nil(t, err)
-	require.Equal(t, 200, info.ResponseCode)
-
-	// Check received events
-	close(destinationEventsChan)
-	wg.Wait()
-
-	require.Len(t, destinationReceivedEvents, 1)
-	require.Equal(t, eventToSend.ID(), destinationReceivedEvents[0].ID())
-	require.Equal(t, eventToSend.Data(), destinationReceivedEvents[0].Data())
-
-	// Log the actual content type received
-	actualContentType := destinationReceivedEvents[0].DataContentType()
-	t.Logf("Received content type: %s", actualContentType)
-
-	// Additional checks to ensure the event format
-	require.Equal(t, "application/cloudevents+json", actualContentType)
+	t.Run("JsonFormat", func(t *testing.T) {
+		testEventFormat(t, kncloudevents.Json, "text/json", 8336)
+	})
 }
+
 
 func TestDispatchMessageToTLSEndpoint(t *testing.T) {
 	var wg sync.WaitGroup

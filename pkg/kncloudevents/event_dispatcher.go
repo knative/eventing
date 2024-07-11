@@ -219,14 +219,16 @@ func (d *Dispatcher) send(ctx context.Context, message binding.Message, destinat
 	config.reply = sanitizeAddressable(config.reply)
 	config.deadLetterSink = sanitizeAddressable(config.deadLetterSink)
 
-	// Add `Prefer: reply` header no matter if a reply destination is provided.
+	// send to destination
+
+	// Add `Prefer: reply` header no matter if a reply destination is provided. Discussion: https://github.com/knative/eventing/pull/5764
 	additionalHeadersForDestination := http.Header{}
 	if config.additionalHeaders != nil {
 		additionalHeadersForDestination = config.additionalHeaders.Clone()
 	}
 	additionalHeadersForDestination.Set("Prefer", "reply")
 
-	// Handle the new event format option
+	// Handle the event format option
 	if config.eventFormat != nil {
 		switch *config.eventFormat {
 		case Binary:
@@ -241,7 +243,7 @@ func (d *Dispatcher) send(ctx context.Context, message binding.Message, destinat
 		// If DeadLetter is configured, then send original message with knative error extensions
 		if config.deadLetterSink != nil {
 			dispatchTransformers := dispatchExecutionInfoTransformers(destination.URL, dispatchExecutionInfo)
-			_, deadLetterResponse, dispatchExecutionInfo, deadLetterErr := d.executeRequest(ctx, *config.deadLetterSink, message, config.additionalHeaders, config.retryConfig, config.oidcServiceAccount, append(config.transformers, dispatchTransformers...))
+			_, deadLetterResponse, dispatchExecutionInfo, deadLetterErr := d.executeRequest(ctx, *config.deadLetterSink, message, config.additionalHeaders, config.retryConfig, config.oidcServiceAccount, append(config.transformers, dispatchTransformers))
 			if deadLetterErr != nil {
 				return dispatchExecutionInfo, fmt.Errorf("unable to complete request to either %s (%v) or %s (%v)", destination.URL, err, config.deadLetterSink.URL, deadLetterErr)
 			}
@@ -284,12 +286,12 @@ func (d *Dispatcher) send(ctx context.Context, message binding.Message, destinat
 	}
 
 	// send reply
-	ctx, responseResponseMessage, dispatchExecutionInfo, err := d.executeRequest(ctx, *config.reply, responseMessage, responseAdditionalHeaders, config.retryConfig, config.oidcServiceAccount, config.transformers...)
+	ctx, responseResponseMessage, dispatchExecutionInfo, err := d.executeRequest(ctx, *config.reply, responseMessage, responseAdditionalHeaders, config.retryConfig, config.oidcServiceAccount, config.transformers)
 	if err != nil {
 		// If DeadLetter is configured, then send original message with knative error extensions
 		if config.deadLetterSink != nil {
 			dispatchTransformers := dispatchExecutionInfoTransformers(config.reply.URL, dispatchExecutionInfo)
-			_, deadLetterResponse, dispatchExecutionInfo, deadLetterErr := d.executeRequest(ctx, *config.deadLetterSink, message, responseAdditionalHeaders, config.retryConfig, config.oidcServiceAccount, append(config.transformers, dispatchTransformers...))
+			_, deadLetterResponse, dispatchExecutionInfo, deadLetterErr := d.executeRequest(ctx, *config.deadLetterSink, message, responseAdditionalHeaders, config.retryConfig, config.oidcServiceAccount, append(config.transformers, dispatchTransformers))
 			if deadLetterErr != nil {
 				return dispatchExecutionInfo, fmt.Errorf("failed to forward reply to %s (%v) and failed to send it to the dead letter sink %s (%v)", config.reply.URL, err, config.deadLetterSink.URL, deadLetterErr)
 			}
