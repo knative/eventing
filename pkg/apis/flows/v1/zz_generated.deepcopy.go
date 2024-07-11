@@ -209,6 +209,7 @@ func (in *ParallelStatus) DeepCopyInto(out *ParallelStatus) {
 		*out = new(duckv1.AuthStatus)
 		(*in).DeepCopyInto(*out)
 	}
+	in.AppliedEventPoliciesStatus.DeepCopyInto(&out.AppliedEventPoliciesStatus)
 	return
 }
 
@@ -376,6 +377,7 @@ func (in *SequenceStatus) DeepCopyInto(out *SequenceStatus) {
 		*out = new(duckv1.AuthStatus)
 		(*in).DeepCopyInto(*out)
 	}
+	in.AppliedEventPoliciesStatus.DeepCopyInto(&out.AppliedEventPoliciesStatus)
 	return
 }
 

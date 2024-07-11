@@ -40,7 +40,7 @@ func TestEventTypeDefaults(t *testing.T) {
 				Spec: EventTypeSpec{},
 			},
 		},
-		"broker empty": {
+		"default broker reference": {
 			initial: EventType{
 				Spec: EventTypeSpec{
 					Type:   "test-type",
@@ -76,9 +76,10 @@ func TestEventTypeDefaults(t *testing.T) {
 			},
 			expected: EventType{
 				Spec: EventTypeSpec{
-					Type:   "test-type",
-					Source: testSource,
-					Schema: testSchema,
+					Reference: nil,
+					Type:      "test-type",
+					Source:    testSource,
+					Schema:    testSchema,
 				},
 			},
 		},

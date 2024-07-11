@@ -27,6 +27,8 @@ import (
 	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
 	eventingv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/eventing/v1"
 	fakeeventingv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/eventing/v1/fake"
+	eventingv1alpha1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/eventing/v1alpha1"
+	fakeeventingv1alpha1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/eventing/v1alpha1/fake"
 	eventingv1beta1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/eventing/v1beta1"
 	fakeeventingv1beta1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/eventing/v1beta1/fake"
 	eventingv1beta2 "knative.dev/eventing/pkg/client/clientset/versioned/typed/eventing/v1beta2"
@@ -94,6 +96,11 @@ var (
 	_ clientset.Interface = &Clientset{}
 	_ testing.FakeClient  = &Clientset{}
 )
+
+// EventingV1alpha1 retrieves the EventingV1alpha1Client
+func (c *Clientset) EventingV1alpha1() eventingv1alpha1.EventingV1alpha1Interface {
+	return &fakeeventingv1alpha1.FakeEventingV1alpha1{Fake: &c.Fake}
+}
 
 // EventingV1beta1 retrieves the EventingV1beta1Client
 func (c *Clientset) EventingV1beta1() eventingv1beta1.EventingV1beta1Interface {

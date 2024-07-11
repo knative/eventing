@@ -33,6 +33,7 @@ var imcCondSet = apis.NewLivingConditionSet(
 	InMemoryChannelConditionAddressable,
 	InMemoryChannelConditionChannelServiceReady,
 	InMemoryChannelConditionDeadLetterSinkResolved,
+	InMemoryChannelConditionEventPoliciesReady,
 )
 
 const (
@@ -64,6 +65,10 @@ const (
 	// InMemoryChannelConditionDeadLetterSinkResolved has status True when there is a Dead Letter Sink ref or URI
 	// defined in the Spec.Delivery, is a valid destination and its correctly resolved into a valid URI
 	InMemoryChannelConditionDeadLetterSinkResolved apis.ConditionType = "DeadLetterSinkResolved"
+
+	// InMemoryChannelConditionEventPoliciesReady has status True when all the applying EventPolicies for this
+	// InMemoryChannel are ready.
+	InMemoryChannelConditionEventPoliciesReady apis.ConditionType = "EventPoliciesReady"
 )
 
 // GetConditionSet retrieves the condition set for this resource. Implements the KRShaped interface.
@@ -181,4 +186,20 @@ func (imcs *InMemoryChannelStatus) MarkDeadLetterSinkNotConfigured() {
 func (imcs *InMemoryChannelStatus) MarkDeadLetterSinkResolvedFailed(reason, messageFormat string, messageA ...interface{}) {
 	imcs.DeliveryStatus = eventingduck.DeliveryStatus{}
 	imcCondSet.Manage(imcs).MarkFalse(InMemoryChannelConditionDeadLetterSinkResolved, reason, messageFormat, messageA...)
+}
+
+func (imcs *InMemoryChannelStatus) MarkEventPoliciesFailed(reason, messageFormat string, messageA ...interface{}) {
+	imcCondSet.Manage(imcs).MarkFalse(InMemoryChannelConditionEventPoliciesReady, reason, messageFormat, messageA...)
+}
+
+func (imcs *InMemoryChannelStatus) MarkEventPoliciesUnknown(reason, messageFormat string, messageA ...interface{}) {
+	imcCondSet.Manage(imcs).MarkUnknown(InMemoryChannelConditionEventPoliciesReady, reason, messageFormat, messageA...)
+}
+
+func (imcs *InMemoryChannelStatus) MarkEventPoliciesTrue() {
+	imcCondSet.Manage(imcs).MarkTrue(InMemoryChannelConditionEventPoliciesReady)
+}
+
+func (imcs *InMemoryChannelStatus) MarkEventPoliciesTrueWithReason(reason, messageFormat string, messageA ...interface{}) {
+	imcCondSet.Manage(imcs).MarkTrueWithReason(InMemoryChannelConditionEventPoliciesReady, reason, messageFormat, messageA...)
 }

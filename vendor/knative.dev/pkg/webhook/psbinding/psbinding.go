@@ -118,9 +118,11 @@ type Reconciler struct {
 	index index
 }
 
-var _ controller.Reconciler = (*Reconciler)(nil)
-var _ pkgreconciler.LeaderAware = (*Reconciler)(nil)
-var _ webhook.AdmissionController = (*Reconciler)(nil)
+var (
+	_ controller.Reconciler       = (*Reconciler)(nil)
+	_ pkgreconciler.LeaderAware   = (*Reconciler)(nil)
+	_ webhook.AdmissionController = (*Reconciler)(nil)
+)
 
 // We need to specifically exclude our deployment(s) from consideration, but this provides a way
 // of excluding other things as well.
@@ -186,7 +188,8 @@ func (ac *Reconciler) Admit(ctx context.Context, request *admissionv1.AdmissionR
 		Group:     request.Kind.Group,
 		Kind:      request.Kind.Kind,
 		Namespace: request.Namespace,
-		Name:      orig.Name},
+		Name:      orig.Name,
+	},
 		labels.Set(orig.Labels))
 	if len(fbs) == 0 {
 		// This doesn't apply!
@@ -269,7 +272,8 @@ func (ac *Reconciler) reconcileMutatingWebhook(ctx context.Context, caCert []byt
 				Group:     gk.Group,
 				Kind:      gk.Kind,
 				Namespace: ref.Namespace,
-				Name:      ref.Name},
+				Name:      ref.Name,
+			},
 				fb)
 		} else {
 			selector, err := metav1.LabelSelectorAsSelector(ref.Selector)
@@ -279,7 +283,8 @@ func (ac *Reconciler) reconcileMutatingWebhook(ctx context.Context, caCert []byt
 			ib.associateSelection(inexactKey{
 				Group:     gk.Group,
 				Kind:      gk.Kind,
-				Namespace: ref.Namespace},
+				Namespace: ref.Namespace,
+			},
 				selector, fb)
 		}
 	}

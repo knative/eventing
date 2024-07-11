@@ -19,18 +19,21 @@ package controller
 import (
 	"context"
 
-	kubeclient "knative.dev/pkg/client/injection/kube/client"
-	"knative.dev/pkg/logging"
+	"knative.dev/eventing/pkg/auth"
 
 	"github.com/kelseyhightower/envconfig"
 	"k8s.io/client-go/tools/cache"
+	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
+	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
+	"knative.dev/pkg/logging"
 	"knative.dev/pkg/system"
 
 	"knative.dev/pkg/resolver"
 
 	"knative.dev/eventing/pkg/apis/feature"
+	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventpolicy"
 	"knative.dev/eventing/pkg/client/injection/informers/messaging/v1/inmemorychannel"
 	inmemorychannelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/inmemorychannel"
 	"knative.dev/eventing/pkg/eventingtls"
@@ -65,6 +68,7 @@ func NewController(
 	serviceAccountInformer := serviceaccount.Get(ctx)
 	roleBindingInformer := rolebinding.Get(ctx)
 	secretInformer := secretinformer.Get(ctx)
+	eventPolicyInformer := eventpolicy.Get(ctx)
 
 	r := &Reconciler{
 		kubeClientSet:        kubeclient.Get(ctx),
@@ -75,6 +79,7 @@ func NewController(
 		serviceAccountLister: serviceAccountInformer.Lister(),
 		roleBindingLister:    roleBindingInformer.Lister(),
 		secretLister:         secretInformer.Lister(),
+		eventPolicyLister:    eventPolicyInformer.Lister(),
 	}
 
 	env := &envConfig{}
@@ -139,6 +144,12 @@ func NewController(
 		FilterFunc: controller.FilterWithName(eventingtls.IMCDispatcherServerTLSSecretName),
 		Handler:    controller.HandleAll(globalResync),
 	})
+
+	imcGK := messagingv1.SchemeGroupVersion.WithKind("InMemoryChannel").GroupKind()
+
+	// Enqueue the InMemoryChannel, if we have an EventPolicy which was referencing
+	// or got updated and now is referencing the InMemoryChannel
+	eventPolicyInformer.Informer().AddEventHandler(auth.EventPolicyEventHandler(inmemorychannelInformer.Informer().GetIndexer(), imcGK, impl.EnqueueKey))
 
 	// Setup the watch on the config map of dispatcher config
 	configStore := config.NewEventDispatcherConfigStore(logging.FromContext(ctx))

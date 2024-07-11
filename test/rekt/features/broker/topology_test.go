@@ -175,14 +175,14 @@ func TestCreateExpectedEventPatterns(t *testing.T) {
 			DeadLetterSink: dlqSink,
 		},
 		t0FailCount: 0,
-		t1FailCount: 1,
+		t1FailCount: 2,
 		want: map[string]knconf.EventPattern{
 			"t0": {
 				Success:  []bool{true},
 				Interval: []uint{0},
 			},
 			"t1": {
-				Success:  []bool{false, true},
+				Success:  []bool{false, false},
 				Interval: []uint{0, 0},
 			},
 			"t0dlq":     noEvents,
@@ -214,7 +214,7 @@ func TestCreateExpectedEventPatterns(t *testing.T) {
 		},
 	}} {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+			//t.Parallel()
 			cfg := []triggerCfg{{
 				delivery:  tt.t0DS,
 				failCount: tt.t0FailCount,
@@ -399,7 +399,7 @@ func TestCreateExpectedEventDeliveryMap(t *testing.T) {
 		},
 		want: map[string][]conformanceevent.Event{},
 	}, {
-		name: "Two triggers, matches the second one (t0), not first (t0)",
+		name: "Two triggers, matches the second one (t1), not first (t0)",
 		inevents: []conformanceevent.Event{
 			{
 				Attributes: conformanceevent.ContextAttributes{
@@ -424,7 +424,7 @@ func TestCreateExpectedEventDeliveryMap(t *testing.T) {
 			},
 		},
 		want: map[string][]conformanceevent.Event{
-			"t0": {
+			"t1": {
 				{
 					Attributes: conformanceevent.ContextAttributes{
 						Type: "eventtype",

@@ -41,6 +41,7 @@ import (
 	ktesting "k8s.io/client-go/testing"
 	"knative.dev/pkg/controller"
 
+	"knative.dev/eventing/pkg/apis/sinks"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
@@ -75,6 +76,8 @@ func MakeFactory(ctor Ctor, unstructured bool, logger *zap.SugaredLogger) Factor
 		ctx, client := fakeeventingclient.With(ctx, ls.GetEventingObjects()...)
 		ctx, dynamicClient := fakedynamicclient.With(ctx,
 			NewScheme(), ToUnstructured(t, r.Objects)...)
+
+		ctx = sinks.WithConfig(ctx, &sinks.Config{KubeClient: kubeClient})
 
 		// The dynamic client's support for patching is BS.  Implement it
 		// here via PrependReactor (this can be overridden below by the

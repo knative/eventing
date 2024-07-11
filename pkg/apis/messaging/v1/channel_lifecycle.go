@@ -29,6 +29,7 @@ var chCondSet = apis.NewLivingConditionSet(
 	ChannelConditionBackingChannelReady,
 	ChannelConditionAddressable,
 	ChannelConditionDeadLetterSinkResolved,
+	ChannelConditionEventPoliciesReady,
 )
 
 const (
@@ -45,6 +46,10 @@ const (
 	// ChannelConditionDeadLetterSinkResolved has status True when there is a Dead Letter Sink ref or URI
 	// defined in the Spec.Delivery, is a valid destination and its correctly resolved into a valid URI
 	ChannelConditionDeadLetterSinkResolved apis.ConditionType = "DeadLetterSinkResolved"
+
+	// ChannelConditionEventPoliciesReady has status True when all the EventPolicies which reference this
+	// Channel are Ready too.
+	ChannelConditionEventPoliciesReady apis.ConditionType = "EventPoliciesReady"
 )
 
 // GetConditionSet retrieves the condition set for this resource. Implements the KRShaped interface.
@@ -145,4 +150,20 @@ func (cs *ChannelStatus) MarkDeadLetterSinkNotConfigured() {
 func (cs *ChannelStatus) MarkDeadLetterSinkResolvedFailed(reason, messageFormat string, messageA ...interface{}) {
 	cs.DeliveryStatus = eventingduck.DeliveryStatus{}
 	chCondSet.Manage(cs).MarkFalse(ChannelConditionDeadLetterSinkResolved, reason, messageFormat, messageA...)
+}
+
+func (cs *ChannelStatus) MarkEventPoliciesFailed(reason, messageFormat string, messageA ...interface{}) {
+	chCondSet.Manage(cs).MarkFalse(ChannelConditionEventPoliciesReady, reason, messageFormat, messageA...)
+}
+
+func (cs *ChannelStatus) MarkEventPoliciesUnknown(reason, messageFormat string, messageA ...interface{}) {
+	chCondSet.Manage(cs).MarkUnknown(ChannelConditionEventPoliciesReady, reason, messageFormat, messageA...)
+}
+
+func (cs *ChannelStatus) MarkEventPoliciesTrue() {
+	chCondSet.Manage(cs).MarkTrue(ChannelConditionEventPoliciesReady)
+}
+
+func (cs *ChannelStatus) MarkEventPoliciesTrueWithReason(reason, messageFormat string, messageA ...interface{}) {
+	chCondSet.Manage(cs).MarkTrueWithReason(ChannelConditionEventPoliciesReady, reason, messageFormat, messageA...)
 }

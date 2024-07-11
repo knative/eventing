@@ -53,6 +53,7 @@ spec:
             - "sinkbindings.sources.knative.dev"
             - "subscriptions.messaging.knative.dev"
             - "triggers.eventing.knative.dev"
+            - "jobsinks.sinks.knative.dev"
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true

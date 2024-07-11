@@ -17,7 +17,10 @@ limitations under the License.
 package sinks
 
 import (
+	"context"
+
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/kubernetes"
 )
 
 const (
@@ -31,3 +34,21 @@ var (
 		Resource: "jobsinks",
 	}
 )
+
+type Config struct {
+	KubeClient kubernetes.Interface
+}
+
+type configKey struct{}
+
+func WithConfig(ctx context.Context, cfg *Config) context.Context {
+	return context.WithValue(ctx, configKey{}, cfg)
+}
+
+func GetConfig(ctx context.Context) *Config {
+	v := ctx.Value(configKey{})
+	if v == nil {
+		panic("Missing value for config")
+	}
+	return v.(*Config)
+}

@@ -75,6 +75,9 @@ const (
 	maxIdleConnsPerHost = 200
 
 	imcGeneration = 7
+
+	readyEventPolicyName   = "test-event-policy-ready"
+	unreadyEventPolicyName = "test-event-policy-unready"
 )
 
 var (
@@ -99,6 +102,12 @@ var (
 	dlsStatus = &duckv1.Addressable{
 		URL:     dlsURI,
 		CACerts: nil,
+	}
+
+	imcV1GVK = metav1.GroupVersionKind{
+		Group:   "messaging.knative.dev",
+		Version: "v1",
+		Kind:    "InMemoryChannel",
 	}
 )
 
@@ -183,7 +192,8 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelEndpointsReady(),
 					WithInMemoryChannelChannelServiceReady(),
 					WithInMemoryChannelAddress(channelServiceAddress),
-					WithInMemoryChannelDLSUnknown()),
+					WithInMemoryChannelDLSUnknown(),
+					WithInMemoryChannelEventPoliciesReadyBecauseOIDCDisabled()),
 			}},
 		}, {
 			Name: "the status of deployment is unknown",
@@ -206,7 +216,8 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelEndpointsReady(),
 					WithInMemoryChannelChannelServiceReady(),
 					WithInMemoryChannelAddress(channelServiceAddress),
-					WithInMemoryChannelDLSUnknown()),
+					WithInMemoryChannelDLSUnknown(),
+					WithInMemoryChannelEventPoliciesReadyBecauseOIDCDisabled()),
 			}},
 		}, {
 			Name: "Service does not exist",
@@ -326,6 +337,7 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelAddress(channelServiceAddress),
 					WithDeadLetterSink(imcDest),
 					WithInMemoryChannelStatusDLS(dlsStatus),
+					WithInMemoryChannelEventPoliciesReadyBecauseOIDCDisabled(),
 				),
 			}},
 		}, {
@@ -368,6 +380,7 @@ func TestAllCases(t *testing.T) {
 						URL:     apis.HTTPS(dlsHost),
 						CACerts: pointer.String(string(eventingtlstesting.CA)),
 					}),
+					WithInMemoryChannelEventPoliciesReadyBecauseOIDCDisabled(),
 				),
 			}},
 		}, {
@@ -393,6 +406,7 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelAddress(channelServiceAddress),
 					WithDeadLetterSink(imcDest),
 					WithInMemoryChannelStatusDLS(dlsStatus),
+					WithInMemoryChannelEventPoliciesReadyBecauseOIDCDisabled(),
 				),
 			}},
 		}, {
@@ -443,6 +457,7 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelAddress(channelServiceAddress),
 					WithDeadLetterSink(imcDest),
 					WithInMemoryChannelStatusDLS(dlsStatus),
+					WithInMemoryChannelEventPoliciesReadyBecauseOIDCDisabled(),
 				),
 			}},
 		}, {
@@ -473,6 +488,7 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelAddress(channelServiceAddress),
 					WithDeadLetterSink(imcDest),
 					WithInMemoryChannelStatusDLS(dlsStatus),
+					WithInMemoryChannelEventPoliciesReadyBecauseOIDCDisabled(),
 				),
 			}},
 		}, {
@@ -541,6 +557,7 @@ func TestAllCases(t *testing.T) {
 					}),
 					WithDeadLetterSink(imcDest),
 					WithInMemoryChannelStatusDLS(dlsStatus),
+					WithInMemoryChannelEventPoliciesReadyBecauseOIDCDisabled(),
 				),
 			}},
 			Ctx: feature.ToContext(context.Background(), feature.Flags{
@@ -588,6 +605,7 @@ func TestAllCases(t *testing.T) {
 					}),
 					WithDeadLetterSink(imcDest),
 					WithInMemoryChannelStatusDLS(dlsStatus),
+					WithInMemoryChannelEventPoliciesReadyBecauseOIDCDisabled(),
 				),
 			}},
 			Ctx: feature.ToContext(context.Background(), feature.Flags{
@@ -617,18 +635,127 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelServiceReady(),
 					WithInMemoryChannelEndpointsReady(),
 					WithInMemoryChannelChannelServiceReady(),
-					WithInMemoryChannelAddress(channelServiceAddress),
 					WithDeadLetterSink(imcDest),
 					WithInMemoryChannelStatusDLS(dlsStatus),
 					WithInMemoryChannelAddress(duckv1.Addressable{
 						URL:      channelServiceAddress.URL,
 						Audience: &channelAudience,
 					}),
+					WithInMemoryChannelEventPoliciesReadyBecauseNoPolicyAndOIDCEnabled(),
 				),
 			}},
 			Ctx: feature.ToContext(context.Background(), feature.Flags{
-				feature.OIDCAuthentication: feature.Enabled,
+				feature.OIDCAuthentication:       feature.Enabled,
+				feature.AuthorizationDefaultMode: feature.AuthorizationAllowSameNamespace,
 			}),
+		}, {
+			Name: "Should provision applying EventPolicies",
+			Key:  imcKey,
+			Objects: []runtime.Object{
+				makeDLSServiceAsUnstructured(),
+				makeReadyDeployment(),
+				makeService(),
+				makeReadyEndpoints(),
+				NewInMemoryChannel(imcName, testNS,
+					WithDeadLetterSink(imcDest),
+					WithInMemoryChannelGeneration(imcGeneration),
+				),
+				makeChannelService(NewInMemoryChannel(imcName, testNS)),
+				NewEventPolicy(readyEventPolicyName, testNS,
+					WithReadyEventPolicyCondition,
+					WithEventPolicyToRef(imcV1GVK, imcName),
+				),
+			},
+			WantErr: false,
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewInMemoryChannel(imcName, testNS,
+					WithInitInMemoryChannelConditions,
+					WithInMemoryChannelDeploymentReady(),
+					WithInMemoryChannelGeneration(imcGeneration),
+					WithInMemoryChannelStatusObservedGeneration(imcGeneration),
+					WithInMemoryChannelServiceReady(),
+					WithInMemoryChannelEndpointsReady(),
+					WithInMemoryChannelChannelServiceReady(),
+					WithInMemoryChannelAddress(channelServiceAddress),
+					WithDeadLetterSink(imcDest),
+					WithInMemoryChannelStatusDLS(dlsStatus),
+					WithInMemoryChannelEventPoliciesReady(),
+					WithInMemoryChannelEventPoliciesListed(readyEventPolicyName),
+				),
+			}},
+		}, {
+			Name: "Should mark NotReady on unready EventPolicy",
+			Key:  imcKey,
+			Objects: []runtime.Object{
+				makeDLSServiceAsUnstructured(),
+				makeReadyDeployment(),
+				makeService(),
+				makeReadyEndpoints(),
+				NewInMemoryChannel(imcName, testNS,
+					WithDeadLetterSink(imcDest),
+					WithInMemoryChannelGeneration(imcGeneration),
+				),
+				makeChannelService(NewInMemoryChannel(imcName, testNS)),
+				NewEventPolicy(unreadyEventPolicyName, testNS,
+					WithUnreadyEventPolicyCondition("", ""),
+					WithEventPolicyToRef(imcV1GVK, imcName),
+				),
+			},
+			WantErr: false,
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewInMemoryChannel(imcName, testNS,
+					WithInitInMemoryChannelConditions,
+					WithInMemoryChannelDeploymentReady(),
+					WithInMemoryChannelGeneration(imcGeneration),
+					WithInMemoryChannelStatusObservedGeneration(imcGeneration),
+					WithInMemoryChannelServiceReady(),
+					WithInMemoryChannelEndpointsReady(),
+					WithInMemoryChannelChannelServiceReady(),
+					WithInMemoryChannelAddress(channelServiceAddress),
+					WithDeadLetterSink(imcDest),
+					WithInMemoryChannelStatusDLS(dlsStatus),
+					WithInMemoryChannelEventPoliciesNotReady("EventPoliciesNotReady", fmt.Sprintf("event policies %s are not ready", unreadyEventPolicyName)),
+				),
+			}},
+		}, {
+			Name: "Should list only Ready EventPolicy",
+			Key:  imcKey,
+			Objects: []runtime.Object{
+				makeDLSServiceAsUnstructured(),
+				makeReadyDeployment(),
+				makeService(),
+				makeReadyEndpoints(),
+				NewInMemoryChannel(imcName, testNS,
+					WithDeadLetterSink(imcDest),
+					WithInMemoryChannelGeneration(imcGeneration),
+				),
+				makeChannelService(NewInMemoryChannel(imcName, testNS)),
+				NewEventPolicy(readyEventPolicyName, testNS,
+					WithReadyEventPolicyCondition,
+					WithEventPolicyToRef(imcV1GVK, imcName),
+				),
+				NewEventPolicy(unreadyEventPolicyName, testNS,
+					WithUnreadyEventPolicyCondition("", ""),
+					WithEventPolicyToRef(imcV1GVK, imcName),
+				),
+			},
+			WantErr: false,
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewInMemoryChannel(imcName, testNS,
+					WithInitInMemoryChannelConditions,
+					WithInMemoryChannelDeploymentReady(),
+					WithInMemoryChannelGeneration(imcGeneration),
+					WithInMemoryChannelStatusObservedGeneration(imcGeneration),
+					WithInMemoryChannelServiceReady(),
+					WithInMemoryChannelEndpointsReady(),
+					WithInMemoryChannelChannelServiceReady(),
+					WithInMemoryChannelAddress(channelServiceAddress),
+					WithDeadLetterSink(imcDest),
+					WithInMemoryChannelStatusDLS(dlsStatus),
+					WithInMemoryChannelEventPoliciesNotReady("EventPoliciesNotReady", fmt.Sprintf("event policies %s are not ready", unreadyEventPolicyName)),
+					WithInMemoryChannelEventPoliciesListed(readyEventPolicyName),
+				),
+			}},
 		}}
 
 	logger := logtesting.TestLogger(t)
@@ -645,13 +772,14 @@ func TestAllCases(t *testing.T) {
 		}
 
 		r := &Reconciler{
-			kubeClientSet:    fakekubeclient.Get(ctx),
-			systemNamespace:  testNS,
-			deploymentLister: listers.GetDeploymentLister(),
-			serviceLister:    listers.GetServiceLister(),
-			endpointsLister:  listers.GetEndpointsLister(),
-			secretLister:     listers.GetSecretLister(),
-			uriResolver:      resolver.NewURIResolverFromTracker(ctx, tracker.New(func(types.NamespacedName) {}, 0)),
+			kubeClientSet:     fakekubeclient.Get(ctx),
+			systemNamespace:   testNS,
+			deploymentLister:  listers.GetDeploymentLister(),
+			serviceLister:     listers.GetServiceLister(),
+			endpointsLister:   listers.GetEndpointsLister(),
+			secretLister:      listers.GetSecretLister(),
+			eventPolicyLister: listers.GetEventPolicyLister(),
+			uriResolver:       resolver.NewURIResolverFromTracker(ctx, tracker.New(func(types.NamespacedName) {}, 0)),
 		}
 		return inmemorychannel.NewReconciler(ctx, logger,
 			fakeeventingclient.Get(ctx), listers.GetInMemoryChannelLister(),
@@ -703,6 +831,7 @@ func TestInNamespace(t *testing.T) {
 					WithInMemoryChannelAddress(channelServiceAddress),
 					WithDeadLetterSink(imcDest),
 					WithInMemoryChannelStatusDLS(dlsStatus),
+					WithInMemoryChannelEventPoliciesReadyBecauseOIDCDisabled(),
 				),
 			}},
 			WantEvents: []string{
@@ -742,6 +871,7 @@ func TestInNamespace(t *testing.T) {
 					WithInMemoryChannelAddress(channelServiceAddress),
 					WithDeadLetterSink(imcDest),
 					WithInMemoryChannelStatusDLS(dlsStatus),
+					WithInMemoryChannelEventPoliciesReadyBecauseOIDCDisabled(),
 				),
 			}},
 		},
@@ -763,6 +893,7 @@ func TestInNamespace(t *testing.T) {
 			serviceAccountLister:       listers.GetServiceAccountLister(),
 			roleBindingLister:          listers.GetRoleBindingLister(),
 			secretLister:               listers.GetSecretLister(),
+			eventPolicyLister:          listers.GetEventPolicyLister(),
 			eventDispatcherConfigStore: eventDispatcherConfigStore,
 			uriResolver:                resolver.NewURIResolverFromTracker(ctx, tracker.New(func(types.NamespacedName) {}, 0)),
 		}

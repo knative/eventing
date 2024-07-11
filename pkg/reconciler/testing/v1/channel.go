@@ -18,6 +18,9 @@ import (
 	"fmt"
 	"time"
 
+	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/pkg/apis/feature"
+
 	"k8s.io/apimachinery/pkg/types"
 
 	v1 "k8s.io/api/core/v1"
@@ -156,6 +159,41 @@ func WithChannelStatusDLS(ds eventingduckv1.DeliveryStatus) ChannelOption {
 func WithChannelDLSUnknown() ChannelOption {
 	return func(c *eventingv1.Channel) {
 		c.Status.MarkDeadLetterSinkNotConfigured()
+	}
+}
+
+func WithChannelEventPoliciesReady() ChannelOption {
+	return func(c *eventingv1.Channel) {
+		c.Status.MarkEventPoliciesTrue()
+	}
+}
+
+func WithChannelEventPoliciesNotReady(reason, message string) ChannelOption {
+	return func(c *eventingv1.Channel) {
+		c.Status.MarkEventPoliciesFailed(reason, message)
+	}
+}
+
+func WithChannelEventPoliciesListed(policyNames ...string) ChannelOption {
+	return func(c *eventingv1.Channel) {
+		for _, name := range policyNames {
+			c.Status.Policies = append(c.Status.Policies, eventingduckv1.AppliedEventPolicyRef{
+				APIVersion: v1alpha1.SchemeGroupVersion.String(),
+				Name:       name,
+			})
+		}
+	}
+}
+
+func WithChannelEventPoliciesReadyBecauseOIDCDisabled() ChannelOption {
+	return func(c *eventingv1.Channel) {
+		c.Status.MarkEventPoliciesTrueWithReason("OIDCDisabled", "Feature %q must be enabled to support Authorization", feature.OIDCAuthentication)
+	}
+}
+
+func WithChannelEventPoliciesReadyBecauseNoPolicyAndOIDCEnabled() ChannelOption {
+	return func(c *eventingv1.Channel) {
+		c.Status.MarkEventPoliciesTrueWithReason("DefaultAuthorizationMode", "Default authz mode is %q", feature.AuthorizationAllowSameNamespace)
 	}
 }
 

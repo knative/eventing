@@ -3,10 +3,23 @@ kind: ConfigMap
 metadata:
   name: {{ .name }}
   namespace: {{ .namespace }}
+  {{ if .labels }}
+  labels:
+    {{ range $key, $value := .labels }}
+    {{ $key }}: "{{ $value }}"
+    {{ end }}
+  {{ else }}
   labels:
     knative.dev/config-propagation: original
     knative.dev/config-category: eventing
+  {{ end }}
 data:
+  {{ if .data }}
+  {{ range $key, $value := .data }}
+  {{ $key }}: |-
+    {{ $value }}
+  {{ end }}
+  {{ else }}
   _example: |
     my-enabled-flag: "enabled"
     my-disabled-flag: "disabled"
@@ -14,4 +27,4 @@ data:
     apiserversources-nodeselector-testkey: testvalue
     apiserversources-nodeselector-testkey1: testvalue1
     apiserversources-nodeselector-testkey2: testvalue2
-
+  {{ end }}

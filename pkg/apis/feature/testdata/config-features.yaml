@@ -25,6 +25,7 @@ data:
     my-enabled-flag: "enabled"
     my-disabled-flag: "disabled"
     my-allowed-flag: "allowed"
+    default-authorization-mode: allow-same-namespace
     apiserversources-nodeselector-testkey: testvalue
     apiserversources-nodeselector-testkey1: testvalue1
     apiserversources-nodeselector-testkey2: testvalue2

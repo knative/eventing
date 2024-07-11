@@ -427,20 +427,23 @@ func TestAllBranches(t *testing.T) {
 						{Subscriber: createSubscriber(0)},
 					})))},
 			WantErr: false,
-			WantDeletes: []clientgotesting.DeleteActionImpl{{
-				ActionImpl: clientgotesting.ActionImpl{
-					Namespace: testNS,
-					Resource:  v1.SchemeGroupVersion.WithResource("subscriptions"),
+			WantUpdates: []clientgotesting.UpdateActionImpl{
+				{
+					ActionImpl: clientgotesting.ActionImpl{
+						Namespace: testNS,
+						Resource:  v1.SchemeGroupVersion.WithResource("subscriptions"),
+					},
+					Object: resources.NewSubscription(0, NewFlowsParallel(parallelName, testNS,
+						WithFlowsParallelChannelTemplateSpec(imc),
+						WithFlowsParallelBranches([]v1.ParallelBranch{
+							{Subscriber: createSubscriber(1)},
+						}))),
 				},
-				Name: resources.ParallelBranchChannelName(parallelName, 0),
-			}},
+			},
 			WantCreates: []runtime.Object{
 				createChannel(parallelName),
 				createBranchChannel(parallelName, 0),
 				resources.NewFilterSubscription(0, NewFlowsParallel(parallelName, testNS, WithFlowsParallelChannelTemplateSpec(imc), WithFlowsParallelBranches([]v1.ParallelBranch{
-					{Subscriber: createSubscriber(1)},
-				}))),
-				resources.NewSubscription(0, NewFlowsParallel(parallelName, testNS, WithFlowsParallelChannelTemplateSpec(imc), WithFlowsParallelBranches([]v1.ParallelBranch{
 					{Subscriber: createSubscriber(1)},
 				}))),
 			},

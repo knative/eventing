@@ -79,6 +79,8 @@ const (
 apiVersion: "messaging.knative.dev/v1"
 kind: "InMemoryChannel"
 `
+	readyEventPolicyName   = "test-event-policy-ready"
+	unreadyEventPolicyName = "test-event-policy-unready"
 )
 
 var (
@@ -135,6 +137,12 @@ var (
 
 	dls = duckv1.Addressable{
 		URL: apis.HTTP("test-dls.test-namespace.svc.cluster.local"),
+	}
+
+	brokerV1GVK = metav1.GroupVersionKind{
+		Group:   "eventing.knative.dev",
+		Version: "v1",
+		Kind:    "Broker",
 	}
 )
 
@@ -386,7 +394,8 @@ func TestReconcile(t *testing.T) {
 					WithChannelAPIVersionAnnotation(triggerChannelAPIVersion),
 					WithChannelKindAnnotation(triggerChannelKind),
 					WithChannelNameAnnotation(triggerChannelName),
-					WithDLSNotConfigured()),
+					WithDLSNotConfigured(),
+					WithBrokerEventPoliciesReadyBecauseOIDCDisabled()),
 			}},
 		}, {
 			Name: "Successful Reconciliation with a Channel with CA certs",
@@ -416,7 +425,8 @@ func TestReconcile(t *testing.T) {
 					WithChannelAPIVersionAnnotation(triggerChannelAPIVersion),
 					WithChannelKindAnnotation(triggerChannelKind),
 					WithChannelNameAnnotation(triggerChannelName),
-					WithDLSNotConfigured()),
+					WithDLSNotConfigured(),
+					WithBrokerEventPoliciesReadyBecauseOIDCDisabled()),
 			}},
 		}, {
 			Name: "Successful Reconciliation with a Channel with Audience",
@@ -446,7 +456,8 @@ func TestReconcile(t *testing.T) {
 					WithChannelAPIVersionAnnotation(triggerChannelAPIVersion),
 					WithChannelKindAnnotation(triggerChannelKind),
 					WithChannelNameAnnotation(triggerChannelName),
-					WithDLSNotConfigured()),
+					WithDLSNotConfigured(),
+					WithBrokerEventPoliciesReadyBecauseOIDCDisabled()),
 			}},
 		}, {
 			Name: "Successful Reconciliation. Using legacy channel template config element.",
@@ -475,7 +486,8 @@ func TestReconcile(t *testing.T) {
 					WithChannelAPIVersionAnnotation(triggerChannelAPIVersion),
 					WithChannelKindAnnotation(triggerChannelKind),
 					WithChannelNameAnnotation(triggerChannelName),
-					WithDLSNotConfigured()),
+					WithDLSNotConfigured(),
+					WithBrokerEventPoliciesReadyBecauseOIDCDisabled()),
 			}},
 		}, {
 			Name: "Successful Reconciliation, status update fails",
@@ -507,7 +519,8 @@ func TestReconcile(t *testing.T) {
 					WithChannelAPIVersionAnnotation(triggerChannelAPIVersion),
 					WithChannelKindAnnotation(triggerChannelKind),
 					WithChannelNameAnnotation(triggerChannelName),
-					WithDLSNotConfigured()),
+					WithDLSNotConfigured(),
+					WithBrokerEventPoliciesReadyBecauseOIDCDisabled()),
 			}},
 			WantEvents: []string{
 				Eventf(corev1.EventTypeWarning, "UpdateFailed", `Failed to update status for "test-broker": inducing failure for update brokers`),
@@ -569,7 +582,8 @@ func TestReconcile(t *testing.T) {
 					WithChannelAddressAnnotation(triggerChannelURL),
 					WithChannelAPIVersionAnnotation(triggerChannelAPIVersion),
 					WithChannelKindAnnotation(triggerChannelKind),
-					WithChannelNameAnnotation(triggerChannelName)),
+					WithChannelNameAnnotation(triggerChannelName),
+					WithBrokerEventPoliciesReadyBecauseOIDCDisabled()),
 			}},
 			WantErr: false,
 		}, {
@@ -602,7 +616,8 @@ func TestReconcile(t *testing.T) {
 					WithChannelAddressAnnotation(triggerChannelURL),
 					WithChannelAPIVersionAnnotation(triggerChannelAPIVersion),
 					WithChannelKindAnnotation(triggerChannelKind),
-					WithChannelNameAnnotation(triggerChannelName)),
+					WithChannelNameAnnotation(triggerChannelName),
+					WithBrokerEventPoliciesReadyBecauseOIDCDisabled()),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
 				makeChannelDLSRefNamePatch(sinkSVCDest.Ref.Name),
@@ -636,7 +651,8 @@ func TestReconcile(t *testing.T) {
 					WithChannelAddressAnnotation(triggerChannelURL),
 					WithChannelAPIVersionAnnotation(triggerChannelAPIVersion),
 					WithChannelKindAnnotation(triggerChannelKind),
-					WithChannelNameAnnotation(triggerChannelName)),
+					WithChannelNameAnnotation(triggerChannelName),
+					WithBrokerEventPoliciesReadyBecauseOIDCDisabled()),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
 				makeChannelDeliveryRetryPatch(deliveryRetries),
@@ -685,6 +701,7 @@ func TestReconcile(t *testing.T) {
 							URL:  brokerAddress,
 						},
 					}),
+					WithBrokerEventPoliciesReadyBecauseOIDCDisabled(),
 				),
 			}},
 			Ctx: feature.ToContext(context.Background(), feature.Flags{
@@ -736,6 +753,7 @@ func TestReconcile(t *testing.T) {
 						URL:     httpsURL(brokerName, testNS),
 						CACerts: pointer.String(testCaCerts),
 					}),
+					WithBrokerEventPoliciesReadyBecauseOIDCDisabled(),
 				),
 			}},
 			Ctx: feature.ToContext(context.Background(), feature.Flags{
@@ -777,6 +795,138 @@ func TestReconcile(t *testing.T) {
 					WithChannelAPIVersionAnnotation(triggerChannelAPIVersion),
 					WithChannelKindAnnotation(triggerChannelKind),
 					WithChannelNameAnnotation(triggerChannelName),
+					WithBrokerEventPoliciesReadyBecauseNoPolicyAndOIDCEnabled(),
+				),
+			}},
+			Ctx: feature.ToContext(context.Background(), feature.Flags{
+				feature.OIDCAuthentication:       feature.Enabled,
+				feature.AuthorizationDefaultMode: feature.AuthorizationAllowSameNamespace,
+			}),
+		},
+		{
+			Name: "Should list applying EventPolicies",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
+					WithBrokerConfig(config()),
+					WithInitBrokerConditions),
+				createChannel(withChannelReady),
+				imcConfigMap(),
+				NewEndpoints(filterServiceName, systemNS,
+					WithEndpointsLabels(FilterLabels()),
+					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
+				NewEndpoints(ingressServiceName, systemNS,
+					WithEndpointsLabels(IngressLabels()),
+					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
+				NewEventPolicy(readyEventPolicyName, testNS,
+					WithReadyEventPolicyCondition,
+					WithEventPolicyToRef(brokerV1GVK, brokerName),
+				),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
+					WithBrokerConfig(config()),
+					WithBrokerReady,
+					WithBrokerAddress(&duckv1.Addressable{
+						URL:      brokerAddress,
+						Audience: &brokerAudience,
+					}),
+					WithChannelAddressAnnotation(triggerChannelURL),
+					WithChannelAPIVersionAnnotation(triggerChannelAPIVersion),
+					WithChannelKindAnnotation(triggerChannelKind),
+					WithChannelNameAnnotation(triggerChannelName),
+					WithDLSNotConfigured(),
+					WithBrokerEventPoliciesReady(),
+					WithBrokerEventPoliciesListed(readyEventPolicyName)),
+			}},
+			Ctx: feature.ToContext(context.Background(), feature.Flags{
+				feature.OIDCAuthentication: feature.Enabled,
+			}),
+		},
+		{
+			Name: "Should mark as NotReady on unready EventPolicies",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
+					WithBrokerConfig(config()),
+					WithInitBrokerConditions),
+				createChannel(withChannelReady),
+				imcConfigMap(),
+				NewEndpoints(filterServiceName, systemNS,
+					WithEndpointsLabels(FilterLabels()),
+					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
+				NewEndpoints(ingressServiceName, systemNS,
+					WithEndpointsLabels(IngressLabels()),
+					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
+				NewEventPolicy(unreadyEventPolicyName, testNS,
+					WithUnreadyEventPolicyCondition("", ""),
+					WithEventPolicyToRef(brokerV1GVK, brokerName),
+				),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
+					WithBrokerConfig(config()),
+					WithBrokerReady,
+					WithBrokerAddress(&duckv1.Addressable{
+						URL:      brokerAddress,
+						Audience: &brokerAudience,
+					}),
+					WithChannelAddressAnnotation(triggerChannelURL),
+					WithChannelAPIVersionAnnotation(triggerChannelAPIVersion),
+					WithChannelKindAnnotation(triggerChannelKind),
+					WithChannelNameAnnotation(triggerChannelName),
+					WithDLSNotConfigured(),
+					WithBrokerEventPoliciesNotReady("EventPoliciesNotReady", fmt.Sprintf("event policies %s are not ready", unreadyEventPolicyName))),
+			}},
+			Ctx: feature.ToContext(context.Background(), feature.Flags{
+				feature.OIDCAuthentication: feature.Enabled,
+			}),
+		},
+		{
+			Name: "Should list only Ready EventPolicies",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
+					WithBrokerConfig(config()),
+					WithInitBrokerConditions),
+				createChannel(withChannelReady),
+				imcConfigMap(),
+				NewEndpoints(filterServiceName, systemNS,
+					WithEndpointsLabels(FilterLabels()),
+					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
+				NewEndpoints(ingressServiceName, systemNS,
+					WithEndpointsLabels(IngressLabels()),
+					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
+				NewEventPolicy(readyEventPolicyName, testNS,
+					WithReadyEventPolicyCondition,
+					WithEventPolicyToRef(brokerV1GVK, brokerName),
+				),
+				NewEventPolicy(unreadyEventPolicyName, testNS,
+					WithUnreadyEventPolicyCondition("", ""),
+					WithEventPolicyToRef(brokerV1GVK, brokerName),
+				),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
+					WithBrokerConfig(config()),
+					WithBrokerReady,
+					WithBrokerAddress(&duckv1.Addressable{
+						URL:      brokerAddress,
+						Audience: &brokerAudience,
+					}),
+					WithChannelAddressAnnotation(triggerChannelURL),
+					WithChannelAPIVersionAnnotation(triggerChannelAPIVersion),
+					WithChannelKindAnnotation(triggerChannelKind),
+					WithChannelNameAnnotation(triggerChannelName),
+					WithDLSNotConfigured(),
+					WithBrokerEventPoliciesNotReady("EventPoliciesNotReady", fmt.Sprintf("event policies %s are not ready", unreadyEventPolicyName)),
+					WithBrokerEventPoliciesListed(readyEventPolicyName),
 				),
 			}},
 			Ctx: feature.ToContext(context.Background(), feature.Flags{
@@ -810,6 +960,7 @@ func TestReconcile(t *testing.T) {
 			secretLister:       listers.GetSecretLister(),
 			channelableTracker: duck.NewListableTrackerFromTracker(ctx, channelable.Get, tracker.New(func(types.NamespacedName) {}, 0)),
 			uriResolver:        resolver.NewURIResolverFromTracker(ctx, tracker.New(func(types.NamespacedName) {}, 0)),
+			eventPolicyLister:  listers.GetEventPolicyLister(),
 		}
 		return broker.NewReconciler(ctx, logger,
 			fakeeventingclient.Get(ctx), listers.GetBrokerLister(),
