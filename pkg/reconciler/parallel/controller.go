@@ -20,12 +20,14 @@ import (
 	"context"
 
 	"k8s.io/client-go/tools/cache"
+	"knative.dev/eventing/pkg/apis/feature"
 	v1 "knative.dev/eventing/pkg/apis/flows/v1"
 	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/injection/clients/dynamicclient"
+	"knative.dev/pkg/logging"
 
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
@@ -54,6 +56,14 @@ func NewController(
 		eventPolicyLister:  eventPolicyInformer.Lister(),
 	}
 	impl := parallelreconciler.NewImpl(ctx, r)
+
+	var globalResync func()
+	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {
+		if globalResync != nil {
+			globalResync()
+		}
+	})
+	featureStore.WatchConfigs(cmw)
 
 	r.channelableTracker = duck.NewListableTrackerFromTracker(ctx, channelable.Get, impl.Tracker)
 	parallelInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
