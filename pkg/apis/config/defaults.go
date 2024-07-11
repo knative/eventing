@@ -137,7 +137,9 @@ type DefaultConfig struct {
 	// DefaultBrokerClass and DefaultBrokerClassConfig are the default broker class for the whole cluster/namespace.
 	// Users have to specify both of them
 	DefaultBrokerClass string `json:"brokerClass,omitempty"`
-	*BrokerConfig      `json:",inline"`
+
+	//Deprecated: Use the config in BrokerClasses instead
+	*BrokerConfig `json:",inline"`
 
 	// Optional: BrokerClasses are the default broker classes' config. The key is the broker class name, and the value is the config for that broker class.
 	BrokerClasses map[string]*BrokerConfig `json:"brokerClasses,omitempty"`
@@ -183,8 +185,16 @@ func (d *Defaults) getBrokerConfigByClassName(ns string, brokerClassName string)
 				}
 				// if not found, return the cluster default config
 				return d.getClusterDefaultBrokerConfig(brokerClassName)
+			} else {
+				// If the brokerClassName exists in the BrokerClasses, return the config in the BrokerClasses
+				if config, ok := nsConfig.BrokerClasses[brokerClassName]; ok && config != nil {
+					return config, nil
+				} else {
+					// If the brokerClassName is the default broker class for the namespace, return the BrokerConfig
+					return nsConfig.BrokerConfig, nil
+				}
 			}
-			return nsConfig.BrokerConfig, nil
+
 		}
 	}
 
@@ -209,12 +219,18 @@ func (d *Defaults) getBrokerConfigForEmptyClassName(ns string) (*BrokerConfig, e
 // getClusterDefaultBrokerConfig returns the BrokerConfig for the given brokerClassName.
 func (d *Defaults) getClusterDefaultBrokerConfig(brokerClassName string) (*BrokerConfig, error) {
 	if d.ClusterDefaultConfig == nil || d.ClusterDefaultConfig.BrokerConfig == nil {
-		return nil, errors.New("Defaults for Broker Configurations have not been set up.")
+		return nil, errors.New("Defaults for Broker Configurations for cluster have not been set up.")
 	}
 
 	// Check if the brokerClassName is the default broker class for the whole cluster
 	if brokerClassName == "" || d.ClusterDefaultConfig.DefaultBrokerClass == brokerClassName {
-		return d.ClusterDefaultConfig.BrokerConfig, nil
+		// If the brokerClassName exists in the BrokerClasses, return the config in the BrokerClasses
+		if config, ok := d.ClusterDefaultConfig.BrokerClasses[brokerClassName]; ok && config != nil {
+			return config, nil
+		} else {
+			// If the brokerClassName is the default broker class for the cluster, return the BrokerConfig
+			return d.ClusterDefaultConfig.BrokerConfig, nil
+		}
 	}
 
 	if config, ok := d.ClusterDefaultConfig.BrokerClasses[brokerClassName]; ok && config != nil {
