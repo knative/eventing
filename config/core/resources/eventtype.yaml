@@ -23,7 +23,7 @@ spec:
   group: eventing.knative.dev
   versions:
   - name: v1beta3
-    served: false
+    served: true
     storage: false
     subresources:
       status: {}

@@ -23,8 +23,8 @@ import (
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 
-	eventtypeinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta2/eventtype"
-	eventtypereconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1beta2/eventtype"
+	eventtypeinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta3/eventtype"
+	eventtypereconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1beta3/eventtype"
 )
 
 // NewController initializes the controller and is called by the generated code
