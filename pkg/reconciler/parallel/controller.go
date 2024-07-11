@@ -65,7 +65,7 @@ func NewController(
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 
-	parallelGK := v1.SchemeGroupVersion.WithKind("Parallel").GroupKind()
+	parallelGK := v1.Kind("Parallel")
 	// Enqueue the Parallel, if we have an EventPolicy which was referencing
 	// or got updated and now is referencing the Parallel
 	eventPolicyInformer.Informer().AddEventHandler(auth.EventPolicyEventHandler(
