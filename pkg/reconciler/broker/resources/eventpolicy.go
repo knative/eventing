@@ -22,6 +22,7 @@ import (
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/pkg/kmeta"
 )
 
 const (
@@ -37,7 +38,7 @@ func MakeEventPolicyForBackingChannel(b *eventingv1.Broker, backingChannel *even
 	return &eventingv1alpha1.EventPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: backingChannel.Namespace,
-			Name:      b.Name + "-event-policy",
+			Name:      BrokerEventPolicyName(b.Name, backingChannel.Name),
 			OwnerReferences: []metav1.OwnerReference{
 				{
 					APIVersion: brokerAPIVersion,
@@ -73,4 +74,8 @@ func LabelsForBackingChannelsEventPolicy(broker *eventingv1.Broker) map[string]s
 		BackingChannelEventPolicyLabelPrefix + "broker-kind":    brokerKind,
 		BackingChannelEventPolicyLabelPrefix + "broker-name":    broker.Name,
 	}
+}
+
+func BrokerEventPolicyName(brokerName, channelName string) string {
+	return kmeta.ChildName(brokerName, "-ep-"+channelName)
 }

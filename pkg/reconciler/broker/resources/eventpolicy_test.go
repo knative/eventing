@@ -43,7 +43,7 @@ func TestMakeEventPolicyForBackingChannel(t *testing.T) {
 	want := &eventingv1alpha1.EventPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "test-namespace",
-			Name:      "test-broker-event-policy",
+			Name:      BrokerEventPolicyName(broker.Name, backingChannel.Name),
 			OwnerReferences: []metav1.OwnerReference{
 				{
 					APIVersion: "eventing.knative.dev/v1",

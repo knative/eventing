@@ -1290,7 +1290,7 @@ func makeTLSSecret() *corev1.Secret {
 }
 
 func makeEventPolicy() *eventingv1alpha1.EventPolicy {
-	return NewEventPolicy(brokerName+"-event-policy", testNS,
+	return NewEventPolicy(resources.BrokerEventPolicyName(brokerName, triggerChannelName), testNS,
 		WithEventPolicyToRef(channelV1GVK, triggerChannelName),
 		WithEventPolicyFromSub(resources.OIDCBrokerSub),
 		WithEventPolicyOwnerReferences([]metav1.OwnerReference{
