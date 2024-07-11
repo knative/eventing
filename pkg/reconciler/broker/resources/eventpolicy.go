@@ -18,6 +18,7 @@ package resources
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
@@ -58,7 +59,7 @@ func MakeEventPolicyForBackingChannel(b *eventingv1.Broker, backingChannel *even
 			},
 			From: []eventingv1alpha1.EventPolicySpecFrom{
 				{
-					Sub: toStrPtr(OIDCBrokerSub),
+					Sub: ptr.To(OIDCBrokerSub),
 				},
 			},
 		},
@@ -72,8 +73,4 @@ func LabelsForBackingChannelsEventPolicy(broker *eventingv1.Broker) map[string]s
 		BackingChannelEventPolicyLabelPrefix + "broker-kind":    brokerKind,
 		BackingChannelEventPolicyLabelPrefix + "broker-name":    broker.Name,
 	}
-}
-
-func toStrPtr(s string) *string {
-	return &s
 }

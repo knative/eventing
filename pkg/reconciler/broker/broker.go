@@ -451,7 +451,7 @@ func (r *Reconciler) reconcileBrokerChannelEventPolicies(ctx context.Context, b 
 			}
 		} else if err != nil {
 			return fmt.Errorf("failed to get EventPolicy for Broker %s: %w", expected.Name, err)
-		} else if r.policyNeedsUpdate(foundEP, expected) {
+		} else if policyNeedsUpdate(foundEP, expected) {
 			// update the EventPolicy if it exists and needs update.
 			logging.FromContext(ctx).Info("Updating EventPolicy for Broker %s", expected.Name)
 			expected.SetResourceVersion(foundEP.GetResourceVersion())
@@ -480,7 +480,7 @@ func (r *Reconciler) reconcileBrokerChannelEventPolicies(ctx context.Context, b 
 	return nil
 }
 
-func (r *Reconciler) policyNeedsUpdate(foundEP, expected *eventingv1alpha1.EventPolicy) bool {
+func policyNeedsUpdate(foundEP, expected *eventingv1alpha1.EventPolicy) bool {
 	return !equality.Semantic.DeepDerivative(expected, foundEP)
 }
 

@@ -21,6 +21,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
@@ -64,7 +65,7 @@ func TestMakeEventPolicyForBackingChannel(t *testing.T) {
 			},
 			From: []eventingv1alpha1.EventPolicySpecFrom{
 				{
-					Sub: toStrPtr(OIDCBrokerSub),
+					Sub: ptr.To(OIDCBrokerSub),
 				},
 			},
 		},
