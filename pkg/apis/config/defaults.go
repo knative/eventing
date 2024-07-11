@@ -154,7 +154,7 @@ type BrokerConfig struct {
 }
 
 // GetBrokerConfig returns a namespace specific Broker Config, and if
-// that doesn't exist, return a Cluster Default and if that doesn't exist
+// that doesn't exist, return a Cluster Default and if that doesn't exist return an error.
 func (d *Defaults) GetBrokerConfig(ns string, brokerClassName *string) (*BrokerConfig, error) {
 	if d == nil {
 		return nil, errors.New("Defaults are nil")
@@ -177,13 +177,14 @@ func (d *Defaults) getBrokerConfigByClassName(ns string, brokerClassName string)
 		// check if the brokerClassName is the default broker class for this namespace
 		if nsConfig.DefaultBrokerClass == brokerClassName {
 			if nsConfig.BrokerConfig == nil {
-				// as no default broker class config is set for this namespace, should get the cluster default config
+				// as no default broker class config is set for this namespace, check whether nsconfig's brokerClasses map has the config for this broker class
+				if config, ok := nsConfig.BrokerClasses[brokerClassName]; ok && config != nil {
+					return config, nil
+				}
+				// if not found, return the cluster default config
 				return d.getClusterDefaultBrokerConfig(brokerClassName)
 			}
 			return nsConfig.BrokerConfig, nil
-		}
-		if config, ok := nsConfig.BrokerClasses[brokerClassName]; ok && config != nil {
-			return config, nil
 		}
 	}
 
@@ -211,12 +212,8 @@ func (d *Defaults) getClusterDefaultBrokerConfig(brokerClassName string) (*Broke
 		return nil, errors.New("Defaults for Broker Configurations have not been set up.")
 	}
 
-	if brokerClassName == "" {
-		return d.ClusterDefaultConfig.BrokerConfig, nil
-	}
-
 	// Check if the brokerClassName is the default broker class for the whole cluster
-	if d.ClusterDefaultConfig.DefaultBrokerClass == brokerClassName {
+	if brokerClassName == "" || d.ClusterDefaultConfig.DefaultBrokerClass == brokerClassName {
 		return d.ClusterDefaultConfig.BrokerConfig, nil
 	}
 
@@ -248,5 +245,5 @@ func (d *Defaults) GetBrokerClass(ns string) (string, error) {
 	}
 
 	// If neither namespace specific nor cluster default broker class is found
-	return "", fmt.Errorf("Defaults are nil")
+	return "", fmt.Errorf("Neither namespace specific nor cluster default broker class is found for namespace %q, please set them via ConfigMap config-br-defaults", ns)
 }
