@@ -28,10 +28,7 @@ import (
 const (
 	BackingChannelEventPolicyLabelPrefix = "eventing.knative.dev/"
 	OIDCBrokerSub                        = "system:serviceaccount:knative-eventing:mt-broker-ingress-oidc"
-	brokerAPIVersion                     = "eventing.knative.dev/v1"
-	version                              = "v1"
 	brokerKind                           = "Broker"
-	brokerGroup                          = "eventing.knative.dev"
 )
 
 func MakeEventPolicyForBackingChannel(b *eventingv1.Broker, backingChannel *eventingduckv1.Channelable) *eventingv1alpha1.EventPolicy {
@@ -41,7 +38,7 @@ func MakeEventPolicyForBackingChannel(b *eventingv1.Broker, backingChannel *even
 			Name:      BrokerEventPolicyName(b.Name, backingChannel.Name),
 			OwnerReferences: []metav1.OwnerReference{
 				{
-					APIVersion: brokerAPIVersion,
+					APIVersion: eventingv1.SchemeGroupVersion.String(),
 					Kind:       brokerKind,
 					Name:       b.Name,
 				},
@@ -69,8 +66,8 @@ func MakeEventPolicyForBackingChannel(b *eventingv1.Broker, backingChannel *even
 
 func LabelsForBackingChannelsEventPolicy(broker *eventingv1.Broker) map[string]string {
 	return map[string]string{
-		BackingChannelEventPolicyLabelPrefix + "broker-group":   brokerGroup,
-		BackingChannelEventPolicyLabelPrefix + "broker-version": version,
+		BackingChannelEventPolicyLabelPrefix + "broker-group":   eventingv1.SchemeGroupVersion.Group,
+		BackingChannelEventPolicyLabelPrefix + "broker-version": eventingv1.SchemeGroupVersion.Version,
 		BackingChannelEventPolicyLabelPrefix + "broker-kind":    brokerKind,
 		BackingChannelEventPolicyLabelPrefix + "broker-name":    broker.Name,
 	}

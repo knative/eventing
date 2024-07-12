@@ -436,14 +436,15 @@ func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterf
 }
 
 func (r *Reconciler) reconcileBrokerChannelEventPolicies(ctx context.Context, b *eventingv1.Broker, triggerChan *duckv1.Channelable, featureFlags feature.Flags) error {
-	expected := resources.MakeEventPolicyForBackingChannel(b, triggerChan)
+	logger := logging.FromContext(ctx)
 
+	expected := resources.MakeEventPolicyForBackingChannel(b, triggerChan)
 	if featureFlags.IsOIDCAuthentication() {
 		// Get the EventPolicy, create if not exists.
 		foundEP, err := r.eventPolicyLister.EventPolicies(expected.Namespace).Get(expected.Name)
 		if apierrs.IsNotFound(err) {
 			// Create the EventPolicy since it doesn't exist.
-			logging.FromContext(ctx).Debugw("Creating EventPolicy for Broker %s", expected.Name)
+			logger.Debugw("Creating EventPolicy for Broker %s", expected.Name)
 
 			_, err = r.eventingClientSet.EventingV1alpha1().EventPolicies(expected.Namespace).Create(ctx, expected, metav1.CreateOptions{})
 			if err != nil {
@@ -456,7 +457,7 @@ func (r *Reconciler) reconcileBrokerChannelEventPolicies(ctx context.Context, b 
 		}
 		if policyNeedsUpdate(foundEP, expected) {
 			// Update the EventPolicy since it exists and needs update.
-			logging.FromContext(ctx).Debugw("Updating EventPolicy for Broker %s", expected.Name)
+			logger.Debugw("Updating EventPolicy for Broker %s", expected.Name)
 			expected.SetResourceVersion(foundEP.GetResourceVersion())
 			_, err = r.eventingClientSet.EventingV1alpha1().EventPolicies(expected.Namespace).Update(ctx, expected, metav1.UpdateOptions{})
 			if err != nil {
@@ -467,18 +468,22 @@ func (r *Reconciler) reconcileBrokerChannelEventPolicies(ctx context.Context, b 
 	}
 
 	// List all the orphaned EventPolicies that have owner reference set to the Broker and delete them.
-	eventPolicies, err := r.eventPolicyLister.EventPolicies(expected.Namespace).List(labels.Everything())
+	selector, err := labels.ValidatedSelectorFromSet(resources.LabelsForBackingChannelsEventPolicy(b))
+	if err != nil {
+		return fmt.Errorf("could not get valid selector for broker's channel EventPolicy %s/%s: %w", b.Namespace, b.Name, err)
+	}
+	eventPolicies, err := r.eventPolicyLister.EventPolicies(expected.Namespace).List(selector)
 	if err != nil {
 		return fmt.Errorf("failed to list EventPolicies for Broker %s: %w", expected.Name, err)
 	}
 	for _, ep := range eventPolicies {
 		if metav1.IsControlledBy(ep, b) {
-			logging.FromContext(ctx).Debugw("Deleting EventPolicy for Broker %s", expected.Name)
+			logger.Debugw("Deleting EventPolicy for Broker %s", expected.Name)
 			err := r.eventingClientSet.EventingV1alpha1().EventPolicies(ep.Namespace).Delete(ctx, ep.Name, metav1.DeleteOptions{})
 			if err != nil {
 				return fmt.Errorf("failed to delete EventPolicy for Broker %s: %w", expected.Name, err)
 			}
-			logging.FromContext(ctx).Debugw("Deleted EventPolicy for Broker %s", expected.Name)
+			logger.Debugw("Deleted EventPolicy for Broker %s", expected.Name)
 		}
 	}
 	return nil
