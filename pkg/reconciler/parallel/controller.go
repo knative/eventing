@@ -55,7 +55,6 @@ func NewController(
 		eventingClientSet:  eventingclient.Get(ctx),
 		eventPolicyLister:  eventPolicyInformer.Lister(),
 	}
-	impl := parallelreconciler.NewImpl(ctx, r)
 
 	var globalResync func()
 	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {
@@ -64,6 +63,12 @@ func NewController(
 		}
 	})
 	featureStore.WatchConfigs(cmw)
+
+	impl := parallelreconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
+		return controller.Options{
+			ConfigStore: featureStore,
+		}
+	})
 
 	r.channelableTracker = duck.NewListableTrackerFromTracker(ctx, channelable.Get, impl.Tracker)
 	parallelInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
