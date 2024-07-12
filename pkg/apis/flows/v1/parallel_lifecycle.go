@@ -25,7 +25,7 @@ import (
 	pkgduckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
-var pCondSet = apis.NewLivingConditionSet(ParallelConditionReady, ParallelConditionChannelsReady, ParallelConditionSubscriptionsReady, ParallelConditionAddressable)
+var pCondSet = apis.NewLivingConditionSet(ParallelConditionReady, ParallelConditionChannelsReady, ParallelConditionSubscriptionsReady, ParallelConditionAddressable, ParallelConditionEventPoliciesReady)
 
 const (
 	// ParallelConditionReady has status True when all subconditions below have been set to True.
@@ -42,6 +42,10 @@ const (
 	// ParallelConditionAddressable has status true when this Parallel meets
 	// the Addressable contract and has a non-empty hostname.
 	ParallelConditionAddressable apis.ConditionType = "Addressable"
+
+	// ParallelConditionEventPoliciesReady has status True when applying EventPolicies for this
+	// Parallel are ready or if there are no EventPolicies.
+	ParallelConditionEventPoliciesReady apis.ConditionType = "EventPoliciesReady"
 )
 
 // GetConditionSet retrieves the condition set for this resource. Implements the KRShaped interface.
@@ -216,4 +220,24 @@ func (ps *ParallelStatus) setAddress(address *pkgduckv1.Addressable) {
 	} else {
 		pCondSet.Manage(ps).MarkTrue(ParallelConditionAddressable)
 	}
+}
+
+// MarkEventPoliciesFailed marks the ParallelConditionEventPoliciesReady as False with the given reason and message.
+func (ps *ParallelStatus) MarkEventPoliciesFailed(reason, messageFormat string, messageA ...interface{}) {
+	pCondSet.Manage(ps).MarkFalse(ParallelConditionEventPoliciesReady, reason, messageFormat, messageA...)
+}
+
+// MarkEventPoliciesUnknown marks the ParallelConditionEventPoliciesReady as Unknown with the given reason and message.
+func (ps *ParallelStatus) MarkEventPoliciesUnknown(reason, messageFormat string, messageA ...interface{}) {
+	pCondSet.Manage(ps).MarkUnknown(ParallelConditionEventPoliciesReady, reason, messageFormat, messageA...)
+}
+
+// MarkEventPoliciesTrue marks the ParallelConditionEventPoliciesReady as True.
+func (ps *ParallelStatus) MarkEventPoliciesTrue() {
+	pCondSet.Manage(ps).MarkTrue(ParallelConditionEventPoliciesReady)
+}
+
+// MarkEventPoliciesTrueWithReason marks the ParallelConditionEventPoliciesReady as True with the given reason and message.
+func (ps *ParallelStatus) MarkEventPoliciesTrueWithReason(reason, messageFormat string, messageA ...interface{}) {
+	pCondSet.Manage(ps).MarkTrueWithReason(ParallelConditionEventPoliciesReady, reason, messageFormat, messageA...)
 }

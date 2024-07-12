@@ -21,6 +21,9 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/pkg/apis/feature"
 	flowsv1 "knative.dev/eventing/pkg/apis/flows/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -111,5 +114,40 @@ func WithFlowsParallelSubscriptionsNotReady(reason, message string) FlowsParalle
 func WithFlowsParallelAddressableNotReady(reason, message string) FlowsParallelOption {
 	return func(p *flowsv1.Parallel) {
 		p.Status.MarkAddressableNotReady(reason, message)
+	}
+}
+
+func WithFlowsParallelEventPoliciesReady() FlowsParallelOption {
+	return func(p *flowsv1.Parallel) {
+		p.Status.MarkEventPoliciesTrue()
+	}
+}
+
+func WithFlowsParallelEventPoliciesNotReady(reason, message string) FlowsParallelOption {
+	return func(p *flowsv1.Parallel) {
+		p.Status.MarkEventPoliciesFailed(reason, message)
+	}
+}
+
+func WithFlowsParallelEventPoliciesReadyBecauseOIDCDisabled() FlowsParallelOption {
+	return func(p *flowsv1.Parallel) {
+		p.Status.MarkEventPoliciesTrueWithReason("OIDCDisabled", "Feature %q must be enabled to support Authorization", feature.OIDCAuthentication)
+	}
+}
+
+func WithFlowsParallelEventPoliciesReadyBecauseNoPolicyAndOIDCEnabled() FlowsParallelOption {
+	return func(p *flowsv1.Parallel) {
+		p.Status.MarkEventPoliciesTrueWithReason("DefaultAuthorizationMode", "Default authz mode is %q", feature.AuthorizationAllowSameNamespace)
+	}
+}
+
+func WithFlowsParallelEventPoliciesListed(policyNames ...string) FlowsParallelOption {
+	return func(p *flowsv1.Parallel) {
+		for _, name := range policyNames {
+			p.Status.Policies = append(p.Status.Policies, eventingduckv1.AppliedEventPolicyRef{
+				APIVersion: v1alpha1.SchemeGroupVersion.String(),
+				Name:       name,
+			})
+		}
 	}
 }
