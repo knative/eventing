@@ -62,6 +62,7 @@ func TestEventPolicySpecValidationWithOIDCAuthenticationFeatureFlagDisabled(t *t
 			ctx := feature.ToContext(context.TODO(), feature.Flags{
 				feature.OIDCAuthentication: feature.Disabled,
 			})
+			ctx = apis.WithinCreate(ctx)
 			got := test.ep.Validate(ctx)
 			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
 				t.Errorf("%s: Validate EventPolicySpec (-want, +got) = %v", test.name, diff)
@@ -69,6 +70,7 @@ func TestEventPolicySpecValidationWithOIDCAuthenticationFeatureFlagDisabled(t *t
 		})
 	}
 }
+
 func TestEventPolicySpecValidationWithOIDCAuthenticationFeatureFlagEnabled(t *testing.T) {
 	tests := []struct {
 		name string

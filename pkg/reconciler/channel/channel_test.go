@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/pkg/apis/feature"
 
 	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
 
@@ -576,6 +577,9 @@ func TestReconcile(t *testing.T) {
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		ctx = channelable.WithDuck(ctx)
 		ctx = v1addr.WithDuck(ctx)
+		ctx = feature.ToContext(ctx, feature.Flags{
+			feature.OIDCAuthentication: feature.Enabled,
+		})
 		r := &Reconciler{
 			dynamicClientSet:   fakedynamicclient.Get(ctx),
 			channelLister:      listers.GetMessagingChannelLister(),

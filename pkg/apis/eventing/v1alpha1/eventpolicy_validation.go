@@ -25,13 +25,17 @@ import (
 )
 
 func (ep *EventPolicy) Validate(ctx context.Context) *apis.FieldError {
+	// To not allow creation or spec updates of EventPolicy CRs
+	// if the oidc-authentication feature is not enabled
+	if apis.IsInCreate(ctx) || apis.IsInSpec(ctx) {
+		if !feature.FromContext(ctx).IsOIDCAuthentication() {
+			return apis.ErrGeneric("oidc-authentication feature not enabled")
+		}
+	}
 	return ep.Spec.Validate(ctx).ViaField("spec")
 }
 
 func (ets *EventPolicySpec) Validate(ctx context.Context) *apis.FieldError {
-	if !feature.FromContext(ctx).IsOIDCAuthentication() {
-		return apis.ErrGeneric("oidc-authentication feature not enabled")
-	}
 	var err *apis.FieldError
 	for i, f := range ets.From {
 		if f.Ref == nil && (f.Sub == nil || *f.Sub == "") {
