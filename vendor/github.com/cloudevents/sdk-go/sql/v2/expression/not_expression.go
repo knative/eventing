@@ -16,12 +16,12 @@ type notExpression baseUnaryExpression
 func (l notExpression) Evaluate(event cloudevents.Event) (interface{}, error) {
 	val, err := l.child.Evaluate(event)
 	if err != nil {
-		return nil, err
+		return false, err
 	}
 
 	val, err = utils.Cast(val, cesql.BooleanType)
 	if err != nil {
-		return nil, err
+		return false, err
 	}
 
 	return !(val.(bool)), nil

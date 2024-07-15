@@ -6,9 +6,8 @@
 package expression
 
 import (
-	"errors"
-
 	cesql "github.com/cloudevents/sdk-go/sql/v2"
+	sqlerrors "github.com/cloudevents/sdk-go/sql/v2/errors"
 	"github.com/cloudevents/sdk-go/sql/v2/utils"
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 )
@@ -21,22 +20,22 @@ type mathExpression struct {
 func (s mathExpression) Evaluate(event cloudevents.Event) (interface{}, error) {
 	leftVal, err := s.left.Evaluate(event)
 	if err != nil {
-		return nil, err
+		return int32(0), err
 	}
 
 	rightVal, err := s.right.Evaluate(event)
 	if err != nil {
-		return nil, err
+		return int32(0), err
 	}
 
 	leftVal, err = utils.Cast(leftVal, cesql.IntegerType)
 	if err != nil {
-		return nil, err
+		return int32(0), err
 	}
 
 	rightVal, err = utils.Cast(rightVal, cesql.IntegerType)
 	if err != nil {
-		return nil, err
+		return int32(0), err
 	}
 
 	return s.fn(leftVal.(int32), rightVal.(int32))
@@ -86,7 +85,7 @@ func NewModuleExpression(left cesql.Expression, right cesql.Expression) cesql.Ex
 		},
 		fn: func(x, y int32) (int32, error) {
 			if y == 0 {
-				return 0, errors.New("math error: division by zero")
+				return 0, sqlerrors.NewMathError("division by zero")
 			}
 			return x % y, nil
 		},
@@ -101,7 +100,7 @@ func NewDivisionExpression(left cesql.Expression, right cesql.Expression) cesql.
 		},
 		fn: func(x, y int32) (int32, error) {
 			if y == 0 {
-				return 0, errors.New("math error: division by zero")
+				return 0, sqlerrors.NewMathError("division by zero")
 			}
 			return x / y, nil
 		},

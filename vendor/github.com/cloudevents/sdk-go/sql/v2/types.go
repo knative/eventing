@@ -34,6 +34,21 @@ func (t Type) String() string {
 	return "Any"
 }
 
+func (t Type) ZeroValue() interface{} {
+	switch t {
+	case StringType:
+		return ""
+	case IntegerType:
+		return 0
+	case BooleanType:
+		return false
+	case AnyType:
+		// by default, return false
+		return false
+	}
+	return false
+}
+
 func TypeFromVal(val interface{}) Type {
 	switch val.(type) {
 	case string:
