@@ -18,15 +18,20 @@ package graph
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	eventingv1beta3 "knative.dev/eventing/pkg/apis/eventing/v1beta3"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/injection/clients/dynamicclient"
 )
 
 func ConstructGraph(ctx context.Context, filterFunc func(obj interface{}) bool) (*Graph, error) {
@@ -56,67 +61,14 @@ func ConstructGraph(ctx context.Context, filterFunc func(obj interface{}) bool) 
 		}
 	}
 
-	apiServerSources, err := eventingClient.SourcesV1().ApiServerSources("").List(ctx, metav1.ListOptions{})
+	sources, err := getSources(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, apiServerSource := range apiServerSources.Items {
-		if filterFunc(apiServerSource) {
-			g.AddSource(duckv1.Source{
-				ObjectMeta: apiServerSource.ObjectMeta,
-				TypeMeta:   apiServerSource.TypeMeta,
-				Spec:       apiServerSource.Spec.SourceSpec,
-				Status:     apiServerSource.Status.SourceStatus,
-			})
-		}
-	}
-
-	containerSources, err := eventingClient.SourcesV1().ContainerSources("").List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return nil, err
-	}
-
-	for _, containerSource := range containerSources.Items {
-		if filterFunc(containerSource) {
-			g.AddSource(duckv1.Source{
-				ObjectMeta: containerSource.ObjectMeta,
-				TypeMeta:   containerSource.TypeMeta,
-				Spec:       containerSource.Spec.SourceSpec,
-				Status:     containerSource.Status.SourceStatus,
-			})
-		}
-	}
-
-	pingSources, err := eventingClient.SourcesV1().PingSources("").List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return nil, err
-	}
-
-	for _, pingSource := range pingSources.Items {
-		if filterFunc(pingSource) {
-			g.AddSource(duckv1.Source{
-				ObjectMeta: pingSource.ObjectMeta,
-				TypeMeta:   pingSource.TypeMeta,
-				Spec:       pingSource.Spec.SourceSpec,
-				Status:     pingSource.Status.SourceStatus,
-			})
-		}
-	}
-
-	sinkBindings, err := eventingClient.SourcesV1().SinkBindings("").List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return nil, err
-	}
-
-	for _, sinkBinding := range sinkBindings.Items {
-		if filterFunc(sinkBinding) {
-			g.AddSource(duckv1.Source{
-				ObjectMeta: sinkBinding.ObjectMeta,
-				TypeMeta:   sinkBinding.TypeMeta,
-				Spec:       sinkBinding.Spec.SourceSpec,
-				Status:     sinkBinding.Status.SourceStatus,
-			})
+	for _, source := range sources {
+		if filterFunc(source) {
+			g.AddSource(source)
 		}
 	}
 
@@ -348,4 +300,123 @@ func (g *Graph) AddSubscription(subscription messagingv1.Subscription) error {
 
 	return nil
 
+}
+
+func getSources(ctx context.Context) ([]duckv1.Source, error) {
+	client := dynamicclient.Get(ctx)
+	sourceCRDs, err := client.Resource(
+		schema.GroupVersionResource{
+			Group:    "apiextentions.k8s.io",
+			Version:  "v1",
+			Resource: "customresourcedefinitions",
+		},
+	).List(ctx, metav1.ListOptions{LabelSelector: labels.Set{"duck.knative.dev/source": "true"}.String()})
+	if err != nil {
+		return nil, fmt.Errorf("unable to list source CRDs: %w", err)
+	}
+
+	duckSources := []duckv1.Source{}
+
+	for i := range sourceCRDs.Items {
+		sourceCrd := sourceCRDs.Items[i]
+		sourceGVR, err := gvrFromUnstructured(&sourceCrd)
+		if err != nil {
+			continue
+		}
+
+		sourcesList, err := client.Resource(sourceGVR).List(ctx, metav1.ListOptions{})
+		if err != nil {
+			continue
+		}
+
+		for i := range sourcesList.Items {
+			unstructuredSource := sourcesList.Items[i]
+			duckSource, err := duckSourceFromUnstructured(&unstructuredSource)
+			if err == nil {
+				duckSources = append(duckSources, duckSource)
+			}
+		}
+	}
+
+	return duckSources, nil
+}
+
+func duckSourceFromUnstructured(u *unstructured.Unstructured) (duckv1.Source, error) {
+	duckSource := duckv1.Source{}
+	marshalled, err := u.MarshalJSON()
+	if err != nil {
+		return duckSource, err
+	}
+
+	err = json.Unmarshal(marshalled, &duckSource)
+	return duckSource, err
+}
+func gvrFromUnstructured(u *unstructured.Unstructured) (schema.GroupVersionResource, error) {
+	group, err := groupFromUnstructured(u)
+	if err != nil {
+		return schema.GroupVersionResource{}, err
+	}
+
+	version, err := versionFromUnstructured(u)
+	if err != nil {
+		return schema.GroupVersionResource{}, err
+	}
+
+	resource, err := resourceFromUnstructured(u)
+	if err != nil {
+		return schema.GroupVersionResource{}, err
+	}
+
+	return schema.GroupVersionResource{
+		Group:    group,
+		Version:  version,
+		Resource: resource,
+	}, nil
+}
+
+func groupFromUnstructured(u *unstructured.Unstructured) (string, error) {
+	content := u.UnstructuredContent()
+	group, found, err := unstructured.NestedString(content, "spec", "group")
+	if !found || err != nil {
+		return "", fmt.Errorf("can't find source kind from source CRD: %w", err)
+	}
+
+	return group, nil
+}
+
+func versionFromUnstructured(u *unstructured.Unstructured) (string, error) {
+	content := u.UnstructuredContent()
+	var version string
+	versions, found, err := unstructured.NestedSlice(content, "spec", "versions")
+	if !found || err != nil || len(versions) == 0 {
+		version, found, err = unstructured.NestedString(content, "spec", "version")
+		if !found || err != nil {
+			return "", fmt.Errorf("can't find source version from source CRD: %w", err)
+		}
+	} else {
+		for _, v := range versions {
+			if vmap, ok := v.(map[string]interface{}); ok {
+				if vmap["served"] == true {
+					version = vmap["name"].(string)
+					break
+				}
+			}
+		}
+	}
+
+	if version == "" {
+		return "", fmt.Errorf("can't find source version from source CRD: %w", err)
+	}
+
+	return version, nil
+}
+
+func resourceFromUnstructured(u *unstructured.Unstructured) (string, error) {
+	content := u.UnstructuredContent()
+	resource, found, err := unstructured.NestedString(content, "spec", "names", "plural")
+	if !found || err != nil {
+		return "", fmt.Errorf("can't find source resource from source CRD: %w", err)
+	}
+
+	return resource, nil
 }
