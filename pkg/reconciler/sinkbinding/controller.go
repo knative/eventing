@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -44,7 +44,7 @@ import (
 	"knative.dev/pkg/apis/duck"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	configmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap/filtered"
-	secretinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/secret"
+	secretinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/secret/filtered"
 	serviceaccountinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount/filtered"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
@@ -80,7 +80,7 @@ func NewController(
 	psInformerFactory := podspecable.Get(ctx)
 	namespaceInformer := namespace.Get(ctx)
 	oidcServiceaccountInformer := serviceaccountinformer.Get(ctx, auth.OIDCLabelSelector)
-	secretInformer := secretinformer.Get(ctx)
+	secretInformer := secretinformer.Get(ctx, auth.OIDCLabelSelector)
 	trustBundleConfigMapInformer := configmapinformer.Get(ctx, eventingtls.TrustBundleLabelSelector)
 	trustBundleConfigMapLister := trustBundleConfigMapInformer.Lister()
 

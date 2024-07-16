@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -53,7 +53,7 @@ func SourceToTriggerSinkWithDLS() *feature.Feature {
 	// Setup trigger
 	f.Setup("install trigger", trigger.Install(
 		triggerName,
-		brokerName,
+		trigger.WithBrokerName(brokerName),
 		trigger.WithSubscriber(nil, "bad://uri"),
 		delivery.WithDeadLetterSink(prober.AsKReference(triggerSinkName), "")))
 
@@ -105,7 +105,7 @@ func SourceToTriggerSinkWithDLSDontUseBrokers() *feature.Feature {
 
 	f.Setup("install trigger", trigger.Install(
 		triggerName,
-		brokerName,
+		trigger.WithBrokerName(brokerName),
 		trigger.WithSubscriber(nil, "bad://uri"),
 		delivery.WithDeadLetterSink(prober.AsKReference(triggerSinkName), "")))
 
@@ -154,8 +154,8 @@ func BadTriggerDoesNotAffectOkTrigger() *feature.Feature {
 	f.Setup("Broker is ready", broker.IsReady(brokerName))
 	prober.SetTargetResource(broker.GVR(), brokerName)
 
-	f.Setup("install trigger via1", trigger.Install(via1, brokerName, trigger.WithSubscriber(nil, "bad://uri")))
-	f.Setup("install trigger via2", trigger.Install(via2, brokerName, trigger.WithSubscriber(prober.AsKReference(sink), "")))
+	f.Setup("install trigger via1", trigger.Install(via1, trigger.WithBrokerName(brokerName), trigger.WithSubscriber(nil, "bad://uri")))
+	f.Setup("install trigger via2", trigger.Install(via2, trigger.WithBrokerName(brokerName), trigger.WithSubscriber(prober.AsKReference(sink), "")))
 
 	// Resources ready.
 	f.Setup("trigger1 goes ready", trigger.IsReady(via1))

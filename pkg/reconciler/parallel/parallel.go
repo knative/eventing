@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -36,10 +36,13 @@ import (
 	pkgreconciler "knative.dev/pkg/reconciler"
 
 	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	"knative.dev/eventing/pkg/apis/feature"
 	v1 "knative.dev/eventing/pkg/apis/flows/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
+	"knative.dev/eventing/pkg/auth"
 	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
 	parallelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/flows/v1/parallel"
+	eventingv1alpha1listers "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 	listers "knative.dev/eventing/pkg/client/listers/flows/v1"
 	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1"
 	ducklib "knative.dev/eventing/pkg/duck"
@@ -58,6 +61,8 @@ type Reconciler struct {
 
 	// dynamicClientSet allows us to configure pluggable Build objects
 	dynamicClientSet dynamic.Interface
+
+	eventPolicyLister eventingv1alpha1listers.EventPolicyLister
 }
 
 // Check that our Reconciler implements parallelreconciler.Interface
@@ -71,6 +76,8 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, p *v1.Parallel) pkgrecon
 	//     2.2 create a Subscription to the filter Channel, subscribe the subscriber and send reply to
 	//         either the branch Reply. If not present, send reply to the global Reply. If not present, do not send reply.
 	// 3. Rinse and repeat step #2 above for each branch in the list
+	featureFlags := feature.FromContext(ctx)
+
 	if p.Status.BranchStatuses == nil {
 		p.Status.BranchStatuses = make([]v1.ParallelBranchStatus, 0)
 	}
@@ -135,6 +142,11 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, p *v1.Parallel) pkgrecon
 
 	if err := r.removeUnwantedSubscriptions(ctx, p, append(filterSubs, subs...)); err != nil {
 		return fmt.Errorf("error removing unwanted Subscriptions: %w", err)
+	}
+
+	err := auth.UpdateStatusWithEventPolicies(featureFlags, &p.Status.AppliedEventPoliciesStatus, &p.Status, r.eventPolicyLister, v1.SchemeGroupVersion.WithKind("Parallel"), p.ObjectMeta)
+	if err != nil {
+		return fmt.Errorf("could not update parallel status with EventPolicies: %v", err)
 	}
 
 	return nil

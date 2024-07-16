@@ -31,7 +31,7 @@ github.com/census-instrumentation/opencensus-proto/gen-go/agent/trace/v1
 github.com/census-instrumentation/opencensus-proto/gen-go/metrics/v1
 github.com/census-instrumentation/opencensus-proto/gen-go/resource/v1
 github.com/census-instrumentation/opencensus-proto/gen-go/trace/v1
-# github.com/cespare/xxhash/v2 v2.2.0
+# github.com/cespare/xxhash/v2 v2.3.0
 ## explicit; go 1.11
 github.com/cespare/xxhash/v2
 # github.com/cloudevents/conformance v0.2.0
@@ -45,9 +45,10 @@ github.com/cloudevents/sdk-go/observability/opencensus/v2/http
 # github.com/cloudevents/sdk-go/protocol/mqtt_paho/v2 v2.0.0-20240508060731-1ed9471c98bd
 ## explicit; go 1.18
 github.com/cloudevents/sdk-go/protocol/mqtt_paho/v2
-# github.com/cloudevents/sdk-go/sql/v2 v2.15.2
+# github.com/cloudevents/sdk-go/sql/v2 v2.0.0-20240712172937-3ce6b2f1f011
 ## explicit; go 1.18
 github.com/cloudevents/sdk-go/sql/v2
+github.com/cloudevents/sdk-go/sql/v2/errors
 github.com/cloudevents/sdk-go/sql/v2/expression
 github.com/cloudevents/sdk-go/sql/v2/function
 github.com/cloudevents/sdk-go/sql/v2/gen
@@ -344,15 +345,15 @@ go.uber.org/zap/internal/stacktrace
 go.uber.org/zap/internal/ztest
 go.uber.org/zap/zapcore
 go.uber.org/zap/zaptest
-# golang.org/x/crypto v0.24.0
-## explicit; go 1.18
+# golang.org/x/crypto v0.25.0
+## explicit; go 1.20
 golang.org/x/crypto/pbkdf2
-# golang.org/x/mod v0.18.0
+# golang.org/x/mod v0.19.0
 ## explicit; go 1.18
 golang.org/x/mod/internal/lazyregexp
 golang.org/x/mod/module
 golang.org/x/mod/semver
-# golang.org/x/net v0.26.0
+# golang.org/x/net v0.27.0
 ## explicit; go 1.18
 golang.org/x/net/context
 golang.org/x/net/http/httpguts
@@ -372,12 +373,12 @@ golang.org/x/oauth2/internal
 ## explicit; go 1.18
 golang.org/x/sync/errgroup
 golang.org/x/sync/semaphore
-# golang.org/x/sys v0.21.0
+# golang.org/x/sys v0.22.0
 ## explicit; go 1.18
 golang.org/x/sys/plan9
 golang.org/x/sys/unix
 golang.org/x/sys/windows
-# golang.org/x/term v0.21.0
+# golang.org/x/term v0.22.0
 ## explicit; go 1.18
 golang.org/x/term
 # golang.org/x/text v0.16.0
@@ -389,7 +390,7 @@ golang.org/x/text/unicode/norm
 # golang.org/x/time v0.5.0
 ## explicit; go 1.18
 golang.org/x/time/rate
-# golang.org/x/tools v0.22.0
+# golang.org/x/tools v0.23.0
 ## explicit; go 1.19
 golang.org/x/tools/go/ast/astutil
 golang.org/x/tools/imports
@@ -413,14 +414,15 @@ google.golang.org/genproto/googleapis/api/httpbody
 # google.golang.org/genproto/googleapis/rpc v0.0.0-20240528184218-531527333157
 ## explicit; go 1.20
 google.golang.org/genproto/googleapis/rpc/status
-# google.golang.org/grpc v1.64.0
-## explicit; go 1.19
+# google.golang.org/grpc v1.65.0
+## explicit; go 1.21
 google.golang.org/grpc
 google.golang.org/grpc/attributes
 google.golang.org/grpc/backoff
 google.golang.org/grpc/balancer
 google.golang.org/grpc/balancer/base
 google.golang.org/grpc/balancer/grpclb/state
+google.golang.org/grpc/balancer/pickfirst
 google.golang.org/grpc/balancer/roundrobin
 google.golang.org/grpc/binarylog/grpc_binarylog_v1
 google.golang.org/grpc/channelz
@@ -442,7 +444,6 @@ google.golang.org/grpc/internal/channelz
 google.golang.org/grpc/internal/credentials
 google.golang.org/grpc/internal/envconfig
 google.golang.org/grpc/internal/grpclog
-google.golang.org/grpc/internal/grpcrand
 google.golang.org/grpc/internal/grpcsync
 google.golang.org/grpc/internal/grpcutil
 google.golang.org/grpc/internal/idle
@@ -1049,16 +1050,16 @@ k8s.io/utils/pointer
 k8s.io/utils/ptr
 k8s.io/utils/strings/slices
 k8s.io/utils/trace
-# knative.dev/hack v0.0.0-20240607132042-09143140a254
+# knative.dev/hack v0.0.0-20240704013904-b9799599afcf
 ## explicit; go 1.18
 knative.dev/hack
-# knative.dev/hack/schema v0.0.0-20240607132042-09143140a254
+# knative.dev/hack/schema v0.0.0-20240704013904-b9799599afcf
 ## explicit; go 1.18
 knative.dev/hack/schema/commands
 knative.dev/hack/schema/docs
 knative.dev/hack/schema/registry
 knative.dev/hack/schema/schema
-# knative.dev/pkg v0.0.0-20240626134149-3f6a546ac3a4
+# knative.dev/pkg v0.0.0-20240708181110-b4e5f07a2c37
 ## explicit; go 1.22
 knative.dev/pkg/apiextensions/storageversion
 knative.dev/pkg/apiextensions/storageversion/cmd/migrate
@@ -1109,7 +1110,7 @@ knative.dev/pkg/client/injection/kube/informers/core/v1/endpoints/fake
 knative.dev/pkg/client/injection/kube/informers/core/v1/namespace
 knative.dev/pkg/client/injection/kube/informers/core/v1/namespace/fake
 knative.dev/pkg/client/injection/kube/informers/core/v1/pod
-knative.dev/pkg/client/injection/kube/informers/core/v1/secret
+knative.dev/pkg/client/injection/kube/informers/core/v1/secret/filtered
 knative.dev/pkg/client/injection/kube/informers/core/v1/service
 knative.dev/pkg/client/injection/kube/informers/core/v1/service/fake
 knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount
@@ -1204,8 +1205,8 @@ knative.dev/pkg/webhook/resourcesemantics
 knative.dev/pkg/webhook/resourcesemantics/conversion
 knative.dev/pkg/webhook/resourcesemantics/defaulting
 knative.dev/pkg/webhook/resourcesemantics/validation
-# knative.dev/reconciler-test v0.0.0-20240618170853-5bf0b86114f8
-## explicit; go 1.21
+# knative.dev/reconciler-test v0.0.0-20240704013940-3a59c9dfb680
+## explicit; go 1.22
 knative.dev/reconciler-test/cmd/eventshub
 knative.dev/reconciler-test/pkg/environment
 knative.dev/reconciler-test/pkg/eventshub

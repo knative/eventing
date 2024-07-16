@@ -58,6 +58,11 @@ func (table functionTable) AddFunction(function cesql.Function) error {
 	}
 }
 
+// Adds user defined function
+func AddFunction(fn cesql.Function) error {
+	return globalFunctionTable.AddFunction(fn)
+}
+
 func (table functionTable) ResolveFunction(name string, args int) cesql.Function {
 	item := table[strings.ToUpper(name)]
 	if item == nil {

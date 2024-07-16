@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,6 +18,8 @@ package broker
 
 import (
 	"context"
+
+	"knative.dev/eventing/pkg/auth"
 
 	"go.uber.org/zap"
 	"k8s.io/client-go/tools/cache"
@@ -41,6 +43,7 @@ import (
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
 	brokerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/broker"
+	eventpolicyinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventpolicy"
 	subscriptioninformer "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/subscription"
 	brokerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/broker"
 	"knative.dev/eventing/pkg/duck"
@@ -69,6 +72,7 @@ func NewController(
 	endpointsInformer := endpointsinformer.Get(ctx)
 	configmapInformer := configmapinformer.Get(ctx)
 	secretInformer := secretinformer.Get(ctx)
+	eventPolicyInformer := eventpolicyinformer.Get(ctx)
 
 	var globalResync func(obj interface{})
 
@@ -101,6 +105,7 @@ func NewController(
 		brokerClass:        eventing.MTChannelBrokerClassValue,
 		configmapLister:    configmapInformer.Lister(),
 		secretLister:       secretInformer.Lister(),
+		eventPolicyLister:  eventPolicyInformer.Lister(),
 	}
 	impl := brokerreconciler.NewImpl(ctx, r, eventing.MTChannelBrokerClassValue, func(impl *controller.Impl) controller.Options {
 		return controller.Options{
@@ -144,6 +149,12 @@ func NewController(
 		FilterFunc: controller.FilterWithName(ingressServerTLSSecretName),
 		Handler:    controller.HandleAll(globalResync),
 	})
+
+	brokerGK := eventingv1.SchemeGroupVersion.WithKind("Broker").GroupKind()
+
+	// Enqueue the Broker, if we have an EventPolicy which was referencing
+	// or got updated and now is referencing the Broker
+	eventPolicyInformer.Informer().AddEventHandler(auth.EventPolicyEventHandler(brokerInformer.Informer().GetIndexer(), brokerGK, impl.EnqueueKey))
 
 	return impl
 }

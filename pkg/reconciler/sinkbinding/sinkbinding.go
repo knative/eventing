@@ -193,6 +193,9 @@ func (s *SinkBindingSubResourcesReconciler) renewOIDCTokenSecret(ctx context.Con
 
 	apiVersion := fmt.Sprintf("%s/%s", v1.SchemeGroupVersion.Group, v1.SchemeGroupVersion.Version)
 	applyConfig := new(applyconfigurationcorev1.SecretApplyConfiguration).
+		WithLabels(map[string]string{
+			auth.OIDCLabelKey: "enabled",
+		}).
 		WithName(secretName).
 		WithNamespace(sb.Namespace).
 		WithType(corev1.SecretTypeOpaque).

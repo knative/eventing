@@ -49,7 +49,7 @@ Resource Types:
 <h3 id="duck.knative.dev/v1.AppliedEventPoliciesStatus">AppliedEventPoliciesStatus
 </h3>
 <p>
-(<em>Appears on:</em><a href="#duck.knative.dev/v1.ChannelableStatus">ChannelableStatus</a>, <a href="#eventing.knative.dev/v1.BrokerStatus">BrokerStatus</a>, <a href="#flows.knative.dev/v1.ParallelStatus">ParallelStatus</a>, <a href="#flows.knative.dev/v1.SequenceStatus">SequenceStatus</a>)
+(<em>Appears on:</em><a href="#duck.knative.dev/v1.ChannelableStatus">ChannelableStatus</a>, <a href="#eventing.knative.dev/v1.BrokerStatus">BrokerStatus</a>, <a href="#flows.knative.dev/v1.ParallelStatus">ParallelStatus</a>, <a href="#flows.knative.dev/v1.SequenceStatus">SequenceStatus</a>, <a href="#sinks.knative.dev/v1alpha1.JobSinkStatus">JobSinkStatus</a>)
 </p>
 <p>
 <p>AppliedEventPoliciesStatus contains the list of policies which apply to a resource.
@@ -504,6 +504,24 @@ For more details: <a href="https://github.com/knative/eventing/issues/5811">http
 - <a href="https://en.wikipedia.org/wiki/ISO_8601">https://en.wikipedia.org/wiki/ISO_8601</a></p>
 </td>
 </tr>
+<tr>
+<td>
+<code>format</code><br/>
+<em>
+<a href="#duck.knative.dev/v1.FormatType">
+FormatType
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>format specifies the desired event format for the cloud event.
+It can be one of the following values:
+- nil: default value, no specific format required.
+- &ldquo;JSON&rdquo;: indicates the event should be in structured mode.
+- &ldquo;binary&rdquo;: indicates the event should be in binary mode.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="duck.knative.dev/v1.DeliveryStatus">DeliveryStatus
@@ -563,6 +581,27 @@ string
 </td>
 </tr>
 </tbody>
+</table>
+<h3 id="duck.knative.dev/v1.FormatType">FormatType
+(<code>string</code> alias)</p></h3>
+<p>
+(<em>Appears on:</em><a href="#duck.knative.dev/v1.DeliverySpec">DeliverySpec</a>)
+</p>
+<p>
+<p>FormatType is the type for delivery format</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr><td><p>&#34;binary&#34;</p></td>
+<td></td>
+</tr><tr><td><p>&#34;json&#34;</p></td>
+<td></td>
+</tr></tbody>
 </table>
 <h3 id="duck.knative.dev/v1.Subscribable">Subscribable
 </h3>
@@ -5949,6 +5988,23 @@ JobStatus
 </td>
 <td>
 <em>(Optional)</em>
+</td>
+</tr>
+<tr>
+<td>
+<code>AppliedEventPoliciesStatus</code><br/>
+<em>
+<a href="#duck.knative.dev/v1.AppliedEventPoliciesStatus">
+AppliedEventPoliciesStatus
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>AppliedEventPoliciesStatus</code> are embedded into this type.)
+</p>
+<em>(Optional)</em>
+<p>AppliedEventPoliciesStatus contains the list of EventPolicies which apply to this JobSink</p>
 </td>
 </tr>
 </tbody>

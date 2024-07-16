@@ -49,7 +49,7 @@ data:
 
   # ALPHA feature: The cross-namespace-event-links flag allows you to use cross-namespace referencing for Eventing.
   # For more details: https://github.com/knative/eventing/issues/7739
-  cross-namespace-event-links: "disabled"
+  cross-namespace-event-links: "enabled"
 
   # ALPHA feature: The new-apiserversource-filters flag allows you to use the new `filters` field
   # in APIServerSource objects with its rich filtering capabilities.
