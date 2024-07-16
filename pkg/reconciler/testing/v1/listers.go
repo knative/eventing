@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,6 +18,7 @@ package testing
 
 import (
 	appsv1 "k8s.io/api/apps/v1"
+	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -26,20 +27,25 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	fakekubeclientset "k8s.io/client-go/kubernetes/fake"
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
+	batchv1listers "k8s.io/client-go/listers/batch/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	rbacv1listers "k8s.io/client-go/listers/rbac/v1"
 	"k8s.io/client-go/tools/cache"
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
-	eventingv1beta2 "knative.dev/eventing/pkg/apis/eventing/v1beta2"
+	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	eventingv1beta3 "knative.dev/eventing/pkg/apis/eventing/v1beta3"
 	flowsv1 "knative.dev/eventing/pkg/apis/flows/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
+	sinksv1alpha1 "knative.dev/eventing/pkg/apis/sinks/v1alpha1"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	fakeeventingclientset "knative.dev/eventing/pkg/client/clientset/versioned/fake"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1"
-	eventingv1beta2listers "knative.dev/eventing/pkg/client/listers/eventing/v1beta2"
+	eventingv1alpha1listers "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
+	eventingv1beta3listers "knative.dev/eventing/pkg/client/listers/eventing/v1beta3"
 	flowslisters "knative.dev/eventing/pkg/client/listers/flows/v1"
 	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1"
+	sinkslisters "knative.dev/eventing/pkg/client/listers/sinks/v1alpha1"
 	sourcelisters "knative.dev/eventing/pkg/client/listers/sources/v1"
 	testscheme "knative.dev/eventing/pkg/reconciler/testing/scheme"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -108,8 +114,16 @@ func (l *Listers) GetAllObjects() []runtime.Object {
 	return all
 }
 
-func (l *Listers) GetEventTypeLister() eventingv1beta2listers.EventTypeLister {
-	return eventingv1beta2listers.NewEventTypeLister(l.indexerFor(&eventingv1beta2.EventType{}))
+func (l *Listers) GetEventTypeLister() eventingv1beta3listers.EventTypeLister {
+	return eventingv1beta3listers.NewEventTypeLister(l.indexerFor(&eventingv1beta3.EventType{}))
+}
+
+func (l *Listers) GetEventPolicyLister() eventingv1alpha1listers.EventPolicyLister {
+	return eventingv1alpha1listers.NewEventPolicyLister(l.indexerFor(&eventingv1alpha1.EventPolicy{}))
+}
+
+func (l *Listers) GetJobSinkLister() sinkslisters.JobSinkLister {
+	return sinkslisters.NewJobSinkLister(l.indexerFor(&sinksv1alpha1.JobSink{}))
 }
 
 func (l *Listers) GetPingSourceLister() sourcelisters.PingSourceLister {
@@ -206,4 +220,8 @@ func (l *Listers) GetNodeLister() corev1listers.NodeLister {
 
 func (l *Listers) GetPodLister() corev1listers.PodLister {
 	return corev1listers.NewPodLister(l.indexerFor(&corev1.Pod{}))
+}
+
+func (l *Listers) GetJobLister() batchv1listers.JobLister {
+	return batchv1listers.NewJobLister(l.indexerFor(&batchv1.Job{}))
 }

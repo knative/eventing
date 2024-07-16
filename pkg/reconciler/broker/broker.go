@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -28,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 	corev1listers "k8s.io/client-go/listers/core/v1"
@@ -46,11 +47,13 @@ import (
 	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/apis/eventing"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/apis/feature"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	"knative.dev/eventing/pkg/auth"
 	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
 	brokerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/broker"
+	eventingv1alpha1listers "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1"
 	ducklib "knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/eventingtls"
@@ -79,6 +82,8 @@ type Reconciler struct {
 
 	// If specified, only reconcile brokers with these labels
 	brokerClass string
+
+	eventPolicyLister eventingv1alpha1listers.EventPolicyLister
 }
 
 // Check that our Reconciler implements Interface
@@ -116,7 +121,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(b),
 			},
-			Labels:      TriggerChannelLabels(b.Name),
+			Labels:      TriggerChannelLabels(b.Name, b.Namespace),
 			Annotations: map[string]string{eventing.ScopeAnnotationKey: eventing.ScopeCluster},
 		},
 		ducklib.WithChannelableSpec(tmpChannelableSpec),
@@ -255,6 +260,16 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 	}
 
 	b.GetConditionSet().Manage(b.GetStatus()).MarkTrue(eventingv1.BrokerConditionAddressable)
+
+	err = auth.UpdateStatusWithEventPolicies(featureFlags, &b.Status.AppliedEventPoliciesStatus, &b.Status, r.eventPolicyLister, eventingv1.SchemeGroupVersion.WithKind("Broker"), b.ObjectMeta)
+	if err != nil {
+		return fmt.Errorf("could not update broker status with EventPolicies: %v", err)
+	}
+
+	// Reconcile the EventPolicy for the Broker.
+	if err := r.reconcileBrokerChannelEventPolicies(ctx, b, triggerChan, featureFlags); err != nil {
+		return fmt.Errorf("failed to reconcile EventPolicy for Broker %s: %w", b.Name, err)
+	}
 
 	// So, at this point the Broker is ready and everything should be solid
 	// for the triggers to act upon.
@@ -420,9 +435,67 @@ func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterf
 	return channelable, nil
 }
 
+func (r *Reconciler) reconcileBrokerChannelEventPolicies(ctx context.Context, b *eventingv1.Broker, triggerChan *duckv1.Channelable, featureFlags feature.Flags) error {
+	logger := logging.FromContext(ctx)
+
+	expected := resources.MakeEventPolicyForBackingChannel(b, triggerChan)
+	if featureFlags.IsOIDCAuthentication() {
+		// Get the EventPolicy, create if not exists.
+		foundEP, err := r.eventPolicyLister.EventPolicies(expected.Namespace).Get(expected.Name)
+		if apierrs.IsNotFound(err) {
+			// Create the EventPolicy since it doesn't exist.
+			logger.Debugw("Creating EventPolicy for Broker %s", expected.Name)
+
+			_, err = r.eventingClientSet.EventingV1alpha1().EventPolicies(expected.Namespace).Create(ctx, expected, metav1.CreateOptions{})
+			if err != nil {
+				return fmt.Errorf("failed to create EventPolicy for Broker %s: %w", expected.Name, err)
+			}
+			return nil
+		}
+		if err != nil {
+			return fmt.Errorf("failed to get EventPolicy for Broker %s: %w", expected.Name, err)
+		}
+		if policyNeedsUpdate(foundEP, expected) {
+			// Update the EventPolicy since it exists and needs update.
+			logger.Debugw("Updating EventPolicy for Broker %s", expected.Name)
+			expected.SetResourceVersion(foundEP.GetResourceVersion())
+			_, err = r.eventingClientSet.EventingV1alpha1().EventPolicies(expected.Namespace).Update(ctx, expected, metav1.UpdateOptions{})
+			if err != nil {
+				return fmt.Errorf("failed to update EventPolicy for Broker %s: %w", expected.Name, err)
+			}
+		}
+		return nil
+	}
+
+	// List all the orphaned EventPolicies that have owner reference set to the Broker and delete them.
+	selector, err := labels.ValidatedSelectorFromSet(resources.LabelsForBackingChannelsEventPolicy(b))
+	if err != nil {
+		return fmt.Errorf("could not get valid selector for broker's channel EventPolicy %s/%s: %w", b.Namespace, b.Name, err)
+	}
+	eventPolicies, err := r.eventPolicyLister.EventPolicies(expected.Namespace).List(selector)
+	if err != nil {
+		return fmt.Errorf("failed to list EventPolicies for Broker %s: %w", expected.Name, err)
+	}
+	for _, ep := range eventPolicies {
+		if metav1.IsControlledBy(ep, b) {
+			logger.Debugw("Deleting EventPolicy for Broker %s", expected.Name)
+			err := r.eventingClientSet.EventingV1alpha1().EventPolicies(ep.Namespace).Delete(ctx, ep.Name, metav1.DeleteOptions{})
+			if err != nil {
+				return fmt.Errorf("failed to delete EventPolicy for Broker %s: %w", expected.Name, err)
+			}
+			logger.Debugw("Deleted EventPolicy for Broker %s", expected.Name)
+		}
+	}
+	return nil
+}
+
+func policyNeedsUpdate(foundEP, expected *eventingv1alpha1.EventPolicy) bool {
+	return !equality.Semantic.DeepDerivative(expected, foundEP)
+}
+
 // TriggerChannelLabels are all the labels placed on the Trigger Channel for the given brokerName. This
 // should only be used by Broker and Trigger code.
-func TriggerChannelLabels(brokerName string) map[string]string {
+func TriggerChannelLabels(brokerName, brokerNamespace string) map[string]string {
 	return map[string]string{
 		eventing.BrokerLabelKey:                 brokerName,
 		"eventing.knative.dev/brokerEverything": "true",

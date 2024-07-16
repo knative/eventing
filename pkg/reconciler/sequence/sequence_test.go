@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -28,10 +28,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	clientgotesting "k8s.io/client-go/testing"
 
-	"knative.dev/eventing/pkg/apis/feature"
 	v1 "knative.dev/eventing/pkg/apis/flows/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
-	"knative.dev/eventing/pkg/auth"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 
 	"knative.dev/pkg/apis"
@@ -52,15 +50,15 @@ import (
 	. "knative.dev/pkg/reconciler/testing"
 
 	. "knative.dev/eventing/pkg/reconciler/testing/v1"
-
-	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 )
 
 const (
-	testNS             = "test-namespace"
-	sequenceName       = "test-sequence"
-	replyChannelName   = "reply-channel"
-	sequenceGeneration = 7
+	testNS                 = "test-namespace"
+	sequenceName           = "test-sequence"
+	replyChannelName       = "reply-channel"
+	sequenceGeneration     = 7
+	readyEventPolicyName   = "test-event-policy-ready"
+	unreadyEventPolicyName = "test-event-policy-unready"
 )
 
 var (
@@ -68,6 +66,12 @@ var (
 		Group:   "messaging.knative.dev",
 		Version: "v1",
 		Kind:    "Subscriber",
+	}
+
+	sequenceGVK = metav1.GroupVersionKind{
+		Group:   "flows.knative.dev",
+		Version: "v1",
+		Kind:    "Sequence",
 	}
 )
 
@@ -190,10 +194,10 @@ func TestAllCases(t *testing.T) {
 				WithInitSequenceConditions,
 				WithSequenceChannelTemplateSpec(imc),
 				WithSequenceSteps([]v1.SequenceStep{{Destination: createDestination(0)}}),
-				WithSequenceOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
 				WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
 				WithSequenceAddressableNotReady("emptyAddress", "addressable is nil"),
 				WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+				WithSequenceEventPoliciesReadyBecauseOIDCDisabled(),
 				WithSequenceChannelStatuses([]v1.SequenceChannelStatus{
 					{
 						Channel: corev1.ObjectReference{
@@ -434,6 +438,7 @@ func TestAllCases(t *testing.T) {
 				WithSequenceAddressableNotReady("emptyAddress", "addressable is nil"),
 				WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
 				WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+				WithSequenceEventPoliciesReadyBecauseOIDCDisabled(),
 				WithSequenceChannelStatuses([]v1.SequenceChannelStatus{
 					{
 						Channel: corev1.ObjectReference{
@@ -465,8 +470,7 @@ func TestAllCases(t *testing.T) {
 							Message: "Subscription does not have Ready condition",
 						},
 					},
-				}),
-				WithSequenceOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled()),
+				})),
 		}},
 	}, {
 		Name: "threestep",
@@ -514,6 +518,7 @@ func TestAllCases(t *testing.T) {
 					{Destination: createDestination(2)}}),
 				WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
 				WithSequenceAddressableNotReady("emptyAddress", "addressable is nil"),
+				WithSequenceEventPoliciesReadyBecauseOIDCDisabled(),
 				WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
 				WithSequenceChannelStatuses([]v1.SequenceChannelStatus{
 					{
@@ -602,8 +607,7 @@ func TestAllCases(t *testing.T) {
 							Message: "Subscription does not have Ready condition",
 						},
 					},
-				}),
-				WithSequenceOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled()),
+				})),
 		}},
 	}, {
 		Name: "threestepwithdeliveryontwo",
@@ -652,6 +656,7 @@ func TestAllCases(t *testing.T) {
 				WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
 				WithSequenceAddressableNotReady("emptyAddress", "addressable is nil"),
 				WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+				WithSequenceEventPoliciesReadyBecauseOIDCDisabled(),
 				WithSequenceChannelStatuses([]v1.SequenceChannelStatus{
 					{
 						Channel: corev1.ObjectReference{
@@ -739,8 +744,7 @@ func TestAllCases(t *testing.T) {
 							Message: "Subscription does not have Ready condition",
 						},
 					},
-				}),
-				WithSequenceOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled()),
+				})),
 		}},
 	}, {
 		Name: "threestepwithreply",
@@ -792,6 +796,7 @@ func TestAllCases(t *testing.T) {
 				WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
 				WithSequenceAddressableNotReady("emptyAddress", "addressable is nil"),
 				WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+				WithSequenceEventPoliciesReadyBecauseOIDCDisabled(),
 				WithSequenceChannelStatuses([]v1.SequenceChannelStatus{
 					{
 						Channel: corev1.ObjectReference{
@@ -879,8 +884,7 @@ func TestAllCases(t *testing.T) {
 							Message: "Subscription does not have Ready condition",
 						},
 					},
-				}),
-				WithSequenceOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled()),
+				})),
 		}},
 	}, {
 		Name: "sequenceupdatesubscription",
@@ -896,18 +900,15 @@ func TestAllCases(t *testing.T) {
 				WithSequenceSteps([]v1.SequenceStep{{Destination: createDestination(0)}}))),
 		},
 		WantErr: false,
-		WantDeletes: []clientgotesting.DeleteActionImpl{{
+		WantUpdates: []clientgotesting.UpdateActionImpl{{
 			ActionImpl: clientgotesting.ActionImpl{
 				Namespace: testNS,
 				Resource:  v1.SchemeGroupVersion.WithResource("subscriptions"),
 			},
-			Name: resources.SequenceChannelName(sequenceName, 0),
-		}},
-		WantCreates: []runtime.Object{
-			resources.NewSubscription(0, NewSequence(sequenceName, testNS,
+			Object: resources.NewSubscription(0, NewSequence(sequenceName, testNS,
 				WithSequenceChannelTemplateSpec(imc),
 				WithSequenceSteps([]v1.SequenceStep{{Destination: createDestination(1)}}))),
-		},
+		}},
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 			Object: NewSequence(sequenceName, testNS,
 				WithInitSequenceConditions,
@@ -916,6 +917,7 @@ func TestAllCases(t *testing.T) {
 				WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
 				WithSequenceAddressableNotReady("emptyAddress", "addressable is nil"),
 				WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+				WithSequenceEventPoliciesReadyBecauseOIDCDisabled(),
 				WithSequenceChannelStatuses([]v1.SequenceChannelStatus{
 					{
 						Channel: corev1.ObjectReference{
@@ -947,8 +949,7 @@ func TestAllCases(t *testing.T) {
 							Message: "Subscription does not have Ready condition",
 						},
 					},
-				}),
-				WithSequenceOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled()),
+				})),
 		}},
 	}, {
 		Name: "sequenceupdate-remove-step",
@@ -1001,6 +1002,18 @@ func TestAllCases(t *testing.T) {
 				Name: resources.SequenceChannelName(sequenceName, 2),
 			},
 		},
+		WantUpdates: []clientgotesting.UpdateActionImpl{{
+			ActionImpl: clientgotesting.ActionImpl{
+				Namespace: testNS,
+				Resource:  v1.SchemeGroupVersion.WithResource("subscriptions"),
+			},
+			Object: resources.NewSubscription(1, NewSequence(sequenceName, testNS,
+				WithSequenceChannelTemplateSpec(imc),
+				WithSequenceSteps([]v1.SequenceStep{
+					{Destination: createDestination(0)},
+					{Destination: createDestination(1)}},
+				))),
+		}},
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 			Object: NewSequence(sequenceName, testNS,
 				WithInitSequenceConditions,
@@ -1011,6 +1024,7 @@ func TestAllCases(t *testing.T) {
 				WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
 				WithSequenceAddressableNotReady("emptyAddress", "addressable is nil"),
 				WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+				WithSequenceEventPoliciesReadyBecauseOIDCDisabled(),
 				WithSequenceChannelStatuses([]v1.SequenceChannelStatus{
 					{
 						Channel: corev1.ObjectReference{
@@ -1070,8 +1084,7 @@ func TestAllCases(t *testing.T) {
 							Message: "Subscription does not have Ready condition",
 						},
 					},
-				}),
-				WithSequenceOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled()),
+				})),
 		}},
 	}, {
 		Name: "sequenceupdate-remove-step-subscription-removal-fails",
@@ -1131,6 +1144,18 @@ func TestAllCases(t *testing.T) {
 				Name: resources.SequenceChannelName(sequenceName, 2),
 			},
 		},
+		WantUpdates: []clientgotesting.UpdateActionImpl{{
+			ActionImpl: clientgotesting.ActionImpl{
+				Namespace: testNS,
+				Resource:  v1.SchemeGroupVersion.WithResource("subscriptions"),
+			},
+			Object: resources.NewSubscription(1, NewSequence(sequenceName, testNS,
+				WithSequenceChannelTemplateSpec(imc),
+				WithSequenceSteps([]v1.SequenceStep{
+					{Destination: createDestination(0)},
+					{Destination: createDestination(1)}},
+				))),
+		}},
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 			Object: NewSequence(sequenceName, testNS,
 				WithInitSequenceConditions,
@@ -1141,6 +1166,7 @@ func TestAllCases(t *testing.T) {
 				WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
 				WithSequenceAddressableNotReady("emptyAddress", "addressable is nil"),
 				WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+				WithSequenceEventPoliciesReadyBecauseOIDCDisabled(),
 				WithSequenceChannelStatuses([]v1.SequenceChannelStatus{
 					{
 						Channel: corev1.ObjectReference{
@@ -1200,8 +1226,7 @@ func TestAllCases(t *testing.T) {
 							Message: "Subscription does not have Ready condition",
 						},
 					},
-				}),
-				WithSequenceOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled()),
+				})),
 		}},
 	}, {
 		Name: "sequenceupdate-remove-step-channel-removal-fails",
@@ -1245,6 +1270,18 @@ func TestAllCases(t *testing.T) {
 		WantEvents: []string{
 			Eventf(corev1.EventTypeWarning, "InternalError", "inducing failure for delete inmemorychannels"),
 		},
+		WantUpdates: []clientgotesting.UpdateActionImpl{{
+			ActionImpl: clientgotesting.ActionImpl{
+				Namespace: testNS,
+				Resource:  v1.SchemeGroupVersion.WithResource("subscriptions"),
+			},
+			Object: resources.NewSubscription(1, NewSequence(sequenceName, testNS,
+				WithSequenceChannelTemplateSpec(imc),
+				WithSequenceSteps([]v1.SequenceStep{
+					{Destination: createDestination(0)},
+					{Destination: createDestination(1)}},
+				))),
+		}},
 
 		WantDeletes: []clientgotesting.DeleteActionImpl{
 			{
@@ -1327,87 +1364,26 @@ func TestAllCases(t *testing.T) {
 				})),
 		}},
 	}, {
-		Name: "OIDC: creates OIDC service account",
+		Name: "Should provision applying EventPolicies",
 		Key:  pKey,
-		Ctx: feature.ToContext(context.Background(), feature.Flags{
-			feature.OIDCAuthentication: feature.Enabled,
-		}),
 		Objects: []runtime.Object{
 			NewSequence(sequenceName, testNS,
 				WithInitSequenceConditions,
 				WithSequenceChannelTemplateSpec(imc),
 				WithSequenceSteps([]v1.SequenceStep{{Destination: createDestination(0)}})),
-			createChannel(sequenceName, 0),
-			resources.NewSubscription(0,
-				NewSequence(sequenceName, testNS,
-					WithSequenceChannelTemplateSpec(imc),
-					WithSequenceSteps([]v1.SequenceStep{{Destination: createDestination(0)}})))},
+			NewEventPolicy(readyEventPolicyName, testNS,
+				WithReadyEventPolicyCondition,
+				WithEventPolicyToRef(sequenceGVK, sequenceName),
+			),
+		},
 		WantErr: false,
 		WantCreates: []runtime.Object{
-			makeSequenceOIDCServiceAccount(),
-		},
-		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-			Object: NewSequence(sequenceName, testNS,
-				WithInitSequenceConditions,
-				WithSequenceChannelTemplateSpec(imc),
-				WithSequenceSteps([]v1.SequenceStep{{Destination: createDestination(0)}}),
-				WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
-				WithSequenceAddressableNotReady("emptyAddress", "addressable is nil"),
-				WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
-				WithSequenceChannelStatuses([]v1.SequenceChannelStatus{
-					{
-						Channel: corev1.ObjectReference{
-							APIVersion: "messaging.knative.dev/v1",
-							Kind:       "InMemoryChannel",
-							Name:       resources.SequenceChannelName(sequenceName, 0),
-							Namespace:  testNS,
-						},
-						ReadyCondition: apis.Condition{
-							Type:    apis.ConditionReady,
-							Status:  corev1.ConditionUnknown,
-							Reason:  "NoReady",
-							Message: "Channel does not have Ready condition",
-						},
-					},
-				}),
-				WithSequenceSubscriptionStatuses([]v1.SequenceSubscriptionStatus{
-					{
-						Subscription: corev1.ObjectReference{
-							APIVersion: "messaging.knative.dev/v1",
-							Kind:       "Subscription",
-							Name:       resources.SequenceSubscriptionName(sequenceName, 0),
-							Namespace:  testNS,
-						},
-						ReadyCondition: apis.Condition{
-							Type:    apis.ConditionReady,
-							Status:  corev1.ConditionUnknown,
-							Reason:  "NoReady",
-							Message: "Subscription does not have Ready condition",
-						},
-					},
-				}),
-				WithSequenceOIDCIdentityCreatedSucceeded(),
-				WithSequenceOIDCServiceAccountName(makeSequenceOIDCServiceAccount().Name)),
-		}},
-	}, {
-		Name: "OIDC: Sequence not ready on invalid OIDC service account",
-		Key:  pKey,
-		Ctx: feature.ToContext(context.Background(), feature.Flags{
-			feature.OIDCAuthentication: feature.Enabled,
-		}),
-		Objects: []runtime.Object{
-			makeSequenceOIDCServiceAccountWithoutOwnerRef(),
-			NewSequence(sequenceName, testNS,
-				WithInitSequenceConditions,
-				WithSequenceChannelTemplateSpec(imc),
-				WithSequenceSteps([]v1.SequenceStep{{Destination: createDestination(0)}})),
 			createChannel(sequenceName, 0),
 			resources.NewSubscription(0,
 				NewSequence(sequenceName, testNS,
 					WithSequenceChannelTemplateSpec(imc),
-					WithSequenceSteps([]v1.SequenceStep{{Destination: createDestination(0)}})))},
-		WantErr:     true,
-		WantCreates: []runtime.Object{},
+					WithSequenceSteps([]v1.SequenceStep{{Destination: createDestination(0)}}))),
+		},
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 			Object: NewSequence(sequenceName, testNS,
 				WithInitSequenceConditions,
@@ -1448,45 +1424,158 @@ func TestAllCases(t *testing.T) {
 						},
 					},
 				}),
-				WithSequenceOIDCIdentityCreatedFailed("Unable to resolve service account for OIDC authentication", fmt.Sprintf("service account %s not owned by Sequence %s", makeSequenceOIDCServiceAccountWithoutOwnerRef().Name, sequenceName)),
-				WithSequenceOIDCServiceAccountName(makeSequenceOIDCServiceAccountWithoutOwnerRef().Name)),
+				WithSequenceEventPoliciesReady(),
+				WithSequenceEventPoliciesListed(readyEventPolicyName),
+			),
 		}},
-		WantEvents: []string{
-			Eventf(corev1.EventTypeWarning, "InternalError", fmt.Sprintf("service account %s not owned by Sequence %s", makeSequenceOIDCServiceAccountWithoutOwnerRef().Name, sequenceName)),
+	}, {
+		Name: "Should mark as NotReady on unready EventPolicies",
+		Key:  pKey,
+		Objects: []runtime.Object{
+			NewSequence(sequenceName, testNS,
+				WithInitSequenceConditions,
+				WithSequenceChannelTemplateSpec(imc),
+				WithSequenceSteps([]v1.SequenceStep{{Destination: createDestination(0)}})),
+			NewEventPolicy(unreadyEventPolicyName, testNS,
+				WithUnreadyEventPolicyCondition("", ""),
+				WithEventPolicyToRef(sequenceGVK, sequenceName),
+			),
 		},
-	}}
+		WantErr: false,
+		WantCreates: []runtime.Object{
+			createChannel(sequenceName, 0),
+			resources.NewSubscription(0,
+				NewSequence(sequenceName, testNS,
+					WithSequenceChannelTemplateSpec(imc),
+					WithSequenceSteps([]v1.SequenceStep{{Destination: createDestination(0)}}))),
+		},
+		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: NewSequence(sequenceName, testNS,
+				WithInitSequenceConditions,
+				WithSequenceChannelTemplateSpec(imc),
+				WithSequenceSteps([]v1.SequenceStep{{Destination: createDestination(0)}}),
+				WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
+				WithSequenceAddressableNotReady("emptyAddress", "addressable is nil"),
+				WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+				WithSequenceChannelStatuses([]v1.SequenceChannelStatus{
+					{
+						Channel: corev1.ObjectReference{
+							APIVersion: "messaging.knative.dev/v1",
+							Kind:       "InMemoryChannel",
+							Name:       resources.SequenceChannelName(sequenceName, 0),
+							Namespace:  testNS,
+						},
+						ReadyCondition: apis.Condition{
+							Type:    apis.ConditionReady,
+							Status:  corev1.ConditionUnknown,
+							Reason:  "NoReady",
+							Message: "Channel does not have Ready condition",
+						},
+					},
+				}),
+				WithSequenceSubscriptionStatuses([]v1.SequenceSubscriptionStatus{
+					{
+						Subscription: corev1.ObjectReference{
+							APIVersion: "messaging.knative.dev/v1",
+							Kind:       "Subscription",
+							Name:       resources.SequenceSubscriptionName(sequenceName, 0),
+							Namespace:  testNS,
+						},
+						ReadyCondition: apis.Condition{
+							Type:    apis.ConditionReady,
+							Status:  corev1.ConditionUnknown,
+							Reason:  "NoReady",
+							Message: "Subscription does not have Ready condition",
+						},
+					},
+				}),
+				WithSequenceEventPoliciesNotReady("EventPoliciesNotReady", fmt.Sprintf("event policies %s are not ready", unreadyEventPolicyName))),
+		}},
+	}, {
+		Name: "should list only Ready EventPolicies",
+		Key:  pKey,
+		Objects: []runtime.Object{
+			NewSequence(sequenceName, testNS,
+				WithInitSequenceConditions,
+				WithSequenceChannelTemplateSpec(imc),
+				WithSequenceSteps([]v1.SequenceStep{{Destination: createDestination(0)}})),
+			NewEventPolicy(unreadyEventPolicyName, testNS,
+				WithUnreadyEventPolicyCondition("", ""),
+				WithEventPolicyToRef(sequenceGVK, sequenceName),
+			),
+			NewEventPolicy(readyEventPolicyName, testNS,
+				WithReadyEventPolicyCondition,
+				WithEventPolicyToRef(sequenceGVK, sequenceName),
+			),
+		},
+		WantErr: false,
+		WantCreates: []runtime.Object{
+			createChannel(sequenceName, 0),
+			resources.NewSubscription(0,
+				NewSequence(sequenceName, testNS,
+					WithSequenceChannelTemplateSpec(imc),
+					WithSequenceSteps([]v1.SequenceStep{{Destination: createDestination(0)}}))),
+		},
+		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: NewSequence(sequenceName, testNS,
+				WithInitSequenceConditions,
+				WithSequenceChannelTemplateSpec(imc),
+				WithSequenceSteps([]v1.SequenceStep{{Destination: createDestination(0)}}),
+				WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
+				WithSequenceAddressableNotReady("emptyAddress", "addressable is nil"),
+				WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+				WithSequenceChannelStatuses([]v1.SequenceChannelStatus{
+					{
+						Channel: corev1.ObjectReference{
+							APIVersion: "messaging.knative.dev/v1",
+							Kind:       "InMemoryChannel",
+							Name:       resources.SequenceChannelName(sequenceName, 0),
+							Namespace:  testNS,
+						},
+						ReadyCondition: apis.Condition{
+							Type:    apis.ConditionReady,
+							Status:  corev1.ConditionUnknown,
+							Reason:  "NoReady",
+							Message: "Channel does not have Ready condition",
+						},
+					},
+				}),
+				WithSequenceSubscriptionStatuses([]v1.SequenceSubscriptionStatus{
+					{
+						Subscription: corev1.ObjectReference{
+							APIVersion: "messaging.knative.dev/v1",
+							Kind:       "Subscription",
+							Name:       resources.SequenceSubscriptionName(sequenceName, 0),
+							Namespace:  testNS,
+						},
+						ReadyCondition: apis.Condition{
+							Type:    apis.ConditionReady,
+							Status:  corev1.ConditionUnknown,
+							Reason:  "NoReady",
+							Message: "Subscription does not have Ready condition",
+						},
+					},
+				}),
+				WithSequenceEventPoliciesNotReady("EventPoliciesNotReady", fmt.Sprintf("event policies %s are not ready", unreadyEventPolicyName)),
+				WithSequenceEventPoliciesListed(readyEventPolicyName),
+			),
+		}},
+	},
+	}
 
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		ctx = channelable.WithDuck(ctx)
 		r := &Reconciler{
-			sequenceLister:       listers.GetSequenceLister(),
-			channelableTracker:   duck.NewListableTrackerFromTracker(ctx, channelable.Get, tracker.New(func(types.NamespacedName) {}, 0)),
-			subscriptionLister:   listers.GetSubscriptionLister(),
-			eventingClientSet:    fakeeventingclient.Get(ctx),
-			dynamicClientSet:     fakedynamicclient.Get(ctx),
-			kubeclient:           fakekubeclient.Get(ctx),
-			serviceAccountLister: listers.GetServiceAccountLister(),
+			sequenceLister:     listers.GetSequenceLister(),
+			channelableTracker: duck.NewListableTrackerFromTracker(ctx, channelable.Get, tracker.New(func(types.NamespacedName) {}, 0)),
+			subscriptionLister: listers.GetSubscriptionLister(),
+			eventingClientSet:  fakeeventingclient.Get(ctx),
+			dynamicClientSet:   fakedynamicclient.Get(ctx),
+			eventPolicyLister:  listers.GetEventPolicyLister(),
 		}
 		return sequence.NewReconciler(ctx, logging.FromContext(ctx),
 			fakeeventingclient.Get(ctx), listers.GetSequenceLister(),
 			controller.GetEventRecorder(ctx), r)
 	}, false, logger))
-}
-
-func makeSequenceOIDCServiceAccount() *corev1.ServiceAccount {
-	return auth.GetOIDCServiceAccountForResource(v1.SchemeGroupVersion.WithKind("Sequence"), metav1.ObjectMeta{
-		Name:      sequenceName,
-		Namespace: testNS,
-	})
-}
-
-func makeSequenceOIDCServiceAccountWithoutOwnerRef() *corev1.ServiceAccount {
-	sa := auth.GetOIDCServiceAccountForResource(v1.SchemeGroupVersion.WithKind("Sequence"), metav1.ObjectMeta{
-		Name:      sequenceName,
-		Namespace: testNS,
-	})
-	sa.OwnerReferences = nil
-
-	return sa
 }

@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,10 +18,11 @@ package testing
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/apis/feature"
 	flowsv1 "knative.dev/eventing/pkg/apis/flows/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
@@ -116,30 +117,37 @@ func WithSequenceAddressableNotReady(reason, message string) SequenceOption {
 	}
 }
 
-func WithSequenceOIDCIdentityCreatedSucceeded() SequenceOption {
-	return func(s *flowsv1.Sequence) {
-		s.Status.MarkOIDCIdentityCreatedSucceeded()
+func WithSequenceEventPoliciesReady() SequenceOption {
+	return func(p *flowsv1.Sequence) {
+		p.Status.MarkEventPoliciesTrue()
 	}
 }
 
-func WithSequenceOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled() SequenceOption {
-	return func(s *flowsv1.Sequence) {
-		s.Status.MarkOIDCIdentityCreatedSucceededWithReason(fmt.Sprintf("%s feature disabled", feature.OIDCAuthentication), "")
+func WithSequenceEventPoliciesNotReady(reason, message string) SequenceOption {
+	return func(p *flowsv1.Sequence) {
+		p.Status.MarkEventPoliciesFailed(reason, message)
 	}
 }
 
-func WithSequenceOIDCIdentityCreatedFailed(reason, message string) SequenceOption {
-	return func(s *flowsv1.Sequence) {
-		s.Status.MarkOIDCIdentityCreatedFailed(reason, message)
-	}
-}
-
-func WithSequenceOIDCServiceAccountName(name string) SequenceOption {
-	return func(s *flowsv1.Sequence) {
-		if s.Status.Auth == nil {
-			s.Status.Auth = &duckv1.AuthStatus{}
+func WithSequenceEventPoliciesListed(policyNames ...string) SequenceOption {
+	return func(p *flowsv1.Sequence) {
+		for _, name := range policyNames {
+			p.Status.Policies = append(p.Status.Policies, eventingduckv1.AppliedEventPolicyRef{
+				APIVersion: v1alpha1.SchemeGroupVersion.String(),
+				Name:       name,
+			})
 		}
+	}
+}
 
-		s.Status.Auth.ServiceAccountName = &name
+func WithSequenceEventPoliciesReadyBecauseOIDCDisabled() SequenceOption {
+	return func(p *flowsv1.Sequence) {
+		p.Status.MarkEventPoliciesTrueWithReason("OIDCDisabled", "Feature %q must be enabled to support Authorization", feature.OIDCAuthentication)
+	}
+}
+
+func WithSequenceEventPoliciesReadyBecauseNoPolicyAndOIDCEnabled() SequenceOption {
+	return func(p *flowsv1.Sequence) {
+		p.Status.MarkEventPoliciesTrueWithReason("DefaultAuthorizationMode", "Default authz mode is %q", feature.AuthorizationAllowSameNamespace)
 	}
 }

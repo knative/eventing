@@ -8,7 +8,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -26,7 +26,6 @@ import (
 
 	// Needed for the storage version too.
 	_ "knative.dev/pkg/apiextensions/storageversion/cmd/migrate"
-	_ "knative.dev/pkg/test/mako/stub-sidecar"
 
 	// For chaos testing the leaderelection stuff.
 	_ "knative.dev/pkg/leaderelection/chaosduck"

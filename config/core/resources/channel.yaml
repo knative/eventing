@@ -189,6 +189,11 @@ spec:
                         serviceAccountName:
                           description: ServiceAccountName is the name of the generated service account used for this components OIDC authentication.
                           type: string
+                        serviceAccountNames:
+                          description: ServiceAccountNames is the list of names of the generated service accounts used for this components OIDC authentication.
+                          type: array
+                          items:
+                            type: string
           status:
             description: Status represents the current state of the Channel. This data may be out of date.
             type: object
@@ -239,6 +244,18 @@ spec:
                   namespace:
                     description: 'Namespace of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/ This is optional field, it gets defaulted to the object holding it if left out.'
                     type: string
+              policies:
+                description: List of applied EventPolicies
+                type: array
+                items:
+                  type: object
+                  properties:
+                    apiVersion:
+                      description: The API version of the applied EventPolicy. This indicates, which version of EventPolicy is supported by the resource.
+                      type: string
+                    name:
+                      description: The name of the applied EventPolicy
+                      type: string
               conditions:
                 description: Conditions the latest available observations of a resource's current state.
                 type: array
@@ -321,6 +338,11 @@ spec:
                         serviceAccountName:
                           description: ServiceAccountName is the name of the generated service account used for this components OIDC authentication.
                           type: string
+                        serviceAccountNames:
+                          description: ServiceAccountNames is the list of names of the generated service accounts used for this components OIDC authentication.
+                          type: array
+                          items:
+                            type: string
   names:
     kind: Channel
     plural: channels

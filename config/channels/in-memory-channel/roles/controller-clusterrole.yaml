@@ -30,6 +30,7 @@ rules:
       - list
       - watch
       - update
+      - knsubscribe
   - apiGroups:
       - messaging.knative.dev
     resources:
@@ -44,6 +45,14 @@ rules:
       - inmemorychannels
     verbs:
       - patch
+  - apiGroups:
+      - eventing.knative.dev
+    resources:
+      - eventpolicies
+    verbs:
+      - get
+      - list
+      - watch
   - apiGroups:
       - ""
     resources:

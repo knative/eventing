@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -56,6 +56,7 @@ func TestGetFlags(t *testing.T) {
 	require.True(t, flags.IsAllowed("my-enabled-flag"))
 	require.True(t, flags.IsAllowed("my-allowed-flag"))
 	require.False(t, flags.IsAllowed("non-disabled-flag"))
+	require.True(t, flags.IsAuthorizationDefaultModeSameNamespace())
 
 	nodeSelector := flags.NodeSelector()
 	expectedNodeSelector := map[string]string{"testkey": "testvalue", "testkey1": "testvalue1", "testkey2": "testvalue2"}
@@ -69,8 +70,5 @@ func TestShouldNotOverrideDefaults(t *testing.T) {
 
 	if !f.IsDisabled(KReferenceGroup) && !f.IsEnabled(KReferenceGroup) {
 		t.Errorf("Expected default value for %s in flags %+v", KReferenceGroup, f)
-	}
-	if !f.IsEnabled(NewTriggerFilters) {
-		t.Errorf("Expected default value for %s to be %s in flags %+v", NewTriggerFilters, Enabled, f)
 	}
 }

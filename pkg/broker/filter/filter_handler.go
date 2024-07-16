@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -227,7 +227,24 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 }
 
 func (h *Handler) handleDispatchToReplyRequest(ctx context.Context, trigger *eventingv1.Trigger, writer http.ResponseWriter, request *http.Request, event *event.Event) {
-	broker, err := h.brokerLister.Brokers(trigger.Namespace).Get(trigger.Spec.Broker)
+	var brokerName, brokerNamespace string
+	if feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) && trigger.Spec.BrokerRef != nil {
+		if trigger.Spec.BrokerRef.Name != "" {
+			brokerName = trigger.Spec.BrokerRef.Name
+		} else {
+			brokerName = trigger.Spec.Broker
+		}
+		if trigger.Spec.BrokerRef.Namespace != "" {
+			brokerNamespace = trigger.Spec.BrokerRef.Namespace
+		} else {
+			brokerNamespace = trigger.Namespace
+		}
+	} else {
+		brokerName = trigger.Spec.Broker
+		brokerNamespace = trigger.Namespace
+	}
+
+	broker, err := h.brokerLister.Brokers(brokerNamespace).Get(brokerName)
 	if err != nil {
 		h.logger.Info("Unable to get the Broker", zap.Error(err))
 		writer.WriteHeader(http.StatusBadRequest)
@@ -239,7 +256,7 @@ func (h *Handler) handleDispatchToReplyRequest(ctx context.Context, trigger *eve
 	reportArgs := &ReportArgs{
 		ns:          trigger.Namespace,
 		trigger:     trigger.Name,
-		broker:      trigger.Spec.Broker,
+		broker:      brokerName,
 		requestType: "reply_forward",
 	}
 
@@ -256,7 +273,23 @@ func (h *Handler) handleDispatchToReplyRequest(ctx context.Context, trigger *eve
 }
 
 func (h *Handler) handleDispatchToDLSRequest(ctx context.Context, trigger *eventingv1.Trigger, writer http.ResponseWriter, request *http.Request, event *event.Event) {
-	broker, err := h.brokerLister.Brokers(trigger.Namespace).Get(trigger.Spec.Broker)
+	var brokerName, brokerNamespace string
+	if feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) && trigger.Spec.BrokerRef != nil {
+		if trigger.Spec.BrokerRef.Name != "" {
+			brokerName = trigger.Spec.BrokerRef.Name
+		} else {
+			brokerName = trigger.Spec.Broker
+		}
+		if trigger.Spec.BrokerRef.Namespace != "" {
+			brokerNamespace = trigger.Spec.BrokerRef.Namespace
+		} else {
+			brokerNamespace = trigger.Namespace
+		}
+	} else {
+		brokerName = trigger.Spec.Broker
+		brokerNamespace = trigger.Namespace
+	}
+	broker, err := h.brokerLister.Brokers(brokerNamespace).Get(brokerName)
 	if err != nil {
 		h.logger.Info("Unable to get the Broker", zap.Error(err))
 		writer.WriteHeader(http.StatusBadRequest)
@@ -281,7 +314,7 @@ func (h *Handler) handleDispatchToDLSRequest(ctx context.Context, trigger *event
 	reportArgs := &ReportArgs{
 		ns:          trigger.Namespace,
 		trigger:     trigger.Name,
-		broker:      trigger.Spec.Broker,
+		broker:      brokerName,
 		requestType: "dls_forward",
 	}
 
@@ -298,6 +331,17 @@ func (h *Handler) handleDispatchToDLSRequest(ctx context.Context, trigger *event
 }
 
 func (h *Handler) handleDispatchToSubscriberRequest(ctx context.Context, trigger *eventingv1.Trigger, writer http.ResponseWriter, request *http.Request, event *event.Event) {
+	var brokerName string
+	if feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) && trigger.Spec.BrokerRef != nil {
+		if trigger.Spec.BrokerRef.Name != "" {
+			brokerName = trigger.Spec.BrokerRef.Name
+		} else {
+			brokerName = trigger.Spec.Broker
+		}
+	} else {
+		brokerName = trigger.Spec.Broker
+	}
+
 	triggerRef := types.NamespacedName{
 		Name:      trigger.Name,
 		Namespace: trigger.Namespace,
@@ -321,7 +365,7 @@ func (h *Handler) handleDispatchToSubscriberRequest(ctx context.Context, trigger
 	reportArgs := &ReportArgs{
 		ns:          trigger.Namespace,
 		trigger:     trigger.Name,
-		broker:      trigger.Spec.Broker,
+		broker:      brokerName,
 		filterType:  triggerFilterAttribute(trigger.Spec.Filter, "type"),
 		requestType: "filter",
 	}
@@ -519,7 +563,7 @@ func (h *Handler) getTrigger(ref path.NamespacedNameUID) (*eventingv1.Trigger, e
 
 func (h *Handler) filterEvent(ctx context.Context, trigger *eventingv1.Trigger, event cloudevents.Event) eventfilter.FilterResult {
 	switch {
-	case feature.FromContext(ctx).IsEnabled(feature.NewTriggerFilters) && len(trigger.Spec.Filters) > 0:
+	case len(trigger.Spec.Filters) > 0:
 		logging.FromContext(ctx).Debugw("New trigger filters feature is enabled. Applying new filters.", zap.Any("filters", trigger.Spec.Filters))
 		filter, ok := h.filtersMap.Get(trigger)
 		if !ok {

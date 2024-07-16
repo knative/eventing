@@ -19,18 +19,18 @@ type inExpression struct {
 func (l inExpression) Evaluate(event cloudevents.Event) (interface{}, error) {
 	leftValue, err := l.leftExpression.Evaluate(event)
 	if err != nil {
-		return nil, err
+		return false, err
 	}
 
 	for _, rightExpression := range l.setExpression {
 		rightValue, err := rightExpression.Evaluate(event)
 		if err != nil {
-			return nil, err
+			return false, err
 		}
 
 		rightValue, err = utils.Cast(rightValue, cesql.TypeFromVal(leftValue))
 		if err != nil {
-			return nil, err
+			return false, err
 		}
 
 		if leftValue == rightValue {

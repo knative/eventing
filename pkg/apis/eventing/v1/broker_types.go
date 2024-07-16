@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -96,6 +96,10 @@ type BrokerStatus struct {
 	// DeliveryStatus contains a resolved URL to the dead letter sink address, and any other
 	// resolved delivery options.
 	eventingduckv1.DeliveryStatus `json:",inline"`
+
+	// AppliedEventPoliciesStatus contains the list of EventPolicies which apply to this Broker
+	// +optional
+	eventingduckv1.AppliedEventPoliciesStatus `json:",inline"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

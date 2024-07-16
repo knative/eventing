@@ -21,17 +21,57 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// RoleOption enables further configuration of a Role.
+type RoleOption func(*v1.Role)
+type PolicyRuleOption func(*v1.PolicyRule)
+
 // createRole creates a Role in the Kubernetes cluster.
-func CreateRole(namespace, roleName, verbs, resources, apiGroup string) *v1.Role {
-	return &v1.Role{
+func CreateRole(name, namespace string, o ...RoleOption) *v1.Role {
+	r := &v1.Role{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      roleName,
+			Name:      name,
 			Namespace: namespace,
 		},
-		Rules: []v1.PolicyRule{{
-			APIGroups: []string{apiGroup},
-			Resources: []string{resources},
-			Verbs:     []string{verbs},
-		}},
+		Rules: []v1.PolicyRule{},
+	}
+	for _, opt := range o {
+		opt(r)
+	}
+	return r
+}
+
+func WithRoleRules(rules ...*v1.PolicyRule) RoleOption {
+	roleRules := make([]v1.PolicyRule, 0, len(rules))
+	for _, rule := range rules {
+		roleRules = append(roleRules, *rule)
+	}
+	return func(r *v1.Role) {
+		r.Rules = roleRules
+	}
+}
+
+func WithPolicyRule(o ...PolicyRuleOption) *v1.PolicyRule {
+	pr := &v1.PolicyRule{}
+	for _, opt := range o {
+		opt(pr)
+	}
+	return pr
+}
+
+func WithAPIGroups(apiGroups []string) PolicyRuleOption {
+	return func(r *v1.PolicyRule) {
+		r.APIGroups = apiGroups
+	}
+}
+
+func WithResources(resources ...string) PolicyRuleOption {
+	return func(r *v1.PolicyRule) {
+		r.Resources = resources
+	}
+}
+
+func WithVerbs(verbs ...string) PolicyRuleOption {
+	return func(r *v1.PolicyRule) {
+		r.Verbs = verbs
 	}
 }

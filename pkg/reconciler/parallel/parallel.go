@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -22,7 +22,6 @@ import (
 
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/equality"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -30,14 +29,12 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/kubernetes"
 	duckapis "knative.dev/pkg/apis/duck"
 
 	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/logging"
 	pkgreconciler "knative.dev/pkg/reconciler"
 
-	corev1listers "k8s.io/client-go/listers/core/v1"
 	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/apis/feature"
 	v1 "knative.dev/eventing/pkg/apis/flows/v1"
@@ -45,15 +42,15 @@ import (
 	"knative.dev/eventing/pkg/auth"
 	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
 	parallelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/flows/v1/parallel"
+	eventingv1alpha1listers "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 	listers "knative.dev/eventing/pkg/client/listers/flows/v1"
 	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1"
 	ducklib "knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/reconciler/parallel/resources"
-	duckv1knative "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/kmp"
 )
 
 type Reconciler struct {
-	kubeclient kubernetes.Interface
 	// listers index properties about resources
 	parallelLister     listers.ParallelLister
 	channelableTracker ducklib.ListableTracker
@@ -63,8 +60,9 @@ type Reconciler struct {
 	eventingClientSet clientset.Interface
 
 	// dynamicClientSet allows us to configure pluggable Build objects
-	dynamicClientSet     dynamic.Interface
-	serviceAccountLister corev1listers.ServiceAccountLister
+	dynamicClientSet dynamic.Interface
+
+	eventPolicyLister eventingv1alpha1listers.EventPolicyLister
 }
 
 // Check that our Reconciler implements parallelreconciler.Interface
@@ -78,13 +76,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, p *v1.Parallel) pkgrecon
 	//     2.2 create a Subscription to the filter Channel, subscribe the subscriber and send reply to
 	//         either the branch Reply. If not present, send reply to the global Reply. If not present, do not send reply.
 	// 3. Rinse and repeat step #2 above for each branch in the list
-	// OIDC authentication
 	featureFlags := feature.FromContext(ctx)
-	if err := auth.SetupOIDCServiceAccount(ctx, featureFlags, r.serviceAccountLister, r.kubeclient, v1.SchemeGroupVersion.WithKind("Parallel"), p.ObjectMeta, &p.Status, func(as *duckv1knative.AuthStatus) {
-		p.Status.Auth = as
-	}); err != nil {
-		return err
-	}
 
 	if p.Status.BranchStatuses == nil {
 		p.Status.BranchStatuses = make([]v1.ParallelBranchStatus, 0)
@@ -150,6 +142,11 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, p *v1.Parallel) pkgrecon
 
 	if err := r.removeUnwantedSubscriptions(ctx, p, append(filterSubs, subs...)); err != nil {
 		return fmt.Errorf("error removing unwanted Subscriptions: %w", err)
+	}
+
+	err := auth.UpdateStatusWithEventPolicies(featureFlags, &p.Status.AppliedEventPoliciesStatus, &p.Status, r.eventPolicyLister, v1.SchemeGroupVersion.WithKind("Parallel"), p.ObjectMeta)
+	if err != nil {
+		return fmt.Errorf("could not update parallel status with EventPolicies: %v", err)
 	}
 
 	return nil
@@ -231,7 +228,7 @@ func (r *Reconciler) reconcileSubscription(ctx context.Context, branchNumber int
 		// TODO: Send events here, or elsewhere?
 		//r.Recorder.Eventf(p, corev1.EventTypeWarning, subscriptionCreateFailed, "Create Parallels's subscription failed: %v", err)
 		return nil, fmt.Errorf("failed to get Subscription: %s", err)
-	} else if !equality.Semantic.DeepDerivative(expected.Spec, sub.Spec) {
+	} else if immutableFieldsChanged := expected.CheckImmutableFields(ctx, sub); immutableFieldsChanged != nil {
 		// Given that spec.channel is immutable, we cannot just update the subscription. We delete
 		// it instead, and re-create it.
 		err = r.eventingClientSet.MessagingV1().Subscriptions(sub.Namespace).Delete(ctx, sub.Name, metav1.DeleteOptions{})
@@ -245,6 +242,13 @@ func (r *Reconciler) reconcileSubscription(ctx context.Context, branchNumber int
 			return nil, err
 		}
 		return newSub, nil
+	} else if equal, err := kmp.SafeEqual(sub.Spec, expected.Spec); !equal || err != nil {
+		updatedSub, err := r.eventingClientSet.MessagingV1().Subscriptions(sub.Namespace).Update(ctx, expected, metav1.UpdateOptions{})
+		if err != nil {
+			logging.FromContext(ctx).Infow("Cannot update subscription", zap.Error(err))
+			return nil, err
+		}
+		return updatedSub, nil
 	}
 	return sub, nil
 }

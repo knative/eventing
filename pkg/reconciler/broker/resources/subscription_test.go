@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,6 +17,7 @@ limitations under the License.
 package resources
 
 import (
+	"context"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -63,7 +64,7 @@ func TestNewSubscription(t *testing.T) {
 			APIVersion: "broker-apiVersion",
 		},
 	}
-	got := NewSubscription(trigger, triggerChannelRef, dest, reply, delivery)
+	got := NewSubscription(context.Background(), trigger, triggerChannelRef, dest, reply, delivery)
 	want := &messagingv1.Subscription{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "t-namespace",

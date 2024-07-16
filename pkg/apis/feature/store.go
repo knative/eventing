@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -40,12 +40,12 @@ func FromContext(ctx context.Context) Flags {
 }
 
 // FromContextOrDefaults is like FromContext, but when no Flags is attached it
-// returns an empty Flags.
+// returns default Flags.
 func FromContextOrDefaults(ctx context.Context) Flags {
 	if cfg := FromContext(ctx); cfg != nil {
 		return cfg
 	}
-	return Flags{}
+	return newDefaults()
 }
 
 // ToContext attaches the provided Flags to the provided context, returning the

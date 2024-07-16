@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -34,7 +34,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgotesting "k8s.io/client-go/testing"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
-	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1beta2/eventtype"
+	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1beta3/eventtype"
 	. "knative.dev/eventing/pkg/reconciler/testing/v1"
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/configmap"
@@ -87,6 +87,8 @@ func TestReconcile(t *testing.T) {
 			NewEventType(eventTypeName, testNS,
 				WithEventTypeType(eventTypeType),
 				WithEventTypeSource(eventTypeSource),
+				WithEventTypeSpecV1(),
+				WithEventTypeEmptyID(),
 				WithEventTypeReference(brokerReference(eventTypeBroker)),
 			),
 		},
@@ -94,6 +96,8 @@ func TestReconcile(t *testing.T) {
 			Object: NewEventType(eventTypeName, testNS,
 				WithEventTypeType(eventTypeType),
 				WithEventTypeSource(eventTypeSource),
+				WithEventTypeSpecV1(),
+				WithEventTypeEmptyID(),
 				WithEventTypeReference(brokerReference(eventTypeBroker)),
 				WithInitEventTypeConditions,
 				WithEventTypeResourceDoesNotExist,
@@ -112,6 +116,8 @@ func TestReconcile(t *testing.T) {
 				NewEventType(eventTypeName, testNS,
 					WithEventTypeType(eventTypeType),
 					WithEventTypeSource(eventTypeSource),
+					WithEventTypeSpecV1(),
+					WithEventTypeEmptyID(),
 					WithEventTypeReference(channelReference(eventTypeChannel)),
 				),
 			},
@@ -119,6 +125,8 @@ func TestReconcile(t *testing.T) {
 				Object: NewEventType(eventTypeName, testNS,
 					WithEventTypeType(eventTypeType),
 					WithEventTypeSource(eventTypeSource),
+					WithEventTypeSpecV1(),
+					WithEventTypeEmptyID(),
 					WithInitEventTypeConditions,
 					WithEventTypeReference(channelReference(eventTypeChannel)),
 					WithEventTypeResourceDoesNotExist,
@@ -136,6 +144,8 @@ func TestReconcile(t *testing.T) {
 				NewEventType(eventTypeName, testNS,
 					WithEventTypeType(eventTypeType),
 					WithEventTypeSource(eventTypeSource),
+					WithEventTypeSpecV1(),
+					WithEventTypeEmptyID(),
 					WithEventTypeReference(brokerReference(eventTypeBroker)),
 				),
 				resources.MakeBroker(testNS, eventTypeBroker),
@@ -144,6 +154,8 @@ func TestReconcile(t *testing.T) {
 				Object: NewEventType(eventTypeName, testNS,
 					WithEventTypeType(eventTypeType),
 					WithEventTypeSource(eventTypeSource),
+					WithEventTypeSpecV1(),
+					WithEventTypeEmptyID(),
 					WithInitEventTypeConditions,
 					WithEventTypeReference(brokerReference(eventTypeBroker)),
 					WithEventTypeResourceExists,
@@ -158,6 +170,8 @@ func TestReconcile(t *testing.T) {
 				NewEventType(eventTypeName, testNS,
 					WithEventTypeType(eventTypeType),
 					WithEventTypeSource(eventTypeSource),
+					WithEventTypeSpecV1(),
+					WithEventTypeEmptyID(),
 					WithEventTypeReference(channelReference(eventTypeChannel)),
 				),
 				NewInMemoryChannel(eventTypeChannel, testNS),
@@ -166,14 +180,36 @@ func TestReconcile(t *testing.T) {
 				Object: NewEventType(eventTypeName, testNS,
 					WithEventTypeType(eventTypeType),
 					WithEventTypeSource(eventTypeSource),
+					WithEventTypeSpecV1(),
+					WithEventTypeEmptyID(),
 					WithInitEventTypeConditions,
 					WithEventTypeReference(channelReference(eventTypeChannel)),
 					WithEventTypeResourceExists,
 				),
 			}},
 			WantErr: false,
-		},
-	}
+		}, {
+			Name: "No reference set",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewEventType(eventTypeName, testNS,
+					WithEventTypeType(eventTypeType),
+					WithEventTypeSource(eventTypeSource),
+					WithEventTypeSpecV1(),
+					WithEventTypeEmptyID(),
+				),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewEventType(eventTypeName, testNS,
+					WithInitEventTypeConditions,
+					WithEventTypeType(eventTypeType),
+					WithEventTypeSource(eventTypeSource),
+					WithEventTypeSpecV1(),
+					WithEventTypeEmptyID(),
+					WithEventTypeReferenceNotSet),
+			}},
+			WantErr: false,
+		}}
 
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {

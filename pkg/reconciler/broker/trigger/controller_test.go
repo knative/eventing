@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"testing"
 
+	"knative.dev/pkg/logging"
 	"knative.dev/pkg/ptr"
 
 	triggerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/trigger"
@@ -38,6 +39,7 @@ import (
 
 	apiseventing "knative.dev/eventing/pkg/apis/eventing"
 	eventing "knative.dev/eventing/pkg/apis/eventing/v1"
+	"knative.dev/eventing/pkg/apis/feature"
 	brokerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/broker"
 	v1lister "knative.dev/eventing/pkg/client/listers/eventing/v1"
 	testingv1 "knative.dev/eventing/pkg/reconciler/testing/v1"
@@ -192,7 +194,8 @@ func TestFilterOIDCServiceAccounts(t *testing.T) {
 			err := triggerInformer.Informer().GetStore().Add(tc.trigger)
 			assert.NoError(t, err)
 
-			filter := filterOIDCServiceAccounts(triggerInformer.Lister(), brokerInformer.Lister())
+			featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"))
+			filter := filterOIDCServiceAccounts(featureStore, triggerInformer.Lister(), brokerInformer.Lister())
 			pass := filter(tc.sa)
 			assert.Equal(t, tc.pass, pass)
 		})
@@ -270,7 +273,8 @@ func TestFilterTriggers(t *testing.T) {
 			for _, obj := range tc.brokers {
 				_ = brokerInformer.Informer().GetStore().Add(obj)
 			}
-			filter := filterTriggers(brokerInformer.Lister())
+			featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"))
+			filter := filterTriggers(featureStore, brokerInformer.Lister())
 			pass := filter(tc.trigger)
 			assert.Equal(t, tc.pass, pass)
 		})
@@ -301,7 +305,8 @@ func TestGetTriggersForBroker(t *testing.T) {
 			ls := testingv1.NewListers(tt.in)
 			logger := logtesting.TestLogger(t)
 			triggerLister := ls.GetTriggerLister()
-			triggers := getTriggersForBroker(logger, triggerLister, ReadyBroker())
+			flags := feature.FromContextOrDefaults(context.TODO())
+			triggers := getTriggersForBroker(logger, triggerLister, ReadyBroker(), flags)
 			var found []string
 			for _, want := range tt.out {
 				for _, got := range triggers {
@@ -343,7 +348,8 @@ func (failer *TriggerNamespaceListerFailer) Get(name string) (*eventing.Trigger,
 func TestListFailure(t *testing.T) {
 	logger := logtesting.TestLogger(t)
 	triggerListerFailer := &TriggerListerFailer{}
-	if len(getTriggersForBroker(logger, triggerListerFailer, ReadyBroker())) != 0 {
+	flags := feature.FromContextOrDefaults(context.TODO())
+	if len(getTriggersForBroker(logger, triggerListerFailer, ReadyBroker(), flags)) != 0 {
 		t.Fatalf("Got back triggers when not expecting any")
 	}
 }

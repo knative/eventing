@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -29,6 +29,7 @@ import (
 	"knative.dev/pkg/ptr"
 
 	eventingv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	apiseventing "knative.dev/eventing/pkg/apis/eventing"
 	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/pkg/apis/feature"
 )
@@ -54,10 +55,35 @@ func NewTrigger(name, namespace, broker string, to ...TriggerOption) *v1.Trigger
 	return t
 }
 
+func NewTriggerWithBrokerRef(name, namespace string, to ...TriggerOption) *v1.Trigger {
+	t := &v1.Trigger{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+	}
+
+	for _, opt := range to {
+		opt(t)
+	}
+
+	t.SetDefaults(context.Background())
+	return t
+}
+
 func WithTriggerSubscriberURI(rawurl string) TriggerOption {
 	uri, _ := apis.ParseURL(rawurl)
 	return func(t *v1.Trigger) {
 		t.Spec.Subscriber = duckv1.Destination{URI: uri}
+	}
+}
+
+func WithBrokerLabels(brokerName, brokerNamespace string) TriggerOption {
+	return func(t *v1.Trigger) {
+		if t.Labels == nil {
+			t.Labels = make(map[string]string)
+		}
+		t.Labels[apiseventing.BrokerLabelKey] = brokerName
 	}
 }
 
@@ -160,6 +186,17 @@ func WithTriggerBrokerNotConfigured() TriggerOption {
 func WithTriggerBrokerUnknown(reason, message string) TriggerOption {
 	return func(t *v1.Trigger) {
 		t.Status.MarkBrokerUnknown(reason, message)
+	}
+}
+
+func WithTriggerBrokerRef(gvk metav1.GroupVersionKind, name string, namespace string) TriggerOption {
+	return func(t *v1.Trigger) {
+		t.Spec.BrokerRef = &duckv1.KReference{
+			APIVersion: apiVersion(gvk),
+			Kind:       gvk.Kind,
+			Name:       name,
+			Namespace:  namespace,
+		}
 	}
 }
 

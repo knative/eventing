@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -22,14 +22,12 @@ import (
 
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/equality"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/kubernetes"
 	"knative.dev/pkg/kmeta"
 
 	duckapis "knative.dev/pkg/apis/duck"
@@ -43,13 +41,13 @@ import (
 	"knative.dev/eventing/pkg/auth"
 	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
 	sequencereconciler "knative.dev/eventing/pkg/client/injection/reconciler/flows/v1/sequence"
+	eventingv1alpha1listers "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 	listers "knative.dev/eventing/pkg/client/listers/flows/v1"
 	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1"
 	"knative.dev/eventing/pkg/duck"
+	"knative.dev/pkg/kmp"
 
-	corev1listers "k8s.io/client-go/listers/core/v1"
 	"knative.dev/eventing/pkg/reconciler/sequence/resources"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 type Reconciler struct {
@@ -62,9 +60,9 @@ type Reconciler struct {
 	eventingClientSet clientset.Interface
 
 	// dynamicClientSet allows us to configure pluggable Build objects
-	dynamicClientSet     dynamic.Interface
-	serviceAccountLister corev1listers.ServiceAccountLister
-	kubeclient           kubernetes.Interface
+	dynamicClientSet dynamic.Interface
+
+	eventPolicyLister eventingv1alpha1listers.EventPolicyLister
 }
 
 // Check that our Reconciler implements sequencereconciler.Interface
@@ -80,6 +78,8 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, s *v1.Sequence) pkgrecon
 	//    than channel, we could just (optionally) feed it directly to the following subscription.
 	// 3. Rinse and repeat step #2 above for each Step in the list
 	// 4. If there's a Reply, then the last Subscription will be configured to send the reply to that.
+
+	featureFlags := feature.FromContext(ctx)
 
 	gvr, _ := meta.UnsafeGuessKindToResource(s.Spec.ChannelTemplate.GetObjectKind().GroupVersionKind())
 	channelResourceInterface := r.dynamicClientSet.Resource(gvr).Namespace(s.Namespace)
@@ -129,11 +129,9 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, s *v1.Sequence) pkgrecon
 		return err
 	}
 
-	featureFlags := feature.FromContext(ctx)
-	if err := auth.SetupOIDCServiceAccount(ctx, featureFlags, r.serviceAccountLister, r.kubeclient, v1.SchemeGroupVersion.WithKind("Sequence"), s.ObjectMeta, &s.Status, func(as *duckv1.AuthStatus) {
-		s.Status.Auth = as
-	}); err != nil {
-		return err
+	err := auth.UpdateStatusWithEventPolicies(featureFlags, &s.Status.AppliedEventPoliciesStatus, &s.Status, r.eventPolicyLister, v1.SchemeGroupVersion.WithKind("Sequence"), s.ObjectMeta)
+	if err != nil {
+		return fmt.Errorf("could not update Sequence status with EventPolicies: %v", err)
 	}
 
 	return r.removeUnwantedSubscriptions(ctx, s, subs)
@@ -204,7 +202,7 @@ func (r *Reconciler) reconcileSubscription(ctx context.Context, step int, p *v1.
 		// TODO: Send events here, or elsewhere?
 		//r.Recorder.Eventf(p, corev1.EventTypeWarning, subscriptionCreateFailed, "Create Sequences's subscription failed: %v", err)
 		return nil, fmt.Errorf("failed to get subscription: %s", err)
-	} else if !equality.Semantic.DeepDerivative(expected.Spec, sub.Spec) {
+	} else if immutableFieldsChanged := expected.CheckImmutableFields(ctx, sub); immutableFieldsChanged != nil {
 		// Given that spec.channel is immutable, we cannot just update the subscription. We delete
 		// it instead, and re-create it.
 		err = r.eventingClientSet.MessagingV1().Subscriptions(sub.Namespace).Delete(ctx, sub.Name, metav1.DeleteOptions{})
@@ -218,6 +216,14 @@ func (r *Reconciler) reconcileSubscription(ctx context.Context, step int, p *v1.
 			return nil, err
 		}
 		return newSub, nil
+	} else if equal, err := kmp.SafeEqual(sub.Spec, expected.Spec); !equal || err != nil {
+		// only the mutable fields were changed, so we can update the subscription
+		updatedSub, err := r.eventingClientSet.MessagingV1().Subscriptions(sub.Namespace).Update(ctx, expected, metav1.UpdateOptions{})
+		if err != nil {
+			logging.FromContext(ctx).Infow("Cannot update subscription", zap.Error(err))
+			return nil, err
+		}
+		return updatedSub, nil
 	}
 	return sub, nil
 }

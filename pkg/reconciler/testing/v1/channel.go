@@ -3,7 +3,7 @@ Copyright 2020 The Knative Authors
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,6 +17,9 @@ import (
 	"context"
 	"fmt"
 	"time"
+
+	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/pkg/apis/feature"
 
 	"k8s.io/apimachinery/pkg/types"
 
@@ -156,6 +159,41 @@ func WithChannelStatusDLS(ds eventingduckv1.DeliveryStatus) ChannelOption {
 func WithChannelDLSUnknown() ChannelOption {
 	return func(c *eventingv1.Channel) {
 		c.Status.MarkDeadLetterSinkNotConfigured()
+	}
+}
+
+func WithChannelEventPoliciesReady() ChannelOption {
+	return func(c *eventingv1.Channel) {
+		c.Status.MarkEventPoliciesTrue()
+	}
+}
+
+func WithChannelEventPoliciesNotReady(reason, message string) ChannelOption {
+	return func(c *eventingv1.Channel) {
+		c.Status.MarkEventPoliciesFailed(reason, message)
+	}
+}
+
+func WithChannelEventPoliciesListed(policyNames ...string) ChannelOption {
+	return func(c *eventingv1.Channel) {
+		for _, name := range policyNames {
+			c.Status.Policies = append(c.Status.Policies, eventingduckv1.AppliedEventPolicyRef{
+				APIVersion: v1alpha1.SchemeGroupVersion.String(),
+				Name:       name,
+			})
+		}
+	}
+}
+
+func WithChannelEventPoliciesReadyBecauseOIDCDisabled() ChannelOption {
+	return func(c *eventingv1.Channel) {
+		c.Status.MarkEventPoliciesTrueWithReason("OIDCDisabled", "Feature %q must be enabled to support Authorization", feature.OIDCAuthentication)
+	}
+}
+
+func WithChannelEventPoliciesReadyBecauseNoPolicyAndOIDCEnabled() ChannelOption {
+	return func(c *eventingv1.Channel) {
+		c.Status.MarkEventPoliciesTrueWithReason("DefaultAuthorizationMode", "Default authz mode is %q", feature.AuthorizationAllowSameNamespace)
 	}
 }
 

@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -470,9 +470,23 @@ func TestAllCases(t *testing.T) {
 					}}),
 				),
 				// Role
-				CreateRole(channelNS, "test-role", "knsubscribe", "InMemoryChannel", "messaging.knative.dev"),
+				CreateRole("test-role", channelNS,
+					WithRoleRules(
+						WithPolicyRule(
+							WithAPIGroups([]string{"messaging.knative.dev"}),
+							WithResources("InMemoryChannels"),
+							WithVerbs("knsubscribe")))),
 				// Rolebinding
-				CreateRoleBinding(channelNS, "test-role", NewServiceAccount("test-user")),
+				CreateRoleBinding("test-role", channelNS,
+					WithRoleBindingSubjects(
+						WithSubjects(
+							WithSubjectKind("ServiceAccount"),
+							WithSubjectName("test-user"))),
+					WithRoleBindingRoleRef(
+						WithRoleRef(
+							WithRoleRefAPIGroup("rbac.authorization.k8s.io"),
+							WithRoleRefKind("Role"),
+							WithRoleRefName("test-role")))),
 			},
 			Key:                     testNS + "/" + subscriptionName,
 			SkipNamespaceValidation: true,
@@ -493,7 +507,7 @@ func TestAllCases(t *testing.T) {
 				),
 			}},
 			WantCreates: []runtime.Object{
-				makeSubjectAccessReview("test-user", makeResourceAttributes(channelNS, channelName, "knsubscribe", "messaging.knative.dev", "InMemoryChannel")),
+				makeSubjectAccessReview("test-user", makeResourceAttributes(channelNS, channelName, "knsubscribe", "messaging.knative.dev", "inmemorychannels")),
 			},
 		}, {
 			Name: "subscription goes ready without api version",
@@ -1473,6 +1487,7 @@ func TestAllCases(t *testing.T) {
 					WithBackingChannelReady,
 					WithChannelAddress(sink),
 					WithChannelDLSUnknown(),
+					WithChannelEventPoliciesReady(),
 				),
 				NewInMemoryChannel(channelName, testNS,
 					WithInitInMemoryChannelConditions,

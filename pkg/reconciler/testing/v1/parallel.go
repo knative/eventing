@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,10 +18,11 @@ package testing
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/apis/feature"
 	flowsv1 "knative.dev/eventing/pkg/apis/flows/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
@@ -116,30 +117,37 @@ func WithFlowsParallelAddressableNotReady(reason, message string) FlowsParallelO
 	}
 }
 
-func WithFlowsParallelOIDCIdentityCreatedSucceeded() FlowsParallelOption {
+func WithFlowsParallelEventPoliciesReady() FlowsParallelOption {
 	return func(p *flowsv1.Parallel) {
-		p.Status.MarkOIDCIdentityCreatedSucceeded()
+		p.Status.MarkEventPoliciesTrue()
 	}
 }
 
-func WithFlowsParallelOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled() FlowsParallelOption {
+func WithFlowsParallelEventPoliciesNotReady(reason, message string) FlowsParallelOption {
 	return func(p *flowsv1.Parallel) {
-		p.Status.MarkOIDCIdentityCreatedSucceededWithReason(fmt.Sprintf("%s feature disabled", feature.OIDCAuthentication), "")
+		p.Status.MarkEventPoliciesFailed(reason, message)
 	}
 }
 
-func WithFlowsParallelOIDCIdentityCreatedFailed(reason, message string) FlowsParallelOption {
+func WithFlowsParallelEventPoliciesReadyBecauseOIDCDisabled() FlowsParallelOption {
 	return func(p *flowsv1.Parallel) {
-		p.Status.MarkOIDCIdentityCreatedFailed(reason, message)
+		p.Status.MarkEventPoliciesTrueWithReason("OIDCDisabled", "Feature %q must be enabled to support Authorization", feature.OIDCAuthentication)
 	}
 }
 
-func WithFlowsParallelOIDCServiceAccountName(name string) FlowsParallelOption {
+func WithFlowsParallelEventPoliciesReadyBecauseNoPolicyAndOIDCEnabled() FlowsParallelOption {
 	return func(p *flowsv1.Parallel) {
-		if p.Status.Auth == nil {
-			p.Status.Auth = &duckv1.AuthStatus{}
+		p.Status.MarkEventPoliciesTrueWithReason("DefaultAuthorizationMode", "Default authz mode is %q", feature.AuthorizationAllowSameNamespace)
+	}
+}
+
+func WithFlowsParallelEventPoliciesListed(policyNames ...string) FlowsParallelOption {
+	return func(p *flowsv1.Parallel) {
+		for _, name := range policyNames {
+			p.Status.Policies = append(p.Status.Policies, eventingduckv1.AppliedEventPolicyRef{
+				APIVersion: v1alpha1.SchemeGroupVersion.String(),
+				Name:       name,
+			})
 		}
-
-		p.Status.Auth.ServiceAccountName = &name
 	}
 }

@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -66,6 +66,7 @@ func (t testHelper) ReadyBrokerStatus() *BrokerStatus {
 		URL: apis.HTTP("example.com"),
 	})
 	bs.MarkDeadLetterSinkResolvedSucceeded(eventingduckv1.DeliveryStatus{})
+	bs.MarkEventPoliciesTrue()
 	return bs
 }
 
@@ -77,6 +78,7 @@ func (t testHelper) ReadyBrokerStatusWithoutDLS() *BrokerStatus {
 	bs.SetAddress(&duckv1.Addressable{
 		URL: apis.HTTP("example.com"),
 	})
+	bs.MarkEventPoliciesTrue()
 	bs.MarkDeadLetterSinkNotConfigured()
 	return bs
 }

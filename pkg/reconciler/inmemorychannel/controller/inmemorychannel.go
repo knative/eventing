@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -20,6 +20,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
+	"knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/utils/pointer"
@@ -93,6 +95,8 @@ type Reconciler struct {
 	eventDispatcherConfigStore *config.EventDispatcherConfigStore
 
 	uriResolver *resolver.URIResolver
+
+	eventPolicyLister v1alpha1.EventPolicyLister
 }
 
 // Check that our Reconciler implements Interface
@@ -230,6 +234,11 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1.InMemoryChannel)
 	}
 
 	imc.GetConditionSet().Manage(imc.GetStatus()).MarkTrue(v1.InMemoryChannelConditionAddressable)
+
+	err = auth.UpdateStatusWithEventPolicies(featureFlags, &imc.Status.AppliedEventPoliciesStatus, &imc.Status, r.eventPolicyLister, v1.SchemeGroupVersion.WithKind("InMemoryChannel"), imc.ObjectMeta)
+	if err != nil {
+		return fmt.Errorf("could not update InMemoryChannels status with EventPolicies: %v", err)
+	}
 
 	// Ok, so now the Dispatcher Deployment & Service have been created, we're golden since the
 	// dispatcher watches the Channel and where it needs to dispatch events to.

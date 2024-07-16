@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,6 +19,8 @@ package v1
 import (
 	"fmt"
 	"testing"
+
+	"knative.dev/pkg/ptr"
 
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
@@ -144,7 +146,7 @@ func TestSequenceInitializeConditions(t *testing.T) {
 					Type:   SequenceConditionChannelsReady,
 					Status: corev1.ConditionUnknown,
 				}, {
-					Type:   SequenceConditionOIDCIdentityCreated,
+					Type:   SequenceConditionEventPoliciesReady,
 					Status: corev1.ConditionUnknown,
 				}, {
 					Type:   SequenceConditionReady,
@@ -174,7 +176,7 @@ func TestSequenceInitializeConditions(t *testing.T) {
 					Type:   SequenceConditionChannelsReady,
 					Status: corev1.ConditionFalse,
 				}, {
-					Type:   SequenceConditionOIDCIdentityCreated,
+					Type:   SequenceConditionEventPoliciesReady,
 					Status: corev1.ConditionUnknown,
 				}, {
 					Type:   SequenceConditionReady,
@@ -204,7 +206,7 @@ func TestSequenceInitializeConditions(t *testing.T) {
 					Type:   SequenceConditionChannelsReady,
 					Status: corev1.ConditionUnknown,
 				}, {
-					Type:   SequenceConditionOIDCIdentityCreated,
+					Type:   SequenceConditionEventPoliciesReady,
 					Status: corev1.ConditionUnknown,
 				}, {
 					Type:   SequenceConditionReady,
@@ -282,6 +284,85 @@ func TestSequencePropagateSubscriptionStatuses(t *testing.T) {
 	}
 }
 
+func TestSequencePropagateSubscriptionOIDCSA(t *testing.T) {
+	tests := []struct {
+		name        string
+		subs        []*messagingv1.Subscription
+		wantOIDCSAs []string
+	}{{
+		name: "empty",
+		subs: []*messagingv1.Subscription{},
+	}, {
+		name: "one subscription",
+		subs: []*messagingv1.Subscription{{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "messaging.knative.dev/v1",
+				Kind:       "Subscription",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "sub",
+				Namespace: "testns",
+			},
+			Status: messagingv1.SubscriptionStatus{
+				Auth: &duckv1.AuthStatus{
+					ServiceAccountName: ptr.String("sub-oidc-sa"),
+				},
+			},
+		}},
+		wantOIDCSAs: []string{"sub-oidc-sa"},
+	}, {
+		name: "multiple subscriptions",
+		subs: []*messagingv1.Subscription{{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "messaging.knative.dev/v1",
+				Kind:       "Subscription",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "sub1",
+				Namespace: "testns",
+			},
+			Status: messagingv1.SubscriptionStatus{
+				Auth: &duckv1.AuthStatus{
+					ServiceAccountName: ptr.String("sub1-oidc-sa"),
+				},
+			},
+		}, {
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "messaging.knative.dev/v1",
+				Kind:       "Subscription",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "sub2",
+				Namespace: "testns",
+			},
+			Status: messagingv1.SubscriptionStatus{
+				Auth: &duckv1.AuthStatus{
+					ServiceAccountName: ptr.String("sub2-oidc-sa"),
+				},
+			},
+		},
+			getSubscription("sub3", true),
+		},
+		wantOIDCSAs: []string{"sub1-oidc-sa", "sub2-oidc-sa"},
+	}}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ps := SequenceStatus{}
+			ps.PropagateSubscriptionStatuses(test.subs)
+
+			var got []string
+			if ps.Auth != nil {
+				got = ps.Auth.ServiceAccountNames
+			}
+
+			if diff := cmp.Diff(test.wantOIDCSAs, got); diff != "" {
+				t.Errorf("unexpected OIDC service accounts (-want, +got) = %v", diff)
+			}
+		})
+	}
+}
+
 func TestSequencePropagateChannelStatuses(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -324,59 +405,59 @@ func TestSequencePropagateChannelStatuses(t *testing.T) {
 
 func TestSequenceReady(t *testing.T) {
 	tests := []struct {
-		name          string
-		subs          []*messagingv1.Subscription
-		channels      []*eventingduckv1.Channelable
-		oidcSACreated bool
-		want          bool
+		name               string
+		subs               []*messagingv1.Subscription
+		channels           []*eventingduckv1.Channelable
+		eventPoliciesReady bool
+		want               bool
 	}{{
-		name:          "empty",
-		subs:          []*messagingv1.Subscription{},
-		channels:      []*eventingduckv1.Channelable{},
-		oidcSACreated: false,
-		want:          false,
+		name:               "empty",
+		subs:               []*messagingv1.Subscription{},
+		channels:           []*eventingduckv1.Channelable{},
+		eventPoliciesReady: true,
+		want:               false,
 	}, {
-		name:          "one channelable not ready, one subscription ready",
-		channels:      []*eventingduckv1.Channelable{getChannelable(false)},
-		subs:          []*messagingv1.Subscription{getSubscription("sub0", true)},
-		oidcSACreated: false,
-		want:          false,
+		name:               "one channelable not ready, one subscription ready",
+		channels:           []*eventingduckv1.Channelable{getChannelable(false)},
+		subs:               []*messagingv1.Subscription{getSubscription("sub0", true)},
+		eventPoliciesReady: true,
+		want:               false,
 	}, {
-		name:          "one channelable ready, one subscription not ready",
-		channels:      []*eventingduckv1.Channelable{getChannelable(true)},
-		subs:          []*messagingv1.Subscription{getSubscription("sub0", false)},
-		oidcSACreated: false,
-		want:          false,
+		name:               "one channelable ready, one subscription not ready",
+		channels:           []*eventingduckv1.Channelable{getChannelable(true)},
+		subs:               []*messagingv1.Subscription{getSubscription("sub0", false)},
+		eventPoliciesReady: true,
+		want:               false,
 	}, {
-		name:          "one channelable ready, one subscription ready, oidc SA created",
-		channels:      []*eventingduckv1.Channelable{getChannelable(true)},
-		subs:          []*messagingv1.Subscription{getSubscription("sub0", true)},
-		oidcSACreated: true,
-		want:          true,
+		name:               "one channelable ready, one subscription ready, event policy ready",
+		channels:           []*eventingduckv1.Channelable{getChannelable(true)},
+		subs:               []*messagingv1.Subscription{getSubscription("sub0", true)},
+		eventPoliciesReady: true,
+		want:               true,
 	}, {
-		name:          "one channelable ready, one not, two subscriptions ready",
-		channels:      []*eventingduckv1.Channelable{getChannelable(true), getChannelable(false)},
-		subs:          []*messagingv1.Subscription{getSubscription("sub0", true), getSubscription("sub1", true)},
-		oidcSACreated: false,
-		want:          false,
+		name:               "one channelable ready, one subscription ready, event policy not ready",
+		channels:           []*eventingduckv1.Channelable{getChannelable(true)},
+		subs:               []*messagingv1.Subscription{getSubscription("sub0", true)},
+		eventPoliciesReady: false,
+		want:               false,
 	}, {
-		name:          "two channelables ready, one subscription ready, one not",
-		channels:      []*eventingduckv1.Channelable{getChannelable(true), getChannelable(true)},
-		subs:          []*messagingv1.Subscription{getSubscription("sub0", true), getSubscription("sub1", false)},
-		oidcSACreated: false,
-		want:          false,
+		name:               "one channelable ready, one not, two subscriptions ready",
+		channels:           []*eventingduckv1.Channelable{getChannelable(true), getChannelable(false)},
+		subs:               []*messagingv1.Subscription{getSubscription("sub0", true), getSubscription("sub1", true)},
+		eventPoliciesReady: true,
+		want:               false,
 	}, {
-		name:          "two channelables ready, two subscriptions ready, oidc SA not created",
-		channels:      []*eventingduckv1.Channelable{getChannelable(true), getChannelable(true)},
-		subs:          []*messagingv1.Subscription{getSubscription("sub0", true), getSubscription("sub1", true)},
-		oidcSACreated: false,
-		want:          false,
+		name:               "two channelables ready, one subscription ready, one not",
+		channels:           []*eventingduckv1.Channelable{getChannelable(true), getChannelable(true)},
+		subs:               []*messagingv1.Subscription{getSubscription("sub0", true), getSubscription("sub1", false)},
+		eventPoliciesReady: true,
+		want:               false,
 	}, {
-		name:          "two channelables ready, two subscriptions ready, oidc SA created",
-		channels:      []*eventingduckv1.Channelable{getChannelable(true), getChannelable(true)},
-		subs:          []*messagingv1.Subscription{getSubscription("sub0", true), getSubscription("sub1", true)},
-		oidcSACreated: true,
-		want:          true,
+		name:               "two channelables ready, two subscriptions ready",
+		channels:           []*eventingduckv1.Channelable{getChannelable(true), getChannelable(true)},
+		subs:               []*messagingv1.Subscription{getSubscription("sub0", true), getSubscription("sub1", true)},
+		eventPoliciesReady: true,
+		want:               true,
 	}}
 
 	for _, test := range tests {
@@ -384,8 +465,11 @@ func TestSequenceReady(t *testing.T) {
 			ps := SequenceStatus{}
 			ps.PropagateChannelStatuses(test.channels)
 			ps.PropagateSubscriptionStatuses(test.subs)
-			if test.oidcSACreated {
-				ps.MarkOIDCIdentityCreatedSucceeded()
+
+			if test.eventPoliciesReady {
+				ps.MarkEventPoliciesTrue()
+			} else {
+				ps.MarkEventPoliciesFailed("", "")
 			}
 
 			got := ps.IsReady()

@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -32,6 +32,7 @@ const (
 	BrokerConditionFilter                 apis.ConditionType = "FilterReady"
 	BrokerConditionAddressable            apis.ConditionType = "Addressable"
 	BrokerConditionDeadLetterSinkResolved apis.ConditionType = "DeadLetterSinkResolved"
+	BrokerConditionEventPoliciesReady     apis.ConditionType = "EventPoliciesReady"
 )
 
 var brokerCondSet = apis.NewLivingConditionSet(
@@ -40,6 +41,7 @@ var brokerCondSet = apis.NewLivingConditionSet(
 	BrokerConditionFilter,
 	BrokerConditionAddressable,
 	BrokerConditionDeadLetterSinkResolved,
+	BrokerConditionEventPoliciesReady,
 )
 var brokerCondSetLock = sync.RWMutex{}
 
@@ -117,4 +119,20 @@ func (bs *BrokerStatus) MarkDeadLetterSinkNotConfigured() {
 func (bs *BrokerStatus) MarkDeadLetterSinkResolvedFailed(reason, messageFormat string, messageA ...interface{}) {
 	bs.DeliveryStatus = eventingduck.DeliveryStatus{}
 	bs.GetConditionSet().Manage(bs).MarkFalse(BrokerConditionDeadLetterSinkResolved, reason, messageFormat, messageA...)
+}
+
+func (bs *BrokerStatus) MarkEventPoliciesTrue() {
+	bs.GetConditionSet().Manage(bs).MarkTrue(BrokerConditionEventPoliciesReady)
+}
+
+func (bs *BrokerStatus) MarkEventPoliciesTrueWithReason(reason, messageFormat string, messageA ...interface{}) {
+	bs.GetConditionSet().Manage(bs).MarkTrueWithReason(BrokerConditionEventPoliciesReady, reason, messageFormat, messageA...)
+}
+
+func (bs *BrokerStatus) MarkEventPoliciesFailed(reason, messageFormat string, messageA ...interface{}) {
+	bs.GetConditionSet().Manage(bs).MarkFalse(BrokerConditionEventPoliciesReady, reason, messageFormat, messageA...)
+}
+
+func (bs *BrokerStatus) MarkEventPoliciesUnknown(reason, messageFormat string, messageA ...interface{}) {
+	bs.GetConditionSet().Manage(bs).MarkUnknown(BrokerConditionEventPoliciesReady, reason, messageFormat, messageA...)
 }

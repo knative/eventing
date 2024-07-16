@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -81,6 +81,14 @@ type DeliverySpec struct {
 	//
 	// +optional
 	RetryAfterMax *string `json:"retryAfterMax,omitempty"`
+
+	// format specifies the desired event format for the cloud event.
+	// It can be one of the following values:
+	// - nil: default value, no specific format required.
+	// - "JSON": indicates the event should be in structured mode.
+	// - "binary": indicates the event should be in binary mode.
+	//+optional
+	Format *FormatType `json:"format,omitempty"`
 }
 
 func (ds *DeliverySpec) Validate(ctx context.Context) *apis.FieldError {
@@ -123,6 +131,15 @@ func (ds *DeliverySpec) Validate(ctx context.Context) *apis.FieldError {
 		}
 	}
 
+	if ds.Format != nil {
+		switch *ds.Format {
+		case DeliveryFormatBinary, DeliveryFormatJson:
+			// nothing
+		default:
+			errs = errs.Also(apis.ErrInvalidValue(*ds.Format, "format"))
+		}
+	}
+
 	if ds.RetryAfterMax != nil {
 		if feature.FromContext(ctx).IsEnabled(feature.DeliveryRetryAfter) {
 			p, me := period.Parse(*ds.RetryAfterMax)
@@ -146,6 +163,14 @@ const (
 
 	// Exponential backoff policy
 	BackoffPolicyExponential BackoffPolicyType = "exponential"
+)
+
+// FormatType is the type for delivery format
+type FormatType string
+
+const (
+	DeliveryFormatJson   FormatType = "json"
+	DeliveryFormatBinary FormatType = "binary"
 )
 
 // DeliveryStatus contains the Status of an object supporting delivery options. This type is intended to be embedded into a status struct.

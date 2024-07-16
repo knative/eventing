@@ -22,7 +22,12 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
+
+	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	eventpolicyinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventpolicy"
+	"knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	"go.uber.org/zap"
@@ -37,9 +42,10 @@ const (
 )
 
 type OIDCTokenVerifier struct {
-	logger     *zap.SugaredLogger
-	restConfig *rest.Config
-	provider   *oidc.Provider
+	logger            *zap.SugaredLogger
+	restConfig        *rest.Config
+	provider          *oidc.Provider
+	eventPolicyLister v1alpha1.EventPolicyLister
 }
 
 type IDToken struct {
@@ -53,8 +59,9 @@ type IDToken struct {
 
 func NewOIDCTokenVerifier(ctx context.Context) *OIDCTokenVerifier {
 	tokenHandler := &OIDCTokenVerifier{
-		logger:     logging.FromContext(ctx).With("component", "oidc-token-handler"),
-		restConfig: injection.GetConfig(ctx),
+		logger:            logging.FromContext(ctx).With("component", "oidc-token-handler"),
+		restConfig:        injection.GetConfig(ctx),
+		eventPolicyLister: eventpolicyinformer.Get(ctx).Lister(),
 	}
 
 	if err := tokenHandler.initOIDCProvider(ctx); err != nil {
@@ -64,13 +71,103 @@ func NewOIDCTokenVerifier(ctx context.Context) *OIDCTokenVerifier {
 	return tokenHandler
 }
 
-// VerifyJWT verifies the given JWT for the expected audience and returns the parsed ID token.
-func (c *OIDCTokenVerifier) VerifyJWT(ctx context.Context, jwt, audience string) (*IDToken, error) {
-	if c.provider == nil {
+// VerifyJWTFromRequest verifies if the incoming request contains a correct JWT token
+//
+// Deprecated: use OIDCTokenVerifier.Verify() instead to bundle AuthN and AuthZ verification
+func (v *OIDCTokenVerifier) VerifyJWTFromRequest(ctx context.Context, r *http.Request, audience *string, response http.ResponseWriter) error {
+	_, err := v.verifyAuthN(ctx, audience, r, response)
+
+	return err
+}
+
+// VerifyRequest verifies AuthN and AuthZ in the request. On verification errors, it sets the
+// responses HTTP status and returns an error
+func (v *OIDCTokenVerifier) VerifyRequest(ctx context.Context, features feature.Flags, requiredOIDCAudience *string, resourceNamespace string, policyRefs []duckv1.AppliedEventPolicyRef, req *http.Request, resp http.ResponseWriter) error {
+	if !features.IsOIDCAuthentication() {
+		return nil
+	}
+
+	idToken, err := v.verifyAuthN(ctx, requiredOIDCAudience, req, resp)
+	if err != nil {
+		return fmt.Errorf("authentication of request could not be verified: %w", err)
+	}
+
+	err = v.verifyAuthZ(features, idToken, resourceNamespace, policyRefs, resp)
+	if err != nil {
+		return fmt.Errorf("authorization of request could not be verified: %w", err)
+	}
+
+	return nil
+}
+
+// verifyAuthN verifies if the incoming request contains a correct JWT token
+func (v *OIDCTokenVerifier) verifyAuthN(ctx context.Context, audience *string, req *http.Request, resp http.ResponseWriter) (*IDToken, error) {
+	token := GetJWTFromHeader(req.Header)
+	if token == "" {
+		resp.WriteHeader(http.StatusUnauthorized)
+		return nil, fmt.Errorf("no JWT token found in request")
+	}
+
+	if audience == nil {
+		resp.WriteHeader(http.StatusInternalServerError)
+		return nil, fmt.Errorf("no audience is provided")
+	}
+
+	idToken, err := v.verifyJWT(ctx, token, *audience)
+	if err != nil {
+		resp.WriteHeader(http.StatusUnauthorized)
+		return nil, fmt.Errorf("failed to verify JWT: %w", err)
+	}
+
+	return idToken, nil
+}
+
+// verifyAuthZ verifies if the given idToken is allowed by the resources eventPolicyStatus
+func (v *OIDCTokenVerifier) verifyAuthZ(features feature.Flags, idToken *IDToken, resourceNamespace string, policyRefs []duckv1.AppliedEventPolicyRef, resp http.ResponseWriter) error {
+	if len(policyRefs) > 0 {
+		subjectsFromApplyingPolicies := []string{}
+		for _, p := range policyRefs {
+			policy, err := v.eventPolicyLister.EventPolicies(resourceNamespace).Get(p.Name)
+			if err != nil {
+				resp.WriteHeader(http.StatusInternalServerError)
+				return fmt.Errorf("failed to get eventPolicy: %w", err)
+			}
+
+			subjectsFromApplyingPolicies = append(subjectsFromApplyingPolicies, policy.Status.From...)
+		}
+
+		if !SubjectContained(idToken.Subject, subjectsFromApplyingPolicies) {
+			resp.WriteHeader(http.StatusForbidden)
+			return fmt.Errorf("token is from subject %q, but only %q are part of applying event policies", idToken.Subject, subjectsFromApplyingPolicies)
+		}
+
+		return nil
+	} else {
+		if features.IsAuthorizationDefaultModeDenyAll() {
+			resp.WriteHeader(http.StatusForbidden)
+			return fmt.Errorf("no event policies apply for resource and %s is set to %s", feature.AuthorizationDefaultMode, feature.AuthorizationDenyAll)
+
+		} else if features.IsAuthorizationDefaultModeSameNamespace() {
+			if !strings.HasPrefix(idToken.Subject, fmt.Sprintf("%s:%s:", kubernetesServiceAccountPrefix, resourceNamespace)) {
+				resp.WriteHeader(http.StatusForbidden)
+				return fmt.Errorf("no policies apply for resource. %s is set to %s, but token is from subject %q, which is not part of %q namespace", feature.AuthorizationDefaultMode, feature.AuthorizationDenyAll, idToken.Subject, resourceNamespace)
+			}
+
+			return nil
+		}
+		// else: allow all
+	}
+
+	return nil
+}
+
+// verifyJWT verifies the given JWT for the expected audience and returns the parsed ID token.
+func (v *OIDCTokenVerifier) verifyJWT(ctx context.Context, jwt, audience string) (*IDToken, error) {
+	if v.provider == nil {
 		return nil, fmt.Errorf("provider is nil. Is the OIDC provider config correct?")
 	}
 
-	verifier := c.provider.Verifier(&oidc.Config{
+	verifier := v.provider.Verifier(&oidc.Config{
 		ClientID: audience,
 	})
 
@@ -89,8 +186,8 @@ func (c *OIDCTokenVerifier) VerifyJWT(ctx context.Context, jwt, audience string)
 	}, nil
 }
 
-func (c *OIDCTokenVerifier) initOIDCProvider(ctx context.Context) error {
-	discovery, err := c.getKubernetesOIDCDiscovery()
+func (v *OIDCTokenVerifier) initOIDCProvider(ctx context.Context) error {
+	discovery, err := v.getKubernetesOIDCDiscovery()
 	if err != nil {
 		return fmt.Errorf("could not load Kubernetes OIDC discovery information: %w", err)
 	}
@@ -100,25 +197,25 @@ func (c *OIDCTokenVerifier) initOIDCProvider(ctx context.Context) error {
 		ctx = oidc.InsecureIssuerURLContext(ctx, discovery.Issuer)
 	}
 
-	httpClient, err := c.getHTTPClientForKubeAPIServer()
+	httpClient, err := v.getHTTPClientForKubeAPIServer()
 	if err != nil {
 		return fmt.Errorf("could not get HTTP client with TLS certs of API server: %w", err)
 	}
 	ctx = oidc.ClientContext(ctx, httpClient)
 
 	// get OIDC provider
-	c.provider, err = oidc.NewProvider(ctx, kubernetesOIDCDiscoveryBaseURL)
+	v.provider, err = oidc.NewProvider(ctx, kubernetesOIDCDiscoveryBaseURL)
 	if err != nil {
 		return fmt.Errorf("could not get OIDC provider: %w", err)
 	}
 
-	c.logger.Debug("updated OIDC provider config", zap.Any("discovery-config", discovery))
+	v.logger.Debug("updated OIDC provider config", zap.Any("discovery-config", discovery))
 
 	return nil
 }
 
-func (c *OIDCTokenVerifier) getHTTPClientForKubeAPIServer() (*http.Client, error) {
-	client, err := rest.HTTPClientFor(c.restConfig)
+func (v *OIDCTokenVerifier) getHTTPClientForKubeAPIServer() (*http.Client, error) {
+	client, err := rest.HTTPClientFor(v.restConfig)
 	if err != nil {
 		return nil, fmt.Errorf("could not create HTTP client from rest config: %w", err)
 	}
@@ -126,8 +223,8 @@ func (c *OIDCTokenVerifier) getHTTPClientForKubeAPIServer() (*http.Client, error
 	return client, nil
 }
 
-func (c *OIDCTokenVerifier) getKubernetesOIDCDiscovery() (*openIDMetadata, error) {
-	client, err := c.getHTTPClientForKubeAPIServer()
+func (v *OIDCTokenVerifier) getKubernetesOIDCDiscovery() (*openIDMetadata, error) {
+	client, err := v.getHTTPClientForKubeAPIServer()
 	if err != nil {
 		return nil, fmt.Errorf("could not get HTTP client for API server: %w", err)
 	}
@@ -149,27 +246,6 @@ func (c *OIDCTokenVerifier) getKubernetesOIDCDiscovery() (*openIDMetadata, error
 	}
 
 	return openIdConfig, nil
-}
-
-// VerifyJWTFromRequest will verify the incoming request contains the correct JWT token
-func (tokenVerifier *OIDCTokenVerifier) VerifyJWTFromRequest(ctx context.Context, r *http.Request, audience *string, response http.ResponseWriter) error {
-	token := GetJWTFromHeader(r.Header)
-	if token == "" {
-		response.WriteHeader(http.StatusUnauthorized)
-		return fmt.Errorf("no JWT token found in request")
-	}
-
-	if audience == nil {
-		response.WriteHeader(http.StatusInternalServerError)
-		return fmt.Errorf("no audience is provided")
-	}
-
-	if _, err := tokenVerifier.VerifyJWT(ctx, token, *audience); err != nil {
-		response.WriteHeader(http.StatusUnauthorized)
-		return fmt.Errorf("failed to verify JWT: %w", err)
-	}
-
-	return nil
 }
 
 type openIDMetadata struct {

@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -47,10 +47,11 @@ func TestTriggerDefaults(t *testing.T) {
 			expected: defaultTrigger,
 		},
 		"nil filter": {
-			initial: Trigger{Spec: TriggerSpec{Broker: otherBroker}},
+			initial: Trigger{Spec: TriggerSpec{Broker: otherBroker}, ObjectMeta: metav1.ObjectMeta{Namespace: namespace}},
 			expected: Trigger{
 				ObjectMeta: v1.ObjectMeta{
-					Labels: map[string]string{brokerLabel: otherBroker},
+					Labels:    map[string]string{brokerLabel: otherBroker},
+					Namespace: namespace,
 				},
 				Spec: TriggerSpec{Broker: otherBroker, Filter: emptyTriggerFilter}},
 		},
@@ -133,11 +134,13 @@ func TestTriggerDefaults(t *testing.T) {
 		"with broker and label": {
 			initial: Trigger{
 				ObjectMeta: v1.ObjectMeta{
-					Labels: map[string]string{"otherLabel": "my-other-label"},
+					Namespace: namespace,
+					Labels:    map[string]string{"otherLabel": "my-other-label"},
 				},
 				Spec: TriggerSpec{Broker: defaultBroker}},
 			expected: Trigger{
 				ObjectMeta: v1.ObjectMeta{
+					Namespace: namespace,
 					Labels: map[string]string{
 						"otherLabel": "my-other-label",
 						brokerLabel:  defaultBroker},

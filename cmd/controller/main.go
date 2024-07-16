@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -28,11 +28,14 @@ import (
 
 	"knative.dev/pkg/injection/sharedmain"
 
-	"knative.dev/eventing/pkg/auth"
-	"knative.dev/eventing/pkg/eventingtls"
-
 	filteredFactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
 	"knative.dev/pkg/signals"
+
+	"knative.dev/eventing/pkg/apis/sinks"
+	"knative.dev/eventing/pkg/auth"
+	"knative.dev/eventing/pkg/eventingtls"
+	"knative.dev/eventing/pkg/reconciler/eventpolicy"
+	"knative.dev/eventing/pkg/reconciler/jobsink"
 
 	"knative.dev/eventing/pkg/reconciler/apiserversource"
 	"knative.dev/eventing/pkg/reconciler/channel"
@@ -81,6 +84,7 @@ func main() {
 	ctx = filteredFactory.WithSelectors(ctx,
 		auth.OIDCLabelSelector,
 		eventingtls.TrustBundleLabelSelector,
+		sinks.JobSinkJobsLabelSelector,
 	)
 
 	sharedmain.MainWithContext(ctx, "controller",
@@ -90,6 +94,7 @@ func main() {
 
 		// Eventing
 		eventtype.NewController,
+		eventpolicy.NewController,
 
 		// Flows
 		parallel.NewController,
@@ -101,6 +106,9 @@ func main() {
 		containersource.NewController,
 		// Sources CRD
 		sourcecrd.NewController,
+
+		// Sinks
+		jobsink.NewController,
 
 		// Sugar
 		sugarnamespace.NewController,
