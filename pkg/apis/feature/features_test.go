@@ -71,7 +71,4 @@ func TestShouldNotOverrideDefaults(t *testing.T) {
 	if !f.IsDisabled(KReferenceGroup) && !f.IsEnabled(KReferenceGroup) {
 		t.Errorf("Expected default value for %s in flags %+v", KReferenceGroup, f)
 	}
-	if !f.IsEnabled(NewTriggerFilters) {
-		t.Errorf("Expected default value for %s to be %s in flags %+v", NewTriggerFilters, Enabled, f)
-	}
 }

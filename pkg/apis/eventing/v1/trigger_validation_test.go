@@ -692,9 +692,6 @@ func TestTriggerSpecValidationWithCrossNamespaceEventLinksFeatureEnabled(t *test
 }
 
 func TestFilterSpecValidation(t *testing.T) {
-	newTriggerFiltersEnabledCtx := feature.ToContext(context.TODO(), feature.Flags{
-		feature.NewTriggerFilters: feature.Enabled,
-	})
 	tests := []struct {
 		name    string
 		filter  *TriggerFilter
@@ -939,7 +936,7 @@ func TestFilterSpecValidation(t *testing.T) {
 				Filters:    test.filters,
 				Subscriber: validSubscriber,
 			}
-			got := ts.Validate(newTriggerFiltersEnabledCtx)
+			got := ts.Validate(context.Background())
 			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
 				t.Errorf("Validate TriggerSpec (-want, +got) =\n%s", diff)
 			}

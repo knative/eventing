@@ -672,9 +672,7 @@ func TestReceiver_WithSubscriptionsAPI(t *testing.T) {
 				reporter,
 				configmapinformer.Get(ctx).Lister().ConfigMaps("ns"),
 				func(ctx context.Context) context.Context {
-					return feature.ToContext(context.TODO(), feature.Flags{
-						feature.NewTriggerFilters: feature.Enabled,
-					})
+					return ctx
 				})
 			if err != nil {
 				t.Fatal("Unable to create receiver:", err)

@@ -21,7 +21,6 @@ const (
 	DeliveryRetryAfter       = "delivery-retryafter"
 	DeliveryTimeout          = "delivery-timeout"
 	KReferenceMapping        = "kreference-mapping"
-	NewTriggerFilters        = "new-trigger-filters"
 	TransportEncryption      = "transport-encryption"
 	EvenTypeAutoCreate       = "eventtype-auto-create"
 	OIDCAuthentication       = "authentication-oidc"
