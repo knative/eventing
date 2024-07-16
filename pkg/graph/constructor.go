@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
@@ -40,24 +41,28 @@ func ConstructGraph(ctx context.Context, filterFunc func(obj interface{}) bool) 
 	g := NewGraph()
 
 	brokers, err := eventingClient.EventingV1().Brokers("").List(ctx, metav1.ListOptions{})
-	if err != nil {
+	if err != nil && !apierrs.IsNotFound(err) && !apierrs.IsUnauthorized(err) && !apierrs.IsForbidden(err) {
 		return nil, err
 	}
 
-	for _, broker := range brokers.Items {
-		if filterFunc(broker) {
-			g.AddBroker(broker)
+	if err == nil {
+		for _, broker := range brokers.Items {
+			if filterFunc(broker) {
+				g.AddBroker(broker)
+			}
 		}
 	}
 
 	channels, err := eventingClient.MessagingV1().Channels("").List(ctx, metav1.ListOptions{})
-	if err != nil {
+	if err != nil && !apierrs.IsNotFound(err) && !apierrs.IsUnauthorized(err) && !apierrs.IsForbidden(err) {
 		return nil, err
 	}
 
-	for _, channel := range channels.Items {
-		if filterFunc(channel) {
-			g.AddChannel(channel)
+	if err == nil {
+		for _, channel := range channels.Items {
+			if filterFunc(channel) {
+				g.AddChannel(channel)
+			}
 		}
 	}
 
@@ -73,43 +78,49 @@ func ConstructGraph(ctx context.Context, filterFunc func(obj interface{}) bool) 
 	}
 
 	triggers, err := eventingClient.EventingV1().Triggers("").List(ctx, metav1.ListOptions{})
-	if err != nil {
+	if err != nil && !apierrs.IsNotFound(err) && !apierrs.IsUnauthorized(err) && !apierrs.IsForbidden(err) {
 		return nil, err
 	}
 
-	for _, trigger := range triggers.Items {
-		if filterFunc(trigger) {
-			err := g.AddTrigger(trigger)
-			if err != nil {
-				return nil, err
+	if err == nil {
+		for _, trigger := range triggers.Items {
+			if filterFunc(trigger) {
+				err := g.AddTrigger(trigger)
+				if err != nil {
+					return nil, err
+				}
 			}
 		}
 	}
 
 	subscriptions, err := eventingClient.MessagingV1().Subscriptions("").List(ctx, metav1.ListOptions{})
-	if err != nil {
+	if err != nil && !apierrs.IsNotFound(err) && !apierrs.IsUnauthorized(err) && !apierrs.IsForbidden(err) {
 		return nil, err
 	}
 
-	for _, subscription := range subscriptions.Items {
-		if filterFunc(subscription) {
-			err := g.AddSubscription(subscription)
-			if err != nil {
-				return nil, err
+	if err == nil {
+		for _, subscription := range subscriptions.Items {
+			if filterFunc(subscription) {
+				err := g.AddSubscription(subscription)
+				if err != nil {
+					return nil, err
+				}
 			}
 		}
 	}
 
 	eventTypes, err := eventingClient.EventingV1beta3().EventTypes("").List(ctx, metav1.ListOptions{})
-	if err != nil {
+	if err != nil && !apierrs.IsNotFound(err) && !apierrs.IsUnauthorized(err) && !apierrs.IsForbidden(err) {
 		return nil, err
 	}
 
-	for _, eventType := range eventTypes.Items {
-		if filterFunc(eventType) {
-			err := g.AddEventType(eventType)
-			if err != nil {
-				return nil, err
+	if err == nil {
+		for _, eventType := range eventTypes.Items {
+			if filterFunc(eventType) {
+				err := g.AddEventType(eventType)
+				if err != nil {
+					return nil, err
+				}
 			}
 		}
 	}
