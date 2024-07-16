@@ -15,6 +15,7 @@ var IntFunction function = function{
 	name:         "INT",
 	fixedArgs:    []cesql.Type{cesql.AnyType},
 	variadicArgs: nil,
+	returnType:   cesql.IntegerType,
 	fn: func(event cloudevents.Event, i []interface{}) (interface{}, error) {
 		return utils.Cast(i[0], cesql.IntegerType)
 	},
@@ -24,6 +25,7 @@ var BoolFunction function = function{
 	name:         "BOOL",
 	fixedArgs:    []cesql.Type{cesql.AnyType},
 	variadicArgs: nil,
+	returnType:   cesql.BooleanType,
 	fn: func(event cloudevents.Event, i []interface{}) (interface{}, error) {
 		return utils.Cast(i[0], cesql.BooleanType)
 	},
@@ -33,6 +35,7 @@ var StringFunction function = function{
 	name:         "STRING",
 	fixedArgs:    []cesql.Type{cesql.AnyType},
 	variadicArgs: nil,
+	returnType:   cesql.StringType,
 	fn: func(event cloudevents.Event, i []interface{}) (interface{}, error) {
 		return utils.Cast(i[0], cesql.StringType)
 	},
@@ -42,6 +45,7 @@ var IsIntFunction function = function{
 	name:         "IS_INT",
 	fixedArgs:    []cesql.Type{cesql.AnyType},
 	variadicArgs: nil,
+	returnType:   cesql.BooleanType,
 	fn: func(event cloudevents.Event, i []interface{}) (interface{}, error) {
 		return utils.CanCast(i[0], cesql.IntegerType), nil
 	},
@@ -51,6 +55,7 @@ var IsBoolFunction function = function{
 	name:         "IS_BOOL",
 	fixedArgs:    []cesql.Type{cesql.AnyType},
 	variadicArgs: nil,
+	returnType:   cesql.BooleanType,
 	fn: func(event cloudevents.Event, i []interface{}) (interface{}, error) {
 		return utils.CanCast(i[0], cesql.BooleanType), nil
 	},
