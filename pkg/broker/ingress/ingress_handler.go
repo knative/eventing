@@ -231,16 +231,11 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	features := feature.FromContext(ctx)
-	if features.IsOIDCAuthentication() {
-		h.Logger.Debug("OIDC authentication is enabled")
-
-		err = h.tokenVerifier.VerifyJWTFromRequest(ctx, request, broker.Status.Address.Audience, writer)
-		if err != nil {
-			h.Logger.Warn("Error when validating the JWT token in the request", zap.Error(err))
-			return
-		}
-
-		h.Logger.Debug("Request contained a valid JWT. Continuing...")
+	err = h.tokenVerifier.VerifyRequest(ctx, features, broker.Status.Address.Audience, brokerNamespace, broker.Status.Policies, request, writer)
+	if err != nil {
+		h.Logger.Warn("Failed to verify AuthN and AuthZ.", zap.Error(err))
+		writer.WriteHeader(http.StatusForbidden)
+		return
 	}
 
 	ctx, span := trace.StartSpan(ctx, tracing.BrokerMessagingDestination(brokerNamespacedName))
