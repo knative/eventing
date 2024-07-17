@@ -179,3 +179,19 @@ type openIDMetadata struct {
 	SubjectTypes  []string `json:"subject_types_supported"`
 	SigningAlgs   []string `json:"id_token_signing_alg_values_supported"`
 }
+
+// Getting the OIDCIdentity
+func (c *OIDCTokenVerifier) GetOIDCIdentity(ctx context.Context, r *http.Request, audience string) (*IDToken, error) {
+	token := GetJWTFromHeader(r.Header)
+	if token == "" {
+		return nil, fmt.Errorf("no JWT token found in request")
+	}
+
+	// Verify the JWT token
+	oidcToken, err := c.VerifyJWT(ctx, token, audience)
+	if err != nil {
+		return nil, fmt.Errorf("failed to verify JWT: %v", err)
+	}
+
+	return oidcToken, nil
+}

@@ -256,12 +256,13 @@ func (r *EventReceiver) ServeHTTP(response nethttp.ResponseWriter, request *neth
 	features := feature.FromContext(ctx)
 	if features.IsOIDCAuthentication() {
 		r.logger.Debug("OIDC authentication is enabled")
-		err = r.tokenVerifier.VerifyJWTFromRequest(ctx, request, &r.audience, response)
+		oidcToken, err := r.tokenVerifier.GetOIDCIdentity(ctx, request, r.audience)
 		if err != nil {
 			r.logger.Warn("Error when validating the JWT token in the request", zap.Error(err))
+			response.WriteHeader(nethttp.StatusUnauthorized)
 			return
 		}
-		r.logger.Debug("Request contained a valid JWT. Continuing...")
+		r.logger.Debug("Request contained a valid JWT. Continuing...", zap.String("subject", oidcToken.Subject))
 	}
 
 	err = r.receiverFunc(request.Context(), channel, *event, utils.PassThroughHeaders(request.Header))
