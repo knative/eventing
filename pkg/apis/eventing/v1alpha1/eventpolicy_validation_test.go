@@ -146,7 +146,7 @@ func TestEventPolicySpecValidationWithOIDCAuthenticationFeatureFlagEnabled(t *te
 			}(),
 		},
 		{
-			name: "invalid, bot from.ref and from.sub set",
+			name: "invalid, both from.ref and from.sub set for the same list element",
 			ep: &EventPolicy{
 				Spec: EventPolicySpec{
 					From: []EventPolicySpecFrom{{
@@ -175,7 +175,7 @@ func TestEventPolicySpecValidationWithOIDCAuthenticationFeatureFlagEnabled(t *te
 			}(),
 		},
 		{
-			name: "invalid, both to.ref and to.selector set",
+			name: "invalid, both to.ref and to.selector set for the same list element",
 			ep: &EventPolicy{
 				Spec: EventPolicySpec{
 					To: []EventPolicySpecTo{
