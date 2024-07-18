@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -46,10 +46,10 @@ func SourceToSink(brokerName string) *feature.Feature {
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 
 	// Point the Trigger subscriber to the sink svc.
-	cfg := []manifest.CfgFn{trigger.WithSubscriber(service.AsKReference(sink), "")}
+	cfg := []manifest.CfgFn{trigger.WithSubscriber(service.AsKReference(sink), ""), trigger.WithBrokerName(brokerName)}
 
 	// Install the trigger
-	f.Setup("install trigger", trigger.Install(via, brokerName, cfg...))
+	f.Setup("install trigger", trigger.Install(via, cfg...))
 
 	f.Setup("trigger goes ready", trigger.IsReady(via))
 
@@ -85,7 +85,7 @@ func SourceToSinkWithDLQ() *feature.Feature {
 	brokerConfig := append(broker.WithEnvConfig(), delivery.WithDeadLetterSink(service.AsKReference(dls), ""))
 	f.Setup("install broker", broker.Install(brokerName, brokerConfig...))
 	f.Setup("Broker is ready", broker.IsReady(brokerName))
-	f.Setup("install trigger", trigger.Install(triggerName, brokerName, trigger.WithSubscriber(nil, "bad://uri")))
+	f.Setup("install trigger", trigger.Install(triggerName, trigger.WithBrokerName(brokerName), trigger.WithSubscriber(nil, "bad://uri")))
 	f.Setup("trigger is ready", trigger.IsReady(triggerName))
 
 	ce := FullEvent()
@@ -123,7 +123,7 @@ func SourceToSinkWithFlakyDLQ(brokerName string) *feature.Feature {
 	f.Setup("install dlq", eventshub.Install(dlq, eventshub.StartReceiver))
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver, eventshub.DropFirstN(2)))
 	f.Setup("update broker with DLQ", broker.Install(brokerName, broker.WithDeadLetterSink(service.AsKReference(dlq), "")))
-	f.Setup("install trigger", trigger.Install(via, brokerName, trigger.WithSubscriber(service.AsKReference(sink), "")))
+	f.Setup("install trigger", trigger.Install(via, trigger.WithBrokerName(brokerName), trigger.WithSubscriber(service.AsKReference(sink), "")))
 	f.Setup("trigger goes ready", trigger.IsReady(via))
 	f.Setup("broker goes ready", broker.IsReady(via))
 

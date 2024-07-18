@@ -138,6 +138,14 @@ func WithEventPolicyFrom(gvk metav1.GroupVersionKind, name, namespace string) Ev
 	}
 }
 
+func WithEventPolicyFromSub(sub string) EventPolicyOption {
+	return func(ep *v1alpha1.EventPolicy) {
+		ep.Spec.From = append(ep.Spec.From, v1alpha1.EventPolicySpecFrom{
+			Sub: &sub,
+		})
+	}
+}
+
 func WithEventPolicyLabels(labels map[string]string) EventPolicyOption {
 	return func(ep *v1alpha1.EventPolicy) {
 		ep.ObjectMeta.Labels = labels

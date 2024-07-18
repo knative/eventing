@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -48,7 +48,7 @@ func Defaulting_Filter() *feature.Feature {
 
 	f.Setup("Set Trigger name", SetTriggerName(resourceName))
 	f.Setup("Create a Trigger with empty spec.filter",
-		triggerresources.Install(resourceName, "broker", withSubscriber))
+		triggerresources.Install(resourceName, triggerresources.WithBrokerName("broker"), withSubscriber))
 
 	f.Stable("Conformance").
 		Must("Trigger MUST default spec.filter to empty filter",
@@ -65,7 +65,7 @@ func Defaulting_SubscriberNamespace() *feature.Feature {
 
 	f.Setup("Set Trigger name", SetTriggerName(resourceName))
 	f.Setup("Create a Trigger with empty subscriber namespace",
-		triggerresources.Install(resourceName, "broker", withSubscriber))
+		triggerresources.Install(resourceName, triggerresources.WithBrokerName("broker"), withSubscriber))
 
 	f.Stable("Conformance").
 		Must("Trigger subscriber namespace MUST be defaulted to Trigger namespace",

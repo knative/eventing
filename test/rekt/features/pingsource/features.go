@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -204,7 +204,7 @@ func SendsEventsWithEventTypes() *feature.Feature {
 	f.Setup("broker is ready", broker.IsReady(brokerName))
 	f.Setup("broker is addressable", broker.IsAddressable(brokerName))
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
-	f.Setup("install trigger", trigger.Install(via, brokerName, trigger.WithSubscriber(service.AsKReference(sink), "")))
+	f.Setup("install trigger", trigger.Install(via, trigger.WithBrokerName(brokerName), trigger.WithSubscriber(service.AsKReference(sink), "")))
 	f.Setup("trigger goes ready", trigger.IsReady(via))
 
 	f.Requirement("install pingsource", func(ctx context.Context, t feature.T) {
@@ -253,7 +253,7 @@ func SendsEventsWithBrokerAsSinkTLS() *feature.Feature {
 	f.Setup("install trigger", func(ctx context.Context, t feature.T) {
 		d := service.AsDestinationRef(sinkName)
 		d.CACerts = eventshub.GetCaCerts(ctx)
-		trigger.Install(triggerName, brokerName, trigger.WithSubscriberFromDestination(d))(ctx, t)
+		trigger.Install(triggerName, trigger.WithBrokerName(brokerName), trigger.WithSubscriberFromDestination(d))(ctx, t)
 	})
 	f.Setup("Wait for Trigger to become ready", trigger.IsReady(triggerName))
 

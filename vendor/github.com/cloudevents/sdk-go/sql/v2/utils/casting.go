@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	cesql "github.com/cloudevents/sdk-go/sql/v2"
+	sqlerrors "github.com/cloudevents/sdk-go/sql/v2/errors"
 )
 
 func Cast(val interface{}, target cesql.Type) (interface{}, error) {
@@ -36,11 +37,16 @@ func Cast(val interface{}, target cesql.Type) (interface{}, error) {
 		case string:
 			v, err := strconv.ParseInt(val.(string), 10, 32)
 			if err != nil {
-				err = fmt.Errorf("cannot cast from String to Integer: %w", err)
+				err = sqlerrors.NewCastError(fmt.Errorf("cannot cast from String to Integer: %w", err))
 			}
 			return int32(v), err
+		case bool:
+			if val.(bool) {
+				return int32(1), nil
+			}
+			return int32(0), nil
 		}
-		return 0, fmt.Errorf("undefined cast from %v to %v", cesql.TypeFromVal(val), target)
+		return 0, sqlerrors.NewCastError(fmt.Errorf("undefined cast from %v to %v", cesql.TypeFromVal(val), target))
 	case cesql.BooleanType:
 		switch val.(type) {
 		case string:
@@ -50,9 +56,14 @@ func Cast(val interface{}, target cesql.Type) (interface{}, error) {
 			} else if lowerCase == "false" {
 				return false, nil
 			}
-			return false, fmt.Errorf("cannot cast String to Boolean, actual value: %v", val)
+			return false, sqlerrors.NewCastError(fmt.Errorf("cannot cast String to Boolean, actual value: %v", val))
+		case int32:
+			if val.(int32) == 0 {
+				return false, nil
+			}
+			return true, nil
 		}
-		return false, fmt.Errorf("undefined cast from %v to %v", cesql.TypeFromVal(val), target)
+		return false, sqlerrors.NewCastError(fmt.Errorf("undefined cast from %v to %v", cesql.TypeFromVal(val), target))
 	}
 
 	// AnyType doesn't need casting

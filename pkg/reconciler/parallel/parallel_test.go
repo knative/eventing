@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -53,10 +53,12 @@ import (
 )
 
 const (
-	testNS             = "test-namespace"
-	parallelName       = "test-parallel"
-	replyChannelName   = "reply-channel"
-	parallelGeneration = 79
+	testNS                 = "test-namespace"
+	parallelName           = "test-parallel"
+	replyChannelName       = "reply-channel"
+	parallelGeneration     = 79
+	readyEventPolicyName   = "test-event-policy-ready"
+	unreadyEventPolicyName = "test-event-policy-unready"
 )
 
 var (
@@ -64,6 +66,12 @@ var (
 		Group:   "messaging.knative.dev",
 		Version: "v1",
 		Kind:    "Subscriber",
+	}
+
+	parallelGVK = metav1.GroupVersionKind{
+		Group:   "flows.knative.dev",
+		Version: "v1",
+		Kind:    "Parallel",
 	}
 )
 
@@ -137,6 +145,7 @@ func TestAllBranches(t *testing.T) {
 					WithFlowsParallelAddressableNotReady("emptyAddress", "addressable is nil"),
 					WithFlowsParallelSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
 					WithFlowsParallelIngressChannelStatus(createParallelChannelStatus(parallelName, corev1.ConditionFalse)),
+					WithFlowsParallelEventPoliciesReadyBecauseOIDCDisabled(),
 					WithFlowsParallelBranchStatuses([]v1.ParallelBranchStatus{{
 						FilterSubscriptionStatus: createParallelFilterSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
 						FilterChannelStatus:      createParallelBranchChannelStatus(parallelName, 0, corev1.ConditionFalse),
@@ -173,6 +182,7 @@ func TestAllBranches(t *testing.T) {
 					WithFlowsParallelAddressableNotReady("emptyAddress", "addressable is nil"),
 					WithFlowsParallelSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
 					WithFlowsParallelIngressChannelStatus(createParallelChannelStatus(parallelName, corev1.ConditionFalse)),
+					WithFlowsParallelEventPoliciesReadyBecauseOIDCDisabled(),
 					WithFlowsParallelBranchStatuses([]v1.ParallelBranchStatus{{
 						FilterSubscriptionStatus: createParallelFilterSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
 						FilterChannelStatus:      createParallelBranchChannelStatus(parallelName, 0, corev1.ConditionFalse),
@@ -209,6 +219,7 @@ func TestAllBranches(t *testing.T) {
 					WithFlowsParallelAddressableNotReady("emptyAddress", "addressable is nil"),
 					WithFlowsParallelSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
 					WithFlowsParallelIngressChannelStatus(createParallelChannelStatus(parallelName, corev1.ConditionFalse)),
+					WithFlowsParallelEventPoliciesReadyBecauseOIDCDisabled(),
 					WithFlowsParallelBranchStatuses([]v1.ParallelBranchStatus{{
 						FilterSubscriptionStatus: createParallelFilterSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
 						FilterChannelStatus:      createParallelBranchChannelStatus(parallelName, 0, corev1.ConditionFalse),
@@ -249,6 +260,7 @@ func TestAllBranches(t *testing.T) {
 					WithFlowsParallelChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
 					WithFlowsParallelSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
 					WithFlowsParallelIngressChannelStatus(createParallelChannelStatus(parallelName, corev1.ConditionFalse)),
+					WithFlowsParallelEventPoliciesReadyBecauseOIDCDisabled(),
 					WithFlowsParallelBranchStatuses([]v1.ParallelBranchStatus{{
 						FilterSubscriptionStatus: createParallelFilterSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
 						FilterChannelStatus:      createParallelBranchChannelStatus(parallelName, 0, corev1.ConditionFalse),
@@ -289,6 +301,7 @@ func TestAllBranches(t *testing.T) {
 					WithFlowsParallelChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
 					WithFlowsParallelSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
 					WithFlowsParallelIngressChannelStatus(createParallelChannelStatus(parallelName, corev1.ConditionFalse)),
+					WithFlowsParallelEventPoliciesReadyBecauseOIDCDisabled(),
 					WithFlowsParallelBranchStatuses([]v1.ParallelBranchStatus{{
 						FilterSubscriptionStatus: createParallelFilterSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
 						FilterChannelStatus:      createParallelBranchChannelStatus(parallelName, 0, corev1.ConditionFalse),
@@ -339,6 +352,7 @@ func TestAllBranches(t *testing.T) {
 					WithFlowsParallelAddressableNotReady("emptyAddress", "addressable is nil"),
 					WithFlowsParallelSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
 					WithFlowsParallelIngressChannelStatus(createParallelChannelStatus(parallelName, corev1.ConditionFalse)),
+					WithFlowsParallelEventPoliciesReadyBecauseOIDCDisabled(),
 					WithFlowsParallelBranchStatuses([]v1.ParallelBranchStatus{
 						{
 							FilterSubscriptionStatus: createParallelFilterSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
@@ -398,6 +412,7 @@ func TestAllBranches(t *testing.T) {
 					WithFlowsParallelAddressableNotReady("emptyAddress", "addressable is nil"),
 					WithFlowsParallelSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
 					WithFlowsParallelIngressChannelStatus(createParallelChannelStatus(parallelName, corev1.ConditionFalse)),
+					WithFlowsParallelEventPoliciesReadyBecauseOIDCDisabled(),
 					WithFlowsParallelBranchStatuses([]v1.ParallelBranchStatus{
 						{
 							FilterSubscriptionStatus: createParallelFilterSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
@@ -456,6 +471,7 @@ func TestAllBranches(t *testing.T) {
 					WithFlowsParallelAddressableNotReady("emptyAddress", "addressable is nil"),
 					WithFlowsParallelSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
 					WithFlowsParallelIngressChannelStatus(createParallelChannelStatus(parallelName, corev1.ConditionFalse)),
+					WithFlowsParallelEventPoliciesReadyBecauseOIDCDisabled(),
 					WithFlowsParallelBranchStatuses([]v1.ParallelBranchStatus{{
 						FilterSubscriptionStatus: createParallelFilterSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
 						FilterChannelStatus:      createParallelBranchChannelStatus(parallelName, 0, corev1.ConditionFalse),
@@ -553,6 +569,139 @@ func TestAllBranches(t *testing.T) {
 					WithFlowsParallelAddressableNotReady("emptyAddress", "addressable is nil"),
 					WithFlowsParallelSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
 					WithFlowsParallelIngressChannelStatus(createParallelChannelStatus(parallelName, corev1.ConditionFalse)),
+					WithFlowsParallelEventPoliciesReadyBecauseOIDCDisabled(),
+					WithFlowsParallelBranchStatuses([]v1.ParallelBranchStatus{{
+						FilterSubscriptionStatus: createParallelFilterSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
+						FilterChannelStatus:      createParallelBranchChannelStatus(parallelName, 0, corev1.ConditionFalse),
+						SubscriptionStatus:       createParallelSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
+					}})),
+			}},
+		}, {
+			Name: "Should provision applying EventPolicies",
+			Key:  pKey,
+			Objects: []runtime.Object{
+				NewFlowsParallel(parallelName, testNS,
+					WithInitFlowsParallelConditions,
+					WithFlowsParallelChannelTemplateSpec(imc),
+					WithFlowsParallelBranches([]v1.ParallelBranch{
+						{Filter: createFilter(0), Subscriber: createSubscriber(0)},
+					})),
+				NewEventPolicy(readyEventPolicyName, testNS,
+					WithReadyEventPolicyCondition,
+					WithEventPolicyToRef(parallelGVK, parallelName),
+				),
+			},
+			WantErr: false,
+			WantCreates: []runtime.Object{
+				createChannel(parallelName),
+				createBranchChannel(parallelName, 0),
+				resources.NewFilterSubscription(0, NewFlowsParallel(parallelName, testNS, WithFlowsParallelChannelTemplateSpec(imc), WithFlowsParallelBranches([]v1.ParallelBranch{
+					{Filter: createFilter(0), Subscriber: createSubscriber(0)},
+				}))),
+				resources.NewSubscription(0, NewFlowsParallel(parallelName, testNS, WithFlowsParallelChannelTemplateSpec(imc), WithFlowsParallelBranches([]v1.ParallelBranch{
+					{Filter: createFilter(0), Subscriber: createSubscriber(0)},
+				}))),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewFlowsParallel(parallelName, testNS,
+					WithInitFlowsParallelConditions,
+					WithFlowsParallelChannelTemplateSpec(imc),
+					WithFlowsParallelBranches([]v1.ParallelBranch{{Filter: createFilter(0), Subscriber: createSubscriber(0)}}),
+					WithFlowsParallelChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
+					WithFlowsParallelAddressableNotReady("emptyAddress", "addressable is nil"),
+					WithFlowsParallelSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+					WithFlowsParallelIngressChannelStatus(createParallelChannelStatus(parallelName, corev1.ConditionFalse)),
+					WithFlowsParallelEventPoliciesReady(),
+					WithFlowsParallelEventPoliciesListed(readyEventPolicyName),
+					WithFlowsParallelBranchStatuses([]v1.ParallelBranchStatus{{
+						FilterSubscriptionStatus: createParallelFilterSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
+						FilterChannelStatus:      createParallelBranchChannelStatus(parallelName, 0, corev1.ConditionFalse),
+						SubscriptionStatus:       createParallelSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
+					}})),
+			}},
+		}, {
+			Name: "Should mark as NotReady on unready EventPolicies",
+			Key:  pKey,
+			Objects: []runtime.Object{
+				NewFlowsParallel(parallelName, testNS,
+					WithInitFlowsParallelConditions,
+					WithFlowsParallelChannelTemplateSpec(imc),
+					WithFlowsParallelBranches([]v1.ParallelBranch{
+						{Filter: createFilter(0), Subscriber: createSubscriber(0)},
+					})),
+				NewEventPolicy(unreadyEventPolicyName, testNS,
+					WithUnreadyEventPolicyCondition("", ""),
+					WithEventPolicyToRef(parallelGVK, parallelName),
+				),
+			},
+			WantErr: false,
+			WantCreates: []runtime.Object{
+				createChannel(parallelName),
+				createBranchChannel(parallelName, 0),
+				resources.NewFilterSubscription(0, NewFlowsParallel(parallelName, testNS, WithFlowsParallelChannelTemplateSpec(imc), WithFlowsParallelBranches([]v1.ParallelBranch{
+					{Filter: createFilter(0), Subscriber: createSubscriber(0)},
+				}))),
+				resources.NewSubscription(0, NewFlowsParallel(parallelName, testNS, WithFlowsParallelChannelTemplateSpec(imc), WithFlowsParallelBranches([]v1.ParallelBranch{
+					{Filter: createFilter(0), Subscriber: createSubscriber(0)},
+				}))),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewFlowsParallel(parallelName, testNS,
+					WithInitFlowsParallelConditions,
+					WithFlowsParallelChannelTemplateSpec(imc),
+					WithFlowsParallelBranches([]v1.ParallelBranch{{Filter: createFilter(0), Subscriber: createSubscriber(0)}}),
+					WithFlowsParallelChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
+					WithFlowsParallelAddressableNotReady("emptyAddress", "addressable is nil"),
+					WithFlowsParallelSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+					WithFlowsParallelIngressChannelStatus(createParallelChannelStatus(parallelName, corev1.ConditionFalse)),
+					WithFlowsParallelEventPoliciesNotReady("EventPoliciesNotReady", fmt.Sprintf("event policies %s are not ready", unreadyEventPolicyName)),
+					WithFlowsParallelBranchStatuses([]v1.ParallelBranchStatus{{
+						FilterSubscriptionStatus: createParallelFilterSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
+						FilterChannelStatus:      createParallelBranchChannelStatus(parallelName, 0, corev1.ConditionFalse),
+						SubscriptionStatus:       createParallelSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
+					}})),
+			}},
+		}, {
+			Name: "should list only Ready EventPolicies",
+			Key:  pKey,
+			Objects: []runtime.Object{
+				NewFlowsParallel(parallelName, testNS,
+					WithInitFlowsParallelConditions,
+					WithFlowsParallelChannelTemplateSpec(imc),
+					WithFlowsParallelBranches([]v1.ParallelBranch{
+						{Filter: createFilter(0), Subscriber: createSubscriber(0)},
+					})),
+				NewEventPolicy(unreadyEventPolicyName, testNS,
+					WithUnreadyEventPolicyCondition("", ""),
+					WithEventPolicyToRef(parallelGVK, parallelName),
+				),
+				NewEventPolicy(readyEventPolicyName, testNS,
+					WithReadyEventPolicyCondition,
+					WithEventPolicyToRef(parallelGVK, parallelName),
+				),
+			},
+			WantErr: false,
+			WantCreates: []runtime.Object{
+				createChannel(parallelName),
+				createBranchChannel(parallelName, 0),
+				resources.NewFilterSubscription(0, NewFlowsParallel(parallelName, testNS, WithFlowsParallelChannelTemplateSpec(imc), WithFlowsParallelBranches([]v1.ParallelBranch{
+					{Filter: createFilter(0), Subscriber: createSubscriber(0)},
+				}))),
+				resources.NewSubscription(0, NewFlowsParallel(parallelName, testNS, WithFlowsParallelChannelTemplateSpec(imc), WithFlowsParallelBranches([]v1.ParallelBranch{
+					{Filter: createFilter(0), Subscriber: createSubscriber(0)},
+				}))),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewFlowsParallel(parallelName, testNS,
+					WithInitFlowsParallelConditions,
+					WithFlowsParallelChannelTemplateSpec(imc),
+					WithFlowsParallelBranches([]v1.ParallelBranch{{Filter: createFilter(0), Subscriber: createSubscriber(0)}}),
+					WithFlowsParallelChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
+					WithFlowsParallelAddressableNotReady("emptyAddress", "addressable is nil"),
+					WithFlowsParallelSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+					WithFlowsParallelIngressChannelStatus(createParallelChannelStatus(parallelName, corev1.ConditionFalse)),
+					WithFlowsParallelEventPoliciesNotReady("EventPoliciesNotReady", fmt.Sprintf("event policies %s are not ready", unreadyEventPolicyName)),
+					WithFlowsParallelEventPoliciesListed(readyEventPolicyName),
 					WithFlowsParallelBranchStatuses([]v1.ParallelBranchStatus{{
 						FilterSubscriptionStatus: createParallelFilterSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
 						FilterChannelStatus:      createParallelBranchChannelStatus(parallelName, 0, corev1.ConditionFalse),
@@ -571,6 +720,7 @@ func TestAllBranches(t *testing.T) {
 			subscriptionLister: listers.GetSubscriptionLister(),
 			eventingClientSet:  fakeeventingclient.Get(ctx),
 			dynamicClientSet:   fakedynamicclient.Get(ctx),
+			eventPolicyLister:  listers.GetEventPolicyLister(),
 		}
 		return parallel.NewReconciler(ctx, logging.FromContext(ctx),
 			fakeeventingclient.Get(ctx), listers.GetParallelLister(),

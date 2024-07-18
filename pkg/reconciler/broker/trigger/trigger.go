@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -57,8 +57,6 @@ import (
 )
 
 var brokerGVK = eventingv1.SchemeGroupVersion.WithKind("Broker")
-var brokerNamespace string
-var broker string
 
 const (
 	// Name of the corev1.Events emitted from the Trigger reconciliation process.
@@ -91,6 +89,8 @@ type Reconciler struct {
 func (r *Reconciler) ReconcileKind(ctx context.Context, t *eventingv1.Trigger) pkgreconciler.Event {
 	logging.FromContext(ctx).Infow("Reconciling", zap.Any("Trigger", t))
 
+	var broker string
+	var brokerNamespace string
 	if t.Spec.BrokerRef != nil && feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) {
 		broker = t.Spec.BrokerRef.Name
 		brokerNamespace = t.Spec.BrokerRef.Namespace

@@ -6,13 +6,12 @@
 package parser
 
 import (
-	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/antlr/antlr4/runtime/Go/antlr"
 
-	"github.com/cloudevents/sdk-go/sql/v2"
+	v2 "github.com/cloudevents/sdk-go/sql/v2"
+	sqlerrors "github.com/cloudevents/sdk-go/sql/v2/errors"
 	"github.com/cloudevents/sdk-go/sql/v2/gen"
 )
 
@@ -39,10 +38,10 @@ func (p *Parser) Parse(input string) (v2.Expression, error) {
 	result := antlrParser.Cesql().Accept(&visitor)
 
 	if result == nil {
-		return nil, mergeErrs(append(collectingErrorListener.errs, visitor.parsingErrors...))
+		return nil, sqlerrors.NewParseError(append(collectingErrorListener.errs, visitor.parsingErrors...))
 	}
 
-	return result.(v2.Expression), mergeErrs(append(collectingErrorListener.errs, visitor.parsingErrors...))
+	return result.(v2.Expression), sqlerrors.NewParseError(append(collectingErrorListener.errs, visitor.parsingErrors...))
 }
 
 type errorListener struct {
@@ -52,19 +51,6 @@ type errorListener struct {
 
 func (d *errorListener) SyntaxError(recognizer antlr.Recognizer, offendingSymbol interface{}, line, column int, msg string, e antlr.RecognitionException) {
 	d.errs = append(d.errs, fmt.Errorf("syntax error: %v", e.GetMessage()))
-}
-
-func mergeErrs(errs []error) error {
-	if len(errs) == 0 {
-		return nil
-	}
-
-	var errStrings []string
-	for _, err := range errs {
-		errStrings = append(errStrings, err.Error())
-	}
-
-	return errors.New(strings.Join(errStrings, ","))
 }
 
 var defaultParser = Parser{}
