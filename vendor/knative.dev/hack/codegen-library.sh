@@ -152,12 +152,17 @@ function restore-gopath() {
   if __is_checkout_onto_gopath; then
     return
   fi
-  if [ -n "$CODEGEN_TMP_GOPATH" ] && [ -d "$CODEGEN_TMP_GOPATH" ]; then
+  if [ -d "$CODEGEN_TMP_GOPATH" ]; then
     chmod -R u+w "${CODEGEN_TMP_GOPATH}"
     rm -rf "${CODEGEN_TMP_GOPATH}"
     unset CODEGEN_TMP_GOPATH
   fi
-  unset CODEGEN_ORIGINAL_GOPATH GOPATH GOBIN
+  unset GOPATH GOBIN
+  # Restore the original GOPATH, if it was different from the default one.
+  if [ "$CODEGEN_ORIGINAL_GOPATH" != "$(go env GOPATH)" ]; then
+    export GOPATH="$CODEGEN_ORIGINAL_GOPATH"
+  fi
+  unset CODEGEN_ORIGINAL_GOPATH
 }
 
 add_trap cleanup-codegen EXIT

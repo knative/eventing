@@ -774,7 +774,7 @@ function go_update_deps() {
 function __clean_goworksum_if_exists() {
   if [ -f "$REPO_ROOT_DIR/go.work.sum" ]; then
     log.step 'Cleaning the go.work.sum file'
-    true > "$REPO_ROOT_DIR/go.work.sum"
+    truncate --size 0 "$REPO_ROOT_DIR/go.work.sum"
   fi
 }
 
@@ -844,7 +844,7 @@ function __go_update_deps_for_module() {
   if [[ "${FORCE_VENDOR:-false}" == "true" ]] || [ -d vendor ]; then
     group "Go mod vendor"
     # Call go work vendor for Go 1.22+ and go.work file exists.
-    if [ -f "$REPO_ROOT_DIR/go.work" ] && go help work vendor >/dev/null 2>&1; then
+    if [ -f "$REPO_ROOT_DIR/go.work" ] && go help work vendor &>/dev/null; then
       go work vendor
     else
       go mod vendor
