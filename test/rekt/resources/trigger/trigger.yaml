@@ -27,6 +27,13 @@ spec:
   {{ if .brokerName }}
   broker: {{ .brokerName }}
   {{ end }}
+  {{ if .brokerRef }}
+  brokerRef:
+    kind: {{ .brokerRef.kind }}
+    namespace: {{ .brokerRef.namespace }}
+    name: {{ .brokerRef.name }}
+    apiVersion: {{ .brokerRef.apiVersion }}
+  {{ end }}
   {{ if .filter }}
   filter:
     attributes:

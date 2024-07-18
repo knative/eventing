@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -47,6 +47,9 @@ func NewController(
 	triggerInformer := trigger.Get(ctx)
 	brokerInformer := broker.Get(ctx)
 
+	featureStore := feature.NewStore(logging.FromContext(ctx).Named("config-features"))
+	featureStore.WatchConfigs(cmw)
+
 	r := &Reconciler{
 		eventingClientSet: eventingclient.Get(ctx),
 		brokerLister:      brokerInformer.Lister(),
@@ -73,7 +76,7 @@ func NewController(
 				return
 			}
 			for _, t := range triggers {
-				if feature.FromContext(ctx).IsCrossNamespaceEventLinks() && t.Spec.BrokerRef != nil && t.Spec.BrokerRef.Namespace == b.Namespace {
+				if featureStore.Load().IsCrossNamespaceEventLinks() && t.Spec.BrokerRef != nil && t.Spec.BrokerRef.Namespace == b.Namespace {
 					impl.Enqueue(t)
 				} else if t.Namespace == b.Namespace {
 					impl.Enqueue(t)

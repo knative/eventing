@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -104,7 +104,7 @@ func NewController(
 		FilterFunc: brokerFilter,
 		Handler: controller.HandleAll(func(obj interface{}) {
 			if broker, ok := obj.(*eventing.Broker); ok {
-				for _, t := range getTriggersForBroker(ctx, logger, triggerLister, broker) {
+				for _, t := range getTriggersForBroker(logger, triggerLister, broker, featureStore.Load()) {
 					impl.Enqueue(t)
 				}
 			}
@@ -163,6 +163,8 @@ func filterTriggers(featureStore *feature.Store, lister eventinglisters.BrokerLi
 			return false
 		}
 
+		var broker string
+		var brokerNamespace string
 		if featureStore.IsEnabled(feature.CrossNamespaceEventLinks) && trigger.Spec.BrokerRef != nil {
 			broker = trigger.Spec.BrokerRef.Name
 			brokerNamespace = trigger.Spec.BrokerRef.Namespace
@@ -185,7 +187,7 @@ func filterTriggers(featureStore *feature.Store, lister eventinglisters.BrokerLi
 // the Triggers belonging to it. As there is no way to return failures in the
 // Informers EventHandler, errors are logged, and an empty array is returned in case
 // of failures.
-func getTriggersForBroker(ctx context.Context, logger *zap.SugaredLogger, triggerLister eventinglisters.TriggerLister, broker *eventing.Broker) []*eventing.Trigger {
+func getTriggersForBroker(logger *zap.SugaredLogger, triggerLister eventinglisters.TriggerLister, broker *eventing.Broker, features feature.Flags) []*eventing.Trigger {
 	r := make([]*eventing.Trigger, 0)
 	selector := labels.SelectorFromSet(map[string]string{apiseventing.BrokerLabelKey: broker.Name})
 	triggers, err := triggerLister.Triggers(metav1.NamespaceAll).List(selector)
@@ -194,10 +196,9 @@ func getTriggersForBroker(ctx context.Context, logger *zap.SugaredLogger, trigge
 		return r
 	}
 	for _, t := range triggers {
-		if feature.FromContext(ctx).IsCrossNamespaceEventLinks() && t.Spec.BrokerRef != nil && t.Spec.BrokerRef.Namespace == broker.Namespace {
+		if features.IsCrossNamespaceEventLinks() && t.Spec.BrokerRef != nil && t.Spec.BrokerRef.Namespace == broker.Namespace {
 			r = append(r, t)
-		}
-		if t.Namespace == broker.Namespace {
+		} else if t.Namespace == broker.Namespace {
 			r = append(r, t)
 		}
 	}

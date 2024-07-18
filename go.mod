@@ -7,7 +7,7 @@ require (
 	github.com/cloudevents/conformance v0.2.0
 	github.com/cloudevents/sdk-go/observability/opencensus/v2 v2.15.2
 	github.com/cloudevents/sdk-go/protocol/mqtt_paho/v2 v2.0.0-20240508060731-1ed9471c98bd
-	github.com/cloudevents/sdk-go/sql/v2 v2.15.2
+	github.com/cloudevents/sdk-go/sql/v2 v2.0.0-20240712172937-3ce6b2f1f011
 	github.com/cloudevents/sdk-go/v2 v2.15.2
 	github.com/coreos/go-oidc/v3 v3.9.0
 	github.com/eclipse/paho.golang v0.12.0
@@ -16,9 +16,7 @@ require (
 	github.com/google/gofuzz v1.2.0
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.1
-	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-retryablehttp v0.7.7
-	github.com/hashicorp/golang-lru v1.0.2
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/openzipkin/zipkin-go v0.4.3
@@ -78,6 +76,8 @@ require (
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/gnostic-models v0.6.8 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.16.0 // indirect
+	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
+	github.com/hashicorp/golang-lru v1.0.2 // indirect
 	github.com/imdario/mergo v0.3.9 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect

@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -692,9 +692,6 @@ func TestTriggerSpecValidationWithCrossNamespaceEventLinksFeatureEnabled(t *test
 }
 
 func TestFilterSpecValidation(t *testing.T) {
-	newTriggerFiltersEnabledCtx := feature.ToContext(context.TODO(), feature.Flags{
-		feature.NewTriggerFilters: feature.Enabled,
-	})
 	tests := []struct {
 		name    string
 		filter  *TriggerFilter
@@ -921,7 +918,7 @@ func TestFilterSpecValidation(t *testing.T) {
 			{
 				CESQL: "this is wrong",
 			}},
-		want: apis.ErrInvalidValue("this is wrong", "cesql", "syntax error: ").ViaFieldIndex("filters", 0),
+		want: apis.ErrInvalidValue("this is wrong", "cesql", "parse error: syntax error: ").ViaFieldIndex("filters", 0),
 	}, {
 		name: "Valid CE SQL expression",
 		filters: []SubscriptionsAPIFilter{
@@ -939,7 +936,7 @@ func TestFilterSpecValidation(t *testing.T) {
 				Filters:    test.filters,
 				Subscriber: validSubscriber,
 			}
-			got := ts.Validate(newTriggerFiltersEnabledCtx)
+			got := ts.Validate(context.Background())
 			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
 				t.Errorf("Validate TriggerSpec (-want, +got) =\n%s", diff)
 			}
