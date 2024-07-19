@@ -22,12 +22,14 @@ import (
 
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic"
+	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/pkg/kmeta"
 
 	duckapis "knative.dev/pkg/apis/duck"
@@ -127,6 +129,11 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, s *v1.Sequence) pkgrecon
 	// leftover channels and subscriptions that need to be removed.
 	if err := r.removeUnwantedChannels(ctx, channelResourceInterface, s, channels); err != nil {
 		return err
+	}
+
+	// Handle EventPolicies
+	if err := r.reconcileEventPolicies(ctx, s, channels, subs, featureFlags); err != nil {
+		return fmt.Errorf("failed to reconcile EventPolicies: %w", err)
 	}
 
 	err := auth.UpdateStatusWithEventPolicies(featureFlags, &s.Status.AppliedEventPoliciesStatus, &s.Status, r.eventPolicyLister, v1.SchemeGroupVersion.WithKind("Sequence"), s.ObjectMeta)
@@ -329,5 +336,147 @@ func (r *Reconciler) removeUnwantedSubscriptions(ctx context.Context, seq *v1.Se
 		}
 	}
 
+	return nil
+}
+
+func (r *Reconciler) reconcileEventPolicies(ctx context.Context, s *v1.Sequence, channels []*eventingduckv1.Channelable, subs []*messagingv1.Subscription, featureFlags feature.Flags) error {
+	if featureFlags.IsOIDCAuthentication() {
+		// Create or update EventPolicies, and we skip the first channel as it's the input channel!
+		for i := 1; i < len(channels); i++ {
+			if err := r.reconcileChannelEventPolicy(ctx, s, channels[i], subs[i-1]); err != nil {
+				return err
+			}
+			r.verifyEventPolicyCreation(ctx, &eventingv1alpha1.EventPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      fmt.Sprintf("%s-channel-%s", s.Name, channels[i].Name),
+					Namespace: s.Namespace,
+				},
+				Spec: eventingv1alpha1.EventPolicySpec{
+					To: []eventingv1alpha1.EventPolicySpecTo{
+						{
+							Ref: &eventingv1alpha1.EventPolicyToReference{
+								APIVersion: channels[i].APIVersion,
+								Kind:       channels[i].Kind,
+								Name:       channels[i].Name,
+							},
+						},
+					},
+					From: []eventingv1alpha1.EventPolicySpecFrom{
+						{
+							Ref: &eventingv1alpha1.EventPolicyFromReference{
+								Kind:       "Subscription",
+								Namespace:  subs[i-1].Namespace,
+								Name:       subs[i-1].Name,
+								APIVersion: subs[i-1].APIVersion,
+							},
+						},
+					},
+				},
+			})
+		}
+
+		// Handle input channel EventPolicy
+		if err := r.reconcileInputChannelEventPolicy(ctx, s, channels[0]); err != nil {
+			return err
+		}
+
+	} else {
+		// Clean up existing EventPolicies, as the authentication feature flag is disabled
+		if err := r.cleanupEventPolicies(ctx, s); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (r *Reconciler) reconcileChannelEventPolicy(ctx context.Context, s *v1.Sequence, channel *eventingduckv1.Channelable, subscription *messagingv1.Subscription) error {
+	expected := resources.MakeEventPolicyForSequenceChannel(s, channel, subscription)
+
+	return r.createOrUpdateEventPolicy(ctx, expected)
+}
+func (r *Reconciler) createOrUpdateEventPolicy(ctx context.Context, expected *eventingv1alpha1.EventPolicy) error {
+	existing, err := r.eventPolicyLister.EventPolicies(expected.Namespace).Get(expected.Name)
+	if apierrs.IsNotFound(err) {
+		_, err = r.eventingClientSet.EventingV1alpha1().EventPolicies(expected.Namespace).Create(ctx, expected, metav1.CreateOptions{})
+		return err
+	} else if err != nil {
+		return err
+	}
+
+	// Update if needed
+	if !equality.Semantic.DeepEqual(existing.Spec, expected.Spec) {
+		existing.Spec = expected.Spec
+		_, err = r.eventingClientSet.EventingV1alpha1().EventPolicies(existing.Namespace).Update(ctx, existing, metav1.UpdateOptions{})
+		return err
+	}
+
+	return nil
+}
+
+func (r *Reconciler) reconcileInputChannelEventPolicy(ctx context.Context, s *v1.Sequence, inputChannel *eventingduckv1.Channelable) error {
+	// Check if there's an EventPolicy for the Sequence
+	sequencePolicy, err := r.eventPolicyLister.EventPolicies(s.Namespace).Get(s.Name)
+	if err != nil {
+		if apierrs.IsNotFound(err) {
+			// No EventPolicy for the Sequence, so we don't create one for the input channel
+			return nil
+		}
+		return err
+	}
+
+	expected := &eventingv1alpha1.EventPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            fmt.Sprintf("%s-input-channel", s.Name),
+			Namespace:       s.Namespace,
+			OwnerReferences: []metav1.OwnerReference{*kmeta.NewControllerRef(s)},
+		},
+		Spec: eventingv1alpha1.EventPolicySpec{
+
+			To: []eventingv1alpha1.EventPolicySpecTo{
+				{
+					Ref: &eventingv1alpha1.EventPolicyToReference{
+						APIVersion: inputChannel.APIVersion,
+						Kind:       inputChannel.Kind,
+						Name:       inputChannel.Name,
+					},
+				},
+			},
+			From: sequencePolicy.Spec.From,
+		},
+	}
+
+	return r.createOrUpdateEventPolicy(ctx, expected)
+}
+
+func (r *Reconciler) cleanupEventPolicies(ctx context.Context, s *v1.Sequence) error {
+	policies, err := r.eventPolicyLister.EventPolicies(s.Namespace).List(labels.Everything())
+	if err != nil {
+		return err
+	}
+
+	for _, policy := range policies {
+		if metav1.IsControlledBy(policy, s) {
+			err := r.eventingClientSet.EventingV1alpha1().EventPolicies(policy.Namespace).Delete(ctx, policy.Name, metav1.DeleteOptions{})
+			if err != nil && !apierrs.IsNotFound(err) {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func (r *Reconciler) verifyEventPolicyCreation(ctx context.Context, expected *eventingv1alpha1.EventPolicy) error {
+	logging.FromContext(ctx).Infof("Verifying EventPolicy creation: %s", expected.Name)
+
+	// Try to get the EventPolicy using the client directly
+	policy, err := r.eventingClientSet.EventingV1alpha1().EventPolicies(expected.Namespace).Get(ctx, expected.Name, metav1.GetOptions{})
+	if err != nil {
+		logging.FromContext(ctx).Errorf("Failed to get EventPolicy after creation: %v", err)
+		return err
+	}
+
+	logging.FromContext(ctx).Infof("Successfully verified EventPolicy creation: %s", policy.Name)
 	return nil
 }
