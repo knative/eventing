@@ -17,7 +17,8 @@
 # Documentation about this script and how to use it can be found
 # at https://github.com/knative/test-infra/tree/main/ci
 
-source $(dirname $0)/../vendor/knative.dev/hack/release.sh
+# shellcheck disable=SC1090
+source "$(go run knative.dev/hack/cmd/script release.sh)"
 
 function build_release() {
   # Run `generate-yamls.sh`, which should be versioned with the
