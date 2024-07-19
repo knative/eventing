@@ -168,6 +168,9 @@ func TestReconcile(t *testing.T) {
 				WithChannelAddress(&backingChannelAddressable),
 				WithChannelEventPoliciesReadyBecauseOIDCDisabled()),
 		}},
+		Ctx: feature.ToContext(context.Background(), feature.Flags{
+			feature.OIDCAuthentication: feature.Disabled,
+		}),
 	}, {
 		Name: "Already reconciled",
 		Key:  testKey,
@@ -191,6 +194,9 @@ func TestReconcile(t *testing.T) {
 				WithInMemoryChannelDLSUnknown(),
 				WithInMemoryChannelEventPoliciesReady()),
 		},
+		Ctx: feature.ToContext(context.Background(), feature.Flags{
+			feature.OIDCAuthentication: feature.Disabled,
+		}),
 	}, {
 		Name: "Backing channel created",
 		Key:  testKey,
@@ -215,6 +221,9 @@ func TestReconcile(t *testing.T) {
 				WithBackingChannelUnknown("BackingChannelNotConfigured", "BackingChannel has not yet been reconciled."),
 				WithChannelEventPoliciesReadyBecauseOIDCDisabled()),
 		}},
+		Ctx: feature.ToContext(context.Background(), feature.Flags{
+			feature.OIDCAuthentication: feature.Disabled,
+		}),
 	}, {
 		Name: "Backing channel created with delivery",
 		Key:  testKey,
@@ -266,6 +275,9 @@ func TestReconcile(t *testing.T) {
 				WithBackingChannelUnknown("BackingChannelNotConfigured", "BackingChannel has not yet been reconciled."),
 				WithChannelEventPoliciesReadyBecauseOIDCDisabled()),
 		}},
+		Ctx: feature.ToContext(context.Background(), feature.Flags{
+			feature.OIDCAuthentication: feature.Disabled,
+		}),
 	}, {
 		Name: "Generation Bump",
 		Key:  testKey,
@@ -301,6 +313,9 @@ func TestReconcile(t *testing.T) {
 				WithChannelObservedGeneration(42),
 				WithChannelEventPoliciesReadyBecauseOIDCDisabled()),
 		}},
+		Ctx: feature.ToContext(context.Background(), feature.Flags{
+			feature.OIDCAuthentication: feature.Disabled,
+		}),
 	}, {
 		Name: "Updating subscribers statuses",
 		Key:  testKey,
@@ -336,6 +351,9 @@ func TestReconcile(t *testing.T) {
 				WithChannelDLSUnknown(),
 				WithChannelEventPoliciesReadyBecauseOIDCDisabled()),
 		}},
+		Ctx: feature.ToContext(context.Background(), feature.Flags{
+			feature.OIDCAuthentication: feature.Disabled,
+		}),
 	}, {
 		Name: "Should provision applying EventPolicies",
 		Key:  testKey,
@@ -577,9 +595,6 @@ func TestReconcile(t *testing.T) {
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		ctx = channelable.WithDuck(ctx)
 		ctx = v1addr.WithDuck(ctx)
-		ctx = feature.ToContext(ctx, feature.Flags{
-			feature.OIDCAuthentication: feature.Enabled,
-		})
 		r := &Reconciler{
 			dynamicClientSet:   fakedynamicclient.Get(ctx),
 			channelLister:      listers.GetMessagingChannelLister(),
