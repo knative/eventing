@@ -23,6 +23,8 @@ import (
 	"strings"
 	"time"
 
+	"k8s.io/utils/ptr"
+
 	opencensusclient "github.com/cloudevents/sdk-go/observability/opencensus/v2/client"
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"
@@ -231,7 +233,11 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	features := feature.FromContext(ctx)
-	err = h.tokenVerifier.VerifyRequest(ctx, features, broker.Status.Address.Audience, brokerNamespace, broker.Status.Policies, request, writer)
+	audience := ptr.To("")
+	if broker.Status.Address != nil {
+		audience = broker.Status.Address.Audience
+	}
+	err = h.tokenVerifier.VerifyRequest(ctx, features, audience, brokerNamespace, broker.Status.Policies, request, writer)
 	if err != nil {
 		h.Logger.Warn("Failed to verify AuthN and AuthZ.", zap.Error(err))
 		writer.WriteHeader(http.StatusForbidden)
