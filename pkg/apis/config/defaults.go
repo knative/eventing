@@ -196,7 +196,11 @@ func (d *Defaults) getBrokerConfigByClassName(ns string, brokerClassName string)
 					return nsConfig.BrokerConfig, nil
 				}
 			}
-
+		} else {
+			// if the brokerClassName is not the default broker class for the namespace, check whether nsconfig's brokerClasses map has the config for this broker class
+			if config, ok := nsConfig.BrokerClasses[brokerClassName]; ok && config != nil {
+				return config, nil
+			}
 		}
 	}
 

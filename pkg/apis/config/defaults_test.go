@@ -108,12 +108,12 @@ func TestGetBrokerConfig(t *testing.T) {
 		},
 		{
 			name:           "Nil Defaults",
-			wantErrMessage: "Defaults are nil",
+			wantErrMessage: "Defaults for Broker Configurations for cluster have not been set up. You can set them via ConfigMap config-br-defaults.",
 		},
 		{
 			name:           "Empty Defaults",
 			namespace:      "rando",
-			wantErrMessage: "Defaults for Broker Configurations have not been set up.",
+			wantErrMessage: "Defaults for Broker Configurations for cluster have not been set up. You can set them via ConfigMap config-br-defaults.",
 		},
 	}
 
