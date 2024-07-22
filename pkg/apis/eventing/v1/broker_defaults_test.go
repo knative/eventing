@@ -144,8 +144,8 @@ var (
 						KReference: &duckv1.KReference{
 							APIVersion: "v1",
 							Kind:       "ConfigMap",
-							Namespace:  "haha-ns",
-							Name:       "haha-config",
+							Namespace:  "test-ns",
+							Name:       "test-config",
 						},
 					},
 					BrokerClasses: map[string]*config.BrokerConfig{
@@ -168,13 +168,13 @@ var (
 					},
 				},
 				"custom": {
-					DefaultBrokerClass: "haha-broker",
+					DefaultBrokerClass: "test-broker",
 					BrokerConfig: &config.BrokerConfig{
 						KReference: &duckv1.KReference{
 							APIVersion: "v1",
 							Kind:       "ConfigMap",
-							Namespace:  "haha-ns",
-							Name:       "haha-config",
+							Namespace:  "test-ns",
+							Name:       "test-config",
 						},
 					},
 					BrokerClasses: map[string]*config.BrokerConfig{
@@ -226,7 +226,15 @@ var (
 							APIVersion: "v1",
 							Kind:       "ConfigMap",
 							Namespace:  "knative-eventing",
-							Name:       "imc-channel-haha",
+							Name:       "imc-channel-test",
+						},
+					},
+					"MTChannelBasedBroker": {
+						KReference: &duckv1.KReference{
+							APIVersion: "v1",
+							Kind:       "ConfigMap",
+							Namespace:  "knative-eventing",
+							Name:       "imc-channel-in-broker-classes",
 						},
 					},
 				},
@@ -577,7 +585,32 @@ func TestBrokerSetDefaults(t *testing.T) {
 					Config: &duckv1.KReference{
 						Kind:       "ConfigMap",
 						Namespace:  "knative-eventing",
-						Name:       "imc-channel-haha",
+						Name:       "imc-channel-test",
+						APIVersion: "v1",
+					},
+				},
+			},
+		},
+		"if targeted broker class has config exist in both default config and broker classes ": {
+			initial: Broker{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						eventing.BrokerClassKey: "MTChannelBasedBroker",
+					},
+				},
+			},
+			expected: Broker{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "",
+					Annotations: map[string]string{
+						eventing.BrokerClassKey: "MTChannelBasedBroker",
+					},
+				},
+				Spec: BrokerSpec{
+					Config: &duckv1.KReference{
+						Kind:       "ConfigMap",
+						Namespace:  "knative-eventing",
+						Name:       "imc-channel-in-broker-classes",
 						APIVersion: "v1",
 					},
 				},
@@ -592,14 +625,14 @@ func TestBrokerSetDefaults(t *testing.T) {
 					Name:      "broker",
 					Namespace: "custom",
 					Annotations: map[string]string{
-						eventing.BrokerClassKey: "haha-broker",
+						eventing.BrokerClassKey: "test-broker",
 					},
 				},
 				Spec: BrokerSpec{
 					Config: &duckv1.KReference{
 						Kind:       "ConfigMap",
-						Namespace:  "haha-ns",
-						Name:       "haha-config",
+						Namespace:  "test-ns",
+						Name:       "test-config",
 						APIVersion: "v1",
 					},
 				},
