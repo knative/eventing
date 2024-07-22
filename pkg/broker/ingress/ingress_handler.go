@@ -240,7 +240,6 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	err = h.tokenVerifier.VerifyRequest(ctx, features, audience, brokerNamespace, broker.Status.Policies, request, writer)
 	if err != nil {
 		h.Logger.Warn("Failed to verify AuthN and AuthZ.", zap.Error(err))
-		writer.WriteHeader(http.StatusForbidden)
 		return
 	}
 
