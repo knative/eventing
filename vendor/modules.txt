@@ -1059,7 +1059,7 @@ knative.dev/hack/schema/commands
 knative.dev/hack/schema/docs
 knative.dev/hack/schema/registry
 knative.dev/hack/schema/schema
-# knative.dev/pkg v0.0.0-20240708181110-b4e5f07a2c37
+# knative.dev/pkg v0.0.0-20240716082220-4355f0c73608
 ## explicit; go 1.22
 knative.dev/pkg/apiextensions/storageversion
 knative.dev/pkg/apiextensions/storageversion/cmd/migrate
@@ -1205,7 +1205,7 @@ knative.dev/pkg/webhook/resourcesemantics
 knative.dev/pkg/webhook/resourcesemantics/conversion
 knative.dev/pkg/webhook/resourcesemantics/defaulting
 knative.dev/pkg/webhook/resourcesemantics/validation
-# knative.dev/reconciler-test v0.0.0-20240704013940-3a59c9dfb680
+# knative.dev/reconciler-test v0.0.0-20240716134925-00d94f40c470
 ## explicit; go 1.22
 knative.dev/reconciler-test/cmd/eventshub
 knative.dev/reconciler-test/pkg/environment
