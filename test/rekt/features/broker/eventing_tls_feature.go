@@ -72,7 +72,7 @@ func RotateMTChannelBrokerTLSCertificates() *feature.Feature {
 	f.Setup("install trigger", func(ctx context.Context, t feature.T) {
 		d := service.AsDestinationRef(sink)
 		d.CACerts = eventshub.GetCaCerts(ctx)
-		trigger.Install(triggerName, brokerName, trigger.WithSubscriberFromDestination(d))(ctx, t)
+		trigger.Install(triggerName, trigger.WithBrokerName(brokerName), trigger.WithSubscriberFromDestination(d))(ctx, t)
 	})
 	f.Setup("trigger is ready", trigger.IsReady(triggerName))
 	f.Setup("Broker has HTTPS address", broker.ValidateAddress(brokerName, addressable.AssertHTTPSAddress))

@@ -45,19 +45,27 @@ func (source *EventType) ConvertTo(ctx context.Context, to apis.Convertible) err
 			}
 		}
 
-		sink.Spec.Attributes = []v1beta3.EventAttributeDefinition{}
+		sink.Spec.Attributes = []v1beta3.EventAttributeDefinition{
+			{
+				Name:     "specversion",
+				Required: true,
+			},
+			{
+				Name:     "id",
+				Required: true,
+			},
+		}
+		// set all required attributes for the v1beta3 resource. if there is no value that makes sense, leave that empty
 		if source.Spec.Type != "" {
 			sink.Spec.Attributes = append(sink.Spec.Attributes, v1beta3.EventAttributeDefinition{
 				Name:     "type",
 				Required: true,
 				Value:    source.Spec.Type,
 			})
-		}
-		if source.Spec.Schema != nil {
+		} else {
 			sink.Spec.Attributes = append(sink.Spec.Attributes, v1beta3.EventAttributeDefinition{
-				Name:     "schemadata",
-				Required: false,
-				Value:    source.Spec.Schema.String(),
+				Name:     "type",
+				Required: true,
 			})
 		}
 		if source.Spec.Source != nil {
@@ -65,6 +73,20 @@ func (source *EventType) ConvertTo(ctx context.Context, to apis.Convertible) err
 				Name:     "source",
 				Required: true,
 				Value:    source.Spec.Source.String(),
+			})
+		} else {
+			sink.Spec.Attributes = append(sink.Spec.Attributes, v1beta3.EventAttributeDefinition{
+				Name:     "source",
+				Required: true,
+			})
+		}
+
+		// convert the schema so that we don't lose it in the conversion.
+		if source.Spec.Schema != nil {
+			sink.Spec.Attributes = append(sink.Spec.Attributes, v1beta3.EventAttributeDefinition{
+				Name:     "schemadata",
+				Required: false,
+				Value:    source.Spec.Schema.String(),
 			})
 		}
 		return nil

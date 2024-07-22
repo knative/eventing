@@ -32,3 +32,4 @@ fi
 knative_teardown || exit $?
 
 rm -f $(dirname "$0")/../tmp/uninstall_list.txt
+

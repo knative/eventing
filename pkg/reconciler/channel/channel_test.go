@@ -3,7 +3,7 @@ Copyright 2019 The Knative Authors
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/pkg/apis/feature"
 
 	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
 
@@ -167,6 +168,9 @@ func TestReconcile(t *testing.T) {
 				WithChannelAddress(&backingChannelAddressable),
 				WithChannelEventPoliciesReadyBecauseOIDCDisabled()),
 		}},
+		Ctx: feature.ToContext(context.Background(), feature.Flags{
+			feature.OIDCAuthentication: feature.Disabled,
+		}),
 	}, {
 		Name: "Already reconciled",
 		Key:  testKey,
@@ -190,6 +194,9 @@ func TestReconcile(t *testing.T) {
 				WithInMemoryChannelDLSUnknown(),
 				WithInMemoryChannelEventPoliciesReady()),
 		},
+		Ctx: feature.ToContext(context.Background(), feature.Flags{
+			feature.OIDCAuthentication: feature.Disabled,
+		}),
 	}, {
 		Name: "Backing channel created",
 		Key:  testKey,
@@ -214,6 +221,9 @@ func TestReconcile(t *testing.T) {
 				WithBackingChannelUnknown("BackingChannelNotConfigured", "BackingChannel has not yet been reconciled."),
 				WithChannelEventPoliciesReadyBecauseOIDCDisabled()),
 		}},
+		Ctx: feature.ToContext(context.Background(), feature.Flags{
+			feature.OIDCAuthentication: feature.Disabled,
+		}),
 	}, {
 		Name: "Backing channel created with delivery",
 		Key:  testKey,
@@ -265,6 +275,9 @@ func TestReconcile(t *testing.T) {
 				WithBackingChannelUnknown("BackingChannelNotConfigured", "BackingChannel has not yet been reconciled."),
 				WithChannelEventPoliciesReadyBecauseOIDCDisabled()),
 		}},
+		Ctx: feature.ToContext(context.Background(), feature.Flags{
+			feature.OIDCAuthentication: feature.Disabled,
+		}),
 	}, {
 		Name: "Generation Bump",
 		Key:  testKey,
@@ -300,6 +313,9 @@ func TestReconcile(t *testing.T) {
 				WithChannelObservedGeneration(42),
 				WithChannelEventPoliciesReadyBecauseOIDCDisabled()),
 		}},
+		Ctx: feature.ToContext(context.Background(), feature.Flags{
+			feature.OIDCAuthentication: feature.Disabled,
+		}),
 	}, {
 		Name: "Updating subscribers statuses",
 		Key:  testKey,
@@ -335,6 +351,9 @@ func TestReconcile(t *testing.T) {
 				WithChannelDLSUnknown(),
 				WithChannelEventPoliciesReadyBecauseOIDCDisabled()),
 		}},
+		Ctx: feature.ToContext(context.Background(), feature.Flags{
+			feature.OIDCAuthentication: feature.Disabled,
+		}),
 	}, {
 		Name: "Should provision applying EventPolicies",
 		Key:  testKey,
