@@ -192,7 +192,7 @@ func TestGetBrokerClass(t *testing.T) {
 	if err == nil {
 		t.Errorf("GetBrokerClass did not fail with nil")
 	}
-	if err.Error() != "Defaults are nil" {
+	if err.Error() != "Defaults for Broker Configurations for cluster have not been set up. You can set them via ConfigMap config-br-defaults." {
 		t.Error("GetBrokerClass did not fail with nil msg, got", err.Error())
 	}
 
@@ -201,7 +201,8 @@ func TestGetBrokerClass(t *testing.T) {
 	if err == nil {
 		t.Errorf("GetBrokerClass did not fail with empty")
 	}
-	if err.Error() != "Defaults are nil" {
+	// if error contains Neither namespace specific nor cluster default broker class is found
+	if err.Error() != "Neither namespace specific nor cluster default broker class is found for namespace \"rando\", please set them via ConfigMap config-br-defaults" {
 		t.Error("GetBrokerClass did not fail with non-setup msg, got", err)
 	}
 }

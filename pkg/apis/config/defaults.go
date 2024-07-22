@@ -83,6 +83,8 @@ The priority precedence for determining the broker class and configuration is as
 
 3. If no default cluster configuration is set, return an error
 
+4. If no default namespace configuration is set, will use the cluster-wide default configuration.
+
 This can be represented as a flow chart:
 
                     Start
