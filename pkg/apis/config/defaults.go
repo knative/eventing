@@ -159,7 +159,7 @@ type BrokerConfig struct {
 // that doesn't exist, return a Cluster Default and if that doesn't exist return an error.
 func (d *Defaults) GetBrokerConfig(ns string, brokerClassName *string) (*BrokerConfig, error) {
 	if d == nil {
-		return nil, errors.New("Defaults are nil")
+		return nil, errors.New("Defaults for Broker Configurations for cluster have not been set up. You can set them via ConfigMap config-br-defaults.")
 	}
 
 	// Early return if brokerClassName is provided and valid
@@ -219,7 +219,7 @@ func (d *Defaults) getBrokerConfigForEmptyClassName(ns string) (*BrokerConfig, e
 // getClusterDefaultBrokerConfig returns the BrokerConfig for the given brokerClassName.
 func (d *Defaults) getClusterDefaultBrokerConfig(brokerClassName string) (*BrokerConfig, error) {
 	if d.ClusterDefaultConfig == nil || d.ClusterDefaultConfig.BrokerConfig == nil {
-		return nil, errors.New("Defaults for Broker Configurations for cluster have not been set up.")
+		return nil, errors.New("Defaults for Broker Configurations for cluster have not been set up. You can set them via ConfigMap config-br-defaults.")
 	}
 
 	// Check if the brokerClassName is the default broker class for the whole cluster
@@ -245,7 +245,7 @@ func (d *Defaults) getClusterDefaultBrokerConfig(brokerClassName string) (*Broke
 // return an error.
 func (d *Defaults) GetBrokerClass(ns string) (string, error) {
 	if d == nil {
-		return "", errors.New("Defaults are nil")
+		return "", errors.New("Defaults for Broker Configurations for cluster have not been set up. You can set them via ConfigMap config-br-defaults.")
 	}
 
 	// Check if the namespace has a specific configuration
