@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -36,7 +36,11 @@ func MakeEventPolicyForSequenceChannel(s *flowsv1.Sequence, channel *eventingduc
 			Namespace: channel.Namespace,
 			Name:      SequenceEventPolicyName(s.Name, channel.Name),
 			OwnerReferences: []metav1.OwnerReference{
-				*kmeta.NewControllerRef(s),
+				{
+					APIVersion: flowsv1.SchemeGroupVersion.String(),
+					Kind:       sequenceKind,
+					Name:       s.Name,
+				},
 			},
 			Labels: LabelsForSequenceChannelsEventPolicy(s.Name),
 		},
@@ -74,7 +78,13 @@ func LabelsForSequenceChannelsEventPolicy(sequenceName string) map[string]string
 }
 
 func SequenceEventPolicyName(sequenceName, channelName string) string {
-	return kmeta.ChildName(sequenceName, "-ep-"+channelName)
+	// if channel name is empty, it means the event policy is for the output channel
+	if channelName == "" {
+		return kmeta.ChildName(sequenceName, "-ep") // no need to add the channel name
+	} else {
+		return kmeta.ChildName(sequenceName, "-ep-"+channelName)
+	}
+
 }
 
 // MakeEventPolicyForSequenceInputChannel creates an EventPolicy for the input channel of a Sequence
@@ -82,9 +92,13 @@ func MakeEventPolicyForSequenceInputChannel(s *flowsv1.Sequence, inputChannel *e
 	return &eventingv1alpha1.EventPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: inputChannel.Namespace,
-			Name:      SequenceInputEventPolicyName(s.Name),
+			Name:      SequenceEventPolicyName(s.Name, inputChannel.Name),
 			OwnerReferences: []metav1.OwnerReference{
-				*kmeta.NewControllerRef(s),
+				{
+					APIVersion: flowsv1.SchemeGroupVersion.String(),
+					Kind:       sequenceKind,
+					Name:       s.Name,
+				},
 			},
 			Labels: LabelsForSequenceChannelsEventPolicy(s.Name),
 		},
@@ -101,8 +115,4 @@ func MakeEventPolicyForSequenceInputChannel(s *flowsv1.Sequence, inputChannel *e
 			From: sequencePolicy.Spec.From,
 		},
 	}
-}
-
-func SequenceInputEventPolicyName(sequenceName string) string {
-	return kmeta.ChildName(sequenceName, "-input-ep")
 }

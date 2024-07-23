@@ -193,7 +193,7 @@ func (r *Reconciler) reconcileSubscription(ctx context.Context, step int, p *v1.
 	subName := resources.SequenceSubscriptionName(p.Name, step)
 	sub, err := r.subscriptionLister.Subscriptions(p.Namespace).Get(subName)
 
-	// If the resource doesn't exist, we'll create it.
+	// If the resource doesn't exist, we'll create itF.
 	if apierrs.IsNotFound(err) {
 		sub = expected
 		logging.FromContext(ctx).Infof("Creating subscription: %+v", sub)
@@ -346,33 +346,6 @@ func (r *Reconciler) reconcileEventPolicies(ctx context.Context, s *v1.Sequence,
 			if err := r.reconcileChannelEventPolicy(ctx, s, channels[i], subs[i-1]); err != nil {
 				return err
 			}
-			r.verifyEventPolicyCreation(ctx, &eventingv1alpha1.EventPolicy{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      fmt.Sprintf("%s-channel-%s", s.Name, channels[i].Name),
-					Namespace: s.Namespace,
-				},
-				Spec: eventingv1alpha1.EventPolicySpec{
-					To: []eventingv1alpha1.EventPolicySpecTo{
-						{
-							Ref: &eventingv1alpha1.EventPolicyToReference{
-								APIVersion: channels[i].APIVersion,
-								Kind:       channels[i].Kind,
-								Name:       channels[i].Name,
-							},
-						},
-					},
-					From: []eventingv1alpha1.EventPolicySpecFrom{
-						{
-							Ref: &eventingv1alpha1.EventPolicyFromReference{
-								Kind:       "Subscription",
-								Namespace:  subs[i-1].Namespace,
-								Name:       subs[i-1].Name,
-								APIVersion: subs[i-1].APIVersion,
-							},
-						},
-					},
-				},
-			})
 		}
 
 		// Handle input channel EventPolicy
@@ -416,7 +389,7 @@ func (r *Reconciler) createOrUpdateEventPolicy(ctx context.Context, expected *ev
 
 func (r *Reconciler) reconcileInputChannelEventPolicy(ctx context.Context, s *v1.Sequence, inputChannel *eventingduckv1.Channelable) error {
 	// Check if there's an EventPolicy for the Sequence
-	sequencePolicy, err := r.eventPolicyLister.EventPolicies(s.Namespace).Get(s.Name)
+	sequencePolicy, err := r.eventPolicyLister.EventPolicies(s.Namespace).Get(s.Name + "-ep")
 	if err != nil {
 		if apierrs.IsNotFound(err) {
 			// No EventPolicy for the Sequence, so we don't create one for the input channel
@@ -425,26 +398,7 @@ func (r *Reconciler) reconcileInputChannelEventPolicy(ctx context.Context, s *v1
 		return err
 	}
 
-	expected := &eventingv1alpha1.EventPolicy{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:            fmt.Sprintf("%s-input-channel", s.Name),
-			Namespace:       s.Namespace,
-			OwnerReferences: []metav1.OwnerReference{*kmeta.NewControllerRef(s)},
-		},
-		Spec: eventingv1alpha1.EventPolicySpec{
-
-			To: []eventingv1alpha1.EventPolicySpecTo{
-				{
-					Ref: &eventingv1alpha1.EventPolicyToReference{
-						APIVersion: inputChannel.APIVersion,
-						Kind:       inputChannel.Kind,
-						Name:       inputChannel.Name,
-					},
-				},
-			},
-			From: sequencePolicy.Spec.From,
-		},
-	}
+	expected := resources.MakeEventPolicyForSequenceInputChannel(s, inputChannel, sequencePolicy)
 
 	return r.createOrUpdateEventPolicy(ctx, expected)
 }
