@@ -193,7 +193,7 @@ func (r *Reconciler) reconcileSubscription(ctx context.Context, step int, p *v1.
 	subName := resources.SequenceSubscriptionName(p.Name, step)
 	sub, err := r.subscriptionLister.Subscriptions(p.Namespace).Get(subName)
 
-	// If the resource doesn't exist, we'll create itF.
+	// If the resource doesn't exist, we'll create it.
 	if apierrs.IsNotFound(err) {
 		sub = expected
 		logging.FromContext(ctx).Infof("Creating subscription: %+v", sub)
@@ -418,19 +418,5 @@ func (r *Reconciler) cleanupEventPolicies(ctx context.Context, s *v1.Sequence) e
 		}
 	}
 
-	return nil
-}
-
-func (r *Reconciler) verifyEventPolicyCreation(ctx context.Context, expected *eventingv1alpha1.EventPolicy) error {
-	logging.FromContext(ctx).Infof("Verifying EventPolicy creation: %s", expected.Name)
-
-	// Try to get the EventPolicy using the client directly
-	policy, err := r.eventingClientSet.EventingV1alpha1().EventPolicies(expected.Namespace).Get(ctx, expected.Name, metav1.GetOptions{})
-	if err != nil {
-		logging.FromContext(ctx).Errorf("Failed to get EventPolicy after creation: %v", err)
-		return err
-	}
-
-	logging.FromContext(ctx).Infof("Successfully verified EventPolicy creation: %s", policy.Name)
 	return nil
 }
