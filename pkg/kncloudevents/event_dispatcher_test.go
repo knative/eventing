@@ -32,6 +32,7 @@ import (
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
+	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"github.com/cloudevents/sdk-go/v2/binding"
 	"github.com/cloudevents/sdk-go/v2/binding/transformer"
 	"github.com/cloudevents/sdk-go/v2/test"
@@ -927,8 +928,7 @@ func TestSendEvent(t *testing.T) {
 		})
 	}
 }
-
-func testEventFormat(t *testing.T, format kncloudevents.EventFormat, contentType string, port int) {
+func testEventFormat(t *testing.T, format kncloudevents.EventFormat, expectedEncoding binding.Encoding, port int) {
 	var wg sync.WaitGroup
 	ctx, _ := rectesting.SetupFakeContext(t)
 	ctx, cancel := context.WithCancel(ctx)
@@ -940,12 +940,38 @@ func testEventFormat(t *testing.T, format kncloudevents.EventFormat, contentType
 	dispatcher := kncloudevents.NewDispatcher(eventingtls.NewDefaultClientConfig(), oidcTokenProvider)
 
 	eventToSend := test.FullEvent()
-	eventToSend.SetDataContentType(contentType)
 
 	// Destination setup
 	destinationEventsChan := make(chan cloudevents.Event, 10)
 	destinationReceivedEvents := make([]cloudevents.Event, 0, 10)
-	destinationHandler := eventingtlstesting.EventChannelHandler(destinationEventsChan)
+
+	// HTTP handler to receive and process CloudEvent
+	destinationHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+
+		// Convert the incoming HTTP request to a CloudEvent message
+		message := cehttp.NewMessageFromHttpRequest(r)
+		defer message.Finish(nil)
+
+		// Read the encoding from the message
+		encoding := message.ReadEncoding()
+
+		// Log the encoding
+		t.Log("Received encoding:", encoding)
+
+		// Compare with expected encoding
+		require.Equal(t, expectedEncoding, encoding)
+
+		event, err := binding.ToEvent(ctx, message)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		destinationEventsChan <- *event
+		w.WriteHeader(http.StatusOK)
+	})
+
 	destinationCA := eventingtlstesting.StartServer(ctx, t, port, destinationHandler, kncloudevents.WithDrainQuietPeriod(time.Millisecond))
 	destination := duckv1.Addressable{
 		URL:     apis.HTTPS(fmt.Sprintf("localhost:%d", port)),
@@ -964,7 +990,7 @@ func testEventFormat(t *testing.T, format kncloudevents.EventFormat, contentType
 	dispatcherOpts := kncloudevents.WithEventFormat(&format)
 
 	// Send event
-	info, err := dispatcher.SendEvent(ctx, test.FullEvent(), destination, dispatcherOpts)
+	info, err := dispatcher.SendEvent(ctx, eventToSend, destination, dispatcherOpts)
 	require.Nil(t, err)
 	require.Equal(t, 200, info.ResponseCode)
 
@@ -975,26 +1001,17 @@ func testEventFormat(t *testing.T, format kncloudevents.EventFormat, contentType
 	require.Len(t, destinationReceivedEvents, 1)
 	require.Equal(t, eventToSend.ID(), destinationReceivedEvents[0].ID())
 	require.Equal(t, eventToSend.Data(), destinationReceivedEvents[0].Data())
-
-	// Log the actual content type received
-	actualContentType := destinationReceivedEvents[0].DataContentType()
-	t.Logf("Received content type: %s", actualContentType)
-
-	// Additional checks to ensure the event format
-	require.Equal(t, contentType, actualContentType)
 }
 
 func TestEventFormats(t *testing.T) {
 	t.Run("BinaryFormat", func(t *testing.T) {
-		testEventFormat(t, kncloudevents.Binary, "text/json", 8335)
+		testEventFormat(t, kncloudevents.Binary, binding.EncodingBinary, 8335)
 	})
 
 	t.Run("JsonFormat", func(t *testing.T) {
-		testEventFormat(t, kncloudevents.Json, "text/json", 8336)
+		testEventFormat(t, kncloudevents.Json, binding.EncodingStructured, 8336)
 	})
 }
-
-
 func TestDispatchMessageToTLSEndpoint(t *testing.T) {
 	var wg sync.WaitGroup
 	ctx, _ := rectesting.SetupFakeContext(t)
