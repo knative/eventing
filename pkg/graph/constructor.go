@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"go.uber.org/zap"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -47,7 +48,7 @@ type ConstructorConfig struct {
 	ShouldAddEventType    func(et eventingv1beta3.EventType) bool
 }
 
-func ConstructGraph(ctx context.Context, config ConstructorConfig, filterFunc func(obj interface{}) bool) (*Graph, error) {
+func ConstructGraph(ctx context.Context, config ConstructorConfig, logger zap.Logger) (*Graph, error) {
 	eventingClient, err := eventingclient.NewForConfig(&config.RestConfig)
 	if err != nil {
 		return nil, err
@@ -61,6 +62,10 @@ func ConstructGraph(ctx context.Context, config ConstructorConfig, filterFunc fu
 			return nil, err
 		}
 
+		if apierrs.IsUnauthorized(err) || apierrs.IsForbidden(err) {
+			logger.Warn("failed to list brokers while constructing lineage graph", zap.Error(err))
+		}
+
 		if err == nil {
 			for _, broker := range brokers.Items {
 				if config.ShouldAddBroker(broker) {
@@ -72,6 +77,10 @@ func ConstructGraph(ctx context.Context, config ConstructorConfig, filterFunc fu
 		channels, err := eventingClient.MessagingV1().Channels(ns).List(ctx, metav1.ListOptions{})
 		if err != nil && !apierrs.IsNotFound(err) && !apierrs.IsUnauthorized(err) && !apierrs.IsForbidden(err) {
 			return nil, err
+		}
+
+		if apierrs.IsUnauthorized(err) || apierrs.IsForbidden(err) {
+			logger.Warn("failed to list channels while constructing lineage graph", zap.Error(err))
 		}
 
 		if err == nil {
@@ -98,6 +107,10 @@ func ConstructGraph(ctx context.Context, config ConstructorConfig, filterFunc fu
 			return nil, err
 		}
 
+		if apierrs.IsUnauthorized(err) || apierrs.IsForbidden(err) {
+			logger.Warn("failed to list triggers while constructing lineage graph", zap.Error(err))
+		}
+
 		if err == nil {
 			for _, trigger := range triggers.Items {
 				if config.ShouldAddTrigger(trigger) {
@@ -114,6 +127,10 @@ func ConstructGraph(ctx context.Context, config ConstructorConfig, filterFunc fu
 			return nil, err
 		}
 
+		if apierrs.IsUnauthorized(err) || apierrs.IsForbidden(err) {
+			logger.Warn("failed to list subscriptions while constructing lineage graph", zap.Error(err))
+		}
+
 		if err == nil {
 			for _, subscription := range subscriptions.Items {
 				if config.ShouldAddSubscription(subscription) {
@@ -128,6 +145,10 @@ func ConstructGraph(ctx context.Context, config ConstructorConfig, filterFunc fu
 		eventTypes, err := eventingClient.EventingV1beta3().EventTypes(ns).List(ctx, metav1.ListOptions{})
 		if err != nil && !apierrs.IsNotFound(err) && !apierrs.IsUnauthorized(err) && !apierrs.IsForbidden(err) {
 			return nil, err
+		}
+
+		if apierrs.IsUnauthorized(err) || apierrs.IsForbidden(err) {
+			logger.Warn("failed to list eventtypes while constructing lineage graph", zap.Error(err))
 		}
 
 		if err == nil {
