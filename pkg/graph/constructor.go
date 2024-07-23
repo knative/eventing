@@ -26,100 +26,117 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic"
+	rest "k8s.io/client-go/rest"
 
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	eventingv1beta3 "knative.dev/eventing/pkg/apis/eventing/v1beta3"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
-	eventingclient "knative.dev/eventing/pkg/client/injection/client"
+	eventingclient "knative.dev/eventing/pkg/client/clientset/versioned"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
-	"knative.dev/pkg/injection/clients/dynamicclient"
 )
 
-func ConstructGraph(ctx context.Context, filterFunc func(obj interface{}) bool) (*Graph, error) {
-	eventingClient := eventingclient.Get(ctx)
+type ConstructorConfig struct {
+	RestConfig            rest.Config
+	Namespaces            []string
+	ShouldAddBroker       func(b eventingv1.Broker) bool
+	ShouldAddChannel      func(c messagingv1.Channel) bool
+	ShouldAddSource       func(s duckv1.Source) bool
+	ShouldAddTrigger      func(t eventingv1.Trigger) bool
+	ShouldAddSubscription func(s messagingv1.Subscription) bool
+	ShouldAddEventType    func(et eventingv1beta3.EventType) bool
+}
 
-	g := NewGraph()
-
-	brokers, err := eventingClient.EventingV1().Brokers("").List(ctx, metav1.ListOptions{})
-	if err != nil && !apierrs.IsNotFound(err) && !apierrs.IsUnauthorized(err) && !apierrs.IsForbidden(err) {
-		return nil, err
-	}
-
-	if err == nil {
-		for _, broker := range brokers.Items {
-			if filterFunc(broker) {
-				g.AddBroker(broker)
-			}
-		}
-	}
-
-	channels, err := eventingClient.MessagingV1().Channels("").List(ctx, metav1.ListOptions{})
-	if err != nil && !apierrs.IsNotFound(err) && !apierrs.IsUnauthorized(err) && !apierrs.IsForbidden(err) {
-		return nil, err
-	}
-
-	if err == nil {
-		for _, channel := range channels.Items {
-			if filterFunc(channel) {
-				g.AddChannel(channel)
-			}
-		}
-	}
-
-	sources, err := getSources(ctx)
+func ConstructGraph(ctx context.Context, config ConstructorConfig, filterFunc func(obj interface{}) bool) (*Graph, error) {
+	eventingClient, err := eventingclient.NewForConfig(&config.RestConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, source := range sources {
-		if filterFunc(source) {
-			g.AddSource(source)
+	g := NewGraph()
+
+	for _, ns := range config.Namespaces {
+		brokers, err := eventingClient.EventingV1().Brokers(ns).List(ctx, metav1.ListOptions{})
+		if err != nil && !apierrs.IsNotFound(err) && !apierrs.IsUnauthorized(err) && !apierrs.IsForbidden(err) {
+			return nil, err
 		}
-	}
 
-	triggers, err := eventingClient.EventingV1().Triggers("").List(ctx, metav1.ListOptions{})
-	if err != nil && !apierrs.IsNotFound(err) && !apierrs.IsUnauthorized(err) && !apierrs.IsForbidden(err) {
-		return nil, err
-	}
-
-	if err == nil {
-		for _, trigger := range triggers.Items {
-			if filterFunc(trigger) {
-				err := g.AddTrigger(trigger)
-				if err != nil {
-					return nil, err
+		if err == nil {
+			for _, broker := range brokers.Items {
+				if config.ShouldAddBroker(broker) {
+					g.AddBroker(broker)
 				}
 			}
 		}
-	}
 
-	subscriptions, err := eventingClient.MessagingV1().Subscriptions("").List(ctx, metav1.ListOptions{})
-	if err != nil && !apierrs.IsNotFound(err) && !apierrs.IsUnauthorized(err) && !apierrs.IsForbidden(err) {
-		return nil, err
-	}
+		channels, err := eventingClient.MessagingV1().Channels(ns).List(ctx, metav1.ListOptions{})
+		if err != nil && !apierrs.IsNotFound(err) && !apierrs.IsUnauthorized(err) && !apierrs.IsForbidden(err) {
+			return nil, err
+		}
 
-	if err == nil {
-		for _, subscription := range subscriptions.Items {
-			if filterFunc(subscription) {
-				err := g.AddSubscription(subscription)
-				if err != nil {
-					return nil, err
+		if err == nil {
+			for _, channel := range channels.Items {
+				if config.ShouldAddChannel(channel) {
+					g.AddChannel(channel)
 				}
 			}
 		}
-	}
 
-	eventTypes, err := eventingClient.EventingV1beta3().EventTypes("").List(ctx, metav1.ListOptions{})
-	if err != nil && !apierrs.IsNotFound(err) && !apierrs.IsUnauthorized(err) && !apierrs.IsForbidden(err) {
-		return nil, err
-	}
+		sources, err := getSources(ctx, config)
+		if err != nil {
+			return nil, err
+		}
 
-	if err == nil {
-		for _, eventType := range eventTypes.Items {
-			if filterFunc(eventType) {
-				err := g.AddEventType(eventType)
-				if err != nil {
-					return nil, err
+		for _, source := range sources {
+			if config.ShouldAddSource(source) {
+				g.AddSource(source)
+			}
+		}
+
+		triggers, err := eventingClient.EventingV1().Triggers(ns).List(ctx, metav1.ListOptions{})
+		if err != nil && !apierrs.IsNotFound(err) && !apierrs.IsUnauthorized(err) && !apierrs.IsForbidden(err) {
+			return nil, err
+		}
+
+		if err == nil {
+			for _, trigger := range triggers.Items {
+				if config.ShouldAddTrigger(trigger) {
+					err := g.AddTrigger(trigger)
+					if err != nil {
+						return nil, err
+					}
+				}
+			}
+		}
+
+		subscriptions, err := eventingClient.MessagingV1().Subscriptions(ns).List(ctx, metav1.ListOptions{})
+		if err != nil && !apierrs.IsNotFound(err) && !apierrs.IsUnauthorized(err) && !apierrs.IsForbidden(err) {
+			return nil, err
+		}
+
+		if err == nil {
+			for _, subscription := range subscriptions.Items {
+				if config.ShouldAddSubscription(subscription) {
+					err := g.AddSubscription(subscription)
+					if err != nil {
+						return nil, err
+					}
+				}
+			}
+		}
+
+		eventTypes, err := eventingClient.EventingV1beta3().EventTypes(ns).List(ctx, metav1.ListOptions{})
+		if err != nil && !apierrs.IsNotFound(err) && !apierrs.IsUnauthorized(err) && !apierrs.IsForbidden(err) {
+			return nil, err
+		}
+
+		if err == nil {
+			for _, eventType := range eventTypes.Items {
+				if config.ShouldAddEventType(eventType) {
+					err := g.AddEventType(eventType)
+					if err != nil {
+						return nil, err
+					}
 				}
 			}
 		}
@@ -258,6 +275,7 @@ func (g *Graph) AddTrigger(trigger eventingv1.Trigger) error {
 	return nil
 
 }
+
 func (g *Graph) AddSubscription(subscription messagingv1.Subscription) error {
 	channelRef := &duckv1.KReference{
 		Name:       subscription.Spec.Channel.Name,
@@ -300,8 +318,12 @@ func (g *Graph) AddSubscription(subscription messagingv1.Subscription) error {
 
 }
 
-func getSources(ctx context.Context) ([]duckv1.Source, error) {
-	client := dynamicclient.Get(ctx)
+func getSources(ctx context.Context, config ConstructorConfig) ([]duckv1.Source, error) {
+	client, err := dynamic.NewForConfig(&config.RestConfig)
+	if err != nil {
+		return nil, err
+	}
+
 	sourceCRDs, err := client.Resource(
 		schema.GroupVersionResource{
 			Group:    "apiextentions.k8s.io",
@@ -322,16 +344,18 @@ func getSources(ctx context.Context) ([]duckv1.Source, error) {
 			continue
 		}
 
-		sourcesList, err := client.Resource(sourceGVR).List(ctx, metav1.ListOptions{})
-		if err != nil {
-			continue
-		}
+		for _, ns := range config.Namespaces {
+			sourcesList, err := client.Resource(sourceGVR).Namespace(ns).List(ctx, metav1.ListOptions{})
+			if err != nil {
+				continue
+			}
 
-		for i := range sourcesList.Items {
-			unstructuredSource := sourcesList.Items[i]
-			duckSource, err := duckSourceFromUnstructured(&unstructuredSource)
-			if err == nil {
-				duckSources = append(duckSources, duckSource)
+			for i := range sourcesList.Items {
+				unstructuredSource := sourcesList.Items[i]
+				duckSource, err := duckSourceFromUnstructured(&unstructuredSource)
+				if err == nil {
+					duckSources = append(duckSources, duckSource)
+				}
 			}
 		}
 	}
@@ -349,6 +373,7 @@ func duckSourceFromUnstructured(u *unstructured.Unstructured) (duckv1.Source, er
 	err = json.Unmarshal(marshalled, &duckSource)
 	return duckSource, err
 }
+
 func gvrFromUnstructured(u *unstructured.Unstructured) (schema.GroupVersionResource, error) {
 	group, err := groupFromUnstructured(u)
 	if err != nil {
