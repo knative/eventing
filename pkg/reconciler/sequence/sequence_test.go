@@ -166,9 +166,7 @@ func TestAllCases(t *testing.T) {
 		},
 		Spec: &runtime.RawExtension{Raw: []byte("{}")},
 	}
-
-	table := TableTest{
-		{
+	table := TableTest{{
 			Name: "bad workqueue key",
 			// Make sure Reconcile handles bad keys.
 			Key: "too/many/parts",
