@@ -50,6 +50,7 @@ import (
 	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 	_ "knative.dev/pkg/system/testing"
 
+	v1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/eventingtls/eventingtlstesting"
@@ -928,7 +929,7 @@ func TestSendEvent(t *testing.T) {
 		})
 	}
 }
-func testEventFormat(t *testing.T, format kncloudevents.EventFormat, expectedEncoding binding.Encoding, port int) {
+func testEventFormat(t *testing.T, format v1.FormatType, expectedEncoding binding.Encoding, port int) {
 	var wg sync.WaitGroup
 	ctx, _ := rectesting.SetupFakeContext(t)
 	ctx, cancel := context.WithCancel(ctx)
@@ -1005,11 +1006,11 @@ func testEventFormat(t *testing.T, format kncloudevents.EventFormat, expectedEnc
 
 func TestEventFormats(t *testing.T) {
 	t.Run("BinaryFormat", func(t *testing.T) {
-		testEventFormat(t, kncloudevents.Binary, binding.EncodingBinary, 8335)
+		testEventFormat(t, v1.DeliveryFormatBinary, binding.EncodingBinary, 8335)
 	})
 
 	t.Run("JsonFormat", func(t *testing.T) {
-		testEventFormat(t, kncloudevents.Json, binding.EncodingStructured, 8336)
+		testEventFormat(t, v1.DeliveryFormatJson, binding.EncodingStructured, 8336)
 	})
 }
 func TestDispatchMessageToTLSEndpoint(t *testing.T) {

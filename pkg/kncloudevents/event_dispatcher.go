@@ -41,6 +41,7 @@ import (
 	"knative.dev/pkg/system"
 
 	eventingapis "knative.dev/eventing/pkg/apis"
+	v1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/eventtype"
@@ -65,16 +66,9 @@ type DispatchInfo struct {
 	Scheme         string
 }
 
-type EventFormat string
-
-const (
-	Binary EventFormat = "binary"
-	Json   EventFormat = "json"
-)
-
 type SendOption func(*senderConfig) error
 
-func WithEventFormat(format *EventFormat) SendOption {
+func WithEventFormat(format *v1.FormatType) SendOption {
 	return func(sc *senderConfig) error {
 		sc.eventFormat = format
 		return nil
@@ -155,7 +149,7 @@ type senderConfig struct {
 	eventTypeAutoHandler *eventtype.EventTypeAutoHandler
 	eventTypeRef         *duckv1.KReference
 	eventTypeOnwerUID    types.UID
-	eventFormat          *EventFormat
+	eventFormat          *v1.FormatType
 }
 
 type Dispatcher struct {
@@ -231,9 +225,9 @@ func (d *Dispatcher) send(ctx context.Context, message binding.Message, destinat
 	// Handle the event format option
 	if config.eventFormat != nil {
 		switch *config.eventFormat {
-		case Binary:
+		case v1.DeliveryFormatBinary:
 			ctx = binding.WithForceBinary(ctx)
-		case Json:
+		case v1.DeliveryFormatJson:
 			ctx = binding.WithForceStructured(ctx)
 		}
 	}
