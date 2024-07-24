@@ -340,29 +340,133 @@ func (r *Reconciler) removeUnwantedSubscriptions(ctx context.Context, seq *v1.Se
 }
 
 func (r *Reconciler) reconcileEventPolicies(ctx context.Context, s *v1.Sequence, channels []*eventingduckv1.Channelable, subs []*messagingv1.Subscription, featureFlags feature.Flags) error {
-	if featureFlags.IsOIDCAuthentication() {
-		// Create or update EventPolicies, and we skip the first channel as it's the input channel!
-		for i := 1; i < len(channels); i++ {
-			if err := r.reconcileChannelEventPolicy(ctx, s, channels[i], subs[i-1]); err != nil {
-				return err
+	if !featureFlags.IsOIDCAuthentication() {
+		return r.cleanupAllEventPolicies(ctx, s)
+	}
+
+	// List all existing EventPolicies for this Sequence
+	existingPolicies, err := r.listEventPoliciesForSequence(ctx, s)
+	if err != nil {
+		return fmt.Errorf("failed to list existing EventPolicies: %w", err)
+	}
+
+	// Prepare maps for lookups
+	existingPolicyMap := make(map[string]*eventingv1alpha1.EventPolicy)
+	for _, policy := range existingPolicies {
+		existingPolicyMap[policy.Name] = policy
+	}
+
+	// Prepare lists for different actions
+	var policiesToUpdate, policiesToCreate, policiesToDelete []*eventingv1alpha1.EventPolicy
+
+	// Handle intermediate channel policies (skip the first channel as it's the input channel!)
+	for i := 1; i < len(channels); i++ {
+		expectedPolicy := resources.MakeEventPolicyForSequenceChannel(s, channels[i], subs[i-1])
+		existingPolicy, exists := existingPolicyMap[expectedPolicy.Name]
+
+		if exists {
+			if !equality.Semantic.DeepEqual(existingPolicy.Spec, expectedPolicy.Spec) {
+				policiesToUpdate = append(policiesToUpdate, expectedPolicy)
 			}
+			delete(existingPolicyMap, expectedPolicy.Name)
+		} else {
+			policiesToCreate = append(policiesToCreate, expectedPolicy)
 		}
+	}
 
-		// Handle input channel EventPolicy
-		if err := r.reconcileInputChannelEventPolicy(ctx, s, channels[0]); err != nil {
-			return err
+	// Handle input channel policy
+	inputPolicy, err := r.prepareInputChannelEventPolicy(ctx, s, channels[0])
+	if err != nil {
+		return fmt.Errorf("failed to prepare input channel EventPolicy: %w", err)
+	}
+	if inputPolicy != nil {
+		// The sequence has the event policy, so we are creating the event policy for the input channel
+		existingInputPolicy, exists := existingPolicyMap[inputPolicy.Name]
+		if exists {
+			if !equality.Semantic.DeepEqual(existingInputPolicy.Spec, inputPolicy.Spec) {
+				policiesToUpdate = append(policiesToUpdate, inputPolicy)
+			}
+			delete(existingPolicyMap, inputPolicy.Name)
+		} else {
+			policiesToCreate = append(policiesToCreate, inputPolicy)
 		}
+	}
 
-	} else {
-		// Clean up existing EventPolicies, as the authentication feature flag is disabled
-		if err := r.cleanupEventPolicies(ctx, s); err != nil {
-			return err
-		}
+	// Any remaining policies in the map should be deleted
+	for _, policy := range existingPolicyMap {
+		policiesToDelete = append(policiesToDelete, policy)
+	}
+
+	// Perform the actual CRUD operations
+	if err := r.createEventPolicies(ctx, policiesToCreate); err != nil {
+		return fmt.Errorf("failed to create EventPolicies: %w", err)
+	}
+	if err := r.updateEventPolicies(ctx, policiesToUpdate); err != nil {
+		return fmt.Errorf("failed to update EventPolicies: %w", err)
+	}
+	if err := r.deleteEventPolicies(ctx, policiesToDelete); err != nil {
+		return fmt.Errorf("failed to delete EventPolicies: %w", err)
 	}
 
 	return nil
 }
 
+func (r *Reconciler) listEventPoliciesForSequence(ctx context.Context, s *v1.Sequence) ([]*eventingv1alpha1.EventPolicy, error) {
+	labelSelector := labels.SelectorFromSet(map[string]string{
+		resources.SequenceChannelEventPolicyLabelPrefix + "sequence-name": s.Name,
+	})
+	return r.eventPolicyLister.EventPolicies(s.Namespace).List(labelSelector)
+}
+
+func (r *Reconciler) prepareInputChannelEventPolicy(ctx context.Context, s *v1.Sequence, inputChannel *eventingduckv1.Channelable) (*eventingv1alpha1.EventPolicy, error) {
+	// Trying to see whether the user manually created the eventpolicy for the sequence
+	sequencePolicy, err := r.eventPolicyLister.EventPolicies(s.Namespace).Get(s.Name + "-ep")
+	if err != nil {
+		if apierrs.IsNotFound(err) {
+			return nil, nil // No EventPolicy for the Sequence, so we don't create one for the input channel
+		}
+		return nil, err
+	}
+	return resources.MakeEventPolicyForSequenceInputChannel(s, inputChannel, sequencePolicy), nil
+}
+
+func (r *Reconciler) createEventPolicies(ctx context.Context, policies []*eventingv1alpha1.EventPolicy) error {
+	for _, policy := range policies {
+		_, err := r.eventingClientSet.EventingV1alpha1().EventPolicies(policy.Namespace).Create(ctx, policy, metav1.CreateOptions{})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (r *Reconciler) updateEventPolicies(ctx context.Context, policies []*eventingv1alpha1.EventPolicy) error {
+	for _, policy := range policies {
+		_, err := r.eventingClientSet.EventingV1alpha1().EventPolicies(policy.Namespace).Update(ctx, policy, metav1.UpdateOptions{})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (r *Reconciler) deleteEventPolicies(ctx context.Context, policies []*eventingv1alpha1.EventPolicy) error {
+	for _, policy := range policies {
+		err := r.eventingClientSet.EventingV1alpha1().EventPolicies(policy.Namespace).Delete(ctx, policy.Name, metav1.DeleteOptions{})
+		if err != nil && !apierrs.IsNotFound(err) {
+			return err
+		}
+	}
+	return nil
+}
+
+func (r *Reconciler) cleanupAllEventPolicies(ctx context.Context, s *v1.Sequence) error {
+	policies, err := r.listEventPoliciesForSequence(ctx, s)
+	if err != nil {
+		return fmt.Errorf("failed to list EventPolicies for cleanup: %w", err)
+	}
+	return r.deleteEventPolicies(ctx, policies)
+}
 func (r *Reconciler) reconcileChannelEventPolicy(ctx context.Context, s *v1.Sequence, channel *eventingduckv1.Channelable, subscription *messagingv1.Subscription) error {
 	expected := resources.MakeEventPolicyForSequenceChannel(s, channel, subscription)
 
@@ -382,40 +486,6 @@ func (r *Reconciler) createOrUpdateEventPolicy(ctx context.Context, expected *ev
 		existing.Spec = expected.Spec
 		_, err = r.eventingClientSet.EventingV1alpha1().EventPolicies(existing.Namespace).Update(ctx, existing, metav1.UpdateOptions{})
 		return err
-	}
-
-	return nil
-}
-
-func (r *Reconciler) reconcileInputChannelEventPolicy(ctx context.Context, s *v1.Sequence, inputChannel *eventingduckv1.Channelable) error {
-	// Check if there's an EventPolicy for the Sequence
-	sequencePolicy, err := r.eventPolicyLister.EventPolicies(s.Namespace).Get(s.Name + "-ep")
-	if err != nil {
-		if apierrs.IsNotFound(err) {
-			// No EventPolicy for the Sequence, so we don't create one for the input channel
-			return nil
-		}
-		return err
-	}
-
-	expected := resources.MakeEventPolicyForSequenceInputChannel(s, inputChannel, sequencePolicy)
-
-	return r.createOrUpdateEventPolicy(ctx, expected)
-}
-
-func (r *Reconciler) cleanupEventPolicies(ctx context.Context, s *v1.Sequence) error {
-	policies, err := r.eventPolicyLister.EventPolicies(s.Namespace).List(labels.Everything())
-	if err != nil {
-		return err
-	}
-
-	for _, policy := range policies {
-		if metav1.IsControlledBy(policy, s) {
-			err := r.eventingClientSet.EventingV1alpha1().EventPolicies(policy.Namespace).Delete(ctx, policy.Name, metav1.DeleteOptions{})
-			if err != nil && !apierrs.IsNotFound(err) {
-				return err
-			}
-		}
 	}
 
 	return nil
