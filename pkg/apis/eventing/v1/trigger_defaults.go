@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,6 +19,8 @@ package v1
 import (
 	"context"
 
+	"knative.dev/eventing/pkg/apis/feature"
+
 	"knative.dev/pkg/apis"
 )
 
@@ -29,7 +31,7 @@ const (
 func (t *Trigger) SetDefaults(ctx context.Context) {
 	withNS := apis.WithinParent(ctx, t.ObjectMeta)
 	t.Spec.SetDefaults(withNS)
-	setLabels(t)
+	setLabels(ctx, t)
 }
 
 func (ts *TriggerSpec) SetDefaults(ctx context.Context) {
@@ -42,8 +44,13 @@ func (ts *TriggerSpec) SetDefaults(ctx context.Context) {
 	ts.Delivery.SetDefaults(ctx)
 }
 
-func setLabels(t *Trigger) {
-	if t.Spec.Broker != "" {
+func setLabels(ctx context.Context, t *Trigger) {
+	if feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) && t.Spec.BrokerRef != nil {
+		if len(t.Labels) == 0 {
+			t.Labels = map[string]string{}
+		}
+		t.Labels[brokerLabel] = t.Spec.BrokerRef.Name
+	} else if t.Spec.Broker != "" {
 		if len(t.Labels) == 0 {
 			t.Labels = map[string]string{}
 		}

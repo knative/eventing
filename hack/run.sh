@@ -1,4 +1,4 @@
-#!/usr/bin/env bash 
+#!/usr/bin/env bash
 
 set -e
 
@@ -28,7 +28,7 @@ function usage() {
 }
 
 if [[ "${action}" == "install" ]]; then
-	./"${ROOT_DIR}"/hack/install.sh 
+	./"${ROOT_DIR}"/hack/install.sh
 elif [[ "${action}" == "update-cert-manager" ]]; then
 	./"${ROOT_DIR}"/hack/update-cert-manager.sh "$2" "$3"
 elif [[ "${action}" == "e2e-debug" ]]; then
@@ -44,7 +44,7 @@ elif [[ "${action}" == "update-checksums" ]]; then
 elif [[ "${action}" == "update-codegen" ]]; then
 	./"${ROOT_DIR}"/hack/update-codegen.sh
 elif [[ "${action}" == "update-deps" ]]; then
-	./"${ROOT_DIR}"/hack/update-deps.sh 
+	./"${ROOT_DIR}"/hack/update-deps.sh
 elif [[ "${action}" == "verify-codegen" ]]; then
 	./"${ROOT_DIR}"/hack/verify-codegen.sh
 else
@@ -52,3 +52,4 @@ else
 	usage "$0"
 	exit 1
 fi
+

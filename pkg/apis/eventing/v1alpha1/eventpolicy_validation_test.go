@@ -21,11 +21,57 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/ptr"
 )
 
-func TestEventPolicySpecValidation(t *testing.T) {
+func TestEventPolicySpecValidationWithOIDCAuthenticationFeatureFlagDisabled(t *testing.T) {
+	tests := []struct {
+		name string
+		ep   *EventPolicy
+		want *apis.FieldError
+	}{
+		{
+			name: "valid, from.sub exactly '*'",
+			ep: &EventPolicy{
+				Spec: EventPolicySpec{
+					From: []EventPolicySpecFrom{{
+						Sub: ptr.String("*"),
+					}},
+				},
+			},
+			want: func() *apis.FieldError {
+				return apis.ErrGeneric("oidc-authentication feature not enabled")
+			}(),
+		},
+		{
+			name: "invalid, missing from.ref and from.sub",
+			ep: &EventPolicy{
+				Spec: EventPolicySpec{
+					From: []EventPolicySpecFrom{{}},
+				},
+			},
+			want: func() *apis.FieldError {
+				return apis.ErrGeneric("oidc-authentication feature not enabled")
+			}(),
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctx := feature.ToContext(context.TODO(), feature.Flags{
+				feature.OIDCAuthentication: feature.Disabled,
+			})
+			ctx = apis.WithinCreate(ctx)
+			got := test.ep.Validate(ctx)
+			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
+				t.Errorf("%s: Validate EventPolicySpec (-want, +got) = %v", test.name, diff)
+			}
+		})
+	}
+}
+
+func TestEventPolicySpecValidationWithOIDCAuthenticationFeatureFlagEnabled(t *testing.T) {
 	tests := []struct {
 		name string
 		ep   *EventPolicy
@@ -100,7 +146,7 @@ func TestEventPolicySpecValidation(t *testing.T) {
 			}(),
 		},
 		{
-			name: "invalid, bot from.ref and from.sub set",
+			name: "invalid, both from.ref and from.sub set for the same list element",
 			ep: &EventPolicy{
 				Spec: EventPolicySpec{
 					From: []EventPolicySpecFrom{{
@@ -129,7 +175,7 @@ func TestEventPolicySpecValidation(t *testing.T) {
 			}(),
 		},
 		{
-			name: "invalid, both to.ref and to.selector set",
+			name: "invalid, both to.ref and to.selector set for the same list element",
 			ep: &EventPolicy{
 				Spec: EventPolicySpec{
 					To: []EventPolicySpecTo{
@@ -252,7 +298,10 @@ func TestEventPolicySpecValidation(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := test.ep.Validate(context.TODO())
+			ctx := feature.ToContext(context.TODO(), feature.Flags{
+				feature.OIDCAuthentication: feature.Enabled,
+			})
+			got := test.ep.Validate(ctx)
 			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
 				t.Errorf("%s: Validate EventPolicySpec (-want, +got) = %v", test.name, diff)
 			}

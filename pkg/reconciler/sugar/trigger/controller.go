@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -29,6 +29,7 @@ import (
 
 	"knative.dev/eventing/pkg/apis/eventing"
 	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	"knative.dev/eventing/pkg/apis/feature"
 	sugarconfig "knative.dev/eventing/pkg/apis/sugar"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1/broker"
@@ -45,6 +46,9 @@ func NewController(
 
 	triggerInformer := trigger.Get(ctx)
 	brokerInformer := broker.Get(ctx)
+
+	featureStore := feature.NewStore(logging.FromContext(ctx).Named("config-features"))
+	featureStore.WatchConfigs(cmw)
 
 	r := &Reconciler{
 		eventingClientSet: eventingclient.Get(ctx),
@@ -66,13 +70,17 @@ func NewController(
 	// Watch brokers.
 	brokerInformer.Informer().AddEventHandler(controller.HandleAll(func(obj interface{}) {
 		if b, ok := obj.(*v1.Broker); ok {
-			triggers, err := triggerInformer.Lister().Triggers(b.Namespace).List(labels.SelectorFromSet(map[string]string{eventing.BrokerLabelKey: b.Name}))
+			triggers, err := triggerInformer.Lister().Triggers("").List(labels.SelectorFromSet(map[string]string{eventing.BrokerLabelKey: b.Name}))
 			if err != nil {
 				logging.FromContext(ctx).Warnw("Failed to list triggers", zap.String("Namespace", b.Namespace), zap.String("Broker", b.Name))
 				return
 			}
 			for _, t := range triggers {
-				impl.Enqueue(t)
+				if featureStore.Load().IsCrossNamespaceEventLinks() && t.Spec.BrokerRef != nil && t.Spec.BrokerRef.Namespace == b.Namespace {
+					impl.Enqueue(t)
+				} else if t.Namespace == b.Namespace {
+					impl.Enqueue(t)
+				}
 			}
 		}
 	}))

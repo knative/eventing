@@ -79,19 +79,27 @@ func TestEventTypeConversionV1Beta3(t *testing.T) {
 			Description: in.Spec.Description,
 			Attributes: []v1beta3.EventAttributeDefinition{
 				{
+					Name:     "specversion",
+					Required: true,
+				},
+				{
+					Name:     "id",
+					Required: true,
+				},
+				{
 					Name:     "type",
 					Required: true,
 					Value:    in.Spec.Type,
 				},
 				{
-					Name:     "schemadata",
-					Required: false,
-					Value:    in.Spec.Schema.String(),
-				},
-				{
 					Name:     "source",
 					Required: true,
 					Value:    in.Spec.Source.String(),
+				},
+				{
+					Name:     "schemadata",
+					Required: false,
+					Value:    in.Spec.Schema.String(),
 				},
 			},
 		},

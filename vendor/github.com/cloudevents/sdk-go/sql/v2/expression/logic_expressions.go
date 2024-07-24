@@ -20,12 +20,12 @@ type logicExpression struct {
 func (s logicExpression) Evaluate(event cloudevents.Event) (interface{}, error) {
 	leftVal, err := s.left.Evaluate(event)
 	if err != nil {
-		return nil, err
+		return false, err
 	}
 
 	leftVal, err = utils.Cast(leftVal, cesql.BooleanType)
 	if err != nil {
-		return nil, err
+		return false, err
 	}
 
 	// Don't bother to check the other expression unless we need to
@@ -38,12 +38,12 @@ func (s logicExpression) Evaluate(event cloudevents.Event) (interface{}, error) 
 
 	rightVal, err := s.right.Evaluate(event)
 	if err != nil {
-		return nil, err
+		return false, err
 	}
 
 	rightVal, err = utils.Cast(rightVal, cesql.BooleanType)
 	if err != nil {
-		return nil, err
+		return false, err
 	}
 
 	return s.fn(leftVal.(bool), rightVal.(bool)), nil

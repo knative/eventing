@@ -20,10 +20,18 @@ import (
 	"context"
 	"strings"
 
+	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/pkg/apis"
 )
 
 func (ep *EventPolicy) Validate(ctx context.Context) *apis.FieldError {
+	// To not allow creation or spec updates of EventPolicy CRs
+	// if the oidc-authentication feature is not enabled
+	if apis.IsInCreate(ctx) || (apis.IsInUpdate(ctx) && apis.IsInSpec(ctx)) {
+		if !feature.FromContext(ctx).IsOIDCAuthentication() {
+			return apis.ErrGeneric("oidc-authentication feature not enabled")
+		}
+	}
 	return ep.Spec.Validate(ctx).ViaField("spec")
 }
 

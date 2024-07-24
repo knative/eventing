@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -140,9 +140,10 @@ func ManyTriggers() *feature.FeatureSet {
 					trigger.WithSubscriber(service.AsKReference(sink), ""),
 					trigger.WithFilter(filter),
 					trigger.WithExtensions(eventFilter.Extensions),
+					trigger.WithBrokerName(brokerName),
 				}
 
-				trigger.Install(sink, brokerName, cfg...)(ctx, t)
+				trigger.Install(sink, cfg...)(ctx, t)
 			}
 
 			broker.IsReady(brokerName)(ctx, t)
@@ -291,7 +292,7 @@ func brokerChannelFlowWithTransformation(createSubscriberFn func(ref *v1.KRefere
 	// Install the trigger1 point to Broker and transform the original events to new events
 	f.Setup("install trigger1", trigger.Install(
 		trigger1,
-		brokerName,
+		trigger.WithBrokerName(brokerName),
 		trigger.WithFilter(filter1),
 		trigger.WithSubscriber(service.AsKReference(sink1), ""),
 	))
@@ -299,7 +300,7 @@ func brokerChannelFlowWithTransformation(createSubscriberFn func(ref *v1.KRefere
 	// Install the trigger2 point to Broker to filter all the events
 	f.Setup("install trigger2", trigger.Install(
 		trigger2,
-		brokerName,
+		trigger.WithBrokerName(brokerName),
 		trigger.WithFilter(filter2),
 		trigger.WithSubscriber(service.AsKReference(sink2), ""),
 	))
@@ -321,7 +322,7 @@ func brokerChannelFlowWithTransformation(createSubscriberFn func(ref *v1.KRefere
 	// Install the trigger3 point to Broker to filter the events after transformation point to channel
 	f.Setup("install trigger3", trigger.Install(
 		trigger3,
-		brokerName,
+		trigger.WithBrokerName(brokerName),
 		trigger.WithFilter(filter3),
 		trigger.WithSubscriber(channel.AsRef(channelName), ""),
 	))
@@ -431,7 +432,7 @@ func brokerEventTransformationForTrigger() *feature.Feature {
 	// Install the trigger1 point to Broker and transform the original events to new events
 	f.Setup("install trigger1", trigger.Install(
 		trigger1,
-		brokerName,
+		trigger.WithBrokerName(brokerName),
 		trigger.WithFilter(filter1),
 		trigger.WithSubscriber(service.AsKReference(sink1), ""),
 	))
@@ -439,7 +440,7 @@ func brokerEventTransformationForTrigger() *feature.Feature {
 	// Install the trigger2 point to Broker to filter all the events
 	f.Setup("install trigger2", trigger.Install(
 		trigger2,
-		brokerName,
+		trigger.WithBrokerName(brokerName),
 		trigger.WithFilter(filter2),
 		trigger.WithSubscriber(service.AsKReference(sink2), ""),
 	))
@@ -499,10 +500,10 @@ func BrokerPreferHeaderCheck() *feature.Feature {
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 
 	// Point the Trigger subscriber to the sink svc.
-	cfg := []manifest.CfgFn{trigger.WithSubscriber(service.AsKReference(sink), "")}
+	cfg := []manifest.CfgFn{trigger.WithSubscriber(service.AsKReference(sink), ""), trigger.WithBrokerName(brokerName)}
 
 	// Install the trigger
-	f.Setup("install trigger", trigger.Install(via, brokerName, cfg...))
+	f.Setup("install trigger", trigger.Install(via, cfg...))
 	f.Setup("trigger goes ready", trigger.IsReady(via))
 
 	f.Requirement("install source", eventshub.Install(
@@ -560,10 +561,10 @@ func brokerRedeliveryFibonacci(retryNum int32) *feature.Feature {
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 
 	// Point the Trigger subscriber to the sink svc.
-	cfg := []manifest.CfgFn{trigger.WithSubscriber(service.AsKReference(sink), "")}
+	cfg := []manifest.CfgFn{trigger.WithSubscriber(service.AsKReference(sink), ""), trigger.WithBrokerName(brokerName)}
 
 	// Install the trigger
-	f.Setup("install trigger", trigger.Install(via, brokerName, cfg...))
+	f.Setup("install trigger", trigger.Install(via, cfg...))
 	f.Setup("trigger goes ready", trigger.IsReady(via))
 
 	f.Requirement("install source", eventshub.Install(
@@ -615,10 +616,10 @@ func brokerRedeliveryDropN(retryNum int32, dropNum uint) *feature.Feature {
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 
 	// Point the Trigger subscriber to the sink svc.
-	cfg := []manifest.CfgFn{trigger.WithSubscriber(service.AsKReference(sink), "")}
+	cfg := []manifest.CfgFn{trigger.WithSubscriber(service.AsKReference(sink), ""), trigger.WithBrokerName(brokerName)}
 
 	// Install the trigger
-	f.Setup("install trigger", trigger.Install(via, brokerName, cfg...))
+	f.Setup("install trigger", trigger.Install(via, cfg...))
 	f.Setup("trigger goes ready", trigger.IsReady(via))
 
 	f.Requirement("install source", eventshub.Install(
@@ -689,7 +690,7 @@ func brokerSubscriberUnreachable() *feature.Feature {
 	// Install the trigger and Point the Trigger subscriber to the sink svc.
 	f.Setup("install trigger", trigger.Install(
 		triggerName,
-		brokerName,
+		trigger.WithBrokerName(brokerName),
 		trigger.WithSubscriber(nil, subscriberUri),
 		trigger.WithDeadLetterSink(service.AsKReference(sink), ""),
 	))
@@ -748,7 +749,7 @@ func brokerSubscriberErrorNodata() *feature.Feature {
 	// Install the trigger and Point the Trigger subscriber to the sink svc.
 	f.Setup("install trigger", trigger.Install(
 		triggerName,
-		brokerName,
+		trigger.WithBrokerName(brokerName),
 		trigger.WithSubscriber(service.AsKReference(failer), ""),
 		trigger.WithDeadLetterSink(service.AsKReference(sink), ""),
 	))
@@ -810,7 +811,7 @@ func brokerSubscriberErrorWithdata() *feature.Feature {
 	// Install the trigger and Point the Trigger subscriber to the sink svc.
 	f.Setup("install trigger", trigger.Install(
 		triggerName,
-		brokerName,
+		trigger.WithBrokerName(brokerName),
 		trigger.WithSubscriber(service.AsKReference(failer), ""),
 		trigger.WithDeadLetterSink(service.AsKReference(sink), ""),
 	))
@@ -893,7 +894,7 @@ func brokerSubscriberLongMessage() *feature.Feature {
 	// Install the trigger and Point the Trigger subscriber to the sink svc.
 	f.Setup("install trigger", trigger.Install(
 		triggerName,
-		brokerName,
+		trigger.WithBrokerName(brokerName),
 		trigger.WithSubscriber(service.AsKReference(sink), ""),
 	))
 	f.Setup("trigger goes ready", trigger.IsReady(triggerName))
@@ -968,7 +969,7 @@ func brokerSubscriberLongResponseMessage() *feature.Feature {
 	// Install the Triggers with appropriate Sinks and filters
 	f.Setup("install trigger1", trigger.Install(
 		trigger1,
-		brokerName,
+		trigger.WithBrokerName(brokerName),
 		trigger.WithSubscriber(service.AsKReference(sink1), ""),
 		trigger.WithFilter(map[string]string{"type": eventType1, "source": eventSource1}),
 	))
@@ -976,7 +977,7 @@ func brokerSubscriberLongResponseMessage() *feature.Feature {
 
 	f.Setup("install trigger2", trigger.Install(
 		trigger2,
-		brokerName,
+		trigger.WithBrokerName(brokerName),
 		trigger.WithSubscriber(service.AsKReference(sink2), ""),
 		trigger.WithFilter(map[string]string{"type": eventType2, "source": eventSource2}),
 	))

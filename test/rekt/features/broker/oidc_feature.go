@@ -77,7 +77,7 @@ func BrokerSendEventWithOIDCTokenToSubscriber() *feature.Feature {
 		d := service.AsDestinationRef(sink)
 		d.CACerts = eventshub.GetCaCerts(ctx)
 		d.Audience = &sinkAudience
-		trigger.Install(triggerName, brokerName, trigger.WithSubscriberFromDestination(d))(ctx, t)
+		trigger.Install(triggerName, trigger.WithBrokerName(brokerName), trigger.WithSubscriberFromDestination(d))(ctx, t)
 	})
 	f.Setup("trigger goes ready", trigger.IsReady(triggerName))
 
@@ -135,7 +135,7 @@ func BrokerSendEventWithOIDCTokenToDLS() *feature.Feature {
 		d := duckv1.Destination{}
 		d.CACerts = eventshub.GetCaCerts(ctx)
 		d.URI, _ = apis.ParseURL("bad://uri")
-		trigger.Install(triggerName, brokerName, trigger.WithSubscriberFromDestination(&d))(ctx, t)
+		trigger.Install(triggerName, trigger.WithBrokerName(brokerName), trigger.WithSubscriberFromDestination(&d))(ctx, t)
 
 	})
 
@@ -201,7 +201,7 @@ func BrokerSendEventWithOIDCTokenToReply() *feature.Feature {
 	f.Setup("install the trigger", func(ctx context.Context, t feature.T) {
 		d := service.AsDestinationRef(subscriber)
 		d.CACerts = eventshub.GetCaCerts(ctx)
-		trigger.Install(triggerName, brokerName, trigger.WithSubscriberFromDestination(d), trigger.WithFilter(map[string]string{
+		trigger.Install(triggerName, trigger.WithBrokerName(brokerName), trigger.WithSubscriberFromDestination(d), trigger.WithFilter(map[string]string{
 			"type": event.Type(),
 		}))(ctx, t)
 	})
@@ -211,7 +211,7 @@ func BrokerSendEventWithOIDCTokenToReply() *feature.Feature {
 	f.Setup("install the trigger and specify the CA cert of the destination", func(ctx context.Context, t feature.T) {
 		d := service.AsDestinationRef(reply)
 		d.CACerts = eventshub.GetCaCerts(ctx)
-		trigger.Install(helperTriggerName, brokerName, trigger.WithSubscriberFromDestination(d), trigger.WithFilter(map[string]string{
+		trigger.Install(helperTriggerName, trigger.WithBrokerName(brokerName), trigger.WithSubscriberFromDestination(d), trigger.WithFilter(map[string]string{
 			"type": replyEventType,
 		}))(ctx, t)
 	})
