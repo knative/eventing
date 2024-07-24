@@ -232,7 +232,7 @@ func (d *Dispatcher) send(ctx context.Context, message binding.Message, destinat
 		}
 	}
 
-	ctx, responseMessage, dispatchExecutionInfo, err := d.executeRequest(ctx, destination, message, additionalHeadersForDestination, config.retryConfig, config.oidcServiceAccount, config.transformers...)
+	ctx, responseMessage, dispatchExecutionInfo, err := d.executeRequest(ctx, destination, message, additionalHeadersForDestination, config.retryConfig, config.oidcServiceAccount, config.transformers)
 	if err != nil {
 		// If DeadLetter is configured, then send original message with knative error extensions
 		if config.deadLetterSink != nil {
