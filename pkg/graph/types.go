@@ -75,8 +75,10 @@ func NewGraph() *Graph {
 
 func (g *Graph) Vertices() Vertices {
 	vertices := make([]*Vertex, len(g.vertices))
+	i := 0
 	for _, v := range g.vertices {
-		vertices = append(vertices, v)
+		vertices[i] = v
+		i++
 	}
 	return vertices
 }
