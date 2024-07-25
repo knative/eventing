@@ -33,6 +33,7 @@ type Vertex struct {
 	inEdges  []*Edge
 	outEdges []*Edge
 	visited  bool
+	resource interface{}
 }
 
 type Vertices []*Vertex
@@ -132,6 +133,13 @@ func (v *Vertex) Unvisit() {
 
 func (v *Vertex) Visited() bool {
 	return v.visited
+}
+
+func (v *Vertex) Resource() (obj interface{}, ok bool) {
+	if v.resource == nil {
+		return nil, false
+	}
+	return v.resource, true
 }
 
 func (v *Vertex) NewWithSameRef() *Vertex {
