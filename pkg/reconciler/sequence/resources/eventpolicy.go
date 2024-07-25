@@ -70,7 +70,7 @@ func MakeEventPolicyForSequenceChannel(s *flowsv1.Sequence, channel *eventingduc
 
 func LabelsForSequenceChannelsEventPolicy(sequenceName string) map[string]string {
 	return map[string]string{
-		SequenceChannelEventPolicyLabelPrefix + "sequence-name":    sequenceName,
+		SequenceChannelEventPolicyLabelPrefix + "sequence-name": sequenceName,
 	}
 }
 
