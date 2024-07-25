@@ -23,6 +23,8 @@ import (
 	"strings"
 	"time"
 
+	"k8s.io/utils/ptr"
+
 	opencensusclient "github.com/cloudevents/sdk-go/observability/opencensus/v2/client"
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"
@@ -231,16 +233,14 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	features := feature.FromContext(ctx)
-	if features.IsOIDCAuthentication() {
-		h.Logger.Debug("OIDC authentication is enabled")
-
-		err = h.tokenVerifier.VerifyJWTFromRequest(ctx, request, broker.Status.Address.Audience, writer)
-		if err != nil {
-			h.Logger.Warn("Error when validating the JWT token in the request", zap.Error(err))
-			return
-		}
-
-		h.Logger.Debug("Request contained a valid JWT. Continuing...")
+	audience := ptr.To("")
+	if broker.Status.Address != nil {
+		audience = broker.Status.Address.Audience
+	}
+	err = h.tokenVerifier.VerifyRequest(ctx, features, audience, brokerNamespace, broker.Status.Policies, request, writer)
+	if err != nil {
+		h.Logger.Warn("Failed to verify AuthN and AuthZ.", zap.Error(err))
+		return
 	}
 
 	ctx, span := trace.StartSpan(ctx, tracing.BrokerMessagingDestination(brokerNamespacedName))
