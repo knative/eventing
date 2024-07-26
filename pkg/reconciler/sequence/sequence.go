@@ -363,7 +363,7 @@ func (r *Reconciler) reconcileEventPolicies(ctx context.Context, s *v1.Sequence,
 		existingPolicy, exists := existingPolicyMap[expectedPolicy.Name]
 
 		if exists {
-			if !equality.Semantic.DeepEqual(existingPolicy.Spec, expectedPolicy.Spec) {
+			if !equality.Semantic.DeepDerivative(expectedPolicy.Spec, existingPolicy.Spec) {
 				policiesToUpdate = append(policiesToUpdate, expectedPolicy)
 			}
 			delete(existingPolicyMap, expectedPolicy.Name)
@@ -381,7 +381,7 @@ func (r *Reconciler) reconcileEventPolicies(ctx context.Context, s *v1.Sequence,
 		// The sequence has the event policy, so we are creating the event policy for the input channel
 		existingInputPolicy, exists := existingPolicyMap[inputPolicy.Name]
 		if exists {
-			if !equality.Semantic.DeepEqual(existingInputPolicy.Spec, inputPolicy.Spec) {
+			if !equality.Semantic.DeepDerivative(inputPolicy.Spec, existingInputPolicy.Spec) {
 				policiesToUpdate = append(policiesToUpdate, inputPolicy)
 			}
 			delete(existingPolicyMap, inputPolicy.Name)
