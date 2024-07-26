@@ -131,7 +131,6 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, s *v1.Sequence) pkgrecon
 		return err
 	}
 
-	// Handle EventPolicies
 	if err := r.reconcileEventPolicies(ctx, s, channels, subs, featureFlags); err != nil {
 		return fmt.Errorf("failed to reconcile EventPolicies: %w", err)
 	}
