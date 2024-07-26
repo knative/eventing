@@ -348,14 +348,18 @@ func (r *Reconciler) reconcileEventPolicies(ctx context.Context, s *v1.Sequence,
 		return fmt.Errorf("failed to list existing EventPolicies: %w", err)
 	}
 
-	// Prepare maps for lookups
+	// Prepare maps for efficient lookups, updates, and deletions of policies
 	existingPolicyMap := make(map[string]*eventingv1alpha1.EventPolicy)
 	for _, policy := range existingPolicies {
 		existingPolicyMap[policy.Name] = policy
 	}
 
-	// Prepare lists for different actions
-	var policiesToUpdate, policiesToCreate, policiesToDelete []*eventingv1alpha1.EventPolicy
+	// Prepare lists for different actions so that policies can be categorized
+	// Corresponding operations will be performed on these lists
+	var policiesToUpdate, policiesToCreate []*eventingv1alpha1.EventPolicy
+
+	// pre-allocation because we know the maximum possible size upfront (the number of existing policies).
+	policiesToDelete := make([]*eventingv1alpha1.EventPolicy, 0, len(existingPolicies))
 
 	// Handle intermediate channel policies (skip the first channel as it's the input channel!)
 	for i := 1; i < len(channels); i++ {
