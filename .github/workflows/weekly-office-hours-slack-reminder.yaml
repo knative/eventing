@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: 'Weekly Eventing WG Office Hours Slack Reminder"
+name: 'Weekly Eventing WG Office Hours Slack Reminder'
 
 on:
   workflow_dispatch:
@@ -23,7 +23,6 @@ jobs:
   remind:
     name: weekly-eventing-office-hours-reminder
     runs-on: 'ubuntu-latest'
-
     steps:
       - name: Post reminder to Slack
         uses: rtCamp/action-slack-notify@v2.2.1
