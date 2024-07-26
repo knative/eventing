@@ -343,7 +343,6 @@ func (r *Reconciler) reconcileEventPolicies(ctx context.Context, s *v1.Sequence,
 		return r.cleanupAllEventPolicies(ctx, s)
 	}
 
-	// List all existing EventPolicies for this Sequence
 	existingPolicies, err := r.listEventPoliciesForSequence(s)
 	if err != nil {
 		return fmt.Errorf("failed to list existing EventPolicies: %w", err)
