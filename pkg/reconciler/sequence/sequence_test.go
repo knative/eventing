@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"testing"
 
-	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/apis/feature"
 
 	corev1 "k8s.io/api/core/v1"
@@ -30,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	clientgotesting "k8s.io/client-go/testing"
+	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 
 	v1 "knative.dev/eventing/pkg/apis/flows/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
@@ -2260,6 +2260,300 @@ func TestAllCases(t *testing.T) {
 							},
 						},
 					})),
+			}},
+		},
+		{
+			Name: "sequenceupdate-remove-step with 3 steps with AuthZ enabled, and sequence doesn't have event policy",
+			Key:  pKey,
+			Objects: []runtime.Object{
+				NewSequence(sequenceName, testNS,
+					WithInitSequenceConditions,
+					WithSequenceChannelTemplateSpec(imc),
+					WithSequenceSteps([]v1.SequenceStep{
+						{Destination: createDestination(0)},
+						{Destination: createDestination(1)}})),
+				createChannel(sequenceName, 0),
+				createChannel(sequenceName, 1),
+				createChannel(sequenceName, 2),
+				resources.NewSubscription(0, NewSequence(sequenceName, testNS,
+					WithSequenceChannelTemplateSpec(imc),
+					WithSequenceSteps([]v1.SequenceStep{
+						{Destination: createDestination(0)},
+						{Destination: createDestination(1)},
+						{Destination: createDestination(2)},
+					}))),
+				resources.NewSubscription(1, NewSequence(sequenceName, testNS,
+					WithSequenceChannelTemplateSpec(imc),
+					WithSequenceSteps([]v1.SequenceStep{
+						{Destination: createDestination(0)},
+						{Destination: createDestination(1)},
+						{Destination: createDestination(2)},
+					}))),
+				resources.NewSubscription(2, NewSequence(sequenceName, testNS,
+					WithSequenceChannelTemplateSpec(imc),
+					WithSequenceSteps([]v1.SequenceStep{
+						{Destination: createDestination(0)},
+						{Destination: createDestination(1)},
+						{Destination: createDestination(2)},
+					}))),
+				// Making the event policy for the sequence:
+				makeEventPolicy(sequenceName, resources.SequenceChannelName(sequenceName, 1), 1),
+				makeEventPolicy(sequenceName, resources.SequenceChannelName(sequenceName, 2), 2),
+			},
+			WantErr: false,
+			Ctx: feature.ToContext(context.Background(), feature.Flags{
+				feature.OIDCAuthentication:       feature.Enabled,
+				feature.AuthorizationDefaultMode: feature.AuthorizationAllowSameNamespace,
+			}),
+			WantDeletes: []clientgotesting.DeleteActionImpl{
+				{
+					ActionImpl: clientgotesting.ActionImpl{
+						Namespace: testNS,
+						Resource:  v1.SchemeGroupVersion.WithResource("subscriptions"),
+					},
+					Name: resources.SequenceChannelName(sequenceName, 2),
+				}, {
+					ActionImpl: clientgotesting.ActionImpl{
+						Namespace: testNS,
+						Resource:  v1.SchemeGroupVersion.WithResource("inmemorychannels"),
+					},
+					Name: resources.SequenceChannelName(sequenceName, 2),
+				},
+				{
+					ActionImpl: clientgotesting.ActionImpl{
+						Namespace: testNS,
+						Resource:  v1.SchemeGroupVersion.WithResource("eventpolicies"),
+					},
+					Name: resources.SequenceEventPolicyName(sequenceName, resources.SequenceChannelName(sequenceName, 2)),
+				},
+			},
+			WantUpdates: []clientgotesting.UpdateActionImpl{{
+				ActionImpl: clientgotesting.ActionImpl{
+					Namespace: testNS,
+					Resource:  v1.SchemeGroupVersion.WithResource("subscriptions"),
+				},
+				Object: resources.NewSubscription(1, NewSequence(sequenceName, testNS,
+					WithSequenceChannelTemplateSpec(imc),
+					WithSequenceSteps([]v1.SequenceStep{
+						{Destination: createDestination(0)},
+						{Destination: createDestination(1)}},
+					))),
+			}},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewSequence(sequenceName, testNS,
+					WithInitSequenceConditions,
+					WithSequenceChannelTemplateSpec(imc),
+					WithSequenceSteps([]v1.SequenceStep{
+						{Destination: createDestination(0)},
+						{Destination: createDestination(1)}}),
+					WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
+					WithSequenceAddressableNotReady("emptyAddress", "addressable is nil"),
+					WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+					WithSequenceEventPoliciesReadyBecauseNoPolicyAndOIDCEnabled(),
+					WithSequenceChannelStatuses([]v1.SequenceChannelStatus{
+						{
+							Channel: corev1.ObjectReference{
+								APIVersion: "messaging.knative.dev/v1",
+								Kind:       "InMemoryChannel",
+								Name:       resources.SequenceChannelName(sequenceName, 0),
+								Namespace:  testNS,
+							},
+							ReadyCondition: apis.Condition{
+								Type:    apis.ConditionReady,
+								Status:  corev1.ConditionUnknown,
+								Reason:  "NoReady",
+								Message: "Channel does not have Ready condition",
+							},
+						},
+						{
+							Channel: corev1.ObjectReference{
+								APIVersion: "messaging.knative.dev/v1",
+								Kind:       "InMemoryChannel",
+								Name:       resources.SequenceChannelName(sequenceName, 1),
+								Namespace:  testNS,
+							},
+							ReadyCondition: apis.Condition{
+								Type:    apis.ConditionReady,
+								Status:  corev1.ConditionUnknown,
+								Reason:  "NoReady",
+								Message: "Channel does not have Ready condition",
+							},
+						},
+					}),
+					WithSequenceSubscriptionStatuses([]v1.SequenceSubscriptionStatus{
+						{
+							Subscription: corev1.ObjectReference{
+								APIVersion: "messaging.knative.dev/v1",
+								Kind:       "Subscription",
+								Name:       resources.SequenceSubscriptionName(sequenceName, 0),
+								Namespace:  testNS,
+							},
+							ReadyCondition: apis.Condition{
+								Type:    apis.ConditionReady,
+								Status:  corev1.ConditionUnknown,
+								Reason:  "NoReady",
+								Message: "Subscription does not have Ready condition",
+							},
+						},
+						{
+							Subscription: corev1.ObjectReference{
+								APIVersion: "messaging.knative.dev/v1",
+								Kind:       "Subscription",
+								Name:       resources.SequenceSubscriptionName(sequenceName, 1),
+								Namespace:  testNS,
+							},
+							ReadyCondition: apis.Condition{
+								Type:    apis.ConditionReady,
+								Status:  corev1.ConditionUnknown,
+								Reason:  "NoReady",
+								Message: "Subscription does not have Ready condition",
+							},
+						},
+					})),
+			}},
+		},
+		{
+			Name: "sequenceupdate-remove-step with 2 steps with AuthZ enabled, and sequence doesn't have event policy",
+			Key:  pKey,
+			Objects: []runtime.Object{
+				NewSequence(sequenceName, testNS,
+					WithInitSequenceConditions,
+					WithSequenceChannelTemplateSpec(imc),
+					WithSequenceSteps([]v1.SequenceStep{
+						{Destination: createDestination(0)},
+					})),
+				createChannel(sequenceName, 0),
+				createChannel(sequenceName, 1),
+				resources.NewSubscription(0, NewSequence(sequenceName, testNS,
+					WithSequenceChannelTemplateSpec(imc),
+					WithSequenceSteps([]v1.SequenceStep{
+						{Destination: createDestination(0)},
+						{Destination: createDestination(1)},
+					}))),
+				resources.NewSubscription(1, NewSequence(sequenceName, testNS,
+					WithSequenceChannelTemplateSpec(imc),
+					WithSequenceSteps([]v1.SequenceStep{
+						{Destination: createDestination(0)},
+						{Destination: createDestination(1)},
+					}))),
+				// Making the event policy for the sequence:
+				makeEventPolicy(sequenceName, resources.SequenceChannelName(sequenceName, 1), 1),
+			},
+			WantErr: false,
+			Ctx: feature.ToContext(context.Background(), feature.Flags{
+				feature.OIDCAuthentication:       feature.Enabled,
+				feature.AuthorizationDefaultMode: feature.AuthorizationAllowSameNamespace,
+			}),
+			WantDeletes: []clientgotesting.DeleteActionImpl{
+				{
+					ActionImpl: clientgotesting.ActionImpl{
+						Namespace: testNS,
+						Resource:  v1.SchemeGroupVersion.WithResource("subscriptions"),
+					},
+					Name: resources.SequenceChannelName(sequenceName, 1),
+				}, {
+					ActionImpl: clientgotesting.ActionImpl{
+						Namespace: testNS,
+						Resource:  v1.SchemeGroupVersion.WithResource("inmemorychannels"),
+					},
+					Name: resources.SequenceChannelName(sequenceName, 1),
+				},
+				{
+					ActionImpl: clientgotesting.ActionImpl{
+						Namespace: testNS,
+						Resource:  v1.SchemeGroupVersion.WithResource("eventpolicies"),
+					},
+					Name: resources.SequenceEventPolicyName(sequenceName, resources.SequenceChannelName(sequenceName, 1)),
+				},
+			},
+			WantUpdates: []clientgotesting.UpdateActionImpl{{
+				ActionImpl: clientgotesting.ActionImpl{
+					Namespace: testNS,
+					Resource:  v1.SchemeGroupVersion.WithResource("subscriptions"),
+				},
+				Object: resources.NewSubscription(0, NewSequence(sequenceName, testNS,
+					WithSequenceChannelTemplateSpec(imc),
+					WithSequenceSteps([]v1.SequenceStep{
+						{Destination: createDestination(0)}},
+					))),
+			}},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewSequence(sequenceName, testNS,
+					WithInitSequenceConditions,
+					WithSequenceChannelTemplateSpec(imc),
+					WithSequenceSteps([]v1.SequenceStep{
+						{Destination: createDestination(0)}}),
+					WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
+					WithSequenceAddressableNotReady("emptyAddress", "addressable is nil"),
+					WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+					WithSequenceEventPoliciesReadyBecauseNoPolicyAndOIDCEnabled(),
+					WithSequenceChannelStatuses([]v1.SequenceChannelStatus{
+						{
+							Channel: corev1.ObjectReference{
+								APIVersion: "messaging.knative.dev/v1",
+								Kind:       "InMemoryChannel",
+								Name:       resources.SequenceChannelName(sequenceName, 0),
+								Namespace:  testNS,
+							},
+							ReadyCondition: apis.Condition{
+								Type:    apis.ConditionReady,
+								Status:  corev1.ConditionUnknown,
+								Reason:  "NoReady",
+								Message: "Channel does not have Ready condition",
+							},
+						},
+					}),
+					WithSequenceSubscriptionStatuses([]v1.SequenceSubscriptionStatus{
+						{
+							Subscription: corev1.ObjectReference{
+								APIVersion: "messaging.knative.dev/v1",
+								Kind:       "Subscription",
+								Name:       resources.SequenceSubscriptionName(sequenceName, 0),
+								Namespace:  testNS,
+							},
+							ReadyCondition: apis.Condition{
+								Type:    apis.ConditionReady,
+								Status:  corev1.ConditionUnknown,
+								Reason:  "NoReady",
+								Message: "Subscription does not have Ready condition",
+							},
+						},
+					})),
+			}},
+		},
+		{
+			Name: "sequenceupdate-remove-step with 1 steps with AuthZ enabled, and sequence doesn't have event policy",
+			Key:  pKey,
+			Objects: []runtime.Object{
+				NewSequence(sequenceName, testNS,
+					WithInitSequenceConditions,
+					WithSequenceChannelTemplateSpec(imc),
+					WithSequenceSteps([]v1.SequenceStep{})),
+				createChannel(sequenceName, 0),
+				resources.NewSubscription(0, NewSequence(sequenceName, testNS,
+					WithSequenceChannelTemplateSpec(imc),
+					WithSequenceSteps([]v1.SequenceStep{
+						{Destination: createDestination(0)},
+					}))),
+			},
+			WantErr: true,
+			Ctx: feature.ToContext(context.Background(), feature.Flags{
+				feature.OIDCAuthentication:       feature.Enabled,
+				feature.AuthorizationDefaultMode: feature.AuthorizationAllowSameNamespace,
+			}),
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, "UpdateFailed", "Failed to update status for \"test-sequence\": missing field(s): spec.steps"),
+			},
+
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewSequence(sequenceName, testNS,
+					WithInitSequenceConditions,
+					WithSequenceChannelTemplateSpec(imc),
+					WithSequenceSteps([]v1.SequenceStep{}),
+					WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
+					WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+					WithSequenceChannelStatuses([]v1.SequenceChannelStatus{}),
+					WithSequenceSubscriptionStatuses([]v1.SequenceSubscriptionStatus{})),
 			}},
 		},
 	}
