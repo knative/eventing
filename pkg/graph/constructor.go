@@ -247,7 +247,7 @@ func (g *Graph) fetchEventTypes(ctx context.Context, config ConstructorConfig, e
 
 		if err == nil {
 			for _, eventType := range eventTypes.Items {
-				if config.ShouldAddEventType(eventType) {
+				if config.ShouldAddEventType == nil || config.ShouldAddEventType(eventType) {
 					err := g.AddEventType(eventType)
 					if err != nil {
 						return err
