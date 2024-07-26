@@ -355,10 +355,7 @@ func (r *Reconciler) reconcileEventPolicies(ctx context.Context, s *v1.Sequence,
 	}
 
 	// Prepare lists for different actions so that policies can be categorized
-	// Corresponding operations will be performed on these lists
 	var policiesToUpdate, policiesToCreate []*eventingv1alpha1.EventPolicy
-
-	// pre-allocation because we know the maximum possible size upfront (the number of existing policies).
 	policiesToDelete := make([]*eventingv1alpha1.EventPolicy, 0, len(existingPolicies))
 
 	// Handle intermediate channel policies (skip the first channel as it's the input channel!)
@@ -376,13 +373,12 @@ func (r *Reconciler) reconcileEventPolicies(ctx context.Context, s *v1.Sequence,
 		}
 	}
 
-	// Handle input channel policy
-	inputPolicy, err := r.prepareInputChannelEventPolicy(s, channels[0])
+	// Handle input channel policies
+	inputPolicies, err := r.prepareInputChannelEventPolicy(s, channels[0])
 	if err != nil {
-		return fmt.Errorf("failed to prepare input channel EventPolicy: %w", err)
+		return fmt.Errorf("failed to prepare input channel EventPolicies: %w", err)
 	}
-	if inputPolicy != nil {
-		// The sequence has the event policy, so we are creating the event policy for the input channel
+	for _, inputPolicy := range inputPolicies {
 		existingInputPolicy, exists := existingPolicyMap[inputPolicy.Name]
 		if exists {
 			if !equality.Semantic.DeepDerivative(inputPolicy.Spec, existingInputPolicy.Spec) {
@@ -413,6 +409,7 @@ func (r *Reconciler) reconcileEventPolicies(ctx context.Context, s *v1.Sequence,
 	return nil
 }
 
+// listEventPoliciesForSequence lists all EventPolicies (e.g. the policies for the input channel and the intermediate channels) created during reconcileKind that are associated with the given Sequence.
 func (r *Reconciler) listEventPoliciesForSequence(s *v1.Sequence) ([]*eventingv1alpha1.EventPolicy, error) {
 	labelSelector := labels.SelectorFromSet(map[string]string{
 		resources.SequenceChannelEventPolicyLabelPrefix + "sequence-name": s.Name,
@@ -420,16 +417,27 @@ func (r *Reconciler) listEventPoliciesForSequence(s *v1.Sequence) ([]*eventingv1
 	return r.eventPolicyLister.EventPolicies(s.Namespace).List(labelSelector)
 }
 
-func (r *Reconciler) prepareInputChannelEventPolicy(s *v1.Sequence, inputChannel *eventingduckv1.Channelable) (*eventingv1alpha1.EventPolicy, error) {
-	// Trying to see whether the user manually created the eventpolicy for the sequence
-	sequencePolicy, err := r.eventPolicyLister.EventPolicies(s.Namespace).Get(s.Name + "-ep")
+func (r *Reconciler) prepareInputChannelEventPolicy(s *v1.Sequence, inputChannel *eventingduckv1.Channelable) ([]*eventingv1alpha1.EventPolicy, error) {
+	matchingPolicies, err := auth.GetEventPoliciesForResource(
+		r.eventPolicyLister,
+		v1.SchemeGroupVersion.WithKind("Sequence"),
+		s.ObjectMeta,
+	)
 	if err != nil {
-		if apierrs.IsNotFound(err) {
-			return nil, nil // No EventPolicy for the Sequence, so we don't create one for the input channel
-		}
-		return nil, err
+		return nil, fmt.Errorf("failed to get matching EventPolicies for Sequence: %w", err)
 	}
-	return resources.MakeEventPolicyForSequenceInputChannel(s, inputChannel, sequencePolicy), nil
+
+	if len(matchingPolicies) == 0 {
+		return nil, nil
+	}
+
+	var inputChannelPolicies []*eventingv1alpha1.EventPolicy
+	for _, policy := range matchingPolicies {
+		inputChannelPolicy := resources.MakeEventPolicyForSequenceInputChannel(s, inputChannel, policy)
+		inputChannelPolicies = append(inputChannelPolicies, inputChannelPolicy)
+	}
+
+	return inputChannelPolicies, nil
 }
 
 func (r *Reconciler) createEventPolicies(ctx context.Context, policies []*eventingv1alpha1.EventPolicy) error {
