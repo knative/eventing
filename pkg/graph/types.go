@@ -17,6 +17,8 @@ limitations under the License.
 package graph
 
 import (
+	"fmt"
+
 	eventingv1beta3 "knative.dev/eventing/pkg/apis/eventing/v1beta3"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -103,6 +105,21 @@ func (g *Graph) Sources() Vertices {
 	return sources
 }
 
+func (g *Graph) String() string {
+	s := ""
+	for _, v := range g.vertices {
+		s += fmt.Sprintf("%s\n", v)
+		if len(v.outEdges) != 0 {
+			s += "Out Edges:\n"
+			for _, e := range v.outEdges {
+				s += fmt.Sprintf("\t%s\n", e)
+			}
+		}
+	}
+
+	return s
+}
+
 func (v *Vertex) InDegree() int {
 	return len(v.inEdges)
 }
@@ -164,6 +181,10 @@ func (v *Vertex) AddEdge(to *Vertex, edgeRef *duckv1.Destination, transform Tran
 	v.parent.edges[makeComparableDestination(edgeRef)] = append(v.parent.edges[makeComparableDestination(edgeRef)], edge)
 }
 
+func (v *Vertex) String() string {
+	return DestString(v.self)
+}
+
 func (g *Graph) GetPrimaryOutEdgeWithRef(edgeRef *duckv1.KReference) *Edge {
 	if edges, ok := g.edges[makeComparableDestination(&duckv1.Destination{Ref: edgeRef})]; ok {
 		for _, e := range edges {
@@ -194,6 +215,23 @@ func (e *Edge) To() *Vertex {
 
 func (e *Edge) Reference() *duckv1.Destination {
 	return e.self
+}
+
+func (e *Edge) String() string {
+	return fmt.Sprintf("[%s] --> [%s]", DestString(e.from.self), DestString(e.to.self))
+}
+
+func DestString(self *duckv1.Destination) string {
+	if self.Ref != nil && self.URI != nil {
+		return fmt.Sprintf("%s (%s)", self.Ref.String(), self.URI.String())
+	}
+	if self.Ref != nil {
+		return self.Ref.String()
+	}
+	if self.URI != nil {
+		return self.URI.String()
+	}
+	return "nil"
 }
 
 func makeComparableDestination(dest *duckv1.Destination) comparableDestination {
