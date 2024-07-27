@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	opencensusclient "github.com/cloudevents/sdk-go/observability/opencensus/v2/client"
@@ -31,6 +32,7 @@ import (
 	"github.com/cloudevents/sdk-go/v2/binding"
 	"github.com/cloudevents/sdk-go/v2/event"
 	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
+	"github.com/go-jose/go-jose/v3/jwt"
 	"go.opencensus.io/trace"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
@@ -40,22 +42,21 @@ import (
 	"knative.dev/pkg/logging"
 
 	"knative.dev/eventing/pkg/apis"
-	"knative.dev/eventing/pkg/auth"
-	"knative.dev/eventing/pkg/eventingtls"
-	"knative.dev/eventing/pkg/utils"
-
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/pkg/apis/feature"
+	"knative.dev/eventing/pkg/auth"
 	eventingbroker "knative.dev/eventing/pkg/broker"
 	v1 "knative.dev/eventing/pkg/client/informers/externalversions/eventing/v1"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1"
 	"knative.dev/eventing/pkg/eventfilter"
 	"knative.dev/eventing/pkg/eventfilter/attributes"
 	"knative.dev/eventing/pkg/eventfilter/subscriptionsapi"
+	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/eventtype"
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/reconciler/sugar/trigger/path"
 	"knative.dev/eventing/pkg/tracing"
+	"knative.dev/eventing/pkg/utils"
 )
 
 const (
@@ -152,6 +153,37 @@ func NewHandler(logger *zap.Logger, tokenVerifier *auth.OIDCTokenVerifier, oidcT
 	}, nil
 }
 
+func getOIDCIdentity(r *http.Request) (string, error) {
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		return "", fmt.Errorf("missing Authorization header")
+	}
+
+	// Remove the "Bearer " prefix
+	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+
+	// Parse the token without validation (unverified)
+	var claims jwt.Claims
+	token, err := jwt.ParseSigned(tokenString)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse token: %w", err)
+	}
+
+	// Extract the claims (note: no key needed for unsigned parsing)
+	err = token.UnsafeClaimsWithoutVerification(&claims)
+	if err != nil {
+		return "", fmt.Errorf("failed to extract claims: %w", err)
+	}
+
+	// Get the "sub" claim from the token
+	sub := claims.Subject
+	if sub == "" {
+		return "", fmt.Errorf("missing or invalid 'sub' claim")
+	}
+
+	return sub, nil
+}
+
 func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	ctx := h.withContext(request.Context())
 
@@ -207,6 +239,18 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 		err = h.tokenVerifier.VerifyJWTFromRequest(ctx, request, &audience, writer)
 		if err != nil {
 			h.logger.Warn("Error when validating the JWT token in the request", zap.Error(err))
+			return
+		}
+
+		oidcIdentity, err := getOIDCIdentity(request)
+		if err != nil {
+			h.logger.Warn("Error when extracting OIDC identity from the request", zap.Error(err))
+			return
+		}
+
+		if trigger.Status.Auth.ServiceAccountName != &oidcIdentity {
+			h.logger.Warn("Invalid service account in JWT token.")
+			writer.WriteHeader(http.StatusNotFound)
 			return
 		}
 
