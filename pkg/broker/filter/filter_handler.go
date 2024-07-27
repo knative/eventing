@@ -250,7 +250,7 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 
 		if trigger.Status.Auth.ServiceAccountName != &oidcIdentity {
 			h.logger.Warn("Invalid service account in JWT token.")
-			writer.WriteHeader(http.StatusNotFound)
+			writer.WriteHeader(http.StatusForbidden)
 			return
 		}
 
