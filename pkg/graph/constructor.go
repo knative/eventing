@@ -264,7 +264,7 @@ func (g *Graph) AddBroker(broker eventingv1.Broker) {
 	ref := &duckv1.KReference{
 		Name:       broker.Name,
 		Namespace:  broker.Namespace,
-		APIVersion: "eventing.knative.dev/v1",
+		APIVersion: eventingv1.SchemeGroupVersion.String(),
 		Kind:       "Broker",
 	}
 	dest := &duckv1.Destination{Ref: ref}
@@ -291,7 +291,7 @@ func (g *Graph) AddChannel(channel messagingv1.Channel) {
 	ref := &duckv1.KReference{
 		Name:       channel.Name,
 		Namespace:  channel.Namespace,
-		APIVersion: "messaging.knative.dev/v1",
+		APIVersion: messagingv1.SchemeGroupVersion.String(),
 		Kind:       channel.Kind,
 	}
 	dest := &duckv1.Destination{Ref: ref}
@@ -313,7 +313,7 @@ func (g *Graph) AddEventType(et eventingv1beta3.EventType) error {
 	ref := &duckv1.KReference{
 		Name:       et.Name,
 		Namespace:  et.Namespace,
-		APIVersion: "eventing.knative.dev/v1beta3",
+		APIVersion: eventingv1beta3.SchemeGroupVersion.String(),
 		Kind:       "EventType",
 	}
 	dest := &duckv1.Destination{Ref: ref}
@@ -357,7 +357,7 @@ func (g *Graph) AddTrigger(trigger eventingv1.Trigger) error {
 	brokerRef := &duckv1.KReference{
 		Name:       trigger.Spec.Broker,
 		Namespace:  trigger.Namespace,
-		APIVersion: "eventing.knative.dev/v1",
+		APIVersion: eventingv1.SchemeGroupVersion.String(),
 		Kind:       "Broker",
 	}
 	brokerDest := &duckv1.Destination{Ref: brokerRef}
@@ -369,7 +369,7 @@ func (g *Graph) AddTrigger(trigger eventingv1.Trigger) error {
 	triggerRef := &duckv1.KReference{
 		Name:       trigger.Name,
 		Namespace:  trigger.Namespace,
-		APIVersion: "eventing.knative.dev/v1",
+		APIVersion: eventingv1.SchemeGroupVersion.String(),
 		Kind:       "Trigger",
 	}
 	triggerDest := &duckv1.Destination{Ref: triggerRef}
