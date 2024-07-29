@@ -83,12 +83,12 @@ func ParallelEventPolicyName(parallelName, channelName string) string {
 	}
 }
 
-// MakeEventPolicyForParallelInputChannel creates an EventPolicy for the input channel of a Parallel.
-func MakeEventPolicyForParallelInputChannel(p *flowsv1.Parallel, inputChannel *eventingduckv1.Channelable, parallelPolicy *eventingv1alpha1.EventPolicy) *eventingv1alpha1.EventPolicy {
+// MakeEventPolicyForParallelIngressChannel creates an EventPolicy for the ingress channel of a Parallel.
+func MakeEventPolicyForParallelIngressChannel(p *flowsv1.Parallel, ingressChannel *eventingduckv1.Channelable, parallelPolicy *eventingv1alpha1.EventPolicy) *eventingv1alpha1.EventPolicy {
 	return &eventingv1alpha1.EventPolicy{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: inputChannel.Namespace,
-			Name:      ParallelEventPolicyName(p.Name, inputChannel.Name),
+			Namespace: ingressChannel.Namespace,
+			Name:      ParallelEventPolicyName(p.Name, ingressChannel.Name),
 			OwnerReferences: []metav1.OwnerReference{
 				{
 					APIVersion: flowsv1.SchemeGroupVersion.String(),
@@ -102,9 +102,9 @@ func MakeEventPolicyForParallelInputChannel(p *flowsv1.Parallel, inputChannel *e
 			To: []eventingv1alpha1.EventPolicySpecTo{
 				{
 					Ref: &eventingv1alpha1.EventPolicyToReference{
-						APIVersion: inputChannel.APIVersion,
-						Kind:       inputChannel.Kind,
-						Name:       inputChannel.Name,
+						APIVersion: ingressChannel.APIVersion,
+						Kind:       ingressChannel.Kind,
+						Name:       ingressChannel.Name,
 					},
 				},
 			},
