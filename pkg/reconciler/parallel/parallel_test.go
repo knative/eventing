@@ -35,6 +35,8 @@ import (
 	clientgotesting "k8s.io/client-go/testing"
 
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/pkg/apis"
@@ -65,13 +67,19 @@ var (
 	subscriberGVK = metav1.GroupVersionKind{
 		Group:   "messaging.knative.dev",
 		Version: "v1",
-		Kind:    "Subscriber",
+		Kind:    "Subscription",
 	}
 
 	parallelGVK = metav1.GroupVersionKind{
 		Group:   "flows.knative.dev",
 		Version: "v1",
 		Kind:    "Parallel",
+	}
+
+	channelV1GVK = metav1.GroupVersionKind{
+		Group:   "messaging.knative.dev",
+		Version: "v1",
+		Kind:    "InMemoryChannel",
 	}
 )
 
@@ -708,6 +716,97 @@ func TestAllBranches(t *testing.T) {
 						SubscriptionStatus:       createParallelSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
 					}})),
 			}},
+		}, {
+			Name: "AuthZ Enablled with single branch, with filter, no EventPolicies",
+			Key:  pKey,
+			Objects: []runtime.Object{
+				NewFlowsParallel(parallelName, testNS,
+					WithInitFlowsParallelConditions,
+					WithFlowsParallelChannelTemplateSpec(imc),
+					WithFlowsParallelBranches([]v1.ParallelBranch{
+						{Filter: createFilter(0), Subscriber: createSubscriber(0)},
+					}))},
+			WantErr: false,
+			WantCreates: []runtime.Object{
+				createChannel(parallelName),
+				createBranchChannel(parallelName, 0),
+				resources.NewFilterSubscription(0, NewFlowsParallel(parallelName, testNS, WithFlowsParallelChannelTemplateSpec(imc), WithFlowsParallelBranches([]v1.ParallelBranch{
+					{Filter: createFilter(0), Subscriber: createSubscriber(0)},
+				}))),
+				resources.NewSubscription(0, NewFlowsParallel(parallelName, testNS, WithFlowsParallelChannelTemplateSpec(imc), WithFlowsParallelBranches([]v1.ParallelBranch{
+					{Filter: createFilter(0), Subscriber: createSubscriber(0)},
+				}))),
+				makeEventPolicy(parallelName, resources.ParallelBranchChannelName(parallelName, 0), 0),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewFlowsParallel(parallelName, testNS,
+					WithInitFlowsParallelConditions,
+					WithFlowsParallelChannelTemplateSpec(imc),
+					WithFlowsParallelBranches([]v1.ParallelBranch{{Filter: createFilter(0), Subscriber: createSubscriber(0)}}),
+					WithFlowsParallelChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
+					WithFlowsParallelAddressableNotReady("emptyAddress", "addressable is nil"),
+					WithFlowsParallelSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+					WithFlowsParallelIngressChannelStatus(createParallelChannelStatus(parallelName, corev1.ConditionFalse)),
+					WithFlowsParallelEventPoliciesReadyBecauseNoPolicyAndOIDCEnabled(),
+					WithFlowsParallelBranchStatuses([]v1.ParallelBranchStatus{{
+						FilterSubscriptionStatus: createParallelFilterSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
+						FilterChannelStatus:      createParallelBranchChannelStatus(parallelName, 0, corev1.ConditionFalse),
+						SubscriptionStatus:       createParallelSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
+					}})),
+			}},
+			Ctx: feature.ToContext(context.Background(), feature.Flags{
+				feature.OIDCAuthentication:       feature.Enabled,
+				feature.AuthorizationDefaultMode: feature.AuthorizationAllowSameNamespace,
+			}),
+		}, {
+			Name: "AuthZ Enablled with single branch, with filter, with Parallel EventPolicy",
+			Key:  pKey,
+			Objects: []runtime.Object{
+				NewFlowsParallel(parallelName, testNS,
+					WithInitFlowsParallelConditions,
+					WithFlowsParallelChannelTemplateSpec(imc),
+					WithFlowsParallelBranches([]v1.ParallelBranch{
+						{Filter: createFilter(0), Subscriber: createSubscriber(0)},
+					})),
+				NewEventPolicy(readyEventPolicyName, testNS,
+					WithReadyEventPolicyCondition,
+					WithEventPolicyToRef(parallelGVK, parallelName),
+				),
+			},
+			WantErr: false,
+			WantCreates: []runtime.Object{
+				createChannel(parallelName),
+				createBranchChannel(parallelName, 0),
+				resources.NewFilterSubscription(0, NewFlowsParallel(parallelName, testNS, WithFlowsParallelChannelTemplateSpec(imc), WithFlowsParallelBranches([]v1.ParallelBranch{
+					{Filter: createFilter(0), Subscriber: createSubscriber(0)},
+				}))),
+				resources.NewSubscription(0, NewFlowsParallel(parallelName, testNS, WithFlowsParallelChannelTemplateSpec(imc), WithFlowsParallelBranches([]v1.ParallelBranch{
+					{Filter: createFilter(0), Subscriber: createSubscriber(0)},
+				}))),
+				makeEventPolicy(parallelName, resources.ParallelBranchChannelName(parallelName, 0), 0),
+				makeIngressChannelEventPolicy(parallelName, resources.ParallelChannelName(parallelName)),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewFlowsParallel(parallelName, testNS,
+					WithInitFlowsParallelConditions,
+					WithFlowsParallelChannelTemplateSpec(imc),
+					WithFlowsParallelBranches([]v1.ParallelBranch{{Filter: createFilter(0), Subscriber: createSubscriber(0)}}),
+					WithFlowsParallelChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
+					WithFlowsParallelAddressableNotReady("emptyAddress", "addressable is nil"),
+					WithFlowsParallelSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+					WithFlowsParallelIngressChannelStatus(createParallelChannelStatus(parallelName, corev1.ConditionFalse)),
+					WithFlowsParallelEventPoliciesReady(),
+					WithFlowsParallelEventPoliciesListed(readyEventPolicyName),
+					WithFlowsParallelBranchStatuses([]v1.ParallelBranchStatus{{
+						FilterSubscriptionStatus: createParallelFilterSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
+						FilterChannelStatus:      createParallelBranchChannelStatus(parallelName, 0, corev1.ConditionFalse),
+						SubscriptionStatus:       createParallelSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
+					}})),
+			}},
+			Ctx: feature.ToContext(context.Background(), feature.Flags{
+				feature.OIDCAuthentication:       feature.Enabled,
+				feature.AuthorizationDefaultMode: feature.AuthorizationAllowSameNamespace,
+			}),
 		},
 	}
 
@@ -889,4 +988,48 @@ func createDelivery(gvk metav1.GroupVersionKind, name, namespace string) *eventi
 			},
 		},
 	}
+}
+
+func makeEventPolicy(parallelName, channelName string, branch int) *eventingv1alpha1.EventPolicy {
+	return NewEventPolicy(resources.ParallelEventPolicyName(parallelName, channelName), testNS,
+		WithEventPolicyToRef(channelV1GVK, channelName),
+		// from a subscription
+		WithEventPolicyFrom(subscriberGVK, resources.ParallelFilterSubscriptionName(parallelName, branch), testNS),
+		WithEventPolicyOwnerReferences([]metav1.OwnerReference{
+			{
+				APIVersion: "flows.knative.dev/v1",
+				Kind:       "Parallel",
+				Name:       parallelName,
+			},
+		}...),
+		WithEventPolicyLabels(resources.LabelsForParallelChannelsEventPolicy(parallelName)),
+	)
+}
+
+func makeParallelEventPolicy(parallelName string) *eventingv1alpha1.EventPolicy {
+	return NewEventPolicy(resources.ParallelEventPolicyName(parallelName, ""), testNS,
+		// from a subscription
+		WithEventPolicyOwnerReferences([]metav1.OwnerReference{
+			{
+				APIVersion: "flows.knative.dev/v1",
+				Kind:       "Parallel",
+				Name:       parallelName,
+			},
+		}...),
+	)
+}
+
+func makeIngressChannelEventPolicy(parallelName, channelName string) *eventingv1alpha1.EventPolicy {
+	return NewEventPolicy(resources.ParallelEventPolicyName(parallelName, channelName), testNS,
+		WithEventPolicyToRef(channelV1GVK, channelName),
+		// from a subscription
+		WithEventPolicyOwnerReferences([]metav1.OwnerReference{
+			{
+				APIVersion: "flows.knative.dev/v1",
+				Kind:       "Parallel",
+				Name:       parallelName,
+			},
+		}...),
+		WithEventPolicyLabels(resources.LabelsForParallelChannelsEventPolicy(parallelName)),
+	)
 }

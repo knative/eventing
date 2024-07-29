@@ -377,7 +377,7 @@ func (r *Reconciler) reconcileEventPolicies(ctx context.Context, p *v1.Parallel,
 	// prepare the list of event policies to create, update and delete.
 	var policiesToCreate, policiesToUpdate, policiesToDelete []*eventingv1alpha1.EventPolicy
 	policiesToDelete = make([]*eventingv1alpha1.EventPolicy, 0, len(existingPolicyMap))
-	
+
 	for i, channel := range channels {
 		filterSub := filterSubs[i]
 		expectedPolicy := resources.MakeEventPolicyForParallelChannel(p, channel, filterSub)
