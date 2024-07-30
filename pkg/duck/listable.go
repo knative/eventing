@@ -162,7 +162,7 @@ func (t *listableTracker) TrackInNamespaceKReference(ctx context.Context, obj me
 	}
 }
 
-// TrackInNamespace satisfies the ListableTracker interface.
+// Track satisfies the ListableTracker interface.
 func (t *listableTracker) Track(ctx context.Context, obj metav1.Object, namespace string) Track {
 	return func(ref corev1.ObjectReference) error {
 		// This is often used by Trigger and Subscription, both of which pass in refs that do not
@@ -181,7 +181,7 @@ func (t *listableTracker) Track(ctx context.Context, obj metav1.Object, namespac
 	}
 }
 
-// TrackInNamespaceKReference satisfies the ListableTracker interface.
+// TrackKReference satisfies the ListableTracker interface.
 func (t *listableTracker) TrackKReference(ctx context.Context, obj metav1.Object, namespace string) TrackKReference {
 	return func(ref duckv1.KReference) error {
 		// This is often used by Trigger and Subscription, both of which pass in refs that do not
