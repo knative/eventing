@@ -1252,19 +1252,6 @@ func makeEventPolicy(parallelName, channelName string, branch int) *eventingv1al
 	)
 }
 
-func makeParallelEventPolicy(parallelName string) *eventingv1alpha1.EventPolicy {
-	return NewEventPolicy(resources.ParallelEventPolicyName(parallelName, ""), testNS,
-		// from a subscription
-		WithEventPolicyOwnerReferences([]metav1.OwnerReference{
-			{
-				APIVersion: "flows.knative.dev/v1",
-				Kind:       "Parallel",
-				Name:       parallelName,
-			},
-		}...),
-	)
-}
-
 func makeIngressChannelEventPolicy(parallelName, channelName string) *eventingv1alpha1.EventPolicy {
 	return NewEventPolicy(resources.ParallelEventPolicyName(parallelName, channelName), testNS,
 		WithEventPolicyToRef(channelV1GVK, channelName),

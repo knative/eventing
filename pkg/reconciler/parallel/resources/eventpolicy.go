@@ -75,12 +75,7 @@ func LabelsForParallelChannelsEventPolicy(parallelName string) map[string]string
 }
 
 func ParallelEventPolicyName(parallelName, channelName string) string {
-	// if channel name is empty, it means the event policy is for the output channel
-	if channelName == "" {
-		return kmeta.ChildName(parallelName, "-ep") // no need to add the channel name
-	} else {
-		return kmeta.ChildName(parallelName, "-ep-"+channelName)
-	}
+	return kmeta.ChildName(parallelName, "-ep-"+channelName)
 }
 
 // MakeEventPolicyForParallelIngressChannel creates an EventPolicy for the ingress channel of a Parallel.
