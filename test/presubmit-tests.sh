@@ -29,7 +29,9 @@
 export GO111MODULE=on
 
 export KO_FLAGS="--platform=linux/amd64"
-source "$(dirname "${BASH_SOURCE[0]}")/../vendor/knative.dev/hack/presubmit-tests.sh"
+
+# shellcheck disable=SC1090
+source "$(go run knative.dev/hack/cmd/script presubmit-tests.sh)"
 
 # We use the default build, unit and integration test runners.
 
