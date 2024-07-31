@@ -2254,7 +2254,7 @@ AppliedEventPoliciesStatus
 <h3 id="eventing.knative.dev/v1.SubscriptionsAPIFilter">SubscriptionsAPIFilter
 </h3>
 <p>
-(<em>Appears on:</em><a href="#eventing.knative.dev/v1.SubscriptionsAPIFilter">SubscriptionsAPIFilter</a>, <a href="#eventing.knative.dev/v1.TriggerSpec">TriggerSpec</a>, <a href="#sources.knative.dev/v1.ApiServerSourceSpec">ApiServerSourceSpec</a>)
+(<em>Appears on:</em><a href="#eventing.knative.dev/v1.SubscriptionsAPIFilter">SubscriptionsAPIFilter</a>, <a href="#eventing.knative.dev/v1.TriggerSpec">TriggerSpec</a>, <a href="#eventing.knative.dev/v1alpha1.EventPolicySpec">EventPolicySpec</a>, <a href="#sources.knative.dev/v1.ApiServerSourceSpec">ApiServerSourceSpec</a>)
 </p>
 <p>
 <p>SubscriptionsAPIFilter allows defining a filter expression using CloudEvents
@@ -2735,6 +2735,24 @@ An empty list means it applies to all resources in the EventPolicies namespace</
 <p>From is the list of sources or oidc identities, which are allowed to send events to the targets (.spec.to).</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>filters</code><br/>
+<em>
+<a href="#eventing.knative.dev/v1.SubscriptionsAPIFilter">
+[]SubscriptionsAPIFilter
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Filters is the list of SubscriptoinsApi filters which determine whether or not the event is accepted.
+It is an array of filter expressions that evaluate to true or false.
+If any filter expression in the array evaluates to false, the event will not
+pass the target resource&rsquo;s ingress. Absence of any filters implies that the filters
+always evaluate to true.</p>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -2896,6 +2914,24 @@ An empty list means it applies to all resources in the EventPolicies namespace</
 </td>
 <td>
 <p>From is the list of sources or oidc identities, which are allowed to send events to the targets (.spec.to).</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>filters</code><br/>
+<em>
+<a href="#eventing.knative.dev/v1.SubscriptionsAPIFilter">
+[]SubscriptionsAPIFilter
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Filters is the list of SubscriptoinsApi filters which determine whether or not the event is accepted.
+It is an array of filter expressions that evaluate to true or false.
+If any filter expression in the array evaluates to false, the event will not
+pass the target resource&rsquo;s ingress. Absence of any filters implies that the filters
+always evaluate to true.</p>
 </td>
 </tr>
 </tbody>
