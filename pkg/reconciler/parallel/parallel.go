@@ -19,6 +19,7 @@ package parallel
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -466,6 +467,11 @@ func (r *Reconciler) prepareIngressChannelEventpolicies(p *v1.Parallel, ingressC
 	if len(applyingEventPoliciesForParallel) == 0 {
 		return nil, nil
 	}
+
+	// sort the event policies by name to ensure deterministic order.
+	sort.Slice(applyingEventPoliciesForParallel, func(i, j int) bool {
+		return applyingEventPoliciesForParallel[i].Name < applyingEventPoliciesForParallel[j].Name
+	})
 
 	ingressChannelEventPolicies := make([]*eventingv1alpha1.EventPolicy, 0, len(applyingEventPoliciesForParallel))
 	for _, eventPolicy := range applyingEventPoliciesForParallel {
