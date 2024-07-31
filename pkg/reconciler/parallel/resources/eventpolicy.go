@@ -83,7 +83,7 @@ func MakeEventPolicyForParallelIngressChannel(p *flowsv1.Parallel, ingressChanne
 	return &eventingv1alpha1.EventPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: ingressChannel.Namespace,
-			Name:      ParallelEventPolicyName(p.Name, ingressChannel.Name),
+			Name:      ParallelEventPolicyName(p.Name, parallelPolicy.Name),
 			OwnerReferences: []metav1.OwnerReference{
 				{
 					APIVersion: flowsv1.SchemeGroupVersion.String(),

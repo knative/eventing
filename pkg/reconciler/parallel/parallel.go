@@ -375,8 +375,8 @@ func (r *Reconciler) reconcileEventPolicies(ctx context.Context, p *v1.Parallel,
 	}
 
 	// prepare the list of event policies to create, update and delete.
-	var policiesToCreate, policiesToUpdate, policiesToDelete []*eventingv1alpha1.EventPolicy
-	policiesToDelete = make([]*eventingv1alpha1.EventPolicy, 0, len(existingPolicyMap))
+	var policiesToCreate, policiesToUpdate []*eventingv1alpha1.EventPolicy
+	policiesToDelete := make([]*eventingv1alpha1.EventPolicy, 0, len(existingPolicyMap))
 
 	for i, channel := range channels {
 		filterSub := filterSubs[i]
@@ -467,7 +467,7 @@ func (r *Reconciler) prepareIngressChannelEventpolicies(p *v1.Parallel, ingressC
 		return nil, nil
 	}
 
-	var ingressChannelEventPolicies []*eventingv1alpha1.EventPolicy
+	ingressChannelEventPolicies := make([]*eventingv1alpha1.EventPolicy, 0, len(applyingEventPoliciesForParallel))
 	for _, eventPolicy := range applyingEventPoliciesForParallel {
 		ingressChannelEventPolicies = append(ingressChannelEventPolicies, resources.MakeEventPolicyForParallelIngressChannel(p, ingressChannel, eventPolicy))
 	}
