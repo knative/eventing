@@ -74,8 +74,10 @@ func LabelsForParallelChannelsEventPolicy(parallelName string) map[string]string
 	}
 }
 
-func ParallelEventPolicyName(parallelName, channelName string) string {
-	return kmeta.ChildName(parallelName, "-ep-"+channelName)
+// ParallelEventPolicyName returns the name of the EventPolicy for the Parallel.
+// suffix is either channel name or parent event policy name.
+func ParallelEventPolicyName(parallelName, suffix string) string {
+	return kmeta.ChildName(parallelName, "-ep-"+suffix)
 }
 
 // MakeEventPolicyForParallelIngressChannel creates an EventPolicy for the ingress channel of a Parallel.

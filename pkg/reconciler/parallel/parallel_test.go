@@ -1194,7 +1194,7 @@ func TestAllBranches(t *testing.T) {
 				feature.AuthorizationDefaultMode: feature.AuthorizationAllowSameNamespace,
 			}),
 		}, {
-			Name: "Parallel with multiple event policies",
+			Name: "Parallel Event Policy Deleted, corresponding Ingress Channel Policy should be deleted",
 			Key:  pKey,
 			Objects: []runtime.Object{
 				NewFlowsParallel(parallelName, testNS,
@@ -1207,14 +1207,9 @@ func TestAllBranches(t *testing.T) {
 					WithReadyEventPolicyCondition,
 					WithEventPolicyToRef(parallelGVK, parallelName),
 				),
-				NewEventPolicy(readyEventPolicyName+"-1", testNS,
-					WithReadyEventPolicyCondition,
-					WithEventPolicyToRef(parallelGVK, parallelName),
-				),
-				NewEventPolicy(readyEventPolicyName+"-2", testNS,
-					WithReadyEventPolicyCondition,
-					WithEventPolicyToRef(parallelGVK, parallelName),
-				),
+				makeEventPolicy(parallelName, resources.ParallelBranchChannelName(parallelName, 0), 0),
+				makeIngressChannelEventPolicy(parallelName, resources.ParallelChannelName(parallelName), readyEventPolicyName),
+				makeIngressChannelEventPolicy(parallelName, resources.ParallelChannelName(parallelName), readyEventPolicyName+"-1"),
 			},
 			WantErr: false,
 			WantCreates: []runtime.Object{
@@ -1226,10 +1221,15 @@ func TestAllBranches(t *testing.T) {
 				resources.NewSubscription(0, NewFlowsParallel(parallelName, testNS, WithFlowsParallelChannelTemplateSpec(imc), WithFlowsParallelBranches([]v1.ParallelBranch{
 					{Filter: createFilter(0), Subscriber: createSubscriber(0)},
 				}))),
-				makeEventPolicy(parallelName, resources.ParallelBranchChannelName(parallelName, 0), 0),
-				makeIngressChannelEventPolicy(parallelName, resources.ParallelChannelName(parallelName), readyEventPolicyName),
-				makeIngressChannelEventPolicy(parallelName, resources.ParallelChannelName(parallelName), readyEventPolicyName+"-1"),
-				makeIngressChannelEventPolicy(parallelName, resources.ParallelChannelName(parallelName), readyEventPolicyName+"-2"),
+			},
+			WantDeletes: []clientgotesting.DeleteActionImpl{
+				{
+					ActionImpl: clientgotesting.ActionImpl{
+						Namespace: testNS,
+						Resource:  v1.SchemeGroupVersion.WithResource("eventpolicies"),
+					},
+					Name: resources.ParallelEventPolicyName(parallelName, readyEventPolicyName+"-1"),
+				},
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewFlowsParallel(parallelName, testNS,
@@ -1241,7 +1241,7 @@ func TestAllBranches(t *testing.T) {
 					WithFlowsParallelSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
 					WithFlowsParallelIngressChannelStatus(createParallelChannelStatus(parallelName, corev1.ConditionFalse)),
 					WithFlowsParallelEventPoliciesReady(),
-					WithFlowsParallelEventPoliciesListed(readyEventPolicyName, readyEventPolicyName+"-1", readyEventPolicyName+"-2"),
+					WithFlowsParallelEventPoliciesListed(readyEventPolicyName),
 					WithFlowsParallelBranchStatuses([]v1.ParallelBranchStatus{{
 						FilterSubscriptionStatus: createParallelFilterSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
 						FilterChannelStatus:      createParallelBranchChannelStatus(parallelName, 0, corev1.ConditionFalse),
