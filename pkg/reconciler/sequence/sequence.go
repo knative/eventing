@@ -19,7 +19,6 @@ package sequence
 import (
 	"context"
 	"fmt"
-
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -30,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic"
 	"knative.dev/pkg/kmeta"
+	"sort"
 
 	duckapis "knative.dev/pkg/apis/duck"
 	"knative.dev/pkg/logging"
@@ -431,11 +431,16 @@ func (r *Reconciler) prepareInputChannelEventPolicy(s *v1.Sequence, inputChannel
 		return nil, nil
 	}
 
+	sort.Slice(matchingPolicies, func(i, j int) bool {
+		return matchingPolicies[i].Name < matchingPolicies[j].Name
+	})
+
 	var inputChannelPolicies []*eventingv1alpha1.EventPolicy
 	for _, policy := range matchingPolicies {
 		inputChannelPolicy := resources.MakeEventPolicyForSequenceInputChannel(s, inputChannel, policy)
 		inputChannelPolicies = append(inputChannelPolicies, inputChannelPolicy)
 	}
+
 
 	return inputChannelPolicies, nil
 }
