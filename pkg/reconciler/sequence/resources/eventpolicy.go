@@ -76,11 +76,7 @@ func LabelsForSequenceChannelsEventPolicy(sequenceName string) map[string]string
 
 func SequenceEventPolicyName(sequenceName, channelName string) string {
 	// if channel name is empty, it means the event policy is for the output channel
-	if channelName == "" {
-		return kmeta.ChildName(sequenceName, "-ep") // no need to add the channel name
-	} else {
-		return kmeta.ChildName(sequenceName, "-ep-"+channelName)
-	}
+	return kmeta.ChildName(sequenceName, channelName+"-ep")
 
 }
 
@@ -89,7 +85,7 @@ func MakeEventPolicyForSequenceInputChannel(s *flowsv1.Sequence, inputChannel *e
 	return &eventingv1alpha1.EventPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: inputChannel.Namespace,
-			Name:      SequenceEventPolicyName(s.Name, inputChannel.Name),
+			Name:      SequenceEventPolicyName(s.Name, sequencePolicy.Name),
 			OwnerReferences: []metav1.OwnerReference{
 				{
 					APIVersion: flowsv1.SchemeGroupVersion.String(),
