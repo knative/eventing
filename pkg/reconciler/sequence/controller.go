@@ -20,11 +20,16 @@ import (
 	"context"
 
 	"k8s.io/client-go/tools/cache"
+	"knative.dev/pkg/configmap"
+	"knative.dev/pkg/controller"
+	"knative.dev/pkg/logging"
+
+	"knative.dev/eventing/pkg/apis/feature"
 	v1 "knative.dev/eventing/pkg/apis/flows/v1"
 	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/duck"
-	"knative.dev/pkg/configmap"
-	"knative.dev/pkg/controller"
+
+	"knative.dev/pkg/injection/clients/dynamicclient"
 
 	flowsv1 "knative.dev/eventing/pkg/apis/flows/v1"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
@@ -33,7 +38,6 @@ import (
 	"knative.dev/eventing/pkg/client/injection/informers/flows/v1/sequence"
 	"knative.dev/eventing/pkg/client/injection/informers/messaging/v1/subscription"
 	sequencereconciler "knative.dev/eventing/pkg/client/injection/reconciler/flows/v1/sequence"
-	"knative.dev/pkg/injection/clients/dynamicclient"
 )
 
 // NewController initializes the controller and is called by the generated code
@@ -47,6 +51,14 @@ func NewController(
 	subscriptionInformer := subscription.Get(ctx)
 	eventPolicyInformer := eventpolicy.Get(ctx)
 
+	var globalResync func()
+	store := feature.NewStore(logging.FromContext(ctx), func(name string, value interface{}) {
+		if globalResync != nil {
+			globalResync()
+		}
+	})
+	store.WatchConfigs(cmw)
+
 	r := &Reconciler{
 		sequenceLister:     sequenceInformer.Lister(),
 		subscriptionLister: subscriptionInformer.Lister(),
@@ -54,7 +66,15 @@ func NewController(
 		eventingClientSet:  eventingclient.Get(ctx),
 		eventPolicyLister:  eventPolicyInformer.Lister(),
 	}
-	impl := sequencereconciler.NewImpl(ctx, r)
+	impl := sequencereconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
+		return controller.Options{
+			ConfigStore: store,
+		}
+	})
+
+	globalResync = func() {
+		impl.GlobalResync(sequenceInformer.Informer())
+	}
 
 	r.channelableTracker = duck.NewListableTrackerFromTracker(ctx, channelable.Get, impl.Tracker)
 	sequenceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))

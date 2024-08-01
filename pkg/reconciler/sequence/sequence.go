@@ -36,6 +36,8 @@ import (
 	"knative.dev/pkg/logging"
 	pkgreconciler "knative.dev/pkg/reconciler"
 
+	"knative.dev/pkg/kmp"
+
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/apis/feature"
@@ -48,7 +50,6 @@ import (
 	listers "knative.dev/eventing/pkg/client/listers/flows/v1"
 	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1"
 	"knative.dev/eventing/pkg/duck"
-	"knative.dev/pkg/kmp"
 
 	"knative.dev/eventing/pkg/reconciler/sequence/resources"
 )
@@ -224,6 +225,7 @@ func (r *Reconciler) reconcileSubscription(ctx context.Context, step int, p *v1.
 		}
 		return newSub, nil
 	} else if equal, err := kmp.SafeEqual(sub.Spec, expected.Spec); !equal || err != nil {
+		expected.ResourceVersion = sub.ResourceVersion
 		// only the mutable fields were changed, so we can update the subscription
 		updatedSub, err := r.eventingClientSet.MessagingV1().Subscriptions(sub.Namespace).Update(ctx, expected, metav1.UpdateOptions{})
 		if err != nil {
