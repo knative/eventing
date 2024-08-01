@@ -44,6 +44,8 @@ func main() {
 		eventingtls.TrustBundleLabelSelector,
 	)
 
+	ctx = sharedmain.WithHealthProbesDisabled(ctx)
+
 	sharedmain.MainWithContext(ctx, "inmemorychannel-dispatcher",
 		inmemorychannel.NewController,
 	)
