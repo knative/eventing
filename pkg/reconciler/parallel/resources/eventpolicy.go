@@ -40,6 +40,7 @@ func MakeEventPolicyForParallelChannel(p *flowsv1.Parallel, channel *eventingduc
 					APIVersion: flowsv1.SchemeGroupVersion.String(),
 					Kind:       parallelKind,
 					Name:       p.Name,
+					UID:        p.UID,
 				},
 			},
 			Labels: LabelsForParallelChannelsEventPolicy(p.Name),
