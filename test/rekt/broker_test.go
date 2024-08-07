@@ -284,3 +284,18 @@ func TestBrokerSendsEventsWithOIDCSupport(t *testing.T) {
 
 	env.TestSet(ctx, t, broker.BrokerSendEventWithOIDC())
 }
+
+func TestBrokerSupportsAuthZ(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+		eventshub.WithTLS(t),
+	)
+
+	env.TestSet(ctx, t, broker.BrokerSupportsAuthZ())
+}
