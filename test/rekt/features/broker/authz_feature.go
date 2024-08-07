@@ -21,12 +21,10 @@ import (
 
 	"github.com/cloudevents/sdk-go/v2/test"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
-	"knative.dev/eventing/test/rekt/resources/eventpolicy"
-	"knative.dev/eventing/test/rekt/resources/pingsource"
-	"knative.dev/reconciler-test/pkg/environment"
-
 	"knative.dev/eventing/test/rekt/features/featureflags"
 	"knative.dev/eventing/test/rekt/resources/broker"
+	"knative.dev/eventing/test/rekt/resources/eventpolicy"
+	"knative.dev/eventing/test/rekt/resources/pingsource"
 	"knative.dev/eventing/test/rekt/resources/trigger"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/eventshub"
@@ -73,18 +71,16 @@ func BrokerAcceptsEventsFromAuthorizedSender() *feature.Feature {
 		trigger.WithBrokerName(brokerName),
 		trigger.WithSubscriber(service.AsKReference(sink), "")))
 
-	f.Setup("Install the EventPolicy", func(ctx context.Context, t feature.T) {
-		eventpolicy.Install(
-			eventPolicyName,
-			eventpolicy.WithToRef(
-				broker.GVR().GroupVersion().WithKind("Broker"),
-				brokerName),
-			eventpolicy.WithFromRef(
-				pingsource.Gvr().GroupVersion().WithKind("PingSource"),
-				source,
-				environment.FromContext(ctx).Namespace()),
-		)(ctx, t)
-	})
+	f.Setup("Install the EventPolicy", eventpolicy.Install(
+		eventPolicyName,
+		eventpolicy.WithToRef(
+			broker.GVR().GroupVersion().WithKind("Broker"),
+			brokerName),
+		eventpolicy.WithFromRef(
+			pingsource.Gvr().GroupVersion().WithKind("PingSource"),
+			source,
+			""),
+	))
 
 	// Install source
 	f.Requirement("Install Pingsource", func(ctx context.Context, t feature.T) {
