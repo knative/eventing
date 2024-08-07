@@ -40,6 +40,7 @@ func MakeEventPolicyForSequenceChannel(s *flowsv1.Sequence, channel *eventingduc
 					APIVersion: flowsv1.SchemeGroupVersion.String(),
 					Kind:       sequenceKind,
 					Name:       s.Name,
+					UID:        s.UID,
 				},
 			},
 			Labels: LabelsForSequenceChannelsEventPolicy(s.Name),
@@ -57,8 +58,8 @@ func MakeEventPolicyForSequenceChannel(s *flowsv1.Sequence, channel *eventingduc
 			From: []eventingv1alpha1.EventPolicySpecFrom{
 				{
 					Ref: &eventingv1alpha1.EventPolicyFromReference{
-						APIVersion: subscription.APIVersion,
-						Kind:       subscription.Kind,
+						APIVersion: "messaging.knative.dev/v1",
+						Kind:       "Subscription",
 						Name:       subscription.Name,
 						Namespace:  subscription.Namespace,
 					},
@@ -75,8 +76,11 @@ func LabelsForSequenceChannelsEventPolicy(sequenceName string) map[string]string
 }
 
 func SequenceEventPolicyName(sequenceName, channelName string) string {
-	// if channel name is empty, it means the event policy is for the output channel
-	return kmeta.ChildName(sequenceName, channelName+"-ep")
+
+	if channelName == "" {
+		return sequenceName
+	}
+	return kmeta.ChildName(sequenceName, "-"+channelName)
 
 }
 
@@ -91,6 +95,7 @@ func MakeEventPolicyForSequenceInputChannel(s *flowsv1.Sequence, inputChannel *e
 					APIVersion: flowsv1.SchemeGroupVersion.String(),
 					Kind:       sequenceKind,
 					Name:       s.Name,
+					UID:        s.UID,
 				},
 			},
 			Labels: LabelsForSequenceChannelsEventPolicy(s.Name),

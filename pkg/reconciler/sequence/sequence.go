@@ -367,7 +367,7 @@ func (r *Reconciler) reconcileEventPolicies(ctx context.Context, s *v1.Sequence,
 		existingPolicy, exists := existingPolicyMap[expectedPolicy.Name]
 
 		if exists {
-			if !equality.Semantic.DeepDerivative(expectedPolicy.Spec, existingPolicy.Spec) {
+			if !equality.Semantic.DeepDerivative(expectedPolicy, existingPolicy) {
 				policiesToUpdate = append(policiesToUpdate, expectedPolicy)
 			}
 			delete(existingPolicyMap, expectedPolicy.Name)
@@ -384,7 +384,7 @@ func (r *Reconciler) reconcileEventPolicies(ctx context.Context, s *v1.Sequence,
 	for _, inputPolicy := range inputPolicies {
 		existingInputPolicy, exists := existingPolicyMap[inputPolicy.Name]
 		if exists {
-			if !equality.Semantic.DeepDerivative(inputPolicy.Spec, existingInputPolicy.Spec) {
+			if !equality.Semantic.DeepDerivative(inputPolicy, existingInputPolicy) {
 				policiesToUpdate = append(policiesToUpdate, inputPolicy)
 			}
 			delete(existingPolicyMap, inputPolicy.Name)

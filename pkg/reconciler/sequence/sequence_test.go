@@ -1784,7 +1784,7 @@ func TestAllCases(t *testing.T) {
 
 					WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
 					WithSequenceAddressableNotReady("emptyAddress", "addressable is nil"),
-					WithSequenceEventPoliciesNotReady("EventPoliciesNotReady", "event policies test-sequence-ep are not ready"),
+					WithSequenceEventPoliciesNotReady("EventPoliciesNotReady", "event policies test-sequence are not ready"),
 					WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
 
 					WithSequenceChannelStatuses([]v1.SequenceChannelStatus{
@@ -2043,7 +2043,7 @@ func TestAllCases(t *testing.T) {
 
 					WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
 					WithSequenceAddressableNotReady("emptyAddress", "addressable is nil"),
-					WithSequenceEventPoliciesNotReady("EventPoliciesNotReady", "event policies test-sequence-ep are not ready"),
+					WithSequenceEventPoliciesNotReady("EventPoliciesNotReady", "event policies test-sequence are not ready"),
 					WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
 
 					WithSequenceChannelStatuses([]v1.SequenceChannelStatus{
@@ -2221,7 +2221,7 @@ func TestAllCases(t *testing.T) {
 
 					WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
 					WithSequenceAddressableNotReady("emptyAddress", "addressable is nil"),
-					WithSequenceEventPoliciesNotReady("EventPoliciesNotReady", "event policies test-sequence-ep are not ready"),
+					WithSequenceEventPoliciesNotReady("EventPoliciesNotReady", "event policies test-sequence are not ready"),
 					WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
 
 					WithSequenceChannelStatuses([]v1.SequenceChannelStatus{
@@ -2642,7 +2642,7 @@ func TestAllCases(t *testing.T) {
 					WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
 					WithSequenceAddressableNotReady("emptyAddress", "addressable is nil"),
 					WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
-					WithSequenceEventPoliciesNotReady("EventPoliciesNotReady", "event policies test-sequence-ep are not ready"),
+					WithSequenceEventPoliciesNotReady("EventPoliciesNotReady", "event policies test-sequence are not ready"),
 					WithSequenceChannelStatuses([]v1.SequenceChannelStatus{
 						{
 							Channel: corev1.ObjectReference{
@@ -2782,7 +2782,7 @@ func TestAllCases(t *testing.T) {
 					WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
 					WithSequenceAddressableNotReady("emptyAddress", "addressable is nil"),
 					WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
-					WithSequenceEventPoliciesNotReady("EventPoliciesNotReady", "event policies test-sequence-ep are not ready"),
+					WithSequenceEventPoliciesNotReady("EventPoliciesNotReady", "event policies test-sequence are not ready"),
 					WithSequenceChannelStatuses([]v1.SequenceChannelStatus{
 						{
 							Channel: corev1.ObjectReference{
@@ -3090,7 +3090,7 @@ func TestAllCases(t *testing.T) {
 					WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
 					WithSequenceAddressableNotReady("emptyAddress", "addressable is nil"),
 					WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
-					WithSequenceEventPoliciesNotReady("EventPoliciesNotReady", fmt.Sprintf("event policies %s are not ready", sequenceName+"-ep")),
+					WithSequenceEventPoliciesNotReady("EventPoliciesNotReady", fmt.Sprintf("event policies %s are not ready", sequenceName)),
 					WithSequenceChannelStatuses([]v1.SequenceChannelStatus{
 						{
 							Channel: corev1.ObjectReference{
@@ -3335,10 +3335,9 @@ func TestAllCases(t *testing.T) {
 				feature.AuthorizationDefaultMode: feature.AuthorizationAllowSameNamespace,
 			}),
 			WantCreates: []runtime.Object{
-
+				makeInputChannelEventPolicy(sequenceName, resources.SequenceChannelName(sequenceName, 0), resources.SequenceEventPolicyName(sequenceName, "")),
 				makeInputChannelEventPolicy(sequenceName, resources.SequenceChannelName(sequenceName, 0), resources.SequenceEventPolicyName(sequenceName+"-additional-1", "")),
 				makeInputChannelEventPolicy(sequenceName, resources.SequenceChannelName(sequenceName, 0), resources.SequenceEventPolicyName(sequenceName+"-additional-2", "")),
-				makeInputChannelEventPolicy(sequenceName, resources.SequenceChannelName(sequenceName, 0), resources.SequenceEventPolicyName(sequenceName, "")),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSequence(sequenceName, testNS,
@@ -3351,7 +3350,7 @@ func TestAllCases(t *testing.T) {
 					WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
 					WithSequenceAddressableNotReady("emptyAddress", "addressable is nil"),
 					WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
-					WithSequenceEventPoliciesNotReady("EventPoliciesNotReady", fmt.Sprintf("event policies %s, %s, %s are not ready", sequenceName+"-ep", sequenceName+"-additional-1-ep", sequenceName+"-additional-2-ep")),
+					WithSequenceEventPoliciesNotReady("EventPoliciesNotReady", fmt.Sprintf("event policies %s, %s, %s are not ready", sequenceName, sequenceName+"-additional-1", sequenceName+"-additional-2")),
 					WithSequenceChannelStatuses([]v1.SequenceChannelStatus{
 						{
 							Channel: corev1.ObjectReference{
