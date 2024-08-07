@@ -20,6 +20,8 @@ import (
 	"context"
 	"testing"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"github.com/google/go-cmp/cmp"
 )
 
@@ -31,6 +33,36 @@ func TestEventPolicyDefaults(t *testing.T) {
 		"nil spec": {
 			initial:  EventPolicy{},
 			expected: EventPolicy{},
+		},
+		"default .spec.from[].namespace": {
+			initial: EventPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "my-ns",
+				},
+				Spec: EventPolicySpec{
+					From: []EventPolicySpecFrom{
+						{
+							Ref: &EventPolicyFromReference{
+								Namespace: "",
+							},
+						},
+					},
+				},
+			},
+			expected: EventPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "my-ns",
+				},
+				Spec: EventPolicySpec{
+					From: []EventPolicySpecFrom{
+						{
+							Ref: &EventPolicyFromReference{
+								Namespace: "my-ns",
+							},
+						},
+					},
+				},
+			},
 		},
 	}
 	for n, tc := range testCases {
