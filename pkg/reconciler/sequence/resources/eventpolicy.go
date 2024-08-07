@@ -28,6 +28,7 @@ import (
 const (
 	SequenceChannelEventPolicyLabelPrefix = "flows.knative.dev/"
 	sequenceKind                          = "Sequence"
+	subscriptionKind                      = "Subscription"
 )
 
 func MakeEventPolicyForSequenceChannel(s *flowsv1.Sequence, channel *eventingduckv1.Channelable, subscription *messagingv1.Subscription) *eventingv1alpha1.EventPolicy {
@@ -58,8 +59,8 @@ func MakeEventPolicyForSequenceChannel(s *flowsv1.Sequence, channel *eventingduc
 			From: []eventingv1alpha1.EventPolicySpecFrom{
 				{
 					Ref: &eventingv1alpha1.EventPolicyFromReference{
-						APIVersion: "messaging.knative.dev/v1",
-						Kind:       "Subscription",
+						APIVersion: messagingv1.SchemeGroupVersion.String(),
+						Kind:       subscriptionKind,
 						Name:       subscription.Name,
 						Namespace:  subscription.Namespace,
 					},
@@ -75,12 +76,12 @@ func LabelsForSequenceChannelsEventPolicy(sequenceName string) map[string]string
 	}
 }
 
-func SequenceEventPolicyName(sequenceName, channelName string) string {
+func SequenceEventPolicyName(sequenceName, postfix string) string {
 
-	if channelName == "" {
+	if postfix == "" {
 		return sequenceName
 	}
-	return kmeta.ChildName(sequenceName, "-"+channelName)
+	return kmeta.ChildName(sequenceName, "-"+postfix)
 
 }
 
