@@ -18,6 +18,7 @@ package broker
 
 import (
 	"context"
+
 	"github.com/cloudevents/sdk-go/v2/test"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/eventing/test/rekt/resources/eventpolicy"
@@ -136,13 +137,13 @@ func BrokerRejectsEventsFromUnauthorizedSender() *feature.Feature {
 		trigger.WithSubscriber(service.AsKReference(sink), "")))
 	f.Setup("Trigger goes ready", trigger.IsReady(triggerName))
 
-	// Install an event policy for Broker allowing from a dummy subject, to not fall back to the default-auth-mode
+	// Install an event policy for Broker allowing from a sample subject, to not fall back to the default-auth-mode
 	f.Setup("Install an EventPolicy", eventpolicy.Install(
 		eventPolicyName,
 		eventpolicy.WithToRef(
 			broker.GVR().GroupVersion().WithKind("Broker"),
 			brokerName),
-		eventpolicy.WithFromSubject("dummy-sub")))
+		eventpolicy.WithFromSubject("sample-sub")))
 
 	// Send event
 	f.Requirement("Install Source", eventshub.Install(

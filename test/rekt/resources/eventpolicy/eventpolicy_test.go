@@ -18,8 +18,9 @@ package eventpolicy_test
 
 import (
 	"embed"
-	"knative.dev/eventing/test/rekt/resources/broker"
 	"os"
+
+	"knative.dev/eventing/test/rekt/resources/broker"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/test/rekt/resources/eventpolicy"
