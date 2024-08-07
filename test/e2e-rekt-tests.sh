@@ -50,4 +50,10 @@ kubectl apply -Rf "$(dirname "$0")/config-authentication-oidc"
 
 go_test_e2e -timeout=1h ./test/rekt -run OIDC || fail_test
 
+echo "Running E2E Authorization Reconciler Tests"
+
+kubectl apply -Rf "$(dirname "$0")/config-authentication-oidc"
+
+go_test_e2e -timeout=1h ./test/rekt -run AuthZ || fail_test
+
 success
