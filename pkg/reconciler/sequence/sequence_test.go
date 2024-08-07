@@ -3413,6 +3413,149 @@ func TestAllCases(t *testing.T) {
 					})),
 			}},
 		},
+		{
+			Name: "sequence with existing intermediate eventpolicies requiring update and cleanup",
+			Key:  pKey,
+			Objects: []runtime.Object{
+				NewSequence(sequenceName, testNS,
+					WithInitSequenceConditions,
+					WithSequenceChannelTemplateSpec(imc),
+					WithSequenceSteps([]v1.SequenceStep{
+						{Destination: createDestination(0)},
+						{Destination: createDestination(1)},
+					})),
+				createChannel(sequenceName, 0),
+				createChannel(sequenceName, 1),
+				resources.NewSubscription(0, NewSequence(sequenceName, testNS,
+					WithSequenceChannelTemplateSpec(imc),
+					WithSequenceSteps([]v1.SequenceStep{
+						{Destination: createDestination(0)},
+						{Destination: createDestination(1)},
+					}))),
+				resources.NewSubscription(1, NewSequence(sequenceName, testNS,
+					WithSequenceChannelTemplateSpec(imc),
+					WithSequenceSteps([]v1.SequenceStep{
+						{Destination: createDestination(0)},
+						{Destination: createDestination(1)},
+					}))),
+				makeSequenceEventPolicy(sequenceName),
+				makeSequenceEventPolicy(sequenceName + "-additional"),
+				// Existing intermediate policy for input channel (needs update)
+				makeInputChannelEventPolicyWithWrongSpec(sequenceName, resources.SequenceChannelName(sequenceName, 0), resources.SequenceEventPolicyName(sequenceName, "")),
+				// Existing intermediate policy for step 0 (correct, no update needed)
+				makeEventPolicy(sequenceName, resources.SequenceChannelName(sequenceName, 0), 0),
+				// Existing intermediate policy for step 1 (needs to be deleted)
+				makeEventPolicy(sequenceName, resources.SequenceChannelName(sequenceName, 1), 1),
+				// Obsolete policy that should be deleted
+				makeObsoleteEventPolicy(sequenceName),
+			},
+			WantErr: false,
+			Ctx: feature.ToContext(context.Background(), feature.Flags{
+				feature.OIDCAuthentication:       feature.Enabled,
+				feature.AuthorizationDefaultMode: feature.AuthorizationAllowSameNamespace,
+			}),
+			WantUpdates: []clientgotesting.UpdateActionImpl{
+				{
+					ActionImpl: clientgotesting.ActionImpl{
+						Namespace: testNS,
+						Resource:  eventingv1alpha1.SchemeGroupVersion.WithResource("eventpolicies"),
+					},
+					Object: makeInputChannelEventPolicy(sequenceName, resources.SequenceChannelName(sequenceName, 0), resources.SequenceEventPolicyName(sequenceName, "")),
+				},
+			},
+			WantCreates: []runtime.Object{
+				makeInputChannelEventPolicy(sequenceName, resources.SequenceChannelName(sequenceName, 0), resources.SequenceEventPolicyName(sequenceName+"-additional", "")),
+			},
+			WantDeletes: []clientgotesting.DeleteActionImpl{
+				{
+					ActionImpl: clientgotesting.ActionImpl{
+						Namespace: testNS,
+						Resource:  eventingv1alpha1.SchemeGroupVersion.WithResource("eventpolicies"),
+					},
+					Name: resources.SequenceEventPolicyName(sequenceName, resources.SequenceChannelName(sequenceName, 0)),
+				},
+				{
+					ActionImpl: clientgotesting.ActionImpl{
+						Namespace: testNS,
+						Resource:  eventingv1alpha1.SchemeGroupVersion.WithResource("eventpolicies"),
+					},
+					Name: resources.SequenceEventPolicyName(sequenceName, "obsolete"),
+				},
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewSequence(sequenceName, testNS,
+					WithInitSequenceConditions,
+					WithSequenceChannelTemplateSpec(imc),
+					WithSequenceSteps([]v1.SequenceStep{
+						{Destination: createDestination(0)},
+						{Destination: createDestination(1)},
+					}),
+					WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
+					WithSequenceAddressableNotReady("emptyAddress", "addressable is nil"),
+					WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+					WithSequenceEventPoliciesNotReady("EventPoliciesNotReady", fmt.Sprintf("event policies %s, %s are not ready", sequenceName, sequenceName+"-additional")),
+					WithSequenceChannelStatuses([]v1.SequenceChannelStatus{
+						{
+							Channel: corev1.ObjectReference{
+								APIVersion: "messaging.knative.dev/v1",
+								Kind:       "InMemoryChannel",
+								Name:       resources.SequenceChannelName(sequenceName, 0),
+								Namespace:  testNS,
+							},
+							ReadyCondition: apis.Condition{
+								Type:    apis.ConditionReady,
+								Status:  corev1.ConditionUnknown,
+								Reason:  "NoReady",
+								Message: "Channel does not have Ready condition",
+							},
+						},
+						{
+							Channel: corev1.ObjectReference{
+								APIVersion: "messaging.knative.dev/v1",
+								Kind:       "InMemoryChannel",
+								Name:       resources.SequenceChannelName(sequenceName, 1),
+								Namespace:  testNS,
+							},
+							ReadyCondition: apis.Condition{
+								Type:    apis.ConditionReady,
+								Status:  corev1.ConditionUnknown,
+								Reason:  "NoReady",
+								Message: "Channel does not have Ready condition",
+							},
+						},
+					}),
+					WithSequenceSubscriptionStatuses([]v1.SequenceSubscriptionStatus{
+						{
+							Subscription: corev1.ObjectReference{
+								APIVersion: "messaging.knative.dev/v1",
+								Kind:       "Subscription",
+								Name:       resources.SequenceSubscriptionName(sequenceName, 0),
+								Namespace:  testNS,
+							},
+							ReadyCondition: apis.Condition{
+								Type:    apis.ConditionReady,
+								Status:  corev1.ConditionUnknown,
+								Reason:  "NoReady",
+								Message: "Subscription does not have Ready condition",
+							},
+						},
+						{
+							Subscription: corev1.ObjectReference{
+								APIVersion: "messaging.knative.dev/v1",
+								Kind:       "Subscription",
+								Name:       resources.SequenceSubscriptionName(sequenceName, 1),
+								Namespace:  testNS,
+							},
+							ReadyCondition: apis.Condition{
+								Type:    apis.ConditionReady,
+								Status:  corev1.ConditionUnknown,
+								Reason:  "NoReady",
+								Message: "Subscription does not have Ready condition",
+							},
+						},
+					})),
+			}},
+		},
 	}
 
 	logger := logtesting.TestLogger(t)
@@ -3466,6 +3609,37 @@ func makeInputChannelEventPolicy(sequenceName, channelName string, sequenceEvent
 	return NewEventPolicy(resources.SequenceEventPolicyName(sequenceName, sequenceEventPolicyName), testNS,
 		WithEventPolicyToRef(channelV1GVK, channelName),
 		// from a subscription
+		WithEventPolicyOwnerReferences([]metav1.OwnerReference{
+			{
+				APIVersion: "flows.knative.dev/v1",
+				Kind:       "Sequence",
+				Name:       sequenceName,
+			},
+		}...),
+		WithEventPolicyLabels(resources.LabelsForSequenceChannelsEventPolicy(sequenceName)),
+	)
+}
+
+func makeInputChannelEventPolicyWithWrongSpec(sequenceName, channelName, policyName string) *eventingv1alpha1.EventPolicy {
+	policy := makeInputChannelEventPolicy(sequenceName, channelName, policyName)
+	// Modify the policy to have an incorrect specification
+	policy.Spec.From = []eventingv1alpha1.EventPolicySpecFrom{
+		{
+			Ref: &eventingv1alpha1.EventPolicyFromReference{
+				APIVersion: "messaging.knative.dev/v1",
+				Kind:       "Subscription",
+				Name:       "wrong-subscription",
+				Namespace:  testNS,
+			},
+		},
+	}
+
+	return policy
+}
+
+func makeObsoleteEventPolicy(sequenceName string) *eventingv1alpha1.EventPolicy {
+	return NewEventPolicy(resources.SequenceEventPolicyName(sequenceName, "obsolete"), testNS,
+		WithEventPolicyToRef(channelV1GVK, "obsolete-channel"),
 		WithEventPolicyOwnerReferences([]metav1.OwnerReference{
 			{
 				APIVersion: "flows.knative.dev/v1",
