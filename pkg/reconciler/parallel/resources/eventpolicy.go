@@ -92,6 +92,12 @@ func MakeEventPolicyForParallelIngressChannel(p *flowsv1.Parallel, ingressChanne
 					APIVersion: flowsv1.SchemeGroupVersion.String(),
 					Kind:       parallelKind,
 					Name:       p.Name,
+					UID:        p.UID,
+				}, {
+					APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
+					Kind:       "EventPolicy",
+					Name:       parallelPolicy.Name,
+					UID:        parallelPolicy.UID,
 				},
 			},
 			Labels: LabelsForParallelChannelsEventPolicy(p.Name),

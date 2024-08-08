@@ -1519,6 +1519,10 @@ func makeIngressChannelEventPolicy(parallelName, channelName, parallelEventPolic
 				APIVersion: "flows.knative.dev/v1",
 				Kind:       "Parallel",
 				Name:       parallelName,
+			}, {
+				APIVersion: "eventing.knative.dev/v1alpha1",
+				Kind:       "EventPolicy",
+				Name:       parallelEventPolicyName,
 			},
 		}...),
 		WithEventPolicyLabels(resources.LabelsForParallelChannelsEventPolicy(parallelName)),
