@@ -20,11 +20,10 @@ import (
 	"embed"
 	"os"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-	"knative.dev/eventing/test/rekt/resources/eventpolicy"
-	"knative.dev/pkg/ptr"
+	"knative.dev/eventing/test/rekt/resources/broker"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/eventing/test/rekt/resources/eventpolicy"
 	testlog "knative.dev/reconciler-test/pkg/logging"
 	"knative.dev/reconciler-test/pkg/manifest"
 )
@@ -82,49 +81,30 @@ func Example_full() {
 	}
 
 	cfgFn := []manifest.CfgFn{
-		eventpolicy.WithTo([]v1alpha1.EventPolicySpecTo{
-			{
-				Ref: &v1alpha1.EventPolicyToReference{
-					Name:       "my-broker",
-					Kind:       "Broker",
-					APIVersion: "eventing.knative.dev/v1",
+		eventpolicy.WithToRef(
+			broker.GVR().GroupVersion().WithKind("Broker"),
+			"my-broker"),
+		eventpolicy.WithToSelector(
+			broker.GVR().GroupVersion().WithKind("Broker"),
+			&metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"matchlabel1": "matchlabelvalue1",
+					"matchlabel2": "matchlabelvalue2",
 				},
-			},
-			{
-				Selector: &v1alpha1.EventPolicySelector{
-					LabelSelector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							"matchlabel1": "matchlabelvalue1",
-							"matchlabel2": "matchlabelvalue2",
-						},
-						MatchExpressions: []metav1.LabelSelectorRequirement{
-							{
-								Key:      "matchlabelselector1",
-								Values:   []string{"matchlabelselectorvalue1"},
-								Operator: metav1.LabelSelectorOpIn,
-							},
-						},
-					},
-					TypeMeta: &metav1.TypeMeta{
-						APIVersion: "eventing.knative.dev/v1",
-						Kind:       "Broker",
+				MatchExpressions: []metav1.LabelSelectorRequirement{
+					{
+						Key:      "matchlabelselector1",
+						Values:   []string{"matchlabelselectorvalue1"},
+						Operator: metav1.LabelSelectorOpIn,
 					},
 				},
-			},
-		}...),
-		eventpolicy.WithFrom([]v1alpha1.EventPolicySpecFrom{
-			{
-				Ref: &v1alpha1.EventPolicyFromReference{
-					APIVersion: "eventing.knative.dev/v1",
-					Name:       "my-broker",
-					Kind:       "Broker",
-					Namespace:  "my-ns-2",
-				},
-			},
-			{
-				Sub: ptr.String("my-sub"),
-			},
-		}...),
+			}),
+		eventpolicy.WithFromRef(
+			broker.GVR().GroupVersion().WithKind("Broker"),
+			"my-broker",
+			"my-ns-2",
+		),
+		eventpolicy.WithFromSubject("my-sub"),
 	}
 
 	for _, fn := range cfgFn {
