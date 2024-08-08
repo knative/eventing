@@ -383,7 +383,8 @@ func (r *Reconciler) reconcileEventPolicies(ctx context.Context, p *v1.Parallel,
 		filterSub := filterSubs[i]
 		expectedPolicy := resources.MakeEventPolicyForParallelChannel(p, channel, filterSub)
 		if existingPolicy, ok := existingPolicyMap[expectedPolicy.Name]; ok {
-			if !equality.Semantic.DeepDerivative(existingPolicy.Spec, expectedPolicy.Spec) {
+			if !equality.Semantic.DeepDerivative(expectedPolicy, existingPolicy) {
+				expectedPolicy.SetResourceVersion(existingPolicy.ResourceVersion)
 				policiesToUpdate = append(policiesToUpdate, expectedPolicy)
 			}
 			delete(existingPolicyMap, expectedPolicy.Name)
@@ -399,8 +400,9 @@ func (r *Reconciler) reconcileEventPolicies(ctx context.Context, p *v1.Parallel,
 	}
 
 	for _, policy := range ingressChannelEventPolicies {
-		if existingPolicy, ok := existingPolicyMap[policy.Name]; ok {
-			if !equality.Semantic.DeepDerivative(existingPolicy.Spec, policy.Spec) {
+		if existingIngressChannelPolicy, ok := existingPolicyMap[policy.Name]; ok {
+			if !equality.Semantic.DeepDerivative(policy, existingIngressChannelPolicy) {
+				policy.SetResourceVersion(existingIngressChannelPolicy.ResourceVersion)
 				policiesToUpdate = append(policiesToUpdate, policy)
 			}
 			delete(existingPolicyMap, policy.Name)

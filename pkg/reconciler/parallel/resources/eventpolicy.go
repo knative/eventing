@@ -71,10 +71,7 @@ func MakeEventPolicyForParallelChannel(p *flowsv1.Parallel, channel *eventingduc
 
 func LabelsForParallelChannelsEventPolicy(parallelName string) map[string]string {
 	return map[string]string{
-		ParallelChannelEventPolicyLabelPrefix + "parallel-group":   flowsv1.SchemeGroupVersion.Group,
-		ParallelChannelEventPolicyLabelPrefix + "parallel-version": flowsv1.SchemeGroupVersion.Version,
-		ParallelChannelEventPolicyLabelPrefix + "parallel-kind":    parallelKind,
-		ParallelChannelEventPolicyLabelPrefix + "parallel-name":    parallelName,
+		ParallelChannelEventPolicyLabelPrefix + "parallel-name": parallelName,
 	}
 }
 
