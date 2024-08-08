@@ -19,7 +19,6 @@ package sequence
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"sort"
 
 	"go.uber.org/zap"
@@ -386,7 +385,7 @@ func (r *Reconciler) reconcileEventPolicies(ctx context.Context, s *v1.Sequence,
 	for _, inputPolicy := range inputPolicies {
 		existingInputPolicy, exists := existingPolicyMap[inputPolicy.Name]
 		if exists {
-			if !reflect.DeepEqual(inputPolicy, existingInputPolicy) {
+			if !equality.Semantic.DeepDerivative(inputPolicy, existingInputPolicy) {
 				inputPolicy.SetResourceVersion(existingInputPolicy.ResourceVersion)
 				policiesToUpdate = append(policiesToUpdate, inputPolicy)
 			}
