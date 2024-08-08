@@ -3634,6 +3634,16 @@ func makeInputChannelEventPolicyWithWrongSpec(sequenceName, channelName, policyN
 		},
 	}
 
+	policy.Spec.To = []eventingv1alpha1.EventPolicySpecTo{
+		{
+			Ref: &eventingv1alpha1.EventPolicyToReference{
+				APIVersion: "messaging.knative.dev/v1",
+				Kind:       "InMemoryChannel",
+				Name:       "wrong-channel",
+			},
+		},
+	}
+
 	return policy
 }
 
