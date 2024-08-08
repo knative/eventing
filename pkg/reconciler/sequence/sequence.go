@@ -19,7 +19,6 @@ package sequence
 import (
 	"context"
 	"fmt"
-	"sort"
 
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -435,10 +434,6 @@ func (r *Reconciler) prepareInputChannelEventPolicy(s *v1.Sequence, inputChannel
 	if len(matchingPolicies) == 0 {
 		return nil, nil
 	}
-
-	sort.Slice(matchingPolicies, func(i, j int) bool {
-		return matchingPolicies[i].Name < matchingPolicies[j].Name
-	})
 
 	inputChannelPolicies := make([]*eventingv1alpha1.EventPolicy, 0, len(matchingPolicies))
 	for _, policy := range matchingPolicies {
