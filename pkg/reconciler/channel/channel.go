@@ -131,8 +131,9 @@ func (r *Reconciler) reconcileBackingChannelEventPolicies(ctx context.Context, c
 		return fmt.Errorf("could not get applying EventPolicies for for channel %s/%s: %w", channel.Namespace, channel.Name, err)
 	}
 
-	// map to keep track of the applying policies for the backing channel
-	// this is needed to delete outdated policies
+	// map to keep track of which policies are still applying
+	// the idea is to maintain a map of applying policies to check which policies are outdated.
+	// if a backing channel policy is not in the map, it is outdated and should be deleted.
 	applyingEventPoliciesForChannelMap := make(map[string]string, len(applyingEventPoliciesForChannel))
 
 	for _, policy := range applyingEventPoliciesForChannel {
