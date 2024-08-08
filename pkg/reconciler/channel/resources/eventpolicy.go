@@ -29,13 +29,17 @@ const (
 	BackingChannelEventPolicyLabelPrefix = "messaging.knative.dev/"
 )
 
+func GetEventPolicyNameForBackingChannel(backingChannelName, parentPolicyName string) string {
+	return kmeta.ChildName(fmt.Sprintf("%s-", parentPolicyName), backingChannelName)
+}
+
 func MakeEventPolicyForBackingChannel(backingChannel *eventingduckv1.Channelable, parentPolicy *eventingv1alpha1.EventPolicy) *eventingv1alpha1.EventPolicy {
 	parentPolicy = parentPolicy.DeepCopy()
 
 	return &eventingv1alpha1.EventPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: backingChannel.Namespace,
-			Name:      kmeta.ChildName(fmt.Sprintf("%s-", parentPolicy.Name), backingChannel.Name),
+			Name:      GetEventPolicyNameForBackingChannel(backingChannel.Name, parentPolicy.Name),
 			OwnerReferences: []metav1.OwnerReference{
 				{
 					APIVersion: backingChannel.APIVersion,

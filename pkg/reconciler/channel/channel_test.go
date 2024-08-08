@@ -589,6 +589,67 @@ func TestReconcile(t *testing.T) {
 				}),
 			),
 		},
+	}, {
+		Name: "should delete EventPolicies for backing channel",
+		Key:  testKey,
+		Objects: []runtime.Object{
+			NewChannel(channelName, testNS,
+				WithChannelTemplate(channelCRD()),
+				WithInitChannelConditions,
+				WithChannelEventPoliciesReady(),
+				WithChannelEventPoliciesListed(readyEventPolicyName)),
+			NewInMemoryChannel(channelName, testNS,
+				WithInitInMemoryChannelConditions,
+				WithInMemoryChannelDeploymentReady(),
+				WithInMemoryChannelServiceReady(),
+				WithInMemoryChannelEndpointsReady(),
+				WithInMemoryChannelChannelServiceReady(),
+				WithInMemoryChannelAddress(backingChannelAddressable),
+				WithInMemoryChannelDLSUnknown(),
+				WithInMemoryChannelEventPoliciesReady()),
+			NewEventPolicy(fmt.Sprintf("%s-%s", readyEventPolicyName, channelName), testNS,
+				WithEventPolicyToRef(imcV1GVK, channelName),
+				WithEventPolicyOwnerReferences([]metav1.OwnerReference{
+					{
+						APIVersion: v1.SchemeGroupVersion.String(),
+						Kind:       "InMemoryChannel",
+						Name:       channelName,
+					}, {
+						APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
+						Kind:       "EventPolicy",
+						Name:       readyEventPolicyName,
+					},
+				}...),
+				WithEventPolicyLabels(map[string]string{
+					"messaging.knative.dev/channel-group":   v1.SchemeGroupVersion.Group,
+					"messaging.knative.dev/channel-version": v1.SchemeGroupVersion.Version,
+					"messaging.knative.dev/channel-kind":    "InMemoryChannel",
+					"messaging.knative.dev/channel-name":    channelName,
+				}),
+			),
+		},
+		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: NewChannel(channelName, testNS,
+				WithChannelTemplate(channelCRD()),
+				WithInitChannelConditions,
+				WithBackingChannelObjRef(backingChannelObjRef()),
+				WithBackingChannelReady,
+				WithChannelDLSUnknown(),
+				WithChannelAddress(&backingChannelAddressable),
+				WithChannelEventPoliciesReadyBecauseNoPolicyAndOIDCEnabled(),
+			),
+		}},
+		WantDeletes: []clientgotesting.DeleteActionImpl{{
+			ActionImpl: clientgotesting.ActionImpl{
+				Namespace: testNS,
+				Resource:  eventingv1alpha1.SchemeGroupVersion.WithResource("eventpolicies"),
+			},
+			Name: fmt.Sprintf("%s-%s", readyEventPolicyName, channelName),
+		}},
+		Ctx: feature.ToContext(context.Background(), feature.Flags{
+			feature.OIDCAuthentication:       feature.Enabled,
+			feature.AuthorizationDefaultMode: feature.AuthorizationAllowSameNamespace,
+		}),
 	}}
 
 	logger := logtesting.TestLogger(t)

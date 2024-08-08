@@ -131,17 +131,16 @@ func (r *Reconciler) reconcileBackingChannelEventPolicies(ctx context.Context, c
 		return fmt.Errorf("could not get applying EventPolicies for for channel %s/%s: %w", channel.Namespace, channel.Name, err)
 	}
 
+	// map to keep track of the applying policies for the backing channel
+	// this is needed to delete outdated policies
+	applyingEventPoliciesForChannelMap := make(map[string]string, len(applyingEventPoliciesForChannel))
+
 	for _, policy := range applyingEventPoliciesForChannel {
 		err := r.reconcileBackingChannelEventPolicy(ctx, backingChannel, policy)
 		if err != nil {
 			return fmt.Errorf("could not reconcile EventPolicy %s/%s for backing channel %s/%s: %w", policy.Namespace, policy.Name, backingChannel.Namespace, backingChannel.Name, err)
 		}
-	}
-
-	// Check, if we have old EP for the backing channel, which are not relevant anymore
-	applyingEventPoliciesForBackingChannel, err := auth.GetEventPoliciesForResource(r.eventPolicyLister, backingChannel.GroupVersionKind(), backingChannel.ObjectMeta)
-	if err != nil {
-		return fmt.Errorf("could not get applying EventPolicies for for backing channel %s/%s: %w", channel.Namespace, channel.Name, err)
+		applyingEventPoliciesForChannelMap[resources.GetEventPolicyNameForBackingChannel(backingChannel.Name, policy.Name)] = policy.Name
 	}
 
 	selector, err := labels.ValidatedSelectorFromSet(resources.LabelsForBackingChannelsEventPolicy(backingChannel))
@@ -155,8 +154,7 @@ func (r *Reconciler) reconcileBackingChannelEventPolicies(ctx context.Context, c
 	}
 
 	for _, policy := range existingEventPoliciesForBackingChannel {
-		if !r.containsPolicy(policy.Name, applyingEventPoliciesForBackingChannel) {
-
+		if _, ok := applyingEventPoliciesForChannelMap[policy.Name]; !ok {
 			// the existing policy is not in the list of applying policies anymore --> is outdated --> delete it
 			err := r.eventingClientSet.EventingV1alpha1().EventPolicies(policy.Namespace).Delete(ctx, policy.Name, metav1.DeleteOptions{})
 			if err != nil && apierrs.IsNotFound(err) {
@@ -188,15 +186,6 @@ func (r *Reconciler) reconcileBackingChannelEventPolicy(ctx context.Context, bac
 	}
 
 	return nil
-}
-
-func (r *Reconciler) containsPolicy(name string, policies []*eventingv1alpha1.EventPolicy) bool {
-	for _, policy := range policies {
-		if policy.Name == name {
-			return true
-		}
-	}
-	return false
 }
 
 func (r *Reconciler) policyNeedsUpdate(foundEP, expected *eventingv1alpha1.EventPolicy) bool {
