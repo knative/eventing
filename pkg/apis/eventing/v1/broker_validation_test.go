@@ -197,7 +197,7 @@ func TestValidate(t *testing.T) {
 		cfg: &config.Config{
 			Defaults: &config.Defaults{
 				NamespaceDefaultsConfig: nil,
-				ClusterDefault: &config.ClassAndBrokerConfig{
+				ClusterDefaultConfig: &config.DefaultConfig{
 					DisallowDifferentNamespaceConfig: pointer.Bool(true),
 				},
 			},
@@ -225,7 +225,7 @@ func TestValidate(t *testing.T) {
 		name: "invalid config, cross namespace disallowed, namespace wide",
 		cfg: &config.Config{
 			Defaults: &config.Defaults{
-				NamespaceDefaultsConfig: map[string]*config.ClassAndBrokerConfig{
+				NamespaceDefaultsConfig: map[string]*config.DefaultConfig{
 					"ns1": {DisallowDifferentNamespaceConfig: pointer.Bool(true)},
 				},
 			},
@@ -253,7 +253,7 @@ func TestValidate(t *testing.T) {
 		name: "valid config, cross namespace allowed, namespace wide",
 		cfg: &config.Config{
 			Defaults: &config.Defaults{
-				NamespaceDefaultsConfig: map[string]*config.ClassAndBrokerConfig{
+				NamespaceDefaultsConfig: map[string]*config.DefaultConfig{
 					"ns1": {DisallowDifferentNamespaceConfig: pointer.Bool(true)},
 				},
 			},
