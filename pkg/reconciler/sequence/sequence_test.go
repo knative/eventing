@@ -82,6 +82,12 @@ var (
 		Version: "v1",
 		Kind:    "InMemoryChannel",
 	}
+
+	eventPolicyV1Alpha1GVK = metav1.GroupVersionKind{
+		Group:   "eventing.knative.dev",
+		Version: "v1alpha1",
+		Kind:    "EventPolicy",
+	}
 )
 
 func createReplyChannel(channelName string) *duckv1.Destination {
@@ -3611,9 +3617,9 @@ func makeInputChannelEventPolicy(sequenceName, channelName string, sequenceEvent
 		// from a subscription
 		WithEventPolicyOwnerReferences([]metav1.OwnerReference{
 			{
-				APIVersion: "flows.knative.dev/v1",
-				Kind:       "Sequence",
-				Name:       sequenceName,
+				APIVersion: apiVersion(eventPolicyV1Alpha1GVK),
+				Kind:       eventPolicyV1Alpha1GVK.Kind,
+				Name:       sequenceEventPolicyName,
 			},
 		}...),
 		WithEventPolicyLabels(resources.LabelsForSequenceChannelsEventPolicy(sequenceName)),
@@ -3626,8 +3632,8 @@ func makeInputChannelEventPolicyWithWrongSpec(sequenceName, channelName, policyN
 	policy.Spec.From = []eventingv1alpha1.EventPolicySpecFrom{
 		{
 			Ref: &eventingv1alpha1.EventPolicyFromReference{
-				APIVersion: "messaging.knative.dev/v1",
-				Kind:       "Subscription",
+				APIVersion: apiVersion(subscriberGVK),
+				Kind:       subscriberGVK.Kind,
 				Name:       "wrong-subscription",
 				Namespace:  testNS,
 			},
@@ -3637,8 +3643,8 @@ func makeInputChannelEventPolicyWithWrongSpec(sequenceName, channelName, policyN
 	policy.Spec.To = []eventingv1alpha1.EventPolicySpecTo{
 		{
 			Ref: &eventingv1alpha1.EventPolicyToReference{
-				APIVersion: "messaging.knative.dev/v1",
-				Kind:       "InMemoryChannel",
+				APIVersion: apiVersion(channelV1GVK),
+				Kind:       channelV1GVK.Kind,
 				Name:       "wrong-channel",
 			},
 		},
@@ -3652,8 +3658,8 @@ func makeObsoleteEventPolicy(sequenceName string) *eventingv1alpha1.EventPolicy 
 		WithEventPolicyToRef(channelV1GVK, "obsolete-channel"),
 		WithEventPolicyOwnerReferences([]metav1.OwnerReference{
 			{
-				APIVersion: "flows.knative.dev/v1",
-				Kind:       "Sequence",
+				APIVersion: apiVersion(sequenceGVK),
+				Kind:       sequenceGVK.Kind,
 				Name:       sequenceName,
 			},
 		}...),

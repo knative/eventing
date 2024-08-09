@@ -29,6 +29,7 @@ const (
 	SequenceChannelEventPolicyLabelPrefix = "flows.knative.dev/"
 	sequenceKind                          = "Sequence"
 	subscriptionKind                      = "Subscription"
+	eventPolicyKind                       = "EventPolicy"
 )
 
 func MakeEventPolicyForSequenceChannel(s *flowsv1.Sequence, channel *eventingduckv1.Channelable, subscription *messagingv1.Subscription) *eventingv1alpha1.EventPolicy {
@@ -93,10 +94,10 @@ func MakeEventPolicyForSequenceInputChannel(s *flowsv1.Sequence, inputChannel *e
 			Name:      SequenceEventPolicyName(s.Name, sequencePolicy.Name),
 			OwnerReferences: []metav1.OwnerReference{
 				{
-					APIVersion: flowsv1.SchemeGroupVersion.String(),
-					Kind:       sequenceKind,
-					Name:       s.Name,
-					UID:        s.UID,
+					APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
+					Kind:       eventPolicyKind,
+					Name:       sequencePolicy.Name,
+					UID:        sequencePolicy.UID,
 				},
 			},
 			Labels: LabelsForSequenceChannelsEventPolicy(s.Name),
