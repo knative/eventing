@@ -28,6 +28,7 @@ import (
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/informers"
 	clientappsv1 "k8s.io/client-go/kubernetes/typed/apps/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
@@ -35,11 +36,8 @@ import (
 	"knative.dev/pkg/reconciler"
 
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
-	statefulsetinformer "knative.dev/pkg/client/injection/kube/informers/apps/v1/statefulset"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
-
-	podinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/pod"
 
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/scheduler"
@@ -78,6 +76,8 @@ type Config struct {
 
 	VPodLister scheduler.VPodLister     `json:"-"`
 	NodeLister corev1listers.NodeLister `json:"-"`
+	// Pod lister for statefulset: StatefulSetNamespace / StatefulSetName
+	PodLister corev1listers.PodNamespaceLister `json:"-"`
 
 	// getReserved returns reserved replicas
 	getReserved GetReserved
@@ -85,12 +85,13 @@ type Config struct {
 
 func New(ctx context.Context, cfg *Config) (scheduler.Scheduler, error) {
 
-	podInformer := podinformer.Get(ctx)
-	podLister := podInformer.Lister().Pods(cfg.StatefulSetNamespace)
+	if cfg.PodLister == nil {
+		return nil, fmt.Errorf("Config.PodLister is required")
+	}
 
 	scaleCache := scheduler.NewScaleCache(ctx, cfg.StatefulSetNamespace, kubeclient.Get(ctx).AppsV1().StatefulSets(cfg.StatefulSetNamespace), cfg.ScaleCacheConfig)
 
-	stateAccessor := st.NewStateBuilder(ctx, cfg.StatefulSetNamespace, cfg.StatefulSetName, cfg.VPodLister, cfg.PodCapacity, cfg.SchedulerPolicy, cfg.SchedPolicy, cfg.DeschedPolicy, podLister, cfg.NodeLister, scaleCache)
+	stateAccessor := st.NewStateBuilder(ctx, cfg.StatefulSetNamespace, cfg.StatefulSetName, cfg.VPodLister, cfg.PodCapacity, cfg.SchedulerPolicy, cfg.SchedPolicy, cfg.DeschedPolicy, cfg.PodLister, cfg.NodeLister, scaleCache)
 
 	var getReserved GetReserved
 	cfg.getReserved = func() map[types.NamespacedName]map[string]int32 {
@@ -106,7 +107,7 @@ func New(ctx context.Context, cfg *Config) (scheduler.Scheduler, error) {
 		autoscaler.Start(ctx)
 	}()
 
-	s := newStatefulSetScheduler(ctx, cfg, stateAccessor, autoscaler, podLister)
+	s := newStatefulSetScheduler(ctx, cfg, stateAccessor, autoscaler)
 	getReserved = s.Reserved
 	wg.Done()
 
@@ -130,7 +131,6 @@ type StatefulSetScheduler struct {
 	statefulSetName      string
 	statefulSetNamespace string
 	statefulSetClient    clientappsv1.StatefulSetInterface
-	podLister            corev1listers.PodNamespaceLister
 	vpodLister           scheduler.VPodLister
 	lock                 sync.Locker
 	stateAccessor        st.StateAccessor
@@ -168,8 +168,7 @@ func (s *StatefulSetScheduler) Demote(b reconciler.Bucket) {
 func newStatefulSetScheduler(ctx context.Context,
 	cfg *Config,
 	stateAccessor st.StateAccessor,
-	autoscaler Autoscaler,
-	podlister corev1listers.PodNamespaceLister) *StatefulSetScheduler {
+	autoscaler Autoscaler) *StatefulSetScheduler {
 
 	scheduler := &StatefulSetScheduler{
 		ctx:                  ctx,
@@ -177,7 +176,6 @@ func newStatefulSetScheduler(ctx context.Context,
 		statefulSetNamespace: cfg.StatefulSetNamespace,
 		statefulSetName:      cfg.StatefulSetName,
 		statefulSetClient:    kubeclient.Get(ctx).AppsV1().StatefulSets(cfg.StatefulSetNamespace),
-		podLister:            podlister,
 		vpodLister:           cfg.VPodLister,
 		lock:                 new(sync.Mutex),
 		stateAccessor:        stateAccessor,
@@ -186,11 +184,25 @@ func newStatefulSetScheduler(ctx context.Context,
 	}
 
 	// Monitor our statefulset
-	statefulsetInformer := statefulsetinformer.Get(ctx)
-	statefulsetInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.FilterWithNameAndNamespace(cfg.StatefulSetNamespace, cfg.StatefulSetName),
-		Handler:    controller.HandleAll(scheduler.updateStatefulset),
-	})
+	c := kubeclient.Get(ctx)
+	sif := informers.NewSharedInformerFactoryWithOptions(c,
+		controller.GetResyncPeriod(ctx),
+		informers.WithNamespace(cfg.StatefulSetNamespace),
+	)
+
+	sif.Apps().V1().StatefulSets().Informer().
+		AddEventHandler(cache.FilteringResourceEventHandler{
+			FilterFunc: controller.FilterWithNameAndNamespace(cfg.StatefulSetNamespace, cfg.StatefulSetName),
+			Handler:    controller.HandleAll(scheduler.updateStatefulset),
+		})
+
+	sif.Start(ctx.Done())
+	_ = sif.WaitForCacheSync(ctx.Done())
+
+	go func() {
+		<-ctx.Done()
+		sif.Shutdown()
+	}()
 
 	return scheduler
 }

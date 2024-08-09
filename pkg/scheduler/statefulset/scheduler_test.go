@@ -810,7 +810,7 @@ func TestStatefulsetScheduler(t *testing.T) {
 				StatefulSetName:      sfsName,
 				VPodLister:           vpodClient.List,
 			}
-			s := newStatefulSetScheduler(ctx, cfg, sa, nil, lsp.GetPodLister().Pods(testNs))
+			s := newStatefulSetScheduler(ctx, cfg, sa, nil)
 
 			// Give some time for the informer to notify the scheduler and set the number of replicas
 			err = wait.PollUntilContextTimeout(ctx, 200*time.Millisecond, time.Second, true, func(ctx context.Context) (bool, error) {
@@ -906,7 +906,7 @@ func TestReservePlacements(t *testing.T) {
 				VPodLister:           vpodClient.List,
 			}
 			fa := newFakeAutoscaler()
-			s := newStatefulSetScheduler(ctx, cfg, nil, fa, nil)
+			s := newStatefulSetScheduler(ctx, cfg, nil, fa)
 			_ = s.Promote(reconciler.UniversalBucket(), func(bucket reconciler.Bucket, name types.NamespacedName) {})
 
 			s.reservePlacements(tc.vpod, tc.vpod.GetPlacements()) //initial reserve
