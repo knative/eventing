@@ -28,4 +28,14 @@ func (ep *EventPolicy) SetDefaults(ctx context.Context) {
 }
 
 func (ets *EventPolicySpec) SetDefaults(ctx context.Context) {
+	for i := range ets.From {
+		ets.From[i].SetDefaults(ctx)
+	}
+}
+
+func (from *EventPolicySpecFrom) SetDefaults(ctx context.Context) {
+	if from.Ref != nil && from.Ref.Namespace == "" {
+		// default to event policies namespace
+		from.Ref.Namespace = apis.ParentMeta(ctx).Namespace
+	}
 }
