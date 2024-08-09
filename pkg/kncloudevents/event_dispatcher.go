@@ -26,10 +26,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/cloudevents/sdk-go/v2/binding/buffering"
-
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"
+	"github.com/cloudevents/sdk-go/v2/binding/buffering"
 	"github.com/cloudevents/sdk-go/v2/event"
 	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"github.com/hashicorp/go-retryablehttp"
@@ -42,6 +41,7 @@ import (
 	"knative.dev/pkg/system"
 
 	eventingapis "knative.dev/eventing/pkg/apis"
+	v1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/eventtype"
@@ -67,6 +67,13 @@ type DispatchInfo struct {
 }
 
 type SendOption func(*senderConfig) error
+
+func WithEventFormat(format *v1.FormatType) SendOption {
+	return func(sc *senderConfig) error {
+		sc.eventFormat = format
+		return nil
+	}
+}
 
 func WithReply(reply *duckv1.Addressable) SendOption {
 	return func(sc *senderConfig) error {
@@ -142,6 +149,7 @@ type senderConfig struct {
 	eventTypeAutoHandler *eventtype.EventTypeAutoHandler
 	eventTypeRef         *duckv1.KReference
 	eventTypeOnwerUID    types.UID
+	eventFormat          *v1.FormatType
 }
 
 type Dispatcher struct {
@@ -214,6 +222,16 @@ func (d *Dispatcher) send(ctx context.Context, message binding.Message, destinat
 	}
 	additionalHeadersForDestination.Set("Prefer", "reply")
 
+	// Handle the event format option
+	if config.eventFormat != nil {
+		switch *config.eventFormat {
+		case v1.DeliveryFormatBinary:
+			ctx = binding.WithForceBinary(ctx)
+		case v1.DeliveryFormatJson:
+			ctx = binding.WithForceStructured(ctx)
+		}
+	}
+
 	ctx, responseMessage, dispatchExecutionInfo, err := d.executeRequest(ctx, destination, message, additionalHeadersForDestination, config.retryConfig, config.oidcServiceAccount, config.transformers)
 	if err != nil {
 		// If DeadLetter is configured, then send original message with knative error extensions
@@ -262,7 +280,6 @@ func (d *Dispatcher) send(ctx context.Context, message binding.Message, destinat
 	}
 
 	// send reply
-
 	ctx, responseResponseMessage, dispatchExecutionInfo, err := d.executeRequest(ctx, *config.reply, responseMessage, responseAdditionalHeaders, config.retryConfig, config.oidcServiceAccount, config.transformers)
 	if err != nil {
 		// If DeadLetter is configured, then send original message with knative error extensions

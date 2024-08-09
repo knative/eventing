@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -33,6 +34,7 @@ import (
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"
 	"github.com/cloudevents/sdk-go/v2/binding/transformer"
+	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"github.com/cloudevents/sdk-go/v2/test"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
@@ -48,6 +50,7 @@ import (
 	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 	_ "knative.dev/pkg/system/testing"
 
+	v1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/eventingtls/eventingtlstesting"
@@ -926,7 +929,90 @@ func TestSendEvent(t *testing.T) {
 		})
 	}
 }
+func testEventFormat(t *testing.T, format v1.FormatType, expectedEncoding binding.Encoding, port int) {
+	var wg sync.WaitGroup
+	ctx, _ := rectesting.SetupFakeContext(t)
+	ctx, cancel := context.WithCancel(ctx)
+	defer func() {
+		cancel()
+		time.Sleep(500 * time.Millisecond)
+	}()
+	oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
+	dispatcher := kncloudevents.NewDispatcher(eventingtls.NewDefaultClientConfig(), oidcTokenProvider)
 
+	eventToSend := test.FullEvent()
+
+	// Destination setup
+	destinationEventsChan := make(chan cloudevents.Event, 10)
+	destinationReceivedEvents := make([]cloudevents.Event, 0, 10)
+
+	// HTTP handler to receive and process CloudEvent
+	destinationHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+
+		// Convert the incoming HTTP request to a CloudEvent message
+		message := cehttp.NewMessageFromHttpRequest(r)
+		defer message.Finish(nil)
+
+		// Read the encoding from the message
+		encoding := message.ReadEncoding()
+
+		// Log the encoding
+		t.Log("Received encoding:", encoding)
+
+		// Compare with expected encoding
+		require.Equal(t, expectedEncoding, encoding)
+
+		event, err := binding.ToEvent(ctx, message)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		destinationEventsChan <- *event
+		w.WriteHeader(http.StatusOK)
+	})
+
+	destinationCA := eventingtlstesting.StartServer(ctx, t, port, destinationHandler, kncloudevents.WithDrainQuietPeriod(time.Millisecond))
+	destination := duckv1.Addressable{
+		URL:     apis.HTTPS(fmt.Sprintf("localhost:%d", port)),
+		CACerts: &destinationCA,
+	}
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for event := range destinationEventsChan {
+			destinationReceivedEvents = append(destinationReceivedEvents, event)
+		}
+	}()
+
+	// Set the event format
+	dispatcherOpts := kncloudevents.WithEventFormat(&format)
+
+	// Send event
+	info, err := dispatcher.SendEvent(ctx, eventToSend, destination, dispatcherOpts)
+	require.Nil(t, err)
+	require.Equal(t, 200, info.ResponseCode)
+
+	// Check received events
+	close(destinationEventsChan)
+	wg.Wait()
+
+	require.Len(t, destinationReceivedEvents, 1)
+	require.Equal(t, eventToSend.ID(), destinationReceivedEvents[0].ID())
+	require.Equal(t, eventToSend.Data(), destinationReceivedEvents[0].Data())
+}
+
+func TestEventFormats(t *testing.T) {
+	t.Run("BinaryFormat", func(t *testing.T) {
+		testEventFormat(t, v1.DeliveryFormatBinary, binding.EncodingBinary, 8335)
+	})
+
+	t.Run("JsonFormat", func(t *testing.T) {
+		testEventFormat(t, v1.DeliveryFormatJson, binding.EncodingStructured, 8336)
+	})
+}
 func TestDispatchMessageToTLSEndpoint(t *testing.T) {
 	var wg sync.WaitGroup
 	ctx, _ := rectesting.SetupFakeContext(t)
