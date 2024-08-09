@@ -40,6 +40,7 @@ import (
 
 	"knative.dev/eventing/pkg/apis/eventing"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/broker"
 
@@ -290,7 +291,7 @@ func TestHandler_ServeHTTP(t *testing.T) {
 			}
 
 			tokenProvider := auth.NewOIDCTokenProvider(ctx)
-			tokenVerifier := auth.NewOIDCTokenVerifier(ctx)
+			tokenVerifier := auth.NewOIDCTokenVerifier(ctx, feature.FromContextOrDefaults(ctx))
 
 			h, err := NewHandler(logger,
 				&mockReporter{},

@@ -61,6 +61,8 @@ func TestGetFlags(t *testing.T) {
 	nodeSelector := flags.NodeSelector()
 	expectedNodeSelector := map[string]string{"testkey": "testvalue", "testkey1": "testvalue1", "testkey2": "testvalue2"}
 	require.Equal(t, expectedNodeSelector, nodeSelector)
+
+	require.Equal(t, flags.OIDCDiscoveryBaseURL(), "https://oidc.eks.eu-west-1.amazonaws.com/id/1")
 }
 
 func TestShouldNotOverrideDefaults(t *testing.T) {

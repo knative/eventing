@@ -37,10 +37,6 @@ import (
 	"knative.dev/pkg/logging"
 )
 
-const (
-	kubernetesOIDCDiscoveryBaseURL = "https://kubernetes.default.svc"
-)
-
 type OIDCTokenVerifier struct {
 	logger            *zap.SugaredLogger
 	restConfig        *rest.Config
@@ -57,14 +53,14 @@ type IDToken struct {
 	AccessTokenHash string
 }
 
-func NewOIDCTokenVerifier(ctx context.Context) *OIDCTokenVerifier {
+func NewOIDCTokenVerifier(ctx context.Context, features feature.Flags) *OIDCTokenVerifier {
 	tokenHandler := &OIDCTokenVerifier{
 		logger:            logging.FromContext(ctx).With("component", "oidc-token-handler"),
 		restConfig:        injection.GetConfig(ctx),
 		eventPolicyLister: eventpolicyinformer.Get(ctx).Lister(),
 	}
 
-	if err := tokenHandler.initOIDCProvider(ctx); err != nil {
+	if err := tokenHandler.initOIDCProvider(ctx, features); err != nil {
 		tokenHandler.logger.Error(fmt.Sprintf("could not initialize provider. You can ignore this message, when the %s feature is disabled", feature.OIDCAuthentication), zap.Error(err))
 	}
 
@@ -186,13 +182,13 @@ func (v *OIDCTokenVerifier) verifyJWT(ctx context.Context, jwt, audience string)
 	}, nil
 }
 
-func (v *OIDCTokenVerifier) initOIDCProvider(ctx context.Context) error {
-	discovery, err := v.getKubernetesOIDCDiscovery()
+func (v *OIDCTokenVerifier) initOIDCProvider(ctx context.Context, features feature.Flags) error {
+	discovery, err := v.getKubernetesOIDCDiscovery(features)
 	if err != nil {
 		return fmt.Errorf("could not load Kubernetes OIDC discovery information: %w", err)
 	}
 
-	if discovery.Issuer != kubernetesOIDCDiscoveryBaseURL {
+	if discovery.Issuer != features.OIDCDiscoveryBaseURL() {
 		// in case we have another issuer as the api server:
 		ctx = oidc.InsecureIssuerURLContext(ctx, discovery.Issuer)
 	}
@@ -204,7 +200,7 @@ func (v *OIDCTokenVerifier) initOIDCProvider(ctx context.Context) error {
 	ctx = oidc.ClientContext(ctx, httpClient)
 
 	// get OIDC provider
-	v.provider, err = oidc.NewProvider(ctx, kubernetesOIDCDiscoveryBaseURL)
+	v.provider, err = oidc.NewProvider(ctx, features.OIDCDiscoveryBaseURL())
 	if err != nil {
 		return fmt.Errorf("could not get OIDC provider: %w", err)
 	}
@@ -223,13 +219,13 @@ func (v *OIDCTokenVerifier) getHTTPClientForKubeAPIServer() (*http.Client, error
 	return client, nil
 }
 
-func (v *OIDCTokenVerifier) getKubernetesOIDCDiscovery() (*openIDMetadata, error) {
+func (v *OIDCTokenVerifier) getKubernetesOIDCDiscovery(features feature.Flags) (*openIDMetadata, error) {
 	client, err := v.getHTTPClientForKubeAPIServer()
 	if err != nil {
 		return nil, fmt.Errorf("could not get HTTP client for API server: %w", err)
 	}
 
-	resp, err := client.Get(kubernetesOIDCDiscoveryBaseURL + "/.well-known/openid-configuration")
+	resp, err := client.Get(features.OIDCDiscoveryBaseURL() + "/.well-known/openid-configuration")
 	if err != nil {
 		return nil, fmt.Errorf("could not get response: %w", err)
 	}
