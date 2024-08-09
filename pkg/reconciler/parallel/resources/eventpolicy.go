@@ -58,8 +58,8 @@ func MakeEventPolicyForParallelChannel(p *flowsv1.Parallel, channel *eventingduc
 			From: []eventingv1alpha1.EventPolicySpecFrom{
 				{
 					Ref: &eventingv1alpha1.EventPolicyFromReference{
-						APIVersion: subscription.APIVersion,
-						Kind:       subscription.Kind,
+						APIVersion: messagingv1.SchemeGroupVersion.String(),
+						Kind:       "Subscription",
 						Name:       subscription.Name,
 						Namespace:  subscription.Namespace,
 					},
