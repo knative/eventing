@@ -62,8 +62,7 @@ const (
 )
 
 var (
-	v1ChannelGVK     = v1.SchemeGroupVersion.WithKind("Channel")
-	channelNamespace string
+	v1ChannelGVK = v1.SchemeGroupVersion.WithKind("Channel")
 )
 
 type Reconciler struct {
@@ -350,22 +349,22 @@ func (r *Reconciler) trackAndFetchChannel(ctx context.Context, sub *v1.Subscript
 		ref = *newRef
 	}
 
+	channelNamespace := sub.Namespace
+	if feature.FromContextOrDefaults(ctx).IsCrossNamespaceEventLinks() && sub.Spec.Channel.Namespace != "" {
+		channelNamespace = sub.Spec.Channel.Namespace
+	}
+
 	// Track the channel using the channelableTracker.
 	// We don't need the explicitly set a channelInformer, as this will dynamically generate one for us.
 	// This code needs to be called before checking the existence of the `channel`, in order to make sure the
 	// subscription controller will reconcile upon a `channel` change.
-	if err := r.channelableTracker.TrackInNamespaceKReference(ctx, sub)(ref); err != nil {
+	if err := r.channelableTracker.TrackKReference(ctx, sub, channelNamespace)(ref); err != nil {
 		return nil, pkgreconciler.NewEvent(corev1.EventTypeWarning, "TrackerFailed", "unable to track changes to spec.channel: %w", err)
 	}
 	chLister, err := r.channelableTracker.ListerForKReference(ref)
 	if err != nil {
 		logging.FromContext(ctx).Errorw("Error getting lister for Channel", zap.Any("channel", ref), zap.Error(err))
 		return nil, err
-	}
-	if feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) && sub.Spec.Channel.Namespace != "" {
-		channelNamespace = sub.Spec.Channel.Namespace
-	} else {
-		channelNamespace = sub.Namespace
 	}
 
 	obj, err := chLister.ByNamespace(channelNamespace).Get(ref.Name)
@@ -397,11 +396,11 @@ func (r *Reconciler) getChannel(ctx context.Context, sub *v1.Subscription) (*eve
 	// to have a "backing" channel that is what we need to actually operate on
 	// as well as keep track of.
 	if v1ChannelGVK.Group == gvk.Group && v1ChannelGVK.Kind == gvk.Kind {
+		channelNamespace := sub.Namespace
 		if feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) && sub.Spec.Channel.Namespace != "" {
 			channelNamespace = sub.Spec.Channel.Namespace
-		} else {
-			channelNamespace = sub.Namespace
 		}
+
 		// Track changes on Channel.
 		// Ref: https://github.com/knative/eventing/issues/2641
 		// NOTE: There is a race condition with using the channelableTracker
@@ -460,10 +459,9 @@ func isNilOrEmptyDestination(destination *duckv1.Destination) bool {
 
 func (r *Reconciler) syncPhysicalChannel(ctx context.Context, sub *v1.Subscription, channel *eventingduckv1.Channelable, isDeleted bool) (bool, error) {
 	logging.FromContext(ctx).Debugw("Reconciling physical from Channel", zap.Any("sub", sub))
+	channelNamespace := sub.Namespace
 	if feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) && sub.Spec.Channel.Namespace != "" {
 		channelNamespace = sub.Spec.Channel.Namespace
-	} else {
-		channelNamespace = sub.Namespace
 	}
 	if patched, patchErr := r.patchSubscription(ctx, channelNamespace, channel, sub); patchErr != nil {
 		if isDeleted && apierrors.IsNotFound(patchErr) {
