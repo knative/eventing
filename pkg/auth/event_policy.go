@@ -17,7 +17,12 @@ limitations under the License.
 package auth
 
 import (
+	"context"
 	"fmt"
+	cloudevents "github.com/cloudevents/sdk-go/v2"
+	"go.uber.org/zap"
+	"knative.dev/eventing/pkg/eventfilter"
+	"knative.dev/eventing/pkg/eventfilter/subscriptionsapi"
 	"strings"
 
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
@@ -204,17 +209,18 @@ func resolveSubjectsFromReference(resolver *resolver.AuthenticatableResolver, re
 	return objFullSANames, nil
 }
 
-// SubjectContained checks if the given sub is contained in the list of allowedSubs
+// SubjectAndFiltersPass checks if the given sub is contained in the list of allowedSubs
 // or if it matches a prefix pattern in subs (e.g. system:serviceaccounts:my-ns:*)
-func SubjectContained(sub string, allowedSubs []string) bool {
-	for _, s := range allowedSubs {
-		if strings.EqualFold(s, sub) {
-			return true
-		}
+func SubjectAndFiltersPass(ctx context.Context, sub string, allowedSubsWithFilters []filtersBySubjects, event *cloudevents.Event, logger *zap.SugaredLogger) bool {
+	if event == nil {
+		return false
+	}
 
-		if strings.HasSuffix(s, "*") &&
-			strings.HasPrefix(sub, strings.TrimSuffix(s, "*")) {
-			return true
+	for _, swf := range allowedSubsWithFilters {
+		for _, s := range swf.subjects {
+			if strings.EqualFold(s, sub) || (strings.HasSuffix(s, "*") && strings.HasPrefix(sub, strings.TrimSuffix(s, "*"))) {
+				return subscriptionsapi.CreateSubscriptionsAPIFilters(logger, swf.filters).Filter(ctx, *event) != eventfilter.FailFilter
+			}
 		}
 	}
 

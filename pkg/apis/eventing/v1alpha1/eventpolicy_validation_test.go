@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/ptr"
@@ -292,6 +293,45 @@ func TestEventPolicySpecValidationWithOIDCAuthenticationFeatureFlagEnabled(t *te
 			},
 			want: func() *apis.FieldError {
 				return nil
+			}(),
+		},
+		{
+			name: "valid, from.sub exactly '*', valid filters",
+			ep: &EventPolicy{
+				Spec: EventPolicySpec{
+					From: []EventPolicySpecFrom{{
+						Sub: ptr.String("*"),
+					}},
+					Filters: []eventingv1.SubscriptionsAPIFilter{
+						{
+							Prefix: map[string]string{"type": "example"},
+						},
+					},
+				},
+			},
+			want: func() *apis.FieldError {
+				return nil
+			}(),
+		},
+		{
+			name: "invalid, from.sub exactly '*', invalid cesql filter",
+			ep: &EventPolicy{
+				Spec: EventPolicySpec{
+					From: []EventPolicySpecFrom{{
+						Sub: ptr.String("*"),
+					}},
+					Filters: []eventingv1.SubscriptionsAPIFilter{
+						{
+							CESQL: "type LIKE id",
+						},
+					},
+				},
+			},
+			want: func() *apis.FieldError {
+
+				return apis.ErrInvalidValue("type LIKE id", "cesql", "parse error: syntax error: |failed to parse LIKE expression: the pattern was not a string literal").
+					ViaFieldIndex("filters", 0).
+					ViaField("spec")
 			}(),
 		},
 	}

@@ -762,8 +762,8 @@ func TestSubjectContained(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := SubjectContained(tt.sub, tt.allowedSubs); got != tt.want {
-				t.Errorf("SubjectContained(%q, '%v') = %v, want %v", tt.sub, tt.allowedSubs, got, tt.want)
+			if got := SubjectAndFiltersPass(tt.sub, tt.allowedSubs); got != tt.want {
+				t.Errorf("SubjectAndFiltersPass(%q, '%v') = %v, want %v", tt.sub, tt.allowedSubs, got, tt.want)
 			}
 		})
 	}

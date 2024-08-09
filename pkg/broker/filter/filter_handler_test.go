@@ -651,7 +651,7 @@ func TestReceiver_WithSubscriptionsAPI(t *testing.T) {
 					trig.Status.SubscriberURI = url
 				}
 				triggerinformerfake.Get(ctx).Informer().GetStore().Add(trig)
-				filtersMap.Set(trig, createSubscriptionsAPIFilters(logging.FromContext(ctx).Desugar(), trig))
+				filtersMap.Set(trig, subscriptionsapi.CreateSubscriptionsAPIFilters(logging.FromContext(ctx).Desugar(), trig.Spec.Filters))
 
 				// create the needed broker object
 				b := &v1.Broker{

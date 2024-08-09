@@ -29,9 +29,12 @@ import (
 	eventpolicyinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventpolicy"
 	"knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 
+	"github.com/cloudevents/sdk-go/v2/binding"
+	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"github.com/coreos/go-oidc/v3/oidc"
 	"go.uber.org/zap"
 	"k8s.io/client-go/rest"
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/pkg/injection"
 	"knative.dev/pkg/logging"
@@ -92,7 +95,7 @@ func (v *OIDCTokenVerifier) VerifyRequest(ctx context.Context, features feature.
 		return fmt.Errorf("authentication of request could not be verified: %w", err)
 	}
 
-	err = v.verifyAuthZ(features, idToken, resourceNamespace, policyRefs, resp)
+	err = v.verifyAuthZ(ctx, features, idToken, resourceNamespace, policyRefs, req, resp)
 	if err != nil {
 		return fmt.Errorf("authorization of request could not be verified: %w", err)
 	}
@@ -123,9 +126,18 @@ func (v *OIDCTokenVerifier) verifyAuthN(ctx context.Context, audience *string, r
 }
 
 // verifyAuthZ verifies if the given idToken is allowed by the resources eventPolicyStatus
-func (v *OIDCTokenVerifier) verifyAuthZ(features feature.Flags, idToken *IDToken, resourceNamespace string, policyRefs []duckv1.AppliedEventPolicyRef, resp http.ResponseWriter) error {
+func (v *OIDCTokenVerifier) verifyAuthZ(ctx context.Context, features feature.Flags, idToken *IDToken, resourceNamespace string, policyRefs []duckv1.AppliedEventPolicyRef, req *http.Request, resp http.ResponseWriter) error {
 	if len(policyRefs) > 0 {
-		subjectsFromApplyingPolicies := []string{}
+		message := cehttp.NewMessageFromHttpRequest(req)
+		defer message.Finish(nil)
+
+		event, err := binding.ToEvent(ctx, message)
+		if err != nil {
+			resp.WriteHeader(http.StatusInternalServerError)
+			return fmt.Errorf("failed to decode event from request: %w", err)
+		}
+
+		subjectsFromApplyingPolicies := []filtersBySubjects{}
 		for _, p := range policyRefs {
 			policy, err := v.eventPolicyLister.EventPolicies(resourceNamespace).Get(p.Name)
 			if err != nil {
@@ -133,10 +145,10 @@ func (v *OIDCTokenVerifier) verifyAuthZ(features feature.Flags, idToken *IDToken
 				return fmt.Errorf("failed to get eventPolicy: %w", err)
 			}
 
-			subjectsFromApplyingPolicies = append(subjectsFromApplyingPolicies, policy.Status.From...)
+			subjectsFromApplyingPolicies = append(subjectsFromApplyingPolicies, filtersBySubjects{subjects: policy.Status.From, filters: policy.Spec.Filters})
 		}
 
-		if !SubjectContained(idToken.Subject, subjectsFromApplyingPolicies) {
+		if !SubjectAndFiltersPass(ctx, idToken.Subject, subjectsFromApplyingPolicies, event, v.logger) {
 			resp.WriteHeader(http.StatusForbidden)
 			return fmt.Errorf("token is from subject %q, but only %q are part of applying event policies", idToken.Subject, subjectsFromApplyingPolicies)
 		}
@@ -254,4 +266,9 @@ type openIDMetadata struct {
 	ResponseTypes []string `json:"response_types_supported"`
 	SubjectTypes  []string `json:"subject_types_supported"`
 	SigningAlgs   []string `json:"id_token_signing_alg_values_supported"`
+}
+
+type filtersBySubjects struct {
+	filters  []eventingv1.SubscriptionsAPIFilter
+	subjects []string
 }
