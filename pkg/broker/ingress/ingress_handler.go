@@ -73,7 +73,7 @@ type Handler struct {
 
 	eventDispatcher *kncloudevents.Dispatcher
 
-	tokenVerifier *auth.Verifier
+	TokenVerifier *auth.Verifier
 
 	withContext func(ctx context.Context) context.Context
 }
@@ -128,7 +128,7 @@ func NewHandler(logger *zap.Logger, reporter StatsReporter, defaulter client.Eve
 		Logger:          logger,
 		BrokerLister:    brokerInformer.Lister(),
 		eventDispatcher: kncloudevents.NewDispatcher(clientConfig, oidcTokenProvider),
-		tokenVerifier:   tokenVerifier,
+		TokenVerifier:   tokenVerifier,
 		withContext:     withContext,
 	}, nil
 }
@@ -237,7 +237,7 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	if broker.Status.Address != nil {
 		audience = broker.Status.Address.Audience
 	}
-	err = h.tokenVerifier.VerifyRequest(ctx, features, audience, brokerNamespace, broker.Status.Policies, request, writer)
+	err = h.TokenVerifier.VerifyRequest(ctx, features, audience, brokerNamespace, broker.Status.Policies, request, writer)
 	if err != nil {
 		h.Logger.Warn("Failed to verify AuthN and AuthZ.", zap.Error(err))
 		return

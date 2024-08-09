@@ -90,7 +90,7 @@ type Handler struct {
 	logger             *zap.Logger
 	withContext        func(ctx context.Context) context.Context
 	filtersMap         *subscriptionsapi.FiltersMap
-	tokenVerifier      *auth.Verifier
+	TokenVerifier      *auth.Verifier
 	EventTypeCreator   *eventtype.EventTypeAutoHandler
 }
 
@@ -153,7 +153,7 @@ func NewHandler(logger *zap.Logger, tokenVerifier *auth.Verifier, oidcTokenProvi
 		brokerLister:       brokerInformer.Lister(),
 		subscriptionLister: subscriptionInformer.Lister(),
 		logger:             logger,
-		tokenVerifier:      tokenVerifier,
+		TokenVerifier:      tokenVerifier,
 		withContext:        wc,
 		filtersMap:         fm,
 	}, nil
@@ -225,7 +225,7 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 		}
 
 		subscriptionFullIdentity := fmt.Sprintf("system:serviceaccount:%s:%s", subscription.Namespace, *subscription.Status.Auth.ServiceAccountName)
-		err = h.tokenVerifier.VerifyRequestFromSubject(ctx, features, &audience, subscriptionFullIdentity, request, writer)
+		err = h.TokenVerifier.VerifyRequestFromSubject(ctx, features, &audience, subscriptionFullIdentity, request, writer)
 		if err != nil {
 			h.logger.Warn("Error when validating the JWT token in the request", zap.Error(err))
 			return

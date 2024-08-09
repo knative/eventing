@@ -104,8 +104,13 @@ func main() {
 
 	logger.Info("Starting the JobSink Ingress")
 
+	var h *Handler
+
 	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {
 		logger.Info("Updated", zap.String("name", name), zap.Any("value", value))
+		if flags, ok := value.(feature.Flags); ok && h != nil {
+			h.authVerifier = auth.NewVerifier(ctx, eventpolicyinformer.Get(ctx).Lister(), flags)
+		}
 	})
 	featureStore.WatchConfigs(configMapWatcher)
 
@@ -114,11 +119,11 @@ func main() {
 		return logging.WithLogger(featureStore.ToContext(ctx), sl)
 	}
 
-	h := &Handler{
+	h = &Handler{
 		k8s:          kubeclient.Get(ctx),
 		lister:       jobsink.Get(ctx).Lister(),
 		withContext:  ctxFunc,
-		authVerifier: auth.NewVerifier(ctx, eventpolicyinformer.Get(ctx).Lister()),
+		authVerifier: auth.NewVerifier(ctx, eventpolicyinformer.Get(ctx).Lister(), featureStore.Load()),
 	}
 
 	tlsConfig, err := getServerTLSConfig(ctx)
