@@ -18,6 +18,7 @@ package auth
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
@@ -92,6 +93,11 @@ func GetEventPoliciesForResource(lister listerseventingv1alpha1.EventPolicyListe
 			}
 		}
 	}
+
+	// Sort the policies by name to ensure deterministic order
+	sort.Slice(relevantPolicies, func(i, j int) bool {
+		return relevantPolicies[i].Name < relevantPolicies[j].Name
+	})
 
 	return relevantPolicies, nil
 }

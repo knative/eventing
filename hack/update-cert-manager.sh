@@ -21,7 +21,7 @@ metadata:
 EOF
 
   helm template -n cert-manager cert-manager jetstack/cert-manager --create-namespace --version "${cert_manager_version}" --set installCRDs=true > third_party/cert-manager/01-cert-manager.yaml
-  helm template -n cert-manager cert-manager jetstack/trust-manager --create-namespace --version "${trust_manager_version}" --set installCRDs=true > third_party/cert-manager/02-trust-manager.yaml
+  helm template -n cert-manager cert-manager jetstack/trust-manager --create-namespace --version "${trust_manager_version}" --set crds.enabled=true > third_party/cert-manager/02-trust-manager.yaml
 }
 
-update_cert_manager "v1.13.3" "v0.7.1"
+update_cert_manager "v1.13.3" "v0.12.0"

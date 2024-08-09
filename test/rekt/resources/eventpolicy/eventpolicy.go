@@ -22,8 +22,6 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/k8s"
@@ -52,68 +50,84 @@ func Install(name string, opts ...manifest.CfgFn) feature.StepFn {
 	}
 }
 
-func WithTo(tos ...eventingv1alpha1.EventPolicySpecTo) manifest.CfgFn {
+func WithToRef(gvk schema.GroupVersionKind, name string) manifest.CfgFn {
 	return func(cfg map[string]interface{}) {
 		if _, set := cfg["to"]; !set {
 			cfg["to"] = []map[string]interface{}{}
 		}
 
 		res := cfg["to"].([]map[string]interface{})
-		for _, ref := range tos {
-			to := map[string]interface{}{}
-			if ref.Ref != nil {
-				to = map[string]interface{}{
-					"ref": map[string]interface{}{
-						"apiVersion": ref.Ref.APIVersion,
-						"kind":       ref.Ref.Kind,
-						"name":       ref.Ref.Name,
-					}}
-			}
 
-			if ref.Selector != nil {
-				selector := labelSelectorToStringMap(ref.Selector.LabelSelector)
-				selector["apiVersion"] = ref.Selector.APIVersion
-				selector["kind"] = ref.Selector.Kind
+		to := map[string]interface{}{
+			"ref": map[string]interface{}{
+				"apiVersion": gvk.GroupVersion().String(),
+				"kind":       gvk.Kind,
+				"name":       name,
+			}}
 
-				to = map[string]interface{}{
-					"selector": selector,
-				}
-			}
-
-			res = append(res, to)
-		}
+		res = append(res, to)
 
 		cfg["to"] = res
 	}
 }
 
-func WithFrom(froms ...eventingv1alpha1.EventPolicySpecFrom) manifest.CfgFn {
+func WithToSelector(gvk schema.GroupVersionKind, labelSelector *metav1.LabelSelector) manifest.CfgFn {
+	return func(cfg map[string]interface{}) {
+		if _, set := cfg["to"]; !set {
+			cfg["to"] = []map[string]interface{}{}
+		}
+
+		res := cfg["to"].([]map[string]interface{})
+
+		selector := labelSelectorToStringMap(labelSelector)
+		selector["apiVersion"] = gvk.GroupVersion().String()
+		selector["kind"] = gvk.Kind
+
+		to := map[string]interface{}{
+			"selector": selector,
+		}
+
+		res = append(res, to)
+
+		cfg["to"] = res
+	}
+}
+
+func WithFromRef(gvk schema.GroupVersionKind, name, namespace string) manifest.CfgFn {
 	return func(cfg map[string]interface{}) {
 		if _, set := cfg["from"]; !set {
 			cfg["from"] = []map[string]interface{}{}
 		}
 
 		res := cfg["from"].([]map[string]interface{})
-		for _, ref := range froms {
-			from := map[string]interface{}{}
-			if ref.Ref != nil {
-				from = map[string]interface{}{
-					"ref": map[string]interface{}{
-						"apiVersion": ref.Ref.APIVersion,
-						"kind":       ref.Ref.Kind,
-						"name":       ref.Ref.Name,
-						"namespace":  ref.Ref.Namespace,
-					}}
-			}
 
-			if ref.Sub != nil && *ref.Sub != "" {
-				from = map[string]interface{}{
-					"sub": *ref.Sub,
-				}
-			}
+		from := map[string]interface{}{
+			"ref": map[string]interface{}{
+				"apiVersion": gvk.GroupVersion().String(),
+				"kind":       gvk.Kind,
+				"name":       name,
+				"namespace":  namespace,
+			}}
 
-			res = append(res, from)
+		res = append(res, from)
+
+		cfg["from"] = res
+	}
+}
+
+func WithFromSubject(subject string) manifest.CfgFn {
+	return func(cfg map[string]interface{}) {
+		if _, set := cfg["from"]; !set {
+			cfg["from"] = []map[string]interface{}{}
 		}
+
+		res := cfg["from"].([]map[string]interface{})
+
+		from := map[string]interface{}{
+			"sub": subject,
+		}
+
+		res = append(res, from)
 
 		cfg["from"] = res
 	}
@@ -126,7 +140,7 @@ func IsReady(name string, timing ...time.Duration) feature.StepFn {
 
 func labelSelectorToStringMap(selector *metav1.LabelSelector) map[string]interface{} {
 	if selector == nil {
-		return nil
+		return map[string]interface{}{}
 	}
 
 	r := map[string]interface{}{}

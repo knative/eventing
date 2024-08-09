@@ -41,6 +41,7 @@ func MakeEventPolicyForBackingChannel(b *eventingv1.Broker, backingChannel *even
 					APIVersion: eventingv1.SchemeGroupVersion.String(),
 					Kind:       brokerKind,
 					Name:       b.Name,
+					UID:        b.UID,
 				},
 			},
 			Labels: LabelsForBackingChannelsEventPolicy(b),
