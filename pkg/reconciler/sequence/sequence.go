@@ -22,6 +22,7 @@ import (
 
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -37,6 +38,7 @@ import (
 	"knative.dev/pkg/kmp"
 
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/apis/feature"
 	v1 "knative.dev/eventing/pkg/apis/flows/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
@@ -128,6 +130,10 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, s *v1.Sequence) pkgrecon
 	// leftover channels and subscriptions that need to be removed.
 	if err := r.removeUnwantedChannels(ctx, channelResourceInterface, s, channels); err != nil {
 		return err
+	}
+
+	if err := r.reconcileEventPolicies(ctx, s, channels, subs, featureFlags); err != nil {
+		return fmt.Errorf("failed to reconcile EventPolicies: %w", err)
 	}
 
 	err := auth.UpdateStatusWithEventPolicies(featureFlags, &s.Status.AppliedEventPoliciesStatus, &s.Status, r.eventPolicyLister, v1.SchemeGroupVersion.WithKind("Sequence"), s.ObjectMeta)
@@ -332,4 +338,146 @@ func (r *Reconciler) removeUnwantedSubscriptions(ctx context.Context, seq *v1.Se
 	}
 
 	return nil
+}
+
+func (r *Reconciler) reconcileEventPolicies(ctx context.Context, s *v1.Sequence, channels []*eventingduckv1.Channelable, subs []*messagingv1.Subscription, featureFlags feature.Flags) error {
+	if !featureFlags.IsOIDCAuthentication() {
+		return r.cleanupAllEventPolicies(ctx, s)
+	}
+
+	existingPolicies, err := r.listEventPoliciesForSequence(s)
+	if err != nil {
+		return fmt.Errorf("failed to list existing EventPolicies: %w", err)
+	}
+
+	// Prepare maps for efficient lookups, updates, and deletions of policies
+	existingPolicyMap := make(map[string]*eventingv1alpha1.EventPolicy)
+	for _, policy := range existingPolicies {
+		existingPolicyMap[policy.Name] = policy
+	}
+
+	// Prepare lists for different actions so that policies can be categorized
+	var policiesToUpdate, policiesToCreate []*eventingv1alpha1.EventPolicy
+	policiesToDelete := make([]*eventingv1alpha1.EventPolicy, 0, len(existingPolicies))
+
+	// Handle intermediate channel policies (skip the first channel as it's the input channel!)
+	for i := 1; i < len(channels); i++ {
+		expectedPolicy := resources.MakeEventPolicyForSequenceChannel(s, channels[i], subs[i-1])
+		existingPolicy, exists := existingPolicyMap[expectedPolicy.Name]
+
+		if exists {
+			if !equality.Semantic.DeepDerivative(expectedPolicy, existingPolicy) {
+				expectedPolicy.SetResourceVersion(existingPolicy.ResourceVersion)
+				policiesToUpdate = append(policiesToUpdate, expectedPolicy)
+			}
+			delete(existingPolicyMap, expectedPolicy.Name)
+		} else {
+			policiesToCreate = append(policiesToCreate, expectedPolicy)
+		}
+	}
+
+	// Handle input channel policies
+	inputPolicies, err := r.prepareInputChannelEventPolicy(s, channels[0])
+	if err != nil {
+		return fmt.Errorf("failed to prepare input channel EventPolicies: %w", err)
+	}
+	for _, inputPolicy := range inputPolicies {
+		existingInputPolicy, exists := existingPolicyMap[inputPolicy.Name]
+		if exists {
+			if !equality.Semantic.DeepDerivative(inputPolicy, existingInputPolicy) {
+				inputPolicy.SetResourceVersion(existingInputPolicy.ResourceVersion)
+				policiesToUpdate = append(policiesToUpdate, inputPolicy)
+			}
+			delete(existingPolicyMap, inputPolicy.Name)
+		} else {
+			policiesToCreate = append(policiesToCreate, inputPolicy)
+		}
+	}
+
+	// Any remaining policies in the map should be deleted
+	for _, policy := range existingPolicyMap {
+		policiesToDelete = append(policiesToDelete, policy)
+	}
+
+	// Perform the actual CRUD operations
+	if err := r.createEventPolicies(ctx, policiesToCreate); err != nil {
+		return fmt.Errorf("failed to create EventPolicies: %w", err)
+	}
+	if err := r.updateEventPolicies(ctx, policiesToUpdate); err != nil {
+		return fmt.Errorf("failed to update EventPolicies: %w", err)
+	}
+	if err := r.deleteEventPolicies(ctx, policiesToDelete); err != nil {
+		return fmt.Errorf("failed to delete EventPolicies: %w", err)
+	}
+
+	return nil
+}
+
+// listEventPoliciesForSequence lists all EventPolicies (e.g. the policies for the input channel and the intermediate channels) created during reconcileKind that are associated with the given Sequence.
+func (r *Reconciler) listEventPoliciesForSequence(s *v1.Sequence) ([]*eventingv1alpha1.EventPolicy, error) {
+	labelSelector := labels.SelectorFromSet(map[string]string{
+		resources.SequenceChannelEventPolicyLabelPrefix + "sequence-name": s.Name,
+	})
+	return r.eventPolicyLister.EventPolicies(s.Namespace).List(labelSelector)
+}
+
+func (r *Reconciler) prepareInputChannelEventPolicy(s *v1.Sequence, inputChannel *eventingduckv1.Channelable) ([]*eventingv1alpha1.EventPolicy, error) {
+	matchingPolicies, err := auth.GetEventPoliciesForResource(
+		r.eventPolicyLister,
+		v1.SchemeGroupVersion.WithKind("Sequence"),
+		s.ObjectMeta,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get matching EventPolicies for Sequence: %w", err)
+	}
+
+	if len(matchingPolicies) == 0 {
+		return nil, nil
+	}
+
+	inputChannelPolicies := make([]*eventingv1alpha1.EventPolicy, 0, len(matchingPolicies))
+	for _, policy := range matchingPolicies {
+		inputChannelPolicy := resources.MakeEventPolicyForSequenceInputChannel(s, inputChannel, policy)
+		inputChannelPolicies = append(inputChannelPolicies, inputChannelPolicy)
+	}
+
+	return inputChannelPolicies, nil
+}
+
+func (r *Reconciler) createEventPolicies(ctx context.Context, policies []*eventingv1alpha1.EventPolicy) error {
+	for _, policy := range policies {
+		_, err := r.eventingClientSet.EventingV1alpha1().EventPolicies(policy.Namespace).Create(ctx, policy, metav1.CreateOptions{})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (r *Reconciler) updateEventPolicies(ctx context.Context, policies []*eventingv1alpha1.EventPolicy) error {
+	for _, policy := range policies {
+		_, err := r.eventingClientSet.EventingV1alpha1().EventPolicies(policy.Namespace).Update(ctx, policy, metav1.UpdateOptions{})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (r *Reconciler) deleteEventPolicies(ctx context.Context, policies []*eventingv1alpha1.EventPolicy) error {
+	for _, policy := range policies {
+		err := r.eventingClientSet.EventingV1alpha1().EventPolicies(policy.Namespace).Delete(ctx, policy.Name, metav1.DeleteOptions{})
+		if err != nil && !apierrs.IsNotFound(err) {
+			return err
+		}
+	}
+	return nil
+}
+
+func (r *Reconciler) cleanupAllEventPolicies(ctx context.Context, s *v1.Sequence) error {
+	policies, err := r.listEventPoliciesForSequence(s)
+	if err != nil {
+		return fmt.Errorf("failed to list EventPolicies for cleanup: %w", err)
+	}
+	return r.deleteEventPolicies(ctx, policies)
 }
