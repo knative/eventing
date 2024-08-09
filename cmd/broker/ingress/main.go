@@ -156,6 +156,7 @@ func main() {
 			}
 			handler.EvenTypeHandler = autoCreate
 		}
+		handler.TokenVerifier = auth.NewOIDCTokenVerifier(ctx, featureFlags)
 	})
 	featureStore.WatchConfigs(configMapWatcher)
 
@@ -167,7 +168,7 @@ func main() {
 	reporter := ingress.NewStatsReporter(env.ContainerName, kmeta.ChildName(env.PodName, uuid.New().String()))
 
 	oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
-	oidcTokenVerifier := auth.NewOIDCTokenVerifier(ctx)
+	oidcTokenVerifier := auth.NewOIDCTokenVerifier(ctx, featureStore.Load())
 	trustBundleConfigMapInformer := configmapinformer.Get(ctx, eventingtls.TrustBundleLabelSelector).Lister().ConfigMaps(system.Namespace())
 	handler, err = ingress.NewHandler(logger, reporter, broker.TTLDefaulter(logger, int32(env.MaxTTL)), brokerInformer, oidcTokenVerifier, oidcTokenProvider, trustBundleConfigMapInformer, ctxFunc)
 	if err != nil {

@@ -129,17 +129,6 @@ func NewController(
 		TrustBundleConfigMapLister: trustBundleConfigMapInformer.Lister().ConfigMaps(system.Namespace()),
 	}
 
-	r := &Reconciler{
-		multiChannelEventHandler: sh,
-		reporter:                 reporter,
-		messagingClientSet:       eventingclient.Get(ctx).MessagingV1(),
-		eventingClient:           eventingclient.Get(ctx).EventingV1beta2(),
-		eventTypeLister:          eventtypeinformer.Get(ctx).Lister(),
-		eventDispatcher:          kncloudevents.NewDispatcher(clientConfig, oidcTokenProvider),
-		tokenVerifier:            auth.NewOIDCTokenVerifier(ctx),
-		clientConfig:             clientConfig,
-	}
-
 	var globalResync func(obj interface{})
 
 	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(_ string, _ interface{}) {
@@ -147,13 +136,25 @@ func NewController(
 			globalResync(nil)
 		}
 	})
+
 	featureStore.WatchConfigs(cmw)
+	r := &Reconciler{
+		multiChannelEventHandler: sh,
+		reporter:                 reporter,
+		messagingClientSet:       eventingclient.Get(ctx).MessagingV1(),
+		eventingClient:           eventingclient.Get(ctx).EventingV1beta2(),
+		eventTypeLister:          eventtypeinformer.Get(ctx).Lister(),
+		eventDispatcher:          kncloudevents.NewDispatcher(clientConfig, oidcTokenProvider),
+		tokenVerifier:            auth.NewOIDCTokenVerifier(ctx, featureStore.Load()),
+		clientConfig:             clientConfig,
+	}
 
 	impl := inmemorychannelreconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
 		return controller.Options{SkipStatusUpdates: true, FinalizerName: finalizerName, ConfigStore: featureStore}
 	})
 
 	globalResync = func(_ interface{}) {
+		r.tokenVerifier = auth.NewOIDCTokenVerifier(ctx, featureStore.Load())
 		impl.GlobalResync(inmemorychannelInformer.Informer())
 	}
 

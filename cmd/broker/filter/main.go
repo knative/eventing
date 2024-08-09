@@ -131,7 +131,7 @@ func main() {
 			}
 			handler.EventTypeCreator = autoCreate
 		}
-
+		handler.TokenVerifier = auth.NewOIDCTokenVerifier(ctx, featureFlags)
 	})
 	featureStore.WatchConfigs(configMapWatcher)
 
@@ -151,7 +151,7 @@ func main() {
 	oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
 	// We are running both the receiver (takes messages in from the Broker) and the dispatcher (send
 	// the messages to the triggers' subscribers) in this binary.
-	oidcTokenVerifier := auth.NewOIDCTokenVerifier(ctx)
+	oidcTokenVerifier := auth.NewOIDCTokenVerifier(ctx, featureStore.Load())
 	trustBundleConfigMapInformer := configmapinformer.Get(ctx, eventingtls.TrustBundleLabelSelector).Lister().ConfigMaps(system.Namespace())
 	handler, err = filter.NewHandler(logger, oidcTokenVerifier, oidcTokenProvider, triggerinformer.Get(ctx), brokerinformer.Get(ctx), reporter, trustBundleConfigMapInformer, ctxFunc)
 	if err != nil {

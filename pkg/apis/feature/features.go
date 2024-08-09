@@ -64,6 +64,9 @@ const (
 	// This configuration is applied when there is no EventPolicy with a "to" referencing a given
 	// resource.
 	AuthorizationAllowSameNamespace Flag = "Allow-Same-Namespace"
+
+	// DefaultOIDCDiscoveryURL is the default OIDC Discovery URL used in most Kubernetes clusters.
+	DefaultOIDCDiscoveryBaseURL Flag = "https://kubernetes.default.svc"
 )
 
 // Flags is a map containing all the enabled/disabled flags for the experimental features.
@@ -81,6 +84,7 @@ func newDefaults() Flags {
 		EvenTypeAutoCreate:       Disabled,
 		NewAPIServerFilters:      Disabled,
 		AuthorizationDefaultMode: AuthorizationAllowSameNamespace,
+		OIDCDiscoveryBaseURL:     DefaultOIDCDiscoveryBaseURL,
 	}
 }
 
@@ -134,6 +138,19 @@ func (e Flags) IsAuthorizationDefaultModeSameNamespace() bool {
 	return e != nil && e[AuthorizationDefaultMode] == AuthorizationAllowSameNamespace
 }
 
+func (e Flags) OIDCDiscoveryBaseURL() string {
+	if e == nil {
+		return string(DefaultOIDCDiscoveryBaseURL)
+	}
+
+	discoveryUrl, ok := e[OIDCDiscoveryBaseURL]
+	if !ok {
+		return string(DefaultOIDCDiscoveryBaseURL)
+	}
+
+	return string(discoveryUrl)
+}
+
 func (e Flags) String() string {
 	return fmt.Sprintf("%+v", map[string]Flag(e))
 }
@@ -183,7 +200,7 @@ func NewFlagsConfigFromMap(data map[string]string) (Flags, error) {
 			flags[sanitizedKey] = AuthorizationDenyAll
 		} else if sanitizedKey == AuthorizationDefaultMode && strings.EqualFold(v, string(AuthorizationAllowSameNamespace)) {
 			flags[sanitizedKey] = AuthorizationAllowSameNamespace
-		} else if strings.Contains(k, NodeSelectorLabel) {
+		} else if strings.Contains(k, NodeSelectorLabel) || sanitizedKey == OIDCDiscoveryBaseURL {
 			flags[sanitizedKey] = Flag(v)
 		} else {
 			flags[k] = Flag(v)

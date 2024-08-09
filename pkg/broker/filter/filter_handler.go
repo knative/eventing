@@ -84,7 +84,7 @@ type Handler struct {
 	logger           *zap.Logger
 	withContext      func(ctx context.Context) context.Context
 	filtersMap       *subscriptionsapi.FiltersMap
-	tokenVerifier    *auth.OIDCTokenVerifier
+	TokenVerifier    *auth.OIDCTokenVerifier
 	EventTypeCreator *eventtype.EventTypeAutoHandler
 }
 
@@ -146,7 +146,7 @@ func NewHandler(logger *zap.Logger, tokenVerifier *auth.OIDCTokenVerifier, oidcT
 		triggerLister:   triggerInformer.Lister(),
 		brokerLister:    brokerInformer.Lister(),
 		logger:          logger,
-		tokenVerifier:   tokenVerifier,
+		TokenVerifier:   tokenVerifier,
 		withContext:     wc,
 		filtersMap:      fm,
 	}, nil
@@ -204,7 +204,7 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 
 		audience := FilterAudience
 
-		err = h.tokenVerifier.VerifyJWTFromRequest(ctx, request, &audience, writer)
+		err = h.TokenVerifier.VerifyJWTFromRequest(ctx, request, &audience, writer)
 		if err != nil {
 			h.logger.Warn("Error when validating the JWT token in the request", zap.Error(err))
 			return
