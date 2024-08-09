@@ -18,6 +18,7 @@ package auth
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -254,4 +255,54 @@ type openIDMetadata struct {
 	ResponseTypes []string `json:"response_types_supported"`
 	SubjectTypes  []string `json:"subject_types_supported"`
 	SigningAlgs   []string `json:"id_token_signing_alg_values_supported"`
+}
+
+// Getting the OIDCIdentity
+func (c *OIDCTokenVerifier) GetOIDCIdentity(ctx context.Context, r *http.Request, audience string) (*IDToken, error) {
+	token := GetJWTFromHeader(r.Header)
+	if token == "" {
+		return nil, fmt.Errorf("no JWT token found in request")
+	}
+	parsedToken, err := ParseJWT(token)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse JWT: %v", err)
+	}
+
+	var claims struct {
+		Issuer   string   `json:"iss"`
+		Audience []string `json:"aud"`
+		Subject  string   `json:"sub"`
+		Expiry   int64    `json:"exp"`
+		IssuedAt int64    `json:"iat"`
+	}
+
+	if err := parsedToken.Claims(&claims); err != nil {
+		return nil, fmt.Errorf("failed to parse claims: %v", err)
+	}
+
+	return &IDToken{
+		Issuer:   claims.Issuer,
+		Audience: claims.Audience,
+		Subject:  claims.Subject,
+		Expiry:   time.Unix(claims.Expiry, 0),
+		IssuedAt: time.Unix(claims.IssuedAt, 0),
+	}, nil
+}
+func ParseJWT(token string) (*oidc.IDToken, error) {
+	parts := strings.Split(token, ".")
+	if len(parts) != 3 {
+		return nil, fmt.Errorf("invalid JWT token format")
+	}
+
+	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode JWT payload: %v", err)
+	}
+
+	var claims oidc.IDToken
+	if err := json.Unmarshal(payload, &claims); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal JWT claims: %v", err)
+	}
+
+	return &claims, nil
 }

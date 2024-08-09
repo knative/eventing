@@ -252,6 +252,13 @@ func (r *EventReceiver) ServeHTTP(response nethttp.ResponseWriter, request *neth
 		return
 	}
 
+	// Extract OIDC identity
+	_, err = r.ExtractOIDCIdentity(ctx, request)
+	if err != nil {
+		response.WriteHeader(nethttp.StatusUnauthorized)
+		return
+	}
+
 	/// Here we do the OIDC audience verification
 	features := feature.FromContext(ctx)
 	if features.IsOIDCAuthentication() {
@@ -263,7 +270,6 @@ func (r *EventReceiver) ServeHTTP(response nethttp.ResponseWriter, request *neth
 		}
 		r.logger.Debug("Request contained a valid JWT. Continuing...")
 	}
-
 	err = r.receiverFunc(request.Context(), channel, *event, utils.PassThroughHeaders(request.Header))
 	if err != nil {
 		if _, ok := err.(*UnknownChannelError); ok {
@@ -289,3 +295,18 @@ func ReportEventCountMetricsForDispatchError(err error, reporter StatsReporter, 
 }
 
 var _ nethttp.Handler = (*EventReceiver)(nil)
+
+func (r *EventReceiver) ExtractOIDCIdentity(ctx context.Context, request *nethttp.Request) (*auth.IDToken, error) {
+	if r.tokenVerifier == nil {
+		return nil, nil
+	}
+
+	identity, err := r.tokenVerifier.GetOIDCIdentity(ctx, request, r.audience)
+	if err != nil {
+		r.logger.Warn("Error getting OIDC identity", zap.Error(err))
+		return nil, err
+	}
+
+	r.logger.Debug("Successfully retrieved OIDC identity", zap.String("identity", identity.Subject))
+	return identity, nil
+}
