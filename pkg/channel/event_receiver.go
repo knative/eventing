@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-	http://www.apache.org/licenses/LICENSE-2.0
+    http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -24,8 +24,8 @@ import (
 	"time"
 
 	"knative.dev/eventing/pkg/apis/feature"
-
 	"knative.dev/eventing/pkg/auth"
+	v1 "knative.dev/eventing/pkg/client/listers/messaging/v1"
 
 	"github.com/cloudevents/sdk-go/v2/event"
 	"github.com/cloudevents/sdk-go/v2/protocol/http"
@@ -72,6 +72,7 @@ type EventReceiver struct {
 	tokenVerifier        *auth.OIDCTokenVerifier
 	audience             string
 	withContext          func(context.Context) context.Context
+	imc                  v1.InMemoryChannelNamespaceLister
 }
 
 // EventReceiverFunc is the function to be called for handling the event.
@@ -251,19 +252,22 @@ func (r *EventReceiver) ServeHTTP(response nethttp.ResponseWriter, request *neth
 		response.WriteHeader(nethttp.StatusBadRequest)
 		return
 	}
-
+	imc, err := r.imc.Get(channel.Name)
+	if err != nil {
+		r.logger.Warn("Failed to retrieve name", zap.Error(err))
+		response.WriteHeader(nethttp.StatusBadRequest)
+		return
+	}
 	/// Here we do the OIDC audience verification
 	features := feature.FromContext(ctx)
 	if features.IsOIDCAuthentication() {
 		r.logger.Debug("OIDC authentication is enabled")
-		err = r.tokenVerifier.VerifyJWTFromRequest(ctx, request, &r.audience, response)
+		err = r.tokenVerifier.VerifyRequest(ctx, features, &r.audience, channel.Namespace, imc.Status.Policies, request, response)
 		if err != nil {
-			r.logger.Warn("Error when validating the JWT token in the request", zap.Error(err))
+			r.logger.Warn("Failed to verify AuthN and AuthZ.", zap.Error(err))
 			return
 		}
-		r.logger.Debug("Request contained a valid JWT. Continuing...")
 	}
-
 	err = r.receiverFunc(request.Context(), channel, *event, utils.PassThroughHeaders(request.Header))
 	if err != nil {
 		if _, ok := err.(*UnknownChannelError); ok {
