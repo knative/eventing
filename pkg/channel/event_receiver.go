@@ -23,9 +23,11 @@ import (
 	nethttp "net/http"
 	"time"
 
+	v1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/eventing/pkg/auth"
-	v1 "knative.dev/eventing/pkg/client/listers/messaging/v1"
+
+	//v1 "knative.dev/eventing/pkg/client/listers/messaging/v1"
 
 	"github.com/cloudevents/sdk-go/v2/event"
 	"github.com/cloudevents/sdk-go/v2/protocol/http"
@@ -72,7 +74,7 @@ type EventReceiver struct {
 	tokenVerifier        *auth.OIDCTokenVerifier
 	audience             string
 	withContext          func(context.Context) context.Context
-	imc                  v1.InMemoryChannelNamespaceLister
+	getPoliciesFor       func(namespace string, name string) (v1.AppliedEventPoliciesStatus, error)
 }
 
 // EventReceiverFunc is the function to be called for handling the event.
@@ -252,17 +254,17 @@ func (r *EventReceiver) ServeHTTP(response nethttp.ResponseWriter, request *neth
 		response.WriteHeader(nethttp.StatusBadRequest)
 		return
 	}
-	imc, err := r.imc.Get(channel.Name)
+	polices, err := r.getPoliciesFor(channel.Namespace, channel.Name)
 	if err != nil {
 		r.logger.Warn("Failed to retrieve name", zap.Error(err))
-		response.WriteHeader(nethttp.StatusBadRequest)
+		response.WriteHeader(nethttp.StatusInternalServerError)
 		return
 	}
 	/// Here we do the OIDC audience verification
 	features := feature.FromContext(ctx)
 	if features.IsOIDCAuthentication() {
 		r.logger.Debug("OIDC authentication is enabled")
-		err = r.tokenVerifier.VerifyRequest(ctx, features, &r.audience, channel.Namespace, imc.Status.Policies, request, response)
+		err = r.tokenVerifier.VerifyRequest(ctx, features, &r.audience, channel.Namespace, polices.Policies, request, response)
 		if err != nil {
 			r.logger.Warn("Failed to verify AuthN and AuthZ.", zap.Error(err))
 			return
