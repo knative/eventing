@@ -20,9 +20,10 @@ limitations under the License.
 package rekt
 
 import (
-	"knative.dev/eventing/test/rekt/features/authz"
 	"testing"
 	"time"
+
+	"knative.dev/eventing/test/rekt/features/authz"
 
 	"knative.dev/reconciler-test/pkg/feature"
 

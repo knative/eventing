@@ -19,10 +19,11 @@ package authz
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"knative.dev/eventing/test/rekt/resources/eventpolicy"
 	"knative.dev/eventing/test/rekt/resources/pingsource"
 	"knative.dev/reconciler-test/pkg/environment"
-	"time"
 
 	"knative.dev/eventing/test/rekt/features/featureflags"
 
@@ -105,7 +106,7 @@ func addressableRejectsUnauthorizedRequest(gvr schema.GroupVersionResource, kind
 		eventpolicy.WithToRef(
 			gvr.GroupVersion().WithKind(kind),
 			name),
-		eventpolicy.WithFromSubject(fmt.Sprintf("system:serviceaccount:default:unknown-identity")),
+		eventpolicy.WithFromSubject("system:serviceaccount:default:unknown-identity"),
 	))
 	f.Setup(fmt.Sprintf("EventPolicy for %s %s is ready", kind, name), k8s.IsReady(gvr, name))
 
