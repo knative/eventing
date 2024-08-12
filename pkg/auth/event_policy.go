@@ -19,11 +19,13 @@ package auth
 import (
 	"context"
 	"fmt"
+	"sort"
+	"strings"
+
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"go.uber.org/zap"
 	"knative.dev/eventing/pkg/eventfilter"
 	"knative.dev/eventing/pkg/eventfilter/subscriptionsapi"
-	"strings"
 
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/apis/feature"
@@ -97,6 +99,11 @@ func GetEventPoliciesForResource(lister listerseventingv1alpha1.EventPolicyListe
 			}
 		}
 	}
+
+	// Sort the policies by name to ensure deterministic order
+	sort.Slice(relevantPolicies, func(i, j int) bool {
+		return relevantPolicies[i].Name < relevantPolicies[j].Name
+	})
 
 	return relevantPolicies, nil
 }
