@@ -20,6 +20,7 @@ limitations under the License.
 package rekt
 
 import (
+	"knative.dev/eventing/test/rekt/features/authz"
 	"testing"
 	"time"
 
@@ -297,5 +298,8 @@ func TestBrokerSupportsAuthZ(t *testing.T) {
 		eventshub.WithTLS(t),
 	)
 
-	env.TestSet(ctx, t, broker.BrokerSupportsAuthZ())
+	name := feature.MakeRandomK8sName("broker")
+	env.Prerequisite(ctx, t, broker.GoesReady(name, brokerresources.WithEnvConfig()...))
+
+	env.TestSet(ctx, t, authz.AddressableAuthZConformance(brokerresources.GVR(), "Broker", name))
 }
