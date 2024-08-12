@@ -55,6 +55,7 @@ func addressableAllowsAuthorizedRequest(gvr schema.GroupVersionResource, kind, n
 
 	source := feature.MakeRandomK8sName("source")
 	eventPolicy := feature.MakeRandomK8sName("eventpolicy")
+	sourceSubject := feature.MakeRandomK8sName("source-oidc-identity")
 
 	event := test.FullEvent()
 
@@ -66,7 +67,7 @@ func addressableAllowsAuthorizedRequest(gvr schema.GroupVersionResource, kind, n
 			eventpolicy.WithToRef(
 				gvr.GroupVersion().WithKind(kind),
 				name),
-			eventpolicy.WithFromSubject(fmt.Sprintf("system:serviceaccount:%s:oidc-%s", namespace, source)),
+			eventpolicy.WithFromSubject(fmt.Sprintf("system:serviceaccount:%s:%s", namespace, sourceSubject)),
 		)(ctx, t)
 	})
 	f.Setup(fmt.Sprintf("EventPolicy for %s %s is ready", kind, name), k8s.IsReady(gvr, name))
@@ -76,7 +77,7 @@ func addressableAllowsAuthorizedRequest(gvr schema.GroupVersionResource, kind, n
 		source,
 		eventshub.StartSenderToResourceTLS(gvr, name, nil),
 		eventshub.InputEvent(event),
-		eventshub.InitialSenderDelay(10*time.Second),
+		eventshub.OIDCSubject(sourceSubject),
 	))
 
 	f.Alpha(kind).
