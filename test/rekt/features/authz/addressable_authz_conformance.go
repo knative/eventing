@@ -40,7 +40,7 @@ func AddressableAuthZConformance(gvr schema.GroupVersionResource, kind, name str
 		Features: []*feature.Feature{
 			addressableAllowsAuthorizedRequest(gvr, kind, name),
 			addressableRejectsUnauthorizedRequest(gvr, kind, name),
-			//addressableBecomesUnreadyOnUnreadyEventPolicy(gvr, kind, name), // skipping for now, as broker seems to not handle it correctly
+			addressableBecomesUnreadyOnUnreadyEventPolicy(gvr, kind, name),
 		},
 	}
 	return &fs
