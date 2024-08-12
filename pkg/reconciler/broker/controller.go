@@ -93,6 +93,7 @@ func NewController(
 		BrokerConditionTriggerChannel,
 		BrokerConditionFilter,
 		BrokerConditionAddressable,
+		eventingv1.BrokerConditionEventPoliciesReady,
 	))
 
 	brokerFilter := pkgreconciler.AnnotationFilterFunc(brokerreconciler.ClassAnnotationKey, eventing.MTChannelBrokerClassValue, false /*allowUnset*/)
