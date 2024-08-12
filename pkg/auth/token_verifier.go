@@ -100,6 +100,29 @@ func (v *OIDCTokenVerifier) VerifyRequest(ctx context.Context, features feature.
 	return nil
 }
 
+// VerifyRequestFromSubject verifies AuthN and AuthZ in the request.
+// In the AuthZ part it checks if the request comes from the given allowedSubject.
+// On verification errors, it sets the responses HTTP status and returns an error.
+// This method is similar to VerifyRequest() except that VerifyRequestFromSubject()
+// verifies in the AuthZ part that the request comes from a given subject.
+func (v *OIDCTokenVerifier) VerifyRequestFromSubject(ctx context.Context, features feature.Flags, requiredOIDCAudience *string, allowedSubject string, req *http.Request, resp http.ResponseWriter) error {
+	if !features.IsOIDCAuthentication() {
+		return nil
+	}
+
+	idToken, err := v.verifyAuthN(ctx, requiredOIDCAudience, req, resp)
+	if err != nil {
+		return fmt.Errorf("authentication of request could not be verified: %w", err)
+	}
+
+	if idToken.Subject != allowedSubject {
+		resp.WriteHeader(http.StatusForbidden)
+		return fmt.Errorf("token is from subject %q, but only %q is allowed", idToken.Subject, allowedSubject)
+	}
+
+	return nil
+}
+
 // verifyAuthN verifies if the incoming request contains a correct JWT token
 func (v *OIDCTokenVerifier) verifyAuthN(ctx context.Context, audience *string, req *http.Request, resp http.ResponseWriter) (*IDToken, error) {
 	token := GetJWTFromHeader(req.Header)
