@@ -31,6 +31,15 @@ rules:
       - get
       - list
       - watch
+  # get subscription of trigger for AuthZ
+  - apiGroups:
+      - messaging.knative.dev
+    resources:
+      - subscriptions
+    verbs:
+      - get
+      - list
+      - watch
   - apiGroups:
       - ""
     resources:
