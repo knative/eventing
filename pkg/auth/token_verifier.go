@@ -150,7 +150,7 @@ func (v *OIDCTokenVerifier) verifyAuthZ(ctx context.Context, features feature.Fl
 
 		if !SubjectAndFiltersPass(ctx, idToken.Subject, subjectsFromApplyingPolicies, event, v.logger) {
 			resp.WriteHeader(http.StatusForbidden)
-			return fmt.Errorf("token is from subject %q, but only %q are part of applying event policies", idToken.Subject, subjectsFromApplyingPolicies)
+			return fmt.Errorf("token is from subject %q, but only %#v are part of applying event policies", idToken.Subject, subjectsFromApplyingPolicies)
 		}
 
 		return nil

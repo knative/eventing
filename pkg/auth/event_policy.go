@@ -226,7 +226,7 @@ func SubjectAndFiltersPass(ctx context.Context, sub string, allowedSubsWithFilte
 	for _, swf := range allowedSubsWithFilters {
 		for _, s := range swf.subjects {
 			if strings.EqualFold(s, sub) || (strings.HasSuffix(s, "*") && strings.HasPrefix(sub, strings.TrimSuffix(s, "*"))) {
-				return subscriptionsapi.CreateSubscriptionsAPIFilters(logger, swf.filters).Filter(ctx, *event) != eventfilter.FailFilter
+				return subscriptionsapi.CreateSubscriptionsAPIFilters(logger.Desugar(), swf.filters).Filter(ctx, *event) != eventfilter.FailFilter
 			}
 		}
 	}

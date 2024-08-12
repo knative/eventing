@@ -22,7 +22,11 @@ import (
 	"strings"
 	"testing"
 
+	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/utils/ptr"
+
+	cetest "github.com/cloudevents/sdk-go/v2/test"
 
 	"github.com/google/go-cmp/cmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -38,7 +42,6 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/authstatus"
 	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
-	"knative.dev/pkg/ptr"
 	reconcilertesting "knative.dev/pkg/reconciler/testing"
 	"knative.dev/pkg/resolver"
 	"knative.dev/pkg/tracker"
@@ -541,9 +544,9 @@ func TestResolveSubjects(t *testing.T) {
 						Namespace:  namespace,
 					},
 				}, {
-					Sub: ptr.String("system:serviceaccount:my-ns:my-app"),
+					Sub: ptr.To("system:serviceaccount:my-ns:my-app"),
 				}, {
-					Sub: ptr.String("system:serviceaccount:my-ns:my-app-2"),
+					Sub: ptr.To("system:serviceaccount:my-ns:my-app-2"),
 				},
 			},
 			objects: []runtime.Object{
@@ -555,7 +558,7 @@ func TestResolveSubjects(t *testing.T) {
 					Status: sourcesv1.ApiServerSourceStatus{
 						SourceStatus: duckv1.SourceStatus{
 							Auth: &duckv1.AuthStatus{
-								ServiceAccountName: ptr.String("my-apiserversource-oidc-sa"),
+								ServiceAccountName: ptr.To("my-apiserversource-oidc-sa"),
 							},
 						},
 					},
@@ -591,9 +594,9 @@ func TestResolveSubjects(t *testing.T) {
 						Namespace:  namespace,
 					},
 				}, {
-					Sub: ptr.String("system:serviceaccount:my-ns:my-app"),
+					Sub: ptr.To("system:serviceaccount:my-ns:my-app"),
 				}, {
-					Sub: ptr.String("system:serviceaccount:my-ns:my-app-2"),
+					Sub: ptr.To("system:serviceaccount:my-ns:my-app-2"),
 				},
 			},
 			objects: []runtime.Object{
@@ -605,7 +608,7 @@ func TestResolveSubjects(t *testing.T) {
 					Status: sourcesv1.ApiServerSourceStatus{
 						SourceStatus: duckv1.SourceStatus{
 							Auth: &duckv1.AuthStatus{
-								ServiceAccountName: ptr.String("my-apiserversource-oidc-sa"),
+								ServiceAccountName: ptr.To("my-apiserversource-oidc-sa"),
 							},
 						},
 					},
@@ -618,7 +621,7 @@ func TestResolveSubjects(t *testing.T) {
 					Status: sourcesv1.PingSourceStatus{
 						SourceStatus: duckv1.SourceStatus{
 							Auth: &duckv1.AuthStatus{
-								ServiceAccountName: ptr.String("my-pingsource-oidc-sa"),
+								ServiceAccountName: ptr.To("my-pingsource-oidc-sa"),
 							},
 						},
 					},
@@ -692,78 +695,148 @@ func TestResolveSubjects(t *testing.T) {
 	}
 }
 
-func TestSubjectContained(t *testing.T) {
+func TestSubjectAndFiltersContained(t *testing.T) {
 
 	tests := []struct {
-		name        string
-		sub         string
-		allowedSubs []string
-		want        bool
+		name                  string
+		sub                   string
+		allowedSubsAndFilters []filtersBySubjects
+		want                  bool
 	}{
 		{
 			name: "simple 1:1 match",
 			sub:  "system:serviceaccounts:my-ns:my-sa",
-			allowedSubs: []string{
-				"system:serviceaccounts:my-ns:my-sa",
+			allowedSubsAndFilters: []filtersBySubjects{
+				{
+					subjects: []string{"system:serviceaccounts:my-ns:my-sa"},
+				},
 			},
 			want: true,
 		}, {
 			name: "simple 1:n match",
 			sub:  "system:serviceaccounts:my-ns:my-sa",
-			allowedSubs: []string{
-				"system:serviceaccounts:my-ns:another-sa",
-				"system:serviceaccounts:my-ns:my-sa",
-				"system:serviceaccounts:my-ns:yet-another-sa",
+			allowedSubsAndFilters: []filtersBySubjects{
+				{
+					subjects: []string{
+						"system:serviceaccounts:my-ns:another-sa",
+						"system:serviceaccounts:my-ns:my-sa",
+						"system:serviceaccounts:my-ns:yet-another-sa"},
+				},
 			},
 			want: true,
 		}, {
 			name: "pattern match (all)",
 			sub:  "system:serviceaccounts:my-ns:my-sa",
-			allowedSubs: []string{
-				"*",
+			allowedSubsAndFilters: []filtersBySubjects{
+				{
+					subjects: []string{
+						"*"},
+				},
 			},
 			want: true,
 		}, {
 			name: "pattern match (namespace)",
 			sub:  "system:serviceaccounts:my-ns:my-sa",
-			allowedSubs: []string{
-				"system:serviceaccounts:my-ns:*",
+			allowedSubsAndFilters: []filtersBySubjects{
+				{
+					subjects: []string{
+						"system:serviceaccounts:my-ns:*",
+					},
+				},
 			},
 			want: true,
 		}, {
 			name: "pattern match (different namespace)",
 			sub:  "system:serviceaccounts:my-ns-2:my-sa",
-			allowedSubs: []string{
-				"system:serviceaccounts:my-ns:*",
+			allowedSubsAndFilters: []filtersBySubjects{
+				{
+					subjects: []string{
+						"system:serviceaccounts:my-ns:*",
+					},
+				},
 			},
 			want: false,
 		}, {
 			name: "pattern match (namespace prefix)",
 			sub:  "system:serviceaccounts:my-ns:my-sa",
-			allowedSubs: []string{
-				"system:serviceaccounts:my-ns*",
+			allowedSubsAndFilters: []filtersBySubjects{
+				{
+					subjects: []string{
+						"system:serviceaccounts:my-ns*",
+					},
+				},
 			},
 			want: true,
 		}, {
 			name: "pattern match (namespace prefix 2)",
 			sub:  "system:serviceaccounts:my-ns-2:my-sa",
-			allowedSubs: []string{
-				"system:serviceaccounts:my-ns*",
+			allowedSubsAndFilters: []filtersBySubjects{
+				{
+					subjects: []string{
+						"system:serviceaccounts:my-ns*",
+					},
+				},
 			},
 			want: true,
 		}, {
 			name: "pattern match (middle)",
 			sub:  "system:serviceaccounts:my-ns:my-sa",
-			allowedSubs: []string{
-				"system:serviceaccounts:*:my-sa",
+			allowedSubsAndFilters: []filtersBySubjects{
+				{
+					subjects: []string{
+						"system:serviceaccounts:*:my-sa",
+					},
+				},
+			},
+			want: false,
+		}, {
+			name: "pattern match (namespace prefix) and failing event filter",
+			sub:  "system:serviceaccounts:my-ns:my-sa",
+			allowedSubsAndFilters: []filtersBySubjects{
+				{
+					subjects: []string{
+						"system:serviceaccounts:my-ns*",
+					},
+					filters: []eventingv1.SubscriptionsAPIFilter{
+						{
+							CESQL: "false",
+						},
+					},
+				},
+			},
+			want: false,
+		}, {
+			name: "only check filter if subject matches",
+			sub:  "system:serviceaccounts:my-ns:my-sa",
+			allowedSubsAndFilters: []filtersBySubjects{
+				{
+					subjects: []string{
+						"system:serviceaccounts:not-my-ns*",
+					},
+					filters: []eventingv1.SubscriptionsAPIFilter{
+						{
+							CESQL: "true",
+						},
+					},
+				},
+				{
+					subjects: []string{
+						"system:serviceaccounts:my-ns*",
+					},
+					filters: []eventingv1.SubscriptionsAPIFilter{
+						{
+							CESQL: "false",
+						},
+					},
+				},
 			},
 			want: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := SubjectAndFiltersPass(tt.sub, tt.allowedSubs); got != tt.want {
-				t.Errorf("SubjectAndFiltersPass(%q, '%v') = %v, want %v", tt.sub, tt.allowedSubs, got, tt.want)
+			if got := SubjectAndFiltersPass(context.Background(), tt.sub, tt.allowedSubsAndFilters, ptr.To(cetest.MinEvent()), zap.NewNop().Sugar()); got != tt.want {
+				t.Errorf("SubjectAndFiltersPass(%q, '%v') = %v, want %v", tt.sub, tt.allowedSubsAndFilters, got, tt.want)
 			}
 		})
 	}
