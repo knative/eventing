@@ -47,6 +47,7 @@ import (
 	brokerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/broker"
 	triggerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/trigger"
 	eventtypeinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta2/eventtype"
+	subscriptioninformer "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/subscription"
 	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/eventtype"
 	"knative.dev/eventing/pkg/reconciler/names"
@@ -154,7 +155,7 @@ func main() {
 	// the messages to the triggers' subscribers) in this binary.
 	oidcTokenVerifier := auth.NewOIDCTokenVerifier(ctx)
 	trustBundleConfigMapInformer := configmapinformer.Get(ctx, eventingtls.TrustBundleLabelSelector).Lister().ConfigMaps(system.Namespace())
-	handler, err = filter.NewHandler(logger, oidcTokenVerifier, oidcTokenProvider, triggerinformer.Get(ctx), brokerinformer.Get(ctx), reporter, trustBundleConfigMapInformer, ctxFunc)
+	handler, err = filter.NewHandler(logger, oidcTokenVerifier, oidcTokenProvider, triggerinformer.Get(ctx), brokerinformer.Get(ctx), subscriptioninformer.Get(ctx), reporter, trustBundleConfigMapInformer, ctxFunc)
 	if err != nil {
 		logger.Fatal("Error creating Handler", zap.Error(err))
 	}

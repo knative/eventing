@@ -27,6 +27,9 @@ import (
 	"testing"
 	"time"
 
+	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
+	"knative.dev/eventing/pkg/reconciler/broker/resources"
+
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"
 	"github.com/cloudevents/sdk-go/v2/event"
@@ -52,6 +55,7 @@ import (
 
 	brokerinformerfake "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/broker/fake"
 	triggerinformerfake "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/trigger/fake"
+	subscriptioninformerfake "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/subscription/fake"
 
 	// Fake injection client
 	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventpolicy/fake"
@@ -454,6 +458,15 @@ func TestReceiver(t *testing.T) {
 				}
 				triggerinformerfake.Get(ctx).Informer().GetStore().Add(trig)
 
+				// create needed triggers subscription object
+				sub := &messagingv1.Subscription{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      resources.SubscriptionName(feature.FromContext(ctx), trig),
+						Namespace: trig.Namespace,
+					},
+				}
+				subscriptioninformerfake.Get(ctx).Informer().GetStore().Add(sub)
+
 				// create the needed broker object
 				b := &v1.Broker{
 					ObjectMeta: metav1.ObjectMeta{
@@ -471,6 +484,7 @@ func TestReceiver(t *testing.T) {
 				oidcTokenProvider,
 				triggerinformerfake.Get(ctx),
 				brokerinformerfake.Get(ctx),
+				subscriptioninformerfake.Get(ctx),
 				reporter,
 				configmapinformer.Get(ctx).Lister().ConfigMaps("ns"),
 				func(ctx context.Context) context.Context {
@@ -654,6 +668,15 @@ func TestReceiver_WithSubscriptionsAPI(t *testing.T) {
 				triggerinformerfake.Get(ctx).Informer().GetStore().Add(trig)
 				filtersMap.Set(trig, createSubscriptionsAPIFilters(logging.FromContext(ctx).Desugar(), trig))
 
+				// create needed triggers subscription object
+				sub := &messagingv1.Subscription{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      resources.SubscriptionName(feature.FromContext(ctx), trig),
+						Namespace: trig.Namespace,
+					},
+				}
+				subscriptioninformerfake.Get(ctx).Informer().GetStore().Add(sub)
+
 				// create the needed broker object
 				b := &v1.Broker{
 					ObjectMeta: metav1.ObjectMeta{
@@ -670,6 +693,7 @@ func TestReceiver_WithSubscriptionsAPI(t *testing.T) {
 				oidcTokenProvider,
 				triggerinformerfake.Get(ctx),
 				brokerinformerfake.Get(ctx),
+				subscriptioninformerfake.Get(ctx),
 				reporter,
 				configmapinformer.Get(ctx).Lister().ConfigMaps("ns"),
 				func(ctx context.Context) context.Context {
