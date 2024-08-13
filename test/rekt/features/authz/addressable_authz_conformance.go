@@ -120,7 +120,7 @@ func addressableRejectsUnauthorizedRequest(gvr schema.GroupVersionResource, kind
 
 	f.Alpha(kind).
 		Must("event sent", eventassert.OnStore(source).MatchSentEvent(test.HasId(event.ID())).Exact(1)).
-		Must("get 202 on response", eventassert.OnStore(source).Match(eventassert.MatchStatusCode(403)).AtLeast(1))
+		Must("get 403 on response", eventassert.OnStore(source).Match(eventassert.MatchStatusCode(403)).AtLeast(1))
 
 	return f
 }
