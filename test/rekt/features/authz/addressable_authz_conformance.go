@@ -101,7 +101,7 @@ func addressableRejectsUnauthorizedRequest(gvr schema.GroupVersionResource, kind
 	event := test.FullEvent()
 
 	// Install event policy
-	f.Setup("Install the EventPolicy", eventpolicy.Install(
+	f.Setup("Install the EventPolicy with from subject that does not match", eventpolicy.Install(
 		eventPolicy,
 		eventpolicy.WithToRef(
 			gvr.GroupVersion().WithKind(kind),
