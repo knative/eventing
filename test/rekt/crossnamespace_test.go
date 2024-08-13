@@ -24,10 +24,12 @@ import (
 
 	"knative.dev/pkg/system"
 	"knative.dev/reconciler-test/pkg/environment"
+	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/knative"
 
 	"knative.dev/eventing/test/rekt/features/trigger"
+	"knative.dev/eventing/test/rekt/resources/broker"
 )
 
 func TestBrokerTriggerCrossNamespaceReference(t *testing.T) {
@@ -50,5 +52,7 @@ func TestBrokerTriggerCrossNamespaceReference(t *testing.T) {
 	)
 
 	// brokerEnv.Test(brokerEnvCtx, t, broker.GoesReady(brokerName))
-	triggerEnv.Test(triggerEnvCtx, t, trigger.CrossNamespaceEventLinks(brokerEnvCtx))
+	triggerEnv.Test(triggerEnvCtx, t, trigger.CrossNamespaceEventLinks(brokerEnvCtx, func(name, namespace string) feature.StepFn {
+		return broker.Install(name, broker.WithNamespace(namespace))
+	}))
 }
