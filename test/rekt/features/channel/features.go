@@ -47,8 +47,16 @@ import (
 
 func ChannelChain(length int, createSubscriberFn func(ref *duckv1.KReference, uri string) manifest.CfgFn) *feature.Feature {
 	f := feature.NewFeature()
-	sink := feature.MakeRandomK8sName("sink")
-	cs := feature.MakeRandomK8sName("containersource")
+
+	sink, channel := ChannelChainSetup(f, length, createSubscriberFn)
+
+	ChannelChainAssert(f, sink, channel)
+
+	return f
+}
+
+func ChannelChainSetup(f *feature.Feature, length int, createSubscriberFn func(ref *duckv1.KReference, uri string) manifest.CfgFn) (sink string, channel string) {
+	sink = feature.MakeRandomK8sName("sink")
 
 	var channels []string
 	for i := 0; i < length; i++ {
@@ -79,13 +87,19 @@ func ChannelChain(length int, createSubscriberFn func(ref *duckv1.KReference, ur
 		f.Setup("subscription is ready", subscription.IsReady(sub))
 	}
 
-	// attach the first channel to the source
-	f.Requirement("install containersource", containersource.Install(cs, containersource.WithSink(channel_impl.AsDestinationRef(channels[0]))))
+	return sink, channels[0]
+}
+
+func ChannelChainAssert(f *feature.Feature, sink, channel string) {
+	cs := feature.MakeRandomK8sName("containersource")
+	eventType := feature.MakeRandomK8sName("et")
+	args := "--eventType=" + eventType
+	f.Requirement("install containersource", containersource.Install(cs,
+		containersource.WithSink(channel_impl.AsDestinationRef(channel)),
+		containersource.WithArgs(args)))
 	f.Requirement("containersource goes ready", containersource.IsReady(cs))
 
-	f.Assert("chained channels relay events", assert.OnStore(sink).MatchEvent(test.HasType("dev.knative.eventing.samples.heartbeat")).AtLeast(1))
-
-	return f
+	f.Assert("chained channels relay events", assert.OnStore(sink).MatchEvent(test.HasType(eventType)).AtLeast(1))
 }
 
 func DeadLetterSink(createSubscriberFn func(ref *duckv1.KReference, uri string) manifest.CfgFn) *feature.Feature {
