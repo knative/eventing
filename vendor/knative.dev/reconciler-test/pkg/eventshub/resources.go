@@ -136,6 +136,9 @@ func Install(name string, options ...EventsHubOption) feature.StepFn {
 		if isOIDCEnabled && !isReceiver {
 			// install oidc sa
 			oidcSAName := fmt.Sprintf("oidc-%s", name)
+			if envs[OIDCSubjectEnv] != "" {
+				oidcSAName = envs[OIDCSubjectEnv]
+			}
 			serviceaccount.Install(oidcSAName)(ctx, t)
 
 			// generate token

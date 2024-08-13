@@ -234,6 +234,21 @@ func OIDCReceiverAudience(aud string) EventsHubOption {
 	return compose(envOption(OIDCReceiverAudienceEnv, aud), envOIDCEnabled())
 }
 
+// VerifyEventFormat has the receiver verify the event format when receiving events
+func VerifyEventFormat(format string) EventsHubOption {
+	return compose(envOption("EVENT_FORMAT", format))
+}
+
+// VerifyEventFormat has the receiver verify the event format is structured when receiving events
+func VerifyEventFormatStructured() EventsHubOption {
+	return VerifyEventFormat("json")
+}
+
+// VerifyEventFormat has the receiver verify the event format is binary when receiving events
+func VerifyEventFormatBinary() EventsHubOption {
+	return VerifyEventFormat("binary")
+}
+
 // --- Sender options
 
 // InitialSenderDelay defines how much the sender has to wait (in millisecond), when started, before start sending events.
@@ -332,6 +347,11 @@ func oidcSinkAudience(aud *string) EventsHubOption {
 // OIDCCorruptedSignature adds an OIDC token with an invalid signature to the request.
 func OIDCCorruptedSignature() EventsHubOption {
 	return compose(envOption(OIDCGenerateCorruptedSignatureTokenEnv, "true"), envOIDCEnabled())
+}
+
+// OIDCSubject sets the name of the OIDC subject to use by the sender. If this option is not set, it defaults to "oidc-<eventshub-name>"
+func OIDCSubject(sub string) EventsHubOption {
+	return compose(envOption(OIDCSubjectEnv, sub), envOIDCEnabled())
 }
 
 // OIDCToken adds the given token used for OIDC authentication to the request.

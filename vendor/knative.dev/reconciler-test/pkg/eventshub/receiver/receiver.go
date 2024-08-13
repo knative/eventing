@@ -58,6 +58,7 @@ type Receiver struct {
 	skipResponseBody    string
 	EnforceTLS          bool
 	oidcAudience        string
+	expectedFormat      *string
 
 	kubeclient kubernetes.Interface
 }
@@ -65,6 +66,9 @@ type Receiver struct {
 type envConfig struct {
 	// ReceiverName is used to identify this instance of the receiver.
 	ReceiverName string `envconfig:"POD_NAME" default:"receiver-default" required:"true"`
+
+	// EventFormat is used to verify the format of the received events
+	EventFormat string `envconfig:"EVENT_FORMAT" default:"" required:"false"`
 
 	// EnforceTLS is used to enforce TLS.
 	EnforceTLS bool `envconfig:"ENFORCE_TLS" default:"false"`
@@ -142,6 +146,11 @@ func NewFromEnv(ctx context.Context, eventLogs *eventshub.EventLogs) *Receiver {
 		responseWaitTime = time.Duration(env.ResponseWaitTime) * time.Second
 	}
 
+	var expectedEventFormat *string
+	if env.EventFormat != "" {
+		expectedEventFormat = &env.EventFormat
+	}
+
 	return &Receiver{
 		Name:                env.ReceiverName,
 		EnforceTLS:          env.EnforceTLS,
@@ -155,6 +164,7 @@ func NewFromEnv(ctx context.Context, eventLogs *eventshub.EventLogs) *Receiver {
 		skipResponseHeaders: env.SkipResponseHeaders,
 		oidcAudience:        env.OIDCAudience,
 		kubeclient:          kubeclient.Get(ctx),
+		expectedFormat:      expectedEventFormat,
 	}
 }
 
@@ -238,6 +248,8 @@ func (o *Receiver) ServeHTTP(writer http.ResponseWriter, request *http.Request) 
 	m := cloudeventshttp.NewMessageFromHttpRequest(request)
 	defer m.Finish(nil)
 
+	encoding := m.ReadEncoding()
+
 	event, eventErr := cloudeventsbindings.ToEvent(context.TODO(), m)
 	headers := make(http.Header)
 	for k, v := range request.Header {
@@ -260,7 +272,7 @@ func (o *Receiver) ServeHTTP(writer http.ResponseWriter, request *http.Request) 
 	shouldSkip := o.counter.Skip()
 	var s uint64
 	var kind eventshub.EventKind
-	if shouldSkip || rejectErr != nil {
+	if shouldSkip || rejectErr != nil || !verifyFormat(o.expectedFormat, encoding) {
 		kind = eventshub.EventRejected
 		s = atomic.AddUint64(&o.dropSeq, 1)
 	} else {
@@ -295,7 +307,7 @@ func (o *Receiver) ServeHTTP(writer http.ResponseWriter, request *http.Request) 
 		time.Sleep(o.responseWaitTime)
 	}
 
-	if rejectErr != nil {
+	if rejectErr != nil || !verifyFormat(o.expectedFormat, encoding) {
 		for headerKey, headerValue := range o.skipResponseHeaders {
 			writer.Header().Set(headerKey, headerValue)
 		}
@@ -360,4 +372,20 @@ func (o *Receiver) verifyJWT(request *http.Request) (*authv1.UserInfo, error) {
 
 func isTLS(request *http.Request) bool {
 	return request.TLS != nil && request.TLS.HandshakeComplete && !eventshub.IsInsecureCipherSuite(request.TLS)
+}
+
+func verifyFormat(expected *string, actual cloudeventsbindings.Encoding) bool {
+	// we don't care what format is, always return true
+	if expected == nil {
+		return true
+	}
+
+	switch *expected {
+	case "binary":
+		return actual == cloudeventsbindings.EncodingBinary
+	case "json":
+		return actual == cloudeventsbindings.EncodingStructured
+	default:
+		return false
+	}
 }
