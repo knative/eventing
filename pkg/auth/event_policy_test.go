@@ -700,13 +700,13 @@ func TestSubjectAndFiltersContained(t *testing.T) {
 	tests := []struct {
 		name                  string
 		sub                   string
-		allowedSubsAndFilters []filtersBySubjects
+		allowedSubsAndFilters []subjectsWithFilters
 		want                  bool
 	}{
 		{
 			name: "simple 1:1 match",
 			sub:  "system:serviceaccounts:my-ns:my-sa",
-			allowedSubsAndFilters: []filtersBySubjects{
+			allowedSubsAndFilters: []subjectsWithFilters{
 				{
 					subjects: []string{"system:serviceaccounts:my-ns:my-sa"},
 				},
@@ -715,7 +715,7 @@ func TestSubjectAndFiltersContained(t *testing.T) {
 		}, {
 			name: "simple 1:n match",
 			sub:  "system:serviceaccounts:my-ns:my-sa",
-			allowedSubsAndFilters: []filtersBySubjects{
+			allowedSubsAndFilters: []subjectsWithFilters{
 				{
 					subjects: []string{
 						"system:serviceaccounts:my-ns:another-sa",
@@ -727,7 +727,7 @@ func TestSubjectAndFiltersContained(t *testing.T) {
 		}, {
 			name: "pattern match (all)",
 			sub:  "system:serviceaccounts:my-ns:my-sa",
-			allowedSubsAndFilters: []filtersBySubjects{
+			allowedSubsAndFilters: []subjectsWithFilters{
 				{
 					subjects: []string{
 						"*"},
@@ -737,7 +737,7 @@ func TestSubjectAndFiltersContained(t *testing.T) {
 		}, {
 			name: "pattern match (namespace)",
 			sub:  "system:serviceaccounts:my-ns:my-sa",
-			allowedSubsAndFilters: []filtersBySubjects{
+			allowedSubsAndFilters: []subjectsWithFilters{
 				{
 					subjects: []string{
 						"system:serviceaccounts:my-ns:*",
@@ -748,7 +748,7 @@ func TestSubjectAndFiltersContained(t *testing.T) {
 		}, {
 			name: "pattern match (different namespace)",
 			sub:  "system:serviceaccounts:my-ns-2:my-sa",
-			allowedSubsAndFilters: []filtersBySubjects{
+			allowedSubsAndFilters: []subjectsWithFilters{
 				{
 					subjects: []string{
 						"system:serviceaccounts:my-ns:*",
@@ -759,7 +759,7 @@ func TestSubjectAndFiltersContained(t *testing.T) {
 		}, {
 			name: "pattern match (namespace prefix)",
 			sub:  "system:serviceaccounts:my-ns:my-sa",
-			allowedSubsAndFilters: []filtersBySubjects{
+			allowedSubsAndFilters: []subjectsWithFilters{
 				{
 					subjects: []string{
 						"system:serviceaccounts:my-ns*",
@@ -770,7 +770,7 @@ func TestSubjectAndFiltersContained(t *testing.T) {
 		}, {
 			name: "pattern match (namespace prefix 2)",
 			sub:  "system:serviceaccounts:my-ns-2:my-sa",
-			allowedSubsAndFilters: []filtersBySubjects{
+			allowedSubsAndFilters: []subjectsWithFilters{
 				{
 					subjects: []string{
 						"system:serviceaccounts:my-ns*",
@@ -781,7 +781,7 @@ func TestSubjectAndFiltersContained(t *testing.T) {
 		}, {
 			name: "pattern match (middle)",
 			sub:  "system:serviceaccounts:my-ns:my-sa",
-			allowedSubsAndFilters: []filtersBySubjects{
+			allowedSubsAndFilters: []subjectsWithFilters{
 				{
 					subjects: []string{
 						"system:serviceaccounts:*:my-sa",
@@ -792,7 +792,7 @@ func TestSubjectAndFiltersContained(t *testing.T) {
 		}, {
 			name: "pattern match (namespace prefix) and failing event filter",
 			sub:  "system:serviceaccounts:my-ns:my-sa",
-			allowedSubsAndFilters: []filtersBySubjects{
+			allowedSubsAndFilters: []subjectsWithFilters{
 				{
 					subjects: []string{
 						"system:serviceaccounts:my-ns*",
@@ -808,7 +808,7 @@ func TestSubjectAndFiltersContained(t *testing.T) {
 		}, {
 			name: "only check filter if subject matches",
 			sub:  "system:serviceaccounts:my-ns:my-sa",
-			allowedSubsAndFilters: []filtersBySubjects{
+			allowedSubsAndFilters: []subjectsWithFilters{
 				{
 					subjects: []string{
 						"system:serviceaccounts:not-my-ns*",

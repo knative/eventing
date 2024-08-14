@@ -22,6 +22,7 @@ import (
 	"knative.dev/eventing/pkg/eventfilter"
 )
 
+// MaterializeSubscriptionsAPIFilter materializes a SubscriptionsAPIFilter into a runnable Filter.
 func MaterializeSubscriptionsAPIFilter(logger *zap.Logger, filter v1.SubscriptionsAPIFilter) eventfilter.Filter {
 	var materializedFilter eventfilter.Filter
 	var err error

@@ -217,8 +217,9 @@ func resolveSubjectsFromReference(resolver *resolver.AuthenticatableResolver, re
 }
 
 // SubjectAndFiltersPass checks if the given sub is contained in the list of allowedSubs
-// or if it matches a prefix pattern in subs (e.g. system:serviceaccounts:my-ns:*)
-func SubjectAndFiltersPass(ctx context.Context, sub string, allowedSubsWithFilters []filtersBySubjects, event *cloudevents.Event, logger *zap.SugaredLogger) bool {
+// or if it matches a prefix pattern in subs (e.g. system:serviceaccounts:my-ns:*), as
+// well as if the event passes any filters associated with the subjects for an event policy
+func SubjectAndFiltersPass(ctx context.Context, sub string, allowedSubsWithFilters []subjectsWithFilters, event *cloudevents.Event, logger *zap.SugaredLogger) bool {
 	if event == nil {
 		return false
 	}
