@@ -17,6 +17,7 @@ limitations under the License.
 package upgrade
 
 import (
+	"context"
 	"log"
 	"os"
 	"sync"
@@ -56,10 +57,11 @@ func RunMainTest(m *testing.M) {
 // call this function multiple times and still properly verify the feature (e.g. one call
 // after upgrade, one call after downgrade).
 type DurableFeature struct {
-	SetupF    *feature.Feature
-	VerifyF   *feature.Feature
-	Namespace string
-	Global    environment.GlobalEnvironment
+	SetupF   *feature.Feature
+	setupEnv environment.Environment
+	setupCtx context.Context
+	VerifyF  *feature.Feature
+	Global   environment.GlobalEnvironment
 }
 
 func (fe *DurableFeature) Setup(label string) pkgupgrade.Operation {
@@ -72,7 +74,8 @@ func (fe *DurableFeature) Setup(label string) pkgupgrade.Operation {
 			k8s.WithEventListener,
 			// Not managed - namespace preserved.
 		)
-		fe.Namespace = env.Namespace()
+		fe.setupEnv = env
+		fe.setupCtx = ctx
 		env.Test(ctx, c.T, fe.SetupF)
 	})
 }
@@ -80,32 +83,16 @@ func (fe *DurableFeature) Setup(label string) pkgupgrade.Operation {
 func (fe *DurableFeature) Verify(label string) pkgupgrade.Operation {
 	return pkgupgrade.NewOperation(label, func(c pkgupgrade.Context) {
 		c.T.Parallel()
-		ctx, env := fe.Global.Environment(
-			knative.WithKnativeNamespace(system.Namespace()),
-			knative.WithLoggingConfig,
-			knative.WithTracingConfig,
-			k8s.WithEventListener,
-			// Re-use namespace.
-			environment.InNamespace(fe.Namespace),
-			// Not managed - namespace preserved.
-		)
-		env.Test(ctx, c.T, fe.VerifyF)
+		fe.setupEnv.Test(fe.setupCtx, c.T, fe.VerifyF)
 	})
 }
 
 func (fe *DurableFeature) VerifyTeardown(label string) pkgupgrade.Operation {
 	return pkgupgrade.NewOperation(label, func(c pkgupgrade.Context) {
 		c.T.Parallel()
-		ctx, env := fe.Global.Environment(
-			knative.WithKnativeNamespace(system.Namespace()),
-			knative.WithLoggingConfig,
-			knative.WithTracingConfig,
-			k8s.WithEventListener,
-			environment.InNamespace(fe.Namespace),
-			// Ensures teardown of resources/namespace.
-			environment.Managed(c.T),
-		)
-		env.Test(ctx, c.T, fe.VerifyF)
+		fe.setupEnv.Test(fe.setupCtx, c.T, fe.VerifyF)
+		// Ensures teardown of resources/namespace.
+		fe.setupEnv.Finish()
 	})
 }
 
@@ -117,7 +104,6 @@ func (fe *DurableFeature) SetupVerifyTeardown(label string) pkgupgrade.Operation
 			knative.WithLoggingConfig,
 			knative.WithTracingConfig,
 			k8s.WithEventListener,
-			// Ensures teardown of resources/namespace.
 			environment.Managed(c.T),
 		)
 		env.Test(ctx, c.T, fe.SetupF)
@@ -132,30 +118,30 @@ type FeatureWithUpgradeTests interface {
 }
 
 // NewFeatureGroupOnlyUpgrade creates a new feature group with these actions:
-// Pre-upgrade: Setup, Assert
-// Post-upgrade: Assert, Teardown
+// Pre-upgrade: Setup, Verify
+// Post-upgrade: Verify, Teardown
 // Post-downgrade: no-op.
-func NewFeatureGroupOnlyUpgrade(fg *DurableFeatureGroup) featureGroupWithPostUpgradeTeardown {
-	return featureGroupWithPostUpgradeTeardown{
+func NewFeatureGroupOnlyUpgrade(fg *DurableFeatureGroup) featureGroupOnlyUpgrade {
+	return featureGroupOnlyUpgrade{
 		label: "OnlyUpgrade",
 		group: fg,
 	}
 }
 
-type featureGroupWithPostUpgradeTeardown struct {
+type featureGroupOnlyUpgrade struct {
 	label string
 	group *DurableFeatureGroup
 }
 
-func (f *featureGroupWithPostUpgradeTeardown) PreUpgradeTests() []pkgupgrade.Operation {
+func (f *featureGroupOnlyUpgrade) PreUpgradeTests() []pkgupgrade.Operation {
 	return f.group.Setup(f.label)
 }
 
-func (f *featureGroupWithPostUpgradeTeardown) PostUpgradeTests() []pkgupgrade.Operation {
+func (f *featureGroupOnlyUpgrade) PostUpgradeTests() []pkgupgrade.Operation {
 	return f.group.VerifyTeardown(f.label)
 }
 
-func (f *featureGroupWithPostUpgradeTeardown) PostDowngradeTests() []pkgupgrade.Operation {
+func (f *featureGroupOnlyUpgrade) PostDowngradeTests() []pkgupgrade.Operation {
 	// No-op. Teardown was done post-upgrade.
 	return nil
 }
@@ -164,28 +150,28 @@ func (f *featureGroupWithPostUpgradeTeardown) PostDowngradeTests() []pkgupgrade.
 // Pre-upgrade: Setup, Verify.
 // Post-upgrade: Verify.
 // Post-downgrade: Verify, Teardown.
-func NewFeatureGroupUpgradeDowngrade(fg *DurableFeatureGroup) featureGroupWithPostDowngradeTeardown {
-	return featureGroupWithPostDowngradeTeardown{
+func NewFeatureGroupUpgradeDowngrade(fg *DurableFeatureGroup) featureGroupUpgradeDowngrade {
+	return featureGroupUpgradeDowngrade{
 		label: "BothUpgradeDowngrade",
 		group: fg,
 	}
 }
 
-type featureGroupWithPostDowngradeTeardown struct {
+type featureGroupUpgradeDowngrade struct {
 	label string
 	group *DurableFeatureGroup
 }
 
-func (f *featureGroupWithPostDowngradeTeardown) PreUpgradeTests() []pkgupgrade.Operation {
+func (f *featureGroupUpgradeDowngrade) PreUpgradeTests() []pkgupgrade.Operation {
 	return f.group.Setup(f.label)
 }
 
-func (f *featureGroupWithPostDowngradeTeardown) PostUpgradeTests() []pkgupgrade.Operation {
+func (f *featureGroupUpgradeDowngrade) PostUpgradeTests() []pkgupgrade.Operation {
 	// PostUpgrade only asserts existing resources. Teardown will be done post-downgrade.
 	return f.group.Verify(f.label)
 }
 
-func (f *featureGroupWithPostDowngradeTeardown) PostDowngradeTests() []pkgupgrade.Operation {
+func (f *featureGroupUpgradeDowngrade) PostDowngradeTests() []pkgupgrade.Operation {
 	return f.group.VerifyTeardown(f.label)
 }
 
@@ -193,29 +179,29 @@ func (f *featureGroupWithPostDowngradeTeardown) PostDowngradeTests() []pkgupgrad
 // Pre-upgrade: no-op.
 // Post-upgrade: Setup, Verify.
 // Post-downgrade: Verify, Teardown.
-func NewFeatureGroupOnlyDowngrade(fg *DurableFeatureGroup) featureGroupWithPostUpgradeSetup {
-	return featureGroupWithPostUpgradeSetup{
+func NewFeatureGroupOnlyDowngrade(fg *DurableFeatureGroup) featureGroupOnlyDowngrade {
+	return featureGroupOnlyDowngrade{
 		label: "OnlyDowngrade",
 		group: fg,
 	}
 }
 
-type featureGroupWithPostUpgradeSetup struct {
+type featureGroupOnlyDowngrade struct {
 	label string
 	group *DurableFeatureGroup
 }
 
-func (f *featureGroupWithPostUpgradeSetup) PreUpgradeTests() []pkgupgrade.Operation {
+func (f *featureGroupOnlyDowngrade) PreUpgradeTests() []pkgupgrade.Operation {
 	// No-op. Resources will be created post-upgrade.
 	return nil
 }
 
-func (f *featureGroupWithPostUpgradeSetup) PostUpgradeTests() []pkgupgrade.Operation {
+func (f *featureGroupOnlyDowngrade) PostUpgradeTests() []pkgupgrade.Operation {
 	// Resources created post-upgrade.
 	return f.group.Setup(f.label)
 }
 
-func (f *featureGroupWithPostUpgradeSetup) PostDowngradeTests() []pkgupgrade.Operation {
+func (f *featureGroupOnlyDowngrade) PostDowngradeTests() []pkgupgrade.Operation {
 	// Assert and Teardown is done post-downgrade.
 	return f.group.VerifyTeardown(f.label)
 }
