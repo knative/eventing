@@ -61,7 +61,7 @@ type DurableFeature struct {
 }
 
 func (fe *DurableFeature) Setup(label string) pkgupgrade.Operation {
-	return pkgupgrade.NewOperation(label+"/Setup/", func(c pkgupgrade.Context) {
+	return pkgupgrade.NewOperation(label, func(c pkgupgrade.Context) {
 		c.T.Parallel()
 		ctx, env := fe.Global.Environment(
 			knative.WithKnativeNamespace(system.Namespace()),
@@ -76,7 +76,7 @@ func (fe *DurableFeature) Setup(label string) pkgupgrade.Operation {
 }
 
 func (fe *DurableFeature) Verify(label string) pkgupgrade.Operation {
-	return pkgupgrade.NewOperation(label+"/Verify/", func(c pkgupgrade.Context) {
+	return pkgupgrade.NewOperation(label, func(c pkgupgrade.Context) {
 		c.T.Parallel()
 		ctx, env := fe.Global.Environment(
 			knative.WithKnativeNamespace(system.Namespace()),
@@ -92,7 +92,7 @@ func (fe *DurableFeature) Verify(label string) pkgupgrade.Operation {
 }
 
 func (fe *DurableFeature) VerifyTeardown(label string) pkgupgrade.Operation {
-	return pkgupgrade.NewOperation(label+"/VerifyTeardown/", func(c pkgupgrade.Context) {
+	return pkgupgrade.NewOperation(label, func(c pkgupgrade.Context) {
 		c.T.Parallel()
 		ctx, env := fe.Global.Environment(
 			knative.WithKnativeNamespace(system.Namespace()),
@@ -108,7 +108,7 @@ func (fe *DurableFeature) VerifyTeardown(label string) pkgupgrade.Operation {
 }
 
 func (fe *DurableFeature) SetupVerifyTeardown(label string) pkgupgrade.Operation {
-	return pkgupgrade.NewOperation(label+"/SetupVerifyTeardown", func(c pkgupgrade.Context) {
+	return pkgupgrade.NewOperation(label, func(c pkgupgrade.Context) {
 		c.T.Parallel()
 		ctx, env := fe.Global.Environment(
 			knative.WithKnativeNamespace(system.Namespace()),
