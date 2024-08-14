@@ -41,6 +41,7 @@ const (
 	OIDCEnabledEnv                         = "ENABLE_OIDC_AUTH"
 	OIDCGenerateExpiredTokenEnv            = "OIDC_GENERATE_EXPIRED_TOKEN"
 	OIDCGenerateInvalidAudienceTokenEnv    = "OIDC_GENERATE_INVALID_AUDIENCE_TOKEN"
+	OIDCSubjectEnv                         = "OIDC_SUBJECT"
 	OIDCGenerateCorruptedSignatureTokenEnv = "OIDC_GENERATE_CORRUPTED_SIG_TOKEN"
 	OIDCSinkAudienceEnv                    = "OIDC_SINK_AUDIENCE"
 	OIDCReceiverAudienceEnv                = "OIDC_AUDIENCE"

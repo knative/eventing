@@ -35,18 +35,17 @@ import (
 // NewSubscription returns a placeholder subscription for trigger 't', from brokerTrigger to 'dest'
 // replying to brokerIngress.
 func NewSubscription(ctx context.Context, t *eventingv1.Trigger, brokerTrigger *corev1.ObjectReference, dest, reply *duckv1.Destination, delivery *eventingduckv1.DeliverySpec) *messagingv1.Subscription {
-	var broker, channelNamespace string
-	if t.Spec.BrokerRef != nil && feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) {
-		broker = t.Spec.BrokerRef.Name
+	features := feature.FromContext(ctx)
+	var channelNamespace string
+	if t.Spec.BrokerRef != nil && features.IsEnabled(feature.CrossNamespaceEventLinks) {
 		channelNamespace = t.Spec.BrokerRef.Namespace
 	} else {
-		broker = t.Spec.Broker
 		channelNamespace = ""
 	}
 	return &messagingv1.Subscription{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: t.Namespace,
-			Name:      kmeta.ChildName(fmt.Sprintf("%s-%s-", broker, t.Name), string(t.GetUID())),
+			Name:      SubscriptionName(features, t),
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(t),
 			},
@@ -64,6 +63,18 @@ func NewSubscription(ctx context.Context, t *eventingv1.Trigger, brokerTrigger *
 			Delivery:   delivery,
 		},
 	}
+}
+
+// SubscriptionName returns the name of the Subscription for the given Trigger
+func SubscriptionName(features feature.Flags, trigger *eventingv1.Trigger) string {
+	var brokerName string
+	if trigger.Spec.BrokerRef != nil && features.IsEnabled(feature.CrossNamespaceEventLinks) {
+		brokerName = trigger.Spec.BrokerRef.Name
+	} else {
+		brokerName = trigger.Spec.Broker
+	}
+
+	return kmeta.ChildName(fmt.Sprintf("%s-%s-", brokerName, trigger.Name), string(trigger.GetUID()))
 }
 
 // SubscriptionLabels generates the labels present on the Subscription linking this Trigger to the

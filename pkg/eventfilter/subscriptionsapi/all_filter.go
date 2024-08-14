@@ -42,6 +42,11 @@ type allFilter struct {
 
 // NewAllFilter returns an event filter which passes if all the contained filters pass
 func NewAllFilter(filters ...eventfilter.Filter) eventfilter.Filter {
+	// just one filter, no need to create a new AllFilter
+	if len(filters) == 1 {
+		return filters[0]
+	}
+
 	filterCounts := make([]filterCount, len(filters))
 	for i, filter := range filters {
 		filterCounts[i] = filterCount{
