@@ -49,7 +49,7 @@ func TestEventingUpgrades(t *testing.T) {
 	defer canceler()
 
 	commonFeatureGroup := &DurableFeatureGroup{
-		InMemoryChannelFeature(glob),
+		InMemoryChannelFeature(global),
 	}
 	// Feature group that will run the same test post-upgrade and post-downgrade
 	// creating new resource every time.
