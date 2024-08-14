@@ -43,6 +43,7 @@ func AddressableAuthZConformance(gvr schema.GroupVersionResource, kind, name str
 			addressableAllowsAuthorizedRequest(gvr, kind, name),
 			addressableRejectsUnauthorizedRequest(gvr, kind, name),
 			addressableBecomesUnreadyOnUnreadyEventPolicy(gvr, kind, name),
+			addressableRespectsEventPolicyFilters(gvr, kind, name),
 		},
 	}
 	return &fs
@@ -127,7 +128,7 @@ func addressableRejectsUnauthorizedRequest(gvr schema.GroupVersionResource, kind
 }
 
 func addressableRespectsEventPolicyFilters(gvr schema.GroupVersionResource, kind, name string) *feature.Feature {
-	f := feature.NewFeatureNamed(fmt.Sprintf("%s only admits events that pass the event policy filter"))
+	f := feature.NewFeatureNamed(fmt.Sprintf("%s only admits events that pass the event policy filter", kind))
 
 	f.Prerequisite("OIDC authentication is enabled", featureflags.AuthenticationOIDCEnabled())
 	f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
