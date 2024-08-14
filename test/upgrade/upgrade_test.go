@@ -49,30 +49,35 @@ func TestEventingUpgrades(t *testing.T) {
 	canceler := testlib.ExportLogStreamOnError(t, testlib.SystemLogsDir, system.Namespace(), labels...)
 	defer canceler()
 
-	commonFeatureGroup := &DurableFeatureGroup{
-		InMemoryChannelFeature(global),
-	}
 	// Feature group that will run the same test post-upgrade and post-downgrade
 	// creating new resource every time.
 	// Pre-upgrade: no-op.
 	// Post-upgrade: Setup, Verify, Teardown
 	// Post-downgrade: Setup, Verify, Teardown
-	featSmoke := NewFeatureGroupSmoke(commonFeatureGroup)
+	featSmoke := NewFeatureGroupSmoke(DurableFeatureGroup{
+		InMemoryChannelFeature(global),
+	})
 	// Feature group that will be created pre-upgrade and verified/removed post-upgrade.
 	// Pre-upgrade: Setup, Verify
 	// Post-upgrade: Verify, Teardown
 	// Post-downgrade: no-op.
-	featOnlyUpgrade := NewFeatureGroupOnlyUpgrade(commonFeatureGroup)
+	featOnlyUpgrade := NewFeatureGroupOnlyUpgrade(DurableFeatureGroup{
+		InMemoryChannelFeature(global),
+	})
 	// Feature group that will be created pre-upgrade and verified post-upgrade, verified and removed post-downgrade
 	// Pre-upgrade: Setup, Verify.
 	// Post-upgrade: Verify.
 	// Post-downgrade: Verify, Teardown.
-	featBothUpgradeDowngrade := NewFeatureGroupUpgradeDowngrade(commonFeatureGroup)
+	featBothUpgradeDowngrade := NewFeatureGroupUpgradeDowngrade(DurableFeatureGroup{
+		InMemoryChannelFeature(global),
+	})
 	// Feature group that will be created post-upgrade, verified and removed post-downgrade.
 	// Pre-upgrade: no-op.
 	// Post-upgrade: Setup, Verify.
 	// Post-downgrade: Verify, Teardown.
-	featOnlyDowngrade := NewFeatureGroupOnlyDowngrade(commonFeatureGroup)
+	featOnlyDowngrade := NewFeatureGroupOnlyDowngrade(DurableFeatureGroup{
+		InMemoryChannelFeature(global),
+	})
 
 	suite := pkgupgrade.Suite{
 		Tests: pkgupgrade.Tests{

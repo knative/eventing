@@ -121,7 +121,7 @@ type FeatureWithUpgradeTests interface {
 // Pre-upgrade: Setup, Verify
 // Post-upgrade: Verify, Teardown
 // Post-downgrade: no-op.
-func NewFeatureGroupOnlyUpgrade(fg *DurableFeatureGroup) featureGroupOnlyUpgrade {
+func NewFeatureGroupOnlyUpgrade(fg DurableFeatureGroup) featureGroupOnlyUpgrade {
 	return featureGroupOnlyUpgrade{
 		label: "OnlyUpgrade",
 		group: fg,
@@ -130,7 +130,7 @@ func NewFeatureGroupOnlyUpgrade(fg *DurableFeatureGroup) featureGroupOnlyUpgrade
 
 type featureGroupOnlyUpgrade struct {
 	label string
-	group *DurableFeatureGroup
+	group DurableFeatureGroup
 }
 
 func (f *featureGroupOnlyUpgrade) PreUpgradeTests() []pkgupgrade.Operation {
@@ -150,7 +150,7 @@ func (f *featureGroupOnlyUpgrade) PostDowngradeTests() []pkgupgrade.Operation {
 // Pre-upgrade: Setup, Verify.
 // Post-upgrade: Verify.
 // Post-downgrade: Verify, Teardown.
-func NewFeatureGroupUpgradeDowngrade(fg *DurableFeatureGroup) featureGroupUpgradeDowngrade {
+func NewFeatureGroupUpgradeDowngrade(fg DurableFeatureGroup) featureGroupUpgradeDowngrade {
 	return featureGroupUpgradeDowngrade{
 		label: "BothUpgradeDowngrade",
 		group: fg,
@@ -159,7 +159,7 @@ func NewFeatureGroupUpgradeDowngrade(fg *DurableFeatureGroup) featureGroupUpgrad
 
 type featureGroupUpgradeDowngrade struct {
 	label string
-	group *DurableFeatureGroup
+	group DurableFeatureGroup
 }
 
 func (f *featureGroupUpgradeDowngrade) PreUpgradeTests() []pkgupgrade.Operation {
@@ -179,7 +179,7 @@ func (f *featureGroupUpgradeDowngrade) PostDowngradeTests() []pkgupgrade.Operati
 // Pre-upgrade: no-op.
 // Post-upgrade: Setup, Verify.
 // Post-downgrade: Verify, Teardown.
-func NewFeatureGroupOnlyDowngrade(fg *DurableFeatureGroup) featureGroupOnlyDowngrade {
+func NewFeatureGroupOnlyDowngrade(fg DurableFeatureGroup) featureGroupOnlyDowngrade {
 	return featureGroupOnlyDowngrade{
 		label: "OnlyDowngrade",
 		group: fg,
@@ -188,7 +188,7 @@ func NewFeatureGroupOnlyDowngrade(fg *DurableFeatureGroup) featureGroupOnlyDowng
 
 type featureGroupOnlyDowngrade struct {
 	label string
-	group *DurableFeatureGroup
+	group DurableFeatureGroup
 }
 
 func (f *featureGroupOnlyDowngrade) PreUpgradeTests() []pkgupgrade.Operation {
@@ -210,7 +210,7 @@ func (f *featureGroupOnlyDowngrade) PostDowngradeTests() []pkgupgrade.Operation 
 // Pre-upgrade: no-op.
 // Post-upgrade: Setup, Verify, Teardown.
 // Post-downgrade: Setup, Verify, Teardown.
-func NewFeatureGroupSmoke(fg *DurableFeatureGroup) featureGroupSmoke {
+func NewFeatureGroupSmoke(fg DurableFeatureGroup) featureGroupSmoke {
 	return featureGroupSmoke{
 		label: "Smoke",
 		group: fg,
@@ -219,7 +219,7 @@ func NewFeatureGroupSmoke(fg *DurableFeatureGroup) featureGroupSmoke {
 
 type featureGroupSmoke struct {
 	label string
-	group *DurableFeatureGroup
+	group DurableFeatureGroup
 }
 
 func (f *featureGroupSmoke) PreUpgradeTests() []pkgupgrade.Operation {
@@ -235,7 +235,7 @@ func (f *featureGroupSmoke) PostDowngradeTests() []pkgupgrade.Operation {
 	return f.group.SetupVerifyTeardown(f.label)
 }
 
-type DurableFeatureGroup []*DurableFeature
+type DurableFeatureGroup []DurableFeature
 
 func (fg DurableFeatureGroup) Setup(label string) []pkgupgrade.Operation {
 	ops := make([]pkgupgrade.Operation, 0, len(fg))
@@ -269,7 +269,7 @@ func (fg DurableFeatureGroup) SetupVerifyTeardown(label string) []pkgupgrade.Ope
 	return ops
 }
 
-func InMemoryChannelFeature(glob environment.GlobalEnvironment) *DurableFeature {
+func InMemoryChannelFeature(glob environment.GlobalEnvironment) DurableFeature {
 	// Prevent race conditions on channel_impl.EnvCfg.ChannelGK when running tests in parallel.
 	mux.Lock()
 	defer mux.Unlock()
@@ -286,5 +286,5 @@ func InMemoryChannelFeature(glob environment.GlobalEnvironment) *DurableFeature 
 	verifyF := feature.NewFeature()
 	channel.ChannelChainAssert(verifyF, sink, ch)
 
-	return &DurableFeature{SetupF: setupF, VerifyF: verifyF, Global: glob}
+	return DurableFeature{SetupF: setupF, VerifyF: verifyF, Global: glob}
 }
