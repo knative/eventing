@@ -26,12 +26,6 @@ import (
 	"net/http"
 	"time"
 
-	"go.opencensus.io/resource"
-	"go.opencensus.io/tag"
-	"knative.dev/pkg/metrics/metricskey"
-
-	eventingmetrics "knative.dev/eventing/pkg/metrics"
-
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	messaginginformers "knative.dev/eventing/pkg/client/informers/externalversions/messaging/v1"
 	"knative.dev/eventing/pkg/reconciler/broker/resources"
@@ -86,7 +80,7 @@ const (
 // Handler parses Cloud Events, determines if they pass a filter, and sends them to a subscriber.
 type Handler struct {
 	// reporter reports stats of status code and dispatch time
-	reporter eventingmetrics.StatsReporter
+	reporter StatsReporter
 
 	eventDispatcher *kncloudevents.Dispatcher
 
@@ -100,45 +94,8 @@ type Handler struct {
 	EventTypeCreator   *eventtype.EventTypeAutoHandler
 }
 
-type BrokerArgs struct {
-	ns            string
-	trigger       string
-	broker        string
-	filterType    string
-	requestType   string
-	requestScheme string
-}
-
-var (
-	triggerFilterTypeKey          = tag.MustNewKey(eventingmetrics.LabelFilterType)
-	triggerFilterRequestTypeKey   = tag.MustNewKey("filter_request_type")
-	triggerFilterRequestSchemeKey = tag.MustNewKey(eventingmetrics.LabelEventScheme)
-	responseCodeKey               = tag.MustNewKey(eventingmetrics.LabelResponseCode)
-	responseCodeClassKey          = tag.MustNewKey(eventingmetrics.LabelResponseCodeClass)
-)
-
-func (args *BrokerArgs) GenerateTag(tags ...tag.Mutator) (context.Context, error) {
-	ctx := metricskey.WithResource(eventingmetrics.EmptyContext, resource.Resource{
-		Type: eventingmetrics.ResourceTypeKnativeTrigger,
-		Labels: map[string]string{
-			eventingmetrics.LabelNamespaceName: args.ns,
-			eventingmetrics.LabelBrokerName:    args.broker,
-			eventingmetrics.LabelTriggerName:   args.trigger,
-		},
-	})
-	// Note that filterType and filterSource can be empty strings, so they need a special treatment.
-	ctx, err := tag.New(
-		ctx,
-		append(tags,
-			tag.Insert(triggerFilterTypeKey, eventingmetrics.ValueOrAny(args.filterType)),
-			tag.Insert(triggerFilterRequestTypeKey, args.requestType),
-			tag.Insert(triggerFilterRequestSchemeKey, args.requestScheme),
-		)...)
-	return ctx, err
-}
-
 // NewHandler creates a new Handler and its associated EventReceiver.
-func NewHandler(logger *zap.Logger, tokenVerifier *auth.OIDCTokenVerifier, oidcTokenProvider *auth.OIDCTokenProvider, triggerInformer v1.TriggerInformer, brokerInformer v1.BrokerInformer, subscriptionInformer messaginginformers.SubscriptionInformer, reporter eventingmetrics.StatsReporter, trustBundleConfigMapLister corev1listers.ConfigMapNamespaceLister, wc func(ctx context.Context) context.Context) (*Handler, error) {
+func NewHandler(logger *zap.Logger, tokenVerifier *auth.OIDCTokenVerifier, oidcTokenProvider *auth.OIDCTokenProvider, triggerInformer v1.TriggerInformer, brokerInformer v1.BrokerInformer, subscriptionInformer messaginginformers.SubscriptionInformer, reporter StatsReporter, trustBundleConfigMapLister corev1listers.ConfigMapNamespaceLister, wc func(ctx context.Context) context.Context) (*Handler, error) {
 	kncloudevents.ConfigureConnectionArgs(&kncloudevents.ConnectionArgs{
 		MaxIdleConns:        defaultMaxIdleConnections,
 		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
@@ -317,11 +274,10 @@ func (h *Handler) handleDispatchToReplyRequest(ctx context.Context, trigger *eve
 
 	target := broker.Status.Address
 
-	reportArgs := &BrokerArgs{
+	reportArgs := &ReportArgs{
 		ns:          trigger.Namespace,
 		trigger:     trigger.Name,
 		broker:      brokerName,
-		filterType:  triggerFilterAttribute(trigger.Spec.Filter, "type"),
 		requestType: "reply_forward",
 	}
 
@@ -376,7 +332,7 @@ func (h *Handler) handleDispatchToDLSRequest(ctx context.Context, trigger *event
 		}
 	}
 
-	reportArgs := &BrokerArgs{
+	reportArgs := &ReportArgs{
 		ns:          trigger.Namespace,
 		trigger:     trigger.Name,
 		broker:      brokerName,
@@ -427,7 +383,7 @@ func (h *Handler) handleDispatchToSubscriberRequest(ctx context.Context, trigger
 		h.logger.Warn("Failed to delete TTL.", zap.Error(err))
 	}
 
-	reportArgs := &BrokerArgs{
+	reportArgs := &ReportArgs{
 		ns:          trigger.Namespace,
 		trigger:     trigger.Name,
 		broker:      brokerName,
@@ -470,7 +426,7 @@ func (h *Handler) handleDispatchToSubscriberRequest(ctx context.Context, trigger
 	h.send(ctx, writer, utils.PassThroughHeaders(request.Header), target, reportArgs, event, trigger, ttl)
 }
 
-func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers http.Header, target duckv1.Addressable, reportArgs *BrokerArgs, event *cloudevents.Event, t *eventingv1.Trigger, ttl int32) {
+func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers http.Header, target duckv1.Addressable, reportArgs *ReportArgs, event *cloudevents.Event, t *eventingv1.Trigger, ttl int32) {
 	additionalHeaders := headers.Clone()
 	additionalHeaders.Set(apis.KnNamespaceHeader, t.GetNamespace())
 
@@ -603,7 +559,7 @@ func (h *Handler) writeResponse(ctx context.Context, writer http.ResponseWriter,
 	return dispatchInfo.ResponseCode, nil
 }
 
-func (h *Handler) reportArrivalTime(event *event.Event, reportArgs *BrokerArgs) {
+func (h *Handler) reportArrivalTime(event *event.Event, reportArgs *ReportArgs) {
 	// Record the event processing time. This might be off if the receiver and the filter pods are running in
 	// different nodes with different clocks.
 	var arrivalTimeStr string

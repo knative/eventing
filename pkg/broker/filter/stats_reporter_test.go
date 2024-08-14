@@ -17,13 +17,9 @@ limitations under the License.
 package filter
 
 import (
-	"context"
 	"net/http"
 	"testing"
 	"time"
-
-	"go.opencensus.io/tag"
-	"knative.dev/pkg/metrics/metricskey"
 
 	"go.opencensus.io/resource"
 	broker "knative.dev/eventing/pkg/broker"
@@ -32,50 +28,16 @@ import (
 	_ "knative.dev/pkg/metrics/testing"
 )
 
-type TestArgs struct {
-	ns            string
-	trigger       string
-	broker        string
-	filterType    string
-	requestType   string
-	requestScheme string
-	container     string
-	uniqueName    string
-}
-
-func (args *TestArgs) GenerateTag(tags ...tag.Mutator) (context.Context, error) {
-	ctx := metricskey.WithResource(metrics.EmptyContext, resource.Resource{
-		Type: metrics.ResourceTypeKnativeTrigger,
-		Labels: map[string]string{
-			metrics.LabelNamespaceName: args.ns,
-			metrics.LabelBrokerName:    args.broker,
-			metrics.LabelTriggerName:   args.trigger,
-		},
-	})
-	// Note that filterType and filterSource can be empty strings, so they need a special treatment.
-	ctx, err := tag.New(
-		ctx,
-		append(tags,
-			tag.Insert(broker.ContainerTagKey, args.container),
-			tag.Insert(broker.UniqueTagKey, args.uniqueName),
-			tag.Insert(triggerFilterTypeKey, metrics.ValueOrAny(args.filterType)),
-			tag.Insert(triggerFilterRequestTypeKey, args.requestType),
-			tag.Insert(triggerFilterRequestSchemeKey, args.requestScheme),
-		)...)
-	return ctx, err
-}
 func TestStatsReporter(t *testing.T) {
 	setup()
-	args := &TestArgs{
+	args := &ReportArgs{
 		ns:         "testns",
 		trigger:    "testtrigger",
 		broker:     "testbroker",
 		filterType: "testeventtype",
-		container:  "testcontainer",
-		uniqueName: "testpod",
 	}
 
-	r := metrics.NewStatsReporter("testcontainer", "testpod")
+	r := NewStatsReporter("testcontainer", "testpod")
 
 	wantTags := map[string]string{
 		metrics.LabelFilterType:   "testeventtype",
@@ -133,20 +95,18 @@ func TestStatsReporter(t *testing.T) {
 func TestReporterEmptySourceAndTypeFilter(t *testing.T) {
 	setup()
 
-	args := &TestArgs{
+	args := &ReportArgs{
 		ns:            "testns",
 		trigger:       "testtrigger",
 		broker:        "testbroker",
 		filterType:    "",
 		requestScheme: "http",
-		container:     "testcontainer",
-		uniqueName:    "testpod",
 	}
 
-	r := metrics.NewStatsReporter("testcontainer", "testpod")
+	r := NewStatsReporter("testcontainer", "testpod")
 
 	wantTags := map[string]string{
-		metrics.LabelFilterType:        metrics.AnyValue,
+		metrics.LabelFilterType:        anyValue,
 		metrics.LabelResponseCode:      "202",
 		metrics.LabelResponseCodeClass: "2xx",
 		broker.LabelContainerName:      "testcontainer",
@@ -196,5 +156,5 @@ func resetMetrics() {
 		"event_count",
 		"event_dispatch_latencies",
 		"event_processing_latencies")
-	metrics.Register()
+	register()
 }
