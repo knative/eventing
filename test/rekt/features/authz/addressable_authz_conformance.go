@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"time"
 
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/test/rekt/resources/eventpolicy"
 	"knative.dev/eventing/test/rekt/resources/pingsource"
 	"knative.dev/reconciler-test/pkg/environment"
@@ -121,6 +122,73 @@ func addressableRejectsUnauthorizedRequest(gvr schema.GroupVersionResource, kind
 	f.Alpha(kind).
 		Must("event sent", eventassert.OnStore(source).MatchSentEvent(test.HasId(event.ID())).Exact(1)).
 		Must("get 403 on response", eventassert.OnStore(source).Match(eventassert.MatchStatusCode(403)).AtLeast(1))
+
+	return f
+}
+
+func addressableRespectsEventPolicyFilters(gvr schema.GroupVersionResource, kind, name string) *feature.Feature {
+	f := feature.NewFeatureNamed(fmt.Sprintf("%s only admits events that pass the event policy filter"))
+
+	f.Prerequisite("OIDC authentication is enabled", featureflags.AuthenticationOIDCEnabled())
+	f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
+	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
+
+	eventPolicy := feature.MakeRandomK8sName("eventpolicy")
+	source1 := feature.MakeRandomK8sName("source")
+	sourceSubject1 := feature.MakeRandomK8sName("source-oidc-identity")
+	source2 := feature.MakeRandomK8sName("source")
+	sourceSubject2 := feature.MakeRandomK8sName("source-oidc-identity")
+
+	event1 := test.FullEvent()
+	event1.SetType("valid.event.type")
+	event1.SetID("1")
+	event2 := test.FullEvent()
+	event2.SetType("invalid.event.type")
+	event2.SetID("2")
+
+	// Install event policy
+	f.Setup("Install the EventPolicy", func(ctx context.Context, t feature.T) {
+		namespace := environment.FromContext(ctx).Namespace()
+		eventpolicy.Install(
+			eventPolicy,
+			eventpolicy.WithToRef(
+				gvr.GroupVersion().WithKind(kind),
+				name),
+			eventpolicy.WithFromSubject(fmt.Sprintf("system:serviceaccount:%s:%s", namespace, sourceSubject1)),
+			eventpolicy.WithFromSubject(fmt.Sprintf("system:serviceaccount:%s:%s", namespace, sourceSubject2)),
+			eventpolicy.WithFilters([]eventingv1.SubscriptionsAPIFilter{
+				{
+					Prefix: map[string]string{
+						"type": "valid",
+					},
+				},
+			}),
+		)(ctx, t)
+	})
+	f.Setup(fmt.Sprintf("EventPolicy for %s %s is ready", kind, name), k8s.IsReady(gvr, name))
+
+	// Install source
+	f.Requirement("install source 1", eventshub.Install(
+		source1,
+		eventshub.StartSenderToResourceTLS(gvr, name, nil),
+		eventshub.InputEvent(event1),
+		eventshub.OIDCSubject(sourceSubject1),
+	))
+
+	f.Requirement("install source 2", eventshub.Install(
+		source2,
+		eventshub.StartSenderToResourceTLS(gvr, name, nil),
+		eventshub.InputEvent(event2),
+		eventshub.OIDCSubject(sourceSubject2),
+	))
+
+	f.Alpha(kind).
+		Must("valid event sent", eventassert.OnStore(source1).MatchSentEvent(test.HasId(event1.ID())).Exact(1)).
+		Must("get 202 on response", eventassert.OnStore(source1).Match(eventassert.MatchStatusCode(202)).AtLeast(1))
+
+	f.Alpha(kind).
+		Must("invalid event sent", eventassert.OnStore(source2).MatchSentEvent(test.HasId(event2.ID())).Exact(1)).
+		Must("get 403 on response", eventassert.OnStore(source2).Match(eventassert.MatchStatusCode(403)).AtLeast(1))
 
 	return f
 }
