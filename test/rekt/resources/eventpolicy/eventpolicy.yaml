@@ -71,4 +71,4 @@ spec:
   {{ if .filters }}
   filters:
 {{ .filters }}
-  {{ .end }}
+  {{ end }}
