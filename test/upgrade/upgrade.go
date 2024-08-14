@@ -51,8 +51,10 @@ func RunMainTest(m *testing.M) {
 	}())
 }
 
-// DurableFeature holds the setup and verify feature. The "setup" feature should set up
-// the feature. The "verify" feature should only verify its function.
+// DurableFeature holds the setup and verify phase of a feature. The "setup" phase should set up
+// the feature. The "verify" phase should only verify its function. It should be possible to
+// call this function multiple times and still properly verify the feature (e.g. one call
+// after upgrade, one call after downgrade).
 type DurableFeature struct {
 	SetupF    *feature.Feature
 	VerifyF   *feature.Feature

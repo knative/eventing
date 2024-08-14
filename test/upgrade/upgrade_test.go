@@ -22,6 +22,7 @@ package upgrade
 import (
 	"flag"
 	"log"
+	"slices"
 	"testing"
 
 	"knative.dev/eventing/test"
@@ -75,13 +76,13 @@ func TestEventingUpgrades(t *testing.T) {
 
 	suite := pkgupgrade.Suite{
 		Tests: pkgupgrade.Tests{
-			PreUpgrade: merge(
+			PreUpgrade: slices.Concat(
 				featSmoke.PreUpgradeTests(),
 				featOnlyUpgrade.PreUpgradeTests(),
 				featBothUpgradeDowngrade.PreUpgradeTests(),
 				featOnlyDowngrade.PreUpgradeTests(),
 			),
-			PostUpgrade: merge(
+			PostUpgrade: slices.Concat(
 				[]pkgupgrade.Operation{
 					CRDPostUpgradeTest(),
 				},
@@ -90,7 +91,7 @@ func TestEventingUpgrades(t *testing.T) {
 				featBothUpgradeDowngrade.PostUpgradeTests(),
 				featOnlyDowngrade.PostUpgradeTests(),
 			),
-			PostDowngrade: merge(
+			PostDowngrade: slices.Concat(
 				featSmoke.PostDowngradeTests(),
 				featOnlyUpgrade.PostDowngradeTests(),
 				featBothUpgradeDowngrade.PostDowngradeTests(),
@@ -133,16 +134,4 @@ func TestMain(m *testing.M) {
 
 	flag.Parse()
 	RunMainTest(m)
-}
-
-func merge(slices ...[]pkgupgrade.Operation) []pkgupgrade.Operation {
-	l := 0
-	for _, slice := range slices {
-		l += len(slice)
-	}
-	result := make([]pkgupgrade.Operation, 0, l)
-	for _, slice := range slices {
-		result = append(result, slice...)
-	}
-	return result
 }
