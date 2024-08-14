@@ -50,24 +50,13 @@ var (
 		stats.UnitMilliseconds,
 	)
 
-	// processingTimeInMsecM records the time spent between arrival at the Broker
-	// and the delivery to the Trigger subscriber.
-	processingTimeInMsecM = stats.Float64(
-		"event_processing_latencies",
-		"The time spent processing an event before it is dispatched to a Trigger subscriber",
-		stats.UnitMilliseconds,
-	)
-
 	// Create the tag keys that will be used to add tags to our measurements.
 	// Tag keys must conform to the restrictions described in
 	// go.opencensus.io/tag/validate.go. Currently those restrictions are:
 	// - length between 1 and 255 inclusive
 	// - characters are printable US-ASCII
-	triggerFilterTypeKey          = tag.MustNewKey(LabelFilterType)
-	triggerFilterRequestTypeKey   = tag.MustNewKey("filter_request_type")
-	triggerFilterRequestSchemeKey = tag.MustNewKey(LabelEventScheme)
-	responseCodeKey               = tag.MustNewKey(LabelResponseCode)
-	responseCodeClassKey          = tag.MustNewKey(LabelResponseCodeClass)
+	responseCodeKey      = tag.MustNewKey(LabelResponseCode)
+	responseCodeClassKey = tag.MustNewKey(LabelResponseCodeClass)
 )
 
 type MetricArgs interface {
@@ -75,14 +64,13 @@ type MetricArgs interface {
 }
 
 func init() {
-	Register()
+	Register([]stats.Measure{}, nil)
 }
 
 // StatsReporter defines the interface for sending filter metrics.
 type StatsReporter interface {
 	ReportEventCount(args MetricArgs, responseCode int) error
 	ReportEventDispatchTime(args MetricArgs, responseCode int, d time.Duration) error
-	ReportEventProcessingTime(args MetricArgs, d time.Duration) error
 }
 
 var _ StatsReporter = (*reporter)(nil)
@@ -102,67 +90,77 @@ func NewStatsReporter(container, uniqueName string) StatsReporter {
 	}
 }
 
-func Register() {
-	// Create view to see our measurements.
-	err := metrics.RegisterResourceView(
-		&view.View{
+func Register(customMetrics []stats.Measure, customViews []*view.View, customTagKeys ...tag.Key) {
+	commonTagKeys := []tag.Key{responseCodeKey, responseCodeClassKey, tag.MustNewKey("unique_name"), tag.MustNewKey("container_name")}
+	allTagKeys := append(commonTagKeys, customTagKeys...)
+
+	defaultViews := []*view.View{
+		{
 			Description: eventCountM.Description(),
 			Measure:     eventCountM,
 			Aggregation: view.Count(),
-			TagKeys:     []tag.Key{triggerFilterTypeKey, triggerFilterRequestTypeKey, triggerFilterRequestSchemeKey, responseCodeKey, responseCodeClassKey, tag.MustNewKey("unique_name"), tag.MustNewKey("container_name")},
+			TagKeys:     allTagKeys,
 		},
-		&view.View{
+		{
 			Description: dispatchTimeInMsecM.Description(),
 			Measure:     dispatchTimeInMsecM,
-			Aggregation: view.Distribution(metrics.Buckets125(1, 10000)...), // 1, 2, 5, 10, 20, 50, 100, 1000, 5000, 10000
-			TagKeys:     []tag.Key{triggerFilterTypeKey, triggerFilterRequestTypeKey, triggerFilterRequestSchemeKey, responseCodeKey, responseCodeClassKey, tag.MustNewKey("unique_name"), tag.MustNewKey("container_name")},
+			Aggregation: view.Distribution(metrics.Buckets125(1, 10000)...),
+			TagKeys:     allTagKeys,
 		},
-		&view.View{
-			Description: processingTimeInMsecM.Description(),
-			Measure:     processingTimeInMsecM,
-			Aggregation: view.Distribution(metrics.Buckets125(1, 10000)...), // 1, 2, 5, 10, 20, 50, 100, 1000, 5000, 10000
-			TagKeys:     []tag.Key{triggerFilterTypeKey, triggerFilterRequestTypeKey, triggerFilterRequestSchemeKey, tag.MustNewKey("unique_name"), tag.MustNewKey("container_name")},
-		},
-	)
-	if err != nil {
-		log.Printf("failed to register opencensus views, %s", err)
+	}
+
+	// Add custom views for custom metrics
+	for _, metric := range customMetrics {
+		defaultViews = append(defaultViews, &view.View{
+			Description: metric.Description(),
+			Measure:     metric,
+			Aggregation: view.LastValue(), // You can change this aggregation as needed
+			TagKeys:     allTagKeys,
+		})
+	}
+
+	// Append custom views
+	allViews := append(defaultViews, customViews...)
+
+	if err := metrics.RegisterResourceView(allViews...); err != nil {
+		log.Printf("Failed to register opencensus views: %v", err)
 	}
 }
 
 // ReportEventCount captures the event count.
 func (r *reporter) ReportEventCount(args MetricArgs, responseCode int) error {
-	ctx, err := args.GenerateTag(
+	// Create base tags
+	baseTags := []tag.Mutator{
 		tag.Insert(responseCodeKey, strconv.Itoa(responseCode)),
-		tag.Insert(responseCodeClassKey, metrics.ResponseCodeClass(responseCode)))
+		tag.Insert(responseCodeClassKey, metrics.ResponseCodeClass(responseCode)),
+	}
+
+	// Generate context with all tags, including any custom ones from args.GenerateTag
+	ctx, err := args.GenerateTag(baseTags...)
 	if err != nil {
 		return err
 	}
+
 	metrics.Record(ctx, eventCountM.M(1))
 	return nil
 }
 
 // ReportEventDispatchTime captures dispatch times.
 func (r *reporter) ReportEventDispatchTime(args MetricArgs, responseCode int, d time.Duration) error {
-	ctx, err := args.GenerateTag(
+	// Create base tags
+	baseTags := []tag.Mutator{
 		tag.Insert(responseCodeKey, strconv.Itoa(responseCode)),
-		tag.Insert(responseCodeClassKey, metrics.ResponseCodeClass(responseCode)))
+		tag.Insert(responseCodeClassKey, metrics.ResponseCodeClass(responseCode)),
+	}
+
+	// Generate context with all tags, including any custom ones from args.GenerateTag
+	ctx, err := args.GenerateTag(baseTags...)
 	if err != nil {
 		return err
 	}
+
 	// convert time.Duration in nanoseconds to milliseconds.
 	metrics.Record(ctx, dispatchTimeInMsecM.M(float64(d/time.Millisecond)))
-	return nil
-}
-
-// ReportEventProcessingTime captures event processing times.
-func (r *reporter) ReportEventProcessingTime(args MetricArgs, d time.Duration) error {
-	ctx, err := args.GenerateTag()
-	if err != nil {
-		return err
-	}
-
-	// convert time.Duration in nanoseconds to milliseconds.
-	metrics.Record(ctx, processingTimeInMsecM.M(float64(d/time.Millisecond)))
 	return nil
 }
 
