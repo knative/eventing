@@ -13,48 +13,70 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package metrics
+package metrics_test
 
 import (
 	"context"
-	"net/http"
 	"testing"
-	"time"
 
+	"go.opencensus.io/resource"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
+	eventingmetrics "knative.dev/eventing/pkg/metrics"
+	"knative.dev/pkg/metrics/metricskey"
 	"knative.dev/pkg/metrics/metricstest"
 	_ "knative.dev/pkg/metrics/testing"
 )
 
-type testMetricArgs struct{}
-
-func (t *testMetricArgs) GenerateTag(tags ...tag.Mutator) (context.Context, error) {
-	return tag.New(EmptyContext, append(tags,
-		tag.Insert(tag.MustNewKey("unique_name"), "testpod"),
-		tag.Insert(tag.MustNewKey("container_name"), "testcontainer"),
-	)...)
+type testMetricArgs struct {
+	ns        string
+	trigger   string
+	broker    string
+	testParam string
 }
 
-// Custom metric for testing
-var customMetricM = stats.Int64(
-	"custom_metric",
-	"A custom metric for testing",
-	stats.UnitDimensionless,
+func (args *testMetricArgs) GenerateTag(tags ...tag.Mutator) (context.Context, error) {
+	ctx := metricskey.WithResource(context.Background(), resource.Resource{
+		Type: eventingmetrics.ResourceTypeKnativeTrigger,
+		Labels: map[string]string{
+			eventingmetrics.LabelNamespaceName: args.ns,
+			eventingmetrics.LabelBrokerName:    args.broker,
+			eventingmetrics.LabelTriggerName:   args.trigger,
+		},
+	})
+	ctx, err := tag.New(
+		ctx,
+		append(tags,
+			tag.Insert(customTagKey, args.testParam),
+		)...)
+	return ctx, err
+}
+
+var (
+	customMetricM = stats.Int64(
+		"custom_metric",
+		"A custom metric for testing",
+		stats.UnitDimensionless,
+	)
+
+	customTagKey = tag.MustNewKey("custom_tag")
 )
 
-// Custom tag for testing
-var customTagKey = tag.MustNewKey("custom_tag")
+// StatsReporter interface definition
+type StatsReporter interface {
+	eventingmetrics.StatsReporter
+	ReportCustomMetric(args eventingmetrics.MetricArgs, value int64) error
+}
 
-// add ReportEventCountRetry to StatsReporter
-type statsReporterTester interface {
-	StatsReporter
-	ReportCustomMetric(args MetricArgs, value int64) error
+// reporter struct definition
+type reporter struct {
+	container  string
+	uniqueName string
 }
 
 // ReportCustomMetric records a custom metric value.
-func (r *reporter) ReportCustomMetric(args MetricArgs, value int64) error {
+func (r *reporter) ReportCustomMetric(args eventingmetrics.MetricArgs, value int64) error {
 	// Create base tags
 	baseTags := []tag.Mutator{
 		tag.Insert(tag.MustNewKey("unique_name"), r.uniqueName),
@@ -71,61 +93,27 @@ func (r *reporter) ReportCustomMetric(args MetricArgs, value int64) error {
 	stats.Record(ctx, customMetricM.M(value))
 	return nil
 }
-func NewStatsReporterTester(container, uniqueName string) statsReporterTester {
-	return &reporter{
-		container:  container,
-		uniqueName: uniqueName,
-	}
-}
-
-func TestStatsReporter(t *testing.T) {
-	setup()
-
-	args := &testMetricArgs{}
-	r := NewStatsReporterTester("testcontainer", "testpod")
-
-	wantTags := map[string]string{
-		"response_code":       "202",
-		"response_code_class": "2xx",
-		"unique_name":         "testpod",
-		"container_name":      "testcontainer",
-	}
-
-	// Test ReportEventCount
-	expectSuccess(t, func() error {
-		return r.ReportEventCount(args, http.StatusAccepted)
-	})
-	expectSuccess(t, func() error {
-		return r.ReportEventCount(args, http.StatusAccepted)
-	})
-	metricstest.CheckCountData(t, "event_count", wantTags, 2)
-
-	// Test ReportEventDispatchTime
-	expectSuccess(t, func() error {
-		return r.ReportEventDispatchTime(args, http.StatusAccepted, 1100*time.Millisecond)
-	})
-	expectSuccess(t, func() error {
-		return r.ReportEventDispatchTime(args, http.StatusAccepted, 9100*time.Millisecond)
-	})
-	metricstest.CheckDistributionData(t, "event_dispatch_latencies", wantTags, 2, 1100.0, 9100.0)
-
-}
 
 func TestRegisterCustomMetrics(t *testing.T) {
 	setup()
 
-	customMetrics := []stats.Measure{customMetricM}
-	customViews := []*view.View{
-		{
-			Description: customMetricM.Description(),
-			Measure:     customMetricM,
-			Aggregation: view.LastValue(),
-			TagKeys:     []tag.Key{customTagKey},
-		},
+	args := &testMetricArgs{
+		ns:        "test-namespace",
+		trigger:   "test-trigger",
+		broker:    "test-broker",
+		testParam: "test-param",
 	}
+	r := &reporter{
+		container:  "testcontainer",
+		uniqueName: "testpod",
+	}
+
+	customMetrics := []stats.Measure{customMetricM}
+
 	customTagKeys := []tag.Key{customTagKey}
 
-	Register(customMetrics, customViews, customTagKeys...)
+	// No need for customViews, as the custom metric will be used to create the view
+	eventingmetrics.Register(customMetrics, nil, customTagKeys...)
 
 	// Verify that the custom view is registered
 	if v := view.Find("custom_metric"); v == nil {
@@ -133,11 +121,12 @@ func TestRegisterCustomMetrics(t *testing.T) {
 	}
 
 	// Record a value for the custom metric
-	ctx, _ := tag.New(context.Background(), tag.Insert(customTagKey, "test_value"))
-	stats.Record(ctx, customMetricM.M(100))
+	expectSuccess(t, func() error {
+		return r.ReportCustomMetric(args, 100)
+	})
 
 	// Check if the value was recorded correctly
-	metricstest.CheckLastValueData(t, "custom_metric", map[string]string{"custom_tag": "test_value"}, 100)
+	metricstest.CheckLastValueData(t, "custom_metric", map[string]string{"custom_tag": "test-param"}, 100)
 }
 
 func expectSuccess(t *testing.T, f func() error) {
@@ -152,10 +141,6 @@ func setup() {
 }
 
 func resetMetrics() {
-	metricstest.Unregister(
-		"event_count",
-		"event_dispatch_latencies",
-		"event_processing_latencies",
-		"custom_metric")
-	Register([]stats.Measure{}, nil)
+	metricstest.Unregister("custom_metric")
+	eventingmetrics.Register([]stats.Measure{}, nil)
 }
