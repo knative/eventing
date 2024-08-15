@@ -23,5 +23,6 @@ import (
 func PostDowngradeTest() pkgupgrade.Operation {
 	return pkgupgrade.NewOperation("EventingPostDowngradeTest", func(c pkgupgrade.Context) {
 		runSmokeTest(c.T)
+		c.T.Fatal("Induced error")
 	})
 }
