@@ -49,58 +49,30 @@ func TestEventingUpgrades(t *testing.T) {
 	canceler := testlib.ExportLogStreamOnError(t, testlib.SystemLogsDir, system.Namespace(), labels...)
 	defer canceler()
 
-	// Feature group that will run the same test post-upgrade and post-downgrade
-	// creating new resource every time.
-	// Pre-upgrade: no-op.
-	// Post-upgrade: Setup, Verify, Teardown
-	// Post-downgrade: Setup, Verify, Teardown
-	featSmoke := NewFeatureGroupSmoke(DurableFeatureGroup{
-		InMemoryChannelFeature(global),
-	})
-	// Feature group that will be created pre-upgrade and verified/removed post-upgrade.
-	// Pre-upgrade: Setup, Verify
-	// Post-upgrade: Verify, Teardown
-	// Post-downgrade: no-op.
-	featOnlyUpgrade := NewFeatureGroupOnlyUpgrade(DurableFeatureGroup{
-		InMemoryChannelFeature(global),
-	})
-	// Feature group that will be created pre-upgrade and verified post-upgrade, verified and removed post-downgrade
-	// Pre-upgrade: Setup, Verify.
-	// Post-upgrade: Verify.
-	// Post-downgrade: Verify, Teardown.
-	featBothUpgradeDowngrade := NewFeatureGroupUpgradeDowngrade(DurableFeatureGroup{
-		InMemoryChannelFeature(global),
-	})
-	// Feature group that will be created post-upgrade, verified and removed post-downgrade.
-	// Pre-upgrade: no-op.
-	// Post-upgrade: Setup, Verify.
-	// Post-downgrade: Verify, Teardown.
-	featOnlyDowngrade := NewFeatureGroupOnlyDowngrade(DurableFeatureGroup{
-		InMemoryChannelFeature(global),
-	})
+	g := FeatureGroupWithUpgradeTests{
+		// A feature that will run the same test post-upgrade and post-downgrade.
+		NewFeatureSmoke(InMemoryChannelFeature(global)),
+		// A feature that will be created pre-upgrade and verified/removed post-upgrade.
+		NewFeatureOnlyUpgrade(InMemoryChannelFeature(global)),
+		// A feature that will be created pre-upgrade, verified post-upgrade, verified and removed post-downgrade.
+		NewFeatureUpgradeDowngrade(InMemoryChannelFeature(global)),
+		// A feature that will be created post-upgrade, verified and removed post-downgrade.
+		NewFeatureOnlyDowngrade(InMemoryChannelFeature(global)),
+	}
 
 	suite := pkgupgrade.Suite{
 		Tests: pkgupgrade.Tests{
 			PreUpgrade: slices.Concat(
-				featSmoke.PreUpgradeTests(),
-				featOnlyUpgrade.PreUpgradeTests(),
-				featBothUpgradeDowngrade.PreUpgradeTests(),
-				featOnlyDowngrade.PreUpgradeTests(),
+				g.PreUpgradeTests(),
 			),
 			PostUpgrade: slices.Concat(
 				[]pkgupgrade.Operation{
 					CRDPostUpgradeTest(),
 				},
-				featSmoke.PostUpgradeTests(),
-				featOnlyUpgrade.PostUpgradeTests(),
-				featBothUpgradeDowngrade.PostUpgradeTests(),
-				featOnlyDowngrade.PostUpgradeTests(),
+				g.PostUpgradeTests(),
 			),
 			PostDowngrade: slices.Concat(
-				featSmoke.PostDowngradeTests(),
-				featOnlyUpgrade.PostDowngradeTests(),
-				featBothUpgradeDowngrade.PostDowngradeTests(),
-				featOnlyDowngrade.PostDowngradeTests(),
+				g.PostDowngradeTests(),
 			),
 			Continual: []pkgupgrade.BackgroundOperation{
 				ContinualTest(),

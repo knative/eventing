@@ -37,7 +37,7 @@ import (
 	"knative.dev/reconciler-test/pkg/manifest"
 )
 
-var mux = &sync.Mutex{}
+var channelConfigMux = &sync.Mutex{}
 
 // RunMainTest expects flags to be already initialized.
 // This function needs to be exposed, so that test cases in other repositories can call the upgrade
@@ -53,9 +53,9 @@ func RunMainTest(m *testing.M) {
 }
 
 // DurableFeature holds the setup and verify phase of a feature. The "setup" phase should set up
-// the feature. The "verify" phase should only verify its function. It should be possible to
-// call this function multiple times and still properly verify the feature (e.g. one call
-// after upgrade, one call after downgrade).
+// the feature. The "verify" phase should only verify its function. This function should be
+// idempotent. Calling this function multiple times should still properly verify the feature
+// (e.g. one call after upgrade, one call after downgrade).
 type DurableFeature struct {
 	SetupF   *feature.Feature
 	setupEnv environment.Environment
@@ -117,162 +117,173 @@ type FeatureWithUpgradeTests interface {
 	PostDowngradeTests() []pkgupgrade.Operation
 }
 
-// NewFeatureGroupOnlyUpgrade creates a new feature group with these actions:
+// NewFeatureOnlyUpgrade decorates a feature with these actions:
 // Pre-upgrade: Setup, Verify
 // Post-upgrade: Verify, Teardown
 // Post-downgrade: no-op.
-func NewFeatureGroupOnlyUpgrade(fg DurableFeatureGroup) featureGroupOnlyUpgrade {
-	return featureGroupOnlyUpgrade{
-		label: "OnlyUpgrade",
-		group: fg,
+func NewFeatureOnlyUpgrade(f *DurableFeature) FeatureWithUpgradeTests {
+	return featureOnlyUpgrade{
+		label:   "OnlyUpgrade",
+		feature: f,
 	}
 }
 
-type featureGroupOnlyUpgrade struct {
-	label string
-	group DurableFeatureGroup
+type featureOnlyUpgrade struct {
+	label   string
+	feature *DurableFeature
 }
 
-func (f *featureGroupOnlyUpgrade) PreUpgradeTests() []pkgupgrade.Operation {
-	return f.group.Setup(f.label)
+func (f featureOnlyUpgrade) PreUpgradeTests() []pkgupgrade.Operation {
+	return []pkgupgrade.Operation{
+		f.feature.Setup(f.label),
+	}
 }
 
-func (f *featureGroupOnlyUpgrade) PostUpgradeTests() []pkgupgrade.Operation {
-	return f.group.VerifyTeardown(f.label)
+func (f featureOnlyUpgrade) PostUpgradeTests() []pkgupgrade.Operation {
+	return []pkgupgrade.Operation{
+		f.feature.VerifyTeardown(f.label),
+	}
 }
 
-func (f *featureGroupOnlyUpgrade) PostDowngradeTests() []pkgupgrade.Operation {
+func (f featureOnlyUpgrade) PostDowngradeTests() []pkgupgrade.Operation {
 	// No-op. Teardown was done post-upgrade.
 	return nil
 }
 
-// NewFeatureGroupUpgradeDowngrade creates a new feature group with these actions:
+// NewFeatureUpgradeDowngrade decorates a feature with these actions:
 // Pre-upgrade: Setup, Verify.
 // Post-upgrade: Verify.
 // Post-downgrade: Verify, Teardown.
-func NewFeatureGroupUpgradeDowngrade(fg DurableFeatureGroup) featureGroupUpgradeDowngrade {
-	return featureGroupUpgradeDowngrade{
-		label: "BothUpgradeDowngrade",
-		group: fg,
+func NewFeatureUpgradeDowngrade(f *DurableFeature) FeatureWithUpgradeTests {
+	return featureUpgradeDowngrade{
+		label:   "BothUpgradeDowngrade",
+		feature: f,
 	}
 }
 
-type featureGroupUpgradeDowngrade struct {
-	label string
-	group DurableFeatureGroup
+type featureUpgradeDowngrade struct {
+	label   string
+	feature *DurableFeature
 }
 
-func (f *featureGroupUpgradeDowngrade) PreUpgradeTests() []pkgupgrade.Operation {
-	return f.group.Setup(f.label)
+func (f featureUpgradeDowngrade) PreUpgradeTests() []pkgupgrade.Operation {
+	return []pkgupgrade.Operation{
+		f.feature.Setup(f.label),
+	}
 }
 
-func (f *featureGroupUpgradeDowngrade) PostUpgradeTests() []pkgupgrade.Operation {
+func (f featureUpgradeDowngrade) PostUpgradeTests() []pkgupgrade.Operation {
 	// PostUpgrade only asserts existing resources. Teardown will be done post-downgrade.
-	return f.group.Verify(f.label)
+	return []pkgupgrade.Operation{
+		f.feature.Verify(f.label),
+	}
 }
 
-func (f *featureGroupUpgradeDowngrade) PostDowngradeTests() []pkgupgrade.Operation {
-	return f.group.VerifyTeardown(f.label)
+func (f featureUpgradeDowngrade) PostDowngradeTests() []pkgupgrade.Operation {
+	return []pkgupgrade.Operation{
+		f.feature.VerifyTeardown(f.label),
+	}
 }
 
-// NewFeatureGroupOnlyDowngrade creates a new feature group with these actions:
+// NewFeatureOnlyDowngrade decorates a feature with these actions:
 // Pre-upgrade: no-op.
 // Post-upgrade: Setup, Verify.
 // Post-downgrade: Verify, Teardown.
-func NewFeatureGroupOnlyDowngrade(fg DurableFeatureGroup) featureGroupOnlyDowngrade {
-	return featureGroupOnlyDowngrade{
-		label: "OnlyDowngrade",
-		group: fg,
+func NewFeatureOnlyDowngrade(f *DurableFeature) FeatureWithUpgradeTests {
+	return featureOnlyDowngrade{
+		label:   "OnlyDowngrade",
+		feature: f,
 	}
 }
 
-type featureGroupOnlyDowngrade struct {
-	label string
-	group DurableFeatureGroup
+type featureOnlyDowngrade struct {
+	label   string
+	feature *DurableFeature
 }
 
-func (f *featureGroupOnlyDowngrade) PreUpgradeTests() []pkgupgrade.Operation {
+func (f featureOnlyDowngrade) PreUpgradeTests() []pkgupgrade.Operation {
 	// No-op. Resources will be created post-upgrade.
 	return nil
 }
 
-func (f *featureGroupOnlyDowngrade) PostUpgradeTests() []pkgupgrade.Operation {
+func (f featureOnlyDowngrade) PostUpgradeTests() []pkgupgrade.Operation {
 	// Resources created post-upgrade.
-	return f.group.Setup(f.label)
-}
-
-func (f *featureGroupOnlyDowngrade) PostDowngradeTests() []pkgupgrade.Operation {
-	// Assert and Teardown is done post-downgrade.
-	return f.group.VerifyTeardown(f.label)
-}
-
-// NewFeatureGroupSmoke creates a new feature group with these actions:
-// Pre-upgrade: no-op.
-// Post-upgrade: Setup, Verify, Teardown.
-// Post-downgrade: Setup, Verify, Teardown.
-func NewFeatureGroupSmoke(fg DurableFeatureGroup) featureGroupSmoke {
-	return featureGroupSmoke{
-		label: "Smoke",
-		group: fg,
+	return []pkgupgrade.Operation{
+		f.feature.Setup(f.label),
 	}
 }
 
-type featureGroupSmoke struct {
-	label string
-	group DurableFeatureGroup
+func (f featureOnlyDowngrade) PostDowngradeTests() []pkgupgrade.Operation {
+	// Assert and Teardown is done post-downgrade.
+	return []pkgupgrade.Operation{
+		f.feature.VerifyTeardown(f.label),
+	}
 }
 
-func (f *featureGroupSmoke) PreUpgradeTests() []pkgupgrade.Operation {
+// NewFeatureSmoke decorates a feature with these actions:
+// Pre-upgrade: no-op.
+// Post-upgrade: Setup, Verify, Teardown.
+// Post-downgrade: Setup, Verify, Teardown.
+func NewFeatureSmoke(f *DurableFeature) FeatureWithUpgradeTests {
+	return featureSmoke{
+		label:   "Smoke",
+		feature: f,
+	}
+}
+
+type featureSmoke struct {
+	label   string
+	feature *DurableFeature
+}
+
+func (f featureSmoke) PreUpgradeTests() []pkgupgrade.Operation {
 	// No-op. No need to smoke test before upgrade.
 	return nil
 }
 
-func (f *featureGroupSmoke) PostUpgradeTests() []pkgupgrade.Operation {
-	return f.group.SetupVerifyTeardown(f.label)
+func (f featureSmoke) PostUpgradeTests() []pkgupgrade.Operation {
+	return []pkgupgrade.Operation{
+		f.feature.SetupVerifyTeardown(f.label),
+	}
 }
 
-func (f *featureGroupSmoke) PostDowngradeTests() []pkgupgrade.Operation {
-	return f.group.SetupVerifyTeardown(f.label)
+func (f featureSmoke) PostDowngradeTests() []pkgupgrade.Operation {
+	return []pkgupgrade.Operation{
+		f.feature.SetupVerifyTeardown(f.label),
+	}
 }
 
-type DurableFeatureGroup []DurableFeature
+// FeatureGroupWithUpgradeTests aggregates tests across a group of features.
+type FeatureGroupWithUpgradeTests []FeatureWithUpgradeTests
 
-func (fg DurableFeatureGroup) Setup(label string) []pkgupgrade.Operation {
+func (fg FeatureGroupWithUpgradeTests) PreUpgradeTests() []pkgupgrade.Operation {
 	ops := make([]pkgupgrade.Operation, 0, len(fg))
 	for _, ft := range fg {
-		ops = append(ops, ft.Setup(label))
+		ops = append(ops, ft.PreUpgradeTests()...)
 	}
 	return ops
 }
 
-func (fg DurableFeatureGroup) Verify(label string) []pkgupgrade.Operation {
+func (fg FeatureGroupWithUpgradeTests) PostUpgradeTests() []pkgupgrade.Operation {
 	ops := make([]pkgupgrade.Operation, 0, len(fg))
 	for _, ft := range fg {
-		ops = append(ops, ft.Verify(label))
+		ops = append(ops, ft.PostUpgradeTests()...)
 	}
 	return ops
 }
 
-func (fg DurableFeatureGroup) VerifyTeardown(label string) []pkgupgrade.Operation {
+func (fg FeatureGroupWithUpgradeTests) PostDowngradeTests() []pkgupgrade.Operation {
 	ops := make([]pkgupgrade.Operation, 0, len(fg))
 	for _, ft := range fg {
-		ops = append(ops, ft.VerifyTeardown(label))
+		ops = append(ops, ft.PostDowngradeTests()...)
 	}
 	return ops
 }
 
-func (fg DurableFeatureGroup) SetupVerifyTeardown(label string) []pkgupgrade.Operation {
-	ops := make([]pkgupgrade.Operation, 0, len(fg))
-	for _, ft := range fg {
-		ops = append(ops, ft.SetupVerifyTeardown(label))
-	}
-	return ops
-}
-
-func InMemoryChannelFeature(glob environment.GlobalEnvironment) DurableFeature {
+func InMemoryChannelFeature(glob environment.GlobalEnvironment) *DurableFeature {
 	// Prevent race conditions on channel_impl.EnvCfg.ChannelGK when running tests in parallel.
-	mux.Lock()
-	defer mux.Unlock()
+	channelConfigMux.Lock()
+	defer channelConfigMux.Unlock()
 	channel_impl.EnvCfg.ChannelGK = "InMemoryChannel.messaging.knative.dev"
 	channel_impl.EnvCfg.ChannelV = "v1"
 
@@ -286,5 +297,5 @@ func InMemoryChannelFeature(glob environment.GlobalEnvironment) DurableFeature {
 	verifyF := feature.NewFeature()
 	channel.ChannelChainAssert(verifyF, sink, ch)
 
-	return DurableFeature{SetupF: setupF, VerifyF: verifyF, Global: glob}
+	return &DurableFeature{SetupF: setupF, VerifyF: verifyF, Global: glob}
 }
