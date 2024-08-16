@@ -138,6 +138,7 @@ func NewController(
 		eventDispatcher:          kncloudevents.NewDispatcher(clientConfig, oidcTokenProvider),
 		tokenVerifier:            auth.NewOIDCTokenVerifier(ctx),
 		clientConfig:             clientConfig,
+		inMemoryChannelLister:    inmemorychannelInformer.Lister(),
 	}
 
 	var globalResync func(obj interface{})
