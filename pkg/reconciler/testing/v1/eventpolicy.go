@@ -19,6 +19,8 @@ package testing
 import (
 	"context"
 
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
@@ -143,6 +145,12 @@ func WithEventPolicyFromSub(sub string) EventPolicyOption {
 		ep.Spec.From = append(ep.Spec.From, v1alpha1.EventPolicySpecFrom{
 			Sub: &sub,
 		})
+	}
+}
+
+func WithEventPolicyFilter(filter eventingv1.SubscriptionsAPIFilter) EventPolicyOption {
+	return func(ep *v1alpha1.EventPolicy) {
+		ep.Spec.Filters = append(ep.Spec.Filters, filter)
 	}
 }
 
