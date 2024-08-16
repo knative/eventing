@@ -112,7 +112,8 @@ func MakeEventPolicyForSequenceInputChannel(s *flowsv1.Sequence, inputChannel *e
 					},
 				},
 			},
-			From: sequencePolicy.Spec.From,
+			From:    sequencePolicy.Spec.From,
+			Filters: sequencePolicy.Spec.Filters,
 		},
 	}
 }

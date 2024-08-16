@@ -61,7 +61,8 @@ func MakeEventPolicyForBackingChannel(backingChannel *eventingduckv1.Channelable
 					},
 				},
 			},
-			From: parentPolicy.Spec.From,
+			From:    parentPolicy.Spec.From,
+			Filters: parentPolicy.Spec.Filters,
 		},
 	}
 }

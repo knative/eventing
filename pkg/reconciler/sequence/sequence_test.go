@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"testing"
 
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+
 	"knative.dev/eventing/pkg/apis/feature"
 
 	corev1 "k8s.io/api/core/v1"
@@ -3561,6 +3563,119 @@ func TestAllCases(t *testing.T) {
 						},
 					})),
 			}},
+		}, {
+			Name: "Propagates Filter of Sequence EventPolicy to ingress channels EventPolicy",
+			Key:  pKey,
+			Objects: []runtime.Object{
+				NewSequence(sequenceName, testNS,
+					WithInitSequenceConditions,
+					WithSequenceChannelTemplateSpec(imc),
+					WithSequenceSteps([]v1.SequenceStep{
+						{Destination: createDestination(0)},
+						{Destination: createDestination(1)},
+					})),
+				createChannel(sequenceName, 0),
+				createChannel(sequenceName, 1),
+				resources.NewSubscription(0, NewSequence(sequenceName, testNS,
+					WithSequenceChannelTemplateSpec(imc),
+					WithSequenceSteps([]v1.SequenceStep{
+						{Destination: createDestination(0)},
+						{Destination: createDestination(1)},
+					}))),
+				resources.NewSubscription(1, NewSequence(sequenceName, testNS,
+					WithSequenceChannelTemplateSpec(imc),
+					WithSequenceSteps([]v1.SequenceStep{
+						{Destination: createDestination(0)},
+						{Destination: createDestination(1)},
+					}))),
+				makeSequenceEventPolicy(sequenceName, WithEventPolicyFilter(eventingv1.SubscriptionsAPIFilter{
+					CESQL: "true",
+				})),
+				makeEventPolicy(sequenceName, resources.SequenceChannelName(sequenceName, 1), 1),
+			},
+			WantErr: false,
+			Ctx: feature.ToContext(context.Background(), feature.Flags{
+				feature.OIDCAuthentication:       feature.Enabled,
+				feature.AuthorizationDefaultMode: feature.AuthorizationAllowSameNamespace,
+			}),
+			WantCreates: []runtime.Object{
+				makeInputChannelEventPolicy(sequenceName, resources.SequenceChannelName(sequenceName, 0), resources.SequenceEventPolicyName(sequenceName, ""), WithEventPolicyFilter(eventingv1.SubscriptionsAPIFilter{
+					CESQL: "true",
+				})),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewSequence(sequenceName, testNS,
+					WithInitSequenceConditions,
+					WithSequenceChannelTemplateSpec(imc),
+					WithSequenceSteps([]v1.SequenceStep{
+						{Destination: createDestination(0)},
+						{Destination: createDestination(1)},
+					}),
+					WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
+					WithSequenceAddressableNotReady("emptyAddress", "addressable is nil"),
+					WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+					WithSequenceEventPoliciesNotReady("EventPoliciesNotReady", fmt.Sprintf("event policies %s are not ready", sequenceName)),
+					WithSequenceChannelStatuses([]v1.SequenceChannelStatus{
+						{
+							Channel: corev1.ObjectReference{
+								APIVersion: "messaging.knative.dev/v1",
+								Kind:       "InMemoryChannel",
+								Name:       resources.SequenceChannelName(sequenceName, 0),
+								Namespace:  testNS,
+							},
+							ReadyCondition: apis.Condition{
+								Type:    apis.ConditionReady,
+								Status:  corev1.ConditionUnknown,
+								Reason:  "NoReady",
+								Message: "Channel does not have Ready condition",
+							},
+						},
+						{
+							Channel: corev1.ObjectReference{
+								APIVersion: "messaging.knative.dev/v1",
+								Kind:       "InMemoryChannel",
+								Name:       resources.SequenceChannelName(sequenceName, 1),
+								Namespace:  testNS,
+							},
+							ReadyCondition: apis.Condition{
+								Type:    apis.ConditionReady,
+								Status:  corev1.ConditionUnknown,
+								Reason:  "NoReady",
+								Message: "Channel does not have Ready condition",
+							},
+						},
+					}),
+					WithSequenceSubscriptionStatuses([]v1.SequenceSubscriptionStatus{
+						{
+							Subscription: corev1.ObjectReference{
+								APIVersion: "messaging.knative.dev/v1",
+								Kind:       "Subscription",
+								Name:       resources.SequenceSubscriptionName(sequenceName, 0),
+								Namespace:  testNS,
+							},
+							ReadyCondition: apis.Condition{
+								Type:    apis.ConditionReady,
+								Status:  corev1.ConditionUnknown,
+								Reason:  "NoReady",
+								Message: "Subscription does not have Ready condition",
+							},
+						},
+						{
+							Subscription: corev1.ObjectReference{
+								APIVersion: "messaging.knative.dev/v1",
+								Kind:       "Subscription",
+								Name:       resources.SequenceSubscriptionName(sequenceName, 1),
+								Namespace:  testNS,
+							},
+							ReadyCondition: apis.Condition{
+								Type:    apis.ConditionReady,
+								Status:  corev1.ConditionUnknown,
+								Reason:  "NoReady",
+								Message: "Subscription does not have Ready condition",
+							},
+						},
+					})),
+			}},
 		},
 	}
 
@@ -3598,8 +3713,8 @@ func makeEventPolicy(sequenceName, channelName string, step int) *eventingv1alph
 }
 
 // Write a function to make the event policy for the sequence
-func makeSequenceEventPolicy(sequenceName string) *eventingv1alpha1.EventPolicy {
-	return NewEventPolicy(resources.SequenceEventPolicyName(sequenceName, ""), testNS,
+func makeSequenceEventPolicy(sequenceName string, opts ...EventPolicyOption) *eventingv1alpha1.EventPolicy {
+	ep := NewEventPolicy(resources.SequenceEventPolicyName(sequenceName, ""), testNS,
 		// from a subscription
 		WithEventPolicyOwnerReferences([]metav1.OwnerReference{
 			{
@@ -3609,10 +3724,16 @@ func makeSequenceEventPolicy(sequenceName string) *eventingv1alpha1.EventPolicy 
 			},
 		}...),
 	)
+
+	for _, opt := range opts {
+		opt(ep)
+	}
+
+	return ep
 }
 
-func makeInputChannelEventPolicy(sequenceName, channelName string, sequenceEventPolicyName string) *eventingv1alpha1.EventPolicy {
-	return NewEventPolicy(resources.SequenceEventPolicyName(sequenceName, sequenceEventPolicyName), testNS,
+func makeInputChannelEventPolicy(sequenceName, channelName string, sequenceEventPolicyName string, opts ...EventPolicyOption) *eventingv1alpha1.EventPolicy {
+	ep := NewEventPolicy(resources.SequenceEventPolicyName(sequenceName, sequenceEventPolicyName), testNS,
 		WithEventPolicyToRef(channelV1GVK, channelName),
 		// from a subscription
 		WithEventPolicyOwnerReferences([]metav1.OwnerReference{
@@ -3624,6 +3745,12 @@ func makeInputChannelEventPolicy(sequenceName, channelName string, sequenceEvent
 		}...),
 		WithEventPolicyLabels(resources.LabelsForSequenceChannelsEventPolicy(sequenceName)),
 	)
+
+	for _, opt := range opts {
+		opt(ep)
+	}
+
+	return ep
 }
 
 func makeInputChannelEventPolicyWithWrongSpec(sequenceName, channelName, policyName string) *eventingv1alpha1.EventPolicy {

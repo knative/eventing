@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"testing"
 
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/apis/feature"
 
@@ -554,6 +556,9 @@ func TestReconcile(t *testing.T) {
 			NewEventPolicy(readyEventPolicyName, testNS,
 				WithReadyEventPolicyCondition,
 				WithEventPolicyToRef(channelV1GVK, channelName),
+				WithEventPolicyFilter(eventingv1.SubscriptionsAPIFilter{
+					CESQL: "true",
+				}),
 			),
 		},
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
@@ -586,6 +591,9 @@ func TestReconcile(t *testing.T) {
 					"messaging.knative.dev/channel-version": v1.SchemeGroupVersion.Version,
 					"messaging.knative.dev/channel-kind":    "InMemoryChannel",
 					"messaging.knative.dev/channel-name":    channelName,
+				}),
+				WithEventPolicyFilter(eventingv1.SubscriptionsAPIFilter{
+					CESQL: "true",
 				}),
 			),
 		},
