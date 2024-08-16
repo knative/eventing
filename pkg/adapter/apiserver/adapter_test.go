@@ -35,7 +35,6 @@ import (
 	kubetesting "k8s.io/client-go/testing"
 	adaptertest "knative.dev/eventing/pkg/adapter/v2/test"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
-	brokerfilter "knative.dev/eventing/pkg/broker/filter"
 	"knative.dev/eventing/pkg/eventfilter/subscriptionsapi"
 	rectesting "knative.dev/eventing/pkg/reconciler/testing"
 	"knative.dev/pkg/logging"
@@ -299,7 +298,7 @@ func makeResourceAndTestingClient() (*resourceDelegate, *adaptertest.TestCloudEv
 		source:              "unit-test",
 		apiServerSourceName: apiServerSourceNameTest,
 		logger:              logger,
-		filter:              subscriptionsapi.NewAllFilter(brokerfilter.MaterializeFiltersList(logger.Desugar(), []eventingv1.SubscriptionsAPIFilter{})...),
+		filter:              subscriptionsapi.NewAllFilter(subscriptionsapi.MaterializeFiltersList(logger.Desugar(), []eventingv1.SubscriptionsAPIFilter{})...),
 	}, ce
 }
 
@@ -313,6 +312,6 @@ func makeRefAndTestingClient() (*resourceDelegate, *adaptertest.TestCloudEventsC
 		apiServerSourceName: apiServerSourceNameTest,
 		logger:              zap.NewExample().Sugar(),
 		ref:                 true,
-		filter:              subscriptionsapi.NewAllFilter(brokerfilter.MaterializeFiltersList(logger.Desugar(), []eventingv1.SubscriptionsAPIFilter{})...),
+		filter:              subscriptionsapi.NewAllFilter(subscriptionsapi.MaterializeFiltersList(logger.Desugar(), []eventingv1.SubscriptionsAPIFilter{})...),
 	}, ce
 }

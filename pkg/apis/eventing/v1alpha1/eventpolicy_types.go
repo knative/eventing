@@ -20,9 +20,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/kmeta"
+
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 )
 
 // +genclient
@@ -71,6 +74,14 @@ type EventPolicySpec struct {
 
 	// From is the list of sources or oidc identities, which are allowed to send events to the targets (.spec.to).
 	From []EventPolicySpecFrom `json:"from,omitempty"`
+
+	// Filters is the list of SubscriptoinsApi filters which determine whether or not the event is accepted.
+	// It is an array of filter expressions that evaluate to true or false.
+	// If any filter expression in the array evaluates to false, the event will not
+	// pass the target resource's ingress. Absence of any filters implies that the filters
+	// always evaluate to true.
+	// +optional
+	Filters []eventingv1.SubscriptionsAPIFilter `json:"filters,omitempty"`
 }
 
 type EventPolicySpecTo struct {

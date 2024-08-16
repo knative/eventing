@@ -114,7 +114,7 @@ func NewHandler(logger *zap.Logger, tokenVerifier *auth.OIDCTokenVerifier, oidcT
 				return
 			}
 			logger.Debug("Adding filter to filtersMap")
-			fm.Set(trigger, createSubscriptionsAPIFilters(logger, trigger))
+			fm.Set(trigger, subscriptionsapi.CreateSubscriptionsAPIFilters(logger, trigger.Spec.Filters))
 			kncloudevents.AddOrUpdateAddressableHandler(clientConfig, duckv1.Addressable{
 				URL:     trigger.Status.SubscriberURI,
 				CACerts: trigger.Status.SubscriberCACerts,
@@ -126,7 +126,7 @@ func NewHandler(logger *zap.Logger, tokenVerifier *auth.OIDCTokenVerifier, oidcT
 				return
 			}
 			logger.Debug("Updating filter in filtersMap")
-			fm.Set(trigger, createSubscriptionsAPIFilters(logger, trigger))
+			fm.Set(trigger, subscriptionsapi.CreateSubscriptionsAPIFilters(logger, trigger.Spec.Filters))
 			kncloudevents.AddOrUpdateAddressableHandler(clientConfig, duckv1.Addressable{
 				URL:     trigger.Status.SubscriberURI,
 				CACerts: trigger.Status.SubscriberCACerts,
@@ -608,70 +608,7 @@ func (h *Handler) filterEvent(ctx context.Context, trigger *eventingv1.Trigger, 
 }
 
 func applySubscriptionsAPIFilters(ctx context.Context, trigger *eventingv1.Trigger, event cloudevents.Event) eventfilter.FilterResult {
-	return createSubscriptionsAPIFilters(logging.FromContext(ctx).Desugar(), trigger).Filter(ctx, event)
-}
-
-func createSubscriptionsAPIFilters(logger *zap.Logger, trigger *eventingv1.Trigger) eventfilter.Filter {
-	if len(trigger.Spec.Filters) == 0 {
-		logger.Debug("Found no filters for trigger", zap.Any("trigger.Spec", trigger.Spec))
-		return subscriptionsapi.NewNoFilter()
-	}
-	return subscriptionsapi.NewAllFilter(MaterializeFiltersList(logger, trigger.Spec.Filters)...)
-}
-
-func materializeSubscriptionsAPIFilter(logger *zap.Logger, filter eventingv1.SubscriptionsAPIFilter) eventfilter.Filter {
-	var materializedFilter eventfilter.Filter
-	var err error
-	switch {
-	case len(filter.Exact) > 0:
-		// The webhook validates that this map has only a single key:value pair.
-		materializedFilter, err = subscriptionsapi.NewExactFilter(filter.Exact)
-		if err != nil {
-			logger.Debug("Invalid exact expression", zap.Any("filters", filter.Exact), zap.Error(err))
-			return nil
-		}
-	case len(filter.Prefix) > 0:
-		// The webhook validates that this map has only a single key:value pair.
-		materializedFilter, err = subscriptionsapi.NewPrefixFilter(filter.Prefix)
-		if err != nil {
-			logger.Debug("Invalid prefix expression", zap.Any("filters", filter.Exact), zap.Error(err))
-			return nil
-		}
-	case len(filter.Suffix) > 0:
-		// The webhook validates that this map has only a single key:value pair.
-		materializedFilter, err = subscriptionsapi.NewSuffixFilter(filter.Suffix)
-		if err != nil {
-			logger.Debug("Invalid suffix expression", zap.Any("filters", filter.Exact), zap.Error(err))
-			return nil
-		}
-	case len(filter.All) > 0:
-		materializedFilter = subscriptionsapi.NewAllFilter(MaterializeFiltersList(logger, filter.All)...)
-	case len(filter.Any) > 0:
-		materializedFilter = subscriptionsapi.NewAnyFilter(MaterializeFiltersList(logger, filter.Any)...)
-	case filter.Not != nil:
-		materializedFilter = subscriptionsapi.NewNotFilter(materializeSubscriptionsAPIFilter(logger, *filter.Not))
-	case filter.CESQL != "":
-		if materializedFilter, err = subscriptionsapi.NewCESQLFilter(filter.CESQL); err != nil {
-			// This is weird, CESQL expression should be validated when Trigger's are created.
-			logger.Debug("Found an Invalid CE SQL expression", zap.String("expression", filter.CESQL))
-			return nil
-		}
-	}
-	return materializedFilter
-}
-
-// MaterialzieFilterList allows any component that supports `SubscriptionsAPIFilter` to process them
-func MaterializeFiltersList(logger *zap.Logger, filters []eventingv1.SubscriptionsAPIFilter) []eventfilter.Filter {
-	materializedFilters := make([]eventfilter.Filter, 0, len(filters))
-	for _, f := range filters {
-		f := materializeSubscriptionsAPIFilter(logger, f)
-		if f == nil {
-			logger.Warn("Failed to parse filter. Skipping filter.", zap.Any("filter", f))
-			continue
-		}
-		materializedFilters = append(materializedFilters, f)
-	}
-	return materializedFilters
+	return subscriptionsapi.CreateSubscriptionsAPIFilters(logging.FromContext(ctx).Desugar(), trigger.Spec.Filters).Filter(ctx, event)
 }
 
 func applyAttributesFilter(ctx context.Context, filter *eventingv1.TriggerFilter, event cloudevents.Event) eventfilter.FilterResult {

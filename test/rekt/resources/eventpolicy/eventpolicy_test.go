@@ -20,6 +20,7 @@ import (
 	"embed"
 	"os"
 
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/test/rekt/resources/broker"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -105,6 +106,11 @@ func Example_full() {
 			"my-ns-2",
 		),
 		eventpolicy.WithFromSubject("my-sub"),
+		eventpolicy.WithFilters([]eventingv1.SubscriptionsAPIFilter{
+			{
+				CESQL: "type LIKE event.%.type",
+			},
+		}),
 	}
 
 	for _, fn := range cfgFn {
@@ -147,4 +153,6 @@ func Example_full() {
 	//         name: my-broker
 	//         namespace: my-ns-2
 	//     - sub: my-sub
+	//   filters:
+	//     - cesql: type LIKE event.%.type
 }

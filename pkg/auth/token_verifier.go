@@ -17,6 +17,7 @@ limitations under the License.
 package auth
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -29,9 +30,12 @@ import (
 	eventpolicyinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventpolicy"
 	"knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 
+	"github.com/cloudevents/sdk-go/v2/binding"
+	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"github.com/coreos/go-oidc/v3/oidc"
 	"go.uber.org/zap"
 	"k8s.io/client-go/rest"
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/pkg/injection"
 	"knative.dev/pkg/logging"
@@ -92,7 +96,7 @@ func (v *OIDCTokenVerifier) VerifyRequest(ctx context.Context, features feature.
 		return fmt.Errorf("authentication of request could not be verified: %w", err)
 	}
 
-	err = v.verifyAuthZ(features, idToken, resourceNamespace, policyRefs, resp)
+	err = v.verifyAuthZ(ctx, features, idToken, resourceNamespace, policyRefs, req, resp)
 	if err != nil {
 		return fmt.Errorf("authorization of request could not be verified: %w", err)
 	}
@@ -146,9 +150,24 @@ func (v *OIDCTokenVerifier) verifyAuthN(ctx context.Context, audience *string, r
 }
 
 // verifyAuthZ verifies if the given idToken is allowed by the resources eventPolicyStatus
-func (v *OIDCTokenVerifier) verifyAuthZ(features feature.Flags, idToken *IDToken, resourceNamespace string, policyRefs []duckv1.AppliedEventPolicyRef, resp http.ResponseWriter) error {
+func (v *OIDCTokenVerifier) verifyAuthZ(ctx context.Context, features feature.Flags, idToken *IDToken, resourceNamespace string, policyRefs []duckv1.AppliedEventPolicyRef, req *http.Request, resp http.ResponseWriter) error {
 	if len(policyRefs) > 0 {
-		subjectsFromApplyingPolicies := []string{}
+		req, err := copyRequest(req)
+		if err != nil {
+			resp.WriteHeader(http.StatusInternalServerError)
+			return fmt.Errorf("failed to copy request body: %w", err)
+		}
+
+		message := cehttp.NewMessageFromHttpRequest(req)
+		defer message.Finish(nil)
+
+		event, err := binding.ToEvent(ctx, message)
+		if err != nil {
+			resp.WriteHeader(http.StatusInternalServerError)
+			return fmt.Errorf("failed to decode event from request: %w", err)
+		}
+
+		subjectsWithFiltersFromApplyingPolicies := []subjectsWithFilters{}
 		for _, p := range policyRefs {
 			policy, err := v.eventPolicyLister.EventPolicies(resourceNamespace).Get(p.Name)
 			if err != nil {
@@ -156,12 +175,12 @@ func (v *OIDCTokenVerifier) verifyAuthZ(features feature.Flags, idToken *IDToken
 				return fmt.Errorf("failed to get eventPolicy: %w", err)
 			}
 
-			subjectsFromApplyingPolicies = append(subjectsFromApplyingPolicies, policy.Status.From...)
+			subjectsWithFiltersFromApplyingPolicies = append(subjectsWithFiltersFromApplyingPolicies, subjectsWithFilters{subjects: policy.Status.From, filters: policy.Spec.Filters})
 		}
 
-		if !SubjectContained(idToken.Subject, subjectsFromApplyingPolicies) {
+		if !SubjectAndFiltersPass(ctx, idToken.Subject, subjectsWithFiltersFromApplyingPolicies, event, v.logger) {
 			resp.WriteHeader(http.StatusForbidden)
-			return fmt.Errorf("token is from subject %q, but only %q are part of applying event policies", idToken.Subject, subjectsFromApplyingPolicies)
+			return fmt.Errorf("token is from subject %q, but only %#v are part of applying event policies", idToken.Subject, subjectsWithFiltersFromApplyingPolicies)
 		}
 
 		return nil
@@ -271,10 +290,44 @@ func (v *OIDCTokenVerifier) getKubernetesOIDCDiscovery() (*openIDMetadata, error
 	return openIdConfig, nil
 }
 
+// copyRequest makes a copy of the http request which can be consumed as needed, leaving the original request
+// able to be consumed as well.
+func copyRequest(req *http.Request) (*http.Request, error) {
+	// check if we actually need to copy the body, otherwise we can return the original request
+	if req.Body == nil || req.Body == http.NoBody {
+		return req, nil
+	}
+
+	var buf bytes.Buffer
+	if _, err := buf.ReadFrom(req.Body); err != nil {
+		return nil, fmt.Errorf("failed to read request body while copying it: %w", err)
+	}
+
+	if err := req.Body.Close(); err != nil {
+		return nil, fmt.Errorf("failed to close original request body ready while copying request: %w", err)
+	}
+
+	// set the original request body to be readable again
+	req.Body = io.NopCloser(&buf)
+
+	// return a new request with a readable body and same headers as the original
+	// we don't need to set any other fields as cloudevents only uses the headers
+	// and body to construct the Message/Event.
+	return &http.Request{
+		Header: req.Header,
+		Body:   io.NopCloser(bytes.NewReader(buf.Bytes())),
+	}, nil
+}
+
 type openIDMetadata struct {
 	Issuer        string   `json:"issuer"`
 	JWKSURI       string   `json:"jwks_uri"`
 	ResponseTypes []string `json:"response_types_supported"`
 	SubjectTypes  []string `json:"subject_types_supported"`
 	SigningAlgs   []string `json:"id_token_signing_alg_values_supported"`
+}
+
+type subjectsWithFilters struct {
+	filters  []eventingv1.SubscriptionsAPIFilter
+	subjects []string
 }
