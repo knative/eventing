@@ -187,6 +187,9 @@ function install_knative_eventing() {
     UNINSTALL_LIST+=( "${EVENTING_RELEASE_YAML}" )
   fi
 
+  # Workaround for https://github.com/knative/eventing/issues/8161
+  kubectl label namespace "${SYSTEM_NAMESPACE}" bindings.knative.dev/exclude=true --overwrite
+
   # Setup config tracing for tracing tests
   local TMP_CONFIG_TRACING_CONFIG=${TMP_DIR}/${CONFIG_TRACING_CONFIG##*/}
   sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" "${CONFIG_TRACING_CONFIG}" > "${TMP_CONFIG_TRACING_CONFIG}"
