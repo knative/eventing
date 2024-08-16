@@ -52,7 +52,5 @@ func TestBrokerTriggerCrossNamespaceReference(t *testing.T) {
 	)
 
 	// brokerEnv.Test(brokerEnvCtx, t, broker.GoesReady(brokerName))
-	triggerEnv.Test(triggerEnvCtx, t, trigger.CrossNamespaceEventLinks(brokerEnvCtx, func(name, namespace string) feature.StepFn {
-		return broker.Install(name, broker.WithNamespace(namespace))
-	}))
+	triggerEnv.Test(triggerEnvCtx, t, trigger.CrossNamespaceEventLinks(brokerEnvCtx)
 }

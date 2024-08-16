@@ -34,9 +34,7 @@ import (
 	"knative.dev/reconciler-test/pkg/resources/service"
 )
 
-type InstallBrokerStep func(brokerName, brokerNamespace string) feature.StepFn
-
-func CrossNamespaceEventLinks(brokerEnvCtx context.Context, installBroker InstallBrokerStep) *feature.Feature {
+func CrossNamespaceEventLinks(brokerEnvCtx context.Context) *feature.Feature {
 	f := feature.NewFeature()
 
 	f.Prerequisite("Cross Namespace Event Links is enabled", featureflags.CrossEventLinksEnabled())
@@ -62,7 +60,7 @@ func CrossNamespaceEventLinks(brokerEnvCtx context.Context, installBroker Instal
 		trigger.WithBrokerRef(brokerRef),
 	}
 
-	f.Setup("install broker", installBroker(brokerName, brokerNamespace))
+	f.Setup("install broker", broker.Install(brokerName, append(broker.WithEnvConfig(), broker.WithNamespace(brokerNamespace))...))
 	f.Setup("install trigger", trigger.Install(triggerName, triggerCfg...))
 
 	f.Setup("install subscriber", eventshub.Install(subscriberName, eventshub.StartReceiver))
