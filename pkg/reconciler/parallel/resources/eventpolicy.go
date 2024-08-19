@@ -112,7 +112,8 @@ func MakeEventPolicyForParallelIngressChannel(p *flowsv1.Parallel, ingressChanne
 					},
 				},
 			},
-			From: parallelPolicy.Spec.From,
+			From:    parallelPolicy.Spec.From,
+			Filters: parallelPolicy.Spec.Filters,
 		},
 	}
 }

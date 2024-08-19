@@ -67,3 +67,8 @@ spec:
     - sub: {{ $from.sub }}
     {{ end }}
   {{ end }}
+
+  {{ if .filters }}
+  filters:
+{{ .filters }}
+  {{ end }}

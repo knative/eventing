@@ -26,6 +26,10 @@ import (
 	"net/http"
 	"time"
 
+	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
+	messaginginformers "knative.dev/eventing/pkg/client/informers/externalversions/messaging/v1"
+	"knative.dev/eventing/pkg/reconciler/broker/resources"
+
 	opencensusclient "github.com/cloudevents/sdk-go/observability/opencensus/v2/client"
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"
@@ -49,6 +53,7 @@ import (
 	eventingbroker "knative.dev/eventing/pkg/broker"
 	v1 "knative.dev/eventing/pkg/client/informers/externalversions/eventing/v1"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1"
+	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1"
 	"knative.dev/eventing/pkg/eventfilter"
 	"knative.dev/eventing/pkg/eventfilter/attributes"
 	"knative.dev/eventing/pkg/eventfilter/subscriptionsapi"
@@ -79,17 +84,18 @@ type Handler struct {
 
 	eventDispatcher *kncloudevents.Dispatcher
 
-	triggerLister    eventinglisters.TriggerLister
-	brokerLister     eventinglisters.BrokerLister
-	logger           *zap.Logger
-	withContext      func(ctx context.Context) context.Context
-	filtersMap       *subscriptionsapi.FiltersMap
-	tokenVerifier    *auth.OIDCTokenVerifier
-	EventTypeCreator *eventtype.EventTypeAutoHandler
+	triggerLister      eventinglisters.TriggerLister
+	brokerLister       eventinglisters.BrokerLister
+	subscriptionLister messaginglisters.SubscriptionLister
+	logger             *zap.Logger
+	withContext        func(ctx context.Context) context.Context
+	filtersMap         *subscriptionsapi.FiltersMap
+	tokenVerifier      *auth.OIDCTokenVerifier
+	EventTypeCreator   *eventtype.EventTypeAutoHandler
 }
 
 // NewHandler creates a new Handler and its associated EventReceiver.
-func NewHandler(logger *zap.Logger, tokenVerifier *auth.OIDCTokenVerifier, oidcTokenProvider *auth.OIDCTokenProvider, triggerInformer v1.TriggerInformer, brokerInformer v1.BrokerInformer, reporter StatsReporter, trustBundleConfigMapLister corev1listers.ConfigMapNamespaceLister, wc func(ctx context.Context) context.Context) (*Handler, error) {
+func NewHandler(logger *zap.Logger, tokenVerifier *auth.OIDCTokenVerifier, oidcTokenProvider *auth.OIDCTokenProvider, triggerInformer v1.TriggerInformer, brokerInformer v1.BrokerInformer, subscriptionInformer messaginginformers.SubscriptionInformer, reporter StatsReporter, trustBundleConfigMapLister corev1listers.ConfigMapNamespaceLister, wc func(ctx context.Context) context.Context) (*Handler, error) {
 	kncloudevents.ConfigureConnectionArgs(&kncloudevents.ConnectionArgs{
 		MaxIdleConns:        defaultMaxIdleConnections,
 		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
@@ -108,7 +114,7 @@ func NewHandler(logger *zap.Logger, tokenVerifier *auth.OIDCTokenVerifier, oidcT
 				return
 			}
 			logger.Debug("Adding filter to filtersMap")
-			fm.Set(trigger, createSubscriptionsAPIFilters(logger, trigger))
+			fm.Set(trigger, subscriptionsapi.CreateSubscriptionsAPIFilters(logger, trigger.Spec.Filters))
 			kncloudevents.AddOrUpdateAddressableHandler(clientConfig, duckv1.Addressable{
 				URL:     trigger.Status.SubscriberURI,
 				CACerts: trigger.Status.SubscriberCACerts,
@@ -120,7 +126,7 @@ func NewHandler(logger *zap.Logger, tokenVerifier *auth.OIDCTokenVerifier, oidcT
 				return
 			}
 			logger.Debug("Updating filter in filtersMap")
-			fm.Set(trigger, createSubscriptionsAPIFilters(logger, trigger))
+			fm.Set(trigger, subscriptionsapi.CreateSubscriptionsAPIFilters(logger, trigger.Spec.Filters))
 			kncloudevents.AddOrUpdateAddressableHandler(clientConfig, duckv1.Addressable{
 				URL:     trigger.Status.SubscriberURI,
 				CACerts: trigger.Status.SubscriberCACerts,
@@ -141,19 +147,21 @@ func NewHandler(logger *zap.Logger, tokenVerifier *auth.OIDCTokenVerifier, oidcT
 	})
 
 	return &Handler{
-		reporter:        reporter,
-		eventDispatcher: kncloudevents.NewDispatcher(clientConfig, oidcTokenProvider),
-		triggerLister:   triggerInformer.Lister(),
-		brokerLister:    brokerInformer.Lister(),
-		logger:          logger,
-		tokenVerifier:   tokenVerifier,
-		withContext:     wc,
-		filtersMap:      fm,
+		reporter:           reporter,
+		eventDispatcher:    kncloudevents.NewDispatcher(clientConfig, oidcTokenProvider),
+		triggerLister:      triggerInformer.Lister(),
+		brokerLister:       brokerInformer.Lister(),
+		subscriptionLister: subscriptionInformer.Lister(),
+		logger:             logger,
+		tokenVerifier:      tokenVerifier,
+		withContext:        wc,
+		filtersMap:         fm,
 	}, nil
 }
 
 func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	ctx := h.withContext(request.Context())
+	features := feature.FromContext(ctx)
 
 	writer.Header().Set("Allow", "POST")
 
@@ -173,6 +181,13 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		h.logger.Info("Unable to get the Trigger", zap.Error(err), zap.Any("triggerRef", triggerRef))
 		writer.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	subscription, err := h.getSubscription(features, trigger)
+	if err != nil {
+		h.logger.Info("Unable to get the Subscription of the Trigger", zap.Error(err), zap.Any("triggerRef", triggerRef))
+		writer.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
@@ -198,13 +213,19 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 		span.AddAttributes(opencensusclient.EventTraceAttributes(event)...)
 	}
 
-	features := feature.FromContext(ctx)
 	if features.IsOIDCAuthentication() {
 		h.logger.Debug("OIDC authentication is enabled")
 
 		audience := FilterAudience
 
-		err = h.tokenVerifier.VerifyJWTFromRequest(ctx, request, &audience, writer)
+		if subscription.Status.Auth == nil || subscription.Status.Auth.ServiceAccountName == nil {
+			h.logger.Warn("Subscription does not have an OIDC identity set, while OIDC is enabled", zap.String("subscription", subscription.Name), zap.String("subscription-namespace", subscription.Namespace))
+			writer.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		subscriptionFullIdentity := fmt.Sprintf("system:serviceaccount:%s:%s", subscription.Namespace, *subscription.Status.Auth.ServiceAccountName)
+		err = h.tokenVerifier.VerifyRequestFromSubject(ctx, features, &audience, subscriptionFullIdentity, request, writer)
 		if err != nil {
 			h.logger.Warn("Error when validating the JWT token in the request", zap.Error(err))
 			return
@@ -570,6 +591,12 @@ func (h *Handler) getTrigger(ref path.NamespacedNameUID) (*eventingv1.Trigger, e
 	return t, nil
 }
 
+func (h *Handler) getSubscription(features feature.Flags, trigger *eventingv1.Trigger) (*messagingv1.Subscription, error) {
+	subscriptionName := resources.SubscriptionName(features, trigger)
+
+	return h.subscriptionLister.Subscriptions(trigger.Namespace).Get(subscriptionName)
+}
+
 func (h *Handler) filterEvent(ctx context.Context, trigger *eventingv1.Trigger, event cloudevents.Event) eventfilter.FilterResult {
 	switch {
 	case len(trigger.Spec.Filters) > 0:
@@ -590,70 +617,7 @@ func (h *Handler) filterEvent(ctx context.Context, trigger *eventingv1.Trigger, 
 }
 
 func applySubscriptionsAPIFilters(ctx context.Context, trigger *eventingv1.Trigger, event cloudevents.Event) eventfilter.FilterResult {
-	return createSubscriptionsAPIFilters(logging.FromContext(ctx).Desugar(), trigger).Filter(ctx, event)
-}
-
-func createSubscriptionsAPIFilters(logger *zap.Logger, trigger *eventingv1.Trigger) eventfilter.Filter {
-	if len(trigger.Spec.Filters) == 0 {
-		logger.Debug("Found no filters for trigger", zap.Any("trigger.Spec", trigger.Spec))
-		return subscriptionsapi.NewNoFilter()
-	}
-	return subscriptionsapi.NewAllFilter(MaterializeFiltersList(logger, trigger.Spec.Filters)...)
-}
-
-func materializeSubscriptionsAPIFilter(logger *zap.Logger, filter eventingv1.SubscriptionsAPIFilter) eventfilter.Filter {
-	var materializedFilter eventfilter.Filter
-	var err error
-	switch {
-	case len(filter.Exact) > 0:
-		// The webhook validates that this map has only a single key:value pair.
-		materializedFilter, err = subscriptionsapi.NewExactFilter(filter.Exact)
-		if err != nil {
-			logger.Debug("Invalid exact expression", zap.Any("filters", filter.Exact), zap.Error(err))
-			return nil
-		}
-	case len(filter.Prefix) > 0:
-		// The webhook validates that this map has only a single key:value pair.
-		materializedFilter, err = subscriptionsapi.NewPrefixFilter(filter.Prefix)
-		if err != nil {
-			logger.Debug("Invalid prefix expression", zap.Any("filters", filter.Exact), zap.Error(err))
-			return nil
-		}
-	case len(filter.Suffix) > 0:
-		// The webhook validates that this map has only a single key:value pair.
-		materializedFilter, err = subscriptionsapi.NewSuffixFilter(filter.Suffix)
-		if err != nil {
-			logger.Debug("Invalid suffix expression", zap.Any("filters", filter.Exact), zap.Error(err))
-			return nil
-		}
-	case len(filter.All) > 0:
-		materializedFilter = subscriptionsapi.NewAllFilter(MaterializeFiltersList(logger, filter.All)...)
-	case len(filter.Any) > 0:
-		materializedFilter = subscriptionsapi.NewAnyFilter(MaterializeFiltersList(logger, filter.Any)...)
-	case filter.Not != nil:
-		materializedFilter = subscriptionsapi.NewNotFilter(materializeSubscriptionsAPIFilter(logger, *filter.Not))
-	case filter.CESQL != "":
-		if materializedFilter, err = subscriptionsapi.NewCESQLFilter(filter.CESQL); err != nil {
-			// This is weird, CESQL expression should be validated when Trigger's are created.
-			logger.Debug("Found an Invalid CE SQL expression", zap.String("expression", filter.CESQL))
-			return nil
-		}
-	}
-	return materializedFilter
-}
-
-// MaterialzieFilterList allows any component that supports `SubscriptionsAPIFilter` to process them
-func MaterializeFiltersList(logger *zap.Logger, filters []eventingv1.SubscriptionsAPIFilter) []eventfilter.Filter {
-	materializedFilters := make([]eventfilter.Filter, 0, len(filters))
-	for _, f := range filters {
-		f := materializeSubscriptionsAPIFilter(logger, f)
-		if f == nil {
-			logger.Warn("Failed to parse filter. Skipping filter.", zap.Any("filter", f))
-			continue
-		}
-		materializedFilters = append(materializedFilters, f)
-	}
-	return materializedFilters
+	return subscriptionsapi.CreateSubscriptionsAPIFilters(logging.FromContext(ctx).Desugar(), trigger.Spec.Filters).Filter(ctx, event)
 }
 
 func applyAttributesFilter(ctx context.Context, filter *eventingv1.TriggerFilter, event cloudevents.Event) eventfilter.FilterResult {

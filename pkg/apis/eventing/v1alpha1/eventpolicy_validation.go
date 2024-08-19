@@ -20,6 +20,7 @@ import (
 	"context"
 	"strings"
 
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/pkg/apis"
 )
@@ -59,6 +60,8 @@ func (ets *EventPolicySpec) Validate(ctx context.Context) *apis.FieldError {
 			err = err.Also(t.Ref.Validate().ViaField("ref").ViaFieldIndex("to", i))
 		}
 	}
+
+	err = err.Also(eventingv1.ValidateSubscriptionAPIFiltersList(ctx, ets.Filters).ViaField("filters"))
 
 	return err
 }

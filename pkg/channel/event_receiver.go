@@ -23,6 +23,8 @@ import (
 	nethttp "net/http"
 	"time"
 
+	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+
 	"knative.dev/eventing/pkg/apis/feature"
 
 	"knative.dev/eventing/pkg/auth"
@@ -71,6 +73,7 @@ type EventReceiver struct {
 	reporter             StatsReporter
 	tokenVerifier        *auth.OIDCTokenVerifier
 	audience             string
+	getPoliciesForFunc   GetPoliciesForFunc
 	withContext          func(context.Context) context.Context
 }
 
@@ -103,6 +106,16 @@ type ResolveChannelFromPathFunc func(string) (ChannelReference, error)
 func ResolveChannelFromPath(PathToChannelFunc ResolveChannelFromPathFunc) EventReceiverOptions {
 	return func(r *EventReceiver) error {
 		r.pathToChannelFunc = PathToChannelFunc
+		return nil
+	}
+}
+
+// GetPoliciesForFunc function enables the EventReceiver to get the Channels AppliedEventPoliciesStatus
+type GetPoliciesForFunc func(channel ChannelReference) ([]duckv1.AppliedEventPolicyRef, error)
+
+func ReceiverWithGetPoliciesForFunc(fn GetPoliciesForFunc) EventReceiverOptions {
+	return func(r *EventReceiver) error {
+		r.getPoliciesForFunc = fn
 		return nil
 	}
 }
@@ -256,12 +269,26 @@ func (r *EventReceiver) ServeHTTP(response nethttp.ResponseWriter, request *neth
 	features := feature.FromContext(ctx)
 	if features.IsOIDCAuthentication() {
 		r.logger.Debug("OIDC authentication is enabled")
-		err = r.tokenVerifier.VerifyJWTFromRequest(ctx, request, &r.audience, response)
-		if err != nil {
-			r.logger.Warn("Error when validating the JWT token in the request", zap.Error(err))
+
+		if r.getPoliciesForFunc == nil {
+			r.logger.Error("getPoliciesForFunc() callback not set. Can't get applying event policies of channel")
+			response.WriteHeader(nethttp.StatusInternalServerError)
 			return
 		}
-		r.logger.Debug("Request contained a valid JWT. Continuing...")
+
+		applyingEventPolicies, err := r.getPoliciesForFunc(channel)
+		if err != nil {
+			r.logger.Error("could not get applying event policies of channel", zap.Error(err), zap.String("channel", channel.String()))
+			response.WriteHeader(nethttp.StatusInternalServerError)
+			return
+		}
+
+		err = r.tokenVerifier.VerifyRequest(ctx, features, &r.audience, channel.Namespace, applyingEventPolicies, request, response)
+		if err != nil {
+			r.logger.Warn("could not verify authn and authz of request", zap.Error(err))
+			return
+		}
+		r.logger.Debug("Request contained a valid and authorized JWT. Continuing...")
 	}
 
 	err = r.receiverFunc(request.Context(), channel, *event, utils.PassThroughHeaders(request.Header))

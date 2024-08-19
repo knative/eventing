@@ -20,6 +20,8 @@ import (
 	"context"
 	"fmt"
 
+	listers "knative.dev/eventing/pkg/client/listers/messaging/v1"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"go.uber.org/zap"
@@ -55,12 +57,13 @@ type Reconciler struct {
 	reporter                 channel.StatsReporter
 	messagingClientSet       messagingv1.MessagingV1Interface
 	eventTypeLister          v1beta2.EventTypeLister
+	inMemoryChannelLister    listers.InMemoryChannelLister
 	eventingClient           eventingv1beta2.EventingV1beta2Interface
 	featureStore             *feature.Store
 	eventDispatcher          *kncloudevents.Dispatcher
-	tokenVerifier            *auth.OIDCTokenVerifier
 
-	clientConfig eventingtls.ClientConfig
+	tokenVerifier *auth.OIDCTokenVerifier
+	clientConfig  eventingtls.ClientConfig
 }
 
 // Check the interfaces Reconciler should implement
@@ -133,6 +136,7 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1.InMemoryChannel) rec
 			r.eventDispatcher,
 			channel.OIDCTokenVerification(r.tokenVerifier, audience(imc)),
 			channel.ReceiverWithContextFunc(wc),
+			channel.ReceiverWithGetPoliciesForFunc(r.getAppliedEventPolicyRef),
 		)
 		if err != nil {
 			logging.FromContext(ctx).Error("Failed to create a new fanout.EventHandler", err)
@@ -165,6 +169,7 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1.InMemoryChannel) rec
 			channel.ResolveChannelFromPath(channel.ParseChannelFromPath),
 			channel.OIDCTokenVerification(r.tokenVerifier, audience(imc)),
 			channel.ReceiverWithContextFunc(wc),
+			channel.ReceiverWithGetPoliciesForFunc(r.getAppliedEventPolicyRef),
 		)
 		if err != nil {
 			logging.FromContext(ctx).Error("Failed to create a new fanout.EventHandler", err)
@@ -276,6 +281,15 @@ func (r *Reconciler) deleteFunc(obj interface{}) {
 	}
 
 	handleSubscribers(imc.Spec.Subscribers, kncloudevents.DeleteAddressableHandler)
+}
+
+func (r *Reconciler) getAppliedEventPolicyRef(channel channel.ChannelReference) ([]eventingduckv1.AppliedEventPolicyRef, error) {
+	imc, err := r.inMemoryChannelLister.InMemoryChannels(channel.Namespace).Get(channel.Name)
+	if err != nil {
+		return nil, fmt.Errorf("could not get inmemory channel %s/%s: %w", channel.Namespace, channel.Name, err)
+	}
+
+	return imc.Status.Policies, nil
 }
 
 func handleSubscribers(subscribers []eventingduckv1.SubscriberSpec, handle func(duckv1.Addressable)) {
