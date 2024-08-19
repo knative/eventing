@@ -196,6 +196,9 @@ var WithRetry = delivery.WithRetry
 // WithTimeout adds the timeout related config to the config.
 var WithTimeout = delivery.WithTimeout
 
+// WithFormat adds the format related config to a Trigger spec
+var WithFormat = delivery.WithFormat
+
 // Install will create a Trigger resource, augmented with the config fn options.
 func Install(name string, opts ...manifest.CfgFn) feature.StepFn {
 	cfg := map[string]interface{}{
