@@ -20,8 +20,11 @@ import (
 	"context"
 	"embed"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"time"
+
+	"knative.dev/pkg/apis"
 
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -202,4 +205,21 @@ func AsKReference(name string) *duckv1.KReference {
 		Name:       name,
 		APIVersion: GVR().GroupVersion().String(),
 	}
+}
+
+// GoesReadySimple returns a feature that will create a JobSink with a simple sink
+// and confirm it becomes ready with an address.
+func GoesReadySimple(name string) *feature.Feature {
+	f := new(feature.Feature)
+
+	sink := feature.MakeRandomK8sName("sink")
+	sinkURL := &apis.URL{Scheme: "http", Host: sink}
+
+	f.Setup("Install sink", eventshub.Install(sink, eventshub.StartReceiver))
+
+	f.Setup(fmt.Sprintf("install JobSink %q", name), Install(name, WithForwarderJob(sinkURL.String())))
+	f.Setup("JobSink is ready", IsReady(name))
+	f.Setup("JobSink is addressable", IsAddressable(name))
+
+	return f
 }

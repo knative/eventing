@@ -22,13 +22,17 @@ package rekt
 import (
 	"testing"
 
+	"knative.dev/eventing/test/rekt/features/authz"
+
 	"knative.dev/pkg/system"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/eventshub"
+	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/knative"
 
 	"knative.dev/eventing/test/rekt/features/jobsink"
+	jsresource "knative.dev/eventing/test/rekt/resources/jobsink"
 )
 
 func TestJobSinkSuccess(t *testing.T) {
@@ -73,4 +77,22 @@ func TestJobSinkOIDC(t *testing.T) {
 	)
 
 	env.Test(ctx, t, jobsink.OIDC())
+}
+
+func TestJobSinkSupportsAuthZ(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		eventshub.WithTLS(t),
+		environment.Managed(t),
+	)
+
+	name := feature.MakeRandomK8sName("jobsink")
+	env.Prerequisite(ctx, t, jsresource.GoesReadySimple(name))
+
+	env.TestSet(ctx, t, authz.AddressableAuthZConformance(jsresource.GVR(), "JobSink", name))
 }
