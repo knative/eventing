@@ -73,7 +73,7 @@ func addressableAllowsAuthorizedRequest(gvr schema.GroupVersionResource, kind, n
 			eventpolicy.WithFromSubject(fmt.Sprintf("system:serviceaccount:%s:%s", namespace, sourceSubject)),
 		)(ctx, t)
 	})
-	f.Setup(fmt.Sprintf("EventPolicy for %s %s is ready", kind, name), k8s.IsReady(gvr, name))
+	f.Setup(fmt.Sprintf("EventPolicy for %s %s is ready", kind, name), k8s.IsReady(eventpolicy.GVR(), eventPolicy))
 
 	// Install source
 	f.Requirement("install source", eventshub.Install(
@@ -110,7 +110,7 @@ func addressableRejectsUnauthorizedRequest(gvr schema.GroupVersionResource, kind
 			name),
 		eventpolicy.WithFromSubject("system:serviceaccount:default:unknown-identity"),
 	))
-	f.Setup(fmt.Sprintf("EventPolicy for %s %s is ready", kind, name), k8s.IsReady(gvr, name))
+	f.Setup(fmt.Sprintf("EventPolicy for %s %s is ready", kind, name), k8s.IsReady(eventpolicy.GVR(), eventPolicy))
 
 	// Install source
 	f.Requirement("install source", eventshub.Install(
@@ -166,7 +166,7 @@ func addressableRespectsEventPolicyFilters(gvr schema.GroupVersionResource, kind
 			}),
 		)(ctx, t)
 	})
-	f.Setup(fmt.Sprintf("EventPolicy for %s %s is ready", kind, name), k8s.IsReady(gvr, name))
+	f.Setup(fmt.Sprintf("EventPolicy for %s %s is ready", kind, name), k8s.IsReady(eventpolicy.GVR(), eventPolicy))
 
 	// Install source
 	f.Requirement("install source 1", eventshub.Install(
@@ -213,7 +213,7 @@ func addressableBecomesUnreadyOnUnreadyEventPolicy(gvr schema.GroupVersionResour
 			name),
 		eventpolicy.WithFromRef(pingsource.Gvr().GroupVersion().WithKind("PingSource"), "doesnt-exist", "doesnt-exist"),
 	))
-	f.Requirement(fmt.Sprintf("EventPolicy for %s %s is NotReady", kind, name), k8s.IsNotReady(gvr, name))
+	f.Requirement(fmt.Sprintf("EventPolicy for %s %s is NotReady", kind, name), k8s.IsNotReady(eventpolicy.GVR(), eventPolicy))
 
 	f.Alpha(kind).Must("become NotReady with NotReady EventPolicy ", k8s.IsNotReady(gvr, name))
 
