@@ -81,6 +81,18 @@ func TestTriggerDependencyAnnotation(t *testing.T) {
 	env.Test(ctx, t, trigger.TriggerDependencyAnnotation())
 }
 
+func TestTriggerDeliveryFormat(t *testing.T) {
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+	)
+
+	env.TestSet(ctx, t, trigger.TriggerSupportsDeliveryFormat())
+}
+
 func TestTriggerTLSSubscriber(t *testing.T) {
 	t.Parallel()
 

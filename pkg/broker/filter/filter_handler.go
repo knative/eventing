@@ -423,10 +423,15 @@ func (h *Handler) handleDispatchToSubscriberRequest(ctx context.Context, trigger
 		Audience: trigger.Status.SubscriberAudience,
 	}
 
-	h.send(ctx, writer, utils.PassThroughHeaders(request.Header), target, reportArgs, event, trigger, ttl)
+	sendOptions := []kncloudevents.SendOption{}
+	if trigger.Spec.Delivery != nil && trigger.Spec.Delivery.Format != nil {
+		sendOptions = append(sendOptions, kncloudevents.WithEventFormat(trigger.Spec.Delivery.Format))
+	}
+
+	h.send(ctx, writer, utils.PassThroughHeaders(request.Header), target, reportArgs, event, trigger, ttl, sendOptions...)
 }
 
-func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers http.Header, target duckv1.Addressable, reportArgs *ReportArgs, event *cloudevents.Event, t *eventingv1.Trigger, ttl int32) {
+func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers http.Header, target duckv1.Addressable, reportArgs *ReportArgs, event *cloudevents.Event, t *eventingv1.Trigger, ttl int32, sendOpts ...kncloudevents.SendOption) {
 	additionalHeaders := headers.Clone()
 	additionalHeaders.Set(apis.KnNamespaceHeader, t.GetNamespace())
 
@@ -452,6 +457,10 @@ func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers 
 			Name:      *t.Status.Auth.ServiceAccountName,
 			Namespace: t.Namespace,
 		}))
+	}
+
+	if len(sendOpts) > 0 {
+		opts = append(opts, sendOpts...)
 	}
 
 	dispatchInfo, err := h.eventDispatcher.SendEvent(ctx, *event, target, opts...)

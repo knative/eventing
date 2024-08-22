@@ -96,4 +96,7 @@ spec:
     {{ if .delivery.backoffDelay }}
     backoffDelay: "{{ .delivery.backoffDelay}}"
     {{ end }}
+    {{ if .delivery.format }}
+    format: {{ .delivery.format }}
+    {{ end }}
   {{ end }}

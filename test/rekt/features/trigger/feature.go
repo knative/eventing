@@ -18,6 +18,7 @@ package trigger
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/cloudevents/sdk-go/v2/test"
 	"k8s.io/utils/pointer"
@@ -92,6 +93,39 @@ func TriggerDependencyAnnotation() *feature.Feature {
 			test.HasType("dev.knative.sources.ping"),
 			test.DataContains("Test trigger-annotation"),
 		).AtLeast(1))
+
+	return f
+}
+
+func TriggerSupportsDeliveryFormat() *feature.FeatureSet {
+	return &feature.FeatureSet{
+		Name:     "Trigger supports delivery format",
+		Features: []*feature.Feature{triggerWithDispatcherFormat("json"), triggerWithDispatcherFormat("binary")},
+	}
+}
+
+func triggerWithDispatcherFormat(format string) *feature.Feature {
+	f := feature.NewFeatureNamed(fmt.Sprintf("Trigger supports sending with %s delivery format", format))
+
+	brokerName := feature.MakeRandomK8sName("broker")
+	sourceName := feature.MakeRandomK8sName("source")
+	sinkName := feature.MakeRandomK8sName("sink")
+	triggerName := feature.MakeRandomK8sName("trigger")
+	eventToSend := test.FullEvent()
+
+	f.Setup("Install Broker", broker.Install(brokerName, broker.WithEnvConfig()...))
+	f.Setup("Broker is ready", broker.IsReady(brokerName))
+	f.Setup("Broker is addressable", broker.IsAddressable(brokerName))
+
+	f.Setup("Install Sink", eventshub.Install(sinkName, eventshub.VerifyEventFormat(format), eventshub.StartReceiver))
+
+	f.Setup("Install trigger", trigger.Install(triggerName, trigger.WithBrokerName(brokerName), trigger.WithFormat(format), trigger.WithSubscriber(service.AsKReference(sinkName), "")))
+	f.Setup("Trigger is ready", trigger.IsReady(triggerName))
+
+	f.Requirement("Install source", eventshub.Install(sourceName, eventshub.InputEvent(eventToSend), eventshub.StartSenderToResource(broker.GVR(), brokerName)))
+
+	f.Alpha("trigger").
+		Must("dispatch event with correct format", assert.OnStore(sinkName).MatchReceivedEvent(test.HasId(eventToSend.ID())).AtLeast(1))
 
 	return f
 }
