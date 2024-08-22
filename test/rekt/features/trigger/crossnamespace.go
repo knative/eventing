@@ -60,7 +60,7 @@ func CrossNamespaceEventLinks(brokerEnvCtx context.Context) *feature.Feature {
 		trigger.WithBrokerRef(brokerRef),
 	}
 
-	f.Setup("install broker", broker.Install(brokerName, broker.WithNamespace(brokerNamespace)))
+	f.Setup("install broker", broker.Install(brokerName, append(broker.WithEnvConfig(), broker.WithNamespace(brokerNamespace))...))
 	f.Setup("install trigger", trigger.Install(triggerName, triggerCfg...))
 
 	f.Setup("install subscriber", eventshub.Install(subscriberName, eventshub.StartReceiver))
