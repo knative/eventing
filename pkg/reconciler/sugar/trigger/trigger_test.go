@@ -20,6 +20,8 @@ import (
 	"context"
 	"testing"
 
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -70,8 +72,16 @@ func TestEnabled(t *testing.T) {
 	// Context with DefaultConfig
 	c := config.Config{
 		Defaults: &config.Defaults{
-			ClusterDefault: &config.ClassAndBrokerConfig{
-				BrokerClass: "AValidBrokerClass",
+			ClusterDefaultConfig: &config.DefaultConfig{
+				DefaultBrokerClass: "AValidBrokerClass",
+				BrokerConfig: &config.BrokerConfig{
+					KReference: &duckv1.KReference{
+						Name:       "default-broker-config",
+						Kind:       "ConfigMap",
+						Namespace:  testNS,
+						APIVersion: "v1",
+					},
+				},
 			},
 		},
 	}

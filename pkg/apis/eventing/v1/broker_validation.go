@@ -33,34 +33,46 @@ const (
 
 func (b *Broker) Validate(ctx context.Context) *apis.FieldError {
 	ctx = apis.WithinParent(ctx, b.ObjectMeta)
-
 	cfg := config.FromContextOrDefaults(ctx)
-	var brConfig *config.ClassAndBrokerConfig
-	if cfg.Defaults != nil {
-		if c, ok := cfg.Defaults.NamespaceDefaultsConfig[b.GetNamespace()]; ok {
-			brConfig = c
-		} else {
-			brConfig = cfg.Defaults.ClusterDefault
-		}
-	}
 
-	withNS := ctx
-	if brConfig == nil || brConfig.DisallowDifferentNamespaceConfig == nil || !*brConfig.DisallowDifferentNamespaceConfig {
-		withNS = apis.AllowDifferentNamespace(ctx)
-	}
+	var errs *apis.FieldError
+	withNS := determineNamespaceAllowance(ctx, cfg.Defaults)
 
 	// Make sure a BrokerClassAnnotation exists
-	var errs *apis.FieldError
 	if bc, ok := b.GetAnnotations()[BrokerClassAnnotationKey]; !ok || bc == "" {
 		errs = errs.Also(apis.ErrMissingField(BrokerClassAnnotationKey))
 	}
 
+	// Further validation logic
 	errs = errs.Also(b.Spec.Validate(withNS).ViaField("spec"))
 	if apis.IsInUpdate(ctx) {
 		original := apis.GetBaseline(ctx).(*Broker)
 		errs = errs.Also(b.CheckImmutableFields(ctx, original))
 	}
+
 	return errs
+}
+
+// Determine if the namespace allowance based on the given configuration
+func determineNamespaceAllowance(ctx context.Context, brConfig *config.Defaults) context.Context {
+
+	// If there is no configurations set, allow different namespace by default
+	if brConfig == nil || (brConfig.NamespaceDefaultsConfig == nil && brConfig.ClusterDefaultConfig == nil) {
+		return apis.AllowDifferentNamespace(ctx)
+	}
+	namespace := apis.ParentMeta(ctx).Namespace
+	nsConfig := brConfig.NamespaceDefaultsConfig[namespace]
+
+	// Check if the namespace disallows different namespace first
+	if nsConfig == nil || nsConfig.DisallowDifferentNamespaceConfig == nil || !*nsConfig.DisallowDifferentNamespaceConfig {
+		// If there is no namespace specific configuration or DisallowDifferentNamespaceConfig is false, check the cluster level configuration
+		if brConfig.ClusterDefaultConfig == nil || brConfig.ClusterDefaultConfig.DisallowDifferentNamespaceConfig == nil || !*brConfig.ClusterDefaultConfig.DisallowDifferentNamespaceConfig {
+			// If there is no cluster level configuration or DisallowDifferentNamespaceConfig in cluster level is false, allow different namespace
+			return apis.AllowDifferentNamespace(ctx)
+		}
+	}
+	// If we reach here, it means DisallowDifferentNamespaceConfig is true at either level, no need to explicitly disallow, just return the original context
+	return ctx
 }
 
 func (bs *BrokerSpec) Validate(ctx context.Context) *apis.FieldError {

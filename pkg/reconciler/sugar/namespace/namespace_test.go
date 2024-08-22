@@ -29,6 +29,7 @@ import (
 	sugarconfig "knative.dev/eventing/pkg/apis/sugar"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/reconciler/sugar/resources"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 	namespacereconciler "knative.dev/pkg/client/injection/kube/reconciler/core/v1/namespace"
 	"knative.dev/pkg/configmap"
@@ -69,8 +70,16 @@ func TestEnabled(t *testing.T) {
 	// Context with DefaultConfig
 	c := config.Config{
 		Defaults: &config.Defaults{
-			ClusterDefault: &config.ClassAndBrokerConfig{
-				BrokerClass: "AValidBrokerClass",
+			ClusterDefaultConfig: &config.DefaultConfig{
+				DefaultBrokerClass: "AValidBrokerClass",
+				BrokerConfig: &config.BrokerConfig{
+					KReference: &duckv1.KReference{
+						Name:       "default-broker-config",
+						Kind:       "ConfigMap",
+						Namespace:  testNS,
+						APIVersion: "v1",
+					},
+				},
 			},
 		},
 	}
