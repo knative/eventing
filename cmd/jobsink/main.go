@@ -191,22 +191,19 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Name:      parts[2],
 	}
 
+	js, err := h.lister.JobSinks(ref.Namespace).Get(ref.Name)
+	if err != nil {
+		logger.Warn("Failed to retrieve jobsink", zap.String("ref", ref.String()), zap.Error(err))
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
 	logger.Debug("Handling POST request", zap.String("URI", r.RequestURI))
 
-	features := feature.FromContext(ctx)
-	logger.Debug("features", zap.Any("features", features))
-
-	if features.IsOIDCAuthentication() {
-		logger.Debug("OIDC authentication is enabled")
-
-		audience := auth.GetAudienceDirect(sinksv.SchemeGroupVersion.WithKind("JobSink"), ref.Namespace, ref.Name)
-
-		err := h.oidcTokenVerifier.VerifyJWTFromRequest(ctx, r, &audience, w)
-		if err != nil {
-			logger.Warn("Error when validating the JWT token in the request", zap.Error(err))
-			return
-		}
-		logger.Debug("Request contained a valid JWT. Continuing...")
+	err = h.oidcTokenVerifier.VerifyRequest(ctx, feature.FromContext(ctx), js.Status.Address.Audience, js.Namespace, js.Status.Policies, r, w)
+	if err != nil {
+		logger.Warn("Failed to verify AuthN and AuthZ.", zap.Error(err))
+		return
 	}
 
 	message := cehttp.NewMessageFromHttpRequest(r)
@@ -221,13 +218,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if err := event.Validate(); err != nil {
 		logger.Info("failed to validate event from request", zap.Error(err))
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	js, err := h.lister.JobSinks(ref.Namespace).Get(ref.Name)
-	if err != nil {
-		logger.Warn("Failed to retrieve jobsink", zap.String("ref", ref.String()), zap.Error(err))
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
