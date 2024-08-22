@@ -87,7 +87,7 @@ func (fe *DurableFeature) Verify(label string) pkgupgrade.Operation {
 	})
 }
 
-func (fe *DurableFeature) VerifyTeardown(label string) pkgupgrade.Operation {
+func (fe *DurableFeature) VerifyAndTeardown(label string) pkgupgrade.Operation {
 	return pkgupgrade.NewOperation(label, func(c pkgupgrade.Context) {
 		c.T.Parallel()
 		fe.setupEnv.Test(fe.setupCtx, c.T, fe.VerifyF)
@@ -96,7 +96,7 @@ func (fe *DurableFeature) VerifyTeardown(label string) pkgupgrade.Operation {
 	})
 }
 
-func (fe *DurableFeature) SetupVerifyTeardown(label string) pkgupgrade.Operation {
+func (fe *DurableFeature) SetupVerifyAndTeardown(label string) pkgupgrade.Operation {
 	return pkgupgrade.NewOperation(label, func(c pkgupgrade.Context) {
 		c.T.Parallel()
 		ctx, env := fe.Global.Environment(
@@ -141,7 +141,7 @@ func (f featureOnlyUpgrade) PreUpgradeTests() []pkgupgrade.Operation {
 
 func (f featureOnlyUpgrade) PostUpgradeTests() []pkgupgrade.Operation {
 	return []pkgupgrade.Operation{
-		f.feature.VerifyTeardown(f.label),
+		f.feature.VerifyAndTeardown(f.label),
 	}
 }
 
@@ -181,7 +181,7 @@ func (f featureUpgradeDowngrade) PostUpgradeTests() []pkgupgrade.Operation {
 
 func (f featureUpgradeDowngrade) PostDowngradeTests() []pkgupgrade.Operation {
 	return []pkgupgrade.Operation{
-		f.feature.VerifyTeardown(f.label),
+		f.feature.VerifyAndTeardown(f.label),
 	}
 }
 
@@ -216,7 +216,7 @@ func (f featureOnlyDowngrade) PostUpgradeTests() []pkgupgrade.Operation {
 func (f featureOnlyDowngrade) PostDowngradeTests() []pkgupgrade.Operation {
 	// Assert and Teardown is done post-downgrade.
 	return []pkgupgrade.Operation{
-		f.feature.VerifyTeardown(f.label),
+		f.feature.VerifyAndTeardown(f.label),
 	}
 }
 
@@ -243,13 +243,13 @@ func (f featureSmoke) PreUpgradeTests() []pkgupgrade.Operation {
 
 func (f featureSmoke) PostUpgradeTests() []pkgupgrade.Operation {
 	return []pkgupgrade.Operation{
-		f.feature.SetupVerifyTeardown(f.label),
+		f.feature.SetupVerifyAndTeardown(f.label),
 	}
 }
 
 func (f featureSmoke) PostDowngradeTests() []pkgupgrade.Operation {
 	return []pkgupgrade.Operation{
-		f.feature.SetupVerifyTeardown(f.label),
+		f.feature.SetupVerifyAndTeardown(f.label),
 	}
 }
 
