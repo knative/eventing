@@ -36,13 +36,29 @@ import (
 	"knative.dev/reconciler-test/pkg/k8s"
 )
 
+// AddressableAuthZConformance returns a feature set to test all Authorization features for an addressable.
 func AddressableAuthZConformance(gvr schema.GroupVersionResource, kind, name string) *feature.FeatureSet {
+	fs := feature.FeatureSet{
+		Name: fmt.Sprintf("%s handles authorization features correctly", kind),
+		Features: []*feature.Feature{
+			addressableRespectsEventPolicyFilters(gvr, kind, name),
+		},
+	}
+
+	fs.Features = append(fs.Features, AddressableAuthZConformanceRequestHandling(gvr, kind, name).Features...)
+
+	return &fs
+}
+
+// AddressableAuthZConformanceRequestHandling returns a FeatureSet to test the basic authorization features.
+// This basic feature set contains to allow authorized and reject unauthorized requests. In addition it also
+// tests, that the addressable becomes unready in case of a NotReady assigned EventPolicy.
+func AddressableAuthZConformanceRequestHandling(gvr schema.GroupVersionResource, kind, name string) *feature.FeatureSet {
 	fs := feature.FeatureSet{
 		Name: fmt.Sprintf("%s handles authorization in requests correctly", kind),
 		Features: []*feature.Feature{
 			addressableAllowsAuthorizedRequest(gvr, kind, name),
 			addressableRejectsUnauthorizedRequest(gvr, kind, name),
-			addressableRespectsEventPolicyFilters(gvr, kind, name),
 			addressableBecomesUnreadyOnUnreadyEventPolicy(gvr, kind, name),
 		},
 	}
