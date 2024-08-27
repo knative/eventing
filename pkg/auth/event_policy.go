@@ -316,18 +316,12 @@ type EventPolicyStatusMarker interface {
 	MarkEventPoliciesTrueWithReason(reason, messageFormat string, messageA ...interface{})
 }
 
-func UpdateStatusWithEventPolicies(featureFlags feature.Flags, status *eventingduckv1.AppliedEventPoliciesStatus, statusMarker EventPolicyStatusMarker, eventPolicyLister listerseventingv1alpha1.EventPolicyLister, gvk schema.GroupVersionKind, objectMeta metav1.ObjectMeta) error {
+func UpdateStatusWithProvidedEventPolicies(featureFlags feature.Flags, status *eventingduckv1.AppliedEventPoliciesStatus, statusMarker EventPolicyStatusMarker, applyingEventPolicies []*v1alpha1.EventPolicy) error {
 	status.Policies = nil
 
-	applyingEvenPolicies, err := GetEventPoliciesForResource(eventPolicyLister, gvk, objectMeta)
-	if err != nil {
-		statusMarker.MarkEventPoliciesFailed("EventPoliciesGetFailed", "Failed to get applying event policies")
-		return fmt.Errorf("unable to get applying event policies: %w", err)
-	}
-
-	if len(applyingEvenPolicies) > 0 {
+	if len(applyingEventPolicies) > 0 {
 		unreadyEventPolicies := []string{}
-		for _, policy := range applyingEvenPolicies {
+		for _, policy := range applyingEventPolicies {
 			if !policy.Status.IsReady() {
 				unreadyEventPolicies = append(unreadyEventPolicies, policy.Name)
 			} else {
@@ -356,4 +350,14 @@ func UpdateStatusWithEventPolicies(featureFlags feature.Flags, status *eventingd
 	}
 
 	return nil
+}
+
+func UpdateStatusWithEventPolicies(featureFlags feature.Flags, status *eventingduckv1.AppliedEventPoliciesStatus, statusMarker EventPolicyStatusMarker, eventPolicyLister listerseventingv1alpha1.EventPolicyLister, gvk schema.GroupVersionKind, objectMeta metav1.ObjectMeta) error {
+	applyingEvenPolicies, err := GetEventPoliciesForResource(eventPolicyLister, gvk, objectMeta)
+	if err != nil {
+		statusMarker.MarkEventPoliciesFailed("EventPoliciesGetFailed", "Failed to get applying event policies")
+		return fmt.Errorf("unable to get applying event policies: %w", err)
+	}
+
+	return UpdateStatusWithProvidedEventPolicies(featureFlags, status, statusMarker, applyingEvenPolicies)
 }
