@@ -97,6 +97,11 @@ var (
 	_ testing.FakeClient  = &Clientset{}
 )
 
+// EventingV1 retrieves the EventingV1Client
+func (c *Clientset) EventingV1() eventingv1.EventingV1Interface {
+	return &fakeeventingv1.FakeEventingV1{Fake: &c.Fake}
+}
+
 // EventingV1alpha1 retrieves the EventingV1alpha1Client
 func (c *Clientset) EventingV1alpha1() eventingv1alpha1.EventingV1alpha1Interface {
 	return &fakeeventingv1alpha1.FakeEventingV1alpha1{Fake: &c.Fake}
@@ -117,11 +122,6 @@ func (c *Clientset) EventingV1beta3() eventingv1beta3.EventingV1beta3Interface {
 	return &fakeeventingv1beta3.FakeEventingV1beta3{Fake: &c.Fake}
 }
 
-// EventingV1 retrieves the EventingV1Client
-func (c *Clientset) EventingV1() eventingv1.EventingV1Interface {
-	return &fakeeventingv1.FakeEventingV1{Fake: &c.Fake}
-}
-
 // FlowsV1 retrieves the FlowsV1Client
 func (c *Clientset) FlowsV1() flowsv1.FlowsV1Interface {
 	return &fakeflowsv1.FakeFlowsV1{Fake: &c.Fake}
@@ -137,12 +137,12 @@ func (c *Clientset) SinksV1alpha1() sinksv1alpha1.SinksV1alpha1Interface {
 	return &fakesinksv1alpha1.FakeSinksV1alpha1{Fake: &c.Fake}
 }
 
-// SourcesV1beta2 retrieves the SourcesV1beta2Client
-func (c *Clientset) SourcesV1beta2() sourcesv1beta2.SourcesV1beta2Interface {
-	return &fakesourcesv1beta2.FakeSourcesV1beta2{Fake: &c.Fake}
-}
-
 // SourcesV1 retrieves the SourcesV1Client
 func (c *Clientset) SourcesV1() sourcesv1.SourcesV1Interface {
 	return &fakesourcesv1.FakeSourcesV1{Fake: &c.Fake}
+}
+
+// SourcesV1beta2 retrieves the SourcesV1beta2Client
+func (c *Clientset) SourcesV1beta2() sourcesv1beta2.SourcesV1beta2Interface {
+	return &fakesourcesv1beta2.FakeSourcesV1beta2{Fake: &c.Fake}
 }

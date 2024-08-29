@@ -19,6 +19,7 @@ set -o nounset
 set -o pipefail
 
 source $(dirname $0)/../vendor/knative.dev/hack/codegen-library.sh
+source "${CODEGEN_PKG}/kube_codegen.sh"
 
 # If we run with -mod=vendor here, then generate-groups.sh looks for vendor files in the wrong place.
 export GOFLAGS=-mod=
@@ -32,27 +33,16 @@ ${REPO_ROOT_DIR}/hack/update-checksums.sh
 
 group "Kubernetes Codegen"
 
-# generate the code with:
-# --output-base    because this script should also be able to run inside the vendor dir of
-#                  k8s.io/kubernetes. The output-base is needed for the generators to output into the vendor dir
-#                  instead of the $GOPATH directly. For normal projects this can be dropped.
-${CODEGEN_PKG}/generate-groups.sh "deepcopy,client,informer,lister" \
-  knative.dev/eventing/pkg/client knative.dev/eventing/pkg/apis \
-  "sinks:v1alpha1 eventing:v1alpha1 eventing:v1beta1 eventing:v1beta2 eventing:v1beta3 eventing:v1 messaging:v1 flows:v1 sources:v1beta2 sources:v1" \
-  --go-header-file ${REPO_ROOT_DIR}/hack/boilerplate/boilerplate.go.txt
+kube::codegen::gen_helpers \
+  --boilerplate "${REPO_ROOT_DIR}/hack/boilerplate/boilerplate.go.txt" \
+  "${REPO_ROOT_DIR}/pkg/apis"
 
-# Deep copy config
-${GOPATH}/bin/deepcopy-gen \
-  -O zz_generated.deepcopy \
-  --go-header-file ${REPO_ROOT_DIR}/hack/boilerplate/boilerplate.go.txt \
-  -i knative.dev/eventing/pkg/apis/config \
-  -i knative.dev/eventing/pkg/apis/messaging/config \
-
-# Only deepcopy the Duck types, as they are not real resources.
-${CODEGEN_PKG}/generate-groups.sh "deepcopy" \
-  knative.dev/eventing/pkg/client knative.dev/eventing/pkg/apis \
-  "duck:v1beta1 duck:v1alpha1 duck:v1" \
-  --go-header-file ${REPO_ROOT_DIR}/hack/boilerplate/boilerplate.go.txt
+kube::codegen::gen_client \
+  --boilerplate "${REPO_ROOT_DIR}/hack/boilerplate/boilerplate.go.txt" \
+  --output-dir "${REPO_ROOT_DIR}/pkg/client" \
+  --output-pkg "knative.dev/eventing/pkg/client" \
+  --with-watch \
+  "${REPO_ROOT_DIR}/pkg/apis"
 
 group "Knative Codegen"
 
