@@ -40,16 +40,16 @@ var Scheme = runtime.NewScheme()
 var Codecs = serializer.NewCodecFactory(Scheme)
 var ParameterCodec = runtime.NewParameterCodec(Scheme)
 var localSchemeBuilder = runtime.SchemeBuilder{
+	eventingv1.AddToScheme,
 	eventingv1alpha1.AddToScheme,
 	eventingv1beta1.AddToScheme,
 	eventingv1beta2.AddToScheme,
 	eventingv1beta3.AddToScheme,
-	eventingv1.AddToScheme,
 	flowsv1.AddToScheme,
 	messagingv1.AddToScheme,
 	sinksv1alpha1.AddToScheme,
-	sourcesv1beta2.AddToScheme,
 	sourcesv1.AddToScheme,
+	sourcesv1beta2.AddToScheme,
 }
 
 // AddToScheme adds all types of this clientset into the given scheme. This allows composition
