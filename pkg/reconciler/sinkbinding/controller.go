@@ -26,6 +26,7 @@ import (
 
 	"knative.dev/eventing/pkg/auth"
 	sbinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1/sinkbinding"
+	listers "knative.dev/eventing/pkg/client/listers/sources/v1"
 	"knative.dev/eventing/pkg/eventingtls"
 
 	"knative.dev/pkg/client/injection/ducks/duck/v1/podspecable"
@@ -76,6 +77,7 @@ func NewController(
 	logger := logging.FromContext(ctx)
 
 	sbInformer := sbinformer.Get(ctx)
+	sbLister := sbInformer.Lister()
 	dc := dynamicclient.Get(ctx)
 	psInformerFactory := podspecable.Get(ctx)
 	namespaceInformer := namespace.Get(ctx)
@@ -128,7 +130,13 @@ func NewController(
 	}
 
 	sbInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
-	namespaceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
+	namespaceInformer.Informer().AddEventHandler(controller.HandleAll(func(obj interface{}) {
+		ns, err := kmeta.DeletionHandlingAccessor(obj)
+		if err != nil {
+			return
+		}
+		enqueueInNamespace(sbLister, ns.GetName(), impl)
+	}))
 
 	sbResolver := resolver.NewURIResolverFromTracker(ctx, impl.Tracker)
 	c.SubResourcesReconciler = &SinkBindingSubResourcesReconciler{
@@ -172,16 +180,7 @@ func NewController(
 			return
 		}
 
-		sbs, err := sbInformer.Lister().SinkBindings(obj.GetNamespace()).List(labels.Everything())
-		if err != nil {
-			return
-		}
-		for _, sb := range sbs {
-			impl.EnqueueKey(types.NamespacedName{
-				Namespace: sb.Namespace,
-				Name:      sb.Name,
-			})
-		}
+		enqueueInNamespace(sbLister, obj.GetNamespace(), impl)
 	}))
 
 	return impl
@@ -255,4 +254,14 @@ func createRecorder(ctx context.Context, agentName string) record.EventRecorder 
 	}
 
 	return recorder
+}
+
+func enqueueInNamespace(sbLister listers.SinkBindingLister, ns string, impl *controller.Impl) {
+	sbs, err := sbLister.SinkBindings(ns).List(labels.Everything())
+	if err != nil {
+		return
+	}
+	for _, sb := range sbs {
+		impl.EnqueueKey(types.NamespacedName{Namespace: sb.Namespace, Name: sb.Name})
+	}
 }
