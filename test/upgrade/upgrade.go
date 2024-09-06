@@ -57,7 +57,10 @@ func RunMainTest(m *testing.M) {
 // idempotent. Calling this function multiple times should still properly verify the feature
 // (e.g. one call after upgrade, one call after downgrade).
 type DurableFeature struct {
-	SetupF   *feature.Feature
+	SetupF *feature.Feature
+	// EnvOpts should never include environment.Managed or environment.Cleanup as these functions
+	// break the functionality.
+	EnvOpts  []environment.EnvOpts
 	setupEnv environment.Environment
 	setupCtx context.Context
 	VerifyF  *feature.Feature
@@ -68,11 +71,8 @@ func (fe *DurableFeature) Setup(label string) pkgupgrade.Operation {
 	return pkgupgrade.NewOperation(label, func(c pkgupgrade.Context) {
 		c.T.Parallel()
 		ctx, env := fe.Global.Environment(
-			knative.WithKnativeNamespace(system.Namespace()),
-			knative.WithLoggingConfig,
-			knative.WithTracingConfig,
-			k8s.WithEventListener,
-			// Not managed - namespace preserved.
+			fe.EnvOpts...,
+		// Not managed - namespace preserved.
 		)
 		fe.setupEnv = env
 		fe.setupCtx = ctx
@@ -100,11 +100,7 @@ func (fe *DurableFeature) SetupVerifyAndTeardown(label string) pkgupgrade.Operat
 	return pkgupgrade.NewOperation(label, func(c pkgupgrade.Context) {
 		c.T.Parallel()
 		ctx, env := fe.Global.Environment(
-			knative.WithKnativeNamespace(system.Namespace()),
-			knative.WithLoggingConfig,
-			knative.WithTracingConfig,
-			k8s.WithEventListener,
-			environment.Managed(c.T),
+			append(fe.EnvOpts, environment.Managed(c.T))...,
 		)
 		env.Test(ctx, c.T, fe.SetupF)
 		env.Test(ctx, c.T, fe.VerifyF)
@@ -297,5 +293,12 @@ func InMemoryChannelFeature(glob environment.GlobalEnvironment) *DurableFeature 
 	verifyF := feature.NewFeature()
 	channel.ChannelChainAssert(verifyF, sink, ch)
 
-	return &DurableFeature{SetupF: setupF, VerifyF: verifyF, Global: glob}
+	opts := []environment.EnvOpts{
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+	}
+
+	return &DurableFeature{SetupF: setupF, VerifyF: verifyF, Global: glob, EnvOpts: opts}
 }
