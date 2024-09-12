@@ -303,7 +303,7 @@ func InMemoryChannelFeature(glob environment.GlobalEnvironment) *DurableFeature 
 	sink, ch := channel.ChannelChainSetup(setupF, 1, createSubscriberFn)
 
 	verifyF := func() *feature.Feature {
-		f := feature.NewFeature()
+		f := feature.NewFeatureNamed(setupF.Name)
 		channel.ChannelChainAssert(f, sink, ch)
 		return f
 	}
@@ -322,7 +322,7 @@ func BrokerEventTransformationForTrigger(glob environment.GlobalEnvironment,
 	cfg := brokerfeatures.BrokerEventTransformationForTriggerSetup(setupF)
 
 	verifyF := func() *feature.Feature {
-		f := feature.NewFeature()
+		f := feature.NewFeatureNamed(setupF.Name)
 		brokerfeatures.BrokerEventTransformationForTriggerAssert(f, cfg)
 		return f
 	}
