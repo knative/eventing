@@ -52,12 +52,16 @@ func TestEventingUpgrades(t *testing.T) {
 	g := FeatureGroupWithUpgradeTests{
 		// A feature that will run the same test post-upgrade and post-downgrade.
 		NewFeatureSmoke(InMemoryChannelFeature(global)),
+		NewFeatureSmoke(BrokerEventTransformationForTrigger(global)),
 		// A feature that will be created pre-upgrade and verified/removed post-upgrade.
 		NewFeatureOnlyUpgrade(InMemoryChannelFeature(global)),
+		NewFeatureOnlyUpgrade(BrokerEventTransformationForTrigger(global)),
 		// A feature that will be created pre-upgrade, verified post-upgrade, verified and removed post-downgrade.
 		NewFeatureUpgradeDowngrade(InMemoryChannelFeature(global)),
+		NewFeatureUpgradeDowngrade(BrokerEventTransformationForTrigger(global)),
 		// A feature that will be created post-upgrade, verified and removed post-downgrade.
 		NewFeatureOnlyDowngrade(InMemoryChannelFeature(global)),
+		NewFeatureOnlyDowngrade(BrokerEventTransformationForTrigger(global)),
 	}
 
 	suite := pkgupgrade.Suite{
