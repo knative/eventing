@@ -44,6 +44,7 @@ import (
 	"knative.dev/eventing/pkg/broker"
 
 	brokerinformerfake "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/broker/fake"
+	eventpolicyinformerfake "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventpolicy/fake"
 
 	// Fake injection client
 	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventpolicy/fake"
@@ -290,7 +291,7 @@ func TestHandler_ServeHTTP(t *testing.T) {
 			}
 
 			tokenProvider := auth.NewOIDCTokenProvider(ctx)
-			tokenVerifier := auth.NewOIDCTokenVerifier(ctx)
+			tokenVerifier := auth.NewOIDCTokenVerifier(ctx, eventpolicyinformerfake.Get(ctx).Lister())
 
 			h, err := NewHandler(logger,
 				&mockReporter{},

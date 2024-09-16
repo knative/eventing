@@ -27,7 +27,6 @@ import (
 	"time"
 
 	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
-	eventpolicyinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventpolicy"
 	"knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 
 	"github.com/cloudevents/sdk-go/v2/binding"
@@ -37,6 +36,7 @@ import (
 	"k8s.io/client-go/rest"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/pkg/apis/feature"
+	listerseventingv1alpha1 "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 	"knative.dev/pkg/injection"
 	"knative.dev/pkg/logging"
 )
@@ -61,11 +61,11 @@ type IDToken struct {
 	AccessTokenHash string
 }
 
-func NewOIDCTokenVerifier(ctx context.Context) *OIDCTokenVerifier {
+func NewOIDCTokenVerifier(ctx context.Context, eventPolicyLister listerseventingv1alpha1.EventPolicyLister) *OIDCTokenVerifier {
 	tokenHandler := &OIDCTokenVerifier{
 		logger:            logging.FromContext(ctx).With("component", "oidc-token-handler"),
 		restConfig:        injection.GetConfig(ctx),
-		eventPolicyLister: eventpolicyinformer.Get(ctx).Lister(),
+		eventPolicyLister: eventPolicyLister,
 	}
 
 	if err := tokenHandler.initOIDCProvider(ctx); err != nil {

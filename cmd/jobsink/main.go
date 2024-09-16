@@ -54,6 +54,7 @@ import (
 	"knative.dev/eventing/pkg/apis/sinks"
 	sinksv "knative.dev/eventing/pkg/apis/sinks/v1alpha1"
 	"knative.dev/eventing/pkg/auth"
+	eventpolicyinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventpolicy"
 	"knative.dev/eventing/pkg/client/injection/informers/sinks/v1alpha1/jobsink"
 	sinkslister "knative.dev/eventing/pkg/client/listers/sinks/v1alpha1"
 	"knative.dev/eventing/pkg/eventingtls"
@@ -117,7 +118,7 @@ func main() {
 		k8s:               kubeclient.Get(ctx),
 		lister:            jobsink.Get(ctx).Lister(),
 		withContext:       ctxFunc,
-		oidcTokenVerifier: auth.NewOIDCTokenVerifier(ctx),
+		oidcTokenVerifier: auth.NewOIDCTokenVerifier(ctx, eventpolicyinformer.Get(ctx).Lister()),
 	}
 
 	tlsConfig, err := getServerTLSConfig(ctx)
