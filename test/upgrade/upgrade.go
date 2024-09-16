@@ -23,7 +23,10 @@ import (
 	"sync"
 	"testing"
 
+	"knative.dev/eventing/pkg/apis/eventing"
+	brokerfeatures "knative.dev/eventing/test/rekt/features/broker"
 	"knative.dev/eventing/test/rekt/features/channel"
+	brokerresources "knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/eventing/test/rekt/resources/channel_impl"
 	"knative.dev/eventing/test/rekt/resources/subscription"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -37,7 +40,16 @@ import (
 	"knative.dev/reconciler-test/pkg/manifest"
 )
 
-var channelConfigMux = &sync.Mutex{}
+var (
+	channelConfigMux = &sync.Mutex{}
+	brokerConfigMux  = &sync.Mutex{}
+	opts             = []environment.EnvOpts{
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+	}
+)
 
 // RunMainTest expects flags to be already initialized.
 // This function needs to be exposed, so that test cases in other repositories can call the upgrade
@@ -63,7 +75,7 @@ type DurableFeature struct {
 	EnvOpts  []environment.EnvOpts
 	setupEnv environment.Environment
 	setupCtx context.Context
-	VerifyF  *feature.Feature
+	VerifyF  func() *feature.Feature
 	Global   environment.GlobalEnvironment
 }
 
@@ -83,14 +95,14 @@ func (fe *DurableFeature) Setup(label string) pkgupgrade.Operation {
 func (fe *DurableFeature) Verify(label string) pkgupgrade.Operation {
 	return pkgupgrade.NewOperation(label, func(c pkgupgrade.Context) {
 		c.T.Parallel()
-		fe.setupEnv.Test(fe.setupCtx, c.T, fe.VerifyF)
+		fe.setupEnv.Test(fe.setupCtx, c.T, fe.VerifyF())
 	})
 }
 
 func (fe *DurableFeature) VerifyAndTeardown(label string) pkgupgrade.Operation {
 	return pkgupgrade.NewOperation(label, func(c pkgupgrade.Context) {
 		c.T.Parallel()
-		fe.setupEnv.Test(fe.setupCtx, c.T, fe.VerifyF)
+		fe.setupEnv.Test(fe.setupCtx, c.T, fe.VerifyF())
 		// Ensures teardown of resources/namespace.
 		fe.setupEnv.Finish()
 	})
@@ -103,7 +115,7 @@ func (fe *DurableFeature) SetupVerifyAndTeardown(label string) pkgupgrade.Operat
 			append(fe.EnvOpts, environment.Managed(c.T))...,
 		)
 		env.Test(ctx, c.T, fe.SetupF)
-		env.Test(ctx, c.T, fe.VerifyF)
+		env.Test(ctx, c.T, fe.VerifyF())
 	})
 }
 
@@ -290,14 +302,29 @@ func InMemoryChannelFeature(glob environment.GlobalEnvironment) *DurableFeature 
 	setupF := feature.NewFeature()
 	sink, ch := channel.ChannelChainSetup(setupF, 1, createSubscriberFn)
 
-	verifyF := feature.NewFeature()
-	channel.ChannelChainAssert(verifyF, sink, ch)
+	verifyF := func() *feature.Feature {
+		f := feature.NewFeatureNamed(setupF.Name)
+		channel.ChannelChainAssert(f, sink, ch)
+		return f
+	}
 
-	opts := []environment.EnvOpts{
-		knative.WithKnativeNamespace(system.Namespace()),
-		knative.WithLoggingConfig,
-		knative.WithTracingConfig,
-		k8s.WithEventListener,
+	return &DurableFeature{SetupF: setupF, VerifyF: verifyF, Global: glob, EnvOpts: opts}
+}
+
+func BrokerEventTransformationForTrigger(glob environment.GlobalEnvironment,
+) *DurableFeature {
+	// Prevent race conditions on EnvCfg.BrokerClass when running tests in parallel.
+	brokerConfigMux.Lock()
+	defer brokerConfigMux.Unlock()
+	brokerresources.EnvCfg.BrokerClass = eventing.MTChannelBrokerClassValue
+
+	setupF := feature.NewFeature()
+	cfg := brokerfeatures.BrokerEventTransformationForTriggerSetup(setupF)
+
+	verifyF := func() *feature.Feature {
+		f := feature.NewFeatureNamed(setupF.Name)
+		brokerfeatures.BrokerEventTransformationForTriggerAssert(f, cfg)
+		return f
 	}
 
 	return &DurableFeature{SetupF: setupF, VerifyF: verifyF, Global: glob, EnvOpts: opts}
