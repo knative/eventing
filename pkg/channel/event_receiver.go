@@ -71,7 +71,7 @@ type EventReceiver struct {
 	hostToChannelFunc    ResolveChannelFromHostFunc
 	pathToChannelFunc    ResolveChannelFromPathFunc
 	reporter             StatsReporter
-	tokenVerifier        *auth.OIDCTokenVerifier
+	tokenVerifier        *auth.Verifier
 	audience             string
 	getPoliciesForFunc   GetPoliciesForFunc
 	withContext          func(context.Context) context.Context
@@ -120,7 +120,7 @@ func ReceiverWithGetPoliciesForFunc(fn GetPoliciesForFunc) EventReceiverOptions 
 	}
 }
 
-func OIDCTokenVerification(tokenVerifier *auth.OIDCTokenVerifier, audience string) EventReceiverOptions {
+func OIDCTokenVerification(tokenVerifier *auth.Verifier, audience string) EventReceiverOptions {
 	return func(r *EventReceiver) error {
 		r.tokenVerifier = tokenVerifier
 		r.audience = audience

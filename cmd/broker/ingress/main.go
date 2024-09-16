@@ -168,9 +168,9 @@ func main() {
 	reporter := ingress.NewStatsReporter(env.ContainerName, kmeta.ChildName(env.PodName, uuid.New().String()))
 
 	oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
-	oidcTokenVerifier := auth.NewOIDCTokenVerifier(ctx, eventpolicyinformer.Get(ctx).Lister())
+	authVerifier := auth.NewVerifier(ctx, eventpolicyinformer.Get(ctx).Lister())
 	trustBundleConfigMapInformer := configmapinformer.Get(ctx, eventingtls.TrustBundleLabelSelector).Lister().ConfigMaps(system.Namespace())
-	handler, err = ingress.NewHandler(logger, reporter, broker.TTLDefaulter(logger, int32(env.MaxTTL)), brokerInformer, oidcTokenVerifier, oidcTokenProvider, trustBundleConfigMapInformer, ctxFunc)
+	handler, err = ingress.NewHandler(logger, reporter, broker.TTLDefaulter(logger, int32(env.MaxTTL)), brokerInformer, authVerifier, oidcTokenProvider, trustBundleConfigMapInformer, ctxFunc)
 	if err != nil {
 		logger.Fatal("Error creating Handler", zap.Error(err))
 	}

@@ -62,8 +62,8 @@ type Reconciler struct {
 	featureStore             *feature.Store
 	eventDispatcher          *kncloudevents.Dispatcher
 
-	tokenVerifier *auth.OIDCTokenVerifier
-	clientConfig  eventingtls.ClientConfig
+	authVerifier *auth.Verifier
+	clientConfig eventingtls.ClientConfig
 }
 
 // Check the interfaces Reconciler should implement
@@ -134,7 +134,7 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1.InMemoryChannel) rec
 			channelRef,
 			UID,
 			r.eventDispatcher,
-			channel.OIDCTokenVerification(r.tokenVerifier, audience(imc)),
+			channel.OIDCTokenVerification(r.authVerifier, audience(imc)),
 			channel.ReceiverWithContextFunc(wc),
 			channel.ReceiverWithGetPoliciesForFunc(r.getAppliedEventPolicyRef),
 		)
@@ -167,7 +167,7 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1.InMemoryChannel) rec
 			UID,
 			r.eventDispatcher,
 			channel.ResolveChannelFromPath(channel.ParseChannelFromPath),
-			channel.OIDCTokenVerification(r.tokenVerifier, audience(imc)),
+			channel.OIDCTokenVerification(r.authVerifier, audience(imc)),
 			channel.ReceiverWithContextFunc(wc),
 			channel.ReceiverWithGetPoliciesForFunc(r.getAppliedEventPolicyRef),
 		)

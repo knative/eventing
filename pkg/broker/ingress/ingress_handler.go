@@ -73,12 +73,12 @@ type Handler struct {
 
 	eventDispatcher *kncloudevents.Dispatcher
 
-	tokenVerifier *auth.OIDCTokenVerifier
+	tokenVerifier *auth.Verifier
 
 	withContext func(ctx context.Context) context.Context
 }
 
-func NewHandler(logger *zap.Logger, reporter StatsReporter, defaulter client.EventDefaulter, brokerInformer v1.BrokerInformer, tokenVerifier *auth.OIDCTokenVerifier, oidcTokenProvider *auth.OIDCTokenProvider, trustBundleConfigMapLister corev1listers.ConfigMapNamespaceLister, withContext func(ctx context.Context) context.Context) (*Handler, error) {
+func NewHandler(logger *zap.Logger, reporter StatsReporter, defaulter client.EventDefaulter, brokerInformer v1.BrokerInformer, tokenVerifier *auth.Verifier, oidcTokenProvider *auth.OIDCTokenProvider, trustBundleConfigMapLister corev1listers.ConfigMapNamespaceLister, withContext func(ctx context.Context) context.Context) (*Handler, error) {
 	connectionArgs := kncloudevents.ConnectionArgs{
 		MaxIdleConns:        defaultMaxIdleConnections,
 		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,

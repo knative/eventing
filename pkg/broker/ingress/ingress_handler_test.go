@@ -291,13 +291,13 @@ func TestHandler_ServeHTTP(t *testing.T) {
 			}
 
 			tokenProvider := auth.NewOIDCTokenProvider(ctx)
-			tokenVerifier := auth.NewOIDCTokenVerifier(ctx, eventpolicyinformerfake.Get(ctx).Lister())
+			authVerifier := auth.NewVerifier(ctx, eventpolicyinformerfake.Get(ctx).Lister())
 
 			h, err := NewHandler(logger,
 				&mockReporter{},
 				tc.defaulter,
 				brokerinformerfake.Get(ctx),
-				tokenVerifier,
+				authVerifier,
 				tokenProvider,
 				configmapinformer.Get(ctx).Lister().ConfigMaps("ns"),
 				func(ctx context.Context) context.Context {

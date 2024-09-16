@@ -137,7 +137,7 @@ func NewController(
 		eventingClient:           eventingclient.Get(ctx).EventingV1beta2(),
 		eventTypeLister:          eventtypeinformer.Get(ctx).Lister(),
 		eventDispatcher:          kncloudevents.NewDispatcher(clientConfig, oidcTokenProvider),
-		tokenVerifier:            auth.NewOIDCTokenVerifier(ctx, eventpolicyinformer.Get(ctx).Lister()),
+		authVerifier:             auth.NewVerifier(ctx, eventpolicyinformer.Get(ctx).Lister()),
 		clientConfig:             clientConfig,
 		inMemoryChannelLister:    inmemorychannelInformer.Lister(),
 	}
