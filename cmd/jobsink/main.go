@@ -364,20 +364,19 @@ func (h *Handler) handleGet(ctx context.Context, w http.ResponseWriter, r *http.
 		Name:      parts[4],
 	}
 
+	js, err := h.lister.JobSinks(ref.Namespace).Get(ref.Name)
+	if err != nil {
+		logger.Warn("Failed to retrieve jobsink", zap.String("ref", ref.String()), zap.Error(err))
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
 	logger.Debug("Handling GET request", zap.String("URI", r.RequestURI))
 
-	features := feature.FromContext(ctx)
-	if features.IsOIDCAuthentication() {
-		logger.Debug("OIDC authentication is enabled")
-
-		audience := auth.GetAudienceDirect(sinksv.SchemeGroupVersion.WithKind("JobSink"), ref.Namespace, ref.Name)
-
-		err := h.oidcTokenVerifier.VerifyJWTFromRequest(ctx, r, &audience, w)
-		if err != nil {
-			logger.Warn("Error when validating the JWT token in the request", zap.Error(err))
-			return
-		}
-		logger.Debug("Request contained a valid JWT. Continuing...")
+	err = h.oidcTokenVerifier.VerifyRequest(ctx, feature.FromContext(ctx), js.Status.Address.Audience, js.Namespace, js.Status.Policies, r, w)
+	if err != nil {
+		logger.Warn("Failed to verify AuthN and AuthZ.", zap.Error(err))
+		return
 	}
 
 	eventSource := parts[6]

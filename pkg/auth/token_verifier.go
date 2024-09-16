@@ -75,15 +75,6 @@ func NewOIDCTokenVerifier(ctx context.Context) *OIDCTokenVerifier {
 	return tokenHandler
 }
 
-// VerifyJWTFromRequest verifies if the incoming request contains a correct JWT token
-//
-// Deprecated: use OIDCTokenVerifier.Verify() instead to bundle AuthN and AuthZ verification
-func (v *OIDCTokenVerifier) VerifyJWTFromRequest(ctx context.Context, r *http.Request, audience *string, response http.ResponseWriter) error {
-	_, err := v.verifyAuthN(ctx, audience, r, response)
-
-	return err
-}
-
 // VerifyRequest verifies AuthN and AuthZ in the request. On verification errors, it sets the
 // responses HTTP status and returns an error
 func (v *OIDCTokenVerifier) VerifyRequest(ctx context.Context, features feature.Flags, requiredOIDCAudience *string, resourceNamespace string, policyRefs []duckv1.AppliedEventPolicyRef, req *http.Request, resp http.ResponseWriter) error {
