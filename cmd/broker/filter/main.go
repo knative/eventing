@@ -19,8 +19,9 @@ package main
 import (
 	"context"
 	"fmt"
-	eventpolicyinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventpolicy"
 	"log"
+
+	eventpolicyinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventpolicy"
 
 	"github.com/google/uuid"
 	"github.com/kelseyhightower/envconfig"
