@@ -88,7 +88,7 @@ func NewController(
 ) *controller.Impl {
 	logger := logging.FromContext(ctx)
 
-	trustBundleConfigMapInformer := filteredconfigmapinformer.Get(ctx, eventingtls.TrustBundleLabelSelector)
+	trustBundleConfigMapLister := filteredconfigmapinformer.Get(ctx, eventingtls.TrustBundleLabelSelector).Lister().ConfigMaps(system.Namespace())
 
 	// Setup trace publishing.
 	iw := cmw.(*configmapinformer.InformedWatcher)
@@ -127,7 +127,7 @@ func NewController(
 	oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
 
 	clientConfig := eventingtls.ClientConfig{
-		TrustBundleConfigMapLister: trustBundleConfigMapInformer.Lister().ConfigMaps(system.Namespace()),
+		TrustBundleConfigMapLister: trustBundleConfigMapLister,
 	}
 
 	var globalResync func(obj interface{})
@@ -146,7 +146,7 @@ func NewController(
 		eventingClient:           eventingclient.Get(ctx).EventingV1beta2(),
 		eventTypeLister:          eventtypeinformer.Get(ctx).Lister(),
 		eventDispatcher:          kncloudevents.NewDispatcher(clientConfig, oidcTokenProvider),
-		authVerifier:             auth.NewVerifier(ctx, eventpolicyinformer.Get(ctx).Lister(), featureStore.Load()),
+		authVerifier:             auth.NewVerifier(ctx, eventpolicyinformer.Get(ctx).Lister(), trustBundleConfigMapLister, featureStore.Load()),
 		clientConfig:             clientConfig,
 		inMemoryChannelLister:    inmemorychannelInformer.Lister(),
 	}
@@ -156,7 +156,7 @@ func NewController(
 	})
 
 	globalResync = func(_ interface{}) {
-		r.authVerifier = auth.NewVerifier(ctx, eventpolicyinformer.Get(ctx).Lister(), featureStore.Load())
+		r.authVerifier = auth.NewVerifier(ctx, eventpolicyinformer.Get(ctx).Lister(), trustBundleConfigMapLister, featureStore.Load())
 		impl.GlobalResync(inmemorychannelInformer.Informer())
 	}
 

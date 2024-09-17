@@ -25,6 +25,9 @@ import (
 	"net/http"
 	"strings"
 
+	configmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap/filtered"
+	filteredFactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
+
 	"github.com/cloudevents/sdk-go/v2/binding"
 	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"go.uber.org/zap"
@@ -70,9 +73,13 @@ func main() {
 
 	cfg := injection.ParseAndGetRESTConfigOrDie()
 	ctx = injection.WithConfig(ctx, cfg)
+	ctx = filteredFactory.WithSelectors(ctx,
+		eventingtls.TrustBundleLabelSelector,
+	)
 
 	ctx, informers := injection.Default.SetupInformers(ctx, cfg)
 	ctx = injection.WithConfig(ctx, cfg)
+
 	loggingConfig, err := cmdbroker.GetLoggingConfig(ctx, system.Namespace(), logging.ConfigMapName())
 	if err != nil {
 		log.Fatal("Error loading/parsing logging configuration:", err)
@@ -104,12 +111,13 @@ func main() {
 
 	logger.Info("Starting the JobSink Ingress")
 
+	trustBundleConfigMapLister := configmapinformer.Get(ctx, eventingtls.TrustBundleLabelSelector).Lister().ConfigMaps(system.Namespace())
 	var h *Handler
 
 	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {
 		logger.Info("Updated", zap.String("name", name), zap.Any("value", value))
 		if flags, ok := value.(feature.Flags); ok && h != nil {
-			h.authVerifier = auth.NewVerifier(ctx, eventpolicyinformer.Get(ctx).Lister(), flags)
+			h.authVerifier = auth.NewVerifier(ctx, eventpolicyinformer.Get(ctx).Lister(), trustBundleConfigMapLister, flags)
 		}
 	})
 	featureStore.WatchConfigs(configMapWatcher)
@@ -123,7 +131,7 @@ func main() {
 		k8s:          kubeclient.Get(ctx),
 		lister:       jobsink.Get(ctx).Lister(),
 		withContext:  ctxFunc,
-		authVerifier: auth.NewVerifier(ctx, eventpolicyinformer.Get(ctx).Lister(), featureStore.Load()),
+		authVerifier: auth.NewVerifier(ctx, eventpolicyinformer.Get(ctx).Lister(), trustBundleConfigMapLister, featureStore.Load()),
 	}
 
 	tlsConfig, err := getServerTLSConfig(ctx)

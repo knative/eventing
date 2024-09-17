@@ -26,6 +26,11 @@ import (
 	"testing"
 	"time"
 
+	"knative.dev/eventing/pkg/eventingtls"
+	filteredconfigmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap/filtered/fake"
+	filteredFactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
+	"knative.dev/pkg/system"
+
 	"github.com/cloudevents/sdk-go/v2/client"
 	"github.com/cloudevents/sdk-go/v2/event"
 	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
@@ -50,6 +55,7 @@ import (
 	// Fake injection client
 	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventpolicy/fake"
 	_ "knative.dev/pkg/client/injection/kube/client/fake"
+	_ "knative.dev/pkg/client/injection/kube/informers/factory/filtered/fake"
 )
 
 const (
@@ -263,7 +269,8 @@ func TestHandler_ServeHTTP(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx, _ := reconcilertesting.SetupFakeContext(t)
+			ctx, _ := reconcilertesting.SetupFakeContext(t, SetUpInformerSelector)
+			trustBundleConfigMapLister := filteredconfigmapinformer.Get(ctx, eventingtls.TrustBundleLabelSelector).Lister().ConfigMaps(system.Namespace())
 
 			s := httptest.NewServer(tc.handler)
 			defer s.Close()
@@ -292,7 +299,7 @@ func TestHandler_ServeHTTP(t *testing.T) {
 			}
 
 			tokenProvider := auth.NewOIDCTokenProvider(ctx)
-			authVerifier := auth.NewVerifier(ctx, eventpolicyinformerfake.Get(ctx).Lister(), feature.FromContextOrDefaults(ctx))
+			authVerifier := auth.NewVerifier(ctx, eventpolicyinformerfake.Get(ctx).Lister(), trustBundleConfigMapLister, feature.FromContextOrDefaults(ctx))
 
 			h, err := NewHandler(logger,
 				&mockReporter{},
@@ -401,4 +408,9 @@ func makeBroker(name, namespace string) *eventingv1.Broker {
 func withUninitializedAnnotations(b *eventingv1.Broker) *eventingv1.Broker {
 	b.Status.Annotations = nil
 	return b
+}
+
+func SetUpInformerSelector(ctx context.Context) context.Context {
+	ctx = filteredFactory.WithSelectors(ctx, eventingtls.TrustBundleLabelSelector)
+	return ctx
 }
