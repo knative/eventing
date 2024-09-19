@@ -50,10 +50,34 @@ func TestEventTypeSpecValidation(t *testing.T) {
 		ets  *EventTypeSpec
 		want *apis.FieldError
 	}{{
-		name: "invalid eventtype type",
+		name: "invalid eventtype type, missing type",
 		ets:  &EventTypeSpec{},
 		want: func() *apis.FieldError {
 			fe := apis.ErrMissingField("attributes.id", "attributes.source", "attributes.specversion", "attributes.type")
+			return fe
+		}(),
+	}, {
+		name: "partially invalid eventtype type",
+		ets: &EventTypeSpec{
+			Attributes: []EventAttributeDefinition{
+				{
+					Name:     "source",
+					Value:    testSource.String(),
+					Required: true,
+				},
+				{
+					Name:     "specversion",
+					Value:    "v1",
+					Required: true,
+				},
+				{
+					Name:     "id",
+					Required: true,
+				},
+			},
+		},
+		want: func() *apis.FieldError {
+			fe := apis.ErrMissingField("attributes.type")
 			return fe
 		}(),
 	}, {
@@ -79,6 +103,46 @@ func TestEventTypeSpecValidation(t *testing.T) {
 					Name:     "specversion",
 					Value:    "v1",
 					Required: true,
+				},
+				{
+					Name:     "id",
+					Required: true,
+				},
+			},
+		},
+	}, {
+		name: "valid eventtype with extensions and optional attributes",
+		ets: &EventTypeSpec{
+			Reference: &duckv1.KReference{
+				APIVersion: "eventing.knative.dev/v1",
+				Kind:       "Broker",
+				Name:       "test-broker",
+			},
+			Attributes: []EventAttributeDefinition{
+				{
+					Name:     "type",
+					Value:    "event-type",
+					Required: true,
+				},
+				{
+					Name:     "source",
+					Value:    testSource.String(),
+					Required: true,
+				},
+				{
+					Name:     "specversion",
+					Value:    "v1",
+					Required: true,
+				},
+				{
+					Name:     "subject",
+					Value:    "foo.png",
+					Required: false,
+				},
+				{
+					Name:     "customattribute",
+					Value:    "value",
+					Required: false,
 				},
 				{
 					Name:     "id",
