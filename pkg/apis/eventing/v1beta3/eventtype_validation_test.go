@@ -50,7 +50,7 @@ func TestEventTypeSpecValidation(t *testing.T) {
 		ets  *EventTypeSpec
 		want *apis.FieldError
 	}{{
-		name: "invalid eventtype type, missing type",
+		name: "invalid/empty eventtype",
 		ets:  &EventTypeSpec{},
 		want: func() *apis.FieldError {
 			fe := apis.ErrMissingField("attributes.id", "attributes.source", "attributes.specversion", "attributes.type")
