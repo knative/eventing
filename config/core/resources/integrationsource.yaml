@@ -1,0 +1,400 @@
+# Copyright 2020 The Knative Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    eventing.knative.dev/source: "true"
+    duck.knative.dev/source: "true"
+    knative.dev/crd-install: "true"
+    app.kubernetes.io/version: devel
+    app.kubernetes.io/name: knative-eventing
+  name: integrationsources.sources.knative.dev
+spec:
+  group: sources.knative.dev
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      subresources:
+        status: {}
+      schema:
+        openAPIV3Schema:
+          description: 'IntegrationSource is an event source that starts a container image which generates events under certain situations and sends messages to a sink URI'
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                ceOverrides:
+                  description: CloudEventOverrides defines overrides to control the output format and modifications of the event sent to the sink.
+                  type: object
+                  properties:
+                    extensions:
+                      description: Extensions specify what attribute are added or overridden on the outbound event. Each `Extensions` key-value pair are set on the event as an attribute extension independently.
+                      type: object
+                      x-kubernetes-preserve-unknown-fields: true
+                sink:
+                  description: Sink is a reference to an object that will resolve to a uri to use as the sink.
+                  type: object
+                  properties:
+                    ref:
+                      description: Ref points to an Addressable.
+                      type: object
+                      properties:
+                        apiVersion:
+                          description: API version of the referent.
+                          type: string
+                        kind:
+                          description: 'Kind of the referent. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                          type: string
+                        name:
+                          description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                          type: string
+                        namespace:
+                          description: 'Namespace of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/ This is optional field, it gets defaulted to the object holding it if left out.'
+                          type: string
+                    uri:
+                      description: URI can be an absolute URL(non-empty scheme and non-empty host) pointing to the target or a relative URI. Relative URIs will be resolved using the base URI retrieved from Ref.
+                      type: string
+                    CACerts:
+                      description: CACerts is the Certification Authority (CA) certificates in PEM format that the source trusts when sending events to the sink.
+                      type: string
+                    audience:
+                      description: Audience is the OIDC audience. This only needs to be set if the target is not an Addressable and thus the Audience can't be received from the target itself. If specified, it takes precedence over the target's Audience.
+                      type: string
+                timer:
+                  type: object
+                  properties:
+                    period:
+                      type: integer
+                      title: Period
+                      description: The interval (in milliseconds) to wait between producing the
+                        next message.
+                      default: 1000
+                    message:
+                      type: string
+                      title: Message
+                      description: The message to generate.
+                      example: hello world
+                    contentType:
+                      type: string
+                      title: Content Type
+                      description: The content type of the generated message.
+                      default: text/plain
+                    repeatCount:
+                      type: integer
+                      title: Repeat Count
+                      description: Specifies a maximum limit of number of fires
+                aws:
+                  type: object
+                  properties:
+                    s3:
+                      type: object
+                      properties:
+                        bucketNameOrArn:
+                          type: string
+                          title: Bucket Name
+                          description: The S3 Bucket name or Amazon Resource Name (ARN).
+                        deleteAfterRead:
+                          type: boolean
+                          title: Auto-delete Objects
+                          description: Specifies to delete objects after consuming them.
+                          default: true
+                        moveAfterRead:
+                          type: boolean
+                          title: Move Objects After Delete
+                          description: Move objects from S3 bucket to a different bucket after
+                            they have been retrieved.
+                          default: false
+                        destinationBucket:
+                          type: string
+                          title: Destination Bucket
+                          description: Define the destination bucket where an object must be moved
+                            when moveAfterRead is set to true.
+                        destinationBucketPrefix:
+                          type: string
+                          title: Destination Bucket Prefix
+                          description: Define the destination bucket prefix to use when an object
+                            must be moved, and moveAfterRead is set to true.
+                        destinationBucketSuffix:
+                          type: string
+                          title: Destination Bucket Suffix
+                          description: Define the destination bucket suffix to use when an object
+                            must be moved, and moveAfterRead is set to true.
+                        region:
+                          type: string
+                          title: AWS Region
+                          description: The AWS region to access.
+                        autoCreateBucket:
+                          type: boolean
+                          title: Autocreate Bucket
+                          description: Specifies to automatically create the S3 bucket.
+                          default: false
+                        prefix:
+                          type: string
+                          title: Prefix
+                          description: The AWS S3 bucket prefix to consider while searching.
+                          example: folder/
+                        ignoreBody:
+                          type: boolean
+                          title: Ignore Body
+                          description: If true, the S3 Object body is ignored. Setting this to
+                            true overrides any behavior defined by the `includeBody` option. If
+                            false, the S3 object is put in the body.
+                          default: false
+                        profileCredentialsName:
+                          type: string
+                          title: Profile Credentials Name
+                          description: If using a profile credentials provider this parameter
+                            will set the profile name.
+                        sessionToken:
+                          type: string
+                          title: Session Token
+                          description: Amazon AWS Session Token used when the user needs to assume
+                            a IAM role.
+                        uriEndpointOverride:
+                          type: string
+                          title: Overwrite Endpoint URI
+                          description: The overriding endpoint URI. To use this option, you must
+                            also select the `overrideEndpoint` option.
+                        overrideEndpoint:
+                          type: boolean
+                          title: Endpoint Overwrite
+                          description: Select this option to override the endpoint URI. To use
+                            this option, you must also provide a URI for the `uriEndpointOverride`
+                            option.
+                          default: false
+                        forcePathStyle:
+                          type: boolean
+                          title: Force Path Style
+                          description: Forces path style when accessing AWS S3 buckets.
+                          default: false
+                        delay:
+                          type: integer
+                          title: Delay
+                          description: The number of milliseconds before the next poll of the
+                            selected bucket.
+                          default: 500
+                        maxMessagesPerPoll:
+                          type: integer
+                          title: Max Messages Per Poll
+                          description: Gets the maximum number of messages as a limit to poll
+                            at each polling. Gets the maximum number of messages as a limit to
+                            poll at each polling. The default value is 10. Use 0 or a negative
+                            number to set it as unlimited.
+                          default: 10
+                    sqs:
+                      type: object
+                      properties:
+                        queueNameOrArn:
+                          type: string
+                          title: Queue Name
+                          description: The SQS Queue Name or ARN
+                        deleteAfterRead:
+                          type: boolean
+                          title: Auto-delete Messages
+                          description: Delete messages after consuming them
+                          default: true
+                        region:
+                          type: string
+                          title: AWS Region
+                          description: The AWS region to access.
+                        autoCreateQueue:
+                          type: boolean
+                          title: Autocreate Queue
+                          description: Setting the autocreation of the SQS queue.
+                          default: false
+                        amazonAWSHost:
+                          type: string
+                          title: AWS Host
+                          description: The hostname of the Amazon AWS cloud.
+                          default: amazonaws.com
+                        protocol:
+                          type: string
+                          title: Protocol
+                          description: The underlying protocol used to communicate with SQS
+                          default: https
+                          example: http or https
+                        queueURL:
+                          type: string
+                          title: Queue URL
+                          description: The full SQS Queue URL (required if using KEDA)
+                        profileCredentialsName:
+                          type: string
+                          title: Profile Credentials Name
+                          description: If using a profile credentials provider this parameter
+                            will set the profile name.
+                        sessionToken:
+                          type: string
+                          title: Session Token
+                          description: Amazon AWS Session Token used when the user needs to assume
+                            a IAM role.
+                        uriEndpointOverride:
+                          type: string
+                          title: Overwrite Endpoint URI
+                          description: The overriding endpoint URI. To use this option, you must
+                            also select the `overrideEndpoint` option.
+                        overrideEndpoint:
+                          type: boolean
+                          title: Endpoint Overwrite
+                          description: Select this option to override the endpoint URI. To use
+                            this option, you must also provide a URI for the `uriEndpointOverride`
+                            option.
+                          default: false
+                        delay:
+                          type: integer
+                          title: Delay
+                          description: The number of milliseconds before the next poll of the
+                            selected stream
+                          default: 500
+                        greedy:
+                          type: boolean
+                          title: Greedy Scheduler
+                          description: If greedy is enabled, then the polling will happen immediately
+                            again, if the previous run polled 1 or more messages.
+                          default: false
+                        maxMessagesPerPoll:
+                          type: integer
+                          title: Max Messages Per Poll
+                          description: The maximum number of messages to return. Amazon SQS never
+                            returns more messages than this value (however, fewer messages might
+                            be returned). Valid values 1 to 10. Default 1.
+                          default: 1
+                        waitTimeSeconds:
+                          type: integer
+                          title: Wait Time Seconds
+                          description: The duration (in seconds) for which the call waits for
+                            a message to arrive in the queue before returning. If a message is
+                            available, the call returns sooner than WaitTimeSeconds. If no messages
+                            are available and the wait time expires, the call does not return
+                            a message list.
+                        visibilityTimeout:
+                          type: integer
+                          title: Visibility Timeout
+                          description: The duration (in seconds) that the received messages are
+                            hidden from subsequent retrieve requests after being retrieved by
+                            a ReceiveMessage request.
+                    auth:
+                      description: 'Auth configurations'
+                      type: object
+                      properties:
+                        secret:
+                          description: 'Auth secret'
+                          type: object
+                          properties:
+                            ref:
+                              description: |
+                                Secret reference.
+                              type: object
+                              required:
+                                - name
+                              properties:
+                                name:
+                                  description: 'Secret name'
+                                  type: string
+            status:
+              type: object
+              properties:
+                annotations:
+                  description: Annotations is additional Status fields for the Resource to save some additional State as well as convey more information to the user. This is roughly akin to Annotations on any k8s resource, just the reconciler conveying richer information outwards.
+                  type: object
+                  x-kubernetes-preserve-unknown-fields: true
+                auth:
+                  description: Auth provides the relevant information for OIDC authentication.
+                  type: object
+                  properties:
+                    serviceAccountName:
+                      description: ServiceAccountName is the name of the generated service account used for this components OIDC authentication.
+                      type: string
+                    serviceAccountNames:
+                      description: ServiceAccountNames is the list of names of the generated service accounts used for this components OIDC authentication.
+                      type: array
+                      items:
+                        type: string
+                ceAttributes:
+                  description: CloudEventAttributes are the specific attributes that the Source uses as part of its CloudEvents.
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      source:
+                        description: Source is the CloudEvents source attribute.
+                        type: string
+                      type:
+                        description: Type refers to the CloudEvent type attribute.
+                        type: string
+                conditions:
+                  description: Conditions the latest available observations of a resource's current state.
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - type
+                      - status
+                    properties:
+                      lastTransitionTime:
+                        description: LastTransitionTime is the last time the condition transitioned from one status to another. We use VolatileTime in place of metav1.Time to exclude this from creating equality.Semantic differences (all other things held constant).
+                        type: string
+                      message:
+                        description: A human readable message indicating details about the transition.
+                        type: string
+                      reason:
+                        description: The reason for the condition's last transition.
+                        type: string
+                      severity:
+                        description: Severity with which to treat failures of this type of condition. When this is not specified, it defaults to Error.
+                        type: string
+                      status:
+                        description: Status of the condition, one of True, False, Unknown.
+                        type: string
+                      type:
+                        description: Type of condition.
+                        type: string
+                observedGeneration:
+                  description: ObservedGeneration is the 'Generation' of the Service that was last processed by the controller.
+                  type: integer
+                  format: int64
+                sinkUri:
+                  description: SinkURI is the current active sink URI that has been configured for the Source.
+                  type: string
+                sinkCACerts:
+                  description: CACerts is the Certification Authority (CA) certificates in PEM format that the source trusts when sending events to the sink.
+                  type: string
+                sinkAudience:
+                  description: Audience is the OIDC audience of the sink.
+                  type: string
+      additionalPrinterColumns:
+        - name: Sink
+          type: string
+          jsonPath: ".status.sinkUri"
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+        - name: Ready
+          type: string
+          jsonPath: ".status.conditions[?(@.type==\"Ready\")].status"
+        - name: Reason
+          type: string
+          jsonPath: ".status.conditions[?(@.type=='Ready')].reason"
+  names:
+    categories:
+      - all
+      - knative
+      - sources
+    kind: IntegrationSource
+    plural: integrationsources
+    singular: integrationsource
+  scope: Namespaced
