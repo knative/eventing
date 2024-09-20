@@ -56,4 +56,10 @@ var (
 		Group:    GroupName,
 		Resource: "containersources",
 	}
+
+	// IntegrationSourceResource respresents a Knative Eventing Sources IntegrationSource
+	IntegrationSourceResource = schema.GroupResource{
+		Group:    GroupName,
+		Resource: "integrationsources",
+	}
 )
