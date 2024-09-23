@@ -25,6 +25,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
+
 	"knative.dev/eventing/pkg/scheduler"
 )
 
@@ -55,10 +56,10 @@ func SatisfyZoneAvailability(feasiblePods []int32, states *State) bool {
 	var zoneName string
 	var err error
 	for _, podID := range feasiblePods {
-		wait.PollUntilContextTimeout(context.Background(), 50*time.Millisecond, 5*time.Second, true, func(ctx context.Context) (bool, error) {
-			zoneName, _, err = states.GetPodInfo(PodNameFromOrdinal(states.StatefulSetName, podID))
-			return err == nil, nil
-		})
+		zoneName, _, err = states.GetPodInfo(PodNameFromOrdinal(states.StatefulSetName, podID))
+		if err != nil {
+			continue
+		}
 		zoneMap[zoneName] = struct{}{}
 	}
 	return len(zoneMap) == int(states.NumZones)
