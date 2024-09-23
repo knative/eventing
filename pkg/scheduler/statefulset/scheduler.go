@@ -28,18 +28,16 @@ import (
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/informers"
 	clientappsv1 "k8s.io/client-go/kubernetes/typed/apps/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/utils/integer"
+	"knative.dev/pkg/logging"
 	"knative.dev/pkg/reconciler"
 
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
-	statefulsetinformer "knative.dev/pkg/client/injection/kube/informers/apps/v1/statefulset"
 	"knative.dev/pkg/controller"
-	"knative.dev/pkg/logging"
-
-	podinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/pod"
 
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/scheduler"
@@ -69,6 +67,8 @@ type Config struct {
 	PodCapacity int32 `json:"podCapacity"`
 	// Autoscaler refresh period
 	RefreshPeriod time.Duration `json:"refreshPeriod"`
+	// Autoscaler retry period
+	RetryPeriod time.Duration `json:"retryPeriod"`
 
 	SchedulerPolicy scheduler.SchedulerPolicyType `json:"schedulerPolicy"`
 	SchedPolicy     *scheduler.SchedulerPolicy    `json:"schedPolicy"`
@@ -78,6 +78,8 @@ type Config struct {
 
 	VPodLister scheduler.VPodLister     `json:"-"`
 	NodeLister corev1listers.NodeLister `json:"-"`
+	// Pod lister for statefulset: StatefulSetNamespace / StatefulSetName
+	PodLister corev1listers.PodNamespaceLister `json:"-"`
 
 	// getReserved returns reserved replicas
 	getReserved GetReserved
@@ -85,19 +87,20 @@ type Config struct {
 
 func New(ctx context.Context, cfg *Config) (scheduler.Scheduler, error) {
 
-	podInformer := podinformer.Get(ctx)
-	podLister := podInformer.Lister().Pods(cfg.StatefulSetNamespace)
+	if cfg.PodLister == nil {
+		return nil, fmt.Errorf("Config.PodLister is required")
+	}
 
 	scaleCache := scheduler.NewScaleCache(ctx, cfg.StatefulSetNamespace, kubeclient.Get(ctx).AppsV1().StatefulSets(cfg.StatefulSetNamespace), cfg.ScaleCacheConfig)
 
-	stateAccessor := st.NewStateBuilder(ctx, cfg.StatefulSetNamespace, cfg.StatefulSetName, cfg.VPodLister, cfg.PodCapacity, cfg.SchedulerPolicy, cfg.SchedPolicy, cfg.DeschedPolicy, podLister, cfg.NodeLister, scaleCache)
+	stateAccessor := st.NewStateBuilder(cfg.StatefulSetName, cfg.VPodLister, cfg.PodCapacity, cfg.SchedulerPolicy, cfg.SchedPolicy, cfg.DeschedPolicy, cfg.PodLister, cfg.NodeLister, scaleCache)
 
 	var getReserved GetReserved
 	cfg.getReserved = func() map[types.NamespacedName]map[string]int32 {
 		return getReserved()
 	}
 
-	autoscaler := newAutoscaler(ctx, cfg, stateAccessor, scaleCache)
+	autoscaler := newAutoscaler(cfg, stateAccessor, scaleCache)
 
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -106,7 +109,7 @@ func New(ctx context.Context, cfg *Config) (scheduler.Scheduler, error) {
 		autoscaler.Start(ctx)
 	}()
 
-	s := newStatefulSetScheduler(ctx, cfg, stateAccessor, autoscaler, podLister)
+	s := newStatefulSetScheduler(ctx, cfg, stateAccessor, autoscaler)
 	getReserved = s.Reserved
 	wg.Done()
 
@@ -125,12 +128,9 @@ func (p Pending) Total() int32 {
 
 // StatefulSetScheduler is a scheduler placing VPod into statefulset-managed set of pods
 type StatefulSetScheduler struct {
-	ctx                  context.Context
-	logger               *zap.SugaredLogger
 	statefulSetName      string
 	statefulSetNamespace string
 	statefulSetClient    clientappsv1.StatefulSetInterface
-	podLister            corev1listers.PodNamespaceLister
 	vpodLister           scheduler.VPodLister
 	lock                 sync.Locker
 	stateAccessor        st.StateAccessor
@@ -168,16 +168,12 @@ func (s *StatefulSetScheduler) Demote(b reconciler.Bucket) {
 func newStatefulSetScheduler(ctx context.Context,
 	cfg *Config,
 	stateAccessor st.StateAccessor,
-	autoscaler Autoscaler,
-	podlister corev1listers.PodNamespaceLister) *StatefulSetScheduler {
+	autoscaler Autoscaler) *StatefulSetScheduler {
 
 	scheduler := &StatefulSetScheduler{
-		ctx:                  ctx,
-		logger:               logging.FromContext(ctx),
 		statefulSetNamespace: cfg.StatefulSetNamespace,
 		statefulSetName:      cfg.StatefulSetName,
 		statefulSetClient:    kubeclient.Get(ctx).AppsV1().StatefulSets(cfg.StatefulSetNamespace),
-		podLister:            podlister,
 		vpodLister:           cfg.VPodLister,
 		lock:                 new(sync.Mutex),
 		stateAccessor:        stateAccessor,
@@ -186,22 +182,38 @@ func newStatefulSetScheduler(ctx context.Context,
 	}
 
 	// Monitor our statefulset
-	statefulsetInformer := statefulsetinformer.Get(ctx)
-	statefulsetInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.FilterWithNameAndNamespace(cfg.StatefulSetNamespace, cfg.StatefulSetName),
-		Handler:    controller.HandleAll(scheduler.updateStatefulset),
-	})
+	c := kubeclient.Get(ctx)
+	sif := informers.NewSharedInformerFactoryWithOptions(c,
+		controller.GetResyncPeriod(ctx),
+		informers.WithNamespace(cfg.StatefulSetNamespace),
+	)
+
+	sif.Apps().V1().StatefulSets().Informer().
+		AddEventHandler(cache.FilteringResourceEventHandler{
+			FilterFunc: controller.FilterWithNameAndNamespace(cfg.StatefulSetNamespace, cfg.StatefulSetName),
+			Handler: controller.HandleAll(func(i interface{}) {
+				scheduler.updateStatefulset(ctx, i)
+			}),
+		})
+
+	sif.Start(ctx.Done())
+	_ = sif.WaitForCacheSync(ctx.Done())
+
+	go func() {
+		<-ctx.Done()
+		sif.Shutdown()
+	}()
 
 	return scheduler
 }
 
-func (s *StatefulSetScheduler) Schedule(vpod scheduler.VPod) ([]duckv1alpha1.Placement, error) {
+func (s *StatefulSetScheduler) Schedule(ctx context.Context, vpod scheduler.VPod) ([]duckv1alpha1.Placement, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	s.reservedMu.Lock()
 	defer s.reservedMu.Unlock()
 
-	placements, err := s.scheduleVPod(vpod)
+	placements, err := s.scheduleVPod(ctx, vpod)
 	if placements == nil {
 		return placements, err
 	}
@@ -216,11 +228,13 @@ func (s *StatefulSetScheduler) Schedule(vpod scheduler.VPod) ([]duckv1alpha1.Pla
 	return placements, err
 }
 
-func (s *StatefulSetScheduler) scheduleVPod(vpod scheduler.VPod) ([]duckv1alpha1.Placement, error) {
-	logger := s.logger.With("key", vpod.GetKey(), zap.String("component", "scheduler"))
+func (s *StatefulSetScheduler) scheduleVPod(ctx context.Context, vpod scheduler.VPod) ([]duckv1alpha1.Placement, error) {
+	logger := logging.FromContext(ctx).With("key", vpod.GetKey(), zap.String("component", "scheduler"))
+	ctx = logging.WithLogger(ctx, logger)
+
 	// Get the current placements state
 	// Quite an expensive operation but safe and simple.
-	state, err := s.stateAccessor.State(s.reserved)
+	state, err := s.stateAccessor.State(ctx, s.reserved)
 	if err != nil {
 		logger.Debug("error while refreshing scheduler state (will retry)", zap.Error(err))
 		return nil, err
@@ -258,12 +272,14 @@ func (s *StatefulSetScheduler) scheduleVPod(vpod scheduler.VPod) ([]duckv1alpha1
 			}
 
 			// Handle overcommitted pods.
-			if state.FreeCap[ordinal] < 0 {
+			if state.Free(ordinal) < 0 {
 				// vr > free => vr: 9, overcommit 4 -> free: 0, vr: 5, pending: +4
 				// vr = free => vr: 4, overcommit 4 -> free: 0, vr: 0, pending: +4
 				// vr < free => vr: 3, overcommit 4 -> free: -1, vr: 0, pending: +3
 
 				overcommit := -state.FreeCap[ordinal]
+
+				logger.Debugw("overcommit", zap.Any("overcommit", overcommit), zap.Any("placement", p))
 
 				if p.VReplicas >= overcommit {
 					state.SetFree(ordinal, 0)
@@ -301,7 +317,9 @@ func (s *StatefulSetScheduler) scheduleVPod(vpod scheduler.VPod) ([]duckv1alpha1
 	if state.SchedulerPolicy != "" {
 		// Need less => scale down
 		if tr > vpod.GetVReplicas() {
-			logger.Debugw("scaling down", zap.Int32("vreplicas", tr), zap.Int32("new vreplicas", vpod.GetVReplicas()))
+			logger.Debugw("scaling down", zap.Int32("vreplicas", tr), zap.Int32("new vreplicas", vpod.GetVReplicas()),
+				zap.Any("placements", placements),
+				zap.Any("existingPlacements", existingPlacements))
 
 			placements = s.removeReplicas(tr-vpod.GetVReplicas(), placements)
 
@@ -311,15 +329,19 @@ func (s *StatefulSetScheduler) scheduleVPod(vpod scheduler.VPod) ([]duckv1alpha1
 		}
 
 		// Need more => scale up
-		logger.Debugw("scaling up", zap.Int32("vreplicas", tr), zap.Int32("new vreplicas", vpod.GetVReplicas()))
+		logger.Debugw("scaling up", zap.Int32("vreplicas", tr), zap.Int32("new vreplicas", vpod.GetVReplicas()),
+			zap.Any("placements", placements),
+			zap.Any("existingPlacements", existingPlacements))
 
 		placements, left = s.addReplicas(state, vpod.GetVReplicas()-tr, placements)
 
 	} else { //Predicates and priorities must be used for scheduling
 		// Need less => scale down
 		if tr > vpod.GetVReplicas() && state.DeschedPolicy != nil {
-			logger.Infow("scaling down", zap.Int32("vreplicas", tr), zap.Int32("new vreplicas", vpod.GetVReplicas()))
-			placements = s.removeReplicasWithPolicy(vpod, tr-vpod.GetVReplicas(), placements)
+			logger.Infow("scaling down", zap.Int32("vreplicas", tr), zap.Int32("new vreplicas", vpod.GetVReplicas()),
+				zap.Any("placements", placements),
+				zap.Any("existingPlacements", existingPlacements))
+			placements = s.removeReplicasWithPolicy(ctx, vpod, tr-vpod.GetVReplicas(), placements)
 
 			// Do not trigger the autoscaler to avoid unnecessary churn
 
@@ -331,8 +353,10 @@ func (s *StatefulSetScheduler) scheduleVPod(vpod scheduler.VPod) ([]duckv1alpha1
 			// Need more => scale up
 			// rebalancing needed for all vreps most likely since there are pending vreps from previous reconciliation
 			// can fall here when vreps scaled up or after eviction
-			logger.Infow("scaling up with a rebalance (if needed)", zap.Int32("vreplicas", tr), zap.Int32("new vreplicas", vpod.GetVReplicas()))
-			placements, left = s.rebalanceReplicasWithPolicy(vpod, vpod.GetVReplicas(), placements)
+			logger.Infow("scaling up with a rebalance (if needed)", zap.Int32("vreplicas", tr), zap.Int32("new vreplicas", vpod.GetVReplicas()),
+				zap.Any("placements", placements),
+				zap.Any("existingPlacements", existingPlacements))
+			placements, left = s.rebalanceReplicasWithPolicy(ctx, vpod, vpod.GetVReplicas(), placements)
 		}
 	}
 
@@ -343,10 +367,10 @@ func (s *StatefulSetScheduler) scheduleVPod(vpod scheduler.VPod) ([]duckv1alpha1
 		// Trigger the autoscaler
 		if s.autoscaler != nil {
 			logger.Infow("Awaiting autoscaler", zap.Any("placement", placements), zap.Int32("left", left))
-			s.autoscaler.Autoscale(s.ctx)
+			s.autoscaler.Autoscale(ctx)
 		}
 
-		if state.SchedPolicy != nil {
+		if state.SchedulerPolicy == "" && state.SchedPolicy != nil {
 			logger.Info("reverting to previous placements")
 			s.reservePlacements(vpod, existingPlacements)           // rebalancing doesn't care about new placements since all vreps will be re-placed
 			return existingPlacements, s.notEnoughPodReplicas(left) // requeue to wait for the autoscaler to do its job
@@ -368,25 +392,25 @@ func toJSONable(pending map[types.NamespacedName]int32) map[string]int32 {
 	return r
 }
 
-func (s *StatefulSetScheduler) rebalanceReplicasWithPolicy(vpod scheduler.VPod, diff int32, placements []duckv1alpha1.Placement) ([]duckv1alpha1.Placement, int32) {
+func (s *StatefulSetScheduler) rebalanceReplicasWithPolicy(ctx context.Context, vpod scheduler.VPod, diff int32, placements []duckv1alpha1.Placement) ([]duckv1alpha1.Placement, int32) {
 	s.makeZeroPlacements(vpod, placements)
-	placements, diff = s.addReplicasWithPolicy(vpod, diff, make([]duckv1alpha1.Placement, 0)) //start fresh with a new placements list
+	placements, diff = s.addReplicasWithPolicy(ctx, vpod, diff, make([]duckv1alpha1.Placement, 0)) //start fresh with a new placements list
 
 	return placements, diff
 }
 
-func (s *StatefulSetScheduler) removeReplicasWithPolicy(vpod scheduler.VPod, diff int32, placements []duckv1alpha1.Placement) []duckv1alpha1.Placement {
-	logger := s.logger.Named("remove replicas with policy")
+func (s *StatefulSetScheduler) removeReplicasWithPolicy(ctx context.Context, vpod scheduler.VPod, diff int32, placements []duckv1alpha1.Placement) []duckv1alpha1.Placement {
+	logger := logging.FromContext(ctx).Named("remove replicas with policy")
 	numVreps := diff
 
 	for i := int32(0); i < numVreps; i++ { //deschedule one vreplica at a time
-		state, err := s.stateAccessor.State(s.reserved)
+		state, err := s.stateAccessor.State(ctx, s.reserved)
 		if err != nil {
 			logger.Info("error while refreshing scheduler state (will retry)", zap.Error(err))
 			return placements
 		}
 
-		feasiblePods := s.findFeasiblePods(s.ctx, state, vpod, state.DeschedPolicy)
+		feasiblePods := s.findFeasiblePods(ctx, state, vpod, state.DeschedPolicy)
 		feasiblePods = s.removePodsNotInPlacement(vpod, feasiblePods)
 		if len(feasiblePods) == 1 { //nothing to score, remove vrep from that pod
 			placementPodID := feasiblePods[0]
@@ -397,7 +421,7 @@ func (s *StatefulSetScheduler) removeReplicasWithPolicy(vpod scheduler.VPod, dif
 			continue
 		}
 
-		priorityList, err := s.prioritizePods(s.ctx, state, vpod, feasiblePods, state.DeschedPolicy)
+		priorityList, err := s.prioritizePods(ctx, state, vpod, feasiblePods, state.DeschedPolicy)
 		if err != nil {
 			logger.Info("error while scoring pods using priorities", zap.Error(err))
 			s.reservePlacements(vpod, placements)
@@ -443,13 +467,13 @@ func (s *StatefulSetScheduler) removeSelectionFromPlacements(placementPodID int3
 	return newPlacements
 }
 
-func (s *StatefulSetScheduler) addReplicasWithPolicy(vpod scheduler.VPod, diff int32, placements []duckv1alpha1.Placement) ([]duckv1alpha1.Placement, int32) {
-	logger := s.logger.Named("add replicas with policy")
+func (s *StatefulSetScheduler) addReplicasWithPolicy(ctx context.Context, vpod scheduler.VPod, diff int32, placements []duckv1alpha1.Placement) ([]duckv1alpha1.Placement, int32) {
+	logger := logging.FromContext(ctx).Named("add replicas with policy")
 
 	numVreps := diff
 	for i := int32(0); i < numVreps; i++ { //schedule one vreplica at a time (find most suitable pod placement satisying predicates with high score)
 		// Get the current placements state
-		state, err := s.stateAccessor.State(s.reserved)
+		state, err := s.stateAccessor.State(ctx, s.reserved)
 		if err != nil {
 			logger.Info("error while refreshing scheduler state (will retry)", zap.Error(err))
 			return placements, diff
@@ -462,7 +486,7 @@ func (s *StatefulSetScheduler) addReplicasWithPolicy(vpod scheduler.VPod, diff i
 			break               //end the iteration for all vreps since there are not pods
 		}
 
-		feasiblePods := s.findFeasiblePods(s.ctx, state, vpod, state.SchedPolicy)
+		feasiblePods := s.findFeasiblePods(ctx, state, vpod, state.SchedPolicy)
 		if len(feasiblePods) == 0 { //no pods available to schedule this vreplica
 			logger.Info("no feasible pods available to schedule this vreplica")
 			s.reservePlacements(vpod, placements)
@@ -480,7 +504,7 @@ func (s *StatefulSetScheduler) addReplicasWithPolicy(vpod scheduler.VPod, diff i
 			continue
 		} */
 
-		priorityList, err := s.prioritizePods(s.ctx, state, vpod, feasiblePods, state.SchedPolicy)
+		priorityList, err := s.prioritizePods(ctx, state, vpod, feasiblePods, state.SchedPolicy)
 		if err != nil {
 			logger.Info("error while scoring pods using priorities", zap.Error(err))
 			s.reservePlacements(vpod, placements)
@@ -555,7 +579,7 @@ func (s *StatefulSetScheduler) removePodsNotInPlacement(vpod scheduler.VPod, fea
 // prioritizePods prioritizes the pods by running the score plugins, which return a score for each pod.
 // The scores from each plugin are added together to make the score for that pod.
 func (s *StatefulSetScheduler) prioritizePods(ctx context.Context, states *st.State, vpod scheduler.VPod, feasiblePods []int32, policy *scheduler.SchedulerPolicy) (st.PodScoreList, error) {
-	logger := s.logger.Named("prioritize all feasible pods")
+	logger := logging.FromContext(ctx).Named("prioritize all feasible pods")
 
 	// If no priority configs are provided, then all pods will have a score of one
 	result := make(st.PodScoreList, 0, len(feasiblePods))
@@ -618,7 +642,7 @@ func (s *StatefulSetScheduler) selectPod(podScoreList st.PodScoreList) (int32, e
 // If any of these plugins doesn't return "Success", the pod is not suitable for placing the vrep.
 // Meanwhile, the failure message and status are set for the given pod.
 func (s *StatefulSetScheduler) RunFilterPlugins(ctx context.Context, states *st.State, vpod scheduler.VPod, podID int32, policy *scheduler.SchedulerPolicy) st.PluginToStatus {
-	logger := s.logger.Named("run all filter plugins")
+	logger := logging.FromContext(ctx).Named("run all filter plugins")
 
 	statuses := make(st.PluginToStatus)
 	for _, plugin := range policy.Predicates {
@@ -651,7 +675,7 @@ func (s *StatefulSetScheduler) runFilterPlugin(ctx context.Context, pl st.Filter
 // RunScorePlugins runs the set of configured scoring plugins. It returns a list that stores for each scoring plugin name the corresponding PodScoreList(s).
 // It also returns *Status, which is set to non-success if any of the plugins returns a non-success status.
 func (s *StatefulSetScheduler) RunScorePlugins(ctx context.Context, states *st.State, vpod scheduler.VPod, feasiblePods []int32, policy *scheduler.SchedulerPolicy) (st.PluginToPodScores, *st.Status) {
-	logger := s.logger.Named("run all score plugins")
+	logger := logging.FromContext(ctx).Named("run all score plugins")
 
 	pluginToPodScores := make(st.PluginToPodScores, len(policy.Priorities))
 	for _, plugin := range policy.Priorities {
@@ -764,10 +788,11 @@ func (s *StatefulSetScheduler) addReplicas(states *st.State, diff int32, placeme
 	return newPlacements, diff
 }
 
-func (s *StatefulSetScheduler) updateStatefulset(obj interface{}) {
+func (s *StatefulSetScheduler) updateStatefulset(ctx context.Context, obj interface{}) {
 	statefulset, ok := obj.(*appsv1.StatefulSet)
 	if !ok {
-		s.logger.Fatalw("expected a Statefulset object", zap.Any("object", obj))
+		logging.FromContext(ctx).Warnw("expected a Statefulset object", zap.Any("object", obj))
+		return
 	}
 
 	s.lock.Lock()
@@ -777,7 +802,7 @@ func (s *StatefulSetScheduler) updateStatefulset(obj interface{}) {
 		s.replicas = 1
 	} else if s.replicas != *statefulset.Spec.Replicas {
 		s.replicas = *statefulset.Spec.Replicas
-		s.logger.Infow("statefulset replicas updated", zap.Int32("replicas", s.replicas))
+		logging.FromContext(ctx).Infow("statefulset replicas updated", zap.Int32("replicas", s.replicas))
 	}
 }
 

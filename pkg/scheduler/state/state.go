@@ -22,7 +22,6 @@ import (
 	"errors"
 	"math"
 	"strconv"
-	"time"
 
 	"go.uber.org/zap"
 	v1 "k8s.io/api/core/v1"
@@ -30,9 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/apimachinery/pkg/util/wait"
 	corev1 "k8s.io/client-go/listers/core/v1"
-
 	"knative.dev/pkg/logging"
 
 	"knative.dev/eventing/pkg/scheduler"
@@ -42,7 +39,7 @@ type StateAccessor interface {
 	// State returns the current state (snapshot) about placed vpods
 	// Take into account reserved vreplicas and update `reserved` to reflect
 	// the current state.
-	State(reserved map[types.NamespacedName]map[string]int32) (*State, error)
+	State(ctx context.Context, reserved map[types.NamespacedName]map[string]int32) (*State, error)
 }
 
 // state provides information about the current scheduling of all vpods
@@ -152,8 +149,6 @@ func (s *State) IsSchedulablePod(ordinal int32) bool {
 
 // stateBuilder reconstruct the state from scratch, by listing vpods
 type stateBuilder struct {
-	ctx              context.Context
-	logger           *zap.SugaredLogger
 	vpodLister       scheduler.VPodLister
 	capacity         int32
 	schedulerPolicy  scheduler.SchedulerPolicyType
@@ -166,11 +161,9 @@ type stateBuilder struct {
 }
 
 // NewStateBuilder returns a StateAccessor recreating the state from scratch each time it is requested
-func NewStateBuilder(ctx context.Context, namespace, sfsname string, lister scheduler.VPodLister, podCapacity int32, schedulerPolicy scheduler.SchedulerPolicyType, schedPolicy *scheduler.SchedulerPolicy, deschedPolicy *scheduler.SchedulerPolicy, podlister corev1.PodNamespaceLister, nodeLister corev1.NodeLister, statefulSetCache *scheduler.ScaleCache) StateAccessor {
+func NewStateBuilder(sfsname string, lister scheduler.VPodLister, podCapacity int32, schedulerPolicy scheduler.SchedulerPolicyType, schedPolicy, deschedPolicy *scheduler.SchedulerPolicy, podlister corev1.PodNamespaceLister, nodeLister corev1.NodeLister, statefulSetCache *scheduler.ScaleCache) StateAccessor {
 
 	return &stateBuilder{
-		ctx:              ctx,
-		logger:           logging.FromContext(ctx),
 		vpodLister:       lister,
 		capacity:         podCapacity,
 		schedulerPolicy:  schedulerPolicy,
@@ -183,15 +176,18 @@ func NewStateBuilder(ctx context.Context, namespace, sfsname string, lister sche
 	}
 }
 
-func (s *stateBuilder) State(reserved map[types.NamespacedName]map[string]int32) (*State, error) {
+func (s *stateBuilder) State(ctx context.Context, reserved map[types.NamespacedName]map[string]int32) (*State, error) {
 	vpods, err := s.vpodLister()
 	if err != nil {
 		return nil, err
 	}
 
-	scale, err := s.statefulSetCache.GetScale(s.ctx, s.statefulSetName, metav1.GetOptions{})
+	logger := logging.FromContext(ctx).With("subcomponent", "statebuilder")
+	ctx = logging.WithLogger(ctx, logger)
+
+	scale, err := s.statefulSetCache.GetScale(ctx, s.statefulSetName, metav1.GetOptions{})
 	if err != nil {
-		s.logger.Infow("failed to get statefulset", zap.Error(err))
+		logger.Infow("failed to get statefulset", zap.Error(err))
 		return nil, err
 	}
 
@@ -235,36 +231,35 @@ func (s *stateBuilder) State(reserved map[types.NamespacedName]map[string]int32)
 	}
 
 	for podId := int32(0); podId < scale.Spec.Replicas && s.podLister != nil; podId++ {
-		var pod *v1.Pod
-		wait.PollUntilContextTimeout(context.Background(), 50*time.Millisecond, 5*time.Second, true, func(ctx context.Context) (bool, error) {
-			pod, err = s.podLister.Get(PodNameFromOrdinal(s.statefulSetName, podId))
-			return err == nil, nil
-		})
-
-		if pod != nil {
-			if isPodUnschedulable(pod) {
-				// Pod is marked for eviction - CANNOT SCHEDULE VREPS on this pod.
-				continue
-			}
-
-			node, err := s.nodeLister.Get(pod.Spec.NodeName)
-			if err != nil {
-				return nil, err
-			}
-
-			if isNodeUnschedulable(node) {
-				// Node is marked as Unschedulable - CANNOT SCHEDULE VREPS on a pod running on this node.
-				continue
-			}
-
-			// Pod has no annotation or not annotated as unschedulable and
-			// not on an unschedulable node, so add to feasible
-			schedulablePods.Insert(podId)
+		pod, err := s.podLister.Get(PodNameFromOrdinal(s.statefulSetName, podId))
+		if err != nil {
+			logger.Warnw("Failed to get pod", zap.Int32("ordinal", podId), zap.Error(err))
+			continue
 		}
+		if isPodUnschedulable(pod) {
+			// Pod is marked for eviction - CANNOT SCHEDULE VREPS on this pod.
+			logger.Debugw("Pod is unschedulable", zap.Any("pod", pod))
+			continue
+		}
+
+		node, err := s.nodeLister.Get(pod.Spec.NodeName)
+		if err != nil {
+			return nil, err
+		}
+
+		if isNodeUnschedulable(node) {
+			// Node is marked as Unschedulable - CANNOT SCHEDULE VREPS on a pod running on this node.
+			logger.Debugw("Pod is on an unschedulable node", zap.Any("pod", node))
+			continue
+		}
+
+		// Pod has no annotation or not annotated as unschedulable and
+		// not on an unschedulable node, so add to feasible
+		schedulablePods.Insert(podId)
 	}
 
 	for _, p := range schedulablePods.List() {
-		free, last = s.updateFreeCapacity(free, last, PodNameFromOrdinal(s.statefulSetName, p), 0)
+		free, last = s.updateFreeCapacity(logger, free, last, PodNameFromOrdinal(s.statefulSetName, p), 0)
 	}
 
 	// Getting current state from existing placements for all vpods
@@ -286,15 +281,14 @@ func (s *stateBuilder) State(reserved map[types.NamespacedName]map[string]int32)
 			// Account for reserved vreplicas
 			vreplicas = withReserved(vpod.GetKey(), podName, vreplicas, reserved)
 
-			free, last = s.updateFreeCapacity(free, last, podName, vreplicas)
+			free, last = s.updateFreeCapacity(logger, free, last, podName, vreplicas)
 
 			withPlacement[vpod.GetKey()][podName] = true
 
-			var pod *v1.Pod
-			wait.PollUntilContextTimeout(context.Background(), 50*time.Millisecond, 5*time.Second, true, func(ctx context.Context) (bool, error) {
-				pod, err = s.podLister.Get(podName)
-				return err == nil, nil
-			})
+			pod, err := s.podLister.Get(podName)
+			if err != nil {
+				logger.Warnw("Failed to get pod", zap.String("podName", podName), zap.Error(err))
+			}
 
 			if pod != nil && schedulablePods.Has(OrdinalFromPodName(pod.GetName())) {
 				nodeName := pod.Spec.NodeName       //node name for this pod
@@ -315,11 +309,10 @@ func (s *stateBuilder) State(reserved map[types.NamespacedName]map[string]int32)
 					continue
 				}
 
-				var pod *v1.Pod
-				wait.PollUntilContextTimeout(context.Background(), 50*time.Millisecond, 5*time.Second, true, func(ctx context.Context) (bool, error) {
-					pod, err = s.podLister.Get(podName)
-					return err == nil, nil
-				})
+				pod, err := s.podLister.Get(podName)
+				if err != nil {
+					logger.Warnw("Failed to get pod", zap.String("podName", podName), zap.Error(err))
+				}
 
 				if pod != nil && schedulablePods.Has(OrdinalFromPodName(pod.GetName())) {
 					nodeName := pod.Spec.NodeName       //node name for this pod
@@ -330,7 +323,7 @@ func (s *stateBuilder) State(reserved map[types.NamespacedName]map[string]int32)
 				}
 			}
 
-			free, last = s.updateFreeCapacity(free, last, podName, rvreplicas)
+			free, last = s.updateFreeCapacity(logger, free, last, podName, rvreplicas)
 		}
 	}
 
@@ -338,7 +331,7 @@ func (s *stateBuilder) State(reserved map[types.NamespacedName]map[string]int32)
 		SchedulerPolicy: s.schedulerPolicy, SchedPolicy: s.schedPolicy, DeschedPolicy: s.deschedPolicy, NodeToZoneMap: nodeToZoneMap, StatefulSetName: s.statefulSetName, PodLister: s.podLister,
 		PodSpread: podSpread, NodeSpread: nodeSpread, ZoneSpread: zoneSpread, Pending: pending, ExpectedVReplicaByVPod: expectedVReplicasByVPod}
 
-	s.logger.Infow("cluster state info", zap.Any("state", state), zap.Any("reserved", toJSONable(reserved)))
+	logger.Infow("cluster state info", zap.Any("state", state), zap.Any("reserved", toJSONable(reserved)))
 
 	return state, nil
 }
@@ -350,7 +343,7 @@ func pendingFromVPod(vpod scheduler.VPod) int32 {
 	return int32(math.Max(float64(0), float64(expected-scheduled)))
 }
 
-func (s *stateBuilder) updateFreeCapacity(free []int32, last int32, podName string, vreplicas int32) ([]int32, int32) {
+func (s *stateBuilder) updateFreeCapacity(logger *zap.SugaredLogger, free []int32, last int32, podName string, vreplicas int32) ([]int32, int32) {
 	ordinal := OrdinalFromPodName(podName)
 	free = grow(free, ordinal, s.capacity)
 
@@ -359,7 +352,7 @@ func (s *stateBuilder) updateFreeCapacity(free []int32, last int32, podName stri
 	// Assert the pod is not overcommitted
 	if free[ordinal] < 0 {
 		// This should not happen anymore. Log as an error but do not interrupt the current scheduling.
-		s.logger.Warnw("pod is overcommitted", zap.String("podName", podName), zap.Int32("free", free[ordinal]))
+		logger.Warnw("pod is overcommitted", zap.String("podName", podName), zap.Int32("free", free[ordinal]))
 	}
 
 	if ordinal > last {

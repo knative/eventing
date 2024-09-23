@@ -30,6 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	v1 "k8s.io/client-go/listers/core/v1"
 	gtesting "k8s.io/client-go/testing"
+	"knative.dev/pkg/logging"
 	"knative.dev/pkg/reconciler"
 
 	kubeclient "knative.dev/pkg/client/injection/kube/client/fake"
@@ -451,7 +452,7 @@ func TestAutoscaler(t *testing.T) {
 
 			scaleCache := scheduler.NewScaleCache(ctx, testNs, kubeclient.Get(ctx).AppsV1().StatefulSets(testNs), scheduler.ScaleCacheConfig{RefreshPeriod: time.Minute * 5})
 
-			stateAccessor := state.NewStateBuilder(ctx, testNs, sfsName, vpodClient.List, 10, tc.schedulerPolicyType, tc.schedulerPolicy, tc.deschedulerPolicy, lspp, lsnn, scaleCache)
+			stateAccessor := state.NewStateBuilder(sfsName, vpodClient.List, 10, tc.schedulerPolicyType, tc.schedulerPolicy, tc.deschedulerPolicy, lspp, lsnn, scaleCache)
 
 			sfsClient := kubeclient.Get(ctx).AppsV1().StatefulSets(testNs)
 			_, err := sfsClient.Create(ctx, tscheduler.MakeStatefulset(testNs, sfsName, tc.replicas), metav1.CreateOptions{})
@@ -474,7 +475,7 @@ func TestAutoscaler(t *testing.T) {
 					return tc.reserved
 				},
 			}
-			autoscaler := newAutoscaler(ctx, cfg, stateAccessor, scaleCache)
+			autoscaler := newAutoscaler(cfg, stateAccessor, scaleCache)
 			_ = autoscaler.Promote(reconciler.UniversalBucket(), nil)
 
 			for _, vpod := range tc.vpods {
@@ -512,7 +513,7 @@ func TestAutoscalerScaleDownToZero(t *testing.T) {
 	vpodClient := tscheduler.NewVPodClient()
 	ls := listers.NewListers(nil)
 	scaleCache := scheduler.NewScaleCache(ctx, testNs, kubeclient.Get(ctx).AppsV1().StatefulSets(testNs), scheduler.ScaleCacheConfig{RefreshPeriod: time.Minute * 5})
-	stateAccessor := state.NewStateBuilder(ctx, testNs, sfsName, vpodClient.List, 10, scheduler.MAXFILLUP, &scheduler.SchedulerPolicy{}, &scheduler.SchedulerPolicy{}, nil, ls.GetNodeLister(), scaleCache)
+	stateAccessor := state.NewStateBuilder(sfsName, vpodClient.List, 10, scheduler.MAXFILLUP, &scheduler.SchedulerPolicy{}, &scheduler.SchedulerPolicy{}, nil, ls.GetNodeLister(), scaleCache)
 
 	sfsClient := kubeclient.Get(ctx).AppsV1().StatefulSets(testNs)
 	_, err := sfsClient.Create(ctx, tscheduler.MakeStatefulset(testNs, sfsName, 10), metav1.CreateOptions{})
@@ -535,7 +536,7 @@ func TestAutoscalerScaleDownToZero(t *testing.T) {
 			return nil
 		},
 	}
-	autoscaler := newAutoscaler(ctx, cfg, stateAccessor, scaleCache)
+	autoscaler := newAutoscaler(cfg, stateAccessor, scaleCache)
 	_ = autoscaler.Promote(reconciler.UniversalBucket(), nil)
 
 	done := make(chan bool)
@@ -950,7 +951,7 @@ func TestCompactor(t *testing.T) {
 			lsp := listers.NewListers(podlist)
 			lsn := listers.NewListers(nodelist)
 			scaleCache := scheduler.NewScaleCache(ctx, testNs, kubeclient.Get(ctx).AppsV1().StatefulSets(testNs), scheduler.ScaleCacheConfig{RefreshPeriod: time.Minute * 5})
-			stateAccessor := state.NewStateBuilder(ctx, testNs, sfsName, vpodClient.List, 10, tc.schedulerPolicyType, tc.schedulerPolicy, tc.deschedulerPolicy, lsp.GetPodLister().Pods(testNs), lsn.GetNodeLister(), scaleCache)
+			stateAccessor := state.NewStateBuilder(sfsName, vpodClient.List, 10, tc.schedulerPolicyType, tc.schedulerPolicy, tc.deschedulerPolicy, lsp.GetPodLister().Pods(testNs), lsn.GetNodeLister(), scaleCache)
 
 			evictions := make(map[types.NamespacedName][]duckv1alpha1.Placement)
 			recordEviction := func(pod *corev1.Pod, vpod scheduler.VPod, from *duckv1alpha1.Placement) error {
@@ -966,7 +967,7 @@ func TestCompactor(t *testing.T) {
 				RefreshPeriod:        10 * time.Second,
 				PodCapacity:          10,
 			}
-			autoscaler := newAutoscaler(ctx, cfg, stateAccessor, scaleCache)
+			autoscaler := newAutoscaler(cfg, stateAccessor, scaleCache)
 			_ = autoscaler.Promote(reconciler.UniversalBucket(), func(bucket reconciler.Bucket, name types.NamespacedName) {})
 			assert.Equal(t, true, autoscaler.isLeader.Load())
 
@@ -974,7 +975,7 @@ func TestCompactor(t *testing.T) {
 				vpodClient.Append(vpod)
 			}
 
-			state, err := stateAccessor.State(nil)
+			state, err := stateAccessor.State(ctx, nil)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -988,7 +989,9 @@ func TestCompactor(t *testing.T) {
 				scaleUpFactor = 1 // Non-HA scaling
 			}
 
-			autoscaler.mayCompact(state, scaleUpFactor)
+			if err := autoscaler.mayCompact(logging.FromContext(ctx), state, scaleUpFactor); err != nil {
+				t.Fatal(err)
+			}
 
 			if tc.wantEvictions == nil && len(evictions) != 0 {
 				t.Fatalf("unexpected evictions: %v", evictions)
