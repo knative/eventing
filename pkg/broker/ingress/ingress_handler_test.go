@@ -36,10 +36,12 @@ import (
 	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"github.com/google/go-cmp/cmp"
 	"go.uber.org/zap"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	configmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap/fake"
 
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/configmap"
 
 	reconcilertesting "knative.dev/pkg/reconciler/testing"
 
@@ -299,7 +301,17 @@ func TestHandler_ServeHTTP(t *testing.T) {
 			}
 
 			tokenProvider := auth.NewOIDCTokenProvider(ctx)
-			authVerifier := auth.NewVerifier(ctx, eventpolicyinformerfake.Get(ctx).Lister(), trustBundleConfigMapLister, feature.FromContextOrDefaults(ctx))
+			authVerifier := auth.NewVerifier(ctx, eventpolicyinformerfake.Get(ctx).Lister(), trustBundleConfigMapLister, configmap.NewStaticWatcher(
+				&corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "config-features",
+						Namespace: "knative-eventing",
+					},
+					Data: map[string]string{
+						feature.OIDCAuthentication: string(feature.Enabled),
+					},
+				},
+			))
 
 			h, err := NewHandler(logger,
 				&mockReporter{},

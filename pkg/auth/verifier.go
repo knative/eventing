@@ -30,6 +30,7 @@ import (
 	"go.opencensus.io/plugin/ochttp"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"knative.dev/eventing/pkg/eventingtls"
+	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/network"
 	"knative.dev/pkg/tracing/propagation/tracecontextb3"
 
@@ -65,7 +66,7 @@ type IDToken struct {
 	AccessTokenHash string
 }
 
-func NewVerifier(ctx context.Context, eventPolicyLister listerseventingv1alpha1.EventPolicyLister, trustBundleConfigMapLister corev1listers.ConfigMapNamespaceLister, features feature.Flags) *Verifier {
+func NewVerifier(ctx context.Context, eventPolicyLister listerseventingv1alpha1.EventPolicyLister, trustBundleConfigMapLister corev1listers.ConfigMapNamespaceLister, cmw configmap.Watcher) *Verifier {
 	tokenHandler := &Verifier{
 		logger:                     logging.FromContext(ctx).With("component", "oidc-token-handler"),
 		restConfig:                 injection.GetConfig(ctx),
@@ -73,7 +74,16 @@ func NewVerifier(ctx context.Context, eventPolicyLister listerseventingv1alpha1.
 		trustBundleConfigMapLister: trustBundleConfigMapLister,
 	}
 
-	if err := tokenHandler.initOIDCProvider(ctx, features); err != nil {
+	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {
+		if features, ok := value.(feature.Flags); ok {
+			if err := tokenHandler.initOIDCProvider(ctx, features); err != nil {
+				tokenHandler.logger.Error(fmt.Sprintf("could not initialize provider after config update. You can ignore this message, when the %s feature is disabled", feature.OIDCAuthentication), zap.Error(err))
+			}
+		}
+	})
+	featureStore.WatchConfigs(cmw)
+
+	if err := tokenHandler.initOIDCProvider(ctx, featureStore.Load()); err != nil {
 		tokenHandler.logger.Error(fmt.Sprintf("could not initialize provider. You can ignore this message, when the %s feature is disabled", feature.OIDCAuthentication), zap.Error(err))
 	}
 
@@ -243,10 +253,13 @@ func (v *Verifier) initOIDCProvider(ctx context.Context, features feature.Flags)
 	ctx = oidc.ClientContext(ctx, httpClient)
 
 	// get OIDC provider
-	v.provider, err = oidc.NewProvider(ctx, features.OIDCDiscoveryBaseURL())
+	provider, err := oidc.NewProvider(ctx, features.OIDCDiscoveryBaseURL())
 	if err != nil {
 		return fmt.Errorf("could not get OIDC provider: %w", err)
 	}
+
+	// provider is valid, update it
+	v.provider = provider
 
 	v.logger.Debug("updated OIDC provider config", zap.Any("discovery-config", discovery))
 

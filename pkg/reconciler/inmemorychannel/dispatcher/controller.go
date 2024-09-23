@@ -146,7 +146,7 @@ func NewController(
 		eventingClient:           eventingclient.Get(ctx).EventingV1beta2(),
 		eventTypeLister:          eventtypeinformer.Get(ctx).Lister(),
 		eventDispatcher:          kncloudevents.NewDispatcher(clientConfig, oidcTokenProvider),
-		authVerifier:             auth.NewVerifier(ctx, eventpolicyinformer.Get(ctx).Lister(), trustBundleConfigMapLister, featureStore.Load()),
+		authVerifier:             auth.NewVerifier(ctx, eventpolicyinformer.Get(ctx).Lister(), trustBundleConfigMapLister, cmw),
 		clientConfig:             clientConfig,
 		inMemoryChannelLister:    inmemorychannelInformer.Lister(),
 	}
@@ -156,7 +156,6 @@ func NewController(
 	})
 
 	globalResync = func(_ interface{}) {
-		r.authVerifier = auth.NewVerifier(ctx, eventpolicyinformer.Get(ctx).Lister(), trustBundleConfigMapLister, featureStore.Load())
 		impl.GlobalResync(inmemorychannelInformer.Informer())
 	}
 

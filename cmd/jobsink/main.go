@@ -114,12 +114,7 @@ func main() {
 	trustBundleConfigMapLister := configmapinformer.Get(ctx, eventingtls.TrustBundleLabelSelector).Lister().ConfigMaps(system.Namespace())
 	var h *Handler
 
-	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {
-		logger.Info("Updated", zap.String("name", name), zap.Any("value", value))
-		if flags, ok := value.(feature.Flags); ok && h != nil {
-			h.authVerifier = auth.NewVerifier(ctx, eventpolicyinformer.Get(ctx).Lister(), trustBundleConfigMapLister, flags)
-		}
-	})
+	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"))
 	featureStore.WatchConfigs(configMapWatcher)
 
 	// Decorate contexts with the current state of the feature config.
@@ -131,7 +126,7 @@ func main() {
 		k8s:          kubeclient.Get(ctx),
 		lister:       jobsink.Get(ctx).Lister(),
 		withContext:  ctxFunc,
-		authVerifier: auth.NewVerifier(ctx, eventpolicyinformer.Get(ctx).Lister(), trustBundleConfigMapLister, featureStore.Load()),
+		authVerifier: auth.NewVerifier(ctx, eventpolicyinformer.Get(ctx).Lister(), trustBundleConfigMapLister, configMapWatcher),
 	}
 
 	tlsConfig, err := getServerTLSConfig(ctx)
