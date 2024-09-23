@@ -18,6 +18,7 @@ package statefulset
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"sync"
 	"sync/atomic"
@@ -27,10 +28,8 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/wait"
-	"knative.dev/pkg/reconciler"
-
 	"knative.dev/pkg/logging"
+	"knative.dev/pkg/reconciler"
 
 	"knative.dev/eventing/pkg/scheduler"
 	st "knative.dev/eventing/pkg/scheduler/state"
@@ -58,9 +57,8 @@ type autoscaler struct {
 	statefulSetCache *scheduler.ScaleCache
 	statefulSetName  string
 	vpodLister       scheduler.VPodLister
-	logger           *zap.SugaredLogger
 	stateAccessor    st.StateAccessor
-	trigger          chan struct{}
+	trigger          chan context.Context
 	evictor          scheduler.Evictor
 
 	// capacity is the total number of virtual replicas available per pod.
@@ -68,7 +66,9 @@ type autoscaler struct {
 
 	// refreshPeriod is how often the autoscaler tries to scale down the statefulset
 	refreshPeriod time.Duration
-	lock          sync.Locker
+	// retryPeriod is how often the autoscaler retry failed autoscale operations
+	retryPeriod time.Duration
+	lock        sync.Locker
 
 	// isLeader signals whether a given autoscaler instance is leader or not.
 	// The autoscaler is considered the leader when ephemeralLeaderElectionObject is in a
@@ -104,17 +104,17 @@ func (a *autoscaler) Demote(b reconciler.Bucket) {
 	}
 }
 
-func newAutoscaler(ctx context.Context, cfg *Config, stateAccessor st.StateAccessor, statefulSetCache *scheduler.ScaleCache) *autoscaler {
-	return &autoscaler{
-		logger:           logging.FromContext(ctx).With(zap.String("component", "autoscaler")),
+func newAutoscaler(cfg *Config, stateAccessor st.StateAccessor, statefulSetCache *scheduler.ScaleCache) *autoscaler {
+	a := &autoscaler{
 		statefulSetCache: statefulSetCache,
 		statefulSetName:  cfg.StatefulSetName,
 		vpodLister:       cfg.VPodLister,
 		stateAccessor:    stateAccessor,
 		evictor:          cfg.Evictor,
-		trigger:          make(chan struct{}, 1),
+		trigger:          make(chan context.Context, 1),
 		capacity:         cfg.PodCapacity,
 		refreshPeriod:    cfg.RefreshPeriod,
+		retryPeriod:      cfg.RetryPeriod,
 		lock:             new(sync.Mutex),
 		isLeader:         atomic.Bool{},
 		getReserved:      cfg.getReserved,
@@ -124,25 +124,38 @@ func newAutoscaler(ctx context.Context, cfg *Config, stateAccessor st.StateAcces
 			Add(-cfg.RefreshPeriod).
 			Add(-time.Minute),
 	}
+
+	if a.retryPeriod == 0 {
+		a.retryPeriod = time.Second
+	}
+
+	return a
 }
 
 func (a *autoscaler) Start(ctx context.Context) {
 	attemptScaleDown := false
 	for {
+		autoscaleCtx := ctx
 		select {
 		case <-ctx.Done():
 			return
 		case <-time.After(a.refreshPeriod):
-			a.logger.Infow("Triggering scale down", zap.Bool("isLeader", a.isLeader.Load()))
+			logging.FromContext(ctx).Infow("Triggering scale down", zap.Bool("isLeader", a.isLeader.Load()))
 			attemptScaleDown = true
-		case <-a.trigger:
-			a.logger.Infow("Triggering scale up", zap.Bool("isLeader", a.isLeader.Load()))
+		case autoscaleCtx = <-a.trigger:
+			logging.FromContext(autoscaleCtx).Infow("Triggering scale up", zap.Bool("isLeader", a.isLeader.Load()))
 			attemptScaleDown = false
 		}
 
 		// Retry a few times, just so that we don't have to wait for the next beat when
 		// a transient error occurs
-		a.syncAutoscale(ctx, attemptScaleDown)
+		if err := a.syncAutoscale(autoscaleCtx, attemptScaleDown); err != nil {
+			logging.FromContext(autoscaleCtx).Errorw("Failed to sync autoscale", zap.Error(err))
+			go func() {
+				time.Sleep(a.retryPeriod)
+				a.Autoscale(ctx) // Use top-level context for background retries
+			}()
+		}
 	}
 }
 
@@ -150,10 +163,10 @@ func (a *autoscaler) Autoscale(ctx context.Context) {
 	select {
 	// We trigger the autoscaler asynchronously by using the channel so that the scale down refresh
 	// period is reset.
-	case a.trigger <- struct{}{}:
+	case a.trigger <- ctx:
 	default:
 		// We don't want to block if the channel's buffer is full, it will be triggered eventually.
-
+		logging.FromContext(ctx).Debugw("Skipping autoscale since autoscale is in progress")
 	}
 }
 
@@ -161,36 +174,34 @@ func (a *autoscaler) syncAutoscale(ctx context.Context, attemptScaleDown bool) e
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
-	var lastErr error
-	wait.Poll(500*time.Millisecond, 5*time.Second, func() (bool, error) {
-		err := a.doautoscale(ctx, attemptScaleDown)
-		if err != nil {
-			logging.FromContext(ctx).Errorw("Failed to autoscale", zap.Error(err))
-		}
-		lastErr = err
-		return err == nil, nil
-	})
-	return lastErr
+	if err := a.doautoscale(ctx, attemptScaleDown); err != nil {
+		return fmt.Errorf("failed to do autoscale: %w", err)
+	}
+	return nil
 }
 
 func (a *autoscaler) doautoscale(ctx context.Context, attemptScaleDown bool) error {
 	if !a.isLeader.Load() {
 		return nil
 	}
-	state, err := a.stateAccessor.State(a.getReserved())
+
+	logger := logging.FromContext(ctx).With("component", "autoscaler")
+	ctx = logging.WithLogger(ctx, logger)
+
+	state, err := a.stateAccessor.State(ctx, a.getReserved())
 	if err != nil {
-		a.logger.Info("error while refreshing scheduler state (will retry)", zap.Error(err))
+		logger.Info("error while refreshing scheduler state (will retry)", zap.Error(err))
 		return err
 	}
 
 	scale, err := a.statefulSetCache.GetScale(ctx, a.statefulSetName, metav1.GetOptions{})
 	if err != nil {
 		// skip a beat
-		a.logger.Infow("failed to get scale subresource", zap.Error(err))
+		logger.Infow("failed to get scale subresource", zap.Error(err))
 		return err
 	}
 
-	a.logger.Debugw("checking adapter capacity",
+	logger.Debugw("checking adapter capacity",
 		zap.Int32("replicas", scale.Spec.Replicas),
 		zap.Any("state", state))
 
@@ -234,43 +245,43 @@ func (a *autoscaler) doautoscale(ctx context.Context, attemptScaleDown bool) err
 
 	if newreplicas != scale.Spec.Replicas {
 		scale.Spec.Replicas = newreplicas
-		a.logger.Infow("updating adapter replicas", zap.Int32("replicas", scale.Spec.Replicas))
+		logger.Infow("updating adapter replicas", zap.Int32("replicas", scale.Spec.Replicas))
 
 		_, err = a.statefulSetCache.UpdateScale(ctx, a.statefulSetName, scale, metav1.UpdateOptions{})
 		if err != nil {
-			a.logger.Errorw("updating scale subresource failed", zap.Error(err))
+			logger.Errorw("updating scale subresource failed", zap.Error(err))
 			return err
 		}
 	} else if attemptScaleDown {
 		// since the number of replicas hasn't changed and time has approached to scale down,
 		// take the opportunity to compact the vreplicas
-		a.mayCompact(state, scaleUpFactor)
+		return a.mayCompact(logger, state, scaleUpFactor)
 	}
 	return nil
 }
 
-func (a *autoscaler) mayCompact(s *st.State, scaleUpFactor int32) {
+func (a *autoscaler) mayCompact(logger *zap.SugaredLogger, s *st.State, scaleUpFactor int32) error {
 
 	// This avoids a too aggressive scale down by adding a "grace period" based on the refresh
 	// period
 	nextAttempt := a.lastCompactAttempt.Add(a.refreshPeriod)
 	if time.Now().Before(nextAttempt) {
-		a.logger.Debugw("Compact was retried before refresh period",
+		logger.Debugw("Compact was retried before refresh period",
 			zap.Time("lastCompactAttempt", a.lastCompactAttempt),
 			zap.Time("nextAttempt", nextAttempt),
 			zap.String("refreshPeriod", a.refreshPeriod.String()),
 		)
-		return
+		return nil
 	}
 
-	a.logger.Debugw("Trying to compact and scale down",
+	logger.Debugw("Trying to compact and scale down",
 		zap.Int32("scaleUpFactor", scaleUpFactor),
 		zap.Any("state", s),
 	)
 
 	// when there is only one pod there is nothing to move or number of pods is just enough!
 	if s.LastOrdinal < 1 || len(s.SchedulablePods) <= int(scaleUpFactor) {
-		return
+		return nil
 	}
 
 	if s.SchedulerPolicy == scheduler.MAXFILLUP {
@@ -283,7 +294,7 @@ func (a *autoscaler) mayCompact(s *st.State, scaleUpFactor int32) {
 			a.lastCompactAttempt = time.Now()
 			err := a.compact(s, scaleUpFactor)
 			if err != nil {
-				a.logger.Errorw("vreplicas compaction failed", zap.Error(err))
+				return fmt.Errorf("vreplicas compaction failed (scaleUpFactor %d): %w", scaleUpFactor, err)
 			}
 		}
 
@@ -303,10 +314,11 @@ func (a *autoscaler) mayCompact(s *st.State, scaleUpFactor int32) {
 			a.lastCompactAttempt = time.Now()
 			err := a.compact(s, scaleUpFactor)
 			if err != nil {
-				a.logger.Errorw("vreplicas compaction failed", zap.Error(err))
+				return fmt.Errorf("vreplicas compaction failed (scaleUpFactor %d): %w", scaleUpFactor, err)
 			}
 		}
 	}
+	return nil
 }
 
 func (a *autoscaler) compact(s *st.State, scaleUpFactor int32) error {
@@ -323,16 +335,14 @@ func (a *autoscaler) compact(s *st.State, scaleUpFactor int32) error {
 				ordinal := st.OrdinalFromPodName(placements[i].PodName)
 
 				if ordinal == s.LastOrdinal-j {
-					wait.PollUntilContextTimeout(context.Background(), 50*time.Millisecond, 5*time.Second, true, func(ctx context.Context) (bool, error) {
-						if s.PodLister != nil {
-							pod, err = s.PodLister.Get(placements[i].PodName)
-						}
-						return err == nil, nil
-					})
+					pod, err = s.PodLister.Get(placements[i].PodName)
+					if err != nil {
+						return fmt.Errorf("failed to get pod %s: %w", placements[i].PodName, err)
+					}
 
 					err = a.evictor(pod, vpod, &placements[i])
 					if err != nil {
-						return err
+						return fmt.Errorf("failed to evict pod %s: %w", pod.Name, err)
 					}
 				}
 			}

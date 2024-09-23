@@ -17,6 +17,7 @@ limitations under the License.
 package scheduler
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -28,12 +29,12 @@ func TestSchedulerFuncSchedule(t *testing.T) {
 
 	called := 0
 
-	var s Scheduler = SchedulerFunc(func(vpod VPod) ([]duckv1alpha1.Placement, error) {
+	var s Scheduler = SchedulerFunc(func(ctx context.Context, vpod VPod) ([]duckv1alpha1.Placement, error) {
 		called++
 		return nil, nil
 	})
 
-	_, err := s.Schedule(nil)
+	_, err := s.Schedule(context.Background(), nil)
 	require.Nil(t, err)
 	require.Equal(t, 1, called)
 }

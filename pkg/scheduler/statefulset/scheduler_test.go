@@ -804,7 +804,7 @@ func TestStatefulsetScheduler(t *testing.T) {
 			lsp := listers.NewListers(podlist)
 			lsn := listers.NewListers(nodelist)
 			scaleCache := scheduler.NewScaleCache(ctx, testNs, kubeclient.Get(ctx).AppsV1().StatefulSets(testNs), scheduler.ScaleCacheConfig{RefreshPeriod: time.Minute * 5})
-			sa := state.NewStateBuilder(ctx, testNs, sfsName, vpodClient.List, 10, tc.schedulerPolicyType, tc.schedulerPolicy, tc.deschedulerPolicy, lsp.GetPodLister().Pods(testNs), lsn.GetNodeLister(), scaleCache)
+			sa := state.NewStateBuilder(sfsName, vpodClient.List, 10, tc.schedulerPolicyType, tc.schedulerPolicy, tc.deschedulerPolicy, lsp.GetPodLister().Pods(testNs), lsn.GetNodeLister(), scaleCache)
 			cfg := &Config{
 				StatefulSetNamespace: testNs,
 				StatefulSetName:      sfsName,
@@ -823,7 +823,7 @@ func TestStatefulsetScheduler(t *testing.T) {
 			}
 
 			vpod := vpodClient.Create(vpodNamespace, vpodName, tc.vreplicas, tc.placements)
-			placements, err := s.Schedule(vpod)
+			placements, err := s.Schedule(ctx, vpod)
 
 			if tc.err == nil && err != nil {
 				t.Fatal("unexpected error", err)
