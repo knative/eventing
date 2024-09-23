@@ -804,13 +804,13 @@ func TestStatefulsetScheduler(t *testing.T) {
 			lsp := listers.NewListers(podlist)
 			lsn := listers.NewListers(nodelist)
 			scaleCache := scheduler.NewScaleCache(ctx, testNs, kubeclient.Get(ctx).AppsV1().StatefulSets(testNs), scheduler.ScaleCacheConfig{RefreshPeriod: time.Minute * 5})
-			sa := state.NewStateBuilder(ctx, testNs, sfsName, vpodClient.List, 10, tc.schedulerPolicyType, tc.schedulerPolicy, tc.deschedulerPolicy, lsp.GetPodLister().Pods(testNs), lsn.GetNodeLister(), scaleCache)
+			sa := state.NewStateBuilder(sfsName, vpodClient.List, 10, tc.schedulerPolicyType, tc.schedulerPolicy, tc.deschedulerPolicy, lsp.GetPodLister().Pods(testNs), lsn.GetNodeLister(), scaleCache)
 			cfg := &Config{
 				StatefulSetNamespace: testNs,
 				StatefulSetName:      sfsName,
 				VPodLister:           vpodClient.List,
 			}
-			s := newStatefulSetScheduler(ctx, cfg, sa, nil, lsp.GetPodLister().Pods(testNs))
+			s := newStatefulSetScheduler(ctx, cfg, sa, nil)
 
 			// Give some time for the informer to notify the scheduler and set the number of replicas
 			err = wait.PollUntilContextTimeout(ctx, 200*time.Millisecond, time.Second, true, func(ctx context.Context) (bool, error) {
@@ -823,7 +823,7 @@ func TestStatefulsetScheduler(t *testing.T) {
 			}
 
 			vpod := vpodClient.Create(vpodNamespace, vpodName, tc.vreplicas, tc.placements)
-			placements, err := s.Schedule(vpod)
+			placements, err := s.Schedule(ctx, vpod)
 
 			if tc.err == nil && err != nil {
 				t.Fatal("unexpected error", err)
@@ -906,7 +906,7 @@ func TestReservePlacements(t *testing.T) {
 				VPodLister:           vpodClient.List,
 			}
 			fa := newFakeAutoscaler()
-			s := newStatefulSetScheduler(ctx, cfg, nil, fa, nil)
+			s := newStatefulSetScheduler(ctx, cfg, nil, fa)
 			_ = s.Promote(reconciler.UniversalBucket(), func(bucket reconciler.Bucket, name types.NamespacedName) {})
 
 			s.reservePlacements(tc.vpod, tc.vpod.GetPlacements()) //initial reserve
