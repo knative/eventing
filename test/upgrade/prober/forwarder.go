@@ -20,6 +20,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/duck"
 	"knative.dev/eventing/test/lib/resources"
@@ -69,6 +70,9 @@ func (p *prober) forwarderKService(name, namespace string) *unstructured.Unstruc
 		"spec": map[string]interface{}{
 			"template": map[string]interface{}{
 				"metadata": map[string]interface{}{
+					"labels": map[string]interface{}{
+						"sidecar.istio.io/inject": "true",
+					},
 					"annotations": map[string]interface{}{
 						"sidecar.istio.io/inject":                "true",
 						"sidecar.istio.io/rewriteAppHTTPProbers": "true",

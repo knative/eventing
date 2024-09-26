@@ -128,8 +128,9 @@ O2dgzikq8iSy1BlRsVw=
 						"sidecar.istio.io/inject": "true",
 					},
 					Labels: map[string]string{
-						"test-key1": "test-value1",
-						"test-key2": "test-value2",
+						"sidecar.istio.io/inject": "true",
+						"test-key1":               "test-value1",
+						"test-key2":               "test-value2",
 					},
 				},
 				Spec: corev1.PodSpec{

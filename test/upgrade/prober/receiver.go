@@ -91,7 +91,8 @@ func (p *prober) createReceiverDeployment() *appsv1.Deployment {
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						"app": receiver.Name,
+						"app":                     receiver.Name,
+						"sidecar.istio.io/inject": "true",
 					},
 					Annotations: map[string]string{
 						"sidecar.istio.io/inject":                "true",

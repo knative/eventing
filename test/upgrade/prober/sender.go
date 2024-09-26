@@ -52,7 +52,8 @@ func (p *prober) deploySender() {
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						"app": sender.Name,
+						"app":                     sender.Name,
+						"sidecar.istio.io/inject": "true",
 					},
 					Annotations: map[string]string{
 						"sidecar.istio.io/inject":                "true",
