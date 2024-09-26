@@ -26,10 +26,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"knative.dev/eventing/pkg/adapter/v2"
 	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/ptr"
 	"knative.dev/pkg/system"
+
+	"knative.dev/eventing/pkg/adapter/v2"
 
 	"knative.dev/eventing/pkg/adapter/apiserver"
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
@@ -80,7 +81,7 @@ func MakeReceiveAdapter(args *ReceiveAdapterArgs) (*appsv1.Deployment, error) {
 					Annotations: map[string]string{
 						"sidecar.istio.io/inject": "true",
 					},
-					Labels: args.Labels,
+					Labels: maybeAddKeyValue(args.Labels, "sidecar.istio.io/inject", "true"),
 				},
 				Spec: corev1.PodSpec{
 					NodeSelector:       args.NodeSelector,
@@ -209,4 +210,19 @@ func makeEnv(args *ReceiveAdapterArgs) ([]corev1.EnvVar, error) {
 		envs = append(envs, corev1.EnvVar{Name: adapter.EnvConfigCEOverrides, Value: string(ceJson)})
 	}
 	return envs, nil
+}
+
+func maybeAddKeyValue(labels map[string]string, key string, value string) map[string]string {
+	if labels == nil {
+		return map[string]string{key: value}
+	}
+	ret := labels
+	if _, ok := labels[key]; !ok {
+		ret = make(map[string]string, len(labels)+1)
+		for k, v := range labels {
+			ret[k] = v
+		}
+		ret[key] = value
+	}
+	return ret
 }
