@@ -1,12 +1,15 @@
 package resources
 
 import (
+	"fmt"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	"knative.dev/pkg/kmeta"
+	"reflect"
 	"strconv"
+	"strings"
 )
 
 func NewContainerSource(source *v1alpha1.IntegrationSource) *sourcesv1.ContainerSource {
@@ -37,19 +40,85 @@ func NewContainerSource(source *v1alpha1.IntegrationSource) *sourcesv1.Container
 	}
 }
 
-// Function to set env vars for spec objects
+func generateEnvVarsFromStruct(prefix string, s interface{}) []corev1.EnvVar {
+	var envVars []corev1.EnvVar
+
+	// Use reflection to inspect the struct fields
+	v := reflect.ValueOf(s)
+	if v.Kind() == reflect.Ptr {
+		v = v.Elem()
+	}
+
+	t := v.Type()
+
+	for i := 0; i < v.NumField(); i++ {
+		field := v.Field(i)
+		fieldType := t.Field(i)
+
+		// Skip unexported fields
+		if !field.CanInterface() {
+			continue
+		}
+
+		// Handle embedded/anonymous structs recursively
+		if fieldType.Anonymous && field.Kind() == reflect.Struct {
+			// Recursively handle embedded structs with the same prefix
+			envVars = append(envVars, generateEnvVarsFromStruct(prefix, field.Interface())...)
+			continue
+		}
+
+		// Extract the JSON tag or fall back to the Go field name
+		jsonTag := fieldType.Tag.Get("json")
+		tagName := strings.Split(jsonTag, ",")[0]
+
+		// fallback to Go field name if no JSON tag
+		if tagName == "" || tagName == "-" {
+			tagName = fieldType.Name
+		}
+
+		envVarName := fmt.Sprintf("%s_%s", prefix, strings.ToUpper(tagName))
+
+		if field.Kind() == reflect.Ptr {
+			if field.IsNil() {
+				continue
+			}
+			field = field.Elem()
+		}
+
+		var value string
+		switch field.Kind() {
+		case reflect.Int, reflect.Int32, reflect.Int64:
+			value = strconv.FormatInt(field.Int(), 10)
+		case reflect.Bool:
+			value = strconv.FormatBool(field.Bool())
+		case reflect.String:
+			value = field.String()
+		default:
+			// Skip unsupported types
+			continue
+		}
+
+		// Skip zero/empty values
+		if value == "" {
+			continue
+		}
+
+		envVars = append(envVars, corev1.EnvVar{
+			Name:  envVarName,
+			Value: value,
+		})
+	}
+
+	return envVars
+}
+
+// Function to create environment variables for Timer or AWS configurations dynamically
 func makeEnv(source *v1alpha1.IntegrationSource) []corev1.EnvVar {
 	var envVars []corev1.EnvVar
 
+	// Timer environment variables
 	if source.Spec.Timer != nil {
-		envVars = append(envVars, []corev1.EnvVar{
-			makeBasicEnvVar("CAMEL_KAMELET_TIMER_SOURCE_PERIOD", strconv.Itoa(source.Spec.Timer.Period)),
-			makeBasicEnvVar("CAMEL_KAMELET_TIMER_SOURCE_MESSAGE", source.Spec.Timer.Message),
-			makeBasicEnvVar("CAMEL_KAMELET_TIMER_SOURCE_CONTENTTYPE", source.Spec.Timer.ContentType),
-		}...)
-		if source.Spec.Timer.RepeatCount > 0 {
-			envVars = append(envVars, makeBasicEnvVar("CAMEL_KAMELET_TIMER_SOURCE_REPEATCOUNT", strconv.Itoa(source.Spec.Timer.RepeatCount)))
-		}
+		envVars = append(envVars, generateEnvVarsFromStruct("CAMEL_KAMELET_TIMER_SOURCE", *source.Spec.Timer)...)
 		return envVars
 	}
 
@@ -59,43 +128,31 @@ func makeEnv(source *v1alpha1.IntegrationSource) []corev1.EnvVar {
 		secretName = source.Spec.Aws.Auth.Secret.Ref.Name
 	}
 
+	// AWS S3 environment variables
 	if source.Spec.Aws != nil && source.Spec.Aws.S3 != nil {
-		envVars = append(envVars, []corev1.EnvVar{
-			makeSecretEnvVar("CAMEL_KAMELET_AWS_S3_SOURCE_ACCESSKEY", "aws.s3.accessKey", secretName),
-			makeSecretEnvVar("CAMEL_KAMELET_AWS_S3_SOURCE_SECRETKEY", "aws.s3.secretKey", secretName),
-			makeBasicEnvVar("CAMEL_KAMELET_AWS_S3_SOURCE_BUCKETNAMEORARN", source.Spec.Aws.S3.BucketNameOrArn),
-			makeBasicEnvVar("CAMEL_KAMELET_AWS_S3_SOURCE_REGION", source.Spec.Aws.S3.Region),
-			makeBasicEnvVar("CAMEL_KAMELET_AWS_S3_SOURCE_DELETEAFTERREAD", strconv.FormatBool(source.Spec.Aws.S3.DeleteAfterRead)),
-			makeBasicEnvVar("CAMEL_KAMELET_AWS_S3_SOURCE_MOVEAFTERREAD", strconv.FormatBool(source.Spec.Aws.S3.MoveAfterRead)),
-			makeBasicEnvVar("CAMEL_KAMELET_AWS_S3_SOURCE_DESTINATIONBUCKET", source.Spec.Aws.S3.DestinationBucket),
-			makeBasicEnvVar("CAMEL_KAMELET_AWS_S3_SOURCE_PREFIX", source.Spec.Aws.S3.Prefix),
-			makeBasicEnvVar("CAMEL_KAMELET_AWS_S3_SOURCE_IGNOREBODY", strconv.FormatBool(source.Spec.Aws.S3.IgnoreBody)),
-			makeBasicEnvVar("CAMEL_KAMELET_AWS_S3_SOURCE_DELAY", strconv.Itoa(source.Spec.Aws.S3.Delay)),
-			makeBasicEnvVar("CAMEL_KAMELET_AWS_S3_SOURCE_MAXMESSAGESPERPOLL", strconv.Itoa(source.Spec.Aws.S3.MaxMessagesPerPoll)),
-		}...)
+		envVars = append(envVars, generateEnvVarsFromStruct("CAMEL_KAMELET_AWS_S3_SOURCE", *source.Spec.Aws.S3)...)
+		if secretName != "" {
+			envVars = append(envVars, []corev1.EnvVar{
+				makeSecretEnvVar("CAMEL_KAMELET_AWS_S3_SOURCE_ACCESSKEY", "aws.s3.accessKey", secretName),
+				makeSecretEnvVar("CAMEL_KAMELET_AWS_S3_SOURCE_SECRETKEY", "aws.s3.secretKey", secretName),
+			}...)
+		}
 		return envVars
 	}
 
+	// AWS SQS environment variables
 	if source.Spec.Aws != nil && source.Spec.Aws.SQS != nil {
-		envVars = append(envVars, []corev1.EnvVar{
-			makeSecretEnvVar("CAMEL_KAMELET_AWS_SQS_SOURCE_ACCESSKEY", "aws.s3.accessKey", secretName),
-			makeSecretEnvVar("CAMEL_KAMELET_AWS_SQS_SOURCE_SECRETKEY", "aws.s3.secretKey", secretName),
-			makeBasicEnvVar("CAMEL_KAMELET_AWS_SQS_SOURCE_QUEUENAMEORARN", source.Spec.Aws.SQS.QueueNameOrArn),
-			makeBasicEnvVar("CAMEL_KAMELET_AWS_SQS_SOURCE_REGION", source.Spec.Aws.SQS.Region),
-			makeBasicEnvVar("CAMEL_KAMELET_AWS_SQS_SOURCE_DELETEAFTERREAD", strconv.FormatBool(source.Spec.Aws.SQS.DeleteAfterRead)),
-			makeBasicEnvVar("CAMEL_KAMELET_AWS_SQS_SOURCE_AUTOCREATEQUEUE", strconv.FormatBool(source.Spec.Aws.SQS.AutoCreateQueue)),
-			makeBasicEnvVar("CAMEL_KAMELET_AWS_SQS_SOURCE_AMAZONAWSHOST", source.Spec.Aws.SQS.AmazonAWSHost),
-			makeBasicEnvVar("CAMEL_KAMELET_AWS_SQS_SOURCE_PROTOCOL", source.Spec.Aws.SQS.Protocol),
-			makeBasicEnvVar("CAMEL_KAMELET_AWS_SQS_SOURCE_QUEUEURL", source.Spec.Aws.SQS.QueueURL),
-			makeBasicEnvVar("CAMEL_KAMELET_AWS_SQS_SOURCE_GREEDY", strconv.FormatBool(source.Spec.Aws.SQS.Greedy)),
-			makeBasicEnvVar("CAMEL_KAMELET_AWS_SQS_SOURCE_DELAY", strconv.Itoa(source.Spec.Aws.SQS.Delay)),
-			makeBasicEnvVar("CAMEL_KAMELET_AWS_SQS_SOURCE_MAXMESSAGESPERPOLL", strconv.Itoa(source.Spec.Aws.SQS.MaxMessagesPerPoll)),
-			makeBasicEnvVar("CAMEL_KAMELET_AWS_SQS_SOURCE_WAITTIMESECONDS", strconv.Itoa(source.Spec.Aws.SQS.WaitTimeSeconds)),
-			makeBasicEnvVar("CAMEL_KAMELET_AWS_SQS_SOURCE_VISIBILITYTIMEOUT", strconv.Itoa(source.Spec.Aws.SQS.VisibilityTimeout)),
-		}...)
+		envVars = append(envVars, generateEnvVarsFromStruct("CAMEL_KAMELET_AWS_SQS_SOURCE", *source.Spec.Aws.SQS)...)
+		if secretName != "" {
+			envVars = append(envVars, []corev1.EnvVar{
+				makeSecretEnvVar("CAMEL_KAMELET_AWS_SQS_SOURCE_ACCESSKEY", "aws.s3.accessKey", secretName),
+				makeSecretEnvVar("CAMEL_KAMELET_AWS_SQS_SOURCE_SECRETKEY", "aws.s3.secretKey", secretName),
+			}...)
+		}
 		return envVars
 	}
 
+	// If no valid configuration is found, return empty envVars
 	return envVars
 }
 
