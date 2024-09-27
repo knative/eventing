@@ -7432,7 +7432,7 @@ IntegrationSourceStatus
 <h3 id="sources.knative.dev/v1alpha1.AWSCommon">AWSCommon
 </h3>
 <p>
-(<em>Appears on:</em><a href="#sources.knative.dev/v1alpha1.AWSS3">AWSS3</a>, <a href="#sources.knative.dev/v1alpha1.AWSSQS">AWSSQS</a>)
+(<em>Appears on:</em><a href="#sources.knative.dev/v1alpha1.AWSDDBStreams">AWSDDBStreams</a>, <a href="#sources.knative.dev/v1alpha1.AWSS3">AWSS3</a>, <a href="#sources.knative.dev/v1alpha1.AWSSQS">AWSSQS</a>)
 </p>
 <p>
 </p>
@@ -7499,6 +7499,67 @@ bool
 </td>
 <td>
 <p>Override endpoint URI</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="sources.knative.dev/v1alpha1.AWSDDBStreams">AWSDDBStreams
+</h3>
+<p>
+(<em>Appears on:</em><a href="#sources.knative.dev/v1alpha1.Aws">Aws</a>)
+</p>
+<p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>AWSCommon</code><br/>
+<em>
+<a href="#sources.knative.dev/v1alpha1.AWSCommon">
+AWSCommon
+</a>
+</em>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<code>table</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<code>streamIteratorType</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>The name of the DynamoDB table</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>delay</code><br/>
+<em>
+int
+</em>
+</td>
+<td>
+<p>Defines where in the DynamoDB stream to start getting records</p>
 </td>
 </tr>
 </tbody>
@@ -7906,6 +7967,19 @@ AWSSQS
 </tr>
 <tr>
 <td>
+<code>ddb-streams</code><br/>
+<em>
+<a href="#sources.knative.dev/v1alpha1.AWSDDBStreams">
+AWSDDBStreams
+</a>
+</em>
+</td>
+<td>
+<p>SQS source configuration</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>auth</code><br/>
 <em>
 <a href="#sources.knative.dev/v1alpha1.Auth">
@@ -7914,7 +7988,7 @@ Auth
 </em>
 </td>
 <td>
-<p>SQS source configuration</p>
+<p>DynamoDB Streams source configuration</p>
 </td>
 </tr>
 </tbody>
