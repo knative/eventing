@@ -287,6 +287,53 @@ spec:
                           description: The duration (in seconds) that the received messages are
                             hidden from subsequent retrieve requests after being retrieved by
                             a ReceiveMessage request.
+                    ddb-streams:
+                      type: object
+                      properties:
+                        table:
+                          type: string
+                          title: Table
+                          description: The name of the DynamoDB table.
+                        region:
+                          type: string
+                          title: AWS Region
+                          description: The AWS region to access.
+                        streamIteratorType:
+                          type: string
+                          title: Stream Iterator Type
+                          description: Defines where in the DynamoDB stream to start getting records.
+                            There are two enums and the value can be one of FROM_LATEST and FROM_START.
+                            Note that using FROM_START can cause a significant delay before the stream
+                            has caught up to real-time.
+                          default: FROM_LATEST
+                        profileCredentialsName:
+                          type: string
+                          title: Profile Credentials Name
+                          description: If using a profile credentials provider this parameter
+                            will set the profile name.
+                        sessionToken:
+                          type: string
+                          title: Session Token
+                          description: Amazon AWS Session Token used when the user needs to assume
+                            an IAM role.
+                        uriEndpointOverride:
+                          type: string
+                          title: Overwrite Endpoint URI
+                          description: The overriding endpoint URI. To use this option, you must
+                            also select the `overrideEndpoint` option.
+                        overrideEndpoint:
+                          type: boolean
+                          title: Endpoint Overwrite
+                          description: Select this option to override the endpoint URI. To use
+                            this option, you must also provide a URI for the `uriEndpointOverride`
+                            option.
+                          default: false
+                        delay:
+                          type: integer
+                          title: Delay
+                          description: The number of milliseconds before the next poll from the
+                            database.
+                          default: 500
                     auth:
                       description: 'Auth configurations'
                       type: object
