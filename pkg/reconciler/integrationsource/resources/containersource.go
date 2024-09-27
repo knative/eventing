@@ -152,6 +152,18 @@ func makeEnv(source *v1alpha1.IntegrationSource) []corev1.EnvVar {
 		return envVars
 	}
 
+	// AWS DynamoDB Streams environment variables
+	if source.Spec.Aws != nil && source.Spec.Aws.DDBStreams != nil {
+		envVars = append(envVars, generateEnvVarsFromStruct("CAMEL_KAMELET_AWS_DDB_STREAMS_SOURCE", *source.Spec.Aws.DDBStreams)...)
+		if secretName != "" {
+			envVars = append(envVars, []corev1.EnvVar{
+				makeSecretEnvVar("CAMEL_KAMELET_AWS_DDB_STREAMS_SOURCE_ACCESSKEY", "aws.s3.accessKey", secretName),
+				makeSecretEnvVar("CAMEL_KAMELET_AWS_DDB_STREAMS_SOURCE_SECRETKEY", "aws.s3.secretKey", secretName),
+			}...)
+		}
+		return envVars
+	}
+
 	// If no valid configuration is found, return empty envVars
 	return envVars
 }
@@ -162,12 +174,13 @@ func selectImage(source *v1alpha1.IntegrationSource) string {
 	}
 	if source.Spec.Aws != nil {
 		if source.Spec.Aws.S3 != nil {
-			//source-timer
-			//			return "quay.io/openshift-knative/kn-connector-source-timer:1.0.1-SNAPSHOT"
 			return "quay.io/openshift-knative/kn-connector-aws-s3-source:1.0-SNAPSHOT"
 		}
 		if source.Spec.Aws.SQS != nil {
 			return "quay.io/openshift-knative/kn-connector-aws-sqs-source:1.0-SNAPSHOT"
+		}
+		if source.Spec.Aws.DDBStreams != nil {
+			return "quay.io/openshift-knative/kn-connector-aws-ddb-streams-source:1.0-SNAPSHOT"
 		}
 	}
 	return ""

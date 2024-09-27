@@ -114,10 +114,18 @@ type AWSSQS struct {
 	VisibilityTimeout  int    `json:"visibilityTimeout,omitempty"`           // Visibility timeout in seconds
 }
 
+type AWSDDBStreams struct {
+	AWSCommon
+	Table              string `json:"table,omitempty"`                                    // The name of the DynamoDB table
+	StreamIteratorType string `json:"streamIteratorType,omitempty" default:"FROM_LATEST"` // Defines where in the DynamoDB stream to start getting records
+	Delay              int    `json:"delay,omitempty" default:"500"`                      // Delay in milliseconds before the next poll from the database
+}
+
 type Aws struct {
-	S3   *AWSS3  `json:"s3,omitempty"`  // S3 source configuration
-	SQS  *AWSSQS `json:"sqs,omitempty"` // SQS source configuration
-	Auth *Auth   `json:"auth,omitempty"`
+	S3         *AWSS3         `json:"s3,omitempty"`          // S3 source configuration
+	SQS        *AWSSQS        `json:"sqs,omitempty"`         // SQS source configuration
+	DDBStreams *AWSDDBStreams `json:"ddb-streams,omitempty"` // DynamoDB Streams source configuration
+	Auth       *Auth          `json:"auth,omitempty"`
 }
 
 type Auth struct {
