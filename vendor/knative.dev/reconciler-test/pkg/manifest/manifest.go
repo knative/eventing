@@ -86,10 +86,14 @@ func (f *YamlManifest) Apply(spec *unstructured.Unstructured) error {
 	if err != nil {
 		return err
 	}
+	gvr, _ := meta.UnsafeGuessKindToResource(spec.GroupVersionKind())
 	if current == nil {
 		f.log.Info("Creating type ", spec.GroupVersionKind(), " name ", spec.GetName())
-		gvr, _ := meta.UnsafeGuessKindToResource(spec.GroupVersionKind())
 		if _, err := f.client.Resource(gvr).Namespace(spec.GetNamespace()).Create(context.Background(), spec, v1.CreateOptions{}); err != nil {
+			// We might be applying the same resource in parallel, in that case, update the resource.
+			if errors.IsAlreadyExists(err) {
+				return f.Apply(spec)
+			}
 			return fmt.Errorf("failed to create resource %v - Resource:\n%s", err, toYaml(spec))
 		}
 	} else {
@@ -97,7 +101,6 @@ func (f *YamlManifest) Apply(spec *unstructured.Unstructured) error {
 		if UpdateChanged(spec.UnstructuredContent(), current.UnstructuredContent()) {
 			f.log.Info("Updating type ", spec.GroupVersionKind(), " name ", spec.GetName())
 
-			gvr, _ := meta.UnsafeGuessKindToResource(spec.GroupVersionKind())
 			if _, err = f.client.Resource(gvr).Namespace(current.GetNamespace()).Update(context.Background(), current, v1.UpdateOptions{}); err != nil {
 				return fmt.Errorf("failed to update resource %v - Resource:\n%s", err, toYaml(spec))
 			}

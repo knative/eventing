@@ -36,6 +36,9 @@ spec:
         {{ range $key, $value := .selectors }}
         {{ $key }}: "{{ $value }}"
         {{ end }}
+        {{ range $key, $value := .podlabels }}
+        {{ $key }}: "{{ $value }}"
+        {{ end }}
     spec:
       {{ if .podSecurityContext }}
       securityContext:

@@ -19,6 +19,9 @@ metadata:
   namespace: {{ .namespace }}
   labels:
     app: eventshub-{{ .name }}
+    {{ range $key, $value := .labels }}
+    {{ $key }}: "{{ $value }}"
+    {{ end }}
   {{ if .annotations }}
   annotations:
     {{ range $key, $value := .annotations }}
