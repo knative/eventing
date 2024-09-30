@@ -168,6 +168,7 @@ func Install(name string, options ...EventsHubOption) feature.StepFn {
 
 		if ic := environment.GetIstioConfig(ctx); ic.Enabled {
 			manifest.WithIstioPodAnnotations(cfg)
+			manifest.WithIstioPodLabels(cfg)
 		}
 
 		manifest.PodSecurityCfgFn(ctx, t)(cfg)

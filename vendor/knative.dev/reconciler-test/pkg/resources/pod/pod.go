@@ -44,6 +44,7 @@ func Install(name string, image string, opts ...manifest.CfgFn) feature.StepFn {
 
 		if ic := environment.GetIstioConfig(ctx); ic.Enabled {
 			manifest.WithIstioPodAnnotations(cfg)
+			manifest.WithIstioPodLabels(cfg)
 		}
 
 		manifest.PodSecurityCfgFn(ctx, t)(cfg)
