@@ -214,13 +214,6 @@ func (in *IntegrationSourceList) DeepCopyObject() runtime.Object {
 func (in *IntegrationSourceSpec) DeepCopyInto(out *IntegrationSourceSpec) {
 	*out = *in
 	in.SourceSpec.DeepCopyInto(&out.SourceSpec)
-	if in.Properties != nil {
-		in, out := &in.Properties, &out.Properties
-		*out = make(map[string]string, len(*in))
-		for key, val := range *in {
-			(*out)[key] = val
-		}
-	}
 	if in.Aws != nil {
 		in, out := &in.Aws, &out.Aws
 		*out = new(Aws)

@@ -105,7 +105,8 @@ var ourTypes = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
 
 	// For group sinks.knative.dev.
 	// v1alpha1
-	sinksv1alpha1.SchemeGroupVersion.WithKind("JobSink"): &sinksv1alpha1.JobSink{},
+	sinksv1alpha1.SchemeGroupVersion.WithKind("JobSink"):         &sinksv1alpha1.JobSink{},
+	sinksv1alpha1.SchemeGroupVersion.WithKind("IntegrationSink"): &sinksv1alpha1.IntegrationSink{},
 
 	// For group flows.knative.dev
 	// v1

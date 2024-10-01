@@ -57,10 +57,6 @@ type IntegrationSourceSpec struct {
 	//   and modifications of the event sent to the sink.
 	duckv1.SourceSpec `json:",inline"`
 
-	// Properties are a key/value properties
-	Properties map[string]string `json:"properties"`
-	Type       string            `json:"type,omitempty"`
-
 	Aws   *Aws   `json:"aws,omitempty"`   // AWS source configuration
 	Timer *Timer `json:"timer,omitempty"` // Timer configuration
 }

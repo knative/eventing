@@ -99,6 +99,8 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Messaging().V1().Subscriptions().Informer()}, nil
 
 		// Group=sinks.knative.dev, Version=v1alpha1
+	case sinksv1alpha1.SchemeGroupVersion.WithResource("integrationsinks"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Sinks().V1alpha1().IntegrationSinks().Informer()}, nil
 	case sinksv1alpha1.SchemeGroupVersion.WithResource("jobsinks"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Sinks().V1alpha1().JobSinks().Informer()}, nil
 
