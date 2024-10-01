@@ -62,7 +62,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, js *sinks.JobSink) recon
 }
 
 func (r *Reconciler) getCaCerts() (*string, error) {
-	// Getting the secret called "imc-dispatcher-tls" from system namespace
+	// Getting the secret called "job-sink-server-tls" from system namespace
 	secret, err := r.secretLister.Secrets(r.systemNamespace).Get(eventingtls.JobSinkDispatcherServerTLSSecretName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get CA certs from %s/%s: %w", r.systemNamespace, eventingtls.JobSinkDispatcherServerTLSSecretName, err)
@@ -119,7 +119,7 @@ func (r *Reconciler) reconcileAddress(ctx context.Context, js *sinks.JobSink) er
 			js.Status.Addresses[i].Audience = &audience
 		}
 	} else {
-		logging.FromContext(ctx).Debug("Clearing the imc audience as OIDC is not enabled")
+		logging.FromContext(ctx).Debug("Clearing the JobSink audience as OIDC is not enabled")
 		js.Status.Address.Audience = nil
 		for i := range js.Status.Addresses {
 			js.Status.Addresses[i].Audience = nil
