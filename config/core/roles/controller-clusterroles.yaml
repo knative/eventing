@@ -113,6 +113,8 @@ rules:
     resources:
       - "jobsinks"
       - "jobsinks/status"
+      - "integrationsinks"
+      - "integrationsinks/status"
     verbs:
       - "get"
       - "list"

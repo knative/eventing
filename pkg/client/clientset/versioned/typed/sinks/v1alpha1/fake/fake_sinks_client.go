@@ -28,6 +28,10 @@ type FakeSinksV1alpha1 struct {
 	*testing.Fake
 }
 
+func (c *FakeSinksV1alpha1) IntegrationSinks(namespace string) v1alpha1.IntegrationSinkInterface {
+	return &FakeIntegrationSinks{c, namespace}
+}
+
 func (c *FakeSinksV1alpha1) JobSinks(namespace string) v1alpha1.JobSinkInterface {
 	return &FakeJobSinks{c, namespace}
 }

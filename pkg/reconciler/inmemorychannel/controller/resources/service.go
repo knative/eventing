@@ -52,6 +52,7 @@ func ExternalService(namespace, service string) K8sServiceOption {
 }
 
 // NewK8sService creates a new Service for a Channel resource. It also sets the appropriate
+
 // OwnerReferences on the resource so handleObject can discover the Channel resource that 'owns' it.
 // As well as being garbage collected when the Channel is deleted.
 func NewK8sService(imc *v1.InMemoryChannel, opts ...K8sServiceOption) (*corev1.Service, error) {

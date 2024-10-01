@@ -21,6 +21,7 @@ import (
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
 	"errors"
+	"knative.dev/eventing/pkg/reconciler/integrationsink"
 	"log"
 	"net/http"
 	"os"
@@ -112,6 +113,7 @@ func main() {
 
 		// Sinks
 		jobsink.NewController,
+		integrationsink.NewController,
 
 		// Sugar
 		sugarnamespace.NewController,

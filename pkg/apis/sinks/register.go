@@ -33,6 +33,12 @@ var (
 		Group:    GroupName,
 		Resource: "jobsinks",
 	}
+
+	// IntegrationSinkResource respresents a Knative Eventing sink IntegrationSink
+	IntegrationSinkResource = schema.GroupResource{
+		Group:    GroupName,
+		Resource: "integrationsinks",
+	}
 )
 
 type Config struct {
