@@ -49,6 +49,7 @@ var (
 	_ apis.Defaultable   = (*JobSink)(nil)
 	_ apis.HasSpec       = (*JobSink)(nil)
 	_ duckv1.KRShaped    = (*JobSink)(nil)
+	_ apis.Convertible   = (*JobSink)(nil)
 )
 
 // JobSinkSpec defines the desired state of the JobSink.
