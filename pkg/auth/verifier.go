@@ -25,6 +25,7 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"go.opencensus.io/plugin/ochttp"
@@ -52,9 +53,10 @@ import (
 type Verifier struct {
 	logger                     *zap.SugaredLogger
 	restConfig                 *rest.Config
-	provider                   *oidc.Provider
 	eventPolicyLister          v1alpha1.EventPolicyLister
 	trustBundleConfigMapLister corev1listers.ConfigMapNamespaceLister
+	m                          *sync.RWMutex
+	provider                   *oidc.Provider
 }
 
 type IDToken struct {
@@ -211,6 +213,9 @@ func (v *Verifier) verifyAuthZ(ctx context.Context, features feature.Flags, idTo
 
 // verifyJWT verifies the given JWT for the expected audience and returns the parsed ID token.
 func (v *Verifier) verifyJWT(ctx context.Context, jwt, audience string) (*IDToken, error) {
+	v.m.RLock()
+	defer v.m.RUnlock()
+
 	if v.provider == nil {
 		return nil, fmt.Errorf("provider is nil. Is the OIDC provider config correct?")
 	}
@@ -259,6 +264,8 @@ func (v *Verifier) initOIDCProvider(ctx context.Context, features feature.Flags)
 	}
 
 	// provider is valid, update it
+	v.m.Lock()
+	defer v.m.Unlock()
 	v.provider = provider
 
 	v.logger.Debug("updated OIDC provider config", zap.Any("discovery-config", discovery))
