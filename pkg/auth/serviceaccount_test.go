@@ -19,7 +19,10 @@ package auth
 import (
 	"context"
 	"testing"
+	"time"
 
+	"k8s.io/apimachinery/pkg/api/equality"
+	clientgotesting "k8s.io/client-go/testing"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	kubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 
@@ -133,18 +136,51 @@ func TestEnsureOIDCServiceAccountExistsForResource(t *testing.T) {
 	eventtypes := make([]runtime.Object, 0, 10)
 	listers := rttestingv1.NewListers(eventtypes)
 
-	err := EnsureOIDCServiceAccountExistsForResource(ctx, listers.GetServiceAccountLister(), kubeclient.Get(ctx), gvk, objectMeta)
-	if err != nil {
-		t.Errorf("EnsureOIDCServiceAccountExistsForResource failed: %s", err)
+	client := kubeclient.Get(ctx)
 
+	err := EnsureOIDCServiceAccountExistsForResource(ctx, listers.GetServiceAccountLister(), client, gvk, objectMeta)
+	if err != nil {
+		t.Fatalf("EnsureOIDCServiceAccountExistsForResource failed: %s", err)
 	}
 	expected := GetOIDCServiceAccountForResource(gvk, objectMeta)
 	sa, err := kubeclient.Get(ctx).CoreV1().ServiceAccounts(objectMeta.Namespace).Get(context.TODO(), expected.Name, metav1.GetOptions{})
 	if err != nil {
-		t.Errorf("get ServiceAccounts  failed: %s", err)
+		t.Fatalf("get ServiceAccounts  failed: %s", err)
 	}
 	if sa == nil || sa.Name != expected.Name {
-		t.Errorf("EnsureOIDCServiceAccountExistsForResource create ServiceAccounts  failed: %s", err)
+		t.Fatalf("EnsureOIDCServiceAccountExistsForResource create ServiceAccounts  failed: %s", err)
+	}
+
+	updated := expected.DeepCopy()
+	updated.Secrets = []v1.ObjectReference{{
+		Kind:       "Secret",
+		Name:       "test-secret",
+		APIVersion: "v1",
+	}}
+	updated.Annotations["testannotation"] = "testvalue"
+	updated.CreationTimestamp = metav1.Time{Time: time.Now()}
+
+	listers = rttestingv1.NewListers([]runtime.Object{updated})
+
+	_, err = client.CoreV1().ServiceAccounts(objectMeta.Namespace).Update(context.TODO(), updated, metav1.UpdateOptions{})
+	if err != nil {
+		t.Fatalf("Update ServiceAccounts failed: %s", err)
+	}
+	err = EnsureOIDCServiceAccountExistsForResource(ctx, listers.GetServiceAccountLister(), client, gvk, objectMeta)
+	if err != nil {
+		t.Fatalf("EnsureOIDCServiceAccountExistsForResource failed: %s", err)
+	}
+	client.Fake.AddReactor("*", "*", func(action clientgotesting.Action) (handled bool, ret runtime.Object, err error) {
+		t.Fatalf("Action detected %#v", action)
+		return
+	})
+	sa, err = client.CoreV1().ServiceAccounts(objectMeta.Namespace).Get(context.TODO(), expected.Name, metav1.GetOptions{})
+	if err != nil {
+		t.Fatalf("get ServiceAccounts  failed: %s", err)
+	}
+
+	if len(sa.Secrets) != len(updated.Secrets) || !equality.Semantic.DeepEqual(sa.Secrets, updated.Secrets) {
+		t.Fatalf("Got secrets is not equal to updated secret, got %#v, want %#v", sa.Secrets, updated.Secrets)
 	}
 }
 
