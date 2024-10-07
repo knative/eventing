@@ -109,6 +109,9 @@ func EnsureOIDCServiceAccountExistsForResource(ctx context.Context, serviceAccou
 		return fmt.Errorf("service account %s not owned by %s %s", sa.Name, gvk.Kind, objectMeta.Name)
 	}
 
+	// DeepDerivative does not understand default metav1.Time{} as an empty value
+	expected.CreationTimestamp = sa.CreationTimestamp
+
 	if !equality.Semantic.DeepDerivative(expected, sa) {
 		expected.ResourceVersion = sa.ResourceVersion
 
