@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 	"go.uber.org/zap"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/network"
@@ -32,8 +34,9 @@ type Reconciler struct {
 
 	kubeClientSet kubernetes.Interface
 
-	serviceLister corev1listers.ServiceLister
-	podLister     corev1listers.PodLister
+	deploymentLister appsv1listers.DeploymentLister
+	serviceLister    corev1listers.ServiceLister
+	podLister        corev1listers.PodLister
 
 	systemNamespace string
 }
@@ -64,22 +67,22 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, sink *sinks.IntegrationS
 	return nil
 }
 
-func (r *Reconciler) reconcileDeployment(ctx context.Context, sink *sinks.IntegrationSink) (*corev1.Pod, error) {
+func (r *Reconciler) reconcileDeployment(ctx context.Context, sink *sinks.IntegrationSink) (*appsv1.Deployment, error) {
 
-	expected := resources.MakePod(sink)
-	pod, err := r.podLister.Pods(sink.Namespace).Get(expected.Name)
+	expected := resources.MakeDeploymentSpec(sink)
+	pod, err := r.deploymentLister.Deployments(sink.Namespace).Get(expected.Name)
 	if apierrors.IsNotFound(err) {
-		pod, err := r.kubeClientSet.CoreV1().Pods(sink.Namespace).Create(ctx, expected, metav1.CreateOptions{})
+		pod, err := r.kubeClientSet.AppsV1().Deployments(sink.Namespace).Create(ctx, expected, metav1.CreateOptions{})
 		if err != nil {
-			return nil, fmt.Errorf("creating new Pod: %v", err)
+			return nil, fmt.Errorf("creating new Deployment: %v", err)
 		}
-		controller.GetEventRecorder(ctx).Eventf(sink, corev1.EventTypeNormal, "FIXME___reconciled", "Pod created %q", pod.Name)
+		controller.GetEventRecorder(ctx).Eventf(sink, corev1.EventTypeNormal, "FIXME___reconciled", "Deployment created %q", pod.Name)
 	} else if err != nil {
-		return nil, fmt.Errorf("getting Pod: %v", err)
+		return nil, fmt.Errorf("getting Deployment: %v", err)
 	} else if !metav1.IsControlledBy(pod, sink) {
 		return nil, fmt.Errorf("pod %q is not owned by KameletSink %q", pod.Name, sink.Name)
 	} else {
-		logging.FromContext(ctx).Debugw("Reusing existing Pod", zap.Any("Pod", pod))
+		logging.FromContext(ctx).Debugw("Reusing existing Deployment", zap.Any("Pod", pod))
 
 	}
 
@@ -93,11 +96,11 @@ func (r *Reconciler) reconcileService(ctx context.Context, sink *sinks.Integrati
 	if apierrors.IsNotFound(err) {
 		svc, err := r.kubeClientSet.CoreV1().Services(sink.Namespace).Create(ctx, expected, metav1.CreateOptions{})
 		if err != nil {
-			return nil, fmt.Errorf("creating new Pod: %v", err)
+			return nil, fmt.Errorf("creating new Service: %v", err)
 		}
-		controller.GetEventRecorder(ctx).Eventf(sink, corev1.EventTypeNormal, "FIXME___reconciled", "Pod created %q", svc.Name)
+		controller.GetEventRecorder(ctx).Eventf(sink, corev1.EventTypeNormal, "FIXME___reconciled", "Service created %q", svc.Name)
 	} else if err != nil {
-		return nil, fmt.Errorf("getting Pod : %v", err)
+		return nil, fmt.Errorf("getting Service : %v", err)
 	} else if !metav1.IsControlledBy(svc, sink) {
 		return nil, fmt.Errorf("service %q is not owned by KameletSink %q", svc.Name, sink.Name)
 	} else {
@@ -183,8 +186,8 @@ func (r *Reconciler) httpAddress(sink *sinks.IntegrationSink) duckv1.Addressable
 		Name: ptr.To("http"),
 		URL: &apis.URL{
 			Scheme: "http",
-			Host:   network.GetServiceHostname("integration-sink", r.systemNamespace),
-			Path:   fmt.Sprintf("/%s/%s", sink.GetNamespace(), sink.GetName()),
+			Host:   network.GetServiceHostname(sink.GetName()+"-deployment", sink.GetNamespace()),
+			//			Path:   fmt.Sprintf("/%s/%s", sink.GetNamespace(), sink.GetName()),
 		},
 	}
 	return httpAddress
