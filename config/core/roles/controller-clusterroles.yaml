@@ -137,6 +137,7 @@ rules:
       - "sinks.knative.dev"
     resources:
       - "jobsinks/finalizers"
+      - "integrationsinks/finalizers"
     verbs:
       - "update"
 

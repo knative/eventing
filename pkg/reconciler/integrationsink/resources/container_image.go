@@ -9,12 +9,52 @@ import (
 	"knative.dev/pkg/kmeta"
 )
 
-func MakePod(sink *v1alpha1.IntegrationSink) *corev1.Pod {
+//func MakePod(sink *v1alpha1.IntegrationSink) *corev1.Pod {
+//
+//	pod := &corev1.Pod{
+//		TypeMeta: metav1.TypeMeta{
+//			APIVersion: "v1",
+//			Kind:       "Pod",
+//		},
+//		ObjectMeta: metav1.ObjectMeta{
+//			Name:      DeploymentName(sink),
+//			Namespace: sink.Namespace,
+//			OwnerReferences: []metav1.OwnerReference{
+//				*kmeta.NewControllerRef(sink),
+//			},
+//			Labels: map[string]string{
+//				"app": DeploymentName(sink),
+//			},
+//		},
+//		Spec: corev1.PodSpec{
+//			Containers: []corev1.Container{
+//				{
+//					Name:            "sink",
+//					Image:           "quay.io/openshift-knative/kn-connector-log-sink:1.0-SNAPSHOT",
+//					ImagePullPolicy: corev1.PullIfNotPresent,
+//					Ports: []corev1.ContainerPort{{
+//						ContainerPort: 8080,
+//						Protocol:      corev1.ProtocolTCP,
+//						Name:          "http",
+//					}},
+//				},
+//			},
+//		},
+//	}
+//	return pod
+//}
 
-	pod := &corev1.Pod{
+func MakeDeploymentSpec(sink *v1alpha1.IntegrationSink) *appsv1.Deployment {
+
+	//labels := Labels(sink.Name)
+	//for k, v := range labels {
+	//	template.Labels[k] = v
+	//}
+
+	deploy := &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "Pod",
+			APIVersion: "apps/v1",
+			Kind:       "Deployment",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      DeploymentName(sink),
@@ -22,26 +62,35 @@ func MakePod(sink *v1alpha1.IntegrationSink) *corev1.Pod {
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(sink),
 			},
-			Labels: map[string]string{
-				"app": DeploymentName(sink),
-			},
+			Labels: Labels(sink.Name),
 		},
-		Spec: corev1.PodSpec{
-			Containers: []corev1.Container{
-				{
-					Name:            "sink",
-					Image:           "quay.io/openshift-knative/kn-connector-sink-log:1.0-SNAPSHOT",
-					ImagePullPolicy: corev1.PullIfNotPresent,
-					Ports: []corev1.ContainerPort{{
-						ContainerPort: 8080,
-						Protocol:      corev1.ProtocolTCP,
-						Name:          "http",
-					}},
+		Spec: appsv1.DeploymentSpec{
+			Selector: &metav1.LabelSelector{
+				MatchLabels: Labels(sink.Name),
+			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: Labels(sink.Name),
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:            "sink",
+							Image:           "quay.io/openshift-knative/kn-connector-log-sink:1.0-SNAPSHOT",
+							ImagePullPolicy: corev1.PullIfNotPresent,
+							Ports: []corev1.ContainerPort{{
+								ContainerPort: 8080,
+								Protocol:      corev1.ProtocolTCP,
+								Name:          "http",
+							}},
+						},
+					},
 				},
 			},
 		},
 	}
-	return pod
+
+	return deploy
 
 }
 
@@ -57,14 +106,10 @@ func MakeService(sink *v1alpha1.IntegrationSink) *corev1.Service {
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(sink),
 			},
-			Labels: map[string]string{
-				"app": DeploymentName(sink),
-			},
+			Labels: Labels(sink.Name),
 		},
 		Spec: corev1.ServiceSpec{
-			Selector: map[string]string{
-				"app": DeploymentName(sink),
-			},
+			Selector: Labels(sink.Name),
 			Ports: []corev1.ServicePort{
 				{
 					Name:       "http",

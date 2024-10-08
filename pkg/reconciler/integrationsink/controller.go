@@ -6,6 +6,7 @@ import (
 	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventpolicy"
 	"knative.dev/eventing/pkg/client/injection/informers/sinks/v1alpha1/integrationsink"
+	deploymentinformer "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment"
 	"knative.dev/pkg/client/injection/kube/informers/core/v1/service"
 
 	secretinformer "knative.dev/pkg/injection/clients/namespacedkube/informers/core/v1/secret"
@@ -30,14 +31,16 @@ func NewController(
 	secretInformer := secretinformer.Get(ctx)
 	eventPolicyInformer := eventpolicy.Get(ctx)
 	podInformer := podinformer.Get(ctx)
+	deploymentInformer := deploymentinformer.Get(ctx)
+
 	serviceInformer := service.Get(ctx)
 
 	r := &Reconciler{
 		kubeClientSet: kubeclient.Get(ctx),
 
-		podLister: podInformer.Lister(),
-
-		serviceLister: serviceInformer.Lister(),
+		podLister:        podInformer.Lister(),
+		deploymentLister: deploymentInformer.Lister(),
+		serviceLister:    serviceInformer.Lister(),
 
 		systemNamespace:   system.Namespace(),
 		secretLister:      secretInformer.Lister(),
