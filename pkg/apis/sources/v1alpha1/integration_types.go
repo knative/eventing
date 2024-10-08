@@ -20,6 +20,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"knative.dev/eventing/pkg/apis/common"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/kmeta"
@@ -119,36 +120,10 @@ type AWSDDBStreams struct {
 }
 
 type Aws struct {
-	S3         *AWSS3         `json:"s3,omitempty"`          // S3 source configuration
-	SQS        *AWSSQS        `json:"sqs,omitempty"`         // SQS source configuration
-	DDBStreams *AWSDDBStreams `json:"ddb-streams,omitempty"` // DynamoDB Streams source configuration
-	Auth       *Auth          `json:"auth,omitempty"`
-}
-
-type Auth struct {
-	// Auth Secret
-	Secret *Secret `json:"secret,omitempty"`
-
-	// AccessKey is the AWS access key ID.
-	AccessKey string `json:"accessKey,omitempty"`
-
-	// SecretKey is the AWS secret access key.
-	SecretKey string `json:"secretKey,omitempty"`
-}
-
-func (a *Auth) HasAuth() bool {
-	return a != nil && a.Secret != nil &&
-		a.Secret.Ref != nil && a.Secret.Ref.Name != ""
-}
-
-type Secret struct {
-	// Secret reference for SASL and SSL configurations.
-	Ref *SecretReference `json:"ref,omitempty"`
-}
-
-type SecretReference struct {
-	// Secret name.
-	Name string `json:"name"`
+	S3         *common.AWSS3         `json:"s3,omitempty"`          // S3 source configuration
+	SQS        *common.AWSSQS        `json:"sqs,omitempty"`         // SQS source configuration
+	DDBStreams *common.AWSDDBStreams `json:"ddb-streams,omitempty"` // DynamoDB Streams source configuration
+	Auth       *common.Auth          `json:"auth,omitempty"`
 }
 
 // GetGroupVersionKind returns the GroupVersionKind.

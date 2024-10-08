@@ -8217,9 +8217,6 @@ bool
 <h3 id="sources.knative.dev/v1alpha1.AWSDDBStreams">AWSDDBStreams
 </h3>
 <p>
-(<em>Appears on:</em><a href="#sources.knative.dev/v1alpha1.Aws">Aws</a>)
-</p>
-<p>
 </p>
 <table>
 <thead>
@@ -8281,9 +8278,6 @@ int
 </table>
 <h3 id="sources.knative.dev/v1alpha1.AWSS3">AWSS3
 </h3>
-<p>
-(<em>Appears on:</em><a href="#sources.knative.dev/v1alpha1.Aws">Aws</a>)
-</p>
 <p>
 </p>
 <table>
@@ -8446,9 +8440,6 @@ int
 <h3 id="sources.knative.dev/v1alpha1.AWSSQS">AWSSQS
 </h3>
 <p>
-(<em>Appears on:</em><a href="#sources.knative.dev/v1alpha1.Aws">Aws</a>)
-</p>
-<p>
 </p>
 <table>
 <thead>
@@ -8596,58 +8587,6 @@ int
 </tr>
 </tbody>
 </table>
-<h3 id="sources.knative.dev/v1alpha1.Auth">Auth
-</h3>
-<p>
-(<em>Appears on:</em><a href="#sources.knative.dev/v1alpha1.Aws">Aws</a>)
-</p>
-<p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>secret</code><br/>
-<em>
-<a href="#sources.knative.dev/v1alpha1.Secret">
-Secret
-</a>
-</em>
-</td>
-<td>
-<p>Auth Secret</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>accessKey</code><br/>
-<em>
-string
-</em>
-</td>
-<td>
-<p>AccessKey is the AWS access key ID.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>secretKey</code><br/>
-<em>
-string
-</em>
-</td>
-<td>
-<p>SecretKey is the AWS secret access key.</p>
-</td>
-</tr>
-</tbody>
-</table>
 <h3 id="sources.knative.dev/v1alpha1.Aws">Aws
 </h3>
 <p>
@@ -8667,9 +8606,7 @@ string
 <td>
 <code>s3</code><br/>
 <em>
-<a href="#sources.knative.dev/v1alpha1.AWSS3">
-AWSS3
-</a>
+knative.dev/eventing/pkg/apis/common.AWSS3
 </em>
 </td>
 <td>
@@ -8679,9 +8616,7 @@ AWSS3
 <td>
 <code>sqs</code><br/>
 <em>
-<a href="#sources.knative.dev/v1alpha1.AWSSQS">
-AWSSQS
-</a>
+knative.dev/eventing/pkg/apis/common.AWSSQS
 </em>
 </td>
 <td>
@@ -8692,9 +8627,7 @@ AWSSQS
 <td>
 <code>ddb-streams</code><br/>
 <em>
-<a href="#sources.knative.dev/v1alpha1.AWSDDBStreams">
-AWSDDBStreams
-</a>
+knative.dev/eventing/pkg/apis/common.AWSDDBStreams
 </em>
 </td>
 <td>
@@ -8705,9 +8638,7 @@ AWSDDBStreams
 <td>
 <code>auth</code><br/>
 <em>
-<a href="#sources.knative.dev/v1alpha1.Auth">
-Auth
-</a>
+knative.dev/eventing/pkg/apis/common.Auth
 </em>
 </td>
 <td>
@@ -8815,64 +8746,6 @@ processed by the controller.
 state.
 * SinkURI - the current active sink URI that has been configured for the
 Source.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="sources.knative.dev/v1alpha1.Secret">Secret
-</h3>
-<p>
-(<em>Appears on:</em><a href="#sources.knative.dev/v1alpha1.Auth">Auth</a>)
-</p>
-<p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>ref</code><br/>
-<em>
-<a href="#sources.knative.dev/v1alpha1.SecretReference">
-SecretReference
-</a>
-</em>
-</td>
-<td>
-<p>Secret reference for SASL and SSL configurations.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="sources.knative.dev/v1alpha1.SecretReference">SecretReference
-</h3>
-<p>
-(<em>Appears on:</em><a href="#sources.knative.dev/v1alpha1.Secret">Secret</a>)
-</p>
-<p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>name</code><br/>
-<em>
-string
-</em>
-</td>
-<td>
-<p>Secret name.</p>
 </td>
 </tr>
 </tbody>
