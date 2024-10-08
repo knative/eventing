@@ -20,6 +20,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"knative.dev/eventing/pkg/apis/common"
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -55,79 +56,10 @@ type IntegrationSinkSpec struct {
 	Aws *Aws `json:"aws,omitempty"` // AWS source configuration
 }
 
-type AWSCommon struct {
-	// Auth is the S3 authentication (accessKey/secretKey) configuration.
-	Region string `json:"region,omitempty"` // AWS region
-	//UseDefaultCredentials  bool   `json:"useDefaultCredentials" default:"false"` // Use default credentials provider
-	//UseProfileCredentials  bool   `json:"useProfileCredentials" default:"false"` // Use profile credentials provider
-	ProfileCredentialsName string `json:"profileCredentialsName,omitempty"` // Profile name for profile credentials provider
-	//	UseSessionCredentials  bool   `json:"useSessionCredentials" default:"false"` // Use session credentials
-	SessionToken        string `json:"sessionToken,omitempty"`           // Session token
-	URIEndpointOverride string `json:"uriEndpointOverride,omitempty"`    // Override endpoint URI
-	OverrideEndpoint    bool   `json:"overrideEndpoint" default:"false"` // Override endpoint flag
-}
-
-type AWSS3 struct {
-	AWSCommon
-	BucketNameOrArn         string `json:"bucketNameOrArn,omitempty"`         // S3 Bucket name or ARN
-	DeleteAfterRead         bool   `json:"deleteAfterRead" default:"true"`    // Auto-delete objects after reading
-	MoveAfterRead           bool   `json:"moveAfterRead" default:"false"`     // Move objects after reading
-	DestinationBucket       string `json:"destinationBucket,omitempty"`       // Destination bucket for moved objects
-	DestinationBucketPrefix string `json:"destinationBucketPrefix,omitempty"` // Prefix for moved objects
-	DestinationBucketSuffix string `json:"destinationBucketSuffix,omitempty"` // Suffix for moved objects
-	AutoCreateBucket        bool   `json:"autoCreateBucket" default:"false"`  // Auto-create S3 bucket
-	Prefix                  string `json:"prefix,omitempty"`                  // S3 bucket prefix for search
-	IgnoreBody              bool   `json:"ignoreBody" default:"false"`        // Ignore object body
-	ForcePathStyle          bool   `json:"forcePathStyle" default:"false"`    // Force path style for bucket access
-	Delay                   int    `json:"delay" default:"500"`               // Delay between polls in milliseconds
-	MaxMessagesPerPoll      int    `json:"maxMessagesPerPoll" default:"10"`   // Max messages to poll per request
-}
-
-type AWSSQS struct {
-	AWSCommon
-	QueueNameOrArn     string `json:"queueNameOrArn,omitempty"`              // SQS Queue name or ARN
-	DeleteAfterRead    bool   `json:"deleteAfterRead" default:"true"`        // Auto-delete messages after reading
-	AutoCreateQueue    bool   `json:"autoCreateQueue" default:"false"`       // Auto-create SQS queue
-	AmazonAWSHost      string `json:"amazonAWSHost" default:"amazonaws.com"` // AWS host
-	Protocol           string `json:"protocol" default:"https"`              // Communication protocol (http/https)
-	QueueURL           string `json:"queueURL,omitempty"`                    // Full SQS queue URL
-	Greedy             bool   `json:"greedy" default:"false"`                // Greedy scheduler
-	Delay              int    `json:"delay" default:"500"`                   // Delay between polls in milliseconds
-	MaxMessagesPerPoll int    `json:"maxMessagesPerPoll" default:"1"`        // Max messages to return (1-10)
-	WaitTimeSeconds    int    `json:"waitTimeSeconds,omitempty"`             // Wait time for messages
-	VisibilityTimeout  int    `json:"visibilityTimeout,omitempty"`           // Visibility timeout in seconds
-}
-
 type Aws struct {
-	S3   *AWSS3  `json:"s3,omitempty"`  // S3 source configuration
-	SQS  *AWSSQS `json:"sqs,omitempty"` // SQS source configuration
-	Auth *Auth   `json:"auth,omitempty"`
-}
-
-type Auth struct {
-	// Auth Secret
-	Secret *Secret `json:"secret,omitempty"`
-
-	// AccessKey is the AWS access key ID.
-	AccessKey string `json:"accessKey,omitempty"`
-
-	// SecretKey is the AWS secret access key.
-	SecretKey string `json:"secretKey,omitempty"`
-}
-
-func (a *Auth) HasAuth() bool {
-	return a != nil && a.Secret != nil &&
-		a.Secret.Ref != nil && a.Secret.Ref.Name != ""
-}
-
-type Secret struct {
-	// Secret reference for SASL and SSL configurations.
-	Ref *SecretReference `json:"ref,omitempty"`
-}
-
-type SecretReference struct {
-	// Secret name.
-	Name string `json:"name"`
+	S3   *common.AWSS3  `json:"s3,omitempty"`  // S3 source configuration
+	SQS  *common.AWSSQS `json:"sqs,omitempty"` // SQS source configuration
+	Auth *common.Auth   `json:"auth,omitempty"`
 }
 
 type IntegrationSinkStatus struct {
