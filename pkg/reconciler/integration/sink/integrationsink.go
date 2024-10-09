@@ -1,4 +1,4 @@
-package integrationsink
+package sink
 
 import (
 	"context"
@@ -11,6 +11,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
+	"knative.dev/eventing/pkg/reconciler/integration/sink/resources"
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/network"
 
@@ -21,7 +22,6 @@ import (
 	"knative.dev/eventing/pkg/auth"
 	eventingv1alpha1listers "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/eventingtls"
-	"knative.dev/eventing/pkg/reconciler/integrationsink/resources"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"

@@ -21,7 +21,6 @@ import (
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
 	"errors"
-	"knative.dev/eventing/pkg/reconciler/integrationsink"
 	"log"
 	"net/http"
 	"os"
@@ -42,6 +41,7 @@ import (
 	"knative.dev/eventing/pkg/reconciler/channel"
 	"knative.dev/eventing/pkg/reconciler/containersource"
 	"knative.dev/eventing/pkg/reconciler/eventtype"
+	integrationsink "knative.dev/eventing/pkg/reconciler/integration/sink"
 	integrationsource "knative.dev/eventing/pkg/reconciler/integration/source"
 	"knative.dev/eventing/pkg/reconciler/parallel"
 	"knative.dev/eventing/pkg/reconciler/pingsource"

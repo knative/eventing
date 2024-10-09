@@ -1,4 +1,4 @@
-package integrationsink
+package sink
 
 import (
 	"context"

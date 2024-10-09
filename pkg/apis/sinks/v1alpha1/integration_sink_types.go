@@ -54,6 +54,23 @@ var (
 
 type IntegrationSinkSpec struct {
 	Aws *Aws `json:"aws,omitempty"` // AWS source configuration
+	Log *Log `json:"log,omitempty"` // Log sink configuration
+}
+
+type Log struct {
+	LoggerName          string `json:"loggerName,omitempty" default:"log-sink"`      // Name of the logging category to use
+	Level               string `json:"level,omitempty" default:"INFO"`               // Logging level to use
+	LogMask             bool   `json:"logMask,omitempty" default:"false"`            // Mask sensitive information in the log
+	Marker              string `json:"marker,omitempty"`                             // An optional Marker name to use
+	Multiline           bool   `json:"multiline,omitempty" default:"false"`          // If enabled, outputs each information on a newline
+	ShowAllProperties   bool   `json:"showAllProperties,omitempty" default:"false"`  // Show all of the exchange properties (both internal and custom)
+	ShowBody            bool   `json:"showBody,omitempty" default:"true"`            // Show the message body
+	ShowBodyType        bool   `json:"showBodyType,omitempty" default:"true"`        // Show the body Java type
+	ShowExchangePattern bool   `json:"showExchangePattern,omitempty" default:"true"` // Show the Message Exchange Pattern (MEP)
+	ShowHeaders         bool   `json:"showHeaders,omitempty" default:"false"`        // Show the headers received
+	ShowProperties      bool   `json:"showProperties,omitempty" default:"false"`     // Show the exchange properties (only custom)
+	ShowStreams         bool   `json:"showStreams,omitempty" default:"false"`        // Show the stream bodies
+	ShowCachedStreams   bool   `json:"showCachedStreams,omitempty" default:"true"`   // Show cached stream bodies
 }
 
 type Aws struct {
