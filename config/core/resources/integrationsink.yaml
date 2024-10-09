@@ -38,6 +38,76 @@ spec:
               description: Spec defines the desired state of the IntegrationSink.
               type: object
               properties:
+                log:
+                  type: object
+                  properties:
+                    loggerName:
+                      type: string
+                      title: Logger Name
+                      description: Name of the logging category to use
+                      default: log-sink
+                    level:
+                      type: string
+                      title: Log Level
+                      description: Logging level to use
+                      default: INFO
+                    logMask:
+                      type: boolean
+                      title: Log Mask
+                      description: Mask sensitive information like password or passphrase in the
+                        log
+                      default: false
+                    marker:
+                      type: string
+                      title: Marker
+                      description: An optional Marker name to use
+                    multiline:
+                      type: boolean
+                      title: Multiline
+                      description: If enabled then each information is outputted on a newline
+                      default: false
+                    showAllProperties:
+                      type: boolean
+                      title: Show All Properties
+                      description: Show all of the exchange properties (both internal and custom)
+                      default: false
+                    showBody:
+                      type: boolean
+                      title: Show Body
+                      description: Show the message body
+                      default: true
+                    showBodyType:
+                      type: boolean
+                      title: Show Body Type
+                      description: Show the body Java type
+                      default: true
+                    showExchangePattern:
+                      type: boolean
+                      title: Show Exchange Pattern
+                      description: Shows the Message Exchange Pattern (or MEP for short)
+                      default: true
+                    showHeaders:
+                      type: boolean
+                      title: Show Headers
+                      description: Show the headers received
+                      default: false
+                    showProperties:
+                      type: boolean
+                      title: Show Properties
+                      description: Show the exchange properties (only custom). Use showAllProperties
+                        to show both internal and custom properties.
+                      default: false
+                    showStreams:
+                      type: boolean
+                      title: Show Streams
+                      description: Show the stream bodies (they may not be available in following
+                        steps)
+                      default: false
+                    showCachedStreams:
+                      type: boolean
+                      title: Show Cached Streams
+                      description: Whether Camel should show cached stream bodies or not.
+                      default: true
                 aws:
                   type: object
                   properties:

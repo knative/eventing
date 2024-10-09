@@ -5918,6 +5918,19 @@ Aws
 <td>
 </td>
 </tr>
+<tr>
+<td>
+<code>log</code><br/>
+<em>
+<a href="#sinks.knative.dev/v1alpha1.Log">
+Log
+</a>
+</em>
+</td>
+<td>
+<p>AWS source configuration</p>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -6097,6 +6110,19 @@ Aws
 </em>
 </td>
 <td>
+</td>
+</tr>
+<tr>
+<td>
+<code>log</code><br/>
+<em>
+<a href="#sinks.knative.dev/v1alpha1.Log">
+Log
+</a>
+</em>
+</td>
+<td>
+<p>AWS source configuration</p>
 </td>
 </tr>
 </tbody>
@@ -6304,6 +6330,165 @@ string
 </em>
 </td>
 <td>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="sinks.knative.dev/v1alpha1.Log">Log
+</h3>
+<p>
+(<em>Appears on:</em><a href="#sinks.knative.dev/v1alpha1.IntegrationSinkSpec">IntegrationSinkSpec</a>)
+</p>
+<p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>loggerName</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<code>level</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Name of the logging category to use</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>logMask</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Logging level to use</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>marker</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Mask sensitive information in the log</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>multiline</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>An optional Marker name to use</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>showAllProperties</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>If enabled, outputs each information on a newline</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>showBody</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Show all of the exchange properties (both internal and custom)</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>showBodyType</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Show the message body</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>showExchangePattern</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Show the body Java type</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>showHeaders</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Show the Message Exchange Pattern (MEP)</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>showProperties</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Show the headers received</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>showStreams</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Show the exchange properties (only custom)</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>showCachedStreams</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Show the stream bodies</p>
 </td>
 </tr>
 </tbody>

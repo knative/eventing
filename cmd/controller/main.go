@@ -21,7 +21,8 @@ import (
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
 	"errors"
-	"knative.dev/eventing/pkg/reconciler/integrationsink"
+	integrationSink "knative.dev/eventing/pkg/reconciler/integration/sink"
+	integrationSource "knative.dev/eventing/pkg/reconciler/integration/source"
 	"log"
 	"net/http"
 	"os"
@@ -42,7 +43,6 @@ import (
 	"knative.dev/eventing/pkg/reconciler/channel"
 	"knative.dev/eventing/pkg/reconciler/containersource"
 	"knative.dev/eventing/pkg/reconciler/eventtype"
-	"knative.dev/eventing/pkg/reconciler/integrationsource"
 	"knative.dev/eventing/pkg/reconciler/parallel"
 	"knative.dev/eventing/pkg/reconciler/pingsource"
 	"knative.dev/eventing/pkg/reconciler/sequence"
@@ -106,14 +106,14 @@ func main() {
 		apiserversource.NewController,
 		pingsource.NewController,
 		containersource.NewController,
-		integrationsource.NewController,
+		integrationSource.NewController,
 
 		// Sources CRD
 		sourcecrd.NewController,
 
 		// Sinks
 		jobsink.NewController,
-		integrationsink.NewController,
+		integrationSink.NewController,
 
 		// Sugar
 		sugarnamespace.NewController,
