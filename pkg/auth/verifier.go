@@ -55,7 +55,7 @@ type Verifier struct {
 	restConfig                 *rest.Config
 	eventPolicyLister          v1alpha1.EventPolicyLister
 	trustBundleConfigMapLister corev1listers.ConfigMapNamespaceLister
-	m                          *sync.RWMutex
+	m                          sync.RWMutex
 	provider                   *oidc.Provider
 }
 
