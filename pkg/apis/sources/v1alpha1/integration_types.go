@@ -45,6 +45,7 @@ var (
 	_ apis.Defaultable   = (*IntegrationSource)(nil)
 	_ apis.HasSpec       = (*IntegrationSource)(nil)
 	_ duckv1.KRShaped    = (*IntegrationSource)(nil)
+	_ apis.Convertible   = (*IntegrationSource)(nil)
 )
 
 // IntegrationSourceSpec defines the desired state of IntegrationSource
@@ -84,41 +85,41 @@ type AWSCommon struct {
 }
 
 type AWSS3 struct {
-	AWSCommon
-	BucketNameOrArn         string `json:"bucketNameOrArn,omitempty"`         // S3 Bucket name or ARN
-	DeleteAfterRead         bool   `json:"deleteAfterRead" default:"true"`    // Auto-delete objects after reading
-	MoveAfterRead           bool   `json:"moveAfterRead" default:"false"`     // Move objects after reading
-	DestinationBucket       string `json:"destinationBucket,omitempty"`       // Destination bucket for moved objects
-	DestinationBucketPrefix string `json:"destinationBucketPrefix,omitempty"` // Prefix for moved objects
-	DestinationBucketSuffix string `json:"destinationBucketSuffix,omitempty"` // Suffix for moved objects
-	AutoCreateBucket        bool   `json:"autoCreateBucket" default:"false"`  // Auto-create S3 bucket
-	Prefix                  string `json:"prefix,omitempty"`                  // S3 bucket prefix for search
-	IgnoreBody              bool   `json:"ignoreBody" default:"false"`        // Ignore object body
-	ForcePathStyle          bool   `json:"forcePathStyle" default:"false"`    // Force path style for bucket access
-	Delay                   int    `json:"delay" default:"500"`               // Delay between polls in milliseconds
-	MaxMessagesPerPoll      int    `json:"maxMessagesPerPoll" default:"10"`   // Max messages to poll per request
+	AWSCommon               `json:",inline"` // Embeds AWSCommon to inherit its fields in JSON
+	BucketNameOrArn         string           `json:"bucketNameOrArn,omitempty"`         // S3 Bucket name or ARN
+	DeleteAfterRead         bool             `json:"deleteAfterRead" default:"true"`    // Auto-delete objects after reading
+	MoveAfterRead           bool             `json:"moveAfterRead" default:"false"`     // Move objects after reading
+	DestinationBucket       string           `json:"destinationBucket,omitempty"`       // Destination bucket for moved objects
+	DestinationBucketPrefix string           `json:"destinationBucketPrefix,omitempty"` // Prefix for moved objects
+	DestinationBucketSuffix string           `json:"destinationBucketSuffix,omitempty"` // Suffix for moved objects
+	AutoCreateBucket        bool             `json:"autoCreateBucket" default:"false"`  // Auto-create S3 bucket
+	Prefix                  string           `json:"prefix,omitempty"`                  // S3 bucket prefix for search
+	IgnoreBody              bool             `json:"ignoreBody" default:"false"`        // Ignore object body
+	ForcePathStyle          bool             `json:"forcePathStyle" default:"false"`    // Force path style for bucket access
+	Delay                   int              `json:"delay" default:"500"`               // Delay between polls in milliseconds
+	MaxMessagesPerPoll      int              `json:"maxMessagesPerPoll" default:"10"`   // Max messages to poll per request
 }
 
 type AWSSQS struct {
-	AWSCommon
-	QueueNameOrArn     string `json:"queueNameOrArn,omitempty"`              // SQS Queue name or ARN
-	DeleteAfterRead    bool   `json:"deleteAfterRead" default:"true"`        // Auto-delete messages after reading
-	AutoCreateQueue    bool   `json:"autoCreateQueue" default:"false"`       // Auto-create SQS queue
-	AmazonAWSHost      string `json:"amazonAWSHost" default:"amazonaws.com"` // AWS host
-	Protocol           string `json:"protocol" default:"https"`              // Communication protocol (http/https)
-	QueueURL           string `json:"queueURL,omitempty"`                    // Full SQS queue URL
-	Greedy             bool   `json:"greedy" default:"false"`                // Greedy scheduler
-	Delay              int    `json:"delay" default:"500"`                   // Delay between polls in milliseconds
-	MaxMessagesPerPoll int    `json:"maxMessagesPerPoll" default:"1"`        // Max messages to return (1-10)
-	WaitTimeSeconds    int    `json:"waitTimeSeconds,omitempty"`             // Wait time for messages
-	VisibilityTimeout  int    `json:"visibilityTimeout,omitempty"`           // Visibility timeout in seconds
+	AWSCommon          `json:",inline"` // Embeds AWSCommon to inherit its fields in JSON
+	QueueNameOrArn     string           `json:"queueNameOrArn,omitempty"`              // SQS Queue name or ARN
+	DeleteAfterRead    bool             `json:"deleteAfterRead" default:"true"`        // Auto-delete messages after reading
+	AutoCreateQueue    bool             `json:"autoCreateQueue" default:"false"`       // Auto-create SQS queue
+	AmazonAWSHost      string           `json:"amazonAWSHost" default:"amazonaws.com"` // AWS host
+	Protocol           string           `json:"protocol" default:"https"`              // Communication protocol (http/https)
+	QueueURL           string           `json:"queueURL,omitempty"`                    // Full SQS queue URL
+	Greedy             bool             `json:"greedy" default:"false"`                // Greedy scheduler
+	Delay              int              `json:"delay" default:"500"`                   // Delay between polls in milliseconds
+	MaxMessagesPerPoll int              `json:"maxMessagesPerPoll" default:"1"`        // Max messages to return (1-10)
+	WaitTimeSeconds    int              `json:"waitTimeSeconds,omitempty"`             // Wait time for messages
+	VisibilityTimeout  int              `json:"visibilityTimeout,omitempty"`           // Visibility timeout in seconds
 }
 
 type AWSDDBStreams struct {
-	AWSCommon
-	Table              string `json:"table,omitempty"`                                    // The name of the DynamoDB table
-	StreamIteratorType string `json:"streamIteratorType,omitempty" default:"FROM_LATEST"` // Defines where in the DynamoDB stream to start getting records
-	Delay              int    `json:"delay,omitempty" default:"500"`                      // Delay in milliseconds before the next poll from the database
+	AWSCommon          `json:",inline"` // Embeds AWSCommon to inherit its fields in JSON
+	Table              string           `json:"table,omitempty"`                                    // The name of the DynamoDB table
+	StreamIteratorType string           `json:"streamIteratorType,omitempty" default:"FROM_LATEST"` // Defines where in the DynamoDB stream to start getting records
+	Delay              int              `json:"delay,omitempty" default:"500"`                      // Delay in milliseconds before the next poll from the database
 }
 
 type Aws struct {

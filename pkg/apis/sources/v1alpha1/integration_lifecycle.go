@@ -17,8 +17,8 @@ limitations under the License.
 package v1alpha1
 
 import (
-	appsv1 "k8s.io/api/apps/v1"
-	"knative.dev/eventing/pkg/apis/duck"
+	corev1 "k8s.io/api/core/v1"
+	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/pkg/apis"
 )
 
@@ -26,19 +26,12 @@ const (
 	// IntegrationSourceConditionReady has status True when the IntegrationSource is ready to send events.
 	IntegrationSourceConditionReady = apis.ConditionReady
 
-	// IntegrationSourceConditionSinkProvided has status True when the ApiServerSource has been configured with a sink target.
-	IntegrationSourceConditionSinkProvided apis.ConditionType = "SinkProvided"
-
-	// IntegrationSourceConditionSinkBindingReady has status True when the IntegrationSource's SinkBinding is ready.
-	IntegrationSourceConditionSinkBindingReady apis.ConditionType = "SinkBindingReady"
-
 	// IntegrationSourceConditionReceiveAdapterReady has status True when the IntegrationSource's Deployment is ready.
-	IntegrationSourceConditionDeploymentReady apis.ConditionType = "DeploymentReady"
+	IntegrationSourceConditionContainerSourceReady apis.ConditionType = "ContainerSourceReady"
 )
 
 var IntegrationCondSet = apis.NewLivingConditionSet(
-	IntegrationSourceConditionSinkBindingReady,
-	IntegrationSourceConditionDeploymentReady,
+	IntegrationSourceConditionContainerSourceReady,
 )
 
 // GetConditionSet retrieves the condition set for this resource. Implements the KRShaped interface.
@@ -46,29 +39,42 @@ func (*IntegrationSource) GetConditionSet() apis.ConditionSet {
 	return IntegrationCondSet
 }
 
-func (iss *IntegrationSourceStatus) MarkSink(uri *apis.URL) {
-	iss.SinkURI = uri
-	if len(uri.String()) > 0 {
-		IntegrationCondSet.Manage(iss).MarkTrue(IntegrationSourceConditionSinkProvided)
-	} else {
-		IntegrationCondSet.Manage(iss).MarkUnknown(IntegrationSourceConditionSinkProvided, "SinkEmpty", "Sink has resolved to empty.")
-	}
+// GetTopLevelCondition returns the top level condition.
+func (s *IntegrationSourceStatus) GetTopLevelCondition() *apis.Condition {
+	return IntegrationCondSet.Manage(s).GetTopLevelCondition()
 }
 
-func (iss *IntegrationSourceStatus) MarkNoSink(reason, messageFormat string, messageA ...interface{}) {
-	IntegrationCondSet.Manage(iss).MarkFalse(IntegrationSourceConditionSinkProvided, reason, messageFormat, messageA...)
-}
-
-func (iss *IntegrationSourceStatus) PropagateDeploymentAvailability(d *appsv1.Deployment) {
-	if duck.DeploymentIsAvailable(&d.Status, false) {
-		IntegrationCondSet.Manage(iss).MarkTrue(IntegrationSourceConditionDeploymentReady)
-	} else {
-		// I don't know how to propagate the status well, so just give the name of the Deployment
-		// for now.
-		IntegrationCondSet.Manage(iss).MarkFalse(IntegrationSourceConditionDeploymentReady, "DeploymentUnavailable", "The Deployment '%s' is unavailable.", d.Name)
-	}
+// InitializeConditions sets relevant unset conditions to Unknown state.
+func (s *IntegrationSourceStatus) InitializeConditions() {
+	IntegrationCondSet.Manage(s).InitializeConditions()
 }
 
 func (iss *IntegrationSourceStatus) IsReady() bool {
 	return IntegrationCondSet.Manage(iss).IsHappy()
+}
+
+func (s *IntegrationSourceStatus) PropagateContainerSourceStatus(status *v1.ContainerSourceStatus) {
+	// Do not copy conditions nor observedGeneration
+	conditions := s.Conditions
+	observedGeneration := s.ObservedGeneration
+	s.SourceStatus = status.SourceStatus
+	s.Conditions = conditions
+	s.ObservedGeneration = observedGeneration
+
+	cond := status.GetCondition(apis.ConditionReady)
+	switch {
+	case cond == nil:
+		IntegrationCondSet.Manage(s).MarkUnknown(IntegrationSourceConditionContainerSourceReady, "", "")
+	case cond.Status == corev1.ConditionTrue:
+		IntegrationCondSet.Manage(s).MarkTrue(IntegrationSourceConditionContainerSourceReady)
+	case cond.Status == corev1.ConditionFalse:
+		IntegrationCondSet.Manage(s).MarkFalse(IntegrationSourceConditionContainerSourceReady, cond.Reason, cond.Message)
+	case cond.Status == corev1.ConditionUnknown:
+		IntegrationCondSet.Manage(s).MarkUnknown(IntegrationSourceConditionContainerSourceReady, cond.Reason, cond.Message)
+	default:
+		IntegrationCondSet.Manage(s).MarkUnknown(IntegrationSourceConditionContainerSourceReady, cond.Reason, cond.Message)
+	}
+
+	// Propagate SinkBindings AuthStatus to containersources AuthStatus
+	s.Auth = status.Auth
 }

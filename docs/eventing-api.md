@@ -7528,6 +7528,9 @@ AWSCommon
 </em>
 </td>
 <td>
+<p>
+(Members of <code>AWSCommon</code> are embedded into this type.)
+</p>
 </td>
 </tr>
 <tr>
@@ -7538,6 +7541,7 @@ string
 </em>
 </td>
 <td>
+<p>Embeds AWSCommon to inherit its fields in JSON</p>
 </td>
 </tr>
 <tr>
@@ -7589,6 +7593,9 @@ AWSCommon
 </em>
 </td>
 <td>
+<p>
+(Members of <code>AWSCommon</code> are embedded into this type.)
+</p>
 </td>
 </tr>
 <tr>
@@ -7599,6 +7606,7 @@ string
 </em>
 </td>
 <td>
+<p>Embeds AWSCommon to inherit its fields in JSON</p>
 </td>
 </tr>
 <tr>
@@ -7749,6 +7757,9 @@ AWSCommon
 </em>
 </td>
 <td>
+<p>
+(Members of <code>AWSCommon</code> are embedded into this type.)
+</p>
 </td>
 </tr>
 <tr>
@@ -7759,6 +7770,7 @@ string
 </em>
 </td>
 <td>
+<p>Embeds AWSCommon to inherit its fields in JSON</p>
 </td>
 </tr>
 <tr>

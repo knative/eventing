@@ -18,12 +18,10 @@ package integrationsource
 
 import (
 	"context"
-	containersourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1/containersource"
-	"knative.dev/pkg/resolver"
-
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/cache"
+	containersourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1/containersource"
 	configmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap/filtered"
 	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/system"
@@ -36,7 +34,6 @@ import (
 	"knative.dev/eventing/pkg/apis/feature"
 	v1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
-	sinkbindinginformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1/sinkbinding"
 	integrationsourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha1/integrationsource"
 	v1integrationsource "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha1/integrationsource"
 	"knative.dev/eventing/pkg/eventingtls"
@@ -53,7 +50,6 @@ func NewController(
 	integrationsourceInformer := integrationsourceinformer.Get(ctx)
 	containerSourceInformer := containersourceinformer.Get(ctx)
 
-	sinkbindingInformer := sinkbindinginformer.Get(ctx)
 	trustBundleConfigMapInformer := configmapinformer.Get(ctx, eventingtls.TrustBundleLabelSelector)
 
 	var globalResync func(obj interface{})
@@ -66,14 +62,11 @@ func NewController(
 	featureStore.WatchConfigs(cmw)
 
 	r := &Reconciler{
-		kubeClientSet:         kubeClient,
-		eventingClientSet:     eventingClient,
-		containerSourceLister: containerSourceInformer.Lister(),
-
+		kubeClientSet:           kubeClient,
+		eventingClientSet:       eventingClient,
+		containerSourceLister:   containerSourceInformer.Lister(),
 		integrationSourceLister: integrationsourceInformer.Lister(),
-
-		trustBundleConfigMapLister: trustBundleConfigMapInformer.Lister(),
-		//configAccessor:             reconcilersource.WatchConfigurations(ctx, component, cmw),
+		//trustBundleConfigMapLister: trustBundleConfigMapInformer.Lister(),
 	}
 
 	impl := v1integrationsource.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
@@ -84,11 +77,9 @@ func NewController(
 		impl.GlobalResync(integrationsourceInformer.Informer())
 	}
 
-	r.sinkResolver = resolver.NewURIResolverFromTracker(ctx, impl.Tracker)
-
 	integrationsourceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
-	sinkbindingInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+	containerSourceInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.FilterController(&v1alpha1.IntegrationSource{}),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
