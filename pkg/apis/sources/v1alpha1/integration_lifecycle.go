@@ -26,12 +26,16 @@ const (
 	// IntegrationSourceConditionReady has status True when the IntegrationSource is ready to send events.
 	IntegrationSourceConditionReady = apis.ConditionReady
 
-	// IntegrationSourceConditionReceiveAdapterReady has status True when the IntegrationSource's Deployment is ready.
+	// IntegrationSourceConditionSinkProvided has status True when the ApiServerSource has been configured with a sink target.
+	IntegrationSourceConditionSinkProvided apis.ConditionType = "SinkProvided"
+
+	// IntegrationSourceConditionContainerSourceReady has status True when the IntegrationSource's ContainerSource is ready.
 	IntegrationSourceConditionContainerSourceReady apis.ConditionType = "ContainerSourceReady"
 )
 
 var IntegrationCondSet = apis.NewLivingConditionSet(
 	IntegrationSourceConditionContainerSourceReady,
+	//	IntegrationSourceConditionSinkProvided,
 )
 
 // GetConditionSet retrieves the condition set for this resource. Implements the KRShaped interface.
@@ -49,8 +53,27 @@ func (s *IntegrationSourceStatus) InitializeConditions() {
 	IntegrationCondSet.Manage(s).InitializeConditions()
 }
 
-func (iss *IntegrationSourceStatus) IsReady() bool {
-	return IntegrationCondSet.Manage(iss).IsHappy()
+// / GetCondition returns the condition currently associated with the given type, or nil.
+func (i *IntegrationSourceStatus) GetCondition(t apis.ConditionType) *apis.Condition {
+	return IntegrationCondSet.Manage(i).GetCondition(t)
+}
+
+// IsReady returns true if the resource is ready overall.
+func (i *IntegrationSourceStatus) IsReady() bool {
+	return IntegrationCondSet.Manage(i).IsHappy()
+}
+
+func (i *IntegrationSourceStatus) MarkSink(uri *apis.URL) {
+	i.SinkURI = uri
+	if len(uri.String()) > 0 {
+		IntegrationCondSet.Manage(i).MarkTrue(IntegrationSourceConditionSinkProvided)
+	} else {
+		IntegrationCondSet.Manage(i).MarkFalse(IntegrationSourceConditionSinkProvided, "SinkEmpty", "Sink has resolved to empty.%s", "")
+	}
+}
+
+func (iss *IntegrationSourceStatus) MarkNoSink(reason, messageFormat string, messageA ...interface{}) {
+	IntegrationCondSet.Manage(iss).MarkFalse(IntegrationSourceConditionSinkProvided, reason, messageFormat, messageA...)
 }
 
 func (s *IntegrationSourceStatus) PropagateContainerSourceStatus(status *v1.ContainerSourceStatus) {
