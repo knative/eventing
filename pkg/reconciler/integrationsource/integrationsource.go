@@ -9,7 +9,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	corev1listers "k8s.io/client-go/listers/core/v1"
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
@@ -20,17 +19,12 @@ import (
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
 	pkgreconciler "knative.dev/pkg/reconciler"
-	"knative.dev/pkg/resolver"
 )
 
 const (
 	// Name of the corev1.Events emitted from the reconciliation process
-	sourceReconciled   = "KameletSourceReconciled"
-	deploymentCreated  = "KameletSourceDeploymentCreated"
-	serciceCreated     = "KameletSourceServiceCreated"
-	deploymentUpdated  = "KameletSourceDeploymentUpdated"
-	sinkBindingCreated = "KameletSourceSinkBindingCreated"
-	sinkBindingUpdated = "KameletSourceSinkBindingUpdated"
+	containerSourceCreated = "ContainerSourceCreated"
+	containerSourceUpdated = "ContainerSourceUpdated"
 
 	component = "integrationsource"
 )
@@ -40,14 +34,8 @@ type Reconciler struct {
 	kubeClientSet     kubernetes.Interface
 	eventingClientSet clientset.Interface
 
-	// listers index properties about resources
-	serviceLister corev1listers.ServiceLister
-	sinkResolver  *resolver.URIResolver
-
-	containerSourceLister v1listers.ContainerSourceLister
-
-	integrationSourceLister    listers.IntegrationSourceLister
-	trustBundleConfigMapLister corev1listers.ConfigMapLister
+	containerSourceLister   v1listers.ContainerSourceLister
+	integrationSourceLister listers.IntegrationSourceLister
 }
 
 // Check that our Reconciler implements Interface
@@ -55,18 +43,10 @@ var _ integrationsource.Interface = (*Reconciler)(nil)
 
 func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1alpha1.IntegrationSource) pkgreconciler.Event {
 
-	cs, err := r.reconcileContainerSource(ctx, source)
+	_, err := r.reconcileContainerSource(ctx, source)
 	if err != nil {
 		logging.FromContext(ctx).Errorw("Error reconciling ContainerSource", zap.Error(err))
 		return err
-	}
-
-	if cs != nil {
-		if c := cs.Status.GetCondition(v1.ContainerSourceConditionReady); c.IsTrue() {
-			source.Status.MarkSink(cs.Status.SinkURI)
-		} else if c.IsFalse() {
-			source.Status.MarkNoSink(c.GetReason(), "%s", c.GetMessage())
-		}
 	}
 
 	return nil
@@ -81,7 +61,7 @@ func (r *Reconciler) reconcileContainerSource(ctx context.Context, source *v1alp
 		if err != nil {
 			return nil, fmt.Errorf("creating new ContainerSource: %v", err)
 		}
-		controller.GetEventRecorder(ctx).Eventf(source, corev1.EventTypeNormal, sourceReconciled, "ContainerSource created %q", cs.Name)
+		controller.GetEventRecorder(ctx).Eventf(source, corev1.EventTypeNormal, containerSourceCreated, "ContainerSource created %q", cs.Name)
 	} else if err != nil {
 		return nil, fmt.Errorf("getting ContainerSource: %v", err)
 	} else if !metav1.IsControlledBy(cs, source) {
@@ -92,12 +72,12 @@ func (r *Reconciler) reconcileContainerSource(ctx context.Context, source *v1alp
 		if err != nil {
 			return nil, fmt.Errorf("updating ContainerSource: %v", err)
 		}
-		controller.GetEventRecorder(ctx).Eventf(source, corev1.EventTypeNormal, sourceReconciled, "ContainerSource updated %q", cs.Name)
+		controller.GetEventRecorder(ctx).Eventf(source, corev1.EventTypeNormal, containerSourceUpdated, "ContainerSource updated %q", cs.Name)
 	} else {
 		logging.FromContext(ctx).Debugw("Reusing existing ContainerSource", zap.Any("ContainerSource", cs))
-
 	}
 
+	source.Status.PropagateContainerSourceStatus(&cs.Status)
 	return cs, nil
 }
 
