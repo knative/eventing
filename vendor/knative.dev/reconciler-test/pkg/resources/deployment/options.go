@@ -26,6 +26,7 @@ var (
 	WithAnnotations    = manifest.WithAnnotations
 	WithLabels         = manifest.WithLabels
 	WithPodAnnotations = manifest.WithPodAnnotations
+	WithPodLabels      = manifest.WithPodLabels
 )
 
 func WithSelectors(selectors map[string]string) manifest.CfgFn {
