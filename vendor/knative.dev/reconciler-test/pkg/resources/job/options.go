@@ -24,6 +24,7 @@ import (
 
 var (
 	WithLabels         = manifest.WithLabels
+	WithPodLabels      = manifest.WithPodLabels
 	WithAnnotations    = manifest.WithAnnotations
 	WithPodAnnotations = manifest.WithPodAnnotations
 )
@@ -32,14 +33,6 @@ func WithEnvs(envs map[string]string) manifest.CfgFn {
 	return func(cfg map[string]interface{}) {
 		if envs != nil {
 			cfg["envs"] = envs
-		}
-	}
-}
-
-func WithPodLabels(labels map[string]string) manifest.CfgFn {
-	return func(cfg map[string]interface{}) {
-		if labels != nil {
-			cfg["podlabels"] = labels
 		}
 	}
 }
