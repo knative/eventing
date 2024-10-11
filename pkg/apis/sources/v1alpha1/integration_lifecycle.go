@@ -57,7 +57,7 @@ func (s *IntegrationSourceStatus) PropagateContainerSourceStatus(status *v1.Cont
 	// Do not copy conditions nor observedGeneration
 	conditions := s.Conditions
 	observedGeneration := s.ObservedGeneration
-	s.SourceStatus = status.SourceStatus
+	s.SourceStatus = *status.SourceStatus.DeepCopy()
 
 	cond := status.GetCondition(apis.ConditionReady)
 	switch {
