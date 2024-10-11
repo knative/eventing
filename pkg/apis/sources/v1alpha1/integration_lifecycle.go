@@ -55,8 +55,6 @@ func (iss *IntegrationSourceStatus) IsReady() bool {
 
 func (s *IntegrationSourceStatus) PropagateContainerSourceStatus(status *v1.ContainerSourceStatus) {
 	// Do not copy conditions nor observedGeneration
-	conditions := s.Conditions
-	observedGeneration := s.ObservedGeneration
 	s.SourceStatus = *status.SourceStatus.DeepCopy()
 
 	cond := status.GetCondition(apis.ConditionReady)
