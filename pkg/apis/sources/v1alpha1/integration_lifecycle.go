@@ -58,8 +58,6 @@ func (s *IntegrationSourceStatus) PropagateContainerSourceStatus(status *v1.Cont
 	conditions := s.Conditions
 	observedGeneration := s.ObservedGeneration
 	s.SourceStatus = status.SourceStatus
-	s.Conditions = conditions
-	s.ObservedGeneration = observedGeneration
 
 	cond := status.GetCondition(apis.ConditionReady)
 	switch {
