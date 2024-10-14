@@ -94,7 +94,7 @@ func makeEnv(sink *v1alpha1.IntegrationSink) []corev1.EnvVar {
 
 	// Log environment variables
 	if sink.Spec.Log != nil {
-		envVars = append(envVars, integration.GenerateEnvVarsFromStruct(constructBaseSinkVariableName("LOG"), *sink.Spec.Log)...)
+		envVars = append(envVars, integration.GenerateEnvVarsFromStruct("CAMEL_KAMELET_LOG_SINK", *sink.Spec.Log)...)
 		return envVars
 	}
 
@@ -106,11 +106,11 @@ func makeEnv(sink *v1alpha1.IntegrationSink) []corev1.EnvVar {
 
 	// AWS S3 environment variables
 	if sink.Spec.Aws != nil && sink.Spec.Aws.S3 != nil {
-		envVars = append(envVars, integration.GenerateEnvVarsFromStruct(constructBaseSinkVariableName("AWS_S3"), *sink.Spec.Aws.S3)...)
+		envVars = append(envVars, integration.GenerateEnvVarsFromStruct("CAMEL_KAMELET_AWS_S3_SINK", *sink.Spec.Aws.S3)...)
 		if secretName != "" {
 			envVars = append(envVars, []corev1.EnvVar{
-				integration.MakeSecretEnvVar("CAMEL_KAMELET_AWS_S3_SINK_ACCESSKEY", "aws.s3.accessKey", secretName),
-				integration.MakeSecretEnvVar("CAMEL_KAMELET_AWS_S3_SINK_SECRETKEY", "aws.s3.secretKey", secretName),
+				integration.MakeSecretEnvVar("CAMEL_KAMELET_AWS_S3_SINK_ACCESSKEY", "aws.accessKey", secretName),
+				integration.MakeSecretEnvVar("CAMEL_KAMELET_AWS_S3_SINK_SECRETKEY", "aws.secretKey", secretName),
 			}...)
 		}
 		return envVars
@@ -118,11 +118,11 @@ func makeEnv(sink *v1alpha1.IntegrationSink) []corev1.EnvVar {
 
 	// AWS SQS environment variables
 	if sink.Spec.Aws != nil && sink.Spec.Aws.SQS != nil {
-		envVars = append(envVars, integration.GenerateEnvVarsFromStruct(constructBaseSinkVariableName("AWS_SQS"), *sink.Spec.Aws.SQS)...)
+		envVars = append(envVars, integration.GenerateEnvVarsFromStruct("CAMEL_KAMELET_AWS_SQS_SINK", *sink.Spec.Aws.SQS)...)
 		if secretName != "" {
 			envVars = append(envVars, []corev1.EnvVar{
-				integration.MakeSecretEnvVar("CAMEL_KAMELET_AWS_SQS_SINK_ACCESSKEY", "aws.s3.accessKey", secretName),
-				integration.MakeSecretEnvVar("CAMEL_KAMELET_AWS_SQS_SINK_SECRETKEY", "aws.s3.secretKey", secretName),
+				integration.MakeSecretEnvVar("CAMEL_KAMELET_AWS_SQS_SINK_ACCESSKEY", "aws.accessKey", secretName),
+				integration.MakeSecretEnvVar("CAMEL_KAMELET_AWS_SQS_SINK_SECRETKEY", "aws.secretKey", secretName),
 			}...)
 		}
 		return envVars
@@ -132,21 +132,17 @@ func makeEnv(sink *v1alpha1.IntegrationSink) []corev1.EnvVar {
 	return envVars
 }
 
-func selectImage(source *v1alpha1.IntegrationSink) string {
-	if source.Spec.Log != nil {
-		return "quay.io/openshift-knative/kn-connector-log-sink:1.0-SNAPSHOT"
+func selectImage(sink *v1alpha1.IntegrationSink) string {
+	if sink.Spec.Log != nil {
+		return "gcr.io/knative-nightly/log-sink:latest"
 	}
-	if source.Spec.Aws != nil {
-		if source.Spec.Aws.S3 != nil {
-			return "quay.io/openshift-knative/kn-connector-aws-s3-sink:1.0-SNAPSHOT"
+	if sink.Spec.Aws != nil {
+		if sink.Spec.Aws.S3 != nil {
+			return "gcr.io/knative-nightly/aws-s3-source:latest"
 		}
-		if source.Spec.Aws.SQS != nil {
-			return "quay.io/openshift-knative/kn-connector-aws-sqs-sink:1.0-SNAPSHOT"
+		if sink.Spec.Aws.SQS != nil {
+			return "gcr.io/knative-nightly/aws-sqs-source:latest"
 		}
 	}
 	return ""
-}
-
-func constructBaseSinkVariableName(variable string) string {
-	return integration.MakeBaseVariableName(variable, componentSuffix)
 }
