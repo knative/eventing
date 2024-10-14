@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	"context"
+	"knative.dev/eventing/pkg/apis/common"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -45,15 +46,15 @@ func TestIntegrationSourceSpecValidation(t *testing.T) {
 			name: "valid AWS S3 source with auth and region",
 			spec: IntegrationSourceSpec{
 				Aws: &Aws{
-					S3: &AWSS3{
-						AWSCommon: AWSCommon{
+					S3: &common.AWSS3{
+						AWSCommon: common.AWSCommon{
 							Region: "us-east-1",
 						},
 						BucketNameOrArn: "example-bucket",
 					},
-					Auth: &Auth{
-						Secret: &Secret{
-							Ref: &SecretReference{
+					Auth: &common.Auth{
+						Secret: &common.Secret{
+							Ref: &common.SecretReference{
 								Name: "aws-secret",
 							},
 						},
@@ -66,15 +67,15 @@ func TestIntegrationSourceSpecValidation(t *testing.T) {
 			name: "valid AWS SQS source with auth and region",
 			spec: IntegrationSourceSpec{
 				Aws: &Aws{
-					SQS: &AWSSQS{
-						AWSCommon: AWSCommon{
+					SQS: &common.AWSSQS{
+						AWSCommon: common.AWSCommon{
 							Region: "us-east-1",
 						},
 						QueueNameOrArn: "example-queue",
 					},
-					Auth: &Auth{
-						Secret: &Secret{
-							Ref: &SecretReference{
+					Auth: &common.Auth{
+						Secret: &common.Secret{
+							Ref: &common.SecretReference{
 								Name: "aws-secret",
 							},
 						},
@@ -87,15 +88,15 @@ func TestIntegrationSourceSpecValidation(t *testing.T) {
 			name: "valid AWS DDBStreams source with auth and region",
 			spec: IntegrationSourceSpec{
 				Aws: &Aws{
-					DDBStreams: &AWSDDBStreams{
-						AWSCommon: AWSCommon{
+					DDBStreams: &common.AWSDDBStreams{
+						AWSCommon: common.AWSCommon{
 							Region: "us-east-1",
 						},
 						Table: "example-table",
 					},
-					Auth: &Auth{
-						Secret: &Secret{
-							Ref: &SecretReference{
+					Auth: &common.Auth{
+						Secret: &common.Secret{
+							Ref: &common.SecretReference{
 								Name: "aws-secret",
 							},
 						},
@@ -113,8 +114,8 @@ func TestIntegrationSourceSpecValidation(t *testing.T) {
 					ContentType: "text/plain",
 				},
 				Aws: &Aws{
-					S3: &AWSS3{
-						AWSCommon: AWSCommon{
+					S3: &common.AWSS3{
+						AWSCommon: common.AWSCommon{
 							Region: "us-east-1",
 						},
 						BucketNameOrArn: "example-bucket",
@@ -127,21 +128,21 @@ func TestIntegrationSourceSpecValidation(t *testing.T) {
 			name: "multiple AWS sources set (invalid)",
 			spec: IntegrationSourceSpec{
 				Aws: &Aws{
-					S3: &AWSS3{
-						AWSCommon: AWSCommon{
+					S3: &common.AWSS3{
+						AWSCommon: common.AWSCommon{
 							Region: "us-east-1",
 						},
 						BucketNameOrArn: "example-bucket",
 					},
-					SQS: &AWSSQS{
-						AWSCommon: AWSCommon{
+					SQS: &common.AWSSQS{
+						AWSCommon: common.AWSCommon{
 							Region: "us-east-1",
 						},
 						QueueNameOrArn: "example-queue",
 					},
-					Auth: &Auth{
-						Secret: &Secret{
-							Ref: &SecretReference{
+					Auth: &common.Auth{
+						Secret: &common.Secret{
+							Ref: &common.SecretReference{
 								Name: "aws-secret",
 							},
 						},
@@ -154,14 +155,14 @@ func TestIntegrationSourceSpecValidation(t *testing.T) {
 			name: "AWS SQS source without QueueNameOrArn (invalid)",
 			spec: IntegrationSourceSpec{
 				Aws: &Aws{
-					SQS: &AWSSQS{
-						AWSCommon: AWSCommon{
+					SQS: &common.AWSSQS{
+						AWSCommon: common.AWSCommon{
 							Region: "us-east-1",
 						},
 					},
-					Auth: &Auth{
-						Secret: &Secret{
-							Ref: &SecretReference{
+					Auth: &common.Auth{
+						Secret: &common.Secret{
+							Ref: &common.SecretReference{
 								Name: "aws-secret",
 							},
 						},
@@ -174,14 +175,14 @@ func TestIntegrationSourceSpecValidation(t *testing.T) {
 			name: "AWS DDBStreams source without Table (invalid)",
 			spec: IntegrationSourceSpec{
 				Aws: &Aws{
-					DDBStreams: &AWSDDBStreams{
-						AWSCommon: AWSCommon{
+					DDBStreams: &common.AWSDDBStreams{
+						AWSCommon: common.AWSCommon{
 							Region: "us-east-1",
 						},
 					},
-					Auth: &Auth{
-						Secret: &Secret{
-							Ref: &SecretReference{
+					Auth: &common.Auth{
+						Secret: &common.Secret{
+							Ref: &common.SecretReference{
 								Name: "aws-secret",
 							},
 						},
@@ -199,8 +200,8 @@ func TestIntegrationSourceSpecValidation(t *testing.T) {
 			name: "AWS source without auth (invalid)",
 			spec: IntegrationSourceSpec{
 				Aws: &Aws{
-					S3: &AWSS3{
-						AWSCommon: AWSCommon{
+					S3: &common.AWSS3{
+						AWSCommon: common.AWSCommon{
 							Region: "us-east-1",
 						},
 						BucketNameOrArn: "example-bucket",
@@ -213,12 +214,12 @@ func TestIntegrationSourceSpecValidation(t *testing.T) {
 			name: "AWS S3 source without region (invalid)",
 			spec: IntegrationSourceSpec{
 				Aws: &Aws{
-					S3: &AWSS3{
+					S3: &common.AWSS3{
 						BucketNameOrArn: "example-bucket",
 					},
-					Auth: &Auth{
-						Secret: &Secret{
-							Ref: &SecretReference{
+					Auth: &common.Auth{
+						Secret: &common.Secret{
+							Ref: &common.SecretReference{
 								Name: "aws-secret",
 							},
 						},
