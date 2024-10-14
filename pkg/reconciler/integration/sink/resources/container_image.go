@@ -134,14 +134,14 @@ func makeEnv(sink *v1alpha1.IntegrationSink) []corev1.EnvVar {
 
 func selectImage(source *v1alpha1.IntegrationSink) string {
 	if source.Spec.Log != nil {
-		return "quay.io/openshift-knative/kn-connector-log-sink:1.0-SNAPSHOT"
+		return "quay.io/openshift-knative/log-sink:1.0-SNAPSHOT"
 	}
 	if source.Spec.Aws != nil {
 		if source.Spec.Aws.S3 != nil {
-			return "quay.io/openshift-knative/kn-connector-aws-s3-sink:1.0-SNAPSHOT"
+			return "quay.io/openshift-knative/aws-s3-sink:1.0-SNAPSHOT"
 		}
 		if source.Spec.Aws.SQS != nil {
-			return "quay.io/openshift-knative/kn-connector-aws-sqs-sink:1.0-SNAPSHOT"
+			return "quay.io/openshift-knative/aws-sqs-sink:1.0-SNAPSHOT"
 		}
 	}
 	return ""
