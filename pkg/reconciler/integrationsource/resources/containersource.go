@@ -170,17 +170,17 @@ func makeEnv(source *v1alpha1.IntegrationSource) []corev1.EnvVar {
 
 func selectImage(source *v1alpha1.IntegrationSource) string {
 	if source.Spec.Timer != nil {
-		return "quay.io/openshift-knative/kn-connector-timer-source:1.0-SNAPSHOT"
+		return "quay.io/openshift-knative/timer-source:1.0-SNAPSHOT"
 	}
 	if source.Spec.Aws != nil {
 		if source.Spec.Aws.S3 != nil {
-			return "quay.io/openshift-knative/kn-connector-aws-s3-source:1.0-SNAPSHOT"
+			return "quay.io/openshift-knative/aws-s3-source:1.0-SNAPSHOT"
 		}
 		if source.Spec.Aws.SQS != nil {
-			return "quay.io/openshift-knative/kn-connector-aws-sqs-source:1.0-SNAPSHOT"
+			return "quay.io/openshift-knative/aws-sqs-source:1.0-SNAPSHOT"
 		}
 		if source.Spec.Aws.DDBStreams != nil {
-			return "quay.io/openshift-knative/kn-connector-aws-ddb-streams-source:1.0-SNAPSHOT"
+			return "quay.io/openshift-knative/aws-ddb-streams-source:1.0-SNAPSHOT"
 		}
 	}
 	return ""
