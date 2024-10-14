@@ -49,7 +49,7 @@ var (
 	_ apis.Defaultable   = (*IntegrationSink)(nil)
 	_ apis.HasSpec       = (*IntegrationSink)(nil)
 	_ duckv1.KRShaped    = (*IntegrationSink)(nil)
-	//	_ apis.Convertible   = (*IntegrationSink)(nil)
+	_ apis.Convertible   = (*JobSink)(nil)
 )
 
 type IntegrationSinkSpec struct {

@@ -26,8 +26,59 @@ func (sink *IntegrationSink) Validate(ctx context.Context) *apis.FieldError {
 	return sink.Spec.Validate(ctx).ViaField("spec")
 }
 
-func (sink *IntegrationSinkSpec) Validate(ctx context.Context) *apis.FieldError {
+func (spec *IntegrationSinkSpec) Validate(ctx context.Context) *apis.FieldError {
 	var errs *apis.FieldError
+
+	// Count how many fields are set to ensure mutual exclusivity
+	sinkSetCount := 0
+	if spec.Log != nil {
+		sinkSetCount++
+	}
+	if spec.Aws != nil {
+		if spec.Aws.S3 != nil {
+			sinkSetCount++
+		}
+		if spec.Aws.SQS != nil {
+			sinkSetCount++
+		}
+	}
+
+	// Validate that only one sink field is set
+	if sinkSetCount > 1 {
+		errs = errs.Also(apis.ErrGeneric("only one sink type can be set", "spec"))
+	} else if sinkSetCount == 0 {
+		errs = errs.Also(apis.ErrGeneric("at least one sink type must be specified", "spec"))
+	}
+
+	// Only perform AWS-specific validation if exactly one AWS sink is configured
+	if sinkSetCount == 1 && spec.Aws != nil {
+		if spec.Aws.S3 != nil || spec.Aws.SQS != nil {
+			// Check that AWS Auth is properly configured
+			if !spec.Aws.Auth.HasAuth() {
+				errs = errs.Also(apis.ErrMissingField("aws.auth.secret.ref.name"))
+			}
+		}
+
+		// Additional validation for AWS S3 required fields
+		if spec.Aws.S3 != nil {
+			if spec.Aws.S3.BucketNameOrArn == "" {
+				errs = errs.Also(apis.ErrMissingField("aws.s3.bucketNameOrArn"))
+			}
+			if spec.Aws.S3.Region == "" {
+				errs = errs.Also(apis.ErrMissingField("aws.s3.region"))
+			}
+		}
+
+		// Additional validation for AWS SQS required fields
+		if spec.Aws.SQS != nil {
+			if spec.Aws.SQS.QueueNameOrArn == "" {
+				errs = errs.Also(apis.ErrMissingField("aws.sqs.queueNameOrArn"))
+			}
+			if spec.Aws.SQS.Region == "" {
+				errs = errs.Also(apis.ErrMissingField("aws.sqs.region"))
+			}
+		}
+	}
 
 	return errs
 }
