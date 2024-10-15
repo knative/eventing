@@ -28,4 +28,5 @@ const (
 	CrossNamespaceEventLinks = "cross-namespace-event-links"
 	NewAPIServerFilters      = "new-apiserversource-filters"
 	AuthorizationDefaultMode = "default-authorization-mode"
+	OIDCDiscoveryBaseURL     = "oidc-discovery-base-url"
 )

@@ -27,6 +27,11 @@ import (
 	"testing"
 	"time"
 
+	"knative.dev/eventing/pkg/eventingtls"
+	filteredFactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
+	"knative.dev/pkg/configmap"
+	"knative.dev/pkg/system"
+
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	"knative.dev/eventing/pkg/reconciler/broker/resources"
 
@@ -38,10 +43,12 @@ import (
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"knative.dev/pkg/apis"
 	configmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap/fake"
+	filteredconfigmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap/filtered/fake"
 	"knative.dev/pkg/logging"
 	reconcilertesting "knative.dev/pkg/reconciler/testing"
 
@@ -60,6 +67,7 @@ import (
 	// Fake injection client
 	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventpolicy/fake"
 	_ "knative.dev/pkg/client/injection/kube/client/fake"
+	_ "knative.dev/pkg/client/injection/kube/informers/factory/filtered/fake"
 )
 
 const (
@@ -425,10 +433,11 @@ func TestReceiver(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			ctx, _ := reconcilertesting.SetupFakeContext(t)
+			ctx, _ := reconcilertesting.SetupFakeContext(t, SetUpInformerSelector)
 			ctx = feature.ToContext(ctx, feature.Flags{
 				feature.OIDCAuthentication: feature.Enabled,
 			})
+			trustBundleConfigMapLister := filteredconfigmapinformer.Get(ctx, eventingtls.TrustBundleLabelSelector).Lister().ConfigMaps(system.Namespace())
 
 			fh := fakeHandler{
 				failRequest:            tc.requestFails,
@@ -444,7 +453,17 @@ func TestReceiver(t *testing.T) {
 
 			logger := zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller()))
 			oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
-			authVerifier := auth.NewVerifier(ctx, eventpolicyinformerfake.Get(ctx).Lister())
+			authVerifier := auth.NewVerifier(ctx, eventpolicyinformerfake.Get(ctx).Lister(), trustBundleConfigMapLister, configmap.NewStaticWatcher(
+				&corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "config-features",
+						Namespace: "knative-eventing",
+					},
+					Data: map[string]string{
+						feature.OIDCAuthentication: string(feature.Enabled),
+					},
+				},
+			))
 
 			for _, trig := range tc.triggers {
 				// Replace the SubscriberURI to point at our fake server.
@@ -641,7 +660,8 @@ func TestReceiver_WithSubscriptionsAPI(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			ctx, _ := reconcilertesting.SetupFakeContext(t)
+			ctx, _ := reconcilertesting.SetupFakeContext(t, SetUpInformerSelector)
+			trustBundleConfigMapLister := filteredconfigmapinformer.Get(ctx, eventingtls.TrustBundleLabelSelector).Lister().ConfigMaps(system.Namespace())
 
 			fh := fakeHandler{
 				t: t,
@@ -653,7 +673,17 @@ func TestReceiver_WithSubscriptionsAPI(t *testing.T) {
 
 			logger := zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller()))
 			oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
-			authVerifier := auth.NewVerifier(ctx, eventpolicyinformerfake.Get(ctx).Lister())
+			authVerifier := auth.NewVerifier(ctx, eventpolicyinformerfake.Get(ctx).Lister(), trustBundleConfigMapLister, configmap.NewStaticWatcher(
+				&corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "config-features",
+						Namespace: "knative-eventing",
+					},
+					Data: map[string]string{
+						feature.OIDCAuthentication: string(feature.Enabled),
+					},
+				},
+			))
 
 			// Replace the SubscriberURI to point at our fake server.
 			for _, trig := range tc.triggers {
@@ -988,4 +1018,9 @@ func makeEmptyResponse(status int) *http.Response {
 		Header:     make(http.Header),
 	}
 	return r
+}
+
+func SetUpInformerSelector(ctx context.Context) context.Context {
+	ctx = filteredFactory.WithSelectors(ctx, eventingtls.TrustBundleLabelSelector)
+	return ctx
 }

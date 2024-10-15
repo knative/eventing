@@ -25,6 +25,9 @@ import (
 	"net/http"
 	"strings"
 
+	configmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap/filtered"
+	filteredFactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
+
 	"github.com/cloudevents/sdk-go/v2/binding"
 	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"go.uber.org/zap"
@@ -70,9 +73,13 @@ func main() {
 
 	cfg := injection.ParseAndGetRESTConfigOrDie()
 	ctx = injection.WithConfig(ctx, cfg)
+	ctx = filteredFactory.WithSelectors(ctx,
+		eventingtls.TrustBundleLabelSelector,
+	)
 
 	ctx, informers := injection.Default.SetupInformers(ctx, cfg)
 	ctx = injection.WithConfig(ctx, cfg)
+
 	loggingConfig, err := cmdbroker.GetLoggingConfig(ctx, system.Namespace(), logging.ConfigMapName())
 	if err != nil {
 		log.Fatal("Error loading/parsing logging configuration:", err)
@@ -104,9 +111,10 @@ func main() {
 
 	logger.Info("Starting the JobSink Ingress")
 
-	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {
-		logger.Info("Updated", zap.String("name", name), zap.Any("value", value))
-	})
+	trustBundleConfigMapLister := configmapinformer.Get(ctx, eventingtls.TrustBundleLabelSelector).Lister().ConfigMaps(system.Namespace())
+	var h *Handler
+
+	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"))
 	featureStore.WatchConfigs(configMapWatcher)
 
 	// Decorate contexts with the current state of the feature config.
@@ -114,11 +122,11 @@ func main() {
 		return logging.WithLogger(featureStore.ToContext(ctx), sl)
 	}
 
-	h := &Handler{
+	h = &Handler{
 		k8s:          kubeclient.Get(ctx),
 		lister:       jobsink.Get(ctx).Lister(),
 		withContext:  ctxFunc,
-		authVerifier: auth.NewVerifier(ctx, eventpolicyinformer.Get(ctx).Lister()),
+		authVerifier: auth.NewVerifier(ctx, eventpolicyinformer.Get(ctx).Lister(), trustBundleConfigMapLister, configMapWatcher),
 	}
 
 	tlsConfig, err := getServerTLSConfig(ctx)

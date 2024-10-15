@@ -88,7 +88,7 @@ func NewController(
 ) *controller.Impl {
 	logger := logging.FromContext(ctx)
 
-	trustBundleConfigMapInformer := filteredconfigmapinformer.Get(ctx, eventingtls.TrustBundleLabelSelector)
+	trustBundleConfigMapLister := filteredconfigmapinformer.Get(ctx, eventingtls.TrustBundleLabelSelector).Lister().ConfigMaps(system.Namespace())
 
 	// Setup trace publishing.
 	iw := cmw.(*configmapinformer.InformedWatcher)
@@ -127,19 +127,7 @@ func NewController(
 	oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
 
 	clientConfig := eventingtls.ClientConfig{
-		TrustBundleConfigMapLister: trustBundleConfigMapInformer.Lister().ConfigMaps(system.Namespace()),
-	}
-
-	r := &Reconciler{
-		multiChannelEventHandler: sh,
-		reporter:                 reporter,
-		messagingClientSet:       eventingclient.Get(ctx).MessagingV1(),
-		eventingClient:           eventingclient.Get(ctx).EventingV1beta2(),
-		eventTypeLister:          eventtypeinformer.Get(ctx).Lister(),
-		eventDispatcher:          kncloudevents.NewDispatcher(clientConfig, oidcTokenProvider),
-		authVerifier:             auth.NewVerifier(ctx, eventpolicyinformer.Get(ctx).Lister()),
-		clientConfig:             clientConfig,
-		inMemoryChannelLister:    inmemorychannelInformer.Lister(),
+		TrustBundleConfigMapLister: trustBundleConfigMapLister,
 	}
 
 	var globalResync func(obj interface{})
@@ -149,7 +137,19 @@ func NewController(
 			globalResync(nil)
 		}
 	})
+
 	featureStore.WatchConfigs(cmw)
+	r := &Reconciler{
+		multiChannelEventHandler: sh,
+		reporter:                 reporter,
+		messagingClientSet:       eventingclient.Get(ctx).MessagingV1(),
+		eventingClient:           eventingclient.Get(ctx).EventingV1beta2(),
+		eventTypeLister:          eventtypeinformer.Get(ctx).Lister(),
+		eventDispatcher:          kncloudevents.NewDispatcher(clientConfig, oidcTokenProvider),
+		authVerifier:             auth.NewVerifier(ctx, eventpolicyinformer.Get(ctx).Lister(), trustBundleConfigMapLister, cmw),
+		clientConfig:             clientConfig,
+		inMemoryChannelLister:    inmemorychannelInformer.Lister(),
+	}
 
 	impl := inmemorychannelreconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
 		return controller.Options{SkipStatusUpdates: true, FinalizerName: finalizerName, ConfigStore: featureStore}
