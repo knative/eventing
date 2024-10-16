@@ -36,7 +36,6 @@ type Reconciler struct {
 
 	deploymentLister appsv1listers.DeploymentLister
 	serviceLister    corev1listers.ServiceLister
-	podLister        corev1listers.PodLister
 
 	systemNamespace string
 }

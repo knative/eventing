@@ -11,8 +11,6 @@ import (
 
 	secretinformer "knative.dev/pkg/injection/clients/namespacedkube/informers/core/v1/secret"
 
-	podinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/pod"
-
 	integrationsinkreconciler "knative.dev/eventing/pkg/client/injection/reconciler/sinks/v1alpha1/integrationsink"
 	"knative.dev/eventing/pkg/eventingtls"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
@@ -30,7 +28,6 @@ func NewController(
 	integrationSinkInformer := integrationsink.Get(ctx)
 	secretInformer := secretinformer.Get(ctx)
 	eventPolicyInformer := eventpolicy.Get(ctx)
-	podInformer := podinformer.Get(ctx)
 	deploymentInformer := deploymentinformer.Get(ctx)
 
 	serviceInformer := service.Get(ctx)
@@ -38,7 +35,6 @@ func NewController(
 	r := &Reconciler{
 		kubeClientSet: kubeclient.Get(ctx),
 
-		podLister:        podInformer.Lister(),
 		deploymentLister: deploymentInformer.Lister(),
 		serviceLister:    serviceInformer.Lister(),
 
@@ -46,8 +42,6 @@ func NewController(
 		secretLister:      secretInformer.Lister(),
 		eventPolicyLister: eventPolicyInformer.Lister(),
 	}
-
-	logging.FromContext(ctx).Info("Creating IntegrationSink controller")
 
 	var globalResync func(obj interface{})
 
@@ -58,8 +52,6 @@ func NewController(
 	})
 	featureStore.WatchConfigs(cmw)
 
-	logging.FromContext(ctx).Info("Creating IntegrationSink controller 2 ")
-
 	impl := integrationsinkreconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
 		return controller.Options{
 			ConfigStore: featureStore,
@@ -68,18 +60,24 @@ func NewController(
 
 	integrationSinkInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
-	logging.FromContext(ctx).Info("Creating IntegrationSink controller 3 ")
-
 	globalResync = func(interface{}) {
 		impl.GlobalResync(integrationSinkInformer.Informer())
 	}
-
-	logging.FromContext(ctx).Info("Creating IntegrationSink controller 3 ")
 
 	secretInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.FilterWithName(eventingtls.IntegrationSinkDispatcherServerTLSSecretName),
 		Handler:    controller.HandleAll(globalResync),
 	})
 
+	//integrationSinkGK := sinksv1alpha1.SchemeGroupVersion.WithKind("IntegrationSink").GroupKind()
+	//
+	//// Enqueue the JobSink, if we have an EventPolicy which was referencing
+	//// or got updated and now is referencing the JobSink.
+	//eventPolicyInformer.Informer().AddEventHandler(auth.EventPolicyEventHandler(
+	//	integrationSinkInformer.Informer().GetIndexer(),
+	//	integrationSinkGK,
+	//	impl.EnqueueKey,
+	//))
+	//
 	return impl
 }
