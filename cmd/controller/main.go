@@ -21,6 +21,8 @@ import (
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
 	"errors"
+	integrationSink "knative.dev/eventing/pkg/reconciler/integration/sink"
+	integrationSource "knative.dev/eventing/pkg/reconciler/integration/source"
 	"log"
 	"net/http"
 	"os"
@@ -104,11 +106,14 @@ func main() {
 		apiserversource.NewController,
 		pingsource.NewController,
 		containersource.NewController,
+		integrationSource.NewController,
+
 		// Sources CRD
 		sourcecrd.NewController,
 
 		// Sinks
 		jobsink.NewController,
+		integrationSink.NewController,
 
 		// Sugar
 		sugarnamespace.NewController,

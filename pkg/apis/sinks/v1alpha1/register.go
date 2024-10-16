@@ -47,6 +47,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
 		&JobSink{},
 		&JobSinkList{},
+		&IntegrationSink{},
+		&IntegrationSinkList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil

@@ -43,6 +43,8 @@ import (
 	fakesinksv1alpha1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/sinks/v1alpha1/fake"
 	sourcesv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/sources/v1"
 	fakesourcesv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/sources/v1/fake"
+	sourcesv1alpha1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/sources/v1alpha1"
+	fakesourcesv1alpha1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/sources/v1alpha1/fake"
 	sourcesv1beta2 "knative.dev/eventing/pkg/client/clientset/versioned/typed/sources/v1beta2"
 	fakesourcesv1beta2 "knative.dev/eventing/pkg/client/clientset/versioned/typed/sources/v1beta2/fake"
 )
@@ -140,6 +142,11 @@ func (c *Clientset) SinksV1alpha1() sinksv1alpha1.SinksV1alpha1Interface {
 // SourcesV1 retrieves the SourcesV1Client
 func (c *Clientset) SourcesV1() sourcesv1.SourcesV1Interface {
 	return &fakesourcesv1.FakeSourcesV1{Fake: &c.Fake}
+}
+
+// SourcesV1alpha1 retrieves the SourcesV1alpha1Client
+func (c *Clientset) SourcesV1alpha1() sourcesv1alpha1.SourcesV1alpha1Interface {
+	return &fakesourcesv1alpha1.FakeSourcesV1alpha1{Fake: &c.Fake}
 }
 
 // SourcesV1beta2 retrieves the SourcesV1beta2Client

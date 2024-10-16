@@ -18,6 +18,14 @@ limitations under the License.
 
 package v1alpha1
 
+// IntegrationSinkListerExpansion allows custom methods to be added to
+// IntegrationSinkLister.
+type IntegrationSinkListerExpansion interface{}
+
+// IntegrationSinkNamespaceListerExpansion allows custom methods to be added to
+// IntegrationSinkNamespaceLister.
+type IntegrationSinkNamespaceListerExpansion interface{}
+
 // JobSinkListerExpansion allows custom methods to be added to
 // JobSinkLister.
 type JobSinkListerExpansion interface{}
