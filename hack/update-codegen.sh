@@ -49,7 +49,7 @@ group "Knative Codegen"
 # Knative Injection
 ${KNATIVE_CODEGEN_PKG}/hack/generate-knative.sh "injection" \
   knative.dev/eventing/pkg/client knative.dev/eventing/pkg/apis \
-  "sinks:v1alpha1 eventing:v1alpha1 eventing:v1beta1 eventing:v1beta2 eventing:v1beta3 eventing:v1 messaging:v1 flows:v1 sources:v1beta2 sources:v1 duck:v1beta1 duck:v1" \
+  "sinks:v1alpha1 eventing:v1alpha1 eventing:v1beta1 eventing:v1beta2 eventing:v1beta3 eventing:v1 messaging:v1 flows:v1 sources:v1alpha1 sources:v1beta2 sources:v1 duck:v1beta1 duck:v1" \
   --go-header-file ${REPO_ROOT_DIR}/hack/boilerplate/boilerplate.go.txt
 
 group "Generating API reference docs"
