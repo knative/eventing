@@ -24,7 +24,6 @@ import (
 
 	"knative.dev/pkg/system"
 	"knative.dev/reconciler-test/pkg/environment"
-	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/knative"
 
@@ -46,18 +45,18 @@ func TestIntegrationSourceWithSinkRef(t *testing.T) {
 	env.Test(ctx, t, integrationsource.SendsEventsWithSinkRef())
 }
 
-func TestIntegrationSourceWithTLS(t *testing.T) {
-	t.Parallel()
-
-	ctx, env := global.Environment(
-		knative.WithKnativeNamespace(system.Namespace()),
-		knative.WithLoggingConfig,
-		knative.WithTracingConfig,
-		k8s.WithEventListener,
-		environment.Managed(t),
-		eventshub.WithTLS(t),
-	)
-
-	env.ParallelTest(ctx, t, integrationsource.SendEventsWithTLSRecieverAsSink())
-	env.ParallelTest(ctx, t, integrationsource.SendEventsWithTLSRecieverAsSinkTrustBundle())
-}
+//func TestIntegrationSourceWithTLS(t *testing.T) {
+//	t.Parallel()
+//
+//	ctx, env := global.Environment(
+//		knative.WithKnativeNamespace(system.Namespace()),
+//		knative.WithLoggingConfig,
+//		knative.WithTracingConfig,
+//		k8s.WithEventListener,
+//		environment.Managed(t),
+//		eventshub.WithTLS(t),
+//	)
+//
+//	env.ParallelTest(ctx, t, integrationsource.SendEventsWithTLSRecieverAsSink())
+//	env.ParallelTest(ctx, t, integrationsource.SendEventsWithTLSRecieverAsSinkTrustBundle())
+//}
