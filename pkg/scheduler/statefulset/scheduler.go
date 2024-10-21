@@ -28,11 +28,11 @@ import (
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/informers"
 	clientappsv1 "k8s.io/client-go/kubernetes/typed/apps/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/utils/integer"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/reconciler"
 
@@ -740,47 +740,66 @@ func (s *StatefulSetScheduler) removeReplicas(diff int32, placements []duckv1alp
 }
 
 func (s *StatefulSetScheduler) addReplicas(states *st.State, diff int32, placements []duckv1alpha1.Placement) ([]duckv1alpha1.Placement, int32) {
-	// Pod affinity algorithm: prefer adding replicas to existing pods before considering other replicas
-	newPlacements := make([]duckv1alpha1.Placement, 0, len(placements))
-
-	// Add to existing
-	for i := 0; i < len(placements); i++ {
-		podName := placements[i].PodName
-		ordinal := st.OrdinalFromPodName(podName)
-
-		// Is there space in PodName?
-		f := states.Free(ordinal)
-		if diff >= 0 && f > 0 {
-			allocation := integer.Int32Min(f, diff)
-			newPlacements = append(newPlacements, duckv1alpha1.Placement{
-				PodName:   podName,
-				VReplicas: placements[i].VReplicas + allocation,
-			})
-
-			diff -= allocation
-			states.SetFree(ordinal, f-allocation)
-		} else {
-			newPlacements = append(newPlacements, placements[i])
-		}
+	if states.Replicas <= 0 {
+		return placements, diff
 	}
 
-	if diff > 0 {
-		// Needs to allocate replicas to additional pods
-		for ordinal := int32(0); ordinal < s.replicas; ordinal++ {
-			f := states.Free(ordinal)
-			if f > 0 {
-				allocation := integer.Int32Min(f, diff)
-				newPlacements = append(newPlacements, duckv1alpha1.Placement{
-					PodName:   st.PodNameFromOrdinal(s.statefulSetName, ordinal),
+	newPlacements := make([]duckv1alpha1.Placement, 0, len(placements))
+
+	// Preserve existing placements
+	for _, p := range placements {
+		newPlacements = append(newPlacements, *p.DeepCopy())
+	}
+
+	candidates := make([]string, states.Replicas)
+	lastIdx := states.Replicas - 1
+	existingPlacements := sets.New[string]()
+
+	// De-prioritize existing placements pods, add existing placements to the tail of the candidates.
+	for _, placement := range placements {
+		// This should really never happen as placements are de-duped, however, better to handle
+		// edge cases in case the prerequisite doesn't hold in the future.
+		if existingPlacements.Has(placement.PodName) {
+			continue
+		}
+		candidates[lastIdx] = placement.PodName
+		lastIdx--
+		existingPlacements.Insert(placement.PodName)
+	}
+
+	// Add all the ordinals to the candidates list.
+	// De-prioritize the last ordinals over lower ordinals so that we reduce the chances for compaction.
+	for ordinal := s.replicas - 1; ordinal >= 0; ordinal-- {
+		podName := st.PodNameFromOrdinal(states.StatefulSetName, ordinal)
+		if existingPlacements.Has(podName) {
+			continue
+		}
+		candidates[lastIdx] = podName
+		lastIdx--
+	}
+
+	// Spread replicas in as many candidates as possible.
+	foundFreeCandidate := true
+	for diff > 0 && foundFreeCandidate {
+		foundFreeCandidate = false
+		for _, podName := range candidates {
+			if diff <= 0 {
+				break
+			}
+
+			ordinal := st.OrdinalFromPodName(podName)
+			// Is there space?
+			if f := states.Free(ordinal); f > 0 {
+				foundFreeCandidate = true
+				allocation := int32(1)
+
+				newPlacements = upsertPlacements(newPlacements, duckv1alpha1.Placement{
+					PodName:   st.PodNameFromOrdinal(states.StatefulSetName, ordinal),
 					VReplicas: allocation,
 				})
 
 				diff -= allocation
 				states.SetFree(ordinal, f-allocation)
-			}
-
-			if diff == 0 {
-				break
 			}
 		}
 	}
@@ -858,4 +877,19 @@ func (s *StatefulSetScheduler) Reserved() map[types.NamespacedName]map[string]in
 	}
 
 	return r
+}
+
+func upsertPlacements(placements []duckv1alpha1.Placement, placement duckv1alpha1.Placement) []duckv1alpha1.Placement {
+	found := false
+	for i := range placements {
+		if placements[i].PodName == placement.PodName {
+			placements[i].VReplicas = placements[i].VReplicas + placement.VReplicas
+			found = true
+			break
+		}
+	}
+	if !found {
+		placements = append(placements, placement)
+	}
+	return placements
 }
