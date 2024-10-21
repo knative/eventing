@@ -74,7 +74,6 @@ func TestStatefulsetScheduler(t *testing.T) {
 			vreplicas:           1,
 			replicas:            int32(0),
 			err:                 controller.NewRequeueAfter(5 * time.Second),
-			expected:            []duckv1alpha1.Placement{},
 			schedulerPolicyType: scheduler.MAXFILLUP,
 		},
 		{
@@ -130,8 +129,44 @@ func TestStatefulsetScheduler(t *testing.T) {
 			vreplicas: 15,
 			replicas:  int32(2),
 			expected: []duckv1alpha1.Placement{
-				{PodName: "statefulset-name-0", VReplicas: 10},
-				{PodName: "statefulset-name-1", VReplicas: 5},
+				{PodName: "statefulset-name-0", VReplicas: 8},
+				{PodName: "statefulset-name-1", VReplicas: 7},
+			},
+			schedulerPolicyType: scheduler.MAXFILLUP,
+		},
+		{
+			name:      "5 replicas, 4 vreplicas spread, scheduled",
+			vreplicas: 4,
+			replicas:  int32(5),
+			expected: []duckv1alpha1.Placement{
+				{PodName: "statefulset-name-0", VReplicas: 1},
+				{PodName: "statefulset-name-1", VReplicas: 1},
+				{PodName: "statefulset-name-2", VReplicas: 1},
+				{PodName: "statefulset-name-3", VReplicas: 1},
+			},
+			schedulerPolicyType: scheduler.MAXFILLUP,
+		},
+		{
+			name:      "2 replicas, 4 vreplicas spread, scheduled",
+			vreplicas: 4,
+			replicas:  int32(2),
+			expected: []duckv1alpha1.Placement{
+				{PodName: "statefulset-name-0", VReplicas: 2},
+				{PodName: "statefulset-name-1", VReplicas: 2},
+			},
+			schedulerPolicyType: scheduler.MAXFILLUP,
+		},
+		{
+			name:      "3 replicas, 2 new vreplicas spread, scheduled",
+			vreplicas: 5,
+			replicas:  int32(3),
+			placements: []duckv1alpha1.Placement{
+				{PodName: "statefulset-name-0", VReplicas: 1},
+			},
+			expected: []duckv1alpha1.Placement{
+				{PodName: "statefulset-name-0", VReplicas: 2},
+				{PodName: "statefulset-name-1", VReplicas: 2},
+				{PodName: "statefulset-name-2", VReplicas: 1},
 			},
 			schedulerPolicyType: scheduler.MAXFILLUP,
 		},
