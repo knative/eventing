@@ -81,8 +81,10 @@ type Options struct {
 	// before shutting down.
 	GracePeriod time.Duration
 
-	// DisableNamespaceOwnership configures whether the webhook adds an owner reference for the SYSTEM_NAMESPACE
-	// Disabling this is useful when you expect the webhook configuration to be managed by something other than knative
+	// DisableNamespaceOwnership configures if the SYSTEM_NAMESPACE is added as an owner reference to the
+	// webhook configuration resources. Overridden by the WEBHOOK_DISABLE_NAMESPACE_OWNERSHIP environment variable.
+	// Disabling can be useful to avoid breaking systems that expect ownership to indicate a true controller
+	// relationship: https://github.com/knative/serving/issues/15483
 	DisableNamespaceOwnership bool
 
 	// ControllerOptions encapsulates options for creating a new controller,
