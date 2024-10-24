@@ -184,17 +184,17 @@ func makeSSLEnvVar() []corev1.EnvVar {
 
 func selectImage(source *v1alpha1.IntegrationSource) string {
 	if source.Spec.Timer != nil {
-		return "quay.io/openshift-knative/timer-source:1.0-SNAPSHOT"
+		return "gcr.io/knative-nightly/timer-source:latest"
 	}
 	if source.Spec.Aws != nil {
 		if source.Spec.Aws.S3 != nil {
-			return "quay.io/openshift-knative/aws-s3-source:1.0-SNAPSHOT"
+			return "gcr.io/knative-nightly/aws-s3-source:latest"
 		}
 		if source.Spec.Aws.SQS != nil {
-			return "quay.io/openshift-knative/aws-sqs-source:1.0-SNAPSHOT"
+			return "gcr.io/knative-nightly/aws-sqs-source:latest"
 		}
 		if source.Spec.Aws.DDBStreams != nil {
-			return "quay.io/openshift-knative/aws-ddb-streams-source:1.0-SNAPSHOT"
+			return "gcr.io/knative-nightly/aws-ddb-streams-source:latest"
 		}
 	}
 	return ""
