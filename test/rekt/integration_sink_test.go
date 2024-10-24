@@ -43,7 +43,7 @@ func TestIntegrationSinkSuccess(t *testing.T) {
 	env.Test(ctx, t, integrationsink.Success())
 }
 
-//func TestJobSinkSuccessTLS(t *testing.T) {
+//func TestIntegrationSinkSuccessTLS(t *testing.T) {
 //	t.Parallel()
 //
 //	ctx, env := global.Environment(
@@ -55,8 +55,9 @@ func TestIntegrationSinkSuccess(t *testing.T) {
 //		environment.Managed(t),
 //	)
 //
-//	env.Test(ctx, t, jobsink.SuccessTLS())
+//	env.Test(ctx, t, integrationsink.SuccessTLS())
 //}
+
 //
 //func TestJobSinkOIDC(t *testing.T) {
 //	t.Parallel()

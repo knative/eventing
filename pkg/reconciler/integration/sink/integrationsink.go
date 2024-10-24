@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"go.uber.org/zap"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -41,72 +40,81 @@ type Reconciler struct {
 }
 
 func (r *Reconciler) ReconcileKind(ctx context.Context, sink *sinks.IntegrationSink) reconciler.Event {
-	pod, err := r.reconcileDeployment(ctx, sink)
-	if err != nil {
+	featureFlags := feature.FromContext(ctx)
+
+	if err := r.reconcileDeployment(ctx, sink); err != nil {
 		logging.FromContext(ctx).Errorw("Error reconciling Pod", zap.Error(err))
 		return err
 	}
 
-	if pod != nil {
-	}
-
-	service, err := r.reconcileService(ctx, sink)
-	if err != nil {
+	if err := r.reconcileService(ctx, sink); err != nil {
 		logging.FromContext(ctx).Errorw("Error reconciling Service", zap.Error(err))
 		return err
-	}
-
-	if service != nil {
 	}
 
 	if err := r.reconcileAddress(ctx, sink); err != nil {
 		return fmt.Errorf("failed to reconcile address: %w", err)
 	}
 
+	err := auth.UpdateStatusWithEventPolicies(featureFlags, &sink.Status.AppliedEventPoliciesStatus, &sink.Status, r.eventPolicyLister, sinks.SchemeGroupVersion.WithKind("IntegrationSink"), sink.ObjectMeta)
+	if err != nil {
+		return fmt.Errorf("could not update IntegrationSink status with EventPolicies: %v", err)
+	}
+
 	return nil
 }
 
-func (r *Reconciler) reconcileDeployment(ctx context.Context, sink *sinks.IntegrationSink) (*appsv1.Deployment, error) {
+func (r *Reconciler) reconcileDeployment(ctx context.Context, sink *sinks.IntegrationSink) error {
+
+	//updatedSink := sink.DeepCopy()
 
 	expected := resources.MakeDeploymentSpec(sink)
 	pod, err := r.deploymentLister.Deployments(sink.Namespace).Get(expected.Name)
 	if apierrors.IsNotFound(err) {
-		pod, err := r.kubeClientSet.AppsV1().Deployments(sink.Namespace).Create(ctx, expected, metav1.CreateOptions{})
+		pod, err = r.kubeClientSet.AppsV1().Deployments(sink.Namespace).Create(ctx, expected, metav1.CreateOptions{})
 		if err != nil {
-			return nil, fmt.Errorf("creating new Deployment: %v", err)
+			return fmt.Errorf("creating new Deployment: %v", err)
 		}
 		controller.GetEventRecorder(ctx).Eventf(sink, corev1.EventTypeNormal, "FIXME___reconciled", "Deployment created %q", pod.Name)
+		//sink.Status.PropagateDeploymentAvailability(&pod.Status)
+
 	} else if err != nil {
-		return nil, fmt.Errorf("getting Deployment: %v", err)
+		return fmt.Errorf("getting Deployment: %v", err)
 	} else if !metav1.IsControlledBy(pod, sink) {
-		return nil, fmt.Errorf("pod %q is not owned by KameletSink %q", pod.Name, sink.Name)
+		return fmt.Errorf("pod %q is not owned by KameletSink %q", pod.Name, sink.Name)
 	} else {
 		logging.FromContext(ctx).Debugw("Reusing existing Deployment", zap.Any("Pod", pod))
 
 	}
 
-	return pod, nil
+	////logging.FromContext(ctx).Infow("Reusing existing Deployment", zap.Any("Pod", pod))
+	////logging.FromContext(ctx).Infow("Reusing existing Deployment", zap.Any("Status", pod.Status))
+	////logging.FromContext(ctx).Infow("Reusing existing Deployment", zap.Any("sink", sink))
+	////logging.FromContext(ctx).Infow("Reusing existing Deployment", zap.Any("sink-Status", sink.Status))
+	//
+	sink.Status.PropagateDeploymentAvailability(&pod.Status)
+	return nil
 }
 
-func (r *Reconciler) reconcileService(ctx context.Context, sink *sinks.IntegrationSink) (*corev1.Service, error) {
+func (r *Reconciler) reconcileService(ctx context.Context, sink *sinks.IntegrationSink) error {
 	expected := resources.MakeService(sink)
 
 	svc, err := r.serviceLister.Services(sink.Namespace).Get(expected.Name)
 	if apierrors.IsNotFound(err) {
 		svc, err := r.kubeClientSet.CoreV1().Services(sink.Namespace).Create(ctx, expected, metav1.CreateOptions{})
 		if err != nil {
-			return nil, fmt.Errorf("creating new Service: %v", err)
+			return fmt.Errorf("creating new Service: %v", err)
 		}
 		controller.GetEventRecorder(ctx).Eventf(sink, corev1.EventTypeNormal, "FIXME___reconciled", "Service created %q", svc.Name)
 	} else if err != nil {
-		return nil, fmt.Errorf("getting Service : %v", err)
+		return fmt.Errorf("getting Service : %v", err)
 	} else if !metav1.IsControlledBy(svc, sink) {
-		return nil, fmt.Errorf("service %q is not owned by KameletSink %q", svc.Name, sink.Name)
+		return fmt.Errorf("service %q is not owned by KameletSink %q", svc.Name, sink.Name)
 	} else {
 		logging.FromContext(ctx).Debugw("Reusing existing Service", zap.Any("Service", svc))
 	}
 
-	return svc, nil
+	return nil
 }
 
 func (r *Reconciler) reconcileAddress(ctx context.Context, sink *sinks.IntegrationSink) error {

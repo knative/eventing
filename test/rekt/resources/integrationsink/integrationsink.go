@@ -17,7 +17,7 @@ import (
 var yamlEmbed embed.FS
 
 func GVR() schema.GroupVersionResource {
-	return schema.GroupVersionResource{Group: "sinks.knative.dev", Version: "v1alpha1", Resource: "integrationsink"}
+	return schema.GroupVersionResource{Group: "sinks.knative.dev", Version: "v1alpha1", Resource: "integrationsinks"}
 }
 
 // WithAnnotations adds annotations to the IntegrationSink.

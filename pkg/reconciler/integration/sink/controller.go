@@ -4,6 +4,8 @@ import (
 	"context"
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/eventing/pkg/apis/feature"
+	v1alpha1 "knative.dev/eventing/pkg/apis/sinks/v1alpha1"
+	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventpolicy"
 	"knative.dev/eventing/pkg/client/injection/informers/sinks/v1alpha1/integrationsink"
 	deploymentinformer "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment"
@@ -64,20 +66,25 @@ func NewController(
 		impl.GlobalResync(integrationSinkInformer.Informer())
 	}
 
+	deploymentInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: controller.FilterControllerGVK(v1alpha1.SchemeGroupVersion.WithKind("IntegrationSink")),
+		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
+	})
+
 	secretInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.FilterWithName(eventingtls.IntegrationSinkDispatcherServerTLSSecretName),
 		Handler:    controller.HandleAll(globalResync),
 	})
 
-	//integrationSinkGK := sinksv1alpha1.SchemeGroupVersion.WithKind("IntegrationSink").GroupKind()
-	//
-	//// Enqueue the JobSink, if we have an EventPolicy which was referencing
-	//// or got updated and now is referencing the JobSink.
-	//eventPolicyInformer.Informer().AddEventHandler(auth.EventPolicyEventHandler(
-	//	integrationSinkInformer.Informer().GetIndexer(),
-	//	integrationSinkGK,
-	//	impl.EnqueueKey,
-	//))
-	//
+	integrationSinkGK := v1alpha1.SchemeGroupVersion.WithKind("IntegrationSink").GroupKind()
+
+	// Enqueue the JobSink, if we have an EventPolicy which was referencing
+	// or got updated and now is referencing the JobSink.
+	eventPolicyInformer.Informer().AddEventHandler(auth.EventPolicyEventHandler(
+		integrationSinkInformer.Informer().GetIndexer(),
+		integrationSinkGK,
+		impl.EnqueueKey,
+	))
+
 	return impl
 }

@@ -17,6 +17,8 @@ limitations under the License.
 package v1alpha1
 
 import (
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
@@ -27,6 +29,9 @@ const (
 
 	IntegrationSinkConditionAddressable apis.ConditionType = "Addressable"
 
+	// IntegrationSinkConditionDeploymentReady has status True when the IntegrationSink has been configured with a deployment.
+	IntegrationSinkConditionDeploymentReady apis.ConditionType = "DeploymentReady"
+
 	// IntegrationSinkConditionEventPoliciesReady has status True when all the applying EventPolicies for this
 	// IntegrationSink are ready.
 	IntegrationSinkConditionEventPoliciesReady apis.ConditionType = "EventPoliciesReady"
@@ -34,6 +39,7 @@ const (
 
 var IntegrationSinkCondSet = apis.NewLivingConditionSet(
 	IntegrationSinkConditionAddressable,
+	IntegrationSinkConditionDeploymentReady,
 	IntegrationSinkConditionEventPoliciesReady,
 )
 
@@ -85,6 +91,25 @@ func (s *IntegrationSinkStatus) MarkEventPoliciesTrue() {
 // MarkEventPoliciesTrueWithReason marks the EventPoliciesReady condition to True with the given reason and message.
 func (s *IntegrationSinkStatus) MarkEventPoliciesTrueWithReason(reason, messageFormat string, messageA ...interface{}) {
 	IntegrationSinkCondSet.Manage(s).MarkTrueWithReason(IntegrationSinkConditionEventPoliciesReady, reason, messageFormat, messageA...)
+}
+
+func (s *IntegrationSinkStatus) PropagateDeploymentAvailability(d *appsv1.DeploymentStatus) {
+	deploymentAvailableFound := false
+	for _, cond := range d.Conditions {
+		if cond.Type == appsv1.DeploymentAvailable {
+			deploymentAvailableFound = true
+			if cond.Status == corev1.ConditionTrue {
+				IntegrationSinkCondSet.Manage(s).MarkTrue(IntegrationSinkConditionDeploymentReady)
+			} else if cond.Status == corev1.ConditionFalse {
+				IntegrationSinkCondSet.Manage(s).MarkFalse(IntegrationSinkConditionDeploymentReady, cond.Reason, cond.Message)
+			} else if cond.Status == corev1.ConditionUnknown {
+				IntegrationSinkCondSet.Manage(s).MarkUnknown(IntegrationSinkConditionDeploymentReady, cond.Reason, cond.Message)
+			}
+		}
+	}
+	if !deploymentAvailableFound {
+		IntegrationSinkCondSet.Manage(s).MarkUnknown(IntegrationSinkConditionDeploymentReady, "DeploymentUnavailable", "The Deployment '%s' is unavailable.", d)
+	}
 }
 
 func (s *IntegrationSinkStatus) SetAddress(address *duckv1.Addressable) {
