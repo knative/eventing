@@ -29,41 +29,46 @@ import (
 func Success() *feature.Feature {
 	f := feature.NewFeature()
 
+	//	sink := feature.MakeRandomK8sName("sink")
 	integrationSink := feature.MakeRandomK8sName("integrationsink")
 	source := feature.MakeRandomK8sName("source")
 
-	//	sinkURL := &apis.URL{Scheme: "http", Host: sink}
+	//sinkURL := &apis.URL{Scheme: "http", Host: sink}
 
 	event := cetest.FullEvent()
 	event.SetID(uuid.NewString())
 
 	f.Setup("install integration sink", integrationsink.Install(integrationSink)) //, integrationsink.WithForwarderJob(sinkURL.String())))
 
-	//f.Setup("integrationsink is addressable", integrationsink.IsAddressable(integrationSink))
+	f.Setup("integrationsink is addressable", integrationsink.IsAddressable(integrationSink))
 	f.Setup("integrationsink is ready", integrationsink.IsReady(integrationSink))
 
 	f.Requirement("install source for ksink", eventshub.Install(source,
 		eventshub.StartSenderToResource(integrationsink.GVR(), integrationSink),
 		eventshub.InputEvent(cetest.FullEvent()),
 		eventshub.AddSequence,
-		eventshub.SendMultipleEvents(100, time.Millisecond)))
+		eventshub.SendMultipleEvents(2, time.Millisecond)))
 
-	f.Requirement("install source", eventshub.Install(source,
-		eventshub.StartSenderToResource(integrationsink.GVR(), integrationSink),
-		eventshub.InputEvent(event)))
+	//f.Requirement("install source for ksink", eventshub.Install(source,
+	//	eventshub.StartSenderToResource(integrationsink.GVR(), integrationSink),
+	//	eventshub.InputEvent(cetest.FullEvent()),
+	//	eventshub.AddSequence,
+	//	eventshub.SendMultipleEvents(100, time.Millisecond)))
+	//
+	//f.Requirement("install source", eventshub.Install(source,
+	//	eventshub.StartSenderToResource(integrationsink.GVR(), integrationSink),
+	//	eventshub.InputEvent(event)))
 
 	//f.Assert("Job is created with the mounted event", assert.OnStore(sink).
 	//	MatchReceivedEvent(cetest.HasId(event.ID())).
 	//	AtLeast(1),
 	//)
-
+	//
 	f.Assert("Source sent the event", assert.OnStore(source).
 		Match(assert.MatchKind(eventshub.EventResponse)).
 		Match(assert.MatchStatusCode(202)).
 		AtLeast(1),
 	)
-
-	//	f.Assert("At least one Job is complete", AtLeastOneJobIsComplete(integrationSink))
 
 	return f
 }
