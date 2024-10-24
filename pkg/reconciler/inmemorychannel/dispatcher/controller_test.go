@@ -41,7 +41,7 @@ import (
 	_ "knative.dev/pkg/injection/clients/namespacedkube/informers/core/v1/secret/fake"
 
 	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventpolicy/fake"
-	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta2/eventtype/fake"
+	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta3/eventtype/fake"
 	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/inmemorychannel/fake"
 )
 
