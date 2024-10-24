@@ -18,6 +18,7 @@ package integrationsource
 
 import (
 	"context"
+
 	"github.com/cloudevents/sdk-go/v2/test"
 	"knative.dev/eventing/test/rekt/features/featureflags"
 	"knative.dev/eventing/test/rekt/features/source"

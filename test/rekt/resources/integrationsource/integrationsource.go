@@ -3,14 +3,15 @@ package integrationsource
 import (
 	"context"
 	"embed"
+	"strings"
+	"time"
+
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/manifest"
-	"strings"
-	"time"
 )
 
 //go:embed integrationsource.yaml

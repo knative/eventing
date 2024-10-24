@@ -19,8 +19,9 @@ package v1alpha1
 import (
 	"context"
 	"errors"
-	"knative.dev/pkg/apis"
 	"testing"
+
+	"knative.dev/pkg/apis"
 )
 
 // implement apis.Convertible

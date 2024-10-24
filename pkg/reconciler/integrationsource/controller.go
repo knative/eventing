@@ -18,6 +18,7 @@ package integrationsource
 
 import (
 	"context"
+
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/cache"

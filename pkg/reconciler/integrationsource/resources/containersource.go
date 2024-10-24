@@ -2,14 +2,15 @@ package resources
 
 import (
 	"fmt"
+	"reflect"
+	"strconv"
+	"strings"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	"knative.dev/pkg/kmeta"
-	"reflect"
-	"strconv"
-	"strings"
 )
 
 func NewContainerSource(source *v1alpha1.IntegrationSource) *sourcesv1.ContainerSource {
