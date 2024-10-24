@@ -41,7 +41,7 @@ func NewContainerSource(source *v1alpha1.IntegrationSource) *sourcesv1.Container
 }
 
 func generateEnvVarsFromStruct(prefix string, s interface{}) []corev1.EnvVar {
-	var envVars []corev1.EnvVar
+	var envVars = makeSSLEnvVar()
 
 	// Use reflection to inspect the struct fields
 	v := reflect.ValueOf(s)
@@ -166,6 +166,19 @@ func makeEnv(source *v1alpha1.IntegrationSource) []corev1.EnvVar {
 
 	// If no valid configuration is found, return empty envVars
 	return envVars
+}
+
+func makeSSLEnvVar() []corev1.EnvVar {
+	return []corev1.EnvVar{
+		{
+			Name:  "CAMEL_KNATIVE_CLIENT_SSL_ENABLED",
+			Value: "true",
+		},
+		{
+			Name:  "CAMEL_KNATIVE_CLIENT_SSL_CERT_PATH",
+			Value: "/knative-custom-certs/knative-eventing-bundle.pem",
+		},
+	}
 }
 
 func selectImage(source *v1alpha1.IntegrationSource) string {
