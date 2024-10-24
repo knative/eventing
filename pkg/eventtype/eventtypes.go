@@ -29,18 +29,18 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	"knative.dev/eventing/pkg/apis/eventing/v1beta2"
+	"knative.dev/eventing/pkg/apis/eventing/v1beta3"
 	"knative.dev/eventing/pkg/apis/feature"
-	eventingv1beta2 "knative.dev/eventing/pkg/client/clientset/versioned/typed/eventing/v1beta2"
-	v1beta22 "knative.dev/eventing/pkg/client/listers/eventing/v1beta2"
+	eventingv1beta3 "knative.dev/eventing/pkg/client/clientset/versioned/typed/eventing/v1beta3"
+	v1beta33 "knative.dev/eventing/pkg/client/listers/eventing/v1beta3"
 	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 type EventTypeAutoHandler struct {
-	EventTypeLister v1beta22.EventTypeLister
-	EventingClient  eventingv1beta2.EventingV1beta2Interface
+	EventTypeLister v1beta33.EventTypeLister
+	EventingClient  eventingv1beta3.EventingV1beta3Interface
 	FeatureStore    *feature.Store
 	Logger          *zap.Logger
 }
@@ -80,7 +80,7 @@ func (h *EventTypeAutoHandler) AutoCreateEventType(ctx context.Context, event *e
 		source, _ := apis.ParseURL(event.Source())
 		schema, _ := apis.ParseURL(event.DataSchema())
 
-		et := &v1beta2.EventType{
+		et := &v1beta3.EventType{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      eventTypeName,
 				Namespace: addressable.Namespace,
@@ -93,11 +93,14 @@ func (h *EventTypeAutoHandler) AutoCreateEventType(ctx context.Context, event *e
 					},
 				},
 			},
-			Spec: v1beta2.EventTypeSpec{
-				Type:        event.Type(),
-				Source:      source,
-				Schema:      schema,
-				SchemaData:  event.DataSchema(),
+			Spec: v1beta3.EventTypeSpec{
+				Attributes: []v1beta3.EventAttributeDefinition{
+					{Name: "type", Value: event.Type(), Required: true},
+					{Name: "source", Value: source.String(), Required: true},
+					{Name: "schemadata", Value: schema.String(), Required: true},
+					{Name: "specversion", Value: event.SpecVersion(), Required: true},
+					{Name: "id", Required: false},
+				},
 				Reference:   addressable,
 				Description: "Event Type auto-created by controller",
 			},
