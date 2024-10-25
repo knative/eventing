@@ -30,6 +30,7 @@ import (
 	kubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/apps/v1/statefulset/fake"
 	"knative.dev/pkg/controller"
+	"knative.dev/pkg/reconciler"
 
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	listers "knative.dev/eventing/pkg/reconciler/testing/v1"
@@ -310,8 +311,7 @@ func TestStatefulsetScheduler(t *testing.T) {
 			vreplicas: 2,
 			replicas:  int32(4),
 			expected: []duckv1alpha1.Placement{
-				{PodName: "statefulset-name-1", VReplicas: 1},
-				{PodName: "statefulset-name-3", VReplicas: 1},
+				{PodName: "statefulset-name-3", VReplicas: 2},
 			},
 			initialReserved: map[types.NamespacedName]map[string]int32{
 				types.NamespacedName{Namespace: vpodNamespace + "-a", Name: vpodName}: {
@@ -326,8 +326,7 @@ func TestStatefulsetScheduler(t *testing.T) {
 					"statefulset-name-0": 10,
 				},
 				types.NamespacedName{Namespace: vpodNamespace, Name: vpodName}: {
-					"statefulset-name-3": 1,
-					"statefulset-name-1": 1,
+					"statefulset-name-3": 2,
 				},
 			},
 		},
@@ -404,9 +403,9 @@ func TestStatefulsetScheduler(t *testing.T) {
 				{PodName: "statefulset-name-3", VReplicas: 1},
 			},
 			expected: []duckv1alpha1.Placement{
-				{PodName: "statefulset-name-1", VReplicas: 1},
+				{PodName: "statefulset-name-1", VReplicas: 2},
 				{PodName: "statefulset-name-2", VReplicas: 1},
-				{PodName: "statefulset-name-3", VReplicas: 2},
+				{PodName: "statefulset-name-3", VReplicas: 1},
 			},
 			initialReserved: map[types.NamespacedName]map[string]int32{
 				types.NamespacedName{Namespace: vpodNamespace + "-a", Name: vpodName}: {
@@ -422,9 +421,9 @@ func TestStatefulsetScheduler(t *testing.T) {
 					"statefulset-name-0": 10,
 				},
 				types.NamespacedName{Namespace: vpodNamespace, Name: vpodName}: {
-					"statefulset-name-1": 1,
+					"statefulset-name-1": 2,
 					"statefulset-name-2": 1,
-					"statefulset-name-3": 2,
+					"statefulset-name-3": 1,
 				},
 			},
 		},
@@ -462,7 +461,7 @@ func TestStatefulsetScheduler(t *testing.T) {
 			},
 		},
 		{
-			name:      "issue",
+			name:      "Scale one replica up with many existing placements",
 			vreplicas: 32,
 			replicas:  int32(2),
 			placements: []duckv1alpha1.Placement{
@@ -527,6 +526,36 @@ func TestStatefulsetScheduler(t *testing.T) {
 			},
 			capacity: 20,
 		},
+		{
+			name:      "Reserved inconsistent with placements",
+			vreplicas: 32,
+			replicas:  int32(2),
+			placements: []duckv1alpha1.Placement{
+				{PodName: "statefulset-name-0", VReplicas: 1},
+			},
+			expected: []duckv1alpha1.Placement{
+				{PodName: "statefulset-name-0", VReplicas: 13},
+				{PodName: "statefulset-name-1", VReplicas: 19},
+			},
+			initialReserved: map[types.NamespacedName]map[string]int32{
+				types.NamespacedName{Namespace: vpodNamespace + "-a", Name: vpodName}: {
+					"statefulset-name-0": 7,
+				},
+				types.NamespacedName{Namespace: vpodNamespace, Name: vpodName}: {
+					"statefulset-name-0": 7,
+				},
+			},
+			expectedReserved: map[types.NamespacedName]map[string]int32{
+				types.NamespacedName{Namespace: vpodNamespace + "-a", Name: vpodName}: {
+					"statefulset-name-0": 7,
+				},
+				types.NamespacedName{Namespace: vpodNamespace, Name: vpodName}: {
+					"statefulset-name-0": 13,
+					"statefulset-name-1": 19,
+				},
+			},
+			capacity: 20,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -547,7 +576,7 @@ func TestStatefulsetScheduler(t *testing.T) {
 				podlist = append(podlist, pod)
 			}
 
-			capacity := int32(0)
+			capacity := int32(10)
 			if tc.capacity > 0 {
 				capacity = tc.capacity
 			}
@@ -565,6 +594,10 @@ func TestStatefulsetScheduler(t *testing.T) {
 				VPodLister:           vpodClient.List,
 			}
 			s := newStatefulSetScheduler(ctx, cfg, sa, nil)
+			err = s.Promote(reconciler.UniversalBucket(), func(bucket reconciler.Bucket, name types.NamespacedName) {})
+			if err != nil {
+				t.Fatal("unexpected error", err)
+			}
 			if tc.initialReserved != nil {
 				s.reserved = tc.initialReserved
 			}
