@@ -50,7 +50,7 @@ import (
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	brokerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/broker"
 	eventpolicyinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventpolicy"
-	eventtypeinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta2/eventtype"
+	eventtypeinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta3/eventtype"
 	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/eventtype"
 	"knative.dev/eventing/pkg/reconciler/names"
@@ -153,7 +153,7 @@ func main() {
 		if featureFlags.IsEnabled(feature.EvenTypeAutoCreate) && featureStore != nil && handler != nil {
 			autoCreate := &eventtype.EventTypeAutoHandler{
 				EventTypeLister: eventtypeinformer.Get(ctx).Lister(),
-				EventingClient:  eventingclient.Get(ctx).EventingV1beta2(),
+				EventingClient:  eventingclient.Get(ctx).EventingV1beta3(),
 				FeatureStore:    featureStore,
 				Logger:          logger,
 			}
@@ -190,7 +190,7 @@ func main() {
 	if featureStore.IsEnabled(feature.EvenTypeAutoCreate) {
 		autoCreate := &eventtype.EventTypeAutoHandler{
 			EventTypeLister: eventtypeinformer.Get(ctx).Lister(),
-			EventingClient:  eventingclient.Get(ctx).EventingV1beta2(),
+			EventingClient:  eventingclient.Get(ctx).EventingV1beta3(),
 			FeatureStore:    featureStore,
 			Logger:          logger,
 		}
