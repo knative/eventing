@@ -556,6 +556,89 @@ func TestStatefulsetScheduler(t *testing.T) {
 			},
 			capacity: 20,
 		},
+		{
+			name:       "Reserved and overcommit",
+			vreplicas:  32,
+			replicas:   int32(2),
+			placements: []duckv1alpha1.Placement{},
+			expected: []duckv1alpha1.Placement{
+				{PodName: "statefulset-name-0", VReplicas: 9},
+				{PodName: "statefulset-name-1", VReplicas: 20},
+			},
+			initialReserved: map[types.NamespacedName]map[string]int32{
+				types.NamespacedName{Namespace: vpodNamespace + "-a", Name: vpodName}: {
+					"statefulset-name-0": 11,
+				},
+				types.NamespacedName{Namespace: vpodNamespace, Name: vpodName}: {
+					"statefulset-name-0": 17,
+				},
+			},
+			expectedReserved: map[types.NamespacedName]map[string]int32{
+				types.NamespacedName{Namespace: vpodNamespace + "-a", Name: vpodName}: {
+					"statefulset-name-0": 11,
+				},
+				types.NamespacedName{Namespace: vpodNamespace, Name: vpodName}: {
+					"statefulset-name-0": 9,
+					"statefulset-name-1": 20,
+				},
+			},
+			capacity: 20,
+			err:      controller.NewRequeueAfter(5 * time.Second),
+		},
+		{
+			name:       "Reserved and overcommit, remove the full placement",
+			vreplicas:  32,
+			replicas:   int32(1),
+			placements: []duckv1alpha1.Placement{},
+			initialReserved: map[types.NamespacedName]map[string]int32{
+				types.NamespacedName{Namespace: vpodNamespace + "-a", Name: vpodName}: {
+					"statefulset-name-0": 18,
+				},
+				types.NamespacedName{Namespace: vpodNamespace + "-b", Name: vpodName}: {
+					"statefulset-name-0": 2,
+				},
+				types.NamespacedName{Namespace: vpodNamespace, Name: vpodName}: {
+					"statefulset-name-0": 10,
+				},
+			},
+			expectedReserved: map[types.NamespacedName]map[string]int32{
+				types.NamespacedName{Namespace: vpodNamespace + "-a", Name: vpodName}: {
+					"statefulset-name-0": 18,
+				},
+				types.NamespacedName{Namespace: vpodNamespace + "-b", Name: vpodName}: {
+					"statefulset-name-0": 2,
+				},
+			},
+			capacity: 20,
+			err:      controller.NewRequeueAfter(5 * time.Second),
+		},
+		{
+			name:       "Reserved and overcommit, remove the full placement, keep others overcommitted replicas",
+			vreplicas:  32,
+			replicas:   int32(1),
+			placements: []duckv1alpha1.Placement{},
+			initialReserved: map[types.NamespacedName]map[string]int32{
+				types.NamespacedName{Namespace: vpodNamespace + "-a", Name: vpodName}: {
+					"statefulset-name-0": 18,
+				},
+				types.NamespacedName{Namespace: vpodNamespace + "-b", Name: vpodName}: {
+					"statefulset-name-0": 3,
+				},
+				types.NamespacedName{Namespace: vpodNamespace, Name: vpodName}: {
+					"statefulset-name-0": 10,
+				},
+			},
+			expectedReserved: map[types.NamespacedName]map[string]int32{
+				types.NamespacedName{Namespace: vpodNamespace + "-a", Name: vpodName}: {
+					"statefulset-name-0": 18,
+				},
+				types.NamespacedName{Namespace: vpodNamespace + "-b", Name: vpodName}: {
+					"statefulset-name-0": 3,
+				},
+			},
+			capacity: 20,
+			err:      controller.NewRequeueAfter(5 * time.Second),
+		},
 	}
 
 	for _, tc := range testCases {
