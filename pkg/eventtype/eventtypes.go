@@ -99,7 +99,7 @@ func (h *EventTypeAutoHandler) AutoCreateEventType(ctx context.Context, event *e
 					{Name: "source", Value: source.String(), Required: true},
 					{Name: "schemadata", Value: schema.String(), Required: true},
 					{Name: "specversion", Value: event.SpecVersion(), Required: true},
-					{Name: "id", Required: false},
+					{Name: "id", Required: true},
 				},
 				Reference:   addressable,
 				Description: "Event Type auto-created by controller",
