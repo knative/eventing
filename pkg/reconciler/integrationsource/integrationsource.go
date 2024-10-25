@@ -26,8 +26,6 @@ const (
 	// Name of the corev1.Events emitted from the reconciliation process
 	containerSourceCreated = "ContainerSourceCreated"
 	containerSourceUpdated = "ContainerSourceUpdated"
-
-	component = "integrationsource"
 )
 
 // Reconciler implements controller.Reconciler for ContainerSource resources.
