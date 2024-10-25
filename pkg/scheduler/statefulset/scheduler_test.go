@@ -55,6 +55,7 @@ func TestStatefulsetScheduler(t *testing.T) {
 		pending          map[types.NamespacedName]int32
 		initialReserved  map[types.NamespacedName]map[string]int32
 		expectedReserved map[types.NamespacedName]map[string]int32
+		capacity         int32
 	}{
 		{
 			name:      "no replicas, no vreplicas",
@@ -460,6 +461,72 @@ func TestStatefulsetScheduler(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:      "issue",
+			vreplicas: 32,
+			replicas:  int32(2),
+			placements: []duckv1alpha1.Placement{
+				{PodName: "statefulset-name-0", VReplicas: 1},
+			},
+			expected: []duckv1alpha1.Placement{
+				{PodName: "statefulset-name-0", VReplicas: 13},
+				{PodName: "statefulset-name-1", VReplicas: 19},
+			},
+			initialReserved: map[types.NamespacedName]map[string]int32{
+				types.NamespacedName{Namespace: vpodNamespace + "-a", Name: vpodName}: {
+					"statefulset-name-0": 1,
+				},
+				types.NamespacedName{Namespace: vpodNamespace + "-b", Name: vpodName}: {
+					"statefulset-name-0": 1,
+				},
+				types.NamespacedName{Namespace: vpodNamespace + "-c", Name: vpodName}: {
+					"statefulset-name-0": 1,
+				},
+				types.NamespacedName{Namespace: vpodNamespace + "-d", Name: vpodName}: {
+					"statefulset-name-0": 1,
+				},
+				types.NamespacedName{Namespace: vpodNamespace + "-e", Name: vpodName}: {
+					"statefulset-name-0": 1,
+				},
+				types.NamespacedName{Namespace: vpodNamespace + "-f", Name: vpodName}: {
+					"statefulset-name-0": 1,
+				},
+				types.NamespacedName{Namespace: vpodNamespace + "-g", Name: vpodName}: {
+					"statefulset-name-0": 1,
+				},
+				types.NamespacedName{Namespace: vpodNamespace, Name: vpodName}: {
+					"statefulset-name-0": 1,
+				},
+			},
+			expectedReserved: map[types.NamespacedName]map[string]int32{
+				types.NamespacedName{Namespace: vpodNamespace + "-a", Name: vpodName}: {
+					"statefulset-name-0": 1,
+				},
+				types.NamespacedName{Namespace: vpodNamespace + "-b", Name: vpodName}: {
+					"statefulset-name-0": 1,
+				},
+				types.NamespacedName{Namespace: vpodNamespace + "-c", Name: vpodName}: {
+					"statefulset-name-0": 1,
+				},
+				types.NamespacedName{Namespace: vpodNamespace + "-d", Name: vpodName}: {
+					"statefulset-name-0": 1,
+				},
+				types.NamespacedName{Namespace: vpodNamespace + "-e", Name: vpodName}: {
+					"statefulset-name-0": 1,
+				},
+				types.NamespacedName{Namespace: vpodNamespace + "-f", Name: vpodName}: {
+					"statefulset-name-0": 1,
+				},
+				types.NamespacedName{Namespace: vpodNamespace + "-g", Name: vpodName}: {
+					"statefulset-name-0": 1,
+				},
+				types.NamespacedName{Namespace: vpodNamespace, Name: vpodName}: {
+					"statefulset-name-0": 13,
+					"statefulset-name-1": 19,
+				},
+			},
+			capacity: 20,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -480,13 +547,18 @@ func TestStatefulsetScheduler(t *testing.T) {
 				podlist = append(podlist, pod)
 			}
 
+			capacity := int32(0)
+			if tc.capacity > 0 {
+				capacity = tc.capacity
+			}
+
 			_, err := kubeclient.Get(ctx).AppsV1().StatefulSets(testNs).Create(ctx, tscheduler.MakeStatefulset(testNs, sfsName, tc.replicas), metav1.CreateOptions{})
 			if err != nil {
 				t.Fatal("unexpected error", err)
 			}
 			lsp := listers.NewListers(podlist)
 			scaleCache := scheduler.NewScaleCache(ctx, testNs, kubeclient.Get(ctx).AppsV1().StatefulSets(testNs), scheduler.ScaleCacheConfig{RefreshPeriod: time.Minute * 5})
-			sa := state.NewStateBuilder(sfsName, vpodClient.List, 10, lsp.GetPodLister().Pods(testNs), scaleCache)
+			sa := state.NewStateBuilder(sfsName, vpodClient.List, capacity, lsp.GetPodLister().Pods(testNs), scaleCache)
 			cfg := &Config{
 				StatefulSetNamespace: testNs,
 				StatefulSetName:      sfsName,
