@@ -303,14 +303,14 @@ func (s *State) MarshalJSON() ([]byte, error) {
 		Capacity:        s.Capacity,
 		Replicas:        s.Replicas,
 		StatefulSetName: s.StatefulSetName,
-		PodSpread:       toJSONable(s.PodSpread),
+		PodSpread:       ToJSONable(s.PodSpread),
 		Pending:         toJSONablePending(s.Pending),
 	}
 
 	return json.Marshal(sj)
 }
 
-func toJSONable(ps map[types.NamespacedName]map[string]int32) map[string]map[string]int32 {
+func ToJSONable(ps map[types.NamespacedName]map[string]int32) map[string]map[string]int32 {
 	r := make(map[string]map[string]int32, len(ps))
 	for k, v := range ps {
 		r[k.String()] = v
