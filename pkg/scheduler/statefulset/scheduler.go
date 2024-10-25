@@ -294,11 +294,13 @@ func (s *StatefulSetScheduler) scheduleVPod(ctx context.Context, vpod scheduler.
 				if p.VReplicas >= overcommit {
 					state.SetFree(ordinal, 0)
 					state.Pending[vpod.GetKey()] += overcommit
+					reservedByPodName[p.PodName] -= overcommit
 
 					p.VReplicas = p.VReplicas - overcommit
 				} else {
 					state.SetFree(ordinal, p.VReplicas-overcommit)
 					state.Pending[vpod.GetKey()] += p.VReplicas
+					reservedByPodName[p.PodName] -= p.VReplicas
 
 					p.VReplicas = 0
 				}
