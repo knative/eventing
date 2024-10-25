@@ -127,8 +127,34 @@ var (
 
 // Promote implements reconciler.LeaderAware.
 func (s *StatefulSetScheduler) Promote(b reconciler.Bucket, enq func(reconciler.Bucket, types.NamespacedName)) error {
+	if !b.Has(ephemeralLeaderElectionObject) {
+		return nil
+	}
+
 	if v, ok := s.autoscaler.(reconciler.LeaderAware); ok {
 		return v.Promote(b, enq)
+	}
+	if err := s.initReserved(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *StatefulSetScheduler) initReserved() error {
+	s.reservedMu.Lock()
+	defer s.reservedMu.Unlock()
+
+	vPods, err := s.vpodLister()
+	if err != nil {
+		return fmt.Errorf("failed to list vPods during init: %w", err)
+	}
+
+	s.reserved = make(map[types.NamespacedName]map[string]int32, len(vPods))
+	for _, vPod := range vPods {
+		s.reserved[vPod.GetKey()] = make(map[string]int32, len(vPod.GetPlacements()))
+		for _, placement := range vPod.GetPlacements() {
+			s.reserved[vPod.GetKey()][placement.PodName] += placement.VReplicas
+		}
 	}
 	return nil
 }
@@ -215,21 +241,27 @@ func (s *StatefulSetScheduler) scheduleVPod(ctx context.Context, vpod scheduler.
 		return nil, err
 	}
 
-	existingPlacements := vpod.GetPlacements()
-
 	reservedByPodName := make(map[string]int32, 2)
-	for k, v := range s.reserved {
-		if k.Namespace == vpod.GetKey().Namespace && k.Name == vpod.GetKey().Name {
-			// Skip adding reserved for our vpod.
-			continue
-		}
+	for _, v := range s.reserved {
 		for podName, vReplicas := range v {
 			v, _ := reservedByPodName[podName]
 			reservedByPodName[podName] = vReplicas + v
 		}
 	}
 
-	logger.Debugw("scheduling",
+	// Use reserved placements as starting point, if we have them.
+	existingPlacements := make([]duckv1alpha1.Placement, 0)
+	if placements, ok := s.reserved[vpod.GetKey()]; ok {
+		existingPlacements = make([]duckv1alpha1.Placement, 0, len(placements))
+		for podName, n := range placements {
+			existingPlacements = append(existingPlacements, duckv1alpha1.Placement{
+				PodName:   podName,
+				VReplicas: n,
+			})
+		}
+	}
+
+	logger.Debugw("scheduling state",
 		zap.Any("state", state),
 		zap.Any("reservedByPodName", reservedByPodName),
 		zap.Any("reserved", st.ToJSONable(s.reserved)),
@@ -249,14 +281,13 @@ func (s *StatefulSetScheduler) scheduleVPod(ctx context.Context, vpod scheduler.
 			}
 
 			// Handle overcommitted pods.
-			f := state.Free(ordinal)
 			reserved, _ := reservedByPodName[p.PodName]
-			if f-reserved < 0 {
+			if state.Capacity-reserved < 0 {
 				// vr > free => vr: 9, overcommit 4 -> free: 0, vr: 5, pending: +4
 				// vr = free => vr: 4, overcommit 4 -> free: 0, vr: 0, pending: +4
 				// vr < free => vr: 3, overcommit 4 -> free: -1, vr: 0, pending: +3
 
-				overcommit := -(f - reserved)
+				overcommit := -(state.Capacity - reserved)
 
 				logger.Debugw("overcommit", zap.Any("overcommit", overcommit), zap.Any("placement", p))
 
@@ -374,7 +405,7 @@ func (s *StatefulSetScheduler) addReplicas(states *st.State, reservedByPodName m
 			ordinal := st.OrdinalFromPodName(podName)
 			reserved, _ := reservedByPodName[podName]
 			// Is there space?
-			if f := states.Free(ordinal); f-reserved > 0 {
+			if states.Capacity-reserved > 0 {
 				foundFreeCandidate = true
 				allocation := int32(1)
 
@@ -384,7 +415,7 @@ func (s *StatefulSetScheduler) addReplicas(states *st.State, reservedByPodName m
 				})
 
 				diff -= allocation
-				states.SetFree(ordinal, f-allocation)
+				reservedByPodName[podName] += allocation
 			}
 		}
 	}
@@ -403,7 +434,13 @@ func (s *StatefulSetScheduler) candidatesOrdered(states *st.State, vpod schedule
 	lastIdx := states.Replicas - 1
 
 	// De-prioritize existing placements pods, add existing placements to the tail of the candidates.
-	for _, placement := range placements {
+	// Start from the last one so that within the "existing replicas" group, we prioritize lower ordinals
+	// to reduce compaction.
+	for i := len(placements) - 1; i >= 0; i-- {
+		placement := placements[i]
+		if !states.IsSchedulablePod(st.OrdinalFromPodName(placement.PodName)) {
+			continue
+		}
 		// This should really never happen as placements are de-duped, however, better to handle
 		// edge cases in case the prerequisite doesn't hold in the future.
 		if existingPlacements.Has(placement.PodName) {
@@ -417,6 +454,9 @@ func (s *StatefulSetScheduler) candidatesOrdered(states *st.State, vpod schedule
 	// Prioritize reserved placements that don't appear in the committed placements.
 	if reserved, ok := s.reserved[vpod.GetKey()]; ok {
 		for podName := range reserved {
+			if !states.IsSchedulablePod(st.OrdinalFromPodName(podName)) {
+				continue
+			}
 			if existingPlacements.Has(podName) {
 				continue
 			}
@@ -429,6 +469,9 @@ func (s *StatefulSetScheduler) candidatesOrdered(states *st.State, vpod schedule
 	// Add all the ordinals to the candidates list.
 	// De-prioritize the last ordinals over lower ordinals so that we reduce the chances for compaction.
 	for ordinal := s.replicas - 1; ordinal >= 0; ordinal-- {
+		if !states.IsSchedulablePod(ordinal) {
+			continue
+		}
 		podName := st.PodNameFromOrdinal(states.StatefulSetName, ordinal)
 		if existingPlacements.Has(podName) {
 			continue
