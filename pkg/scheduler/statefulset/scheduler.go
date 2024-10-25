@@ -215,8 +215,6 @@ func (s *StatefulSetScheduler) scheduleVPod(ctx context.Context, vpod scheduler.
 		return nil, err
 	}
 
-	logger.Debugw("scheduling", zap.Any("state", state))
-
 	existingPlacements := vpod.GetPlacements()
 
 	reservedByPodName := make(map[string]int32, 2)
@@ -230,6 +228,13 @@ func (s *StatefulSetScheduler) scheduleVPod(ctx context.Context, vpod scheduler.
 			reservedByPodName[podName] = vReplicas + v
 		}
 	}
+
+	logger.Debugw("scheduling",
+		zap.Any("state", state),
+		zap.Any("reservedByPodName", reservedByPodName),
+		zap.Any("reserved", st.ToJSONable(s.reserved)),
+		zap.Any("vpod", vpod),
+	)
 
 	// Remove unschedulable or adjust overcommitted pods from placements
 	var placements []duckv1alpha1.Placement
