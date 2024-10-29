@@ -434,10 +434,10 @@ func (s *StatefulSetScheduler) addReplicas(states *st.State, reservedByPodName m
 
 func (s *StatefulSetScheduler) candidatesOrdered(states *st.State, vpod scheduler.VPod, placements []duckv1alpha1.Placement) []int32 {
 	existingPlacements := sets.New[string]()
-	candidates := make([]int32, states.Replicas)
+	candidates := make([]int32, len(states.SchedulablePods))
 
 	firstIdx := 0
-	lastIdx := states.Replicas - 1
+	lastIdx := len(candidates) - 1
 
 	// De-prioritize existing placements pods, add existing placements to the tail of the candidates.
 	// Start from the last one so that within the "existing replicas" group, we prioritize lower ordinals

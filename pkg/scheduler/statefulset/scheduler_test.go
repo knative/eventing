@@ -27,6 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
 	kubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/apps/v1/statefulset/fake"
@@ -48,16 +49,17 @@ const (
 
 func TestStatefulsetScheduler(t *testing.T) {
 	testCases := []struct {
-		name             string
-		vreplicas        int32
-		replicas         int32
-		placements       []duckv1alpha1.Placement
-		expected         []duckv1alpha1.Placement
-		err              error
-		pending          map[types.NamespacedName]int32
-		initialReserved  map[types.NamespacedName]map[string]int32
-		expectedReserved map[types.NamespacedName]map[string]int32
-		capacity         int32
+		name              string
+		vreplicas         int32
+		replicas          int32
+		placements        []duckv1alpha1.Placement
+		expected          []duckv1alpha1.Placement
+		err               error
+		pending           map[types.NamespacedName]int32
+		initialReserved   map[types.NamespacedName]map[string]int32
+		expectedReserved  map[types.NamespacedName]map[string]int32
+		unschedulablePods sets.Set[int32]
+		capacity          int32
 	}{
 		{
 			name:      "no replicas, no vreplicas",
@@ -640,6 +642,63 @@ func TestStatefulsetScheduler(t *testing.T) {
 			capacity: 20,
 			err:      controller.NewRequeueAfter(5 * time.Second),
 		},
+		{
+			name:       "Unschedulable pod",
+			vreplicas:  20,
+			replicas:   int32(1),
+			capacity: 20,
+			unschedulablePods: sets.New[int32](0),
+			err:      controller.NewRequeueAfter(5 * time.Second),
+		},
+		{
+			name:       "Unschedulable pod, with reserved and some space",
+			vreplicas:  20,
+			replicas:   int32(2),
+			capacity: 20,
+			expected: []duckv1alpha1.Placement{
+				{PodName: "statefulset-name-0", VReplicas: 2},
+			},
+			initialReserved: map[types.NamespacedName]map[string]int32{
+				types.NamespacedName{Namespace: vpodNamespace + "-a", Name: vpodName}: {
+					"statefulset-name-0": 18,
+				},
+			},
+			expectedReserved: map[types.NamespacedName]map[string]int32{
+				types.NamespacedName{Namespace: vpodNamespace + "-a", Name: vpodName}: {
+					"statefulset-name-0": 18,
+				},
+				types.NamespacedName{Namespace: vpodNamespace, Name: vpodName}: {
+					"statefulset-name-0": 2,
+				},
+			},
+			unschedulablePods: sets.New[int32](1),
+			err:      controller.NewRequeueAfter(5 * time.Second),
+		},
+		{
+			name:       "Unschedulable middle pod, with reserved and some space",
+			vreplicas:  20,
+			replicas:   int32(3),
+			capacity: 20,
+			expected: []duckv1alpha1.Placement{
+				{PodName: "statefulset-name-0", VReplicas: 2},
+				{PodName: "statefulset-name-2", VReplicas: 18},
+			},
+			initialReserved: map[types.NamespacedName]map[string]int32{
+				types.NamespacedName{Namespace: vpodNamespace + "-a", Name: vpodName}: {
+					"statefulset-name-0": 18,
+				},
+			},
+			expectedReserved: map[types.NamespacedName]map[string]int32{
+				types.NamespacedName{Namespace: vpodNamespace + "-a", Name: vpodName}: {
+					"statefulset-name-0": 18,
+				},
+				types.NamespacedName{Namespace: vpodNamespace, Name: vpodName}: {
+					"statefulset-name-0": 2,
+					"statefulset-name-2": 18,
+				},
+			},
+			unschedulablePods: sets.New[int32](1),
+		},
 	}
 
 	for _, tc := range testCases {
@@ -653,6 +712,9 @@ func TestStatefulsetScheduler(t *testing.T) {
 			for i := int32(0); i < tc.replicas; i++ {
 				nodeName := "node" + fmt.Sprint(i)
 				podName := sfsName + "-" + fmt.Sprint(i)
+				if tc.unschedulablePods.Has(i) {
+					nodeName = ""
+				}
 				pod, err := kubeclient.Get(ctx).CoreV1().Pods(testNs).Create(ctx, tscheduler.MakePod(testNs, podName, nodeName), metav1.CreateOptions{})
 				if err != nil {
 					t.Fatal("unexpected error", err)
