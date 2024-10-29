@@ -17,7 +17,6 @@ limitations under the License.
 package state
 
 import (
-	"math"
 	"strconv"
 	"strings"
 
@@ -33,7 +32,7 @@ func PodNameFromOrdinal(name string, ordinal int32) string {
 func OrdinalFromPodName(podName string) int32 {
 	ordinal, err := strconv.ParseInt(podName[strings.LastIndex(podName, "-")+1:], 10, 32)
 	if err != nil {
-		return math.MaxInt32
+		panic(podName + " is not a valid pod name")
 	}
 	return int32(ordinal)
 }
