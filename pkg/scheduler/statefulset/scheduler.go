@@ -261,6 +261,10 @@ func (s *StatefulSetScheduler) scheduleVPod(ctx context.Context, vpod scheduler.
 		}
 	}
 
+	sort.SliceStable(existingPlacements, func(i int, j int) bool {
+		return st.OrdinalFromPodName(existingPlacements[i].PodName) < st.OrdinalFromPodName(existingPlacements[j].PodName)
+	})
+
 	logger.Debugw("scheduling state",
 		zap.Any("state", state),
 		zap.Any("reservedByPodName", reservedByPodName),
@@ -399,12 +403,12 @@ func (s *StatefulSetScheduler) addReplicas(states *st.State, reservedByPodName m
 	foundFreeCandidate := true
 	for diff > 0 && foundFreeCandidate {
 		foundFreeCandidate = false
-		for _, podName := range candidates {
+		for _, ordinal := range candidates {
 			if diff <= 0 {
 				break
 			}
 
-			ordinal := st.OrdinalFromPodName(podName)
+			podName := st.PodNameFromOrdinal(states.StatefulSetName, ordinal)
 			reserved, _ := reservedByPodName[podName]
 			// Is there space?
 			if states.Capacity-reserved > 0 {
@@ -428,9 +432,9 @@ func (s *StatefulSetScheduler) addReplicas(states *st.State, reservedByPodName m
 	return newPlacements, diff
 }
 
-func (s *StatefulSetScheduler) candidatesOrdered(states *st.State, vpod scheduler.VPod, placements []duckv1alpha1.Placement) []string {
+func (s *StatefulSetScheduler) candidatesOrdered(states *st.State, vpod scheduler.VPod, placements []duckv1alpha1.Placement) []int32 {
 	existingPlacements := sets.New[string]()
-	candidates := make([]string, states.Replicas)
+	candidates := make([]int32, states.Replicas)
 
 	firstIdx := 0
 	lastIdx := states.Replicas - 1
@@ -440,7 +444,8 @@ func (s *StatefulSetScheduler) candidatesOrdered(states *st.State, vpod schedule
 	// to reduce compaction.
 	for i := len(placements) - 1; i >= 0; i-- {
 		placement := placements[i]
-		if !states.IsSchedulablePod(st.OrdinalFromPodName(placement.PodName)) {
+		ordinal := st.OrdinalFromPodName(placement.PodName)
+		if !states.IsSchedulablePod(ordinal) {
 			continue
 		}
 		// This should really never happen as placements are de-duped, however, better to handle
@@ -448,7 +453,7 @@ func (s *StatefulSetScheduler) candidatesOrdered(states *st.State, vpod schedule
 		if existingPlacements.Has(placement.PodName) {
 			continue
 		}
-		candidates[lastIdx] = placement.PodName
+		candidates[lastIdx] = ordinal
 		lastIdx--
 		existingPlacements.Insert(placement.PodName)
 	}
@@ -462,7 +467,7 @@ func (s *StatefulSetScheduler) candidatesOrdered(states *st.State, vpod schedule
 			if existingPlacements.Has(podName) {
 				continue
 			}
-			candidates[firstIdx] = podName
+			candidates[firstIdx] = st.OrdinalFromPodName(podName)
 			firstIdx++
 			existingPlacements.Insert(podName)
 		}
@@ -478,7 +483,7 @@ func (s *StatefulSetScheduler) candidatesOrdered(states *st.State, vpod schedule
 		if existingPlacements.Has(podName) {
 			continue
 		}
-		candidates[lastIdx] = podName
+		candidates[lastIdx] = ordinal
 		lastIdx--
 	}
 	return candidates
