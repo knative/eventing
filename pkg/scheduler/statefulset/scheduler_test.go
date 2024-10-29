@@ -19,6 +19,7 @@ package statefulset
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"reflect"
 	"testing"
 	"time"
@@ -716,5 +717,51 @@ func TestStatefulsetScheduler(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func BenchmarkSchedule(b *testing.B) {
+	ctx, _ := tscheduler.SetupFakeContext(b)
+
+	_, err := kubeclient.Get(ctx).AppsV1().StatefulSets(testNs).Create(ctx, tscheduler.MakeStatefulset(testNs, sfsName, 10000), metav1.CreateOptions{})
+	if err != nil {
+		b.Fatal("unexpected error", err)
+	}
+
+	vpodClient := tscheduler.NewVPodClient()
+	for i := 0; i < 1000; i++ {
+		vpodClient.Create(vpodNamespace, vpodName, rand.Int31n(100), nil)
+	}
+	k8s := kubeclient.Get(ctx).CoreV1()
+
+	podlist := make([]runtime.Object, 0)
+	for i := int32(0); i < 10000; i++ {
+		nodeName := "node" + fmt.Sprint(i)
+		podName := sfsName + "-" + fmt.Sprint(i)
+		pod, err := k8s.Pods(testNs).Create(ctx, tscheduler.MakePod(testNs, podName, nodeName), metav1.CreateOptions{})
+		if err != nil {
+			b.Fatal("unexpected error", err)
+		}
+		podlist = append(podlist, pod)
+	}
+	lsp := listers.NewListers(podlist)
+	scaleCache := scheduler.NewScaleCache(ctx, testNs, kubeclient.Get(ctx).AppsV1().StatefulSets(testNs), scheduler.ScaleCacheConfig{RefreshPeriod: time.Minute * 5})
+	sa := state.NewStateBuilder(sfsName, vpodClient.List, 20, lsp.GetPodLister().Pods(testNs), scaleCache)
+	cfg := &Config{
+		StatefulSetNamespace: testNs,
+		StatefulSetName:      sfsName,
+		VPodLister:           vpodClient.List,
+	}
+	s := newStatefulSetScheduler(ctx, cfg, sa, nil)
+	err = s.Promote(reconciler.UniversalBucket(), func(bucket reconciler.Bucket, name types.NamespacedName) {})
+	if err != nil {
+		b.Fatal("unexpected error", err)
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if _, err := s.Schedule(ctx, vpodClient.Random()); err != nil {
+			b.Fatal("unexpected error", err)
+		}
 	}
 }

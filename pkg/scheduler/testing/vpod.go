@@ -103,7 +103,7 @@ func MakePod(ns, name, nodename string) *v1.Pod {
 	return obj
 }
 
-func SetupFakeContext(t *testing.T) (context.Context, context.CancelFunc) {
+func SetupFakeContext(t testing.TB) (context.Context, context.CancelFunc) {
 	ctx, cancel, informers := rectesting.SetupFakeContextWithCancel(t)
 	err := controller.StartInformers(ctx.Done(), informers...)
 	if err != nil {
