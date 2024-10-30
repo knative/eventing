@@ -14,5 +14,5 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// The scheduler is responsible for placing virtual pod (VPod) replicas within real pods.
+// Package scheduler is responsible for placing virtual pod (VPod) replicas within real pods.
 package scheduler

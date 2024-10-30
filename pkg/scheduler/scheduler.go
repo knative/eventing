@@ -30,56 +30,11 @@ import (
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 )
 
-type SchedulerPolicyType string
-
 const (
-	// MAXFILLUP policy type adds vreplicas to existing pods to fill them up before adding to new pods
-	MAXFILLUP SchedulerPolicyType = "MAXFILLUP"
-
 	// PodAnnotationKey is an annotation used by the scheduler to be informed of pods
 	// being evicted and not use it for placing vreplicas
 	PodAnnotationKey = "eventing.knative.dev/unschedulable"
 )
-
-const (
-	ZoneLabel = "topology.kubernetes.io/zone"
-
-	UnknownZone = "unknown"
-)
-
-const (
-	// MaxWeight is the maximum weight that can be assigned for a priority.
-	MaxWeight uint64 = 10
-	// MinWeight is the minimum weight that can be assigned for a priority.
-	MinWeight uint64 = 0
-)
-
-// Policy describes a struct of a policy resource.
-type SchedulerPolicy struct {
-	// Holds the information to configure the fit predicate functions.
-	Predicates []PredicatePolicy `json:"predicates"`
-	// Holds the information to configure the priority functions.
-	Priorities []PriorityPolicy `json:"priorities"`
-}
-
-// PredicatePolicy describes a struct of a predicate policy.
-type PredicatePolicy struct {
-	// Identifier of the predicate policy
-	Name string `json:"name"`
-	// Holds the parameters to configure the given predicate
-	Args interface{} `json:"args"`
-}
-
-// PriorityPolicy describes a struct of a priority policy.
-type PriorityPolicy struct {
-	// Identifier of the priority policy
-	Name string `json:"name"`
-	// The numeric multiplier for the pod scores that the priority function generates
-	// The weight should be a positive integer
-	Weight uint64 `json:"weight"`
-	// Holds the parameters to configure the given priority function
-	Args interface{} `json:"args"`
-}
 
 // VPodLister is the function signature for returning a list of VPods
 type VPodLister func() ([]VPod, error)
