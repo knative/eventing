@@ -7368,27 +7368,6 @@ and modifications of the event sent to the sink.</p>
 </tr>
 <tr>
 <td>
-<code>properties</code><br/>
-<em>
-map[string]string
-</em>
-</td>
-<td>
-<p>Properties are a key/value properties</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>type</code><br/>
-<em>
-string
-</em>
-</td>
-<td>
-</td>
-</tr>
-<tr>
-<td>
 <code>aws</code><br/>
 <em>
 <a href="#sources.knative.dev/v1alpha1.Aws">
@@ -7463,8 +7442,7 @@ string
 </em>
 </td>
 <td>
-<p>UseDefaultCredentials  bool   <code>json:&quot;useDefaultCredentials&quot; default:&quot;false&quot;</code> // Use default credentials provider
-UseProfileCredentials  bool   <code>json:&quot;useProfileCredentials&quot; default:&quot;false&quot;</code> // Use profile credentials provider</p>
+<p>AWS region</p>
 </td>
 </tr>
 <tr>
@@ -7475,8 +7453,7 @@ string
 </em>
 </td>
 <td>
-<pre><code>UseSessionCredentials  bool   `json:&quot;useSessionCredentials&quot; default:&quot;false&quot;` // Use session credentials
-</code></pre>
+<p>Profile name for profile credentials provider</p>
 </td>
 </tr>
 <tr>
@@ -8039,27 +8016,6 @@ knative.dev/pkg/apis/duck/v1.SourceSpec
 a URI directly to use as the sink.
 * CloudEventOverrides - defines overrides to control the output format
 and modifications of the event sent to the sink.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>properties</code><br/>
-<em>
-map[string]string
-</em>
-</td>
-<td>
-<p>Properties are a key/value properties</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>type</code><br/>
-<em>
-string
-</em>
-</td>
-<td>
 </td>
 </tr>
 <tr>

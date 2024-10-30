@@ -35,7 +35,7 @@ func NewContainerSource(source *v1alpha1.IntegrationSource) *sourcesv1.Container
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(source),
 			},
-			Name:      source.Name,
+			Name:      ContainerSourceName(source),
 			Namespace: source.Namespace,
 		},
 		Spec: sourcesv1.ContainerSourceSpec{

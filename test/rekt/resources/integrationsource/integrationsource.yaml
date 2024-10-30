@@ -21,19 +21,6 @@ spec:
   timer:
     period: 2000
     message: "Hello, Eventing Core"
-
-#  {{ if .schedule }}
-#  schedule: '{{ .schedule }}'
-#  {{ end }}
-#  {{ if .contentType }}
-#  contentType: '{{ .contentType }}'
-#  {{ end }}
-#  {{ if .data }}
-#  data: '{{ .data }}'
-#  {{ end }}
-#  {{ if .dataBase64 }}
-#  dataBase64: '{{ .dataBase64 }}'
-#  {{ end }}
 #  {{if .sink }}
   sink:
     {{ if .sink.ref }}

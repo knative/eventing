@@ -23,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/cache"
 	containersourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1/containersource"
+
 	configmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap/filtered"
 	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/system"
@@ -33,7 +34,7 @@ import (
 	"knative.dev/pkg/logging"
 
 	"knative.dev/eventing/pkg/apis/feature"
-	v1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	integrationsourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha1/integrationsource"
 	v1integrationsource "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha1/integrationsource"
@@ -67,7 +68,6 @@ func NewController(
 		eventingClientSet:       eventingClient,
 		containerSourceLister:   containerSourceInformer.Lister(),
 		integrationSourceLister: integrationsourceInformer.Lister(),
-		//trustBundleConfigMapLister: trustBundleConfigMapInformer.Lister(),
 	}
 
 	impl := v1integrationsource.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {

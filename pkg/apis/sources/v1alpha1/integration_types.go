@@ -57,10 +57,6 @@ type IntegrationSourceSpec struct {
 	//   and modifications of the event sent to the sink.
 	duckv1.SourceSpec `json:",inline"`
 
-	// Properties are a key/value properties
-	Properties map[string]string `json:"properties"`
-	Type       string            `json:"type,omitempty"`
-
 	Aws   *Aws   `json:"aws,omitempty"`   // AWS source configuration
 	Timer *Timer `json:"timer,omitempty"` // Timer configuration
 }
@@ -74,14 +70,11 @@ type Timer struct {
 
 type AWSCommon struct {
 	// Auth is the S3 authentication (accessKey/secretKey) configuration.
-	Region string `json:"region,omitempty"` // AWS region
-	//UseDefaultCredentials  bool   `json:"useDefaultCredentials" default:"false"` // Use default credentials provider
-	//UseProfileCredentials  bool   `json:"useProfileCredentials" default:"false"` // Use profile credentials provider
+	Region                 string `json:"region,omitempty"`                 // AWS region
 	ProfileCredentialsName string `json:"profileCredentialsName,omitempty"` // Profile name for profile credentials provider
-	//	UseSessionCredentials  bool   `json:"useSessionCredentials" default:"false"` // Use session credentials
-	SessionToken        string `json:"sessionToken,omitempty"`           // Session token
-	URIEndpointOverride string `json:"uriEndpointOverride,omitempty"`    // Override endpoint URI
-	OverrideEndpoint    bool   `json:"overrideEndpoint" default:"false"` // Override endpoint flag
+	SessionToken           string `json:"sessionToken,omitempty"`           // Session token
+	URIEndpointOverride    string `json:"uriEndpointOverride,omitempty"`    // Override endpoint URI
+	OverrideEndpoint       bool   `json:"overrideEndpoint" default:"false"` // Override endpoint flag
 }
 
 type AWSS3 struct {

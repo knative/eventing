@@ -54,7 +54,7 @@ func (iss *IntegrationSourceStatus) IsReady() bool {
 }
 
 func (s *IntegrationSourceStatus) PropagateContainerSourceStatus(status *v1.ContainerSourceStatus) {
-	// Do not copy conditions nor observedGeneration
+	//// Do not copy conditions nor observedGeneration
 	s.SourceStatus = *status.SourceStatus.DeepCopy()
 
 	cond := status.GetCondition(apis.ConditionReady)
@@ -71,6 +71,6 @@ func (s *IntegrationSourceStatus) PropagateContainerSourceStatus(status *v1.Cont
 		IntegrationCondSet.Manage(s).MarkUnknown(IntegrationSourceConditionContainerSourceReady, cond.Reason, cond.Message)
 	}
 
-	// Propagate SinkBindings AuthStatus to containersources AuthStatus
+	// Propagate ContainerSources AuthStatus to IntegrationSources AuthStatus
 	s.Auth = status.Auth
 }
