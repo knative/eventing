@@ -227,7 +227,7 @@ func TestStatefulsetScheduler(t *testing.T) {
 			replicas:  int32(1),
 			expected:  []duckv1alpha1.Placement{{PodName: "statefulset-name-0", VReplicas: 3}},
 			initialReserved: map[types.NamespacedName]map[string]int32{
-				types.NamespacedName{Namespace: vpodNamespace, Name: vpodName}: {
+				{Namespace: vpodNamespace, Name: vpodName}: {
 					"statefulset-name-0": 3,
 				},
 			},
@@ -237,7 +237,7 @@ func TestStatefulsetScheduler(t *testing.T) {
 			vreplicas: 3,
 			replicas:  int32(1),
 			initialReserved: map[types.NamespacedName]map[string]int32{
-				types.NamespacedName{Namespace: vpodNamespace + "-a", Name: vpodName}: {
+				{Namespace: vpodNamespace + "-a", Name: vpodName}: {
 					"statefulset-name-0": 10,
 				},
 			},
@@ -251,12 +251,12 @@ func TestStatefulsetScheduler(t *testing.T) {
 				{PodName: "statefulset-name-0", VReplicas: 1},
 			},
 			initialReserved: map[types.NamespacedName]map[string]int32{
-				types.NamespacedName{Namespace: vpodNamespace + "-a", Name: vpodName}: {
+				{Namespace: vpodNamespace + "-a", Name: vpodName}: {
 					"statefulset-name-0": 10,
 				},
 			},
 			expectedReserved: map[types.NamespacedName]map[string]int32{
-				types.NamespacedName{Namespace: vpodNamespace + "-a", Name: vpodName}: {
+				{Namespace: vpodNamespace + "-a", Name: vpodName}: {
 					"statefulset-name-0": 10,
 				},
 			},
@@ -270,18 +270,18 @@ func TestStatefulsetScheduler(t *testing.T) {
 				{PodName: "statefulset-name-0", VReplicas: 1},
 			},
 			initialReserved: map[types.NamespacedName]map[string]int32{
-				types.NamespacedName{Namespace: vpodNamespace + "-a", Name: vpodName}: {
+				{Namespace: vpodNamespace + "-a", Name: vpodName}: {
 					"statefulset-name-0": 10,
 				},
-				types.NamespacedName{Namespace: vpodNamespace + "-b", Name: vpodName}: {
+				{Namespace: vpodNamespace + "-b", Name: vpodName}: {
 					"statefulset-name-0": 5,
 				},
 			},
 			expectedReserved: map[types.NamespacedName]map[string]int32{
-				types.NamespacedName{Namespace: vpodNamespace + "-a", Name: vpodName}: {
+				{Namespace: vpodNamespace + "-a", Name: vpodName}: {
 					"statefulset-name-0": 10,
 				},
-				types.NamespacedName{Namespace: vpodNamespace + "-b", Name: vpodName}: {
+				{Namespace: vpodNamespace + "-b", Name: vpodName}: {
 					"statefulset-name-0": 5,
 				},
 			},
@@ -295,15 +295,15 @@ func TestStatefulsetScheduler(t *testing.T) {
 				{PodName: "statefulset-name-0", VReplicas: 1},
 			},
 			initialReserved: map[types.NamespacedName]map[string]int32{
-				types.NamespacedName{Namespace: vpodNamespace + "-a", Name: vpodName}: {
+				{Namespace: vpodNamespace + "-a", Name: vpodName}: {
 					"statefulset-name-0": 9,
 				},
 			},
 			expectedReserved: map[types.NamespacedName]map[string]int32{
-				types.NamespacedName{Namespace: vpodNamespace + "-a", Name: vpodName}: {
+				{Namespace: vpodNamespace + "-a", Name: vpodName}: {
 					"statefulset-name-0": 9,
 				},
-				types.NamespacedName{Namespace: vpodNamespace, Name: vpodName}: {
+				{Namespace: vpodNamespace, Name: vpodName}: {
 					"statefulset-name-0": 1,
 				},
 			},
@@ -317,18 +317,18 @@ func TestStatefulsetScheduler(t *testing.T) {
 				{PodName: "statefulset-name-3", VReplicas: 2},
 			},
 			initialReserved: map[types.NamespacedName]map[string]int32{
-				types.NamespacedName{Namespace: vpodNamespace + "-a", Name: vpodName}: {
+				{Namespace: vpodNamespace + "-a", Name: vpodName}: {
 					"statefulset-name-0": 10,
 				},
-				types.NamespacedName{Namespace: vpodNamespace, Name: vpodName}: {
+				{Namespace: vpodNamespace, Name: vpodName}: {
 					"statefulset-name-3": 3,
 				},
 			},
 			expectedReserved: map[types.NamespacedName]map[string]int32{
-				types.NamespacedName{Namespace: vpodNamespace + "-a", Name: vpodName}: {
+				{Namespace: vpodNamespace + "-a", Name: vpodName}: {
 					"statefulset-name-0": 10,
 				},
-				types.NamespacedName{Namespace: vpodNamespace, Name: vpodName}: {
+				{Namespace: vpodNamespace, Name: vpodName}: {
 					"statefulset-name-3": 2,
 				},
 			},
@@ -346,19 +346,19 @@ func TestStatefulsetScheduler(t *testing.T) {
 				{PodName: "statefulset-name-3", VReplicas: 1},
 			},
 			initialReserved: map[types.NamespacedName]map[string]int32{
-				types.NamespacedName{Namespace: vpodNamespace + "-a", Name: vpodName}: {
+				{Namespace: vpodNamespace + "-a", Name: vpodName}: {
 					"statefulset-name-0": 10,
 				},
-				types.NamespacedName{Namespace: vpodNamespace, Name: vpodName}: {
+				{Namespace: vpodNamespace, Name: vpodName}: {
 					"statefulset-name-3": 1,
 					"statefulset-name-1": 1,
 				},
 			},
 			expectedReserved: map[types.NamespacedName]map[string]int32{
-				types.NamespacedName{Namespace: vpodNamespace + "-a", Name: vpodName}: {
+				{Namespace: vpodNamespace + "-a", Name: vpodName}: {
 					"statefulset-name-0": 10,
 				},
-				types.NamespacedName{Namespace: vpodNamespace, Name: vpodName}: {
+				{Namespace: vpodNamespace, Name: vpodName}: {
 					"statefulset-name-3": 1,
 					"statefulset-name-1": 1,
 				},
@@ -378,19 +378,19 @@ func TestStatefulsetScheduler(t *testing.T) {
 				{PodName: "statefulset-name-3", VReplicas: 1},
 			},
 			initialReserved: map[types.NamespacedName]map[string]int32{
-				types.NamespacedName{Namespace: vpodNamespace + "-a", Name: vpodName}: {
+				{Namespace: vpodNamespace + "-a", Name: vpodName}: {
 					"statefulset-name-0": 10,
 				},
-				types.NamespacedName{Namespace: vpodNamespace, Name: vpodName}: {
+				{Namespace: vpodNamespace, Name: vpodName}: {
 					"statefulset-name-1": 1,
 					"statefulset-name-3": 1,
 				},
 			},
 			expectedReserved: map[types.NamespacedName]map[string]int32{
-				types.NamespacedName{Namespace: vpodNamespace + "-a", Name: vpodName}: {
+				{Namespace: vpodNamespace + "-a", Name: vpodName}: {
 					"statefulset-name-0": 10,
 				},
-				types.NamespacedName{Namespace: vpodNamespace, Name: vpodName}: {
+				{Namespace: vpodNamespace, Name: vpodName}: {
 					"statefulset-name-1": 1,
 					"statefulset-name-2": 1,
 					"statefulset-name-3": 1,
@@ -411,19 +411,19 @@ func TestStatefulsetScheduler(t *testing.T) {
 				{PodName: "statefulset-name-3", VReplicas: 1},
 			},
 			initialReserved: map[types.NamespacedName]map[string]int32{
-				types.NamespacedName{Namespace: vpodNamespace + "-a", Name: vpodName}: {
+				{Namespace: vpodNamespace + "-a", Name: vpodName}: {
 					"statefulset-name-0": 10,
 				},
-				types.NamespacedName{Namespace: vpodNamespace, Name: vpodName}: {
+				{Namespace: vpodNamespace, Name: vpodName}: {
 					"statefulset-name-1": 1,
 					"statefulset-name-3": 1,
 				},
 			},
 			expectedReserved: map[types.NamespacedName]map[string]int32{
-				types.NamespacedName{Namespace: vpodNamespace + "-a", Name: vpodName}: {
+				{Namespace: vpodNamespace + "-a", Name: vpodName}: {
 					"statefulset-name-0": 10,
 				},
-				types.NamespacedName{Namespace: vpodNamespace, Name: vpodName}: {
+				{Namespace: vpodNamespace, Name: vpodName}: {
 					"statefulset-name-1": 2,
 					"statefulset-name-2": 1,
 					"statefulset-name-3": 1,
@@ -444,10 +444,10 @@ func TestStatefulsetScheduler(t *testing.T) {
 				{PodName: "statefulset-name-1", VReplicas: 1},
 			},
 			initialReserved: map[types.NamespacedName]map[string]int32{
-				types.NamespacedName{Namespace: vpodNamespace + "-a", Name: vpodName}: {
+				{Namespace: vpodNamespace + "-a", Name: vpodName}: {
 					"statefulset-name-0": 10,
 				},
-				types.NamespacedName{Namespace: vpodNamespace, Name: vpodName}: {
+				{Namespace: vpodNamespace, Name: vpodName}: {
 					"statefulset-name-0": 1,
 					"statefulset-name-1": 1,
 					"statefulset-name-2": 3,
@@ -455,10 +455,10 @@ func TestStatefulsetScheduler(t *testing.T) {
 				},
 			},
 			expectedReserved: map[types.NamespacedName]map[string]int32{
-				types.NamespacedName{Namespace: vpodNamespace + "-a", Name: vpodName}: {
+				{Namespace: vpodNamespace + "-a", Name: vpodName}: {
 					"statefulset-name-0": 10,
 				},
-				types.NamespacedName{Namespace: vpodNamespace, Name: vpodName}: {
+				{Namespace: vpodNamespace, Name: vpodName}: {
 					"statefulset-name-1": 1,
 				},
 			},
@@ -475,54 +475,54 @@ func TestStatefulsetScheduler(t *testing.T) {
 				{PodName: "statefulset-name-1", VReplicas: 19},
 			},
 			initialReserved: map[types.NamespacedName]map[string]int32{
-				types.NamespacedName{Namespace: vpodNamespace + "-a", Name: vpodName}: {
+				{Namespace: vpodNamespace + "-a", Name: vpodName}: {
 					"statefulset-name-0": 1,
 				},
-				types.NamespacedName{Namespace: vpodNamespace + "-b", Name: vpodName}: {
+				{Namespace: vpodNamespace + "-b", Name: vpodName}: {
 					"statefulset-name-0": 1,
 				},
-				types.NamespacedName{Namespace: vpodNamespace + "-c", Name: vpodName}: {
+				{Namespace: vpodNamespace + "-c", Name: vpodName}: {
 					"statefulset-name-0": 1,
 				},
-				types.NamespacedName{Namespace: vpodNamespace + "-d", Name: vpodName}: {
+				{Namespace: vpodNamespace + "-d", Name: vpodName}: {
 					"statefulset-name-0": 1,
 				},
-				types.NamespacedName{Namespace: vpodNamespace + "-e", Name: vpodName}: {
+				{Namespace: vpodNamespace + "-e", Name: vpodName}: {
 					"statefulset-name-0": 1,
 				},
-				types.NamespacedName{Namespace: vpodNamespace + "-f", Name: vpodName}: {
+				{Namespace: vpodNamespace + "-f", Name: vpodName}: {
 					"statefulset-name-0": 1,
 				},
-				types.NamespacedName{Namespace: vpodNamespace + "-g", Name: vpodName}: {
+				{Namespace: vpodNamespace + "-g", Name: vpodName}: {
 					"statefulset-name-0": 1,
 				},
-				types.NamespacedName{Namespace: vpodNamespace, Name: vpodName}: {
+				{Namespace: vpodNamespace, Name: vpodName}: {
 					"statefulset-name-0": 1,
 				},
 			},
 			expectedReserved: map[types.NamespacedName]map[string]int32{
-				types.NamespacedName{Namespace: vpodNamespace + "-a", Name: vpodName}: {
+				{Namespace: vpodNamespace + "-a", Name: vpodName}: {
 					"statefulset-name-0": 1,
 				},
-				types.NamespacedName{Namespace: vpodNamespace + "-b", Name: vpodName}: {
+				{Namespace: vpodNamespace + "-b", Name: vpodName}: {
 					"statefulset-name-0": 1,
 				},
-				types.NamespacedName{Namespace: vpodNamespace + "-c", Name: vpodName}: {
+				{Namespace: vpodNamespace + "-c", Name: vpodName}: {
 					"statefulset-name-0": 1,
 				},
-				types.NamespacedName{Namespace: vpodNamespace + "-d", Name: vpodName}: {
+				{Namespace: vpodNamespace + "-d", Name: vpodName}: {
 					"statefulset-name-0": 1,
 				},
-				types.NamespacedName{Namespace: vpodNamespace + "-e", Name: vpodName}: {
+				{Namespace: vpodNamespace + "-e", Name: vpodName}: {
 					"statefulset-name-0": 1,
 				},
-				types.NamespacedName{Namespace: vpodNamespace + "-f", Name: vpodName}: {
+				{Namespace: vpodNamespace + "-f", Name: vpodName}: {
 					"statefulset-name-0": 1,
 				},
-				types.NamespacedName{Namespace: vpodNamespace + "-g", Name: vpodName}: {
+				{Namespace: vpodNamespace + "-g", Name: vpodName}: {
 					"statefulset-name-0": 1,
 				},
-				types.NamespacedName{Namespace: vpodNamespace, Name: vpodName}: {
+				{Namespace: vpodNamespace, Name: vpodName}: {
 					"statefulset-name-0": 13,
 					"statefulset-name-1": 19,
 				},
@@ -541,18 +541,18 @@ func TestStatefulsetScheduler(t *testing.T) {
 				{PodName: "statefulset-name-1", VReplicas: 19},
 			},
 			initialReserved: map[types.NamespacedName]map[string]int32{
-				types.NamespacedName{Namespace: vpodNamespace + "-a", Name: vpodName}: {
+				{Namespace: vpodNamespace + "-a", Name: vpodName}: {
 					"statefulset-name-0": 7,
 				},
-				types.NamespacedName{Namespace: vpodNamespace, Name: vpodName}: {
+				{Namespace: vpodNamespace, Name: vpodName}: {
 					"statefulset-name-0": 7,
 				},
 			},
 			expectedReserved: map[types.NamespacedName]map[string]int32{
-				types.NamespacedName{Namespace: vpodNamespace + "-a", Name: vpodName}: {
+				{Namespace: vpodNamespace + "-a", Name: vpodName}: {
 					"statefulset-name-0": 7,
 				},
-				types.NamespacedName{Namespace: vpodNamespace, Name: vpodName}: {
+				{Namespace: vpodNamespace, Name: vpodName}: {
 					"statefulset-name-0": 13,
 					"statefulset-name-1": 19,
 				},
@@ -569,18 +569,18 @@ func TestStatefulsetScheduler(t *testing.T) {
 				{PodName: "statefulset-name-1", VReplicas: 20},
 			},
 			initialReserved: map[types.NamespacedName]map[string]int32{
-				types.NamespacedName{Namespace: vpodNamespace + "-a", Name: vpodName}: {
+				{Namespace: vpodNamespace + "-a", Name: vpodName}: {
 					"statefulset-name-0": 11,
 				},
-				types.NamespacedName{Namespace: vpodNamespace, Name: vpodName}: {
+				{Namespace: vpodNamespace, Name: vpodName}: {
 					"statefulset-name-0": 17,
 				},
 			},
 			expectedReserved: map[types.NamespacedName]map[string]int32{
-				types.NamespacedName{Namespace: vpodNamespace + "-a", Name: vpodName}: {
+				{Namespace: vpodNamespace + "-a", Name: vpodName}: {
 					"statefulset-name-0": 11,
 				},
-				types.NamespacedName{Namespace: vpodNamespace, Name: vpodName}: {
+				{Namespace: vpodNamespace, Name: vpodName}: {
 					"statefulset-name-0": 9,
 					"statefulset-name-1": 20,
 				},
@@ -594,21 +594,21 @@ func TestStatefulsetScheduler(t *testing.T) {
 			replicas:   int32(1),
 			placements: []duckv1alpha1.Placement{},
 			initialReserved: map[types.NamespacedName]map[string]int32{
-				types.NamespacedName{Namespace: vpodNamespace + "-a", Name: vpodName}: {
+				{Namespace: vpodNamespace + "-a", Name: vpodName}: {
 					"statefulset-name-0": 18,
 				},
-				types.NamespacedName{Namespace: vpodNamespace + "-b", Name: vpodName}: {
+				{Namespace: vpodNamespace + "-b", Name: vpodName}: {
 					"statefulset-name-0": 2,
 				},
-				types.NamespacedName{Namespace: vpodNamespace, Name: vpodName}: {
+				{Namespace: vpodNamespace, Name: vpodName}: {
 					"statefulset-name-0": 10,
 				},
 			},
 			expectedReserved: map[types.NamespacedName]map[string]int32{
-				types.NamespacedName{Namespace: vpodNamespace + "-a", Name: vpodName}: {
+				{Namespace: vpodNamespace + "-a", Name: vpodName}: {
 					"statefulset-name-0": 18,
 				},
-				types.NamespacedName{Namespace: vpodNamespace + "-b", Name: vpodName}: {
+				{Namespace: vpodNamespace + "-b", Name: vpodName}: {
 					"statefulset-name-0": 2,
 				},
 			},
@@ -621,21 +621,21 @@ func TestStatefulsetScheduler(t *testing.T) {
 			replicas:   int32(1),
 			placements: []duckv1alpha1.Placement{},
 			initialReserved: map[types.NamespacedName]map[string]int32{
-				types.NamespacedName{Namespace: vpodNamespace + "-a", Name: vpodName}: {
+				{Namespace: vpodNamespace + "-a", Name: vpodName}: {
 					"statefulset-name-0": 18,
 				},
-				types.NamespacedName{Namespace: vpodNamespace + "-b", Name: vpodName}: {
+				{Namespace: vpodNamespace + "-b", Name: vpodName}: {
 					"statefulset-name-0": 3,
 				},
-				types.NamespacedName{Namespace: vpodNamespace, Name: vpodName}: {
+				{Namespace: vpodNamespace, Name: vpodName}: {
 					"statefulset-name-0": 10,
 				},
 			},
 			expectedReserved: map[types.NamespacedName]map[string]int32{
-				types.NamespacedName{Namespace: vpodNamespace + "-a", Name: vpodName}: {
+				{Namespace: vpodNamespace + "-a", Name: vpodName}: {
 					"statefulset-name-0": 18,
 				},
-				types.NamespacedName{Namespace: vpodNamespace + "-b", Name: vpodName}: {
+				{Namespace: vpodNamespace + "-b", Name: vpodName}: {
 					"statefulset-name-0": 3,
 				},
 			},
@@ -643,56 +643,56 @@ func TestStatefulsetScheduler(t *testing.T) {
 			err:      controller.NewRequeueAfter(5 * time.Second),
 		},
 		{
-			name:       "Unschedulable pod",
-			vreplicas:  20,
-			replicas:   int32(1),
-			capacity: 20,
+			name:              "Unschedulable pod",
+			vreplicas:         20,
+			replicas:          int32(1),
+			capacity:          20,
 			unschedulablePods: sets.New[int32](0),
-			err:      controller.NewRequeueAfter(5 * time.Second),
+			err:               controller.NewRequeueAfter(5 * time.Second),
 		},
 		{
-			name:       "Unschedulable pod, with reserved and some space",
-			vreplicas:  20,
-			replicas:   int32(2),
-			capacity: 20,
+			name:      "Unschedulable pod, with reserved and some space",
+			vreplicas: 20,
+			replicas:  int32(2),
+			capacity:  20,
 			expected: []duckv1alpha1.Placement{
 				{PodName: "statefulset-name-0", VReplicas: 2},
 			},
 			initialReserved: map[types.NamespacedName]map[string]int32{
-				types.NamespacedName{Namespace: vpodNamespace + "-a", Name: vpodName}: {
+				{Namespace: vpodNamespace + "-a", Name: vpodName}: {
 					"statefulset-name-0": 18,
 				},
 			},
 			expectedReserved: map[types.NamespacedName]map[string]int32{
-				types.NamespacedName{Namespace: vpodNamespace + "-a", Name: vpodName}: {
+				{Namespace: vpodNamespace + "-a", Name: vpodName}: {
 					"statefulset-name-0": 18,
 				},
-				types.NamespacedName{Namespace: vpodNamespace, Name: vpodName}: {
+				{Namespace: vpodNamespace, Name: vpodName}: {
 					"statefulset-name-0": 2,
 				},
 			},
 			unschedulablePods: sets.New[int32](1),
-			err:      controller.NewRequeueAfter(5 * time.Second),
+			err:               controller.NewRequeueAfter(5 * time.Second),
 		},
 		{
-			name:       "Unschedulable middle pod, with reserved and some space",
-			vreplicas:  20,
-			replicas:   int32(3),
-			capacity: 20,
+			name:      "Unschedulable middle pod, with reserved and some space",
+			vreplicas: 20,
+			replicas:  int32(3),
+			capacity:  20,
 			expected: []duckv1alpha1.Placement{
 				{PodName: "statefulset-name-0", VReplicas: 2},
 				{PodName: "statefulset-name-2", VReplicas: 18},
 			},
 			initialReserved: map[types.NamespacedName]map[string]int32{
-				types.NamespacedName{Namespace: vpodNamespace + "-a", Name: vpodName}: {
+				{Namespace: vpodNamespace + "-a", Name: vpodName}: {
 					"statefulset-name-0": 18,
 				},
 			},
 			expectedReserved: map[types.NamespacedName]map[string]int32{
-				types.NamespacedName{Namespace: vpodNamespace + "-a", Name: vpodName}: {
+				{Namespace: vpodNamespace + "-a", Name: vpodName}: {
 					"statefulset-name-0": 18,
 				},
-				types.NamespacedName{Namespace: vpodNamespace, Name: vpodName}: {
+				{Namespace: vpodNamespace, Name: vpodName}: {
 					"statefulset-name-0": 2,
 					"statefulset-name-2": 18,
 				},
