@@ -216,7 +216,7 @@ func TestAllCases(t *testing.T) {
 			},
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, sourceReconciled, `ContainerSource reconciled: "%s/%s"`, testNS, sourceName),
+				Eventf(corev1.EventTypeNormal, "ContainerSourceReconciled", `ContainerSource reconciled: "%s/%s"`, testNS, sourceName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewContainerSource(sourceName, testNS,
