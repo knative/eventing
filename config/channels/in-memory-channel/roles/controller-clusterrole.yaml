@@ -54,6 +54,15 @@ rules:
       - list
       - watch
   - apiGroups:
+      - sinks.knative.dev
+    resources:
+      - jobsinks
+      - jobsinks/status
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
       - ""
     resources:
       - services
