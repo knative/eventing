@@ -94,6 +94,10 @@ spec:
                       name:
                         description: The name of the applied EventPolicy
                         type: string
+                observedGeneration:
+                  description: ObservedGeneration is the 'Generation' of the Service that was last processed by the controller.
+                  type: integer
+                  format: int64
                 conditions:
                   description: Conditions the latest available observations of a resource's current state.
                   type: array
