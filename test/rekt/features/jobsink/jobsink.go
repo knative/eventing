@@ -29,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"knative.dev/pkg/apis"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
+	"knative.dev/pkg/network"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/eventshub/assert"
@@ -49,13 +50,17 @@ func Success() *feature.Feature {
 	jobSink := feature.MakeRandomK8sName("jobsink")
 	source := feature.MakeRandomK8sName("source")
 
-	sinkURL := &apis.URL{Scheme: "http", Host: sink}
-
 	event := cetest.FullEvent()
 	event.SetID(uuid.NewString())
 
 	f.Setup("install forwarder sink", eventshub.Install(sink, eventshub.StartReceiver))
-	f.Setup("install job sink", jobsink.Install(jobSink, jobsink.WithForwarderJob(sinkURL.String())))
+	f.Setup("install job sink", func(ctx context.Context, t feature.T) {
+		sinkURL := &apis.URL{
+			Scheme: "http",
+			Host:   network.GetServiceHostname(sink, environment.FromContext(ctx).Namespace()),
+		}
+		jobsink.Install(jobSink, jobsink.WithForwarderJob(sinkURL.String()))(ctx, t)
+	})
 
 	f.Setup("jobsink is addressable", jobsink.IsAddressable(jobSink))
 	f.Setup("jobsink is ready", jobsink.IsReady(jobSink))
