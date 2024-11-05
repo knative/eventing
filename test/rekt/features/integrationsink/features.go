@@ -66,7 +66,7 @@ func Success() *feature.Feature {
 	//
 	f.Assert("Source sent the event", assert.OnStore(source).
 		Match(assert.MatchKind(eventshub.EventResponse)).
-		Match(assert.MatchStatusCode(202)).
+		Match(assert.MatchStatusCode(204)).
 		AtLeast(1),
 	)
 
