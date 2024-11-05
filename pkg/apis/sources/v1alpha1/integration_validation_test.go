@@ -18,8 +18,9 @@ package v1alpha1
 
 import (
 	"context"
-	"knative.dev/eventing/pkg/apis/common"
 	"testing"
+
+	"knative.dev/eventing/pkg/apis/common"
 
 	"github.com/google/go-cmp/cmp"
 	"knative.dev/pkg/apis"
