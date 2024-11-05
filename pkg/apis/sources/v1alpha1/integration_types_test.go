@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"knative.dev/eventing/pkg/apis/common"
 	"testing"
 )
 
@@ -53,8 +54,8 @@ func TestTimer(t *testing.T) {
 }
 
 func TestAWS(t *testing.T) {
-	s3 := AWSS3{
-		AWSCommon: AWSCommon{
+	s3 := common.AWSS3{
+		AWSCommon: common.AWSCommon{
 			Region: "eu-north-1",
 		},
 		BucketNameOrArn: "example-bucket",
@@ -64,8 +65,8 @@ func TestAWS(t *testing.T) {
 		t.Errorf("AWSS3.Region = %v, want 'eu-north-1'", s3.Region)
 	}
 
-	sqs := AWSSQS{
-		AWSCommon: AWSCommon{
+	sqs := common.AWSSQS{
+		AWSCommon: common.AWSCommon{
 			Region: "eu-north-1",
 		},
 		QueueNameOrArn: "example-queue",
@@ -75,8 +76,8 @@ func TestAWS(t *testing.T) {
 		t.Errorf("AWSSQS.Region = %v, want 'eu-north-1'", sqs.Region)
 	}
 
-	ddbStreams := AWSDDBStreams{
-		AWSCommon: AWSCommon{
+	ddbStreams := common.AWSDDBStreams{
+		AWSCommon: common.AWSCommon{
 			Region: "eu-north-1",
 		},
 		Table: "example-table",
