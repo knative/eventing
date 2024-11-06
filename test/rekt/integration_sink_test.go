@@ -21,6 +21,7 @@ package rekt
 
 import (
 	"knative.dev/eventing/test/rekt/features/integrationsink"
+	"knative.dev/reconciler-test/pkg/eventshub"
 	"testing"
 
 	"knative.dev/pkg/system"
@@ -43,20 +44,20 @@ func TestIntegrationSinkSuccess(t *testing.T) {
 	env.Test(ctx, t, integrationsink.Success())
 }
 
-//func TestIntegrationSinkSuccessTLS(t *testing.T) {
-//	t.Parallel()
-//
-//	ctx, env := global.Environment(
-//		knative.WithKnativeNamespace(system.Namespace()),
-//		knative.WithLoggingConfig,
-//		knative.WithTracingConfig,
-//		k8s.WithEventListener,
-//		eventshub.WithTLS(t),
-//		environment.Managed(t),
-//	)
-//
-//	env.Test(ctx, t, integrationsink.SuccessTLS())
-//}
+func TestIntegrationSinkSuccessTLS(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		eventshub.WithTLS(t),
+		environment.Managed(t),
+	)
+
+	env.Test(ctx, t, integrationsink.SuccessTLS())
+}
 
 //
 //func TestJobSinkOIDC(t *testing.T) {

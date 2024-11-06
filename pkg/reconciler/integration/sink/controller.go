@@ -65,15 +65,14 @@ func NewController(
 	globalResync = func(interface{}) {
 		impl.GlobalResync(integrationSinkInformer.Informer())
 	}
+	secretInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: controller.FilterWithName(eventingtls.IntegrationSinkDispatcherServerTLSSecretName),
+		Handler:    controller.HandleAll(globalResync),
+	})
 
 	deploymentInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.FilterControllerGVK(v1alpha1.SchemeGroupVersion.WithKind("IntegrationSink")),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
-	})
-
-	secretInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.FilterWithName(eventingtls.IntegrationSinkDispatcherServerTLSSecretName),
-		Handler:    controller.HandleAll(globalResync),
 	})
 
 	integrationSinkGK := v1alpha1.SchemeGroupVersion.WithKind("IntegrationSink").GroupKind()
