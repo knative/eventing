@@ -306,6 +306,14 @@ func MainWithInformers(ctx context.Context, component string, env EnvConfigAcces
 		}()
 	}
 
+	if !HealthProbesDisabled(ctx) {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			injection.ServeHealthProbes(ctx, injection.HealthCheckDefaultPort)
+		}()
+	}
+
 	// Finally start the adapter (blocking)
 	if err := adapter.Start(ctx); err != nil {
 		logger.Fatalw("Start returned an error", zap.Error(err))
