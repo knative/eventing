@@ -29,6 +29,11 @@ import (
 	"knative.dev/pkg/kmeta"
 )
 
+const (
+	awsAccessKey = "aws.accessKey"
+	awsSecretKey = "aws.secretKey"
+)
+
 func NewContainerSource(source *v1alpha1.IntegrationSource) *sourcesv1.ContainerSource {
 	return &sourcesv1.ContainerSource{
 		ObjectMeta: metav1.ObjectMeta{
@@ -150,8 +155,8 @@ func makeEnv(source *v1alpha1.IntegrationSource) []corev1.EnvVar {
 		envVars = append(envVars, generateEnvVarsFromStruct("CAMEL_KAMELET_AWS_S3_SOURCE", *source.Spec.Aws.S3)...)
 		if secretName != "" {
 			envVars = append(envVars, []corev1.EnvVar{
-				makeSecretEnvVar("CAMEL_KAMELET_AWS_S3_SOURCE_ACCESSKEY", "aws.s3.accessKey", secretName),
-				makeSecretEnvVar("CAMEL_KAMELET_AWS_S3_SOURCE_SECRETKEY", "aws.s3.secretKey", secretName),
+				makeSecretEnvVar("CAMEL_KAMELET_AWS_S3_SOURCE_ACCESSKEY", awsAccessKey, secretName),
+				makeSecretEnvVar("CAMEL_KAMELET_AWS_S3_SOURCE_SECRETKEY", awsSecretKey, secretName),
 			}...)
 		}
 		return envVars
@@ -162,8 +167,8 @@ func makeEnv(source *v1alpha1.IntegrationSource) []corev1.EnvVar {
 		envVars = append(envVars, generateEnvVarsFromStruct("CAMEL_KAMELET_AWS_SQS_SOURCE", *source.Spec.Aws.SQS)...)
 		if secretName != "" {
 			envVars = append(envVars, []corev1.EnvVar{
-				makeSecretEnvVar("CAMEL_KAMELET_AWS_SQS_SOURCE_ACCESSKEY", "aws.s3.accessKey", secretName),
-				makeSecretEnvVar("CAMEL_KAMELET_AWS_SQS_SOURCE_SECRETKEY", "aws.s3.secretKey", secretName),
+				makeSecretEnvVar("CAMEL_KAMELET_AWS_SQS_SOURCE_ACCESSKEY", awsAccessKey, secretName),
+				makeSecretEnvVar("CAMEL_KAMELET_AWS_SQS_SOURCE_SECRETKEY", awsSecretKey, secretName),
 			}...)
 		}
 		return envVars
@@ -174,8 +179,8 @@ func makeEnv(source *v1alpha1.IntegrationSource) []corev1.EnvVar {
 		envVars = append(envVars, generateEnvVarsFromStruct("CAMEL_KAMELET_AWS_DDB_STREAMS_SOURCE", *source.Spec.Aws.DDBStreams)...)
 		if secretName != "" {
 			envVars = append(envVars, []corev1.EnvVar{
-				makeSecretEnvVar("CAMEL_KAMELET_AWS_DDB_STREAMS_SOURCE_ACCESSKEY", "aws.s3.accessKey", secretName),
-				makeSecretEnvVar("CAMEL_KAMELET_AWS_DDB_STREAMS_SOURCE_SECRETKEY", "aws.s3.secretKey", secretName),
+				makeSecretEnvVar("CAMEL_KAMELET_AWS_DDB_STREAMS_SOURCE_ACCESSKEY", awsAccessKey, secretName),
+				makeSecretEnvVar("CAMEL_KAMELET_AWS_DDB_STREAMS_SOURCE_SECRETKEY", awsSecretKey, secretName),
 			}...)
 		}
 		return envVars
