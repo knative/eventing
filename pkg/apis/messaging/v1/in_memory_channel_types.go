@@ -45,12 +45,12 @@ type InMemoryChannel struct {
 	Status InMemoryChannelStatus `json:"status,omitempty"`
 }
 
-const (
+var (
 	// AsyncHandlerAnnotation controls whether InMemoryChannel uses the async handler.
 	//
 	// Async handler is subject to event loss since it responds with 200 before forwarding the event
 	// to all subscriptions.
-	AsyncHandlerAnnotation = "messaging.knative.dev/async-handler"
+	AsyncHandlerAnnotation = SchemeGroupVersion.Group + "/async-handler"
 )
 
 var (

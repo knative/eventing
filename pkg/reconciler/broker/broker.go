@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -113,8 +114,14 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 	}
 
 	metadata := b.ObjectMeta.DeepCopy()
-	channelAnnotations := metadata.GetAnnotations()
-	channelAnnotations[eventing.ScopeAnnotationKey] = eventing.ScopeCluster
+	channelAnnotations := map[string]string{
+		eventing.ScopeAnnotationKey: eventing.ScopeCluster,
+	}
+	for k, v := range metadata.GetAnnotations() {
+		if strings.HasPrefix(k, messagingv1.SchemeGroupVersion.Group) {
+			channelAnnotations[k] = v
+		}
+	}
 
 	logging.FromContext(ctx).Infow("Reconciling the trigger channel")
 	c, err := ducklib.NewPhysicalChannel(
