@@ -37,6 +37,7 @@ import (
 
 	eventasssert "knative.dev/reconciler-test/pkg/eventshub/assert"
 
+	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	"knative.dev/eventing/test/rekt/features"
 	"knative.dev/eventing/test/rekt/resources/channel"
 	"knative.dev/eventing/test/rekt/resources/channel_impl"
@@ -146,7 +147,7 @@ func AsyncHandler(createSubscriberFn func(ref *duckv1.KReference, uri string) ma
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 	f.Setup("install channel", channel_impl.Install(name, channel_impl.WithAnnotations(map[string]interface{}{
-		"eventing.knative.dev/async-handler": "true",
+		v1.AsyncHandlerAnnotation: "true",
 	})))
 	f.Setup("install subscription", subscription.Install(sub,
 		subscription.WithChannel(channel_impl.AsRef(name)),
@@ -181,7 +182,7 @@ func AsyncHandlerUpdate(createSubscriberFn func(ref *duckv1.KReference, uri stri
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 	f.Setup("install channel", channel_impl.Install(name, channel_impl.WithAnnotations(map[string]interface{}{
-		"eventing.knative.dev/async-handler": "true",
+		v1.AsyncHandlerAnnotation: "true",
 	})))
 	f.Setup("install subscription", subscription.Install(sub,
 		subscription.WithChannel(channel_impl.AsRef(name)),
@@ -191,7 +192,7 @@ func AsyncHandlerUpdate(createSubscriberFn func(ref *duckv1.KReference, uri stri
 	f.Setup("subscription is ready", subscription.IsReady(sub))
 
 	f.Requirement("update channel async handler", channel_impl.Install(name, channel_impl.WithAnnotations(map[string]interface{}{
-		"eventing.knative.dev/async-handler": "false",
+		v1.AsyncHandlerAnnotation: "false",
 	})))
 	f.Requirement("channel is ready", channel_impl.IsReady(name))
 

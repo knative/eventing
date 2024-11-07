@@ -50,7 +50,7 @@ const (
 	//
 	// Async handler is subject to event loss since it responds with 200 before forwarding the event
 	// to all subscriptions.
-	AsyncHandlerAnnotation = "eventing.knative.dev/async-handler"
+	AsyncHandlerAnnotation = "messaging.knative.dev/async-handler"
 )
 
 var (

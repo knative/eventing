@@ -34,6 +34,7 @@ import (
 
 	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	"knative.dev/eventing/test/rekt/features"
 	"knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/eventing/test/rekt/resources/channel"
@@ -567,7 +568,7 @@ func PropagatesMetadata() *feature.Feature {
 	sink := feature.MakeRandomK8sName("sink")
 	via := feature.MakeRandomK8sName("via")
 
-	key := "eventing.knative.dev/async-handler"
+	key := messagingv1.AsyncHandlerAnnotation
 	value := "false"
 
 	event := test.FullEvent()
