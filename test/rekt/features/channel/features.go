@@ -134,6 +134,81 @@ func DeadLetterSink(createSubscriberFn func(ref *duckv1.KReference, uri string) 
 	return f
 }
 
+func AsyncHandler(createSubscriberFn func(ref *duckv1.KReference, uri string) manifest.CfgFn) *feature.Feature {
+	f := feature.NewFeature()
+	sink := feature.MakeRandomK8sName("sink")
+	source := feature.MakeRandomK8sName("source")
+	name := feature.MakeRandomK8sName("channel")
+	sub := feature.MakeRandomK8sName("subscription")
+
+	event := test.FullEvent()
+	event.SetID(uuid.New().String())
+
+	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
+	f.Setup("install channel", channel_impl.Install(name, channel_impl.WithAnnotations(map[string]interface{}{
+		"eventing.knative.dev/async-handler": "true",
+	})))
+	f.Setup("install subscription", subscription.Install(sub,
+		subscription.WithChannel(channel_impl.AsRef(name)),
+		createSubscriberFn(service.AsKReference(sink), ""),
+	))
+	f.Setup("channel is ready", channel_impl.IsReady(name))
+	f.Setup("subscription is ready", subscription.IsReady(sub))
+
+	f.Requirement("install source", eventshub.Install(source, eventshub.InputEvent(event), eventshub.StartSenderToResource(channel_impl.GVR(), name)))
+
+	f.Assert("Event sent", assert.OnStore(source).
+		MatchSentEvent(test.HasId(event.ID())).
+		AtLeast(1),
+	)
+	f.Assert("sink receives event", assert.OnStore(sink).
+		MatchEvent(test.HasId(event.ID())).
+		AtLeast(1),
+	)
+
+	return f
+}
+
+func AsyncHandlerUpdate(createSubscriberFn func(ref *duckv1.KReference, uri string) manifest.CfgFn) *feature.Feature {
+	f := feature.NewFeature()
+	sink := feature.MakeRandomK8sName("sink")
+	source := feature.MakeRandomK8sName("source")
+	name := feature.MakeRandomK8sName("channel")
+	sub := feature.MakeRandomK8sName("subscription")
+
+	event := test.FullEvent()
+	event.SetID(uuid.New().String())
+
+	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
+	f.Setup("install channel", channel_impl.Install(name, channel_impl.WithAnnotations(map[string]interface{}{
+		"eventing.knative.dev/async-handler": "true",
+	})))
+	f.Setup("install subscription", subscription.Install(sub,
+		subscription.WithChannel(channel_impl.AsRef(name)),
+		createSubscriberFn(service.AsKReference(sink), ""),
+	))
+	f.Setup("channel is ready", channel_impl.IsReady(name))
+	f.Setup("subscription is ready", subscription.IsReady(sub))
+
+	f.Requirement("update channel async handler", channel_impl.Install(name, channel_impl.WithAnnotations(map[string]interface{}{
+		"eventing.knative.dev/async-handler": "false",
+	})))
+	f.Requirement("channel is ready", channel_impl.IsReady(name))
+
+	f.Assert("install source", eventshub.Install(source, eventshub.InputEvent(event), eventshub.StartSenderToResource(channel_impl.GVR(), name)))
+
+	f.Assert("Event sent", assert.OnStore(source).
+		MatchSentEvent(test.HasId(event.ID())).
+		AtLeast(1),
+	)
+	f.Assert("sink receives event", assert.OnStore(sink).
+		MatchEvent(test.HasId(event.ID())).
+		AtLeast(1),
+	)
+
+	return f
+}
+
 func DeadLetterSinkGenericChannel(createSubscriberFn func(ref *duckv1.KReference, uri string) manifest.CfgFn) *feature.Feature {
 	f := feature.NewFeature()
 	sink := feature.MakeRandomK8sName("sink")

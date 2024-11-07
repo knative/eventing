@@ -23,8 +23,9 @@ import (
 	"testing"
 	"time"
 
-	"knative.dev/eventing/test/rekt/features/authz"
 	"knative.dev/reconciler-test/pkg/feature"
+
+	"knative.dev/eventing/test/rekt/features/authz"
 
 	"github.com/cloudevents/sdk-go/v2/binding"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -203,6 +204,27 @@ func TestChannelDeadLetterSink(t *testing.T) {
 		return subscription.WithSubscriber(ref, uri, "")
 	}
 	env.Test(ctx, t, channel.DeadLetterSink(createSubscriberFn))
+}
+
+/*
+TestChannelAsyncHandler tests if the async handler can be configured on the channel.
+*/
+func TestChannelAsyncHandler(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+	)
+
+	createSubscriberFn := func(ref *duckv1.KReference, uri string) manifest.CfgFn {
+		return subscription.WithSubscriber(ref, uri, "")
+	}
+	env.ParallelTest(ctx, t, channel.AsyncHandler(createSubscriberFn))
+	env.ParallelTest(ctx, t, channel.AsyncHandlerUpdate(createSubscriberFn))
 }
 
 // TestGenericChannelDeadLetterSink tests if the events that cannot be delivered end up in
