@@ -19,6 +19,7 @@ package dispatcher
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	listers "knative.dev/eventing/pkg/client/listers/messaging/v1"
 
@@ -250,13 +251,21 @@ func newConfigForInMemoryChannel(ctx context.Context, imc *v1.InMemoryChannel) (
 		subs[i] = *conf
 	}
 
+	async := false
+	if v, ok := imc.Annotations[v1.AsyncHandlerAnnotation]; ok {
+		b, err := strconv.ParseBool(v)
+		if err == nil {
+			async = b
+		}
+	}
+
 	return &multichannelfanout.ChannelConfig{
 		Namespace: imc.Namespace,
 		Name:      imc.Name,
 		HostName:  imc.Status.Address.URL.Host,
 		Path:      fmt.Sprintf("%s/%s", imc.Namespace, imc.Name),
 		FanoutConfig: fanout.Config{
-			AsyncHandler:  false,
+			AsyncHandler:  async,
 			Subscriptions: subs,
 		},
 	}, nil
