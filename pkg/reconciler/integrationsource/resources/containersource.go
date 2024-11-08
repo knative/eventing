@@ -63,7 +63,7 @@ func NewContainerSource(source *v1alpha1.IntegrationSource) *sourcesv1.Container
 }
 
 func generateEnvVarsFromStruct(prefix string, s interface{}) []corev1.EnvVar {
-	var envVars = makeSSLEnvVar()
+	var envVars []corev1.EnvVar
 
 	// Use reflection to inspect the struct fields
 	v := reflect.ValueOf(s)
@@ -136,7 +136,7 @@ func generateEnvVarsFromStruct(prefix string, s interface{}) []corev1.EnvVar {
 
 // Function to create environment variables for Timer or AWS configurations dynamically
 func makeEnv(source *v1alpha1.IntegrationSource) []corev1.EnvVar {
-	var envVars []corev1.EnvVar
+	var envVars = makeSSLEnvVar()
 
 	// Timer environment variables
 	if source.Spec.Timer != nil {
