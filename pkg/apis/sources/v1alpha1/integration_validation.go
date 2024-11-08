@@ -65,8 +65,8 @@ func (spec *IntegrationSourceSpec) Validate(ctx context.Context) *apis.FieldErro
 
 		// Additional validation for AWS S3 required fields
 		if spec.Aws.S3 != nil {
-			if spec.Aws.S3.BucketNameOrArn == "" {
-				errs = errs.Also(apis.ErrMissingField("aws.s3.bucketNameOrArn"))
+			if spec.Aws.S3.Arn == "" {
+				errs = errs.Also(apis.ErrMissingField("aws.s3.arn"))
 			}
 			if spec.Aws.S3.Region == "" {
 				errs = errs.Also(apis.ErrMissingField("aws.s3.region"))
@@ -75,7 +75,7 @@ func (spec *IntegrationSourceSpec) Validate(ctx context.Context) *apis.FieldErro
 
 		// Additional validation for AWS SQS required fields
 		if spec.Aws.SQS != nil {
-			if spec.Aws.SQS.QueueNameOrArn == "" {
+			if spec.Aws.SQS.Arn == "" {
 				errs = errs.Also(apis.ErrMissingField("aws.sqs.queueNameOrArn"))
 			}
 			if spec.Aws.SQS.Region == "" {

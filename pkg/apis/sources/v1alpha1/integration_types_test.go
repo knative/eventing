@@ -57,7 +57,7 @@ func TestAWS(t *testing.T) {
 		AWSCommon: AWSCommon{
 			Region: "eu-north-1",
 		},
-		BucketNameOrArn: "example-bucket",
+		Arn: "example-bucket",
 	}
 
 	if s3.Region != "eu-north-1" {
@@ -68,7 +68,7 @@ func TestAWS(t *testing.T) {
 		AWSCommon: AWSCommon{
 			Region: "eu-north-1",
 		},
-		QueueNameOrArn: "example-queue",
+		Arn: "example-queue",
 	}
 
 	if sqs.Region != "eu-north-1" {

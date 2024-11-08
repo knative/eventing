@@ -49,7 +49,7 @@ func TestIntegrationSourceSpecValidation(t *testing.T) {
 						AWSCommon: AWSCommon{
 							Region: "us-east-1",
 						},
-						BucketNameOrArn: "example-bucket",
+						Arn: "example-bucket",
 					},
 					Auth: &Auth{
 						Secret: &Secret{
@@ -70,7 +70,7 @@ func TestIntegrationSourceSpecValidation(t *testing.T) {
 						AWSCommon: AWSCommon{
 							Region: "us-east-1",
 						},
-						QueueNameOrArn: "example-queue",
+						Arn: "example-queue",
 					},
 					Auth: &Auth{
 						Secret: &Secret{
@@ -117,7 +117,7 @@ func TestIntegrationSourceSpecValidation(t *testing.T) {
 						AWSCommon: AWSCommon{
 							Region: "us-east-1",
 						},
-						BucketNameOrArn: "example-bucket",
+						Arn: "example-bucket",
 					},
 				},
 			},
@@ -131,13 +131,13 @@ func TestIntegrationSourceSpecValidation(t *testing.T) {
 						AWSCommon: AWSCommon{
 							Region: "us-east-1",
 						},
-						BucketNameOrArn: "example-bucket",
+						Arn: "example-bucket",
 					},
 					SQS: &AWSSQS{
 						AWSCommon: AWSCommon{
 							Region: "us-east-1",
 						},
-						QueueNameOrArn: "example-queue",
+						Arn: "example-queue",
 					},
 					Auth: &Auth{
 						Secret: &Secret{
@@ -203,7 +203,7 @@ func TestIntegrationSourceSpecValidation(t *testing.T) {
 						AWSCommon: AWSCommon{
 							Region: "us-east-1",
 						},
-						BucketNameOrArn: "example-bucket",
+						Arn: "example-bucket",
 					},
 				},
 			},
@@ -214,7 +214,7 @@ func TestIntegrationSourceSpecValidation(t *testing.T) {
 			spec: IntegrationSourceSpec{
 				Aws: &Aws{
 					S3: &AWSS3{
-						BucketNameOrArn: "example-bucket",
+						Arn: "example-bucket",
 					},
 					Auth: &Auth{
 						Secret: &Secret{
