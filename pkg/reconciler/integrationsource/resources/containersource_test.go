@@ -118,8 +118,6 @@ func TestGenerateEnvVarsFromStruct(t *testing.T) {
 
 	// Expected environment variables including SSL settings
 	want := []corev1.EnvVar{
-		{Name: "CAMEL_KNATIVE_CLIENT_SSL_ENABLED", Value: "true"},
-		{Name: "CAMEL_KNATIVE_CLIENT_SSL_CERT_PATH", Value: "/knative-custom-certs/knative-eventing-bundle.pem"},
 		{Name: "TEST_PREFIX_FIELD1", Value: "123"},
 		{Name: "TEST_PREFIX_FIELD2", Value: "true"},
 		{Name: "TEST_PREFIX_FIELD3", Value: "hello"},
