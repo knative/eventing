@@ -25,6 +25,7 @@ import (
 	"github.com/cloudevents/sdk-go/v2/binding"
 	"github.com/cloudevents/sdk-go/v2/test"
 	"github.com/google/uuid"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/network"
 	"knative.dev/reconciler-test/pkg/environment"
@@ -191,12 +192,24 @@ func AsyncHandlerUpdate(createSubscriberFn func(ref *duckv1.KReference, uri stri
 	f.Setup("channel is ready", channel_impl.IsReady(name))
 	f.Setup("subscription is ready", subscription.IsReady(sub))
 
-	f.Requirement("update channel async handler", channel_impl.Install(name, channel_impl.WithAnnotations(map[string]interface{}{
-		v1.AsyncHandlerAnnotation: "false",
-	})))
-	f.Requirement("channel is ready", channel_impl.IsReady(name))
+	f.Requirement("update channel async handler", func(ctx context.Context, t feature.T) {
+		dc := Client(ctx)
 
-	f.Assert("install source", eventshub.Install(source, eventshub.InputEvent(event), eventshub.StartSenderToResource(channel_impl.GVR(), name)))
+		imc, err := dc.ChannelImpl.Get(ctx, name, metav1.GetOptions{})
+		if err != nil {
+			t.Fatalf("Failed to retrieve InMemoryChannel: %v", err)
+		}
+		// swap and update it to false
+		imc.SetAnnotations(map[string]string{
+			v1.AsyncHandlerAnnotation: "true",
+		})
+		if _, err := dc.ChannelImpl.Update(ctx, imc, metav1.UpdateOptions{}); err != nil {
+			t.Fatalf("Failed to update async handler annotation: %v", err)
+		}
+	})
+
+	f.Requirement("channel is ready", channel_impl.IsReady(name))
+	f.Requirement("install source", eventshub.Install(source, eventshub.InputEvent(event), eventshub.StartSenderToResource(channel_impl.GVR(), name)))
 
 	f.Assert("Event sent", assert.OnStore(source).
 		MatchSentEvent(test.HasId(event.ID())).

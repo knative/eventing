@@ -17,8 +17,8 @@ kind: {{ .kind }}
 metadata:
   name: {{ .name }}
   namespace: {{ .namespace }}
-  annotations:
   {{ if .annotations }}
+  annotations:
     {{ range $key, $value := .annotations }}
       {{ $key }}: "{{ $value }}"
     {{ end }}
