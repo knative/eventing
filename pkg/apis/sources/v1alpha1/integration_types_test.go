@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"knative.dev/eventing/pkg/apis/common/integration/v1alpha1"
 	"testing"
 )
 
@@ -53,8 +54,8 @@ func TestTimer(t *testing.T) {
 }
 
 func TestAWS(t *testing.T) {
-	s3 := AWSS3{
-		AWSCommon: AWSCommon{
+	s3 := v1alpha1.AWSS3{
+		AWSCommon: v1alpha1.AWSCommon{
 			Region: "eu-north-1",
 		},
 		Arn: "example-bucket",
@@ -64,8 +65,8 @@ func TestAWS(t *testing.T) {
 		t.Errorf("AWSS3.Region = %v, want 'eu-north-1'", s3.Region)
 	}
 
-	sqs := AWSSQS{
-		AWSCommon: AWSCommon{
+	sqs := v1alpha1.AWSSQS{
+		AWSCommon: v1alpha1.AWSCommon{
 			Region: "eu-north-1",
 		},
 		Arn: "example-queue",
@@ -75,8 +76,8 @@ func TestAWS(t *testing.T) {
 		t.Errorf("AWSSQS.Region = %v, want 'eu-north-1'", sqs.Region)
 	}
 
-	ddbStreams := AWSDDBStreams{
-		AWSCommon: AWSCommon{
+	ddbStreams := v1alpha1.AWSDDBStreams{
+		AWSCommon: v1alpha1.AWSCommon{
 			Region: "eu-north-1",
 		},
 		Table: "example-table",
@@ -89,9 +90,9 @@ func TestAWS(t *testing.T) {
 
 // TestAuthFieldAccess tests the HasAuth method and field access in Auth struct
 func TestAuthFieldAccess(t *testing.T) {
-	auth := Auth{
-		Secret: &Secret{
-			Ref: &SecretReference{
+	auth := v1alpha1.Auth{
+		Secret: &v1alpha1.Secret{
+			Ref: &v1alpha1.SecretReference{
 				Name: "aws-secret",
 			},
 		},
