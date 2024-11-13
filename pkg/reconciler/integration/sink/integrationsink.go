@@ -47,10 +47,10 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, sink *sinks.IntegrationS
 		return err
 	}
 
-	//if err := r.reconcileService(ctx, sink); err != nil {
-	//	logging.FromContext(ctx).Errorw("Error reconciling Service", zap.Error(err))
-	//	return err
-	//}
+	if err := r.reconcileService(ctx, sink); err != nil {
+		logging.FromContext(ctx).Errorw("Error reconciling Service", zap.Error(err))
+		return err
+	}
 
 	if err := r.reconcileAddress(ctx, sink); err != nil {
 		return fmt.Errorf("failed to reconcile address: %w", err)
