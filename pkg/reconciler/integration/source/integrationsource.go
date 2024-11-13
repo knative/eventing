@@ -14,11 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package integrationsource
+package source
 
 import (
 	"context"
 	"fmt"
+	"knative.dev/eventing/pkg/reconciler/integration/source/resources"
 
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -32,7 +33,6 @@ import (
 	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha1/integrationsource"
 	v1listers "knative.dev/eventing/pkg/client/listers/sources/v1"
 	listers "knative.dev/eventing/pkg/client/listers/sources/v1alpha1"
-	"knative.dev/eventing/pkg/reconciler/integrationsource/resources"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
 	pkgreconciler "knative.dev/pkg/reconciler"
