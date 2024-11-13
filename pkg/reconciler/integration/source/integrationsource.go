@@ -19,6 +19,7 @@ package source
 import (
 	"context"
 	"fmt"
+	"knative.dev/eventing/pkg/reconciler/integration/source/resources"
 
 	"knative.dev/eventing/pkg/reconciler/integration/source/resources"
 
