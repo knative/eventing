@@ -93,7 +93,7 @@ func (s *IntegrationSinkStatus) MarkEventPoliciesTrueWithReason(reason, messageF
 	IntegrationSinkCondSet.Manage(s).MarkTrueWithReason(IntegrationSinkConditionEventPoliciesReady, reason, messageFormat, messageA...)
 }
 
-func (s *IntegrationSinkStatus) PropagateDeploymentAvailability(d *appsv1.DeploymentStatus) {
+func (s *IntegrationSinkStatus) PropagateDeploymentStatus(d *appsv1.DeploymentStatus) {
 	deploymentAvailableFound := false
 	for _, cond := range d.Conditions {
 		if cond.Type == appsv1.DeploymentAvailable {

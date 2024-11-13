@@ -79,7 +79,8 @@ func TestReconcile(t *testing.T) {
 			Name: "key not found",
 			// Make sure Reconcile handles good keys that don't exist.
 			Key: "foo/not-found",
-		}, {
+		},
+		{
 			Name: "error creating containersource",
 			Objects: []runtime.Object{
 				NewIntegrationSource(sourceName, testNS,
@@ -160,12 +161,12 @@ func TestReconcile(t *testing.T) {
 				),
 			}},
 		}}
-
 	logger := logtesting.TestLogger(t)
 
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		ctx = addressable.WithDuck(ctx)
 		r := &Reconciler{
+
 			kubeClientSet:           fakekubeclient.Get(ctx),
 			eventingClientSet:       fakeeventingclient.Get(ctx),
 			containerSourceLister:   listers.GetContainerSourceLister(),

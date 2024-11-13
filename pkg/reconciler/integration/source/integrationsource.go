@@ -22,8 +22,6 @@ import (
 
 	"knative.dev/eventing/pkg/reconciler/integration/source/resources"
 
-	"knative.dev/eventing/pkg/reconciler/integration/source/resources"
-
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"

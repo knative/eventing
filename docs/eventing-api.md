@@ -6354,7 +6354,7 @@ JobSinkStatus
 <td>
 <code>s3</code><br/>
 <em>
-knative.dev/eventing/pkg/apis/common.AWSS3
+knative.dev/eventing/pkg/apis/common/integration/v1alpha1.AWSS3
 </em>
 </td>
 <td>
@@ -6364,7 +6364,7 @@ knative.dev/eventing/pkg/apis/common.AWSS3
 <td>
 <code>sqs</code><br/>
 <em>
-knative.dev/eventing/pkg/apis/common.AWSSQS
+knative.dev/eventing/pkg/apis/common/integration/v1alpha1.AWSSQS
 </em>
 </td>
 <td>
@@ -6375,7 +6375,7 @@ knative.dev/eventing/pkg/apis/common.AWSSQS
 <td>
 <code>auth</code><br/>
 <em>
-knative.dev/eventing/pkg/apis/common.Auth
+knative.dev/eventing/pkg/apis/common/integration/v1alpha1.Auth
 </em>
 </td>
 <td>

@@ -3,6 +3,8 @@ package integrationsink
 import (
 	"context"
 	"embed"
+	"time"
+
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/eventshub"
@@ -10,7 +12,6 @@ import (
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/knative"
 	"knative.dev/reconciler-test/pkg/manifest"
-	"time"
 )
 
 //go:embed integrationsink.yaml

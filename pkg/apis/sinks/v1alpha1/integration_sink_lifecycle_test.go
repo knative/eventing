@@ -17,11 +17,12 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"testing"
+
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
-	"testing"
 )
 
 func TestIntegrationSinkGetConditionSet(t *testing.T) {
@@ -44,6 +45,9 @@ func TestIntegrationSinkInitializeConditions(t *testing.T) {
 			Status: duckv1.Status{
 				Conditions: []apis.Condition{{
 					Type:   IntegrationSinkConditionAddressable,
+					Status: corev1.ConditionUnknown,
+				}, {
+					Type:   IntegrationSinkConditionDeploymentReady,
 					Status: corev1.ConditionUnknown,
 				}, {
 					Type:   IntegrationSinkConditionEventPoliciesReady,
@@ -70,6 +74,9 @@ func TestIntegrationSinkInitializeConditions(t *testing.T) {
 					Type:   IntegrationSinkConditionAddressable,
 					Status: corev1.ConditionFalse,
 				}, {
+					Type:   IntegrationSinkConditionDeploymentReady,
+					Status: corev1.ConditionUnknown,
+				}, {
 					Type:   IntegrationSinkConditionEventPoliciesReady,
 					Status: corev1.ConditionUnknown,
 				}, {
@@ -93,6 +100,9 @@ func TestIntegrationSinkInitializeConditions(t *testing.T) {
 				Conditions: []apis.Condition{{
 					Type:   IntegrationSinkConditionAddressable,
 					Status: corev1.ConditionTrue,
+				}, {
+					Type:   IntegrationSinkConditionDeploymentReady,
+					Status: corev1.ConditionUnknown,
 				}, {
 					Type:   IntegrationSinkConditionEventPoliciesReady,
 					Status: corev1.ConditionUnknown,

@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	"context"
+
 	"knative.dev/pkg/apis"
 )
 
@@ -61,7 +62,7 @@ func (spec *IntegrationSinkSpec) Validate(ctx context.Context) *apis.FieldError 
 
 		// Additional validation for AWS S3 required fields
 		if spec.Aws.S3 != nil {
-			if spec.Aws.S3.BucketNameOrArn == "" {
+			if spec.Aws.S3.Arn == "" {
 				errs = errs.Also(apis.ErrMissingField("aws.s3.bucketNameOrArn"))
 			}
 			if spec.Aws.S3.Region == "" {
@@ -71,7 +72,7 @@ func (spec *IntegrationSinkSpec) Validate(ctx context.Context) *apis.FieldError 
 
 		// Additional validation for AWS SQS required fields
 		if spec.Aws.SQS != nil {
-			if spec.Aws.SQS.QueueNameOrArn == "" {
+			if spec.Aws.SQS.Arn == "" {
 				errs = errs.Also(apis.ErrMissingField("aws.sqs.queueNameOrArn"))
 			}
 			if spec.Aws.SQS.Region == "" {

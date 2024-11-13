@@ -1,8 +1,28 @@
+/*
+Copyright 2024 The Knative Authors
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+	http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package sink
 
 import (
 	"context"
 	"fmt"
+
+	v1 "k8s.io/api/apps/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
+
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -27,6 +47,15 @@ import (
 	"knative.dev/pkg/reconciler"
 )
 
+const (
+	// Name of the corev1.Events emitted from the reconciliation process
+	sinkReconciled    = "IntegrationSinkReconciled"
+	deploymentCreated = "DeploymentCreated"
+	deploymentUpdated = "DeploymentUpdated"
+	serviceCreated    = "ServiceCreated"
+	serviceUpdated    = "ServiceUpdated"
+)
+
 type Reconciler struct {
 	secretLister      corev1listers.SecretLister
 	eventPolicyLister eventingv1alpha1listers.EventPolicyLister
@@ -39,15 +68,23 @@ type Reconciler struct {
 	systemNamespace string
 }
 
+// newReconciledNormal makes a new reconciler event with event type Normal, and
+// reason IntegrationSink.
+func newReconciledNormal(namespace, name string) reconciler.Event {
+	return reconciler.NewEvent(corev1.EventTypeNormal, sinkReconciled, "IntegrationSink reconciled: \"%s/%s\"", namespace, name)
+}
+
 func (r *Reconciler) ReconcileKind(ctx context.Context, sink *sinks.IntegrationSink) reconciler.Event {
 	featureFlags := feature.FromContext(ctx)
 
-	if err := r.reconcileDeployment(ctx, sink); err != nil {
+	_, err := r.reconcileDeployment(ctx, sink)
+	if err != nil {
 		logging.FromContext(ctx).Errorw("Error reconciling Pod", zap.Error(err))
 		return err
 	}
 
-	if err := r.reconcileService(ctx, sink); err != nil {
+	_, err = r.reconcileService(ctx, sink)
+	if err != nil {
 		logging.FromContext(ctx).Errorw("Error reconciling Service", zap.Error(err))
 		return err
 	}
@@ -56,65 +93,63 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, sink *sinks.IntegrationS
 		return fmt.Errorf("failed to reconcile address: %w", err)
 	}
 
-	err := auth.UpdateStatusWithEventPolicies(featureFlags, &sink.Status.AppliedEventPoliciesStatus, &sink.Status, r.eventPolicyLister, sinks.SchemeGroupVersion.WithKind("IntegrationSink"), sink.ObjectMeta)
+	err = auth.UpdateStatusWithEventPolicies(featureFlags, &sink.Status.AppliedEventPoliciesStatus, &sink.Status, r.eventPolicyLister, sinks.SchemeGroupVersion.WithKind("IntegrationSink"), sink.ObjectMeta)
 	if err != nil {
 		return fmt.Errorf("could not update IntegrationSink status with EventPolicies: %v", err)
 	}
 
-	return nil
+	return newReconciledNormal(sink.Namespace, sink.Name)
 }
 
-func (r *Reconciler) reconcileDeployment(ctx context.Context, sink *sinks.IntegrationSink) error {
-
-	//updatedSink := sink.DeepCopy()
+func (r *Reconciler) reconcileDeployment(ctx context.Context, sink *sinks.IntegrationSink) (*v1.Deployment, error) {
 
 	expected := resources.MakeDeploymentSpec(sink)
-	pod, err := r.deploymentLister.Deployments(sink.Namespace).Get(expected.Name)
+	deployment, err := r.deploymentLister.Deployments(sink.Namespace).Get(expected.Name)
 	if apierrors.IsNotFound(err) {
-		pod, err = r.kubeClientSet.AppsV1().Deployments(sink.Namespace).Create(ctx, expected, metav1.CreateOptions{})
+		deployment, err = r.kubeClientSet.AppsV1().Deployments(sink.Namespace).Create(ctx, expected, metav1.CreateOptions{})
 		if err != nil {
-			return fmt.Errorf("creating new Deployment: %v", err)
+			return nil, fmt.Errorf("creating new Deployment: %v", err)
 		}
-		controller.GetEventRecorder(ctx).Eventf(sink, corev1.EventTypeNormal, "FIXME___reconciled", "Deployment created %q", pod.Name)
-		//sink.Status.PropagateDeploymentAvailability(&pod.Status)
-
+		controller.GetEventRecorder(ctx).Eventf(sink, corev1.EventTypeNormal, deploymentCreated, "Deployment created %q", deployment.Name)
 	} else if err != nil {
-		return fmt.Errorf("getting Deployment: %v", err)
-	} else if !metav1.IsControlledBy(pod, sink) {
-		return fmt.Errorf("pod %q is not owned by KameletSink %q", pod.Name, sink.Name)
-	} else {
-		logging.FromContext(ctx).Debugw("Reusing existing Deployment", zap.Any("Pod", pod))
+		return nil, fmt.Errorf("getting Deployment: %v", err)
+	} else if !metav1.IsControlledBy(deployment, sink) {
+		return nil, fmt.Errorf("Deployment %q is not owned by IntegrationSink %q", deployment.Name, sink.Name)
+	} else if r.podSpecChanged(deployment.Spec.Template.Spec, expected.Spec.Template.Spec) {
 
+		deployment.Spec.Template.Spec = expected.Spec.Template.Spec
+		deployment, err = r.kubeClientSet.AppsV1().Deployments(sink.Namespace).Update(ctx, deployment, metav1.UpdateOptions{})
+		if err != nil {
+			return nil, fmt.Errorf("updating Deployment: %v", err)
+		}
+		controller.GetEventRecorder(ctx).Eventf(sink, corev1.EventTypeNormal, deploymentUpdated, "Deployment %q updated", deployment.Name)
+	} else {
+		logging.FromContext(ctx).Debugw("Reusing existing Deployment", zap.Any("Deployment", deployment))
 	}
 
-	////logging.FromContext(ctx).Infow("Reusing existing Deployment", zap.Any("Pod", pod))
-	////logging.FromContext(ctx).Infow("Reusing existing Deployment", zap.Any("Status", pod.Status))
-	////logging.FromContext(ctx).Infow("Reusing existing Deployment", zap.Any("sink", sink))
-	////logging.FromContext(ctx).Infow("Reusing existing Deployment", zap.Any("sink-Status", sink.Status))
-	//
-	sink.Status.PropagateDeploymentAvailability(&pod.Status)
-	return nil
+	sink.Status.PropagateDeploymentStatus(&deployment.Status)
+	return deployment, nil
 }
 
-func (r *Reconciler) reconcileService(ctx context.Context, sink *sinks.IntegrationSink) error {
+func (r *Reconciler) reconcileService(ctx context.Context, sink *sinks.IntegrationSink) (*corev1.Service, error) {
 	expected := resources.MakeService(sink)
 
 	svc, err := r.serviceLister.Services(sink.Namespace).Get(expected.Name)
 	if apierrors.IsNotFound(err) {
 		svc, err := r.kubeClientSet.CoreV1().Services(sink.Namespace).Create(ctx, expected, metav1.CreateOptions{})
 		if err != nil {
-			return fmt.Errorf("creating new Service: %v", err)
+			return nil, fmt.Errorf("creating new Service: %v", err)
 		}
-		controller.GetEventRecorder(ctx).Eventf(sink, corev1.EventTypeNormal, "FIXME___reconciled", "Service created %q", svc.Name)
+		controller.GetEventRecorder(ctx).Eventf(sink, corev1.EventTypeNormal, serviceCreated, "Service created %q", svc.Name)
 	} else if err != nil {
-		return fmt.Errorf("getting Service : %v", err)
+		return nil, fmt.Errorf("getting Service : %v", err)
 	} else if !metav1.IsControlledBy(svc, sink) {
-		return fmt.Errorf("service %q is not owned by KameletSink %q", svc.Name, sink.Name)
+		return nil, fmt.Errorf("Service %q is not owned by IntegrationSink %q", svc.Name, sink.Name)
 	} else {
 		logging.FromContext(ctx).Debugw("Reusing existing Service", zap.Any("Service", svc))
 	}
 
-	return nil
+	return svc, nil
 }
 
 func (r *Reconciler) reconcileAddress(ctx context.Context, sink *sinks.IntegrationSink) error {
@@ -194,7 +229,6 @@ func (r *Reconciler) httpAddress(sink *sinks.IntegrationSink) duckv1.Addressable
 		URL: &apis.URL{
 			Scheme: "http",
 			Host:   network.GetServiceHostname(sink.GetName()+"-deployment", sink.GetNamespace()),
-			//			Path:   fmt.Sprintf("/%s/%s", sink.GetNamespace(), sink.GetName()),
 		},
 	}
 	return httpAddress
@@ -205,4 +239,19 @@ func (r *Reconciler) httpsAddress(certs *string, sink *sinks.IntegrationSink) du
 	addr.URL.Scheme = "https"
 	addr.CACerts = certs
 	return addr
+}
+
+func (r *Reconciler) podSpecChanged(oldPodSpec corev1.PodSpec, newPodSpec corev1.PodSpec) bool {
+	if !equality.Semantic.DeepDerivative(newPodSpec, oldPodSpec) {
+		return true
+	}
+	if len(oldPodSpec.Containers) != len(newPodSpec.Containers) {
+		return true
+	}
+	for i := range newPodSpec.Containers {
+		if !equality.Semantic.DeepEqual(newPodSpec.Containers[i].Env, oldPodSpec.Containers[i].Env) {
+			return true
+		}
+	}
+	return false
 }

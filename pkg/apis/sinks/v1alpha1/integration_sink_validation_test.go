@@ -18,8 +18,9 @@ package v1alpha1
 
 import (
 	"context"
-	"knative.dev/eventing/pkg/apis/common"
 	"testing"
+
+	"knative.dev/eventing/pkg/apis/common/integration/v1alpha1"
 
 	"github.com/google/go-cmp/cmp"
 	"knative.dev/pkg/apis"
@@ -45,15 +46,15 @@ func TestIntegrationSinkSpecValidation(t *testing.T) {
 			name: "valid AWS S3 sink with auth and region",
 			spec: IntegrationSinkSpec{
 				Aws: &Aws{
-					S3: &common.AWSS3{
-						AWSCommon: common.AWSCommon{
+					S3: &v1alpha1.AWSS3{
+						AWSCommon: v1alpha1.AWSCommon{
 							Region: "us-east-1",
 						},
-						BucketNameOrArn: "example-bucket",
+						Arn: "example-bucket",
 					},
-					Auth: &common.Auth{
-						Secret: &common.Secret{
-							Ref: &common.SecretReference{
+					Auth: &v1alpha1.Auth{
+						Secret: &v1alpha1.Secret{
+							Ref: &v1alpha1.SecretReference{
 								Name: "aws-secret",
 							},
 						},
@@ -66,15 +67,15 @@ func TestIntegrationSinkSpecValidation(t *testing.T) {
 			name: "valid AWS SQS sink with auth and region",
 			spec: IntegrationSinkSpec{
 				Aws: &Aws{
-					SQS: &common.AWSSQS{
-						AWSCommon: common.AWSCommon{
+					SQS: &v1alpha1.AWSSQS{
+						AWSCommon: v1alpha1.AWSCommon{
 							Region: "us-east-1",
 						},
-						QueueNameOrArn: "example-queue",
+						Arn: "example-queue",
 					},
-					Auth: &common.Auth{
-						Secret: &common.Secret{
-							Ref: &common.SecretReference{
+					Auth: &v1alpha1.Auth{
+						Secret: &v1alpha1.Secret{
+							Ref: &v1alpha1.SecretReference{
 								Name: "aws-secret",
 							},
 						},
@@ -91,11 +92,11 @@ func TestIntegrationSinkSpecValidation(t *testing.T) {
 					ShowHeaders: true,
 				},
 				Aws: &Aws{
-					S3: &common.AWSS3{
-						AWSCommon: common.AWSCommon{
+					S3: &v1alpha1.AWSS3{
+						AWSCommon: v1alpha1.AWSCommon{
 							Region: "us-east-1",
 						},
-						BucketNameOrArn: "example-bucket",
+						Arn: "example-bucket",
 					},
 				},
 			},
@@ -105,21 +106,21 @@ func TestIntegrationSinkSpecValidation(t *testing.T) {
 			name: "multiple AWS sinks set (invalid)",
 			spec: IntegrationSinkSpec{
 				Aws: &Aws{
-					S3: &common.AWSS3{
-						AWSCommon: common.AWSCommon{
+					S3: &v1alpha1.AWSS3{
+						AWSCommon: v1alpha1.AWSCommon{
 							Region: "us-east-1",
 						},
-						BucketNameOrArn: "example-bucket",
+						Arn: "example-bucket",
 					},
-					SQS: &common.AWSSQS{
-						AWSCommon: common.AWSCommon{
+					SQS: &v1alpha1.AWSSQS{
+						AWSCommon: v1alpha1.AWSCommon{
 							Region: "us-east-1",
 						},
-						QueueNameOrArn: "example-queue",
+						Arn: "example-queue",
 					},
-					Auth: &common.Auth{
-						Secret: &common.Secret{
-							Ref: &common.SecretReference{
+					Auth: &v1alpha1.Auth{
+						Secret: &v1alpha1.Secret{
+							Ref: &v1alpha1.SecretReference{
 								Name: "aws-secret",
 							},
 						},
@@ -132,14 +133,14 @@ func TestIntegrationSinkSpecValidation(t *testing.T) {
 			name: "AWS SQS sink without QueueNameOrArn (invalid)",
 			spec: IntegrationSinkSpec{
 				Aws: &Aws{
-					SQS: &common.AWSSQS{
-						AWSCommon: common.AWSCommon{
+					SQS: &v1alpha1.AWSSQS{
+						AWSCommon: v1alpha1.AWSCommon{
 							Region: "us-east-1",
 						},
 					},
-					Auth: &common.Auth{
-						Secret: &common.Secret{
-							Ref: &common.SecretReference{
+					Auth: &v1alpha1.Auth{
+						Secret: &v1alpha1.Secret{
+							Ref: &v1alpha1.SecretReference{
 								Name: "aws-secret",
 							},
 						},
@@ -157,11 +158,11 @@ func TestIntegrationSinkSpecValidation(t *testing.T) {
 			name: "AWS sink without auth (invalid)",
 			spec: IntegrationSinkSpec{
 				Aws: &Aws{
-					S3: &common.AWSS3{
-						AWSCommon: common.AWSCommon{
+					S3: &v1alpha1.AWSS3{
+						AWSCommon: v1alpha1.AWSCommon{
 							Region: "us-east-1",
 						},
-						BucketNameOrArn: "example-bucket",
+						Arn: "example-bucket",
 					},
 				},
 			},
@@ -171,12 +172,12 @@ func TestIntegrationSinkSpecValidation(t *testing.T) {
 			name: "AWS S3 sink without region (invalid)",
 			spec: IntegrationSinkSpec{
 				Aws: &Aws{
-					S3: &common.AWSS3{
-						BucketNameOrArn: "example-bucket",
+					S3: &v1alpha1.AWSS3{
+						Arn: "example-bucket",
 					},
-					Auth: &common.Auth{
-						Secret: &common.Secret{
-							Ref: &common.SecretReference{
+					Auth: &v1alpha1.Auth{
+						Secret: &v1alpha1.Secret{
+							Ref: &v1alpha1.SecretReference{
 								Name: "aws-secret",
 							},
 						},

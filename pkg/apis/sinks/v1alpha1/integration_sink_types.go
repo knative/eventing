@@ -20,7 +20,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"knative.dev/eventing/pkg/apis/common"
+	"knative.dev/eventing/pkg/apis/common/integration/v1alpha1"
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -74,9 +74,9 @@ type Log struct {
 }
 
 type Aws struct {
-	S3   *common.AWSS3  `json:"s3,omitempty"`  // S3 source configuration
-	SQS  *common.AWSSQS `json:"sqs,omitempty"` // SQS source configuration
-	Auth *common.Auth   `json:"auth,omitempty"`
+	S3   *v1alpha1.AWSS3  `json:"s3,omitempty"`  // S3 source configuration
+	SQS  *v1alpha1.AWSSQS `json:"sqs,omitempty"` // SQS source configuration
+	Auth *v1alpha1.Auth   `json:"auth,omitempty"`
 }
 
 type IntegrationSinkStatus struct {
