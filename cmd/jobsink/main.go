@@ -258,8 +258,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	logger.Debug("Creating job for event", zap.String("URI", r.RequestURI), zap.String("jobName", jobName))
-
 	job := js.Spec.Job.DeepCopy()
 	job.Name = jobName
 	if job.Labels == nil {
@@ -315,6 +313,12 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
+	logger.Debug("Creating job for event",
+		zap.String("URI", r.RequestURI),
+		zap.String("jobName", jobName),
+		zap.Any("job", job),
+	)
+
 	createdJob, err := h.k8s.BatchV1().Jobs(ref.Namespace).Create(r.Context(), job, metav1.CreateOptions{})
 	if err != nil && !apierrors.IsAlreadyExists(err) {
 		logger.Warn("Failed to create job", zap.Error(err))
@@ -323,8 +327,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-
-	logger.Debug("Creating secret for event", zap.String("URI", r.RequestURI), zap.String("jobName", jobName))
+	if apierrors.IsAlreadyExists(err) {
+		logger.Debug("Job already exists", zap.String("URI", r.RequestURI), zap.String("jobName", jobName))
+	}
 
 	secret := &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{},
@@ -341,7 +346,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					Kind:               "Job",
 					Name:               createdJob.Name,
 					UID:                createdJob.UID,
-					Controller:         ptr.Bool(false),
+					Controller:         ptr.Bool(true),
 					BlockOwnerDeletion: ptr.Bool(false),
 				},
 			},
@@ -351,6 +356,12 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Type:      corev1.SecretTypeOpaque,
 	}
 
+	logger.Debug("Creating secret for event",
+		zap.String("URI", r.RequestURI),
+		zap.String("jobName", jobName),
+		zap.Any("secret.metadata", secret.ObjectMeta),
+	)
+
 	_, err = h.k8s.CoreV1().Secrets(ref.Namespace).Create(r.Context(), secret, metav1.CreateOptions{})
 	if err != nil && !apierrors.IsAlreadyExists(err) {
 		logger.Warn("Failed to create secret", zap.Error(err))
@@ -358,6 +369,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Reason", err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		return
+	}
+	if apierrors.IsAlreadyExists(err) {
+		logger.Debug("Secret already exists", zap.String("URI", r.RequestURI), zap.String("jobName", jobName))
 	}
 
 	w.Header().Add("Location", locationHeader(ref, event.Source(), event.ID()))
