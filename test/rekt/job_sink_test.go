@@ -42,7 +42,23 @@ func TestJobSinkSuccess(t *testing.T) {
 		environment.Managed(t),
 	)
 
-	env.Test(ctx, t, jobsink.Success())
+	env.Test(ctx, t, jobsink.Success(""))
+}
+
+func TestJobSinkDeleteJobCascadeSecretDeletion(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+	)
+
+	jobSinkName := feature.MakeRandomK8sName("jobsink")
+	env.Test(ctx, t, jobsink.Success(jobSinkName))
+	env.Test(ctx, t, jobsink.DeleteJobsCascadeSecretsDeletion(jobSinkName))
 }
 
 func TestJobSinkSuccessTLS(t *testing.T) {
