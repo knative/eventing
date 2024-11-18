@@ -61,6 +61,15 @@ func WithBrokerFinalizers(finalizers ...string) BrokerOption {
 	}
 }
 
+func WithBrokerAnnotation(key, value string) BrokerOption {
+	return func(b *v1.Broker) {
+		if b.Annotations == nil {
+			b.Annotations = map[string]string{}
+		}
+		b.Annotations[key] = value
+	}
+}
+
 func WithBrokerResourceVersion(rv string) BrokerOption {
 	return func(b *v1.Broker) {
 		b.ResourceVersion = rv

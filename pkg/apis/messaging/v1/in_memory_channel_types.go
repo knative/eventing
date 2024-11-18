@@ -19,10 +19,11 @@ package v1
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/kmeta"
+
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 )
 
 // +genclient
@@ -43,6 +44,14 @@ type InMemoryChannel struct {
 	// +optional
 	Status InMemoryChannelStatus `json:"status,omitempty"`
 }
+
+var (
+	// AsyncHandlerAnnotation controls whether InMemoryChannel uses the async handler.
+	//
+	// Async handler is subject to event loss since it responds with 200 before forwarding the event
+	// to all subscriptions.
+	AsyncHandlerAnnotation = SchemeGroupVersion.Group + "/async-handler"
+)
 
 var (
 	// Check that InMemoryChannel can be validated and defaulted.

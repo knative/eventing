@@ -173,6 +173,8 @@ func AsDestinationRef(name string) *duckv1.Destination {
 // WithDeadLetterSink adds the dead letter sink related config to a Subscription spec.
 var WithDeadLetterSink = delivery.WithDeadLetterSink
 
+var WithAnnotations = manifest.WithAnnotations
+
 // ValidateAddress validates the address retured by Address
 func ValidateAddress(name string, validate addressable.ValidateAddressFn, timings ...time.Duration) feature.StepFn {
 	return addressable.ValidateAddress(GVR(), name, validate, timings...)
