@@ -258,44 +258,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	jobName := kmeta.ChildName(ref.Name, id)
 
-	logger.Debug("Creating secret for event", zap.String("URI", r.RequestURI), zap.String("jobName", jobName))
-
-	jobSinkUID := js.GetUID()
-
-	or := metav1.OwnerReference{
-		APIVersion:         sinksv.SchemeGroupVersion.String(),
-		Kind:               sinks.JobSinkResource.Resource,
-		Name:               js.GetName(),
-		UID:                jobSinkUID,
-		Controller:         ptr.Bool(true),
-		BlockOwnerDeletion: ptr.Bool(false),
-	}
-
-	secret := &corev1.Secret{
-		TypeMeta: metav1.TypeMeta{},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      jobName,
-			Namespace: ref.Namespace,
-			Labels: map[string]string{
-				sinks.JobSinkIDLabel:   id,
-				sinks.JobSinkNameLabel: ref.Name,
-			},
-			OwnerReferences: []metav1.OwnerReference{or},
-		},
-		Immutable: ptr.Bool(true),
-		Data:      map[string][]byte{"event": eventBytes},
-		Type:      corev1.SecretTypeOpaque,
-	}
-
-	_, err = h.k8s.CoreV1().Secrets(ref.Namespace).Create(r.Context(), secret, metav1.CreateOptions{})
-	if err != nil && !apierrors.IsAlreadyExists(err) {
-		logger.Warn("Failed to create secret", zap.Error(err))
-
-		w.Header().Add("Reason", err.Error())
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
 	logger.Debug("Creating job for event", zap.String("URI", r.RequestURI), zap.String("jobName", jobName))
 
 	job := js.Spec.Job.DeepCopy()
@@ -305,7 +267,14 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	job.Labels[sinks.JobSinkIDLabel] = id
 	job.Labels[sinks.JobSinkNameLabel] = ref.Name
-	job.OwnerReferences = append(job.OwnerReferences, or)
+	job.OwnerReferences = append(job.OwnerReferences, metav1.OwnerReference{
+		APIVersion:         sinksv.SchemeGroupVersion.String(),
+		Kind:               sinks.JobSinkResource.Resource,
+		Name:               js.GetName(),
+		UID:                js.GetUID(),
+		Controller:         ptr.Bool(true),
+		BlockOwnerDeletion: ptr.Bool(false),
+	})
 	var mountPathName string
 	for i := range job.Spec.Template.Spec.Containers {
 		found := false
@@ -346,9 +315,45 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	_, err = h.k8s.BatchV1().Jobs(ref.Namespace).Create(r.Context(), job, metav1.CreateOptions{})
-	if err != nil {
+	createdJob, err := h.k8s.BatchV1().Jobs(ref.Namespace).Create(r.Context(), job, metav1.CreateOptions{})
+	if err != nil && !apierrors.IsAlreadyExists(err) {
 		logger.Warn("Failed to create job", zap.Error(err))
+
+		w.Header().Add("Reason", err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	logger.Debug("Creating secret for event", zap.String("URI", r.RequestURI), zap.String("jobName", jobName))
+
+	secret := &corev1.Secret{
+		TypeMeta: metav1.TypeMeta{},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      jobName,
+			Namespace: ref.Namespace,
+			Labels: map[string]string{
+				sinks.JobSinkIDLabel:   id,
+				sinks.JobSinkNameLabel: ref.Name,
+			},
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion:         "batch/v1",
+					Kind:               "Job",
+					Name:               createdJob.Name,
+					UID:                createdJob.UID,
+					Controller:         ptr.Bool(false),
+					BlockOwnerDeletion: ptr.Bool(false),
+				},
+			},
+		},
+		Immutable: ptr.Bool(true),
+		Data:      map[string][]byte{"event": eventBytes},
+		Type:      corev1.SecretTypeOpaque,
+	}
+
+	_, err = h.k8s.CoreV1().Secrets(ref.Namespace).Create(r.Context(), secret, metav1.CreateOptions{})
+	if err != nil && !apierrors.IsAlreadyExists(err) {
+		logger.Warn("Failed to create secret", zap.Error(err))
 
 		w.Header().Add("Reason", err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
