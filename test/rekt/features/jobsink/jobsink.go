@@ -95,9 +95,10 @@ func DeleteJobsCascadeSecretsDeletion(jobSink string) *feature.Feature {
 	}))
 
 	f.Requirement("delete jobs for jobsink", func(ctx context.Context, t feature.T) {
+		policy := metav1.DeletePropagationBackground
 		err := kubeclient.Get(ctx).BatchV1().
 			Jobs(environment.FromContext(ctx).Namespace()).
-			DeleteCollection(ctx, metav1.DeleteOptions{}, metav1.ListOptions{
+			DeleteCollection(ctx, metav1.DeleteOptions{PropagationPolicy: &policy}, metav1.ListOptions{
 				LabelSelector: fmt.Sprintf("%s=%s", sinks.JobSinkNameLabel, jobSink),
 			})
 		if err != nil {
