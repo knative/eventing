@@ -26,6 +26,8 @@ import (
 	"os"
 	"time"
 
+	"knative.dev/eventing/pkg/reconciler/integration/source"
+
 	"knative.dev/pkg/injection/sharedmain"
 
 	filteredFactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
