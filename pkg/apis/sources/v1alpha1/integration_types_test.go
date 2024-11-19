@@ -17,8 +17,9 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"knative.dev/eventing/pkg/apis/common/integration/v1alpha1"
 	"testing"
+
+	"knative.dev/eventing/pkg/apis/common/integration/v1alpha1"
 )
 
 func TestIntegrationSource_GetStatus(t *testing.T) {
