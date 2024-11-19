@@ -26,8 +26,6 @@ import (
 	"os"
 	"time"
 
-	"knative.dev/eventing/pkg/reconciler/integration/source"
-
 	"knative.dev/pkg/injection/sharedmain"
 
 	filteredFactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
@@ -43,6 +41,7 @@ import (
 	"knative.dev/eventing/pkg/reconciler/channel"
 	"knative.dev/eventing/pkg/reconciler/containersource"
 	"knative.dev/eventing/pkg/reconciler/eventtype"
+	integrationsource "knative.dev/eventing/pkg/reconciler/integration/source"
 	"knative.dev/eventing/pkg/reconciler/parallel"
 	"knative.dev/eventing/pkg/reconciler/pingsource"
 	"knative.dev/eventing/pkg/reconciler/sequence"
@@ -106,7 +105,7 @@ func main() {
 		apiserversource.NewController,
 		pingsource.NewController,
 		containersource.NewController,
-		source.NewController,
+		integrationsource.NewController,
 
 		// Sources CRD
 		sourcecrd.NewController,
