@@ -21,11 +21,12 @@ import (
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
 	"errors"
-	"knative.dev/eventing/pkg/reconciler/integration/source"
 	"log"
 	"net/http"
 	"os"
 	"time"
+
+	"knative.dev/eventing/pkg/reconciler/integration/source"
 
 	"knative.dev/pkg/injection/sharedmain"
 

@@ -25,8 +25,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-const prefix = "CAMEL_KAMELET_"
-
 func GenerateEnvVarsFromStruct(prefix string, s interface{}) []corev1.EnvVar {
 	var envVars []corev1.EnvVar
 
