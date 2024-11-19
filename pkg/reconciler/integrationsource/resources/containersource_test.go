@@ -129,3 +129,28 @@ func TestGenerateEnvVarsFromStruct(t *testing.T) {
 		t.Errorf("generateEnvVarsFromStruct() mismatch (-want +got):\n%s", diff)
 	}
 }
+
+func TestGenerateEnvVarsFromStruct_S3WithCamelTag(t *testing.T) {
+	type AWSS3 struct {
+		Arn    string `json:"arn,omitempty" camel:"CAMEL_KAMELET_AWS_S3_SOURCE_BUCKETNAMEORARN"`
+		Region string `json:"region,omitempty"`
+	}
+
+	prefix := "CAMEL_KAMELET_AWS_S3_SOURCE"
+	input := AWSS3{
+		Arn:    "arn:aws:s3:::example-bucket",
+		Region: "us-west-2",
+	}
+
+	// Expected environment variables including SSL settings and camel tag for Arn
+	want := []corev1.EnvVar{
+		{Name: "CAMEL_KAMELET_AWS_S3_SOURCE_BUCKETNAMEORARN", Value: "arn:aws:s3:::example-bucket"},
+		{Name: "CAMEL_KAMELET_AWS_S3_SOURCE_REGION", Value: "us-west-2"},
+	}
+
+	got := generateEnvVarsFromStruct(prefix, input)
+
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Errorf("generateEnvVarsFromStruct_S3WithCamelTag() mismatch (-want +got):\n%s", diff)
+	}
+}

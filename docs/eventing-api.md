@@ -7577,7 +7577,7 @@ AWSCommon
 </tr>
 <tr>
 <td>
-<code>bucketNameOrArn</code><br/>
+<code>arn</code><br/>
 <em>
 string
 </em>
@@ -7594,7 +7594,7 @@ bool
 </em>
 </td>
 <td>
-<p>S3 Bucket name or ARN</p>
+<p>S3 ARN</p>
 </td>
 </tr>
 <tr>
@@ -7741,7 +7741,7 @@ AWSCommon
 </tr>
 <tr>
 <td>
-<code>queueNameOrArn</code><br/>
+<code>arn</code><br/>
 <em>
 string
 </em>
@@ -7758,7 +7758,7 @@ bool
 </em>
 </td>
 <td>
-<p>SQS Queue name or ARN</p>
+<p>SQS ARN</p>
 </td>
 </tr>
 <tr>
@@ -7774,7 +7774,7 @@ bool
 </tr>
 <tr>
 <td>
-<code>amazonAWSHost</code><br/>
+<code>host</code><br/>
 <em>
 string
 </em>
@@ -7956,7 +7956,7 @@ AWSSQS
 </tr>
 <tr>
 <td>
-<code>ddb-streams</code><br/>
+<code>ddbStreams</code><br/>
 <em>
 <a href="#sources.knative.dev/v1alpha1.AWSDDBStreams">
 AWSDDBStreams

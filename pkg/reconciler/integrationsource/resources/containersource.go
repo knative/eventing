@@ -89,16 +89,17 @@ func generateEnvVarsFromStruct(prefix string, s interface{}) []corev1.EnvVar {
 			continue
 		}
 
-		// Extract the JSON tag or fall back to the Go field name
-		jsonTag := fieldType.Tag.Get("json")
-		tagName := strings.Split(jsonTag, ",")[0]
-
-		// fallback to Go field name if no JSON tag
-		if tagName == "" || tagName == "-" {
-			tagName = fieldType.Name
+		// First, check for the custom 'camel' tag
+		envVarName := fieldType.Tag.Get("camel")
+		if envVarName == "" {
+			// If 'camel' tag is not present, fall back to the 'json' tag or Go field name
+			jsonTag := fieldType.Tag.Get("json")
+			tagName := strings.Split(jsonTag, ",")[0]
+			if tagName == "" || tagName == "-" {
+				tagName = fieldType.Name
+			}
+			envVarName = fmt.Sprintf("%s_%s", prefix, strings.ToUpper(tagName))
 		}
-
-		envVarName := fmt.Sprintf("%s_%s", prefix, strings.ToUpper(tagName))
 
 		if field.Kind() == reflect.Ptr {
 			if field.IsNil() {
