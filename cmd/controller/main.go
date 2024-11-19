@@ -41,7 +41,7 @@ import (
 	"knative.dev/eventing/pkg/reconciler/channel"
 	"knative.dev/eventing/pkg/reconciler/containersource"
 	"knative.dev/eventing/pkg/reconciler/eventtype"
-	"knative.dev/eventing/pkg/reconciler/integrationsource"
+	integrationsource "knative.dev/eventing/pkg/reconciler/integration/source"
 	"knative.dev/eventing/pkg/reconciler/parallel"
 	"knative.dev/eventing/pkg/reconciler/pingsource"
 	"knative.dev/eventing/pkg/reconciler/sequence"
