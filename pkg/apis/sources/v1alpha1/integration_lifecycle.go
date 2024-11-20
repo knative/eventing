@@ -26,7 +26,7 @@ const (
 	// IntegrationSourceConditionReady has status True when the IntegrationSource is ready to send events.
 	IntegrationSourceConditionReady = apis.ConditionReady
 
-	// IntegrationSourceConditionReceiveAdapterReady has status True when the IntegrationSource's Deployment is ready.
+	// IntegrationSourceConditionContainerSourceReady has status True when the IntegrationSource's ContainerSource is ready.
 	IntegrationSourceConditionContainerSourceReady apis.ConditionType = "ContainerSourceReady"
 )
 
@@ -54,7 +54,7 @@ func (iss *IntegrationSourceStatus) IsReady() bool {
 }
 
 func (s *IntegrationSourceStatus) PropagateContainerSourceStatus(status *v1.ContainerSourceStatus) {
-	//// Do not copy conditions nor observedGeneration
+	// ContainerSource status has all we need, hence deep copy it.
 	s.SourceStatus = *status.SourceStatus.DeepCopy()
 
 	cond := status.GetCondition(apis.ConditionReady)
