@@ -66,7 +66,7 @@ import (
 	"knative.dev/eventing/pkg/utils"
 )
 
-const component = "job-sink"
+const component = "job_sink"
 
 func main() {
 
