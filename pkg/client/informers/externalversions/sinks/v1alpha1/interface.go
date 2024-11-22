@@ -24,6 +24,8 @@ import (
 
 // Interface provides access to all the informers in this group version.
 type Interface interface {
+	// IntegrationSinks returns a IntegrationSinkInformer.
+	IntegrationSinks() IntegrationSinkInformer
 	// JobSinks returns a JobSinkInformer.
 	JobSinks() JobSinkInformer
 }
@@ -37,6 +39,11 @@ type version struct {
 // New returns a new Interface.
 func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakListOptions internalinterfaces.TweakListOptionsFunc) Interface {
 	return &version{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
+}
+
+// IntegrationSinks returns a IntegrationSinkInformer.
+func (v *version) IntegrationSinks() IntegrationSinkInformer {
+	return &integrationSinkInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // JobSinks returns a JobSinkInformer.

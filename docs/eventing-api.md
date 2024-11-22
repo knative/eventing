@@ -52,7 +52,7 @@ Resource Types:
 <h3 id="duck.knative.dev/v1.AppliedEventPoliciesStatus">AppliedEventPoliciesStatus
 </h3>
 <p>
-(<em>Appears on:</em><a href="#duck.knative.dev/v1.ChannelableStatus">ChannelableStatus</a>, <a href="#eventing.knative.dev/v1.BrokerStatus">BrokerStatus</a>, <a href="#eventing.knative.dev/v1alpha1.RequestReplyStatus">RequestReplyStatus</a>, <a href="#flows.knative.dev/v1.ParallelStatus">ParallelStatus</a>, <a href="#flows.knative.dev/v1.SequenceStatus">SequenceStatus</a>, <a href="#sinks.knative.dev/v1alpha1.JobSinkStatus">JobSinkStatus</a>)
+(<em>Appears on:</em><a href="#duck.knative.dev/v1.ChannelableStatus">ChannelableStatus</a>, <a href="#eventing.knative.dev/v1.BrokerStatus">BrokerStatus</a>, <a href="#eventing.knative.dev/v1alpha1.RequestReplyStatus">RequestReplyStatus</a>, <a href="#flows.knative.dev/v1.ParallelStatus">ParallelStatus</a>, <a href="#flows.knative.dev/v1.SequenceStatus">SequenceStatus</a>, <a href="#sinks.knative.dev/v1alpha1.IntegrationSinkStatus">IntegrationSinkStatus</a>, <a href="#sinks.knative.dev/v1alpha1.JobSinkStatus">JobSinkStatus</a>)
 </p>
 <p>
 <p>AppliedEventPoliciesStatus contains the list of policies which apply to a resource.
@@ -6144,8 +6144,109 @@ resolved delivery options.</p>
 </p>
 Resource Types:
 <ul><li>
+<a href="#sinks.knative.dev/v1alpha1.IntegrationSink">IntegrationSink</a>
+</li><li>
 <a href="#sinks.knative.dev/v1alpha1.JobSink">JobSink</a>
 </li></ul>
+<h3 id="sinks.knative.dev/v1alpha1.IntegrationSink">IntegrationSink
+</h3>
+<p>
+<p>IntegrationSink is the Schema for the IntegrationSink API.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>apiVersion</code><br/>
+string</td>
+<td>
+<code>
+sinks.knative.dev/v1alpha1
+</code>
+</td>
+</tr>
+<tr>
+<td>
+<code>kind</code><br/>
+string
+</td>
+<td><code>IntegrationSink</code></td>
+</tr>
+<tr>
+<td>
+<code>metadata</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#objectmeta-v1-meta">
+Kubernetes meta/v1.ObjectMeta
+</a>
+</em>
+</td>
+<td>
+Refer to the Kubernetes API documentation for the fields of the
+<code>metadata</code> field.
+</td>
+</tr>
+<tr>
+<td>
+<code>spec</code><br/>
+<em>
+<a href="#sinks.knative.dev/v1alpha1.IntegrationSinkSpec">
+IntegrationSinkSpec
+</a>
+</em>
+</td>
+<td>
+<br/>
+<br/>
+<table>
+<tr>
+<td>
+<code>aws</code><br/>
+<em>
+<a href="#sinks.knative.dev/v1alpha1.Aws">
+Aws
+</a>
+</em>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<code>log</code><br/>
+<em>
+<a href="#sinks.knative.dev/v1alpha1.Log">
+Log
+</a>
+</em>
+</td>
+<td>
+<p>AWS source configuration</p>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+<tr>
+<td>
+<code>status</code><br/>
+<em>
+<a href="#sinks.knative.dev/v1alpha1.IntegrationSinkStatus">
+IntegrationSinkStatus
+</a>
+</em>
+</td>
+<td>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="sinks.knative.dev/v1alpha1.JobSink">JobSink
 </h3>
 <p>
@@ -6230,6 +6331,164 @@ JobSinkStatus
 </em>
 </td>
 <td>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="sinks.knative.dev/v1alpha1.Aws">Aws
+</h3>
+<p>
+(<em>Appears on:</em><a href="#sinks.knative.dev/v1alpha1.IntegrationSinkSpec">IntegrationSinkSpec</a>)
+</p>
+<p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>s3</code><br/>
+<em>
+knative.dev/eventing/pkg/apis/common/integration/v1alpha1.AWSS3
+</em>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<code>sqs</code><br/>
+<em>
+knative.dev/eventing/pkg/apis/common/integration/v1alpha1.AWSSQS
+</em>
+</td>
+<td>
+<p>S3 source configuration</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>auth</code><br/>
+<em>
+knative.dev/eventing/pkg/apis/common/integration/v1alpha1.Auth
+</em>
+</td>
+<td>
+<p>SQS source configuration</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="sinks.knative.dev/v1alpha1.IntegrationSinkSpec">IntegrationSinkSpec
+</h3>
+<p>
+(<em>Appears on:</em><a href="#sinks.knative.dev/v1alpha1.IntegrationSink">IntegrationSink</a>)
+</p>
+<p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>aws</code><br/>
+<em>
+<a href="#sinks.knative.dev/v1alpha1.Aws">
+Aws
+</a>
+</em>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<code>log</code><br/>
+<em>
+<a href="#sinks.knative.dev/v1alpha1.Log">
+Log
+</a>
+</em>
+</td>
+<td>
+<p>AWS source configuration</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="sinks.knative.dev/v1alpha1.IntegrationSinkStatus">IntegrationSinkStatus
+</h3>
+<p>
+(<em>Appears on:</em><a href="#sinks.knative.dev/v1alpha1.IntegrationSink">IntegrationSink</a>)
+</p>
+<p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>Status</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#Status">
+knative.dev/pkg/apis/duck/v1.Status
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>Status</code> are embedded into this type.)
+</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>AddressStatus</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#AddressStatus">
+knative.dev/pkg/apis/duck/v1.AddressStatus
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>AddressStatus</code> are embedded into this type.)
+</p>
+<em>(Optional)</em>
+<p>AddressStatus is the part where the JobSink fulfills the Addressable contract.
+It exposes the endpoint as an URI to get events delivered.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>AppliedEventPoliciesStatus</code><br/>
+<em>
+<a href="#duck.knative.dev/v1.AppliedEventPoliciesStatus">
+AppliedEventPoliciesStatus
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>AppliedEventPoliciesStatus</code> are embedded into this type.)
+</p>
+<em>(Optional)</em>
+<p>AppliedEventPoliciesStatus contains the list of EventPolicies which apply to this JobSink</p>
 </td>
 </tr>
 </tbody>
@@ -6370,6 +6629,165 @@ string
 </em>
 </td>
 <td>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="sinks.knative.dev/v1alpha1.Log">Log
+</h3>
+<p>
+(<em>Appears on:</em><a href="#sinks.knative.dev/v1alpha1.IntegrationSinkSpec">IntegrationSinkSpec</a>)
+</p>
+<p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>loggerName</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<code>level</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Name of the logging category to use</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>logMask</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Logging level to use</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>marker</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Mask sensitive information in the log</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>multiline</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>An optional Marker name to use</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>showAllProperties</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>If enabled, outputs each information on a newline</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>showBody</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Show all of the exchange properties (both internal and custom)</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>showBodyType</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Show the message body</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>showExchangePattern</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Show the body Java type</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>showHeaders</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Show the Message Exchange Pattern (MEP)</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>showProperties</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Show the headers received</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>showStreams</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Show the exchange properties (only custom)</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>showCachedStreams</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Show the stream bodies</p>
 </td>
 </tr>
 </tbody>
