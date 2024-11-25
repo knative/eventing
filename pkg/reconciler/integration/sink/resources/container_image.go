@@ -21,6 +21,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	commonv1a1 "knative.dev/eventing/pkg/apis/common/integration/v1alpha1"
 	"knative.dev/eventing/pkg/apis/sinks/v1alpha1"
 	"knative.dev/eventing/pkg/reconciler/integration"
 	"knative.dev/pkg/kmeta"
@@ -123,8 +124,8 @@ func makeEnv(sink *v1alpha1.IntegrationSink) []corev1.EnvVar {
 		envVars = append(envVars, integration.GenerateEnvVarsFromStruct("CAMEL_KAMELET_AWS_S3_SINK", *sink.Spec.Aws.S3)...)
 		if secretName != "" {
 			envVars = append(envVars, []corev1.EnvVar{
-				integration.MakeSecretEnvVar("CAMEL_KAMELET_AWS_S3_SINK_ACCESSKEY", "aws.accessKey", secretName),
-				integration.MakeSecretEnvVar("CAMEL_KAMELET_AWS_S3_SINK_SECRETKEY", "aws.secretKey", secretName),
+				integration.MakeSecretEnvVar("CAMEL_KAMELET_AWS_S3_SINK_ACCESSKEY", commonv1a1.AwsAccessKey, secretName),
+				integration.MakeSecretEnvVar("CAMEL_KAMELET_AWS_S3_SINK_SECRETKEY", commonv1a1.AwsSecretKey, secretName),
 			}...)
 		}
 		return envVars
@@ -135,8 +136,8 @@ func makeEnv(sink *v1alpha1.IntegrationSink) []corev1.EnvVar {
 		envVars = append(envVars, integration.GenerateEnvVarsFromStruct("CAMEL_KAMELET_AWS_SQS_SINK", *sink.Spec.Aws.SQS)...)
 		if secretName != "" {
 			envVars = append(envVars, []corev1.EnvVar{
-				integration.MakeSecretEnvVar("CAMEL_KAMELET_AWS_SQS_SINK_ACCESSKEY", "aws.accessKey", secretName),
-				integration.MakeSecretEnvVar("CAMEL_KAMELET_AWS_SQS_SINK_SECRETKEY", "aws.secretKey", secretName),
+				integration.MakeSecretEnvVar("CAMEL_KAMELET_AWS_SQS_SINK_ACCESSKEY", commonv1a1.AwsAccessKey, secretName),
+				integration.MakeSecretEnvVar("CAMEL_KAMELET_AWS_SQS_SINK_SECRETKEY", commonv1a1.AwsSecretKey, secretName),
 			}...)
 		}
 		return envVars
