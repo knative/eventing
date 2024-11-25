@@ -257,6 +257,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	js = js.DeepCopy() // Do not modify informer copy.
+	js.SetDefaults(ctx)
+
 	job := js.Spec.Job.DeepCopy()
 	job.Name = jobName
 	if job.Labels == nil {

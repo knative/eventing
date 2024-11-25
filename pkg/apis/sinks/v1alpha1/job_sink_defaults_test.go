@@ -21,13 +21,111 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	batchv1 "k8s.io/api/batch/v1"
+	corev1 "k8s.io/api/core/v1"
 )
 
 func TestSetDefaults(t *testing.T) {
 	testCases := map[string]struct {
 		initial  JobSink
 		expected JobSink
-	}{}
+	}{
+		"execution mode": {
+			initial: JobSink{
+				Spec: JobSinkSpec{
+					Job: &batchv1.Job{
+						Spec:       batchv1.JobSpec{
+							Template: corev1.PodTemplateSpec{
+								Spec:       corev1.PodSpec{
+									Containers: []corev1.Container{
+										{
+											Name:                     "cnt",
+											Image:                    "img",
+										},
+										{
+											Name:                     "cnt2",
+											Image:                    "img2",
+										},
+										{
+											Name:                     "cnt3",
+											Image:                    "img3",
+											Env: []corev1.EnvVar{
+												{Name: "KNATIVE_EXECUTION_MODE", Value: "something"},
+											},
+										},
+									},
+									InitContainers: []corev1.Container{
+										{
+											Name:                     "cnt",
+											Image:                    "img",
+										},
+										{
+											Name:                     "cnt-ini2",
+											Image:                    "img-ini2",
+											Env: []corev1.EnvVar{
+												{Name: "KNATIVE_EXECUTION_MODE", Value: "something"},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: JobSink{
+				Spec: JobSinkSpec{
+					Job: &batchv1.Job{
+						Spec:       batchv1.JobSpec{
+							Template: corev1.PodTemplateSpec{
+								Spec:       corev1.PodSpec{
+									InitContainers: []corev1.Container{
+										{
+											Name:                     "cnt",
+											Image:                    "img",
+											Env: []corev1.EnvVar{
+												{Name: "KNATIVE_EXECUTION_MODE", Value: "batch"},
+											},
+										},
+										{
+											Name:                     "cnt-ini2",
+											Image:                    "img-ini2",
+											Env: []corev1.EnvVar{
+												{Name: "KNATIVE_EXECUTION_MODE", Value: "something"},
+											},
+										},
+									},
+									Containers: []corev1.Container{
+										{
+											Name:                     "cnt",
+											Image:                    "img",
+											Env: []corev1.EnvVar{
+												{Name: "KNATIVE_EXECUTION_MODE", Value: "batch"},
+											},
+										},
+										{
+											Name:                     "cnt2",
+											Image:                    "img2",
+											Env: []corev1.EnvVar{
+												{Name: "KNATIVE_EXECUTION_MODE", Value: "batch"},
+											},
+										},
+										{
+											Name:                     "cnt3",
+											Image:                    "img3",
+											Env: []corev1.EnvVar{
+												{Name: "KNATIVE_EXECUTION_MODE", Value: "something"},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
 			tc.initial.SetDefaults(context.TODO())

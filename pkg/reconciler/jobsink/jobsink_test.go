@@ -263,6 +263,9 @@ func testJob(name string) *batchv1.Job {
 					Containers: []corev1.Container{
 						{
 							Name: "test-container",
+							Env: []corev1.EnvVar{
+								{Name: "KNATIVE_EXECUTION_MODE", Value: "batch"},
+							},
 						},
 					},
 				},
