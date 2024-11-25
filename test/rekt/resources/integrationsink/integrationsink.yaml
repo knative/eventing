@@ -19,7 +19,7 @@ metadata:
   namespace: {{ .namespace }}
   {{ if .annotations }}
   {{ range $key, $value := .annotations }}
-  {{ $key }}: {{ $value }}
+  {{ $key }}: "{{ $value }}"
   {{ end }}
   {{ end }}
 spec:
