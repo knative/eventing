@@ -31,7 +31,7 @@ spec:
         status: { }
       schema:
         openAPIV3Schema:
-          description: 'IntegrationSink triggers long-running jobs when an event occur.'
+          description: 'IntegrationSink sends events to generic event sink'
           type: object
           properties:
             spec:
@@ -114,7 +114,7 @@ spec:
                     s3:
                       type: object
                       properties:
-                        bucketNameOrArn:
+                        arn:
                           type: string
                           title: Bucket Name
                           description: The S3 Bucket name or Amazon Resource Name (ARN).
@@ -209,7 +209,7 @@ spec:
                     sqs:
                       type: object
                       properties:
-                        queueNameOrArn:
+                        arn:
                           type: string
                           title: Queue Name
                           description: The SQS Queue Name or ARN
@@ -227,7 +227,7 @@ spec:
                           title: Autocreate Queue
                           description: Setting the autocreation of the SQS queue.
                           default: false
-                        amazonAWSHost:
+                        host:
                           type: string
                           title: AWS Host
                           description: The hostname of the Amazon AWS cloud.
@@ -320,7 +320,7 @@ spec:
               type: object
               properties:
                 address:
-                  description: IntegrationSink is Addressable. It exposes the endpoint as an URI to schedule long running jobs when an even occurs.
+                  description: IntegrationSink is Addressable. It exposes the endpoints as URIs to get events delivered into the used Kamelet.
                   type: object
                   properties:
                     name:
@@ -332,7 +332,7 @@ spec:
                     audience:
                       type: string
                 addresses:
-                  description: IntegrationSink is Addressable. It exposes the endpoint as an URI to schedule long running jobs when an even occurs.
+                  description: IntegrationSink is Addressable. It exposes the endpoints as URIs to get events delivered into the used Kamelet.
                   type: array
                   items:
                     type: object
@@ -345,12 +345,6 @@ spec:
                         type: string
                       audience:
                         type: string
-                job:
-                  type: object
-                  properties:
-                    selector:
-                      type: string
-                      description: Label selector for all scheduled jobs
                 annotations:
                   description: Annotations is additional Status fields for the Resource to save some additional State as well as convey more information to the user. This is roughly akin to Annotations on any k8s resource, just the reconciler conveying richer information outwards.
                   type: object

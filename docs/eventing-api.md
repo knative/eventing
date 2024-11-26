@@ -6384,6 +6384,21 @@ knative.dev/eventing/pkg/apis/common/integration/v1alpha1.Auth
 </tr>
 </tbody>
 </table>
+<h3 id="sinks.knative.dev/v1alpha1.ExecutionMode">ExecutionMode
+(<code>string</code> alias)</p></h3>
+<p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr><td><p>&#34;batch&#34;</p></td>
+<td></td>
+</tr></tbody>
+</table>
 <h3 id="sinks.knative.dev/v1alpha1.IntegrationSinkSpec">IntegrationSinkSpec
 </h3>
 <p>
