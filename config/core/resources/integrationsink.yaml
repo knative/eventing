@@ -114,7 +114,7 @@ spec:
                     s3:
                       type: object
                       properties:
-                        bucketNameOrArn:
+                        arn:
                           type: string
                           title: Bucket Name
                           description: The S3 Bucket name or Amazon Resource Name (ARN).
@@ -209,7 +209,7 @@ spec:
                     sqs:
                       type: object
                       properties:
-                        queueNameOrArn:
+                        arn:
                           type: string
                           title: Queue Name
                           description: The SQS Queue Name or ARN
@@ -227,7 +227,7 @@ spec:
                           title: Autocreate Queue
                           description: Setting the autocreation of the SQS queue.
                           default: false
-                        amazonAWSHost:
+                        host:
                           type: string
                           title: AWS Host
                           description: The hostname of the Amazon AWS cloud.
