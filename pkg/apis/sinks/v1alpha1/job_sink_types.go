@@ -29,7 +29,7 @@ import (
 )
 
 const (
-	ExecutionModeEnvVar = "KNATIVE_EXECUTION_MODE"
+	ExecutionModeEnvVar = "K_EXECUTION_MODE"
 )
 
 type ExecutionMode string
