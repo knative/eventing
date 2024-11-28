@@ -19,15 +19,11 @@ package resources
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	commonv1a1 "knative.dev/eventing/pkg/apis/common/integration/v1alpha1"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	"knative.dev/eventing/pkg/reconciler/integration"
 	"knative.dev/pkg/kmeta"
-)
-
-const (
-	awsAccessKey = "aws.accessKey"
-	awsSecretKey = "aws.secretKey"
 )
 
 func NewContainerSource(source *v1alpha1.IntegrationSource) *sourcesv1.ContainerSource {
@@ -79,8 +75,8 @@ func makeEnv(source *v1alpha1.IntegrationSource) []corev1.EnvVar {
 		envVars = append(envVars, integration.GenerateEnvVarsFromStruct("CAMEL_KAMELET_AWS_S3_SOURCE", *source.Spec.Aws.S3)...)
 		if secretName != "" {
 			envVars = append(envVars, []corev1.EnvVar{
-				integration.MakeSecretEnvVar("CAMEL_KAMELET_AWS_S3_SOURCE_ACCESSKEY", awsAccessKey, secretName),
-				integration.MakeSecretEnvVar("CAMEL_KAMELET_AWS_S3_SOURCE_SECRETKEY", awsSecretKey, secretName),
+				integration.MakeSecretEnvVar("CAMEL_KAMELET_AWS_S3_SOURCE_ACCESSKEY", commonv1a1.AwsAccessKey, secretName),
+				integration.MakeSecretEnvVar("CAMEL_KAMELET_AWS_S3_SOURCE_SECRETKEY", commonv1a1.AwsSecretKey, secretName),
 			}...)
 		}
 		return envVars
@@ -91,8 +87,8 @@ func makeEnv(source *v1alpha1.IntegrationSource) []corev1.EnvVar {
 		envVars = append(envVars, integration.GenerateEnvVarsFromStruct("CAMEL_KAMELET_AWS_SQS_SOURCE", *source.Spec.Aws.SQS)...)
 		if secretName != "" {
 			envVars = append(envVars, []corev1.EnvVar{
-				integration.MakeSecretEnvVar("CAMEL_KAMELET_AWS_SQS_SOURCE_ACCESSKEY", awsAccessKey, secretName),
-				integration.MakeSecretEnvVar("CAMEL_KAMELET_AWS_SQS_SOURCE_SECRETKEY", awsSecretKey, secretName),
+				integration.MakeSecretEnvVar("CAMEL_KAMELET_AWS_SQS_SOURCE_ACCESSKEY", commonv1a1.AwsAccessKey, secretName),
+				integration.MakeSecretEnvVar("CAMEL_KAMELET_AWS_SQS_SOURCE_SECRETKEY", commonv1a1.AwsSecretKey, secretName),
 			}...)
 		}
 		return envVars
@@ -103,8 +99,8 @@ func makeEnv(source *v1alpha1.IntegrationSource) []corev1.EnvVar {
 		envVars = append(envVars, integration.GenerateEnvVarsFromStruct("CAMEL_KAMELET_AWS_DDB_STREAMS_SOURCE", *source.Spec.Aws.DDBStreams)...)
 		if secretName != "" {
 			envVars = append(envVars, []corev1.EnvVar{
-				integration.MakeSecretEnvVar("CAMEL_KAMELET_AWS_DDB_STREAMS_SOURCE_ACCESSKEY", awsAccessKey, secretName),
-				integration.MakeSecretEnvVar("CAMEL_KAMELET_AWS_DDB_STREAMS_SOURCE_SECRETKEY", awsSecretKey, secretName),
+				integration.MakeSecretEnvVar("CAMEL_KAMELET_AWS_DDB_STREAMS_SOURCE_ACCESSKEY", commonv1a1.AwsAccessKey, secretName),
+				integration.MakeSecretEnvVar("CAMEL_KAMELET_AWS_DDB_STREAMS_SOURCE_SECRETKEY", commonv1a1.AwsSecretKey, secretName),
 			}...)
 		}
 		return envVars

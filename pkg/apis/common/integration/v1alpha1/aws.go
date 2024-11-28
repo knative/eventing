@@ -16,6 +16,14 @@ limitations under the License.
 
 package v1alpha1
 
+const (
+
+	// AwsAccessKey is the name of the expected key on the secret for accessing the actual AWS access key value.
+	AwsAccessKey = "aws.accessKey"
+	// AwsSecretKey is the name of the expected key on the secret for accessing the actual AWS secret key value.
+	AwsSecretKey = "aws.secretKey"
+)
+
 type AWSCommon struct {
 	// Auth is the S3 authentication (accessKey/secretKey) configuration.
 	Region                 string `json:"region,omitempty"`                 // AWS region
