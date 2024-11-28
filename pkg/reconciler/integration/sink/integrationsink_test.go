@@ -19,6 +19,8 @@ package sink
 import (
 	"fmt"
 
+	"knative.dev/eventing/pkg/reconciler/integration"
+
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
 	"knative.dev/pkg/apis"
@@ -33,7 +35,6 @@ import (
 	sinksv1alpha1 "knative.dev/eventing/pkg/apis/sinks/v1alpha1"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/client/injection/reconciler/sinks/v1alpha1/integrationsink"
-	"knative.dev/eventing/pkg/reconciler/integration/sink/resources"
 	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/logging"
@@ -187,16 +188,16 @@ func makeDeployment(sink *sinksv1alpha1.IntegrationSink, ready *corev1.Condition
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(sink),
 			},
-			Labels: resources.Labels(sink.Name),
+			Labels: integration.Labels(sink.Name),
 		},
 		Status: status,
 		Spec: appsv1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{
-				MatchLabels: resources.Labels(sink.Name),
+				MatchLabels: integration.Labels(sink.Name),
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: resources.Labels(sink.Name),
+					Labels: integration.Labels(sink.Name),
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
@@ -274,7 +275,7 @@ func makeService(name, namespace string) *corev1.Service {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
-			Labels:    resources.Labels(sinkName),
+			Labels:    integration.Labels(sinkName),
 			OwnerReferences: []metav1.OwnerReference{
 				{
 					APIVersion:         "sinks.knative.dev/v1alpha1",
@@ -295,7 +296,7 @@ func makeService(name, namespace string) *corev1.Service {
 					TargetPort: intstr.IntOrString{IntVal: 8080},
 				},
 			},
-			Selector: resources.Labels(sinkName),
+			Selector: integration.Labels(sinkName),
 		},
 	}
 }

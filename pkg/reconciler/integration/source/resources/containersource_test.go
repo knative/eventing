@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"testing"
 
+	"knative.dev/eventing/pkg/reconciler/integration"
+
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/kmeta"
@@ -67,9 +69,13 @@ func TestNewContainerSource(t *testing.T) {
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(source),
 			},
+			Labels: integration.Labels(source.Name),
 		},
 		Spec: sourcesv1.ContainerSourceSpec{
 			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: integration.Labels(source.Name),
+				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
