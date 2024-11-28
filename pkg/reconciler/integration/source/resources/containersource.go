@@ -34,10 +34,13 @@ func NewContainerSource(source *v1alpha1.IntegrationSource) *sourcesv1.Container
 			},
 			Name:      ContainerSourceName(source),
 			Namespace: source.Namespace,
+			Labels:    integration.Labels(source.Name),
 		},
 		Spec: sourcesv1.ContainerSourceSpec{
-
 			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: integration.Labels(source.Name),
+				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{

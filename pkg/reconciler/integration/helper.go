@@ -124,3 +124,9 @@ func MakeSSLEnvVar() []corev1.EnvVar {
 		},
 	}
 }
+
+func Labels(name string) map[string]string {
+	return map[string]string{
+		"app.kubernetes.io/name": name,
+	}
+}

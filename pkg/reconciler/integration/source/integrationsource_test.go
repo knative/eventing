@@ -19,6 +19,8 @@ package source
 import (
 	"fmt"
 
+	"knative.dev/eventing/pkg/reconciler/integration"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -188,9 +190,13 @@ func makeContainerSource(source *sourcesv1alpha1.IntegrationSource, ready *corev
 			},
 			Name:      containerSourceName,
 			Namespace: source.Namespace,
+			Labels:    integration.Labels(source.Name),
 		},
 		Spec: sourcesv1.ContainerSourceSpec{
 			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: integration.Labels(source.Name),
+				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{

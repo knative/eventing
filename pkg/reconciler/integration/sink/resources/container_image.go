@@ -40,15 +40,15 @@ func MakeDeploymentSpec(sink *v1alpha1.IntegrationSink) *appsv1.Deployment {
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(sink),
 			},
-			Labels: Labels(sink.Name),
+			Labels: integration.Labels(sink.Name),
 		},
 		Spec: appsv1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{
-				MatchLabels: Labels(sink.Name),
+				MatchLabels: integration.Labels(sink.Name),
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: Labels(sink.Name),
+					Labels: integration.Labels(sink.Name),
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
@@ -84,10 +84,10 @@ func MakeService(sink *v1alpha1.IntegrationSink) *corev1.Service {
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(sink),
 			},
-			Labels: Labels(sink.Name),
+			Labels: integration.Labels(sink.Name),
 		},
 		Spec: corev1.ServiceSpec{
-			Selector: Labels(sink.Name),
+			Selector: integration.Labels(sink.Name),
 			Ports: []corev1.ServicePort{
 				{
 					Name:       "http",
