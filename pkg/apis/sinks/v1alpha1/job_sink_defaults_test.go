@@ -50,7 +50,7 @@ func TestSetDefaults(t *testing.T) {
 											Name:  "cnt3",
 											Image: "img3",
 											Env: []corev1.EnvVar{
-												{Name: "KNATIVE_EXECUTION_MODE", Value: "something"},
+												{Name: "K_EXECUTION_MODE", Value: "something"},
 											},
 										},
 									},
@@ -63,7 +63,7 @@ func TestSetDefaults(t *testing.T) {
 											Name:  "cnt-ini2",
 											Image: "img-ini2",
 											Env: []corev1.EnvVar{
-												{Name: "KNATIVE_EXECUTION_MODE", Value: "something"},
+												{Name: "K_EXECUTION_MODE", Value: "something"},
 											},
 										},
 									},
@@ -84,14 +84,14 @@ func TestSetDefaults(t *testing.T) {
 											Name:  "cnt",
 											Image: "img",
 											Env: []corev1.EnvVar{
-												{Name: "KNATIVE_EXECUTION_MODE", Value: "batch"},
+												{Name: "K_EXECUTION_MODE", Value: "batch"},
 											},
 										},
 										{
 											Name:  "cnt-ini2",
 											Image: "img-ini2",
 											Env: []corev1.EnvVar{
-												{Name: "KNATIVE_EXECUTION_MODE", Value: "something"},
+												{Name: "K_EXECUTION_MODE", Value: "something"},
 											},
 										},
 									},
@@ -100,21 +100,21 @@ func TestSetDefaults(t *testing.T) {
 											Name:  "cnt",
 											Image: "img",
 											Env: []corev1.EnvVar{
-												{Name: "KNATIVE_EXECUTION_MODE", Value: "batch"},
+												{Name: "K_EXECUTION_MODE", Value: "batch"},
 											},
 										},
 										{
 											Name:  "cnt2",
 											Image: "img2",
 											Env: []corev1.EnvVar{
-												{Name: "KNATIVE_EXECUTION_MODE", Value: "batch"},
+												{Name: "K_EXECUTION_MODE", Value: "batch"},
 											},
 										},
 										{
 											Name:  "cnt3",
 											Image: "img3",
 											Env: []corev1.EnvVar{
-												{Name: "KNATIVE_EXECUTION_MODE", Value: "something"},
+												{Name: "K_EXECUTION_MODE", Value: "something"},
 											},
 										},
 									},
