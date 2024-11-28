@@ -166,3 +166,25 @@ rules:
     - get
     - list
     - watch
+
+---
+
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: integrationsinks-addressable-resolver
+  labels:
+    duck.knative.dev/addressable: "true"
+    app.kubernetes.io/version: devel
+    app.kubernetes.io/name: knative-eventing
+# Do not use this role directly. These rules will be added to the "addressable-resolver" role.
+rules:
+- apiGroups:
+    - sinks.knative.dev
+  resources:
+    - integrationsinks
+    - integrationsinks/status
+  verbs:
+    - get
+    - list
+    - watch
