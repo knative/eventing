@@ -78,7 +78,7 @@ func TestCESQLFilter(t *testing.T) {
 			}
 			f, err := NewCESQLFilter(tt.expression)
 			if err != nil {
-				t.Fatalf("Error inistanciating CESQL filter. %v", err)
+				t.Fatalf("Error instanciating CESQL filter. %v", err)
 			}
 			if got := f.Filter(context.TODO(), *e); got != tt.want {
 				t.Errorf("Filter() = %v, want %v", got, tt.want)
