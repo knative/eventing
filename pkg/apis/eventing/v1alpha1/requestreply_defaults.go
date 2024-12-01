@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"k8s.io/utils/ptr"
+	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/pkg/apis"
 )
 
@@ -30,7 +31,7 @@ func (rr *RequestReply) SetDefaults(ctx context.Context) {
 
 func (rrs *RequestReplySpec) SetDefaults(ctx context.Context) {
 	if rrs.Timeout == nil || *rrs.Timeout == "" {
-		rrs.Timeout = ptr.To("30s")
+		rrs.Timeout = ptr.To(feature.FromContextOrDefaults(ctx).RequestReplyDefaultTimeout())
 	}
 
 	if rrs.CorrelationAttribute == "" {
