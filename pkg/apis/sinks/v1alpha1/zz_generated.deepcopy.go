@@ -40,6 +40,11 @@ func (in *Aws) DeepCopyInto(out *Aws) {
 		*out = new(integrationv1alpha1.AWSSQS)
 		**out = **in
 	}
+	if in.SNS != nil {
+		in, out := &in.SNS, &out.SNS
+		*out = new(integrationv1alpha1.AWSSNS)
+		**out = **in
+	}
 	if in.Auth != nil {
 		in, out := &in.Auth, &out.Auth
 		*out = new(integrationv1alpha1.Auth)

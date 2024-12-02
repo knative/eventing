@@ -42,6 +42,9 @@ func (spec *IntegrationSinkSpec) Validate(ctx context.Context) *apis.FieldError 
 		if spec.Aws.SQS != nil {
 			sinkSetCount++
 		}
+		if spec.Aws.SNS != nil {
+			sinkSetCount++
+		}
 	}
 
 	// Validate that only one sink field is set
@@ -53,7 +56,7 @@ func (spec *IntegrationSinkSpec) Validate(ctx context.Context) *apis.FieldError 
 
 	// Only perform AWS-specific validation if exactly one AWS sink is configured
 	if sinkSetCount == 1 && spec.Aws != nil {
-		if spec.Aws.S3 != nil || spec.Aws.SQS != nil {
+		if spec.Aws.S3 != nil || spec.Aws.SQS != nil || spec.Aws.SNS != nil {
 			// Check that AWS Auth is properly configured
 			if !spec.Aws.Auth.HasAuth() {
 				errs = errs.Also(apis.ErrMissingField("aws.auth.secret.ref.name"))
@@ -77,6 +80,15 @@ func (spec *IntegrationSinkSpec) Validate(ctx context.Context) *apis.FieldError 
 			}
 			if spec.Aws.SQS.Region == "" {
 				errs = errs.Also(apis.ErrMissingField("aws.sqs.region"))
+			}
+		}
+		// Additional validation for AWS SNS required fields
+		if spec.Aws.SNS != nil {
+			if spec.Aws.SNS.Arn == "" {
+				errs = errs.Also(apis.ErrMissingField("aws.sns.arn"))
+			}
+			if spec.Aws.SNS.Region == "" {
+				errs = errs.Also(apis.ErrMissingField("aws.sns.region"))
 			}
 		}
 	}

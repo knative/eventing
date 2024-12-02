@@ -70,3 +70,9 @@ type AWSDDBStreams struct {
 	StreamIteratorType string           `json:"streamIteratorType,omitempty" default:"FROM_LATEST"` // Defines where in the DynamoDB stream to start getting records
 	Delay              int              `json:"delay,omitempty" default:"500"`                      // Delay in milliseconds before the next poll from the database
 }
+
+type AWSSNS struct {
+	AWSCommon       `json:",inline"` // Embeds AWSCommon to inherit its fields in JSON
+	Arn             string           `json:"arn,omitempty" camel:"CAMEL_KAMELET_AWS_SNS_SINK_TOPICNAMEORARN"` // SNS ARN
+	AutoCreateTopic bool             `json:"autoCreateTopic" default:"false"`                                 // Auto-create SNS topic
+}

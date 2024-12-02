@@ -31,6 +31,7 @@ var sinkImageMap = map[string]string{
 	"log":     "gcr.io/knative-nightly/log-sink:latest",
 	"aws-s3":  "gcr.io/knative-nightly/aws-s3-sink:latest",
 	"aws-sqs": "gcr.io/knative-nightly/aws-sqs-sink:latest",
+	"aws-sns": "gcr.io/knative-nightly/aws-sns-sink:latest",
 }
 
 func MakeDeploymentSpec(sink *v1alpha1.IntegrationSink) *appsv1.Deployment {
@@ -149,6 +150,18 @@ func makeEnv(sink *v1alpha1.IntegrationSink) []corev1.EnvVar {
 		return envVars
 	}
 
+	// AWS SNS environment variables
+	if sink.Spec.Aws != nil && sink.Spec.Aws.SNS != nil {
+		envVars = append(envVars, integration.GenerateEnvVarsFromStruct("CAMEL_KAMELET_AWS_SNS_SINK", *sink.Spec.Aws.SNS)...)
+		if secretName != "" {
+			envVars = append(envVars, []corev1.EnvVar{
+				integration.MakeSecretEnvVar("CAMEL_KAMELET_AWS_SNS_SINK_ACCESSKEY", commonv1a1.AwsAccessKey, secretName),
+				integration.MakeSecretEnvVar("CAMEL_KAMELET_AWS_SNS_SINK_SECRETKEY", commonv1a1.AwsSecretKey, secretName),
+			}...)
+		}
+		return envVars
+	}
+
 	// If no valid configuration is found, return empty envVars
 	return envVars
 }
@@ -161,6 +174,8 @@ func selectImage(sink *v1alpha1.IntegrationSink) string {
 		return sinkImageMap["aws-s3"]
 	case sink.Spec.Aws != nil && sink.Spec.Aws.SQS != nil:
 		return sinkImageMap["aws-sqs"]
+	case sink.Spec.Aws != nil && sink.Spec.Aws.SNS != nil:
+		return sinkImageMap["aws-sns"]
 	default:
 		return ""
 	}

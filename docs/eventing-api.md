@@ -6373,13 +6373,24 @@ knative.dev/eventing/pkg/apis/common/integration/v1alpha1.AWSSQS
 </tr>
 <tr>
 <td>
+<code>sns</code><br/>
+<em>
+knative.dev/eventing/pkg/apis/common/integration/v1alpha1.AWSSNS
+</em>
+</td>
+<td>
+<p>SQS source configuration</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>auth</code><br/>
 <em>
 knative.dev/eventing/pkg/apis/common/integration/v1alpha1.Auth
 </em>
 </td>
 <td>
-<p>SQS source configuration</p>
+<p>SNS source configuration</p>
 </td>
 </tr>
 </tbody>

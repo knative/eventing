@@ -76,6 +76,7 @@ type Log struct {
 type Aws struct {
 	S3   *v1alpha1.AWSS3  `json:"s3,omitempty"`  // S3 source configuration
 	SQS  *v1alpha1.AWSSQS `json:"sqs,omitempty"` // SQS source configuration
+	SNS  *v1alpha1.AWSSNS `json:"sns,omitempty"` // SNS source configuration
 	Auth *v1alpha1.Auth   `json:"auth,omitempty"`
 }
 
