@@ -26,6 +26,14 @@ import (
 	"knative.dev/pkg/kmeta"
 )
 
+// TODO: replace with ConfigMap
+var sourceImageMap = map[string]string{
+	"timer":           "gcr.io/knative-nightly/timer-source:latest",
+	"aws-s3":          "gcr.io/knative-nightly/aws-s3-source:latest",
+	"aws-sqs":         "gcr.io/knative-nightly/aws-sqs-source:latest",
+	"aws-ddb-streams": "gcr.io/knative-nightly/aws-ddb-streams-source:latest",
+}
+
 func NewContainerSource(source *v1alpha1.IntegrationSource) *sourcesv1.ContainerSource {
 	return &sourcesv1.ContainerSource{
 		ObjectMeta: metav1.ObjectMeta{
@@ -114,19 +122,16 @@ func makeEnv(source *v1alpha1.IntegrationSource) []corev1.EnvVar {
 }
 
 func selectImage(source *v1alpha1.IntegrationSource) string {
-	if source.Spec.Timer != nil {
-		return "gcr.io/knative-nightly/timer-source:latest"
+	switch {
+	case source.Spec.Timer != nil:
+		return sourceImageMap["timer"]
+	case source.Spec.Aws != nil && source.Spec.Aws.S3 != nil:
+		return sourceImageMap["aws-s3"]
+	case source.Spec.Aws != nil && source.Spec.Aws.SQS != nil:
+		return sourceImageMap["aws-sqs"]
+	case source.Spec.Aws != nil && source.Spec.Aws.DDBStreams != nil:
+		return sourceImageMap["aws-ddb-streams"]
+	default:
+		return ""
 	}
-	if source.Spec.Aws != nil {
-		if source.Spec.Aws.S3 != nil {
-			return "gcr.io/knative-nightly/aws-s3-source:latest"
-		}
-		if source.Spec.Aws.SQS != nil {
-			return "gcr.io/knative-nightly/aws-sqs-source:latest"
-		}
-		if source.Spec.Aws.DDBStreams != nil {
-			return "gcr.io/knative-nightly/aws-ddb-streams-source:latest"
-		}
-	}
-	return ""
 }
