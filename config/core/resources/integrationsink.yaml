@@ -165,16 +165,6 @@ spec:
                             true overrides any behavior defined by the `includeBody` option. If
                             false, the S3 object is put in the body.
                           default: false
-                        profileCredentialsName:
-                          type: string
-                          title: Profile Credentials Name
-                          description: If using a profile credentials provider this parameter
-                            will set the profile name.
-                        sessionToken:
-                          type: string
-                          title: Session Token
-                          description: Amazon AWS Session Token used when the user needs to assume
-                            a IAM role.
                         uriEndpointOverride:
                           type: string
                           title: Overwrite Endpoint URI
@@ -242,16 +232,6 @@ spec:
                           type: string
                           title: Queue URL
                           description: The full SQS Queue URL (required if using KEDA)
-                        profileCredentialsName:
-                          type: string
-                          title: Profile Credentials Name
-                          description: If using a profile credentials provider this parameter
-                            will set the profile name.
-                        sessionToken:
-                          type: string
-                          title: Session Token
-                          description: Amazon AWS Session Token used when the user needs to assume
-                            a IAM role.
                         uriEndpointOverride:
                           type: string
                           title: Overwrite Endpoint URI
@@ -313,11 +293,6 @@ spec:
                           title: Autocreate Topic
                           description: Setting the autocreation of the SNS topic.
                           default: false
-                        sessionToken:
-                          type: string
-                          title: Session Token
-                          description: Amazon AWS Session Token used when the user needs to assume
-                            a IAM role.
                         uriEndpointOverride:
                           type: string
                           title: Overwrite Endpoint URI
