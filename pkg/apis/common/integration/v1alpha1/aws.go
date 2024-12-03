@@ -26,11 +26,9 @@ const (
 
 type AWSCommon struct {
 	// Auth is the S3 authentication (accessKey/secretKey) configuration.
-	Region                 string `json:"region,omitempty"`                 // AWS region
-	ProfileCredentialsName string `json:"profileCredentialsName,omitempty"` // Profile name for profile credentials provider
-	SessionToken           string `json:"sessionToken,omitempty"`           // Session token
-	URIEndpointOverride    string `json:"uriEndpointOverride,omitempty"`    // Override endpoint URI
-	OverrideEndpoint       bool   `json:"overrideEndpoint" default:"false"` // Override endpoint flag
+	Region              string `json:"region,omitempty"`                 // AWS region
+	URIEndpointOverride string `json:"uriEndpointOverride,omitempty"`    // Override endpoint URI
+	OverrideEndpoint    bool   `json:"overrideEndpoint" default:"false"` // Override endpoint flag
 }
 
 type AWSS3 struct {
