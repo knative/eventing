@@ -297,6 +297,39 @@ spec:
                           description: The duration (in seconds) that the received messages are
                             hidden from subsequent retrieve requests after being retrieved by
                             a ReceiveMessage request.
+                    sns:
+                      type: object
+                      properties:
+                        arn:
+                          type: string
+                          title: Topic Name
+                          description: The SNS topic name name or Amazon Resource Name (ARN).
+                        region:
+                          type: string
+                          title: AWS Region
+                          description: The AWS region to access.
+                        autoCreateTopic:
+                          type: boolean
+                          title: Autocreate Topic
+                          description: Setting the autocreation of the SNS topic.
+                          default: false
+                        sessionToken:
+                          type: string
+                          title: Session Token
+                          description: Amazon AWS Session Token used when the user needs to assume
+                            a IAM role.
+                        uriEndpointOverride:
+                          type: string
+                          title: Overwrite Endpoint URI
+                          description: The overriding endpoint URI. To use this option, you must
+                            also select the `overrideEndpoint` option.
+                        overrideEndpoint:
+                          type: boolean
+                          title: Endpoint Overwrite
+                          description: Select this option to override the endpoint URI. To use
+                            this option, you must also provide a URI for the `uriEndpointOverride`
+                            option.
+                          default: false
                     auth:
                       description: 'Auth configurations'
                       type: object

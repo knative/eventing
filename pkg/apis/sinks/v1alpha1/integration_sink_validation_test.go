@@ -150,6 +150,26 @@ func TestIntegrationSinkSpecValidation(t *testing.T) {
 			want: apis.ErrMissingField("aws.sqs.queueNameOrArn"),
 		},
 		{
+			name: "AWS SNS sink without TopicNameOrArn (invalid)",
+			spec: IntegrationSinkSpec{
+				Aws: &Aws{
+					SNS: &v1alpha1.AWSSNS{
+						AWSCommon: v1alpha1.AWSCommon{
+							Region: "us-east-1",
+						},
+					},
+					Auth: &v1alpha1.Auth{
+						Secret: &v1alpha1.Secret{
+							Ref: &v1alpha1.SecretReference{
+								Name: "aws-secret",
+							},
+						},
+					},
+				},
+			},
+			want: apis.ErrMissingField("aws.sns.arn"),
+		},
+		{
 			name: "no sink type specified (invalid)",
 			spec: IntegrationSinkSpec{},
 			want: apis.ErrGeneric("at least one sink type must be specified", "spec"),
