@@ -27,6 +27,12 @@ import (
 	"knative.dev/pkg/kmeta"
 )
 
+var sinkImageMap = map[string]string{
+	"log":     "gcr.io/knative-nightly/log-sink:latest",
+	"aws-s3":  "gcr.io/knative-nightly/aws-s3-sink:latest",
+	"aws-sqs": "gcr.io/knative-nightly/aws-sqs-sink:latest",
+}
+
 func MakeDeploymentSpec(sink *v1alpha1.IntegrationSink) *appsv1.Deployment {
 
 	deploy := &appsv1.Deployment{
@@ -148,16 +154,14 @@ func makeEnv(sink *v1alpha1.IntegrationSink) []corev1.EnvVar {
 }
 
 func selectImage(sink *v1alpha1.IntegrationSink) string {
-	if sink.Spec.Log != nil {
-		return "gcr.io/knative-nightly/log-sink:latest"
+	switch {
+	case sink.Spec.Log != nil:
+		return sinkImageMap["log"]
+	case sink.Spec.Aws != nil && sink.Spec.Aws.S3 != nil:
+		return sinkImageMap["aws-s3"]
+	case sink.Spec.Aws != nil && sink.Spec.Aws.SQS != nil:
+		return sinkImageMap["aws-sqs"]
+	default:
+		return ""
 	}
-	if sink.Spec.Aws != nil {
-		if sink.Spec.Aws.S3 != nil {
-			return "gcr.io/knative-nightly/aws-s3-source:latest"
-		}
-		if sink.Spec.Aws.SQS != nil {
-			return "gcr.io/knative-nightly/aws-sqs-source:latest"
-		}
-	}
-	return ""
 }
