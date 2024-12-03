@@ -26,6 +26,8 @@ import (
 	"net/http"
 	"time"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+
 	opencensusclient "github.com/cloudevents/sdk-go/observability/opencensus/v2/client"
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"
@@ -170,6 +172,11 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	trigger, err := h.getTrigger(triggerRef)
+	if apierrors.IsNotFound(err) {
+		h.logger.Info("Unable to find the Trigger", zap.Error(err), zap.Any("triggerRef", triggerRef))
+		writer.WriteHeader(http.StatusNotFound)
+		return
+	}
 	if err != nil {
 		h.logger.Info("Unable to get the Trigger", zap.Error(err), zap.Any("triggerRef", triggerRef))
 		writer.WriteHeader(http.StatusBadRequest)
@@ -245,6 +252,11 @@ func (h *Handler) handleDispatchToReplyRequest(ctx context.Context, trigger *eve
 	}
 
 	broker, err := h.brokerLister.Brokers(brokerNamespace).Get(brokerName)
+	if apierrors.IsNotFound(err) {
+		h.logger.Info("Unable to get the Broker", zap.Error(err))
+		writer.WriteHeader(http.StatusNotFound)
+		return
+	}
 	if err != nil {
 		h.logger.Info("Unable to get the Broker", zap.Error(err))
 		writer.WriteHeader(http.StatusBadRequest)
@@ -290,6 +302,11 @@ func (h *Handler) handleDispatchToDLSRequest(ctx context.Context, trigger *event
 		brokerNamespace = trigger.Namespace
 	}
 	broker, err := h.brokerLister.Brokers(brokerNamespace).Get(brokerName)
+	if apierrors.IsNotFound(err) {
+		h.logger.Info("Unable to get the Broker", zap.Error(err))
+		writer.WriteHeader(http.StatusNotFound)
+		return
+	}
 	if err != nil {
 		h.logger.Info("Unable to get the Broker", zap.Error(err))
 		writer.WriteHeader(http.StatusBadRequest)
@@ -309,6 +326,9 @@ func (h *Handler) handleDispatchToDLSRequest(ctx context.Context, trigger *event
 			CACerts:  broker.Status.DeadLetterSinkCACerts,
 			Audience: broker.Status.DeadLetterSinkAudience,
 		}
+	}
+	if target == nil {
+		return
 	}
 
 	reportArgs := &ReportArgs{
