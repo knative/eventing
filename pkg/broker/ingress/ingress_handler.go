@@ -23,6 +23,7 @@ import (
 	"strings"
 	"time"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/utils/ptr"
 
 	opencensusclient "github.com/cloudevents/sdk-go/observability/opencensus/v2/client"
@@ -226,6 +227,11 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	broker, err := h.getBroker(brokerName, brokerNamespace)
+	if apierrors.IsNotFound(err) {
+		h.Logger.Warn("Failed to retrieve broker", zap.Error(err))
+		writer.WriteHeader(http.StatusNotFound)
+		return
+	}
 	if err != nil {
 		h.Logger.Warn("Failed to retrieve broker", zap.Error(err))
 		writer.WriteHeader(http.StatusBadRequest)
@@ -315,7 +321,7 @@ func (h *Handler) receive(ctx context.Context, headers http.Header, event *cloud
 	channelAddress, err := h.getChannelAddress(brokerObj)
 	if err != nil {
 		h.Logger.Warn("could not get channel address from broker", zap.Error(err))
-		return http.StatusBadRequest, kncloudevents.NoDuration
+		return http.StatusInternalServerError, kncloudevents.NoDuration
 	}
 
 	opts := []kncloudevents.SendOption{
