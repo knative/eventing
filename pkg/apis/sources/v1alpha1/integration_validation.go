@@ -76,7 +76,7 @@ func (spec *IntegrationSourceSpec) Validate(ctx context.Context) *apis.FieldErro
 		// Additional validation for AWS SQS required fields
 		if spec.Aws.SQS != nil {
 			if spec.Aws.SQS.Arn == "" {
-				errs = errs.Also(apis.ErrMissingField("aws.sqs.queueNameOrArn"))
+				errs = errs.Also(apis.ErrMissingField("aws.sqs.arn"))
 			}
 			if spec.Aws.SQS.Region == "" {
 				errs = errs.Also(apis.ErrMissingField("aws.sqs.region"))

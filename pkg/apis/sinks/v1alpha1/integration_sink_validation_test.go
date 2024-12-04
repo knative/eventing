@@ -147,7 +147,7 @@ func TestIntegrationSinkSpecValidation(t *testing.T) {
 					},
 				},
 			},
-			want: apis.ErrMissingField("aws.sqs.queueNameOrArn"),
+			want: apis.ErrMissingField("aws.sqs.arn"),
 		},
 		{
 			name: "AWS SNS sink without TopicNameOrArn (invalid)",
