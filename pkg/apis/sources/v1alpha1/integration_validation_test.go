@@ -170,7 +170,7 @@ func TestIntegrationSourceSpecValidation(t *testing.T) {
 					},
 				},
 			},
-			want: apis.ErrMissingField("aws.sqs.queueNameOrArn"),
+			want: apis.ErrMissingField("aws.sqs.arn"),
 		},
 		{
 			name: "AWS DDBStreams source without Table (invalid)",
