@@ -24,6 +24,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/kelseyhightower/envconfig"
 	"go.uber.org/zap"
+	eventpolicyinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventpolicy"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	configmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap/filtered"
 	filteredFactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
@@ -151,7 +152,7 @@ func main() {
 	oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
 	// We are running both the receiver (takes messages in from the Broker) and the dispatcher (send
 	// the messages to the triggers' subscribers) in this binary.
-	oidcTokenVerifier := auth.NewOIDCTokenVerifier(ctx)
+	oidcTokenVerifier := auth.NewOIDCTokenVerifier(ctx, eventpolicyinformer.Get(ctx).Lister())
 	trustBundleConfigMapInformer := configmapinformer.Get(ctx, eventingtls.TrustBundleLabelSelector).Lister().ConfigMaps(system.Namespace())
 	handler, err = filter.NewHandler(logger, oidcTokenVerifier, oidcTokenProvider, triggerinformer.Get(ctx), brokerinformer.Get(ctx), reporter, trustBundleConfigMapInformer, ctxFunc)
 	if err != nil {

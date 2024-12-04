@@ -35,6 +35,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
+	eventpolicyinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventpolicy"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	configmap "knative.dev/pkg/configmap/informer"
 	"knative.dev/pkg/controller"
@@ -118,7 +119,7 @@ func main() {
 		k8s:               kubeclient.Get(ctx),
 		lister:            jobsink.Get(ctx).Lister(),
 		withContext:       ctxFunc,
-		oidcTokenVerifier: auth.NewOIDCTokenVerifier(ctx),
+		oidcTokenVerifier: auth.NewOIDCTokenVerifier(ctx, eventpolicyinformer.Get(ctx).Lister()),
 	}
 
 	tlsConfig, err := getServerTLSConfig(ctx)
