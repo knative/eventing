@@ -22,7 +22,6 @@ import (
 	adaptertest "knative.dev/eventing/pkg/adapter/v2/test"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/pkg/apis/sources"
-	brokerfilter "knative.dev/eventing/pkg/broker/filter"
 	"knative.dev/eventing/pkg/eventfilter/subscriptionsapi"
 )
 
@@ -87,7 +86,7 @@ func TestFilterFails(t *testing.T) {
 		source:              "unit-test",
 		apiServerSourceName: apiServerSourceNameTest,
 		logger:              logger,
-		filter:              subscriptionsapi.NewAllFilter(brokerfilter.MaterializeFiltersList(logger.Desugar(), filters)...),
+		filter:              subscriptionsapi.NewAllFilter(subscriptionsapi.MaterializeFiltersList(logger.Desugar(), filters)...),
 	}
 
 	delegate.Update(simplePod("unit", "test"))
@@ -104,7 +103,7 @@ func TestEmptyFiltersList(t *testing.T) {
 		source:              "unit-test",
 		apiServerSourceName: apiServerSourceNameTest,
 		logger:              logger,
-		filter:              subscriptionsapi.NewAllFilter(brokerfilter.MaterializeFiltersList(logger.Desugar(), filters)...),
+		filter:              subscriptionsapi.NewAllFilter(subscriptionsapi.MaterializeFiltersList(logger.Desugar(), filters)...),
 	}
 
 	delegate.Update(simplePod("unit", "test"))
