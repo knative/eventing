@@ -124,3 +124,14 @@ func ConfiguratorOptionsFromContext(ctx context.Context) []ConfiguratorOption {
 	}
 	return value.([]ConfiguratorOption)
 }
+
+type healthProbesDisabledKey struct{}
+
+// WithHealthProbesDisabled signals to MainWithContext that it should disable default probes (readiness and liveness).
+func WithHealthProbesDisabled(ctx context.Context) context.Context {
+	return context.WithValue(ctx, healthProbesDisabledKey{}, struct{}{})
+}
+
+func HealthProbesDisabled(ctx context.Context) bool {
+	return ctx.Value(healthProbesDisabledKey{}) != nil
+}
