@@ -27,6 +27,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/kelseyhightower/envconfig"
 	"go.uber.org/zap"
+	eventpolicyinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventpolicy"
 	configmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap/filtered"
 
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
@@ -167,7 +168,7 @@ func main() {
 	reporter := ingress.NewStatsReporter(env.ContainerName, kmeta.ChildName(env.PodName, uuid.New().String()))
 
 	oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
-	oidcTokenVerifier := auth.NewOIDCTokenVerifier(ctx)
+	oidcTokenVerifier := auth.NewOIDCTokenVerifier(ctx, eventpolicyinformer.Get(ctx).Lister())
 	trustBundleConfigMapInformer := configmapinformer.Get(ctx, eventingtls.TrustBundleLabelSelector).Lister().ConfigMaps(system.Namespace())
 	handler, err = ingress.NewHandler(logger, reporter, broker.TTLDefaulter(logger, int32(env.MaxTTL)), brokerInformer, oidcTokenVerifier, oidcTokenProvider, trustBundleConfigMapInformer, ctxFunc)
 	if err != nil {
