@@ -29,6 +29,5 @@ const (
 	NewAPIServerFilters        = "new-apiserversource-filters"
 	AuthorizationDefaultMode   = "default-authorization-mode"
 	OIDCDiscoveryBaseURL       = "oidc-discovery-base-url"
-	RequestReplyDefaultTimeout = "requestreply-default-timeout" // TODO check this
-
+	RequestReplyDefaultTimeout = "requestreply-default-timeout"
 )

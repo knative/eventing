@@ -166,7 +166,7 @@ func (e Flags) RequestReplyDefaultTimeout() string {
 		return string(DefaultRequestReplyTimeout)
 	}
 
-	return string(timeout) // TODO, check this, check this whole function really
+	return string(timeout)
 }
 
 func (e Flags) String() string {
