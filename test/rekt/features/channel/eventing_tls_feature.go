@@ -31,6 +31,7 @@ import (
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
+	"knative.dev/reconciler-test/pkg/knative"
 	"knative.dev/reconciler-test/pkg/resources/service"
 	"knative.dev/reconciler-test/resources/certificate"
 
@@ -38,6 +39,7 @@ import (
 	"knative.dev/eventing/test/rekt/features/featureflags"
 	"knative.dev/eventing/test/rekt/resources/addressable"
 	"knative.dev/eventing/test/rekt/resources/channel_impl"
+	"knative.dev/eventing/test/rekt/resources/configmap"
 	"knative.dev/eventing/test/rekt/resources/subscription"
 )
 
@@ -194,6 +196,91 @@ func SubscriptionTLSTrustBundle() *feature.Feature {
 				Host:   network.GetServiceHostname(sink, environment.FromContext(ctx).Namespace()),
 			},
 			CACerts: nil, // CA certs are in the trust-bundle
+		}
+		subscription.Install(subscriptionName,
+			subscription.WithChannel(channel_impl.AsRef(channelName)),
+			subscription.WithSubscriberFromDestination(d))(ctx, t)
+	})
+	f.Setup("subscription is ready", subscription.IsReady(subscriptionName))
+	f.Setup("install dead letter subscription", func(ctx context.Context, t feature.T) {
+		d := &duckv1.Destination{
+			URI: &apis.URL{
+				Scheme: "https", // Force using https
+				Host:   network.GetServiceHostname(dlsName, environment.FromContext(ctx).Namespace()),
+			},
+			CACerts: nil, // CA certs are in the trust-bundle
+		}
+
+		subscription.Install(dlsSubscriptionName,
+			subscription.WithChannel(channel_impl.AsRef(channelName)),
+			subscription.WithDeadLetterSinkFromDestination(d),
+			subscription.WithSubscriber(nil, "http://127.0.0.1:2468", ""))(ctx, t)
+	})
+	f.Setup("subscription dead letter is ready", subscription.IsReady(dlsSubscriptionName))
+	f.Setup("Channel has HTTPS address", channel_impl.ValidateAddress(channelName, addressable.AssertHTTPSAddress))
+
+	event := cetest.FullEvent()
+	event.SetID(uuid.New().String())
+
+	f.Requirement("install source", eventshub.Install(source,
+		eventshub.StartSenderToResourceTLS(channel_impl.GVR(), channelName, nil),
+		eventshub.InputEvent(event),
+		// Send multiple events so that we take into account that the certificate rotation might
+		// be detected by the server after some time.
+		eventshub.SendMultipleEvents(100, 3*time.Second),
+	))
+
+	f.Assert("Event sent", assert.OnStore(source).
+		MatchSentEvent(cetest.HasId(event.ID())).
+		AtLeast(1),
+	)
+	f.Assert("Event received in sink", assert.OnStore(sink).
+		MatchReceivedEvent(cetest.HasId(event.ID())).
+		AtLeast(1),
+	)
+	f.Assert("Event received in dead letter sink", assert.OnStore(dlsName).
+		MatchReceivedEvent(cetest.HasId(event.ID())).
+		AtLeast(1),
+	)
+
+	return f
+}
+
+func SubscriptionTLSWithAdditionalTrustBundle() *feature.Feature {
+
+	channelName := feature.MakeRandomK8sName("channel")
+	subscriptionName := feature.MakeRandomK8sName("sub")
+	sink := feature.MakeRandomK8sName("sink")
+	source := feature.MakeRandomK8sName("source")
+	dlsName := feature.MakeRandomK8sName("dls")
+	dlsSubscriptionName := feature.MakeRandomK8sName("dls-sub")
+	trustBundle := feature.MakeRandomK8sName("trust-bundle")
+
+	f := feature.NewFeature()
+
+	f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
+	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
+
+	f.Setup("Add trust bundle to system namespace", func(ctx context.Context, t feature.T) {
+
+		configmap.Install(trustBundle, knative.KnativeNamespaceFromContext(ctx),
+			configmap.WithLabels(map[string]string{"networking.knative.dev/trust-bundle": "true"}),
+			configmap.WithData("ca.crt", *eventshub.GetCaCerts(ctx)),
+		)(ctx, t)
+	})
+
+	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiverTLS))
+	f.Setup("install sink", eventshub.Install(dlsName, eventshub.StartReceiverTLS))
+	f.Setup("install channel", channel_impl.Install(channelName))
+	f.Setup("channel is ready", channel_impl.IsReady(channelName))
+
+	f.Setup("install subscription", func(ctx context.Context, t feature.T) {
+		d := &duckv1.Destination{
+			URI: &apis.URL{
+				Scheme: "https", // Force using https
+				Host:   network.GetServiceHostname(sink, environment.FromContext(ctx).Namespace()),
+			},
+			CACerts: nil, // CA certs are in the new trust-bundle
 		}
 		subscription.Install(subscriptionName,
 			subscription.WithChannel(channel_impl.AsRef(channelName)),
