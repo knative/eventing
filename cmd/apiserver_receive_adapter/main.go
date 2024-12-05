@@ -33,6 +33,7 @@ const (
 func main() {
 	ctx := signals.NewContext()
 	ctx = adapter.WithInjectorEnabled(ctx)
+	ctx = adapter.WithHealthProbesDisabled(ctx)
 
 	ctx = filteredFactory.WithSelectors(ctx,
 		auth.OIDCLabelSelector,
