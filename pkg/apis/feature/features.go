@@ -71,6 +71,9 @@ const (
 	// DefaultRequestReplyTimeout is a value for RequestReplyDefaultTimeout that indicates to timeout
 	// a RequestReply resource after 30 seconds by default.
 	DefaultRequestReplyTimeout Flag = "30s"
+
+	// DefaultJWKSURI is the default JWKS URI used in most Kubernetes clusters.
+	DefaultJWKSURI Flag = ""
 )
 
 // Flags is a map containing all the enabled/disabled flags for the experimental features.
@@ -90,6 +93,7 @@ func newDefaults() Flags {
 		AuthorizationDefaultMode:   AuthorizationAllowSameNamespace,
 		OIDCDiscoveryBaseURL:       DefaultOIDCDiscoveryBaseURL,
 		RequestReplyDefaultTimeout: DefaultRequestReplyTimeout,
+		JWKSURI:                    DefaultJWKSURI,
 	}
 }
 
@@ -169,6 +173,19 @@ func (e Flags) RequestReplyDefaultTimeout() string {
 	return string(timeout)
 }
 
+func (e Flags) JWKSURI() string {
+	if e == nil {
+		return string(DefaultJWKSURI)
+	}
+
+	jwksURI, ok := e[JWKSURI]
+	if !ok {
+		return string(DefaultJWKSURI)
+	}
+
+	return string(jwksURI)
+}
+
 func (e Flags) String() string {
 	return fmt.Sprintf("%+v", map[string]Flag(e))
 }
@@ -219,6 +236,8 @@ func NewFlagsConfigFromMap(data map[string]string) (Flags, error) {
 		} else if sanitizedKey == AuthorizationDefaultMode && strings.EqualFold(v, string(AuthorizationAllowSameNamespace)) {
 			flags[sanitizedKey] = AuthorizationAllowSameNamespace
 		} else if strings.Contains(k, NodeSelectorLabel) || sanitizedKey == OIDCDiscoveryBaseURL {
+			flags[sanitizedKey] = Flag(v)
+		} else if sanitizedKey == JWKSURI {
 			flags[sanitizedKey] = Flag(v)
 		} else {
 			flags[k] = Flag(v)

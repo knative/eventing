@@ -63,6 +63,8 @@ func TestGetFlags(t *testing.T) {
 	require.Equal(t, expectedNodeSelector, nodeSelector)
 
 	require.Equal(t, flags.OIDCDiscoveryBaseURL(), "https://oidc.eks.eu-west-1.amazonaws.com/id/1")
+	
+	require.Equal(t, flags.JWKSURI(), "https://oidc.eks.eu-west-1.amazonaws.com/id/1/jwk")
 }
 
 func TestShouldNotOverrideDefaults(t *testing.T) {
