@@ -19,6 +19,7 @@ package sink
 import (
 	"context"
 	"fmt"
+	cmv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 
 	v1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -40,6 +41,11 @@ import (
 	sinks "knative.dev/eventing/pkg/apis/sinks/v1alpha1"
 	"knative.dev/eventing/pkg/auth"
 	eventingv1alpha1listers "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
+
+	certmanagerclientset "knative.dev/eventing/pkg/client/certmanager/clientset/versioned"
+
+	certmanagerlisters "knative.dev/eventing/pkg/client/certmanager/listers/certmanager/v1"
+
 	"knative.dev/eventing/pkg/eventingtls"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/controller"
@@ -49,11 +55,12 @@ import (
 
 const (
 	// Name of the corev1.Events emitted from the reconciliation process
-	sinkReconciled    = "IntegrationSinkReconciled"
-	deploymentCreated = "DeploymentCreated"
-	deploymentUpdated = "DeploymentUpdated"
-	serviceCreated    = "ServiceCreated"
-	serviceUpdated    = "ServiceUpdated"
+	sinkReconciled     = "IntegrationSinkReconciled"
+	deploymentCreated  = "DeploymentCreated"
+	deploymentUpdated  = "DeploymentUpdated"
+	serviceCreated     = "ServiceCreated"
+	certificateCreated = "CertificateCreated"
+	serviceUpdated     = "ServiceUpdated"
 )
 
 type Reconciler struct {
@@ -62,8 +69,10 @@ type Reconciler struct {
 
 	kubeClientSet kubernetes.Interface
 
-	deploymentLister appsv1listers.DeploymentLister
-	serviceLister    corev1listers.ServiceLister
+	deploymentLister    appsv1listers.DeploymentLister
+	serviceLister       corev1listers.ServiceLister
+	cmCertificateLister certmanagerlisters.CertificateLister
+	certManagerClient   certmanagerclientset.Interface
 
 	systemNamespace string
 }
@@ -146,10 +155,34 @@ func (r *Reconciler) reconcileService(ctx context.Context, sink *sinks.Integrati
 	} else if !metav1.IsControlledBy(svc, sink) {
 		return nil, fmt.Errorf("Service %q is not owned by IntegrationSink %q", svc.Name, sink.Name)
 	} else {
+		// Hallo, hier ist ein Kommentar :-) DANCE DACNE yO!
+		// WTF is this comment?!
 		logging.FromContext(ctx).Debugw("Reusing existing Service", zap.Any("Service", svc))
 	}
 
 	return svc, nil
+}
+
+func (r *Reconciler) reconcileCMCertificate(ctx context.Context, sink *sinks.IntegrationSink) (*cmv1.Certificate, error) {
+
+	expected := resources.MakeCertificate(sink)
+
+	cert, err := r.cmCertificateLister.Certificates(sink.Namespace).Get(expected.Name)
+	if apierrors.IsNotFound(err) {
+		cert, err := r.certManagerClient.CertmanagerV1().Certificates(sink.Namespace).Create(ctx, expected, metav1.CreateOptions{})
+		if err != nil {
+			return nil, fmt.Errorf("creating new Certificate: %v", err)
+		}
+		controller.GetEventRecorder(ctx).Eventf(sink, corev1.EventTypeNormal, certificateCreated, "Certificate created %q", cert.Name)
+	} else if err != nil {
+		return nil, fmt.Errorf("getting Certificate: %v", err)
+	} else if !metav1.IsControlledBy(cert, sink) {
+		return nil, fmt.Errorf("Certificate %q is not owned by IntegrationSink %q", cert.Name, sink.Name)
+	} else {
+		logging.FromContext(ctx).Debugw("Reusing existing Certificate", zap.Any("Certificate", cert))
+	}
+
+	return cert, nil
 }
 
 func (r *Reconciler) reconcileAddress(ctx context.Context, sink *sinks.IntegrationSink) error {
