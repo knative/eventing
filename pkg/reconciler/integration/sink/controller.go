@@ -28,6 +28,9 @@ import (
 	deploymentinformer "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment"
 	"knative.dev/pkg/client/injection/kube/informers/core/v1/service"
 
+	cmclient "knative.dev/eventing/pkg/client/certmanager/injection/client"
+	cmcertinformer "knative.dev/eventing/pkg/client/certmanager/injection/informers/certmanager/v1/certificate"
+
 	secretinformer "knative.dev/pkg/injection/clients/namespacedkube/informers/core/v1/secret"
 
 	integrationsinkreconciler "knative.dev/eventing/pkg/client/injection/reconciler/sinks/v1alpha1/integrationsink"
@@ -49,6 +52,8 @@ func NewController(
 	eventPolicyInformer := eventpolicy.Get(ctx)
 	deploymentInformer := deploymentinformer.Get(ctx)
 
+	cmCertificateInformer := cmcertinformer.Get(ctx)
+
 	serviceInformer := service.Get(ctx)
 
 	r := &Reconciler{
@@ -57,9 +62,11 @@ func NewController(
 		deploymentLister: deploymentInformer.Lister(),
 		serviceLister:    serviceInformer.Lister(),
 
-		systemNamespace:   system.Namespace(),
-		secretLister:      secretInformer.Lister(),
-		eventPolicyLister: eventPolicyInformer.Lister(),
+		systemNamespace:     system.Namespace(),
+		secretLister:        secretInformer.Lister(),
+		eventPolicyLister:   eventPolicyInformer.Lister(),
+		cmCertificateLister: cmCertificateInformer.Lister(),
+		certManagerClient:   cmclient.Get(ctx),
 	}
 
 	var globalResync func(obj interface{})
