@@ -75,7 +75,7 @@ type Reconciler struct {
 	cmCertificateLister certmanagerlisters.CertificateLister
 	certManagerClient   certmanagerclientset.Interface
 
-	systemNamespace string
+	//	systemNamespace string
 }
 
 // newReconciledNormal makes a new reconciler event with event type Normal, and
@@ -196,7 +196,7 @@ func (r *Reconciler) reconcileAddress(ctx context.Context, sink *sinks.Integrati
 
 	featureFlags := feature.FromContext(ctx)
 	if featureFlags.IsPermissiveTransportEncryption() {
-		caCerts, err := r.getCaCerts()
+		caCerts, err := r.getCaCerts(sink)
 		if err != nil {
 			return err
 		}
@@ -215,7 +215,7 @@ func (r *Reconciler) reconcileAddress(ctx context.Context, sink *sinks.Integrati
 		// - status.address https address with path-based routing
 		// - status.addresses:
 		//   - https address with path-based routing
-		caCerts, err := r.getCaCerts()
+		caCerts, err := r.getCaCerts(sink)
 		if err != nil {
 			return err
 		}
@@ -249,11 +249,10 @@ func (r *Reconciler) reconcileAddress(ctx context.Context, sink *sinks.Integrati
 	return nil
 }
 
-func (r *Reconciler) getCaCerts() (*string, error) {
-	// Getting the secret called "imc-dispatcher-tls" from system namespace
-	secret, err := r.secretLister.Secrets(r.systemNamespace).Get(eventingtls.IntegrationSinkDispatcherServerTLSSecretName)
+func (r *Reconciler) getCaCerts(sink *sinks.IntegrationSink) (*string, error) {
+	secret, err := r.secretLister.Secrets(sink.Namespace).Get(resources.DeploymentName(sink) + "-cert")
 	if err != nil {
-		return nil, fmt.Errorf("failed to get CA certs from %s/%s: %w", r.systemNamespace, eventingtls.IntegrationSinkDispatcherServerTLSSecretName, err)
+		return nil, fmt.Errorf("failed to get CA certs from %s/%s: %w", sink.Namespace, resources.DeploymentName(sink)+"-cert", err)
 	}
 	caCerts, ok := secret.Data[eventingtls.SecretCACert]
 	if !ok {
