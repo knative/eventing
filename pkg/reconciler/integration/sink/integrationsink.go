@@ -74,8 +74,6 @@ type Reconciler struct {
 	serviceLister       corev1listers.ServiceLister
 	cmCertificateLister certmanagerlisters.CertificateLister
 	certManagerClient   certmanagerclientset.Interface
-
-	//	systemNamespace string
 }
 
 // newReconciledNormal makes a new reconciler event with event type Normal, and
