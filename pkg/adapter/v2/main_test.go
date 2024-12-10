@@ -67,6 +67,7 @@ func TestMainWithContext(t *testing.T) {
 	}()
 
 	ctx := context.TODO()
+	ctx = WithHealthProbesDisabled(ctx)
 	ctx, _ = fakekubeclient.With(ctx)
 
 	MainWithContext(ctx, "mycomponent",
