@@ -18,6 +18,7 @@ package sink
 
 import (
 	"context"
+	pkgreconciler "knative.dev/pkg/reconciler"
 
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/eventing/pkg/apis/feature"
@@ -34,7 +35,6 @@ import (
 	secretinformer "knative.dev/pkg/injection/clients/namespacedkube/informers/core/v1/secret"
 
 	integrationsinkreconciler "knative.dev/eventing/pkg/client/injection/reconciler/sinks/v1alpha1/integrationsink"
-	"knative.dev/eventing/pkg/eventingtls"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
@@ -89,8 +89,9 @@ func NewController(
 	globalResync = func(interface{}) {
 		impl.GlobalResync(integrationSinkInformer.Informer())
 	}
+
 	secretInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.FilterWithName(eventingtls.IntegrationSinkDispatcherServerTLSSecretName),
+		FilterFunc: pkgreconciler.LabelFilterFunc("app.kubernetes.io/name", "integration-sink", false),
 		Handler:    controller.HandleAll(globalResync),
 	})
 
