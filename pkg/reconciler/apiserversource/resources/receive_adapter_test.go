@@ -144,7 +144,7 @@ O2dgzikq8iSy1BlRsVw=
 								Name:          "metrics",
 								ContainerPort: 9090,
 							}, {
-								Name:          "health",
+								Name:          "probes",
 								ContainerPort: 8080,
 							}},
 							Env: []corev1.EnvVar{
@@ -187,7 +187,16 @@ O2dgzikq8iSy1BlRsVw=
 							ReadinessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
-										Port: intstr.FromString("health"),
+										Port: intstr.FromString("probes"),
+										Path: "readiness",
+									},
+								},
+							},
+							LivenessProbe: &corev1.Probe{
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Port: intstr.FromString("probes"),
+										Path: "health",
 									},
 								},
 							},
