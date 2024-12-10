@@ -18,6 +18,7 @@ package sink
 
 import (
 	"context"
+
 	pkgreconciler "knative.dev/pkg/reconciler"
 
 	"k8s.io/client-go/tools/cache"
