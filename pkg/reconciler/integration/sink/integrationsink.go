@@ -19,6 +19,7 @@ package sink
 import (
 	"context"
 	"fmt"
+
 	cmv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 
 	v1 "k8s.io/api/apps/v1"
@@ -95,6 +96,12 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, sink *sinks.IntegrationS
 	_, err = r.reconcileService(ctx, sink)
 	if err != nil {
 		logging.FromContext(ctx).Errorw("Error reconciling Service", zap.Error(err))
+		return err
+	}
+
+	_, err = r.reconcileCMCertificate(ctx, sink)
+	if err != nil {
+		logging.FromContext(ctx).Errorw("Error reconciling Certificate", zap.Error(err))
 		return err
 	}
 
