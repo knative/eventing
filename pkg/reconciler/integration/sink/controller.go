@@ -39,7 +39,6 @@ import (
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
-	"knative.dev/pkg/system"
 )
 
 // NewController creates a Reconciler for IntegrationSource and returns the result of NewImpl.
@@ -62,7 +61,6 @@ func NewController(
 		deploymentLister: deploymentInformer.Lister(),
 		serviceLister:    serviceInformer.Lister(),
 
-		systemNamespace:     system.Namespace(),
 		secretLister:        secretInformer.Lister(),
 		eventPolicyLister:   eventPolicyInformer.Lister(),
 		cmCertificateLister: cmCertificateInformer.Lister(),
