@@ -96,13 +96,22 @@ func MakeReceiveAdapter(args *ReceiveAdapterArgs) (*appsv1.Deployment, error) {
 								Name:          "metrics",
 								ContainerPort: 9090,
 							}, {
-								Name:          "health",
+								Name:          "probes",
 								ContainerPort: 8080,
 							}},
 							ReadinessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
-										Port: intstr.FromString("health"),
+										Path: "readiness",
+										Port: intstr.FromString("probes"),
+									},
+								},
+							},
+							LivenessProbe: &corev1.Probe{
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path: "health",
+										Port: intstr.FromString("probes"),
 									},
 								},
 							},

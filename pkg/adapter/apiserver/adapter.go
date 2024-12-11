@@ -19,7 +19,6 @@ package apiserver
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
@@ -126,20 +125,8 @@ func (a *apiServerAdapter) start(ctx context.Context, stopCh <-chan struct{}) er
 		}
 	}
 
-	srv := &http.Server{
-		Addr: ":8080",
-		// Configure read header timeout to overcome potential Slowloris Attack because ReadHeaderTimeout is not
-		// configured in the http.Server.
-		ReadHeaderTimeout: 10 * time.Second,
-		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusOK)
-		}),
-	}
-	go srv.ListenAndServe()
-
 	<-stopCh
 	stop <- struct{}{}
-	srv.Shutdown(ctx)
 	return nil
 }
 
