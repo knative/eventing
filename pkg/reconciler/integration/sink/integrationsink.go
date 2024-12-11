@@ -85,6 +85,14 @@ func newReconciledNormal(namespace, name string) reconciler.Event {
 func (r *Reconciler) ReconcileKind(ctx context.Context, sink *sinks.IntegrationSink) reconciler.Event {
 	featureFlags := feature.FromContext(ctx)
 
+	if featureFlags.IsPermissiveTransportEncryption() || featureFlags.IsStrictTransportEncryption() {
+		_, err := r.reconcileCMCertificate(ctx, sink)
+		if err != nil {
+			logging.FromContext(ctx).Errorw("Error reconciling Certificate", zap.Error(err))
+			return err
+		}
+	}
+
 	_, err := r.reconcileDeployment(ctx, sink)
 	if err != nil {
 		logging.FromContext(ctx).Errorw("Error reconciling Pod", zap.Error(err))
@@ -94,12 +102,6 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, sink *sinks.IntegrationS
 	_, err = r.reconcileService(ctx, sink)
 	if err != nil {
 		logging.FromContext(ctx).Errorw("Error reconciling Service", zap.Error(err))
-		return err
-	}
-
-	_, err = r.reconcileCMCertificate(ctx, sink)
-	if err != nil {
-		logging.FromContext(ctx).Errorw("Error reconciling Certificate", zap.Error(err))
 		return err
 	}
 
