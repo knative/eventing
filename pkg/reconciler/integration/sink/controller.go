@@ -33,10 +33,9 @@ import (
 	cmclient "knative.dev/eventing/pkg/client/certmanager/injection/client"
 	cmcertinformer "knative.dev/eventing/pkg/client/certmanager/injection/informers/certmanager/v1/certificate"
 
-	secretinformer "knative.dev/pkg/injection/clients/namespacedkube/informers/core/v1/secret"
-
 	integrationsinkreconciler "knative.dev/eventing/pkg/client/injection/reconciler/sinks/v1alpha1/integrationsink"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
+	secretinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/secret/filtered"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
@@ -48,7 +47,7 @@ func NewController(
 	cmw configmap.Watcher,
 ) *controller.Impl {
 	integrationSinkInformer := integrationsink.Get(ctx)
-	secretInformer := secretinformer.Get(ctx)
+	secretInformer := secretinformer.Get(ctx, "app.kubernetes.io/name")
 	eventPolicyInformer := eventpolicy.Get(ctx)
 	deploymentInformer := deploymentinformer.Get(ctx)
 
