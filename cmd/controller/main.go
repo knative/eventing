@@ -61,6 +61,7 @@ func main() {
 		auth.OIDCLabelSelector,
 		eventingtls.TrustBundleLabelSelector,
 		sinks.JobSinkJobsLabelSelector,
+		"app.kubernetes.io/name",
 	)
 
 	for _, inf := range []injection.InformerInjector{challenge.WithInformer, v1certificate.WithInformer, certificaterequest.WithInformer, clusterissuer.WithInformer, issuer.WithInformer} {
