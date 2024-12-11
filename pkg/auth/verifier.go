@@ -329,6 +329,11 @@ func (v *Verifier) getKubernetesOIDCDiscovery(features feature.Flags, client *ht
 		return nil, fmt.Errorf("could not unmarshall openid config: %w", err)
 	}
 
+	// overwrite jwk uri if it is set in the feature flags
+	if features.JWKSURI() != "" {
+		openIdConfig.JWKSURI = features.JWKSURI()
+	}
+
 	return openIdConfig, nil
 }
 

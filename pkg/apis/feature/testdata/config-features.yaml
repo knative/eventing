@@ -30,3 +30,4 @@ data:
     apiserversources-nodeselector-testkey1: testvalue1
     apiserversources-nodeselector-testkey2: testvalue2
     oidc-discovery-base-url: "https://oidc.eks.eu-west-1.amazonaws.com/id/1"
+    jwks-uri: "https://oidc.eks.eu-west-1.amazonaws.com/id/1/jwk"
