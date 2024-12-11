@@ -102,7 +102,7 @@ func TestNewContainerSource(t *testing.T) {
 		},
 	}
 
-	got := NewContainerSource(source)
+	got := NewContainerSource(source, false)
 	if diff := cmp.Diff(want, got); diff != "" {
 		t.Errorf("NewContainerSource() mismatch (-want +got):\n%s", diff)
 	}

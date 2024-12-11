@@ -34,7 +34,7 @@ var sourceImageMap = map[string]string{
 	"aws-ddb-streams": "gcr.io/knative-nightly/aws-ddb-streams-source:latest",
 }
 
-func NewContainerSource(source *v1alpha1.IntegrationSource) *sourcesv1.ContainerSource {
+func NewContainerSource(source *v1alpha1.IntegrationSource, oidc bool) *sourcesv1.ContainerSource {
 	return &sourcesv1.ContainerSource{
 		ObjectMeta: metav1.ObjectMeta{
 			OwnerReferences: []metav1.OwnerReference{
@@ -55,7 +55,7 @@ func NewContainerSource(source *v1alpha1.IntegrationSource) *sourcesv1.Container
 							Name:            "source",
 							Image:           selectImage(source),
 							ImagePullPolicy: corev1.PullIfNotPresent,
-							Env:             makeEnv(source),
+							Env:             makeEnv(source, oidc),
 						},
 					},
 				},
@@ -66,8 +66,21 @@ func NewContainerSource(source *v1alpha1.IntegrationSource) *sourcesv1.Container
 }
 
 // Function to create environment variables for Timer or AWS configurations dynamically
-func makeEnv(source *v1alpha1.IntegrationSource) []corev1.EnvVar {
+func makeEnv(source *v1alpha1.IntegrationSource, oidc bool) []corev1.EnvVar {
 	var envVars = integration.MakeSSLEnvVar()
+
+	if oidc {
+		envVars = append(envVars, []corev1.EnvVar{
+			{
+				Name:  "CAMEL_KNATIVE_CLIENT_OIDC_ENABLED",
+				Value: "true",
+			},
+			{
+				Name:  "CAMEL_KNATIVE_CLIENT_OIDC_TOKEN_PATH",
+				Value: "file:///oidc/token",
+			},
+		}...)
+	}
 
 	// Timer environment variables
 	if source.Spec.Timer != nil {

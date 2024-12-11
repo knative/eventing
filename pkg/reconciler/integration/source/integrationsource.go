@@ -20,6 +20,8 @@ import (
 	"context"
 	"fmt"
 
+	"knative.dev/eventing/pkg/apis/feature"
+
 	"knative.dev/eventing/pkg/reconciler/integration/source/resources"
 
 	"go.uber.org/zap"
@@ -76,7 +78,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1alpha1.Integra
 }
 
 func (r *Reconciler) reconcileContainerSource(ctx context.Context, source *v1alpha1.IntegrationSource) (*v1.ContainerSource, error) {
-	expected := resources.NewContainerSource(source)
+	expected := resources.NewContainerSource(source, feature.FromContext(ctx).IsOIDCAuthentication())
 
 	cs, err := r.containerSourceLister.ContainerSources(source.Namespace).Get(expected.Name)
 	if apierrors.IsNotFound(err) {
