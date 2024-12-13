@@ -55,6 +55,7 @@ spec:
             - "subscriptions.messaging.knative.dev"
             - "triggers.eventing.knative.dev"
             - "jobsinks.sinks.knative.dev"
+            - "eventpolicies.eventing.knative.dev"
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
