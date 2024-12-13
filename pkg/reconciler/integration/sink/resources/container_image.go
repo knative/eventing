@@ -63,11 +63,17 @@ func MakeDeploymentSpec(sink *v1alpha1.IntegrationSink) *appsv1.Deployment {
 							Name:            "sink",
 							Image:           selectImage(sink),
 							ImagePullPolicy: corev1.PullIfNotPresent,
-							Ports: []corev1.ContainerPort{{
-								ContainerPort: 8080,
-								Protocol:      corev1.ProtocolTCP,
-								Name:          "http",
-							}},
+							Ports: []corev1.ContainerPort{
+								{
+									ContainerPort: 8080,
+									Protocol:      corev1.ProtocolTCP,
+									Name:          "http",
+								},
+								{
+									ContainerPort: 8443,
+									Protocol:      corev1.ProtocolTCP,
+									Name:          "https",
+								}},
 							Env: makeEnv(sink),
 						},
 					},
@@ -101,6 +107,12 @@ func MakeService(sink *v1alpha1.IntegrationSink) *corev1.Service {
 					Protocol:   corev1.ProtocolTCP,
 					Port:       80,
 					TargetPort: intstr.IntOrString{IntVal: 8080},
+				},
+				{
+					Name:       "https",
+					Protocol:   corev1.ProtocolTCP,
+					Port:       443,
+					TargetPort: intstr.IntOrString{IntVal: 443},
 				},
 			},
 		},
