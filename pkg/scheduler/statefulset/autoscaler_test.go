@@ -470,9 +470,7 @@ func TestCompactor(t *testing.T) {
 					{PodName: "statefulset-name-0", VReplicas: int32(8)},
 					{PodName: "statefulset-name-1", VReplicas: int32(2)}}),
 			},
-			wantEvictions: map[types.NamespacedName][]duckv1alpha1.Placement{
-				{Name: "vpod-1", Namespace: testNs}: {{PodName: "statefulset-name-1", VReplicas: int32(2)}},
-			},
+			wantEvictions: nil,
 		},
 		{
 			name:     "multiple vpods, with placements in multiple pods, compacted",
@@ -500,8 +498,49 @@ func TestCompactor(t *testing.T) {
 					{PodName: "statefulset-name-0", VReplicas: int32(2)},
 					{PodName: "statefulset-name-2", VReplicas: int32(7)}}),
 			},
+			wantEvictions: nil,
+		},
+		{
+			name:     "multiple vpods, scale down, with placements in multiple pods, compacted",
+			replicas: int32(2),
+			vpods: []scheduler.VPod{
+				tscheduler.NewVPod(testNs, "vpod-1", 10, []duckv1alpha1.Placement{
+					{PodName: "statefulset-name-0", VReplicas: int32(3)},
+					{PodName: "statefulset-name-1", VReplicas: int32(7)}}),
+				tscheduler.NewVPod(testNs, "vpod-2", 10, []duckv1alpha1.Placement{
+					{PodName: "statefulset-name-0", VReplicas: int32(7)},
+					{PodName: "statefulset-name-2", VReplicas: int32(3)}}),
+			},
 			wantEvictions: map[types.NamespacedName][]duckv1alpha1.Placement{
-				{Name: "vpod-2", Namespace: testNs}: {{PodName: "statefulset-name-2", VReplicas: int32(7)}},
+				{Name: "vpod-2", Namespace: testNs}: {{PodName: "statefulset-name-2", VReplicas: int32(3)}},
+			},
+		},
+		{
+			name:     "multiple vpods, scale down multiple, with placements in multiple pods, compacted",
+			replicas: int32(1),
+			vpods: []scheduler.VPod{
+				tscheduler.NewVPod(testNs, "vpod-1", 6, []duckv1alpha1.Placement{
+					{PodName: "statefulset-name-0", VReplicas: int32(3)},
+					{PodName: "statefulset-name-1", VReplicas: int32(7)},
+					{PodName: "statefulset-name-2", VReplicas: int32(6)},
+				}),
+				tscheduler.NewVPod(testNs, "vpod-2", 3, []duckv1alpha1.Placement{
+					{PodName: "statefulset-name-0", VReplicas: int32(7)},
+					{PodName: "statefulset-name-2", VReplicas: int32(3)},
+					{PodName: "statefulset-name-3", VReplicas: int32(2)},
+					{PodName: "statefulset-name-10", VReplicas: int32(1)},
+				}),
+			},
+			wantEvictions: map[types.NamespacedName][]duckv1alpha1.Placement{
+				{Name: "vpod-1", Namespace: testNs}: {
+					{PodName: "statefulset-name-2", VReplicas: int32(6)},
+					{PodName: "statefulset-name-1", VReplicas: int32(7)},
+				},
+				{Name: "vpod-2", Namespace: testNs}: {
+					{PodName: "statefulset-name-10", VReplicas: int32(1)},
+					{PodName: "statefulset-name-3", VReplicas: int32(2)},
+					{PodName: "statefulset-name-2", VReplicas: int32(3)},
+				},
 			},
 		},
 	}
