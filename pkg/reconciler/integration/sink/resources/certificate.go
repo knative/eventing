@@ -31,14 +31,14 @@ import (
 func MakeCertificate(sink *v1alpha1.IntegrationSink) *cmv1.Certificate {
 	return &cmv1.Certificate{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      DeploymentName(sink) + "-cert",
+			Name:      CertificateName(sink),
 			Namespace: sink.Namespace,
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(sink),
 			},
 		},
 		Spec: cmv1.CertificateSpec{
-			SecretName: DeploymentName(sink) + "-cert",
+			SecretName: CertificateName(sink),
 			SecretTemplate: &cmv1.CertificateSecretTemplate{
 				Labels: map[string]string{
 					"app.kubernetes.io/component": "knative-eventing",

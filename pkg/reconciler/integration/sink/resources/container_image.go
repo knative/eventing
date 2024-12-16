@@ -35,6 +35,7 @@ var sinkImageMap = map[string]string{
 }
 
 func MakeDeploymentSpec(sink *v1alpha1.IntegrationSink) *appsv1.Deployment {
+	t := true
 
 	deploy := &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
@@ -58,6 +59,17 @@ func MakeDeploymentSpec(sink *v1alpha1.IntegrationSink) *appsv1.Deployment {
 					Labels: integration.Labels(sink.Name),
 				},
 				Spec: corev1.PodSpec{
+					Volumes: []corev1.Volume{
+						{
+							Name: CertificateName(sink),
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: CertificateName(sink),
+									Optional:   &t,
+								},
+							},
+						},
+					},
 					Containers: []corev1.Container{
 						{
 							Name:            "sink",
@@ -75,6 +87,13 @@ func MakeDeploymentSpec(sink *v1alpha1.IntegrationSink) *appsv1.Deployment {
 									Name:          "https",
 								}},
 							Env: makeEnv(sink),
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      CertificateName(sink),
+									MountPath: "/etc/" + CertificateName(sink),
+									ReadOnly:  true,
+								},
+							},
 						},
 					},
 				},
@@ -112,7 +131,7 @@ func MakeService(sink *v1alpha1.IntegrationSink) *corev1.Service {
 					Name:       "https",
 					Protocol:   corev1.ProtocolTCP,
 					Port:       443,
-					TargetPort: intstr.IntOrString{IntVal: 443},
+					TargetPort: intstr.IntOrString{IntVal: 8443},
 				},
 			},
 		},
@@ -125,6 +144,20 @@ func DeploymentName(sink *v1alpha1.IntegrationSink) string {
 
 func makeEnv(sink *v1alpha1.IntegrationSink) []corev1.EnvVar {
 	var envVars []corev1.EnvVar
+
+	//QUARKUS_HTTP_SSL_CERTIFICATE_FILES=/mount/certs/server.crt
+	//QUARKUS_HTTP_SSL_CERTIFICATE_KEY-FILES=/mount/certs/server.key
+
+	envVars = append(envVars, []corev1.EnvVar{
+		{
+			Name:  "QUARKUS_HTTP_SSL_CERTIFICATE_FILES",
+			Value: "/etc/" + CertificateName(sink) + "/tls.crt",
+		},
+		{
+			Name:  "QUARKUS_HTTP_SSL_CERTIFICATE_KEY-FILES",
+			Value: "/etc/" + CertificateName(sink) + "/tls.key",
+		},
+	}...)
 
 	// Log environment variables
 	if sink.Spec.Log != nil {
