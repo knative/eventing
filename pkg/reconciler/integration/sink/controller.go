@@ -19,6 +19,8 @@ package sink
 import (
 	"context"
 
+	cmclient "knative.dev/eventing/pkg/client/certmanager/injection/client"
+	cmcertinformer "knative.dev/eventing/pkg/client/certmanager/injection/informers/certmanager/v1/certificate"
 	pkgreconciler "knative.dev/pkg/reconciler"
 
 	"k8s.io/client-go/tools/cache"
@@ -29,9 +31,6 @@ import (
 	"knative.dev/eventing/pkg/client/injection/informers/sinks/v1alpha1/integrationsink"
 	deploymentinformer "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment"
 	"knative.dev/pkg/client/injection/kube/informers/core/v1/service"
-
-	cmclient "knative.dev/eventing/pkg/client/certmanager/injection/client"
-	cmcertinformer "knative.dev/eventing/pkg/client/certmanager/injection/informers/certmanager/v1/certificate"
 
 	integrationsinkreconciler "knative.dev/eventing/pkg/client/injection/reconciler/sinks/v1alpha1/integrationsink"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
@@ -51,8 +50,6 @@ func NewController(
 	eventPolicyInformer := eventpolicy.Get(ctx)
 	deploymentInformer := deploymentinformer.Get(ctx)
 
-	cmCertificateInformer := cmcertinformer.Get(ctx)
-
 	serviceInformer := service.Get(ctx)
 
 	r := &Reconciler{
@@ -61,11 +58,11 @@ func NewController(
 		deploymentLister: deploymentInformer.Lister(),
 		serviceLister:    serviceInformer.Lister(),
 
-		secretLister:        secretInformer.Lister(),
-		eventPolicyLister:   eventPolicyInformer.Lister(),
-		cmCertificateLister: cmCertificateInformer.Lister(),
-		certManagerClient:   cmclient.Get(ctx),
+		secretLister:      secretInformer.Lister(),
+		eventPolicyLister: eventPolicyInformer.Lister(),
 	}
+
+	//	featureFlags := feature.FromContext(ctx)
 
 	var globalResync func(obj interface{})
 
@@ -75,6 +72,13 @@ func NewController(
 		}
 	})
 	featureStore.WatchConfigs(cmw)
+
+	// If not enabled, it is disable, strict or Permissive
+	if featureStore.Load().IsPermissiveTransportEncryption() || featureStore.Load().IsStrictTransportEncryption() {
+		cmCertificateInformer := cmcertinformer.Get(ctx)
+		r.cmCertificateLister = cmCertificateInformer.Lister()
+		r.certManagerClient = cmclient.Get(ctx)
+	}
 
 	impl := integrationsinkreconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
 		return controller.Options{
