@@ -93,7 +93,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, sink *sinks.IntegrationS
 		}
 	}
 
-	_, err := r.reconcileDeployment(ctx, sink)
+	_, err := r.reconcileDeployment(ctx, sink, featureFlags)
 	if err != nil {
 		logging.FromContext(ctx).Errorw("Error reconciling Pod", zap.Error(err))
 		return err
@@ -117,9 +117,9 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, sink *sinks.IntegrationS
 	return newReconciledNormal(sink.Namespace, sink.Name)
 }
 
-func (r *Reconciler) reconcileDeployment(ctx context.Context, sink *sinks.IntegrationSink) (*v1.Deployment, error) {
+func (r *Reconciler) reconcileDeployment(ctx context.Context, sink *sinks.IntegrationSink, featureFlags feature.Flags) (*v1.Deployment, error) {
 
-	expected := resources.MakeDeploymentSpec(sink)
+	expected := resources.MakeDeploymentSpec(sink, featureFlags)
 	deployment, err := r.deploymentLister.Deployments(sink.Namespace).Get(expected.Name)
 	if apierrors.IsNotFound(err) {
 		deployment, err = r.kubeClientSet.AppsV1().Deployments(sink.Namespace).Create(ctx, expected, metav1.CreateOptions{})
