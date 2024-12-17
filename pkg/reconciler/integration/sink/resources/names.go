@@ -24,3 +24,7 @@ import (
 func CertificateName(sink *v1alpha1.IntegrationSink) string {
 	return kmeta.ChildName(sink.Name, "-server-tls")
 }
+
+func DeploymentName(sink *v1alpha1.IntegrationSink) string {
+	return kmeta.ChildName(sink.Name, "-deployment")
+}

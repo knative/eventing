@@ -22,6 +22,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	commonv1a1 "knative.dev/eventing/pkg/apis/common/integration/v1alpha1"
+	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/eventing/pkg/apis/sinks/v1alpha1"
 	"knative.dev/eventing/pkg/reconciler/integration"
 	"knative.dev/pkg/kmeta"
@@ -34,7 +35,7 @@ var sinkImageMap = map[string]string{
 	"aws-sns": "gcr.io/knative-nightly/aws-sns-sink:latest",
 }
 
-func MakeDeploymentSpec(sink *v1alpha1.IntegrationSink) *appsv1.Deployment {
+func MakeDeploymentSpec(sink *v1alpha1.IntegrationSink, featureFlags feature.Flags) *appsv1.Deployment {
 	t := true
 
 	deploy := &appsv1.Deployment{
@@ -86,7 +87,7 @@ func MakeDeploymentSpec(sink *v1alpha1.IntegrationSink) *appsv1.Deployment {
 									Protocol:      corev1.ProtocolTCP,
 									Name:          "https",
 								}},
-							Env: makeEnv(sink),
+							Env: makeEnv(sink, featureFlags),
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      CertificateName(sink),
@@ -138,26 +139,32 @@ func MakeService(sink *v1alpha1.IntegrationSink) *corev1.Service {
 	}
 }
 
-func DeploymentName(sink *v1alpha1.IntegrationSink) string {
-	return kmeta.ChildName(sink.Name, "-deployment")
-}
-
-func makeEnv(sink *v1alpha1.IntegrationSink) []corev1.EnvVar {
+func makeEnv(sink *v1alpha1.IntegrationSink, featureFlags feature.Flags) []corev1.EnvVar {
 	var envVars []corev1.EnvVar
 
-	//QUARKUS_HTTP_SSL_CERTIFICATE_FILES=/mount/certs/server.crt
-	//QUARKUS_HTTP_SSL_CERTIFICATE_KEY-FILES=/mount/certs/server.key
+	// Transport encryption environment variables
+	if !featureFlags.IsDisabledTransportEncryption() {
+		envVars = append(envVars, []corev1.EnvVar{
+			{
+				Name:  "QUARKUS_HTTP_SSL_CERTIFICATE_FILES",
+				Value: "/etc/" + CertificateName(sink) + "/tls.crt",
+			},
+			{
+				Name:  "QUARKUS_HTTP_SSL_CERTIFICATE_KEY-FILES",
+				Value: "/etc/" + CertificateName(sink) + "/tls.key",
+			},
+		}...)
+	}
 
-	envVars = append(envVars, []corev1.EnvVar{
-		{
-			Name:  "QUARKUS_HTTP_SSL_CERTIFICATE_FILES",
-			Value: "/etc/" + CertificateName(sink) + "/tls.crt",
-		},
-		{
-			Name:  "QUARKUS_HTTP_SSL_CERTIFICATE_KEY-FILES",
-			Value: "/etc/" + CertificateName(sink) + "/tls.key",
-		},
-	}...)
+	// No HTTP with strict TLS
+	if featureFlags.IsStrictTransportEncryption() {
+		envVars = append(envVars, []corev1.EnvVar{
+			{
+				Name:  "QUARKUS_HTTP_INSECURE_REQUESTS",
+				Value: "disabled",
+			},
+		}...)
+	}
 
 	// Log environment variables
 	if sink.Spec.Log != nil {
