@@ -73,6 +73,9 @@ func Install(name string, opts ...manifest.CfgFn) feature.StepFn {
 			fn(cfg)
 		}
 
+		if err := registerImage(ctx); err != nil {
+			t.Fatal(err)
+		}
 		if _, err := manifest.InstallYamlFS(ctx, yamlEmbed, cfg); err != nil {
 			t.Fatal(err)
 		}
@@ -222,4 +225,11 @@ func GoesReadySimple(name string) *feature.Feature {
 	f.Setup("JobSink is addressable", IsAddressable(name))
 
 	return f
+}
+
+func registerImage(ctx context.Context) error {
+	im := eventshub.ImageFromContext(ctx)
+	reg := environment.RegisterPackage(im)
+	_, err := reg(ctx, environment.FromContext(ctx))
+	return err
 }
