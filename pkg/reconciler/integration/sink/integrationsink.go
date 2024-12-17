@@ -162,8 +162,6 @@ func (r *Reconciler) reconcileService(ctx context.Context, sink *sinks.Integrati
 	} else if !metav1.IsControlledBy(svc, sink) {
 		return nil, fmt.Errorf("Service %q is not owned by IntegrationSink %q", svc.Name, sink.Name)
 	} else {
-		// Hallo, hier ist ein Kommentar :-) DANCE DACNE yO!
-		// WTF is this comment?!
 		logging.FromContext(ctx).Debugw("Reusing existing Service", zap.Any("Service", svc))
 	}
 
