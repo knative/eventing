@@ -58,14 +58,14 @@ func TestStateBuilder(t *testing.T) {
 			name:     "no vpods",
 			replicas: int32(0),
 			vpods:    [][]duckv1alpha1.Placement{},
-			expected: State{Capacity: 10, FreeCap: []int32{}, SchedulablePods: []int32{}, LastOrdinal: -1, StatefulSetName: sfsName, Pending: map[types.NamespacedName]int32{}, ExpectedVReplicaByVPod: map[types.NamespacedName]int32{}},
+			expected: State{Capacity: 10, FreeCap: []int32{}, SchedulablePods: []int32{}, StatefulSetName: sfsName, Pending: map[types.NamespacedName]int32{}, ExpectedVReplicaByVPod: map[types.NamespacedName]int32{}},
 			freec:    int32(0),
 		},
 		{
 			name:     "one vpods",
 			replicas: int32(1),
 			vpods:    [][]duckv1alpha1.Placement{{{PodName: "statefulset-name-0", VReplicas: 1}}},
-			expected: State{Capacity: 10, FreeCap: []int32{int32(9)}, SchedulablePods: []int32{int32(0)}, LastOrdinal: 0, Replicas: 1, StatefulSetName: sfsName,
+			expected: State{Capacity: 10, FreeCap: []int32{int32(9)}, SchedulablePods: []int32{int32(0)}, Replicas: 1, StatefulSetName: sfsName,
 				PodSpread: map[types.NamespacedName]map[string]int32{
 					{Name: vpodName + "-0", Namespace: vpodNs + "-0"}: {
 						"statefulset-name-0": 1,
@@ -88,7 +88,7 @@ func TestStateBuilder(t *testing.T) {
 				{{PodName: "statefulset-name-1", VReplicas: 2}},
 				{{PodName: "statefulset-name-1", VReplicas: 3}, {PodName: "statefulset-name-0", VReplicas: 1}},
 			},
-			expected: State{Capacity: 10, FreeCap: []int32{int32(8), int32(5), int32(5)}, SchedulablePods: []int32{int32(0), int32(1), int32(2)}, LastOrdinal: 2, Replicas: 3, StatefulSetName: sfsName,
+			expected: State{Capacity: 10, FreeCap: []int32{int32(8), int32(5), int32(5)}, SchedulablePods: []int32{int32(0), int32(1), int32(2)}, Replicas: 3, StatefulSetName: sfsName,
 				PodSpread: map[types.NamespacedName]map[string]int32{
 					{Name: vpodName + "-0", Namespace: vpodNs + "-0"}: {
 						"statefulset-name-0": 1,
@@ -124,7 +124,7 @@ func TestStateBuilder(t *testing.T) {
 				{{PodName: "statefulset-name-1", VReplicas: 2}},
 				{{PodName: "statefulset-name-1", VReplicas: 3}, {PodName: "statefulset-name-0", VReplicas: 1}},
 			},
-			expected: State{Capacity: 10, FreeCap: []int32{int32(8), int32(5), int32(5)}, SchedulablePods: []int32{int32(1), int32(2)}, LastOrdinal: 2, Replicas: 3, StatefulSetName: sfsName,
+			expected: State{Capacity: 10, FreeCap: []int32{int32(8), int32(5), int32(5)}, SchedulablePods: []int32{int32(1), int32(2)}, Replicas: 3, StatefulSetName: sfsName,
 				PodSpread: map[types.NamespacedName]map[string]int32{
 					{Name: vpodName + "-0", Namespace: vpodNs + "-0"}: {
 						"statefulset-name-2": 5,
@@ -157,7 +157,7 @@ func TestStateBuilder(t *testing.T) {
 				{{PodName: "statefulset-name-1", VReplicas: 0}},
 				{{PodName: "statefulset-name-1", VReplicas: 0}, {PodName: "statefulset-name-3", VReplicas: 0}},
 			},
-			expected: State{Capacity: 10, FreeCap: []int32{int32(9), int32(10), int32(5), int32(10)}, SchedulablePods: []int32{int32(0), int32(1), int32(2), int32(3)}, LastOrdinal: 3, Replicas: 4, StatefulSetName: sfsName,
+			expected: State{Capacity: 10, FreeCap: []int32{int32(9), int32(10), int32(5), int32(10)}, SchedulablePods: []int32{int32(0), int32(1), int32(2), int32(3)}, Replicas: 4, StatefulSetName: sfsName,
 				PodSpread: map[types.NamespacedName]map[string]int32{
 					{Name: vpodName + "-0", Namespace: vpodNs + "-0"}: {
 						"statefulset-name-0": 1,
@@ -188,7 +188,7 @@ func TestStateBuilder(t *testing.T) {
 			name:     "three vpods but one tainted and one with no zone label",
 			replicas: int32(1),
 			vpods:    [][]duckv1alpha1.Placement{{{PodName: "statefulset-name-0", VReplicas: 1}}},
-			expected: State{Capacity: 10, FreeCap: []int32{int32(9)}, SchedulablePods: []int32{int32(0)}, LastOrdinal: 0, Replicas: 1, StatefulSetName: sfsName,
+			expected: State{Capacity: 10, FreeCap: []int32{int32(9)}, SchedulablePods: []int32{int32(0)}, Replicas: 1, StatefulSetName: sfsName,
 				PodSpread: map[types.NamespacedName]map[string]int32{
 					{Name: vpodName + "-0", Namespace: vpodNs + "-0"}: {
 						"statefulset-name-0": 1,
@@ -207,7 +207,7 @@ func TestStateBuilder(t *testing.T) {
 			name:     "one vpod (HA)",
 			replicas: int32(1),
 			vpods:    [][]duckv1alpha1.Placement{{{PodName: "statefulset-name-0", VReplicas: 1}}},
-			expected: State{Capacity: 10, FreeCap: []int32{int32(9)}, SchedulablePods: []int32{int32(0)}, LastOrdinal: 0, Replicas: 1, StatefulSetName: sfsName,
+			expected: State{Capacity: 10, FreeCap: []int32{int32(9)}, SchedulablePods: []int32{int32(0)}, Replicas: 1, StatefulSetName: sfsName,
 				PodSpread: map[types.NamespacedName]map[string]int32{
 					{Name: vpodName + "-0", Namespace: vpodNs + "-0"}: {
 						"statefulset-name-0": 1,
