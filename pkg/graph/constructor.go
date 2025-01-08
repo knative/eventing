@@ -45,8 +45,8 @@ type ConstructorConfig struct {
 	// regardless of the Lenient setting.
 	Lenient bool
 
-	EventingClient        *eventingclient.Clientset
-	DynamicClient         *dynamic.DynamicClient
+	EventingClient        eventingclient.Interface
+	DynamicClient         dynamic.Interface
 	Namespaces            []string
 	ShouldAddBroker       func(b eventingv1.Broker) bool
 	FetchBrokers          bool
@@ -98,7 +98,7 @@ func ConstructGraph(ctx context.Context, config ConstructorConfig, logger zap.Lo
 	return g, nil
 }
 
-func (g *Graph) fetchBrokers(ctx context.Context, config ConstructorConfig, eventingClient *eventingclient.Clientset, logger zap.Logger) error {
+func (g *Graph) fetchBrokers(ctx context.Context, config ConstructorConfig, eventingClient eventingclient.Interface, logger zap.Logger) error {
 	if !config.FetchBrokers {
 		return nil
 	}
@@ -132,7 +132,7 @@ func (g *Graph) fetchBrokers(ctx context.Context, config ConstructorConfig, even
 	return nil
 }
 
-func (g *Graph) fetchChannels(ctx context.Context, config ConstructorConfig, eventingClient *eventingclient.Clientset, logger zap.Logger) error {
+func (g *Graph) fetchChannels(ctx context.Context, config ConstructorConfig, eventingClient eventingclient.Interface, logger zap.Logger) error {
 	if !config.FetchChannels {
 		return nil
 	}
@@ -166,7 +166,7 @@ func (g *Graph) fetchChannels(ctx context.Context, config ConstructorConfig, eve
 	return nil
 }
 
-func (g *Graph) fetchSources(ctx context.Context, config ConstructorConfig, _ *eventingclient.Clientset, logger zap.Logger) error {
+func (g *Graph) fetchSources(ctx context.Context, config ConstructorConfig, _ eventingclient.Interface, logger zap.Logger) error {
 	if !config.FetchSources {
 		return nil
 	}
@@ -185,7 +185,7 @@ func (g *Graph) fetchSources(ctx context.Context, config ConstructorConfig, _ *e
 	return nil
 }
 
-func (g *Graph) fetchTriggers(ctx context.Context, config ConstructorConfig, eventingClient *eventingclient.Clientset, logger zap.Logger) error {
+func (g *Graph) fetchTriggers(ctx context.Context, config ConstructorConfig, eventingClient eventingclient.Interface, logger zap.Logger) error {
 	if !config.FetchTriggers {
 		return nil
 	}
@@ -222,7 +222,7 @@ func (g *Graph) fetchTriggers(ctx context.Context, config ConstructorConfig, eve
 	return nil
 }
 
-func (g *Graph) fetchSubscriptions(ctx context.Context, config ConstructorConfig, eventingClient *eventingclient.Clientset, logger zap.Logger) error {
+func (g *Graph) fetchSubscriptions(ctx context.Context, config ConstructorConfig, eventingClient eventingclient.Interface, logger zap.Logger) error {
 	if !config.FetchSubscriptions {
 		return nil
 	}
@@ -259,7 +259,7 @@ func (g *Graph) fetchSubscriptions(ctx context.Context, config ConstructorConfig
 	return nil
 }
 
-func (g *Graph) fetchEventTypes(ctx context.Context, config ConstructorConfig, eventingClient *eventingclient.Clientset, logger zap.Logger) error {
+func (g *Graph) fetchEventTypes(ctx context.Context, config ConstructorConfig, eventingClient eventingclient.Interface, logger zap.Logger) error {
 	if !config.FetchEventTypes {
 		return nil
 	}
