@@ -97,12 +97,8 @@ func (g *Graph) fetchBrokers(ctx context.Context, config ConstructorConfig, even
 
 	for _, ns := range config.Namespaces {
 		brokers, err := eventingClient.EventingV1().Brokers(ns).List(ctx, metav1.ListOptions{})
-		if err != nil && !apierrs.IsNotFound(err) && !apierrs.IsUnauthorized(err) && !apierrs.IsForbidden(err) {
+		if err != nil && !apierrs.IsNotFound(err) {
 			return err
-		}
-
-		if apierrs.IsUnauthorized(err) || apierrs.IsForbidden(err) {
-			logger.Warn("failed to list brokers while constructing lineage graph", zap.Error(err))
 		}
 
 		if err == nil {
@@ -125,12 +121,8 @@ func (g *Graph) fetchChannels(ctx context.Context, config ConstructorConfig, eve
 	for _, ns := range config.Namespaces {
 
 		channels, err := eventingClient.MessagingV1().Channels(ns).List(ctx, metav1.ListOptions{})
-		if err != nil && !apierrs.IsNotFound(err) && !apierrs.IsUnauthorized(err) && !apierrs.IsForbidden(err) {
+		if err != nil && !apierrs.IsNotFound(err) {
 			return err
-		}
-
-		if apierrs.IsUnauthorized(err) || apierrs.IsForbidden(err) {
-			logger.Warn("failed to list channels while constructing lineage graph", zap.Error(err))
 		}
 
 		if err == nil {
@@ -171,12 +163,8 @@ func (g *Graph) fetchTriggers(ctx context.Context, config ConstructorConfig, eve
 
 	for _, ns := range config.Namespaces {
 		triggers, err := eventingClient.EventingV1().Triggers(ns).List(ctx, metav1.ListOptions{})
-		if err != nil && !apierrs.IsNotFound(err) && !apierrs.IsUnauthorized(err) && !apierrs.IsForbidden(err) {
+		if err != nil && !apierrs.IsNotFound(err) {
 			return err
-		}
-
-		if apierrs.IsUnauthorized(err) || apierrs.IsForbidden(err) {
-			logger.Warn("failed to list triggers while constructing lineage graph", zap.Error(err))
 		}
 
 		if err == nil {
@@ -201,12 +189,8 @@ func (g *Graph) fetchSubscriptions(ctx context.Context, config ConstructorConfig
 
 	for _, ns := range config.Namespaces {
 		subscriptions, err := eventingClient.MessagingV1().Subscriptions(ns).List(ctx, metav1.ListOptions{})
-		if err != nil && !apierrs.IsNotFound(err) && !apierrs.IsUnauthorized(err) && !apierrs.IsForbidden(err) {
+		if err != nil && !apierrs.IsNotFound(err) {
 			return err
-		}
-
-		if apierrs.IsUnauthorized(err) || apierrs.IsForbidden(err) {
-			logger.Warn("failed to list subscriptions while constructing lineage graph", zap.Error(err))
 		}
 
 		if err == nil {
@@ -231,12 +215,8 @@ func (g *Graph) fetchEventTypes(ctx context.Context, config ConstructorConfig, e
 
 	for _, ns := range config.Namespaces {
 		eventTypes, err := eventingClient.EventingV1beta3().EventTypes(ns).List(ctx, metav1.ListOptions{})
-		if err != nil && !apierrs.IsNotFound(err) && !apierrs.IsUnauthorized(err) && !apierrs.IsForbidden(err) {
+		if err != nil && !apierrs.IsNotFound(err) {
 			return err
-		}
-
-		if apierrs.IsUnauthorized(err) || apierrs.IsForbidden(err) {
-			logger.Warn("failed to list eventtypes while constructing lineage graph", zap.Error(err))
 		}
 
 		if err == nil {
@@ -436,10 +416,7 @@ func getSources(ctx context.Context, config ConstructorConfig, logger zap.Logger
 		},
 	).List(ctx, metav1.ListOptions{LabelSelector: labels.Set{"duck.knative.dev/source": "true"}.String()})
 	if err != nil {
-		if errors.IsNotFound(err) || errors.IsUnauthorized(err) || errors.IsForbidden(err) {
-			logger.Warn("failed to list source CRDs", zap.Error(err))
-			// no need to keep processing here, but also this isn't an error that should stop us from
-			// continuing to build the graph
+		if errors.IsNotFound(err) {
 			return nil, nil
 		} else {
 			return nil, fmt.Errorf("unable to list source CRDs: %w", err)
