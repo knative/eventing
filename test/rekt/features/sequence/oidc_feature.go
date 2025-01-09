@@ -219,3 +219,51 @@ func SequenceSendsEventWithOIDCTokenToReply() *feature.Feature {
 
 	return f
 }
+
+func SequenceWithOIDCAudienceForSteps(name string) *feature.Feature {
+	f := feature.NewFeatureNamed("Sequence with OIDC audience for steps")
+
+	f.Prerequisite("OIDC Authentication is enabled", featureflags.AuthenticationOIDCEnabled())
+	f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
+	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
+
+	channelTemplate := channel_template.ChannelTemplate{
+		TypeMeta: channel_impl.TypeMeta(),
+		Spec:     map[string]interface{}{},
+	}
+
+	step1Name := feature.MakeRandomK8sName("step1")
+	step2Name := feature.MakeRandomK8sName("step2")
+
+	step1Audience := "step1-aud"
+	step2Audience := "step2-aud"
+
+	f.Setup("install step 1", eventshub.Install(step1Name,
+		eventshub.OIDCReceiverAudience(step1Audience),
+		eventshub.StartReceiverTLS))
+	f.Setup("install step 2", eventshub.Install(step2Name,
+		eventshub.OIDCReceiverAudience(step2Audience),
+		eventshub.StartReceiverTLS))
+
+	f.Setup("Install Sequence", func(ctx context.Context, t feature.T) {
+		cfg := []manifest.CfgFn{
+			sequence.WithChannelTemplate(channelTemplate),
+			sequence.WithStepFromDestination(&duckv1.Destination{
+				Ref:      service.AsKReference(step1Name),
+				Audience: &step1Audience,
+				CACerts:  eventshub.GetCaCerts(ctx),
+			}),
+			sequence.WithStepFromDestination(&duckv1.Destination{
+				Ref:      service.AsKReference(step2Name),
+				Audience: &step2Audience,
+				CACerts:  eventshub.GetCaCerts(ctx),
+			}),
+		}
+
+		sequence.Install(name, cfg...)(ctx, t)
+	})
+
+	f.Setup("Sequence goes ready", sequence.IsReady(name))
+
+	return f
+}

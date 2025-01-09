@@ -117,10 +117,7 @@ func TestParallelSupportsAuthZ(t *testing.T) {
 	)
 
 	name := feature.MakeRandomK8sName("parallel")
-	env.Prerequisite(ctx, t, parallel.GoesReady(name, parallelresources.WithChannelTemplate(channel_template.ChannelTemplate{
-		TypeMeta: channel_impl.TypeMeta(),
-		Spec:     map[string]interface{}{},
-	})))
+	env.Prerequisite(ctx, t, parallel.ParallelWithOIDCAudienceForSteps(name))
 
 	env.TestSet(ctx, t, authz.AddressableAuthZConformance(parallelresources.GVR(), "Parallel", name))
 }

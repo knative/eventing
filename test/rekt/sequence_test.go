@@ -114,10 +114,8 @@ func TestSequenceSupportsAuthZ(t *testing.T) {
 	)
 
 	name := feature.MakeRandomK8sName("sequence")
-	env.Prerequisite(ctx, t, sequence.GoesReady(name, sequenceresources.WithChannelTemplate(channel_template.ChannelTemplate{
-		TypeMeta: channel_impl.TypeMeta(),
-		Spec:     map[string]interface{}{},
-	})))
+
+	env.Prerequisite(ctx, t, sequence.SequenceWithOIDCAudienceForSteps(name))
 
 	env.TestSet(ctx, t, authz.AddressableAuthZConformance(sequenceresources.GVR(), "Sequence", name))
 }

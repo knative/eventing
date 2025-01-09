@@ -28,6 +28,7 @@ import (
 	"knative.dev/eventing/pkg/reconciler/parallel/resources"
 	"knative.dev/eventing/test/rekt/features/featureflags"
 	"knative.dev/eventing/test/rekt/resources/addressable"
+	"knative.dev/eventing/test/rekt/resources/channel_impl"
 	"knative.dev/eventing/test/rekt/resources/channel_template"
 	"knative.dev/eventing/test/rekt/resources/parallel"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -174,6 +175,99 @@ func ParallelHasAudienceOfInputChannel(parallelName, parallelNamespace string, c
 	})
 
 	f.Alpha("Parallel").Must("has audience set", parallel.ValidateAddress(parallelName, addressable.AssertAddressWithAudience(expectedAudience)))
+
+	return f
+}
+
+func ParallelWithOIDCAudienceForSteps(name string) *feature.Feature {
+	f := feature.NewFeatureNamed("Parallel with OIDC audience for steps")
+
+	f.Prerequisite("OIDC Authentication is enabled", featureflags.AuthenticationOIDCEnabled())
+	f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
+	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
+
+	channelTemplate := channel_template.ChannelTemplate{
+		TypeMeta: channel_impl.TypeMeta(),
+		Spec:     map[string]interface{}{},
+	}
+
+	sink := feature.MakeRandomK8sName("sink1")
+	sinkAudience := "sinkAud"
+	subscriber1Audience := "subscriber1Aud"
+	subscriber2Audience := "subscriber2Aud"
+	filter1Audience := "filter1Aud"
+
+	eventBody := `{"msg":"test msg"}`
+	event := test.FullEvent()
+	_ = event.SetData(cloudeventsv2.ApplicationJSON, []byte(eventBody))
+
+	// Construct two branches
+	branch1Num := 0
+	branch2Num := 1
+	subscriber1 := feature.MakeRandomK8sName("subscriber" + strconv.Itoa(branch1Num))
+	subscriber2 := feature.MakeRandomK8sName("subscriber" + strconv.Itoa(branch2Num))
+	filter1 := feature.MakeRandomK8sName("filter" + strconv.Itoa(branch1Num))
+
+	f.Setup("install sink", eventshub.Install(sink,
+		eventshub.OIDCReceiverAudience(sinkAudience),
+		eventshub.StartReceiverTLS))
+
+	// Install Subscribers for both branches.
+	f.Setup("install subscriber1", eventshub.Install(subscriber1,
+		eventshub.ReplyWithAppendedData("appended data 1"),
+		eventshub.OIDCReceiverAudience(subscriber1Audience),
+		eventshub.StartReceiverTLS))
+	f.Setup("install subscriber2", eventshub.Install(subscriber2,
+		eventshub.ReplyWithAppendedData("appended data 2"),
+		eventshub.OIDCReceiverAudience(subscriber2Audience),
+		eventshub.StartReceiverTLS))
+
+	// Install Filter only for first branch.
+	f.Setup("install filter1", eventshub.Install(filter1,
+		eventshub.ReplyWithTransformedEvent(event.Type(), event.Source(), string(event.Data())),
+		eventshub.OIDCReceiverAudience(filter1Audience),
+		eventshub.StartReceiverTLS))
+
+	// Install a Parallel with two branches
+	f.Setup("install Parallel", func(ctx context.Context, t feature.T) {
+		cfg := []manifest.CfgFn{
+			parallel.WithChannelTemplate(channelTemplate),
+			parallel.WithReply(&duckv1.Destination{
+				Ref:      service.AsKReference(sink),
+				Audience: &sinkAudience,
+				CACerts:  eventshub.GetCaCerts(ctx),
+			}),
+			parallel.WithSubscriberAt(branch1Num, &duckv1.Destination{
+				Ref:      service.AsKReference(subscriber1),
+				Audience: &subscriber1Audience,
+				CACerts:  eventshub.GetCaCerts(ctx),
+			}),
+			parallel.WithSubscriberAt(branch2Num, &duckv1.Destination{
+				Ref:      service.AsKReference(subscriber2),
+				Audience: &subscriber2Audience,
+				CACerts:  eventshub.GetCaCerts(ctx),
+			}),
+			parallel.WithFilterAt(branch1Num, &duckv1.Destination{
+				Ref:      service.AsKReference(filter1),
+				Audience: &filter1Audience,
+				CACerts:  eventshub.GetCaCerts(ctx),
+			}),
+			parallel.WithReplyAt(branch1Num, nil),
+			parallel.WithReplyAt(branch2Num, nil),
+
+			// The Reply for second branch is same as global reply.
+			parallel.WithReplyAt(branch2Num, &duckv1.Destination{
+				Ref:      service.AsKReference(sink),
+				Audience: &sinkAudience,
+				CACerts:  eventshub.GetCaCerts(ctx),
+			}),
+		}
+
+		parallel.Install(name, cfg...)(ctx, t)
+	})
+
+	f.Setup("Parallel goes ready", parallel.IsReady(name))
+	f.Setup("Parallel is addressable", parallel.IsAddressable(name))
 
 	return f
 }
