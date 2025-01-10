@@ -116,6 +116,7 @@ func SequenceSendsEventWithOIDCTokenToSteps() *feature.Feature {
 	})
 
 	f.Setup("Sequence goes ready", sequence.IsReady(sequenceName))
+	f.Setup("Sequence is addressable", sequence.IsAddressable(sequenceName))
 
 	event := test.FullEvent()
 	event.SetData("text/plain", "hello")
@@ -198,6 +199,7 @@ func SequenceSendsEventWithOIDCTokenToReply() *feature.Feature {
 		sequence.Install(sequenceName, cfg...)(ctx, t)
 	})
 	f.Setup("Sequence goes ready", sequence.IsReady(sequenceName))
+	f.Setup("Sequence is addressable", sequence.IsAddressable(sequenceName))
 
 	event := test.FullEvent()
 	event.SetData("text/plain", "hello")
@@ -264,6 +266,7 @@ func SequenceWithOIDCAudienceForSteps(name string) *feature.Feature {
 	})
 
 	f.Setup("Sequence goes ready", sequence.IsReady(name))
+	f.Setup("Sequence is addressable", sequence.IsAddressable(name))
 
 	return f
 }
