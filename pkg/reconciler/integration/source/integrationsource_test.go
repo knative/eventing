@@ -19,6 +19,10 @@ package source
 import (
 	"fmt"
 
+	"knative.dev/eventing/pkg/apis/feature"
+	"knative.dev/eventing/pkg/auth"
+	"knative.dev/pkg/ptr"
+
 	"knative.dev/eventing/pkg/reconciler/integration"
 
 	corev1 "k8s.io/api/core/v1"
@@ -162,6 +166,36 @@ func TestReconcile(t *testing.T) {
 					WithIntegrationSourcePropagateContainerSourceStatus(makeContainerSourceStatus(&conditionTrue)),
 				),
 			}},
+		}, {
+			Name: "OIDC: IntegrationSource uses OIDC service account of containersource",
+			Key:  testNS + "/" + sourceName,
+			Ctx: feature.ToContext(context.Background(), feature.Flags{
+				feature.OIDCAuthentication: feature.Enabled,
+			}),
+			Objects: []runtime.Object{
+				NewIntegrationSource(sourceName, testNS,
+					WithIntegrationSourceUID(sourceUID),
+					WithIntegrationSourceSpec(makeIntegrationSourceSpec(sinkDest)),
+				),
+				makeContainerSourceOIDC(NewIntegrationSource(sourceName, testNS,
+					WithIntegrationSourceUID(sourceUID),
+					WithIntegrationSourceSpec(makeIntegrationSourceSpec(sinkDest)),
+				), &conditionTrue),
+			},
+			WantErr: false,
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewIntegrationSource(sourceName, testNS,
+					WithIntegrationSourceUID(sourceUID),
+					WithIntegrationSourceSpec(makeIntegrationSourceSpec(sinkDest)),
+					WithInitIntegrationSourceConditions,
+					WithIntegrationSourceStatusObservedGeneration(generation),
+					WithIntegrationSourcePropagateContainerSourceStatus(makeContainerSourceStatus(&conditionTrue)),
+					WithIntegrationSourceOIDCServiceAccountName(getOIDCServiceAccountNameForContainerSource()),
+				),
+			}},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, sourceReconciled, `IntegrationSource reconciled: "%s/%s"`, testNS, sourceName),
+			},
 		}}
 	logger := logtesting.TestLogger(t)
 
@@ -182,7 +216,47 @@ func TestReconcile(t *testing.T) {
 	))
 }
 
-func makeContainerSource(source *sourcesv1alpha1.IntegrationSource, ready *corev1.ConditionStatus) runtime.Object {
+func makeContainerSourceOIDC(source *sourcesv1alpha1.IntegrationSource, ready *corev1.ConditionStatus) *sourcesv1.ContainerSource {
+	cs := makeContainerSource(source, ready)
+
+	// replace all env_vars for inserting the OIDC ones at the right order/index
+	cs.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{
+		{
+			Name:  "CAMEL_KNATIVE_CLIENT_SSL_ENABLED",
+			Value: "true",
+		},
+		{
+			Name:  "CAMEL_KNATIVE_CLIENT_SSL_CERT_PATH",
+			Value: "/knative-custom-certs/knative-eventing-bundle.pem",
+		},
+		{
+			Name:  "CAMEL_KNATIVE_CLIENT_OIDC_ENABLED",
+			Value: "true",
+		},
+		{
+			Name:  "CAMEL_KNATIVE_CLIENT_OIDC_TOKEN_PATH",
+			Value: "file:///oidc/token",
+		},
+		{
+			Name:  "CAMEL_KAMELET_TIMER_SOURCE_PERIOD",
+			Value: "1000",
+		},
+		{
+			Name:  "CAMEL_KAMELET_TIMER_SOURCE_MESSAGE",
+			Value: "Hallo",
+		},
+		{
+			Name:  "CAMEL_KAMELET_TIMER_SOURCE_REPEATCOUNT",
+			Value: "0",
+		},
+	}
+
+	cs.Status = *makeContainerSourceStatusOIDC(ready)
+
+	return cs
+}
+
+func makeContainerSource(source *sourcesv1alpha1.IntegrationSource, ready *corev1.ConditionStatus) *sourcesv1.ContainerSource {
 	cs := &sourcesv1.ContainerSource{
 		ObjectMeta: metav1.ObjectMeta{
 			OwnerReferences: []metav1.OwnerReference{
@@ -250,6 +324,21 @@ func makeContainerSourceStatus(ready *corev1.ConditionStatus) *sourcesv1.Contain
 			},
 		},
 	}
+}
+
+func makeContainerSourceStatusOIDC(ready *corev1.ConditionStatus) *sourcesv1.ContainerSourceStatus {
+	css := makeContainerSourceStatus(ready)
+	css.Auth = &duckv1.AuthStatus{
+		ServiceAccountName: ptr.String(getOIDCServiceAccountNameForContainerSource()),
+	}
+	return css
+}
+
+func getOIDCServiceAccountNameForContainerSource() string {
+	return auth.GetOIDCServiceAccountNameForResource(sourcesv1.SchemeGroupVersion.WithKind("ContainerSource"), metav1.ObjectMeta{
+		Name:      containerSourceName,
+		Namespace: testNS,
+	})
 }
 
 func makeIntegrationSourceSpec(sink duckv1.Destination) sourcesv1alpha1.IntegrationSourceSpec {
