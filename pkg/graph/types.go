@@ -18,10 +18,12 @@ package graph
 
 import (
 	"fmt"
+	"strings"
 
-	eventingv1beta3 "knative.dev/eventing/pkg/apis/eventing/v1beta3"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+
+	eventingv1beta3 "knative.dev/eventing/pkg/apis/eventing/v1beta3"
 )
 
 type Graph struct {
@@ -109,12 +111,6 @@ func (g *Graph) String() string {
 	s := ""
 	for _, v := range g.vertices {
 		s += fmt.Sprintf("%s\n", v)
-		if len(v.outEdges) != 0 {
-			s += "Out Edges:\n"
-			for _, e := range v.outEdges {
-				s += fmt.Sprintf("\t%s\n", e)
-			}
-		}
 	}
 
 	return s
@@ -182,7 +178,23 @@ func (v *Vertex) AddEdge(to *Vertex, edgeRef *duckv1.Destination, transform Tran
 }
 
 func (v *Vertex) String() string {
-	return DestString(v.self)
+	sb := strings.Builder{}
+	sb.WriteString(DestString(v.self))
+	if v.OutDegree() > 0 {
+		sb.WriteString("\n\tOut Edges:")
+		for _, e := range v.outEdges {
+			sb.WriteString("\n\t\t")
+			sb.WriteString(e.String())
+		}
+	}
+	if v.InDegree() > 0 {
+		sb.WriteString("\n\tIn Edges:")
+		for _, e := range v.inEdges {
+			sb.WriteString("\n\t\t")
+			sb.WriteString(e.String())
+		}
+	}
+	return sb.String()
 }
 
 func (g *Graph) GetPrimaryOutEdgeWithRef(edgeRef *duckv1.KReference) *Edge {
