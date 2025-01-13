@@ -24,6 +24,7 @@ import (
 
 	"knative.dev/reconciler-test/pkg/feature"
 
+	"knative.dev/eventing/test/rekt/features/authz"
 	"knative.dev/eventing/test/rekt/features/sequence"
 	"knative.dev/eventing/test/rekt/resources/channel_impl"
 	"knative.dev/eventing/test/rekt/resources/channel_template"
@@ -98,4 +99,23 @@ func TestSequenceSendsEventsOIDC(t *testing.T) {
 	)
 
 	env.TestSet(ctx, t, sequence.SequenceSendsEventWithOIDC())
+}
+
+func TestSequenceSupportsAuthZ(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+		eventshub.WithTLS(t),
+	)
+
+	name := feature.MakeRandomK8sName("sequence")
+
+	env.Prerequisite(ctx, t, sequence.SequenceWithOIDCAudienceForSteps(name))
+
+	env.TestSet(ctx, t, authz.AddressableAuthZConformance(sequenceresources.GVR(), "Sequence", name))
 }

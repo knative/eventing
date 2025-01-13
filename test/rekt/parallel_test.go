@@ -22,7 +22,6 @@ package rekt
 import (
 	"testing"
 
-	"knative.dev/eventing/test/rekt/resources/channel_impl"
 	"knative.dev/reconciler-test/pkg/feature"
 
 	"knative.dev/pkg/system"
@@ -31,7 +30,9 @@ import (
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/knative"
 
+	"knative.dev/eventing/test/rekt/features/authz"
 	"knative.dev/eventing/test/rekt/features/parallel"
+	"knative.dev/eventing/test/rekt/resources/channel_impl"
 	"knative.dev/eventing/test/rekt/resources/channel_template"
 	parallelresources "knative.dev/eventing/test/rekt/resources/parallel"
 )
@@ -101,4 +102,22 @@ func TestParallelTwoBranchesWithOIDC(t *testing.T) {
 	)
 
 	env.Test(ctx, t, parallel.ParallelWithTwoBranchesOIDC(channel_template.ImmemoryChannelTemplate()))
+}
+
+func TestParallelSupportsAuthZ(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+		eventshub.WithTLS(t),
+	)
+
+	name := feature.MakeRandomK8sName("parallel")
+	env.Prerequisite(ctx, t, parallel.ParallelWithOIDCAudienceForSteps(name))
+
+	env.TestSet(ctx, t, authz.AddressableAuthZConformance(parallelresources.GVR(), "Parallel", name))
 }
