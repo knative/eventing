@@ -336,3 +336,9 @@ func WithBrokerEventPoliciesReadyBecauseNoPolicyAndOIDCEnabled() BrokerOption {
 		b.Status.MarkEventPoliciesTrueWithReason("DefaultAuthorizationMode", "Default authz mode is %q", feature.AuthorizationAllowSameNamespace)
 	}
 }
+
+func WithBrokerEventPoliciesReadyAndDefaultAuthorizationMode(authMode string) BrokerOption {
+	return func(b *v1.Broker) {
+		b.Status.MarkEventPoliciesTrueWithReason("DefaultAuthorizationMode", "Default authz mode is %q", authMode)
+	}
+}
