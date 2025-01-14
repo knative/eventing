@@ -41,22 +41,24 @@ var eventpoliciesKind = v1alpha1.SchemeGroupVersion.WithKind("EventPolicy")
 
 // Get takes name of the eventPolicy, and returns the corresponding eventPolicy object, and an error if there is any.
 func (c *FakeEventPolicies) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.EventPolicy, err error) {
+	emptyResult := &v1alpha1.EventPolicy{}
 	obj, err := c.Fake.
-		Invokes(testing.NewGetAction(eventpoliciesResource, c.ns, name), &v1alpha1.EventPolicy{})
+		Invokes(testing.NewGetActionWithOptions(eventpoliciesResource, c.ns, name, options), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1alpha1.EventPolicy), err
 }
 
 // List takes label and field selectors, and returns the list of EventPolicies that match those selectors.
 func (c *FakeEventPolicies) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.EventPolicyList, err error) {
+	emptyResult := &v1alpha1.EventPolicyList{}
 	obj, err := c.Fake.
-		Invokes(testing.NewListAction(eventpoliciesResource, eventpoliciesKind, c.ns, opts), &v1alpha1.EventPolicyList{})
+		Invokes(testing.NewListActionWithOptions(eventpoliciesResource, eventpoliciesKind, c.ns, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -75,40 +77,43 @@ func (c *FakeEventPolicies) List(ctx context.Context, opts v1.ListOptions) (resu
 // Watch returns a watch.Interface that watches the requested eventPolicies.
 func (c *FakeEventPolicies) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
-		InvokesWatch(testing.NewWatchAction(eventpoliciesResource, c.ns, opts))
+		InvokesWatch(testing.NewWatchActionWithOptions(eventpoliciesResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a eventPolicy and creates it.  Returns the server's representation of the eventPolicy, and an error, if there is any.
 func (c *FakeEventPolicies) Create(ctx context.Context, eventPolicy *v1alpha1.EventPolicy, opts v1.CreateOptions) (result *v1alpha1.EventPolicy, err error) {
+	emptyResult := &v1alpha1.EventPolicy{}
 	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(eventpoliciesResource, c.ns, eventPolicy), &v1alpha1.EventPolicy{})
+		Invokes(testing.NewCreateActionWithOptions(eventpoliciesResource, c.ns, eventPolicy, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1alpha1.EventPolicy), err
 }
 
 // Update takes the representation of a eventPolicy and updates it. Returns the server's representation of the eventPolicy, and an error, if there is any.
 func (c *FakeEventPolicies) Update(ctx context.Context, eventPolicy *v1alpha1.EventPolicy, opts v1.UpdateOptions) (result *v1alpha1.EventPolicy, err error) {
+	emptyResult := &v1alpha1.EventPolicy{}
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateAction(eventpoliciesResource, c.ns, eventPolicy), &v1alpha1.EventPolicy{})
+		Invokes(testing.NewUpdateActionWithOptions(eventpoliciesResource, c.ns, eventPolicy, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1alpha1.EventPolicy), err
 }
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeEventPolicies) UpdateStatus(ctx context.Context, eventPolicy *v1alpha1.EventPolicy, opts v1.UpdateOptions) (*v1alpha1.EventPolicy, error) {
+func (c *FakeEventPolicies) UpdateStatus(ctx context.Context, eventPolicy *v1alpha1.EventPolicy, opts v1.UpdateOptions) (result *v1alpha1.EventPolicy, err error) {
+	emptyResult := &v1alpha1.EventPolicy{}
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceAction(eventpoliciesResource, "status", c.ns, eventPolicy), &v1alpha1.EventPolicy{})
+		Invokes(testing.NewUpdateSubresourceActionWithOptions(eventpoliciesResource, "status", c.ns, eventPolicy, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1alpha1.EventPolicy), err
 }
@@ -123,7 +128,7 @@ func (c *FakeEventPolicies) Delete(ctx context.Context, name string, opts v1.Del
 
 // DeleteCollection deletes a collection of objects.
 func (c *FakeEventPolicies) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(eventpoliciesResource, c.ns, listOpts)
+	action := testing.NewDeleteCollectionActionWithOptions(eventpoliciesResource, c.ns, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1alpha1.EventPolicyList{})
 	return err
@@ -131,11 +136,12 @@ func (c *FakeEventPolicies) DeleteCollection(ctx context.Context, opts v1.Delete
 
 // Patch applies the patch and returns the patched eventPolicy.
 func (c *FakeEventPolicies) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.EventPolicy, err error) {
+	emptyResult := &v1alpha1.EventPolicy{}
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(eventpoliciesResource, c.ns, name, pt, data, subresources...), &v1alpha1.EventPolicy{})
+		Invokes(testing.NewPatchSubresourceActionWithOptions(eventpoliciesResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1alpha1.EventPolicy), err
 }

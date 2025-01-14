@@ -19,8 +19,8 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 	v1alpha1 "knative.dev/eventing/pkg/apis/sinks/v1alpha1"
 )
@@ -38,25 +38,17 @@ type IntegrationSinkLister interface {
 
 // integrationSinkLister implements the IntegrationSinkLister interface.
 type integrationSinkLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*v1alpha1.IntegrationSink]
 }
 
 // NewIntegrationSinkLister returns a new IntegrationSinkLister.
 func NewIntegrationSinkLister(indexer cache.Indexer) IntegrationSinkLister {
-	return &integrationSinkLister{indexer: indexer}
-}
-
-// List lists all IntegrationSinks in the indexer.
-func (s *integrationSinkLister) List(selector labels.Selector) (ret []*v1alpha1.IntegrationSink, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1alpha1.IntegrationSink))
-	})
-	return ret, err
+	return &integrationSinkLister{listers.New[*v1alpha1.IntegrationSink](indexer, v1alpha1.Resource("integrationsink"))}
 }
 
 // IntegrationSinks returns an object that can list and get IntegrationSinks.
 func (s *integrationSinkLister) IntegrationSinks(namespace string) IntegrationSinkNamespaceLister {
-	return integrationSinkNamespaceLister{indexer: s.indexer, namespace: namespace}
+	return integrationSinkNamespaceLister{listers.NewNamespaced[*v1alpha1.IntegrationSink](s.ResourceIndexer, namespace)}
 }
 
 // IntegrationSinkNamespaceLister helps list and get IntegrationSinks.
@@ -74,26 +66,5 @@ type IntegrationSinkNamespaceLister interface {
 // integrationSinkNamespaceLister implements the IntegrationSinkNamespaceLister
 // interface.
 type integrationSinkNamespaceLister struct {
-	indexer   cache.Indexer
-	namespace string
-}
-
-// List lists all IntegrationSinks in the indexer for a given namespace.
-func (s integrationSinkNamespaceLister) List(selector labels.Selector) (ret []*v1alpha1.IntegrationSink, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1alpha1.IntegrationSink))
-	})
-	return ret, err
-}
-
-// Get retrieves the IntegrationSink from the indexer for a given namespace and name.
-func (s integrationSinkNamespaceLister) Get(name string) (*v1alpha1.IntegrationSink, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v1alpha1.Resource("integrationsink"), name)
-	}
-	return obj.(*v1alpha1.IntegrationSink), nil
+	listers.ResourceIndexer[*v1alpha1.IntegrationSink]
 }

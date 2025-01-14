@@ -41,22 +41,24 @@ var integrationsinksKind = v1alpha1.SchemeGroupVersion.WithKind("IntegrationSink
 
 // Get takes name of the integrationSink, and returns the corresponding integrationSink object, and an error if there is any.
 func (c *FakeIntegrationSinks) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.IntegrationSink, err error) {
+	emptyResult := &v1alpha1.IntegrationSink{}
 	obj, err := c.Fake.
-		Invokes(testing.NewGetAction(integrationsinksResource, c.ns, name), &v1alpha1.IntegrationSink{})
+		Invokes(testing.NewGetActionWithOptions(integrationsinksResource, c.ns, name, options), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1alpha1.IntegrationSink), err
 }
 
 // List takes label and field selectors, and returns the list of IntegrationSinks that match those selectors.
 func (c *FakeIntegrationSinks) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.IntegrationSinkList, err error) {
+	emptyResult := &v1alpha1.IntegrationSinkList{}
 	obj, err := c.Fake.
-		Invokes(testing.NewListAction(integrationsinksResource, integrationsinksKind, c.ns, opts), &v1alpha1.IntegrationSinkList{})
+		Invokes(testing.NewListActionWithOptions(integrationsinksResource, integrationsinksKind, c.ns, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -75,40 +77,43 @@ func (c *FakeIntegrationSinks) List(ctx context.Context, opts v1.ListOptions) (r
 // Watch returns a watch.Interface that watches the requested integrationSinks.
 func (c *FakeIntegrationSinks) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
-		InvokesWatch(testing.NewWatchAction(integrationsinksResource, c.ns, opts))
+		InvokesWatch(testing.NewWatchActionWithOptions(integrationsinksResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a integrationSink and creates it.  Returns the server's representation of the integrationSink, and an error, if there is any.
 func (c *FakeIntegrationSinks) Create(ctx context.Context, integrationSink *v1alpha1.IntegrationSink, opts v1.CreateOptions) (result *v1alpha1.IntegrationSink, err error) {
+	emptyResult := &v1alpha1.IntegrationSink{}
 	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(integrationsinksResource, c.ns, integrationSink), &v1alpha1.IntegrationSink{})
+		Invokes(testing.NewCreateActionWithOptions(integrationsinksResource, c.ns, integrationSink, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1alpha1.IntegrationSink), err
 }
 
 // Update takes the representation of a integrationSink and updates it. Returns the server's representation of the integrationSink, and an error, if there is any.
 func (c *FakeIntegrationSinks) Update(ctx context.Context, integrationSink *v1alpha1.IntegrationSink, opts v1.UpdateOptions) (result *v1alpha1.IntegrationSink, err error) {
+	emptyResult := &v1alpha1.IntegrationSink{}
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateAction(integrationsinksResource, c.ns, integrationSink), &v1alpha1.IntegrationSink{})
+		Invokes(testing.NewUpdateActionWithOptions(integrationsinksResource, c.ns, integrationSink, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1alpha1.IntegrationSink), err
 }
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeIntegrationSinks) UpdateStatus(ctx context.Context, integrationSink *v1alpha1.IntegrationSink, opts v1.UpdateOptions) (*v1alpha1.IntegrationSink, error) {
+func (c *FakeIntegrationSinks) UpdateStatus(ctx context.Context, integrationSink *v1alpha1.IntegrationSink, opts v1.UpdateOptions) (result *v1alpha1.IntegrationSink, err error) {
+	emptyResult := &v1alpha1.IntegrationSink{}
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceAction(integrationsinksResource, "status", c.ns, integrationSink), &v1alpha1.IntegrationSink{})
+		Invokes(testing.NewUpdateSubresourceActionWithOptions(integrationsinksResource, "status", c.ns, integrationSink, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1alpha1.IntegrationSink), err
 }
@@ -123,7 +128,7 @@ func (c *FakeIntegrationSinks) Delete(ctx context.Context, name string, opts v1.
 
 // DeleteCollection deletes a collection of objects.
 func (c *FakeIntegrationSinks) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(integrationsinksResource, c.ns, listOpts)
+	action := testing.NewDeleteCollectionActionWithOptions(integrationsinksResource, c.ns, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1alpha1.IntegrationSinkList{})
 	return err
@@ -131,11 +136,12 @@ func (c *FakeIntegrationSinks) DeleteCollection(ctx context.Context, opts v1.Del
 
 // Patch applies the patch and returns the patched integrationSink.
 func (c *FakeIntegrationSinks) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.IntegrationSink, err error) {
+	emptyResult := &v1alpha1.IntegrationSink{}
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(integrationsinksResource, c.ns, name, pt, data, subresources...), &v1alpha1.IntegrationSink{})
+		Invokes(testing.NewPatchSubresourceActionWithOptions(integrationsinksResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1alpha1.IntegrationSink), err
 }
