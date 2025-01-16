@@ -41,22 +41,24 @@ var sequencesKind = v1.SchemeGroupVersion.WithKind("Sequence")
 
 // Get takes name of the sequence, and returns the corresponding sequence object, and an error if there is any.
 func (c *FakeSequences) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.Sequence, err error) {
+	emptyResult := &v1.Sequence{}
 	obj, err := c.Fake.
-		Invokes(testing.NewGetAction(sequencesResource, c.ns, name), &v1.Sequence{})
+		Invokes(testing.NewGetActionWithOptions(sequencesResource, c.ns, name, options), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1.Sequence), err
 }
 
 // List takes label and field selectors, and returns the list of Sequences that match those selectors.
 func (c *FakeSequences) List(ctx context.Context, opts metav1.ListOptions) (result *v1.SequenceList, err error) {
+	emptyResult := &v1.SequenceList{}
 	obj, err := c.Fake.
-		Invokes(testing.NewListAction(sequencesResource, sequencesKind, c.ns, opts), &v1.SequenceList{})
+		Invokes(testing.NewListActionWithOptions(sequencesResource, sequencesKind, c.ns, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -75,40 +77,43 @@ func (c *FakeSequences) List(ctx context.Context, opts metav1.ListOptions) (resu
 // Watch returns a watch.Interface that watches the requested sequences.
 func (c *FakeSequences) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
-		InvokesWatch(testing.NewWatchAction(sequencesResource, c.ns, opts))
+		InvokesWatch(testing.NewWatchActionWithOptions(sequencesResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a sequence and creates it.  Returns the server's representation of the sequence, and an error, if there is any.
 func (c *FakeSequences) Create(ctx context.Context, sequence *v1.Sequence, opts metav1.CreateOptions) (result *v1.Sequence, err error) {
+	emptyResult := &v1.Sequence{}
 	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(sequencesResource, c.ns, sequence), &v1.Sequence{})
+		Invokes(testing.NewCreateActionWithOptions(sequencesResource, c.ns, sequence, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1.Sequence), err
 }
 
 // Update takes the representation of a sequence and updates it. Returns the server's representation of the sequence, and an error, if there is any.
 func (c *FakeSequences) Update(ctx context.Context, sequence *v1.Sequence, opts metav1.UpdateOptions) (result *v1.Sequence, err error) {
+	emptyResult := &v1.Sequence{}
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateAction(sequencesResource, c.ns, sequence), &v1.Sequence{})
+		Invokes(testing.NewUpdateActionWithOptions(sequencesResource, c.ns, sequence, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1.Sequence), err
 }
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeSequences) UpdateStatus(ctx context.Context, sequence *v1.Sequence, opts metav1.UpdateOptions) (*v1.Sequence, error) {
+func (c *FakeSequences) UpdateStatus(ctx context.Context, sequence *v1.Sequence, opts metav1.UpdateOptions) (result *v1.Sequence, err error) {
+	emptyResult := &v1.Sequence{}
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceAction(sequencesResource, "status", c.ns, sequence), &v1.Sequence{})
+		Invokes(testing.NewUpdateSubresourceActionWithOptions(sequencesResource, "status", c.ns, sequence, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1.Sequence), err
 }
@@ -123,7 +128,7 @@ func (c *FakeSequences) Delete(ctx context.Context, name string, opts metav1.Del
 
 // DeleteCollection deletes a collection of objects.
 func (c *FakeSequences) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(sequencesResource, c.ns, listOpts)
+	action := testing.NewDeleteCollectionActionWithOptions(sequencesResource, c.ns, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1.SequenceList{})
 	return err
@@ -131,11 +136,12 @@ func (c *FakeSequences) DeleteCollection(ctx context.Context, opts metav1.Delete
 
 // Patch applies the patch and returns the patched sequence.
 func (c *FakeSequences) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Sequence, err error) {
+	emptyResult := &v1.Sequence{}
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(sequencesResource, c.ns, name, pt, data, subresources...), &v1.Sequence{})
+		Invokes(testing.NewPatchSubresourceActionWithOptions(sequencesResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1.Sequence), err
 }

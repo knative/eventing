@@ -19,8 +19,8 @@ limitations under the License.
 package v1beta3
 
 import (
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 	v1beta3 "knative.dev/eventing/pkg/apis/eventing/v1beta3"
 )
@@ -38,25 +38,17 @@ type EventTypeLister interface {
 
 // eventTypeLister implements the EventTypeLister interface.
 type eventTypeLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*v1beta3.EventType]
 }
 
 // NewEventTypeLister returns a new EventTypeLister.
 func NewEventTypeLister(indexer cache.Indexer) EventTypeLister {
-	return &eventTypeLister{indexer: indexer}
-}
-
-// List lists all EventTypes in the indexer.
-func (s *eventTypeLister) List(selector labels.Selector) (ret []*v1beta3.EventType, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1beta3.EventType))
-	})
-	return ret, err
+	return &eventTypeLister{listers.New[*v1beta3.EventType](indexer, v1beta3.Resource("eventtype"))}
 }
 
 // EventTypes returns an object that can list and get EventTypes.
 func (s *eventTypeLister) EventTypes(namespace string) EventTypeNamespaceLister {
-	return eventTypeNamespaceLister{indexer: s.indexer, namespace: namespace}
+	return eventTypeNamespaceLister{listers.NewNamespaced[*v1beta3.EventType](s.ResourceIndexer, namespace)}
 }
 
 // EventTypeNamespaceLister helps list and get EventTypes.
@@ -74,26 +66,5 @@ type EventTypeNamespaceLister interface {
 // eventTypeNamespaceLister implements the EventTypeNamespaceLister
 // interface.
 type eventTypeNamespaceLister struct {
-	indexer   cache.Indexer
-	namespace string
-}
-
-// List lists all EventTypes in the indexer for a given namespace.
-func (s eventTypeNamespaceLister) List(selector labels.Selector) (ret []*v1beta3.EventType, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1beta3.EventType))
-	})
-	return ret, err
-}
-
-// Get retrieves the EventType from the indexer for a given namespace and name.
-func (s eventTypeNamespaceLister) Get(name string) (*v1beta3.EventType, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v1beta3.Resource("eventtype"), name)
-	}
-	return obj.(*v1beta3.EventType), nil
+	listers.ResourceIndexer[*v1beta3.EventType]
 }

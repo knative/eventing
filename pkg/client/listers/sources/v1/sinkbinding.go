@@ -19,8 +19,8 @@ limitations under the License.
 package v1
 
 import (
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 )
@@ -38,25 +38,17 @@ type SinkBindingLister interface {
 
 // sinkBindingLister implements the SinkBindingLister interface.
 type sinkBindingLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*v1.SinkBinding]
 }
 
 // NewSinkBindingLister returns a new SinkBindingLister.
 func NewSinkBindingLister(indexer cache.Indexer) SinkBindingLister {
-	return &sinkBindingLister{indexer: indexer}
-}
-
-// List lists all SinkBindings in the indexer.
-func (s *sinkBindingLister) List(selector labels.Selector) (ret []*v1.SinkBinding, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1.SinkBinding))
-	})
-	return ret, err
+	return &sinkBindingLister{listers.New[*v1.SinkBinding](indexer, v1.Resource("sinkbinding"))}
 }
 
 // SinkBindings returns an object that can list and get SinkBindings.
 func (s *sinkBindingLister) SinkBindings(namespace string) SinkBindingNamespaceLister {
-	return sinkBindingNamespaceLister{indexer: s.indexer, namespace: namespace}
+	return sinkBindingNamespaceLister{listers.NewNamespaced[*v1.SinkBinding](s.ResourceIndexer, namespace)}
 }
 
 // SinkBindingNamespaceLister helps list and get SinkBindings.
@@ -74,26 +66,5 @@ type SinkBindingNamespaceLister interface {
 // sinkBindingNamespaceLister implements the SinkBindingNamespaceLister
 // interface.
 type sinkBindingNamespaceLister struct {
-	indexer   cache.Indexer
-	namespace string
-}
-
-// List lists all SinkBindings in the indexer for a given namespace.
-func (s sinkBindingNamespaceLister) List(selector labels.Selector) (ret []*v1.SinkBinding, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1.SinkBinding))
-	})
-	return ret, err
-}
-
-// Get retrieves the SinkBinding from the indexer for a given namespace and name.
-func (s sinkBindingNamespaceLister) Get(name string) (*v1.SinkBinding, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v1.Resource("sinkbinding"), name)
-	}
-	return obj.(*v1.SinkBinding), nil
+	listers.ResourceIndexer[*v1.SinkBinding]
 }

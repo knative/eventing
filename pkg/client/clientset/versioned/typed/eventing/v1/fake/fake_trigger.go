@@ -41,22 +41,24 @@ var triggersKind = v1.SchemeGroupVersion.WithKind("Trigger")
 
 // Get takes name of the trigger, and returns the corresponding trigger object, and an error if there is any.
 func (c *FakeTriggers) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.Trigger, err error) {
+	emptyResult := &v1.Trigger{}
 	obj, err := c.Fake.
-		Invokes(testing.NewGetAction(triggersResource, c.ns, name), &v1.Trigger{})
+		Invokes(testing.NewGetActionWithOptions(triggersResource, c.ns, name, options), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1.Trigger), err
 }
 
 // List takes label and field selectors, and returns the list of Triggers that match those selectors.
 func (c *FakeTriggers) List(ctx context.Context, opts metav1.ListOptions) (result *v1.TriggerList, err error) {
+	emptyResult := &v1.TriggerList{}
 	obj, err := c.Fake.
-		Invokes(testing.NewListAction(triggersResource, triggersKind, c.ns, opts), &v1.TriggerList{})
+		Invokes(testing.NewListActionWithOptions(triggersResource, triggersKind, c.ns, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -75,40 +77,43 @@ func (c *FakeTriggers) List(ctx context.Context, opts metav1.ListOptions) (resul
 // Watch returns a watch.Interface that watches the requested triggers.
 func (c *FakeTriggers) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
-		InvokesWatch(testing.NewWatchAction(triggersResource, c.ns, opts))
+		InvokesWatch(testing.NewWatchActionWithOptions(triggersResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a trigger and creates it.  Returns the server's representation of the trigger, and an error, if there is any.
 func (c *FakeTriggers) Create(ctx context.Context, trigger *v1.Trigger, opts metav1.CreateOptions) (result *v1.Trigger, err error) {
+	emptyResult := &v1.Trigger{}
 	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(triggersResource, c.ns, trigger), &v1.Trigger{})
+		Invokes(testing.NewCreateActionWithOptions(triggersResource, c.ns, trigger, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1.Trigger), err
 }
 
 // Update takes the representation of a trigger and updates it. Returns the server's representation of the trigger, and an error, if there is any.
 func (c *FakeTriggers) Update(ctx context.Context, trigger *v1.Trigger, opts metav1.UpdateOptions) (result *v1.Trigger, err error) {
+	emptyResult := &v1.Trigger{}
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateAction(triggersResource, c.ns, trigger), &v1.Trigger{})
+		Invokes(testing.NewUpdateActionWithOptions(triggersResource, c.ns, trigger, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1.Trigger), err
 }
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeTriggers) UpdateStatus(ctx context.Context, trigger *v1.Trigger, opts metav1.UpdateOptions) (*v1.Trigger, error) {
+func (c *FakeTriggers) UpdateStatus(ctx context.Context, trigger *v1.Trigger, opts metav1.UpdateOptions) (result *v1.Trigger, err error) {
+	emptyResult := &v1.Trigger{}
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceAction(triggersResource, "status", c.ns, trigger), &v1.Trigger{})
+		Invokes(testing.NewUpdateSubresourceActionWithOptions(triggersResource, "status", c.ns, trigger, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1.Trigger), err
 }
@@ -123,7 +128,7 @@ func (c *FakeTriggers) Delete(ctx context.Context, name string, opts metav1.Dele
 
 // DeleteCollection deletes a collection of objects.
 func (c *FakeTriggers) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(triggersResource, c.ns, listOpts)
+	action := testing.NewDeleteCollectionActionWithOptions(triggersResource, c.ns, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1.TriggerList{})
 	return err
@@ -131,11 +136,12 @@ func (c *FakeTriggers) DeleteCollection(ctx context.Context, opts metav1.DeleteO
 
 // Patch applies the patch and returns the patched trigger.
 func (c *FakeTriggers) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Trigger, err error) {
+	emptyResult := &v1.Trigger{}
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(triggersResource, c.ns, name, pt, data, subresources...), &v1.Trigger{})
+		Invokes(testing.NewPatchSubresourceActionWithOptions(triggersResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1.Trigger), err
 }

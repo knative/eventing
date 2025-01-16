@@ -19,8 +19,8 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 	v1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 )
@@ -38,25 +38,17 @@ type RequestReplyLister interface {
 
 // requestReplyLister implements the RequestReplyLister interface.
 type requestReplyLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*v1alpha1.RequestReply]
 }
 
 // NewRequestReplyLister returns a new RequestReplyLister.
 func NewRequestReplyLister(indexer cache.Indexer) RequestReplyLister {
-	return &requestReplyLister{indexer: indexer}
-}
-
-// List lists all RequestReplies in the indexer.
-func (s *requestReplyLister) List(selector labels.Selector) (ret []*v1alpha1.RequestReply, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1alpha1.RequestReply))
-	})
-	return ret, err
+	return &requestReplyLister{listers.New[*v1alpha1.RequestReply](indexer, v1alpha1.Resource("requestreply"))}
 }
 
 // RequestReplies returns an object that can list and get RequestReplies.
 func (s *requestReplyLister) RequestReplies(namespace string) RequestReplyNamespaceLister {
-	return requestReplyNamespaceLister{indexer: s.indexer, namespace: namespace}
+	return requestReplyNamespaceLister{listers.NewNamespaced[*v1alpha1.RequestReply](s.ResourceIndexer, namespace)}
 }
 
 // RequestReplyNamespaceLister helps list and get RequestReplies.
@@ -74,26 +66,5 @@ type RequestReplyNamespaceLister interface {
 // requestReplyNamespaceLister implements the RequestReplyNamespaceLister
 // interface.
 type requestReplyNamespaceLister struct {
-	indexer   cache.Indexer
-	namespace string
-}
-
-// List lists all RequestReplies in the indexer for a given namespace.
-func (s requestReplyNamespaceLister) List(selector labels.Selector) (ret []*v1alpha1.RequestReply, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1alpha1.RequestReply))
-	})
-	return ret, err
-}
-
-// Get retrieves the RequestReply from the indexer for a given namespace and name.
-func (s requestReplyNamespaceLister) Get(name string) (*v1alpha1.RequestReply, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v1alpha1.Resource("requestreply"), name)
-	}
-	return obj.(*v1alpha1.RequestReply), nil
+	listers.ResourceIndexer[*v1alpha1.RequestReply]
 }

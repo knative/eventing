@@ -41,22 +41,24 @@ var brokersKind = v1.SchemeGroupVersion.WithKind("Broker")
 
 // Get takes name of the broker, and returns the corresponding broker object, and an error if there is any.
 func (c *FakeBrokers) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.Broker, err error) {
+	emptyResult := &v1.Broker{}
 	obj, err := c.Fake.
-		Invokes(testing.NewGetAction(brokersResource, c.ns, name), &v1.Broker{})
+		Invokes(testing.NewGetActionWithOptions(brokersResource, c.ns, name, options), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1.Broker), err
 }
 
 // List takes label and field selectors, and returns the list of Brokers that match those selectors.
 func (c *FakeBrokers) List(ctx context.Context, opts metav1.ListOptions) (result *v1.BrokerList, err error) {
+	emptyResult := &v1.BrokerList{}
 	obj, err := c.Fake.
-		Invokes(testing.NewListAction(brokersResource, brokersKind, c.ns, opts), &v1.BrokerList{})
+		Invokes(testing.NewListActionWithOptions(brokersResource, brokersKind, c.ns, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -75,40 +77,43 @@ func (c *FakeBrokers) List(ctx context.Context, opts metav1.ListOptions) (result
 // Watch returns a watch.Interface that watches the requested brokers.
 func (c *FakeBrokers) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
-		InvokesWatch(testing.NewWatchAction(brokersResource, c.ns, opts))
+		InvokesWatch(testing.NewWatchActionWithOptions(brokersResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a broker and creates it.  Returns the server's representation of the broker, and an error, if there is any.
 func (c *FakeBrokers) Create(ctx context.Context, broker *v1.Broker, opts metav1.CreateOptions) (result *v1.Broker, err error) {
+	emptyResult := &v1.Broker{}
 	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(brokersResource, c.ns, broker), &v1.Broker{})
+		Invokes(testing.NewCreateActionWithOptions(brokersResource, c.ns, broker, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1.Broker), err
 }
 
 // Update takes the representation of a broker and updates it. Returns the server's representation of the broker, and an error, if there is any.
 func (c *FakeBrokers) Update(ctx context.Context, broker *v1.Broker, opts metav1.UpdateOptions) (result *v1.Broker, err error) {
+	emptyResult := &v1.Broker{}
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateAction(brokersResource, c.ns, broker), &v1.Broker{})
+		Invokes(testing.NewUpdateActionWithOptions(brokersResource, c.ns, broker, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1.Broker), err
 }
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeBrokers) UpdateStatus(ctx context.Context, broker *v1.Broker, opts metav1.UpdateOptions) (*v1.Broker, error) {
+func (c *FakeBrokers) UpdateStatus(ctx context.Context, broker *v1.Broker, opts metav1.UpdateOptions) (result *v1.Broker, err error) {
+	emptyResult := &v1.Broker{}
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceAction(brokersResource, "status", c.ns, broker), &v1.Broker{})
+		Invokes(testing.NewUpdateSubresourceActionWithOptions(brokersResource, "status", c.ns, broker, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1.Broker), err
 }
@@ -123,7 +128,7 @@ func (c *FakeBrokers) Delete(ctx context.Context, name string, opts metav1.Delet
 
 // DeleteCollection deletes a collection of objects.
 func (c *FakeBrokers) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(brokersResource, c.ns, listOpts)
+	action := testing.NewDeleteCollectionActionWithOptions(brokersResource, c.ns, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1.BrokerList{})
 	return err
@@ -131,11 +136,12 @@ func (c *FakeBrokers) DeleteCollection(ctx context.Context, opts metav1.DeleteOp
 
 // Patch applies the patch and returns the patched broker.
 func (c *FakeBrokers) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Broker, err error) {
+	emptyResult := &v1.Broker{}
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(brokersResource, c.ns, name, pt, data, subresources...), &v1.Broker{})
+		Invokes(testing.NewPatchSubresourceActionWithOptions(brokersResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1.Broker), err
 }
