@@ -195,6 +195,35 @@ func TestReconcile(t *testing.T) {
 			},
 			WantErr: false,
 		},
+		{
+			Name: "Multiple subjects found using glob style expression, status set to Ready",
+			Ctx: feature.ToContext(context.TODO(), feature.Flags{
+				feature.OIDCAuthentication: feature.Enabled,
+			}),
+			Key: testNS + "/" + eventPolicyName,
+			Objects: []runtime.Object{
+				apiServerSourceWithServiceAccount,
+				pingSourceWithServiceAccount,
+				NewEventPolicy(eventPolicyName, testNS,
+					WithInitEventPolicyConditions,
+					WithEventPolicyFromSub(fmt.Sprintf("system:serviceaccount:%s*", testNS)),
+				),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{
+				{
+					Object: NewEventPolicy(eventPolicyName, testNS,
+						WithEventPolicyFromSub(fmt.Sprintf("system:serviceaccount:%s*", testNS)),
+						WithEventPolicyStatusFromSub([]string{
+							fmt.Sprintf("system:serviceaccount:%s*", testNS),
+						}),
+						WithEventPolicyAuthenticationEnabledCondition,
+						WithReadyEventPolicyCondition,
+						WithEventPolicySubjectsResolvedSucceeded,
+					),
+				},
+			},
+			WantErr: false,
+		},
 
 		// test cases for authentication-oidc feature disabled afterwards
 		{
