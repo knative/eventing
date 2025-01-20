@@ -5,6 +5,9 @@ import (
 	"embed"
 	"time"
 
+	"knative.dev/eventing/test/rekt/resources/addressable"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/eventshub"
@@ -65,4 +68,9 @@ func IsNotReady(name string, timing ...time.Duration) feature.StepFn {
 // given.
 func IsAddressable(name string, timings ...time.Duration) feature.StepFn {
 	return k8s.IsAddressable(GVR(), name, timings...)
+}
+
+// Address returns a IntegrationSink's address.
+func Address(ctx context.Context, name string, timings ...time.Duration) (*duckv1.Addressable, error) {
+	return addressable.Address(ctx, GVR(), name, timings...)
 }

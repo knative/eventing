@@ -58,3 +58,18 @@ func TestIntegrationSinkSuccessTLS(t *testing.T) {
 
 	env.Test(ctx, t, integrationsink.SuccessTLS())
 }
+
+func TestIntegrationSinkOIDC(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		eventshub.WithTLS(t),
+		environment.Managed(t),
+	)
+
+	env.Test(ctx, t, integrationsink.OIDC())
+}
