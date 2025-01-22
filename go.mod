@@ -1,5 +1,7 @@
 module knative.dev/eventing
 
+// A placeholder comment to rebuild with Go 1.23.5 toolchain to cover CVEs
+
 go 1.22.7
 
 require (
