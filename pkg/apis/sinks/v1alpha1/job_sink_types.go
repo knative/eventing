@@ -71,7 +71,9 @@ type JobSinkSpec struct {
 }
 
 // JobSinkStatus defines the observed state of JobSink.
+// +kubebuilder:subresource:status
 type JobSinkStatus struct {
+	// +kubebuilder:pruning:PreserveUnknownFields
 	duckv1.Status `json:",inline"`
 
 	// AddressStatus is the part where the JobSink fulfills the Addressable contract.
