@@ -69,7 +69,12 @@ func NewController(
 	logger := logging.FromContext(ctx)
 	brokerInformer := brokerinformer.Get(ctx)
 	subscriptionInformer := subscriptioninformer.Get(ctx)
+
 	endpointsInformer := namespacedinformerfactory.Get(ctx).Core().V1().Endpoints()
+	if err := controller.StartInformers(ctx.Done(), endpointsInformer.Informer()); err != nil {
+		logger.Fatalw("Failed to start namespaced endpoints informer", zap.Error(err))
+	}
+
 	configmapInformer := configmapinformer.Get(ctx)
 	secretInformer := secretinformer.Get(ctx)
 	eventPolicyInformer := eventpolicyinformer.Get(ctx)
