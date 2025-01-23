@@ -19,6 +19,10 @@ package sink
 import (
 	"context"
 
+	cmclient "knative.dev/eventing/pkg/client/certmanager/injection/client"
+	cmcertinformer "knative.dev/eventing/pkg/client/certmanager/injection/informers/certmanager/v1/certificate"
+	pkgreconciler "knative.dev/pkg/reconciler"
+
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/eventing/pkg/apis/feature"
 	v1alpha1 "knative.dev/eventing/pkg/apis/sinks/v1alpha1"
@@ -28,15 +32,12 @@ import (
 	deploymentinformer "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment"
 	"knative.dev/pkg/client/injection/kube/informers/core/v1/service"
 
-	secretinformer "knative.dev/pkg/injection/clients/namespacedkube/informers/core/v1/secret"
-
 	integrationsinkreconciler "knative.dev/eventing/pkg/client/injection/reconciler/sinks/v1alpha1/integrationsink"
-	"knative.dev/eventing/pkg/eventingtls"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
+	secretinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/secret/filtered"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
-	"knative.dev/pkg/system"
 )
 
 // NewController creates a Reconciler for IntegrationSource and returns the result of NewImpl.
@@ -45,7 +46,7 @@ func NewController(
 	cmw configmap.Watcher,
 ) *controller.Impl {
 	integrationSinkInformer := integrationsink.Get(ctx)
-	secretInformer := secretinformer.Get(ctx)
+	secretInformer := secretinformer.Get(ctx, "app.kubernetes.io/name")
 	eventPolicyInformer := eventpolicy.Get(ctx)
 	deploymentInformer := deploymentinformer.Get(ctx)
 
@@ -57,10 +58,11 @@ func NewController(
 		deploymentLister: deploymentInformer.Lister(),
 		serviceLister:    serviceInformer.Lister(),
 
-		systemNamespace:   system.Namespace(),
 		secretLister:      secretInformer.Lister(),
 		eventPolicyLister: eventPolicyInformer.Lister(),
 	}
+
+	//	featureFlags := feature.FromContext(ctx)
 
 	var globalResync func(obj interface{})
 
@@ -70,6 +72,13 @@ func NewController(
 		}
 	})
 	featureStore.WatchConfigs(cmw)
+
+	// If not enabled, it is disable, strict or Permissive
+	if featureStore.Load().IsPermissiveTransportEncryption() || featureStore.Load().IsStrictTransportEncryption() {
+		cmCertificateInformer := cmcertinformer.Get(ctx)
+		r.cmCertificateLister = cmCertificateInformer.Lister()
+		r.certManagerClient = cmclient.Get(ctx)
+	}
 
 	impl := integrationsinkreconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
 		return controller.Options{
@@ -82,8 +91,9 @@ func NewController(
 	globalResync = func(interface{}) {
 		impl.GlobalResync(integrationSinkInformer.Informer())
 	}
+
 	secretInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.FilterWithName(eventingtls.IntegrationSinkDispatcherServerTLSSecretName),
+		FilterFunc: pkgreconciler.LabelFilterFunc("app.kubernetes.io/name", "integration-sink", false),
 		Handler:    controller.HandleAll(globalResync),
 	})
 
