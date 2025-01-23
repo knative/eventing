@@ -27,7 +27,11 @@ import (
 	"knative.dev/eventing/pkg/apis/eventing"
 )
 
-var eventingControllerSAName = fmt.Sprintf("system:serviceaccount:%s:eventing-controller", system.Namespace())
+var eventingControllerSAName string
+
+func init() {
+	eventingControllerSAName = fmt.Sprintf("system:serviceaccount:%s:eventing-controller", system.Namespace())
+}
 
 func (imc *InMemoryChannel) Validate(ctx context.Context) *apis.FieldError {
 	errs := imc.Spec.Validate(ctx).ViaField("spec")
