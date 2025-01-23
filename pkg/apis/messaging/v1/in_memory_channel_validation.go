@@ -19,10 +19,10 @@ package v1
 import (
 	"context"
 	"fmt"
-	"knative.dev/pkg/system"
 
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/kmp"
+	"knative.dev/pkg/system"
 
 	"knative.dev/eventing/pkg/apis/eventing"
 )
