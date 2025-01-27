@@ -41,22 +41,24 @@ var apiserversourcesKind = v1.SchemeGroupVersion.WithKind("ApiServerSource")
 
 // Get takes name of the apiServerSource, and returns the corresponding apiServerSource object, and an error if there is any.
 func (c *FakeApiServerSources) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.ApiServerSource, err error) {
+	emptyResult := &v1.ApiServerSource{}
 	obj, err := c.Fake.
-		Invokes(testing.NewGetAction(apiserversourcesResource, c.ns, name), &v1.ApiServerSource{})
+		Invokes(testing.NewGetActionWithOptions(apiserversourcesResource, c.ns, name, options), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1.ApiServerSource), err
 }
 
 // List takes label and field selectors, and returns the list of ApiServerSources that match those selectors.
 func (c *FakeApiServerSources) List(ctx context.Context, opts metav1.ListOptions) (result *v1.ApiServerSourceList, err error) {
+	emptyResult := &v1.ApiServerSourceList{}
 	obj, err := c.Fake.
-		Invokes(testing.NewListAction(apiserversourcesResource, apiserversourcesKind, c.ns, opts), &v1.ApiServerSourceList{})
+		Invokes(testing.NewListActionWithOptions(apiserversourcesResource, apiserversourcesKind, c.ns, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -75,40 +77,43 @@ func (c *FakeApiServerSources) List(ctx context.Context, opts metav1.ListOptions
 // Watch returns a watch.Interface that watches the requested apiServerSources.
 func (c *FakeApiServerSources) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
-		InvokesWatch(testing.NewWatchAction(apiserversourcesResource, c.ns, opts))
+		InvokesWatch(testing.NewWatchActionWithOptions(apiserversourcesResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a apiServerSource and creates it.  Returns the server's representation of the apiServerSource, and an error, if there is any.
 func (c *FakeApiServerSources) Create(ctx context.Context, apiServerSource *v1.ApiServerSource, opts metav1.CreateOptions) (result *v1.ApiServerSource, err error) {
+	emptyResult := &v1.ApiServerSource{}
 	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(apiserversourcesResource, c.ns, apiServerSource), &v1.ApiServerSource{})
+		Invokes(testing.NewCreateActionWithOptions(apiserversourcesResource, c.ns, apiServerSource, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1.ApiServerSource), err
 }
 
 // Update takes the representation of a apiServerSource and updates it. Returns the server's representation of the apiServerSource, and an error, if there is any.
 func (c *FakeApiServerSources) Update(ctx context.Context, apiServerSource *v1.ApiServerSource, opts metav1.UpdateOptions) (result *v1.ApiServerSource, err error) {
+	emptyResult := &v1.ApiServerSource{}
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateAction(apiserversourcesResource, c.ns, apiServerSource), &v1.ApiServerSource{})
+		Invokes(testing.NewUpdateActionWithOptions(apiserversourcesResource, c.ns, apiServerSource, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1.ApiServerSource), err
 }
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeApiServerSources) UpdateStatus(ctx context.Context, apiServerSource *v1.ApiServerSource, opts metav1.UpdateOptions) (*v1.ApiServerSource, error) {
+func (c *FakeApiServerSources) UpdateStatus(ctx context.Context, apiServerSource *v1.ApiServerSource, opts metav1.UpdateOptions) (result *v1.ApiServerSource, err error) {
+	emptyResult := &v1.ApiServerSource{}
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceAction(apiserversourcesResource, "status", c.ns, apiServerSource), &v1.ApiServerSource{})
+		Invokes(testing.NewUpdateSubresourceActionWithOptions(apiserversourcesResource, "status", c.ns, apiServerSource, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1.ApiServerSource), err
 }
@@ -123,7 +128,7 @@ func (c *FakeApiServerSources) Delete(ctx context.Context, name string, opts met
 
 // DeleteCollection deletes a collection of objects.
 func (c *FakeApiServerSources) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(apiserversourcesResource, c.ns, listOpts)
+	action := testing.NewDeleteCollectionActionWithOptions(apiserversourcesResource, c.ns, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1.ApiServerSourceList{})
 	return err
@@ -131,11 +136,12 @@ func (c *FakeApiServerSources) DeleteCollection(ctx context.Context, opts metav1
 
 // Patch applies the patch and returns the patched apiServerSource.
 func (c *FakeApiServerSources) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.ApiServerSource, err error) {
+	emptyResult := &v1.ApiServerSource{}
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(apiserversourcesResource, c.ns, name, pt, data, subresources...), &v1.ApiServerSource{})
+		Invokes(testing.NewPatchSubresourceActionWithOptions(apiserversourcesResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1.ApiServerSource), err
 }

@@ -55,7 +55,7 @@ import (
 	"knative.dev/eventing/pkg/channel"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	eventpolicyinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventpolicy"
-	eventtypeinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta2/eventtype"
+	eventtypeinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta3/eventtype"
 	inmemorychannelinformer "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/inmemorychannel"
 	inmemorychannelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/inmemorychannel"
 	"knative.dev/eventing/pkg/inmemorychannel"
@@ -143,7 +143,7 @@ func NewController(
 		multiChannelEventHandler: sh,
 		reporter:                 reporter,
 		messagingClientSet:       eventingclient.Get(ctx).MessagingV1(),
-		eventingClient:           eventingclient.Get(ctx).EventingV1beta2(),
+		eventingClient:           eventingclient.Get(ctx).EventingV1beta3(),
 		eventTypeLister:          eventtypeinformer.Get(ctx).Lister(),
 		eventDispatcher:          kncloudevents.NewDispatcher(clientConfig, oidcTokenProvider),
 		authVerifier:             auth.NewVerifier(ctx, eventpolicyinformer.Get(ctx).Lister(), trustBundleConfigMapLister, cmw),

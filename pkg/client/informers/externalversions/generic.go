@@ -32,6 +32,7 @@ import (
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	sinksv1alpha1 "knative.dev/eventing/pkg/apis/sinks/v1alpha1"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
+	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	sourcesv1beta2 "knative.dev/eventing/pkg/apis/sources/v1beta2"
 )
 
@@ -70,6 +71,8 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		// Group=eventing.knative.dev, Version=v1alpha1
 	case v1alpha1.SchemeGroupVersion.WithResource("eventpolicies"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Eventing().V1alpha1().EventPolicies().Informer()}, nil
+	case v1alpha1.SchemeGroupVersion.WithResource("requestreplies"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Eventing().V1alpha1().RequestReplies().Informer()}, nil
 
 		// Group=eventing.knative.dev, Version=v1beta1
 	case v1beta1.SchemeGroupVersion.WithResource("eventtypes"):
@@ -98,6 +101,8 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Messaging().V1().Subscriptions().Informer()}, nil
 
 		// Group=sinks.knative.dev, Version=v1alpha1
+	case sinksv1alpha1.SchemeGroupVersion.WithResource("integrationsinks"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Sinks().V1alpha1().IntegrationSinks().Informer()}, nil
 	case sinksv1alpha1.SchemeGroupVersion.WithResource("jobsinks"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Sinks().V1alpha1().JobSinks().Informer()}, nil
 
@@ -110,6 +115,10 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Sources().V1().PingSources().Informer()}, nil
 	case sourcesv1.SchemeGroupVersion.WithResource("sinkbindings"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Sources().V1().SinkBindings().Informer()}, nil
+
+		// Group=sources.knative.dev, Version=v1alpha1
+	case sourcesv1alpha1.SchemeGroupVersion.WithResource("integrationsources"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Sources().V1alpha1().IntegrationSources().Informer()}, nil
 
 		// Group=sources.knative.dev, Version=v1beta2
 	case sourcesv1beta2.SchemeGroupVersion.WithResource("pingsources"):

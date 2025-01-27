@@ -17,6 +17,8 @@ limitations under the License.
 package testing
 
 import (
+	"math/rand"
+
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/scheduler"
 )
@@ -50,4 +52,11 @@ func (s *VPodClient) Append(vpod scheduler.VPod) {
 
 func (s *VPodClient) List() ([]scheduler.VPod, error) {
 	return s.lister()
+}
+
+func (s *VPodClient) Random() scheduler.VPod {
+	s.store.lock.Lock()
+	defer s.store.lock.Unlock()
+
+	return s.store.vpods[rand.Intn(len(s.store.vpods))]
 }

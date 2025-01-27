@@ -24,7 +24,7 @@ metadata:
   {{ end }}
   {{ if .annotations }}
     {{ range $key, $value := .annotations }}
-    {{ $key }}: {{ $value }}
+    {{ $key }}: "{{ $value }}"
     {{ end }}
   {{ end }}
   {{ end }}

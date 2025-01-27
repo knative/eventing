@@ -19,8 +19,8 @@ limitations under the License.
 package v1
 
 import (
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
 )
@@ -38,25 +38,17 @@ type InMemoryChannelLister interface {
 
 // inMemoryChannelLister implements the InMemoryChannelLister interface.
 type inMemoryChannelLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*v1.InMemoryChannel]
 }
 
 // NewInMemoryChannelLister returns a new InMemoryChannelLister.
 func NewInMemoryChannelLister(indexer cache.Indexer) InMemoryChannelLister {
-	return &inMemoryChannelLister{indexer: indexer}
-}
-
-// List lists all InMemoryChannels in the indexer.
-func (s *inMemoryChannelLister) List(selector labels.Selector) (ret []*v1.InMemoryChannel, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1.InMemoryChannel))
-	})
-	return ret, err
+	return &inMemoryChannelLister{listers.New[*v1.InMemoryChannel](indexer, v1.Resource("inmemorychannel"))}
 }
 
 // InMemoryChannels returns an object that can list and get InMemoryChannels.
 func (s *inMemoryChannelLister) InMemoryChannels(namespace string) InMemoryChannelNamespaceLister {
-	return inMemoryChannelNamespaceLister{indexer: s.indexer, namespace: namespace}
+	return inMemoryChannelNamespaceLister{listers.NewNamespaced[*v1.InMemoryChannel](s.ResourceIndexer, namespace)}
 }
 
 // InMemoryChannelNamespaceLister helps list and get InMemoryChannels.
@@ -74,26 +66,5 @@ type InMemoryChannelNamespaceLister interface {
 // inMemoryChannelNamespaceLister implements the InMemoryChannelNamespaceLister
 // interface.
 type inMemoryChannelNamespaceLister struct {
-	indexer   cache.Indexer
-	namespace string
-}
-
-// List lists all InMemoryChannels in the indexer for a given namespace.
-func (s inMemoryChannelNamespaceLister) List(selector labels.Selector) (ret []*v1.InMemoryChannel, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1.InMemoryChannel))
-	})
-	return ret, err
-}
-
-// Get retrieves the InMemoryChannel from the indexer for a given namespace and name.
-func (s inMemoryChannelNamespaceLister) Get(name string) (*v1.InMemoryChannel, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v1.Resource("inmemorychannel"), name)
-	}
-	return obj.(*v1.InMemoryChannel), nil
+	listers.ResourceIndexer[*v1.InMemoryChannel]
 }

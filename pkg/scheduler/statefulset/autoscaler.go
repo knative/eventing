@@ -26,8 +26,10 @@ import (
 
 	"go.uber.org/zap"
 	v1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/integer"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/reconciler"
 
@@ -62,7 +64,8 @@ type autoscaler struct {
 	evictor          scheduler.Evictor
 
 	// capacity is the total number of virtual replicas available per pod.
-	capacity int32
+	capacity    int32
+	minReplicas int32
 
 	// refreshPeriod is how often the autoscaler tries to scale down the statefulset
 	refreshPeriod time.Duration
@@ -113,6 +116,7 @@ func newAutoscaler(cfg *Config, stateAccessor st.StateAccessor, statefulSetCache
 		evictor:          cfg.Evictor,
 		trigger:          make(chan context.Context, 1),
 		capacity:         cfg.PodCapacity,
+		minReplicas:      cfg.MinReplicas,
 		refreshPeriod:    cfg.RefreshPeriod,
 		retryPeriod:      cfg.RetryPeriod,
 		lock:             new(sync.Mutex),
@@ -188,7 +192,7 @@ func (a *autoscaler) doautoscale(ctx context.Context, attemptScaleDown bool) err
 	logger := logging.FromContext(ctx).With("component", "autoscaler")
 	ctx = logging.WithLogger(ctx, logger)
 
-	state, err := a.stateAccessor.State(ctx, a.getReserved())
+	state, err := a.stateAccessor.State(ctx)
 	if err != nil {
 		logger.Info("error while refreshing scheduler state (will retry)", zap.Error(err))
 		return err
@@ -205,46 +209,15 @@ func (a *autoscaler) doautoscale(ctx context.Context, attemptScaleDown bool) err
 		zap.Int32("replicas", scale.Spec.Replicas),
 		zap.Any("state", state))
 
-	var scaleUpFactor, newreplicas, minNumPods int32
-	scaleUpFactor = 1                                                                                         // Non-HA scaling
-	if state.SchedPolicy != nil && contains(nil, state.SchedPolicy.Priorities, st.AvailabilityZonePriority) { //HA scaling across zones
-		scaleUpFactor = state.NumZones
-	}
-	if state.SchedPolicy != nil && contains(nil, state.SchedPolicy.Priorities, st.AvailabilityNodePriority) { //HA scaling across nodes
-		scaleUpFactor = state.NumNodes
-	}
-
-	newreplicas = state.LastOrdinal + 1 // Ideal number
-
-	if state.SchedulerPolicy == scheduler.MAXFILLUP {
-		newreplicas = int32(math.Ceil(float64(state.TotalExpectedVReplicas()) / float64(state.Capacity)))
-	} else {
-		// Take into account pending replicas and pods that are already filled (for even pod spread)
-		pending := state.TotalPending()
-		if pending > 0 {
-			// Make sure to allocate enough pods for holding all pending replicas.
-			if state.SchedPolicy != nil && contains(state.SchedPolicy.Predicates, nil, st.EvenPodSpread) && len(state.FreeCap) > 0 { //HA scaling across pods
-				leastNonZeroCapacity := a.minNonZeroInt(state.FreeCap)
-				minNumPods = int32(math.Ceil(float64(pending) / float64(leastNonZeroCapacity)))
-			} else {
-				minNumPods = int32(math.Ceil(float64(pending) / float64(a.capacity)))
-			}
-			newreplicas += int32(math.Ceil(float64(minNumPods)/float64(scaleUpFactor)) * float64(scaleUpFactor))
-		}
-
-		if newreplicas <= state.LastOrdinal {
-			// Make sure to never scale down past the last ordinal
-			newreplicas = state.LastOrdinal + scaleUpFactor
-		}
-	}
+	newReplicas := integer.Int32Max(int32(math.Ceil(float64(state.TotalExpectedVReplicas())/float64(state.Capacity))), a.minReplicas)
 
 	// Only scale down if permitted
-	if !attemptScaleDown && newreplicas < scale.Spec.Replicas {
-		newreplicas = scale.Spec.Replicas
+	if !attemptScaleDown && newReplicas < scale.Spec.Replicas {
+		newReplicas = scale.Spec.Replicas
 	}
 
-	if newreplicas != scale.Spec.Replicas {
-		scale.Spec.Replicas = newreplicas
+	if newReplicas != scale.Spec.Replicas {
+		scale.Spec.Replicas = newReplicas
 		logger.Infow("updating adapter replicas", zap.Int32("replicas", scale.Spec.Replicas))
 
 		_, err = a.statefulSetCache.UpdateScale(ctx, a.statefulSetName, scale, metav1.UpdateOptions{})
@@ -255,12 +228,12 @@ func (a *autoscaler) doautoscale(ctx context.Context, attemptScaleDown bool) err
 	} else if attemptScaleDown {
 		// since the number of replicas hasn't changed and time has approached to scale down,
 		// take the opportunity to compact the vreplicas
-		return a.mayCompact(logger, state, scaleUpFactor)
+		return a.mayCompact(logger, state)
 	}
 	return nil
 }
 
-func (a *autoscaler) mayCompact(logger *zap.SugaredLogger, s *st.State, scaleUpFactor int32) error {
+func (a *autoscaler) mayCompact(logger *zap.SugaredLogger, s *st.State) error {
 
 	// This avoids a too aggressive scale down by adding a "grace period" based on the refresh
 	// period
@@ -275,53 +248,24 @@ func (a *autoscaler) mayCompact(logger *zap.SugaredLogger, s *st.State, scaleUpF
 	}
 
 	logger.Debugw("Trying to compact and scale down",
-		zap.Int32("scaleUpFactor", scaleUpFactor),
 		zap.Any("state", s),
 	)
 
-	// when there is only one pod there is nothing to move or number of pods is just enough!
-	if s.LastOrdinal < 1 || len(s.SchedulablePods) <= int(scaleUpFactor) {
-		return nil
-	}
-
-	if s.SchedulerPolicy == scheduler.MAXFILLUP {
-		// Determine if there is enough free capacity to
-		// move all vreplicas placed in the last pod to pods with a lower ordinal
-		freeCapacity := s.FreeCapacity() - s.Free(s.LastOrdinal)
-		usedInLastPod := s.Capacity - s.Free(s.LastOrdinal)
-
-		if freeCapacity >= usedInLastPod {
-			a.lastCompactAttempt = time.Now()
-			err := a.compact(s, scaleUpFactor)
-			if err != nil {
-				return fmt.Errorf("vreplicas compaction failed (scaleUpFactor %d): %w", scaleUpFactor, err)
-			}
-		}
-
-		// only do 1 replica at a time to avoid overloading the scheduler with too many
-		// rescheduling requests.
-	} else if s.SchedPolicy != nil {
-		//Below calculation can be optimized to work for recovery scenarios when nodes/zones are lost due to failure
-		freeCapacity := s.FreeCapacity()
-		usedInLastXPods := s.Capacity * scaleUpFactor
-		for i := int32(0); i < scaleUpFactor && s.LastOrdinal-i >= 0; i++ {
-			freeCapacity = freeCapacity - s.Free(s.LastOrdinal-i)
-			usedInLastXPods = usedInLastXPods - s.Free(s.LastOrdinal-i)
-		}
-
-		if (freeCapacity >= usedInLastXPods) && //remaining pods can hold all vreps from evicted pods
-			(s.Replicas-scaleUpFactor >= scaleUpFactor) { //remaining # of pods is enough for HA scaling
-			a.lastCompactAttempt = time.Now()
-			err := a.compact(s, scaleUpFactor)
-			if err != nil {
-				return fmt.Errorf("vreplicas compaction failed (scaleUpFactor %d): %w", scaleUpFactor, err)
-			}
+	// Determine if there are vpods that need compaction
+	if s.Replicas != int32(len(s.FreeCap)) {
+		a.lastCompactAttempt = time.Now()
+		err := a.compact(s)
+		if err != nil {
+			return fmt.Errorf("vreplicas compaction failed: %w", err)
 		}
 	}
+
+	// only do 1 replica at a time to avoid overloading the scheduler with too many
+	// rescheduling requests.
 	return nil
 }
 
-func (a *autoscaler) compact(s *st.State, scaleUpFactor int32) error {
+func (a *autoscaler) compact(s *st.State) error {
 	var pod *v1.Pod
 	vpods, err := a.vpodLister()
 	if err != nil {
@@ -331,47 +275,20 @@ func (a *autoscaler) compact(s *st.State, scaleUpFactor int32) error {
 	for _, vpod := range vpods {
 		placements := vpod.GetPlacements()
 		for i := len(placements) - 1; i >= 0; i-- { //start from the last placement
-			for j := int32(0); j < scaleUpFactor; j++ {
-				ordinal := st.OrdinalFromPodName(placements[i].PodName)
+			ordinal := st.OrdinalFromPodName(placements[i].PodName)
 
-				if ordinal == s.LastOrdinal-j {
-					pod, err = s.PodLister.Get(placements[i].PodName)
-					if err != nil {
-						return fmt.Errorf("failed to get pod %s: %w", placements[i].PodName, err)
-					}
+			if ordinal >= s.Replicas {
+				pod, err = s.PodLister.Get(placements[i].PodName)
+				if err != nil && !apierrors.IsNotFound(err) {
+					return fmt.Errorf("failed to get pod %s: %w", placements[i].PodName, err)
+				}
 
-					err = a.evictor(pod, vpod, &placements[i])
-					if err != nil {
-						return fmt.Errorf("failed to evict pod %s: %w", pod.Name, err)
-					}
+				err = a.evictor(pod, vpod, &placements[i])
+				if err != nil {
+					return fmt.Errorf("failed to evict pod %s: %w", pod.Name, err)
 				}
 			}
 		}
 	}
 	return nil
-}
-
-func contains(preds []scheduler.PredicatePolicy, priors []scheduler.PriorityPolicy, name string) bool {
-	for _, v := range preds {
-		if v.Name == name {
-			return true
-		}
-	}
-	for _, v := range priors {
-		if v.Name == name {
-			return true
-		}
-	}
-
-	return false
-}
-
-func (a *autoscaler) minNonZeroInt(slice []int32) int32 {
-	min := a.capacity
-	for _, v := range slice {
-		if v < min && v > 0 {
-			min = v
-		}
-	}
-	return min
 }

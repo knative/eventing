@@ -26,10 +26,11 @@ import (
 	"testing"
 	"time"
 
-	"knative.dev/eventing/pkg/eventingtls"
 	filteredconfigmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap/filtered/fake"
 	filteredFactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
 	"knative.dev/pkg/system"
+
+	"knative.dev/eventing/pkg/eventingtls"
 
 	"github.com/cloudevents/sdk-go/v2/client"
 	"github.com/cloudevents/sdk-go/v2/event"
@@ -54,10 +55,11 @@ import (
 	brokerinformerfake "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/broker/fake"
 	eventpolicyinformerfake "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventpolicy/fake"
 
-	// Fake injection client
-	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventpolicy/fake"
 	_ "knative.dev/pkg/client/injection/kube/client/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/factory/filtered/fake"
+
+	// Fake injection client
+	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventpolicy/fake"
 )
 
 const (
@@ -223,9 +225,9 @@ func TestHandler_ServeHTTP(t *testing.T) {
 			method:     nethttp.MethodPost,
 			uri:        "/ns/name",
 			body:       getValidEvent(),
-			statusCode: nethttp.StatusBadRequest,
+			statusCode: nethttp.StatusInternalServerError,
 			handler:    handler(),
-			reporter:   &mockReporter{StatusCode: nethttp.StatusBadRequest, EventDispatchTimeReported: false},
+			reporter:   &mockReporter{StatusCode: nethttp.StatusInternalServerError, EventDispatchTimeReported: false},
 			defaulter:  broker.TTLDefaulter(logger, 100),
 			brokers: []*eventingv1.Broker{
 				withUninitializedAnnotations(makeBroker("name", "ns")),

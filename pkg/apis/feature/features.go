@@ -67,6 +67,10 @@ const (
 
 	// DefaultOIDCDiscoveryURL is the default OIDC Discovery URL used in most Kubernetes clusters.
 	DefaultOIDCDiscoveryBaseURL Flag = "https://kubernetes.default.svc"
+
+	// DefaultRequestReplyTimeout is a value for RequestReplyDefaultTimeout that indicates to timeout
+	// a RequestReply resource after 30 seconds by default.
+	DefaultRequestReplyTimeout Flag = "30s"
 )
 
 // Flags is a map containing all the enabled/disabled flags for the experimental features.
@@ -75,16 +79,17 @@ type Flags map[string]Flag
 
 func newDefaults() Flags {
 	return map[string]Flag{
-		KReferenceGroup:          Disabled,
-		DeliveryRetryAfter:       Disabled,
-		DeliveryTimeout:          Enabled,
-		KReferenceMapping:        Disabled,
-		TransportEncryption:      Disabled,
-		OIDCAuthentication:       Disabled,
-		EvenTypeAutoCreate:       Disabled,
-		NewAPIServerFilters:      Disabled,
-		AuthorizationDefaultMode: AuthorizationAllowSameNamespace,
-		OIDCDiscoveryBaseURL:     DefaultOIDCDiscoveryBaseURL,
+		KReferenceGroup:            Disabled,
+		DeliveryRetryAfter:         Disabled,
+		DeliveryTimeout:            Enabled,
+		KReferenceMapping:          Disabled,
+		TransportEncryption:        Disabled,
+		OIDCAuthentication:         Disabled,
+		EvenTypeAutoCreate:         Disabled,
+		NewAPIServerFilters:        Disabled,
+		AuthorizationDefaultMode:   AuthorizationAllowSameNamespace,
+		OIDCDiscoveryBaseURL:       DefaultOIDCDiscoveryBaseURL,
+		RequestReplyDefaultTimeout: DefaultRequestReplyTimeout,
 	}
 }
 
@@ -149,6 +154,19 @@ func (e Flags) OIDCDiscoveryBaseURL() string {
 	}
 
 	return string(discoveryUrl)
+}
+
+func (e Flags) RequestReplyDefaultTimeout() string {
+	if e == nil {
+		return string(DefaultRequestReplyTimeout)
+	}
+
+	timeout, ok := e[RequestReplyDefaultTimeout]
+	if !ok {
+		return string(DefaultRequestReplyTimeout)
+	}
+
+	return string(timeout)
 }
 
 func (e Flags) String() string {

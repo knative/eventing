@@ -17,7 +17,6 @@ limitations under the License.
 package scheduler
 
 import (
-	"k8s.io/apimachinery/pkg/util/sets"
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 )
 
@@ -28,25 +27,4 @@ func GetTotalVReplicas(placements []duckv1alpha1.Placement) int32 {
 		r += p.VReplicas
 	}
 	return r
-}
-
-// GetPlacementForPod returns the placement corresponding to podName
-func GetPlacementForPod(placements []duckv1alpha1.Placement, podName string) *duckv1alpha1.Placement {
-	for i := 0; i < len(placements); i++ {
-		if placements[i].PodName == podName {
-			return &placements[i]
-		}
-	}
-	return nil
-}
-
-// GetPodCount returns the number of pods with the given placements
-func GetPodCount(placements []duckv1alpha1.Placement) int {
-	set := sets.NewString()
-	for _, p := range placements {
-		if p.VReplicas > 0 {
-			set.Insert(p.PodName)
-		}
-	}
-	return set.Len()
 }

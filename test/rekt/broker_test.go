@@ -192,6 +192,22 @@ func TestBrokerRedelivery(t *testing.T) {
 	env.TestSet(ctx, t, broker.BrokerRedelivery())
 }
 
+// TestBrokerPropagatesMetadata test Broker reconciler propagates metadata to channel.
+func TestBrokerPropagatesMetadata(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+		environment.WithPollTimings(5*time.Second, 4*time.Minute),
+	)
+
+	env.ParallelTest(ctx, t, broker.PropagatesMetadata())
+}
+
 func TestBrokerDeadLetterSinkExtensions(t *testing.T) {
 	t.Parallel()
 

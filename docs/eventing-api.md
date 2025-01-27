@@ -37,6 +37,9 @@
 <a href="#sources.knative.dev%2fv1">sources.knative.dev/v1</a>
 </li>
 <li>
+<a href="#sources.knative.dev%2fv1alpha1">sources.knative.dev/v1alpha1</a>
+</li>
+<li>
 <a href="#sources.knative.dev%2fv1beta2">sources.knative.dev/v1beta2</a>
 </li>
 </ul>
@@ -49,7 +52,7 @@ Resource Types:
 <h3 id="duck.knative.dev/v1.AppliedEventPoliciesStatus">AppliedEventPoliciesStatus
 </h3>
 <p>
-(<em>Appears on:</em><a href="#duck.knative.dev/v1.ChannelableStatus">ChannelableStatus</a>, <a href="#eventing.knative.dev/v1.BrokerStatus">BrokerStatus</a>, <a href="#flows.knative.dev/v1.ParallelStatus">ParallelStatus</a>, <a href="#flows.knative.dev/v1.SequenceStatus">SequenceStatus</a>, <a href="#sinks.knative.dev/v1alpha1.JobSinkStatus">JobSinkStatus</a>)
+(<em>Appears on:</em><a href="#duck.knative.dev/v1.ChannelableStatus">ChannelableStatus</a>, <a href="#eventing.knative.dev/v1.BrokerStatus">BrokerStatus</a>, <a href="#eventing.knative.dev/v1alpha1.RequestReplyStatus">RequestReplyStatus</a>, <a href="#flows.knative.dev/v1.ParallelStatus">ParallelStatus</a>, <a href="#flows.knative.dev/v1.SequenceStatus">SequenceStatus</a>, <a href="#sinks.knative.dev/v1alpha1.IntegrationSinkStatus">IntegrationSinkStatus</a>, <a href="#sinks.knative.dev/v1alpha1.JobSinkStatus">JobSinkStatus</a>)
 </p>
 <p>
 <p>AppliedEventPoliciesStatus contains the list of policies which apply to a resource.
@@ -390,7 +393,7 @@ AppliedEventPoliciesStatus
 <h3 id="duck.knative.dev/v1.DeliverySpec">DeliverySpec
 </h3>
 <p>
-(<em>Appears on:</em><a href="#duck.knative.dev/v1.ChannelableSpec">ChannelableSpec</a>, <a href="#duck.knative.dev/v1.SubscriberSpec">SubscriberSpec</a>, <a href="#eventing.knative.dev/v1.BrokerSpec">BrokerSpec</a>, <a href="#eventing.knative.dev/v1.TriggerSpec">TriggerSpec</a>, <a href="#flows.knative.dev/v1.ParallelBranch">ParallelBranch</a>, <a href="#flows.knative.dev/v1.SequenceStep">SequenceStep</a>, <a href="#messaging.knative.dev/v1.SubscriptionSpec">SubscriptionSpec</a>)
+(<em>Appears on:</em><a href="#duck.knative.dev/v1.ChannelableSpec">ChannelableSpec</a>, <a href="#duck.knative.dev/v1.SubscriberSpec">SubscriberSpec</a>, <a href="#eventing.knative.dev/v1.BrokerSpec">BrokerSpec</a>, <a href="#eventing.knative.dev/v1.TriggerSpec">TriggerSpec</a>, <a href="#eventing.knative.dev/v1alpha1.RequestReplySpec">RequestReplySpec</a>, <a href="#flows.knative.dev/v1.ParallelBranch">ParallelBranch</a>, <a href="#flows.knative.dev/v1.SequenceStep">SequenceStep</a>, <a href="#messaging.knative.dev/v1.SubscriptionSpec">SubscriptionSpec</a>)
 </p>
 <p>
 <p>DeliverySpec contains the delivery options for event senders,
@@ -2645,6 +2648,8 @@ knative.dev/pkg/apis/duck/v1.AuthStatus
 Resource Types:
 <ul><li>
 <a href="#eventing.knative.dev/v1alpha1.EventPolicy">EventPolicy</a>
+</li><li>
+<a href="#eventing.knative.dev/v1alpha1.RequestReply">RequestReply</a>
 </li></ul>
 <h3 id="eventing.knative.dev/v1alpha1.EventPolicy">EventPolicy
 </h3>
@@ -2762,6 +2767,150 @@ always evaluate to true.</p>
 <em>
 <a href="#eventing.knative.dev/v1alpha1.EventPolicyStatus">
 EventPolicyStatus
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Status represents the current state of the EventPolicy.
+This data may be out of date.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="eventing.knative.dev/v1alpha1.RequestReply">RequestReply
+</h3>
+<p>
+<p>RequestRepluy represents synchronous interface to sending and receiving events from a Broker.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>apiVersion</code><br/>
+string</td>
+<td>
+<code>
+eventing.knative.dev/v1alpha1
+</code>
+</td>
+</tr>
+<tr>
+<td>
+<code>kind</code><br/>
+string
+</td>
+<td><code>RequestReply</code></td>
+</tr>
+<tr>
+<td>
+<code>metadata</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#objectmeta-v1-meta">
+Kubernetes meta/v1.ObjectMeta
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+Refer to the Kubernetes API documentation for the fields of the
+<code>metadata</code> field.
+</td>
+</tr>
+<tr>
+<td>
+<code>spec</code><br/>
+<em>
+<a href="#eventing.knative.dev/v1alpha1.RequestReplySpec">
+RequestReplySpec
+</a>
+</em>
+</td>
+<td>
+<p>Spec defines the desired state of the EventPolicy.</p>
+<br/>
+<br/>
+<table>
+<tr>
+<td>
+<code>brokerRef</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#KReference">
+knative.dev/pkg/apis/duck/v1.KReference
+</a>
+</em>
+</td>
+<td>
+<p>BrokerRef contains the reference to the broker the RequestReply sends events to.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>correlationAttribute</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<code>replyAttribute</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<code>timeout</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<code>delivery</code><br/>
+<em>
+<a href="#duck.knative.dev/v1.DeliverySpec">
+DeliverySpec
+</a>
+</em>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<code>secrets</code><br/>
+<em>
+[]string
+</em>
+</td>
+<td>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+<tr>
+<td>
+<code>status</code><br/>
+<em>
+<a href="#eventing.knative.dev/v1alpha1.RequestReplyStatus">
+RequestReplyStatus
 </a>
 </em>
 </td>
@@ -3120,6 +3269,159 @@ string
 <td>
 <p>Name of the referent.
 More info: <a href="https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names">https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="eventing.knative.dev/v1alpha1.RequestReplySpec">RequestReplySpec
+</h3>
+<p>
+(<em>Appears on:</em><a href="#eventing.knative.dev/v1alpha1.RequestReply">RequestReply</a>)
+</p>
+<p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>brokerRef</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#KReference">
+knative.dev/pkg/apis/duck/v1.KReference
+</a>
+</em>
+</td>
+<td>
+<p>BrokerRef contains the reference to the broker the RequestReply sends events to.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>correlationAttribute</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<code>replyAttribute</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<code>timeout</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<code>delivery</code><br/>
+<em>
+<a href="#duck.knative.dev/v1.DeliverySpec">
+DeliverySpec
+</a>
+</em>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<code>secrets</code><br/>
+<em>
+[]string
+</em>
+</td>
+<td>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="eventing.knative.dev/v1alpha1.RequestReplyStatus">RequestReplyStatus
+</h3>
+<p>
+(<em>Appears on:</em><a href="#eventing.knative.dev/v1alpha1.RequestReply">RequestReply</a>)
+</p>
+<p>
+<p>RequestReplyStatus represents the current state of a RequestReply.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>Status</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#Status">
+knative.dev/pkg/apis/duck/v1.Status
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>Status</code> are embedded into this type.)
+</p>
+<p>inherits duck/v1 Status, which currently provides:
+* ObservedGeneration - the &lsquo;Generation&rsquo; of the Service that was last processed by the controller.
+* Conditions - the latest available observations of a resource&rsquo;s current state.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>AddressStatus</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#AddressStatus">
+knative.dev/pkg/apis/duck/v1.AddressStatus
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>AddressStatus</code> are embedded into this type.)
+</p>
+<em>(Optional)</em>
+<p>AddressStatus is the part where the RequestReply fulfills the Addressable contract.
+It exposes the endpoint as an URI to get events delivered.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>AppliedEventPoliciesStatus</code><br/>
+<em>
+<a href="#duck.knative.dev/v1.AppliedEventPoliciesStatus">
+AppliedEventPoliciesStatus
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>AppliedEventPoliciesStatus</code> are embedded into this type.)
+</p>
+<em>(Optional)</em>
+<p>AppliedEventPoliciesStatus contains the list of EventPolicies which apply to this Broker.</p>
 </td>
 </tr>
 </tbody>
@@ -5842,8 +6144,109 @@ resolved delivery options.</p>
 </p>
 Resource Types:
 <ul><li>
+<a href="#sinks.knative.dev/v1alpha1.IntegrationSink">IntegrationSink</a>
+</li><li>
 <a href="#sinks.knative.dev/v1alpha1.JobSink">JobSink</a>
 </li></ul>
+<h3 id="sinks.knative.dev/v1alpha1.IntegrationSink">IntegrationSink
+</h3>
+<p>
+<p>IntegrationSink is the Schema for the IntegrationSink API.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>apiVersion</code><br/>
+string</td>
+<td>
+<code>
+sinks.knative.dev/v1alpha1
+</code>
+</td>
+</tr>
+<tr>
+<td>
+<code>kind</code><br/>
+string
+</td>
+<td><code>IntegrationSink</code></td>
+</tr>
+<tr>
+<td>
+<code>metadata</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#objectmeta-v1-meta">
+Kubernetes meta/v1.ObjectMeta
+</a>
+</em>
+</td>
+<td>
+Refer to the Kubernetes API documentation for the fields of the
+<code>metadata</code> field.
+</td>
+</tr>
+<tr>
+<td>
+<code>spec</code><br/>
+<em>
+<a href="#sinks.knative.dev/v1alpha1.IntegrationSinkSpec">
+IntegrationSinkSpec
+</a>
+</em>
+</td>
+<td>
+<br/>
+<br/>
+<table>
+<tr>
+<td>
+<code>aws</code><br/>
+<em>
+<a href="#sinks.knative.dev/v1alpha1.Aws">
+Aws
+</a>
+</em>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<code>log</code><br/>
+<em>
+<a href="#sinks.knative.dev/v1alpha1.Log">
+Log
+</a>
+</em>
+</td>
+<td>
+<p>AWS source configuration</p>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+<tr>
+<td>
+<code>status</code><br/>
+<em>
+<a href="#sinks.knative.dev/v1alpha1.IntegrationSinkStatus">
+IntegrationSinkStatus
+</a>
+</em>
+</td>
+<td>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="sinks.knative.dev/v1alpha1.JobSink">JobSink
 </h3>
 <p>
@@ -5928,6 +6331,190 @@ JobSinkStatus
 </em>
 </td>
 <td>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="sinks.knative.dev/v1alpha1.Aws">Aws
+</h3>
+<p>
+(<em>Appears on:</em><a href="#sinks.knative.dev/v1alpha1.IntegrationSinkSpec">IntegrationSinkSpec</a>)
+</p>
+<p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>s3</code><br/>
+<em>
+knative.dev/eventing/pkg/apis/common/integration/v1alpha1.AWSS3
+</em>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<code>sqs</code><br/>
+<em>
+knative.dev/eventing/pkg/apis/common/integration/v1alpha1.AWSSQS
+</em>
+</td>
+<td>
+<p>S3 source configuration</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>sns</code><br/>
+<em>
+knative.dev/eventing/pkg/apis/common/integration/v1alpha1.AWSSNS
+</em>
+</td>
+<td>
+<p>SQS source configuration</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>auth</code><br/>
+<em>
+knative.dev/eventing/pkg/apis/common/integration/v1alpha1.Auth
+</em>
+</td>
+<td>
+<p>SNS source configuration</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="sinks.knative.dev/v1alpha1.ExecutionMode">ExecutionMode
+(<code>string</code> alias)</p></h3>
+<p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr><td><p>&#34;batch&#34;</p></td>
+<td></td>
+</tr></tbody>
+</table>
+<h3 id="sinks.knative.dev/v1alpha1.IntegrationSinkSpec">IntegrationSinkSpec
+</h3>
+<p>
+(<em>Appears on:</em><a href="#sinks.knative.dev/v1alpha1.IntegrationSink">IntegrationSink</a>)
+</p>
+<p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>aws</code><br/>
+<em>
+<a href="#sinks.knative.dev/v1alpha1.Aws">
+Aws
+</a>
+</em>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<code>log</code><br/>
+<em>
+<a href="#sinks.knative.dev/v1alpha1.Log">
+Log
+</a>
+</em>
+</td>
+<td>
+<p>AWS source configuration</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="sinks.knative.dev/v1alpha1.IntegrationSinkStatus">IntegrationSinkStatus
+</h3>
+<p>
+(<em>Appears on:</em><a href="#sinks.knative.dev/v1alpha1.IntegrationSink">IntegrationSink</a>)
+</p>
+<p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>Status</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#Status">
+knative.dev/pkg/apis/duck/v1.Status
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>Status</code> are embedded into this type.)
+</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>AddressStatus</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#AddressStatus">
+knative.dev/pkg/apis/duck/v1.AddressStatus
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>AddressStatus</code> are embedded into this type.)
+</p>
+<em>(Optional)</em>
+<p>AddressStatus is the part where the JobSink fulfills the Addressable contract.
+It exposes the endpoint as an URI to get events delivered.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>AppliedEventPoliciesStatus</code><br/>
+<em>
+<a href="#duck.knative.dev/v1.AppliedEventPoliciesStatus">
+AppliedEventPoliciesStatus
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>AppliedEventPoliciesStatus</code> are embedded into this type.)
+</p>
+<em>(Optional)</em>
+<p>AppliedEventPoliciesStatus contains the list of EventPolicies which apply to this JobSink</p>
 </td>
 </tr>
 </tbody>
@@ -6068,6 +6655,165 @@ string
 </em>
 </td>
 <td>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="sinks.knative.dev/v1alpha1.Log">Log
+</h3>
+<p>
+(<em>Appears on:</em><a href="#sinks.knative.dev/v1alpha1.IntegrationSinkSpec">IntegrationSinkSpec</a>)
+</p>
+<p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>loggerName</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<code>level</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Name of the logging category to use</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>logMask</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Logging level to use</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>marker</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Mask sensitive information in the log</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>multiline</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>An optional Marker name to use</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>showAllProperties</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>If enabled, outputs each information on a newline</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>showBody</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Show all of the exchange properties (both internal and custom)</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>showBodyType</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Show the message body</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>showExchangePattern</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Show the body Java type</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>showHeaders</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Show the Message Exchange Pattern (MEP)</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>showProperties</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Show the headers received</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>showStreams</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Show the exchange properties (only custom)</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>showCachedStreams</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Show the stream bodies</p>
 </td>
 </tr>
 </tbody>
@@ -7273,6 +8019,357 @@ string
 <td>
 <p>OIDCTokenSecretName is the name of the secret containing the token for
 this SinkBindings OIDC authentication</p>
+</td>
+</tr>
+</tbody>
+</table>
+<hr/>
+<h2 id="sources.knative.dev/v1alpha1">sources.knative.dev/v1alpha1</h2>
+<p>
+<p>Package v1alpha1 contains API Schema definitions for the sources v1alpha1 API group.</p>
+</p>
+Resource Types:
+<ul><li>
+<a href="#sources.knative.dev/v1alpha1.IntegrationSource">IntegrationSource</a>
+</li></ul>
+<h3 id="sources.knative.dev/v1alpha1.IntegrationSource">IntegrationSource
+</h3>
+<p>
+<p>IntegrationSource is the Schema for the Integrationsources API</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>apiVersion</code><br/>
+string</td>
+<td>
+<code>
+sources.knative.dev/v1alpha1
+</code>
+</td>
+</tr>
+<tr>
+<td>
+<code>kind</code><br/>
+string
+</td>
+<td><code>IntegrationSource</code></td>
+</tr>
+<tr>
+<td>
+<code>metadata</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#objectmeta-v1-meta">
+Kubernetes meta/v1.ObjectMeta
+</a>
+</em>
+</td>
+<td>
+Refer to the Kubernetes API documentation for the fields of the
+<code>metadata</code> field.
+</td>
+</tr>
+<tr>
+<td>
+<code>spec</code><br/>
+<em>
+<a href="#sources.knative.dev/v1alpha1.IntegrationSourceSpec">
+IntegrationSourceSpec
+</a>
+</em>
+</td>
+<td>
+<br/>
+<br/>
+<table>
+<tr>
+<td>
+<code>SourceSpec</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#SourceSpec">
+knative.dev/pkg/apis/duck/v1.SourceSpec
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>SourceSpec</code> are embedded into this type.)
+</p>
+<p>inherits duck/v1 SourceSpec, which currently provides:
+* Sink - a reference to an object that will resolve to a domain name or
+a URI directly to use as the sink.
+* CloudEventOverrides - defines overrides to control the output format
+and modifications of the event sent to the sink.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>aws</code><br/>
+<em>
+<a href="#sources.knative.dev/v1alpha1.Aws">
+Aws
+</a>
+</em>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<code>timer</code><br/>
+<em>
+<a href="#sources.knative.dev/v1alpha1.Timer">
+Timer
+</a>
+</em>
+</td>
+<td>
+<p>AWS source configuration</p>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+<tr>
+<td>
+<code>status</code><br/>
+<em>
+<a href="#sources.knative.dev/v1alpha1.IntegrationSourceStatus">
+IntegrationSourceStatus
+</a>
+</em>
+</td>
+<td>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="sources.knative.dev/v1alpha1.Aws">Aws
+</h3>
+<p>
+(<em>Appears on:</em><a href="#sources.knative.dev/v1alpha1.IntegrationSourceSpec">IntegrationSourceSpec</a>)
+</p>
+<p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>s3</code><br/>
+<em>
+knative.dev/eventing/pkg/apis/common/integration/v1alpha1.AWSS3
+</em>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<code>sqs</code><br/>
+<em>
+knative.dev/eventing/pkg/apis/common/integration/v1alpha1.AWSSQS
+</em>
+</td>
+<td>
+<p>S3 source configuration</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>ddbStreams</code><br/>
+<em>
+knative.dev/eventing/pkg/apis/common/integration/v1alpha1.AWSDDBStreams
+</em>
+</td>
+<td>
+<p>SQS source configuration</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>auth</code><br/>
+<em>
+knative.dev/eventing/pkg/apis/common/integration/v1alpha1.Auth
+</em>
+</td>
+<td>
+<p>DynamoDB Streams source configuration</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="sources.knative.dev/v1alpha1.IntegrationSourceSpec">IntegrationSourceSpec
+</h3>
+<p>
+(<em>Appears on:</em><a href="#sources.knative.dev/v1alpha1.IntegrationSource">IntegrationSource</a>)
+</p>
+<p>
+<p>IntegrationSourceSpec defines the desired state of IntegrationSource</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>SourceSpec</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#SourceSpec">
+knative.dev/pkg/apis/duck/v1.SourceSpec
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>SourceSpec</code> are embedded into this type.)
+</p>
+<p>inherits duck/v1 SourceSpec, which currently provides:
+* Sink - a reference to an object that will resolve to a domain name or
+a URI directly to use as the sink.
+* CloudEventOverrides - defines overrides to control the output format
+and modifications of the event sent to the sink.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>aws</code><br/>
+<em>
+<a href="#sources.knative.dev/v1alpha1.Aws">
+Aws
+</a>
+</em>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<code>timer</code><br/>
+<em>
+<a href="#sources.knative.dev/v1alpha1.Timer">
+Timer
+</a>
+</em>
+</td>
+<td>
+<p>AWS source configuration</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="sources.knative.dev/v1alpha1.IntegrationSourceStatus">IntegrationSourceStatus
+</h3>
+<p>
+(<em>Appears on:</em><a href="#sources.knative.dev/v1alpha1.IntegrationSource">IntegrationSource</a>)
+</p>
+<p>
+<p>IntegrationSourceStatus defines the observed state of IntegrationSource</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>SourceStatus</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#SourceStatus">
+knative.dev/pkg/apis/duck/v1.SourceStatus
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>SourceStatus</code> are embedded into this type.)
+</p>
+<p>inherits duck/v1 SourceStatus, which currently provides:
+* ObservedGeneration - the &lsquo;Generation&rsquo; of the Service that was last
+processed by the controller.
+* Conditions - the latest available observations of a resource&rsquo;s current
+state.
+* SinkURI - the current active sink URI that has been configured for the
+Source.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="sources.knative.dev/v1alpha1.Timer">Timer
+</h3>
+<p>
+(<em>Appears on:</em><a href="#sources.knative.dev/v1alpha1.IntegrationSourceSpec">IntegrationSourceSpec</a>)
+</p>
+<p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>period</code><br/>
+<em>
+int
+</em>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<code>message</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Interval (in milliseconds) between producing messages</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>contentType</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Message to generate</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>repeatCount</code><br/>
+<em>
+int
+</em>
+</td>
+<td>
+<p>Content type of generated message</p>
 </td>
 </tr>
 </tbody>

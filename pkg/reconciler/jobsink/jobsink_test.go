@@ -28,10 +28,6 @@ import (
 	utilrand "k8s.io/apimachinery/pkg/util/rand"
 	clientgotesting "k8s.io/client-go/testing"
 	"k8s.io/utils/ptr"
-	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
-	jobsinkreconciler "knative.dev/eventing/pkg/client/injection/reconciler/sinks/v1alpha1/jobsink"
-	. "knative.dev/eventing/pkg/reconciler/testing/v1"
-	. "knative.dev/eventing/pkg/reconciler/testing/v1alpha1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	v1 "knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
@@ -40,6 +36,12 @@ import (
 	logtesting "knative.dev/pkg/logging/testing"
 	"knative.dev/pkg/network"
 	. "knative.dev/pkg/reconciler/testing"
+
+	"knative.dev/eventing/pkg/apis/sinks/v1alpha1"
+	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
+	jobsinkreconciler "knative.dev/eventing/pkg/client/injection/reconciler/sinks/v1alpha1/jobsink"
+	. "knative.dev/eventing/pkg/reconciler/testing/v1"
+	. "knative.dev/eventing/pkg/reconciler/testing/v1alpha1"
 )
 
 const (
@@ -198,6 +200,36 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 		},
+		{
+			Name: "Successful reconciliation, observed generation",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewJobSink(jobSinkName, testNamespace,
+					func(sink *v1alpha1.JobSink) {
+						sink.Generation = 4242
+					},
+					WithJobSinkJob(testJob("")),
+					WithInitJobSinkConditions),
+			},
+			WantErr: false,
+			WantCreates: []runtime.Object{
+				testJob("test-jobSinkml6mm"),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{
+				{
+					Object: NewJobSink(jobSinkName, testNamespace,
+						WithJobSinkJob(testJob("")),
+						WithJobSinkAddressableReady(),
+						WithJobSinkJobStatusSelector(),
+						WithJobSinkAddress(&jobSinkAddressable),
+						func(sink *v1alpha1.JobSink) {
+							sink.Generation = 4242
+							sink.Status.ObservedGeneration = 4242
+						},
+						WithJobSinkEventPoliciesReadyBecauseOIDCDisabled()),
+				},
+			},
+		},
 	}
 
 	logger := logtesting.TestLogger(t)
@@ -231,6 +263,9 @@ func testJob(name string) *batchv1.Job {
 					Containers: []corev1.Container{
 						{
 							Name: "test-container",
+							Env: []corev1.EnvVar{
+								{Name: "K_EXECUTION_MODE", Value: "batch"},
+							},
 						},
 					},
 				},

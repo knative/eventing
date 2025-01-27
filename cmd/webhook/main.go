@@ -20,6 +20,8 @@ import (
 	"context"
 	"os"
 
+	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
+
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -92,6 +94,8 @@ var ourTypes = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
 	messagingv1.SchemeGroupVersion.WithKind("Subscription"): &messagingv1.Subscription{},
 
 	// For group sources.knative.dev.
+	// v1alpha1
+	sourcesv1alpha1.SchemeGroupVersion.WithKind("IntegrationSource"): &sourcesv1alpha1.IntegrationSource{},
 	// v1beta2
 	sourcesv1beta2.SchemeGroupVersion.WithKind("PingSource"): &sourcesv1beta2.PingSource{},
 	// v1
@@ -102,7 +106,8 @@ var ourTypes = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
 
 	// For group sinks.knative.dev.
 	// v1alpha1
-	sinksv1alpha1.SchemeGroupVersion.WithKind("JobSink"): &sinksv1alpha1.JobSink{},
+	sinksv1alpha1.SchemeGroupVersion.WithKind("JobSink"):         &sinksv1alpha1.JobSink{},
+	sinksv1alpha1.SchemeGroupVersion.WithKind("IntegrationSink"): &sinksv1alpha1.IntegrationSink{},
 
 	// For group flows.knative.dev
 	// v1

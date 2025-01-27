@@ -39,6 +39,7 @@ import (
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	sinksv1alpha1 "knative.dev/eventing/pkg/apis/sinks/v1alpha1"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
+	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	fakeeventingclientset "knative.dev/eventing/pkg/client/clientset/versioned/fake"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1"
 	eventingv1alpha1listers "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
@@ -47,6 +48,7 @@ import (
 	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1"
 	sinkslisters "knative.dev/eventing/pkg/client/listers/sinks/v1alpha1"
 	sourcelisters "knative.dev/eventing/pkg/client/listers/sources/v1"
+	sourcev1alpha1listers "knative.dev/eventing/pkg/client/listers/sources/v1alpha1"
 	testscheme "knative.dev/eventing/pkg/reconciler/testing/scheme"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/reconciler/testing"
@@ -122,8 +124,16 @@ func (l *Listers) GetEventPolicyLister() eventingv1alpha1listers.EventPolicyList
 	return eventingv1alpha1listers.NewEventPolicyLister(l.indexerFor(&eventingv1alpha1.EventPolicy{}))
 }
 
+func (l *Listers) GetIntegrationSinkLister() sinkslisters.IntegrationSinkLister {
+	return sinkslisters.NewIntegrationSinkLister(l.indexerFor(&sinksv1alpha1.IntegrationSink{}))
+}
+
 func (l *Listers) GetJobSinkLister() sinkslisters.JobSinkLister {
 	return sinkslisters.NewJobSinkLister(l.indexerFor(&sinksv1alpha1.JobSink{}))
+}
+
+func (l *Listers) GetIntegrationSourceLister() sourcev1alpha1listers.IntegrationSourceLister {
+	return sourcev1alpha1listers.NewIntegrationSourceLister(l.indexerFor(&sourcesv1alpha1.IntegrationSource{}))
 }
 
 func (l *Listers) GetPingSourceLister() sourcelisters.PingSourceLister {

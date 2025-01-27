@@ -48,6 +48,7 @@ import (
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/apis/feature"
+	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	"knative.dev/eventing/pkg/auth"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
@@ -405,6 +406,48 @@ func TestReconcile(t *testing.T) {
 					WithDLSNotConfigured(),
 					WithBrokerEventPoliciesReadyBecauseOIDCDisabled()),
 			}},
+		}, {
+			Name: "Propagate annotations",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				makeDLSServiceAsUnstructured(),
+				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
+					WithBrokerConfig(config()),
+					WithInitBrokerConditions,
+					WithBrokerAnnotation(v1.AsyncHandlerAnnotation, "true")),
+				createChannel(withChannelReady),
+				imcConfigMap(),
+				NewEndpoints(filterServiceName, systemNS,
+					WithEndpointsLabels(FilterLabels()),
+					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
+				NewEndpoints(ingressServiceName, systemNS,
+					WithEndpointsLabels(IngressLabels()),
+					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
+					WithBrokerConfig(config()),
+					WithBrokerAnnotation(v1.AsyncHandlerAnnotation, "true"),
+					WithBrokerReady,
+					WithDLSNotConfigured(),
+					WithBrokerAddressURI(brokerAddress),
+					WithChannelAddressAnnotation(triggerChannelURL),
+					WithChannelAPIVersionAnnotation(triggerChannelAPIVersion),
+					WithChannelKindAnnotation(triggerChannelKind),
+					WithChannelNameAnnotation(triggerChannelName),
+					WithBrokerEventPoliciesReadyBecauseOIDCDisabled()),
+			}},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				{
+					ActionImpl: clientgotesting.ActionImpl{
+						Namespace: testNS,
+					},
+					Name:  fmt.Sprintf("%s-kne-trigger", brokerName),
+					Patch: []byte(`[{"op":"add","path":"/metadata/annotations/messaging.knative.dev~1async-handler","value":"` + "true" + `"}]`),
+				},
+			},
 		}, {
 			Name: "Successful Reconciliation with a Channel with CA certs",
 			Key:  testKey,
@@ -812,6 +855,52 @@ func TestReconcile(t *testing.T) {
 			Ctx: feature.ToContext(context.Background(), feature.Flags{
 				feature.OIDCAuthentication:       feature.Enabled,
 				feature.AuthorizationDefaultMode: feature.AuthorizationAllowSameNamespace,
+			}),
+		},
+		{
+			Name: "Should respect setting default authorization mode",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				makeDLSServiceAsUnstructured(),
+				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
+					WithBrokerConfig(config()),
+					WithDeadLeaderSink(sinkSVCDest),
+					WithInitBrokerConditions),
+				createChannel(withChannelReady, withChannelDeadLetterSink(sinkSVCDest)),
+				imcConfigMap(),
+				NewEndpoints(filterServiceName, systemNS,
+					WithEndpointsLabels(FilterLabels()),
+					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
+				NewEndpoints(ingressServiceName, systemNS,
+					WithEndpointsLabels(IngressLabels()),
+					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
+			},
+			WantErr: false,
+			WantCreates: []runtime.Object{
+				makeEventPolicy(),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
+					WithBrokerConfig(config()),
+					WithBrokerReadyWithDLS,
+					WithDeadLeaderSink(sinkSVCDest),
+					WithBrokerAddress(&duckv1.Addressable{
+						URL:      brokerAddress,
+						Audience: &brokerAudience,
+					}),
+					WithBrokerStatusDLS(dls),
+					WithChannelAddressAnnotation(triggerChannelURL),
+					WithChannelAPIVersionAnnotation(triggerChannelAPIVersion),
+					WithChannelKindAnnotation(triggerChannelKind),
+					WithChannelNameAnnotation(triggerChannelName),
+					WithBrokerEventPoliciesReadyAndDefaultAuthorizationMode(string(feature.AuthorizationDenyAll)),
+				),
+			}},
+			Ctx: feature.ToContext(context.Background(), feature.Flags{
+				feature.OIDCAuthentication:       feature.Enabled,
+				feature.AuthorizationDefaultMode: feature.AuthorizationDenyAll,
 			}),
 		},
 		{

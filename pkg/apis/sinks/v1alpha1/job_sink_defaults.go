@@ -18,7 +18,48 @@ package v1alpha1
 
 import (
 	"context"
+
+	batchv1 "k8s.io/api/batch/v1"
+	corev1 "k8s.io/api/core/v1"
 )
 
 func (sink *JobSink) SetDefaults(ctx context.Context) {
+	if sink.Spec.Job != nil {
+		setBatchJobDefaults(sink.Spec.Job)
+	}
+}
+
+func setBatchJobDefaults(job *batchv1.Job) {
+	for i := range job.Spec.Template.Spec.Containers {
+		executionModeFound := false
+		for j := range job.Spec.Template.Spec.Containers[i].Env {
+			if job.Spec.Template.Spec.Containers[i].Env[j].Name == ExecutionModeEnvVar {
+				executionModeFound = true
+				break
+			}
+		}
+		if executionModeFound {
+			continue
+		}
+		job.Spec.Template.Spec.Containers[i].Env = append(job.Spec.Template.Spec.Containers[i].Env, corev1.EnvVar{
+			Name:  ExecutionModeEnvVar,
+			Value: string(ExecutionModeBatch),
+		})
+	}
+	for i := range job.Spec.Template.Spec.InitContainers {
+		executionModeFound := false
+		for j := range job.Spec.Template.Spec.InitContainers[i].Env {
+			if job.Spec.Template.Spec.InitContainers[i].Env[j].Name == ExecutionModeEnvVar {
+				executionModeFound = true
+				break
+			}
+		}
+		if executionModeFound {
+			continue
+		}
+		job.Spec.Template.Spec.InitContainers[i].Env = append(job.Spec.Template.Spec.InitContainers[i].Env, corev1.EnvVar{
+			Name:  ExecutionModeEnvVar,
+			Value: string(ExecutionModeBatch),
+		})
+	}
 }

@@ -41,22 +41,24 @@ var pingsourcesKind = v1.SchemeGroupVersion.WithKind("PingSource")
 
 // Get takes name of the pingSource, and returns the corresponding pingSource object, and an error if there is any.
 func (c *FakePingSources) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.PingSource, err error) {
+	emptyResult := &v1.PingSource{}
 	obj, err := c.Fake.
-		Invokes(testing.NewGetAction(pingsourcesResource, c.ns, name), &v1.PingSource{})
+		Invokes(testing.NewGetActionWithOptions(pingsourcesResource, c.ns, name, options), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1.PingSource), err
 }
 
 // List takes label and field selectors, and returns the list of PingSources that match those selectors.
 func (c *FakePingSources) List(ctx context.Context, opts metav1.ListOptions) (result *v1.PingSourceList, err error) {
+	emptyResult := &v1.PingSourceList{}
 	obj, err := c.Fake.
-		Invokes(testing.NewListAction(pingsourcesResource, pingsourcesKind, c.ns, opts), &v1.PingSourceList{})
+		Invokes(testing.NewListActionWithOptions(pingsourcesResource, pingsourcesKind, c.ns, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -75,40 +77,43 @@ func (c *FakePingSources) List(ctx context.Context, opts metav1.ListOptions) (re
 // Watch returns a watch.Interface that watches the requested pingSources.
 func (c *FakePingSources) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
-		InvokesWatch(testing.NewWatchAction(pingsourcesResource, c.ns, opts))
+		InvokesWatch(testing.NewWatchActionWithOptions(pingsourcesResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a pingSource and creates it.  Returns the server's representation of the pingSource, and an error, if there is any.
 func (c *FakePingSources) Create(ctx context.Context, pingSource *v1.PingSource, opts metav1.CreateOptions) (result *v1.PingSource, err error) {
+	emptyResult := &v1.PingSource{}
 	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(pingsourcesResource, c.ns, pingSource), &v1.PingSource{})
+		Invokes(testing.NewCreateActionWithOptions(pingsourcesResource, c.ns, pingSource, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1.PingSource), err
 }
 
 // Update takes the representation of a pingSource and updates it. Returns the server's representation of the pingSource, and an error, if there is any.
 func (c *FakePingSources) Update(ctx context.Context, pingSource *v1.PingSource, opts metav1.UpdateOptions) (result *v1.PingSource, err error) {
+	emptyResult := &v1.PingSource{}
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateAction(pingsourcesResource, c.ns, pingSource), &v1.PingSource{})
+		Invokes(testing.NewUpdateActionWithOptions(pingsourcesResource, c.ns, pingSource, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1.PingSource), err
 }
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakePingSources) UpdateStatus(ctx context.Context, pingSource *v1.PingSource, opts metav1.UpdateOptions) (*v1.PingSource, error) {
+func (c *FakePingSources) UpdateStatus(ctx context.Context, pingSource *v1.PingSource, opts metav1.UpdateOptions) (result *v1.PingSource, err error) {
+	emptyResult := &v1.PingSource{}
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceAction(pingsourcesResource, "status", c.ns, pingSource), &v1.PingSource{})
+		Invokes(testing.NewUpdateSubresourceActionWithOptions(pingsourcesResource, "status", c.ns, pingSource, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1.PingSource), err
 }
@@ -123,7 +128,7 @@ func (c *FakePingSources) Delete(ctx context.Context, name string, opts metav1.D
 
 // DeleteCollection deletes a collection of objects.
 func (c *FakePingSources) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(pingsourcesResource, c.ns, listOpts)
+	action := testing.NewDeleteCollectionActionWithOptions(pingsourcesResource, c.ns, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1.PingSourceList{})
 	return err
@@ -131,11 +136,12 @@ func (c *FakePingSources) DeleteCollection(ctx context.Context, opts metav1.Dele
 
 // Patch applies the patch and returns the patched pingSource.
 func (c *FakePingSources) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.PingSource, err error) {
+	emptyResult := &v1.PingSource{}
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(pingsourcesResource, c.ns, name, pt, data, subresources...), &v1.PingSource{})
+		Invokes(testing.NewPatchSubresourceActionWithOptions(pingsourcesResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1.PingSource), err
 }

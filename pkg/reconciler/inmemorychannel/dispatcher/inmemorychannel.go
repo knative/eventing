@@ -19,6 +19,7 @@ package dispatcher
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	listers "knative.dev/eventing/pkg/client/listers/messaging/v1"
 
@@ -42,10 +43,10 @@ import (
 	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/channel/fanout"
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
-	eventingv1beta2 "knative.dev/eventing/pkg/client/clientset/versioned/typed/eventing/v1beta2"
+	eventingv1beta3 "knative.dev/eventing/pkg/client/clientset/versioned/typed/eventing/v1beta3"
 	messagingv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/messaging/v1"
 	reconcilerv1 "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/inmemorychannel"
-	"knative.dev/eventing/pkg/client/listers/eventing/v1beta2"
+	"knative.dev/eventing/pkg/client/listers/eventing/v1beta3"
 	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/eventtype"
 	"knative.dev/eventing/pkg/kncloudevents"
@@ -56,9 +57,9 @@ type Reconciler struct {
 	multiChannelEventHandler multichannelfanout.MultiChannelEventHandler
 	reporter                 channel.StatsReporter
 	messagingClientSet       messagingv1.MessagingV1Interface
-	eventTypeLister          v1beta2.EventTypeLister
+	eventTypeLister          v1beta3.EventTypeLister
 	inMemoryChannelLister    listers.InMemoryChannelLister
-	eventingClient           eventingv1beta2.EventingV1beta2Interface
+	eventingClient           eventingv1beta3.EventingV1beta3Interface
 	featureStore             *feature.Store
 	eventDispatcher          *kncloudevents.Dispatcher
 
@@ -250,13 +251,21 @@ func newConfigForInMemoryChannel(ctx context.Context, imc *v1.InMemoryChannel) (
 		subs[i] = *conf
 	}
 
+	async := false
+	if v, ok := imc.Annotations[v1.AsyncHandlerAnnotation]; ok {
+		b, err := strconv.ParseBool(v)
+		if err == nil {
+			async = b
+		}
+	}
+
 	return &multichannelfanout.ChannelConfig{
 		Namespace: imc.Namespace,
 		Name:      imc.Name,
 		HostName:  imc.Status.Address.URL.Host,
 		Path:      fmt.Sprintf("%s/%s", imc.Namespace, imc.Name),
 		FanoutConfig: fanout.Config{
-			AsyncHandler:  false,
+			AsyncHandler:  async,
 			Subscriptions: subs,
 		},
 	}, nil

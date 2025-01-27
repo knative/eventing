@@ -41,22 +41,24 @@ var sinkbindingsKind = v1.SchemeGroupVersion.WithKind("SinkBinding")
 
 // Get takes name of the sinkBinding, and returns the corresponding sinkBinding object, and an error if there is any.
 func (c *FakeSinkBindings) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.SinkBinding, err error) {
+	emptyResult := &v1.SinkBinding{}
 	obj, err := c.Fake.
-		Invokes(testing.NewGetAction(sinkbindingsResource, c.ns, name), &v1.SinkBinding{})
+		Invokes(testing.NewGetActionWithOptions(sinkbindingsResource, c.ns, name, options), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1.SinkBinding), err
 }
 
 // List takes label and field selectors, and returns the list of SinkBindings that match those selectors.
 func (c *FakeSinkBindings) List(ctx context.Context, opts metav1.ListOptions) (result *v1.SinkBindingList, err error) {
+	emptyResult := &v1.SinkBindingList{}
 	obj, err := c.Fake.
-		Invokes(testing.NewListAction(sinkbindingsResource, sinkbindingsKind, c.ns, opts), &v1.SinkBindingList{})
+		Invokes(testing.NewListActionWithOptions(sinkbindingsResource, sinkbindingsKind, c.ns, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -75,40 +77,43 @@ func (c *FakeSinkBindings) List(ctx context.Context, opts metav1.ListOptions) (r
 // Watch returns a watch.Interface that watches the requested sinkBindings.
 func (c *FakeSinkBindings) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
-		InvokesWatch(testing.NewWatchAction(sinkbindingsResource, c.ns, opts))
+		InvokesWatch(testing.NewWatchActionWithOptions(sinkbindingsResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a sinkBinding and creates it.  Returns the server's representation of the sinkBinding, and an error, if there is any.
 func (c *FakeSinkBindings) Create(ctx context.Context, sinkBinding *v1.SinkBinding, opts metav1.CreateOptions) (result *v1.SinkBinding, err error) {
+	emptyResult := &v1.SinkBinding{}
 	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(sinkbindingsResource, c.ns, sinkBinding), &v1.SinkBinding{})
+		Invokes(testing.NewCreateActionWithOptions(sinkbindingsResource, c.ns, sinkBinding, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1.SinkBinding), err
 }
 
 // Update takes the representation of a sinkBinding and updates it. Returns the server's representation of the sinkBinding, and an error, if there is any.
 func (c *FakeSinkBindings) Update(ctx context.Context, sinkBinding *v1.SinkBinding, opts metav1.UpdateOptions) (result *v1.SinkBinding, err error) {
+	emptyResult := &v1.SinkBinding{}
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateAction(sinkbindingsResource, c.ns, sinkBinding), &v1.SinkBinding{})
+		Invokes(testing.NewUpdateActionWithOptions(sinkbindingsResource, c.ns, sinkBinding, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1.SinkBinding), err
 }
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeSinkBindings) UpdateStatus(ctx context.Context, sinkBinding *v1.SinkBinding, opts metav1.UpdateOptions) (*v1.SinkBinding, error) {
+func (c *FakeSinkBindings) UpdateStatus(ctx context.Context, sinkBinding *v1.SinkBinding, opts metav1.UpdateOptions) (result *v1.SinkBinding, err error) {
+	emptyResult := &v1.SinkBinding{}
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceAction(sinkbindingsResource, "status", c.ns, sinkBinding), &v1.SinkBinding{})
+		Invokes(testing.NewUpdateSubresourceActionWithOptions(sinkbindingsResource, "status", c.ns, sinkBinding, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1.SinkBinding), err
 }
@@ -123,7 +128,7 @@ func (c *FakeSinkBindings) Delete(ctx context.Context, name string, opts metav1.
 
 // DeleteCollection deletes a collection of objects.
 func (c *FakeSinkBindings) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(sinkbindingsResource, c.ns, listOpts)
+	action := testing.NewDeleteCollectionActionWithOptions(sinkbindingsResource, c.ns, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1.SinkBindingList{})
 	return err
@@ -131,11 +136,12 @@ func (c *FakeSinkBindings) DeleteCollection(ctx context.Context, opts metav1.Del
 
 // Patch applies the patch and returns the patched sinkBinding.
 func (c *FakeSinkBindings) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.SinkBinding, err error) {
+	emptyResult := &v1.SinkBinding{}
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(sinkbindingsResource, c.ns, name, pt, data, subresources...), &v1.SinkBinding{})
+		Invokes(testing.NewPatchSubresourceActionWithOptions(sinkbindingsResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1.SinkBinding), err
 }

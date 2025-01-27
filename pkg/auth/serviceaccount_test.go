@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"k8s.io/apimachinery/pkg/api/equality"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	clientgotesting "k8s.io/client-go/testing"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	kubeclient "knative.dev/pkg/client/injection/kube/client/fake"
@@ -31,11 +32,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"knative.dev/pkg/ptr"
+	rectesting "knative.dev/pkg/reconciler/testing"
+
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/pkg/apis/feature"
 	rttestingv1 "knative.dev/eventing/pkg/reconciler/testing/v1"
-	"knative.dev/pkg/ptr"
-	rectesting "knative.dev/pkg/reconciler/testing"
 )
 
 func TestGetOIDCServiceAccountNameForResource(t *testing.T) {
@@ -245,8 +247,8 @@ func TestSetupOIDCServiceAccount(t *testing.T) {
 
 	// Checks whether the created serviceAccount still exists or not.
 	sa, err = kubeclient.Get(ctx).CoreV1().ServiceAccounts(objectMeta.Namespace).Get(context.TODO(), expected.Name, metav1.GetOptions{})
-	if sa != nil || err == nil {
-		t.Errorf("DeleteOIDCServiceAccountIfExists failed to delete the serviceAccount: %+v", sa)
+	if !apierrors.IsNotFound(err) {
+		t.Errorf("DeleteOIDCServiceAccountIfExists failed to delete the serviceAccount: %+v: %+v", sa, err)
 	}
 
 	if trigger.Status.Auth != nil {
@@ -289,6 +291,7 @@ func TestSetupOIDCServiceAccount(t *testing.T) {
 		if condition.Type == eventingv1.TriggerConditionOIDCIdentityCreated {
 			if condition.Reason == "authentication-oidc feature disabled" {
 				matched = true
+				break
 			}
 		}
 	}
@@ -321,7 +324,7 @@ func TestDeleteOIDCServiceAccountIfExists(t *testing.T) {
 	}
 
 	sa, err := kubeclient.Get(ctx).CoreV1().ServiceAccounts(objectMeta.Namespace).Get(context.TODO(), expected.Name, metav1.GetOptions{})
-	if sa != nil || err == nil {
-		t.Errorf("DeleteOIDCServiceAccountIfExists failed to delete the serviceAccount: %+v", sa)
+	if !apierrors.IsNotFound(err) {
+		t.Errorf("DeleteOIDCServiceAccountIfExists failed to delete the serviceAccount: %+v: %+v", sa, err)
 	}
 }

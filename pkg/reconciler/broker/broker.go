@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -108,8 +109,18 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 		return err
 	}
 
-	var tmpChannelableSpec duckv1.ChannelableSpec = duckv1.ChannelableSpec{
+	var tmpChannelableSpec = duckv1.ChannelableSpec{
 		Delivery: b.Spec.Delivery,
+	}
+
+	metadata := b.ObjectMeta.DeepCopy()
+	channelAnnotations := map[string]string{
+		eventing.ScopeAnnotationKey: eventing.ScopeCluster,
+	}
+	for k, v := range metadata.GetAnnotations() {
+		if strings.HasPrefix(k, messagingv1.SchemeGroupVersion.Group) {
+			channelAnnotations[k] = v
+		}
 	}
 
 	logging.FromContext(ctx).Infow("Reconciling the trigger channel")
@@ -122,7 +133,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 				*kmeta.NewControllerRef(b),
 			},
 			Labels:      TriggerChannelLabels(b.Name, b.Namespace),
-			Annotations: map[string]string{eventing.ScopeAnnotationKey: eventing.ScopeCluster},
+			Annotations: channelAnnotations,
 		},
 		ducklib.WithChannelableSpec(tmpChannelableSpec),
 		ducklib.WithPhysicalChannelSpec(chanMan.template.Spec),
@@ -392,7 +403,9 @@ func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterf
 		return nil, fmt.Errorf("failed to convert %s/%s into Channelable: %w", channelObjRef.Namespace, channelObjRef.Name, err)
 	}
 
-	if equality.Semantic.DeepEqual(desired.Spec.Delivery, channelable.Spec.Delivery) {
+	if equality.Semantic.DeepDerivative(desired.Spec.Delivery, channelable.Spec.Delivery) &&
+		equality.Semantic.DeepDerivative(desired.Annotations, channelable.Annotations) &&
+		equality.Semantic.DeepDerivative(desired.Labels, channelable.Labels) {
 		// If propagated/mutable properties match return the Channel.
 		return channelable, nil
 	}
@@ -402,12 +415,20 @@ func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterf
 	jsonPatch, err := duckapis.CreatePatch(
 		// Existing Channel properties
 		duckv1.Channelable{
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: channelable.Annotations,
+				Labels:      channelable.Labels,
+			},
 			Spec: duckv1.ChannelableSpec{
 				Delivery: channelable.Spec.Delivery,
 			},
 		},
 		// Desired Channel properties
 		duckv1.Channelable{
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: desired.Annotations,
+				Labels:      desired.Labels,
+			},
 			Spec: duckv1.ChannelableSpec{
 				Delivery: desired.Spec.Delivery,
 			},

@@ -20,6 +20,7 @@ import (
 	"context"
 	"crypto/md5" //nolint:gosec
 	"crypto/tls"
+	"encoding/hex"
 	"fmt"
 	"log"
 	"net/http"
@@ -65,7 +66,7 @@ import (
 	"knative.dev/eventing/pkg/utils"
 )
 
-const component = "job-sink"
+const component = "job_sink"
 
 func main() {
 
@@ -231,11 +232,11 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id := toIdHashLabelValue(event.Source(), event.ID())
-	logger.Debug("Getting job for event", zap.String("URI", r.RequestURI), zap.String("id", id))
+	jobName := toJobName(ref.Name, event.Source(), event.ID())
+	logger.Debug("Getting job for event", zap.String("URI", r.RequestURI), zap.String("jobName", jobName))
 
 	jobs, err := h.k8s.BatchV1().Jobs(js.GetNamespace()).List(r.Context(), metav1.ListOptions{
-		LabelSelector: jobLabelSelector(ref, id),
+		LabelSelector: jobLabelSelector(ref, jobName),
 		Limit:         1,
 	})
 	if err != nil {
@@ -256,56 +257,24 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jobName := kmeta.ChildName(ref.Name, id)
-
-	logger.Debug("Creating secret for event", zap.String("URI", r.RequestURI), zap.String("jobName", jobName))
-
-	jobSinkUID := js.GetUID()
-
-	or := metav1.OwnerReference{
-		APIVersion:         sinksv.SchemeGroupVersion.String(),
-		Kind:               sinks.JobSinkResource.Resource,
-		Name:               js.GetName(),
-		UID:                jobSinkUID,
-		Controller:         ptr.Bool(true),
-		BlockOwnerDeletion: ptr.Bool(false),
-	}
-
-	secret := &corev1.Secret{
-		TypeMeta: metav1.TypeMeta{},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      jobName,
-			Namespace: ref.Namespace,
-			Labels: map[string]string{
-				sinks.JobSinkIDLabel:   id,
-				sinks.JobSinkNameLabel: ref.Name,
-			},
-			OwnerReferences: []metav1.OwnerReference{or},
-		},
-		Immutable: ptr.Bool(true),
-		Data:      map[string][]byte{"event": eventBytes},
-		Type:      corev1.SecretTypeOpaque,
-	}
-
-	_, err = h.k8s.CoreV1().Secrets(ref.Namespace).Create(r.Context(), secret, metav1.CreateOptions{})
-	if err != nil && !apierrors.IsAlreadyExists(err) {
-		logger.Warn("Failed to create secret", zap.Error(err))
-
-		w.Header().Add("Reason", err.Error())
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	logger.Debug("Creating job for event", zap.String("URI", r.RequestURI), zap.String("jobName", jobName))
+	js = js.DeepCopy() // Do not modify informer copy.
+	js.SetDefaults(ctx)
 
 	job := js.Spec.Job.DeepCopy()
 	job.Name = jobName
 	if job.Labels == nil {
 		job.Labels = make(map[string]string, 4)
 	}
-	job.Labels[sinks.JobSinkIDLabel] = id
+	job.Labels[sinks.JobSinkIDLabel] = jobName
 	job.Labels[sinks.JobSinkNameLabel] = ref.Name
-	job.OwnerReferences = append(job.OwnerReferences, or)
+	job.OwnerReferences = append(job.OwnerReferences, metav1.OwnerReference{
+		APIVersion:         sinksv.SchemeGroupVersion.String(),
+		Kind:               sinks.JobSinkResource.Resource,
+		Name:               js.GetName(),
+		UID:                js.GetUID(),
+		Controller:         ptr.Bool(true),
+		BlockOwnerDeletion: ptr.Bool(false),
+	})
 	var mountPathName string
 	for i := range job.Spec.Template.Spec.Containers {
 		found := false
@@ -346,13 +315,65 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	_, err = h.k8s.BatchV1().Jobs(ref.Namespace).Create(r.Context(), job, metav1.CreateOptions{})
-	if err != nil {
+	logger.Debug("Creating job for event",
+		zap.String("URI", r.RequestURI),
+		zap.String("jobName", jobName),
+		zap.Any("job", job),
+	)
+
+	createdJob, err := h.k8s.BatchV1().Jobs(ref.Namespace).Create(r.Context(), job, metav1.CreateOptions{})
+	if err != nil && !apierrors.IsAlreadyExists(err) {
 		logger.Warn("Failed to create job", zap.Error(err))
 
 		w.Header().Add("Reason", err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		return
+	}
+	if apierrors.IsAlreadyExists(err) {
+		logger.Debug("Job already exists", zap.String("URI", r.RequestURI), zap.String("jobName", jobName))
+	}
+
+	secret := &corev1.Secret{
+		TypeMeta: metav1.TypeMeta{},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      jobName,
+			Namespace: ref.Namespace,
+			Labels: map[string]string{
+				sinks.JobSinkIDLabel:   jobName,
+				sinks.JobSinkNameLabel: ref.Name,
+			},
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion:         "batch/v1",
+					Kind:               "Job",
+					Name:               createdJob.Name,
+					UID:                createdJob.UID,
+					Controller:         ptr.Bool(true),
+					BlockOwnerDeletion: ptr.Bool(false),
+				},
+			},
+		},
+		Immutable: ptr.Bool(true),
+		Data:      map[string][]byte{"event": eventBytes},
+		Type:      corev1.SecretTypeOpaque,
+	}
+
+	logger.Debug("Creating secret for event",
+		zap.String("URI", r.RequestURI),
+		zap.String("jobName", jobName),
+		zap.Any("secret.metadata", secret.ObjectMeta),
+	)
+
+	_, err = h.k8s.CoreV1().Secrets(ref.Namespace).Create(r.Context(), secret, metav1.CreateOptions{})
+	if err != nil && !apierrors.IsAlreadyExists(err) {
+		logger.Warn("Failed to create secret", zap.Error(err))
+
+		w.Header().Add("Reason", err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if apierrors.IsAlreadyExists(err) {
+		logger.Debug("Secret already exists", zap.String("URI", r.RequestURI), zap.String("jobName", jobName))
 	}
 
 	w.Header().Add("Location", locationHeader(ref, event.Source(), event.ID()))
@@ -391,8 +412,7 @@ func (h *Handler) handleGet(ctx context.Context, w http.ResponseWriter, r *http.
 	eventSource := parts[6]
 	eventID := parts[8]
 
-	id := toIdHashLabelValue(eventSource, eventID)
-	jobName := kmeta.ChildName(ref.Name, id)
+	jobName := toJobName(ref.Name, eventSource, eventID)
 
 	job, err := h.k8s.BatchV1().Jobs(ref.Namespace).Get(r.Context(), jobName, metav1.GetOptions{})
 	if err != nil {
@@ -445,6 +465,7 @@ func jobLabelSelector(ref types.NamespacedName, id string) string {
 	return fmt.Sprintf("%s=%s,%s=%s", sinks.JobSinkIDLabel, id, sinks.JobSinkNameLabel, ref.Name)
 }
 
-func toIdHashLabelValue(source, id string) string {
-	return utils.ToDNS1123Subdomain(fmt.Sprintf("%s", md5.Sum([]byte(fmt.Sprintf("%s-%s", source, id))))) //nolint:gosec
+func toJobName(js string, source, id string) string {
+	h := md5.Sum([]byte(source + id)) //nolint:gosec
+	return kmeta.ChildName(js+"-", utils.ToDNS1123Subdomain(hex.EncodeToString(h[:])))
 }
