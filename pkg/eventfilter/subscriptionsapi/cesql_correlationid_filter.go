@@ -25,8 +25,6 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
-	"os"
-	"path"
 	"regexp"
 	"strings"
 
@@ -35,12 +33,12 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/clientcmd"
 
 	cesql "github.com/cloudevents/sdk-go/sql/v2"
 	cefn "github.com/cloudevents/sdk-go/sql/v2/function"
 	ceruntime "github.com/cloudevents/sdk-go/sql/v2/runtime"
+
+	kubeclient "knative.dev/pkg/client/injection/kube/client"
 )
 
 // Add a user defined function to validate correlation id, then return a cesql_filter
@@ -78,7 +76,7 @@ func NewCESQLCorrelationIdFilter(expr string) (eventfilter.Filter, error) {
 				}
 			}
 
-			secrets, err := getSecretsFromK8s()
+			secrets, err := getSecretsFromK8s("default")
 			if err != nil {
 				return false, err
 			}
@@ -91,31 +89,14 @@ func NewCESQLCorrelationIdFilter(expr string) (eventfilter.Filter, error) {
 			 * Check if the encrypted value matches with originalId
 			 */
 			for _, secret := range secrets {
-				key, keyFieldExists := secret.Data["key"]
-				algorithm, algorithmFieldExists := secret.Data["algorithm"]
+				res, err := verifySecret(secret, secretNamesToTry, originalId, encryptedIdBytes)
 
-				if keyFieldExists && algorithmFieldExists && secretNamesToTry[secret.Name] {
-					var decryptionFunc func(originalId string, encryptedIdBytes []byte, key []byte) (bool, error)
-					switch strings.ToUpper(string(algorithm)) {
-					case "AES", "AES-ECB":
-						decryptionFunc = compareWithAES
-					case "DES":
-						decryptionFunc = compareWithDES
-					case "3DES", "TRIPLEDES":
-						decryptionFunc = compareWithTripleDES
-					case "RC4":
-						decryptionFunc = compareWithRC4
-					default:
-						return false, errors.New("cipher algorithm not supported")
-					}
+				if err != nil {
+					return false, err
+				}
 
-					res, err := decryptionFunc(originalId, encryptedIdBytes, key)
-					if err != nil {
-						return false, err
-					}
-					if res {
-						return true, nil
-					}
+				if res {
+					return true, nil
 				}
 			}
 
@@ -128,26 +109,9 @@ func NewCESQLCorrelationIdFilter(expr string) (eventfilter.Filter, error) {
 	return NewCESQLFilter(expr)
 }
 
-func getSecretsFromK8s() ([]v1.Secret, error) {
-	// Assuming .kube/config is in the home directory
-	basePath, _ := os.UserHomeDir()
-	defaultKubeConfigPath := path.Join(basePath, ".kube", "config")
-
-	// Set up k8s client to get secrets
-	config, err := clientcmd.BuildConfigFromFlags("", defaultKubeConfigPath)
-	if err != nil {
-		return nil, err
-	}
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return nil, err
-	}
-	secrets, err := clientset.CoreV1().Secrets("default").List(context.Background(), metav1.ListOptions{})
-	if err != nil {
-		return nil, err
-	}
-
-	return secrets.Items, nil
+func getSecretsFromK8s(namespace string) ([]v1.Secret, error) {
+	secrets, err := kubeclient.Get(context.Background()).CoreV1().Secrets(namespace).List(context.Background(), metav1.ListOptions{})
+	return secrets.Items, err
 }
 
 func decodeBase64OrHex(encryptedId string) ([]byte, error) {
@@ -224,4 +188,37 @@ func getPlaintextFromBlock(block cipher.Block, encryptedIdBytes []byte) string {
 	}
 
 	return ""
+}
+
+func verifySecret(secret v1.Secret, secretNamesToTry map[string]bool, originalId string, encryptedIdBytes []byte) (bool, error) {
+	key, keyFieldExists := secret.Data["key"]
+	algorithm, algorithmFieldExists := secret.Data["algorithm"]
+
+	if keyFieldExists && algorithmFieldExists && secretNamesToTry[secret.Name] {
+		var decryptionFunc, err = determineDecryptionFunc(string(algorithm))
+
+		res, err := decryptionFunc(originalId, encryptedIdBytes, key)
+		if err != nil {
+			return false, err
+		} else {
+			return res, nil
+		}
+	}
+
+	return false, nil
+}
+
+func determineDecryptionFunc(algorithm string) (func(originalId string, encryptedIdBytes []byte, key []byte) (bool, error), error) {
+	switch strings.ToUpper(string(algorithm)) {
+	case "AES", "AES-ECB":
+		return compareWithAES, nil
+	case "DES":
+		return compareWithDES, nil
+	case "3DES", "TRIPLEDES":
+		return compareWithTripleDES, nil
+	case "RC4":
+		return compareWithRC4, nil
+	default:
+		return nil, errors.New("cipher algorithm not supported")
+	}
 }
