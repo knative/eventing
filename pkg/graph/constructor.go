@@ -472,7 +472,7 @@ func (g *Graph) AddSubscription(subscription messagingv1.Subscription) error {
 func getSources(ctx context.Context, config ConstructorConfig, logger zap.Logger) ([]duckv1.Source, error) {
 	sourceCRDs, err := config.DynamicClient.Resource(
 		schema.GroupVersionResource{
-			Group:    "apiextentions.k8s.io",
+			Group:    "apiextensions.k8s.io",
 			Version:  "v1",
 			Resource: "customresourcedefinitions",
 		},
