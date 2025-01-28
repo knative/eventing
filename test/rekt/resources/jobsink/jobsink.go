@@ -106,6 +106,22 @@ func WithJob(job batchv1.Job) manifest.CfgFn {
 	}
 }
 
+func WithIstioConfig() func(*batchv1.Job) {
+	return func(job *batchv1.Job) {
+		if job.Spec.Template.Labels == nil {
+			job.Spec.Template.Labels = make(map[string]string)
+		}
+		job.Spec.Template.Labels["sidecar.istio.io/inject"] = "true"
+
+		if job.Spec.Template.Annotations == nil {
+			job.Spec.Template.Annotations = make(map[string]string)
+		}
+		job.Spec.Template.Annotations["sidecar.istio.io/rewriteAppHTTPProbers"] = "true"
+		job.Spec.Template.Annotations["proxy.istio.io/config"] = `{ "holdApplicationUntilProxyStarts": true }`
+		job.Spec.Template.Annotations["sidecar.istio.io/inject"] = "true" // For backwards compatibility.
+	}
+}
+
 func WithForwarderJob(sink string, options ...func(*batchv1.Job)) manifest.CfgFn {
 	return func(cfg map[string]interface{}) {
 		j := batchv1.Job{
