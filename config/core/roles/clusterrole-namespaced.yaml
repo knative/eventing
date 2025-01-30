@@ -80,13 +80,26 @@ rules:
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
+  name: knative-sinks-namespaced-admin
+  labels:
+    rbac.authorization.k8s.io/aggregate-to-admin: "true"
+    app.kubernetes.io/version: devel
+    app.kubernetes.io/name: knative-eventing
+rules:
+  - apiGroups: ["sinks.knative.dev"]
+    resources: ["*"]
+    verbs: ["*"]
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
   name: knative-eventing-namespaced-edit
   labels:
     rbac.authorization.k8s.io/aggregate-to-edit: "true"
     app.kubernetes.io/version: devel
     app.kubernetes.io/name: knative-eventing
 rules:
-  - apiGroups: ["eventing.knative.dev", "messaging.knative.dev", "sources.knative.dev", "flows.knative.dev", "bindings.knative.dev"]
+  - apiGroups: ["eventing.knative.dev", "messaging.knative.dev", "sources.knative.dev", "flows.knative.dev", "bindings.knative.dev", "sinks.knative.dev"]
     resources: ["*"]
     verbs: ["create", "update", "patch", "delete"]
 ---
@@ -99,6 +112,6 @@ metadata:
     app.kubernetes.io/version: devel
     app.kubernetes.io/name: knative-eventing
 rules:
-  - apiGroups: ["eventing.knative.dev", "messaging.knative.dev", "sources.knative.dev", "flows.knative.dev", "bindings.knative.dev"]
+  - apiGroups: ["eventing.knative.dev", "messaging.knative.dev", "sources.knative.dev", "flows.knative.dev", "bindings.knative.dev", "sinks.knative.dev"]
     resources: ["*"]
     verbs: ["get", "list", "watch"]
