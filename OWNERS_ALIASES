@@ -13,11 +13,9 @@ aliases:
   - vyasgun
   docs-reviewers:
   - nainaz
-  - retocode
   - skonto
   docs-writers:
   - csantanapr
-  - retocode
   - skonto
   eventing-reviewers:
   - Leo6Leo
@@ -51,7 +49,6 @@ aliases:
   knative-admin:
   - aliok
   - cardil
-  - davidhadas
   - dprotaso
   - dsimansk
   - evankanderson
@@ -60,15 +57,13 @@ aliases:
   - knative-prow-robot
   - knative-prow-updater-robot
   - knative-test-reporter-robot
-  - nainaz
-  - psschwei
-  - retocode
-  - salaboy
+  - matzew
+  - nrrso
   - skonto
   - upodroid
   knative-release-leads:
+  - dprotaso
   - dsimansk
-  - retocode
   - skonto
   knative-robots:
   - knative-automation
@@ -105,32 +100,22 @@ aliases:
   - davidhadas
   - evankanderson
   serving-approvers:
-  - ReToCode
   - skonto
   serving-reviewers:
-  - izabelacg
-  - retocode
   - skonto
   serving-triage:
-  - izabelacg
-  - retocode
   - skonto
   serving-wg-leads:
   - dprotaso
   serving-writers:
-  - ReToCode
   - dprotaso
   - skonto
   steering-committee:
   - aliok
-  - davidhadas
   - dprotaso
-  - dsimansk
   - evankanderson
-  - nainaz
-  - psschwei
-  - salaboy
-  technical-oversight-committee: []
+  - matzew
+  - nrrso
   ux-wg-leads:
   - cali0707
   - leo6leo

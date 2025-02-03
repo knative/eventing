@@ -26,6 +26,7 @@ import (
 
 	"go.uber.org/zap"
 	v1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/integer"
@@ -250,17 +251,8 @@ func (a *autoscaler) mayCompact(logger *zap.SugaredLogger, s *st.State) error {
 		zap.Any("state", s),
 	)
 
-	// when there is only one pod there is nothing to move or number of pods is just enough!
-	if s.LastOrdinal < 1 || len(s.SchedulablePods) <= 1 {
-		return nil
-	}
-
-	// Determine if there is enough free capacity to
-	// move all vreplicas placed in the last pod to pods with a lower ordinal
-	freeCapacity := s.FreeCapacity() - s.Free(s.LastOrdinal)
-	usedInLastPod := s.Capacity - s.Free(s.LastOrdinal)
-
-	if freeCapacity >= usedInLastPod {
+	// Determine if there are vpods that need compaction
+	if s.Replicas != int32(len(s.FreeCap)) {
 		a.lastCompactAttempt = time.Now()
 		err := a.compact(s)
 		if err != nil {
@@ -285,9 +277,9 @@ func (a *autoscaler) compact(s *st.State) error {
 		for i := len(placements) - 1; i >= 0; i-- { //start from the last placement
 			ordinal := st.OrdinalFromPodName(placements[i].PodName)
 
-			if ordinal == s.LastOrdinal {
+			if ordinal >= s.Replicas {
 				pod, err = s.PodLister.Get(placements[i].PodName)
-				if err != nil {
+				if err != nil && !apierrors.IsNotFound(err) {
 					return fmt.Errorf("failed to get pod %s: %w", placements[i].PodName, err)
 				}
 

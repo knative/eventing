@@ -19,11 +19,13 @@ package dispatcher
 import (
 	"context"
 	"net/http"
+	"reflect"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	clientgotesting "k8s.io/client-go/testing"
@@ -661,4 +663,107 @@ func (f *fakeMultiChannelHandler) GetChannelHandler(host string) fanout.EventHan
 
 func (f *fakeMultiChannelHandler) CountChannelHandlers() int {
 	return len(f.handlers)
+}
+
+func Test_newConfigForInMemoryChannelAsyncHandler(t *testing.T) {
+	ctx, _ := SetupFakeContext(t, SetUpInformerSelector)
+
+	type args struct {
+		ctx context.Context
+		imc *v1.InMemoryChannel
+	}
+	tests := []struct {
+		name      string
+		args      args
+		wantAsync bool
+		wantErr   bool
+	}{
+		{
+			name: "async handler",
+			args: args{
+				ctx: ctx,
+				imc: &v1.InMemoryChannel{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "n",
+						Namespace: "ns",
+						Annotations: map[string]string{
+							v1.AsyncHandlerAnnotation: "true",
+						},
+					},
+					Status: v1.InMemoryChannelStatus{
+						ChannelableStatus: eventingduckv1.ChannelableStatus{
+							AddressStatus: duckv1.AddressStatus{
+								Address: &duckv1.Addressable{
+									URL: apis.HTTPS("something"),
+								},
+							},
+						},
+					},
+				},
+			},
+			wantAsync: true,
+			wantErr:   false,
+		},
+		{
+			name: "sync handler, default",
+			args: args{
+				ctx: ctx,
+				imc: &v1.InMemoryChannel{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "n",
+						Namespace: "ns",
+					},
+					Status: v1.InMemoryChannelStatus{
+						ChannelableStatus: eventingduckv1.ChannelableStatus{
+							AddressStatus: duckv1.AddressStatus{
+								Address: &duckv1.Addressable{
+									URL: apis.HTTPS("something"),
+								},
+							},
+						},
+					},
+				},
+			},
+			wantAsync: false,
+			wantErr:   false,
+		},
+		{
+			name: "sync handler, explicit",
+			args: args{
+				ctx: ctx,
+				imc: &v1.InMemoryChannel{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "n",
+						Namespace: "ns",
+						Annotations: map[string]string{
+							v1.AsyncHandlerAnnotation: "false",
+						},
+					},
+					Status: v1.InMemoryChannelStatus{
+						ChannelableStatus: eventingduckv1.ChannelableStatus{
+							AddressStatus: duckv1.AddressStatus{
+								Address: &duckv1.Addressable{
+									URL: apis.HTTPS("something"),
+								},
+							},
+						},
+					},
+				},
+			},
+			wantAsync: false,
+			wantErr:   false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := newConfigForInMemoryChannel(tt.args.ctx, tt.args.imc)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("newConfigForInMemoryChannel() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got.FanoutConfig.AsyncHandler, tt.wantAsync) {
+				t.Errorf("newConfigForInMemoryChannel() got = %v, want %v", got, tt.wantAsync)
+			}
+		})
+	}
 }

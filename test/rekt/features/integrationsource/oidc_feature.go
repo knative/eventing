@@ -55,7 +55,7 @@ func SendsEventsWithSinkRefOIDC() *feature.Feature {
 
 	f.Stable("integrationsource as event source").
 		Must("delivers events",
-			assert.OnStore(sink).MatchEvent(test.HasType("dev.knative.connector.event.timer")).AtLeast(1)).
+			assert.OnStore(sink).MatchEvent(test.HasType("dev.knative.eventing.timer")).AtLeast(1)).
 		Must("uses integrationsources identity for OIDC", assert.OnStore(sink).MatchWithContext(
 			assert.MatchKind(eventshub.EventReceived).WithContext(),
 			assert.MatchOIDCUserFromResource(integrationsource.Gvr(), src)).AtLeast(1)).

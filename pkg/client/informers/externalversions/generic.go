@@ -71,6 +71,8 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		// Group=eventing.knative.dev, Version=v1alpha1
 	case v1alpha1.SchemeGroupVersion.WithResource("eventpolicies"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Eventing().V1alpha1().EventPolicies().Informer()}, nil
+	case v1alpha1.SchemeGroupVersion.WithResource("requestreplies"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Eventing().V1alpha1().RequestReplies().Informer()}, nil
 
 		// Group=eventing.knative.dev, Version=v1beta1
 	case v1beta1.SchemeGroupVersion.WithResource("eventtypes"):
@@ -99,6 +101,8 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Messaging().V1().Subscriptions().Informer()}, nil
 
 		// Group=sinks.knative.dev, Version=v1alpha1
+	case sinksv1alpha1.SchemeGroupVersion.WithResource("integrationsinks"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Sinks().V1alpha1().IntegrationSinks().Informer()}, nil
 	case sinksv1alpha1.SchemeGroupVersion.WithResource("jobsinks"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Sinks().V1alpha1().JobSinks().Informer()}, nil
 

@@ -20,15 +20,7 @@ set -o pipefail
 
 source $(dirname $0)/../vendor/knative.dev/hack/codegen-library.sh
 
-# If we run with -mod=vendor here, then generate-groups.sh looks for vendor files in the wrong place.
-export GOFLAGS=-mod=
-
 echo "=== Update Codegen for $MODULE_NAME"
-
-# generate the code with:
-# --output-base    because this script should also be able to run inside the vendor dir of
-#                  k8s.io/kubernetes. The output-base is needed for the generators to output into the vendor dir
-#                  instead of the $GOPATH directly. For normal projects this can be dropped.
 
 group "Kubernetes Codegen"
 
@@ -43,7 +35,7 @@ ${REPO_ROOT_DIR}/hack/generate-knative.sh "injection" \
 K8S_TYPES=$(find ./vendor/k8s.io/api -type d -path '*/*/*/*/*/*' | cut -d'/' -f 5-6 | sort | sed 's@/@:@g' |
   grep -v "abac:" | \
   grep -v "admission:" | \
-  grep -v "admissionregistration:" \
+  grep -v "admissionregistration:" | \
   grep -v "componentconfig:" | \
   grep -v "imagepolicy:" | \
   grep -v "resource:" | \

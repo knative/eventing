@@ -28,12 +28,17 @@ import (
 
 type SinksV1alpha1Interface interface {
 	RESTClient() rest.Interface
+	IntegrationSinksGetter
 	JobSinksGetter
 }
 
 // SinksV1alpha1Client is used to interact with features provided by the sinks.knative.dev group.
 type SinksV1alpha1Client struct {
 	restClient rest.Interface
+}
+
+func (c *SinksV1alpha1Client) IntegrationSinks(namespace string) IntegrationSinkInterface {
+	return newIntegrationSinks(c, namespace)
 }
 
 func (c *SinksV1alpha1Client) JobSinks(namespace string) JobSinkInterface {

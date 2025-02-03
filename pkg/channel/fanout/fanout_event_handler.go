@@ -60,8 +60,11 @@ type Subscription struct {
 // Config for a fanout.EventHandler.
 type Config struct {
 	Subscriptions []Subscription `json:"subscriptions"`
-	// Deprecated: AsyncHandler controls whether the Subscriptions are called synchronous or asynchronously.
+	// AsyncHandler controls whether the Subscriptions are called synchronous or asynchronously.
 	// It is expected to be false when used as a sidecar.
+	//
+	// Async handler is subject to event loss since it responds with 200 before forwarding the event
+	// to all subscriptions.
 	AsyncHandler bool `json:"asyncHandler,omitempty"`
 }
 

@@ -51,6 +51,10 @@ type EnvConfig struct {
 	BrokerTemplatesDir string `envconfig:"BROKER_TEMPLATES"`
 }
 
+func (cfg EnvConfig) IsMTChannelBasedBroker() bool {
+	return cfg.BrokerClass == "" || cfg.BrokerClass == "MTChannelBasedBroker"
+}
+
 func init() {
 	// Process EventingGlobal.
 	if err := envconfig.Process("", &EnvCfg); err != nil {

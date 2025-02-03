@@ -25,11 +25,11 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/pkg/apis"
 	configmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap"
-	endpointsinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/endpoints"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/injection/clients/dynamicclient"
 	secretinformer "knative.dev/pkg/injection/clients/namespacedkube/informers/core/v1/secret"
+	namespacedinformerfactory "knative.dev/pkg/injection/clients/namespacedkube/informers/factory"
 	"knative.dev/pkg/logging"
 	pkgreconciler "knative.dev/pkg/reconciler"
 	"knative.dev/pkg/resolver"
@@ -69,7 +69,12 @@ func NewController(
 	logger := logging.FromContext(ctx)
 	brokerInformer := brokerinformer.Get(ctx)
 	subscriptionInformer := subscriptioninformer.Get(ctx)
-	endpointsInformer := endpointsinformer.Get(ctx)
+
+	endpointsInformer := namespacedinformerfactory.Get(ctx).Core().V1().Endpoints()
+	if err := controller.StartInformers(ctx.Done(), endpointsInformer.Informer()); err != nil {
+		logger.Fatalw("Failed to start namespaced endpoints informer", zap.Error(err))
+	}
+
 	configmapInformer := configmapinformer.Get(ctx)
 	secretInformer := secretinformer.Get(ctx)
 	eventPolicyInformer := eventpolicyinformer.Get(ctx)

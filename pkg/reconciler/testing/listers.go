@@ -87,7 +87,7 @@ func (l *Listers) GetEventingObjects() []runtime.Object {
 	return l.sorter.ObjectsForSchemeFunc(fakeeventingclientset.AddToScheme)
 }
 
-func (l *Listers) GetAPIExtentionsObjects() []runtime.Object {
+func (l *Listers) GetAPIExtensionsObjects() []runtime.Object {
 	return l.sorter.ObjectsForSchemeFunc(fakeapiextensionsclientset.AddToScheme)
 }
 

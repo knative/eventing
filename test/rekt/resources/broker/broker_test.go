@@ -168,7 +168,7 @@ func ExampleWithAnnotations() {
 	//   name: foo
 	//   namespace: bar
 	//   annotations:
-	//     eventing.knative.dev/foo: bar
+	//     eventing.knative.dev/foo: "bar"
 	// spec:
 }
 

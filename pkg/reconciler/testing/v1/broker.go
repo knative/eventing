@@ -61,6 +61,15 @@ func WithBrokerFinalizers(finalizers ...string) BrokerOption {
 	}
 }
 
+func WithBrokerAnnotation(key, value string) BrokerOption {
+	return func(b *v1.Broker) {
+		if b.Annotations == nil {
+			b.Annotations = map[string]string{}
+		}
+		b.Annotations[key] = value
+	}
+}
+
 func WithBrokerResourceVersion(rv string) BrokerOption {
 	return func(b *v1.Broker) {
 		b.ResourceVersion = rv
@@ -325,5 +334,11 @@ func WithBrokerEventPoliciesReadyBecauseOIDCDisabled() BrokerOption {
 func WithBrokerEventPoliciesReadyBecauseNoPolicyAndOIDCEnabled() BrokerOption {
 	return func(b *v1.Broker) {
 		b.Status.MarkEventPoliciesTrueWithReason("DefaultAuthorizationMode", "Default authz mode is %q", feature.AuthorizationAllowSameNamespace)
+	}
+}
+
+func WithBrokerEventPoliciesReadyAndDefaultAuthorizationMode(authMode string) BrokerOption {
+	return func(b *v1.Broker) {
+		b.Status.MarkEventPoliciesTrueWithReason("DefaultAuthorizationMode", "Default authz mode is %q", authMode)
 	}
 }

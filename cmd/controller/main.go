@@ -20,12 +20,6 @@ import (
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
-	"errors"
-	"log"
-	"net/http"
-	"os"
-	"time"
-
 	"knative.dev/pkg/injection/sharedmain"
 
 	filteredFactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
@@ -41,7 +35,8 @@ import (
 	"knative.dev/eventing/pkg/reconciler/channel"
 	"knative.dev/eventing/pkg/reconciler/containersource"
 	"knative.dev/eventing/pkg/reconciler/eventtype"
-	"knative.dev/eventing/pkg/reconciler/integrationsource"
+	integrationsink "knative.dev/eventing/pkg/reconciler/integration/sink"
+	integrationsource "knative.dev/eventing/pkg/reconciler/integration/source"
 	"knative.dev/eventing/pkg/reconciler/parallel"
 	"knative.dev/eventing/pkg/reconciler/pingsource"
 	"knative.dev/eventing/pkg/reconciler/sequence"
@@ -52,35 +47,7 @@ import (
 )
 
 func main() {
-
 	ctx := signals.NewContext()
-
-	port := os.Getenv("PROBES_PORT")
-	if port == "" {
-		port = "8080"
-	}
-
-	// sets up liveness and readiness probes.
-	server := http.Server{
-		ReadTimeout: 5 * time.Second,
-		Handler:     http.HandlerFunc(handler),
-		Addr:        ":" + port,
-	}
-
-	go func() {
-
-		go func() {
-			<-ctx.Done()
-			_ = server.Shutdown(ctx)
-		}()
-
-		// start the web server on port and accept requests
-		log.Printf("Readiness and health check server listening on port %s", port)
-
-		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Fatal(err)
-		}
-	}()
 
 	ctx = filteredFactory.WithSelectors(ctx,
 		auth.OIDCLabelSelector,
@@ -112,13 +79,10 @@ func main() {
 
 		// Sinks
 		jobsink.NewController,
+		integrationsink.NewController,
 
 		// Sugar
 		sugarnamespace.NewController,
 		sugartrigger.NewController,
 	)
-}
-
-func handler(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
 }

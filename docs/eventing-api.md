@@ -52,7 +52,7 @@ Resource Types:
 <h3 id="duck.knative.dev/v1.AppliedEventPoliciesStatus">AppliedEventPoliciesStatus
 </h3>
 <p>
-(<em>Appears on:</em><a href="#duck.knative.dev/v1.ChannelableStatus">ChannelableStatus</a>, <a href="#eventing.knative.dev/v1.BrokerStatus">BrokerStatus</a>, <a href="#flows.knative.dev/v1.ParallelStatus">ParallelStatus</a>, <a href="#flows.knative.dev/v1.SequenceStatus">SequenceStatus</a>, <a href="#sinks.knative.dev/v1alpha1.JobSinkStatus">JobSinkStatus</a>)
+(<em>Appears on:</em><a href="#duck.knative.dev/v1.ChannelableStatus">ChannelableStatus</a>, <a href="#eventing.knative.dev/v1.BrokerStatus">BrokerStatus</a>, <a href="#eventing.knative.dev/v1alpha1.RequestReplyStatus">RequestReplyStatus</a>, <a href="#flows.knative.dev/v1.ParallelStatus">ParallelStatus</a>, <a href="#flows.knative.dev/v1.SequenceStatus">SequenceStatus</a>, <a href="#sinks.knative.dev/v1alpha1.IntegrationSinkStatus">IntegrationSinkStatus</a>, <a href="#sinks.knative.dev/v1alpha1.JobSinkStatus">JobSinkStatus</a>)
 </p>
 <p>
 <p>AppliedEventPoliciesStatus contains the list of policies which apply to a resource.
@@ -393,7 +393,7 @@ AppliedEventPoliciesStatus
 <h3 id="duck.knative.dev/v1.DeliverySpec">DeliverySpec
 </h3>
 <p>
-(<em>Appears on:</em><a href="#duck.knative.dev/v1.ChannelableSpec">ChannelableSpec</a>, <a href="#duck.knative.dev/v1.SubscriberSpec">SubscriberSpec</a>, <a href="#eventing.knative.dev/v1.BrokerSpec">BrokerSpec</a>, <a href="#eventing.knative.dev/v1.TriggerSpec">TriggerSpec</a>, <a href="#flows.knative.dev/v1.ParallelBranch">ParallelBranch</a>, <a href="#flows.knative.dev/v1.SequenceStep">SequenceStep</a>, <a href="#messaging.knative.dev/v1.SubscriptionSpec">SubscriptionSpec</a>)
+(<em>Appears on:</em><a href="#duck.knative.dev/v1.ChannelableSpec">ChannelableSpec</a>, <a href="#duck.knative.dev/v1.SubscriberSpec">SubscriberSpec</a>, <a href="#eventing.knative.dev/v1.BrokerSpec">BrokerSpec</a>, <a href="#eventing.knative.dev/v1.TriggerSpec">TriggerSpec</a>, <a href="#eventing.knative.dev/v1alpha1.RequestReplySpec">RequestReplySpec</a>, <a href="#flows.knative.dev/v1.ParallelBranch">ParallelBranch</a>, <a href="#flows.knative.dev/v1.SequenceStep">SequenceStep</a>, <a href="#messaging.knative.dev/v1.SubscriptionSpec">SubscriptionSpec</a>)
 </p>
 <p>
 <p>DeliverySpec contains the delivery options for event senders,
@@ -2648,6 +2648,8 @@ knative.dev/pkg/apis/duck/v1.AuthStatus
 Resource Types:
 <ul><li>
 <a href="#eventing.knative.dev/v1alpha1.EventPolicy">EventPolicy</a>
+</li><li>
+<a href="#eventing.knative.dev/v1alpha1.RequestReply">RequestReply</a>
 </li></ul>
 <h3 id="eventing.knative.dev/v1alpha1.EventPolicy">EventPolicy
 </h3>
@@ -2765,6 +2767,150 @@ always evaluate to true.</p>
 <em>
 <a href="#eventing.knative.dev/v1alpha1.EventPolicyStatus">
 EventPolicyStatus
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Status represents the current state of the EventPolicy.
+This data may be out of date.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="eventing.knative.dev/v1alpha1.RequestReply">RequestReply
+</h3>
+<p>
+<p>RequestRepluy represents synchronous interface to sending and receiving events from a Broker.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>apiVersion</code><br/>
+string</td>
+<td>
+<code>
+eventing.knative.dev/v1alpha1
+</code>
+</td>
+</tr>
+<tr>
+<td>
+<code>kind</code><br/>
+string
+</td>
+<td><code>RequestReply</code></td>
+</tr>
+<tr>
+<td>
+<code>metadata</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#objectmeta-v1-meta">
+Kubernetes meta/v1.ObjectMeta
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+Refer to the Kubernetes API documentation for the fields of the
+<code>metadata</code> field.
+</td>
+</tr>
+<tr>
+<td>
+<code>spec</code><br/>
+<em>
+<a href="#eventing.knative.dev/v1alpha1.RequestReplySpec">
+RequestReplySpec
+</a>
+</em>
+</td>
+<td>
+<p>Spec defines the desired state of the EventPolicy.</p>
+<br/>
+<br/>
+<table>
+<tr>
+<td>
+<code>brokerRef</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#KReference">
+knative.dev/pkg/apis/duck/v1.KReference
+</a>
+</em>
+</td>
+<td>
+<p>BrokerRef contains the reference to the broker the RequestReply sends events to.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>correlationAttribute</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<code>replyAttribute</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<code>timeout</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<code>delivery</code><br/>
+<em>
+<a href="#duck.knative.dev/v1.DeliverySpec">
+DeliverySpec
+</a>
+</em>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<code>secrets</code><br/>
+<em>
+[]string
+</em>
+</td>
+<td>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+<tr>
+<td>
+<code>status</code><br/>
+<em>
+<a href="#eventing.knative.dev/v1alpha1.RequestReplyStatus">
+RequestReplyStatus
 </a>
 </em>
 </td>
@@ -3123,6 +3269,159 @@ string
 <td>
 <p>Name of the referent.
 More info: <a href="https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names">https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="eventing.knative.dev/v1alpha1.RequestReplySpec">RequestReplySpec
+</h3>
+<p>
+(<em>Appears on:</em><a href="#eventing.knative.dev/v1alpha1.RequestReply">RequestReply</a>)
+</p>
+<p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>brokerRef</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#KReference">
+knative.dev/pkg/apis/duck/v1.KReference
+</a>
+</em>
+</td>
+<td>
+<p>BrokerRef contains the reference to the broker the RequestReply sends events to.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>correlationAttribute</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<code>replyAttribute</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<code>timeout</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<code>delivery</code><br/>
+<em>
+<a href="#duck.knative.dev/v1.DeliverySpec">
+DeliverySpec
+</a>
+</em>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<code>secrets</code><br/>
+<em>
+[]string
+</em>
+</td>
+<td>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="eventing.knative.dev/v1alpha1.RequestReplyStatus">RequestReplyStatus
+</h3>
+<p>
+(<em>Appears on:</em><a href="#eventing.knative.dev/v1alpha1.RequestReply">RequestReply</a>)
+</p>
+<p>
+<p>RequestReplyStatus represents the current state of a RequestReply.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>Status</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#Status">
+knative.dev/pkg/apis/duck/v1.Status
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>Status</code> are embedded into this type.)
+</p>
+<p>inherits duck/v1 Status, which currently provides:
+* ObservedGeneration - the &lsquo;Generation&rsquo; of the Service that was last processed by the controller.
+* Conditions - the latest available observations of a resource&rsquo;s current state.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>AddressStatus</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#AddressStatus">
+knative.dev/pkg/apis/duck/v1.AddressStatus
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>AddressStatus</code> are embedded into this type.)
+</p>
+<em>(Optional)</em>
+<p>AddressStatus is the part where the RequestReply fulfills the Addressable contract.
+It exposes the endpoint as an URI to get events delivered.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>AppliedEventPoliciesStatus</code><br/>
+<em>
+<a href="#duck.knative.dev/v1.AppliedEventPoliciesStatus">
+AppliedEventPoliciesStatus
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>AppliedEventPoliciesStatus</code> are embedded into this type.)
+</p>
+<em>(Optional)</em>
+<p>AppliedEventPoliciesStatus contains the list of EventPolicies which apply to this Broker.</p>
 </td>
 </tr>
 </tbody>
@@ -5845,8 +6144,109 @@ resolved delivery options.</p>
 </p>
 Resource Types:
 <ul><li>
+<a href="#sinks.knative.dev/v1alpha1.IntegrationSink">IntegrationSink</a>
+</li><li>
 <a href="#sinks.knative.dev/v1alpha1.JobSink">JobSink</a>
 </li></ul>
+<h3 id="sinks.knative.dev/v1alpha1.IntegrationSink">IntegrationSink
+</h3>
+<p>
+<p>IntegrationSink is the Schema for the IntegrationSink API.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>apiVersion</code><br/>
+string</td>
+<td>
+<code>
+sinks.knative.dev/v1alpha1
+</code>
+</td>
+</tr>
+<tr>
+<td>
+<code>kind</code><br/>
+string
+</td>
+<td><code>IntegrationSink</code></td>
+</tr>
+<tr>
+<td>
+<code>metadata</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#objectmeta-v1-meta">
+Kubernetes meta/v1.ObjectMeta
+</a>
+</em>
+</td>
+<td>
+Refer to the Kubernetes API documentation for the fields of the
+<code>metadata</code> field.
+</td>
+</tr>
+<tr>
+<td>
+<code>spec</code><br/>
+<em>
+<a href="#sinks.knative.dev/v1alpha1.IntegrationSinkSpec">
+IntegrationSinkSpec
+</a>
+</em>
+</td>
+<td>
+<br/>
+<br/>
+<table>
+<tr>
+<td>
+<code>aws</code><br/>
+<em>
+<a href="#sinks.knative.dev/v1alpha1.Aws">
+Aws
+</a>
+</em>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<code>log</code><br/>
+<em>
+<a href="#sinks.knative.dev/v1alpha1.Log">
+Log
+</a>
+</em>
+</td>
+<td>
+<p>AWS source configuration</p>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+<tr>
+<td>
+<code>status</code><br/>
+<em>
+<a href="#sinks.knative.dev/v1alpha1.IntegrationSinkStatus">
+IntegrationSinkStatus
+</a>
+</em>
+</td>
+<td>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="sinks.knative.dev/v1alpha1.JobSink">JobSink
 </h3>
 <p>
@@ -5931,6 +6331,190 @@ JobSinkStatus
 </em>
 </td>
 <td>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="sinks.knative.dev/v1alpha1.Aws">Aws
+</h3>
+<p>
+(<em>Appears on:</em><a href="#sinks.knative.dev/v1alpha1.IntegrationSinkSpec">IntegrationSinkSpec</a>)
+</p>
+<p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>s3</code><br/>
+<em>
+knative.dev/eventing/pkg/apis/common/integration/v1alpha1.AWSS3
+</em>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<code>sqs</code><br/>
+<em>
+knative.dev/eventing/pkg/apis/common/integration/v1alpha1.AWSSQS
+</em>
+</td>
+<td>
+<p>S3 source configuration</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>sns</code><br/>
+<em>
+knative.dev/eventing/pkg/apis/common/integration/v1alpha1.AWSSNS
+</em>
+</td>
+<td>
+<p>SQS source configuration</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>auth</code><br/>
+<em>
+knative.dev/eventing/pkg/apis/common/integration/v1alpha1.Auth
+</em>
+</td>
+<td>
+<p>SNS source configuration</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="sinks.knative.dev/v1alpha1.ExecutionMode">ExecutionMode
+(<code>string</code> alias)</p></h3>
+<p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr><td><p>&#34;batch&#34;</p></td>
+<td></td>
+</tr></tbody>
+</table>
+<h3 id="sinks.knative.dev/v1alpha1.IntegrationSinkSpec">IntegrationSinkSpec
+</h3>
+<p>
+(<em>Appears on:</em><a href="#sinks.knative.dev/v1alpha1.IntegrationSink">IntegrationSink</a>)
+</p>
+<p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>aws</code><br/>
+<em>
+<a href="#sinks.knative.dev/v1alpha1.Aws">
+Aws
+</a>
+</em>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<code>log</code><br/>
+<em>
+<a href="#sinks.knative.dev/v1alpha1.Log">
+Log
+</a>
+</em>
+</td>
+<td>
+<p>AWS source configuration</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="sinks.knative.dev/v1alpha1.IntegrationSinkStatus">IntegrationSinkStatus
+</h3>
+<p>
+(<em>Appears on:</em><a href="#sinks.knative.dev/v1alpha1.IntegrationSink">IntegrationSink</a>)
+</p>
+<p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>Status</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#Status">
+knative.dev/pkg/apis/duck/v1.Status
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>Status</code> are embedded into this type.)
+</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>AddressStatus</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#AddressStatus">
+knative.dev/pkg/apis/duck/v1.AddressStatus
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>AddressStatus</code> are embedded into this type.)
+</p>
+<em>(Optional)</em>
+<p>AddressStatus is the part where the JobSink fulfills the Addressable contract.
+It exposes the endpoint as an URI to get events delivered.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>AppliedEventPoliciesStatus</code><br/>
+<em>
+<a href="#duck.knative.dev/v1.AppliedEventPoliciesStatus">
+AppliedEventPoliciesStatus
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>AppliedEventPoliciesStatus</code> are embedded into this type.)
+</p>
+<em>(Optional)</em>
+<p>AppliedEventPoliciesStatus contains the list of EventPolicies which apply to this JobSink</p>
 </td>
 </tr>
 </tbody>
@@ -6071,6 +6655,165 @@ string
 </em>
 </td>
 <td>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="sinks.knative.dev/v1alpha1.Log">Log
+</h3>
+<p>
+(<em>Appears on:</em><a href="#sinks.knative.dev/v1alpha1.IntegrationSinkSpec">IntegrationSinkSpec</a>)
+</p>
+<p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>loggerName</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<code>level</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Name of the logging category to use</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>logMask</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Logging level to use</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>marker</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Mask sensitive information in the log</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>multiline</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>An optional Marker name to use</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>showAllProperties</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>If enabled, outputs each information on a newline</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>showBody</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Show all of the exchange properties (both internal and custom)</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>showBodyType</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Show the message body</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>showExchangePattern</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Show the body Java type</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>showHeaders</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Show the Message Exchange Pattern (MEP)</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>showProperties</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Show the headers received</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>showStreams</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Show the exchange properties (only custom)</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>showCachedStreams</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Show the stream bodies</p>
 </td>
 </tr>
 </tbody>
@@ -7408,512 +8151,6 @@ IntegrationSourceStatus
 </tr>
 </tbody>
 </table>
-<h3 id="sources.knative.dev/v1alpha1.AWSCommon">AWSCommon
-</h3>
-<p>
-(<em>Appears on:</em><a href="#sources.knative.dev/v1alpha1.AWSDDBStreams">AWSDDBStreams</a>, <a href="#sources.knative.dev/v1alpha1.AWSS3">AWSS3</a>, <a href="#sources.knative.dev/v1alpha1.AWSSQS">AWSSQS</a>)
-</p>
-<p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>region</code><br/>
-<em>
-string
-</em>
-</td>
-<td>
-<p>Auth is the S3 authentication (accessKey/secretKey) configuration.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>profileCredentialsName</code><br/>
-<em>
-string
-</em>
-</td>
-<td>
-<p>AWS region</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>sessionToken</code><br/>
-<em>
-string
-</em>
-</td>
-<td>
-<p>Profile name for profile credentials provider</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>uriEndpointOverride</code><br/>
-<em>
-string
-</em>
-</td>
-<td>
-<p>Session token</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>overrideEndpoint</code><br/>
-<em>
-bool
-</em>
-</td>
-<td>
-<p>Override endpoint URI</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="sources.knative.dev/v1alpha1.AWSDDBStreams">AWSDDBStreams
-</h3>
-<p>
-(<em>Appears on:</em><a href="#sources.knative.dev/v1alpha1.Aws">Aws</a>)
-</p>
-<p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>AWSCommon</code><br/>
-<em>
-<a href="#sources.knative.dev/v1alpha1.AWSCommon">
-AWSCommon
-</a>
-</em>
-</td>
-<td>
-<p>
-(Members of <code>AWSCommon</code> are embedded into this type.)
-</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>table</code><br/>
-<em>
-string
-</em>
-</td>
-<td>
-<p>Embeds AWSCommon to inherit its fields in JSON</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>streamIteratorType</code><br/>
-<em>
-string
-</em>
-</td>
-<td>
-<p>The name of the DynamoDB table</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>delay</code><br/>
-<em>
-int
-</em>
-</td>
-<td>
-<p>Defines where in the DynamoDB stream to start getting records</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="sources.knative.dev/v1alpha1.AWSS3">AWSS3
-</h3>
-<p>
-(<em>Appears on:</em><a href="#sources.knative.dev/v1alpha1.Aws">Aws</a>)
-</p>
-<p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>AWSCommon</code><br/>
-<em>
-<a href="#sources.knative.dev/v1alpha1.AWSCommon">
-AWSCommon
-</a>
-</em>
-</td>
-<td>
-<p>
-(Members of <code>AWSCommon</code> are embedded into this type.)
-</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>bucketNameOrArn</code><br/>
-<em>
-string
-</em>
-</td>
-<td>
-<p>Embeds AWSCommon to inherit its fields in JSON</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>deleteAfterRead</code><br/>
-<em>
-bool
-</em>
-</td>
-<td>
-<p>S3 Bucket name or ARN</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>moveAfterRead</code><br/>
-<em>
-bool
-</em>
-</td>
-<td>
-<p>Auto-delete objects after reading</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>destinationBucket</code><br/>
-<em>
-string
-</em>
-</td>
-<td>
-<p>Move objects after reading</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>destinationBucketPrefix</code><br/>
-<em>
-string
-</em>
-</td>
-<td>
-<p>Destination bucket for moved objects</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>destinationBucketSuffix</code><br/>
-<em>
-string
-</em>
-</td>
-<td>
-<p>Prefix for moved objects</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>autoCreateBucket</code><br/>
-<em>
-bool
-</em>
-</td>
-<td>
-<p>Suffix for moved objects</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>prefix</code><br/>
-<em>
-string
-</em>
-</td>
-<td>
-<p>Auto-create S3 bucket</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>ignoreBody</code><br/>
-<em>
-bool
-</em>
-</td>
-<td>
-<p>S3 bucket prefix for search</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>forcePathStyle</code><br/>
-<em>
-bool
-</em>
-</td>
-<td>
-<p>Ignore object body</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>delay</code><br/>
-<em>
-int
-</em>
-</td>
-<td>
-<p>Force path style for bucket access</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>maxMessagesPerPoll</code><br/>
-<em>
-int
-</em>
-</td>
-<td>
-<p>Delay between polls in milliseconds</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="sources.knative.dev/v1alpha1.AWSSQS">AWSSQS
-</h3>
-<p>
-(<em>Appears on:</em><a href="#sources.knative.dev/v1alpha1.Aws">Aws</a>)
-</p>
-<p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>AWSCommon</code><br/>
-<em>
-<a href="#sources.knative.dev/v1alpha1.AWSCommon">
-AWSCommon
-</a>
-</em>
-</td>
-<td>
-<p>
-(Members of <code>AWSCommon</code> are embedded into this type.)
-</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>queueNameOrArn</code><br/>
-<em>
-string
-</em>
-</td>
-<td>
-<p>Embeds AWSCommon to inherit its fields in JSON</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>deleteAfterRead</code><br/>
-<em>
-bool
-</em>
-</td>
-<td>
-<p>SQS Queue name or ARN</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>autoCreateQueue</code><br/>
-<em>
-bool
-</em>
-</td>
-<td>
-<p>Auto-delete messages after reading</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>amazonAWSHost</code><br/>
-<em>
-string
-</em>
-</td>
-<td>
-<p>Auto-create SQS queue</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>protocol</code><br/>
-<em>
-string
-</em>
-</td>
-<td>
-<p>AWS host</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>queueURL</code><br/>
-<em>
-string
-</em>
-</td>
-<td>
-<p>Communication protocol (http/https)</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>greedy</code><br/>
-<em>
-bool
-</em>
-</td>
-<td>
-<p>Full SQS queue URL</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>delay</code><br/>
-<em>
-int
-</em>
-</td>
-<td>
-<p>Greedy scheduler</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>maxMessagesPerPoll</code><br/>
-<em>
-int
-</em>
-</td>
-<td>
-<p>Delay between polls in milliseconds</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>waitTimeSeconds</code><br/>
-<em>
-int
-</em>
-</td>
-<td>
-<p>Max messages to return (1-10)</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>visibilityTimeout</code><br/>
-<em>
-int
-</em>
-</td>
-<td>
-<p>Wait time for messages</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="sources.knative.dev/v1alpha1.Auth">Auth
-</h3>
-<p>
-(<em>Appears on:</em><a href="#sources.knative.dev/v1alpha1.Aws">Aws</a>)
-</p>
-<p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>secret</code><br/>
-<em>
-<a href="#sources.knative.dev/v1alpha1.Secret">
-Secret
-</a>
-</em>
-</td>
-<td>
-<p>Auth Secret</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>accessKey</code><br/>
-<em>
-string
-</em>
-</td>
-<td>
-<p>AccessKey is the AWS access key ID.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>secretKey</code><br/>
-<em>
-string
-</em>
-</td>
-<td>
-<p>SecretKey is the AWS secret access key.</p>
-</td>
-</tr>
-</tbody>
-</table>
 <h3 id="sources.knative.dev/v1alpha1.Aws">Aws
 </h3>
 <p>
@@ -7933,9 +8170,7 @@ string
 <td>
 <code>s3</code><br/>
 <em>
-<a href="#sources.knative.dev/v1alpha1.AWSS3">
-AWSS3
-</a>
+knative.dev/eventing/pkg/apis/common/integration/v1alpha1.AWSS3
 </em>
 </td>
 <td>
@@ -7945,9 +8180,7 @@ AWSS3
 <td>
 <code>sqs</code><br/>
 <em>
-<a href="#sources.knative.dev/v1alpha1.AWSSQS">
-AWSSQS
-</a>
+knative.dev/eventing/pkg/apis/common/integration/v1alpha1.AWSSQS
 </em>
 </td>
 <td>
@@ -7956,11 +8189,9 @@ AWSSQS
 </tr>
 <tr>
 <td>
-<code>ddb-streams</code><br/>
+<code>ddbStreams</code><br/>
 <em>
-<a href="#sources.knative.dev/v1alpha1.AWSDDBStreams">
-AWSDDBStreams
-</a>
+knative.dev/eventing/pkg/apis/common/integration/v1alpha1.AWSDDBStreams
 </em>
 </td>
 <td>
@@ -7971,9 +8202,7 @@ AWSDDBStreams
 <td>
 <code>auth</code><br/>
 <em>
-<a href="#sources.knative.dev/v1alpha1.Auth">
-Auth
-</a>
+knative.dev/eventing/pkg/apis/common/integration/v1alpha1.Auth
 </em>
 </td>
 <td>
@@ -8081,64 +8310,6 @@ processed by the controller.
 state.
 * SinkURI - the current active sink URI that has been configured for the
 Source.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="sources.knative.dev/v1alpha1.Secret">Secret
-</h3>
-<p>
-(<em>Appears on:</em><a href="#sources.knative.dev/v1alpha1.Auth">Auth</a>)
-</p>
-<p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>ref</code><br/>
-<em>
-<a href="#sources.knative.dev/v1alpha1.SecretReference">
-SecretReference
-</a>
-</em>
-</td>
-<td>
-<p>Secret reference for SASL and SSL configurations.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="sources.knative.dev/v1alpha1.SecretReference">SecretReference
-</h3>
-<p>
-(<em>Appears on:</em><a href="#sources.knative.dev/v1alpha1.Secret">Secret</a>)
-</p>
-<p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>name</code><br/>
-<em>
-string
-</em>
-</td>
-<td>
-<p>Secret name.</p>
 </td>
 </tr>
 </tbody>

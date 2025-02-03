@@ -67,7 +67,7 @@ func MakeFactory(ctor Ctor, unstructured bool, logger *zap.SugaredLogger) Factor
 
 		ctx, kubeClient := fakekubeclient.With(ctx, ls.GetKubeObjects()...)
 		ctx, client := fakeeventingclient.With(ctx, ls.GetEventingObjects()...)
-		ctx, apiextclient := fakeapiextclient.With(ctx, ls.GetAPIExtentionsObjects()...)
+		ctx, apiextclient := fakeapiextclient.With(ctx, ls.GetAPIExtensionsObjects()...)
 		ctx, dynamicClient := fakedynamicclient.With(ctx,
 			NewScheme(), ToUnstructured(t, r.Objects)...)
 

@@ -104,7 +104,7 @@ spec:
                     s3:
                       type: object
                       properties:
-                        bucketNameOrArn:
+                        arn:
                           type: string
                           title: Bucket Name
                           description: The S3 Bucket name or Amazon Resource Name (ARN).
@@ -155,16 +155,6 @@ spec:
                             true overrides any behavior defined by the `includeBody` option. If
                             false, the S3 object is put in the body.
                           default: false
-                        profileCredentialsName:
-                          type: string
-                          title: Profile Credentials Name
-                          description: If using a profile credentials provider this parameter
-                            will set the profile name.
-                        sessionToken:
-                          type: string
-                          title: Session Token
-                          description: Amazon AWS Session Token used when the user needs to assume
-                            a IAM role.
                         uriEndpointOverride:
                           type: string
                           title: Overwrite Endpoint URI
@@ -199,7 +189,7 @@ spec:
                     sqs:
                       type: object
                       properties:
-                        queueNameOrArn:
+                        arn:
                           type: string
                           title: Queue Name
                           description: The SQS Queue Name or ARN
@@ -217,7 +207,7 @@ spec:
                           title: Autocreate Queue
                           description: Setting the autocreation of the SQS queue.
                           default: false
-                        amazonAWSHost:
+                        host:
                           type: string
                           title: AWS Host
                           description: The hostname of the Amazon AWS cloud.
@@ -232,16 +222,6 @@ spec:
                           type: string
                           title: Queue URL
                           description: The full SQS Queue URL (required if using KEDA)
-                        profileCredentialsName:
-                          type: string
-                          title: Profile Credentials Name
-                          description: If using a profile credentials provider this parameter
-                            will set the profile name.
-                        sessionToken:
-                          type: string
-                          title: Session Token
-                          description: Amazon AWS Session Token used when the user needs to assume
-                            a IAM role.
                         uriEndpointOverride:
                           type: string
                           title: Overwrite Endpoint URI
@@ -287,7 +267,7 @@ spec:
                           description: The duration (in seconds) that the received messages are
                             hidden from subsequent retrieve requests after being retrieved by
                             a ReceiveMessage request.
-                    ddb-streams:
+                    ddbStreams:
                       type: object
                       properties:
                         table:
@@ -306,16 +286,6 @@ spec:
                             Note that using FROM_START can cause a significant delay before the stream
                             has caught up to real-time.
                           default: FROM_LATEST
-                        profileCredentialsName:
-                          type: string
-                          title: Profile Credentials Name
-                          description: If using a profile credentials provider this parameter
-                            will set the profile name.
-                        sessionToken:
-                          type: string
-                          title: Session Token
-                          description: Amazon AWS Session Token used when the user needs to assume
-                            an IAM role.
                         uriEndpointOverride:
                           type: string
                           title: Overwrite Endpoint URI

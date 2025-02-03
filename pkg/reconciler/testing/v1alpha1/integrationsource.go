@@ -19,6 +19,8 @@ package v1alpha1
 import (
 	"context"
 
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
@@ -69,5 +71,15 @@ func WithIntegrationSourcePropagateContainerSourceStatus(status *v1.ContainerSou
 func WithIntegrationSourceSpec(spec v1alpha1.IntegrationSourceSpec) IntegrationSourceOption {
 	return func(s *v1alpha1.IntegrationSource) {
 		s.Spec = spec
+	}
+}
+
+func WithIntegrationSourceOIDCServiceAccountName(name string) IntegrationSourceOption {
+	return func(s *v1alpha1.IntegrationSource) {
+		if s.Status.Auth == nil {
+			s.Status.Auth = &duckv1.AuthStatus{}
+		}
+
+		s.Status.Auth.ServiceAccountName = &name
 	}
 }

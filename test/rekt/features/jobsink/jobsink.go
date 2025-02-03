@@ -24,11 +24,13 @@ import (
 	cetest "github.com/cloudevents/sdk-go/v2/test"
 	"github.com/google/uuid"
 	batchv1 "k8s.io/api/batch/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"knative.dev/pkg/apis"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
+	"knative.dev/pkg/network"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/eventshub/assert"
@@ -42,20 +44,31 @@ import (
 	"knative.dev/eventing/test/rekt/resources/jobsink"
 )
 
-func Success() *feature.Feature {
+func Success(jobSinkName string) *feature.Feature {
 	f := feature.NewFeature()
 
 	sink := feature.MakeRandomK8sName("sink")
 	jobSink := feature.MakeRandomK8sName("jobsink")
+	if jobSinkName != "" {
+		jobSink = jobSinkName
+	}
 	source := feature.MakeRandomK8sName("source")
-
-	sinkURL := &apis.URL{Scheme: "http", Host: sink}
 
 	event := cetest.FullEvent()
 	event.SetID(uuid.NewString())
 
 	f.Setup("install forwarder sink", eventshub.Install(sink, eventshub.StartReceiver))
-	f.Setup("install job sink", jobsink.Install(jobSink, jobsink.WithForwarderJob(sinkURL.String())))
+	f.Setup("install job sink", func(ctx context.Context, t feature.T) {
+		sinkURL := &apis.URL{
+			Scheme: "http",
+			Host:   network.GetServiceHostname(sink, environment.FromContext(ctx).Namespace()),
+		}
+		var opts []func(*batchv1.Job)
+		if ic := environment.GetIstioConfig(ctx); ic.Enabled {
+			opts = append(opts, jobsink.WithIstioConfig())
+		}
+		jobsink.Install(jobSink, jobsink.WithForwarderJob(sinkURL.String(), opts...))(ctx, t)
+	})
 
 	f.Setup("jobsink is addressable", jobsink.IsAddressable(jobSink))
 	f.Setup("jobsink is ready", jobsink.IsReady(jobSink))
@@ -74,6 +87,32 @@ func Success() *feature.Feature {
 		AtLeast(1),
 	)
 	f.Assert("At least one Job is complete", AtLeastOneJobIsComplete(jobSink))
+
+	return f
+}
+
+func DeleteJobsCascadeSecretsDeletion(jobSink string) *feature.Feature {
+	f := feature.NewFeature()
+
+	f.Setup("Prerequisite: At least one secret for jobsink present", verifySecretsForJobSink(jobSink, func(secrets *corev1.SecretList) bool {
+		return len(secrets.Items) > 0
+	}))
+
+	f.Requirement("delete jobs for jobsink", func(ctx context.Context, t feature.T) {
+		policy := metav1.DeletePropagationBackground
+		err := kubeclient.Get(ctx).BatchV1().
+			Jobs(environment.FromContext(ctx).Namespace()).
+			DeleteCollection(ctx, metav1.DeleteOptions{PropagationPolicy: &policy}, metav1.ListOptions{
+				LabelSelector: fmt.Sprintf("%s=%s", sinks.JobSinkNameLabel, jobSink),
+			})
+		if err != nil {
+			t.Error(err)
+		}
+	})
+
+	f.Assert("No secrets for jobsink are present", verifySecretsForJobSink(jobSink, func(secrets *corev1.SecretList) bool {
+		return len(secrets.Items) == 0
+	}))
 
 	return f
 }
@@ -232,5 +271,29 @@ func AtLeastOneJobIsComplete(jobSinkName string) feature.StepFn {
 
 		bytes, _ := json.MarshalIndent(jobs.Items, "", "  ")
 		t.Errorf("No job is complete:\n%v", string(bytes))
+	}
+}
+
+func verifySecretsForJobSink(jobSink string, verify func(secrets *corev1.SecretList) bool) feature.StepFn {
+	return func(ctx context.Context, t feature.T) {
+
+		interval, timeout := environment.PollTimingsFromContext(ctx)
+		lastSecretList := &corev1.SecretList{}
+		err := wait.PollUntilContextTimeout(ctx, interval, timeout, true, func(ctx context.Context) (bool, error) {
+			var err error
+			lastSecretList, err = kubeclient.Get(ctx).CoreV1().
+				Secrets(environment.FromContext(ctx).Namespace()).
+				List(ctx, metav1.ListOptions{
+					LabelSelector: fmt.Sprintf("%s=%s", sinks.JobSinkNameLabel, jobSink),
+				})
+			if err != nil {
+				return false, fmt.Errorf("failed to list secrets: %w", err)
+			}
+			return verify(lastSecretList), nil
+		})
+		if err != nil {
+			bytes, _ := json.Marshal(lastSecretList)
+			t.Errorf("failed to wait for no secrets: %v\nSecret list:\n%s", err, string(bytes))
+		}
 	}
 }

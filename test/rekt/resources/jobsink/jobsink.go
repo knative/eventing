@@ -73,6 +73,9 @@ func Install(name string, opts ...manifest.CfgFn) feature.StepFn {
 			fn(cfg)
 		}
 
+		if err := registerImage(ctx); err != nil {
+			t.Fatal(err)
+		}
 		if _, err := manifest.InstallYamlFS(ctx, yamlEmbed, cfg); err != nil {
 			t.Fatal(err)
 		}
@@ -100,6 +103,22 @@ func WithJob(job batchv1.Job) manifest.CfgFn {
 
 	return func(m map[string]interface{}) {
 		m["job"] = strings.Join(out, "\n")
+	}
+}
+
+func WithIstioConfig() func(*batchv1.Job) {
+	return func(job *batchv1.Job) {
+		if job.Spec.Template.Labels == nil {
+			job.Spec.Template.Labels = make(map[string]string)
+		}
+		job.Spec.Template.Labels["sidecar.istio.io/inject"] = "true"
+
+		if job.Spec.Template.Annotations == nil {
+			job.Spec.Template.Annotations = make(map[string]string)
+		}
+		job.Spec.Template.Annotations["sidecar.istio.io/rewriteAppHTTPProbers"] = "true"
+		job.Spec.Template.Annotations["proxy.istio.io/config"] = `{ "holdApplicationUntilProxyStarts": true }`
+		job.Spec.Template.Annotations["sidecar.istio.io/inject"] = "true" // For backwards compatibility.
 	}
 }
 
@@ -222,4 +241,11 @@ func GoesReadySimple(name string) *feature.Feature {
 	f.Setup("JobSink is addressable", IsAddressable(name))
 
 	return f
+}
+
+func registerImage(ctx context.Context) error {
+	im := eventshub.ImageFromContext(ctx)
+	reg := environment.RegisterPackage(im)
+	_, err := reg(ctx, environment.FromContext(ctx))
+	return err
 }

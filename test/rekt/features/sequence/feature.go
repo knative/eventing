@@ -72,6 +72,7 @@ func SequenceTest(channelTemplate channel_template.ChannelTemplate) *feature.Fea
 	// Install a Sequence with three steps
 	f.Setup("install Sequence", sequence.Install(sequenceName, cfg...))
 	f.Setup("Sequence goes ready", sequence.IsReady(sequenceName))
+	f.Setup("Sequence is addressable", sequence.IsAddressable(sequenceName))
 
 	eventBody := fmt.Sprintf("TestSequence %s", uuid.New().String())
 	// Install PingSource point to sequence Address with eventBody

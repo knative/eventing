@@ -41,22 +41,24 @@ var jobsinksKind = v1alpha1.SchemeGroupVersion.WithKind("JobSink")
 
 // Get takes name of the jobSink, and returns the corresponding jobSink object, and an error if there is any.
 func (c *FakeJobSinks) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.JobSink, err error) {
+	emptyResult := &v1alpha1.JobSink{}
 	obj, err := c.Fake.
-		Invokes(testing.NewGetAction(jobsinksResource, c.ns, name), &v1alpha1.JobSink{})
+		Invokes(testing.NewGetActionWithOptions(jobsinksResource, c.ns, name, options), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1alpha1.JobSink), err
 }
 
 // List takes label and field selectors, and returns the list of JobSinks that match those selectors.
 func (c *FakeJobSinks) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.JobSinkList, err error) {
+	emptyResult := &v1alpha1.JobSinkList{}
 	obj, err := c.Fake.
-		Invokes(testing.NewListAction(jobsinksResource, jobsinksKind, c.ns, opts), &v1alpha1.JobSinkList{})
+		Invokes(testing.NewListActionWithOptions(jobsinksResource, jobsinksKind, c.ns, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -75,40 +77,43 @@ func (c *FakeJobSinks) List(ctx context.Context, opts v1.ListOptions) (result *v
 // Watch returns a watch.Interface that watches the requested jobSinks.
 func (c *FakeJobSinks) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
-		InvokesWatch(testing.NewWatchAction(jobsinksResource, c.ns, opts))
+		InvokesWatch(testing.NewWatchActionWithOptions(jobsinksResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a jobSink and creates it.  Returns the server's representation of the jobSink, and an error, if there is any.
 func (c *FakeJobSinks) Create(ctx context.Context, jobSink *v1alpha1.JobSink, opts v1.CreateOptions) (result *v1alpha1.JobSink, err error) {
+	emptyResult := &v1alpha1.JobSink{}
 	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(jobsinksResource, c.ns, jobSink), &v1alpha1.JobSink{})
+		Invokes(testing.NewCreateActionWithOptions(jobsinksResource, c.ns, jobSink, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1alpha1.JobSink), err
 }
 
 // Update takes the representation of a jobSink and updates it. Returns the server's representation of the jobSink, and an error, if there is any.
 func (c *FakeJobSinks) Update(ctx context.Context, jobSink *v1alpha1.JobSink, opts v1.UpdateOptions) (result *v1alpha1.JobSink, err error) {
+	emptyResult := &v1alpha1.JobSink{}
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateAction(jobsinksResource, c.ns, jobSink), &v1alpha1.JobSink{})
+		Invokes(testing.NewUpdateActionWithOptions(jobsinksResource, c.ns, jobSink, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1alpha1.JobSink), err
 }
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeJobSinks) UpdateStatus(ctx context.Context, jobSink *v1alpha1.JobSink, opts v1.UpdateOptions) (*v1alpha1.JobSink, error) {
+func (c *FakeJobSinks) UpdateStatus(ctx context.Context, jobSink *v1alpha1.JobSink, opts v1.UpdateOptions) (result *v1alpha1.JobSink, err error) {
+	emptyResult := &v1alpha1.JobSink{}
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceAction(jobsinksResource, "status", c.ns, jobSink), &v1alpha1.JobSink{})
+		Invokes(testing.NewUpdateSubresourceActionWithOptions(jobsinksResource, "status", c.ns, jobSink, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1alpha1.JobSink), err
 }
@@ -123,7 +128,7 @@ func (c *FakeJobSinks) Delete(ctx context.Context, name string, opts v1.DeleteOp
 
 // DeleteCollection deletes a collection of objects.
 func (c *FakeJobSinks) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(jobsinksResource, c.ns, listOpts)
+	action := testing.NewDeleteCollectionActionWithOptions(jobsinksResource, c.ns, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1alpha1.JobSinkList{})
 	return err
@@ -131,11 +136,12 @@ func (c *FakeJobSinks) DeleteCollection(ctx context.Context, opts v1.DeleteOptio
 
 // Patch applies the patch and returns the patched jobSink.
 func (c *FakeJobSinks) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.JobSink, err error) {
+	emptyResult := &v1alpha1.JobSink{}
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(jobsinksResource, c.ns, name, pt, data, subresources...), &v1alpha1.JobSink{})
+		Invokes(testing.NewPatchSubresourceActionWithOptions(jobsinksResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1alpha1.JobSink), err
 }

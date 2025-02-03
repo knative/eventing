@@ -19,8 +19,8 @@ limitations under the License.
 package v1
 
 import (
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 	v1 "knative.dev/eventing/pkg/apis/flows/v1"
 )
@@ -38,25 +38,17 @@ type ParallelLister interface {
 
 // parallelLister implements the ParallelLister interface.
 type parallelLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*v1.Parallel]
 }
 
 // NewParallelLister returns a new ParallelLister.
 func NewParallelLister(indexer cache.Indexer) ParallelLister {
-	return &parallelLister{indexer: indexer}
-}
-
-// List lists all Parallels in the indexer.
-func (s *parallelLister) List(selector labels.Selector) (ret []*v1.Parallel, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1.Parallel))
-	})
-	return ret, err
+	return &parallelLister{listers.New[*v1.Parallel](indexer, v1.Resource("parallel"))}
 }
 
 // Parallels returns an object that can list and get Parallels.
 func (s *parallelLister) Parallels(namespace string) ParallelNamespaceLister {
-	return parallelNamespaceLister{indexer: s.indexer, namespace: namespace}
+	return parallelNamespaceLister{listers.NewNamespaced[*v1.Parallel](s.ResourceIndexer, namespace)}
 }
 
 // ParallelNamespaceLister helps list and get Parallels.
@@ -74,26 +66,5 @@ type ParallelNamespaceLister interface {
 // parallelNamespaceLister implements the ParallelNamespaceLister
 // interface.
 type parallelNamespaceLister struct {
-	indexer   cache.Indexer
-	namespace string
-}
-
-// List lists all Parallels in the indexer for a given namespace.
-func (s parallelNamespaceLister) List(selector labels.Selector) (ret []*v1.Parallel, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1.Parallel))
-	})
-	return ret, err
-}
-
-// Get retrieves the Parallel from the indexer for a given namespace and name.
-func (s parallelNamespaceLister) Get(name string) (*v1.Parallel, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v1.Resource("parallel"), name)
-	}
-	return obj.(*v1.Parallel), nil
+	listers.ResourceIndexer[*v1.Parallel]
 }

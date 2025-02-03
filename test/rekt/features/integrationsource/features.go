@@ -46,7 +46,7 @@ func SendsEventsWithSinkRef() *feature.Feature {
 
 	f.Stable("integrationsource as event source").
 		Must("delivers events",
-			assert.OnStore(sink).MatchEvent(test.HasType("dev.knative.connector.event.timer")).AtLeast(1))
+			assert.OnStore(sink).MatchEvent(test.HasType("dev.knative.eventing.timer")).AtLeast(1))
 
 	return f
 }
@@ -72,7 +72,7 @@ func SendEventsWithTLSRecieverAsSink() *feature.Feature {
 		Must("delivers events",
 			assert.OnStore(sink).
 				Match(assert.MatchKind(eventshub.EventReceived)).
-				MatchEvent(test.HasType("dev.knative.connector.event.timer")).
+				MatchEvent(test.HasType("dev.knative.eventing.timer")).
 				AtLeast(1),
 		).
 		Must("Set sinkURI to HTTPS endpoint", source.ExpectHTTPSSink(integrationsource.Gvr(), src)).
@@ -108,7 +108,7 @@ func SendEventsWithTLSRecieverAsSinkTrustBundle() *feature.Feature {
 		Must("delivers events",
 			assert.OnStore(sink).
 				Match(assert.MatchKind(eventshub.EventReceived)).
-				MatchEvent(test.HasType("dev.knative.connector.event.timer")).
+				MatchEvent(test.HasType("dev.knative.eventing.timer")).
 				AtLeast(1),
 		).
 		Must("Set sinkURI to HTTPS endpoint", source.ExpectHTTPSSink(integrationsource.Gvr(), src))

@@ -124,6 +124,10 @@ func (l *Listers) GetEventPolicyLister() eventingv1alpha1listers.EventPolicyList
 	return eventingv1alpha1listers.NewEventPolicyLister(l.indexerFor(&eventingv1alpha1.EventPolicy{}))
 }
 
+func (l *Listers) GetIntegrationSinkLister() sinkslisters.IntegrationSinkLister {
+	return sinkslisters.NewIntegrationSinkLister(l.indexerFor(&sinksv1alpha1.IntegrationSink{}))
+}
+
 func (l *Listers) GetJobSinkLister() sinkslisters.JobSinkLister {
 	return sinkslisters.NewJobSinkLister(l.indexerFor(&sinksv1alpha1.JobSink{}))
 }

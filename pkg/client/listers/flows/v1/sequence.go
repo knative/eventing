@@ -19,8 +19,8 @@ limitations under the License.
 package v1
 
 import (
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 	v1 "knative.dev/eventing/pkg/apis/flows/v1"
 )
@@ -38,25 +38,17 @@ type SequenceLister interface {
 
 // sequenceLister implements the SequenceLister interface.
 type sequenceLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*v1.Sequence]
 }
 
 // NewSequenceLister returns a new SequenceLister.
 func NewSequenceLister(indexer cache.Indexer) SequenceLister {
-	return &sequenceLister{indexer: indexer}
-}
-
-// List lists all Sequences in the indexer.
-func (s *sequenceLister) List(selector labels.Selector) (ret []*v1.Sequence, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1.Sequence))
-	})
-	return ret, err
+	return &sequenceLister{listers.New[*v1.Sequence](indexer, v1.Resource("sequence"))}
 }
 
 // Sequences returns an object that can list and get Sequences.
 func (s *sequenceLister) Sequences(namespace string) SequenceNamespaceLister {
-	return sequenceNamespaceLister{indexer: s.indexer, namespace: namespace}
+	return sequenceNamespaceLister{listers.NewNamespaced[*v1.Sequence](s.ResourceIndexer, namespace)}
 }
 
 // SequenceNamespaceLister helps list and get Sequences.
@@ -74,26 +66,5 @@ type SequenceNamespaceLister interface {
 // sequenceNamespaceLister implements the SequenceNamespaceLister
 // interface.
 type sequenceNamespaceLister struct {
-	indexer   cache.Indexer
-	namespace string
-}
-
-// List lists all Sequences in the indexer for a given namespace.
-func (s sequenceNamespaceLister) List(selector labels.Selector) (ret []*v1.Sequence, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1.Sequence))
-	})
-	return ret, err
-}
-
-// Get retrieves the Sequence from the indexer for a given namespace and name.
-func (s sequenceNamespaceLister) Get(name string) (*v1.Sequence, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v1.Resource("sequence"), name)
-	}
-	return obj.(*v1.Sequence), nil
+	listers.ResourceIndexer[*v1.Sequence]
 }
