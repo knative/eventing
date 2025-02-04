@@ -73,7 +73,7 @@ type EventTypeSpec struct {
 	Attributes []EventAttributeDefinition `json:"attributes"`
 	// Variables is an array that provides definitions for variables used within attribute values.
 	// +optional
-	Variables []EventVariableDefinition `json:"variables"`
+	Variables []EventVariableDefinition `json:"variables,omitempty"`
 }
 
 type EventAttributeDefinition struct {
@@ -93,9 +93,9 @@ type EventVariableDefinition struct {
 	// Name is the name of the variable used within EventType attribute values enclosed in curly brackets.
 	Name string `json:"name"`
 	// Pattern is a CESQL LIKE pattern that the attribute value would adhere to.
-	Pattern string `json:"pattern"`
+	Pattern string `json:"pattern,omitempty"`
 	// Example is an example of an attribute value that adheres to the CESQL pattern.
-	Example string `json:"example"`
+	Example string `json:"example,omitempty"`
 }
 
 // EventTypeStatus represents the current state of a EventType.
