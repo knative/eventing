@@ -150,6 +150,109 @@ func TestEventTypeSpecValidation(t *testing.T) {
 				},
 			},
 		},
+	}, {
+		name: "invalid eventtype due to missing variable definitions",
+		ets: &EventTypeSpec{
+			Reference: &duckv1.KReference{
+				APIVersion: "eventing.knative.dev/v1",
+				Kind:       "Broker",
+				Name:       "test-broker",
+			},
+			Attributes: []EventAttributeDefinition{
+				{
+					Name:     "type",
+					Value:    "event-type",
+					Required: true,
+				},
+				{
+					Name:     "source",
+					Value:    testSource.String(),
+					Required: true,
+				},
+				{
+					Name:     "specversion",
+					Value:    "v1",
+					Required: true,
+				},
+				{
+					Name:     "id",
+					Required: true,
+				},
+				{
+					Name:     "attributeWithVariable",
+					Value:    "test.{testVariable}.{definedVariable}",
+					Required: true,
+				},
+				{
+					Name:     "anotherAttributeWithVariable",
+					Value:    "test.something.{requestStatus}.more",
+					Required: true,
+				},
+			},
+			Variables: []EventVariableDefinition{
+				{
+					Name:    "definedVariable",
+					Pattern: "%",
+					Example: "",
+				},
+			},
+		},
+		want: func() *apis.FieldError {
+			fe := apis.ErrMissingField("variables.requestStatus", "variables.testVariable")
+			return fe
+		}(),
+	}, {
+		name: "valid eventtype with variable definitions",
+		ets: &EventTypeSpec{
+			Reference: &duckv1.KReference{
+				APIVersion: "eventing.knative.dev/v1",
+				Kind:       "Broker",
+				Name:       "test-broker",
+			},
+			Attributes: []EventAttributeDefinition{
+				{
+					Name:     "type",
+					Value:    "event-type",
+					Required: true,
+				},
+				{
+					Name:     "source",
+					Value:    testSource.String(),
+					Required: true,
+				},
+				{
+					Name:     "specversion",
+					Value:    "v1",
+					Required: true,
+				},
+				{
+					Name:     "id",
+					Required: true,
+				},
+				{
+					Name:     "attributeWithVariable",
+					Value:    "test.{testVariable}",
+					Required: true,
+				},
+				{
+					Name:     "anotherAttributeWithVariable",
+					Value:    "test.something.{requestStatus}.more",
+					Required: true,
+				},
+			},
+			Variables: []EventVariableDefinition{
+				{
+					Name:    "testVariable",
+					Pattern: "%",
+					Example: "Any.value_passes",
+				},
+				{
+					Name:    "requestStatus",
+					Pattern: "req_est.%",
+					Example: "request.failed",
+				},
+			},
+		},
 	},
 	}
 
@@ -487,6 +590,59 @@ func TestEventTypeImmutableFields(t *testing.T) {
 			got := test.current.CheckImmutableFields(context.TODO(), test.original)
 			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
 				t.Error("CheckImmutableFields (-want, +got) =", diff)
+			}
+		})
+	}
+}
+
+func TestEventTypeSpecExtractAttributeVariables(t *testing.T) {
+	tests := []struct {
+		name   string
+		ets *EventTypeSpec
+		want   []string
+	}{
+		{
+			name: "extract included variables",
+			ets: &EventTypeSpec{
+				Attributes: []EventAttributeDefinition{
+					{
+						Name:     "type",
+						Value:    "a.{first}.{second}.{third}.{}",
+						Required: true,
+					},
+					{
+						Name:     "source",
+						Value:    "{fourth}{fifth}.ab.{sixth}",
+						Required: true,
+					},
+				},
+			},
+			want: []string{"first", "second", "third", "fourth", "fifth", "sixth"},
+		},
+		{
+			name: "ignores escaped curly brackets",
+			ets: &EventTypeSpec{
+				Attributes: []EventAttributeDefinition{
+					{
+						Name:     "type",
+						Value:    "a.{first}.\\{second}.{third}",
+						Required: true,
+					},
+					{
+						Name:     "source",
+						Value:    "\\{fourth}{fifth}.ab.{sixth}",
+						Required: true,
+					},
+				},
+			},
+			want: []string{"first", "third", "fifth", "sixth"},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := test.ets.extractAttributeVariables()
+			if diff := cmp.Diff(got, test.want); diff != "" {
+				t.Error("ExtractAttributeVariables (-want, +got) =", diff)
 			}
 		})
 	}

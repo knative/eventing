@@ -71,6 +71,9 @@ type EventTypeSpec struct {
 	Description string `json:"description,omitempty"`
 	// Attributes is an array of CloudEvent attributes and extension attributes.
 	Attributes []EventAttributeDefinition `json:"attributes"`
+	// Variables is an array that provides definitions for variables used within attribute values.
+	// +optional
+	Variables []EventVariableDefinition `json:"variables"`
 }
 
 type EventAttributeDefinition struct {
@@ -84,6 +87,15 @@ type EventAttributeDefinition struct {
 	// To specify a section of the string value which may change between different CloudEvents
 	// you can use curly brackets {} and optionally a variable name between them.
 	Value string `json:"value,omitempty"`
+}
+
+type EventVariableDefinition struct {
+	// Name is the name of the variable used within EventType attribute values enclosed in curly brackets.
+	Name string `json:"name"`
+	// Pattern is a CESQL LIKE pattern that the attribute value would adhere to.
+	Pattern string `json:"pattern"`
+	// Example is an example of an attribute value that adheres to the CESQL pattern.
+	Example string `json:"example"`
 }
 
 // EventTypeStatus represents the current state of a EventType.

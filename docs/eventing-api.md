@@ -4191,6 +4191,20 @@ string
 <p>Attributes is an array of CloudEvent attributes and extension attributes.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>variables</code><br/>
+<em>
+<a href="#eventing.knative.dev/v1beta3.EventVariableDefinition">
+[]EventVariableDefinition
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Variables is an array that provides definitions for variables used within attribute values.</p>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -4320,6 +4334,20 @@ string
 <p>Attributes is an array of CloudEvent attributes and extension attributes.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>variables</code><br/>
+<em>
+<a href="#eventing.knative.dev/v1beta3.EventVariableDefinition">
+[]EventVariableDefinition
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Variables is an array that provides definitions for variables used within attribute values.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="eventing.knative.dev/v1beta3.EventTypeStatus">EventTypeStatus
@@ -4354,6 +4382,56 @@ knative.dev/pkg/apis/duck/v1.Status
 <p>inherits duck/v1 Status, which currently provides:
 * ObservedGeneration - the &lsquo;Generation&rsquo; of the Service that was last processed by the controller.
 * Conditions - the latest available observations of a resource&rsquo;s current state.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="eventing.knative.dev/v1beta3.EventVariableDefinition">EventVariableDefinition
+</h3>
+<p>
+(<em>Appears on:</em><a href="#eventing.knative.dev/v1beta3.EventTypeSpec">EventTypeSpec</a>)
+</p>
+<p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>name</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Name is the name of the variable used within EventType attribute values enclosed in curly brackets.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>pattern</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Pattern is a CESQL LIKE pattern that the attribute value would adhere to.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>example</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Example is an example of an attribute value that adheres to the CESQL pattern.</p>
 </td>
 </tr>
 </tbody>

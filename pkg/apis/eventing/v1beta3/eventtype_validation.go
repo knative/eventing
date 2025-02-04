@@ -18,6 +18,7 @@ package v1beta3
 
 import (
 	"context"
+	"strings"
 
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/kmp"
@@ -32,6 +33,7 @@ func (ets *EventTypeSpec) Validate(ctx context.Context) *apis.FieldError {
 	// TODO: validate attribute with name=source is a valid URI
 	// TODO: validate attribute with name=schema is a valid URI
 	errs = errs.Also(ets.ValidateAttributes().ViaField("attributes"))
+	errs = errs.Also(ets.ValidateVariables().ViaField("variables"))
 	return errs
 }
 
@@ -82,4 +84,62 @@ func (ets *EventTypeSpec) ValidateAttributes() *apis.FieldError {
 	}
 
 	return nil
+}
+
+func (ets *EventTypeSpec) ValidateVariables() *apis.FieldError {
+	var errs *apis.FieldError
+
+	usedVariables := ets.extractAttributeVariables()
+	if len(usedVariables) == 0 {
+		return nil
+	}
+
+	definedVariables := make(map[string]EventVariableDefinition, len(ets.Variables))
+	for _, variable := range ets.Variables {
+		definedVariables[variable.Name] = variable
+	}
+
+	var missingVariables []string
+ 	for _, varName := range usedVariables {
+		if _, ok := definedVariables[varName]; !ok {
+			// keep track of any used variables that aren't defined
+			missingVariables = append(missingVariables, varName)
+		}
+	}
+
+	if len(missingVariables) > 0 {
+		errs = errs.Also(apis.ErrMissingField(missingVariables...))
+	}
+
+	return errs
+}
+
+// extractEmbeddedAttributeVariables extracts variables embedded within attribute values 
+// enclosed in curly brackets (e.g. "path.{A}.{B}" -> ["A", "B"]).
+func (ets *EventTypeSpec) extractAttributeVariables() []string {
+	var variables []string
+
+	for _, attr := range ets.Attributes {
+		for idx := 0; idx < len(attr.Value); idx++ {
+			if attr.Value[idx] == '\\' {
+				idx++ // skip over escaped character
+				continue
+			} 
+			if attr.Value[idx] != '{' {
+				continue // ignore characters not enclosed in curly brackets
+			}
+
+			idx++
+			var varName strings.Builder
+			for idx < len(attr.Value) && attr.Value[idx] != '}' {
+				varName.WriteByte(attr.Value[idx])
+				idx++
+			}
+
+ 			if idx < len(attr.Value) && attr.Value[idx] == '}' && varName.Len() > 0 {
+				variables = append(variables, varName.String())
+			}
+		}
+	}
+	return variables
 }

@@ -76,6 +76,23 @@ spec:
                     value:
                       type: string
                       description: "Value of the attribute. May be a template string using curly brackets {} to represent variable sections of the string."
+              variables:
+                description: "Variables is an optional field that defines variables used within attribute values."
+                type: array
+                items:
+                  type: object
+                  required:
+                    - Name
+                  properties:
+                    name:
+                      type: string
+                      description: "Name of the variable used within EventType attribute values enclosed in curly brackets."
+                    pattern:
+                      type: string
+                      description: "A CESQL LIKE pattern that the attribute value would adhere to."
+                    example:
+                      type: string
+                      description: "Example of an attribute value that adheres to the CESQL pattern."
           status:
             description: 'Status represents the current state of the EventType. This data
                 may be out of date.'
