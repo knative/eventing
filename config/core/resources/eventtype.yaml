@@ -77,12 +77,12 @@ spec:
                       type: string
                       description: "Value of the attribute. May be a template string using curly brackets {} to represent variable sections of the string."
               variables:
-                description: "Variables is an optional field that defines variables used within attribute values."
+                description: "Each variable used within attribute values must be defined in the variables field, except for unnamed variables (i.e. {}), which do not need to be defined."
                 type: array
                 items:
                   type: object
                   required:
-                    - Name
+                    - name
                   properties:
                     name:
                       type: string
