@@ -597,9 +597,9 @@ func TestEventTypeImmutableFields(t *testing.T) {
 
 func TestEventTypeSpecExtractAttributeVariables(t *testing.T) {
 	tests := []struct {
-		name   string
-		ets *EventTypeSpec
-		want   []string
+		name string
+		ets  *EventTypeSpec
+		want []string
 	}{
 		{
 			name: "extract included variables",

@@ -100,7 +100,7 @@ func (ets *EventTypeSpec) ValidateVariables() *apis.FieldError {
 	}
 
 	var missingVariables []string
- 	for _, varName := range usedVariables {
+	for _, varName := range usedVariables {
 		if _, ok := definedVariables[varName]; !ok {
 			// keep track of any used variables that aren't defined
 			missingVariables = append(missingVariables, varName)
@@ -114,7 +114,7 @@ func (ets *EventTypeSpec) ValidateVariables() *apis.FieldError {
 	return errs
 }
 
-// extractEmbeddedAttributeVariables extracts variables embedded within attribute values 
+// extractEmbeddedAttributeVariables extracts variables embedded within attribute values
 // enclosed in curly brackets (e.g. "path.{A}.{B}" -> ["A", "B"]).
 func (ets *EventTypeSpec) extractAttributeVariables() []string {
 	var variables []string
@@ -124,7 +124,7 @@ func (ets *EventTypeSpec) extractAttributeVariables() []string {
 			if attr.Value[idx] == '\\' {
 				idx++ // skip over escaped character
 				continue
-			} 
+			}
 			if attr.Value[idx] != '{' {
 				continue // ignore characters not enclosed in curly brackets
 			}
@@ -136,7 +136,7 @@ func (ets *EventTypeSpec) extractAttributeVariables() []string {
 				idx++
 			}
 
- 			if idx < len(attr.Value) && attr.Value[idx] == '}' && varName.Len() > 0 {
+			if idx < len(attr.Value) && attr.Value[idx] == '}' && varName.Len() > 0 {
 				variables = append(variables, varName.String())
 			}
 		}
