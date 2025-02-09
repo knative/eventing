@@ -42,17 +42,22 @@ import (
 )
 
 // Add a user defined function to validate correlation id, then return a cesql_filter
-func NewCESQLCorrelationIdFilter(expr string) (eventfilter.Filter, error) {
-
+func NewCESQLCorrelationIdFilter(expr string, ctx context.Context) (eventfilter.Filter, error) {
 	var correlationIdFilterFunction = cefn.NewFunction(
 		"KN_VERIFY_CORRELATIONID",
-		[]cesql.Type{cesql.StringType},
+		[]cesql.Type{cesql.StringType, cesql.StringType},
 		cesql.TypePtr(cesql.StringType),
 		cesql.BooleanType,
 		func(event cloudevents.Event, i []interface{}) (interface{}, error) {
-			correlationId := i[0].(string)
+			namespace := i[0].(string)
+			correlationId := i[1].(string)
 
-			match, _ := regexp.MatchString(".*:.*", correlationId)
+			correlationIdRegex, err := regexp.Compile(".*:.*")
+			if err != nil {
+				return false, err
+			}
+
+			match := correlationIdRegex.MatchString(correlationId)
 			if !match {
 				return false, errors.New("correlationId Format: <original id>:<base64/hex encoded encrypted id>")
 			}
@@ -71,12 +76,12 @@ func NewCESQLCorrelationIdFilter(expr string) (eventfilter.Filter, error) {
 
 			// Iterate through secret names in argument list and add them to the set
 			for num, secret := range i {
-				if num != 0 {
+				if num > 0 {
 					secretNamesToTry[secret.(string)] = true
 				}
 			}
 
-			secrets, err := getSecretsFromK8s("default")
+			secrets, err := getSecretsFromK8s(namespace, ctx)
 			if err != nil {
 				return false, err
 			}
@@ -109,8 +114,8 @@ func NewCESQLCorrelationIdFilter(expr string) (eventfilter.Filter, error) {
 	return NewCESQLFilter(expr)
 }
 
-func getSecretsFromK8s(namespace string) ([]v1.Secret, error) {
-	secrets, err := kubeclient.Get(context.Background()).CoreV1().Secrets(namespace).List(context.Background(), metav1.ListOptions{})
+func getSecretsFromK8s(namespace string, ctx context.Context) ([]v1.Secret, error) {
+	secrets, err := kubeclient.Get(ctx).CoreV1().Secrets(namespace).List(ctx, metav1.ListOptions{})
 	return secrets.Items, err
 }
 
