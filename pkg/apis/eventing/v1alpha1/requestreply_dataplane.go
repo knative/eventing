@@ -48,6 +48,12 @@ func (m *proxiedRequestMap) deleteEvent(event *cloudevents.Event) {
 
 func (m *proxiedRequestMap) HandleNewEvent(ctx context.Context, responseWriter http.ResponseWriter, event *cloudevents.Event) {
 	fmt.Printf("handling new event: %s\n", event.String())
+
+	originalID := event.ID() //generate signed id using event id
+	signedID := originalID + "_signed" //placeholder for signing
+    correlationID := fmt.Sprintf("%s:%s", originalID, signedID) //setting correlation id
+    event.SetExtension("correlationId", correlationID)
+
 	pr := m.addEvent(responseWriter, event)
 
 	c, err := cloudevents.NewClientHTTP(cehttp.WithTarget(os.Getenv("K_SINK")))
@@ -77,6 +83,7 @@ func (m *proxiedRequestMap) HandleNewEvent(ctx context.Context, responseWriter h
 			return
 		case <-ctx.Done():
 			fmt.Printf("context timeout reached before encountering a response to the event, discarding event %s\n", event.ID())
+			responseWriter.WriteHeader(http.StatusRequestTimeout) // handle timeout to send http408
 			m.deleteEvent(event)
 			return
 		}
@@ -90,7 +97,7 @@ func (m *proxiedRequestMap) HandleResponseEvent(ctx context.Context, responseWri
 
 	responseWriter.WriteHeader(http.StatusAccepted)
 
-	id := event.Extensions()["responseid"]
+	id := event.Extensions()["replyAttribute"] //check if event has replyAttribute
 	pr, ok := m.entries[id.(string)]
 	if !ok {
 		fmt.Printf("no event found corresponding to the response id %s, discarding\n", id)
@@ -103,7 +110,8 @@ func (m *proxiedRequestMap) HandleResponseEvent(ctx context.Context, responseWri
 }
 
 func isResponseEvent(event *cloudevents.Event) bool {
-	_, ok := event.Extensions()["responseid"]
+
+	_, ok := event.Extensions()["replyAttribute"] //checks if event has replyAttribute
 	return ok
 }
 
