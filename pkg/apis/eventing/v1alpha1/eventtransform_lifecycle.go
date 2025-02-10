@@ -28,14 +28,14 @@ const (
 	TransformConditionAddressable apis.ConditionType = "Addressable"
 	TransformationConditionReady  apis.ConditionType = "TransformationReady"
 
-	TransformationAddressableEmptyURL = "NoURL"
+	TransformationAddressableEmptyURL string = "NoURL"
 
 	// Specific transformations conditions
 
 	// TransformationJsonataDeploymentReady is the condition to indicate that the Jsonata deployment
 	// is ready.
 	TransformationJsonataDeploymentReady       apis.ConditionType = "JsonataDeploymentReady"
-	TransformationJsonataDeploymentUnavailable                    = "JsonataDeploymentUnavailable"
+	TransformationJsonataDeploymentUnavailable string             = "JsonataDeploymentUnavailable"
 	// TransformationJsonataSinkBindingReady is the condition to indicate that the Jsonata sink
 	// binding is ready.
 	TransformationJsonataSinkBindingReady apis.ConditionType = "JsonataSinkBindingReady"
