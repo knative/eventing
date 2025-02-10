@@ -189,7 +189,7 @@ func TestReconcile(t *testing.T) {
 					WithIntegrationSourceSpec(makeIntegrationSourceSpec(sinkDest)),
 					WithInitIntegrationSourceConditions,
 					WithIntegrationSourceStatusObservedGeneration(generation),
-					WithIntegrationSourcePropagateContainerSourceStatus(makeContainerSourceStatus(&conditionTrue)),
+					WithIntegrationSourcePropagateContainerSourceStatus(makeContainerSourceStatusOIDC(&conditionTrue)),
 					WithIntegrationSourceOIDCServiceAccountName(getOIDCServiceAccountNameForContainerSource()),
 				),
 			}},
@@ -218,39 +218,6 @@ func TestReconcile(t *testing.T) {
 
 func makeContainerSourceOIDC(source *sourcesv1alpha1.IntegrationSource, ready *corev1.ConditionStatus) *sourcesv1.ContainerSource {
 	cs := makeContainerSource(source, ready)
-
-	// replace all env_vars for inserting the OIDC ones at the right order/index
-	cs.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{
-		{
-			Name:  "CAMEL_KNATIVE_CLIENT_SSL_ENABLED",
-			Value: "true",
-		},
-		{
-			Name:  "CAMEL_KNATIVE_CLIENT_SSL_CERT_PATH",
-			Value: "/knative-custom-certs/knative-eventing-bundle.pem",
-		},
-		{
-			Name:  "CAMEL_KNATIVE_CLIENT_OIDC_ENABLED",
-			Value: "true",
-		},
-		{
-			Name:  "CAMEL_KNATIVE_CLIENT_OIDC_TOKEN_PATH",
-			Value: "file:///oidc/token",
-		},
-		{
-			Name:  "CAMEL_KAMELET_TIMER_SOURCE_PERIOD",
-			Value: "1000",
-		},
-		{
-			Name:  "CAMEL_KAMELET_TIMER_SOURCE_MESSAGE",
-			Value: "Hallo",
-		},
-		{
-			Name:  "CAMEL_KAMELET_TIMER_SOURCE_REPEATCOUNT",
-			Value: "0",
-		},
-	}
-
 	cs.Status = *makeContainerSourceStatusOIDC(ready)
 
 	return cs
