@@ -29,7 +29,6 @@ import (
 	"strings"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
-	"knative.dev/eventing/pkg/eventfilter"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,7 +41,7 @@ import (
 )
 
 // Add a user defined function to validate correlation id, then return a cesql_filter
-func NewCESQLCorrelationIdFilter(expr string, ctx context.Context) (eventfilter.Filter, error) {
+func NewCESQLCorrelationIdFilter(ctx context.Context) error {
 	var correlationIdFilterFunction = cefn.NewFunction(
 		"KN_VERIFY_CORRELATIONID",
 		[]cesql.Type{cesql.StringType, cesql.StringType},
@@ -76,7 +75,8 @@ func NewCESQLCorrelationIdFilter(expr string, ctx context.Context) (eventfilter.
 
 			// Iterate through secret names in argument list and add them to the set
 			for num, secret := range i {
-				if num > 0 {
+				// Skip checking namespace and correlationid
+				if num > 1 {
 					secretNamesToTry[secret.(string)] = true
 				}
 			}
@@ -109,9 +109,7 @@ func NewCESQLCorrelationIdFilter(expr string, ctx context.Context) (eventfilter.
 		},
 	)
 
-	ceruntime.AddFunction(correlationIdFilterFunction)
-
-	return NewCESQLFilter(expr)
+	return ceruntime.AddFunction(correlationIdFilterFunction)
 }
 
 func getSecretsFromK8s(namespace string, ctx context.Context) ([]v1.Secret, error) {

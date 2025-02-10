@@ -126,15 +126,17 @@ func TestCESQLCorrelationIdFilterMatchAES(t *testing.T) {
 		}
 	}
 
+	NewCESQLCorrelationIdFilter(ctx)
+
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			e := tt.event
 			if e == nil {
 				e = makeEvent()
 			}
-			f, err := NewCESQLCorrelationIdFilter(tt.expression, ctx)
+			f, err := NewCESQLFilter(tt.expression)
 			if err != nil {
-				t.Fatalf("Error instanciating CESQL CorrelationId filter. %v", err)
+				t.Fatalf("Error instanciating CESQL filter. %v", err)
 			}
 			if got := f.Filter(ctx, *e); got != tt.want {
 				t.Errorf("Filter() = %v, want %v", got, tt.want)
@@ -184,15 +186,17 @@ func TestCESQLCorrelationIdFilterMatchDES(t *testing.T) {
 		}
 	}
 
+	NewCESQLCorrelationIdFilter(ctx)
+
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			e := tt.event
 			if e == nil {
 				e = makeEvent()
 			}
-			f, err := NewCESQLCorrelationIdFilter(tt.expression, ctx)
+			f, err := NewCESQLFilter(tt.expression)
 			if err != nil {
-				t.Fatalf("Error instanciating CESQL CorrelationId filter. %v", err)
+				t.Fatalf("Error instanciating CESQL filter. %v", err)
 			}
 			if got := f.Filter(ctx, *e); got != tt.want {
 				t.Errorf("Filter() = %v, want %v", got, tt.want)
@@ -246,15 +250,17 @@ func TestCESQLCorrelationIdFilterMatch3DES(t *testing.T) {
 		}
 	}
 
+	NewCESQLCorrelationIdFilter(ctx)
+
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			e := tt.event
 			if e == nil {
 				e = makeEvent()
 			}
-			f, err := NewCESQLCorrelationIdFilter(tt.expression, ctx)
+			f, err := NewCESQLFilter(tt.expression)
 			if err != nil {
-				t.Fatalf("Error instanciating CESQL CorrelationId filter. %v", err)
+				t.Fatalf("Error instanciating CESQL filter. %v", err)
 			}
 			if got := f.Filter(ctx, *e); got != tt.want {
 				t.Errorf("Filter() = %v, want %v", got, tt.want)
@@ -304,13 +310,15 @@ func TestCESQLCorrelationIdFilterMatchRC4(t *testing.T) {
 		}
 	}
 
+	NewCESQLCorrelationIdFilter(ctx)
+
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			e := tt.event
 			if e == nil {
 				e = makeEvent()
 			}
-			f, err := NewCESQLCorrelationIdFilter(tt.expression, ctx)
+			f, err := NewCESQLFilter(tt.expression)
 			if err != nil {
 				t.Fatalf("Error instanciating CESQL CorrelationId filter. %v", err)
 			}
@@ -366,13 +374,15 @@ func TestCESQLCorrelationIdFilterMatchFail(t *testing.T) {
 		}
 	}
 
+	NewCESQLCorrelationIdFilter(ctx)
+
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			e := tt.event
 			if e == nil {
 				e = makeEvent()
 			}
-			f, err := NewCESQLCorrelationIdFilter(tt.expression, ctx)
+			f, err := NewCESQLFilter(tt.expression)
 			if err != nil {
 				t.Fatalf("Error instanciating CESQL CorrelationId filter. %v", err)
 			}
