@@ -78,7 +78,9 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1alpha1.Integra
 }
 
 func (r *Reconciler) reconcileContainerSource(ctx context.Context, source *v1alpha1.IntegrationSource) (*v1.ContainerSource, error) {
-	expected := resources.NewContainerSource(source, feature.FromContext(ctx).IsOIDCAuthentication())
+	// set the OIDC to true only if the feature is enabled and the sink audience is set
+	// to prevent container environment vars to be set, just when the config is on.
+	expected := resources.NewContainerSource(source, feature.FromContext(ctx).IsOIDCAuthentication() && source.Status.SinkAudience != nil)
 
 	cs, err := r.containerSourceLister.ContainerSources(source.Namespace).Get(expected.Name)
 	if apierrors.IsNotFound(err) {
