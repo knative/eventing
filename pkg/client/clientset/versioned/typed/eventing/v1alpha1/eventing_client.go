@@ -29,6 +29,7 @@ import (
 type EventingV1alpha1Interface interface {
 	RESTClient() rest.Interface
 	EventPoliciesGetter
+	EventTransformsGetter
 	RequestRepliesGetter
 }
 
@@ -39,6 +40,10 @@ type EventingV1alpha1Client struct {
 
 func (c *EventingV1alpha1Client) EventPolicies(namespace string) EventPolicyInterface {
 	return newEventPolicies(c, namespace)
+}
+
+func (c *EventingV1alpha1Client) EventTransforms(namespace string) EventTransformInterface {
+	return newEventTransforms(c, namespace)
 }
 
 func (c *EventingV1alpha1Client) RequestReplies(namespace string) RequestReplyInterface {
