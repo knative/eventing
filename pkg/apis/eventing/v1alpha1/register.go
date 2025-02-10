@@ -50,7 +50,7 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&RequestReply{},
 		&RequestReplyList{},
 		&EventTransform{},
-		&TransformList{},
+		&EventTransformList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil
