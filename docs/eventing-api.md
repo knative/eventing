@@ -2649,6 +2649,8 @@ Resource Types:
 <ul><li>
 <a href="#eventing.knative.dev/v1alpha1.EventPolicy">EventPolicy</a>
 </li><li>
+<a href="#eventing.knative.dev/v1alpha1.EventTransform">EventTransform</a>
+</li><li>
 <a href="#eventing.knative.dev/v1alpha1.RequestReply">RequestReply</a>
 </li></ul>
 <h3 id="eventing.knative.dev/v1alpha1.EventPolicy">EventPolicy
@@ -2773,6 +2775,118 @@ EventPolicyStatus
 <td>
 <em>(Optional)</em>
 <p>Status represents the current state of the EventPolicy.
+This data may be out of date.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="eventing.knative.dev/v1alpha1.EventTransform">EventTransform
+</h3>
+<p>
+<p>EventTransform represents an even transformation.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>apiVersion</code><br/>
+string</td>
+<td>
+<code>
+eventing.knative.dev/v1alpha1
+</code>
+</td>
+</tr>
+<tr>
+<td>
+<code>kind</code><br/>
+string
+</td>
+<td><code>EventTransform</code></td>
+</tr>
+<tr>
+<td>
+<code>metadata</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#objectmeta-v1-meta">
+Kubernetes meta/v1.ObjectMeta
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+Refer to the Kubernetes API documentation for the fields of the
+<code>metadata</code> field.
+</td>
+</tr>
+<tr>
+<td>
+<code>spec</code><br/>
+<em>
+<a href="#eventing.knative.dev/v1alpha1.EventTransformSpec">
+EventTransformSpec
+</a>
+</em>
+</td>
+<td>
+<p>Spec defines the desired state of the EventTransform.</p>
+<br/>
+<br/>
+<table>
+<tr>
+<td>
+<code>sink</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#Destination">
+knative.dev/pkg/apis/duck/v1.Destination
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Sink is a reference to an object that will resolve to a uri to use as the sink.</p>
+<p>If not present, the transformation will send back the transformed event as response, this
+is useful to leverage the built-in Broker reply feature to re-publish a transformed event
+back to the broker.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>Transformations</code><br/>
+<em>
+<a href="#eventing.knative.dev/v1alpha1.EventTransformations">
+EventTransformations
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>Transformations</code> are embedded into this type.)
+</p>
+<p>Transformations contain all possible transformations, only one &ldquo;type&rdquo; can be used.</p>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+<tr>
+<td>
+<code>status</code><br/>
+<em>
+<a href="#eventing.knative.dev/v1alpha1.EventTransformStatus">
+EventTransformStatus
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Status represents the current state of the EventTransform.
 This data may be out of date.</p>
 </td>
 </tr>
@@ -3269,6 +3383,214 @@ string
 <td>
 <p>Name of the referent.
 More info: <a href="https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names">https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="eventing.knative.dev/v1alpha1.EventTransformSpec">EventTransformSpec
+</h3>
+<p>
+(<em>Appears on:</em><a href="#eventing.knative.dev/v1alpha1.EventTransform">EventTransform</a>)
+</p>
+<p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>sink</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#Destination">
+knative.dev/pkg/apis/duck/v1.Destination
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Sink is a reference to an object that will resolve to a uri to use as the sink.</p>
+<p>If not present, the transformation will send back the transformed event as response, this
+is useful to leverage the built-in Broker reply feature to re-publish a transformed event
+back to the broker.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>Transformations</code><br/>
+<em>
+<a href="#eventing.knative.dev/v1alpha1.EventTransformations">
+EventTransformations
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>Transformations</code> are embedded into this type.)
+</p>
+<p>Transformations contain all possible transformations, only one &ldquo;type&rdquo; can be used.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="eventing.knative.dev/v1alpha1.EventTransformStatus">EventTransformStatus
+</h3>
+<p>
+(<em>Appears on:</em><a href="#eventing.knative.dev/v1alpha1.EventTransform">EventTransform</a>)
+</p>
+<p>
+<p>EventTransformStatus represents the current state of a EventTransform.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>SourceStatus</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#SourceStatus">
+knative.dev/pkg/apis/duck/v1.SourceStatus
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>SourceStatus</code> are embedded into this type.)
+</p>
+<p>SourceStatus inherits duck/v1 SourceStatus, which currently provides:
+* ObservedGeneration - the &lsquo;Generation&rsquo; of the Service that was last
+processed by the controller.
+* Conditions - the latest available observations of a resource&rsquo;s current
+state.
+* SinkURI - the current active sink URI that has been configured for the
+Source.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>AddressStatus</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#AddressStatus">
+knative.dev/pkg/apis/duck/v1.AddressStatus
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>AddressStatus</code> are embedded into this type.)
+</p>
+<em>(Optional)</em>
+<p>AddressStatus is the part where the EventTransform fulfills the Addressable contract.
+It exposes the endpoint as an URI to get events delivered.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>jsonata</code><br/>
+<em>
+<a href="#eventing.knative.dev/v1alpha1.JsonataEventTransformationStatus">
+JsonataEventTransformationStatus
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>JsonataTransformationStatus is the status associated with JsonataEventTransformationSpec.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="eventing.knative.dev/v1alpha1.EventTransformations">EventTransformations
+</h3>
+<p>
+(<em>Appears on:</em><a href="#eventing.knative.dev/v1alpha1.EventTransformSpec">EventTransformSpec</a>)
+</p>
+<p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>jsonata</code><br/>
+<em>
+<a href="#eventing.knative.dev/v1alpha1.JsonataEventTransformationSpec">
+JsonataEventTransformationSpec
+</a>
+</em>
+</td>
+<td>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="eventing.knative.dev/v1alpha1.JsonataEventTransformationSpec">JsonataEventTransformationSpec
+</h3>
+<p>
+(<em>Appears on:</em><a href="#eventing.knative.dev/v1alpha1.EventTransformations">EventTransformations</a>)
+</p>
+<p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>expression</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Expression is the JSONata expression.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="eventing.knative.dev/v1alpha1.JsonataEventTransformationStatus">JsonataEventTransformationStatus
+</h3>
+<p>
+(<em>Appears on:</em><a href="#eventing.knative.dev/v1alpha1.EventTransformStatus">EventTransformStatus</a>)
+</p>
+<p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>deployment</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#deploymentstatus-v1-apps">
+Kubernetes apps/v1.DeploymentStatus
+</a>
+</em>
+</td>
+<td>
 </td>
 </tr>
 </tbody>
