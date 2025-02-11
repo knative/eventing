@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"sort"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"go.uber.org/zap"
@@ -114,6 +115,11 @@ type StatefulSetScheduler struct {
 	// replicas is the (cached) number of statefulset replicas.
 	replicas int32
 
+	// isLeader signals whether a given Scheduler instance is leader or not.
+	// The autoscaler is considered the leader when ephemeralLeaderElectionObject is in a
+	// bucket where we've been promoted.
+	isLeader atomic.Bool
+
 	// reserved tracks vreplicas that have been placed (ie. scheduled) but haven't been
 	// committed yet (ie. not appearing in vpodLister)
 	reserved   map[types.NamespacedName]map[string]int32
@@ -130,6 +136,9 @@ func (s *StatefulSetScheduler) Promote(b reconciler.Bucket, enq func(reconciler.
 	if !b.Has(ephemeralLeaderElectionObject) {
 		return nil
 	}
+	// The demoted bucket has the ephemeralLeaderElectionObject, so we are not leader anymore.
+	// Flip the flag after running initReserved.
+	defer s.isLeader.Store(true)
 
 	if v, ok := s.autoscaler.(reconciler.LeaderAware); ok {
 		return v.Promote(b, enq)
@@ -151,6 +160,9 @@ func (s *StatefulSetScheduler) initReserved() error {
 
 	s.reserved = make(map[types.NamespacedName]map[string]int32, len(vPods))
 	for _, vPod := range vPods {
+		if !vPod.GetDeletionTimestamp().IsZero() {
+			continue
+		}
 		s.reserved[vPod.GetKey()] = make(map[string]int32, len(vPod.GetPlacements()))
 		for _, placement := range vPod.GetPlacements() {
 			s.reserved[vPod.GetKey()][placement.PodName] += placement.VReplicas
@@ -159,8 +171,41 @@ func (s *StatefulSetScheduler) initReserved() error {
 	return nil
 }
 
+// resyncReserved removes deleted vPods from reserved to keep the state consistent when leadership
+// changes (Promote / Demote).
+// initReserved is not enough since the vPod lister can be stale.
+func (s *StatefulSetScheduler) resyncReserved() error {
+	if !s.isLeader.Load() {
+		return nil
+	}
+
+	vPods, err := s.vpodLister()
+	if err != nil {
+		return fmt.Errorf("failed to list vPods during reserved resync: %w", err)
+	}
+	vPodsByK := vPodsByKey(vPods)
+
+	s.reservedMu.Lock()
+	defer s.reservedMu.Unlock()
+
+	for key := range s.reserved {
+		vPod, ok := vPodsByK[key]
+		if !ok || vPod == nil {
+			delete(s.reserved, key)
+		}
+	}
+
+	return nil
+}
+
 // Demote implements reconciler.LeaderAware.
 func (s *StatefulSetScheduler) Demote(b reconciler.Bucket) {
+	if !b.Has(ephemeralLeaderElectionObject) {
+		return
+	}
+	// The demoted bucket has the ephemeralLeaderElectionObject, so we are not leader anymore.
+	defer s.isLeader.Store(false)
+
 	if v, ok := s.autoscaler.(reconciler.LeaderAware); ok {
 		v.Demote(b)
 	}
@@ -206,6 +251,17 @@ func newStatefulSetScheduler(ctx context.Context,
 	go func() {
 		<-ctx.Done()
 		sif.Shutdown()
+	}()
+
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(cfg.RefreshPeriod * 3):
+				_ = s.resyncReserved()
+			}
+		}
 	}()
 
 	return s
@@ -560,4 +616,12 @@ func upsertPlacements(placements []duckv1alpha1.Placement, placement duckv1alpha
 		placements = append(placements, placement)
 	}
 	return placements
+}
+
+func vPodsByKey(vPods []scheduler.VPod) map[types.NamespacedName]scheduler.VPod {
+	r := make(map[types.NamespacedName]scheduler.VPod, len(vPods))
+	for _, vPod := range vPods {
+		r[vPod.GetKey()] = vPod
+	}
+	return r
 }
