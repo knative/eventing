@@ -49,6 +49,7 @@ func main() {
 	registry.Register(&flowsv1.Sequence{})
 	registry.Register(&flowsv1.Parallel{})
 	registry.Register(&eventingv1alpha1.EventPolicy{})
+	registry.Register(&eventingv1alpha1.EventTransform{})
 
 	if err := commands.New("knative.dev/eventing").Execute(); err != nil {
 		log.Fatal("Error during command execution: ", err)
