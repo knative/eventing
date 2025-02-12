@@ -20,6 +20,8 @@ import (
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
+	"fmt"
+
 	"knative.dev/pkg/injection/sharedmain"
 
 	filteredFactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
@@ -29,6 +31,7 @@ import (
 	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/reconciler/eventpolicy"
+	"knative.dev/eventing/pkg/reconciler/eventtransform"
 	"knative.dev/eventing/pkg/reconciler/jobsink"
 
 	"knative.dev/eventing/pkg/reconciler/apiserversource"
@@ -53,6 +56,7 @@ func main() {
 		auth.OIDCLabelSelector,
 		eventingtls.TrustBundleLabelSelector,
 		sinks.JobSinkJobsLabelSelector,
+		fmt.Sprintf("%s=%s", eventtransform.JsonataResourcesLabelKey, eventtransform.JsonataResourcesLabelValue),
 	)
 
 	sharedmain.MainWithContext(ctx, "controller",
@@ -84,5 +88,8 @@ func main() {
 		// Sugar
 		sugarnamespace.NewController,
 		sugartrigger.NewController,
+
+		// Transform
+		eventtransform.NewController,
 	)
 }
