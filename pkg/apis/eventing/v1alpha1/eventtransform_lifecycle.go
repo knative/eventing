@@ -28,7 +28,8 @@ const (
 	TransformConditionAddressable apis.ConditionType = "Addressable"
 	TransformationConditionReady  apis.ConditionType = "TransformationReady"
 
-	TransformationAddressableEmptyURL string = "NoURL"
+	TransformationAddressableEmptyURL                   string = "NoURL"
+	TransformationAddressableWaitingForServiceEndpoints string = "WaitingForServiceEndpoints"
 
 	// Specific transformations conditions
 
@@ -157,6 +158,10 @@ func (ts *EventTransformStatus) propagateTransformationConditionStatus(cond *api
 	} else {
 		ts.GetConditionSet().Manage(ts).MarkUnknown(TransformationConditionReady, cond.Reason, cond.Message)
 	}
+}
+
+func (ts *EventTransformStatus) MarkWaitingForServiceEndpoints() {
+	ts.GetConditionSet().Manage(ts).MarkFalse(TransformConditionAddressable, TransformationAddressableWaitingForServiceEndpoints, "URL is empty")
 }
 
 func (ts *EventTransformStatus) SetAddresses(addresses ...duckv1.Addressable) {

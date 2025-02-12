@@ -49,6 +49,7 @@ type EventTransform struct {
 var (
 	// Check that EventTransform can be validated, can be defaulted, and has immutable fields.
 	_ apis.Validatable = (*EventTransform)(nil)
+	_ apis.Defaultable = (*EventTransform)(nil)
 
 	// Check that EventTransform can return its spec untyped.
 	_ apis.HasSpec = (*EventTransform)(nil)
@@ -73,8 +74,8 @@ type EventTransformSpec struct {
 	// +optional
 	Sink *duckv1.Destination `json:"sink,omitempty"`
 
-	// Transformations contain all possible transformations, only one "type" can be used.
-	Transformations EventTransformations `json:",inline"`
+	// EventTransformations contain all possible transformations, only one "type" can be used.
+	EventTransformations `json:",inline"`
 }
 
 type EventTransformations struct {

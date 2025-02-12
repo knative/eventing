@@ -79,7 +79,8 @@ func init() {
 var ourTypes = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
 	// For group eventing.knative.dev.
 	// v1alpha1
-	eventingv1alpha1.SchemeGroupVersion.WithKind("EventPolicy"): &eventingv1alpha1.EventPolicy{},
+	eventingv1alpha1.SchemeGroupVersion.WithKind("EventPolicy"):    &eventingv1alpha1.EventPolicy{},
+	eventingv1alpha1.SchemeGroupVersion.WithKind("EventTransform"): &eventingv1alpha1.EventTransform{},
 	// v1beta1
 	eventingv1beta1.SchemeGroupVersion.WithKind("EventType"): &eventingv1beta1.EventType{},
 	// v1beta2

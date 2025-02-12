@@ -34,7 +34,7 @@ func TestFullLifecycle(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{},
 		Spec: EventTransformSpec{
 			Sink: nil,
-			Transformations: EventTransformations{
+			EventTransformations: EventTransformations{
 				Jsonata: &JsonataEventTransformationSpec{
 					Expression: `
     {

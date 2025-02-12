@@ -328,7 +328,7 @@ func (in *EventTransformSpec) DeepCopyInto(out *EventTransformSpec) {
 		*out = new(duckv1.Destination)
 		(*in).DeepCopyInto(*out)
 	}
-	in.Transformations.DeepCopyInto(&out.Transformations)
+	in.EventTransformations.DeepCopyInto(&out.EventTransformations)
 	return
 }
 

@@ -19,10 +19,13 @@ package eventtransform
 import (
 	"context"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/informers"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	deploymentinformer "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment/filtered"
 	configmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap/filtered"
+	serviceinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/service/filtered"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/kmeta"
@@ -48,6 +51,17 @@ func NewController(
 	jsonataConfigMapInformer := configmapinformer.Get(ctx, JsonataResourcesSelector)
 	jsonataDeploymentInformer := deploymentinformer.Get(ctx, JsonataResourcesSelector)
 	jsonataSinkBindingInformer := sinkbindinginformer.Get(ctx, JsonataResourcesSelector)
+	jsonataServiceInformer := serviceinformer.Get(ctx, JsonataResourcesSelector)
+
+	// Create a custom informer as one in knative/pkg doesn't exist for endpoints.
+	factory := informers.NewSharedInformerFactoryWithOptions(
+		kubeclient.Get(ctx),
+		controller.DefaultResyncPeriod,
+		informers.WithTweakListOptions(func(options *metav1.ListOptions) {
+			options.LabelSelector = JsonataResourcesSelector
+		}),
+	)
+	jsonataEndpointInformer := factory.Core().V1().Endpoints()
 
 	var globalResync func()
 
@@ -63,6 +77,8 @@ func NewController(
 		client:                   eventingclient.Get(ctx),
 		jsonataConfigMapLister:   jsonataConfigMapInformer.Lister(),
 		jsonataDeploymentsLister: jsonataDeploymentInformer.Lister(),
+		jsonataServiceLister:     jsonataServiceInformer.Lister(),
+		jsonataEndpointLister:    jsonataEndpointInformer.Lister(),
 		jsonataSinkBindingLister: jsonataSinkBindingInformer.Lister(),
 	}
 
@@ -79,8 +95,14 @@ func NewController(
 	eventTransformInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	jsonataDeploymentInformer.Informer().AddEventHandler(controller.HandleAll(enqueueUsingNameLabel(impl)))
+	jsonataServiceInformer.Informer().AddEventHandler(controller.HandleAll(enqueueUsingNameLabel(impl)))
+	jsonataEndpointInformer.Informer().AddEventHandler(controller.HandleAll(enqueueUsingNameLabel(impl)))
 	jsonataConfigMapInformer.Informer().AddEventHandler(controller.HandleAll(enqueueUsingNameLabel(impl)))
 	jsonataSinkBindingInformer.Informer().AddEventHandler(controller.HandleAll(enqueueUsingNameLabel(impl)))
+
+	// Start the factory after creating all necessary informers.
+	factory.Start(ctx.Done())
+	factory.WaitForCacheSync(ctx.Done())
 
 	return impl
 }
