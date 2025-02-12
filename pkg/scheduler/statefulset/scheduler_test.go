@@ -745,7 +745,9 @@ func TestStatefulsetScheduler(t *testing.T) {
 				t.Fatal("unexpected error", err)
 			}
 			if tc.initialReserved != nil {
+				s.reservedMu.Lock()
 				s.reserved = tc.initialReserved
+				s.reservedMu.Unlock()
 			}
 
 			// Give some time for the informer to notify the scheduler and set the number of replicas
