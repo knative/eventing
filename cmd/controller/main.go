@@ -25,10 +25,13 @@ import (
 	filteredFactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
 	"knative.dev/pkg/signals"
 
+	eventingfilteredfactory "knative.dev/eventing/pkg/client/injection/informers/factory/filtered"
+
 	"knative.dev/eventing/pkg/apis/sinks"
 	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/reconciler/eventpolicy"
+	"knative.dev/eventing/pkg/reconciler/eventtransform"
 	"knative.dev/eventing/pkg/reconciler/jobsink"
 
 	"knative.dev/eventing/pkg/reconciler/apiserversource"
@@ -53,6 +56,11 @@ func main() {
 		auth.OIDCLabelSelector,
 		eventingtls.TrustBundleLabelSelector,
 		sinks.JobSinkJobsLabelSelector,
+		eventtransform.JsonataResourcesSelector,
+	)
+
+	ctx = eventingfilteredfactory.WithSelectors(ctx,
+		eventtransform.JsonataResourcesSelector,
 	)
 
 	sharedmain.MainWithContext(ctx, "controller",
@@ -84,5 +92,8 @@ func main() {
 		// Sugar
 		sugarnamespace.NewController,
 		sugartrigger.NewController,
+
+		// Transform
+		eventtransform.NewController,
 	)
 }
