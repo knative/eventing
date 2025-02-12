@@ -99,6 +99,8 @@ rules:
       - "eventtypes/status"
       - "eventpolicies"
       - "eventpolicies/status"
+      - "eventtransforms"
+      - "eventtransforms/status"
     verbs:
       - "get"
       - "list"
