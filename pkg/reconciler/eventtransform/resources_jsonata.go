@@ -27,6 +27,8 @@ const (
 	JsonataResourcesNameSuffix = "jsonata"
 	JsonataExpressionDataKey   = "jsonata-expression"
 	JsonataExpressionPath      = "/etc/jsonata"
+
+	JsonataResourcesSelector = JsonataResourcesLabelKey + "=" + JsonataResourcesLabelValue
 )
 
 func jsonataExpressionConfigMap(_ context.Context, transform *eventing.EventTransform) corev1.ConfigMap {

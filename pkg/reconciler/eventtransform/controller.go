@@ -18,7 +18,6 @@ package eventtransform
 
 import (
 	"context"
-	"fmt"
 
 	"k8s.io/apimachinery/pkg/types"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
@@ -46,9 +45,9 @@ func NewController(
 ) *controller.Impl {
 
 	eventTransformInformer := eventtransformeryinformer.Get(ctx)
-	jsonataConfigMapInformer := configmapinformer.Get(ctx, fmt.Sprintf("%s=%s", JsonataResourcesLabelKey, JsonataResourcesLabelValue))
-	jsonataDeploymentInformer := deploymentinformer.Get(ctx, fmt.Sprintf("%s=%s", JsonataResourcesLabelKey, JsonataResourcesLabelValue))
-	jsonataSinkBindingInformer := sinkbindinginformer.Get(ctx, fmt.Sprintf("%s=%s", JsonataResourcesLabelKey, JsonataResourcesLabelValue))
+	jsonataConfigMapInformer := configmapinformer.Get(ctx, JsonataResourcesSelector)
+	jsonataDeploymentInformer := deploymentinformer.Get(ctx, JsonataResourcesSelector)
+	jsonataSinkBindingInformer := sinkbindinginformer.Get(ctx, JsonataResourcesSelector)
 
 	var globalResync func()
 
