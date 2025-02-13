@@ -283,7 +283,7 @@ func (v *Verifier) getHTTPClientForKubeAPIServer() (*http.Client, error) {
 }
 
 func (v *Verifier) getHTTPClient(features feature.Flags) (*http.Client, error) {
-	if features.OIDCDiscoveryBaseURL() == "https://kubernetes.default.svc" {
+	if features.OIDCDiscoveryBaseURL() == "https://kubernetes.default.svc" && features.JWKSURI() == "" {
 		return v.getHTTPClientForKubeAPIServer()
 	}
 
@@ -327,6 +327,11 @@ func (v *Verifier) getKubernetesOIDCDiscovery(features feature.Flags, client *ht
 	openIdConfig := &openIDMetadata{}
 	if err := json.Unmarshal(body, openIdConfig); err != nil {
 		return nil, fmt.Errorf("could not unmarshall openid config: %w", err)
+	}
+
+	// overwrite jwk uri if it is set in the feature flags
+	if features.JWKSURI() != "" {
+		openIdConfig.JWKSURI = features.JWKSURI()
 	}
 
 	return openIdConfig, nil
