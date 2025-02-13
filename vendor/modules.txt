@@ -1170,6 +1170,7 @@ knative.dev/pkg/client/injection/kube/informers/core/v1/namespace/fake
 knative.dev/pkg/client/injection/kube/informers/core/v1/secret/filtered
 knative.dev/pkg/client/injection/kube/informers/core/v1/service
 knative.dev/pkg/client/injection/kube/informers/core/v1/service/fake
+knative.dev/pkg/client/injection/kube/informers/core/v1/service/filtered
 knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount
 knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount/fake
 knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount/filtered

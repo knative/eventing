@@ -36,7 +36,7 @@ func (ts *EventTransformSpec) Validate(ctx context.Context) *apis.FieldError {
 	// These are transformations field paths.
 	transformations := make([]string, 0, 2)
 
-	if ts.Transformations.Jsonata != nil {
+	if ts.EventTransformations.Jsonata != nil {
 		transformations = append(transformations, "jsonata")
 	}
 
@@ -46,7 +46,7 @@ func (ts *EventTransformSpec) Validate(ctx context.Context) *apis.FieldError {
 		errs = errs.Also(apis.ErrMultipleOneOf(transformations...))
 	}
 
-	errs = errs.Also(ts.Transformations.Jsonata.Validate(ctx).ViaField("jsonata"))
+	errs = errs.Also(ts.EventTransformations.Jsonata.Validate(ctx).ViaField("jsonata"))
 	errs = errs.Also(ts.Sink.Validate(ctx).ViaField("sink"))
 
 	if apis.IsInUpdate(ctx) {
@@ -71,7 +71,7 @@ func (in *EventTransformSpec) CheckImmutableFields(_ context.Context, original *
 
 	var errs *apis.FieldError
 
-	if original.Spec.Transformations.Jsonata != nil && in.Transformations.Jsonata == nil {
+	if original.Spec.EventTransformations.Jsonata != nil && in.EventTransformations.Jsonata == nil {
 		errs = errs.Also(apis.ErrGeneric("transformations types are immutable, jsonata transformation cannot be changed to a different transformation type"))
 	}
 

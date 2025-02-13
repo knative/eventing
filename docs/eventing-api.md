@@ -2858,7 +2858,7 @@ back to the broker.</p>
 </tr>
 <tr>
 <td>
-<code>Transformations</code><br/>
+<code>EventTransformations</code><br/>
 <em>
 <a href="#eventing.knative.dev/v1alpha1.EventTransformations">
 EventTransformations
@@ -2867,9 +2867,9 @@ EventTransformations
 </td>
 <td>
 <p>
-(Members of <code>Transformations</code> are embedded into this type.)
+(Members of <code>EventTransformations</code> are embedded into this type.)
 </p>
-<p>Transformations contain all possible transformations, only one &ldquo;type&rdquo; can be used.</p>
+<p>EventTransformations contain all possible transformations, only one &ldquo;type&rdquo; can be used.</p>
 </td>
 </tr>
 </table>
@@ -3421,7 +3421,7 @@ back to the broker.</p>
 </tr>
 <tr>
 <td>
-<code>Transformations</code><br/>
+<code>EventTransformations</code><br/>
 <em>
 <a href="#eventing.knative.dev/v1alpha1.EventTransformations">
 EventTransformations
@@ -3430,9 +3430,9 @@ EventTransformations
 </td>
 <td>
 <p>
-(Members of <code>Transformations</code> are embedded into this type.)
+(Members of <code>EventTransformations</code> are embedded into this type.)
 </p>
-<p>Transformations contain all possible transformations, only one &ldquo;type&rdquo; can be used.</p>
+<p>EventTransformations contain all possible transformations, only one &ldquo;type&rdquo; can be used.</p>
 </td>
 </tr>
 </tbody>

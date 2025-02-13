@@ -40,7 +40,7 @@ const (
 	JsonataResourcesLabelKey   = "eventing.knative.dev/event-transform-jsonata"
 	JsonataResourcesLabelValue = "true"
 	JsonataExpressionHashKey   = "eventing.knative.dev/event-transform-jsonata-expression-hash"
-	JsonataResourcesNameSuffix = "jsonata"
+	JsonataResourcesNameSuffix = "-jsonata"
 	JsonataExpressionDataKey   = "jsonata-expression"
 	JsonataExpressionPath      = "/etc/jsonata"
 
@@ -50,16 +50,15 @@ const (
 func jsonataExpressionConfigMap(_ context.Context, transform *eventing.EventTransform) corev1.ConfigMap {
 	expression := corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        kmeta.ChildName(transform.Name, JsonataResourcesNameSuffix),
-			Namespace:   transform.GetNamespace(),
-			Labels:      jsonataLabels(transform),
-			Annotations: transform.Annotations,
+			Name:      kmeta.ChildName(transform.Name, JsonataResourcesNameSuffix),
+			Namespace: transform.GetNamespace(),
+			Labels:    jsonataLabels(transform),
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(transform),
 			},
 		},
 		Data: map[string]string{
-			JsonataExpressionDataKey: transform.Spec.Transformations.Jsonata.Expression,
+			JsonataExpressionDataKey: transform.Spec.EventTransformations.Jsonata.Expression,
 		},
 	}
 	return expression
@@ -76,7 +75,7 @@ func jsonataDeployment(_ context.Context, expression *corev1.ConfigMap, transfor
 			Name:        kmeta.ChildName(transform.Name, JsonataResourcesNameSuffix),
 			Namespace:   transform.GetNamespace(),
 			Labels:      jsonataLabels(transform),
-			Annotations: transform.Annotations,
+			Annotations: make(map[string]string, 2),
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(transform),
 			},
@@ -143,10 +142,43 @@ func jsonataDeployment(_ context.Context, expression *corev1.ConfigMap, transfor
 	}
 
 	// When the expression changes, this rolls out a new deployment with the latest ConfigMap data.
-	hash := sha256.Sum256([]byte(transform.Spec.Transformations.Jsonata.Expression))
+	hash := sha256.Sum256([]byte(transform.Spec.EventTransformations.Jsonata.Expression))
 	d.Annotations[JsonataExpressionHashKey] = base64.StdEncoding.EncodeToString(hash[:])
 
 	return d
+}
+
+func jsonataService(_ context.Context, transform *eventing.EventTransform) corev1.Service {
+	s := corev1.Service{
+		TypeMeta: metav1.TypeMeta{},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        kmeta.ChildName(transform.Name, JsonataResourcesNameSuffix),
+			Namespace:   transform.GetNamespace(),
+			Labels:      jsonataLabels(transform),
+			Annotations: make(map[string]string, 2),
+			OwnerReferences: []metav1.OwnerReference{
+				*kmeta.NewControllerRef(transform),
+			},
+		},
+		Spec: corev1.ServiceSpec{
+			Ports: []corev1.ServicePort{
+				{
+					Name:        "http",
+					Protocol:    corev1.ProtocolTCP,
+					AppProtocol: ptr.String("http"),
+					Port:        80,
+					TargetPort:  intstr.IntOrString{Type: intstr.Int, IntVal: 8080},
+				},
+			},
+			Selector: map[string]string{
+				JsonataResourcesLabelKey: JsonataResourcesLabelValue,
+				NameLabelKey:             transform.GetName(),
+			},
+			Type: corev1.ServiceTypeClusterIP,
+		},
+	}
+
+	return s
 }
 
 func jsonataSinkBindingName(transform *eventing.EventTransform) string {
@@ -157,10 +189,9 @@ func jsonataSinkBinding(_ context.Context, transform *eventing.EventTransform) s
 	name := jsonataSinkBindingName(transform)
 	sb := sourcesv1.SinkBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        name,
-			Namespace:   transform.GetNamespace(),
-			Labels:      jsonataLabels(transform),
-			Annotations: transform.Annotations,
+			Name:      name,
+			Namespace: transform.GetNamespace(),
+			Labels:    jsonataLabels(transform),
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(transform),
 			},
@@ -184,10 +215,7 @@ func jsonataSinkBinding(_ context.Context, transform *eventing.EventTransform) s
 }
 
 func jsonataLabels(transform *eventing.EventTransform) map[string]string {
-	labels := make(map[string]string, len(transform.Labels)+2)
-	for k, v := range transform.Labels {
-		labels[k] = v
-	}
+	labels := make(map[string]string, 2)
 	labels[JsonataResourcesLabelKey] = JsonataResourcesLabelValue
 	labels[NameLabelKey] = transform.GetName()
 	return labels
