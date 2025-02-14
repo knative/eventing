@@ -40,8 +40,8 @@ import (
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 )
 
-// Add a user defined function to validate correlation id, then return a cesql_filter
-func NewCESQLCorrelationIdFilter(ctx context.Context) error {
+// Register a user defined CESQL function to validate correlation id
+func RegisterCESQLCorrelationIdFilter(ctx context.Context) error {
 	var correlationIdFilterFunction = cefn.NewFunction(
 		"KN_VERIFY_CORRELATIONID",
 		[]cesql.Type{cesql.StringType, cesql.StringType},

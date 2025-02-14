@@ -126,7 +126,7 @@ func TestCESQLCorrelationIdFilterMatchAES(t *testing.T) {
 		}
 	}
 
-	NewCESQLCorrelationIdFilter(ctx)
+	RegisterCESQLCorrelationIdFilter(ctx)
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -186,7 +186,7 @@ func TestCESQLCorrelationIdFilterMatchDES(t *testing.T) {
 		}
 	}
 
-	NewCESQLCorrelationIdFilter(ctx)
+	RegisterCESQLCorrelationIdFilter(ctx)
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -250,7 +250,7 @@ func TestCESQLCorrelationIdFilterMatch3DES(t *testing.T) {
 		}
 	}
 
-	NewCESQLCorrelationIdFilter(ctx)
+	RegisterCESQLCorrelationIdFilter(ctx)
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -310,7 +310,7 @@ func TestCESQLCorrelationIdFilterMatchRC4(t *testing.T) {
 		}
 	}
 
-	NewCESQLCorrelationIdFilter(ctx)
+	RegisterCESQLCorrelationIdFilter(ctx)
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -374,7 +374,7 @@ func TestCESQLCorrelationIdFilterMatchFail(t *testing.T) {
 		}
 	}
 
-	NewCESQLCorrelationIdFilter(ctx)
+	RegisterCESQLCorrelationIdFilter(ctx)
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
