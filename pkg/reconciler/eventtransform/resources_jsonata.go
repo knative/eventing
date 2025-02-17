@@ -37,12 +37,14 @@ import (
 )
 
 const (
-	JsonataResourcesLabelKey   = "eventing.knative.dev/event-transform-jsonata"
-	JsonataResourcesLabelValue = "true"
-	JsonataExpressionHashKey   = "eventing.knative.dev/event-transform-jsonata-expression-hash"
-	JsonataResourcesNameSuffix = "-jsonata"
-	JsonataExpressionDataKey   = "jsonata-expression"
-	JsonataExpressionPath      = "/etc/jsonata"
+	JsonataResourcesLabelKey      = "eventing.knative.dev/event-transform-jsonata"
+	JsonataResourcesLabelValue    = "true"
+	JsonataExpressionHashKey      = "eventing.knative.dev/event-transform-jsonata-expression-hash"
+	JsonataResourcesNameSuffix    = "-jsonata"
+	JsonataExpressionDataKey      = "jsonata-expression"
+	JsonataReplyExpressionDataKey = "jsonata-expression-reply"
+
+	JsonataExpressionPath = "/etc/jsonata"
 
 	JsonataResourcesSelector = JsonataResourcesLabelKey + "=" + JsonataResourcesLabelValue
 )
@@ -61,6 +63,11 @@ func jsonataExpressionConfigMap(_ context.Context, transform *eventing.EventTran
 			JsonataExpressionDataKey: transform.Spec.EventTransformations.Jsonata.Expression,
 		},
 	}
+
+	if transform.Spec.Reply != nil && transform.Spec.Reply.Jsonata != nil {
+		expression.Data[JsonataReplyExpressionDataKey] = transform.Spec.Reply.Jsonata.Expression
+	}
+
 	return expression
 }
 
@@ -141,8 +148,39 @@ func jsonataDeployment(_ context.Context, expression *corev1.ConfigMap, transfor
 		},
 	}
 
-	// When the expression changes, this rolls out a new deployment with the latest ConfigMap data.
-	hash := sha256.Sum256([]byte(transform.Spec.EventTransformations.Jsonata.Expression))
+	// hashPayload is used to detect and roll out a new deployment when expressions change.
+	hashPayload := transform.Spec.EventTransformations.Jsonata.Expression
+
+	if transform.Spec.Reply != nil {
+		if transform.Spec.Reply.Discard != nil {
+			if *transform.Spec.Reply.Discard {
+				d.Spec.Template.Spec.Containers[0].Env = append(d.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{
+					Name:  "JSONATA_DISCARD_RESPONSE_BODY",
+					Value: "true",
+				})
+			} else {
+				d.Spec.Template.Spec.Containers[0].Env = append(d.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{
+					Name:  "JSONATA_DISCARD_RESPONSE_BODY",
+					Value: "false",
+				})
+			}
+		} else {
+			d.Spec.Template.Spec.Containers[0].Env = append(d.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{
+				Name:  "JSONATA_DISCARD_RESPONSE_BODY",
+				Value: "false",
+			})
+		}
+
+		if transform.Spec.Reply.Jsonata != nil {
+			d.Spec.Template.Spec.Containers[0].Env = append(d.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{
+				Name:  "JSONATA_RESPONSE_TRANSFORM_FILE_NAME",
+				Value: filepath.Join(JsonataExpressionPath, JsonataReplyExpressionDataKey),
+			})
+			hashPayload += transform.Spec.Reply.Jsonata.Expression
+		}
+	}
+
+	hash := sha256.Sum256([]byte(hashPayload))
 	d.Annotations[JsonataExpressionHashKey] = base64.StdEncoding.EncodeToString(hash[:])
 
 	return d
