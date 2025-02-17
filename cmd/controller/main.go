@@ -65,6 +65,7 @@ func main() {
 		eventingtls.TrustBundleLabelSelector,
 		sinks.JobSinkJobsLabelSelector,
 		eventtransform.JsonataResourcesSelector,
+		"app.kubernetes.io/name",
 	)
 
 	ctx = eventingfilteredfactory.WithSelectors(ctx,
