@@ -2858,6 +2858,21 @@ back to the broker.</p>
 </tr>
 <tr>
 <td>
+<code>reply</code><br/>
+<em>
+<a href="#eventing.knative.dev/v1alpha1.ReplySpec">
+ReplySpec
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Reply is the configuration on how to handle responses from Sink.
+It can only be set if Sink is set.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>EventTransformations</code><br/>
 <em>
 <a href="#eventing.knative.dev/v1alpha1.EventTransformations">
@@ -3421,6 +3436,21 @@ back to the broker.</p>
 </tr>
 <tr>
 <td>
+<code>reply</code><br/>
+<em>
+<a href="#eventing.knative.dev/v1alpha1.ReplySpec">
+ReplySpec
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Reply is the configuration on how to handle responses from Sink.
+It can only be set if Sink is set.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>EventTransformations</code><br/>
 <em>
 <a href="#eventing.knative.dev/v1alpha1.EventTransformations">
@@ -3512,7 +3542,7 @@ JsonataEventTransformationStatus
 <h3 id="eventing.knative.dev/v1alpha1.EventTransformations">EventTransformations
 </h3>
 <p>
-(<em>Appears on:</em><a href="#eventing.knative.dev/v1alpha1.EventTransformSpec">EventTransformSpec</a>)
+(<em>Appears on:</em><a href="#eventing.knative.dev/v1alpha1.EventTransformSpec">EventTransformSpec</a>, <a href="#eventing.knative.dev/v1alpha1.ReplySpec">ReplySpec</a>)
 </p>
 <p>
 </p>
@@ -3591,6 +3621,59 @@ Kubernetes apps/v1.DeploymentStatus
 </em>
 </td>
 <td>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="eventing.knative.dev/v1alpha1.ReplySpec">ReplySpec
+</h3>
+<p>
+(<em>Appears on:</em><a href="#eventing.knative.dev/v1alpha1.EventTransformSpec">EventTransformSpec</a>)
+</p>
+<p>
+<p>ReplySpec is the configurations on how to handle responses from Sink.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>EventTransformations</code><br/>
+<em>
+<a href="#eventing.knative.dev/v1alpha1.EventTransformations">
+EventTransformations
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>EventTransformations</code> are embedded into this type.)
+</p>
+<p>EventTransformations for replies from the Sink, contain all possible transformations,
+only one &ldquo;type&rdquo; can be used.</p>
+<p>The used type must match the top-level transformation, if you need to mix transformation types,
+use compositions and chain transformations together to achieve your desired outcome.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>discard</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Discard discards responses from Sink and return empty response body.</p>
+<p>When set to false, it returns the exact sink response body.
+When set to true, Discard is mutually exclusive with EventTransformations in the reply
+section, it can either be discarded or transformed.</p>
+<p>Default: false.</p>
 </td>
 </tr>
 </tbody>

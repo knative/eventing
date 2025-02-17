@@ -74,8 +74,35 @@ type EventTransformSpec struct {
 	// +optional
 	Sink *duckv1.Destination `json:"sink,omitempty"`
 
+	// Reply is the configuration on how to handle responses from Sink.
+	// It can only be set if Sink is set.
+	//
+	// +optional
+	Reply *ReplySpec `json:"reply,omitempty"`
+
 	// EventTransformations contain all possible transformations, only one "type" can be used.
 	EventTransformations `json:",inline"`
+}
+
+// ReplySpec is the configurations on how to handle responses from Sink.
+type ReplySpec struct {
+	// EventTransformations for replies from the Sink, contain all possible transformations,
+	// only one "type" can be used.
+	//
+	// The used type must match the top-level transformation, if you need to mix transformation types,
+	// use compositions and chain transformations together to achieve your desired outcome.
+	EventTransformations `json:",inline"`
+
+	// Discard discards responses from Sink and return empty response body.
+	//
+	// When set to false, it returns the exact sink response body.
+	// When set to true, Discard is mutually exclusive with EventTransformations in the reply
+	// section, it can either be discarded or transformed.
+	//
+	// Default: false.
+	//
+	// +optional
+	Discard *bool `json:"discard,omitempty"`
 }
 
 type EventTransformations struct {
