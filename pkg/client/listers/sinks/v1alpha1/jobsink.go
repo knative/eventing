@@ -19,10 +19,10 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
-	"k8s.io/client-go/tools/cache"
-	v1alpha1 "knative.dev/eventing/pkg/apis/sinks/v1alpha1"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
+	sinksv1alpha1 "knative.dev/eventing/pkg/apis/sinks/v1alpha1"
 )
 
 // JobSinkLister helps list JobSinks.
@@ -30,7 +30,7 @@ import (
 type JobSinkLister interface {
 	// List lists all JobSinks in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1alpha1.JobSink, err error)
+	List(selector labels.Selector) (ret []*sinksv1alpha1.JobSink, err error)
 	// JobSinks returns an object that can list and get JobSinks.
 	JobSinks(namespace string) JobSinkNamespaceLister
 	JobSinkListerExpansion
@@ -38,17 +38,17 @@ type JobSinkLister interface {
 
 // jobSinkLister implements the JobSinkLister interface.
 type jobSinkLister struct {
-	listers.ResourceIndexer[*v1alpha1.JobSink]
+	listers.ResourceIndexer[*sinksv1alpha1.JobSink]
 }
 
 // NewJobSinkLister returns a new JobSinkLister.
 func NewJobSinkLister(indexer cache.Indexer) JobSinkLister {
-	return &jobSinkLister{listers.New[*v1alpha1.JobSink](indexer, v1alpha1.Resource("jobsink"))}
+	return &jobSinkLister{listers.New[*sinksv1alpha1.JobSink](indexer, sinksv1alpha1.Resource("jobsink"))}
 }
 
 // JobSinks returns an object that can list and get JobSinks.
 func (s *jobSinkLister) JobSinks(namespace string) JobSinkNamespaceLister {
-	return jobSinkNamespaceLister{listers.NewNamespaced[*v1alpha1.JobSink](s.ResourceIndexer, namespace)}
+	return jobSinkNamespaceLister{listers.NewNamespaced[*sinksv1alpha1.JobSink](s.ResourceIndexer, namespace)}
 }
 
 // JobSinkNamespaceLister helps list and get JobSinks.
@@ -56,15 +56,15 @@ func (s *jobSinkLister) JobSinks(namespace string) JobSinkNamespaceLister {
 type JobSinkNamespaceLister interface {
 	// List lists all JobSinks in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1alpha1.JobSink, err error)
+	List(selector labels.Selector) (ret []*sinksv1alpha1.JobSink, err error)
 	// Get retrieves the JobSink from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v1alpha1.JobSink, error)
+	Get(name string) (*sinksv1alpha1.JobSink, error)
 	JobSinkNamespaceListerExpansion
 }
 
 // jobSinkNamespaceLister implements the JobSinkNamespaceLister
 // interface.
 type jobSinkNamespaceLister struct {
-	listers.ResourceIndexer[*v1alpha1.JobSink]
+	listers.ResourceIndexer[*sinksv1alpha1.JobSink]
 }

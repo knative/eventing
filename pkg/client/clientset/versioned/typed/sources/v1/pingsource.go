@@ -19,13 +19,13 @@ limitations under the License.
 package v1
 
 import (
-	"context"
+	context "context"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	gentype "k8s.io/client-go/gentype"
-	v1 "knative.dev/eventing/pkg/apis/sources/v1"
+	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	scheme "knative.dev/eventing/pkg/client/clientset/versioned/scheme"
 )
 
@@ -37,33 +37,34 @@ type PingSourcesGetter interface {
 
 // PingSourceInterface has methods to work with PingSource resources.
 type PingSourceInterface interface {
-	Create(ctx context.Context, pingSource *v1.PingSource, opts metav1.CreateOptions) (*v1.PingSource, error)
-	Update(ctx context.Context, pingSource *v1.PingSource, opts metav1.UpdateOptions) (*v1.PingSource, error)
+	Create(ctx context.Context, pingSource *sourcesv1.PingSource, opts metav1.CreateOptions) (*sourcesv1.PingSource, error)
+	Update(ctx context.Context, pingSource *sourcesv1.PingSource, opts metav1.UpdateOptions) (*sourcesv1.PingSource, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, pingSource *v1.PingSource, opts metav1.UpdateOptions) (*v1.PingSource, error)
+	UpdateStatus(ctx context.Context, pingSource *sourcesv1.PingSource, opts metav1.UpdateOptions) (*sourcesv1.PingSource, error)
 	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.PingSource, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.PingSourceList, error)
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*sourcesv1.PingSource, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*sourcesv1.PingSourceList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.PingSource, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *sourcesv1.PingSource, err error)
 	PingSourceExpansion
 }
 
 // pingSources implements PingSourceInterface
 type pingSources struct {
-	*gentype.ClientWithList[*v1.PingSource, *v1.PingSourceList]
+	*gentype.ClientWithList[*sourcesv1.PingSource, *sourcesv1.PingSourceList]
 }
 
 // newPingSources returns a PingSources
 func newPingSources(c *SourcesV1Client, namespace string) *pingSources {
 	return &pingSources{
-		gentype.NewClientWithList[*v1.PingSource, *v1.PingSourceList](
+		gentype.NewClientWithList[*sourcesv1.PingSource, *sourcesv1.PingSourceList](
 			"pingsources",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			namespace,
-			func() *v1.PingSource { return &v1.PingSource{} },
-			func() *v1.PingSourceList { return &v1.PingSourceList{} }),
+			func() *sourcesv1.PingSource { return &sourcesv1.PingSource{} },
+			func() *sourcesv1.PingSourceList { return &sourcesv1.PingSourceList{} },
+		),
 	}
 }

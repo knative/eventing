@@ -19,129 +19,30 @@ limitations under the License.
 package fake
 
 import (
-	"context"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
+	gentype "k8s.io/client-go/gentype"
 	v1 "knative.dev/eventing/pkg/apis/flows/v1"
+	flowsv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/flows/v1"
 )
 
-// FakeParallels implements ParallelInterface
-type FakeParallels struct {
+// fakeParallels implements ParallelInterface
+type fakeParallels struct {
+	*gentype.FakeClientWithList[*v1.Parallel, *v1.ParallelList]
 	Fake *FakeFlowsV1
-	ns   string
 }
 
-var parallelsResource = v1.SchemeGroupVersion.WithResource("parallels")
-
-var parallelsKind = v1.SchemeGroupVersion.WithKind("Parallel")
-
-// Get takes name of the parallel, and returns the corresponding parallel object, and an error if there is any.
-func (c *FakeParallels) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.Parallel, err error) {
-	emptyResult := &v1.Parallel{}
-	obj, err := c.Fake.
-		Invokes(testing.NewGetActionWithOptions(parallelsResource, c.ns, name, options), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
+func newFakeParallels(fake *FakeFlowsV1, namespace string) flowsv1.ParallelInterface {
+	return &fakeParallels{
+		gentype.NewFakeClientWithList[*v1.Parallel, *v1.ParallelList](
+			fake.Fake,
+			namespace,
+			v1.SchemeGroupVersion.WithResource("parallels"),
+			v1.SchemeGroupVersion.WithKind("Parallel"),
+			func() *v1.Parallel { return &v1.Parallel{} },
+			func() *v1.ParallelList { return &v1.ParallelList{} },
+			func(dst, src *v1.ParallelList) { dst.ListMeta = src.ListMeta },
+			func(list *v1.ParallelList) []*v1.Parallel { return gentype.ToPointerSlice(list.Items) },
+			func(list *v1.ParallelList, items []*v1.Parallel) { list.Items = gentype.FromPointerSlice(items) },
+		),
+		fake,
 	}
-	return obj.(*v1.Parallel), err
-}
-
-// List takes label and field selectors, and returns the list of Parallels that match those selectors.
-func (c *FakeParallels) List(ctx context.Context, opts metav1.ListOptions) (result *v1.ParallelList, err error) {
-	emptyResult := &v1.ParallelList{}
-	obj, err := c.Fake.
-		Invokes(testing.NewListActionWithOptions(parallelsResource, parallelsKind, c.ns, opts), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-
-	label, _, _ := testing.ExtractFromListOptions(opts)
-	if label == nil {
-		label = labels.Everything()
-	}
-	list := &v1.ParallelList{ListMeta: obj.(*v1.ParallelList).ListMeta}
-	for _, item := range obj.(*v1.ParallelList).Items {
-		if label.Matches(labels.Set(item.Labels)) {
-			list.Items = append(list.Items, item)
-		}
-	}
-	return list, err
-}
-
-// Watch returns a watch.Interface that watches the requested parallels.
-func (c *FakeParallels) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewWatchActionWithOptions(parallelsResource, c.ns, opts))
-
-}
-
-// Create takes the representation of a parallel and creates it.  Returns the server's representation of the parallel, and an error, if there is any.
-func (c *FakeParallels) Create(ctx context.Context, parallel *v1.Parallel, opts metav1.CreateOptions) (result *v1.Parallel, err error) {
-	emptyResult := &v1.Parallel{}
-	obj, err := c.Fake.
-		Invokes(testing.NewCreateActionWithOptions(parallelsResource, c.ns, parallel, opts), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1.Parallel), err
-}
-
-// Update takes the representation of a parallel and updates it. Returns the server's representation of the parallel, and an error, if there is any.
-func (c *FakeParallels) Update(ctx context.Context, parallel *v1.Parallel, opts metav1.UpdateOptions) (result *v1.Parallel, err error) {
-	emptyResult := &v1.Parallel{}
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateActionWithOptions(parallelsResource, c.ns, parallel, opts), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1.Parallel), err
-}
-
-// UpdateStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeParallels) UpdateStatus(ctx context.Context, parallel *v1.Parallel, opts metav1.UpdateOptions) (result *v1.Parallel, err error) {
-	emptyResult := &v1.Parallel{}
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceActionWithOptions(parallelsResource, "status", c.ns, parallel, opts), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1.Parallel), err
-}
-
-// Delete takes name of the parallel and deletes it. Returns an error if one occurs.
-func (c *FakeParallels) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewDeleteActionWithOptions(parallelsResource, c.ns, name, opts), &v1.Parallel{})
-
-	return err
-}
-
-// DeleteCollection deletes a collection of objects.
-func (c *FakeParallels) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
-	action := testing.NewDeleteCollectionActionWithOptions(parallelsResource, c.ns, opts, listOpts)
-
-	_, err := c.Fake.Invokes(action, &v1.ParallelList{})
-	return err
-}
-
-// Patch applies the patch and returns the patched parallel.
-func (c *FakeParallels) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Parallel, err error) {
-	emptyResult := &v1.Parallel{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(parallelsResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1.Parallel), err
 }

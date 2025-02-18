@@ -19,13 +19,13 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"context"
+	context "context"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	gentype "k8s.io/client-go/gentype"
-	v1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	scheme "knative.dev/eventing/pkg/client/clientset/versioned/scheme"
 )
 
@@ -37,33 +37,34 @@ type EventPoliciesGetter interface {
 
 // EventPolicyInterface has methods to work with EventPolicy resources.
 type EventPolicyInterface interface {
-	Create(ctx context.Context, eventPolicy *v1alpha1.EventPolicy, opts v1.CreateOptions) (*v1alpha1.EventPolicy, error)
-	Update(ctx context.Context, eventPolicy *v1alpha1.EventPolicy, opts v1.UpdateOptions) (*v1alpha1.EventPolicy, error)
+	Create(ctx context.Context, eventPolicy *eventingv1alpha1.EventPolicy, opts v1.CreateOptions) (*eventingv1alpha1.EventPolicy, error)
+	Update(ctx context.Context, eventPolicy *eventingv1alpha1.EventPolicy, opts v1.UpdateOptions) (*eventingv1alpha1.EventPolicy, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, eventPolicy *v1alpha1.EventPolicy, opts v1.UpdateOptions) (*v1alpha1.EventPolicy, error)
+	UpdateStatus(ctx context.Context, eventPolicy *eventingv1alpha1.EventPolicy, opts v1.UpdateOptions) (*eventingv1alpha1.EventPolicy, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha1.EventPolicy, error)
-	List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.EventPolicyList, error)
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*eventingv1alpha1.EventPolicy, error)
+	List(ctx context.Context, opts v1.ListOptions) (*eventingv1alpha1.EventPolicyList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.EventPolicy, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *eventingv1alpha1.EventPolicy, err error)
 	EventPolicyExpansion
 }
 
 // eventPolicies implements EventPolicyInterface
 type eventPolicies struct {
-	*gentype.ClientWithList[*v1alpha1.EventPolicy, *v1alpha1.EventPolicyList]
+	*gentype.ClientWithList[*eventingv1alpha1.EventPolicy, *eventingv1alpha1.EventPolicyList]
 }
 
 // newEventPolicies returns a EventPolicies
 func newEventPolicies(c *EventingV1alpha1Client, namespace string) *eventPolicies {
 	return &eventPolicies{
-		gentype.NewClientWithList[*v1alpha1.EventPolicy, *v1alpha1.EventPolicyList](
+		gentype.NewClientWithList[*eventingv1alpha1.EventPolicy, *eventingv1alpha1.EventPolicyList](
 			"eventpolicies",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			namespace,
-			func() *v1alpha1.EventPolicy { return &v1alpha1.EventPolicy{} },
-			func() *v1alpha1.EventPolicyList { return &v1alpha1.EventPolicyList{} }),
+			func() *eventingv1alpha1.EventPolicy { return &eventingv1alpha1.EventPolicy{} },
+			func() *eventingv1alpha1.EventPolicyList { return &eventingv1alpha1.EventPolicyList{} },
+		),
 	}
 }

@@ -19,13 +19,13 @@ limitations under the License.
 package v1
 
 import (
-	"context"
+	context "context"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	gentype "k8s.io/client-go/gentype"
-	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
+	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	scheme "knative.dev/eventing/pkg/client/clientset/versioned/scheme"
 )
 
@@ -37,33 +37,34 @@ type SubscriptionsGetter interface {
 
 // SubscriptionInterface has methods to work with Subscription resources.
 type SubscriptionInterface interface {
-	Create(ctx context.Context, subscription *v1.Subscription, opts metav1.CreateOptions) (*v1.Subscription, error)
-	Update(ctx context.Context, subscription *v1.Subscription, opts metav1.UpdateOptions) (*v1.Subscription, error)
+	Create(ctx context.Context, subscription *messagingv1.Subscription, opts metav1.CreateOptions) (*messagingv1.Subscription, error)
+	Update(ctx context.Context, subscription *messagingv1.Subscription, opts metav1.UpdateOptions) (*messagingv1.Subscription, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, subscription *v1.Subscription, opts metav1.UpdateOptions) (*v1.Subscription, error)
+	UpdateStatus(ctx context.Context, subscription *messagingv1.Subscription, opts metav1.UpdateOptions) (*messagingv1.Subscription, error)
 	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.Subscription, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.SubscriptionList, error)
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*messagingv1.Subscription, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*messagingv1.SubscriptionList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Subscription, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *messagingv1.Subscription, err error)
 	SubscriptionExpansion
 }
 
 // subscriptions implements SubscriptionInterface
 type subscriptions struct {
-	*gentype.ClientWithList[*v1.Subscription, *v1.SubscriptionList]
+	*gentype.ClientWithList[*messagingv1.Subscription, *messagingv1.SubscriptionList]
 }
 
 // newSubscriptions returns a Subscriptions
 func newSubscriptions(c *MessagingV1Client, namespace string) *subscriptions {
 	return &subscriptions{
-		gentype.NewClientWithList[*v1.Subscription, *v1.SubscriptionList](
+		gentype.NewClientWithList[*messagingv1.Subscription, *messagingv1.SubscriptionList](
 			"subscriptions",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			namespace,
-			func() *v1.Subscription { return &v1.Subscription{} },
-			func() *v1.SubscriptionList { return &v1.SubscriptionList{} }),
+			func() *messagingv1.Subscription { return &messagingv1.Subscription{} },
+			func() *messagingv1.SubscriptionList { return &messagingv1.SubscriptionList{} },
+		),
 	}
 }

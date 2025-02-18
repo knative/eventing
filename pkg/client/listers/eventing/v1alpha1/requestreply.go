@@ -19,10 +19,10 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
-	"k8s.io/client-go/tools/cache"
-	v1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
+	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 )
 
 // RequestReplyLister helps list RequestReplies.
@@ -30,7 +30,7 @@ import (
 type RequestReplyLister interface {
 	// List lists all RequestReplies in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1alpha1.RequestReply, err error)
+	List(selector labels.Selector) (ret []*eventingv1alpha1.RequestReply, err error)
 	// RequestReplies returns an object that can list and get RequestReplies.
 	RequestReplies(namespace string) RequestReplyNamespaceLister
 	RequestReplyListerExpansion
@@ -38,17 +38,17 @@ type RequestReplyLister interface {
 
 // requestReplyLister implements the RequestReplyLister interface.
 type requestReplyLister struct {
-	listers.ResourceIndexer[*v1alpha1.RequestReply]
+	listers.ResourceIndexer[*eventingv1alpha1.RequestReply]
 }
 
 // NewRequestReplyLister returns a new RequestReplyLister.
 func NewRequestReplyLister(indexer cache.Indexer) RequestReplyLister {
-	return &requestReplyLister{listers.New[*v1alpha1.RequestReply](indexer, v1alpha1.Resource("requestreply"))}
+	return &requestReplyLister{listers.New[*eventingv1alpha1.RequestReply](indexer, eventingv1alpha1.Resource("requestreply"))}
 }
 
 // RequestReplies returns an object that can list and get RequestReplies.
 func (s *requestReplyLister) RequestReplies(namespace string) RequestReplyNamespaceLister {
-	return requestReplyNamespaceLister{listers.NewNamespaced[*v1alpha1.RequestReply](s.ResourceIndexer, namespace)}
+	return requestReplyNamespaceLister{listers.NewNamespaced[*eventingv1alpha1.RequestReply](s.ResourceIndexer, namespace)}
 }
 
 // RequestReplyNamespaceLister helps list and get RequestReplies.
@@ -56,15 +56,15 @@ func (s *requestReplyLister) RequestReplies(namespace string) RequestReplyNamesp
 type RequestReplyNamespaceLister interface {
 	// List lists all RequestReplies in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1alpha1.RequestReply, err error)
+	List(selector labels.Selector) (ret []*eventingv1alpha1.RequestReply, err error)
 	// Get retrieves the RequestReply from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v1alpha1.RequestReply, error)
+	Get(name string) (*eventingv1alpha1.RequestReply, error)
 	RequestReplyNamespaceListerExpansion
 }
 
 // requestReplyNamespaceLister implements the RequestReplyNamespaceLister
 // interface.
 type requestReplyNamespaceLister struct {
-	listers.ResourceIndexer[*v1alpha1.RequestReply]
+	listers.ResourceIndexer[*eventingv1alpha1.RequestReply]
 }

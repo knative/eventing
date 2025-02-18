@@ -19,13 +19,13 @@ limitations under the License.
 package v1
 
 import (
-	"context"
+	context "context"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	gentype "k8s.io/client-go/gentype"
-	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	scheme "knative.dev/eventing/pkg/client/clientset/versioned/scheme"
 )
 
@@ -37,33 +37,34 @@ type TriggersGetter interface {
 
 // TriggerInterface has methods to work with Trigger resources.
 type TriggerInterface interface {
-	Create(ctx context.Context, trigger *v1.Trigger, opts metav1.CreateOptions) (*v1.Trigger, error)
-	Update(ctx context.Context, trigger *v1.Trigger, opts metav1.UpdateOptions) (*v1.Trigger, error)
+	Create(ctx context.Context, trigger *eventingv1.Trigger, opts metav1.CreateOptions) (*eventingv1.Trigger, error)
+	Update(ctx context.Context, trigger *eventingv1.Trigger, opts metav1.UpdateOptions) (*eventingv1.Trigger, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, trigger *v1.Trigger, opts metav1.UpdateOptions) (*v1.Trigger, error)
+	UpdateStatus(ctx context.Context, trigger *eventingv1.Trigger, opts metav1.UpdateOptions) (*eventingv1.Trigger, error)
 	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.Trigger, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.TriggerList, error)
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*eventingv1.Trigger, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*eventingv1.TriggerList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Trigger, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *eventingv1.Trigger, err error)
 	TriggerExpansion
 }
 
 // triggers implements TriggerInterface
 type triggers struct {
-	*gentype.ClientWithList[*v1.Trigger, *v1.TriggerList]
+	*gentype.ClientWithList[*eventingv1.Trigger, *eventingv1.TriggerList]
 }
 
 // newTriggers returns a Triggers
 func newTriggers(c *EventingV1Client, namespace string) *triggers {
 	return &triggers{
-		gentype.NewClientWithList[*v1.Trigger, *v1.TriggerList](
+		gentype.NewClientWithList[*eventingv1.Trigger, *eventingv1.TriggerList](
 			"triggers",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			namespace,
-			func() *v1.Trigger { return &v1.Trigger{} },
-			func() *v1.TriggerList { return &v1.TriggerList{} }),
+			func() *eventingv1.Trigger { return &eventingv1.Trigger{} },
+			func() *eventingv1.TriggerList { return &eventingv1.TriggerList{} },
+		),
 	}
 }

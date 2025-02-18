@@ -29,7 +29,7 @@ type FakeSourcesV1beta2 struct {
 }
 
 func (c *FakeSourcesV1beta2) PingSources(namespace string) v1beta2.PingSourceInterface {
-	return &FakePingSources{c, namespace}
+	return newFakePingSources(c, namespace)
 }
 
 // RESTClient returns a RESTClient that is used to communicate

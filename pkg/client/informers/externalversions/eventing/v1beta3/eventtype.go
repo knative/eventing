@@ -19,24 +19,24 @@ limitations under the License.
 package v1beta3
 
 import (
-	"context"
+	context "context"
 	time "time"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
 	cache "k8s.io/client-go/tools/cache"
-	eventingv1beta3 "knative.dev/eventing/pkg/apis/eventing/v1beta3"
+	apiseventingv1beta3 "knative.dev/eventing/pkg/apis/eventing/v1beta3"
 	versioned "knative.dev/eventing/pkg/client/clientset/versioned"
 	internalinterfaces "knative.dev/eventing/pkg/client/informers/externalversions/internalinterfaces"
-	v1beta3 "knative.dev/eventing/pkg/client/listers/eventing/v1beta3"
+	eventingv1beta3 "knative.dev/eventing/pkg/client/listers/eventing/v1beta3"
 )
 
 // EventTypeInformer provides access to a shared informer and lister for
 // EventTypes.
 type EventTypeInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1beta3.EventTypeLister
+	Lister() eventingv1beta3.EventTypeLister
 }
 
 type eventTypeInformer struct {
@@ -71,7 +71,7 @@ func NewFilteredEventTypeInformer(client versioned.Interface, namespace string, 
 				return client.EventingV1beta3().EventTypes(namespace).Watch(context.TODO(), options)
 			},
 		},
-		&eventingv1beta3.EventType{},
+		&apiseventingv1beta3.EventType{},
 		resyncPeriod,
 		indexers,
 	)
@@ -82,9 +82,9 @@ func (f *eventTypeInformer) defaultInformer(client versioned.Interface, resyncPe
 }
 
 func (f *eventTypeInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&eventingv1beta3.EventType{}, f.defaultInformer)
+	return f.factory.InformerFor(&apiseventingv1beta3.EventType{}, f.defaultInformer)
 }
 
-func (f *eventTypeInformer) Lister() v1beta3.EventTypeLister {
-	return v1beta3.NewEventTypeLister(f.Informer().GetIndexer())
+func (f *eventTypeInformer) Lister() eventingv1beta3.EventTypeLister {
+	return eventingv1beta3.NewEventTypeLister(f.Informer().GetIndexer())
 }

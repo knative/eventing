@@ -19,24 +19,24 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
 	cache "k8s.io/client-go/tools/cache"
-	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	apiseventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	versioned "knative.dev/eventing/pkg/client/clientset/versioned"
 	internalinterfaces "knative.dev/eventing/pkg/client/informers/externalversions/internalinterfaces"
-	v1alpha1 "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
+	eventingv1alpha1 "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 )
 
 // EventTransformInformer provides access to a shared informer and lister for
 // EventTransforms.
 type EventTransformInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1alpha1.EventTransformLister
+	Lister() eventingv1alpha1.EventTransformLister
 }
 
 type eventTransformInformer struct {
@@ -71,7 +71,7 @@ func NewFilteredEventTransformInformer(client versioned.Interface, namespace str
 				return client.EventingV1alpha1().EventTransforms(namespace).Watch(context.TODO(), options)
 			},
 		},
-		&eventingv1alpha1.EventTransform{},
+		&apiseventingv1alpha1.EventTransform{},
 		resyncPeriod,
 		indexers,
 	)
@@ -82,9 +82,9 @@ func (f *eventTransformInformer) defaultInformer(client versioned.Interface, res
 }
 
 func (f *eventTransformInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&eventingv1alpha1.EventTransform{}, f.defaultInformer)
+	return f.factory.InformerFor(&apiseventingv1alpha1.EventTransform{}, f.defaultInformer)
 }
 
-func (f *eventTransformInformer) Lister() v1alpha1.EventTransformLister {
-	return v1alpha1.NewEventTransformLister(f.Informer().GetIndexer())
+func (f *eventTransformInformer) Lister() eventingv1alpha1.EventTransformLister {
+	return eventingv1alpha1.NewEventTransformLister(f.Informer().GetIndexer())
 }

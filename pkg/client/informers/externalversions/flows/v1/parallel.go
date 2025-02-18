@@ -19,24 +19,24 @@ limitations under the License.
 package v1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
 	cache "k8s.io/client-go/tools/cache"
-	flowsv1 "knative.dev/eventing/pkg/apis/flows/v1"
+	apisflowsv1 "knative.dev/eventing/pkg/apis/flows/v1"
 	versioned "knative.dev/eventing/pkg/client/clientset/versioned"
 	internalinterfaces "knative.dev/eventing/pkg/client/informers/externalversions/internalinterfaces"
-	v1 "knative.dev/eventing/pkg/client/listers/flows/v1"
+	flowsv1 "knative.dev/eventing/pkg/client/listers/flows/v1"
 )
 
 // ParallelInformer provides access to a shared informer and lister for
 // Parallels.
 type ParallelInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1.ParallelLister
+	Lister() flowsv1.ParallelLister
 }
 
 type parallelInformer struct {
@@ -71,7 +71,7 @@ func NewFilteredParallelInformer(client versioned.Interface, namespace string, r
 				return client.FlowsV1().Parallels(namespace).Watch(context.TODO(), options)
 			},
 		},
-		&flowsv1.Parallel{},
+		&apisflowsv1.Parallel{},
 		resyncPeriod,
 		indexers,
 	)
@@ -82,9 +82,9 @@ func (f *parallelInformer) defaultInformer(client versioned.Interface, resyncPer
 }
 
 func (f *parallelInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&flowsv1.Parallel{}, f.defaultInformer)
+	return f.factory.InformerFor(&apisflowsv1.Parallel{}, f.defaultInformer)
 }
 
-func (f *parallelInformer) Lister() v1.ParallelLister {
-	return v1.NewParallelLister(f.Informer().GetIndexer())
+func (f *parallelInformer) Lister() flowsv1.ParallelLister {
+	return flowsv1.NewParallelLister(f.Informer().GetIndexer())
 }
