@@ -19,24 +19,24 @@ limitations under the License.
 package v1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
-	certmanagerv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	apiscertmanagerv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
 	cache "k8s.io/client-go/tools/cache"
 	versioned "knative.dev/eventing/pkg/client/certmanager/clientset/versioned"
 	internalinterfaces "knative.dev/eventing/pkg/client/certmanager/informers/externalversions/internalinterfaces"
-	v1 "knative.dev/eventing/pkg/client/certmanager/listers/certmanager/v1"
+	certmanagerv1 "knative.dev/eventing/pkg/client/certmanager/listers/certmanager/v1"
 )
 
 // CertificateRequestInformer provides access to a shared informer and lister for
 // CertificateRequests.
 type CertificateRequestInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1.CertificateRequestLister
+	Lister() certmanagerv1.CertificateRequestLister
 }
 
 type certificateRequestInformer struct {
@@ -71,7 +71,7 @@ func NewFilteredCertificateRequestInformer(client versioned.Interface, namespace
 				return client.CertmanagerV1().CertificateRequests(namespace).Watch(context.TODO(), options)
 			},
 		},
-		&certmanagerv1.CertificateRequest{},
+		&apiscertmanagerv1.CertificateRequest{},
 		resyncPeriod,
 		indexers,
 	)
@@ -82,9 +82,9 @@ func (f *certificateRequestInformer) defaultInformer(client versioned.Interface,
 }
 
 func (f *certificateRequestInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&certmanagerv1.CertificateRequest{}, f.defaultInformer)
+	return f.factory.InformerFor(&apiscertmanagerv1.CertificateRequest{}, f.defaultInformer)
 }
 
-func (f *certificateRequestInformer) Lister() v1.CertificateRequestLister {
-	return v1.NewCertificateRequestLister(f.Informer().GetIndexer())
+func (f *certificateRequestInformer) Lister() certmanagerv1.CertificateRequestLister {
+	return certmanagerv1.NewCertificateRequestLister(f.Informer().GetIndexer())
 }
