@@ -19,10 +19,10 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
-	"k8s.io/client-go/tools/cache"
-	v1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
+	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 )
 
 // IntegrationSourceLister helps list IntegrationSources.
@@ -30,7 +30,7 @@ import (
 type IntegrationSourceLister interface {
 	// List lists all IntegrationSources in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1alpha1.IntegrationSource, err error)
+	List(selector labels.Selector) (ret []*sourcesv1alpha1.IntegrationSource, err error)
 	// IntegrationSources returns an object that can list and get IntegrationSources.
 	IntegrationSources(namespace string) IntegrationSourceNamespaceLister
 	IntegrationSourceListerExpansion
@@ -38,17 +38,17 @@ type IntegrationSourceLister interface {
 
 // integrationSourceLister implements the IntegrationSourceLister interface.
 type integrationSourceLister struct {
-	listers.ResourceIndexer[*v1alpha1.IntegrationSource]
+	listers.ResourceIndexer[*sourcesv1alpha1.IntegrationSource]
 }
 
 // NewIntegrationSourceLister returns a new IntegrationSourceLister.
 func NewIntegrationSourceLister(indexer cache.Indexer) IntegrationSourceLister {
-	return &integrationSourceLister{listers.New[*v1alpha1.IntegrationSource](indexer, v1alpha1.Resource("integrationsource"))}
+	return &integrationSourceLister{listers.New[*sourcesv1alpha1.IntegrationSource](indexer, sourcesv1alpha1.Resource("integrationsource"))}
 }
 
 // IntegrationSources returns an object that can list and get IntegrationSources.
 func (s *integrationSourceLister) IntegrationSources(namespace string) IntegrationSourceNamespaceLister {
-	return integrationSourceNamespaceLister{listers.NewNamespaced[*v1alpha1.IntegrationSource](s.ResourceIndexer, namespace)}
+	return integrationSourceNamespaceLister{listers.NewNamespaced[*sourcesv1alpha1.IntegrationSource](s.ResourceIndexer, namespace)}
 }
 
 // IntegrationSourceNamespaceLister helps list and get IntegrationSources.
@@ -56,15 +56,15 @@ func (s *integrationSourceLister) IntegrationSources(namespace string) Integrati
 type IntegrationSourceNamespaceLister interface {
 	// List lists all IntegrationSources in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1alpha1.IntegrationSource, err error)
+	List(selector labels.Selector) (ret []*sourcesv1alpha1.IntegrationSource, err error)
 	// Get retrieves the IntegrationSource from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v1alpha1.IntegrationSource, error)
+	Get(name string) (*sourcesv1alpha1.IntegrationSource, error)
 	IntegrationSourceNamespaceListerExpansion
 }
 
 // integrationSourceNamespaceLister implements the IntegrationSourceNamespaceLister
 // interface.
 type integrationSourceNamespaceLister struct {
-	listers.ResourceIndexer[*v1alpha1.IntegrationSource]
+	listers.ResourceIndexer[*sourcesv1alpha1.IntegrationSource]
 }

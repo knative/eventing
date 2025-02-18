@@ -19,24 +19,24 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
 	cache "k8s.io/client-go/tools/cache"
-	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	apissourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	versioned "knative.dev/eventing/pkg/client/clientset/versioned"
 	internalinterfaces "knative.dev/eventing/pkg/client/informers/externalversions/internalinterfaces"
-	v1alpha1 "knative.dev/eventing/pkg/client/listers/sources/v1alpha1"
+	sourcesv1alpha1 "knative.dev/eventing/pkg/client/listers/sources/v1alpha1"
 )
 
 // IntegrationSourceInformer provides access to a shared informer and lister for
 // IntegrationSources.
 type IntegrationSourceInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1alpha1.IntegrationSourceLister
+	Lister() sourcesv1alpha1.IntegrationSourceLister
 }
 
 type integrationSourceInformer struct {
@@ -71,7 +71,7 @@ func NewFilteredIntegrationSourceInformer(client versioned.Interface, namespace 
 				return client.SourcesV1alpha1().IntegrationSources(namespace).Watch(context.TODO(), options)
 			},
 		},
-		&sourcesv1alpha1.IntegrationSource{},
+		&apissourcesv1alpha1.IntegrationSource{},
 		resyncPeriod,
 		indexers,
 	)
@@ -82,9 +82,9 @@ func (f *integrationSourceInformer) defaultInformer(client versioned.Interface, 
 }
 
 func (f *integrationSourceInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&sourcesv1alpha1.IntegrationSource{}, f.defaultInformer)
+	return f.factory.InformerFor(&apissourcesv1alpha1.IntegrationSource{}, f.defaultInformer)
 }
 
-func (f *integrationSourceInformer) Lister() v1alpha1.IntegrationSourceLister {
-	return v1alpha1.NewIntegrationSourceLister(f.Informer().GetIndexer())
+func (f *integrationSourceInformer) Lister() sourcesv1alpha1.IntegrationSourceLister {
+	return sourcesv1alpha1.NewIntegrationSourceLister(f.Informer().GetIndexer())
 }

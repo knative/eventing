@@ -19,11 +19,11 @@ limitations under the License.
 package v1
 
 import (
-	"net/http"
+	http "net/http"
 
 	rest "k8s.io/client-go/rest"
-	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
-	"knative.dev/eventing/pkg/client/clientset/versioned/scheme"
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	scheme "knative.dev/eventing/pkg/client/clientset/versioned/scheme"
 )
 
 type EventingV1Interface interface {
@@ -90,10 +90,10 @@ func New(c rest.Interface) *EventingV1Client {
 }
 
 func setConfigDefaults(config *rest.Config) error {
-	gv := v1.SchemeGroupVersion
+	gv := eventingv1.SchemeGroupVersion
 	config.GroupVersion = &gv
 	config.APIPath = "/apis"
-	config.NegotiatedSerializer = scheme.Codecs.WithoutConversion()
+	config.NegotiatedSerializer = rest.CodecFactoryForGeneratedClient(scheme.Scheme, scheme.Codecs).WithoutConversion()
 
 	if config.UserAgent == "" {
 		config.UserAgent = rest.DefaultKubernetesUserAgent()

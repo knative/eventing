@@ -19,13 +19,13 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"context"
+	context "context"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	gentype "k8s.io/client-go/gentype"
-	v1alpha1 "knative.dev/eventing/pkg/apis/sinks/v1alpha1"
+	sinksv1alpha1 "knative.dev/eventing/pkg/apis/sinks/v1alpha1"
 	scheme "knative.dev/eventing/pkg/client/clientset/versioned/scheme"
 )
 
@@ -37,33 +37,34 @@ type JobSinksGetter interface {
 
 // JobSinkInterface has methods to work with JobSink resources.
 type JobSinkInterface interface {
-	Create(ctx context.Context, jobSink *v1alpha1.JobSink, opts v1.CreateOptions) (*v1alpha1.JobSink, error)
-	Update(ctx context.Context, jobSink *v1alpha1.JobSink, opts v1.UpdateOptions) (*v1alpha1.JobSink, error)
+	Create(ctx context.Context, jobSink *sinksv1alpha1.JobSink, opts v1.CreateOptions) (*sinksv1alpha1.JobSink, error)
+	Update(ctx context.Context, jobSink *sinksv1alpha1.JobSink, opts v1.UpdateOptions) (*sinksv1alpha1.JobSink, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, jobSink *v1alpha1.JobSink, opts v1.UpdateOptions) (*v1alpha1.JobSink, error)
+	UpdateStatus(ctx context.Context, jobSink *sinksv1alpha1.JobSink, opts v1.UpdateOptions) (*sinksv1alpha1.JobSink, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha1.JobSink, error)
-	List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.JobSinkList, error)
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*sinksv1alpha1.JobSink, error)
+	List(ctx context.Context, opts v1.ListOptions) (*sinksv1alpha1.JobSinkList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.JobSink, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *sinksv1alpha1.JobSink, err error)
 	JobSinkExpansion
 }
 
 // jobSinks implements JobSinkInterface
 type jobSinks struct {
-	*gentype.ClientWithList[*v1alpha1.JobSink, *v1alpha1.JobSinkList]
+	*gentype.ClientWithList[*sinksv1alpha1.JobSink, *sinksv1alpha1.JobSinkList]
 }
 
 // newJobSinks returns a JobSinks
 func newJobSinks(c *SinksV1alpha1Client, namespace string) *jobSinks {
 	return &jobSinks{
-		gentype.NewClientWithList[*v1alpha1.JobSink, *v1alpha1.JobSinkList](
+		gentype.NewClientWithList[*sinksv1alpha1.JobSink, *sinksv1alpha1.JobSinkList](
 			"jobsinks",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			namespace,
-			func() *v1alpha1.JobSink { return &v1alpha1.JobSink{} },
-			func() *v1alpha1.JobSinkList { return &v1alpha1.JobSinkList{} }),
+			func() *sinksv1alpha1.JobSink { return &sinksv1alpha1.JobSink{} },
+			func() *sinksv1alpha1.JobSinkList { return &sinksv1alpha1.JobSinkList{} },
+		),
 	}
 }

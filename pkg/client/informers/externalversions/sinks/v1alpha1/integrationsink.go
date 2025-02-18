@@ -19,24 +19,24 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
 	cache "k8s.io/client-go/tools/cache"
-	sinksv1alpha1 "knative.dev/eventing/pkg/apis/sinks/v1alpha1"
+	apissinksv1alpha1 "knative.dev/eventing/pkg/apis/sinks/v1alpha1"
 	versioned "knative.dev/eventing/pkg/client/clientset/versioned"
 	internalinterfaces "knative.dev/eventing/pkg/client/informers/externalversions/internalinterfaces"
-	v1alpha1 "knative.dev/eventing/pkg/client/listers/sinks/v1alpha1"
+	sinksv1alpha1 "knative.dev/eventing/pkg/client/listers/sinks/v1alpha1"
 )
 
 // IntegrationSinkInformer provides access to a shared informer and lister for
 // IntegrationSinks.
 type IntegrationSinkInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1alpha1.IntegrationSinkLister
+	Lister() sinksv1alpha1.IntegrationSinkLister
 }
 
 type integrationSinkInformer struct {
@@ -71,7 +71,7 @@ func NewFilteredIntegrationSinkInformer(client versioned.Interface, namespace st
 				return client.SinksV1alpha1().IntegrationSinks(namespace).Watch(context.TODO(), options)
 			},
 		},
-		&sinksv1alpha1.IntegrationSink{},
+		&apissinksv1alpha1.IntegrationSink{},
 		resyncPeriod,
 		indexers,
 	)
@@ -82,9 +82,9 @@ func (f *integrationSinkInformer) defaultInformer(client versioned.Interface, re
 }
 
 func (f *integrationSinkInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&sinksv1alpha1.IntegrationSink{}, f.defaultInformer)
+	return f.factory.InformerFor(&apissinksv1alpha1.IntegrationSink{}, f.defaultInformer)
 }
 
-func (f *integrationSinkInformer) Lister() v1alpha1.IntegrationSinkLister {
-	return v1alpha1.NewIntegrationSinkLister(f.Informer().GetIndexer())
+func (f *integrationSinkInformer) Lister() sinksv1alpha1.IntegrationSinkLister {
+	return sinksv1alpha1.NewIntegrationSinkLister(f.Informer().GetIndexer())
 }

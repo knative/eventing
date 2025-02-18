@@ -19,13 +19,13 @@ limitations under the License.
 package v1
 
 import (
-	"context"
+	context "context"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	gentype "k8s.io/client-go/gentype"
-	v1 "knative.dev/eventing/pkg/apis/sources/v1"
+	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	scheme "knative.dev/eventing/pkg/client/clientset/versioned/scheme"
 )
 
@@ -37,33 +37,34 @@ type SinkBindingsGetter interface {
 
 // SinkBindingInterface has methods to work with SinkBinding resources.
 type SinkBindingInterface interface {
-	Create(ctx context.Context, sinkBinding *v1.SinkBinding, opts metav1.CreateOptions) (*v1.SinkBinding, error)
-	Update(ctx context.Context, sinkBinding *v1.SinkBinding, opts metav1.UpdateOptions) (*v1.SinkBinding, error)
+	Create(ctx context.Context, sinkBinding *sourcesv1.SinkBinding, opts metav1.CreateOptions) (*sourcesv1.SinkBinding, error)
+	Update(ctx context.Context, sinkBinding *sourcesv1.SinkBinding, opts metav1.UpdateOptions) (*sourcesv1.SinkBinding, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, sinkBinding *v1.SinkBinding, opts metav1.UpdateOptions) (*v1.SinkBinding, error)
+	UpdateStatus(ctx context.Context, sinkBinding *sourcesv1.SinkBinding, opts metav1.UpdateOptions) (*sourcesv1.SinkBinding, error)
 	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.SinkBinding, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.SinkBindingList, error)
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*sourcesv1.SinkBinding, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*sourcesv1.SinkBindingList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.SinkBinding, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *sourcesv1.SinkBinding, err error)
 	SinkBindingExpansion
 }
 
 // sinkBindings implements SinkBindingInterface
 type sinkBindings struct {
-	*gentype.ClientWithList[*v1.SinkBinding, *v1.SinkBindingList]
+	*gentype.ClientWithList[*sourcesv1.SinkBinding, *sourcesv1.SinkBindingList]
 }
 
 // newSinkBindings returns a SinkBindings
 func newSinkBindings(c *SourcesV1Client, namespace string) *sinkBindings {
 	return &sinkBindings{
-		gentype.NewClientWithList[*v1.SinkBinding, *v1.SinkBindingList](
+		gentype.NewClientWithList[*sourcesv1.SinkBinding, *sourcesv1.SinkBindingList](
 			"sinkbindings",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			namespace,
-			func() *v1.SinkBinding { return &v1.SinkBinding{} },
-			func() *v1.SinkBindingList { return &v1.SinkBindingList{} }),
+			func() *sourcesv1.SinkBinding { return &sourcesv1.SinkBinding{} },
+			func() *sourcesv1.SinkBindingList { return &sourcesv1.SinkBindingList{} },
+		),
 	}
 }

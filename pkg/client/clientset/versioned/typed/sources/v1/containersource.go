@@ -19,13 +19,13 @@ limitations under the License.
 package v1
 
 import (
-	"context"
+	context "context"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	gentype "k8s.io/client-go/gentype"
-	v1 "knative.dev/eventing/pkg/apis/sources/v1"
+	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	scheme "knative.dev/eventing/pkg/client/clientset/versioned/scheme"
 )
 
@@ -37,33 +37,34 @@ type ContainerSourcesGetter interface {
 
 // ContainerSourceInterface has methods to work with ContainerSource resources.
 type ContainerSourceInterface interface {
-	Create(ctx context.Context, containerSource *v1.ContainerSource, opts metav1.CreateOptions) (*v1.ContainerSource, error)
-	Update(ctx context.Context, containerSource *v1.ContainerSource, opts metav1.UpdateOptions) (*v1.ContainerSource, error)
+	Create(ctx context.Context, containerSource *sourcesv1.ContainerSource, opts metav1.CreateOptions) (*sourcesv1.ContainerSource, error)
+	Update(ctx context.Context, containerSource *sourcesv1.ContainerSource, opts metav1.UpdateOptions) (*sourcesv1.ContainerSource, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, containerSource *v1.ContainerSource, opts metav1.UpdateOptions) (*v1.ContainerSource, error)
+	UpdateStatus(ctx context.Context, containerSource *sourcesv1.ContainerSource, opts metav1.UpdateOptions) (*sourcesv1.ContainerSource, error)
 	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.ContainerSource, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.ContainerSourceList, error)
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*sourcesv1.ContainerSource, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*sourcesv1.ContainerSourceList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.ContainerSource, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *sourcesv1.ContainerSource, err error)
 	ContainerSourceExpansion
 }
 
 // containerSources implements ContainerSourceInterface
 type containerSources struct {
-	*gentype.ClientWithList[*v1.ContainerSource, *v1.ContainerSourceList]
+	*gentype.ClientWithList[*sourcesv1.ContainerSource, *sourcesv1.ContainerSourceList]
 }
 
 // newContainerSources returns a ContainerSources
 func newContainerSources(c *SourcesV1Client, namespace string) *containerSources {
 	return &containerSources{
-		gentype.NewClientWithList[*v1.ContainerSource, *v1.ContainerSourceList](
+		gentype.NewClientWithList[*sourcesv1.ContainerSource, *sourcesv1.ContainerSourceList](
 			"containersources",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			namespace,
-			func() *v1.ContainerSource { return &v1.ContainerSource{} },
-			func() *v1.ContainerSourceList { return &v1.ContainerSourceList{} }),
+			func() *sourcesv1.ContainerSource { return &sourcesv1.ContainerSource{} },
+			func() *sourcesv1.ContainerSourceList { return &sourcesv1.ContainerSourceList{} },
+		),
 	}
 }

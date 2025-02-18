@@ -29,11 +29,11 @@ type FakeSinksV1alpha1 struct {
 }
 
 func (c *FakeSinksV1alpha1) IntegrationSinks(namespace string) v1alpha1.IntegrationSinkInterface {
-	return &FakeIntegrationSinks{c, namespace}
+	return newFakeIntegrationSinks(c, namespace)
 }
 
 func (c *FakeSinksV1alpha1) JobSinks(namespace string) v1alpha1.JobSinkInterface {
-	return &FakeJobSinks{c, namespace}
+	return newFakeJobSinks(c, namespace)
 }
 
 // RESTClient returns a RESTClient that is used to communicate

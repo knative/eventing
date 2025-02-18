@@ -19,129 +19,34 @@ limitations under the License.
 package fake
 
 import (
-	"context"
-
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
+	gentype "k8s.io/client-go/gentype"
 	v1alpha1 "knative.dev/eventing/pkg/apis/sinks/v1alpha1"
+	sinksv1alpha1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/sinks/v1alpha1"
 )
 
-// FakeIntegrationSinks implements IntegrationSinkInterface
-type FakeIntegrationSinks struct {
+// fakeIntegrationSinks implements IntegrationSinkInterface
+type fakeIntegrationSinks struct {
+	*gentype.FakeClientWithList[*v1alpha1.IntegrationSink, *v1alpha1.IntegrationSinkList]
 	Fake *FakeSinksV1alpha1
-	ns   string
 }
 
-var integrationsinksResource = v1alpha1.SchemeGroupVersion.WithResource("integrationsinks")
-
-var integrationsinksKind = v1alpha1.SchemeGroupVersion.WithKind("IntegrationSink")
-
-// Get takes name of the integrationSink, and returns the corresponding integrationSink object, and an error if there is any.
-func (c *FakeIntegrationSinks) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.IntegrationSink, err error) {
-	emptyResult := &v1alpha1.IntegrationSink{}
-	obj, err := c.Fake.
-		Invokes(testing.NewGetActionWithOptions(integrationsinksResource, c.ns, name, options), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
+func newFakeIntegrationSinks(fake *FakeSinksV1alpha1, namespace string) sinksv1alpha1.IntegrationSinkInterface {
+	return &fakeIntegrationSinks{
+		gentype.NewFakeClientWithList[*v1alpha1.IntegrationSink, *v1alpha1.IntegrationSinkList](
+			fake.Fake,
+			namespace,
+			v1alpha1.SchemeGroupVersion.WithResource("integrationsinks"),
+			v1alpha1.SchemeGroupVersion.WithKind("IntegrationSink"),
+			func() *v1alpha1.IntegrationSink { return &v1alpha1.IntegrationSink{} },
+			func() *v1alpha1.IntegrationSinkList { return &v1alpha1.IntegrationSinkList{} },
+			func(dst, src *v1alpha1.IntegrationSinkList) { dst.ListMeta = src.ListMeta },
+			func(list *v1alpha1.IntegrationSinkList) []*v1alpha1.IntegrationSink {
+				return gentype.ToPointerSlice(list.Items)
+			},
+			func(list *v1alpha1.IntegrationSinkList, items []*v1alpha1.IntegrationSink) {
+				list.Items = gentype.FromPointerSlice(items)
+			},
+		),
+		fake,
 	}
-	return obj.(*v1alpha1.IntegrationSink), err
-}
-
-// List takes label and field selectors, and returns the list of IntegrationSinks that match those selectors.
-func (c *FakeIntegrationSinks) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.IntegrationSinkList, err error) {
-	emptyResult := &v1alpha1.IntegrationSinkList{}
-	obj, err := c.Fake.
-		Invokes(testing.NewListActionWithOptions(integrationsinksResource, integrationsinksKind, c.ns, opts), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-
-	label, _, _ := testing.ExtractFromListOptions(opts)
-	if label == nil {
-		label = labels.Everything()
-	}
-	list := &v1alpha1.IntegrationSinkList{ListMeta: obj.(*v1alpha1.IntegrationSinkList).ListMeta}
-	for _, item := range obj.(*v1alpha1.IntegrationSinkList).Items {
-		if label.Matches(labels.Set(item.Labels)) {
-			list.Items = append(list.Items, item)
-		}
-	}
-	return list, err
-}
-
-// Watch returns a watch.Interface that watches the requested integrationSinks.
-func (c *FakeIntegrationSinks) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewWatchActionWithOptions(integrationsinksResource, c.ns, opts))
-
-}
-
-// Create takes the representation of a integrationSink and creates it.  Returns the server's representation of the integrationSink, and an error, if there is any.
-func (c *FakeIntegrationSinks) Create(ctx context.Context, integrationSink *v1alpha1.IntegrationSink, opts v1.CreateOptions) (result *v1alpha1.IntegrationSink, err error) {
-	emptyResult := &v1alpha1.IntegrationSink{}
-	obj, err := c.Fake.
-		Invokes(testing.NewCreateActionWithOptions(integrationsinksResource, c.ns, integrationSink, opts), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1alpha1.IntegrationSink), err
-}
-
-// Update takes the representation of a integrationSink and updates it. Returns the server's representation of the integrationSink, and an error, if there is any.
-func (c *FakeIntegrationSinks) Update(ctx context.Context, integrationSink *v1alpha1.IntegrationSink, opts v1.UpdateOptions) (result *v1alpha1.IntegrationSink, err error) {
-	emptyResult := &v1alpha1.IntegrationSink{}
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateActionWithOptions(integrationsinksResource, c.ns, integrationSink, opts), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1alpha1.IntegrationSink), err
-}
-
-// UpdateStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeIntegrationSinks) UpdateStatus(ctx context.Context, integrationSink *v1alpha1.IntegrationSink, opts v1.UpdateOptions) (result *v1alpha1.IntegrationSink, err error) {
-	emptyResult := &v1alpha1.IntegrationSink{}
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceActionWithOptions(integrationsinksResource, "status", c.ns, integrationSink, opts), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1alpha1.IntegrationSink), err
-}
-
-// Delete takes name of the integrationSink and deletes it. Returns an error if one occurs.
-func (c *FakeIntegrationSinks) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewDeleteActionWithOptions(integrationsinksResource, c.ns, name, opts), &v1alpha1.IntegrationSink{})
-
-	return err
-}
-
-// DeleteCollection deletes a collection of objects.
-func (c *FakeIntegrationSinks) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewDeleteCollectionActionWithOptions(integrationsinksResource, c.ns, opts, listOpts)
-
-	_, err := c.Fake.Invokes(action, &v1alpha1.IntegrationSinkList{})
-	return err
-}
-
-// Patch applies the patch and returns the patched integrationSink.
-func (c *FakeIntegrationSinks) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.IntegrationSink, err error) {
-	emptyResult := &v1alpha1.IntegrationSink{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(integrationsinksResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1alpha1.IntegrationSink), err
 }

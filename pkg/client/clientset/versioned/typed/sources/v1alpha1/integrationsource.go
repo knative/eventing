@@ -19,13 +19,13 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"context"
+	context "context"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	gentype "k8s.io/client-go/gentype"
-	v1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	scheme "knative.dev/eventing/pkg/client/clientset/versioned/scheme"
 )
 
@@ -37,33 +37,34 @@ type IntegrationSourcesGetter interface {
 
 // IntegrationSourceInterface has methods to work with IntegrationSource resources.
 type IntegrationSourceInterface interface {
-	Create(ctx context.Context, integrationSource *v1alpha1.IntegrationSource, opts v1.CreateOptions) (*v1alpha1.IntegrationSource, error)
-	Update(ctx context.Context, integrationSource *v1alpha1.IntegrationSource, opts v1.UpdateOptions) (*v1alpha1.IntegrationSource, error)
+	Create(ctx context.Context, integrationSource *sourcesv1alpha1.IntegrationSource, opts v1.CreateOptions) (*sourcesv1alpha1.IntegrationSource, error)
+	Update(ctx context.Context, integrationSource *sourcesv1alpha1.IntegrationSource, opts v1.UpdateOptions) (*sourcesv1alpha1.IntegrationSource, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, integrationSource *v1alpha1.IntegrationSource, opts v1.UpdateOptions) (*v1alpha1.IntegrationSource, error)
+	UpdateStatus(ctx context.Context, integrationSource *sourcesv1alpha1.IntegrationSource, opts v1.UpdateOptions) (*sourcesv1alpha1.IntegrationSource, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha1.IntegrationSource, error)
-	List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.IntegrationSourceList, error)
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*sourcesv1alpha1.IntegrationSource, error)
+	List(ctx context.Context, opts v1.ListOptions) (*sourcesv1alpha1.IntegrationSourceList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.IntegrationSource, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *sourcesv1alpha1.IntegrationSource, err error)
 	IntegrationSourceExpansion
 }
 
 // integrationSources implements IntegrationSourceInterface
 type integrationSources struct {
-	*gentype.ClientWithList[*v1alpha1.IntegrationSource, *v1alpha1.IntegrationSourceList]
+	*gentype.ClientWithList[*sourcesv1alpha1.IntegrationSource, *sourcesv1alpha1.IntegrationSourceList]
 }
 
 // newIntegrationSources returns a IntegrationSources
 func newIntegrationSources(c *SourcesV1alpha1Client, namespace string) *integrationSources {
 	return &integrationSources{
-		gentype.NewClientWithList[*v1alpha1.IntegrationSource, *v1alpha1.IntegrationSourceList](
+		gentype.NewClientWithList[*sourcesv1alpha1.IntegrationSource, *sourcesv1alpha1.IntegrationSourceList](
 			"integrationsources",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			namespace,
-			func() *v1alpha1.IntegrationSource { return &v1alpha1.IntegrationSource{} },
-			func() *v1alpha1.IntegrationSourceList { return &v1alpha1.IntegrationSourceList{} }),
+			func() *sourcesv1alpha1.IntegrationSource { return &sourcesv1alpha1.IntegrationSource{} },
+			func() *sourcesv1alpha1.IntegrationSourceList { return &sourcesv1alpha1.IntegrationSourceList{} },
+		),
 	}
 }

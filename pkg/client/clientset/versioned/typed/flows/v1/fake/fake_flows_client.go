@@ -29,11 +29,11 @@ type FakeFlowsV1 struct {
 }
 
 func (c *FakeFlowsV1) Parallels(namespace string) v1.ParallelInterface {
-	return &FakeParallels{c, namespace}
+	return newFakeParallels(c, namespace)
 }
 
 func (c *FakeFlowsV1) Sequences(namespace string) v1.SequenceInterface {
-	return &FakeSequences{c, namespace}
+	return newFakeSequences(c, namespace)
 }
 
 // RESTClient returns a RESTClient that is used to communicate
