@@ -19,24 +19,24 @@ limitations under the License.
 package v1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
-	acmev1 "github.com/cert-manager/cert-manager/pkg/apis/acme/v1"
+	apisacmev1 "github.com/cert-manager/cert-manager/pkg/apis/acme/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
 	cache "k8s.io/client-go/tools/cache"
 	versioned "knative.dev/eventing/pkg/client/certmanager/clientset/versioned"
 	internalinterfaces "knative.dev/eventing/pkg/client/certmanager/informers/externalversions/internalinterfaces"
-	v1 "knative.dev/eventing/pkg/client/certmanager/listers/acme/v1"
+	acmev1 "knative.dev/eventing/pkg/client/certmanager/listers/acme/v1"
 )
 
 // ChallengeInformer provides access to a shared informer and lister for
 // Challenges.
 type ChallengeInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1.ChallengeLister
+	Lister() acmev1.ChallengeLister
 }
 
 type challengeInformer struct {
@@ -71,7 +71,7 @@ func NewFilteredChallengeInformer(client versioned.Interface, namespace string, 
 				return client.AcmeV1().Challenges(namespace).Watch(context.TODO(), options)
 			},
 		},
-		&acmev1.Challenge{},
+		&apisacmev1.Challenge{},
 		resyncPeriod,
 		indexers,
 	)
@@ -82,9 +82,9 @@ func (f *challengeInformer) defaultInformer(client versioned.Interface, resyncPe
 }
 
 func (f *challengeInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&acmev1.Challenge{}, f.defaultInformer)
+	return f.factory.InformerFor(&apisacmev1.Challenge{}, f.defaultInformer)
 }
 
-func (f *challengeInformer) Lister() v1.ChallengeLister {
-	return v1.NewChallengeLister(f.Informer().GetIndexer())
+func (f *challengeInformer) Lister() acmev1.ChallengeLister {
+	return acmev1.NewChallengeLister(f.Informer().GetIndexer())
 }
