@@ -40,6 +40,7 @@ import (
 	sources "knative.dev/eventing/pkg/apis/sources/v1"
 	eventingclient "knative.dev/eventing/pkg/client/clientset/versioned"
 	sourceslisters "knative.dev/eventing/pkg/client/listers/sources/v1"
+	reconcilersource "knative.dev/eventing/pkg/reconciler/source"
 )
 
 type Reconciler struct {
@@ -51,6 +52,8 @@ type Reconciler struct {
 	jsonataServiceLister     corelister.ServiceLister
 	jsonataEndpointLister    corelister.EndpointsLister
 	jsonataSinkBindingLister sourceslisters.SinkBindingLister
+
+	configWatcher *reconcilersource.ConfigWatcher
 }
 
 func (r *Reconciler) ReconcileKind(ctx context.Context, transform *eventing.EventTransform) reconciler.Event {
@@ -144,7 +147,7 @@ func (r *Reconciler) reconcileJsonataTransformationService(ctx context.Context, 
 }
 
 func (r *Reconciler) reconcileJsonataTransformationDeployment(ctx context.Context, expression *corev1.ConfigMap, transform *eventing.EventTransform) error {
-	expected := jsonataDeployment(ctx, expression, transform)
+	expected := jsonataDeployment(ctx, r.configWatcher, expression, transform)
 
 	curr, err := r.jsonataDeploymentsLister.Deployments(expected.GetNamespace()).Get(expected.GetName())
 	if apierrors.IsNotFound(err) {
