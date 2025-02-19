@@ -41,7 +41,7 @@ type IntegrationSink struct {
 	Status IntegrationSinkStatus `json:"status,omitempty"`
 }
 
-// Check the interfaces that JobSink should be implementing.
+// Check the interfaces that IntegrationSink should be implementing.
 var (
 	_ runtime.Object     = (*IntegrationSink)(nil)
 	_ kmeta.OwnerRefable = (*IntegrationSink)(nil)
@@ -49,7 +49,7 @@ var (
 	_ apis.Defaultable   = (*IntegrationSink)(nil)
 	_ apis.HasSpec       = (*IntegrationSink)(nil)
 	_ duckv1.KRShaped    = (*IntegrationSink)(nil)
-	_ apis.Convertible   = (*JobSink)(nil)
+	_ apis.Convertible   = (*IntegrationSink)(nil)
 )
 
 type IntegrationSinkSpec struct {

@@ -17,14 +17,9 @@ limitations under the License.
 package resources
 
 import (
-	"knative.dev/eventing/pkg/apis/sinks/v1alpha1"
 	"knative.dev/pkg/kmeta"
 )
 
-func CertificateName(sink *v1alpha1.IntegrationSink) string {
-	return kmeta.ChildName(sink.Name, "-server-tls")
-}
-
-func DeploymentName(sink *v1alpha1.IntegrationSink) string {
-	return kmeta.ChildName(sink.Name, "-deployment")
+func DeploymentName(sinkName string) string {
+	return kmeta.ChildName(sinkName, "-deployment")
 }
