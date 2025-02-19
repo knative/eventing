@@ -228,9 +228,6 @@ rules:
       - "cert-manager.io"
     resources:
       - "certificates"
-      - "clusterissuers"
-      - "certificaterequests"
-      - "issuers"
     verbs:
       - "get"
       - "list"
