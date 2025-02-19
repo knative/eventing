@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1beta1
+package v1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,8 +23,8 @@ import (
 // +genclient
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:categories=gateway-api
-// +kubebuilder:storageversion
 // +kubebuilder:subresource:status
+// +kubebuilder:storageversion
 // +kubebuilder:printcolumn:name="Hostnames",type=string,JSONPath=`.spec.hostnames`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
@@ -197,8 +197,19 @@ type HTTPRouteRule struct {
 	// Filters define the filters that are applied to requests that match
 	// this rule.
 	//
-	// The effects of ordering of multiple behaviors are currently unspecified.
-	// This can change in the future based on feedback during the alpha stage.
+	// Wherever possible, implementations SHOULD implement filters in the order
+	// they are specified.
+	//
+	// Implementations MAY choose to implement this ordering strictly, rejecting
+	// any combination or order of filters that can not be supported. If implementations
+	// choose a strict interpretation of filter ordering, they MUST clearly document
+	// that behavior.
+	//
+	// To reject an invalid combination or order of filters, implementations SHOULD
+	// consider the Route Rules with this configuration invalid. If all Route Rules
+	// in a Route are invalid, the entire Route would be considered invalid. If only
+	// a portion of Route Rules are invalid, implementations MUST set the
+	// "PartiallyInvalid" condition for the Route.
 	//
 	// Conformance-levels at this level are defined based on the type of filter:
 	//
@@ -263,6 +274,75 @@ type HTTPRouteRule struct {
 	// +optional
 	// +kubebuilder:validation:MaxItems=16
 	BackendRefs []HTTPBackendRef `json:"backendRefs,omitempty"`
+
+	// Timeouts defines the timeouts that can be configured for an HTTP request.
+	//
+	// Support: Extended
+	//
+	// +optional
+	// <gateway:experimental>
+	Timeouts *HTTPRouteTimeouts `json:"timeouts,omitempty"`
+
+	// SessionPersistence defines and configures session persistence
+	// for the route rule.
+	//
+	// Support: Extended
+	//
+	// +optional
+	// <gateway:experimental>
+	SessionPersistence *SessionPersistence `json:"sessionPersistence,omitempty"`
+}
+
+// HTTPRouteTimeouts defines timeouts that can be configured for an HTTPRoute.
+// Timeout values are represented with Gateway API Duration formatting.
+//
+// +kubebuilder:validation:XValidation:message="backendRequest timeout cannot be longer than request timeout",rule="!(has(self.request) && has(self.backendRequest) && duration(self.request) != duration('0s') && duration(self.backendRequest) > duration(self.request))"
+type HTTPRouteTimeouts struct {
+	// Request specifies the maximum duration for a gateway to respond to an HTTP request.
+	// If the gateway has not been able to respond before this deadline is met, the gateway
+	// MUST return a timeout error.
+	//
+	// For example, setting the `rules.timeouts.request` field to the value `10s` in an
+	// `HTTPRoute` will cause a timeout if a client request is taking longer than 10 seconds
+	// to complete.
+	//
+	// Setting a timeout to the zero duration (e.g. "0s") SHOULD disable the timeout
+	// completely. Implementations that cannot completely disable the timeout MUST
+	// instead interpret the zero duration as the longest possible value to which
+	// the timeout can be set.
+	//
+	// This timeout is intended to cover as close to the whole request-response transaction
+	// as possible although an implementation MAY choose to start the timeout after the entire
+	// request stream has been received instead of immediately after the transaction is
+	// initiated by the client.
+	//
+	// When this field is unspecified, request timeout behavior is implementation-specific.
+	//
+	// Support: Extended
+	//
+	// +optional
+	Request *Duration `json:"request,omitempty"`
+
+	// BackendRequest specifies a timeout for an individual request from the gateway
+	// to a backend. This covers the time from when the request first starts being
+	// sent from the gateway to when the full response has been received from the backend.
+	//
+	// Setting a timeout to the zero duration (e.g. "0s") SHOULD disable the timeout
+	// completely. Implementations that cannot completely disable the timeout MUST
+	// instead interpret the zero duration as the longest possible value to which
+	// the timeout can be set.
+	//
+	// An entire client HTTP transaction with a gateway, covered by the Request timeout,
+	// may result in more than one call from the gateway to the destination backend,
+	// for example, if automatic retries are supported.
+	//
+	// Because the Request timeout encompasses the BackendRequest timeout, the value of
+	// BackendRequest must be <= the value of Request timeout.
+	//
+	// Support: Extended
+	//
+	// +optional
+	BackendRequest *Duration `json:"backendRequest,omitempty"`
 }
 
 // PathMatchType specifies the semantics of how HTTP paths should be compared.
@@ -771,7 +851,7 @@ type HTTPHeader struct {
 // HTTPHeaderFilter defines a filter that modifies the headers of an HTTP
 // request or response. Only one action for a given header name is permitted.
 // Filters specifying multiple actions of the same or different type for any one
-// header name are invalid and will be rejected by the webhook if installed.
+// header name are invalid and will be rejected by CRD validation.
 // Configuration to set or add multiple values for a header must use RFC 7230
 // header value formatting, separating each value with a comma.
 type HTTPHeaderFilter struct {
@@ -1059,7 +1139,30 @@ type HTTPRequestMirrorFilter struct {
 	BackendRef BackendObjectReference `json:"backendRef"`
 }
 
-// HTTPBackendRef defines how a HTTPRoute should forward an HTTP request.
+// HTTPBackendRef defines how a HTTPRoute forwards a HTTP request.
+//
+// Note that when a namespace different than the local namespace is specified, a
+// ReferenceGrant object is required in the referent namespace to allow that
+// namespace's owner to accept the reference. See the ReferenceGrant
+// documentation for details.
+//
+// <gateway:experimental:description>
+//
+// When the BackendRef points to a Kubernetes Service, implementations SHOULD
+// honor the appProtocol field if it is set for the target Service Port.
+//
+// Implementations supporting appProtocol SHOULD recognize the Kubernetes
+// Standard Application Protocols defined in KEP-3726.
+//
+// If a Service appProtocol isn't specified, an implementation MAY infer the
+// backend protocol through its own means. Implementations MAY infer the
+// protocol from the Route type referring to the backend Service.
+//
+// If a Route is not able to send traffic to the backend using the specified
+// protocol then the backend is considered invalid. Implementations MUST set the
+// "ResolvedRefs" condition to "False" with the "UnsupportedProtocol" reason.
+//
+// </gateway:experimental:description>
 type HTTPBackendRef struct {
 	// BackendRef is a reference to a backend to forward matched requests to.
 	//
@@ -1083,11 +1186,24 @@ type HTTPBackendRef struct {
 	//   case, the Reason must be set to `RefNotPermitted` and the Message of the
 	//   Condition must explain which cross-namespace reference is not allowed.
 	//
+	// * It refers to a Kubernetes Service that has an incompatible appProtocol
+	//   for the given Route type
+	//
+	// * The BackendTLSPolicy object is installed in the cluster, a BackendTLSPolicy
+	//   is present that refers to the Service, and the implementation is unable
+	//   to meet the requirement. At the time of writing, BackendTLSPolicy is
+	//   experimental, but once it becomes standard, this will become a MUST
+	//   requirement.
+	//
 	// Support: Core for Kubernetes Service
 	//
 	// Support: Implementation-specific for any other resource
 	//
 	// Support for weight: Core
+	//
+	// Support for Kubernetes Service appProtocol: Extended
+	//
+	// Support for BackendTLSPolicy: Experimental and ImplementationSpecific
 	//
 	// +optional
 	BackendRef `json:",inline"`
