@@ -20,6 +20,8 @@ import (
 	"context"
 	"fmt"
 
+	"knative.dev/eventing/pkg/certificates"
+
 	cmv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 
 	v1 "k8s.io/api/apps/v1"
@@ -170,7 +172,7 @@ func (r *Reconciler) reconcileService(ctx context.Context, sink *sinks.Integrati
 
 func (r *Reconciler) reconcileCMCertificate(ctx context.Context, sink *sinks.IntegrationSink) (*cmv1.Certificate, error) {
 
-	expected := resources.MakeCertificate(sink)
+	expected := certificates.MakeCertificate(sink, sink.Name)
 
 	cert, err := r.cmCertificateLister.Certificates(sink.Namespace).Get(expected.Name)
 	if apierrors.IsNotFound(err) {
@@ -248,9 +250,9 @@ func (r *Reconciler) reconcileAddress(ctx context.Context, sink *sinks.Integrati
 }
 
 func (r *Reconciler) getCaCerts(sink *sinks.IntegrationSink) (*string, error) {
-	secret, err := r.secretLister.Secrets(sink.Namespace).Get(resources.CertificateName(sink.Name))
+	secret, err := r.secretLister.Secrets(sink.Namespace).Get(certificates.CertificateName(sink.Name))
 	if err != nil {
-		return nil, fmt.Errorf("failed to get CA certs from %s/%s: %w", sink.Namespace, resources.CertificateName(sink.Name), err)
+		return nil, fmt.Errorf("failed to get CA certs from %s/%s: %w", sink.Namespace, certificates.CertificateName(sink.Name), err)
 	}
 	caCerts, ok := secret.Data[eventingtls.SecretCACert]
 	if !ok {
