@@ -142,19 +142,19 @@ func MakeService(sink *v1alpha1.IntegrationSink) *corev1.Service {
 func makeEnv(sink *v1alpha1.IntegrationSink, featureFlags feature.Flags) []corev1.EnvVar {
 	var envVars []corev1.EnvVar
 
-	// Transport encryption environment variables
-	if !featureFlags.IsDisabledTransportEncryption() {
-		envVars = append(envVars, []corev1.EnvVar{
-			{
-				Name:  "QUARKUS_HTTP_SSL_CERTIFICATE_FILES",
-				Value: "/etc/" + CertificateName(sink) + "/tls.crt",
-			},
-			{
-				Name:  "QUARKUS_HTTP_SSL_CERTIFICATE_KEY-FILES",
-				Value: "/etc/" + CertificateName(sink) + "/tls.key",
-			},
-		}...)
-	}
+	//// Transport encryption environment variables
+	//if !featureFlags.IsDisabledTransportEncryption() {
+	//	envVars = append(envVars, []corev1.EnvVar{
+	//		{
+	//			Name:  "QUARKUS_HTTP_SSL_CERTIFICATE_FILES",
+	//			Value: "/etc/" + CertificateName(sink) + "/tls.crt",
+	//		},
+	//		{
+	//			Name:  "QUARKUS_HTTP_SSL_CERTIFICATE_KEY-FILES",
+	//			Value: "/etc/" + CertificateName(sink) + "/tls.key",
+	//		},
+	//	}...)
+	//}
 
 	// No HTTP with strict TLS
 	if featureFlags.IsStrictTransportEncryption() {

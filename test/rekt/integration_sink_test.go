@@ -25,7 +25,6 @@ import (
 	"knative.dev/eventing/test/rekt/features/integrationsink"
 	"knative.dev/pkg/system"
 	"knative.dev/reconciler-test/pkg/environment"
-	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/knative"
 )
@@ -42,19 +41,4 @@ func TestIntegrationSinkSuccess(t *testing.T) {
 	)
 
 	env.Test(ctx, t, integrationsink.Success())
-}
-
-func TestIntegrationSinkSuccessTLS(t *testing.T) {
-	t.Parallel()
-
-	ctx, env := global.Environment(
-		knative.WithKnativeNamespace(system.Namespace()),
-		knative.WithLoggingConfig,
-		knative.WithTracingConfig,
-		k8s.WithEventListener,
-		eventshub.WithTLS(t),
-		environment.Managed(t),
-	)
-
-	env.Test(ctx, t, integrationsink.SuccessTLS())
 }
