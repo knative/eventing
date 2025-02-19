@@ -21,8 +21,8 @@ package fakeFilteredFactory
 import (
 	context "context"
 
+	externalversions "github.com/cert-manager/cert-manager/pkg/client/informers/externalversions"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	externalversions "knative.dev/eventing/pkg/client/certmanager/informers/externalversions"
 	fake "knative.dev/eventing/pkg/client/certmanager/injection/client/fake"
 	filtered "knative.dev/eventing/pkg/client/certmanager/injection/informers/factory/filtered"
 	controller "knative.dev/pkg/controller"
