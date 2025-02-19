@@ -36,7 +36,7 @@ var sinkImageMap = map[string]string{
 }
 
 func MakeDeploymentSpec(sink *v1alpha1.IntegrationSink, featureFlags feature.Flags) *appsv1.Deployment {
-	t := true
+	//t := true
 
 	deploy := &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
@@ -60,17 +60,17 @@ func MakeDeploymentSpec(sink *v1alpha1.IntegrationSink, featureFlags feature.Fla
 					Labels: integration.Labels(sink.Name),
 				},
 				Spec: corev1.PodSpec{
-					Volumes: []corev1.Volume{
-						{
-							Name: CertificateName(sink),
-							VolumeSource: corev1.VolumeSource{
-								Secret: &corev1.SecretVolumeSource{
-									SecretName: CertificateName(sink),
-									Optional:   &t,
-								},
-							},
-						},
-					},
+					//Volumes: []corev1.Volume{
+					//	{
+					//		Name: CertificateName(sink),
+					//		VolumeSource: corev1.VolumeSource{
+					//			Secret: &corev1.SecretVolumeSource{
+					//				SecretName: CertificateName(sink),
+					//				Optional:   &t,
+					//			},
+					//		},
+					//	},
+					//},
 					Containers: []corev1.Container{
 						{
 							Name:            "sink",
@@ -88,13 +88,13 @@ func MakeDeploymentSpec(sink *v1alpha1.IntegrationSink, featureFlags feature.Fla
 									Name:          "https",
 								}},
 							Env: makeEnv(sink, featureFlags),
-							VolumeMounts: []corev1.VolumeMount{
-								{
-									Name:      CertificateName(sink),
-									MountPath: "/etc/" + CertificateName(sink),
-									ReadOnly:  true,
-								},
-							},
+							//VolumeMounts: []corev1.VolumeMount{
+							//	{
+							//		Name:      CertificateName(sink),
+							//		MountPath: "/etc/" + CertificateName(sink),
+							//		ReadOnly:  true,
+							//	},
+							//},
 						},
 					},
 				},
