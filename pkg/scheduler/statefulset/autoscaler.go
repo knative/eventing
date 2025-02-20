@@ -205,16 +205,18 @@ func (a *autoscaler) doautoscale(ctx context.Context, attemptScaleDown bool) err
 		return err
 	}
 
-	logger.Debugw("checking adapter capacity",
-		zap.Int32("replicas", scale.Spec.Replicas),
-		zap.Any("state", state))
-
 	newReplicas := integer.Int32Max(int32(math.Ceil(float64(state.TotalExpectedVReplicas())/float64(state.Capacity))), a.minReplicas)
 
 	// Only scale down if permitted
 	if !attemptScaleDown && newReplicas < scale.Spec.Replicas {
 		newReplicas = scale.Spec.Replicas
 	}
+
+	logger.Debugw("checking adapter capacity",
+		zap.Bool("attemptScaleDown", attemptScaleDown),
+		zap.Int32("replicas", scale.Spec.Replicas),
+		zap.Int32("newReplicas", newReplicas),
+		zap.Any("state", state))
 
 	if newReplicas != scale.Spec.Replicas {
 		scale.Spec.Replicas = newReplicas
