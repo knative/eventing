@@ -219,6 +219,11 @@ func IsReady(name string, timing ...time.Duration) feature.StepFn {
 	return k8s.IsReady(GVR(), name, timing...)
 }
 
+// IsNotReady tests to see if a Trigger is not ready within the time given.
+func IsNotReady(name string, timing ...time.Duration) feature.StepFn {
+	return k8s.IsNotReady(GVR(), name, timing...)
+}
+
 func WithNewFilters(filters []eventingv1.SubscriptionsAPIFilter) manifest.CfgFn {
 	jsonBytes, err := json.Marshal(filters)
 	if err != nil {
