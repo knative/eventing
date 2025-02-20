@@ -26,12 +26,13 @@ import (
 	commonv1a1 "knative.dev/eventing/pkg/apis/common/integration/v1alpha1"
 	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/eventing/pkg/apis/sinks/v1alpha1"
+	"knative.dev/eventing/pkg/certificates"
 	"knative.dev/eventing/pkg/reconciler/integration"
 	"knative.dev/pkg/kmeta"
 )
 
 func MakeDeploymentSpec(sink *v1alpha1.IntegrationSink, featureFlags feature.Flags) *appsv1.Deployment {
-	//t := true
+	t := true
 
 	deploy := &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
@@ -55,17 +56,17 @@ func MakeDeploymentSpec(sink *v1alpha1.IntegrationSink, featureFlags feature.Fla
 					Labels: integration.Labels(sink.Name),
 				},
 				Spec: corev1.PodSpec{
-					//Volumes: []corev1.Volume{
-					//	{
-					//		Name: CertificateName(sink),
-					//		VolumeSource: corev1.VolumeSource{
-					//			Secret: &corev1.SecretVolumeSource{
-					//				SecretName: CertificateName(sink),
-					//				Optional:   &t,
-					//			},
-					//		},
-					//	},
-					//},
+					Volumes: []corev1.Volume{
+						{
+							Name: certificates.CertificateName(sink.Name),
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: certificates.CertificateName(sink.Name),
+									Optional:   &t,
+								},
+							},
+						},
+					},
 					Containers: []corev1.Container{
 						{
 							Name:            "sink",
@@ -83,13 +84,13 @@ func MakeDeploymentSpec(sink *v1alpha1.IntegrationSink, featureFlags feature.Fla
 									Name:          "https",
 								}},
 							Env: makeEnv(sink, featureFlags),
-							//VolumeMounts: []corev1.VolumeMount{
-							//	{
-							//		Name:      CertificateName(sink),
-							//		MountPath: "/etc/" + CertificateName(sink),
-							//		ReadOnly:  true,
-							//	},
-							//},
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      certificates.CertificateName(sink.Name),
+									MountPath: "/etc/" + certificates.CertificateName(sink.Name),
+									ReadOnly:  true,
+								},
+							},
 						},
 					},
 				},
@@ -137,19 +138,19 @@ func MakeService(sink *v1alpha1.IntegrationSink) *corev1.Service {
 func makeEnv(sink *v1alpha1.IntegrationSink, featureFlags feature.Flags) []corev1.EnvVar {
 	var envVars []corev1.EnvVar
 
-	//// Transport encryption environment variables
-	//if !featureFlags.IsDisabledTransportEncryption() {
-	//	envVars = append(envVars, []corev1.EnvVar{
-	//		{
-	//			Name:  "QUARKUS_HTTP_SSL_CERTIFICATE_FILES",
-	//			Value: "/etc/" + CertificateName(sink) + "/tls.crt",
-	//		},
-	//		{
-	//			Name:  "QUARKUS_HTTP_SSL_CERTIFICATE_KEY-FILES",
-	//			Value: "/etc/" + CertificateName(sink) + "/tls.key",
-	//		},
-	//	}...)
-	//}
+	// Transport encryption environment variables
+	if !featureFlags.IsDisabledTransportEncryption() {
+		envVars = append(envVars, []corev1.EnvVar{
+			{
+				Name:  "QUARKUS_HTTP_SSL_CERTIFICATE_FILES",
+				Value: "/etc/" + certificates.CertificateName(sink.Name) + "/tls.crt",
+			},
+			{
+				Name:  "QUARKUS_HTTP_SSL_CERTIFICATE_KEY-FILES",
+				Value: "/etc/" + certificates.CertificateName(sink.Name) + "/tls.key",
+			},
+		}...)
+	}
 
 	// No HTTP with strict TLS
 	if featureFlags.IsStrictTransportEncryption() {
