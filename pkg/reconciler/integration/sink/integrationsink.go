@@ -248,9 +248,9 @@ func (r *Reconciler) reconcileAddress(ctx context.Context, sink *sinks.Integrati
 }
 
 func (r *Reconciler) getCaCerts(sink *sinks.IntegrationSink) (*string, error) {
-	secret, err := r.secretLister.Secrets(sink.Namespace).Get(resources.CertificateName(sink))
+	secret, err := r.secretLister.Secrets(sink.Namespace).Get(resources.CertificateName(sink.Name))
 	if err != nil {
-		return nil, fmt.Errorf("failed to get CA certs from %s/%s: %w", sink.Namespace, resources.CertificateName(sink), err)
+		return nil, fmt.Errorf("failed to get CA certs from %s/%s: %w", sink.Namespace, resources.CertificateName(sink.Name), err)
 	}
 	caCerts, ok := secret.Data[eventingtls.SecretCACert]
 	if !ok {

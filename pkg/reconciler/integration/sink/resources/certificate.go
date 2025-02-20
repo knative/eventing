@@ -28,21 +28,25 @@ import (
 	"knative.dev/eventing/pkg/apis/sinks/v1alpha1"
 )
 
+func CertificateName(sinkName string) string {
+	return kmeta.ChildName(sinkName, "-server-tls")
+}
+
 func MakeCertificate(sink *v1alpha1.IntegrationSink) *cmv1.Certificate {
 	return &cmv1.Certificate{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      CertificateName(sink),
+			Name:      CertificateName(sink.Name),
 			Namespace: sink.Namespace,
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(sink),
 			},
 		},
 		Spec: cmv1.CertificateSpec{
-			SecretName: CertificateName(sink),
+			SecretName: CertificateName(sink.Name),
 			SecretTemplate: &cmv1.CertificateSecretTemplate{
 				Labels: map[string]string{
 					"app.kubernetes.io/component": "knative-eventing",
-					"app.kubernetes.io/name":      "integration-sink",
+					"app.kubernetes.io/name":      sink.Name,
 				},
 			},
 			Duration: &metav1.Duration{
@@ -62,8 +66,8 @@ func MakeCertificate(sink *v1alpha1.IntegrationSink) *cmv1.Certificate {
 				RotationPolicy: cmv1.RotationPolicyAlways,
 			},
 			DNSNames: []string{
-				fmt.Sprintf("%s.%s.svc.cluster.local", DeploymentName(sink), sink.Namespace),
-				fmt.Sprintf("%s.%s.svc", DeploymentName(sink), sink.Namespace),
+				fmt.Sprintf("%s.%s.svc.cluster.local", DeploymentName(sink.Name), sink.Namespace),
+				fmt.Sprintf("%s.%s.svc", DeploymentName(sink.Name), sink.Namespace),
 			},
 			IssuerRef: cmmeta.ObjectReference{
 				Name:  "knative-eventing-ca-issuer",

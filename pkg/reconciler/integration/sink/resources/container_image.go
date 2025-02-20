@@ -44,7 +44,7 @@ func MakeDeploymentSpec(sink *v1alpha1.IntegrationSink, featureFlags feature.Fla
 			Kind:       "Deployment",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      DeploymentName(sink),
+			Name:      DeploymentName(sink.Name),
 			Namespace: sink.Namespace,
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(sink),
@@ -112,7 +112,7 @@ func MakeService(sink *v1alpha1.IntegrationSink) *corev1.Service {
 			Kind:       "Service",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      DeploymentName(sink),
+			Name:      DeploymentName(sink.Name),
 			Namespace: sink.Namespace,
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(sink),
