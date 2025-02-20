@@ -8,9 +8,6 @@ run:
     - postupgrade
     - postdowngrade
 
-  skip-dirs:
-    - pkg/client
-
 linters:
   enable:
     - asciicheck
@@ -22,6 +19,8 @@ linters:
     - errcheck
 
 issues:
+  exclude-dirs:
+    - pkg/client
   exclude-rules:
     - path: test # Excludes /test, *_test.go etc.
       linters:
