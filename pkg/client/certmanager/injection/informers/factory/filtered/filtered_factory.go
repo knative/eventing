@@ -21,8 +21,8 @@ package filteredFactory
 import (
 	context "context"
 
+	externalversions "github.com/cert-manager/cert-manager/pkg/client/informers/externalversions"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	externalversions "knative.dev/eventing/pkg/client/certmanager/informers/externalversions"
 	client "knative.dev/eventing/pkg/client/certmanager/injection/client"
 	controller "knative.dev/pkg/controller"
 	injection "knative.dev/pkg/injection"
@@ -72,7 +72,7 @@ func Get(ctx context.Context, selector string) externalversions.SharedInformerFa
 	untyped := ctx.Value(Key{Selector: selector})
 	if untyped == nil {
 		logging.FromContext(ctx).Panicf(
-			"Unable to fetch knative.dev/eventing/pkg/client/certmanager/informers/externalversions.SharedInformerFactory with selector %s from context.", selector)
+			"Unable to fetch github.com/cert-manager/cert-manager/pkg/client/informers/externalversions.SharedInformerFactory with selector %s from context.", selector)
 	}
 	return untyped.(externalversions.SharedInformerFactory)
 }
