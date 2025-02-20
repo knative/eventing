@@ -18,12 +18,12 @@ package eventtransform_test
 
 import (
 	"embed"
+	eventing "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"os"
 
 	testlog "knative.dev/reconciler-test/pkg/logging"
 	"knative.dev/reconciler-test/pkg/manifest"
 
-	eventing "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/test/rekt/resources/eventtransform"
 )
 
@@ -33,29 +33,6 @@ var yaml embed.FS
 // The following examples validate the processing of the With* helper methods
 // applied to config and go template parser.
 
-func Example_min() {
-	ctx := testlog.NewContext()
-	images := map[string]string{}
-	cfg := map[string]interface{}{
-		"name":      "foo",
-		"namespace": "bar",
-	}
-
-	files, err := manifest.ExecuteYAML(ctx, yaml, images, cfg)
-	if err != nil {
-		panic(err)
-	}
-
-	manifest.OutputYAML(os.Stdout, files)
-	// Output:
-	// apiVersion: sinks.knative.dev/v1alpha1
-	// kind: JobSink
-	// metadata:
-	//   name: foo
-	//   namespace: bar
-	// spec:
-}
-
 func Example_full() {
 	ctx := testlog.NewContext()
 	images := map[string]string{}
@@ -64,13 +41,15 @@ func Example_full() {
 		"namespace": "bar",
 	}
 
-	eventtransform.WithSpec(eventing.EventTransformSpec{
-		EventTransformations: eventing.EventTransformations{
-			Jsonata: &eventing.JsonataEventTransformationSpec{
-				Expression: "hello",
-			},
-		},
+	eventtransform.WithAnnotations(map[string]interface{}{
+		"annotation1": "value1",
 	})(cfg)
+
+	eventtransform.WithSpec(
+		eventtransform.WithJsonata(eventing.JsonataEventTransformationSpec{
+			Expression: `{"data": $ }`,
+		}),
+	)(cfg)
 
 	files, err := manifest.ExecuteYAML(ctx, yaml, images, cfg)
 	if err != nil {
@@ -84,7 +63,8 @@ func Example_full() {
 	// metadata:
 	//   name: foo
 	//   namespace: bar
+	//     annotation1: "value1"
 	// spec:
 	//   jsonata:
-	//     expression: hello
+	//     expression: '{"data": $ }'
 }

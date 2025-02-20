@@ -77,7 +77,14 @@ func Install(name string, opts ...manifest.CfgFn) feature.StepFn {
 	}
 }
 
-func WithSpec(spec eventing.EventTransformSpec) manifest.CfgFn {
+type SpecOption func(spec *eventing.EventTransformSpec)
+
+func WithSpec(options ...SpecOption) manifest.CfgFn {
+	spec := eventing.EventTransformSpec{}
+	for _, opt := range options {
+		opt(&spec)
+	}
+
 	specBytes, err := json.Marshal(spec)
 	if err != nil {
 		panic(err)
@@ -98,6 +105,18 @@ func WithSpec(spec eventing.EventTransformSpec) manifest.CfgFn {
 
 	return func(m map[string]interface{}) {
 		m["spec"] = strings.Join(out, "\n")
+	}
+}
+
+func WithSink(sink *duckv1.Destination) SpecOption {
+	return func(spec *eventing.EventTransformSpec) {
+		spec.Sink = sink
+	}
+}
+
+func WithJsonata(jsonata eventing.JsonataEventTransformationSpec) SpecOption {
+	return func(spec *eventing.EventTransformSpec) {
+		spec.Jsonata = &jsonata
 	}
 }
 
@@ -136,7 +155,7 @@ func AsDestinationRef(name string) *duckv1.Destination {
 // AsKReference returns a KReference for a JobSink without namespace.
 func AsKReference(name string) *duckv1.KReference {
 	return &duckv1.KReference{
-		Kind:       "JobSink",
+		Kind:       "EventTransform",
 		Name:       name,
 		APIVersion: GVR().GroupVersion().String(),
 	}
