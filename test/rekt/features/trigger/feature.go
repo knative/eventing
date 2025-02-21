@@ -28,14 +28,12 @@ import (
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/feature"
-	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/manifest"
 	"knative.dev/reconciler-test/pkg/resources/service"
 
 	"knative.dev/reconciler-test/pkg/eventshub/assert"
 
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
-	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/pkg/eventingtls/eventingtlstesting"
 	"knative.dev/eventing/test/rekt/features/featureflags"
 	"knative.dev/eventing/test/rekt/resources/broker"
@@ -73,26 +71,10 @@ func TriggerDependencyAnnotation() *feature.Feature {
 	f.Setup("install trigger", trigger.Install(triggerName, cfg...))
 
 	// trigger is not ready since the pingsource dependency is not installed yet
-	f.Setup("trigger is not ready before pingsource dependency exists", func(ctx context.Context, t feature.T) {
-		trigger.IsNotReady(triggerName)(ctx, t)
+	f.Setup("trigger is not ready before pingsource dependency exists", trigger.IsNotReady(triggerName))
 
-		// verify that trigger's pingsource DependencyDoesNotExist condition is met
-		err := k8s.WaitForResourceCondition(ctx, t, environment.FromContext(ctx).Namespace(), triggerName, trigger.GVR(),
-			func(obj duckv1.KResource) bool {
-				expectedReason := "DependencyDoesNotExist"
-				expectedMessage := fmt.Sprintf(`Dependency does not exist: pingsources.sources.knative.dev "%s" not found`, psourcename)
-
-				condition := obj.Status.GetCondition(eventingv1.TriggerConditionDependency)
-				if condition != nil && condition.Reason == expectedReason && condition.Message == expectedMessage {
-					return true
-				}
-				return false
-			})
-
-		if err != nil {
-			t.Error("trigger's pingsource DependencyDoesNotExist condition not met", err)
-		}
-	})
+	// verify that the trigger has the DependencyDoesNotExist condition
+	f.Setup("trigger has DependencyDoesNotExist condition", trigger.DependencyDoesNotExist(triggerName))
 
 	// trigger won't go ready until after the pingsource exists, because of the dependency annotation
 	f.Requirement("trigger goes ready", trigger.IsReady(triggerName))
