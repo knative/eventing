@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: eventing-integrations-images
+  namespace: knative-eventing
+  labels:
+    app.kubernetes.io/version: "v20250220-98eb037"
+data:
+  aws-s3-sink: gcr.io/knative-nightly/aws-s3-sink@sha256:c14c49821ccf59b8584a13523ea04a164c418fdb899e584809a2d4cb5de1ef76
+  aws-sqs-source: gcr.io/knative-nightly/aws-sqs-source@sha256:03c355c8d91db9dbc97b076734a61c0ccc283f84b67e03541fec675c9e5f899d
+  aws-sns-sink: gcr.io/knative-nightly/aws-sns-sink@sha256:4c8972ccea48ac2823bbc6e44f3b0b9a1daeb0b5727c08fe25e8992a0c9673c2
+  timer-source: gcr.io/knative-nightly/timer-source@sha256:4270869170ab6a0d717d7a904f47fdd7899b1fc8d9a1457b68de5ff8e667a4ed
+  aws-ddb-streams-source: gcr.io/knative-nightly/aws-ddb-streams-source@sha256:9670cc0ab31113d244176f3490082e5ea155d64ab7d3dcaeb5027e40cb9c9859
+  aws-s3-source: gcr.io/knative-nightly/aws-s3-source@sha256:1d6bdd165da87126cfb6a9f9e90e7343a6a4a768415627ef060d2727e46b4f59
+  log-sink: gcr.io/knative-nightly/log-sink@sha256:15be39524a6467367c5d21a15642a972047d929555f79b4d26f0188060cc03cd
+  aws-sqs-sink: gcr.io/knative-nightly/aws-sqs-sink@sha256:d6d962fc3d6af2ec0456319785ed97f22399fbeff562f8bb1a5bce71be1b6970
