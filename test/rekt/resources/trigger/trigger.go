@@ -25,6 +25,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/manifest"
@@ -217,6 +218,29 @@ func Install(name string, opts ...manifest.CfgFn) feature.StepFn {
 // IsReady tests to see if a Trigger becomes ready within the time given.
 func IsReady(name string, timing ...time.Duration) feature.StepFn {
 	return k8s.IsReady(GVR(), name, timing...)
+}
+
+// IsNotReady tests to see if a Trigger is not ready within the time given.
+func IsNotReady(name string, timing ...time.Duration) feature.StepFn {
+	return k8s.IsNotReady(GVR(), name, timing...)
+}
+
+// DependencyDoesNotExist tests to see if a Trigger meets the DependencyDoesNotExist condition within the time given.
+func DependencyDoesNotExist(name string, timing ...time.Duration) feature.StepFn {
+	return func(ctx context.Context, t feature.T) {
+		err := k8s.WaitForResourceCondition(ctx, t, environment.FromContext(ctx).Namespace(), name, GVR(),
+			func(obj duckv1.KResource) bool {
+				condition := obj.Status.GetCondition(eventingv1.TriggerConditionDependency)
+				if condition != nil && condition.Reason == "DependencyDoesNotExist" {
+					return true
+				}
+				return false
+			}, timing...)
+
+		if err != nil {
+			t.Error("trigger did not meet DependencyDoesNotExist condition", err)
+		}
+	}
 }
 
 func WithNewFilters(filters []eventingv1.SubscriptionsAPIFilter) manifest.CfgFn {
