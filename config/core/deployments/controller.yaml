@@ -78,8 +78,10 @@ spec:
                 fieldPath: metadata.name
 
           - name: EVENT_TRANSFORM_JSONATA_IMAGE
-            value: quay.io/pierdipi/jsonata-transform@sha256:6aafed0012b8a3c24a1cd72fc4521981ec7680cf64988c22ded0aafa2a431c93
-
+            valueFrom:
+              configMapKeyRef:
+                key: transform-jsonata
+                name: eventing-transformations-images
 
 ##         Adapter settings
 #          - name: K_LOGGING_CONFIG
