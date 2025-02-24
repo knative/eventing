@@ -114,6 +114,15 @@ func WithSink(sink *duckv1.Destination) SpecOption {
 	}
 }
 
+func WithReplyJsonata(jsonata eventing.JsonataEventTransformationSpec) SpecOption {
+	return func(spec *eventing.EventTransformSpec) {
+		if spec.Reply == nil {
+			spec.Reply = &eventing.ReplySpec{}
+		}
+		spec.Reply.Jsonata = &jsonata
+	}
+}
+
 func WithJsonata(jsonata eventing.JsonataEventTransformationSpec) SpecOption {
 	return func(spec *eventing.EventTransformSpec) {
 		spec.Jsonata = &jsonata

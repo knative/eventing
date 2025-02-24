@@ -18,8 +18,9 @@ package eventtransform_test
 
 import (
 	"embed"
-	eventing "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"os"
+
+	eventing "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 
 	testlog "knative.dev/reconciler-test/pkg/logging"
 	"knative.dev/reconciler-test/pkg/manifest"

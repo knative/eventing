@@ -20,10 +20,11 @@ limitations under the License.
 package rekt
 
 import (
+	"testing"
+
 	"knative.dev/pkg/system"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/knative"
-	"testing"
 
 	"knative.dev/eventing/test/rekt/features/eventtransform"
 	_ "knative.dev/pkg/system/testing"
@@ -42,4 +43,18 @@ func TestEventTransformWithSink(t *testing.T) {
 	)
 
 	env.Test(ctx, t, eventtransform.Sink())
+}
+
+func TestEventTransformWithSinkReplyTransform(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+	)
+
+	env.Test(ctx, t, eventtransform.SinkReplyTransform())
 }
