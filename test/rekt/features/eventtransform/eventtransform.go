@@ -17,6 +17,7 @@ limitations under the License.
 package eventtransform
 
 import (
+	"fmt"
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
@@ -30,7 +31,81 @@ import (
 	"knative.dev/reconciler-test/pkg/resources/service"
 )
 
-func Sink() *feature.Feature {
+// JsonataDirect tests that the EventTransform replies with the transformed event back as HTTP response.
+func JsonataDirect() *feature.Feature {
+	f := feature.NewFeature()
+
+	transformName := feature.MakeRandomK8sName("event-transform")
+	source := feature.MakeRandomK8sName("source")
+
+	const (
+		reason  = "test-reason"
+		message = "test-message"
+	)
+
+	event := cloudevents.NewEvent()
+	event.SetID(uuid.NewString())
+	event.SetSource("my-source")
+	event.SetType("my-type")
+	event.SetTime(time.Now())
+	_ = event.SetData(cloudevents.ApplicationJSON, map[string]interface{}{
+		"reason":  reason,
+		"message": message,
+	})
+
+	f.Setup("Install event transform", eventtransform.Install(transformName, eventtransform.WithSpec(
+		eventtransform.WithJsonata(eventing.JsonataEventTransformationSpec{Expression: `
+{
+    "specversion": "1.0",
+    "id": id,
+    "type": "transformed-event",
+    "source": source,
+    "reason": data.reason,
+    "message": data.message,
+	"kind": "input",
+    "data": $
+}
+`}),
+	)))
+	f.Setup("event transform is addressable", eventtransform.IsAddressable(transformName))
+	f.Setup("event transform is ready", eventtransform.IsReady(transformName))
+
+	f.Requirement("install source", eventshub.Install(source,
+		eventshub.InputEvent(event),
+		eventshub.StartSenderToResource(eventtransform.GVR(), transformName)),
+	)
+
+	f.Assert("expected sent event", assert.OnStore(source).
+		MatchSentEvent(
+			cetest.HasId(event.ID()),
+			cetest.HasSource(event.Source()),
+			cetest.HasType(event.Type()),
+			cetest.DataContains(reason),
+			cetest.DataContains(message),
+		).Exact(1),
+	)
+
+	f.Assert("expected transformed event as response", assert.OnStore(source).
+		Match(PositiveStatusCode).
+		MatchResponseEvent(
+			cetest.HasId(event.ID()),
+			cetest.HasSource(event.Source()),
+			cetest.HasType("transformed-event"),
+			cetest.HasExtension("reason", reason),
+			cetest.HasExtension("message", message),
+			cetest.DataContains(event.Type()),
+			cetest.DataContains(event.Source()),
+			cetest.DataContains(event.ID()),
+			cetest.DataContains(reason),
+			cetest.DataContains(message),
+		).Exact(1),
+	)
+
+	return f
+}
+
+// JsonataSink tests that the EventTransform forwards the transformed event to the sink.
+func JsonataSink() *feature.Feature {
 	f := feature.NewFeature()
 
 	transformName := feature.MakeRandomK8sName("event-transform")
@@ -76,7 +151,7 @@ func Sink() *feature.Feature {
 	)
 
 	f.Assert("expected transformed event", assert.OnStore(sink).
-		MatchEvent(
+		MatchReceivedEvent(
 			cetest.HasId(event.ID()),
 			cetest.HasSource(event.Source()),
 			cetest.HasType("transformed-event"),
@@ -87,13 +162,21 @@ func Sink() *feature.Feature {
 			cetest.DataContains(event.ID()),
 			cetest.DataContains(reason),
 			cetest.DataContains(message),
-		).AtLeast(1),
+		).Exact(1),
+	)
+
+	f.Assert("source received a 2xx status code", assert.OnStore(source).
+		Match(
+			assert.MatchKind(eventshub.EventResponse),
+			PositiveStatusCode,
+		).
+		Exact(1),
 	)
 
 	return f
 }
 
-func SinkReplyTransform() *feature.Feature {
+func JsonataSinkReplyTransform() *feature.Feature {
 	f := feature.NewFeature()
 
 	transformName := feature.MakeRandomK8sName("event-transform")
@@ -159,7 +242,7 @@ func SinkReplyTransform() *feature.Feature {
 		eventshub.StartSenderToResource(eventtransform.GVR(), transformName)),
 	)
 
-	f.Assert("expected transformed event", assert.OnStore(sink).
+	f.Assert("expected transformed event to the sink", assert.OnStore(sink).
 		MatchReceivedEvent(
 			cetest.HasId(event.ID()),
 			cetest.HasSource(event.Source()),
@@ -171,18 +254,26 @@ func SinkReplyTransform() *feature.Feature {
 			cetest.DataContains(event.ID()),
 			cetest.DataContains(reason),
 			cetest.DataContains(message),
-		).AtLeast(1),
+		).Exact(1),
 	)
 
-	f.Assert("expected transformed event", assert.OnStore(source).
+	f.Assert("expected response transformed event to the source", assert.OnStore(source).
+		Match(PositiveStatusCode).
 		MatchResponseEvent(
 			cetest.HasSource(replyEventSource),
 			cetest.HasType(replyEventType),
 			cetest.HasExtension("reason", reason),
 			cetest.DataContains(replyEventType),
 			cetest.DataContains(replyEventSource),
-		).AtLeast(1),
+		).Exact(1),
 	)
 
 	return f
+}
+
+func PositiveStatusCode(info eventshub.EventInfo) error {
+	if info.StatusCode < 200 || info.StatusCode >= 300 {
+		return fmt.Errorf("expected 2xx status code, got %d", info.StatusCode)
+	}
+	return nil
 }
