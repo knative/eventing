@@ -6,4 +6,4 @@ metadata:
   labels:
     app.kubernetes.io/version: "v20250220-98eb037"
 data:
-  transform-jsonata: gcr.io/knative-nightly/transform-jsonata:98eb03795b1aa33834e4da5df7862f7b02e14c05@sha256:1df5074a11ae8cc5d9fc48f1ecfa2b280541c96ad17f381fde16c444d56f7539
+  transform-jsonata: gcr.io/knative-nightly/transform-jsonata@sha256:26cb8a28d0548d1a3d57794f0524bfcba6f1a6a67199d3e0dc3d047ff05c9808
