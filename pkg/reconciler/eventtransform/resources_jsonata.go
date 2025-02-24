@@ -34,6 +34,7 @@ import (
 
 	eventing "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
+	reconcilersource "knative.dev/eventing/pkg/reconciler/source"
 )
 
 const (
@@ -71,7 +72,7 @@ func jsonataExpressionConfigMap(_ context.Context, transform *eventing.EventTran
 	return expression
 }
 
-func jsonataDeployment(_ context.Context, expression *corev1.ConfigMap, transform *eventing.EventTransform) appsv1.Deployment {
+func jsonataDeployment(_ context.Context, cw *reconcilersource.ConfigWatcher, expression *corev1.ConfigMap, transform *eventing.EventTransform) appsv1.Deployment {
 	image := os.Getenv("EVENT_TRANSFORM_JSONATA_IMAGE")
 	if image == "" {
 		panic("EVENT_TRANSFORM_JSONATA_IMAGE must be set")
@@ -106,12 +107,15 @@ func jsonataDeployment(_ context.Context, expression *corev1.ConfigMap, transfor
 						{
 							Name:  "jsonata-event-transform",
 							Image: image,
-							Env: []corev1.EnvVar{
-								{
-									Name:  "JSONATA_TRANSFORM_FILE_NAME",
-									Value: filepath.Join(JsonataExpressionPath, JsonataExpressionDataKey),
+							Env: append(
+								[]corev1.EnvVar{
+									{
+										Name:  "JSONATA_TRANSFORM_FILE_NAME",
+										Value: filepath.Join(JsonataExpressionPath, JsonataExpressionDataKey),
+									},
 								},
-							},
+								cw.ToEnvVars()...,
+							),
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      expression.GetName(),
