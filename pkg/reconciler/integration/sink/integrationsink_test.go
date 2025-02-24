@@ -58,6 +58,8 @@ const (
 	sinkName = "test-integration-sink"
 	sinkUID  = "1234-5678-90"
 	testNS   = "test-namespace"
+
+	logSinkImage = "quay.io/fake-image/log-sink"
 )
 
 var (
@@ -74,6 +76,7 @@ var (
 )
 
 func TestReconcile(t *testing.T) {
+	t.Setenv("INTEGRATION_SINK_LOG_IMAGE", logSinkImage)
 
 	table := TableTest{
 		{
@@ -202,7 +205,7 @@ func makeDeployment(sink *sinksv1alpha1.IntegrationSink, ready *corev1.Condition
 					Containers: []corev1.Container{
 						{
 							Name:            "sink",
-							Image:           "gcr.io/knative-nightly/log-sink:latest",
+							Image:           logSinkImage,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Ports: []corev1.ContainerPort{
 								{

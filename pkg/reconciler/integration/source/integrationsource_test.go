@@ -58,6 +58,8 @@ const (
 	testNS     = "testnamespace"
 	sinkName   = "testsink"
 	generation = 1
+
+	timerSourceImage = "quay.io/fake-image/timer-source"
 )
 
 var (
@@ -75,6 +77,7 @@ var (
 )
 
 func TestReconcile(t *testing.T) {
+	t.Setenv("INTEGRATION_SOURCE_TIMER_IMAGE", timerSourceImage)
 
 	table := TableTest{
 		{
@@ -242,7 +245,7 @@ func makeContainerSource(source *sourcesv1alpha1.IntegrationSource, ready *corev
 					Containers: []corev1.Container{
 						{
 							Name:            "source",
-							Image:           "gcr.io/knative-nightly/timer-source:latest",
+							Image:           timerSourceImage,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Env: []corev1.EnvVar{
 								{
