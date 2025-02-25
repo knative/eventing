@@ -17,8 +17,8 @@ jobs:
       fail-fast: false # Keep running if one leg fails.
       matrix:
         k8s-version:
-          - v1.30.8
           - v1.31.4
+          - v1.32.2
 
         test-suite:
         - ./test/e2e
@@ -29,12 +29,12 @@ jobs:
         # This is attempting to make it a bit clearer what's being tested.
         # See: https://github.com/kubernetes-sigs/kind/releases/tag/v0.20.0
         include:
-        - k8s-version: v1.30.8
-          kind-version: v0.26.0
-          kind-image-sha: sha256:17cd608b3971338d9180b00776cb766c50d0a0b6b904ab4ff52fd3fc5c6369bf
-        - k8s-version: v1.31.4
-          kind-version: v0.26.0
-          kind-image-sha: sha256:2cb39f7295fe7eafee0842b1052a599a4fb0f8bcf3f83d96c7f4864c357c6c30
+        - k8s-version: v1.31.6
+          kind-version: v0.27.0
+          kind-image-sha: sha256:28b7cbb993dfe093c76641a0c95807637213c9109b761f1d422c2400e22b8e87
+        - k8s-version: v1.32.2
+          kind-version: v0.27.0
+          kind-image-sha: sha256:f226345927d7e348497136874b6d207e0b32cc52154ad8323129352923a3142f
 
         # Add the flags we use for each of these test suites.
         - test-suite: ./test/e2e
