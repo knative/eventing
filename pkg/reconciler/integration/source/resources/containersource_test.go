@@ -40,6 +40,9 @@ const (
 )
 
 func TestNewContainerSource(t *testing.T) {
+	const timerImage = "quay.io/timer-image"
+	t.Setenv("INTEGRATION_SOURCE_TIMER_IMAGE", timerImage)
+
 	source := &v1alpha1.IntegrationSource{
 
 		ObjectMeta: metav1.ObjectMeta{
@@ -80,7 +83,7 @@ func TestNewContainerSource(t *testing.T) {
 					Containers: []corev1.Container{
 						{
 							Name:            "source",
-							Image:           "gcr.io/knative-nightly/timer-source:latest",
+							Image:           timerImage,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Env: []corev1.EnvVar{
 								{Name: "CAMEL_KNATIVE_CLIENT_SSL_ENABLED", Value: "true"},
