@@ -708,6 +708,21 @@ func TestStatefulsetScheduler(t *testing.T) {
 
 			vpodClient := tscheduler.NewVPodClient()
 			vpod := vpodClient.Create(vpodNamespace, vpodName, tc.vreplicas, tc.placements)
+			for vPodKey, res := range tc.initialReserved {
+				if vPodKey.Namespace == vpodNamespace && vPodKey.Name == vpodName {
+					continue
+				}
+				var placements []duckv1alpha1.Placement
+				count := int32(0)
+				for pod, vReplicas := range res {
+					count += vReplicas
+					placements = append(placements, duckv1alpha1.Placement{
+						PodName:   pod,
+						VReplicas: vReplicas,
+					})
+				}
+				vpodClient.Create(vPodKey.Namespace, vPodKey.Name, count, placements)
+			}
 
 			for i := int32(0); i < tc.replicas; i++ {
 				nodeName := "node" + fmt.Sprint(i)
@@ -745,7 +760,9 @@ func TestStatefulsetScheduler(t *testing.T) {
 				t.Fatal("unexpected error", err)
 			}
 			if tc.initialReserved != nil {
+				s.reservedMu.Lock()
 				s.reserved = tc.initialReserved
+				s.reservedMu.Unlock()
 			}
 
 			// Give some time for the informer to notify the scheduler and set the number of replicas
