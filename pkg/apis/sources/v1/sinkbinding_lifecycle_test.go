@@ -165,6 +165,7 @@ func TestSinkBindingStatusIsReady(t *testing.T) {
 			s := &SinkBindingStatus{}
 			s.InitializeConditions()
 			s.MarkSink(sink)
+			s.MarkTrustBundlePropagated()
 			s.MarkBindingUnavailable("TheReason", "this is the message")
 			return s
 		}(),
@@ -175,6 +176,7 @@ func TestSinkBindingStatusIsReady(t *testing.T) {
 			s := &SinkBindingStatus{}
 			s.InitializeConditions()
 			s.MarkSink(sink)
+			s.MarkTrustBundlePropagated()
 			s.MarkBindingAvailable()
 			s.MarkOIDCIdentityCreatedSucceeded()
 			s.MarkOIDCTokenSecretCreatedSuccceeded()
@@ -187,6 +189,7 @@ func TestSinkBindingStatusIsReady(t *testing.T) {
 			s := &SinkBindingStatus{}
 			s.InitializeConditions()
 			s.MarkSink(sink)
+			s.MarkTrustBundlePropagated()
 			s.MarkBindingAvailable()
 			s.MarkOIDCIdentityCreatedSucceeded()
 			s.MarkOIDCTokenSecretCreatedSuccceeded()
@@ -199,6 +202,7 @@ func TestSinkBindingStatusIsReady(t *testing.T) {
 			s := &SinkBindingStatus{}
 			s.InitializeConditions()
 			s.MarkSink(sink)
+			s.MarkTrustBundlePropagated()
 			s.MarkBindingAvailable()
 			s.MarkOIDCIdentityCreatedSucceededWithReason("TheReason", "feature is disabled")
 			s.MarkOIDCTokenSecretCreatedSuccceeded()
@@ -211,6 +215,7 @@ func TestSinkBindingStatusIsReady(t *testing.T) {
 			s := &SinkBindingStatus{}
 			s.InitializeConditions()
 			s.MarkSink(sink)
+			s.MarkTrustBundlePropagated()
 			s.MarkBindingAvailable()
 			s.MarkOIDCIdentityCreatedFailed("TheReason", "this is a message")
 			s.MarkOIDCTokenSecretCreatedSuccceeded()
@@ -223,6 +228,7 @@ func TestSinkBindingStatusIsReady(t *testing.T) {
 			s := &SinkBindingStatus{}
 			s.InitializeConditions()
 			s.MarkSink(sink)
+			s.MarkTrustBundlePropagated()
 			s.MarkBindingAvailable()
 			s.MarkOIDCIdentityCreatedSucceeded()
 			s.MarkOIDCTokenSecretCreatedSuccceeded()
@@ -235,9 +241,23 @@ func TestSinkBindingStatusIsReady(t *testing.T) {
 			s := &SinkBindingStatus{}
 			s.InitializeConditions()
 			s.MarkSink(sink)
+			s.MarkTrustBundlePropagated()
 			s.MarkBindingAvailable()
 			s.MarkOIDCIdentityCreatedSucceeded()
 			s.MarkOIDCTokenSecretCreatedFailed("Some", "reason")
+			return s
+		}(),
+		want: false,
+	}, {
+		name: "mark trust bundle propagation failed",
+		s: func() *SinkBindingStatus {
+			s := &SinkBindingStatus{}
+			s.InitializeConditions()
+			s.MarkSink(sink)
+			s.MarkFailedTrustBundlePropagation("failed", "failed")
+			s.MarkBindingAvailable()
+			s.MarkOIDCIdentityCreatedSucceeded()
+			s.MarkOIDCTokenSecretCreatedSuccceeded()
 			return s
 		}(),
 		want: false,
@@ -974,5 +994,19 @@ func TestSinkBindingDoNoURI(t *testing.T) {
 
 	if !cmp.Equal(got, want) {
 		t.Error("Undo (-want, +got):", cmp.Diff(want, got))
+	}
+}
+
+func TestSinkBindingUnavailable(t *testing.T) {
+
+	sb := &SinkBinding{}
+	sb.Status.InitializeConditions()
+	sb.Status.MarkBindingUnavailable("failed", "failed")
+
+	sb.Status.InitializeConditions()
+
+	r := sb.Status.GetCondition(apis.ConditionReady)
+	if r.IsTrue() || r.IsUnknown() {
+		t.Error("unexpected condition: ", r)
 	}
 }
