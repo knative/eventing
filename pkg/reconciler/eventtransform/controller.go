@@ -36,6 +36,7 @@ import (
 	eventtransformeryinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventtransform"
 	sinkbindinginformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1/sinkbinding/filtered"
 	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1alpha1/eventtransform"
+	reconcilersource "knative.dev/eventing/pkg/reconciler/source"
 )
 
 const (
@@ -72,6 +73,10 @@ func NewController(
 	})
 	featureStore.WatchConfigs(cmw)
 
+	configWatcher := reconcilersource.WatchConfigurations(ctx, "eventtransform", cmw,
+		reconcilersource.WithTracing,
+	)
+
 	r := &Reconciler{
 		k8s:                      kubeclient.Get(ctx),
 		client:                   eventingclient.Get(ctx),
@@ -80,6 +85,7 @@ func NewController(
 		jsonataServiceLister:     jsonataServiceInformer.Lister(),
 		jsonataEndpointLister:    jsonataEndpointInformer.Lister(),
 		jsonataSinkBindingLister: jsonataSinkBindingInformer.Lister(),
+		configWatcher:            configWatcher,
 	}
 
 	impl := eventtransform.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
