@@ -30,7 +30,7 @@ import (
 // EventTransformOption enables further configuration of a EventTransform.
 type EventTransformOption func(transform *eventing.EventTransform)
 
-// NewEventTransform creates a JobSink with JobSinkOptions.
+// NewEventTransform creates an EventTransform with EventTransformOptions.
 func NewEventTransform(name, namespace string, o ...EventTransformOption) *eventing.EventTransform {
 	t := &eventing.EventTransform{
 		ObjectMeta: metav1.ObjectMeta{
