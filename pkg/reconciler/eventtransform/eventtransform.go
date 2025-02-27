@@ -155,7 +155,10 @@ func (r *Reconciler) reconcileJsonataTransformationDeployment(ctx context.Contex
 		if err != nil {
 			return err
 		}
-		transform.Status.PropagateJsonataDeploymentStatus(created.Status)
+		if !transform.Status.PropagateJsonataDeploymentStatus(created.Status) {
+			// Wait for Deployment to become ready before continuing.
+			return controller.NewSkipKey("")
+		}
 		return nil
 	}
 	if err != nil {
@@ -164,7 +167,10 @@ func (r *Reconciler) reconcileJsonataTransformationDeployment(ctx context.Contex
 	if equality.Semantic.DeepDerivative(expected.Spec, curr.Spec) &&
 		equality.Semantic.DeepDerivative(expected.Labels, curr.Labels) &&
 		equality.Semantic.DeepDerivative(expected.Annotations, curr.Annotations) {
-		transform.Status.PropagateJsonataDeploymentStatus(curr.Status)
+		if !transform.Status.PropagateJsonataDeploymentStatus(curr.Status) {
+			// Wait for Deployment to become ready before continuing.
+			return controller.NewSkipKey("")
+		}
 		return nil
 	}
 	expected.ResourceVersion = curr.ResourceVersion
@@ -172,7 +178,10 @@ func (r *Reconciler) reconcileJsonataTransformationDeployment(ctx context.Contex
 	if err != nil {
 		return err
 	}
-	transform.Status.PropagateJsonataDeploymentStatus(updated.Status)
+	if !transform.Status.PropagateJsonataDeploymentStatus(updated.Status) {
+		// Wait for Deployment to become ready before continuing.
+		return controller.NewSkipKey("")
+	}
 	return nil
 }
 
@@ -189,7 +198,10 @@ func (r *Reconciler) reconcileJsonataTransformationSinkBinding(ctx context.Conte
 		if err != nil {
 			return err
 		}
-		transform.Status.PropagateJsonataSinkBindingStatus(created.Status)
+		if !transform.Status.PropagateJsonataSinkBindingStatus(created.Status) {
+			// Wait for SinkBinding to become ready before continuing.
+			return controller.NewSkipKey("")
+		}
 		return nil
 	}
 	if err != nil {
@@ -198,7 +210,10 @@ func (r *Reconciler) reconcileJsonataTransformationSinkBinding(ctx context.Conte
 	if equality.Semantic.DeepDerivative(expected.Spec, curr.Spec) &&
 		equality.Semantic.DeepDerivative(expected.Labels, curr.Labels) &&
 		equality.Semantic.DeepDerivative(expected.Annotations, curr.Annotations) {
-		transform.Status.PropagateJsonataSinkBindingStatus(curr.Status)
+		if !transform.Status.PropagateJsonataSinkBindingStatus(curr.Status) {
+			// Wait for SinkBinding to become ready before continuing.
+			return controller.NewSkipKey("")
+		}
 		return nil
 	}
 	expected.ResourceVersion = curr.ResourceVersion
@@ -206,7 +221,11 @@ func (r *Reconciler) reconcileJsonataTransformationSinkBinding(ctx context.Conte
 	if err != nil {
 		return err
 	}
-	transform.Status.PropagateJsonataSinkBindingStatus(updated.Status)
+	if !transform.Status.PropagateJsonataSinkBindingStatus(updated.Status) {
+		// Wait for SinkBinding to become ready before continuing.
+		return controller.NewSkipKey("")
+	}
+
 	return nil
 }
 
@@ -220,7 +239,7 @@ func (r *Reconciler) reconcileJsonataTransformationAddress(ctx context.Context, 
 	if err != nil {
 		return fmt.Errorf("failed to list jsonata endpoints: %w", err)
 	}
-	if len(endpoint.Subsets) == 0 || len(endpoint.Subsets[0].Ports) == 0 {
+	if len(endpoint.Subsets) == 0 || len(endpoint.Subsets[0].Ports) == 0 || len(endpoint.Subsets[0].Addresses) == 0 {
 		transform.Status.MarkWaitingForServiceEndpoints()
 		return nil
 	}

@@ -132,6 +132,10 @@ func (l *Listers) GetJobSinkLister() sinkslisters.JobSinkLister {
 	return sinkslisters.NewJobSinkLister(l.indexerFor(&sinksv1alpha1.JobSink{}))
 }
 
+func (l *Listers) GetEventTransformLister() eventingv1alpha1listers.EventTransformLister {
+	return eventingv1alpha1listers.NewEventTransformLister(l.indexerFor(&eventingv1alpha1.EventTransform{}))
+}
+
 func (l *Listers) GetIntegrationSourceLister() sourcev1alpha1listers.IntegrationSourceLister {
 	return sourcev1alpha1listers.NewIntegrationSourceLister(l.indexerFor(&sourcesv1alpha1.IntegrationSource{}))
 }
