@@ -87,7 +87,7 @@ func (ts *EventTransformStatus) InitializeConditions() {
 	ts.GetConditionSet().Manage(ts).InitializeConditions()
 }
 
-func (ts *EventTransformStatus) PropagateJsonataDeploymentStatus(ds appsv1.DeploymentStatus) {
+func (ts *EventTransformStatus) PropagateJsonataDeploymentStatus(ds appsv1.DeploymentStatus) bool {
 	defer ts.propagateTransformJsonataReadiness()
 	if ts.JsonataTransformationStatus == nil {
 		ts.JsonataTransformationStatus = &JsonataEventTransformationStatus{}
@@ -95,9 +95,10 @@ func (ts *EventTransformStatus) PropagateJsonataDeploymentStatus(ds appsv1.Deplo
 	ts.JsonataTransformationStatus.Deployment = ds
 	if ds.Replicas > 0 && ds.Replicas == ds.AvailableReplicas {
 		transformJsonataConditionSet.Manage(ts).MarkTrue(TransformationJsonataDeploymentReady)
-	} else {
-		transformJsonataConditionSet.Manage(ts).MarkFalse(TransformationJsonataDeploymentReady, TransformationJsonataDeploymentUnavailable, "Expected replicas: %d, available: %d", ds.Replicas, ds.AvailableReplicas)
+		return true
 	}
+	transformJsonataConditionSet.Manage(ts).MarkFalse(TransformationJsonataDeploymentReady, TransformationJsonataDeploymentUnavailable, "Expected replicas: %d, available: %d", ds.Replicas, ds.AvailableReplicas)
+	return false
 }
 
 func (ts *EventTransformStatus) PropagateJsonataSinkBindingUnset() {
@@ -105,7 +106,7 @@ func (ts *EventTransformStatus) PropagateJsonataSinkBindingUnset() {
 	transformJsonataConditionSet.Manage(ts).MarkTrue(TransformationJsonataSinkBindingReady)
 }
 
-func (ts *EventTransformStatus) PropagateJsonataSinkBindingStatus(sbs sourcesv1.SinkBindingStatus) {
+func (ts *EventTransformStatus) PropagateJsonataSinkBindingStatus(sbs sourcesv1.SinkBindingStatus) bool {
 	defer ts.propagateTransformJsonataReadiness()
 	if ts.JsonataTransformationStatus == nil {
 		ts.JsonataTransformationStatus = &JsonataEventTransformationStatus{}
@@ -118,15 +119,18 @@ func (ts *EventTransformStatus) PropagateJsonataSinkBindingStatus(sbs sourcesv1.
 	topLevel := sbs.GetCondition(apis.ConditionReady)
 	if topLevel == nil {
 		transformJsonataConditionSet.Manage(ts).MarkUnknown(TransformationJsonataSinkBindingReady, "", "")
-		return
+		return false
 	}
 	if topLevel.IsTrue() {
 		transformJsonataConditionSet.Manage(ts).MarkTrue(TransformationJsonataSinkBindingReady)
-	} else if topLevel.IsFalse() {
-		transformJsonataConditionSet.Manage(ts).MarkFalse(TransformationJsonataSinkBindingReady, topLevel.Reason, topLevel.Message)
-	} else {
-		transformJsonataConditionSet.Manage(ts).MarkUnknown(TransformationJsonataSinkBindingReady, topLevel.Reason, topLevel.Message)
+		return true
 	}
+	if topLevel.IsFalse() {
+		transformJsonataConditionSet.Manage(ts).MarkFalse(TransformationJsonataSinkBindingReady, topLevel.Reason, topLevel.Message)
+		return false
+	}
+	transformJsonataConditionSet.Manage(ts).MarkUnknown(TransformationJsonataSinkBindingReady, topLevel.Reason, topLevel.Message)
+	return false
 }
 
 func (ts *EventTransformStatus) propagateTransformJsonataReadiness() {
