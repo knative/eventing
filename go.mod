@@ -13,7 +13,7 @@ require (
 	github.com/coreos/go-oidc/v3 v3.9.0
 	github.com/eclipse/paho.golang v0.12.0
 	github.com/go-jose/go-jose/v3 v3.0.3
-	github.com/google/go-cmp v0.6.0
+	github.com/google/go-cmp v0.7.0
 	github.com/google/gofuzz v1.2.0
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.3
@@ -44,10 +44,10 @@ require (
 	k8s.io/apiserver v0.32.1
 	k8s.io/client-go v0.32.2
 	k8s.io/utils v0.0.0-20241210054802-24370beab758
-	knative.dev/hack v0.0.0-20250217122557-ce4c934f30e5
-	knative.dev/hack/schema v0.0.0-20250217122557-ce4c934f30e5
-	knative.dev/pkg v0.0.0-20250218011850-c925de2a3f07
-	knative.dev/reconciler-test v0.0.0-20250217113456-62eb465c1406
+	knative.dev/hack v0.0.0-20250219013704-306ce745e077
+	knative.dev/hack/schema v0.0.0-20250219013704-306ce745e077
+	knative.dev/pkg v0.0.0-20250226145529-0372c089c78f
+	knative.dev/reconciler-test v0.0.0-20250219013557-5ca0bd4fcad5
 	sigs.k8s.io/yaml v1.4.0
 )
 
