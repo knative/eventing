@@ -43,7 +43,7 @@ spec:
           image: ko://knative.dev/pkg/apiextensions/storageversion/cmd/migrate
           env:
             - name: IGNORE_NOT_FOUND
-              value: true
+              value: "true"
           args:
             - "apiserversources.sources.knative.dev"
             - "brokers.eventing.knative.dev"
