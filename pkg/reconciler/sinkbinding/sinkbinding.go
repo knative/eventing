@@ -248,5 +248,6 @@ func (s *SinkBindingSubResourcesReconciler) propagateTrustBundles(ctx context.Co
 		Version: v1.SchemeGroupVersion.Version,
 		Kind:    "SinkBinding",
 	}
-	return eventingtls.PropagateTrustBundles(ctx, s.kubeclient, s.trustBundleConfigMapLister, gvk, sb)
+	_, err := eventingtls.PropagateTrustBundles(ctx, s.kubeclient, s.trustBundleConfigMapLister, gvk, sb)
+	return err
 }
