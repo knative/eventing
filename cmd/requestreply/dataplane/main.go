@@ -94,6 +94,54 @@ func encryptWithAES(originalId string, key []byte) (string, error) {
 	return base64.StdEncoding.EncodeToString(ciphertext), nil
 }
 
+func encryptWithDES(originalId string, key []byte) (string, error) {
+	block, err := des.NewCipher(key)
+    if err != nil {
+        return "", err
+    }
+	
+	plaintext := []byte(originalId)
+    blockSize := block.BlockSize()
+    padding := blockSize - (len(plaintext) % blockSize)
+    paddedText := make([]byte, len(plaintext)+padding)
+    copy(paddedText, plaintext)
+
+	for i := len(plaintext); i < len(paddedText); i++ {
+        paddedText[i] = byte(padding)
+    }
+
+	ciphertext := make([]byte, len(paddedText))
+    for i := 0; i < len(paddedText); i += blockSize {
+        block.Encrypt(ciphertext[i:i+blockSize], paddedText[i:i+blockSize])
+    }
+
+	return base64.StdEncoding.EncodeToString(ciphertext), nil
+}
+
+func encryptWithTripleDES(originalId string, key []byte) (string, error) {
+	block, err := des.NewTripleDESCipher(key)
+    if err != nil {
+        return "", err
+    }
+
+	plaintext := []byte(originalId)
+    blockSize := block.BlockSize()
+    padding := blockSize - (len(plaintext) % blockSize)
+    paddedText := make([]byte, len(plaintext)+padding)
+    copy(paddedText, plaintext)
+
+	for i := len(plaintext); i < len(paddedText); i++ {
+        paddedText[i] = byte(padding)
+    }
+
+	ciphertext := make([]byte, len(paddedText))
+    for i := 0; i < len(paddedText); i += blockSize {
+        block.Encrypt(ciphertext[i:i+blockSize], paddedText[i:i+blockSize])
+    }
+
+	return base64.StdEncoding.EncodeToString(ciphertext), nil
+}
+
 func (m *proxiedRequestMap) HandleNewEvent(ctx context.Context, responseWriter http.ResponseWriter, event *cloudevents.Event) {
 	fmt.Printf("handling new event: %s\n", event.String())
 
