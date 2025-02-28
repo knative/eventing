@@ -68,6 +68,32 @@ func determineEncryptionFunc(originalId string, key []byte, algorithm string) (s
 	}
 }
 
+func encryptWithAES(originalId string, key []byte) (string, error) {
+	block, err := aes.NewCipher(key) //initialize new cipher with the key (should be 16,24,32 bytes)
+	if err != nil {
+		return "", err
+	}
+
+	plaintext := []byte(originalId)
+	blockSize := block.BlockSize() // 16
+	padding := blockSize - (len(plaintext) % blockSize) // calculate padding bytes
+	paddedText := make([]byte, len(plaintext)+padding) // new array combining original data & padding
+	copy(paddedText, plaintext)
+
+	for i := len(plaintext); i < len(paddedText); i++ {
+		paddedText[i] = byte(padding)
+	}
+		
+	// Encrypt
+	ciphertext := make([]byte, len(paddedText))
+	for i := 0; i < len(paddedText); i += blockSize {
+		block.Encrypt(ciphertext[i:i+blockSize], paddedText[i:i+blockSize]) //ECB mode
+	}
+		
+	// Return base64 encoded string
+	return base64.StdEncoding.EncodeToString(ciphertext), nil
+}
+
 func (m *proxiedRequestMap) HandleNewEvent(ctx context.Context, responseWriter http.ResponseWriter, event *cloudevents.Event) {
 	fmt.Printf("handling new event: %s\n", event.String())
 
