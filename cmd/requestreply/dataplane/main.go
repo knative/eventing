@@ -7,6 +7,13 @@ import (
 	"os"
 	"sync"
 	"time"
+	"crypto/aes"
+    "crypto/cipher"
+    "crypto/des"
+    "crypto/rc4"
+    "encoding/base64"
+    "errors"
+    "strings"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"
@@ -46,18 +53,18 @@ func (m *proxiedRequestMap) deleteEvent(event *cloudevents.Event) {
 	delete(m.entries, event.ID())
 }
 
-func determineDecryptionFunc(algorithm string) (func(originalId string, encryptedIdBytes []byte, key []byte) (bool, error), error) { //Encrypt instead of Decrypt
+func determineEncryptionFunc(originalId string, key []byte, algorithm string) (string, error) { //Encrypt instead of Decrypt
 	switch strings.ToUpper(string(algorithm)) {
 	case "AES", "AES-ECB":
-		return compareWithAES, nil
+		return encryptWithAES(originalId, key)
 	case "DES":
-		return compareWithDES, nil
+		return encryptWithDES(originalId, key)
 	case "3DES", "TRIPLEDES":
-		return compareWithTripleDES, nil
+		return encryptWithTripleDES(originalId, key)
 	case "RC4":
-		return compareWithRC4, nil
+		return encryptWithRC4(originalId, key)
 	default:
-		return nil, errors.New("cipher algorithm not supported")
+		return "", errors.New("encryption failed")
 	}
 }
 
