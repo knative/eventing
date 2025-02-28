@@ -46,6 +46,21 @@ func (m *proxiedRequestMap) deleteEvent(event *cloudevents.Event) {
 	delete(m.entries, event.ID())
 }
 
+func determineDecryptionFunc(algorithm string) (func(originalId string, encryptedIdBytes []byte, key []byte) (bool, error), error) { //Encrypt instead of Decrypt
+	switch strings.ToUpper(string(algorithm)) {
+	case "AES", "AES-ECB":
+		return compareWithAES, nil
+	case "DES":
+		return compareWithDES, nil
+	case "3DES", "TRIPLEDES":
+		return compareWithTripleDES, nil
+	case "RC4":
+		return compareWithRC4, nil
+	default:
+		return nil, errors.New("cipher algorithm not supported")
+	}
+}
+
 func (m *proxiedRequestMap) HandleNewEvent(ctx context.Context, responseWriter http.ResponseWriter, event *cloudevents.Event) {
 	fmt.Printf("handling new event: %s\n", event.String())
 
@@ -110,7 +125,7 @@ func (m *proxiedRequestMap) HandleResponseEvent(ctx context.Context, responseWri
 }
 
 func isResponseEvent(event *cloudevents.Event) bool {
-
+	
 	_, ok := event.Extensions()["replyAttribute"] //checks if event has replyAttribute
 	return ok
 }
