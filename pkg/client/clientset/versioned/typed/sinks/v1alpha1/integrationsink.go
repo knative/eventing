@@ -19,13 +19,13 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"context"
+	context "context"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	gentype "k8s.io/client-go/gentype"
-	v1alpha1 "knative.dev/eventing/pkg/apis/sinks/v1alpha1"
+	sinksv1alpha1 "knative.dev/eventing/pkg/apis/sinks/v1alpha1"
 	scheme "knative.dev/eventing/pkg/client/clientset/versioned/scheme"
 )
 
@@ -37,33 +37,34 @@ type IntegrationSinksGetter interface {
 
 // IntegrationSinkInterface has methods to work with IntegrationSink resources.
 type IntegrationSinkInterface interface {
-	Create(ctx context.Context, integrationSink *v1alpha1.IntegrationSink, opts v1.CreateOptions) (*v1alpha1.IntegrationSink, error)
-	Update(ctx context.Context, integrationSink *v1alpha1.IntegrationSink, opts v1.UpdateOptions) (*v1alpha1.IntegrationSink, error)
+	Create(ctx context.Context, integrationSink *sinksv1alpha1.IntegrationSink, opts v1.CreateOptions) (*sinksv1alpha1.IntegrationSink, error)
+	Update(ctx context.Context, integrationSink *sinksv1alpha1.IntegrationSink, opts v1.UpdateOptions) (*sinksv1alpha1.IntegrationSink, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, integrationSink *v1alpha1.IntegrationSink, opts v1.UpdateOptions) (*v1alpha1.IntegrationSink, error)
+	UpdateStatus(ctx context.Context, integrationSink *sinksv1alpha1.IntegrationSink, opts v1.UpdateOptions) (*sinksv1alpha1.IntegrationSink, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha1.IntegrationSink, error)
-	List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.IntegrationSinkList, error)
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*sinksv1alpha1.IntegrationSink, error)
+	List(ctx context.Context, opts v1.ListOptions) (*sinksv1alpha1.IntegrationSinkList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.IntegrationSink, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *sinksv1alpha1.IntegrationSink, err error)
 	IntegrationSinkExpansion
 }
 
 // integrationSinks implements IntegrationSinkInterface
 type integrationSinks struct {
-	*gentype.ClientWithList[*v1alpha1.IntegrationSink, *v1alpha1.IntegrationSinkList]
+	*gentype.ClientWithList[*sinksv1alpha1.IntegrationSink, *sinksv1alpha1.IntegrationSinkList]
 }
 
 // newIntegrationSinks returns a IntegrationSinks
 func newIntegrationSinks(c *SinksV1alpha1Client, namespace string) *integrationSinks {
 	return &integrationSinks{
-		gentype.NewClientWithList[*v1alpha1.IntegrationSink, *v1alpha1.IntegrationSinkList](
+		gentype.NewClientWithList[*sinksv1alpha1.IntegrationSink, *sinksv1alpha1.IntegrationSinkList](
 			"integrationsinks",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			namespace,
-			func() *v1alpha1.IntegrationSink { return &v1alpha1.IntegrationSink{} },
-			func() *v1alpha1.IntegrationSinkList { return &v1alpha1.IntegrationSinkList{} }),
+			func() *sinksv1alpha1.IntegrationSink { return &sinksv1alpha1.IntegrationSink{} },
+			func() *sinksv1alpha1.IntegrationSinkList { return &sinksv1alpha1.IntegrationSinkList{} },
+		),
 	}
 }

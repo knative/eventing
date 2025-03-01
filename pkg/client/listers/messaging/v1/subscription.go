@@ -19,10 +19,10 @@ limitations under the License.
 package v1
 
 import (
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
-	"k8s.io/client-go/tools/cache"
-	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
+	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 )
 
 // SubscriptionLister helps list Subscriptions.
@@ -30,7 +30,7 @@ import (
 type SubscriptionLister interface {
 	// List lists all Subscriptions in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1.Subscription, err error)
+	List(selector labels.Selector) (ret []*messagingv1.Subscription, err error)
 	// Subscriptions returns an object that can list and get Subscriptions.
 	Subscriptions(namespace string) SubscriptionNamespaceLister
 	SubscriptionListerExpansion
@@ -38,17 +38,17 @@ type SubscriptionLister interface {
 
 // subscriptionLister implements the SubscriptionLister interface.
 type subscriptionLister struct {
-	listers.ResourceIndexer[*v1.Subscription]
+	listers.ResourceIndexer[*messagingv1.Subscription]
 }
 
 // NewSubscriptionLister returns a new SubscriptionLister.
 func NewSubscriptionLister(indexer cache.Indexer) SubscriptionLister {
-	return &subscriptionLister{listers.New[*v1.Subscription](indexer, v1.Resource("subscription"))}
+	return &subscriptionLister{listers.New[*messagingv1.Subscription](indexer, messagingv1.Resource("subscription"))}
 }
 
 // Subscriptions returns an object that can list and get Subscriptions.
 func (s *subscriptionLister) Subscriptions(namespace string) SubscriptionNamespaceLister {
-	return subscriptionNamespaceLister{listers.NewNamespaced[*v1.Subscription](s.ResourceIndexer, namespace)}
+	return subscriptionNamespaceLister{listers.NewNamespaced[*messagingv1.Subscription](s.ResourceIndexer, namespace)}
 }
 
 // SubscriptionNamespaceLister helps list and get Subscriptions.
@@ -56,15 +56,15 @@ func (s *subscriptionLister) Subscriptions(namespace string) SubscriptionNamespa
 type SubscriptionNamespaceLister interface {
 	// List lists all Subscriptions in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1.Subscription, err error)
+	List(selector labels.Selector) (ret []*messagingv1.Subscription, err error)
 	// Get retrieves the Subscription from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v1.Subscription, error)
+	Get(name string) (*messagingv1.Subscription, error)
 	SubscriptionNamespaceListerExpansion
 }
 
 // subscriptionNamespaceLister implements the SubscriptionNamespaceLister
 // interface.
 type subscriptionNamespaceLister struct {
-	listers.ResourceIndexer[*v1.Subscription]
+	listers.ResourceIndexer[*messagingv1.Subscription]
 }

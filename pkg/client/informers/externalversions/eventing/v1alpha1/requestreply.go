@@ -19,24 +19,24 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
 	cache "k8s.io/client-go/tools/cache"
-	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	apiseventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	versioned "knative.dev/eventing/pkg/client/clientset/versioned"
 	internalinterfaces "knative.dev/eventing/pkg/client/informers/externalversions/internalinterfaces"
-	v1alpha1 "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
+	eventingv1alpha1 "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 )
 
 // RequestReplyInformer provides access to a shared informer and lister for
 // RequestReplies.
 type RequestReplyInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1alpha1.RequestReplyLister
+	Lister() eventingv1alpha1.RequestReplyLister
 }
 
 type requestReplyInformer struct {
@@ -71,7 +71,7 @@ func NewFilteredRequestReplyInformer(client versioned.Interface, namespace strin
 				return client.EventingV1alpha1().RequestReplies(namespace).Watch(context.TODO(), options)
 			},
 		},
-		&eventingv1alpha1.RequestReply{},
+		&apiseventingv1alpha1.RequestReply{},
 		resyncPeriod,
 		indexers,
 	)
@@ -82,9 +82,9 @@ func (f *requestReplyInformer) defaultInformer(client versioned.Interface, resyn
 }
 
 func (f *requestReplyInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&eventingv1alpha1.RequestReply{}, f.defaultInformer)
+	return f.factory.InformerFor(&apiseventingv1alpha1.RequestReply{}, f.defaultInformer)
 }
 
-func (f *requestReplyInformer) Lister() v1alpha1.RequestReplyLister {
-	return v1alpha1.NewRequestReplyLister(f.Informer().GetIndexer())
+func (f *requestReplyInformer) Lister() eventingv1alpha1.RequestReplyLister {
+	return eventingv1alpha1.NewRequestReplyLister(f.Informer().GetIndexer())
 }

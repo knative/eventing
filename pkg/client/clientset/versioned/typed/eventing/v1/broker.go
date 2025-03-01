@@ -19,13 +19,13 @@ limitations under the License.
 package v1
 
 import (
-	"context"
+	context "context"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	gentype "k8s.io/client-go/gentype"
-	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	scheme "knative.dev/eventing/pkg/client/clientset/versioned/scheme"
 )
 
@@ -37,33 +37,34 @@ type BrokersGetter interface {
 
 // BrokerInterface has methods to work with Broker resources.
 type BrokerInterface interface {
-	Create(ctx context.Context, broker *v1.Broker, opts metav1.CreateOptions) (*v1.Broker, error)
-	Update(ctx context.Context, broker *v1.Broker, opts metav1.UpdateOptions) (*v1.Broker, error)
+	Create(ctx context.Context, broker *eventingv1.Broker, opts metav1.CreateOptions) (*eventingv1.Broker, error)
+	Update(ctx context.Context, broker *eventingv1.Broker, opts metav1.UpdateOptions) (*eventingv1.Broker, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, broker *v1.Broker, opts metav1.UpdateOptions) (*v1.Broker, error)
+	UpdateStatus(ctx context.Context, broker *eventingv1.Broker, opts metav1.UpdateOptions) (*eventingv1.Broker, error)
 	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.Broker, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.BrokerList, error)
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*eventingv1.Broker, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*eventingv1.BrokerList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Broker, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *eventingv1.Broker, err error)
 	BrokerExpansion
 }
 
 // brokers implements BrokerInterface
 type brokers struct {
-	*gentype.ClientWithList[*v1.Broker, *v1.BrokerList]
+	*gentype.ClientWithList[*eventingv1.Broker, *eventingv1.BrokerList]
 }
 
 // newBrokers returns a Brokers
 func newBrokers(c *EventingV1Client, namespace string) *brokers {
 	return &brokers{
-		gentype.NewClientWithList[*v1.Broker, *v1.BrokerList](
+		gentype.NewClientWithList[*eventingv1.Broker, *eventingv1.BrokerList](
 			"brokers",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			namespace,
-			func() *v1.Broker { return &v1.Broker{} },
-			func() *v1.BrokerList { return &v1.BrokerList{} }),
+			func() *eventingv1.Broker { return &eventingv1.Broker{} },
+			func() *eventingv1.BrokerList { return &eventingv1.BrokerList{} },
+		),
 	}
 }

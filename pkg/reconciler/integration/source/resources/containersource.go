@@ -17,6 +17,8 @@ limitations under the License.
 package resources
 
 import (
+	"os"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	commonv1a1 "knative.dev/eventing/pkg/apis/common/integration/v1alpha1"
@@ -25,14 +27,6 @@ import (
 	"knative.dev/eventing/pkg/reconciler/integration"
 	"knative.dev/pkg/kmeta"
 )
-
-// TODO: replace with ConfigMap
-var sourceImageMap = map[string]string{
-	"timer":           "gcr.io/knative-nightly/timer-source:latest",
-	"aws-s3":          "gcr.io/knative-nightly/aws-s3-source:latest",
-	"aws-sqs":         "gcr.io/knative-nightly/aws-sqs-source:latest",
-	"aws-ddb-streams": "gcr.io/knative-nightly/aws-ddb-streams-source:latest",
-}
 
 func NewContainerSource(source *v1alpha1.IntegrationSource, oidc bool) *sourcesv1.ContainerSource {
 	return &sourcesv1.ContainerSource{
@@ -135,15 +129,16 @@ func makeEnv(source *v1alpha1.IntegrationSource, oidc bool) []corev1.EnvVar {
 }
 
 func selectImage(source *v1alpha1.IntegrationSource) string {
+	// Injected in ./config/core/deployments/controller.yaml
 	switch {
 	case source.Spec.Timer != nil:
-		return sourceImageMap["timer"]
+		return os.Getenv("INTEGRATION_SOURCE_TIMER_IMAGE")
 	case source.Spec.Aws != nil && source.Spec.Aws.S3 != nil:
-		return sourceImageMap["aws-s3"]
+		return os.Getenv("INTEGRATION_SOURCE_AWS_S3_IMAGE")
 	case source.Spec.Aws != nil && source.Spec.Aws.SQS != nil:
-		return sourceImageMap["aws-sqs"]
+		return os.Getenv("INTEGRATION_SOURCE_AWS_SQS_IMAGE")
 	case source.Spec.Aws != nil && source.Spec.Aws.DDBStreams != nil:
-		return sourceImageMap["aws-ddb-streams"]
+		return os.Getenv("INTEGRATION_SOURCE_AWS_DDB_STREAMS_IMAGE")
 	default:
 		return ""
 	}

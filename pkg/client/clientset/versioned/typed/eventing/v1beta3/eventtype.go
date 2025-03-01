@@ -19,13 +19,13 @@ limitations under the License.
 package v1beta3
 
 import (
-	"context"
+	context "context"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	gentype "k8s.io/client-go/gentype"
-	v1beta3 "knative.dev/eventing/pkg/apis/eventing/v1beta3"
+	eventingv1beta3 "knative.dev/eventing/pkg/apis/eventing/v1beta3"
 	scheme "knative.dev/eventing/pkg/client/clientset/versioned/scheme"
 )
 
@@ -37,33 +37,34 @@ type EventTypesGetter interface {
 
 // EventTypeInterface has methods to work with EventType resources.
 type EventTypeInterface interface {
-	Create(ctx context.Context, eventType *v1beta3.EventType, opts v1.CreateOptions) (*v1beta3.EventType, error)
-	Update(ctx context.Context, eventType *v1beta3.EventType, opts v1.UpdateOptions) (*v1beta3.EventType, error)
+	Create(ctx context.Context, eventType *eventingv1beta3.EventType, opts v1.CreateOptions) (*eventingv1beta3.EventType, error)
+	Update(ctx context.Context, eventType *eventingv1beta3.EventType, opts v1.UpdateOptions) (*eventingv1beta3.EventType, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, eventType *v1beta3.EventType, opts v1.UpdateOptions) (*v1beta3.EventType, error)
+	UpdateStatus(ctx context.Context, eventType *eventingv1beta3.EventType, opts v1.UpdateOptions) (*eventingv1beta3.EventType, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1beta3.EventType, error)
-	List(ctx context.Context, opts v1.ListOptions) (*v1beta3.EventTypeList, error)
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*eventingv1beta3.EventType, error)
+	List(ctx context.Context, opts v1.ListOptions) (*eventingv1beta3.EventTypeList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta3.EventType, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *eventingv1beta3.EventType, err error)
 	EventTypeExpansion
 }
 
 // eventTypes implements EventTypeInterface
 type eventTypes struct {
-	*gentype.ClientWithList[*v1beta3.EventType, *v1beta3.EventTypeList]
+	*gentype.ClientWithList[*eventingv1beta3.EventType, *eventingv1beta3.EventTypeList]
 }
 
 // newEventTypes returns a EventTypes
 func newEventTypes(c *EventingV1beta3Client, namespace string) *eventTypes {
 	return &eventTypes{
-		gentype.NewClientWithList[*v1beta3.EventType, *v1beta3.EventTypeList](
+		gentype.NewClientWithList[*eventingv1beta3.EventType, *eventingv1beta3.EventTypeList](
 			"eventtypes",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			namespace,
-			func() *v1beta3.EventType { return &v1beta3.EventType{} },
-			func() *v1beta3.EventTypeList { return &v1beta3.EventTypeList{} }),
+			func() *eventingv1beta3.EventType { return &eventingv1beta3.EventType{} },
+			func() *eventingv1beta3.EventTypeList { return &eventingv1beta3.EventTypeList{} },
+		),
 	}
 }

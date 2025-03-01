@@ -25,10 +25,13 @@ import (
 	filteredFactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
 	"knative.dev/pkg/signals"
 
+	eventingfilteredfactory "knative.dev/eventing/pkg/client/injection/informers/factory/filtered"
+
 	"knative.dev/eventing/pkg/apis/sinks"
 	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/reconciler/eventpolicy"
+	"knative.dev/eventing/pkg/reconciler/eventtransform"
 	"knative.dev/eventing/pkg/reconciler/jobsink"
 
 	"knative.dev/eventing/pkg/reconciler/apiserversource"
@@ -53,7 +56,17 @@ func main() {
 		auth.OIDCLabelSelector,
 		eventingtls.TrustBundleLabelSelector,
 		sinks.JobSinkJobsLabelSelector,
+		eventtransform.JsonataResourcesSelector,
+		"app.kubernetes.io/name",
 	)
+
+	ctx = eventingfilteredfactory.WithSelectors(ctx,
+		eventtransform.JsonataResourcesSelector,
+	)
+
+	//for _, inf := range []injection.InformerInjector{v1certificate.WithInformer} {
+	//	injection.Default.RegisterInformer(inf)
+	//}
 
 	sharedmain.MainWithContext(ctx, "controller",
 		// Messaging
@@ -84,5 +97,8 @@ func main() {
 		// Sugar
 		sugarnamespace.NewController,
 		sugartrigger.NewController,
+
+		// Transform
+		eventtransform.NewController,
 	)
 }

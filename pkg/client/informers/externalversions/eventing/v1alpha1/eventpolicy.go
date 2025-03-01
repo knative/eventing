@@ -19,24 +19,24 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
 	cache "k8s.io/client-go/tools/cache"
-	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	apiseventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	versioned "knative.dev/eventing/pkg/client/clientset/versioned"
 	internalinterfaces "knative.dev/eventing/pkg/client/informers/externalversions/internalinterfaces"
-	v1alpha1 "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
+	eventingv1alpha1 "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 )
 
 // EventPolicyInformer provides access to a shared informer and lister for
 // EventPolicies.
 type EventPolicyInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1alpha1.EventPolicyLister
+	Lister() eventingv1alpha1.EventPolicyLister
 }
 
 type eventPolicyInformer struct {
@@ -71,7 +71,7 @@ func NewFilteredEventPolicyInformer(client versioned.Interface, namespace string
 				return client.EventingV1alpha1().EventPolicies(namespace).Watch(context.TODO(), options)
 			},
 		},
-		&eventingv1alpha1.EventPolicy{},
+		&apiseventingv1alpha1.EventPolicy{},
 		resyncPeriod,
 		indexers,
 	)
@@ -82,9 +82,9 @@ func (f *eventPolicyInformer) defaultInformer(client versioned.Interface, resync
 }
 
 func (f *eventPolicyInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&eventingv1alpha1.EventPolicy{}, f.defaultInformer)
+	return f.factory.InformerFor(&apiseventingv1alpha1.EventPolicy{}, f.defaultInformer)
 }
 
-func (f *eventPolicyInformer) Lister() v1alpha1.EventPolicyLister {
-	return v1alpha1.NewEventPolicyLister(f.Informer().GetIndexer())
+func (f *eventPolicyInformer) Lister() eventingv1alpha1.EventPolicyLister {
+	return eventingv1alpha1.NewEventPolicyLister(f.Informer().GetIndexer())
 }

@@ -66,6 +66,8 @@ func (f SchedulerFunc) Schedule(ctx context.Context, vpod VPod) ([]duckv1alpha1.
 // VPod represents virtual replicas placed into real Kubernetes pods
 // The scheduler is responsible for placing VPods
 type VPod interface {
+	GetDeletionTimestamp() *metav1.Time
+
 	// GetKey returns the VPod key (namespace/name).
 	GetKey() types.NamespacedName
 

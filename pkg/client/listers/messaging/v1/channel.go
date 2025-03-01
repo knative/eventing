@@ -19,10 +19,10 @@ limitations under the License.
 package v1
 
 import (
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
-	"k8s.io/client-go/tools/cache"
-	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
+	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 )
 
 // ChannelLister helps list Channels.
@@ -30,7 +30,7 @@ import (
 type ChannelLister interface {
 	// List lists all Channels in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1.Channel, err error)
+	List(selector labels.Selector) (ret []*messagingv1.Channel, err error)
 	// Channels returns an object that can list and get Channels.
 	Channels(namespace string) ChannelNamespaceLister
 	ChannelListerExpansion
@@ -38,17 +38,17 @@ type ChannelLister interface {
 
 // channelLister implements the ChannelLister interface.
 type channelLister struct {
-	listers.ResourceIndexer[*v1.Channel]
+	listers.ResourceIndexer[*messagingv1.Channel]
 }
 
 // NewChannelLister returns a new ChannelLister.
 func NewChannelLister(indexer cache.Indexer) ChannelLister {
-	return &channelLister{listers.New[*v1.Channel](indexer, v1.Resource("channel"))}
+	return &channelLister{listers.New[*messagingv1.Channel](indexer, messagingv1.Resource("channel"))}
 }
 
 // Channels returns an object that can list and get Channels.
 func (s *channelLister) Channels(namespace string) ChannelNamespaceLister {
-	return channelNamespaceLister{listers.NewNamespaced[*v1.Channel](s.ResourceIndexer, namespace)}
+	return channelNamespaceLister{listers.NewNamespaced[*messagingv1.Channel](s.ResourceIndexer, namespace)}
 }
 
 // ChannelNamespaceLister helps list and get Channels.
@@ -56,15 +56,15 @@ func (s *channelLister) Channels(namespace string) ChannelNamespaceLister {
 type ChannelNamespaceLister interface {
 	// List lists all Channels in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1.Channel, err error)
+	List(selector labels.Selector) (ret []*messagingv1.Channel, err error)
 	// Get retrieves the Channel from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v1.Channel, error)
+	Get(name string) (*messagingv1.Channel, error)
 	ChannelNamespaceListerExpansion
 }
 
 // channelNamespaceLister implements the ChannelNamespaceLister
 // interface.
 type channelNamespaceLister struct {
-	listers.ResourceIndexer[*v1.Channel]
+	listers.ResourceIndexer[*messagingv1.Channel]
 }

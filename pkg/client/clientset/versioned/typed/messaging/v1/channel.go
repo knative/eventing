@@ -19,13 +19,13 @@ limitations under the License.
 package v1
 
 import (
-	"context"
+	context "context"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	gentype "k8s.io/client-go/gentype"
-	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
+	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	scheme "knative.dev/eventing/pkg/client/clientset/versioned/scheme"
 )
 
@@ -37,33 +37,34 @@ type ChannelsGetter interface {
 
 // ChannelInterface has methods to work with Channel resources.
 type ChannelInterface interface {
-	Create(ctx context.Context, channel *v1.Channel, opts metav1.CreateOptions) (*v1.Channel, error)
-	Update(ctx context.Context, channel *v1.Channel, opts metav1.UpdateOptions) (*v1.Channel, error)
+	Create(ctx context.Context, channel *messagingv1.Channel, opts metav1.CreateOptions) (*messagingv1.Channel, error)
+	Update(ctx context.Context, channel *messagingv1.Channel, opts metav1.UpdateOptions) (*messagingv1.Channel, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, channel *v1.Channel, opts metav1.UpdateOptions) (*v1.Channel, error)
+	UpdateStatus(ctx context.Context, channel *messagingv1.Channel, opts metav1.UpdateOptions) (*messagingv1.Channel, error)
 	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.Channel, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.ChannelList, error)
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*messagingv1.Channel, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*messagingv1.ChannelList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Channel, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *messagingv1.Channel, err error)
 	ChannelExpansion
 }
 
 // channels implements ChannelInterface
 type channels struct {
-	*gentype.ClientWithList[*v1.Channel, *v1.ChannelList]
+	*gentype.ClientWithList[*messagingv1.Channel, *messagingv1.ChannelList]
 }
 
 // newChannels returns a Channels
 func newChannels(c *MessagingV1Client, namespace string) *channels {
 	return &channels{
-		gentype.NewClientWithList[*v1.Channel, *v1.ChannelList](
+		gentype.NewClientWithList[*messagingv1.Channel, *messagingv1.ChannelList](
 			"channels",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			namespace,
-			func() *v1.Channel { return &v1.Channel{} },
-			func() *v1.ChannelList { return &v1.ChannelList{} }),
+			func() *messagingv1.Channel { return &messagingv1.Channel{} },
+			func() *messagingv1.ChannelList { return &messagingv1.ChannelList{} },
+		),
 	}
 }

@@ -33,7 +33,7 @@ import (
 
 	"knative.dev/reconciler-test/pkg/eventshub/assert"
 
-	eventingv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/eventingtls/eventingtlstesting"
 	"knative.dev/eventing/test/rekt/features/featureflags"
 	"knative.dev/eventing/test/rekt/resources/broker"
@@ -67,9 +67,14 @@ func TriggerDependencyAnnotation() *feature.Feature {
 		trigger.WithAnnotations(annotations),
 		trigger.WithBrokerName(brokerName),
 	}
-
 	// Install the trigger
 	f.Setup("install trigger", trigger.Install(triggerName, cfg...))
+
+	// trigger is not ready since the pingsource dependency is not installed yet
+	f.Setup("trigger is not ready before pingsource dependency exists", trigger.IsNotReady(triggerName))
+
+	// verify that the trigger has the DependencyDoesNotExist condition
+	f.Setup("trigger has DependencyDoesNotExist condition", trigger.DependencyDoesNotExist(triggerName))
 
 	// trigger won't go ready until after the pingsource exists, because of the dependency annotation
 	f.Requirement("trigger goes ready", trigger.IsReady(triggerName))
@@ -167,7 +172,7 @@ func TriggerWithTLSSubscriber() *feature.Feature {
 		dls := service.AsDestinationRef(dlsName)
 		dls.CACerts = eventshub.GetCaCerts(ctx)
 
-		linear := eventingv1.BackoffPolicyLinear
+		linear := eventingduckv1.BackoffPolicyLinear
 		trigger.Install(dlsTriggerName, trigger.WithBrokerName(brokerName),
 			trigger.WithRetry(2, &linear, pointer.String("PT1S")),
 			trigger.WithDeadLetterSinkFromDestination(dls),
@@ -245,7 +250,7 @@ func TriggerWithTLSSubscriberTrustBundle() *feature.Feature {
 			CACerts: nil, // CA certs are in the trust-bundle
 		}
 
-		linear := eventingv1.BackoffPolicyLinear
+		linear := eventingduckv1.BackoffPolicyLinear
 		trigger.Install(dlsTriggerName, trigger.WithBrokerName(brokerName),
 			trigger.WithRetry(2, &linear, pointer.String("PT1S")),
 			trigger.WithDeadLetterSinkFromDestination(dls),

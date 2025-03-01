@@ -19,24 +19,24 @@ limitations under the License.
 package v1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
 	cache "k8s.io/client-go/tools/cache"
-	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
+	apismessagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	versioned "knative.dev/eventing/pkg/client/clientset/versioned"
 	internalinterfaces "knative.dev/eventing/pkg/client/informers/externalversions/internalinterfaces"
-	v1 "knative.dev/eventing/pkg/client/listers/messaging/v1"
+	messagingv1 "knative.dev/eventing/pkg/client/listers/messaging/v1"
 )
 
 // SubscriptionInformer provides access to a shared informer and lister for
 // Subscriptions.
 type SubscriptionInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1.SubscriptionLister
+	Lister() messagingv1.SubscriptionLister
 }
 
 type subscriptionInformer struct {
@@ -71,7 +71,7 @@ func NewFilteredSubscriptionInformer(client versioned.Interface, namespace strin
 				return client.MessagingV1().Subscriptions(namespace).Watch(context.TODO(), options)
 			},
 		},
-		&messagingv1.Subscription{},
+		&apismessagingv1.Subscription{},
 		resyncPeriod,
 		indexers,
 	)
@@ -82,9 +82,9 @@ func (f *subscriptionInformer) defaultInformer(client versioned.Interface, resyn
 }
 
 func (f *subscriptionInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&messagingv1.Subscription{}, f.defaultInformer)
+	return f.factory.InformerFor(&apismessagingv1.Subscription{}, f.defaultInformer)
 }
 
-func (f *subscriptionInformer) Lister() v1.SubscriptionLister {
-	return v1.NewSubscriptionLister(f.Informer().GetIndexer())
+func (f *subscriptionInformer) Lister() messagingv1.SubscriptionLister {
+	return messagingv1.NewSubscriptionLister(f.Informer().GetIndexer())
 }

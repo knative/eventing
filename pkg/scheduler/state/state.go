@@ -278,23 +278,25 @@ func isPodUnschedulable(pod *v1.Pod) bool {
 func (s *State) MarshalJSON() ([]byte, error) {
 
 	type S struct {
-		FreeCap         []int32                     `json:"freeCap"`
-		SchedulablePods []int32                     `json:"schedulablePods"`
-		Capacity        int32                       `json:"capacity"`
-		Replicas        int32                       `json:"replicas"`
-		StatefulSetName string                      `json:"statefulSetName"`
-		PodSpread       map[string]map[string]int32 `json:"podSpread"`
-		Pending         map[string]int32            `json:"pending"`
+		FreeCap                []int32                     `json:"freeCap"`
+		SchedulablePods        []int32                     `json:"schedulablePods"`
+		Capacity               int32                       `json:"capacity"`
+		Replicas               int32                       `json:"replicas"`
+		StatefulSetName        string                      `json:"statefulSetName"`
+		PodSpread              map[string]map[string]int32 `json:"podSpread"`
+		Pending                map[string]int32            `json:"pending"`
+		ExpectedVReplicaByVPod map[string]int32            `json:"expectedVReplicaByVPod"`
 	}
 
 	sj := S{
-		FreeCap:         s.FreeCap,
-		SchedulablePods: s.SchedulablePods,
-		Capacity:        s.Capacity,
-		Replicas:        s.Replicas,
-		StatefulSetName: s.StatefulSetName,
-		PodSpread:       ToJSONable(s.PodSpread),
-		Pending:         toJSONablePending(s.Pending),
+		FreeCap:                s.FreeCap,
+		SchedulablePods:        s.SchedulablePods,
+		Capacity:               s.Capacity,
+		Replicas:               s.Replicas,
+		StatefulSetName:        s.StatefulSetName,
+		PodSpread:              ToJSONable(s.PodSpread),
+		Pending:                toJSONablePending(s.Pending),
+		ExpectedVReplicaByVPod: toJSONablePending(s.ExpectedVReplicaByVPod),
 	}
 
 	return json.Marshal(sj)

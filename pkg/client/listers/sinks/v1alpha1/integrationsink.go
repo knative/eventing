@@ -19,10 +19,10 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
-	"k8s.io/client-go/tools/cache"
-	v1alpha1 "knative.dev/eventing/pkg/apis/sinks/v1alpha1"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
+	sinksv1alpha1 "knative.dev/eventing/pkg/apis/sinks/v1alpha1"
 )
 
 // IntegrationSinkLister helps list IntegrationSinks.
@@ -30,7 +30,7 @@ import (
 type IntegrationSinkLister interface {
 	// List lists all IntegrationSinks in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1alpha1.IntegrationSink, err error)
+	List(selector labels.Selector) (ret []*sinksv1alpha1.IntegrationSink, err error)
 	// IntegrationSinks returns an object that can list and get IntegrationSinks.
 	IntegrationSinks(namespace string) IntegrationSinkNamespaceLister
 	IntegrationSinkListerExpansion
@@ -38,17 +38,17 @@ type IntegrationSinkLister interface {
 
 // integrationSinkLister implements the IntegrationSinkLister interface.
 type integrationSinkLister struct {
-	listers.ResourceIndexer[*v1alpha1.IntegrationSink]
+	listers.ResourceIndexer[*sinksv1alpha1.IntegrationSink]
 }
 
 // NewIntegrationSinkLister returns a new IntegrationSinkLister.
 func NewIntegrationSinkLister(indexer cache.Indexer) IntegrationSinkLister {
-	return &integrationSinkLister{listers.New[*v1alpha1.IntegrationSink](indexer, v1alpha1.Resource("integrationsink"))}
+	return &integrationSinkLister{listers.New[*sinksv1alpha1.IntegrationSink](indexer, sinksv1alpha1.Resource("integrationsink"))}
 }
 
 // IntegrationSinks returns an object that can list and get IntegrationSinks.
 func (s *integrationSinkLister) IntegrationSinks(namespace string) IntegrationSinkNamespaceLister {
-	return integrationSinkNamespaceLister{listers.NewNamespaced[*v1alpha1.IntegrationSink](s.ResourceIndexer, namespace)}
+	return integrationSinkNamespaceLister{listers.NewNamespaced[*sinksv1alpha1.IntegrationSink](s.ResourceIndexer, namespace)}
 }
 
 // IntegrationSinkNamespaceLister helps list and get IntegrationSinks.
@@ -56,15 +56,15 @@ func (s *integrationSinkLister) IntegrationSinks(namespace string) IntegrationSi
 type IntegrationSinkNamespaceLister interface {
 	// List lists all IntegrationSinks in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1alpha1.IntegrationSink, err error)
+	List(selector labels.Selector) (ret []*sinksv1alpha1.IntegrationSink, err error)
 	// Get retrieves the IntegrationSink from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v1alpha1.IntegrationSink, error)
+	Get(name string) (*sinksv1alpha1.IntegrationSink, error)
 	IntegrationSinkNamespaceListerExpansion
 }
 
 // integrationSinkNamespaceLister implements the IntegrationSinkNamespaceLister
 // interface.
 type integrationSinkNamespaceLister struct {
-	listers.ResourceIndexer[*v1alpha1.IntegrationSink]
+	listers.ResourceIndexer[*sinksv1alpha1.IntegrationSink]
 }

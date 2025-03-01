@@ -19,10 +19,10 @@ limitations under the License.
 package v1
 
 import (
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
-	"k8s.io/client-go/tools/cache"
-	v1 "knative.dev/eventing/pkg/apis/flows/v1"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
+	flowsv1 "knative.dev/eventing/pkg/apis/flows/v1"
 )
 
 // ParallelLister helps list Parallels.
@@ -30,7 +30,7 @@ import (
 type ParallelLister interface {
 	// List lists all Parallels in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1.Parallel, err error)
+	List(selector labels.Selector) (ret []*flowsv1.Parallel, err error)
 	// Parallels returns an object that can list and get Parallels.
 	Parallels(namespace string) ParallelNamespaceLister
 	ParallelListerExpansion
@@ -38,17 +38,17 @@ type ParallelLister interface {
 
 // parallelLister implements the ParallelLister interface.
 type parallelLister struct {
-	listers.ResourceIndexer[*v1.Parallel]
+	listers.ResourceIndexer[*flowsv1.Parallel]
 }
 
 // NewParallelLister returns a new ParallelLister.
 func NewParallelLister(indexer cache.Indexer) ParallelLister {
-	return &parallelLister{listers.New[*v1.Parallel](indexer, v1.Resource("parallel"))}
+	return &parallelLister{listers.New[*flowsv1.Parallel](indexer, flowsv1.Resource("parallel"))}
 }
 
 // Parallels returns an object that can list and get Parallels.
 func (s *parallelLister) Parallels(namespace string) ParallelNamespaceLister {
-	return parallelNamespaceLister{listers.NewNamespaced[*v1.Parallel](s.ResourceIndexer, namespace)}
+	return parallelNamespaceLister{listers.NewNamespaced[*flowsv1.Parallel](s.ResourceIndexer, namespace)}
 }
 
 // ParallelNamespaceLister helps list and get Parallels.
@@ -56,15 +56,15 @@ func (s *parallelLister) Parallels(namespace string) ParallelNamespaceLister {
 type ParallelNamespaceLister interface {
 	// List lists all Parallels in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1.Parallel, err error)
+	List(selector labels.Selector) (ret []*flowsv1.Parallel, err error)
 	// Get retrieves the Parallel from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v1.Parallel, error)
+	Get(name string) (*flowsv1.Parallel, error)
 	ParallelNamespaceListerExpansion
 }
 
 // parallelNamespaceLister implements the ParallelNamespaceLister
 // interface.
 type parallelNamespaceLister struct {
-	listers.ResourceIndexer[*v1.Parallel]
+	listers.ResourceIndexer[*flowsv1.Parallel]
 }

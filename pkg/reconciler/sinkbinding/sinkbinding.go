@@ -18,13 +18,11 @@ package sinkbinding
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
-	duckv1 "knative.dev/pkg/apis/duck/v1"
-
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/resolver"
 
@@ -61,17 +59,12 @@ type SinkBindingSubResourcesReconciler struct {
 
 func (s *SinkBindingSubResourcesReconciler) Reconcile(ctx context.Context, b psbinding.Bindable) error {
 	sb := b.(*v1.SinkBinding)
-	if s.res == nil {
-		err := errors.New("Resolver is nil")
-		logging.FromContext(ctx).Errorf("%w", err)
-		sb.Status.MarkBindingUnavailable("NoResolver", "No Resolver associated with context for sink")
-		return err
-	}
 
 	if err := s.propagateTrustBundles(ctx, sb); err != nil {
-		sb.Status.MarkBindingUnavailable("TrustBundlePropagation", err.Error())
+		sb.Status.MarkFailedTrustBundlePropagation("FailedTrustBundlePropagation", err.Error())
 		return err
 	}
+	sb.Status.MarkTrustBundlePropagated()
 
 	if sb.Spec.Sink.Ref != nil {
 		s.tracker.TrackReference(tracker.Reference{
@@ -84,8 +77,7 @@ func (s *SinkBindingSubResourcesReconciler) Reconcile(ctx context.Context, b psb
 
 	addr, err := s.res.AddressableFromDestinationV1(ctx, sb.Spec.Sink, sb)
 	if err != nil {
-		logging.FromContext(ctx).Errorf("Failed to get Addressable from Destination: %w", err)
-		sb.Status.MarkBindingUnavailable("NoAddressable", "Addressable could not be extracted from destination")
+		sb.Status.MarkSinkFailed("NoAddressable", "Addressable could not be extracted from destination: %v", err)
 		return err
 	}
 	sb.Status.MarkSink(addr)

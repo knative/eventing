@@ -19,24 +19,24 @@ limitations under the License.
 package v1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
 	cache "k8s.io/client-go/tools/cache"
-	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
+	apissourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	versioned "knative.dev/eventing/pkg/client/clientset/versioned"
 	internalinterfaces "knative.dev/eventing/pkg/client/informers/externalversions/internalinterfaces"
-	v1 "knative.dev/eventing/pkg/client/listers/sources/v1"
+	sourcesv1 "knative.dev/eventing/pkg/client/listers/sources/v1"
 )
 
 // SinkBindingInformer provides access to a shared informer and lister for
 // SinkBindings.
 type SinkBindingInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1.SinkBindingLister
+	Lister() sourcesv1.SinkBindingLister
 }
 
 type sinkBindingInformer struct {
@@ -71,7 +71,7 @@ func NewFilteredSinkBindingInformer(client versioned.Interface, namespace string
 				return client.SourcesV1().SinkBindings(namespace).Watch(context.TODO(), options)
 			},
 		},
-		&sourcesv1.SinkBinding{},
+		&apissourcesv1.SinkBinding{},
 		resyncPeriod,
 		indexers,
 	)
@@ -82,9 +82,9 @@ func (f *sinkBindingInformer) defaultInformer(client versioned.Interface, resync
 }
 
 func (f *sinkBindingInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&sourcesv1.SinkBinding{}, f.defaultInformer)
+	return f.factory.InformerFor(&apissourcesv1.SinkBinding{}, f.defaultInformer)
 }
 
-func (f *sinkBindingInformer) Lister() v1.SinkBindingLister {
-	return v1.NewSinkBindingLister(f.Informer().GetIndexer())
+func (f *sinkBindingInformer) Lister() sourcesv1.SinkBindingLister {
+	return sourcesv1.NewSinkBindingLister(f.Informer().GetIndexer())
 }

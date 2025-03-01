@@ -58,6 +58,8 @@ const (
 	sinkName = "test-integration-sink"
 	sinkUID  = "1234-5678-90"
 	testNS   = "test-namespace"
+
+	logSinkImage = "quay.io/fake-image/log-sink"
 )
 
 var (
@@ -74,6 +76,7 @@ var (
 )
 
 func TestReconcile(t *testing.T) {
+	t.Setenv("INTEGRATION_SINK_LOG_IMAGE", logSinkImage)
 
 	table := TableTest{
 		{
@@ -152,7 +155,6 @@ func TestReconcile(t *testing.T) {
 			serviceLister:     listers.GetServiceLister(),
 			secretLister:      listers.GetSecretLister(),
 			eventPolicyLister: listers.GetEventPolicyLister(),
-			systemNamespace:   testNS,
 		}
 
 		return integrationsink.NewReconciler(ctx, logging.FromContext(ctx), fakeeventingclient.Get(ctx), listers.GetIntegrationSinkLister(), controller.GetEventRecorder(ctx), r)
@@ -203,13 +205,20 @@ func makeDeployment(sink *sinksv1alpha1.IntegrationSink, ready *corev1.Condition
 					Containers: []corev1.Container{
 						{
 							Name:            "sink",
-							Image:           "gcr.io/knative-nightly/log-sink:latest",
+							Image:           logSinkImage,
 							ImagePullPolicy: corev1.PullIfNotPresent,
-							Ports: []corev1.ContainerPort{{
-								ContainerPort: 8080,
-								Protocol:      corev1.ProtocolTCP,
-								Name:          "http",
-							}},
+							Ports: []corev1.ContainerPort{
+								{
+									ContainerPort: 8080,
+									Protocol:      corev1.ProtocolTCP,
+									Name:          "http",
+								},
+								{
+									ContainerPort: 8443,
+									Protocol:      corev1.ProtocolTCP,
+									Name:          "https",
+								},
+							},
 							Env: []corev1.EnvVar{
 								{
 									Name:  "CAMEL_KAMELET_LOG_SINK_LEVEL",
@@ -294,6 +303,12 @@ func makeService(name, namespace string) *corev1.Service {
 					Protocol:   corev1.ProtocolTCP,
 					Port:       80,
 					TargetPort: intstr.IntOrString{IntVal: 8080},
+				},
+				{
+					Name:       "https",
+					Protocol:   corev1.ProtocolTCP,
+					Port:       443,
+					TargetPort: intstr.IntOrString{IntVal: 8443},
 				},
 			},
 			Selector: integration.Labels(sinkName),

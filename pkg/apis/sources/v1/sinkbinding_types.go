@@ -70,13 +70,17 @@ type SinkBindingSpec struct {
 }
 
 const (
-	// SinkBindingConditionReady is configured to indicate whether the Binding
+	// SinkBindingConditionAvailable is configured to indicate whether the Binding
 	// has been configured for resources subject to its runtime contract.
-	SinkBindingConditionReady = apis.ConditionReady
+	SinkBindingConditionAvailable apis.ConditionType = "SinkBindingAvailable"
 
 	// SinkBindingConditionSinkProvided is configured to indicate whether the
 	// sink has been properly extracted from the resolver.
 	SinkBindingConditionSinkProvided apis.ConditionType = "SinkProvided"
+
+	// SinkBindingTrustBundlePropagated is configured to indicate whether the
+	// TLS trust bundle has been properly propagated.
+	SinkBindingTrustBundlePropagated apis.ConditionType = "TrustBundlePropagated"
 
 	// SinkBindingConditionOIDCIdentityCreated is configured to indicate whether
 	// the OIDC identity has been created for the sink.

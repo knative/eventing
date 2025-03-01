@@ -19,24 +19,24 @@ limitations under the License.
 package v1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
 	cache "k8s.io/client-go/tools/cache"
-	flowsv1 "knative.dev/eventing/pkg/apis/flows/v1"
+	apisflowsv1 "knative.dev/eventing/pkg/apis/flows/v1"
 	versioned "knative.dev/eventing/pkg/client/clientset/versioned"
 	internalinterfaces "knative.dev/eventing/pkg/client/informers/externalversions/internalinterfaces"
-	v1 "knative.dev/eventing/pkg/client/listers/flows/v1"
+	flowsv1 "knative.dev/eventing/pkg/client/listers/flows/v1"
 )
 
 // SequenceInformer provides access to a shared informer and lister for
 // Sequences.
 type SequenceInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1.SequenceLister
+	Lister() flowsv1.SequenceLister
 }
 
 type sequenceInformer struct {
@@ -71,7 +71,7 @@ func NewFilteredSequenceInformer(client versioned.Interface, namespace string, r
 				return client.FlowsV1().Sequences(namespace).Watch(context.TODO(), options)
 			},
 		},
-		&flowsv1.Sequence{},
+		&apisflowsv1.Sequence{},
 		resyncPeriod,
 		indexers,
 	)
@@ -82,9 +82,9 @@ func (f *sequenceInformer) defaultInformer(client versioned.Interface, resyncPer
 }
 
 func (f *sequenceInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&flowsv1.Sequence{}, f.defaultInformer)
+	return f.factory.InformerFor(&apisflowsv1.Sequence{}, f.defaultInformer)
 }
 
-func (f *sequenceInformer) Lister() v1.SequenceLister {
-	return v1.NewSequenceLister(f.Informer().GetIndexer())
+func (f *sequenceInformer) Lister() flowsv1.SequenceLister {
+	return flowsv1.NewSequenceLister(f.Informer().GetIndexer())
 }

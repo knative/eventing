@@ -19,24 +19,24 @@ limitations under the License.
 package v1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
 	cache "k8s.io/client-go/tools/cache"
-	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	apiseventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	versioned "knative.dev/eventing/pkg/client/clientset/versioned"
 	internalinterfaces "knative.dev/eventing/pkg/client/informers/externalversions/internalinterfaces"
-	v1 "knative.dev/eventing/pkg/client/listers/eventing/v1"
+	eventingv1 "knative.dev/eventing/pkg/client/listers/eventing/v1"
 )
 
 // TriggerInformer provides access to a shared informer and lister for
 // Triggers.
 type TriggerInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1.TriggerLister
+	Lister() eventingv1.TriggerLister
 }
 
 type triggerInformer struct {
@@ -71,7 +71,7 @@ func NewFilteredTriggerInformer(client versioned.Interface, namespace string, re
 				return client.EventingV1().Triggers(namespace).Watch(context.TODO(), options)
 			},
 		},
-		&eventingv1.Trigger{},
+		&apiseventingv1.Trigger{},
 		resyncPeriod,
 		indexers,
 	)
@@ -82,9 +82,9 @@ func (f *triggerInformer) defaultInformer(client versioned.Interface, resyncPeri
 }
 
 func (f *triggerInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&eventingv1.Trigger{}, f.defaultInformer)
+	return f.factory.InformerFor(&apiseventingv1.Trigger{}, f.defaultInformer)
 }
 
-func (f *triggerInformer) Lister() v1.TriggerLister {
-	return v1.NewTriggerLister(f.Informer().GetIndexer())
+func (f *triggerInformer) Lister() eventingv1.TriggerLister {
+	return eventingv1.NewTriggerLister(f.Informer().GetIndexer())
 }

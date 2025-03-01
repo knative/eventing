@@ -57,9 +57,6 @@ const (
 	BrokerFilterServerTLSSecretName = "mt-broker-filter-server-tls" //nolint:gosec // This is not a hardcoded credential
 	// BrokerIngressServerTLSSecretName is the name of the tls secret for the broker ingress server
 	BrokerIngressServerTLSSecretName = "mt-broker-ingress-server-tls" //nolint:gosec // This is not a hardcoded credential
-
-	// IntegrationSinkDispatcherServerTLSSecretName is the name of the tls secret for the integration sink dispatcher server
-	IntegrationSinkDispatcherServerTLSSecretName = "integration-sink-server-tls" //nolint:gosec // This is not a hardcoded credential
 )
 
 type ClientConfig struct {
