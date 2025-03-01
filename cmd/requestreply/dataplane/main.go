@@ -161,6 +161,11 @@ func encryptWithRC4(originalId string, key []byte) (string, error) {
 func (m *proxiedRequestMap) HandleNewEvent(ctx context.Context, responseWriter http.ResponseWriter, event *cloudevents.Event) {
 	fmt.Printf("handling new event: %s\n", event.String())
 
+	correlationAttributeName := os.Getenv("CE_CORRELATION_ATTRIBUTE_NAME")
+	if correlationAttributeName == "" {
+		correlationAttributeName = "correlationId"
+	}
+
 	key := []byte("placeholderkey")
 	algorithm := "AES"
 
@@ -172,9 +177,10 @@ func (m *proxiedRequestMap) HandleNewEvent(ctx context.Context, responseWriter h
         return
     }
     correlationID := fmt.Sprintf("%s:%s", originalID, signedID)
-    event.SetExtension("correlationId", correlationID)
+    event.SetExtension(correlationAttributeName, correlationID)
 
 	pr := m.addEvent(responseWriter, event)
+	m.entries[originalID] = pr
 
 	c, err := cloudevents.NewClientHTTP(cehttp.WithTarget(os.Getenv("K_SINK")))
 	if err != nil {
@@ -218,21 +224,43 @@ func (m *proxiedRequestMap) HandleResponseEvent(ctx context.Context, responseWri
 
 	responseWriter.WriteHeader(http.StatusAccepted)
 
-	id := event.Extensions()["replyAttribute"] //check if event has replyAttribute
-	pr, ok := m.entries[id.(string)]
+	replyAttributeName := os.Getenv("CE_REPLY_ATTRIBUTE_NAME")
+	if replyAttributeName == "" {
+		replyAttributeName = "replyAttribute"
+	}
+
+	correlationIDExt, ok := event.Extensions()[replyAttributeName]
 	if !ok {
-		fmt.Printf("no event found corresponding to the response id %s, discarding\n", id)
+		fmt.Printf("response event missing %s extension\n", replyAttributeName)
+		return
+	}
+	
+	correlationID := correlationIDExt.(string)
+	parts := strings.Split(correlationID, ":")
+	if len(parts) != 2 {
+		fmt.Printf("invalid correlation ID format: %s\n", correlationID)
 		return
 	}
 
-	// send the reply event back to the original response writer
-	fmt.Printf("found an event corresponding to the response id %s, replying\n", id)
+	originalID := parts[0]
+
+	pr, ok := m.entries[originalID]
+	if !ok {
+		fmt.Printf("no event found corresponding to the response id %s, discarding\n", originalID)
+		return
+	}
+
+	fmt.Printf("found an event corresponding to the response id %s, replying\n", originalID)
 	pr.replyEvent <- event
 }
 
 func isResponseEvent(event *cloudevents.Event) bool {
+	replyAttributeName := os.Getenv("CE_REPLY_ATTRIBUTE_NAME")
+	if replyAttributeName == "" {
+		replyAttributeName = "replyAttribute"
+	}
 	
-	_, ok := event.Extensions()["replyAttribute"] //checks if event has replyAttribute
+	_, ok := event.Extensions()[replyAttributeName]
 	return ok
 }
 
