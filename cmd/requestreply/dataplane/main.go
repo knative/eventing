@@ -19,6 +19,9 @@ import (
 	"github.com/cloudevents/sdk-go/v2/binding"
 	"github.com/cloudevents/sdk-go/v2/protocol"
 	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+    "k8s.io/client-go/kubernetes"
+    "k8s.io/client-go/rest"
 )
 
 type proxiedRequest struct {
@@ -158,9 +161,17 @@ func encryptWithRC4(originalId string, key []byte) (string, error) {
 func (m *proxiedRequestMap) HandleNewEvent(ctx context.Context, responseWriter http.ResponseWriter, event *cloudevents.Event) {
 	fmt.Printf("handling new event: %s\n", event.String())
 
+	key := []byte("placeholderkey")
+	algorithm := "AES"
+
 	originalID := event.ID() //generate signed id using event id
-	signedID := originalID + "_signed" //placeholder for signing
-    correlationID := fmt.Sprintf("%s:%s", originalID, signedID) //setting correlation id
+	signedID, err := encryptId(originalID, key, algorithm)
+	if err != nil {
+        fmt.Printf("failed to encrypt ID: %s\n", err)
+        responseWriter.WriteHeader(http.StatusInternalServerError)
+        return
+    }
+    correlationID := fmt.Sprintf("%s:%s", originalID, signedID)
     event.SetExtension("correlationId", correlationID)
 
 	pr := m.addEvent(responseWriter, event)
@@ -176,6 +187,7 @@ func (m *proxiedRequestMap) HandleNewEvent(ctx context.Context, responseWriter h
 	if protocol.IsNACK(res) || protocol.IsUndelivered(res) {
 		fmt.Printf("failed to send event %s: %s\n", event.ID(), res.Error())
 		responseWriter.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 
 	for {
