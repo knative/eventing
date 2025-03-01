@@ -142,6 +142,19 @@ func encryptWithTripleDES(originalId string, key []byte) (string, error) {
 	return base64.StdEncoding.EncodeToString(ciphertext), nil
 }
 
+func encryptWithRC4(originalId string, key []byte) (string, error) {
+	cipher, err := rc4.NewCipher(key)
+    if err != nil {
+        return "", err
+    }
+
+	plaintext := []byte(originalId)
+    ciphertext := make([]byte, len(plaintext))
+    cipher.XORKeyStream(ciphertext, plaintext)
+
+	return base64.StdEncoding.EncodeToString(ciphertext), nil
+}
+
 func (m *proxiedRequestMap) HandleNewEvent(ctx context.Context, responseWriter http.ResponseWriter, event *cloudevents.Event) {
 	fmt.Printf("handling new event: %s\n", event.String())
 
