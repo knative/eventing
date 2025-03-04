@@ -20,9 +20,6 @@ import (
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
-	v1certificate "knative.dev/eventing/pkg/client/certmanager/injection/informers/certmanager/v1/certificate"
-
-	"knative.dev/pkg/injection"
 	"knative.dev/pkg/injection/sharedmain"
 
 	filteredFactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
@@ -66,10 +63,6 @@ func main() {
 	ctx = eventingfilteredfactory.WithSelectors(ctx,
 		eventtransform.JsonataResourcesSelector,
 	)
-
-	for _, inf := range []injection.InformerInjector{v1certificate.WithInformer} {
-		injection.Default.RegisterInformer(inf)
-	}
 
 	sharedmain.MainWithContext(ctx, "controller",
 		// Messaging
