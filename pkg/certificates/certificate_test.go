@@ -88,7 +88,7 @@ func TestNewCertificate(t *testing.T) {
 		},
 	}
 
-	got := MakeCertificate(obj, testName)
+	got := MakeCertificate(obj)
 
 	if diff := cmp.Diff(want, got); diff != "" {
 		t.Error("unexpected condition (-want, +got) =", diff)

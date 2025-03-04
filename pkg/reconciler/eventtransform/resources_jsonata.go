@@ -20,15 +20,21 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
+	"fmt"
 	"os"
 	"path/filepath"
 
+	cmv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"knative.dev/eventing/pkg/apis/feature"
+	"knative.dev/eventing/pkg/certificates"
+	"knative.dev/eventing/pkg/eventingtls"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/kmeta"
+	"knative.dev/pkg/network"
 	"knative.dev/pkg/ptr"
 	"knative.dev/pkg/tracker"
 
@@ -48,6 +54,11 @@ const (
 	JsonataExpressionPath = "/etc/jsonata"
 
 	JsonataResourcesSelector = JsonataResourcesLabelKey + "=" + JsonataResourcesLabelValue
+
+	JsonataTLSVolumeName = "jsonata-tls-certs"
+	JsonataTLSVolumePath = "/etc/jsonata-tls"
+	JsonataTLSKeyPath    = JsonataTLSVolumePath + "/" + eventingtls.TLSKey
+	JsonataTLSCertPath   = JsonataTLSVolumePath + "/" + eventingtls.TLSCrt
 )
 
 func jsonataExpressionConfigMap(_ context.Context, transform *eventing.EventTransform) corev1.ConfigMap {
@@ -72,7 +83,7 @@ func jsonataExpressionConfigMap(_ context.Context, transform *eventing.EventTran
 	return expression
 }
 
-func jsonataDeployment(_ context.Context, cw *reconcilersource.ConfigWatcher, expression *corev1.ConfigMap, transform *eventing.EventTransform) appsv1.Deployment {
+func jsonataDeployment(ctx context.Context, cw *reconcilersource.ConfigWatcher, expression *corev1.ConfigMap, transform *eventing.EventTransform) appsv1.Deployment {
 	image := os.Getenv("EVENT_TRANSFORM_JSONATA_IMAGE")
 	if image == "" {
 		panic("EVENT_TRANSFORM_JSONATA_IMAGE must be set")
@@ -122,6 +133,36 @@ func jsonataDeployment(_ context.Context, cw *reconcilersource.ConfigWatcher, ex
 									ReadOnly:  true,
 									MountPath: JsonataExpressionPath,
 								},
+							},
+							LivenessProbe: &corev1.Probe{
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path:   "/healthz",
+										Port:   intstr.FromInt32(8080),
+										Scheme: corev1.URISchemeHTTP,
+									},
+								},
+								InitialDelaySeconds:           5,
+								TimeoutSeconds:                10,
+								PeriodSeconds:                 5,
+								SuccessThreshold:              1,
+								FailureThreshold:              3,
+								TerminationGracePeriodSeconds: ptr.Int64(120),
+							},
+							ReadinessProbe: &corev1.Probe{
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path:   "/readyz",
+										Port:   intstr.FromInt32(8080),
+										Scheme: corev1.URISchemeHTTP,
+									},
+								},
+								InitialDelaySeconds:           5,
+								TimeoutSeconds:                10,
+								PeriodSeconds:                 5,
+								SuccessThreshold:              1,
+								FailureThreshold:              10,
+								TerminationGracePeriodSeconds: ptr.Int64(120),
 							},
 						},
 					},
@@ -184,13 +225,62 @@ func jsonataDeployment(_ context.Context, cw *reconcilersource.ConfigWatcher, ex
 		}
 	}
 
+	// hashPayload annotation is used to detect and roll out a new deployment when expressions change.
 	hash := sha256.Sum256([]byte(hashPayload))
 	d.Annotations[JsonataExpressionHashKey] = base64.StdEncoding.EncodeToString(hash[:])
+
+	if feature.FromContext(ctx).IsStrictTransportEncryption() {
+		// Disable HTTP Server in 'strict' mode.
+		d.Spec.Template.Spec.Containers[0].Env = append(d.Spec.Template.Spec.Containers[0].Env,
+			corev1.EnvVar{
+				Name:  "DISABLE_HTTP_SERVER",
+				Value: "true",
+			},
+		)
+
+		// Switch probes to use HTTPS Scheme and Port.
+		d.Spec.Template.Spec.Containers[0].LivenessProbe.HTTPGet.Port = intstr.FromInt32(8443)
+		d.Spec.Template.Spec.Containers[0].LivenessProbe.HTTPGet.Scheme = corev1.URISchemeHTTPS
+		d.Spec.Template.Spec.Containers[0].ReadinessProbe.HTTPGet.Port = intstr.FromInt32(8443)
+		d.Spec.Template.Spec.Containers[0].ReadinessProbe.HTTPGet.Scheme = corev1.URISchemeHTTPS
+	}
+
+	if f := feature.FromContext(ctx); f.IsStrictTransportEncryption() || f.IsPermissiveTransportEncryption() {
+		// Inject TLS Cert and Key file paths.
+		d.Spec.Template.Spec.Containers[0].Env = append(d.Spec.Template.Spec.Containers[0].Env,
+			corev1.EnvVar{
+				Name:  "HTTPS_CERT_PATH",
+				Value: JsonataTLSCertPath,
+			},
+			corev1.EnvVar{
+				Name:  "HTTPS_KEY_PATH",
+				Value: JsonataTLSKeyPath,
+			},
+		)
+
+		// Inject TLS Cert and Key secret volume.
+		d.Spec.Template.Spec.Containers[0].VolumeMounts = append(d.Spec.Template.Spec.Containers[0].VolumeMounts,
+			corev1.VolumeMount{
+				Name:      JsonataTLSVolumeName,
+				ReadOnly:  true,
+				MountPath: JsonataTLSVolumePath,
+			},
+		)
+		d.Spec.Template.Spec.Volumes = append(d.Spec.Template.Spec.Volumes, corev1.Volume{
+			Name: JsonataTLSVolumeName,
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: jsonataCertificateSecretName(transform),
+					Optional:   ptr.Bool(false),
+				},
+			},
+		})
+	}
 
 	return d
 }
 
-func jsonataService(_ context.Context, transform *eventing.EventTransform) corev1.Service {
+func jsonataService(ctx context.Context, transform *eventing.EventTransform) corev1.Service {
 	s := corev1.Service{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
@@ -203,21 +293,51 @@ func jsonataService(_ context.Context, transform *eventing.EventTransform) corev
 			},
 		},
 		Spec: corev1.ServiceSpec{
-			Ports: []corev1.ServicePort{
-				{
-					Name:        "http",
-					Protocol:    corev1.ProtocolTCP,
-					AppProtocol: ptr.String("http"),
-					Port:        80,
-					TargetPort:  intstr.IntOrString{Type: intstr.Int, IntVal: 8080},
-				},
-			},
 			Selector: map[string]string{
 				JsonataResourcesLabelKey: JsonataResourcesLabelValue,
 				NameLabelKey:             transform.GetName(),
 			},
 			Type: corev1.ServiceTypeClusterIP,
 		},
+	}
+
+	if f := feature.FromContext(ctx); f.IsStrictTransportEncryption() {
+		s.Spec.Ports = []corev1.ServicePort{
+			{
+				Name:        "https",
+				Protocol:    corev1.ProtocolTCP,
+				AppProtocol: ptr.String("https"),
+				Port:        443,
+				TargetPort:  intstr.IntOrString{Type: intstr.Int, IntVal: 8443},
+			},
+		}
+	} else if f.IsPermissiveTransportEncryption() {
+		s.Spec.Ports = []corev1.ServicePort{
+			{
+				Name:        "https",
+				Protocol:    corev1.ProtocolTCP,
+				AppProtocol: ptr.String("https"),
+				Port:        443,
+				TargetPort:  intstr.IntOrString{Type: intstr.Int, IntVal: 8443},
+			},
+			{
+				Name:        "http",
+				Protocol:    corev1.ProtocolTCP,
+				AppProtocol: ptr.String("http"),
+				Port:        80,
+				TargetPort:  intstr.IntOrString{Type: intstr.Int, IntVal: 8080},
+			},
+		}
+	} else {
+		s.Spec.Ports = []corev1.ServicePort{
+			{
+				Name:        "http",
+				Protocol:    corev1.ProtocolTCP,
+				AppProtocol: ptr.String("http"),
+				Port:        80,
+				TargetPort:  intstr.IntOrString{Type: intstr.Int, IntVal: 8080},
+			},
+		}
 	}
 
 	return s
@@ -261,4 +381,17 @@ func jsonataLabels(transform *eventing.EventTransform) map[string]string {
 	labels[JsonataResourcesLabelKey] = JsonataResourcesLabelValue
 	labels[NameLabelKey] = transform.GetName()
 	return labels
+}
+
+func jsonataCertificateSecretName(transform *eventing.EventTransform) string {
+	cert := certificates.MakeCertificate(transform)
+	return cert.Spec.SecretName
+}
+
+func jsonataCertificate(ctx context.Context, transform *eventing.EventTransform) *cmv1.Certificate {
+	svc := jsonataService(ctx, transform)
+	return certificates.MakeCertificate(transform, certificates.WithDNSNames(
+		network.GetServiceHostname(svc.Name, svc.Namespace),
+		fmt.Sprintf("%s.%s.svc", svc.Name, svc.Namespace),
+	))
 }

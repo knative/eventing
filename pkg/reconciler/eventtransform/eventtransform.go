@@ -28,6 +28,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	appslister "k8s.io/client-go/listers/apps/v1"
 	corelister "k8s.io/client-go/listers/core/v1"
+	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/controller"
@@ -79,6 +80,11 @@ func (r *Reconciler) reconcileJsonataTransformation(ctx context.Context, transfo
 
 	logger.Debugw("Reconciling Jsonata transformation Service")
 	if err := r.reconcileJsonataTransformationService(ctx, transform); err != nil {
+		return fmt.Errorf("failed to reconcile Jsonata transformation deployment: %w", err)
+	}
+
+	logger.Debugw("Reconciling Jsonata transformation Certificate")
+	if err := r.reconcileJsonataTransformationCertificate(ctx, transform); err != nil {
 		return fmt.Errorf("failed to reconcile Jsonata transformation deployment: %w", err)
 	}
 
@@ -143,6 +149,12 @@ func (r *Reconciler) reconcileJsonataTransformationService(ctx context.Context, 
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+func (r *Reconciler) reconcileJsonataTransformationCertificate(ctx context.Context, transform *eventing.EventTransform) error {
+	// TODO Reconcile Jsonata certificate once the `pkg/certificates` library is complete.
+	_ = jsonataCertificate(ctx, transform)
 	return nil
 }
 
@@ -244,13 +256,34 @@ func (r *Reconciler) reconcileJsonataTransformationAddress(ctx context.Context, 
 		return nil
 	}
 
-	// TODO: Support TLS and Authn/z
-
 	hostname := network.GetServiceHostname(service.GetName(), service.GetNamespace())
-	transform.Status.SetAddresses(duckv1.Addressable{
-		Name: ptr.String("http"),
-		URL:  apis.HTTP(hostname),
-	})
+
+	if feature.FromContext(ctx).IsStrictTransportEncryption() {
+		transform.Status.SetAddresses(
+			duckv1.Addressable{
+				Name: ptr.String("https"),
+				URL:  apis.HTTP(hostname),
+			},
+		)
+	} else if feature.FromContext(ctx).IsPermissiveTransportEncryption() {
+		transform.Status.SetAddresses(
+			duckv1.Addressable{
+				Name: ptr.String("https"),
+				URL:  apis.HTTP(hostname),
+			},
+			duckv1.Addressable{
+				Name: ptr.String("http"),
+				URL:  apis.HTTP(hostname),
+			},
+		)
+	} else {
+		transform.Status.SetAddresses(duckv1.Addressable{
+			Name: ptr.String("http"),
+			URL:  apis.HTTP(hostname),
+		})
+	}
+
+	// TODO: Support Authn/z (control plane and data plane)
 
 	return nil
 }

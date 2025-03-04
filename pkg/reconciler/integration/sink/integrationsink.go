@@ -172,7 +172,10 @@ func (r *Reconciler) reconcileService(ctx context.Context, sink *sinks.Integrati
 
 func (r *Reconciler) reconcileCMCertificate(ctx context.Context, sink *sinks.IntegrationSink) (*cmv1.Certificate, error) {
 
-	expected := certificates.MakeCertificate(sink, sink.Name)
+	expected := certificates.MakeCertificate(sink, certificates.WithDNSNames(
+		network.GetServiceHostname(resources.DeploymentName(sink.GetName()), sink.GetNamespace()),
+		fmt.Sprintf("%s.%s.svc", resources.DeploymentName(sink.GetName()), sink.GetNamespace()),
+	))
 
 	cert, err := r.cmCertificateLister.Certificates(sink.Namespace).Get(expected.Name)
 	if apierrors.IsNotFound(err) {

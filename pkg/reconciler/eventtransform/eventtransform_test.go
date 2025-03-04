@@ -26,6 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgotesting "k8s.io/client-go/testing"
+	"knative.dev/eventing/pkg/apis/feature"
 	sources "knative.dev/eventing/pkg/apis/sources/v1"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
@@ -1171,12 +1172,18 @@ func TestReconcile(t *testing.T) {
 			configWatcher:            cw,
 		}
 
+		store := feature.NewStore(logger.Named("config-store"))
+		store.WatchConfigs(watcher)
+
 		return eventtransform.NewReconciler(ctx,
 			logger,
 			fakeeventingclient.Get(ctx),
 			listers.GetEventTransformLister(),
 			controller.GetEventRecorder(ctx),
 			r,
+			controller.Options{
+				ConfigStore: store,
+			},
 		)
 	}, false, logger))
 }

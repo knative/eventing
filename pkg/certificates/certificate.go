@@ -17,7 +17,6 @@ limitations under the License.
 package certificates
 
 import (
-	"fmt"
 	"time"
 
 	cmv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
@@ -31,25 +30,27 @@ func CertificateName(objName string) string {
 	return kmeta.ChildName(objName, "-server-tls")
 }
 
-func MakeCertificate(obj kmeta.OwnerRefableAccessor, name string) *cmv1.Certificate {
-	return &cmv1.Certificate{
+type CertificateOption func(cert *cmv1.Certificate)
+
+func MakeCertificate(obj kmeta.OwnerRefableAccessor, opts ...CertificateOption) *cmv1.Certificate {
+	cert := &cmv1.Certificate{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      CertificateName(name),
+			Name:      CertificateName(obj.GetName()),
 			Namespace: obj.GetNamespace(),
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(obj),
 			},
 			Labels: map[string]string{
 				"app.kubernetes.io/component": "knative-eventing",
-				"app.kubernetes.io/name":      name,
+				"app.kubernetes.io/name":      obj.GetName(),
 			},
 		},
 		Spec: cmv1.CertificateSpec{
-			SecretName: CertificateName(name),
+			SecretName: CertificateName(obj.GetName()),
 			SecretTemplate: &cmv1.CertificateSecretTemplate{
 				Labels: map[string]string{
 					"app.kubernetes.io/component": "knative-eventing",
-					"app.kubernetes.io/name":      name,
+					"app.kubernetes.io/name":      obj.GetName(),
 				},
 			},
 			Duration: &metav1.Duration{
@@ -68,10 +69,6 @@ func MakeCertificate(obj kmeta.OwnerRefableAccessor, name string) *cmv1.Certific
 				Size:           2048,
 				RotationPolicy: cmv1.RotationPolicyAlways,
 			},
-			DNSNames: []string{
-				fmt.Sprintf("%s.%s.svc.cluster.local", deploymentName(name), obj.GetNamespace()),
-				fmt.Sprintf("%s.%s.svc", deploymentName(name), obj.GetNamespace()),
-			},
 			IssuerRef: cmmeta.ObjectReference{
 				Name:  "knative-eventing-ca-issuer",
 				Kind:  "ClusterIssuer",
@@ -79,8 +76,15 @@ func MakeCertificate(obj kmeta.OwnerRefableAccessor, name string) *cmv1.Certific
 			},
 		},
 	}
+
+	for _, opt := range opts {
+		opt(cert)
+	}
+	return cert
 }
 
-func deploymentName(sinkName string) string {
-	return kmeta.ChildName(sinkName, "-deployment")
+func WithDNSNames(dnsNames ...string) CertificateOption {
+	return func(cert *cmv1.Certificate) {
+		cert.Spec.DNSNames = dnsNames
+	}
 }
