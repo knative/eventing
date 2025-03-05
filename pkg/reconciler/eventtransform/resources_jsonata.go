@@ -101,6 +101,7 @@ func jsonataDeployment(ctx context.Context, cw *reconcilersource.ConfigWatcher, 
 		},
 		Spec: appsv1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{
+				// Keep these matchLabels fixed and stable across versions.
 				MatchLabels: map[string]string{
 					JsonataResourcesLabelKey: JsonataResourcesLabelValue,
 					NameLabelKey:             transform.GetName(),
@@ -132,6 +133,17 @@ func jsonataDeployment(ctx context.Context, cw *reconcilersource.ConfigWatcher, 
 									Name:      expression.GetName(),
 									ReadOnly:  true,
 									MountPath: JsonataExpressionPath,
+								},
+							},
+							SecurityContext: &corev1.SecurityContext{
+								AllowPrivilegeEscalation: ptr.Bool(false),
+								RunAsNonRoot:             ptr.Bool(true),
+								ReadOnlyRootFilesystem:   ptr.Bool(true),
+								Capabilities: &corev1.Capabilities{
+									Drop: []corev1.Capability{"ALL"},
+								},
+								SeccompProfile: &corev1.SeccompProfile{
+									Type: corev1.SeccompProfileTypeRuntimeDefault,
 								},
 							},
 							LivenessProbe: &corev1.Probe{
@@ -175,6 +187,36 @@ func jsonataDeployment(ctx context.Context, cw *reconcilersource.ConfigWatcher, 
 										Name: expression.GetName(),
 									},
 									Optional: ptr.Bool(false),
+								},
+							},
+						},
+					},
+					Affinity: &corev1.Affinity{
+						PodAffinity: &corev1.PodAffinity{
+							PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{
+								{
+									PodAffinityTerm: corev1.PodAffinityTerm{
+										LabelSelector: &metav1.LabelSelector{
+											MatchLabels: map[string]string{
+												JsonataResourcesLabelKey: JsonataResourcesLabelValue,
+												NameLabelKey:             transform.GetName(),
+											},
+										},
+										TopologyKey: "topology.kubernetes.io/zone",
+									},
+									Weight: 100,
+								},
+								{
+									PodAffinityTerm: corev1.PodAffinityTerm{
+										LabelSelector: &metav1.LabelSelector{
+											MatchLabels: map[string]string{
+												JsonataResourcesLabelKey: JsonataResourcesLabelValue,
+												NameLabelKey:             transform.GetName(),
+											},
+										},
+										TopologyKey: "kubernetes.io/hostname",
+									},
+									Weight: 90,
 								},
 							},
 						},
