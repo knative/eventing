@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	"context"
 
+	cmv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	eventing "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
@@ -109,6 +110,12 @@ func WithJsonataEventTransformInitializeStatusSkipSinkBinding() EventTransformOp
 func WithJsonataDeploymentStatus(status appsv1.DeploymentStatus) EventTransformOption {
 	return func(transform *eventing.EventTransform) {
 		transform.Status.PropagateJsonataDeploymentStatus(status)
+	}
+}
+
+func WithJsonataCertificateStatus(status cmv1.CertificateStatus) EventTransformOption {
+	return func(transform *eventing.EventTransform) {
+		transform.Status.PropagateJsonataCertificateStatus(status)
 	}
 }
 

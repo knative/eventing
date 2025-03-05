@@ -47,6 +47,7 @@ const (
 	JsonataResourcesLabelKey      = "eventing.knative.dev/event-transform-jsonata"
 	JsonataResourcesLabelValue    = "true"
 	JsonataExpressionHashKey      = "eventing.knative.dev/event-transform-jsonata-expression-hash"
+	JsonataCertificateRevisionKey = "eventing.knative.dev/event-transform-jsonata-certificate-revision"
 	JsonataResourcesNameSuffix    = "-jsonata"
 	JsonataExpressionDataKey      = "jsonata-expression"
 	JsonataReplyExpressionDataKey = "jsonata-expression-reply"
@@ -83,7 +84,7 @@ func jsonataExpressionConfigMap(_ context.Context, transform *eventing.EventTran
 	return expression
 }
 
-func jsonataDeployment(ctx context.Context, cw *reconcilersource.ConfigWatcher, expression *corev1.ConfigMap, transform *eventing.EventTransform) appsv1.Deployment {
+func jsonataDeployment(ctx context.Context, cw *reconcilersource.ConfigWatcher, expression *corev1.ConfigMap, certificate *cmv1.Certificate, transform *eventing.EventTransform) appsv1.Deployment {
 	image := os.Getenv("EVENT_TRANSFORM_JSONATA_IMAGE")
 	if image == "" {
 		panic("EVENT_TRANSFORM_JSONATA_IMAGE must be set")
@@ -271,6 +272,11 @@ func jsonataDeployment(ctx context.Context, cw *reconcilersource.ConfigWatcher, 
 	hash := sha256.Sum256([]byte(hashPayload))
 	d.Annotations[JsonataExpressionHashKey] = base64.StdEncoding.EncodeToString(hash[:])
 
+	if certificate != nil && certificate.Status.Revision != nil {
+		// certificate revision annotation is used to detect and roll out a new deployment when certificates change.
+		d.Annotations[JsonataCertificateRevisionKey] = fmt.Sprintf("%d", *certificate.Status.Revision)
+	}
+
 	if feature.FromContext(ctx).IsStrictTransportEncryption() {
 		// Disable HTTP Server in 'strict' mode.
 		d.Spec.Template.Spec.Containers[0].Env = append(d.Spec.Template.Spec.Containers[0].Env,
@@ -432,8 +438,13 @@ func jsonataCertificateSecretName(transform *eventing.EventTransform) string {
 
 func jsonataCertificate(ctx context.Context, transform *eventing.EventTransform) *cmv1.Certificate {
 	svc := jsonataService(ctx, transform)
-	return certificates.MakeCertificate(transform, certificates.WithDNSNames(
-		network.GetServiceHostname(svc.Name, svc.Namespace),
-		fmt.Sprintf("%s.%s.svc", svc.Name, svc.Namespace),
-	))
+	return certificates.MakeCertificate(transform,
+		func(cert *cmv1.Certificate) {
+			cert.Name = kmeta.ChildName(transform.Name, JsonataResourcesNameSuffix)
+		},
+		certificates.WithDNSNames(
+			network.GetServiceHostname(svc.Name, svc.Namespace),
+			fmt.Sprintf("%s.%s.svc", svc.Name, svc.Namespace),
+		),
+	)
 }

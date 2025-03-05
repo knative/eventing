@@ -55,14 +55,14 @@ func NewController(
 	jsonataServiceInformer := serviceinformer.Get(ctx, JsonataResourcesSelector)
 
 	// Create a custom informer as one in knative/pkg doesn't exist for endpoints.
-	factory := informers.NewSharedInformerFactoryWithOptions(
+	jsonataEndpointFactory := informers.NewSharedInformerFactoryWithOptions(
 		kubeclient.Get(ctx),
 		controller.DefaultResyncPeriod,
 		informers.WithTweakListOptions(func(options *metav1.ListOptions) {
 			options.LabelSelector = JsonataResourcesSelector
 		}),
 	)
-	jsonataEndpointInformer := factory.Core().V1().Endpoints()
+	jsonataEndpointInformer := jsonataEndpointFactory.Core().V1().Endpoints()
 
 	var globalResync func()
 
@@ -107,8 +107,8 @@ func NewController(
 	jsonataSinkBindingInformer.Informer().AddEventHandler(controller.HandleAll(enqueueUsingNameLabel(impl)))
 
 	// Start the factory after creating all necessary informers.
-	factory.Start(ctx.Done())
-	factory.WaitForCacheSync(ctx.Done())
+	jsonataEndpointFactory.Start(ctx.Done())
+	jsonataEndpointFactory.WaitForCacheSync(ctx.Done())
 
 	return impl
 }
