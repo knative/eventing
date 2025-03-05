@@ -18,15 +18,12 @@ package sink
 
 import (
 	"context"
-	"fmt"
-	"os"
-	"time"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	certmanagerclient "knative.dev/eventing/pkg/client/certmanager/clientset/versioned"
 	certmanagerinformers "knative.dev/eventing/pkg/client/certmanager/informers/externalversions"
+	"knative.dev/pkg/injection"
 
 	"knative.dev/eventing/pkg/apis/feature"
 	v1alpha1 "knative.dev/eventing/pkg/apis/sinks/v1alpha1"
@@ -55,21 +52,13 @@ func NewController(
 	deploymentInformer := deploymentinformer.Get(ctx)
 	serviceInformer := service.Get(ctx)
 
-	config, err := rest.InClusterConfig()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error getting cluster config: %v\n", err)
-		os.Exit(1)
-	}
-
-	certManagerClient := certmanagerclient.NewForConfigOrDie(config)
-
-	resyncPeriod := 30 * time.Second
+	certManagerClient := certmanagerclient.NewForConfigOrDie(injection.GetConfig(ctx))
 
 	factory := certmanagerinformers.NewSharedInformerFactoryWithOptions(
 		certManagerClient,
-		resyncPeriod,
+		controller.DefaultResyncPeriod,
 		certmanagerinformers.WithTweakListOptions(func(options *v1.ListOptions) {
-			options.LabelSelector = "app.kubernetes.io/name"
+			options.LabelSelector = "app.kubernetes.io/component=knative-eventing"
 		}),
 	)
 
@@ -86,6 +75,8 @@ func NewController(
 		cmCertificateLister: cmCertificateInformer.Lister(),
 		certManagerClient:   certManagerClient,
 	}
+
+	logging.FromContext(ctx).Info("Creating IntegrationSink controller")
 
 	var globalResync func(obj interface{})
 
