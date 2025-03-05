@@ -39,6 +39,10 @@ func MakeCertificate(obj kmeta.OwnerRefableAccessor, name string) *cmv1.Certific
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(obj),
 			},
+			Labels: map[string]string{
+				"app.kubernetes.io/component": "knative-eventing",
+				"app.kubernetes.io/name":      name,
+			},
 		},
 		Spec: cmv1.CertificateSpec{
 			SecretName: CertificateName(name),
