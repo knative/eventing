@@ -116,6 +116,8 @@ func NewController(
 		impl.EnqueueKey,
 	))
 
+	cmCertificateInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
+
 	factory.Start(ctx.Done())
 	factory.WaitForCacheSync(ctx.Done())
 
