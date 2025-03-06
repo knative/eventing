@@ -45,10 +45,9 @@ import (
 	"knative.dev/eventing/pkg/auth"
 	eventingv1alpha1listers "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 
-	certmanagerclientset "knative.dev/eventing/pkg/client/certmanager/clientset/versioned"
+	certmanagerclientset "github.com/cert-manager/cert-manager/pkg/client/clientset/versioned"
 
-	certmanagerlisters "knative.dev/eventing/pkg/client/certmanager/listers/certmanager/v1"
-
+	certmanagerlisters "github.com/cert-manager/cert-manager/pkg/client/listers/certmanager/v1"
 	"knative.dev/eventing/pkg/eventingtls"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/controller"
