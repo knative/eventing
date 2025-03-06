@@ -20,8 +20,6 @@ import (
 	"fmt"
 	"time"
 
-	"knative.dev/eventing/pkg/reconciler/integration/sink/resources"
-
 	cmv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	"knative.dev/pkg/kmeta"
@@ -40,6 +38,10 @@ func MakeCertificate(obj kmeta.OwnerRefableAccessor, name string) *cmv1.Certific
 			Namespace: obj.GetNamespace(),
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(obj),
+			},
+			Labels: map[string]string{
+				"app.kubernetes.io/component": "knative-eventing",
+				"app.kubernetes.io/name":      name,
 			},
 		},
 		Spec: cmv1.CertificateSpec{
@@ -67,8 +69,8 @@ func MakeCertificate(obj kmeta.OwnerRefableAccessor, name string) *cmv1.Certific
 				RotationPolicy: cmv1.RotationPolicyAlways,
 			},
 			DNSNames: []string{
-				fmt.Sprintf("%s.%s.svc.cluster.local", resources.DeploymentName(name), obj.GetNamespace()),
-				fmt.Sprintf("%s.%s.svc", resources.DeploymentName(name), obj.GetNamespace()),
+				fmt.Sprintf("%s.%s.svc.cluster.local", deploymentName(name), obj.GetNamespace()),
+				fmt.Sprintf("%s.%s.svc", deploymentName(name), obj.GetNamespace()),
 			},
 			IssuerRef: cmmeta.ObjectReference{
 				Name:  "knative-eventing-ca-issuer",
@@ -77,4 +79,8 @@ func MakeCertificate(obj kmeta.OwnerRefableAccessor, name string) *cmv1.Certific
 			},
 		},
 	}
+}
+
+func deploymentName(sinkName string) string {
+	return kmeta.ChildName(sinkName, "-deployment")
 }

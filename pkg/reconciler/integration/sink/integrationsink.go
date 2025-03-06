@@ -87,13 +87,13 @@ func newReconciledNormal(namespace, name string) reconciler.Event {
 func (r *Reconciler) ReconcileKind(ctx context.Context, sink *sinks.IntegrationSink) reconciler.Event {
 	featureFlags := feature.FromContext(ctx)
 
-	//if featureFlags.IsPermissiveTransportEncryption() || featureFlags.IsStrictTransportEncryption() {
-	//	_, err := r.reconcileCMCertificate(ctx, sink)
-	//	if err != nil {
-	//		logging.FromContext(ctx).Errorw("Error reconciling Certificate", zap.Error(err))
-	//		return err
-	//	}
-	//}
+	if featureFlags.IsPermissiveTransportEncryption() || featureFlags.IsStrictTransportEncryption() {
+		_, err := r.reconcileCMCertificate(ctx, sink)
+		if err != nil {
+			logging.FromContext(ctx).Errorw("Error reconciling Certificate", zap.Error(err))
+			return err
+		}
+	}
 
 	_, err := r.reconcileDeployment(ctx, sink, featureFlags)
 	if err != nil {

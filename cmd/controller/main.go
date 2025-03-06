@@ -64,10 +64,6 @@ func main() {
 		eventtransform.JsonataResourcesSelector,
 	)
 
-	//for _, inf := range []injection.InformerInjector{v1certificate.WithInformer} {
-	//	injection.Default.RegisterInformer(inf)
-	//}
-
 	sharedmain.MainWithContext(ctx, "controller",
 		// Messaging
 		channel.NewController,
