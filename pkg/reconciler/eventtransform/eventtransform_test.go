@@ -1635,6 +1635,373 @@ func TestReconcile(t *testing.T) {
 				eventJsonataServiceCreated(),
 			},
 		},
+		{
+			Name: "Reconcile certificate updated, transport-encryption strict",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewEventTransform(testName, testNS,
+					WithEventTransformJsonataExpression(),
+				),
+				jsonataTestDeployment(ctx, cw, func(d *appsv1.Deployment) {
+					d.Status = appsv1.DeploymentStatus{
+						ObservedGeneration:  1,
+						Replicas:            1,
+						UpdatedReplicas:     1,
+						ReadyReplicas:       1,
+						AvailableReplicas:   1,
+						UnavailableReplicas: 0,
+					}
+				}),
+				&corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{Namespace: testNS, Name: "config-features"},
+					Data: map[string]string{
+						"transport-encryption": "strict",
+					},
+				},
+				jsonataTestCertificate(ctx, func(certificate *cmapis.Certificate) {
+					certificate.Spec.SecretName = "foo"
+					x := 1
+					certificate.Status.Revision = &x
+					certificate.Status.Conditions = append(certificate.Status.Conditions, cmapis.CertificateCondition{
+						Type:   cmapis.CertificateConditionReady,
+						Status: cmmeta.ConditionTrue,
+					})
+				}),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{
+				{Object: NewEventTransform(testName, testNS,
+					WithEventTransformJsonataExpression(),
+					WithJsonataEventTransformInitializeStatusSkipSinkBinding(),
+					WithJsonataCertificateStatus(cmapis.CertificateStatus{}),
+					func(transform *v1alpha1.EventTransform) {
+						transform.Status.JsonataTransformationStatus = nil
+					},
+				)},
+			},
+			WantUpdates: []clientgotesting.UpdateActionImpl{
+				{Object: jsonataTestCertificate(ctx)},
+			},
+			WantCreates: []runtime.Object{
+				jsonataExpressionTestConfigMap(ctx),
+				jsonataTestService(ctx, func(service *corev1.Service) {
+					service.Spec.Ports[0].Name = "https"
+					service.Spec.Ports[0].AppProtocol = ptr.String("https")
+					service.Spec.Ports[0].Port = 443
+					service.Spec.Ports[0].TargetPort = intstr.FromInt32(8443)
+				}),
+			},
+			WantEvents: []string{
+				eventJsonataConfigMapCreated(),
+				eventJsonataServiceCreated(),
+				eventJsonataCertificateUpdated(),
+			},
+			WantErr: true, // skip key, waiting for certificate
+		},
+		{
+			Name: "Reconcile certificate updated, transport-encryption permissive",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewEventTransform(testName, testNS,
+					WithEventTransformJsonataExpression(),
+				),
+				jsonataTestDeployment(ctx, cw, func(d *appsv1.Deployment) {
+					d.Status = appsv1.DeploymentStatus{
+						ObservedGeneration:  1,
+						Replicas:            1,
+						UpdatedReplicas:     1,
+						ReadyReplicas:       1,
+						AvailableReplicas:   1,
+						UnavailableReplicas: 0,
+					}
+				}),
+				&corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{Namespace: testNS, Name: "config-features"},
+					Data: map[string]string{
+						"transport-encryption": "permissive",
+					},
+				},
+				jsonataTestCertificate(ctx, func(certificate *cmapis.Certificate) {
+					certificate.Spec.SecretName = "foo"
+					x := 1
+					certificate.Status.Revision = &x
+					certificate.Status.Conditions = append(certificate.Status.Conditions, cmapis.CertificateCondition{
+						Type:   cmapis.CertificateConditionReady,
+						Status: cmmeta.ConditionTrue,
+					})
+				}),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{
+				{Object: NewEventTransform(testName, testNS,
+					WithEventTransformJsonataExpression(),
+					WithJsonataEventTransformInitializeStatusSkipSinkBinding(),
+					WithJsonataCertificateStatus(cmapis.CertificateStatus{}),
+					func(transform *v1alpha1.EventTransform) {
+						transform.Status.JsonataTransformationStatus = nil
+					},
+				)},
+			},
+			WantUpdates: []clientgotesting.UpdateActionImpl{
+				{Object: jsonataTestCertificate(ctx)},
+			},
+			WantCreates: []runtime.Object{
+				jsonataExpressionTestConfigMap(ctx),
+				jsonataTestService(ctx, func(service *corev1.Service) {
+					service.Spec.Ports = []corev1.ServicePort{
+						{
+							Name:        "https",
+							Protocol:    corev1.ProtocolTCP,
+							AppProtocol: ptr.String("https"),
+							Port:        443,
+							TargetPort:  intstr.IntOrString{Type: intstr.Int, IntVal: 8443},
+						},
+						{
+							Name:        "http",
+							Protocol:    corev1.ProtocolTCP,
+							AppProtocol: ptr.String("http"),
+							Port:        80,
+							TargetPort:  intstr.IntOrString{Type: intstr.Int, IntVal: 8080},
+						},
+					}
+				}),
+			},
+			WantEvents: []string{
+				eventJsonataConfigMapCreated(),
+				eventJsonataServiceCreated(),
+				eventJsonataCertificateUpdated(),
+			},
+			WantErr: true, // skip key, waiting for certificate
+		},
+		{
+			Name: "Reconcile certificate deleted, transport-encryption turned off",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewEventTransform(testName, testNS,
+					WithEventTransformJsonataExpression(),
+				),
+				jsonataTestDeployment(ctx, cw, func(d *appsv1.Deployment) {
+					d.Status = appsv1.DeploymentStatus{
+						ObservedGeneration:  1,
+						Replicas:            1,
+						UpdatedReplicas:     1,
+						ReadyReplicas:       1,
+						AvailableReplicas:   1,
+						UnavailableReplicas: 0,
+					}
+				}),
+				&corev1.Endpoints{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: jsonataTestService(ctx).Namespace,
+						Name:      jsonataTestService(ctx).Name,
+					},
+					Subsets: []corev1.EndpointSubset{
+						{
+							Ports: []corev1.EndpointPort{
+								{
+									Port: 80,
+								},
+								{
+									Port: 443,
+								},
+							},
+							Addresses: []corev1.EndpointAddress{
+								{
+									IP: "192.168.0.1",
+								},
+							},
+						},
+					},
+				},
+				&corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{Namespace: testNS, Name: "config-features"},
+					Data: map[string]string{
+						"transport-encryption": "disabled",
+					},
+				},
+				jsonataTestCertificate(ctx, func(certificate *cmapis.Certificate) {
+					certificate.Spec.SecretName = "foo"
+					x := 1
+					certificate.Status.Revision = &x
+					certificate.Status.Conditions = append(certificate.Status.Conditions, cmapis.CertificateCondition{
+						Type:   cmapis.CertificateConditionReady,
+						Status: cmmeta.ConditionTrue,
+					})
+				}),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{
+				{Object: NewEventTransform(testName, testNS,
+					WithEventTransformJsonataExpression(),
+					WithJsonataEventTransformInitializeStatus(),
+					WithJsonataDeploymentStatus(appsv1.DeploymentStatus{
+						ObservedGeneration:  1,
+						Replicas:            1,
+						UpdatedReplicas:     1,
+						ReadyReplicas:       1,
+						AvailableReplicas:   1,
+						UnavailableReplicas: 0,
+					}),
+					WithEventTransformAddresses(
+						duckv1.Addressable{
+							Name: ptr.String("http"),
+							URL:  apis.HTTP(network.GetServiceHostname(jsonataTestService(ctx).Name, jsonataTestService(ctx).Namespace)),
+						},
+					),
+				)},
+			},
+			WantDeletes: []clientgotesting.DeleteActionImpl{
+				{
+					ActionImpl: clientgotesting.ActionImpl{
+						Namespace: testNS,
+						Resource:  cmapis.SchemeGroupVersion.WithResource("certificates"),
+					},
+					Name: jsonataTestCertificate(ctx).Name,
+				},
+			},
+			WantCreates: []runtime.Object{
+				jsonataExpressionTestConfigMap(ctx),
+				jsonataTestService(ctx),
+			},
+			WantEvents: []string{
+				eventJsonataConfigMapCreated(),
+				eventJsonataServiceCreated(),
+				eventJsonataCertificateDeleted(),
+			},
+		},
+		{
+			Name: "Reconcile second loop, transport-encryption strict, endpoints ports not ready, certificate ready",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewEventTransform(testName, testNS,
+					WithEventTransformJsonataExpression(),
+				),
+				jsonataTestDeployment(ctx, cw, func(d *appsv1.Deployment) {
+					d.Status = appsv1.DeploymentStatus{
+						ObservedGeneration:  1,
+						Replicas:            1,
+						UpdatedReplicas:     1,
+						ReadyReplicas:       1,
+						AvailableReplicas:   1,
+						UnavailableReplicas: 0,
+					}
+					// Disable HTTP Server in 'strict' mode.
+					d.Spec.Template.Spec.Containers[0].Env = append(d.Spec.Template.Spec.Containers[0].Env,
+						corev1.EnvVar{
+							Name:  "DISABLE_HTTP_SERVER",
+							Value: "true",
+						},
+					)
+
+					// Switch probes to use HTTPS Scheme and Port.
+					d.Spec.Template.Spec.Containers[0].LivenessProbe.HTTPGet.Port = intstr.FromInt32(8443)
+					d.Spec.Template.Spec.Containers[0].LivenessProbe.HTTPGet.Scheme = corev1.URISchemeHTTPS
+					d.Spec.Template.Spec.Containers[0].ReadinessProbe.HTTPGet.Port = intstr.FromInt32(8443)
+					d.Spec.Template.Spec.Containers[0].ReadinessProbe.HTTPGet.Scheme = corev1.URISchemeHTTPS
+
+					// Inject TLS Cert and Key file paths.
+					d.Spec.Template.Spec.Containers[0].Env = append(d.Spec.Template.Spec.Containers[0].Env,
+						corev1.EnvVar{
+							Name:  "HTTPS_CERT_PATH",
+							Value: JsonataTLSCertPath,
+						},
+						corev1.EnvVar{
+							Name:  "HTTPS_KEY_PATH",
+							Value: JsonataTLSKeyPath,
+						},
+					)
+
+					// Inject TLS Cert and Key secret volume.
+					d.Spec.Template.Spec.Containers[0].VolumeMounts = append(d.Spec.Template.Spec.Containers[0].VolumeMounts,
+						corev1.VolumeMount{
+							Name:      JsonataTLSVolumeName,
+							ReadOnly:  true,
+							MountPath: JsonataTLSVolumePath,
+						},
+					)
+					d.Spec.Template.Spec.Volumes = append(d.Spec.Template.Spec.Volumes, corev1.Volume{
+						Name: JsonataTLSVolumeName,
+						VolumeSource: corev1.VolumeSource{
+							Secret: &corev1.SecretVolumeSource{
+								SecretName: jsonataCertificateSecretName(NewEventTransform(testName, testNS)),
+								Optional:   ptr.Bool(false),
+							},
+						},
+					})
+
+					d.Annotations[JsonataCertificateRevisionKey] = "1"
+				}),
+				&corev1.Endpoints{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: jsonataTestService(ctx).Namespace,
+						Name:      jsonataTestService(ctx).Name,
+					},
+					Subsets: []corev1.EndpointSubset{
+						{
+							Ports: []corev1.EndpointPort{
+								{
+									Port: 80,
+								},
+							},
+							Addresses: []corev1.EndpointAddress{
+								{
+									IP: "192.168.0.1",
+								},
+							},
+						},
+					},
+				},
+				&corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{Namespace: testNS, Name: "config-features"},
+					Data: map[string]string{
+						"transport-encryption": "strict",
+					},
+				},
+				jsonataTestCertificate(ctx, func(certificate *cmapis.Certificate) {
+					x := 1
+					certificate.Status.Revision = &x
+					certificate.Status.Conditions = append(certificate.Status.Conditions, cmapis.CertificateCondition{
+						Type:   cmapis.CertificateConditionReady,
+						Status: cmmeta.ConditionTrue,
+					})
+				}),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{
+				{Object: NewEventTransform(testName, testNS,
+					WithEventTransformJsonataExpression(),
+					WithJsonataEventTransformInitializeStatus(),
+					WithJsonataCertificateStatus(cmapis.CertificateStatus{
+						Revision: func() *int {
+							x := 1
+							return &x
+						}(),
+						Conditions: []cmapis.CertificateCondition{
+							{Type: cmapis.CertificateConditionReady, Status: cmmeta.ConditionTrue},
+						},
+					}),
+					WithJsonataDeploymentStatus(appsv1.DeploymentStatus{
+						ObservedGeneration:  1,
+						Replicas:            1,
+						UpdatedReplicas:     1,
+						ReadyReplicas:       1,
+						AvailableReplicas:   1,
+						UnavailableReplicas: 0,
+					}),
+					WithJsonataWaitingForServiceEndpoints(),
+				)},
+			},
+			WantCreates: []runtime.Object{
+				jsonataExpressionTestConfigMap(ctx),
+				jsonataTestService(ctx, func(service *corev1.Service) {
+					service.Spec.Ports[0].Name = "https"
+					service.Spec.Ports[0].AppProtocol = ptr.String("https")
+					service.Spec.Ports[0].Port = 443
+					service.Spec.Ports[0].TargetPort = intstr.FromInt32(8443)
+				}),
+			},
+			WantEvents: []string{
+				eventJsonataConfigMapCreated(),
+				eventJsonataServiceCreated(),
+			},
+			WantErr: true, // skip key, waiting for endpoints
+		},
 	}
 
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, watcher configmap.Watcher) controller.Reconciler {
