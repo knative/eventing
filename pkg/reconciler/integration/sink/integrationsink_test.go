@@ -19,6 +19,8 @@ package sink
 import (
 	"fmt"
 
+	"knative.dev/eventing/pkg/certificates"
+
 	"knative.dev/eventing/pkg/reconciler/integration"
 
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -165,6 +167,7 @@ func TestReconcile(t *testing.T) {
 }
 
 func makeDeployment(sink *sinksv1alpha1.IntegrationSink, ready *corev1.ConditionStatus) runtime.Object {
+	t := true
 
 	status := appsv1.DeploymentStatus{}
 	if ready != nil {
@@ -202,6 +205,17 @@ func makeDeployment(sink *sinksv1alpha1.IntegrationSink, ready *corev1.Condition
 					Labels: integration.Labels(sink.Name),
 				},
 				Spec: corev1.PodSpec{
+					Volumes: []corev1.Volume{
+						{
+							Name: certificates.CertificateName(sink.Name),
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: certificates.CertificateName(sink.Name),
+									Optional:   &t,
+								},
+							},
+						},
+					},
 					Containers: []corev1.Container{
 						{
 							Name:            "sink",
@@ -220,6 +234,14 @@ func makeDeployment(sink *sinksv1alpha1.IntegrationSink, ready *corev1.Condition
 								},
 							},
 							Env: []corev1.EnvVar{
+								{
+									Name:  "QUARKUS_HTTP_SSL_CERTIFICATE_FILES",
+									Value: "/etc/test-integration-sink-server-tls/tls.crt",
+								},
+								{
+									Name:  "QUARKUS_HTTP_SSL_CERTIFICATE_KEY-FILES",
+									Value: "/etc/test-integration-sink-server-tls/tls.key",
+								},
 								{
 									Name:  "CAMEL_KAMELET_LOG_SINK_LEVEL",
 									Value: "info",
@@ -263,6 +285,13 @@ func makeDeployment(sink *sinksv1alpha1.IntegrationSink, ready *corev1.Condition
 								{
 									Name:  "CAMEL_KAMELET_LOG_SINK_SHOWCACHEDSTREAMS",
 									Value: "false",
+								},
+							},
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      certificates.CertificateName(sink.Name),
+									MountPath: "/etc/" + certificates.CertificateName(sink.Name),
+									ReadOnly:  true,
 								},
 							},
 						},
