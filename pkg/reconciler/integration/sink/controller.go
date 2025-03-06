@@ -52,28 +52,12 @@ func NewController(
 	deploymentInformer := deploymentinformer.Get(ctx)
 	serviceInformer := service.Get(ctx)
 
-	certManagerClient := certmanagerclient.NewForConfigOrDie(injection.GetConfig(ctx))
-
-	factory := certmanagerinformers.NewSharedInformerFactoryWithOptions(
-		certManagerClient,
-		controller.DefaultResyncPeriod,
-		certmanagerinformers.WithTweakListOptions(func(options *v1.ListOptions) {
-			options.LabelSelector = "app.kubernetes.io/component=knative-eventing"
-		}),
-	)
-
-	cmCertificateInformer := factory.Certmanager().V1().Certificates()
-
 	r := &Reconciler{
-		kubeClientSet: kubeclient.Get(ctx),
-
-		deploymentLister: deploymentInformer.Lister(),
-		serviceLister:    serviceInformer.Lister(),
-
-		secretLister:        secretInformer.Lister(),
-		eventPolicyLister:   eventPolicyInformer.Lister(),
-		cmCertificateLister: cmCertificateInformer.Lister(),
-		certManagerClient:   certManagerClient,
+		kubeClientSet:     kubeclient.Get(ctx),
+		deploymentLister:  deploymentInformer.Lister(),
+		serviceLister:     serviceInformer.Lister(),
+		secretLister:      secretInformer.Lister(),
+		eventPolicyLister: eventPolicyInformer.Lister(),
 	}
 
 	logging.FromContext(ctx).Info("Creating IntegrationSink controller")
@@ -83,6 +67,39 @@ func NewController(
 	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {
 		if globalResync != nil {
 			globalResync(nil)
+		}
+
+		if features, ok := value.(feature.Flags); ok {
+			// we assume that Cert-Manager is installed in the cluster if the feature flag is enabled
+			if features.IsPermissiveTransportEncryption() || features.IsStrictTransportEncryption() {
+
+				go func() { // Start and register informer
+					certManagerClient := certmanagerclient.NewForConfigOrDie(injection.GetConfig(ctx))
+					factory := certmanagerinformers.NewSharedInformerFactoryWithOptions(
+						certManagerClient,
+						controller.DefaultResyncPeriod,
+						certmanagerinformers.WithTweakListOptions(func(options *v1.ListOptions) {
+							options.LabelSelector = "app.kubernetes.io/component=knative-eventing"
+						}),
+					)
+					cmCertificateInformer := factory.Certmanager().V1().Certificates()
+					r.cmCertificateLister = cmCertificateInformer.Lister()
+					r.certManagerClient = certManagerClient
+
+					cmCertificateInformer.Informer().AddEventHandler(controller.HandleAll(globalResync))
+					factory.Start(ctx.Done())
+
+					if !cache.WaitForCacheSync(ctx.Done(), cmCertificateInformer.Informer().HasSynced) {
+						logging.FromContext(ctx).Error("Failed to sync Cert Manager Certificate informer")
+					}
+				}()
+
+			} else {
+				cancelFunc, cancelExists := ctx.Value("cancelFunc").(context.CancelFunc)
+				if cancelExists {
+					go cancelFunc()
+				}
+			}
 		}
 	})
 	featureStore.WatchConfigs(cmw)
@@ -115,11 +132,6 @@ func NewController(
 		integrationSinkGK,
 		impl.EnqueueKey,
 	))
-
-	cmCertificateInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
-
-	factory.Start(ctx.Done())
-	factory.WaitForCacheSync(ctx.Done())
 
 	return impl
 }
