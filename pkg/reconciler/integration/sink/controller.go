@@ -19,10 +19,10 @@ package sink
 import (
 	"context"
 
+	certmanagerclientset "github.com/cert-manager/cert-manager/pkg/client/clientset/versioned"
+	certmanagerinformers "github.com/cert-manager/cert-manager/pkg/client/informers/externalversions"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
-	certmanagerclient "knative.dev/eventing/pkg/client/certmanager/clientset/versioned"
-	certmanagerinformers "knative.dev/eventing/pkg/client/certmanager/informers/externalversions"
 	"knative.dev/pkg/injection"
 
 	"knative.dev/eventing/pkg/apis/feature"
@@ -74,7 +74,7 @@ func NewController(
 			if features.IsPermissiveTransportEncryption() || features.IsStrictTransportEncryption() {
 
 				go func() { // Start and register informer
-					certManagerClient := certmanagerclient.NewForConfigOrDie(injection.GetConfig(ctx))
+					certManagerClient := certmanagerclientset.NewForConfigOrDie(injection.GetConfig(ctx))
 					factory := certmanagerinformers.NewSharedInformerFactoryWithOptions(
 						certManagerClient,
 						controller.DefaultResyncPeriod,
