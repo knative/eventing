@@ -105,12 +105,13 @@ func TestApiServerSourceDataPlaneTLS(t *testing.T) {
 		knative.WithLoggingConfig,
 		knative.WithTracingConfig,
 		k8s.WithEventListener,
-		//environment.Managed(t),
+		environment.Managed(t),
 		eventshub.WithTLS(t),
 	)
 
 	env.ParallelTest(ctx, t, apiserversourcefeatures.SendsEventsWithTLS())
 	env.ParallelTest(ctx, t, apiserversourcefeatures.SendsEventsWithTLSTrustBundle())
+	env.ParallelTest(ctx, t, apiserversourcefeatures.SendsEventsWithTLSWithAdditionalTrustBundle())
 }
 
 func TestApiServerSourceDataPlane_EventModes(t *testing.T) {
