@@ -26,6 +26,17 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	SecretLabelKey   = "app.kubernetes.io/component"
+	SecretLabelValue = "knative-eventing"
+
+	CertificateLabelKey   = "app.kubernetes.io/component"
+	CertificateLabelValue = "knative-eventing"
+
+	SecretLabelSelectorPair      = SecretLabelKey + "=" + SecretLabelValue
+	CertificateLabelSelectorPair = CertificateLabelKey + "=" + CertificateLabelValue
+)
+
 func CertificateName(objName string) string {
 	return kmeta.ChildName(objName, "-server-tls")
 }
@@ -41,16 +52,16 @@ func MakeCertificate(obj kmeta.OwnerRefableAccessor, opts ...CertificateOption) 
 				*kmeta.NewControllerRef(obj),
 			},
 			Labels: map[string]string{
-				"app.kubernetes.io/component": "knative-eventing",
-				"app.kubernetes.io/name":      obj.GetName(),
+				CertificateLabelKey:      CertificateLabelValue,
+				"app.kubernetes.io/name": obj.GetName(),
 			},
 		},
 		Spec: cmv1.CertificateSpec{
 			SecretName: CertificateName(obj.GetName()),
 			SecretTemplate: &cmv1.CertificateSecretTemplate{
 				Labels: map[string]string{
-					"app.kubernetes.io/component": "knative-eventing",
-					"app.kubernetes.io/name":      obj.GetName(),
+					SecretLabelKey:           SecretLabelValue,
+					"app.kubernetes.io/name": obj.GetName(),
 				},
 			},
 			Duration: &metav1.Duration{

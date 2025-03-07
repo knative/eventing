@@ -84,7 +84,7 @@ func jsonataExpressionConfigMap(_ context.Context, transform *eventing.EventTran
 	return expression
 }
 
-func jsonataDeployment(ctx context.Context, cw *reconcilersource.ConfigWatcher, expression *corev1.ConfigMap, certificate *cmv1.Certificate, transform *eventing.EventTransform) appsv1.Deployment {
+func jsonataDeployment(ctx context.Context, withCombinedTrustBundle bool, cw *reconcilersource.ConfigWatcher, expression *corev1.ConfigMap, certificate *cmv1.Certificate, transform *eventing.EventTransform) appsv1.Deployment {
 	image := os.Getenv("EVENT_TRANSFORM_JSONATA_IMAGE")
 	if image == "" {
 		panic("EVENT_TRANSFORM_JSONATA_IMAGE must be set")
@@ -170,12 +170,11 @@ func jsonataDeployment(ctx context.Context, cw *reconcilersource.ConfigWatcher, 
 										Scheme: corev1.URISchemeHTTP,
 									},
 								},
-								InitialDelaySeconds:           5,
-								TimeoutSeconds:                10,
-								PeriodSeconds:                 5,
-								SuccessThreshold:              1,
-								FailureThreshold:              10,
-								TerminationGracePeriodSeconds: ptr.Int64(120),
+								InitialDelaySeconds: 5,
+								TimeoutSeconds:      10,
+								PeriodSeconds:       5,
+								SuccessThreshold:    1,
+								FailureThreshold:    10,
 							},
 						},
 					},
@@ -293,7 +292,21 @@ func jsonataDeployment(ctx context.Context, cw *reconcilersource.ConfigWatcher, 
 		d.Spec.Template.Spec.Containers[0].ReadinessProbe.HTTPGet.Scheme = corev1.URISchemeHTTPS
 	}
 
+	if withCombinedTrustBundle {
+		d.Spec.Template.Spec.Containers[0].Env = append(d.Spec.Template.Spec.Containers[0].Env,
+			corev1.EnvVar{
+				Name: "NODE_EXTRA_CA_CERTS",
+				Value: filepath.Join(
+					eventingtls.TrustBundleMountPath,
+					eventingtls.TrustBundleCombined,
+					eventingtls.TrustBundleCombinedPemFile,
+				),
+			},
+		)
+	}
+
 	if f := feature.FromContext(ctx); f.IsStrictTransportEncryption() || f.IsPermissiveTransportEncryption() {
+
 		// Inject TLS Cert and Key file paths.
 		d.Spec.Template.Spec.Containers[0].Env = append(d.Spec.Template.Spec.Containers[0].Env,
 			corev1.EnvVar{

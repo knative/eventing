@@ -34,6 +34,7 @@ import (
 	"knative.dev/eventing/pkg/apis/feature"
 	cmclient "knative.dev/eventing/pkg/client/certmanager/clientset/versioned"
 	cmlisters "knative.dev/eventing/pkg/client/certmanager/listers/certmanager/v1"
+	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/controller"
@@ -54,12 +55,14 @@ type Reconciler struct {
 	client   eventingclient.Interface
 	cmClient cmclient.Interface
 
-	jsonataConfigMapLister   corelister.ConfigMapLister
-	jsonataDeploymentsLister appslister.DeploymentLister
-	jsonataServiceLister     corelister.ServiceLister
-	jsonataEndpointLister    corelister.EndpointsLister
-	jsonataSinkBindingLister sourceslisters.SinkBindingLister
-	cmCertificateLister      cmlisters.CertificateLister
+	jsonataConfigMapLister     corelister.ConfigMapLister
+	jsonataDeploymentsLister   appslister.DeploymentLister
+	jsonataServiceLister       corelister.ServiceLister
+	jsonataEndpointLister      corelister.EndpointsLister
+	jsonataSinkBindingLister   sourceslisters.SinkBindingLister
+	cmCertificateLister        cmlisters.CertificateLister
+	certificatesSecretLister   corelister.SecretLister
+	trustBundleConfigMapLister corelister.ConfigMapLister
 
 	configWatcher *reconcilersource.ConfigWatcher
 }
@@ -203,7 +206,11 @@ func (r *Reconciler) reconcileJsonataTransformationCertificate(ctx context.Conte
 }
 
 func (r *Reconciler) reconcileJsonataTransformationDeployment(ctx context.Context, expression *corev1.ConfigMap, certificate *cmapis.Certificate, transform *eventing.EventTransform) error {
-	expected := jsonataDeployment(ctx, r.configWatcher, expression, certificate, transform)
+	withCombinedTrustBundle := false
+	if isPresent, _ := eventingtls.CombinedBundlePresent(r.trustBundleConfigMapLister); isPresent {
+		withCombinedTrustBundle = true
+	}
+	expected := jsonataDeployment(ctx, withCombinedTrustBundle, r.configWatcher, expression, certificate, transform)
 
 	curr, err := r.jsonataDeploymentsLister.Deployments(expected.GetNamespace()).Get(expected.GetName())
 	if apierrors.IsNotFound(err) {
@@ -313,7 +320,7 @@ func (r *Reconciler) reconcileJsonataTransformationAddress(ctx context.Context, 
 	if f := feature.FromContext(ctx); f.IsStrictTransportEncryption() {
 		for _, sub := range endpoint.Subsets {
 			for _, p := range sub.Ports {
-				if p.Port != 443 {
+				if p.Port != 8443 {
 					transform.Status.MarkWaitingForServiceEndpoints()
 					return controller.NewSkipKey("")
 				}
@@ -326,15 +333,17 @@ func (r *Reconciler) reconcileJsonataTransformationAddress(ctx context.Context, 
 	if feature.FromContext(ctx).IsStrictTransportEncryption() {
 		transform.Status.SetAddresses(
 			duckv1.Addressable{
-				Name: ptr.String("https"),
-				URL:  apis.HTTPS(hostname),
+				Name:    ptr.String("https"),
+				URL:     apis.HTTPS(hostname),
+				CACerts: r.jsonataCaCerts(ctx, transform),
 			},
 		)
 	} else if feature.FromContext(ctx).IsPermissiveTransportEncryption() {
 		transform.Status.SetAddresses(
 			duckv1.Addressable{
-				Name: ptr.String("https"),
-				URL:  apis.HTTPS(hostname),
+				Name:    ptr.String("https"),
+				URL:     apis.HTTPS(hostname),
+				CACerts: r.jsonataCaCerts(ctx, transform),
 			},
 			duckv1.Addressable{
 				Name: ptr.String("http"),
@@ -351,6 +360,21 @@ func (r *Reconciler) reconcileJsonataTransformationAddress(ctx context.Context, 
 	// TODO: Support Authn/z (control plane and data plane)
 
 	return nil
+}
+
+func (r *Reconciler) jsonataCaCerts(_ context.Context, transform *eventing.EventTransform) *string {
+	s, err := r.certificatesSecretLister.Secrets(transform.GetNamespace()).Get(jsonataCertificateSecretName(transform))
+	if err != nil {
+		return nil
+	}
+	ca, ok := s.Data[eventingtls.SecretCACert]
+	if !ok {
+		return nil
+	}
+	if len(ca) == 0 {
+		return nil
+	}
+	return ptr.String(string(ca))
 }
 
 func (r *Reconciler) createService(ctx context.Context, transform *eventing.EventTransform, expected corev1.Service) (*corev1.Service, error) {

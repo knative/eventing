@@ -1217,7 +1217,7 @@ func TestReconcile(t *testing.T) {
 						{
 							Ports: []corev1.EndpointPort{
 								{
-									Port: 443,
+									Port: 8443,
 								},
 							},
 							Addresses: []corev1.EndpointAddress{
@@ -1334,7 +1334,7 @@ func TestReconcile(t *testing.T) {
 						{
 							Ports: []corev1.EndpointPort{
 								{
-									Port: 443,
+									Port: 8443,
 								},
 							},
 							Addresses: []corev1.EndpointAddress{
@@ -1547,10 +1547,10 @@ func TestReconcile(t *testing.T) {
 						{
 							Ports: []corev1.EndpointPort{
 								{
-									Port: 80,
+									Port: 8080,
 								},
 								{
-									Port: 443,
+									Port: 8443,
 								},
 							},
 							Addresses: []corev1.EndpointAddress{
@@ -1797,10 +1797,10 @@ func TestReconcile(t *testing.T) {
 						{
 							Ports: []corev1.EndpointPort{
 								{
-									Port: 80,
+									Port: 8080,
 								},
 								{
-									Port: 443,
+									Port: 8443,
 								},
 							},
 							Addresses: []corev1.EndpointAddress{
@@ -2016,6 +2016,7 @@ func TestReconcile(t *testing.T) {
 			jsonataEndpointLister:    listers.GetEndpointsLister(),
 			jsonataSinkBindingLister: listers.GetSinkBindingLister(),
 			cmCertificateLister:      listers.GetCertificateLister(),
+			certificatesSecretLister: listers.GetSecretLister(),
 			configWatcher:            cw,
 		}
 
@@ -2057,7 +2058,7 @@ func jsonataExpressionTestConfigMap(ctx context.Context, opts ...ConfigMapOption
 }
 
 func jsonataTestDeployment(ctx context.Context, cw *reconcilersource.ConfigWatcher, opts ...DeploymentOption) *appsv1.Deployment {
-	d := jsonataDeployment(ctx, cw, func() *corev1.ConfigMap {
+	d := jsonataDeployment(ctx, false, cw, func() *corev1.ConfigMap {
 		cm := jsonataExpressionConfigMap(ctx, NewEventTransform(testName, testNS,
 			WithEventTransformJsonataExpression(),
 		))
@@ -2073,7 +2074,7 @@ func jsonataTestDeployment(ctx context.Context, cw *reconcilersource.ConfigWatch
 }
 
 func jsonataTestReplyDeployment(ctx context.Context, cw *reconcilersource.ConfigWatcher, opts ...DeploymentOption) *appsv1.Deployment {
-	d := jsonataDeployment(ctx, cw, func() *corev1.ConfigMap {
+	d := jsonataDeployment(ctx, false, cw, func() *corev1.ConfigMap {
 		cm := jsonataExpressionConfigMap(ctx, NewEventTransform(testName, testNS,
 			WithEventTransformJsonataExpression(),
 			WithEventTransformJsonataReplyExpression(),
@@ -2091,7 +2092,7 @@ func jsonataTestReplyDeployment(ctx context.Context, cw *reconcilersource.Config
 }
 
 func jsonataTestReplyDiscardDeployment(ctx context.Context, cw *reconcilersource.ConfigWatcher, opts ...DeploymentOption) *appsv1.Deployment {
-	d := jsonataDeployment(ctx, cw, func() *corev1.ConfigMap {
+	d := jsonataDeployment(ctx, false, cw, func() *corev1.ConfigMap {
 		cm := jsonataExpressionConfigMap(ctx, NewEventTransform(testName, testNS,
 			WithEventTransformJsonataExpression(),
 			WithEventTransformJsonataReplyDiscard(),
