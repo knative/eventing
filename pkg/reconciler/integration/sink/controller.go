@@ -21,12 +21,13 @@ import (
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
+	"knative.dev/eventing/pkg/certificates"
 	certmanagerclient "knative.dev/eventing/pkg/client/certmanager/clientset/versioned"
 	certmanagerinformers "knative.dev/eventing/pkg/client/certmanager/informers/externalversions"
 	"knative.dev/pkg/injection"
 
 	"knative.dev/eventing/pkg/apis/feature"
-	v1alpha1 "knative.dev/eventing/pkg/apis/sinks/v1alpha1"
+	"knative.dev/eventing/pkg/apis/sinks/v1alpha1"
 	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventpolicy"
 	"knative.dev/eventing/pkg/client/injection/informers/sinks/v1alpha1/integrationsink"
@@ -47,7 +48,7 @@ func NewController(
 	cmw configmap.Watcher,
 ) *controller.Impl {
 	integrationSinkInformer := integrationsink.Get(ctx)
-	secretInformer := secretinformer.Get(ctx, "app.kubernetes.io/name")
+	secretInformer := secretinformer.Get(ctx, certificates.SecretLabelSelectorPair)
 	eventPolicyInformer := eventpolicy.Get(ctx)
 	deploymentInformer := deploymentinformer.Get(ctx)
 	serviceInformer := service.Get(ctx)

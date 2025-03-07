@@ -20,9 +20,10 @@ import (
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
+	"knative.dev/eventing/pkg/certificates"
 	"knative.dev/pkg/injection/sharedmain"
 
-	filteredFactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
+	kubefilteredfactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
 	"knative.dev/pkg/signals"
 
 	eventingfilteredfactory "knative.dev/eventing/pkg/client/injection/informers/factory/filtered"
@@ -52,12 +53,12 @@ import (
 func main() {
 	ctx := signals.NewContext()
 
-	ctx = filteredFactory.WithSelectors(ctx,
+	ctx = kubefilteredfactory.WithSelectors(ctx,
 		auth.OIDCLabelSelector,
 		eventingtls.TrustBundleLabelSelector,
 		sinks.JobSinkJobsLabelSelector,
 		eventtransform.JsonataResourcesSelector,
-		"app.kubernetes.io/name",
+		certificates.SecretLabelSelectorPair,
 	)
 
 	ctx = eventingfilteredfactory.WithSelectors(ctx,

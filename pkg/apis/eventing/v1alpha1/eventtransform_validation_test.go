@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha1
+package v1alpha1_test
 
 import (
 	"context"
@@ -22,6 +22,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	eventing "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/pkg/eventingtls/eventingtlstesting"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/ptr"
@@ -30,7 +32,7 @@ import (
 
 func TestJSONDecode(t *testing.T) {
 
-	et := &EventTransform{}
+	et := &eventing.EventTransform{}
 
 	err := json.Decode([]byte(`
 {
@@ -57,109 +59,108 @@ var sink = &duckv1.Destination{
 func TestEventTransform_Validate(t *testing.T) {
 	tests := []struct {
 		name string
-		in   EventTransform
+		in   eventing.EventTransform
 		ctx  context.Context
 		want *apis.FieldError
 	}{
 		{
 			name: "empty",
-			in: EventTransform{
+			in: eventing.EventTransform{
 				TypeMeta: metav1.TypeMeta{},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "name",
 				},
-				Spec:   EventTransformSpec{},
-				Status: EventTransformStatus{},
+				Spec:   eventing.EventTransformSpec{},
+				Status: eventing.EventTransformStatus{},
 			},
 			ctx:  context.Background(),
 			want: apis.ErrMissingOneOf("jsonata").ViaField("spec"),
 		},
 		{
 			name: "jsonata valid",
-			in: EventTransform{
+			in: eventing.EventTransform{
 				TypeMeta: metav1.TypeMeta{},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "name",
 				},
-				Spec: EventTransformSpec{
-					EventTransformations: EventTransformations{
-						Jsonata: &JsonataEventTransformationSpec{
+				Spec: eventing.EventTransformSpec{
+					EventTransformations: eventing.EventTransformations{
+						Jsonata: &eventing.JsonataEventTransformationSpec{
 							Expression: `{ "specversion": "1.0" }`,
 						},
 					},
 				},
-				Status: EventTransformStatus{},
 			},
 			ctx:  context.Background(),
 			want: nil,
 		},
 		{
 			name: "jsonata with reply valid",
-			in: EventTransform{
+			in: eventing.EventTransform{
 				TypeMeta: metav1.TypeMeta{},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "name",
 				},
-				Spec: EventTransformSpec{
+				Spec: eventing.EventTransformSpec{
 					Sink: sink,
-					EventTransformations: EventTransformations{
-						Jsonata: &JsonataEventTransformationSpec{
+					EventTransformations: eventing.EventTransformations{
+						Jsonata: &eventing.JsonataEventTransformationSpec{
 							Expression: `{ "specversion": "1.0" }`,
 						},
 					},
-					Reply: &ReplySpec{
-						EventTransformations: EventTransformations{
-							Jsonata: &JsonataEventTransformationSpec{
+					Reply: &eventing.ReplySpec{
+						EventTransformations: eventing.EventTransformations{
+							Jsonata: &eventing.JsonataEventTransformationSpec{
 								Expression: `{ "specversion": "1.0" }`,
 							},
 						},
 					},
 				},
-				Status: EventTransformStatus{},
+				Status: eventing.EventTransformStatus{},
 			},
 			ctx:  context.Background(),
 			want: nil,
 		},
 		{
 			name: "jsonata with reply discard valid",
-			in: EventTransform{
+			in: eventing.EventTransform{
 				TypeMeta: metav1.TypeMeta{},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "name",
 				},
-				Spec: EventTransformSpec{
+				Spec: eventing.EventTransformSpec{
 					Sink: sink,
-					EventTransformations: EventTransformations{
-						Jsonata: &JsonataEventTransformationSpec{
+					EventTransformations: eventing.EventTransformations{
+						Jsonata: &eventing.JsonataEventTransformationSpec{
 							Expression: `{ "specversion": "1.0" }`,
 						},
 					},
-					Reply: &ReplySpec{
+					Reply: &eventing.ReplySpec{
 						Discard: ptr.Bool(true),
 					},
 				},
-				Status: EventTransformStatus{},
+				Status: eventing.EventTransformStatus{},
 			},
 			ctx:  context.Background(),
 			want: nil,
 		},
 		{
 			name: "jsonata with reply, jsonata reply transformations and discard = true, invalid",
-			in: EventTransform{
+			in: eventing.EventTransform{
 				TypeMeta: metav1.TypeMeta{},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "name",
 				},
-				Spec: EventTransformSpec{
+				Spec: eventing.EventTransformSpec{
 					Sink: sink,
-					EventTransformations: EventTransformations{
-						Jsonata: &JsonataEventTransformationSpec{
+					EventTransformations: eventing.EventTransformations{
+						Jsonata: &eventing.JsonataEventTransformationSpec{
 							Expression: `{ "specversion": "1.0" }`,
 						},
 					},
-					Reply: &ReplySpec{
-						EventTransformations: EventTransformations{
-							Jsonata: &JsonataEventTransformationSpec{
+					Reply: &eventing.ReplySpec{
+						EventTransformations: eventing.EventTransformations{
+							Jsonata: &eventing.JsonataEventTransformationSpec{
 								Expression: `{ "specversion": "1.0" }`,
 							},
 						},
@@ -172,76 +173,72 @@ func TestEventTransform_Validate(t *testing.T) {
 		},
 		{
 			name: "jsonata update change expression",
-			in: EventTransform{
+			in: eventing.EventTransform{
 				TypeMeta: metav1.TypeMeta{},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "name",
 				},
-				Spec: EventTransformSpec{
+				Spec: eventing.EventTransformSpec{
 					Sink: sink,
-					EventTransformations: EventTransformations{
-						Jsonata: &JsonataEventTransformationSpec{
+					EventTransformations: eventing.EventTransformations{
+						Jsonata: &eventing.JsonataEventTransformationSpec{
 							Expression: `{ "specversion": "2.0" }`,
 						},
 					},
-					Reply: &ReplySpec{
-						EventTransformations: EventTransformations{
-							Jsonata: &JsonataEventTransformationSpec{
+					Reply: &eventing.ReplySpec{
+						EventTransformations: eventing.EventTransformations{
+							Jsonata: &eventing.JsonataEventTransformationSpec{
 								Expression: `{ "specversion": "2.0" }`,
 							},
 						},
 					},
 				},
-				Status: EventTransformStatus{},
 			},
-			ctx: apis.WithinUpdate(context.Background(), &EventTransform{
+			ctx: apis.WithinUpdate(context.Background(), &eventing.EventTransform{
 				TypeMeta: metav1.TypeMeta{},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "name",
 				},
-				Spec: EventTransformSpec{
-					EventTransformations: EventTransformations{
-						Jsonata: &JsonataEventTransformationSpec{
+				Spec: eventing.EventTransformSpec{
+					EventTransformations: eventing.EventTransformations{
+						Jsonata: &eventing.JsonataEventTransformationSpec{
 							Expression: `{ "specversion": "1.0" }`,
 						},
 					},
-					Reply: &ReplySpec{
-						EventTransformations: EventTransformations{
-							Jsonata: &JsonataEventTransformationSpec{
+					Reply: &eventing.ReplySpec{
+						EventTransformations: eventing.EventTransformations{
+							Jsonata: &eventing.JsonataEventTransformationSpec{
 								Expression: `{ "specversion": "1.0" }`,
 							},
 						},
 					},
 				},
-				Status: EventTransformStatus{},
 			}),
 			want: nil,
 		},
 		{
 			name: "transform jsonata change transformation type, have -> not have",
-			in: EventTransform{
+			in: eventing.EventTransform{
 				TypeMeta: metav1.TypeMeta{},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "name",
 				},
-				Spec: EventTransformSpec{
-					EventTransformations: EventTransformations{
-						Jsonata: &JsonataEventTransformationSpec{
+				Spec: eventing.EventTransformSpec{
+					EventTransformations: eventing.EventTransformations{
+						Jsonata: &eventing.JsonataEventTransformationSpec{
 							Expression: `{ "specversion": "2.0" }`,
 						},
 					},
 				},
-				Status: EventTransformStatus{},
 			},
-			ctx: apis.WithinUpdate(context.Background(), &EventTransform{
+			ctx: apis.WithinUpdate(context.Background(), &eventing.EventTransform{
 				TypeMeta: metav1.TypeMeta{},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "name",
 				},
-				Spec: EventTransformSpec{
-					EventTransformations: EventTransformations{},
+				Spec: eventing.EventTransformSpec{
+					EventTransformations: eventing.EventTransformations{},
 				},
-				Status: EventTransformStatus{},
 			}),
 			want: (&apis.FieldError{}).
 				Also(
@@ -252,109 +249,105 @@ func TestEventTransform_Validate(t *testing.T) {
 		},
 		{
 			name: "transform jsonata change reply transformation type, have -> not have",
-			in: EventTransform{
+			in: eventing.EventTransform{
 				TypeMeta: metav1.TypeMeta{},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "name",
 				},
-				Spec: EventTransformSpec{
+				Spec: eventing.EventTransformSpec{
 					Sink: sink,
-					EventTransformations: EventTransformations{
-						Jsonata: &JsonataEventTransformationSpec{
+					EventTransformations: eventing.EventTransformations{
+						Jsonata: &eventing.JsonataEventTransformationSpec{
 							Expression: `{ "specversion": "2.0" }`,
 						},
 					},
-					Reply: &ReplySpec{
-						EventTransformations: EventTransformations{
-							Jsonata: &JsonataEventTransformationSpec{
+					Reply: &eventing.ReplySpec{
+						EventTransformations: eventing.EventTransformations{
+							Jsonata: &eventing.JsonataEventTransformationSpec{
 								Expression: `{ "specversion": "2.0" }`,
 							},
 						},
 					},
 				},
-				Status: EventTransformStatus{},
 			},
-			ctx: apis.WithinUpdate(context.Background(), &EventTransform{
+			ctx: apis.WithinUpdate(context.Background(), &eventing.EventTransform{
 				TypeMeta: metav1.TypeMeta{},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "name",
 				},
-				Spec: EventTransformSpec{
-					EventTransformations: EventTransformations{
-						Jsonata: &JsonataEventTransformationSpec{
+				Spec: eventing.EventTransformSpec{
+					EventTransformations: eventing.EventTransformations{
+						Jsonata: &eventing.JsonataEventTransformationSpec{
 							Expression: `{ "specversion": "2.0" }`,
 						},
 					},
 				},
-				Status: EventTransformStatus{},
 			}),
 			want: nil,
 		},
 		{
 			name: "transform jsonata change reply transformation type, jsonata expression -> discard",
-			in: EventTransform{
+			in: eventing.EventTransform{
 				TypeMeta: metav1.TypeMeta{},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "name",
 				},
-				Spec: EventTransformSpec{
+				Spec: eventing.EventTransformSpec{
 					Sink: sink,
-					EventTransformations: EventTransformations{
-						Jsonata: &JsonataEventTransformationSpec{
+					EventTransformations: eventing.EventTransformations{
+						Jsonata: &eventing.JsonataEventTransformationSpec{
 							Expression: `{ "specversion": "2.0" }`,
 						},
 					},
-					Reply: &ReplySpec{
-						EventTransformations: EventTransformations{
-							Jsonata: &JsonataEventTransformationSpec{
+					Reply: &eventing.ReplySpec{
+						EventTransformations: eventing.EventTransformations{
+							Jsonata: &eventing.JsonataEventTransformationSpec{
 								Expression: `{ "specversion": "2.0" }`,
 							},
 						},
 					},
 				},
-				Status: EventTransformStatus{},
 			},
-			ctx: apis.WithinUpdate(context.Background(), &EventTransform{
+			ctx: apis.WithinUpdate(context.Background(), &eventing.EventTransform{
 				TypeMeta: metav1.TypeMeta{},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "name",
 				},
-				Spec: EventTransformSpec{
-					EventTransformations: EventTransformations{
-						Jsonata: &JsonataEventTransformationSpec{
+				Spec: eventing.EventTransformSpec{
+					EventTransformations: eventing.EventTransformations{
+						Jsonata: &eventing.JsonataEventTransformationSpec{
 							Expression: `{ "specversion": "2.0" }`,
 						},
 					},
-					Reply: &ReplySpec{
+					Reply: &eventing.ReplySpec{
 						Discard: ptr.Bool(true),
 					},
 				},
-				Status: EventTransformStatus{},
 			}),
 			want: nil,
 		},
 		{
 			name: "reply without sink",
-			in: EventTransform{
+			in: eventing.EventTransform{
 				TypeMeta: metav1.TypeMeta{},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "name",
 				},
-				Spec: EventTransformSpec{
-					EventTransformations: EventTransformations{
-						Jsonata: &JsonataEventTransformationSpec{
+				Spec: eventing.EventTransformSpec{
+					EventTransformations: eventing.EventTransformations{
+						Jsonata: &eventing.JsonataEventTransformationSpec{
 							Expression: `{ "specversion": "2.0" }`,
 						},
 					},
-					Reply: &ReplySpec{
-						EventTransformations: EventTransformations{
-							Jsonata: &JsonataEventTransformationSpec{
+					Reply: &eventing.ReplySpec{
+						EventTransformations: eventing.EventTransformations{
+							Jsonata: &eventing.JsonataEventTransformationSpec{
 								Expression: `{ "specversion": "2.0" }`,
 							},
 						},
 					},
 				},
-				Status: EventTransformStatus{},
+				Status: eventing.EventTransformStatus{},
 			},
 			ctx: context.Background(),
 			want: (&apis.FieldError{}).Also(
@@ -362,6 +355,32 @@ func TestEventTransform_Validate(t *testing.T) {
 					ViaField("reply").
 					ViaField("spec"),
 			),
+		},
+		{
+			name: "jsonata with sink unsupported CACerts",
+			in: eventing.EventTransform{
+				TypeMeta: metav1.TypeMeta{},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "name",
+				},
+				Spec: eventing.EventTransformSpec{
+					Sink: &duckv1.Destination{
+						URI:     sink.URI,
+						CACerts: ptr.String(string(eventingtlstesting.CA)),
+					},
+					EventTransformations: eventing.EventTransformations{
+						Jsonata: &eventing.JsonataEventTransformationSpec{
+							Expression: `{ "specversion": "1.0" }`,
+						},
+					},
+				},
+			},
+			ctx: context.Background(),
+			want: (&apis.FieldError{}).Also(&apis.FieldError{
+				Message: "CACerts for the sink is not supported for JSONata transformations, to propagate CA trust bundles use labeled ConfigMaps: " +
+					"https://knative.dev/docs/eventing/features/transport-encryption/#configure-additional-ca-trust-bundles",
+				Paths: []string{"spec.sink.CACerts"},
+			}),
 		},
 	}
 	for _, tt := range tests {

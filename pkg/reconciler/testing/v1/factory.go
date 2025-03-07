@@ -26,6 +26,7 @@ import (
 	authv1 "k8s.io/api/authorization/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	cmclient "knative.dev/eventing/pkg/client/certmanager/injection/client/fake"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/logging"
 
@@ -70,12 +71,14 @@ func MakeFactory(ctor Ctor, unstructured bool, logger *zap.SugaredLogger) Factor
 		} else {
 			ctx = context.Background()
 		}
+		r.Ctx = logging.WithLogger(ctx, logger)
 		ctx = logging.WithLogger(ctx, logger)
 
 		ctx, kubeClient := fakekubeclient.With(ctx, ls.GetKubeObjects()...)
 		ctx, client := fakeeventingclient.With(ctx, ls.GetEventingObjects()...)
 		ctx, dynamicClient := fakedynamicclient.With(ctx,
 			NewScheme(), ToUnstructured(t, r.Objects)...)
+		ctx, cmClient := cmclient.With(ctx, ls.GetCertManagerObjects()...)
 
 		ctx = sinks.WithConfig(ctx, &sinks.Config{KubeClient: kubeClient})
 
@@ -164,9 +167,10 @@ func MakeFactory(ctor Ctor, unstructured bool, logger *zap.SugaredLogger) Factor
 			kubeClient.PrependReactor("*", "*", reactor)
 			client.PrependReactor("*", "*", reactor)
 			dynamicClient.PrependReactor("*", "*", reactor)
+			cmClient.PrependReactor("*", "*", reactor)
 		}
 
-		actionRecorderList := ActionRecorderList{dynamicClient, client, kubeClient}
+		actionRecorderList := ActionRecorderList{dynamicClient, client, kubeClient, cmClient}
 		eventList := EventList{Recorder: eventRecorder}
 
 		return c, actionRecorderList, eventList

@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	"knative.dev/pkg/system"
+	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/knative"
 
@@ -45,6 +46,21 @@ func TestEventTransformJsonataDirect(t *testing.T) {
 	env.Test(ctx, t, eventtransform.JsonataDirect())
 }
 
+func TestEventTransformJsonataDirectTLS(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+		eventshub.WithTLS(t),
+	)
+
+	env.Test(ctx, t, eventtransform.JsonataDirectTLS())
+}
+
 func TestEventTransformJsonataWithSink(t *testing.T) {
 	t.Parallel()
 
@@ -57,6 +73,21 @@ func TestEventTransformJsonataWithSink(t *testing.T) {
 	)
 
 	env.Test(ctx, t, eventtransform.JsonataSink())
+}
+
+func TestEventTransformJsonataWithSinkTLS(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+		eventshub.WithTLS(t),
+	)
+
+	env.Test(ctx, t, eventtransform.JsonataSinkTLS())
 }
 
 func TestEventTransformJsonataWithSinkReplyTransform(t *testing.T) {
