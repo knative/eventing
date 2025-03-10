@@ -181,7 +181,7 @@ func (r *Reconciler) reconcileCMCertificate(ctx context.Context, sink *sinks.Int
 
 	lister := r.cmCertificateLister.Load()
 	if lister == nil || *lister == nil {
-		return nil, fmt.Errorf("no cer-manager certificate lister created yet, this should rarely happen")
+		return nil, fmt.Errorf("no cert-manager certificate lister created yet, this should rarely happen and recover")
 	}
 
 	cert, err := (*lister).Certificates(sink.Namespace).Get(expected.Name)

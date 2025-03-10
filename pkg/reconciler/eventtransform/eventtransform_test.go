@@ -19,6 +19,7 @@ package eventtransform
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
 	"testing"
 
 	cmapis "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
@@ -33,6 +34,7 @@ import (
 	"knative.dev/eventing/pkg/apis/feature"
 	sources "knative.dev/eventing/pkg/apis/sources/v1"
 	cmclient "knative.dev/eventing/pkg/client/certmanager/injection/client/fake"
+	cmlisters "knative.dev/eventing/pkg/client/certmanager/listers/certmanager/v1"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1alpha1/eventtransform"
@@ -2020,6 +2022,10 @@ func TestReconcile(t *testing.T) {
 
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, watcher configmap.Watcher) controller.Reconciler {
 
+		cmCertificatesListerAtomic := &atomic.Pointer[cmlisters.CertificateLister]{}
+		cmCertificatesLister := listers.GetCertificateLister()
+		cmCertificatesListerAtomic.Store(&cmCertificatesLister)
+
 		r := &Reconciler{
 			k8s:                        kubeclient.Get(ctx),
 			client:                     eventingclient.Get(ctx),
@@ -2029,7 +2035,7 @@ func TestReconcile(t *testing.T) {
 			jsonataServiceLister:       listers.GetServiceLister(),
 			jsonataEndpointLister:      listers.GetEndpointsLister(),
 			jsonataSinkBindingLister:   listers.GetSinkBindingLister(),
-			cmCertificateLister:        listers.GetCertificateLister(),
+			cmCertificateLister:        cmCertificatesListerAtomic,
 			certificatesSecretLister:   listers.GetSecretLister(),
 			trustBundleConfigMapLister: listers.GetConfigMapLister(),
 			configWatcher:              cw,

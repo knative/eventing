@@ -70,7 +70,7 @@ func (df *DynamicCertificatesInformer) Reconcile(ctx context.Context, features f
 	df.mu.Lock()
 	defer df.mu.Unlock()
 	if !features.IsPermissiveTransportEncryption() && !features.IsStrictTransportEncryption() {
-		logger.Debugw("transport encryption is disabled")
+		logger.Debugw("transport encryption is disabled, stopping informer")
 		return df.stop(ctx)
 	}
 	if df.cancel.Load() != nil {

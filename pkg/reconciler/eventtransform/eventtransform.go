@@ -178,7 +178,7 @@ func (r *Reconciler) reconcileJsonataTransformationCertificate(ctx context.Conte
 
 	cmCertificateLister := r.cmCertificateLister.Load()
 	if cmCertificateLister == nil || *cmCertificateLister == nil {
-		return nil, fmt.Errorf("no cer-manager certificate lister created yet, this should rarely happen and recover")
+		return nil, fmt.Errorf("no cert-manager certificate lister created yet, this should rarely happen and recover")
 	}
 
 	curr, err := (*cmCertificateLister).Certificates(expected.GetNamespace()).Get(expected.GetName())
