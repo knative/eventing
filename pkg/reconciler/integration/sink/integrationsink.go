@@ -75,7 +75,7 @@ type Reconciler struct {
 
 	deploymentLister    appsv1listers.DeploymentLister
 	serviceLister       corev1listers.ServiceLister
-	cmCertificateLister atomic.Pointer[certmanagerlisters.CertificateLister]
+	cmCertificateLister *atomic.Pointer[certmanagerlisters.CertificateLister]
 
 	certManagerClient certmanagerclientset.Interface
 }
@@ -180,8 +180,8 @@ func (r *Reconciler) reconcileCMCertificate(ctx context.Context, sink *sinks.Int
 	))
 
 	lister := r.cmCertificateLister.Load()
-	if lister == nil {
-		return nil, fmt.Errorf("no cer-manager certificate lister created yet, this should never happen")
+	if lister == nil || *lister == nil {
+		return nil, fmt.Errorf("no cer-manager certificate lister created yet, this should rarely happen")
 	}
 
 	cert, err := (*lister).Certificates(sink.Namespace).Get(expected.Name)

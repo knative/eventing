@@ -62,23 +62,25 @@ func NewController(
 		kubeClientSet:       kubeclient.Get(ctx),
 		deploymentLister:    deploymentInformer.Lister(),
 		serviceLister:       serviceInformer.Lister(),
-		cmCertificateLister: *dynamicCertificateInformer.Lister(),
+		cmCertificateLister: dynamicCertificateInformer.Lister(),
 		certManagerClient:   cmclient.NewForConfigOrDie(injection.GetConfig(ctx)),
 	}
 
 	logging.FromContext(ctx).Info("Creating IntegrationSink controller")
 
 	var globalResync func(obj interface{})
+	var enqueueControllerOf func(interface{})
 
 	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {
 		if globalResync != nil {
-			if features, ok := value.(feature.Flags); ok {
-				// we assume that Cert-Manager is installed in the cluster if the feature flag is enabled
-				if err := dynamicCertificateInformer.Reconcile(ctx, features, controller.HandleAll(globalResync)); err != nil {
-					logging.FromContext(ctx).Errorw("Failed to start certificates dynamic factory", zap.Error(err))
-				}
-			}
 			globalResync(nil)
+		}
+
+		if features, ok := value.(feature.Flags); ok && enqueueControllerOf != nil {
+			// we assume that Cert-Manager is installed in the cluster if the feature flag is enabled
+			if err := dynamicCertificateInformer.Reconcile(ctx, features, controller.HandleAll(enqueueControllerOf)); err != nil {
+				logging.FromContext(ctx).Errorw("Failed to start certificates dynamic factory", zap.Error(err))
+			}
 		}
 	})
 	featureStore.WatchConfigs(cmw)
@@ -88,6 +90,7 @@ func NewController(
 			ConfigStore: featureStore,
 		}
 	})
+	enqueueControllerOf = impl.EnqueueControllerOf
 
 	integrationSinkInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
