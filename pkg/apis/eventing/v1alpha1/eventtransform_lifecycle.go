@@ -195,6 +195,10 @@ func (ts *EventTransformStatus) MarkWaitingForServiceEndpoints() {
 	ts.GetConditionSet().Manage(ts).MarkFalse(TransformConditionAddressable, TransformationAddressableWaitingForServiceEndpoints, "URL is empty")
 }
 
+func (ts *EventTransformStatus) IsTransformationReady() bool {
+	return ts.GetConditionSet().Manage(ts).GetCondition(TransformationConditionReady).IsTrue()
+}
+
 func (ts *EventTransformStatus) SetAddresses(addresses ...duckv1.Addressable) {
 	if len(addresses) == 0 || addresses[0].URL.IsEmpty() {
 		ts.GetConditionSet().Manage(ts).MarkFalse(TransformConditionAddressable, TransformationAddressableEmptyURL, "URL is empty")

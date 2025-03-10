@@ -194,6 +194,12 @@ func PropagateTrustBundles(ctx context.Context, k8s kubernetes.Interface, trustB
 	return nil
 }
 
+// CombinedBundlePresent will check if PropagateTrustBundles and AddTrustBundleVolumes will add the TrustBundleCombined
+// volume.
+//
+// This is useful to know before creating the data plane how to configure the runtime to read the combined bundle.
+// For example, Node.js allows injecting an environment variable `NODE_EXTRA_CA_CERTS` to point to a PEM-formatted
+// trust bundle file, and we would need to know if that combined bundle will be injected by SinkBinding.
 func CombinedBundlePresent(trustBundleLister corev1listers.ConfigMapLister) (bool, error) {
 	cms, err := trustBundleLister.ConfigMaps(system.Namespace()).List(TrustBundleSelector)
 	if err != nil {

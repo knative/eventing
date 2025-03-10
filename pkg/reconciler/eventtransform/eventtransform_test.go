@@ -126,7 +126,7 @@ func TestReconcile(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{
 				{Object: NewEventTransform(testName, testNS,
 					WithEventTransformJsonataExpression(),
-					WithJsonataEventTransformInitializeStatusSkipSinkBinding(),
+					WithJsonataEventTransformInitializeStatus(),
 					WithJsonataDeploymentStatus(appsv1.DeploymentStatus{}),
 				)},
 			},
@@ -356,7 +356,7 @@ func TestReconcile(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{
 				{Object: NewEventTransform(testName, testNS,
 					WithEventTransformJsonataExpression(),
-					WithJsonataEventTransformInitializeStatusSkipSinkBinding(),
+					WithJsonataEventTransformInitializeStatus(),
 					WithJsonataDeploymentStatus(appsv1.DeploymentStatus{
 						ObservedGeneration:  0,
 						Replicas:            0,
@@ -636,15 +636,14 @@ func TestReconcile(t *testing.T) {
 					WithEventTransformSink(sink),
 					WithEventTransformJsonataExpression(),
 					WithJsonataEventTransformInitializeStatus(),
-					WithJsonataDeploymentStatus(appsv1.DeploymentStatus{
-						ObservedGeneration:  1,
-						Replicas:            1,
-						UpdatedReplicas:     1,
-						ReadyReplicas:       1,
-						AvailableReplicas:   1,
-						UnavailableReplicas: 0,
-					}),
 					WithJsonataSinkBindingStatus(sources.SinkBindingStatus{}),
+					WithJsonataDeploymentStatus(appsv1.DeploymentStatus{
+						Replicas:           1,
+						AvailableReplicas:  1,
+						ObservedGeneration: 1,
+						UpdatedReplicas:    1,
+						ReadyReplicas:      1,
+					}),
 				)},
 			},
 			WantCreates: []runtime.Object{
@@ -703,15 +702,14 @@ func TestReconcile(t *testing.T) {
 					WithEventTransformSink(sink2),
 					WithEventTransformJsonataExpression(),
 					WithJsonataEventTransformInitializeStatus(),
-					WithJsonataDeploymentStatus(appsv1.DeploymentStatus{
-						ObservedGeneration:  1,
-						Replicas:            1,
-						UpdatedReplicas:     1,
-						ReadyReplicas:       1,
-						AvailableReplicas:   1,
-						UnavailableReplicas: 0,
-					}),
 					WithJsonataSinkBindingStatus(sources.SinkBindingStatus{}),
+					WithJsonataDeploymentStatus(appsv1.DeploymentStatus{
+						Replicas:           1,
+						AvailableReplicas:  1,
+						ObservedGeneration: 1,
+						UpdatedReplicas:    1,
+						ReadyReplicas:      1,
+					}),
 				)},
 			},
 			WantUpdates: []clientgotesting.UpdateActionImpl{
@@ -949,6 +947,14 @@ func TestReconcile(t *testing.T) {
 					WithEventTransformJsonataReplyExpression(),
 					WithJsonataEventTransformInitializeStatus(),
 					WithJsonataDeploymentStatus(appsv1.DeploymentStatus{}),
+					WithJsonataSinkBindingStatus(sources.SinkBindingStatus{
+						SourceStatus: duckv1.SourceStatus{
+							Status: duckv1.Status{
+								Conditions: []apis.Condition{{Type: apis.ConditionReady, Status: corev1.ConditionTrue}},
+							},
+							SinkURI: sink.URI,
+						},
+					}),
 				)},
 			},
 			WantUpdates: []clientgotesting.UpdateActionImpl{
@@ -1096,6 +1102,14 @@ func TestReconcile(t *testing.T) {
 					WithEventTransformJsonataExpression(),
 					WithEventTransformJsonataReplyDiscard(),
 					WithJsonataEventTransformInitializeStatus(),
+					WithJsonataSinkBindingStatus(sources.SinkBindingStatus{
+						SourceStatus: duckv1.SourceStatus{
+							SinkURI: sink.URI,
+							Status: duckv1.Status{
+								Conditions: []apis.Condition{{Type: apis.ConditionReady, Status: corev1.ConditionTrue}},
+							},
+						},
+					}),
 					WithJsonataDeploymentStatus(appsv1.DeploymentStatus{}),
 				)},
 			},
@@ -1238,7 +1252,7 @@ func TestReconcile(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{
 				{Object: NewEventTransform(testName, testNS,
 					WithEventTransformJsonataExpression(),
-					WithJsonataEventTransformInitializeStatusSkipSinkBinding(),
+					WithJsonataEventTransformInitializeStatus(),
 					WithJsonataCertificateStatus(cmapis.CertificateStatus{}),
 					func(transform *v1alpha1.EventTransform) {
 						transform.Status.JsonataTransformationStatus = nil
@@ -1453,7 +1467,7 @@ func TestReconcile(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{
 				{Object: NewEventTransform(testName, testNS,
 					WithEventTransformJsonataExpression(),
-					WithJsonataEventTransformInitializeStatusSkipSinkBinding(),
+					WithJsonataEventTransformInitializeStatus(),
 					WithJsonataCertificateStatus(cmapis.CertificateStatus{}),
 					func(transform *v1alpha1.EventTransform) {
 						transform.Status.JsonataTransformationStatus = nil
@@ -1671,7 +1685,7 @@ func TestReconcile(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{
 				{Object: NewEventTransform(testName, testNS,
 					WithEventTransformJsonataExpression(),
-					WithJsonataEventTransformInitializeStatusSkipSinkBinding(),
+					WithJsonataEventTransformInitializeStatus(),
 					WithJsonataCertificateStatus(cmapis.CertificateStatus{}),
 					func(transform *v1alpha1.EventTransform) {
 						transform.Status.JsonataTransformationStatus = nil
@@ -1733,7 +1747,7 @@ func TestReconcile(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{
 				{Object: NewEventTransform(testName, testNS,
 					WithEventTransformJsonataExpression(),
-					WithJsonataEventTransformInitializeStatusSkipSinkBinding(),
+					WithJsonataEventTransformInitializeStatus(),
 					WithJsonataCertificateStatus(cmapis.CertificateStatus{}),
 					func(transform *v1alpha1.EventTransform) {
 						transform.Status.JsonataTransformationStatus = nil
@@ -2007,17 +2021,18 @@ func TestReconcile(t *testing.T) {
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, watcher configmap.Watcher) controller.Reconciler {
 
 		r := &Reconciler{
-			k8s:                      kubeclient.Get(ctx),
-			client:                   eventingclient.Get(ctx),
-			cmClient:                 cmclient.Get(ctx),
-			jsonataConfigMapLister:   listers.GetConfigMapLister(),
-			jsonataDeploymentsLister: listers.GetDeploymentLister(),
-			jsonataServiceLister:     listers.GetServiceLister(),
-			jsonataEndpointLister:    listers.GetEndpointsLister(),
-			jsonataSinkBindingLister: listers.GetSinkBindingLister(),
-			cmCertificateLister:      listers.GetCertificateLister(),
-			certificatesSecretLister: listers.GetSecretLister(),
-			configWatcher:            cw,
+			k8s:                        kubeclient.Get(ctx),
+			client:                     eventingclient.Get(ctx),
+			cmClient:                   cmclient.Get(ctx),
+			jsonataConfigMapLister:     listers.GetConfigMapLister(),
+			jsonataDeploymentsLister:   listers.GetDeploymentLister(),
+			jsonataServiceLister:       listers.GetServiceLister(),
+			jsonataEndpointLister:      listers.GetEndpointsLister(),
+			jsonataSinkBindingLister:   listers.GetSinkBindingLister(),
+			cmCertificateLister:        listers.GetCertificateLister(),
+			certificatesSecretLister:   listers.GetSecretLister(),
+			trustBundleConfigMapLister: listers.GetConfigMapLister(),
+			configWatcher:              cw,
 		}
 
 		store := feature.NewStore(logger.Named("config-store"))

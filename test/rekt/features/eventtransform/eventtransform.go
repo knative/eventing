@@ -374,6 +374,7 @@ func JsonataSinkTLS() *feature.Feature {
 	})
 
 	f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
+	f.Prerequisite("transport encryption is strict", featureflags.AuthenticationOIDCEnabled())
 
 	f.Setup("Install event transform", eventtransform.Install(transformName, eventtransform.WithSpec(
 		eventtransform.WithSink(&duckv1.Destination{URI: apis.HTTPS(sink)}),

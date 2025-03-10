@@ -98,15 +98,6 @@ func WithJsonataEventTransformInitializeStatus() EventTransformOption {
 	}
 }
 
-func WithJsonataEventTransformInitializeStatusSkipSinkBinding() EventTransformOption {
-	return func(transform *eventing.EventTransform) {
-		transform.Status.InitializeConditions()
-		if transform.Status.JsonataTransformationStatus == nil {
-			transform.Status.JsonataTransformationStatus = &eventing.JsonataEventTransformationStatus{}
-		}
-	}
-}
-
 func WithJsonataDeploymentStatus(status appsv1.DeploymentStatus) EventTransformOption {
 	return func(transform *eventing.EventTransform) {
 		transform.Status.PropagateJsonataDeploymentStatus(status)

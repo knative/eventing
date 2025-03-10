@@ -93,6 +93,12 @@ func (r *Reconciler) reconcileJsonataTransformation(ctx context.Context, transfo
 		return fmt.Errorf("failed to reconcile Jsonata transformation deployment: %w", err)
 	}
 
+	logger.Debugw("Reconciling Jsonata transformation SinkBinding")
+	sinkBinding, err := r.reconcileJsonataTransformationSinkBinding(ctx, transform)
+	if err != nil {
+		return fmt.Errorf("failed to reconcile Jsonata transformation sink binding: %w", err)
+	}
+
 	logger.Debugw("Reconciling Jsonata transformation Certificate")
 	certificate, err := r.reconcileJsonataTransformationCertificate(ctx, transform)
 	if err != nil {
@@ -104,9 +110,9 @@ func (r *Reconciler) reconcileJsonataTransformation(ctx context.Context, transfo
 		return fmt.Errorf("failed to reconcile Jsonata transformation deployment: %w", err)
 	}
 
-	logger.Debugw("Reconciling Jsonata transformation SinkBinding")
-	if err := r.reconcileJsonataTransformationSinkBinding(ctx, transform); err != nil {
-		return fmt.Errorf("failed to reconcile Jsonata transformation sink binding: %w", err)
+	// Wait for SinkBinding to become ready before continuing (if set)
+	if sinkBinding != nil && !sinkBinding.Status.IsReady() {
+		return controller.NewSkipKey("")
 	}
 
 	logger.Debugw("Reconciling Jsonata transformation address")
@@ -207,8 +213,10 @@ func (r *Reconciler) reconcileJsonataTransformationCertificate(ctx context.Conte
 
 func (r *Reconciler) reconcileJsonataTransformationDeployment(ctx context.Context, expression *corev1.ConfigMap, certificate *cmapis.Certificate, transform *eventing.EventTransform) error {
 	withCombinedTrustBundle := false
-	if isPresent, _ := eventingtls.CombinedBundlePresent(r.trustBundleConfigMapLister); isPresent {
-		withCombinedTrustBundle = true
+	if transform.Spec.Sink != nil {
+		if isPresent, _ := eventingtls.CombinedBundlePresent(r.trustBundleConfigMapLister); isPresent {
+			withCombinedTrustBundle = true
+		}
 	}
 	expected := jsonataDeployment(ctx, withCombinedTrustBundle, r.configWatcher, expression, certificate, transform)
 
@@ -258,10 +266,10 @@ func (r *Reconciler) reconcileJsonataTransformationDeployment(ctx context.Contex
 	return nil
 }
 
-func (r *Reconciler) reconcileJsonataTransformationSinkBinding(ctx context.Context, transform *eventing.EventTransform) error {
+func (r *Reconciler) reconcileJsonataTransformationSinkBinding(ctx context.Context, transform *eventing.EventTransform) (*sources.SinkBinding, error) {
 	if transform.Spec.Sink == nil {
 		transform.Status.PropagateJsonataSinkBindingUnset()
-		return r.deleteJsonataTransformationSinkBinding(ctx, transform)
+		return nil, r.deleteJsonataTransformationSinkBinding(ctx, transform)
 	}
 
 	expected := jsonataSinkBinding(ctx, transform)
@@ -269,37 +277,27 @@ func (r *Reconciler) reconcileJsonataTransformationSinkBinding(ctx context.Conte
 	if apierrors.IsNotFound(err) {
 		created, err := r.createSinkBinding(ctx, transform, expected)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		if !transform.Status.PropagateJsonataSinkBindingStatus(created.Status) {
-			// Wait for SinkBinding to become ready before continuing.
-			return controller.NewSkipKey("")
-		}
-		return nil
+		transform.Status.PropagateJsonataSinkBindingStatus(created.Status)
+		return created, nil
 	}
 	if err != nil {
-		return fmt.Errorf("failed to get deployment %s/%s: %w", expected.GetNamespace(), expected.GetName(), err)
+		return nil, fmt.Errorf("failed to get sink binding %s/%s: %w", expected.GetNamespace(), expected.GetName(), err)
 	}
 	if equality.Semantic.DeepDerivative(expected.Spec, curr.Spec) &&
 		equality.Semantic.DeepDerivative(expected.Labels, curr.Labels) &&
 		equality.Semantic.DeepDerivative(expected.Annotations, curr.Annotations) {
-		if !transform.Status.PropagateJsonataSinkBindingStatus(curr.Status) {
-			// Wait for SinkBinding to become ready before continuing.
-			return controller.NewSkipKey("")
-		}
-		return nil
+		transform.Status.PropagateJsonataSinkBindingStatus(curr.Status)
+		return curr, nil
 	}
 	expected.ResourceVersion = curr.ResourceVersion
 	updated, err := r.updateSinkBinding(ctx, transform, expected)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	if !transform.Status.PropagateJsonataSinkBindingStatus(updated.Status) {
-		// Wait for SinkBinding to become ready before continuing.
-		return controller.NewSkipKey("")
-	}
-
-	return nil
+	transform.Status.PropagateJsonataSinkBindingStatus(updated.Status)
+	return updated, nil
 }
 
 func (r *Reconciler) reconcileJsonataTransformationAddress(ctx context.Context, transform *eventing.EventTransform) error {
