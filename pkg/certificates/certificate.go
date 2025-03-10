@@ -25,6 +25,7 @@ import (
 
 	cmv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
+	"go.uber.org/zap"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
@@ -64,14 +65,20 @@ func NewDynamicCertificatesInformer() *DynamicCertificatesInformer {
 }
 
 func (df *DynamicCertificatesInformer) Reconcile(ctx context.Context, features feature.Flags, handler cache.ResourceEventHandler) error {
+	logger := logging.FromContext(ctx).With(zap.String("component", "DynamicCertificatesInformer"))
+
 	df.mu.Lock()
 	defer df.mu.Unlock()
 	if !features.IsPermissiveTransportEncryption() && !features.IsStrictTransportEncryption() {
+		logger.Debugw("transport encryption is disabled")
 		return df.stop(ctx)
 	}
 	if df.cancel.Load() != nil {
+		logger.Debugw("Cancel function already loaded, skipping start")
 		return nil
 	}
+	logger.Debugw("Starting dynamic certificates informer")
+
 	ctx, cancel := context.WithCancel(ctx)
 
 	client := cmclient.NewForConfigOrDie(injection.GetConfig(ctx))
@@ -80,7 +87,7 @@ func (df *DynamicCertificatesInformer) Reconcile(ctx context.Context, features f
 		client,
 		controller.DefaultResyncPeriod,
 		cminformers.WithTweakListOptions(func(options *metav1.ListOptions) {
-			options.LabelSelector = "app.kubernetes.io/component=knative-eventing"
+			options.LabelSelector = CertificateLabelSelectorPair
 		}),
 	)
 	informer := factory.Certmanager().V1().Certificates()
@@ -89,8 +96,11 @@ func (df *DynamicCertificatesInformer) Reconcile(ctx context.Context, features f
 	factory.Start(ctx.Done())
 	if !cache.WaitForCacheSync(ctx.Done(), informer.Informer().HasSynced) {
 		defer cancel()
+		logger.Errorw("Failed to sync certificates informer cache")
 		return fmt.Errorf("failed to sync cert-manager Certificate informer")
 	}
+
+	logger.Infow("Started dynamic certificates informer")
 
 	lister := informer.Lister()
 	df.lister.Store(&lister)
@@ -107,7 +117,6 @@ func (df *DynamicCertificatesInformer) stop(ctx context.Context) error {
 	}
 
 	(*cancel)()
-	df.lister.Store(nil)
 	df.cancel.Store(nil) // Cancel is always set as last field since it's used as a "guard".
 	return nil
 }
