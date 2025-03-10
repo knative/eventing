@@ -19,6 +19,7 @@ package eventtransform
 import (
 	"context"
 
+	"go.uber.org/zap"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/informers"
@@ -37,7 +38,6 @@ import (
 	"knative.dev/pkg/logging"
 
 	"knative.dev/eventing/pkg/apis/feature"
-	certificatesinformer "knative.dev/eventing/pkg/client/certmanager/injection/informers/certmanager/v1/certificate"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	eventtransforminformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventtransform"
 	sinkbindinginformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1/sinkbinding/filtered"
@@ -48,11 +48,6 @@ import (
 const (
 	NameLabelKey = "eventing.knative.dev/event-transform-name"
 )
-
-func init() {
-	// TODO: Use dynamic (filtered) informer factory since cert-manager is an optional dependency: https://github.com/knative/eventing/pull/8517
-	injection.Default.RegisterInformer(certificatesinformer.WithInformer)
-}
 
 func NewController(
 	ctx context.Context,
@@ -66,9 +61,7 @@ func NewController(
 	jsonataServiceInformer := serviceinformer.Get(ctx, JsonataResourcesSelector)
 	certificatesSecretInformer := secretinformer.Get(ctx, certificates.SecretLabelSelectorPair)
 	trustBundleConfigMapInformer := configmapinformer.Get(ctx, eventingtls.TrustBundleLabelSelector)
-	// TODO: Use dynamic (filtered) informer factory since cert-manager is an optional dependency: https://github.com/knative/eventing/pull/8517
-	// 		Also remove init function
-	certificatesInformer := certificatesinformer.Get(ctx)
+	dynamicCertificatesInformer := certificates.NewDynamicCertificatesInformer()
 
 	// Create a custom informer as one in knative/pkg doesn't exist for endpoints.
 	jsonataEndpointFactory := informers.NewSharedInformerFactoryWithOptions(
@@ -81,10 +74,18 @@ func NewController(
 	jsonataEndpointInformer := jsonataEndpointFactory.Core().V1().Endpoints()
 
 	var globalResync func()
+	var enqueueControllerOf func(interface{})
 
 	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {
 		if globalResync != nil {
 			globalResync()
+		}
+
+		if features, ok := value.(feature.Flags); ok && enqueueControllerOf != nil {
+			// we assume that Cert-Manager is installed in the cluster if the feature flag is enabled
+			if err := dynamicCertificatesInformer.Reconcile(ctx, features, controller.HandleAll(enqueueControllerOf)); err != nil {
+				logging.FromContext(ctx).Errorw("Failed to start certificates dynamic factory", zap.Error(err))
+			}
 		}
 	})
 	featureStore.WatchConfigs(cmw)
@@ -102,7 +103,7 @@ func NewController(
 		jsonataServiceLister:       jsonataServiceInformer.Lister(),
 		jsonataEndpointLister:      jsonataEndpointInformer.Lister(),
 		jsonataSinkBindingLister:   jsonataSinkBindingInformer.Lister(),
-		cmCertificateLister:        certificatesInformer.Lister(),
+		cmCertificateLister:        dynamicCertificatesInformer.Lister(),
 		certificatesSecretLister:   certificatesSecretInformer.Lister(),
 		trustBundleConfigMapLister: trustBundleConfigMapInformer.Lister(),
 		configWatcher:              configWatcher,
@@ -113,6 +114,7 @@ func NewController(
 			ConfigStore: featureStore,
 		}
 	})
+	enqueueControllerOf = impl.EnqueueControllerOf
 
 	globalResync = func() {
 		impl.GlobalResync(eventTransformInformer.Informer())
@@ -125,7 +127,6 @@ func NewController(
 	jsonataEndpointInformer.Informer().AddEventHandler(controller.HandleAll(enqueueUsingNameLabel(impl)))
 	jsonataConfigMapInformer.Informer().AddEventHandler(controller.HandleAll(enqueueUsingNameLabel(impl)))
 	jsonataSinkBindingInformer.Informer().AddEventHandler(controller.HandleAll(enqueueUsingNameLabel(impl)))
-	certificatesInformer.Informer().AddEventHandler(controller.HandleAll(impl.EnqueueControllerOf))
 
 	// Start the factory after creating all necessary informers.
 	jsonataEndpointFactory.Start(ctx.Done())

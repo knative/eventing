@@ -19,6 +19,7 @@ package sink
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
 
 	"knative.dev/eventing/pkg/certificates"
 
@@ -74,8 +75,9 @@ type Reconciler struct {
 
 	deploymentLister    appsv1listers.DeploymentLister
 	serviceLister       corev1listers.ServiceLister
-	cmCertificateLister certmanagerlisters.CertificateLister
-	certManagerClient   certmanagerclientset.Interface
+	cmCertificateLister *atomic.Pointer[certmanagerlisters.CertificateLister]
+
+	certManagerClient certmanagerclientset.Interface
 }
 
 // newReconciledNormal makes a new reconciler event with event type Normal, and
@@ -177,7 +179,12 @@ func (r *Reconciler) reconcileCMCertificate(ctx context.Context, sink *sinks.Int
 		fmt.Sprintf("%s.%s.svc", resources.DeploymentName(sink.GetName()), sink.GetNamespace()),
 	))
 
-	cert, err := r.cmCertificateLister.Certificates(sink.Namespace).Get(expected.Name)
+	lister := r.cmCertificateLister.Load()
+	if lister == nil || *lister == nil {
+		return nil, fmt.Errorf("no cert-manager certificate lister created yet, this should rarely happen and recover")
+	}
+
+	cert, err := (*lister).Certificates(sink.Namespace).Get(expected.Name)
 	if apierrors.IsNotFound(err) {
 		cert, err := r.certManagerClient.CertmanagerV1().Certificates(sink.Namespace).Create(ctx, expected, metav1.CreateOptions{})
 		if err != nil {
