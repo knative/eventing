@@ -20,6 +20,9 @@ import (
 	"context"
 	"fmt"
 
+	cmapis "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	"github.com/google/go-cmp/cmp"
+	"go.uber.org/zap/zapcore"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -28,6 +31,10 @@ import (
 	"k8s.io/client-go/kubernetes"
 	appslister "k8s.io/client-go/listers/apps/v1"
 	corelister "k8s.io/client-go/listers/core/v1"
+	"knative.dev/eventing/pkg/apis/feature"
+	cmclient "knative.dev/eventing/pkg/client/certmanager/clientset/versioned"
+	cmlisters "knative.dev/eventing/pkg/client/certmanager/listers/certmanager/v1"
+	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/controller"
@@ -44,14 +51,18 @@ import (
 )
 
 type Reconciler struct {
-	k8s    kubernetes.Interface
-	client eventingclient.Interface
+	k8s      kubernetes.Interface
+	client   eventingclient.Interface
+	cmClient cmclient.Interface
 
-	jsonataConfigMapLister   corelister.ConfigMapLister
-	jsonataDeploymentsLister appslister.DeploymentLister
-	jsonataServiceLister     corelister.ServiceLister
-	jsonataEndpointLister    corelister.EndpointsLister
-	jsonataSinkBindingLister sourceslisters.SinkBindingLister
+	jsonataConfigMapLister     corelister.ConfigMapLister
+	jsonataDeploymentsLister   appslister.DeploymentLister
+	jsonataServiceLister       corelister.ServiceLister
+	jsonataEndpointLister      corelister.EndpointsLister
+	jsonataSinkBindingLister   sourceslisters.SinkBindingLister
+	cmCertificateLister        cmlisters.CertificateLister
+	certificatesSecretLister   corelister.SecretLister
+	trustBundleConfigMapLister corelister.ConfigMapLister
 
 	configWatcher *reconcilersource.ConfigWatcher
 }
@@ -82,14 +93,26 @@ func (r *Reconciler) reconcileJsonataTransformation(ctx context.Context, transfo
 		return fmt.Errorf("failed to reconcile Jsonata transformation deployment: %w", err)
 	}
 
-	logger.Debugw("Reconciling Jsonata transformation Deployment")
-	if err := r.reconcileJsonataTransformationDeployment(ctx, expressionCm, transform); err != nil {
+	logger.Debugw("Reconciling Jsonata transformation SinkBinding")
+	sinkBinding, err := r.reconcileJsonataTransformationSinkBinding(ctx, transform)
+	if err != nil {
+		return fmt.Errorf("failed to reconcile Jsonata transformation sink binding: %w", err)
+	}
+
+	logger.Debugw("Reconciling Jsonata transformation Certificate")
+	certificate, err := r.reconcileJsonataTransformationCertificate(ctx, transform)
+	if err != nil {
 		return fmt.Errorf("failed to reconcile Jsonata transformation deployment: %w", err)
 	}
 
-	logger.Debugw("Reconciling Jsonata transformation SinkBinding")
-	if err := r.reconcileJsonataTransformationSinkBinding(ctx, transform); err != nil {
-		return fmt.Errorf("failed to reconcile Jsonata transformation sink binding: %w", err)
+	logger.Debugw("Reconciling Jsonata transformation Deployment")
+	if err := r.reconcileJsonataTransformationDeployment(ctx, expressionCm, certificate, transform); err != nil {
+		return fmt.Errorf("failed to reconcile Jsonata transformation deployment: %w", err)
+	}
+
+	// Wait for SinkBinding to become ready before continuing (if set)
+	if sinkBinding != nil && !sinkBinding.Status.IsReady() {
+		return controller.NewSkipKey("")
 	}
 
 	logger.Debugw("Reconciling Jsonata transformation address")
@@ -146,8 +169,56 @@ func (r *Reconciler) reconcileJsonataTransformationService(ctx context.Context, 
 	return nil
 }
 
-func (r *Reconciler) reconcileJsonataTransformationDeployment(ctx context.Context, expression *corev1.ConfigMap, transform *eventing.EventTransform) error {
-	expected := jsonataDeployment(ctx, r.configWatcher, expression, transform)
+func (r *Reconciler) reconcileJsonataTransformationCertificate(ctx context.Context, transform *eventing.EventTransform) (*cmapis.Certificate, error) {
+	if f := feature.FromContext(ctx); !f.IsStrictTransportEncryption() && !f.IsPermissiveTransportEncryption() {
+		return nil, r.deleteJsonataTransformationCertificate(ctx, transform)
+	}
+	expected := jsonataCertificate(ctx, transform)
+
+	curr, err := r.cmCertificateLister.Certificates(expected.GetNamespace()).Get(expected.GetName())
+	if apierrors.IsNotFound(err) {
+		created, err := r.createCertificate(ctx, transform, expected)
+		if err != nil {
+			return nil, err
+		}
+		if !transform.Status.PropagateJsonataCertificateStatus(created.Status) {
+			// Wait for Certificate to become ready before continuing.
+			return nil, controller.NewSkipKey("")
+		}
+		return created, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to get certificate %s/%s: %w", expected.GetNamespace(), expected.GetName(), err)
+	}
+	if equality.Semantic.DeepDerivative(expected.Spec, curr.Spec) &&
+		equality.Semantic.DeepDerivative(expected.Labels, curr.Labels) &&
+		equality.Semantic.DeepDerivative(expected.Annotations, curr.Annotations) {
+		if !transform.Status.PropagateJsonataCertificateStatus(curr.Status) {
+			// Wait for Certificate to become ready before continuing.
+			return nil, controller.NewSkipKey("")
+		}
+		return curr, nil
+	}
+	expected.ResourceVersion = curr.ResourceVersion
+	updated, err := r.updateCertificate(ctx, transform, expected)
+	if err != nil {
+		return nil, err
+	}
+	if !transform.Status.PropagateJsonataCertificateStatus(updated.Status) {
+		// Wait for Certificate to become ready before continuing.
+		return nil, controller.NewSkipKey("")
+	}
+	return updated, nil
+}
+
+func (r *Reconciler) reconcileJsonataTransformationDeployment(ctx context.Context, expression *corev1.ConfigMap, certificate *cmapis.Certificate, transform *eventing.EventTransform) error {
+	withCombinedTrustBundle := false
+	if transform.Spec.Sink != nil {
+		if isPresent, _ := eventingtls.CombinedBundlePresent(r.trustBundleConfigMapLister); isPresent {
+			withCombinedTrustBundle = true
+		}
+	}
+	expected := jsonataDeployment(ctx, withCombinedTrustBundle, r.configWatcher, expression, certificate, transform)
 
 	curr, err := r.jsonataDeploymentsLister.Deployments(expected.GetNamespace()).Get(expected.GetName())
 	if apierrors.IsNotFound(err) {
@@ -173,6 +244,16 @@ func (r *Reconciler) reconcileJsonataTransformationDeployment(ctx context.Contex
 		}
 		return nil
 	}
+
+	if logger := logging.FromContext(ctx); logger.Desugar().Core().Enabled(zapcore.DebugLevel) {
+		logger.Infow(
+			"Updating deployment "+cmp.Diff(expected.Spec, curr.Spec),
+			"diff.spec", cmp.Diff(expected.Spec, curr.Spec),
+			"diff.labels", cmp.Diff(expected.Labels, curr.Labels),
+			"diff.annotations", cmp.Diff(expected.Annotations, curr.Annotations),
+		)
+	}
+
 	expected.ResourceVersion = curr.ResourceVersion
 	updated, err := r.updateDeployment(ctx, transform, expected)
 	if err != nil {
@@ -185,10 +266,10 @@ func (r *Reconciler) reconcileJsonataTransformationDeployment(ctx context.Contex
 	return nil
 }
 
-func (r *Reconciler) reconcileJsonataTransformationSinkBinding(ctx context.Context, transform *eventing.EventTransform) error {
+func (r *Reconciler) reconcileJsonataTransformationSinkBinding(ctx context.Context, transform *eventing.EventTransform) (*sources.SinkBinding, error) {
 	if transform.Spec.Sink == nil {
 		transform.Status.PropagateJsonataSinkBindingUnset()
-		return r.deleteJsonataTransformationSinkBinding(ctx, transform)
+		return nil, r.deleteJsonataTransformationSinkBinding(ctx, transform)
 	}
 
 	expected := jsonataSinkBinding(ctx, transform)
@@ -196,37 +277,27 @@ func (r *Reconciler) reconcileJsonataTransformationSinkBinding(ctx context.Conte
 	if apierrors.IsNotFound(err) {
 		created, err := r.createSinkBinding(ctx, transform, expected)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		if !transform.Status.PropagateJsonataSinkBindingStatus(created.Status) {
-			// Wait for SinkBinding to become ready before continuing.
-			return controller.NewSkipKey("")
-		}
-		return nil
+		transform.Status.PropagateJsonataSinkBindingStatus(created.Status)
+		return created, nil
 	}
 	if err != nil {
-		return fmt.Errorf("failed to get deployment %s/%s: %w", expected.GetNamespace(), expected.GetName(), err)
+		return nil, fmt.Errorf("failed to get sink binding %s/%s: %w", expected.GetNamespace(), expected.GetName(), err)
 	}
 	if equality.Semantic.DeepDerivative(expected.Spec, curr.Spec) &&
 		equality.Semantic.DeepDerivative(expected.Labels, curr.Labels) &&
 		equality.Semantic.DeepDerivative(expected.Annotations, curr.Annotations) {
-		if !transform.Status.PropagateJsonataSinkBindingStatus(curr.Status) {
-			// Wait for SinkBinding to become ready before continuing.
-			return controller.NewSkipKey("")
-		}
-		return nil
+		transform.Status.PropagateJsonataSinkBindingStatus(curr.Status)
+		return curr, nil
 	}
 	expected.ResourceVersion = curr.ResourceVersion
 	updated, err := r.updateSinkBinding(ctx, transform, expected)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	if !transform.Status.PropagateJsonataSinkBindingStatus(updated.Status) {
-		// Wait for SinkBinding to become ready before continuing.
-		return controller.NewSkipKey("")
-	}
-
-	return nil
+	transform.Status.PropagateJsonataSinkBindingStatus(updated.Status)
+	return updated, nil
 }
 
 func (r *Reconciler) reconcileJsonataTransformationAddress(ctx context.Context, transform *eventing.EventTransform) error {
@@ -234,25 +305,74 @@ func (r *Reconciler) reconcileJsonataTransformationAddress(ctx context.Context, 
 	endpoint, err := r.jsonataEndpointLister.Endpoints(transform.GetNamespace()).Get(service.GetName())
 	if apierrors.IsNotFound(err) {
 		transform.Status.MarkWaitingForServiceEndpoints()
-		return nil
+		return controller.NewSkipKey("")
 	}
 	if err != nil {
 		return fmt.Errorf("failed to list jsonata endpoints: %w", err)
 	}
 	if len(endpoint.Subsets) == 0 || len(endpoint.Subsets[0].Ports) == 0 || len(endpoint.Subsets[0].Addresses) == 0 {
 		transform.Status.MarkWaitingForServiceEndpoints()
-		return nil
+		return controller.NewSkipKey("")
 	}
 
-	// TODO: Support TLS and Authn/z
+	if f := feature.FromContext(ctx); f.IsStrictTransportEncryption() {
+		for _, sub := range endpoint.Subsets {
+			for _, p := range sub.Ports {
+				if p.Port != 8443 {
+					transform.Status.MarkWaitingForServiceEndpoints()
+					return controller.NewSkipKey("")
+				}
+			}
+		}
+	}
 
 	hostname := network.GetServiceHostname(service.GetName(), service.GetNamespace())
-	transform.Status.SetAddresses(duckv1.Addressable{
-		Name: ptr.String("http"),
-		URL:  apis.HTTP(hostname),
-	})
+
+	if feature.FromContext(ctx).IsStrictTransportEncryption() {
+		transform.Status.SetAddresses(
+			duckv1.Addressable{
+				Name:    ptr.String("https"),
+				URL:     apis.HTTPS(hostname),
+				CACerts: r.jsonataCaCerts(ctx, transform),
+			},
+		)
+	} else if feature.FromContext(ctx).IsPermissiveTransportEncryption() {
+		transform.Status.SetAddresses(
+			duckv1.Addressable{
+				Name:    ptr.String("https"),
+				URL:     apis.HTTPS(hostname),
+				CACerts: r.jsonataCaCerts(ctx, transform),
+			},
+			duckv1.Addressable{
+				Name: ptr.String("http"),
+				URL:  apis.HTTP(hostname),
+			},
+		)
+	} else {
+		transform.Status.SetAddresses(duckv1.Addressable{
+			Name: ptr.String("http"),
+			URL:  apis.HTTP(hostname),
+		})
+	}
+
+	// TODO: Support Authn/z (control plane and data plane)
 
 	return nil
+}
+
+func (r *Reconciler) jsonataCaCerts(_ context.Context, transform *eventing.EventTransform) *string {
+	s, err := r.certificatesSecretLister.Secrets(transform.GetNamespace()).Get(jsonataCertificateSecretName(transform))
+	if err != nil {
+		return nil
+	}
+	ca, ok := s.Data[eventingtls.SecretCACert]
+	if !ok {
+		return nil
+	}
+	if len(ca) == 0 {
+		return nil
+	}
+	return ptr.String(string(ca))
 }
 
 func (r *Reconciler) createService(ctx context.Context, transform *eventing.EventTransform, expected corev1.Service) (*corev1.Service, error) {
@@ -345,5 +465,44 @@ func (r *Reconciler) updateSinkBinding(ctx context.Context, transform *eventing.
 		return nil, fmt.Errorf("failed to update sink binding %s/%s: %w", expected.GetNamespace(), expected.GetName(), err)
 	}
 	controller.GetEventRecorder(ctx).Event(transform, corev1.EventTypeNormal, "JsonataSinkBindingUpdated", expected.GetName())
+	return updated, nil
+}
+
+func (r *Reconciler) deleteJsonataTransformationCertificate(ctx context.Context, transform *eventing.EventTransform) error {
+	certificate := jsonataCertificate(ctx, transform)
+	_, err := r.cmCertificateLister.Certificates(certificate.GetNamespace()).Get(certificate.GetName())
+	if apierrors.IsNotFound(err) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("failed to get certificate %s/%s: %w", certificate.GetNamespace(), certificate.GetName(), err)
+	}
+
+	err = r.cmClient.CertmanagerV1().Certificates(certificate.GetNamespace()).Delete(ctx, certificate.GetName(), metav1.DeleteOptions{})
+	if apierrors.IsNotFound(err) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("failed to delete certificate %s/%s: %w", certificate.GetNamespace(), certificate.GetName(), err)
+	}
+	controller.GetEventRecorder(ctx).Event(transform, corev1.EventTypeNormal, "JsonataCertificateDeleted", certificate.GetName())
+	return nil
+}
+
+func (r *Reconciler) createCertificate(ctx context.Context, transform *eventing.EventTransform, expected *cmapis.Certificate) (*cmapis.Certificate, error) {
+	created, err := r.cmClient.CertmanagerV1().Certificates(expected.GetNamespace()).Create(ctx, expected, metav1.CreateOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create jsonata certificate %s/%s: %w", expected.GetNamespace(), expected.GetName(), err)
+	}
+	controller.GetEventRecorder(ctx).Event(transform, corev1.EventTypeNormal, "JsonataCertificateCreated", expected.GetName())
+	return created, nil
+}
+
+func (r *Reconciler) updateCertificate(ctx context.Context, transform *eventing.EventTransform, expected *cmapis.Certificate) (*cmapis.Certificate, error) {
+	updated, err := r.cmClient.CertmanagerV1().Certificates(expected.GetNamespace()).Update(ctx, expected, metav1.UpdateOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to update jsonata certificate %s/%s: %w", expected.GetNamespace(), expected.GetName(), err)
+	}
+	controller.GetEventRecorder(ctx).Event(transform, corev1.EventTypeNormal, "JsonataCertificateUpdated", expected.GetName())
 	return updated, nil
 }

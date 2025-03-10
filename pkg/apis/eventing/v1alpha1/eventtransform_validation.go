@@ -35,6 +35,7 @@ var possibleTransformations = []string{"jsonata"}
 func (ts *EventTransformSpec) Validate(ctx context.Context) *apis.FieldError {
 	errs := ts.EventTransformations.Validate(ctx /* allowEmpty */, false)
 	errs = errs.Also(ts.Sink.Validate(ctx).ViaField("sink"))
+	errs = errs.Also(disallowSinkCaCerts(ts).ViaField("sink"))
 	errs = errs.Also(ts.Reply.Validate(ctx, ts).ViaField("reply"))
 
 	if apis.IsInUpdate(ctx) {
@@ -119,6 +120,18 @@ func (js *JsonataEventTransformationSpec) Validate(context.Context) *apis.FieldE
 	// The downside is that the errors will only be present in the status of the EventTransform resource.
 	// We can reconsider this in the future and improve.
 	return nil
+}
+
+func disallowSinkCaCerts(ts *EventTransformSpec) *apis.FieldError {
+	sink := ts.Sink
+	if sink == nil || sink.CACerts == nil || ts.Jsonata == nil {
+		return nil
+	}
+	return &apis.FieldError{
+		Message: "CACerts for the sink is not supported for JSONata transformations, to propagate CA trust bundles use labeled ConfigMaps: " +
+			"https://knative.dev/docs/eventing/features/transport-encryption/#configure-additional-ca-trust-bundles",
+		Paths: []string{"CACerts"},
+	}
 }
 
 func (in *EventTransformSpec) CheckImmutableFields(ctx context.Context, original *EventTransform) *apis.FieldError {

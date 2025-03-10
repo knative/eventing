@@ -24,7 +24,11 @@ import (
 	cetest "github.com/cloudevents/sdk-go/v2/test"
 	"github.com/google/uuid"
 	eventing "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/test/rekt/features/featureflags"
+	"knative.dev/eventing/test/rekt/resources/addressable"
 	"knative.dev/eventing/test/rekt/resources/eventtransform"
+	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
@@ -266,6 +270,157 @@ func JsonataSinkReplyTransform() *feature.Feature {
 			cetest.DataContains(replyEventType),
 			cetest.DataContains(replyEventSource),
 		).Exact(1),
+	)
+
+	return f
+}
+
+func JsonataDirectTLS() *feature.Feature {
+	f := feature.NewFeature()
+
+	transformName := feature.MakeRandomK8sName("event-transform")
+	source := feature.MakeRandomK8sName("source")
+
+	const (
+		reason  = "test-reason"
+		message = "test-message"
+	)
+
+	event := cloudevents.NewEvent()
+	event.SetID(uuid.NewString())
+	event.SetSource("my-source")
+	event.SetType("my-type")
+	event.SetTime(time.Now())
+	_ = event.SetData(cloudevents.ApplicationJSON, map[string]interface{}{
+		"reason":  reason,
+		"message": message,
+	})
+
+	f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
+
+	f.Setup("Install event transform", eventtransform.Install(transformName, eventtransform.WithSpec(
+		eventtransform.WithJsonata(eventing.JsonataEventTransformationSpec{Expression: `
+{
+    "specversion": "1.0",
+    "id": id,
+    "type": "transformed-event",
+    "source": source,
+    "reason": data.reason,
+    "message": data.message,
+	"kind": "input",
+    "data": $
+}
+`}),
+	)))
+	f.Setup("event transform is addressable", eventtransform.IsAddressable(transformName))
+	f.Setup("event transform is ready", eventtransform.IsReady(transformName))
+	f.Setup("event transform has HTTPS address", eventtransform.ValidateAddress(transformName, addressable.AssertHTTPSAddress))
+
+	f.Requirement("install source", eventshub.Install(source,
+		eventshub.InputEvent(event),
+		eventshub.StartSenderToResourceTLS(eventtransform.GVR(), transformName, nil)),
+	)
+
+	f.Assert("expected sent event", assert.OnStore(source).
+		MatchSentEvent(
+			cetest.HasId(event.ID()),
+			cetest.HasSource(event.Source()),
+			cetest.HasType(event.Type()),
+			cetest.DataContains(reason),
+			cetest.DataContains(message),
+		).Exact(1),
+	)
+
+	f.Assert("expected transformed event as response", assert.OnStore(source).
+		Match(PositiveStatusCode).
+		MatchResponseEvent(
+			cetest.HasId(event.ID()),
+			cetest.HasSource(event.Source()),
+			cetest.HasType("transformed-event"),
+			cetest.HasExtension("reason", reason),
+			cetest.HasExtension("message", message),
+			cetest.DataContains(event.Type()),
+			cetest.DataContains(event.Source()),
+			cetest.DataContains(event.ID()),
+			cetest.DataContains(reason),
+			cetest.DataContains(message),
+		).Exact(1),
+	)
+
+	return f
+}
+
+// JsonataSinkTLS tests that the EventTransform forwards the transformed event to the sink.
+func JsonataSinkTLS() *feature.Feature {
+	f := feature.NewFeature()
+
+	transformName := feature.MakeRandomK8sName("event-transform")
+	sink := feature.MakeRandomK8sName("sink")
+	source := feature.MakeRandomK8sName("source")
+
+	const (
+		reason  = "test-reason"
+		message = "test-message"
+	)
+
+	event := cloudevents.NewEvent()
+	event.SetID(uuid.NewString())
+	event.SetSource("my-source")
+	event.SetType("my-type")
+	event.SetTime(time.Now())
+	_ = event.SetData(cloudevents.ApplicationJSON, map[string]interface{}{
+		"reason":  reason,
+		"message": message,
+	})
+
+	f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
+	f.Prerequisite("transport encryption is strict", featureflags.AuthenticationOIDCEnabled())
+
+	f.Setup("Install event transform", eventtransform.Install(transformName, eventtransform.WithSpec(
+		eventtransform.WithSink(&duckv1.Destination{URI: apis.HTTPS(sink)}),
+		eventtransform.WithJsonata(eventing.JsonataEventTransformationSpec{Expression: `
+{
+    "specversion": "1.0",
+    "id": id,
+    "type": "transformed-event",
+    "source": source,
+    "reason": data.reason,
+    "message": data.message,
+    "data": $
+}
+`}),
+	)))
+	f.Setup("event transform is addressable", eventtransform.IsAddressable(transformName))
+	f.Setup("event transform is ready", eventtransform.IsReady(transformName))
+	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiverTLS))
+	f.Setup("event transform has HTTPS address", eventtransform.ValidateAddress(transformName, addressable.AssertHTTPSAddress))
+
+	f.Requirement("install source", eventshub.Install(source,
+		eventshub.InputEvent(event),
+		eventshub.StartSenderToResourceTLS(eventtransform.GVR(), transformName, nil)),
+	)
+
+	f.Assert("expected transformed event", assert.OnStore(sink).
+		MatchReceivedEvent(
+			cetest.HasId(event.ID()),
+			cetest.HasSource(event.Source()),
+			cetest.HasType("transformed-event"),
+			cetest.HasExtension("reason", reason),
+			cetest.HasExtension("message", message),
+			cetest.DataContains(event.Type()),
+			cetest.DataContains(event.Source()),
+			cetest.DataContains(event.ID()),
+			cetest.DataContains(reason),
+			cetest.DataContains(message),
+		).Exact(1),
+	)
+
+	f.Assert("source received a 2xx status code", assert.OnStore(source).
+		Match(
+			assert.MatchKind(eventshub.EventResponse),
+			PositiveStatusCode,
+		).
+		Exact(1),
 	)
 
 	return f
