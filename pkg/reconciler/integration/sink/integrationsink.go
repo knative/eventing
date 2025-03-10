@@ -20,6 +20,10 @@ import (
 	"context"
 	"fmt"
 
+	"knative.dev/eventing/pkg/certificates"
+
+	cmv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+
 	v1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 
@@ -40,6 +44,11 @@ import (
 	sinks "knative.dev/eventing/pkg/apis/sinks/v1alpha1"
 	"knative.dev/eventing/pkg/auth"
 	eventingv1alpha1listers "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
+
+	certmanagerclientset "knative.dev/eventing/pkg/client/certmanager/clientset/versioned"
+
+	certmanagerlisters "knative.dev/eventing/pkg/client/certmanager/listers/certmanager/v1"
+
 	"knative.dev/eventing/pkg/eventingtls"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/controller"
@@ -49,11 +58,12 @@ import (
 
 const (
 	// Name of the corev1.Events emitted from the reconciliation process
-	sinkReconciled    = "IntegrationSinkReconciled"
-	deploymentCreated = "DeploymentCreated"
-	deploymentUpdated = "DeploymentUpdated"
-	serviceCreated    = "ServiceCreated"
-	serviceUpdated    = "ServiceUpdated"
+	sinkReconciled     = "IntegrationSinkReconciled"
+	deploymentCreated  = "DeploymentCreated"
+	deploymentUpdated  = "DeploymentUpdated"
+	serviceCreated     = "ServiceCreated"
+	certificateCreated = "CertificateCreated"
+	serviceUpdated     = "ServiceUpdated"
 )
 
 type Reconciler struct {
@@ -62,10 +72,10 @@ type Reconciler struct {
 
 	kubeClientSet kubernetes.Interface
 
-	deploymentLister appsv1listers.DeploymentLister
-	serviceLister    corev1listers.ServiceLister
-
-	systemNamespace string
+	deploymentLister    appsv1listers.DeploymentLister
+	serviceLister       corev1listers.ServiceLister
+	cmCertificateLister certmanagerlisters.CertificateLister
+	certManagerClient   certmanagerclientset.Interface
 }
 
 // newReconciledNormal makes a new reconciler event with event type Normal, and
@@ -77,7 +87,15 @@ func newReconciledNormal(namespace, name string) reconciler.Event {
 func (r *Reconciler) ReconcileKind(ctx context.Context, sink *sinks.IntegrationSink) reconciler.Event {
 	featureFlags := feature.FromContext(ctx)
 
-	_, err := r.reconcileDeployment(ctx, sink)
+	if featureFlags.IsPermissiveTransportEncryption() || featureFlags.IsStrictTransportEncryption() {
+		_, err := r.reconcileCMCertificate(ctx, sink)
+		if err != nil {
+			logging.FromContext(ctx).Errorw("Error reconciling Certificate", zap.Error(err))
+			return err
+		}
+	}
+
+	_, err := r.reconcileDeployment(ctx, sink, featureFlags)
 	if err != nil {
 		logging.FromContext(ctx).Errorw("Error reconciling Pod", zap.Error(err))
 		return err
@@ -101,9 +119,9 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, sink *sinks.IntegrationS
 	return newReconciledNormal(sink.Namespace, sink.Name)
 }
 
-func (r *Reconciler) reconcileDeployment(ctx context.Context, sink *sinks.IntegrationSink) (*v1.Deployment, error) {
+func (r *Reconciler) reconcileDeployment(ctx context.Context, sink *sinks.IntegrationSink, featureFlags feature.Flags) (*v1.Deployment, error) {
 
-	expected := resources.MakeDeploymentSpec(sink)
+	expected := resources.MakeDeploymentSpec(sink, featureFlags)
 	deployment, err := r.deploymentLister.Deployments(sink.Namespace).Get(expected.Name)
 	if apierrors.IsNotFound(err) {
 		deployment, err = r.kubeClientSet.AppsV1().Deployments(sink.Namespace).Create(ctx, expected, metav1.CreateOptions{})
@@ -152,11 +170,36 @@ func (r *Reconciler) reconcileService(ctx context.Context, sink *sinks.Integrati
 	return svc, nil
 }
 
+func (r *Reconciler) reconcileCMCertificate(ctx context.Context, sink *sinks.IntegrationSink) (*cmv1.Certificate, error) {
+
+	expected := certificates.MakeCertificate(sink, certificates.WithDNSNames(
+		network.GetServiceHostname(resources.DeploymentName(sink.GetName()), sink.GetNamespace()),
+		fmt.Sprintf("%s.%s.svc", resources.DeploymentName(sink.GetName()), sink.GetNamespace()),
+	))
+
+	cert, err := r.cmCertificateLister.Certificates(sink.Namespace).Get(expected.Name)
+	if apierrors.IsNotFound(err) {
+		cert, err := r.certManagerClient.CertmanagerV1().Certificates(sink.Namespace).Create(ctx, expected, metav1.CreateOptions{})
+		if err != nil {
+			return nil, fmt.Errorf("creating new Certificate: %v", err)
+		}
+		controller.GetEventRecorder(ctx).Eventf(sink, corev1.EventTypeNormal, certificateCreated, "Certificate created %q", cert.Name)
+	} else if err != nil {
+		return nil, fmt.Errorf("getting Certificate: %v", err)
+	} else if !metav1.IsControlledBy(cert, sink) {
+		return nil, fmt.Errorf("Certificate %q is not owned by IntegrationSink %q", cert.Name, sink.Name)
+	} else {
+		logging.FromContext(ctx).Debugw("Reusing existing Certificate", zap.Any("Certificate", cert))
+	}
+
+	return cert, nil
+}
+
 func (r *Reconciler) reconcileAddress(ctx context.Context, sink *sinks.IntegrationSink) error {
 
 	featureFlags := feature.FromContext(ctx)
 	if featureFlags.IsPermissiveTransportEncryption() {
-		caCerts, err := r.getCaCerts()
+		caCerts, err := r.getCaCerts(sink)
 		if err != nil {
 			return err
 		}
@@ -175,7 +218,7 @@ func (r *Reconciler) reconcileAddress(ctx context.Context, sink *sinks.Integrati
 		// - status.address https address with path-based routing
 		// - status.addresses:
 		//   - https address with path-based routing
-		caCerts, err := r.getCaCerts()
+		caCerts, err := r.getCaCerts(sink)
 		if err != nil {
 			return err
 		}
@@ -209,11 +252,10 @@ func (r *Reconciler) reconcileAddress(ctx context.Context, sink *sinks.Integrati
 	return nil
 }
 
-func (r *Reconciler) getCaCerts() (*string, error) {
-	// Getting the secret called "imc-dispatcher-tls" from system namespace
-	secret, err := r.secretLister.Secrets(r.systemNamespace).Get(eventingtls.IntegrationSinkDispatcherServerTLSSecretName)
+func (r *Reconciler) getCaCerts(sink *sinks.IntegrationSink) (*string, error) {
+	secret, err := r.secretLister.Secrets(sink.Namespace).Get(certificates.CertificateName(sink.Name))
 	if err != nil {
-		return nil, fmt.Errorf("failed to get CA certs from %s/%s: %w", r.systemNamespace, eventingtls.IntegrationSinkDispatcherServerTLSSecretName, err)
+		return nil, fmt.Errorf("failed to get CA certs from %s/%s: %w", sink.Namespace, certificates.CertificateName(sink.Name), err)
 	}
 	caCerts, ok := secret.Data[eventingtls.SecretCACert]
 	if !ok {

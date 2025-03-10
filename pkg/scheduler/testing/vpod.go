@@ -57,6 +57,10 @@ func NewVPod(ns, name string, vreplicas int32, placements []duckv1alpha1.Placeme
 	}
 }
 
+func (d *sampleVPod) GetDeletionTimestamp() *metav1.Time {
+	return nil
+}
+
 func (d *sampleVPod) GetKey() types.NamespacedName {
 	return d.key
 }

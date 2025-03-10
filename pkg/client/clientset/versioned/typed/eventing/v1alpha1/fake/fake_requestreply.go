@@ -19,129 +19,34 @@ limitations under the License.
 package fake
 
 import (
-	"context"
-
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
+	gentype "k8s.io/client-go/gentype"
 	v1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	eventingv1alpha1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/eventing/v1alpha1"
 )
 
-// FakeRequestReplies implements RequestReplyInterface
-type FakeRequestReplies struct {
+// fakeRequestReplies implements RequestReplyInterface
+type fakeRequestReplies struct {
+	*gentype.FakeClientWithList[*v1alpha1.RequestReply, *v1alpha1.RequestReplyList]
 	Fake *FakeEventingV1alpha1
-	ns   string
 }
 
-var requestrepliesResource = v1alpha1.SchemeGroupVersion.WithResource("requestreplies")
-
-var requestrepliesKind = v1alpha1.SchemeGroupVersion.WithKind("RequestReply")
-
-// Get takes name of the requestReply, and returns the corresponding requestReply object, and an error if there is any.
-func (c *FakeRequestReplies) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.RequestReply, err error) {
-	emptyResult := &v1alpha1.RequestReply{}
-	obj, err := c.Fake.
-		Invokes(testing.NewGetActionWithOptions(requestrepliesResource, c.ns, name, options), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
+func newFakeRequestReplies(fake *FakeEventingV1alpha1, namespace string) eventingv1alpha1.RequestReplyInterface {
+	return &fakeRequestReplies{
+		gentype.NewFakeClientWithList[*v1alpha1.RequestReply, *v1alpha1.RequestReplyList](
+			fake.Fake,
+			namespace,
+			v1alpha1.SchemeGroupVersion.WithResource("requestreplies"),
+			v1alpha1.SchemeGroupVersion.WithKind("RequestReply"),
+			func() *v1alpha1.RequestReply { return &v1alpha1.RequestReply{} },
+			func() *v1alpha1.RequestReplyList { return &v1alpha1.RequestReplyList{} },
+			func(dst, src *v1alpha1.RequestReplyList) { dst.ListMeta = src.ListMeta },
+			func(list *v1alpha1.RequestReplyList) []*v1alpha1.RequestReply {
+				return gentype.ToPointerSlice(list.Items)
+			},
+			func(list *v1alpha1.RequestReplyList, items []*v1alpha1.RequestReply) {
+				list.Items = gentype.FromPointerSlice(items)
+			},
+		),
+		fake,
 	}
-	return obj.(*v1alpha1.RequestReply), err
-}
-
-// List takes label and field selectors, and returns the list of RequestReplies that match those selectors.
-func (c *FakeRequestReplies) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.RequestReplyList, err error) {
-	emptyResult := &v1alpha1.RequestReplyList{}
-	obj, err := c.Fake.
-		Invokes(testing.NewListActionWithOptions(requestrepliesResource, requestrepliesKind, c.ns, opts), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-
-	label, _, _ := testing.ExtractFromListOptions(opts)
-	if label == nil {
-		label = labels.Everything()
-	}
-	list := &v1alpha1.RequestReplyList{ListMeta: obj.(*v1alpha1.RequestReplyList).ListMeta}
-	for _, item := range obj.(*v1alpha1.RequestReplyList).Items {
-		if label.Matches(labels.Set(item.Labels)) {
-			list.Items = append(list.Items, item)
-		}
-	}
-	return list, err
-}
-
-// Watch returns a watch.Interface that watches the requested requestReplies.
-func (c *FakeRequestReplies) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewWatchActionWithOptions(requestrepliesResource, c.ns, opts))
-
-}
-
-// Create takes the representation of a requestReply and creates it.  Returns the server's representation of the requestReply, and an error, if there is any.
-func (c *FakeRequestReplies) Create(ctx context.Context, requestReply *v1alpha1.RequestReply, opts v1.CreateOptions) (result *v1alpha1.RequestReply, err error) {
-	emptyResult := &v1alpha1.RequestReply{}
-	obj, err := c.Fake.
-		Invokes(testing.NewCreateActionWithOptions(requestrepliesResource, c.ns, requestReply, opts), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1alpha1.RequestReply), err
-}
-
-// Update takes the representation of a requestReply and updates it. Returns the server's representation of the requestReply, and an error, if there is any.
-func (c *FakeRequestReplies) Update(ctx context.Context, requestReply *v1alpha1.RequestReply, opts v1.UpdateOptions) (result *v1alpha1.RequestReply, err error) {
-	emptyResult := &v1alpha1.RequestReply{}
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateActionWithOptions(requestrepliesResource, c.ns, requestReply, opts), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1alpha1.RequestReply), err
-}
-
-// UpdateStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeRequestReplies) UpdateStatus(ctx context.Context, requestReply *v1alpha1.RequestReply, opts v1.UpdateOptions) (result *v1alpha1.RequestReply, err error) {
-	emptyResult := &v1alpha1.RequestReply{}
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceActionWithOptions(requestrepliesResource, "status", c.ns, requestReply, opts), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1alpha1.RequestReply), err
-}
-
-// Delete takes name of the requestReply and deletes it. Returns an error if one occurs.
-func (c *FakeRequestReplies) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewDeleteActionWithOptions(requestrepliesResource, c.ns, name, opts), &v1alpha1.RequestReply{})
-
-	return err
-}
-
-// DeleteCollection deletes a collection of objects.
-func (c *FakeRequestReplies) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewDeleteCollectionActionWithOptions(requestrepliesResource, c.ns, opts, listOpts)
-
-	_, err := c.Fake.Invokes(action, &v1alpha1.RequestReplyList{})
-	return err
-}
-
-// Patch applies the patch and returns the patched requestReply.
-func (c *FakeRequestReplies) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.RequestReply, err error) {
-	emptyResult := &v1alpha1.RequestReply{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(requestrepliesResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1alpha1.RequestReply), err
 }

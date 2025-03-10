@@ -19,6 +19,8 @@ package sink
 import (
 	"fmt"
 
+	"knative.dev/eventing/pkg/certificates"
+
 	"knative.dev/eventing/pkg/reconciler/integration"
 
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -58,6 +60,8 @@ const (
 	sinkName = "test-integration-sink"
 	sinkUID  = "1234-5678-90"
 	testNS   = "test-namespace"
+
+	logSinkImage = "quay.io/fake-image/log-sink"
 )
 
 var (
@@ -74,6 +78,7 @@ var (
 )
 
 func TestReconcile(t *testing.T) {
+	t.Setenv("INTEGRATION_SINK_LOG_IMAGE", logSinkImage)
 
 	table := TableTest{
 		{
@@ -152,7 +157,6 @@ func TestReconcile(t *testing.T) {
 			serviceLister:     listers.GetServiceLister(),
 			secretLister:      listers.GetSecretLister(),
 			eventPolicyLister: listers.GetEventPolicyLister(),
-			systemNamespace:   testNS,
 		}
 
 		return integrationsink.NewReconciler(ctx, logging.FromContext(ctx), fakeeventingclient.Get(ctx), listers.GetIntegrationSinkLister(), controller.GetEventRecorder(ctx), r)
@@ -163,6 +167,7 @@ func TestReconcile(t *testing.T) {
 }
 
 func makeDeployment(sink *sinksv1alpha1.IntegrationSink, ready *corev1.ConditionStatus) runtime.Object {
+	t := true
 
 	status := appsv1.DeploymentStatus{}
 	if ready != nil {
@@ -200,17 +205,43 @@ func makeDeployment(sink *sinksv1alpha1.IntegrationSink, ready *corev1.Condition
 					Labels: integration.Labels(sink.Name),
 				},
 				Spec: corev1.PodSpec{
+					Volumes: []corev1.Volume{
+						{
+							Name: certificates.CertificateName(sink.Name),
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: certificates.CertificateName(sink.Name),
+									Optional:   &t,
+								},
+							},
+						},
+					},
 					Containers: []corev1.Container{
 						{
 							Name:            "sink",
-							Image:           "gcr.io/knative-nightly/log-sink:latest",
+							Image:           logSinkImage,
 							ImagePullPolicy: corev1.PullIfNotPresent,
-							Ports: []corev1.ContainerPort{{
-								ContainerPort: 8080,
-								Protocol:      corev1.ProtocolTCP,
-								Name:          "http",
-							}},
+							Ports: []corev1.ContainerPort{
+								{
+									ContainerPort: 8080,
+									Protocol:      corev1.ProtocolTCP,
+									Name:          "http",
+								},
+								{
+									ContainerPort: 8443,
+									Protocol:      corev1.ProtocolTCP,
+									Name:          "https",
+								},
+							},
 							Env: []corev1.EnvVar{
+								{
+									Name:  "QUARKUS_HTTP_SSL_CERTIFICATE_FILES",
+									Value: "/etc/test-integration-sink-server-tls/tls.crt",
+								},
+								{
+									Name:  "QUARKUS_HTTP_SSL_CERTIFICATE_KEY-FILES",
+									Value: "/etc/test-integration-sink-server-tls/tls.key",
+								},
 								{
 									Name:  "CAMEL_KAMELET_LOG_SINK_LEVEL",
 									Value: "info",
@@ -256,6 +287,13 @@ func makeDeployment(sink *sinksv1alpha1.IntegrationSink, ready *corev1.Condition
 									Value: "false",
 								},
 							},
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      certificates.CertificateName(sink.Name),
+									MountPath: "/etc/" + certificates.CertificateName(sink.Name),
+									ReadOnly:  true,
+								},
+							},
 						},
 					},
 				},
@@ -294,6 +332,12 @@ func makeService(name, namespace string) *corev1.Service {
 					Protocol:   corev1.ProtocolTCP,
 					Port:       80,
 					TargetPort: intstr.IntOrString{IntVal: 8080},
+				},
+				{
+					Name:       "https",
+					Protocol:   corev1.ProtocolTCP,
+					Port:       443,
+					TargetPort: intstr.IntOrString{IntVal: 8443},
 				},
 			},
 			Selector: integration.Labels(sinkName),

@@ -19,10 +19,10 @@ limitations under the License.
 package v1
 
 import (
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
-	"k8s.io/client-go/tools/cache"
-	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 )
 
 // TriggerLister helps list Triggers.
@@ -30,7 +30,7 @@ import (
 type TriggerLister interface {
 	// List lists all Triggers in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1.Trigger, err error)
+	List(selector labels.Selector) (ret []*eventingv1.Trigger, err error)
 	// Triggers returns an object that can list and get Triggers.
 	Triggers(namespace string) TriggerNamespaceLister
 	TriggerListerExpansion
@@ -38,17 +38,17 @@ type TriggerLister interface {
 
 // triggerLister implements the TriggerLister interface.
 type triggerLister struct {
-	listers.ResourceIndexer[*v1.Trigger]
+	listers.ResourceIndexer[*eventingv1.Trigger]
 }
 
 // NewTriggerLister returns a new TriggerLister.
 func NewTriggerLister(indexer cache.Indexer) TriggerLister {
-	return &triggerLister{listers.New[*v1.Trigger](indexer, v1.Resource("trigger"))}
+	return &triggerLister{listers.New[*eventingv1.Trigger](indexer, eventingv1.Resource("trigger"))}
 }
 
 // Triggers returns an object that can list and get Triggers.
 func (s *triggerLister) Triggers(namespace string) TriggerNamespaceLister {
-	return triggerNamespaceLister{listers.NewNamespaced[*v1.Trigger](s.ResourceIndexer, namespace)}
+	return triggerNamespaceLister{listers.NewNamespaced[*eventingv1.Trigger](s.ResourceIndexer, namespace)}
 }
 
 // TriggerNamespaceLister helps list and get Triggers.
@@ -56,15 +56,15 @@ func (s *triggerLister) Triggers(namespace string) TriggerNamespaceLister {
 type TriggerNamespaceLister interface {
 	// List lists all Triggers in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1.Trigger, err error)
+	List(selector labels.Selector) (ret []*eventingv1.Trigger, err error)
 	// Get retrieves the Trigger from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v1.Trigger, error)
+	Get(name string) (*eventingv1.Trigger, error)
 	TriggerNamespaceListerExpansion
 }
 
 // triggerNamespaceLister implements the TriggerNamespaceLister
 // interface.
 type triggerNamespaceLister struct {
-	listers.ResourceIndexer[*v1.Trigger]
+	listers.ResourceIndexer[*eventingv1.Trigger]
 }

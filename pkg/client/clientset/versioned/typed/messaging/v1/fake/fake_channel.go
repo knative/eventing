@@ -19,129 +19,30 @@ limitations under the License.
 package fake
 
 import (
-	"context"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
+	gentype "k8s.io/client-go/gentype"
 	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
+	messagingv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/messaging/v1"
 )
 
-// FakeChannels implements ChannelInterface
-type FakeChannels struct {
+// fakeChannels implements ChannelInterface
+type fakeChannels struct {
+	*gentype.FakeClientWithList[*v1.Channel, *v1.ChannelList]
 	Fake *FakeMessagingV1
-	ns   string
 }
 
-var channelsResource = v1.SchemeGroupVersion.WithResource("channels")
-
-var channelsKind = v1.SchemeGroupVersion.WithKind("Channel")
-
-// Get takes name of the channel, and returns the corresponding channel object, and an error if there is any.
-func (c *FakeChannels) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.Channel, err error) {
-	emptyResult := &v1.Channel{}
-	obj, err := c.Fake.
-		Invokes(testing.NewGetActionWithOptions(channelsResource, c.ns, name, options), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
+func newFakeChannels(fake *FakeMessagingV1, namespace string) messagingv1.ChannelInterface {
+	return &fakeChannels{
+		gentype.NewFakeClientWithList[*v1.Channel, *v1.ChannelList](
+			fake.Fake,
+			namespace,
+			v1.SchemeGroupVersion.WithResource("channels"),
+			v1.SchemeGroupVersion.WithKind("Channel"),
+			func() *v1.Channel { return &v1.Channel{} },
+			func() *v1.ChannelList { return &v1.ChannelList{} },
+			func(dst, src *v1.ChannelList) { dst.ListMeta = src.ListMeta },
+			func(list *v1.ChannelList) []*v1.Channel { return gentype.ToPointerSlice(list.Items) },
+			func(list *v1.ChannelList, items []*v1.Channel) { list.Items = gentype.FromPointerSlice(items) },
+		),
+		fake,
 	}
-	return obj.(*v1.Channel), err
-}
-
-// List takes label and field selectors, and returns the list of Channels that match those selectors.
-func (c *FakeChannels) List(ctx context.Context, opts metav1.ListOptions) (result *v1.ChannelList, err error) {
-	emptyResult := &v1.ChannelList{}
-	obj, err := c.Fake.
-		Invokes(testing.NewListActionWithOptions(channelsResource, channelsKind, c.ns, opts), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-
-	label, _, _ := testing.ExtractFromListOptions(opts)
-	if label == nil {
-		label = labels.Everything()
-	}
-	list := &v1.ChannelList{ListMeta: obj.(*v1.ChannelList).ListMeta}
-	for _, item := range obj.(*v1.ChannelList).Items {
-		if label.Matches(labels.Set(item.Labels)) {
-			list.Items = append(list.Items, item)
-		}
-	}
-	return list, err
-}
-
-// Watch returns a watch.Interface that watches the requested channels.
-func (c *FakeChannels) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewWatchActionWithOptions(channelsResource, c.ns, opts))
-
-}
-
-// Create takes the representation of a channel and creates it.  Returns the server's representation of the channel, and an error, if there is any.
-func (c *FakeChannels) Create(ctx context.Context, channel *v1.Channel, opts metav1.CreateOptions) (result *v1.Channel, err error) {
-	emptyResult := &v1.Channel{}
-	obj, err := c.Fake.
-		Invokes(testing.NewCreateActionWithOptions(channelsResource, c.ns, channel, opts), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1.Channel), err
-}
-
-// Update takes the representation of a channel and updates it. Returns the server's representation of the channel, and an error, if there is any.
-func (c *FakeChannels) Update(ctx context.Context, channel *v1.Channel, opts metav1.UpdateOptions) (result *v1.Channel, err error) {
-	emptyResult := &v1.Channel{}
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateActionWithOptions(channelsResource, c.ns, channel, opts), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1.Channel), err
-}
-
-// UpdateStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeChannels) UpdateStatus(ctx context.Context, channel *v1.Channel, opts metav1.UpdateOptions) (result *v1.Channel, err error) {
-	emptyResult := &v1.Channel{}
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceActionWithOptions(channelsResource, "status", c.ns, channel, opts), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1.Channel), err
-}
-
-// Delete takes name of the channel and deletes it. Returns an error if one occurs.
-func (c *FakeChannels) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewDeleteActionWithOptions(channelsResource, c.ns, name, opts), &v1.Channel{})
-
-	return err
-}
-
-// DeleteCollection deletes a collection of objects.
-func (c *FakeChannels) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
-	action := testing.NewDeleteCollectionActionWithOptions(channelsResource, c.ns, opts, listOpts)
-
-	_, err := c.Fake.Invokes(action, &v1.ChannelList{})
-	return err
-}
-
-// Patch applies the patch and returns the patched channel.
-func (c *FakeChannels) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Channel, err error) {
-	emptyResult := &v1.Channel{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(channelsResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1.Channel), err
 }

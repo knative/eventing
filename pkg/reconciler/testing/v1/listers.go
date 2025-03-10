@@ -17,6 +17,7 @@ limitations under the License.
 package testing
 
 import (
+	certmanagerv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -40,6 +41,7 @@ import (
 	sinksv1alpha1 "knative.dev/eventing/pkg/apis/sinks/v1alpha1"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	certmanagerlisters "knative.dev/eventing/pkg/client/certmanager/listers/certmanager/v1"
 	fakeeventingclientset "knative.dev/eventing/pkg/client/clientset/versioned/fake"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1"
 	eventingv1alpha1listers "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
@@ -62,6 +64,7 @@ var clientSetSchemes = []func(*runtime.Scheme) error{
 	eventingduck.AddToScheme,
 	testscheme.Eventing.AddToScheme,
 	testscheme.Serving.AddToScheme,
+	certmanagerv1.AddToScheme,
 }
 
 type Listers struct {
@@ -105,6 +108,10 @@ func (l *Listers) GetEventingObjects() []runtime.Object {
 	return l.sorter.ObjectsForSchemeFunc(fakeeventingclientset.AddToScheme)
 }
 
+func (l *Listers) GetCertManagerObjects() []runtime.Object {
+	return l.sorter.ObjectsForSchemeFunc(certmanagerv1.AddToScheme)
+}
+
 func (l *Listers) GetSubscriberObjects() []runtime.Object {
 	return l.sorter.ObjectsForSchemeFunc(testscheme.SubscriberToScheme)
 }
@@ -130,6 +137,10 @@ func (l *Listers) GetIntegrationSinkLister() sinkslisters.IntegrationSinkLister 
 
 func (l *Listers) GetJobSinkLister() sinkslisters.JobSinkLister {
 	return sinkslisters.NewJobSinkLister(l.indexerFor(&sinksv1alpha1.JobSink{}))
+}
+
+func (l *Listers) GetEventTransformLister() eventingv1alpha1listers.EventTransformLister {
+	return eventingv1alpha1listers.NewEventTransformLister(l.indexerFor(&eventingv1alpha1.EventTransform{}))
 }
 
 func (l *Listers) GetIntegrationSourceLister() sourcev1alpha1listers.IntegrationSourceLister {
@@ -174,6 +185,10 @@ func (l *Listers) GetApiServerSourceLister() sourcelisters.ApiServerSourceLister
 
 func (l *Listers) GetSinkBindingLister() sourcelisters.SinkBindingLister {
 	return sourcelisters.NewSinkBindingLister(l.indexerFor(&sourcesv1.SinkBinding{}))
+}
+
+func (l *Listers) GetCertificateLister() certmanagerlisters.CertificateLister {
+	return certmanagerlisters.NewCertificateLister(l.indexerFor(&certmanagerv1.Certificate{}))
 }
 
 func (l *Listers) GetContainerSourceLister() sourcelisters.ContainerSourceLister {

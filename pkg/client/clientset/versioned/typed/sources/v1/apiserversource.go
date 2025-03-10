@@ -19,13 +19,13 @@ limitations under the License.
 package v1
 
 import (
-	"context"
+	context "context"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	gentype "k8s.io/client-go/gentype"
-	v1 "knative.dev/eventing/pkg/apis/sources/v1"
+	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	scheme "knative.dev/eventing/pkg/client/clientset/versioned/scheme"
 )
 
@@ -37,33 +37,34 @@ type ApiServerSourcesGetter interface {
 
 // ApiServerSourceInterface has methods to work with ApiServerSource resources.
 type ApiServerSourceInterface interface {
-	Create(ctx context.Context, apiServerSource *v1.ApiServerSource, opts metav1.CreateOptions) (*v1.ApiServerSource, error)
-	Update(ctx context.Context, apiServerSource *v1.ApiServerSource, opts metav1.UpdateOptions) (*v1.ApiServerSource, error)
+	Create(ctx context.Context, apiServerSource *sourcesv1.ApiServerSource, opts metav1.CreateOptions) (*sourcesv1.ApiServerSource, error)
+	Update(ctx context.Context, apiServerSource *sourcesv1.ApiServerSource, opts metav1.UpdateOptions) (*sourcesv1.ApiServerSource, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, apiServerSource *v1.ApiServerSource, opts metav1.UpdateOptions) (*v1.ApiServerSource, error)
+	UpdateStatus(ctx context.Context, apiServerSource *sourcesv1.ApiServerSource, opts metav1.UpdateOptions) (*sourcesv1.ApiServerSource, error)
 	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.ApiServerSource, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.ApiServerSourceList, error)
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*sourcesv1.ApiServerSource, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*sourcesv1.ApiServerSourceList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.ApiServerSource, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *sourcesv1.ApiServerSource, err error)
 	ApiServerSourceExpansion
 }
 
 // apiServerSources implements ApiServerSourceInterface
 type apiServerSources struct {
-	*gentype.ClientWithList[*v1.ApiServerSource, *v1.ApiServerSourceList]
+	*gentype.ClientWithList[*sourcesv1.ApiServerSource, *sourcesv1.ApiServerSourceList]
 }
 
 // newApiServerSources returns a ApiServerSources
 func newApiServerSources(c *SourcesV1Client, namespace string) *apiServerSources {
 	return &apiServerSources{
-		gentype.NewClientWithList[*v1.ApiServerSource, *v1.ApiServerSourceList](
+		gentype.NewClientWithList[*sourcesv1.ApiServerSource, *sourcesv1.ApiServerSourceList](
 			"apiserversources",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			namespace,
-			func() *v1.ApiServerSource { return &v1.ApiServerSource{} },
-			func() *v1.ApiServerSourceList { return &v1.ApiServerSourceList{} }),
+			func() *sourcesv1.ApiServerSource { return &sourcesv1.ApiServerSource{} },
+			func() *sourcesv1.ApiServerSourceList { return &sourcesv1.ApiServerSourceList{} },
+		),
 	}
 }

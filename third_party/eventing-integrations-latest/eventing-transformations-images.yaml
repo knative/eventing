@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: eventing-transformations-images
+  namespace: knative-eventing
+  labels:
+    app.kubernetes.io/version: "v20250307-6934237"
+data:
+  transform-jsonata: gcr.io/knative-nightly/transform-jsonata:69342379ce38c448d284d7f475a65091f314cb4f@sha256:25ab4966d8a0f1c4ccb5ae460e8377dd1a247134c0261893cf400c4a4efe7108

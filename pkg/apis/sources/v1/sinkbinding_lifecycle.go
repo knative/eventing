@@ -42,9 +42,11 @@ const (
 )
 
 var sbCondSet = apis.NewLivingConditionSet(
+	SinkBindingConditionAvailable,
 	SinkBindingConditionSinkProvided,
 	SinkBindingConditionOIDCIdentityCreated,
 	SinkBindingConditionOIDCTokenSecretCreated,
+	SinkBindingTrustBundlePropagated,
 )
 
 // GetConditionSet retrieves the condition set for this resource. Implements the KRShaped interface.
@@ -86,12 +88,23 @@ func (sbs *SinkBindingStatus) InitializeConditions() {
 // MarkBindingUnavailable marks the SinkBinding's Ready condition to False with
 // the provided reason and message.
 func (sbs *SinkBindingStatus) MarkBindingUnavailable(reason, message string) {
-	sbCondSet.Manage(sbs).MarkFalse(SinkBindingConditionReady, reason, message)
+	sbCondSet.Manage(sbs).MarkFalse(SinkBindingConditionAvailable, reason, message)
 }
 
 // MarkBindingAvailable marks the SinkBinding's Ready condition to True.
 func (sbs *SinkBindingStatus) MarkBindingAvailable() {
-	sbCondSet.Manage(sbs).MarkTrue(SinkBindingConditionReady)
+	sbCondSet.Manage(sbs).MarkTrue(SinkBindingConditionAvailable)
+}
+
+// MarkFailedTrustBundlePropagation marks the SinkBinding's SinkBindingTrustBundlePropagated condition to False with
+// the provided reason and message.
+func (sbs *SinkBindingStatus) MarkFailedTrustBundlePropagation(reason, message string) {
+	sbCondSet.Manage(sbs).MarkFalse(SinkBindingTrustBundlePropagated, reason, message)
+}
+
+// MarkTrustBundlePropagated marks the SinkBinding's SinkBindingTrustBundlePropagated condition to True.
+func (sbs *SinkBindingStatus) MarkTrustBundlePropagated() {
+	sbCondSet.Manage(sbs).MarkTrue(SinkBindingTrustBundlePropagated)
 }
 
 // MarkSink sets the condition that the source has a sink configured.
@@ -104,6 +117,11 @@ func (sbs *SinkBindingStatus) MarkSink(addr *duckv1.Addressable) {
 	} else {
 		sbCondSet.Manage(sbs).MarkFalse(SinkBindingConditionSinkProvided, "SinkEmpty", "Sink has resolved to empty.%s", "")
 	}
+}
+
+// MarkSinkFailed sets the condition that the source has a sink configured.
+func (sbs *SinkBindingStatus) MarkSinkFailed(reason, messageFormat string, messageA ...interface{}) {
+	sbCondSet.Manage(sbs).MarkFalse(SinkBindingConditionSinkProvided, reason, messageFormat, messageA...)
 }
 
 func (sbs *SinkBindingStatus) MarkOIDCIdentityCreatedSucceeded() {

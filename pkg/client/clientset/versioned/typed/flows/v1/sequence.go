@@ -19,13 +19,13 @@ limitations under the License.
 package v1
 
 import (
-	"context"
+	context "context"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	gentype "k8s.io/client-go/gentype"
-	v1 "knative.dev/eventing/pkg/apis/flows/v1"
+	flowsv1 "knative.dev/eventing/pkg/apis/flows/v1"
 	scheme "knative.dev/eventing/pkg/client/clientset/versioned/scheme"
 )
 
@@ -37,33 +37,34 @@ type SequencesGetter interface {
 
 // SequenceInterface has methods to work with Sequence resources.
 type SequenceInterface interface {
-	Create(ctx context.Context, sequence *v1.Sequence, opts metav1.CreateOptions) (*v1.Sequence, error)
-	Update(ctx context.Context, sequence *v1.Sequence, opts metav1.UpdateOptions) (*v1.Sequence, error)
+	Create(ctx context.Context, sequence *flowsv1.Sequence, opts metav1.CreateOptions) (*flowsv1.Sequence, error)
+	Update(ctx context.Context, sequence *flowsv1.Sequence, opts metav1.UpdateOptions) (*flowsv1.Sequence, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, sequence *v1.Sequence, opts metav1.UpdateOptions) (*v1.Sequence, error)
+	UpdateStatus(ctx context.Context, sequence *flowsv1.Sequence, opts metav1.UpdateOptions) (*flowsv1.Sequence, error)
 	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.Sequence, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.SequenceList, error)
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*flowsv1.Sequence, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*flowsv1.SequenceList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Sequence, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *flowsv1.Sequence, err error)
 	SequenceExpansion
 }
 
 // sequences implements SequenceInterface
 type sequences struct {
-	*gentype.ClientWithList[*v1.Sequence, *v1.SequenceList]
+	*gentype.ClientWithList[*flowsv1.Sequence, *flowsv1.SequenceList]
 }
 
 // newSequences returns a Sequences
 func newSequences(c *FlowsV1Client, namespace string) *sequences {
 	return &sequences{
-		gentype.NewClientWithList[*v1.Sequence, *v1.SequenceList](
+		gentype.NewClientWithList[*flowsv1.Sequence, *flowsv1.SequenceList](
 			"sequences",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			namespace,
-			func() *v1.Sequence { return &v1.Sequence{} },
-			func() *v1.SequenceList { return &v1.SequenceList{} }),
+			func() *flowsv1.Sequence { return &flowsv1.Sequence{} },
+			func() *flowsv1.SequenceList { return &flowsv1.SequenceList{} },
+		),
 	}
 }

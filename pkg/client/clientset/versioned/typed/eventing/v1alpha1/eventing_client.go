@@ -19,16 +19,17 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"net/http"
+	http "net/http"
 
 	rest "k8s.io/client-go/rest"
-	v1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-	"knative.dev/eventing/pkg/client/clientset/versioned/scheme"
+	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	scheme "knative.dev/eventing/pkg/client/clientset/versioned/scheme"
 )
 
 type EventingV1alpha1Interface interface {
 	RESTClient() rest.Interface
 	EventPoliciesGetter
+	EventTransformsGetter
 	RequestRepliesGetter
 }
 
@@ -39,6 +40,10 @@ type EventingV1alpha1Client struct {
 
 func (c *EventingV1alpha1Client) EventPolicies(namespace string) EventPolicyInterface {
 	return newEventPolicies(c, namespace)
+}
+
+func (c *EventingV1alpha1Client) EventTransforms(namespace string) EventTransformInterface {
+	return newEventTransforms(c, namespace)
 }
 
 func (c *EventingV1alpha1Client) RequestReplies(namespace string) RequestReplyInterface {
@@ -90,10 +95,10 @@ func New(c rest.Interface) *EventingV1alpha1Client {
 }
 
 func setConfigDefaults(config *rest.Config) error {
-	gv := v1alpha1.SchemeGroupVersion
+	gv := eventingv1alpha1.SchemeGroupVersion
 	config.GroupVersion = &gv
 	config.APIPath = "/apis"
-	config.NegotiatedSerializer = scheme.Codecs.WithoutConversion()
+	config.NegotiatedSerializer = rest.CodecFactoryForGeneratedClient(scheme.Scheme, scheme.Codecs).WithoutConversion()
 
 	if config.UserAgent == "" {
 		config.UserAgent = rest.DefaultKubernetesUserAgent()

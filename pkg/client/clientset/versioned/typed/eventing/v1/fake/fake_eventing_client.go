@@ -29,11 +29,11 @@ type FakeEventingV1 struct {
 }
 
 func (c *FakeEventingV1) Brokers(namespace string) v1.BrokerInterface {
-	return &FakeBrokers{c, namespace}
+	return newFakeBrokers(c, namespace)
 }
 
 func (c *FakeEventingV1) Triggers(namespace string) v1.TriggerInterface {
-	return &FakeTriggers{c, namespace}
+	return newFakeTriggers(c, namespace)
 }
 
 // RESTClient returns a RESTClient that is used to communicate

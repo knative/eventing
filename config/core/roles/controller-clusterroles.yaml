@@ -99,6 +99,8 @@ rules:
       - "eventtypes/status"
       - "eventpolicies"
       - "eventpolicies/status"
+      - "eventtransforms"
+      - "eventtransforms/status"
     verbs:
       - "get"
       - "list"
@@ -213,6 +215,32 @@ rules:
       - "coordination.k8s.io"
     resources:
       - "leases"
+    verbs:
+      - "get"
+      - "list"
+      - "create"
+      - "update"
+      - "delete"
+      - "patch"
+      - "watch"
+
+  - apiGroups:
+      - "cert-manager.io"
+    resources:
+      - "certificates"
+    verbs:
+      - "get"
+      - "list"
+      - "create"
+      - "update"
+      - "delete"
+      - "patch"
+      - "watch"
+
+  - apiGroups:
+      - "acme.cert-manager.io"
+    resources:
+      - "challenges"
     verbs:
       - "get"
       - "list"

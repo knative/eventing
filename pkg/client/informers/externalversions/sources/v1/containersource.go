@@ -19,24 +19,24 @@ limitations under the License.
 package v1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
 	cache "k8s.io/client-go/tools/cache"
-	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
+	apissourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	versioned "knative.dev/eventing/pkg/client/clientset/versioned"
 	internalinterfaces "knative.dev/eventing/pkg/client/informers/externalversions/internalinterfaces"
-	v1 "knative.dev/eventing/pkg/client/listers/sources/v1"
+	sourcesv1 "knative.dev/eventing/pkg/client/listers/sources/v1"
 )
 
 // ContainerSourceInformer provides access to a shared informer and lister for
 // ContainerSources.
 type ContainerSourceInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1.ContainerSourceLister
+	Lister() sourcesv1.ContainerSourceLister
 }
 
 type containerSourceInformer struct {
@@ -71,7 +71,7 @@ func NewFilteredContainerSourceInformer(client versioned.Interface, namespace st
 				return client.SourcesV1().ContainerSources(namespace).Watch(context.TODO(), options)
 			},
 		},
-		&sourcesv1.ContainerSource{},
+		&apissourcesv1.ContainerSource{},
 		resyncPeriod,
 		indexers,
 	)
@@ -82,9 +82,9 @@ func (f *containerSourceInformer) defaultInformer(client versioned.Interface, re
 }
 
 func (f *containerSourceInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&sourcesv1.ContainerSource{}, f.defaultInformer)
+	return f.factory.InformerFor(&apissourcesv1.ContainerSource{}, f.defaultInformer)
 }
 
-func (f *containerSourceInformer) Lister() v1.ContainerSourceLister {
-	return v1.NewContainerSourceLister(f.Informer().GetIndexer())
+func (f *containerSourceInformer) Lister() sourcesv1.ContainerSourceLister {
+	return sourcesv1.NewContainerSourceLister(f.Informer().GetIndexer())
 }

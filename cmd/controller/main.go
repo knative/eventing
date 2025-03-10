@@ -20,15 +20,19 @@ import (
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
+	"knative.dev/eventing/pkg/certificates"
 	"knative.dev/pkg/injection/sharedmain"
 
-	filteredFactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
+	kubefilteredfactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
 	"knative.dev/pkg/signals"
+
+	eventingfilteredfactory "knative.dev/eventing/pkg/client/injection/informers/factory/filtered"
 
 	"knative.dev/eventing/pkg/apis/sinks"
 	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/reconciler/eventpolicy"
+	"knative.dev/eventing/pkg/reconciler/eventtransform"
 	"knative.dev/eventing/pkg/reconciler/jobsink"
 
 	"knative.dev/eventing/pkg/reconciler/apiserversource"
@@ -49,10 +53,16 @@ import (
 func main() {
 	ctx := signals.NewContext()
 
-	ctx = filteredFactory.WithSelectors(ctx,
+	ctx = kubefilteredfactory.WithSelectors(ctx,
 		auth.OIDCLabelSelector,
 		eventingtls.TrustBundleLabelSelector,
 		sinks.JobSinkJobsLabelSelector,
+		eventtransform.JsonataResourcesSelector,
+		certificates.SecretLabelSelectorPair,
+	)
+
+	ctx = eventingfilteredfactory.WithSelectors(ctx,
+		eventtransform.JsonataResourcesSelector,
 	)
 
 	sharedmain.MainWithContext(ctx, "controller",
@@ -84,5 +94,8 @@ func main() {
 		// Sugar
 		sugarnamespace.NewController,
 		sugartrigger.NewController,
+
+		// Transform
+		eventtransform.NewController,
 	)
 }

@@ -19,24 +19,24 @@ limitations under the License.
 package v1beta2
 
 import (
-	"context"
+	context "context"
 	time "time"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
 	cache "k8s.io/client-go/tools/cache"
-	sourcesv1beta2 "knative.dev/eventing/pkg/apis/sources/v1beta2"
+	apissourcesv1beta2 "knative.dev/eventing/pkg/apis/sources/v1beta2"
 	versioned "knative.dev/eventing/pkg/client/clientset/versioned"
 	internalinterfaces "knative.dev/eventing/pkg/client/informers/externalversions/internalinterfaces"
-	v1beta2 "knative.dev/eventing/pkg/client/listers/sources/v1beta2"
+	sourcesv1beta2 "knative.dev/eventing/pkg/client/listers/sources/v1beta2"
 )
 
 // PingSourceInformer provides access to a shared informer and lister for
 // PingSources.
 type PingSourceInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1beta2.PingSourceLister
+	Lister() sourcesv1beta2.PingSourceLister
 }
 
 type pingSourceInformer struct {
@@ -71,7 +71,7 @@ func NewFilteredPingSourceInformer(client versioned.Interface, namespace string,
 				return client.SourcesV1beta2().PingSources(namespace).Watch(context.TODO(), options)
 			},
 		},
-		&sourcesv1beta2.PingSource{},
+		&apissourcesv1beta2.PingSource{},
 		resyncPeriod,
 		indexers,
 	)
@@ -82,9 +82,9 @@ func (f *pingSourceInformer) defaultInformer(client versioned.Interface, resyncP
 }
 
 func (f *pingSourceInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&sourcesv1beta2.PingSource{}, f.defaultInformer)
+	return f.factory.InformerFor(&apissourcesv1beta2.PingSource{}, f.defaultInformer)
 }
 
-func (f *pingSourceInformer) Lister() v1beta2.PingSourceLister {
-	return v1beta2.NewPingSourceLister(f.Informer().GetIndexer())
+func (f *pingSourceInformer) Lister() sourcesv1beta2.PingSourceLister {
+	return sourcesv1beta2.NewPingSourceLister(f.Informer().GetIndexer())
 }

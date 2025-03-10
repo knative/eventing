@@ -17,10 +17,14 @@ limitations under the License.
 package eventingtls
 
 import (
+	"bytes"
 	"context"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
 	"sort"
 
+	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -30,6 +34,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"knative.dev/pkg/kmeta"
+	"knative.dev/pkg/logging"
 	"knative.dev/pkg/system"
 )
 
@@ -46,6 +51,10 @@ const (
 	TrustBundleVolumeNamePrefix = "kne-bundle-"
 
 	TrustBundleConfigMapNameSuffix = "kne-bundle"
+
+	TrustBundleCombined = "kn-combined-" + TrustBundleConfigMapNameSuffix
+
+	TrustBundleCombinedPemFile = TrustBundleCombined + ".pem"
 )
 
 var (
@@ -69,6 +78,16 @@ func PropagateTrustBundles(ctx context.Context, k8s kubernetes.Interface, trustB
 		return fmt.Errorf("failed to list trust bundles ConfigMaps in %q: %w", obj.GetNamespace(), err)
 	}
 
+	logging.FromContext(ctx).Debugw("Existing bundles",
+		zap.Any("systemNamespaceBundles", systemNamespaceBundles),
+		zap.Any("userNamespaceBundles", userNamespaceBundles),
+	)
+
+	var combinedBundle bytes.Buffer
+	if err := combineValidTrustBundles(systemNamespaceBundles, &combinedBundle); err != nil {
+		return err
+	}
+
 	type Pair struct {
 		sysCM  *corev1.ConfigMap
 		userCm *corev1.ConfigMap
@@ -85,6 +104,26 @@ func PropagateTrustBundles(ctx context.Context, k8s kubernetes.Interface, trustB
 				sysCM:  cm.DeepCopy(),
 				userCm: p.userCm,
 			}
+		}
+	}
+
+	// After going through the systemNamespaceBundles, add TrustBundleCombined to the system namespace state, so that
+	// it will be reconciled in the user namespace.
+	// If it's present in the system namespace, we "override" it to the "latest" (cache-based) value.
+	if combinedBundle.Len() > 0 {
+		state[userCMName(TrustBundleCombined)] = Pair{
+			sysCM: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      TrustBundleCombined,
+					Namespace: system.Namespace(),
+					Labels: map[string]string{
+						TrustBundleLabelKey: TrustBundleLabelValue,
+					},
+				},
+				BinaryData: map[string][]byte{
+					TrustBundleCombinedPemFile: combinedBundle.Bytes(),
+				},
+			},
 		}
 	}
 
@@ -153,6 +192,24 @@ func PropagateTrustBundles(ctx context.Context, k8s kubernetes.Interface, trustB
 		}
 	}
 	return nil
+}
+
+// CombinedBundlePresent will check if PropagateTrustBundles and AddTrustBundleVolumes will add the TrustBundleCombined
+// volume.
+//
+// This is useful to know before creating the data plane how to configure the runtime to read the combined bundle.
+// For example, Node.js allows injecting an environment variable `NODE_EXTRA_CA_CERTS` to point to a PEM-formatted
+// trust bundle file, and we would need to know if that combined bundle will be injected by SinkBinding.
+func CombinedBundlePresent(trustBundleLister corev1listers.ConfigMapLister) (bool, error) {
+	cms, err := trustBundleLister.ConfigMaps(system.Namespace()).List(TrustBundleSelector)
+	if err != nil {
+		return false, fmt.Errorf("failed to list trust bundles ConfigMaps in %q: %w", system.Namespace(), err)
+	}
+	var combinedBundle bytes.Buffer
+	if err := combineValidTrustBundles(cms, &combinedBundle); err != nil {
+		return false, err
+	}
+	return combinedBundle.Len() > 0, nil
 }
 
 func AddTrustBundleVolumes(trustBundleLister corev1listers.ConfigMapLister, obj kmeta.Accessor, pt *corev1.PodSpec) (*corev1.PodSpec, error) {
@@ -233,6 +290,61 @@ func AddTrustBundleVolumes(trustBundleLister corev1listers.ConfigMapLister, obj 
 	}
 
 	return pt, nil
+}
+
+func combineValidTrustBundles(configMaps []*corev1.ConfigMap, combinedBundle *bytes.Buffer) error {
+	for _, cm := range configMaps {
+
+		// Ensure the combined bundle is always composed in the same order.
+		keys := make([]string, 0, len(cm.Data))
+		for k := range cm.Data {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+
+		for _, key := range keys {
+			data := cm.Data[key]
+			pemData := []byte(data)
+
+			// Read and validate each PEM block in the data
+			for len(pemData) > 0 {
+				var block *pem.Block
+				block, pemData = pem.Decode(pemData)
+
+				if block == nil {
+					// No more PEM blocks or invalid PEM format
+					break
+				}
+
+				// If the combined bundle would produce a value larger than the maximum ConfigMap size, truncate it.
+				// This could be surprising, but we can't do much about it, perhaps depending on the feedback we could
+				// return an error (individual bundles can be used instead in such cases, instead of failing and
+				// requiring admin-level changes).
+				//
+				// The encoded value is larger, so leave some buffer space.
+				if combinedBundle.Len()+len(block.Bytes) > 1000000 /* < 1Mib -> max CM size */ {
+					break
+				}
+
+				if block.Type != "CERTIFICATE" {
+					// Skip non-certificate PEM blocks
+					continue
+				}
+
+				// Attempt to parse the certificate to validate it
+				if _, err := x509.ParseCertificate(block.Bytes); err != nil {
+					// Invalid certificate format
+					continue
+				}
+
+				// Certificate is valid, add to combined output
+				if err := pem.Encode(combinedBundle, block); err != nil {
+					return fmt.Errorf("failed to encode valid certificate from %s/%s ConfigMap for key %q: %v", cm.Namespace, cm.Name, key, err)
+				}
+			}
+		}
+	}
+	return nil
 }
 
 func withOwnerReferences(sb kmeta.Accessor, gvk schema.GroupVersionKind, references []metav1.OwnerReference) []metav1.OwnerReference {
