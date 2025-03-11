@@ -19,12 +19,12 @@ package eventtransform
 import (
 	"context"
 
+	cmclient "github.com/cert-manager/cert-manager/pkg/client/clientset/versioned"
 	"go.uber.org/zap"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/informers"
 	"knative.dev/eventing/pkg/certificates"
-	cmclient "knative.dev/eventing/pkg/client/certmanager/clientset/versioned"
 	"knative.dev/eventing/pkg/eventingtls"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	deploymentinformer "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment/filtered"

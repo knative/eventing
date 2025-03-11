@@ -22,6 +22,8 @@ import (
 	"sync/atomic"
 
 	cmapis "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	cmclient "github.com/cert-manager/cert-manager/pkg/client/clientset/versioned"
+	cmlisters "github.com/cert-manager/cert-manager/pkg/client/listers/certmanager/v1"
 	"github.com/google/go-cmp/cmp"
 	"go.uber.org/zap/zapcore"
 	appsv1 "k8s.io/api/apps/v1"
@@ -33,8 +35,6 @@ import (
 	appslister "k8s.io/client-go/listers/apps/v1"
 	corelister "k8s.io/client-go/listers/core/v1"
 	"knative.dev/eventing/pkg/apis/feature"
-	cmclient "knative.dev/eventing/pkg/client/certmanager/clientset/versioned"
-	cmlisters "knative.dev/eventing/pkg/client/certmanager/listers/certmanager/v1"
 	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
