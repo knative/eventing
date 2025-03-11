@@ -21,9 +21,9 @@ package fake
 import (
 	context "context"
 
+	fake "github.com/cert-manager/cert-manager/pkg/client/clientset/versioned/fake"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	rest "k8s.io/client-go/rest"
-	fake "knative.dev/eventing/pkg/client/certmanager/clientset/versioned/fake"
 	client "knative.dev/eventing/pkg/client/certmanager/injection/client"
 	injection "knative.dev/pkg/injection"
 	logging "knative.dev/pkg/logging"
@@ -51,7 +51,7 @@ func Get(ctx context.Context) *fake.Clientset {
 	untyped := ctx.Value(client.Key{})
 	if untyped == nil {
 		logging.FromContext(ctx).Panic(
-			"Unable to fetch knative.dev/eventing/pkg/client/certmanager/clientset/versioned/fake.Clientset from context.")
+			"Unable to fetch github.com/cert-manager/cert-manager/pkg/client/clientset/versioned/fake.Clientset from context.")
 	}
 	return untyped.(*fake.Clientset)
 }

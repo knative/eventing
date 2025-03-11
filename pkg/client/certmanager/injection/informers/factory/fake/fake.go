@@ -21,7 +21,7 @@ package fake
 import (
 	context "context"
 
-	externalversions "knative.dev/eventing/pkg/client/certmanager/informers/externalversions"
+	externalversions "github.com/cert-manager/cert-manager/pkg/client/informers/externalversions"
 	fake "knative.dev/eventing/pkg/client/certmanager/injection/client/fake"
 	factory "knative.dev/eventing/pkg/client/certmanager/injection/informers/factory"
 	controller "knative.dev/pkg/controller"
