@@ -18,6 +18,9 @@ package sink
 
 import (
 	"fmt"
+	"sync/atomic"
+
+	cmlisters "knative.dev/eventing/pkg/client/certmanager/listers/certmanager/v1"
 
 	"knative.dev/eventing/pkg/certificates"
 
@@ -151,12 +154,18 @@ func TestReconcile(t *testing.T) {
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		ctx = addressable.WithDuck(ctx)
+
+		cmCertificatesListerAtomic := &atomic.Pointer[cmlisters.CertificateLister]{}
+		cmCertificatesLister := listers.GetCertificateLister()
+		cmCertificatesListerAtomic.Store(&cmCertificatesLister)
+
 		r := &Reconciler{
-			kubeClientSet:     fakekubeclient.Get(ctx),
-			deploymentLister:  listers.GetDeploymentLister(),
-			serviceLister:     listers.GetServiceLister(),
-			secretLister:      listers.GetSecretLister(),
-			eventPolicyLister: listers.GetEventPolicyLister(),
+			kubeClientSet:       fakekubeclient.Get(ctx),
+			deploymentLister:    listers.GetDeploymentLister(),
+			serviceLister:       listers.GetServiceLister(),
+			secretLister:        listers.GetSecretLister(),
+			cmCertificateLister: cmCertificatesListerAtomic,
+			eventPolicyLister:   listers.GetEventPolicyLister(),
 		}
 
 		return integrationsink.NewReconciler(ctx, logging.FromContext(ctx), fakeeventingclient.Get(ctx), listers.GetIntegrationSinkLister(), controller.GetEventRecorder(ctx), r)
