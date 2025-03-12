@@ -18,6 +18,7 @@ package testing
 
 import (
 	certmanagerv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	certmanagerlisters "github.com/cert-manager/cert-manager/pkg/client/listers/certmanager/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -41,7 +42,6 @@ import (
 	sinksv1alpha1 "knative.dev/eventing/pkg/apis/sinks/v1alpha1"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
-	certmanagerlisters "knative.dev/eventing/pkg/client/certmanager/listers/certmanager/v1"
 	fakeeventingclientset "knative.dev/eventing/pkg/client/clientset/versioned/fake"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1"
 	eventingv1alpha1listers "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"

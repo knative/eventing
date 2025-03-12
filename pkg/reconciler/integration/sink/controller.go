@@ -35,7 +35,7 @@ import (
 
 	pkgreconciler "knative.dev/pkg/reconciler"
 
-	cmclient "knative.dev/eventing/pkg/client/certmanager/clientset/versioned"
+	certmanagerclientset "github.com/cert-manager/cert-manager/pkg/client/clientset/versioned"
 
 	integrationsinkreconciler "knative.dev/eventing/pkg/client/injection/reconciler/sinks/v1alpha1/integrationsink"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
@@ -63,7 +63,7 @@ func NewController(
 		deploymentLister:    deploymentInformer.Lister(),
 		serviceLister:       serviceInformer.Lister(),
 		cmCertificateLister: dynamicCertificateInformer.Lister(),
-		certManagerClient:   cmclient.NewForConfigOrDie(injection.GetConfig(ctx)),
+		certManagerClient:   certmanagerclientset.NewForConfigOrDie(injection.GetConfig(ctx)),
 	}
 
 	logging.FromContext(ctx).Info("Creating IntegrationSink controller")

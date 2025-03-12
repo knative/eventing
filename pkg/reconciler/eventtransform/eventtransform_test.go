@@ -24,6 +24,7 @@ import (
 
 	cmapis "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
+	cmlisters "github.com/cert-manager/cert-manager/pkg/client/listers/certmanager/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,7 +35,6 @@ import (
 	"knative.dev/eventing/pkg/apis/feature"
 	sources "knative.dev/eventing/pkg/apis/sources/v1"
 	cmclient "knative.dev/eventing/pkg/client/certmanager/injection/client/fake"
-	cmlisters "knative.dev/eventing/pkg/client/certmanager/listers/certmanager/v1"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1alpha1/eventtransform"

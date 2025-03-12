@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"sync/atomic"
 
-	cmlisters "knative.dev/eventing/pkg/client/certmanager/listers/certmanager/v1"
+	cmlisters "github.com/cert-manager/cert-manager/pkg/client/listers/certmanager/v1"
 
 	"knative.dev/eventing/pkg/certificates"
 
