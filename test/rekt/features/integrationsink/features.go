@@ -131,17 +131,10 @@ func OIDC() *feature.Feature {
 		eventshub.AddSequence,
 		eventshub.SendMultipleEvents(2, time.Millisecond)))
 
-	f.Requirement("install source for ksink without audience", func(ctx context.Context, t feature.T) {
-		addr, err := integrationsink.Address(ctx, sourceNoAudience)
-		if err != nil {
-			t.Error(err)
-			return
-		}
-
-		eventshub.Install(sourceNoAudience,
-			eventshub.StartSenderURLTLS(addr.URL.String(), addr.CACerts),
-			eventshub.InputEvent(eventNoAudience))(ctx, t)
-	})
+	f.Requirement("install source for ksink without audience", eventshub.Install(sourceNoAudience,
+		eventshub.StartSenderToResourceTLS(integrationsink.GVR(), integrationSink, nil),
+		eventshub.InputEvent(eventNoAudience)
+	))
 
 	f.Assert("IntegrationSink has audience in address", func(ctx context.Context, t feature.T) {
 		gvk := schema.GroupVersionKind{
