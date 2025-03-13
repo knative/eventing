@@ -161,3 +161,15 @@ func OIDC() *feature.Feature {
 
 	return f
 }
+
+func GoesReadySimple(name string) *feature.Feature {
+	f := feature.NewFeature()
+
+	//	integrationSink := feature.MakeRandomK8sName("integrationsink")
+
+	f.Setup("install integration sink", integrationsink.Install(name))
+	f.Setup("integrationsink is ready", integrationsink.IsReady(name))
+	f.Setup("integrationsink is addressable", integrationsink.IsAddressable(name))
+
+	return f
+}
