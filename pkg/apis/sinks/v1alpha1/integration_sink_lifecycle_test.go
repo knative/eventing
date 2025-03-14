@@ -47,9 +47,6 @@ func TestIntegrationSinkInitializeConditions(t *testing.T) {
 					Type:   IntegrationSinkConditionAddressable,
 					Status: corev1.ConditionUnknown,
 				}, {
-					Type:   IntegrationSinkConditionCertificateReady,
-					Status: corev1.ConditionUnknown,
-				}, {
 					Type:   IntegrationSinkConditionDeploymentReady,
 					Status: corev1.ConditionUnknown,
 				}, {
@@ -77,9 +74,6 @@ func TestIntegrationSinkInitializeConditions(t *testing.T) {
 					Type:   IntegrationSinkConditionAddressable,
 					Status: corev1.ConditionFalse,
 				}, {
-					Type:   IntegrationSinkConditionCertificateReady,
-					Status: corev1.ConditionUnknown,
-				}, {
 					Type:   IntegrationSinkConditionDeploymentReady,
 					Status: corev1.ConditionUnknown,
 				}, {
@@ -106,9 +100,6 @@ func TestIntegrationSinkInitializeConditions(t *testing.T) {
 				Conditions: []apis.Condition{{
 					Type:   IntegrationSinkConditionAddressable,
 					Status: corev1.ConditionTrue,
-				}, {
-					Type:   IntegrationSinkConditionCertificateReady,
-					Status: corev1.ConditionUnknown,
 				}, {
 					Type:   IntegrationSinkConditionDeploymentReady,
 					Status: corev1.ConditionUnknown,

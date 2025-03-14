@@ -49,7 +49,6 @@ var IntegrationSinkCondSet = apis.NewLivingConditionSet(
 	IntegrationSinkConditionAddressable,
 	IntegrationSinkConditionDeploymentReady,
 	IntegrationSinkConditionEventPoliciesReady,
-	IntegrationSinkConditionCertificateReady,
 )
 
 // GetConditionSet retrieves the condition set for this resource. Implements the KRShaped interface.
