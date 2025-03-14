@@ -17,6 +17,8 @@ limitations under the License.
 package v1alpha1
 
 import (
+	cmv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"knative.dev/pkg/apis"
@@ -35,6 +37,12 @@ const (
 	// IntegrationSinkConditionEventPoliciesReady has status True when all the applying EventPolicies for this
 	// IntegrationSink are ready.
 	IntegrationSinkConditionEventPoliciesReady apis.ConditionType = "EventPoliciesReady"
+
+	// IntegrationSinkConditionCertificateReady has status True when the IntegrationSink's certificate is ready.
+	IntegrationSinkConditionCertificateReady apis.ConditionType = "CertificateReady"
+
+	// Certificate related condition reasons
+	IntegrationSinkCertificateNotReady string = "CertificateNotReady"
 )
 
 var IntegrationSinkCondSet = apis.NewLivingConditionSet(
@@ -110,6 +118,37 @@ func (s *IntegrationSinkStatus) PropagateDeploymentStatus(d *appsv1.DeploymentSt
 	if !deploymentAvailableFound {
 		IntegrationSinkCondSet.Manage(s).MarkUnknown(IntegrationSinkConditionDeploymentReady, "DeploymentUnavailable", "The Deployment '%s' is unavailable.", d)
 	}
+}
+
+func (s *IntegrationSinkStatus) PropagateCertificateStatus(cs cmv1.CertificateStatus) bool {
+	var topLevel *cmv1.CertificateCondition
+	for _, cond := range cs.Conditions {
+		if cond.Type == cmv1.CertificateConditionReady {
+			topLevel = &cond
+			break
+		}
+	}
+
+	if topLevel == nil {
+		IntegrationSinkCondSet.Manage(s).MarkUnknown(IntegrationSinkConditionCertificateReady,
+			IntegrationSinkCertificateNotReady, "Certificate is progressing")
+		return false
+	}
+
+	if topLevel.Status == cmmeta.ConditionUnknown {
+		IntegrationSinkCondSet.Manage(s).MarkUnknown(IntegrationSinkConditionCertificateReady,
+			IntegrationSinkCertificateNotReady, "Certificate is progressing, "+topLevel.Reason+" Message: "+topLevel.Message)
+		return false
+	}
+
+	if topLevel.Status == cmmeta.ConditionFalse {
+		IntegrationSinkCondSet.Manage(s).MarkFalse(IntegrationSinkConditionCertificateReady,
+			IntegrationSinkCertificateNotReady, "Certificate is not ready, "+topLevel.Reason+" Message: "+topLevel.Message)
+		return false
+	}
+
+	IntegrationSinkCondSet.Manage(s).MarkTrue(IntegrationSinkConditionCertificateReady)
+	return true
 }
 
 func (s *IntegrationSinkStatus) SetAddress(address *duckv1.Addressable) {
