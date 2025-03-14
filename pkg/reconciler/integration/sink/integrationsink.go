@@ -63,6 +63,7 @@ const (
 	deploymentUpdated  = "DeploymentUpdated"
 	serviceCreated     = "ServiceCreated"
 	certificateCreated = "CertificateCreated"
+	certificateUpdated = "CertificateUpdated"
 	serviceUpdated     = "ServiceUpdated"
 )
 
@@ -176,7 +177,6 @@ func (r *Reconciler) reconcileService(ctx context.Context, sink *sinks.Integrati
 }
 
 func (r *Reconciler) reconcileIntegrationSinkCertificate(ctx context.Context, sink *sinks.IntegrationSink) (*cmv1.Certificate, error) {
-
 	if f := feature.FromContext(ctx); !f.IsStrictTransportEncryption() && !f.IsPermissiveTransportEncryption() {
 		return nil, r.deleteIntegrationSinkCertificate(ctx, sink)
 	}
@@ -188,22 +188,41 @@ func (r *Reconciler) reconcileIntegrationSinkCertificate(ctx context.Context, si
 		return nil, fmt.Errorf("no cert-manager certificate lister created yet, this should rarely happen and recover")
 	}
 
-	cert, err := (*cmCertificateLister).Certificates(sink.Namespace).Get(expected.Name)
+	curr, err := (*cmCertificateLister).Certificates(expected.GetNamespace()).Get(expected.GetName())
 	if apierrors.IsNotFound(err) {
-		cert, err := r.certManagerClient.CertmanagerV1().Certificates(sink.Namespace).Create(ctx, expected, metav1.CreateOptions{})
+		created, err := r.createCertificate(ctx, sink, expected)
 		if err != nil {
-			return nil, fmt.Errorf("creating new Certificate: %v", err)
+			return nil, err
 		}
-		controller.GetEventRecorder(ctx).Eventf(sink, corev1.EventTypeNormal, certificateCreated, "Certificate created %q", cert.Name)
-	} else if err != nil {
-		return nil, fmt.Errorf("getting Certificate: %v", err)
-	} else if !metav1.IsControlledBy(cert, sink) {
-		return nil, fmt.Errorf("Certificate %q is not owned by IntegrationSink %q", cert.Name, sink.Name)
-	} else {
-		logging.FromContext(ctx).Debugw("Reusing existing Certificate", zap.Any("Certificate", cert))
+		if !sink.Status.PropagateCertificateStatus(created.Status) {
+			// Wait for Certificate to become ready before continuing.
+			return nil, controller.NewSkipKey("")
+		}
+		return created, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to get certificate %s/%s: %w", expected.GetNamespace(), expected.GetName(), err)
 	}
 
-	return cert, nil
+	if equality.Semantic.DeepDerivative(expected.Spec, curr.Spec) &&
+		equality.Semantic.DeepDerivative(expected.Labels, curr.Labels) &&
+		equality.Semantic.DeepDerivative(expected.Annotations, curr.Annotations) {
+		if !sink.Status.PropagateCertificateStatus(curr.Status) {
+			// Wait for Certificate to become ready before continuing.
+			return nil, controller.NewSkipKey("")
+		}
+		return curr, nil
+	}
+	expected.ResourceVersion = curr.ResourceVersion
+	updated, err := r.updateCertificate(ctx, sink, expected)
+	if err != nil {
+		return nil, err
+	}
+	if !sink.Status.PropagateCertificateStatus(updated.Status) {
+		// Wait for Certificate to become ready before continuing.
+		return nil, controller.NewSkipKey("")
+	}
+	return updated, nil
 }
 
 func (r *Reconciler) deleteIntegrationSinkCertificate(ctx context.Context, sink *sinks.IntegrationSink) error {
@@ -341,4 +360,22 @@ func integrationSinkCertificate(sink *sinks.IntegrationSink) *cmv1.Certificate {
 			fmt.Sprintf("%s.%s.svc", resources.DeploymentName(sink.Name), sink.Namespace),
 		),
 	)
+}
+
+func (r *Reconciler) createCertificate(ctx context.Context, sink *sinks.IntegrationSink, expected *cmv1.Certificate) (*cmv1.Certificate, error) {
+	created, err := r.certManagerClient.CertmanagerV1().Certificates(expected.GetNamespace()).Create(ctx, expected, metav1.CreateOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("creating new Certificate  %s/%s: %w", expected.GetNamespace(), expected.GetName(), err)
+	}
+	controller.GetEventRecorder(ctx).Eventf(sink, corev1.EventTypeNormal, certificateCreated, "Certificate created %q", expected.GetName())
+	return created, nil
+}
+
+func (r *Reconciler) updateCertificate(ctx context.Context, sink *sinks.IntegrationSink, expected *cmv1.Certificate) (*cmv1.Certificate, error) {
+	updated, err := r.certManagerClient.CertmanagerV1().Certificates(expected.GetNamespace()).Update(ctx, expected, metav1.UpdateOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to update certificate %s/%s: %w", expected.GetNamespace(), expected.GetName(), err)
+	}
+	controller.GetEventRecorder(ctx).Event(sink, corev1.EventTypeNormal, certificateUpdated, expected.GetName())
+	return updated, nil
 }
