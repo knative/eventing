@@ -33,33 +33,33 @@ type AWSCommon struct {
 
 type AWSS3 struct {
 	AWSCommon               `json:",inline"` // Embeds AWSCommon to inherit its fields in JSON
-	Arn                     string           `json:"arn,omitempty" camel:"CAMEL_KAMELET_AWS_S3_SOURCE_BUCKETNAMEORARN"` // S3 ARN
-	DeleteAfterRead         bool             `json:"deleteAfterRead" default:"true"`                                    // Auto-delete objects after reading
-	MoveAfterRead           bool             `json:"moveAfterRead" default:"false"`                                     // Move objects after reading
-	DestinationBucket       string           `json:"destinationBucket,omitempty"`                                       // Destination bucket for moved objects
-	DestinationBucketPrefix string           `json:"destinationBucketPrefix,omitempty"`                                 // Prefix for moved objects
-	DestinationBucketSuffix string           `json:"destinationBucketSuffix,omitempty"`                                 // Suffix for moved objects
-	AutoCreateBucket        bool             `json:"autoCreateBucket" default:"false"`                                  // Auto-create S3 bucket
-	Prefix                  string           `json:"prefix,omitempty"`                                                  // S3 bucket prefix for search
-	IgnoreBody              bool             `json:"ignoreBody" default:"false"`                                        // Ignore object body
-	ForcePathStyle          bool             `json:"forcePathStyle" default:"false"`                                    // Force path style for bucket access
-	Delay                   int              `json:"delay" default:"500"`                                               // Delay between polls in milliseconds
-	MaxMessagesPerPoll      int              `json:"maxMessagesPerPoll" default:"10"`                                   // Max messages to poll per request
+	Arn                     string           `json:"arn,omitempty" camel:"BUCKETNAMEORARN"` // S3 ARN
+	DeleteAfterRead         bool             `json:"deleteAfterRead" default:"true"`        // Auto-delete objects after reading
+	MoveAfterRead           bool             `json:"moveAfterRead" default:"false"`         // Move objects after reading
+	DestinationBucket       string           `json:"destinationBucket,omitempty"`           // Destination bucket for moved objects
+	DestinationBucketPrefix string           `json:"destinationBucketPrefix,omitempty"`     // Prefix for moved objects
+	DestinationBucketSuffix string           `json:"destinationBucketSuffix,omitempty"`     // Suffix for moved objects
+	AutoCreateBucket        bool             `json:"autoCreateBucket" default:"false"`      // Auto-create S3 bucket
+	Prefix                  string           `json:"prefix,omitempty"`                      // S3 bucket prefix for search
+	IgnoreBody              bool             `json:"ignoreBody" default:"false"`            // Ignore object body
+	ForcePathStyle          bool             `json:"forcePathStyle" default:"false"`        // Force path style for bucket access
+	Delay                   int              `json:"delay" default:"500"`                   // Delay between polls in milliseconds
+	MaxMessagesPerPoll      int              `json:"maxMessagesPerPoll" default:"10"`       // Max messages to poll per request
 }
 
 type AWSSQS struct {
 	AWSCommon          `json:",inline"` // Embeds AWSCommon to inherit its fields in JSON
-	Arn                string           `json:"arn,omitempty" camel:"CAMEL_KAMELET_AWS_SQS_SOURCE_QUEUENAMEORARN"`               // SQS ARN
-	DeleteAfterRead    bool             `json:"deleteAfterRead" default:"true"`                                                  // Auto-delete messages after reading
-	AutoCreateQueue    bool             `json:"autoCreateQueue" default:"false"`                                                 // Auto-create SQS queue
-	Host               string           `json:"host" camel:"CAMEL_KAMELET_AWS_SQS_SOURCE_AMAZONAWSHOST" default:"amazonaws.com"` // AWS host
-	Protocol           string           `json:"protocol" default:"https"`                                                        // Communication protocol (http/https)
-	QueueURL           string           `json:"queueURL,omitempty"`                                                              // Full SQS queue URL
-	Greedy             bool             `json:"greedy" default:"false"`                                                          // Greedy scheduler
-	Delay              int              `json:"delay" default:"500"`                                                             // Delay between polls in milliseconds
-	MaxMessagesPerPoll int              `json:"maxMessagesPerPoll" default:"1"`                                                  // Max messages to return (1-10)
-	WaitTimeSeconds    int              `json:"waitTimeSeconds,omitempty"`                                                       // Wait time for messages
-	VisibilityTimeout  int              `json:"visibilityTimeout,omitempty"`                                                     // Visibility timeout in seconds
+	Arn                string           `json:"arn,omitempty" camel:"QUEUENAMEORARN"`               // SQS ARN
+	DeleteAfterRead    bool             `json:"deleteAfterRead" default:"true"`                     // Auto-delete messages after reading
+	AutoCreateQueue    bool             `json:"autoCreateQueue" default:"false"`                    // Auto-create SQS queue
+	Host               string           `json:"host" camel:"AMAZONAWSHOST" default:"amazonaws.com"` // AWS host
+	Protocol           string           `json:"protocol" default:"https"`                           // Communication protocol (http/https)
+	QueueURL           string           `json:"queueURL,omitempty"`                                 // Full SQS queue URL
+	Greedy             bool             `json:"greedy" default:"false"`                             // Greedy scheduler
+	Delay              int              `json:"delay" default:"500"`                                // Delay between polls in milliseconds
+	MaxMessagesPerPoll int              `json:"maxMessagesPerPoll" default:"1"`                     // Max messages to return (1-10)
+	WaitTimeSeconds    int              `json:"waitTimeSeconds,omitempty"`                          // Wait time for messages
+	VisibilityTimeout  int              `json:"visibilityTimeout,omitempty"`                        // Visibility timeout in seconds
 }
 
 type AWSDDBStreams struct {
@@ -71,6 +71,6 @@ type AWSDDBStreams struct {
 
 type AWSSNS struct {
 	AWSCommon       `json:",inline"` // Embeds AWSCommon to inherit its fields in JSON
-	Arn             string           `json:"arn,omitempty" camel:"CAMEL_KAMELET_AWS_SNS_SINK_TOPICNAMEORARN"` // SNS ARN
-	AutoCreateTopic bool             `json:"autoCreateTopic" default:"false"`                                 // Auto-create SNS topic
+	Arn             string           `json:"arn,omitempty" camel:"TOPICNAMEORARN"` // SNS ARN
+	AutoCreateTopic bool             `json:"autoCreateTopic" default:"false"`      // Auto-create SNS topic
 }
