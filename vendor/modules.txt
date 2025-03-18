@@ -57,8 +57,8 @@ github.com/cert-manager/cert-manager/pkg/client/listers/certmanager/v1
 # github.com/cespare/xxhash/v2 v2.3.0
 ## explicit; go 1.11
 github.com/cespare/xxhash/v2
-# github.com/cloudevents/conformance v0.2.0
-## explicit; go 1.14
+# github.com/cloudevents/conformance v0.4.1
+## explicit; go 1.16
 github.com/cloudevents/conformance/pkg/event
 github.com/cloudevents/conformance/pkg/http
 # github.com/cloudevents/sdk-go/observability/opencensus/v2 v2.15.2
