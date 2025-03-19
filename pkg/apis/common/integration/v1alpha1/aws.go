@@ -33,23 +33,23 @@ type AWSCommon struct {
 
 type AWSS3 struct {
 	AWSCommon               `json:",inline"` // Embeds AWSCommon to inherit its fields in JSON
-	Arn                     string           `json:"arn,omitempty" camel:"BUCKETNAMEORARN"` // S3 ARN
-	DeleteAfterRead         bool             `json:"deleteAfterRead" default:"true"`        // Auto-delete objects after reading
-	MoveAfterRead           bool             `json:"moveAfterRead" default:"false"`         // Move objects after reading
-	DestinationBucket       string           `json:"destinationBucket,omitempty"`           // Destination bucket for moved objects
-	DestinationBucketPrefix string           `json:"destinationBucketPrefix,omitempty"`     // Prefix for moved objects
-	DestinationBucketSuffix string           `json:"destinationBucketSuffix,omitempty"`     // Suffix for moved objects
-	AutoCreateBucket        bool             `json:"autoCreateBucket" default:"false"`      // Auto-create S3 bucket
-	Prefix                  string           `json:"prefix,omitempty"`                      // S3 bucket prefix for search
-	IgnoreBody              bool             `json:"ignoreBody" default:"false"`            // Ignore object body
-	ForcePathStyle          bool             `json:"forcePathStyle" default:"false"`        // Force path style for bucket access
-	Delay                   int              `json:"delay" default:"500"`                   // Delay between polls in milliseconds
-	MaxMessagesPerPoll      int              `json:"maxMessagesPerPoll" default:"10"`       // Max messages to poll per request
+	Arn                     string           `json:"arn,omitempty" camel:"BUCKET_NAME_OR_ARN"` // S3 ARN
+	DeleteAfterRead         bool             `json:"deleteAfterRead" default:"true"`           // Auto-delete objects after reading
+	MoveAfterRead           bool             `json:"moveAfterRead" default:"false"`            // Move objects after reading
+	DestinationBucket       string           `json:"destinationBucket,omitempty"`              // Destination bucket for moved objects
+	DestinationBucketPrefix string           `json:"destinationBucketPrefix,omitempty"`        // Prefix for moved objects
+	DestinationBucketSuffix string           `json:"destinationBucketSuffix,omitempty"`        // Suffix for moved objects
+	AutoCreateBucket        bool             `json:"autoCreateBucket" default:"false"`         // Auto-create S3 bucket
+	Prefix                  string           `json:"prefix,omitempty"`                         // S3 bucket prefix for search
+	IgnoreBody              bool             `json:"ignoreBody" default:"false"`               // Ignore object body
+	ForcePathStyle          bool             `json:"forcePathStyle" default:"false"`           // Force path style for bucket access
+	Delay                   int              `json:"delay" default:"500"`                      // Delay between polls in milliseconds
+	MaxMessagesPerPoll      int              `json:"maxMessagesPerPoll" default:"10"`          // Max messages to poll per request
 }
 
 type AWSSQS struct {
 	AWSCommon          `json:",inline"` // Embeds AWSCommon to inherit its fields in JSON
-	Arn                string           `json:"arn,omitempty" camel:"QUEUENAMEORARN"`               // SQS ARN
+	Arn                string           `json:"arn,omitempty" camel:"QUEUE_NAME_OR_ARN"`            // SQS ARN
 	DeleteAfterRead    bool             `json:"deleteAfterRead" default:"true"`                     // Auto-delete messages after reading
 	AutoCreateQueue    bool             `json:"autoCreateQueue" default:"false"`                    // Auto-create SQS queue
 	Host               string           `json:"host" camel:"AMAZONAWSHOST" default:"amazonaws.com"` // AWS host
@@ -71,6 +71,6 @@ type AWSDDBStreams struct {
 
 type AWSSNS struct {
 	AWSCommon       `json:",inline"` // Embeds AWSCommon to inherit its fields in JSON
-	Arn             string           `json:"arn,omitempty" camel:"TOPICNAMEORARN"` // SNS ARN
-	AutoCreateTopic bool             `json:"autoCreateTopic" default:"false"`      // Auto-create SNS topic
+	Arn             string           `json:"arn,omitempty" camel:"TOPIC_NAME_OR_ARN"` // SNS ARN
+	AutoCreateTopic bool             `json:"autoCreateTopic" default:"false"`         // Auto-create SNS topic
 }
