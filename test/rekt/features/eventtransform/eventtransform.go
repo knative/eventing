@@ -17,6 +17,7 @@ limitations under the License.
 package eventtransform
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -24,11 +25,14 @@ import (
 	cetest "github.com/cloudevents/sdk-go/v2/test"
 	"github.com/google/uuid"
 	eventing "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/pkg/eventingtls/eventingtlstesting"
 	"knative.dev/eventing/test/rekt/features/featureflags"
 	"knative.dev/eventing/test/rekt/resources/addressable"
 	"knative.dev/eventing/test/rekt/resources/eventtransform"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/network"
+	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
@@ -375,12 +379,13 @@ func JsonataSinkTLS() *feature.Feature {
 	})
 
 	f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
-	f.Prerequisite("transport encryption is strict", featureflags.AuthenticationOIDCEnabled())
 	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
 
-	f.Setup("Install event transform", eventtransform.Install(transformName, eventtransform.WithSpec(
-		eventtransform.WithSink(&duckv1.Destination{URI: apis.HTTPS(sink)}),
-		eventtransform.WithJsonata(eventing.JsonataEventTransformationSpec{Expression: `
+	f.Setup("Install event transform", func(ctx context.Context, t feature.T) {
+
+		eventtransform.Install(transformName, eventtransform.WithSpec(
+			eventtransform.WithSink(&duckv1.Destination{URI: apis.HTTPS(fmt.Sprintf("%s.%s.svc.%s", sink, environment.FromContext(ctx).Namespace(), network.GetClusterDomainName()))}),
+			eventtransform.WithJsonata(eventing.JsonataEventTransformationSpec{Expression: `
 {
     "specversion": "1.0",
     "id": id,
@@ -391,10 +396,13 @@ func JsonataSinkTLS() *feature.Feature {
     "data": $
 }
 `}),
-	)))
+		))(ctx, t)
+	})
 	f.Setup("event transform is addressable", eventtransform.IsAddressable(transformName))
 	f.Setup("event transform is ready", eventtransform.IsReady(transformName))
-	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiverTLS))
+	f.Setup("install sink", eventshub.Install(sink,
+		eventshub.IssuerRef(eventingtlstesting.IssuerKind, eventingtlstesting.IssuerName),
+		eventshub.StartReceiverTLS))
 	f.Setup("event transform has HTTPS address", eventtransform.ValidateAddress(transformName, addressable.AssertHTTPSAddress))
 
 	f.Requirement("install source", eventshub.Install(source,
