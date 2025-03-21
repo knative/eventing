@@ -298,7 +298,6 @@ func jsonataDeployment(ctx context.Context, withCombinedTrustBundle bool, cw *re
 				Name: "NODE_EXTRA_CA_CERTS",
 				Value: filepath.Join(
 					eventingtls.TrustBundleMountPath,
-					eventingtls.TrustBundleCombined,
 					eventingtls.TrustBundleCombinedPemFile,
 				),
 			},
