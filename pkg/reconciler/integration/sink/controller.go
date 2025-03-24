@@ -19,21 +19,23 @@ package sink
 import (
 	"context"
 
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"go.uber.org/zap"
+
 	"k8s.io/client-go/tools/cache"
-	"knative.dev/eventing/pkg/certificates"
-	certmanagerclient "knative.dev/eventing/pkg/client/certmanager/clientset/versioned"
-	certmanagerinformers "knative.dev/eventing/pkg/client/certmanager/informers/externalversions"
 	"knative.dev/pkg/injection"
 
 	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/eventing/pkg/apis/sinks/v1alpha1"
 	"knative.dev/eventing/pkg/auth"
+	"knative.dev/eventing/pkg/certificates"
 	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventpolicy"
 	"knative.dev/eventing/pkg/client/injection/informers/sinks/v1alpha1/integrationsink"
 	deploymentinformer "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment"
 	"knative.dev/pkg/client/injection/kube/informers/core/v1/service"
+
 	pkgreconciler "knative.dev/pkg/reconciler"
+
+	certmanagerclientset "github.com/cert-manager/cert-manager/pkg/client/clientset/versioned"
 
 	integrationsinkreconciler "knative.dev/eventing/pkg/client/injection/reconciler/sinks/v1alpha1/integrationsink"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
@@ -53,53 +55,31 @@ func NewController(
 	deploymentInformer := deploymentinformer.Get(ctx)
 	serviceInformer := service.Get(ctx)
 
+	dynamicCertificateInformer := certificates.NewDynamicCertificatesInformer()
 	r := &Reconciler{
-		kubeClientSet:     kubeclient.Get(ctx),
-		deploymentLister:  deploymentInformer.Lister(),
-		serviceLister:     serviceInformer.Lister(),
-		secretLister:      secretInformer.Lister(),
-		eventPolicyLister: eventPolicyInformer.Lister(),
+		secretLister:        secretInformer.Lister(),
+		eventPolicyLister:   eventPolicyInformer.Lister(),
+		kubeClientSet:       kubeclient.Get(ctx),
+		deploymentLister:    deploymentInformer.Lister(),
+		serviceLister:       serviceInformer.Lister(),
+		cmCertificateLister: dynamicCertificateInformer.Lister(),
+		certManagerClient:   certmanagerclientset.NewForConfigOrDie(injection.GetConfig(ctx)),
 	}
 
 	logging.FromContext(ctx).Info("Creating IntegrationSink controller")
 
 	var globalResync func(obj interface{})
+	var enqueueControllerOf func(interface{})
 
 	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {
 		if globalResync != nil {
 			globalResync(nil)
 		}
 
-		if features, ok := value.(feature.Flags); ok {
+		if features, ok := value.(feature.Flags); ok && enqueueControllerOf != nil {
 			// we assume that Cert-Manager is installed in the cluster if the feature flag is enabled
-			if features.IsPermissiveTransportEncryption() || features.IsStrictTransportEncryption() {
-
-				go func() { // Start and register informer
-					certManagerClient := certmanagerclient.NewForConfigOrDie(injection.GetConfig(ctx))
-					factory := certmanagerinformers.NewSharedInformerFactoryWithOptions(
-						certManagerClient,
-						controller.DefaultResyncPeriod,
-						certmanagerinformers.WithTweakListOptions(func(options *v1.ListOptions) {
-							options.LabelSelector = "app.kubernetes.io/component=knative-eventing"
-						}),
-					)
-					cmCertificateInformer := factory.Certmanager().V1().Certificates()
-					r.cmCertificateLister = cmCertificateInformer.Lister()
-					r.certManagerClient = certManagerClient
-
-					cmCertificateInformer.Informer().AddEventHandler(controller.HandleAll(globalResync))
-					factory.Start(ctx.Done())
-
-					if !cache.WaitForCacheSync(ctx.Done(), cmCertificateInformer.Informer().HasSynced) {
-						logging.FromContext(ctx).Error("Failed to sync Cert Manager Certificate informer")
-					}
-				}()
-
-			} else {
-				cancelFunc, cancelExists := ctx.Value("cancelFunc").(context.CancelFunc)
-				if cancelExists {
-					go cancelFunc()
-				}
+			if err := dynamicCertificateInformer.Reconcile(ctx, features, controller.HandleAll(enqueueControllerOf)); err != nil {
+				logging.FromContext(ctx).Errorw("Failed to start certificates dynamic factory", zap.Error(err))
 			}
 		}
 	})
@@ -110,6 +90,7 @@ func NewController(
 			ConfigStore: featureStore,
 		}
 	})
+	enqueueControllerOf = impl.EnqueueControllerOf
 
 	integrationSinkInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 

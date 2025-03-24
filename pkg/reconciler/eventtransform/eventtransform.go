@@ -19,8 +19,11 @@ package eventtransform
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
 
 	cmapis "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	cmclient "github.com/cert-manager/cert-manager/pkg/client/clientset/versioned"
+	cmlisters "github.com/cert-manager/cert-manager/pkg/client/listers/certmanager/v1"
 	"github.com/google/go-cmp/cmp"
 	"go.uber.org/zap/zapcore"
 	appsv1 "k8s.io/api/apps/v1"
@@ -32,8 +35,6 @@ import (
 	appslister "k8s.io/client-go/listers/apps/v1"
 	corelister "k8s.io/client-go/listers/core/v1"
 	"knative.dev/eventing/pkg/apis/feature"
-	cmclient "knative.dev/eventing/pkg/client/certmanager/clientset/versioned"
-	cmlisters "knative.dev/eventing/pkg/client/certmanager/listers/certmanager/v1"
 	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -60,7 +61,7 @@ type Reconciler struct {
 	jsonataServiceLister       corelister.ServiceLister
 	jsonataEndpointLister      corelister.EndpointsLister
 	jsonataSinkBindingLister   sourceslisters.SinkBindingLister
-	cmCertificateLister        cmlisters.CertificateLister
+	cmCertificateLister        *atomic.Pointer[cmlisters.CertificateLister]
 	certificatesSecretLister   corelister.SecretLister
 	trustBundleConfigMapLister corelister.ConfigMapLister
 
@@ -175,7 +176,12 @@ func (r *Reconciler) reconcileJsonataTransformationCertificate(ctx context.Conte
 	}
 	expected := jsonataCertificate(ctx, transform)
 
-	curr, err := r.cmCertificateLister.Certificates(expected.GetNamespace()).Get(expected.GetName())
+	cmCertificateLister := r.cmCertificateLister.Load()
+	if cmCertificateLister == nil || *cmCertificateLister == nil {
+		return nil, fmt.Errorf("no cert-manager certificate lister created yet, this should rarely happen and recover")
+	}
+
+	curr, err := (*cmCertificateLister).Certificates(expected.GetNamespace()).Get(expected.GetName())
 	if apierrors.IsNotFound(err) {
 		created, err := r.createCertificate(ctx, transform, expected)
 		if err != nil {
@@ -470,15 +476,19 @@ func (r *Reconciler) updateSinkBinding(ctx context.Context, transform *eventing.
 
 func (r *Reconciler) deleteJsonataTransformationCertificate(ctx context.Context, transform *eventing.EventTransform) error {
 	certificate := jsonataCertificate(ctx, transform)
-	_, err := r.cmCertificateLister.Certificates(certificate.GetNamespace()).Get(certificate.GetName())
-	if apierrors.IsNotFound(err) {
-		return nil
-	}
-	if err != nil {
-		return fmt.Errorf("failed to get certificate %s/%s: %w", certificate.GetNamespace(), certificate.GetName(), err)
+
+	cmCertificateLister := r.cmCertificateLister.Load()
+	if cmCertificateLister != nil && *cmCertificateLister != nil {
+		_, err := (*cmCertificateLister).Certificates(certificate.GetNamespace()).Get(certificate.GetName())
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		if err != nil {
+			return fmt.Errorf("failed to get certificate %s/%s: %w", certificate.GetNamespace(), certificate.GetName(), err)
+		}
 	}
 
-	err = r.cmClient.CertmanagerV1().Certificates(certificate.GetNamespace()).Delete(ctx, certificate.GetName(), metav1.DeleteOptions{})
+	err := r.cmClient.CertmanagerV1().Certificates(certificate.GetNamespace()).Delete(ctx, certificate.GetName(), metav1.DeleteOptions{})
 	if apierrors.IsNotFound(err) {
 		return nil
 	}

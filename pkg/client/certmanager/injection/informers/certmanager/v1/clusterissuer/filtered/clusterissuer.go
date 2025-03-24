@@ -21,7 +21,7 @@ package filtered
 import (
 	context "context"
 
-	v1 "knative.dev/eventing/pkg/client/certmanager/informers/externalversions/certmanager/v1"
+	v1 "github.com/cert-manager/cert-manager/pkg/client/informers/externalversions/certmanager/v1"
 	filtered "knative.dev/eventing/pkg/client/certmanager/injection/informers/factory/filtered"
 	controller "knative.dev/pkg/controller"
 	injection "knative.dev/pkg/injection"
@@ -59,7 +59,7 @@ func Get(ctx context.Context, selector string) v1.ClusterIssuerInformer {
 	untyped := ctx.Value(Key{Selector: selector})
 	if untyped == nil {
 		logging.FromContext(ctx).Panicf(
-			"Unable to fetch knative.dev/eventing/pkg/client/certmanager/informers/externalversions/certmanager/v1.ClusterIssuerInformer with selector %s from context.", selector)
+			"Unable to fetch github.com/cert-manager/cert-manager/pkg/client/informers/externalversions/certmanager/v1.ClusterIssuerInformer with selector %s from context.", selector)
 	}
 	return untyped.(v1.ClusterIssuerInformer)
 }

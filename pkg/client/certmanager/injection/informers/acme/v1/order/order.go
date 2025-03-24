@@ -21,7 +21,7 @@ package order
 import (
 	context "context"
 
-	v1 "knative.dev/eventing/pkg/client/certmanager/informers/externalversions/acme/v1"
+	v1 "github.com/cert-manager/cert-manager/pkg/client/informers/externalversions/acme/v1"
 	factory "knative.dev/eventing/pkg/client/certmanager/injection/informers/factory"
 	controller "knative.dev/pkg/controller"
 	logging "knative.dev/pkg/logging"
@@ -41,7 +41,7 @@ func Get(ctx context.Context) v1.OrderInformer {
 	untyped := ctx.Value(Key{})
 	if untyped == nil {
 		logging.FromContext(ctx).Panic(
-			"Unable to fetch knative.dev/eventing/pkg/client/certmanager/informers/externalversions/acme/v1.OrderInformer from context.")
+			"Unable to fetch github.com/cert-manager/cert-manager/pkg/client/informers/externalversions/acme/v1.OrderInformer from context.")
 	}
 	return untyped.(v1.OrderInformer)
 }

@@ -53,25 +53,77 @@ func TestGenerateEnvVarsFromStruct(t *testing.T) {
 
 func TestGenerateEnvVarsFromStruct_S3WithCamelTag(t *testing.T) {
 	type AWSS3 struct {
-		Arn    string `json:"arn,omitempty" camel:"CAMEL_KAMELET_AWS_S3_SOURCE_BUCKETNAMEORARN"`
+		Arn    string `json:"arn,omitempty" camel:"BUCKETNAMEORARN"`
 		Region string `json:"region,omitempty"`
 	}
 
-	prefix := "CAMEL_KAMELET_AWS_S3_SOURCE"
-	input := AWSS3{
-		Arn:    "arn:aws:s3:::example-bucket",
-		Region: "us-west-2",
+	type AWSSQS struct {
+		Arn    string `json:"arn,omitempty" camel:"QUEUENAMEORARN"`
+		Region string `json:"region,omitempty"`
 	}
 
-	// Expected environment variables including SSL settings and camel tag for Arn
-	want := []corev1.EnvVar{
-		{Name: "CAMEL_KAMELET_AWS_S3_SOURCE_BUCKETNAMEORARN", Value: "arn:aws:s3:::example-bucket"},
-		{Name: "CAMEL_KAMELET_AWS_S3_SOURCE_REGION", Value: "us-west-2"},
+	tests := []struct {
+		name   string
+		prefix string
+		input  interface{}
+		want   []corev1.EnvVar
+	}{
+		{
+			name:   "S3 Source with Camel Tag",
+			prefix: "CAMEL_KAMELET_AWS_S3_SOURCE",
+			input: AWSS3{
+				Arn:    "arn:aws:s3:::example-bucket",
+				Region: "us-west-2",
+			},
+			want: []corev1.EnvVar{
+				{Name: "CAMEL_KAMELET_AWS_S3_SOURCE_BUCKETNAMEORARN", Value: "arn:aws:s3:::example-bucket"},
+				{Name: "CAMEL_KAMELET_AWS_S3_SOURCE_REGION", Value: "us-west-2"},
+			},
+		},
+		{
+			name:   "S3 Sink with Camel Tag",
+			prefix: "CAMEL_KAMELET_AWS_S3_SINK",
+			input: AWSS3{
+				Arn:    "arn:aws:s3:::another-bucket",
+				Region: "eu-central-1",
+			},
+			want: []corev1.EnvVar{
+				{Name: "CAMEL_KAMELET_AWS_S3_SINK_BUCKETNAMEORARN", Value: "arn:aws:s3:::another-bucket"},
+				{Name: "CAMEL_KAMELET_AWS_S3_SINK_REGION", Value: "eu-central-1"},
+			},
+		},
+		{
+			name:   "SQS Source with Camel Tag",
+			prefix: "CAMEL_KAMELET_AWS_SQS_SOURCE",
+			input: AWSSQS{
+				Arn:    "arn:aws:sqs:::example-queue",
+				Region: "us-east-1",
+			},
+			want: []corev1.EnvVar{
+				{Name: "CAMEL_KAMELET_AWS_SQS_SOURCE_QUEUENAMEORARN", Value: "arn:aws:sqs:::example-queue"},
+				{Name: "CAMEL_KAMELET_AWS_SQS_SOURCE_REGION", Value: "us-east-1"},
+			},
+		},
+		{
+			name:   "SQS Sink with Camel Tag",
+			prefix: "CAMEL_KAMELET_AWS_SQS_SINK",
+			input: AWSSQS{
+				Arn:    "arn:aws:sqs:::another-queue",
+				Region: "ap-southeast-1",
+			},
+			want: []corev1.EnvVar{
+				{Name: "CAMEL_KAMELET_AWS_SQS_SINK_QUEUENAMEORARN", Value: "arn:aws:sqs:::another-queue"},
+				{Name: "CAMEL_KAMELET_AWS_SQS_SINK_REGION", Value: "ap-southeast-1"},
+			},
+		},
 	}
 
-	got := GenerateEnvVarsFromStruct(prefix, input)
-
-	if diff := cmp.Diff(want, got); diff != "" {
-		t.Errorf("generateEnvVarsFromStruct_S3WithCamelTag() mismatch (-want +got):\n%s", diff)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := GenerateEnvVarsFromStruct(tt.prefix, tt.input)
+			if diff := cmp.Diff(tt.want, got); diff != "" {
+				t.Errorf("GenerateEnvVarsFromStruct() mismatch (-want +got):\n%s", diff)
+			}
+		})
 	}
 }

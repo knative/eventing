@@ -19,10 +19,12 @@ package eventtransform
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
 	"testing"
 
 	cmapis "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
+	cmlisters "github.com/cert-manager/cert-manager/pkg/client/listers/certmanager/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -2020,6 +2022,10 @@ func TestReconcile(t *testing.T) {
 
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, watcher configmap.Watcher) controller.Reconciler {
 
+		cmCertificatesListerAtomic := &atomic.Pointer[cmlisters.CertificateLister]{}
+		cmCertificatesLister := listers.GetCertificateLister()
+		cmCertificatesListerAtomic.Store(&cmCertificatesLister)
+
 		r := &Reconciler{
 			k8s:                        kubeclient.Get(ctx),
 			client:                     eventingclient.Get(ctx),
@@ -2029,7 +2035,7 @@ func TestReconcile(t *testing.T) {
 			jsonataServiceLister:       listers.GetServiceLister(),
 			jsonataEndpointLister:      listers.GetEndpointsLister(),
 			jsonataSinkBindingLister:   listers.GetSinkBindingLister(),
-			cmCertificateLister:        listers.GetCertificateLister(),
+			cmCertificateLister:        cmCertificatesListerAtomic,
 			certificatesSecretLister:   listers.GetSecretLister(),
 			trustBundleConfigMapLister: listers.GetConfigMapLister(),
 			configWatcher:              cw,
