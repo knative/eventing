@@ -64,39 +64,31 @@ func TestCombineValidTrustBundles(t *testing.T) {
 		return certPEM.Bytes()
 	}
 
+	// Generate invalid PEM data (not a certificate)
+	generateInvalidPEMData := func() []byte {
+		// Generate an RSA private key (which is not a certificate)
+		privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+		if err != nil {
+			t.Fatalf("Failed to generate private key: %v", err)
+		}
+
+		// Encode it to PEM format
+		privateKeyBytes := x509.MarshalPKCS1PrivateKey(privateKey)
+		pemBlock := &pem.Block{
+			Type:  "RSA PRIVATE KEY", // Not a CERTIFICATE type
+			Bytes: privateKeyBytes,
+		}
+
+		return pem.EncodeToMemory(pemBlock)
+	}
+
 	// Generate some test certificates
 	validCert1 := generateValidCert()
 	validCert2 := generateValidCert()
 	validCert3 := generateValidCert()
 
 	// Invalid PEM data (not a certificate)
-	invalidTypeData := []byte(`-----BEGIN RSA PRIVATE KEY-----
-MIIEpAIBAAKCAQEA7bPaMwN0tKpmN1EtAAMnQcbQNVTgC0DfgLYZ1yDqnNEVj8F/
-MVdfQIyhOfAcBImRlvHHbDQxVWiXlANqwN2NmGAB1/cxNkB1GkDn6y/tango/G7t
-TF0/Gm2jcgpCU2RzDxnQPimRJNQkP7rNVY8fiEE7O5EWcB0FbKOZ8G4+epZ5RXuL
-0y/+AyFIYrIsuraqJZBZRLA/aaLmvZbPzBCVNq36QQTzG+CQpgNYXKRJJTmR8D5w
-o2fgzpQRsBHxJ+VM8HyrCWIg8tGJVnMXRaH3LHmXEzJAASL0qO7a7Z1hPdGXCRUO
-3PBXXaVl98PTvAf1IX0SFiJXZ0vwB1OH7NkEvQIDAQABAoIBABhXNxC9kZpwZzWX
-b3m5j4HwgYUyCLlvsYT5xtNEfp87ZnLO0OdD5QlQe02QyrY9uYQCGtX7sWKGXfXF
-czzRpw3+53hf0JhtCgxP88TaOUmLrOQwQYG3Rio9jOGjYQKA5xJFod0c/Z0EWaDB
-xeYUQpRGNoQQUUPJi+WX/UE5pbTUzKWI4xtxVJbxuBEF63xHXfCYl3cTAuBLwZcy
-iRtQS2wQBLKLdj2JZbI/kHMnAUC0Z1kyGQeGJLiYJLWnCEcErPSgi1Yapt95nlQF
-eYgNn1/TqOZtuUMMQcl87+rVAJzQ6/1KsxdIlA/ZQAQUkRwGr4ZTfmPRXCPy5PIw
-eJ1KAAECgYEA9kVvG/ExNHQxIDHZBbHUGPLzGNVwBpvLZnZJxuIl+/kVPCZvEMUK
-5xYfDZYwj9aNDgDWIjTUEN6r+LdJ6uLYkA4kdRYWFm6znKXUKTAhf/ePDqhvwJTI
-LZBQsviwr3J1y4edGNgKVTRQUJdKTnvRVpvugvE3d0FOOJr+JXOKnH0CgYEA9unj
-QLrg8nhgYkC9dKZ5Kt6rysXOO1J29N3JIvzLJFPcOCrvGE5NTPvXsoz/zjRb5Yo5
-L4QQtQ59k1jgXngQV+x3CoRUUQne9TDnnnSj3zWOhuEKmGLtbQEgg0D9x/8uOuaQ
-G/3Z9/cI+blzbOmczPgY+Nwoi7WzCnE0u764lAECgYEA8FdacV6/9tWQWLUZnNxN
-ZFz3Q/9i6XhmXTUM9aBZxR0IVwQMeZMmjkjO8XDHmtE7kUz6WHRXvQBdGPw8CDKF
-PBaDDkPex+Q02sBw3qpvvpHNYpQ6JaVC7MRXdTAEuXMTBuIqMw5jqQAx2JRiDx/y
-2Lv8j4uFpNJ5K1f+kngJMm0CgYB1YnZKiqn6hOEwXB5DCJsjUbRAkBRnOqjXpZJ7
-k3+WbLBc1/AobU0WZqLx8mYQQPqOt8UJm7MfDKxKXqmnEbO+TEWfJiw5nUx0iL7r
-he7Nx4lLsVy/Yj91z5Ct4Qf9+vKaxn0D2gbNQbLkKR4LhsL8IUFYgvQruzQeAEJE
-rIKAAQKBgQC5aT3SiSRZgHNpSLnQK/jSvxys9sxZ9ulL4GTVTwIZlEY8Xw1WZE+o
-AZGGGg4o9sMJAf+SZvHu1vF9wNx+Yh/T9uOzDOGnlKEfHo1ljSWbKlnFfWNPgZF/
-A2JA2pwuXFQlQWpRbL5HUmXAaS1wGMSxFqLznf5qEZUGUNKqUvI8HQ==
------END RSA PRIVATE KEY-----`)
+	invalidTypeData := generateInvalidPEMData()
 
 	// Invalid certificate data (corrupted)
 	invalidCertData := []byte(`-----BEGIN CERTIFICATE-----
