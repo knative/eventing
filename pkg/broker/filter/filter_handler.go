@@ -425,8 +425,8 @@ func (h *Handler) handleDispatchToSubscriberRequest(ctx context.Context, trigger
 	subscriberURI := trigger.Status.SubscriberURI
 	if subscriberURI == nil {
 		// Record the event count.
-		writer.WriteHeader(http.StatusBadRequest)
-		_ = h.reporter.ReportEventCount(reportArgs, http.StatusBadRequest)
+		writer.WriteHeader(http.StatusNotFound)
+		_ = h.reporter.ReportEventCount(reportArgs, http.StatusNotFound)
 		return
 	}
 
