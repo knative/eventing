@@ -1,13 +1,11 @@
+version: "2"
 run:
-  timeout: 10m
-
   build-tags:
     - e2e
     - probe
     - preupgrade
     - postupgrade
     - postdowngrade
-
 linters:
   enable:
     - asciicheck
@@ -17,12 +15,27 @@ linters:
     - unparam
   disable:
     - errcheck
-
-issues:
-  exclude-dirs:
-    - pkg/client # Excludes generated client
-  exclude-rules:
-    - path: test # Excludes /test, *_test.go etc.
-      linters:
-        - gosec
-        - unparam
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - gosec
+          - unparam
+        path: test
+    paths:
+      - pkg/client
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
