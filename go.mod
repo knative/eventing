@@ -36,18 +36,18 @@ require (
 	go.uber.org/atomic v1.10.0
 	go.uber.org/multierr v1.11.0
 	go.uber.org/zap v1.27.0
-	golang.org/x/net v0.37.0
-	golang.org/x/sync v0.12.0
+	golang.org/x/net v0.38.0
+	golang.org/x/sync v0.13.0
 	k8s.io/api v0.32.2
 	k8s.io/apiextensions-apiserver v0.32.1
 	k8s.io/apimachinery v0.32.2
 	k8s.io/apiserver v0.32.1
 	k8s.io/client-go v0.32.2
 	k8s.io/utils v0.0.0-20241210054802-24370beab758
-	knative.dev/hack v0.0.0-20250318155814-8f599b7a828c
-	knative.dev/hack/schema v0.0.0-20250318155814-8f599b7a828c
-	knative.dev/pkg v0.0.0-20250312035536-b7bbf4be5dbd
-	knative.dev/reconciler-test v0.0.0-20250219013557-5ca0bd4fcad5
+	knative.dev/hack v0.0.0-20250331013814-c577ed9f7775
+	knative.dev/hack/schema v0.0.0-20250331013814-c577ed9f7775
+	knative.dev/pkg v0.0.0-20250411133814-a8e20d9db3aa
+	knative.dev/reconciler-test v0.0.0-20250410013714-98ae503a6184
 	sigs.k8s.io/yaml v1.4.0
 )
 
@@ -106,12 +106,12 @@ require (
 	golang.org/x/text v0.23.0 // indirect
 	golang.org/x/time v0.10.0 // indirect
 	golang.org/x/tools v0.31.0 // indirect
-	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
+	gomodules.xyz/jsonpatch/v2 v2.5.0 // indirect
 	google.golang.org/api v0.198.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20250207221924-e9438ea467c6 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250207221924-e9438ea467c6 // indirect
-	google.golang.org/grpc v1.71.0 // indirect
-	google.golang.org/protobuf v1.36.5 // indirect
+	google.golang.org/grpc v1.71.1 // indirect
+	google.golang.org/protobuf v1.36.6 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
