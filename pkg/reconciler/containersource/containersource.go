@@ -109,8 +109,8 @@ func (r *Reconciler) reconcileReceiveAdapter(ctx context.Context, source *v1.Con
 		return nil, fmt.Errorf("getting Deployment: %v", err)
 	} else if !metav1.IsControlledBy(ra, source) {
 		return nil, fmt.Errorf("deployment %q is not owned by ContainerSource %q", ra.Name, source.Name)
-	} else if r.podSpecChanged(&ra.Spec.Template.Spec, &expected.Spec.Template.Spec) {
-		ra.Spec.Template.Spec = expected.Spec.Template.Spec
+	} else if r.podTemplateChanged(&ra.Spec.Template, &expected.Spec.Template) {
+		ra.Spec.Template = expected.Spec.Template
 		ra, err = r.kubeClientSet.AppsV1().Deployments(expected.Namespace).Update(ctx, ra, metav1.UpdateOptions{})
 		if err != nil {
 			return nil, fmt.Errorf("updating Deployment: %v", err)
@@ -156,6 +156,10 @@ func (r *Reconciler) reconcileSinkBinding(ctx context.Context, source *v1.Contai
 
 func (r *Reconciler) podSpecChanged(have *corev1.PodSpec, want *corev1.PodSpec) bool {
 	// TODO this won't work, SinkBinding messes with this. n3wscott working on a fix.
+	return !equality.Semantic.DeepDerivative(want, have)
+}
+
+func (r *Reconciler) podTemplateChanged(have *corev1.PodTemplateSpec, want *corev1.PodTemplateSpec) bool {
 	return !equality.Semantic.DeepDerivative(want, have)
 }
 
