@@ -14,3 +14,11 @@ func getRand(tb testing.TB) int64 {
 	}
 	return out.Int64()
 }
+
+func getRand1(tb testing.TB) int64 {
+	out, err := rand.Int(rand.Reader, big.NewInt(math.MaxInt64))
+	if err != nil {
+		tb.Fatal(err)
+	}
+	return out.Int64()
+}
