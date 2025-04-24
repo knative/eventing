@@ -212,11 +212,17 @@ func CombinedBundlePresent(trustBundleLister corev1listers.ConfigMapLister) (boo
 	return combinedBundle.Len() > 0, nil
 }
 
+// AddTrustBundleVolumes adds the trust bundle volumes to the given PodSpec.
 func AddTrustBundleVolumes(trustBundleLister corev1listers.ConfigMapLister, obj kmeta.Accessor, pt *corev1.PodSpec) (*corev1.PodSpec, error) {
 	cms, err := trustBundleLister.ConfigMaps(obj.GetNamespace()).List(TrustBundleSelector)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list trust bundles ConfigMaps in %q: %w", obj.GetNamespace(), err)
 	}
+
+	// Sort ConfigMaps by name to ensure consistent ordering
+	sort.SliceStable(cms, func(i, j int) bool {
+		return cms[i].Name < cms[j].Name
+	})
 
 	pt = pt.DeepCopy()
 	sources := make([]corev1.VolumeProjection, 0, len(cms))
