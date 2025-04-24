@@ -4,13 +4,13 @@ metadata:
   name: eventing-integrations-images
   namespace: knative-eventing
   labels:
-    app.kubernetes.io/version: "v20250417-9bbd02b"
+    app.kubernetes.io/version: "v20250424-ec8d187"
 data:
-  aws-ddb-streams-source: gcr.io/knative-nightly/aws-ddb-streams-source@sha256:a38e0a812a5072a51a8264eb0c6ff58f36e5261c5c5aef7b928659875a33b3cc
-  timer-source: gcr.io/knative-nightly/timer-source@sha256:bc8bdff1bb4314d23729813feb6cfafced6edc749c0ae1a47ed2d920f0f0840c
-  log-sink: gcr.io/knative-nightly/log-sink@sha256:cd5150e44b11187012bf115224d89dae52666bf2bc505cd0dc307d66c0b2a0f0
-  aws-sqs-source: gcr.io/knative-nightly/aws-sqs-source@sha256:fbad19762b713737adb87082eb1853f64eae4b86a009845aca781d483c79ac09
-  aws-sns-sink: gcr.io/knative-nightly/aws-sns-sink@sha256:9a11f52fb37fcae280f2712249da30349dbfc016c9782420aab92bba42c38cd0
-  aws-s3-sink: gcr.io/knative-nightly/aws-s3-sink@sha256:518003922a4fb8f45e9af046e3f5e11dbb9f0b65472a914bb86f951b4cb06c29
-  aws-s3-source: gcr.io/knative-nightly/aws-s3-source@sha256:7e95fc5f67129da6e5137d8b84ac48b79fc2e129381d597d39cd9bd8ffadcb68
-  aws-sqs-sink: gcr.io/knative-nightly/aws-sqs-sink@sha256:53bc6c564c0671482a00cd092f1e69b63e3fe2b86fd3a32f05fcf32cc006982f
+  aws-ddb-streams-source: gcr.io/knative-nightly/aws-ddb-streams-source@sha256:ad9f6fa61d14828f4d40ff7c5bb6e803dcd5b0e19ff2b48bfa28c3571c49818e
+  timer-source: gcr.io/knative-nightly/timer-source@sha256:7ca1ddbfbd857086b119a528bc327e681d786bd37b0f6f7c20616447ebccb42f
+  log-sink: gcr.io/knative-nightly/log-sink@sha256:fd3abe0fad34c13a3f649af55fc23510986f5dc18c1cadc95039723a7a81959e
+  aws-sqs-source: gcr.io/knative-nightly/aws-sqs-source@sha256:9439811d4cb007821d51e46ec3b8e98917a8c181a63d386d86d2d7928f739eea
+  aws-sns-sink: gcr.io/knative-nightly/aws-sns-sink@sha256:65f87a7b21f22a980722132d0da1aa89ed6ad7a8153fbc6e7b6d8eb3791bc59b
+  aws-s3-sink: gcr.io/knative-nightly/aws-s3-sink@sha256:a4e913565334da0683b0a8aef93922a88e8cf3ed64052b8c6a0487d642cc1c97
+  aws-s3-source: gcr.io/knative-nightly/aws-s3-source@sha256:7fc8f46ab71643320c6010ed99dcaaf1e1e8f6d0614b026dded7d2072b652e70
+  aws-sqs-sink: gcr.io/knative-nightly/aws-sqs-sink@sha256:4dc023097123e7133d1ca6e3168e3c782b1bdb6cdb50b86189632b0e681a0a49
