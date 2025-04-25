@@ -14,7 +14,7 @@ In the following the control plane components and their responsibilities are des
 
 The `mt-broker-controller` is kind of the heart of the MTChannelBasedBroker control plane and has the following responsibilities:
 
-* Watches for new `Broker` resources with the `eventing.kantive.dev/broker.class: MTChannelBasedBroker` annotation (step 2 in the diagram) and creates a new _concrete_ channel resource (step 3 in the diagram) depending on the `channel-template-spec` from the configmap referenced in the `config-br-defaults` configmap (by default this points to `config-br-default-channel`).
+* Watches for new `Broker` resources with the `eventing.knative.dev/broker.class: MTChannelBasedBroker` annotation (step 2 in the diagram) and creates a new _concrete_ channel resource (step 3 in the diagram) depending on the `channel-template-spec` from the configmap referenced in the `config-br-defaults` configmap (by default this points to `config-br-default-channel`).
 
   Be aware that in case the default `brokerClass` in `config-br-defaults` is not set to `MTChannelBasedBroker`, the referenced configmap still must contain a `channel-template-spec`. Otherwise the user needs to define the corresponding config on the broker resource directly when using the `MTChannelBasedBroker` broker class, e.g.:
 
