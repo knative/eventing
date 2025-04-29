@@ -17,7 +17,10 @@ limitations under the License.
 package v1
 
 import (
+	"fmt"
 	"testing"
+
+	"knative.dev/pkg/system"
 
 	"golang.org/x/net/context"
 	authenticationv1 "k8s.io/api/authentication/v1"
@@ -139,7 +142,7 @@ func TestInMemoryChannelValidation(t *testing.T) {
 		want: func() *apis.FieldError {
 			diff, _ := kmp.ShortDiff(validIMCSingleSubscriber.Spec.Subscribers, validIMCTwoSubscribers.Spec.Subscribers)
 			return &apis.FieldError{
-				Message: "Channel.Spec.Subscribers changed by user test-user which was not the system:serviceaccount:knative-eventing:eventing-controller service account",
+				Message: fmt.Sprintf("%s:%s:%s", "Channel.Spec.Subscribers changed by user test-user which was not the system:serviceaccount", system.Namespace(), "eventing-controller service account"),
 				Paths:   []string{"spec.subscribers"},
 				Details: diff,
 			}
