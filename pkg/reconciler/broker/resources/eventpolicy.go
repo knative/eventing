@@ -17,17 +17,21 @@ limitations under the License.
 package resources
 
 import (
+	"fmt"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/pkg/kmeta"
+	"knative.dev/pkg/system"
 )
+
+var OIDCBrokerSub = fmt.Sprintf("%s:%s:%s", "system:serviceaccount", system.Namespace(), "mt-broker-ingress-oidc")
 
 const (
 	BackingChannelEventPolicyLabelPrefix = "eventing.knative.dev/"
-	OIDCBrokerSub                        = "system:serviceaccount:knative-eventing:mt-broker-ingress-oidc"
 	brokerKind                           = "Broker"
 )
 
