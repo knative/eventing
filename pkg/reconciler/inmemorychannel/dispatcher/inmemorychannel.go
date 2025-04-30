@@ -241,7 +241,7 @@ func newConfigForInMemoryChannel(ctx context.Context, imc *v1.InMemoryChannel) (
 		}
 
 		conf.Namespace = imc.Namespace
-		if isOIDCEnabled {
+		if isOIDCEnabled && sub.Auth.ServiceAccountName != nil {
 			conf.ServiceAccount = &types.NamespacedName{
 				Name:      *sub.Auth.ServiceAccountName,
 				Namespace: imc.Namespace,
