@@ -4,13 +4,13 @@ metadata:
   name: eventing-integrations-images
   namespace: knative-eventing
   labels:
-    app.kubernetes.io/version: "v20250424-ec8d187"
+    app.kubernetes.io/version: "v20250522-6675778"
 data:
-  aws-ddb-streams-source: gcr.io/knative-nightly/aws-ddb-streams-source@sha256:ad9f6fa61d14828f4d40ff7c5bb6e803dcd5b0e19ff2b48bfa28c3571c49818e
-  timer-source: gcr.io/knative-nightly/timer-source@sha256:7ca1ddbfbd857086b119a528bc327e681d786bd37b0f6f7c20616447ebccb42f
-  log-sink: gcr.io/knative-nightly/log-sink@sha256:fd3abe0fad34c13a3f649af55fc23510986f5dc18c1cadc95039723a7a81959e
-  aws-sqs-source: gcr.io/knative-nightly/aws-sqs-source@sha256:9439811d4cb007821d51e46ec3b8e98917a8c181a63d386d86d2d7928f739eea
-  aws-sns-sink: gcr.io/knative-nightly/aws-sns-sink@sha256:65f87a7b21f22a980722132d0da1aa89ed6ad7a8153fbc6e7b6d8eb3791bc59b
-  aws-s3-sink: gcr.io/knative-nightly/aws-s3-sink@sha256:a4e913565334da0683b0a8aef93922a88e8cf3ed64052b8c6a0487d642cc1c97
-  aws-s3-source: gcr.io/knative-nightly/aws-s3-source@sha256:7fc8f46ab71643320c6010ed99dcaaf1e1e8f6d0614b026dded7d2072b652e70
-  aws-sqs-sink: gcr.io/knative-nightly/aws-sqs-sink@sha256:4dc023097123e7133d1ca6e3168e3c782b1bdb6cdb50b86189632b0e681a0a49
+  timer-source: gcr.io/knative-nightly/timer-source@sha256:8c65f7039fcb5474cdcb3060efb721840f896106aa7ba43ed47c9b6099d16174
+  aws-sqs-sink: gcr.io/knative-nightly/aws-sqs-sink@sha256:10ee10fb5b85fe7751321a6fc191a9a18dbb6b31b422e3bb9bcea1d6c55d9d1b
+  aws-s3-sink: gcr.io/knative-nightly/aws-s3-sink@sha256:b703aa5ea277659fe12aee307a8baa8c2f0c6e00719015bfa8478ac81e1b46e7
+  aws-s3-source: gcr.io/knative-nightly/aws-s3-source@sha256:72df6389fd781a65cceca4935bf49de31f7b401c4ae2ab2804fe33014c80730a
+  aws-sns-sink: gcr.io/knative-nightly/aws-sns-sink@sha256:24e4a8a68bca9e264144e67bdffdc0d3b4519ac850b85e473d6e7749f1182f6a
+  log-sink: gcr.io/knative-nightly/log-sink@sha256:3df21baac21616623b02469776d5a1ff43a5e1830b6b6646a896fc79d31583d6
+  aws-sqs-source: gcr.io/knative-nightly/aws-sqs-source@sha256:021c19db25b8dcaceec8c5fc67cdf57a99732544d1677e1cc76412b18865fe1a
+  aws-ddb-streams-source: gcr.io/knative-nightly/aws-ddb-streams-source@sha256:2ed21024caf695bb56730f5225ceb64ff1a832e16193a59a9384e7eaac6798cf
