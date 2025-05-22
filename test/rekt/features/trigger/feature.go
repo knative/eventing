@@ -321,7 +321,7 @@ func TriggerWithTLSSubscriberWithAdditionalCATrustBundles() *feature.Feature {
 			CACerts: nil, // CA certs are in the new trust-bundle
 		}
 
-		trigger.Install(triggerName, brokerName,
+		trigger.Install(triggerName, trigger.WithBrokerName(brokerName),
 			trigger.WithSubscriberFromDestination(subscriber))(ctx, t)
 	})
 	f.Setup("Wait for Trigger to become ready", trigger.IsReady(triggerName))
@@ -335,8 +335,8 @@ func TriggerWithTLSSubscriberWithAdditionalCATrustBundles() *feature.Feature {
 			CACerts: nil, // CA certs are in the new trust-bundle
 		}
 
-		linear := eventingv1.BackoffPolicyLinear
-		trigger.Install(dlsTriggerName, brokerName,
+		linear := eventingduckv1.BackoffPolicyLinear
+		trigger.Install(dlsTriggerName, trigger.WithBrokerName(brokerName),
 			trigger.WithRetry(2, &linear, pointer.String("PT1S")),
 			trigger.WithDeadLetterSinkFromDestination(dls),
 			trigger.WithSubscriber(nil, "http://127.0.0.1:2468"))(ctx, t)
