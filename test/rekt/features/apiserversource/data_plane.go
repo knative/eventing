@@ -26,6 +26,7 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/network"
 	"knative.dev/reconciler-test/pkg/environment"
+	"knative.dev/reconciler-test/pkg/knative"
 
 	"knative.dev/eventing/pkg/eventingtls/eventingtlstesting"
 	"knative.dev/eventing/test/rekt/resources/addressable"
@@ -255,6 +256,62 @@ func SendsEventsWithTLSTrustBundle() *feature.Feature {
 				Host:   network.GetServiceHostname(sink, environment.FromContext(ctx).Namespace()),
 			},
 			CACerts: nil, // CA certs are in the trust-bundle
+		}))
+		apiserversource.Install(src, cfg...)(ctx, t)
+	})
+	f.Requirement("ApiServerSource goes ready", apiserversource.IsReady(src))
+
+	f.Stable("ApiServerSource as event source").
+		Must("delivers events on sink with ref",
+			eventassert.OnStore(sink).
+				Match(eventassert.MatchKind(eventshub.EventReceived)).
+				MatchEvent(test.HasType("dev.knative.apiserver.resource.update")).
+				AtLeast(1),
+		).
+		Must("Set sinkURI to HTTPS endpoint", source.ExpectHTTPSSink(apiserversource.Gvr(), src))
+
+	return f
+}
+
+func SendsEventsWithTLSWithAdditionalTrustBundle() *feature.Feature {
+	src := feature.MakeRandomK8sName("apiserversource")
+	sink := feature.MakeRandomK8sName("sink")
+	trustBundle := feature.MakeRandomK8sName("trust-bundle")
+
+	f := feature.NewFeatureNamed("Send events to TLS sink - additional trust bundle")
+
+	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
+
+	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiverTLS))
+
+	f.Setup("Add trust bundle to system namespace", func(ctx context.Context, t feature.T) {
+
+		configmap.Install(trustBundle, knative.KnativeNamespaceFromContext(ctx),
+			configmap.WithLabels(map[string]string{"networking.knative.dev/trust-bundle": "true"}),
+			configmap.WithData("ca.crt", *eventshub.GetCaCerts(ctx)),
+		)(ctx, t)
+	})
+
+	sacmName := feature.MakeRandomK8sName("apiserversource")
+	f.Requirement("Create Service Account for ApiServerSource with RBAC for v1.Event resources",
+		setupAccountAndRoleForPods(sacmName))
+
+	cfg := []manifest.CfgFn{
+		apiserversource.WithServiceAccountName(sacmName),
+		apiserversource.WithEventMode(v1.ResourceMode),
+		apiserversource.WithResources(v1.APIVersionKindSelector{
+			APIVersion: "v1",
+			Kind:       "Event",
+		}),
+	}
+
+	f.Requirement("install ApiServerSource", func(ctx context.Context, t feature.T) {
+		cfg = append(cfg, apiserversource.WithSink(&duckv1.Destination{
+			URI: &apis.URL{
+				Scheme: "https", // Force using https
+				Host:   network.GetServiceHostname(sink, environment.FromContext(ctx).Namespace()),
+			},
+			CACerts: nil, // CA certs are in the new trust-bundle
 		}))
 		apiserversource.Install(src, cfg...)(ctx, t)
 	})
