@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"strconv"
 	"time"
 
 	"go.opencensus.io/plugin/ochttp"
@@ -34,7 +35,8 @@ const (
 )
 
 type HTTPEventReceiver struct {
-	port int
+	desiredPort int
+	port        int
 
 	server   *http.Server
 	listener net.Listener
@@ -49,12 +51,13 @@ type HTTPEventReceiver struct {
 // HTTPEventReceiverOption enables further configuration of a HTTPEventReceiver.
 type HTTPEventReceiverOption func(*HTTPEventReceiver)
 
-func NewHTTPEventReceiver(port int, o ...HTTPEventReceiverOption) *HTTPEventReceiver {
+// NewHTTPEventReceiver creates a new HTTPEventReceiver. When desiredPort is set to 0, a free port will be chosen.
+// The final port of the running server will be stored in receiver.Port.
+func NewHTTPEventReceiver(desiredPort int, o ...HTTPEventReceiverOption) *HTTPEventReceiver {
 	h := &HTTPEventReceiver{
-		port: port,
+		desiredPort: desiredPort,
+		Ready:       make(chan interface{}),
 	}
-
-	h.Ready = make(chan interface{})
 
 	for _, opt := range o {
 		opt(h)
@@ -122,10 +125,19 @@ func (recv *HTTPEventReceiver) GetAddr() string {
 	return ""
 }
 
+// GetPort returns the final assigned port of the server.
+// This is blocking, as we need to wait until the server is running.
+func (recv *HTTPEventReceiver) GetPort() int {
+	// wait until server is ready, as only then the port is assigned
+	<-recv.Ready
+
+	return recv.port
+}
+
 // Blocking
 func (recv *HTTPEventReceiver) StartListen(ctx context.Context, handler http.Handler) error {
 	var err error
-	if recv.listener, err = net.Listen("tcp", fmt.Sprintf(":%d", recv.port)); err != nil {
+	if recv.listener, err = net.Listen("tcp", fmt.Sprintf(":%d", recv.desiredPort)); err != nil {
 		return err
 	}
 
@@ -139,6 +151,18 @@ func (recv *HTTPEventReceiver) StartListen(ctx context.Context, handler http.Han
 	}
 	recv.server.Addr = recv.listener.Addr().String()
 	recv.server.Handler = drainer
+
+	_, portStr, err := net.SplitHostPort(recv.server.Addr)
+	if err != nil {
+		return fmt.Errorf("could not get port of server: %w", err)
+	}
+
+	port, err := strconv.Atoi(portStr)
+	if err != nil {
+		return fmt.Errorf("could not convert port to int: %w", err)
+	}
+
+	recv.port = port
 
 	errChan := make(chan error, 1)
 	go func() {

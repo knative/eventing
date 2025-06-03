@@ -18,6 +18,7 @@ package adapter
 
 import (
 	"context"
+	"fmt"
 	nethttp "net/http"
 	"os"
 	"strconv"
@@ -309,7 +310,7 @@ func TestTLS(t *testing.T) {
 	ctx, cancel := context.WithCancel(ctx)
 	t.Cleanup(cancel)
 
-	ca := eventingtlstesting.StartServer(ctx, t, 8333, nethttp.HandlerFunc(func(writer nethttp.ResponseWriter, request *nethttp.Request) {
+	ca, port := eventingtlstesting.StartServer(ctx, t, 0, nethttp.HandlerFunc(func(writer nethttp.ResponseWriter, request *nethttp.Request) {
 		if request.TLS == nil {
 			// It's not on TLS, fail request
 			writer.WriteHeader(nethttp.StatusInternalServerError)
@@ -328,17 +329,17 @@ func TestTLS(t *testing.T) {
 	}{
 		{
 			name:    "https sink URL, no CA certs fail",
-			sink:    "https://localhost:8333",
+			sink:    fmt.Sprintf("https://localhost:%d", port),
 			wantErr: true,
 		},
 		{
 			name:    "https sink URL with ca certs",
-			sink:    "https://localhost:8333",
+			sink:    fmt.Sprintf("https://localhost:%d", port),
 			caCerts: pointer.String(ca),
 		},
 		{
 			name:    "http sink URL with ca certs",
-			sink:    "http://localhost:8333",
+			sink:    fmt.Sprintf("http://localhost:%d", port),
 			caCerts: pointer.String(ca),
 			wantErr: true,
 		},

@@ -47,7 +47,7 @@ func init() {
 	CA, Key, Crt = loadCerts()
 }
 
-func StartServer(ctx context.Context, t *testing.T, port int, handler http.Handler, receiverOptions ...kncloudevents.HTTPEventReceiverOption) string {
+func StartServer(ctx context.Context, t *testing.T, port int, handler http.Handler, receiverOptions ...kncloudevents.HTTPEventReceiverOption) (string, int) {
 	secret := types.NamespacedName{
 		Namespace: "knative-tests",
 		Name:      "tls-secret",
@@ -83,7 +83,7 @@ func StartServer(ctx context.Context, t *testing.T, port int, handler http.Handl
 		}
 	}()
 
-	return string(CA)
+	return string(CA), receiver.GetPort()
 }
 
 func loadCerts() ([]byte, []byte, []byte) {
