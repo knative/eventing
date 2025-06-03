@@ -21,8 +21,13 @@ package rekt
 
 import (
 	"testing"
+	"time"
 
 	"knative.dev/eventing/test/rekt/features/integrationsink"
+	"knative.dev/eventing/test/rekt/features/oidc"
+	"knative.dev/reconciler-test/pkg/feature"
+
+	integrationsinkResources "knative.dev/eventing/test/rekt/resources/integrationsink"
 	"knative.dev/pkg/system"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/eventshub"
@@ -57,4 +62,26 @@ func TestIntegrationSinkSuccessTLS(t *testing.T) {
 	)
 
 	env.Test(ctx, t, integrationsink.SuccessTLS())
+}
+
+func TestIntegrationSinkOIDC(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+		environment.WithPollTimings(4*time.Second, 12*time.Minute),
+		eventshub.WithTLS(t),
+	)
+
+	name := feature.MakeRandomK8sName("integrationsink")
+
+	env.Prerequisite(ctx, t, integrationsink.GoesReadySimple(name))
+
+	env.TestSet(ctx, t, oidc.AddressableOIDCConformance(integrationsinkResources.GVR(), "IntegrationSink", name, env.Namespace()))
+
+	//		env.Test(ctx, t, integrationsink.OIDC())
 }
