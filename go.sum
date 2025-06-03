@@ -1055,8 +1055,8 @@ google.golang.org/grpc v1.39.1/go.mod h1:PImNr+rS9TWYb2O4/emRugxiyHZ5JyHW5F+RPnD
 google.golang.org/grpc v1.40.0/go.mod h1:ogyxbiOoUXAkP+4+xa6PZSE9DZgIHtSpzjDTB9KAK34=
 google.golang.org/grpc v1.40.1/go.mod h1:ogyxbiOoUXAkP+4+xa6PZSE9DZgIHtSpzjDTB9KAK34=
 google.golang.org/grpc v1.42.0/go.mod h1:k+4IHHFw41K8+bbowsex27ge2rCb65oeWqe4jJ590SU=
-google.golang.org/grpc v1.72.1 h1:HR03wO6eyZ7lknl75XlxABNVLLFc2PAb6mHlYh756mA=
-google.golang.org/grpc v1.72.1/go.mod h1:wH5Aktxcg25y1I3w7H69nHfXdOG3UiadoBtjh3izSDM=
+google.golang.org/grpc v1.72.2 h1:TdbGzwb82ty4OusHWepvFWGLgIbNo1/SUynEN0ssqv8=
+google.golang.org/grpc v1.72.2/go.mod h1:wH5Aktxcg25y1I3w7H69nHfXdOG3UiadoBtjh3izSDM=
 google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.1.0/go.mod h1:6Kw0yEErY5E/yWrBtf03jp27GLLJujG4z/JK95pnjjw=
 google.golang.org/protobuf v0.0.0-20200109180630-ec00e32a8dfd/go.mod h1:DFci5gLYBciE7Vtevhsrf46CRTquxDuWsQurQQe4oz8=
 google.golang.org/protobuf v0.0.0-20200221191635-4d8936d0db64/go.mod h1:kwYJMbMJ01Woi6D6+Kah6886xMZcty6N08ah7+eCXa0=
@@ -1140,10 +1140,10 @@ knative.dev/hack v0.0.0-20250514121446-f525e187efdc h1:8HmclJlA0zNE/G1SkgdC3/IFS
 knative.dev/hack v0.0.0-20250514121446-f525e187efdc/go.mod h1:R0ritgYtjLDO9527h5vb5X6gfvt5LCrJ55BNbVDsWiY=
 knative.dev/hack/schema v0.0.0-20250514121446-f525e187efdc h1:uT/MIH3T3gfhZMzok40nmkL9FrlaOEmTop75cKVZ4zw=
 knative.dev/hack/schema v0.0.0-20250514121446-f525e187efdc/go.mod h1:KkibP1IazICP5ClxwN5D26LDSygsqbYnVGuGFTsHNOQ=
-knative.dev/pkg v0.0.0-20250520014526-44579e9ce5ed h1:5ZYbJDnkQ/Q3oZsiwD0hnbmMwC6+2KvkIJNPH9IToUE=
-knative.dev/pkg v0.0.0-20250520014526-44579e9ce5ed/go.mod h1:RgnJAMaNr/5xVZ9Kkd2BBkeNt1/TpDOo5fCSTqaVX8w=
-knative.dev/reconciler-test v0.0.0-20250516121650-f46fa6544a97 h1:IcAtORqZ3ek+HN9799LRRiBijSgNCdtAvF1S7qzPvcM=
-knative.dev/reconciler-test v0.0.0-20250516121650-f46fa6544a97/go.mod h1:CWM3ApZHYFCw2gQi1SDSVSoMNaGMm3M4JZidda6PhY0=
+knative.dev/pkg v0.0.0-20250602175424-3c3a920206ea h1:ukJPq9MzFTEH/Sei5MSVnSE8+7NSCKixCDZPd6p4ohw=
+knative.dev/pkg v0.0.0-20250602175424-3c3a920206ea/go.mod h1:tFayQbi6t4+5HXuEGLOGvILW228Q7uaJp/FYEgbjJ3A=
+knative.dev/reconciler-test v0.0.0-20250602074324-9a20896ca854 h1:lVLYcQMWGDzcY2jKJI4NwbCReADA/k9f3RQUBBxx/cc=
+knative.dev/reconciler-test v0.0.0-20250602074324-9a20896ca854/go.mod h1:r6tSGY5T+AXRITlgAbyg2wM2LfCn/DgXX7tw24ku58k=
 rsc.io/binaryregexp v0.2.0/go.mod h1:qTv7/COck+e2FymRvadv62gMdZztPaShugOCi3I+8D8=
 rsc.io/quote/v3 v3.1.0/go.mod h1:yEA65RcK8LyAZtP9Kv3t0HmxON59tX3rD+tICJqUlj0=
 rsc.io/sampler v1.3.0/go.mod h1:T1hPZKmBbMNahiBKFy5HrXp6adAjACjK9JXDnKaTXpA=
