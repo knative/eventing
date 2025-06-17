@@ -17,8 +17,8 @@ jobs:
       fail-fast: false # Keep running if one leg fails.
       matrix:
         k8s-version:
-          - v1.32.x
-          - v1.33.x
+          - v1.32.5
+          - v1.33.1
 
         test-suite:
         - ./test/e2e
@@ -29,10 +29,10 @@ jobs:
         # This is attempting to make it a bit clearer what's being tested.
         # See: https://github.com/kubernetes-sigs/kind/releases/tag/v0.20.0
         include:
-        - k8s-version: v1.31.6
+        - k8s-version: v1.32.5
           kind-version: v0.27.0
           kind-image-sha: sha256:28b7cbb993dfe093c76641a0c95807637213c9109b761f1d422c2400e22b8e87
-        - k8s-version: v1.32.2
+        - k8s-version: v1.33.1
           kind-version: v0.27.0
           kind-image-sha: sha256:f226345927d7e348497136874b6d207e0b32cc52154ad8323129352923a3142f
 
@@ -69,6 +69,7 @@ jobs:
       uses: actions/checkout@v2
 
     - name: Install KinD
+      # TODO: replace with chainguard-dev/actions/setup-kind
       run: |
         set -x
 
