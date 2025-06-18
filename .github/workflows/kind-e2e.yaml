@@ -70,20 +70,11 @@ jobs:
 
     - name: Install KinD
       # TODO: replace with chainguard-dev/actions/setup-kind
-      run: |
-        set -x
-
-        # Disable swap otherwise memory enforcement doesn't work
-        # See: https://kubernetes.slack.com/archives/CEKK1KTN2/p1600009955324200
-        sudo swapoff -a
-        sudo rm -f /swapfile
-
-        curl -Lo ./kind https://github.com/kubernetes-sigs/kind/releases/download/${{ matrix.kind-version }}/kind-$(uname)-amd64
-        chmod +x ./kind
-        sudo mv kind /usr/local/bin
-
-    - name: Create KinD Cluster
-      run: ./hack/create-kind-cluster.sh
+      uses: chainguard-dev/actions/setup-kind@ce51233d303aed2394a9976e7f5642fd2158f693 # main
+      with:
+        k8s-version: ${{ matrix.k8s-version }}
+        kind-worker-count: 1
+        cluster-suffix: c${{ github.run_id }}.local
 
     - name: Install Knative Eventing
       run: |
