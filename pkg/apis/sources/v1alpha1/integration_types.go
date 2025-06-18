@@ -62,7 +62,7 @@ type IntegrationSourceSpec struct {
 	Aws   *Aws   `json:"aws,omitempty"`   // AWS source configuration
 	Timer *Timer `json:"timer,omitempty"` // Timer configuration
 
-	Template *corev1.PodSpec `json:"template,omitempty"` // Pod configuration
+	Template *corev1.PodTemplateSpec `json:"template,omitempty"` // Pod configuration
 }
 
 type Timer struct {
