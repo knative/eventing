@@ -22,6 +22,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	v1 "k8s.io/api/core/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	integrationv1alpha1 "knative.dev/eventing/pkg/apis/common/integration/v1alpha1"
 )
@@ -136,6 +137,11 @@ func (in *IntegrationSourceSpec) DeepCopyInto(out *IntegrationSourceSpec) {
 		in, out := &in.Timer, &out.Timer
 		*out = new(Timer)
 		**out = **in
+	}
+	if in.Template != nil {
+		in, out := &in.Template, &out.Template
+		*out = new(v1.PodTemplateSpec)
+		(*in).DeepCopyInto(*out)
 	}
 	return
 }
