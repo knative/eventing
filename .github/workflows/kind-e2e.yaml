@@ -17,8 +17,8 @@ jobs:
       fail-fast: false # Keep running if one leg fails.
       matrix:
         k8s-version:
-          - v1.31.6
-          - v1.32.2
+          - v1.32.5
+          - v1.33.1
 
         test-suite:
         - ./test/e2e
@@ -29,10 +29,10 @@ jobs:
         # This is attempting to make it a bit clearer what's being tested.
         # See: https://github.com/kubernetes-sigs/kind/releases/tag/v0.20.0
         include:
-        - k8s-version: v1.31.6
+        - k8s-version: v1.32.5
           kind-version: v0.27.0
           kind-image-sha: sha256:28b7cbb993dfe093c76641a0c95807637213c9109b761f1d422c2400e22b8e87
-        - k8s-version: v1.32.2
+        - k8s-version: v1.33.1
           kind-version: v0.27.0
           kind-image-sha: sha256:f226345927d7e348497136874b6d207e0b32cc52154ad8323129352923a3142f
 
@@ -69,20 +69,12 @@ jobs:
       uses: actions/checkout@v2
 
     - name: Install KinD
-      run: |
-        set -x
-
-        # Disable swap otherwise memory enforcement doesn't work
-        # See: https://kubernetes.slack.com/archives/CEKK1KTN2/p1600009955324200
-        sudo swapoff -a
-        sudo rm -f /swapfile
-
-        curl -Lo ./kind https://github.com/kubernetes-sigs/kind/releases/download/${{ matrix.kind-version }}/kind-$(uname)-amd64
-        chmod +x ./kind
-        sudo mv kind /usr/local/bin
-
-    - name: Create KinD Cluster
-      run: ./hack/create-kind-cluster.sh
+      # TODO: replace with chainguard-dev/actions/setup-kind
+      uses: chainguard-dev/actions/setup-kind@ce51233d303aed2394a9976e7f5642fd2158f693 # main
+      with:
+        k8s-version: ${{ matrix.k8s-version }}
+        kind-worker-count: 1
+        cluster-suffix: c${{ github.run_id }}.local
 
     - name: Install Knative Eventing
       run: |

@@ -62,13 +62,25 @@ func NewFilteredEventTransformInformer(client versioned.Interface, namespace str
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.EventingV1alpha1().EventTransforms(namespace).List(context.TODO(), options)
+				return client.EventingV1alpha1().EventTransforms(namespace).List(context.Background(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.EventingV1alpha1().EventTransforms(namespace).Watch(context.TODO(), options)
+				return client.EventingV1alpha1().EventTransforms(namespace).Watch(context.Background(), options)
+			},
+			ListWithContextFunc: func(ctx context.Context, options v1.ListOptions) (runtime.Object, error) {
+				if tweakListOptions != nil {
+					tweakListOptions(&options)
+				}
+				return client.EventingV1alpha1().EventTransforms(namespace).List(ctx, options)
+			},
+			WatchFuncWithContext: func(ctx context.Context, options v1.ListOptions) (watch.Interface, error) {
+				if tweakListOptions != nil {
+					tweakListOptions(&options)
+				}
+				return client.EventingV1alpha1().EventTransforms(namespace).Watch(ctx, options)
 			},
 		},
 		&apiseventingv1alpha1.EventTransform{},

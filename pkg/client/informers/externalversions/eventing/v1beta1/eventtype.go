@@ -62,13 +62,25 @@ func NewFilteredEventTypeInformer(client versioned.Interface, namespace string, 
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.EventingV1beta1().EventTypes(namespace).List(context.TODO(), options)
+				return client.EventingV1beta1().EventTypes(namespace).List(context.Background(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.EventingV1beta1().EventTypes(namespace).Watch(context.TODO(), options)
+				return client.EventingV1beta1().EventTypes(namespace).Watch(context.Background(), options)
+			},
+			ListWithContextFunc: func(ctx context.Context, options v1.ListOptions) (runtime.Object, error) {
+				if tweakListOptions != nil {
+					tweakListOptions(&options)
+				}
+				return client.EventingV1beta1().EventTypes(namespace).List(ctx, options)
+			},
+			WatchFuncWithContext: func(ctx context.Context, options v1.ListOptions) (watch.Interface, error) {
+				if tweakListOptions != nil {
+					tweakListOptions(&options)
+				}
+				return client.EventingV1beta1().EventTypes(namespace).Watch(ctx, options)
 			},
 		},
 		&apiseventingv1beta1.EventType{},

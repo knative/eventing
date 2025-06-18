@@ -126,7 +126,7 @@ func (a *apiServerAdapter) start(ctx context.Context, stopCh <-chan struct{}) er
 	}
 
 	<-stopCh
-	stop <- struct{}{}
+	close(stop)
 	return nil
 }
 

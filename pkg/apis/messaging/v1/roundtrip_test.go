@@ -19,9 +19,9 @@ package v1
 import (
 	"testing"
 
-	fuzz "github.com/google/gofuzz"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"knative.dev/eventing/pkg/apis/messaging"
+	"sigs.k8s.io/randfill"
 
 	"k8s.io/apimachinery/pkg/api/apitesting/fuzzer"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -37,8 +37,8 @@ import (
 var FuzzerFuncs = fuzzer.MergeFuzzerFuncs(
 	func(codecs serializer.CodecFactory) []interface{} {
 		return []interface{}{
-			func(ch *Channel, c fuzz.Continue) {
-				c.FuzzNoCustom(ch) // fuzz the Channel
+			func(ch *Channel, c randfill.Continue) {
+				c.FillNoCustom(ch) // fuzz the Channel
 				if ch != nil {
 					if ch.Annotations == nil {
 						ch.Annotations = make(map[string]string)
@@ -52,8 +52,8 @@ var FuzzerFuncs = fuzzer.MergeFuzzerFuncs(
 				ch.Status.InitializeConditions()
 				pkgfuzzer.FuzzConditions(&ch.Status, c)
 			},
-			func(imc *InMemoryChannel, c fuzz.Continue) {
-				c.FuzzNoCustom(imc) // fuzz the InMemoryChannel
+			func(imc *InMemoryChannel, c randfill.Continue) {
+				c.FillNoCustom(imc) // fuzz the InMemoryChannel
 				if imc != nil {
 					if imc.Annotations == nil {
 						imc.Annotations = make(map[string]string)
@@ -67,8 +67,8 @@ var FuzzerFuncs = fuzzer.MergeFuzzerFuncs(
 				imc.Status.InitializeConditions()
 				pkgfuzzer.FuzzConditions(&imc.Status, c)
 			},
-			func(s *SubscriptionStatus, c fuzz.Continue) {
-				c.FuzzNoCustom(s) // fuzz the status object
+			func(s *SubscriptionStatus, c randfill.Continue) {
+				c.FillNoCustom(s) // fuzz the status object
 
 				// Clear the random fuzzed condition
 				s.Status.SetConditions(nil)

@@ -19,8 +19,8 @@ package v1
 import (
 	"testing"
 
-	fuzz "github.com/google/gofuzz"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"sigs.k8s.io/randfill"
 
 	"k8s.io/apimachinery/pkg/api/apitesting/fuzzer"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -36,8 +36,8 @@ import (
 var FuzzerFuncs = fuzzer.MergeFuzzerFuncs(
 	func(codecs serializer.CodecFactory) []interface{} {
 		return []interface{}{
-			func(s *TriggerStatus, c fuzz.Continue) {
-				c.FuzzNoCustom(s) // fuzz the status object
+			func(s *TriggerStatus, c randfill.Continue) {
+				c.FillNoCustom(s) // fuzz the status object
 
 				// Clear the random fuzzed condition
 				s.Status.SetConditions(nil)
@@ -46,8 +46,8 @@ var FuzzerFuncs = fuzzer.MergeFuzzerFuncs(
 				s.InitializeConditions()
 				pkgfuzzer.FuzzConditions(&s.Status, c)
 			},
-			func(s *BrokerStatus, c fuzz.Continue) {
-				c.FuzzNoCustom(s) // fuzz the status object
+			func(s *BrokerStatus, c randfill.Continue) {
+				c.FillNoCustom(s) // fuzz the status object
 
 				// Clear the random fuzzed condition
 				s.Status.SetConditions(nil)
