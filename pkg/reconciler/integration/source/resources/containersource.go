@@ -29,6 +29,9 @@ import (
 )
 
 func NewContainerSource(source *v1alpha1.IntegrationSource, oidc bool) *sourcesv1.ContainerSource {
+	source.Spec.Template.ObjectMeta = metav1.ObjectMeta{
+		Labels: integration.Labels(source.Name),
+	}
 	source.Spec.Template.Spec.Containers = []corev1.Container{
 		{
 			Name:            "source",
