@@ -322,6 +322,10 @@ spec:
                                 name:
                                   description: 'Secret name'
                                   type: string
+                template:
+                  type: object
+                  x-kubernetes-preserve-unknown-fields: true
+                  description: 'A template in the shape of `Deployment.spec.template` to be used for this ContainerSource. More info: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/'
             status:
               type: object
               properties:
@@ -399,10 +403,10 @@ spec:
           jsonPath: ".status.sinkUri"
         - name: Age
           type: date
-          jsonPath: .metadata.creationTimestamp
+          jsonPath: ".metadata.creationTimestamp"
         - name: Ready
           type: string
-          jsonPath: ".status.conditions[?(@.type==\"Ready\")].status"
+          jsonPath: ".status.conditions[?(@.type=='Ready')].status"
         - name: Reason
           type: string
           jsonPath: ".status.conditions[?(@.type=='Ready')].reason"

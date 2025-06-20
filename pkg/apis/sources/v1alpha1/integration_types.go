@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -60,6 +61,8 @@ type IntegrationSourceSpec struct {
 
 	Aws   *Aws   `json:"aws,omitempty"`   // AWS source configuration
 	Timer *Timer `json:"timer,omitempty"` // Timer configuration
+
+	Template *corev1.PodTemplateSpec `json:"template,omitempty"` // Pod configuration
 }
 
 type Timer struct {

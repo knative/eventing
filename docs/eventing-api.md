@@ -8539,6 +8539,18 @@ Timer
 <p>AWS source configuration</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>template</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#podtemplatespec-v1-core">
+Kubernetes core/v1.PodTemplateSpec
+</a>
+</em>
+</td>
+<td>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -8675,6 +8687,18 @@ Timer
 </td>
 <td>
 <p>AWS source configuration</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>template</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#podtemplatespec-v1-core">
+Kubernetes core/v1.PodTemplateSpec
+</a>
+</em>
+</td>
+<td>
 </td>
 </tr>
 </tbody>
