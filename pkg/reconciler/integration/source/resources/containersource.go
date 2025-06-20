@@ -32,9 +32,7 @@ func NewContainerSource(source *v1alpha1.IntegrationSource, oidc bool) *sourcesv
 	if source.Spec.Template == nil {
 		source.Spec.Template = &corev1.PodTemplateSpec{}
 	}
-	source.Spec.Template.ObjectMeta = metav1.ObjectMeta{
-		Labels: integration.Labels(source.Name),
-	}
+	source.Spec.Template.ObjectMeta.Labels = integration.Labels(source.Name)
 	source.Spec.Template.Spec.Containers = []corev1.Container{
 		{
 			Name:            "source",
