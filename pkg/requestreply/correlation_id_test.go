@@ -59,7 +59,7 @@ func TestCorrelationIdVerification(t *testing.T) {
 			expectDecryptionError: true,
 		},
 		"invalid encryption key": {
-			encryptionKey: badKey,
+			encryptionKey:         badKey,
 			expectEncryptionError: true,
 		},
 		"invalid replyid": {
@@ -73,9 +73,9 @@ func TestCorrelationIdVerification(t *testing.T) {
 			expectValid: false,
 		},
 		"different correlationid and replyid attribute names": {
-			encryptionKey: exampleKey,
-			decryptionKey: exampleKey,
-			replyIdName: "reply",
+			encryptionKey:     exampleKey,
+			decryptionKey:     exampleKey,
+			replyIdName:       "reply",
 			correlationIdName: "correlate",
 			transformEvent: func(ce *cloudevents.Event) {
 				ce.SetExtension("reply", ce.Extensions()["correlate"])
