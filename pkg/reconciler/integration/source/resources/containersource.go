@@ -17,6 +17,7 @@ limitations under the License.
 package resources
 
 import (
+	"maps"
 	"os"
 
 	corev1 "k8s.io/api/core/v1"
@@ -29,6 +30,24 @@ import (
 )
 
 func NewContainerSource(source *v1alpha1.IntegrationSource, oidc bool) *sourcesv1.ContainerSource {
+	if source.Spec.Template == nil {
+		source.Spec.Template = &corev1.PodTemplateSpec{}
+	}
+	labels := integration.Labels(source.Name)
+	if source.Spec.Template.Labels == nil {
+		source.Spec.Template.Labels = labels
+	} else {
+		maps.Copy(source.Spec.Template.Labels, labels)
+	}
+	source.Spec.Template.Spec.Containers = []corev1.Container{
+		{
+			Name:            "source",
+			Image:           selectImage(source),
+			ImagePullPolicy: corev1.PullIfNotPresent,
+			Env:             makeEnv(source, oidc),
+		},
+	}
+
 	return &sourcesv1.ContainerSource{
 		ObjectMeta: metav1.ObjectMeta{
 			OwnerReferences: []metav1.OwnerReference{
@@ -39,21 +58,7 @@ func NewContainerSource(source *v1alpha1.IntegrationSource, oidc bool) *sourcesv
 			Labels:    integration.Labels(source.Name),
 		},
 		Spec: sourcesv1.ContainerSourceSpec{
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: integration.Labels(source.Name),
-				},
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{
-						{
-							Name:            "source",
-							Image:           selectImage(source),
-							ImagePullPolicy: corev1.PullIfNotPresent,
-							Env:             makeEnv(source, oidc),
-						},
-					},
-				},
-			},
+			Template:   *source.Spec.Template,
 			SourceSpec: source.Spec.SourceSpec,
 		},
 	}
