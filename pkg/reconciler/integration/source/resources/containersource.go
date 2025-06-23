@@ -17,6 +17,7 @@ limitations under the License.
 package resources
 
 import (
+	"maps"
 	"os"
 
 	corev1 "k8s.io/api/core/v1"
@@ -32,7 +33,12 @@ func NewContainerSource(source *v1alpha1.IntegrationSource, oidc bool) *sourcesv
 	if source.Spec.Template == nil {
 		source.Spec.Template = &corev1.PodTemplateSpec{}
 	}
-	source.Spec.Template.ObjectMeta.Labels = integration.Labels(source.Name)
+	labels := integration.Labels(source.Name)
+	if source.Spec.Template.ObjectMeta.Labels == nil {
+		source.Spec.Template.ObjectMeta.Labels = labels
+	} else {
+		maps.Copy(source.Spec.Template.ObjectMeta.Labels, labels)
+	}
 	source.Spec.Template.Spec.Containers = []corev1.Container{
 		{
 			Name:            "source",
