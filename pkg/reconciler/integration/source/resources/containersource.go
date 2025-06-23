@@ -34,10 +34,10 @@ func NewContainerSource(source *v1alpha1.IntegrationSource, oidc bool) *sourcesv
 		source.Spec.Template = &corev1.PodTemplateSpec{}
 	}
 	labels := integration.Labels(source.Name)
-	if source.Spec.Template.ObjectMeta.Labels == nil {
-		source.Spec.Template.ObjectMeta.Labels = labels
+	if source.Spec.Template.Labels == nil {
+		source.Spec.Template.Labels = labels
 	} else {
-		maps.Copy(source.Spec.Template.ObjectMeta.Labels, labels)
+		maps.Copy(source.Spec.Template.Labels, labels)
 	}
 	source.Spec.Template.Spec.Containers = []corev1.Container{
 		{
