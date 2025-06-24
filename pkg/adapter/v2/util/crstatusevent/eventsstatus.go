@@ -74,7 +74,9 @@ func UpdateFromConfigMap(client *CRStatusEventClient) func(configMap *corev1.Con
 	}
 }
 
-var contextkey struct{}
+type contextkeytype struct{}
+
+var contextkey contextkeytype
 
 func ContextWithCRStatus(ctx context.Context, kubeEventSink *record.EventSink, component string, source runtime.Object, logf func(format string, args ...interface{})) context.Context {
 
@@ -144,7 +146,7 @@ func (a *crStatusEvent) createEvent(ctx context.Context, result protocol.Result)
 		reason = strconv.Itoa(res.StatusCode)
 		if res.Format != "" && res.Format != "%w" { // returns '"%w" but this does not format
 			msg += " " + fmt.Sprintf(res.Format, res.Args...)
-		} else if res.Args != nil && len(res.Args) > 0 {
+		} else if len(res.Args) > 0 {
 			if m, ok := res.Args[0].(*protocol.Receipt); ok {
 				if m.Err != nil {
 					msg += " " + m.Err.Error() // add any error message if it's there.

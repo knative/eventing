@@ -254,7 +254,7 @@ func (a *autoscaler) mayCompact(logger *zap.SugaredLogger, s *st.State) error {
 	)
 
 	// Determine if there are vpods that need compaction
-	if s.Replicas != int32(len(s.FreeCap)) {
+	if int(s.Replicas) != len(s.FreeCap) {
 		a.lastCompactAttempt = time.Now()
 		err := a.compact(s)
 		if err != nil {

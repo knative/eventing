@@ -75,7 +75,7 @@ type envConfig struct {
 	PodName       string `envconfig:"POD_NAME" required:"true"`
 	ContainerName string `envconfig:"CONTAINER_NAME" required:"true"`
 	Port          int    `envconfig:"INGRESS_PORT" default:"8080"`
-	MaxTTL        int    `envconfig:"MAX_TTL" default:"255"`
+	MaxTTL        int32  `envconfig:"MAX_TTL" default:"255"`
 	HTTPPort      int    `envconfig:"INGRESS_PORT" default:"8080"`
 	HTTPSPort     int    `envconfig:"INGRESS_PORT_HTTPS" default:"8443"`
 }
@@ -171,7 +171,7 @@ func main() {
 
 	oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
 	authVerifier := auth.NewVerifier(ctx, eventpolicyinformer.Get(ctx).Lister(), trustBundleConfigMapLister, configMapWatcher)
-	handler, err = ingress.NewHandler(logger, reporter, broker.TTLDefaulter(logger, int32(env.MaxTTL)), brokerInformer, authVerifier, oidcTokenProvider, trustBundleConfigMapLister, ctxFunc)
+	handler, err = ingress.NewHandler(logger, reporter, broker.TTLDefaulter(logger, env.MaxTTL), brokerInformer, authVerifier, oidcTokenProvider, trustBundleConfigMapLister, ctxFunc)
 	if err != nil {
 		logger.Fatal("Error creating Handler", zap.Error(err))
 	}

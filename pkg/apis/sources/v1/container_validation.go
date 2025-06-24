@@ -34,7 +34,7 @@ func (cs *ContainerSourceSpec) Validate(ctx context.Context) *apis.FieldError {
 	}
 
 	// Validate there is at least a container
-	if cs.Template.Spec.Containers == nil || len(cs.Template.Spec.Containers) == 0 {
+	if len(cs.Template.Spec.Containers) == 0 {
 		fe := apis.ErrMissingField("containers")
 		errs = errs.Also(fe)
 	} else {

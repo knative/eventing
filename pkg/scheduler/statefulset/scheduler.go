@@ -300,7 +300,7 @@ func (s *StatefulSetScheduler) scheduleVPod(ctx context.Context, vpod scheduler.
 	reservedByPodName := make(map[string]int32, 2)
 	for _, v := range s.reserved {
 		for podName, vReplicas := range v {
-			v, _ := reservedByPodName[podName]
+			v := reservedByPodName[podName]
 			reservedByPodName[podName] = vReplicas + v
 		}
 	}
@@ -341,7 +341,7 @@ func (s *StatefulSetScheduler) scheduleVPod(ctx context.Context, vpod scheduler.
 			}
 
 			// Handle overcommitted pods.
-			reserved, _ := reservedByPodName[p.PodName]
+			reserved := reservedByPodName[p.PodName]
 			if state.Capacity-reserved < 0 {
 				// vr > free => vr: 9, overcommit 4 -> free: 0, vr: 5, pending: +4
 				// vr = free => vr: 4, overcommit 4 -> free: 0, vr: 0, pending: +4
@@ -465,7 +465,7 @@ func (s *StatefulSetScheduler) addReplicas(states *st.State, reservedByPodName m
 			}
 
 			podName := st.PodNameFromOrdinal(states.StatefulSetName, ordinal)
-			reserved, _ := reservedByPodName[podName]
+			reserved := reservedByPodName[podName]
 			// Is there space?
 			if states.Capacity-reserved > 0 {
 				foundFreeCandidate = true

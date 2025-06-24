@@ -36,6 +36,7 @@ const (
 
 var (
 	// ApiServerSourceResource respresents a Knative Eventing Sources ApiServerSource
+	//nolint:staticcheck // Not capitalizing "API"
 	ApiServerSourceResource = schema.GroupResource{
 		Group:    GroupName,
 		Resource: "apiserversources",

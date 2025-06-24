@@ -292,7 +292,7 @@ func (r *Reconciler) podSpecChanged(oldPodSpec corev1.PodSpec, newPodSpec corev1
 }
 
 func (r *Reconciler) runAccessCheck(ctx context.Context, src *v1.ApiServerSource, namespaces []string) error {
-	if src.Spec.Resources == nil || len(src.Spec.Resources) == 0 {
+	if len(src.Spec.Resources) == 0 {
 		src.Status.MarkSufficientPermissions()
 		return nil
 	}

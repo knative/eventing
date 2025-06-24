@@ -82,6 +82,7 @@ func getClientForAddressable(cfg eventingtls.ClientConfig, addressable duckv1.Ad
 	return client, nil
 }
 
+//nolint:unparam  // error is always nil
 func createNewClient(cfg eventingtls.ClientConfig, addressable duckv1.Addressable) (*nethttp.Client, error) {
 	var base = nethttp.DefaultTransport.(*nethttp.Transport).Clone()
 

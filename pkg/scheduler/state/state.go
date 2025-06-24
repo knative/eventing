@@ -75,7 +75,7 @@ type State struct {
 
 // Free safely returns the free capacity at the given ordinal
 func (s *State) Free(ordinal int32) int32 {
-	if int32(len(s.FreeCap)) <= ordinal {
+	if len(s.FreeCap) <= int(ordinal) {
 		return s.Capacity
 	}
 	return s.FreeCap[ordinal]
@@ -252,14 +252,14 @@ func (s *State) TotalExpectedVReplicas() int32 {
 }
 
 func grow(slice []int32, ordinal int32, def int32) []int32 {
-	l := int32(len(slice))
-	diff := ordinal - l + 1
+	l := len(slice)
+	diff := int(ordinal) - l + 1
 
 	if diff <= 0 {
 		return slice
 	}
 
-	for i := int32(0); i < diff; i++ {
+	for i := 0; i < diff; i++ {
 		slice = append(slice, def)
 	}
 	return slice

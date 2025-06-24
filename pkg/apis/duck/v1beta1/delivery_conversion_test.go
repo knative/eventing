@@ -41,8 +41,11 @@ func TestDeliverySpecConversionBadType(t *testing.T) {
 // Test v1beta1 -> v1 -> v1beta1
 func TestDeliverySpecConversion(t *testing.T) {
 	var retryCount int32 = 10
+	//nolint:staticcheck  // ST1023 types can be inferred
 	var backoffPolicy BackoffPolicyType = BackoffPolicyLinear
+	//nolint:staticcheck  // ST1023 types can be inferred
 	var backoffPolicyExp BackoffPolicyType = BackoffPolicyExponential
+	//nolint:staticcheck  // ST1023 types can be inferred
 	var backoffPolicyBad BackoffPolicyType = "garbage"
 	badPolicyString := `unknown BackoffPolicy, got: "garbage"`
 
@@ -118,8 +121,11 @@ func TestDeliverySpecConversion(t *testing.T) {
 // Test v1 -> v1beta1 -> v1
 func TestDeliverySpecConversionV1(t *testing.T) {
 	var retryCount int32 = 10
+	//nolint:staticcheck  // ST1023 types can be inferred
 	var backoffPolicy v1.BackoffPolicyType = v1.BackoffPolicyLinear
+	//nolint:staticcheck  // ST1023 types can be inferred
 	var backoffPolicyExp v1.BackoffPolicyType = v1.BackoffPolicyExponential
+	//nolint:staticcheck  // ST1023 types can be inferred
 	var backoffPolicyBad v1.BackoffPolicyType = "garbage"
 	badPolicyString := `unknown BackoffPolicy, got: "garbage"`
 

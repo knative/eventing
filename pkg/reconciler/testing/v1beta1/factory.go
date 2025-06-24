@@ -41,6 +41,7 @@ import (
 	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
 
 	"knative.dev/pkg/reconciler"
+	//nolint:staticcheck  // Not sure why this is dot imported...
 	. "knative.dev/pkg/reconciler/testing"
 )
 

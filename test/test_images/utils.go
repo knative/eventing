@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+//nolint:staticcheck  // ST1003:Underscore in package name
 package test_images
 
 import (

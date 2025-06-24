@@ -21,7 +21,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"knative.dev/pkg/kmp"
@@ -102,14 +101,14 @@ func TestChannelDefaultsConfiguration(t *testing.T) {
 		wantChannelDefaults: &ChannelDefaults{
 			NamespaceDefaults: map[string]*ChannelTemplateSpec{
 				"some-namespace": {
-					TypeMeta: v1.TypeMeta{
+					TypeMeta: metav1.TypeMeta{
 						APIVersion: "messaging.knative.dev/v1beta1",
 						Kind:       "KafkaChannel",
 					},
 				},
 			},
 			ClusterDefault: &ChannelTemplateSpec{
-				TypeMeta: v1.TypeMeta{
+				TypeMeta: metav1.TypeMeta{
 					APIVersion: "messaging.knative.dev/v1",
 					Kind:       "InMemoryChannel",
 				},
@@ -137,7 +136,7 @@ func TestChannelDefaultsConfiguration(t *testing.T) {
 		wantErr: false,
 		wantChannelDefaults: &ChannelDefaults{
 			ClusterDefault: &ChannelTemplateSpec{
-				TypeMeta: v1.TypeMeta{
+				TypeMeta: metav1.TypeMeta{
 					APIVersion: "messaging.knative.dev/v1beta1",
 					Kind:       "KafkaChannel",
 				},
@@ -162,7 +161,7 @@ func TestChannelDefaultsConfiguration(t *testing.T) {
 		wantChannelDefaults: &ChannelDefaults{
 			NamespaceDefaults: map[string]*ChannelTemplateSpec{
 				"some-namespace": {
-					TypeMeta: v1.TypeMeta{
+					TypeMeta: metav1.TypeMeta{
 						APIVersion: "messaging.knative.dev/v1",
 						Kind:       "InMemoryChannel",
 					},
@@ -189,7 +188,7 @@ func TestChannelDefaultsConfiguration(t *testing.T) {
 		wantChannelDefaults: &ChannelDefaults{
 			NamespaceDefaults: map[string]*ChannelTemplateSpec{
 				"some-namespace": {
-					TypeMeta: v1.TypeMeta{
+					TypeMeta: metav1.TypeMeta{
 						APIVersion: "messaging.knative.dev/v1",
 						Kind:       "InMemoryChannel",
 					},

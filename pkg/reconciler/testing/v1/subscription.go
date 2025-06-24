@@ -148,6 +148,7 @@ func WithSubscriptionChannelUsingGroup(gvk metav1.GroupVersionKind, name string)
 	}
 }
 
+//nolist:staticcheck  // Should be "API"
 func WithSubscriptionChannelUsingApiVersionAndGroup(gvk metav1.GroupVersionKind, name string) SubscriptionOption {
 	return func(s *v1.Subscription) {
 		s.Spec.Channel = duckv1.KReference{
@@ -170,6 +171,7 @@ func WithSubscriptionChannelRefUsingGroup(gvk metav1.GroupVersionKind, name stri
 	}
 }
 
+// nolint: staticcheck  // Should be "API"
 func WithSubscriptionChannelRefUsingApiVersionAndGroup(gvk metav1.GroupVersionKind, name string, namespace string) SubscriptionOption {
 	return func(s *v1.Subscription) {
 		s.Spec.Channel = duckv1.KReference{
@@ -208,6 +210,7 @@ func WithSubscriptionSubscriberRefUsingGroup(gvk metav1.GroupVersionKind, name, 
 	}
 }
 
+//nolist:staticcheck  // Should be "API"
 func WithSubscriptionSubscriberRefUsingApiVersionAndGroup(gvk metav1.GroupVersionKind, name, namespace string) SubscriptionOption {
 	return func(s *v1.Subscription) {
 		s.Spec.Subscriber = &duckv1.Destination{

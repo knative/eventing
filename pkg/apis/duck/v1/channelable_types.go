@@ -138,7 +138,7 @@ func (c *Channelable) Populate() {
 }
 
 // GetFullType implements duck.Implementable
-func (s *Channelable) GetFullType() duck.Populatable {
+func (c *Channelable) GetFullType() duck.Populatable {
 	return &Channelable{}
 }
 

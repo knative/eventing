@@ -154,11 +154,6 @@ func (r *Reconciler) reconcileSinkBinding(ctx context.Context, source *v1.Contai
 	return sb, nil
 }
 
-func (r *Reconciler) podSpecChanged(have *corev1.PodSpec, want *corev1.PodSpec) bool {
-	// TODO this won't work, SinkBinding messes with this. n3wscott working on a fix.
-	return !equality.Semantic.DeepDerivative(want, have)
-}
-
 func (r *Reconciler) podTemplateChanged(have *corev1.PodTemplateSpec, want *corev1.PodTemplateSpec) bool {
 	return !equality.Semantic.DeepDerivative(want, have)
 }

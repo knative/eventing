@@ -84,6 +84,7 @@ func MakeK8sNamePrefix(s string) string {
 	var sb strings.Builder
 	newToken := false
 	for _, c := range s {
+		//nolint:staticcheck  // QF1001 - DeMorgan's Law
 		if !(unicode.IsLetter(c) || unicode.IsNumber(c)) {
 			newToken = true
 			continue
