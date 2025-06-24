@@ -109,7 +109,7 @@ func TestCorrelationIdVerification(t *testing.T) {
 
 			tc.transformEvent(&ce)
 
-			valid, err := VerifyReplyId(&ce, tc.replyIdName, tc.decryptionKey)
+			valid, err := VerifyReplyId(ce.Extensions()[tc.replyIdName].(string), tc.decryptionKey)
 			if tc.expectDecryptionError {
 				assert.Error(t, err, "verifying replyid should produce an error")
 				return

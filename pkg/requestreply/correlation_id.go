@@ -42,15 +42,10 @@ import (
 */
 
 // VerifyReplyId takes the reply id from a cloudevent and checks that it is valid for this RequestReply resource, by checking that the decrypted id matches the unencrypted id
-func VerifyReplyId(ce *cloudevents.Event, replyIdName string, aesKey []byte) (bool, error) {
-	replyId, ok := ce.Extensions()[replyIdName]
-	if !ok {
-		return false, fmt.Errorf("no %s extension set on the event", replyIdName)
-	}
-
-	parts := strings.Split(replyId.(string), ":")
+func VerifyReplyId(replyId string, aesKey []byte) (bool, error) {
+	parts := strings.Split(replyId, ":")
 	if len(parts) != 2 {
-		return false, fmt.Errorf("expected two parts in the %s attribute, had %d", replyIdName, len(parts))
+		return false, fmt.Errorf("expected two parts in the replyid attribute, had %d", len(parts))
 	}
 
 	originalId := parts[0]
@@ -58,7 +53,7 @@ func VerifyReplyId(ce *cloudevents.Event, replyIdName string, aesKey []byte) (bo
 
 	encryptedBytes, err := base64.URLEncoding.DecodeString(encryptedId)
 	if err != nil {
-		return false, fmt.Errorf("failed to decode base64 data in %s: %w", replyIdName, err)
+		return false, fmt.Errorf("failed to decode base64 data in replyid: %w", err)
 	}
 
 	block, err := aes.NewCipher(aesKey)
