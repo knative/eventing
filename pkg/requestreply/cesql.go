@@ -25,7 +25,7 @@ func RegisterCESQLVerifyCorrelationIdFilter(ctx context.Context) error {
 		cesql.TypePtr(cesql.StringType),
 		cesql.BooleanType,
 		func(e cloudevents.Event, args []interface{}) (interface{}, error) {
-			correlationIdName, namespace := args[0].(string), args[1].(string)
+			replyId, namespace := args[0].(string), args[1].(string)
 			secretNames := args[2:]
 
 			for _, secretName := range secretNames {
@@ -41,7 +41,7 @@ func RegisterCESQLVerifyCorrelationIdFilter(ctx context.Context) error {
 					continue
 				}
 
-				validId, err := VerifyReplyId(&e, correlationIdName, aesKey) // TODO: rethink API here - maybe pass the id directly, instead of event + id name?
+				validId, err := VerifyReplyId(replyId, aesKey) // TODO: rethink API here - maybe pass the id directly, instead of event + id name?
 				if err != nil {
 					logger.Warnf("failed to verify replyid for event: %s", err)
 				}
