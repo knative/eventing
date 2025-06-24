@@ -15,6 +15,8 @@ import (
 
 var once = sync.Once{}
 
+// RegisterCESQLVerifyCorrelationIdFilter registers a new function with the CESQL runtime to verify correlation ids
+// The function signature is KN_VERIFY_CORRELATION_ID(correlation_id, namespace, secret_names...)
 func RegisterCESQLVerifyCorrelationIdFilter(ctx context.Context) error {
 	secretInformer := secretinformer.Get(ctx)
 	logger := logging.FromContext(ctx)
@@ -41,7 +43,7 @@ func RegisterCESQLVerifyCorrelationIdFilter(ctx context.Context) error {
 					continue
 				}
 
-				validId, err := VerifyReplyId(replyId, aesKey) // TODO: rethink API here - maybe pass the id directly, instead of event + id name?
+				validId, err := VerifyReplyId(replyId, aesKey)
 				if err != nil {
 					logger.Warnf("failed to verify replyid for event: %s", err)
 				}
