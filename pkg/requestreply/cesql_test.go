@@ -65,7 +65,7 @@ func TestCESQLFilterWithVerifyCorrelationId(t *testing.T) {
 		},
 		"no replyid": {
 			getEvent: makeEvent,
-			want: eventfilter.FailFilter,
+			want:     eventfilter.FailFilter,
 		},
 	}
 
