@@ -54,6 +54,7 @@ func NewFiltersFeatureSet(installBroker InstallBrokerFunc) *feature.FeatureSet {
 		features,
 		AllFilterFeature(installBroker),
 		AnyFilterFeature(installBroker),
+		AnyFilterMultipleExactFiltersFeature(installBroker),
 		MultipleTriggersAndSinksFeature(installBroker),
 		MissingAttributesFeature(installBroker),
 		FilterAttributeWithEmptyFiltersFeature(installBroker),
@@ -194,6 +195,55 @@ func AnyFilterFeature(installBroker InstallBrokerFunc) *feature.Feature {
 				},
 				{
 					CESQL: "type = 'cesql.event.type'",
+				},
+			},
+		},
+	}
+
+	createNewFiltersFeature(f, eventContexts, filters, eventingv1.TriggerFilter{}, installBroker)
+
+	return f
+}
+
+func AnyFilterMultipleExactFiltersFeature(installBroker InstallBrokerFunc) *feature.Feature {
+	f := feature.NewFeature()
+
+	eventContexts := []CloudEventsContext{
+		{
+			eventType:     "dev.knative.apiserver.resource.update",
+			shouldDeliver: true,
+		},
+		{
+			eventType:     "dev.knative.apiserver.resource.add",
+			shouldDeliver: true,
+		},
+		{
+			eventType:     "dev.knative.apiserver.resource.delete",
+			shouldDeliver: true,
+		},
+		{
+			eventType:     "prefix.event.type",
+			shouldDeliver: false,
+		},
+	}
+
+	filters := []eventingv1.SubscriptionsAPIFilter{
+		{
+			Any: []eventingv1.SubscriptionsAPIFilter{
+				{
+					Exact: map[string]string{
+						"type": "dev.knative.apiserver.resource.update",
+					},
+				},
+				{
+					Exact: map[string]string{
+						"type": "dev.knative.apiserver.resource.add",
+					},
+				},
+				{
+					Exact: map[string]string{
+						"type": "dev.knative.apiserver.resource.delete",
+					},
 				},
 			},
 		},
