@@ -63,29 +63,29 @@ type proxiedRequest struct {
 }
 
 func NewHandler(logger *zap.Logger, requestReplyInformer eventingv1alpha1informers.RequestReplyInformer, trustBundleConfigMapLister corev1listers.ConfigMapNamespaceLister, keyStore AESKeyStore) *IngressHandler {
-	connectionArgs := kncloudevents.ConnectionArgs {
-		MaxIdleConns: defaultMaxIdleConnections,
+	connectionArgs := kncloudevents.ConnectionArgs{
+		MaxIdleConns:        defaultMaxIdleConnections,
 		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
 	}
 
 	kncloudevents.ConfigureConnectionArgs(&connectionArgs)
 
-	clientConfig := eventingtls.ClientConfig {
+	clientConfig := eventingtls.ClientConfig{
 		TrustBundleConfigMapLister: trustBundleConfigMapLister,
 	}
 
 	return &IngressHandler{
-		logger: logger,
-		dispatcher: kncloudevents.NewDispatcher(clientConfig, nil),
+		logger:             logger,
+		dispatcher:         kncloudevents.NewDispatcher(clientConfig, nil),
 		requestReplyLister: requestReplyInformer.Lister(),
-		keyStore: keyStore,
+		keyStore:           keyStore,
 
 		entries: make(map[types.NamespacedName]map[string]*proxiedRequest),
 	}
 
 }
 
-func (h *IngressHandler) HandleRequest(w http.ResponseWriter, req *http.Request) {
+func (h *IngressHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Allow", "POST, OPTIONS")
 	// validate request method
 	if req.Method == http.MethodOptions {
@@ -135,15 +135,16 @@ func (h *IngressHandler) HandleRequest(w http.ResponseWriter, req *http.Request)
 	requestReplyNs, requestReplyName := nsRequestReplyName[1], nsRequestReplyName[2]
 	requestReply, err := h.getRequestReply(requestReplyName, requestReplyNs)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		h.logger.Warn("failed to retrieve RequestReply", zap.Error(err))
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute) // TODO: make this timeout configureable
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute) // TODO: make this timeout configurable
 	defer cancel()
 
-	if isResponseEvent(event) {
-		h.handleResponseEvent(ctx, w, event, requestReply)
+	if isResponseEvent(event, requestReply) {
+		h.handleResponseEvent(w, event, requestReply)
 	} else {
 		h.handleNewEvent(ctx, w, event, requestReply, utils.PassThroughHeaders(req.Header))
 	}
@@ -198,6 +199,10 @@ func (h *IngressHandler) addEvent(responseWriter http.ResponseWriter, event *clo
 		responseWriter: responseWriter,
 		replyEvent:     make(chan *cloudevents.Event, 1),
 	}
+	if h.entries[rr.GetNamespacedName()] == nil {
+		h.entries[rr.GetNamespacedName()] = make(map[string]*proxiedRequest)
+	}
+
 	h.entries[rr.GetNamespacedName()][id] = pr
 
 	return pr
@@ -215,7 +220,9 @@ func (h *IngressHandler) handleNewEvent(ctx context.Context, responseWriter http
 
 	brokerAddress, err := h.getBrokerAddress(rr)
 	if err != nil {
-
+		h.logger.Warn("no broker address annotation set in the request reply resource status", zap.String("name", rr.GetName()), zap.String("namespace", rr.GetNamespace()))
+		responseWriter.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 
 	latestKey, ok := h.keyStore.GetLatestKey(rr.GetNamespacedName())
@@ -262,7 +269,7 @@ func (h *IngressHandler) handleNewEvent(ctx context.Context, responseWriter http
 		}
 	}
 }
-func (h *IngressHandler) handleResponseEvent(ctx context.Context, responseWriter http.ResponseWriter, event *cloudevents.Event, rr *v1alpha1.RequestReply) {
+func (h *IngressHandler) handleResponseEvent(responseWriter http.ResponseWriter, event *cloudevents.Event, rr *v1alpha1.RequestReply) {
 	h.requestLock.RLock()
 	defer h.requestLock.RUnlock()
 
@@ -377,6 +384,10 @@ type AESKeyStore struct {
 }
 
 func (ks *AESKeyStore) AddAesKey(rrName types.NamespacedName, keyName string, keyValue []byte) {
+	if ks.keyStores == nil {
+		ks.keyStores = make(map[types.NamespacedName]*requestReplyAesKeyStore)
+	}
+
 	if ks.keyStores[rrName] == nil {
 		ks.keyStores[rrName] = &requestReplyAesKeyStore{}
 	}
@@ -408,7 +419,7 @@ func (ks *AESKeyStore) GetAllKeys(rrName types.NamespacedName) ([][]byte, bool) 
 	return ks.keyStores[rrName].getAllKeys(), true
 }
 
-func isResponseEvent(event *cloudevents.Event) bool {
-	_, ok := event.Extensions()["responseid"] // TODO: refactor to use id name from the rr resource
+func isResponseEvent(event *cloudevents.Event, rr *v1alpha1.RequestReply) bool {
+	_, ok := event.Extensions()[rr.Spec.ReplyAttribute]
 	return ok
 }
