@@ -148,6 +148,7 @@ func (e Flags) OIDCDiscoveryBaseURL() string {
 		return string(DefaultOIDCDiscoveryBaseURL)
 	}
 
+	//nolint:staticcheck
 	discoveryUrl, ok := e[OIDCDiscoveryBaseURL]
 	if !ok {
 		return string(DefaultOIDCDiscoveryBaseURL)

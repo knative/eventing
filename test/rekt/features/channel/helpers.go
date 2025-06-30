@@ -98,6 +98,7 @@ func getChannelableFromName(name string, ctx context.Context, t feature.T) *duck
 	return channel
 }
 
+//nolint:unused
 func patchChannelable(ctx context.Context, t feature.T, before, after *duckv1.Channelable) {
 	patch, err := duck.CreateMergePatch(before, after)
 	if err != nil {

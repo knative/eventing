@@ -34,12 +34,11 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	clientgotesting "k8s.io/client-go/testing"
 
+	ktesting "k8s.io/client-go/testing"
 	"k8s.io/client-go/tools/record"
 
 	"go.uber.org/zap"
-	ktesting "k8s.io/client-go/testing"
 	"knative.dev/pkg/controller"
 
 	"knative.dev/eventing/pkg/apis/sinks"
@@ -48,6 +47,7 @@ import (
 	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
 
 	"knative.dev/pkg/reconciler"
+	//nolint:staticcheck  // Not sure why this is dot imported...
 	. "knative.dev/pkg/reconciler/testing"
 )
 
@@ -119,7 +119,7 @@ func MakeFactory(ctor Ctor, unstructured bool, logger *zap.SugaredLogger) Factor
 		})
 
 		kubeClient.PrependReactor("create", "subjectaccessreviews", func(action ktesting.Action) (handled bool, ret runtime.Object, err error) {
-			obj := action.(clientgotesting.CreateAction).GetObject()
+			obj := action.(ktesting.CreateAction).GetObject()
 			sar, ok := obj.(*authv1.SubjectAccessReview)
 			if !ok {
 				return false, nil, nil

@@ -41,10 +41,6 @@ import (
 	"knative.dev/eventing/pkg/reconciler/source/duck/resources"
 )
 
-const (
-	defaultNamespace = "default"
-)
-
 type Reconciler struct {
 	// eventingClientSet allows us to configure Eventing objects
 	eventingClientSet clientset.Interface

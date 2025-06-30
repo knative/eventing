@@ -16,6 +16,8 @@ limitations under the License.
 
 package sources
 
+//nolint:staticcheck  // Not capitalizing "API" everywhere in this file
+
 const (
 	// ApiServerSourceAddEventType is the ApiServerSource CloudEvent type for adds.
 	ApiServerSourceAddEventType = "dev.knative.apiserver.resource.add"

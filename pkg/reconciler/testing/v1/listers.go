@@ -179,6 +179,7 @@ func (l *Listers) GetParallelLister() flowslisters.ParallelLister {
 	return flowslisters.NewParallelLister(l.indexerFor(&flowsv1.Parallel{}))
 }
 
+//nolint:staticcheck  // Should be "API"
 func (l *Listers) GetApiServerSourceLister() sourcelisters.ApiServerSourceLister {
 	return sourcelisters.NewApiServerSourceLister(l.indexerFor(&sourcesv1.ApiServerSource{}))
 }

@@ -62,13 +62,25 @@ func NewFilteredSequenceInformer(client versioned.Interface, namespace string, r
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.FlowsV1().Sequences(namespace).List(context.TODO(), options)
+				return client.FlowsV1().Sequences(namespace).List(context.Background(), options)
 			},
 			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.FlowsV1().Sequences(namespace).Watch(context.TODO(), options)
+				return client.FlowsV1().Sequences(namespace).Watch(context.Background(), options)
+			},
+			ListWithContextFunc: func(ctx context.Context, options metav1.ListOptions) (runtime.Object, error) {
+				if tweakListOptions != nil {
+					tweakListOptions(&options)
+				}
+				return client.FlowsV1().Sequences(namespace).List(ctx, options)
+			},
+			WatchFuncWithContext: func(ctx context.Context, options metav1.ListOptions) (watch.Interface, error) {
+				if tweakListOptions != nil {
+					tweakListOptions(&options)
+				}
+				return client.FlowsV1().Sequences(namespace).Watch(ctx, options)
 			},
 		},
 		&apisflowsv1.Sequence{},

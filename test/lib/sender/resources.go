@@ -40,6 +40,8 @@ func EnableTracing() func(*corev1.Pod) {
 
 // EnableIncrementalId creates a new incremental id for each event sent from the sender pod. Supported only by event-sender
 // Deprecated: Now you should use recordevents.DeployEventSenderOrFail to send events
+//
+//nolint:staticcheck  // Should be "ID"
 func EnableIncrementalId() func(*corev1.Pod) {
 	return func(pod *corev1.Pod) {
 		pod.Spec.Containers[0].Args = append(

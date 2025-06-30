@@ -39,15 +39,16 @@ import (
 )
 
 var (
-	sink              string
-	responseSink      string
-	inputEvent        string
-	eventEncoding     string
-	periodStr         string
-	delayStr          string
-	maxMsg            int
-	addTracing        bool
-	addSequence       bool
+	sink          string
+	responseSink  string
+	inputEvent    string
+	eventEncoding string
+	periodStr     string
+	delayStr      string
+	maxMsg        int
+	addTracing    bool
+	addSequence   bool
+	//nolint:staticcheck  // Should be "ID"
 	incrementalId     bool
 	additionalHeaders string
 )

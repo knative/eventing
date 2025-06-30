@@ -15,6 +15,20 @@ linters:
     - unparam
   disable:
     - errcheck
+  settings:
+    staticcheck:
+      checks:
+      - all
+      - '-SA1019'  # Temporary ignore SA1019: use of deprecated types or methods
+      - '-ST1003'  # Temporary ignore ST1003: We have a lot of "Api" where it should be "API"
+      - '-ST1005'  # Temporary ignore ST1005: error strings should not be capitalized
+      - '-ST1016'  # Temporary ignore ST1016: methods on the same type should have the same receiver name
+      - '-ST1019'  # Temporary ignore ST1019: multiple imports of a module with different names
+      - '-QF1002'  # Temporary ignore QF1002: could use tagged switch
+      - '-QF1003'  # Temporary ignore QF1003: Convert if/else-if chain to tagged switch
+      - '-QF1007'  # Temporary ignore QF1007: merge conditional assignment into variable declaration
+      - '-QF1008'  # Temporary ignore QF1008: Omit embedded fields from selector expression
+      - '-QF1009'  # Temporary ignore QF1009: Merge conditional assignment into variable declaration
   exclusions:
     generated: lax
     presets:
@@ -27,9 +41,21 @@ linters:
           - gosec
           - unparam
         path: test
+      - linters:
+          - staticcheck
+        text: "ST1003"  # A lot of "Api" instead of "API" names
+        path: pkg/reconciler/testing/v1/apiserversource.go
+      - linters:
+          - staticcheck
+        text: "ST1001"  # Prohibit dot imports
+        path: test/e2e/helpers/.*_helper.go
+      - linters:
+          - staticcheck
+        text: "ST1001"  # Prohibit dot imports
+        path: test/rekt/features/.*.go
     paths:
       - pkg/client
-      - third_party$
+      - third_party/
       - builtin$
       - examples$
 formatters:

@@ -40,7 +40,9 @@ import (
 )
 
 const (
-	SecretLabelKey   = "app.kubernetes.io/component"
+	//nolint:gosec  // Not a credential, just a label
+	SecretLabelKey = "app.kubernetes.io/component"
+	//nolint:gosec  // Not a credential, just a label
 	SecretLabelValue = "knative-eventing"
 
 	CertificateLabelKey   = "app.kubernetes.io/component"
@@ -71,7 +73,8 @@ func (df *DynamicCertificatesInformer) Reconcile(ctx context.Context, features f
 	defer df.mu.Unlock()
 	if !features.IsPermissiveTransportEncryption() && !features.IsStrictTransportEncryption() {
 		logger.Debugw("transport encryption is disabled, stopping informer")
-		return df.stop(ctx)
+		df.stop(ctx)
+		return nil
 	}
 	if df.cancel.Load() != nil {
 		logger.Debugw("Cancel function already loaded, skipping start")
@@ -109,16 +112,15 @@ func (df *DynamicCertificatesInformer) Reconcile(ctx context.Context, features f
 	return nil
 }
 
-func (df *DynamicCertificatesInformer) stop(ctx context.Context) error {
+func (df *DynamicCertificatesInformer) stop(ctx context.Context) {
 	cancel := df.cancel.Load()
 	if cancel == nil {
 		logging.FromContext(ctx).Debugw("Certificate informer has not been started, nothing to stop")
-		return nil
+		return
 	}
 
 	(*cancel)()
 	df.cancel.Store(nil) // Cancel is always set as last field since it's used as a "guard".
-	return nil
 }
 
 func (df *DynamicCertificatesInformer) Lister() *atomic.Pointer[cmlistersv1.CertificateLister] {

@@ -30,16 +30,15 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
-	eventingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 )
 
 // ChannelOption enables further configuration of a Channel.
-type ChannelOption func(*eventingv1.Channel)
+type ChannelOption func(*messagingv1.Channel)
 
 // NewChannel creates a Channel with ChannelOptions
-func NewChannel(name, namespace string, o ...ChannelOption) *eventingv1.Channel {
-	c := &eventingv1.Channel{
+func NewChannel(name, namespace string, o ...ChannelOption) *messagingv1.Channel {
+	c := &messagingv1.Channel{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "messaging.knative.dev/v1",
 			Kind:       "Channel",
@@ -57,33 +56,33 @@ func NewChannel(name, namespace string, o ...ChannelOption) *eventingv1.Channel 
 }
 
 // WithInitChannelConditions initializes the Channel's conditions.
-func WithInitChannelConditions(c *eventingv1.Channel) {
+func WithInitChannelConditions(c *messagingv1.Channel) {
 	c.Status.InitializeConditions()
 }
 
-func WithNoAnnotations(c *eventingv1.Channel) {
+func WithNoAnnotations(c *messagingv1.Channel) {
 	c.ObjectMeta.Annotations = nil
 }
 
 func WithChannelGeneration(gen int64) ChannelOption {
-	return func(s *eventingv1.Channel) {
+	return func(s *messagingv1.Channel) {
 		s.Generation = gen
 	}
 }
 
 func WithChannelObservedGeneration(gen int64) ChannelOption {
-	return func(s *eventingv1.Channel) {
+	return func(s *messagingv1.Channel) {
 		s.Status.ObservedGeneration = gen
 	}
 }
 
-func WithChannelDeleted(c *eventingv1.Channel) {
+func WithChannelDeleted(c *messagingv1.Channel) {
 	t := metav1.NewTime(time.Unix(1e9, 0))
 	c.ObjectMeta.SetDeletionTimestamp(&t)
 }
 
 func WithChannelTemplate(typeMeta metav1.TypeMeta) ChannelOption {
-	return func(c *eventingv1.Channel) {
+	return func(c *messagingv1.Channel) {
 		c.Spec.ChannelTemplate = &messagingv1.ChannelTemplateSpec{
 			TypeMeta: typeMeta,
 		}
@@ -91,41 +90,41 @@ func WithChannelTemplate(typeMeta metav1.TypeMeta) ChannelOption {
 }
 
 func WithBackingChannelFailed(reason, msg string) ChannelOption {
-	return func(c *eventingv1.Channel) {
+	return func(c *messagingv1.Channel) {
 		c.Status.MarkBackingChannelFailed(reason, msg)
 	}
 }
 
 func WithBackingChannelUnknown(reason, msg string) ChannelOption {
-	return func(c *eventingv1.Channel) {
+	return func(c *messagingv1.Channel) {
 		c.Status.MarkBackingChannelUnknown(reason, msg)
 	}
 }
 
-func WithBackingChannelReady(c *eventingv1.Channel) {
+func WithBackingChannelReady(c *messagingv1.Channel) {
 	c.Status.MarkBackingChannelReady()
 }
 
 func WithChannelDelivery(d *eventingduckv1.DeliverySpec) ChannelOption {
-	return func(c *eventingv1.Channel) {
+	return func(c *messagingv1.Channel) {
 		c.Spec.Delivery = d
 	}
 }
 
 func WithBackingChannelObjRef(objRef *duckv1.KReference) ChannelOption {
-	return func(c *eventingv1.Channel) {
+	return func(c *messagingv1.Channel) {
 		c.Status.Channel = objRef
 	}
 }
 
 func WithChannelNoAddress() ChannelOption {
-	return func(c *eventingv1.Channel) {
+	return func(c *messagingv1.Channel) {
 		c.Status.SetAddress(nil)
 	}
 }
 
 func WithChannelAddress(addr *duckv1.Addressable) ChannelOption {
-	return func(c *eventingv1.Channel) {
+	return func(c *messagingv1.Channel) {
 		c.Status.SetAddress(addr)
 	}
 }
@@ -135,7 +134,7 @@ func WithChannelReadySubscriber(uid string) ChannelOption {
 }
 
 func WithChannelReadySubscriberAndGeneration(uid string, observedGeneration int64) ChannelOption {
-	return func(c *eventingv1.Channel) {
+	return func(c *messagingv1.Channel) {
 		c.Status.Subscribers = append(c.Status.Subscribers, eventingduckv1.SubscriberStatus{
 			UID:                types.UID(uid),
 			ObservedGeneration: observedGeneration,
@@ -145,37 +144,37 @@ func WithChannelReadySubscriberAndGeneration(uid string, observedGeneration int6
 }
 
 func WithChannelSubscriberStatuses(subscriberStatuses []eventingduckv1.SubscriberStatus) ChannelOption {
-	return func(c *eventingv1.Channel) {
+	return func(c *messagingv1.Channel) {
 		c.Status.Subscribers = subscriberStatuses
 	}
 }
 
 func WithChannelStatusDLS(ds eventingduckv1.DeliveryStatus) ChannelOption {
-	return func(c *eventingv1.Channel) {
+	return func(c *messagingv1.Channel) {
 		c.Status.MarkDeadLetterSinkResolvedSucceeded(ds)
 	}
 }
 
 func WithChannelDLSUnknown() ChannelOption {
-	return func(c *eventingv1.Channel) {
+	return func(c *messagingv1.Channel) {
 		c.Status.MarkDeadLetterSinkNotConfigured()
 	}
 }
 
 func WithChannelEventPoliciesReady() ChannelOption {
-	return func(c *eventingv1.Channel) {
+	return func(c *messagingv1.Channel) {
 		c.Status.MarkEventPoliciesTrue()
 	}
 }
 
 func WithChannelEventPoliciesNotReady(reason, message string) ChannelOption {
-	return func(c *eventingv1.Channel) {
+	return func(c *messagingv1.Channel) {
 		c.Status.MarkEventPoliciesFailed(reason, message)
 	}
 }
 
 func WithChannelEventPoliciesListed(policyNames ...string) ChannelOption {
-	return func(c *eventingv1.Channel) {
+	return func(c *messagingv1.Channel) {
 		for _, name := range policyNames {
 			c.Status.Policies = append(c.Status.Policies, eventingduckv1.AppliedEventPolicyRef{
 				APIVersion: v1alpha1.SchemeGroupVersion.String(),
@@ -186,19 +185,19 @@ func WithChannelEventPoliciesListed(policyNames ...string) ChannelOption {
 }
 
 func WithChannelEventPoliciesReadyBecauseOIDCDisabled() ChannelOption {
-	return func(c *eventingv1.Channel) {
+	return func(c *messagingv1.Channel) {
 		c.Status.MarkEventPoliciesTrueWithReason("OIDCDisabled", "Feature %q must be enabled to support Authorization", feature.OIDCAuthentication)
 	}
 }
 
 func WithChannelEventPoliciesReadyBecauseNoPolicyAndOIDCEnabled() ChannelOption {
-	return func(c *eventingv1.Channel) {
+	return func(c *messagingv1.Channel) {
 		c.Status.MarkEventPoliciesTrueWithReason("DefaultAuthorizationMode", "Default authz mode is %q", feature.AuthorizationAllowSameNamespace)
 	}
 }
 
 func WithChannelDLSResolvedFailed() ChannelOption {
-	return func(c *eventingv1.Channel) {
+	return func(c *messagingv1.Channel) {
 		c.Status.MarkDeadLetterSinkResolvedFailed(
 			"Unable to get the DeadLetterSink's URI",
 			fmt.Sprintf(`services "%s" not found`,

@@ -20,8 +20,8 @@ import (
 	"testing"
 
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"sigs.k8s.io/randfill"
 
-	fuzz "github.com/google/gofuzz"
 	"k8s.io/apimachinery/pkg/api/apitesting/fuzzer"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -36,8 +36,8 @@ import (
 var FuzzerFuncs = fuzzer.MergeFuzzerFuncs(
 	func(codecs serializer.CodecFactory) []interface{} {
 		return []interface{}{
-			func(source *ApiServerSource, c fuzz.Continue) {
-				c.FuzzNoCustom(source) // fuzz the source
+			func(source *ApiServerSource, c randfill.Continue) {
+				c.FillNoCustom(source) // fuzz the source
 				// Clear the random fuzzed condition
 				source.Status.SetConditions(nil)
 
@@ -45,8 +45,8 @@ var FuzzerFuncs = fuzzer.MergeFuzzerFuncs(
 				source.Status.InitializeConditions()
 				pkgfuzzer.FuzzConditions(&source.Status, c)
 			},
-			func(source *PingSource, c fuzz.Continue) {
-				c.FuzzNoCustom(source) // fuzz the source
+			func(source *PingSource, c randfill.Continue) {
+				c.FillNoCustom(source) // fuzz the source
 				// Clear the random fuzzed condition
 				source.Status.SetConditions(nil)
 
@@ -54,8 +54,8 @@ var FuzzerFuncs = fuzzer.MergeFuzzerFuncs(
 				source.Status.InitializeConditions()
 				pkgfuzzer.FuzzConditions(&source.Status, c)
 			},
-			func(source *ContainerSource, c fuzz.Continue) {
-				c.FuzzNoCustom(source) // fuzz the source
+			func(source *ContainerSource, c randfill.Continue) {
+				c.FillNoCustom(source) // fuzz the source
 				// Clear the random fuzzed condition
 				source.Status.SetConditions(nil)
 
@@ -63,8 +63,8 @@ var FuzzerFuncs = fuzzer.MergeFuzzerFuncs(
 				source.Status.InitializeConditions()
 				pkgfuzzer.FuzzConditions(&source.Status, c)
 			},
-			func(source *SinkBinding, c fuzz.Continue) {
-				c.FuzzNoCustom(source) // fuzz the source
+			func(source *SinkBinding, c randfill.Continue) {
+				c.FillNoCustom(source) // fuzz the source
 				// Clear the random fuzzed condition
 				source.Status.SetConditions(nil)
 

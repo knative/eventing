@@ -36,4 +36,7 @@ import (
 	// API reference docs generation.
 	_ "github.com/ahmetb/gen-crd-api-reference-docs"
 	_ "github.com/ahmetb/gen-crd-api-reference-docs/template"
+
+	// K8s code generation tools
+	_ "k8s.io/code-generator/cmd/validation-gen"
 )

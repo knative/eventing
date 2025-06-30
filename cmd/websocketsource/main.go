@@ -45,6 +45,7 @@ func init() {
 func main() {
 	flag.Parse()
 
+	//nolint:staticcheck
 	k_sink := os.Getenv("K_SINK")
 	if k_sink != "" {
 		sink = k_sink

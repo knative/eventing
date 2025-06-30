@@ -26,7 +26,6 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
-	eventingv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/apis/eventing"
 	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/broker"
@@ -207,7 +206,7 @@ func WithChannelAudienceAnnotation(audience string) BrokerOption {
 
 func WithBrokerStatusDLS(dls duckv1.Addressable) BrokerOption {
 	return func(b *v1.Broker) {
-		b.Status.MarkDeadLetterSinkResolvedSucceeded(eventingv1.NewDeliveryStatusFromAddressable(&dls))
+		b.Status.MarkDeadLetterSinkResolvedSucceeded(eventingduckv1.NewDeliveryStatusFromAddressable(&dls))
 	}
 }
 
@@ -250,7 +249,7 @@ func WithChannelNamespaceAnnotation(namespace string) BrokerOption {
 func WithDeadLeaderSink(d duckv1.Destination) BrokerOption {
 	return func(b *v1.Broker) {
 		if b.Spec.Delivery == nil {
-			b.Spec.Delivery = new(eventingv1.DeliverySpec)
+			b.Spec.Delivery = new(eventingduckv1.DeliverySpec)
 		}
 		b.Spec.Delivery.DeadLetterSink = &d
 	}
@@ -259,7 +258,7 @@ func WithDeadLeaderSink(d duckv1.Destination) BrokerOption {
 func WithBrokerDeliveryRetries(retry int32) BrokerOption {
 	return func(b *v1.Broker) {
 		if b.Spec.Delivery == nil {
-			b.Spec.Delivery = new(eventingv1.DeliverySpec)
+			b.Spec.Delivery = new(eventingduckv1.DeliverySpec)
 		}
 		b.Spec.Delivery.Retry = &retry
 	}

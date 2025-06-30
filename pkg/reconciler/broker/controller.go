@@ -131,7 +131,7 @@ func NewController(
 	// When the endpoints in our multi-tenant filter/ingress change, do a global resync.
 	// During installation, we might reconcile Brokers before our shared filter/ingress is
 	// ready, so when these endpoints change perform a global resync.
-	globalResync = func(obj interface{}) {
+	globalResync = func(any) {
 		// Since changes in the Filter/Ingress Service endpoints affect all the Broker objects,
 		// do a global resync.
 		logger.Info("Doing a global resync due to endpoint changes in shared broker component")

@@ -16,4 +16,6 @@ limitations under the License.
 
 // Package post_install is a placeholder that allows us to pull in config files
 // via go mod vendor.
+//
+//nolint:staticcheck
 package post_install

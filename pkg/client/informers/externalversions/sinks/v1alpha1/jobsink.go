@@ -62,13 +62,25 @@ func NewFilteredJobSinkInformer(client versioned.Interface, namespace string, re
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.SinksV1alpha1().JobSinks(namespace).List(context.TODO(), options)
+				return client.SinksV1alpha1().JobSinks(namespace).List(context.Background(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.SinksV1alpha1().JobSinks(namespace).Watch(context.TODO(), options)
+				return client.SinksV1alpha1().JobSinks(namespace).Watch(context.Background(), options)
+			},
+			ListWithContextFunc: func(ctx context.Context, options v1.ListOptions) (runtime.Object, error) {
+				if tweakListOptions != nil {
+					tweakListOptions(&options)
+				}
+				return client.SinksV1alpha1().JobSinks(namespace).List(ctx, options)
+			},
+			WatchFuncWithContext: func(ctx context.Context, options v1.ListOptions) (watch.Interface, error) {
+				if tweakListOptions != nil {
+					tweakListOptions(&options)
+				}
+				return client.SinksV1alpha1().JobSinks(namespace).Watch(ctx, options)
 			},
 		},
 		&apissinksv1alpha1.JobSink{},
