@@ -7231,6 +7231,9 @@ type Event struct {
 	// +optional
 	Action string `json:"action,omitempty" protobuf:"bytes,12,opt,name=action"`
 
+	// The object that this event is about.
+	Note string `json:"note,omitempty" protobuf:"bytes,13,opt,name=note"`
+
 	// Optional secondary object for more complex actions.
 	// +optional
 	Related *ObjectReference `json:"related,omitempty" protobuf:"bytes,13,opt,name=related"`
