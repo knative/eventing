@@ -146,10 +146,16 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1.ApiServerSour
 	}
 	source.Status.Namespaces = namespaces
 
-	err = r.runAccessCheck(ctx, source, namespaces)
-	if err != nil {
-		logging.FromContext(ctx).Errorw("Not enough permission", zap.Error(err))
-		return err
+	// We don't check if it really exists because in case it does not exist, the value is an empty string
+	// which also serves our purposes as by default we will check permissions
+	annotations := source.GetAnnotations()
+	skipPermissions, _ := annotations["features.knative.dev/apiserversource-skip-permissions"]
+	if skipPermissions != "true" {
+		err = r.runAccessCheck(ctx, source, namespaces)
+		if err != nil {
+			logging.FromContext(ctx).Errorw("Not enough permission", zap.Error(err))
+			return err
+		}
 	}
 
 	if err := r.propagateTrustBundles(ctx, source); err != nil {
@@ -224,19 +230,23 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1.ApiServer
 	// 	return nil, err
 	// }
 
+	annotations := src.GetAnnotations()
+	skipPermissions, _ := annotations["features.knative.dev/apiserversource-skip-permissions"]
+
 	featureFlags := feature.FromContext(ctx)
 
 	adapterArgs := resources.ReceiveAdapterArgs{
-		Image:         r.receiveAdapterImage,
-		Source:        src,
-		Labels:        resources.Labels(src.Name),
-		CACerts:       sinkAddr.CACerts,
-		SinkURI:       sinkAddr.URL.String(),
-		Audience:      sinkAddr.Audience,
-		Configs:       r.configs,
-		Namespaces:    namespaces,
-		AllNamespaces: allNamespaces,
-		NodeSelector:  featureFlags.NodeSelector(),
+		Image:              r.receiveAdapterImage,
+		Source:             src,
+		Labels:             resources.Labels(src.Name),
+		CACerts:            sinkAddr.CACerts,
+		SinkURI:            sinkAddr.URL.String(),
+		Audience:           sinkAddr.Audience,
+		Configs:            r.configs,
+		Namespaces:         namespaces,
+		AllNamespaces:      allNamespaces,
+		NodeSelector:       featureFlags.NodeSelector(),
+		SkippedPermissions: skipPermissions == "true",
 	}
 
 	expected, err := resources.MakeReceiveAdapter(&adapterArgs)

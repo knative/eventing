@@ -26,6 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
@@ -112,7 +113,17 @@ func (a *apiServerAdapter) start(ctx context.Context, stopCh <-chan struct{}) er
 					}
 
 					reflector := cache.NewReflector(lw, &unstructured.Unstructured{}, delegate, resyncPeriod)
-					go reflector.Run(stop)
+					if a.config.SkippedPermissions {
+						go func() {
+							chCtx := wait.ContextForChannel(stop)
+							if err := reflector.ListAndWatchWithContext(chCtx); err != nil {
+								a.logger.Infof("reflector errored listening and watching: %s", err)
+								chCtx.Done()
+							}
+						}()
+					} else {
+						go reflector.Run(stop)
+					}
 				}
 
 				exists = true
