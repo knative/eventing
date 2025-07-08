@@ -23,7 +23,7 @@ metadata:
     app.kubernetes.io/version: devel
     app.kubernetes.io/name: knative-eventing
   annotations:
-    knative.dev/example-checksum: "f46cf09d"
+    knative.dev/example-checksum: "2aa725ed"
 data:
   _example: |
     ################################
@@ -41,34 +41,63 @@ data:
     # this example block and unindented to be in the data block
     # to actually change the configuration.
 
-    # metrics.backend-destination field specifies the system metrics destination.
-    # It supports either prometheus (the default) or stackdriver.
-    # Note: Using stackdriver will incur additional charges
-    metrics.backend-destination: prometheus
+     # metrics-protocol field specifies the protocol used when exporting metrics
+    # It supports either 'none' (the default), 'prometheus', 'http/protobuf' (OTLP HTTP), 'grpc' (OTLP gRPC)
+    metrics-protocol: http/protobuf
 
-    # metrics.request-metrics-backend-destination specifies the request metrics
-    # destination. If non-empty, it enables queue proxy to send request metrics.
-    # Currently supported values: prometheus, stackdriver.
-    metrics.request-metrics-backend-destination: prometheus
+    # metrics-endpoint field specifies the destination metrics should be exporter to.
+    #
+    # The endpoint MUST be set when the protocol is http/protobuf or grpc.
+    # The endpoint MUST NOT be set when the protocol is none.
+    #
+    # When the protocol is prometheus the endpoint can accept a 'host:port' string to customize the
+    # listening host interface and port.
+    metrics-endpoint: http://example.com/v1/traces
 
-    # metrics.stackdriver-project-id field specifies the stackdriver project ID. This
-    # field is optional. When running on GCE, application default credentials will be
-    # used if this field is not provided.
-    metrics.stackdriver-project-id: "<your stackdriver project id>"
-
-    # metrics.allow-stackdriver-custom-metrics indicates whether it is allowed to send metrics to
-    # Stackdriver using "global" resource type and custom metric type if the
-    # metrics are not supported by "knative_broker", "knative_trigger", and "knative_source" resource types.
-    # Setting this flag to "true" could cause extra Stackdriver charge.
-    # If metrics.backend-destination is not Stackdriver, this is ignored.
-    metrics.allow-stackdriver-custom-metrics: "false"
-
-    # profiling.enable indicates whether it is allowed to retrieve runtime profiling data from
-    # the pods via an HTTP server in the format expected by the pprof visualization tool. When
-    # enabled, the Knative Eventing pods expose the profiling data on an alternate HTTP port 8008.
-    # The HTTP context root for profiling is then /debug/pprof/.
-    profiling.enable: "false"
+    # metrics-export-interval specifies the global metrics reporting period for control and data plane components.
+    # If a zero or negative value is passed the default reporting OTel period is used (60 secs).
+    metrics-export-interval: 60s
 
     # sink-event-error-reporting.enable whether the adapter reports a kube event to the CRD indicating
     # a failure to send a cloud event to the sink.
     sink-event-error-reporting.enable: "false"
+
+    # request-metrics-protocol field specifies the protocol used when exporting queue-proxy metrics
+    # It supports either 'none' (the default), 'prometheus', 'http/protobuf' (OTLP HTTP), 'grpc' (OTLP gRPC)
+    request-metrics-protocol: http/protobuf
+
+    # request-metrics-endpoint field specifies the destination metrics from the queue proxy should be exporter to.
+    #
+    # The endpoint MUST be set when the protocol is http/protobuf or grpc.
+    # The endpoint MUST NOT be set when the protocol is none.
+    #
+    # When the protocol is prometheus the endpoint can accept a 'host:port' string to customize the
+    # listening host interface and port.
+    request-metrics-endpoint: http://promstack-kube-prometheus-prometheus.observability:9090/api/v1/otlp/v1/metrics
+
+    # request-metrics-export-interval specifies the global metrics reporting period for the queue-proxy.
+    #
+    # If a zero or negative value is passed the default reporting OTel period is used (60 secs).
+    request-metrics-export-interval: 60s
+
+    # runtime-profiling indicates whether it is allowed to retrieve runtime profiling data from
+    # the pods via an HTTP server in the format expected by the pprof visualization tool. When
+    # enabled, the Knative Serving pods expose the profiling data on an alternate HTTP port 8008.
+    # The HTTP context root for profiling is then /debug/pprof/.
+    runtime-profiling: enabled
+
+
+    # tracing-protocol field specifies the protocol used when exporting metrics
+    # It supports either 'none' (the default), 'prometheus', 'http/protobuf' (OTLP HTTP), 'grpc' (OTLP gRPC)
+    # or `stdout` for debugging purposes
+    tracing-protocol: http/protobuf
+
+    # tracing-endpoint field specifies the destination traces should be exporter to.
+    #
+    # The endpoint MUST be set when the protocol is http/protobuf or grpc.
+    # The endpoint MUST NOT be set when the protocol is none.
+    tracing-endpoint: http://jaeger-collector.observability:4318/v1/traces
+
+    # tracing-sampling-rate allows the user to specify what percentage of all traces should be exported
+    # The value should be between 0 (never sample) to 1 (always sample)
+    tracing-sampling-rate: "1"
