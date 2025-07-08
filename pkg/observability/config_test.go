@@ -32,7 +32,8 @@ func TestNewFromMap(t *testing.T) {
 		want             *Config
 	}{
 		"no map": {
-			m: nil,
+			m:    nil,
+			want: DefaultConfig(),
 		},
 		"valid keys and values": {
 			m: map[string]string{
@@ -44,6 +45,7 @@ func TestNewFromMap(t *testing.T) {
 			m: map[string]string{
 				EnableSinkEventErrorReportingKey: "notabool",
 			},
+			expectParseError: true,
 		},
 	}
 
@@ -55,6 +57,7 @@ func TestNewFromMap(t *testing.T) {
 
 			if tCase.expectParseError {
 				assert.Error(t, err)
+				return
 			} else {
 				assert.NoError(t, err)
 			}
