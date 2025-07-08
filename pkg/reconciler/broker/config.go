@@ -27,6 +27,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	cm "knative.dev/pkg/configmap"
+	"knative.dev/pkg/configmap/parser"
 	"knative.dev/pkg/logging"
 
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
@@ -41,6 +42,15 @@ const (
 	legacyChannelTemplateSpec = "channelTemplateSpec"
 )
 
+func asMultiLineString(key string, target *string) parser.ParseFunc {
+	return func(data map[string]string) error {
+		if raw, ok := data[key]; ok {
+			*target = raw
+		}
+		return nil
+	}
+}
+
 func NewConfigFromConfigMapFunc(ctx context.Context) func(configMap *corev1.ConfigMap) (*Config, error) {
 	return func(configMap *corev1.ConfigMap) (*Config, error) {
 		config := &Config{
@@ -50,9 +60,9 @@ func NewConfigFromConfigMapFunc(ctx context.Context) func(configMap *corev1.Conf
 		temp := ""
 		if err := cm.Parse(configMap.Data,
 			// Legacy for backwards compatibility
-			cm.AsString(legacyChannelTemplateSpec, &temp),
+			asMultiLineString(legacyChannelTemplateSpec, &temp),
 
-			cm.AsString(channelTemplateSpec, &temp),
+			asMultiLineString(channelTemplateSpec, &temp),
 		); err != nil {
 			return nil, fmt.Errorf("ConfigMap's could not be parsed: %w", err)
 		}
