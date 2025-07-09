@@ -360,7 +360,7 @@ func (o *Receiver) verifyJWT(request *http.Request) (*authv1.UserInfo, error) {
 	}
 
 	if err := tokenReview.Status.Error; err != "" {
-		return nil, fmt.Errorf(err)
+		return nil, fmt.Errorf("tokenReview error: %s", err)
 	}
 
 	if !tokenReview.Status.Authenticated {
