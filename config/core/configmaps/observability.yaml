@@ -52,7 +52,7 @@ data:
     #
     # When the protocol is prometheus the endpoint can accept a 'host:port' string to customize the
     # listening host interface and port.
-    metrics-endpoint: http://example.com/v1/traces
+    metrics-endpoint: http://collector.otel.svc.cluster.local/
 
     # metrics-export-interval specifies the global metrics reporting period for control and data plane components.
     # If a zero or negative value is passed the default reporting OTel period is used (60 secs).
