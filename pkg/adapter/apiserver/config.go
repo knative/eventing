@@ -68,4 +68,11 @@ type Config struct {
 	//
 	// +optional
 	Filters []eventingv1.SubscriptionsAPIFilter `json:"filters,omitempty"`
+
+	// SkippedPermissions is a field that communicates that the
+	// ApiServerSource did not check if permissions were OK to setup
+	// watches on the required resources and namespaces. This changes the behaviour
+	// of the pod, so it does not keep trying for failed watches.
+	//
+	SkippedPermissions bool `json:"skippedPermissions,omitempty"`
 }

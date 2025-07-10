@@ -258,3 +258,81 @@ O2dgzikq8iSy1BlRsVw=
 		})
 	}
 }
+
+func TestMakeReceiveAdapterWithSkipPermissions(t *testing.T) {
+	name := "source-name"
+	testCert := `-----BEGIN CERTIFICATE-----
+Test certificate content here
+-----END CERTIFICATE-----`
+
+	tests := []struct {
+		name            string
+		skipPermissions bool
+		expectedConfig  string
+	}{
+		{
+			name:            "SkippedPermissions true",
+			skipPermissions: true,
+			expectedConfig:  `{"namespaces":["source-namespace"],"allNamespaces":false,"resources":[{"gvr":{"Group":"","Version":"","Resource":"namespaces"}}],"mode":"Resource","skippedPermissions":true}`,
+		},
+		{
+			name:            "SkippedPermissions false",
+			skipPermissions: false,
+			expectedConfig:  `{"namespaces":["source-namespace"],"allNamespaces":false,"resources":[{"gvr":{"Group":"","Version":"","Resource":"namespaces"}}],"mode":"Resource"}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			src := &v1.ApiServerSource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: "source-namespace",
+					UID:       "1234",
+				},
+				Spec: v1.ApiServerSourceSpec{
+					Resources: []v1.APIVersionKindSelector{{
+						APIVersion: "",
+						Kind:       "Namespace",
+					}},
+					EventMode:          "Resource",
+					ServiceAccountName: "source-svc-acct",
+				},
+			}
+
+			got, err := MakeReceiveAdapter(&ReceiveAdapterArgs{
+				Image:              "test-image",
+				Source:             src,
+				Labels:             map[string]string{"test-key": "test-value"},
+				SinkURI:            "sink-uri",
+				CACerts:            &testCert,
+				Configs:            &source.EmptyVarsGenerator{},
+				Namespaces:         []string{"source-namespace"},
+				SkippedPermissions: tt.skipPermissions,
+			})
+
+			if err != nil {
+				t.Fatalf("MakeReceiveAdapter() error = %v", err)
+			}
+
+			// Find the K_SOURCE_CONFIG environment variable
+			var sourceConfigValue string
+			for _, container := range got.Spec.Template.Spec.Containers {
+				for _, env := range container.Env {
+					if env.Name == "K_SOURCE_CONFIG" {
+						sourceConfigValue = env.Value
+						break
+					}
+				}
+			}
+
+			if sourceConfigValue == "" {
+				t.Fatal("K_SOURCE_CONFIG environment variable not found")
+			}
+
+			if sourceConfigValue != tt.expectedConfig {
+				t.Errorf("K_SOURCE_CONFIG value mismatch:\nexpected: %s\ngot: %s", tt.expectedConfig, sourceConfigValue)
+			}
+		})
+	}
+}

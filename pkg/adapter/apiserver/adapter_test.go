@@ -315,3 +315,68 @@ func makeRefAndTestingClient() (*resourceDelegate, *adaptertest.TestCloudEventsC
 		filter:              subscriptionsapi.NewAllFilter(subscriptionsapi.MaterializeFiltersList(logger.Desugar(), []eventingv1.SubscriptionsAPIFilter{})...),
 	}, ce
 }
+
+func TestAdapter_SkipPermissions(t *testing.T) {
+	ce := adaptertest.NewTestClient()
+
+	tests := []struct {
+		name               string
+		skipPermissions    bool
+		expectedLogMessage string
+	}{
+		{
+			name:               "skip permissions enabled",
+			skipPermissions:    true,
+			expectedLogMessage: "ApiServerSource skipped checking permissions so only watches will be only attempted once",
+		},
+		{
+			name:            "skip permissions disabled",
+			skipPermissions: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := Config{
+				Namespaces: []string{"default"},
+				Resources: []ResourceWatch{{
+					GVR: schema.GroupVersionResource{
+						Version:  "v1",
+						Resource: "pods",
+					},
+				}},
+				EventMode:          "Resource",
+				SkippedPermissions: tt.skipPermissions,
+			}
+
+			ctx, _ := pkgtesting.SetupFakeContext(t)
+			logger := logging.FromContext(ctx).Named("adapter-test")
+
+			a := &apiServerAdapter{
+				ce:     ce,
+				logger: logger,
+				config: config,
+
+				discover: makeDiscoveryClient(),
+				k8s:      makeDynamicClient(simplePod("foo", "default")),
+				source:   "unit-test",
+				name:     "unittest",
+			}
+
+			ctx, cancel := context.WithCancel(ctx)
+			done := make(chan struct{})
+			go func() {
+				defer close(done)
+				err := a.Start(ctx)
+				if err != nil {
+					t.Logf("Start returned error: %v", err)
+				}
+			}()
+
+			time.Sleep(1 * time.Second)
+
+			cancel()
+			<-done
+		})
+	}
+}

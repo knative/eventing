@@ -291,3 +291,31 @@ func WithFilters(filters []eventingv1.SubscriptionsAPIFilter) manifest.CfgFn {
 		cfg["filters"] = strings.Join(out, "\n")
 	}
 }
+
+// WithSkipPermissions adds the skip permissions annotation to the ApiServerSource
+func WithSkipPermissions(skip bool) manifest.CfgFn {
+	return func(cfg map[string]interface{}) {
+		if _, set := cfg["annotations"]; !set {
+			cfg["annotations"] = map[string]string{}
+		}
+		annotations := cfg["annotations"].(map[string]string)
+		if skip {
+			annotations["features.knative.dev/apiserversource-skip-permissions"] = "true"
+		} else {
+			annotations["features.knative.dev/apiserversource-skip-permissions"] = "false"
+		}
+	}
+}
+
+// WithAnnotations adds custom annotations to the ApiServerSource
+func WithAnnotations(annotations map[string]string) manifest.CfgFn {
+	return func(cfg map[string]interface{}) {
+		if _, set := cfg["annotations"]; !set {
+			cfg["annotations"] = map[string]string{}
+		}
+		annot := cfg["annotations"].(map[string]string)
+		for k, v := range annotations {
+			annot[k] = v
+		}
+	}
+}

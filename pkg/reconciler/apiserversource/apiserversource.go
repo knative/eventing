@@ -60,7 +60,8 @@ const (
 	apiserversourceDeploymentCreated = "ApiServerSourceDeploymentCreated"
 	apiserversourceDeploymentUpdated = "ApiServerSourceDeploymentUpdated"
 
-	component = "apiserversource"
+	component                 = "apiserversource"
+	skipPermissionsAnnotation = "features.knative.dev/apiserversource-skip-permissions"
 )
 
 func newWarningSinkNotFound(sink *duckv1.Destination) pkgreconciler.Event {
@@ -146,10 +147,19 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1.ApiServerSour
 	}
 	source.Status.Namespaces = namespaces
 
-	err = r.runAccessCheck(ctx, source, namespaces)
-	if err != nil {
-		logging.FromContext(ctx).Errorw("Not enough permission", zap.Error(err))
-		return err
+	// We don't check if it really exists because in case it does not exist, the value is an empty string
+	// which also serves our purposes as by default we will check permissions
+	annotations := source.GetAnnotations()
+	skipPermissions := annotations[skipPermissionsAnnotation]
+	if skipPermissions == "true" {
+		// If skip permissions, mark enough permissions directly
+		source.Status.MarkSufficientPermissions()
+	} else {
+		err = r.runAccessCheck(ctx, source, namespaces)
+		if err != nil {
+			logging.FromContext(ctx).Errorw("Not enough permission", zap.Error(err))
+			return err
+		}
 	}
 
 	if err := r.propagateTrustBundles(ctx, source); err != nil {
@@ -224,19 +234,23 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1.ApiServer
 	// 	return nil, err
 	// }
 
+	annotations := src.GetAnnotations()
+	skipPermissions := annotations[skipPermissionsAnnotation]
+
 	featureFlags := feature.FromContext(ctx)
 
 	adapterArgs := resources.ReceiveAdapterArgs{
-		Image:         r.receiveAdapterImage,
-		Source:        src,
-		Labels:        resources.Labels(src.Name),
-		CACerts:       sinkAddr.CACerts,
-		SinkURI:       sinkAddr.URL.String(),
-		Audience:      sinkAddr.Audience,
-		Configs:       r.configs,
-		Namespaces:    namespaces,
-		AllNamespaces: allNamespaces,
-		NodeSelector:  featureFlags.NodeSelector(),
+		Image:              r.receiveAdapterImage,
+		Source:             src,
+		Labels:             resources.Labels(src.Name),
+		CACerts:            sinkAddr.CACerts,
+		SinkURI:            sinkAddr.URL.String(),
+		Audience:           sinkAddr.Audience,
+		Configs:            r.configs,
+		Namespaces:         namespaces,
+		AllNamespaces:      allNamespaces,
+		NodeSelector:       featureFlags.NodeSelector(),
+		SkippedPermissions: skipPermissions == "true",
 	}
 
 	expected, err := resources.MakeReceiveAdapter(&adapterArgs)
