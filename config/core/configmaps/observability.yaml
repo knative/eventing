@@ -62,24 +62,6 @@ data:
     # a failure to send a cloud event to the sink.
     sink-event-error-reporting.enable: "false"
 
-    # request-metrics-protocol field specifies the protocol used when exporting request metrics
-    # It supports either 'none' (the default), 'prometheus', 'http/protobuf' (OTLP HTTP), 'grpc' (OTLP gRPC)
-    request-metrics-protocol: http/protobuf
-
-    # request-metrics-endpoint field specifies the destination metrics for requests should be exported to.
-    #
-    # The endpoint MUST be set when the protocol is http/protobuf or grpc.
-    # The endpoint MUST NOT be set when the protocol is none.
-    #
-    # When the protocol is prometheus the endpoint can accept a 'host:port' string to customize the
-    # listening host interface and port.
-    request-metrics-endpoint: http://promstack-kube-prometheus-prometheus.observability:9090/api/v1/otlp/v1/metrics
-
-    # request-metrics-export-interval specifies the global metrics reporting period for request metrics.
-    #
-    # If a zero or negative value is passed the default reporting OTel period is used (60 secs).
-    request-metrics-export-interval: 60s
-
     # runtime-profiling indicates whether it is allowed to retrieve runtime profiling data from
     # the pods via an HTTP server in the format expected by the pprof visualization tool. When
     # enabled, the Knative Eventing pods expose the profiling data on an alternate HTTP port 8008.

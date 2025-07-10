@@ -21,7 +21,6 @@ import (
 
 	configmap "knative.dev/pkg/configmap/parser"
 	pkgo11y "knative.dev/pkg/observability"
-	metrics "knative.dev/pkg/observability/metrics"
 )
 
 const (
@@ -43,8 +42,6 @@ type (
 type Config struct {
 	BaseConfig
 
-	RequestMetrics MetricsConfig `json:"requestMetrics"`
-
 	// EnableSinkEventErrorReporting specifies whether we should emit a k8s
 	// event when delivery to a sink fails
 	EnableSinkEventErrorReporting bool `json:"enableSinkEventErrorReporting"`
@@ -53,7 +50,6 @@ type Config struct {
 func DefaultConfig() *Config {
 	return &Config{
 		BaseConfig:                    *pkgo11y.DefaultConfig(),
-		RequestMetrics:                metrics.DefaultConfig(),
 		EnableSinkEventErrorReporting: DefaultEnableSinkEventErrorReporting,
 	}
 }
@@ -65,12 +61,6 @@ func NewFromMap(m map[string]string) (*Config, error) {
 		return nil, err
 	} else {
 		c.BaseConfig = *cfg
-	}
-
-	if rm, err := metrics.NewFromMapWithPrefix("request-", m); err != nil {
-		return nil, err
-	} else {
-		c.RequestMetrics = rm
 	}
 
 	err := configmap.Parse(m, configmap.As(EnableSinkEventErrorReportingKey, &c.EnableSinkEventErrorReporting))
