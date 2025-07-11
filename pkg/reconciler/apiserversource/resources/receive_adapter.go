@@ -40,16 +40,17 @@ import (
 // ReceiveAdapterArgs are the arguments needed to create a ApiServer Receive Adapter.
 // Every field is required.
 type ReceiveAdapterArgs struct {
-	Image         string
-	Source        *v1.ApiServerSource
-	Labels        map[string]string
-	Audience      *string
-	SinkURI       string
-	CACerts       *string
-	Configs       reconcilersource.ConfigAccessor
-	Namespaces    []string
-	AllNamespaces bool
-	NodeSelector  map[string]string
+	Image              string
+	Source             *v1.ApiServerSource
+	Labels             map[string]string
+	Audience           *string
+	SinkURI            string
+	CACerts            *string
+	Configs            reconcilersource.ConfigAccessor
+	Namespaces         []string
+	AllNamespaces      bool
+	NodeSelector       map[string]string
+	SkippedPermissions bool
 }
 
 // MakeReceiveAdapter generates (but does not insert into K8s) the Receive Adapter Deployment for
@@ -132,12 +133,13 @@ func MakeReceiveAdapter(args *ReceiveAdapterArgs) (*appsv1.Deployment, error) {
 
 func makeEnv(args *ReceiveAdapterArgs) ([]corev1.EnvVar, error) {
 	cfg := &apiserver.Config{
-		Namespaces:    args.Namespaces,
-		Resources:     make([]apiserver.ResourceWatch, 0, len(args.Source.Spec.Resources)),
-		ResourceOwner: args.Source.Spec.ResourceOwner,
-		EventMode:     args.Source.Spec.EventMode,
-		AllNamespaces: args.AllNamespaces,
-		Filters:       args.Source.Spec.Filters,
+		Namespaces:         args.Namespaces,
+		Resources:          make([]apiserver.ResourceWatch, 0, len(args.Source.Spec.Resources)),
+		ResourceOwner:      args.Source.Spec.ResourceOwner,
+		EventMode:          args.Source.Spec.EventMode,
+		AllNamespaces:      args.AllNamespaces,
+		Filters:            args.Source.Spec.Filters,
+		SkippedPermissions: args.SkippedPermissions,
 	}
 
 	for _, r := range args.Source.Spec.Resources {

@@ -1529,6 +1529,199 @@ func TestReconcile(t *testing.T) {
 			},
 			WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor(true)},
 			SkipNamespaceValidation: true, // SubjectAccessReview objects are cluster-scoped.
+		}, {
+			Name: "skip permissions - set to false",
+			Objects: []runtime.Object{
+				rttestingv1.NewApiServerSource(sourceName, testNS,
+					rttestingv1.WithApiServerSourceSpec(sourcesv1.ApiServerSourceSpec{
+						Resources: []sourcesv1.APIVersionKindSelector{{
+							APIVersion: "v1",
+							Kind:       "Namespace",
+						}},
+						SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
+					}),
+					rttestingv1.WithApiServerSourceUID(sourceUID),
+					rttestingv1.WithApiServerSourceObjectMetaGeneration(generation),
+					rttestingv1.WithApiServerSourceNamespaceSelector(metav1.LabelSelector{}),
+					rttestingv1.WithApiServerSourceSkipPermissions(false),
+				),
+				rttestingv1.NewChannel(sinkName, testNS,
+					rttestingv1.WithInitChannelConditions,
+					rttestingv1.WithChannelAddress(sinkAddressable),
+				),
+				makeAvailableReceiveAdapter(t),
+				rttesting.NewNamespace("test-a"),
+			},
+			Key: testNS + "/" + sourceName,
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: rttestingv1.NewApiServerSource(sourceName, testNS,
+					rttestingv1.WithApiServerSourceSpec(sourcesv1.ApiServerSourceSpec{
+						Resources: []sourcesv1.APIVersionKindSelector{{
+							APIVersion: "v1",
+							Kind:       "Namespace",
+						}},
+						SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
+					}),
+					rttestingv1.WithApiServerSourceUID(sourceUID),
+					rttestingv1.WithApiServerSourceObjectMetaGeneration(generation),
+					// Status Update:
+					rttestingv1.WithInitApiServerSourceConditions,
+					rttestingv1.WithApiServerSourceDeployed,
+					rttestingv1.WithApiServerSourceSink(sinkURI),
+					rttestingv1.WithApiServerSourceSufficientPermissions,
+					rttestingv1.WithApiServerSourceReferenceModeEventTypes(source),
+					rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
+					rttestingv1.WithApiServerSourceNamespaceSelector(metav1.LabelSelector{}),
+					rttestingv1.WithApiServerSourceStatusNamespaces([]string{"test-a"}),
+					rttestingv1.WithApiServerSourceOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
+					rttestingv1.WithApiServerSourceSkipPermissions(false),
+				),
+			}},
+			WantCreates: []runtime.Object{
+				makeNamespacedSubjectAccessReview("namespaces", "get", "default", "test-a"),
+				makeNamespacedSubjectAccessReview("namespaces", "list", "default", "test-a"),
+				makeNamespacedSubjectAccessReview("namespaces", "watch", "default", "test-a"),
+			},
+			WantUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: makeAvailableReceiveAdapterWithNamespaces(t, []string{"test-a"}, true),
+			}},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", sourceName),
+				Eventf(corev1.EventTypeNormal, "ApiServerSourceDeploymentUpdated", `Deployment "apiserversource-test-apiserver-source-1234" updated`),
+			},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchFinalizers(sourceName, testNS),
+			},
+			WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor(true)},
+			SkipNamespaceValidation: true, // SubjectAccessReview objects are cluster-scoped.
+		}, {
+			Name: "skip permissions - not set",
+			Objects: []runtime.Object{
+				rttestingv1.NewApiServerSource(sourceName, testNS,
+					rttestingv1.WithApiServerSourceSpec(sourcesv1.ApiServerSourceSpec{
+						Resources: []sourcesv1.APIVersionKindSelector{{
+							APIVersion: "v1",
+							Kind:       "Namespace",
+						}},
+						SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
+					}),
+					rttestingv1.WithApiServerSourceUID(sourceUID),
+					rttestingv1.WithApiServerSourceObjectMetaGeneration(generation),
+					rttestingv1.WithApiServerSourceNamespaceSelector(metav1.LabelSelector{}),
+				),
+				rttestingv1.NewChannel(sinkName, testNS,
+					rttestingv1.WithInitChannelConditions,
+					rttestingv1.WithChannelAddress(sinkAddressable),
+				),
+				makeAvailableReceiveAdapter(t),
+				rttesting.NewNamespace("test-a"),
+			},
+			Key: testNS + "/" + sourceName,
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: rttestingv1.NewApiServerSource(sourceName, testNS,
+					rttestingv1.WithApiServerSourceSpec(sourcesv1.ApiServerSourceSpec{
+						Resources: []sourcesv1.APIVersionKindSelector{{
+							APIVersion: "v1",
+							Kind:       "Namespace",
+						}},
+						SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
+					}),
+					rttestingv1.WithApiServerSourceUID(sourceUID),
+					rttestingv1.WithApiServerSourceObjectMetaGeneration(generation),
+					// Status Update:
+					rttestingv1.WithInitApiServerSourceConditions,
+					rttestingv1.WithApiServerSourceDeployed,
+					rttestingv1.WithApiServerSourceSink(sinkURI),
+					rttestingv1.WithApiServerSourceSufficientPermissions,
+					rttestingv1.WithApiServerSourceReferenceModeEventTypes(source),
+					rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
+					rttestingv1.WithApiServerSourceNamespaceSelector(metav1.LabelSelector{}),
+					rttestingv1.WithApiServerSourceStatusNamespaces([]string{"test-a"}),
+					rttestingv1.WithApiServerSourceOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
+				),
+			}},
+			WantCreates: []runtime.Object{
+				makeNamespacedSubjectAccessReview("namespaces", "get", "default", "test-a"),
+				makeNamespacedSubjectAccessReview("namespaces", "list", "default", "test-a"),
+				makeNamespacedSubjectAccessReview("namespaces", "watch", "default", "test-a"),
+			},
+			WantUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: makeAvailableReceiveAdapterWithNamespaces(t, []string{"test-a"}, true),
+			}},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", sourceName),
+				Eventf(corev1.EventTypeNormal, "ApiServerSourceDeploymentUpdated", `Deployment "apiserversource-test-apiserver-source-1234" updated`),
+			},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchFinalizers(sourceName, testNS),
+			},
+			WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor(true)},
+			SkipNamespaceValidation: true, // SubjectAccessReview objects are cluster-scoped.
+		}, {
+			Name: "skip permissions - set to true",
+			Objects: []runtime.Object{
+				rttestingv1.NewApiServerSource(sourceName, testNS,
+					rttestingv1.WithApiServerSourceSpec(sourcesv1.ApiServerSourceSpec{
+						Resources: []sourcesv1.APIVersionKindSelector{{
+							APIVersion: "v1",
+							Kind:       "Namespace",
+						}},
+						SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
+					}),
+					rttestingv1.WithApiServerSourceUID(sourceUID),
+					rttestingv1.WithApiServerSourceObjectMetaGeneration(generation),
+					rttestingv1.WithApiServerSourceNamespaceSelector(metav1.LabelSelector{}),
+					rttestingv1.WithApiServerSourceSkipPermissions(true),
+				),
+				rttestingv1.NewChannel(sinkName, testNS,
+					rttestingv1.WithInitChannelConditions,
+					rttestingv1.WithChannelAddress(sinkAddressable),
+				),
+				makeAvailableReceiveAdapter(t),
+				rttesting.NewNamespace("test-a"),
+			},
+			Key: testNS + "/" + sourceName,
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: rttestingv1.NewApiServerSource(sourceName, testNS,
+					rttestingv1.WithApiServerSourceSpec(sourcesv1.ApiServerSourceSpec{
+						Resources: []sourcesv1.APIVersionKindSelector{{
+							APIVersion: "v1",
+							Kind:       "Namespace",
+						}},
+						SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
+					}),
+					rttestingv1.WithApiServerSourceUID(sourceUID),
+					rttestingv1.WithApiServerSourceObjectMetaGeneration(generation),
+					// Status Update:
+					rttestingv1.WithInitApiServerSourceConditions,
+					rttestingv1.WithApiServerSourceDeployed,
+					rttestingv1.WithApiServerSourceSink(sinkURI),
+					rttestingv1.WithApiServerSourceSufficientPermissions,
+					rttestingv1.WithApiServerSourceReferenceModeEventTypes(source),
+					rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
+					rttestingv1.WithApiServerSourceNamespaceSelector(metav1.LabelSelector{}),
+					rttestingv1.WithApiServerSourceStatusNamespaces([]string{"test-a"}),
+					rttestingv1.WithApiServerSourceOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled(),
+					rttestingv1.WithApiServerSourceSkipPermissions(true),
+				),
+			}},
+			WantCreates: []runtime.Object{
+				// makeNamespacedSubjectAccessReview("namespaces", "get", "default", "test-a"),
+				// makeNamespacedSubjectAccessReview("namespaces", "list", "default", "test-a"),
+				// makeNamespacedSubjectAccessReview("namespaces", "watch", "default", "test-a"),
+			},
+			WantUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: makeAvailableReceiveAdapterWithNamespacesAndSkip(t, []string{"test-a"}, true),
+			}},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", sourceName),
+				Eventf(corev1.EventTypeNormal, "ApiServerSourceDeploymentUpdated", `Deployment "apiserversource-test-apiserver-source-1234" updated`),
+			},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchFinalizers(sourceName, testNS),
+			},
+			WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor(true)},
+			SkipNamespaceValidation: true, // SubjectAccessReview objects are cluster-scoped.
 		},
 	}
 
@@ -1764,13 +1957,14 @@ func makeAvailableReceiveAdapterWithNamespaces(t *testing.T, namespaces []string
 	)
 
 	args := resources.ReceiveAdapterArgs{
-		Image:         image,
-		Source:        src,
-		Labels:        resources.Labels(sourceName),
-		SinkURI:       sinkURI.String(),
-		Configs:       &reconcilersource.EmptyVarsGenerator{},
-		Namespaces:    namespaces,
-		AllNamespaces: allNamespaces,
+		Image:              image,
+		Source:             src,
+		Labels:             resources.Labels(sourceName),
+		SinkURI:            sinkURI.String(),
+		Configs:            &reconcilersource.EmptyVarsGenerator{},
+		Namespaces:         namespaces,
+		AllNamespaces:      allNamespaces,
+		SkippedPermissions: false,
 	}
 
 	ra, err := resources.MakeReceiveAdapter(&args)
@@ -1947,6 +2141,42 @@ func makeAvailableReceiveAdapterWithNodeSelector(t *testing.T, selector map[stri
 		Configs:      &reconcilersource.EmptyVarsGenerator{},
 		NodeSelector: selector,
 		Namespaces:   []string{testNS},
+	}
+
+	ra, err := resources.MakeReceiveAdapter(&args)
+	require.NoError(t, err)
+
+	rttesting.WithDeploymentAvailable()(ra)
+	return ra
+}
+
+func makeAvailableReceiveAdapterWithNamespacesAndSkip(t *testing.T, namespaces []string, allNamespaces bool) *appsv1.Deployment {
+	t.Helper()
+
+	src := rttestingv1.NewApiServerSource(sourceName, testNS,
+		rttestingv1.WithApiServerSourceSpec(sourcesv1.ApiServerSourceSpec{
+			Resources: []sourcesv1.APIVersionKindSelector{{
+				APIVersion: "v1",
+				Kind:       "Namespace",
+			}},
+			SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
+		}),
+		rttestingv1.WithApiServerSourceUID(sourceUID),
+		// Status Update:
+		rttestingv1.WithInitApiServerSourceConditions,
+		rttestingv1.WithApiServerSourceDeployed,
+		rttestingv1.WithApiServerSourceSink(sinkURI),
+	)
+
+	args := resources.ReceiveAdapterArgs{
+		Image:              image,
+		Source:             src,
+		Labels:             resources.Labels(sourceName),
+		SinkURI:            sinkURI.String(),
+		Configs:            &reconcilersource.EmptyVarsGenerator{},
+		Namespaces:         namespaces,
+		AllNamespaces:      allNamespaces,
+		SkippedPermissions: true,
 	}
 
 	ra, err := resources.MakeReceiveAdapter(&args)
