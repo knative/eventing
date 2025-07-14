@@ -93,45 +93,53 @@ func (a *apiServerAdapter) setupDelegate() cache.Store {
 	return delegate
 }
 
-type watchCreator func(ctx context.Context, res dynamic.ResourceInterface, labelSelector string)
+type ResourceWatchMatch struct {
+	// resourceWatch is the target configuration for the resource watch.
+	resourceWatch *ResourceWatch
+	// apiResource is the API resource information matched to the resource watch.
+	apiResource *metav1.APIResource
+	// resourceInterfaces are the dynamic interfaces that are matched to the api resource and namespace configuration in the resource watch.
+	resourceInterfaces []dynamic.ResourceInterface
+}
 
-func (a *apiServerAdapter) createWatchers(ctx context.Context, errorOnNotExists bool, wc watchCreator) error {
+func (a *apiServerAdapter) collectResourceMatches() ([]ResourceWatchMatch, error) {
+	matches := make([]ResourceWatchMatch, 0, len(a.config.Resources))
+
 	for _, configRes := range a.config.Resources {
-
 		resources, err := a.discover.ServerResourcesForGroupVersion(configRes.GVR.GroupVersion().String())
 		if err != nil {
-			return fmt.Errorf("failed to retrieve information about resource %s: %v", configRes.GVR.String(), err)
+			return nil, fmt.Errorf("failed to retrieve information about resource %s: %v", configRes.GVR.String(), err)
 		}
 
-		exists := false
+		match := ResourceWatchMatch{
+			resourceWatch:      &configRes,
+			apiResource:        nil,
+			resourceInterfaces: make([]dynamic.ResourceInterface, 0),
+		}
 		for _, apires := range resources.APIResources {
 			if apires.Name == configRes.GVR.Resource {
-				var resources []dynamic.ResourceInterface
+				match.apiResource = &apires
+
 				if apires.Namespaced && !a.config.AllNamespaces {
 					for _, ns := range a.config.Namespaces {
-						resources = append(resources, a.k8s.Resource(configRes.GVR).Namespace(ns))
+						match.resourceInterfaces = append(match.resourceInterfaces, a.k8s.Resource(configRes.GVR).Namespace(ns))
 					}
 				} else {
-					resources = append(resources, a.k8s.Resource(configRes.GVR))
+					match.resourceInterfaces = append(match.resourceInterfaces, a.k8s.Resource(configRes.GVR))
 				}
 
-				for _, res := range resources {
-					wc(ctx, res, configRes.LabelSelector)
-				}
-
-				exists = true
 				break
 			}
 		}
 
-		if !exists {
+		matches = append(matches, match)
+
+		if match.apiResource == nil {
 			a.logger.Errorf("could not retrieve information about resource %s: it doesn't exist", configRes.GVR.String())
-			if errorOnNotExists {
-				return fmt.Errorf("resource %s does not exist", configRes.GVR.String())
-			}
 		}
 	}
-	return nil
+
+	return matches, nil
 }
 
 func (a *apiServerAdapter) startWithPermissionCheck(ctx context.Context, stopCh <-chan struct{}, delegate cache.Store) error {
@@ -142,16 +150,25 @@ func (a *apiServerAdapter) startWithPermissionCheck(ctx context.Context, stopCh 
 
 	a.logger.Infof("STARTING -- %#v", a.config)
 
-	if err := a.createWatchers(ctx, false, func(ctx context.Context, res dynamic.ResourceInterface, labelSelector string) {
-		lw := &cache.ListWatch{
-			ListFunc:  asUnstructuredLister(ctx, res.List, labelSelector),
-			WatchFunc: asUnstructuredWatcher(ctx, res.Watch, labelSelector),
-		}
+	matches, err := a.collectResourceMatches()
+	if err != nil {
+		return fmt.Errorf("failed to collect resource matches: %v", err)
+	}
 
-		reflector := cache.NewReflector(lw, &unstructured.Unstructured{}, delegate, resyncPeriod)
-		go reflector.Run(stop)
-	}); err != nil {
-		return fmt.Errorf("failed to create watchers: %v", err)
+	for _, match := range matches {
+		if match.apiResource == nil {
+			a.logger.Errorf("could not retrieve information about resource %s: it doesn't exist. skipping...", match.resourceWatch.GVR.String())
+			continue
+		}
+		for _, res := range match.resourceInterfaces {
+			lw := &cache.ListWatch{
+				ListFunc:  asUnstructuredLister(ctx, res.List, match.resourceWatch.LabelSelector),
+				WatchFunc: asUnstructuredWatcher(ctx, res.Watch, match.resourceWatch.LabelSelector),
+			}
+
+			reflector := cache.NewReflector(lw, &unstructured.Unstructured{}, delegate, resyncPeriod)
+			go reflector.Run(stop)
+		}
 	}
 
 	<-stopCh
@@ -171,27 +188,36 @@ func (a *apiServerAdapter) startWithoutPermissionCheck(ctx context.Context, stop
 	var wg sync.WaitGroup
 	errorChan := make(chan error, 1)
 
-	if err := a.createWatchers(ctx, true, func(ctx context.Context, res dynamic.ResourceInterface, labelSelector string) {
-		lw := &cache.ListWatch{
-			ListFunc:  asUnstructuredLister(watchCtx, res.List, labelSelector),
-			WatchFunc: asUnstructuredWatcher(watchCtx, res.Watch, labelSelector),
-		}
+	matches, err := a.collectResourceMatches()
+	if err != nil {
+		return fmt.Errorf("failed to collect resource matches: %v", err)
+	}
 
-		reflector := cache.NewReflector(lw, &unstructured.Unstructured{}, delegate, resyncPeriod)
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			if err := reflector.ListAndWatchWithContext(watchCtx); err != nil {
-				a.logger.Errorf("reflector failed: %v", err)
-				select {
-				case errorChan <- fmt.Errorf("failed to watch: %v", err):
-				default:
-				}
-				cancelWatchers()
+	for _, match := range matches {
+		if match.apiResource == nil {
+			a.logger.Errorf("could not retrieve information about resource %s: it doesn't exist.", match.resourceWatch.GVR.String())
+			return fmt.Errorf("resource %s does not exist", match.resourceWatch.GVR.String())
+		}
+		for _, res := range match.resourceInterfaces {
+			lw := &cache.ListWatch{
+				ListFunc:  asUnstructuredLister(watchCtx, res.List, match.resourceWatch.LabelSelector),
+				WatchFunc: asUnstructuredWatcher(watchCtx, res.Watch, match.resourceWatch.LabelSelector),
 			}
-		}()
-	}); err != nil {
-		return fmt.Errorf("failed to create watchers: %v", err)
+
+			reflector := cache.NewReflector(lw, &unstructured.Unstructured{}, delegate, resyncPeriod)
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				if err := reflector.ListAndWatchWithContext(watchCtx); err != nil {
+					a.logger.Errorf("reflector failed: %v", err)
+					select {
+					case errorChan <- fmt.Errorf("failed to watch: %v", err):
+					default:
+					}
+					cancelWatchers()
+				}
+			}()
+		}
 	}
 
 	go func() {
