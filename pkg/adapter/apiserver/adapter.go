@@ -61,11 +61,17 @@ func (a *apiServerAdapter) Start(ctx context.Context) error {
 }
 
 func (a *apiServerAdapter) start(ctx context.Context, stopCh <-chan struct{}) error {
-	// Local stop channel.
-	stop := make(chan struct{})
+	delegate := a.setupDelegate()
 
-	resyncPeriod := 10 * time.Hour
+	a.logger.Infof("STARTING -- %#v", a.config)
+	if a.config.SkippedPermissions {
+		a.logger.Info("ApiServerSource skipped checking permissions so watches will be attempted only once")
+		return a.startWithoutPermissionCheck(ctx, stopCh, delegate)
+	}
+	return a.startWithPermissionCheck(ctx, stopCh, delegate)
+}
 
+func (a *apiServerAdapter) setupDelegate() cache.Store {
 	var delegate cache.Store = &resourceDelegate{
 		ce:                  a.ce,
 		source:              a.source,
@@ -84,11 +90,66 @@ func (a *apiServerAdapter) start(ctx context.Context, stopCh <-chan struct{}) er
 			delegate:   delegate,
 		}
 	}
+	return delegate
+}
+
+func (a *apiServerAdapter) startWithPermissionCheck(ctx context.Context, stopCh <-chan struct{}, delegate cache.Store) error {
+	// Local stop channel.
+	stop := make(chan struct{})
+
+	resyncPeriod := 10 * time.Hour
 
 	a.logger.Infof("STARTING -- %#v", a.config)
-	if a.config.SkippedPermissions {
-		a.logger.Info("ApiServerSource skipped checking permissions so watches will be attempted only once")
+
+	for _, configRes := range a.config.Resources {
+
+		resources, err := a.discover.ServerResourcesForGroupVersion(configRes.GVR.GroupVersion().String())
+		if err != nil {
+			return fmt.Errorf("failed to retrieve information about resource %s: %v", configRes.GVR.String(), err)
+		}
+
+		exists := false
+		for _, apires := range resources.APIResources {
+			if apires.Name == configRes.GVR.Resource {
+				var resources []dynamic.ResourceInterface
+				if apires.Namespaced && !a.config.AllNamespaces {
+					for _, ns := range a.config.Namespaces {
+						resources = append(resources, a.k8s.Resource(configRes.GVR).Namespace(ns))
+					}
+				} else {
+					resources = append(resources, a.k8s.Resource(configRes.GVR))
+				}
+
+				for _, res := range resources {
+					lw := &cache.ListWatch{
+						ListFunc:  asUnstructuredLister(ctx, res.List, configRes.LabelSelector),
+						WatchFunc: asUnstructuredWatcher(ctx, res.Watch, configRes.LabelSelector),
+					}
+
+					reflector := cache.NewReflector(lw, &unstructured.Unstructured{}, delegate, resyncPeriod)
+					go reflector.Run(stop)
+				}
+
+				exists = true
+				break
+			}
+		}
+
+		if !exists {
+			a.logger.Errorf("could not retrieve information about resource %s: it doesn't exist", configRes.GVR.String())
+		}
 	}
+
+	<-stopCh
+	close(stop)
+	return nil
+}
+
+func (a *apiServerAdapter) startWithoutPermissionCheck(ctx context.Context, stopCh <-chan struct{}, delegate cache.Store) error {
+	resyncPeriod := 10 * time.Hour
+
+	a.logger.Infof("STARTING -- %#v", a.config)
+	a.logger.Info("ApiServerSource skipped checking permissions so watches will be attempted only once")
 
 	watchCtx, cancelWatchers := context.WithCancel(ctx)
 	defer cancelWatchers()
@@ -122,22 +183,18 @@ func (a *apiServerAdapter) start(ctx context.Context, stopCh <-chan struct{}) er
 					}
 
 					reflector := cache.NewReflector(lw, &unstructured.Unstructured{}, delegate, resyncPeriod)
-					if a.config.SkippedPermissions {
-						wg.Add(1)
-						go func() {
-							defer wg.Done()
-							if err := reflector.ListAndWatchWithContext(watchCtx); err != nil {
-								a.logger.Errorf("reflector failed: %v", err)
-								select {
-								case errorChan <- fmt.Errorf("failed to watch: %v", err):
-								default:
-								}
-								cancelWatchers()
+					wg.Add(1)
+					go func() {
+						defer wg.Done()
+						if err := reflector.ListAndWatchWithContext(watchCtx); err != nil {
+							a.logger.Errorf("reflector failed: %v", err)
+							select {
+							case errorChan <- fmt.Errorf("failed to watch: %v", err):
+							default:
 							}
-						}()
-					} else {
-						go reflector.Run(stop)
-					}
+							cancelWatchers()
+						}
+					}()
 				}
 
 				exists = true
@@ -147,33 +204,26 @@ func (a *apiServerAdapter) start(ctx context.Context, stopCh <-chan struct{}) er
 
 		if !exists {
 			a.logger.Errorf("could not retrieve information about resource %s: it doesn't exist", configRes.GVR.String())
-			if a.config.SkippedPermissions {
-				return fmt.Errorf("resource %s does not exist", configRes.GVR.String())
-			}
+			return fmt.Errorf("resource %s does not exist", configRes.GVR.String())
 		}
 	}
 
-	if a.config.SkippedPermissions {
-		go func() {
-			wg.Wait()
-			close(errorChan)
-		}()
+	go func() {
+		wg.Wait()
+		close(errorChan)
+	}()
 
-		select {
-		case err := <-errorChan:
-			if err != nil {
-				a.logger.Errorf("ApiServerSource failed: %v", err)
-				return err
-			}
-		case <-stopCh:
-			cancelWatchers()
-			return nil
+	select {
+	case err := <-errorChan:
+		if err != nil {
+			a.logger.Errorf("ApiServerSource failed: %v", err)
+			return err
 		}
-	} else {
-		<-stopCh
+	case <-stopCh:
+		cancelWatchers()
+		return nil
 	}
 
-	close(stop)
 	return nil
 }
 
