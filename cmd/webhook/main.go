@@ -67,6 +67,7 @@ import (
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	sourcesv1beta2 "knative.dev/eventing/pkg/apis/sources/v1beta2"
 	"knative.dev/eventing/pkg/apis/sugar"
+	o11yconfigmap "knative.dev/eventing/pkg/observability/configmap"
 	"knative.dev/eventing/pkg/reconciler/sinkbinding"
 
 	versionedscheme "knative.dev/eventing/pkg/client/clientset/versioned/scheme"
@@ -213,8 +214,8 @@ func NewConfigValidationController(ctx context.Context, _ configmap.Watcher) *co
 
 		// The configmaps to validate.
 		configmap.Constructors{
-			tracingconfig.ConfigName: tracingconfig.NewTracingConfigFromConfigMap,
-			// metrics.ConfigMapName():   metricsconfig.NewObservabilityConfigFromConfigMap,
+			tracingconfig.ConfigName:       tracingconfig.NewTracingConfigFromConfigMap,
+			o11yconfigmap.Name():           o11yconfigmap.Parse,
 			logging.ConfigMapName():        logging.NewConfigFromConfigMap,
 			leaderelection.ConfigMapName(): leaderelection.NewConfigFromConfigMap,
 			sugar.ConfigName:               sugar.NewConfigFromConfigMap,
