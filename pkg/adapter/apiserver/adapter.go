@@ -64,11 +64,17 @@ func (a *apiServerAdapter) start(ctx context.Context, stopCh <-chan struct{}) er
 	delegate := a.setupDelegate()
 
 	a.logger.Infof("STARTING -- %#v", a.config)
+
+	matches, err := a.collectResourceMatches()
+	if err != nil {
+		return fmt.Errorf("failed to collect resource matches: %v", err)
+	}
+
 	if a.config.SkippedPermissions {
 		a.logger.Info("ApiServerSource skipped checking permissions so watches will be attempted only once")
-		return a.startWithoutPermissionCheck(ctx, stopCh, delegate)
+		return a.startWithoutPermissionCheck(ctx, stopCh, delegate, matches)
 	}
-	return a.startWithPermissionCheck(ctx, stopCh, delegate)
+	return a.startWithPermissionCheck(ctx, stopCh, delegate, matches)
 }
 
 func (a *apiServerAdapter) setupDelegate() cache.Store {
@@ -142,18 +148,13 @@ func (a *apiServerAdapter) collectResourceMatches() ([]ResourceWatchMatch, error
 	return matches, nil
 }
 
-func (a *apiServerAdapter) startWithPermissionCheck(ctx context.Context, stopCh <-chan struct{}, delegate cache.Store) error {
+func (a *apiServerAdapter) startWithPermissionCheck(ctx context.Context, stopCh <-chan struct{}, delegate cache.Store, matches []ResourceWatchMatch) error {
 	// Local stop channel.
 	stop := make(chan struct{})
 
 	resyncPeriod := 10 * time.Hour
 
 	a.logger.Infof("STARTING -- %#v", a.config)
-
-	matches, err := a.collectResourceMatches()
-	if err != nil {
-		return fmt.Errorf("failed to collect resource matches: %v", err)
-	}
 
 	for _, match := range matches {
 		if match.apiResource == nil {
@@ -176,7 +177,7 @@ func (a *apiServerAdapter) startWithPermissionCheck(ctx context.Context, stopCh 
 	return nil
 }
 
-func (a *apiServerAdapter) startWithoutPermissionCheck(ctx context.Context, stopCh <-chan struct{}, delegate cache.Store) error {
+func (a *apiServerAdapter) startWithoutPermissionCheck(ctx context.Context, stopCh <-chan struct{}, delegate cache.Store, matches []ResourceWatchMatch) error {
 	resyncPeriod := 10 * time.Hour
 
 	a.logger.Infof("STARTING -- %#v", a.config)
@@ -187,11 +188,6 @@ func (a *apiServerAdapter) startWithoutPermissionCheck(ctx context.Context, stop
 
 	var wg sync.WaitGroup
 	errorChan := make(chan error, 1)
-
-	matches, err := a.collectResourceMatches()
-	if err != nil {
-		return fmt.Errorf("failed to collect resource matches: %v", err)
-	}
 
 	for _, match := range matches {
 		if match.apiResource == nil {
