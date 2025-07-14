@@ -24,10 +24,12 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"go.uber.org/zap"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
+
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/tools/cache"
@@ -56,6 +58,15 @@ type apiServerAdapter struct {
 	name     string // TODO: who dis?
 }
 
+type resourceWatchMatch struct {
+	// resourceWatch is the target configuration for the resource watch.
+	resourceWatch *ResourceWatch
+	// apiResource is the API resource information matched to the resource watch.
+	apiResource *metav1.APIResource
+	// resourceInterfaces are the dynamic interfaces that are matched to the api resource and namespace configuration in the resource watch.
+	resourceInterfaces []dynamic.ResourceInterface
+}
+
 func (a *apiServerAdapter) Start(ctx context.Context) error {
 	return a.start(ctx, ctx.Done())
 }
@@ -77,78 +88,7 @@ func (a *apiServerAdapter) start(ctx context.Context, stopCh <-chan struct{}) er
 	return a.startWithPermissionCheck(ctx, stopCh, delegate, matches)
 }
 
-func (a *apiServerAdapter) setupDelegate() cache.Store {
-	var delegate cache.Store = &resourceDelegate{
-		ce:                  a.ce,
-		source:              a.source,
-		logger:              a.logger,
-		ref:                 a.config.EventMode == v1.ReferenceMode,
-		apiServerSourceName: a.name,
-		filter:              subscriptionsapi.NewAllFilter(subscriptionsapi.MaterializeFiltersList(a.logger.Desugar(), a.config.Filters)...),
-	}
-	if a.config.ResourceOwner != nil {
-		a.logger.Infow("will be filtered",
-			zap.String("APIVersion", a.config.ResourceOwner.APIVersion),
-			zap.String("Kind", a.config.ResourceOwner.Kind))
-		delegate = &controllerFilter{
-			apiVersion: a.config.ResourceOwner.APIVersion,
-			kind:       a.config.ResourceOwner.Kind,
-			delegate:   delegate,
-		}
-	}
-	return delegate
-}
-
-type ResourceWatchMatch struct {
-	// resourceWatch is the target configuration for the resource watch.
-	resourceWatch *ResourceWatch
-	// apiResource is the API resource information matched to the resource watch.
-	apiResource *metav1.APIResource
-	// resourceInterfaces are the dynamic interfaces that are matched to the api resource and namespace configuration in the resource watch.
-	resourceInterfaces []dynamic.ResourceInterface
-}
-
-func (a *apiServerAdapter) collectResourceMatches() ([]ResourceWatchMatch, error) {
-	matches := make([]ResourceWatchMatch, 0, len(a.config.Resources))
-
-	for _, configRes := range a.config.Resources {
-		resources, err := a.discover.ServerResourcesForGroupVersion(configRes.GVR.GroupVersion().String())
-		if err != nil {
-			return nil, fmt.Errorf("failed to retrieve information about resource %s: %v", configRes.GVR.String(), err)
-		}
-
-		match := ResourceWatchMatch{
-			resourceWatch:      &configRes,
-			apiResource:        nil,
-			resourceInterfaces: make([]dynamic.ResourceInterface, 0),
-		}
-		for _, apires := range resources.APIResources {
-			if apires.Name == configRes.GVR.Resource {
-				match.apiResource = &apires
-
-				if apires.Namespaced && !a.config.AllNamespaces {
-					for _, ns := range a.config.Namespaces {
-						match.resourceInterfaces = append(match.resourceInterfaces, a.k8s.Resource(configRes.GVR).Namespace(ns))
-					}
-				} else {
-					match.resourceInterfaces = append(match.resourceInterfaces, a.k8s.Resource(configRes.GVR))
-				}
-
-				break
-			}
-		}
-
-		matches = append(matches, match)
-
-		if match.apiResource == nil {
-			a.logger.Errorf("could not retrieve information about resource %s: it doesn't exist", configRes.GVR.String())
-		}
-	}
-
-	return matches, nil
-}
-
-func (a *apiServerAdapter) startWithPermissionCheck(ctx context.Context, stopCh <-chan struct{}, delegate cache.Store, matches []ResourceWatchMatch) error {
+func (a *apiServerAdapter) startWithPermissionCheck(ctx context.Context, stopCh <-chan struct{}, delegate cache.Store, matches []resourceWatchMatch) error {
 	// Local stop channel.
 	stop := make(chan struct{})
 
@@ -177,7 +117,7 @@ func (a *apiServerAdapter) startWithPermissionCheck(ctx context.Context, stopCh 
 	return nil
 }
 
-func (a *apiServerAdapter) startWithoutPermissionCheck(ctx context.Context, stopCh <-chan struct{}, delegate cache.Store, matches []ResourceWatchMatch) error {
+func (a *apiServerAdapter) startWithoutPermissionCheck(ctx context.Context, stopCh <-chan struct{}, delegate cache.Store, matches []resourceWatchMatch) error {
 	resyncPeriod := 10 * time.Hour
 
 	a.logger.Infof("STARTING -- %#v", a.config)
@@ -233,6 +173,68 @@ func (a *apiServerAdapter) startWithoutPermissionCheck(ctx context.Context, stop
 	}
 
 	return nil
+}
+
+func (a *apiServerAdapter) setupDelegate() cache.Store {
+	var delegate cache.Store = &resourceDelegate{
+		ce:                  a.ce,
+		source:              a.source,
+		logger:              a.logger,
+		ref:                 a.config.EventMode == v1.ReferenceMode,
+		apiServerSourceName: a.name,
+		filter:              subscriptionsapi.NewAllFilter(subscriptionsapi.MaterializeFiltersList(a.logger.Desugar(), a.config.Filters)...),
+	}
+	if a.config.ResourceOwner != nil {
+		a.logger.Infow("will be filtered",
+			zap.String("APIVersion", a.config.ResourceOwner.APIVersion),
+			zap.String("Kind", a.config.ResourceOwner.Kind))
+		delegate = &controllerFilter{
+			apiVersion: a.config.ResourceOwner.APIVersion,
+			kind:       a.config.ResourceOwner.Kind,
+			delegate:   delegate,
+		}
+	}
+	return delegate
+}
+
+func (a *apiServerAdapter) collectResourceMatches() ([]resourceWatchMatch, error) {
+	matches := make([]resourceWatchMatch, 0, len(a.config.Resources))
+
+	for _, configRes := range a.config.Resources {
+		resources, err := a.discover.ServerResourcesForGroupVersion(configRes.GVR.GroupVersion().String())
+		if err != nil {
+			return nil, fmt.Errorf("failed to retrieve information about resource %s: %v", configRes.GVR.String(), err)
+		}
+
+		match := resourceWatchMatch{
+			resourceWatch:      &configRes,
+			apiResource:        nil,
+			resourceInterfaces: make([]dynamic.ResourceInterface, 0),
+		}
+		for _, apires := range resources.APIResources {
+			if apires.Name == configRes.GVR.Resource {
+				match.apiResource = &apires
+
+				if apires.Namespaced && !a.config.AllNamespaces {
+					for _, ns := range a.config.Namespaces {
+						match.resourceInterfaces = append(match.resourceInterfaces, a.k8s.Resource(configRes.GVR).Namespace(ns))
+					}
+				} else {
+					match.resourceInterfaces = append(match.resourceInterfaces, a.k8s.Resource(configRes.GVR))
+				}
+
+				break
+			}
+		}
+
+		matches = append(matches, match)
+
+		if match.apiResource == nil {
+			a.logger.Errorf("could not retrieve information about resource %s: it doesn't exist", configRes.GVR.String())
+		}
+	}
+
+	return matches, nil
 }
 
 type unstructuredLister func(context.Context, metav1.ListOptions) (*unstructured.UnstructuredList, error)
