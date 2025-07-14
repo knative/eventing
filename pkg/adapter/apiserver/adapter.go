@@ -83,12 +83,12 @@ func (a *apiServerAdapter) start(ctx context.Context, stopCh <-chan struct{}) er
 
 	if a.config.SkippedPermissions {
 		a.logger.Info("ApiServerSource skipped checking permissions so watches will be attempted only once")
-		return a.startWithoutPermissionCheck(ctx, stopCh, delegate, matches)
+		return a.startFailFast(ctx, stopCh, delegate, matches)
 	}
-	return a.startWithPermissionCheck(ctx, stopCh, delegate, matches)
+	return a.startResilient(ctx, stopCh, delegate, matches)
 }
 
-func (a *apiServerAdapter) startWithPermissionCheck(ctx context.Context, stopCh <-chan struct{}, delegate cache.Store, matches []resourceWatchMatch) error {
+func (a *apiServerAdapter) startResilient(ctx context.Context, stopCh <-chan struct{}, delegate cache.Store, matches []resourceWatchMatch) error {
 	// Local stop channel.
 	stop := make(chan struct{})
 
@@ -117,11 +117,14 @@ func (a *apiServerAdapter) startWithPermissionCheck(ctx context.Context, stopCh 
 	return nil
 }
 
-func (a *apiServerAdapter) startWithoutPermissionCheck(ctx context.Context, stopCh <-chan struct{}, delegate cache.Store, matches []resourceWatchMatch) error {
+// startFailFast starts the ApiServerSource in fail fast mode, where it attempts to create watches only once.
+// If any single watch fails, it will return an error and stop all watches.
+// This would result in the APIServerSource status marked as failed.
+func (a *apiServerAdapter) startFailFast(ctx context.Context, stopCh <-chan struct{}, delegate cache.Store, matches []resourceWatchMatch) error {
 	resyncPeriod := 10 * time.Hour
 
 	a.logger.Infof("STARTING -- %#v", a.config)
-	a.logger.Info("ApiServerSource skipped checking permissions so watches will be attempted only once")
+	a.logger.Info("ApiServerSource is in fail fast mode, so watch creation will be attempted only once")
 
 	watchCtx, cancelWatchers := context.WithCancel(ctx)
 	defer cancelWatchers()
