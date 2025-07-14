@@ -93,14 +93,9 @@ func (a *apiServerAdapter) setupDelegate() cache.Store {
 	return delegate
 }
 
-func (a *apiServerAdapter) startWithPermissionCheck(ctx context.Context, stopCh <-chan struct{}, delegate cache.Store) error {
-	// Local stop channel.
-	stop := make(chan struct{})
+type watchCreator func(ctx context.Context, res dynamic.ResourceInterface, labelSelector string)
 
-	resyncPeriod := 10 * time.Hour
-
-	a.logger.Infof("STARTING -- %#v", a.config)
-
+func (a *apiServerAdapter) createWatchers(ctx context.Context, errorOnNotExists bool, wc watchCreator) error {
 	for _, configRes := range a.config.Resources {
 
 		resources, err := a.discover.ServerResourcesForGroupVersion(configRes.GVR.GroupVersion().String())
@@ -121,13 +116,7 @@ func (a *apiServerAdapter) startWithPermissionCheck(ctx context.Context, stopCh 
 				}
 
 				for _, res := range resources {
-					lw := &cache.ListWatch{
-						ListFunc:  asUnstructuredLister(ctx, res.List, configRes.LabelSelector),
-						WatchFunc: asUnstructuredWatcher(ctx, res.Watch, configRes.LabelSelector),
-					}
-
-					reflector := cache.NewReflector(lw, &unstructured.Unstructured{}, delegate, resyncPeriod)
-					go reflector.Run(stop)
+					wc(ctx, res, configRes.LabelSelector)
 				}
 
 				exists = true
@@ -137,7 +126,32 @@ func (a *apiServerAdapter) startWithPermissionCheck(ctx context.Context, stopCh 
 
 		if !exists {
 			a.logger.Errorf("could not retrieve information about resource %s: it doesn't exist", configRes.GVR.String())
+			if errorOnNotExists {
+				return fmt.Errorf("resource %s does not exist", configRes.GVR.String())
+			}
 		}
+	}
+	return nil
+}
+
+func (a *apiServerAdapter) startWithPermissionCheck(ctx context.Context, stopCh <-chan struct{}, delegate cache.Store) error {
+	// Local stop channel.
+	stop := make(chan struct{})
+
+	resyncPeriod := 10 * time.Hour
+
+	a.logger.Infof("STARTING -- %#v", a.config)
+
+	if err := a.createWatchers(ctx, false, func(ctx context.Context, res dynamic.ResourceInterface, labelSelector string) {
+		lw := &cache.ListWatch{
+			ListFunc:  asUnstructuredLister(ctx, res.List, labelSelector),
+			WatchFunc: asUnstructuredWatcher(ctx, res.Watch, labelSelector),
+		}
+
+		reflector := cache.NewReflector(lw, &unstructured.Unstructured{}, delegate, resyncPeriod)
+		go reflector.Run(stop)
+	}); err != nil {
+		return fmt.Errorf("failed to create watchers: %v", err)
 	}
 
 	<-stopCh
@@ -157,55 +171,27 @@ func (a *apiServerAdapter) startWithoutPermissionCheck(ctx context.Context, stop
 	var wg sync.WaitGroup
 	errorChan := make(chan error, 1)
 
-	for _, configRes := range a.config.Resources {
-
-		resources, err := a.discover.ServerResourcesForGroupVersion(configRes.GVR.GroupVersion().String())
-		if err != nil {
-			return fmt.Errorf("failed to retrieve information about resource %s: %v", configRes.GVR.String(), err)
+	if err := a.createWatchers(ctx, true, func(ctx context.Context, res dynamic.ResourceInterface, labelSelector string) {
+		lw := &cache.ListWatch{
+			ListFunc:  asUnstructuredLister(watchCtx, res.List, labelSelector),
+			WatchFunc: asUnstructuredWatcher(watchCtx, res.Watch, labelSelector),
 		}
 
-		exists := false
-		for _, apires := range resources.APIResources {
-			if apires.Name == configRes.GVR.Resource {
-				var resources []dynamic.ResourceInterface
-				if apires.Namespaced && !a.config.AllNamespaces {
-					for _, ns := range a.config.Namespaces {
-						resources = append(resources, a.k8s.Resource(configRes.GVR).Namespace(ns))
-					}
-				} else {
-					resources = append(resources, a.k8s.Resource(configRes.GVR))
+		reflector := cache.NewReflector(lw, &unstructured.Unstructured{}, delegate, resyncPeriod)
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if err := reflector.ListAndWatchWithContext(watchCtx); err != nil {
+				a.logger.Errorf("reflector failed: %v", err)
+				select {
+				case errorChan <- fmt.Errorf("failed to watch: %v", err):
+				default:
 				}
-
-				for _, res := range resources {
-					lw := &cache.ListWatch{
-						ListFunc:  asUnstructuredLister(watchCtx, res.List, configRes.LabelSelector),
-						WatchFunc: asUnstructuredWatcher(watchCtx, res.Watch, configRes.LabelSelector),
-					}
-
-					reflector := cache.NewReflector(lw, &unstructured.Unstructured{}, delegate, resyncPeriod)
-					wg.Add(1)
-					go func() {
-						defer wg.Done()
-						if err := reflector.ListAndWatchWithContext(watchCtx); err != nil {
-							a.logger.Errorf("reflector failed: %v", err)
-							select {
-							case errorChan <- fmt.Errorf("failed to watch: %v", err):
-							default:
-							}
-							cancelWatchers()
-						}
-					}()
-				}
-
-				exists = true
-				break
+				cancelWatchers()
 			}
-		}
-
-		if !exists {
-			a.logger.Errorf("could not retrieve information about resource %s: it doesn't exist", configRes.GVR.String())
-			return fmt.Errorf("resource %s does not exist", configRes.GVR.String())
-		}
+		}()
+	}); err != nil {
+		return fmt.Errorf("failed to create watchers: %v", err)
 	}
 
 	go func() {
