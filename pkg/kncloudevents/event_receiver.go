@@ -217,7 +217,7 @@ func CreateHandler(handler http.Handler, otelOpts ...otelhttp.Option) http.Handl
 	return otelhttp.NewHandler(
 		handler,
 		"kncloudevents.receive",
-		opts...
+		opts...,
 	)
 }
 

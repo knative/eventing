@@ -114,7 +114,6 @@ func createNewClient(cfg eventingtls.ClientConfig, addressable duckv1.Addressabl
 
 				return fmt.Sprintf("%s %s", r.Method, r.URL.Path)
 			}),
-
 		),
 	}
 

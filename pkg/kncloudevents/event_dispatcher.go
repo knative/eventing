@@ -400,7 +400,7 @@ func (d *Dispatcher) executeRequest(
 
 	ctx, span := tracer.Start(ctx, fmt.Sprintf("send %s", target.URL.String()))
 
-	defer func ()  {
+	defer func() {
 		if span.IsRecording() {
 			labeler, _ := otelhttp.LabelerFromContext(ctx)
 			span.SetAttributes(labeler.Get()...)

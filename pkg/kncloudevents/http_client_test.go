@@ -129,4 +129,3 @@ func Test_ConfigureConnectionArgs(t *testing.T) {
 	require.NotSame(t, client1, client3)
 	require.NotSame(t, client2, client3)
 }
-
