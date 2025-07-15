@@ -18,12 +18,12 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
+	"time"
 
 	eventpolicyinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventpolicy"
+	"knative.dev/eventing/pkg/observability/otel"
 
-	"github.com/google/uuid"
 	"github.com/kelseyhightower/envconfig"
 	"go.uber.org/zap"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
@@ -32,13 +32,10 @@ import (
 	configmap "knative.dev/pkg/configmap/informer"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/injection"
-	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/logging"
-	"knative.dev/pkg/metrics"
+	k8sruntime "knative.dev/pkg/observability/runtime/k8s"
 	"knative.dev/pkg/signals"
 	"knative.dev/pkg/system"
-	"knative.dev/pkg/tracing"
-	tracingconfig "knative.dev/pkg/tracing/config"
 
 	"knative.dev/eventing/cmd/broker"
 	"knative.dev/eventing/pkg/apis/feature"
@@ -51,7 +48,7 @@ import (
 	subscriptioninformer "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/subscription"
 	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/eventtype"
-	"knative.dev/eventing/pkg/reconciler/names"
+	o11yconfigmap "knative.dev/eventing/pkg/observability/configmap"
 )
 
 const (
@@ -71,8 +68,6 @@ type envConfig struct {
 func main() {
 	ctx := signals.NewContext()
 
-	// Report stats on Go memory usage every 30 seconds.
-	metrics.MemStatsOrDie(ctx)
 
 	cfg := injection.ParseAndGetRESTConfigOrDie()
 	ctx = injection.WithConfig(ctx, cfg)
@@ -105,17 +100,27 @@ func main() {
 
 	logger.Info("Starting the Broker Filter")
 
+	pprof := k8sruntime.NewProfilingServer(sl.Named("pprof"))
+
+	mp, tp := otel.SetupObservabilityOrDie(ctx, "broker.filter", sl, pprof)
+
+	defer func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		if err := mp.Shutdown(ctx); err != nil {
+			sl.Errorw("Error flushing metrics", zap.Error(err))
+		}
+
+		if err := tp.Shutdown(ctx); err != nil {
+			sl.Errorw("Error flushing traces", zap.Error(err))
+		}
+	}()
+
 	// Watch the logging config map and dynamically update logging levels.
 	configMapWatcher := configmap.NewInformedWatcher(kubeClient, system.Namespace())
-	// Watch the observability config map and dynamically update metrics exporter.
-	updateFunc, err := metrics.UpdateExporterFromConfigMapWithOpts(ctx, metrics.ExporterOptions{
-		Component:      component,
-		PrometheusPort: defaultMetricsPort,
-	}, sl)
-	if err != nil {
-		logger.Fatal("Failed to create metrics exporter update function", zap.Error(err))
-	}
-	configMapWatcher.Watch(metrics.ConfigMapName(), updateFunc)
+
+	configMapWatcher.Watch(o11yconfigmap.Name(), pprof.UpdateFromConfigMap)
 	// TODO change the component name to broker once Stackdriver metrics are approved.
 	// Watch the observability config map and dynamically update request logs.
 	configMapWatcher.Watch(logging.ConfigMapName(), logging.UpdateLevelFromConfigMap(sl, atomicLevel, component))
@@ -125,7 +130,7 @@ func main() {
 	var featureStore *feature.Store
 	var handler *filter.Handler
 
-	featureStore = feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {
+	featureStore = feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value any) {
 		featureFlags := value.(feature.Flags)
 		if featureFlags.IsEnabled(feature.EvenTypeAutoCreate) && featureStore != nil && handler != nil {
 			autoCreate := &eventtype.EventTypeAutoHandler{
@@ -144,23 +149,35 @@ func main() {
 		return featureStore.ToContext(ctx)
 	}
 
-	bin := fmt.Sprintf("%s.%s", names.BrokerFilterName, system.Namespace())
-	tracer, err := tracing.SetupPublishingWithDynamicConfig(sl, configMapWatcher, bin, tracingconfig.ConfigName)
-	if err != nil {
-		logger.Fatal("Error setting up trace publishing", zap.Error(err))
-	}
-
-	reporter := filter.NewStatsReporter(env.ContainerName, kmeta.ChildName(env.PodName, uuid.New().String()))
-
 	oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
 	// We are running both the receiver (takes messages in from the Broker) and the dispatcher (send
 	// the messages to the triggers' subscribers) in this binary.
 	authVerifier := auth.NewVerifier(ctx, eventpolicyinformer.Get(ctx).Lister(), trustBundleConfigMapLister, configMapWatcher)
-	handler, err = filter.NewHandler(logger, authVerifier, oidcTokenProvider, triggerinformer.Get(ctx), brokerinformer.Get(ctx), subscriptioninformer.Get(ctx), reporter, trustBundleConfigMapLister, ctxFunc)
+	handler, err = filter.NewHandler(
+		logger,
+		authVerifier,
+		oidcTokenProvider,
+		triggerinformer.Get(ctx),
+		brokerinformer.Get(ctx),
+		subscriptioninformer.Get(ctx),
+		trustBundleConfigMapLister,
+		ctxFunc,
+		mp,
+		tp,
+	)
 	if err != nil {
 		logger.Fatal("Error creating Handler", zap.Error(err))
 	}
-	serverManager, err := filter.NewServerManager(ctx, logger, configMapWatcher, env.HTTPPort, env.HTTPSPort, handler)
+	serverManager, err := filter.NewServerManager(
+		ctx, 
+		logger, 
+		configMapWatcher, 
+		env.HTTPPort, 
+		env.HTTPSPort, 
+		mp,
+		tp,
+		handler,
+	)
 	if err != nil {
 		logger.Fatal("Error creating server manager", zap.Error(err))
 	}
@@ -182,11 +199,9 @@ func main() {
 	if err != nil {
 		logger.Fatal("serverManager.StartServers() returned an error", zap.Error(err))
 	}
-	tracer.Shutdown(context.Background())
 	logger.Info("Exiting...")
 }
 
 func flush(logger *zap.SugaredLogger) {
 	_ = logger.Sync()
-	metrics.FlushExporter()
 }
