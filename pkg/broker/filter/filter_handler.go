@@ -33,12 +33,16 @@ import (
 	"knative.dev/eventing/pkg/observability"
 	"knative.dev/eventing/pkg/reconciler/broker/resources"
 
-	opencensusclient "github.com/cloudevents/sdk-go/observability/opencensus/v2/client"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
+	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
+	"go.opentelemetry.io/otel/trace"
+
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"
 	"github.com/cloudevents/sdk-go/v2/event"
 	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
-	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
 	corev1listers "k8s.io/client-go/listers/core/v1"
@@ -79,14 +83,15 @@ const (
 	FilterAudience = "mt-broker-filter"
 	skipTTL        = -1
 
-	TracerName = "knative.dev/pkg/broker/filter"
+	ScopeName = "knative.dev/pkg/broker/filter"
+)
+
+var (
+	latencyBounds = []float64{0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10}
 )
 
 // Handler parses Cloud Events, determines if they pass a filter, and sends them to a subscriber.
 type Handler struct {
-	// reporter reports stats of status code and dispatch time
-	reporter StatsReporter
-
 	eventDispatcher *kncloudevents.Dispatcher
 
 	triggerLister      eventinglisters.TriggerLister
@@ -98,6 +103,8 @@ type Handler struct {
 	tokenVerifier      *auth.Verifier
 	EventTypeCreator   *eventtype.EventTypeAutoHandler
 	tracer             trace.Tracer
+	dispatchDuration   metric.Float64Histogram
+	processDuration    metric.Float64Histogram
 }
 
 // NewHandler creates a new Handler and its associated EventReceiver.
@@ -108,10 +115,10 @@ func NewHandler(
 	triggerInformer v1.TriggerInformer,
 	brokerInformer v1.BrokerInformer,
 	subscriptionInformer messaginginformers.SubscriptionInformer,
-	reporter StatsReporter,
 	trustBundleConfigMapLister corev1listers.ConfigMapNamespaceLister,
 	wc func(ctx context.Context) context.Context,
-	tp trace.TracerProvider,
+	meterProvider metric.MeterProvider,
+	traceProvider trace.TracerProvider,
 ) (*Handler, error) {
 	kncloudevents.ConfigureConnectionArgs(&kncloudevents.ConnectionArgs{
 		MaxIdleConns:        defaultMaxIdleConnections,
@@ -136,7 +143,7 @@ func NewHandler(
 				URL:     trigger.Status.SubscriberURI,
 				CACerts: trigger.Status.SubscriberCACerts,
 			},
-				tp,
+				traceProvider,
 			)
 		},
 		UpdateFunc: func(_, obj interface{}) {
@@ -150,7 +157,7 @@ func NewHandler(
 				URL:     trigger.Status.SubscriberURI,
 				CACerts: trigger.Status.SubscriberCACerts,
 			},
-				tp,
+				traceProvider,
 			)
 		},
 		DeleteFunc: func(obj interface{}) {
@@ -167,8 +174,7 @@ func NewHandler(
 		},
 	})
 
-	return &Handler{
-		reporter:           reporter,
+	h := &Handler{
 		eventDispatcher:    kncloudevents.NewDispatcher(clientConfig, oidcTokenProvider),
 		triggerLister:      triggerInformer.Lister(),
 		brokerLister:       brokerInformer.Lister(),
@@ -177,11 +183,38 @@ func NewHandler(
 		tokenVerifier:      tokenVerifier,
 		withContext:        wc,
 		filtersMap:         fm,
-		tracer:             tp.Tracer(TracerName),
-	}, nil
+		tracer:             traceProvider.Tracer(ScopeName),
+	}
+
+	meter := meterProvider.Meter(ScopeName)
+
+	var err error
+
+	h.dispatchDuration, err = meter.Float64Histogram(
+		"kn.eventing.dispatch.duration",
+		metric.WithDescription("The duration to dispatch the event"),
+		metric.WithUnit("s"),
+		metric.WithExplicitBucketBoundaries(latencyBounds...),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	h.processDuration, err = meter.Float64Histogram(
+		"kn.eventing.process.duration",
+		metric.WithDescription("The duration of processing an event before dispatching it"),
+		metric.WithUnit("s"),
+		metric.WithExplicitBucketBoundaries(latencyBounds...),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return h, nil
 }
 
 func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
+	start := time.Now()
 	ctx := h.withContext(request.Context())
 	features := feature.FromContext(ctx)
 
@@ -220,21 +253,36 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 
 	h.logger.Debug("Received message", zap.Any("trigger", triggerRef.NamespacedName), zap.Stringer("event", event))
 
+	var broker types.NamespacedName
+	if feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) && trigger.Spec.BrokerRef != nil {
+		if trigger.Spec.BrokerRef.Name != "" {
+			broker.Name = trigger.Spec.BrokerRef.Name
+		} else {
+			broker.Name = trigger.Spec.Broker
+		}
+		if trigger.Spec.BrokerRef.Namespace != "" {
+			broker.Namespace = trigger.Spec.BrokerRef.Namespace
+		} else {
+			broker.Namespace = trigger.Namespace
+		}
+	} else {
+		broker.Name = trigger.Spec.Broker
+		broker.Namespace = trigger.Namespace
+	}
+
 	ctx = observability.WithMessagingLabels(ctx, tracing.TriggerMessagingDestination(triggerRef.NamespacedName), "send")
 	ctx = observability.WithEventLabels(ctx, *event)
+	ctx = observability.WithBrokerLabels(ctx, broker)
 
 	ctx, span := h.tracer.Start(ctx, tracing.TriggerMessagingDestination(triggerRef.NamespacedName))
-	defer span.End()
+	defer func() {
+		if span.IsRecording() {
+			labeler, _ := otelhttp.LabelerFromContext(ctx)
+			span.SetAttributes(labeler.Get()...)
+		}
 
-	if span.IsRecording() {
-		span.AddAttributes(
-			tracing.MessagingSystemAttribute,
-			tracing.MessagingProtocolHTTP,
-			tracing.TriggerMessagingDestinationAttribute(triggerRef.NamespacedName),
-			tracing.MessagingMessageIDAttribute(event.ID()),
-		)
-		span.AddAttributes(opencensusclient.EventTraceAttributes(event)...)
-	}
+		span.End()
+	}()
 
 	if features.IsOIDCAuthentication() {
 		h.logger.Debug("OIDC authentication is enabled")
@@ -270,37 +318,28 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	if triggerRef.IsReply {
-		h.handleDispatchToReplyRequest(ctx, trigger, writer, request, event)
+		h.handleDispatchToReplyRequest(ctx, trigger, broker, writer, request, event, start)
 		return
 	}
 
 	if triggerRef.IsDLS {
-		h.handleDispatchToDLSRequest(ctx, trigger, writer, request, event)
+		h.handleDispatchToDLSRequest(ctx, trigger, broker, writer, request, event, start)
 		return
 	}
 
-	h.handleDispatchToSubscriberRequest(ctx, trigger, writer, request, event)
+	h.handleDispatchToSubscriberRequest(ctx, trigger, writer, request, event, start)
 }
 
-func (h *Handler) handleDispatchToReplyRequest(ctx context.Context, trigger *eventingv1.Trigger, writer http.ResponseWriter, request *http.Request, event *event.Event) {
-	var brokerName, brokerNamespace string
-	if feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) && trigger.Spec.BrokerRef != nil {
-		if trigger.Spec.BrokerRef.Name != "" {
-			brokerName = trigger.Spec.BrokerRef.Name
-		} else {
-			brokerName = trigger.Spec.Broker
-		}
-		if trigger.Spec.BrokerRef.Namespace != "" {
-			brokerNamespace = trigger.Spec.BrokerRef.Namespace
-		} else {
-			brokerNamespace = trigger.Namespace
-		}
-	} else {
-		brokerName = trigger.Spec.Broker
-		brokerNamespace = trigger.Namespace
-	}
-
-	broker, err := h.brokerLister.Brokers(brokerNamespace).Get(brokerName)
+func (h *Handler) handleDispatchToReplyRequest(
+	ctx context.Context,
+	trigger *eventingv1.Trigger,
+	brokerRef types.NamespacedName,
+	writer http.ResponseWriter,
+	request *http.Request,
+	event *event.Event,
+	start time.Time,
+) {
+	broker, err := h.brokerLister.Brokers(brokerRef.Namespace).Get(brokerRef.Name)
 	if apierrors.IsNotFound(err) {
 		h.logger.Info("Unable to get the Broker", zap.Error(err))
 		writer.WriteHeader(http.StatusNotFound)
@@ -314,43 +353,25 @@ func (h *Handler) handleDispatchToReplyRequest(ctx context.Context, trigger *eve
 
 	target := broker.Status.Address
 
-	reportArgs := &ReportArgs{
-		ns:          trigger.Namespace,
-		trigger:     trigger.Name,
-		broker:      brokerName,
-		requestType: "reply_forward",
-	}
-
-	if request.TLS != nil {
-		reportArgs.requestScheme = "https"
-	} else {
-		reportArgs.requestScheme = "http"
-	}
+	labeler, _ := otelhttp.LabelerFromContext(ctx)
+	h.processDuration.Record(ctx, time.Since(start).Seconds(), metric.WithAttributes(labeler.Get()...))
 
 	h.logger.Info("sending to reply", zap.Any("target", target))
 
 	// since the broker-filter acts here like a proxy, we don't filter headers
-	h.send(ctx, writer, request.Header, *target, reportArgs, event, trigger, skipTTL)
+	h.send(ctx, writer, request.Header, *target, event, trigger, skipTTL)
 }
 
-func (h *Handler) handleDispatchToDLSRequest(ctx context.Context, trigger *eventingv1.Trigger, writer http.ResponseWriter, request *http.Request, event *event.Event) {
-	var brokerName, brokerNamespace string
-	if feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) && trigger.Spec.BrokerRef != nil {
-		if trigger.Spec.BrokerRef.Name != "" {
-			brokerName = trigger.Spec.BrokerRef.Name
-		} else {
-			brokerName = trigger.Spec.Broker
-		}
-		if trigger.Spec.BrokerRef.Namespace != "" {
-			brokerNamespace = trigger.Spec.BrokerRef.Namespace
-		} else {
-			brokerNamespace = trigger.Namespace
-		}
-	} else {
-		brokerName = trigger.Spec.Broker
-		brokerNamespace = trigger.Namespace
-	}
-	broker, err := h.brokerLister.Brokers(brokerNamespace).Get(brokerName)
+func (h *Handler) handleDispatchToDLSRequest(
+	ctx context.Context,
+	trigger *eventingv1.Trigger,
+	brokerRef types.NamespacedName,
+	writer http.ResponseWriter,
+	request *http.Request,
+	event *event.Event,
+	start time.Time,
+) {
+	broker, err := h.brokerLister.Brokers(brokerRef.Namespace).Get(brokerRef.Name)
 	if apierrors.IsNotFound(err) {
 		h.logger.Info("Unable to get the Broker", zap.Error(err))
 		writer.WriteHeader(http.StatusNotFound)
@@ -380,37 +401,16 @@ func (h *Handler) handleDispatchToDLSRequest(ctx context.Context, trigger *event
 		return
 	}
 
-	reportArgs := &ReportArgs{
-		ns:          trigger.Namespace,
-		trigger:     trigger.Name,
-		broker:      brokerName,
-		requestType: "dls_forward",
-	}
-
-	if request.TLS != nil {
-		reportArgs.requestScheme = "https"
-	} else {
-		reportArgs.requestScheme = "http"
-	}
+	labeler, _ := otelhttp.LabelerFromContext(ctx)
+	h.processDuration.Record(ctx, time.Since(start).Seconds(), metric.WithAttributes(labeler.Get()...))
 
 	h.logger.Info("sending to dls", zap.Any("target", target))
 
 	// since the broker-filter acts here like a proxy, we don't filter headers
-	h.send(ctx, writer, request.Header, *target, reportArgs, event, trigger, skipTTL)
+	h.send(ctx, writer, request.Header, *target, event, trigger, skipTTL)
 }
 
-func (h *Handler) handleDispatchToSubscriberRequest(ctx context.Context, trigger *eventingv1.Trigger, writer http.ResponseWriter, request *http.Request, event *event.Event) {
-	var brokerName string
-	if feature.FromContext(ctx).IsEnabled(feature.CrossNamespaceEventLinks) && trigger.Spec.BrokerRef != nil {
-		if trigger.Spec.BrokerRef.Name != "" {
-			brokerName = trigger.Spec.BrokerRef.Name
-		} else {
-			brokerName = trigger.Spec.Broker
-		}
-	} else {
-		brokerName = trigger.Spec.Broker
-	}
-
+func (h *Handler) handleDispatchToSubscriberRequest(ctx context.Context, trigger *eventingv1.Trigger, writer http.ResponseWriter, request *http.Request, event *event.Event, start time.Time) {
 	triggerRef := types.NamespacedName{
 		Name:      trigger.Name,
 		Namespace: trigger.Namespace,
@@ -431,25 +431,10 @@ func (h *Handler) handleDispatchToSubscriberRequest(ctx context.Context, trigger
 		h.logger.Warn("Failed to delete TTL.", zap.Error(err))
 	}
 
-	reportArgs := &ReportArgs{
-		ns:          trigger.Namespace,
-		trigger:     trigger.Name,
-		broker:      brokerName,
-		filterType:  triggerFilterAttribute(trigger.Spec.Filter, "type"),
-		requestType: "filter",
-	}
-
-	if request.TLS != nil {
-		reportArgs.requestScheme = "https"
-	} else {
-		reportArgs.requestScheme = "http"
-	}
-
 	subscriberURI := trigger.Status.SubscriberURI
 	if subscriberURI == nil {
 		// Record the event count.
 		writer.WriteHeader(http.StatusNotFound)
-		_ = h.reporter.ReportEventCount(reportArgs, http.StatusNotFound)
 		return
 	}
 
@@ -463,7 +448,8 @@ func (h *Handler) handleDispatchToSubscriberRequest(ctx context.Context, trigger
 		return
 	}
 
-	h.reportArrivalTime(event, reportArgs)
+	labeler, _ := otelhttp.LabelerFromContext(ctx)
+	h.processDuration.Record(ctx, time.Since(start).Seconds(), metric.WithAttributes(labeler.Get()...))
 
 	target := duckv1.Addressable{
 		URL:      trigger.Status.SubscriberURI,
@@ -476,10 +462,10 @@ func (h *Handler) handleDispatchToSubscriberRequest(ctx context.Context, trigger
 		sendOptions = append(sendOptions, kncloudevents.WithEventFormat(trigger.Spec.Delivery.Format))
 	}
 
-	h.send(ctx, writer, utils.PassThroughHeaders(request.Header), target, reportArgs, event, trigger, ttl, sendOptions...)
+	h.send(ctx, writer, utils.PassThroughHeaders(request.Header), target, event, trigger, ttl, sendOptions...)
 }
 
-func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers http.Header, target duckv1.Addressable, reportArgs *ReportArgs, event *cloudevents.Event, t *eventingv1.Trigger, ttl int32, sendOpts ...kncloudevents.SendOption) {
+func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers http.Header, target duckv1.Addressable, event *cloudevents.Event, t *eventingv1.Trigger, ttl int32, sendOpts ...kncloudevents.SendOption) {
 	additionalHeaders := headers.Clone()
 	additionalHeaders.Set(apis.KnNamespaceHeader, t.GetNamespace())
 
@@ -512,17 +498,18 @@ func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers 
 	}
 
 	dispatchInfo, err := h.eventDispatcher.SendEvent(ctx, *event, target, opts...)
+	labeler, _ := otelhttp.LabelerFromContext(ctx)
+	attrs := []attribute.KeyValue{semconv.HTTPResponseStatusCode(dispatchInfo.ResponseCode)}
+	attrs = append(attrs, labeler.Get()...)
+	h.dispatchDuration.Record(ctx, dispatchInfo.Duration.Seconds(), metric.WithAttributes(attrs...))
 	if err != nil {
 		h.logger.Error("failed to send event", zap.Error(err))
 
 		// If error is not because of the response, it should respond with http.StatusInternalServerError
 		if dispatchInfo.ResponseCode <= 0 {
 			writer.WriteHeader(http.StatusInternalServerError)
-			_ = h.reporter.ReportEventCount(reportArgs, http.StatusInternalServerError)
 			return
 		}
-
-		h.reporter.ReportEventDispatchTime(reportArgs, dispatchInfo.ResponseCode, dispatchInfo.Duration)
 
 		writeHeaders(utils.PassThroughHeaders(dispatchInfo.ResponseHeader), writer)
 		writer.WriteHeader(dispatchInfo.ResponseCode)
@@ -541,21 +528,17 @@ func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers 
 		if err != nil {
 			h.logger.Error("failed to write error response", zap.Error(err))
 		}
-		_ = h.reporter.ReportEventCount(reportArgs, dispatchInfo.ResponseCode)
 
 		return
 	}
 
 	h.logger.Debug("Successfully dispatched message", zap.Any("target", target))
 
-	h.reporter.ReportEventDispatchTime(reportArgs, dispatchInfo.ResponseCode, dispatchInfo.Duration)
-
 	// If there is an event in the response write it to the response
-	statusCode, err := h.writeResponse(ctx, writer, dispatchInfo, ttl, target.URL.String())
+	_, err = h.writeResponse(ctx, writer, dispatchInfo, ttl, target.URL.String())
 	if err != nil {
 		h.logger.Error("failed to write response", zap.Error(err))
 	}
-	_ = h.reporter.ReportEventCount(reportArgs, statusCode)
 }
 
 // The return values are the status
@@ -614,18 +597,6 @@ func (h *Handler) writeResponse(ctx context.Context, writer http.ResponseWriter,
 	h.logger.Debug("Replied with a CloudEvent response", zap.Any("target", target))
 
 	return dispatchInfo.ResponseCode, nil
-}
-
-func (h *Handler) reportArrivalTime(event *event.Event, reportArgs *ReportArgs) {
-	// Record the event processing time. This might be off if the receiver and the filter pods are running in
-	// different nodes with different clocks.
-	var arrivalTimeStr string
-	if extErr := event.ExtensionAs(eventingbroker.EventArrivalTime, &arrivalTimeStr); extErr == nil {
-		arrivalTime, err := time.Parse(time.RFC3339, arrivalTimeStr)
-		if err == nil {
-			_ = h.reporter.ReportEventProcessingTime(reportArgs, time.Since(arrivalTime))
-		}
-	}
 }
 
 func (h *Handler) getTrigger(ref path.NamespacedNameUID) (*eventingv1.Trigger, error) {
