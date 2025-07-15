@@ -32,6 +32,7 @@ import (
 
 const (
 	DefaultShutdownTimeout = time.Minute * 1
+	TracerName             = "knative.dev/eventing/pkg/kncloudevents"
 )
 
 type HTTPEventReceiver struct {

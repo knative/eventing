@@ -30,6 +30,7 @@ import (
 
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	messaginginformers "knative.dev/eventing/pkg/client/informers/externalversions/messaging/v1"
+	"knative.dev/eventing/pkg/observability"
 	"knative.dev/eventing/pkg/reconciler/broker/resources"
 
 	opencensusclient "github.com/cloudevents/sdk-go/observability/opencensus/v2/client"
@@ -37,7 +38,7 @@ import (
 	"github.com/cloudevents/sdk-go/v2/binding"
 	"github.com/cloudevents/sdk-go/v2/event"
 	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
-	"go.opencensus.io/trace"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
 	corev1listers "k8s.io/client-go/listers/core/v1"
@@ -77,6 +78,8 @@ const (
 
 	FilterAudience = "mt-broker-filter"
 	skipTTL        = -1
+
+	TracerName = "knative.dev/pkg/broker/filter"
 )
 
 // Handler parses Cloud Events, determines if they pass a filter, and sends them to a subscriber.
@@ -94,10 +97,22 @@ type Handler struct {
 	filtersMap         *subscriptionsapi.FiltersMap
 	tokenVerifier      *auth.Verifier
 	EventTypeCreator   *eventtype.EventTypeAutoHandler
+	tracer             trace.Tracer
 }
 
 // NewHandler creates a new Handler and its associated EventReceiver.
-func NewHandler(logger *zap.Logger, tokenVerifier *auth.Verifier, oidcTokenProvider *auth.OIDCTokenProvider, triggerInformer v1.TriggerInformer, brokerInformer v1.BrokerInformer, subscriptionInformer messaginginformers.SubscriptionInformer, reporter StatsReporter, trustBundleConfigMapLister corev1listers.ConfigMapNamespaceLister, wc func(ctx context.Context) context.Context) (*Handler, error) {
+func NewHandler(
+	logger *zap.Logger,
+	tokenVerifier *auth.Verifier,
+	oidcTokenProvider *auth.OIDCTokenProvider,
+	triggerInformer v1.TriggerInformer,
+	brokerInformer v1.BrokerInformer,
+	subscriptionInformer messaginginformers.SubscriptionInformer,
+	reporter StatsReporter,
+	trustBundleConfigMapLister corev1listers.ConfigMapNamespaceLister,
+	wc func(ctx context.Context) context.Context,
+	tp trace.TracerProvider,
+) (*Handler, error) {
 	kncloudevents.ConfigureConnectionArgs(&kncloudevents.ConnectionArgs{
 		MaxIdleConns:        defaultMaxIdleConnections,
 		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
@@ -120,7 +135,9 @@ func NewHandler(logger *zap.Logger, tokenVerifier *auth.Verifier, oidcTokenProvi
 			kncloudevents.AddOrUpdateAddressableHandler(clientConfig, duckv1.Addressable{
 				URL:     trigger.Status.SubscriberURI,
 				CACerts: trigger.Status.SubscriberCACerts,
-			})
+			},
+				tp,
+			)
 		},
 		UpdateFunc: func(_, obj interface{}) {
 			trigger, ok := obj.(*eventingv1.Trigger)
@@ -132,7 +149,9 @@ func NewHandler(logger *zap.Logger, tokenVerifier *auth.Verifier, oidcTokenProvi
 			kncloudevents.AddOrUpdateAddressableHandler(clientConfig, duckv1.Addressable{
 				URL:     trigger.Status.SubscriberURI,
 				CACerts: trigger.Status.SubscriberCACerts,
-			})
+			},
+				tp,
+			)
 		},
 		DeleteFunc: func(obj interface{}) {
 			trigger, ok := obj.(*eventingv1.Trigger)
@@ -158,6 +177,7 @@ func NewHandler(logger *zap.Logger, tokenVerifier *auth.Verifier, oidcTokenProvi
 		tokenVerifier:      tokenVerifier,
 		withContext:        wc,
 		filtersMap:         fm,
+		tracer:             tp.Tracer(TracerName),
 	}, nil
 }
 
@@ -200,10 +220,13 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 
 	h.logger.Debug("Received message", zap.Any("trigger", triggerRef.NamespacedName), zap.Stringer("event", event))
 
-	ctx, span := trace.StartSpan(ctx, tracing.TriggerMessagingDestination(triggerRef.NamespacedName))
+	ctx = observability.WithMessagingLabels(ctx, tracing.TriggerMessagingDestination(triggerRef.NamespacedName), "send")
+	ctx = observability.WithEventLabels(ctx, *event)
+
+	ctx, span := h.tracer.Start(ctx, tracing.TriggerMessagingDestination(triggerRef.NamespacedName))
 	defer span.End()
 
-	if span.IsRecordingEvents() {
+	if span.IsRecording() {
 		span.AddAttributes(
 			tracing.MessagingSystemAttribute,
 			tracing.MessagingProtocolHTTP,
