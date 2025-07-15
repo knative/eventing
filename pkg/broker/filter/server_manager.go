@@ -19,18 +19,33 @@ package filter
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
+	"net/http"
 
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
 	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/pkg/configmap"
+	"knative.dev/pkg/network"
+	"knative.dev/pkg/observability/tracing"
 
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	secretinformer "knative.dev/pkg/injection/clients/namespacedkube/informers/core/v1/secret"
 )
 
-func NewServerManager(ctx context.Context, logger *zap.Logger, cmw configmap.Watcher, httpPort, httpsPort int, handler *Handler) (*eventingtls.ServerManager, error) {
+func NewServerManager(
+	ctx context.Context,
+	logger *zap.Logger,
+	cmw configmap.Watcher,
+	httpPort, httpsPort int,
+	meterProvider metric.MeterProvider,
+	traceProvider trace.TracerProvider,
+	handler *Handler,
+) (*eventingtls.ServerManager, error) {
 	tlsConfig, err := getServerTLSConfig(ctx)
 	if err != nil {
 		logger.Info("failed to get TLS server config", zap.Error(err))
@@ -39,7 +54,22 @@ func NewServerManager(ctx context.Context, logger *zap.Logger, cmw configmap.Wat
 	httpReceiver := kncloudevents.NewHTTPEventReceiver(httpPort)
 	httpsReceiver := kncloudevents.NewHTTPEventReceiver(httpsPort, kncloudevents.WithTLSConfig(tlsConfig))
 
-	return eventingtls.NewServerManager(ctx, httpReceiver, httpsReceiver, handler, cmw)
+	otelHandler := otelhttp.NewHandler(handler, "broker.filter",
+		otelhttp.WithMeterProvider(meterProvider),
+		otelhttp.WithTracerProvider(traceProvider),
+		otelhttp.WithFilter(func(r *http.Request) bool {
+			return !network.IsKubeletProbe(r)
+		}),
+		otelhttp.WithPropagators(tracing.DefaultTextMapPropagator()),
+		otelhttp.WithSpanNameFormatter(func(operation string, r *http.Request) string {
+			if r.URL.Path == "" {
+				return r.Method + " /"
+			}
+			return fmt.Sprintf("%s %s", r.Method, r.URL.Path)
+		}),
+	)
+
+	return eventingtls.NewServerManager(ctx, httpReceiver, httpsReceiver, otelHandler, cmw)
 }
 
 func getServerTLSConfig(ctx context.Context) (*tls.Config, error) {

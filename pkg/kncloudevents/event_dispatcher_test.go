@@ -802,16 +802,7 @@ func TestSendEvent(t *testing.T) {
 				trace.WithSyncer(exporter),
 			)
 			otel.SetTextMapPropagator(propagation.TraceContext{})
-			if tp == nil {
-				fmt.Printf("ERROR: tp is nil\n")
-			}
-
 			opt := kncloudevents.WithTraceProvider(tp)
-			if opt == nil {
-				fmt.Printf("ERROR: opt is nil\n")
-			} else {
-				fmt.Printf("opt: %+v\n", opt)
-			}
 			oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
 			dispatcher := kncloudevents.NewDispatcher(eventingtls.NewDefaultClientConfig(), oidcTokenProvider, opt)
 			destHandler := &fakeHandler{
