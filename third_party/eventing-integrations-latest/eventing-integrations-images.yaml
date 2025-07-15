@@ -4,13 +4,13 @@ metadata:
   name: eventing-integrations-images
   namespace: knative-eventing
   labels:
-    app.kubernetes.io/version: "v20250708-1a5ad26"
+    app.kubernetes.io/version: "v20250715-5f3d795"
 data:
-  log-sink: gcr.io/knative-nightly/log-sink@sha256:3f00f2aaf82bc2a8e450ca09fabb9e0530102d4fc16c4f8b8fd5fd7eaf3fbc56
-  aws-sns-sink: gcr.io/knative-nightly/aws-sns-sink@sha256:e65178aad58f89982503b84585694045fd828e7c4db282cf89e21b6f0f80874d
-  aws-sqs-sink: gcr.io/knative-nightly/aws-sqs-sink@sha256:6e0bea51589d087541e604c7091ae3ff97b2322b1997e1dcd111d0da2c2d324f
-  aws-sqs-source: gcr.io/knative-nightly/aws-sqs-source@sha256:1db7869f9ef8839504d76d185f0ecc0605cda062e21025b92aa067ba9d479e3b
-  aws-ddb-streams-source: gcr.io/knative-nightly/aws-ddb-streams-source@sha256:7835d29143e86def4f78f6806466060ad37d7d46e87a13fdd2dffd5c65bd9db1
-  aws-s3-sink: gcr.io/knative-nightly/aws-s3-sink@sha256:767c5811b7bb6451164f098acb326284224d55332c95cfb391f0ef0e9d3a2e08
-  timer-source: gcr.io/knative-nightly/timer-source@sha256:e2ea30ce725e2d60b36f8d092c8bb46f72762168085e377931d201446c0bb430
-  aws-s3-source: gcr.io/knative-nightly/aws-s3-source@sha256:54948e57c04e6b18dfcde036cdbd573002532bb260e4d7dc0da627080100c50f
+  log-sink: gcr.io/knative-nightly/log-sink@sha256:79d2ea695069a4e5e198ccfa6cb8bd82026c66af5f1924dabc2be865ade4463d
+  aws-sns-sink: gcr.io/knative-nightly/aws-sns-sink@sha256:0c01dbffc26446d3b9b9ea022bf29f8082bd1c3360180652eb8c9badeaef279c
+  aws-sqs-sink: gcr.io/knative-nightly/aws-sqs-sink@sha256:18415389a00c3b9fb0551b3f61e45f926e7ec9da62323174083d9521ed3b7ecf
+  aws-sqs-source: gcr.io/knative-nightly/aws-sqs-source@sha256:9a6479f35787eef0ce115feee1ae22b3d255e1aa49bd2d5dc4cf001e69e3ac2f
+  aws-ddb-streams-source: gcr.io/knative-nightly/aws-ddb-streams-source@sha256:9efe408d400440c705986c7b2938eab1bde944ebadffb564ae2921c63855d364
+  aws-s3-sink: gcr.io/knative-nightly/aws-s3-sink@sha256:3d0b247c4c0221db1dea7edeb551ba3719e650f025981b3f77fdbc5057adb6a5
+  timer-source: gcr.io/knative-nightly/timer-source@sha256:ac1eb4993b8b75350ed8d8b1d04bed5c930f8d84281ef770e6cbfd550b15df75
+  aws-s3-source: gcr.io/knative-nightly/aws-s3-source@sha256:0d8478e8a61602ec52441421d2382bc282658bb47282658b7e12ddd4f7e1febc
