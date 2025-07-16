@@ -25,25 +25,25 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	obsclient "github.com/cloudevents/sdk-go/observability/opencensus/v2/client"
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"
-	"github.com/cloudevents/sdk-go/v2/client"
 	"github.com/cloudevents/sdk-go/v2/event"
 	"github.com/cloudevents/sdk-go/v2/protocol/http"
 	"github.com/cloudevents/sdk-go/v2/test"
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
-	"go.opencensus.io/plugin/ochttp"
-	"go.opencensus.io/trace"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/sdk/metric"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/pkg/network"
+	"knative.dev/pkg/observability/tracing"
 	_ "knative.dev/pkg/system/testing"
-	"knative.dev/pkg/tracing"
-	tracingconfig "knative.dev/pkg/tracing/config"
-	"knative.dev/pkg/tracing/propagation/tracecontextb3"
 )
 
 func TestEventReceiver_ServeHTTP(t *testing.T) {
@@ -153,7 +153,6 @@ func TestEventReceiver_ServeHTTP(t *testing.T) {
 			},
 		},
 	}
-	reporter := NewStatsReporter("testcontainer", "testpod")
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
 			// Default the common things.
@@ -168,7 +167,18 @@ func TestEventReceiver_ServeHTTP(t *testing.T) {
 			}
 
 			f := tc.receiverFunc
-			r, err := NewEventReceiver(f, zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())), reporter, tc.opts...)
+
+			reader := metric.NewManualReader()
+			mp := metric.NewMeterProvider(metric.WithReader(reader))
+
+			exporter := tracetest.NewInMemoryExporter()
+			tp := sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))
+
+			otel.SetTextMapPropagator(tracing.DefaultTextMapPropagator())
+
+			opts := append(tc.opts, MeterProvider(mp), TraceProvider(tp))
+
+			r, err := NewEventReceiver(f, zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())), opts...)
 			if err != nil {
 				t.Fatalf("Error creating new event receiver. Error:%s", err)
 			}
@@ -179,7 +189,10 @@ func TestEventReceiver_ServeHTTP(t *testing.T) {
 				t.Fatal(err)
 			}
 			req := httptest.NewRequest(tc.method, "http://"+tc.host+tc.path, nil)
-			reqCtx, _ := trace.StartSpan(context.TODO(), "bla")
+
+			tracer := tp.Tracer(ScopeName)
+
+			reqCtx, _ := tracer.Start(context.TODO(), "bla")
 			req = req.WithContext(reqCtx)
 			req.Host = tc.host
 
@@ -214,6 +227,14 @@ func TestEventReceiver_ServeHTTP(t *testing.T) {
 func TestEventReceiver_ServerStart_trace_propagation(t *testing.T) {
 	want := test.ConvertEventExtensionsToString(t, test.FullEvent())
 
+	reader := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(reader))
+
+	exporter := tracetest.NewInMemoryExporter()
+	tp := sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))
+
+	otel.SetTextMapPropagator(tracing.DefaultTextMapPropagator())
+
 	done := make(chan struct{}, 1)
 
 	receiverFunc := func(ctx context.Context, r ChannelReference, e event.Event, additionalHeaders nethttp.Header) error {
@@ -221,7 +242,7 @@ func TestEventReceiver_ServerStart_trace_propagation(t *testing.T) {
 			return fmt.Errorf("test receiver func -- bad reference: %v", r)
 		}
 
-		if span := trace.FromContext(ctx); span == nil {
+		if span := trace.SpanFromContext(ctx); span == nil {
 			return errors.New("missing span")
 		}
 
@@ -234,10 +255,9 @@ func TestEventReceiver_ServerStart_trace_propagation(t *testing.T) {
 	method := nethttp.MethodPost
 	host := "test-name.test-namespace.svc." + network.GetClusterDomainName()
 
-	reporter := NewStatsReporter("testcontainer", "testpod")
 	logger, _ := zap.NewDevelopment()
 
-	r, err := NewEventReceiver(receiverFunc, logger, reporter)
+	r, err := NewEventReceiver(receiverFunc, logger)
 	if err != nil {
 		t.Fatalf("Error creating new event receiver. Error:%s", err)
 	}
@@ -245,25 +265,20 @@ func TestEventReceiver_ServerStart_trace_propagation(t *testing.T) {
 	server := httptest.NewServer(kncloudevents.CreateHandler(r))
 	defer server.Close()
 
-	tracer, err := tracing.SetupPublishingWithStaticConfig(logger.Sugar(), "localhost", &tracingconfig.Config{
-		Backend:        tracingconfig.Zipkin,
-		Debug:          true,
-		SampleRate:     1.0,
-		ZipkinEndpoint: "http://zipkin.zipkin.svc.cluster.local:9411/api/v2/spans",
-	})
-	require.NoError(t, err)
-	defer tracer.Shutdown(context.Background())
-
 	p, err := cloudevents.NewHTTP(
 		http.WithTarget(server.URL),
 		http.WithMethod(method),
-		cloudevents.WithRoundTripper(&ochttp.Transport{
-			Propagation: tracecontextb3.TraceContextEgress,
-		}))
+		cloudevents.WithRoundTripper(
+			otelhttp.NewTransport(nil,
+				otelhttp.WithPropagators(tracing.DefaultTextMapPropagator()),
+				otelhttp.WithTracerProvider(tp),
+				otelhttp.WithMeterProvider(mp),
+			),
+		))
 	require.NoError(t, err)
 	p.RequestTemplate.Host = host
 
-	c, err := cloudevents.NewClient(p, client.WithObservabilityService(obsclient.New()))
+	c, err := cloudevents.NewClient(p)
 	require.NoError(t, err)
 
 	res := c.Send(context.Background(), want)
@@ -276,13 +291,12 @@ func TestEventReceiver_ServerStart_trace_propagation(t *testing.T) {
 }
 
 func TestEventReceiver_WrongRequest(t *testing.T) {
-	reporter := NewStatsReporter("testcontainer", "testpod")
 	host := "http://test-channel.test-namespace.svc." + network.GetClusterDomainName() + "/"
 
 	f := func(_ context.Context, _ ChannelReference, _ event.Event, _ nethttp.Header) error {
 		return errors.New("test induced receiver function error")
 	}
-	r, err := NewEventReceiver(f, zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())), reporter)
+	r, err := NewEventReceiver(f, zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())))
 	if err != nil {
 		t.Fatalf("Error creating new event receiver. Error:%s", err)
 	}
@@ -300,7 +314,6 @@ func TestEventReceiver_WrongRequest(t *testing.T) {
 
 func TestEventReceiver_UnknownHost(t *testing.T) {
 	host := "http://test-channel.test-namespace.svc." + network.GetClusterDomainName() + "/"
-	reporter := NewStatsReporter("testcontainer", "testpod")
 
 	f := func(_ context.Context, _ ChannelReference, _ event.Event, _ nethttp.Header) error {
 		return errors.New("test induced receiver function error")
@@ -308,7 +321,6 @@ func TestEventReceiver_UnknownHost(t *testing.T) {
 	r, err := NewEventReceiver(
 		f,
 		zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())),
-		reporter,
 		ResolveChannelFromHostHeader(func(s string) (reference ChannelReference, err error) {
 			return ChannelReference{}, UnknownHostError(s)
 		}))

@@ -25,6 +25,23 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
+func WithLabeler(ctx context.Context) context.Context {
+	labeler, ok := otelhttp.LabelerFromContext(ctx)
+	if !ok {
+		ctx = otelhttp.ContextWithLabeler(ctx, labeler)
+	}
+
+	return ctx
+}
+
+func MessagingLabels(destination, operation string) []attribute.KeyValue {
+	return []attribute.KeyValue{
+		MessagingDestinationName.With(destination),
+		MessagingOperationName.With(operation),
+		MessagingSystem.With(KnativeMessagingSystem),
+	}
+}
+
 func WithMessagingLabels(ctx context.Context, destination, operation string) context.Context {
 	labeler, ok := otelhttp.LabelerFromContext(ctx)
 	if !ok {
@@ -32,15 +49,25 @@ func WithMessagingLabels(ctx context.Context, destination, operation string) con
 	}
 
 	labeler.Add(
-		MessagingDestinationName.With(destination),
-		MessagingOperationName.With(operation),
-		MessagingSystem.With(KnativeMessagingSystem),
+		MessagingLabels(destination, operation)...
 	)
 
 	return ctx
 }
 
-func WithEventLabels(ctx context.Context, event cloudevents.Event) context.Context {
+// WithMinimalEventLabels adds a minimal set of event labels, suitable for metrics (to keep cardinality lower)
+func WithMinimalEventLabels(ctx context.Context, event *cloudevents.Event) context.Context {
+	labeler, ok := otelhttp.LabelerFromContext(ctx)
+	if !ok {
+		ctx = otelhttp.ContextWithLabeler(ctx, labeler)
+	}
+
+	labeler.Add(CloudEventType.With(event.Type()))
+
+	return ctx
+}
+
+func WithEventLabels(ctx context.Context, event *cloudevents.Event) context.Context {
 	labeler, ok := otelhttp.LabelerFromContext(ctx)
 	if !ok {
 		ctx = otelhttp.ContextWithLabeler(ctx, labeler)
@@ -61,6 +88,20 @@ func WithEventLabels(ctx context.Context, event cloudevents.Event) context.Conte
 	}
 
 	labeler.Add(labels...)
+
+	return ctx
+}
+
+func WithChannelLabels(ctx context.Context, channel types.NamespacedName) context.Context {
+	labeler, ok := otelhttp.LabelerFromContext(ctx)
+	if !ok {
+		ctx = otelhttp.ContextWithLabeler(ctx, labeler)
+	}
+
+	labeler.Add(
+		ChannelName.With(channel.Name),
+		ChannelNamespace.With(channel.Namespace),
+	)
 
 	return ctx
 }

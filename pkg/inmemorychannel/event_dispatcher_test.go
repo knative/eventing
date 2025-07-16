@@ -32,17 +32,18 @@ import (
 	protocolhttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"github.com/cloudevents/sdk-go/v2/test"
 	"github.com/pkg/errors"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.uber.org/zap"
 	"k8s.io/client-go/rest"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/injection"
-
-	"knative.dev/pkg/tracing"
-	tracingconfig "knative.dev/pkg/tracing/config"
+	"knative.dev/pkg/observability/tracing"
 
 	"knative.dev/eventing/pkg/auth"
-	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/channel/fanout"
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
 	"knative.dev/eventing/pkg/eventingtls"
@@ -115,20 +116,23 @@ func TestDispatcher_dispatch(t *testing.T) {
 
 	logger, err := zap.NewDevelopment(zap.AddStacktrace(zap.WarnLevel))
 	oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
-	dispatcher := kncloudevents.NewDispatcher(eventingtls.NewDefaultClientConfig(), oidcTokenProvider)
-	reporter := channel.NewStatsReporter("testcontainer", "testpod")
+	reader := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(reader))
+
+
+	exporter := tracetest.NewInMemoryExporter()
+	tp := trace.NewTracerProvider(trace.WithSyncer(exporter))
+	otel.SetTextMapPropagator(tracing.DefaultTextMapPropagator())
+
+	dispatcher := kncloudevents.NewDispatcher(
+		eventingtls.NewDefaultClientConfig(), 
+		oidcTokenProvider,
+		kncloudevents.WithTraceProvider(tp),
+		kncloudevents.WithMeterProvider(mp),
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	// tracing publishing is configured to let the code pass in all "critical" branches
-	tracer, _ := tracing.SetupPublishingWithStaticConfig(logger.Sugar(), "localhost", &tracingconfig.Config{
-		Backend:        tracingconfig.Zipkin,
-		Debug:          true,
-		SampleRate:     1.0,
-		ZipkinEndpoint: "http://zipkin.zipkin.svc.cluster.local:9411/api/v2/spans",
-	})
-	defer tracer.Shutdown(context.Background())
 
 	port, err := freePort()
 	if err != nil {
@@ -241,7 +245,7 @@ func TestDispatcher_dispatch(t *testing.T) {
 		},
 	}
 
-	sh, err := multichannelfanout.NewEventHandlerWithConfig(context.TODO(), logger, config, reporter, dispatcher)
+	sh, err := multichannelfanout.NewEventHandlerWithConfig(context.TODO(), logger, config, dispatcher, mp, tp)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -270,7 +274,12 @@ func TestDispatcher_dispatch(t *testing.T) {
 	inMemoryDispatcher.WaitReady()
 
 	// Ok now everything should be ready to send the event
-	d := kncloudevents.NewDispatcher(eventingtls.NewDefaultClientConfig(), oidcTokenProvider)
+	d := kncloudevents.NewDispatcher(
+		eventingtls.NewDefaultClientConfig(), 
+		oidcTokenProvider,
+		kncloudevents.WithMeterProvider(mp),
+		kncloudevents.WithTraceProvider(tp),
+	)
 	dispatchInfo, err := d.SendEvent(context.TODO(), test.FullEvent(), *mustParseUrlToAddressable(t, channelAProxy.URL))
 	if err != nil {
 		t.Fatal(err)

@@ -54,6 +54,10 @@ func TriggerMessagingDestination(t types.NamespacedName) string {
 	return fmt.Sprintf("trigger:%s.%s", t.Name, t.Namespace)
 }
 
+func SubscriptionMessagingDestination(t types.NamespacedName) string {
+	return fmt.Sprintf("subscription:%s.%s", t.Name, t.Namespace)
+}
+
 func TriggerMessagingDestinationAttribute(t types.NamespacedName) trace.Attribute {
 	return trace.StringAttribute(MessagingDestinationAttributeName, TriggerMessagingDestination(t))
 }

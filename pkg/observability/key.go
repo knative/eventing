@@ -35,6 +35,10 @@ var (
 	BrokerName      = attributekey.String("kn.broker.name")
 	BrokerNamespace = attributekey.String("kn.broker.namespace")
 
+	// attributes relating to the channel
+	ChannelName      = attributekey.String("kn.channel.name")
+	ChannelNamespace = attributekey.String("kn.channel.namespace")
+
 	// attributes relating to the cloudevent (not including the ID for cardinality reasons)
 	CloudEventType            = attributekey.String(ceo11y.TypeAttr)
 	CloudEventSource          = attributekey.String(ceo11y.SourceAttr)

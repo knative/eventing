@@ -126,7 +126,7 @@ func TestWithEventLabels(t *testing.T) {
 				ctx = otelhttp.ContextWithLabeler(ctx, labeler)
 			}
 
-			ctx = WithEventLabels(ctx, tCase.event)
+			ctx = WithEventLabels(ctx, &tCase.event)
 
 			labeler, ok := otelhttp.LabelerFromContext(ctx)
 			assert.True(t, ok, "labeler should be set on the context")

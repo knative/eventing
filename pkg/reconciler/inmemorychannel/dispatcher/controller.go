@@ -26,14 +26,13 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/cache"
 
-	"github.com/google/uuid"
 	"github.com/kelseyhightower/envconfig"
-	"knative.dev/pkg/kmeta"
 
 	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
 	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/kncloudevents"
+	"knative.dev/eventing/pkg/observability/otel"
 
 	"knative.dev/pkg/logging"
 
@@ -42,23 +41,21 @@ import (
 	"knative.dev/pkg/configmap"
 	configmapinformer "knative.dev/pkg/configmap/informer"
 	"knative.dev/pkg/controller"
+	k8sruntime "knative.dev/pkg/observability/runtime/k8s"
 	pkgreconciler "knative.dev/pkg/reconciler"
-
-	"knative.dev/pkg/tracing"
-	tracingconfig "knative.dev/pkg/tracing/config"
 
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	secretinformer "knative.dev/pkg/injection/clients/namespacedkube/informers/core/v1/secret"
 
 	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/feature"
-	"knative.dev/eventing/pkg/channel"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	eventpolicyinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventpolicy"
 	eventtypeinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta3/eventtype"
 	inmemorychannelinformer "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/inmemorychannel"
 	inmemorychannelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/inmemorychannel"
 	"knative.dev/eventing/pkg/inmemorychannel"
+	o11yconfigmap "knative.dev/eventing/pkg/observability/configmap"
 )
 
 const (
@@ -88,14 +85,15 @@ func NewController(
 ) *controller.Impl {
 	logger := logging.FromContext(ctx)
 
+	pprof := k8sruntime.NewProfilingServer(logger.Named("pprof"))
+
+	mp, tp := otel.SetupObservabilityOrDie(ctx, "inmemorychannel.dispatcher", logger, pprof)
+
 	trustBundleConfigMapLister := filteredconfigmapinformer.Get(ctx, eventingtls.TrustBundleLabelSelector).Lister().ConfigMaps(system.Namespace())
 
-	// Setup trace publishing.
 	iw := cmw.(*configmapinformer.InformedWatcher)
-	tracer, err := tracing.SetupPublishingWithDynamicConfig(logger, iw, "imc-dispatcher", tracingconfig.ConfigName)
-	if err != nil {
-		logger.Panicw("Error setting up trace publishing", zap.Error(err))
-	}
+	iw.Watch(o11yconfigmap.Name(), pprof.UpdateFromConfigMap)
+
 	var env envConfig
 	if err := envconfig.Process("", &env); err != nil {
 		logger.Panicw("Failed to process env var", zap.Error(err))
@@ -112,8 +110,6 @@ func NewController(
 		MaxIdleConns:        env.MaxIdleConns,
 		MaxIdleConnsPerHost: env.MaxIdleConnsPerHost,
 	})
-
-	reporter := channel.NewStatsReporter(env.ContainerName, kmeta.ChildName(env.PodName, uuid.New().String()))
 
 	sh := multichannelfanout.NewEventHandler(ctx, logger.Desugar())
 
@@ -141,14 +137,20 @@ func NewController(
 	featureStore.WatchConfigs(cmw)
 	r := &Reconciler{
 		multiChannelEventHandler: sh,
-		reporter:                 reporter,
 		messagingClientSet:       eventingclient.Get(ctx).MessagingV1(),
 		eventingClient:           eventingclient.Get(ctx).EventingV1beta3(),
 		eventTypeLister:          eventtypeinformer.Get(ctx).Lister(),
-		eventDispatcher:          kncloudevents.NewDispatcher(clientConfig, oidcTokenProvider),
-		authVerifier:             auth.NewVerifier(ctx, eventpolicyinformer.Get(ctx).Lister(), trustBundleConfigMapLister, cmw),
-		clientConfig:             clientConfig,
-		inMemoryChannelLister:    inmemorychannelInformer.Lister(),
+		eventDispatcher: kncloudevents.NewDispatcher(
+			clientConfig,
+			oidcTokenProvider,
+			kncloudevents.WithMeterProvider(mp),
+			kncloudevents.WithTraceProvider(tp),
+		),
+		authVerifier:          auth.NewVerifier(ctx, eventpolicyinformer.Get(ctx).Lister(), trustBundleConfigMapLister, cmw),
+		clientConfig:          clientConfig,
+		inMemoryChannelLister: inmemorychannelInformer.Lister(),
+		meterProvider:         mp,
+		traceProvider:         tp,
 	}
 
 	impl := inmemorychannelreconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
@@ -219,7 +221,17 @@ func NewController(
 		if err != nil {
 			logging.FromContext(ctx).Errorw("Failed stopping inMemoryDispatcher.", zap.Error(err))
 		}
-		tracer.Shutdown(context.Background())
+
+		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		defer cancel()
+
+		if err := mp.Shutdown(ctx); err != nil {
+			logger.Errorw("Error flushing metrics", zap.Error(err))
+		}
+
+		if err := tp.Shutdown(ctx); err != nil {
+			logger.Errorw("Error flushing traces", zap.Error(err))
+		}
 	}()
 
 	return impl

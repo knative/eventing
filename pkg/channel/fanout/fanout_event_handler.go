@@ -29,7 +29,10 @@ import (
 	"time"
 
 	"github.com/cloudevents/sdk-go/v2/event"
-	"go.opencensus.io/trace"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -40,10 +43,17 @@ import (
 	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/eventtype"
 	"knative.dev/eventing/pkg/kncloudevents"
+	"knative.dev/eventing/pkg/observability"
+	"knative.dev/eventing/pkg/tracing"
 )
 
 const (
 	defaultTimeout = 15 * time.Minute
+	ScopeName      = "knative.dev/eventing/pkg/channel/fanout"
+)
+
+var (
+	latencyBounds = []float64{0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10}
 )
 
 type Subscription struct {
@@ -95,30 +105,30 @@ type FanoutEventHandler struct {
 	// rather than a member variable.
 	timeout time.Duration
 
-	reporter         channel.StatsReporter
 	logger           *zap.Logger
 	eventTypeHandler *eventtype.EventTypeAutoHandler
 	channelRef       *duckv1.KReference
 	channelUID       *types.UID
 	hasHttpSubs      bool
 	hasHttpsSubs     bool
+	dispatchDuration metric.Float64Histogram
 }
 
 // NewFanoutEventHandler creates a new fanout.EventHandler.
 func NewFanoutEventHandler(
 	logger *zap.Logger,
 	config Config,
-	reporter channel.StatsReporter,
 	eventTypeHandler *eventtype.EventTypeAutoHandler,
 	channelRef *duckv1.KReference,
 	channelUID *types.UID,
 	eventDispatcher *kncloudevents.Dispatcher,
+	meterProvider metric.MeterProvider,
+	traceProvider trace.TracerProvider,
 	receiverOpts ...channel.EventReceiverOptions,
 ) (*FanoutEventHandler, error) {
 	handler := &FanoutEventHandler{
 		logger:           logger,
 		timeout:          defaultTimeout,
-		reporter:         reporter,
 		asyncHandler:     config.AsyncHandler,
 		eventTypeHandler: eventTypeHandler,
 		channelRef:       channelRef,
@@ -126,15 +136,42 @@ func NewFanoutEventHandler(
 		eventDispatcher:  eventDispatcher,
 	}
 
+	if meterProvider == nil {
+		meterProvider = otel.GetMeterProvider()
+	}
+	if traceProvider == nil {
+		traceProvider = otel.GetTracerProvider()
+	}
+
 	handler.SetSubscriptions(context.Background(), config.Subscriptions)
+
+	receiverOpts = append(
+		// set these first in case they were set to something else in the passed through receiverOpts
+		[]channel.EventReceiverOptions{
+			channel.MeterProvider(meterProvider),
+			channel.TraceProvider(traceProvider),
+		},
+		receiverOpts...,
+	)
 
 	// The receiver function needs to point back at the handler itself, so set it up after
 	// initialization.
-	receiver, err := channel.NewEventReceiver(createEventReceiverFunction(handler), logger, reporter, receiverOpts...)
+	receiver, err := channel.NewEventReceiver(createEventReceiverFunction(handler), logger, receiverOpts...)
 	if err != nil {
 		return nil, err
 	}
 	handler.receiver = receiver
+
+	meter := meterProvider.Meter(ScopeName)
+	handler.dispatchDuration, err = meter.Float64Histogram(
+		"kn.eventing.dispatch.duration",
+		metric.WithDescription("The duration to dispatch the event"),
+		metric.WithUnit("s"),
+		metric.WithExplicitBucketBoundaries(latencyBounds...),
+	)
+	if err != nil {
+		return nil, err
+	}
 
 	return handler, nil
 }
@@ -233,11 +270,11 @@ func createEventReceiverFunction(f *FanoutEventHandler) func(context.Context, ch
 				return nil
 			}
 
-			parentSpan := trace.FromContext(ctx)
+			parentSpan := trace.SpanFromContext(ctx)
 
-			go func(e event.Event, h nethttp.Header, s *trace.Span) {
+			go func(e event.Event, h nethttp.Header, s trace.Span) {
 				// Run async dispatch with background context.
-				ctx = trace.NewContext(context.Background(), s)
+				ctx = trace.ContextWithSpan(context.Background(), s)
 				// Any returned error is already logged in f.dispatch().
 				_ = f.dispatch(ctx, subs, e, h)
 
@@ -266,24 +303,6 @@ func (f *FanoutEventHandler) ServeHTTP(response nethttp.ResponseWriter, request 
 	f.receiver.ServeHTTP(response, request)
 }
 
-// ParseDispatchResultAndReportMetrics processes the dispatch result and records the related channel metrics with the appropriate context
-func ParseDispatchResultAndReportMetrics(result DispatchResult, reporter channel.StatsReporter, reportArgs channel.ReportArgs) error {
-	if result.info != nil && result.info.Duration > kncloudevents.NoDuration {
-		if result.info.ResponseCode > kncloudevents.NoResponse {
-			_ = reporter.ReportEventDispatchTime(&reportArgs, result.info.ResponseCode, result.info.Duration)
-		} else {
-			_ = reporter.ReportEventDispatchTime(&reportArgs, nethttp.StatusInternalServerError, result.info.Duration)
-		}
-	}
-	err := result.err
-	if err != nil {
-		channel.ReportEventCountMetricsForDispatchError(err, reporter, &reportArgs)
-	} else if result.info != nil {
-		_ = reporter.ReportEventCount(&reportArgs, result.info.ResponseCode)
-	}
-	return err
-}
-
 // dispatch takes the event, fans it out to each subscription in subs. If all the fanned out
 // events return successfully, then return nil. Else, return an error.
 func (f *FanoutEventHandler) dispatch(ctx context.Context, subs []Subscription, event event.Event, additionalHeaders nethttp.Header) DispatchResult {
@@ -297,12 +316,16 @@ func (f *FanoutEventHandler) dispatch(ctx context.Context, subs []Subscription, 
 			r := DispatchResult{err: err, info: dispatchedResultPerSub}
 			results <- r
 
-			args := channel.ReportArgs{
-				Ns:          s.Namespace,
-				EventType:   event.Type(),
-				EventScheme: r.info.Scheme,
-			}
-			_ = ParseDispatchResultAndReportMetrics(r, f.reporter, args)
+			labeler, _ := otelhttp.LabelerFromContext(ctx)
+			labels := append(
+				observability.MessagingLabels(
+					tracing.SubscriptionMessagingDestination(types.NamespacedName{Name: s.Name, Namespace: s.Namespace}),
+					"send",
+				),
+				labeler.Get()...,
+			)
+			f.dispatchDuration.Record(ctx, dispatchedResultPerSub.Duration.Seconds(), metric.WithAttributes(labels...))
+
 		}(sub)
 	}
 
