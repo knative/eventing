@@ -45,6 +45,7 @@ func MakeDeployment(source *v1.ContainerSource) *appsv1.Deployment {
 				*kmeta.NewControllerRef(source),
 			},
 			Labels: template.Labels,
+			Annotations: template.Annotations,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{
