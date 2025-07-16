@@ -25,7 +25,10 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel/metric"
 	configmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap/filtered"
 	filteredFactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
 
@@ -46,10 +49,9 @@ import (
 	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
+	k8sruntime "knative.dev/pkg/observability/runtime/k8s"
 	"knative.dev/pkg/ptr"
 	"knative.dev/pkg/system"
-	"knative.dev/pkg/tracing"
-	tracingconfig "knative.dev/pkg/tracing/config"
 
 	"knative.dev/pkg/signals"
 
@@ -63,10 +65,20 @@ import (
 	sinkslister "knative.dev/eventing/pkg/client/listers/sinks/v1alpha1"
 	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/kncloudevents"
+	"knative.dev/eventing/pkg/observability"
+	o11yconfigmap "knative.dev/eventing/pkg/observability/configmap"
+	"knative.dev/eventing/pkg/observability/otel"
 	"knative.dev/eventing/pkg/utils"
 )
 
-const component = "job_sink"
+const (
+	component = "job_sink"
+	ScopeName = "knative.dev/cmd/jobsink"
+)
+
+var (
+	latencyBounds = []float64{0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10}
+)
 
 func main() {
 
@@ -89,26 +101,29 @@ func main() {
 	logger := sl.Desugar()
 	defer flush(sl)
 
+	pprof := k8sruntime.NewProfilingServer(sl.Named("pprof"))
+
+	mp, tp := otel.SetupObservabilityOrDie(ctx, "jobsink", sl, pprof)
+
+	defer func() {
+		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		defer cancel()
+
+		if err := mp.Shutdown(ctx); err != nil {
+			sl.Errorw("Error flushing metrics", zap.Error(err))
+		}
+
+		if err := tp.Shutdown(ctx); err != nil {
+			sl.Errorw("Error flushing traces", zap.Error(err))
+		}
+	}()
+
 	// Watch the logging config map and dynamically update logging levels.
 	configMapWatcher := configmap.NewInformedWatcher(kubeclient.Get(ctx), system.Namespace())
 	// Watch the observability config map and dynamically update metrics exporter.
-	updateFunc, err := metrics.UpdateExporterFromConfigMapWithOpts(ctx, metrics.ExporterOptions{
-		Component:      component,
-		PrometheusPort: 9092,
-	}, sl)
-	if err != nil {
-		logger.Fatal("Failed to create metrics exporter update function", zap.Error(err))
-	}
-	configMapWatcher.Watch(metrics.ConfigMapName(), updateFunc)
+	configMapWatcher.Watch(o11yconfigmap.Name(), pprof.UpdateFromConfigMap)
 	// Watch the observability config map and dynamically update request logs.
 	configMapWatcher.Watch(logging.ConfigMapName(), logging.UpdateLevelFromConfigMap(sl, atomicLevel, component))
-
-	bin := fmt.Sprintf("%s.%s", "job-sink", system.Namespace())
-
-	tracer, err := tracing.SetupPublishingWithDynamicConfig(sl, configMapWatcher, bin, tracingconfig.ConfigName)
-	if err != nil {
-		logger.Fatal("Error setting up trace publishing", zap.Error(err))
-	}
 
 	logger.Info("Starting the JobSink Ingress")
 
@@ -130,6 +145,20 @@ func main() {
 		authVerifier: auth.NewVerifier(ctx, eventpolicyinformer.Get(ctx).Lister(), trustBundleConfigMapLister, configMapWatcher),
 	}
 
+	meter := mp.Meter(ScopeName)
+
+	h.dispatchDuration, err = meter.Float64Histogram(
+		"kn.eventing.dispatch.duration",
+		metric.WithDescription("The duration to dispatch the event"),
+		metric.WithUnit("s"),
+		metric.WithExplicitBucketBoundaries(latencyBounds...),
+	)
+	if err != nil {
+		logger.Fatal("failed to create dispatch metric", zap.Error(err))
+	}
+
+	handler := otel.NewHandler(h, "receive", mp, tp)
+
 	tlsConfig, err := getServerTLSConfig(ctx)
 	if err != nil {
 		log.Fatal("Failed to get TLS config", err)
@@ -139,11 +168,11 @@ func main() {
 		kncloudevents.NewHTTPEventReceiver(8080),
 		kncloudevents.NewHTTPEventReceiver(8443,
 			kncloudevents.WithTLSConfig(tlsConfig)),
-		h,
+		handler,
 		configMapWatcher,
 	)
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal("failed to start eventingtls server", zap.Error(err))
 	}
 
 	// configMapWatcher does not block, so start it first.
@@ -163,20 +192,28 @@ func main() {
 	if err = sm.StartServers(ctx); err != nil {
 		logger.Fatal("StartServers() returned an error", zap.Error(err))
 	}
-	tracer.Shutdown(context.Background())
 	logger.Info("Exiting...")
 }
 
 type Handler struct {
-	k8s          kubernetes.Interface
-	lister       sinkslister.JobSinkLister
-	withContext  func(ctx context.Context) context.Context
-	authVerifier *auth.Verifier
+	k8s              kubernetes.Interface
+	lister           sinkslister.JobSinkLister
+	withContext      func(ctx context.Context) context.Context
+	authVerifier     *auth.Verifier
+	dispatchDuration metric.Float64Histogram
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx := h.withContext(r.Context())
 	logger := logging.FromContext(ctx).Desugar()
+	start := time.Now()
+
+	ctx = observability.WithRequestLabels(ctx, r)
+
+	defer func() {
+		labeler, _ := otelhttp.LabelerFromContext(ctx)
+		h.dispatchDuration.Record(ctx, time.Since(start).Seconds(), metric.WithAttributes(labeler.Get()...))
+	}()
 
 	if r.Method == http.MethodGet {
 		h.handleGet(ctx, w, r)
@@ -201,12 +238,16 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Name:      parts[2],
 	}
 
+	ctx = observability.WithSinkLabels(ctx, ref, "JobSink")
+
 	js, err := h.lister.JobSinks(ref.Namespace).Get(ref.Name)
 	if err != nil {
 		logger.Warn("Failed to retrieve jobsink", zap.String("ref", ref.String()), zap.Error(err))
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+
+	ctx = observability.WithLowCardinalityMessagingLabels(ctx, fmt.Sprintf("job:%s-{jobIdentifierHash}.%s", js.Name, js.Namespace), "send")
 
 	logger.Debug("Handling POST request", zap.String("URI", r.RequestURI))
 
@@ -231,6 +272,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+
+	ctx = observability.WithMinimalEventLabels(ctx, event)
 
 	jobName := toJobName(ref.Name, event.Source(), event.ID())
 	logger.Debug("Getting job for event", zap.String("URI", r.RequestURI), zap.String("jobName", jobName))
