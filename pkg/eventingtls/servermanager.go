@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+
 	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/logging"
@@ -42,7 +44,7 @@ type ServerManager struct {
 }
 
 type Receiver interface {
-	StartListen(context.Context, http.Handler) error
+	StartListen(context.Context, http.Handler, ...otelhttp.Option) error
 }
 
 func NewServerManager(ctx context.Context, httpReceiver, httpsReceiver Receiver, handler http.Handler, cmw configmap.Watcher) (*ServerManager, error) {

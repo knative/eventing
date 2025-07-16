@@ -24,10 +24,11 @@ import (
 	"sync"
 	"time"
 
-	"go.opencensus.io/plugin/ochttp"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/trace"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/network"
-	"knative.dev/pkg/tracing/propagation/tracecontextb3"
 
 	"knative.dev/eventing/pkg/eventingtls"
 )
@@ -61,7 +62,7 @@ func init() {
 	go cleanupClientsMap(ctx)
 }
 
-func getClientForAddressable(cfg eventingtls.ClientConfig, addressable duckv1.Addressable) (*nethttp.Client, error) {
+func getClientForAddressable(cfg eventingtls.ClientConfig, addressable duckv1.Addressable, mp metric.MeterProvider, tp trace.TracerProvider) (*nethttp.Client, error) {
 	clients.clientsMu.Lock()
 	defer clients.clientsMu.Unlock()
 
@@ -69,7 +70,7 @@ func getClientForAddressable(cfg eventingtls.ClientConfig, addressable duckv1.Ad
 
 	client, ok := clients.clients[clientKey]
 	if !ok {
-		newClient, err := createNewClient(cfg, addressable)
+		newClient, err := createNewClient(cfg, addressable, mp, tp)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create new client for addressable: %w", err)
 		}
@@ -83,7 +84,7 @@ func getClientForAddressable(cfg eventingtls.ClientConfig, addressable duckv1.Ad
 }
 
 //nolint:unparam  // error is always nil
-func createNewClient(cfg eventingtls.ClientConfig, addressable duckv1.Addressable) (*nethttp.Client, error) {
+func createNewClient(cfg eventingtls.ClientConfig, addressable duckv1.Addressable, mp metric.MeterProvider, tp trace.TracerProvider) (*nethttp.Client, error) {
 	var base = nethttp.DefaultTransport.(*nethttp.Transport).Clone()
 
 	if eventingtls.IsHttpsSink(addressable.URL.String()) {
@@ -104,22 +105,30 @@ func createNewClient(cfg eventingtls.ClientConfig, addressable duckv1.Addressabl
 	clients.connectionArgs.configureTransport(base)
 	client := &nethttp.Client{
 		// Add output tracing.
-		Transport: &ochttp.Transport{
-			Base:        base,
-			Propagation: tracecontextb3.TraceContextEgress,
-		},
+		Transport: otelhttp.NewTransport(
+			base,
+			otelhttp.WithTracerProvider(tp),
+			otelhttp.WithMeterProvider(mp),
+			otelhttp.WithSpanNameFormatter(func(operation string, r *nethttp.Request) string {
+				if r.URL.Path == "" {
+					return r.Method + " /"
+				}
+
+				return fmt.Sprintf("%s %s", r.Method, r.URL.Path)
+			}),
+		),
 	}
 
 	return client, nil
 }
 
-func AddOrUpdateAddressableHandler(cfg eventingtls.ClientConfig, addressable duckv1.Addressable) {
+func AddOrUpdateAddressableHandler(cfg eventingtls.ClientConfig, addressable duckv1.Addressable, mp metric.MeterProvider, tp trace.TracerProvider) {
 	clients.clientsMu.Lock()
 	defer clients.clientsMu.Unlock()
 
 	clientKey := addressable.URL.String()
 
-	client, err := createNewClient(cfg, addressable)
+	client, err := createNewClient(cfg, addressable, mp, tp)
 	if err != nil {
 		fmt.Printf("failed to create new client: %v", err)
 		return

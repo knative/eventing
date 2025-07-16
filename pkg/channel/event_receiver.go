@@ -23,20 +23,29 @@ import (
 	nethttp "net/http"
 	"time"
 
-	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
-
-	"knative.dev/eventing/pkg/apis/feature"
-
-	"knative.dev/eventing/pkg/auth"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/cloudevents/sdk-go/v2/event"
 	"github.com/cloudevents/sdk-go/v2/protocol/http"
+
 	"go.uber.org/zap"
+	"k8s.io/apimachinery/pkg/types"
 
 	"knative.dev/pkg/network"
 
+	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	"knative.dev/eventing/pkg/apis/feature"
+	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/kncloudevents"
+	"knative.dev/eventing/pkg/observability"
 	"knative.dev/eventing/pkg/utils"
+)
+
+const (
+	ScopeName = "knative.dev/eventing/pkg/channel"
 )
 
 // UnknownChannelError represents the error when an event is received by a channel dispatcher for a
@@ -70,11 +79,12 @@ type EventReceiver struct {
 	logger               *zap.Logger
 	hostToChannelFunc    ResolveChannelFromHostFunc
 	pathToChannelFunc    ResolveChannelFromPathFunc
-	reporter             StatsReporter
 	tokenVerifier        *auth.Verifier
 	audience             string
 	getPoliciesForFunc   GetPoliciesForFunc
 	withContext          func(context.Context) context.Context
+	meterProvider        metric.MeterProvider
+	traceProvider        trace.TracerProvider
 }
 
 // EventReceiverFunc is the function to be called for handling the event.
@@ -135,22 +145,43 @@ func ReceiverWithContextFunc(fn func(context.Context) context.Context) EventRece
 	}
 }
 
+func MeterProvider(meterProvider metric.MeterProvider) EventReceiverOptions {
+	return func(r *EventReceiver) error {
+		r.meterProvider = meterProvider
+		return nil
+	}
+}
+
+func TraceProvider(traceProvider trace.TracerProvider) EventReceiverOptions {
+	return func(r *EventReceiver) error {
+		r.traceProvider = traceProvider
+		return nil
+	}
+}
+
 // NewEventReceiver creates an event receiver passing new events to the
 // receiverFunc.
-func NewEventReceiver(receiverFunc EventReceiverFunc, logger *zap.Logger, reporter StatsReporter, opts ...EventReceiverOptions) (*EventReceiver, error) {
+func NewEventReceiver(receiverFunc EventReceiverFunc, logger *zap.Logger, opts ...EventReceiverOptions) (*EventReceiver, error) {
 	bindingsReceiver := kncloudevents.NewHTTPEventReceiver(8080)
 	receiver := &EventReceiver{
 		httpBindingsReceiver: bindingsReceiver,
 		receiverFunc:         receiverFunc,
 		hostToChannelFunc:    ResolveChannelFromHostFunc(ParseChannelFromHost),
 		logger:               logger,
-		reporter:             reporter,
 	}
 	for _, opt := range opts {
 		if err := opt(receiver); err != nil {
 			return nil, err
 		}
 	}
+
+	if receiver.traceProvider == nil {
+		receiver.traceProvider = otel.GetTracerProvider()
+	}
+	if receiver.meterProvider == nil {
+		receiver.meterProvider = otel.GetMeterProvider()
+	}
+
 	return receiver, nil
 }
 
@@ -164,8 +195,16 @@ func (r *EventReceiver) Start(ctx context.Context) error {
 	defer cancel()
 
 	errCh := make(chan error, 1)
+	otelOpts := []otelhttp.Option{}
+	if r.meterProvider != nil {
+		otelOpts = append(otelOpts, otelhttp.WithMeterProvider(r.meterProvider))
+	}
+	if r.traceProvider != nil {
+		otelOpts = append(otelOpts, otelhttp.WithTracerProvider(r.traceProvider))
+	}
+
 	go func() {
-		errCh <- r.httpBindingsReceiver.StartListen(ctx, r)
+		errCh <- r.httpBindingsReceiver.StartListen(ctx, r, otelOpts...)
 	}()
 
 	// Stop either if the receiver stops (sending to errCh) or if the context Done channel is closed.
@@ -211,7 +250,6 @@ func (r *EventReceiver) ServeHTTP(response nethttp.ResponseWriter, request *neth
 	//   400 - the request was malformed
 	//   404 - the request was for an unknown channel
 	//   500 - an error occurred processing the request
-	args := ReportArgs{}
 	var channel ChannelReference
 	var err error
 
@@ -237,26 +275,21 @@ func (r *EventReceiver) ServeHTTP(response nethttp.ResponseWriter, request *neth
 		}
 
 		r.logger.Info("Could not extract channel", zap.Error(err))
-		ReportEventCountMetricsForDispatchError(err, r.reporter, &args)
 		return
 	}
 	r.logger.Debug("Request mapped to channel", zap.String("channel", channel.String()))
 
-	args.Ns = channel.Namespace
-
-	if request.TLS != nil {
-		args.EventScheme = "https"
-	} else {
-		args.EventScheme = "http"
-	}
+	ctx = observability.WithChannelLabels(ctx, types.NamespacedName{Name: channel.Name, Namespace: channel.Namespace})
+	ctx = observability.WithRequestLabels(ctx, request)
 
 	event, err := http.NewEventFromHTTPRequest(request)
 	if err != nil {
 		r.logger.Warn("failed to extract event from request", zap.Error(err))
 		response.WriteHeader(nethttp.StatusBadRequest)
-		_ = r.reporter.ReportEventCount(&args, nethttp.StatusBadRequest)
 		return
 	}
+
+	ctx = observability.WithMinimalEventLabels(ctx, event)
 
 	// run validation for the extracted event
 	if err := event.Validate(); err != nil {
@@ -302,17 +335,6 @@ func (r *EventReceiver) ServeHTTP(response nethttp.ResponseWriter, request *neth
 		return
 	}
 	response.WriteHeader(nethttp.StatusAccepted)
-}
-
-func ReportEventCountMetricsForDispatchError(err error, reporter StatsReporter, args *ReportArgs) {
-	switch err.(type) {
-	case *UnknownChannelError:
-		_ = reporter.ReportEventCount(args, nethttp.StatusNotFound)
-	case BadRequestError:
-		_ = reporter.ReportEventCount(args, nethttp.StatusBadRequest)
-	default:
-		_ = reporter.ReportEventCount(args, nethttp.StatusInternalServerError)
-	}
 }
 
 var _ nethttp.Handler = (*EventReceiver)(nil)

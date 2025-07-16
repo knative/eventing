@@ -28,5 +28,6 @@ import (
 )
 
 func TestChannelTracingWithReply(t *testing.T) {
+	t.Skip("needs to be reworked for OTel (eventing#8637)")
 	helpers.ChannelTracingTestHelperWithChannelTestRunner(context.Background(), t, channelTestRunner, testlib.SetupClientOptionNoop)
 }

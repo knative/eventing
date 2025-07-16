@@ -25,10 +25,15 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"time"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	filteredFactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
 	"knative.dev/pkg/configmap"
+	"knative.dev/pkg/observability/metrics/metricstest"
 	"knative.dev/pkg/system"
 
 	"knative.dev/eventing/pkg/eventingtls"
@@ -109,7 +114,6 @@ func TestReceiver(t *testing.T) {
 		expectedDispatch            bool
 		expectedStatus              int
 		expectedHeaders             http.Header
-		expectedEventCount          bool
 		expectedEventDispatchTime   bool
 		expectedEventProcessingTime bool
 		expectedResponseHeaders     http.Header
@@ -138,16 +142,15 @@ func TestReceiver(t *testing.T) {
 			triggers: []*eventingv1.Trigger{
 				makeTrigger(withoutSubscriberURI()),
 			},
-			expectedStatus:     http.StatusNotFound,
-			expectedEventCount: true,
+			expectedStatus: http.StatusNotFound,
 		},
 		"Trigger without a Filter": {
 			triggers: []*eventingv1.Trigger{
 				makeTrigger(),
 			},
-			expectedDispatch:          true,
-			expectedEventCount:        true,
-			expectedEventDispatchTime: true,
+			expectedDispatch:            true,
+			expectedEventDispatchTime:   true,
+			expectedEventProcessingTime: true,
 		},
 		"No TTL": {
 			triggers: []*eventingv1.Trigger{
@@ -163,7 +166,6 @@ func TestReceiver(t *testing.T) {
 					Attributes: map[string]string{"type": "some-other-type"},
 				})),
 			},
-			expectedEventCount: false,
 		},
 		"Wrong source": {
 			triggers: []*eventingv1.Trigger{
@@ -171,7 +173,6 @@ func TestReceiver(t *testing.T) {
 					Attributes: map[string]string{"source": "some-other-source"},
 				})),
 			},
-			expectedEventCount: false,
 		},
 		"Wrong extension": {
 			triggers: []*eventingv1.Trigger{
@@ -179,17 +180,16 @@ func TestReceiver(t *testing.T) {
 					Attributes: map[string]string{extensionName: "some-other-extension"},
 				})),
 			},
-			expectedEventCount: false,
 		},
 		"Dispatch failed": {
 			triggers: []*eventingv1.Trigger{
 				makeTrigger(withAttributesFilter(&eventingv1.TriggerFilter{})),
 			},
-			requestFails:              true,
-			expectedStatus:            http.StatusBadRequest,
-			expectedDispatch:          true,
-			expectedEventCount:        true,
-			expectedEventDispatchTime: true,
+			requestFails:                true,
+			expectedStatus:              http.StatusBadRequest,
+			expectedDispatch:            true,
+			expectedEventDispatchTime:   true,
+			expectedEventProcessingTime: true,
 		},
 		"GetTrigger fails": {
 			triggers: []*eventingv1.Trigger{
@@ -199,16 +199,15 @@ func TestReceiver(t *testing.T) {
 				),
 			},
 			expectedDispatch:          false,
-			expectedEventCount:        false,
 			expectedEventDispatchTime: false,
 		},
 		"Dispatch succeeded - Any": {
 			triggers: []*eventingv1.Trigger{
 				makeTrigger(withAttributesFilter(&eventingv1.TriggerFilter{})),
 			},
-			expectedDispatch:          true,
-			expectedEventCount:        true,
-			expectedEventDispatchTime: true,
+			expectedDispatch:            true,
+			expectedEventDispatchTime:   true,
+			expectedEventProcessingTime: true,
 		},
 		"Dispatch succeeded - Source with type": {
 			triggers: []*eventingv1.Trigger{
@@ -216,9 +215,9 @@ func TestReceiver(t *testing.T) {
 					Attributes: map[string]string{"type": eventType, "source": eventSource},
 				})),
 			},
-			expectedDispatch:          true,
-			expectedEventCount:        true,
-			expectedEventDispatchTime: true,
+			expectedDispatch:            true,
+			expectedEventDispatchTime:   true,
+			expectedEventProcessingTime: true,
 		},
 		"Dispatch succeeded - Source, type and extensions": {
 			triggers: []*eventingv1.Trigger{
@@ -226,10 +225,10 @@ func TestReceiver(t *testing.T) {
 					Attributes: map[string]string{"type": eventType, "source": eventSource, extensionName: extensionValue},
 				})),
 			},
-			event:                     makeEventWithExtension(extensionName, extensionValue),
-			expectedDispatch:          true,
-			expectedEventCount:        true,
-			expectedEventDispatchTime: true,
+			event:                       makeEventWithExtension(extensionName, extensionValue),
+			expectedDispatch:            true,
+			expectedEventDispatchTime:   true,
+			expectedEventProcessingTime: true,
 		},
 		"Dispatch succeeded - Any - Arrival extension": {
 			triggers: []*eventingv1.Trigger{
@@ -237,7 +236,6 @@ func TestReceiver(t *testing.T) {
 			},
 			event:                       makeEventWithExtension(broker.EventArrivalTime, "2019-08-26T23:38:17.834384404Z"),
 			expectedDispatch:            true,
-			expectedEventCount:          true,
 			expectedEventDispatchTime:   true,
 			expectedEventProcessingTime: true,
 		},
@@ -250,29 +248,28 @@ func TestReceiver(t *testing.T) {
 						extensionName: "some-other-extension-value"},
 				})),
 			},
-			event:              makeEventWithExtension(extensionName, extensionValue),
-			expectedEventCount: false,
+			event: makeEventWithExtension(extensionName, extensionValue),
 		},
 		"Returned Cloud Event": {
 			triggers: []*eventingv1.Trigger{
 				makeTrigger(withAttributesFilter(&eventingv1.TriggerFilter{})),
 			},
-			expectedDispatch:          true,
-			expectedEventCount:        true,
-			expectedEventDispatchTime: true,
-			expectedResponseEvent:     makeDifferentEvent(),
+			expectedDispatch:            true,
+			expectedEventDispatchTime:   true,
+			expectedEventProcessingTime: true,
+			expectedResponseEvent:       makeDifferentEvent(),
 		},
 		"Error From Trigger": {
 			triggers: []*eventingv1.Trigger{
 				makeTrigger(withAttributesFilter(&eventingv1.TriggerFilter{})),
 			},
-			event:                     makeEvent(),
-			requestFails:              true,
-			failureStatus:             http.StatusTooManyRequests,
-			expectedDispatch:          true,
-			expectedEventCount:        true,
-			expectedEventDispatchTime: true,
-			expectedStatus:            http.StatusTooManyRequests,
+			event:                       makeEvent(),
+			requestFails:                true,
+			failureStatus:               http.StatusTooManyRequests,
+			expectedDispatch:            true,
+			expectedEventDispatchTime:   true,
+			expectedEventProcessingTime: true,
+			expectedStatus:              http.StatusTooManyRequests,
 		},
 		"Returned Cloud Event with custom headers": {
 			triggers: []*eventingv1.Trigger{
@@ -308,10 +305,10 @@ func TestReceiver(t *testing.T) {
 				// Prefer: reply will be added for every request as defined in the spec.
 				"Prefer": []string{"reply"},
 			},
-			expectedDispatch:          true,
-			expectedEventCount:        true,
-			expectedEventDispatchTime: true,
-			expectedResponseEvent:     makeDifferentEvent(),
+			expectedDispatch:            true,
+			expectedEventDispatchTime:   true,
+			expectedEventProcessingTime: true,
+			expectedResponseEvent:       makeDifferentEvent(),
 		},
 		"Maintain `Prefer: reply` header when it is provided in the original request": {
 			triggers: []*eventingv1.Trigger{
@@ -333,10 +330,10 @@ func TestReceiver(t *testing.T) {
 				// Prefer: reply must be present, even if it is provided in the original request
 				"Prefer": []string{"reply"},
 			},
-			expectedDispatch:          true,
-			expectedEventCount:        true,
-			expectedEventDispatchTime: true,
-			expectedResponseEvent:     makeDifferentEvent(),
+			expectedDispatch:            true,
+			expectedEventDispatchTime:   true,
+			expectedEventProcessingTime: true,
+			expectedResponseEvent:       makeDifferentEvent(),
 		},
 		"Add `Prefer: reply` header when it isn't provided in the original request": {
 			triggers: []*eventingv1.Trigger{
@@ -354,83 +351,83 @@ func TestReceiver(t *testing.T) {
 				// Prefer: reply must be present, even if it is provided in the original request
 				"Prefer": []string{"reply"},
 			},
-			expectedDispatch:          true,
-			expectedEventCount:        true,
-			expectedEventDispatchTime: true,
-			expectedResponseEvent:     makeDifferentEvent(),
+			expectedDispatch:            true,
+			expectedEventDispatchTime:   true,
+			expectedEventProcessingTime: true,
+			expectedResponseEvent:       makeDifferentEvent(),
 		},
 		"Returned non empty non event expectedResponse": {
 			triggers: []*eventingv1.Trigger{
 				makeTrigger(withAttributesFilter(&eventingv1.TriggerFilter{})),
 			},
-			expectedDispatch:          true,
-			expectedEventCount:        true,
-			expectedEventDispatchTime: true,
-			expectedStatus:            http.StatusBadGateway,
-			expectedResponse:          makeNonEmptyResponse(),
+			expectedDispatch:            true,
+			expectedEventDispatchTime:   true,
+			expectedEventProcessingTime: true,
+			expectedStatus:              http.StatusBadGateway,
+			expectedResponse:            makeNonEmptyResponse(),
 		},
 		"Returned malformed Cloud Event": {
 			triggers: []*eventingv1.Trigger{
 				makeTrigger(withAttributesFilter(&eventingv1.TriggerFilter{})),
 			},
-			expectedDispatch:          true,
-			expectedEventCount:        true,
-			expectedEventDispatchTime: true,
-			expectedStatus:            http.StatusOK,
-			expectedResponse:          makeMalformedEventResponse(),
+			expectedDispatch:            true,
+			expectedEventDispatchTime:   true,
+			expectedEventProcessingTime: true,
+			expectedStatus:              http.StatusOK,
+			expectedResponse:            makeMalformedEventResponse(),
 		},
 		"Returned malformed structured Cloud Event": {
 			triggers: []*eventingv1.Trigger{
 				makeTrigger(withAttributesFilter(&eventingv1.TriggerFilter{})),
 			},
-			expectedDispatch:          true,
-			expectedEventCount:        true,
-			expectedEventDispatchTime: true,
-			expectedStatus:            http.StatusBadGateway,
-			expectedResponse:          makeMalformedStructuredEventResponse(),
+			expectedDispatch:            true,
+			expectedEventDispatchTime:   true,
+			expectedEventProcessingTime: true,
+			expectedStatus:              http.StatusBadGateway,
+			expectedResponse:            makeMalformedStructuredEventResponse(),
 		},
 		"Returned empty body 200": {
 			triggers: []*eventingv1.Trigger{
 				makeTrigger(withAttributesFilter(&eventingv1.TriggerFilter{})),
 			},
-			expectedDispatch:          true,
-			expectedEventCount:        true,
-			expectedEventDispatchTime: true,
-			expectedStatus:            http.StatusOK,
-			expectedResponse:          makeEmptyResponse(200),
+			expectedDispatch:            true,
+			expectedEventDispatchTime:   true,
+			expectedEventProcessingTime: true,
+			expectedStatus:              http.StatusOK,
+			expectedResponse:            makeEmptyResponse(200),
 		},
 		"Returned empty body 202": {
 			triggers: []*eventingv1.Trigger{
 				makeTrigger(withAttributesFilter(&eventingv1.TriggerFilter{})),
 			},
-			expectedDispatch:          true,
-			expectedEventCount:        true,
-			expectedEventDispatchTime: true,
-			expectedStatus:            http.StatusAccepted,
-			expectedResponse:          makeEmptyResponse(202),
+			expectedDispatch:            true,
+			expectedEventDispatchTime:   true,
+			expectedEventProcessingTime: true,
+			expectedStatus:              http.StatusAccepted,
+			expectedResponse:            makeEmptyResponse(202),
 		},
 		"Proxy allowed empty non event response headers": {
 			triggers: []*eventingv1.Trigger{
 				makeTrigger(withAttributesFilter(&eventingv1.TriggerFilter{})),
 			},
-			expectedDispatch:          true,
-			expectedEventCount:        true,
-			expectedEventDispatchTime: true,
-			expectedStatus:            http.StatusTooManyRequests,
-			expectedResponse:          makeEmptyResponse(http.StatusTooManyRequests),
-			additionalReplyHeaders:    http.Header{"Retry-After": []string{"10"}},
-			expectedResponseHeaders:   http.Header{"Retry-After": []string{"10"}},
+			expectedDispatch:            true,
+			expectedEventDispatchTime:   true,
+			expectedEventProcessingTime: true,
+			expectedStatus:              http.StatusTooManyRequests,
+			expectedResponse:            makeEmptyResponse(http.StatusTooManyRequests),
+			additionalReplyHeaders:      http.Header{"Retry-After": []string{"10"}},
+			expectedResponseHeaders:     http.Header{"Retry-After": []string{"10"}},
 		},
 		"Do not proxy disallowed response headers": {
 			triggers: []*eventingv1.Trigger{
 				makeTrigger(withAttributesFilter(&eventingv1.TriggerFilter{})),
 			},
-			expectedDispatch:          true,
-			expectedEventCount:        true,
-			expectedEventDispatchTime: true,
-			expectedResponseEvent:     makeDifferentEvent(),
-			additionalReplyHeaders:    http.Header{"Retry-After": []string{"10"}, "Test-Header": []string{"TestValue"}},
-			expectedResponseHeaders:   http.Header{"Retry-After": []string{"10"}},
+			expectedDispatch:            true,
+			expectedEventDispatchTime:   true,
+			expectedEventProcessingTime: true,
+			expectedResponseEvent:       makeDifferentEvent(),
+			additionalReplyHeaders:      http.Header{"Retry-After": []string{"10"}, "Test-Header": []string{"TestValue"}},
+			expectedResponseHeaders:     http.Header{"Retry-After": []string{"10"}},
 		},
 	}
 	for n, tc := range testCases {
@@ -452,6 +449,13 @@ func TestReceiver(t *testing.T) {
 			}
 			s := httptest.NewServer(&fh)
 			defer s.Close()
+
+			reader := metric.NewManualReader()
+			mp := metric.NewMeterProvider(metric.WithReader(reader))
+
+			exporter := tracetest.NewInMemoryExporter()
+			tp := trace.NewTracerProvider(trace.WithSyncer(exporter))
+			otel.SetTextMapPropagator(propagation.TraceContext{})
 
 			logger := zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller()))
 			oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
@@ -498,7 +502,6 @@ func TestReceiver(t *testing.T) {
 				brokerinformerfake.Get(ctx).Informer().GetStore().Add(b)
 			}
 
-			reporter := &mockReporter{}
 			r, err := NewHandler(
 				logger,
 				authVerifier,
@@ -506,11 +509,12 @@ func TestReceiver(t *testing.T) {
 				triggerinformerfake.Get(ctx),
 				brokerinformerfake.Get(ctx),
 				subscriptioninformerfake.Get(ctx),
-				reporter,
 				configmapinformer.Get(ctx).Lister().ConfigMaps("ns"),
 				func(ctx context.Context) context.Context {
 					return ctx
 				},
+				mp,
+				tp,
 			)
 			if err != nil {
 				t.Fatal("Unable to create receiver:", err)
@@ -551,15 +555,18 @@ func TestReceiver(t *testing.T) {
 			if tc.expectedDispatch != fh.requestReceived {
 				t.Errorf("Incorrect dispatch. Expected %v, Actual %v", tc.expectedDispatch, fh.requestReceived)
 			}
-			if tc.expectedEventCount != reporter.eventCountReported {
-				t.Errorf("Incorrect event count reported metric. Expected %v, Actual %v", tc.expectedEventCount, reporter.eventCountReported)
+
+			expectedMetricNames := []string{}
+			if tc.expectedEventDispatchTime {
+				expectedMetricNames = append(expectedMetricNames, "kn.eventing.dispatch.duration")
 			}
-			if tc.expectedEventDispatchTime != reporter.eventDispatchTimeReported {
-				t.Errorf("Incorrect event dispatch time reported metric. Expected %v, Actual %v", tc.expectedEventDispatchTime, reporter.eventDispatchTimeReported)
+			if tc.expectedEventProcessingTime {
+				expectedMetricNames = append(expectedMetricNames, "kn.eventing.process.duration")
 			}
-			if tc.expectedEventProcessingTime != reporter.eventProcessingTimeReported {
-				t.Errorf("Incorrect event processing time reported metric. Expected %v, Actual %v", tc.expectedEventProcessingTime, reporter.eventProcessingTimeReported)
+			if len(expectedMetricNames) > 0 {
+				metricstest.AssertMetrics(t, reader, metricstest.MetricsPresent(ScopeName, expectedMetricNames...))
 			}
+
 			if tc.expectedResponseEvent != nil {
 				if tc.expectedResponseEvent.SpecVersion() != event.CloudEventsVersionV1 {
 					t.Errorf("Incorrect spec version. Expected %v, Actual %v", tc.expectedResponseEvent.SpecVersion(), event.CloudEventsVersionV1)
@@ -607,8 +614,8 @@ func TestReceiver_WithSubscriptionsAPI(t *testing.T) {
 		triggers                  []*eventingv1.Trigger
 		event                     *cloudevents.Event
 		expectedDispatch          bool
-		expectedEventCount        bool
 		expectedEventDispatchTime bool
+		expectEventProcessTime    bool
 	}{
 		"Wrong source": {
 			triggers: []*eventingv1.Trigger{
@@ -616,7 +623,6 @@ func TestReceiver_WithSubscriptionsAPI(t *testing.T) {
 					Exact: map[string]string{"source": "some-other-source"},
 				})),
 			},
-			expectedEventCount: false,
 		},
 		"Wrong extension": {
 			triggers: []*eventingv1.Trigger{
@@ -624,7 +630,6 @@ func TestReceiver_WithSubscriptionsAPI(t *testing.T) {
 					Exact: map[string]string{extensionName: "some-other-extension"},
 				})),
 			},
-			expectedEventCount: false,
 		},
 		"Dispatch succeeded - Source with type": {
 			triggers: []*eventingv1.Trigger{
@@ -633,8 +638,8 @@ func TestReceiver_WithSubscriptionsAPI(t *testing.T) {
 				})),
 			},
 			expectedDispatch:          true,
-			expectedEventCount:        true,
 			expectedEventDispatchTime: true,
+			expectEventProcessTime:    true,
 		},
 		"Dispatch succeeded - SubscriptionsAPI filter overrides Attributes Filter": {
 			triggers: []*eventingv1.Trigger{
@@ -647,7 +652,7 @@ func TestReceiver_WithSubscriptionsAPI(t *testing.T) {
 					})),
 			},
 			expectedDispatch:          true,
-			expectedEventCount:        true,
+			expectEventProcessTime:    true,
 			expectedEventDispatchTime: true,
 		},
 		"Dispatch failed - empty SubscriptionsAPI filter does not override Attributes Filter": {
@@ -657,7 +662,6 @@ func TestReceiver_WithSubscriptionsAPI(t *testing.T) {
 						Attributes: map[string]string{"type": "some-other-type", "source": "some-other-source"},
 					})),
 			},
-			expectedEventCount: false,
 		},
 	}
 	for n, tc := range testCases {
@@ -672,6 +676,13 @@ func TestReceiver_WithSubscriptionsAPI(t *testing.T) {
 			defer s.Close()
 
 			filtersMap := subscriptionsapi.NewFiltersMap()
+
+			reader := metric.NewManualReader()
+			mp := metric.NewMeterProvider(metric.WithReader(reader))
+
+			exporter := tracetest.NewInMemoryExporter()
+			tp := trace.NewTracerProvider(trace.WithSyncer(exporter))
+			otel.SetTextMapPropagator(propagation.TraceContext{})
 
 			logger := zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller()))
 			oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
@@ -718,7 +729,6 @@ func TestReceiver_WithSubscriptionsAPI(t *testing.T) {
 				}
 				brokerinformerfake.Get(ctx).Informer().GetStore().Add(b)
 			}
-			reporter := &mockReporter{}
 			r, err := NewHandler(
 				logger,
 				authVerifier,
@@ -726,11 +736,13 @@ func TestReceiver_WithSubscriptionsAPI(t *testing.T) {
 				triggerinformerfake.Get(ctx),
 				brokerinformerfake.Get(ctx),
 				subscriptioninformerfake.Get(ctx),
-				reporter,
 				configmapinformer.Get(ctx).Lister().ConfigMaps("ns"),
 				func(ctx context.Context) context.Context {
 					return ctx
-				})
+				},
+				mp,
+				tp,
+			)
 			if err != nil {
 				t.Fatal("Unable to create receiver:", err)
 			}
@@ -760,11 +772,16 @@ func TestReceiver_WithSubscriptionsAPI(t *testing.T) {
 			if tc.expectedDispatch != fh.requestReceived {
 				t.Errorf("Incorrect dispatch. Expected %v, Actual %v", tc.expectedDispatch, fh.requestReceived)
 			}
-			if tc.expectedEventCount != reporter.eventCountReported {
-				t.Errorf("Incorrect event count reported metric. Expected %v, Actual %v", tc.expectedEventCount, reporter.eventCountReported)
+
+			expectedMetricNames := []string{}
+			if tc.expectedEventDispatchTime {
+				expectedMetricNames = append(expectedMetricNames, "kn.eventing.dispatch.duration")
 			}
-			if tc.expectedEventDispatchTime != reporter.eventDispatchTimeReported {
-				t.Errorf("Incorrect event dispatch time reported metric. Expected %v, Actual %v", tc.expectedEventDispatchTime, reporter.eventDispatchTimeReported)
+			if tc.expectEventProcessTime {
+				expectedMetricNames = append(expectedMetricNames, "kn.eventing.process.duration")
+			}
+			if len(expectedMetricNames) > 0 {
+				metricstest.AssertMetrics(t, reader, metricstest.MetricsPresent(ScopeName, expectedMetricNames...))
 			}
 			// Compare the returned event.
 			message := cehttp.NewMessageFromHttpResponse(response)
@@ -795,27 +812,6 @@ func (r *responseWriterWithInvocationsCheck) WriteHeader(statusCode int) {
 		r.t.Fatal("WriteHeader invoked more than once")
 	}
 	r.ResponseWriter.WriteHeader(statusCode)
-}
-
-type mockReporter struct {
-	eventCountReported          bool
-	eventDispatchTimeReported   bool
-	eventProcessingTimeReported bool
-}
-
-func (r *mockReporter) ReportEventCount(args *ReportArgs, responseCode int) error {
-	r.eventCountReported = true
-	return nil
-}
-
-func (r *mockReporter) ReportEventDispatchTime(args *ReportArgs, responseCode int, d time.Duration) error {
-	r.eventDispatchTimeReported = true
-	return nil
-}
-
-func (r *mockReporter) ReportEventProcessingTime(args *ReportArgs, d time.Duration) error {
-	r.eventProcessingTimeReported = true
-	return nil
 }
 
 type fakeHandler struct {

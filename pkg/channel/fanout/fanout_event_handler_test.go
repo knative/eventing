@@ -25,12 +25,19 @@ import (
 	"testing"
 	"time"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/sdk/metric"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	"go.opentelemetry.io/otel/trace"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/pointer"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/injection"
+	"knative.dev/pkg/observability/tracing"
 
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/auth"
@@ -42,7 +49,6 @@ import (
 	"github.com/cloudevents/sdk-go/v2/event"
 	bindingshttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"github.com/cloudevents/sdk-go/v2/test"
-	"go.opencensus.io/trace"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
 	"knative.dev/pkg/apis"
@@ -177,7 +183,7 @@ func TestFanoutEventHandler_ServeHTTP(t *testing.T) {
 		},
 		"receiver has span": {
 			receiverFunc: func(ctx context.Context, _ channel.ChannelReference, _ event.Event, _ http.Header) error {
-				if span := trace.FromContext(ctx); span == nil {
+				if span := trace.SpanFromContext(ctx); span == nil {
 					return errors.New("missing span")
 				}
 				return nil
@@ -331,7 +337,6 @@ func testFanoutEventHandler(t *testing.T, async bool, receiverFunc channel.Event
 	ctx = injection.WithConfig(ctx, &rest.Config{})
 
 	var subscriberServerWg *sync.WaitGroup
-	reporter := channel.NewStatsReporter("testcontainer", "testpod")
 	if subscriberReqs != 0 {
 		subscriberServerWg = &sync.WaitGroup{}
 		subscriberServerWg.Add(subscriberReqs)
@@ -383,17 +388,25 @@ func testFanoutEventHandler(t *testing.T, async bool, receiverFunc channel.Event
 		return nil
 	}
 
+	reader := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(reader))
+
+	exporter := tracetest.NewInMemoryExporter()
+	tp := sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))
+	otel.SetTextMapPropagator(tracing.DefaultTextMapPropagator())
+
 	h, err := NewFanoutEventHandler(
 		logger,
 		Config{
 			Subscriptions: subs,
 			AsyncHandler:  async,
 		},
-		reporter,
 		nil,
 		nil,
 		nil,
 		dispatcher,
+		mp,
+		tp,
 		recvOptionFunc,
 	)
 	<-calledChan
@@ -402,7 +415,12 @@ func testFanoutEventHandler(t *testing.T, async bool, receiverFunc channel.Event
 	}
 
 	if receiverFunc != nil {
-		receiver, err := channel.NewEventReceiver(receiverFunc, logger, reporter)
+		receiver, err := channel.NewEventReceiver(
+			receiverFunc,
+			logger,
+			channel.MeterProvider(mp),
+			channel.TraceProvider(tp),
+		)
 		if err != nil {
 			t.Fatal("NewEventReceiver failed =", err)
 		}
@@ -416,7 +434,8 @@ func testFanoutEventHandler(t *testing.T, async bool, receiverFunc channel.Event
 	}
 
 	event := makeCloudEvent()
-	reqCtx, _ := trace.StartSpan(context.TODO(), "bla")
+	tracer := tp.Tracer(ScopeName)
+	reqCtx, _ := tracer.Start(context.TODO(), "bla")
 	req := httptest.NewRequest(http.MethodPost, "http://channelname.channelnamespace/", nil).WithContext(reqCtx)
 
 	ctx = context.Background()

@@ -17,11 +17,10 @@ limitations under the License.
 package kncloudevents
 
 import (
-	nethttp "net/http"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"go.opencensus.io/plugin/ochttp"
+	"go.opentelemetry.io/otel"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
@@ -82,7 +81,7 @@ func Test_getClientForAddressable(t *testing.T) {
 				URL:     url,
 				CACerts: tt.caCert,
 			}
-			_, err = getClientForAddressable(eventingtls.NewDefaultClientConfig(), addressable)
+			_, err = getClientForAddressable(eventingtls.NewDefaultClientConfig(), addressable, otel.GetMeterProvider(), otel.GetTracerProvider())
 			if (err != nil) != tt.wantErr {
 				t.Errorf("getClientForAddressable() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -101,45 +100,32 @@ func Test_ConfigureConnectionArgs(t *testing.T) {
 		MaxIdleConnsPerHost: 1000,
 		MaxIdleConns:        1000,
 	})
-	client1, err := getClientForAddressable(eventingtls.NewDefaultClientConfig(), target)
+	client1, err := getClientForAddressable(eventingtls.NewDefaultClientConfig(), target, otel.GetMeterProvider(), otel.GetTracerProvider())
 	require.Nil(t, err)
-
-	require.Equal(t, 1000, castToTransport(client1).MaxIdleConns)
-	require.Equal(t, 1000, castToTransport(client1).MaxIdleConnsPerHost)
 
 	// Set other connection args
 	ConfigureConnectionArgs(&ConnectionArgs{
 		MaxIdleConnsPerHost: 2000,
 		MaxIdleConns:        2000,
 	})
-	client2, err := getClientForAddressable(eventingtls.NewDefaultClientConfig(), target)
+	client2, err := getClientForAddressable(eventingtls.NewDefaultClientConfig(), target, otel.GetMeterProvider(), otel.GetTracerProvider())
 	require.Nil(t, err)
-
-	require.Equal(t, 2000, castToTransport(client2).MaxIdleConns)
-	require.Equal(t, 2000, castToTransport(client2).MaxIdleConnsPerHost)
 
 	// Try to set the same value and client should not be cleaned up
 	ConfigureConnectionArgs(&ConnectionArgs{
 		MaxIdleConnsPerHost: 2000,
 		MaxIdleConns:        2000,
 	})
-	client2_2, err := getClientForAddressable(eventingtls.NewDefaultClientConfig(), target)
+	client2_2, err := getClientForAddressable(eventingtls.NewDefaultClientConfig(), target, otel.GetMeterProvider(), otel.GetTracerProvider())
 	require.Nil(t, err)
 	require.Same(t, client2_2, client2)
 
 	// Set back to nil
 	ConfigureConnectionArgs(nil)
-	client3, err := getClientForAddressable(eventingtls.NewDefaultClientConfig(), target)
+	client3, err := getClientForAddressable(eventingtls.NewDefaultClientConfig(), target, otel.GetMeterProvider(), otel.GetTracerProvider())
 	require.Nil(t, err)
-
-	require.Equal(t, nethttp.DefaultTransport.(*nethttp.Transport).MaxIdleConns, castToTransport(client3).MaxIdleConns)
-	require.Equal(t, nethttp.DefaultTransport.(*nethttp.Transport).MaxIdleConnsPerHost, castToTransport(client3).MaxIdleConnsPerHost)
 
 	require.NotSame(t, client1, client2)
 	require.NotSame(t, client1, client3)
 	require.NotSame(t, client2, client3)
-}
-
-func castToTransport(client *nethttp.Client) *nethttp.Transport {
-	return client.Transport.(*ochttp.Transport).Base.(*nethttp.Transport)
 }

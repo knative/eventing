@@ -24,10 +24,15 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"time"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	filteredconfigmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap/filtered/fake"
 	filteredFactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
+	"knative.dev/pkg/observability/metrics/metricstest"
+	"knative.dev/pkg/observability/tracing"
 	"knative.dev/pkg/system"
 
 	"knative.dev/eventing/pkg/eventingtls"
@@ -72,17 +77,17 @@ func TestHandler_ServeHTTP(t *testing.T) {
 	logger := zap.NewNop()
 
 	tt := []struct {
-		name            string
-		method          string
-		uri             string
-		body            io.Reader
-		headers         nethttp.Header
-		expectedHeaders nethttp.Header
-		statusCode      int
-		handler         nethttp.Handler
-		reporter        StatsReporter
-		defaulter       client.EventDefaulter
-		brokers         []*eventingv1.Broker
+		name                   string
+		method                 string
+		uri                    string
+		body                   io.Reader
+		headers                nethttp.Header
+		expectedHeaders        nethttp.Header
+		statusCode             int
+		handler                nethttp.Handler
+		defaulter              client.EventDefaulter
+		brokers                []*eventingv1.Broker
+		expectDispatchDuration bool
 	}{
 		{
 			name:       "invalid method PATCH",
@@ -91,7 +96,6 @@ func TestHandler_ServeHTTP(t *testing.T) {
 			body:       getValidEvent(),
 			statusCode: nethttp.StatusMethodNotAllowed,
 			handler:    handler(),
-			reporter:   &mockReporter{},
 			defaulter:  broker.TTLDefaulter(logger, 100),
 		},
 		{
@@ -101,7 +105,6 @@ func TestHandler_ServeHTTP(t *testing.T) {
 			body:       getValidEvent(),
 			statusCode: nethttp.StatusMethodNotAllowed,
 			handler:    handler(),
-			reporter:   &mockReporter{},
 			defaulter:  broker.TTLDefaulter(logger, 100),
 		},
 		{
@@ -111,7 +114,6 @@ func TestHandler_ServeHTTP(t *testing.T) {
 			body:       getValidEvent(),
 			statusCode: nethttp.StatusMethodNotAllowed,
 			handler:    handler(),
-			reporter:   &mockReporter{},
 			defaulter:  broker.TTLDefaulter(logger, 100),
 		},
 		{
@@ -121,7 +123,6 @@ func TestHandler_ServeHTTP(t *testing.T) {
 			body:       getValidEvent(),
 			statusCode: nethttp.StatusMethodNotAllowed,
 			handler:    handler(),
-			reporter:   &mockReporter{},
 			defaulter:  broker.TTLDefaulter(logger, 100),
 		},
 		{
@@ -137,7 +138,6 @@ func TestHandler_ServeHTTP(t *testing.T) {
 			},
 			statusCode: nethttp.StatusOK,
 			handler:    handler(),
-			reporter:   &mockReporter{},
 			defaulter:  broker.TTLDefaulter(logger, 100),
 		},
 		{
@@ -150,11 +150,11 @@ func TestHandler_ServeHTTP(t *testing.T) {
 			},
 			statusCode: senderResponseStatusCode,
 			handler:    handler(),
-			reporter:   &mockReporter{StatusCode: senderResponseStatusCode, EventDispatchTimeReported: true},
 			defaulter:  broker.TTLDefaulter(logger, 100),
 			brokers: []*eventingv1.Broker{
 				makeBroker("name", "ns"),
 			},
+			expectDispatchDuration: true,
 		},
 		{
 			name:   "valid - ignore trailing slash (happy path POST)",
@@ -166,11 +166,11 @@ func TestHandler_ServeHTTP(t *testing.T) {
 			},
 			statusCode: senderResponseStatusCode,
 			handler:    handler(),
-			reporter:   &mockReporter{StatusCode: senderResponseStatusCode, EventDispatchTimeReported: true},
 			defaulter:  broker.TTLDefaulter(logger, 100),
 			brokers: []*eventingv1.Broker{
 				makeBroker("name", "ns"),
 			},
+			expectDispatchDuration: true,
 		},
 		{
 			name:       "invalid event",
@@ -179,7 +179,6 @@ func TestHandler_ServeHTTP(t *testing.T) {
 			body:       getInvalidEvent(),
 			statusCode: nethttp.StatusBadRequest,
 			handler:    handler(),
-			reporter:   &mockReporter{},
 			brokers: []*eventingv1.Broker{
 				makeBroker("name", "ns"),
 			},
@@ -191,7 +190,6 @@ func TestHandler_ServeHTTP(t *testing.T) {
 			body:       getValidEvent(),
 			statusCode: nethttp.StatusBadRequest,
 			handler:    handler(),
-			reporter:   &mockReporter{StatusCode: nethttp.StatusBadRequest},
 			brokers: []*eventingv1.Broker{
 				makeBroker("name", "ns"),
 			},
@@ -203,7 +201,6 @@ func TestHandler_ServeHTTP(t *testing.T) {
 			body:       getValidEvent(),
 			statusCode: nethttp.StatusBadRequest,
 			handler:    handler(),
-			reporter:   &mockReporter{},
 			brokers: []*eventingv1.Broker{
 				makeBroker("name", "ns"),
 			},
@@ -215,7 +212,6 @@ func TestHandler_ServeHTTP(t *testing.T) {
 			body:       strings.NewReader("not an event"),
 			statusCode: nethttp.StatusBadRequest,
 			handler:    handler(),
-			reporter:   &mockReporter{},
 			brokers: []*eventingv1.Broker{
 				makeBroker("name", "ns"),
 			},
@@ -227,7 +223,6 @@ func TestHandler_ServeHTTP(t *testing.T) {
 			body:       getValidEvent(),
 			statusCode: nethttp.StatusInternalServerError,
 			handler:    handler(),
-			reporter:   &mockReporter{StatusCode: nethttp.StatusInternalServerError, EventDispatchTimeReported: false},
 			defaulter:  broker.TTLDefaulter(logger, 100),
 			brokers: []*eventingv1.Broker{
 				withUninitializedAnnotations(makeBroker("name", "ns")),
@@ -240,7 +235,6 @@ func TestHandler_ServeHTTP(t *testing.T) {
 			body:       getValidEvent(),
 			statusCode: nethttp.StatusNotFound,
 			handler:    handler(),
-			reporter:   &mockReporter{},
 			brokers: []*eventingv1.Broker{
 				makeBroker("name", "ns"),
 			},
@@ -263,11 +257,11 @@ func TestHandler_ServeHTTP(t *testing.T) {
 				"Knative-Foo":  []string{"123"},
 				"X-Request-Id": []string{"123"},
 			},
-			reporter:  &mockReporter{StatusCode: senderResponseStatusCode, EventDispatchTimeReported: true},
 			defaulter: broker.TTLDefaulter(logger, 100),
 			brokers: []*eventingv1.Broker{
 				makeBroker("name", "ns"),
 			},
+			expectDispatchDuration: true,
 		},
 	}
 
@@ -278,6 +272,13 @@ func TestHandler_ServeHTTP(t *testing.T) {
 
 			s := httptest.NewServer(tc.handler)
 			defer s.Close()
+
+			reader := metric.NewManualReader()
+			mp := metric.NewMeterProvider(metric.WithReader(reader))
+
+			exporter := tracetest.NewInMemoryExporter()
+			tp := trace.NewTracerProvider(trace.WithSyncer(exporter))
+			otel.SetTextMapPropagator(tracing.DefaultTextMapPropagator())
 
 			recorder := httptest.NewRecorder()
 			request := httptest.NewRequest(tc.method, tc.uri, tc.body)
@@ -316,7 +317,6 @@ func TestHandler_ServeHTTP(t *testing.T) {
 			))
 
 			h, err := NewHandler(logger,
-				&mockReporter{},
 				tc.defaulter,
 				brokerinformerfake.Get(ctx),
 				authVerifier,
@@ -324,7 +324,10 @@ func TestHandler_ServeHTTP(t *testing.T) {
 				configmapinformer.Get(ctx).Lister().ConfigMaps("ns"),
 				func(ctx context.Context) context.Context {
 					return ctx
-				})
+				},
+				mp,
+				tp,
+			)
 			if err != nil {
 				t.Fatal("Unable to create receiver:", err)
 			}
@@ -346,9 +349,12 @@ func TestHandler_ServeHTTP(t *testing.T) {
 				}
 			}
 
-			if diff := cmp.Diff(tc.reporter, h.Reporter); diff != "" {
-				t.Errorf("expected reporter state %+v got %+v - diff %s", tc.reporter, h.Reporter, diff)
+			expectedMetricNames := []string{}
+			if tc.expectDispatchDuration {
+				expectedMetricNames = append(expectedMetricNames, "kn.eventing.dispatch.duration")
 			}
+
+			metricstest.AssertMetrics(t, reader, metricstest.MetricsPresent(ScopeName, expectedMetricNames...))
 		})
 	}
 }
@@ -366,21 +372,6 @@ func handler() nethttp.Handler {
 	return nethttp.HandlerFunc(func(writer nethttp.ResponseWriter, request *nethttp.Request) {
 		writer.WriteHeader(senderResponseStatusCode)
 	})
-}
-
-type mockReporter struct {
-	StatusCode                int
-	EventDispatchTimeReported bool
-}
-
-func (r *mockReporter) ReportEventCount(_ *ReportArgs, responseCode int) error {
-	r.StatusCode = responseCode
-	return nil
-}
-
-func (r *mockReporter) ReportEventDispatchTime(_ *ReportArgs, _ int, _ time.Duration) error {
-	r.EventDispatchTimeReported = true
-	return nil
 }
 
 func getValidEvent() io.Reader {

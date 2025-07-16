@@ -39,6 +39,10 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/rest"
 	"knative.dev/pkg/injection"
@@ -793,8 +797,14 @@ func TestSendEvent(t *testing.T) {
 			ctx, _ = fakekubeclient.With(ctx)
 			ctx = injection.WithConfig(ctx, &rest.Config{})
 
+			exporter := tracetest.NewInMemoryExporter()
+			tp := trace.NewTracerProvider(
+				trace.WithSyncer(exporter),
+			)
+			otel.SetTextMapPropagator(propagation.TraceContext{})
+			opt := kncloudevents.WithTraceProvider(tp)
 			oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
-			dispatcher := kncloudevents.NewDispatcher(eventingtls.NewDefaultClientConfig(), oidcTokenProvider)
+			dispatcher := kncloudevents.NewDispatcher(eventingtls.NewDefaultClientConfig(), oidcTokenProvider, opt)
 			destHandler := &fakeHandler{
 				t:        t,
 				response: tc.fakeResponse,

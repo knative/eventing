@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"strconv"
 
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/trace"
 	listers "knative.dev/eventing/pkg/client/listers/messaging/v1"
 
 	"github.com/google/go-cmp/cmp"
@@ -55,7 +57,6 @@ import (
 // Reconciler reconciles InMemory Channels.
 type Reconciler struct {
 	multiChannelEventHandler multichannelfanout.MultiChannelEventHandler
-	reporter                 channel.StatsReporter
 	messagingClientSet       messagingv1.MessagingV1Interface
 	eventTypeLister          v1beta3.EventTypeLister
 	inMemoryChannelLister    listers.InMemoryChannelLister
@@ -63,8 +64,10 @@ type Reconciler struct {
 	featureStore             *feature.Store
 	eventDispatcher          *kncloudevents.Dispatcher
 
-	authVerifier *auth.Verifier
-	clientConfig eventingtls.ClientConfig
+	authVerifier  *auth.Verifier
+	clientConfig  eventingtls.ClientConfig
+	meterProvider metric.MeterProvider
+	traceProvider trace.TracerProvider
 }
 
 // Check the interfaces Reconciler should implement
@@ -130,11 +133,12 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1.InMemoryChannel) rec
 		fanoutHandler, err := fanout.NewFanoutEventHandler(
 			logging.FromContext(ctx).Desugar(),
 			config.FanoutConfig,
-			r.reporter,
 			eventTypeAutoHandler,
 			channelRef,
 			UID,
 			r.eventDispatcher,
+			r.meterProvider,
+			r.traceProvider,
 			channel.OIDCTokenVerification(r.authVerifier, audience(imc)),
 			channel.ReceiverWithContextFunc(wc),
 			channel.ReceiverWithGetPoliciesForFunc(r.getAppliedEventPolicyRef),
@@ -162,11 +166,12 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1.InMemoryChannel) rec
 		fanoutHandler, err := fanout.NewFanoutEventHandler(
 			logging.FromContext(ctx).Desugar(),
 			config.FanoutConfig,
-			r.reporter,
 			eventTypeAutoHandler,
 			channelRef,
 			UID,
 			r.eventDispatcher,
+			r.meterProvider,
+			r.traceProvider,
 			channel.ResolveChannelFromPath(channel.ParseChannelFromPath),
 			channel.OIDCTokenVerification(r.authVerifier, audience(imc)),
 			channel.ReceiverWithContextFunc(wc),
@@ -189,7 +194,7 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1.InMemoryChannel) rec
 	}
 
 	handleSubscribers(imc.Spec.Subscribers, func(addressable duckv1.Addressable) {
-		kncloudevents.AddOrUpdateAddressableHandler(r.clientConfig, addressable)
+		kncloudevents.AddOrUpdateAddressableHandler(r.clientConfig, addressable, r.meterProvider, r.traceProvider)
 	})
 
 	return nil

@@ -25,13 +25,15 @@ import (
 	"strconv"
 	"time"
 
-	"go.opencensus.io/plugin/ochttp"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"knative.dev/pkg/network"
 	"knative.dev/pkg/network/handlers"
-	"knative.dev/pkg/tracing/propagation/tracecontextb3"
+	"knative.dev/pkg/observability/tracing"
 )
 
 const (
 	DefaultShutdownTimeout = time.Minute * 1
+	TracerName             = "knative.dev/eventing/pkg/kncloudevents"
 )
 
 type HTTPEventReceiver struct {
@@ -135,14 +137,14 @@ func (recv *HTTPEventReceiver) GetPort() int {
 }
 
 // Blocking
-func (recv *HTTPEventReceiver) StartListen(ctx context.Context, handler http.Handler) error {
+func (recv *HTTPEventReceiver) StartListen(ctx context.Context, handler http.Handler, otelOpts ...otelhttp.Option) error {
 	var err error
 	if recv.listener, err = net.Listen("tcp", fmt.Sprintf(":%d", recv.desiredPort)); err != nil {
 		return err
 	}
 
 	drainer := &handlers.Drainer{
-		Inner:       CreateHandler(handler),
+		Inner:       CreateHandler(handler, otelOpts...),
 		HealthCheck: recv.checker,
 		QuietPeriod: recv.drainQuietPeriod,
 	}
@@ -204,11 +206,19 @@ func WithShutdownTimeout(ctx context.Context, timeout time.Duration) context.Con
 	return context.WithValue(ctx, shutdownTimeoutKey{}, timeout)
 }
 
-func CreateHandler(handler http.Handler) http.Handler {
-	return &ochttp.Handler{
-		Propagation: tracecontextb3.TraceContextEgress,
-		Handler:     handler,
-	}
+func CreateHandler(handler http.Handler, otelOpts ...otelhttp.Option) http.Handler {
+	opts := append([]otelhttp.Option{
+		otelhttp.WithPropagators(tracing.DefaultTextMapPropagator()),
+		otelhttp.WithFilter(func(r *http.Request) bool {
+			// Don't trace kubelet probes
+			return !network.IsKubeletProbe(r)
+		}),
+	}, otelOpts...)
+	return otelhttp.NewHandler(
+		handler,
+		"kncloudevents.receive",
+		opts...,
+	)
 }
 
 func newServer() *http.Server {

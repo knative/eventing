@@ -24,6 +24,10 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -35,6 +39,7 @@ import (
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	logtesting "knative.dev/pkg/logging/testing"
+	"knative.dev/pkg/observability/tracing"
 	"knative.dev/pkg/ptr"
 	"knative.dev/pkg/reconciler"
 	. "knative.dev/pkg/reconciler/testing"
@@ -520,11 +525,18 @@ func TestReconciler_ReconcileKind(t *testing.T) {
 			feature.EvenTypeAutoCreate: feature.Disabled,
 		})
 
+		reader := metric.NewManualReader()
+		mp := metric.NewMeterProvider(metric.WithReader(reader))
+
+		exporter := tracetest.NewInMemoryExporter()
+		tp := trace.NewTracerProvider(trace.WithSyncer(exporter))
+		otel.SetTextMapPropagator(tracing.DefaultTextMapPropagator())
+
 		oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
 		dispatcher := kncloudevents.NewDispatcher(eventingtls.ClientConfig{}, oidcTokenProvider)
 		// Just run the tests once with no existing handler (creates the handler) and once
 		// with an existing, so we exercise both paths at once.
-		fh, err := fanout.NewFanoutEventHandler(nil, fanout.Config{}, nil, nil, nil, nil, dispatcher)
+		fh, err := fanout.NewFanoutEventHandler(nil, fanout.Config{}, nil, nil, nil, dispatcher, mp, tp)
 		if err != nil {
 			t.Error(err)
 		}
@@ -573,7 +585,15 @@ func TestReconciler_InvalidInputs(t *testing.T) {
 
 		oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
 		dispatcher := kncloudevents.NewDispatcher(eventingtls.ClientConfig{}, oidcTokenProvider)
-		fh, err := fanout.NewFanoutEventHandler(nil, fanout.Config{}, nil, nil, nil, nil, dispatcher)
+
+		reader := metric.NewManualReader()
+		mp := metric.NewMeterProvider(metric.WithReader(reader))
+
+		exporter := tracetest.NewInMemoryExporter()
+		tp := trace.NewTracerProvider(trace.WithSyncer(exporter))
+		otel.SetTextMapPropagator(tracing.DefaultTextMapPropagator())
+
+		fh, err := fanout.NewFanoutEventHandler(nil, fanout.Config{}, nil, nil, nil, dispatcher, mp, tp)
 		if err != nil {
 			t.Error(err)
 		}
@@ -607,7 +627,15 @@ func TestReconciler_Deletion(t *testing.T) {
 
 		oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
 		dispatcher := kncloudevents.NewDispatcher(eventingtls.ClientConfig{}, oidcTokenProvider)
-		fh, err := fanout.NewFanoutEventHandler(nil, fanout.Config{}, nil, nil, nil, nil, dispatcher)
+
+		reader := metric.NewManualReader()
+		mp := metric.NewMeterProvider(metric.WithReader(reader))
+
+		exporter := tracetest.NewInMemoryExporter()
+		tp := trace.NewTracerProvider(trace.WithSyncer(exporter))
+		otel.SetTextMapPropagator(tracing.DefaultTextMapPropagator())
+
+		fh, err := fanout.NewFanoutEventHandler(nil, fanout.Config{}, nil, nil, nil, dispatcher, mp, tp)
 		if err != nil {
 			t.Error(err)
 		}

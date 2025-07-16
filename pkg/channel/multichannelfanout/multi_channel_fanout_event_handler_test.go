@@ -22,6 +22,11 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"
 	bindingshttp "github.com/cloudevents/sdk-go/v2/protocol/http"
@@ -32,6 +37,7 @@ import (
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/injection"
+	"knative.dev/pkg/observability/tracing"
 	"knative.dev/pkg/ptr"
 
 	"knative.dev/eventing/pkg/auth"
@@ -72,7 +78,6 @@ func TestNewEventHandlerWithConfig(t *testing.T) {
 			createErr: "duplicate channel key: duplicatekey",
 		},
 	}
-	reporter := channel.NewStatsReporter("testcontainer", "testpod")
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := context.Background()
@@ -82,13 +87,21 @@ func TestNewEventHandlerWithConfig(t *testing.T) {
 			logger := zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller()))
 			oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
 
+			reader := metric.NewManualReader()
+			mp := metric.NewMeterProvider(metric.WithReader(reader))
+
+			exporter := tracetest.NewInMemoryExporter()
+			tp := trace.NewTracerProvider(trace.WithSyncer(exporter))
+			otel.SetTextMapPropagator(tracing.DefaultTextMapPropagator())
+
 			dispatcher := kncloudevents.NewDispatcher(eventingtls.NewDefaultClientConfig(), oidcTokenProvider)
 			_, err := NewEventHandlerWithConfig(
 				context.TODO(),
 				logger,
 				tc.config,
-				reporter,
 				dispatcher,
+				mp,
+				tp,
 			)
 			if tc.createErr != "" {
 				if err == nil {
@@ -110,11 +123,17 @@ func TestNewEventHandler(t *testing.T) {
 	ctx = injection.WithConfig(ctx, &rest.Config{})
 
 	handlerName := "handler.example.com"
-	reporter := channel.NewStatsReporter("testcontainer", "testpod")
 	logger := zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller()))
 
 	oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
 	dispatcher := kncloudevents.NewDispatcher(eventingtls.NewDefaultClientConfig(), oidcTokenProvider)
+
+	reader := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(reader))
+
+	exporter := tracetest.NewInMemoryExporter()
+	tp := trace.NewTracerProvider(trace.WithSyncer(exporter))
+	otel.SetTextMapPropagator(tracing.DefaultTextMapPropagator())
 
 	handler := NewEventHandler(context.TODO(), logger)
 	h := handler.GetChannelHandler(handlerName)
@@ -124,7 +143,7 @@ func TestNewEventHandler(t *testing.T) {
 	if h != nil {
 		t.Errorf("Found handler for %q but not expected", handlerName)
 	}
-	f, err := fanout.NewFanoutEventHandler(logger, fanout.Config{}, reporter, nil, nil, nil, dispatcher)
+	f, err := fanout.NewFanoutEventHandler(logger, fanout.Config{}, nil, nil, nil, dispatcher, mp, tp)
 	if err != nil {
 		t.Error("Failed to create FanoutMessagHandler: ", err)
 	}
@@ -337,10 +356,17 @@ func TestServeHTTPEventHandler(t *testing.T) {
 			replaceDomains(tc.config, server.URL[7:])
 
 			logger := zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller()))
-			reporter := channel.NewStatsReporter("testcontainer", "testpod")
 			oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
 			dispatcher := kncloudevents.NewDispatcher(eventingtls.NewDefaultClientConfig(), oidcTokenProvider)
-			h, err := NewEventHandlerWithConfig(context.TODO(), logger, tc.config, reporter, dispatcher, tc.recvOptions...)
+
+			reader := metric.NewManualReader()
+			mp := metric.NewMeterProvider(metric.WithReader(reader))
+
+			exporter := tracetest.NewInMemoryExporter()
+			tp := trace.NewTracerProvider(trace.WithSyncer(exporter))
+			otel.SetTextMapPropagator(tracing.DefaultTextMapPropagator())
+
+			h, err := NewEventHandlerWithConfig(context.TODO(), logger, tc.config, dispatcher, mp, tp, tc.recvOptions...)
 			if err != nil {
 				t.Fatalf("Unexpected NewHandler error: '%v'", err)
 			}

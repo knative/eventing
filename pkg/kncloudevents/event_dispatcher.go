@@ -32,7 +32,10 @@ import (
 	"github.com/cloudevents/sdk-go/v2/event"
 	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"github.com/hashicorp/go-retryablehttp"
-	"go.opencensus.io/trace"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/trace"
 	"k8s.io/apimachinery/pkg/types"
 
 	"knative.dev/pkg/apis"
@@ -45,11 +48,11 @@ import (
 	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/eventtype"
+	"knative.dev/eventing/pkg/observability"
 	"knative.dev/eventing/pkg/utils"
 
 	"knative.dev/eventing/pkg/broker"
 	"knative.dev/eventing/pkg/kncloudevents/attributes"
-	"knative.dev/eventing/pkg/tracing"
 )
 
 const (
@@ -155,13 +158,43 @@ type senderConfig struct {
 type Dispatcher struct {
 	oidcTokenProvider *auth.OIDCTokenProvider
 	clientConfig      eventingtls.ClientConfig
+	traceProvider     trace.TracerProvider
+	meterProvider     metric.MeterProvider
 }
 
-func NewDispatcher(clientConfig eventingtls.ClientConfig, oidcTokenProvider *auth.OIDCTokenProvider) *Dispatcher {
-	return &Dispatcher{
+type DispatcherOption func(*Dispatcher)
+
+func WithTraceProvider(tp trace.TracerProvider) DispatcherOption {
+	return func(d *Dispatcher) {
+		d.traceProvider = tp
+	}
+}
+
+func WithMeterProvider(mp metric.MeterProvider) DispatcherOption {
+	return func(d *Dispatcher) {
+		d.meterProvider = mp
+	}
+}
+
+func NewDispatcher(clientConfig eventingtls.ClientConfig, oidcTokenProvider *auth.OIDCTokenProvider, options ...DispatcherOption) *Dispatcher {
+	d := &Dispatcher{
 		clientConfig:      clientConfig,
 		oidcTokenProvider: oidcTokenProvider,
 	}
+
+	for _, opt := range options {
+		opt(d)
+	}
+
+	if d.traceProvider == nil {
+		d.traceProvider = otel.GetTracerProvider()
+	}
+
+	if d.meterProvider == nil {
+		d.meterProvider = otel.GetMeterProvider()
+	}
+
+	return d
 }
 
 // SendEvent sends the given event to the given destination.
@@ -170,6 +203,9 @@ func (d *Dispatcher) SendEvent(ctx context.Context, event event.Event, destinati
 	// - we mutate the event and the callers might not expect this
 	// - it might produce data races if the caller is trying to read the event in different go routines
 	c := event.Clone()
+
+	ctx = observability.WithEventLabels(ctx, &c)
+
 	message := binding.ToMessage(&c)
 
 	return d.SendMessage(ctx, message, destination, options...)
@@ -177,6 +213,8 @@ func (d *Dispatcher) SendEvent(ctx context.Context, event event.Event, destinati
 
 // SendMessage sends the given message to the given destination.
 // SendMessage is kept for compatibility and SendEvent should be used whenever possible.
+// Note: for event labels to be applied to the metrics and span for this message,
+// you will need to add them to the context using WithEventLabels
 func (d *Dispatcher) SendMessage(ctx context.Context, message binding.Message, destination duckv1.Addressable, options ...SendOption) (*DispatchInfo, error) {
 	config := &senderConfig{
 		additionalHeaders: make(http.Header),
@@ -232,12 +270,28 @@ func (d *Dispatcher) send(ctx context.Context, message binding.Message, destinat
 		}
 	}
 
-	ctx, responseMessage, dispatchExecutionInfo, err := d.executeRequest(ctx, destination, message, additionalHeadersForDestination, config.retryConfig, config.oidcServiceAccount, config.transformers)
+	ctx, responseMessage, dispatchExecutionInfo, err := d.executeRequest(
+		ctx,
+		destination,
+		message,
+		additionalHeadersForDestination,
+		config.retryConfig,
+		config.oidcServiceAccount,
+		config.transformers,
+	)
 	if err != nil {
 		// If DeadLetter is configured, then send original message with knative error extensions
 		if config.deadLetterSink != nil {
 			dispatchTransformers := dispatchExecutionInfoTransformers(destination.URL, dispatchExecutionInfo)
-			_, deadLetterResponse, dispatchExecutionInfo, deadLetterErr := d.executeRequest(ctx, *config.deadLetterSink, message, config.additionalHeaders, config.retryConfig, config.oidcServiceAccount, append(config.transformers, dispatchTransformers))
+			_, deadLetterResponse, dispatchExecutionInfo, deadLetterErr := d.executeRequest(
+				ctx,
+				*config.deadLetterSink,
+				message,
+				config.additionalHeaders,
+				config.retryConfig,
+				config.oidcServiceAccount,
+				append(config.transformers, dispatchTransformers),
+			)
 			if deadLetterErr != nil {
 				return dispatchExecutionInfo, fmt.Errorf("unable to complete request to either %s (%v) or %s (%v)", destination.URL, err, config.deadLetterSink.URL, deadLetterErr)
 			}
@@ -280,12 +334,28 @@ func (d *Dispatcher) send(ctx context.Context, message binding.Message, destinat
 	}
 
 	// send reply
-	ctx, responseResponseMessage, dispatchExecutionInfo, err := d.executeRequest(ctx, *config.reply, responseMessage, responseAdditionalHeaders, config.retryConfig, config.oidcServiceAccount, config.transformers)
+	ctx, responseResponseMessage, dispatchExecutionInfo, err := d.executeRequest(
+		ctx,
+		*config.reply,
+		responseMessage,
+		responseAdditionalHeaders,
+		config.retryConfig,
+		config.oidcServiceAccount,
+		config.transformers,
+	)
 	if err != nil {
 		// If DeadLetter is configured, then send original message with knative error extensions
 		if config.deadLetterSink != nil {
 			dispatchTransformers := dispatchExecutionInfoTransformers(config.reply.URL, dispatchExecutionInfo)
-			_, deadLetterResponse, dispatchExecutionInfo, deadLetterErr := d.executeRequest(ctx, *config.deadLetterSink, message, responseAdditionalHeaders, config.retryConfig, config.oidcServiceAccount, append(config.transformers, dispatchTransformers))
+			_, deadLetterResponse, dispatchExecutionInfo, deadLetterErr := d.executeRequest(
+				ctx,
+				*config.deadLetterSink,
+				message,
+				responseAdditionalHeaders,
+				config.retryConfig,
+				config.oidcServiceAccount,
+				append(config.transformers, dispatchTransformers),
+			)
 			if deadLetterErr != nil {
 				return dispatchExecutionInfo, fmt.Errorf("failed to forward reply to %s (%v) and failed to send it to the dead letter sink %s (%v)", config.reply.URL, err, config.deadLetterSink.URL, deadLetterErr)
 			}
@@ -305,7 +375,15 @@ func (d *Dispatcher) send(ctx context.Context, message binding.Message, destinat
 	return dispatchExecutionInfo, nil
 }
 
-func (d *Dispatcher) executeRequest(ctx context.Context, target duckv1.Addressable, message cloudevents.Message, additionalHeaders http.Header, retryConfig *RetryConfig, oidcServiceAccount *types.NamespacedName, transformers ...binding.Transformer) (context.Context, cloudevents.Message, *DispatchInfo, error) {
+func (d *Dispatcher) executeRequest(
+	ctx context.Context,
+	target duckv1.Addressable,
+	message cloudevents.Message,
+	additionalHeaders http.Header,
+	retryConfig *RetryConfig,
+	oidcServiceAccount *types.NamespacedName,
+	transformers ...binding.Transformer,
+) (context.Context, cloudevents.Message, *DispatchInfo, error) {
 	var scheme string
 	if target.URL != nil {
 		scheme = target.URL.Scheme
@@ -320,19 +398,25 @@ func (d *Dispatcher) executeRequest(ctx context.Context, target duckv1.Addressab
 		Scheme:         scheme,
 	}
 
-	ctx, span := trace.StartSpan(ctx, "knative.dev", trace.WithSpanKind(trace.SpanKindClient))
-	defer span.End()
+	tracer := d.traceProvider.Tracer(TracerName)
 
-	if span.IsRecordingEvents() {
-		transformers = append(transformers, tracing.PopulateSpan(span, target.URL.String()))
-	}
+	ctx, span := tracer.Start(ctx, fmt.Sprintf("send %s", target.URL.String()))
+
+	defer func() {
+		if span.IsRecording() {
+			labeler, _ := otelhttp.LabelerFromContext(ctx)
+			span.SetAttributes(labeler.Get()...)
+		}
+
+		span.End()
+	}()
 
 	req, err := d.createRequest(ctx, message, target, additionalHeaders, oidcServiceAccount, transformers...)
 	if err != nil {
 		return ctx, nil, &dispatchInfo, fmt.Errorf("failed to create request: %w", err)
 	}
 
-	client, err := newClient(d.clientConfig, target)
+	client, err := newClient(d.clientConfig, target, d.meterProvider, d.traceProvider)
 	if err != nil {
 		return ctx, nil, &dispatchInfo, fmt.Errorf("failed to create http client: %w", err)
 	}
@@ -340,6 +424,7 @@ func (d *Dispatcher) executeRequest(ctx context.Context, target duckv1.Addressab
 	start := time.Now()
 	response, err := client.DoWithRetries(req, retryConfig)
 	dispatchInfo.Duration = time.Since(start)
+
 	if err != nil {
 		dispatchInfo.ResponseCode = http.StatusInternalServerError
 		dispatchInfo.ResponseBody = []byte(fmt.Sprintf("dispatch error: %s", err.Error()))
@@ -427,8 +512,8 @@ type client struct {
 	http.Client
 }
 
-func newClient(cfg eventingtls.ClientConfig, target duckv1.Addressable) (*client, error) {
-	c, err := getClientForAddressable(cfg, target)
+func newClient(cfg eventingtls.ClientConfig, target duckv1.Addressable, mp metric.MeterProvider, tp trace.TracerProvider) (*client, error) {
+	c, err := getClientForAddressable(cfg, target, mp, tp)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get http client for addressable: %w", err)
 	}
