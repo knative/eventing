@@ -19,26 +19,23 @@ package ingress
 import (
 	"context"
 	"crypto/tls"
-	"fmt"
-	"net/http"
 
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
+
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
 	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/kncloudevents"
+	"knative.dev/eventing/pkg/observability/otel"
 	"knative.dev/pkg/configmap"
-	"knative.dev/pkg/network"
-	"knative.dev/pkg/observability/tracing"
 
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	secretinformer "knative.dev/pkg/injection/clients/namespacedkube/informers/core/v1/secret"
 )
 
 func NewServerManager(
-	ctx context.Context, 
+	ctx context.Context,
 	logger *zap.Logger,
 	cmw configmap.Watcher,
 	httpPort, httpsPort int,
@@ -53,22 +50,7 @@ func NewServerManager(
 	httpReceiver := kncloudevents.NewHTTPEventReceiver(httpPort)
 	httpsReceiver := kncloudevents.NewHTTPEventReceiver(httpsPort, kncloudevents.WithTLSConfig(tlsConfig))
 
-	otelHandler := otelhttp.NewHandler(handler, "broker.ingress",
-		otelhttp.WithMeterProvider(meterProvider),
-		otelhttp.WithTracerProvider(traceProvider),
-		otelhttp.WithFilter(func(r *http.Request) bool {
-			return !network.IsKubeletProbe(r)
-		}),
-		otelhttp.WithPropagators(tracing.DefaultTextMapPropagator()),
-		otelhttp.WithSpanNameFormatter(func(operation string, r *http.Request) string {
-			if r.URL.Path == "" {
-				return r.Method + " /"
-			}
-			return fmt.Sprintf("%s %s", r.Method, r.URL.Path)
-		}),
-
-	)
-
+	otelHandler := otel.NewHandler(handler, "broker.ingress", meterProvider, traceProvider)
 	return eventingtls.NewServerManager(ctx, httpReceiver, httpsReceiver, otelHandler, cmw)
 }
 

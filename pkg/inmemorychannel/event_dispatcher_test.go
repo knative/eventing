@@ -119,13 +119,12 @@ func TestDispatcher_dispatch(t *testing.T) {
 	reader := metric.NewManualReader()
 	mp := metric.NewMeterProvider(metric.WithReader(reader))
 
-
 	exporter := tracetest.NewInMemoryExporter()
 	tp := trace.NewTracerProvider(trace.WithSyncer(exporter))
 	otel.SetTextMapPropagator(tracing.DefaultTextMapPropagator())
 
 	dispatcher := kncloudevents.NewDispatcher(
-		eventingtls.NewDefaultClientConfig(), 
+		eventingtls.NewDefaultClientConfig(),
 		oidcTokenProvider,
 		kncloudevents.WithTraceProvider(tp),
 		kncloudevents.WithMeterProvider(mp),
@@ -275,7 +274,7 @@ func TestDispatcher_dispatch(t *testing.T) {
 
 	// Ok now everything should be ready to send the event
 	d := kncloudevents.NewDispatcher(
-		eventingtls.NewDefaultClientConfig(), 
+		eventingtls.NewDefaultClientConfig(),
 		oidcTokenProvider,
 		kncloudevents.WithMeterProvider(mp),
 		kncloudevents.WithTraceProvider(tp),
