@@ -28,6 +28,6 @@ import (
 )
 
 func TestBrokerTracing(t *testing.T) {
-	t.Skip("needs to be reworked for OTel (eventin#8637)")
+	t.Skip("needs to be reworked for OTel (eventing#8637)")
 	helpers.BrokerTracingTestHelperWithChannelTestRunner(context.Background(), t, brokerClass, channelTestRunner, testlib.SetupClientOptionNoop)
 }
