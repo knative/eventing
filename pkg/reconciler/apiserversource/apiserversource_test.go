@@ -1705,11 +1705,7 @@ func TestReconcile(t *testing.T) {
 					rttestingv1.WithApiServerSourceSkipPermissions(true),
 				),
 			}},
-			WantCreates: []runtime.Object{
-				// makeNamespacedSubjectAccessReview("namespaces", "get", "default", "test-a"),
-				// makeNamespacedSubjectAccessReview("namespaces", "list", "default", "test-a"),
-				// makeNamespacedSubjectAccessReview("namespaces", "watch", "default", "test-a"),
-			},
+			WantCreates: []runtime.Object{},
 			WantUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: makeAvailableReceiveAdapterWithNamespacesAndSkip(t, []string{"test-a"}, true),
 			}},
