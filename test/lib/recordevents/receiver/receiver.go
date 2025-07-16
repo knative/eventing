@@ -24,6 +24,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"knative.dev/eventing/test/lib/dropevents"
 
 	cloudeventsbindings "github.com/cloudevents/sdk-go/v2/binding"
@@ -117,7 +118,7 @@ func NewFromEnv(ctx context.Context, eventLogs *recordevents.EventLogs) *Receive
 
 // Start will create the CloudEvents client and start listening for inbound
 // HTTP requests. This is a is a blocking call.
-func (o *Receiver) Start(ctx context.Context, handlerFuncs ...func(handler http.Handler) http.Handler) error {
+func (o *Receiver) Start(ctx context.Context, handlerFuncs ...func(handler http.Handler, opts ...otelhttp.Option) http.Handler) error {
 	var handler http.Handler = o
 
 	for _, dec := range handlerFuncs {
