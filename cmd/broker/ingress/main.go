@@ -18,13 +18,12 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
+	"time"
 
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
-	"github.com/google/uuid"
 	"github.com/kelseyhightower/envconfig"
 	"go.uber.org/zap"
 	configmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap/filtered"
@@ -34,13 +33,10 @@ import (
 	configmap "knative.dev/pkg/configmap/informer"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/injection"
-	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/logging"
-	"knative.dev/pkg/metrics"
+	k8sruntime "knative.dev/pkg/observability/runtime/k8s"
 	"knative.dev/pkg/signals"
 	"knative.dev/pkg/system"
-	"knative.dev/pkg/tracing"
-	tracingconfig "knative.dev/pkg/tracing/config"
 
 	cmdbroker "knative.dev/eventing/cmd/broker"
 	"knative.dev/eventing/pkg/apis/feature"
@@ -53,7 +49,8 @@ import (
 	eventtypeinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta3/eventtype"
 	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/eventtype"
-	"knative.dev/eventing/pkg/reconciler/names"
+	o11yconfigmap "knative.dev/eventing/pkg/observability/configmap"
+	"knative.dev/eventing/pkg/observability/otel"
 )
 
 // TODO make these constants configurable (either as env variables, config map, or part of broker spec).
@@ -82,9 +79,6 @@ type envConfig struct {
 
 func main() {
 	ctx := signals.NewContext()
-
-	// Report stats on Go memory usage every 30 seconds.
-	metrics.MemStatsOrDie(ctx)
 
 	cfg := injection.ParseAndGetRESTConfigOrDie()
 	ctx = injection.WithConfig(ctx, cfg)
@@ -118,30 +112,34 @@ func main() {
 	logger := sl.Desugar()
 	defer flush(sl)
 
+	pprof := k8sruntime.NewProfilingServer(sl.Named("pprof"))
+
+	mp, tp := otel.SetupObservabilityOrDie(ctx, "broker.ingress", sl, pprof)
+
+	defer func() {
+		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		defer cancel()
+
+		if err := mp.Shutdown(ctx); err != nil {
+			sl.Errorw("Error flushing metrics", zap.Error(err))
+		}
+
+		if err := tp.Shutdown(ctx); err != nil {
+			sl.Errorw("Error flushing traces", zap.Error(err))
+		}
+	}()
+
 	logger.Info("Starting the Broker Ingress")
 
 	brokerInformer := brokerinformer.Get(ctx)
 
 	// Watch the logging config map and dynamically update logging levels.
 	configMapWatcher := configmap.NewInformedWatcher(kubeclient.Get(ctx), system.Namespace())
-	// Watch the observability config map and dynamically update metrics exporter.
-	updateFunc, err := metrics.UpdateExporterFromConfigMapWithOpts(ctx, metrics.ExporterOptions{
-		Component:      component,
-		PrometheusPort: defaultMetricsPort,
-	}, sl)
-	if err != nil {
-		logger.Fatal("Failed to create metrics exporter update function", zap.Error(err))
-	}
-	configMapWatcher.Watch(metrics.ConfigMapName(), updateFunc)
+
+	configMapWatcher.Watch(o11yconfigmap.Name(), pprof.UpdateFromConfigMap)
 	// TODO change the component name to broker once Stackdriver metrics are approved.
 	// Watch the observability config map and dynamically update request logs.
 	configMapWatcher.Watch(logging.ConfigMapName(), logging.UpdateLevelFromConfigMap(sl, atomicLevel, component))
-
-	bin := fmt.Sprintf("%s.%s", names.BrokerIngressName, system.Namespace())
-	tracer, err := tracing.SetupPublishingWithDynamicConfig(sl, configMapWatcher, bin, tracingconfig.ConfigName)
-	if err != nil {
-		logger.Fatal("Error setting up trace publishing", zap.Error(err))
-	}
 
 	trustBundleConfigMapLister := configmapinformer.Get(ctx, eventingtls.TrustBundleLabelSelector).Lister().ConfigMaps(system.Namespace())
 
@@ -167,16 +165,33 @@ func main() {
 		return featureStore.ToContext(ctx)
 	}
 
-	reporter := ingress.NewStatsReporter(env.ContainerName, kmeta.ChildName(env.PodName, uuid.New().String()))
-
 	oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
 	authVerifier := auth.NewVerifier(ctx, eventpolicyinformer.Get(ctx).Lister(), trustBundleConfigMapLister, configMapWatcher)
-	handler, err = ingress.NewHandler(logger, reporter, broker.TTLDefaulter(logger, env.MaxTTL), brokerInformer, authVerifier, oidcTokenProvider, trustBundleConfigMapLister, ctxFunc)
+	handler, err = ingress.NewHandler(
+		logger,
+		broker.TTLDefaulter(logger, env.MaxTTL),
+		brokerInformer,
+		authVerifier,
+		oidcTokenProvider,
+		trustBundleConfigMapLister,
+		ctxFunc,
+		mp,
+		tp,
+	)
 	if err != nil {
 		logger.Fatal("Error creating Handler", zap.Error(err))
 	}
 
-	serverManager, err := ingress.NewServerManager(ctx, logger, configMapWatcher, env.HTTPPort, env.HTTPSPort, handler)
+	serverManager, err := ingress.NewServerManager(
+		ctx,
+		logger,
+		configMapWatcher,
+		env.HTTPPort,
+		env.HTTPSPort,
+		mp,
+		tp,
+		handler,
+	)
 	if err != nil {
 		logger.Fatal("Error creating server manager", zap.Error(err))
 	}
@@ -209,11 +224,8 @@ func main() {
 	if err != nil {
 		logger.Fatal("serverManager.StartServers() returned an error", zap.Error(err))
 	}
-	tracer.Shutdown(context.Background())
-	logger.Info("Exiting...")
 }
 
 func flush(logger *zap.SugaredLogger) {
 	_ = logger.Sync()
-	metrics.FlushExporter()
 }

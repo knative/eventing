@@ -68,7 +68,6 @@ type envConfig struct {
 func main() {
 	ctx := signals.NewContext()
 
-
 	cfg := injection.ParseAndGetRESTConfigOrDie()
 	ctx = injection.WithConfig(ctx, cfg)
 
@@ -169,11 +168,11 @@ func main() {
 		logger.Fatal("Error creating Handler", zap.Error(err))
 	}
 	serverManager, err := filter.NewServerManager(
-		ctx, 
-		logger, 
-		configMapWatcher, 
-		env.HTTPPort, 
-		env.HTTPSPort, 
+		ctx,
+		logger,
+		configMapWatcher,
+		env.HTTPPort,
+		env.HTTPSPort,
 		mp,
 		tp,
 		handler,

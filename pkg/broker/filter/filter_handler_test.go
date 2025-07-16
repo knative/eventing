@@ -142,7 +142,7 @@ func TestReceiver(t *testing.T) {
 			triggers: []*eventingv1.Trigger{
 				makeTrigger(withoutSubscriberURI()),
 			},
-			expectedStatus:     http.StatusNotFound,
+			expectedStatus: http.StatusNotFound,
 		},
 		"Trigger without a Filter": {
 			triggers: []*eventingv1.Trigger{
@@ -248,7 +248,7 @@ func TestReceiver(t *testing.T) {
 						extensionName: "some-other-extension-value"},
 				})),
 			},
-			event:              makeEventWithExtension(extensionName, extensionValue),
+			event: makeEventWithExtension(extensionName, extensionValue),
 		},
 		"Returned Cloud Event": {
 			triggers: []*eventingv1.Trigger{

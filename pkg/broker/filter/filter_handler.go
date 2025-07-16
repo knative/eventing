@@ -271,12 +271,13 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	ctx = observability.WithMessagingLabels(ctx, tracing.TriggerMessagingDestination(triggerRef.NamespacedName), "send")
-	ctx = observability.WithEventLabels(ctx, *event)
+	ctx = observability.WithMinimalEventLabels(ctx, event)
 	ctx = observability.WithBrokerLabels(ctx, broker)
 
 	ctx, span := h.tracer.Start(ctx, tracing.TriggerMessagingDestination(triggerRef.NamespacedName))
 	defer func() {
 		if span.IsRecording() {
+			ctx = observability.WithEventLabels(ctx, event)
 			labeler, _ := otelhttp.LabelerFromContext(ctx)
 			span.SetAttributes(labeler.Get()...)
 		}

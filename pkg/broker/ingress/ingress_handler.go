@@ -26,12 +26,14 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/utils/ptr"
 
-	opencensusclient "github.com/cloudevents/sdk-go/observability/opencensus/v2/client"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/trace"
+
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"
 	"github.com/cloudevents/sdk-go/v2/client"
 	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
-	"go.opencensus.io/trace"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
 	corev1listers "k8s.io/client-go/listers/core/v1"
@@ -51,6 +53,7 @@ import (
 	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/eventtype"
 	"knative.dev/eventing/pkg/kncloudevents"
+	"knative.dev/eventing/pkg/observability"
 	"knative.dev/eventing/pkg/tracing"
 	"knative.dev/eventing/pkg/utils"
 )
@@ -58,28 +61,38 @@ import (
 const (
 	defaultMaxIdleConnections        = 1000
 	defaultMaxIdleConnectionsPerHost = 1000
+	ScopeName                        = "knative.dev/pkg/broker/ingress"
+)
+
+var (
+	latencyBounds = []float64{0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10}
 )
 
 type Handler struct {
 	// Defaults sets default values to incoming events
 	Defaulter client.EventDefaulter
-	// Reporter reports stats of status code and dispatch time
-	Reporter StatsReporter
 	// BrokerLister gets broker objects
-	BrokerLister eventinglisters.BrokerLister
-
-	EvenTypeHandler *eventtype.EventTypeAutoHandler
-
-	Logger *zap.Logger
-
-	eventDispatcher *kncloudevents.Dispatcher
-
-	tokenVerifier *auth.Verifier
-
-	withContext func(ctx context.Context) context.Context
+	BrokerLister     eventinglisters.BrokerLister
+	EvenTypeHandler  *eventtype.EventTypeAutoHandler
+	Logger           *zap.Logger
+	eventDispatcher  *kncloudevents.Dispatcher
+	tokenVerifier    *auth.Verifier
+	withContext      func(ctx context.Context) context.Context
+	tracer           trace.Tracer
+	dispatchDuration metric.Float64Histogram
 }
 
-func NewHandler(logger *zap.Logger, reporter StatsReporter, defaulter client.EventDefaulter, brokerInformer v1.BrokerInformer, tokenVerifier *auth.Verifier, oidcTokenProvider *auth.OIDCTokenProvider, trustBundleConfigMapLister corev1listers.ConfigMapNamespaceLister, withContext func(ctx context.Context) context.Context) (*Handler, error) {
+func NewHandler(
+	logger *zap.Logger,
+	defaulter client.EventDefaulter,
+	brokerInformer v1.BrokerInformer,
+	tokenVerifier *auth.Verifier,
+	oidcTokenProvider *auth.OIDCTokenProvider,
+	trustBundleConfigMapLister corev1listers.ConfigMapNamespaceLister,
+	withContext func(ctx context.Context) context.Context,
+	meterProvider metric.MeterProvider,
+	traceProvider trace.TracerProvider,
+) (*Handler, error) {
 	connectionArgs := kncloudevents.ConnectionArgs{
 		MaxIdleConns:        defaultMaxIdleConnections,
 		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
@@ -99,7 +112,7 @@ func NewHandler(logger *zap.Logger, reporter StatsReporter, defaulter client.Eve
 			kncloudevents.AddOrUpdateAddressableHandler(clientConfig, duckv1.Addressable{
 				URL:     broker.Status.Address.URL,
 				CACerts: broker.Status.Address.CACerts,
-			})
+			}, traceProvider)
 		},
 		UpdateFunc: func(_, obj interface{}) {
 			broker, ok := obj.(*eventingv1.Broker)
@@ -109,7 +122,7 @@ func NewHandler(logger *zap.Logger, reporter StatsReporter, defaulter client.Eve
 			kncloudevents.AddOrUpdateAddressableHandler(clientConfig, duckv1.Addressable{
 				URL:     broker.Status.Address.URL,
 				CACerts: broker.Status.Address.CACerts,
-			})
+			}, traceProvider)
 		},
 		DeleteFunc: func(obj interface{}) {
 			broker, ok := obj.(*eventingv1.Broker)
@@ -123,15 +136,30 @@ func NewHandler(logger *zap.Logger, reporter StatsReporter, defaulter client.Eve
 		},
 	})
 
-	return &Handler{
+	h := &Handler{
 		Defaulter:       defaulter,
-		Reporter:        reporter,
 		Logger:          logger,
 		BrokerLister:    brokerInformer.Lister(),
 		eventDispatcher: kncloudevents.NewDispatcher(clientConfig, oidcTokenProvider),
 		tokenVerifier:   tokenVerifier,
 		withContext:     withContext,
-	}, nil
+		tracer:          traceProvider.Tracer(ScopeName),
+	}
+
+	meter := meterProvider.Meter(ScopeName)
+
+	var err error
+	h.dispatchDuration, err = meter.Float64Histogram(
+		"kn.eventing.dispatch.duration",
+		metric.WithDescription("The duration to dispatch the event"),
+		metric.WithUnit("s"),
+		metric.WithExplicitBucketBoundaries(latencyBounds...),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return h, nil
 }
 
 func (h *Handler) getBroker(name, namespace string) (*eventingv1.Broker, error) {
@@ -249,36 +277,27 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	ctx, span := trace.StartSpan(ctx, tracing.BrokerMessagingDestination(brokerNamespacedName))
-	defer span.End()
+	ctx = observability.WithBrokerLabels(ctx, brokerNamespacedName)
+	ctx = observability.WithMinimalEventLabels(ctx, event)
 
-	if span.IsRecordingEvents() {
-		span.AddAttributes(
-			tracing.MessagingSystemAttribute,
-			tracing.MessagingProtocolHTTP,
-			tracing.BrokerMessagingDestinationAttribute(brokerNamespacedName),
-			tracing.MessagingMessageIDAttribute(event.ID()),
-		)
-		span.AddAttributes(opencensusclient.EventTraceAttributes(event)...)
-	}
+	ctx, span := h.tracer.Start(ctx, tracing.BrokerMessagingDestination(brokerNamespacedName))
+	defer func ()  {
+		if span.IsRecording() {
+			// add event labels here so that they only populate the span, and not any metrics
+			ctx = observability.WithEventLabels(ctx, event)
+			labeler, _ := otelhttp.LabelerFromContext(ctx)
+			span.SetAttributes(labeler.Get()...)
+		}
 
-	reporterArgs := &ReportArgs{
-		ns:        brokerNamespace,
-		broker:    brokerName,
-		eventType: event.Type(),
-	}
+		span.End()
+	}()
 
-	if request.TLS != nil {
-		reporterArgs.eventScheme = "https"
-	} else {
-		reporterArgs.eventScheme = "http"
-	}
 
 	statusCode, dispatchTime := h.receive(ctx, utils.PassThroughHeaders(request.Header), event, broker)
 	if dispatchTime > kncloudevents.NoDuration {
-		_ = h.Reporter.ReportEventDispatchTime(reporterArgs, statusCode, dispatchTime)
+		labeler, _ := otelhttp.LabelerFromContext(ctx)
+		h.dispatchDuration.Record(ctx, dispatchTime.Seconds(), metric.WithAttributes(labeler.Get()...))
 	}
-	_ = h.Reporter.ReportEventCount(reporterArgs, statusCode)
 
 	writer.WriteHeader(statusCode)
 
@@ -323,6 +342,8 @@ func (h *Handler) receive(ctx context.Context, headers http.Header, event *cloud
 		h.Logger.Warn("could not get channel address from broker", zap.Error(err))
 		return http.StatusInternalServerError, kncloudevents.NoDuration
 	}
+
+	ctx = observability.WithMessagingLabels(ctx, channelAddress.URL.String(), "send")
 
 	opts := []kncloudevents.SendOption{
 		kncloudevents.WithHeader(headers),
