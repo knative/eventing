@@ -259,26 +259,26 @@ O2dgzikq8iSy1BlRsVw=
 	}
 }
 
-func TestMakeReceiveAdapterWithSkipPermissions(t *testing.T) {
+func TestMakeReceiveAdapterWithFailFast(t *testing.T) {
 	name := "source-name"
 	testCert := `-----BEGIN CERTIFICATE-----
 Test certificate content here
 -----END CERTIFICATE-----`
 
 	tests := []struct {
-		name            string
-		skipPermissions bool
-		expectedConfig  string
+		name           string
+		failFast       bool
+		expectedConfig string
 	}{
 		{
-			name:            "SkippedPermissions true",
-			skipPermissions: true,
-			expectedConfig:  `{"namespaces":["source-namespace"],"allNamespaces":false,"resources":[{"gvr":{"Group":"","Version":"","Resource":"namespaces"}}],"mode":"Resource","skippedPermissions":true}`,
+			name:           "FailFast true",
+			failFast:       true,
+			expectedConfig: `{"namespaces":["source-namespace"],"allNamespaces":false,"resources":[{"gvr":{"Group":"","Version":"","Resource":"namespaces"}}],"mode":"Resource","failFast":true}`,
 		},
 		{
-			name:            "SkippedPermissions false",
-			skipPermissions: false,
-			expectedConfig:  `{"namespaces":["source-namespace"],"allNamespaces":false,"resources":[{"gvr":{"Group":"","Version":"","Resource":"namespaces"}}],"mode":"Resource"}`,
+			name:           "FailFast false",
+			failFast:       false,
+			expectedConfig: `{"namespaces":["source-namespace"],"allNamespaces":false,"resources":[{"gvr":{"Group":"","Version":"","Resource":"namespaces"}}],"mode":"Resource"}`,
 		},
 	}
 
@@ -301,14 +301,14 @@ Test certificate content here
 			}
 
 			got, err := MakeReceiveAdapter(&ReceiveAdapterArgs{
-				Image:              "test-image",
-				Source:             src,
-				Labels:             map[string]string{"test-key": "test-value"},
-				SinkURI:            "sink-uri",
-				CACerts:            &testCert,
-				Configs:            &source.EmptyVarsGenerator{},
-				Namespaces:         []string{"source-namespace"},
-				SkippedPermissions: tt.skipPermissions,
+				Image:      "test-image",
+				Source:     src,
+				Labels:     map[string]string{"test-key": "test-value"},
+				SinkURI:    "sink-uri",
+				CACerts:    &testCert,
+				Configs:    &source.EmptyVarsGenerator{},
+				Namespaces: []string{"source-namespace"},
+				FailFast:   tt.failFast,
 			})
 
 			if err != nil {

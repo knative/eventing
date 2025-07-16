@@ -69,10 +69,9 @@ type Config struct {
 	// +optional
 	Filters []eventingv1.SubscriptionsAPIFilter `json:"filters,omitempty"`
 
-	// SkippedPermissions is a field that communicates that the
-	// ApiServerSource did not check if permissions were OK to setup
-	// watches on the required resources and namespaces. This changes the behaviour
-	// of the pod, so it does not keep trying for failed watches.
-	//
-	SkippedPermissions bool `json:"skippedPermissions,omitempty"`
+	// FailFast is a field that communicates that the ApiServerSource adapter should not retry failed watches.
+	// This is useful, when for example, the `skip permissions check` is set to true
+	// (via the features.knative.dev/apiserversource-skip-permissions annotation), and the ApiServerSource
+	// adapter should not keep trying to establish watches on resources that it perhaps does not have permissions for.
+	FailFast bool `json:"failFast,omitempty"`
 }

@@ -81,10 +81,18 @@ func (a *apiServerAdapter) start(ctx context.Context, stopCh <-chan struct{}) er
 		return fmt.Errorf("failed to collect resource matches: %v", err)
 	}
 
-	if a.config.SkippedPermissions {
-		a.logger.Info("ApiServerSource skipped checking permissions so watches will be attempted only once")
+	// we have two modes of operation for the ApiServerSource adapter:
+	// 1. Resilient Mode (Default): The adapter uses `reflector.Run()` to continuously retry establishing watches
+	//    on resources, making it resilient to transient errors or delayed permission grants.
+	// 2. Fail-Fast Mode: In this mode, the adapter uses `reflector.ListAndWatchWithContext()`. If any resource watch
+	//    fails to be established on the first attempt, the entire adapter will fail immediately. This provides faster
+	//    feedback and a clearer failure state in environments where permissions are expected to be correct at startup.
+
+	if a.config.FailFast {
+		a.logger.Info("Starting in fail-fast mode. Any single watch failure will stop the adapter.")
 		return a.startFailFast(ctx, stopCh, delegate, matches)
 	}
+	a.logger.Info("Starting in resilient mode. Watch failures will be retried.")
 	return a.startResilient(ctx, stopCh, delegate, matches)
 }
 
@@ -99,6 +107,8 @@ func (a *apiServerAdapter) startResilient(ctx context.Context, stopCh <-chan str
 	for _, match := range matches {
 		if match.apiResource == nil {
 			a.logger.Errorf("could not retrieve information about resource %s: it doesn't exist. skipping...", match.resourceWatch.GVR.String())
+			// This was already logged as a warning in collectResourceMatches.
+			// In resilient mode, we just skip it and continue.
 			continue
 		}
 		for _, res := range match.resourceInterfaces {

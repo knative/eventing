@@ -1957,14 +1957,14 @@ func makeAvailableReceiveAdapterWithNamespaces(t *testing.T, namespaces []string
 	)
 
 	args := resources.ReceiveAdapterArgs{
-		Image:              image,
-		Source:             src,
-		Labels:             resources.Labels(sourceName),
-		SinkURI:            sinkURI.String(),
-		Configs:            &reconcilersource.EmptyVarsGenerator{},
-		Namespaces:         namespaces,
-		AllNamespaces:      allNamespaces,
-		SkippedPermissions: false,
+		Image:         image,
+		Source:        src,
+		Labels:        resources.Labels(sourceName),
+		SinkURI:       sinkURI.String(),
+		Configs:       &reconcilersource.EmptyVarsGenerator{},
+		Namespaces:    namespaces,
+		AllNamespaces: allNamespaces,
+		FailFast:      false,
 	}
 
 	ra, err := resources.MakeReceiveAdapter(&args)
@@ -2169,14 +2169,14 @@ func makeAvailableReceiveAdapterWithNamespacesAndSkip(t *testing.T, namespaces [
 	)
 
 	args := resources.ReceiveAdapterArgs{
-		Image:              image,
-		Source:             src,
-		Labels:             resources.Labels(sourceName),
-		SinkURI:            sinkURI.String(),
-		Configs:            &reconcilersource.EmptyVarsGenerator{},
-		Namespaces:         namespaces,
-		AllNamespaces:      allNamespaces,
-		SkippedPermissions: true,
+		Image:         image,
+		Source:        src,
+		Labels:        resources.Labels(sourceName),
+		SinkURI:       sinkURI.String(),
+		Configs:       &reconcilersource.EmptyVarsGenerator{},
+		Namespaces:    namespaces,
+		AllNamespaces: allNamespaces,
+		FailFast:      true,
 	}
 
 	ra, err := resources.MakeReceiveAdapter(&args)

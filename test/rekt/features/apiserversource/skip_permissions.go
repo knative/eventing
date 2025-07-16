@@ -87,7 +87,7 @@ func SkipPermissionsFeature() *feature.Feature {
 		}
 	})
 
-	f.Assert("ApiServerSource adapter has SkippedPermissions set to true", func(ctx context.Context, t feature.T) {
+	f.Assert("ApiServerSource adapter has FailFast set to true", func(ctx context.Context, t feature.T) {
 		env := environment.FromContext(ctx)
 		deploymentName := fmt.Sprintf("apiserversource-%s", source)
 
@@ -104,8 +104,8 @@ func SkipPermissionsFeature() *feature.Feature {
 					t.Fatalf("error deserializing K_SOURCE_CONFIG json: %s", err)
 				}
 
-				if !config.SkippedPermissions {
-					t.Fatal("skipPermissions should be true")
+				if !config.FailFast {
+					t.Fatal("failFast should be true")
 				}
 
 			}

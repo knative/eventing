@@ -316,22 +316,22 @@ func makeRefAndTestingClient() (*resourceDelegate, *adaptertest.TestCloudEventsC
 	}, ce
 }
 
-func TestAdapter_SkipPermissions(t *testing.T) {
+func TestAdapter_FailFast(t *testing.T) {
 	ce := adaptertest.NewTestClient()
 
 	tests := []struct {
 		name               string
-		skipPermissions    bool
+		failFast           bool
 		expectedLogMessage string
 	}{
 		{
-			name:               "skip permissions enabled",
-			skipPermissions:    true,
-			expectedLogMessage: "ApiServerSource skipped checking permissions so only watches will be only attempted once",
+			name:               "fail fast permissions enabled",
+			failFast:           true,
+			expectedLogMessage: "Starting in fail-fast mode. Any single watch failure will stop the adapter.",
 		},
 		{
-			name:            "skip permissions disabled",
-			skipPermissions: false,
+			name:     "fail fast disabled",
+			failFast: false,
 		},
 	}
 
@@ -345,8 +345,8 @@ func TestAdapter_SkipPermissions(t *testing.T) {
 						Resource: "pods",
 					},
 				}},
-				EventMode:          "Resource",
-				SkippedPermissions: tt.skipPermissions,
+				EventMode: "Resource",
+				FailFast:  tt.failFast,
 			}
 
 			ctx, _ := pkgtesting.SetupFakeContext(t)
