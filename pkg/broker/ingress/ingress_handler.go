@@ -233,6 +233,7 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	ctx := h.withContext(request.Context())
+	ctx = observability.WithRequestLabels(ctx, request)
 
 	message := cehttp.NewMessageFromHttpRequest(request)
 	defer message.Finish(nil)

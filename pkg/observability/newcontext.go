@@ -18,6 +18,7 @@ package observability
 
 import (
 	"context"
+	"net/http"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
@@ -49,8 +50,24 @@ func WithMessagingLabels(ctx context.Context, destination, operation string) con
 	}
 
 	labeler.Add(
-		MessagingLabels(destination, operation)...
+		MessagingLabels(destination, operation)...,
 	)
+
+	return ctx
+}
+
+func WithRequestLabels(ctx context.Context, r *http.Request) context.Context {
+	labeler, ok := otelhttp.LabelerFromContext(ctx)
+	if !ok {
+		ctx = otelhttp.ContextWithLabeler(ctx, labeler)
+	}
+
+	scheme := "http"
+	if r.TLS != nil {
+		scheme = "https"
+	}
+
+	labeler.Add(RequestScheme.With(scheme))
 
 	return ctx
 }

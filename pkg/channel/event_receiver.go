@@ -280,6 +280,7 @@ func (r *EventReceiver) ServeHTTP(response nethttp.ResponseWriter, request *neth
 	r.logger.Debug("Request mapped to channel", zap.String("channel", channel.String()))
 
 	ctx = observability.WithChannelLabels(ctx, types.NamespacedName{Name: channel.Name, Namespace: channel.Namespace})
+	ctx = observability.WithRequestLabels(ctx, request)
 
 	event, err := http.NewEventFromHTTPRequest(request)
 	if err != nil {

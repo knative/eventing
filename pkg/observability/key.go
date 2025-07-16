@@ -45,4 +45,7 @@ var (
 	CloudEventSubject         = attributekey.String(ceo11y.SubjectAttr)
 	CloudEventDataContenttype = attributekey.String(ceo11y.DatacontenttypeAttr)
 	CloudEventSpecVersion     = attributekey.String(ceo11y.SpecversionAttr)
+
+	// attributes relating to the request
+	RequestScheme = attributekey.String("url.scheme")
 )

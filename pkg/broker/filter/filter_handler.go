@@ -251,6 +251,8 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	ctx = observability.WithRequestLabels(ctx, request)
+
 	event, err := cehttp.NewEventFromHTTPRequest(request)
 	if err != nil {
 		h.logger.Warn("failed to extract event from request", zap.Error(err))
