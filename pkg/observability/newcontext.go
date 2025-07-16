@@ -56,6 +56,21 @@ func WithMessagingLabels(ctx context.Context, destination, operation string) con
 	return ctx
 }
 
+func WithLowCardinalityMessagingLabels(ctx context.Context, destinationTemplate, operation string) context.Context {
+	labeler, ok := otelhttp.LabelerFromContext(ctx)
+	if !ok {
+		ctx = otelhttp.ContextWithLabeler(ctx, labeler)
+	}
+
+	labeler.Add(
+		MessagingDestinationTemplate.With(destinationTemplate),
+		MessagingOperationName.With(operation),
+		MessagingSystem.With(KnativeMessagingSystem),
+	)
+
+	return ctx
+}
+
 func WithRequestLabels(ctx context.Context, r *http.Request) context.Context {
 	labeler, ok := otelhttp.LabelerFromContext(ctx)
 	if !ok {
@@ -132,6 +147,21 @@ func WithBrokerLabels(ctx context.Context, broker types.NamespacedName) context.
 	labeler.Add(
 		BrokerName.With(broker.Name),
 		BrokerNamespace.With(broker.Namespace),
+	)
+
+	return ctx
+}
+
+func WithSinkLabels(ctx context.Context, sink types.NamespacedName, kind string) context.Context {
+	labeler, ok := otelhttp.LabelerFromContext(ctx)
+	if !ok {
+		ctx = otelhttp.ContextWithLabeler(ctx, labeler)
+	}
+
+	labeler.Add(
+		SinkName.With(sink.Name),
+		SinkNamespace.With(sink.Namespace),
+		SinkKind.With(kind),
 	)
 
 	return ctx

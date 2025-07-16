@@ -27,9 +27,10 @@ const (
 
 var (
 	// required attributes for otel messaging span semantics: https://opentelemetry.io/docs/specs/semconv/messaging/messaging-spans/#conventions
-	MessagingSystem          = attributekey.String("messaging.system")
-	MessagingOperationName   = attributekey.String("messaging.operation.name")
-	MessagingDestinationName = attributekey.String("messaging.destination.name")
+	MessagingSystem              = attributekey.String("messaging.system")
+	MessagingOperationName       = attributekey.String("messaging.operation.name")
+	MessagingDestinationName     = attributekey.String("messaging.destination.name")
+	MessagingDestinationTemplate = attributekey.String("messaging.destination.tempate")
 
 	// attributes relating to the broker
 	BrokerName      = attributekey.String("kn.broker.name")
@@ -38,6 +39,11 @@ var (
 	// attributes relating to the channel
 	ChannelName      = attributekey.String("kn.channel.name")
 	ChannelNamespace = attributekey.String("kn.channel.namespace")
+
+	// attributes relating to the broker
+	SinkName      = attributekey.String("kn.sink.name")
+	SinkNamespace = attributekey.String("kn.sink.namespace")
+	SinkKind      = attributekey.String("kn.sink.kind")
 
 	// attributes relating to the cloudevent (not including the ID for cardinality reasons)
 	CloudEventType            = attributekey.String(ceo11y.TypeAttr)
