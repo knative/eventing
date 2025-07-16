@@ -81,7 +81,7 @@ func Test_getClientForAddressable(t *testing.T) {
 				URL:     url,
 				CACerts: tt.caCert,
 			}
-			_, err = getClientForAddressable(eventingtls.NewDefaultClientConfig(), addressable, otel.GetTracerProvider())
+			_, err = getClientForAddressable(eventingtls.NewDefaultClientConfig(), addressable, otel.GetMeterProvider(), otel.GetTracerProvider())
 			if (err != nil) != tt.wantErr {
 				t.Errorf("getClientForAddressable() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -100,7 +100,7 @@ func Test_ConfigureConnectionArgs(t *testing.T) {
 		MaxIdleConnsPerHost: 1000,
 		MaxIdleConns:        1000,
 	})
-	client1, err := getClientForAddressable(eventingtls.NewDefaultClientConfig(), target, otel.GetTracerProvider())
+	client1, err := getClientForAddressable(eventingtls.NewDefaultClientConfig(), target, otel.GetMeterProvider(), otel.GetTracerProvider())
 	require.Nil(t, err)
 
 	// Set other connection args
@@ -108,7 +108,7 @@ func Test_ConfigureConnectionArgs(t *testing.T) {
 		MaxIdleConnsPerHost: 2000,
 		MaxIdleConns:        2000,
 	})
-	client2, err := getClientForAddressable(eventingtls.NewDefaultClientConfig(), target, otel.GetTracerProvider())
+	client2, err := getClientForAddressable(eventingtls.NewDefaultClientConfig(), target, otel.GetMeterProvider(), otel.GetTracerProvider())
 	require.Nil(t, err)
 
 	// Try to set the same value and client should not be cleaned up
@@ -116,13 +116,13 @@ func Test_ConfigureConnectionArgs(t *testing.T) {
 		MaxIdleConnsPerHost: 2000,
 		MaxIdleConns:        2000,
 	})
-	client2_2, err := getClientForAddressable(eventingtls.NewDefaultClientConfig(), target, otel.GetTracerProvider())
+	client2_2, err := getClientForAddressable(eventingtls.NewDefaultClientConfig(), target, otel.GetMeterProvider(), otel.GetTracerProvider())
 	require.Nil(t, err)
 	require.Same(t, client2_2, client2)
 
 	// Set back to nil
 	ConfigureConnectionArgs(nil)
-	client3, err := getClientForAddressable(eventingtls.NewDefaultClientConfig(), target, otel.GetTracerProvider())
+	client3, err := getClientForAddressable(eventingtls.NewDefaultClientConfig(), target, otel.GetMeterProvider(), otel.GetTracerProvider())
 	require.Nil(t, err)
 
 	require.NotSame(t, client1, client2)

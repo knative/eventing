@@ -34,6 +34,7 @@ import (
 	"github.com/hashicorp/go-retryablehttp"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -152,13 +153,13 @@ type senderConfig struct {
 	eventTypeRef         *duckv1.KReference
 	eventTypeOnwerUID    types.UID
 	eventFormat          *v1.FormatType
-	traceProvider        trace.TracerProvider
 }
 
 type Dispatcher struct {
 	oidcTokenProvider *auth.OIDCTokenProvider
 	clientConfig      eventingtls.ClientConfig
 	traceProvider     trace.TracerProvider
+	meterProvider     metric.MeterProvider
 }
 
 type DispatcherOption func(*Dispatcher)
@@ -166,6 +167,12 @@ type DispatcherOption func(*Dispatcher)
 func WithTraceProvider(tp trace.TracerProvider) DispatcherOption {
 	return func(d *Dispatcher) {
 		d.traceProvider = tp
+	}
+}
+
+func WithMeterProvider(mp metric.MeterProvider) DispatcherOption {
+	return func(d *Dispatcher) {
+		d.meterProvider = mp
 	}
 }
 
@@ -183,6 +190,10 @@ func NewDispatcher(clientConfig eventingtls.ClientConfig, oidcTokenProvider *aut
 		d.traceProvider = otel.GetTracerProvider()
 	}
 
+	if d.meterProvider == nil {
+		d.meterProvider = otel.GetMeterProvider()
+	}
+
 	return d
 }
 
@@ -193,7 +204,7 @@ func (d *Dispatcher) SendEvent(ctx context.Context, event event.Event, destinati
 	// - it might produce data races if the caller is trying to read the event in different go routines
 	c := event.Clone()
 
-	ctx = observability.WithEventLabels(ctx, c)
+	ctx = observability.WithEventLabels(ctx, &c)
 
 	message := binding.ToMessage(&c)
 
@@ -266,7 +277,6 @@ func (d *Dispatcher) send(ctx context.Context, message binding.Message, destinat
 		additionalHeadersForDestination,
 		config.retryConfig,
 		config.oidcServiceAccount,
-		config.traceProvider,
 		config.transformers,
 	)
 	if err != nil {
@@ -280,7 +290,6 @@ func (d *Dispatcher) send(ctx context.Context, message binding.Message, destinat
 				config.additionalHeaders,
 				config.retryConfig,
 				config.oidcServiceAccount,
-				config.traceProvider,
 				append(config.transformers, dispatchTransformers),
 			)
 			if deadLetterErr != nil {
@@ -332,7 +341,6 @@ func (d *Dispatcher) send(ctx context.Context, message binding.Message, destinat
 		responseAdditionalHeaders,
 		config.retryConfig,
 		config.oidcServiceAccount,
-		config.traceProvider,
 		config.transformers,
 	)
 	if err != nil {
@@ -346,7 +354,6 @@ func (d *Dispatcher) send(ctx context.Context, message binding.Message, destinat
 				responseAdditionalHeaders,
 				config.retryConfig,
 				config.oidcServiceAccount,
-				config.traceProvider,
 				append(config.transformers, dispatchTransformers),
 			)
 			if deadLetterErr != nil {
@@ -375,7 +382,6 @@ func (d *Dispatcher) executeRequest(
 	additionalHeaders http.Header,
 	retryConfig *RetryConfig,
 	oidcServiceAccount *types.NamespacedName,
-	tp trace.TracerProvider,
 	transformers ...binding.Transformer,
 ) (context.Context, cloudevents.Message, *DispatchInfo, error) {
 	var scheme string
@@ -392,11 +398,7 @@ func (d *Dispatcher) executeRequest(
 		Scheme:         scheme,
 	}
 
-	if tp == nil {
-		tp = d.traceProvider
-	}
-
-	tracer := tp.Tracer(TracerName)
+	tracer := d.traceProvider.Tracer(TracerName)
 
 	ctx, span := tracer.Start(ctx, fmt.Sprintf("send %s", target.URL.String()))
 
@@ -414,7 +416,7 @@ func (d *Dispatcher) executeRequest(
 		return ctx, nil, &dispatchInfo, fmt.Errorf("failed to create request: %w", err)
 	}
 
-	client, err := newClient(d.clientConfig, target, tp)
+	client, err := newClient(d.clientConfig, target, d.meterProvider, d.traceProvider)
 	if err != nil {
 		return ctx, nil, &dispatchInfo, fmt.Errorf("failed to create http client: %w", err)
 	}
@@ -510,8 +512,8 @@ type client struct {
 	http.Client
 }
 
-func newClient(cfg eventingtls.ClientConfig, target duckv1.Addressable, tp trace.TracerProvider) (*client, error) {
-	c, err := getClientForAddressable(cfg, target, tp)
+func newClient(cfg eventingtls.ClientConfig, target duckv1.Addressable, mp metric.MeterProvider, tp trace.TracerProvider) (*client, error) {
+	c, err := getClientForAddressable(cfg, target, mp, tp)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get http client for addressable: %w", err)
 	}

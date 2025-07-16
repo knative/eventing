@@ -112,7 +112,7 @@ func NewHandler(
 			kncloudevents.AddOrUpdateAddressableHandler(clientConfig, duckv1.Addressable{
 				URL:     broker.Status.Address.URL,
 				CACerts: broker.Status.Address.CACerts,
-			}, traceProvider)
+			}, meterProvider, traceProvider)
 		},
 		UpdateFunc: func(_, obj interface{}) {
 			broker, ok := obj.(*eventingv1.Broker)
@@ -122,7 +122,7 @@ func NewHandler(
 			kncloudevents.AddOrUpdateAddressableHandler(clientConfig, duckv1.Addressable{
 				URL:     broker.Status.Address.URL,
 				CACerts: broker.Status.Address.CACerts,
-			}, traceProvider)
+			}, meterProvider, traceProvider)
 		},
 		DeleteFunc: func(obj interface{}) {
 			broker, ok := obj.(*eventingv1.Broker)
@@ -137,13 +137,18 @@ func NewHandler(
 	})
 
 	h := &Handler{
-		Defaulter:       defaulter,
-		Logger:          logger,
-		BrokerLister:    brokerInformer.Lister(),
-		eventDispatcher: kncloudevents.NewDispatcher(clientConfig, oidcTokenProvider),
-		tokenVerifier:   tokenVerifier,
-		withContext:     withContext,
-		tracer:          traceProvider.Tracer(ScopeName),
+		Defaulter:    defaulter,
+		Logger:       logger,
+		BrokerLister: brokerInformer.Lister(),
+		eventDispatcher: kncloudevents.NewDispatcher(
+			clientConfig,
+			oidcTokenProvider,
+			kncloudevents.WithMeterProvider(meterProvider),
+			kncloudevents.WithTraceProvider(traceProvider),
+		),
+		tokenVerifier: tokenVerifier,
+		withContext:   withContext,
+		tracer:        traceProvider.Tracer(ScopeName),
 	}
 
 	meter := meterProvider.Meter(ScopeName)
@@ -281,7 +286,7 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	ctx = observability.WithMinimalEventLabels(ctx, event)
 
 	ctx, span := h.tracer.Start(ctx, tracing.BrokerMessagingDestination(brokerNamespacedName))
-	defer func ()  {
+	defer func() {
 		if span.IsRecording() {
 			// add event labels here so that they only populate the span, and not any metrics
 			ctx = observability.WithEventLabels(ctx, event)
@@ -291,7 +296,6 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 
 		span.End()
 	}()
-
 
 	statusCode, dispatchTime := h.receive(ctx, utils.PassThroughHeaders(request.Header), event, broker)
 	if dispatchTime > kncloudevents.NoDuration {

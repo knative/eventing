@@ -143,6 +143,7 @@ func NewHandler(
 				URL:     trigger.Status.SubscriberURI,
 				CACerts: trigger.Status.SubscriberCACerts,
 			},
+				meterProvider,
 				traceProvider,
 			)
 		},
@@ -157,6 +158,7 @@ func NewHandler(
 				URL:     trigger.Status.SubscriberURI,
 				CACerts: trigger.Status.SubscriberCACerts,
 			},
+				meterProvider,
 				traceProvider,
 			)
 		},
@@ -175,7 +177,12 @@ func NewHandler(
 	})
 
 	h := &Handler{
-		eventDispatcher:    kncloudevents.NewDispatcher(clientConfig, oidcTokenProvider),
+		eventDispatcher: kncloudevents.NewDispatcher(
+			clientConfig,
+			oidcTokenProvider,
+			kncloudevents.WithMeterProvider(meterProvider),
+			kncloudevents.WithTraceProvider(traceProvider),
+		),
 		triggerLister:      triggerInformer.Lister(),
 		brokerLister:       brokerInformer.Lister(),
 		subscriptionLister: subscriptionInformer.Lister(),

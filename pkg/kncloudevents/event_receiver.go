@@ -137,14 +137,14 @@ func (recv *HTTPEventReceiver) GetPort() int {
 }
 
 // Blocking
-func (recv *HTTPEventReceiver) StartListen(ctx context.Context, handler http.Handler) error {
+func (recv *HTTPEventReceiver) StartListen(ctx context.Context, handler http.Handler, otelOpts ...otelhttp.Option) error {
 	var err error
 	if recv.listener, err = net.Listen("tcp", fmt.Sprintf(":%d", recv.desiredPort)); err != nil {
 		return err
 	}
 
 	drainer := &handlers.Drainer{
-		Inner:       CreateHandler(handler),
+		Inner:       CreateHandler(handler, otelOpts...),
 		HealthCheck: recv.checker,
 		QuietPeriod: recv.drainQuietPeriod,
 	}
