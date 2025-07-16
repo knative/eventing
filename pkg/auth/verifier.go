@@ -28,12 +28,13 @@ import (
 	"sync"
 	"time"
 
-	"go.opencensus.io/plugin/ochttp"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/network"
-	"knative.dev/pkg/tracing/propagation/tracecontextb3"
+	"knative.dev/pkg/observability/tracing"
 
 	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
@@ -303,10 +304,12 @@ func (v *Verifier) getHTTPClient(features feature.Flags) (*http.Client, error) {
 
 	client := &http.Client{
 		// Add output tracing.
-		Transport: &ochttp.Transport{
-			Base:        base,
-			Propagation: tracecontextb3.TraceContextEgress,
-		},
+		Transport: otelhttp.NewTransport(
+			base,
+			otelhttp.WithMeterProvider(otel.GetMeterProvider()),
+			otelhttp.WithTracerProvider(otel.GetTracerProvider()),
+			otelhttp.WithPropagators(tracing.DefaultTextMapPropagator()),
+		),
 	}
 
 	return client, nil
