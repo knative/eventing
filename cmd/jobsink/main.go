@@ -68,6 +68,7 @@ import (
 	"knative.dev/eventing/pkg/observability"
 	o11yconfigmap "knative.dev/eventing/pkg/observability/configmap"
 	"knative.dev/eventing/pkg/observability/otel"
+	eventingtracing "knative.dev/eventing/pkg/tracing"
 	"knative.dev/eventing/pkg/utils"
 )
 
@@ -260,7 +261,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	message := cehttp.NewMessageFromHttpRequest(r)
 	defer message.Finish(nil)
 
-	event, err := binding.ToEvent(r.Context(), message)
+	event, err := binding.ToEvent(r.Context(), message, eventingtracing.PopulateCEDistributedTracing(ctx))
 	if err != nil {
 		logger.Warn("failed to extract event from request", zap.Error(err))
 		w.WriteHeader(http.StatusBadRequest)
