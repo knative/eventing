@@ -23,9 +23,9 @@ import (
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	cloudeventshttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"github.com/wavesoftware/go-ensure"
-	"go.opencensus.io/plugin/ochttp"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"knative.dev/eventing/test/upgrade/prober/wathola/config"
-	"knative.dev/pkg/tracing/propagation/tracecontextb3"
+	"knative.dev/pkg/observability/tracing"
 )
 
 var log = config.Log
@@ -42,10 +42,14 @@ func Receive(
 ) {
 	opts := make([]cloudeventshttp.Option, 0)
 	opts = append(opts, cloudevents.WithPort(port))
-	opts = append(opts, cloudevents.WithRoundTripper(&ochttp.Transport{
-		Propagation: tracecontextb3.TraceContextEgress,
-	}))
-	opts = append(opts, cloudevents.WithMiddleware(tracingMiddleware))
+	opts = append(opts, cloudevents.WithRoundTripper(otelhttp.NewTransport(
+		nethttp.DefaultTransport,
+		otelhttp.WithPropagators(tracing.DefaultTextMapPropagator()),
+	)))
+	opts = append(opts, cloudevents.WithMiddleware(otelhttp.NewMiddleware(
+		"receive",
+		otelhttp.WithPropagators(tracing.DefaultTextMapPropagator()),
+	)))
 	if config.Instance.Readiness.Enabled {
 		readyOpt := cloudevents.WithMiddleware(readinessMiddleware)
 		opts = append(opts, readyOpt)
@@ -102,11 +106,4 @@ func headersOf(req *nethttp.Request) string {
 	ensure.NoError(req.Header.Write(&b))
 	headers := b.String()
 	return strings.ReplaceAll(headers, "\r\n", "; ")
-}
-
-func tracingMiddleware(h nethttp.Handler) nethttp.Handler {
-	return &ochttp.Handler{
-		Propagation: tracecontextb3.TraceContextEgress,
-		Handler:     h,
-	}
 }
