@@ -33,8 +33,8 @@ var (
 	MessagingDestinationTemplate = attributekey.String("messaging.destination.tempate")
 
 	// attributes relating to the source
-	SourceName      = attributekey.String("kn.source.name")
-	SourceNamespace = attributekey.String("kn.source.namespace")
+	SourceName          = attributekey.String("kn.source.name")
+	SourceNamespace     = attributekey.String("kn.source.namespace")
 	SourceResourceGroup = attributekey.String("kn.source.resourcegroup")
 
 	// attributes relating to the broker

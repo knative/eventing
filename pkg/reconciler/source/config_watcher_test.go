@@ -42,9 +42,9 @@ func TestNewConfigWatcher_defaults(t *testing.T) {
 		expectLoggingContains       string
 		expectObservabilityContains string
 	}{{
-		name:                  "With pre-filled sample data",
-		cmw:                   configMapWatcherWithSampleData(),
-		expectLoggingContains: `"zap-logger-config":"{\"level\": \"fatal\"}"`,
+		name:                        "With pre-filled sample data",
+		cmw:                         configMapWatcherWithSampleData(),
+		expectLoggingContains:       `"zap-logger-config":"{\"level\": \"fatal\"}"`,
 		expectObservabilityContains: `"metrics":{"protocol":"http/protobuf","endpoint":"http://localhost:12345"}`,
 	}, {
 		name: "With empty data",

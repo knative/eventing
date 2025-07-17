@@ -25,10 +25,10 @@ import (
 	"knative.dev/eventing/pkg/apis/feature"
 
 	"knative.dev/eventing/pkg/auth"
+	o11yconfigmap "knative.dev/eventing/pkg/observability/configmap"
 	filteredFactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/logging"
-	o11yconfigmap "knative.dev/eventing/pkg/observability/configmap"
 
 	// Fake injection informers
 	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta2/eventtype/fake"

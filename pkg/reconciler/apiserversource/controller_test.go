@@ -32,11 +32,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 
+	o11yconfigmap "knative.dev/eventing/pkg/observability/configmap"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/logging"
-	o11yconfigmap "knative.dev/eventing/pkg/observability/configmap"
-
 
 	_ "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment/fake"
 	// Fake injection informers

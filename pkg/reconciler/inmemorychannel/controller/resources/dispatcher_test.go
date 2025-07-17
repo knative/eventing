@@ -32,8 +32,8 @@ import (
 	"knative.dev/pkg/system"
 
 	"knative.dev/eventing/pkg/kncloudevents"
-	"knative.dev/eventing/pkg/reconciler/inmemorychannel/controller/config"
 	o11yconfigmap "knative.dev/eventing/pkg/observability/configmap"
+	"knative.dev/eventing/pkg/reconciler/inmemorychannel/controller/config"
 )
 
 const (

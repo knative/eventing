@@ -158,7 +158,7 @@ func (o *observabilityConfiguratorFromConfigMap) SetupObservabilityOrDie(ctx con
 	}
 
 	cfg = observability.MergeWithDefaults(cfg)
-	
+
 	ctx = observability.WithConfig(ctx, cfg)
 
 	return otel.SetupObservabilityOrDie(ctx, component, logger, pprof)

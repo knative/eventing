@@ -26,7 +26,7 @@ import (
 // as <singular>.<group>
 func K8sAttributes(name, namespace, resource string) []attribute.KeyValue {
 	return []attribute.KeyValue{
-		attributekey.String("k8s."+resource+".name").With(name),
-		attributekey.String("k8s."+resource+".namespace").With(namespace),
+		attributekey.String("k8s." + resource + ".name").With(name),
+		attributekey.String("k8s." + resource + ".namespace").With(namespace),
 	}
 }

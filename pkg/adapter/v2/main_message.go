@@ -51,7 +51,6 @@ func MainMessageAdapterWithContext(ctx context.Context, component string, ector 
 		log.Fatalf("Error processing env var: %s", err)
 	}
 
-
 	// Retrieve the logger from the env
 	logger := env.GetLogger()
 	defer flush(logger)

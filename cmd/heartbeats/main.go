@@ -163,7 +163,7 @@ func main() {
 		log.Panicf("failed to setup tracing provider: %s", err.Error())
 	}
 
-	defer func ()  {
+	defer func() {
 		ctx, cancel := context.WithTimeout(ctx, time.Second*10)
 		defer cancel()
 
