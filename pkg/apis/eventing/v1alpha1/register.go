@@ -24,6 +24,22 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
+const (
+	// RequestReplyBrokerAddressStatusAnnotationKey is the RequestReply status
+	// annotation key used to specify the address of the broker
+	RequestReplyBrokerAddressStatusAnnotationKey = "knative.dev/brokerAddress"
+
+	// RequestReplyBrokerCACertsStatusAnnotationKey is the RequestReply status
+	// annotation key used to specify the broker's Certification Authority (CA)
+	// certificates in PEM format according to
+	// https://www.rfc-editor.org/rfc/rfc7468
+	RequestReplyBrokerCACertsStatusAnnotationKey = "knative.dev/brokerCACerts"
+
+	// RequestReplyBrokerAudienceStatusAnnotationKey is the RequestReply status
+	// anotation key used to specify the broker's OIDC audience
+	RequestReplyBrokerAudienceStatusAnnotationKey = "knative.dev/brokerAudience"
+)
+
 // SchemeGroupVersion is group version used to register these objects
 var SchemeGroupVersion = schema.GroupVersion{Group: eventing.GroupName, Version: "v1alpha1"}
 
