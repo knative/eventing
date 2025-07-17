@@ -35,8 +35,8 @@ import (
 	"knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/logging"
-	"knative.dev/pkg/metrics"
-	"knative.dev/pkg/tracing/config"
+	o11yconfigmap "knative.dev/eventing/pkg/observability/configmap"
+
 
 	_ "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment/fake"
 	// Fake injection informers
@@ -61,7 +61,7 @@ func TestNew(t *testing.T) {
 	os.Setenv("APISERVER_RA_IMAGE", "knative.dev/example")
 	c := NewController(ctx, configmap.NewStaticWatcher(&corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      metrics.ConfigMapName(),
+			Name:      o11yconfigmap.Name(),
 			Namespace: "knative-eventing",
 		},
 		Data: map[string]string{
@@ -76,14 +76,6 @@ func TestNew(t *testing.T) {
 			"zap-logger-config":   "test-config",
 			"loglevel.controller": "info",
 			"loglevel.webhook":    "info",
-		},
-	}, &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      config.ConfigName,
-			Namespace: "knative-eventing",
-		},
-		Data: map[string]string{
-			"_example": "test-config",
 		},
 	}, &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{

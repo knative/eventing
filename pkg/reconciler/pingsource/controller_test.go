@@ -28,8 +28,7 @@ import (
 	filteredFactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/logging"
-	"knative.dev/pkg/metrics"
-	"knative.dev/pkg/tracing/config"
+	o11yconfigmap "knative.dev/eventing/pkg/observability/configmap"
 
 	// Fake injection informers
 	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta2/eventtype/fake"
@@ -47,7 +46,7 @@ func TestNew(t *testing.T) {
 	c := NewController(ctx, configmap.NewStaticWatcher(
 		&corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      metrics.ConfigMapName(),
+				Name:      o11yconfigmap.Name(),
 				Namespace: "knative-eventing",
 			},
 			Data: map[string]string{
@@ -62,14 +61,6 @@ func TestNew(t *testing.T) {
 				"zap-logger-config":   "test-config",
 				"loglevel.controller": "info",
 				"loglevel.webhook":    "info",
-			},
-		}, &corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      config.ConfigName,
-				Namespace: "knative-eventing",
-			},
-			Data: map[string]string{
-				"_example": "test-config",
 			},
 		}, &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{

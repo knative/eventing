@@ -19,8 +19,6 @@ package source
 import (
 	"net/http"
 	"testing"
-
-	_ "knative.dev/pkg/metrics/testing"
 )
 
 func TestStatsReporter(t *testing.T) {

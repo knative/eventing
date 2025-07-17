@@ -89,6 +89,11 @@ func GetConfig(ctx context.Context) *Config {
 // merge the config with the default config, setting defaults wherever config is not set
 func MergeWithDefaults(cfg *Config) *Config {
 	d := DefaultConfig()
+
+	if cfg == nil {
+		return d
+	}
+
 	var emptyMetrics MetricsConfig
 	if cfg.Metrics == emptyMetrics {
 		cfg.Metrics = d.Metrics

@@ -33,7 +33,6 @@ import (
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/eventing/pkg/reconciler/source"
 
-	_ "knative.dev/pkg/metrics/testing"
 	_ "knative.dev/pkg/system/testing"
 )
 

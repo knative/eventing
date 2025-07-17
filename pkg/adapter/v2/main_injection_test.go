@@ -22,12 +22,10 @@ import (
 	"testing"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
-	"go.opencensus.io/stats/view"
 	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/leaderelection"
 	"knative.dev/pkg/logging"
-	"knative.dev/pkg/metrics"
 	_ "knative.dev/pkg/system/testing"
 )
 
@@ -131,5 +129,4 @@ func TestMain_WithControllerHA(t *testing.T) {
 	}()
 	cancel()
 	<-done
-	defer view.Unregister(metrics.NewMemStatsAll().DefaultViews()...)
 }

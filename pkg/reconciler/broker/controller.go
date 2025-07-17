@@ -34,8 +34,6 @@ import (
 	pkgreconciler "knative.dev/pkg/reconciler"
 	"knative.dev/pkg/resolver"
 	"knative.dev/pkg/system"
-	"knative.dev/pkg/tracing"
-	tracingconfig "knative.dev/pkg/tracing/config"
 
 	"knative.dev/eventing/pkg/apis/eventing"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
@@ -57,8 +55,6 @@ const (
 	BrokerConditionFilter         apis.ConditionType = "FilterReady"
 	BrokerConditionAddressable    apis.ConditionType = "Addressable"
 )
-
-var Tracer tracing.Tracer
 
 // NewController initializes the controller and is called by the generated code
 // Registers event handlers to enqueue events
@@ -87,11 +83,6 @@ func NewController(
 		}
 	})
 	featureStore.WatchConfigs(cmw)
-
-	var err error
-	if Tracer, err = tracing.SetupPublishingWithDynamicConfig(logger, cmw, "mt-broker-controller", tracingconfig.ConfigName); err != nil {
-		logger.Fatal("Error setting up trace publishing", zap.Error(err))
-	}
 
 	eventingv1.RegisterAlternateBrokerConditionSet(apis.NewLivingConditionSet(
 		BrokerConditionIngress,

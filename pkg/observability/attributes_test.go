@@ -20,7 +20,8 @@ import (
 	"reflect"
 	"testing"
 
-	"go.opencensus.io/trace"
+	"go.opentelemetry.io/otel/attribute"
+	"knative.dev/pkg/observability/attributekey"
 )
 
 func TestK8sAttributes(t *testing.T) {
@@ -29,16 +30,16 @@ func TestK8sAttributes(t *testing.T) {
 		name         string
 		namespace    string
 		resourceType string
-		want         []trace.Attribute
+		want         []attribute.KeyValue
 	}{
 		{
 			name:         "foo",
 			namespace:    "default",
 			resourceType: "resource.k8s.io",
 
-			want: []trace.Attribute{
-				trace.StringAttribute("k8s.resource.k8s.io.name", "foo"),
-				trace.StringAttribute(K8sNamespaceName, "default"),
+			want: []attribute.KeyValue{
+				attributekey.String("k8s.resource.k8s.io.name").With("foo"),
+				attributekey.String("k8s.resource.k8s.io.namespace").With("default"),
 			},
 		},
 	}

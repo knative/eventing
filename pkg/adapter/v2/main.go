@@ -50,7 +50,6 @@ import (
 	"knative.dev/pkg/injection"
 	"knative.dev/pkg/leaderelection"
 	"knative.dev/pkg/logging"
-	"knative.dev/pkg/metrics"
 	k8sruntime "knative.dev/pkg/observability/runtime/k8s"
 	"knative.dev/pkg/reconciler"
 	"knative.dev/pkg/signals"
@@ -327,7 +326,6 @@ func StartInformers(ctx context.Context, informers []controller.Informer) {
 
 func flush(logger *zap.SugaredLogger) {
 	_ = logger.Sync()
-	metrics.FlushExporter()
 }
 
 // GetConfigMapByPolling retrieves a ConfigMap.
@@ -377,23 +375,6 @@ func SetupConfigMapWatch(ctx context.Context, opts ...ConfigMapWatchOption) conf
 	}
 
 	return cminformer.NewInformedWatcher(kubeclient.Get(ctx), NamespaceFromContext(ctx), o.LabelsFilter...)
-}
-
-// SecretFetcher provides a helper function to fetch individual Kubernetes
-// Secrets (for example, a key for client-side TLS). Note that this is not
-// intended for high-volume usage; the current use is when establishing a
-// metrics client connection in WatchObservabilityConfigOrDie.
-// This method requires that the Namespace has been added to the context.
-func SecretFetcher(ctx context.Context) metrics.SecretFetcher {
-	// NOTE: Do not use secrets.Get(ctx) here to get a SecretLister, as it will register
-	// a *global* SecretInformer and require cluster-level `secrets.list` permission,
-	// even if you scope down the Lister to a given namespace after requesting it. Instead,
-	// we package up a function from kubeclient.
-	// TODO(evankanderson): If this direct request to the apiserver on each TLS connection
-	// to the opencensus agent is too much load, switch to a cached Secret.
-	return func(name string) (*corev1.Secret, error) {
-		return kubeclient.Get(ctx).CoreV1().Secrets(NamespaceFromContext(ctx)).Get(ctx, name, metav1.GetOptions{})
-	}
 }
 
 // adapterConfigurator hosts the range of configurators that
