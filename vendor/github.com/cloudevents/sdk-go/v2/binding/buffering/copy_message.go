@@ -44,11 +44,12 @@ func CopyMessage(ctx context.Context, m binding.Message, transformers ...binding
 	bm := binaryBufferedMessage{}
 
 	encoding, err := binding.DirectWrite(ctx, m, &sm, &bm, transformers...)
-	if encoding == binding.EncodingStructured {
+	switch encoding {
+	case binding.EncodingStructured:
 		return &sm, err
-	} else if encoding == binding.EncodingBinary {
+	case binding.EncodingBinary:
 		return &bm, err
-	} else {
+	default:
 		e, err := binding.ToEvent(ctx, m, transformers...)
 		if err != nil {
 			return nil, err
