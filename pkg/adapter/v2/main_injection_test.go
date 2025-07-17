@@ -34,7 +34,7 @@ import (
 func TestMain_WithController_DisableHA(t *testing.T) {
 	os.Setenv("K_SINK", "http://sink")
 	os.Setenv("NAMESPACE", "ns")
-	os.Setenv("K_METRICS_CONFIG", "error config")
+	os.Setenv("K_OBSERVABILITY_CONFIG", "{}")
 	os.Setenv("K_LOGGING_CONFIG", "error config")
 	os.Setenv("MODE", "mymode")
 	os.Setenv("disable-ha", "true")
@@ -42,7 +42,7 @@ func TestMain_WithController_DisableHA(t *testing.T) {
 	defer func() {
 		os.Unsetenv("K_SINK")
 		os.Unsetenv("NAMESPACE")
-		os.Unsetenv("K_METRICS_CONFIG")
+		os.Unsetenv("K_OBSERVABILITY_CONFIG")
 		os.Unsetenv("K_LOGGING_CONFIG")
 		os.Unsetenv("MODE")
 		os.Unsetenv("disable-ha")
@@ -87,20 +87,19 @@ func TestMain_WithController_DisableHA(t *testing.T) {
 
 	cancel()
 	<-done
-	defer view.Unregister(metrics.NewMemStatsAll().DefaultViews()...)
 }
 
 func TestMain_WithControllerHA(t *testing.T) {
 	os.Setenv("K_SINK", "http://sink")
 	os.Setenv("NAMESPACE", "ns")
-	os.Setenv("K_METRICS_CONFIG", "error config")
+	os.Setenv("K_OBSERVABILITY_CONFIG", "{}")
 	os.Setenv("K_LOGGING_CONFIG", "error config")
 	os.Setenv("MODE", "mymode")
 
 	defer func() {
 		os.Unsetenv("K_SINK")
 		os.Unsetenv("NAMESPACE")
-		os.Unsetenv("K_METRICS_CONFIG")
+		os.Unsetenv("K_OBSERVABILITY_CONFIG")
 		os.Unsetenv("K_LOGGING_CONFIG")
 		os.Unsetenv("MODE")
 	}()

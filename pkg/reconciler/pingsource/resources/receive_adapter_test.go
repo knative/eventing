@@ -62,12 +62,10 @@ func TestMakePingAdapter(t *testing.T) {
 		Name:  "K_LOGGING_CONFIG",
 		Value: "",
 	}, {
-		Name:  "K_METRICS_CONFIG",
+		Name:  "K_OBSERVABILITY_CONFIG",
 		Value: "",
-	}, {
-		Name:  "K_TRACING_CONFIG",
-		Value: "",
-	}}
+	},
+	}
 
 	got := MakeReceiveAdapterEnvVar(args)
 

@@ -18,6 +18,7 @@ package adapter
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"testing"
 
@@ -28,6 +29,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
+	"knative.dev/eventing/pkg/observability"
 	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 	kubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 	"knative.dev/pkg/configmap"
@@ -54,14 +56,14 @@ type myAdapter struct {
 func TestMainWithContext(t *testing.T) {
 	os.Setenv("K_SINK", "http://sink")
 	os.Setenv("NAMESPACE", "ns")
-	os.Setenv("K_METRICS_CONFIG", "error config")
+	os.Setenv("K_OBSERVABILITY_CONFIG", "error config")
 	os.Setenv("K_LOGGING_CONFIG", "error config")
 	os.Setenv("MODE", "mymode")
 
 	defer func() {
 		os.Unsetenv("K_SINK")
 		os.Unsetenv("NAMESPACE")
-		os.Unsetenv("K_METRICS_CONFIG")
+		os.Unsetenv("K_OBSERVABILITY_CONFIG")
 		os.Unsetenv("K_LOGGING_CONFIG")
 		os.Unsetenv("MODE")
 	}()
@@ -95,14 +97,14 @@ func TestMainWithContext(t *testing.T) {
 func TestMainWithInformerNoLeaderElection(t *testing.T) {
 	os.Setenv("K_SINK", "http://sink")
 	os.Setenv("NAMESPACE", "ns")
-	os.Setenv("K_METRICS_CONFIG", "error config")
+	os.Setenv("K_OBSERVABILITY_CONFIG", "error config")
 	os.Setenv("K_LOGGING_CONFIG", "error config")
 	os.Setenv("MODE", "mymode")
 
 	defer func() {
 		os.Unsetenv("K_SINK")
 		os.Unsetenv("NAMESPACE")
-		os.Unsetenv("K_METRICS_CONFIG")
+		os.Unsetenv("K_OBSERVABILITY_CONFIG")
 		os.Unsetenv("K_LOGGING_CONFIG")
 		os.Unsetenv("MODE")
 	}()
@@ -140,28 +142,19 @@ func TestMainWithInformerNoLeaderElection(t *testing.T) {
 }
 
 func TestMain_MetricsConfig(t *testing.T) {
-	m := &metrics.ExporterOptions{
-		Domain:         "example.com",
-		Component:      "foo",
-		PrometheusPort: 9021,
-		PrometheusHost: "prom.example.com",
-		ConfigMap: map[string]string{
-			"profiling.enable": "true",
-			"foo":              "bar",
-		},
-	}
-	metricsJson, _ := metrics.OptionsToJSON(m)
+	obsCfg := observability.DefaultConfig()
+	obsCfgJson, _ := json.Marshal(obsCfg)
 
 	os.Setenv("K_SINK", "http://sink")
 	os.Setenv("NAMESPACE", "ns")
-	os.Setenv("K_METRICS_CONFIG", metricsJson)
+	os.Setenv("K_OBSERVABILITY_CONFIG", string(obsCfgJson))
 	os.Setenv("K_LOGGING_CONFIG", "error config")
 	os.Setenv("MODE", "mymode")
 
 	defer func() {
 		os.Unsetenv("K_SINK")
 		os.Unsetenv("NAMESPACE")
-		os.Unsetenv("K_METRICS_CONFIG")
+		os.Unsetenv("K_OBSERVABILITY_CONFIG")
 		os.Unsetenv("K_LOGGING_CONFIG")
 		os.Unsetenv("MODE")
 	}()
@@ -301,16 +294,8 @@ func TestMain_LogConfigWatcher(t *testing.T) {
 
 		// Other configurator options are also enabled to make sure that at least
 		// they do not panic when ConfigMaps are updated.
-		WithMetricsExporterConfigurator(
-			NewMetricsExporterConfiguratorFromConfigMap(tComponentName,
-				WithMetricsExporterConfiguratorConfigMapName(tObservabilityConfigMapName),
-				WithMetricsExporterConfiguratorMetricsDomain(tMetricsDomain))),
-		WithTracingConfigurator(NewTracingConfiguratorFromConfigMap(
-			WithTracingConfiguratorConfigMapName(tTracingConfigMapName))),
 		WithCloudEventsStatusReporterConfigurator(NewCloudEventsReporterConfiguratorFromConfigMap(
 			WithCloudEventsStatusReporterConfiguratorConfigMapName(tObservabilityConfigMapName))),
-		WithProfilerConfigurator(NewProfilerConfiguratorFromConfigMap(
-			WithProfilerConfiguratorConfigMapName(tObservabilityConfigMapName))),
 	})
 
 	env := ConstructEnvOrDie(func() EnvConfigAccessor { return &myEnvConfig{} })

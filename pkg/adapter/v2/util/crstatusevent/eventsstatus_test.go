@@ -30,6 +30,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/record"
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
+	"knative.dev/eventing/pkg/observability"
 )
 
 func logF(format string, a ...interface{}) {
@@ -127,7 +128,10 @@ func TestReportCRStatusEvent(t *testing.T) {
 			defer ctx.Done()
 			ctx = ContextWithCRStatus(ctx, &tt.args.fakesink, "mycomponent", src, logF)
 
-			crStatusEventClient := NewCRStatusEventClient(map[string]string{"sink-event-error-reporting.enable": tt.args.enabled})
+			cfg := observability.DefaultConfig()
+			cfg.EnableSinkEventErrorReporting, _ = strconv.ParseBool(tt.args.enabled)
+
+			crStatusEventClient := NewCRStatusEventClient(cfg)
 
 			crStatusEventClient.ReportCRStatusEvent(ctx, tt.args.result)
 
@@ -186,7 +190,10 @@ func TestUpdateFromConfigMap(t *testing.T) {
 			ctx := context.Background()
 			defer ctx.Done()
 
-			crStatusEventClient := NewCRStatusEventClient(map[string]string{"sink-event-error-reporting.enable": strconv.FormatBool(tc.initEnabled)})
+			cfg := observability.DefaultConfig()
+			cfg.EnableSinkEventErrorReporting = tc.initEnabled
+
+			crStatusEventClient := NewCRStatusEventClient(cfg)
 			if crStatusEventClient.isEnabledVar != tc.initEnabled {
 				require.Equal(t, tc.initEnabled, crStatusEventClient.isEnabledVar, "Wrong CRStatusEventClient enabled initial flag")
 			}

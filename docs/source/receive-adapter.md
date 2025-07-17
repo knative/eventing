@@ -98,10 +98,9 @@ func main() {
 
 ## Logging, metrics and tracing
 
-The adapter main code automatically sets up logging, a metrics server,
-optionally a profiler server and tracing based on configuration parameters
-stored in the environment variables named `K_LOGGING_CONFIG`, `K_METRICS_CONFIG`
-and `K_TRACING_CONFIG`, respectively.
+The adapter main code automatically sets up logging, metrics, and tracing based on configuration parameters
+stored in the environment variables named `K_LOGGING_CONFIG`, and `K_OBSERVABILITY_CONFIG`
+respectively.
 
 The adapter does not watch for configuration changes. This is up to the
 controller to watch for changes and to update the adapter accordingly.

@@ -18,6 +18,7 @@ package observability
 
 import (
 	"context"
+	"fmt"
 
 	configmap "knative.dev/pkg/configmap/parser"
 	pkgo11y "knative.dev/pkg/observability"
@@ -58,6 +59,7 @@ func NewFromMap(m map[string]string) (*Config, error) {
 	c := DefaultConfig()
 
 	if cfg, err := pkgo11y.NewFromMap(m); err != nil {
+		fmt.Printf("failed to parse config from map: %s\n", err.Error())
 		return nil, err
 	} else {
 		c.BaseConfig = *cfg
@@ -65,6 +67,7 @@ func NewFromMap(m map[string]string) (*Config, error) {
 
 	err := configmap.Parse(m, configmap.As(EnableSinkEventErrorReportingKey, &c.EnableSinkEventErrorReporting))
 	if err != nil {
+		fmt.Printf("failed to parse enable-sink-error-reporting: %s\n", err.Error())
 		return c, err
 	}
 
@@ -80,5 +83,26 @@ func WithConfig(ctx context.Context, cfg *Config) context.Context {
 func GetConfig(ctx context.Context) *Config {
 	// we can ignore the "ok" value here, because the config will just be nil in that case
 	cfg, _ := ctx.Value(cfgKey{}).(*Config)
+	return cfg
+}
+
+// merge the config with the default config, setting defaults wherever config is not set
+func MergeWithDefaults(cfg *Config) *Config {
+	d := DefaultConfig()
+	var emptyMetrics MetricsConfig
+	if cfg.Metrics == emptyMetrics {
+		cfg.Metrics = d.Metrics
+	}
+
+	var emptyRuntime RuntimeConfig
+	if cfg.Runtime == emptyRuntime {
+		cfg.Runtime = d.Runtime
+	}
+
+	var emptyTracing TracingConfig
+	if cfg.Tracing == emptyTracing {
+		cfg.Tracing = d.Tracing
+	}
+
 	return cfg
 }

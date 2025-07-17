@@ -28,10 +28,11 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/kelseyhightower/envconfig"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 	"k8s.io/client-go/informers"
 	corev1listers "k8s.io/client-go/listers/core/v1"
-	"knative.dev/pkg/tracing"
 
 	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/eventingtls"
@@ -50,6 +51,7 @@ import (
 	"knative.dev/pkg/leaderelection"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
+	k8sruntime "knative.dev/pkg/observability/runtime/k8s"
 	"knative.dev/pkg/reconciler"
 	"knative.dev/pkg/signals"
 
@@ -73,27 +75,10 @@ type LoggerConfigurator interface {
 	CreateLogger(ctx context.Context) *zap.SugaredLogger
 }
 
-// MetricsExporterConfigurator configures the metrics exporter for an adapter.
-type MetricsExporterConfigurator interface {
-	SetupMetricsExporter(ctx context.Context)
-}
-
-// TracingConfiguration for adapters.
-type TracingConfiguration struct {
-	InstanceName string
-}
-
-// TracingConfigurator configures the tracing settings for an adapter.
-type TracingConfigurator interface {
-	SetupTracing(ctx context.Context, cfg *TracingConfiguration) tracing.Tracer
-}
-
 // ObservabilityConfigurator groups the observability related methods
 // that configure an adapter.
 type ObservabilityConfigurator interface {
-	LoggerConfigurator
-	MetricsExporterConfigurator
-	TracingConfigurator
+	SetupObservabilityOrDie(ctx context.Context, component string, logger *zap.SugaredLogger, pprof *k8sruntime.ProfilingServer) (metric.MeterProvider, trace.TracerProvider)
 }
 
 // ProfilerConfigurator configures the profiling settings for an adapter.
@@ -109,8 +94,8 @@ type CloudEventsStatusReporterConfigurator interface {
 
 // AdapterConfigurator exposes methods for configuring the adapter.
 type AdapterConfigurator interface {
+	LoggerConfigurator
 	ObservabilityConfigurator
-	ProfilerConfigurator
 	CloudEventsStatusReporterConfigurator
 }
 
@@ -194,23 +179,9 @@ func MainWithInformers(ctx context.Context, component string, env EnvConfigAcces
 	_ = prev.Sync()
 	ctx = logging.WithLogger(ctx, logger)
 
-	configurator.SetupMetricsExporter(ctx)
+	pprof := k8sruntime.NewProfilingServer(logger.Named("pprof"))
 
-	// Report stats on Go memory usage.
-	metrics.MemStatsOrDie(ctx)
-
-	// Create a profiling server based on configuration.
-	if ps := configurator.CreateProfilingServer(ctx); ps != nil {
-		go func() {
-			// Don't forward ErrServerClosed as that indicates we're already shutting down.
-			if err := ps.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-				logger.Errorw("profiling server failed", zap.Error(err))
-			}
-		}()
-	}
-
-	tracer := configurator.SetupTracing(ctx, &TracingConfiguration{InstanceName: env.GetName()})
-	defer tracer.Shutdown(context.Background())
+	_, _ = configurator.SetupObservabilityOrDie(ctx, component, logger, pprof)
 
 	crStatusEventClient := configurator.CreateCloudEventsStatusReporter(ctx)
 
@@ -429,9 +400,7 @@ func SecretFetcher(ctx context.Context) metrics.SecretFetcher {
 // will be used when setting up the adapter.
 type adapterConfigurator struct {
 	LoggerConfigurator
-	MetricsExporterConfigurator
-	TracingConfigurator
-	ProfilerConfigurator
+	ObservabilityConfigurator
 	CloudEventsStatusReporterConfigurator
 }
 
@@ -446,27 +415,9 @@ func WithLoggerConfigurator(c LoggerConfigurator) ConfiguratorOption {
 	}
 }
 
-// WithMetricsExporterConfigurator sets the adapter configurator with
-// a custom metrics exporter option.
-func WithMetricsExporterConfigurator(c MetricsExporterConfigurator) ConfiguratorOption {
+func WithObservabilityConfigurator(c ObservabilityConfigurator) ConfiguratorOption {
 	return func(acfg *adapterConfigurator) {
-		acfg.MetricsExporterConfigurator = c
-	}
-}
-
-// WithTracingConfigurator sets the adapter configurator with
-// a custom tracing option.
-func WithTracingConfigurator(c TracingConfigurator) ConfiguratorOption {
-	return func(acfg *adapterConfigurator) {
-		acfg.TracingConfigurator = c
-	}
-}
-
-// WithProfilerConfigurator sets the adapter configurator with
-// a custom profiler option.
-func WithProfilerConfigurator(c ProfilerConfigurator) ConfiguratorOption {
-	return func(acfg *adapterConfigurator) {
-		acfg.ProfilerConfigurator = c
+		acfg.ObservabilityConfigurator = c
 	}
 }
 
@@ -484,9 +435,7 @@ func newConfigurator(env EnvConfigAccessor, opts ...ConfiguratorOption) AdapterC
 	// default to environment variable based configurators
 	acfg := &adapterConfigurator{
 		LoggerConfigurator:                    NewLoggerConfiguratorFromEnvironment(env),
-		MetricsExporterConfigurator:           NewMetricsExporterConfiguratorFromEnvironment(env),
-		TracingConfigurator:                   NewTracingConfiguratorFromEnvironment(env),
-		ProfilerConfigurator:                  NewProfilerConfiguratorFromEnvironment(env),
+		ObservabilityConfigurator:             NewObservabilityConfiguratorFromEnvironment(env),
 		CloudEventsStatusReporterConfigurator: NewCloudEventsStatusReporterConfiguratorFromEnvironment(env),
 	}
 

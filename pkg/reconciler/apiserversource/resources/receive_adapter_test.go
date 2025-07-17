@@ -177,10 +177,7 @@ O2dgzikq8iSy1BlRsVw=
 									Name:  source.EnvLoggingCfg,
 									Value: "",
 								}, {
-									Name:  source.EnvMetricsCfg,
-									Value: "",
-								}, {
-									Name:  source.EnvTracingCfg,
+									Name:  source.EnvObservabilityCfg,
 									Value: "",
 								},
 							},

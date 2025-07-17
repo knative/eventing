@@ -30,6 +30,8 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/record"
+	"knative.dev/eventing/pkg/observability"
+	o11yconfigmap "knative.dev/eventing/pkg/observability/configmap"
 )
 
 type crStatusEvent struct {
@@ -48,13 +50,10 @@ func GetDefaultClient() *CRStatusEventClient {
 	return &CRStatusEventClient{}
 }
 
-func NewCRStatusEventClient(metricMap map[string]string) *CRStatusEventClient {
-	if metricMap == nil {
-		return nil
-	}
-
+func NewCRStatusEventClient(cfg *observability.Config) *CRStatusEventClient {
 	ret := &CRStatusEventClient{}
-	if metricMap["sink-event-error-reporting.enable"] == "true" {
+	// default to returning a client, but with reporting disabled
+	if cfg != nil && cfg.EnableSinkEventErrorReporting {
 		ret.isEnabledVar = true
 	}
 	return ret
@@ -66,11 +65,14 @@ func NewCRStatusEventClient(metricMap map[string]string) *CRStatusEventClient {
 // updates the client's Event Recorder configuration.
 func UpdateFromConfigMap(client *CRStatusEventClient) func(configMap *corev1.ConfigMap) {
 	return func(cm *corev1.ConfigMap) {
-		if cm != nil && cm.Data != nil && cm.Data["sink-event-error-reporting.enable"] != "" {
-			client.m.Lock()
-			defer client.m.Unlock()
-			client.isEnabledVar, _ = strconv.ParseBool(cm.Data["sink-event-error-reporting.enable"])
+		cfg, err := o11yconfigmap.Parse(cm)
+		if err != nil {
+			return
 		}
+
+		client.m.Lock()
+		defer client.m.Unlock()
+		client.isEnabledVar = cfg.EnableSinkEventErrorReporting
 	}
 }
 
