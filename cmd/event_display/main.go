@@ -27,14 +27,18 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"time"
 
-	"github.com/cloudevents/sdk-go/observability/opencensus/v2/client"
+	"github.com/cloudevents/sdk-go/observability/opentelemetry/v2/client"
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
-
-	"go.uber.org/zap"
-	"knative.dev/pkg/tracing"
-	"knative.dev/pkg/tracing/config"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/trace"
+	"knative.dev/eventing/pkg/observability"
+	"knative.dev/pkg/observability/metrics"
+	"knative.dev/pkg/observability/resource"
+	"knative.dev/pkg/observability/tracing"
 )
 
 /*
@@ -85,16 +89,51 @@ func run(ctx context.Context) {
 	if err != nil {
 		log.Fatal("Failed to create client: ", err)
 	}
-	conf, err := config.JSONToTracingConfig(os.Getenv("K_CONFIG_TRACING"))
-	if err != nil {
-		log.Printf("Failed to read tracing config, using the no-op default: %v", err)
-	}
-	tracer, err := tracing.SetupPublishingWithStaticConfig(zap.L().Sugar(), "", conf)
-	if err != nil {
-		log.Fatalf("Failed to initialize tracing: %v", err)
-	}
-	defer tracer.Shutdown(context.Background())
 
+	cfg := &observability.Config{}
+
+	err = json.Unmarshal([]byte(os.Getenv("K_OBSERVABILITY_CONFIG")), cfg)
+	cfg = observability.MergeWithDefaults(cfg)
+
+	ctx = observability.WithConfig(ctx, cfg)
+
+	otelResource := resource.Default("hearbeat")
+
+	meterProvider, err := metrics.NewMeterProvider(
+		ctx,
+		cfg.Metrics,
+		metric.WithResource(otelResource),
+	)
+	if err != nil {
+		log.Panicf("failed to setup meter provider: %s", err.Error())
+	}
+
+	otel.SetMeterProvider(meterProvider)
+
+	tracerProvider, err := tracing.NewTracerProvider(
+		ctx,
+		cfg.Tracing,
+		trace.WithResource(otelResource),
+	)
+	if err != nil {
+		log.Panicf("failed to setup tracing provider: %s", err.Error())
+	}
+
+	defer func ()  {
+		ctx, cancel := context.WithTimeout(ctx, time.Second*10)
+		defer cancel()
+
+		if err := meterProvider.Shutdown(ctx); err != nil {
+			log.Printf("failed to shut down metrics: %s", err.Error())
+		}
+
+		if err := tracerProvider.Shutdown(ctx); err != nil {
+			log.Printf("failed to shut down tracing: %s", err.Error())
+		}
+	}()
+
+	otel.SetTextMapPropagator(tracing.DefaultTextMapPropagator())
+	otel.SetTracerProvider(tracerProvider)
 	if err := c.StartReceiver(ctx, display); err != nil {
 		log.Fatal("Error during receiver's runtime: ", err)
 	}

@@ -29,16 +29,19 @@ import (
 	"syscall"
 	"time"
 
-	"go.opencensus.io/plugin/ochttp"
-	"go.uber.org/zap"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/trace"
 	"knative.dev/eventing/pkg/eventingtls"
+	"knative.dev/eventing/pkg/observability"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/observability/metrics"
+	"knative.dev/pkg/observability/resource"
+	"knative.dev/pkg/observability/tracing"
 	"knative.dev/pkg/signals"
-	"knative.dev/pkg/tracing"
-	"knative.dev/pkg/tracing/config"
-	"knative.dev/pkg/tracing/propagation/tracecontextb3"
 
-	"github.com/cloudevents/sdk-go/observability/opencensus/v2/client"
+	"github.com/cloudevents/sdk-go/observability/opentelemetry/v2/client"
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"github.com/kelseyhightower/envconfig"
@@ -90,7 +93,7 @@ type envConfig struct {
 	OneShot bool `envconfig:"ONE_SHOT" default:"false"`
 
 	// JSON configuration for tracing
-	TracingConfig string `envconfig:"K_CONFIG_TRACING"`
+	ObservabilityConfig string `envconfig:"K_OBSERVABILITY_CONFIG"`
 }
 
 func main() {
@@ -131,36 +134,72 @@ func main() {
 		log.Printf("Failed to read OIDC token, client will not send Authorization header: %v", err)
 	}
 
-	conf, err := config.JSONToTracingConfig(env.TracingConfig)
+	cfg := &observability.Config{}
+
+	err = json.Unmarshal([]byte(env.ObservabilityConfig), cfg)
+	cfg = observability.MergeWithDefaults(cfg)
+
+	ctx = observability.WithConfig(ctx, cfg)
+
+	otelResource := resource.Default("hearbeat")
+
+	meterProvider, err := metrics.NewMeterProvider(
+		ctx,
+		cfg.Metrics,
+		metric.WithResource(otelResource),
+	)
 	if err != nil {
-		log.Printf("Failed to read tracing config, using the no-op default: %v", err)
+		log.Panicf("failed to setup meter provider: %s", err.Error())
 	}
-	tracer, err := tracing.SetupPublishingWithStaticConfig(zap.L().Sugar(), "", conf)
+
+	otel.SetMeterProvider(meterProvider)
+
+	tracerProvider, err := tracing.NewTracerProvider(
+		ctx,
+		cfg.Tracing,
+		trace.WithResource(otelResource),
+	)
 	if err != nil {
-		log.Fatalf("Failed to initialize tracing: %v", err)
+		log.Panicf("failed to setup tracing provider: %s", err.Error())
 	}
-	defer tracer.Shutdown(ctx)
+
+	defer func ()  {
+		ctx, cancel := context.WithTimeout(ctx, time.Second*10)
+		defer cancel()
+
+		if err := meterProvider.Shutdown(ctx); err != nil {
+			log.Printf("failed to shut down metrics: %s", err.Error())
+		}
+
+		if err := tracerProvider.Shutdown(ctx); err != nil {
+			log.Printf("failed to shut down tracing: %s", err.Error())
+		}
+	}()
+
+	otel.SetTextMapPropagator(tracing.DefaultTextMapPropagator())
+	otel.SetTracerProvider(tracerProvider)
 
 	opts := make([]cehttp.Option, 0, 1)
 	opts = append(opts, cloudevents.WithTarget(sink))
 
+	baseTransport := http.DefaultTransport.(*http.Transport).Clone()
 	if eventingtls.IsHttpsSink(sink) {
 		clientConfig := eventingtls.NewDefaultClientConfig()
 		clientConfig.CACerts = &cacerts
 
-		httpTransport := http.DefaultTransport.(*http.Transport).Clone()
-		httpTransport.TLSClientConfig, err = eventingtls.GetTLSClientConfig(clientConfig)
+		baseTransport.TLSClientConfig, err = eventingtls.GetTLSClientConfig(clientConfig)
 		if err != nil {
 			log.Fatalf("Failed to get TLS Client Config: %v", err)
 		}
 
-		transport := &ochttp.Transport{
-			Base:        httpTransport,
-			Propagation: tracecontextb3.TraceContextEgress,
-		}
-		opts = append(opts, cehttp.WithRoundTripper(transport))
 	}
 
+	transport := otelhttp.NewTransport(
+		baseTransport,
+		otelhttp.WithPropagators(tracing.DefaultTextMapPropagator()),
+	)
+
+	opts = append(opts, cehttp.WithRoundTripper(transport))
 	c, err := client.NewClientHTTP(opts, nil)
 	if err != nil {
 		log.Fatalf("failed to create client: %s", err.Error())
