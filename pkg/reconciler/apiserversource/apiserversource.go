@@ -61,7 +61,7 @@ const (
 	apiserversourceDeploymentUpdated = "ApiServerSourceDeploymentUpdated"
 
 	component                 = "apiserversource"
-	skipPermissionsAnnotation = "features.knative.dev/apiserversource-skip-permissions"
+	skipPermissionsAnnotation = "features.knative.dev/apiserversource-skip-permissions-check"
 )
 
 func newWarningSinkNotFound(sink *duckv1.Destination) pkgreconciler.Event {

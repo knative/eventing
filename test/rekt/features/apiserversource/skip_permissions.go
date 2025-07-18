@@ -77,7 +77,7 @@ func SkipPermissionsFeature() *feature.Feature {
 			t.Fatal("ApiServerSource has no annotations")
 		}
 
-		skipPermissions, found := annotations["features.knative.dev/apiserversource-skip-permissions"]
+		skipPermissions, found := annotations["features.knative.dev/apiserversource-skip-permissions-check"]
 		if !found {
 			t.Fatal("Skip permissions annotation not found")
 		}
@@ -158,7 +158,7 @@ func SkipPermissionsDisabledFeature() *feature.Feature {
 			t.Fatal("ApiServerSource has no annotations")
 		}
 
-		skipPermissions, found := annotations["features.knative.dev/apiserversource-skip-permissions"]
+		skipPermissions, found := annotations["features.knative.dev/apiserversource-skip-permissions-check"]
 		if !found {
 			t.Fatal("Skip permissions annotation not found")
 		}

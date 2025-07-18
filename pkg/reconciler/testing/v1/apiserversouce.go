@@ -192,9 +192,9 @@ func WithApiServerSourceSkipPermissions(skip bool) ApiServerSourceOption {
 			c.Annotations = make(map[string]string)
 		}
 		if skip {
-			c.Annotations["features.knative.dev/apiserversource-skip-permissions"] = "true"
+			c.Annotations["features.knative.dev/apiserversource-skip-permissions-check"] = "true"
 		} else {
-			c.Annotations["features.knative.dev/apiserversource-skip-permissions"] = "false"
+			c.Annotations["features.knative.dev/apiserversource-skip-permissions-check"] = "false"
 		}
 	}
 }
