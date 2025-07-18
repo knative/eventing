@@ -184,3 +184,29 @@ func WithApiServerSourceOIDCServiceAccountName(name string) ApiServerSourceOptio
 		c.Status.Auth.ServiceAccountName = &name
 	}
 }
+
+// WithApiServerSourceSkipPermissions adds the skip permissions annotation to the ApiServerSource
+func WithApiServerSourceSkipPermissions(skip bool) ApiServerSourceOption {
+	return func(c *v1.ApiServerSource) {
+		if c.Annotations == nil {
+			c.Annotations = make(map[string]string)
+		}
+		if skip {
+			c.Annotations["features.knative.dev/apiserversource-skip-permissions-check"] = "true"
+		} else {
+			c.Annotations["features.knative.dev/apiserversource-skip-permissions-check"] = "false"
+		}
+	}
+}
+
+// WithApiServerSourceAnnotations adds custom annotations to the ApiServerSource
+func WithApiServerSourceAnnotations(annotations map[string]string) ApiServerSourceOption {
+	return func(c *v1.ApiServerSource) {
+		if c.Annotations == nil {
+			c.Annotations = make(map[string]string)
+		}
+		for k, v := range annotations {
+			c.Annotations[k] = v
+		}
+	}
+}
