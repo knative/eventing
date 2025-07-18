@@ -300,9 +300,9 @@ func WithSkipPermissions(skip bool) manifest.CfgFn {
 		}
 		annotations := cfg["annotations"].(map[string]string)
 		if skip {
-			annotations["features.knative.dev/apiserversource-skip-permissions-check"] = "true"
+			annotations["features.knative.dev/apiserversource-skip-permissions-check"] = "'true'"
 		} else {
-			annotations["features.knative.dev/apiserversource-skip-permissions-check"] = "false"
+			annotations["features.knative.dev/apiserversource-skip-permissions-check"] = "'false'"
 		}
 	}
 }
