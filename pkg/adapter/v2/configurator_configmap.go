@@ -33,11 +33,6 @@ import (
 	"knative.dev/eventing/pkg/observability/otel"
 )
 
-const (
-	defaultMetricsPort   = 9092
-	defaultMetricsDomain = "knative.dev/eventing"
-)
-
 // loggerConfiguratorFromConfigMap dynamically
 // configures a logger using a watcher on a Configmap.
 type loggerConfiguratorFromConfigMap struct {

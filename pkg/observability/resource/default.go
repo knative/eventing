@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"os"
 
-	"go.uber.org/zap"
 	"knative.dev/pkg/changeset"
 	"knative.dev/pkg/system"
 
@@ -56,7 +55,7 @@ func Default(serviceName string) (*resource.Resource, error) {
 		)
 	}
 
-	resource, err := resource.Merge(
+	resource, resourceErr := resource.Merge(
 		resource.Default(),
 		resource.NewWithAttributes(
 			semconv.SchemaURL,
@@ -65,7 +64,7 @@ func Default(serviceName string) (*resource.Resource, error) {
 	)
 
 	if err != nil {
-		err = errors.Join(err, fmt.Errorf("encountered error while merging otel resources", zap.Error(err)))
+		err = errors.Join(err, fmt.Errorf("encountered error while merging otel resources: %s", resourceErr.Error()))
 	}
 
 	return resource, err
