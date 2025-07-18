@@ -36,8 +36,9 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"knative.dev/eventing/pkg/observability"
+	eventingotel "knative.dev/eventing/pkg/observability/otel"
+	"knative.dev/eventing/pkg/observability/resource"
 	"knative.dev/pkg/observability/metrics"
-	"knative.dev/pkg/observability/resource"
 	"knative.dev/pkg/observability/tracing"
 )
 
@@ -97,7 +98,10 @@ func run(ctx context.Context) {
 
 	ctx = observability.WithConfig(ctx, cfg)
 
-	otelResource := resource.Default("hearbeat")
+	otelResource, err := resource.Default("hearbeat")
+	if err != nil {
+		log.Printf("failed to correctly initialize otel resource, resouce may be missing some attributes: %s", err.Error())
+	}
 
 	meterProvider, err := metrics.NewMeterProvider(
 		ctx,
@@ -105,7 +109,8 @@ func run(ctx context.Context) {
 		metric.WithResource(otelResource),
 	)
 	if err != nil {
-		log.Panicf("failed to setup meter provider: %s", err.Error())
+		log.Printf("failed to setup meter provider, falling back to noop: %s", err.Error())
+		meterProvider = eventingotel.DefaultMeterProvider(ctx, otelResource)
 	}
 
 	otel.SetMeterProvider(meterProvider)
@@ -116,7 +121,8 @@ func run(ctx context.Context) {
 		trace.WithResource(otelResource),
 	)
 	if err != nil {
-		log.Panicf("failed to setup tracing provider: %s", err.Error())
+		log.Printf("failed to setup tracing provider, falling back to noop: %s", err.Error())
+		tracerProvider = eventingotel.DefaultTraceProvider(ctx, otelResource)
 	}
 
 	defer func() {
