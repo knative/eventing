@@ -22,7 +22,6 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/wavesoftware/go-ensure"
-	"go.opencensus.io/trace"
 	"knative.dev/eventing/test/upgrade/prober/wathola/client"
 	"knative.dev/eventing/test/upgrade/prober/wathola/config"
 	"knative.dev/eventing/test/upgrade/prober/wathola/event"
@@ -61,8 +60,6 @@ func (r receiver) Receive() {
 
 func (r receiver) receiveEvent(ctx context.Context, e cloudevents.Event) {
 	log.Debug("Event received: ", e)
-	_, span := trace.StartSpan(ctx, Name)
-	defer span.End()
 	t := e.Context.GetType()
 	if t == event.StepType {
 		step := &event.Step{}
@@ -70,7 +67,6 @@ func (r receiver) receiveEvent(ctx context.Context, e cloudevents.Event) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		span.AddAttributes(trace.Int64Attribute("step", int64(step.Number)))
 		r.step.RegisterStep(step)
 	}
 	if t == event.FinishedType {

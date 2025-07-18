@@ -23,6 +23,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"net/http"
 	nethttp "net/http"
 	"strconv"
 	"strings"
@@ -32,9 +33,9 @@ import (
 	"github.com/cloudevents/sdk-go/v2/binding"
 	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"github.com/kelseyhightower/envconfig"
-	"go.opencensus.io/plugin/ochttp"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"knative.dev/pkg/logging"
-	"knative.dev/pkg/tracing/propagation/tracecontextb3"
+	"knative.dev/pkg/observability/tracing"
 
 	"knative.dev/eventing/test/lib/recordevents"
 )
@@ -109,10 +110,10 @@ func Start(ctx context.Context, logs *recordevents.EventLogs) error {
 
 	httpClient := &nethttp.Client{}
 	if env.AddTracing {
-		httpClient.Transport = &ochttp.Transport{
-			Base:        nethttp.DefaultTransport,
-			Propagation: tracecontextb3.TraceContextEgress,
-		}
+		httpClient.Transport = otelhttp.NewTransport(
+			http.DefaultTransport,
+			otelhttp.WithPropagators(tracing.DefaultTextMapPropagator()),
+		)
 	}
 
 	var baseEvent *cloudevents.Event

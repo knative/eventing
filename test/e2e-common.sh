@@ -206,16 +206,17 @@ function install_knative_eventing() {
   if ! (( DEPLOY_KNATIVE_MONITORING )); then return 0; fi
 
   # Ensure knative monitoring is installed only once
-  kubectl get ns knative-monitoring|| kubectl create namespace knative-monitoring
-  knative_monitoring_pods=$(kubectl get pods -n knative-monitoring \
-    --field-selector status.phase=Running 2> /dev/null | tail -n +2 | wc -l)
-  if ! [[ ${knative_monitoring_pods} -gt 0 ]]; then
-    echo ">> Installing Knative Monitoring"
-    start_knative_eventing_monitoring "${KNATIVE_EVENTING_MONITORING_YAML}" || fail_test "Knative Monitoring did not come up"
-    UNINSTALL_LIST+=( "${KNATIVE_EVENTING_MONITORING_YAML}" )
-  else
-    echo ">> Knative Monitoring seems to be running, pods running: ${knative_monitoring_pods}."
-  fi
+  # TODO(Cali0707): figure out what to install going forwards for OTel monitoring
+  # kubectl get ns knative-monitoring|| kubectl create namespace knative-monitoring
+  # knative_monitoring_pods=$(kubectl get pods -n knative-monitoring \
+  #   --field-selector status.phase=Running 2> /dev/null | tail -n +2 | wc -l)
+  # if ! [[ ${knative_monitoring_pods} -gt 0 ]]; then
+  #   echo ">> Installing Knative Monitoring"
+  #   start_knative_eventing_monitoring "${KNATIVE_EVENTING_MONITORING_YAML}" || fail_test "Knative Monitoring did not come up"
+  #   UNINSTALL_LIST+=( "${KNATIVE_EVENTING_MONITORING_YAML}" )
+  # else
+  #   echo ">> Knative Monitoring seems to be running, pods running: ${knative_monitoring_pods}."
+  # fi
 }
 
 function install_head {

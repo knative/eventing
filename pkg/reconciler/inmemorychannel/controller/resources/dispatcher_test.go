@@ -28,11 +28,11 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/logging"
-	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/ptr"
 	"knative.dev/pkg/system"
 
 	"knative.dev/eventing/pkg/kncloudevents"
+	o11yconfigmap "knative.dev/eventing/pkg/observability/configmap"
 	"knative.dev/eventing/pkg/reconciler/inmemorychannel/controller/config"
 )
 
@@ -91,7 +91,7 @@ func TestNewDispatcher(t *testing.T) {
 								Value: "knative.dev/inmemorychannel-dispatcher",
 							}, {
 								Name:  "CONFIG_OBSERVABILITY_NAME",
-								Value: metrics.ConfigMapName(),
+								Value: o11yconfigmap.Name(),
 							}, {
 								Name:  "CONFIG_LOGGING_NAME",
 								Value: logging.ConfigMapName(),

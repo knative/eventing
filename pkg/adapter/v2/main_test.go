@@ -18,22 +18,22 @@ package adapter
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"testing"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
-	"go.opencensus.io/stats/view"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
+	"knative.dev/eventing/pkg/observability"
 	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 	kubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/leaderelection"
 	"knative.dev/pkg/logging"
-	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/reconciler"
 	_ "knative.dev/pkg/system/testing"
 )
@@ -54,14 +54,14 @@ type myAdapter struct {
 func TestMainWithContext(t *testing.T) {
 	os.Setenv("K_SINK", "http://sink")
 	os.Setenv("NAMESPACE", "ns")
-	os.Setenv("K_METRICS_CONFIG", "error config")
+	os.Setenv("K_OBSERVABILITY_CONFIG", "error config")
 	os.Setenv("K_LOGGING_CONFIG", "error config")
 	os.Setenv("MODE", "mymode")
 
 	defer func() {
 		os.Unsetenv("K_SINK")
 		os.Unsetenv("NAMESPACE")
-		os.Unsetenv("K_METRICS_CONFIG")
+		os.Unsetenv("K_OBSERVABILITY_CONFIG")
 		os.Unsetenv("K_LOGGING_CONFIG")
 		os.Unsetenv("MODE")
 	}()
@@ -88,21 +88,19 @@ func TestMainWithContext(t *testing.T) {
 			}
 			return &myAdapter{}
 		})
-
-	defer view.Unregister(metrics.NewMemStatsAll().DefaultViews()...)
 }
 
 func TestMainWithInformerNoLeaderElection(t *testing.T) {
 	os.Setenv("K_SINK", "http://sink")
 	os.Setenv("NAMESPACE", "ns")
-	os.Setenv("K_METRICS_CONFIG", "error config")
+	os.Setenv("K_OBSERVABILITY_CONFIG", "error config")
 	os.Setenv("K_LOGGING_CONFIG", "error config")
 	os.Setenv("MODE", "mymode")
 
 	defer func() {
 		os.Unsetenv("K_SINK")
 		os.Unsetenv("NAMESPACE")
-		os.Unsetenv("K_METRICS_CONFIG")
+		os.Unsetenv("K_OBSERVABILITY_CONFIG")
 		os.Unsetenv("K_LOGGING_CONFIG")
 		os.Unsetenv("MODE")
 	}()
@@ -136,32 +134,22 @@ func TestMainWithInformerNoLeaderElection(t *testing.T) {
 
 	cancel()
 	<-done
-	defer view.Unregister(metrics.NewMemStatsAll().DefaultViews()...)
 }
 
 func TestMain_MetricsConfig(t *testing.T) {
-	m := &metrics.ExporterOptions{
-		Domain:         "example.com",
-		Component:      "foo",
-		PrometheusPort: 9021,
-		PrometheusHost: "prom.example.com",
-		ConfigMap: map[string]string{
-			"profiling.enable": "true",
-			"foo":              "bar",
-		},
-	}
-	metricsJson, _ := metrics.OptionsToJSON(m)
+	obsCfg := observability.DefaultConfig()
+	obsCfgJson, _ := json.Marshal(obsCfg)
 
 	os.Setenv("K_SINK", "http://sink")
 	os.Setenv("NAMESPACE", "ns")
-	os.Setenv("K_METRICS_CONFIG", metricsJson)
+	os.Setenv("K_OBSERVABILITY_CONFIG", string(obsCfgJson))
 	os.Setenv("K_LOGGING_CONFIG", "error config")
 	os.Setenv("MODE", "mymode")
 
 	defer func() {
 		os.Unsetenv("K_SINK")
 		os.Unsetenv("NAMESPACE")
-		os.Unsetenv("K_METRICS_CONFIG")
+		os.Unsetenv("K_OBSERVABILITY_CONFIG")
 		os.Unsetenv("K_LOGGING_CONFIG")
 		os.Unsetenv("MODE")
 	}()
@@ -195,7 +183,6 @@ func TestMain_MetricsConfig(t *testing.T) {
 
 	cancel()
 	<-done
-	defer view.Unregister(metrics.NewMemStatsAll().DefaultViews()...)
 }
 
 func TestStartInformers(t *testing.T) {
@@ -277,7 +264,6 @@ func TestMain_LogConfigWatcher(t *testing.T) {
 	os.Setenv("K_LOGGING_CONFIG", "this should not be applied")
 	os.Setenv("NAMESPACE", "ns from context should be used")
 	os.Setenv("POD_NAME", "my-test-pod")
-	os.Setenv(metrics.DomainEnv, "env-metrics-domain")
 
 	defer func() {
 		os.Unsetenv("K_SINK")
@@ -301,16 +287,8 @@ func TestMain_LogConfigWatcher(t *testing.T) {
 
 		// Other configurator options are also enabled to make sure that at least
 		// they do not panic when ConfigMaps are updated.
-		WithMetricsExporterConfigurator(
-			NewMetricsExporterConfiguratorFromConfigMap(tComponentName,
-				WithMetricsExporterConfiguratorConfigMapName(tObservabilityConfigMapName),
-				WithMetricsExporterConfiguratorMetricsDomain(tMetricsDomain))),
-		WithTracingConfigurator(NewTracingConfiguratorFromConfigMap(
-			WithTracingConfiguratorConfigMapName(tTracingConfigMapName))),
 		WithCloudEventsStatusReporterConfigurator(NewCloudEventsReporterConfiguratorFromConfigMap(
 			WithCloudEventsStatusReporterConfiguratorConfigMapName(tObservabilityConfigMapName))),
-		WithProfilerConfigurator(NewProfilerConfiguratorFromConfigMap(
-			WithProfilerConfiguratorConfigMapName(tObservabilityConfigMapName))),
 	})
 
 	env := ConstructEnvOrDie(func() EnvConfigAccessor { return &myEnvConfig{} })
@@ -343,14 +321,10 @@ func TestMain_LogConfigWatcher(t *testing.T) {
 				}
 
 				// Change observability ConfigMap settings.
-				ocm.Data["metrics.backend-destination"] = "opencensus"
-				ocm.Data["profiling.enable"] = "true"
+				ocm.Data["metrics-protocol"] = "prometheus"
 				ocm.Data["sink-event-error-reporting.enable"] = "true"
 				cmw.OnChange(ocm)
 
-				// Change tracing ConfigMap settings.
-				tcm.Data["backend"] = "zipkin"
-				tcm.Data["zipkin-endpoint"] = "http://zipking-test-endpoint"
 				cmw.OnChange(tcm)
 
 				return &myAdapter{blocking: true}
@@ -360,5 +334,4 @@ func TestMain_LogConfigWatcher(t *testing.T) {
 
 	cancel()
 	<-done
-	defer view.Unregister(metrics.NewMemStatsAll().DefaultViews()...)
 }

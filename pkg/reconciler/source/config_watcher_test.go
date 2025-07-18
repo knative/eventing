@@ -28,10 +28,8 @@ import (
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/logging"
 	loggingtesting "knative.dev/pkg/logging/testing"
-	"knative.dev/pkg/metrics"
-	tracingconfig "knative.dev/pkg/tracing/config"
 
-	_ "knative.dev/pkg/metrics/testing"
+	o11yconfigmap "knative.dev/eventing/pkg/observability/configmap"
 )
 
 const testComponent = "test_component"
@@ -39,26 +37,20 @@ const testComponentWithCustomLogLevel = "test_component_custom_loglevel"
 
 func TestNewConfigWatcher_defaults(t *testing.T) {
 	testCases := []struct {
-		name                  string
-		cmw                   configmap.Watcher
-		expectLoggingContains string
-		expectMetricsContains string
-		expectTracingContains string
+		name                        string
+		cmw                         configmap.Watcher
+		expectLoggingContains       string
+		expectObservabilityContains string
 	}{{
-		name:                  "With pre-filled sample data",
-		cmw:                   configMapWatcherWithSampleData(),
-		expectLoggingContains: `"zap-logger-config":"{\"level\": \"fatal\"}"`,
-		expectMetricsContains: `"ConfigMap":{"metrics.backend":"test"}`,
-		expectTracingContains: `"zipkin-endpoint":"zipkin.test"`,
+		name:                        "With pre-filled sample data",
+		cmw:                         configMapWatcherWithSampleData(),
+		expectLoggingContains:       `"zap-logger-config":"{\"level\": \"fatal\"}"`,
+		expectObservabilityContains: `"metrics":{"protocol":"http/protobuf","endpoint":"http://localhost:12345"}`,
 	}, {
 		name: "With empty data",
 		cmw:  configMapWatcherWithEmptyData(),
 		// logging defaults to Knative's defaults
 		expectLoggingContains: ``,
-		// metrics defaults to empty ConfigMap
-		expectMetricsContains: `"ConfigMap":{}`,
-		// tracing defaults to None backend
-		expectTracingContains: `"backend":"none"`,
 	}}
 
 	for _, tc := range testCases {
@@ -67,72 +59,15 @@ func TestNewConfigWatcher_defaults(t *testing.T) {
 			cw := WatchConfigurations(ctx, testComponent, tc.cmw)
 
 			assert.NotNil(t, cw.LoggingConfig(), "logging config should be enabled")
-			assert.NotNil(t, cw.MetricsConfig(), "metrics config should be enabled")
-			assert.NotNil(t, cw.TracingConfig(), "tracing config should be enabled")
 
 			envs := cw.ToEnvVars()
 
-			const expectEnvs = 3
+			const expectEnvs = 2
 			require.Lenf(t, envs, expectEnvs, "there should be %d env var(s)", expectEnvs)
 
 			assert.Equal(t, EnvLoggingCfg, envs[0].Name, "first env var is logging config")
 			assert.Contains(t, envs[0].Value, tc.expectLoggingContains)
-
-			assert.Equal(t, EnvMetricsCfg, envs[1].Name, "second env var is metrics config")
-			assert.Contains(t, envs[1].Value, tc.expectMetricsContains)
-
-			assert.Equal(t, EnvTracingCfg, envs[2].Name, "third env var is tracing config")
-			assert.Contains(t, envs[2].Value, tc.expectTracingContains)
-		})
-	}
-}
-
-func TestNewConfigWatcher_withOptions(t *testing.T) {
-	testCases := []struct {
-		name                  string
-		cmw                   configmap.Watcher
-		expectMetricsContains string
-	}{{
-		name:                  "With pre-filled sample data",
-		cmw:                   configMapWatcherWithSampleData(),
-		expectMetricsContains: `"ConfigMap":{"metrics.backend":"test"}`,
-	}, {
-		name: "With empty data",
-		cmw:  configMapWatcherWithEmptyData(),
-		// metrics defaults to empty ConfigMap
-		expectMetricsContains: `"ConfigMap":{}`,
-	}, {
-		name: "With bad logging config",
-		cmw: func() configmap.Watcher {
-			return configmap.NewStaticWatcher(
-				newTestConfigMap(logging.ConfigMapName(), map[string]string{
-					"zap-logger-config": `this is not json`,
-				}),
-				newTestConfigMap(metrics.ConfigMapName(), nil),
-				newTestConfigMap(tracingconfig.ConfigName, nil),
-			)
-		}(),
-		expectMetricsContains: `"ConfigMap":{}`,
-	}}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			ctx := loggingtesting.TestContextWithLogger(t)
-			cw := WatchConfigurations(ctx, testComponent, tc.cmw,
-				WithMetrics,
-			)
-
-			assert.Nil(t, cw.LoggingConfig(), "logging config should be disabled")
-			assert.Nil(t, cw.TracingConfig(), "tracing config should be disabled")
-			assert.NotNil(t, cw.MetricsConfig(), "metrics config should be enabled")
-
-			envs := cw.ToEnvVars()
-
-			const expectEnvs = 1
-			require.Lenf(t, envs, expectEnvs, "there should be %d env var(s)", expectEnvs)
-
-			assert.Equal(t, EnvMetricsCfg, envs[0].Name, "env var is metrics config")
-			assert.Contains(t, envs[0].Value, tc.expectMetricsContains)
+			assert.Contains(t, envs[1].Value, tc.expectObservabilityContains)
 		})
 	}
 }
@@ -152,20 +87,18 @@ func TestLoggingConfigWithCustomLoggingLevel(t *testing.T) {
 func TestEmptyVarsGenerator(t *testing.T) {
 	g := &EmptyVarsGenerator{}
 	envs := g.ToEnvVars()
-	const expectEnvs = 3
+	const expectEnvs = 2
 	require.Lenf(t, envs, expectEnvs, "there should be %d env var(s)", expectEnvs)
 }
 
 func TestNilSafeMethods(t *testing.T) {
 	var cw *ConfigWatcher
 	assert.Nil(t, cw.LoggingConfig(), "logging config should be disabled")
-	assert.Nil(t, cw.TracingConfig(), "tracing config should be disabled")
-	assert.Nil(t, cw.MetricsConfig(), "metrics config should be disabled")
+	assert.Nil(t, cw.ObservabilityConfig(), "tracing config should be disabled")
 
 	assert.NotPanics(t, func() {
 		cw.updateFromLoggingConfigMap(nil)
-		cw.updateFromMetricsConfigMap(nil)
-		cw.updateFromTracingConfigMap(nil)
+		cw.updateFromObservabilityConfigMap(nil)
 	}, "can update nil cfg")
 
 }
@@ -174,8 +107,7 @@ func TestNilSafeMethods(t *testing.T) {
 func configMapWatcherWithSampleData() configmap.Watcher {
 	return configmap.NewStaticWatcher(
 		newTestConfigMap(logging.ConfigMapName(), loggingConfigMapData()),
-		newTestConfigMap(metrics.ConfigMapName(), metricsConfigMapData()),
-		newTestConfigMap(tracingconfig.ConfigName, tracingConfigMapData()),
+		newTestConfigMap(o11yconfigmap.Name(), observabilityConfigMapData()),
 	)
 }
 
@@ -183,8 +115,7 @@ func configMapWatcherWithSampleData() configmap.Watcher {
 func configMapWatcherWithEmptyData() configmap.Watcher {
 	return configmap.NewStaticWatcher(
 		newTestConfigMap(logging.ConfigMapName(), nil),
-		newTestConfigMap(metrics.ConfigMapName(), nil),
-		newTestConfigMap(tracingconfig.ConfigName, nil),
+		newTestConfigMap(o11yconfigmap.Name(), nil),
 	)
 }
 
@@ -212,14 +143,11 @@ func loggingConfigMapData() map[string]string {
 		"loglevel." + testComponentWithCustomLogLevel: "debug",
 	}
 }
-func metricsConfigMapData() map[string]string {
+func observabilityConfigMapData() map[string]string {
 	return map[string]string{
-		"metrics.backend": "test",
-	}
-}
-func tracingConfigMapData() map[string]string {
-	return map[string]string{
-		"backend":         "zipkin",
-		"zipkin-endpoint": "zipkin.test",
+		"metrics-protocol": "http/protobuf",
+		"metrics-endpoint": "http://localhost:12345",
+		"tracing-protocol": "grpc",
+		"tracing-endpoint": "http://localhost:54321",
 	}
 }

@@ -90,9 +90,7 @@ func NewController(
 	})
 	featureStore.WatchConfigs(cmw)
 
-	configWatcher := reconcilersource.WatchConfigurations(ctx, "eventtransform", cmw,
-		reconcilersource.WithTracing,
-	)
+	configWatcher := reconcilersource.WatchConfigurations(ctx, "eventtransform", cmw)
 
 	r := &Reconciler{
 		k8s:                        kubeclient.Get(ctx),

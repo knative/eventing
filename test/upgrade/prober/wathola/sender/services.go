@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"strings"
@@ -29,12 +30,11 @@ import (
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	cloudeventshttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"github.com/wavesoftware/go-ensure"
-	"go.opencensus.io/plugin/ochttp"
-	"go.opencensus.io/trace"
-	"knative.dev/pkg/tracing/propagation/tracecontextb3"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"knative.dev/eventing/test/upgrade/prober/wathola/config"
 	"knative.dev/eventing/test/upgrade/prober/wathola/event"
+	"knative.dev/pkg/observability/tracing"
 )
 
 const (
@@ -184,9 +184,10 @@ func (h httpSender) SendEvent(ce cloudevents.Event, endpoint interface{}) error 
 func (h httpSender) SendEventWithContext(ctx context.Context, ce cloudevents.Event, endpoint interface{}) error {
 	url := endpoint.(string)
 	opts := []cloudeventshttp.Option{
-		cloudevents.WithRoundTripper(&ochttp.Transport{
-			Propagation: tracecontextb3.TraceContextEgress,
-		}),
+		cloudevents.WithRoundTripper(otelhttp.NewTransport(
+			http.DefaultTransport,
+			otelhttp.WithPropagators(tracing.DefaultTextMapPropagator()),
+		)),
 	}
 	c, err := cloudevents.NewClientHTTP(opts...)
 	if err != nil {
@@ -203,12 +204,9 @@ func (h httpSender) SendEventWithContext(ctx context.Context, ce cloudevents.Eve
 func (s *sender) sendStep() (*event.Step, error) {
 	step := event.Step{Number: s.eventsSent + 1}
 	ce := NewCloudEvent(step, event.StepType)
-	ctx, span := PopulateSpanWithEvent(context.Background(), ce, Name)
-	defer span.End()
-	span.AddAttributes(trace.Int64Attribute("step", int64(step.Number)))
 	endpoint := senderConfig.Address
 	log.Infof("Sending step event #%v to %#v", step.Number, endpoint)
-	err := SendEvent(ctx, ce, endpoint)
+	err := SendEvent(context.Background(), ce, endpoint)
 	// Record every request regardless of the result
 	s.totalRequests++
 	if err != nil {
@@ -230,18 +228,6 @@ func (s *sender) sendFinished() {
 	}
 	endpoint := senderConfig.Address
 	ce := NewCloudEvent(finished, event.FinishedType)
-	ctx, span := PopulateSpanWithEvent(context.Background(), ce, Name)
-	defer span.End()
 	log.Infof("Sending finished event (count: %v) to %#v", finished.EventsSent, endpoint)
-	ensure.NoError(SendEvent(ctx, ce, endpoint))
-}
-
-func PopulateSpanWithEvent(ctx context.Context, ce cloudevents.Event, spanName string) (context.Context, *trace.Span) {
-	ctxWithSpan, span := trace.StartSpan(ctx, spanName)
-	span.AddAttributes(
-		trace.StringAttribute("cloudevents.type", ce.Type()),
-		trace.StringAttribute("cloudevents.id", ce.ID()),
-		trace.StringAttribute("target", config.Instance.Forwarder.Target),
-	)
-	return ctxWithSpan, span
+	ensure.NoError(SendEvent(context.Background(), ce, endpoint))
 }

@@ -20,9 +20,6 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-
-	_ "knative.dev/pkg/metrics/testing"
-	_ "knative.dev/pkg/system/testing"
 )
 
 func TestLabels(t *testing.T) {

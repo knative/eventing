@@ -22,6 +22,7 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/runtime"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/metric"
+	sdkresource "go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
 
 	"go.uber.org/zap"
@@ -112,6 +113,26 @@ func SetupObservabilityOrDie(
 	otel.SetTracerProvider(tracerProvider)
 
 	return meterProvider, tracerProvider
+}
+
+func DefaultMeterProvider(ctx context.Context, resource *sdkresource.Resource) *metrics.MeterProvider {
+	meterProvider, _ := metrics.NewMeterProvider(
+		ctx,
+		observability.DefaultConfig().Metrics,
+		metric.WithResource(resource),
+	)
+
+	return meterProvider
+}
+
+func DefaultTraceProvider(ctx context.Context, resource *sdkresource.Resource) *tracing.TracerProvider {
+	traceProvider, _ := tracing.NewTracerProvider(
+		ctx,
+		observability.DefaultConfig().Tracing,
+		trace.WithResource(resource),
+	)
+
+	return traceProvider
 }
 
 // GetObservabilityConfig gets the observability config from the (in order):

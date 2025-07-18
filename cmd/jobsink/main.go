@@ -48,7 +48,6 @@ import (
 	secretinformer "knative.dev/pkg/injection/clients/namespacedkube/informers/core/v1/secret"
 	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/logging"
-	"knative.dev/pkg/metrics"
 	k8sruntime "knative.dev/pkg/observability/runtime/k8s"
 	"knative.dev/pkg/ptr"
 	"knative.dev/pkg/system"
@@ -486,7 +485,6 @@ func (h *Handler) handleGet(ctx context.Context, w http.ResponseWriter, r *http.
 
 func flush(logger *zap.SugaredLogger) {
 	_ = logger.Sync()
-	metrics.FlushExporter()
 }
 
 func getServerTLSConfig(ctx context.Context) (*tls.Config, error) {

@@ -19,7 +19,6 @@ import (
 	"context"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
-	"go.opencensus.io/trace"
 	"knative.dev/eventing/test/upgrade/prober/wathola/client"
 	"knative.dev/eventing/test/upgrade/prober/wathola/config"
 	"knative.dev/eventing/test/upgrade/prober/wathola/sender"
@@ -59,8 +58,6 @@ func (f *forwarder) Forward() {
 func (f *forwarder) forwardEvent(ctx context.Context, e cloudevents.Event) {
 	target := config.Instance.Forwarder.Target
 	log.Debugf("Forwarding event %v to %v", e.ID(), target)
-	ctx, span := trace.StartSpan(ctx, Name)
-	defer span.End()
 	err := sender.SendEvent(ctx, e, target)
 	if err != nil {
 		log.Error(err)

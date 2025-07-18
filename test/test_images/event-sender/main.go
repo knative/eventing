@@ -22,20 +22,18 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	nethttp "net/http"
+	"net/http"
 	"time"
 
-	obsclient "github.com/cloudevents/sdk-go/observability/opencensus/v2/client"
+	obsclient "github.com/cloudevents/sdk-go/observability/opentelemetry/v2/client"
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/client"
 	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
-	"go.opencensus.io/plugin/ochttp"
-	"go.uber.org/zap"
-	"knative.dev/pkg/tracing"
-	"knative.dev/pkg/tracing/propagation/tracecontextb3"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"knative.dev/eventing/test/lib/sender"
 	"knative.dev/eventing/test/test_images"
+	"knative.dev/pkg/observability/tracing"
 )
 
 var (
@@ -95,10 +93,10 @@ func main() {
 	if addTracing {
 		httpOpts = append(
 			httpOpts,
-			cloudevents.WithRoundTripper(&ochttp.Transport{
-				Base:        nethttp.DefaultTransport,
-				Propagation: tracecontextb3.TraceContextEgress,
-			}),
+			cloudevents.WithRoundTripper(otelhttp.NewTransport(
+				http.DefaultTransport,
+				otelhttp.WithPropagators(tracing.DefaultTextMapPropagator()),
+			)),
 		)
 	}
 	if additionalHeaders != "" {
@@ -113,15 +111,10 @@ func main() {
 	}
 
 	var c cloudevents.Client
-	var tracer tracing.Tracer
 	if addTracing {
 		log.Println("Adding tracing")
-		logger, _ := zap.NewDevelopment()
-		if tracer, err = test_images.ConfigureTracing(logger.Sugar(), ""); err != nil {
-			log.Fatalf("Unable to setup trace publishing: %v", err)
-		}
-		defer tracer.Shutdown(context.Background())
-		c, err = cloudevents.NewClient(t, client.WithObservabilityService(obsclient.New()))
+		// TODO(Cali0707): add in trace publishing here, for now skipping
+		c, err = cloudevents.NewClient(t, client.WithObservabilityService(obsclient.NewOTelObservabilityService()))
 	} else {
 		c, err = cloudevents.NewClient(t)
 	}

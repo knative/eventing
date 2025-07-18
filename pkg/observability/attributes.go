@@ -17,19 +17,16 @@ limitations under the License.
 package observability
 
 import (
-	"go.opencensus.io/trace"
-)
-
-const (
-	K8sNamespaceName = "k8s.namespace.name"
+	"go.opentelemetry.io/otel/attribute"
+	"knative.dev/pkg/observability/attributekey"
 )
 
 // K8sAttributes generates Kubernetes trace attributes for the object of the
 // given name in the given namespace. resource identifies the object type
 // as <singular>.<group>
-func K8sAttributes(name, namespace, resource string) []trace.Attribute {
-	return []trace.Attribute{
-		trace.StringAttribute("k8s."+resource+".name", name),
-		trace.StringAttribute(K8sNamespaceName, namespace),
+func K8sAttributes(name, namespace, resource string) []attribute.KeyValue {
+	return []attribute.KeyValue{
+		attributekey.String("k8s." + resource + ".name").With(name),
+		attributekey.String("k8s." + resource + ".namespace").With(namespace),
 	}
 }

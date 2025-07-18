@@ -24,6 +24,8 @@ import (
 	"net/http"
 	"testing"
 	"time"
+
+	_ "knative.dev/pkg/system/testing"
 )
 
 const ceClientURL = "http://localhost:8080"

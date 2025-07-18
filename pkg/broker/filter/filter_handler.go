@@ -653,19 +653,6 @@ func applyAttributesFilter(ctx context.Context, filter *eventingv1.TriggerFilter
 	return attributes.NewAttributesFilter(filter.Attributes).Filter(ctx, event)
 }
 
-// triggerFilterAttribute returns the filter attribute value for a given `attributeName`. If it doesn't not exist,
-// returns the any value filter.
-func triggerFilterAttribute(filter *eventingv1.TriggerFilter, attributeName string) string {
-	attributeValue := eventingv1.TriggerAnyFilter
-	if filter != nil {
-		attrs := map[string]string(filter.Attributes)
-		if v, ok := attrs[attributeName]; ok {
-			attributeValue = v
-		}
-	}
-	return attributeValue
-}
-
 // writeHeaders adds the specified HTTP Headers to the ResponseWriter.
 func writeHeaders(httpHeader http.Header, writer http.ResponseWriter) {
 	for headerKey, headerValues := range httpHeader {

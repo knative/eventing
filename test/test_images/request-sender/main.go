@@ -27,11 +27,11 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/google/uuid"
-	"go.opencensus.io/plugin/ochttp"
-	"knative.dev/pkg/tracing/propagation/tracecontextb3"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"knative.dev/eventing/test/lib/sender"
 	"knative.dev/eventing/test/test_images"
+	"knative.dev/pkg/observability/tracing"
 )
 
 var (
@@ -76,10 +76,10 @@ func main() {
 	}
 
 	httpClient := &nethttp.Client{
-		Transport: &ochttp.Transport{
-			Base:        nethttp.DefaultTransport,
-			Propagation: tracecontextb3.TraceContextEgress,
-		},
+		Transport: otelhttp.NewTransport(
+			nethttp.DefaultTransport,
+			otelhttp.WithPropagators(tracing.DefaultTextMapPropagator()),
+		),
 	}
 
 	sequence := 0
