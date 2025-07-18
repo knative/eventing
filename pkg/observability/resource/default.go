@@ -63,7 +63,7 @@ func Default(serviceName string) (*resource.Resource, error) {
 		),
 	)
 
-	if err != nil {
+	if resourceErr != nil {
 		err = errors.Join(err, fmt.Errorf("encountered error while merging otel resources: %s", resourceErr.Error()))
 	}
 
