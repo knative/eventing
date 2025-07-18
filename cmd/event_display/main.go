@@ -94,13 +94,16 @@ func run(ctx context.Context) {
 	cfg := &observability.Config{}
 
 	err = json.Unmarshal([]byte(os.Getenv("K_OBSERVABILITY_CONFIG")), cfg)
+	if err != nil {
+		log.Printf("failed to parse observability config from env, falling back to default config\n")
+	}
 	cfg = observability.MergeWithDefaults(cfg)
 
 	ctx = observability.WithConfig(ctx, cfg)
 
 	otelResource, err := resource.Default("hearbeat")
 	if err != nil {
-		log.Printf("failed to correctly initialize otel resource, resouce may be missing some attributes: %s", err.Error())
+		log.Printf("failed to correctly initialize otel resource, resouce may be missing some attributes: %s\n", err.Error())
 	}
 
 	meterProvider, err := metrics.NewMeterProvider(
@@ -109,7 +112,7 @@ func run(ctx context.Context) {
 		metric.WithResource(otelResource),
 	)
 	if err != nil {
-		log.Printf("failed to setup meter provider, falling back to noop: %s", err.Error())
+		log.Printf("failed to setup meter provider, falling back to noop: %s\n", err.Error())
 		meterProvider = eventingotel.DefaultMeterProvider(ctx, otelResource)
 	}
 
@@ -121,7 +124,7 @@ func run(ctx context.Context) {
 		trace.WithResource(otelResource),
 	)
 	if err != nil {
-		log.Printf("failed to setup tracing provider, falling back to noop: %s", err.Error())
+		log.Printf("failed to setup tracing provider, falling back to noop: %s\n", err.Error())
 		tracerProvider = eventingotel.DefaultTraceProvider(ctx, otelResource)
 	}
 
@@ -130,11 +133,11 @@ func run(ctx context.Context) {
 		defer cancel()
 
 		if err := meterProvider.Shutdown(ctx); err != nil {
-			log.Printf("failed to shut down metrics: %s", err.Error())
+			log.Printf("failed to shut down metrics: %s\n", err.Error())
 		}
 
 		if err := tracerProvider.Shutdown(ctx); err != nil {
-			log.Printf("failed to shut down tracing: %s", err.Error())
+			log.Printf("failed to shut down tracing: %s\n", err.Error())
 		}
 	}()
 

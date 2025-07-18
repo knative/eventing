@@ -50,8 +50,8 @@ func Default(serviceName string) (*resource.Resource, error) {
 		attrs = append(attrs, semconv.K8SNamespaceName(namespace))
 	} else {
 		err = fmt.Errorf(
-			"the environment variable %q is not set, not adding %q to otel attributes", 
-			system.NamespaceEnvKey, 
+			"the environment variable %q is not set, not adding %q to otel attributes",
+			system.NamespaceEnvKey,
 			semconv.K8SNamespaceNameKey,
 		)
 	}

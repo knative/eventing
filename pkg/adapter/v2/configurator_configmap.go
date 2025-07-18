@@ -208,6 +208,10 @@ func (c *cloudEventsStatusReporterConfiguratorFromConfigMap) CreateCloudEventsSt
 	}
 
 	cfg, err := o11yconfigmap.Parse(ocm)
+	if err != nil {
+		logger.Errorw("observability config could not be parsed from ConfigMap, falling back to default (noop) config", zap.Error(err))
+		cfg = observability.DefaultConfig()
+	}
 	r := crstatusevent.NewCRStatusEventClient(cfg)
 
 	logger.Infof("Adding Watcher on ConfigMap %s for CE client status reporter", c.configMapName)
