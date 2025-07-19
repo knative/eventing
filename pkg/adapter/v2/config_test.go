@@ -37,9 +37,7 @@ type myEnvConfig struct {
 func TestEnvConfig(t *testing.T) {
 	t.Setenv("K_SINK", "http://sink")
 	t.Setenv("NAMESPACE", "ns")
-	t.Setenv("K_METRICS_CONFIG", "metrics")
 	t.Setenv("K_LOGGING_CONFIG", "logging")
-	t.Setenv("K_TRACING_CONFIG", "tracing")
 	t.Setenv("K_LEADER_ELECTION_CONFIG", "leaderelection")
 	t.Setenv("K_SINK_TIMEOUT", "999")
 	t.Setenv("MODE", "mymode") // note: custom to this test impl

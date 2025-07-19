@@ -19,7 +19,7 @@ package observability
 import (
 	"context"
 
-	"go.opencensus.io/trace"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 type spanDataKey struct{}
@@ -33,11 +33,11 @@ type SpanData struct {
 	Kind int
 
 	// Attributes is the additional set of span attributes
-	Attributes []trace.Attribute
+	Attributes []attribute.KeyValue
 }
 
 // WithSpanData extends the given context with the given span values
-func WithSpanData(ctx context.Context, name string, kind int, attributes []trace.Attribute) context.Context {
+func WithSpanData(ctx context.Context, name string, kind int, attributes []attribute.KeyValue) context.Context {
 	return context.WithValue(ctx, spanDataKey{}, &SpanData{
 		Name:       name,
 		Kind:       kind,

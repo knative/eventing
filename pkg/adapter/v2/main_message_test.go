@@ -18,15 +18,15 @@ package adapter
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"testing"
 
-	"go.opencensus.io/stats/view"
 	"knative.dev/eventing/pkg/eventingtls/eventingtlstesting"
 	"knative.dev/eventing/pkg/metrics/source"
+	"knative.dev/eventing/pkg/observability"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/leaderelection"
-	"knative.dev/pkg/metrics"
 
 	_ "knative.dev/pkg/client/injection/kube/client/fake"
 )
@@ -34,22 +34,13 @@ import (
 type myAdapterBindings struct{}
 
 func TestMainMessageAdapterWithContext(t *testing.T) {
-	m := &metrics.ExporterOptions{
-		Domain:         "example.com",
-		Component:      "foo",
-		PrometheusPort: 9021,
-		PrometheusHost: "prom.example.com",
-		ConfigMap: map[string]string{
-			"profiling.enable": "true",
-			"foo":              "bar",
-		},
-	}
-	metricsJson, _ := metrics.OptionsToJSON(m)
+	obs := observability.DefaultConfig()
+	obsJson, _ := json.Marshal(obs)
 
 	os.Setenv("K_SINK", "http://sink")
 	os.Setenv("K_CA_CERTS", string(eventingtlstesting.CA))
 	os.Setenv("NAMESPACE", "ns")
-	os.Setenv("K_METRICS_CONFIG", metricsJson)
+	os.Setenv("K_OBSERVABILITY_CONFIG", string(obsJson))
 	os.Setenv("K_LOGGING_CONFIG", "logging")
 	os.Setenv("MODE", "mymode")
 
@@ -57,7 +48,7 @@ func TestMainMessageAdapterWithContext(t *testing.T) {
 		os.Unsetenv("K_SINK")
 		os.Unsetenv("K_CA_CERTS")
 		os.Unsetenv("NAMESPACE")
-		os.Unsetenv("K_METRICS_CONFIG")
+		os.Unsetenv("K_OBSERVABILITY_CONFIG")
 		os.Unsetenv("K_LOGGING_CONFIG")
 		os.Unsetenv("MODE")
 	}()
@@ -88,8 +79,6 @@ func TestMainMessageAdapterWithContext(t *testing.T) {
 		})
 
 	cancel()
-
-	defer view.Unregister(metrics.NewMemStatsAll().DefaultViews()...)
 }
 
 func (m *myAdapterBindings) Start(_ context.Context) error {
