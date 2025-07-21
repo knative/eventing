@@ -227,3 +227,17 @@ func TestApiServerSourceNewFiltersFeature(t *testing.T) {
 
 	env.TestSet(ctx, t, apiserversourcefeatures.NewFiltersFeature())
 }
+
+func TestApiServerSourceSkipPermissionsFeature(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+	)
+
+	env.TestSet(ctx, t, apiserversourcefeatures.SkipPermissionsFeature())
+}
