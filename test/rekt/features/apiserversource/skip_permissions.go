@@ -119,6 +119,7 @@ func SkipPermissionsEnabledNoRBACFeature() *feature.Feature {
 
 		if obj == nil {
 			t.Fatal("could not found a Deployment prefixed with 'apiserversource-one-'")
+			return
 		}
 
 		for _, envvar := range obj.Spec.Template.Spec.Containers[0].Env {
@@ -262,6 +263,7 @@ func SkipPermissionsEnabledWithRBACFeature() *feature.Feature {
 
 		if obj == nil {
 			t.Fatal("could not found a Deployment prefixed with 'apiserversource-two-'")
+			return
 		}
 
 		if obj.Status.ReadyReplicas != 1 {
@@ -488,6 +490,7 @@ func SkipPermissionsDisabledWithRBACFeature() *feature.Feature {
 
 		if obj == nil {
 			t.Fatal("could not found a Deployment prefixed with 'apiserversource-four-'")
+			return
 		}
 
 		if obj.Status.ReadyReplicas != 1 {
