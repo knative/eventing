@@ -44,7 +44,7 @@ func MakeDeployment(source *v1.ContainerSource) *appsv1.Deployment {
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(source),
 			},
-			Labels: template.Labels,
+			Labels:      template.Labels,
 			Annotations: template.Annotations,
 		},
 		Spec: appsv1.DeploymentSpec{
