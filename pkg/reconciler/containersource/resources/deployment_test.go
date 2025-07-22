@@ -149,6 +149,123 @@ func TestMakeDeployment(t *testing.T) {
 		},
 
 		{
+			name: "valid container source with one container, labels are respected",
+			source: &v1.ContainerSource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: "test-namespace",
+					UID:       uid,
+				},
+				Spec: v1.ContainerSourceSpec{
+					Template: corev1.PodTemplateSpec{
+						ObjectMeta: metav1.ObjectMeta{
+							Labels: map[string]string{
+								"example": "value",
+							},
+						},
+						Spec: corev1.PodSpec{
+							ServiceAccountName: "test-service-account",
+							Containers: []corev1.Container{
+								{
+									Name:  "test-source",
+									Image: "test-image",
+									Args:  []string{"--test1=args1", "--test2=args2"},
+									Env: []corev1.EnvVar{
+										{
+											Name:  "test1",
+											Value: "arg1",
+										},
+										{
+											Name: "test2",
+											ValueFrom: &corev1.EnvVarSource{
+												SecretKeyRef: &corev1.SecretKeySelector{
+													Key: "test2-secret",
+												},
+											},
+										},
+									},
+									ImagePullPolicy: corev1.PullIfNotPresent,
+								},
+							},
+						},
+					},
+					SourceSpec: duckv1.SourceSpec{
+						Sink: duckv1.Destination{
+							URI: apis.HTTP("test-sink"),
+						},
+					},
+				},
+			},
+			want: &appsv1.Deployment{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "apps/v1",
+					Kind:       "Deployment",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      fmt.Sprintf("%s-deployment", name),
+					Namespace: "test-namespace",
+					OwnerReferences: []metav1.OwnerReference{{
+						APIVersion:         "sources.knative.dev/v1",
+						Kind:               "ContainerSource",
+						Name:               name,
+						UID:                uid,
+						Controller:         &yes,
+						BlockOwnerDeletion: &yes,
+					}},
+					Labels: map[string]string{
+						"sources.knative.dev/containerSource": name,
+						"sources.knative.dev/source":          "container-source-controller",
+						"example":                             "value",
+					},
+				},
+				Spec: appsv1.DeploymentSpec{
+					Selector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							"sources.knative.dev/containerSource": name,
+							"sources.knative.dev/source":          "container-source-controller",
+							"example":                             "value",
+						},
+					},
+					Template: corev1.PodTemplateSpec{
+						ObjectMeta: metav1.ObjectMeta{
+							Labels: map[string]string{
+								"sources.knative.dev/containerSource": name,
+								"sources.knative.dev/source":          "container-source-controller",
+								"example":                             "value",
+							},
+						},
+						Spec: corev1.PodSpec{
+							ServiceAccountName: "test-service-account",
+							Containers: []corev1.Container{
+								{
+									Name:  "test-source",
+									Image: "test-image",
+									Args: []string{
+										"--test1=args1",
+										"--test2=args2",
+									},
+									Env: []corev1.EnvVar{
+										{
+											Name:  "test1",
+											Value: "arg1",
+										}, {
+											Name: "test2",
+											ValueFrom: &corev1.EnvVarSource{
+												SecretKeyRef: &corev1.SecretKeySelector{
+													Key: "test2-secret",
+												},
+											},
+										}},
+									ImagePullPolicy: corev1.PullIfNotPresent,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+
+		{
 			name: "valid container source with two containers",
 			source: &v1.ContainerSource{
 				ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: "test-namespace", UID: uid},
