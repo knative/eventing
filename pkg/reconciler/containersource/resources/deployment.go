@@ -17,6 +17,8 @@ limitations under the License.
 package resources
 
 import (
+	"maps"
+
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
@@ -29,9 +31,7 @@ func MakeDeployment(source *v1.ContainerSource) *appsv1.Deployment {
 		template.Labels = make(map[string]string)
 	}
 	labels := Labels(source.Name)
-	for k, v := range labels {
-		template.Labels[k] = v
-	}
+	maps.Copy(template.Labels, labels)
 
 	deploy := &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
@@ -44,11 +44,12 @@ func MakeDeployment(source *v1.ContainerSource) *appsv1.Deployment {
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(source),
 			},
-			Labels: labels,
+			Labels:      template.Labels,
+			Annotations: template.Annotations,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{
-				MatchLabels: labels,
+				MatchLabels: template.Labels,
 			},
 			Template: template,
 		},
