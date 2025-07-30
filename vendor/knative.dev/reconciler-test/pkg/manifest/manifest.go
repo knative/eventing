@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"strings"
 
+	"knative.dev/pkg/reconciler"
+
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
@@ -101,7 +103,11 @@ func (f *YamlManifest) Apply(spec *unstructured.Unstructured) error {
 		if UpdateChanged(spec.UnstructuredContent(), current.UnstructuredContent()) {
 			f.log.Info("Updating type ", spec.GroupVersionKind(), " name ", spec.GetName())
 
-			if _, err = f.client.Resource(gvr).Namespace(current.GetNamespace()).Update(context.Background(), current, v1.UpdateOptions{}); err != nil {
+			err = reconciler.RetryUpdateConflicts(func(i int) error {
+				_, err := f.client.Resource(gvr).Namespace(current.GetNamespace()).Update(context.Background(), current, v1.UpdateOptions{})
+				return err
+			})
+			if err != nil {
 				return fmt.Errorf("failed to update resource %v - Resource:\n%s", err, toYaml(spec))
 			}
 		}
