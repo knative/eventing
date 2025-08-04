@@ -206,6 +206,15 @@ func (f *Feature) DeleteResources(ctx context.Context, t T) {
 func DeleteResources(ctx context.Context, t T, refs []corev1.ObjectReference) error {
 	dc := dynamicclient.Get(ctx)
 
+	// Keep track of refs that were successfully deleted (DELETE didn't fail)
+	refsDeleted := map[corev1.ObjectReference]bool{}
+
+	deleteOptions := &metav1.DeleteOptions{}
+	// Set delete propagation policy to foreground
+	foregroundDeletePropagation := metav1.DeletePropagationForeground
+	deleteOptions.PropagationPolicy = &foregroundDeletePropagation
+
+	// First, try to delete all the refs at least once
 	for _, ref := range refs {
 
 		gv, err := schema.ParseGroupVersion(ref.APIVersion)
@@ -216,20 +225,18 @@ func DeleteResources(ctx context.Context, t T, refs []corev1.ObjectReference) er
 		resource := apis.KindToResource(gv.WithKind(ref.Kind))
 		t.Logf("Deleting %s/%s of GVR: %+v", ref.Namespace, ref.Name, resource)
 
-		deleteOptions := &metav1.DeleteOptions{}
-		// Set delete propagation policy to foreground
-		foregroundDeletePropagation := metav1.DeletePropagationForeground
-		deleteOptions.PropagationPolicy = &foregroundDeletePropagation
-
 		err = dc.Resource(resource).Namespace(ref.Namespace).Delete(ctx, ref.Name, *deleteOptions)
 		// Ignore not found errors.
 		if err != nil && !apierrors.IsNotFound(err) {
 			t.Logf("Warning, failed to delete %s/%s of GVR: %+v: %v", ref.Namespace, ref.Name, resource, err)
+		} else {
+			refsDeleted[ref] = true
 		}
 	}
 
 	var lastResource corev1.ObjectReference // One still present resource
 
+	// Poll until all the refs are gone while retrying failed deletions
 	interval, timeout := state.PollTimingsFromContext(ctx)
 	err := wait.Poll(interval, timeout, func() (bool, error) {
 		for _, ref := range refs {
@@ -239,7 +246,21 @@ func DeleteResources(ctx context.Context, t T, refs []corev1.ObjectReference) er
 			}
 
 			resource := apis.KindToResource(gv.WithKind(ref.Kind))
-			t.Logf("Deleting %s/%s of GVR: %+v", ref.Namespace, ref.Name, resource)
+
+			// Make sure we delete successfully at most once
+			refDeleted, ok := refsDeleted[ref]
+			if !ok || !refDeleted {
+				t.Logf("Retrying deleting %s/%s of GVR: %+v", ref.Namespace, ref.Name, resource)
+
+				err = dc.Resource(resource).Namespace(ref.Namespace).Delete(ctx, ref.Name, *deleteOptions)
+
+				// Ignore not found errors.
+				if err != nil && !apierrors.IsNotFound(err) {
+					t.Logf("Warning, failed to delete %s/%s of GVR: %+v: %v", ref.Namespace, ref.Name, resource, err)
+				} else {
+					refsDeleted[ref] = true
+				}
+			}
 
 			_, err = dc.Resource(resource).
 				Namespace(ref.Namespace).
