@@ -18,11 +18,9 @@ package tracing
 
 import (
 	"context"
-	"log"
 
 	"go.uber.org/zap"
 	"knative.dev/pkg/logging"
-	"knative.dev/pkg/test/zipkin"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/knative"
@@ -31,6 +29,7 @@ import (
 
 // WithGatherer registers the trace gatherer with the environment and will be
 // receiving milestone events.
+// TODO(Cali0707): make this work with the OTel tracing
 func WithGatherer(t feature.T) environment.EnvOpts {
 	return func(ctx context.Context, env environment.Environment) (context.Context, error) {
 		gatherer, err := milestone.NewTracingGatherer(ctx, env.Namespace(),
@@ -45,6 +44,4 @@ func WithGatherer(t feature.T) environment.EnvOpts {
 	}
 }
 
-func Cleanup() {
-	zipkin.CleanupZipkinTracingSetup(log.Printf)
-}
+func Cleanup() {}

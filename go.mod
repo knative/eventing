@@ -51,7 +51,7 @@ require (
 	knative.dev/hack v0.0.0-20250708013849-70d4b00da6ba
 	knative.dev/hack/schema v0.0.0-20250708013849-70d4b00da6ba
 	knative.dev/pkg v0.0.0-20250804212045-2a0abb7b5eb3
-	knative.dev/reconciler-test v0.0.0-20250729152438-4f40f6229058
+	knative.dev/reconciler-test v0.0.0-20250805151946-e7475cab4beb
 	sigs.k8s.io/randfill v1.0.0
 	sigs.k8s.io/yaml v1.6.0
 )
@@ -120,7 +120,6 @@ require (
 	golang.org/x/text v0.27.0 // indirect
 	golang.org/x/time v0.12.0 // indirect
 	golang.org/x/tools v0.35.0 // indirect
-	golang.org/x/tools/go/expect v0.1.1-deprecated // indirect
 	gomodules.xyz/jsonpatch/v2 v2.5.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20250603155806-513f23925822 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250603155806-513f23925822 // indirect

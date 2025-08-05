@@ -30,6 +30,7 @@ import (
 
 type tracingConfigEnvKey struct{}
 
+// Deprecated: use WithObservabilityConfig instead
 func WithTracingConfig(ctx context.Context, env environment.Environment) (context.Context, error) {
 	knativeNamespace := KnativeNamespaceFromContext(ctx)
 	cm, err := kubeclient.Get(ctx).CoreV1().ConfigMaps(knativeNamespace).Get(context.Background(), configtracing.ConfigName, metav1.GetOptions{})
@@ -52,6 +53,7 @@ func WithTracingConfig(ctx context.Context, env environment.Environment) (contex
 
 var _ environment.EnvOpts = WithTracingConfig
 
+// Deprecated: use ObservabilityConfigFromContext instead
 func TracingConfigFromContext(ctx context.Context) string {
 	if e, ok := ctx.Value(tracingConfigEnvKey{}).(string); ok {
 		return e

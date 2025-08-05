@@ -18,25 +18,35 @@ package eventshub
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
-	"go.opencensus.io/plugin/ochttp"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/trace"
+	otelnoop "go.opentelemetry.io/otel/trace/noop"
 	"go.uber.org/zap"
 	"knative.dev/pkg/logging"
-	"knative.dev/pkg/tracing"
-	"knative.dev/pkg/tracing/config"
-	"knative.dev/pkg/tracing/propagation/tracecontextb3"
+	"knative.dev/pkg/observability"
+	"knative.dev/pkg/observability/metrics"
+	"knative.dev/pkg/observability/resource"
+	"knative.dev/pkg/observability/tracing"
 )
 
 const (
-	ConfigTracingEnv   = "K_CONFIG_TRACING"
-	ConfigLoggingEnv   = "K_CONFIG_LOGGING"
-	EventGeneratorsEnv = "EVENT_GENERATORS"
-	EventLogsEnv       = "EVENT_LOGS"
+	// Deprecated: use ConfigObservabilityEnv instead
+	ConfigTracingEnv = "K_CONFIG_TRACING"
+
+	ConfigLoggingEnv       = "K_CONFIG_LOGGING"
+	ConfigObservabilityEnv = "K_CONFIG_OBSERVABILITY"
+	EventGeneratorsEnv     = "EVENT_GENERATORS"
+	EventLogsEnv           = "EVENT_LOGS"
 
 	OIDCEnabledEnv                         = "ENABLE_OIDC_AUTH"
 	OIDCGenerateExpiredTokenEnv            = "OIDC_GENERATE_EXPIRED_TOKEN"
@@ -73,33 +83,81 @@ func ParseDurationStr(durationStr string, defaultDuration int) time.Duration {
 	return duration
 }
 
+// Deprecated: use ConfigureObservability instead. This will now always return a noop tracer
 // ConfigureTracing can be used in test-images to configure tracing
-func ConfigureTracing(logger *zap.SugaredLogger, serviceName string) (tracing.Tracer, error) {
-	tracingEnv := os.Getenv(ConfigTracingEnv)
+func ConfigureTracing(logger *zap.SugaredLogger, serviceName string) (trace.Tracer, error) {
+	return otelnoop.NewTracerProvider().Tracer(serviceName), nil
+}
 
-	var (
-		tracer tracing.Tracer
-		err    error
+func ConfigureObservability(ctx context.Context, logger *zap.SugaredLogger, serviceName string) (*metrics.MeterProvider, *tracing.TracerProvider, error) {
+	obsCfgEnv := os.Getenv(ConfigObservabilityEnv)
+
+	cfg, err := ParseObservabilityConfig(obsCfgEnv)
+	if err != nil {
+		logger.Warnw("Error while trying to parse observability config from env, falling back to default config", zap.Error(err))
+	}
+
+	cfg = NewObservabilityConfigFromExistingWithDefaults(cfg)
+
+	resource := resource.Default(serviceName)
+
+	meterProvider, err := metrics.NewMeterProvider(
+		ctx,
+		cfg.Metrics,
+		sdkmetric.WithResource(resource),
 	)
-
-	if tracingEnv == "" {
-		tracer, err = tracing.SetupPublishingWithStaticConfig(logger, serviceName, config.NoopConfig())
-		if err != nil {
-			return tracer, err
-		}
-	}
-
-	conf, err := config.JSONToTracingConfig(tracingEnv)
 	if err != nil {
-		return tracer, err
+		return nil, nil, err
 	}
 
-	tracer, err = tracing.SetupPublishingWithStaticConfig(logger, serviceName, conf)
+	otel.SetMeterProvider(meterProvider)
+
+	tracerProvider, err := tracing.NewTracerProvider(
+		ctx,
+		cfg.Tracing,
+		sdktrace.WithResource(resource),
+	)
 	if err != nil {
-		return tracer, err
+		return nil, nil, err
 	}
 
-	return tracer, nil
+	otel.SetTextMapPropagator(tracing.DefaultTextMapPropagator())
+	otel.SetTracerProvider(tracerProvider)
+
+	return meterProvider, tracerProvider, nil
+}
+
+func ParseObservabilityConfig(configStr string) (*observability.Config, error) {
+	obsCfg := &observability.Config{}
+	err := json.Unmarshal([]byte(configStr), obsCfg)
+	return obsCfg, err
+}
+
+func NewObservabilityConfigFromExistingWithDefaults(cfg *observability.Config) *observability.Config {
+	defaultCfg := observability.DefaultConfig()
+	if cfg == nil {
+		return cfg
+	}
+
+	newCfg := &observability.Config{
+		Metrics: cfg.Metrics,
+		Runtime: cfg.Runtime,
+		Tracing: cfg.Tracing,
+	}
+	var emptyMetrics observability.MetricsConfig
+	if newCfg.Metrics == emptyMetrics {
+		newCfg.Metrics = defaultCfg.Metrics
+	}
+	var emptyRuntime observability.RuntimeConfig
+	if newCfg.Runtime == emptyRuntime {
+		newCfg.Runtime = defaultCfg.Runtime
+	}
+	var emptyTracing observability.TracingConfig
+	if newCfg.Tracing == emptyTracing {
+		newCfg.Tracing = defaultCfg.Tracing
+	}
+
+	return newCfg
 }
 
 // ConfigureTracing can be used in test-images to configure tracing
@@ -116,19 +174,20 @@ func ConfigureLogging(ctx context.Context, name string) context.Context {
 
 // WithServerTracing wraps the provided handler in a tracing handler
 func WithServerTracing(handler http.Handler) http.Handler {
-	return &ochttp.Handler{
-		Propagation: tracecontextb3.TraceContextEgress,
-		Handler:     handler,
-	}
+	return otelhttp.NewHandler(
+		handler,
+		"receive",
+		otelhttp.WithPropagators(tracing.DefaultTextMapPropagator()),
+	)
 }
 
 // WithClientTracing enables exporting traces by the client's transport.
 func WithClientTracing(client *http.Client) error {
 	prev := client.Transport
-	client.Transport = &ochttp.Transport{
-		Base:        prev,
-		Propagation: tracecontextb3.TraceContextEgress,
-	}
+	client.Transport = otelhttp.NewTransport(
+		prev,
+		otelhttp.WithPropagators(tracing.DefaultTextMapPropagator()),
+	)
 	return nil
 }
 
