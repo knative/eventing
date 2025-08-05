@@ -44,7 +44,6 @@ import (
 	"knative.dev/pkg/leaderelection"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/signals"
-	tracingconfig "knative.dev/pkg/tracing/config"
 	"knative.dev/pkg/webhook"
 	"knative.dev/pkg/webhook/certificates"
 	"knative.dev/pkg/webhook/configmaps"
@@ -214,7 +213,6 @@ func NewConfigValidationController(ctx context.Context, _ configmap.Watcher) *co
 
 		// The configmaps to validate.
 		configmap.Constructors{
-			tracingconfig.ConfigName:       tracingconfig.NewTracingConfigFromConfigMap,
 			o11yconfigmap.Name():           o11yconfigmap.Parse,
 			logging.ConfigMapName():        logging.NewConfigFromConfigMap,
 			leaderelection.ConfigMapName(): leaderelection.NewConfigFromConfigMap,
