@@ -58,7 +58,7 @@ var (
 	CloudEventSpecVersion     = attributekey.String(ceo11y.SpecversionAttr)
 
 	// attributes relating to the request
-	RequestScheme = attributekey.String("url.scheme")
+	RequestScheme      = attributekey.String("url.scheme")
 	ResponseStatusCode = attributekey.Int("response.statuscode")
-	ResponseStatusText  = attributekey.String("response.statustext")
+	ResponseStatusText = attributekey.String("response.statustext")
 )
