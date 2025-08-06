@@ -71,6 +71,20 @@ func WithLowCardinalityMessagingLabels(ctx context.Context, destinationTemplate,
 	return ctx
 }
 
+func WithResponseLabels(ctx context.Context, r *http.Response) context.Context {
+	labeler, ok := otelhttp.LabelerFromContext(ctx)
+	if !ok {
+		ctx = otelhttp.ContextWithLabeler(ctx, labeler)
+	}
+
+	if r != nil {
+		labeler.Add(ResponseStatusCode.With(int(r.StatusCode)))
+		labeler.Add(ResponseStatusText.With(r.Status))
+	}
+
+	return ctx
+}
+
 func WithRequestLabels(ctx context.Context, r *http.Request) context.Context {
 	labeler, ok := otelhttp.LabelerFromContext(ctx)
 	if !ok {

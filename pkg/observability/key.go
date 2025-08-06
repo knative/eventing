@@ -59,4 +59,6 @@ var (
 
 	// attributes relating to the request
 	RequestScheme = attributekey.String("url.scheme")
+	ResponseStatusCode = attributekey.Int("response.statuscode")
+	ResponseStatusText  = attributekey.String("response.statustext")
 )
