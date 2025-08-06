@@ -19,16 +19,22 @@ package test_images
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
+	"go.opentelemetry.io/otel"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.uber.org/zap"
+
+	"knative.dev/eventing/pkg/observability"
+	eventingotel "knative.dev/eventing/pkg/observability/otel"
+	"knative.dev/eventing/pkg/observability/resource"
 	"knative.dev/pkg/logging"
-	"knative.dev/pkg/tracing"
-	"knative.dev/pkg/tracing/config"
+	"knative.dev/pkg/observability/tracing"
 )
 
 func ParseHeaders(serializedHeaders string) http.Header {
@@ -53,18 +59,38 @@ func ParseDurationStr(durationStr string, defaultDuration int) time.Duration {
 }
 
 const (
-	ConfigTracingEnv = "K_CONFIG_TRACING"
-	ConfigLoggingEnv = "K_CONFIG_LOGGING"
+	ConfigObservabilityEnv = "K_CONFIG_OBSERVABILITY"
+	ConfigLoggingEnv       = "K_CONFIG_LOGGING"
 )
 
 // ConfigureTracing can be used in test-images to configure tracing.
-func ConfigureTracing(logger *zap.SugaredLogger, serviceName string) (tracing.Tracer, error) {
-	tracingEnv := os.Getenv(ConfigTracingEnv)
-	conf, err := config.JSONToTracingConfig(tracingEnv)
+func ConfigureTracing(ctx context.Context, logger *zap.SugaredLogger, serviceName string) (*tracing.TracerProvider, error) {
+	observabilityEnv := os.Getenv(ConfigObservabilityEnv)
+	cfg := &observability.Config{}
+	err := json.Unmarshal([]byte(observabilityEnv), cfg)
 	if err != nil {
 		logger.Warn("Error while trying to read the tracing config, using NoopConfig: ", err)
+		cfg = observability.DefaultConfig()
 	}
-	return tracing.SetupPublishingWithStaticConfig(logger, serviceName, conf)
+
+	otelResource, err := resource.Default(serviceName)
+	if err != nil {
+		logger.Warnw("Error while trying to create otelResource, some attributes may not be set", zap.Error(err))
+	}
+
+	tracerProvider, err := tracing.NewTracerProvider(
+		ctx,
+		cfg.Tracing,
+		sdktrace.WithResource(otelResource),
+	)
+	if err != nil {
+		tracerProvider = eventingotel.DefaultTraceProvider(ctx, otelResource)
+	}
+
+	otel.SetTextMapPropagator(tracing.DefaultTextMapPropagator())
+	otel.SetTracerProvider(tracerProvider)
+
+	return tracerProvider, nil
 }
 
 // ConfigureLogging can be used in test-images to configure logging.

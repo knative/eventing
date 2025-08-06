@@ -18,22 +18,43 @@ package config
 
 import (
 	"context"
+	"encoding/json"
 
+	"go.opentelemetry.io/otel"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.uber.org/zap"
-	"knative.dev/pkg/tracing"
-	tracingconfig "knative.dev/pkg/tracing/config"
+
+	"knative.dev/eventing/pkg/observability"
+	eventingotel "knative.dev/eventing/pkg/observability/otel"
+	"knative.dev/eventing/pkg/observability/resource"
+	"knative.dev/pkg/observability/tracing"
 )
 
-var tracer tracing.Tracer
+var tracer *tracing.TracerProvider
 
 func SetupTracing() {
-	config, err := tracingconfig.JSONToTracingConfig(Instance.TracingConfig)
+	cfg := &observability.Config{}
+	err := json.Unmarshal([]byte(Instance.ObservabilityConfig), cfg)
 	if err != nil {
 		Log.Warn("Tracing configuration is invalid, using the no-op default", zap.Error(err))
 	}
-	if tracer, err = tracing.SetupPublishingWithStaticConfig(Log, "", config); err != nil {
-		Log.Fatal("Error setting up trace publishing", zap.Error(err))
+
+	otelResource, err := resource.Default("wathola_prober")
+	if err != nil {
+		Log.Warnw("Error while trying to create otelResource, some attributes may not be set", zap.Error(err))
 	}
+
+	tracerProvider, err := tracing.NewTracerProvider(
+		context.Background(),
+		cfg.Tracing,
+		sdktrace.WithResource(otelResource),
+	)
+	if err != nil {
+		tracerProvider = eventingotel.DefaultTraceProvider(context.Background(), otelResource)
+	}
+
+	otel.SetTextMapPropagator(tracing.DefaultTextMapPropagator())
+	otel.SetTracerProvider(tracerProvider)
 }
 
 func ShutdownTracing() {

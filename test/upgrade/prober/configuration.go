@@ -170,13 +170,13 @@ func (p *prober) deployConfiguration() {
 func (p *prober) deployConfigToml(endpoint interface{}) {
 	name := p.config.ConfigMapName
 	p.log.Infof("Deploying config map: \"%s/%s\"", p.client.Namespace, name)
-	configData := p.compileTemplate(p.config.ConfigTemplate, endpoint, p.client.TracingCfg)
+	configData := p.compileTemplate(p.config.ConfigTemplate, endpoint, p.client.ObservabilityCfg)
 	p.client.CreateConfigMapOrFail(name, p.client.Namespace, map[string]string{
 		p.config.ConfigFilename: configData,
 	})
 }
 
-func (p *prober) compileTemplate(templateName string, endpoint interface{}, tracingConfig string) string {
+func (p *prober) compileTemplate(templateName string, endpoint interface{}, observabilityConfig string) string {
 	_, filename, _, _ := runtime.Caller(0)
 	templateFilepath := path.Join(path.Dir(filename), templateName)
 	templateBytes, err := os.ReadFile(templateFilepath)
@@ -186,13 +186,13 @@ func (p *prober) compileTemplate(templateName string, endpoint interface{}, trac
 	var buff bytes.Buffer
 	data := struct {
 		*Config
-		Endpoint        interface{}
-		TracingConfig   string
-		ForwarderTarget string
+		Endpoint            interface{}
+		ObservabilityConfig string
+		ForwarderTarget     string
 	}{
 		p.config,
 		endpoint,
-		tracingConfig,
+		observabilityConfig,
 		fmt.Sprintf(forwarderTargetFmt, p.client.Namespace, network.GetClusterDomainName()),
 	}
 	p.ensureNoError(tmpl.Execute(&buff, data))

@@ -50,11 +50,11 @@ func main() {
 	ctx, _ := injection.EnableInjectionOrDie(nil, cfg)
 	ctx = test_images.ConfigureLogging(ctx, "recordevents")
 
-	tracer, err := test_images.ConfigureTracing(logging.FromContext(ctx), "")
+	tp, err := test_images.ConfigureTracing(ctx, logging.FromContext(ctx), "")
 	if err != nil {
 		logging.FromContext(ctx).Fatal("Unable to setup trace publishing", err)
 	}
-	defer tracer.Shutdown(context.Background())
+	defer tp.Shutdown(context.Background())
 
 	var env envConfig
 	if err := envconfig.Process("", &env); err != nil {
