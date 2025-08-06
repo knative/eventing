@@ -27,16 +27,20 @@ import (
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	"go.opentelemetry.io/otel/trace"
 	otelnoop "go.opentelemetry.io/otel/trace/noop"
 	"go.uber.org/zap"
+	"knative.dev/pkg/changeset"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/observability"
 	"knative.dev/pkg/observability/metrics"
-	"knative.dev/pkg/observability/resource"
 	"knative.dev/pkg/observability/tracing"
+	"knative.dev/pkg/system"
 )
 
 const (
@@ -60,6 +64,8 @@ const (
 	EnforceTLS    = "ENFORCE_TLS"
 	tlsIssuerKind = "TLS_ISSUER_KIND"
 	tlsIssuerName = "TLS_ISSUER_NAME"
+
+	otelServiceNameKey = "OTEL_SERVICE_NAME"
 )
 
 func ParseHeaders(serializedHeaders string) http.Header {
@@ -99,7 +105,10 @@ func ConfigureObservability(ctx context.Context, logger *zap.SugaredLogger, serv
 
 	cfg = NewObservabilityConfigFromExistingWithDefaults(cfg)
 
-	resource := resource.Default(serviceName)
+	resource, err := defaultResource(serviceName)
+	if err != nil {
+		logger.Warnw("Error while creating otel resource, resource may be missing some attributes", zap.Error(err))
+	}
 
 	meterProvider, err := metrics.NewMeterProvider(
 		ctx,
@@ -125,6 +134,38 @@ func ConfigureObservability(ctx context.Context, logger *zap.SugaredLogger, serv
 	otel.SetTracerProvider(tracerProvider)
 
 	return meterProvider, tracerProvider, nil
+}
+
+func defaultResource(serviceName string) (*resource.Resource, error) {
+	// If the OTEL_SERVICE_NAME is set then let this override
+	// our own serviceName
+	if name := os.Getenv(otelServiceNameKey); name != "" {
+		serviceName = name
+	}
+
+	attrs := []attribute.KeyValue{
+		semconv.ServiceVersion(changeset.Get()),
+		semconv.ServiceName(serviceName),
+	}
+
+	if ns := os.Getenv("SYSTEM_NAMESPACE"); ns != "" {
+		attrs = append(attrs, semconv.K8SNamespaceName(ns))
+	}
+
+	if pn := system.PodName(); pn != "" {
+		attrs = append(attrs, semconv.K8SPodName(pn))
+	}
+
+	// Ignore the error because it complains about semconv
+	// schema version differences
+	resource, err := resource.Merge(
+		resource.Default(),
+		resource.NewWithAttributes(
+			semconv.SchemaURL,
+			attrs...,
+		),
+	)
+	return resource, err
 }
 
 func ParseObservabilityConfig(configStr string) (*observability.Config, error) {
