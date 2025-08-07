@@ -36,7 +36,7 @@ func TestBrokerTriggerCrossNamespaceReference(t *testing.T) {
 	brokerEnvCtx, _ := global.Environment(
 		knative.WithKnativeNamespace(system.Namespace()),
 		knative.WithLoggingConfig,
-		knative.WithTracingConfig,
+		knative.WithObservabilityConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
 	)
@@ -44,7 +44,7 @@ func TestBrokerTriggerCrossNamespaceReference(t *testing.T) {
 	triggerEnvCtx, triggerEnv := global.Environment(
 		knative.WithKnativeNamespace(system.Namespace()),
 		knative.WithLoggingConfig,
-		knative.WithTracingConfig,
+		knative.WithObservabilityConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
 	)

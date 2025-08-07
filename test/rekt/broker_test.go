@@ -46,7 +46,7 @@ func TestBrokerWithManyTriggers(t *testing.T) {
 	ctx, env := global.Environment(
 		knative.WithKnativeNamespace(system.Namespace()),
 		knative.WithLoggingConfig,
-		knative.WithTracingConfig,
+		knative.WithObservabilityConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
 		tracing.WithGatherer(t),
@@ -64,7 +64,7 @@ func TestBrokerWorkFlowWithTransformation(t *testing.T) {
 	ctx, env := global.Environment(
 		knative.WithKnativeNamespace(system.Namespace()),
 		knative.WithLoggingConfig,
-		knative.WithTracingConfig,
+		knative.WithObservabilityConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
 		environment.WithPollTimings(5*time.Second, 4*time.Minute),
@@ -79,7 +79,7 @@ func TestBrokerAsMiddleware(t *testing.T) {
 	ctx, env := global.Environment(
 		knative.WithKnativeNamespace(system.Namespace()),
 		knative.WithLoggingConfig,
-		knative.WithTracingConfig,
+		knative.WithObservabilityConfig,
 		k8s.WithEventListener,
 		environment.WithPollTimings(5*time.Second, 4*time.Minute),
 	)
@@ -97,7 +97,7 @@ func TestBrokerWithDLQ(t *testing.T) {
 	ctx, env := global.Environment(
 		knative.WithKnativeNamespace(system.Namespace()),
 		knative.WithLoggingConfig,
-		knative.WithTracingConfig,
+		knative.WithObservabilityConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
 		environment.WithPollTimings(5*time.Second, 4*time.Minute),
@@ -117,7 +117,7 @@ func TestBrokerWithFlakyDLQ(t *testing.T) {
 	ctx, env := global.Environment(
 		knative.WithKnativeNamespace(system.Namespace()),
 		knative.WithLoggingConfig,
-		knative.WithTracingConfig,
+		knative.WithObservabilityConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
 		environment.WithPollTimings(5*time.Second, 4*time.Minute),
@@ -135,7 +135,7 @@ func TestBrokerConformance(t *testing.T) {
 	ctx, env := global.Environment(
 		knative.WithKnativeNamespace(system.Namespace()),
 		knative.WithLoggingConfig,
-		knative.WithTracingConfig,
+		knative.WithObservabilityConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
 		environment.WithPollTimings(5*time.Second, 4*time.Minute),
@@ -151,7 +151,7 @@ func TestBrokerDefaultDelivery(t *testing.T) {
 	ctx, env := global.Environment(
 		knative.WithKnativeNamespace(system.Namespace()),
 		knative.WithLoggingConfig,
-		knative.WithTracingConfig,
+		knative.WithObservabilityConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
 		environment.WithPollTimings(5*time.Second, 4*time.Minute),
@@ -166,7 +166,7 @@ func TestBrokerPreferHeaderCheck(t *testing.T) {
 	ctx, env := global.Environment(
 		knative.WithKnativeNamespace(system.Namespace()),
 		knative.WithLoggingConfig,
-		knative.WithTracingConfig,
+		knative.WithObservabilityConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
 		environment.WithPollTimings(5*time.Second, 4*time.Minute),
@@ -183,7 +183,7 @@ func TestBrokerRedelivery(t *testing.T) {
 	ctx, env := global.Environment(
 		knative.WithKnativeNamespace(system.Namespace()),
 		knative.WithLoggingConfig,
-		knative.WithTracingConfig,
+		knative.WithObservabilityConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
 		environment.WithPollTimings(5*time.Second, 4*time.Minute),
@@ -199,7 +199,7 @@ func TestBrokerPropagatesMetadata(t *testing.T) {
 	ctx, env := global.Environment(
 		knative.WithKnativeNamespace(system.Namespace()),
 		knative.WithLoggingConfig,
-		knative.WithTracingConfig,
+		knative.WithObservabilityConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
 		environment.WithPollTimings(5*time.Second, 4*time.Minute),
@@ -214,7 +214,7 @@ func TestBrokerDeadLetterSinkExtensions(t *testing.T) {
 	ctx, env := global.Environment(
 		knative.WithKnativeNamespace(system.Namespace()),
 		knative.WithLoggingConfig,
-		knative.WithTracingConfig,
+		knative.WithObservabilityConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
 		environment.WithPollTimings(5*time.Second, 4*time.Minute),
@@ -229,7 +229,7 @@ func TestBrokerDeliverLongMessage(t *testing.T) {
 	ctx, env := global.Environment(
 		knative.WithKnativeNamespace(system.Namespace()),
 		knative.WithLoggingConfig,
-		knative.WithTracingConfig,
+		knative.WithObservabilityConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
 		environment.WithPollTimings(5*time.Second, 4*time.Minute),
@@ -244,7 +244,7 @@ func TestBrokerDeliverLongResponseMessage(t *testing.T) {
 	ctx, env := global.Environment(
 		knative.WithKnativeNamespace(system.Namespace()),
 		knative.WithLoggingConfig,
-		knative.WithTracingConfig,
+		knative.WithObservabilityConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
 		environment.WithPollTimings(5*time.Second, 4*time.Minute),
@@ -259,7 +259,7 @@ func TestMTChannelBrokerRotateTLSCertificates(t *testing.T) {
 	ctx, env := global.Environment(
 		knative.WithKnativeNamespace(system.Namespace()),
 		knative.WithLoggingConfig,
-		knative.WithTracingConfig,
+		knative.WithObservabilityConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
 		eventshub.WithTLS(t),
@@ -275,7 +275,7 @@ func TestBrokerSupportsOIDC(t *testing.T) {
 	ctx, env := global.Environment(
 		knative.WithKnativeNamespace(system.Namespace()),
 		knative.WithLoggingConfig,
-		knative.WithTracingConfig,
+		knative.WithObservabilityConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
 		environment.WithPollTimings(4*time.Second, 12*time.Minute),
@@ -294,7 +294,7 @@ func TestBrokerSendsEventsWithOIDCSupport(t *testing.T) {
 	ctx, env := global.Environment(
 		knative.WithKnativeNamespace(system.Namespace()),
 		knative.WithLoggingConfig,
-		knative.WithTracingConfig,
+		knative.WithObservabilityConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
 		eventshub.WithTLS(t),
@@ -309,7 +309,7 @@ func TestBrokerSupportsAuthZ(t *testing.T) {
 	ctx, env := global.Environment(
 		knative.WithKnativeNamespace(system.Namespace()),
 		knative.WithLoggingConfig,
-		knative.WithTracingConfig,
+		knative.WithObservabilityConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
 		eventshub.WithTLS(t),

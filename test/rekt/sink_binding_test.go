@@ -37,7 +37,7 @@ func TestSinkBindingV1Deployment(t *testing.T) {
 	ctx, env := global.Environment(
 		knative.WithKnativeNamespace(system.Namespace()),
 		knative.WithLoggingConfig,
-		knative.WithTracingConfig,
+		knative.WithObservabilityConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
 	)
@@ -52,7 +52,7 @@ func TestSinkBindingV1DeploymentTLS(t *testing.T) {
 	ctx, env := global.Environment(
 		knative.WithKnativeNamespace(system.Namespace()),
 		knative.WithLoggingConfig,
-		knative.WithTracingConfig,
+		knative.WithObservabilityConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
 		eventshub.WithTLS(t),
@@ -68,7 +68,7 @@ func TestSinkBindingV1Deployment_BrokerAsSinkTLS(t *testing.T) {
 	ctx, env := global.Environment(
 		knative.WithKnativeNamespace(system.Namespace()),
 		knative.WithLoggingConfig,
-		knative.WithTracingConfig,
+		knative.WithObservabilityConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
 		eventshub.WithTLS(t),
@@ -83,7 +83,7 @@ func TestSinkBindingV1Job(t *testing.T) {
 	ctx, env := global.Environment(
 		knative.WithKnativeNamespace(system.Namespace()),
 		knative.WithLoggingConfig,
-		knative.WithTracingConfig,
+		knative.WithObservabilityConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
 	)

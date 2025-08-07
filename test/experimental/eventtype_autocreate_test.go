@@ -35,7 +35,7 @@ func TestIMCEventTypeAutoCreate(t *testing.T) {
 	ctx, env := global.Environment(
 		knative.WithKnativeNamespace(system.Namespace()),
 		knative.WithLoggingConfig,
-		knative.WithTracingConfig,
+		knative.WithObservabilityConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
 	)
@@ -49,7 +49,7 @@ func TestSubscriptionEventTypeAutoCreate(t *testing.T) {
 	ctx, env := global.Environment(
 		knative.WithKnativeNamespace(system.Namespace()),
 		knative.WithLoggingConfig,
-		knative.WithTracingConfig,
+		knative.WithObservabilityConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
 	)
@@ -63,7 +63,7 @@ func TestBrokerEventTypeAutoCreate(t *testing.T) {
 	ctx, env := global.Environment(
 		knative.WithKnativeNamespace(system.Namespace()),
 		knative.WithLoggingConfig,
-		knative.WithTracingConfig,
+		knative.WithObservabilityConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
 	)
@@ -79,7 +79,7 @@ func TestTriggerEventTypeAutoCreate(t *testing.T) {
 	ctx, env := global.Environment(
 		knative.WithKnativeNamespace(system.Namespace()),
 		knative.WithLoggingConfig,
-		knative.WithTracingConfig,
+		knative.WithObservabilityConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
 	)
@@ -95,7 +95,7 @@ func TestPingSourceEventTypeMatch(t *testing.T) {
 	ctx, env := global.Environment(
 		knative.WithKnativeNamespace(system.Namespace()),
 		knative.WithLoggingConfig,
-		knative.WithTracingConfig,
+		knative.WithObservabilityConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
 	)

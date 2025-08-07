@@ -73,7 +73,7 @@ const (
 //	ctx, env := global.Environment(
 //	  knative.WithKnativeNamespace("knative-namespace"),
 //	  knative.WithLoggingConfig,
-//	  knative.WithTracingConfig,
+//	  knative.WithObservabilityConfig,
 //	  k8s.WithEventListener,
 //	)
 func Install(name string, options ...EventsHubOption) feature.StepFn {
@@ -91,9 +91,9 @@ func Install(name string, options ...EventsHubOption) feature.StepFn {
 			log.Fatalf("Error while computing environment variables for eventshub: %s", err)
 		}
 
-		// eventshub needs tracing and logging config
+		// eventshub needs observability and logging config
 		envs[ConfigLoggingEnv] = knative.LoggingConfigFromContext(ctx)
-		envs[ConfigTracingEnv] = knative.TracingConfigFromContext(ctx)
+		envs[ConfigObservabilityEnv] = knative.ObservabilityConfigFromContext(ctx)
 
 		// Register the event info store to assert later the events published by the eventshub
 		eventListener := k8s.EventListenerFromContext(ctx)
@@ -116,7 +116,7 @@ func Install(name string, options ...EventsHubOption) feature.StepFn {
 			serviceName = feature.MakeRandomK8sName(name)
 		}
 
-		cfg := map[string]interface{}{
+		cfg := map[string]any{
 			"name":           name,
 			"serviceName":    serviceName,
 			"envs":           envs,

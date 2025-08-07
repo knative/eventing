@@ -38,7 +38,8 @@ import (
 	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"github.com/cloudevents/sdk-go/v2/types"
 	"github.com/kelseyhightower/envconfig"
-	"go.opencensus.io/trace"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -108,6 +109,8 @@ type generator struct {
 	// The current namespace.
 	SystemNamespace string `envconfig:"SYSTEM_NAMESPACE" required:"true"`
 
+	ObservabilityConfig string `envconfig:"K_OBSERVABILITY_CONFIG" default:"{}" required:"false"`
+
 	// --- Processed State ---
 
 	// baseEvent is parsed from InputEvent.
@@ -134,6 +137,8 @@ func Start(ctx context.Context, logs *eventshub.EventLogs, clientOpts ...eventsh
 	}
 
 	logging.FromContext(ctx).Infof("Sender environment configuration: %+v", env)
+
+	tracer := otel.GetTracerProvider().Tracer("knative.dev/reconciler-test/pkg/eventshub/sender")
 
 	period, err := time.ParseDuration(durationWithUnit(env.Period))
 	if err != nil {
@@ -212,7 +217,7 @@ func Start(ctx context.Context, logs *eventshub.EventLogs, clientOpts ...eventsh
 			}
 		}
 
-		ctx, span := trace.StartSpan(ctx, "eventshub-sender")
+		ctx, span := tracer.Start(ctx, "eventshub-sender")
 
 		req, event, err := env.next(ctx)
 		if err != nil {
@@ -223,9 +228,9 @@ func Start(ctx context.Context, logs *eventshub.EventLogs, clientOpts ...eventsh
 		if event != nil {
 			eventString = event.String()
 		}
-		span.AddAttributes(
-			trace.StringAttribute("namespace", env.SystemNamespace),
-			trace.StringAttribute("event", eventString),
+		span.SetAttributes(
+			attribute.String("namespace", env.SystemNamespace),
+			attribute.String("event", eventString),
 		)
 
 		res, err := httpClient.Do(req)
