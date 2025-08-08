@@ -18,8 +18,10 @@ package eventshub
 
 import (
 	"context"
+	"time"
 
 	"github.com/kelseyhightower/envconfig"
+	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 	"knative.dev/pkg/injection"
 	"knative.dev/pkg/logging"
@@ -45,11 +47,22 @@ func Start(eventLogFactories map[string]EventLogFactory, eventGeneratorFactories
 	ctx, _ = injection.EnableInjectionOrDie(ctx, nil)
 	ctx = ConfigureLogging(ctx, "eventshub")
 
-	tracer, err := ConfigureTracing(logging.FromContext(ctx), "")
+	mp, tp, err := ConfigureObservability(ctx, logging.FromContext(ctx), "eventshub")
 	if err != nil {
-		logging.FromContext(ctx).Fatal("Unable to setup trace publishing", err)
+		logging.FromContext(ctx).Fatal("Unable to setup observability", err)
 	}
-	defer tracer.Shutdown(context.Background())
+
+	defer func() {
+		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		defer cancel()
+
+		if err := mp.Shutdown(ctx); err != nil {
+			logging.FromContext(ctx).Warnw("Failed to shutdown metrics provider", zap.Error(err))
+		}
+		if err := tp.Shutdown(ctx); err != nil {
+			logging.FromContext(ctx).Warnw("Failed to shutdown tracer provider", zap.Error(err))
+		}
+	}()
 
 	var env envConfig
 	if err := envconfig.Process("", &env); err != nil {
