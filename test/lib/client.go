@@ -38,9 +38,9 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"knative.dev/pkg/test"
-	configtracing "knative.dev/pkg/tracing/config"
 
 	eventing "knative.dev/eventing/pkg/client/clientset/versioned"
+	o11yconfigmap "knative.dev/eventing/pkg/observability/configmap"
 	"knative.dev/eventing/test/lib/duck"
 )
 
@@ -60,8 +60,8 @@ type Client struct {
 
 	podsCreated []string
 
-	TracingCfg string
-	loggingCfg string
+	ObservabilityCfg string
+	loggingCfg       string
 
 	cleanup func()
 }
@@ -104,7 +104,7 @@ func NewClient(namespace string, t *testing.T) (*Client, error) {
 	client.EventListener = NewEventListener(client.Kube, client.Namespace, client.T.Logf)
 	client.Cleanup(client.EventListener.Stop)
 
-	client.TracingCfg, err = getTracingConfig(client.Kube)
+	client.ObservabilityCfg, err = getObservabilityConfig(client.Kube)
 	if err != nil {
 		return nil, err
 	}
@@ -160,23 +160,23 @@ func getGenericResource(tm metav1.TypeMeta) runtime.Object {
 	return &duckv1.KResource{}
 }
 
-func getTracingConfig(c kubernetes.Interface) (string, error) {
-	cm, err := c.CoreV1().ConfigMaps(system.Namespace()).Get(context.Background(), configtracing.ConfigName, metav1.GetOptions{})
+func getObservabilityConfig(c kubernetes.Interface) (string, error) {
+	cm, err := c.CoreV1().ConfigMaps(system.Namespace()).Get(context.Background(), o11yconfigmap.Name(), metav1.GetOptions{})
 	if err != nil {
-		return "", fmt.Errorf("error while retrieving the %s config map: %+v", configtracing.ConfigName, errors.WithStack(err))
+		return "", fmt.Errorf("error while retrieving the %s config map: %+v", o11yconfigmap.Name(), errors.WithStack(err))
 	}
 
-	config, err := configtracing.NewTracingConfigFromConfigMap(cm)
+	config, err := o11yconfigmap.Parse(cm)
 	if err != nil {
-		return "", fmt.Errorf("error while parsing the %s config map: %+v", configtracing.ConfigName, errors.WithStack(err))
+		return "", fmt.Errorf("error while parsing the %s config map: %+v", o11yconfigmap.Name(), errors.WithStack(err))
 	}
 
-	configSerialized, err := configtracing.TracingConfigToJSON(config)
+	configSerialized, err := json.Marshal(config)
 	if err != nil {
-		return "", fmt.Errorf("error while serializing the %s config map: %+v", configtracing.ConfigName, errors.WithStack(err))
+		return "", fmt.Errorf("error while serializing the %s config map: %+v", o11yconfigmap.Name(), errors.WithStack(err))
 	}
 
-	return configSerialized, nil
+	return string(configSerialized), nil
 }
 
 func getLoggingConfig(c kubernetes.Interface) (string, error) {

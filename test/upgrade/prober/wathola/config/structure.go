@@ -66,10 +66,10 @@ type ReadinessConfig struct {
 
 // Config hold complete configuration
 type Config struct {
-	Sender        SenderConfig
-	Forwarder     ForwarderConfig
-	Receiver      ReceiverConfig
-	Readiness     ReadinessConfig
-	LogLevel      string
-	TracingConfig string
+	Sender              SenderConfig
+	Forwarder           ForwarderConfig
+	Receiver            ReceiverConfig
+	Readiness           ReadinessConfig
+	LogLevel            string
+	ObservabilityConfig string
 }

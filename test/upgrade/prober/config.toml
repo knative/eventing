@@ -1,5 +1,5 @@
 # logLevel = 'DEBUG'
-tracingConfig = '{{- .TracingConfig -}}'
+observabilityConfig = '{{- .ObservabilityConfig -}}'
 [sender]
 address = '{{- .Endpoint -}}'
 interval = {{ .Config.Interval.Nanoseconds }}
