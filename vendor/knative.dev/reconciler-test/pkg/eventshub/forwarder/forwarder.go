@@ -31,7 +31,9 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	cloudeventsbindings "github.com/cloudevents/sdk-go/v2/binding"
-	"go.opencensus.io/trace"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 
 	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
@@ -63,6 +65,7 @@ type Forwarder struct {
 	handlerFuncs []eventshub.HandlerFunc
 	clientOpts   []eventshub.ClientOption
 	httpClient   *http.Client
+	tracer       trace.Tracer
 }
 
 type envConfig struct {
@@ -96,7 +99,8 @@ func NewFromEnv(ctx context.Context, eventLogs *eventshub.EventLogs, handlerFunc
 		ctx:          ctx,
 		handlerFuncs: handlerFuncs,
 		clientOpts:   clientOpts,
-		httpClient:   &http.Client{},
+		httpClient:   &http.Client{Transport: http.DefaultTransport.(*http.Transport).Clone()},
+		tracer:       otel.GetTracerProvider().Tracer("knative.dev/reconciler-test/pkg/eventshub/forwarder"),
 	}
 }
 
@@ -139,7 +143,7 @@ func (o *Forwarder) Start(ctx context.Context) error {
 }
 
 func (o *Forwarder) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
-	requestCtx, span := trace.StartSpan(request.Context(), "eventshub-forwarder")
+	requestCtx, span := o.tracer.Start(request.Context(), "eventshub-forwarder")
 	defer span.End()
 
 	body, err := io.ReadAll(request.Body)
@@ -204,9 +208,9 @@ func (o *Forwarder) ServeHTTP(writer http.ResponseWriter, request *http.Request)
 	if event != nil {
 		eventString = event.String()
 	}
-	span.AddAttributes(
-		trace.StringAttribute("namespace", o.Namespace),
-		trace.StringAttribute("event", eventString),
+	span.SetAttributes(
+		attribute.String("namespace", o.Namespace),
+		attribute.String("event", eventString),
 	)
 
 	res, err := o.httpClient.Do(req)

@@ -22,8 +22,8 @@ func GVR() schema.GroupVersionResource {
 }
 
 // WithAnnotations adds annotations to the IntegrationSink.
-func WithAnnotations(annotations map[string]interface{}) manifest.CfgFn {
-	return func(cfg map[string]interface{}) {
+func WithAnnotations(annotations map[string]any) manifest.CfgFn {
+	return func(cfg map[string]any) {
 		if annotations != nil {
 			cfg["annotations"] = annotations
 		}
@@ -34,12 +34,12 @@ func WithAnnotations(annotations map[string]interface{}) manifest.CfgFn {
 func Install(name string, opts ...manifest.CfgFn) feature.StepFn {
 
 	return func(ctx context.Context, t feature.T) {
-		cfg := map[string]interface{}{
-			"name":                     name,
-			"namespace":                environment.FromContext(ctx).Namespace(),
-			"image":                    eventshub.ImageFromContext(ctx),
-			eventshub.ConfigLoggingEnv: knative.LoggingConfigFromContext(ctx),
-			eventshub.ConfigTracingEnv: knative.TracingConfigFromContext(ctx),
+		cfg := map[string]any{
+			"name":                           name,
+			"namespace":                      environment.FromContext(ctx).Namespace(),
+			"image":                          eventshub.ImageFromContext(ctx),
+			eventshub.ConfigLoggingEnv:       knative.LoggingConfigFromContext(ctx),
+			eventshub.ConfigObservabilityEnv: knative.ObservabilityConfigFromContext(ctx),
 		}
 		for _, fn := range opts {
 			fn(cfg)
