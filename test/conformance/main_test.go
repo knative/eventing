@@ -21,7 +21,6 @@ package conformance
 import (
 	"context"
 	"flag"
-	"log"
 	"os"
 	"strings"
 	"testing"
@@ -31,7 +30,6 @@ import (
 	"knative.dev/eventing/test"
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/setupclientoptions"
-	"knative.dev/pkg/test/zipkin"
 )
 
 const (
@@ -66,10 +64,6 @@ func TestMain(m *testing.M) {
 		brokerClass = test.BrokerClass
 
 		addSourcesInitializers()
-		// Any tests may SetupZipkinTracing, it will only actually be done once. This should be the ONLY
-		// place that cleans it up. If an individual test calls this instead, then it will break other
-		// tests that need the tracing in place.
-		defer zipkin.CleanupZipkinTracingSetup(log.Printf)
 
 		exit := m.Run()
 		// Collect logs only when test failed.
