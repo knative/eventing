@@ -51,7 +51,7 @@ func WithObservabilityConfig(ctx context.Context, env environment.Environment) (
 	return context.WithValue(ctx, observabilityCfgEnvKey{}, string(configSerialized)), nil
 }
 
-var _ environment.EnvOpts = WithTracingConfig
+var _ environment.EnvOpts = WithObservabilityConfig
 
 func ObservabilityConfigFromContext(ctx context.Context) string {
 	if e, ok := ctx.Value(observabilityCfgEnvKey{}).(string); ok {
