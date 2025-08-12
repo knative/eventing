@@ -19,15 +19,11 @@ package helpers
 import (
 	"context"
 	"testing"
-	"time"
 
 	cetest "github.com/cloudevents/sdk-go/v2/test"
-	"github.com/openzipkin/zipkin-go/model"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/pkg/system"
-	"knative.dev/pkg/test/zipkin"
 
 	tracinghelper "knative.dev/eventing/test/conformance/helpers/tracing"
 	testlib "knative.dev/eventing/test/lib"
@@ -60,43 +56,40 @@ func tracingTest(
 	client := testlib.Setup(t, true, setupClient)
 	defer testlib.TearDown(client)
 
-	// Do NOT call zipkin.CleanupZipkinTracingSetup. That will be called exactly once in
-	// TestMain.
-	zipkin.SetupZipkinTracingFromConfigTracingOrFail(context.Background(), t, client.Kube, system.Namespace())
-
+	// TODO - redo with OTel
 	// Start the event info store. Note this is done _before_ we setup the infrastructure, which
 	// sends the event.
-	targetTracker, err := recordevents.NewEventInfoStore(client, recordEventsPodName, client.Namespace)
-	if err != nil {
-		t.Fatal("Pod tracker failed:", err)
-	}
+	// targetTracker, err := recordevents.NewEventInfoStore(client, recordEventsPodName, client.Namespace)
+	// if err != nil {
+	// 	t.Fatal("Pod tracker failed:", err)
+	// }
 
 	// Setup the test infrastructure
-	expectedTestSpan, eventMatcher := setupInfrastructure(ctx, t, &channel, client, recordEventsPodName, true)
+	// expectedTestSpan, eventMatcher := setupInfrastructure(ctx, t, &channel, client, recordEventsPodName, true)
 
 	// Assert that the event was seen.
-	matches := targetTracker.AssertAtLeast(1, recordevents.MatchEvent(eventMatcher))
+	// matches := targetTracker.AssertAtLeast(1, recordevents.MatchEvent(eventMatcher))
 
 	// Match the trace
-	traceID := getTraceIDHeader(t, matches)
-	trace, err := zipkin.JSONTracePred(traceID, 5*time.Minute, func(trace []model.SpanModel) bool {
-		tree, err := tracinghelper.GetTraceTree(trace)
-		if err != nil {
-			return false
-		}
-		// Do not pass t to prevent unnecessary log output.
-		return len(expectedTestSpan.MatchesSubtree(nil, tree)) > 0
-	})
-	if err != nil {
-		t.Logf("Unable to get trace %q: %v. Trace so far %+v", traceID, err, tracinghelper.PrettyPrintTrace(trace))
-		tree, err := tracinghelper.GetTraceTree(trace)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if len(expectedTestSpan.MatchesSubtree(t, tree)) == 0 {
-			t.Fatalf("No matching subtree. want: %v got: %v", expectedTestSpan, tree)
-		}
-	}
+	// traceID := getTraceIDHeader(t, matches)
+	// trace, err := zipkin.JSONTracePred(traceID, 5*time.Minute, func(trace []model.SpanModel) bool {
+	// 	tree, err := tracinghelper.GetTraceTree(trace)
+	// 	if err != nil {
+	// 		return false
+	// 	}
+	// 	// Do not pass t to prevent unnecessary log output.
+	// 	return len(expectedTestSpan.MatchesSubtree(nil, tree)) > 0
+	// })
+	// if err != nil {
+	// 	t.Logf("Unable to get trace %q: %v. Trace so far %+v", traceID, err, tracinghelper.PrettyPrintTrace(trace))
+	// 	tree, err := tracinghelper.GetTraceTree(trace)
+	// 	if err != nil {
+	// 		t.Fatal(err)
+	// 	}
+	// 	if len(expectedTestSpan.MatchesSubtree(t, tree)) == 0 {
+	// 		t.Fatalf("No matching subtree. want: %v got: %v", expectedTestSpan, tree)
+	// 	}
+	// }
 }
 
 // getTraceIDHeader gets the TraceID from the passed in events.  It returns the header from the

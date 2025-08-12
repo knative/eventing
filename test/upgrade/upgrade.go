@@ -18,7 +18,6 @@ package upgrade
 
 import (
 	"context"
-	"log"
 	"os"
 	"sync"
 	"testing"
@@ -32,7 +31,6 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/system"
 	pkgupgrade "knative.dev/pkg/test/upgrade"
-	"knative.dev/pkg/test/zipkin"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/k8s"
@@ -56,10 +54,6 @@ var (
 // main tests in eventing.
 func RunMainTest(m *testing.M) {
 	os.Exit(func() int {
-		// Any tests may SetupZipkinTracing, it will only actually be done once. This should be the ONLY
-		// place that cleans it up. If an individual test calls this instead, then it will break other
-		// tests that need the tracing in place.
-		defer zipkin.CleanupZipkinTracingSetup(log.Printf)
 		return m.Run()
 	}())
 }

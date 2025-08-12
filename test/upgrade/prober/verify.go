@@ -33,12 +33,10 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"knative.dev/pkg/network"
-	"knative.dev/pkg/system"
 	pkgTest "knative.dev/pkg/test"
 	"knative.dev/pkg/test/helpers"
 	"knative.dev/pkg/test/logging"
 	"knative.dev/pkg/test/prow"
-	"knative.dev/pkg/test/zipkin"
 
 	"knative.dev/eventing/test/upgrade/prober/wathola/event"
 	"knative.dev/eventing/test/upgrade/prober/wathola/fetcher"
@@ -55,11 +53,8 @@ const (
 // Verify will verify prober state after finished has been sent.
 func (p *prober) Verify() (eventErrs []error, eventsSent int) {
 	var report *receiver.Report
-	// Enable port-forwarding for Zipkin endpoint.
-	if err := zipkin.SetupZipkinTracingFromConfigTracing(p.config.Ctx,
-		p.client.Kube, p.client.T.Logf, system.Namespace()); err != nil {
-		p.log.Warnf("Failed to setup Zipkin tracing. Traces for events won't be available.")
-	}
+	// TODO - Enable port-forwarding tracing endpoint
+
 	p.log.Info("Waiting for complete report from receiver...")
 	start := time.Now()
 	if err := wait.PollUntilContextTimeout(context.Background(), jobWaitInterval, jobWaitTimeout, true, func(ctx context.Context) (bool, error) {
