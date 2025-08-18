@@ -69,7 +69,7 @@ func NewFromMap(m map[string]string) (*Config, error) {
 		c.BaseConfig = *cfg
 	}
 
-	// Force the port to the default queue user metrics port if it's not overriden
+	// Force the port to the default queue user metrics port if it's not overridden
 	if c.BaseConfig.Metrics.Protocol == metrics.ProtocolPrometheus && c.BaseConfig.Metrics.Endpoint == "" {
 		c.BaseConfig.Metrics.Endpoint = fmt.Sprintf(":%d", DefaultMetricsPort)
 	}
@@ -108,7 +108,7 @@ func MergeWithDefaults(cfg *Config) *Config {
 		cfg.Metrics = d.Metrics
 	}
 
-	// Force the port to the default queue user metrics port if it's not overriden
+	// Force the port to the default queue user metrics port if it's not overridden
 	if cfg.BaseConfig.Metrics.Protocol == metrics.ProtocolPrometheus && cfg.BaseConfig.Metrics.Endpoint == "" {
 		cfg.BaseConfig.Metrics.Endpoint = fmt.Sprintf(":%d", DefaultMetricsPort)
 	}
