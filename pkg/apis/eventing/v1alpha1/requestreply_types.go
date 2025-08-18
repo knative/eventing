@@ -20,6 +20,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -119,4 +120,11 @@ func (rr *RequestReply) GetUntypedSpec() interface{} {
 // GetStatus retrieves the status of the EventPolicy. Implements the KRShaped interface.
 func (rr *RequestReply) GetStatus() *duckv1.Status {
 	return &rr.Status.Status
+}
+
+func (rr *RequestReply) GetNamespacedName() types.NamespacedName {
+	return types.NamespacedName{
+		Name:      rr.Name,
+		Namespace: rr.Namespace,
+	}
 }
