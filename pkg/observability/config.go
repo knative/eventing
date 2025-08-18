@@ -22,6 +22,7 @@ import (
 
 	configmap "knative.dev/pkg/configmap/parser"
 	pkgo11y "knative.dev/pkg/observability"
+	"knative.dev/pkg/observability/metrics"
 )
 
 const (
@@ -30,6 +31,9 @@ const (
 
 	// DefaultEnableSinkEventErrorReporting is used to set the default sink event error reporting value
 	DefaultEnableSinkEventErrorReporting = false
+
+	// DefaultMetricsPort is the default port used for prometheus metrics if the prometheus protocol is used
+	DefaultMetricsPort = 9092
 )
 
 type (
@@ -65,6 +69,11 @@ func NewFromMap(m map[string]string) (*Config, error) {
 		c.BaseConfig = *cfg
 	}
 
+	// Force the port to the default queue user metrics port if it's not overridden
+	if c.BaseConfig.Metrics.Protocol == metrics.ProtocolPrometheus && c.BaseConfig.Metrics.Endpoint == "" {
+		c.BaseConfig.Metrics.Endpoint = fmt.Sprintf(":%d", DefaultMetricsPort)
+	}
+
 	err := configmap.Parse(m, configmap.As(EnableSinkEventErrorReportingKey, &c.EnableSinkEventErrorReporting))
 	if err != nil {
 		fmt.Printf("failed to parse enable-sink-error-reporting: %s\n", err.Error())
@@ -97,6 +106,11 @@ func MergeWithDefaults(cfg *Config) *Config {
 	var emptyMetrics MetricsConfig
 	if cfg.Metrics == emptyMetrics {
 		cfg.Metrics = d.Metrics
+	}
+
+	// Force the port to the default queue user metrics port if it's not overridden
+	if cfg.BaseConfig.Metrics.Protocol == metrics.ProtocolPrometheus && cfg.BaseConfig.Metrics.Endpoint == "" {
+		cfg.BaseConfig.Metrics.Endpoint = fmt.Sprintf(":%d", DefaultMetricsPort)
 	}
 
 	var emptyRuntime RuntimeConfig
