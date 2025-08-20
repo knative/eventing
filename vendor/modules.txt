@@ -1200,10 +1200,10 @@ k8s.io/utils/pointer
 k8s.io/utils/ptr
 k8s.io/utils/strings/slices
 k8s.io/utils/trace
-# knative.dev/hack v0.0.0-20250708013849-70d4b00da6ba
+# knative.dev/hack v0.0.0-20250819212547-d496a6e708d3
 ## explicit; go 1.21
 knative.dev/hack
-# knative.dev/hack/schema v0.0.0-20250708013849-70d4b00da6ba
+# knative.dev/hack/schema v0.0.0-20250819212547-d496a6e708d3
 ## explicit; go 1.21
 knative.dev/hack/schema/commands
 knative.dev/hack/schema/docs
@@ -1363,7 +1363,7 @@ knative.dev/pkg/webhook/resourcesemantics
 knative.dev/pkg/webhook/resourcesemantics/conversion
 knative.dev/pkg/webhook/resourcesemantics/defaulting
 knative.dev/pkg/webhook/resourcesemantics/validation
-# knative.dev/reconciler-test v0.0.0-20250814021443-f87776da7a48
+# knative.dev/reconciler-test v0.0.0-20250818021647-3bf376b1f1ce
 ## explicit; go 1.24.0
 knative.dev/reconciler-test/cmd/eventshub
 knative.dev/reconciler-test/pkg/environment
