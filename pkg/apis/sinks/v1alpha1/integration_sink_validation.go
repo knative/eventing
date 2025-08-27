@@ -45,6 +45,9 @@ func (spec *IntegrationSinkSpec) Validate(ctx context.Context) *apis.FieldError 
 		if spec.Aws.SNS != nil {
 			sinkSetCount++
 		}
+		if spec.Aws.Eventbridge != nil {
+			sinkSetCount++
+		}
 	}
 
 	// Validate that only one sink field is set
@@ -56,7 +59,7 @@ func (spec *IntegrationSinkSpec) Validate(ctx context.Context) *apis.FieldError 
 
 	// Only perform AWS-specific validation if exactly one AWS sink is configured
 	if sinkSetCount == 1 && spec.Aws != nil {
-		if spec.Aws.S3 != nil || spec.Aws.SQS != nil || spec.Aws.SNS != nil {
+		if spec.Aws.S3 != nil || spec.Aws.SQS != nil || spec.Aws.SNS != nil || spec.Aws.Eventbridge != nil {
 			// Check that AWS Auth is properly configured
 			if !spec.Aws.Auth.HasAuth() {
 				errs = errs.Also(apis.ErrMissingField("aws.auth.secret.ref.name"))
@@ -88,6 +91,15 @@ func (spec *IntegrationSinkSpec) Validate(ctx context.Context) *apis.FieldError 
 				errs = errs.Also(apis.ErrMissingField("aws.sns.arn"))
 			}
 			if spec.Aws.SNS.Region == "" {
+				errs = errs.Also(apis.ErrMissingField("aws.sns.region"))
+			}
+		}
+		// Additional validation for AWS Eventbridge required fields
+		if spec.Aws.Eventbridge != nil {
+			if spec.Aws.Eventbridge.Arn == "" {
+				errs = errs.Also(apis.ErrMissingField("aws.sns.arn"))
+			}
+			if spec.Aws.Eventbridge.Region == "" {
 				errs = errs.Also(apis.ErrMissingField("aws.sns.region"))
 			}
 		}
