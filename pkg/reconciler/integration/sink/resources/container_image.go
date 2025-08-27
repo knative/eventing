@@ -411,6 +411,18 @@ func makeEnv(sink *v1alpha1.IntegrationSink, featureFlags feature.Flags) []corev
 		return envVars
 	}
 
+	// AWS Eventbridge environment variables
+	if sink.Spec.Aws != nil && sink.Spec.Aws.EVENTBRIDGE != nil {
+		envVars = append(envVars, integration.GenerateEnvVarsFromStruct("CAMEL_KAMELET_AWS_EVENTBRIDGE_SINK", *sink.Spec.Aws.EVENTBRIDGE)...)
+		if secretName != "" {
+			envVars = append(envVars, []corev1.EnvVar{
+				integration.MakeSecretEnvVar("CAMEL_KAMELET_AWS_EVENTBRIDGE_SINK_ACCESSKEY", commonv1a1.AwsAccessKey, secretName),
+				integration.MakeSecretEnvVar("CAMEL_KAMELET_AWS_EVENTBRIDGE_SINK_SECRETKEY", commonv1a1.AwsSecretKey, secretName),
+			}...)
+		}
+		return envVars
+	}
+
 	// If no valid configuration is found, return empty envVars
 	return envVars
 }
@@ -433,6 +445,8 @@ func selectImage(sink *v1alpha1.IntegrationSink) string {
 		return os.Getenv("INTEGRATION_SINK_AWS_SQS_IMAGE")
 	case sink.Spec.Aws != nil && sink.Spec.Aws.SNS != nil:
 		return os.Getenv("INTEGRATION_SINK_AWS_SNS_IMAGE")
+	case sink.Spec.Aws != nil && sink.Spec.Aws.EVENTBRIDGE != nil:
+		return os.Getenv("INTEGRATION_SINK_AWS_EVENTBRIDGE_IMAGE")
 	default:
 		return ""
 	}

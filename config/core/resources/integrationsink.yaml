@@ -111,6 +111,46 @@ spec:
                 aws:
                   type: object
                   properties:
+                    eventbridge:
+                      type: object
+                      properties:
+                        arn:
+                          type: string
+                          title: Eventbus Name
+                          description: The Eventbridge Eventbus name or Amazon Resource Name (ARN).
+                        resourcesArn:
+                          type: string
+                          title: Resources ARN
+                          description: The ARN of resources related to the AWS event (e.g. arn:aws:s3:eu-east-1:000000000001:test).
+                        eventSourcePrefix:
+                          type: string
+                          title: Event Source Prefix
+                          description: The event source prefix set for all events sent to the eventbus.
+                        eventSource:
+                          type: string
+                          title: Event Source
+                          description: The event source related to the AWS event (e.g. aws.s3).
+                        detailType:
+                          type: string
+                          title: Detail Type
+                          description: The event detail type related to the AWS event (e.g. Object Created).
+                        region:
+                          type: string
+                          title: AWS Region
+                          description: The AWS region to access.
+                        uriEndpointOverride:
+                          type: string
+                          title: Overwrite Endpoint URI
+                          description: The overriding endpoint URI. To use this option, you must
+                            also select the `overrideEndpoint` option.
+                        overrideEndpoint:
+                          type: boolean
+                          title: Endpoint Overwrite
+                          description: Select this option to override the endpoint URI. To use
+                            this option, you must also provide a URI for the `uriEndpointOverride`
+                            option.
+                          default: false
+
                     s3:
                       type: object
                       properties:

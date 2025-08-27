@@ -98,6 +98,17 @@ func TestAWS(t *testing.T) {
 	if sns.Region != "eu-north-1" {
 		t.Errorf("AWSDDBStreams.Region = %v, want 'eu-north-1'", sns.Region)
 	}
+
+	eb := v1alpha1.AWSEventbridge{
+		AWSCommon: v1alpha1.AWSCommon{
+			Region: "eu-north-1",
+		},
+		Arn: "example-event-bus",
+	}
+
+	if eb.Region != "eu-north-1" {
+		t.Errorf("AWSEventbridge.Region = %v, want 'eu-north-1'", sns.Region)
+	}
 }
 
 // TestAuthFieldAccess tests the HasAuth method and field access in Auth struct
