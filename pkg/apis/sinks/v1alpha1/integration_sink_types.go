@@ -53,7 +53,7 @@ var (
 )
 
 type IntegrationSinkSpec struct {
-	Aws *Aws `json:"aws,omitempty"` // AWS source configuration
+	Aws *Aws `json:"aws,omitempty"` // AWS sink configuration
 	Log *Log `json:"log,omitempty"` // Log sink configuration
 }
 
@@ -74,9 +74,9 @@ type Log struct {
 }
 
 type Aws struct {
-	S3   *v1alpha1.AWSS3  `json:"s3,omitempty"`  // S3 source configuration
-	SQS  *v1alpha1.AWSSQS `json:"sqs,omitempty"` // SQS source configuration
-	SNS  *v1alpha1.AWSSNS `json:"sns,omitempty"` // SNS source configuration
+	S3   *v1alpha1.AWSS3  `json:"s3,omitempty"`  // S3 sink configuration
+	SQS  *v1alpha1.AWSSQS `json:"sqs,omitempty"` // SQS sink configuration
+	SNS  *v1alpha1.AWSSNS `json:"sns,omitempty"` // SNS sink configuration
 	Auth *v1alpha1.Auth   `json:"auth,omitempty"`
 }
 
