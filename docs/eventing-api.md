@@ -6632,7 +6632,7 @@ Log
 </em>
 </td>
 <td>
-<p>AWS source configuration</p>
+<p>AWS sink configuration</p>
 </td>
 </tr>
 </table>
@@ -6773,7 +6773,7 @@ knative.dev/eventing/pkg/apis/common/integration/v1alpha1.AWSSQS
 </em>
 </td>
 <td>
-<p>S3 source configuration</p>
+<p>S3 sink configuration</p>
 </td>
 </tr>
 <tr>
@@ -6784,7 +6784,7 @@ knative.dev/eventing/pkg/apis/common/integration/v1alpha1.AWSSNS
 </em>
 </td>
 <td>
-<p>SQS source configuration</p>
+<p>SQS sink configuration</p>
 </td>
 </tr>
 <tr>
@@ -6795,7 +6795,7 @@ knative.dev/eventing/pkg/apis/common/integration/v1alpha1.Auth
 </em>
 </td>
 <td>
-<p>SNS source configuration</p>
+<p>SNS sink configuration</p>
 </td>
 </tr>
 </tbody>
@@ -6852,7 +6852,7 @@ Log
 </em>
 </td>
 <td>
-<p>AWS source configuration</p>
+<p>AWS sink configuration</p>
 </td>
 </tr>
 </tbody>
