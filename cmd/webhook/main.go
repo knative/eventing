@@ -20,7 +20,9 @@ import (
 	"context"
 	"os"
 
+	"go.uber.org/zap"
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	"knative.dev/eventing/pkg/requestreply"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -81,6 +83,7 @@ var ourTypes = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
 	// v1alpha1
 	eventingv1alpha1.SchemeGroupVersion.WithKind("EventPolicy"):    &eventingv1alpha1.EventPolicy{},
 	eventingv1alpha1.SchemeGroupVersion.WithKind("EventTransform"): &eventingv1alpha1.EventTransform{},
+	eventingv1alpha1.SchemeGroupVersion.WithKind("RequestReply"):   &eventingv1alpha1.RequestReply{},
 	// v1beta1
 	eventingv1beta1.SchemeGroupVersion.WithKind("EventType"): &eventingv1beta1.EventType{},
 	// v1beta2
@@ -178,6 +181,10 @@ func NewValidationAdmissionController(ctx context.Context, cmw configmap.Watcher
 			&sinks.Config{
 				KubeClient: k8s,
 			})
+	}
+
+	if err := requestreply.RegisterCESQLVerifyCorrelationIdFilter(ctx); err != nil {
+		logging.FromContext(ctx).Warn("Failed to register KN_VERIFY_CORRELATION_ID to CESQL runtime. You will be unable to use the RequestReply resource", zap.Error(err))
 	}
 
 	return validation.NewAdmissionController(ctx,

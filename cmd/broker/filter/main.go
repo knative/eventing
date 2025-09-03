@@ -23,6 +23,7 @@ import (
 
 	eventpolicyinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventpolicy"
 	"knative.dev/eventing/pkg/observability/otel"
+	"knative.dev/eventing/pkg/requestreply"
 
 	"github.com/kelseyhightower/envconfig"
 	"go.uber.org/zap"
@@ -190,6 +191,10 @@ func main() {
 	logger.Info("Starting informers.")
 	if err := controller.StartInformers(ctx.Done(), informers...); err != nil {
 		logger.Fatal("Failed to start informers", zap.Error(err))
+	}
+
+	if err := requestreply.RegisterCESQLVerifyCorrelationIdFilter(ctx); err != nil {
+		logger.Fatal("failed to register KN_VERIFY_CORRELATION_ID to CESQL runtime", zap.Error(err))
 	}
 
 	// Start the servers
