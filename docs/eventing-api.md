@@ -3811,13 +3811,13 @@ AppliedEventPoliciesStatus
 </tr>
 <tr>
 <td>
-<code>currentReplicas</code><br/>
+<code>desiredReplicas</code><br/>
 <em>
 int32
 </em>
 </td>
 <td>
-<p>DesiredReplicas is the number of replicas the (StatefulSet pod + trigger) that is desired</p>
+<p>DesiredReplicas is the number of replicas (StatefulSet pod + trigger) that is desired</p>
 </td>
 </tr>
 <tr>
