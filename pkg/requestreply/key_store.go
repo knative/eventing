@@ -62,12 +62,16 @@ func (ks *requestReplyAesKeyStore) getAllKeys() [][]byte {
 }
 
 type AESKeyStore struct {
+	lock      sync.RWMutex
 	keyStores map[types.NamespacedName]*requestReplyAesKeyStore
 	done      chan bool
 	Logger    *zap.SugaredLogger
 }
 
 func (ks *AESKeyStore) AddAesKey(rrName types.NamespacedName, keyName string, keyValue []byte) {
+	ks.lock.Lock()
+	defer ks.lock.Unlock()
+
 	if ks.keyStores == nil {
 		ks.keyStores = make(map[types.NamespacedName]*requestReplyAesKeyStore)
 	}
@@ -80,6 +84,9 @@ func (ks *AESKeyStore) AddAesKey(rrName types.NamespacedName, keyName string, ke
 }
 
 func (ks *AESKeyStore) RemoveAesKey(rrName types.NamespacedName, keyName string) {
+	ks.lock.Lock()
+	defer ks.lock.Unlock()
+
 	if ks.keyStores[rrName] == nil {
 		return
 	}
@@ -88,6 +95,9 @@ func (ks *AESKeyStore) RemoveAesKey(rrName types.NamespacedName, keyName string)
 }
 
 func (ks *AESKeyStore) GetLatestKey(rrName types.NamespacedName) ([]byte, bool) {
+	ks.lock.RLock()
+	defer ks.lock.RUnlock()
+
 	if ks.keyStores[rrName] == nil {
 		return nil, false
 	}
@@ -96,6 +106,9 @@ func (ks *AESKeyStore) GetLatestKey(rrName types.NamespacedName) ([]byte, bool) 
 }
 
 func (ks *AESKeyStore) GetAllKeys(rrName types.NamespacedName) ([][]byte, bool) {
+	ks.lock.RLock()
+	defer ks.lock.RUnlock()
+
 	if ks.keyStores[rrName] == nil {
 		return nil, false
 	}
