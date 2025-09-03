@@ -30,6 +30,7 @@ import (
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
 	corev1listers "k8s.io/client-go/listers/core/v1"
+	"k8s.io/client-go/tools/cache"
 
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	eventingv1alpha1informers "knative.dev/eventing/pkg/client/informers/externalversions/eventing/v1alpha1"
@@ -50,7 +51,8 @@ type IngressHandler struct {
 	dispatcher         *kncloudevents.Dispatcher
 	logger             *zap.Logger
 	requestReplyLister eventingv1alpha1listers.RequestReplyLister
-	keyStore           AESKeyStore
+	podIdx             int
+	keyStore           *AESKeyStore
 
 	requestLock sync.RWMutex
 	entries     map[types.NamespacedName]map[string]*proxiedRequest
@@ -62,7 +64,7 @@ type proxiedRequest struct {
 	replyEvent     chan *cloudevents.Event
 }
 
-func NewHandler(logger *zap.Logger, requestReplyInformer eventingv1alpha1informers.RequestReplyInformer, trustBundleConfigMapLister corev1listers.ConfigMapNamespaceLister, keyStore AESKeyStore) *IngressHandler {
+func NewHandler(logger *zap.Logger, requestReplyInformer eventingv1alpha1informers.RequestReplyInformer, trustBundleConfigMapLister corev1listers.ConfigMapNamespaceLister, keyStore *AESKeyStore, podIdx int) *IngressHandler {
 	connectionArgs := kncloudevents.ConnectionArgs{
 		MaxIdleConns:        defaultMaxIdleConnections,
 		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
@@ -74,10 +76,24 @@ func NewHandler(logger *zap.Logger, requestReplyInformer eventingv1alpha1informe
 		TrustBundleConfigMapLister: trustBundleConfigMapLister,
 	}
 
+	requestReplyInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj any) {
+			// create trigger to this pod
+			// add any necessary secrets
+		},
+		UpdateFunc: func(oldObj, newObj any) {
+			// add/remove secrets
+		},
+		DeleteFunc: func(obj any) {
+			// remove trigger
+		},
+	})
+
 	return &IngressHandler{
 		logger:             logger,
 		dispatcher:         kncloudevents.NewDispatcher(clientConfig, nil),
 		requestReplyLister: requestReplyInformer.Lister(),
+		podIdx:             podIdx,
 		keyStore:           keyStore,
 
 		entries: make(map[types.NamespacedName]map[string]*proxiedRequest),
@@ -106,11 +122,13 @@ func (h *IngressHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	nsRequestReplyName := strings.Split(strings.TrimSuffix(req.RequestURI, "/"), "/")
-	if len(nsRequestReplyName) != 3 {
+	if len(nsRequestReplyName) < 3 || len(nsRequestReplyName) > 4 {
 		h.logger.Info("Malformed uri", zap.String("uri", req.RequestURI))
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+
+	isReplyEvent := len(nsRequestReplyName) == 4 && nsRequestReplyName[3] == "reply"
 
 	// extract event from request
 	message := cehttp.NewMessageFromHttpRequest(req)
@@ -143,8 +161,8 @@ func (h *IngressHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute) // TODO: make this timeout configurable
 	defer cancel()
 
-	if isResponseEvent(event, requestReply) {
-		h.handleResponseEvent(w, event, requestReply)
+	if isReplyEvent {
+		h.handleReplyEvent(w, event, requestReply)
 	} else {
 		h.handleNewEvent(ctx, w, event, requestReply, utils.PassThroughHeaders(req.Header))
 	}
@@ -232,7 +250,7 @@ func (h *IngressHandler) handleNewEvent(ctx context.Context, responseWriter http
 		return
 	}
 
-	err = SetCorrelationId(event, rr.Spec.CorrelationAttribute, latestKey)
+	err = SetCorrelationId(event, rr.Spec.CorrelationAttribute, latestKey, h.podIdx)
 	if err != nil {
 		h.logger.Error("failed to set correlation id on event", zap.Error(err))
 		responseWriter.WriteHeader(http.StatusInternalServerError)
@@ -269,7 +287,8 @@ func (h *IngressHandler) handleNewEvent(ctx context.Context, responseWriter http
 		}
 	}
 }
-func (h *IngressHandler) handleResponseEvent(responseWriter http.ResponseWriter, event *cloudevents.Event, rr *v1alpha1.RequestReply) {
+
+func (h *IngressHandler) handleReplyEvent(responseWriter http.ResponseWriter, event *cloudevents.Event, rr *v1alpha1.RequestReply) {
 	h.requestLock.RLock()
 	defer h.requestLock.RUnlock()
 
@@ -330,94 +349,6 @@ func (h *IngressHandler) handleResponseEvent(responseWriter http.ResponseWriter,
 	pr.replyEvent <- event
 }
 
-type requestReplyAesKeyStore struct {
-	lock      sync.RWMutex
-	newestKey []byte
-	entries   map[string][]byte
-}
-
-func (ks *requestReplyAesKeyStore) addAesKey(keyName string, keyValue []byte) {
-	ks.lock.Lock()
-	defer ks.lock.Unlock()
-
-	ks.newestKey = keyValue
-
-	if ks.entries == nil {
-		ks.entries = map[string][]byte{keyName: keyValue}
-		return
-	}
-
-	ks.entries[keyName] = keyValue
-}
-
-func (ks *requestReplyAesKeyStore) removeAesKey(keyName string) {
-	ks.lock.Lock()
-	defer ks.lock.Unlock()
-
-	delete(ks.entries, keyName)
-}
-
-func (ks *requestReplyAesKeyStore) getLatestKey() []byte {
-	ks.lock.RLock()
-	defer ks.lock.RUnlock()
-
-	return ks.newestKey
-}
-
-func (ks *requestReplyAesKeyStore) getAllKeys() [][]byte {
-	ks.lock.RLock()
-	defer ks.lock.RUnlock()
-
-	keys := make([][]byte, len(ks.entries))
-
-	i := 0
-	for _, v := range ks.entries {
-		keys[i] = v
-		i++
-	}
-
-	return keys
-}
-
-type AESKeyStore struct {
-	keyStores map[types.NamespacedName]*requestReplyAesKeyStore
-}
-
-func (ks *AESKeyStore) AddAesKey(rrName types.NamespacedName, keyName string, keyValue []byte) {
-	if ks.keyStores == nil {
-		ks.keyStores = make(map[types.NamespacedName]*requestReplyAesKeyStore)
-	}
-
-	if ks.keyStores[rrName] == nil {
-		ks.keyStores[rrName] = &requestReplyAesKeyStore{}
-	}
-
-	ks.keyStores[rrName].addAesKey(keyName, keyValue)
-}
-
-func (ks *AESKeyStore) RemoveAesKey(rrName types.NamespacedName, keyName string) {
-	if ks.keyStores[rrName] == nil {
-		return
-	}
-
-	ks.keyStores[rrName].removeAesKey(keyName)
-}
-
-func (ks *AESKeyStore) GetLatestKey(rrName types.NamespacedName) ([]byte, bool) {
-	if ks.keyStores[rrName] == nil {
-		return nil, false
-	}
-
-	return ks.keyStores[rrName].getLatestKey(), true
-}
-
-func (ks *AESKeyStore) GetAllKeys(rrName types.NamespacedName) ([][]byte, bool) {
-	if ks.keyStores[rrName] == nil {
-		return nil, false
-	}
-
-	return ks.keyStores[rrName].getAllKeys(), true
-}
 
 func isResponseEvent(event *cloudevents.Event, rr *v1alpha1.RequestReply) bool {
 	_, ok := event.Extensions()[rr.Spec.ReplyAttribute]
