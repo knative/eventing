@@ -55,7 +55,7 @@ func RegisterCESQLVerifyCorrelationIdFilter(ctx context.Context) error {
 				return false, nil
 			}
 
-			idx, err := strconv.ParseInt(parts[2], 10, 0)
+			idx, err := strconv.ParseInt(parts[2], 10, 32)
 			if err != nil {
 				logger.Warnf("failed to parse correlation id index to int")
 				return false, nil
