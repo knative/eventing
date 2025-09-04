@@ -18,6 +18,7 @@ package requestreply
 
 import (
 	"fmt"
+	"os"
 	"testing"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
@@ -49,7 +50,7 @@ func TestCESQLFilterWithVerifyCorrelationId(t *testing.T) {
 		"has matching replyid": {
 			getEvent: func() *cloudevents.Event {
 				ce := makeEvent()
-				SetCorrelationId(ce, "replyid", exampleKey)
+				SetCorrelationId(ce, "replyid", exampleKey, 0)
 				return ce
 			},
 			want: eventfilter.PassFilter,
@@ -57,16 +58,16 @@ func TestCESQLFilterWithVerifyCorrelationId(t *testing.T) {
 		"has matching replyid on second secret": {
 			getEvent: func() *cloudevents.Event {
 				ce := makeEvent()
-				SetCorrelationId(ce, "replyid", otherKey)
+				SetCorrelationId(ce, "replyid", otherKey, 0)
 				return ce
 			},
 			want:       eventfilter.PassFilter,
-			expression: "KN_VERIFY_CORRELATION_ID(replyid, \"default\", \"request-reply-secret-1\", \"request-reply-secret-2\")",
+			expression: "KN_VERIFY_CORRELATION_ID(replyid, \"request-reply\", \"default\", \"request-reply-keys-2\", 0, 1)",
 		},
 		"no matching secret for replyid": {
 			getEvent: func() *cloudevents.Event {
 				ce := makeEvent()
-				SetCorrelationId(ce, "replyid", otherKey)
+				SetCorrelationId(ce, "replyid", otherKey, 0)
 				return ce
 			},
 			want: eventfilter.FailFilter,
@@ -89,23 +90,26 @@ func TestCESQLFilterWithVerifyCorrelationId(t *testing.T) {
 
 	_ = secretinformer.Get(ctx).Informer().GetStore().Add(&corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "request-reply-secret-1",
-			Namespace: "default",
+			Name:      "request-reply-keys",
+			Namespace: "knative-eventing",
 		},
 		Data: map[string][]byte{
-			"key": exampleKey,
+			"default.request-reply.key": exampleKey,
 		},
 	})
 
 	_ = secretinformer.Get(ctx).Informer().GetStore().Add(&corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "request-reply-secret-2",
-			Namespace: "default",
+			Name:      "request-reply-keys-2",
+			Namespace: "knative-eventing",
 		},
 		Data: map[string][]byte{
-			"key": otherKey,
+			"default.request-reply.key-1": exampleKey,
+			"default.request-reply.key-2": otherKey,
 		},
 	})
+
+	os.Setenv("SYSTEM_NAMESPACE", "knative-eventing")
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -119,7 +123,7 @@ func TestCESQLFilterWithVerifyCorrelationId(t *testing.T) {
 			}
 
 			if tc.expression == "" {
-				tc.expression = fmt.Sprintf("KN_VERIFY_CORRELATION_ID(%s, \"default\", \"request-reply-secret-1\")", tc.replyIdName)
+				tc.expression = fmt.Sprintf("KN_VERIFY_CORRELATION_ID(%s, \"request-reply\", \"default\", \"request-reply-keys\", 0, 1)", tc.replyIdName)
 			}
 
 			ce := tc.getEvent()

@@ -35,17 +35,17 @@ import (
  processing the request determines that their event should be treated as the "reply", the correlationid attribute is copied into a reply
  cloudevent extension attribute (by default replyid).
 
- The format of the correlationid/replyid attribute is: <original event id>:<base64 encoding of AES encrypted original event id>
+ The format of the correlationid/replyid attribute is: <original event id>:<base64 encoding of AES encrypted original event id>:<idx>
 
  The AES encryption of the original id is done to ensure that the correlation id was created by the RequestReply resource, rather than a
- third party.
+ third party. The idx is used for routing to ensure reply events do not overwhelm pods
 */
 
 // VerifyReplyId takes the reply id from a cloudevent and checks that it is valid for this RequestReply resource, by checking that the decrypted id matches the unencrypted id
 func VerifyReplyId(replyId string, aesKey []byte) (bool, error) {
 	parts := strings.Split(replyId, ":")
-	if len(parts) != 2 {
-		return false, fmt.Errorf("expected two parts in the replyid attribute, had %d", len(parts))
+	if len(parts) != 3 {
+		return false, fmt.Errorf("expected three parts in the replyid attribute, had %d", len(parts))
 	}
 
 	originalId := parts[0]
@@ -80,7 +80,7 @@ func VerifyReplyId(replyId string, aesKey []byte) (bool, error) {
 }
 
 // SetCorrelationId sets the correlationid for a cloudevent by encrypting the id and setting the correlationid attribute with the original and encrypted ids
-func SetCorrelationId(ce *cloudevents.Event, correlationIdName string, aesKey []byte) error {
+func SetCorrelationId(ce *cloudevents.Event, correlationIdName string, aesKey []byte, idx int) error {
 	id := ce.ID()
 
 	idBytes := []byte(id)
@@ -105,7 +105,7 @@ func SetCorrelationId(ce *cloudevents.Event, correlationIdName string, aesKey []
 
 	encryptedId := base64.URLEncoding.EncodeToString(encryptedIdBytes)
 
-	ce.SetExtension(correlationIdName, fmt.Sprintf("%s:%s", id, encryptedId))
+	ce.SetExtension(correlationIdName, fmt.Sprintf("%s:%s:%d", id, encryptedId, idx))
 
 	return nil
 }
