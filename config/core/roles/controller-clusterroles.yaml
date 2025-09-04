@@ -42,10 +42,12 @@ rules:
       - "watch"
 
   # Brokers and the namespace annotation controllers manipulate Deployments.
+  # RequestReply controller needs to manipulate StatefulSets
   - apiGroups:
       - "apps"
     resources:
       - "deployments"
+      - "statefulsets"
     verbs:
       - "get"
       - "list"
@@ -103,6 +105,8 @@ rules:
       - "eventpolicies/status"
       - "eventtransforms"
       - "eventtransforms/status"
+      - "requestreplies"
+      - "requestreplies/status"
     verbs:
       - "get"
       - "list"
