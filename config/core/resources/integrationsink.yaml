@@ -111,6 +111,30 @@ spec:
                 aws:
                   type: object
                   properties:
+                    eventbridge:
+                      type: object
+                      properties:
+                        arn:
+                          type: string
+                          title: Eventbus Name
+                          description: The Eventbridge Eventbus name or Amazon Resource Name (ARN).
+                        region:
+                          type: string
+                          title: AWS Region
+                          description: The AWS region to access.
+                        uriEndpointOverride:
+                          type: string
+                          title: Overwrite Endpoint URI
+                          description: The overriding endpoint URI. To use this option, you must
+                            also select the `overrideEndpoint` option.
+                        overrideEndpoint:
+                          type: boolean
+                          title: Endpoint Overwrite
+                          description: Select this option to override the endpoint URI. To use
+                            this option, you must also provide a URI for the `uriEndpointOverride`
+                            option.
+                          default: false
+
                     s3:
                       type: object
                       properties:
