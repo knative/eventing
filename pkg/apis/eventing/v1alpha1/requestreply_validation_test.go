@@ -44,6 +44,7 @@ func TestRequestReplyValidation(t *testing.T) {
 						Kind:       "Broker",
 						Name:       "broker",
 					},
+					Timeout: ptr.To("PT30S"),
 				},
 			},
 			want: func() *apis.FieldError {
@@ -66,6 +67,24 @@ func TestRequestReplyValidation(t *testing.T) {
 			},
 			want: func() *apis.FieldError {
 				return nil
+			}(),
+		},
+		{
+			name: "invalid timeout",
+			rr: &RequestReply{
+				Spec: RequestReplySpec{
+					ReplyAttribute:       "reply",
+					CorrelationAttribute: "correlate",
+					BrokerRef: duckv1.KReference{
+						APIVersion: "eventing.knative.dev/v1",
+						Kind:       "Broker",
+						Name:       "broker",
+					},
+					Timeout: ptr.To("30s"),
+				},
+			},
+			want: func() *apis.FieldError {
+				return apis.ErrInvalidValue("30s", "spec.timeout", "expected 'P' period mark at the start: 30s")
 			}(),
 		},
 	}

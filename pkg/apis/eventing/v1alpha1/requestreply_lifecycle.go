@@ -21,14 +21,14 @@ import (
 	v1 "knative.dev/pkg/apis/duck/v1"
 )
 
-var requestReplyCondSet = apis.NewLivingConditionSet(RequestReplyConditionTriggers, RequestReplyConditionAddressable, RequestReplyConditionEventPoliciesReady, RequestreplyConditionBrokerReady)
+var requestReplyCondSet = apis.NewLivingConditionSet(RequestReplyConditionTriggers, RequestReplyConditionAddressable, RequestReplyConditionEventPoliciesReady, RequestReplyConditionBrokerReady)
 
 const (
 	RequestReplyConditionReady                                 = apis.ConditionReady
 	RequestReplyConditionTriggers           apis.ConditionType = "TriggersReady"
 	RequestReplyConditionAddressable        apis.ConditionType = "Addressable"
 	RequestReplyConditionEventPoliciesReady apis.ConditionType = "EventPoliciesReady"
-	RequestreplyConditionBrokerReady        apis.ConditionType = "BrokerReady"
+	RequestReplyConditionBrokerReady        apis.ConditionType = "BrokerReady"
 )
 
 // GetConditionSet retrieves the condition set for this resource. Implements the KRShaped interface.
@@ -98,13 +98,13 @@ func (rr *RequestReplyStatus) MarkEventPoliciesUnknown(reason, messageFormat str
 }
 
 func (rr *RequestReplyStatus) MarkBrokerReady() {
-	rr.GetConditionSet().Manage(rr).MarkTrue(RequestreplyConditionBrokerReady)
+	rr.GetConditionSet().Manage(rr).MarkTrue(RequestReplyConditionBrokerReady)
 }
 
 func (rr *RequestReplyStatus) MarkBrokerNotReady(reason, messageFormat string, messageA ...interface{}) {
-	rr.GetConditionSet().Manage(rr).MarkFalse(RequestreplyConditionBrokerReady, reason, messageFormat, messageA...)
+	rr.GetConditionSet().Manage(rr).MarkFalse(RequestReplyConditionBrokerReady, reason, messageFormat, messageA...)
 }
 
 func (rr *RequestReplyStatus) MarkBrokerUnknown(reason, messageFormat string, messageA ...interface{}) {
-	rr.GetConditionSet().Manage(rr).MarkUnknown(RequestreplyConditionBrokerReady, reason, messageFormat, messageA...)
+	rr.GetConditionSet().Manage(rr).MarkUnknown(RequestReplyConditionBrokerReady, reason, messageFormat, messageA...)
 }
