@@ -21,14 +21,14 @@ import (
 	v1 "knative.dev/pkg/apis/duck/v1"
 )
 
-var requestReplyCondSet = apis.NewLivingConditionSet(RequestReplyConditionIngress, RequestReplyConditionTriggers, RequestReplyConditionAddressable, RequestReplyConditionEventPoliciesReady)
+var requestReplyCondSet = apis.NewLivingConditionSet(RequestReplyConditionTriggers, RequestReplyConditionAddressable, RequestReplyConditionEventPoliciesReady, RequestReplyConditionBrokerReady)
 
 const (
 	RequestReplyConditionReady                                 = apis.ConditionReady
-	RequestReplyConditionIngress            apis.ConditionType = "IngressReady"
 	RequestReplyConditionTriggers           apis.ConditionType = "TriggersReady"
 	RequestReplyConditionAddressable        apis.ConditionType = "Addressable"
 	RequestReplyConditionEventPoliciesReady apis.ConditionType = "EventPoliciesReady"
+	RequestReplyConditionBrokerReady        apis.ConditionType = "BrokerReady"
 )
 
 // GetConditionSet retrieves the condition set for this resource. Implements the KRShaped interface.
@@ -81,14 +81,6 @@ func (rr *RequestReplyStatus) MarkTriggersNotReadyWithReason(reason, messageForm
 	rr.GetConditionSet().Manage(rr).MarkUnknown(RequestReplyConditionTriggers, reason, messageFormat, messageA...)
 }
 
-func (rr *RequestReplyStatus) MarkIngressReady() {
-	rr.GetConditionSet().Manage(rr).MarkTrue(RequestReplyConditionIngress)
-}
-
-func (rr *RequestReplyStatus) MarkIngressNotReadyWithReason(reason, messageFormat string, messageA ...interface{}) {
-	rr.GetConditionSet().Manage(rr).MarkUnknown(RequestReplyConditionIngress, reason, messageFormat, messageA...)
-}
-
 func (rr *RequestReplyStatus) MarkEventPoliciesTrue() {
 	rr.GetConditionSet().Manage(rr).MarkTrue(RequestReplyConditionEventPoliciesReady)
 }
@@ -103,4 +95,16 @@ func (rr *RequestReplyStatus) MarkEventPoliciesFailed(reason, messageFormat stri
 
 func (rr *RequestReplyStatus) MarkEventPoliciesUnknown(reason, messageFormat string, messageA ...interface{}) {
 	rr.GetConditionSet().Manage(rr).MarkUnknown(RequestReplyConditionEventPoliciesReady, reason, messageFormat, messageA...)
+}
+
+func (rr *RequestReplyStatus) MarkBrokerReady() {
+	rr.GetConditionSet().Manage(rr).MarkTrue(RequestReplyConditionBrokerReady)
+}
+
+func (rr *RequestReplyStatus) MarkBrokerNotReady(reason, messageFormat string, messageA ...interface{}) {
+	rr.GetConditionSet().Manage(rr).MarkFalse(RequestReplyConditionBrokerReady, reason, messageFormat, messageA...)
+}
+
+func (rr *RequestReplyStatus) MarkBrokerUnknown(reason, messageFormat string, messageA ...interface{}) {
+	rr.GetConditionSet().Manage(rr).MarkUnknown(RequestReplyConditionBrokerReady, reason, messageFormat, messageA...)
 }

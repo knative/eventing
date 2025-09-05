@@ -20,6 +20,7 @@ import (
 	"context"
 	"testing"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
 	"github.com/google/go-cmp/cmp"
@@ -33,8 +34,13 @@ func TestRequestReplyDefaults(t *testing.T) {
 		"nil spec": {
 			initial: RequestReply{},
 			expected: RequestReply{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"eventing.knative.dev/broker": "",
+					},
+				},
 				Spec: RequestReplySpec{
-					Timeout:              ptr.To("30s"),
+					Timeout:              ptr.To("PT30S"),
 					CorrelationAttribute: "correlationid",
 					ReplyAttribute:       "replyid",
 				},
@@ -43,14 +49,19 @@ func TestRequestReplyDefaults(t *testing.T) {
 		"does not override existing values": {
 			initial: RequestReply{
 				Spec: RequestReplySpec{
-					Timeout:              ptr.To("40s"),
+					Timeout:              ptr.To("PT40S"),
 					CorrelationAttribute: "othercorrelationid",
 					ReplyAttribute:       "otherreplyid",
 				},
 			},
 			expected: RequestReply{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"eventing.knative.dev/broker": "",
+					},
+				},
 				Spec: RequestReplySpec{
-					Timeout:              ptr.To("40s"),
+					Timeout:              ptr.To("PT40S"),
 					CorrelationAttribute: "othercorrelationid",
 					ReplyAttribute:       "otherreplyid",
 				},

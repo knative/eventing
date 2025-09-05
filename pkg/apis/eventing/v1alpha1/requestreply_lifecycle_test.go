@@ -88,11 +88,11 @@ func TestRequestReplyInitializeConditions(t *testing.T) {
 							Status: corev1.ConditionUnknown,
 						},
 						{
-							Type:   RequestReplyConditionEventPoliciesReady,
+							Type:   RequestReplyConditionBrokerReady,
 							Status: corev1.ConditionUnknown,
 						},
 						{
-							Type:   RequestReplyConditionIngress,
+							Type:   RequestReplyConditionEventPoliciesReady,
 							Status: corev1.ConditionUnknown,
 						},
 						{
@@ -124,28 +124,28 @@ func TestRequestReplyReadyCondition(t *testing.T) {
 		name                            string
 		rrs                             *RequestReplyStatus
 		markAddresableSucceeded         *bool
-		markIngressReadySucceeded       *bool
 		markTriggersReadySucceeded      *bool
 		markEventPoliciesReadySucceeded *bool
+		markBrokerReady                 *bool
 		wantReady                       bool
 	}{
 		{
-			name: "Initially everything is Unknown, Auth&SubjectsResolved marked as true, EP should become Ready",
+			name: "Initially everything is Unknown, Auth&SubjectsResolved marked as true, RR should become Ready",
 			rrs: &RequestReplyStatus{
 				Status: duckv1.Status{
 					Conditions: []apis.Condition{
 						{Type: RequestReplyConditionReady, Status: corev1.ConditionUnknown},
 						{Type: RequestReplyConditionAddressable, Status: corev1.ConditionUnknown},
-						{Type: RequestReplyConditionIngress, Status: corev1.ConditionUnknown},
 						{Type: RequestReplyConditionTriggers, Status: corev1.ConditionUnknown},
 						{Type: RequestReplyConditionEventPoliciesReady, Status: corev1.ConditionUnknown},
+						{Type: RequestReplyConditionBrokerReady, Status: corev1.ConditionUnknown},
 					},
 				},
 			},
 			markAddresableSucceeded:         ptr.To(true),
-			markIngressReadySucceeded:       ptr.To(true),
 			markTriggersReadySucceeded:      ptr.To(true),
 			markEventPoliciesReadySucceeded: ptr.To(true),
+			markBrokerReady:                 ptr.To(true),
 			wantReady:                       true,
 		},
 		{
@@ -155,35 +155,16 @@ func TestRequestReplyReadyCondition(t *testing.T) {
 					Conditions: []apis.Condition{
 						{Type: RequestReplyConditionReady, Status: corev1.ConditionTrue},
 						{Type: RequestReplyConditionAddressable, Status: corev1.ConditionTrue},
-						{Type: RequestReplyConditionIngress, Status: corev1.ConditionTrue},
 						{Type: RequestReplyConditionTriggers, Status: corev1.ConditionTrue},
 						{Type: RequestReplyConditionEventPoliciesReady, Status: corev1.ConditionTrue},
+						{Type: RequestReplyConditionBrokerReady, Status: corev1.ConditionTrue},
 					},
 				},
 			},
 			markAddresableSucceeded:         ptr.To(false),
-			markIngressReadySucceeded:       ptr.To(true),
 			markTriggersReadySucceeded:      ptr.To(true),
 			markEventPoliciesReadySucceeded: ptr.To(true),
-			wantReady:                       false,
-		},
-		{
-			name: "Initially everything is Ready, Ingress set to false, RR should become False",
-			rrs: &RequestReplyStatus{
-				Status: duckv1.Status{
-					Conditions: []apis.Condition{
-						{Type: RequestReplyConditionReady, Status: corev1.ConditionTrue},
-						{Type: RequestReplyConditionAddressable, Status: corev1.ConditionTrue},
-						{Type: RequestReplyConditionIngress, Status: corev1.ConditionTrue},
-						{Type: RequestReplyConditionTriggers, Status: corev1.ConditionTrue},
-						{Type: RequestReplyConditionEventPoliciesReady, Status: corev1.ConditionTrue},
-					},
-				},
-			},
-			markAddresableSucceeded:         ptr.To(true),
-			markIngressReadySucceeded:       ptr.To(false),
-			markTriggersReadySucceeded:      ptr.To(true),
-			markEventPoliciesReadySucceeded: ptr.To(true),
+			markBrokerReady:                 ptr.To(true),
 			wantReady:                       false,
 		},
 		{
@@ -193,16 +174,16 @@ func TestRequestReplyReadyCondition(t *testing.T) {
 					Conditions: []apis.Condition{
 						{Type: RequestReplyConditionReady, Status: corev1.ConditionTrue},
 						{Type: RequestReplyConditionAddressable, Status: corev1.ConditionTrue},
-						{Type: RequestReplyConditionIngress, Status: corev1.ConditionTrue},
 						{Type: RequestReplyConditionTriggers, Status: corev1.ConditionTrue},
 						{Type: RequestReplyConditionEventPoliciesReady, Status: corev1.ConditionTrue},
+						{Type: RequestReplyConditionBrokerReady, Status: corev1.ConditionTrue},
 					},
 				},
 			},
 			markAddresableSucceeded:         ptr.To(true),
-			markIngressReadySucceeded:       ptr.To(true),
 			markTriggersReadySucceeded:      ptr.To(false),
 			markEventPoliciesReadySucceeded: ptr.To(true),
+			markBrokerReady:                 ptr.To(true),
 			wantReady:                       false,
 		},
 		{
@@ -212,14 +193,13 @@ func TestRequestReplyReadyCondition(t *testing.T) {
 					Conditions: []apis.Condition{
 						{Type: RequestReplyConditionReady, Status: corev1.ConditionTrue},
 						{Type: RequestReplyConditionAddressable, Status: corev1.ConditionTrue},
-						{Type: RequestReplyConditionIngress, Status: corev1.ConditionTrue},
 						{Type: RequestReplyConditionTriggers, Status: corev1.ConditionTrue},
 						{Type: RequestReplyConditionEventPoliciesReady, Status: corev1.ConditionTrue},
+						{Type: RequestReplyConditionBrokerReady, Status: corev1.ConditionTrue},
 					},
 				},
 			},
 			markAddresableSucceeded:         ptr.To(true),
-			markIngressReadySucceeded:       ptr.To(true),
 			markTriggersReadySucceeded:      ptr.To(true),
 			markEventPoliciesReadySucceeded: ptr.To(false),
 			wantReady:                       false,
@@ -236,13 +216,6 @@ func TestRequestReplyReadyCondition(t *testing.T) {
 
 				}
 			}
-			if test.markIngressReadySucceeded != nil {
-				if *test.markIngressReadySucceeded {
-					test.rrs.MarkIngressReady()
-				} else {
-					test.rrs.MarkIngressNotReadyWithReason("", "")
-				}
-			}
 			if test.markTriggersReadySucceeded != nil {
 				if *test.markTriggersReadySucceeded {
 					test.rrs.MarkTriggersReady()
@@ -255,6 +228,13 @@ func TestRequestReplyReadyCondition(t *testing.T) {
 					test.rrs.MarkEventPoliciesTrue()
 				} else {
 					test.rrs.MarkEventPoliciesFailed("", "")
+				}
+			}
+			if test.markBrokerReady != nil {
+				if *test.markBrokerReady {
+					test.rrs.MarkBrokerReady()
+				} else {
+					test.rrs.MarkBrokerNotReady("", "")
 				}
 			}
 			rr := RequestReply{Status: *test.rrs}

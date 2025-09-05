@@ -70,7 +70,7 @@ const (
 
 	// DefaultRequestReplyTimeout is a value for RequestReplyDefaultTimeout that indicates to timeout
 	// a RequestReply resource after 30 seconds by default.
-	DefaultRequestReplyTimeout Flag = "30s"
+	DefaultRequestReplyTimeout Flag = "PT30S"
 )
 
 // Flags is a map containing all the enabled/disabled flags for the experimental features.
