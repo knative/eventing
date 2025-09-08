@@ -54,11 +54,6 @@ spec:
               replyAttribute:
                 description: The name of the cloudevents attribute which will hold the correlation id for an event which will be treated as a reply.
                 type: string
-              secrets:
-                description: A list of the names of one or more secrets used to sign the correlation ids and reply ids. The secrets must be in the same namespace as the requestreply resource.
-                type: array
-                items:
-                  type: string
               timeout:
                 description: A ISO8601 string representing how long RequestReply holds onto an incoming request before it times out without a reply.
                 type: string
@@ -141,6 +136,12 @@ spec:
                     type:
                       description: Type of condition.
                       type: string
+              desiredReplicas:
+                description: The current replicas (StatefulSet pod + trigger) that are desired
+                type: integer
+              readyReplicas:
+                description: The current replicas (StatefulSet pod + trigger) that are ready
+                type: integer
               address:
                 description: RequestReply is Addressable. It exposes the endpoint as an URI to get events delivered.
                 type: object
@@ -198,6 +199,8 @@ spec:
     kind: RequestReply
     plural: requestreplies
     singular: requestreply
+    shortNames:
+      - rr
     categories:
       - all
       - knative
