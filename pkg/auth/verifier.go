@@ -368,7 +368,7 @@ type openIDMetadata struct {
 }
 
 func SubjectWithFiltersFromPolicyRef(eventPolicyLister listerseventingv1alpha1.EventPolicyLister, resourceNamespace string, policyRefs []duckv1.AppliedEventPolicyRef) ([]SubjectsWithFilters, error) {
-	var subjectsWithFiltersFromApplyingPolicies []SubjectsWithFilters
+	subjectsWithFiltersFromApplyingPolicies := make([]SubjectsWithFilters, 0, len(policyRefs))
 
 	for _, p := range policyRefs {
 		policy, err := eventPolicyLister.EventPolicies(resourceNamespace).Get(p.Name)

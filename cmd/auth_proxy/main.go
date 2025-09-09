@@ -100,6 +100,7 @@ func main() {
 	configMapWatcher := configmap.NewInformedWatcher(kubeclient.Get(ctx), system.Namespace())
 	logger := setupLogging(ctx, configMapWatcher)
 	defer logger.Sync()
+	ctx = logging.WithLogger(ctx, logger)
 
 	featureStore := setupFeatureStore(ctx, logger, configMapWatcher)
 
@@ -152,7 +153,6 @@ func setupLogging(ctx context.Context, cmw *configmap.InformedWatcher) *zap.Suga
 	}
 
 	logger, atomicLevel := logging.NewLoggerFromConfig(loggingConfig, component)
-	ctx = logging.WithLogger(ctx, logger)
 
 	cmw.Watch(logging.ConfigMapName(), logging.UpdateLevelFromConfigMap(logger, atomicLevel, component))
 
