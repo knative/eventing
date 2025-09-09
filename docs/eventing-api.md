@@ -3021,16 +3021,6 @@ DeliverySpec
 <td>
 </td>
 </tr>
-<tr>
-<td>
-<code>secrets</code><br/>
-<em>
-[]string
-</em>
-</td>
-<td>
-</td>
-</tr>
 </table>
 </td>
 </tr>
@@ -3748,16 +3738,6 @@ DeliverySpec
 <td>
 </td>
 </tr>
-<tr>
-<td>
-<code>secrets</code><br/>
-<em>
-[]string
-</em>
-</td>
-<td>
-</td>
-</tr>
 </tbody>
 </table>
 <h3 id="eventing.knative.dev/v1alpha1.RequestReplyStatus">RequestReplyStatus
@@ -3827,6 +3807,28 @@ AppliedEventPoliciesStatus
 </p>
 <em>(Optional)</em>
 <p>AppliedEventPoliciesStatus contains the list of EventPolicies which apply to this Broker.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>desiredReplicas</code><br/>
+<em>
+int32
+</em>
+</td>
+<td>
+<p>DesiredReplicas is the number of replicas (StatefulSet pod + trigger) that is desired</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>readyReplicas</code><br/>
+<em>
+int32
+</em>
+</td>
+<td>
+<p>ReadyReplicas is the number of ready replicas (StatefulSet pod + trigger) for this RequestReply resource</p>
 </td>
 </tr>
 </tbody>
@@ -6632,7 +6634,7 @@ Log
 </em>
 </td>
 <td>
-<p>AWS source configuration</p>
+<p>AWS sink configuration</p>
 </td>
 </tr>
 </table>
@@ -6773,7 +6775,7 @@ knative.dev/eventing/pkg/apis/common/integration/v1alpha1.AWSSQS
 </em>
 </td>
 <td>
-<p>S3 source configuration</p>
+<p>S3 sink configuration</p>
 </td>
 </tr>
 <tr>
@@ -6784,7 +6786,7 @@ knative.dev/eventing/pkg/apis/common/integration/v1alpha1.AWSSNS
 </em>
 </td>
 <td>
-<p>SQS source configuration</p>
+<p>SQS sink configuration</p>
 </td>
 </tr>
 <tr>
@@ -6795,7 +6797,7 @@ knative.dev/eventing/pkg/apis/common/integration/v1alpha1.Auth
 </em>
 </td>
 <td>
-<p>SNS source configuration</p>
+<p>SNS sink configuration</p>
 </td>
 </tr>
 </tbody>
@@ -6852,7 +6854,7 @@ Log
 </em>
 </td>
 <td>
-<p>AWS source configuration</p>
+<p>AWS sink configuration</p>
 </td>
 </tr>
 </tbody>
