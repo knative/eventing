@@ -141,7 +141,6 @@ func (r *Reconciler) reconcileAesSecret(ctx context.Context, rr *v1alpha1.Reques
 }
 
 func (r *Reconciler) reconcileTriggers(ctx context.Context, rr *v1alpha1.RequestReply) error {
-	logging.FromContext(ctx).Info("cali0707: reconciling triggers")
 	ss, err := r.statefulSetLister.StatefulSets(system.Namespace()).Get(statefulSetName)
 	if err != nil {
 		return fmt.Errorf("failed to get requestreply statefulset: %w", err)
@@ -186,14 +185,11 @@ func (r *Reconciler) reconcileTriggers(ctx context.Context, rr *v1alpha1.Request
 
 		ignoreFields := cmpopts.IgnoreFields(eventingv1.TriggerSpec{}, "Filter")
 		if equal, err := kmp.SafeEqual(t.Spec, desired.Spec, ignoreFields); !equal || err != nil {
-			logging.FromContext(ctx).Info("cali0707: triggers were not equal, updating")
 			t.Spec = desired.Spec
 			t, err = r.eventingClient.EventingV1().Triggers(rr.Namespace).Update(ctx, t, metav1.UpdateOptions{})
 		} else {
-			logging.FromContext(ctx).Info("cali0707: triggers were equal, not updating")
 			// only check if it is ready if it was equal, otherwise it needs to re-reconcile
 			if t.Status.IsReady() {
-				logging.FromContext(ctx).Info("cali0707: trigger was ready")
 				readyCount++
 			}
 		}

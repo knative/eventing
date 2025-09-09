@@ -143,6 +143,10 @@ func (l *Listers) GetEventTransformLister() eventingv1alpha1listers.EventTransfo
 	return eventingv1alpha1listers.NewEventTransformLister(l.indexerFor(&eventingv1alpha1.EventTransform{}))
 }
 
+func (l *Listers) GetRequestReplyLister() eventingv1alpha1listers.RequestReplyLister {
+	return eventingv1alpha1listers.NewRequestReplyLister(l.indexerFor(&eventingv1alpha1.RequestReply{}))
+}
+
 func (l *Listers) GetIntegrationSourceLister() sourcev1alpha1listers.IntegrationSourceLister {
 	return sourcev1alpha1listers.NewIntegrationSourceLister(l.indexerFor(&sourcesv1alpha1.IntegrationSource{}))
 }
@@ -198,6 +202,10 @@ func (l *Listers) GetContainerSourceLister() sourcelisters.ContainerSourceLister
 
 func (l *Listers) GetDeploymentLister() appsv1listers.DeploymentLister {
 	return appsv1listers.NewDeploymentLister(l.indexerFor(&appsv1.Deployment{}))
+}
+
+func (l *Listers) GetStatefulSetLister() appsv1listers.StatefulSetLister {
+	return appsv1listers.NewStatefulSetLister(l.indexerFor(&appsv1.StatefulSet{}))
 }
 
 func (l *Listers) GetK8sServiceLister() corev1listers.ServiceLister {

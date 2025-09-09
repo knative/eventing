@@ -80,7 +80,6 @@ func NewController(
 
 	triggerInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: func(obj any) bool {
-			logger.Info("cali0707: saw trigger event")
 			trigger := obj.(*eventingv1.Trigger)
 			_, ok := trigger.Labels[triggerNameLabelKey] // every trigger associated with a request reply will have this label
 			logger.Info("trigger had label", zap.Bool("hadLabel", ok), zap.Any("labels", trigger.Labels))
