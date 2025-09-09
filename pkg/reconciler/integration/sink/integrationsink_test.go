@@ -160,12 +160,13 @@ func TestReconcile(t *testing.T) {
 		cmCertificatesListerAtomic.Store(&cmCertificatesLister)
 
 		r := &Reconciler{
-			kubeClientSet:       fakekubeclient.Get(ctx),
-			deploymentLister:    listers.GetDeploymentLister(),
-			serviceLister:       listers.GetServiceLister(),
-			secretLister:        listers.GetSecretLister(),
-			cmCertificateLister: cmCertificatesListerAtomic,
-			eventPolicyLister:   listers.GetEventPolicyLister(),
+			kubeClientSet:              fakekubeclient.Get(ctx),
+			deploymentLister:           listers.GetDeploymentLister(),
+			serviceLister:              listers.GetServiceLister(),
+			secretLister:               listers.GetSecretLister(),
+			cmCertificateLister:        cmCertificatesListerAtomic,
+			eventPolicyLister:          listers.GetEventPolicyLister(),
+			trustBundleConfigMapLister: listers.GetConfigMapLister(),
 		}
 
 		return integrationsink.NewReconciler(ctx, logging.FromContext(ctx), fakeeventingclient.Get(ctx), listers.GetIntegrationSinkLister(), controller.GetEventRecorder(ctx), r)

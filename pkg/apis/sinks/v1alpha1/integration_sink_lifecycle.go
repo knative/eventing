@@ -43,12 +43,17 @@ const (
 
 	// Certificate related condition reasons
 	IntegrationSinkCertificateNotReady string = "CertificateNotReady"
+
+	// IntegrationSinkTrustBundlePropagated is configured to indicate whether the
+	// TLS trust bundle has been properly propagated.
+	IntegrationSinkTrustBundlePropagated apis.ConditionType = "TrustBundlePropagated"
 )
 
 var IntegrationSinkCondSet = apis.NewLivingConditionSet(
 	IntegrationSinkConditionAddressable,
 	IntegrationSinkConditionDeploymentReady,
 	IntegrationSinkConditionEventPoliciesReady,
+	IntegrationSinkTrustBundlePropagated,
 )
 
 // GetConditionSet retrieves the condition set for this resource. Implements the KRShaped interface.
@@ -159,4 +164,15 @@ func (s *IntegrationSinkStatus) SetAddress(address *duckv1.Addressable) {
 		IntegrationSinkCondSet.Manage(s).MarkTrue(IntegrationSinkConditionAddressable)
 
 	}
+}
+
+// MarkFailedTrustBundlePropagation marks the IntegrationSink's SinkBindingTrustBundlePropagated condition to False with
+// the provided reason and message.
+func (s *IntegrationSinkStatus) MarkFailedTrustBundlePropagation(reason, message string) {
+	IntegrationSinkCondSet.Manage(s).MarkFalse(IntegrationSinkTrustBundlePropagated, reason, message)
+}
+
+// MarkTrustBundlePropagated marks the IntegrationSink's SinkBindingTrustBundlePropagated condition to True.
+func (s *IntegrationSinkStatus) MarkTrustBundlePropagated() {
+	IntegrationSinkCondSet.Manage(s).MarkTrue(IntegrationSinkTrustBundlePropagated)
 }

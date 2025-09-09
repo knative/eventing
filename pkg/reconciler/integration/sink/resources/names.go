@@ -20,6 +20,10 @@ import (
 	"knative.dev/pkg/kmeta"
 )
 
+const (
+	DeploymentSuffix = "-deployment"
+)
+
 func DeploymentName(sinkName string) string {
-	return kmeta.ChildName(sinkName, "-deployment")
+	return kmeta.ChildName(sinkName, DeploymentSuffix)
 }

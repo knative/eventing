@@ -21,7 +21,12 @@ import (
 	"fmt"
 	"sync/atomic"
 
+	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	rbacv1listers "k8s.io/client-go/listers/rbac/v1"
 	"knative.dev/eventing/pkg/certificates"
+	sinksv1alpha1 "knative.dev/eventing/pkg/client/listers/sinks/v1alpha1"
+	"knative.dev/pkg/system"
 
 	cmv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 
@@ -78,6 +83,11 @@ type Reconciler struct {
 	cmCertificateLister *atomic.Pointer[certmanagerlisters.CertificateLister]
 
 	certManagerClient certmanagerclientset.Interface
+
+	trustBundleConfigMapLister corev1listers.ConfigMapLister
+	integrationSinkLister      sinksv1alpha1.IntegrationSinkLister
+	rolebindingLister          rbacv1listers.RoleBindingLister
+	authProxyImage             string
 }
 
 // newReconciledNormal makes a new reconciler event with event type Normal, and
@@ -90,6 +100,12 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, sink *sinks.IntegrationS
 	featureFlags := feature.FromContext(ctx)
 	logger := logging.FromContext(ctx)
 
+	logger.Debugw("Reconciling Trust Bundles")
+	if err := r.reconcileIntegrationSinkTrustBundles(ctx, sink); err != nil {
+		logger.Errorw("Error reconciling Trust Bundles", zap.Error(err))
+		return err
+	}
+
 	logger.Debugw("Reconciling IntegrationSink Certificate")
 	_, err := r.reconcileIntegrationSinkCertificate(ctx, sink)
 	if err != nil {
@@ -97,8 +113,15 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, sink *sinks.IntegrationS
 		return err
 	}
 
+	logger.Debugw("Reconciling IntegrationSink auth-proxy RBAC")
+	_, err = r.reconcileAuthProxyRBAC(ctx, sink)
+	if err != nil {
+		logging.FromContext(ctx).Errorw("Error reconciling auth-proxy RBAC", zap.Error(err))
+		return err
+	}
+
 	logger.Debugw("Reconciling IntegrationSink Deployment")
-	_, err = r.reconcileDeployment(ctx, sink, featureFlags)
+	_, err = r.reconcileDeployment(ctx, sink, r.authProxyImage, featureFlags)
 	if err != nil {
 		logging.FromContext(ctx).Errorw("Error reconciling Pod", zap.Error(err))
 		return err
@@ -125,9 +148,12 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, sink *sinks.IntegrationS
 	return newReconciledNormal(sink.Namespace, sink.Name)
 }
 
-func (r *Reconciler) reconcileDeployment(ctx context.Context, sink *sinks.IntegrationSink, featureFlags feature.Flags) (*v1.Deployment, error) {
+func (r *Reconciler) reconcileDeployment(ctx context.Context, sink *sinks.IntegrationSink, authProxyImage string, featureFlags feature.Flags) (*v1.Deployment, error) {
+	expected, err := resources.MakeDeploymentSpec(sink, authProxyImage, featureFlags, r.trustBundleConfigMapLister, r.eventPolicyLister)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create deployment template: %w", err)
+	}
 
-	expected := resources.MakeDeploymentSpec(sink, featureFlags)
 	deployment, err := r.deploymentLister.Deployments(sink.Namespace).Get(expected.Name)
 	if apierrors.IsNotFound(err) {
 		deployment, err = r.kubeClientSet.AppsV1().Deployments(sink.Namespace).Create(ctx, expected, metav1.CreateOptions{})
@@ -169,6 +195,12 @@ func (r *Reconciler) reconcileService(ctx context.Context, sink *sinks.Integrati
 		return nil, fmt.Errorf("getting Service : %v", err)
 	} else if !metav1.IsControlledBy(svc, sink) {
 		return nil, fmt.Errorf("Service %q is not owned by IntegrationSink %q", svc.Name, sink.Name)
+	} else if r.serviceChanged(svc.Spec, expected.Spec) {
+		svc.Spec = expected.Spec
+		svc, err = r.kubeClientSet.CoreV1().Services(sink.Namespace).Update(ctx, svc, metav1.UpdateOptions{})
+		if err != nil {
+			return nil, fmt.Errorf("updating Service: %v", err)
+		}
 	} else {
 		logging.FromContext(ctx).Debugw("Reusing existing Service", zap.Any("Service", svc))
 	}
@@ -250,6 +282,22 @@ func (r *Reconciler) deleteIntegrationSinkCertificate(ctx context.Context, sink 
 	return nil
 }
 
+func (r *Reconciler) reconcileIntegrationSinkTrustBundles(ctx context.Context, sink *sinks.IntegrationSink) error {
+	gvk := schema.GroupVersionKind{
+		Group:   sinks.SchemeGroupVersion.Group,
+		Version: sinks.SchemeGroupVersion.Version,
+		Kind:    "IntegrationSink",
+	}
+
+	if _, err := eventingtls.PropagateTrustBundles(ctx, r.kubeClientSet, r.trustBundleConfigMapLister, gvk, sink); err != nil {
+		sink.Status.MarkFailedTrustBundlePropagation("FailedTrustBundlePropagation", err.Error())
+		return err
+	}
+	sink.Status.MarkTrustBundlePropagated()
+
+	return nil
+}
+
 func (r *Reconciler) reconcileAddress(ctx context.Context, sink *sinks.IntegrationSink) error {
 
 	featureFlags := feature.FromContext(ctx)
@@ -284,6 +332,7 @@ func (r *Reconciler) reconcileAddress(ctx context.Context, sink *sinks.Integrati
 	} else {
 		httpAddress := r.httpAddress(sink)
 		sink.Status.Address = &httpAddress
+		sink.Status.Addresses = []duckv1.Addressable{httpAddress}
 	}
 
 	if featureFlags.IsOIDCAuthentication() {
@@ -333,6 +382,7 @@ func (r *Reconciler) httpAddress(sink *sinks.IntegrationSink) duckv1.Addressable
 
 func (r *Reconciler) httpsAddress(certs *string, sink *sinks.IntegrationSink) duckv1.Addressable {
 	addr := r.httpAddress(sink)
+	addr.Name = ptr.To("https")
 	addr.URL.Scheme = "https"
 	addr.CACerts = certs
 	return addr
@@ -378,4 +428,69 @@ func (r *Reconciler) updateCertificate(ctx context.Context, sink *sinks.Integrat
 	}
 	controller.GetEventRecorder(ctx).Event(sink, corev1.EventTypeNormal, certificateUpdated, expected.GetName())
 	return updated, nil
+}
+
+func (r *Reconciler) serviceChanged(existingSvc corev1.ServiceSpec, wantSvc corev1.ServiceSpec) bool {
+	return !equality.Semantic.DeepDerivative(wantSvc, existingSvc)
+}
+
+func (r *Reconciler) reconcileAuthProxyRBAC(ctx context.Context, sink *sinks.IntegrationSink) (*rbacv1.RoleBinding, error) {
+	features := feature.FromContext(ctx)
+
+	expected, err := resources.MakeAuthProxyRoleBindings(sink, r.integrationSinkLister, features)
+	if err != nil {
+		return nil, fmt.Errorf("creating auth proxy rolebinding: %w", err)
+	}
+
+	if !features.IsOIDCAuthentication() {
+		return nil, r.deleteIntegrationSinkRBAC(ctx, expected)
+	}
+
+	rolebinding, err := r.rolebindingLister.RoleBindings(expected.Namespace).Get(expected.Name)
+	if apierrors.IsNotFound(err) {
+		created, err := r.kubeClientSet.RbacV1().RoleBindings(system.Namespace()).Create(ctx, expected, metav1.CreateOptions{})
+		if err != nil {
+			return nil, err
+		}
+
+		return created, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to get rolebinding %s/%s: %w", expected.GetNamespace(), expected.GetName(), err)
+	}
+
+	if !r.rolebindingChanged(rolebinding, expected) {
+		return rolebinding, nil
+	}
+
+	expected.ResourceVersion = rolebinding.ResourceVersion
+	updated, err := r.kubeClientSet.RbacV1().RoleBindings(expected.Namespace).Update(ctx, expected, metav1.UpdateOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return updated, nil
+}
+
+func (r *Reconciler) deleteIntegrationSinkRBAC(ctx context.Context, rolebinding *rbacv1.RoleBinding) error {
+	_, err := r.rolebindingLister.RoleBindings(rolebinding.Namespace).Get(rolebinding.Name)
+	if apierrors.IsNotFound(err) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("failed to get rolebinding %s/%s: %w", rolebinding.Namespace, rolebinding.Name, err)
+	}
+
+	err = r.kubeClientSet.RbacV1().RoleBindings(rolebinding.Namespace).Delete(ctx, rolebinding.Name, metav1.DeleteOptions{})
+	if apierrors.IsNotFound(err) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("failed to delete auth-proxy rolebinding %s/%s: %w", rolebinding.Namespace, rolebinding.Name, err)
+	}
+
+	return nil
+}
+
+func (r *Reconciler) rolebindingChanged(existingRB *rbacv1.RoleBinding, wantRB *rbacv1.RoleBinding) bool {
+	return !equality.Semantic.DeepDerivative(wantRB, existingRB)
 }
