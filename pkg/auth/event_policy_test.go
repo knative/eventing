@@ -700,24 +700,24 @@ func TestSubjectAndFiltersContained(t *testing.T) {
 	tests := []struct {
 		name                  string
 		sub                   string
-		allowedSubsAndFilters []subjectsWithFilters
+		allowedSubsAndFilters []SubjectsWithFilters
 		want                  bool
 	}{
 		{
 			name: "simple 1:1 match",
 			sub:  "system:serviceaccounts:my-ns:my-sa",
-			allowedSubsAndFilters: []subjectsWithFilters{
+			allowedSubsAndFilters: []SubjectsWithFilters{
 				{
-					subjects: []string{"system:serviceaccounts:my-ns:my-sa"},
+					Subjects: []string{"system:serviceaccounts:my-ns:my-sa"},
 				},
 			},
 			want: true,
 		}, {
 			name: "simple 1:n match",
 			sub:  "system:serviceaccounts:my-ns:my-sa",
-			allowedSubsAndFilters: []subjectsWithFilters{
+			allowedSubsAndFilters: []SubjectsWithFilters{
 				{
-					subjects: []string{
+					Subjects: []string{
 						"system:serviceaccounts:my-ns:another-sa",
 						"system:serviceaccounts:my-ns:my-sa",
 						"system:serviceaccounts:my-ns:yet-another-sa"},
@@ -727,9 +727,9 @@ func TestSubjectAndFiltersContained(t *testing.T) {
 		}, {
 			name: "pattern match (all)",
 			sub:  "system:serviceaccounts:my-ns:my-sa",
-			allowedSubsAndFilters: []subjectsWithFilters{
+			allowedSubsAndFilters: []SubjectsWithFilters{
 				{
-					subjects: []string{
+					Subjects: []string{
 						"*"},
 				},
 			},
@@ -737,9 +737,9 @@ func TestSubjectAndFiltersContained(t *testing.T) {
 		}, {
 			name: "pattern match (namespace)",
 			sub:  "system:serviceaccounts:my-ns:my-sa",
-			allowedSubsAndFilters: []subjectsWithFilters{
+			allowedSubsAndFilters: []SubjectsWithFilters{
 				{
-					subjects: []string{
+					Subjects: []string{
 						"system:serviceaccounts:my-ns:*",
 					},
 				},
@@ -748,9 +748,9 @@ func TestSubjectAndFiltersContained(t *testing.T) {
 		}, {
 			name: "pattern match (different namespace)",
 			sub:  "system:serviceaccounts:my-ns-2:my-sa",
-			allowedSubsAndFilters: []subjectsWithFilters{
+			allowedSubsAndFilters: []SubjectsWithFilters{
 				{
-					subjects: []string{
+					Subjects: []string{
 						"system:serviceaccounts:my-ns:*",
 					},
 				},
@@ -759,9 +759,9 @@ func TestSubjectAndFiltersContained(t *testing.T) {
 		}, {
 			name: "pattern match (namespace prefix)",
 			sub:  "system:serviceaccounts:my-ns:my-sa",
-			allowedSubsAndFilters: []subjectsWithFilters{
+			allowedSubsAndFilters: []SubjectsWithFilters{
 				{
-					subjects: []string{
+					Subjects: []string{
 						"system:serviceaccounts:my-ns*",
 					},
 				},
@@ -770,9 +770,9 @@ func TestSubjectAndFiltersContained(t *testing.T) {
 		}, {
 			name: "pattern match (namespace prefix 2)",
 			sub:  "system:serviceaccounts:my-ns-2:my-sa",
-			allowedSubsAndFilters: []subjectsWithFilters{
+			allowedSubsAndFilters: []SubjectsWithFilters{
 				{
-					subjects: []string{
+					Subjects: []string{
 						"system:serviceaccounts:my-ns*",
 					},
 				},
@@ -781,9 +781,9 @@ func TestSubjectAndFiltersContained(t *testing.T) {
 		}, {
 			name: "pattern match (middle)",
 			sub:  "system:serviceaccounts:my-ns:my-sa",
-			allowedSubsAndFilters: []subjectsWithFilters{
+			allowedSubsAndFilters: []SubjectsWithFilters{
 				{
-					subjects: []string{
+					Subjects: []string{
 						"system:serviceaccounts:*:my-sa",
 					},
 				},
@@ -792,12 +792,12 @@ func TestSubjectAndFiltersContained(t *testing.T) {
 		}, {
 			name: "pattern match (namespace prefix) and failing event filter",
 			sub:  "system:serviceaccounts:my-ns:my-sa",
-			allowedSubsAndFilters: []subjectsWithFilters{
+			allowedSubsAndFilters: []SubjectsWithFilters{
 				{
-					subjects: []string{
+					Subjects: []string{
 						"system:serviceaccounts:my-ns*",
 					},
-					filters: []eventingv1.SubscriptionsAPIFilter{
+					Filters: []eventingv1.SubscriptionsAPIFilter{
 						{
 							CESQL: "false",
 						},
@@ -808,22 +808,22 @@ func TestSubjectAndFiltersContained(t *testing.T) {
 		}, {
 			name: "only check filter if subject matches",
 			sub:  "system:serviceaccounts:my-ns:my-sa",
-			allowedSubsAndFilters: []subjectsWithFilters{
+			allowedSubsAndFilters: []SubjectsWithFilters{
 				{
-					subjects: []string{
+					Subjects: []string{
 						"system:serviceaccounts:not-my-ns*",
 					},
-					filters: []eventingv1.SubscriptionsAPIFilter{
+					Filters: []eventingv1.SubscriptionsAPIFilter{
 						{
 							CESQL: "true",
 						},
 					},
 				},
 				{
-					subjects: []string{
+					Subjects: []string{
 						"system:serviceaccounts:my-ns*",
 					},
-					filters: []eventingv1.SubscriptionsAPIFilter{
+					Filters: []eventingv1.SubscriptionsAPIFilter{
 						{
 							CESQL: "false",
 						},

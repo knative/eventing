@@ -36,6 +36,7 @@ import (
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
 )
@@ -193,6 +194,17 @@ func IsHttpsSink(sink string) bool {
 		return false
 	}
 	return strings.EqualFold(s.Scheme, "https")
+}
+
+// GetHttpsAddress returns the (first) https address out of the list of addresses
+func GetHttpsAddress(addresses []duckv1.Addressable) *duckv1.Addressable {
+	for _, address := range addresses {
+		if IsHttpsSink(address.URL.String()) {
+			return &address
+		}
+	}
+
+	return nil
 }
 
 // certPool returns a x509.CertPool with the combined certs from:
