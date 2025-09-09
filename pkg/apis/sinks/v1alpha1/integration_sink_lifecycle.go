@@ -156,14 +156,17 @@ func (s *IntegrationSinkStatus) PropagateCertificateStatus(cs cmv1.CertificateSt
 	return true
 }
 
-func (s *IntegrationSinkStatus) SetAddress(address *duckv1.Addressable) {
-	s.Address = address
-	if address == nil || address.URL.IsEmpty() {
+func (s *IntegrationSinkStatus) SetAddresses(addresses ...duckv1.Addressable) {
+	if len(addresses) == 0 || addresses[0].URL.IsEmpty() {
 		IntegrationSinkCondSet.Manage(s).MarkFalse(IntegrationSinkConditionAddressable, "EmptyHostname", "hostname is the empty string")
-	} else {
-		IntegrationSinkCondSet.Manage(s).MarkTrue(IntegrationSinkConditionAddressable)
-
+		return
 	}
+
+	s.AddressStatus = duckv1.AddressStatus{
+		Address:   &addresses[0],
+		Addresses: addresses,
+	}
+	IntegrationSinkCondSet.Manage(s).MarkTrue(IntegrationSinkConditionAddressable)
 }
 
 // MarkFailedTrustBundlePropagation marks the IntegrationSink's SinkBindingTrustBundlePropagated condition to False with

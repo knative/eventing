@@ -55,6 +55,9 @@ func TestIntegrationSinkInitializeConditions(t *testing.T) {
 				}, {
 					Type:   IntegrationSinkConditionReady,
 					Status: corev1.ConditionUnknown,
+				}, {
+					Type:   IntegrationSinkTrustBundlePropagated,
+					Status: corev1.ConditionUnknown,
 				}},
 			},
 		},
@@ -82,6 +85,9 @@ func TestIntegrationSinkInitializeConditions(t *testing.T) {
 				}, {
 					Type:   IntegrationSinkConditionReady,
 					Status: corev1.ConditionUnknown,
+				}, {
+					Type:   IntegrationSinkTrustBundlePropagated,
+					Status: corev1.ConditionUnknown,
 				}},
 			},
 		},
@@ -108,6 +114,9 @@ func TestIntegrationSinkInitializeConditions(t *testing.T) {
 					Status: corev1.ConditionUnknown,
 				}, {
 					Type:   IntegrationSinkConditionReady,
+					Status: corev1.ConditionUnknown,
+				}, {
+					Type:   IntegrationSinkTrustBundlePropagated,
 					Status: corev1.ConditionUnknown,
 				}},
 			},
