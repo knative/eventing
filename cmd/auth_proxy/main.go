@@ -59,19 +59,19 @@ const component = "auth-proxy"
 
 // envConfig holds all environment configuration for the auth proxy
 type envConfig struct {
-	TargetHost      string `envconfig:"TARGET_HOST" default:"localhost"`
+	TargetHost      string `envconfig:"TARGET_HOST" default:"localhost" required:"true"`
 	TargetHTTPPort  int    `envconfig:"TARGET_HTTP_PORT"  default:"8080"`
 	TargetHTTPSPort int    `envconfig:"TARGET_HTTPS_PORT"  default:"8443"`
 	ProxyHTTPPort   int    `envconfig:"PROXY_HTTP_PORT" default:"3128"`
 	ProxyHTTPSPort  int    `envconfig:"PROXY_HTTPS_PORT" default:"3129"`
 
-	AuthPolicies    string  `envconfig:"AUTH_POLICIES" default:""`
-	SinkNamespace   string  `envconfig:"SINK_NAMESPACE"`
+	AuthPolicies    string  `envconfig:"AUTH_POLICIES"`
+	SinkNamespace   string  `envconfig:"SINK_NAMESPACE" required:"true"`
 	SinkTLSCertPath *string `envconfig:"SINK_TLS_CERT_FILE"`
 	SinkTLSKeyPath  *string `envconfig:"SINK_TLS_KEY_FILE"`
 	SinkCACertsPath *string `envconfig:"SINK_TLS_CA_FILE"`
 
-	SinkURI      string  `envconfig:"SINK_URI"`
+	SinkURI      string  `envconfig:"SINK_URI" required:"true"`
 	SinkAudience *string `envconfig:"SINK_AUDIENCE"`
 }
 
