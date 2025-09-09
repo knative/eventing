@@ -232,6 +232,14 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	// copy the request, as we need access to the body (in case of a structured event) for the auth checks too
+	reqCp, err := utils.CopyRequest(request)
+	if err != nil {
+		h.Logger.Error("Failed to copy request", zap.Error(err))
+		writer.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 	ctx := h.withContext(request.Context())
 	ctx = observability.WithRequestLabels(ctx, request)
 
@@ -277,7 +285,7 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	if broker.Status.Address != nil {
 		audience = broker.Status.Address.Audience
 	}
-	err = h.tokenVerifier.VerifyRequest(ctx, features, audience, brokerNamespace, broker.Status.Policies, request, writer)
+	err = h.tokenVerifier.VerifyRequest(ctx, features, audience, brokerNamespace, broker.Status.Policies, reqCp, writer)
 	if err != nil {
 		h.Logger.Warn("Failed to verify AuthN and AuthZ.", zap.Error(err))
 		return
