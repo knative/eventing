@@ -84,10 +84,7 @@ type AESKeyStore struct {
 	Logger    *zap.SugaredLogger
 }
 
-func (ks *AESKeyStore) AddAesKey(rrName types.NamespacedName, keyName string, keyValue []byte) {
-	ks.lock.Lock()
-	defer ks.lock.Unlock()
-
+func (ks *AESKeyStore) addAesKey(rrName types.NamespacedName, keyName string, keyValue []byte) {
 	if ks.keyStores == nil {
 		ks.keyStores = make(map[types.NamespacedName]*requestReplyAesKeyStore)
 	}
@@ -99,10 +96,7 @@ func (ks *AESKeyStore) AddAesKey(rrName types.NamespacedName, keyName string, ke
 	ks.keyStores[rrName].addAesKey(keyName, keyValue)
 }
 
-func (ks *AESKeyStore) RemoveAesKey(rrName types.NamespacedName, keyName string) {
-	ks.lock.Lock()
-	defer ks.lock.Unlock()
-
+func (ks *AESKeyStore) removeAesKey(rrName types.NamespacedName, keyName string) {
 	if ks.keyStores[rrName] == nil {
 		return
 	}
@@ -138,6 +132,9 @@ func (ks *AESKeyStore) StopWatch() {
 }
 
 func (ks *AESKeyStore) WatchPath(basePath string) error {
+	ks.lock.Lock()
+	defer ks.lock.Unlock()
+
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return fmt.Errorf("failed to create file watcher: %w", err)
@@ -190,6 +187,9 @@ func (ks *AESKeyStore) WatchPath(basePath string) error {
 }
 
 func (ks *AESKeyStore) handleEvent(event fsnotify.Event) {
+	ks.lock.Lock()
+	defer ks.lock.Unlock()
+
 	if event.Has(fsnotify.Create) {
 		info, err := os.Stat(event.Name)
 		if err != nil {
@@ -224,7 +224,7 @@ func (ks *AESKeyStore) processKeyFile(path string) {
 		return
 	}
 
-	ks.AddAesKey(rrNsName, keyName, keyValue)
+	ks.addAesKey(rrNsName, keyName, keyValue)
 }
 
 func (ks *AESKeyStore) removeKeyFile(path string) {
@@ -233,7 +233,7 @@ func (ks *AESKeyStore) removeKeyFile(path string) {
 		return
 	}
 
-	ks.RemoveAesKey(rrNsName, keyName)
+	ks.removeAesKey(rrNsName, keyName)
 }
 
 func parseFileName(fileName string) (types.NamespacedName, string, error) {

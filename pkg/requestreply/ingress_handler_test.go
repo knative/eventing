@@ -194,7 +194,7 @@ func TestHandlerServeHttp(t *testing.T) {
 
 			for rrName, keyMap := range testCase.keys {
 				for keyName, keyValue := range keyMap {
-					keyStore.AddAesKey(rrName, keyName, keyValue)
+					keyStore.addAesKey(rrName, keyName, keyValue)
 				}
 			}
 
