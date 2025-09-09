@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"time"
 
+	cloudevents "github.com/cloudevents/sdk-go/v2"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/test/rekt/resources/eventpolicy"
 	"knative.dev/eventing/test/rekt/resources/pingsource"
@@ -41,7 +42,8 @@ func AddressableAuthZConformance(gvr schema.GroupVersionResource, kind, name str
 	fs := feature.FeatureSet{
 		Name: fmt.Sprintf("%s handles authorization features correctly", kind),
 		Features: []*feature.Feature{
-			addressableRespectsEventPolicyFilters(gvr, kind, name),
+			addressableRespectsEventPolicyFilters(gvr, kind, name, cloudevents.EncodingBinary),
+			addressableRespectsEventPolicyFilters(gvr, kind, name, cloudevents.EncodingStructured),
 		},
 	}
 
@@ -57,16 +59,18 @@ func AddressableAuthZConformanceRequestHandling(gvr schema.GroupVersionResource,
 	fs := feature.FeatureSet{
 		Name: fmt.Sprintf("%s handles authorization in requests correctly", kind),
 		Features: []*feature.Feature{
-			addressableAllowsAuthorizedRequest(gvr, kind, name),
-			addressableRejectsUnauthorizedRequest(gvr, kind, name),
+			addressableAllowsAuthorizedRequest(gvr, kind, name, cloudevents.EncodingBinary),
+			addressableAllowsAuthorizedRequest(gvr, kind, name, cloudevents.EncodingStructured),
+			addressableRejectsUnauthorizedRequest(gvr, kind, name, cloudevents.EncodingBinary),
+			addressableRejectsUnauthorizedRequest(gvr, kind, name, cloudevents.EncodingStructured),
 			addressableBecomesUnreadyOnUnreadyEventPolicy(gvr, kind, name),
 		},
 	}
 	return &fs
 }
 
-func addressableAllowsAuthorizedRequest(gvr schema.GroupVersionResource, kind, name string) *feature.Feature {
-	f := feature.NewFeatureNamed(fmt.Sprintf("%s accepts authorized request", kind))
+func addressableAllowsAuthorizedRequest(gvr schema.GroupVersionResource, kind, name string, inputEventEncoding cloudevents.Encoding) *feature.Feature {
+	f := feature.NewFeatureNamed(fmt.Sprintf("%s accepts authorized request with %s encoding for input event", kind, inputEventEncoding))
 
 	f.Prerequisite("OIDC authentication is enabled", featureflags.AuthenticationOIDCEnabled())
 	f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
@@ -95,7 +99,7 @@ func addressableAllowsAuthorizedRequest(gvr schema.GroupVersionResource, kind, n
 	f.Requirement("install source", eventshub.Install(
 		source,
 		eventshub.StartSenderToResourceTLS(gvr, name, nil),
-		eventshub.InputEvent(event),
+		eventshub.InputEventWithEncoding(event, inputEventEncoding),
 		eventshub.OIDCSubject(sourceSubject),
 	))
 
@@ -106,8 +110,8 @@ func addressableAllowsAuthorizedRequest(gvr schema.GroupVersionResource, kind, n
 	return f
 }
 
-func addressableRejectsUnauthorizedRequest(gvr schema.GroupVersionResource, kind, name string) *feature.Feature {
-	f := feature.NewFeatureNamed(fmt.Sprintf("%s rejects unauthorized request", kind))
+func addressableRejectsUnauthorizedRequest(gvr schema.GroupVersionResource, kind, name string, inputEventEncoding cloudevents.Encoding) *feature.Feature {
+	f := feature.NewFeatureNamed(fmt.Sprintf("%s rejects unauthorized request with %s encoding for input event", kind, inputEventEncoding))
 
 	f.Prerequisite("OIDC authentication is enabled", featureflags.AuthenticationOIDCEnabled())
 	f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
@@ -132,7 +136,7 @@ func addressableRejectsUnauthorizedRequest(gvr schema.GroupVersionResource, kind
 	f.Requirement("install source", eventshub.Install(
 		source,
 		eventshub.StartSenderToResourceTLS(gvr, name, nil),
-		eventshub.InputEvent(event),
+		eventshub.InputEventWithEncoding(event, inputEventEncoding),
 		eventshub.InitialSenderDelay(10*time.Second),
 	))
 
@@ -143,8 +147,8 @@ func addressableRejectsUnauthorizedRequest(gvr schema.GroupVersionResource, kind
 	return f
 }
 
-func addressableRespectsEventPolicyFilters(gvr schema.GroupVersionResource, kind, name string) *feature.Feature {
-	f := feature.NewFeatureNamed(fmt.Sprintf("%s only admits events that pass the event policy filter", kind))
+func addressableRespectsEventPolicyFilters(gvr schema.GroupVersionResource, kind, name string, inputEventEncoding cloudevents.Encoding) *feature.Feature {
+	f := feature.NewFeatureNamed(fmt.Sprintf("%s only admits events that pass the event policy filter with %s encoding for input event", kind, inputEventEncoding))
 
 	f.Prerequisite("OIDC authentication is enabled", featureflags.AuthenticationOIDCEnabled())
 	f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
@@ -188,14 +192,14 @@ func addressableRespectsEventPolicyFilters(gvr schema.GroupVersionResource, kind
 	f.Requirement("install source 1", eventshub.Install(
 		source1,
 		eventshub.StartSenderToResourceTLS(gvr, name, nil),
-		eventshub.InputEvent(event1),
+		eventshub.InputEventWithEncoding(event1, inputEventEncoding),
 		eventshub.OIDCSubject(sourceSubject1),
 	))
 
 	f.Requirement("install source 2", eventshub.Install(
 		source2,
 		eventshub.StartSenderToResourceTLS(gvr, name, nil),
-		eventshub.InputEvent(event2),
+		eventshub.InputEventWithEncoding(event2, inputEventEncoding),
 		eventshub.OIDCSubject(sourceSubject2),
 	))
 
