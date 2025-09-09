@@ -65,14 +65,15 @@ type envConfig struct {
 	ProxyHTTPPort   int    `envconfig:"PROXY_HTTP_PORT" default:"3128"`
 	ProxyHTTPSPort  int    `envconfig:"PROXY_HTTPS_PORT" default:"3129"`
 
-	AuthPolicies    string  `envconfig:"AUTH_POLICIES"`
-	SinkNamespace   string  `envconfig:"SINK_NAMESPACE" required:"true"`
+	SinkURI       string  `envconfig:"SINK_URI" required:"true"`
+	SinkNamespace string  `envconfig:"SINK_NAMESPACE" required:"true"`
+	SinkAudience  *string `envconfig:"SINK_AUDIENCE"`
+
+	AuthPolicies string `envconfig:"AUTH_POLICIES"`
+
 	SinkTLSCertPath *string `envconfig:"SINK_TLS_CERT_FILE"`
 	SinkTLSKeyPath  *string `envconfig:"SINK_TLS_KEY_FILE"`
 	SinkCACertsPath *string `envconfig:"SINK_TLS_CA_FILE"`
-
-	SinkURI      string  `envconfig:"SINK_URI" required:"true"`
-	SinkAudience *string `envconfig:"SINK_AUDIENCE"`
 }
 
 // ProxyHandler handles HTTP requests and performs authentication/authorization
