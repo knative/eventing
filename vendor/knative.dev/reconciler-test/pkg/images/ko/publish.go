@@ -30,7 +30,7 @@ var ErrKoPublishFailed = errors.New("ko publish failed")
 func Publish(ctx context.Context, path string) (string, error) {
 	version := os.Getenv("GOOGLE_KO_VERSION")
 	if version == "" {
-		version = "v0.15.2"
+		version = "v0.18.0"
 	}
 	args := []string{
 		"go", "run", fmt.Sprintf("github.com/google/ko@%s", version),
