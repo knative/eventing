@@ -183,7 +183,7 @@ func addressableAllowsValidRequest(gvr schema.GroupVersionResource, kind, name s
 
 	f.Alpha(kind).
 		Must("event sent", eventassert.OnStore(source).MatchSentEvent(test.HasId(event.ID())).Exact(1)).
-		Must("get 202 on response", eventassert.OnStore(source).Match(eventassert.MatchStatusCode(202)).Exact(1))
+		Must("get 202 or 204 on response", eventassert.OnStore(source).Match(eventassert.OneOf(eventassert.MatchStatusCode(202), eventassert.MatchStatusCode(204))).Exact(1))
 
 	return f
 }

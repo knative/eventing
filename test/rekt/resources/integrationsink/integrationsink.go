@@ -66,3 +66,13 @@ func IsNotReady(name string, timing ...time.Duration) feature.StepFn {
 func IsAddressable(name string, timings ...time.Duration) feature.StepFn {
 	return k8s.IsAddressable(GVR(), name, timings...)
 }
+
+func GoesReadySimple(name string) *feature.Feature {
+	f := feature.NewFeature()
+
+	f.Setup("install integration sink", Install(name))
+	f.Setup("integrationsink is ready", IsReady(name))
+	f.Setup("integrationsink is addressable", IsAddressable(name))
+
+	return f
+}
