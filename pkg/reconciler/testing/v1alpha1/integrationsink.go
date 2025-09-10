@@ -69,9 +69,9 @@ func WithIntegrationSinkAddressableReady() IntegrationSinkOption {
 	}
 }
 
-func WithIntegrationSinkAddress(addr *duckv1.Addressable) IntegrationSinkOption {
+func WithIntegrationSinkAddress(addr duckv1.Addressable) IntegrationSinkOption {
 	return func(s *v1alpha1.IntegrationSink) {
-		s.Status.SetAddress(addr)
+		s.Status.SetAddresses(addr)
 	}
 }
 
@@ -84,5 +84,11 @@ func WithIntegrationSinkSpec(spec v1alpha1.IntegrationSinkSpec) IntegrationSinkO
 func WithIntegrationSinkEventPoliciesReadyBecauseOIDCDisabled() IntegrationSinkOption {
 	return func(s *v1alpha1.IntegrationSink) {
 		s.Status.MarkEventPoliciesTrueWithReason("OIDCDisabled", "Feature %q must be enabled to support Authorization", feature.OIDCAuthentication)
+	}
+}
+
+func WithIntegrationSinkTrustBundlePropagatedReady() IntegrationSinkOption {
+	return func(s *v1alpha1.IntegrationSink) {
+		s.Status.MarkTrustBundlePropagated()
 	}
 }

@@ -113,6 +113,7 @@ func TestReconcile(t *testing.T) {
 					WithIntegrationSinkUID(sinkUID),
 					WithIntegrationSinkSpec(makeIntegrationSinkSpec()),
 					WithInitIntegrationSinkConditions,
+					WithIntegrationSinkTrustBundlePropagatedReady(),
 				),
 			}},
 			WantCreates: []runtime.Object{
@@ -142,9 +143,10 @@ func TestReconcile(t *testing.T) {
 				Object: NewIntegrationSink(sinkName, testNS,
 					WithIntegrationSinkUID(sinkUID),
 					WithIntegrationSinkAddressableReady(),
-					WithIntegrationSinkAddress(&sinkAddressable),
+					WithIntegrationSinkAddress(sinkAddressable),
 					WithIntegrationSinkSpec(makeIntegrationSinkSpec()),
 					WithIntegrationSinkEventPoliciesReadyBecauseOIDCDisabled(),
+					WithIntegrationSinkTrustBundlePropagatedReady(),
 					WithInitIntegrationSinkConditions,
 					WithIntegrationSinkPropagateDeploymenteStatus(makeDeploymentStatus(&conditionTrue)),
 				),
@@ -160,12 +162,15 @@ func TestReconcile(t *testing.T) {
 		cmCertificatesListerAtomic.Store(&cmCertificatesLister)
 
 		r := &Reconciler{
-			kubeClientSet:       fakekubeclient.Get(ctx),
-			deploymentLister:    listers.GetDeploymentLister(),
-			serviceLister:       listers.GetServiceLister(),
-			secretLister:        listers.GetSecretLister(),
-			cmCertificateLister: cmCertificatesListerAtomic,
-			eventPolicyLister:   listers.GetEventPolicyLister(),
+			kubeClientSet:              fakekubeclient.Get(ctx),
+			deploymentLister:           listers.GetDeploymentLister(),
+			serviceLister:              listers.GetServiceLister(),
+			secretLister:               listers.GetSecretLister(),
+			cmCertificateLister:        cmCertificatesListerAtomic,
+			eventPolicyLister:          listers.GetEventPolicyLister(),
+			trustBundleConfigMapLister: listers.GetConfigMapLister(),
+			rolebindingLister:          listers.GetRoleBindingLister(),
+			integrationSinkLister:      listers.GetIntegrationSinkLister(),
 		}
 
 		return integrationsink.NewReconciler(ctx, logging.FromContext(ctx), fakeeventingclient.Get(ctx), listers.GetIntegrationSinkLister(), controller.GetEventRecorder(ctx), r)
@@ -337,16 +342,22 @@ func makeService(name, namespace string) *corev1.Service {
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
 				{
-					Name:       "http",
-					Protocol:   corev1.ProtocolTCP,
-					Port:       80,
-					TargetPort: intstr.IntOrString{IntVal: 8080},
+					Name:     "http",
+					Protocol: corev1.ProtocolTCP,
+					Port:     80,
+					TargetPort: intstr.IntOrString{
+						Type:   intstr.String,
+						StrVal: "http",
+					},
 				},
 				{
-					Name:       "https",
-					Protocol:   corev1.ProtocolTCP,
-					Port:       443,
-					TargetPort: intstr.IntOrString{IntVal: 8443},
+					Name:     "https",
+					Protocol: corev1.ProtocolTCP,
+					Port:     443,
+					TargetPort: intstr.IntOrString{
+						Type:   intstr.String,
+						StrVal: "https",
+					},
 				},
 			},
 			Selector: integration.Labels(sinkName),

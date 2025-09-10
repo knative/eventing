@@ -43,12 +43,17 @@ const (
 
 	// Certificate related condition reasons
 	IntegrationSinkCertificateNotReady string = "CertificateNotReady"
+
+	// IntegrationSinkTrustBundlePropagated is configured to indicate whether the
+	// TLS trust bundle has been properly propagated.
+	IntegrationSinkTrustBundlePropagated apis.ConditionType = "TrustBundlePropagated"
 )
 
 var IntegrationSinkCondSet = apis.NewLivingConditionSet(
 	IntegrationSinkConditionAddressable,
 	IntegrationSinkConditionDeploymentReady,
 	IntegrationSinkConditionEventPoliciesReady,
+	IntegrationSinkTrustBundlePropagated,
 )
 
 // GetConditionSet retrieves the condition set for this resource. Implements the KRShaped interface.
@@ -151,12 +156,26 @@ func (s *IntegrationSinkStatus) PropagateCertificateStatus(cs cmv1.CertificateSt
 	return true
 }
 
-func (s *IntegrationSinkStatus) SetAddress(address *duckv1.Addressable) {
-	s.Address = address
-	if address == nil || address.URL.IsEmpty() {
+func (s *IntegrationSinkStatus) SetAddresses(addresses ...duckv1.Addressable) {
+	if len(addresses) == 0 || addresses[0].URL.IsEmpty() {
 		IntegrationSinkCondSet.Manage(s).MarkFalse(IntegrationSinkConditionAddressable, "EmptyHostname", "hostname is the empty string")
-	} else {
-		IntegrationSinkCondSet.Manage(s).MarkTrue(IntegrationSinkConditionAddressable)
-
+		return
 	}
+
+	s.AddressStatus = duckv1.AddressStatus{
+		Address:   &addresses[0],
+		Addresses: addresses,
+	}
+	IntegrationSinkCondSet.Manage(s).MarkTrue(IntegrationSinkConditionAddressable)
+}
+
+// MarkFailedTrustBundlePropagation marks the IntegrationSink's SinkBindingTrustBundlePropagated condition to False with
+// the provided reason and message.
+func (s *IntegrationSinkStatus) MarkFailedTrustBundlePropagation(reason, message string) {
+	IntegrationSinkCondSet.Manage(s).MarkFalse(IntegrationSinkTrustBundlePropagated, reason, message)
+}
+
+// MarkTrustBundlePropagated marks the IntegrationSink's SinkBindingTrustBundlePropagated condition to True.
+func (s *IntegrationSinkStatus) MarkTrustBundlePropagated() {
+	IntegrationSinkCondSet.Manage(s).MarkTrue(IntegrationSinkTrustBundlePropagated)
 }

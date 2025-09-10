@@ -105,7 +105,7 @@ func addressableAllowsAuthorizedRequest(gvr schema.GroupVersionResource, kind, n
 
 	f.Alpha(kind).
 		Must("event sent", eventassert.OnStore(source).MatchSentEvent(test.HasId(event.ID())).Exact(1)).
-		Must("get 202 on response", eventassert.OnStore(source).Match(eventassert.MatchStatusCode(202)).AtLeast(1))
+		Must("get 202 or 204 on response", eventassert.OnStore(source).Match(eventassert.OneOf(eventassert.MatchStatusCode(202), eventassert.MatchStatusCode(204))).AtLeast(1))
 
 	return f
 }
@@ -205,7 +205,7 @@ func addressableRespectsEventPolicyFilters(gvr schema.GroupVersionResource, kind
 
 	f.Alpha(kind).
 		Must("valid event sent", eventassert.OnStore(source1).MatchSentEvent(test.HasId(event1.ID())).Exact(1)).
-		Must("get 202 on response", eventassert.OnStore(source1).Match(eventassert.MatchStatusCode(202)).AtLeast(1))
+		Must("get 202 or 204 on response", eventassert.OnStore(source1).Match(eventassert.OneOf(eventassert.MatchStatusCode(202), eventassert.MatchStatusCode(204))).AtLeast(1))
 
 	f.Alpha(kind).
 		Must("invalid event sent", eventassert.OnStore(source2).MatchSentEvent(test.HasId(event2.ID())).Exact(1)).

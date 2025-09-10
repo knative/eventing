@@ -17,23 +17,37 @@ limitations under the License.
 package resources
 
 import (
+	"encoding/json"
+	"fmt"
 	"os"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	corev1listers "k8s.io/client-go/listers/core/v1"
+	"k8s.io/utils/ptr"
 	commonv1a1 "knative.dev/eventing/pkg/apis/common/integration/v1alpha1"
 	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/eventing/pkg/apis/sinks/v1alpha1"
+	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/certificates"
+	alpha1 "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
+	v1alpha1listers "knative.dev/eventing/pkg/client/listers/sinks/v1alpha1"
+	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/reconciler/integration"
 	"knative.dev/pkg/kmeta"
+	"knative.dev/pkg/system"
 )
 
-func MakeDeploymentSpec(sink *v1alpha1.IntegrationSink, featureFlags feature.Flags) *appsv1.Deployment {
-	t := true
+const (
+	AuthProxyRolebindingName = "eventing-auth-proxy"
+)
 
+func MakeDeploymentSpec(sink *v1alpha1.IntegrationSink, authProxyImage string, featureFlags feature.Flags, trustBundleConfigmapLister corev1listers.ConfigMapLister, eventPolicyLister alpha1.EventPolicyLister) (*appsv1.Deployment, error) {
 	deploy := &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apps/v1",
@@ -62,7 +76,7 @@ func MakeDeploymentSpec(sink *v1alpha1.IntegrationSink, featureFlags feature.Fla
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName: certificates.CertificateName(sink.Name),
-									Optional:   &t,
+									Optional:   ptr.To(true),
 								},
 							},
 						},
@@ -98,7 +112,53 @@ func MakeDeploymentSpec(sink *v1alpha1.IntegrationSink, featureFlags feature.Fla
 		},
 	}
 
-	return deploy
+	if featureFlags.IsOIDCAuthentication() {
+		// add auth-proxy
+
+		proxyVars, err := makeAuthProxyEnv(sink, featureFlags, eventPolicyLister)
+		if err != nil {
+			return nil, fmt.Errorf("failed to make auth proxy env vars: %w", err)
+		}
+
+		deploy.Spec.Template.Spec.Containers = append(deploy.Spec.Template.Spec.Containers, corev1.Container{
+			Name:            "auth-proxy",
+			Image:           authProxyImage,
+			ImagePullPolicy: corev1.PullAlways,
+			Ports: []corev1.ContainerPort{
+				{
+					ContainerPort: 3128,
+					Protocol:      corev1.ProtocolTCP,
+					Name:          "http",
+				},
+				{
+					ContainerPort: 3129,
+					Protocol:      corev1.ProtocolTCP,
+					Name:          "https",
+				},
+			},
+			Env: proxyVars,
+			VolumeMounts: []corev1.VolumeMount{
+				{
+					// server certs, as the auth-proxy uses the same certs as the underlying sink
+					Name:      certificates.CertificateName(sink.Name),
+					MountPath: "/etc/" + certificates.CertificateName(sink.Name),
+					ReadOnly:  true,
+				},
+			},
+		})
+
+		// add trustbundles directly, so auth-proxies tokenverifier does not need the trustbundleconfigmap lister for oidc discovery
+		podspec, err := eventingtls.AddTrustBundleVolumes(trustBundleConfigmapLister, deploy, &deploy.Spec.Template.Spec)
+		if err != nil {
+			return nil, fmt.Errorf("failed to add trust bundle volumes: %w", err)
+		}
+		deploy.Spec.Template.Spec = *podspec
+
+		// don't expose ports on sink container, as traffic should reach only auth-proxy
+		deploy.Spec.Template.Spec.Containers[0].Ports = nil
+	}
+
+	return deploy, nil
 }
 
 func MakeService(sink *v1alpha1.IntegrationSink) *corev1.Service {
@@ -119,20 +179,145 @@ func MakeService(sink *v1alpha1.IntegrationSink) *corev1.Service {
 			Selector: integration.Labels(sink.Name),
 			Ports: []corev1.ServicePort{
 				{
-					Name:       "http",
-					Protocol:   corev1.ProtocolTCP,
-					Port:       80,
-					TargetPort: intstr.IntOrString{IntVal: 8080},
+					Name:     "http",
+					Protocol: corev1.ProtocolTCP,
+					Port:     80,
+					TargetPort: intstr.IntOrString{
+						Type:   intstr.String,
+						StrVal: "http",
+					},
 				},
 				{
-					Name:       "https",
-					Protocol:   corev1.ProtocolTCP,
-					Port:       443,
-					TargetPort: intstr.IntOrString{IntVal: 8443},
+					Name:     "https",
+					Protocol: corev1.ProtocolTCP,
+					Port:     443,
+					TargetPort: intstr.IntOrString{
+						Type:   intstr.String,
+						StrVal: "https",
+					},
 				},
 			},
 		},
 	}
+}
+
+func MakeAuthProxyRoleBindings(sink *v1alpha1.IntegrationSink, sinkLister v1alpha1listers.IntegrationSinkLister, features feature.Flags) (*rbacv1.RoleBinding, error) {
+	rb := rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      AuthProxyRolebindingName,
+			Namespace: system.Namespace(),
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "Role",
+			Name:     "knative-eventing-auth-proxy",
+		},
+	}
+
+	// now we need to get the SA names for all the deployed IntegrationSink pods
+	sinks, err := sinkLister.List(labels.Everything())
+	if err != nil {
+		return nil, fmt.Errorf("error listing sinks: %w", err)
+	}
+	sinks = append(sinks, sink) //add the current sink too, as this could not exist yet in the cluster
+
+	serviceAccounts := map[types.NamespacedName]struct{}{}
+	for _, s := range sinks {
+		serviceAccounts[types.NamespacedName{
+			Namespace: s.Namespace,
+			Name:      "default", //TODO: get the real SA of the pod, as it could be that the integrationsink pod does not run under the default SA
+		}] = struct{}{}
+	}
+
+	for sa := range serviceAccounts {
+		rb.Subjects = append(rb.Subjects, rbacv1.Subject{
+			Kind:      "ServiceAccount",
+			Namespace: sa.Namespace,
+			Name:      sa.Name,
+		})
+	}
+
+	return &rb, nil
+}
+
+func makeAuthProxyEnv(sink *v1alpha1.IntegrationSink, featureFlags feature.Flags, eventPolicyLister alpha1.EventPolicyLister) ([]corev1.EnvVar, error) {
+	sinkAddress := eventingtls.GetHttpsAddress(sink.Status.Addresses)
+	if sinkAddress == nil {
+		sinkAddress = sink.Status.Address
+	}
+
+	policies, err := auth.SubjectWithFiltersFromPolicyRef(eventPolicyLister, sink.Namespace, sink.Status.Policies)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build auth proxy policies env vars: %w", err)
+	}
+
+	policiesJson, err := json.Marshal(policies)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse policies for auth proxy env vars: %w", err)
+	}
+
+	envVars := []corev1.EnvVar{
+		{
+			Name:  "TARGET_HTTP_PORT",
+			Value: "8080",
+		},
+		{
+			Name:  "TARGET_HTTPS_PORT",
+			Value: "8443",
+		},
+		{
+			Name:  "PROXY_HTTP_PORT",
+			Value: "3128",
+		},
+		{
+			Name:  "PROXY_HTTPS_PORT",
+			Value: "3129",
+		},
+		{
+			Name:  "SYSTEM_NAMESPACE",
+			Value: system.Namespace(),
+		},
+		{
+			Name:  "AUTH_POLICIES",
+			Value: string(policiesJson),
+		},
+		{
+			Name:  "SINK_NAMESPACE",
+			Value: sink.Namespace,
+		},
+	}
+
+	if sinkAddress != nil && sinkAddress.URL != nil {
+		envVars = append(envVars, corev1.EnvVar{
+			Name:  "SINK_URI",
+			Value: sinkAddress.URL.String(),
+		})
+	}
+
+	if !featureFlags.IsDisabledTransportEncryption() {
+		envVars = append(envVars, []corev1.EnvVar{
+			{
+				Name:  "SINK_TLS_CERT_FILE",
+				Value: "/etc/" + certificates.CertificateName(sink.Name) + "/tls.crt",
+			},
+			{
+				Name:  "SINK_TLS_KEY_FILE",
+				Value: "/etc/" + certificates.CertificateName(sink.Name) + "/tls.key",
+			}, {
+				Name:  "SINK_TLS_CA_FILE",
+				Value: "/etc/" + certificates.CertificateName(sink.Name) + "/ca.crt",
+			},
+		}...)
+	}
+
+	if sinkAddress != nil && sinkAddress.Audience != nil {
+		envVars = append(envVars, corev1.EnvVar{
+			Name:  "SINK_AUDIENCE",
+			Value: *sinkAddress.Audience,
+		})
+	}
+
+	return envVars, nil
 }
 
 func makeEnv(sink *v1alpha1.IntegrationSink, featureFlags feature.Flags) []corev1.EnvVar {
