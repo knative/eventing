@@ -17,6 +17,10 @@ limitations under the License.
 package utils
 
 import (
+	"bytes"
+	"fmt"
+	"io"
+	"net/http"
 	"regexp"
 	"strings"
 
@@ -90,4 +94,33 @@ func GenerateFixedName(owner metav1.Object, prefix string) string {
 
 	// A dot must be followed by [a-z0-9] to be DNS1123 compliant. Make sure we are not joining a dot and a dash.
 	return strings.TrimSuffix(prefix, ".") + uid
+}
+
+// CopyRequest makes a copy of the http request which can be consumed as needed, leaving the original request
+// able to be consumed as well.
+func CopyRequest(req *http.Request) (*http.Request, error) {
+	// check if we actually need to copy the body, otherwise we can return the original request
+	if req.Body == nil || req.Body == http.NoBody {
+		return req, nil
+	}
+
+	var buf bytes.Buffer
+	if _, err := buf.ReadFrom(req.Body); err != nil {
+		return nil, fmt.Errorf("failed to read request body while copying it: %w", err)
+	}
+
+	if err := req.Body.Close(); err != nil {
+		return nil, fmt.Errorf("failed to close original request body ready while copying request: %w", err)
+	}
+
+	// set the original request body to be readable again
+	req.Body = io.NopCloser(&buf)
+
+	// return a new request with a readable body and same headers as the original
+	// we don't need to set any other fields as cloudevents only uses the headers
+	// and body to construct the Message/Event.
+	return &http.Request{
+		Header: req.Header,
+		Body:   io.NopCloser(bytes.NewReader(buf.Bytes())),
+	}, nil
 }

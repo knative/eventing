@@ -250,6 +250,14 @@ func (r *EventReceiver) ServeHTTP(response nethttp.ResponseWriter, request *neth
 		args.EventScheme = "http"
 	}
 
+	// copy the request, as we need access to the body (in case of a structured event) for the auth checks too
+	reqCopy, err := utils.CopyRequest(request)
+	if err != nil {
+		r.logger.Error("Failed to copy request", zap.Error(err))
+		response.WriteHeader(nethttp.StatusInternalServerError)
+		return
+	}
+
 	event, err := http.NewEventFromHTTPRequest(request)
 	if err != nil {
 		r.logger.Warn("failed to extract event from request", zap.Error(err))
@@ -283,7 +291,7 @@ func (r *EventReceiver) ServeHTTP(response nethttp.ResponseWriter, request *neth
 			return
 		}
 
-		err = r.tokenVerifier.VerifyRequest(ctx, features, &r.audience, channel.Namespace, applyingEventPolicies, request, response)
+		err = r.tokenVerifier.VerifyRequest(ctx, features, &r.audience, channel.Namespace, applyingEventPolicies, reqCopy, response)
 		if err != nil {
 			r.logger.Warn("could not verify authn and authz of request", zap.Error(err))
 			return
