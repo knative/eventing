@@ -68,7 +68,7 @@ func TestCorrelationIdVerification(t *testing.T) {
 			transformEvent: func(ce *cloudevents.Event) {
 				correlationId := ce.Extensions()["correlationid"]
 				parts := strings.Split(correlationId.(string), ":")
-				ce.SetExtension("replyid", fmt.Sprintf("otherid:%s", parts[1]))
+				ce.SetExtension("replyid", fmt.Sprintf("otherid:%s:0", parts[1]))
 			},
 			expectValid: false,
 		},
@@ -99,7 +99,7 @@ func TestCorrelationIdVerification(t *testing.T) {
 			ce := cloudevents.NewEvent()
 			ce.SetID("exampleid")
 
-			err := SetCorrelationId(&ce, tc.correlationIdName, tc.encryptionKey)
+			err := SetCorrelationId(&ce, tc.correlationIdName, tc.encryptionKey, 0)
 			if tc.expectEncryptionError {
 				assert.Error(t, err, "setting correlationid should fail")
 				return

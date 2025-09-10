@@ -190,15 +190,15 @@ func TestHandlerServeHttp(t *testing.T) {
 				requestreplyinformerfake.Get(ctx).Informer().GetStore().Add(rr)
 			}
 
-			keyStore := AESKeyStore{}
+			keyStore := &AESKeyStore{}
 
 			for rrName, keyMap := range testCase.keys {
 				for keyName, keyValue := range keyMap {
-					keyStore.AddAesKey(rrName, keyName, keyValue)
+					keyStore.addAesKey(rrName, keyName, keyValue)
 				}
 			}
 
-			handler := NewHandler(logger, requestreplyinformerfake.Get(ctx), configmapinformerfake.Get(ctx).Lister().ConfigMaps("ns"), keyStore)
+			handler := NewHandler(logger, requestreplyinformerfake.Get(ctx), configmapinformerfake.Get(ctx).Lister().ConfigMaps("ns"), keyStore, 0)
 
 			testHandler.callbackHandler = handler
 
@@ -228,7 +228,7 @@ func (ts *testServerHandler) ServeHTTP(response http.ResponseWriter, request *ht
 	// send the reply event to the server as a new request (simulating how the RequestReply works)
 	replyRequest, _ := cloudevents.NewHTTPRequestFromEvent(context.Background(), ts.uri, *replyEvent)
 	// the SDK does not seem to set the request uri, so we set it manually here
-	replyRequest.RequestURI = ts.uri
+	replyRequest.RequestURI = ts.uri + "/reply"
 	recorder := httptest.NewRecorder()
 	ts.callbackHandler.ServeHTTP(recorder, replyRequest)
 }
