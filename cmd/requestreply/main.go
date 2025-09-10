@@ -44,8 +44,8 @@ import (
 type envConfig struct {
 	HttpPort    int    `envconfig:"HTTP_PORT" default:"8080"`
 	HttpsPort   int    `envconfig:"HTTPS_PORT" default:"8443"`
-	PodIdx      int    `envconfig:"POD_INDEX"`
-	SecretsPath string `envconfig:"SECRETS_PATH"`
+	PodIdx      int    `envconfig:"POD_INDEX" required:"true"`
+	SecretsPath string `envconfig:"SECRETS_PATH" required:"true"`
 }
 
 func main() {
