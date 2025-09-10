@@ -17,7 +17,10 @@ limitations under the License.
 package utils
 
 import (
+	"bytes"
 	"fmt"
+	"io"
+	"net/http"
 	"strings"
 	"testing"
 
@@ -167,5 +170,47 @@ func TestToDNS1123Subdomain(t *testing.T) {
 				t.Errorf("Expected %q, actually %q", tc.expected, a)
 			}
 		})
+	}
+}
+
+func TestCopyRequest(t *testing.T) {
+	const (
+		contentType   = "application/json"
+		authorization = "Bearer token"
+	)
+
+	originalRequest := &http.Request{
+		Header: map[string][]string{
+			"Content-Type":  {contentType},
+			"Authorization": {authorization},
+		},
+		Body: io.NopCloser(strings.NewReader("test content")),
+	}
+
+	copiedReq, err := CopyRequest(originalRequest)
+
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+
+	if copiedReq.Header.Get("Content-Type") != contentType {
+		t.Error("Header not copied correctly")
+	}
+	if copiedReq.Header.Get("Authorization") != authorization {
+		t.Error("Authorization header not copied correctly")
+	}
+
+	originalBody, err := io.ReadAll(originalRequest.Body)
+	if err != nil {
+		t.Fatalf("Failed to read original body: %v", err)
+	}
+
+	copiedBody, err := io.ReadAll(copiedReq.Body)
+	if err != nil {
+		t.Fatalf("Failed to read copied body: %v", err)
+	}
+
+	if !bytes.Equal(originalBody, copiedBody) {
+		t.Errorf("Body not copied correctly. Original: %s, Copied: %s", originalBody, copiedBody)
 	}
 }
