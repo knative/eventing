@@ -4,6 +4,6 @@ metadata:
   name: eventing-transformations-images
   namespace: knative-eventing
   labels:
-    app.kubernetes.io/version: "v20250904-047dd32"
+    app.kubernetes.io/version: "v20250910-94fff7c"
 data:
-  transform-jsonata: gcr.io/knative-nightly/transform-jsonata:v20250904-047dd32@sha256:6e02270f83cb3319edb281ef3a919dd729286a4bbd410fa246e484588a5caf04
+  transform-jsonata: gcr.io/knative-nightly/transform-jsonata:v20250910-94fff7c@sha256:3436ed4d63f979fd64c588747ca91caeccf8d9534274278905e56997dbc4e02b
