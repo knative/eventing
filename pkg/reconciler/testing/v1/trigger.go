@@ -19,6 +19,7 @@ package testing
 import (
 	"context"
 	"fmt"
+	"maps"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -69,6 +70,12 @@ func NewTriggerWithBrokerRef(name, namespace string, to ...TriggerOption) *v1.Tr
 
 	t.SetDefaults(context.Background())
 	return t
+}
+
+func WithTriggerFilters(filters []v1.SubscriptionsAPIFilter) TriggerOption {
+	return func(t *v1.Trigger) {
+		t.Spec.Filters = filters
+	}
 }
 
 func WithTriggerSubscriberURI(rawurl string) TriggerOption {
@@ -249,6 +256,16 @@ func WithLabel(key, value string) TriggerOption {
 			t.Labels = make(map[string]string)
 		}
 		t.Labels[key] = value
+	}
+}
+
+func WithLabels(labels map[string]string) TriggerOption {
+	return func(t *v1.Trigger) {
+		if t.Labels == nil {
+			t.Labels = labels
+		} else {
+			maps.Copy(t.Labels, labels)
+		}
 	}
 }
 

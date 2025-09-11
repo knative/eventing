@@ -34,6 +34,7 @@ import (
 	"knative.dev/eventing/pkg/reconciler/eventpolicy"
 	"knative.dev/eventing/pkg/reconciler/eventtransform"
 	"knative.dev/eventing/pkg/reconciler/jobsink"
+	"knative.dev/eventing/pkg/reconciler/requestreply"
 
 	"knative.dev/eventing/pkg/reconciler/apiserversource"
 	"knative.dev/eventing/pkg/reconciler/channel"
@@ -59,6 +60,7 @@ func main() {
 		sinks.JobSinkJobsLabelSelector,
 		eventtransform.JsonataResourcesSelector,
 		certificates.SecretLabelSelectorPair,
+		requestreply.SecretLabelSelector,
 	)
 
 	ctx = eventingfilteredfactory.WithSelectors(ctx,
@@ -97,5 +99,8 @@ func main() {
 
 		// Transform
 		eventtransform.NewController,
+
+		// RequestReply
+		requestreply.NewController,
 	)
 }
