@@ -203,8 +203,8 @@ func (r *Reconciler) reconcileTriggers(ctx context.Context, rr *v1alpha1.Request
 		if equal, err := kmp.SafeEqual(t.Spec, desired.Spec, ignoreFields); !equal || err != nil {
 			t.Spec = desired.Spec
 			if _, err = r.eventingClient.EventingV1().Triggers(rr.Namespace).Update(ctx, t, metav1.UpdateOptions{}); err != nil {
-			triggerErrors = errors.Join(triggerErrors, fmt.Errorf("failed to update trigger: %w", err))
-		}
+				triggerErrors = errors.Join(triggerErrors, fmt.Errorf("failed to update trigger: %w", err))
+			}
 		} else {
 			// only check if it is ready if it was equal, otherwise it needs to re-reconcile
 			if t.Status.IsReady() {
