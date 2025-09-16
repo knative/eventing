@@ -4,15 +4,15 @@ metadata:
   name: eventing-integrations-images
   namespace: knative-eventing
   labels:
-    app.kubernetes.io/version: "v20250911-5612da4"
+    app.kubernetes.io/version: "v20250916-147f294"
 data:
-  aws-s3-source: gcr.io/knative-nightly/aws-s3-source@sha256:886d015f982b570c3500f65cd667f36241ba21990199e56334a0b1864d005e12
-  log-sink: gcr.io/knative-nightly/log-sink@sha256:94b04cbd90be97befd1c6883dcf45a32d5cd86c8e2ea8151851a94cc3685f75a
-  aws-sqs-sink: gcr.io/knative-nightly/aws-sqs-sink@sha256:ce23514a6b61d9d459b1d941e4b5c4f85471fd89ac799ec0539e8b579b146b5e
-  aws-sqs-source: gcr.io/knative-nightly/aws-sqs-source@sha256:15514987905591099591e6416de61954e8387a3a42113252452dae487c7ce246
-  aws-ddb-streams-source: gcr.io/knative-nightly/aws-ddb-streams-source@sha256:8f40d3a93cef003723f16b3af7f1a2c7eb199acdd543f0e09865e1ce69081e56
-  aws-s3-sink: gcr.io/knative-nightly/aws-s3-sink@sha256:5049ce7d5405d1a293fa785466c5446031b4cf5be744b3db102bcf851d8e1f42
-  aws-sns-sink: gcr.io/knative-nightly/aws-sns-sink@sha256:28e23f7006b971ca2e96fe8b85673aa60efaf825b66518fd194c5eb9700af847
-  timer-source: gcr.io/knative-nightly/timer-source@sha256:2a5cb8a93e22d3c4ba8e6171f4f3c22be9421c4816b2ea6d2df48201f70443bb
-  jsonata-transformer: gcr.io/knative-nightly/jsonata-transformer@sha256:481a301d391b8fe4203cae8682597f44966d834a305c29d06c163bf1760a387d
-  aws-eventbridge-sink: gcr.io/knative-nightly/aws-eventbridge-sink@sha256:c4cb88aa3d68c0a10fd499338e9021c970ae67c97a5f689beda764455c19d9a5
+  aws-s3-source: gcr.io/knative-nightly/aws-s3-source@sha256:962db1ac44d0fc0755e1ca297755006be67f36b18d56f4772c5174ead4b6297d
+  log-sink: gcr.io/knative-nightly/log-sink@sha256:5151591c16ec5f45001cb2441261ba70f502d1f66ddc94f51309dab61fb3edad
+  aws-sqs-sink: gcr.io/knative-nightly/aws-sqs-sink@sha256:77c6ed8da72875db67599775693fe423db769e66ff46984d4c9939d187ac217f
+  aws-sqs-source: gcr.io/knative-nightly/aws-sqs-source@sha256:660ae70a4424613e7d8795bedbff9f2099d75d1498ba7b3590e622f894b1753c
+  aws-ddb-streams-source: gcr.io/knative-nightly/aws-ddb-streams-source@sha256:0b0d78c3755887194e9d9982d75714ab3737f28713962646710c4fe996c62c71
+  aws-s3-sink: gcr.io/knative-nightly/aws-s3-sink@sha256:1a07ede6c6613f35cb78ac4e28cfcdd98ecde5a8ac7549f1d1029143185a0a1b
+  aws-sns-sink: gcr.io/knative-nightly/aws-sns-sink@sha256:7a9e6d7071cde91776e5f8b3aac3b52b9154b7719ff3cfcc8e74e61aa9b8935a
+  timer-source: gcr.io/knative-nightly/timer-source@sha256:b83b5d7d884926654503a10b7d635dcf604f775359f4e77ac803e0ebbfa6d4a1
+  jsonata-transformer: gcr.io/knative-nightly/jsonata-transformer@sha256:2c23923fe5ead3f39c04b4663ba028b89505d5a9e94f65145c95adafc4fbac2c
+  aws-eventbridge-sink: gcr.io/knative-nightly/aws-eventbridge-sink@sha256:d23ca7ccb680c8d690da68cf8a1e2650658999ded3ef20d8524b003f4afb022c
