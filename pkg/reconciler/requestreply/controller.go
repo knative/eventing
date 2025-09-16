@@ -85,16 +85,15 @@ func NewController(
 			logger.Info("trigger had label", zap.Bool("hadLabel", ok), zap.Any("labels", trigger.Labels))
 			return ok
 		},
-		Handler: enqueueRequestRepliesForTrigger(logger.Desugar(), requestReplyInformer.Lister(), impl.Enqueue),
+		Handler: enqueueRequestRepliesForTrigger(requestReplyInformer.Lister(), impl.Enqueue),
 	})
 
-	brokerInformer.Informer().AddEventHandler(enqueueRequestRepliesForBroker(logger.Desugar(), requestReplyInformer.Lister(), impl.Enqueue))
+	brokerInformer.Informer().AddEventHandler(enqueueRequestRepliesForBroker(requestReplyInformer.Lister(), impl.Enqueue))
 
 	return impl
 }
 
 func enqueueRequestRepliesForTrigger(
-	logger *zap.Logger,
 	lister eventingv1alpha1listers.RequestReplyLister,
 	enqueue func(obj any),
 ) cache.ResourceEventHandler {
@@ -113,7 +112,6 @@ func enqueueRequestRepliesForTrigger(
 }
 
 func enqueueRequestRepliesForBroker(
-	logger *zap.Logger,
 	lister eventingv1alpha1listers.RequestReplyLister,
 	enqueue func(obj any),
 ) cache.ResourceEventHandler {

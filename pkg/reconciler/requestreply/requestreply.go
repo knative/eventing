@@ -51,7 +51,7 @@ import (
 )
 
 const (
-	secretName                  = "request-reply-keys"
+	secretName                  = "request-reply-keys" // #nosec G101 -- This is a hardcoded secret name, not a credential
 	statefulSetName             = "request-reply"
 	serviceName                 = "request-reply"
 	triggerNameLabelKey         = "eventing.knative.dev/RequestReply.name"
@@ -202,7 +202,9 @@ func (r *Reconciler) reconcileTriggers(ctx context.Context, rr *v1alpha1.Request
 		ignoreFields := cmpopts.IgnoreFields(eventingv1.TriggerSpec{}, "Filter")
 		if equal, err := kmp.SafeEqual(t.Spec, desired.Spec, ignoreFields); !equal || err != nil {
 			t.Spec = desired.Spec
-			t, err = r.eventingClient.EventingV1().Triggers(rr.Namespace).Update(ctx, t, metav1.UpdateOptions{})
+			if _, err = r.eventingClient.EventingV1().Triggers(rr.Namespace).Update(ctx, t, metav1.UpdateOptions{}); err != nil {
+			triggerErrors = errors.Join(triggerErrors, fmt.Errorf("failed to update trigger: %w", err))
+		}
 		} else {
 			// only check if it is ready if it was equal, otherwise it needs to re-reconcile
 			if t.Status.IsReady() {
@@ -244,7 +246,10 @@ func (r *Reconciler) reconcileTriggers(ctx context.Context, rr *v1alpha1.Request
 		}
 	}
 
-	rr.Status.ReadyReplicas = ptr.To(int32(readyCount))
+	if readyCount > 2147483647 {
+		return fmt.Errorf("readyCount overflow: %d", readyCount)
+	}
+	rr.Status.ReadyReplicas = ptr.To(int32(readyCount)) // #nosec G115 -- overflow check above
 
 	if *rr.Status.ReadyReplicas == *rr.Status.DesiredReplicas {
 		rr.Status.MarkTriggersReady()
@@ -263,10 +268,12 @@ func (r *Reconciler) reconcileBrokerAddressAnnotation(_ context.Context, rr *v1a
 	broker, err := r.brokerLister.Brokers(rr.Namespace).Get(rr.Spec.BrokerRef.Name)
 	if err != nil {
 		rr.Status.MarkBrokerUnknown("NotFound", "could not get broker: %s", err.Error())
+		return fmt.Errorf("could not get broker: %w", err)
 	}
 
 	if !broker.IsReady() {
 		rr.Status.MarkBrokerNotReady("NotReady", "broker is not ready")
+		return fmt.Errorf("broker is not ready")
 	}
 
 	if rr.Status.Annotations == nil {
@@ -280,7 +287,7 @@ func (r *Reconciler) reconcileBrokerAddressAnnotation(_ context.Context, rr *v1a
 	return nil
 }
 
-func (r *Reconciler) reconcileAddress(ctx context.Context, rr *v1alpha1.RequestReply) {
+func (r *Reconciler) reconcileAddress(_ context.Context, rr *v1alpha1.RequestReply) {
 	ingressHost := network.GetServiceHostname(serviceName, system.Namespace())
 	address := &duckv1.Addressable{
 		Name: ptr.To("http"),
