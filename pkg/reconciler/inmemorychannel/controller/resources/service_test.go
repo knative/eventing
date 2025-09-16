@@ -18,13 +18,13 @@ package resources
 
 import (
 	"errors"
-	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
+	"knative.dev/eventing/pkg/channel"
 	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/network"
 )
@@ -32,6 +32,7 @@ import (
 const (
 	serviceName    = "my-test-service"
 	imcName        = "my-test-imc"
+	imcSvcName     = imcName + channel.K8ServiceNameSuffix
 	testNS         = "my-test-ns"
 	dispatcherNS   = "dispatcher-namespace"
 	dispatcherName = "dispatcher-name"
@@ -44,7 +45,7 @@ func TestCreateExternalServiceAddress(t *testing.T) {
 }
 
 func TestCreateChannelServiceAddress(t *testing.T) {
-	if want, got := "my-test-imc-kn-channel", CreateChannelServiceName(imcName); want != got {
+	if want, got := imcSvcName, CreateChannelServiceName(imcName); want != got {
 		t.Errorf("Want: %q got %q", want, got)
 	}
 }
@@ -62,7 +63,7 @@ func TestNewK8sService(t *testing.T) {
 			Kind:       "Service",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-kn-channel", imcName),
+			Name:      CreateChannelServiceName(imcName),
 			Namespace: testNS,
 			Labels: map[string]string{
 				MessagingRoleLabel: MessagingRole,
@@ -105,7 +106,7 @@ func TestNewK8sServiceWithExternal(t *testing.T) {
 			Kind:       "Service",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-kn-channel", imcName),
+			Name:      CreateChannelServiceName(imcName),
 			Namespace: testNS,
 			Labels: map[string]string{
 				MessagingRoleLabel: MessagingRole,
