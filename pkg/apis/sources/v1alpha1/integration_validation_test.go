@@ -65,6 +65,23 @@ func TestIntegrationSourceSpecValidation(t *testing.T) {
 			want: nil,
 		},
 		{
+			name: "valid AWS S3 source with service account and region",
+			spec: IntegrationSourceSpec{
+				Aws: &Aws{
+					S3: &v1alpha1.AWSS3{
+						AWSCommon: v1alpha1.AWSCommon{
+							Region: "us-east-1",
+						},
+						Arn: "example-bucket",
+					},
+					Auth: &v1alpha1.Auth{
+						ServiceAccountName: "aws-service-account",
+					},
+				},
+			},
+			want: nil,
+		},
+		{
 			name: "valid AWS SQS source with auth and region",
 			spec: IntegrationSourceSpec{
 				Aws: &Aws{
@@ -86,6 +103,23 @@ func TestIntegrationSourceSpecValidation(t *testing.T) {
 			want: nil,
 		},
 		{
+			name: "valid AWS SQS source with service account and region",
+			spec: IntegrationSourceSpec{
+				Aws: &Aws{
+					SQS: &v1alpha1.AWSSQS{
+						AWSCommon: v1alpha1.AWSCommon{
+							Region: "us-east-1",
+						},
+						Arn: "example-queue",
+					},
+					Auth: &v1alpha1.Auth{
+						ServiceAccountName: "aws-service-account",
+					},
+				},
+			},
+			want: nil,
+		},
+		{
 			name: "valid AWS DDBStreams source with auth and region",
 			spec: IntegrationSourceSpec{
 				Aws: &Aws{
@@ -101,6 +135,23 @@ func TestIntegrationSourceSpecValidation(t *testing.T) {
 								Name: "aws-secret",
 							},
 						},
+					},
+				},
+			},
+			want: nil,
+		},
+		{
+			name: "valid AWS DDBStreams source with service account and region",
+			spec: IntegrationSourceSpec{
+				Aws: &Aws{
+					DDBStreams: &v1alpha1.AWSDDBStreams{
+						AWSCommon: v1alpha1.AWSCommon{
+							Region: "us-east-1",
+						},
+						Table: "example-table",
+					},
+					Auth: &v1alpha1.Auth{
+						ServiceAccountName: "aws-service-account",
 					},
 				},
 			},
@@ -171,6 +222,35 @@ func TestIntegrationSourceSpecValidation(t *testing.T) {
 				},
 			},
 			want: apis.ErrMissingField("aws.sqs.arn"),
+		},
+		{
+			name: "AWS SQS source without Auth (invalid)",
+			spec: IntegrationSourceSpec{
+				Aws: &Aws{
+					SQS: &v1alpha1.AWSSQS{
+						AWSCommon: v1alpha1.AWSCommon{
+							Region: "us-east-1",
+						},
+						Arn: "example-queue",
+					},
+				},
+			},
+			want: apis.ErrMissingField("aws.auth.secret.ref.name"),
+		},
+		{
+			name: "AWS SQS source without Auth credentials (invalid)",
+			spec: IntegrationSourceSpec{
+				Aws: &Aws{
+					SQS: &v1alpha1.AWSSQS{
+						AWSCommon: v1alpha1.AWSCommon{
+							Region: "us-east-1",
+						},
+						Arn: "example-queue",
+					},
+					Auth: &v1alpha1.Auth{},
+				},
+			},
+			want: apis.ErrMissingField("aws.auth.secret.ref.name"),
 		},
 		{
 			name: "AWS DDBStreams source without Table (invalid)",

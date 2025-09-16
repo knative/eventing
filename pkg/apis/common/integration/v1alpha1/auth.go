@@ -25,11 +25,13 @@ type Auth struct {
 
 	// SecretKey is the AWS secret access key.
 	SecretKey string `json:"secretKey,omitempty"`
+
+	ServiceAccountName string `json:"serviceAccountName,omitempty"`
 }
 
 func (a *Auth) HasAuth() bool {
-	return a != nil && a.Secret != nil &&
-		a.Secret.Ref != nil && a.Secret.Ref.Name != ""
+	return a != nil && ((a.Secret != nil &&
+		a.Secret.Ref != nil && a.Secret.Ref.Name != "") || a.ServiceAccountName != "")
 }
 
 type Secret struct {

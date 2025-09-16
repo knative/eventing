@@ -107,6 +107,7 @@ func MakeDeploymentSpec(sink *v1alpha1.IntegrationSink, authProxyImage string, f
 							},
 						},
 					},
+					ServiceAccountName: makeServiceAccountName(sink),
 				},
 			},
 		},
@@ -367,6 +368,11 @@ func makeEnv(sink *v1alpha1.IntegrationSink, featureFlags feature.Flags) []corev
 				integration.MakeSecretEnvVar("CAMEL_KAMELET_AWS_S3_SINK_ACCESSKEY", commonv1a1.AwsAccessKey, secretName),
 				integration.MakeSecretEnvVar("CAMEL_KAMELET_AWS_S3_SINK_SECRETKEY", commonv1a1.AwsSecretKey, secretName),
 			}...)
+		} else {
+			envVars = append(envVars, corev1.EnvVar{
+				Name:  "CAMEL_KAMELET_AWS_S3_SINK_USEDEFAULTCREDENTIALSPROVIDER",
+				Value: "true",
+			})
 		}
 		return envVars
 	}
@@ -379,6 +385,11 @@ func makeEnv(sink *v1alpha1.IntegrationSink, featureFlags feature.Flags) []corev
 				integration.MakeSecretEnvVar("CAMEL_KAMELET_AWS_SQS_SINK_ACCESSKEY", commonv1a1.AwsAccessKey, secretName),
 				integration.MakeSecretEnvVar("CAMEL_KAMELET_AWS_SQS_SINK_SECRETKEY", commonv1a1.AwsSecretKey, secretName),
 			}...)
+		} else {
+			envVars = append(envVars, corev1.EnvVar{
+				Name:  "CAMEL_KAMELET_AWS_SQS_SINK_USEDEFAULTCREDENTIALSPROVIDER",
+				Value: "true",
+			})
 		}
 		return envVars
 	}
@@ -391,12 +402,24 @@ func makeEnv(sink *v1alpha1.IntegrationSink, featureFlags feature.Flags) []corev
 				integration.MakeSecretEnvVar("CAMEL_KAMELET_AWS_SNS_SINK_ACCESSKEY", commonv1a1.AwsAccessKey, secretName),
 				integration.MakeSecretEnvVar("CAMEL_KAMELET_AWS_SNS_SINK_SECRETKEY", commonv1a1.AwsSecretKey, secretName),
 			}...)
+		} else {
+			envVars = append(envVars, corev1.EnvVar{
+				Name:  "CAMEL_KAMELET_AWS_SNS_SINK_USEDEFAULTCREDENTIALSPROVIDER",
+				Value: "true",
+			})
 		}
 		return envVars
 	}
 
 	// If no valid configuration is found, return empty envVars
 	return envVars
+}
+
+func makeServiceAccountName(sink *v1alpha1.IntegrationSink) string {
+	if sink.Spec.Aws != nil && sink.Spec.Aws.Auth != nil && sink.Spec.Aws.Auth.ServiceAccountName != "" {
+		return sink.Spec.Aws.Auth.ServiceAccountName
+	}
+	return ""
 }
 
 func selectImage(sink *v1alpha1.IntegrationSink) string {
