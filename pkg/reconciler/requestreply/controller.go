@@ -40,8 +40,6 @@ import (
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 )
 
-const ()
-
 func NewController(
 	ctx context.Context,
 	cmw configmap.Watcher,
