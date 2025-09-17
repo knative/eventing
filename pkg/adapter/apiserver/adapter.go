@@ -39,6 +39,12 @@ import (
 	"knative.dev/eventing/pkg/eventfilter/subscriptionsapi"
 )
 
+const (
+	// MaxNamespacesForIndividualWatches is the threshold above which we should consider
+	// issue a warning to avoid performance issues with many individual watches.
+	MaxNamespacesForIndividualWatches = 100
+)
+
 type envConfig struct {
 	adapter.EnvConfig
 	Name string `envconfig:"NAME" required:"true"`
@@ -229,6 +235,14 @@ func (a *apiServerAdapter) collectResourceMatches() ([]resourceWatchMatch, error
 				match.apiResource = &apires
 
 				if apires.Namespaced && !a.config.AllNamespaces {
+					// Warn when watching many namespaces as this can cause performance issues
+					// See: https://github.com/knative/eventing/issues/8675
+					if len(a.config.Namespaces) > MaxNamespacesForIndividualWatches {
+						a.logger.Warnf("ApiServerSource is watching %d namespaces for resource %s, which exceeds the recommended threshold of %d. "+
+							"This may cause performance issues and watch connection failures. "+
+							"Consider using cluster-wide watches with client-side filtering for better performance.",
+							len(a.config.Namespaces), configRes.GVR.String(), MaxNamespacesForIndividualWatches)
+					}
 					for _, ns := range a.config.Namespaces {
 						match.resourceInterfaces = append(match.resourceInterfaces, a.k8s.Resource(configRes.GVR).Namespace(ns))
 					}
