@@ -123,7 +123,7 @@ func MakeDeploymentSpec(sink *v1alpha1.IntegrationSink, authProxyImage string, f
 		deploy.Spec.Template.Spec.Containers = append(deploy.Spec.Template.Spec.Containers, corev1.Container{
 			Name:            "auth-proxy",
 			Image:           authProxyImage,
-			ImagePullPolicy: corev1.PullAlways,
+			ImagePullPolicy: corev1.PullIfNotPresent,
 			Ports: []corev1.ContainerPort{
 				{
 					ContainerPort: 3128,
