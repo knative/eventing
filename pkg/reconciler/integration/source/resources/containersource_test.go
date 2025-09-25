@@ -44,7 +44,6 @@ func TestNewContainerSource(t *testing.T) {
 	t.Setenv("INTEGRATION_SOURCE_TIMER_IMAGE", timerImage)
 
 	source := &v1alpha1.IntegrationSource{
-
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      testName,
 			Namespace: testNamespace,
@@ -60,6 +59,16 @@ func TestNewContainerSource(t *testing.T) {
 			SourceSpec: duckv1.SourceSpec{
 				Sink: duckv1.Destination{
 					URI: apis.HTTP("http://test-sink"),
+				},
+			},
+			Template: &corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:  "unexpected_container",
+							Image: "undesired_image",
+						},
+					},
 				},
 			},
 		},
