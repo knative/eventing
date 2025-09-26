@@ -74,3 +74,8 @@ type AWSSNS struct {
 	Arn             string           `json:"arn,omitempty" camel:"TOPIC_NAME_OR_ARN"` // SNS ARN
 	AutoCreateTopic bool             `json:"autoCreateTopic" default:"false"`         // Auto-create SNS topic
 }
+
+type AWSEventbridge struct {
+	AWSCommon `json:",inline"` // Embeds AWSCommon to inherit its fields in JSON
+	Arn       string           `json:"arn,omitempty" camel:"EVENTBUS_NAME_OR_ARN"` // EB ARN
+}

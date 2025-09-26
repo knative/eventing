@@ -6759,12 +6759,23 @@ JobSinkStatus
 <tbody>
 <tr>
 <td>
+<code>eventbridge</code><br/>
+<em>
+knative.dev/eventing/pkg/apis/common/integration/v1alpha1.AWSEventbridge
+</em>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
 <code>s3</code><br/>
 <em>
 knative.dev/eventing/pkg/apis/common/integration/v1alpha1.AWSS3
 </em>
 </td>
 <td>
+<p>EB sink configuration</p>
 </td>
 </tr>
 <tr>
