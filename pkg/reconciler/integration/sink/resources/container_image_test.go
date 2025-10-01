@@ -139,7 +139,7 @@ func TestNewSQSContainerSink(t *testing.T) {
 								{Name: "CAMEL_KAMELET_AWS_SQS_SINK_PROTOCOL", Value: "https"},
 								{Name: "CAMEL_KAMELET_AWS_SQS_SINK_WAITTIMESECONDS", Value: "0"},
 								{Name: "CAMEL_KAMELET_AWS_SQS_SINK_VISIBILITYTIMEOUT", Value: "0"},
-								{Name: "CAMEL_KAMELET_AWS_SQS_SINK_USEDEFAULTCREDENTIALSPROVIDER", Value: "true"},
+								{Name: "CAMEL_KAMELET_AWS_SQS_SINK_USE_DEFAULT_CREDENTIALS_PROVIDER", Value: "true"},
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{

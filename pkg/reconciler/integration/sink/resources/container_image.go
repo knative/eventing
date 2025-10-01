@@ -370,7 +370,7 @@ func makeEnv(sink *v1alpha1.IntegrationSink, featureFlags feature.Flags) []corev
 			}...)
 		} else {
 			envVars = append(envVars, corev1.EnvVar{
-				Name:  "CAMEL_KAMELET_AWS_S3_SINK_USEDEFAULTCREDENTIALSPROVIDER",
+				Name:  "CAMEL_KAMELET_AWS_S3_SINK_USE_DEFAULT_CREDENTIALS_PROVIDER",
 				Value: "true",
 			})
 		}
@@ -387,7 +387,7 @@ func makeEnv(sink *v1alpha1.IntegrationSink, featureFlags feature.Flags) []corev
 			}...)
 		} else {
 			envVars = append(envVars, corev1.EnvVar{
-				Name:  "CAMEL_KAMELET_AWS_SQS_SINK_USEDEFAULTCREDENTIALSPROVIDER",
+				Name:  "CAMEL_KAMELET_AWS_SQS_SINK_USE_DEFAULT_CREDENTIALS_PROVIDER",
 				Value: "true",
 			})
 		}
@@ -404,7 +404,7 @@ func makeEnv(sink *v1alpha1.IntegrationSink, featureFlags feature.Flags) []corev
 			}...)
 		} else {
 			envVars = append(envVars, corev1.EnvVar{
-				Name:  "CAMEL_KAMELET_AWS_SNS_SINK_USEDEFAULTCREDENTIALSPROVIDER",
+				Name:  "CAMEL_KAMELET_AWS_SNS_SINK_USE_DEFAULT_CREDENTIALS_PROVIDER",
 				Value: "true",
 			})
 		}

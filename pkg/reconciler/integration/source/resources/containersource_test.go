@@ -187,7 +187,7 @@ func TestNewSQSContainerSource(t *testing.T) {
 								{Name: "CAMEL_KAMELET_AWS_SQS_SOURCE_PROTOCOL", Value: "https"},
 								{Name: "CAMEL_KAMELET_AWS_SQS_SOURCE_WAITTIMESECONDS", Value: "0"},
 								{Name: "CAMEL_KAMELET_AWS_SQS_SOURCE_VISIBILITYTIMEOUT", Value: "0"},
-								{Name: "CAMEL_KAMELET_AWS_SQS_SOURCE_USEDEFAULTCREDENTIALSPROVIDER", Value: "true"},
+								{Name: "CAMEL_KAMELET_AWS_SQS_SOURCE_USE_DEFAULT_CREDENTIALS_PROVIDER", Value: "true"},
 							},
 						},
 					},

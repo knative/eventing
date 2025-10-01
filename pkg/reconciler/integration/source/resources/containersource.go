@@ -104,7 +104,7 @@ func makeEnv(source *v1alpha1.IntegrationSource, oidc bool) []corev1.EnvVar {
 			}...)
 		} else {
 			envVars = append(envVars, corev1.EnvVar{
-				Name:  "CAMEL_KAMELET_AWS_S3_SOURCE_USEDEFAULTCREDENTIALSPROVIDER",
+				Name:  "CAMEL_KAMELET_AWS_S3_SOURCE_USE_DEFAULT_CREDENTIALS_PROVIDER",
 				Value: "true",
 			})
 		}
@@ -121,7 +121,7 @@ func makeEnv(source *v1alpha1.IntegrationSource, oidc bool) []corev1.EnvVar {
 			}...)
 		} else {
 			envVars = append(envVars, corev1.EnvVar{
-				Name:  "CAMEL_KAMELET_AWS_SQS_SOURCE_USEDEFAULTCREDENTIALSPROVIDER",
+				Name:  "CAMEL_KAMELET_AWS_SQS_SOURCE_USE_DEFAULT_CREDENTIALS_PROVIDER",
 				Value: "true",
 			})
 		}
@@ -138,7 +138,7 @@ func makeEnv(source *v1alpha1.IntegrationSource, oidc bool) []corev1.EnvVar {
 			}...)
 		} else {
 			envVars = append(envVars, corev1.EnvVar{
-				Name:  "CAMEL_KAMELET_AWS_DDB_STREAMS_SOURCE_USEDEFAULTCREDENTIALSPROVIDER",
+				Name:  "CAMEL_KAMELET_AWS_DDB_STREAMS_SOURCE_USE_DEFAULT_CREDENTIALS_PROVIDER",
 				Value: "true",
 			})
 		}
