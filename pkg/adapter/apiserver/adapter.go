@@ -157,14 +157,16 @@ func (a *apiServerAdapter) startFailFast(ctx context.Context, stopCh <-chan stru
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				if err := reflector.ListAndWatchWithContext(watchCtx); err != nil {
-					a.logger.Errorf("reflector failed: %v", err)
-					select {
-					case errorChan <- fmt.Errorf("failed to watch: %v", err):
-					default:
-					}
-					cancelWatchers()
+				// ListAndWatch could exit with `nil` under some circumstances, it shouldn't
+				// ever stop listening and watching, so we will treat any exit as a reason to restart
+				err := reflector.ListAndWatchWithContext(watchCtx)
+				a.logger.Error("reflector exited: %v", err)
+
+				select {
+				case errorChan <- fmt.Errorf("failed to watch: %v", err):
+				default:
 				}
+				cancelWatchers()
 			}()
 		}
 	}

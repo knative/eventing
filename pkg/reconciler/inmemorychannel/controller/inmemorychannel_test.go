@@ -33,6 +33,7 @@ import (
 	"knative.dev/pkg/resolver"
 
 	"knative.dev/eventing/pkg/apis/feature"
+	"knative.dev/eventing/pkg/channel"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/eventingtls/eventingtlstesting"
@@ -70,6 +71,7 @@ const (
 	dlsName             = "test-dls"
 	testNS              = "test-namespace"
 	imcName             = "test-imc"
+	imcSvcName          = imcName + channel.K8ServiceNameSuffix
 	imageName           = "test-image"
 	maxIdleConns        = 2000
 	maxIdleConnsPerHost = 200
@@ -83,7 +85,7 @@ const (
 var (
 	channelServiceAddress = duckv1.Addressable{
 		Name: pointer.String("http"),
-		URL:  apis.HTTP("test-imc-kn-channel.test-namespace.svc.cluster.local"),
+		URL:  apis.HTTP(fmt.Sprintf("%s.test-namespace.svc.cluster.local", imcSvcName)),
 	}
 
 	channelAudience = fmt.Sprintf("messaging.knative.dev/inmemorychannel/%s/%s", testNS, imcName)
@@ -426,11 +428,11 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelDeploymentReady(),
 					WithInMemoryChannelServiceReady(),
 					WithInMemoryChannelEndpointsReady(),
-					WithInMemoryChannelChannelServiceNotReady("ChannelServiceFailed", `Channel Service failed: inmemorychannel: test-namespace/test-imc does not own Service: "test-imc-kn-channel"`),
+					WithInMemoryChannelChannelServiceNotReady("ChannelServiceFailed", fmt.Sprintf(`Channel Service failed: inmemorychannel: test-namespace/test-imc does not own Service: "%s"`, imcSvcName)),
 				),
 			}},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "InternalError", `inmemorychannel: test-namespace/test-imc does not own Service: "test-imc-kn-channel"`),
+				Eventf(corev1.EventTypeWarning, "InternalError", fmt.Sprintf(`inmemorychannel: test-namespace/test-imc does not own Service: "%s"`, imcSvcName)),
 			},
 		}, {
 			Name: "Works, channel exists with subscribers",
@@ -986,7 +988,7 @@ func makeChannelService(imc *v1.InMemoryChannel) *corev1.Service {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: testNS,
-			Name:      fmt.Sprintf("%s-kn-channel", imcName),
+			Name:      imcSvcName,
 			Labels: map[string]string{
 				resources.MessagingRoleLabel: resources.MessagingRole,
 			},
@@ -1016,7 +1018,7 @@ func makeChannelServiceNotOwnedByUs(imc *v1.InMemoryChannel) *corev1.Service {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: testNS,
-			Name:      fmt.Sprintf("%s-kn-channel", imcName),
+			Name:      imcSvcName,
 			Labels: map[string]string{
 				resources.MessagingRoleLabel: resources.MessagingRole,
 			},
