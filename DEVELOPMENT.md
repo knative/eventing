@@ -185,11 +185,20 @@ Depending on your needs you might want to install other
 
 ## Install Cert-Manager
 
-Install the Cert-manager operator to run e2e tests for TLS
+Install the Cert-manager operator to run e2e tests for TLS. You need to install the Cert-manager components in two steps. First deploy the namespace and the Cert-manager and wait until three pods are running and one is completed.
 
 ```shell
-kubectl apply -f third_party/cert-manager
+kubectl apply -f third_party/cert-manager/00-namespace.yaml && \
+kubectl apply -f third_party/cert-manager/01-cert-manager.yaml
 ```
+
+Then deploy the Trust-manager and you're done.
+
+```shell
+kubectl apply -f third_party/cert-manager/02-trust-manager.yaml
+```
+
+To give you an idea how the Cert-manager is deployed in the `./hack/run.sh install` script take a look at the [`install_cert_manager`](https://github.com/knative/eventing/blob/bfd6957835e486c582a25bb2683bf83f681b15c3/test/e2e-common.sh#L431) function in [`e2e-common.sh`](https://github.com/knative/eventing/blob/main/test/e2e-common.sh).
 
 Depending on your needs you might want to install other
 [Broker implementations](https://github.com/knative/eventing/tree/main/docs/broker).
