@@ -33,7 +33,7 @@ import (
 // +genreconciler
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// RequestRepluy represents synchronous interface to sending and receiving events from a Broker.
+// RequestReply represents synchronous interface to sending and receiving events from a Broker.
 type RequestReply struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional
