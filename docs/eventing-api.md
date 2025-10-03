@@ -2910,7 +2910,7 @@ This data may be out of date.</p>
 <h3 id="eventing.knative.dev/v1alpha1.RequestReply">RequestReply
 </h3>
 <p>
-<p>RequestRepluy represents synchronous interface to sending and receiving events from a Broker.</p>
+<p>RequestReply represents synchronous interface to sending and receiving events from a Broker.</p>
 </p>
 <table>
 <thead>
