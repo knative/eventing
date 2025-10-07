@@ -42,17 +42,17 @@ require (
 	go.uber.org/zap v1.27.0
 	golang.org/x/net v0.44.0
 	golang.org/x/sync v0.17.0
-	k8s.io/api v0.33.4
-	k8s.io/apiextensions-apiserver v0.33.4
-	k8s.io/apimachinery v0.33.4
-	k8s.io/apiserver v0.33.4
-	k8s.io/client-go v0.33.4
-	k8s.io/code-generator v0.33.4
+	k8s.io/api v0.33.5
+	k8s.io/apiextensions-apiserver v0.33.5
+	k8s.io/apimachinery v0.33.5
+	k8s.io/apiserver v0.33.5
+	k8s.io/client-go v0.33.5
+	k8s.io/code-generator v0.33.5
 	k8s.io/utils v0.0.0-20241210054802-24370beab758
 	knative.dev/hack v0.0.0-20250902153942-1499de21e119
 	knative.dev/hack/schema v0.0.0-20250902153942-1499de21e119
-	knative.dev/pkg v0.0.0-20250915135827-db4c336acdbe
-	knative.dev/reconciler-test v0.0.0-20250909113732-73218b8f3940
+	knative.dev/pkg v0.0.0-20251007000110-e53fcbb06907
+	knative.dev/reconciler-test v0.0.0-20250916021502-da6972135171
 	sigs.k8s.io/randfill v1.0.0
 	sigs.k8s.io/yaml v1.6.0
 )
