@@ -21,6 +21,7 @@ package rekt
 
 import (
 	"testing"
+	"time"
 
 	"knative.dev/pkg/system"
 	"knative.dev/reconciler-test/pkg/environment"
@@ -56,6 +57,7 @@ func TestIntegrationSourceWithTLS(t *testing.T) {
 		k8s.WithEventListener,
 		environment.Managed(t),
 		eventshub.WithTLS(t),
+		environment.WithPollTimings(5*time.Second, 4*time.Minute),
 	)
 
 	env.ParallelTest(ctx, t, integrationsource.SendEventsWithTLSRecieverAsSink())
