@@ -64,6 +64,23 @@ func TestIntegrationSinkSpecValidation(t *testing.T) {
 			want: nil,
 		},
 		{
+			name: "valid AWS S3 sink with service account and region",
+			spec: IntegrationSinkSpec{
+				Aws: &Aws{
+					S3: &v1alpha1.AWSS3{
+						AWSCommon: v1alpha1.AWSCommon{
+							Region: "us-east-1",
+						},
+						Arn: "example-bucket",
+					},
+					Auth: &v1alpha1.Auth{
+						ServiceAccountName: "aws-service-account",
+					},
+				},
+			},
+			want: nil,
+		},
+		{
 			name: "valid AWS SQS sink with auth and region",
 			spec: IntegrationSinkSpec{
 				Aws: &Aws{
@@ -79,6 +96,23 @@ func TestIntegrationSinkSpecValidation(t *testing.T) {
 								Name: "aws-secret",
 							},
 						},
+					},
+				},
+			},
+			want: nil,
+		},
+		{
+			name: "valid AWS SQS sink with service account and region",
+			spec: IntegrationSinkSpec{
+				Aws: &Aws{
+					SQS: &v1alpha1.AWSSQS{
+						AWSCommon: v1alpha1.AWSCommon{
+							Region: "us-east-1",
+						},
+						Arn: "example-queue",
+					},
+					Auth: &v1alpha1.Auth{
+						ServiceAccountName: "aws-service-account",
 					},
 				},
 			},
@@ -184,6 +218,21 @@ func TestIntegrationSinkSpecValidation(t *testing.T) {
 						},
 						Arn: "example-bucket",
 					},
+				},
+			},
+			want: apis.ErrMissingField("aws.auth.secret.ref.name"),
+		},
+		{
+			name: "AWS sink without auth credentials (invalid)",
+			spec: IntegrationSinkSpec{
+				Aws: &Aws{
+					S3: &v1alpha1.AWSS3{
+						AWSCommon: v1alpha1.AWSCommon{
+							Region: "us-east-1",
+						},
+						Arn: "example-bucket",
+					},
+					Auth: &v1alpha1.Auth{},
 				},
 			},
 			want: apis.ErrMissingField("aws.auth.secret.ref.name"),
