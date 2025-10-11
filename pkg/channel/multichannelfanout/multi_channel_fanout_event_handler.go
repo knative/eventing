@@ -34,6 +34,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
+	"k8s.io/client-go/tools/record"
 
 	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/channel/fanout"
@@ -55,6 +56,10 @@ type EventHandler struct {
 	logger       *zap.Logger
 	handlersLock sync.RWMutex
 	handlers     map[string]fanout.EventHandler
+
+	// eventRecorder is used to emit Kubernetes events when messages are dropped.
+	// It is passed to each fanout.EventHandler when they are created.
+	eventRecorder record.EventRecorder
 }
 
 // NewHandler creates a new Handler.
@@ -111,10 +116,29 @@ func NewEventHandlerWithConfig(
 		handlers: handlers,
 	}, nil
 }
+// SetEventRecorder sets the event recorder for this handler.
+// The event recorder will be passed to all fanout handlers (existing and future ones)
+// to enable Kubernetes event emission when messages are dropped.
+func (h *EventHandler) SetEventRecorder(recorder record.EventRecorder) {
+	h.handlersLock.Lock()
+	defer h.handlersLock.Unlock()
+	
+	h.eventRecorder = recorder
+	
+	// Set event recorder on all existing fanout handlers
+	for _, handler := range h.handlers {
+		handler.SetEventRecorder(recorder)
+	}
+}
 
 func (h *EventHandler) SetChannelHandler(host string, handler fanout.EventHandler) {
 	h.handlersLock.Lock()
 	defer h.handlersLock.Unlock()
+    // If we have an event recorder, set it on the new handler
+	if h.eventRecorder != nil {
+		handler.SetEventRecorder(h.eventRecorder)
+	}
+
 	h.handlers[host] = handler
 }
 
