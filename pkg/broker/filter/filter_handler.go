@@ -44,7 +44,9 @@ import (
 	"github.com/cloudevents/sdk-go/v2/event"
 	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"go.uber.org/zap"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -105,6 +107,8 @@ type Handler struct {
 	tracer             trace.Tracer
 	dispatchDuration   metric.Float64Histogram
 	processDuration    metric.Float64Histogram
+	
+	eventRecorder record.EventRecorder
 }
 
 // NewHandler creates a new Handler and its associated EventReceiver.
@@ -218,6 +222,10 @@ func NewHandler(
 	}
 
 	return h, nil
+}
+// SetEventRecorder sets the event recorder for emitting Kubernetes events when messages are dropped.
+func (h *Handler) SetEventRecorder(recorder record.EventRecorder) {
+	h.eventRecorder = recorder
 }
 
 func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
@@ -514,6 +522,12 @@ func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers 
 	h.dispatchDuration.Record(ctx, dispatchInfo.Duration.Seconds(), metric.WithAttributes(attrs...))
 	if err != nil {
 		h.logger.Error("failed to send event", zap.Error(err))
+		// Emit K8s Warning event for dropped event.
+		// An error from SendEvent means retries exhausted and DLS failed/absent.
+		// Only emit if this is not a reply or DLS dispatch (ttl != skipTTL indicates subscriber dispatch)
+		if ttl != skipTTL {
+			h.emitEventDroppedWarning(ctx, event, t, err)
+		}
 
 		// If error is not because of the response, it should respond with http.StatusInternalServerError
 		if dispatchInfo.ResponseCode <= 0 {
@@ -551,11 +565,69 @@ func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers 
 	}
 }
 
+// emitEventDroppedWarning creates a Kubernetes Warning event for dropped events.
+// This is called when trigger delivery fails, which indicates that:
+// 1. All retry attempts have been exhausted
+// 2. DeadLetterSink delivery failed or is not configured
+func (h *Handler) emitEventDroppedWarning(ctx context.Context, event *cloudevents.Event, trigger *eventingv1.Trigger, err error) {
+	if h.eventRecorder == nil {
+		h.logger.Warn("Event recorder not available, cannot emit K8s event for dropped message")
+		return
+	}
+
+	// Skip if trigger has no proper identity
+	if trigger.Name == "" || trigger.Namespace == "" || trigger.UID == "" {
+		h.logger.Warn("Trigger missing identity, cannot emit K8s event",
+			zap.String("name", trigger.Name),
+			zap.String("namespace", trigger.Namespace))
+		return
+	}
+
+	// Get event metadata for proper labeling
+	eventType := event.Type()
+	eventSource := event.Source()
+	eventID := event.ID()
+
+	// Create the event message
+	message := fmt.Sprintf("Event dropped after retries and DLS failure: type=%s, source=%s, id=%s, error=%v",
+		eventType, eventSource, eventID, err)
+
+	// Create annotations with event-type and event-source for Knative reconciler.
+	// These annotations enable the reconciler to properly aggregate events and bump series.count.
+	annotations := map[string]string{
+		"event-type":   eventType,
+		"event-source": eventSource,
+		"event-id":     eventID,
+	}
+
+	// Emit the Warning event.
+	// Using a stable reason ("EventDropped") ensures proper event aggregation.
+	// K8s will automatically aggregate events with same reason, source, and involved object.
+	h.eventRecorder.AnnotatedEventf(
+		&corev1.ObjectReference{
+			APIVersion: eventingv1.SchemeGroupVersion.String(),
+			Kind:       "Trigger",
+			Name:       trigger.Name,
+			Namespace:  trigger.Namespace,
+			UID:        trigger.UID,
+		},
+		annotations,
+		corev1.EventTypeWarning,
+		"EventDropped",
+		message,
+	)
+
+	h.logger.Info("Emitted K8s Warning event for dropped message",
+		zap.String("trigger", fmt.Sprintf("%s/%s", trigger.Namespace, trigger.Name)),
+		zap.String("eventType", eventType),
+		zap.String("eventSource", eventSource),
+		zap.String("eventID", eventID),
+	)
+}		
 // The return values are the status
 func (h *Handler) writeResponse(ctx context.Context, writer http.ResponseWriter, dispatchInfo *kncloudevents.DispatchInfo, ttl int32, target string) (int, error) {
 	response := cehttp.NewMessage(dispatchInfo.ResponseHeader, io.NopCloser(bytes.NewReader(dispatchInfo.ResponseBody)))
 	defer response.Finish(nil)
-
 	if response.ReadEncoding() == binding.EncodingUnknown {
 		// Response doesn't have a ce-specversion header nor a content-type matching a cloudevent event format
 		// Just read a byte out of the reader to see if it's non-empty, we don't care what it is,
