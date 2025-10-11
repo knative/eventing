@@ -24,6 +24,7 @@ package fanout
 import (
 	"context"
 	"errors"
+	"fmt"
 	nethttp "net/http"
 	"sync"
 	"time"
@@ -34,7 +35,9 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
 	"knative.dev/eventing/pkg/apis"
@@ -112,6 +115,10 @@ type FanoutEventHandler struct {
 	hasHttpSubs      bool
 	hasHttpsSubs     bool
 	dispatchDuration metric.Float64Histogram
+
+	// eventRecorder is used to emit Kubernetes events when messages are dropped
+	// (after retries are exhausted and DLS fails or is absent)
+	eventRecorder record.EventRecorder
 }
 
 // NewFanoutEventHandler creates a new fanout.EventHandler.
@@ -174,6 +181,10 @@ func NewFanoutEventHandler(
 	}
 
 	return handler, nil
+}
+// SetEventRecorder sets the event recorder for emitting Kubernetes events when messages are dropped.
+func (f *FanoutEventHandler) SetEventRecorder(recorder record.EventRecorder) {
+	f.eventRecorder = recorder
 }
 
 func SubscriberSpecToFanoutConfig(sub eventingduckv1.SubscriberSpec) (*Subscription, error) {
@@ -313,7 +324,7 @@ func (f *FanoutEventHandler) dispatch(ctx context.Context, subs []Subscription, 
 			h.Set(apis.KnNamespaceHeader, s.Namespace)
 
 			dispatchedResultPerSub, err := f.makeFanoutRequest(ctx, event, h, s)
-			r := DispatchResult{err: err, info: dispatchedResultPerSub}
+			r := DispatchResult{err: err, info: dispatchedResultPerSub, subscription: s}
 			results <- r
 
 			labeler, _ := otelhttp.LabelerFromContext(ctx)
@@ -352,6 +363,10 @@ func (f *FanoutEventHandler) dispatch(ctx context.Context, subs []Subscription, 
 			}
 			if dispatchResult.err != nil {
 				f.logger.Error("Fanout had an error", zap.Error(dispatchResult.err))
+                 // Emit K8s Warning event for dropped event.
+				// An error from SendEvent means retries exhausted and DLS failed/absent.
+				f.emitEventDroppedWarning(ctx, event, dispatchResult.subscription, dispatchResult.err)
+			
 				dispatchResultForFanout.err = dispatchResult.err
 			}
 		case <-time.After(f.timeout):
@@ -393,10 +408,70 @@ func (f *FanoutEventHandler) makeFanoutRequest(ctx context.Context, event event.
 
 	return f.eventDispatcher.SendEvent(ctx, event, sub.Subscriber, dispatchOptions...)
 }
+// emitEventDroppedWarning creates a Kubernetes Warning event for dropped events.
+// This is called when SendEvent returns an error, which indicates that:
+// 1. All retry attempts have been exhausted
+// 2. DeadLetterSink delivery failed or is not configured
+func (f *FanoutEventHandler) emitEventDroppedWarning(ctx context.Context, event event.Event, sub Subscription, err error) {
+	if f.eventRecorder == nil {
+		f.logger.Warn("Event recorder not available, cannot emit K8s event for dropped message")
+		return
+	}
+
+	// Skip if subscription has no proper identity
+	if sub.Name == "" || sub.Namespace == "" || sub.UID == types.UID("") {
+		f.logger.Warn("Subscription missing identity, cannot emit K8s event",
+			zap.String("name", sub.Name),
+			zap.String("namespace", sub.Namespace))
+		return
+	}
+
+	// Get event metadata for proper labeling
+	eventType := event.Type()
+	eventSource := event.Source()
+	eventID := event.ID()
+
+	// Create the event message
+	message := fmt.Sprintf("Event dropped after retries and DLS failure: type=%s, source=%s, id=%s, error=%v",
+		eventType, eventSource, eventID, err)
+
+	// Create annotations with event-type and event-source for Knative reconciler.
+	// These annotations enable the reconciler to properly aggregate events and bump series.count.
+	annotations := map[string]string{
+		"event-type":   eventType,
+		"event-source": eventSource,
+		"event-id":     eventID,
+	}
+
+	// Emit the Warning event.
+	// Using a stable reason ("EventDropped") ensures proper event aggregation.
+	// K8s will automatically aggregate events with same reason, source, and involved object.
+	f.eventRecorder.AnnotatedEventf(
+		&corev1.ObjectReference{
+			APIVersion: messagingv1.SchemeGroupVersion.String(),
+			Kind:       "Subscription",
+			Name:       sub.Name,
+			Namespace:  sub.Namespace,
+			UID:        sub.UID,
+		},
+		annotations,
+		corev1.EventTypeWarning,
+		"EventDropped",
+		message,
+	)
+
+	f.logger.Info("Emitted K8s Warning event for dropped message",
+		zap.String("subscription", fmt.Sprintf("%s/%s", sub.Namespace, sub.Name)),
+		zap.String("eventType", eventType),
+		zap.String("eventSource", eventSource),
+		zap.String("eventID", eventID),
+	)
+}
 
 type DispatchResult struct {
-	err  error
-	info *kncloudevents.DispatchInfo
+	err          error
+	info         *kncloudevents.DispatchInfo
+	subscription Subscription // Added to track which subscription failed
 }
 
 func (d DispatchResult) Error() error {

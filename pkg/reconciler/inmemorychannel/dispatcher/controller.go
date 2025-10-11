@@ -156,6 +156,16 @@ func NewController(
 	impl := inmemorychannelreconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
 		return controller.Options{SkipStatusUpdates: true, FinalizerName: finalizerName, ConfigStore: featureStore}
 	})
+	// Create event recorder for emitting K8s events when messages are dropped.
+	// This recorder will be passed to the MultiChannelEventHandler, which will
+	// propagate it to all fanout handlers.
+	eventRecorder := controller.GetEventRecorder(ctx)
+	if eventRecorder != nil {
+		logger.Info("Setting event recorder on MultiChannelEventHandler for dropped message notifications")
+		sh.SetEventRecorder(eventRecorder)
+	} else {
+		logger.Warn("Event recorder not available, dropped messages will only be logged")
+	}
 
 	globalResync = func(_ interface{}) {
 		impl.GlobalResync(inmemorychannelInformer.Informer())
