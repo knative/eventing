@@ -35,7 +35,9 @@ import (
 	"github.com/cloudevents/sdk-go/v2/client"
 	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"go.uber.org/zap"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 
@@ -80,6 +82,10 @@ type Handler struct {
 	withContext      func(ctx context.Context) context.Context
 	tracer           trace.Tracer
 	dispatchDuration metric.Float64Histogram
+	
+	// eventRecorder is used to emit Kubernetes events when event loops are detected
+	// (when TTL reaches 0, indicating an infinite loop)
+	eventRecorder record.EventRecorder
 }
 
 func NewHandler(
@@ -165,6 +171,10 @@ func NewHandler(
 	}
 
 	return h, nil
+}
+// SetEventRecorder sets the event recorder for emitting Kubernetes events when event loops are detected.
+func (h *Handler) SetEventRecorder(recorder record.EventRecorder) {
+	h.eventRecorder = recorder
 }
 
 func (h *Handler) getBroker(name, namespace string) (*eventingv1.Broker, error) {
@@ -347,6 +357,12 @@ func (h *Handler) receive(ctx context.Context, headers http.Header, event *cloud
 
 	if ttl, err := broker.GetTTL(event.Context); err != nil || ttl <= 0 {
 		h.Logger.Debug("dropping event based on TTL status.", zap.Int32("TTL", ttl), zap.String("event.id", event.ID()), zap.Error(err))
+		// Emit K8s Warning event for event loop detection.
+		// TTL <= 0 indicates the event has been looping through the broker/trigger chain.
+		if ttl == 0 {
+			h.emitEventLoopWarning(ctx, event, brokerObj)
+		}
+		
 		return http.StatusBadRequest, kncloudevents.NoDuration
 	}
 
@@ -373,4 +389,64 @@ func (h *Handler) receive(ctx context.Context, headers http.Header, event *cloud
 	}
 
 	return dispatchInfo.ResponseCode, dispatchInfo.Duration
+}
+// emitEventLoopWarning creates a Kubernetes Warning event for event loop detection.
+// This is called when TTL reaches 0, which indicates that an event has been cycling
+// through the broker/trigger chain infinitely, likely due to misconfiguration.
+func (h *Handler) emitEventLoopWarning(ctx context.Context, event *cloudevents.Event, broker *eventingv1.Broker) {
+	if h.eventRecorder == nil {
+		h.Logger.Warn("Event recorder not available, cannot emit K8s event for event loop")
+		return
+	}
+
+	// Skip if broker has no proper identity
+	if broker.Name == "" || broker.Namespace == "" || broker.UID == "" {
+		h.Logger.Warn("Broker missing identity, cannot emit K8s event",
+			zap.String("name", broker.Name),
+			zap.String("namespace", broker.Namespace))
+		return
+	}
+
+	// Get event metadata for proper labeling
+	eventType := event.Type()
+	eventSource := event.Source()
+	eventID := event.ID()
+
+	// Create the event message
+	message := fmt.Sprintf("Event loop detected (TTL reached 0): type=%s, source=%s, id=%s. "+
+		"This likely indicates a misconfiguration where events are cycling through broker/trigger chain infinitely. "+
+		"Check your trigger filters and reply configurations.",
+		eventType, eventSource, eventID)
+
+	// Create annotations with event-type and event-source for Knative reconciler.
+	// These annotations enable the reconciler to properly aggregate events and bump series.count.
+	annotations := map[string]string{
+		"event-type":   eventType,
+		"event-source": eventSource,
+		"event-id":     eventID,
+	}
+
+	// Emit the Warning event.
+	// Using a stable reason ("EventLoop") ensures proper event aggregation.
+	// K8s will automatically aggregate events with same reason, source, and involved object.
+	h.eventRecorder.AnnotatedEventf(
+		&corev1.ObjectReference{
+			APIVersion: eventingv1.SchemeGroupVersion.String(),
+			Kind:       "Broker",
+			Name:       broker.Name,
+			Namespace:  broker.Namespace,
+			UID:        broker.UID,
+		},
+		annotations,
+		corev1.EventTypeWarning,
+		"EventLoop",
+		message,
+	)
+
+	h.Logger.Info("Emitted K8s Warning event for event loop",
+		zap.String("broker", fmt.Sprintf("%s/%s", broker.Namespace, broker.Name)),
+		zap.String("eventType", eventType),
+		zap.String("eventSource", eventSource),
+		zap.String("eventID", eventID),
+	)
 }
