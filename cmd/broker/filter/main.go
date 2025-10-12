@@ -196,6 +196,16 @@ func main() {
 	if err := requestreply.RegisterCESQLVerifyCorrelationIdFilter(ctx); err != nil {
 		logger.Fatal("failed to register KN_VERIFY_CORRELATION_ID to CESQL runtime", zap.Error(err))
 	}
+	// Create event recorder for emitting K8s events when trigger delivery fails.
+	// This recorder will be used by the filter Handler to emit Warning events when
+	// messages are dropped after retries are exhausted and DLS fails or is absent.
+	eventRecorder := controller.GetEventRecorder(ctx)
+	if eventRecorder != nil {
+		logger.Info("Setting event recorder on broker filter Handler for dropped message notifications")
+		handler.SetEventRecorder(eventRecorder)
+	} else {
+		logger.Warn("Event recorder not available, dropped messages will only be logged")
+	}
 
 	// Start the servers
 	logger.Info("Filter starting...")
