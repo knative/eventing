@@ -51,7 +51,7 @@ func SendsEventsWithSinkRef(sourceType integrationsource.SourceType) *feature.Fe
 	return f
 }
 
-func SendEventsWithTLSRecieverAsSink(sourceType integrationsource.SourceType) *feature.Feature {
+func SendEventsWithTLSReceiverAsSink(sourceType integrationsource.SourceType) *feature.Feature {
 	sourceName := feature.MakeRandomK8sName("integrationsource")
 	sinkName := feature.MakeRandomK8sName("sink")
 	f := feature.NewFeature()
@@ -81,7 +81,7 @@ func SendEventsWithTLSRecieverAsSink(sourceType integrationsource.SourceType) *f
 	return f
 }
 
-func SendEventsWithTLSRecieverAsSinkTrustBundle(sourceType integrationsource.SourceType) *feature.Feature {
+func SendEventsWithTLSReceiverAsSinkTrustBundle(sourceType integrationsource.SourceType) *feature.Feature {
 	sourceName := feature.MakeRandomK8sName("integrationsource")
 	sinkName := feature.MakeRandomK8sName("sink")
 	f := feature.NewFeature()

@@ -62,8 +62,8 @@ func TestIntegrationSourceTimerWithTLS(t *testing.T) {
 		environment.WithPollTimings(5*time.Second, 4*time.Minute),
 	)
 
-	env.ParallelTest(ctx, t, integrationsource.SendEventsWithTLSRecieverAsSink(integrationsourceresource.SourceTypeTimer))
-	env.ParallelTest(ctx, t, integrationsource.SendEventsWithTLSRecieverAsSinkTrustBundle(integrationsourceresource.SourceTypeTimer))
+	env.ParallelTest(ctx, t, integrationsource.SendEventsWithTLSReceiverAsSink(integrationsourceresource.SourceTypeTimer))
+	env.ParallelTest(ctx, t, integrationsource.SendEventsWithTLSReceiverAsSinkTrustBundle(integrationsourceresource.SourceTypeTimer))
 }
 
 func TestIntegrationSourceTimerSendsEventsWithOIDC(t *testing.T) {
