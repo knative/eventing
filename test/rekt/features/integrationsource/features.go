@@ -35,83 +35,83 @@ import (
 )
 
 func SendsEventsWithSinkRef() *feature.Feature {
-	source := feature.MakeRandomK8sName("integrationsource")
-	sink := feature.MakeRandomK8sName("sink")
+	sourceName := feature.MakeRandomK8sName("integrationsource")
+	sinkName := feature.MakeRandomK8sName("sink")
 	f := feature.NewFeature()
 
-	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
+	f.Setup("install sink", eventshub.Install(sinkName, eventshub.StartReceiver))
 
-	f.Requirement("install integrationsource", integrationsource.Install(source, integrationsource.WithSink(service.AsDestinationRef(sink))))
-	f.Requirement("integrationsource goes ready", integrationsource.IsReady(source))
+	f.Requirement("install integrationsource", integrationsource.Install(sourceName, integrationsource.WithSink(service.AsDestinationRef(sinkName))))
+	f.Requirement("integrationsource goes ready", integrationsource.IsReady(sourceName))
 
 	f.Stable("integrationsource as event source").
 		Must("delivers events",
-			assert.OnStore(sink).MatchEvent(test.HasType("dev.knative.eventing.timer")).AtLeast(1))
+			assert.OnStore(sinkName).MatchEvent(test.HasType("dev.knative.eventing.timer")).AtLeast(1))
 
 	return f
 }
 
 func SendEventsWithTLSRecieverAsSink() *feature.Feature {
-	src := feature.MakeRandomK8sName("integrationsource")
-	sink := feature.MakeRandomK8sName("sink")
+	sourceName := feature.MakeRandomK8sName("integrationsource")
+	sinkName := feature.MakeRandomK8sName("sink")
 	f := feature.NewFeature()
 
 	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
 
-	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiverTLS))
+	f.Setup("install sink", eventshub.Install(sinkName, eventshub.StartReceiverTLS))
 
 	f.Requirement("install ContainerSource", func(ctx context.Context, t feature.T) {
-		d := service.AsDestinationRef(sink)
+		d := service.AsDestinationRef(sinkName)
 		d.CACerts = eventshub.GetCaCerts(ctx)
 
-		integrationsource.Install(src, integrationsource.WithSink(d))(ctx, t)
+		integrationsource.Install(sourceName, integrationsource.WithSink(d))(ctx, t)
 	})
-	f.Requirement("integrationsource goes ready", integrationsource.IsReady(src))
+	f.Requirement("integrationsource goes ready", integrationsource.IsReady(sourceName))
 
 	f.Stable("integrationsource as event source").
 		Must("delivers events",
-			assert.OnStore(sink).
+			assert.OnStore(sinkName).
 				Match(assert.MatchKind(eventshub.EventReceived)).
 				MatchEvent(test.HasType("dev.knative.eventing.timer")).
 				AtLeast(1),
 		).
-		Must("Set sinkURI to HTTPS endpoint", source.ExpectHTTPSSink(integrationsource.Gvr(), src)).
-		Must("Set sinkCACerts to non empty CA certs", source.ExpectCACerts(integrationsource.Gvr(), src))
+		Must("Set sinkURI to HTTPS endpoint", source.ExpectHTTPSSink(integrationsource.Gvr(), sourceName)).
+		Must("Set sinkCACerts to non empty CA certs", source.ExpectCACerts(integrationsource.Gvr(), sourceName))
 
 	return f
 }
 
 func SendEventsWithTLSRecieverAsSinkTrustBundle() *feature.Feature {
-	src := feature.MakeRandomK8sName("integrationsource")
-	sink := feature.MakeRandomK8sName("sink")
+	sourceName := feature.MakeRandomK8sName("integrationsource")
+	sinkName := feature.MakeRandomK8sName("sink")
 	f := feature.NewFeature()
 
 	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
 
-	f.Setup("install sink", eventshub.Install(sink,
+	f.Setup("install sink", eventshub.Install(sinkName,
 		eventshub.IssuerRef(eventingtlstesting.IssuerKind, eventingtlstesting.IssuerName),
 		eventshub.StartReceiverTLS,
 	))
 
 	f.Requirement("install ContainerSource", func(ctx context.Context, t feature.T) {
-		integrationsource.Install(src, integrationsource.WithSink(&duckv1.Destination{
+		integrationsource.Install(sourceName, integrationsource.WithSink(&duckv1.Destination{
 			URI: &apis.URL{
 				Scheme: "https", // Force using https
-				Host:   network.GetServiceHostname(sink, environment.FromContext(ctx).Namespace()),
+				Host:   network.GetServiceHostname(sinkName, environment.FromContext(ctx).Namespace()),
 			},
 			CACerts: nil, // CA certs are in the trust-bundle
 		}))(ctx, t)
 	})
-	f.Requirement("integrationsource goes ready", integrationsource.IsReady(src))
+	f.Requirement("integrationsource goes ready", integrationsource.IsReady(sourceName))
 
 	f.Stable("integrationsource as event source").
 		Must("delivers events",
-			assert.OnStore(sink).
+			assert.OnStore(sinkName).
 				Match(assert.MatchKind(eventshub.EventReceived)).
 				MatchEvent(test.HasType("dev.knative.eventing.timer")).
 				AtLeast(1),
 		).
-		Must("Set sinkURI to HTTPS endpoint", source.ExpectHTTPSSink(integrationsource.Gvr(), src))
+		Must("Set sinkURI to HTTPS endpoint", source.ExpectHTTPSSink(integrationsource.Gvr(), sourceName))
 
 	return f
 }
