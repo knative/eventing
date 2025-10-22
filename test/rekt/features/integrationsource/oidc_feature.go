@@ -29,7 +29,7 @@ import (
 	"knative.dev/reconciler-test/pkg/resources/service"
 )
 
-func SendsEventsWithSinkRefOIDC() *feature.Feature {
+func SendsEventsWithSinkRefOIDC(sourceType integrationsource.SourceType) *feature.Feature {
 	src := feature.MakeRandomK8sName("integrationsource")
 	sink := feature.MakeRandomK8sName("sink")
 	sinkAudience := "audience"
@@ -48,7 +48,7 @@ func SendsEventsWithSinkRefOIDC() *feature.Feature {
 		d.CACerts = eventshub.GetCaCerts(ctx)
 		d.Audience = &sinkAudience
 
-		integrationsource.Install(src, integrationsource.WithSink(d))(ctx, t)
+		integrationsource.Install(src, sourceType, integrationsource.WithSink(d))(ctx, t)
 	})
 
 	f.Requirement("integrationsource goes ready", integrationsource.IsReady(src))

@@ -30,9 +30,10 @@ import (
 	"knative.dev/reconciler-test/pkg/knative"
 
 	"knative.dev/eventing/test/rekt/features/integrationsource"
+	integrationsourceresource "knative.dev/eventing/test/rekt/resources/integrationsource"
 )
 
-func TestIntegrationSourceWithSinkRef(t *testing.T) {
+func TestIntegrationSourceTimerWithSinkRef(t *testing.T) {
 	t.Parallel()
 
 	ctx, env := global.Environment(
@@ -45,10 +46,10 @@ func TestIntegrationSourceWithSinkRef(t *testing.T) {
 	)
 	t.Cleanup(env.Finish)
 
-	env.Test(ctx, t, integrationsource.SendsEventsWithSinkRef())
+	env.Test(ctx, t, integrationsource.SendsEventsWithSinkRef(integrationsourceresource.SourceTypeTimer))
 }
 
-func TestIntegrationSourceWithTLS(t *testing.T) {
+func TestIntegrationSourceTimerWithTLS(t *testing.T) {
 	t.Parallel()
 
 	ctx, env := global.Environment(
@@ -61,11 +62,11 @@ func TestIntegrationSourceWithTLS(t *testing.T) {
 		environment.WithPollTimings(5*time.Second, 4*time.Minute),
 	)
 
-	env.ParallelTest(ctx, t, integrationsource.SendEventsWithTLSRecieverAsSink())
-	env.ParallelTest(ctx, t, integrationsource.SendEventsWithTLSRecieverAsSinkTrustBundle())
+	env.ParallelTest(ctx, t, integrationsource.SendEventsWithTLSRecieverAsSink(integrationsourceresource.SourceTypeTimer))
+	env.ParallelTest(ctx, t, integrationsource.SendEventsWithTLSRecieverAsSinkTrustBundle(integrationsourceresource.SourceTypeTimer))
 }
 
-func TestIntegrationSourceSendsEventsWithOIDC(t *testing.T) {
+func TestIntegrationSourceTimerSendsEventsWithOIDC(t *testing.T) {
 	t.Parallel()
 
 	ctx, env := global.Environment(
@@ -78,5 +79,5 @@ func TestIntegrationSourceSendsEventsWithOIDC(t *testing.T) {
 		environment.WithPollTimings(5*time.Second, 4*time.Minute),
 	)
 
-	env.Test(ctx, t, integrationsource.SendsEventsWithSinkRefOIDC())
+	env.Test(ctx, t, integrationsource.SendsEventsWithSinkRefOIDC(integrationsourceresource.SourceTypeTimer))
 }

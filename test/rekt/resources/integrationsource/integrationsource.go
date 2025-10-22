@@ -33,6 +33,13 @@ import (
 //go:embed integrationsource.yaml
 var yaml embed.FS
 
+type SourceType string
+
+const (
+	SourceTypeTimer SourceType = "dev.knative.eventing.timer"
+	SourceTypeS3    SourceType = "dev.knative.eventing.s3"
+)
+
 func Gvr() schema.GroupVersionResource {
 	return schema.GroupVersionResource{Group: "sources.knative.dev", Version: "v1alpha1", Resource: "integrationsources"}
 }
@@ -43,9 +50,10 @@ func IsReady(name string, timing ...time.Duration) feature.StepFn {
 }
 
 // Install will create a ContainerSource resource, augmented with the config fn options.
-func Install(name string, opts ...manifest.CfgFn) feature.StepFn {
+func Install(name string, sourceType SourceType, opts ...manifest.CfgFn) feature.StepFn {
 	cfg := map[string]interface{}{
-		"name": name,
+		"name":                  name,
+		"integrationSourceType": string(sourceType),
 	}
 	for _, fn := range opts {
 		fn(cfg)

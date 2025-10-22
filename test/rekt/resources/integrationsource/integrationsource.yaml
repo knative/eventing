@@ -12,16 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+{{define "timerSpec"}}
+  timer:
+    period: 2000
+    message: "Hello, Eventing Core"
+{{end}}
+
 apiVersion: sources.knative.dev/v1alpha1
 kind: IntegrationSource
 metadata:
   name: {{ .name }}
   namespace: {{ .namespace }}
 spec:
-  timer:
-    period: 2000
-    message: "Hello, Eventing Core"
-#  {{if .sink }}
+  {{- if eq .integrationSourceType "dev.knative.eventing.timer" }}
+  {{ template "timerSpec" }}
+  {{- else }}
+  {{ template "timerSpec" . }} # default to timer source if not specified
+  {{- end }}
   sink:
     {{ if .sink.ref }}
     ref:
@@ -44,4 +51,3 @@ spec:
     {{if .sink.audience }}
     audience: {{ .sink.audience}}
     {{ end }}
-  {{ end }}

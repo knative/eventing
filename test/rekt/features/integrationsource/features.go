@@ -34,24 +34,24 @@ import (
 	"knative.dev/reconciler-test/pkg/resources/service"
 )
 
-func SendsEventsWithSinkRef() *feature.Feature {
+func SendsEventsWithSinkRef(sourceType integrationsource.SourceType) *feature.Feature {
 	sourceName := feature.MakeRandomK8sName("integrationsource")
 	sinkName := feature.MakeRandomK8sName("sink")
 	f := feature.NewFeature()
 
 	f.Setup("install sink", eventshub.Install(sinkName, eventshub.StartReceiver))
 
-	f.Requirement("install integrationsource", integrationsource.Install(sourceName, integrationsource.WithSink(service.AsDestinationRef(sinkName))))
+	f.Requirement("install integrationsource", integrationsource.Install(sourceName, sourceType, integrationsource.WithSink(service.AsDestinationRef(sinkName))))
 	f.Requirement("integrationsource goes ready", integrationsource.IsReady(sourceName))
 
 	f.Stable("integrationsource as event source").
 		Must("delivers events",
-			assert.OnStore(sinkName).MatchEvent(test.HasType("dev.knative.eventing.timer")).AtLeast(1))
+			assert.OnStore(sinkName).MatchEvent(test.HasType(string(sourceType))).AtLeast(1))
 
 	return f
 }
 
-func SendEventsWithTLSRecieverAsSink() *feature.Feature {
+func SendEventsWithTLSRecieverAsSink(sourceType integrationsource.SourceType) *feature.Feature {
 	sourceName := feature.MakeRandomK8sName("integrationsource")
 	sinkName := feature.MakeRandomK8sName("sink")
 	f := feature.NewFeature()
@@ -64,7 +64,7 @@ func SendEventsWithTLSRecieverAsSink() *feature.Feature {
 		d := service.AsDestinationRef(sinkName)
 		d.CACerts = eventshub.GetCaCerts(ctx)
 
-		integrationsource.Install(sourceName, integrationsource.WithSink(d))(ctx, t)
+		integrationsource.Install(sourceName, sourceType, integrationsource.WithSink(d))(ctx, t)
 	})
 	f.Requirement("integrationsource goes ready", integrationsource.IsReady(sourceName))
 
@@ -72,7 +72,7 @@ func SendEventsWithTLSRecieverAsSink() *feature.Feature {
 		Must("delivers events",
 			assert.OnStore(sinkName).
 				Match(assert.MatchKind(eventshub.EventReceived)).
-				MatchEvent(test.HasType("dev.knative.eventing.timer")).
+				MatchEvent(test.HasType(string(sourceType))).
 				AtLeast(1),
 		).
 		Must("Set sinkURI to HTTPS endpoint", source.ExpectHTTPSSink(integrationsource.Gvr(), sourceName)).
@@ -81,7 +81,7 @@ func SendEventsWithTLSRecieverAsSink() *feature.Feature {
 	return f
 }
 
-func SendEventsWithTLSRecieverAsSinkTrustBundle() *feature.Feature {
+func SendEventsWithTLSRecieverAsSinkTrustBundle(sourceType integrationsource.SourceType) *feature.Feature {
 	sourceName := feature.MakeRandomK8sName("integrationsource")
 	sinkName := feature.MakeRandomK8sName("sink")
 	f := feature.NewFeature()
@@ -94,7 +94,7 @@ func SendEventsWithTLSRecieverAsSinkTrustBundle() *feature.Feature {
 	))
 
 	f.Requirement("install ContainerSource", func(ctx context.Context, t feature.T) {
-		integrationsource.Install(sourceName, integrationsource.WithSink(&duckv1.Destination{
+		integrationsource.Install(sourceName, sourceType, integrationsource.WithSink(&duckv1.Destination{
 			URI: &apis.URL{
 				Scheme: "https", // Force using https
 				Host:   network.GetServiceHostname(sinkName, environment.FromContext(ctx).Namespace()),
@@ -108,7 +108,7 @@ func SendEventsWithTLSRecieverAsSinkTrustBundle() *feature.Feature {
 		Must("delivers events",
 			assert.OnStore(sinkName).
 				Match(assert.MatchKind(eventshub.EventReceived)).
-				MatchEvent(test.HasType("dev.knative.eventing.timer")).
+				MatchEvent(test.HasType(string(sourceType))).
 				AtLeast(1),
 		).
 		Must("Set sinkURI to HTTPS endpoint", source.ExpectHTTPSSink(integrationsource.Gvr(), sourceName))
