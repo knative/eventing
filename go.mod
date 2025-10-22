@@ -48,10 +48,10 @@ require (
 	k8s.io/client-go v0.33.4
 	k8s.io/code-generator v0.33.4
 	k8s.io/utils v0.0.0-20241210054802-24370beab758
-	knative.dev/hack v0.0.0-20250902154142-af735b2738d6
-	knative.dev/hack/schema v0.0.0-20250902154142-af735b2738d6
-	knative.dev/pkg v0.0.0-20250909011231-077dcf0d00e8
-	knative.dev/reconciler-test v0.0.0-20250902155644-548dffd12a48
+	knative.dev/hack v0.0.0-20251022160748-50b120a65f30
+	knative.dev/hack/schema v0.0.0-20251022160748-50b120a65f30
+	knative.dev/pkg v0.0.0-20251022154045-7da1174b871b
+	knative.dev/reconciler-test v0.0.0-20251022154745-2f11b0665280
 	sigs.k8s.io/randfill v1.0.0
 	sigs.k8s.io/yaml v1.6.0
 )
