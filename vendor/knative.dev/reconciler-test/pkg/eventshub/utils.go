@@ -18,25 +18,39 @@ package eventshub
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
-	"go.opencensus.io/plugin/ochttp"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/resource"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
+	"go.opentelemetry.io/otel/trace"
+	otelnoop "go.opentelemetry.io/otel/trace/noop"
 	"go.uber.org/zap"
+	"knative.dev/pkg/changeset"
 	"knative.dev/pkg/logging"
-	"knative.dev/pkg/tracing"
-	"knative.dev/pkg/tracing/config"
-	"knative.dev/pkg/tracing/propagation/tracecontextb3"
+	"knative.dev/pkg/observability"
+	"knative.dev/pkg/observability/metrics"
+	"knative.dev/pkg/observability/tracing"
+	"knative.dev/pkg/system"
 )
 
 const (
-	ConfigTracingEnv   = "K_CONFIG_TRACING"
-	ConfigLoggingEnv   = "K_CONFIG_LOGGING"
-	EventGeneratorsEnv = "EVENT_GENERATORS"
-	EventLogsEnv       = "EVENT_LOGS"
+	// Deprecated: use ConfigObservabilityEnv instead
+	ConfigTracingEnv = "K_CONFIG_TRACING"
+
+	ConfigLoggingEnv       = "K_CONFIG_LOGGING"
+	ConfigObservabilityEnv = "K_CONFIG_OBSERVABILITY"
+	EventGeneratorsEnv     = "EVENT_GENERATORS"
+	EventLogsEnv           = "EVENT_LOGS"
 
 	OIDCEnabledEnv                         = "ENABLE_OIDC_AUTH"
 	OIDCGenerateExpiredTokenEnv            = "OIDC_GENERATE_EXPIRED_TOKEN"
@@ -50,6 +64,8 @@ const (
 	EnforceTLS    = "ENFORCE_TLS"
 	tlsIssuerKind = "TLS_ISSUER_KIND"
 	tlsIssuerName = "TLS_ISSUER_NAME"
+
+	otelServiceNameKey = "OTEL_SERVICE_NAME"
 )
 
 func ParseHeaders(serializedHeaders string) http.Header {
@@ -73,33 +89,116 @@ func ParseDurationStr(durationStr string, defaultDuration int) time.Duration {
 	return duration
 }
 
+// Deprecated: use ConfigureObservability instead. This will now always return a noop tracer
 // ConfigureTracing can be used in test-images to configure tracing
-func ConfigureTracing(logger *zap.SugaredLogger, serviceName string) (tracing.Tracer, error) {
-	tracingEnv := os.Getenv(ConfigTracingEnv)
+func ConfigureTracing(logger *zap.SugaredLogger, serviceName string) (trace.Tracer, error) {
+	return otelnoop.NewTracerProvider().Tracer(serviceName), nil
+}
 
-	var (
-		tracer tracing.Tracer
-		err    error
+func ConfigureObservability(ctx context.Context, logger *zap.SugaredLogger, serviceName string) (*metrics.MeterProvider, *tracing.TracerProvider, error) {
+	obsCfgEnv := os.Getenv(ConfigObservabilityEnv)
+
+	cfg, err := ParseObservabilityConfig(obsCfgEnv)
+	if err != nil {
+		logger.Warnw("Error while trying to parse observability config from env, falling back to default config", zap.Error(err))
+	}
+
+	cfg = NewObservabilityConfigFromExistingWithDefaults(cfg)
+
+	resource, err := defaultResource(serviceName)
+	if err != nil {
+		logger.Warnw("Error while creating otel resource, resource may be missing some attributes", zap.Error(err))
+	}
+
+	meterProvider, err := metrics.NewMeterProvider(
+		ctx,
+		cfg.Metrics,
+		sdkmetric.WithResource(resource),
 	)
-
-	if tracingEnv == "" {
-		tracer, err = tracing.SetupPublishingWithStaticConfig(logger, serviceName, config.NoopConfig())
-		if err != nil {
-			return tracer, err
-		}
-	}
-
-	conf, err := config.JSONToTracingConfig(tracingEnv)
 	if err != nil {
-		return tracer, err
+		return nil, nil, err
 	}
 
-	tracer, err = tracing.SetupPublishingWithStaticConfig(logger, serviceName, conf)
+	otel.SetMeterProvider(meterProvider)
+
+	tracerProvider, err := tracing.NewTracerProvider(
+		ctx,
+		cfg.Tracing,
+		sdktrace.WithResource(resource),
+	)
 	if err != nil {
-		return tracer, err
+		return nil, nil, err
 	}
 
-	return tracer, nil
+	otel.SetTextMapPropagator(tracing.DefaultTextMapPropagator())
+	otel.SetTracerProvider(tracerProvider)
+
+	return meterProvider, tracerProvider, nil
+}
+
+func defaultResource(serviceName string) (*resource.Resource, error) {
+	// If the OTEL_SERVICE_NAME is set then let this override
+	// our own serviceName
+	if name := os.Getenv(otelServiceNameKey); name != "" {
+		serviceName = name
+	}
+
+	attrs := []attribute.KeyValue{
+		semconv.ServiceVersion(changeset.Get()),
+		semconv.ServiceName(serviceName),
+	}
+
+	if ns := os.Getenv("SYSTEM_NAMESPACE"); ns != "" {
+		attrs = append(attrs, semconv.K8SNamespaceName(ns))
+	}
+
+	if pn := system.PodName(); pn != "" {
+		attrs = append(attrs, semconv.K8SPodName(pn))
+	}
+
+	// Ignore the error because it complains about semconv
+	// schema version differences
+	resource, err := resource.Merge(
+		resource.Default(),
+		resource.NewWithAttributes(
+			semconv.SchemaURL,
+			attrs...,
+		),
+	)
+	return resource, err
+}
+
+func ParseObservabilityConfig(configStr string) (*observability.Config, error) {
+	obsCfg := &observability.Config{}
+	err := json.Unmarshal([]byte(configStr), obsCfg)
+	return obsCfg, err
+}
+
+func NewObservabilityConfigFromExistingWithDefaults(cfg *observability.Config) *observability.Config {
+	defaultCfg := observability.DefaultConfig()
+	if cfg == nil {
+		return cfg
+	}
+
+	newCfg := &observability.Config{
+		Metrics: cfg.Metrics,
+		Runtime: cfg.Runtime,
+		Tracing: cfg.Tracing,
+	}
+	var emptyMetrics observability.MetricsConfig
+	if newCfg.Metrics == emptyMetrics {
+		newCfg.Metrics = defaultCfg.Metrics
+	}
+	var emptyRuntime observability.RuntimeConfig
+	if newCfg.Runtime == emptyRuntime {
+		newCfg.Runtime = defaultCfg.Runtime
+	}
+	var emptyTracing observability.TracingConfig
+	if newCfg.Tracing == emptyTracing {
+		newCfg.Tracing = defaultCfg.Tracing
+	}
+
+	return newCfg
 }
 
 // ConfigureTracing can be used in test-images to configure tracing
@@ -116,19 +215,20 @@ func ConfigureLogging(ctx context.Context, name string) context.Context {
 
 // WithServerTracing wraps the provided handler in a tracing handler
 func WithServerTracing(handler http.Handler) http.Handler {
-	return &ochttp.Handler{
-		Propagation: tracecontextb3.TraceContextEgress,
-		Handler:     handler,
-	}
+	return otelhttp.NewHandler(
+		handler,
+		"receive",
+		otelhttp.WithPropagators(tracing.DefaultTextMapPropagator()),
+	)
 }
 
 // WithClientTracing enables exporting traces by the client's transport.
 func WithClientTracing(client *http.Client) error {
 	prev := client.Transport
-	client.Transport = &ochttp.Transport{
-		Base:        prev,
-		Propagation: tracecontextb3.TraceContextEgress,
-	}
+	client.Transport = otelhttp.NewTransport(
+		prev,
+		otelhttp.WithPropagators(tracing.DefaultTextMapPropagator()),
+	)
 	return nil
 }
 
