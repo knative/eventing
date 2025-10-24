@@ -21,6 +21,11 @@ import (
 	"strings"
 )
 
+const (
+	// K8ServiceNameSuffix is added to the k8 service name which is owned by the channel
+	K8ServiceNameSuffix = "-kn-channel"
+)
+
 // ChannelReference references a Channel within the cluster by name and
 // namespace.
 type ChannelReference struct {
@@ -38,6 +43,11 @@ func ParseChannelFromHost(host string) (ChannelReference, error) {
 	if len(chunks) < 2 {
 		return ChannelReference{}, BadRequestError(fmt.Sprintf("bad host format %q", host))
 	}
+
+	if channelName, found := strings.CutSuffix(chunks[0], K8ServiceNameSuffix); found {
+		chunks[0] = channelName
+	}
+
 	return ChannelReference{
 		Name:      chunks[0],
 		Namespace: chunks[1],

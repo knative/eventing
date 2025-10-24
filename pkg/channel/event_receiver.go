@@ -306,7 +306,7 @@ func (r *EventReceiver) ServeHTTP(response nethttp.ResponseWriter, request *neth
 		return
 	}
 
-	/// Here we do the OIDC audience verification
+	// Here we do the OIDC audience verification
 	features := feature.FromContext(ctx)
 	if features.IsOIDCAuthentication() {
 		r.logger.Debug("OIDC authentication is enabled")
