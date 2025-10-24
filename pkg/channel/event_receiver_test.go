@@ -88,7 +88,7 @@ func TestEventReceiver_ServeHTTP(t *testing.T) {
 		},
 		"path based channel reference": {
 			path: "/new-namespace/new-channel",
-			host: "test-name.test-namespace.svc." + network.GetClusterDomainName(),
+			host: host(),
 			receiverFunc: func(ctx context.Context, r ChannelReference, m event.Event, additionalHeaders nethttp.Header) error {
 				if r.Namespace != "new-namespace" || r.Name != "new-channel" {
 					return fmt.Errorf("bad channel reference %v", r)
@@ -107,9 +107,9 @@ func TestEventReceiver_ServeHTTP(t *testing.T) {
 				"x-requEst-id":              {"1234"},
 				"knatIve-will-pass-through": {"true", "always"},
 			},
-			host: "test-name.test-namespace.svc." + network.GetClusterDomainName(),
+			host: host(),
 			receiverFunc: func(ctx context.Context, r ChannelReference, e event.Event, additionalHeaders nethttp.Header) error {
-				if r.Namespace != "test-namespace" || r.Name != "test-name" {
+				if r.Namespace != "test-namespace" || r.Name != "test-channel" {
 					return fmt.Errorf("test receiver func -- bad reference: %v", r)
 				}
 
@@ -138,7 +138,7 @@ func TestEventReceiver_ServeHTTP(t *testing.T) {
 		},
 		"OPTIONS okay": {
 			method:   nethttp.MethodOptions,
-			host:     "test-name.test-namespace.svc." + network.GetClusterDomainName(),
+			host:     host(),
 			expected: nethttp.StatusOK,
 			responseValidator: func(res httptest.ResponseRecorder) error {
 				expectedHeaders := nethttp.Header{
@@ -164,7 +164,7 @@ func TestEventReceiver_ServeHTTP(t *testing.T) {
 				tc.path = "/"
 			}
 			if tc.host == "" {
-				tc.host = "test-channel.test-namespace.svc." + network.GetClusterDomainName()
+				tc.host = host()
 			}
 
 			f := tc.receiverFunc
@@ -217,7 +217,7 @@ func TestEventReceiver_ServerStart_trace_propagation(t *testing.T) {
 	done := make(chan struct{}, 1)
 
 	receiverFunc := func(ctx context.Context, r ChannelReference, e event.Event, additionalHeaders nethttp.Header) error {
-		if r.Namespace != "test-namespace" || r.Name != "test-name" {
+		if r.Namespace != "test-namespace" || r.Name != "test-channel" {
 			return fmt.Errorf("test receiver func -- bad reference: %v", r)
 		}
 
@@ -232,8 +232,6 @@ func TestEventReceiver_ServerStart_trace_propagation(t *testing.T) {
 
 	// Default the common things.
 	method := nethttp.MethodPost
-	host := "test-name.test-namespace.svc." + network.GetClusterDomainName()
-
 	reporter := NewStatsReporter("testcontainer", "testpod")
 	logger, _ := zap.NewDevelopment()
 
@@ -261,7 +259,7 @@ func TestEventReceiver_ServerStart_trace_propagation(t *testing.T) {
 			Propagation: tracecontextb3.TraceContextEgress,
 		}))
 	require.NoError(t, err)
-	p.RequestTemplate.Host = host
+	p.RequestTemplate.Host = host()
 
 	c, err := cloudevents.NewClient(p, client.WithObservabilityService(obsclient.New()))
 	require.NoError(t, err)
@@ -277,8 +275,6 @@ func TestEventReceiver_ServerStart_trace_propagation(t *testing.T) {
 
 func TestEventReceiver_WrongRequest(t *testing.T) {
 	reporter := NewStatsReporter("testcontainer", "testpod")
-	host := "http://test-channel.test-namespace.svc." + network.GetClusterDomainName() + "/"
-
 	f := func(_ context.Context, _ ChannelReference, _ event.Event, _ nethttp.Header) error {
 		return errors.New("test induced receiver function error")
 	}
@@ -287,7 +283,7 @@ func TestEventReceiver_WrongRequest(t *testing.T) {
 		t.Fatalf("Error creating new event receiver. Error:%s", err)
 	}
 
-	req := httptest.NewRequest(nethttp.MethodPost, host, bytes.NewReader([]byte("{}")))
+	req := httptest.NewRequest(nethttp.MethodPost, "http://"+host()+"/", bytes.NewReader([]byte("{}")))
 	req.Header.Set("content-type", "application/json")
 
 	res := httptest.ResponseRecorder{}
@@ -299,7 +295,6 @@ func TestEventReceiver_WrongRequest(t *testing.T) {
 }
 
 func TestEventReceiver_UnknownHost(t *testing.T) {
-	host := "http://test-channel.test-namespace.svc." + network.GetClusterDomainName() + "/"
 	reporter := NewStatsReporter("testcontainer", "testpod")
 
 	f := func(_ context.Context, _ ChannelReference, _ event.Event, _ nethttp.Header) error {
@@ -323,7 +318,7 @@ func TestEventReceiver_UnknownHost(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("POST", "http://localhost:8080/", nil)
-	req.Host = host
+	req.Host = "http://" + host() + "/"
 
 	err = http.WriteRequest(context.TODO(), binding.ToMessage(&event), req)
 	if err != nil {
@@ -336,4 +331,8 @@ func TestEventReceiver_UnknownHost(t *testing.T) {
 	if res.Code != 404 {
 		t.Fatal("Unexpected status code. Expected 404. Actual", res.Code)
 	}
+}
+
+func host() string {
+	return fmt.Sprintf("test-channel%s.test-namespace.svc.%s", K8ServiceNameSuffix, network.GetClusterDomainName())
 }
