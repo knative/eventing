@@ -28,6 +28,7 @@ import (
 	"github.com/openzipkin/zipkin-go/model"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	ch "knative.dev/eventing/pkg/channel"
 	tracinghelper "knative.dev/eventing/test/conformance/helpers/tracing"
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
@@ -143,7 +144,7 @@ func setupChannelTracingWithReply(
 		Span: tracinghelper.MatchHTTPSpanNoReply(
 			model.Server,
 			tracinghelper.WithHTTPHostAndPath(
-				fmt.Sprintf("%s-kn-channel.%s.svc", channelName, client.Namespace),
+				fmt.Sprintf("%s%s.%s.svc", channelName, ch.K8ServiceNameSuffix, client.Namespace),
 				"/",
 			),
 		),
@@ -177,14 +178,14 @@ func setupChannelTracingWithReply(
 					},
 					{
 						// 6. Channel Dispatcher span
-						Span: channelSpan(eventID, fmt.Sprintf("%s-kn-channel.%s.svc", replyChannelName, client.Namespace), ""),
+						Span: channelSpan(eventID, fmt.Sprintf("%s%s.%s.svc", replyChannelName, ch.K8ServiceNameSuffix, client.Namespace), ""),
 						Children: []tracinghelper.TestSpanTree{
 							{
 								// 7. Channel sends reply from Mutator Pod to the reply Channel.
 								Span: tracinghelper.MatchHTTPSpanNoReply(
 									model.Client,
 									tracinghelper.WithHTTPURL(
-										fmt.Sprintf("%s-kn-channel.%s.svc", replyChannelName, client.Namespace),
+										fmt.Sprintf("%s%s.%s.svc", replyChannelName, ch.K8ServiceNameSuffix, client.Namespace),
 										"",
 									),
 								),
@@ -194,7 +195,7 @@ func setupChannelTracingWithReply(
 										Span: tracinghelper.MatchHTTPSpanNoReply(
 											model.Server,
 											tracinghelper.WithHTTPHostAndPath(
-												fmt.Sprintf("%s-kn-channel.%s.svc", replyChannelName, client.Namespace),
+												fmt.Sprintf("%s%s.%s.svc", replyChannelName, ch.K8ServiceNameSuffix, client.Namespace),
 												"/",
 											),
 										),
@@ -245,7 +246,7 @@ func setupChannelTracingWithReply(
 			Span: tracinghelper.MatchHTTPSpanNoReply(
 				model.Client,
 				tracinghelper.WithHTTPURL(
-					fmt.Sprintf("%s-kn-channel.%s.svc", channelName, client.Namespace),
+					fmt.Sprintf("%s%s.%s.svc", channelName, ch.K8ServiceNameSuffix, client.Namespace),
 					"",
 				),
 				tracinghelper.WithLocalEndpointServiceName("sender"),
