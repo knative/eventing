@@ -46,16 +46,24 @@ func TestParseChannelFromHost(t *testing.T) {
 		wantErr            bool
 		expectedChannelRef ChannelReference
 	}{
-		"host based": {
-			host:    "test-channel.test-namespace.svc.cluster.local",
+		"host based with channel k8 service suffix": {
+			host:    fmt.Sprintf("%s%s.%s.svc.cluster.local", referencesTestChannelName, K8ServiceNameSuffix, referencesTestNamespace),
 			wantErr: false,
 			expectedChannelRef: ChannelReference{
-				Namespace: "test-namespace",
-				Name:      "test-channel",
+				Namespace: referencesTestNamespace,
+				Name:      referencesTestChannelName,
+			},
+		},
+		"host based": {
+			host:    fmt.Sprintf("%s.%s.svc.cluster.local", referencesTestChannelName, referencesTestNamespace),
+			wantErr: false,
+			expectedChannelRef: ChannelReference{
+				Namespace: referencesTestNamespace,
+				Name:      referencesTestChannelName,
 			},
 		},
 		"bad host format should return error": {
-			host:    "test-channel",
+			host:    referencesTestChannelName,
 			wantErr: true,
 		},
 	}
@@ -91,11 +99,11 @@ func TestParseChannelFromPath(t *testing.T) {
 		expectedChannelRef ChannelReference
 	}{
 		"path based": {
-			path:    "/new-namespace/new-channel/",
+			path:    fmt.Sprintf("/%s/%s/", referencesTestNamespace, referencesTestChannelName),
 			wantErr: false,
 			expectedChannelRef: ChannelReference{
-				Namespace: "new-namespace",
-				Name:      "new-channel",
+				Namespace: referencesTestNamespace,
+				Name:      referencesTestChannelName,
 			},
 		},
 
