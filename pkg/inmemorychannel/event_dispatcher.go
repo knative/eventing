@@ -68,7 +68,6 @@ func (d *InMemoryEventDispatcher) WaitReady() {
 }
 
 func NewEventDispatcher(args *InMemoryEventDispatcherArgs) *InMemoryEventDispatcher {
-	// TODO set read timeouts?
 	readTimeout := args.ReadTimeout
 	if readTimeout <= 0 {
 		readTimeout = 30 * time.Second // default fallback
