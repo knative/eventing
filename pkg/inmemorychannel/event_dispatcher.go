@@ -69,9 +69,16 @@ func (d *InMemoryEventDispatcher) WaitReady() {
 
 func NewEventDispatcher(args *InMemoryEventDispatcherArgs) *InMemoryEventDispatcher {
 	// TODO set read timeouts?
+	readTimeout := args.ReadTimeout
+	if readTimeout <= 0 {
+		readTimeout = 30 * time.Second // default fallback
+	}
+
 	bindingsReceiver := kncloudevents.NewHTTPEventReceiver(
 		args.Port,
-		args.HTTPEventReceiverOptions...,
+		append(args.HTTPEventReceiverOptions,
+			kncloudevents.WithReadTimeout(readTimeout),
+		)...,
 	)
 
 	dispatcher := &InMemoryEventDispatcher{
