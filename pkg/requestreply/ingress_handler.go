@@ -17,6 +17,7 @@ limitations under the License.
 package requestreply
 
 import (
+	"os"
 	"context"
 	"fmt"
 	"net/http"
@@ -56,6 +57,8 @@ type IngressHandler struct {
 
 	requestLock sync.RWMutex
 	entries     map[types.NamespacedName]map[string]*proxiedRequest
+
+	requestTimeout  time.Duration
 }
 
 type proxiedRequest struct {
@@ -75,6 +78,17 @@ func NewHandler(logger *zap.Logger, requestReplyInformer eventingv1alpha1informe
 	clientConfig := eventingtls.ClientConfig{
 		TrustBundleConfigMapLister: trustBundleConfigMapLister,
 	}
+	timeout := time.Minute
+    if val := os.Getenv("REQUEST_REPLY_TIMEOUT"); val != "" {
+        if parsed, err := time.ParseDuration(val); err == nil {
+            timeout = parsed
+            logger.Info("Configured request timeout from env", zap.String("REQUEST_REPLY_TIMEOUT", val))
+        } else {
+            logger.Warn("Failed to parse REQUEST_REPLY_TIMEOUT, using default 1m", zap.Error(err))
+        }
+    } else {
+        logger.Info("Using default 1m request timeout (env not set)")
+    }
 
 	requestReplyInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj any) {
@@ -97,6 +111,7 @@ func NewHandler(logger *zap.Logger, requestReplyInformer eventingv1alpha1informe
 		keyStore:           keyStore,
 
 		entries: make(map[types.NamespacedName]map[string]*proxiedRequest),
+		requestTimeout:     timeout,
 	}
 
 }
@@ -158,7 +173,7 @@ func (h *IngressHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute) // TODO: make this timeout configurable
+	ctx, cancel := context.WithTimeout(context.Background(), h.requestTimeout) 
 	defer cancel()
 
 	if isReplyEvent {
