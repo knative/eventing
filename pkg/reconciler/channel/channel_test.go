@@ -244,9 +244,8 @@ func TestReconcile(t *testing.T) {
 					"apiVersion": "messaging.knative.dev/v1",
 					"kind":       "InMemoryChannel",
 					"metadata": map[string]interface{}{
-						"creationTimestamp": nil,
-						"namespace":         testNS,
-						"name":              channelName,
+						"namespace": testNS,
+						"name":      channelName,
 						"ownerReferences": []interface{}{
 							map[string]interface{}{
 								"apiVersion":         "messaging.knative.dev/v1",
@@ -678,9 +677,8 @@ func createChannelCRD(namespace, name string, ready bool) *unstructured.Unstruct
 			"apiVersion": "messaging.knative.dev/v1",
 			"kind":       "InMemoryChannel",
 			"metadata": map[string]interface{}{
-				"creationTimestamp": nil,
-				"namespace":         namespace,
-				"name":              name,
+				"namespace": namespace,
+				"name":      name,
 				"ownerReferences": []interface{}{
 					map[string]interface{}{
 						"apiVersion":         "messaging.knative.dev/v1",
@@ -722,9 +720,8 @@ func createChannel(namespace, name string, ready bool) *unstructured.Unstructure
 				"apiVersion": "messaging.knative.dev/v1",
 				"kind":       "InMemoryChannel",
 				"metadata": map[string]interface{}{
-					"creationTimestamp": nil,
-					"namespace":         namespace,
-					"name":              name,
+					"namespace": namespace,
+					"name":      name,
 					"ownerReferences": []interface{}{
 						map[string]interface{}{
 							"apiVersion":         "messaging.knative.dev/v1",
@@ -751,9 +748,8 @@ func createChannel(namespace, name string, ready bool) *unstructured.Unstructure
 			"apiVersion": "messaging.knative.dev/v1",
 			"kind":       "InMemoryChannel",
 			"metadata": map[string]interface{}{
-				"creationTimestamp": nil,
-				"namespace":         namespace,
-				"name":              name,
+				"namespace": namespace,
+				"name":      name,
 				"ownerReferences": []interface{}{
 					map[string]interface{}{
 						"apiVersion":         "messaging.knative.dev/v1",

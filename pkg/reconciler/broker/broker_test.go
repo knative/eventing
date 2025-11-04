@@ -1219,9 +1219,8 @@ func createChannel(opts ...unstructuredOption) *unstructured.Unstructured {
 			"apiVersion": "messaging.knative.dev/v1",
 			"kind":       "InMemoryChannel",
 			"metadata": map[string]interface{}{
-				"creationTimestamp": nil,
-				"namespace":         testNS,
-				"name":              fmt.Sprintf("%s-kne-trigger", brokerName),
+				"namespace": testNS,
+				"name":      fmt.Sprintf("%s-kne-trigger", brokerName),
 				"ownerReferences": []interface{}{
 					map[string]interface{}{
 						"apiVersion":         "eventing.knative.dev/v1",
@@ -1265,9 +1264,8 @@ func createChannelNoHostInUrl(namespace string) *unstructured.Unstructured {
 			"apiVersion": "messaging.knative.dev/v1",
 			"kind":       "InMemoryChannel",
 			"metadata": map[string]interface{}{
-				"creationTimestamp": nil,
-				"namespace":         namespace,
-				"name":              name,
+				"namespace": namespace,
+				"name":      name,
 				"ownerReferences": []interface{}{
 					map[string]interface{}{
 						"apiVersion":         "eventing.knative.dev/v1",
