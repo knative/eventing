@@ -109,9 +109,8 @@ func createChannel(sequenceName string, stepNumber int) *unstructured.Unstructur
 			"apiVersion": "messaging.knative.dev/v1",
 			"kind":       "InMemoryChannel",
 			"metadata": map[string]interface{}{
-				"creationTimestamp": nil,
-				"namespace":         testNS,
-				"name":              resources.SequenceChannelName(sequenceName, stepNumber),
+				"namespace": testNS,
+				"name":      resources.SequenceChannelName(sequenceName, stepNumber),
 				"ownerReferences": []interface{}{
 					map[string]interface{}{
 						"apiVersion":         "flows.knative.dev/v1",

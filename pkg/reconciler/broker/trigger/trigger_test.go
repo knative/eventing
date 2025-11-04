@@ -1809,9 +1809,8 @@ func createChannel(namespace string, ready bool) *unstructured.Unstructured {
 				"apiVersion": "messaging.knative.dev/v1",
 				"kind":       "InMemoryChannel",
 				"metadata": map[string]interface{}{
-					"creationTimestamp": nil,
-					"namespace":         namespace,
-					"name":              name,
+					"namespace": namespace,
+					"name":      name,
 					"ownerReferences": []interface{}{
 						map[string]interface{}{
 							"apiVersion":         "eventing.knative.dev/v1",
@@ -1839,9 +1838,8 @@ func createChannel(namespace string, ready bool) *unstructured.Unstructured {
 			"apiVersion": "messaging.knative.dev/v1",
 			"kind":       "InMemoryChannel",
 			"metadata": map[string]interface{}{
-				"creationTimestamp": nil,
-				"namespace":         namespace,
-				"name":              name,
+				"namespace": namespace,
+				"name":      name,
 				"ownerReferences": []interface{}{
 					map[string]interface{}{
 						"apiVersion":         "eventing.knative.dev/v1",

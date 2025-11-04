@@ -89,6 +89,17 @@ func SetObjectDefaults_JobSink(in *JobSink) {
 					b.Protocol = "TCP"
 				}
 			}
+			for j := range a.Env {
+				b := &a.Env[j]
+				if b.ValueFrom != nil {
+					if b.ValueFrom.FileKeyRef != nil {
+						if b.ValueFrom.FileKeyRef.Optional == nil {
+							var ptrVar1 bool = false
+							b.ValueFrom.FileKeyRef.Optional = &ptrVar1
+						}
+					}
+				}
+			}
 			if a.LivenessProbe != nil {
 				if a.LivenessProbe.ProbeHandler.GRPC != nil {
 					if a.LivenessProbe.ProbeHandler.GRPC.Service == nil {
@@ -122,6 +133,17 @@ func SetObjectDefaults_JobSink(in *JobSink) {
 					b.Protocol = "TCP"
 				}
 			}
+			for j := range a.Env {
+				b := &a.Env[j]
+				if b.ValueFrom != nil {
+					if b.ValueFrom.FileKeyRef != nil {
+						if b.ValueFrom.FileKeyRef.Optional == nil {
+							var ptrVar1 bool = false
+							b.ValueFrom.FileKeyRef.Optional = &ptrVar1
+						}
+					}
+				}
+			}
 			if a.LivenessProbe != nil {
 				if a.LivenessProbe.ProbeHandler.GRPC != nil {
 					if a.LivenessProbe.ProbeHandler.GRPC.Service == nil {
@@ -153,6 +175,17 @@ func SetObjectDefaults_JobSink(in *JobSink) {
 				b := &a.EphemeralContainerCommon.Ports[j]
 				if b.Protocol == "" {
 					b.Protocol = "TCP"
+				}
+			}
+			for j := range a.EphemeralContainerCommon.Env {
+				b := &a.EphemeralContainerCommon.Env[j]
+				if b.ValueFrom != nil {
+					if b.ValueFrom.FileKeyRef != nil {
+						if b.ValueFrom.FileKeyRef.Optional == nil {
+							var ptrVar1 bool = false
+							b.ValueFrom.FileKeyRef.Optional = &ptrVar1
+						}
+					}
 				}
 			}
 			if a.EphemeralContainerCommon.LivenessProbe != nil {

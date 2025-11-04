@@ -1416,9 +1416,8 @@ func createChannel(parallelName string) *unstructured.Unstructured {
 			"apiVersion": "messaging.knative.dev/v1",
 			"kind":       "InMemoryChannel",
 			"metadata": map[string]interface{}{
-				"creationTimestamp": nil,
-				"namespace":         testNS,
-				"name":              resources.ParallelChannelName(parallelName),
+				"namespace": testNS,
+				"name":      resources.ParallelChannelName(parallelName),
 				"ownerReferences": []interface{}{
 					map[string]interface{}{
 						"apiVersion":         "flows.knative.dev/v1",
@@ -1441,9 +1440,8 @@ func createBranchChannel(parallelName string, caseNumber int) *unstructured.Unst
 			"apiVersion": "messaging.knative.dev/v1",
 			"kind":       "InMemoryChannel",
 			"metadata": map[string]interface{}{
-				"creationTimestamp": nil,
-				"namespace":         testNS,
-				"name":              resources.ParallelBranchChannelName(parallelName, caseNumber),
+				"namespace": testNS,
+				"name":      resources.ParallelBranchChannelName(parallelName, caseNumber),
 				"ownerReferences": []interface{}{
 					map[string]interface{}{
 						"apiVersion":         "flows.knative.dev/v1",

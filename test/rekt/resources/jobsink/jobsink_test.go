@@ -96,13 +96,11 @@ func Example_full() {
 	//   namespace: bar
 	// spec:
 	//   job:
-	//     metadata:
-	//       creationTimestamp: null
+	//     metadata: {}
 	//     spec:
 	//       parallelism: 1
 	//       template:
-	//         metadata:
-	//           creationTimestamp: null
+	//         metadata: {}
 	//         spec:
 	//           containers:
 	//           - name: job-c
