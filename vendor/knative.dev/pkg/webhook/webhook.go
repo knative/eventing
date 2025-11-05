@@ -243,7 +243,7 @@ func New(
 		}
 	}
 
-	return webhook, err
+	return
 }
 
 // InformersHaveSynced is called when the informers have all been synced, which allows any outstanding
