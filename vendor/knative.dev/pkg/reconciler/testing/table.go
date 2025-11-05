@@ -372,7 +372,7 @@ func filterUpdatesWithSubresource(
 			result = append(result, action)
 		}
 	}
-	return result
+	return
 }
 
 // TableTest represents a list of TableRow tests instances.

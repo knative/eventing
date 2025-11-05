@@ -56,12 +56,7 @@ func GetClusterDomainName() string {
 }
 
 func getClusterDomainName(r io.Reader) string {
-	// First check the ENV variable (allows override).
-	if domain := os.Getenv(clusterDomainEnvKey); len(domain) > 0 {
-		return domain
-	}
-
-	// Then look in the conf file.
+	// First look in the conf file.
 	for scanner := bufio.NewScanner(r); scanner.Scan(); {
 		elements := strings.Split(scanner.Text(), " ")
 		if elements[0] != "search" {
@@ -72,6 +67,11 @@ func getClusterDomainName(r io.Reader) string {
 				return strings.TrimSuffix(e[4:], ".")
 			}
 		}
+	}
+
+	// Then look in the ENV.
+	if domain := os.Getenv(clusterDomainEnvKey); len(domain) > 0 {
+		return domain
 	}
 
 	// For all abnormal cases return default domain name.
