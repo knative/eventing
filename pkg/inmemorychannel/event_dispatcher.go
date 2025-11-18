@@ -68,7 +68,6 @@ func (d *InMemoryEventDispatcher) WaitReady() {
 }
 
 func NewEventDispatcher(args *InMemoryEventDispatcherArgs) *InMemoryEventDispatcher {
-
 	bindingsReceiver := kncloudevents.NewHTTPEventReceiver(
 		args.Port,
 		append(
