@@ -116,8 +116,9 @@ func (a *apiServerAdapter) startResilient(ctx context.Context, stopCh <-chan str
 				ListFunc:  asUnstructuredLister(ctx, res.List, match.resourceWatch.LabelSelector),
 				WatchFunc: asUnstructuredWatcher(ctx, res.Watch, match.resourceWatch.LabelSelector),
 			}
-
-			reflector := cache.NewReflector(lw, &unstructured.Unstructured{}, delegate, resyncPeriod)
+			
+			reflectorName := fmt.Sprintf("apiserversource-%s-%s-%s", a.name, match.resourceWatch.GVR.Resource, match.resourceWatch.GVR.Group)
+			reflector := cache.NewReflector(reflectorName, lw, &unstructured.Unstructured{}, delegate, resyncPeriod)
 			go reflector.Run(stop)
 		}
 	}
@@ -152,8 +153,8 @@ func (a *apiServerAdapter) startFailFast(ctx context.Context, stopCh <-chan stru
 				ListFunc:  asUnstructuredLister(watchCtx, res.List, match.resourceWatch.LabelSelector),
 				WatchFunc: asUnstructuredWatcher(watchCtx, res.Watch, match.resourceWatch.LabelSelector),
 			}
-
-			reflector := cache.NewReflector(lw, &unstructured.Unstructured{}, delegate, resyncPeriod)
+			reflectorName := fmt.Sprintf("apiserversource-%s-%s-%s", a.name, match.resourceWatch.GVR.Resource, match.resourceWatch.GVR.Group)
+			reflector := cache.NewReflector(reflectorName, lw, &unstructured.Unstructured{}, delegate, resyncPeriod)
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
