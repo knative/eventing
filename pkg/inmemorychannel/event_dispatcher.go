@@ -71,8 +71,8 @@ func NewEventDispatcher(args *InMemoryEventDispatcherArgs) *InMemoryEventDispatc
 	bindingsReceiver := kncloudevents.NewHTTPEventReceiver(
 		args.Port,
 		append(
-			args.HTTPEventReceiverOptions,
 			kncloudevents.WithReadTimeout(args.ReadTimeout),
+			args.HTTPEventReceiverOptions,
 		)...,
 	)
 
