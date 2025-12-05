@@ -21,21 +21,26 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strings"
 	"sync"
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
+	"github.com/cloudevents/sdk-go/v2/binding"
+	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	eventsv1 "k8s.io/api/events/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"knative.dev/pkg/logging"
 
 	"knative.dev/eventing/pkg/broker"
 	"knative.dev/eventing/pkg/kncloudevents/attributes"
+	eventingtracing "knative.dev/eventing/pkg/tracing"
 )
 
 const (
@@ -435,4 +440,52 @@ func truncateString(s string, maxLen int) string {
 		return s
 	}
 	return s[:maxLen]
+}
+
+// Handler handles incoming dead-letter events and records them as K8s events
+type Handler struct {
+	aggregator  *EventAggregator
+	withContext func(ctx context.Context) context.Context
+	logger      *zap.SugaredLogger
+}
+
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	ctx := h.withContext(r.Context())
+	logger := logging.FromContext(ctx).Desugar()
+
+	// Handle health check endpoints
+	if r.Method == http.MethodGet {
+		if r.URL.Path == "/healthz" || r.URL.Path == "/readyz" || r.URL.Path == "/" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+	}
+
+	if r.Method != http.MethodPost {
+		logger.Info("Unexpected HTTP method", zap.String("method", r.Method))
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	message := cehttp.NewMessageFromHttpRequest(r)
+	defer message.Finish(nil)
+
+	event, err := binding.ToEvent(r.Context(), message, eventingtracing.PopulateCEDistributedTracing(ctx))
+	if err != nil {
+		logger.Warn("failed to extract event from request", zap.Error(err))
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	if err := event.Validate(); err != nil {
+		logger.Info("failed to validate event from request", zap.Error(err))
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Record the dead-letter event
+	h.aggregator.RecordEvent(ctx, event)
+
+	// Always return success - we've recorded the event
+	w.WriteHeader(http.StatusAccepted)
 }

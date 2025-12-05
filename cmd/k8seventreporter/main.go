@@ -19,11 +19,8 @@ package main
 import (
 	"context"
 	"log"
-	"net/http"
 	"time"
 
-	"github.com/cloudevents/sdk-go/v2/binding"
-	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"go.uber.org/zap"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	configmap "knative.dev/pkg/configmap/informer"
@@ -39,7 +36,6 @@ import (
 	"knative.dev/eventing/pkg/kncloudevents"
 	o11yconfigmap "knative.dev/eventing/pkg/observability/configmap"
 	"knative.dev/eventing/pkg/observability/otel"
-	eventingtracing "knative.dev/eventing/pkg/tracing"
 )
 
 const (
@@ -141,54 +137,6 @@ func main() {
 		logger.Fatal("StartServers() returned an error", zap.Error(err))
 	}
 	logger.Info("Exiting...")
-}
-
-// Handler handles incoming dead-letter events and records them as K8s events
-type Handler struct {
-	aggregator  *EventAggregator
-	withContext func(ctx context.Context) context.Context
-	logger      *zap.SugaredLogger
-}
-
-func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	ctx := h.withContext(r.Context())
-	logger := logging.FromContext(ctx).Desugar()
-
-	// Handle health check endpoints
-	if r.Method == http.MethodGet {
-		if r.URL.Path == "/healthz" || r.URL.Path == "/readyz" || r.URL.Path == "/" {
-			w.WriteHeader(http.StatusOK)
-			return
-		}
-	}
-
-	if r.Method != http.MethodPost {
-		logger.Info("Unexpected HTTP method", zap.String("method", r.Method))
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-
-	message := cehttp.NewMessageFromHttpRequest(r)
-	defer message.Finish(nil)
-
-	event, err := binding.ToEvent(r.Context(), message, eventingtracing.PopulateCEDistributedTracing(ctx))
-	if err != nil {
-		logger.Warn("failed to extract event from request", zap.Error(err))
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	if err := event.Validate(); err != nil {
-		logger.Info("failed to validate event from request", zap.Error(err))
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	// Record the dead-letter event
-	h.aggregator.RecordEvent(ctx, event)
-
-	// Always return success - we've recorded the event
-	w.WriteHeader(http.StatusAccepted)
 }
 
 func flush(logger *zap.SugaredLogger) {
