@@ -400,7 +400,7 @@ func TestEventTransformLoopWithMultipleEvents(t *testing.T) {
 
 	for i := 0; i < 100; i++ {
 		event := cloudevents.NewEvent()
-		event.SetID("loop-event-" + string(rune('0'+i%10)))
+		event.SetID(fmt.Sprintf("loop-event-%d", i))
 		event.SetType("my.looping.event")
 		event.SetSource("my-source")
 		event.SetExtension(attributes.KnativeErrorDestExtensionKey, "http://broker-ingress.knative-eventing.svc.cluster.local/test-ns/my-broker")
