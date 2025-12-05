@@ -805,7 +805,7 @@ func TestReportK8sEvent_NilSeries(t *testing.T) {
 	}
 
 	eventName := generateEventName(agg.ErrorDest, agg.EventType, agg.EventSource, agg.ErrorCode)
-	existing, _ := client.EventsV1().Events("test-ns").Get(ctx, eventName, metav1.GetOptions{})
+	existing, err := client.EventsV1().Events("test-ns").Get(ctx, eventName, metav1.GetOptions{})
 	if err != nil {
 		t.Fatalf("failed to get K8s event: %v", err)
 	}
