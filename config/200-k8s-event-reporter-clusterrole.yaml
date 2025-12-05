@@ -30,7 +30,7 @@ rules:
       - "get"
       - "list"
       - "watch"
-  # Permission to create, update and patch events in events.k8s.io API
+  # Permission to manage events in events.k8s.io API
   - apiGroups:
       - "events.k8s.io"
     resources:
