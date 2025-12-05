@@ -64,32 +64,4 @@ spec:
     backoffPolicy: linear
     backoffDelay: PT2S
 
----
-# Option 3: Configure cluster-wide defaults (Phase 2)
-# This would be done by modifying the config-br-defaults ConfigMap
-# to include a default dead-letter sink.
-#
-# apiVersion: v1
-# kind: ConfigMap
-# metadata:
-#   name: config-br-defaults
-#   namespace: knative-eventing
-# data:
-#   default-br-config: |
-#     clusterDefault:
-#       brokerClass: MTChannelBasedBroker
-#       apiVersion: v1
-#       kind: ConfigMap
-#       name: config-br-default-channel
-#       namespace: knative-eventing
-#       delivery:
-#         deadLetterSink:
-#           ref:
-#             apiVersion: v1
-#             kind: Service
-#             name: k8s-event-reporter
-#             namespace: knative-eventing
-#         retry: 3
-#         backoffPolicy: exponential
-#         backoffDelay: PT1S
 
