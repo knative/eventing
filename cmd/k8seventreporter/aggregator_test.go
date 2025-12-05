@@ -1421,6 +1421,176 @@ func TestReportK8sEvent_AlreadyExistsError(t *testing.T) {
 	}
 }
 
+// TestNewHandler tests the NewHandler constructor
+func TestNewHandler(t *testing.T) {
+	logger := zap.NewNop().Sugar()
+	client := fake.NewSimpleClientset()
+
+	handler := NewHandler(client, logger)
+
+	if handler == nil {
+		t.Fatal("NewHandler returned nil")
+	}
+
+	if handler.aggregator == nil {
+		t.Error("handler.aggregator is nil")
+	}
+
+	if handler.logger == nil {
+		t.Error("handler.logger is nil")
+	}
+
+	if handler.withContext == nil {
+		t.Error("handler.withContext is nil")
+	}
+
+	// Test that withContext works
+	ctx := context.Background()
+	newCtx := handler.withContext(ctx)
+	if newCtx == nil {
+		t.Error("withContext returned nil")
+	}
+}
+
+// TestNewHandlerWithAggregator tests the NewHandlerWithAggregator constructor
+func TestNewHandlerWithAggregator(t *testing.T) {
+	logger := zap.NewNop().Sugar()
+	client := fake.NewSimpleClientset()
+	aggregator := NewEventAggregator(client, logger, 30*time.Second, 100)
+
+	handler := NewHandlerWithAggregator(aggregator, logger)
+
+	if handler == nil {
+		t.Fatal("NewHandlerWithAggregator returned nil")
+	}
+
+	if handler.aggregator != aggregator {
+		t.Error("handler.aggregator doesn't match provided aggregator")
+	}
+
+	if handler.logger == nil {
+		t.Error("handler.logger is nil")
+	}
+
+	if handler.withContext == nil {
+		t.Error("handler.withContext is nil")
+	}
+
+	// Test that withContext works correctly
+	ctx := context.Background()
+	newCtx := handler.withContext(ctx)
+	if newCtx == nil {
+		t.Error("withContext returned nil")
+	}
+
+	// Test handler works by making a health check request
+	req := httptest.NewRequest("GET", "/healthz", nil)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != 200 {
+		t.Errorf("expected status 200, got %d", w.Code)
+	}
+}
+
+// TestNewHandler_ServeHTTP tests that a handler created with NewHandler works correctly
+func TestNewHandler_ServeHTTP(t *testing.T) {
+	logger := zap.NewNop().Sugar()
+	client := fake.NewSimpleClientset()
+
+	handler := NewHandler(client, logger)
+
+	// Test health check
+	req := httptest.NewRequest("GET", "/healthz", nil)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != 200 {
+		t.Errorf("expected status 200 for /healthz, got %d", w.Code)
+	}
+
+	// Test POST with valid event
+	event := cloudevents.NewEvent()
+	event.SetID("test-handler-event")
+	event.SetType("test.handler.type")
+	event.SetSource("test-handler-source")
+	event.SetExtension(attributes.KnativeErrorDestExtensionKey, "http://broker-ingress.knative-eventing.svc.cluster.local/test-ns/broker")
+	event.SetExtension(attributes.KnativeErrorCodeExtensionKey, "500")
+
+	eventBytes, _ := event.MarshalJSON()
+	req = httptest.NewRequest("POST", "/", bytes.NewReader(eventBytes))
+	req.Header.Set("Content-Type", "application/cloudevents+json")
+	w = httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+
+	if w.Code != 202 {
+		t.Errorf("expected status 202 for POST, got %d", w.Code)
+	}
+}
+
+// TestFlush tests the Flush function
+func TestFlush(t *testing.T) {
+	logger := zap.NewNop().Sugar()
+	// This should not panic
+	Flush(logger)
+}
+
+// mockShutdowner is a mock implementation of Shutdowner for testing
+type mockShutdowner struct {
+	shutdownCalled bool
+	err            error
+}
+
+func (m *mockShutdowner) Shutdown(ctx context.Context) error {
+	m.shutdownCalled = true
+	return m.err
+}
+
+// TestShutdownProviders tests the ShutdownProviders function
+func TestShutdownProviders(t *testing.T) {
+	logger := zap.NewNop().Sugar()
+	ctx := context.Background()
+
+	// Test with successful shutdown
+	provider1 := &mockShutdowner{}
+	provider2 := &mockShutdowner{}
+
+	ShutdownProviders(ctx, logger, provider1, provider2)
+
+	if !provider1.shutdownCalled {
+		t.Error("provider1.Shutdown was not called")
+	}
+	if !provider2.shutdownCalled {
+		t.Error("provider2.Shutdown was not called")
+	}
+}
+
+// TestShutdownProviders_WithError tests ShutdownProviders with an error
+func TestShutdownProviders_WithError(t *testing.T) {
+	logger := zap.NewNop().Sugar()
+	ctx := context.Background()
+
+	// Test with error during shutdown
+	provider := &mockShutdowner{err: fmt.Errorf("shutdown error")}
+
+	// Should not panic even with error
+	ShutdownProviders(ctx, logger, provider)
+
+	if !provider.shutdownCalled {
+		t.Error("provider.Shutdown was not called")
+	}
+}
+
+// TestShutdownProviders_WithNilProvider tests ShutdownProviders with nil provider
+func TestShutdownProviders_WithNilProvider(t *testing.T) {
+	logger := zap.NewNop().Sugar()
+	ctx := context.Background()
+
+	// Should not panic with nil provider
+	ShutdownProviders(ctx, logger, nil)
+}
+
 func containsString(s, substr string) bool {
 	for i := 0; i <= len(s)-len(substr); i++ {
 		if s[i:i+len(substr)] == substr {

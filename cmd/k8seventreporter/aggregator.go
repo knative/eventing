@@ -57,6 +57,12 @@ const (
 
 	// Event name prefix
 	EventNamePrefix = "knative-eventing-dlq"
+
+	// AggregationWindow is the time window for aggregating events before reporting
+	AggregationWindow = 30 * time.Second
+
+	// MaxBufferSize is the maximum number of unique event keys to buffer
+	MaxBufferSize = 10000
 )
 
 // AggregatedEvent holds aggregated information about dropped events
@@ -449,6 +455,34 @@ type Handler struct {
 	logger      *zap.SugaredLogger
 }
 
+// NewHandler creates a new Handler with the given Kubernetes client and logger
+func NewHandler(client kubernetes.Interface, logger *zap.SugaredLogger) *Handler {
+	aggregator := NewEventAggregator(client, logger, AggregationWindow, MaxBufferSize)
+
+	ctxFunc := func(ctx context.Context) context.Context {
+		return logging.WithLogger(ctx, logger)
+	}
+
+	return &Handler{
+		aggregator:  aggregator,
+		withContext: ctxFunc,
+		logger:      logger,
+	}
+}
+
+// NewHandlerWithAggregator creates a new Handler with a custom aggregator (for testing)
+func NewHandlerWithAggregator(aggregator *EventAggregator, logger *zap.SugaredLogger) *Handler {
+	ctxFunc := func(ctx context.Context) context.Context {
+		return logging.WithLogger(ctx, logger)
+	}
+
+	return &Handler{
+		aggregator:  aggregator,
+		withContext: ctxFunc,
+		logger:      logger,
+	}
+}
+
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx := h.withContext(r.Context())
 	logger := logging.FromContext(ctx).Desugar()
@@ -488,4 +522,28 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Always return success - we've recorded the event
 	w.WriteHeader(http.StatusAccepted)
+}
+
+// Flush syncs the logger before shutdown
+func Flush(logger *zap.SugaredLogger) {
+	_ = logger.Sync()
+}
+
+// Shutdowner interface for providers that can be shutdown
+type Shutdowner interface {
+	Shutdown(ctx context.Context) error
+}
+
+// ShutdownProviders gracefully shuts down metric and trace providers
+func ShutdownProviders(ctx context.Context, logger *zap.SugaredLogger, providers ...Shutdowner) {
+	shutdownCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	for _, provider := range providers {
+		if provider != nil {
+			if err := provider.Shutdown(shutdownCtx); err != nil {
+				logger.Errorw("Error shutting down provider", zap.Error(err))
+			}
+		}
+	}
 }

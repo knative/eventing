@@ -17,9 +17,7 @@ limitations under the License.
 package main
 
 import (
-	"context"
 	"log"
-	"time"
 
 	"go.uber.org/zap"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
@@ -40,12 +38,6 @@ import (
 
 const (
 	component = "k8s_event_reporter"
-
-	// AggregationWindow is the time window for aggregating events before reporting
-	AggregationWindow = 30 * time.Second
-
-	// MaxBufferSize is the maximum number of unique event keys to buffer
-	MaxBufferSize = 10000
 )
 
 func main() {
@@ -62,24 +54,13 @@ func main() {
 	}
 	sl, atomicLevel := logging.NewLoggerFromConfig(loggingConfig, component)
 	logger := sl.Desugar()
-	defer flush(sl)
+	defer Flush(sl)
 
 	pprof := k8sruntime.NewProfilingServer(sl.Named("pprof"))
 
 	mp, tp := otel.SetupObservabilityOrDie(ctx, component, sl, pprof)
 
-	defer func() {
-		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-		defer cancel()
-
-		if err := mp.Shutdown(ctx); err != nil {
-			sl.Errorw("Error flushing metrics", zap.Error(err))
-		}
-
-		if err := tp.Shutdown(ctx); err != nil {
-			sl.Errorw("Error flushing traces", zap.Error(err))
-		}
-	}()
+	defer ShutdownProviders(ctx, sl, mp, tp)
 
 	// Watch the logging config map and dynamically update logging levels.
 	configMapWatcher := configmap.NewInformedWatcher(kubeclient.Get(ctx), system.Namespace())
@@ -91,18 +72,7 @@ func main() {
 	logger.Info("Starting the K8s Event Reporter Sink")
 
 	// Create the handler with event aggregator
-	aggregator := NewEventAggregator(kubeclient.Get(ctx), sl, AggregationWindow, MaxBufferSize)
-
-	// Decorate contexts with the logger
-	ctxFunc := func(ctx context.Context) context.Context {
-		return logging.WithLogger(ctx, sl)
-	}
-
-	h := &Handler{
-		aggregator:  aggregator,
-		withContext: ctxFunc,
-		logger:      sl,
-	}
+	h := NewHandler(kubeclient.Get(ctx), sl)
 
 	handler := otel.NewHandler(h, "receive", mp, tp)
 
@@ -117,7 +87,7 @@ func main() {
 	}
 
 	// Start the aggregator's reconciliation loop
-	go aggregator.Run(ctx)
+	go h.aggregator.Run(ctx)
 
 	// configMapWatcher does not block, so start it first.
 	logger.Info("Starting ConfigMap watcher")
@@ -137,8 +107,4 @@ func main() {
 		logger.Fatal("StartServers() returned an error", zap.Error(err))
 	}
 	logger.Info("Exiting...")
-}
-
-func flush(logger *zap.SugaredLogger) {
-	_ = logger.Sync()
 }
