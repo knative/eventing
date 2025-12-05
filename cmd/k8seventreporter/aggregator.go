@@ -536,7 +536,7 @@ type Shutdowner interface {
 
 // ShutdownProviders gracefully shuts down metric and trace providers
 func ShutdownProviders(ctx context.Context, logger *zap.SugaredLogger, providers ...Shutdowner) {
-	shutdownCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	for _, provider := range providers {
