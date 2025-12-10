@@ -1,0 +1,41 @@
+name: Update Dependabot PR
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  update-codegen:
+    name: Update codegen
+    runs-on: ubuntu-latest
+    if: ${{ github.actor == 'dependabot[bot]' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          path: ./src/github.com/${{ github.repository }}
+          fetch-depth: 0
+
+      - name: Setup Golang
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: ./src/github.com/${{ github.repository }}/go.mod
+
+      - name: Run ./hack/update-codegen.sh
+        working-directory: ./src/github.com/${{ github.repository }}
+        run: ./hack/update-codegen.sh
+
+      - name: git push
+        working-directory: ./src/github.com/${{ github.repository }}
+        run: |
+          if ! git diff --exit-code --quiet
+          then
+            git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git config --local user.name "github-actions[bot]"
+            git add .
+            git commit -m "Run ./hack/update-codegen.sh"
+            git push
+          fi
