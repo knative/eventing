@@ -1,0 +1,144 @@
+# Copyright 2025 The Knative Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: k8s-event-reporter
+  namespace: knative-eventing
+  labels:
+    app.kubernetes.io/component: k8s-event-reporter
+    app.kubernetes.io/version: devel
+    app.kubernetes.io/name: knative-eventing
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: k8s-event-reporter
+  template:
+    metadata:
+      labels:
+        app: k8s-event-reporter
+        app.kubernetes.io/component: k8s-event-reporter
+        app.kubernetes.io/version: devel
+        app.kubernetes.io/name: knative-eventing
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app: k8s-event-reporter
+              topologyKey: kubernetes.io/hostname
+            weight: 100
+      enableServiceLinks: false
+      containers:
+        - name: k8s-event-reporter
+          terminationMessagePolicy: FallbackToLogsOnError
+          image: ko://knative.dev/eventing/cmd/k8seventreporter
+          env:
+            - name: SYSTEM_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.namespace
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.name
+            - name: CONTAINER_NAME
+              value: k8s-event-reporter
+            - name: CONFIG_LOGGING_NAME
+              value: config-logging
+            - name: CONFIG_OBSERVABILITY_NAME
+              value: config-observability
+            - name: METRICS_DOMAIN
+              value: knative.dev/internal/eventing
+
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /healthz
+              port: 8080
+              scheme: HTTP
+            periodSeconds: 2
+            successThreshold: 1
+            timeoutSeconds: 1
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /healthz
+              port: 8080
+              scheme: HTTP
+            periodSeconds: 2
+            successThreshold: 1
+            timeoutSeconds: 1
+            initialDelaySeconds: 5
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+            - containerPort: 9092
+              name: metrics
+              protocol: TCP
+          terminationMessagePath: /dev/termination-log
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop:
+              - ALL
+            seccompProfile:
+              type: RuntimeDefault
+
+      serviceAccountName: k8s-event-reporter
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: k8s-event-reporter
+    app.kubernetes.io/component: k8s-event-reporter
+    app.kubernetes.io/version: devel
+    app.kubernetes.io/name: knative-eventing
+  name: k8s-event-reporter
+  namespace: knative-eventing
+spec:
+  ports:
+    - name: http
+      port: 80
+      protocol: TCP
+      targetPort: 8080
+    - name: http-metrics
+      port: 9092
+      protocol: TCP
+      targetPort: 9092
+  selector:
+    app: k8s-event-reporter
+
