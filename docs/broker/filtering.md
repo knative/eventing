@@ -280,7 +280,7 @@ spec:
 Cannot be specified with the SourceAndType filter.
 
 _This example assumes the repository name is available as a CloudEvents
-extension `{"repository":proposals"}`._
+extension `{"repository":"proposals"}`._
 
 Specified with the attributes filter:
 
@@ -309,7 +309,7 @@ spec:
 Cannot be specified with the SourceAndType filter.
 
 _This example assumes the repository name is available as a CloudEvents
-extension `{"github.repository":proposals"}`._
+extension `{"github.repository":"proposals"}`._
 
 Specified with the attributes filter:
 
@@ -350,7 +350,7 @@ spec:
 Cannot be specified with the SourceAndType filter or the attributes filter.
 
 _This example assumes the event data is the parseable equivalent of
-`{"user":{"id":"abc123"}`._
+`{"user":{"id":"abc123"}}`._
 
 ```yaml
 spec:
