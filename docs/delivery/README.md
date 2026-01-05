@@ -40,11 +40,11 @@ these situations.
 ### Dead Letter Sink
 
 Channels are responsible for forwarding received events to subscribers. When
-they fail to do so, they are responsible for sending the failing events to an
+they fail to do so, they are responsible for sending the failing events to a
 **dead letter sink**, potentially one per subscriber.
 
 Similarly Event Sources are responsible for sending events to a sink and when
-they fail to do so, they are responsible for sending the failing events to an
+they fail to do so, they are responsible for sending the failing events to a
 **dead letter sink**.
 
 The dead letter sink can be a channel but it does not have to.
