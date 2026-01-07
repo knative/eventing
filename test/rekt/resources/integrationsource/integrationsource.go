@@ -37,7 +37,7 @@ type SourceType string
 
 const (
 	SourceTypeTimer SourceType = "dev.knative.eventing.timer"
-	SourceTypeS3    SourceType = "dev.knative.eventing.s3"
+	SourceTypeS3    SourceType = "dev.knative.eventing.aws-s3"
 )
 
 func Gvr() schema.GroupVersionResource {
@@ -50,10 +50,9 @@ func IsReady(name string, timing ...time.Duration) feature.StepFn {
 }
 
 // Install will create a ContainerSource resource, augmented with the config fn options.
-func Install(name string, sourceType SourceType, opts ...manifest.CfgFn) feature.StepFn {
+func Install(name string, opts ...manifest.CfgFn) feature.StepFn {
 	cfg := map[string]interface{}{
-		"name":                  name,
-		"integrationSourceType": string(sourceType),
+		"name": name,
 	}
 	for _, fn := range opts {
 		fn(cfg)
@@ -107,5 +106,20 @@ func WithSink(d *duckv1.Destination) manifest.CfgFn {
 			sref["namespace"] = ref.Namespace
 			sref["name"] = ref.Name
 		}
+	}
+}
+
+func WithTimerSource() manifest.CfgFn {
+	return func(cfg map[string]interface{}) {
+		cfg["integrationSourceType"] = string(SourceTypeTimer)
+	}
+}
+
+func WithS3Source(arn, region, secretName string) manifest.CfgFn {
+	return func(cfg map[string]interface{}) {
+		cfg["integrationSourceType"] = string(SourceTypeS3)
+		cfg["s3Arn"] = arn
+		cfg["s3Region"] = region
+		cfg["secretName"] = secretName
 	}
 }

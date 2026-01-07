@@ -18,6 +18,17 @@
     message: "Hello, Eventing Core"
 {{end}}
 
+{{define "s3Spec"}}
+  aws:
+    s3:
+      arn: "{{ .s3Arn }}"
+      region: "{{ .s3Region }}"
+    auth:
+      secret:
+        ref:
+          name: "{{ .secretName }}"
+{{end}}
+
 apiVersion: sources.knative.dev/v1alpha1
 kind: IntegrationSource
 metadata:
@@ -26,6 +37,8 @@ metadata:
 spec:
   {{- if eq .integrationSourceType "dev.knative.eventing.timer" }}
   {{ template "timerSpec" }}
+  {{- else if eq .integrationSourceType "dev.knative.eventing.aws-s3" }}
+  {{ template "s3Spec" . }}
   {{- else }}
   {{ template "timerSpec" . }} # default to timer source if not specified
   {{- end }}

@@ -48,14 +48,18 @@ func SendsEventsWithSinkRefOIDC(sourceType integrationsource.SourceType) *featur
 		d.CACerts = eventshub.GetCaCerts(ctx)
 		d.Audience = &sinkAudience
 
-		integrationsource.Install(src, sourceType, integrationsource.WithSink(d))(ctx, t)
+		installSourceByType(ctx, t, src, sourceType, integrationsource.WithSink(d))
 	})
 
 	f.Requirement("integrationsource goes ready", integrationsource.IsReady(src))
 
+	f.Requirement("trigger message", func(ctx context.Context, t feature.T) {
+		triggerEventByType(ctx, t, sourceType)
+	})
+
 	f.Stable("integrationsource as event source").
 		Must("delivers events",
-			assert.OnStore(sink).MatchEvent(test.HasType("dev.knative.eventing.timer")).AtLeast(1)).
+			assert.OnStore(sink).MatchEvent(test.HasType(string(sourceType))).AtLeast(1)).
 		Must("uses integrationsources identity for OIDC", assert.OnStore(sink).MatchWithContext(
 			assert.MatchKind(eventshub.EventReceived).WithContext(),
 			assert.MatchOIDCUserFromResource(integrationsource.Gvr(), src)).AtLeast(1)).
