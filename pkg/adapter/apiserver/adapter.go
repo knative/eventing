@@ -111,13 +111,20 @@ func (a *apiServerAdapter) startResilient(ctx context.Context, stopCh <-chan str
 			// In resilient mode, we just skip it and continue.
 			continue
 		}
-		for _, res := range match.resourceInterfaces {
+		for i, res := range match.resourceInterfaces {
 			lw := &cache.ListWatch{
 				ListFunc:  asUnstructuredLister(ctx, res.List, match.resourceWatch.LabelSelector),
 				WatchFunc: asUnstructuredWatcher(ctx, res.Watch, match.resourceWatch.LabelSelector),
 			}
 
-			reflector := cache.NewReflector(lw, &unstructured.Unstructured{}, delegate, resyncPeriod)
+			// Build reflector name with resource and namespace
+			var reflectorName string
+			if match.apiResource.Namespaced && !a.config.AllNamespaces {
+				reflectorName = fmt.Sprintf("%s/%s", match.resourceWatch.GVR.String(), a.config.Namespaces[i])
+			} else {
+				reflectorName = match.resourceWatch.GVR.String()
+			}
+			reflector := cache.NewNamedReflector(reflectorName, lw, &unstructured.Unstructured{}, delegate, resyncPeriod)
 			go reflector.Run(stop)
 		}
 	}
@@ -147,13 +154,20 @@ func (a *apiServerAdapter) startFailFast(ctx context.Context, stopCh <-chan stru
 			a.logger.Errorf("could not retrieve information about resource %s: it doesn't exist.", match.resourceWatch.GVR.String())
 			return fmt.Errorf("resource %s does not exist", match.resourceWatch.GVR.String())
 		}
-		for _, res := range match.resourceInterfaces {
+		for i, res := range match.resourceInterfaces {
 			lw := &cache.ListWatch{
 				ListFunc:  asUnstructuredLister(watchCtx, res.List, match.resourceWatch.LabelSelector),
 				WatchFunc: asUnstructuredWatcher(watchCtx, res.Watch, match.resourceWatch.LabelSelector),
 			}
 
-			reflector := cache.NewReflector(lw, &unstructured.Unstructured{}, delegate, resyncPeriod)
+			// Build reflector name with resource and namespace
+			var reflectorName string
+			if match.apiResource.Namespaced && !a.config.AllNamespaces {
+				reflectorName = fmt.Sprintf("%s/%s", match.resourceWatch.GVR.String(), a.config.Namespaces[i])
+			} else {
+				reflectorName = match.resourceWatch.GVR.String()
+			}
+			reflector := cache.NewNamedReflector(reflectorName, lw, &unstructured.Unstructured{}, delegate, resyncPeriod)
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
