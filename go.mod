@@ -8,6 +8,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.27.36
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.34
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.95.0
+	github.com/aws/aws-sdk-go-v2/service/sqs v1.42.20
 	github.com/cert-manager/cert-manager v1.16.3
 	github.com/cloudevents/conformance v0.4.1
 	github.com/cloudevents/sdk-go/observability/opentelemetry/v2 v2.16.1

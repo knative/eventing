@@ -38,6 +38,7 @@ type SourceType string
 const (
 	SourceTypeTimer SourceType = "dev.knative.eventing.timer"
 	SourceTypeS3    SourceType = "dev.knative.eventing.aws-s3"
+	SourceTypeSQS   SourceType = "dev.knative.eventing.aws-sqs"
 )
 
 func Gvr() schema.GroupVersionResource {
@@ -120,6 +121,15 @@ func WithS3Source(arn, region, secretName string) manifest.CfgFn {
 		cfg["integrationSourceType"] = string(SourceTypeS3)
 		cfg["s3Arn"] = arn
 		cfg["s3Region"] = region
+		cfg["secretName"] = secretName
+	}
+}
+
+func WithSQSSource(arn, region, secretName string) manifest.CfgFn {
+	return func(cfg map[string]interface{}) {
+		cfg["integrationSourceType"] = string(SourceTypeSQS)
+		cfg["sqsArn"] = arn
+		cfg["sqsRegion"] = region
 		cfg["secretName"] = secretName
 	}
 }

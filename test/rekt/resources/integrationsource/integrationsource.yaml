@@ -29,6 +29,17 @@
           name: "{{ .secretName }}"
 {{end}}
 
+{{define "sqsSpec"}}
+  aws:
+    sqs:
+      arn: "{{ .sqsArn }}"
+      region: "{{ .sqsRegion }}"
+    auth:
+      secret:
+        ref:
+          name: "{{ .secretName }}"
+{{end}}
+
 apiVersion: sources.knative.dev/v1alpha1
 kind: IntegrationSource
 metadata:
@@ -39,6 +50,8 @@ spec:
   {{ template "timerSpec" }}
   {{- else if eq .integrationSourceType "dev.knative.eventing.aws-s3" }}
   {{ template "s3Spec" . }}
+  {{- else if eq .integrationSourceType "dev.knative.eventing.aws-sqs" }}
+  {{ template "sqsSpec" . }}  
   {{- else }}
   {{ template "timerSpec" . }} # default to timer source if not specified
   {{- end }}

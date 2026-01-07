@@ -26,6 +26,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/cloudevents/sdk-go/v2/test"
 	"knative.dev/eventing/pkg/eventingtls/eventingtlstesting"
 	"knative.dev/eventing/test/rekt/features/featureflags"
@@ -79,8 +80,50 @@ func uploadFileToS3(ctx context.Context, t feature.T, arn, key, content string) 
 	}
 }
 
+func sendSQSEvent(ctx context.Context, t feature.T, arn, messageBody string) {
+	accessKey := os.Getenv("AWS_ACCESS_KEY_ID")
+	secretKey := os.Getenv("AWS_SECRET_ACCESS_KEY")
+	region := os.Getenv("AWS_REGION")
+	if region == "" {
+		region = "us-west-1"
+	}
+
+	cfg, err := config.LoadDefaultConfig(ctx,
+		config.WithRegion(region),
+		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(accessKey, secretKey, "")),
+	)
+	if err != nil {
+		t.Fatalf("Failed to load AWS config: %v", err)
+	}
+
+	client := sqs.NewFromConfig(cfg)
+
+	// extract queue name from S3 ARN
+	// Example: arn:aws:sqs:us-west-1::my-queue -> my-queue
+	parts := strings.Split(arn, ":")
+	queueName := parts[5]
+
+	// determine queue URL from queue name
+	urlRes, err := client.GetQueueUrl(ctx, &sqs.GetQueueUrlInput{
+		QueueName: aws.String(queueName),
+	})
+	if err != nil {
+		t.Fatalf("Failed to get queue url for %s, %v", queueName, err)
+	}
+	queueURL := urlRes.QueueUrl
+
+	_, err = client.SendMessage(ctx, &sqs.SendMessageInput{
+		QueueUrl:    queueURL,
+		MessageBody: aws.String(messageBody),
+	})
+	if err != nil {
+		t.Fatalf("Failed to send message to SQS: %v", err)
+	}
+}
+
 // triggerEventByType triggers a message based on the source type
 // For S3 sources, uploads a file to S3 bucket
+// For SQS sources, sends a message to SQS queue
 // For Timer sources, does nothing (timer triggers automatically)
 func triggerEventByType(ctx context.Context, t feature.T, sourceType integrationsource.SourceType) {
 	switch sourceType {
@@ -90,6 +133,12 @@ func triggerEventByType(ctx context.Context, t feature.T, sourceType integration
 			arn = "arn:aws:s3:::eventing-e2e"
 		}
 		uploadFileToS3(ctx, t, arn, "message.json", `{"message": "Hello from AWS S3!"}`)
+	case integrationsource.SourceTypeSQS:
+		arn := os.Getenv("AWS_SQS_SOURCE_ARN")
+		if arn == "" {
+			arn = "arn:aws:sqs:us-west-1::eventing-e2e-sqs-source"
+		}
+		sendSQSEvent(ctx, t, arn, `{"message": "Hello from AWS SQS!"}`)
 	case integrationsource.SourceTypeTimer:
 		// Timer source triggers automatically, no action needed
 	}
@@ -98,10 +147,11 @@ func triggerEventByType(ctx context.Context, t feature.T, sourceType integration
 // installSourceByType installs an integration source based on the source type.
 // For S3 sources, it reads AWS credentials from environment variables and creates a secret.
 // Environment variables:
-//   - AWS_ACCESS_KEY_ID (required)
-//   - AWS_SECRET_ACCESS_KEY (required)
+//   - AWS_ACCESS_KEY_ID (required for S3/SQS sources)
+//   - AWS_SECRET_ACCESS_KEY (required for S3/SQS sources)
 //   - AWS_REGION (optional, default: us-west-1)
 //   - AWS_S3_SOURCE_ARN (optional, default: arn:aws:s3:::eventing-e2e)
+//   - AWS_SQS_SOURCE_ARN (optional, default: arn:aws:sqs:us-west-1::eventing-e2e-sqs-source)
 func installSourceByType(ctx context.Context, t feature.T, sourceName string, sourceType integrationsource.SourceType, sinkOpts ...manifest.CfgFn) {
 	switch sourceType {
 	case integrationsource.SourceTypeS3:
@@ -129,6 +179,32 @@ func installSourceByType(ctx context.Context, t feature.T, sourceName string, so
 			secret.WithStringData("aws.secretKey", secretKey),
 		)(ctx, t)
 		opts := append([]manifest.CfgFn{integrationsource.WithS3Source(arn, region, secretName)}, sinkOpts...)
+		integrationsource.Install(sourceName, opts...)(ctx, t)
+	case integrationsource.SourceTypeSQS:
+		accessKey := os.Getenv("AWS_ACCESS_KEY_ID")
+		secretKey := os.Getenv("AWS_SECRET_ACCESS_KEY")
+
+		if accessKey == "" || secretKey == "" {
+			t.Fatal("AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables must be set for S3 source tests")
+		}
+
+		region := os.Getenv("AWS_REGION")
+		if region == "" {
+			region = "us-west-1"
+		}
+
+		arn := os.Getenv("AWS_SQS_SOURCE_ARN")
+		if arn == "" {
+			arn = "arn:aws:sqs:us-west-1::eventing-e2e-sqs-source"
+		}
+
+		secretName := feature.MakeRandomK8sName("aws-credentials")
+		secret.Install(
+			secretName,
+			secret.WithStringData("aws.accessKey", accessKey),
+			secret.WithStringData("aws.secretKey", secretKey),
+		)(ctx, t)
+		opts := append([]manifest.CfgFn{integrationsource.WithSQSSource(arn, region, secretName)}, sinkOpts...)
 		integrationsource.Install(sourceName, opts...)(ctx, t)
 	case integrationsource.SourceTypeTimer:
 		opts := append([]manifest.CfgFn{integrationsource.WithTimerSource()}, sinkOpts...)
