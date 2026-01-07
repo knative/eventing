@@ -96,6 +96,15 @@ type ApiServerSourceSpec struct {
 	//
 	// +optional
 	Filters []eventingv1.SubscriptionsAPIFilter `json:"filters,omitempty"`
+
+	// DisableCache, when set to true, configures the adapter to use cluster-scoped watches
+	// instead of per-namespace watches. This reduces the number of API connections from N
+	// (namespaces) to 1 per resource type, preventing client-side throttling when tracking
+	// resources across many namespaces. Events from non-selected namespaces are filtered
+	// client-side in the adapter.
+	// Defaults to false (per-namespace watches for better isolation).
+	// +optional
+	DisableCache *bool `json:"disableCache,omitempty"`
 }
 
 // ApiServerSourceStatus defines the observed state of ApiServerSource

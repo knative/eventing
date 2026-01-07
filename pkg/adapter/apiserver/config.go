@@ -74,4 +74,13 @@ type Config struct {
 	// (via the features.knative.dev/apiserversource-skip-permissions-check annotation), and the ApiServerSource
 	// adapter should not keep trying to establish watches on resources that it perhaps does not have permissions for.
 	FailFast bool `json:"failFast,omitempty"`
+
+	// DisableCache when true, forces cluster-scoped watches to reduce API connections
+	// and prevent client-side throttling in high-namespace scenarios.
+	DisableCache bool `json:"disableCache,omitempty"`
+
+	// OriginalNamespaces holds the user's intended namespaces for filtering
+	// when DisableCache forces AllNamespaces mode. This allows cluster-scoped
+	// watches while still filtering events to only the desired namespaces.
+	OriginalNamespaces []string `json:"originalNamespaces,omitempty"`
 }

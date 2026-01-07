@@ -51,6 +51,7 @@ type ReceiveAdapterArgs struct {
 	AllNamespaces bool
 	NodeSelector  map[string]string
 	FailFast      bool
+	DisableCache  bool
 }
 
 // MakeReceiveAdapter generates (but does not insert into K8s) the Receive Adapter Deployment for
@@ -132,14 +133,19 @@ func MakeReceiveAdapter(args *ReceiveAdapterArgs) (*appsv1.Deployment, error) {
 }
 
 func makeEnv(args *ReceiveAdapterArgs) ([]corev1.EnvVar, error) {
+	// When DisableCache is true, force cluster-scoped watches to reduce API connections
+	allNamespaces := args.AllNamespaces || args.DisableCache
+
 	cfg := &apiserver.Config{
-		Namespaces:    args.Namespaces,
-		Resources:     make([]apiserver.ResourceWatch, 0, len(args.Source.Spec.Resources)),
-		ResourceOwner: args.Source.Spec.ResourceOwner,
-		EventMode:     args.Source.Spec.EventMode,
-		AllNamespaces: args.AllNamespaces,
-		Filters:       args.Source.Spec.Filters,
-		FailFast:      args.FailFast,
+		Namespaces:         args.Namespaces,
+		Resources:          make([]apiserver.ResourceWatch, 0, len(args.Source.Spec.Resources)),
+		ResourceOwner:      args.Source.Spec.ResourceOwner,
+		EventMode:          args.Source.Spec.EventMode,
+		AllNamespaces:      allNamespaces,
+		Filters:            args.Source.Spec.Filters,
+		FailFast:           args.FailFast,
+		DisableCache:       args.DisableCache,
+		OriginalNamespaces: args.Namespaces, // Store for client-side filtering
 	}
 
 	for _, r := range args.Source.Spec.Resources {
