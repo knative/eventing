@@ -153,6 +153,11 @@ func (in *ApiServerSourceSpec) DeepCopyInto(out *ApiServerSourceSpec) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	if in.DisableCache != nil {
+		in, out := &in.DisableCache, &out.DisableCache
+		*out = new(bool)
+		**out = **in
+	}
 	return
 }
 

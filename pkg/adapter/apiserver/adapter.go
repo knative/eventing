@@ -191,6 +191,19 @@ func (a *apiServerAdapter) startFailFast(ctx context.Context, stopCh <-chan stru
 }
 
 func (a *apiServerAdapter) setupDelegate() cache.Store {
+	// Build namespace filter set for DisableCache mode
+	var allowedNs map[string]struct{}
+	filterByNs := false
+	if a.config.DisableCache && len(a.config.OriginalNamespaces) > 0 && a.config.AllNamespaces {
+		// DisableCache forced cluster-scoped watches, so we need client-side filtering
+		filterByNs = true
+		allowedNs = make(map[string]struct{}, len(a.config.OriginalNamespaces))
+		for _, ns := range a.config.OriginalNamespaces {
+			allowedNs[ns] = struct{}{}
+		}
+		a.logger.Infof("DisableCache enabled: using cluster-scoped watches with client-side filtering for %d namespaces", len(a.config.OriginalNamespaces))
+	}
+
 	var delegate cache.Store = &resourceDelegate{
 		ce:                  a.ce,
 		source:              a.source,
@@ -198,6 +211,8 @@ func (a *apiServerAdapter) setupDelegate() cache.Store {
 		ref:                 a.config.EventMode == v1.ReferenceMode,
 		apiServerSourceName: a.name,
 		filter:              subscriptionsapi.NewAllFilter(subscriptionsapi.MaterializeFiltersList(a.logger.Desugar(), a.config.Filters)...),
+		allowedNamespaces:   allowedNs,
+		filterByNamespace:   filterByNs,
 	}
 	if a.config.ResourceOwner != nil {
 		a.logger.Infow("will be filtered",

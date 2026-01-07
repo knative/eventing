@@ -22,6 +22,7 @@ import (
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/eventing/pkg/adapter/apiserver/events"
 	"knative.dev/eventing/pkg/eventfilter"
@@ -35,6 +36,12 @@ type resourceDelegate struct {
 	filter              eventfilter.Filter
 
 	logger *zap.SugaredLogger
+
+	// Namespace filtering for DisableCache mode
+	// When DisableCache forces cluster-scoped watches, we filter events
+	// to only those from the originally selected namespaces
+	allowedNamespaces map[string]struct{}
+	filterByNamespace bool
 }
 
 var _ cache.Store = (*resourceDelegate)(nil)
@@ -57,6 +64,18 @@ func (a *resourceDelegate) Delete(obj interface{}) error {
 type makeEventFunc func(string, string, interface{}, bool) (context.Context, cloudevents.Event, error)
 
 func (a *resourceDelegate) handleKubernetesObject(makeEvent makeEventFunc, obj interface{}) error {
+	// Quick namespace filter FIRST (before expensive CloudEvent creation)
+	// This is O(1) map lookup when DisableCache forces cluster-scoped watches
+	if a.filterByNamespace {
+		acc, err := meta.Accessor(obj)
+		if err != nil {
+			return err
+		}
+		if _, ok := a.allowedNamespaces[acc.GetNamespace()]; !ok {
+			return nil // Drop event - not in allowed namespaces
+		}
+	}
+
 	ctx, event, err := makeEvent(a.source, a.apiServerSourceName, obj, a.ref)
 
 	if err != nil {
