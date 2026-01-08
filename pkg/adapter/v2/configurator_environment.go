@@ -45,7 +45,14 @@ func NewLoggerConfiguratorFromEnvironment(env EnvConfigAccessor) LoggerConfigura
 }
 
 // CreateLogger based on environment variables.
+// This also configures klog verbosity if set.
 func (c *loggerConfiguratorFromEnvironment) CreateLogger(ctx context.Context) *zap.SugaredLogger {
+	if accessor, ok := c.env.(interface{ GetKlogLevel() int }); ok {
+		level := accessor.GetKlogLevel()
+		if level > 0 {
+			SetupKlogLevel(level)
+		}
+	}
 	return c.env.GetLogger()
 }
 
