@@ -64,6 +64,9 @@ func TestMakePingAdapter(t *testing.T) {
 	}, {
 		Name:  "K_OBSERVABILITY_CONFIG",
 		Value: "",
+	}, {
+		Name:  "K_KLOG_LEVEL",
+		Value: "",
 	},
 	}
 

@@ -50,3 +50,9 @@ data:
   # For all components changes are be picked up immediately.
   loglevel.controller: "info"
   loglevel.webhook: "info"
+               
+  # klogLevel configures the verbosity level for klog (Kubernetes client-go logging).
+  # This is useful for debugging Kubernetes API client issues.
+  # Valid values are integers from 0-10. Higher values are more verbose.
+  # Default is "0" (minimal output).
+  klogLevel: "0"
