@@ -36,9 +36,10 @@ var yaml embed.FS
 type SourceType string
 
 const (
-	SourceTypeTimer SourceType = "dev.knative.eventing.timer"
-	SourceTypeS3    SourceType = "dev.knative.eventing.aws-s3"
-	SourceTypeSQS   SourceType = "dev.knative.eventing.aws-sqs"
+	SourceTypeTimer      SourceType = "dev.knative.eventing.timer"
+	SourceTypeS3         SourceType = "dev.knative.eventing.aws-s3"
+	SourceTypeSQS        SourceType = "dev.knative.eventing.aws-sqs"
+	SourceTypeDDbStreams SourceType = "dev.knative.eventing.aws-ddb-streams"
 )
 
 func Gvr() schema.GroupVersionResource {
@@ -130,6 +131,15 @@ func WithSQSSource(arn, region, secretName string) manifest.CfgFn {
 		cfg["integrationSourceType"] = string(SourceTypeSQS)
 		cfg["sqsArn"] = arn
 		cfg["sqsRegion"] = region
+		cfg["secretName"] = secretName
+	}
+}
+
+func WithDynamoDBStreamsSource(tableName, region, secretName string) manifest.CfgFn {
+	return func(cfg map[string]interface{}) {
+		cfg["integrationSourceType"] = string(SourceTypeDDbStreams)
+		cfg["ddbStreamsTable"] = tableName
+		cfg["ddbStreamsRegion"] = region
 		cfg["secretName"] = secretName
 	}
 }

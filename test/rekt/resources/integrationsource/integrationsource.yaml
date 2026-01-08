@@ -40,6 +40,18 @@
           name: "{{ .secretName }}"
 {{end}}
 
+{{define "ddbStreamsSpec"}}
+  aws:
+    ddbStreams:
+      table: "{{ .ddbStreamsTable }}"
+      region: "{{ .ddbStreamsRegion }}"
+#      streamIteratorType: "FROM_START"
+    auth:
+      secret:
+        ref:
+          name: "{{ .secretName }}"
+{{end}}
+
 apiVersion: sources.knative.dev/v1alpha1
 kind: IntegrationSource
 metadata:
@@ -51,7 +63,9 @@ spec:
   {{- else if eq .integrationSourceType "dev.knative.eventing.aws-s3" }}
   {{ template "s3Spec" . }}
   {{- else if eq .integrationSourceType "dev.knative.eventing.aws-sqs" }}
-  {{ template "sqsSpec" . }}  
+  {{ template "sqsSpec" . }}
+  {{- else if eq .integrationSourceType "dev.knative.eventing.aws-ddb-streams" }}
+  {{ template "ddbStreamsSpec" . }}
   {{- else }}
   {{ template "timerSpec" . }} # default to timer source if not specified
   {{- end }}
