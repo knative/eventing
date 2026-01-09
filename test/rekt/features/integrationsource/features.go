@@ -291,7 +291,7 @@ func SendsEventsWithSinkRef(sourceType integrationsource.SourceType) *feature.Fe
 
 	f.Requirement("integrationsource goes ready", integrationsource.IsReady(sourceName))
 
-	f.Requirement("trigger event", func(ctx context.Context, t feature.T) {
+	f.Assert("trigger event", func(ctx context.Context, t feature.T) {
 		triggerEventByType(ctx, t, sourceType)
 	})
 
@@ -319,7 +319,7 @@ func SendEventsWithTLSReceiverAsSink(sourceType integrationsource.SourceType) *f
 	})
 	f.Requirement("integrationsource goes ready", integrationsource.IsReady(sourceName))
 
-	f.Requirement("trigger event", func(ctx context.Context, t feature.T) {
+	f.Assert("trigger event", func(ctx context.Context, t feature.T) {
 		triggerEventByType(ctx, t, sourceType)
 	})
 
@@ -361,7 +361,7 @@ func SendEventsWithTLSReceiverAsSinkTrustBundle(sourceType integrationsource.Sou
 	})
 	f.Requirement("integrationsource goes ready", integrationsource.IsReady(sourceName))
 
-	f.Requirement("trigger event", func(ctx context.Context, t feature.T) {
+	f.Assert("trigger event", func(ctx context.Context, t feature.T) {
 		triggerEventByType(ctx, t, sourceType)
 	})
 
