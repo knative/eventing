@@ -35,7 +35,7 @@ import (
 	"knative.dev/reconciler-test/pkg/knative"
 )
 
-func TestIntegrationSinkSuccess(t *testing.T) {
+func TestIntegrationSinkLogSuccess(t *testing.T) {
 	t.Parallel()
 
 	ctx, env := global.Environment(
@@ -46,10 +46,10 @@ func TestIntegrationSinkSuccess(t *testing.T) {
 		environment.Managed(t),
 	)
 
-	env.Test(ctx, t, integrationsink.Success())
+	env.Test(ctx, t, integrationsink.Success(integrationsinkresource.SinkTypeLog))
 }
 
-func TestIntegrationSinkSuccessTLS(t *testing.T) {
+func TestIntegrationSinkLogSuccessTLS(t *testing.T) {
 	t.Parallel()
 
 	ctx, env := global.Environment(
@@ -61,10 +61,10 @@ func TestIntegrationSinkSuccessTLS(t *testing.T) {
 		environment.Managed(t),
 	)
 
-	env.Test(ctx, t, integrationsink.SuccessTLS())
+	env.Test(ctx, t, integrationsink.SuccessTLS(integrationsinkresource.SinkTypeLog))
 }
 
-func TestIntegrationSinkSupportsOIDC(t *testing.T) {
+func TestIntegrationSinkLogSupportsOIDC(t *testing.T) {
 	t.Parallel()
 
 	ctx, env := global.Environment(
@@ -83,7 +83,7 @@ func TestIntegrationSinkSupportsOIDC(t *testing.T) {
 	env.TestSet(ctx, t, oidc.AddressableOIDCConformance(integrationsinkresource.GVR(), "IntegrationSink", name, env.Namespace()))
 }
 
-func TestIntegrationSinkSupportsAuthZ(t *testing.T) {
+func TestIntegrationSinkLogSupportsAuthZ(t *testing.T) {
 	t.Parallel()
 
 	ctx, env := global.Environment(

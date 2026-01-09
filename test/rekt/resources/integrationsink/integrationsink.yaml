@@ -12,6 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+{{define "logSpec"}}
+  log:
+    showHeaders: true
+{{end}}
+
 apiVersion: sinks.knative.dev/v1alpha1
 kind: IntegrationSink
 metadata:
@@ -23,5 +28,8 @@ metadata:
   {{ end }}
   {{ end }}
 spec:
-  log:
-    showHeaders: true
+  {{- if eq .integrationSinkType "log" }}
+  {{ template "logSpec" . }}
+  {{- else }} # default to log sink if not specified
+  {{ template "logSpec" . }}
+  {{- end }}

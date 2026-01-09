@@ -17,6 +17,12 @@ import (
 //go:embed integrationsink.yaml
 var yamlEmbed embed.FS
 
+type SinkType string
+
+const (
+	SinkTypeLog SinkType = "log"
+)
+
 func GVR() schema.GroupVersionResource {
 	return schema.GroupVersionResource{Group: "sinks.knative.dev", Version: "v1alpha1", Resource: "integrationsinks"}
 }
@@ -75,4 +81,10 @@ func GoesReadySimple(name string) *feature.Feature {
 	f.Setup("integrationsink is addressable", IsAddressable(name))
 
 	return f
+}
+
+func WithLogSink() manifest.CfgFn {
+	return func(cfg map[string]interface{}) {
+		cfg["integrationSinkType"] = string(SinkTypeLog)
+	}
 }

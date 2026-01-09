@@ -17,6 +17,7 @@ limitations under the License.
 package integrationsink
 
 import (
+	"context"
 	"time"
 
 	cetest "github.com/cloudevents/sdk-go/v2/test"
@@ -29,7 +30,15 @@ import (
 	"knative.dev/reconciler-test/pkg/feature"
 )
 
-func Success() *feature.Feature {
+// installSinkByType installs an integration sink based on the sink type.
+func installSinkByType(ctx context.Context, t feature.T, sinkName string, sinkType integrationsink.SinkType) {
+	switch sinkType {
+	case integrationsink.SinkTypeLog:
+		integrationsink.Install(sinkName, integrationsink.WithLogSink())(ctx, t)
+	}
+}
+
+func Success(sinkType integrationsink.SinkType) *feature.Feature {
 	f := feature.NewFeature()
 
 	//	sink := feature.MakeRandomK8sName("sink")
@@ -39,7 +48,9 @@ func Success() *feature.Feature {
 	event := cetest.FullEvent()
 	event.SetID(uuid.NewString())
 
-	f.Setup("install integration sink", integrationsink.Install(integrationSink))
+	f.Setup("install integration sink", func(ctx context.Context, t feature.T) {
+		installSinkByType(ctx, t, integrationSink, sinkType)
+	})
 
 	f.Setup("integrationsink is addressable", integrationsink.IsAddressable(integrationSink))
 	f.Setup("integrationsink is ready", integrationsink.IsReady(integrationSink))
@@ -59,7 +70,7 @@ func Success() *feature.Feature {
 	return f
 }
 
-func SuccessTLS() *feature.Feature {
+func SuccessTLS(sinkType integrationsink.SinkType) *feature.Feature {
 	f := feature.NewFeature()
 
 	//	sink := feature.MakeRandomK8sName("sink")
@@ -74,7 +85,9 @@ func SuccessTLS() *feature.Feature {
 	f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
 	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
 
-	f.Setup("install integration sink", integrationsink.Install(integrationSink)) //, integrationsink.WithForwarderJob(sinkURL.String())))
+	f.Setup("install integration sink", func(ctx context.Context, t feature.T) {
+		installSinkByType(ctx, t, integrationSink, sinkType)
+	})
 
 	f.Setup("integrationsink is addressable", integrationsink.IsAddressable(integrationSink))
 	f.Setup("integrationsink is ready", integrationsink.IsReady(integrationSink))
