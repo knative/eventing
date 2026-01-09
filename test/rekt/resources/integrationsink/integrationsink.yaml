@@ -17,6 +17,17 @@
     showHeaders: true
 {{end}}
 
+{{define "s3Spec"}}
+  aws:
+    s3:
+      arn: "{{ .s3Arn }}"
+      region: "{{ .s3Region }}"
+    auth:
+      secret:
+        ref:
+          name: "{{ .secretName }}"
+{{end}}
+
 apiVersion: sinks.knative.dev/v1alpha1
 kind: IntegrationSink
 metadata:
@@ -30,6 +41,8 @@ metadata:
 spec:
   {{- if eq .integrationSinkType "log" }}
   {{ template "logSpec" . }}
+  {{- else if eq .integrationSinkType "dev.knative.eventing.aws-s3" }}
+  {{ template "s3Spec" . }}
   {{- else }} # default to log sink if not specified
   {{ template "logSpec" . }}
   {{- end }}
