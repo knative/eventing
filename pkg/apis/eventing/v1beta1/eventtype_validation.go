@@ -33,8 +33,14 @@ func (ets *EventTypeSpec) Validate(ctx context.Context) *apis.FieldError {
 		fe := apis.ErrMissingField("type")
 		errs = errs.Also(fe)
 	}
-	// TODO validate Source is a valid URI.
-	// TODO validate Schema is a valid URI.
+	// Validate Source is a non-empty URI when provided
+	if ets.Source != nil && ets.Source.IsEmpty() {
+		errs = errs.Also(apis.ErrInvalidValue("", "source", "source URI cannot be empty"))
+	}
+	// Validate Schema is a non-empty URI when provided
+	if ets.Schema != nil && ets.Schema.IsEmpty() {
+		errs = errs.Also(apis.ErrInvalidValue("", "schema", "schema URI cannot be empty"))
+	}
 	// There is no validation of the SchemaData, it is application specific data.
 	return errs
 }

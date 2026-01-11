@@ -61,6 +61,23 @@ func TestEventTypeSpecValidation(t *testing.T) {
 			Source: testSource,
 			Broker: "test-broker",
 		},
+	}, {
+		name: "invalid empty source",
+		ets: &EventTypeSpec{
+			Type:   "test-type",
+			Source: &apis.URL{},
+			Broker: "test-broker",
+		},
+		want: apis.ErrInvalidValue("", "source", "source URI cannot be empty"),
+	}, {
+		name: "invalid empty schema",
+		ets: &EventTypeSpec{
+			Type:   "test-type",
+			Source: testSource,
+			Schema: &apis.URL{},
+			Broker: "test-broker",
+		},
+		want: apis.ErrInvalidValue("", "schema", "schema URI cannot be empty"),
 	},
 	}
 
