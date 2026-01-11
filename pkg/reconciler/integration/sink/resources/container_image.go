@@ -224,9 +224,13 @@ func MakeAuthProxyRoleBindings(sink *v1alpha1.IntegrationSink, sinkLister v1alph
 
 	serviceAccounts := map[types.NamespacedName]struct{}{}
 	for _, s := range sinks {
+		saName := makeServiceAccountName(s)
+		if saName == "" {
+			saName = "default"
+		}
 		serviceAccounts[types.NamespacedName{
 			Namespace: s.Namespace,
-			Name:      "default", //TODO: get the real SA of the pod, as it could be that the integrationsink pod does not run under the default SA
+			Name:      saName,
 		}] = struct{}{}
 	}
 
