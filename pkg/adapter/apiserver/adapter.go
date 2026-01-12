@@ -117,13 +117,7 @@ func (a *apiServerAdapter) startResilient(ctx context.Context, stopCh <-chan str
 				WatchFunc: asUnstructuredWatcher(ctx, res.Watch, match.resourceWatch.LabelSelector),
 			}
 
-			// Build reflector name with resource and namespace
-			var reflectorName string
-			if match.apiResource.Namespaced && !a.config.AllNamespaces {
-				reflectorName = fmt.Sprintf("%s/%s", match.resourceWatch.GVR.String(), a.config.Namespaces[i])
-			} else {
-				reflectorName = match.resourceWatch.GVR.String()
-			}
+			reflectorName := a.buildReflectorName(match.apiResource.Namespaced, match.resourceWatch.GVR.String(), i)
 			reflector := cache.NewNamedReflector(reflectorName, lw, &unstructured.Unstructured{}, delegate, resyncPeriod)
 			go reflector.Run(stop)
 		}
@@ -160,13 +154,7 @@ func (a *apiServerAdapter) startFailFast(ctx context.Context, stopCh <-chan stru
 				WatchFunc: asUnstructuredWatcher(watchCtx, res.Watch, match.resourceWatch.LabelSelector),
 			}
 
-			// Build reflector name with resource and namespace
-			var reflectorName string
-			if match.apiResource.Namespaced && !a.config.AllNamespaces {
-				reflectorName = fmt.Sprintf("%s/%s", match.resourceWatch.GVR.String(), a.config.Namespaces[i])
-			} else {
-				reflectorName = match.resourceWatch.GVR.String()
-			}
+			reflectorName := a.buildReflectorName(match.apiResource.Namespaced, match.resourceWatch.GVR.String(), i)
 			reflector := cache.NewNamedReflector(reflectorName, lw, &unstructured.Unstructured{}, delegate, resyncPeriod)
 			wg.Add(1)
 			go func() {
@@ -224,6 +212,17 @@ func (a *apiServerAdapter) setupDelegate() cache.Store {
 		}
 	}
 	return delegate
+}
+
+// buildReflectorName builds the reflector name with resource GVR and namespace.
+// For namespaced resources (when not watching all namespaces), the name includes
+// both the GVR and the specific namespace being watched (e.g., "apps/v1/deployments/default").
+// For cluster-scoped resources or when watching all namespaces, only the GVR is used.
+func (a *apiServerAdapter) buildReflectorName(namespaced bool, gvr string, namespaceIndex int) string {
+	if namespaced && !a.config.AllNamespaces {
+		return fmt.Sprintf("%s/%s", gvr, a.config.Namespaces[namespaceIndex])
+	}
+	return gvr
 }
 
 func (a *apiServerAdapter) collectResourceMatches() ([]resourceWatchMatch, error) {
