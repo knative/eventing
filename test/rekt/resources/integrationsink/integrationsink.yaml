@@ -39,6 +39,17 @@
           name: "{{ .secretName }}"
 {{end}}
 
+{{define "snsSpec"}}
+  aws:
+    sns:
+      arn: "{{ .snsArn }}"
+      region: "{{ .snsRegion }}"
+    auth:
+      secret:
+        ref:
+          name: "{{ .secretName }}"
+{{end}}
+
 apiVersion: sinks.knative.dev/v1alpha1
 kind: IntegrationSink
 metadata:
@@ -56,6 +67,8 @@ spec:
   {{ template "s3Spec" . }}
   {{- else if eq .integrationSinkType "dev.knative.eventing.aws-sqs" }}
   {{ template "sqsSpec" . }}
+  {{- else if eq .integrationSinkType "dev.knative.eventing.aws-sns" }}
+  {{ template "snsSpec" . }}
   {{- else }} # default to log sink if not specified
   {{ template "logSpec" . }}
   {{- end }}

@@ -27,7 +27,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
-	"github.com/aws/aws-sdk-go-v2/service/sqs/types"
 	cetest "github.com/cloudevents/sdk-go/v2/test"
 	"github.com/google/uuid"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -43,12 +42,15 @@ import (
 // installs an integration sink based on the sink type.
 // For AWS S3 sink, it reads AWS credentials from environment variables and creates a secret.
 // For AWS SQS sink, it reads AWS credentials from environment variables and creates a secret.
+// For AWS SNS sink, it reads AWS credentials from environment variables and creates a secret.
 // Environment variables:
-//   - AWS_ACCESS_KEY_ID (required for S3/SQS sink)
-//   - AWS_SECRET_ACCESS_KEY (required for S3/SQS sink)
+//   - AWS_ACCESS_KEY_ID (required for S3/SQS/SNS sink)
+//   - AWS_SECRET_ACCESS_KEY (required for S3/SQS/SNS sink)
 //   - AWS_REGION (optional, default: us-west-1)
 //   - AWS_S3_SINK_ARN (optional for S3, default: arn:aws:s3:::eventing-e2e-sink)
 //   - AWS_SQS_QUEUE_NAME (optional for SQS, default: eventing-e2e-sqs-sink)
+//   - AWS_SNS_TOPIC_NAME (optional for SNS, default: arn:aws:sns:us-west-1:123456789012:eventing-e2e-sns-sink)
+//   - AWS_SNS_VERIFICATION_QUEUE_NAME (optional for SNS verification, default: eventing-e2e-sns-verification)
 func installSinkByType(ctx context.Context, t feature.T, sinkName string, sinkType integrationsink.SinkType) {
 	switch sinkType {
 	case integrationsink.SinkTypeS3:
@@ -101,6 +103,31 @@ func installSinkByType(ctx context.Context, t feature.T, sinkName string, sinkTy
 			secret.WithStringData("aws.secretKey", secretKey),
 		)(ctx, t)
 		integrationsink.Install(sinkName, integrationsink.WithSQSSink(queueName, region, secretName))(ctx, t)
+	case integrationsink.SinkTypeSNS:
+		accessKey := os.Getenv("AWS_ACCESS_KEY_ID")
+		secretKey := os.Getenv("AWS_SECRET_ACCESS_KEY")
+
+		if accessKey == "" || secretKey == "" {
+			t.Fatal("AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables must be set for SNS sink tests")
+		}
+
+		region := os.Getenv("AWS_REGION")
+		if region == "" {
+			region = "us-west-1"
+		}
+
+		topicName := os.Getenv("AWS_SNS_TOPIC_NAME")
+		if topicName == "" {
+			topicName = "eventing-e2e-sns-sink"
+		}
+
+		secretName := feature.MakeRandomK8sName("aws-credentials")
+		secret.Install(
+			secretName,
+			secret.WithStringData("aws.accessKey", accessKey),
+			secret.WithStringData("aws.secretKey", secretKey),
+		)(ctx, t)
+		integrationsink.Install(sinkName, integrationsink.WithSNSSink(topicName, region, secretName))(ctx, t)
 	case integrationsink.SinkTypeLog:
 		integrationsink.Install(sinkName, integrationsink.WithLogSink())(ctx, t)
 	}
@@ -282,6 +309,7 @@ func cleanupSQSQueue(ctx context.Context, t feature.T, queueURL string) {
 }
 
 // polls until the expected number of messages exist in SQS queue and verifies message bodies
+// deletes messages immediately after verification
 func verifySQSMessages(ctx context.Context, t feature.T, queueURL string, expectedContent string, expectedCount int) {
 	client := createSQSClient(ctx, t)
 
@@ -289,45 +317,96 @@ func verifySQSMessages(ctx context.Context, t feature.T, queueURL string, expect
 	interval := 2 * time.Second
 	timeout := 2 * time.Minute
 
-	var messages []types.Message
+	var verifiedCount int
 	err := wait.PollUntilContextTimeout(ctx, interval, timeout, true, func(ctx context.Context) (bool, error) {
-		// Receive messages without removing them from queue
 		receiveResult, err := client.ReceiveMessage(ctx, &sqs.ReceiveMessageInput{
 			QueueUrl:            aws.String(queueURL),
 			MaxNumberOfMessages: 10,
 			WaitTimeSeconds:     1,
-			VisibilityTimeout:   0, // Make messages immediately visible again
 		})
 		if err != nil {
 			// Continue polling on error
 			return false, nil
 		}
 
-		messages = append(messages, receiveResult.Messages...)
-		return len(messages) == expectedCount, nil
+		// Process and delete messages immediately
+		for _, msg := range receiveResult.Messages {
+			if msg.Body != nil && strings.Contains(*msg.Body, expectedContent) {
+				verifiedCount++
+				_, err := client.DeleteMessage(ctx, &sqs.DeleteMessageInput{
+					QueueUrl:      aws.String(queueURL),
+					ReceiptHandle: msg.ReceiptHandle,
+				})
+				if err != nil {
+					t.Logf("Warning: Failed to delete SQS message: %v", err)
+				}
+			}
+		}
+
+		return verifiedCount >= expectedCount, nil
 	})
 
 	if err != nil {
-		t.Fatalf("Timeout waiting for %d SQS messages. Found: %d", expectedCount, len(messages))
+		t.Fatalf("Timeout waiting for %d SQS messages. Found: %d", expectedCount, verifiedCount)
 	}
 
-	if len(messages) < expectedCount {
-		t.Fatalf("Expected %d SQS messages, found: %d", expectedCount, len(messages))
+	if verifiedCount < expectedCount {
+		t.Fatalf("Expected %d SQS messages, found: %d", expectedCount, verifiedCount)
 	}
 
-	// Verify message bodies contain expected content
-	matchedCount := 0
-	for _, msg := range messages {
-		if msg.Body != nil && strings.Contains(*msg.Body, expectedContent) {
-			matchedCount++
+	t.Logf("Successfully verified %d SQS messages containing expected data", verifiedCount)
+}
+
+// polls until the expected number of SNS messages exist in the verification SQS queue
+// SNS messages are delivered to SQS wrapped in an SNS envelope, so we check the Message field
+// deletes messages immediately after verification
+func verifySNSMessages(ctx context.Context, t feature.T, queueURL string, expectedContent string, expectedCount int) {
+	client := createSQSClient(ctx, t)
+
+	// Poll for expected message count
+	interval := 2 * time.Second
+	timeout := 2 * time.Minute
+
+	var verifiedCount int
+	err := wait.PollUntilContextTimeout(ctx, interval, timeout, true, func(ctx context.Context) (bool, error) {
+		receiveResult, err := client.ReceiveMessage(ctx, &sqs.ReceiveMessageInput{
+			QueueUrl:            aws.String(queueURL),
+			MaxNumberOfMessages: 10,
+			WaitTimeSeconds:     1,
+		})
+		if err != nil {
+			// Continue polling on error
+			return false, nil
 		}
+
+		// Process and delete messages immediately
+		// SNS messages are wrapped in an envelope. The actual message is in the "Message" field.
+		// We check if the message body (which is the SNS envelope) contains the expected content
+		for _, msg := range receiveResult.Messages {
+			if msg.Body != nil && strings.Contains(*msg.Body, expectedContent) {
+				verifiedCount++
+				_, err := client.DeleteMessage(ctx, &sqs.DeleteMessageInput{
+					QueueUrl:      aws.String(queueURL),
+					ReceiptHandle: msg.ReceiptHandle,
+				})
+				if err != nil {
+					t.Logf("Warning: Failed to delete SNS message from verification queue: %v", err)
+				}
+			}
+		}
+
+		return verifiedCount >= expectedCount, nil
+	})
+
+	if err != nil {
+		t.Fatalf("Timeout waiting for %d SNS messages in verification queue. Found: %d", expectedCount, verifiedCount)
 	}
 
-	if matchedCount < expectedCount {
-		t.Fatalf("Expected %d messages with content '%s', found: %d", expectedCount, expectedContent, matchedCount)
+	if verifiedCount < expectedCount {
+		t.Fatalf("Expected %d SNS messages in verification queue, found: %d", expectedCount, verifiedCount)
 	}
 
-	t.Logf("Successfully verified %d SQS messages containing expected data", matchedCount)
+	t.Logf("Successfully verified %d SNS messages containing expected data", verifiedCount)
 }
 
 func Success(sinkType integrationsink.SinkType) *feature.Feature {
@@ -400,16 +479,30 @@ func Success(sinkType integrationsink.SinkType) *feature.Feature {
 			}
 			queueURL := getSQSQueueURL(ctx, t, queueName)
 			// Verify 2 SQS messages were created with expected content (SendMultipleEvents(2, ...))
+			// Messages are deleted immediately after verification
 			verifySQSMessages(ctx, t, queueURL, "hello", 2)
 		})
 
-		f.Teardown("cleanup SQS queue after test", func(ctx context.Context, t feature.T) {
-			queueName := os.Getenv("AWS_SQS_QUEUE_NAME")
+	case integrationsink.SinkTypeSNS:
+		f.Setup("cleanup SNS verification queue before test", func(ctx context.Context, t feature.T) {
+			queueName := os.Getenv("AWS_SNS_VERIFICATION_QUEUE_NAME")
 			if queueName == "" {
-				queueName = "eventing-e2e-sqs-sink"
+				queueName = "eventing-e2e-sns-verification"
 			}
 			queueURL := getSQSQueueURL(ctx, t, queueName)
 			cleanupSQSQueue(ctx, t, queueURL)
+		})
+
+		f.Assert("verify SNS messages", func(ctx context.Context, t feature.T) {
+			queueName := os.Getenv("AWS_SNS_VERIFICATION_QUEUE_NAME")
+			if queueName == "" {
+				queueName = "eventing-e2e-sns-verification"
+			}
+			queueURL := getSQSQueueURL(ctx, t, queueName)
+			// Verify 2 SNS messages were created with expected content (SendMultipleEvents(2, ...))
+			// SNS messages are delivered to the SQS verification queue
+			// Messages are deleted immediately after verification
+			verifySNSMessages(ctx, t, queueURL, "hello", 2)
 		})
 	}
 
