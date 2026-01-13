@@ -111,13 +111,14 @@ func (a *apiServerAdapter) startResilient(ctx context.Context, stopCh <-chan str
 			// In resilient mode, we just skip it and continue.
 			continue
 		}
-		for _, res := range match.resourceInterfaces {
+		for i, res := range match.resourceInterfaces {
 			lw := &cache.ListWatch{
 				ListFunc:  asUnstructuredLister(ctx, res.List, match.resourceWatch.LabelSelector),
 				WatchFunc: asUnstructuredWatcher(ctx, res.Watch, match.resourceWatch.LabelSelector),
 			}
 
-			reflector := cache.NewReflector(lw, &unstructured.Unstructured{}, delegate, resyncPeriod)
+			reflectorName := a.buildReflectorName(match.apiResource.Namespaced, match.resourceWatch.GVR.String(), i)
+			reflector := cache.NewNamedReflector(reflectorName, lw, &unstructured.Unstructured{}, delegate, resyncPeriod)
 			go reflector.Run(stop)
 		}
 	}
@@ -147,13 +148,14 @@ func (a *apiServerAdapter) startFailFast(ctx context.Context, stopCh <-chan stru
 			a.logger.Errorf("could not retrieve information about resource %s: it doesn't exist.", match.resourceWatch.GVR.String())
 			return fmt.Errorf("resource %s does not exist", match.resourceWatch.GVR.String())
 		}
-		for _, res := range match.resourceInterfaces {
+		for i, res := range match.resourceInterfaces {
 			lw := &cache.ListWatch{
 				ListFunc:  asUnstructuredLister(watchCtx, res.List, match.resourceWatch.LabelSelector),
 				WatchFunc: asUnstructuredWatcher(watchCtx, res.Watch, match.resourceWatch.LabelSelector),
 			}
 
-			reflector := cache.NewReflector(lw, &unstructured.Unstructured{}, delegate, resyncPeriod)
+			reflectorName := a.buildReflectorName(match.apiResource.Namespaced, match.resourceWatch.GVR.String(), i)
+			reflector := cache.NewNamedReflector(reflectorName, lw, &unstructured.Unstructured{}, delegate, resyncPeriod)
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
@@ -210,6 +212,17 @@ func (a *apiServerAdapter) setupDelegate() cache.Store {
 		}
 	}
 	return delegate
+}
+
+// buildReflectorName builds the reflector name with resource GVR and namespace.
+// For namespaced resources (when not watching all namespaces), the name includes
+// both the GVR and the specific namespace being watched (e.g., "apps/v1/deployments/default").
+// For cluster-scoped resources or when watching all namespaces, only the GVR is used.
+func (a *apiServerAdapter) buildReflectorName(namespaced bool, gvr string, namespaceIndex int) string {
+	if namespaced && !a.config.AllNamespaces {
+		return fmt.Sprintf("%s/%s", gvr, a.config.Namespaces[namespaceIndex])
+	}
+	return gvr
 }
 
 func (a *apiServerAdapter) collectResourceMatches() ([]resourceWatchMatch, error) {
