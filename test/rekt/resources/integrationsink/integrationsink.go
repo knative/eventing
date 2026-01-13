@@ -22,6 +22,7 @@ type SinkType string
 const (
 	SinkTypeLog SinkType = "log"
 	SinkTypeS3  SinkType = "dev.knative.eventing.aws-s3"
+	SinkTypeSQS SinkType = "dev.knative.eventing.aws-sqs"
 )
 
 func GVR() schema.GroupVersionResource {
@@ -95,6 +96,15 @@ func WithS3Sink(arn, region, secretName string) manifest.CfgFn {
 		cfg["integrationSinkType"] = string(SinkTypeS3)
 		cfg["s3Arn"] = arn
 		cfg["s3Region"] = region
+		cfg["secretName"] = secretName
+	}
+}
+
+func WithSQSSink(arn, region, secretName string) manifest.CfgFn {
+	return func(cfg map[string]interface{}) {
+		cfg["integrationSinkType"] = string(SinkTypeSQS)
+		cfg["sqsArn"] = arn
+		cfg["sqsRegion"] = region
 		cfg["secretName"] = secretName
 	}
 }

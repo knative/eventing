@@ -26,6 +26,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/sqs"
+	"github.com/aws/aws-sdk-go-v2/service/sqs/types"
 	cetest "github.com/cloudevents/sdk-go/v2/test"
 	"github.com/google/uuid"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -40,11 +42,13 @@ import (
 
 // installs an integration sink based on the sink type.
 // For AWS S3 sink, it reads AWS credentials from environment variables and creates a secret.
+// For AWS SQS sink, it reads AWS credentials from environment variables and creates a secret.
 // Environment variables:
-//   - AWS_ACCESS_KEY_ID (required for S3 sink)
-//   - AWS_SECRET_ACCESS_KEY (required for S3 sink)
+//   - AWS_ACCESS_KEY_ID (required for S3/SQS sink)
+//   - AWS_SECRET_ACCESS_KEY (required for S3/SQS sink)
 //   - AWS_REGION (optional, default: us-west-1)
-//   - AWS_S3_SINK_ARN (optional, default: arn:aws:s3:::eventing-e2e-sink)
+//   - AWS_S3_SINK_ARN (optional for S3, default: arn:aws:s3:::eventing-e2e-sink)
+//   - AWS_SQS_QUEUE_NAME (optional for SQS, default: eventing-e2e-sqs-sink)
 func installSinkByType(ctx context.Context, t feature.T, sinkName string, sinkType integrationsink.SinkType) {
 	switch sinkType {
 	case integrationsink.SinkTypeS3:
@@ -72,6 +76,31 @@ func installSinkByType(ctx context.Context, t feature.T, sinkName string, sinkTy
 			secret.WithStringData("aws.secretKey", secretKey),
 		)(ctx, t)
 		integrationsink.Install(sinkName, integrationsink.WithS3Sink(arn, region, secretName))(ctx, t)
+	case integrationsink.SinkTypeSQS:
+		accessKey := os.Getenv("AWS_ACCESS_KEY_ID")
+		secretKey := os.Getenv("AWS_SECRET_ACCESS_KEY")
+
+		if accessKey == "" || secretKey == "" {
+			t.Fatal("AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables must be set for SQS sink tests")
+		}
+
+		region := os.Getenv("AWS_REGION")
+		if region == "" {
+			region = "us-west-1"
+		}
+
+		queueName := os.Getenv("AWS_SQS_QUEUE_NAME")
+		if queueName == "" {
+			queueName = "eventing-e2e-sqs-sink"
+		}
+
+		secretName := feature.MakeRandomK8sName("aws-credentials")
+		secret.Install(
+			secretName,
+			secret.WithStringData("aws.accessKey", accessKey),
+			secret.WithStringData("aws.secretKey", secretKey),
+		)(ctx, t)
+		integrationsink.Install(sinkName, integrationsink.WithSQSSink(queueName, region, secretName))(ctx, t)
 	case integrationsink.SinkTypeLog:
 		integrationsink.Install(sinkName, integrationsink.WithLogSink())(ctx, t)
 	}
@@ -179,6 +208,128 @@ func verifyS3ObjectCount(ctx context.Context, t feature.T, arn string, expectedC
 	t.Logf("Successfully verified %d S3 objects in bucket", objectCount)
 }
 
+func createSQSClient(ctx context.Context, t feature.T) *sqs.Client {
+	accessKey := os.Getenv("AWS_ACCESS_KEY_ID")
+	secretKey := os.Getenv("AWS_SECRET_ACCESS_KEY")
+	region := os.Getenv("AWS_REGION")
+	if region == "" {
+		region = "us-west-1"
+	}
+
+	cfg, err := config.LoadDefaultConfig(ctx,
+		config.WithRegion(region),
+		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(accessKey, secretKey, "")),
+	)
+	if err != nil {
+		t.Fatalf("Failed to load AWS config: %v", err)
+	}
+
+	return sqs.NewFromConfig(cfg)
+}
+
+// resolves a queue name to its full URL using the AWS SQS API
+func getSQSQueueURL(ctx context.Context, t feature.T, queueName string) string {
+	client := createSQSClient(ctx, t)
+
+	result, err := client.GetQueueUrl(ctx, &sqs.GetQueueUrlInput{
+		QueueName: aws.String(queueName),
+	})
+	if err != nil {
+		t.Fatalf("Failed to get SQS queue URL for queue '%s': %v", queueName, err)
+	}
+
+	if result.QueueUrl == nil {
+		t.Fatalf("SQS queue URL is nil for queue '%s'", queueName)
+	}
+
+	return *result.QueueUrl
+}
+
+// removes all messages from SQS queue
+func cleanupSQSQueue(ctx context.Context, t feature.T, queueURL string) {
+	client := createSQSClient(ctx, t)
+
+	// Receive and delete messages in batches
+	for {
+		receiveResult, err := client.ReceiveMessage(ctx, &sqs.ReceiveMessageInput{
+			QueueUrl:            aws.String(queueURL),
+			MaxNumberOfMessages: 10, // Max allowed
+			WaitTimeSeconds:     1,  // Short poll
+		})
+		if err != nil {
+			t.Logf("Warning: Failed to receive SQS messages: %v", err)
+			return
+		}
+
+		if len(receiveResult.Messages) == 0 {
+			t.Logf("No SQS messages found, queue is clean")
+			break
+		}
+
+		t.Logf("Cleaning up %d SQS messages", len(receiveResult.Messages))
+		for _, msg := range receiveResult.Messages {
+			_, err := client.DeleteMessage(ctx, &sqs.DeleteMessageInput{
+				QueueUrl:      aws.String(queueURL),
+				ReceiptHandle: msg.ReceiptHandle,
+			})
+			if err != nil {
+				t.Logf("Warning: Failed to delete SQS message: %v", err)
+			} else {
+				t.Logf("Cleaned up SQS message: %s", *msg.MessageId)
+			}
+		}
+	}
+}
+
+// polls until the expected number of messages exist in SQS queue and verifies message bodies
+func verifySQSMessages(ctx context.Context, t feature.T, queueURL string, expectedContent string, expectedCount int) {
+	client := createSQSClient(ctx, t)
+
+	// Poll for expected message count
+	interval := 2 * time.Second
+	timeout := 2 * time.Minute
+
+	var messages []types.Message
+	err := wait.PollUntilContextTimeout(ctx, interval, timeout, true, func(ctx context.Context) (bool, error) {
+		// Receive messages without removing them from queue
+		receiveResult, err := client.ReceiveMessage(ctx, &sqs.ReceiveMessageInput{
+			QueueUrl:            aws.String(queueURL),
+			MaxNumberOfMessages: 10,
+			WaitTimeSeconds:     1,
+			VisibilityTimeout:   0, // Make messages immediately visible again
+		})
+		if err != nil {
+			// Continue polling on error
+			return false, nil
+		}
+
+		messages = append(messages, receiveResult.Messages...)
+		return len(messages) == expectedCount, nil
+	})
+
+	if err != nil {
+		t.Fatalf("Timeout waiting for %d SQS messages. Found: %d", expectedCount, len(messages))
+	}
+
+	if len(messages) < expectedCount {
+		t.Fatalf("Expected %d SQS messages, found: %d", expectedCount, len(messages))
+	}
+
+	// Verify message bodies contain expected content
+	matchedCount := 0
+	for _, msg := range messages {
+		if msg.Body != nil && strings.Contains(*msg.Body, expectedContent) {
+			matchedCount++
+		}
+	}
+
+	if matchedCount < expectedCount {
+		t.Fatalf("Expected %d messages with content '%s', found: %d", expectedCount, expectedContent, matchedCount)
+	}
+
+	t.Logf("Successfully verified %d SQS messages containing expected data", matchedCount)
+}
+
 func Success(sinkType integrationsink.SinkType) *feature.Feature {
 	f := feature.NewFeature()
 
@@ -192,16 +343,6 @@ func Success(sinkType integrationsink.SinkType) *feature.Feature {
 	f.Setup("integrationsink is addressable", integrationsink.IsAddressable(integrationSink))
 	f.Setup("integrationsink is ready", integrationsink.IsReady(integrationSink))
 
-	if sinkType == integrationsink.SinkTypeS3 {
-		f.Setup("cleanup S3 bucket before test", func(ctx context.Context, t feature.T) {
-			arn := os.Getenv("AWS_S3_SINK_ARN")
-			if arn == "" {
-				arn = "arn:aws:s3:::eventing-e2e-sink"
-			}
-			cleanupS3Bucket(ctx, t, arn)
-		})
-	}
-
 	f.Requirement("install source for ksink", eventshub.Install(source,
 		eventshub.StartSenderToResource(integrationsink.GVR(), integrationSink),
 		eventshub.InputEvent(cetest.FullEvent()),
@@ -214,7 +355,17 @@ func Success(sinkType integrationsink.SinkType) *feature.Feature {
 		AtLeast(1),
 	)
 
-	if sinkType == integrationsink.SinkTypeS3 {
+	// Sink-specific setup, assertions, and teardown
+	switch sinkType {
+	case integrationsink.SinkTypeS3:
+		f.Setup("cleanup S3 bucket before test", func(ctx context.Context, t feature.T) {
+			arn := os.Getenv("AWS_S3_SINK_ARN")
+			if arn == "" {
+				arn = "arn:aws:s3:::eventing-e2e-sink"
+			}
+			cleanupS3Bucket(ctx, t, arn)
+		})
+
 		f.Assert("verify S3 object count", func(ctx context.Context, t feature.T) {
 			arn := os.Getenv("AWS_S3_SINK_ARN")
 			if arn == "" {
@@ -230,6 +381,35 @@ func Success(sinkType integrationsink.SinkType) *feature.Feature {
 				arn = "arn:aws:s3:::eventing-e2e-sink"
 			}
 			cleanupS3Bucket(ctx, t, arn)
+		})
+
+	case integrationsink.SinkTypeSQS:
+		f.Setup("cleanup SQS queue before test", func(ctx context.Context, t feature.T) {
+			queueName := os.Getenv("AWS_SQS_QUEUE_NAME")
+			if queueName == "" {
+				queueName = "eventing-e2e-sqs-sink"
+			}
+			queueURL := getSQSQueueURL(ctx, t, queueName)
+			cleanupSQSQueue(ctx, t, queueURL)
+		})
+
+		f.Assert("verify SQS messages", func(ctx context.Context, t feature.T) {
+			queueName := os.Getenv("AWS_SQS_QUEUE_NAME")
+			if queueName == "" {
+				queueName = "eventing-e2e-sqs-sink"
+			}
+			queueURL := getSQSQueueURL(ctx, t, queueName)
+			// Verify 2 SQS messages were created with expected content (SendMultipleEvents(2, ...))
+			verifySQSMessages(ctx, t, queueURL, "hello", 2)
+		})
+
+		f.Teardown("cleanup SQS queue after test", func(ctx context.Context, t feature.T) {
+			queueName := os.Getenv("AWS_SQS_QUEUE_NAME")
+			if queueName == "" {
+				queueName = "eventing-e2e-sqs-sink"
+			}
+			queueURL := getSQSQueueURL(ctx, t, queueName)
+			cleanupSQSQueue(ctx, t, queueURL)
 		})
 	}
 
