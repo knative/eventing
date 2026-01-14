@@ -322,7 +322,7 @@ func verifySQSMessages(ctx context.Context, t feature.T, queueURL string, expect
 		receiveResult, err := client.ReceiveMessage(ctx, &sqs.ReceiveMessageInput{
 			QueueUrl:            aws.String(queueURL),
 			MaxNumberOfMessages: 10,
-			WaitTimeSeconds:     1,
+			WaitTimeSeconds:     5,
 		})
 		if err != nil {
 			// Continue polling on error
@@ -372,7 +372,7 @@ func verifySNSMessages(ctx context.Context, t feature.T, queueURL string, expect
 		receiveResult, err := client.ReceiveMessage(ctx, &sqs.ReceiveMessageInput{
 			QueueUrl:            aws.String(queueURL),
 			MaxNumberOfMessages: 10,
-			WaitTimeSeconds:     1,
+			WaitTimeSeconds:     5,
 		})
 		if err != nil {
 			// Continue polling on error
