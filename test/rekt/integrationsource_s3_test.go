@@ -1,7 +1,7 @@
 //go:build e2e
 
 /*
-Copyright 2025 The Knative Authors
+Copyright 2026 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ package rekt
 import (
 	"testing"
 
+	"knative.dev/eventing/test/rekt/features/awsconfig"
 	"knative.dev/eventing/test/rekt/features/integrationsource"
 	integrationsourceresource "knative.dev/eventing/test/rekt/resources/integrationsource"
 	"knative.dev/pkg/system"
@@ -36,6 +37,7 @@ func TestIntegrationSourceS3WithSinkRef(t *testing.T) {
 		knative.WithKnativeNamespace(system.Namespace()),
 		knative.WithLoggingConfig,
 		knative.WithObservabilityConfig,
+		awsconfig.WithAWSConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
 	)

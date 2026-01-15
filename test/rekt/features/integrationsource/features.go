@@ -17,24 +17,14 @@ limitations under the License.
 package integrationsource
 
 import (
-	"bytes"
 	"context"
-	"os"
-	"strings"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/credentials"
-	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
-	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/cloudevents/sdk-go/v2/test"
 	"knative.dev/eventing/pkg/eventingtls/eventingtlstesting"
+	"knative.dev/eventing/test/rekt/features/awsconfig"
 	"knative.dev/eventing/test/rekt/features/featureflags"
 	"knative.dev/eventing/test/rekt/features/source"
 	"knative.dev/eventing/test/rekt/resources/integrationsource"
-	"knative.dev/eventing/test/rekt/resources/secret"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/network"
@@ -46,113 +36,6 @@ import (
 	"knative.dev/reconciler-test/pkg/resources/service"
 )
 
-func uploadFileToS3(ctx context.Context, t feature.T, arn, key, content string) {
-	accessKey := os.Getenv("AWS_ACCESS_KEY_ID")
-	secretKey := os.Getenv("AWS_SECRET_ACCESS_KEY")
-	region := os.Getenv("AWS_REGION")
-	if region == "" {
-		region = "us-west-1"
-	}
-
-	// extract bucket name from S3 ARN
-	// Example: arn:aws:s3:::my-bucket -> my-bucket
-	bucketName := arn
-	parts := strings.Split(arn, ":::")
-	if len(parts) == 2 {
-		bucketName = parts[1]
-	}
-
-	cfg, err := config.LoadDefaultConfig(ctx,
-		config.WithRegion(region),
-		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(accessKey, secretKey, "")),
-	)
-	if err != nil {
-		t.Fatalf("Failed to load AWS config: %v", err)
-	}
-
-	client := s3.NewFromConfig(cfg)
-
-	_, err = client.PutObject(ctx, &s3.PutObjectInput{
-		Bucket: aws.String(bucketName),
-		Key:    aws.String(key),
-		Body:   bytes.NewReader([]byte(content)),
-	})
-	if err != nil {
-		t.Fatalf("Failed to upload file to S3: %v", err)
-	}
-}
-
-func sendSQSEvent(ctx context.Context, t feature.T, arn, messageBody string) {
-	accessKey := os.Getenv("AWS_ACCESS_KEY_ID")
-	secretKey := os.Getenv("AWS_SECRET_ACCESS_KEY")
-	region := os.Getenv("AWS_REGION")
-	if region == "" {
-		region = "us-west-1"
-	}
-
-	cfg, err := config.LoadDefaultConfig(ctx,
-		config.WithRegion(region),
-		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(accessKey, secretKey, "")),
-	)
-	if err != nil {
-		t.Fatalf("Failed to load AWS config: %v", err)
-	}
-
-	client := sqs.NewFromConfig(cfg)
-
-	// extract queue name from S3 ARN
-	// Example: arn:aws:sqs:us-west-1::my-queue -> my-queue
-	parts := strings.Split(arn, ":")
-	queueName := parts[5]
-
-	// determine queue URL from queue name
-	urlRes, err := client.GetQueueUrl(ctx, &sqs.GetQueueUrlInput{
-		QueueName: aws.String(queueName),
-	})
-	if err != nil {
-		t.Fatalf("Failed to get queue url for %s, %v", queueName, err)
-	}
-	queueURL := urlRes.QueueUrl
-
-	_, err = client.SendMessage(ctx, &sqs.SendMessageInput{
-		QueueUrl:    queueURL,
-		MessageBody: aws.String(messageBody),
-	})
-	if err != nil {
-		t.Fatalf("Failed to send message to SQS: %v", err)
-	}
-}
-
-func putItemToDynamoDB(ctx context.Context, t feature.T, tableName, message string) {
-	accessKey := os.Getenv("AWS_ACCESS_KEY_ID")
-	secretKey := os.Getenv("AWS_SECRET_ACCESS_KEY")
-	region := os.Getenv("AWS_REGION")
-	if region == "" {
-		region = "us-west-1"
-	}
-
-	cfg, err := config.LoadDefaultConfig(ctx,
-		config.WithRegion(region),
-		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(accessKey, secretKey, "")),
-	)
-	if err != nil {
-		t.Fatalf("Failed to load AWS config: %v", err)
-	}
-
-	client := dynamodb.NewFromConfig(cfg)
-
-	_, err = client.PutItem(ctx, &dynamodb.PutItemInput{
-		TableName: aws.String(tableName),
-		Item: map[string]types.AttributeValue{
-			"id":      &types.AttributeValueMemberN{Value: "1"},
-			"message": &types.AttributeValueMemberS{Value: message},
-		},
-	})
-	if err != nil {
-		t.Fatalf("Failed to put item to DynamoDB table %s: %v", tableName, err)
-	}
-}
-
 // triggerEventByType triggers a message based on the source type
 // For S3 sources, uploads a file to S3 bucket
 // For SQS sources, sends a message to SQS queue
@@ -161,23 +44,14 @@ func putItemToDynamoDB(ctx context.Context, t feature.T, tableName, message stri
 func triggerEventByType(ctx context.Context, t feature.T, sourceType integrationsource.SourceType) {
 	switch sourceType {
 	case integrationsource.SourceTypeS3:
-		arn := os.Getenv("AWS_S3_SOURCE_ARN")
-		if arn == "" {
-			arn = "arn:aws:s3:::eventing-e2e"
-		}
-		uploadFileToS3(ctx, t, arn, "message.json", `{"message": "Hello from AWS S3!"}`)
+		arn := awsconfig.GetEnvOrDefault("AWS_S3_SOURCE_ARN", "arn:aws:s3:::eventing-e2e-source")
+		awsconfig.UploadFileToS3(ctx, t, arn, "message.json", `{"message": "Hello from AWS S3!"}`)
 	case integrationsource.SourceTypeSQS:
-		arn := os.Getenv("AWS_SQS_SOURCE_ARN")
-		if arn == "" {
-			arn = "arn:aws:sqs:us-west-1::eventing-e2e-sqs-source"
-		}
-		sendSQSEvent(ctx, t, arn, `{"message": "Hello from AWS SQS!"}`)
+		arn := awsconfig.GetEnvOrDefault("AWS_SQS_SOURCE_ARN", "arn:aws:sqs:us-west-1::eventing-e2e-sqs-source")
+		awsconfig.SendSQSMessage(ctx, t, arn, `{"message": "Hello from AWS SQS!"}`)
 	case integrationsource.SourceTypeDDbStreams:
-		tableName := os.Getenv("AWS_DDB_STREAMS_TABLE")
-		if tableName == "" {
-			tableName = "eventing-e2e-source"
-		}
-		putItemToDynamoDB(ctx, t, tableName, "Hello from AWS DynamoDB Streams!")
+		tableName := awsconfig.GetEnvOrDefault("AWS_DDB_STREAMS_TABLE", "eventing-e2e-source")
+		awsconfig.PutDynamoDBItem(ctx, t, tableName, "Hello from AWS DynamoDB Streams!")
 	case integrationsource.SourceTypeTimer:
 		// Timer source triggers automatically, no action needed
 	}
@@ -195,82 +69,28 @@ func triggerEventByType(ctx context.Context, t feature.T, sourceType integration
 func installSourceByType(ctx context.Context, t feature.T, sourceName string, sourceType integrationsource.SourceType, sinkOpts ...manifest.CfgFn) {
 	switch sourceType {
 	case integrationsource.SourceTypeS3:
-		accessKey := os.Getenv("AWS_ACCESS_KEY_ID")
-		secretKey := os.Getenv("AWS_SECRET_ACCESS_KEY")
-
-		if accessKey == "" || secretKey == "" {
-			t.Fatal("AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables must be set for S3 source tests")
-		}
-
-		region := os.Getenv("AWS_REGION")
-		if region == "" {
-			region = "us-west-1"
-		}
-
-		arn := os.Getenv("AWS_S3_SOURCE_ARN")
-		if arn == "" {
-			arn = "arn:aws:s3:::eventing-e2e"
-		}
+		cfg := awsconfig.AWSConfigFromContext(ctx)
+		arn := awsconfig.GetEnvOrDefault("AWS_S3_SOURCE_ARN", "arn:aws:s3:::eventing-e2e-source")
 
 		secretName := feature.MakeRandomK8sName("aws-credentials")
-		secret.Install(
-			secretName,
-			secret.WithStringData("aws.accessKey", accessKey),
-			secret.WithStringData("aws.secretKey", secretKey),
-		)(ctx, t)
-		opts := append([]manifest.CfgFn{integrationsource.WithS3Source(arn, region, secretName)}, sinkOpts...)
+		awsconfig.InstallAWSSecret(ctx, t, secretName)
+		opts := append([]manifest.CfgFn{integrationsource.WithS3Source(arn, cfg.Region, secretName)}, sinkOpts...)
 		integrationsource.Install(sourceName, opts...)(ctx, t)
 	case integrationsource.SourceTypeSQS:
-		accessKey := os.Getenv("AWS_ACCESS_KEY_ID")
-		secretKey := os.Getenv("AWS_SECRET_ACCESS_KEY")
-
-		if accessKey == "" || secretKey == "" {
-			t.Fatal("AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables must be set for S3 source tests")
-		}
-
-		region := os.Getenv("AWS_REGION")
-		if region == "" {
-			region = "us-west-1"
-		}
-
-		arn := os.Getenv("AWS_SQS_SOURCE_ARN")
-		if arn == "" {
-			arn = "arn:aws:sqs:us-west-1::eventing-e2e-sqs-source"
-		}
+		cfg := awsconfig.AWSConfigFromContext(ctx)
+		arn := awsconfig.GetEnvOrDefault("AWS_SQS_SOURCE_ARN", "arn:aws:sqs:us-west-1::eventing-e2e-sqs-source")
 
 		secretName := feature.MakeRandomK8sName("aws-credentials")
-		secret.Install(
-			secretName,
-			secret.WithStringData("aws.accessKey", accessKey),
-			secret.WithStringData("aws.secretKey", secretKey),
-		)(ctx, t)
-		opts := append([]manifest.CfgFn{integrationsource.WithSQSSource(arn, region, secretName)}, sinkOpts...)
+		awsconfig.InstallAWSSecret(ctx, t, secretName)
+		opts := append([]manifest.CfgFn{integrationsource.WithSQSSource(arn, cfg.Region, secretName)}, sinkOpts...)
 		integrationsource.Install(sourceName, opts...)(ctx, t)
 	case integrationsource.SourceTypeDDbStreams:
-		accessKey := os.Getenv("AWS_ACCESS_KEY_ID")
-		secretKey := os.Getenv("AWS_SECRET_ACCESS_KEY")
-
-		if accessKey == "" || secretKey == "" {
-			t.Fatal("AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables must be set for DynamoDB Streams source tests")
-		}
-
-		region := os.Getenv("AWS_REGION")
-		if region == "" {
-			region = "us-west-1"
-		}
-
-		tableName := os.Getenv("AWS_DDB_STREAMS_TABLE")
-		if tableName == "" {
-			tableName = "eventing-e2e-source"
-		}
+		cfg := awsconfig.AWSConfigFromContext(ctx)
+		tableName := awsconfig.GetEnvOrDefault("AWS_DDB_STREAMS_TABLE", "eventing-e2e-source")
 
 		secretName := feature.MakeRandomK8sName("aws-credentials")
-		secret.Install(
-			secretName,
-			secret.WithStringData("aws.accessKey", accessKey),
-			secret.WithStringData("aws.secretKey", secretKey),
-		)(ctx, t)
-		opts := append([]manifest.CfgFn{integrationsource.WithDynamoDBStreamsSource(tableName, region, secretName)}, sinkOpts...)
+		awsconfig.InstallAWSSecret(ctx, t, secretName)
+		opts := append([]manifest.CfgFn{integrationsource.WithDynamoDBStreamsSource(tableName, cfg.Region, secretName)}, sinkOpts...)
 		integrationsource.Install(sourceName, opts...)(ctx, t)
 	case integrationsource.SourceTypeTimer:
 		opts := append([]manifest.CfgFn{integrationsource.WithTimerSource()}, sinkOpts...)
