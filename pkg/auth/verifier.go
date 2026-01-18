@@ -56,6 +56,7 @@ type Verifier struct {
 	restConfig                 *rest.Config
 	eventPolicyLister          v1alpha1.EventPolicyLister
 	trustBundleConfigMapLister corev1listers.ConfigMapNamespaceLister
+	featureStore               *feature.Store
 	m                          sync.RWMutex
 	provider                   *oidc.Provider
 }
@@ -70,24 +71,15 @@ type IDToken struct {
 }
 
 func NewVerifier(ctx context.Context, eventPolicyLister listerseventingv1alpha1.EventPolicyLister, trustBundleConfigMapLister corev1listers.ConfigMapNamespaceLister, cmw configmap.Watcher) *Verifier {
+	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {})
+	featureStore.WatchConfigs(cmw)
+
 	tokenHandler := &Verifier{
 		logger:                     logging.FromContext(ctx).With("component", "oidc-token-handler"),
 		restConfig:                 injection.GetConfig(ctx),
 		eventPolicyLister:          eventPolicyLister,
 		trustBundleConfigMapLister: trustBundleConfigMapLister,
-	}
-
-	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"), func(name string, value interface{}) {
-		if features, ok := value.(feature.Flags); ok {
-			if err := tokenHandler.initOIDCProvider(ctx, features); err != nil {
-				tokenHandler.logger.Error(fmt.Sprintf("could not initialize provider after config update. You can ignore this message, when the %s feature is disabled", feature.OIDCAuthentication), zap.Error(err))
-			}
-		}
-	})
-	featureStore.WatchConfigs(cmw)
-
-	if err := tokenHandler.initOIDCProvider(ctx, featureStore.Load()); err != nil {
-		tokenHandler.logger.Error(fmt.Sprintf("could not initialize provider. You can ignore this message, when the %s feature is disabled", feature.OIDCAuthentication), zap.Error(err))
+		featureStore:               featureStore,
 	}
 
 	return tokenHandler
@@ -98,6 +90,11 @@ func NewVerifier(ctx context.Context, eventPolicyLister listerseventingv1alpha1.
 func (v *Verifier) VerifyRequest(ctx context.Context, features feature.Flags, requiredOIDCAudience *string, resourceNamespace string, policyRefs []duckv1.AppliedEventPolicyRef, req *http.Request, resp http.ResponseWriter) error {
 	if !features.IsOIDCAuthentication() {
 		return nil
+	}
+
+	if err := v.ensureProvider(ctx, features); err != nil {
+		resp.WriteHeader(http.StatusInternalServerError)
+		return fmt.Errorf("failed to initialize OIDC provider: %w", err)
 	}
 
 	idToken, err := v.verifyAuthN(ctx, requiredOIDCAudience, req, resp)
@@ -123,6 +120,11 @@ func (v *Verifier) VerifyRequestFromSubject(ctx context.Context, features featur
 		return nil
 	}
 
+	if err := v.ensureProvider(ctx, features); err != nil {
+		resp.WriteHeader(http.StatusInternalServerError)
+		return fmt.Errorf("failed to initialize OIDC provider: %w", err)
+	}
+
 	idToken, err := v.verifyAuthN(ctx, requiredOIDCAudience, req, resp)
 	if err != nil {
 		return fmt.Errorf("authentication of request could not be verified: %w", err)
@@ -145,6 +147,11 @@ func (v *Verifier) VerifyRequestFromSubject(ctx context.Context, features featur
 func (v *Verifier) VerifyRequestFromSubjectsWithFilters(ctx context.Context, features feature.Flags, requiredOIDCAudience *string, allowedSubjectsWithFilters []SubjectsWithFilters, resourceNamespace string, req *http.Request, resp http.ResponseWriter) error {
 	if !features.IsOIDCAuthentication() {
 		return nil
+	}
+
+	if err := v.ensureProvider(ctx, features); err != nil {
+		resp.WriteHeader(http.StatusInternalServerError)
+		return fmt.Errorf("failed to initialize OIDC provider: %w", err)
 	}
 
 	idToken, err := v.verifyAuthN(ctx, requiredOIDCAudience, req, resp)
@@ -236,6 +243,24 @@ func (v *Verifier) verifyAuthZBySubjectsWithFilters(ctx context.Context, feature
 	return nil
 }
 
+func (v *Verifier) ensureProvider(ctx context.Context, features feature.Flags) error {
+	v.m.RLock()
+	if v.provider != nil {
+		v.m.RUnlock()
+		return nil
+	}
+	v.m.RUnlock()
+
+	v.m.Lock()
+	defer v.m.Unlock()
+
+	if v.provider != nil {
+		return nil
+	}
+
+	return v.initOIDCProvider(ctx, features)
+}
+
 // verifyJWT verifies the given JWT for the expected audience and returns the parsed ID token.
 func (v *Verifier) verifyJWT(ctx context.Context, jwt, audience string) (*IDToken, error) {
 	v.m.RLock()
@@ -289,8 +314,6 @@ func (v *Verifier) initOIDCProvider(ctx context.Context, features feature.Flags)
 	}
 
 	// provider is valid, update it
-	v.m.Lock()
-	defer v.m.Unlock()
 	v.provider = provider
 
 	v.logger.Debug("updated OIDC provider config", zap.Any("discovery-config", discovery))
