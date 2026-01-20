@@ -348,8 +348,3 @@ func (h *IngressHandler) handleReplyEvent(responseWriter http.ResponseWriter, ev
 	// send the reply event back to the original response writer
 	pr.replyEvent <- event
 }
-
-func isResponseEvent(event *cloudevents.Event, rr *v1alpha1.RequestReply) bool {
-	_, ok := event.Extensions()[rr.Spec.ReplyAttribute]
-	return ok
-}
