@@ -18,6 +18,7 @@ package integrationsource
 
 import (
 	"context"
+	"time"
 
 	"github.com/cloudevents/sdk-go/v2/test"
 	"knative.dev/eventing/pkg/eventingtls/eventingtlstesting"
@@ -110,6 +111,14 @@ func SendsEventsWithSinkRef(sourceType integrationsource.SourceType) *feature.Fe
 	})
 
 	f.Requirement("integrationsource goes ready", integrationsource.IsReady(sourceName))
+
+	// additional delay for DDBStreams as workaround for https://issues.redhat.com/browse/SRVKE-1834
+	// even though pod with integrationsource is ready, it takes > 5 seconds until it starts receiving events
+	if sourceType == integrationsource.SourceTypeDDbStreams {
+		f.Requirement("sleep", func(ctx context.Context, t feature.T) {
+			time.Sleep(10 * time.Second)
+		})
+	}
 
 	f.Assert("trigger event", func(ctx context.Context, t feature.T) {
 		triggerEventByType(ctx, t, sourceType)

@@ -31,8 +31,6 @@ import (
 )
 
 func TestIntegrationSourceDDbStreamsWithSinkRef(t *testing.T) {
-	t.Skip("TODO: DDBStreams need closer look how it works, it doesn't seem to be reliable.")
-
 	t.Parallel()
 
 	ctx, env := global.Environment(
