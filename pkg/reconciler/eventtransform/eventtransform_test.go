@@ -1339,7 +1339,7 @@ func TestReconcile(t *testing.T) {
 						},
 					})
 
-					d.Annotations[JsonataCertificateRevisionKey] = "1"
+					d.Spec.Template.Annotations[JsonataCertificateRevisionKey] = "1"
 				}),
 				&corev1.Endpoints{
 					ObjectMeta: metav1.ObjectMeta{
@@ -1552,7 +1552,7 @@ func TestReconcile(t *testing.T) {
 						},
 					})
 
-					d.Annotations[JsonataCertificateRevisionKey] = "1"
+					d.Spec.Template.Annotations[JsonataCertificateRevisionKey] = "1"
 				}),
 				&corev1.Endpoints{
 					ObjectMeta: metav1.ObjectMeta{
@@ -1942,7 +1942,7 @@ func TestReconcile(t *testing.T) {
 						},
 					})
 
-					d.Annotations[JsonataCertificateRevisionKey] = "1"
+					d.Spec.Template.Annotations[JsonataCertificateRevisionKey] = "1"
 				}),
 				&corev1.Endpoints{
 					ObjectMeta: metav1.ObjectMeta{

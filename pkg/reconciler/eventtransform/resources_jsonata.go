@@ -92,10 +92,9 @@ func jsonataDeployment(ctx context.Context, withCombinedTrustBundle bool, cw *re
 
 	d := appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        kmeta.ChildName(transform.Name, JsonataResourcesNameSuffix),
-			Namespace:   transform.GetNamespace(),
-			Labels:      jsonataLabels(transform),
-			Annotations: make(map[string]string, 2),
+			Name:      kmeta.ChildName(transform.Name, JsonataResourcesNameSuffix),
+			Namespace: transform.GetNamespace(),
+			Labels:    jsonataLabels(transform),
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(transform),
 			},
@@ -114,6 +113,7 @@ func jsonataDeployment(ctx context.Context, withCombinedTrustBundle bool, cw *re
 						JsonataResourcesLabelKey: JsonataResourcesLabelValue,
 						NameLabelKey:             transform.GetName(),
 					},
+					Annotations: make(map[string]string),
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
@@ -269,11 +269,11 @@ func jsonataDeployment(ctx context.Context, withCombinedTrustBundle bool, cw *re
 
 	// hashPayload annotation is used to detect and roll out a new deployment when expressions change.
 	hash := sha256.Sum256([]byte(hashPayload))
-	d.Annotations[JsonataExpressionHashKey] = base64.StdEncoding.EncodeToString(hash[:])
+	d.Spec.Template.Annotations[JsonataExpressionHashKey] = base64.StdEncoding.EncodeToString(hash[:])
 
 	if certificate != nil && certificate.Status.Revision != nil {
 		// certificate revision annotation is used to detect and roll out a new deployment when certificates change.
-		d.Annotations[JsonataCertificateRevisionKey] = fmt.Sprintf("%d", *certificate.Status.Revision)
+		d.Spec.Template.Annotations[JsonataCertificateRevisionKey] = fmt.Sprintf("%d", *certificate.Status.Revision)
 	}
 
 	if feature.FromContext(ctx).IsStrictTransportEncryption() {
