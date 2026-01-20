@@ -46,6 +46,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
+	"github.com/google/uuid"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"
@@ -259,7 +260,7 @@ func CleanupSQSQueue(ctx context.Context, t feature.T, queueURL string) {
 }
 
 // CleanupDynamoDBTable removes all items from the specified DynamoDB table.
-// Note: This implementation assumes "id" is the primary key of the table.
+// Note: This implementation assumes "id" (string UUID) is the primary key of the table.
 func CleanupDynamoDBTable(ctx context.Context, t feature.T, tableName string) {
 	client := CreateDynamoDBClient(ctx)
 
@@ -348,14 +349,14 @@ func SendSQSMessage(ctx context.Context, t feature.T, arn, messageBody string) {
 }
 
 // PutDynamoDBItem puts an item into the specified DynamoDB table.
-// The item contains an "id" field (number) and a "message" field (string).
+// The item contains an "id" field (UUID string) and a "message" field (string).
 func PutDynamoDBItem(ctx context.Context, t feature.T, tableName, message string) {
 	client := CreateDynamoDBClient(ctx)
 
 	_, err := client.PutItem(ctx, &dynamodb.PutItemInput{
 		TableName: aws.String(tableName),
 		Item: map[string]types.AttributeValue{
-			"id":      &types.AttributeValueMemberN{Value: "1"},
+			"id":      &types.AttributeValueMemberS{Value: uuid.New().String()},
 			"message": &types.AttributeValueMemberS{Value: message},
 		},
 	})

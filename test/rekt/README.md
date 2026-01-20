@@ -185,7 +185,7 @@ echo "Subscription ARN: $SUBSCRIPTION_ARN"
 echo "Creating DynamoDB table with streams..."
 aws dynamodb create-table \
   --table-name "$DDB_TABLE" \
-  --attribute-definitions AttributeName=id,AttributeType=N \
+  --attribute-definitions AttributeName=id,AttributeType=S \
   --key-schema AttributeName=id,KeyType=HASH \
   --billing-mode PAY_PER_REQUEST \
   --stream-specification StreamEnabled=true,StreamViewType=NEW_AND_OLD_IMAGES \
