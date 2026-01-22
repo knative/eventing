@@ -24,7 +24,19 @@ jobs:
     name: weekly-eventing-office-hours-reminder
     runs-on: 'ubuntu-latest'
     steps:
+      - name: Check if this is an on-week
+        id: check-week
+        run: |
+          # Calculate week number (ISO 8601)
+          WEEK_NUM=$(date +%V)
+          # Run on odd weeks only
+          if [ $((WEEK_NUM % 2)) -eq 1 ]; then
+            echo "should_run=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_run=false" >> $GITHUB_OUTPUT
+          fi
       - name: Post reminder to Slack
+        if: steps.check-week.outputs.should_run == 'true'
         uses: rtCamp/action-slack-notify@v2.2.1
         env:
           SLACK_ICON: http://github.com/knative.png?size=48
