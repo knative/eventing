@@ -21,6 +21,7 @@ package rekt
 
 import (
 	"testing"
+	"time"
 
 	"knative.dev/pkg/system"
 	"knative.dev/reconciler-test/pkg/environment"
@@ -40,6 +41,7 @@ func TestContainerSourceWithSinkRef(t *testing.T) {
 		knative.WithObservabilityConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
+		environment.WithPollTimings(5*time.Second, 4*time.Minute),
 	)
 	t.Cleanup(env.Finish)
 
@@ -55,6 +57,7 @@ func TestContainerSourceWithSinkURI(t *testing.T) {
 		knative.WithObservabilityConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
+		environment.WithPollTimings(5*time.Second, 4*time.Minute),
 	)
 
 	env.Test(ctx, t, containersource.SendsEventsWithSinkURI())
@@ -69,6 +72,7 @@ func TestContainerSourceWithCloudEventOverrides(t *testing.T) {
 		knative.WithObservabilityConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
+		environment.WithPollTimings(5*time.Second, 4*time.Minute),
 	)
 
 	env.Test(ctx, t, containersource.SendsEventsWithCloudEventOverrides())
@@ -83,6 +87,7 @@ func TestContainerSourceWithArgs(t *testing.T) {
 		knative.WithObservabilityConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
+		environment.WithPollTimings(5*time.Second, 4*time.Minute),
 	)
 
 	env.Test(ctx, t, containersource.SendsEventsWithArgs())
@@ -98,6 +103,7 @@ func TestContainerSourceWithTLS(t *testing.T) {
 		k8s.WithEventListener,
 		environment.Managed(t),
 		eventshub.WithTLS(t),
+		environment.WithPollTimings(5*time.Second, 4*time.Minute),
 	)
 
 	env.ParallelTest(ctx, t, containersource.SendEventsWithTLSRecieverAsSink())
@@ -114,6 +120,7 @@ func TestContainerSourceSendsEventsWithOIDC(t *testing.T) {
 		k8s.WithEventListener,
 		environment.Managed(t),
 		eventshub.WithTLS(t),
+		environment.WithPollTimings(5*time.Second, 4*time.Minute),
 	)
 
 	env.Test(ctx, t, containersource.SendsEventsWithSinkRefOIDC())
