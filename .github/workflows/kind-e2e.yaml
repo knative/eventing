@@ -59,7 +59,7 @@ jobs:
 
     - name: Install KinD
       # TODO: replace with chainguard-dev/actions/setup-kind
-      uses: chainguard-dev/actions/setup-kind@16e2fd6603a1c6a1fbc880fdbb922b2e8e2be3e7 # main
+      uses: chainguard-dev/actions/setup-kind@36fe99ff72c697d33814bc35228637194f012c47 # main
       with:
         k8s-version: ${{ matrix.k8s-version }}
         kind-worker-count: 1
