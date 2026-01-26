@@ -63,7 +63,7 @@ func AddressableAuthZConformanceRequestHandling(gvr schema.GroupVersionResource,
 			addressableAllowsAuthorizedRequest(gvr, kind, name, cloudevents.EncodingStructured),
 			addressableRejectsUnauthorizedRequest(gvr, kind, name, cloudevents.EncodingBinary),
 			addressableRejectsUnauthorizedRequest(gvr, kind, name, cloudevents.EncodingStructured),
-			addressableBecomesUnreadyOnUnreadyEventPolicy(gvr, kind, name),
+			zAddressableBecomesUnreadyOnUnreadyEventPolicy(gvr, kind, name),
 		},
 	}
 	return &fs
@@ -214,7 +214,11 @@ func addressableRespectsEventPolicyFilters(gvr schema.GroupVersionResource, kind
 	return f
 }
 
-func addressableBecomesUnreadyOnUnreadyEventPolicy(gvr schema.GroupVersionResource, kind, name string) *feature.Feature {
+// zAddressableBecomesUnreadyOnUnreadyEventPolicy tests that an addressable becomes NotReady when an EventPolicy is NotReady.
+// The function name starts with 'z' to ensure it runs last when tests are sorted alphabetically by the test framework.
+// This test creates an EventPolicy with an invalid reference which makes the addressable NotReady, so it must run
+// after all other tests to avoid interfering with them.
+func zAddressableBecomesUnreadyOnUnreadyEventPolicy(gvr schema.GroupVersionResource, kind, name string) *feature.Feature {
 	f := feature.NewFeatureNamed(fmt.Sprintf("%s becomes NotReady when EventPolicy is NotReady", kind))
 
 	f.Prerequisite("OIDC authentication is enabled", featureflags.AuthenticationOIDCEnabled())
