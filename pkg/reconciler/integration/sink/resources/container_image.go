@@ -62,6 +62,7 @@ func MakeDeploymentSpec(sink *v1alpha1.IntegrationSink, authProxyImage string, f
 			Labels: integration.Labels(sink.Name),
 		},
 		Spec: appsv1.DeploymentSpec{
+			Replicas: ptr.To(int32(1)),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: integration.Labels(sink.Name),
 			},

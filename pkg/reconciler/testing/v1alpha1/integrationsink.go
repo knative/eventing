@@ -57,9 +57,9 @@ func WithInitIntegrationSinkConditions(s *v1alpha1.IntegrationSink) {
 	s.Status.InitializeConditions()
 }
 
-func WithIntegrationSinkPropagateDeploymenteStatus(status *appsv1.DeploymentStatus) IntegrationSinkOption {
+func WithIntegrationSinkPropagateDeploymenteStatus(deployment *appsv1.Deployment) IntegrationSinkOption {
 	return func(s *v1alpha1.IntegrationSink) {
-		s.Status.PropagateDeploymentStatus(status)
+		s.Status.PropagateDeploymentStatus(deployment)
 	}
 }
 

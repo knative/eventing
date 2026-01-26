@@ -177,7 +177,7 @@ func (r *Reconciler) reconcileDeployment(ctx context.Context, sink *sinks.Integr
 		logging.FromContext(ctx).Debugw("Reusing existing Deployment", zap.Any("Deployment", deployment))
 	}
 
-	sink.Status.PropagateDeploymentStatus(&deployment.Status)
+	sink.Status.PropagateDeploymentStatus(deployment)
 	return deployment, nil
 }
 
