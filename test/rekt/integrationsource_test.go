@@ -41,6 +41,7 @@ func TestIntegrationSourceWithSinkRef(t *testing.T) {
 		knative.WithObservabilityConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
+		environment.WithPollTimings(5*time.Second, 4*time.Minute),
 	)
 	t.Cleanup(env.Finish)
 
@@ -74,6 +75,7 @@ func TestIntegrationSourceSendsEventsWithOIDC(t *testing.T) {
 		k8s.WithEventListener,
 		environment.Managed(t),
 		eventshub.WithTLS(t),
+		environment.WithPollTimings(5*time.Second, 4*time.Minute),
 	)
 
 	env.Test(ctx, t, integrationsource.SendsEventsWithSinkRefOIDC())
