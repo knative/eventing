@@ -88,6 +88,7 @@ func TestNewSQSContainerSink(t *testing.T) {
 			Labels: integration.Labels(testName),
 		},
 		Spec: appsv1.DeploymentSpec{
+			Replicas: ptr.To(int32(1)),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: integration.Labels(testName),
 			},

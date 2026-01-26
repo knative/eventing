@@ -193,7 +193,24 @@ func makeDeployment(sink *sinksv1alpha1.IntegrationSink, ready *corev1.Condition
 		}
 		if *ready == corev1.ConditionTrue {
 			status.ReadyReplicas = 1
+			status.UpdatedReplicas = 1
+			status.AvailableReplicas = 1
+			status.Replicas = 1
+			status.ObservedGeneration = 1
 		}
+	}
+
+	objectMeta := metav1.ObjectMeta{
+		Name:      deploymentName,
+		Namespace: sink.Namespace,
+		OwnerReferences: []metav1.OwnerReference{
+			*kmeta.NewControllerRef(sink),
+		},
+		Labels: integration.Labels(sink.Name),
+	}
+	// Simulate what Kubernetes API server would set for existing deployments
+	if ready != nil {
+		objectMeta.Generation = 1
 	}
 
 	d := &appsv1.Deployment{
@@ -201,16 +218,10 @@ func makeDeployment(sink *sinksv1alpha1.IntegrationSink, ready *corev1.Condition
 			APIVersion: "apps/v1",
 			Kind:       "Deployment",
 		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      deploymentName,
-			Namespace: sink.Namespace,
-			OwnerReferences: []metav1.OwnerReference{
-				*kmeta.NewControllerRef(sink),
-			},
-			Labels: integration.Labels(sink.Name),
-		},
-		Status: status,
+		ObjectMeta: objectMeta,
+		Status:     status,
 		Spec: appsv1.DeploymentSpec{
+			Replicas: ptr.To(int32(1)),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: integration.Labels(sink.Name),
 			},
@@ -376,12 +387,23 @@ func makeIntegrationSinkSpec() sinksv1alpha1.IntegrationSinkSpec {
 	}
 }
 
-func makeDeploymentStatus(ready *corev1.ConditionStatus) *appsv1.DeploymentStatus {
-	return &appsv1.DeploymentStatus{
-		Conditions: []appsv1.DeploymentCondition{{
-			Type:   appsv1.DeploymentAvailable,
-			Status: *ready,
-		}},
-		Replicas: 1,
+func makeDeploymentStatus(ready *corev1.ConditionStatus) *appsv1.Deployment {
+	return &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Generation: 1,
+		},
+		Spec: appsv1.DeploymentSpec{
+			Replicas: ptr.To(int32(1)),
+		},
+		Status: appsv1.DeploymentStatus{
+			Conditions: []appsv1.DeploymentCondition{{
+				Type:   appsv1.DeploymentAvailable,
+				Status: *ready,
+			}},
+			Replicas:           1,
+			UpdatedReplicas:    1,
+			AvailableReplicas:  1,
+			ObservedGeneration: 1,
+		},
 	}
 }

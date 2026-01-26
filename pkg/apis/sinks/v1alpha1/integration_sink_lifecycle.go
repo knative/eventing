@@ -106,22 +106,51 @@ func (s *IntegrationSinkStatus) MarkEventPoliciesTrueWithReason(reason, messageF
 	IntegrationSinkCondSet.Manage(s).MarkTrueWithReason(IntegrationSinkConditionEventPoliciesReady, reason, messageFormat, messageA...)
 }
 
-func (s *IntegrationSinkStatus) PropagateDeploymentStatus(d *appsv1.DeploymentStatus) {
+func (s *IntegrationSinkStatus) PropagateDeploymentStatus(d *appsv1.Deployment) {
+	// A deployment is fully rolled out when:
+	// 1. ObservedGeneration == Generation: controller has observed the latest spec
+	// 2. UpdatedReplicas == Replicas: all pods updated to the new pod template
+	// 3. AvailableReplicas == Replicas: all updated pods are ready
+	// This ensures EventPolicy changes have propagated to all pods before marking Ready.
+	desiredReplicas := int32(1)
+	if d.Spec.Replicas != nil {
+		desiredReplicas = *d.Spec.Replicas
+	}
+
+	deploymentFullyRolledOut := d.Status.ObservedGeneration == d.Generation &&
+		d.Status.UpdatedReplicas == desiredReplicas &&
+		d.Status.AvailableReplicas == desiredReplicas
+
+	if deploymentFullyRolledOut {
+		IntegrationSinkCondSet.Manage(s).MarkTrue(IntegrationSinkConditionDeploymentReady)
+		return
+	}
+
+	// Check deployment conditions for error states
 	deploymentAvailableFound := false
-	for _, cond := range d.Conditions {
+	for _, cond := range d.Status.Conditions {
 		if cond.Type == appsv1.DeploymentAvailable {
 			deploymentAvailableFound = true
-			if cond.Status == corev1.ConditionTrue {
-				IntegrationSinkCondSet.Manage(s).MarkTrue(IntegrationSinkConditionDeploymentReady)
-			} else if cond.Status == corev1.ConditionFalse {
+			if cond.Status == corev1.ConditionFalse {
 				IntegrationSinkCondSet.Manage(s).MarkFalse(IntegrationSinkConditionDeploymentReady, cond.Reason, cond.Message)
-			} else if cond.Status == corev1.ConditionUnknown {
-				IntegrationSinkCondSet.Manage(s).MarkUnknown(IntegrationSinkConditionDeploymentReady, cond.Reason, cond.Message)
+				return
 			}
 		}
+		// Also check Progressing condition for failures (e.g., ImagePullBackOff, insufficient quota)
+		if cond.Type == appsv1.DeploymentProgressing && cond.Status == corev1.ConditionFalse {
+			IntegrationSinkCondSet.Manage(s).MarkFalse(IntegrationSinkConditionDeploymentReady, cond.Reason, cond.Message)
+			return
+		}
 	}
-	if !deploymentAvailableFound {
-		IntegrationSinkCondSet.Manage(s).MarkUnknown(IntegrationSinkConditionDeploymentReady, "DeploymentUnavailable", "The Deployment '%s' is unavailable.", d)
+
+	// Deployment is progressing but not fully rolled out yet
+	if deploymentAvailableFound {
+		IntegrationSinkCondSet.Manage(s).MarkUnknown(IntegrationSinkConditionDeploymentReady,
+			"DeploymentRollingOut",
+			"Deployment rollout in progress: %d/%d replicas updated and available",
+			d.Status.AvailableReplicas, desiredReplicas)
+	} else {
+		IntegrationSinkCondSet.Manage(s).MarkUnknown(IntegrationSinkConditionDeploymentReady, "DeploymentUnavailable", "The Deployment is unavailable")
 	}
 }
 
