@@ -60,6 +60,14 @@ const (
 	JsonataTLSVolumePath = "/etc/jsonata-tls"
 	JsonataTLSKeyPath    = JsonataTLSVolumePath + "/" + eventingtls.TLSKey
 	JsonataTLSCertPath   = JsonataTLSVolumePath + "/" + eventingtls.TLSCrt
+
+	// OTEL environment variable names for tracing auto-configuration
+	// These are standard OpenTelemetry environment variables that the Node.js SDK
+	// automatically reads to configure the trace exporter.
+	OTELExporterEndpointEnv = "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"
+	OTELExporterProtocolEnv = "OTEL_EXPORTER_OTLP_PROTOCOL"
+	OTELTracesSamplerEnv    = "OTEL_TRACES_SAMPLER"
+	OTELTracesSamplerArgEnv = "OTEL_TRACES_SAMPLER_ARG"
 )
 
 func jsonataExpressionConfigMap(_ context.Context, transform *eventing.EventTransform) corev1.ConfigMap {
@@ -121,13 +129,16 @@ func jsonataDeployment(ctx context.Context, withCombinedTrustBundle bool, cw *re
 							Name:  "jsonata-event-transform",
 							Image: image,
 							Env: append(
-								[]corev1.EnvVar{
-									{
-										Name:  "JSONATA_TRANSFORM_FILE_NAME",
-										Value: filepath.Join(JsonataExpressionPath, JsonataExpressionDataKey),
+								append(
+									[]corev1.EnvVar{
+										{
+											Name:  "JSONATA_TRANSFORM_FILE_NAME",
+											Value: filepath.Join(JsonataExpressionPath, JsonataExpressionDataKey),
+										},
 									},
-								},
-								cw.ToEnvVars()...,
+									cw.ToEnvVars()...,
+								),
+								otelTracingEnvVars(cw)...,
 							),
 							VolumeMounts: []corev1.VolumeMount{
 								{
@@ -459,4 +470,60 @@ func jsonataCertificate(ctx context.Context, transform *eventing.EventTransform)
 			fmt.Sprintf("%s.%s.svc", svc.Name, svc.Namespace),
 		),
 	)
+}
+
+// otelTracingEnvVars generates standard OpenTelemetry environment variables
+// based on the observability configuration. This allows the Node.js OTEL SDK
+// in the transform-jsonata container to auto-configure the trace exporter
+// and send traces to the configured endpoint instead of logging to stdout.
+func otelTracingEnvVars(cw *reconcilersource.ConfigWatcher) []corev1.EnvVar {
+	if cw == nil {
+		return nil
+	}
+
+	obsCfg := cw.ObservabilityConfig()
+	if obsCfg == nil {
+		return nil
+	}
+
+	tracingCfg := obsCfg.Tracing
+	// Only add OTEL env vars if tracing is enabled with a real exporter
+	if tracingCfg.Protocol == "" || tracingCfg.Protocol == "none" {
+		return nil
+	}
+
+	// For stdout protocol, don't set OTEL env vars - let the app use ConsoleSpanExporter
+	if tracingCfg.Protocol == "stdout" {
+		return nil
+	}
+
+	envVars := []corev1.EnvVar{
+		{
+			Name:  OTELExporterProtocolEnv,
+			Value: tracingCfg.Protocol,
+		},
+	}
+
+	if tracingCfg.Endpoint != "" {
+		envVars = append(envVars, corev1.EnvVar{
+			Name:  OTELExporterEndpointEnv,
+			Value: tracingCfg.Endpoint,
+		})
+	}
+
+	// Configure sampling if a sampling rate is set
+	if tracingCfg.SamplingRate > 0 {
+		envVars = append(envVars,
+			corev1.EnvVar{
+				Name:  OTELTracesSamplerEnv,
+				Value: "parentbased_traceidratio",
+			},
+			corev1.EnvVar{
+				Name:  OTELTracesSamplerArgEnv,
+				Value: fmt.Sprintf("%g", tracingCfg.SamplingRate),
+			},
+		)
+	}
+
+	return envVars
 }
