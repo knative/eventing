@@ -45,6 +45,13 @@ const (
 )
 
 func MakeDeploymentSpec(sink *v1alpha1.IntegrationSink, authProxyImage string, featureFlags feature.Flags, trustBundleConfigmapLister corev1listers.ConfigMapLister) (*appsv1.Deployment, error) {
+	probesPort := int32(8080)
+	probesScheme := corev1.URISchemeHTTP
+	if featureFlags.IsStrictTransportEncryption() {
+		probesPort = int32(8443)
+		probesScheme = corev1.URISchemeHTTPS
+	}
+
 	deploy := &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apps/v1",
@@ -103,6 +110,9 @@ func MakeDeploymentSpec(sink *v1alpha1.IntegrationSink, authProxyImage string, f
 									ReadOnly:  true,
 								},
 							},
+							ReadinessProbe: integration.ReadinessProbe(probesPort, probesScheme),
+							LivenessProbe:  integration.LivenessProbe(probesPort, probesScheme),
+							StartupProbe:   integration.StartupProbe(probesPort, probesScheme),
 						},
 					},
 					ServiceAccountName: makeServiceAccountName(sink),
