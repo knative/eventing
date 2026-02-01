@@ -18,7 +18,6 @@ Also take a look at:
 5. [Start eventing controller](#starting-eventing-controller)
 6. [Install the rest (Optional)](#install-channels)
 
-
 > :information_source: If you intend to use event sinks based on Knative
 > Services as described in some of our examples, consider installing
 > [Knative Serving](http://github.com/knative/serving). A few
@@ -220,21 +219,21 @@ To run a single rekt test using the `e2e-debug.sh` script, follow these instruct
 
 2. Execute the following command in your terminal:
 
-    ```bash
-    ./hack/e2e-debug.sh <test_name> <test_dir>
-    ```
+   ```bash
+   ./hack/e2e-debug.sh <test_name> <test_dir>
+   ```
 
-    Replace `<test_name>` with the name of the rekt test you want to run, and `<test_dir>` with the directory containing the test file.
+   Replace `<test_name>` with the name of the rekt test you want to run, and `<test_dir>` with the directory containing the test file.
 
-    **Example:**
+   **Example:**
 
-    ```bash
-    ./hack/e2e-debug.sh TestPingSourceWithSinkRef ./test/rekt
-    ```
+   ```bash
+   ./hack/e2e-debug.sh TestPingSourceWithSinkRef ./test/rekt
+   ```
 
-    This will run the specified rekt test (`TestMyRektScenario` in this case) from the provided directory (`test/rekt/scenarios`).
+   This will run the specified rekt test (`TestMyRektScenario` in this case) from the provided directory (`test/rekt/scenarios`).
 
-    **Note:** Ensure that you have the necessary dependencies and configurations set up before running the test.
+   **Note:** Ensure that you have the necessary dependencies and configurations set up before running the test.
 
 3. The script will wait for Knative Eventing components to come up and then execute the specified test. If any failures occur during the test, relevant error messages will be displayed in the terminal.
 
@@ -335,169 +334,139 @@ Wireshark:
 kubectl sniff <POD_NAME> -n knative-eventing
 ```
 
-## Debugging Knative controllers and friends locally
+## Debugging Knative controllers and webhooks
 
-[Telepresence](https://www.telepresence.io/) can be leveraged to debug Knative
-controllers, webhooks and similar components.
+`ko` has built-in support for remote debugging Go applications using
+[Delve](https://github.com/go-delve/delve). This is the recommended approach for
+debugging Knative Eventing controllers, webhooks, and similar components.
 
-Telepresence allows you to use your local process, IDE, debugger, etc. but
-Kubernetes service calls get redirected to the process on your local. Similarly
-the calls on the local process goes to actual services that are running in
-Kubernetes.
+When you build with the `--debug` flag, `ko` will:
+
+- Install Delve in the container image
+- Set the `ENTRYPOINT` to run your app via Delve, listening on port `40000`
+- Preserve debug symbols in the compiled binary
+
+> information_source: This feature is intended for development workflows only.
+> Do not use `--debug` builds in production.
 
 ### Prerequisites
 
-- Install Telepresence v2 (see the [installation instructions](https://www.getambassador.io/docs/telepresence/latest/install/) for details).
-- Deploy Knative Eventing on your Kubernetes cluster.
+- A Kubernetes cluster with Knative Eventing deployed
+- [`ko`](https://github.com/google/ko) v0.16 or higher
+- An IDE with remote debugging support (VSCode, IntelliJ IDEA, GoLand)
 
-### Connect Telepresence and intercept the controller
+### Build and deploy with debug support
 
-As a first step Telepresence needs to your Kubernetes cluster:
+1. Build and deploy the component you want to debug with the `--debug` flag:
 
-```
-telepresence connect
-```
+```shell
+# Deploy the eventing controller with debug support
+ko apply -f config/500-controller.yaml --debug
 
-_Hint: If this is your first time Telepresence connects to your cluster, you
-need to install the traffic manager too_
-
-```
-telepresence helm install
+# Or deploy the webhook with debug support
+ko apply -f config/500-webhook.yaml --debug
 ```
 
-As Telepresence v2 [needs a
-service](https://www.getambassador.io/docs/telepresence/latest/howtos/intercepts/#intercept-a-service-in-your-own-environment)
-in front of your planned intercepted component (e.g. the controller), you need
-to add a Kubernetes service for your component. E.g.:
+2. Verify the pod is running:
 
-```
-kubectl -n knative-eventing expose deploy/eventing-controller
+```shell
+kubectl -n knative-eventing get pods -l app=eventing-controller
 ```
 
-Afterwards you can run the following command to swap the controller with the
-local controller that we will start later.
+### Connect to the debugger
 
-```
-telepresence intercept eventing-controller --namespace knative-eventing --port 8080:8080 --env-file ./eventing-controller.env
-```
+1. Forward the debug port from the pod to your local machine:
 
-This will replace the `eventing-controller` deployment on the cluster with a
-proxy.
+```shell
+# For the controller
+kubectl -n knative-eventing port-forward deploy/eventing-controller 40000:40000
 
-It will also create a `eventing-controller.env` file which we will use later on.
-The content of this `envfile` looks like this:
-
-```
-CONFIG_LOGGING_NAME=config-logging
-CONFIG_OBSERVABILITY_NAME=config-observability
-METRICS_DOMAIN=knative.dev/eventing
-POD_NAME=eventing-controller-78b599dbb7-8kkql
-SYSTEM_NAMESPACE=knative-eventing
-...
+# Or for the webhook
+kubectl -n knative-eventing port-forward deploy/eventing-webhook 40000:40000
 ```
 
-We need to pass these environment variables later when we are starting our
-controller locally.
-
-### Debug with IntelliJ IDEA
-
-- Install the [EnvFile
-  plugin](https://plugins.jetbrains.com/plugin/7861-envfile) in IntelliJ IDEA
-
-- Create a run configuration in IntelliJ IDEA for `cmd/controller/main.go`:
-
-![Imgur](http://i.imgur.com/M6F3XA2.png)
-
-- Use the `envfile`:
-
-![Imgur](http://i.imgur.com/cdXkKNo.png)
-
-Now, use the run configuration and start the local controller in debug mode. You
-will see that the execution will pause in your breakpoints.
+_Keep this terminal running while you debug._
 
 ### Debug with VSCode
 
-Alternatively you can use VSCode, to debug the controller.
+1. Add the following configuration to your `.vscode/launch.json`:
 
-- Create a debug configuration in VSCode. Add the following configuration to
-  your `.vscode/launch.json`:
-
-```
+```json
 {
-    "configurations": [
-        ...
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Connect to Eventing Controller",
+      "type": "go",
+      "request": "attach",
+      "mode": "remote",
+      "port": 40000,
+      "host": "127.0.0.1",
+      "substitutePath": [
         {
-            "name": "Launch Eventing Controller",
-            "type": "go",
-            "request": "launch",
-            "mode": "auto",
-            "program": "${workspaceFolder}/cmd/controller/main.go",
-            "envFile": "${workspaceFolder}/eventing-controller.env",
-            "preLaunchTask": "intercept-eventing-controller",
-            "postDebugTask": "quit-telepresence",
+          "from": "${workspaceFolder}",
+          "to": "/go/src/knative.dev/eventing"
         }
-    ]
+      ]
+    }
+  ]
 }
 ```
 
-- Debug your application as usual in VSCode
+2. Start the debug configuration in VSCode. Your breakpoints will now be active
+   in the remote process.
 
-_Hint: You can also add the telepresence interception as a preLaunchTask, so you
-don't have to start it every time befor you debug manually. To do so, do the
-following steps_
+> :information_source: The `substitutePath` mapping is required so that VSCode
+> can correctly map source files between your local workspace and the paths
+> inside the container.
 
-1. Add the following tasks to your `.vscode/tasks.json`:
-   ```
-   {
-       "version": "2.0.0",
-       "tasks": [
-           ...
-           {
-               "label": "intercept-eventing-controller",
-               "type": "shell",
-               "command": "telepresence quit; telepresence intercept eventing-controller --namespace knative-eventing --port 8080:8080 --env-file ${workspaceFolder}/eventing-controller.env",
-           },
-           {
-               "label": "quit-telepresence",
-               "type": "shell",
-               "command": "telepresence quit"
-           }
-       ]
-   }
-   ```
-2. Reference the tasks in your launch configuration (`.vscode/launch.json`):
-   ```
-   {
-       "configurations": [
-           ...
-           {
-               "name": "Launch Eventing Controller",
-               ...
-               "preLaunchTask": "intercept-eventing-controller",
-               "postDebugTask": "quit-telepresence",
-           }
-       ]
-   }
-   ```
+### Debug with IntelliJ IDEA / GoLand
+
+1. Go to **Run** → **Edit Configurations**
+
+2. Click **+** and select **Go Remote**
+
+3. Configure the remote debugger:
+   - **Host**: `localhost`
+   - **Port**: `40000`
+
+4. Click **Debug** to connect to the running process.
+
+_Hint: Make sure the port-forward is running before starting the debug session._
+
+### Debugging other components
+
+You can debug any component by applying its config with `--debug`:
+
+```shell
+# Debug the in-memory channel dispatcher
+ko apply -f config/channels/in-memory-channel/300-dispatcher.yaml --debug
+kubectl -n knative-eventing port-forward deploy/imc-dispatcher 40000:40000
+
+# Debug the MT broker ingress
+ko apply -f config/brokers/mt-channel-broker/500-ingress.yaml --debug
+kubectl -n knative-eventing port-forward deploy/mt-broker-ingress 40000:40000
+```
 
 ### Cleanup
 
-To remove the proxy and revert the deployment on the cluster back to its
-original state again, run:
+To stop debugging, simply redeploy the component without the `--debug` flag:
 
+```shell
+ko apply -f config/500-controller.yaml
 ```
-telepresence quit
-```
 
-**Notes**:
+### Troubleshooting
 
-- Networking works fine, but volumes (i.e. being able to access Kubernetes
-  volumes from local controller) are not tested
-- This method can also be used in production, but proceed with caution.
+- **Connection refused**: Ensure the port-forward is running and the pod is in
+  `Running` state.
+- **Breakpoints not hitting**: Verify the `substitutePath` in your IDE matches
+  the Go module path inside the container.
+- **Pod crashes on startup**: The Delve debugger waits for a client connection
+  before starting the app. Make sure to connect your debugger promptly.
 
 ### Common issues when setting up with Ubuntu (WSL)
 
 - Go version mismatch: `sudo apt-get install golang-go` installs an older version of Go (1.18), which is too outdated for installing Ko and Kubectl
-   - Use [this method](https://www.digitalocean.com/community/tutorials/how-to-install-go-on-ubuntu-20-04) instead to manually install go using the .tar file
+  - Use [this method](https://www.digitalocean.com/community/tutorials/how-to-install-go-on-ubuntu-20-04) instead to manually install go using the .tar file
 - Use `go install` to install any additional gotools such as `goimports`
-
