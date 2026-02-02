@@ -32,11 +32,13 @@ import (
 	commonv1a1 "knative.dev/eventing/pkg/apis/common/integration/v1alpha1"
 	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/eventing/pkg/apis/sinks/v1alpha1"
+	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/certificates"
 	v1alpha1listers "knative.dev/eventing/pkg/client/listers/sinks/v1alpha1"
 	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/reconciler/integration"
 	"knative.dev/pkg/kmeta"
+	"knative.dev/pkg/network"
 	"knative.dev/pkg/system"
 )
 
@@ -288,9 +290,19 @@ func makeEventPolicyRoleBindingName(sink *v1alpha1.IntegrationSink) string {
 }
 
 func makeAuthProxyEnv(sink *v1alpha1.IntegrationSink, featureFlags feature.Flags) []corev1.EnvVar {
-	sinkAddress := eventingtls.GetHttpsAddress(sink.Status.Addresses)
-	if sinkAddress == nil {
-		sinkAddress = sink.Status.Address
+	// Derive the sink URI directly instead of reading from status.Address
+	// This avoids a circular dependency where the deployment needs the address,
+	// but the address is set after the deployment is created.
+	var sinkURI string
+	serviceName := DeploymentName(sink.Name)
+	serviceHostname := network.GetServiceHostname(serviceName, sink.Namespace)
+
+	if featureFlags.IsStrictTransportEncryption() || featureFlags.IsPermissiveTransportEncryption() {
+		// HTTPS URL
+		sinkURI = fmt.Sprintf("https://%s", serviceHostname)
+	} else {
+		// HTTP URL
+		sinkURI = fmt.Sprintf("http://%s", serviceHostname)
 	}
 
 	envVars := []corev1.EnvVar{
@@ -334,13 +346,10 @@ func makeAuthProxyEnv(sink *v1alpha1.IntegrationSink, featureFlags feature.Flags
 			Name:  "SINK_NAMESPACE",
 			Value: sink.Namespace,
 		},
-	}
-
-	if sinkAddress != nil && sinkAddress.URL != nil {
-		envVars = append(envVars, corev1.EnvVar{
+		{
 			Name:  "SINK_URI",
-			Value: sinkAddress.URL.String(),
-		})
+			Value: sinkURI,
+		},
 	}
 
 	if !featureFlags.IsDisabledTransportEncryption() {
@@ -359,10 +368,12 @@ func makeAuthProxyEnv(sink *v1alpha1.IntegrationSink, featureFlags feature.Flags
 		}...)
 	}
 
-	if sinkAddress != nil && sinkAddress.Audience != nil {
+	// Set audience if OIDC authentication is enabled
+	if featureFlags.IsOIDCAuthentication() {
+		audience := auth.GetAudience(v1alpha1.SchemeGroupVersion.WithKind("IntegrationSink"), sink.ObjectMeta)
 		envVars = append(envVars, corev1.EnvVar{
 			Name:  "SINK_AUDIENCE",
-			Value: *sinkAddress.Audience,
+			Value: audience,
 		})
 	}
 
