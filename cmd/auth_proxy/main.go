@@ -22,9 +22,11 @@ package main
 
 import (
 	"context"
+	"errors"
 	"net"
 	"os"
 	"sync"
+	"time"
 
 	//nolint:gosec
 	"crypto/tls"
@@ -70,6 +72,7 @@ type envConfig struct {
 	TargetHTTPSPort int    `envconfig:"TARGET_HTTPS_PORT"  default:"8443"`
 	ProxyHTTPPort   int    `envconfig:"PROXY_HTTP_PORT" default:"3128"`
 	ProxyHTTPSPort  int    `envconfig:"PROXY_HTTPS_PORT" default:"3129"`
+	ProxyHealthPort int    `envconfig:"PROXY_HEALTH_PORT" default:"8090"`
 
 	SinkURI       string  `envconfig:"SINK_URI" required:"true"`
 	SinkNamespace string  `envconfig:"SINK_NAMESPACE" required:"true"`
@@ -142,6 +145,20 @@ func main() {
 	if err := startServices(ctx, informers, configMapWatcher, logger); err != nil {
 		logger.Fatalw("Failed to start services", zap.Error(err))
 	}
+
+	// Start health server
+	healthServer := startHealthServer(config, handler)
+	go func() {
+		logger.Infof("Starting health server on port %d", config.ProxyHealthPort)
+		if err := healthServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			logger.Errorw("Health server error", zap.Error(err))
+		}
+	}()
+	defer func() {
+		if err := healthServer.Shutdown(context.Background()); err != nil {
+			logger.Errorw("Error shutting down health server", zap.Error(err))
+		}
+	}()
 
 	logger.Info("Starting auth proxy servers...")
 	if err = serverManager.StartServers(ctx); err != nil {
@@ -315,6 +332,34 @@ func (h *ProxyHandler) invalidateSubjectsCache(logger *zap.SugaredLogger) {
 	defer h.subjectsWithFiltersMu.Unlock()
 	h.cachedSubjectsWithFilters = nil
 	logger.Debug("Invalidated subjects cache due to EventPolicy change")
+}
+
+// startHealthServer creates and returns an HTTP server for health checks
+func startHealthServer(config envConfig, handler *ProxyHandler) *http.Server {
+	mux := http.NewServeMux()
+
+	// Readiness endpoint - checks if auth-proxy is ready to validate tokens
+	mux.HandleFunc("/readyz", func(w http.ResponseWriter, r *http.Request) {
+		if handler.authVerifier.IsReady() {
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("ready"))
+		} else {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			_, _ = w.Write([]byte("not ready"))
+		}
+	})
+
+	// Liveness endpoint - always returns OK if the server is running
+	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("alive"))
+	})
+
+	return &http.Server{
+		Addr:              fmt.Sprintf(":%d", config.ProxyHealthPort),
+		Handler:           mux,
+		ReadHeaderTimeout: 10 * time.Second,
+	}
 }
 
 func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {

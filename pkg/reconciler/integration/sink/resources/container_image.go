@@ -142,6 +142,11 @@ func MakeDeploymentSpec(sink *v1alpha1.IntegrationSink, authProxyImage string, f
 					Protocol:      corev1.ProtocolTCP,
 					Name:          "https",
 				},
+				{
+					ContainerPort: 8090,
+					Protocol:      corev1.ProtocolTCP,
+					Name:          "health",
+				},
 			},
 			Env: proxyVars,
 			VolumeMounts: []corev1.VolumeMount{
@@ -151,6 +156,48 @@ func MakeDeploymentSpec(sink *v1alpha1.IntegrationSink, authProxyImage string, f
 					MountPath: "/etc/" + certificates.CertificateName(sink.Name),
 					ReadOnly:  true,
 				},
+			},
+			ReadinessProbe: &corev1.Probe{
+				ProbeHandler: corev1.ProbeHandler{
+					HTTPGet: &corev1.HTTPGetAction{
+						Path:   "/readyz",
+						Port:   intstr.FromInt32(8090),
+						Scheme: corev1.URISchemeHTTP,
+					},
+				},
+				InitialDelaySeconds: 5,
+				PeriodSeconds:       5,
+				SuccessThreshold:    1,
+				FailureThreshold:    3,
+				TimeoutSeconds:      5,
+			},
+			LivenessProbe: &corev1.Probe{
+				ProbeHandler: corev1.ProbeHandler{
+					HTTPGet: &corev1.HTTPGetAction{
+						Path:   "/healthz",
+						Port:   intstr.FromInt32(8090),
+						Scheme: corev1.URISchemeHTTP,
+					},
+				},
+				InitialDelaySeconds: 10,
+				PeriodSeconds:       10,
+				SuccessThreshold:    1,
+				FailureThreshold:    3,
+				TimeoutSeconds:      5,
+			},
+			StartupProbe: &corev1.Probe{
+				ProbeHandler: corev1.ProbeHandler{
+					HTTPGet: &corev1.HTTPGetAction{
+						Path:   "/readyz",
+						Port:   intstr.FromInt32(8090),
+						Scheme: corev1.URISchemeHTTP,
+					},
+				},
+				InitialDelaySeconds: 0,
+				PeriodSeconds:       2,
+				SuccessThreshold:    1,
+				FailureThreshold:    30,
+				TimeoutSeconds:      5,
 			},
 		})
 
@@ -321,6 +368,10 @@ func makeAuthProxyEnv(sink *v1alpha1.IntegrationSink, featureFlags feature.Flags
 		{
 			Name:  "PROXY_HTTPS_PORT",
 			Value: "3129",
+		},
+		{
+			Name:  "PROXY_HEALTH_PORT",
+			Value: "8090",
 		},
 		{
 			Name:  "SYSTEM_NAMESPACE",
