@@ -334,7 +334,7 @@ Wireshark:
 kubectl sniff <POD_NAME> -n knative-eventing
 ```
 
-## Debugging Knative controllers and webhooks
+## Debugging Knative controllers and friends locally
 
 `ko` has built-in support for remote debugging Go applications using
 [Delve](https://github.com/go-delve/delve). This is the recommended approach for
@@ -401,13 +401,8 @@ _Keep this terminal running while you debug._
       "request": "attach",
       "mode": "remote",
       "port": 40000,
-      "host": "127.0.0.1",
-      "substitutePath": [
-        {
-          "from": "${workspaceFolder}",
-          "to": "/go/src/knative.dev/eventing"
-        }
-      ]
+      "host": "0.0.0.0",
+      "cwd": "${workspaceFolder}"
     }
   ]
 }
@@ -415,10 +410,6 @@ _Keep this terminal running while you debug._
 
 2. Start the debug configuration in VSCode. Your breakpoints will now be active
    in the remote process.
-
-> :information_source: The `substitutePath` mapping is required so that VSCode
-> can correctly map source files between your local workspace and the paths
-> inside the container.
 
 ### Debug with IntelliJ IDEA / GoLand
 
