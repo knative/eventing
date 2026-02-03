@@ -21,8 +21,8 @@ package rekt
 import (
 	"testing"
 
-	"knative.dev/eventing/test/rekt/features/awsconfig"
 	"knative.dev/eventing/test/rekt/features/integrationsink"
+	"knative.dev/eventing/test/rekt/resources/awsconfig"
 	integrationsinkresource "knative.dev/eventing/test/rekt/resources/integrationsink"
 	"knative.dev/pkg/system"
 	"knative.dev/reconciler-test/pkg/environment"
@@ -38,6 +38,7 @@ func TestIntegrationSinkSQSSuccess(t *testing.T) {
 		knative.WithLoggingConfig,
 		knative.WithObservabilityConfig,
 		awsconfig.WithAWSConfig,
+		integrationsinkresource.WithAWSIntegrationSinkConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
 	)

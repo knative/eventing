@@ -48,14 +48,12 @@ func SendsEventsWithSinkRefOIDC(sourceType integrationsource.SourceType) *featur
 		d.CACerts = eventshub.GetCaCerts(ctx)
 		d.Audience = &sinkAudience
 
-		installSourceByType(ctx, t, src, sourceType, integrationsource.WithSink(d))
+		integrationsource.InstallByType(src, sourceType, integrationsource.WithSink(d))(ctx, t)
 	})
 
 	f.Requirement("integrationsource goes ready", integrationsource.IsReady(src))
 
-	f.Requirement("trigger message", func(ctx context.Context, t feature.T) {
-		triggerEventByType(ctx, t, sourceType)
-	})
+	f.Requirement("trigger message", integrationsource.TriggerEventByType(sourceType))
 
 	f.Stable("integrationsource as event source").
 		Must("delivers events",

@@ -120,19 +120,6 @@ func AWSConfigFromContext(ctx context.Context) *AWSConfig {
 	panic("no AWS config found in context")
 }
 
-// GetEnvOrDefault reads an environment variable or returns the default value if not set.
-// This is a utility function for reading service-specific environment variables.
-//
-// Example:
-//
-//	arn := awsconfig.GetEnvOrDefault("AWS_S3_SINK_ARN", "arn:aws:s3:::eventing-e2e-sink")
-func GetEnvOrDefault(envVar, defaultValue string) string {
-	if value := os.Getenv(envVar); value != "" {
-		return value
-	}
-	return defaultValue
-}
-
 // CreateS3Client creates an S3 client using AWS configuration from context.
 func CreateS3Client(ctx context.Context) *s3.Client {
 	cfg := AWSConfigFromContext(ctx)
@@ -205,8 +192,8 @@ func CleanupS3Bucket(ctx context.Context, t feature.T, arn string) {
 	}
 }
 
-// GetSQSQueueURL resolves a queue name to its full URL using the AWS SQS API.
-func GetSQSQueueURL(ctx context.Context, t feature.T, queueName string) string {
+// getSQSQueueURL resolves a queue name to its full URL using the AWS SQS API.
+func getSQSQueueURL(ctx context.Context, t feature.T, queueName string) string {
 	client := CreateSQSClient(ctx)
 
 	result, err := client.GetQueueUrl(ctx, &sqs.GetQueueUrlInput{
@@ -224,7 +211,8 @@ func GetSQSQueueURL(ctx context.Context, t feature.T, queueName string) string {
 }
 
 // CleanupSQSQueue removes all messages from the specified SQS queue.
-func CleanupSQSQueue(ctx context.Context, t feature.T, queueURL string) {
+func CleanupSQSQueue(ctx context.Context, t feature.T, queueName string) {
+	queueURL := getSQSQueueURL(ctx, t, queueName)
 	client := CreateSQSClient(ctx)
 
 	// Receive and delete messages in batches
@@ -408,7 +396,8 @@ func VerifyS3ObjectCount(ctx context.Context, t feature.T, arn string, expectedC
 
 // VerifySQSMessages polls until the expected number of messages exist in SQS queue and verifies message bodies.
 // Messages are deleted immediately after verification.
-func VerifySQSMessages(ctx context.Context, t feature.T, queueURL string, expectedContent string, expectedCount int) {
+func VerifySQSMessages(ctx context.Context, t feature.T, queueName string, expectedContent string, expectedCount int) {
+	queueURL := getSQSQueueURL(ctx, t, queueName)
 	client := CreateSQSClient(ctx)
 
 	// Poll for expected message count
@@ -458,7 +447,8 @@ func VerifySQSMessages(ctx context.Context, t feature.T, queueURL string, expect
 // VerifySNSMessages polls until the expected number of SNS messages exist in the verification SQS queue.
 // SNS messages are delivered to SQS wrapped in an SNS envelope, so we check the Message field.
 // Messages are deleted immediately after verification.
-func VerifySNSMessages(ctx context.Context, t feature.T, queueURL string, expectedContent string, expectedCount int) {
+func VerifySNSMessages(ctx context.Context, t feature.T, queueName string, expectedContent string, expectedCount int) {
+	queueURL := getSQSQueueURL(ctx, t, queueName)
 	client := CreateSQSClient(ctx)
 
 	// Poll for expected message count
