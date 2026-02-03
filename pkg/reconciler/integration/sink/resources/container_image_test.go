@@ -157,7 +157,7 @@ func TestNewSQSContainerSink(t *testing.T) {
 		},
 	}
 
-	got, _ := MakeDeploymentSpec(sink, "unused", feature.Flags{}, nil, nil)
+	got, _ := MakeDeploymentSpec(sink, "unused", feature.Flags{}, nil)
 	sortOpts := []cmp.Option{
 		cmp.Transformer("SortEnvVars", func(in corev1.Container) corev1.Container {
 			out := in

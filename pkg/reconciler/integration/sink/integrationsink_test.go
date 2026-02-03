@@ -17,45 +17,41 @@ limitations under the License.
 package sink
 
 import (
+	"context"
 	"fmt"
 	"sync/atomic"
+	"testing"
 
 	cmlisters "github.com/cert-manager/cert-manager/pkg/client/listers/certmanager/v1"
-
-	"knative.dev/eventing/pkg/certificates"
-
-	"knative.dev/eventing/pkg/reconciler/integration"
-
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	clientgotesting "k8s.io/client-go/testing"
 	"k8s.io/utils/ptr"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
-	"knative.dev/pkg/network"
-
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	clientgotesting "k8s.io/client-go/testing"
-	sinksv1alpha1 "knative.dev/eventing/pkg/apis/sinks/v1alpha1"
-	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
-	"knative.dev/eventing/pkg/client/injection/reconciler/sinks/v1alpha1/integrationsink"
-	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
-	"knative.dev/pkg/kmeta"
-	"knative.dev/pkg/logging"
-
-	"context"
-
-	. "knative.dev/eventing/pkg/reconciler/testing/v1"
-	. "knative.dev/eventing/pkg/reconciler/testing/v1alpha1"
-
 	"knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
+	"knative.dev/pkg/kmeta"
+	"knative.dev/pkg/logging"
 	logtesting "knative.dev/pkg/logging/testing"
+	"knative.dev/pkg/network"
 	. "knative.dev/pkg/reconciler/testing"
+	"knative.dev/pkg/system"
 
-	"testing"
+	"knative.dev/eventing/pkg/apis/feature"
+	sinksv1alpha1 "knative.dev/eventing/pkg/apis/sinks/v1alpha1"
+	"knative.dev/eventing/pkg/certificates"
+	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
+	"knative.dev/eventing/pkg/client/injection/reconciler/sinks/v1alpha1/integrationsink"
+	"knative.dev/eventing/pkg/reconciler/integration"
+	. "knative.dev/eventing/pkg/reconciler/testing/v1"
+	. "knative.dev/eventing/pkg/reconciler/testing/v1alpha1"
+	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 )
 
 const (
@@ -151,6 +147,54 @@ func TestReconcile(t *testing.T) {
 					WithIntegrationSinkPropagateDeploymenteStatus(makeDeploymentStatus(&conditionTrue)),
 				),
 			}},
+		}, {
+			Name: "creates deployment with auth-proxy and RoleBindings when OIDC is enabled",
+			Objects: []runtime.Object{
+				NewIntegrationSink(sinkName, testNS,
+					WithIntegrationSinkUID(sinkUID),
+					WithIntegrationSinkSpec(makeIntegrationSinkSpec()),
+				),
+			},
+			Key: testNS + "/" + sinkName,
+			Ctx: feature.ToContext(context.Background(), feature.Flags{
+				feature.OIDCAuthentication: feature.Enabled,
+			}),
+			WantCreates: []runtime.Object{
+				makeEventPolicyRoleBinding(),
+				makeConfigMapAccessRoleBinding(),
+				makeDeploymentWithAuthProxy(NewIntegrationSink(sinkName, testNS,
+					WithIntegrationSinkUID(sinkUID),
+					WithIntegrationSinkSpec(makeIntegrationSinkSpec())),
+					nil),
+				makeService(deploymentName, testNS),
+			},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, deploymentCreated, "Deployment created %q", deploymentName),
+				Eventf(corev1.EventTypeNormal, serviceCreated, "Service created %q", deploymentName),
+				Eventf(corev1.EventTypeNormal, sinkReconciled, `IntegrationSink reconciled: "%s/%s"`, testNS, sinkName),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewIntegrationSink(sinkName, testNS,
+					WithIntegrationSinkUID(sinkUID),
+					WithIntegrationSinkAddressableReady(),
+					WithIntegrationSinkAddress(duckv1.Addressable{
+						Name: ptr.To("http"),
+						URL: &apis.URL{
+							Scheme: "http",
+							Host:   network.GetServiceHostname(deploymentName, testNS),
+						},
+						Audience: ptr.To("sinks.knative.dev/integrationsink/" + testNS + "/" + sinkName),
+					}),
+					WithIntegrationSinkSpec(makeIntegrationSinkSpec()),
+					WithIntegrationSinkEventPoliciesReady("DefaultAuthorizationMode", `Default authz mode is ""`),
+					WithIntegrationSinkTrustBundlePropagatedReady(),
+					WithInitIntegrationSinkConditions,
+					WithIntegrationSinkPropagateDeploymenteStatus(&appsv1.Deployment{
+						Status: appsv1.DeploymentStatus{},
+					}),
+				),
+			}},
+			SkipNamespaceValidation: true,
 		}}
 
 	logger := logtesting.TestLogger(t)
@@ -328,6 +372,48 @@ func makeDeployment(sink *sinksv1alpha1.IntegrationSink, ready *corev1.Condition
 	return d
 }
 
+func makeDeploymentWithAuthProxy(sink *sinksv1alpha1.IntegrationSink, ready *corev1.ConditionStatus) runtime.Object {
+	d := makeDeployment(sink, ready).(*appsv1.Deployment)
+
+	// Remove ports from sink container (auth-proxy becomes the entry point)
+	d.Spec.Template.Spec.Containers[0].Ports = nil
+
+	// Add auth-proxy container
+	authProxyContainer := corev1.Container{
+		Name:            "auth-proxy",
+		ImagePullPolicy: corev1.PullIfNotPresent,
+		Ports: []corev1.ContainerPort{
+			{ContainerPort: 3128, Protocol: corev1.ProtocolTCP, Name: "http"},
+			{ContainerPort: 3129, Protocol: corev1.ProtocolTCP, Name: "https"},
+		},
+		Env: []corev1.EnvVar{
+			{Name: "TARGET_HTTP_PORT", Value: "8080"},
+			{Name: "TARGET_HTTPS_PORT", Value: "8443"},
+			{Name: "PROXY_HTTP_PORT", Value: "3128"},
+			{Name: "PROXY_HTTPS_PORT", Value: "3129"},
+			{Name: "SYSTEM_NAMESPACE", Value: system.Namespace()},
+			{Name: "PARENT_API_VERSION", Value: "sinks.knative.dev/v1alpha1"},
+			{Name: "PARENT_KIND", Value: "IntegrationSink"},
+			{Name: "PARENT_NAME", Value: sink.Name},
+			{Name: "PARENT_NAMESPACE", Value: sink.Namespace},
+			{Name: "SINK_NAMESPACE", Value: sink.Namespace},
+			{Name: "SINK_TLS_CERT_FILE", Value: "/etc/" + certificates.CertificateName(sink.Name) + "/tls.crt"},
+			{Name: "SINK_TLS_KEY_FILE", Value: "/etc/" + certificates.CertificateName(sink.Name) + "/tls.key"},
+			{Name: "SINK_TLS_CA_FILE", Value: "/etc/" + certificates.CertificateName(sink.Name) + "/ca.crt"},
+		},
+		VolumeMounts: []corev1.VolumeMount{
+			{
+				Name:      certificates.CertificateName(sink.Name),
+				MountPath: "/etc/" + certificates.CertificateName(sink.Name),
+				ReadOnly:  true,
+			},
+		},
+	}
+
+	d.Spec.Template.Spec.Containers = append(d.Spec.Template.Spec.Containers, authProxyContainer)
+	return d
+}
+
 func makeService(name, namespace string) *corev1.Service {
 	return &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
@@ -404,6 +490,59 @@ func makeDeploymentStatus(ready *corev1.ConditionStatus) *appsv1.Deployment {
 			UpdatedReplicas:    1,
 			AvailableReplicas:  1,
 			ObservedGeneration: 1,
+		},
+	}
+}
+
+func makeEventPolicyRoleBinding() *rbacv1.RoleBinding {
+	return &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      sinkName + "-eventpolicy-reader",
+			Namespace: testNS,
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion:         "sinks.knative.dev/v1alpha1",
+					Kind:               "IntegrationSink",
+					Name:               sinkName,
+					UID:                sinkUID,
+					Controller:         ptr.To(true),
+					BlockOwnerDeletion: ptr.To(true),
+				},
+			},
+			Labels: integration.Labels(sinkName),
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: "rbac.authorization.k8s.io",
+			Kind:     "ClusterRole",
+			Name:     "knative-eventing-eventpolicy-reader",
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:      "ServiceAccount",
+				Namespace: testNS,
+				Name:      "default",
+			},
+		},
+	}
+}
+
+func makeConfigMapAccessRoleBinding() *rbacv1.RoleBinding {
+	return &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "eventing-auth-proxy",
+			Namespace: system.Namespace(),
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: "rbac.authorization.k8s.io",
+			Kind:     "Role",
+			Name:     "knative-eventing-auth-proxy",
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:      "ServiceAccount",
+				Namespace: testNS,
+				Name:      "default",
+			},
 		},
 	}
 }

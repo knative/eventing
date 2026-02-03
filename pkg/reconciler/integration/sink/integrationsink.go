@@ -114,7 +114,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, sink *sinks.IntegrationS
 	}
 
 	logger.Debugw("Reconciling IntegrationSink auth-proxy RBAC")
-	_, err = r.reconcileAuthProxyRBAC(ctx, sink)
+	err = r.reconcileAuthProxyRBAC(ctx, sink)
 	if err != nil {
 		logging.FromContext(ctx).Errorw("Error reconciling auth-proxy RBAC", zap.Error(err))
 		return err
@@ -149,7 +149,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, sink *sinks.IntegrationS
 }
 
 func (r *Reconciler) reconcileDeployment(ctx context.Context, sink *sinks.IntegrationSink, authProxyImage string, featureFlags feature.Flags) (*v1.Deployment, error) {
-	expected, err := resources.MakeDeploymentSpec(sink, authProxyImage, featureFlags, r.trustBundleConfigMapLister, r.eventPolicyLister)
+	expected, err := resources.MakeDeploymentSpec(sink, authProxyImage, featureFlags, r.trustBundleConfigMapLister)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create deployment template: %w", err)
 	}
@@ -434,41 +434,103 @@ func (r *Reconciler) serviceChanged(existingSvc corev1.ServiceSpec, wantSvc core
 	return !equality.Semantic.DeepDerivative(wantSvc, existingSvc)
 }
 
-func (r *Reconciler) reconcileAuthProxyRBAC(ctx context.Context, sink *sinks.IntegrationSink) (*rbacv1.RoleBinding, error) {
+func (r *Reconciler) reconcileAuthProxyRBAC(ctx context.Context, sink *sinks.IntegrationSink) error {
 	features := feature.FromContext(ctx)
 
+	// 1. Reconcile EventPolicy access RBAC (RoleBinding in sink's namespace)
+	// This allows auth-proxy to read EventPolicies to enforce authorization
+	if err := r.reconcileEventPolicyRBAC(ctx, sink, features); err != nil {
+		return fmt.Errorf("failed to reconcile EventPolicy RBAC: %w", err)
+	}
+
+	// 2. Reconcile ConfigMap access RBAC (RoleBinding in knative-eventing namespace)
+	// This allows auth-proxy to read logging configuration from the knative-eventing namespace
+	err := r.reconcileConfigMapAccessRBAC(ctx, sink, features)
+	if err != nil {
+		return fmt.Errorf("failed to reconcile ConfigMap access RBAC: %w", err)
+	}
+
+	return nil
+}
+
+// reconcileEventPolicyRBAC reconciles the namespace-scoped RoleBinding
+// that allows auth-proxy to read EventPolicies in the sink's namespace.
+// The RoleBinding references the knative-eventing-eventpolicy-reader ClusterRole.
+func (r *Reconciler) reconcileEventPolicyRBAC(ctx context.Context, sink *sinks.IntegrationSink, features feature.Flags) error {
+	if !features.IsOIDCAuthentication() {
+		// EventPolicy RoleBinding has OwnerReferences, so it'll be garbage collected
+		// when the sink is deleted. No explicit cleanup needed when OIDC is disabled.
+		return nil
+	}
+
+	if err := r.reconcileEventPolicyRoleBinding(ctx, sink); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// reconcileConfigMapAccessRBAC reconciles the RoleBinding in knative-eventing namespace
+// that allows auth-proxy to read ConfigMaps (for logging configuration).
+func (r *Reconciler) reconcileConfigMapAccessRBAC(ctx context.Context, sink *sinks.IntegrationSink, features feature.Flags) error {
 	expected, err := resources.MakeAuthProxyRoleBindings(sink, r.integrationSinkLister, features)
 	if err != nil {
-		return nil, fmt.Errorf("creating auth proxy rolebinding: %w", err)
+		return fmt.Errorf("creating auth proxy rolebinding: %w", err)
 	}
 
 	if !features.IsOIDCAuthentication() {
-		return nil, r.deleteIntegrationSinkRBAC(ctx, expected)
+		return r.deleteIntegrationSinkRBAC(ctx, expected)
 	}
 
 	rolebinding, err := r.rolebindingLister.RoleBindings(expected.Namespace).Get(expected.Name)
 	if apierrors.IsNotFound(err) {
-		created, err := r.kubeClientSet.RbacV1().RoleBindings(system.Namespace()).Create(ctx, expected, metav1.CreateOptions{})
+		_, err = r.kubeClientSet.RbacV1().RoleBindings(system.Namespace()).Create(ctx, expected, metav1.CreateOptions{})
 		if err != nil {
-			return nil, err
+			return err
 		}
-
-		return created, nil
+		return nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("failed to get rolebinding %s/%s: %w", expected.GetNamespace(), expected.GetName(), err)
+		return fmt.Errorf("failed to get rolebinding %s/%s: %w", expected.GetNamespace(), expected.GetName(), err)
 	}
 
 	if !r.rolebindingChanged(rolebinding, expected) {
-		return rolebinding, nil
+		return nil
 	}
 
 	expected.ResourceVersion = rolebinding.ResourceVersion
-	updated, err := r.kubeClientSet.RbacV1().RoleBindings(expected.Namespace).Update(ctx, expected, metav1.UpdateOptions{})
+	_, err = r.kubeClientSet.RbacV1().RoleBindings(expected.Namespace).Update(ctx, expected, metav1.UpdateOptions{})
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return updated, nil
+	return nil
+}
+
+func (r *Reconciler) reconcileEventPolicyRoleBinding(ctx context.Context, sink *sinks.IntegrationSink) error {
+	expected := resources.MakeEventPolicyRoleBinding(sink)
+
+	rb, err := r.kubeClientSet.RbacV1().RoleBindings(expected.Namespace).Get(ctx, expected.Name, metav1.GetOptions{})
+	if apierrors.IsNotFound(err) {
+		_, err := r.kubeClientSet.RbacV1().RoleBindings(expected.Namespace).Create(ctx, expected, metav1.CreateOptions{})
+		if err != nil {
+			return fmt.Errorf("creating EventPolicy RoleBinding: %w", err)
+		}
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("getting EventPolicy RoleBinding: %w", err)
+	}
+
+	// Update if subjects changed
+	if !equality.Semantic.DeepEqual(rb.Subjects, expected.Subjects) {
+		rb.Subjects = expected.Subjects
+		_, err = r.kubeClientSet.RbacV1().RoleBindings(expected.Namespace).Update(ctx, rb, metav1.UpdateOptions{})
+		if err != nil {
+			return fmt.Errorf("updating EventPolicy RoleBinding: %w", err)
+		}
+	}
+
+	return nil
 }
 
 func (r *Reconciler) deleteIntegrationSinkRBAC(ctx context.Context, rolebinding *rbacv1.RoleBinding) error {
@@ -487,6 +549,10 @@ func (r *Reconciler) deleteIntegrationSinkRBAC(ctx context.Context, rolebinding 
 	if err != nil {
 		return fmt.Errorf("failed to delete auth-proxy rolebinding %s/%s: %w", rolebinding.Namespace, rolebinding.Name, err)
 	}
+
+	// Note: EventPolicy Role and RoleBinding have OwnerReferences set to the IntegrationSink,
+	// so they will be automatically garbage collected when the sink is deleted.
+	// We don't need to explicitly delete them here.
 
 	return nil
 }
