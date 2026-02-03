@@ -195,7 +195,7 @@ func setupEventPolicyInformer(ctx context.Context, config envConfig, logger *zap
 	// Create namespace-scoped informer factory
 	eventingInformerFactory := eventinginformers.NewSharedInformerFactoryWithOptions(
 		eventingClient,
-		0, // resyncPeriod - 0 means no resync
+		controller.GetResyncPeriod(ctx),
 		eventinginformers.WithNamespace(config.ParentNamespace),
 	)
 
