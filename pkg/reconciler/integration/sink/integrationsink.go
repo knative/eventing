@@ -457,14 +457,31 @@ func (r *Reconciler) reconcileAuthProxyRBAC(ctx context.Context, sink *sinks.Int
 // that allows auth-proxy to read EventPolicies in the sink's namespace.
 // The RoleBinding references the knative-eventing-eventpolicy-reader ClusterRole.
 func (r *Reconciler) reconcileEventPolicyRBAC(ctx context.Context, sink *sinks.IntegrationSink, features feature.Flags) error {
+	expected := resources.MakeEventPolicyRoleBinding(sink)
+
 	if !features.IsOIDCAuthentication() {
-		// EventPolicy RoleBinding has OwnerReferences, so it'll be garbage collected
-		// when the sink is deleted. No explicit cleanup needed when OIDC is disabled.
-		return nil
+		return r.deleteEventPolicyRBAC(ctx, expected)
 	}
 
-	if err := r.reconcileEventPolicyRoleBinding(ctx, sink); err != nil {
-		return err
+	rb, err := r.rolebindingLister.RoleBindings(expected.Namespace).Get(expected.Name)
+	if apierrors.IsNotFound(err) {
+		_, err := r.kubeClientSet.RbacV1().RoleBindings(expected.Namespace).Create(ctx, expected, metav1.CreateOptions{})
+		if err != nil {
+			return fmt.Errorf("creating EventPolicy RoleBinding: %w", err)
+		}
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("getting EventPolicy RoleBinding: %w", err)
+	}
+
+	// Update if subjects changed
+	if !equality.Semantic.DeepEqual(rb.Subjects, expected.Subjects) {
+		rb.Subjects = expected.Subjects
+		_, err = r.kubeClientSet.RbacV1().RoleBindings(expected.Namespace).Update(ctx, rb, metav1.UpdateOptions{})
+		if err != nil {
+			return fmt.Errorf("updating EventPolicy RoleBinding: %w", err)
+		}
 	}
 
 	return nil
@@ -479,7 +496,7 @@ func (r *Reconciler) reconcileConfigMapAccessRBAC(ctx context.Context, sink *sin
 	}
 
 	if !features.IsOIDCAuthentication() {
-		return r.deleteIntegrationSinkRBAC(ctx, expected)
+		return r.deleteConfigMapAccessRBAC(ctx, expected)
 	}
 
 	rolebinding, err := r.rolebindingLister.RoleBindings(expected.Namespace).Get(expected.Name)
@@ -506,34 +523,7 @@ func (r *Reconciler) reconcileConfigMapAccessRBAC(ctx context.Context, sink *sin
 	return nil
 }
 
-func (r *Reconciler) reconcileEventPolicyRoleBinding(ctx context.Context, sink *sinks.IntegrationSink) error {
-	expected := resources.MakeEventPolicyRoleBinding(sink)
-
-	rb, err := r.rolebindingLister.RoleBindings(expected.Namespace).Get(expected.Name)
-	if apierrors.IsNotFound(err) {
-		_, err := r.kubeClientSet.RbacV1().RoleBindings(expected.Namespace).Create(ctx, expected, metav1.CreateOptions{})
-		if err != nil {
-			return fmt.Errorf("creating EventPolicy RoleBinding: %w", err)
-		}
-		return nil
-	}
-	if err != nil {
-		return fmt.Errorf("getting EventPolicy RoleBinding: %w", err)
-	}
-
-	// Update if subjects changed
-	if !equality.Semantic.DeepEqual(rb.Subjects, expected.Subjects) {
-		rb.Subjects = expected.Subjects
-		_, err = r.kubeClientSet.RbacV1().RoleBindings(expected.Namespace).Update(ctx, rb, metav1.UpdateOptions{})
-		if err != nil {
-			return fmt.Errorf("updating EventPolicy RoleBinding: %w", err)
-		}
-	}
-
-	return nil
-}
-
-func (r *Reconciler) deleteIntegrationSinkRBAC(ctx context.Context, rolebinding *rbacv1.RoleBinding) error {
+func (r *Reconciler) deleteConfigMapAccessRBAC(ctx context.Context, rolebinding *rbacv1.RoleBinding) error {
 	_, err := r.rolebindingLister.RoleBindings(rolebinding.Namespace).Get(rolebinding.Name)
 	if apierrors.IsNotFound(err) {
 		return nil
@@ -550,9 +540,25 @@ func (r *Reconciler) deleteIntegrationSinkRBAC(ctx context.Context, rolebinding 
 		return fmt.Errorf("failed to delete auth-proxy rolebinding %s/%s: %w", rolebinding.Namespace, rolebinding.Name, err)
 	}
 
-	// Note: EventPolicy Role and RoleBinding have OwnerReferences set to the IntegrationSink,
-	// so they will be automatically garbage collected when the sink is deleted.
-	// We don't need to explicitly delete them here.
+	return nil
+}
+
+func (r *Reconciler) deleteEventPolicyRBAC(ctx context.Context, rolebinding *rbacv1.RoleBinding) error {
+	_, err := r.rolebindingLister.RoleBindings(rolebinding.Namespace).Get(rolebinding.Name)
+	if apierrors.IsNotFound(err) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("failed to get rolebinding %s/%s: %w", rolebinding.Namespace, rolebinding.Name, err)
+	}
+
+	err = r.kubeClientSet.RbacV1().RoleBindings(rolebinding.Namespace).Delete(ctx, rolebinding.Name, metav1.DeleteOptions{})
+	if apierrors.IsNotFound(err) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("failed to delete auth-proxy eventpolicy rolebinding %s/%s: %w", rolebinding.Namespace, rolebinding.Name, err)
+	}
 
 	return nil
 }
