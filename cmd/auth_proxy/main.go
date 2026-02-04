@@ -24,6 +24,7 @@ import (
 	"context"
 	"net"
 	"os"
+	"sync"
 
 	//nolint:gosec
 	"crypto/tls"
@@ -38,6 +39,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/cache"
 	"k8s.io/utils/ptr"
 	cmdbroker "knative.dev/eventing/cmd/broker"
 	"knative.dev/eventing/pkg/apis/feature"
@@ -95,6 +97,10 @@ type ProxyHandler struct {
 	config            envConfig
 	eventPolicyLister eventingv1alpha1listers.EventPolicyLister
 	parentResourceGVK schema.GroupVersionKind
+
+	// Cache for subjects with filters
+	subjectsWithFiltersMu     sync.RWMutex
+	cachedSubjectsWithFilters []auth.SubjectsWithFilters
 }
 
 func main() {
@@ -124,6 +130,9 @@ func main() {
 	if err != nil {
 		logger.Fatalw("Failed to create proxy handler", zap.Error(err))
 	}
+
+	// Register event handler to invalidate cache when EventPolicies change
+	registerEventPolicyHandler(eventPolicyInformer, handler, logger)
 
 	serverManager, err := createServerManager(ctx, config, handler, logger, configMapWatcher)
 	if err != nil {
@@ -183,7 +192,7 @@ func setupFeatureStore(_ context.Context, logger *zap.SugaredLogger, configMapWa
 }
 
 // setupEventPolicyInformer creates a namespace-scoped EventPolicy informer
-func setupEventPolicyInformer(ctx context.Context, config envConfig, logger *zap.SugaredLogger) (eventingv1alpha1listers.EventPolicyLister, controller.Informer, error) {
+func setupEventPolicyInformer(ctx context.Context, config envConfig, logger *zap.SugaredLogger) (eventingv1alpha1listers.EventPolicyLister, cache.SharedIndexInformer, error) {
 	cfg := injection.GetConfig(ctx)
 
 	// Create eventing client
@@ -284,6 +293,30 @@ func startServices(ctx context.Context, informers []controller.Informer, configM
 	return nil
 }
 
+// registerEventPolicyHandler registers an event handler on the EventPolicy informer
+// to invalidate the cache when policies change
+func registerEventPolicyHandler(eventPolicyInformer cache.SharedIndexInformer, handler *ProxyHandler, logger *zap.SugaredLogger) {
+	_, _ = eventPolicyInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			handler.invalidateSubjectsCache(logger)
+		},
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			handler.invalidateSubjectsCache(logger)
+		},
+		DeleteFunc: func(obj interface{}) {
+			handler.invalidateSubjectsCache(logger)
+		},
+	})
+}
+
+// invalidateSubjectsCache clears the cached subjects with filters
+func (h *ProxyHandler) invalidateSubjectsCache(logger *zap.SugaredLogger) {
+	h.subjectsWithFiltersMu.Lock()
+	defer h.subjectsWithFiltersMu.Unlock()
+	h.cachedSubjectsWithFilters = nil
+	logger.Debug("Invalidated subjects cache due to EventPolicy change")
+}
+
 func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx := h.withContext(r.Context())
 	logger := logging.FromContext(ctx)
@@ -316,6 +349,26 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // getAuthSubjects retrieves EventPolicies for the parent resource and converts them to SubjectsWithFilters
 func (h *ProxyHandler) getAuthSubjects(logger *zap.SugaredLogger) ([]auth.SubjectsWithFilters, error) {
+	// Try to use cached value (fast path with read lock)
+	h.subjectsWithFiltersMu.RLock()
+	if h.cachedSubjectsWithFilters != nil {
+		cached := h.cachedSubjectsWithFilters
+		h.subjectsWithFiltersMu.RUnlock()
+		logger.Debug("Using cached subjects with filters")
+		return cached, nil
+	}
+	h.subjectsWithFiltersMu.RUnlock()
+
+	// Cache miss - acquire write lock and compute
+	h.subjectsWithFiltersMu.Lock()
+	defer h.subjectsWithFiltersMu.Unlock()
+
+	// Double-check after acquiring write lock (another goroutine might have populated the cache)
+	if h.cachedSubjectsWithFilters != nil {
+		logger.Debug("Using cached subjects with filters (after lock)")
+		return h.cachedSubjectsWithFilters, nil
+	}
+
 	// Get EventPolicies applying to this resource
 	policies, err := auth.GetEventPoliciesForResource(
 		h.eventPolicyLister,
@@ -339,6 +392,10 @@ func (h *ProxyHandler) getAuthSubjects(logger *zap.SugaredLogger) ([]auth.Subjec
 			Filters:  policy.Spec.Filters,
 		})
 	}
+
+	// Store in cache
+	h.cachedSubjectsWithFilters = subjectsWithFilters
+	logger.Debugf("Cached %d subjects with filters for %s/%s", len(subjectsWithFilters), h.config.ParentNamespace, h.config.ParentName)
 
 	return subjectsWithFilters, nil
 }
