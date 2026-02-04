@@ -115,3 +115,16 @@ rules:
   - apiGroups: ["eventing.knative.dev", "messaging.knative.dev", "sources.knative.dev", "flows.knative.dev", "bindings.knative.dev", "sinks.knative.dev"]
     resources: ["*"]
     verbs: ["get", "list", "watch"]
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: knative-eventing-eventpolicy-reader
+  labels:
+    rbac.authorization.k8s.io/aggregate-to-view: "true"
+    app.kubernetes.io/version: devel
+    app.kubernetes.io/name: knative-eventing
+rules:
+  - apiGroups: ["eventing.knative.dev"]
+    resources: ["eventpolicies"]
+    verbs: ["get", "list", "watch"]

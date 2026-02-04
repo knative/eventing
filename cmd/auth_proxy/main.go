@@ -22,9 +22,9 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"net"
 	"os"
+	"sync"
 
 	//nolint:gosec
 	"crypto/tls"
@@ -36,11 +36,17 @@ import (
 
 	"github.com/kelseyhightower/envconfig"
 	"go.uber.org/zap"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/cache"
 	"k8s.io/utils/ptr"
 	cmdbroker "knative.dev/eventing/cmd/broker"
 	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/eventing/pkg/auth"
+	eventingclient "knative.dev/eventing/pkg/client/clientset/versioned"
+	eventinginformers "knative.dev/eventing/pkg/client/informers/externalversions"
+	eventingv1alpha1listers "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/pkg/apis"
@@ -69,7 +75,11 @@ type envConfig struct {
 	SinkNamespace string  `envconfig:"SINK_NAMESPACE" required:"true"`
 	SinkAudience  *string `envconfig:"SINK_AUDIENCE"`
 
-	AuthPolicies string `envconfig:"AUTH_POLICIES"`
+	// Parent resource information for dynamic EventPolicy lookup
+	ParentAPIVersion string `envconfig:"PARENT_API_VERSION" required:"true"`
+	ParentKind       string `envconfig:"PARENT_KIND" required:"true"`
+	ParentName       string `envconfig:"PARENT_NAME" required:"true"`
+	ParentNamespace  string `envconfig:"PARENT_NAMESPACE" required:"true"`
 
 	SinkTLSCertPath *string `envconfig:"SINK_TLS_CERT_FILE"`
 	SinkTLSKeyPath  *string `envconfig:"SINK_TLS_KEY_FILE"`
@@ -79,13 +89,18 @@ type envConfig struct {
 // ProxyHandler handles HTTP requests and performs authentication/authorization
 // before forwarding to the target service
 type ProxyHandler struct {
-	kubeClient   kubernetes.Interface
-	withContext  func(ctx context.Context) context.Context
-	authVerifier *auth.Verifier
-	httpProxy    *httputil.ReverseProxy
-	httpsProxy   *httputil.ReverseProxy
-	config       envConfig
-	authSubjects []auth.SubjectsWithFilters
+	kubeClient        kubernetes.Interface
+	withContext       func(ctx context.Context) context.Context
+	authVerifier      *auth.Verifier
+	httpProxy         *httputil.ReverseProxy
+	httpsProxy        *httputil.ReverseProxy
+	config            envConfig
+	eventPolicyLister eventingv1alpha1listers.EventPolicyLister
+	parentResourceGVK schema.GroupVersionKind
+
+	// Cache for subjects with filters
+	subjectsWithFiltersMu     sync.RWMutex
+	cachedSubjectsWithFilters []auth.SubjectsWithFilters
 }
 
 func main() {
@@ -104,10 +119,20 @@ func main() {
 
 	featureStore := setupFeatureStore(ctx, logger, configMapWatcher)
 
-	handler, err := createProxyHandler(ctx, config, logger, featureStore, configMapWatcher)
+	// Create namespace-scoped EventPolicy informer
+	eventPolicyLister, eventPolicyInformer, err := setupEventPolicyInformer(ctx, config, logger)
+	if err != nil {
+		logger.Fatalw("Failed to setup EventPolicy informer", zap.Error(err))
+	}
+	informers = append(informers, eventPolicyInformer)
+
+	handler, err := createProxyHandler(ctx, config, logger, featureStore, configMapWatcher, eventPolicyLister)
 	if err != nil {
 		logger.Fatalw("Failed to create proxy handler", zap.Error(err))
 	}
+
+	// Register event handler to invalidate cache when EventPolicies change
+	registerEventPolicyHandler(eventPolicyInformer, handler, logger)
 
 	serverManager, err := createServerManager(ctx, config, handler, logger, configMapWatcher)
 	if err != nil {
@@ -166,21 +191,45 @@ func setupFeatureStore(_ context.Context, logger *zap.SugaredLogger, configMapWa
 	return featureStore
 }
 
-// createProxyHandler creates and configures the proxy handler
-func createProxyHandler(ctx context.Context, config envConfig, logger *zap.SugaredLogger, featureStore *feature.Store, configMapWatcher *configmap.InformedWatcher) (*ProxyHandler, error) {
-	var authSubjects []auth.SubjectsWithFilters
+// setupEventPolicyInformer creates a namespace-scoped EventPolicy informer
+func setupEventPolicyInformer(ctx context.Context, config envConfig, logger *zap.SugaredLogger) (eventingv1alpha1listers.EventPolicyLister, cache.SharedIndexInformer, error) {
+	cfg := injection.GetConfig(ctx)
 
-	if len(config.AuthPolicies) > 0 {
-		if err := json.Unmarshal([]byte(config.AuthPolicies), &authSubjects); err != nil {
-			return nil, fmt.Errorf("failed to parse policies: %w", err)
-		}
+	// Create eventing client
+	eventingClient, err := eventingclient.NewForConfig(cfg)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create eventing client: %w", err)
 	}
 
+	// Create namespace-scoped informer factory
+	eventingInformerFactory := eventinginformers.NewSharedInformerFactoryWithOptions(
+		eventingClient,
+		controller.GetResyncPeriod(ctx),
+		eventinginformers.WithNamespace(config.ParentNamespace),
+	)
+
+	eventPolicyInformer := eventingInformerFactory.Eventing().V1alpha1().EventPolicies()
+
+	logger.Infof("Created namespace-scoped EventPolicy informer for namespace %s", config.ParentNamespace)
+
+	return eventPolicyInformer.Lister(), eventPolicyInformer.Informer(), nil
+}
+
+// createProxyHandler creates and configures the proxy handler
+func createProxyHandler(ctx context.Context, config envConfig, logger *zap.SugaredLogger, featureStore *feature.Store, configMapWatcher *configmap.InformedWatcher, eventPolicyLister eventingv1alpha1listers.EventPolicyLister) (*ProxyHandler, error) {
+	// Parse parent resource GVK
+	gv, err := schema.ParseGroupVersion(config.ParentAPIVersion)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse parent API version %q: %w", config.ParentAPIVersion, err)
+	}
+	parentGVK := gv.WithKind(config.ParentKind)
+
 	handler := &ProxyHandler{
-		kubeClient:   kubeclient.Get(ctx),
-		authVerifier: auth.NewVerifier(ctx, nil, nil, configMapWatcher),
-		config:       config,
-		authSubjects: authSubjects,
+		kubeClient:        kubeclient.Get(ctx),
+		authVerifier:      auth.NewVerifier(ctx, nil, nil, configMapWatcher),
+		config:            config,
+		eventPolicyLister: eventPolicyLister,
+		parentResourceGVK: parentGVK,
 	}
 
 	handler.withContext = func(ctx context.Context) context.Context {
@@ -244,6 +293,30 @@ func startServices(ctx context.Context, informers []controller.Informer, configM
 	return nil
 }
 
+// registerEventPolicyHandler registers an event handler on the EventPolicy informer
+// to invalidate the cache when policies change
+func registerEventPolicyHandler(eventPolicyInformer cache.SharedIndexInformer, handler *ProxyHandler, logger *zap.SugaredLogger) {
+	_, _ = eventPolicyInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			handler.invalidateSubjectsCache(logger)
+		},
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			handler.invalidateSubjectsCache(logger)
+		},
+		DeleteFunc: func(obj interface{}) {
+			handler.invalidateSubjectsCache(logger)
+		},
+	})
+}
+
+// invalidateSubjectsCache clears the cached subjects with filters
+func (h *ProxyHandler) invalidateSubjectsCache(logger *zap.SugaredLogger) {
+	h.subjectsWithFiltersMu.Lock()
+	defer h.subjectsWithFiltersMu.Unlock()
+	h.cachedSubjectsWithFilters = nil
+	logger.Debug("Invalidated subjects cache due to EventPolicy change")
+}
+
 func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx := h.withContext(r.Context())
 	logger := logging.FromContext(ctx)
@@ -251,7 +324,15 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	logger.Debugf("Handling request to %s", r.RequestURI)
 
-	err := h.authVerifier.VerifyRequestFromSubjectsWithFilters(ctx, features, h.config.SinkAudience, h.authSubjects, h.config.SinkNamespace, r, w)
+	// Get EventPolicies dynamically for the parent resource
+	authSubjects, err := h.getAuthSubjects(logger)
+	if err != nil {
+		logger.Errorw("Failed to get EventPolicies", zap.Error(err))
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	err = h.authVerifier.VerifyRequestFromSubjectsWithFilters(ctx, features, h.config.SinkAudience, authSubjects, h.config.SinkNamespace, r, w)
 	if err != nil {
 		logger.Debugw("Failed to verify AuthN and AuthZ", zap.Error(err))
 		return
@@ -264,6 +345,59 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		logger.Debug("Forwarding to HTTPS target")
 		h.httpsProxy.ServeHTTP(w, r)
 	}
+}
+
+// getAuthSubjects retrieves EventPolicies for the parent resource and converts them to SubjectsWithFilters
+func (h *ProxyHandler) getAuthSubjects(logger *zap.SugaredLogger) ([]auth.SubjectsWithFilters, error) {
+	// Try to use cached value (fast path with read lock)
+	h.subjectsWithFiltersMu.RLock()
+	if h.cachedSubjectsWithFilters != nil {
+		cached := h.cachedSubjectsWithFilters
+		h.subjectsWithFiltersMu.RUnlock()
+		logger.Debug("Using cached subjects with filters")
+		return cached, nil
+	}
+	h.subjectsWithFiltersMu.RUnlock()
+
+	// Cache miss - acquire write lock and compute
+	h.subjectsWithFiltersMu.Lock()
+	defer h.subjectsWithFiltersMu.Unlock()
+
+	// Double-check after acquiring write lock (another goroutine might have populated the cache)
+	if h.cachedSubjectsWithFilters != nil {
+		logger.Debug("Using cached subjects with filters (after lock)")
+		return h.cachedSubjectsWithFilters, nil
+	}
+
+	// Get EventPolicies applying to this resource
+	policies, err := auth.GetEventPoliciesForResource(
+		h.eventPolicyLister,
+		h.parentResourceGVK,
+		metav1.ObjectMeta{
+			Name:      h.config.ParentName,
+			Namespace: h.config.ParentNamespace,
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get EventPolicies: %w", err)
+	}
+
+	logger.Debugf("Found %d EventPolicies for %s/%s", len(policies), h.config.ParentNamespace, h.config.ParentName)
+
+	// Convert EventPolicies to SubjectsWithFilters
+	subjectsWithFilters := make([]auth.SubjectsWithFilters, 0, len(policies))
+	for _, policy := range policies {
+		subjectsWithFilters = append(subjectsWithFilters, auth.SubjectsWithFilters{
+			Subjects: policy.Status.From,
+			Filters:  policy.Spec.Filters,
+		})
+	}
+
+	// Store in cache
+	h.cachedSubjectsWithFilters = subjectsWithFilters
+	logger.Debugf("Cached %d subjects with filters for %s/%s", len(subjectsWithFilters), h.config.ParentNamespace, h.config.ParentName)
+
+	return subjectsWithFilters, nil
 }
 
 // httpReverseProxy creates a reverse proxy for HTTP traffic to the target service

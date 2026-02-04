@@ -17,7 +17,6 @@ limitations under the License.
 package resources
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 
@@ -33,9 +32,7 @@ import (
 	commonv1a1 "knative.dev/eventing/pkg/apis/common/integration/v1alpha1"
 	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/eventing/pkg/apis/sinks/v1alpha1"
-	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/certificates"
-	alpha1 "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 	v1alpha1listers "knative.dev/eventing/pkg/client/listers/sinks/v1alpha1"
 	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/reconciler/integration"
@@ -47,7 +44,7 @@ const (
 	AuthProxyRolebindingName = "eventing-auth-proxy"
 )
 
-func MakeDeploymentSpec(sink *v1alpha1.IntegrationSink, authProxyImage string, featureFlags feature.Flags, trustBundleConfigmapLister corev1listers.ConfigMapLister, eventPolicyLister alpha1.EventPolicyLister) (*appsv1.Deployment, error) {
+func MakeDeploymentSpec(sink *v1alpha1.IntegrationSink, authProxyImage string, featureFlags feature.Flags, trustBundleConfigmapLister corev1listers.ConfigMapLister) (*appsv1.Deployment, error) {
 	deploy := &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apps/v1",
@@ -116,11 +113,7 @@ func MakeDeploymentSpec(sink *v1alpha1.IntegrationSink, authProxyImage string, f
 
 	if featureFlags.IsOIDCAuthentication() {
 		// add auth-proxy
-
-		proxyVars, err := makeAuthProxyEnv(sink, featureFlags, eventPolicyLister)
-		if err != nil {
-			return nil, fmt.Errorf("failed to make auth proxy env vars: %w", err)
-		}
+		proxyVars := makeAuthProxyEnv(sink, featureFlags)
 
 		deploy.Spec.Template.Spec.Containers = append(deploy.Spec.Template.Spec.Containers, corev1.Container{
 			Name:            "auth-proxy",
@@ -246,20 +239,48 @@ func MakeAuthProxyRoleBindings(sink *v1alpha1.IntegrationSink, sinkLister v1alph
 	return &rb, nil
 }
 
-func makeAuthProxyEnv(sink *v1alpha1.IntegrationSink, featureFlags feature.Flags, eventPolicyLister alpha1.EventPolicyLister) ([]corev1.EnvVar, error) {
+// MakeEventPolicyRole creates a namespace-scoped Role for auth-proxy to access EventPolicies
+// MakeEventPolicyRoleBinding creates a RoleBinding for auth-proxy to access EventPolicies.
+// It references the knative-eventing-eventpolicy-reader ClusterRole which grants
+// read access to EventPolicies.
+func MakeEventPolicyRoleBinding(sink *v1alpha1.IntegrationSink) *rbacv1.RoleBinding {
+	saName := makeServiceAccountName(sink)
+	if saName == "" {
+		saName = "default"
+	}
+
+	return &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      makeEventPolicyRoleBindingName(sink),
+			Namespace: sink.Namespace,
+			OwnerReferences: []metav1.OwnerReference{
+				*kmeta.NewControllerRef(sink),
+			},
+			Labels: integration.Labels(sink.Name),
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "ClusterRole",
+			Name:     "knative-eventing-eventpolicy-reader",
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:      "ServiceAccount",
+				Namespace: sink.Namespace,
+				Name:      saName,
+			},
+		},
+	}
+}
+
+func makeEventPolicyRoleBindingName(sink *v1alpha1.IntegrationSink) string {
+	return fmt.Sprintf("%s-eventpolicy-reader", sink.Name)
+}
+
+func makeAuthProxyEnv(sink *v1alpha1.IntegrationSink, featureFlags feature.Flags) []corev1.EnvVar {
 	sinkAddress := eventingtls.GetHttpsAddress(sink.Status.Addresses)
 	if sinkAddress == nil {
 		sinkAddress = sink.Status.Address
-	}
-
-	policies, err := auth.SubjectWithFiltersFromPolicyRef(eventPolicyLister, sink.Namespace, sink.Status.Policies)
-	if err != nil {
-		return nil, fmt.Errorf("failed to build auth proxy policies env vars: %w", err)
-	}
-
-	policiesJson, err := json.Marshal(policies)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse policies for auth proxy env vars: %w", err)
 	}
 
 	envVars := []corev1.EnvVar{
@@ -284,8 +305,20 @@ func makeAuthProxyEnv(sink *v1alpha1.IntegrationSink, featureFlags feature.Flags
 			Value: system.Namespace(),
 		},
 		{
-			Name:  "AUTH_POLICIES",
-			Value: string(policiesJson),
+			Name:  "PARENT_API_VERSION",
+			Value: v1alpha1.SchemeGroupVersion.String(),
+		},
+		{
+			Name:  "PARENT_KIND",
+			Value: "IntegrationSink",
+		},
+		{
+			Name:  "PARENT_NAME",
+			Value: sink.Name,
+		},
+		{
+			Name:  "PARENT_NAMESPACE",
+			Value: sink.Namespace,
 		},
 		{
 			Name:  "SINK_NAMESPACE",
@@ -323,7 +356,7 @@ func makeAuthProxyEnv(sink *v1alpha1.IntegrationSink, featureFlags feature.Flags
 		})
 	}
 
-	return envVars, nil
+	return envVars
 }
 
 func makeEnv(sink *v1alpha1.IntegrationSink, featureFlags feature.Flags) []corev1.EnvVar {
