@@ -509,7 +509,7 @@ func (r *Reconciler) reconcileConfigMapAccessRBAC(ctx context.Context, sink *sin
 func (r *Reconciler) reconcileEventPolicyRoleBinding(ctx context.Context, sink *sinks.IntegrationSink) error {
 	expected := resources.MakeEventPolicyRoleBinding(sink)
 
-	rb, err := r.kubeClientSet.RbacV1().RoleBindings(expected.Namespace).Get(ctx, expected.Name, metav1.GetOptions{})
+	rb, err := r.rolebindingLister.RoleBindings(expected.Namespace).Get(expected.Name)
 	if apierrors.IsNotFound(err) {
 		_, err := r.kubeClientSet.RbacV1().RoleBindings(expected.Namespace).Create(ctx, expected, metav1.CreateOptions{})
 		if err != nil {
