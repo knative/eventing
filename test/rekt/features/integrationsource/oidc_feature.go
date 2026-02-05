@@ -29,7 +29,7 @@ import (
 	"knative.dev/reconciler-test/pkg/resources/service"
 )
 
-func SendsEventsWithSinkRefOIDC() *feature.Feature {
+func SendsEventsWithSinkRefOIDC(sourceType integrationsource.SourceType) *feature.Feature {
 	src := feature.MakeRandomK8sName("integrationsource")
 	sink := feature.MakeRandomK8sName("sink")
 	sinkAudience := "audience"
@@ -48,14 +48,16 @@ func SendsEventsWithSinkRefOIDC() *feature.Feature {
 		d.CACerts = eventshub.GetCaCerts(ctx)
 		d.Audience = &sinkAudience
 
-		integrationsource.Install(src, integrationsource.WithSink(d))(ctx, t)
+		integrationsource.InstallByType(src, sourceType, integrationsource.WithSink(d))(ctx, t)
 	})
 
 	f.Requirement("integrationsource goes ready", integrationsource.IsReady(src))
 
+	f.Requirement("trigger message", integrationsource.TriggerEventByType(sourceType))
+
 	f.Stable("integrationsource as event source").
 		Must("delivers events",
-			assert.OnStore(sink).MatchEvent(test.HasType("dev.knative.eventing.timer")).AtLeast(1)).
+			assert.OnStore(sink).MatchEvent(test.HasType(string(sourceType))).AtLeast(1)).
 		Must("uses integrationsources identity for OIDC", assert.OnStore(sink).MatchWithContext(
 			assert.MatchKind(eventshub.EventReceived).WithContext(),
 			assert.MatchOIDCUserFromResource(integrationsource.Gvr(), src)).AtLeast(1)).

@@ -29,17 +29,13 @@ import (
 	"knative.dev/reconciler-test/pkg/feature"
 )
 
-func Success() *feature.Feature {
+func Success(sinkType integrationsink.SinkType) *feature.Feature {
 	f := feature.NewFeature()
 
-	//	sink := feature.MakeRandomK8sName("sink")
 	integrationSink := feature.MakeRandomK8sName("integrationsink")
 	source := feature.MakeRandomK8sName("source")
 
-	event := cetest.FullEvent()
-	event.SetID(uuid.NewString())
-
-	f.Setup("install integration sink", integrationsink.Install(integrationSink))
+	f.Setup("install integration sink", integrationsink.InstallByType(integrationSink, sinkType))
 
 	f.Setup("integrationsink is addressable", integrationsink.IsAddressable(integrationSink))
 	f.Setup("integrationsink is ready", integrationsink.IsReady(integrationSink))
@@ -56,10 +52,28 @@ func Success() *feature.Feature {
 		AtLeast(1),
 	)
 
+	// Sink-specific setup, assertions, and teardown
+	switch sinkType {
+	case integrationsink.SinkTypeS3:
+		f.Setup("cleanup S3 bucket before test", integrationsink.CleanupS3())
+		f.Assert("verify S3 object count", integrationsink.AssertS3ObjectCount(2))
+		f.Teardown("cleanup S3 bucket after test", integrationsink.CleanupS3())
+
+	case integrationsink.SinkTypeSQS:
+		f.Setup("cleanup SQS queue before test", integrationsink.CleanupSQS())
+		f.Assert("verify SQS messages", integrationsink.AssertSQSMessages("hello", 2))
+		f.Teardown("cleanup SQS queue after test", integrationsink.CleanupSQS())
+
+	case integrationsink.SinkTypeSNS:
+		f.Setup("cleanup SNS verification queue before test", integrationsink.CleanupSNSVerificationQueue())
+		f.Assert("verify SNS messages", integrationsink.AssertSNSMessages("hello", 2))
+		f.Teardown("cleanup SNS verification queue after test", integrationsink.CleanupSNSVerificationQueue())
+	}
+
 	return f
 }
 
-func SuccessTLS() *feature.Feature {
+func SuccessTLS(sinkType integrationsink.SinkType) *feature.Feature {
 	f := feature.NewFeature()
 
 	//	sink := feature.MakeRandomK8sName("sink")
@@ -74,7 +88,7 @@ func SuccessTLS() *feature.Feature {
 	f.Prerequisite("transport encryption is strict", featureflags.TransportEncryptionStrict())
 	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
 
-	f.Setup("install integration sink", integrationsink.Install(integrationSink)) //, integrationsink.WithForwarderJob(sinkURL.String())))
+	f.Setup("install integration sink", integrationsink.InstallByType(integrationSink, sinkType))
 
 	f.Setup("integrationsink is addressable", integrationsink.IsAddressable(integrationSink))
 	f.Setup("integrationsink is ready", integrationsink.IsReady(integrationSink))
