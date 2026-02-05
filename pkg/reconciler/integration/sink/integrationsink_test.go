@@ -463,10 +463,10 @@ func makeDeploymentWithAuthProxy(sink *sinksv1alpha1.IntegrationSink, ready *cor
 				},
 			},
 			InitialDelaySeconds: 5,
-			PeriodSeconds:       5,
+			PeriodSeconds:       10,
 			SuccessThreshold:    1,
 			FailureThreshold:    3,
-			TimeoutSeconds:      5,
+			TimeoutSeconds:      10,
 		},
 		LivenessProbe: &corev1.Probe{
 			ProbeHandler: corev1.ProbeHandler{
@@ -476,11 +476,11 @@ func makeDeploymentWithAuthProxy(sink *sinksv1alpha1.IntegrationSink, ready *cor
 					Scheme: corev1.URISchemeHTTP,
 				},
 			},
-			InitialDelaySeconds: 10,
+			InitialDelaySeconds: 5,
 			PeriodSeconds:       10,
 			SuccessThreshold:    1,
 			FailureThreshold:    3,
-			TimeoutSeconds:      5,
+			TimeoutSeconds:      10,
 		},
 		StartupProbe: &corev1.Probe{
 			ProbeHandler: corev1.ProbeHandler{
@@ -490,11 +490,11 @@ func makeDeploymentWithAuthProxy(sink *sinksv1alpha1.IntegrationSink, ready *cor
 					Scheme: corev1.URISchemeHTTP,
 				},
 			},
-			InitialDelaySeconds: 0,
-			PeriodSeconds:       2,
+			InitialDelaySeconds: 5,
+			PeriodSeconds:       10,
 			SuccessThreshold:    1,
-			FailureThreshold:    30,
-			TimeoutSeconds:      5,
+			FailureThreshold:    3,
+			TimeoutSeconds:      10,
 		},
 	}
 
