@@ -363,6 +363,48 @@ func makeDeployment(sink *sinksv1alpha1.IntegrationSink, ready *corev1.Condition
 									ReadOnly:  true,
 								},
 							},
+							LivenessProbe: &corev1.Probe{
+								FailureThreshold: 3,
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path:   "/q/health/live",
+										Port:   intstr.FromInt32(8080),
+										Scheme: corev1.URISchemeHTTP,
+									},
+								},
+								InitialDelaySeconds: 5,
+								PeriodSeconds:       10,
+								SuccessThreshold:    1,
+								TimeoutSeconds:      10,
+							},
+							ReadinessProbe: &corev1.Probe{
+								FailureThreshold: 3,
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path:   "/q/health/ready",
+										Port:   intstr.FromInt32(8080),
+										Scheme: corev1.URISchemeHTTP,
+									},
+								},
+								InitialDelaySeconds: 5,
+								PeriodSeconds:       10,
+								SuccessThreshold:    1,
+								TimeoutSeconds:      10,
+							},
+							StartupProbe: &corev1.Probe{
+								FailureThreshold: 3,
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path:   "/q/health/started",
+										Port:   intstr.FromInt32(8080),
+										Scheme: corev1.URISchemeHTTP,
+									},
+								},
+								InitialDelaySeconds: 5,
+								PeriodSeconds:       10,
+								SuccessThreshold:    1,
+								TimeoutSeconds:      10,
+							},
 						},
 					},
 				},
@@ -385,21 +427,25 @@ func makeDeploymentWithAuthProxy(sink *sinksv1alpha1.IntegrationSink, ready *cor
 		Ports: []corev1.ContainerPort{
 			{ContainerPort: 3128, Protocol: corev1.ProtocolTCP, Name: "http"},
 			{ContainerPort: 3129, Protocol: corev1.ProtocolTCP, Name: "https"},
+			{ContainerPort: 8090, Protocol: corev1.ProtocolTCP, Name: "health"},
 		},
 		Env: []corev1.EnvVar{
 			{Name: "TARGET_HTTP_PORT", Value: "8080"},
 			{Name: "TARGET_HTTPS_PORT", Value: "8443"},
 			{Name: "PROXY_HTTP_PORT", Value: "3128"},
 			{Name: "PROXY_HTTPS_PORT", Value: "3129"},
+			{Name: "PROXY_HEALTH_PORT", Value: "8090"},
 			{Name: "SYSTEM_NAMESPACE", Value: system.Namespace()},
 			{Name: "PARENT_API_VERSION", Value: "sinks.knative.dev/v1alpha1"},
 			{Name: "PARENT_KIND", Value: "IntegrationSink"},
 			{Name: "PARENT_NAME", Value: sink.Name},
 			{Name: "PARENT_NAMESPACE", Value: sink.Namespace},
 			{Name: "SINK_NAMESPACE", Value: sink.Namespace},
+			{Name: "SINK_URI", Value: "http://" + deploymentName + "." + sink.Namespace + ".svc.cluster.local"},
 			{Name: "SINK_TLS_CERT_FILE", Value: "/etc/" + certificates.CertificateName(sink.Name) + "/tls.crt"},
 			{Name: "SINK_TLS_KEY_FILE", Value: "/etc/" + certificates.CertificateName(sink.Name) + "/tls.key"},
 			{Name: "SINK_TLS_CA_FILE", Value: "/etc/" + certificates.CertificateName(sink.Name) + "/ca.crt"},
+			{Name: "SINK_AUDIENCE", Value: "sinks.knative.dev/integrationsink/" + sink.Namespace + "/" + sink.Name},
 		},
 		VolumeMounts: []corev1.VolumeMount{
 			{
@@ -407,6 +453,48 @@ func makeDeploymentWithAuthProxy(sink *sinksv1alpha1.IntegrationSink, ready *cor
 				MountPath: "/etc/" + certificates.CertificateName(sink.Name),
 				ReadOnly:  true,
 			},
+		},
+		ReadinessProbe: &corev1.Probe{
+			ProbeHandler: corev1.ProbeHandler{
+				HTTPGet: &corev1.HTTPGetAction{
+					Path:   "/readyz",
+					Port:   intstr.FromInt32(8090),
+					Scheme: corev1.URISchemeHTTP,
+				},
+			},
+			InitialDelaySeconds: 5,
+			PeriodSeconds:       10,
+			SuccessThreshold:    1,
+			FailureThreshold:    3,
+			TimeoutSeconds:      10,
+		},
+		LivenessProbe: &corev1.Probe{
+			ProbeHandler: corev1.ProbeHandler{
+				HTTPGet: &corev1.HTTPGetAction{
+					Path:   "/healthz",
+					Port:   intstr.FromInt32(8090),
+					Scheme: corev1.URISchemeHTTP,
+				},
+			},
+			InitialDelaySeconds: 5,
+			PeriodSeconds:       10,
+			SuccessThreshold:    1,
+			FailureThreshold:    3,
+			TimeoutSeconds:      10,
+		},
+		StartupProbe: &corev1.Probe{
+			ProbeHandler: corev1.ProbeHandler{
+				HTTPGet: &corev1.HTTPGetAction{
+					Path:   "/readyz",
+					Port:   intstr.FromInt32(8090),
+					Scheme: corev1.URISchemeHTTP,
+				},
+			},
+			InitialDelaySeconds: 5,
+			PeriodSeconds:       10,
+			SuccessThreshold:    1,
+			FailureThreshold:    3,
+			TimeoutSeconds:      10,
 		},
 	}
 
