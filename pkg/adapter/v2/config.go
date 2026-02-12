@@ -47,6 +47,7 @@ const (
 	EnvConfigObservabilityConfig  = "K_OBSERVABILITY_CONFIG"
 	EnvConfigLeaderElectionConfig = "K_LEADER_ELECTION_CONFIG"
 	EnvSinkTimeout                = "K_SINK_TIMEOUT"
+	EnvConfigKlogLevel            = "K_KLOG_LEVEL"
 )
 
 // EnvConfig is the minimal set of configuration parameters
@@ -97,6 +98,10 @@ type EnvConfig struct {
 	// Time in seconds to wait for sink to respond
 	EnvSinkTimeout string `envconfig:"K_SINK_TIMEOUT"`
 
+	// KlogLevel is the verbosity level for klog (Kubernetes client-go logging).
+	// Valid values are integers from 0-10. Higher values are more verbose.
+	KlogLevel string `envconfig:"K_KLOG_LEVEL" default:"0"`
+
 	// cached zap logger
 	logger *zap.SugaredLogger
 }
@@ -137,6 +142,9 @@ type EnvConfigAccessor interface {
 
 	// Get the timeout to apply on a request to a sink
 	GetSinktimeout() int
+
+	// GetKlogLevel returns the klog verbosity level.
+	GetKlogLevel() int
 }
 
 var _ EnvConfigAccessor = (*EnvConfig)(nil)
@@ -198,6 +206,13 @@ func (e *EnvConfig) GetSinktimeout() int {
 	}
 	e.GetLogger().Warn("Sink timeout configuration is invalid, default to -1 (no timeout)")
 	return -1
+}
+
+func (e *EnvConfig) GetKlogLevel() int {
+	if level, err := strconv.Atoi(e.KlogLevel); err == nil && level >= 0 {
+		return level
+	}
+	return 0
 }
 
 func (e *EnvConfig) GetObservabilityConfig() (*observability.Config, error) {
