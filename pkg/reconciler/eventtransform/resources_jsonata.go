@@ -65,7 +65,7 @@ const (
 	// These are standard OpenTelemetry environment variables that the Node.js SDK
 	// automatically reads to configure the trace exporter.
 	OTELExporterEndpointEnv = "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"
-	OTELExporterProtocolEnv = "OTEL_EXPORTER_OTLP_PROTOCOL"
+	OTELExporterProtocolEnv = "OTEL_EXPORTER_OTLP_TRACES_PROTOCOL"
 	OTELTracesSamplerEnv    = "OTEL_TRACES_SAMPLER"
 	OTELTracesSamplerArgEnv = "OTEL_TRACES_SAMPLER_ARG"
 )
@@ -128,18 +128,7 @@ func jsonataDeployment(ctx context.Context, withCombinedTrustBundle bool, cw *re
 						{
 							Name:  "jsonata-event-transform",
 							Image: image,
-							Env: append(
-								append(
-									[]corev1.EnvVar{
-										{
-											Name:  "JSONATA_TRANSFORM_FILE_NAME",
-											Value: filepath.Join(JsonataExpressionPath, JsonataExpressionDataKey),
-										},
-									},
-									cw.ToEnvVars()...,
-								),
-								otelTracingEnvVars(cw)...,
-							),
+							Env: jsonataContainerEnvVars(cw),
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      expression.GetName(),
@@ -472,6 +461,21 @@ func jsonataCertificate(ctx context.Context, transform *eventing.EventTransform)
 	)
 }
 
+// jsonataContainerEnvVars builds the base environment variables for the jsonata
+// container, combining the transform file path, config watcher env vars, and
+// OTEL tracing env vars.
+func jsonataContainerEnvVars(cw *reconcilersource.ConfigWatcher) []corev1.EnvVar {
+	envVars := []corev1.EnvVar{
+		{
+			Name:  "JSONATA_TRANSFORM_FILE_NAME",
+			Value: filepath.Join(JsonataExpressionPath, JsonataExpressionDataKey),
+		},
+	}
+	envVars = append(envVars, cw.ToEnvVars()...)
+	envVars = append(envVars, otelTracingEnvVars(cw)...)
+	return envVars
+}
+
 // otelTracingEnvVars generates standard OpenTelemetry environment variables
 // based on the observability configuration. This allows the Node.js OTEL SDK
 // in the transform-jsonata container to auto-configure the trace exporter
@@ -511,8 +515,19 @@ func otelTracingEnvVars(cw *reconcilersource.ConfigWatcher) []corev1.EnvVar {
 		})
 	}
 
-	// Configure sampling if a sampling rate is set
-	if tracingCfg.SamplingRate > 0 {
+	// Configure sampling based on the sampling rate
+	switch {
+	case tracingCfg.SamplingRate == 0:
+		envVars = append(envVars, corev1.EnvVar{
+			Name:  OTELTracesSamplerEnv,
+			Value: "always_off",
+		})
+	case tracingCfg.SamplingRate == 1:
+		envVars = append(envVars, corev1.EnvVar{
+			Name:  OTELTracesSamplerEnv,
+			Value: "always_on",
+		})
+	case tracingCfg.SamplingRate > 0:
 		envVars = append(envVars,
 			corev1.EnvVar{
 				Name:  OTELTracesSamplerEnv,
