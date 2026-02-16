@@ -2208,3 +2208,261 @@ func eventJsonataCertificateUpdated() string {
 func eventJsonataCertificateDeleted() string {
 	return Eventf(corev1.EventTypeNormal, "JsonataCertificateDeleted", fmt.Sprintf("%s-%s", testName, "jsonata"))
 }
+
+func TestOtelTracingEnvVars(t *testing.T) {
+	ctx := context.Background()
+	logger := logtesting.TestLogger(t)
+	ctx = logging.WithLogger(ctx, logger)
+
+	tests := []struct {
+		name        string
+		cwFactory   func() *reconcilersource.ConfigWatcher
+		wantEnvVars []corev1.EnvVar
+	}{
+		{
+			name:        "nil config watcher returns nil",
+			cwFactory:   func() *reconcilersource.ConfigWatcher { return nil },
+			wantEnvVars: nil,
+		},
+		{
+			name: "empty observability config returns nil",
+			cwFactory: func() *reconcilersource.ConfigWatcher {
+				return reconcilersource.WatchConfigurations(ctx, "test",
+					configmap.NewStaticWatcher(
+						&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "config-logging"}},
+						&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "config-observability"}},
+					),
+				)
+			},
+			wantEnvVars: nil,
+		},
+		{
+			name: "stdout protocol returns nil",
+			cwFactory: func() *reconcilersource.ConfigWatcher {
+				return reconcilersource.WatchConfigurations(ctx, "test",
+					configmap.NewStaticWatcher(
+						&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "config-logging"}},
+						&corev1.ConfigMap{
+							ObjectMeta: metav1.ObjectMeta{Name: "config-observability"},
+							Data:       map[string]string{"tracing-protocol": "stdout"},
+						},
+					),
+				)
+			},
+			wantEnvVars: nil,
+		},
+		{
+			name: "grpc protocol with sampling rate 0 sets always_off",
+			cwFactory: func() *reconcilersource.ConfigWatcher {
+				return reconcilersource.WatchConfigurations(ctx, "test",
+					configmap.NewStaticWatcher(
+						&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "config-logging"}},
+						&corev1.ConfigMap{
+							ObjectMeta: metav1.ObjectMeta{Name: "config-observability"},
+							Data: map[string]string{
+								"tracing-protocol":      "grpc",
+								"tracing-endpoint":      "http://otel-collector:4317",
+								"tracing-sampling-rate": "0",
+							},
+						},
+					),
+				)
+			},
+			wantEnvVars: []corev1.EnvVar{
+				{Name: OTELExporterProtocolEnv, Value: "grpc"},
+				{Name: OTELExporterEndpointEnv, Value: "http://otel-collector:4317"},
+				{Name: OTELTracesSamplerEnv, Value: "always_off"},
+			},
+		},
+		{
+			name: "grpc protocol with sampling rate 1 sets always_on",
+			cwFactory: func() *reconcilersource.ConfigWatcher {
+				return reconcilersource.WatchConfigurations(ctx, "test",
+					configmap.NewStaticWatcher(
+						&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "config-logging"}},
+						&corev1.ConfigMap{
+							ObjectMeta: metav1.ObjectMeta{Name: "config-observability"},
+							Data: map[string]string{
+								"tracing-protocol":      "grpc",
+								"tracing-endpoint":      "http://otel-collector:4317",
+								"tracing-sampling-rate": "1",
+							},
+						},
+					),
+				)
+			},
+			wantEnvVars: []corev1.EnvVar{
+				{Name: OTELExporterProtocolEnv, Value: "grpc"},
+				{Name: OTELExporterEndpointEnv, Value: "http://otel-collector:4317"},
+				{Name: OTELTracesSamplerEnv, Value: "always_on"},
+			},
+		},
+		{
+			name: "grpc protocol with sampling rate 0.5 sets parentbased_traceidratio",
+			cwFactory: func() *reconcilersource.ConfigWatcher {
+				return reconcilersource.WatchConfigurations(ctx, "test",
+					configmap.NewStaticWatcher(
+						&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "config-logging"}},
+						&corev1.ConfigMap{
+							ObjectMeta: metav1.ObjectMeta{Name: "config-observability"},
+							Data: map[string]string{
+								"tracing-protocol":      "grpc",
+								"tracing-endpoint":      "http://otel-collector:4317",
+								"tracing-sampling-rate": "0.5",
+							},
+						},
+					),
+				)
+			},
+			wantEnvVars: []corev1.EnvVar{
+				{Name: OTELExporterProtocolEnv, Value: "grpc"},
+				{Name: OTELExporterEndpointEnv, Value: "http://otel-collector:4317"},
+				{Name: OTELTracesSamplerEnv, Value: "parentbased_traceidratio"},
+				{Name: OTELTracesSamplerArgEnv, Value: "0.5"},
+			},
+		},
+		{
+			name: "http/protobuf protocol with default sampling rate sets always_off",
+			cwFactory: func() *reconcilersource.ConfigWatcher {
+				return reconcilersource.WatchConfigurations(ctx, "test",
+					configmap.NewStaticWatcher(
+						&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "config-logging"}},
+						&corev1.ConfigMap{
+							ObjectMeta: metav1.ObjectMeta{Name: "config-observability"},
+							Data: map[string]string{
+								"tracing-protocol": "http/protobuf",
+								"tracing-endpoint": "http://otel-collector:4318/v1/traces",
+							},
+						},
+					),
+				)
+			},
+			wantEnvVars: []corev1.EnvVar{
+				{Name: OTELExporterProtocolEnv, Value: "http/protobuf"},
+				{Name: OTELExporterEndpointEnv, Value: "http://otel-collector:4318/v1/traces"},
+				{Name: OTELTracesSamplerEnv, Value: "always_off"},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cw := tt.cwFactory()
+			got := otelTracingEnvVars(cw)
+
+			if len(got) != len(tt.wantEnvVars) {
+				t.Fatalf("otelTracingEnvVars() returned %d env vars, want %d\ngot:  %+v\nwant: %+v",
+					len(got), len(tt.wantEnvVars), got, tt.wantEnvVars)
+			}
+			for i := range got {
+				if got[i].Name != tt.wantEnvVars[i].Name || got[i].Value != tt.wantEnvVars[i].Value {
+					t.Errorf("env var[%d] = {Name: %q, Value: %q}, want {Name: %q, Value: %q}",
+						i, got[i].Name, got[i].Value, tt.wantEnvVars[i].Name, tt.wantEnvVars[i].Value)
+				}
+			}
+		})
+	}
+}
+
+func TestJsonataDeploymentOtelEnvVars(t *testing.T) {
+	t.Setenv("EVENT_TRANSFORM_JSONATA_IMAGE", "quay.io/event-transform")
+
+	ctx := context.Background()
+	logger := logtesting.TestLogger(t)
+	ctx = logging.WithLogger(ctx, logger)
+
+	tests := []struct {
+		name            string
+		tracingData     map[string]string
+		wantOtelEnvVars map[string]string
+	}{
+		{
+			name: "deployment with grpc tracing and 0.5 sampling rate",
+			tracingData: map[string]string{
+				"tracing-protocol":      "grpc",
+				"tracing-endpoint":      "http://otel-collector:4317",
+				"tracing-sampling-rate": "0.5",
+			},
+			wantOtelEnvVars: map[string]string{
+				OTELExporterProtocolEnv: "grpc",
+				OTELExporterEndpointEnv: "http://otel-collector:4317",
+				OTELTracesSamplerEnv:    "parentbased_traceidratio",
+				OTELTracesSamplerArgEnv: "0.5",
+			},
+		},
+		{
+			name: "deployment with grpc tracing and always_off sampling",
+			tracingData: map[string]string{
+				"tracing-protocol":      "grpc",
+				"tracing-endpoint":      "http://otel-collector:4317",
+				"tracing-sampling-rate": "0",
+			},
+			wantOtelEnvVars: map[string]string{
+				OTELExporterProtocolEnv: "grpc",
+				OTELExporterEndpointEnv: "http://otel-collector:4317",
+				OTELTracesSamplerEnv:    "always_off",
+			},
+		},
+		{
+			name: "deployment with grpc tracing and always_on sampling",
+			tracingData: map[string]string{
+				"tracing-protocol":      "grpc",
+				"tracing-endpoint":      "http://otel-collector:4317",
+				"tracing-sampling-rate": "1",
+			},
+			wantOtelEnvVars: map[string]string{
+				OTELExporterProtocolEnv: "grpc",
+				OTELExporterEndpointEnv: "http://otel-collector:4317",
+				OTELTracesSamplerEnv:    "always_on",
+			},
+		},
+		{
+			name:            "deployment without tracing has no OTEL env vars",
+			tracingData:     nil,
+			wantOtelEnvVars: map[string]string{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cw := reconcilersource.WatchConfigurations(ctx, "eventtransform",
+				configmap.NewStaticWatcher(
+					&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "config-logging"}},
+					&corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{Name: "config-observability"},
+						Data:       tt.tracingData,
+					},
+				),
+			)
+
+			d := jsonataTestDeployment(ctx, cw)
+			envVars := d.Spec.Template.Spec.Containers[0].Env
+
+			envMap := make(map[string]string)
+			for _, e := range envVars {
+				envMap[e.Name] = e.Value
+			}
+
+			for name, wantValue := range tt.wantOtelEnvVars {
+				gotValue, ok := envMap[name]
+				if !ok {
+					t.Errorf("expected env var %q on deployment container, but it was not found", name)
+					continue
+				}
+				if gotValue != wantValue {
+					t.Errorf("env var %q = %q, want %q", name, gotValue, wantValue)
+				}
+			}
+
+			// Verify no unexpected OTEL env vars when tracing is disabled
+			if tt.tracingData == nil {
+				otelEnvNames := []string{OTELExporterProtocolEnv, OTELExporterEndpointEnv, OTELTracesSamplerEnv, OTELTracesSamplerArgEnv}
+				for _, name := range otelEnvNames {
+					if _, ok := envMap[name]; ok {
+						t.Errorf("unexpected env var %q found on deployment container when tracing is disabled", name)
+					}
+				}
+			}
+		})
+	}
+}
