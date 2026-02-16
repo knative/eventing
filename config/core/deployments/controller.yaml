@@ -135,6 +135,13 @@ spec:
                 key: aws-sns-sink
                 name: eventing-integrations-images
 
+          - name: INTEGRATION_SINK_AWS_EVENTBRIDGE_IMAGE
+            valueFrom:
+              configMapKeyRef:
+                key: aws-eventbridge-sink
+                name: eventing-integrations-images
+
+
 ##         Adapter settings
 #          - name: K_LOGGING_CONFIG
 #            value: ''

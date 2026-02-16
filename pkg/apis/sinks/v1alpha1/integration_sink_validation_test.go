@@ -204,6 +204,26 @@ func TestIntegrationSinkSpecValidation(t *testing.T) {
 			want: apis.ErrMissingField("aws.sns.arn"),
 		},
 		{
+			name: "AWS Eventbridge sink without TopicNameOrArn (invalid)",
+			spec: IntegrationSinkSpec{
+				Aws: &Aws{
+					EVENTBRIDGE: &v1alpha1.AWSEventbridge{
+						AWSCommon: v1alpha1.AWSCommon{
+							Region: "us-east-1",
+						},
+					},
+					Auth: &v1alpha1.Auth{
+						Secret: &v1alpha1.Secret{
+							Ref: &v1alpha1.SecretReference{
+								Name: "aws-secret",
+							},
+						},
+					},
+				},
+			},
+			want: apis.ErrMissingField("aws.eventbridge.arn"),
+		},
+		{
 			name: "no sink type specified (invalid)",
 			spec: IntegrationSinkSpec{},
 			want: apis.ErrGeneric("at least one sink type must be specified", "spec"),
@@ -254,6 +274,24 @@ func TestIntegrationSinkSpecValidation(t *testing.T) {
 				},
 			},
 			want: apis.ErrMissingField("aws.s3.region"),
+		},
+		{
+			name: "AWS Eventbridge sink without region (invalid)",
+			spec: IntegrationSinkSpec{
+				Aws: &Aws{
+					EVENTBRIDGE: &v1alpha1.AWSEventbridge{
+						Arn: "example-bus",
+					},
+					Auth: &v1alpha1.Auth{
+						Secret: &v1alpha1.Secret{
+							Ref: &v1alpha1.SecretReference{
+								Name: "aws-secret",
+							},
+						},
+					},
+				},
+			},
+			want: apis.ErrMissingField("aws.eventbridge.region"),
 		},
 	}
 
