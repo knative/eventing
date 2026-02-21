@@ -27,15 +27,20 @@ import (
 	cmv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	corev1listers "k8s.io/client-go/listers/core/v1"
 	"knative.dev/eventing/pkg/apis/feature"
+	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/certificates"
 	"knative.dev/eventing/pkg/eventingtls"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/network"
 	"knative.dev/pkg/ptr"
+	"knative.dev/pkg/system"
 	"knative.dev/pkg/tracker"
 
 	eventing "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
@@ -60,6 +65,8 @@ const (
 	JsonataTLSVolumePath = "/etc/jsonata-tls"
 	JsonataTLSKeyPath    = JsonataTLSVolumePath + "/" + eventingtls.TLSKey
 	JsonataTLSCertPath   = JsonataTLSVolumePath + "/" + eventingtls.TLSCrt
+
+	JsonataAuthProxyRoleBindingName = "eventing-auth-proxy-eventtransform"
 )
 
 func jsonataExpressionConfigMap(_ context.Context, transform *eventing.EventTransform) corev1.ConfigMap {
@@ -84,7 +91,7 @@ func jsonataExpressionConfigMap(_ context.Context, transform *eventing.EventTran
 	return expression
 }
 
-func jsonataDeployment(ctx context.Context, withCombinedTrustBundle bool, cw *reconcilersource.ConfigWatcher, expression *corev1.ConfigMap, certificate *cmv1.Certificate, transform *eventing.EventTransform) appsv1.Deployment {
+func jsonataDeployment(ctx context.Context, authProxyImage string, withCombinedTrustBundle bool, cw *reconcilersource.ConfigWatcher, expression *corev1.ConfigMap, certificate *cmv1.Certificate, transform *eventing.EventTransform, trustBundleConfigMapLister ...corev1listers.ConfigMapLister) appsv1.Deployment {
 	image := os.Getenv("EVENT_TRANSFORM_JSONATA_IMAGE")
 	if image == "" {
 		panic("EVENT_TRANSFORM_JSONATA_IMAGE must be set")
@@ -337,7 +344,181 @@ func jsonataDeployment(ctx context.Context, withCombinedTrustBundle bool, cw *re
 		})
 	}
 
+	if feature.FromContext(ctx).IsOIDCAuthentication() && authProxyImage != "" {
+		var authProxyVolumeMounts []corev1.VolumeMount
+		if f := feature.FromContext(ctx); f.IsStrictTransportEncryption() || f.IsPermissiveTransportEncryption() {
+			authProxyVolumeMounts = []corev1.VolumeMount{{
+				Name:      JsonataTLSVolumeName,
+				ReadOnly:  true,
+				MountPath: JsonataTLSVolumePath,
+			}}
+		}
+
+		d.Spec.Template.Spec.Containers = append(d.Spec.Template.Spec.Containers, corev1.Container{
+			Name:            "auth-proxy",
+			Image:           authProxyImage,
+			ImagePullPolicy: corev1.PullIfNotPresent,
+			Ports: []corev1.ContainerPort{
+				{ContainerPort: 3128, Protocol: corev1.ProtocolTCP, Name: "http"},
+				{ContainerPort: 3129, Protocol: corev1.ProtocolTCP, Name: "https"},
+				{ContainerPort: 8090, Protocol: corev1.ProtocolTCP, Name: "health"},
+			},
+			Env:          jsonataAuthProxyEnv(ctx, transform),
+			VolumeMounts: authProxyVolumeMounts,
+			ReadinessProbe: &corev1.Probe{
+				ProbeHandler: corev1.ProbeHandler{
+					HTTPGet: &corev1.HTTPGetAction{
+						Path:   "/readyz",
+						Port:   intstr.FromInt32(8090),
+						Scheme: corev1.URISchemeHTTP,
+					},
+				},
+				InitialDelaySeconds: 5,
+				PeriodSeconds:       10,
+				SuccessThreshold:    1,
+				FailureThreshold:    3,
+				TimeoutSeconds:      10,
+			},
+			LivenessProbe: &corev1.Probe{
+				ProbeHandler: corev1.ProbeHandler{
+					HTTPGet: &corev1.HTTPGetAction{
+						Path:   "/healthz",
+						Port:   intstr.FromInt32(8090),
+						Scheme: corev1.URISchemeHTTP,
+					},
+				},
+				InitialDelaySeconds: 5,
+				PeriodSeconds:       10,
+				SuccessThreshold:    1,
+				FailureThreshold:    3,
+				TimeoutSeconds:      10,
+			},
+			StartupProbe: &corev1.Probe{
+				ProbeHandler: corev1.ProbeHandler{
+					HTTPGet: &corev1.HTTPGetAction{
+						Path:   "/readyz",
+						Port:   intstr.FromInt32(8090),
+						Scheme: corev1.URISchemeHTTP,
+					},
+				},
+				InitialDelaySeconds: 5,
+				PeriodSeconds:       10,
+				SuccessThreshold:    1,
+				FailureThreshold:    3,
+				TimeoutSeconds:      10,
+			},
+		})
+
+		// add trustbundles so auth-proxy's token verifier does not need the trustbundle configmap lister for oidc discovery
+		if len(trustBundleConfigMapLister) > 0 && trustBundleConfigMapLister[0] != nil {
+			podspec, err := eventingtls.AddTrustBundleVolumes(trustBundleConfigMapLister[0], &d, &d.Spec.Template.Spec)
+			if err == nil && podspec != nil {
+				d.Spec.Template.Spec = *podspec
+			}
+		}
+
+		// don't expose ports on jsonata container, traffic should reach only auth-proxy
+		d.Spec.Template.Spec.Containers[0].Ports = nil
+	}
+
 	return d
+}
+
+func jsonataAuthProxyEnv(ctx context.Context, transform *eventing.EventTransform) []corev1.EnvVar {
+	serviceName := kmeta.ChildName(transform.Name, JsonataResourcesNameSuffix)
+	serviceHostname := network.GetServiceHostname(serviceName, transform.Namespace)
+
+	var sinkURI string
+	if f := feature.FromContext(ctx); f.IsStrictTransportEncryption() || f.IsPermissiveTransportEncryption() {
+		sinkURI = fmt.Sprintf("https://%s", serviceHostname)
+	} else {
+		sinkURI = fmt.Sprintf("http://%s", serviceHostname)
+	}
+
+	envVars := []corev1.EnvVar{
+		{Name: "TARGET_HTTP_PORT", Value: "8080"},
+		{Name: "TARGET_HTTPS_PORT", Value: "8443"},
+		{Name: "PROXY_HTTP_PORT", Value: "3128"},
+		{Name: "PROXY_HTTPS_PORT", Value: "3129"},
+		{Name: "PROXY_HEALTH_PORT", Value: "8090"},
+		{Name: "SYSTEM_NAMESPACE", Value: system.Namespace()},
+		{Name: "PARENT_API_VERSION", Value: eventing.SchemeGroupVersion.String()},
+		{Name: "PARENT_KIND", Value: "EventTransform"},
+		{Name: "PARENT_NAME", Value: transform.Name},
+		{Name: "PARENT_NAMESPACE", Value: transform.Namespace},
+		{Name: "SINK_NAMESPACE", Value: transform.Namespace},
+		{Name: "SINK_URI", Value: sinkURI},
+	}
+
+	if f := feature.FromContext(ctx); f.IsStrictTransportEncryption() || f.IsPermissiveTransportEncryption() {
+		envVars = append(envVars,
+			corev1.EnvVar{Name: "SINK_TLS_CERT_FILE", Value: JsonataTLSCertPath},
+			corev1.EnvVar{Name: "SINK_TLS_KEY_FILE", Value: JsonataTLSKeyPath},
+			corev1.EnvVar{Name: "SINK_TLS_CA_FILE", Value: JsonataTLSVolumePath + "/" + eventingtls.SecretCACert},
+		)
+	}
+
+	if feature.FromContext(ctx).IsOIDCAuthentication() {
+		audience := auth.GetAudience(eventing.SchemeGroupVersion.WithKind("EventTransform"), transform.ObjectMeta)
+		envVars = append(envVars, corev1.EnvVar{Name: "SINK_AUDIENCE", Value: audience})
+	}
+
+	return envVars
+}
+
+func jsonataEventPolicyRoleBinding(transform *eventing.EventTransform) *rbacv1.RoleBinding {
+	return &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("%s-eventpolicy-reader", transform.Name),
+			Namespace: transform.Namespace,
+			Labels:    jsonataLabels(transform),
+			OwnerReferences: []metav1.OwnerReference{
+				*kmeta.NewControllerRef(transform),
+			},
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "ClusterRole",
+			Name:     "knative-eventing-eventpolicy-reader",
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:      "ServiceAccount",
+				Namespace: transform.Namespace,
+				Name:      "default",
+			},
+		},
+	}
+}
+
+func jsonataAuthProxyRoleBinding(transform *eventing.EventTransform, allTransforms []*eventing.EventTransform) *rbacv1.RoleBinding {
+	rb := &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      JsonataAuthProxyRoleBindingName,
+			Namespace: system.Namespace(),
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "Role",
+			Name:     "knative-eventing-auth-proxy",
+		},
+	}
+
+	serviceAccounts := map[types.NamespacedName]struct{}{}
+	for _, t := range allTransforms {
+		serviceAccounts[types.NamespacedName{Namespace: t.Namespace, Name: "default"}] = struct{}{}
+	}
+	serviceAccounts[types.NamespacedName{Namespace: transform.Namespace, Name: "default"}] = struct{}{}
+
+	for sa := range serviceAccounts {
+		rb.Subjects = append(rb.Subjects, rbacv1.Subject{
+			Kind:      "ServiceAccount",
+			Namespace: sa.Namespace,
+			Name:      sa.Name,
+		})
+	}
+
+	return rb
 }
 
 func jsonataService(ctx context.Context, transform *eventing.EventTransform) corev1.Service {
@@ -361,6 +542,13 @@ func jsonataService(ctx context.Context, transform *eventing.EventTransform) cor
 		},
 	}
 
+	httpTargetPort := int32(8080)
+	httpsTargetPort := int32(8443)
+	if feature.FromContext(ctx).IsOIDCAuthentication() {
+		httpTargetPort = 3128
+		httpsTargetPort = 3129
+	}
+
 	if f := feature.FromContext(ctx); f.IsStrictTransportEncryption() {
 		s.Spec.Ports = []corev1.ServicePort{
 			{
@@ -368,7 +556,7 @@ func jsonataService(ctx context.Context, transform *eventing.EventTransform) cor
 				Protocol:    corev1.ProtocolTCP,
 				AppProtocol: ptr.String("https"),
 				Port:        443,
-				TargetPort:  intstr.IntOrString{Type: intstr.Int, IntVal: 8443},
+				TargetPort:  intstr.IntOrString{Type: intstr.Int, IntVal: httpsTargetPort},
 			},
 		}
 	} else if f.IsPermissiveTransportEncryption() {
@@ -378,14 +566,14 @@ func jsonataService(ctx context.Context, transform *eventing.EventTransform) cor
 				Protocol:    corev1.ProtocolTCP,
 				AppProtocol: ptr.String("https"),
 				Port:        443,
-				TargetPort:  intstr.IntOrString{Type: intstr.Int, IntVal: 8443},
+				TargetPort:  intstr.IntOrString{Type: intstr.Int, IntVal: httpsTargetPort},
 			},
 			{
 				Name:        "http",
 				Protocol:    corev1.ProtocolTCP,
 				AppProtocol: ptr.String("http"),
 				Port:        80,
-				TargetPort:  intstr.IntOrString{Type: intstr.Int, IntVal: 8080},
+				TargetPort:  intstr.IntOrString{Type: intstr.Int, IntVal: httpTargetPort},
 			},
 		}
 	} else {
@@ -395,7 +583,7 @@ func jsonataService(ctx context.Context, transform *eventing.EventTransform) cor
 				Protocol:    corev1.ProtocolTCP,
 				AppProtocol: ptr.String("http"),
 				Port:        80,
-				TargetPort:  intstr.IntOrString{Type: intstr.Int, IntVal: 8080},
+				TargetPort:  intstr.IntOrString{Type: intstr.Int, IntVal: httpTargetPort},
 			},
 		}
 	}
