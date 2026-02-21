@@ -27,6 +27,7 @@ import (
 	cmlisters "github.com/cert-manager/cert-manager/pkg/client/listers/certmanager/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -298,13 +299,14 @@ func TestReconcile(t *testing.T) {
 						AvailableReplicas:   1,
 						UnavailableReplicas: 0,
 					}),
-					WithEventTransformAddresses(
-						duckv1.Addressable{
-							Name: ptr.String("http"),
-							URL:  apis.HTTP(network.GetServiceHostname(jsonataTestService(ctx).Name, jsonataTestService(ctx).Namespace)),
-						},
-					),
-				)},
+				WithEventTransformAddresses(
+					duckv1.Addressable{
+						Name: ptr.String("http"),
+						URL:  apis.HTTP(network.GetServiceHostname(jsonataTestService(ctx).Name, jsonataTestService(ctx).Namespace)),
+					},
+				),
+				WithEventTransformEventPoliciesReadyBecauseOIDCDisabled(),
+			)},
 			},
 			WantCreates: []runtime.Object{
 				jsonataExpressionTestConfigMap(ctx),
@@ -437,13 +439,14 @@ func TestReconcile(t *testing.T) {
 						AvailableReplicas:   1,
 						UnavailableReplicas: 0,
 					}),
-					WithEventTransformAddresses(
-						duckv1.Addressable{
-							Name: ptr.String("http"),
-							URL:  apis.HTTP(network.GetServiceHostname(jsonataTestService(ctx).Name, jsonataTestService(ctx).Namespace)),
-						},
-					),
-				)},
+				WithEventTransformAddresses(
+					duckv1.Addressable{
+						Name: ptr.String("http"),
+						URL:  apis.HTTP(network.GetServiceHostname(jsonataTestService(ctx).Name, jsonataTestService(ctx).Namespace)),
+					},
+				),
+				WithEventTransformEventPoliciesReadyBecauseOIDCDisabled(),
+			)},
 			},
 			WantCreates: []runtime.Object{
 				jsonataTestService(ctx),
@@ -510,13 +513,14 @@ func TestReconcile(t *testing.T) {
 						AvailableReplicas:   1,
 						UnavailableReplicas: 0,
 					}),
-					WithEventTransformAddresses(
-						duckv1.Addressable{
-							Name: ptr.String("http"),
-							URL:  apis.HTTP(network.GetServiceHostname(jsonataTestService(ctx).Name, jsonataTestService(ctx).Namespace)),
-						},
-					),
-				)},
+				WithEventTransformAddresses(
+					duckv1.Addressable{
+						Name: ptr.String("http"),
+						URL:  apis.HTTP(network.GetServiceHostname(jsonataTestService(ctx).Name, jsonataTestService(ctx).Namespace)),
+					},
+				),
+				WithEventTransformEventPoliciesReadyBecauseOIDCDisabled(),
+			)},
 			},
 			WantCreates: []runtime.Object{
 				jsonataExpressionTestConfigMap(ctx),
@@ -582,13 +586,14 @@ func TestReconcile(t *testing.T) {
 						AvailableReplicas:   1,
 						UnavailableReplicas: 0,
 					}),
-					WithEventTransformAddresses(
-						duckv1.Addressable{
-							Name: ptr.String("http"),
-							URL:  apis.HTTP(network.GetServiceHostname(jsonataTestService(ctx).Name, jsonataTestService(ctx).Namespace)),
-						},
-					),
-				)},
+				WithEventTransformAddresses(
+					duckv1.Addressable{
+						Name: ptr.String("http"),
+						URL:  apis.HTTP(network.GetServiceHostname(jsonataTestService(ctx).Name, jsonataTestService(ctx).Namespace)),
+					},
+				),
+				WithEventTransformEventPoliciesReadyBecauseOIDCDisabled(),
+			)},
 			},
 		},
 		{
@@ -797,13 +802,14 @@ func TestReconcile(t *testing.T) {
 							},
 						},
 					}),
-					WithEventTransformAddresses(
-						duckv1.Addressable{
-							Name: ptr.String("http"),
-							URL:  apis.HTTP(network.GetServiceHostname(jsonataTestService(ctx).Name, jsonataTestService(ctx).Namespace)),
-						},
-					),
-				)},
+				WithEventTransformAddresses(
+					duckv1.Addressable{
+						Name: ptr.String("http"),
+						URL:  apis.HTTP(network.GetServiceHostname(jsonataTestService(ctx).Name, jsonataTestService(ctx).Namespace)),
+					},
+				),
+				WithEventTransformEventPoliciesReadyBecauseOIDCDisabled(),
+			)},
 			},
 		},
 		{
@@ -869,13 +875,14 @@ func TestReconcile(t *testing.T) {
 						AvailableReplicas:   1,
 						UnavailableReplicas: 0,
 					}),
-					WithEventTransformAddresses(
-						duckv1.Addressable{
-							Name: ptr.String("http"),
-							URL:  apis.HTTP(network.GetServiceHostname(jsonataTestService(ctx).Name, jsonataTestService(ctx).Namespace)),
-						},
-					),
-				)},
+				WithEventTransformAddresses(
+					duckv1.Addressable{
+						Name: ptr.String("http"),
+						URL:  apis.HTTP(network.GetServiceHostname(jsonataTestService(ctx).Name, jsonataTestService(ctx).Namespace)),
+					},
+				),
+				WithEventTransformEventPoliciesReadyBecauseOIDCDisabled(),
+			)},
 			},
 			WantDeletes: []clientgotesting.DeleteActionImpl{
 				{
@@ -1046,13 +1053,14 @@ func TestReconcile(t *testing.T) {
 							},
 						},
 					}),
-					WithEventTransformAddresses(
-						duckv1.Addressable{
-							Name: ptr.String("http"),
-							URL:  apis.HTTP(network.GetServiceHostname(jsonataTestService(ctx).Name, jsonataTestService(ctx).Namespace)),
-						},
-					),
-				)},
+				WithEventTransformAddresses(
+					duckv1.Addressable{
+						Name: ptr.String("http"),
+						URL:  apis.HTTP(network.GetServiceHostname(jsonataTestService(ctx).Name, jsonataTestService(ctx).Namespace)),
+					},
+				),
+				WithEventTransformEventPoliciesReadyBecauseOIDCDisabled(),
+			)},
 			},
 		},
 		{
@@ -1198,13 +1206,14 @@ func TestReconcile(t *testing.T) {
 							},
 						},
 					}),
-					WithEventTransformAddresses(
-						duckv1.Addressable{
-							Name: ptr.String("http"),
-							URL:  apis.HTTP(network.GetServiceHostname(jsonataTestService(ctx).Name, jsonataTestService(ctx).Namespace)),
-						},
-					),
-				)},
+				WithEventTransformAddresses(
+					duckv1.Addressable{
+						Name: ptr.String("http"),
+						URL:  apis.HTTP(network.GetServiceHostname(jsonataTestService(ctx).Name, jsonataTestService(ctx).Namespace)),
+					},
+				),
+				WithEventTransformEventPoliciesReadyBecauseOIDCDisabled(),
+			)},
 			},
 		},
 		{
@@ -1397,13 +1406,14 @@ func TestReconcile(t *testing.T) {
 						AvailableReplicas:   1,
 						UnavailableReplicas: 0,
 					}),
-					WithEventTransformAddresses(
-						duckv1.Addressable{
-							Name: ptr.String("https"),
-							URL:  apis.HTTPS(network.GetServiceHostname(jsonataTestService(ctx).Name, jsonataTestService(ctx).Namespace)),
-						},
-					),
-				)},
+				WithEventTransformAddresses(
+					duckv1.Addressable{
+						Name: ptr.String("https"),
+						URL:  apis.HTTPS(network.GetServiceHostname(jsonataTestService(ctx).Name, jsonataTestService(ctx).Namespace)),
+					},
+				),
+				WithEventTransformEventPoliciesReadyBecauseOIDCDisabled(),
+			)},
 			},
 			WantCreates: []runtime.Object{
 				jsonataExpressionTestConfigMap(ctx),
@@ -1613,17 +1623,18 @@ func TestReconcile(t *testing.T) {
 						AvailableReplicas:   1,
 						UnavailableReplicas: 0,
 					}),
-					WithEventTransformAddresses(
-						duckv1.Addressable{
-							Name: ptr.String("https"),
-							URL:  apis.HTTPS(network.GetServiceHostname(jsonataTestService(ctx).Name, jsonataTestService(ctx).Namespace)),
-						},
-						duckv1.Addressable{
-							Name: ptr.String("http"),
-							URL:  apis.HTTP(network.GetServiceHostname(jsonataTestService(ctx).Name, jsonataTestService(ctx).Namespace)),
-						},
-					),
-				)},
+				WithEventTransformAddresses(
+					duckv1.Addressable{
+						Name: ptr.String("https"),
+						URL:  apis.HTTPS(network.GetServiceHostname(jsonataTestService(ctx).Name, jsonataTestService(ctx).Namespace)),
+					},
+					duckv1.Addressable{
+						Name: ptr.String("http"),
+						URL:  apis.HTTP(network.GetServiceHostname(jsonataTestService(ctx).Name, jsonataTestService(ctx).Namespace)),
+					},
+				),
+				WithEventTransformEventPoliciesReadyBecauseOIDCDisabled(),
+			)},
 			},
 			WantCreates: []runtime.Object{
 				jsonataExpressionTestConfigMap(ctx),
@@ -1855,13 +1866,14 @@ func TestReconcile(t *testing.T) {
 						AvailableReplicas:   1,
 						UnavailableReplicas: 0,
 					}),
-					WithEventTransformAddresses(
-						duckv1.Addressable{
-							Name: ptr.String("http"),
-							URL:  apis.HTTP(network.GetServiceHostname(jsonataTestService(ctx).Name, jsonataTestService(ctx).Namespace)),
-						},
-					),
-				)},
+				WithEventTransformAddresses(
+					duckv1.Addressable{
+						Name: ptr.String("http"),
+						URL:  apis.HTTP(network.GetServiceHostname(jsonataTestService(ctx).Name, jsonataTestService(ctx).Namespace)),
+					},
+				),
+				WithEventTransformEventPoliciesReadyBecauseOIDCDisabled(),
+			)},
 			},
 			WantDeletes: []clientgotesting.DeleteActionImpl{
 				{
@@ -2038,6 +2050,10 @@ func TestReconcile(t *testing.T) {
 			cmCertificateLister:        cmCertificatesListerAtomic,
 			certificatesSecretLister:   listers.GetSecretLister(),
 			trustBundleConfigMapLister: listers.GetConfigMapLister(),
+			eventPolicyLister:          listers.GetEventPolicyLister(),
+			rolebindingLister:          listers.GetRoleBindingLister(),
+			eventTransformLister:       listers.GetEventTransformLister(),
+			authProxyImage:             "",
 			configWatcher:              cw,
 		}
 
@@ -2079,7 +2095,7 @@ func jsonataExpressionTestConfigMap(ctx context.Context, opts ...ConfigMapOption
 }
 
 func jsonataTestDeployment(ctx context.Context, cw *reconcilersource.ConfigWatcher, opts ...DeploymentOption) *appsv1.Deployment {
-	d := jsonataDeployment(ctx, false, cw, func() *corev1.ConfigMap {
+	d := jsonataDeployment(ctx, "", false, cw, func() *corev1.ConfigMap {
 		cm := jsonataExpressionConfigMap(ctx, NewEventTransform(testName, testNS,
 			WithEventTransformJsonataExpression(),
 		))
@@ -2095,7 +2111,7 @@ func jsonataTestDeployment(ctx context.Context, cw *reconcilersource.ConfigWatch
 }
 
 func jsonataTestReplyDeployment(ctx context.Context, cw *reconcilersource.ConfigWatcher, opts ...DeploymentOption) *appsv1.Deployment {
-	d := jsonataDeployment(ctx, false, cw, func() *corev1.ConfigMap {
+	d := jsonataDeployment(ctx, "", false, cw, func() *corev1.ConfigMap {
 		cm := jsonataExpressionConfigMap(ctx, NewEventTransform(testName, testNS,
 			WithEventTransformJsonataExpression(),
 			WithEventTransformJsonataReplyExpression(),
@@ -2113,7 +2129,7 @@ func jsonataTestReplyDeployment(ctx context.Context, cw *reconcilersource.Config
 }
 
 func jsonataTestReplyDiscardDeployment(ctx context.Context, cw *reconcilersource.ConfigWatcher, opts ...DeploymentOption) *appsv1.Deployment {
-	d := jsonataDeployment(ctx, false, cw, func() *corev1.ConfigMap {
+	d := jsonataDeployment(ctx, "", false, cw, func() *corev1.ConfigMap {
 		cm := jsonataExpressionConfigMap(ctx, NewEventTransform(testName, testNS,
 			WithEventTransformJsonataExpression(),
 			WithEventTransformJsonataReplyDiscard(),
@@ -2207,4 +2223,175 @@ func eventJsonataCertificateUpdated() string {
 
 func eventJsonataCertificateDeleted() string {
 	return Eventf(corev1.EventTypeNormal, "JsonataCertificateDeleted", fmt.Sprintf("%s-%s", testName, "jsonata"))
+}
+
+const testAuthProxyImage = "quay.io/fake-auth-proxy"
+
+func TestReconcileOIDC(t *testing.T) {
+	t.Setenv("EVENT_TRANSFORM_JSONATA_IMAGE", "quay.io/event-transform")
+	t.Setenv("SYSTEM_NAMESPACE", "knative-testing")
+
+	ctx := context.Background()
+	logger := logtesting.TestLogger(t)
+	ctx = logging.WithLogger(ctx, logger)
+
+	cw := reconcilersource.WatchConfigurations(
+		ctx,
+		"eventtransform",
+		configmap.NewStaticWatcher(
+			&corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{Name: "config-logging"},
+			},
+			&corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{Name: "config-observability"},
+			},
+			&corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{Name: "config-tracing"},
+			},
+		),
+	)
+
+	serviceName := fmt.Sprintf("%s-%s", testName, "jsonata")
+
+	table := TableTest{
+		{
+			Name: "creates auth-proxy RoleBindings and deployment with auth-proxy when OIDC is enabled",
+			Key:  testKey,
+			Ctx: feature.ToContext(context.Background(), feature.Flags{
+				feature.OIDCAuthentication: feature.Enabled,
+			}),
+			Objects: []runtime.Object{
+				NewEventTransform(testName, testNS,
+					WithEventTransformJsonataExpression(),
+				),
+				jsonataTestDeploymentWithAuthProxy(ctx, cw, func(d *appsv1.Deployment) {
+					d.Status = appsv1.DeploymentStatus{
+						ObservedGeneration:  1,
+						Replicas:            1,
+						UpdatedReplicas:     1,
+						ReadyReplicas:       1,
+						AvailableReplicas:   1,
+						UnavailableReplicas: 0,
+					}
+				}),
+				&corev1.Endpoints{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testNS,
+						Name:      serviceName,
+					},
+					Subsets: []corev1.EndpointSubset{
+						{
+							Ports:     []corev1.EndpointPort{{Port: 3128}},
+							Addresses: []corev1.EndpointAddress{{IP: "192.168.0.1"}},
+						},
+					},
+				},
+				jsonataExpressionTestConfigMap(ctx),
+				&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: testNS, Name: "config-features"}},
+			},
+			WantCreates: []runtime.Object{
+				jsonataTestServiceWithAuthProxy(ctx),
+				jsonataTestEventPolicyRoleBinding(),
+				jsonataTestAuthProxyRoleBinding(),
+			},
+			WantEvents: []string{
+				eventJsonataServiceCreated(),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{
+				{Object: NewEventTransform(testName, testNS,
+					WithEventTransformJsonataExpression(),
+					WithJsonataEventTransformInitializeStatus(),
+					WithJsonataDeploymentStatus(appsv1.DeploymentStatus{
+						ObservedGeneration:  1,
+						Replicas:            1,
+						UpdatedReplicas:     1,
+						ReadyReplicas:       1,
+						AvailableReplicas:   1,
+						UnavailableReplicas: 0,
+					}),
+				WithEventTransformAddresses(
+					duckv1.Addressable{
+						Name:     ptr.String("http"),
+						URL:      apis.HTTP(network.GetServiceHostname(serviceName, testNS)),
+						Audience: ptr.String(v1alpha1.SchemeGroupVersion.Group + "/eventtransform/" + testNS + "/" + testName),
+					},
+				),
+				WithEventTransformEventPoliciesReady("DefaultAuthorizationMode", `Default authz mode is ""`),
+				)},
+			},
+			SkipNamespaceValidation: true,
+		},
+	}
+
+	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, watcher configmap.Watcher) controller.Reconciler {
+
+		cmCertificatesListerAtomic := &atomic.Pointer[cmlisters.CertificateLister]{}
+		cmCertificatesLister := listers.GetCertificateLister()
+		cmCertificatesListerAtomic.Store(&cmCertificatesLister)
+
+		r := &Reconciler{
+			k8s:                        kubeclient.Get(ctx),
+			client:                     eventingclient.Get(ctx),
+			cmClient:                   cmclient.Get(ctx),
+			jsonataConfigMapLister:     listers.GetConfigMapLister(),
+			jsonataDeploymentsLister:   listers.GetDeploymentLister(),
+			jsonataServiceLister:       listers.GetServiceLister(),
+			jsonataEndpointLister:      listers.GetEndpointsLister(),
+			jsonataSinkBindingLister:   listers.GetSinkBindingLister(),
+			cmCertificateLister:        cmCertificatesListerAtomic,
+			certificatesSecretLister:   listers.GetSecretLister(),
+			trustBundleConfigMapLister: listers.GetConfigMapLister(),
+			eventPolicyLister:          listers.GetEventPolicyLister(),
+			rolebindingLister:          listers.GetRoleBindingLister(),
+			eventTransformLister:       listers.GetEventTransformLister(),
+			authProxyImage:             testAuthProxyImage,
+			configWatcher:              cw,
+		}
+
+		return eventtransform.NewReconciler(ctx,
+			logger,
+			fakeeventingclient.Get(ctx),
+			listers.GetEventTransformLister(),
+			controller.GetEventRecorder(ctx),
+			r,
+		)
+	}, false, logger))
+}
+
+func jsonataTestDeploymentWithAuthProxy(ctx context.Context, cw *reconcilersource.ConfigWatcher, opts ...DeploymentOption) *appsv1.Deployment {
+	oidcCtx := feature.ToContext(ctx, feature.Flags{
+		feature.OIDCAuthentication: feature.Enabled,
+	})
+	d := jsonataDeployment(oidcCtx, testAuthProxyImage, false, cw, func() *corev1.ConfigMap {
+		cm := jsonataExpressionConfigMap(oidcCtx, NewEventTransform(testName, testNS,
+			WithEventTransformJsonataExpression(),
+		))
+		return &cm
+	}(), nil, NewEventTransform(testName, testNS,
+		WithEventTransformJsonataExpression(),
+	))
+	for _, opt := range opts {
+		opt(&d)
+	}
+	return &d
+}
+
+func jsonataTestServiceWithAuthProxy(ctx context.Context) *corev1.Service {
+	oidcCtx := feature.ToContext(ctx, feature.Flags{
+		feature.OIDCAuthentication: feature.Enabled,
+	})
+	s := jsonataService(oidcCtx, NewEventTransform(testName, testNS,
+		WithEventTransformJsonataExpression(),
+	))
+	return &s
+}
+
+func jsonataTestEventPolicyRoleBinding() *rbacv1.RoleBinding {
+	transform := NewEventTransform(testName, testNS, WithEventTransformJsonataExpression())
+	return jsonataEventPolicyRoleBinding(transform)
+}
+
+func jsonataTestAuthProxyRoleBinding() *rbacv1.RoleBinding {
+	transform := NewEventTransform(testName, testNS, WithEventTransformJsonataExpression())
+	return jsonataAuthProxyRoleBinding(transform, []*v1alpha1.EventTransform{})
 }
