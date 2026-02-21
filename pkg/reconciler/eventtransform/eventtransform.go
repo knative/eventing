@@ -28,13 +28,17 @@ import (
 	"go.uber.org/zap/zapcore"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/kubernetes"
 	appslister "k8s.io/client-go/listers/apps/v1"
 	corelister "k8s.io/client-go/listers/core/v1"
+	rbacv1listers "k8s.io/client-go/listers/rbac/v1"
 	"knative.dev/eventing/pkg/apis/feature"
+	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -43,10 +47,12 @@ import (
 	"knative.dev/pkg/network"
 	"knative.dev/pkg/ptr"
 	"knative.dev/pkg/reconciler"
+	"knative.dev/pkg/system"
 
 	eventing "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	sources "knative.dev/eventing/pkg/apis/sources/v1"
 	eventingclient "knative.dev/eventing/pkg/client/clientset/versioned"
+	eventingv1alpha1listers "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 	sourceslisters "knative.dev/eventing/pkg/client/listers/sources/v1"
 	reconcilersource "knative.dev/eventing/pkg/reconciler/source"
 )
@@ -65,6 +71,11 @@ type Reconciler struct {
 	certificatesSecretLister   corelister.SecretLister
 	trustBundleConfigMapLister corelister.ConfigMapLister
 
+	eventPolicyLister    eventingv1alpha1listers.EventPolicyLister
+	rolebindingLister    rbacv1listers.RoleBindingLister
+	eventTransformLister eventingv1alpha1listers.EventTransformLister
+	authProxyImage       string
+
 	configWatcher *reconcilersource.ConfigWatcher
 }
 
@@ -72,6 +83,11 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, transform *eventing.Even
 	if err := r.reconcileJsonataTransformation(ctx, transform); err != nil {
 		return fmt.Errorf("failed to reconcile Jsonata transformation: %w", err)
 	}
+
+	if err := auth.UpdateStatusWithEventPolicies(feature.FromContext(ctx), &transform.Status.AppliedEventPoliciesStatus, &transform.Status, r.eventPolicyLister, eventing.SchemeGroupVersion.WithKind("EventTransform"), transform.ObjectMeta); err != nil {
+		return fmt.Errorf("could not update EventTransform status with EventPolicies: %w", err)
+	}
+
 	return nil
 }
 
@@ -104,6 +120,11 @@ func (r *Reconciler) reconcileJsonataTransformation(ctx context.Context, transfo
 	certificate, err := r.reconcileJsonataTransformationCertificate(ctx, transform)
 	if err != nil {
 		return fmt.Errorf("failed to reconcile Jsonata transformation deployment: %w", err)
+	}
+
+	logger.Debugw("Reconciling Jsonata transformation auth-proxy RBAC")
+	if err := r.reconcileAuthProxyRBAC(ctx, transform); err != nil {
+		return fmt.Errorf("failed to reconcile auth-proxy RBAC: %w", err)
 	}
 
 	logger.Debugw("Reconciling Jsonata transformation Deployment")
@@ -224,7 +245,7 @@ func (r *Reconciler) reconcileJsonataTransformationDeployment(ctx context.Contex
 			withCombinedTrustBundle = true
 		}
 	}
-	expected := jsonataDeployment(ctx, withCombinedTrustBundle, r.configWatcher, expression, certificate, transform)
+	expected := jsonataDeployment(ctx, r.authProxyImage, withCombinedTrustBundle, r.configWatcher, expression, certificate, transform, r.trustBundleConfigMapLister)
 
 	curr, err := r.jsonataDeploymentsLister.Deployments(expected.GetNamespace()).Get(expected.GetName())
 	if apierrors.IsNotFound(err) {
@@ -361,7 +382,18 @@ func (r *Reconciler) reconcileJsonataTransformationAddress(ctx context.Context, 
 		})
 	}
 
-	// TODO: Support Authn/z (control plane and data plane)
+	if feature.FromContext(ctx).IsOIDCAuthentication() {
+		audience := auth.GetAudience(eventing.SchemeGroupVersion.WithKind("EventTransform"), transform.ObjectMeta)
+		transform.Status.Address.Audience = &audience
+		for i := range transform.Status.Addresses {
+			transform.Status.Addresses[i].Audience = &audience
+		}
+	} else {
+		transform.Status.Address.Audience = nil
+		for i := range transform.Status.Addresses {
+			transform.Status.Addresses[i].Audience = nil
+		}
+	}
 
 	return nil
 }
@@ -379,6 +411,93 @@ func (r *Reconciler) jsonataCaCerts(_ context.Context, transform *eventing.Event
 		return nil
 	}
 	return ptr.String(string(ca))
+}
+
+func (r *Reconciler) reconcileAuthProxyRBAC(ctx context.Context, transform *eventing.EventTransform) error {
+	features := feature.FromContext(ctx)
+
+	if err := r.reconcileEventPolicyRBAC(ctx, transform, features); err != nil {
+		return fmt.Errorf("failed to reconcile EventPolicy RBAC: %w", err)
+	}
+
+	if err := r.reconcileConfigMapAccessRBAC(ctx, transform, features); err != nil {
+		return fmt.Errorf("failed to reconcile ConfigMap access RBAC: %w", err)
+	}
+
+	return nil
+}
+
+func (r *Reconciler) reconcileEventPolicyRBAC(ctx context.Context, transform *eventing.EventTransform, features feature.Flags) error {
+	expected := jsonataEventPolicyRoleBinding(transform)
+
+	if !features.IsOIDCAuthentication() {
+		return r.deleteRoleBinding(ctx, expected)
+	}
+
+	rb, err := r.rolebindingLister.RoleBindings(expected.Namespace).Get(expected.Name)
+	if apierrors.IsNotFound(err) {
+		_, err = r.k8s.RbacV1().RoleBindings(expected.Namespace).Create(ctx, expected, metav1.CreateOptions{})
+		return err
+	}
+	if err != nil {
+		return fmt.Errorf("getting EventPolicy RoleBinding: %w", err)
+	}
+
+	if !equality.Semantic.DeepEqual(rb.Subjects, expected.Subjects) {
+		rb.Subjects = expected.Subjects
+		_, err = r.k8s.RbacV1().RoleBindings(expected.Namespace).Update(ctx, rb, metav1.UpdateOptions{})
+		if err != nil {
+			return fmt.Errorf("updating EventPolicy RoleBinding: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (r *Reconciler) reconcileConfigMapAccessRBAC(ctx context.Context, transform *eventing.EventTransform, features feature.Flags) error {
+	allTransforms, err := r.eventTransformLister.List(labels.Everything())
+	if err != nil {
+		return fmt.Errorf("listing event transforms: %w", err)
+	}
+
+	expected := jsonataAuthProxyRoleBinding(transform, allTransforms)
+
+	if !features.IsOIDCAuthentication() {
+		return r.deleteRoleBinding(ctx, expected)
+	}
+
+	rb, err := r.rolebindingLister.RoleBindings(expected.Namespace).Get(expected.Name)
+	if apierrors.IsNotFound(err) {
+		_, err = r.k8s.RbacV1().RoleBindings(system.Namespace()).Create(ctx, expected, metav1.CreateOptions{})
+		return err
+	}
+	if err != nil {
+		return fmt.Errorf("failed to get rolebinding %s/%s: %w", expected.GetNamespace(), expected.GetName(), err)
+	}
+
+	if equality.Semantic.DeepDerivative(expected, rb) {
+		return nil
+	}
+
+	expected.ResourceVersion = rb.ResourceVersion
+	_, err = r.k8s.RbacV1().RoleBindings(expected.Namespace).Update(ctx, expected, metav1.UpdateOptions{})
+	return err
+}
+
+func (r *Reconciler) deleteRoleBinding(ctx context.Context, rb *rbacv1.RoleBinding) error {
+	_, err := r.rolebindingLister.RoleBindings(rb.Namespace).Get(rb.Name)
+	if apierrors.IsNotFound(err) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("failed to get rolebinding %s/%s: %w", rb.Namespace, rb.Name, err)
+	}
+
+	err = r.k8s.RbacV1().RoleBindings(rb.Namespace).Delete(ctx, rb.Name, metav1.DeleteOptions{})
+	if apierrors.IsNotFound(err) {
+		return nil
+	}
+	return err
 }
 
 func (r *Reconciler) createService(ctx context.Context, transform *eventing.EventTransform, expected corev1.Service) (*corev1.Service, error) {

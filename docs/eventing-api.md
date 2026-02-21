@@ -52,7 +52,7 @@ Resource Types:
 <h3 id="duck.knative.dev/v1.AppliedEventPoliciesStatus">AppliedEventPoliciesStatus
 </h3>
 <p>
-(<em>Appears on:</em><a href="#duck.knative.dev/v1.ChannelableStatus">ChannelableStatus</a>, <a href="#eventing.knative.dev/v1.BrokerStatus">BrokerStatus</a>, <a href="#eventing.knative.dev/v1alpha1.RequestReplyStatus">RequestReplyStatus</a>, <a href="#flows.knative.dev/v1.ParallelStatus">ParallelStatus</a>, <a href="#flows.knative.dev/v1.SequenceStatus">SequenceStatus</a>, <a href="#sinks.knative.dev/v1alpha1.IntegrationSinkStatus">IntegrationSinkStatus</a>, <a href="#sinks.knative.dev/v1alpha1.JobSinkStatus">JobSinkStatus</a>)
+(<em>Appears on:</em><a href="#duck.knative.dev/v1.ChannelableStatus">ChannelableStatus</a>, <a href="#eventing.knative.dev/v1.BrokerStatus">BrokerStatus</a>, <a href="#eventing.knative.dev/v1alpha1.EventTransformStatus">EventTransformStatus</a>, <a href="#eventing.knative.dev/v1alpha1.RequestReplyStatus">RequestReplyStatus</a>, <a href="#flows.knative.dev/v1.ParallelStatus">ParallelStatus</a>, <a href="#flows.knative.dev/v1.SequenceStatus">SequenceStatus</a>, <a href="#sinks.knative.dev/v1alpha1.IntegrationSinkStatus">IntegrationSinkStatus</a>, <a href="#sinks.knative.dev/v1alpha1.JobSinkStatus">JobSinkStatus</a>)
 </p>
 <p>
 <p>AppliedEventPoliciesStatus contains the list of policies which apply to a resource.
@@ -3511,6 +3511,23 @@ knative.dev/pkg/apis/duck/v1.AddressStatus
 <em>(Optional)</em>
 <p>AddressStatus is the part where the EventTransform fulfills the Addressable contract.
 It exposes the endpoint as an URI to get events delivered.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>AppliedEventPoliciesStatus</code><br/>
+<em>
+<a href="#duck.knative.dev/v1.AppliedEventPoliciesStatus">
+AppliedEventPoliciesStatus
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>AppliedEventPoliciesStatus</code> are embedded into this type.)
+</p>
+<em>(Optional)</em>
+<p>AppliedEventPoliciesStatus contains the list of EventPolicies which apply to this EventTransform.</p>
 </td>
 </tr>
 <tr>
