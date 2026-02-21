@@ -299,14 +299,14 @@ func TestReconcile(t *testing.T) {
 						AvailableReplicas:   1,
 						UnavailableReplicas: 0,
 					}),
-				WithEventTransformAddresses(
-					duckv1.Addressable{
-						Name: ptr.String("http"),
-						URL:  apis.HTTP(network.GetServiceHostname(jsonataTestService(ctx).Name, jsonataTestService(ctx).Namespace)),
-					},
-				),
-				WithEventTransformEventPoliciesReadyBecauseOIDCDisabled(),
-			)},
+					WithEventTransformAddresses(
+						duckv1.Addressable{
+							Name: ptr.String("http"),
+							URL:  apis.HTTP(network.GetServiceHostname(jsonataTestService(ctx).Name, jsonataTestService(ctx).Namespace)),
+						},
+					),
+					WithEventTransformEventPoliciesReadyBecauseOIDCDisabled(),
+				)},
 			},
 			WantCreates: []runtime.Object{
 				jsonataExpressionTestConfigMap(ctx),
@@ -439,14 +439,14 @@ func TestReconcile(t *testing.T) {
 						AvailableReplicas:   1,
 						UnavailableReplicas: 0,
 					}),
-				WithEventTransformAddresses(
-					duckv1.Addressable{
-						Name: ptr.String("http"),
-						URL:  apis.HTTP(network.GetServiceHostname(jsonataTestService(ctx).Name, jsonataTestService(ctx).Namespace)),
-					},
-				),
-				WithEventTransformEventPoliciesReadyBecauseOIDCDisabled(),
-			)},
+					WithEventTransformAddresses(
+						duckv1.Addressable{
+							Name: ptr.String("http"),
+							URL:  apis.HTTP(network.GetServiceHostname(jsonataTestService(ctx).Name, jsonataTestService(ctx).Namespace)),
+						},
+					),
+					WithEventTransformEventPoliciesReadyBecauseOIDCDisabled(),
+				)},
 			},
 			WantCreates: []runtime.Object{
 				jsonataTestService(ctx),
@@ -513,14 +513,14 @@ func TestReconcile(t *testing.T) {
 						AvailableReplicas:   1,
 						UnavailableReplicas: 0,
 					}),
-				WithEventTransformAddresses(
-					duckv1.Addressable{
-						Name: ptr.String("http"),
-						URL:  apis.HTTP(network.GetServiceHostname(jsonataTestService(ctx).Name, jsonataTestService(ctx).Namespace)),
-					},
-				),
-				WithEventTransformEventPoliciesReadyBecauseOIDCDisabled(),
-			)},
+					WithEventTransformAddresses(
+						duckv1.Addressable{
+							Name: ptr.String("http"),
+							URL:  apis.HTTP(network.GetServiceHostname(jsonataTestService(ctx).Name, jsonataTestService(ctx).Namespace)),
+						},
+					),
+					WithEventTransformEventPoliciesReadyBecauseOIDCDisabled(),
+				)},
 			},
 			WantCreates: []runtime.Object{
 				jsonataExpressionTestConfigMap(ctx),
@@ -586,14 +586,14 @@ func TestReconcile(t *testing.T) {
 						AvailableReplicas:   1,
 						UnavailableReplicas: 0,
 					}),
-				WithEventTransformAddresses(
-					duckv1.Addressable{
-						Name: ptr.String("http"),
-						URL:  apis.HTTP(network.GetServiceHostname(jsonataTestService(ctx).Name, jsonataTestService(ctx).Namespace)),
-					},
-				),
-				WithEventTransformEventPoliciesReadyBecauseOIDCDisabled(),
-			)},
+					WithEventTransformAddresses(
+						duckv1.Addressable{
+							Name: ptr.String("http"),
+							URL:  apis.HTTP(network.GetServiceHostname(jsonataTestService(ctx).Name, jsonataTestService(ctx).Namespace)),
+						},
+					),
+					WithEventTransformEventPoliciesReadyBecauseOIDCDisabled(),
+				)},
 			},
 		},
 		{
@@ -802,14 +802,14 @@ func TestReconcile(t *testing.T) {
 							},
 						},
 					}),
-				WithEventTransformAddresses(
-					duckv1.Addressable{
-						Name: ptr.String("http"),
-						URL:  apis.HTTP(network.GetServiceHostname(jsonataTestService(ctx).Name, jsonataTestService(ctx).Namespace)),
-					},
-				),
-				WithEventTransformEventPoliciesReadyBecauseOIDCDisabled(),
-			)},
+					WithEventTransformAddresses(
+						duckv1.Addressable{
+							Name: ptr.String("http"),
+							URL:  apis.HTTP(network.GetServiceHostname(jsonataTestService(ctx).Name, jsonataTestService(ctx).Namespace)),
+						},
+					),
+					WithEventTransformEventPoliciesReadyBecauseOIDCDisabled(),
+				)},
 			},
 		},
 		{
@@ -875,14 +875,14 @@ func TestReconcile(t *testing.T) {
 						AvailableReplicas:   1,
 						UnavailableReplicas: 0,
 					}),
-				WithEventTransformAddresses(
-					duckv1.Addressable{
-						Name: ptr.String("http"),
-						URL:  apis.HTTP(network.GetServiceHostname(jsonataTestService(ctx).Name, jsonataTestService(ctx).Namespace)),
-					},
-				),
-				WithEventTransformEventPoliciesReadyBecauseOIDCDisabled(),
-			)},
+					WithEventTransformAddresses(
+						duckv1.Addressable{
+							Name: ptr.String("http"),
+							URL:  apis.HTTP(network.GetServiceHostname(jsonataTestService(ctx).Name, jsonataTestService(ctx).Namespace)),
+						},
+					),
+					WithEventTransformEventPoliciesReadyBecauseOIDCDisabled(),
+				)},
 			},
 			WantDeletes: []clientgotesting.DeleteActionImpl{
 				{
@@ -1053,14 +1053,14 @@ func TestReconcile(t *testing.T) {
 							},
 						},
 					}),
-				WithEventTransformAddresses(
-					duckv1.Addressable{
-						Name: ptr.String("http"),
-						URL:  apis.HTTP(network.GetServiceHostname(jsonataTestService(ctx).Name, jsonataTestService(ctx).Namespace)),
-					},
-				),
-				WithEventTransformEventPoliciesReadyBecauseOIDCDisabled(),
-			)},
+					WithEventTransformAddresses(
+						duckv1.Addressable{
+							Name: ptr.String("http"),
+							URL:  apis.HTTP(network.GetServiceHostname(jsonataTestService(ctx).Name, jsonataTestService(ctx).Namespace)),
+						},
+					),
+					WithEventTransformEventPoliciesReadyBecauseOIDCDisabled(),
+				)},
 			},
 		},
 		{
@@ -1206,14 +1206,14 @@ func TestReconcile(t *testing.T) {
 							},
 						},
 					}),
-				WithEventTransformAddresses(
-					duckv1.Addressable{
-						Name: ptr.String("http"),
-						URL:  apis.HTTP(network.GetServiceHostname(jsonataTestService(ctx).Name, jsonataTestService(ctx).Namespace)),
-					},
-				),
-				WithEventTransformEventPoliciesReadyBecauseOIDCDisabled(),
-			)},
+					WithEventTransformAddresses(
+						duckv1.Addressable{
+							Name: ptr.String("http"),
+							URL:  apis.HTTP(network.GetServiceHostname(jsonataTestService(ctx).Name, jsonataTestService(ctx).Namespace)),
+						},
+					),
+					WithEventTransformEventPoliciesReadyBecauseOIDCDisabled(),
+				)},
 			},
 		},
 		{
@@ -1406,14 +1406,14 @@ func TestReconcile(t *testing.T) {
 						AvailableReplicas:   1,
 						UnavailableReplicas: 0,
 					}),
-				WithEventTransformAddresses(
-					duckv1.Addressable{
-						Name: ptr.String("https"),
-						URL:  apis.HTTPS(network.GetServiceHostname(jsonataTestService(ctx).Name, jsonataTestService(ctx).Namespace)),
-					},
-				),
-				WithEventTransformEventPoliciesReadyBecauseOIDCDisabled(),
-			)},
+					WithEventTransformAddresses(
+						duckv1.Addressable{
+							Name: ptr.String("https"),
+							URL:  apis.HTTPS(network.GetServiceHostname(jsonataTestService(ctx).Name, jsonataTestService(ctx).Namespace)),
+						},
+					),
+					WithEventTransformEventPoliciesReadyBecauseOIDCDisabled(),
+				)},
 			},
 			WantCreates: []runtime.Object{
 				jsonataExpressionTestConfigMap(ctx),
@@ -1623,18 +1623,18 @@ func TestReconcile(t *testing.T) {
 						AvailableReplicas:   1,
 						UnavailableReplicas: 0,
 					}),
-				WithEventTransformAddresses(
-					duckv1.Addressable{
-						Name: ptr.String("https"),
-						URL:  apis.HTTPS(network.GetServiceHostname(jsonataTestService(ctx).Name, jsonataTestService(ctx).Namespace)),
-					},
-					duckv1.Addressable{
-						Name: ptr.String("http"),
-						URL:  apis.HTTP(network.GetServiceHostname(jsonataTestService(ctx).Name, jsonataTestService(ctx).Namespace)),
-					},
-				),
-				WithEventTransformEventPoliciesReadyBecauseOIDCDisabled(),
-			)},
+					WithEventTransformAddresses(
+						duckv1.Addressable{
+							Name: ptr.String("https"),
+							URL:  apis.HTTPS(network.GetServiceHostname(jsonataTestService(ctx).Name, jsonataTestService(ctx).Namespace)),
+						},
+						duckv1.Addressable{
+							Name: ptr.String("http"),
+							URL:  apis.HTTP(network.GetServiceHostname(jsonataTestService(ctx).Name, jsonataTestService(ctx).Namespace)),
+						},
+					),
+					WithEventTransformEventPoliciesReadyBecauseOIDCDisabled(),
+				)},
 			},
 			WantCreates: []runtime.Object{
 				jsonataExpressionTestConfigMap(ctx),
@@ -1866,14 +1866,14 @@ func TestReconcile(t *testing.T) {
 						AvailableReplicas:   1,
 						UnavailableReplicas: 0,
 					}),
-				WithEventTransformAddresses(
-					duckv1.Addressable{
-						Name: ptr.String("http"),
-						URL:  apis.HTTP(network.GetServiceHostname(jsonataTestService(ctx).Name, jsonataTestService(ctx).Namespace)),
-					},
-				),
-				WithEventTransformEventPoliciesReadyBecauseOIDCDisabled(),
-			)},
+					WithEventTransformAddresses(
+						duckv1.Addressable{
+							Name: ptr.String("http"),
+							URL:  apis.HTTP(network.GetServiceHostname(jsonataTestService(ctx).Name, jsonataTestService(ctx).Namespace)),
+						},
+					),
+					WithEventTransformEventPoliciesReadyBecauseOIDCDisabled(),
+				)},
 			},
 			WantDeletes: []clientgotesting.DeleteActionImpl{
 				{
@@ -2309,14 +2309,14 @@ func TestReconcileOIDC(t *testing.T) {
 						AvailableReplicas:   1,
 						UnavailableReplicas: 0,
 					}),
-				WithEventTransformAddresses(
-					duckv1.Addressable{
-						Name:     ptr.String("http"),
-						URL:      apis.HTTP(network.GetServiceHostname(serviceName, testNS)),
-						Audience: ptr.String(v1alpha1.SchemeGroupVersion.Group + "/eventtransform/" + testNS + "/" + testName),
-					},
-				),
-				WithEventTransformEventPoliciesReady("DefaultAuthorizationMode", `Default authz mode is ""`),
+					WithEventTransformAddresses(
+						duckv1.Addressable{
+							Name:     ptr.String("http"),
+							URL:      apis.HTTP(network.GetServiceHostname(serviceName, testNS)),
+							Audience: ptr.String(v1alpha1.SchemeGroupVersion.Group + "/eventtransform/" + testNS + "/" + testName),
+						},
+					),
+					WithEventTransformEventPoliciesReady("DefaultAuthorizationMode", `Default authz mode is ""`),
 				)},
 			},
 			SkipNamespaceValidation: true,
