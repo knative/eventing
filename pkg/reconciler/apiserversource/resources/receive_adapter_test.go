@@ -178,6 +178,9 @@ O2dgzikq8iSy1BlRsVw=
 								}, {
 									Name:  source.EnvObservabilityCfg,
 									Value: "",
+								}, {
+									Name:  source.EnvKlogLevel,
+									Value: "",
 								},
 							},
 							ReadinessProbe: &corev1.Probe{

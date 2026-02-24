@@ -36,6 +36,8 @@ import (
 const (
 	EnvLoggingCfg       = "K_LOGGING_CONFIG"
 	EnvObservabilityCfg = "K_OBSERVABILITY_CONFIG"
+	EnvKlogLevel        = "K_KLOG_LEVEL"
+	klogLevelKey = "klogLevel"
 )
 
 type ConfigAccessor interface {
@@ -56,6 +58,9 @@ type ConfigWatcher struct {
 	// configurations remain nil if disabled
 	loggingCfg       *logging.Config
 	observabilityCfg *observability.Config
+
+	// klogLevel is the verbosity level for klog (Kubernetes client-go logging).
+	klogLevel string
 }
 
 // configWatcherOption is a function option for ConfigWatchers.
@@ -123,6 +128,11 @@ func (cw *ConfigWatcher) updateFromLoggingConfigMap(cfg *corev1.ConfigMap) {
 
 	delete(cfg.Data, "_example")
 
+	// Extract klog level before parsing the rest of the config
+	if klogLevel, ok := cfg.Data[klogLevelKey]; ok {
+		cw.klogLevel = klogLevel
+	}
+
 	loggingCfg, err := logging.NewConfigFromConfigMap(cfg)
 	if err != nil {
 		cw.logger.Warnw("failed to create logging config from ConfigMap", zap.String("cfg.Name", cfg.Name))
@@ -161,10 +171,11 @@ func (cw *ConfigWatcher) updateFromObservabilityConfigMap(cfg *corev1.ConfigMap)
 // ToEnvVars serializes the contents of the ConfigWatcher to individual
 // environment variables.
 func (cw *ConfigWatcher) ToEnvVars() []corev1.EnvVar {
-	envs := make([]corev1.EnvVar, 0, 3)
+	envs := make([]corev1.EnvVar, 0, 4)
 
 	envs = maybeAppendEnvVar(envs, cw.loggingConfigEnvVar(), cw.LoggingConfig() != nil)
 	envs = maybeAppendEnvVar(envs, cw.observabilityConfigEnvVar(), cw.ObservabilityConfig() != nil)
+	envs = maybeAppendEnvVar(envs, cw.klogLevelEnvVar(), cw.klogLevel != "")
 
 	return envs
 }
@@ -206,7 +217,7 @@ func (cw *ConfigWatcher) loggingConfigEnvVar() corev1.EnvVar {
 	}
 }
 
-// loggingConfigEnvVar returns an EnvVar containing the serialized logging
+// observabilityConfigEnvVar returns an EnvVar containing the serialized observability
 // configuration from the ConfigWatcher.
 func (cw *ConfigWatcher) observabilityConfigEnvVar() corev1.EnvVar {
 	obsCfg := cw.ObservabilityConfig()
@@ -222,6 +233,14 @@ func (cw *ConfigWatcher) observabilityConfigEnvVar() corev1.EnvVar {
 	return corev1.EnvVar{
 		Name:  EnvObservabilityCfg,
 		Value: string(cfg),
+	}
+}
+
+// klogLevelEnvVar returns an EnvVar containing the klog verbosity level.
+func (cw *ConfigWatcher) klogLevelEnvVar() corev1.EnvVar {
+	return corev1.EnvVar{
+		Name:  EnvKlogLevel,
+		Value: cw.klogLevel,
 	}
 }
 
@@ -255,6 +274,7 @@ func (g *EmptyVarsGenerator) ToEnvVars() []corev1.EnvVar {
 	return []corev1.EnvVar{
 		{Name: EnvLoggingCfg},
 		{Name: EnvObservabilityCfg},
+		{Name: EnvKlogLevel},
 	}
 }
 

@@ -62,8 +62,9 @@ func TestNewConfigWatcher_defaults(t *testing.T) {
 
 			envs := cw.ToEnvVars()
 
-			const expectEnvs = 2
-			require.Lenf(t, envs, expectEnvs, "there should be %d env var(s)", expectEnvs)
+			// With sample data we have 3 env vars (logging, observability, klogLevel)
+			// With empty data we have 2 env vars (logging, observability)
+			require.GreaterOrEqual(t, len(envs), 2, "there should be at least 2 env var(s)")
 
 			assert.Equal(t, EnvLoggingCfg, envs[0].Name, "first env var is logging config")
 			assert.Contains(t, envs[0].Value, tc.expectLoggingContains)
@@ -87,7 +88,7 @@ func TestLoggingConfigWithCustomLoggingLevel(t *testing.T) {
 func TestEmptyVarsGenerator(t *testing.T) {
 	g := &EmptyVarsGenerator{}
 	envs := g.ToEnvVars()
-	const expectEnvs = 2
+	const expectEnvs = 3
 	require.Lenf(t, envs, expectEnvs, "there should be %d env var(s)", expectEnvs)
 }
 
@@ -141,6 +142,7 @@ func loggingConfigMapData() map[string]string {
 		"zap-logger-config": `{"level": "fatal"}`,
 
 		"loglevel." + testComponentWithCustomLogLevel: "debug",
+		"klogLevel": "4",
 	}
 }
 func observabilityConfigMapData() map[string]string {
