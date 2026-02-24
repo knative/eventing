@@ -152,7 +152,7 @@ O2dgzikq8iSy1BlRsVw=
 									Value: "sink-uri",
 								}, {
 									Name:  "K_SOURCE_CONFIG",
-									Value: `{"namespaces":["source-namespace"],"allNamespaces":false,"resources":[{"gvr":{"Group":"","Version":"","Resource":"namespaces"}},{"gvr":{"Group":"batch","Version":"v1","Resource":"jobs"}},{"gvr":{"Group":"","Version":"","Resource":"pods"},"selector":"test-key1=test-value1"}],"owner":{"apiVersion":"custom/v1","kind":"Parent"},"mode":"Resource"}`,
+									Value: `{"namespaces":["source-namespace"],"allNamespaces":false,"resources":[{"gvr":{"Group":"","Version":"","Resource":"namespaces"}},{"gvr":{"Group":"batch","Version":"v1","Resource":"jobs"}},{"gvr":{"Group":"","Version":"","Resource":"pods"},"selector":"test-key1=test-value1"}],"owner":{"apiVersion":"custom/v1","kind":"Parent"},"mode":"Resource","originalNamespaces":["source-namespace"]}`,
 								}, {
 									Name:  "SYSTEM_NAMESPACE",
 									Value: "knative-testing",
@@ -269,12 +269,12 @@ Test certificate content here
 		{
 			name:           "FailFast true",
 			failFast:       true,
-			expectedConfig: `{"namespaces":["source-namespace"],"allNamespaces":false,"resources":[{"gvr":{"Group":"","Version":"","Resource":"namespaces"}}],"mode":"Resource","failFast":true}`,
+			expectedConfig: `{"namespaces":["source-namespace"],"allNamespaces":false,"resources":[{"gvr":{"Group":"","Version":"","Resource":"namespaces"}}],"mode":"Resource","failFast":true,"originalNamespaces":["source-namespace"]}`,
 		},
 		{
 			name:           "FailFast false",
 			failFast:       false,
-			expectedConfig: `{"namespaces":["source-namespace"],"allNamespaces":false,"resources":[{"gvr":{"Group":"","Version":"","Resource":"namespaces"}}],"mode":"Resource"}`,
+			expectedConfig: `{"namespaces":["source-namespace"],"allNamespaces":false,"resources":[{"gvr":{"Group":"","Version":"","Resource":"namespaces"}}],"mode":"Resource","originalNamespaces":["source-namespace"]}`,
 		},
 	}
 

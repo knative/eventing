@@ -239,6 +239,11 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1.ApiServer
 
 	featureFlags := feature.FromContext(ctx)
 
+	disableCache := false
+	if src.Spec.DisableCache != nil {
+		disableCache = *src.Spec.DisableCache
+	}
+
 	adapterArgs := resources.ReceiveAdapterArgs{
 		Image:         r.receiveAdapterImage,
 		Source:        src,
@@ -251,6 +256,7 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1.ApiServer
 		AllNamespaces: allNamespaces,
 		NodeSelector:  featureFlags.NodeSelector(),
 		FailFast:      skipPermissions == "true",
+		DisableCache:  disableCache,
 	}
 
 	expected, err := resources.MakeReceiveAdapter(&adapterArgs)
