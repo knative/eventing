@@ -17,7 +17,6 @@ jobs:
       fail-fast: false # Keep running if one leg fails.
       matrix:
         k8s-version:
-          - v1.33.x
           - v1.34.x
           - v1.35.x
 
