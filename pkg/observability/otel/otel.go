@@ -18,6 +18,7 @@ package otel
 
 import (
 	"context"
+	"fmt"
 
 	"go.opentelemetry.io/contrib/instrumentation/runtime"
 	"go.opentelemetry.io/otel"
@@ -45,13 +46,27 @@ import (
 	"knative.dev/pkg/system"
 )
 
+// ConfigOption is a functional option for configuring observability
+type ConfigOption func(*observability.Config)
+
+// WithDefaultMetricsPort sets a custom default metrics port for components that need
+// a different port than the global default (e.g., mt-broker-filter, mt-broker-ingress, job-sink use 9092)
+func WithDefaultMetricsPort(port int) ConfigOption {
+	return func(cfg *observability.Config) {
+		if cfg.BaseConfig.Metrics.Protocol == metrics.ProtocolPrometheus && cfg.BaseConfig.Metrics.Endpoint == "" {
+			cfg.BaseConfig.Metrics.Endpoint = fmt.Sprintf(":%d", port)
+		}
+	}
+}
+
 func SetupObservabilityOrDie(
 	ctx context.Context,
 	component string,
 	logger *zap.SugaredLogger,
 	pprof *k8sruntime.ProfilingServer,
+	opts ...ConfigOption,
 ) (*metrics.MeterProvider, *tracing.TracerProvider) {
-	cfg, err := GetObservabilityConfig(ctx)
+	cfg, err := GetObservabilityConfig(ctx, opts...)
 	if err != nil {
 		logger.Fatalw("error loading observability configuration", zap.Error(err))
 	}
@@ -139,19 +154,34 @@ func DefaultTraceProvider(ctx context.Context, resource *sdkresource.Resource) *
 // 1. the provided context,
 // 2. from the API server,
 // 3. default values (if not found and there were no other errors in the api server request).
-func GetObservabilityConfig(ctx context.Context) (*observability.Config, error) {
-	if cfg := observability.GetConfig(ctx); cfg != nil {
-		return cfg, nil
+func GetObservabilityConfig(ctx context.Context, opts ...ConfigOption) (*observability.Config, error) {
+	var cfg *observability.Config
+
+	if contextCfg := observability.GetConfig(ctx); contextCfg != nil {
+		cfg = contextCfg
+	} else {
+		cm, err := kubeclient.Get(ctx).CoreV1().ConfigMaps(system.Namespace()).
+			Get(ctx, o11yconfigmap.Name(), metav1.GetOptions{})
+
+		if apierrors.IsNotFound(err) {
+			cfg = observability.DefaultConfig()
+		} else if err != nil {
+			return nil, err
+		} else {
+			cfg, err = configmap.Parse(cm)
+			if err != nil {
+				return nil, err
+			}
+		}
 	}
 
-	cm, err := kubeclient.Get(ctx).CoreV1().ConfigMaps(system.Namespace()).
-		Get(ctx, o11yconfigmap.Name(), metav1.GetOptions{})
-
-	if apierrors.IsNotFound(err) {
-		return observability.DefaultConfig(), nil
-	} else if err != nil {
-		return nil, err
+	// Apply custom options first
+	for _, opt := range opts {
+		opt(cfg)
 	}
 
-	return configmap.Parse(cm)
+	// Then apply global default port if endpoint is still not set
+	WithDefaultMetricsPort(observability.DefaultMetricsPort)(cfg)
+
+	return cfg, nil
 }

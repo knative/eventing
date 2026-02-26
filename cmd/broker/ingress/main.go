@@ -114,7 +114,7 @@ func main() {
 
 	pprof := k8sruntime.NewProfilingServer(sl.Named("pprof"))
 
-	mp, tp := otel.SetupObservabilityOrDie(ctx, "broker.ingress", sl, pprof)
+	mp, tp := otel.SetupObservabilityOrDie(ctx, "broker.ingress", sl, pprof, otel.WithDefaultMetricsPort(defaultMetricsPort))
 
 	defer func() {
 		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)

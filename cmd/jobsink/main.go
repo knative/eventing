@@ -72,8 +72,9 @@ import (
 )
 
 const (
-	component = "job_sink"
-	ScopeName = "knative.dev/cmd/jobsink"
+	component          = "job_sink"
+	ScopeName          = "knative.dev/cmd/jobsink"
+	defaultMetricsPort = 9092
 )
 
 var (
@@ -103,7 +104,7 @@ func main() {
 
 	pprof := k8sruntime.NewProfilingServer(sl.Named("pprof"))
 
-	mp, tp := otel.SetupObservabilityOrDie(ctx, "jobsink", sl, pprof)
+	mp, tp := otel.SetupObservabilityOrDie(ctx, "jobsink", sl, pprof, otel.WithDefaultMetricsPort(defaultMetricsPort))
 
 	defer func() {
 		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)

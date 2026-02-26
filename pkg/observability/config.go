@@ -33,7 +33,7 @@ const (
 	DefaultEnableSinkEventErrorReporting = false
 
 	// DefaultMetricsPort is the default port used for prometheus metrics if the prometheus protocol is used
-	DefaultMetricsPort = 9092
+	DefaultMetricsPort = 9090
 )
 
 type (
@@ -67,11 +67,6 @@ func NewFromMap(m map[string]string) (*Config, error) {
 		return nil, err
 	} else {
 		c.BaseConfig = *cfg
-	}
-
-	// Force the port to the default queue user metrics port if it's not overridden
-	if c.BaseConfig.Metrics.Protocol == metrics.ProtocolPrometheus && c.BaseConfig.Metrics.Endpoint == "" {
-		c.BaseConfig.Metrics.Endpoint = fmt.Sprintf(":%d", DefaultMetricsPort)
 	}
 
 	err := configmap.Parse(m, configmap.As(EnableSinkEventErrorReportingKey, &c.EnableSinkEventErrorReporting))
