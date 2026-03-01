@@ -413,6 +413,9 @@ func (r *Reconciler) jsonataCaCerts(_ context.Context, transform *eventing.Event
 	return ptr.String(string(ca))
 }
 
+// reconcileAuthProxyRBAC reconciles the RBAC resources required by the auth-proxy sidecar:
+// a namespace-scoped RoleBinding for EventPolicy access and an aggregated RoleBinding in the
+// knative-eventing namespace for ConfigMap access. Both are only created when OIDC is enabled.
 func (r *Reconciler) reconcileAuthProxyRBAC(ctx context.Context, transform *eventing.EventTransform) error {
 	features := feature.FromContext(ctx)
 
@@ -427,6 +430,9 @@ func (r *Reconciler) reconcileAuthProxyRBAC(ctx context.Context, transform *even
 	return nil
 }
 
+// reconcileEventPolicyRBAC reconciles a namespace-scoped RoleBinding that grants the auth-proxy
+// read access to EventPolicies in the EventTransform's namespace, enabling authorization checks.
+// The RoleBinding is deleted when OIDC authentication is disabled.
 func (r *Reconciler) reconcileEventPolicyRBAC(ctx context.Context, transform *eventing.EventTransform, features feature.Flags) error {
 	expected := jsonataEventPolicyRoleBinding(transform)
 
@@ -454,6 +460,10 @@ func (r *Reconciler) reconcileEventPolicyRBAC(ctx context.Context, transform *ev
 	return nil
 }
 
+// reconcileConfigMapAccessRBAC reconciles an aggregated RoleBinding in the knative-eventing
+// namespace that grants the auth-proxy read access to the config-features and config-logging
+// ConfigMaps. All EventTransform service accounts are aggregated into a single RoleBinding to
+// avoid creating one per EventTransform. The RoleBinding is deleted when OIDC is disabled.
 func (r *Reconciler) reconcileConfigMapAccessRBAC(ctx context.Context, transform *eventing.EventTransform, features feature.Flags) error {
 	allTransforms, err := r.eventTransformLister.List(labels.Everything())
 	if err != nil {
@@ -484,16 +494,13 @@ func (r *Reconciler) reconcileConfigMapAccessRBAC(ctx context.Context, transform
 	return err
 }
 
+// deleteRoleBinding deletes the given RoleBinding if it exists, using the lister cache to
+// avoid unnecessary API calls when the RoleBinding is already absent.
 func (r *Reconciler) deleteRoleBinding(ctx context.Context, rb *rbacv1.RoleBinding) error {
-	_, err := r.rolebindingLister.RoleBindings(rb.Namespace).Get(rb.Name)
-	if apierrors.IsNotFound(err) {
+	if _, err := r.rolebindingLister.RoleBindings(rb.Namespace).Get(rb.Name); apierrors.IsNotFound(err) {
 		return nil
 	}
-	if err != nil {
-		return fmt.Errorf("failed to get rolebinding %s/%s: %w", rb.Namespace, rb.Name, err)
-	}
-
-	err = r.k8s.RbacV1().RoleBindings(rb.Namespace).Delete(ctx, rb.Name, metav1.DeleteOptions{})
+	err := r.k8s.RbacV1().RoleBindings(rb.Namespace).Delete(ctx, rb.Name, metav1.DeleteOptions{})
 	if apierrors.IsNotFound(err) {
 		return nil
 	}
