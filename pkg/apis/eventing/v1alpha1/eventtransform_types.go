@@ -22,6 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/kmeta"
@@ -129,6 +130,10 @@ type EventTransformStatus struct {
 	// It exposes the endpoint as an URI to get events delivered.
 	// +optional
 	duckv1.AddressStatus `json:",inline"`
+
+	// AppliedEventPoliciesStatus contains the list of EventPolicies which apply to this EventTransform.
+	// +optional
+	eventingduckv1.AppliedEventPoliciesStatus `json:",inline"`
 
 	// JsonataTransformationStatus is the status associated with JsonataEventTransformationSpec.
 	// +optional

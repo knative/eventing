@@ -352,6 +352,7 @@ func (in *EventTransformStatus) DeepCopyInto(out *EventTransformStatus) {
 	*out = *in
 	in.SourceStatus.DeepCopyInto(&out.SourceStatus)
 	in.AddressStatus.DeepCopyInto(&out.AddressStatus)
+	in.AppliedEventPoliciesStatus.DeepCopyInto(&out.AppliedEventPoliciesStatus)
 	if in.JsonataTransformationStatus != nil {
 		in, out := &in.JsonataTransformationStatus, &out.JsonataTransformationStatus
 		*out = new(JsonataEventTransformationStatus)

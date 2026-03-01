@@ -20,10 +20,12 @@ import (
 	"context"
 
 	cmclient "github.com/cert-manager/cert-manager/pkg/client/clientset/versioned"
+	"github.com/kelseyhightower/envconfig"
 	"go.uber.org/zap"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/informers"
+	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/certificates"
 	"knative.dev/eventing/pkg/eventingtls"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
@@ -31,14 +33,17 @@ import (
 	configmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap/filtered"
 	secretinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/secret/filtered"
 	serviceinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/service/filtered"
+	rolebindinginformer "knative.dev/pkg/client/injection/kube/informers/rbac/v1/rolebinding"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/injection"
 	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/logging"
 
+	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/apis/feature"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
+	eventpolicyinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventpolicy"
 	eventtransforminformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventtransform"
 	sinkbindinginformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1/sinkbinding/filtered"
 	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1alpha1/eventtransform"
@@ -48,6 +53,10 @@ import (
 const (
 	NameLabelKey = "eventing.knative.dev/event-transform-name"
 )
+
+type envConfig struct {
+	AuthProxyImage string `envconfig:"AUTH_PROXY_IMAGE" required:"true"`
+}
 
 func NewController(
 	ctx context.Context,
@@ -62,6 +71,8 @@ func NewController(
 	certificatesSecretInformer := secretinformer.Get(ctx, certificates.SecretLabelSelectorPair)
 	trustBundleConfigMapInformer := configmapinformer.Get(ctx, eventingtls.TrustBundleLabelSelector)
 	dynamicCertificatesInformer := certificates.NewDynamicCertificatesInformer()
+	eventPolicyInformer := eventpolicyinformer.Get(ctx)
+	rolebindingInformer := rolebindinginformer.Get(ctx)
 
 	// Create a custom informer as one in knative/pkg doesn't exist for endpoints.
 	jsonataEndpointFactory := informers.NewSharedInformerFactoryWithOptions(
@@ -72,6 +83,11 @@ func NewController(
 		}),
 	)
 	jsonataEndpointInformer := jsonataEndpointFactory.Core().V1().Endpoints()
+
+	env := &envConfig{}
+	if err := envconfig.Process("", env); err != nil {
+		logging.FromContext(ctx).Panicf("unable to process EventTransform's required environment variables: %v", err)
+	}
 
 	var globalResync func()
 	var enqueueControllerOf func(interface{})
@@ -104,6 +120,10 @@ func NewController(
 		cmCertificateLister:        dynamicCertificatesInformer.Lister(),
 		certificatesSecretLister:   certificatesSecretInformer.Lister(),
 		trustBundleConfigMapLister: trustBundleConfigMapInformer.Lister(),
+		eventPolicyLister:          eventPolicyInformer.Lister(),
+		rolebindingLister:          rolebindingInformer.Lister(),
+		eventTransformLister:       eventTransformInformer.Lister(),
+		authProxyImage:             env.AuthProxyImage,
 		configWatcher:              configWatcher,
 	}
 
@@ -125,6 +145,13 @@ func NewController(
 	jsonataEndpointInformer.Informer().AddEventHandler(controller.HandleAll(enqueueUsingNameLabel(impl)))
 	jsonataConfigMapInformer.Informer().AddEventHandler(controller.HandleAll(enqueueUsingNameLabel(impl)))
 	jsonataSinkBindingInformer.Informer().AddEventHandler(controller.HandleAll(enqueueUsingNameLabel(impl)))
+
+	eventTransformGK := v1alpha1.SchemeGroupVersion.WithKind("EventTransform").GroupKind()
+	eventPolicyInformer.Informer().AddEventHandler(auth.EventPolicyEventHandler(
+		eventTransformInformer.Informer().GetIndexer(),
+		eventTransformGK,
+		impl.EnqueueKey,
+	))
 
 	// Start the factory after creating all necessary informers.
 	jsonataEndpointFactory.Start(ctx.Done())
