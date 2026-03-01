@@ -19,6 +19,7 @@ package eventtransform
 import (
 	"context"
 	"fmt"
+	"os"
 	"sync/atomic"
 	"testing"
 
@@ -72,6 +73,8 @@ var (
 
 func TestReconcile(t *testing.T) {
 	t.Setenv("EVENT_TRANSFORM_JSONATA_IMAGE", "quay.io/event-transform")
+	t.Setenv("AUTH_PROXY_IMAGE", testAuthProxyImage)
+	t.Setenv("SYSTEM_NAMESPACE", "knative-testing")
 
 	ctx := context.Background()
 	logger := logtesting.TestLogger(t)
@@ -2030,6 +2033,75 @@ func TestReconcile(t *testing.T) {
 			},
 			WantErr: true, // skip key, waiting for endpoints
 		},
+		{
+			Name: "creates auth-proxy RoleBindings and deployment with auth-proxy when OIDC is enabled",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewEventTransform(testName, testNS,
+					WithEventTransformJsonataExpression(),
+				),
+				jsonataTestDeploymentWithAuthProxy(ctx, cw, func(d *appsv1.Deployment) {
+					d.Status = appsv1.DeploymentStatus{
+						ObservedGeneration:  1,
+						Replicas:            1,
+						UpdatedReplicas:     1,
+						ReadyReplicas:       1,
+						AvailableReplicas:   1,
+						UnavailableReplicas: 0,
+					}
+				}),
+				&corev1.Endpoints{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testNS,
+						Name:      fmt.Sprintf("%s-%s", testName, "jsonata"),
+					},
+					Subsets: []corev1.EndpointSubset{
+						{
+							Ports:     []corev1.EndpointPort{{Port: 3128}},
+							Addresses: []corev1.EndpointAddress{{IP: "192.168.0.1"}},
+						},
+					},
+				},
+				jsonataExpressionTestConfigMap(ctx),
+				&corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{Namespace: testNS, Name: "config-features"},
+					Data: map[string]string{
+						"authentication-oidc": "enabled",
+					},
+				},
+			},
+			WantCreates: []runtime.Object{
+				jsonataTestServiceWithAuthProxy(ctx),
+				jsonataTestEventPolicyRoleBinding(),
+				jsonataTestAuthProxyRoleBinding(),
+			},
+			WantEvents: []string{
+				eventJsonataServiceCreated(),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{
+				{Object: NewEventTransform(testName, testNS,
+					WithEventTransformJsonataExpression(),
+					WithJsonataEventTransformInitializeStatus(),
+					WithJsonataDeploymentStatus(appsv1.DeploymentStatus{
+						ObservedGeneration:  1,
+						Replicas:            1,
+						UpdatedReplicas:     1,
+						ReadyReplicas:       1,
+						AvailableReplicas:   1,
+						UnavailableReplicas: 0,
+					}),
+					WithEventTransformAddresses(
+						duckv1.Addressable{
+							Name:     ptr.String("http"),
+							URL:      apis.HTTP(network.GetServiceHostname(fmt.Sprintf("%s-%s", testName, "jsonata"), testNS)),
+							Audience: ptr.String(v1alpha1.SchemeGroupVersion.Group + "/eventtransform/" + testNS + "/" + testName),
+						},
+					),
+					WithEventTransformEventPoliciesReady("DefaultAuthorizationMode", `Default authz mode is "Allow-Same-Namespace"`),
+				)},
+			},
+			SkipNamespaceValidation: true,
+		},
 	}
 
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, watcher configmap.Watcher) controller.Reconciler {
@@ -2053,7 +2125,7 @@ func TestReconcile(t *testing.T) {
 			eventPolicyLister:          listers.GetEventPolicyLister(),
 			rolebindingLister:          listers.GetRoleBindingLister(),
 			eventTransformLister:       listers.GetEventTransformLister(),
-			authProxyImage:             "",
+			authProxyImage:             os.Getenv("AUTH_PROXY_IMAGE"),
 			configWatcher:              cw,
 		}
 
@@ -2226,137 +2298,6 @@ func eventJsonataCertificateDeleted() string {
 }
 
 const testAuthProxyImage = "quay.io/fake-auth-proxy"
-
-func TestReconcileOIDC(t *testing.T) {
-	t.Setenv("EVENT_TRANSFORM_JSONATA_IMAGE", "quay.io/event-transform")
-	t.Setenv("SYSTEM_NAMESPACE", "knative-testing")
-
-	ctx := context.Background()
-	logger := logtesting.TestLogger(t)
-	ctx = logging.WithLogger(ctx, logger)
-
-	cw := reconcilersource.WatchConfigurations(
-		ctx,
-		"eventtransform",
-		configmap.NewStaticWatcher(
-			&corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{Name: "config-logging"},
-			},
-			&corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{Name: "config-observability"},
-			},
-			&corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{Name: "config-tracing"},
-			},
-		),
-	)
-
-	serviceName := fmt.Sprintf("%s-%s", testName, "jsonata")
-
-	table := TableTest{
-		{
-			Name: "creates auth-proxy RoleBindings and deployment with auth-proxy when OIDC is enabled",
-			Key:  testKey,
-			Ctx: feature.ToContext(context.Background(), feature.Flags{
-				feature.OIDCAuthentication: feature.Enabled,
-			}),
-			Objects: []runtime.Object{
-				NewEventTransform(testName, testNS,
-					WithEventTransformJsonataExpression(),
-				),
-				jsonataTestDeploymentWithAuthProxy(ctx, cw, func(d *appsv1.Deployment) {
-					d.Status = appsv1.DeploymentStatus{
-						ObservedGeneration:  1,
-						Replicas:            1,
-						UpdatedReplicas:     1,
-						ReadyReplicas:       1,
-						AvailableReplicas:   1,
-						UnavailableReplicas: 0,
-					}
-				}),
-				&corev1.Endpoints{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: testNS,
-						Name:      serviceName,
-					},
-					Subsets: []corev1.EndpointSubset{
-						{
-							Ports:     []corev1.EndpointPort{{Port: 3128}},
-							Addresses: []corev1.EndpointAddress{{IP: "192.168.0.1"}},
-						},
-					},
-				},
-				jsonataExpressionTestConfigMap(ctx),
-				&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: testNS, Name: "config-features"}},
-			},
-			WantCreates: []runtime.Object{
-				jsonataTestServiceWithAuthProxy(ctx),
-				jsonataTestEventPolicyRoleBinding(),
-				jsonataTestAuthProxyRoleBinding(),
-			},
-			WantEvents: []string{
-				eventJsonataServiceCreated(),
-			},
-			WantStatusUpdates: []clientgotesting.UpdateActionImpl{
-				{Object: NewEventTransform(testName, testNS,
-					WithEventTransformJsonataExpression(),
-					WithJsonataEventTransformInitializeStatus(),
-					WithJsonataDeploymentStatus(appsv1.DeploymentStatus{
-						ObservedGeneration:  1,
-						Replicas:            1,
-						UpdatedReplicas:     1,
-						ReadyReplicas:       1,
-						AvailableReplicas:   1,
-						UnavailableReplicas: 0,
-					}),
-					WithEventTransformAddresses(
-						duckv1.Addressable{
-							Name:     ptr.String("http"),
-							URL:      apis.HTTP(network.GetServiceHostname(serviceName, testNS)),
-							Audience: ptr.String(v1alpha1.SchemeGroupVersion.Group + "/eventtransform/" + testNS + "/" + testName),
-						},
-					),
-					WithEventTransformEventPoliciesReady("DefaultAuthorizationMode", `Default authz mode is ""`),
-				)},
-			},
-			SkipNamespaceValidation: true,
-		},
-	}
-
-	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, watcher configmap.Watcher) controller.Reconciler {
-
-		cmCertificatesListerAtomic := &atomic.Pointer[cmlisters.CertificateLister]{}
-		cmCertificatesLister := listers.GetCertificateLister()
-		cmCertificatesListerAtomic.Store(&cmCertificatesLister)
-
-		r := &Reconciler{
-			k8s:                        kubeclient.Get(ctx),
-			client:                     eventingclient.Get(ctx),
-			cmClient:                   cmclient.Get(ctx),
-			jsonataConfigMapLister:     listers.GetConfigMapLister(),
-			jsonataDeploymentsLister:   listers.GetDeploymentLister(),
-			jsonataServiceLister:       listers.GetServiceLister(),
-			jsonataEndpointLister:      listers.GetEndpointsLister(),
-			jsonataSinkBindingLister:   listers.GetSinkBindingLister(),
-			cmCertificateLister:        cmCertificatesListerAtomic,
-			certificatesSecretLister:   listers.GetSecretLister(),
-			trustBundleConfigMapLister: listers.GetConfigMapLister(),
-			eventPolicyLister:          listers.GetEventPolicyLister(),
-			rolebindingLister:          listers.GetRoleBindingLister(),
-			eventTransformLister:       listers.GetEventTransformLister(),
-			authProxyImage:             testAuthProxyImage,
-			configWatcher:              cw,
-		}
-
-		return eventtransform.NewReconciler(ctx,
-			logger,
-			fakeeventingclient.Get(ctx),
-			listers.GetEventTransformLister(),
-			controller.GetEventRecorder(ctx),
-			r,
-		)
-	}, false, logger))
-}
 
 func jsonataTestDeploymentWithAuthProxy(ctx context.Context, cw *reconcilersource.ConfigWatcher, opts ...DeploymentOption) *appsv1.Deployment {
 	oidcCtx := feature.ToContext(ctx, feature.Flags{
