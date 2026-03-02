@@ -27,9 +27,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
-	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 	"go.opentelemetry.io/otel/trace"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
@@ -310,10 +308,9 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 
 	statusCode, dispatchTime := h.receive(ctx, utils.PassThroughHeaders(request.Header), event, broker)
 	if dispatchTime > kncloudevents.NoDuration {
+		ctx = observability.WithHTTPStatusCodeLabel(ctx, statusCode)
 		labeler, _ := otelhttp.LabelerFromContext(ctx)
-		attrs := []attribute.KeyValue{semconv.HTTPResponseStatusCode(statusCode)}
-		attrs = append(attrs, labeler.Get()...)
-		h.dispatchDuration.Record(ctx, dispatchTime.Seconds(), metric.WithAttributes(attrs...))
+		h.dispatchDuration.Record(ctx, dispatchTime.Seconds(), metric.WithAttributes(labeler.Get()...))
 	}
 
 	writer.WriteHeader(statusCode)

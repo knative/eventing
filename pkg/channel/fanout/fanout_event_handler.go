@@ -31,9 +31,7 @@ import (
 	"github.com/cloudevents/sdk-go/v2/event"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
-	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
@@ -318,6 +316,7 @@ func (f *FanoutEventHandler) dispatch(ctx context.Context, subs []Subscription, 
 			r := DispatchResult{err: err, info: dispatchedResultPerSub}
 			results <- r
 
+			ctx = observability.WithHTTPStatusCodeLabel(ctx, dispatchedResultPerSub.ResponseCode)
 			labeler, _ := otelhttp.LabelerFromContext(ctx)
 			labels := append(
 				observability.MessagingLabels(
@@ -326,9 +325,7 @@ func (f *FanoutEventHandler) dispatch(ctx context.Context, subs []Subscription, 
 				),
 				labeler.Get()...,
 			)
-			attrs := []attribute.KeyValue{semconv.HTTPResponseStatusCode(dispatchedResultPerSub.ResponseCode)}
-			attrs = append(attrs, labels...)
-			f.dispatchDuration.Record(ctx, dispatchedResultPerSub.Duration.Seconds(), metric.WithAttributes(attrs...))
+			f.dispatchDuration.Record(ctx, dispatchedResultPerSub.Duration.Seconds(), metric.WithAttributes(labels...))
 
 		}(sub)
 	}
