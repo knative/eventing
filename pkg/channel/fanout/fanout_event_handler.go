@@ -316,7 +316,8 @@ func (f *FanoutEventHandler) dispatch(ctx context.Context, subs []Subscription, 
 			r := DispatchResult{err: err, info: dispatchedResultPerSub}
 			results <- r
 
-			labeler, _ := otelhttp.LabelerFromContext(ctx)
+			ctxWithStatus := observability.WithHTTPStatusCodeLabel(ctx, dispatchedResultPerSub.ResponseCode)
+			labeler, _ := otelhttp.LabelerFromContext(ctxWithStatus)
 			labels := append(
 				observability.MessagingLabels(
 					tracing.SubscriptionMessagingDestination(types.NamespacedName{Name: s.Name, Namespace: s.Namespace}),
@@ -324,7 +325,7 @@ func (f *FanoutEventHandler) dispatch(ctx context.Context, subs []Subscription, 
 				),
 				labeler.Get()...,
 			)
-			f.dispatchDuration.Record(ctx, dispatchedResultPerSub.Duration.Seconds(), metric.WithAttributes(labels...))
+			f.dispatchDuration.Record(ctxWithStatus, dispatchedResultPerSub.Duration.Seconds(), metric.WithAttributes(labels...))
 
 		}(sub)
 	}

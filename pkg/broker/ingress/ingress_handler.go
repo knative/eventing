@@ -308,6 +308,7 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 
 	statusCode, dispatchTime := h.receive(ctx, utils.PassThroughHeaders(request.Header), event, broker)
 	if dispatchTime > kncloudevents.NoDuration {
+		ctx = observability.WithHTTPStatusCodeLabel(ctx, statusCode)
 		labeler, _ := otelhttp.LabelerFromContext(ctx)
 		h.dispatchDuration.Record(ctx, dispatchTime.Seconds(), metric.WithAttributes(labeler.Get()...))
 	}
