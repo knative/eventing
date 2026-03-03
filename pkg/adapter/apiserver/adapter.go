@@ -52,10 +52,11 @@ type apiServerAdapter struct {
 
 	config Config
 
-	discover discovery.DiscoveryInterface
-	k8s      dynamic.Interface
-	source   string // TODO: who dis?
-	name     string // TODO: who dis?
+	discover  discovery.DiscoveryInterface
+	k8s       dynamic.Interface
+	source    string // TODO: who dis?
+	name      string // TODO: who dis?
+	namespace string
 }
 
 type resourceWatchMatch struct {
@@ -199,6 +200,7 @@ func (a *apiServerAdapter) setupDelegate() cache.Store {
 		logger:              a.logger,
 		ref:                 a.config.EventMode == v1.ReferenceMode,
 		apiServerSourceName: a.name,
+		apiServerSourceNS:   a.namespace,
 		filter:              subscriptionsapi.NewAllFilter(subscriptionsapi.MaterializeFiltersList(a.logger.Desugar(), a.config.Filters)...),
 	}
 	if a.config.ResourceOwner != nil {

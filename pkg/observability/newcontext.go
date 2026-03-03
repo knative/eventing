@@ -168,6 +168,20 @@ func WithSinkLabels(ctx context.Context, sink types.NamespacedName, kind string)
 	return ctx
 }
 
+func WithSourceLabels(ctx context.Context, source types.NamespacedName) context.Context {
+	labeler, ok := otelhttp.LabelerFromContext(ctx)
+	if !ok {
+		ctx = otelhttp.ContextWithLabeler(ctx, labeler)
+	}
+
+	labeler.Add(
+		SourceName.With(source.Name),
+		SourceNamespace.With(source.Namespace),
+	)
+
+	return ctx
+}
+
 func WithHTTPStatusCodeLabel(ctx context.Context, statusCode int) context.Context {
 	labeler, ok := otelhttp.LabelerFromContext(ctx)
 	if !ok {
