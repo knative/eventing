@@ -22,9 +22,11 @@ import (
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/eventing/pkg/adapter/apiserver/events"
 	"knative.dev/eventing/pkg/eventfilter"
+	"knative.dev/eventing/pkg/observability"
 )
 
 type resourceDelegate struct {
@@ -32,9 +34,9 @@ type resourceDelegate struct {
 	source              string
 	ref                 bool
 	apiServerSourceName string
+	apiServerSourceNS   string
 	filter              eventfilter.Filter
-
-	logger *zap.SugaredLogger
+	logger              *zap.SugaredLogger
 }
 
 var _ cache.Store = (*resourceDelegate)(nil)
@@ -81,6 +83,14 @@ func (a *resourceDelegate) sendCloudEvent(ctx context.Context, event cloudevents
 	source := event.Context.GetSource()
 	subject := event.Context.GetSubject()
 	a.logger.Debugf("sending cloudevent id: %s, source: %s, subject: %s", event.ID(), source, subject)
+
+	// Add labels to context so otelhttp picks them up for metrics
+	ctx = observability.WithLabeler(ctx)
+	ctx = observability.WithSourceLabels(ctx, types.NamespacedName{
+		Name:      a.apiServerSourceName,
+		Namespace: a.apiServerSourceNS,
+	})
+	ctx = observability.WithMinimalEventLabels(ctx, &event)
 
 	if result := a.ce.Send(ctx, event); !cloudevents.IsACK(result) {
 		a.logger.Errorw("failed to send cloudevent", zap.Error(result), zap.String("source", source),
