@@ -186,7 +186,9 @@ spec:
                     description: matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels map is equivalent to an element of matchExpressions, whose key field is "key", the operator is "In", and the values array contains only "value". The requirements are ANDed.
                     type: object
                     x-kubernetes-preserve-unknown-fields: true
-
+              disableCache:
+                description: DisableCache, when set to true, configures the adapter to disable client-side caching of Kubernetes resources. This prevents the adapter from using resourceVersion-based caching which can cause throttling when tracking many resources across namespaces.
+                type: boolean
           status:
             type: object
             properties:
