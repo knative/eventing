@@ -874,6 +874,7 @@ func TestSinkBindingDo(t *testing.T) {
 							VolumeMounts: []corev1.VolumeMount{{
 								Name:      oidcTokenVolumeName,
 								MountPath: "/oidc",
+								ReadOnly:  true,
 							}},
 						}},
 						Containers: []corev1.Container{{
@@ -892,6 +893,7 @@ func TestSinkBindingDo(t *testing.T) {
 							VolumeMounts: []corev1.VolumeMount{{
 								Name:      oidcTokenVolumeName,
 								MountPath: "/oidc",
+								ReadOnly:  true,
 							}},
 						}},
 						Volumes: []corev1.Volume{{
