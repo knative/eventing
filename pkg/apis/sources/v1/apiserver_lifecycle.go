@@ -104,7 +104,13 @@ func (s *ApiServerSourceStatus) PropagateDeploymentAvailability(d *appsv1.Deploy
 		if cond.Type == appsv1.DeploymentAvailable {
 			deploymentAvailableFound = true
 			if cond.Status == corev1.ConditionTrue {
-				apiserverCondSet.Manage(s).MarkTrue(ApiServerConditionDeployed)
+				// Also check that there are no unavailable replicas to ensure the deployment
+				// is fully ready (not in the middle of a rolling update)
+				if d.Status.UnavailableReplicas == 0 {
+					apiserverCondSet.Manage(s).MarkTrue(ApiServerConditionDeployed)
+				} else {
+					apiserverCondSet.Manage(s).MarkUnknown(ApiServerConditionDeployed, "DeploymentUpdating", "Deployment has %d unavailable replica(s).", d.Status.UnavailableReplicas)
+				}
 			} else if cond.Status == corev1.ConditionFalse {
 				apiserverCondSet.Manage(s).MarkFalse(ApiServerConditionDeployed, cond.Reason, cond.Message)
 			} else if cond.Status == corev1.ConditionUnknown {

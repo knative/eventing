@@ -111,6 +111,18 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 		}(),
 		wantConditionStatus: corev1.ConditionTrue,
 		want:                true,
+	}, {
+		name: "mark sink and deployment with unavailable replicas",
+		s: func() *PingSourceStatus {
+			s := &PingSourceStatus{}
+			s.InitializeConditions()
+			s.MarkOIDCIdentityCreatedSucceeded()
+			s.MarkSink(exampleAddr)
+			s.PropagateDeploymentAvailability(deploymentWithUnavailableReplicas)
+			return s
+		}(),
+		wantConditionStatus: corev1.ConditionUnknown,
+		want:                false,
 	},
 		{
 			name: "oidc status false",
