@@ -141,7 +141,7 @@ O2dgzikq8iSy1BlRsVw=
 							Image: "test-image",
 							Ports: []corev1.ContainerPort{{
 								Name:          "metrics",
-								ContainerPort: 9090,
+								ContainerPort: 9092,
 							}, {
 								Name:          "probes",
 								ContainerPort: 8080,
