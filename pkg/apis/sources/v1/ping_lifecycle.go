@@ -115,7 +115,13 @@ func (s *PingSourceStatus) PropagateDeploymentAvailability(d *appsv1.Deployment)
 		if cond.Type == appsv1.DeploymentAvailable {
 			deploymentAvailableFound = true
 			if cond.Status == corev1.ConditionTrue {
-				PingSourceCondSet.Manage(s).MarkTrue(PingSourceConditionDeployed)
+				// Also check that there are no unavailable replicas to ensure the deployment
+				// is fully ready (not in the middle of a rolling update)
+				if d.Status.UnavailableReplicas == 0 {
+					PingSourceCondSet.Manage(s).MarkTrue(PingSourceConditionDeployed)
+				} else {
+					PingSourceCondSet.Manage(s).MarkUnknown(PingSourceConditionDeployed, "DeploymentUpdating", "Deployment has %d unavailable replica(s).", d.Status.UnavailableReplicas)
+				}
 			} else if cond.Status == corev1.ConditionFalse {
 				PingSourceCondSet.Manage(s).MarkFalse(PingSourceConditionDeployed, cond.Reason, cond.Message)
 			} else if cond.Status == corev1.ConditionUnknown {
