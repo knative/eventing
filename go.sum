@@ -160,6 +160,8 @@ github.com/coreos/go-semver v0.3.0/go.mod h1:nnelYz7RCh+5ahJtPPxZlU+153eP4D4r3Ee
 github.com/coreos/go-systemd/v22 v22.3.2/go.mod h1:Y58oyj3AT4RCenI/lSvhwexgC+NSVTIJ3seZv2GcEnc=
 github.com/cpuguy83/go-md2man/v2 v2.0.1/go.mod h1:tgQtvFlXSQOSOSIRvRPT7W67SCa46tRHOmNcaadrF8o=
 github.com/cpuguy83/go-md2man/v2 v2.0.6/go.mod h1:oOW0eioCTA6cOiMLiUPZOpcVxMig6NIQQ7OS05n1F4g=
+github.com/creydr/knative-pkg v0.0.0-20260305162839-8b8e5874202c h1:S8eTRbNnsH5dVpJH6Id5K9epAPsw+KzgUOkE2c3lLwM=
+github.com/creydr/knative-pkg v0.0.0-20260305162839-8b8e5874202c/go.mod h1:mV8s7Uc92am8byZSJPIaVm1NBr0h8vsFL+sEEvMoBbk=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1VwoXQT9A3Wy9MM3WgvqSxFWenqJduM=
@@ -1139,8 +1141,6 @@ knative.dev/hack v0.0.0-20260212092700-0126b283bf20 h1:Ocya6ILPQxGrozD5gPELC4J2A
 knative.dev/hack v0.0.0-20260212092700-0126b283bf20/go.mod h1:L5RzHgbvam0u8QFHfzCX6MKxu/a/gIGEdaRBqNiVbl0=
 knative.dev/hack/schema v0.0.0-20260212092700-0126b283bf20 h1:iLDZBzvPIvRS8SljHURFy8sZKhqk+wTwIfNH/O5KaaA=
 knative.dev/hack/schema v0.0.0-20260212092700-0126b283bf20/go.mod h1:KkibP1IazICP5ClxwN5D26LDSygsqbYnVGuGFTsHNOQ=
-knative.dev/pkg v0.0.0-20260304131155-a902bbfa38de h1:cz1QT/L7SNC+dF47xYRPJt1WRP/HfTx8+KoZjmGA8V8=
-knative.dev/pkg v0.0.0-20260304131155-a902bbfa38de/go.mod h1:mV8s7Uc92am8byZSJPIaVm1NBr0h8vsFL+sEEvMoBbk=
 knative.dev/reconciler-test v0.0.0-20260303022055-b6439c2a1955 h1:1SRnHx9BimeT4rIYUA91kjgllqEe7F3VPNdB3ak+kog=
 knative.dev/reconciler-test v0.0.0-20260303022055-b6439c2a1955/go.mod h1:WQUf92QsHOho5etxhuSpa7t8SziOhBhXUsg4jRSb1l4=
 rsc.io/binaryregexp v0.2.0/go.mod h1:qTv7/COck+e2FymRvadv62gMdZztPaShugOCi3I+8D8=

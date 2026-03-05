@@ -1378,7 +1378,7 @@ knative.dev/hack/schema/commands
 knative.dev/hack/schema/docs
 knative.dev/hack/schema/registry
 knative.dev/hack/schema/schema
-# knative.dev/pkg v0.0.0-20260304131155-a902bbfa38de
+# knative.dev/pkg v0.0.0-20260304131155-a902bbfa38de => github.com/creydr/knative-pkg v0.0.0-20260305162839-8b8e5874202c
 ## explicit; go 1.25.0
 knative.dev/pkg/apiextensions/storageversion
 knative.dev/pkg/apiextensions/storageversion/cmd/migrate
@@ -1590,3 +1590,4 @@ sigs.k8s.io/structured-merge-diff/v6/value
 # sigs.k8s.io/yaml v1.6.0
 ## explicit; go 1.22
 sigs.k8s.io/yaml
+# knative.dev/pkg => github.com/creydr/knative-pkg v0.0.0-20260305162839-8b8e5874202c

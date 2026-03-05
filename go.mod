@@ -157,7 +157,5 @@ require (
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.0 // indirect
 )
 
-replace (
-	// test with github.com/creydr/knative-pkg@remove-watchlist-wrapper-for-ducktypes
-	knative.dev/pkg => github.com/creydr/knative-pkg remove-watchlist-wrapper-for-ducktypes
-)
+// test with github.com/creydr/knative-pkg@remove-watchlist-wrapper-for-ducktypes
+replace knative.dev/pkg => github.com/creydr/knative-pkg v0.0.0-20260305162839-8b8e5874202c
