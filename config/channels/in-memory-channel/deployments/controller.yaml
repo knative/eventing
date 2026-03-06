@@ -63,11 +63,6 @@ spec:
             value: config-observability
           - name: METRICS_DOMAIN
             value: knative.dev/inmemorychannel-controller
-          # Disable WatchList client feature which is enabled by default in client-go v0.35
-          # but not fully supported on K8s servers < 1.35 (including GKE 1.34.x).
-          # This prevents informer cache sync issues where resources exist but aren't found.
-          - name: KUBE_FEATURE_WatchListClient
-            value: "false"
           - name: SYSTEM_NAMESPACE
             valueFrom:
               fieldRef:
