@@ -39,6 +39,7 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
+	pkgtls "knative.dev/pkg/tls"
 )
 
 const (
@@ -58,6 +59,8 @@ const (
 	BrokerFilterServerTLSSecretName = "mt-broker-filter-server-tls" //nolint:gosec // This is not a hardcoded credential
 	// BrokerIngressServerTLSSecretName is the name of the tls secret for the broker ingress server
 	BrokerIngressServerTLSSecretName = "mt-broker-ingress-server-tls" //nolint:gosec // This is not a hardcoded credential
+	// RequestReplyServerTLSSecretName is the name of the tls secret for the request reply server
+	RequestReplyServerTLSSecretName = "request-reply-server-tls" //nolint:gosec // This is not a hardcoded credential
 )
 
 type ClientConfig struct {
@@ -181,10 +184,19 @@ func NewDefaultServerConfig() ServerConfig {
 }
 
 func GetTLSServerConfig(config ServerConfig) (*tls.Config, error) {
-	return &tls.Config{
-		MinVersion:     DefaultMinTLSVersion,
-		GetCertificate: config.GetCertificate,
-	}, nil
+	cfg, err := pkgtls.DefaultConfigFromEnv("")
+	if err != nil {
+		return nil, fmt.Errorf("failed to load TLS config from env: %w", err)
+	}
+
+	// DefaultConfigFromEnv defaults to TLS 1.3, but eventing defaults to TLS 1.2.
+	// Only keep TLS 1.3 if explicitly set via environment variable.
+	if os.Getenv(pkgtls.MinVersionEnvKey) == "" {
+		cfg.MinVersion = DefaultMinTLSVersion
+	}
+
+	cfg.GetCertificate = config.GetCertificate
+	return cfg, nil
 }
 
 // IsHttpsSink returns true if the sink has scheme equal to https.
