@@ -51,8 +51,7 @@ func SourceToSink(brokerName string) *feature.Feature {
 	// Install the trigger
 	f.Setup("install trigger", trigger.Install(via, cfg...))
 
-	f.Setup("trigger goes ready", trigger.IsReady(via))
-
+	f.Requirement("trigger goes ready", trigger.IsReady(via))
 	f.Requirement("install source", eventshub.Install(source,
 		eventshub.StartSenderToResource(broker.GVR(), brokerName),
 		eventshub.InputEvent(event),
