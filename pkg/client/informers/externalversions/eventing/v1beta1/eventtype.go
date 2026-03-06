@@ -57,7 +57,7 @@ func NewEventTypeInformer(client versioned.Interface, namespace string, resyncPe
 // one. This reduces memory footprint and number of connections to the server.
 func NewFilteredEventTypeInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
-		&cache.ListWatch{
+		cache.ToListWatcherWithWatchListSemantics(&cache.ListWatch{
 			ListFunc: func(options v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
@@ -82,7 +82,7 @@ func NewFilteredEventTypeInformer(client versioned.Interface, namespace string, 
 				}
 				return client.EventingV1beta1().EventTypes(namespace).Watch(ctx, options)
 			},
-		},
+		}, client),
 		&apiseventingv1beta1.EventType{},
 		resyncPeriod,
 		indexers,

@@ -57,7 +57,7 @@ func NewBrokerInformer(client versioned.Interface, namespace string, resyncPerio
 // one. This reduces memory footprint and number of connections to the server.
 func NewFilteredBrokerInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
-		&cache.ListWatch{
+		cache.ToListWatcherWithWatchListSemantics(&cache.ListWatch{
 			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
@@ -82,7 +82,7 @@ func NewFilteredBrokerInformer(client versioned.Interface, namespace string, res
 				}
 				return client.EventingV1().Brokers(namespace).Watch(ctx, options)
 			},
-		},
+		}, client),
 		&apiseventingv1.Broker{},
 		resyncPeriod,
 		indexers,

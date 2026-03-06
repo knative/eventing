@@ -57,7 +57,7 @@ func NewChannelInformer(client versioned.Interface, namespace string, resyncPeri
 // one. This reduces memory footprint and number of connections to the server.
 func NewFilteredChannelInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
-		&cache.ListWatch{
+		cache.ToListWatcherWithWatchListSemantics(&cache.ListWatch{
 			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
@@ -82,7 +82,7 @@ func NewFilteredChannelInformer(client versioned.Interface, namespace string, re
 				}
 				return client.MessagingV1().Channels(namespace).Watch(ctx, options)
 			},
-		},
+		}, client),
 		&apismessagingv1.Channel{},
 		resyncPeriod,
 		indexers,
