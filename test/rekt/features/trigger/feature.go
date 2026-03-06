@@ -53,8 +53,6 @@ func TriggerDependencyAnnotation() *feature.Feature {
 	//Install the broker
 	brokerName := feature.MakeRandomK8sName("broker")
 	f.Setup("install broker", broker.Install(brokerName, broker.WithEnvConfig()...))
-	f.Setup("broker is ready", broker.IsReady(brokerName))
-	f.Setup("broker is addressable", broker.IsAddressable(brokerName))
 
 	psourcename := "test-ping-source-annotation"
 	dependencyAnnotation := `{"kind":"PingSource","name":"test-ping-source-annotation","apiVersion":"sources.knative.dev/v1"}`
@@ -72,11 +70,15 @@ func TriggerDependencyAnnotation() *feature.Feature {
 	// Install the trigger
 	f.Setup("install trigger", trigger.Install(triggerName, cfg...))
 
+	// Wait for broker to be ready before checking trigger state
+	f.Requirement("broker is ready", broker.IsReady(brokerName))
+	f.Requirement("broker is addressable", broker.IsAddressable(brokerName))
+
 	// trigger is not ready since the pingsource dependency is not installed yet
-	f.Setup("trigger is not ready before pingsource dependency exists", trigger.IsNotReady(triggerName))
+	f.Requirement("trigger is not ready before pingsource dependency exists", trigger.IsNotReady(triggerName))
 
 	// verify that the trigger has the DependencyDoesNotExist condition
-	f.Setup("trigger has DependencyDoesNotExist condition", trigger.DependencyDoesNotExist(triggerName))
+	f.Requirement("trigger has DependencyDoesNotExist condition", trigger.DependencyDoesNotExist(triggerName))
 
 	// trigger won't go ready until after the pingsource exists, because of the dependency annotation
 	f.Requirement("trigger goes ready", trigger.IsReady(triggerName))
@@ -121,13 +123,12 @@ func triggerWithDispatcherFormat(format string) *feature.Feature {
 	eventToSend := test.FullEvent()
 
 	f.Setup("Install Broker", broker.Install(brokerName, broker.WithEnvConfig()...))
-	f.Setup("Broker is ready", broker.IsReady(brokerName))
-	f.Setup("Broker is addressable", broker.IsAddressable(brokerName))
-
 	f.Setup("Install Sink", eventshub.Install(sinkName, eventshub.VerifyEventFormat(format), eventshub.StartReceiver))
-
 	f.Setup("Install trigger", trigger.Install(triggerName, trigger.WithBrokerName(brokerName), trigger.WithFormat(format), trigger.WithSubscriber(service.AsKReference(sinkName), "")))
-	f.Setup("Trigger is ready", trigger.IsReady(triggerName))
+
+	f.Requirement("Broker is ready", broker.IsReady(brokerName))
+	f.Requirement("Broker is addressable", broker.IsAddressable(brokerName))
+	f.Requirement("Trigger is ready", trigger.IsReady(triggerName))
 
 	f.Requirement("Install source", eventshub.Install(sourceName, eventshub.InputEvent(eventToSend), eventshub.StartSenderToResource(broker.GVR(), brokerName)))
 
@@ -153,8 +154,6 @@ func TriggerWithTLSSubscriber() *feature.Feature {
 
 	// Install Broker
 	f.Setup("Install Broker", broker.Install(brokerName, broker.WithEnvConfig()...))
-	f.Setup("Broker is ready", broker.IsReady(brokerName))
-	f.Setup("Broker is addressable", broker.IsAddressable(brokerName))
 
 	// Install Sink
 	f.Setup("Install Sink", eventshub.Install(sinkName, eventshub.StartReceiverTLS))
@@ -168,7 +167,6 @@ func TriggerWithTLSSubscriber() *feature.Feature {
 		trigger.Install(triggerName, trigger.WithBrokerName(brokerName),
 			trigger.WithSubscriberFromDestination(subscriber))(ctx, t)
 	})
-	f.Setup("Wait for Trigger to become ready", trigger.IsReady(triggerName))
 
 	f.Setup("Install failing trigger", func(ctx context.Context, t feature.T) {
 		dls := service.AsDestinationRef(dlsName)
@@ -180,7 +178,11 @@ func TriggerWithTLSSubscriber() *feature.Feature {
 			trigger.WithDeadLetterSinkFromDestination(dls),
 			trigger.WithSubscriber(nil, "http://127.0.0.1:2468"))(ctx, t)
 	})
-	f.Setup("Wait for failing Trigger to become ready", trigger.IsReady(dlsTriggerName))
+
+	f.Requirement("Broker is ready", broker.IsReady(brokerName))
+	f.Requirement("Broker is addressable", broker.IsAddressable(brokerName))
+	f.Requirement("Wait for Trigger to become ready", trigger.IsReady(triggerName))
+	f.Requirement("Wait for failing Trigger to become ready", trigger.IsReady(dlsTriggerName))
 
 	// Install Source
 	f.Requirement("Install Source", eventshub.Install(
@@ -215,8 +217,6 @@ func TriggerWithTLSSubscriberTrustBundle() *feature.Feature {
 
 	// Install Broker
 	f.Setup("Install Broker", broker.Install(brokerName, broker.WithEnvConfig()...))
-	f.Setup("Broker is ready", broker.IsReady(brokerName))
-	f.Setup("Broker is addressable", broker.IsAddressable(brokerName))
 
 	// Install Sink
 	f.Setup("Install Sink", eventshub.Install(sinkName,
@@ -241,7 +241,6 @@ func TriggerWithTLSSubscriberTrustBundle() *feature.Feature {
 		trigger.Install(triggerName, trigger.WithBrokerName(brokerName),
 			trigger.WithSubscriberFromDestination(subscriber))(ctx, t)
 	})
-	f.Setup("Wait for Trigger to become ready", trigger.IsReady(triggerName))
 
 	f.Setup("Install failing trigger", func(ctx context.Context, t feature.T) {
 		dls := &duckv1.Destination{
@@ -258,7 +257,11 @@ func TriggerWithTLSSubscriberTrustBundle() *feature.Feature {
 			trigger.WithDeadLetterSinkFromDestination(dls),
 			trigger.WithSubscriber(nil, "http://127.0.0.1:2468"))(ctx, t)
 	})
-	f.Setup("Wait for failing Trigger to become ready", trigger.IsReady(dlsTriggerName))
+
+	f.Requirement("Broker is ready", broker.IsReady(brokerName))
+	f.Requirement("Broker is addressable", broker.IsAddressable(brokerName))
+	f.Requirement("Wait for Trigger to become ready", trigger.IsReady(triggerName))
+	f.Requirement("Wait for failing Trigger to become ready", trigger.IsReady(dlsTriggerName))
 
 	// Install Source
 	f.Requirement("Install Source", eventshub.Install(
@@ -296,8 +299,6 @@ func TriggerWithTLSSubscriberWithAdditionalCATrustBundles() *feature.Feature {
 
 	// Install Broker
 	f.Setup("Install Broker", broker.Install(brokerName, broker.WithEnvConfig()...))
-	f.Setup("Broker is ready", broker.IsReady(brokerName))
-	f.Setup("Broker is addressable", broker.IsAddressable(brokerName))
 
 	// Install Sink
 	f.Setup("Install Sink", eventshub.Install(sinkName, eventshub.StartReceiverTLS))
@@ -324,7 +325,6 @@ func TriggerWithTLSSubscriberWithAdditionalCATrustBundles() *feature.Feature {
 		trigger.Install(triggerName, trigger.WithBrokerName(brokerName),
 			trigger.WithSubscriberFromDestination(subscriber))(ctx, t)
 	})
-	f.Setup("Wait for Trigger to become ready", trigger.IsReady(triggerName))
 
 	f.Setup("Install failing trigger", func(ctx context.Context, t feature.T) {
 		dls := &duckv1.Destination{
@@ -341,7 +341,11 @@ func TriggerWithTLSSubscriberWithAdditionalCATrustBundles() *feature.Feature {
 			trigger.WithDeadLetterSinkFromDestination(dls),
 			trigger.WithSubscriber(nil, "http://127.0.0.1:2468"))(ctx, t)
 	})
-	f.Setup("Wait for failing Trigger to become ready", trigger.IsReady(dlsTriggerName))
+
+	f.Requirement("Broker is ready", broker.IsReady(brokerName))
+	f.Requirement("Broker is addressable", broker.IsAddressable(brokerName))
+	f.Requirement("Wait for Trigger to become ready", trigger.IsReady(triggerName))
+	f.Requirement("Wait for failing Trigger to become ready", trigger.IsReady(dlsTriggerName))
 
 	// Install Source
 	f.Requirement("Install Source", eventshub.Install(

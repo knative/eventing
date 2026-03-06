@@ -82,10 +82,15 @@ func createChannelTopology(f *feature.Feature, chName string, chDS *v1.DeliveryS
 		}
 	}
 	f.Setup("Create Channel Impl", channel_impl.Install(chName, chOpts...))
-	f.Setup("Channel is Ready", channel_impl.IsReady(chName)) // We want to block in the setup phase until the channel is ready to go.
 
 	// Set the prober target.
 	prober.SetTargetResource(channel_impl.GVR(), chName)
+
+	// Pre-generate subscription names so they're consistent between Setup and Requirement
+	subNames := make([]string, len(subs))
+	for i, sub := range subs {
+		subNames[i] = feature.MakeRandomK8sName(sub.prefix)
+	}
 
 	// Install subscriptions.
 	for i, sub := range subs {
@@ -121,9 +126,13 @@ func createChannelTopology(f *feature.Feature, chName string, chDS *v1.DeliveryS
 			}
 		}
 		opts = append(opts, subscription.WithChannel(channel_impl.AsRef(chName)))
-		name := feature.MakeRandomK8sName(sub.prefix)
-		f.Setup("install subscription"+strconv.Itoa(i), subscription.Install(name, opts...))
-		f.Setup("subscription"+strconv.Itoa(i)+" is ready", subscription.IsReady(name))
+		f.Setup("install subscription"+strconv.Itoa(i), subscription.Install(subNames[i], opts...))
+	}
+
+	// Wait for resources to be ready (runs after all Setup completes)
+	f.Requirement("Channel is Ready", channel_impl.IsReady(chName))
+	for i := range subs {
+		f.Requirement("subscription"+strconv.Itoa(i)+" is ready", subscription.IsReady(subNames[i]))
 	}
 
 	return prober

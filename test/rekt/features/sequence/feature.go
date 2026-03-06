@@ -71,8 +71,9 @@ func SequenceTest(channelTemplate channel_template.ChannelTemplate) *feature.Fea
 
 	// Install a Sequence with three steps
 	f.Setup("install Sequence", sequence.Install(sequenceName, cfg...))
-	f.Setup("Sequence goes ready", sequence.IsReady(sequenceName))
-	f.Setup("Sequence is addressable", sequence.IsAddressable(sequenceName))
+
+	f.Requirement("Sequence goes ready", sequence.IsReady(sequenceName))
+	f.Requirement("Sequence is addressable", sequence.IsAddressable(sequenceName))
 
 	eventBody := fmt.Sprintf("TestSequence %s", uuid.New().String())
 	// Install PingSource point to sequence Address with eventBody
@@ -156,8 +157,9 @@ func SequenceTestTLS(channelTemplate channel_template.ChannelTemplate) *feature.
 
 		sequence.Install(sequenceName, cfg...)(ctx, t)
 	})
-	f.Setup("Sequence goes ready", sequence.IsReady(sequenceName))
-	f.Setup("Sequence has HTTPS address", sequence.ValidateAddress(sequenceName, addressable.AssertHTTPSAddress))
+
+	f.Requirement("Sequence goes ready", sequence.IsReady(sequenceName))
+	f.Requirement("Sequence has HTTPS address", sequence.ValidateAddress(sequenceName, addressable.AssertHTTPSAddress))
 
 	event := test.FullEvent()
 	event.SetData("text/plain", "hello")

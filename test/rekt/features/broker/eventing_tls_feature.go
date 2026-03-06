@@ -68,14 +68,15 @@ func RotateMTChannelBrokerTLSCertificates() *feature.Feature {
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiverTLS))
 	f.Setup("install broker", broker.Install(brokerName, broker.WithEnvConfig()...))
-	f.Setup("Broker is ready", broker.IsReady(brokerName))
 	f.Setup("install trigger", func(ctx context.Context, t feature.T) {
 		d := service.AsDestinationRef(sink)
 		d.CACerts = eventshub.GetCaCerts(ctx)
 		trigger.Install(triggerName, trigger.WithBrokerName(brokerName), trigger.WithSubscriberFromDestination(d))(ctx, t)
 	})
-	f.Setup("trigger is ready", trigger.IsReady(triggerName))
-	f.Setup("Broker has HTTPS address", broker.ValidateAddress(brokerName, addressable.AssertHTTPSAddress))
+
+	f.Requirement("Broker is ready", broker.IsReady(brokerName))
+	f.Requirement("trigger is ready", trigger.IsReady(triggerName))
+	f.Requirement("Broker has HTTPS address", broker.ValidateAddress(brokerName, addressable.AssertHTTPSAddress))
 
 	event := cetest.FullEvent()
 	event.SetID(uuid.New().String())

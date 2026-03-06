@@ -70,7 +70,8 @@ func createBrokerTriggerTopology(f *feature.Feature, brokerName string, brokerDS
 		}
 	}
 	f.Setup("Create Broker", brokerresources.Install(brokerName, brokerOpts...))
-	f.Setup("Broker is Ready", brokerresources.IsReady(brokerName)) // We want to block until broker is ready to go.
+
+	f.Requirement("Broker is Ready", brokerresources.IsReady(brokerName))
 
 	prober.SetTargetResource(brokerresources.GVR(), brokerName)
 
@@ -106,7 +107,7 @@ func createBrokerTriggerTopology(f *feature.Feature, brokerName string, brokerDS
 		f.Setup("Create Trigger"+strconv.Itoa(i)+" with recorder",
 			triggerresources.Install(triggerName, tOpts...))
 
-		f.Setup("Trigger"+strconv.Itoa(i)+" is ready",
+		f.Requirement("Trigger"+strconv.Itoa(i)+" is ready",
 			triggerresources.IsReady(triggerName))
 	}
 	return prober

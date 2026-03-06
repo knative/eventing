@@ -70,9 +70,8 @@ func Success(jobSinkName string) *feature.Feature {
 		jobsink.Install(jobSink, jobsink.WithForwarderJob(sinkURL.String(), opts...))(ctx, t)
 	})
 
-	f.Setup("jobsink is addressable", jobsink.IsAddressable(jobSink))
-	f.Setup("jobsink is ready", jobsink.IsReady(jobSink))
-
+	f.Requirement("jobsink is addressable", jobsink.IsAddressable(jobSink))
+	f.Requirement("jobsink is ready", jobsink.IsReady(jobSink))
 	f.Requirement("install source", eventshub.Install(source,
 		eventshub.StartSenderToResource(jobsink.GVR(), jobSink),
 		eventshub.InputEvent(event)))
@@ -135,9 +134,8 @@ func SuccessTLS() *feature.Feature {
 	f.Setup("install forwarder sink", eventshub.Install(sink, eventshub.StartReceiver))
 	f.Setup("install job sink", jobsink.Install(jobSink, jobsink.WithForwarderJob(sinkURL.String())))
 
-	f.Setup("jobsink is addressable", jobsink.IsAddressable(jobSink))
-	f.Setup("jobsink is ready", jobsink.IsReady(jobSink))
-
+	f.Requirement("jobsink is addressable", jobsink.IsAddressable(jobSink))
+	f.Requirement("jobsink is ready", jobsink.IsReady(jobSink))
 	f.Requirement("install source", eventshub.Install(source,
 		eventshub.StartSenderToResourceTLS(jobsink.GVR(), jobSink, nil),
 		eventshub.InputEvent(event)))
@@ -180,9 +178,8 @@ func OIDC() *feature.Feature {
 	f.Setup("install forwarder sink", eventshub.Install(sink, eventshub.StartReceiver))
 	f.Setup("install job sink", jobsink.Install(jobSink, jobsink.WithForwarderJob(sinkURL.String())))
 
-	f.Setup("jobsink is addressable", jobsink.IsAddressable(jobSink))
-	f.Setup("jobsink is ready", jobsink.IsReady(jobSink))
-
+	f.Requirement("jobsink is addressable", jobsink.IsAddressable(jobSink))
+	f.Requirement("jobsink is ready", jobsink.IsReady(jobSink))
 	f.Requirement("install source", eventshub.Install(source,
 		eventshub.StartSenderToResource(jobsink.GVR(), jobSink),
 		eventshub.InputEvent(event)))

@@ -115,9 +115,9 @@ func ControlPlaneChannel(channelName string) *feature.Feature {
 	f.Setup("install a service", service.Install(sink,
 		service.WithSelectors(map[string]string{"app": "rekt"})))
 	f.Setup("update Channel", channel_impl.Install(cName, delivery.WithDeadLetterSink(service.AsKReference(sink), "")))
-	f.Setup("Channel goes ready", channel_impl.IsReady(cName))
-	f.Setup("Channel is addressable", channel_impl.IsAddressable(cName))
 
+	f.Requirement("Channel goes ready", channel_impl.IsReady(cName))
+	f.Requirement("Channel is addressable", channel_impl.IsAddressable(cName))
 	f.Requirement("Channel has dead letter sink URI in status", channel_impl.HasDeadLetterSinkURI(cName, channel_impl.GVR()))
 
 	f.Stable("Channel Status").

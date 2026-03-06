@@ -31,7 +31,7 @@ import (
 func GoesReady(name string) *feature.Feature {
 	f := feature.NewFeatureNamed("ApiServerSource goes ready.")
 
-	f.Setup("wait until ApiServerSource is ready", apiserversource.IsReady(name))
+	f.Requirement("wait until ApiServerSource is ready", apiserversource.IsReady(name))
 
 	f.Stable("ApiServerSource")
 

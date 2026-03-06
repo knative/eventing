@@ -125,9 +125,9 @@ func ParallelWithTwoBranchesOIDC(channelTemplate channel_template.ChannelTemplat
 
 		parallel.Install(parallelName, cfg...)(ctx, t)
 	})
-	f.Setup("Parallel goes ready", parallel.IsReady(parallelName))
-	f.Setup("Parallel is addressable", parallel.IsAddressable(parallelName))
 
+	f.Requirement("Parallel goes ready", parallel.IsReady(parallelName))
+	f.Requirement("Parallel is addressable", parallel.IsAddressable(parallelName))
 	f.Requirement("install source", eventshub.Install(
 		source,
 		eventshub.StartSenderToResourceTLS(parallel.GVR(), parallelName, nil),
@@ -167,7 +167,7 @@ func ParallelHasAudienceOfInputChannel(parallelName, parallelNamespace string, c
 
 	f.Prerequisite("OIDC Authentication is enabled", featureflags.AuthenticationOIDCEnabled())
 
-	f.Setup("Parallel goes ready", parallel.IsReady(parallelName))
+	f.Requirement("Parallel goes ready", parallel.IsReady(parallelName))
 
 	expectedAudience := auth.GetAudience(channelGVR.GroupVersion().WithKind(channelKind), metav1.ObjectMeta{
 		Name:      resources.ParallelChannelName(parallelName),
@@ -266,8 +266,8 @@ func ParallelWithOIDCAudienceForSteps(name string) *feature.Feature {
 		parallel.Install(name, cfg...)(ctx, t)
 	})
 
-	f.Setup("Parallel goes ready", parallel.IsReady(name))
-	f.Setup("Parallel is addressable", parallel.IsAddressable(name))
+	f.Requirement("Parallel goes ready", parallel.IsReady(name))
+	f.Requirement("Parallel is addressable", parallel.IsAddressable(name))
 
 	return f
 }
