@@ -190,7 +190,8 @@ func PropagateTrustBundles(ctx context.Context, k8s kubernetes.Interface, trustB
 
 		if !equality.Semantic.DeepDerivative(expected.Data, p.userCm.Data) ||
 			!equality.Semantic.DeepDerivative(expected.BinaryData, p.userCm.BinaryData) ||
-			!equality.Semantic.DeepDerivative(expected.Labels, p.userCm.Labels) {
+			!equality.Semantic.DeepDerivative(expected.Labels, p.userCm.Labels) ||
+			!equality.Semantic.DeepDerivative(expected.OwnerReferences, p.userCm.OwnerReferences) {
 			if err := updateConfigMap(ctx, k8s, expected); err != nil {
 				return nil, err
 			}
@@ -309,7 +310,14 @@ func AddTrustBundleVolumesFromConfigMaps(cms []*corev1.ConfigMap, pt *corev1.Pod
 }
 
 func combineValidTrustBundles(configMaps []*corev1.ConfigMap, combinedBundle *bytes.Buffer) error {
-	for _, cm := range configMaps {
+	// Create a sorted copy of configMaps to ensure consistent ordering without modifying the input slice
+	sortedCMs := make([]*corev1.ConfigMap, len(configMaps))
+	copy(sortedCMs, configMaps)
+	sort.SliceStable(sortedCMs, func(i, j int) bool {
+		return sortedCMs[i].Name < sortedCMs[j].Name
+	})
+
+	for _, cm := range sortedCMs {
 
 		// Ensure the combined bundle is always composed in the same order.
 		keys := make([]string, 0, len(cm.Data))
