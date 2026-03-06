@@ -404,7 +404,8 @@ func SendsEventsWithObjectReferencePayload() *feature.Feature {
 	}
 
 	f.Setup("install ApiServerSource", apiserversource.Install(source, cfg...))
-	f.Setup("ApiServerSource goes ready", apiserversource.IsReady(source))
+
+	f.Requirement("ApiServerSource goes ready", apiserversource.IsReady(source))
 
 	examplePodName := feature.MakeRandomK8sName("example")
 
@@ -447,7 +448,8 @@ func SendsEventsWithResourceEventPayload() *feature.Feature {
 	}
 
 	f.Setup("install ApiServerSource", apiserversource.Install(source, cfg...))
-	f.Setup("ApiServerSource goes ready", apiserversource.IsReady(source))
+
+	f.Requirement("ApiServerSource goes ready", apiserversource.IsReady(source))
 
 	examplePodName := feature.MakeRandomK8sName("example")
 
@@ -490,7 +492,8 @@ func SendsEventsForAllResources() *feature.Feature {
 	}
 
 	f.Setup("install ApiServerSource", apiserversource.Install(source, cfg...))
-	f.Setup("ApiServerSource goes ready", apiserversource.IsReady(source))
+
+	f.Requirement("ApiServerSource goes ready", apiserversource.IsReady(source))
 
 	examplePodName := feature.MakeRandomK8sName("example")
 
@@ -546,7 +549,8 @@ func SendsEventsForAllResourcesWithNamespaceSelector() *feature.Feature {
 	}
 
 	f.Setup("install ApiServerSource", apiserversource.Install(source, cfg...))
-	f.Setup("ApiServerSource goes ready", apiserversource.IsReady(source))
+
+	f.Requirement("ApiServerSource goes ready", apiserversource.IsReady(source))
 
 	pod1 := feature.MakeRandomK8sName("example-pod-1")
 	pod2 := feature.MakeRandomK8sName("example-pod-2")
@@ -620,7 +624,8 @@ func SendsEventsForAllResourcesWithEmptyNamespaceSelector() *feature.Feature {
 	}
 
 	f.Setup("install ApiServerSource", apiserversource.Install(source, cfg...))
-	f.Setup("ApiServerSource goes ready", apiserversource.IsReady(source))
+
+	f.Requirement("ApiServerSource goes ready", apiserversource.IsReady(source))
 
 	pingSource1 := feature.MakeRandomK8sName("ping-source-1")
 	pingSource2 := feature.MakeRandomK8sName("ping-source-2")
@@ -675,7 +680,8 @@ func SendsEventsForLabelMatchingResources() *feature.Feature {
 	}
 
 	f.Setup("install ApiServerSource", apiserversource.Install(source, cfg...))
-	f.Setup("ApiServerSource goes ready", apiserversource.IsReady(source))
+
+	f.Requirement("ApiServerSource goes ready", apiserversource.IsReady(source))
 
 	examplePodName := feature.MakeRandomK8sName("example")
 
@@ -769,7 +775,8 @@ func SendEventsForLabelExpressionMatchingResources() *feature.Feature {
 	}
 
 	f.Setup("install ApiServerSource", apiserversource.Install(source, cfg...))
-	f.Setup("ApiServerSource goes ready", apiserversource.IsReady(source))
+
+	f.Requirement("ApiServerSource goes ready", apiserversource.IsReady(source))
 
 	examplePodName := feature.MakeRandomK8sName("example")
 
@@ -1043,7 +1050,8 @@ func EventsAreFilteredOut() *feature.Feature {
 	}
 
 	f.Setup("install ApiServerSource", apiserversource.Install(source, cfg...))
-	f.Setup("ApiServerSource goes ready", apiserversource.IsReady(source))
+
+	f.Requirement("ApiServerSource goes ready", apiserversource.IsReady(source))
 
 	examplePodName := feature.MakeRandomK8sName("example")
 
