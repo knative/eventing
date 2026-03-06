@@ -58,7 +58,7 @@ func SourceToTriggerSinkWithDLS() *feature.Feature {
 		delivery.WithDeadLetterSink(prober.AsKReference(triggerSinkName), "")))
 
 	// Resources ready.
-	f.Setup("trigger goes ready", trigger.IsReady(triggerName))
+	f.Requirement("trigger goes ready", trigger.IsReady(triggerName))
 
 	// Install sender.
 	f.Requirement("install source", prober.SenderInstall("source"))
@@ -110,7 +110,7 @@ func SourceToTriggerSinkWithDLSDontUseBrokers() *feature.Feature {
 		delivery.WithDeadLetterSink(prober.AsKReference(triggerSinkName), "")))
 
 	// Resources ready.
-	f.Setup("trigger goes ready", trigger.IsReady(triggerName))
+	f.Requirement("trigger goes ready", trigger.IsReady(triggerName))
 
 	// Install events after topology is ready.
 	f.Requirement("install source", prober.SenderInstall("source"))
@@ -150,16 +150,15 @@ func BadTriggerDoesNotAffectOkTrigger() *feature.Feature {
 	// Setup data plane
 	brokerConfig := append(broker.WithEnvConfig(), delivery.WithDeadLetterSink(prober.AsKReference(dlq), ""))
 	f.Setup("install broker", broker.Install(brokerName, brokerConfig...))
-	// Block till broker is ready
-	f.Setup("Broker is ready", broker.IsReady(brokerName))
 	prober.SetTargetResource(broker.GVR(), brokerName)
 
 	f.Setup("install trigger via1", trigger.Install(via1, trigger.WithBrokerName(brokerName), trigger.WithSubscriber(nil, "bad://uri")))
 	f.Setup("install trigger via2", trigger.Install(via2, trigger.WithBrokerName(brokerName), trigger.WithSubscriber(prober.AsKReference(sink), "")))
 
 	// Resources ready.
-	f.Setup("trigger1 goes ready", trigger.IsReady(via1))
-	f.Setup("trigger2 goes ready", trigger.IsReady(via2))
+	f.Requirement("Broker is ready", broker.IsReady(brokerName))
+	f.Requirement("trigger1 goes ready", trigger.IsReady(via1))
+	f.Requirement("trigger2 goes ready", trigger.IsReady(via2))
 
 	// Install events after data plane is ready.
 	f.Requirement("install source", prober.SenderInstall(source))

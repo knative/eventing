@@ -95,9 +95,6 @@ func SendsEventsWithBrokerAsSinkTLS(ctx context.Context) *feature.Feature {
 	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
 
 	f.Setup("install broker", broker.Install(brokerName, broker.WithEnvConfig()...))
-	f.Setup("broker is ready", broker.IsReady(brokerName))
-	f.Setup("broker is addressable", broker.IsAddressable(brokerName))
-	f.Setup("Broker has HTTPS address", broker.ValidateAddress(brokerName, addressable.AssertHTTPSAddress))
 	env := environment.FromContext(ctx)
 	f.Setup("install sink", eventshub.Install(sinkName, eventshub.StartReceiverTLS))
 	f.Setup("install a deployment", deployment.Install(subject, heartbeatsImage,
@@ -114,6 +111,9 @@ func SendsEventsWithBrokerAsSinkTLS(ctx context.Context) *feature.Feature {
 		sinkbinding.WithExtensions(extensions),
 	}
 
+	f.Requirement("broker is ready", broker.IsReady(brokerName))
+	f.Requirement("broker is addressable", broker.IsAddressable(brokerName))
+	f.Requirement("Broker has HTTPS address", broker.ValidateAddress(brokerName, addressable.AssertHTTPSAddress))
 	f.Requirement("install SinkBinding", func(ctx context.Context, t feature.T) {
 		d := service.AsDestinationRef(sinkName)
 		d.CACerts = eventshub.GetCaCerts(ctx)
@@ -166,7 +166,7 @@ func SinkBindingV1Job(ctx context.Context) *feature.Feature {
 		AsTrackerReference(subject),
 		cfg...,
 	))
-	f.Setup("SinkBinding goes ready", sinkbinding.IsReady(sbinding))
+	f.Requirement("SinkBinding goes ready", sinkbinding.IsReady(sbinding))
 
 	f.Stable("Create a job as sinkbinding's subject").
 		Must("delivers events",

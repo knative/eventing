@@ -65,14 +65,15 @@ func ChannelChainSetup(f *feature.Feature, length int, createSubscriberFn func(r
 		name := feature.MakeRandomK8sName(fmt.Sprintf("channel-%04d", i))
 		channels = append(channels, name)
 		f.Setup("install channel", channel_impl.Install(name))
-		f.Setup("channel is ready", channel_impl.IsReady(name))
 	}
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 
 	// use the rest for the chain
+	var subs []string
 	for i := 0; i < length; i++ {
 		sub := feature.MakeRandomK8sName(fmt.Sprintf("subscription-%04d", i))
+		subs = append(subs, sub)
 		if i == length-1 {
 			// install the final connection to the sink
 			f.Setup("install sink subscription", subscription.Install(sub,
@@ -85,8 +86,14 @@ func ChannelChainSetup(f *feature.Feature, length int, createSubscriberFn func(r
 				createSubscriberFn(channel_impl.AsRef(channels[i+1]), ""),
 			))
 		}
+	}
 
-		f.Setup("subscription is ready", subscription.IsReady(sub))
+	// Wait for all resources to be ready (runs after all Setup completes)
+	for i := 0; i < length; i++ {
+		f.Requirement("channel is ready", channel_impl.IsReady(channels[i]))
+	}
+	for i := 0; i < length; i++ {
+		f.Requirement("subscription is ready", subscription.IsReady(subs[i]))
 	}
 
 	return sink, channels[0]
@@ -119,9 +126,9 @@ func DeadLetterSink(createSubscriberFn func(ref *duckv1.KReference, uri string) 
 		subscription.WithChannel(channel_impl.AsRef(name)),
 		createSubscriberFn(service.AsKReference(failer), ""),
 	))
-	f.Setup("channel is ready", channel_impl.IsReady(name))
-	f.Setup("subscription is ready", subscription.IsReady(sub))
 
+	f.Requirement("channel is ready", channel_impl.IsReady(name))
+	f.Requirement("subscription is ready", subscription.IsReady(sub))
 	f.Requirement("install containersource", containersource.Install(cs, containersource.WithSink(channel_impl.AsDestinationRef(name))))
 	f.Requirement("containersource is ready", containersource.IsReady(cs))
 	f.Requirement("Channel has dead letter sink uri", channel_impl.HasDeadLetterSinkURI(name, channel_impl.GVR()))

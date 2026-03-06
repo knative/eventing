@@ -62,12 +62,11 @@ func CrossNamespaceEventLinks(brokerEnvCtx context.Context) *feature.Feature {
 
 	f.Setup("install broker", broker.Install(brokerName, append(broker.WithEnvConfig(), broker.WithNamespace(brokerNamespace))...))
 	f.Setup("install trigger", trigger.Install(triggerName, triggerCfg...))
-
 	f.Setup("install subscriber", eventshub.Install(subscriberName, eventshub.StartReceiver))
 
 	// <resource>.IsReady uses the environment in the context to find the resource, hence we can only check the trigger
 	// However, the trigger being ready implies the broker is ready, so we are okay
-	f.Setup("trigger is ready", trigger.IsReady(triggerName))
+	f.Requirement("trigger is ready", trigger.IsReady(triggerName))
 	f.Requirement("install event source", eventshub.Install(sourceName, eventshub.StartSenderToNamespacedResource(broker.GVR(), brokerName, brokerNamespace), eventshub.InputEvent(ev)))
 
 	f.Assert("event is received by subscriber", assert.OnStore(subscriberName).MatchEvent(cetest.HasId(ev.ID())).Exact(1))
