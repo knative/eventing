@@ -69,8 +69,6 @@ func (s *subCfg) dlqName() string {
 //	                      +--[DLQ]--> chdlq (optional)
 func createChannelTopology(f *feature.Feature, chName string, chDS *v1.DeliverySpec, subs []subCfg) *eventshub.EventProber {
 	prober := eventshub.NewProber()
-	// Install the receivers.
-	f.Setup("install channel DLQ", prober.ReceiverInstall("chdlq"))
 
 	var chOpts []manifest.CfgFn
 	if chDS != nil {
@@ -81,50 +79,72 @@ func createChannelTopology(f *feature.Feature, chName string, chDS *v1.DeliveryS
 			chOpts = append(chOpts, delivery.WithRetry(*chDS.Retry, chDS.BackoffPolicy, chDS.BackoffDelay))
 		}
 	}
-	f.Setup("Create Channel Impl", channel_impl.Install(chName, chOpts...))
-	f.Setup("Channel is Ready", channel_impl.IsReady(chName)) // We want to block in the setup phase until the channel is ready to go.
+
+	// Pre-generate subscription names so they're consistent across groups
+	subNames := make([]string, len(subs))
+	for i, sub := range subs {
+		subNames[i] = feature.MakeRandomK8sName(sub.prefix)
+	}
+
+	// Group 1: Install channel and channel DLQ first (must complete before subscriptions)
+	f.Group("install channel", func(g *feature.Feature) {
+		g.Setup("install channel DLQ", prober.ReceiverInstall("chdlq"))
+		g.Setup("Create Channel Impl", channel_impl.Install(chName, chOpts...))
+		g.Setup("Channel is Ready", channel_impl.IsReady(chName)) // We want to block in the setup phase until the channel is ready to go.
+	})
 
 	// Set the prober target.
 	prober.SetTargetResource(channel_impl.GVR(), chName)
 
-	// Install subscriptions.
-	for i, sub := range subs {
-		// Install the expected sinks, they all might not be used.
-
-		subOpts := []eventshub.EventsHubOption{eventshub.DropFirstN(sub.subFailCount)}
-		if sub.subReplies {
-			subOpts = append(subOpts, eventshub.ReplyWithAppendedData(sub.prefix))
-		}
-		f.Setup("install subscription"+strconv.Itoa(i)+" subscriber",
-			prober.ReceiverInstall(sub.subName(), subOpts...))
-
-		f.Setup("install subscription"+strconv.Itoa(i)+" reply",
-			prober.ReceiverInstall(sub.replyName(), eventshub.DropFirstN(sub.replyFailCount)))
-		f.Setup("install subscription"+strconv.Itoa(i)+" DLQ",
-			prober.ReceiverInstall(sub.dlqName()))
-
-		var opts []manifest.CfgFn
-		if sub.hasSub {
-			opts = append(opts, subscription.WithSubscriber(prober.AsKReference(sub.subName()), "", ""))
-		}
-
-		if sub.hasReply {
-			opts = append(opts, subscription.WithReply(prober.AsKReference(sub.replyName()), ""))
-		}
-
-		if sub.delivery.DeadLetterSink != nil {
-			if sub.delivery != nil {
-				opts = append(opts, subscription.WithDeadLetterSink(prober.AsKReference(sub.dlqName()), ""))
+	// Group 2: Install subscription receivers
+	f.Group("install subscription receivers", func(g *feature.Feature) {
+		for i, sub := range subs {
+			// Install the expected sinks, they all might not be used.
+			subOpts := []eventshub.EventsHubOption{eventshub.DropFirstN(sub.subFailCount)}
+			if sub.subReplies {
+				subOpts = append(subOpts, eventshub.ReplyWithAppendedData(sub.prefix))
 			}
-			if sub.delivery.Retry != nil {
-				opts = append(opts, subscription.WithRetry(*sub.delivery.Retry, sub.delivery.BackoffPolicy, sub.delivery.BackoffDelay))
-			}
+			g.Setup("install subscription"+strconv.Itoa(i)+" subscriber",
+				prober.ReceiverInstall(sub.subName(), subOpts...))
+
+			g.Setup("install subscription"+strconv.Itoa(i)+" reply",
+				prober.ReceiverInstall(sub.replyName(), eventshub.DropFirstN(sub.replyFailCount)))
+			g.Setup("install subscription"+strconv.Itoa(i)+" DLQ",
+				prober.ReceiverInstall(sub.dlqName()))
 		}
-		opts = append(opts, subscription.WithChannel(channel_impl.AsRef(chName)))
-		name := feature.MakeRandomK8sName(sub.prefix)
-		f.Setup("install subscription"+strconv.Itoa(i), subscription.Install(name, opts...))
-		f.Setup("subscription"+strconv.Itoa(i)+" is ready", subscription.IsReady(name))
-	}
+	})
+
+	// Group 3: Install subscriptions (these reference channel and receivers)
+	f.Group("install subscriptions", func(g *feature.Feature) {
+		for i, sub := range subs {
+			var opts []manifest.CfgFn
+			if sub.hasSub {
+				opts = append(opts, subscription.WithSubscriber(prober.AsKReference(sub.subName()), "", ""))
+			}
+
+			if sub.hasReply {
+				opts = append(opts, subscription.WithReply(prober.AsKReference(sub.replyName()), ""))
+			}
+
+			if sub.delivery.DeadLetterSink != nil {
+				if sub.delivery != nil {
+					opts = append(opts, subscription.WithDeadLetterSink(prober.AsKReference(sub.dlqName()), ""))
+				}
+				if sub.delivery.Retry != nil {
+					opts = append(opts, subscription.WithRetry(*sub.delivery.Retry, sub.delivery.BackoffPolicy, sub.delivery.BackoffDelay))
+				}
+			}
+			opts = append(opts, subscription.WithChannel(channel_impl.AsRef(chName)))
+			g.Setup("install subscription"+strconv.Itoa(i), subscription.Install(subNames[i], opts...))
+		}
+	})
+
+	// Group 4: Wait for subscriptions to become ready
+	f.Group("subscriptions ready", func(g *feature.Feature) {
+		for i := range subs {
+			g.Setup("subscription"+strconv.Itoa(i)+" is ready", subscription.IsReady(subNames[i]))
+		}
+	})
 
 	return prober
 }
