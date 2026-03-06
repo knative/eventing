@@ -269,16 +269,6 @@ func brokerChannelFlowWithTransformation(createSubscriberFn func(ref *v1.KRefere
 
 	//Install the broker
 	brokerName := feature.MakeRandomK8sName("broker")
-	f.Setup("install broker", broker.Install(brokerName, broker.WithEnvConfig()...))
-	f.Setup("broker is ready", broker.IsReady(brokerName))
-	f.Setup("broker is addressable", broker.IsAddressable(brokerName))
-
-	f.Setup("install sink1", eventshub.Install(sink1,
-		eventshub.ReplyWithTransformedEvent(transformedEventType, transformedEventSource, transformedBody),
-		eventshub.StartReceiver),
-	)
-	f.Setup("install sink2", eventshub.Install(sink2, eventshub.StartReceiver))
-	f.Setup("install sink3", eventshub.Install(sink3, eventshub.StartReceiver))
 
 	// filter1 filters the original events
 	filter1 := eventingv1.TriggerFilterAttributes{
@@ -295,44 +285,67 @@ func brokerChannelFlowWithTransformation(createSubscriberFn func(ref *v1.KRefere
 		"source": transformedEventSource,
 	}
 
-	// Install the trigger1 point to Broker and transform the original events to new events
-	f.Setup("install trigger1", trigger.Install(
-		trigger1,
-		trigger.WithBrokerName(brokerName),
-		trigger.WithFilter(filter1),
-		trigger.WithSubscriber(service.AsKReference(sink1), ""),
-	))
-	f.Setup("trigger1 goes ready", trigger.IsReady(trigger1))
-	// Install the trigger2 point to Broker to filter all the events
-	f.Setup("install trigger2", trigger.Install(
-		trigger2,
-		trigger.WithBrokerName(brokerName),
-		trigger.WithFilter(filter2),
-		trigger.WithSubscriber(service.AsKReference(sink2), ""),
-	))
-	f.Setup("trigger2 goes ready", trigger.IsReady(trigger2))
+	// Group 1: Install broker and sinks first (these must complete before triggers)
+	f.Group("install broker and sinks", func(g *feature.Feature) {
+		g.Setup("install broker", broker.Install(brokerName, broker.WithEnvConfig()...))
+		g.Setup("broker is ready", broker.IsReady(brokerName))
+		g.Setup("broker is addressable", broker.IsAddressable(brokerName))
 
-	// Install the channel and corresponding subscription point to sink3
+		g.Setup("install sink1", eventshub.Install(sink1,
+			eventshub.ReplyWithTransformedEvent(transformedEventType, transformedEventSource, transformedBody),
+			eventshub.StartReceiver),
+		)
+		g.Setup("install sink2", eventshub.Install(sink2, eventshub.StartReceiver))
+		g.Setup("install sink3", eventshub.Install(sink3, eventshub.StartReceiver))
+	})
+
+	// Group 2: Install channel and subscription
 	channelName := feature.MakeRandomK8sName("channel")
-	f.Setup("install channel", channel.Install(channelName,
-		channel.WithTemplate(),
-	))
 	sub := feature.MakeRandomK8sName("subscription")
-	f.Setup("install subscription", subscription.Install(sub,
-		subscription.WithChannel(channel.AsRef(channelName)),
-		createSubscriberFn(service.AsKReference(sink3), ""),
-	))
-	f.Setup("subscription is ready", subscription.IsReady(sub))
-	f.Setup("channel is ready", channel.IsReady(channelName))
+	f.Group("install channel and subscription", func(g *feature.Feature) {
+		// Install the channel and corresponding subscription point to sink3
+		g.Setup("install channel", channel.Install(channelName,
+			channel.WithTemplate(),
+		))
+		g.Setup("install subscription", subscription.Install(sub,
+			subscription.WithChannel(channel.AsRef(channelName)),
+			createSubscriberFn(service.AsKReference(sink3), ""),
+		))
+		g.Setup("subscription is ready", subscription.IsReady(sub))
+		g.Setup("channel is ready", channel.IsReady(channelName))
+	})
 
-	// Install the trigger3 point to Broker to filter the events after transformation point to channel
-	f.Setup("install trigger3", trigger.Install(
-		trigger3,
-		trigger.WithBrokerName(brokerName),
-		trigger.WithFilter(filter3),
-		trigger.WithSubscriber(channel.AsRef(channelName), ""),
-	))
-	f.Setup("trigger3 goes ready", trigger.IsReady(trigger3))
+	// Group 3: Install triggers (these reference broker, sinks, and channel)
+	f.Group("install triggers", func(g *feature.Feature) {
+		// Install the trigger1 point to Broker and transform the original events to new events
+		g.Setup("install trigger1", trigger.Install(
+			trigger1,
+			trigger.WithBrokerName(brokerName),
+			trigger.WithFilter(filter1),
+			trigger.WithSubscriber(service.AsKReference(sink1), ""),
+		))
+		// Install the trigger2 point to Broker to filter all the events
+		g.Setup("install trigger2", trigger.Install(
+			trigger2,
+			trigger.WithBrokerName(brokerName),
+			trigger.WithFilter(filter2),
+			trigger.WithSubscriber(service.AsKReference(sink2), ""),
+		))
+		// Install the trigger3 point to Broker to filter the events after transformation point to channel
+		g.Setup("install trigger3", trigger.Install(
+			trigger3,
+			trigger.WithBrokerName(brokerName),
+			trigger.WithFilter(filter3),
+			trigger.WithSubscriber(channel.AsRef(channelName), ""),
+		))
+	})
+
+	// Group 4: Wait for triggers to become ready
+	f.Group("triggers ready", func(g *feature.Feature) {
+		g.Setup("trigger1 goes ready", trigger.IsReady(trigger1))
+		g.Setup("trigger2 goes ready", trigger.IsReady(trigger2))
+		g.Setup("trigger3 goes ready", trigger.IsReady(trigger3))
+	})
 
 	f.Requirement("install source", eventshub.Install(
 		source,
@@ -427,15 +440,6 @@ func BrokerEventTransformationForTriggerSetup(f *feature.Feature) brokerEventTra
 		state.SetOrFail(ctx, t, "sink1", sink1)
 		state.SetOrFail(ctx, t, "sink2", sink2)
 	})
-	f.Setup("install broker", broker.Install(brokerName, broker.WithEnvConfig()...))
-	f.Setup("broker is ready", broker.IsReady(brokerName))
-	f.Setup("broker is addressable", broker.IsAddressable(brokerName))
-
-	f.Setup("install sink1", eventshub.Install(sink1,
-		eventshub.ReplyWithTransformedEvent(transformedEvent.Type(), transformedEvent.Source(), string(transformedEvent.Data())),
-		eventshub.StartReceiver),
-	)
-	f.Setup("install sink2", eventshub.Install(sink2, eventshub.StartReceiver))
 
 	// filter1 filters the original events
 	filter1 := eventingv1.TriggerFilterAttributes{
@@ -448,22 +452,42 @@ func BrokerEventTransformationForTriggerSetup(f *feature.Feature) brokerEventTra
 		"source": transformedEvent.Source(),
 	}
 
-	// Install the trigger1 point to Broker and transform the original events to new events
-	f.Setup("install trigger1", trigger.Install(
-		trigger1,
-		trigger.WithBrokerName(brokerName),
-		trigger.WithFilter(filter1),
-		trigger.WithSubscriber(service.AsKReference(sink1), ""),
-	))
-	f.Setup("trigger1 goes ready", trigger.IsReady(trigger1))
-	// Install the trigger2 point to Broker to filter all the events
-	f.Setup("install trigger2", trigger.Install(
-		trigger2,
-		trigger.WithBrokerName(brokerName),
-		trigger.WithFilter(filter2),
-		trigger.WithSubscriber(service.AsKReference(sink2), ""),
-	))
-	f.Setup("trigger2 goes ready", trigger.IsReady(trigger2))
+	// Group 1: Install broker and sinks first (these must complete before triggers)
+	f.Group("install broker and sinks", func(g *feature.Feature) {
+		g.Setup("install broker", broker.Install(brokerName, broker.WithEnvConfig()...))
+		g.Setup("broker is ready", broker.IsReady(brokerName))
+		g.Setup("broker is addressable", broker.IsAddressable(brokerName))
+
+		g.Setup("install sink1", eventshub.Install(sink1,
+			eventshub.ReplyWithTransformedEvent(transformedEvent.Type(), transformedEvent.Source(), string(transformedEvent.Data())),
+			eventshub.StartReceiver),
+		)
+		g.Setup("install sink2", eventshub.Install(sink2, eventshub.StartReceiver))
+	})
+
+	// Group 2: Install triggers (these reference the sinks, so sinks must exist)
+	f.Group("install triggers", func(g *feature.Feature) {
+		// Install the trigger1 point to Broker and transform the original events to new events
+		g.Setup("install trigger1", trigger.Install(
+			trigger1,
+			trigger.WithBrokerName(brokerName),
+			trigger.WithFilter(filter1),
+			trigger.WithSubscriber(service.AsKReference(sink1), ""),
+		))
+		// Install the trigger2 point to Broker to filter all the events
+		g.Setup("install trigger2", trigger.Install(
+			trigger2,
+			trigger.WithBrokerName(brokerName),
+			trigger.WithFilter(filter2),
+			trigger.WithSubscriber(service.AsKReference(sink2), ""),
+		))
+	})
+
+	// Group 3: Wait for triggers to become ready
+	f.Group("triggers ready", func(g *feature.Feature) {
+		g.Setup("trigger1 goes ready", trigger.IsReady(trigger1))
+		g.Setup("trigger2 goes ready", trigger.IsReady(trigger2))
+	})
 
 	return brokerEventTransformationConfig{
 		Broker:           brokerName,
