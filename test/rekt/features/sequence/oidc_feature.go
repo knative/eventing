@@ -43,7 +43,7 @@ func SequenceHasAudienceOfInputChannel(sequenceName, sequenceNamespace string, c
 
 	f.Prerequisite("OIDC Authentication is enabled", featureflags.AuthenticationOIDCEnabled())
 
-	f.Setup("Sequence goes ready", sequence.IsReady(sequenceName))
+	f.Requirement("Sequence goes ready", sequence.IsReady(sequenceName))
 
 	expectedAudience := auth.GetAudience(channelGVR.GroupVersion().WithKind(channelKind), metav1.ObjectMeta{
 		Name:      resources.SequenceChannelName(sequenceName, 0),
@@ -115,8 +115,8 @@ func SequenceSendsEventWithOIDCTokenToSteps() *feature.Feature {
 		sequence.Install(sequenceName, cfg...)(ctx, t)
 	})
 
-	f.Setup("Sequence goes ready", sequence.IsReady(sequenceName))
-	f.Setup("Sequence is addressable", sequence.IsAddressable(sequenceName))
+	f.Requirement("Sequence goes ready", sequence.IsReady(sequenceName))
+	f.Requirement("Sequence is addressable", sequence.IsAddressable(sequenceName))
 
 	event := test.FullEvent()
 	event.SetData("text/plain", "hello")
@@ -198,8 +198,9 @@ func SequenceSendsEventWithOIDCTokenToReply() *feature.Feature {
 
 		sequence.Install(sequenceName, cfg...)(ctx, t)
 	})
-	f.Setup("Sequence goes ready", sequence.IsReady(sequenceName))
-	f.Setup("Sequence is addressable", sequence.IsAddressable(sequenceName))
+
+	f.Requirement("Sequence goes ready", sequence.IsReady(sequenceName))
+	f.Requirement("Sequence is addressable", sequence.IsAddressable(sequenceName))
 
 	event := test.FullEvent()
 	event.SetData("text/plain", "hello")
@@ -265,8 +266,8 @@ func SequenceWithOIDCAudienceForSteps(name string) *feature.Feature {
 		sequence.Install(name, cfg...)(ctx, t)
 	})
 
-	f.Setup("Sequence goes ready", sequence.IsReady(name))
-	f.Setup("Sequence is addressable", sequence.IsAddressable(name))
+	f.Requirement("Sequence goes ready", sequence.IsReady(name))
+	f.Requirement("Sequence is addressable", sequence.IsAddressable(name))
 
 	return f
 }

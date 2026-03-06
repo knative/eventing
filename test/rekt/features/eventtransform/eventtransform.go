@@ -75,8 +75,8 @@ func JsonataDirect() *feature.Feature {
 }
 `}),
 	)))
-	f.Setup("event transform is addressable", eventtransform.IsAddressable(transformName))
-	f.Setup("event transform is ready", eventtransform.IsReady(transformName))
+	f.Requirement("event transform is addressable", eventtransform.IsAddressable(transformName))
+	f.Requirement("event transform is ready", eventtransform.IsReady(transformName))
 
 	f.Requirement("install source", eventshub.Install(source,
 		eventshub.InputEvent(event),
@@ -149,8 +149,8 @@ func JsonataSink() *feature.Feature {
 }
 `}),
 	)))
-	f.Setup("event transform is addressable", eventtransform.IsAddressable(transformName))
-	f.Setup("event transform is ready", eventtransform.IsReady(transformName))
+	f.Requirement("event transform is addressable", eventtransform.IsAddressable(transformName))
+	f.Requirement("event transform is ready", eventtransform.IsReady(transformName))
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 
 	f.Requirement("install source", eventshub.Install(source,
@@ -232,8 +232,8 @@ func JsonataSinkReplyTransform() *feature.Feature {
 }
 `}),
 	)))
-	f.Setup("event transform is addressable", eventtransform.IsAddressable(transformName))
-	f.Setup("event transform is ready", eventtransform.IsReady(transformName))
+	f.Requirement("event transform is addressable", eventtransform.IsAddressable(transformName))
+	f.Requirement("event transform is ready", eventtransform.IsReady(transformName))
 
 	const (
 		replyEventType   = "reply-event-type"
@@ -317,8 +317,8 @@ func JsonataDirectTLS() *feature.Feature {
 }
 `}),
 	)))
-	f.Setup("event transform is addressable", eventtransform.IsAddressable(transformName))
-	f.Setup("event transform is ready", eventtransform.IsReady(transformName))
+	f.Requirement("event transform is addressable", eventtransform.IsAddressable(transformName))
+	f.Requirement("event transform is ready", eventtransform.IsReady(transformName))
 	f.Setup("event transform has HTTPS address", eventtransform.ValidateAddress(transformName, addressable.AssertHTTPSAddress))
 
 	f.Requirement("install source", eventshub.Install(source,
@@ -398,8 +398,8 @@ func JsonataSinkTLS() *feature.Feature {
 `}),
 		))(ctx, t)
 	})
-	f.Setup("event transform is addressable", eventtransform.IsAddressable(transformName))
-	f.Setup("event transform is ready", eventtransform.IsReady(transformName))
+	f.Requirement("event transform is addressable", eventtransform.IsAddressable(transformName))
+	f.Requirement("event transform is ready", eventtransform.IsReady(transformName))
 	f.Setup("install sink", eventshub.Install(sink,
 		eventshub.IssuerRef(eventingtlstesting.IssuerKind, eventingtlstesting.IssuerName),
 		eventshub.StartReceiverTLS))

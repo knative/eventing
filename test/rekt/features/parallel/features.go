@@ -148,10 +148,10 @@ func ParallelWithTwoBranchesTLS(channelTemplate channel_template.ChannelTemplate
 
 		parallel.Install(parallelName, cfg...)(ctx, t)
 	})
-	f.Setup("Parallel goes ready", parallel.IsReady(parallelName))
-	f.Setup("Parallel is addressable", parallel.IsAddressable(parallelName))
-	f.Setup("Parallel has HTTPS address", parallel.ValidateAddress(parallelName, addressable.AssertHTTPSAddress))
 
+	f.Requirement("Parallel goes ready", parallel.IsReady(parallelName))
+	f.Requirement("Parallel is addressable", parallel.IsAddressable(parallelName))
+	f.Requirement("Parallel has HTTPS address", parallel.ValidateAddress(parallelName, addressable.AssertHTTPSAddress))
 	f.Requirement("install source", eventshub.Install(
 		source,
 		eventshub.StartSenderToResourceTLS(parallel.GVR(), parallelName, nil),

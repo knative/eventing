@@ -37,8 +37,8 @@ func Success(sinkType integrationsink.SinkType) *feature.Feature {
 
 	f.Setup("install integration sink", integrationsink.InstallByType(integrationSink, sinkType))
 
-	f.Setup("integrationsink is addressable", integrationsink.IsAddressable(integrationSink))
-	f.Setup("integrationsink is ready", integrationsink.IsReady(integrationSink))
+	f.Requirement("integrationsink is addressable", integrationsink.IsAddressable(integrationSink))
+	f.Requirement("integrationsink is ready", integrationsink.IsReady(integrationSink))
 
 	f.Requirement("install source for ksink", eventshub.Install(source,
 		eventshub.StartSenderToResource(integrationsink.GVR(), integrationSink),
@@ -90,8 +90,8 @@ func SuccessTLS(sinkType integrationsink.SinkType) *feature.Feature {
 
 	f.Setup("install integration sink", integrationsink.InstallByType(integrationSink, sinkType))
 
-	f.Setup("integrationsink is addressable", integrationsink.IsAddressable(integrationSink))
-	f.Setup("integrationsink is ready", integrationsink.IsReady(integrationSink))
+	f.Requirement("integrationsink is addressable", integrationsink.IsAddressable(integrationSink))
+	f.Requirement("integrationsink is ready", integrationsink.IsReady(integrationSink))
 
 	f.Requirement("install source for ksink", eventshub.Install(source,
 		eventshub.StartSenderToResource(integrationsink.GVR(), integrationSink),

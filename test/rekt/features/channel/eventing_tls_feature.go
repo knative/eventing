@@ -66,7 +66,6 @@ func RotateDispatcherTLSCertificate() *feature.Feature {
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiverTLS))
 	f.Setup("install channel", channel_impl.Install(channelName))
-	f.Setup("channel is ready", channel_impl.IsReady(channelName))
 	f.Setup("install subscription", func(ctx context.Context, t feature.T) {
 		d := service.AsDestinationRef(sink)
 		d.CACerts = eventshub.GetCaCerts(ctx)
@@ -74,8 +73,10 @@ func RotateDispatcherTLSCertificate() *feature.Feature {
 			subscription.WithChannel(channel_impl.AsRef(channelName)),
 			subscription.WithSubscriberFromDestination(d))(ctx, t)
 	})
-	f.Setup("subscription is ready", subscription.IsReady(subscriptionName))
-	f.Setup("Channel has HTTPS address", channel_impl.ValidateAddress(channelName, addressable.AssertHTTPSAddress))
+
+	f.Requirement("channel is ready", channel_impl.IsReady(channelName))
+	f.Requirement("subscription is ready", subscription.IsReady(subscriptionName))
+	f.Requirement("Channel has HTTPS address", channel_impl.ValidateAddress(channelName, addressable.AssertHTTPSAddress))
 
 	event := cetest.FullEvent()
 	event.SetID(uuid.New().String())
@@ -121,7 +122,6 @@ func SubscriptionTLS() *feature.Feature {
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiverTLS))
 	f.Setup("install dead letter sink", eventshub.Install(dlsName, eventshub.StartReceiverTLS))
 	f.Setup("install channel", channel_impl.Install(channelName))
-	f.Setup("channel is ready", channel_impl.IsReady(channelName))
 	f.Setup("install subscription", func(ctx context.Context, t feature.T) {
 		d := service.AsDestinationRef(sink)
 		d.CACerts = eventshub.GetCaCerts(ctx)
@@ -129,7 +129,6 @@ func SubscriptionTLS() *feature.Feature {
 			subscription.WithChannel(channel_impl.AsRef(channelName)),
 			subscription.WithSubscriberFromDestination(d))(ctx, t)
 	})
-	f.Setup("subscription is ready", subscription.IsReady(subscriptionName))
 	f.Setup("install dead letter subscription", func(ctx context.Context, t feature.T) {
 		d := service.AsDestinationRef(dlsName)
 		d.CACerts = eventshub.GetCaCerts(ctx)
@@ -138,8 +137,11 @@ func SubscriptionTLS() *feature.Feature {
 			subscription.WithDeadLetterSinkFromDestination(d),
 			subscription.WithSubscriber(nil, "http://127.0.0.1:2468", ""))(ctx, t)
 	})
-	f.Setup("subscription dead letter is ready", subscription.IsReady(dlsSubscriptionName))
-	f.Setup("Channel has HTTPS address", channel_impl.ValidateAddress(channelName, addressable.AssertHTTPSAddress))
+
+	f.Requirement("channel is ready", channel_impl.IsReady(channelName))
+	f.Requirement("subscription is ready", subscription.IsReady(subscriptionName))
+	f.Requirement("subscription dead letter is ready", subscription.IsReady(dlsSubscriptionName))
+	f.Requirement("Channel has HTTPS address", channel_impl.ValidateAddress(channelName, addressable.AssertHTTPSAddress))
 
 	event := cetest.FullEvent()
 	event.SetID(uuid.New().String())
@@ -188,7 +190,6 @@ func SubscriptionTLSTrustBundle() *feature.Feature {
 		eventshub.StartReceiverTLS,
 	))
 	f.Setup("install channel", channel_impl.Install(channelName))
-	f.Setup("channel is ready", channel_impl.IsReady(channelName))
 	f.Setup("install subscription", func(ctx context.Context, t feature.T) {
 		d := &duckv1.Destination{
 			URI: &apis.URL{
@@ -201,7 +202,6 @@ func SubscriptionTLSTrustBundle() *feature.Feature {
 			subscription.WithChannel(channel_impl.AsRef(channelName)),
 			subscription.WithSubscriberFromDestination(d))(ctx, t)
 	})
-	f.Setup("subscription is ready", subscription.IsReady(subscriptionName))
 	f.Setup("install dead letter subscription", func(ctx context.Context, t feature.T) {
 		d := &duckv1.Destination{
 			URI: &apis.URL{
@@ -216,8 +216,11 @@ func SubscriptionTLSTrustBundle() *feature.Feature {
 			subscription.WithDeadLetterSinkFromDestination(d),
 			subscription.WithSubscriber(nil, "http://127.0.0.1:2468", ""))(ctx, t)
 	})
-	f.Setup("subscription dead letter is ready", subscription.IsReady(dlsSubscriptionName))
-	f.Setup("Channel has HTTPS address", channel_impl.ValidateAddress(channelName, addressable.AssertHTTPSAddress))
+
+	f.Requirement("channel is ready", channel_impl.IsReady(channelName))
+	f.Requirement("subscription is ready", subscription.IsReady(subscriptionName))
+	f.Requirement("subscription dead letter is ready", subscription.IsReady(dlsSubscriptionName))
+	f.Requirement("Channel has HTTPS address", channel_impl.ValidateAddress(channelName, addressable.AssertHTTPSAddress))
 
 	event := cetest.FullEvent()
 	event.SetID(uuid.New().String())
@@ -272,8 +275,6 @@ func SubscriptionTLSWithAdditionalTrustBundle() *feature.Feature {
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiverTLS))
 	f.Setup("install sink", eventshub.Install(dlsName, eventshub.StartReceiverTLS))
 	f.Setup("install channel", channel_impl.Install(channelName))
-	f.Setup("channel is ready", channel_impl.IsReady(channelName))
-
 	f.Setup("install subscription", func(ctx context.Context, t feature.T) {
 		d := &duckv1.Destination{
 			URI: &apis.URL{
@@ -286,7 +287,6 @@ func SubscriptionTLSWithAdditionalTrustBundle() *feature.Feature {
 			subscription.WithChannel(channel_impl.AsRef(channelName)),
 			subscription.WithSubscriberFromDestination(d))(ctx, t)
 	})
-	f.Setup("subscription is ready", subscription.IsReady(subscriptionName))
 	f.Setup("install dead letter subscription", func(ctx context.Context, t feature.T) {
 		d := &duckv1.Destination{
 			URI: &apis.URL{
@@ -301,8 +301,11 @@ func SubscriptionTLSWithAdditionalTrustBundle() *feature.Feature {
 			subscription.WithDeadLetterSinkFromDestination(d),
 			subscription.WithSubscriber(nil, "http://127.0.0.1:2468", ""))(ctx, t)
 	})
-	f.Setup("subscription dead letter is ready", subscription.IsReady(dlsSubscriptionName))
-	f.Setup("Channel has HTTPS address", channel_impl.ValidateAddress(channelName, addressable.AssertHTTPSAddress))
+
+	f.Requirement("channel is ready", channel_impl.IsReady(channelName))
+	f.Requirement("subscription is ready", subscription.IsReady(subscriptionName))
+	f.Requirement("subscription dead letter is ready", subscription.IsReady(dlsSubscriptionName))
+	f.Requirement("Channel has HTTPS address", channel_impl.ValidateAddress(channelName, addressable.AssertHTTPSAddress))
 
 	event := cetest.FullEvent()
 	event.SetID(uuid.New().String())
