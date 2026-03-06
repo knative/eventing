@@ -19,7 +19,6 @@ package eventshub
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"os"
 	"strconv"
@@ -157,21 +156,16 @@ func defaultResource(serviceName string) (*resource.Resource, error) {
 		attrs = append(attrs, semconv.K8SPodName(pn))
 	}
 
-	res, err := resource.Merge(
+	// Ignore the error because it complains about semconv
+	// schema version differences
+	resource, err := resource.Merge(
 		resource.Default(),
 		resource.NewWithAttributes(
 			semconv.SchemaURL,
 			attrs...,
 		),
 	)
-
-	if errors.Is(err, resource.ErrSchemaURLConflict) {
-		// Ignore the error because it complains about semconv
-		// schema version differences
-		return res, nil
-	}
-
-	return res, err
+	return resource, err
 }
 
 func ParseObservabilityConfig(configStr string) (*observability.Config, error) {

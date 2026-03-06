@@ -1535,8 +1535,8 @@ knative.dev/pkg/webhook/resourcesemantics
 knative.dev/pkg/webhook/resourcesemantics/conversion
 knative.dev/pkg/webhook/resourcesemantics/defaulting
 knative.dev/pkg/webhook/resourcesemantics/validation
-# knative.dev/reconciler-test v0.0.0-20260303022055-b6439c2a1955
-## explicit; go 1.25.0
+# knative.dev/reconciler-test v0.0.0-20260303022055-b6439c2a1955 => knative.dev/reconciler-test v0.0.0-20260209014124-3e047ab70815
+## explicit; go 1.24.0
 knative.dev/reconciler-test/cmd/eventshub
 knative.dev/reconciler-test/pkg/environment
 knative.dev/reconciler-test/pkg/eventshub
@@ -1590,3 +1590,4 @@ sigs.k8s.io/structured-merge-diff/v6/value
 # sigs.k8s.io/yaml v1.6.0
 ## explicit; go 1.22
 sigs.k8s.io/yaml
+# knative.dev/reconciler-test => knative.dev/reconciler-test v0.0.0-20260209014124-3e047ab70815

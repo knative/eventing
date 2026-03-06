@@ -1141,8 +1141,8 @@ knative.dev/hack/schema v0.0.0-20260212092700-0126b283bf20 h1:iLDZBzvPIvRS8SljHU
 knative.dev/hack/schema v0.0.0-20260212092700-0126b283bf20/go.mod h1:KkibP1IazICP5ClxwN5D26LDSygsqbYnVGuGFTsHNOQ=
 knative.dev/pkg v0.0.0-20260304131155-a902bbfa38de h1:cz1QT/L7SNC+dF47xYRPJt1WRP/HfTx8+KoZjmGA8V8=
 knative.dev/pkg v0.0.0-20260304131155-a902bbfa38de/go.mod h1:mV8s7Uc92am8byZSJPIaVm1NBr0h8vsFL+sEEvMoBbk=
-knative.dev/reconciler-test v0.0.0-20260303022055-b6439c2a1955 h1:1SRnHx9BimeT4rIYUA91kjgllqEe7F3VPNdB3ak+kog=
-knative.dev/reconciler-test v0.0.0-20260303022055-b6439c2a1955/go.mod h1:WQUf92QsHOho5etxhuSpa7t8SziOhBhXUsg4jRSb1l4=
+knative.dev/reconciler-test v0.0.0-20260209014124-3e047ab70815 h1:ynTnyoLFY/vXI3nLIXFcr86hiPG0SV11zF+JB+2cIF8=
+knative.dev/reconciler-test v0.0.0-20260209014124-3e047ab70815/go.mod h1:FUaadFiniAaqqBp/D2g2cO/FUABVR8W4yZd2azDzp7I=
 rsc.io/binaryregexp v0.2.0/go.mod h1:qTv7/COck+e2FymRvadv62gMdZztPaShugOCi3I+8D8=
 rsc.io/quote/v3 v3.1.0/go.mod h1:yEA65RcK8LyAZtP9Kv3t0HmxON59tX3rD+tICJqUlj0=
 rsc.io/sampler v1.3.0/go.mod h1:T1hPZKmBbMNahiBKFy5HrXp6adAjACjK9JXDnKaTXpA=

@@ -20,7 +20,6 @@ import (
 	"context"
 	"embed"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -32,7 +31,6 @@ import (
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/network"
-	"knative.dev/pkg/observability"
 
 	"knative.dev/reconciler-test/pkg/environment"
 	eventshubrbac "knative.dev/reconciler-test/pkg/eventshub/rbac"
@@ -207,17 +205,6 @@ func Install(name string, options ...EventsHubOption) feature.StepFn {
 			envs[EventGeneratorsEnv] = "forwarder"
 			// No event recording desired, just logging.
 			envs[EventLogsEnv] = "logger"
-			// Disable Prometheus metrics server to avoid port conflict with queue-proxy.
-			// The forwarder runs as a Knative Service which injects a queue-proxy sidecar
-			// that provides metrics on port 9090. Starting eventshub's own metrics server
-			// would cause a "bind: address already in use" error.
-			if obsCfg, err := ParseObservabilityConfig(envs[ConfigObservabilityEnv]); err == nil && obsCfg != nil {
-				// Clear metrics configuration to disable the metrics server
-				obsCfg.Metrics = observability.MetricsConfig{}
-				if obsCfgStr, err := json.Marshal(obsCfg); err == nil {
-					envs[ConfigObservabilityEnv] = string(obsCfgStr)
-				}
-			}
 			cfg["envs"] = envs
 			cfg["sink"] = sinkURL.URL.String()
 
@@ -225,7 +212,7 @@ func Install(name string, options ...EventsHubOption) feature.StepFn {
 			if _, err := manifest.InstallYamlFS(ctx, forwarderTemplates, cfg); err != nil {
 				log.Fatal(err)
 			}
-			knativeservice.IsReady(name)(ctx, t)
+			knativeservice.IsReady(name)
 		}
 	}
 }
