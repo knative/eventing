@@ -238,3 +238,50 @@ func TestCACerts(t *testing.T) {
 		})
 	}
 }
+
+func TestGetKlogLevel(t *testing.T) {
+	testCases := []struct {
+		name     string
+		envValue string
+		expected int
+	}{
+		{
+			name:     "default value (0)",
+			envValue: "",
+			expected: 0,
+		},
+		{
+			name:     "level 7 - verbose",
+			envValue: "7",
+			expected: 7,
+		},
+		{
+			name:     "invalid level - negative",
+			envValue: "-1",
+			expected: 0,
+		},
+		{
+			name:     "invalid level - non-numeric",
+			envValue: "invalid",
+			expected: 0,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.envValue != "" {
+				t.Setenv("K_KLOG_LEVEL", tc.envValue)
+			}
+
+			var env myEnvConfig
+			err := envconfig.Process("", &env)
+			if err != nil {
+				t.Error("Expected no error:", err)
+			}
+
+			if got := env.GetKlogLevel(); got != tc.expected {
+				t.Errorf("Expected GetKlogLevel() to be %d, got: %d", tc.expected, got)
+			}
+		})
+	}
+}
