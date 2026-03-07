@@ -343,9 +343,13 @@ func (r *Reconciler) reconcileJsonataTransformationAddress(ctx context.Context, 
 	}
 
 	if f := feature.FromContext(ctx); f.IsStrictTransportEncryption() {
+		expectedPort := int32(8443)
+		if f.IsOIDCAuthentication() {
+			expectedPort = 3129
+		}
 		for _, sub := range endpoint.Subsets {
 			for _, p := range sub.Ports {
-				if p.Port != 8443 {
+				if p.Port != expectedPort {
 					transform.Status.MarkWaitingForServiceEndpoints()
 					return controller.NewSkipKey("")
 				}
