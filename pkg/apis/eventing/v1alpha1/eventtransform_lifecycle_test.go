@@ -56,11 +56,13 @@ func TestFullLifecycle(t *testing.T) {
 	topLevel := et.Status.GetCondition(apis.ConditionReady)
 	transformation := et.Status.GetCondition(TransformationConditionReady)
 	addressable := et.Status.GetCondition(TransformConditionAddressable)
+	eventPolicies := et.Status.GetCondition(TransformationEventPoliciesReady)
 
 	assert.Equal(t, corev1.ConditionUnknown, topLevel.Status)
 	assert.Equal(t, corev1.ConditionUnknown, transformation.Status)
 	assert.Equal(t, corev1.ConditionUnknown, addressable.Status)
-	assert.Len(t, et.Status.Conditions, 3)
+	assert.Equal(t, corev1.ConditionUnknown, eventPolicies.Status)
+	assert.Len(t, et.Status.Conditions, 4)
 	assert.Equal(t, false, et.Status.IsReady())
 
 	ds := appsv1.DeploymentStatus{
@@ -75,26 +77,29 @@ func TestFullLifecycle(t *testing.T) {
 
 	deploymentCondition := et.Status.GetCondition(TransformationJsonataDeploymentReady)
 	assert.Equal(t, corev1.ConditionTrue, deploymentCondition.Status)
-	assert.Len(t, et.Status.Conditions, 4)
+	assert.Len(t, et.Status.Conditions, 5)
 	assert.Equal(t, false, et.Status.IsReady())
 
 	transformationCondition := et.Status.GetCondition(TransformationConditionReady)
 	assert.Equal(t, corev1.ConditionUnknown, transformationCondition.Status, et)
-	assert.Len(t, et.Status.Conditions, 4)
+	assert.Len(t, et.Status.Conditions, 5)
 	assert.Equal(t, false, et.Status.IsReady())
 
 	et.Status.PropagateJsonataSinkBindingUnset()
 
 	transformationCondition = et.Status.GetCondition(TransformationConditionReady)
 	assert.Equal(t, corev1.ConditionTrue, transformationCondition.Status, et)
-	assert.Len(t, et.Status.Conditions, 5)
+	assert.Len(t, et.Status.Conditions, 6)
 	assert.Equal(t, false, et.Status.IsReady())
 
 	et.Status.SetAddresses(duckv1.Addressable{URL: apis.HTTPS("example.com")})
 	addrCondition := et.Status.GetCondition(TransformConditionAddressable)
 	assert.Equal(t, corev1.ConditionTrue, addrCondition.Status, et)
-	assert.Len(t, et.Status.Conditions, 5)
+	assert.Len(t, et.Status.Conditions, 6)
+	assert.Equal(t, false, et.Status.IsReady())
 
+	et.Status.MarkEventPoliciesTrue()
+	assert.Len(t, et.Status.Conditions, 6)
 	assert.Equal(t, true, et.Status.IsReady())
 
 	// All conditions are ready

@@ -23,6 +23,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	eventing "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/pkg/apis/feature"
 	sources "knative.dev/eventing/pkg/apis/sources/v1"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/ptr"
@@ -125,5 +126,23 @@ func WithJsonataWaitingForServiceEndpoints() EventTransformOption {
 func WithEventTransformAddresses(addr ...duckv1.Addressable) EventTransformOption {
 	return func(transform *eventing.EventTransform) {
 		transform.Status.SetAddresses(addr...)
+	}
+}
+
+func WithEventTransformEventPoliciesReadyBecauseOIDCDisabled() EventTransformOption {
+	return func(transform *eventing.EventTransform) {
+		transform.Status.MarkEventPoliciesTrueWithReason("OIDCDisabled", "Feature %q must be enabled to support Authorization", feature.OIDCAuthentication)
+	}
+}
+
+func WithEventTransformEventPoliciesReadyBecauseNoPolicyAndOIDCEnabled() EventTransformOption {
+	return func(transform *eventing.EventTransform) {
+		transform.Status.MarkEventPoliciesTrueWithReason("DefaultAuthorizationMode", "Default authz mode is %q", feature.AuthorizationAllowSameNamespace)
+	}
+}
+
+func WithEventTransformEventPoliciesReady(reason, message string) EventTransformOption {
+	return func(transform *eventing.EventTransform) {
+		transform.Status.MarkEventPoliciesTrueWithReason(reason, message)
 	}
 }

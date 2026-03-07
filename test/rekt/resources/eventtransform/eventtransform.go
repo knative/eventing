@@ -129,7 +129,20 @@ func WithJsonata(jsonata eventing.JsonataEventTransformationSpec) SpecOption {
 	}
 }
 
-// IsReady tests to see if a JobSink becomes ready within the time given.
+// GoesReady installs a simple EventTransform with a Jsonata expression and waits for it to become ready.
+func GoesReady(name string) *feature.Feature {
+	f := feature.NewFeature()
+
+	f.Setup("install event transform", Install(name, WithSpec(
+		WithJsonata(eventing.JsonataEventTransformationSpec{Expression: `$`}),
+	)))
+	f.Setup("event transform is ready", IsReady(name))
+	f.Setup("event transform is addressable", IsAddressable(name))
+
+	return f
+}
+
+// IsReady tests to see if an EventTransform becomes ready within the time given.
 func IsReady(name string, timing ...time.Duration) feature.StepFn {
 	return k8s.IsReady(GVR(), name, timing...)
 }
