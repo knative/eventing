@@ -21,9 +21,14 @@ package rekt
 
 import (
 	"testing"
+	"time"
 
+	"knative.dev/eventing/test/rekt/features/authz"
+	"knative.dev/eventing/test/rekt/features/oidc"
+	eventtransformresource "knative.dev/eventing/test/rekt/resources/eventtransform"
 	"knative.dev/pkg/system"
 	"knative.dev/reconciler-test/pkg/eventshub"
+	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/knative"
 
@@ -102,4 +107,41 @@ func TestEventTransformJsonataWithSinkReplyTransform(t *testing.T) {
 	)
 
 	env.Test(ctx, t, eventtransform.JsonataSinkReplyTransform())
+}
+
+func TestEventTransformSupportsOIDC(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithObservabilityConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+		environment.WithPollTimings(4*time.Second, 12*time.Minute),
+		eventshub.WithTLS(t),
+	)
+
+	name := feature.MakeRandomK8sName("eventtransform")
+	env.Prerequisite(ctx, t, eventtransformresource.GoesReady(name))
+
+	env.TestSet(ctx, t, oidc.AddressableOIDCConformance(eventtransformresource.GVR(), "EventTransform", name, env.Namespace()))
+}
+
+func TestEventTransformSupportsAuthZ(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithObservabilityConfig,
+		k8s.WithEventListener,
+		eventshub.WithTLS(t),
+		environment.Managed(t),
+	)
+
+	name := feature.MakeRandomK8sName("eventtransform")
+	env.Prerequisite(ctx, t, eventtransformresource.GoesReady(name))
+
+	env.TestSet(ctx, t, authz.AddressableAuthZConformance(eventtransformresource.GVR(), "EventTransform", name))
 }
