@@ -47,7 +47,7 @@ require (
 	go.uber.org/multierr v1.11.0
 	go.uber.org/zap v1.27.1
 	golang.org/x/net v0.51.0
-	golang.org/x/sync v0.19.0
+	golang.org/x/sync v0.20.0
 	k8s.io/api v0.35.2
 	k8s.io/apiextensions-apiserver v0.35.2
 	k8s.io/apimachinery v0.35.2
@@ -55,10 +55,10 @@ require (
 	k8s.io/client-go v0.35.2
 	k8s.io/code-generator v0.35.2
 	k8s.io/utils v0.0.0-20251002143259-bc988d571ff4
-	knative.dev/hack v0.0.0-20260212092700-0126b283bf20
-	knative.dev/hack/schema v0.0.0-20260212092700-0126b283bf20
-	knative.dev/pkg v0.0.0-20260304131155-a902bbfa38de
-	knative.dev/reconciler-test v0.0.0-20260303022055-b6439c2a1955
+	knative.dev/hack v0.0.0-20260310014051-c448fdb867e2
+	knative.dev/hack/schema v0.0.0-20260310014051-c448fdb867e2
+	knative.dev/pkg v0.0.0-20260310013839-5504026dd1b6
+	knative.dev/reconciler-test v0.0.0-20260310013948-a7bc2f295064
 	sigs.k8s.io/randfill v1.0.0
 	sigs.k8s.io/yaml v1.6.0
 )
