@@ -69,10 +69,10 @@ const (
 	// OTEL environment variable names for tracing auto-configuration
 	// These are standard OpenTelemetry environment variables that the Node.js SDK
 	// automatically reads to configure the trace exporter.
-	OTELExporterEndpointEnv = "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"
-	OTELExporterProtocolEnv = "OTEL_EXPORTER_OTLP_TRACES_PROTOCOL"
-	OTELTracesSamplerEnv    = "OTEL_TRACES_SAMPLER"
-	OTELTracesSamplerArgEnv = "OTEL_TRACES_SAMPLER_ARG"
+	OTELExporterEndpointEnv         = "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"
+	OTELExporterProtocolEnv         = "OTEL_EXPORTER_OTLP_TRACES_PROTOCOL"
+	OTELTracesSamplerEnv            = "OTEL_TRACES_SAMPLER"
+	OTELTracesSamplerArgEnv         = "OTEL_TRACES_SAMPLER_ARG"
 	JsonataAuthProxyRoleBindingName = "eventing-auth-proxy-eventtransform"
 )
 
@@ -134,7 +134,7 @@ func jsonataDeployment(ctx context.Context, authProxyImage string, withCombinedT
 						{
 							Name:  "jsonata-event-transform",
 							Image: image,
-							Env: jsonataContainerEnvVars(cw),
+							Env:   jsonataContainerEnvVars(cw),
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      expression.GetName(),
