@@ -2553,6 +2553,8 @@ func TestJsonataDeploymentOtelEnvVars(t *testing.T) {
 			}
 		})
 	}
+}
+
 const testAuthProxyImage = "quay.io/fake-auth-proxy"
 
 func jsonataTestDeploymentWithAuthProxy(ctx context.Context, cw *reconcilersource.ConfigWatcher, opts ...DeploymentOption) *appsv1.Deployment {
