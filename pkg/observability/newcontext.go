@@ -23,6 +23,7 @@ import (
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/attribute"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 	"k8s.io/apimachinery/pkg/types"
 )
 
@@ -163,6 +164,31 @@ func WithSinkLabels(ctx context.Context, sink types.NamespacedName, kind string)
 		SinkNamespace.With(sink.Namespace),
 		SinkKind.With(kind),
 	)
+
+	return ctx
+}
+
+func WithSourceLabels(ctx context.Context, source types.NamespacedName) context.Context {
+	labeler, ok := otelhttp.LabelerFromContext(ctx)
+	if !ok {
+		ctx = otelhttp.ContextWithLabeler(ctx, labeler)
+	}
+
+	labeler.Add(
+		SourceName.With(source.Name),
+		SourceNamespace.With(source.Namespace),
+	)
+
+	return ctx
+}
+
+func WithHTTPStatusCodeLabel(ctx context.Context, statusCode int) context.Context {
+	labeler, ok := otelhttp.LabelerFromContext(ctx)
+	if !ok {
+		ctx = otelhttp.ContextWithLabeler(ctx, labeler)
+	}
+
+	labeler.Add(semconv.HTTPResponseStatusCode(statusCode))
 
 	return ctx
 }

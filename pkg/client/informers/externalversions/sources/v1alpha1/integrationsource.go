@@ -57,7 +57,7 @@ func NewIntegrationSourceInformer(client versioned.Interface, namespace string, 
 // one. This reduces memory footprint and number of connections to the server.
 func NewFilteredIntegrationSourceInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
-		&cache.ListWatch{
+		cache.ToListWatcherWithWatchListSemantics(&cache.ListWatch{
 			ListFunc: func(options v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
@@ -82,7 +82,7 @@ func NewFilteredIntegrationSourceInformer(client versioned.Interface, namespace 
 				}
 				return client.SourcesV1alpha1().IntegrationSources(namespace).Watch(ctx, options)
 			},
-		},
+		}, client),
 		&apissourcesv1alpha1.IntegrationSource{},
 		resyncPeriod,
 		indexers,

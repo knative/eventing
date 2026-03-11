@@ -29,6 +29,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 	filteredconfigmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap/filtered/fake"
 	filteredFactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
 	"knative.dev/pkg/observability/metrics/metricstest"
@@ -350,11 +351,17 @@ func TestHandler_ServeHTTP(t *testing.T) {
 			}
 
 			expectedMetricNames := []string{}
+			assertions := []metricstest.AssertFunc{}
 			if tc.expectDispatchDuration {
 				expectedMetricNames = append(expectedMetricNames, "kn.eventing.dispatch.duration")
+				assertions = append(assertions,
+					metricstest.HasAttributes(ScopeName, "kn.eventing.dispatch.duration",
+						semconv.HTTPResponseStatusCode(senderResponseStatusCode)),
+				)
 			}
 
-			metricstest.AssertMetrics(t, reader, metricstest.MetricsPresent(ScopeName, expectedMetricNames...))
+			assertions = append(assertions, metricstest.MetricsPresent(ScopeName, expectedMetricNames...))
+			metricstest.AssertMetrics(t, reader, assertions...)
 		})
 	}
 }

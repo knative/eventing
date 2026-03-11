@@ -19,6 +19,7 @@ package source
 import (
 	"fmt"
 
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/eventing/pkg/auth"
 	"knative.dev/pkg/ptr"
@@ -268,6 +269,48 @@ func makeContainerSource(source *sourcesv1alpha1.IntegrationSource, ready *corev
 									Name:  "CAMEL_KAMELET_TIMER_SOURCE_REPEATCOUNT",
 									Value: "0",
 								},
+							},
+							LivenessProbe: &corev1.Probe{
+								FailureThreshold: 3,
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path:   "/q/health/live",
+										Port:   intstr.FromInt32(8080),
+										Scheme: corev1.URISchemeHTTP,
+									},
+								},
+								InitialDelaySeconds: 5,
+								PeriodSeconds:       10,
+								SuccessThreshold:    1,
+								TimeoutSeconds:      10,
+							},
+							ReadinessProbe: &corev1.Probe{
+								FailureThreshold: 3,
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path:   "/q/health/ready",
+										Port:   intstr.FromInt32(8080),
+										Scheme: corev1.URISchemeHTTP,
+									},
+								},
+								InitialDelaySeconds: 5,
+								PeriodSeconds:       10,
+								SuccessThreshold:    1,
+								TimeoutSeconds:      10,
+							},
+							StartupProbe: &corev1.Probe{
+								FailureThreshold: 3,
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path:   "/q/health/started",
+										Port:   intstr.FromInt32(8080),
+										Scheme: corev1.URISchemeHTTP,
+									},
+								},
+								InitialDelaySeconds: 5,
+								PeriodSeconds:       10,
+								SuccessThreshold:    1,
+								TimeoutSeconds:      10,
 							},
 						},
 					},

@@ -51,8 +51,7 @@ func SourceToSink(brokerName string) *feature.Feature {
 	// Install the trigger
 	f.Setup("install trigger", trigger.Install(via, cfg...))
 
-	f.Setup("trigger goes ready", trigger.IsReady(via))
-
+	f.Requirement("trigger goes ready", trigger.IsReady(via))
 	f.Requirement("install source", eventshub.Install(source,
 		eventshub.StartSenderToResource(broker.GVR(), brokerName),
 		eventshub.InputEvent(event),
@@ -84,12 +83,13 @@ func SourceToSinkWithDLQ() *feature.Feature {
 
 	brokerConfig := append(broker.WithEnvConfig(), delivery.WithDeadLetterSink(service.AsKReference(dls), ""))
 	f.Setup("install broker", broker.Install(brokerName, brokerConfig...))
-	f.Setup("Broker is ready", broker.IsReady(brokerName))
 	f.Setup("install trigger", trigger.Install(triggerName, trigger.WithBrokerName(brokerName), trigger.WithSubscriber(nil, "bad://uri")))
-	f.Setup("trigger is ready", trigger.IsReady(triggerName))
 
 	ce := FullEvent()
 	ce.SetID(uuid.New().String())
+
+	f.Requirement("Broker is ready", broker.IsReady(brokerName))
+	f.Requirement("trigger is ready", trigger.IsReady(triggerName))
 
 	// Send events after data plane is ready.
 	f.Requirement("install source", eventshub.Install(source,
@@ -124,8 +124,9 @@ func SourceToSinkWithFlakyDLQ(brokerName string) *feature.Feature {
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver, eventshub.DropFirstN(2)))
 	f.Setup("update broker with DLQ", broker.Install(brokerName, broker.WithDeadLetterSink(service.AsKReference(dlq), "")))
 	f.Setup("install trigger", trigger.Install(via, trigger.WithBrokerName(brokerName), trigger.WithSubscriber(service.AsKReference(sink), "")))
-	f.Setup("trigger goes ready", trigger.IsReady(via))
-	f.Setup("broker goes ready", broker.IsReady(via))
+
+	f.Requirement("trigger goes ready", trigger.IsReady(via))
+	f.Requirement("broker goes ready", broker.IsReady(via))
 
 	f.Requirement("install source", eventshub.Install(source,
 		eventshub.StartSenderToResource(broker.GVR(), brokerName),

@@ -87,8 +87,20 @@ func WithIntegrationSinkEventPoliciesReadyBecauseOIDCDisabled() IntegrationSinkO
 	}
 }
 
+func WithIntegrationSinkEventPoliciesReadyBecauseNoPolicyAndOIDCEnabled() IntegrationSinkOption {
+	return func(s *v1alpha1.IntegrationSink) {
+		s.Status.MarkEventPoliciesTrueWithReason("DefaultAuthorizationMode", "Default authz mode is %q", feature.AuthorizationAllowSameNamespace)
+	}
+}
+
 func WithIntegrationSinkTrustBundlePropagatedReady() IntegrationSinkOption {
 	return func(s *v1alpha1.IntegrationSink) {
 		s.Status.MarkTrustBundlePropagated()
+	}
+}
+
+func WithIntegrationSinkEventPoliciesReady(reason, message string) IntegrationSinkOption {
+	return func(s *v1alpha1.IntegrationSink) {
+		s.Status.MarkEventPoliciesTrueWithReason(reason, message)
 	}
 }

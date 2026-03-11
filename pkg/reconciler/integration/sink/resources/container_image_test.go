@@ -21,6 +21,7 @@ import (
 	"sort"
 	"testing"
 
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"knative.dev/eventing/pkg/reconciler/integration"
 
 	"knative.dev/pkg/kmeta"
@@ -149,6 +150,48 @@ func TestNewSQSContainerSink(t *testing.T) {
 									ReadOnly:  true,
 								},
 							},
+							LivenessProbe: &corev1.Probe{
+								FailureThreshold: 3,
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path:   "/q/health/live",
+										Port:   intstr.FromInt32(8080),
+										Scheme: corev1.URISchemeHTTP,
+									},
+								},
+								InitialDelaySeconds: 5,
+								PeriodSeconds:       10,
+								SuccessThreshold:    1,
+								TimeoutSeconds:      10,
+							},
+							ReadinessProbe: &corev1.Probe{
+								FailureThreshold: 3,
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path:   "/q/health/ready",
+										Port:   intstr.FromInt32(8080),
+										Scheme: corev1.URISchemeHTTP,
+									},
+								},
+								InitialDelaySeconds: 5,
+								PeriodSeconds:       10,
+								SuccessThreshold:    1,
+								TimeoutSeconds:      10,
+							},
+							StartupProbe: &corev1.Probe{
+								FailureThreshold: 3,
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path:   "/q/health/started",
+										Port:   intstr.FromInt32(8080),
+										Scheme: corev1.URISchemeHTTP,
+									},
+								},
+								InitialDelaySeconds: 5,
+								PeriodSeconds:       10,
+								SuccessThreshold:    1,
+								TimeoutSeconds:      10,
+							},
 						},
 					},
 					ServiceAccountName: "aws-service-account",
@@ -157,7 +200,7 @@ func TestNewSQSContainerSink(t *testing.T) {
 		},
 	}
 
-	got, _ := MakeDeploymentSpec(sink, "unused", feature.Flags{}, nil, nil)
+	got, _ := MakeDeploymentSpec(sink, "unused", feature.Flags{}, nil)
 	sortOpts := []cmp.Option{
 		cmp.Transformer("SortEnvVars", func(in corev1.Container) corev1.Container {
 			out := in

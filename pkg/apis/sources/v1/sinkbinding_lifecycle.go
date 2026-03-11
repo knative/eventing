@@ -262,12 +262,14 @@ func (sb *SinkBinding) Do(ctx context.Context, ps *duckv1.WithPod) {
 			ps.Spec.Template.Spec.Containers[i].VolumeMounts = append(ps.Spec.Template.Spec.Containers[i].VolumeMounts, corev1.VolumeMount{
 				Name:      oidcTokenVolumeName,
 				MountPath: "/oidc",
+				ReadOnly:  true,
 			})
 		}
 		for i := range ps.Spec.Template.Spec.InitContainers {
 			ps.Spec.Template.Spec.InitContainers[i].VolumeMounts = append(ps.Spec.Template.Spec.InitContainers[i].VolumeMounts, corev1.VolumeMount{
 				Name:      oidcTokenVolumeName,
 				MountPath: "/oidc",
+				ReadOnly:  true,
 			})
 		}
 	}

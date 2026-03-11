@@ -34,8 +34,9 @@ func GoesReadyInDifferentNamespace(name, namespace string, cfg ...manifest.CfgFn
 	cfg = append(cfg, namespaceCfg)
 
 	f.Setup(fmt.Sprintf("install broker %q in namespace %q", name, namespace), broker.Install(name, cfg...))
-	f.Setup("Broker is ready", broker.IsReady(name))
-	f.Setup("Broker is addressable", broker.IsAddressable(name))
+
+	f.Requirement("Broker is ready", broker.IsReady(name))
+	f.Requirement("Broker is addressable", broker.IsAddressable(name))
 
 	return f
 }

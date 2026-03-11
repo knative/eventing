@@ -34,84 +34,106 @@ import (
 	"knative.dev/reconciler-test/pkg/resources/service"
 )
 
-func SendsEventsWithSinkRef() *feature.Feature {
-	source := feature.MakeRandomK8sName("integrationsource")
-	sink := feature.MakeRandomK8sName("sink")
+func SendsEventsWithSinkRef(sourceType integrationsource.SourceType) *feature.Feature {
+	sourceName := feature.MakeRandomK8sName("integrationsource")
+	sinkName := feature.MakeRandomK8sName("sink")
 	f := feature.NewFeature()
 
-	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
+	f.Setup("install sink", eventshub.Install(sinkName, eventshub.StartReceiver))
 
-	f.Requirement("install integrationsource", integrationsource.Install(source, integrationsource.WithSink(service.AsDestinationRef(sink))))
-	f.Requirement("integrationsource goes ready", integrationsource.IsReady(source))
+	// Source-specific setup and teardown cleanup
+	switch sourceType {
+	case integrationsource.SourceTypeS3:
+		f.Setup("cleanup S3 bucket before test", integrationsource.CleanupS3())
+		f.Teardown("cleanup S3 bucket after test", integrationsource.CleanupS3())
+	case integrationsource.SourceTypeSQS:
+		f.Setup("cleanup SQS queue before test", integrationsource.CleanupSQS())
+		f.Teardown("cleanup SQS queue after test", integrationsource.CleanupSQS())
+	case integrationsource.SourceTypeDDbStreams:
+		f.Setup("cleanup DynamoDB table before test", integrationsource.CleanupDynamoDB())
+		f.Teardown("cleanup DynamoDB table after test", integrationsource.CleanupDynamoDB())
+	}
+
+	f.Requirement("install integrationsource", integrationsource.InstallByType(sourceName, sourceType, integrationsource.WithSink(service.AsDestinationRef(sinkName))))
+
+	f.Requirement("integrationsource goes ready", integrationsource.IsReady(sourceName))
+
+	f.Assert("trigger event", integrationsource.TriggerEventByType(sourceType))
 
 	f.Stable("integrationsource as event source").
 		Must("delivers events",
-			assert.OnStore(sink).MatchEvent(test.HasType("dev.knative.eventing.timer")).AtLeast(1))
+			assert.OnStore(sinkName).MatchEvent(test.HasType(string(sourceType))).AtLeast(1))
 
 	return f
 }
 
-func SendEventsWithTLSRecieverAsSink() *feature.Feature {
-	src := feature.MakeRandomK8sName("integrationsource")
-	sink := feature.MakeRandomK8sName("sink")
+func SendEventsWithTLSReceiverAsSink(sourceType integrationsource.SourceType) *feature.Feature {
+	sourceName := feature.MakeRandomK8sName("integrationsource")
+	sinkName := feature.MakeRandomK8sName("sink")
 	f := feature.NewFeature()
 
 	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
 
-	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiverTLS))
+	f.Setup("install sink", eventshub.Install(sinkName, eventshub.StartReceiverTLS))
 
 	f.Requirement("install ContainerSource", func(ctx context.Context, t feature.T) {
-		d := service.AsDestinationRef(sink)
+		d := service.AsDestinationRef(sinkName)
 		d.CACerts = eventshub.GetCaCerts(ctx)
 
-		integrationsource.Install(src, integrationsource.WithSink(d))(ctx, t)
+		integrationsource.InstallByType(sourceName, sourceType, integrationsource.WithSink(d))(ctx, t)
 	})
-	f.Requirement("integrationsource goes ready", integrationsource.IsReady(src))
+	f.Requirement("integrationsource goes ready", integrationsource.IsReady(sourceName))
+
+	f.Assert("trigger event", integrationsource.TriggerEventByType(sourceType))
 
 	f.Stable("integrationsource as event source").
 		Must("delivers events",
-			assert.OnStore(sink).
+			assert.OnStore(sinkName).
 				Match(assert.MatchKind(eventshub.EventReceived)).
-				MatchEvent(test.HasType("dev.knative.eventing.timer")).
+				MatchEvent(test.HasType(string(sourceType))).
 				AtLeast(1),
 		).
-		Must("Set sinkURI to HTTPS endpoint", source.ExpectHTTPSSink(integrationsource.Gvr(), src)).
-		Must("Set sinkCACerts to non empty CA certs", source.ExpectCACerts(integrationsource.Gvr(), src))
+		Must("Set sinkURI to HTTPS endpoint", source.ExpectHTTPSSink(integrationsource.Gvr(), sourceName)).
+		Must("Set sinkCACerts to non empty CA certs", source.ExpectCACerts(integrationsource.Gvr(), sourceName))
 
 	return f
 }
 
-func SendEventsWithTLSRecieverAsSinkTrustBundle() *feature.Feature {
-	src := feature.MakeRandomK8sName("integrationsource")
-	sink := feature.MakeRandomK8sName("sink")
+func SendEventsWithTLSReceiverAsSinkTrustBundle(sourceType integrationsource.SourceType) *feature.Feature {
+	sourceName := feature.MakeRandomK8sName("integrationsource")
+	sinkName := feature.MakeRandomK8sName("sink")
 	f := feature.NewFeature()
 
 	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
 
-	f.Setup("install sink", eventshub.Install(sink,
+	f.Setup("install sink", eventshub.Install(sinkName,
 		eventshub.IssuerRef(eventingtlstesting.IssuerKind, eventingtlstesting.IssuerName),
 		eventshub.StartReceiverTLS,
 	))
 
 	f.Requirement("install ContainerSource", func(ctx context.Context, t feature.T) {
-		integrationsource.Install(src, integrationsource.WithSink(&duckv1.Destination{
+		destinationSink := &duckv1.Destination{
 			URI: &apis.URL{
 				Scheme: "https", // Force using https
-				Host:   network.GetServiceHostname(sink, environment.FromContext(ctx).Namespace()),
+				Host:   network.GetServiceHostname(sinkName, environment.FromContext(ctx).Namespace()),
 			},
 			CACerts: nil, // CA certs are in the trust-bundle
-		}))(ctx, t)
+		}
+
+		integrationsource.InstallByType(sourceName, sourceType, integrationsource.WithSink(destinationSink))(ctx, t)
 	})
-	f.Requirement("integrationsource goes ready", integrationsource.IsReady(src))
+	f.Requirement("integrationsource goes ready", integrationsource.IsReady(sourceName))
+
+	f.Assert("trigger event", integrationsource.TriggerEventByType(sourceType))
 
 	f.Stable("integrationsource as event source").
 		Must("delivers events",
-			assert.OnStore(sink).
+			assert.OnStore(sinkName).
 				Match(assert.MatchKind(eventshub.EventReceived)).
-				MatchEvent(test.HasType("dev.knative.eventing.timer")).
+				MatchEvent(test.HasType(string(sourceType))).
 				AtLeast(1),
 		).
-		Must("Set sinkURI to HTTPS endpoint", source.ExpectHTTPSSink(integrationsource.Gvr(), src))
+		Must("Set sinkURI to HTTPS endpoint", source.ExpectHTTPSSink(integrationsource.Gvr(), sourceName))
 
 	return f
 }

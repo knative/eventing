@@ -298,6 +298,15 @@ func (v *Verifier) initOIDCProvider(ctx context.Context, features feature.Flags)
 	return nil
 }
 
+// IsReady returns true if the OIDC provider has been initialized and the verifier
+// is ready to validate tokens. This is used by health checks to ensure the auth-proxy
+// doesn't receive traffic before it can properly validate authentication.
+func (v *Verifier) IsReady() bool {
+	v.m.RLock()
+	defer v.m.RUnlock()
+	return v.provider != nil
+}
+
 func (v *Verifier) getHTTPClientForKubeAPIServer() (*http.Client, error) {
 	client, err := rest.HTTPClientFor(v.restConfig)
 	if err != nil {

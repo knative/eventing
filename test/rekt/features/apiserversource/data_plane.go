@@ -340,15 +340,16 @@ func SendsEventsWithEventTypes() *feature.Feature {
 	// Install the broker
 	brokerName := feature.MakeRandomK8sName("broker")
 	f.Setup("install broker", broker.Install(brokerName, broker.WithEnvConfig()...))
-	f.Setup("broker is ready", broker.IsReady(brokerName))
-	f.Setup("broker is addressable", broker.IsAddressable(brokerName))
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 	f.Setup("install trigger", trigger.Install(via, trigger.WithBrokerName(brokerName), trigger.WithSubscriber(service.AsKReference(sink), "")))
-	f.Setup("trigger goes ready", trigger.IsReady(via))
 
 	sacmName := feature.MakeRandomK8sName("apiserversource")
 	f.Setup("Create Service Account for ApiServerSource with RBAC for v1.Event resources",
 		setupAccountAndRoleForPods(sacmName))
+
+	f.Requirement("broker is ready", broker.IsReady(brokerName))
+	f.Requirement("broker is addressable", broker.IsAddressable(brokerName))
+	f.Requirement("trigger goes ready", trigger.IsReady(via))
 
 	f.Requirement("install apiserversource", func(ctx context.Context, t feature.T) {
 		brokeruri, err := broker.Address(ctx, brokerName)
@@ -403,7 +404,8 @@ func SendsEventsWithObjectReferencePayload() *feature.Feature {
 	}
 
 	f.Setup("install ApiServerSource", apiserversource.Install(source, cfg...))
-	f.Setup("ApiServerSource goes ready", apiserversource.IsReady(source))
+
+	f.Requirement("ApiServerSource goes ready", apiserversource.IsReady(source))
 
 	examplePodName := feature.MakeRandomK8sName("example")
 
@@ -446,7 +448,8 @@ func SendsEventsWithResourceEventPayload() *feature.Feature {
 	}
 
 	f.Setup("install ApiServerSource", apiserversource.Install(source, cfg...))
-	f.Setup("ApiServerSource goes ready", apiserversource.IsReady(source))
+
+	f.Requirement("ApiServerSource goes ready", apiserversource.IsReady(source))
 
 	examplePodName := feature.MakeRandomK8sName("example")
 
@@ -489,7 +492,8 @@ func SendsEventsForAllResources() *feature.Feature {
 	}
 
 	f.Setup("install ApiServerSource", apiserversource.Install(source, cfg...))
-	f.Setup("ApiServerSource goes ready", apiserversource.IsReady(source))
+
+	f.Requirement("ApiServerSource goes ready", apiserversource.IsReady(source))
 
 	examplePodName := feature.MakeRandomK8sName("example")
 
@@ -545,7 +549,8 @@ func SendsEventsForAllResourcesWithNamespaceSelector() *feature.Feature {
 	}
 
 	f.Setup("install ApiServerSource", apiserversource.Install(source, cfg...))
-	f.Setup("ApiServerSource goes ready", apiserversource.IsReady(source))
+
+	f.Requirement("ApiServerSource goes ready", apiserversource.IsReady(source))
 
 	pod1 := feature.MakeRandomK8sName("example-pod-1")
 	pod2 := feature.MakeRandomK8sName("example-pod-2")
@@ -619,7 +624,8 @@ func SendsEventsForAllResourcesWithEmptyNamespaceSelector() *feature.Feature {
 	}
 
 	f.Setup("install ApiServerSource", apiserversource.Install(source, cfg...))
-	f.Setup("ApiServerSource goes ready", apiserversource.IsReady(source))
+
+	f.Requirement("ApiServerSource goes ready", apiserversource.IsReady(source))
 
 	pingSource1 := feature.MakeRandomK8sName("ping-source-1")
 	pingSource2 := feature.MakeRandomK8sName("ping-source-2")
@@ -674,7 +680,8 @@ func SendsEventsForLabelMatchingResources() *feature.Feature {
 	}
 
 	f.Setup("install ApiServerSource", apiserversource.Install(source, cfg...))
-	f.Setup("ApiServerSource goes ready", apiserversource.IsReady(source))
+
+	f.Requirement("ApiServerSource goes ready", apiserversource.IsReady(source))
 
 	examplePodName := feature.MakeRandomK8sName("example")
 
@@ -768,7 +775,8 @@ func SendEventsForLabelExpressionMatchingResources() *feature.Feature {
 	}
 
 	f.Setup("install ApiServerSource", apiserversource.Install(source, cfg...))
-	f.Setup("ApiServerSource goes ready", apiserversource.IsReady(source))
+
+	f.Requirement("ApiServerSource goes ready", apiserversource.IsReady(source))
 
 	examplePodName := feature.MakeRandomK8sName("example")
 
@@ -936,18 +944,12 @@ func SendsEventsWithBrokerAsSinkTLS() *feature.Feature {
 	f.Prerequisite("should not run when Istio is enabled", featureflags.IstioDisabled())
 
 	f.Setup("install broker", broker.Install(brokerName, broker.WithEnvConfig()...))
-	f.Setup("broker is ready", broker.IsReady(brokerName))
-	f.Setup("broker is addressable", broker.IsAddressable(brokerName))
-	f.Setup("Broker has HTTPS address", broker.ValidateAddress(brokerName, addressable.AssertHTTPSAddress))
-
 	f.Setup("install sink", eventshub.Install(sinkName, eventshub.StartReceiverTLS))
-
 	f.Setup("install trigger", func(ctx context.Context, t feature.T) {
 		d := service.AsDestinationRef(sinkName)
 		d.CACerts = eventshub.GetCaCerts(ctx)
 		trigger.Install(triggerName, trigger.WithBrokerName(brokerName), trigger.WithSubscriberFromDestination(d))(ctx, t)
 	})
-	f.Setup("Wait for Trigger to become ready", trigger.IsReady(triggerName))
 
 	f.Setup("Create Service Account for ApiServerSource with RBAC for v1.Event resources",
 		setupAccountAndRoleForPods(sacmName))
@@ -964,6 +966,11 @@ func SendsEventsWithBrokerAsSinkTLS() *feature.Feature {
 			LabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"e2e": "testing"}},
 		}),
 	}
+
+	f.Requirement("broker is ready", broker.IsReady(brokerName))
+	f.Requirement("broker is addressable", broker.IsAddressable(brokerName))
+	f.Requirement("Broker has HTTPS address", broker.ValidateAddress(brokerName, addressable.AssertHTTPSAddress))
+	f.Requirement("Wait for Trigger to become ready", trigger.IsReady(triggerName))
 
 	f.Requirement("install ApiServerSource", func(ctx context.Context, t feature.T) {
 		d := broker.AsDestinationRef(brokerName)
@@ -1043,7 +1050,8 @@ func EventsAreFilteredOut() *feature.Feature {
 	}
 
 	f.Setup("install ApiServerSource", apiserversource.Install(source, cfg...))
-	f.Setup("ApiServerSource goes ready", apiserversource.IsReady(source))
+
+	f.Requirement("ApiServerSource goes ready", apiserversource.IsReady(source))
 
 	examplePodName := feature.MakeRandomK8sName("example")
 

@@ -24,13 +24,34 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"math/big"
-	"strings"
 	"testing"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+// parseCertsFromPEM parses all certificates from PEM-encoded data
+func parseCertsFromPEM(t *testing.T, pemData []byte) []*x509.Certificate {
+	var certs []*x509.Certificate
+	remaining := pemData
+	for len(remaining) > 0 {
+		var block *pem.Block
+		block, remaining = pem.Decode(remaining)
+		if block == nil {
+			break
+		}
+		if block.Type != "CERTIFICATE" {
+			continue
+		}
+		cert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			t.Fatalf("Failed to parse certificate: %v", err)
+		}
+		certs = append(certs, cert)
+	}
+	return certs
+}
 
 func TestCombineValidTrustBundles(t *testing.T) {
 	// Helper function to create a valid test certificate
@@ -146,6 +167,31 @@ MIIDIzCC corrupted certificate data
 			expectError: false,
 		},
 		{
+			name: "Multiple ConfigMaps in reversed order produces consistent output",
+			configMaps: []*corev1.ConfigMap{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "cm2",
+						Namespace: "test",
+					},
+					Data: map[string]string{
+						"cert2.pem": string(validCert2),
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "cm1",
+						Namespace: "test",
+					},
+					Data: map[string]string{
+						"cert1.pem": string(validCert1),
+					},
+				},
+			},
+			expected:    string(validCert1) + string(validCert2),
+			expectError: false,
+		},
+		{
 			name: "Multiple certificates in same key",
 			configMaps: []*corev1.ConfigMap{
 				{
@@ -179,7 +225,8 @@ MIIDIzCC corrupted certificate data
 					},
 				},
 			},
-			expected:    string(validCert1) + string(validCert2) + string(validCert3),
+			// We expect the certs in the alphabetical order of the keys
+			expected:    string(validCert3) + string(validCert1) + string(validCert2),
 			expectError: false,
 		},
 		{
@@ -217,36 +264,26 @@ MIIDIzCC corrupted certificate data
 				t.Errorf("Did not expect error but got: %v", err)
 			}
 
-			// For valid certs, we need to compare the actual content
-			// by counting the number of certificates
+			// For valid certs, verify the actual content and order
 			if !tt.expectError {
-				result := buf.String()
+				result := buf.Bytes()
+				expected := []byte(tt.expected)
 
-				expectedCertCount := strings.Count(tt.expected, "BEGIN CERTIFICATE")
-				resultCertCount := strings.Count(result, "BEGIN CERTIFICATE")
+				// Parse expected certificates
+				expectedCerts := parseCertsFromPEM(t, expected)
+				// Parse result certificates
+				resultCerts := parseCertsFromPEM(t, result)
 
-				if expectedCertCount != resultCertCount {
+				// Check count
+				if len(expectedCerts) != len(resultCerts) {
 					t.Errorf("Expected %d certificates, got %d",
-						expectedCertCount, resultCertCount)
+						len(expectedCerts), len(resultCerts))
 				}
 
-				// Verify the actual certificates are there
-				// We can't compare the exact string due to PEM encoding variations
-				// so we count and check if each cert was included
-				remainingPEM := []byte(result)
-				for i := 0; i < expectedCertCount; i++ {
-					var block *pem.Block
-					block, remainingPEM = pem.Decode(remainingPEM)
-
-					if block == nil {
-						t.Errorf("Failed to decode PEM block %d", i)
-						break
-					}
-
-					// Verify it's a valid certificate
-					_, err := x509.ParseCertificate(block.Bytes)
-					if err != nil {
-						t.Errorf("PEM block %d is not a valid certificate: %v", i, err)
+				// Check order and equality
+				for i := 0; i < len(expectedCerts) && i < len(resultCerts); i++ {
+					if !expectedCerts[i].Equal(resultCerts[i]) {
+						t.Errorf("Certificate at index %d does not match expected certificate", i)
 					}
 				}
 			}

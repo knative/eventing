@@ -28,6 +28,7 @@ import (
 	"github.com/robfig/cron/v3"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/record"
@@ -151,6 +152,14 @@ func (a *cronJobsRunner) cronTick(ctx context.Context, client kncloudevents.Clie
 		time.Sleep(time.Duration(rand.Intn(500)) * time.Millisecond) //nolint:gosec // Cryptographic randomness not necessary here.
 
 		a.Logger.Debugf("sending cloudevent id: %s, source: %s, target: %s", event.ID(), source, target)
+
+		// Add labels to context so otelhttp picks them up for metrics
+		ctx = observability.WithLabeler(ctx)
+		ctx = observability.WithSourceLabels(ctx, types.NamespacedName{
+			Name:      src.Name,
+			Namespace: src.Namespace,
+		})
+		ctx = observability.WithMinimalEventLabels(ctx, &event)
 
 		if result := client.Send(ctx, event); !cloudevents.IsACK(result) {
 			// Exhausted number of retries. Event is lost.

@@ -42,9 +42,8 @@ func TriggerGoesReady(name, brokerName string, cfg ...manifest.CfgFn) *feature.F
 	// Install the trigger
 	f.Setup(fmt.Sprintf("install trigger %q", name), trigger.Install(name, cfg...))
 
-	// Wait for a ready broker.
-	f.Setup("Broker is ready", broker.IsReady(brokerName))
-	f.Setup("Trigger is ready", trigger.IsReady(name))
+	f.Requirement("Broker is ready", broker.IsReady(brokerName))
+	f.Requirement("Trigger is ready", trigger.IsReady(name))
 
 	return f
 }
@@ -55,8 +54,9 @@ func GoesReady(name string, cfg ...manifest.CfgFn) *feature.Feature {
 	f := new(feature.Feature)
 
 	f.Setup(fmt.Sprintf("install broker %q", name), broker.Install(name, cfg...))
-	f.Setup("Broker is ready", broker.IsReady(name))
-	f.Setup("Broker is addressable", broker.IsAddressable(name))
+
+	f.Requirement("Broker is ready", broker.IsReady(name))
+	f.Requirement("Broker is addressable", broker.IsAddressable(name))
 
 	return f
 }

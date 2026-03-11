@@ -43,9 +43,7 @@ func DispatcherAuthenticatesRequestsWithOIDC() *feature.Feature {
 	receiverAudience := feature.MakeRandomK8sName("receiver")
 
 	f.Setup("install channel", channel_impl.Install(channelName))
-	f.Setup("channel is ready", channel_impl.IsReady(channelName))
 	f.Setup("install sink", eventshub.Install(sink, eventshub.OIDCReceiverAudience(receiverAudience), eventshub.StartReceiverTLS))
-
 	f.Setup("install subscription", func(ctx context.Context, t feature.T) {
 		d := service.AsDestinationRef(sink)
 		d.CACerts = eventshub.GetCaCerts(ctx)
@@ -55,7 +53,8 @@ func DispatcherAuthenticatesRequestsWithOIDC() *feature.Feature {
 			subscription.WithSubscriberFromDestination(d))(ctx, t)
 	})
 
-	f.Setup("subscription is ready", subscription.IsReady(subscriptionName))
+	f.Requirement("channel is ready", channel_impl.IsReady(channelName))
+	f.Requirement("subscription is ready", subscription.IsReady(subscriptionName))
 
 	event := test.FullEvent()
 	f.Requirement("install source", eventshub.Install(source, eventshub.InputEvent(event), eventshub.StartSenderToResourceTLS(channel_impl.GVR(), channelName, nil)))

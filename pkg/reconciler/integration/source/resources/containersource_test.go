@@ -21,6 +21,7 @@ import (
 	"sort"
 	"testing"
 
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"knative.dev/eventing/pkg/reconciler/integration"
 
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
@@ -103,6 +104,48 @@ func TestNewContainerSource(t *testing.T) {
 								{Name: "CAMEL_KAMELET_TIMER_SOURCE_MESSAGE", Value: "test-message"},
 								{Name: "CAMEL_KAMELET_TIMER_SOURCE_CONTENTTYPE", Value: "text/plain"},
 								{Name: "CAMEL_KAMELET_TIMER_SOURCE_REPEATCOUNT", Value: "0"},
+							},
+							LivenessProbe: &corev1.Probe{
+								FailureThreshold: 3,
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path:   "/q/health/live",
+										Port:   intstr.FromInt32(8080),
+										Scheme: corev1.URISchemeHTTP,
+									},
+								},
+								InitialDelaySeconds: 5,
+								PeriodSeconds:       10,
+								SuccessThreshold:    1,
+								TimeoutSeconds:      10,
+							},
+							ReadinessProbe: &corev1.Probe{
+								FailureThreshold: 3,
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path:   "/q/health/ready",
+										Port:   intstr.FromInt32(8080),
+										Scheme: corev1.URISchemeHTTP,
+									},
+								},
+								InitialDelaySeconds: 5,
+								PeriodSeconds:       10,
+								SuccessThreshold:    1,
+								TimeoutSeconds:      10,
+							},
+							StartupProbe: &corev1.Probe{
+								FailureThreshold: 3,
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path:   "/q/health/started",
+										Port:   intstr.FromInt32(8080),
+										Scheme: corev1.URISchemeHTTP,
+									},
+								},
+								InitialDelaySeconds: 5,
+								PeriodSeconds:       10,
+								SuccessThreshold:    1,
+								TimeoutSeconds:      10,
 							},
 						},
 					},
@@ -197,6 +240,48 @@ func TestNewSQSContainerSource(t *testing.T) {
 								{Name: "CAMEL_KAMELET_AWS_SQS_SOURCE_WAITTIMESECONDS", Value: "0"},
 								{Name: "CAMEL_KAMELET_AWS_SQS_SOURCE_VISIBILITYTIMEOUT", Value: "0"},
 								{Name: "CAMEL_KAMELET_AWS_SQS_SOURCE_USE_DEFAULT_CREDENTIALS_PROVIDER", Value: "true"},
+							},
+							LivenessProbe: &corev1.Probe{
+								FailureThreshold: 3,
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path:   "/q/health/live",
+										Port:   intstr.FromInt32(8080),
+										Scheme: corev1.URISchemeHTTP,
+									},
+								},
+								InitialDelaySeconds: 5,
+								PeriodSeconds:       10,
+								SuccessThreshold:    1,
+								TimeoutSeconds:      10,
+							},
+							ReadinessProbe: &corev1.Probe{
+								FailureThreshold: 3,
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path:   "/q/health/ready",
+										Port:   intstr.FromInt32(8080),
+										Scheme: corev1.URISchemeHTTP,
+									},
+								},
+								InitialDelaySeconds: 5,
+								PeriodSeconds:       10,
+								SuccessThreshold:    1,
+								TimeoutSeconds:      10,
+							},
+							StartupProbe: &corev1.Probe{
+								FailureThreshold: 3,
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path:   "/q/health/started",
+										Port:   intstr.FromInt32(8080),
+										Scheme: corev1.URISchemeHTTP,
+									},
+								},
+								InitialDelaySeconds: 5,
+								PeriodSeconds:       10,
+								SuccessThreshold:    1,
+								TimeoutSeconds:      10,
 							},
 						},
 					},

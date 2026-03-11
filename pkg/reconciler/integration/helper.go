@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 func GenerateEnvVarsFromStruct(prefix string, s interface{}) []corev1.EnvVar {
@@ -130,5 +131,56 @@ func MakeSSLEnvVar() []corev1.EnvVar {
 func Labels(name string) map[string]string {
 	return map[string]string{
 		"app.kubernetes.io/name": name,
+	}
+}
+
+func LivenessProbe(port int32, scheme corev1.URIScheme) *corev1.Probe {
+	return &corev1.Probe{
+		FailureThreshold: 3,
+		ProbeHandler: corev1.ProbeHandler{
+			HTTPGet: &corev1.HTTPGetAction{
+				Path:   "/q/health/live",
+				Port:   intstr.FromInt32(port),
+				Scheme: scheme,
+			},
+		},
+		InitialDelaySeconds: 5,
+		PeriodSeconds:       10,
+		SuccessThreshold:    1,
+		TimeoutSeconds:      10,
+	}
+}
+
+func ReadinessProbe(port int32, scheme corev1.URIScheme) *corev1.Probe {
+	return &corev1.Probe{
+		FailureThreshold: 3,
+		ProbeHandler: corev1.ProbeHandler{
+			HTTPGet: &corev1.HTTPGetAction{
+				Path:   "/q/health/ready",
+				Port:   intstr.FromInt32(port),
+				Scheme: scheme,
+			},
+		},
+		InitialDelaySeconds: 5,
+		PeriodSeconds:       10,
+		SuccessThreshold:    1,
+		TimeoutSeconds:      10,
+	}
+}
+
+func StartupProbe(port int32, scheme corev1.URIScheme) *corev1.Probe {
+	return &corev1.Probe{
+		FailureThreshold: 3,
+		ProbeHandler: corev1.ProbeHandler{
+			HTTPGet: &corev1.HTTPGetAction{
+				Path:   "/q/health/started",
+				Port:   intstr.FromInt32(port),
+				Scheme: scheme,
+			},
+		},
+		InitialDelaySeconds: 5,
+		PeriodSeconds:       10,
+		SuccessThreshold:    1,
+		TimeoutSeconds:      10,
 	}
 }

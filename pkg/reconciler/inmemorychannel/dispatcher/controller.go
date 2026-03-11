@@ -20,6 +20,7 @@ import (
 	"context"
 	"time"
 
+	"go.opentelemetry.io/otel"
 	"knative.dev/pkg/injection"
 	"knative.dev/pkg/system"
 
@@ -32,16 +33,13 @@ import (
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
 	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/kncloudevents"
-	"knative.dev/eventing/pkg/observability/otel"
 
 	"knative.dev/pkg/logging"
 
 	"go.uber.org/zap"
 	filteredconfigmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap/filtered"
 	"knative.dev/pkg/configmap"
-	configmapinformer "knative.dev/pkg/configmap/informer"
 	"knative.dev/pkg/controller"
-	k8sruntime "knative.dev/pkg/observability/runtime/k8s"
 	pkgreconciler "knative.dev/pkg/reconciler"
 
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
@@ -55,7 +53,6 @@ import (
 	inmemorychannelinformer "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/inmemorychannel"
 	inmemorychannelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/inmemorychannel"
 	"knative.dev/eventing/pkg/inmemorychannel"
-	o11yconfigmap "knative.dev/eventing/pkg/observability/configmap"
 )
 
 const (
@@ -85,14 +82,11 @@ func NewController(
 ) *controller.Impl {
 	logger := logging.FromContext(ctx)
 
-	pprof := k8sruntime.NewProfilingServer(logger.Named("pprof"))
-
-	mp, tp := otel.SetupObservabilityOrDie(ctx, "inmemorychannel.dispatcher", logger, pprof)
+	// Use the global meter and tracer providers that were set up by sharedmain
+	mp := otel.GetMeterProvider()
+	tp := otel.GetTracerProvider()
 
 	trustBundleConfigMapLister := filteredconfigmapinformer.Get(ctx, eventingtls.TrustBundleLabelSelector).Lister().ConfigMaps(system.Namespace())
-
-	iw := cmw.(*configmapinformer.InformedWatcher)
-	iw.Watch(o11yconfigmap.Name(), pprof.UpdateFromConfigMap)
 
 	var env envConfig
 	if err := envconfig.Process("", &env); err != nil {
@@ -222,16 +216,7 @@ func NewController(
 			logging.FromContext(ctx).Errorw("Failed stopping inMemoryDispatcher.", zap.Error(err))
 		}
 
-		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-		defer cancel()
-
-		if err := mp.Shutdown(ctx); err != nil {
-			logger.Errorw("Error flushing metrics", zap.Error(err))
-		}
-
-		if err := tp.Shutdown(ctx); err != nil {
-			logger.Errorw("Error flushing traces", zap.Error(err))
-		}
+		// Note: Meter and tracer provider shutdown is handled by sharedmain
 	}()
 
 	return impl

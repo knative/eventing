@@ -45,6 +45,9 @@ func NewContainerSource(source *v1alpha1.IntegrationSource, oidc bool) *sourcesv
 			Image:           selectImage(source),
 			ImagePullPolicy: corev1.PullIfNotPresent,
 			Env:             makeEnv(source, oidc),
+			ReadinessProbe:  integration.ReadinessProbe(8080, corev1.URISchemeHTTP),
+			LivenessProbe:   integration.LivenessProbe(8080, corev1.URISchemeHTTP),
+			StartupProbe:    integration.StartupProbe(8080, corev1.URISchemeHTTP),
 		},
 	}
 	source.Spec.Template.Spec.ServiceAccountName = makeServiceAccountName(source)

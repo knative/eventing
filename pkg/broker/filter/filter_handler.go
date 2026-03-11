@@ -34,9 +34,7 @@ import (
 	"knative.dev/eventing/pkg/reconciler/broker/resources"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
-	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 	"go.opentelemetry.io/otel/trace"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
@@ -508,10 +506,9 @@ func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers 
 	}
 
 	dispatchInfo, err := h.eventDispatcher.SendEvent(ctx, *event, target, opts...)
+	ctx = observability.WithHTTPStatusCodeLabel(ctx, dispatchInfo.ResponseCode)
 	labeler, _ := otelhttp.LabelerFromContext(ctx)
-	attrs := []attribute.KeyValue{semconv.HTTPResponseStatusCode(dispatchInfo.ResponseCode)}
-	attrs = append(attrs, labeler.Get()...)
-	h.dispatchDuration.Record(ctx, dispatchInfo.Duration.Seconds(), metric.WithAttributes(attrs...))
+	h.dispatchDuration.Record(ctx, dispatchInfo.Duration.Seconds(), metric.WithAttributes(labeler.Get()...))
 	if err != nil {
 		h.logger.Error("failed to send event", zap.Error(err))
 

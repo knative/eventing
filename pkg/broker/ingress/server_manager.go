@@ -32,6 +32,7 @@ import (
 
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	secretinformer "knative.dev/pkg/injection/clients/namespacedkube/informers/core/v1/secret"
+	"knative.dev/pkg/system"
 )
 
 func NewServerManager(
@@ -56,7 +57,7 @@ func NewServerManager(
 
 func getServerTLSConfig(ctx context.Context) (*tls.Config, error) {
 	secret := types.NamespacedName{
-		Namespace: "knative-eventing",
+		Namespace: system.Namespace(),
 		Name:      eventingtls.BrokerIngressServerTLSSecretName,
 	}
 

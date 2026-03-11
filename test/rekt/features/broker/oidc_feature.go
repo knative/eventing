@@ -63,8 +63,6 @@ func BrokerSendEventWithOIDCTokenToSubscriber() *feature.Feature {
 
 	// Install the broker
 	f.Setup("install broker", broker.Install(brokerName, broker.WithEnvConfig()...))
-	f.Setup("broker is ready", broker.IsReady(brokerName))
-	f.Setup("broker is addressable", broker.IsAddressable(brokerName))
 
 	// Install the sink
 	f.Setup("install sink", eventshub.Install(
@@ -79,7 +77,10 @@ func BrokerSendEventWithOIDCTokenToSubscriber() *feature.Feature {
 		d.Audience = &sinkAudience
 		trigger.Install(triggerName, trigger.WithBrokerName(brokerName), trigger.WithSubscriberFromDestination(d))(ctx, t)
 	})
-	f.Setup("trigger goes ready", trigger.IsReady(triggerName))
+
+	f.Requirement("broker is ready", broker.IsReady(brokerName))
+	f.Requirement("broker is addressable", broker.IsAddressable(brokerName))
+	f.Requirement("trigger goes ready", trigger.IsReady(triggerName))
 
 	// Send event
 	f.Requirement("install source", eventshub.Install(
@@ -128,8 +129,6 @@ func BrokerSendEventWithOIDCTokenToDLS() *feature.Feature {
 		broker.Install(brokerName, brokerConfig...)(ctx, t)
 	})
 
-	f.Setup("Broker is ready", broker.IsReady(brokerName))
-
 	f.Setup("Install the trigger", func(ctx context.Context, t feature.T) {
 		// create an empty destination ref
 		d := duckv1.Destination{}
@@ -139,7 +138,8 @@ func BrokerSendEventWithOIDCTokenToDLS() *feature.Feature {
 
 	})
 
-	f.Setup("trigger is ready", trigger.IsReady(triggerName))
+	f.Requirement("Broker is ready", broker.IsReady(brokerName))
+	f.Requirement("trigger is ready", trigger.IsReady(triggerName))
 
 	// Send events after data plane is ready.
 	f.Requirement("install source", eventshub.Install(source,
@@ -196,7 +196,6 @@ func BrokerSendEventWithOIDCTokenToReply() *feature.Feature {
 
 	// Install broker
 	f.Setup("install broker", broker.Install(brokerName, broker.WithEnvConfig()...))
-	f.Setup("Broker is ready", broker.IsReady(brokerName))
 
 	f.Setup("install the trigger", func(ctx context.Context, t feature.T) {
 		d := service.AsDestinationRef(subscriber)
@@ -206,8 +205,6 @@ func BrokerSendEventWithOIDCTokenToReply() *feature.Feature {
 		}))(ctx, t)
 	})
 
-	f.Setup("trigger is ready", trigger.IsReady(triggerName))
-
 	f.Setup("install the trigger and specify the CA cert of the destination", func(ctx context.Context, t feature.T) {
 		d := service.AsDestinationRef(reply)
 		d.CACerts = eventshub.GetCaCerts(ctx)
@@ -215,6 +212,9 @@ func BrokerSendEventWithOIDCTokenToReply() *feature.Feature {
 			"type": replyEventType,
 		}))(ctx, t)
 	})
+
+	f.Requirement("Broker is ready", broker.IsReady(brokerName))
+	f.Requirement("trigger is ready", trigger.IsReady(triggerName))
 
 	// Send events after data plane is ready.
 	f.Requirement("install source", eventshub.Install(source,

@@ -65,14 +65,15 @@ func ChannelChainSetup(f *feature.Feature, length int, createSubscriberFn func(r
 		name := feature.MakeRandomK8sName(fmt.Sprintf("channel-%04d", i))
 		channels = append(channels, name)
 		f.Setup("install channel", channel_impl.Install(name))
-		f.Setup("channel is ready", channel_impl.IsReady(name))
 	}
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 
 	// use the rest for the chain
+	var subs []string
 	for i := 0; i < length; i++ {
 		sub := feature.MakeRandomK8sName(fmt.Sprintf("subscription-%04d", i))
+		subs = append(subs, sub)
 		if i == length-1 {
 			// install the final connection to the sink
 			f.Setup("install sink subscription", subscription.Install(sub,
@@ -85,8 +86,14 @@ func ChannelChainSetup(f *feature.Feature, length int, createSubscriberFn func(r
 				createSubscriberFn(channel_impl.AsRef(channels[i+1]), ""),
 			))
 		}
+	}
 
-		f.Setup("subscription is ready", subscription.IsReady(sub))
+	// Wait for all resources to be ready (runs after all Setup completes)
+	for i := 0; i < length; i++ {
+		f.Requirement("channel is ready", channel_impl.IsReady(channels[i]))
+	}
+	for i := 0; i < length; i++ {
+		f.Requirement("subscription is ready", subscription.IsReady(subs[i]))
 	}
 
 	return sink, channels[0]
@@ -119,9 +126,9 @@ func DeadLetterSink(createSubscriberFn func(ref *duckv1.KReference, uri string) 
 		subscription.WithChannel(channel_impl.AsRef(name)),
 		createSubscriberFn(service.AsKReference(failer), ""),
 	))
-	f.Setup("channel is ready", channel_impl.IsReady(name))
-	f.Setup("subscription is ready", subscription.IsReady(sub))
 
+	f.Requirement("channel is ready", channel_impl.IsReady(name))
+	f.Requirement("subscription is ready", subscription.IsReady(sub))
 	f.Requirement("install containersource", containersource.Install(cs, containersource.WithSink(channel_impl.AsDestinationRef(name))))
 	f.Requirement("containersource is ready", containersource.IsReady(cs))
 	f.Requirement("Channel has dead letter sink uri", channel_impl.HasDeadLetterSinkURI(name, channel_impl.GVR()))
@@ -154,9 +161,9 @@ func AsyncHandler(createSubscriberFn func(ref *duckv1.KReference, uri string) ma
 		subscription.WithChannel(channel_impl.AsRef(name)),
 		createSubscriberFn(service.AsKReference(sink), ""),
 	))
-	f.Setup("channel is ready", channel_impl.IsReady(name))
-	f.Setup("subscription is ready", subscription.IsReady(sub))
 
+	f.Requirement("channel is ready", channel_impl.IsReady(name))
+	f.Requirement("subscription is ready", subscription.IsReady(sub))
 	f.Requirement("install source", eventshub.Install(source, eventshub.InputEvent(event), eventshub.StartSenderToResource(channel_impl.GVR(), name)))
 
 	f.Assert("Event sent", assert.OnStore(source).
@@ -189,9 +196,9 @@ func AsyncHandlerUpdate(createSubscriberFn func(ref *duckv1.KReference, uri stri
 		subscription.WithChannel(channel_impl.AsRef(name)),
 		createSubscriberFn(service.AsKReference(sink), ""),
 	))
-	f.Setup("channel is ready", channel_impl.IsReady(name))
-	f.Setup("subscription is ready", subscription.IsReady(sub))
 
+	f.Requirement("channel is ready", channel_impl.IsReady(name))
+	f.Requirement("subscription is ready", subscription.IsReady(sub))
 	f.Requirement("update channel async handler", func(ctx context.Context, t feature.T) {
 		dc := Client(ctx)
 
@@ -241,9 +248,9 @@ func DeadLetterSinkGenericChannel(createSubscriberFn func(ref *duckv1.KReference
 		subscription.WithChannel(channel.AsRef(name)),
 		createSubscriberFn(service.AsKReference(failer), ""),
 	))
-	f.Setup("channel is ready", channel.IsReady(name))
-	f.Setup("subscription is ready", subscription.IsReady(sub))
 
+	f.Requirement("channel is ready", channel.IsReady(name))
+	f.Requirement("subscription is ready", subscription.IsReady(sub))
 	f.Requirement("install containersource", containersource.Install(cs, containersource.WithSink(channel_impl.AsDestinationRef(name))))
 	f.Requirement("containersource is ready", containersource.IsReady(cs))
 	f.Requirement("Channel has dead letter sink uri", channel_impl.HasDeadLetterSinkURI(name, channel.GVR()))
@@ -291,10 +298,9 @@ func AsDeadLetterSink(createSubscriberFn func(ref *duckv1.KReference, uri string
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 	f.Setup("install failing receiver", eventshub.Install(failer, eventshub.StartReceiver, eventshub.DropFirstN(10)))
 
-	f.Setup("channel is ready", channel.IsReady(name))
-	f.Setup("channel is ready", channel.IsReady(dls))
-	f.Setup("containersource is ready", containersource.IsReady(cs))
-
+	f.Requirement("channel is ready", channel.IsReady(name))
+	f.Requirement("channel is ready", channel.IsReady(dls))
+	f.Requirement("containersource is ready", containersource.IsReady(cs))
 	f.Requirement("Channel has dead letter sink uri", channel_impl.HasDeadLetterSinkURI(name, channel.GVR()))
 
 	f.Assert("dls receives events", assert.OnStore(sink).
@@ -328,11 +334,11 @@ func EventTransformation() *feature.Feature {
 		subscription.WithChannel(channel_impl.AsRef(channel2)),
 		subscription.WithSubscriber(prober.AsKReference("sink"), "", ""),
 	))
-	f.Setup("subscription 1 is ready", subscription.IsReady(subscription1))
-	f.Setup("subscription 2 is ready", subscription.IsReady(subscription2))
-	f.Setup("channel 1 is ready", channel_impl.IsReady(channel1))
-	f.Setup("channel 2 is ready", channel_impl.IsReady(channel2))
 
+	f.Requirement("subscription 1 is ready", subscription.IsReady(subscription1))
+	f.Requirement("subscription 2 is ready", subscription.IsReady(subscription2))
+	f.Requirement("channel 1 is ready", channel_impl.IsReady(channel1))
+	f.Requirement("channel 2 is ready", channel_impl.IsReady(channel2))
 	f.Requirement("install source", prober.SenderInstall("source"))
 
 	f.Assert("sink receives events", prober.AssertReceivedAll("source", "sink"))
@@ -370,9 +376,8 @@ func SingleEventWithEncoding(encoding binding.Encoding) *feature.Feature {
 		subscription.WithSubscriber(prober.AsKReference("sink"), "", ""),
 	))
 
-	f.Setup("subscription is ready", subscription.IsReady(sub))
-	f.Setup("channel is ready", channel_impl.IsReady(channel))
-
+	f.Requirement("subscription is ready", subscription.IsReady(sub))
+	f.Requirement("channel is ready", channel_impl.IsReady(channel))
 	f.Requirement("install source", prober.SenderInstall("source", eventshub.InputEventWithEncoding(event, encoding)))
 
 	f.Assert("sink receives events", prober.AssertReceivedAll("source", "sink"))
@@ -406,9 +411,8 @@ func ChannelPreferHeaderCheck(createSubscriberFn func(ref *duckv1.KReference, ur
 		createSubscriberFn(service.AsKReference(sink), ""),
 	))
 
-	f.Setup("subscription is ready", subscription.IsReady(sub))
-	f.Setup("channel is ready", channel.IsReady(channelName))
-
+	f.Requirement("subscription is ready", subscription.IsReady(sub))
+	f.Requirement("channel is ready", channel.IsReady(channelName))
 	f.Requirement("install source", eventshub.Install(
 		source,
 		eventshub.StartSenderToResource(channel.GVR(), channelName),
@@ -458,11 +462,11 @@ func channelSubscriberUnreachable(createSubscriberFn func(ref *duckv1.KReference
 		subscription.WithChannel(channel_impl.AsRef(channelName)),
 		createSubscriberFn(nil, subscriberUri),
 	))
-	f.Setup("channel is ready", channel_impl.IsReady(channelName))
-	f.Setup("channel is addressable", channel_impl.IsAddressable(channelName))
-	f.Setup("subscription is ready", subscription.IsReady(sub))
-	f.Setup("channel has dead letter sink uri", channel_impl.HasDeadLetterSinkURI(channelName, channel_impl.GVR()))
 
+	f.Requirement("channel is ready", channel_impl.IsReady(channelName))
+	f.Requirement("channel is addressable", channel_impl.IsAddressable(channelName))
+	f.Requirement("subscription is ready", subscription.IsReady(sub))
+	f.Requirement("channel has dead letter sink uri", channel_impl.HasDeadLetterSinkURI(channelName, channel_impl.GVR()))
 	f.Requirement("install source", eventshub.Install(
 		sourceName,
 		eventshub.StartSenderToResource(channel_impl.GVR(), channelName),
@@ -502,11 +506,11 @@ func channelSubscriberReturnedErrorNoData(createSubscriberFn func(ref *duckv1.KR
 		subscription.WithChannel(channel_impl.AsRef(channelName)),
 		createSubscriberFn(service.AsKReference(failer), ""),
 	))
-	f.Setup("channel is ready", channel_impl.IsReady(channelName))
-	f.Setup("channel is addressable", channel_impl.IsAddressable(channelName))
-	f.Setup("subscription is ready", subscription.IsReady(sub))
-	f.Setup("channel has dead letter sink uri", channel_impl.HasDeadLetterSinkURI(channelName, channel_impl.GVR()))
 
+	f.Requirement("channel is ready", channel_impl.IsReady(channelName))
+	f.Requirement("channel is addressable", channel_impl.IsAddressable(channelName))
+	f.Requirement("subscription is ready", subscription.IsReady(sub))
+	f.Requirement("channel has dead letter sink uri", channel_impl.HasDeadLetterSinkURI(channelName, channel_impl.GVR()))
 	f.Requirement("install source", eventshub.Install(
 		sourceName,
 		eventshub.StartSenderToResource(channel_impl.GVR(), channelName),
@@ -552,11 +556,11 @@ func channelSubscriberReturnedErrorWithData(createSubscriberFn func(ref *duckv1.
 		subscription.WithChannel(channel_impl.AsRef(channelName)),
 		createSubscriberFn(service.AsKReference(failer), ""),
 	))
-	f.Setup("channel is ready", channel_impl.IsReady(channelName))
-	f.Setup("channel is addressable", channel_impl.IsAddressable(channelName))
-	f.Setup("subscription is ready", subscription.IsReady(sub))
-	f.Setup("channel has dead letter sink uri", channel_impl.HasDeadLetterSinkURI(channelName, channel_impl.GVR()))
 
+	f.Requirement("channel is ready", channel_impl.IsReady(channelName))
+	f.Requirement("channel is addressable", channel_impl.IsAddressable(channelName))
+	f.Requirement("subscription is ready", subscription.IsReady(sub))
+	f.Requirement("channel has dead letter sink uri", channel_impl.HasDeadLetterSinkURI(channelName, channel_impl.GVR()))
 	f.Requirement("install source", eventshub.Install(
 		sourceName,
 		eventshub.StartSenderToResource(channel_impl.GVR(), channelName),

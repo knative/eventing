@@ -95,7 +95,7 @@ func MakeReceiveAdapter(args *ReceiveAdapterArgs) (*appsv1.Deployment, error) {
 							Env:   env,
 							Ports: []corev1.ContainerPort{{
 								Name:          "metrics",
-								ContainerPort: 9090,
+								ContainerPort: 9092,
 							}, {
 								Name:          "probes",
 								ContainerPort: 8080,

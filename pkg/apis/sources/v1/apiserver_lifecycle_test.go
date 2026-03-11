@@ -73,6 +73,21 @@ var (
 			},
 		},
 	}
+
+	deploymentWithUnavailableReplicas = &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "updating",
+		},
+		Status: appsv1.DeploymentStatus{
+			Conditions: []appsv1.DeploymentCondition{
+				{
+					Type:   appsv1.DeploymentAvailable,
+					Status: corev1.ConditionTrue,
+				},
+			},
+			UnavailableReplicas: 1,
+		},
+	}
 )
 
 func TestApiServerSourceGetConditionSet(t *testing.T) {
@@ -198,6 +213,19 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 			s.MarkSink(sink)
 			s.MarkSufficientPermissions()
 			s.PropagateDeploymentAvailability(unknownDeployment)
+			return s
+		}(),
+		wantConditionStatus: corev1.ConditionUnknown,
+		want:                false,
+	}, {
+		name: "mark sink and sufficient permissions and deployment with unavailable replicas",
+		s: func() *ApiServerSourceStatus {
+			s := &ApiServerSourceStatus{}
+			s.InitializeConditions()
+			s.MarkOIDCIdentityCreatedSucceeded()
+			s.MarkSink(sink)
+			s.MarkSufficientPermissions()
+			s.PropagateDeploymentAvailability(deploymentWithUnavailableReplicas)
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionUnknown,

@@ -87,7 +87,8 @@ func ControlPlaneBroker(brokerName string, brokerOpts ...manifest.CfgFn) *featur
 	brokerOpts = append(brokerOpts, broker.WithEnvConfig()...)
 	brokerOpts = append(brokerOpts, delivery.WithDeadLetterSink(service.AsKReference(sink), ""))
 	f.Setup("update broker", broker.Install(bName, brokerOpts...))
-	f.Setup("broker goes ready", broker.IsReady(bName))
+
+	f.Requirement("broker goes ready", broker.IsReady(bName))
 
 	f.Stable("Conformance").
 		Should("Broker objects SHOULD include a Ready condition in their status",
