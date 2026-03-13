@@ -22,7 +22,7 @@ import (
 	"testing"
 
 	"k8s.io/utils/pointer"
-	pkgtls "knative.dev/pkg/tls"
+	pkgtls "knative.dev/pkg/network/tls"
 )
 
 func TestGetClientConfig(t *testing.T) {

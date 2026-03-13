@@ -39,7 +39,7 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
-	pkgtls "knative.dev/pkg/tls"
+	pkgtls "knative.dev/pkg/network/tls"
 )
 
 const (
