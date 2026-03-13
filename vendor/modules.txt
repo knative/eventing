@@ -1523,7 +1523,6 @@ knative.dev/pkg/test/security
 knative.dev/pkg/test/spoof
 knative.dev/pkg/test/upgrade
 knative.dev/pkg/test/upgrade/shell
-knative.dev/pkg/tls
 knative.dev/pkg/tracker
 knative.dev/pkg/version
 knative.dev/pkg/webhook
