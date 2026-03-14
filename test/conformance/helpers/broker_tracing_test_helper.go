@@ -24,7 +24,7 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	cetest "github.com/cloudevents/sdk-go/v2/test"
-	"github.com/openzipkin/zipkin-go/model"
+	oteltrace "go.opentelemetry.io/otel/trace"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
@@ -151,7 +151,7 @@ func setupBrokerTracing(_ context.Context, brokerClass string) SetupTracingTestI
 				{
 					Note: "4. Transformer pod receives the event from the Broker Filter for the 'transformer' trigger.",
 					Span: tracinghelper.MatchHTTPSpanWithReply(
-						model.Server,
+						oteltrace.SpanKindServer,
 						tracinghelper.WithHTTPHostAndPath(transformerSVCHost, "/"),
 						tracinghelper.WithLocalEndpointServiceName(eventTransformerPod.Name),
 					),
@@ -170,7 +170,7 @@ func setupBrokerTracing(_ context.Context, brokerClass string) SetupTracingTestI
 						{
 							Note: "7. Logger pod receives the event from the Broker Filter for the 'logger' trigger.",
 							Span: tracinghelper.MatchHTTPSpanNoReply(
-								model.Server,
+								oteltrace.SpanKindServer,
 								tracinghelper.WithHTTPHostAndPath(loggerSVCHost, "/"),
 								tracinghelper.WithLocalEndpointServiceName(loggerPodName),
 							),
@@ -198,7 +198,7 @@ func setupBrokerTracing(_ context.Context, brokerClass string) SetupTracingTestI
 			expected = tracinghelper.TestSpanTree{
 				Note: "1. Send pod sends event to the Broker Ingress (only if the sending pod generates a span).",
 				Span: tracinghelper.MatchHTTPSpanNoReply(
-					model.Client,
+					oteltrace.SpanKindClient,
 					tracinghelper.WithLocalEndpointServiceName(senderName),
 				),
 				Children: []tracinghelper.TestSpanTree{expected},
