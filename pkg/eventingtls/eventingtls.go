@@ -47,8 +47,6 @@ const (
 	TLSKey = "tls.key"
 	// TLSCrt is the key in the TLS secret for the public key of TLS servers
 	TLSCrt = "tls.crt"
-	// DefaultMinTLSVersion is the default minimum TLS version for servers and clients.
-	DefaultMinTLSVersion = tls.VersionTLS12
 	// SecretCACrt is the name of the CA Cert in the secret
 	SecretCACert = "ca.crt"
 	// IMCDispatcherServerTLSSecretName is the name of the tls secret for the imc dispatcher server
@@ -198,17 +196,11 @@ func GetTLSServerConfig(config ServerConfig) (*tls.Config, error) {
 
 // defaultTLSConfigFromEnv loads TLS configuration from environment variables
 // using the shared knative/pkg/tls utility. DefaultConfigFromEnv defaults to
-// TLS 1.3, but eventing historically defaults to TLS 1.2, so we fall back to
-// 1.2 unless TLS_MIN_VERSION is explicitly set.
-// TODO: switch to TLS 1.3 to align with the rest of the system.
+// TLS 1.3.
 func defaultTLSConfigFromEnv() (*tls.Config, error) {
 	cfg, err := pkgtls.DefaultConfigFromEnv("")
 	if err != nil {
 		return nil, fmt.Errorf("failed to load TLS config from env: %w", err)
-	}
-
-	if os.Getenv(pkgtls.MinVersionEnvKey) == "" {
-		cfg.MinVersion = DefaultMinTLSVersion
 	}
 
 	return cfg, nil
