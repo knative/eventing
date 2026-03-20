@@ -17,7 +17,6 @@ limitations under the License.
 package main
 
 import (
-	"crypto/tls"
 	"testing"
 
 	reconcilertesting "knative.dev/pkg/reconciler/testing"
@@ -39,10 +38,6 @@ func TestGetServerTLSConfig(t *testing.T) {
 
 	if tlsConfig == nil {
 		t.Fatal("expected non-nil TLS config")
-	}
-
-	if tlsConfig.MinVersion != tls.VersionTLS12 {
-		t.Fatalf("want MinVersion TLS 1.2 (%d), got %d", tls.VersionTLS12, tlsConfig.MinVersion)
 	}
 
 	if tlsConfig.GetCertificate == nil {

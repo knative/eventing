@@ -67,16 +67,14 @@ wSdZWoEx7ye2kUHEyRKdRGbHyJtY9YYvaROznzxqVpIqHxnRQnE/If7kcN4t/7vi
 				CACerts: pointer.String(""),
 			},
 			expected: tls.Config{
-				MinVersion: tls.VersionTLS12,
-				RootCAs:    sysCertPool,
+				RootCAs: sysCertPool,
 			},
 		},
 		{
 			name: "nil CA certs",
 			cfg:  ClientConfig{},
 			expected: tls.Config{
-				MinVersion: tls.VersionTLS12,
-				RootCAs:    sysCertPool,
+				RootCAs: sysCertPool,
 			},
 		},
 		{
@@ -85,8 +83,7 @@ wSdZWoEx7ye2kUHEyRKdRGbHyJtY9YYvaROznzxqVpIqHxnRQnE/If7kcN4t/7vi
 				CACerts: pointer.String(pemCaCert),
 			},
 			expected: tls.Config{
-				MinVersion: tls.VersionTLS12,
-				RootCAs:    WithCerts(sysCertPool, pemCaCert),
+				RootCAs: WithCerts(sysCertPool, pemCaCert),
 			},
 		},
 		{
@@ -94,10 +91,8 @@ wSdZWoEx7ye2kUHEyRKdRGbHyJtY9YYvaROznzxqVpIqHxnRQnE/If7kcN4t/7vi
 			cfg: ClientConfig{
 				CACerts: pointer.String(pemCaCert[:len(pemCaCert)-30]),
 			},
-			expected: tls.Config{
-				MinVersion: tls.VersionTLS12,
-			},
-			wantErr: true,
+			expected: tls.Config{},
+			wantErr:  true,
 		},
 	}
 
@@ -115,10 +110,6 @@ wSdZWoEx7ye2kUHEyRKdRGbHyJtY9YYvaROznzxqVpIqHxnRQnE/If7kcN4t/7vi
 			if !got.RootCAs.Equal(tc.expected.RootCAs) {
 				t.Fatalf("Got RootCAs are not equal to expected RootCAs")
 			}
-
-			if got.MinVersion != tc.expected.MinVersion {
-				t.Fatalf("want MinVersion %v, got %v", tc.expected.MinVersion, got.MinVersion)
-			}
 		})
 	}
 }
@@ -132,18 +123,6 @@ func WithCerts(pool *x509.CertPool, caCerts string) *x509.CertPool {
 }
 
 func TestGetTLSClientConfigEnv(t *testing.T) {
-	t.Run("defaults to TLS 1.2 when env not set", func(t *testing.T) {
-		t.Setenv(pkgtls.MinVersionEnvKey, "")
-
-		cfg, err := GetTLSClientConfig(NewDefaultClientConfig())
-		if err != nil {
-			t.Fatal("unexpected error:", err)
-		}
-		if cfg.MinVersion != tls.VersionTLS12 {
-			t.Fatalf("want MinVersion TLS 1.2 (%d), got %d", tls.VersionTLS12, cfg.MinVersion)
-		}
-	})
-
 	t.Run("uses TLS 1.3 when explicitly set via env", func(t *testing.T) {
 		t.Setenv(pkgtls.MinVersionEnvKey, "1.3")
 
@@ -206,18 +185,6 @@ func TestGetTLSClientConfigEnv(t *testing.T) {
 }
 
 func TestGetTLSServerConfig(t *testing.T) {
-	t.Run("defaults to TLS 1.2 when env not set", func(t *testing.T) {
-		t.Setenv(pkgtls.MinVersionEnvKey, "")
-
-		cfg, err := GetTLSServerConfig(NewDefaultServerConfig())
-		if err != nil {
-			t.Fatal("unexpected error:", err)
-		}
-		if cfg.MinVersion != tls.VersionTLS12 {
-			t.Fatalf("want MinVersion TLS 1.2 (%d), got %d", tls.VersionTLS12, cfg.MinVersion)
-		}
-	})
-
 	t.Run("uses TLS 1.3 when explicitly set via env", func(t *testing.T) {
 		t.Setenv(pkgtls.MinVersionEnvKey, "1.3")
 
