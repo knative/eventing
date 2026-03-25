@@ -18,12 +18,14 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"log"
 
 	"github.com/kelseyhightower/envconfig"
 	"go.uber.org/zap"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/kncloudevents"
@@ -34,6 +36,7 @@ import (
 	configmap "knative.dev/pkg/configmap/informer"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/injection"
+	secretinformer "knative.dev/pkg/injection/clients/namespacedkube/informers/core/v1/secret"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/signals"
 	"knative.dev/pkg/system"
@@ -109,9 +112,15 @@ func main() {
 		env.PodIdx,
 	)
 
+	tlsConfig, err := getServerTLSConfig(ctx)
+	if err != nil {
+		logger.Fatal("failed to get TLS server config", zap.Error(err))
+	}
+
 	sm, err := eventingtls.NewServerManager(ctx,
 		kncloudevents.NewHTTPEventReceiver(env.HttpPort),
-		kncloudevents.NewHTTPEventReceiver(env.HttpsPort), // TODO: add tls config when we have it
+		kncloudevents.NewHTTPEventReceiver(env.HttpsPort,
+			kncloudevents.WithTLSConfig(tlsConfig)),
 		handler,
 		configMapWatcher,
 	)
@@ -133,6 +142,17 @@ func main() {
 
 func flush(sl *zap.SugaredLogger) {
 	_ = sl.Sync()
+}
+
+func getServerTLSConfig(ctx context.Context) (*tls.Config, error) {
+	secret := types.NamespacedName{
+		Namespace: system.Namespace(),
+		Name:      eventingtls.RequestReplyServerTLSSecretName,
+	}
+
+	serverTLSConfig := eventingtls.NewDefaultServerConfig()
+	serverTLSConfig.GetCertificate = eventingtls.GetCertificateFromSecret(ctx, secretinformer.Get(ctx), kubeclient.Get(ctx), secret)
+	return eventingtls.GetTLSServerConfig(serverTLSConfig)
 }
 
 func getLoggingConfig(ctx context.Context, namespace, loggingConfigMapName string) (*logging.Config, error) {
