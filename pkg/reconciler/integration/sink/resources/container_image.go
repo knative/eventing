@@ -27,7 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/utils/ptr"
 	commonv1a1 "knative.dev/eventing/pkg/apis/common/integration/v1alpha1"
 	"knative.dev/eventing/pkg/apis/feature"
@@ -46,7 +45,7 @@ const (
 	AuthProxyRolebindingName = "eventing-auth-proxy"
 )
 
-func MakeDeploymentSpec(sink *v1alpha1.IntegrationSink, authProxyImage string, featureFlags feature.Flags, trustBundleConfigmapLister corev1listers.ConfigMapLister, trustBundleConfigMaps []*corev1.ConfigMap) (*appsv1.Deployment, error) {
+func MakeDeploymentSpec(sink *v1alpha1.IntegrationSink, authProxyImage string, featureFlags feature.Flags, trustBundleConfigMaps []*corev1.ConfigMap) (*appsv1.Deployment, error) {
 	probesPort := int32(8080)
 	probesScheme := corev1.URISchemeHTTP
 	if featureFlags.IsStrictTransportEncryption() {
@@ -201,21 +200,10 @@ func MakeDeploymentSpec(sink *v1alpha1.IntegrationSink, authProxyImage string, f
 			},
 		})
 
-		// add trusttrustBundleConfigMaps directly, so auth-proxies tokenverifier does not need the trustbundleconfigmap lister for oidc discovery
-		var (
-			podspec *corev1.PodSpec
-			err     error
-		)
-		if len(trustBundleConfigMaps) > 0 {
-			podspec, err = eventingtls.AddTrustBundleVolumesFromConfigMaps(trustBundleConfigMaps, &deploy.Spec.Template.Spec)
-			if err != nil {
-				return nil, fmt.Errorf("failed to add trust bundle volumes from configmaps: %w", err)
-			}
-		} else {
-			podspec, err = eventingtls.AddTrustBundleVolumes(trustBundleConfigmapLister, deploy, &deploy.Spec.Template.Spec)
-			if err != nil {
-				return nil, fmt.Errorf("failed to add trust bundle volumes: %w", err)
-			}
+		// add trustbundles directly, so auth-proxies tokenverifier does not need the trustbundleconfigmap lister for oidc discovery
+		podspec, err := eventingtls.AddTrustBundleVolumesFromConfigMaps(trustBundleConfigMaps, &deploy.Spec.Template.Spec)
+		if err != nil {
+			return nil, fmt.Errorf("failed to add trust bundle volumes: %w", err)
 		}
 		deploy.Spec.Template.Spec = *podspec
 

@@ -150,7 +150,14 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, sink *sinks.IntegrationS
 }
 
 func (r *Reconciler) reconcileDeployment(ctx context.Context, sink *sinks.IntegrationSink, authProxyImage string, featureFlags feature.Flags, trustBundleConfigMaps []*corev1.ConfigMap) (*v1.Deployment, error) {
-	expected, err := resources.MakeDeploymentSpec(sink, authProxyImage, featureFlags, r.trustBundleConfigMapLister, trustBundleConfigMaps)
+	if len(trustBundleConfigMaps) == 0 {
+		var err error
+		trustBundleConfigMaps, err = r.trustBundleConfigMapLister.ConfigMaps(sink.Namespace).List(eventingtls.TrustBundleSelector)
+		if err != nil {
+			return nil, fmt.Errorf("failed to list trust bundle ConfigMaps: %w", err)
+		}
+	}
+	expected, err := resources.MakeDeploymentSpec(sink, authProxyImage, featureFlags, trustBundleConfigMaps)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create deployment template: %w", err)
 	}
