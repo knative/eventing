@@ -30,7 +30,7 @@ fi
 export SCALE_CHAOSDUCK_TO_ZERO=1
 export REPLICAS=1
 
-KO_ARCH=$(go env | grep GOARCH | awk -F\' '{print $2}')
+KO_ARCH=$(go env GOARCH)
 
 export KO_FLAGS=${KO_FLAGS:-"--platform=linux/$KO_ARCH"}
 
