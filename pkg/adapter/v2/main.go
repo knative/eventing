@@ -18,6 +18,7 @@ package adapter
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -284,11 +285,20 @@ func MainWithInformers(ctx context.Context, component string, env EnvConfigAcces
 		}()
 	}
 
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		if err := pprof.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			logger.Warnw("Profiling server shut down", zap.Error(err))
+		}
+	}()
+
 	// Finally start the adapter (blocking)
 	if err := adapter.Start(ctx); err != nil {
 		logger.Fatalw("Start returned an error", zap.Error(err))
 	}
 
+	_ = pprof.Shutdown(context.Background())
 	wg.Wait()
 }
 
