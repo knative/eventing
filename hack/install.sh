@@ -16,7 +16,6 @@
 
 # This script builds and installs Knative Eventing components from source for local development.
 
-set -e
 set -o errexit
 set -o nounset
 set -o pipefail
