@@ -45,7 +45,7 @@ readonly YAML_LIST_FILE=${2:?"Second argument must be the output file"}
 if [[ -z "${YAML_OUTPUT_DIR:-}" ]]; then
   readonly YAML_OUTPUT_DIR="$(mktemp -d)"
 fi
-rm -fr ${YAML_OUTPUT_DIR}/*.yaml
+rm -fr "${YAML_OUTPUT_DIR}"/*.yaml
 
 # Generated Knative component YAML files
 readonly EVENTING_CORE_YAML=${YAML_OUTPUT_DIR}/"eventing-core.yaml"
