@@ -162,14 +162,14 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1.ApiServerSour
 		}
 	}
 
-	bundles, err := r.propagateTrustBundles(ctx, source)
+	trustBundleConfigMaps, err := r.propagateTrustBundles(ctx, source)
 	if err != nil {
 		return err
 	}
 
 	// An empty selector targets all namespaces.
 	allNamespaces := isEmptySelector(source.Spec.NamespaceSelector)
-	ra, err := r.createReceiveAdapter(ctx, source, sinkAddr, namespaces, allNamespaces, bundles)
+	ra, err := r.createReceiveAdapter(ctx, source, sinkAddr, namespaces, allNamespaces, trustBundleConfigMaps)
 	if err != nil {
 		logging.FromContext(ctx).Errorw("Unable to create the receive adapter", zap.Error(err))
 		return err
@@ -229,7 +229,7 @@ func isEmptySelector(selector *metav1.LabelSelector) bool {
 	return false
 }
 
-func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1.ApiServerSource, sinkAddr *duckv1.Addressable, namespaces []string, allNamespaces bool, bundles []*corev1.ConfigMap) (*appsv1.Deployment, error) {
+func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1.ApiServerSource, sinkAddr *duckv1.Addressable, namespaces []string, allNamespaces bool, trustBundleConfigMaps []*corev1.ConfigMap) (*appsv1.Deployment, error) {
 	// TODO: missing.
 	// if err := checkResourcesStatus(src); err != nil {
 	// 	return nil, err
@@ -259,8 +259,8 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1.ApiServer
 		return nil, err
 	}
 
-	if len(bundles) > 0 {
-		podTemplate, err := eventingtls.AddTrustBundleVolumesFromConfigMaps(bundles, &expected.Spec.Template.Spec)
+	if len(trustBundleConfigMaps) > 0 {
+		podTemplate, err := eventingtls.AddTrustBundleVolumesFromConfigMaps(trustBundleConfigMaps, &expected.Spec.Template.Spec)
 		if err != nil {
 			return nil, fmt.Errorf("failed to add trust bundle volumes from configmaps: %w", err)
 		}
