@@ -481,7 +481,7 @@ func SkipPermissionsDisabledWithRBACFeature() *feature.Feature {
 		}
 
 		if obj == nil {
-			t.Fatal("could not found a Deployment prefixed with 'apiserversource-four-' with at least 1 readyReplica")
+			t.Fatal("could not find a Deployment prefixed with 'apiserversource-four-' with at least 1 readyReplica")
 			return
 		}
 
