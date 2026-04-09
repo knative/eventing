@@ -101,13 +101,14 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, sink *sinks.IntegrationS
 	logger := logging.FromContext(ctx)
 
 	logger.Debugw("Reconciling Trust Bundles")
-	if err := r.reconcileIntegrationSinkTrustBundles(ctx, sink); err != nil {
+	trustBundleConfigMaps, err := r.reconcileIntegrationSinkTrustBundles(ctx, sink)
+	if err != nil {
 		logger.Errorw("Error reconciling Trust Bundles", zap.Error(err))
 		return err
 	}
 
 	logger.Debugw("Reconciling IntegrationSink Certificate")
-	_, err := r.reconcileIntegrationSinkCertificate(ctx, sink)
+	_, err = r.reconcileIntegrationSinkCertificate(ctx, sink)
 	if err != nil {
 		logging.FromContext(ctx).Errorw("Error reconciling Certificate", zap.Error(err))
 		return err
@@ -121,7 +122,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, sink *sinks.IntegrationS
 	}
 
 	logger.Debugw("Reconciling IntegrationSink Deployment")
-	_, err = r.reconcileDeployment(ctx, sink, r.authProxyImage, featureFlags)
+	_, err = r.reconcileDeployment(ctx, sink, r.authProxyImage, featureFlags, trustBundleConfigMaps)
 	if err != nil {
 		logging.FromContext(ctx).Errorw("Error reconciling Pod", zap.Error(err))
 		return err
@@ -148,8 +149,15 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, sink *sinks.IntegrationS
 	return newReconciledNormal(sink.Namespace, sink.Name)
 }
 
-func (r *Reconciler) reconcileDeployment(ctx context.Context, sink *sinks.IntegrationSink, authProxyImage string, featureFlags feature.Flags) (*v1.Deployment, error) {
-	expected, err := resources.MakeDeploymentSpec(sink, authProxyImage, featureFlags, r.trustBundleConfigMapLister)
+func (r *Reconciler) reconcileDeployment(ctx context.Context, sink *sinks.IntegrationSink, authProxyImage string, featureFlags feature.Flags, trustBundleConfigMaps []*corev1.ConfigMap) (*v1.Deployment, error) {
+	if len(trustBundleConfigMaps) == 0 {
+		var err error
+		trustBundleConfigMaps, err = r.trustBundleConfigMapLister.ConfigMaps(sink.Namespace).List(eventingtls.TrustBundleSelector)
+		if err != nil {
+			return nil, fmt.Errorf("failed to list trust bundle ConfigMaps: %w", err)
+		}
+	}
+	expected, err := resources.MakeDeploymentSpec(sink, authProxyImage, featureFlags, trustBundleConfigMaps)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create deployment template: %w", err)
 	}
@@ -282,20 +290,21 @@ func (r *Reconciler) deleteIntegrationSinkCertificate(ctx context.Context, sink 
 	return nil
 }
 
-func (r *Reconciler) reconcileIntegrationSinkTrustBundles(ctx context.Context, sink *sinks.IntegrationSink) error {
+func (r *Reconciler) reconcileIntegrationSinkTrustBundles(ctx context.Context, sink *sinks.IntegrationSink) ([]*corev1.ConfigMap, error) {
 	gvk := schema.GroupVersionKind{
 		Group:   sinks.SchemeGroupVersion.Group,
 		Version: sinks.SchemeGroupVersion.Version,
 		Kind:    "IntegrationSink",
 	}
 
-	if _, err := eventingtls.PropagateTrustBundles(ctx, r.kubeClientSet, r.trustBundleConfigMapLister, gvk, sink); err != nil {
+	trustBundleConfigMaps, err := eventingtls.PropagateTrustBundles(ctx, r.kubeClientSet, r.trustBundleConfigMapLister, gvk, sink)
+	if err != nil {
 		sink.Status.MarkFailedTrustBundlePropagation("FailedTrustBundlePropagation", err.Error())
-		return err
+		return nil, err
 	}
 	sink.Status.MarkTrustBundlePropagated()
 
-	return nil
+	return trustBundleConfigMaps, nil
 }
 
 func (r *Reconciler) reconcileAddress(ctx context.Context, sink *sinks.IntegrationSink) error {

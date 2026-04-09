@@ -256,8 +256,12 @@ func TestReconcile(t *testing.T) {
 				}),
 			),
 		},
+		WantUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: makeAvailableReceiveAdapter(t, withTrustBundle("bundle")),
+		}},
 		WantEvents: []string{
 			Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", sourceName),
+			Eventf(corev1.EventTypeNormal, "ApiServerSourceDeploymentUpdated", `Deployment "apiserversource-test-apiserver-source-1234" updated`),
 		},
 		WantPatches: []clientgotesting.PatchActionImpl{
 			patchFinalizers(sourceName, testNS),

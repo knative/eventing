@@ -162,13 +162,14 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1.ApiServerSour
 		}
 	}
 
-	if err := r.propagateTrustBundles(ctx, source); err != nil {
+	trustBundleConfigMaps, err := r.propagateTrustBundles(ctx, source)
+	if err != nil {
 		return err
 	}
 
 	// An empty selector targets all namespaces.
 	allNamespaces := isEmptySelector(source.Spec.NamespaceSelector)
-	ra, err := r.createReceiveAdapter(ctx, source, sinkAddr, namespaces, allNamespaces)
+	ra, err := r.createReceiveAdapter(ctx, source, sinkAddr, namespaces, allNamespaces, trustBundleConfigMaps)
 	if err != nil {
 		logging.FromContext(ctx).Errorw("Unable to create the receive adapter", zap.Error(err))
 		return err
@@ -228,7 +229,7 @@ func isEmptySelector(selector *metav1.LabelSelector) bool {
 	return false
 }
 
-func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1.ApiServerSource, sinkAddr *duckv1.Addressable, namespaces []string, allNamespaces bool) (*appsv1.Deployment, error) {
+func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1.ApiServerSource, sinkAddr *duckv1.Addressable, namespaces []string, allNamespaces bool, trustBundleConfigMaps []*corev1.ConfigMap) (*appsv1.Deployment, error) {
 	// TODO: missing.
 	// if err := checkResourcesStatus(src); err != nil {
 	// 	return nil, err
@@ -258,11 +259,20 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1.ApiServer
 		return nil, err
 	}
 
-	podTemplate, err := eventingtls.AddTrustBundleVolumes(r.trustBundleConfigMapLister, src, &expected.Spec.Template.Spec)
-	if err != nil {
-		return nil, fmt.Errorf("failed to add trust bundle volumes: %w", err)
+	if len(trustBundleConfigMaps) > 0 {
+		podTemplate, err := eventingtls.AddTrustBundleVolumesFromConfigMaps(trustBundleConfigMaps, &expected.Spec.Template.Spec)
+		if err != nil {
+			return nil, fmt.Errorf("failed to add trust bundle volumes from configmaps: %w", err)
+		}
+		expected.Spec.Template.Spec = *podTemplate
+	} else {
+		podTemplate, err := eventingtls.AddTrustBundleVolumes(r.trustBundleConfigMapLister, src, &expected.Spec.Template.Spec)
+
+		if err != nil {
+			return nil, fmt.Errorf("failed to add trust bundle volumes: %w", err)
+		}
+		expected.Spec.Template.Spec = *podTemplate
 	}
-	expected.Spec.Template.Spec = *podTemplate
 
 	ra, err := r.kubeClientSet.AppsV1().Deployments(src.Namespace).Get(ctx, expected.Name, metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
@@ -472,12 +482,11 @@ func (r *Reconciler) createOIDCRoleBinding(ctx context.Context, source *v1.ApiSe
 	return nil
 }
 
-func (r *Reconciler) propagateTrustBundles(ctx context.Context, source *v1.ApiServerSource) error {
+func (r *Reconciler) propagateTrustBundles(ctx context.Context, source *v1.ApiServerSource) ([]*corev1.ConfigMap, error) {
 	gvk := schema.GroupVersionKind{
 		Group:   v1.SchemeGroupVersion.Group,
 		Version: v1.SchemeGroupVersion.Version,
 		Kind:    "ApiServerSource",
 	}
-	_, err := eventingtls.PropagateTrustBundles(ctx, r.kubeClientSet, r.trustBundleConfigMapLister, gvk, source)
-	return err
+	return eventingtls.PropagateTrustBundles(ctx, r.kubeClientSet, r.trustBundleConfigMapLister, gvk, source)
 }

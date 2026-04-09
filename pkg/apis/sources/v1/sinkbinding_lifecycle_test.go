@@ -32,7 +32,6 @@ import (
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
-	kubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 	configmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap/fake"
 	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
 	"knative.dev/pkg/resolver"
@@ -929,7 +928,6 @@ func TestSinkBindingDo(t *testing.T) {
 			}
 			ctx = WithURIResolver(ctx, r)
 			ctx = WithTrustBundleConfigMapLister(ctx, configmapinformer.Get(ctx).Lister())
-			ctx = WithKubeClient(ctx, kubeclient.Get(ctx))
 
 			for _, cm := range test.configMaps {
 				_ = configmapinformer.Get(ctx).Informer().GetIndexer().Add(cm)
