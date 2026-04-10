@@ -74,7 +74,7 @@ readonly LATEST_RELEASE_VERSION=$(latest_version)
 
 readonly SKIP_UPLOAD_TEST_IMAGES="${SKIP_UPLOAD_TEST_IMAGES:-}"
 
-readonly KAIL_VERSION=v0.16.1
+readonly KAIL_VERSION=v0.17.4
 
 UNINSTALL_LIST=()
 
