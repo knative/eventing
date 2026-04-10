@@ -350,7 +350,7 @@ func TestAdapter_FailFast(t *testing.T) {
 			}
 
 			ctx, _ := pkgtesting.SetupFakeContext(t)
-			logger := logging.FromContext(ctx).Named("adapter-test")
+			logger := zap.NewNop().Sugar()
 
 			a := &apiServerAdapter{
 				ce:     ce,
