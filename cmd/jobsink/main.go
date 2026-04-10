@@ -54,7 +54,6 @@ import (
 
 	"knative.dev/pkg/signals"
 
-	cmdbroker "knative.dev/eventing/cmd/broker"
 	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/eventing/pkg/apis/sinks"
 	sinksv "knative.dev/eventing/pkg/apis/sinks/v1alpha1"
@@ -93,7 +92,7 @@ func main() {
 	ctx, informers := injection.Default.SetupInformers(ctx, cfg)
 	ctx = injection.WithConfig(ctx, cfg)
 
-	loggingConfig, err := cmdbroker.GetLoggingConfig(ctx, system.Namespace(), logging.ConfigMapName())
+	loggingConfig, err := utils.GetLoggingConfig(ctx, system.Namespace(), logging.ConfigMapName())
 	if err != nil {
 		log.Fatal("Error loading/parsing logging configuration:", err)
 	}

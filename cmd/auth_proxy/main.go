@@ -43,7 +43,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/utils/ptr"
-	cmdbroker "knative.dev/eventing/cmd/broker"
 	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/eventing/pkg/auth"
 	eventingclient "knative.dev/eventing/pkg/client/clientset/versioned"
@@ -51,6 +50,7 @@ import (
 	eventingv1alpha1listers "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/kncloudevents"
+	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/apis"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	filteredFactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
@@ -189,7 +189,7 @@ func setupInformers(ctx context.Context) (context.Context, []controller.Informer
 
 // setupLogging initializes logging configuration and returns the logger
 func setupLogging(ctx context.Context, cmw *configmap.InformedWatcher) *zap.SugaredLogger {
-	loggingConfig, err := cmdbroker.GetLoggingConfig(ctx, system.Namespace(), logging.ConfigMapName())
+	loggingConfig, err := utils.GetLoggingConfig(ctx, system.Namespace(), logging.ConfigMapName())
 	if err != nil {
 		log.Fatal("Error loading/parsing logging configuration:", err)
 	}
