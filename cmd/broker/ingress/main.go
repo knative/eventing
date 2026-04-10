@@ -38,7 +38,6 @@ import (
 	"knative.dev/pkg/signals"
 	"knative.dev/pkg/system"
 
-	cmdbroker "knative.dev/eventing/cmd/broker"
 	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/broker"
@@ -51,6 +50,7 @@ import (
 	"knative.dev/eventing/pkg/eventtype"
 	o11yconfigmap "knative.dev/eventing/pkg/observability/configmap"
 	"knative.dev/eventing/pkg/observability/otel"
+	"knative.dev/eventing/pkg/utils"
 )
 
 // TODO make these constants configurable (either as env variables, config map, or part of broker spec).
@@ -104,7 +104,7 @@ func main() {
 
 	ctx, informers := injection.Default.SetupInformers(ctx, cfg)
 	ctx = injection.WithConfig(ctx, cfg)
-	loggingConfig, err := cmdbroker.GetLoggingConfig(ctx, system.Namespace(), logging.ConfigMapName())
+	loggingConfig, err := utils.GetLoggingConfig(ctx, system.Namespace(), logging.ConfigMapName())
 	if err != nil {
 		log.Fatal("Error loading/parsing logging configuration:", err)
 	}

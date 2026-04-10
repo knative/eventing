@@ -38,7 +38,6 @@ import (
 	"knative.dev/pkg/signals"
 	"knative.dev/pkg/system"
 
-	"knative.dev/eventing/cmd/broker"
 	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/broker/filter"
@@ -50,6 +49,7 @@ import (
 	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/eventtype"
 	o11yconfigmap "knative.dev/eventing/pkg/observability/configmap"
+	"knative.dev/eventing/pkg/utils"
 )
 
 const (
@@ -90,7 +90,7 @@ func main() {
 	ctx = injection.WithConfig(ctx, cfg)
 	kubeClient := kubeclient.Get(ctx)
 
-	loggingConfig, err := broker.GetLoggingConfig(ctx, system.Namespace(), logging.ConfigMapName())
+	loggingConfig, err := utils.GetLoggingConfig(ctx, system.Namespace(), logging.ConfigMapName())
 	if err != nil {
 		log.Fatal("Error loading/parsing logging configuration:", err)
 	}

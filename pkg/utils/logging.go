@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package broker
+package utils
 
 import (
 	"context"
@@ -26,7 +26,9 @@ import (
 	"knative.dev/pkg/logging"
 )
 
-// GetLoggingConfig will get config from a specific namespace
+// GetLoggingConfig fetches the logging ConfigMap from the given namespace and
+// parses it into a *logging.Config. If the ConfigMap is not found, it returns
+// the default logging config.
 func GetLoggingConfig(ctx context.Context, namespace, loggingConfigMapName string) (*logging.Config, error) {
 	loggingConfigMap, err := kubeclient.Get(ctx).CoreV1().ConfigMaps(namespace).Get(ctx, loggingConfigMapName, metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
