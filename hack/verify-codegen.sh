@@ -22,7 +22,7 @@ export GO111MODULE=on
 
 source $(dirname $0)/../vendor/knative.dev/hack/library.sh
 
-readonly TMP_DIFFROOT="$(mktemp -d ${REPO_ROOT_DIR}/tmpdiffroot.XXXXXX)"
+readonly TMP_DIFFROOT="$(mktemp -d "${REPO_ROOT_DIR}/tmpdiffroot.XXXXXX")"
 
 cleanup() {
   rm -rf "${TMP_DIFFROOT}"
