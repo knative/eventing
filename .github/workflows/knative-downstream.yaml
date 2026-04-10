@@ -49,11 +49,11 @@ jobs:
       run: |
         go install github.com/google/go-licenses@latest
     - name: Checkout Upstream
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
       with:
         path: ./src/knative.dev/${{ github.event.repository.name }}
     - name: Checkout Downstream
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
       with:
         repository: ${{ matrix.org }}/${{ matrix.repo }}
         path: ./src/knative.dev/${{ matrix.repo }}
