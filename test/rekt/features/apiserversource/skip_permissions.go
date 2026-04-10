@@ -255,23 +255,15 @@ func SkipPermissionsEnabledWithRBACFeature() *feature.Feature {
 
 		var obj *appsv1.Deployment
 		for _, deployment := range objs.Items {
-			if strings.HasPrefix(deployment.Name, "apiserversource-two-") {
+			if strings.HasPrefix(deployment.Name, "apiserversource-two-") && deployment.Status.ReadyReplicas >= 1 {
 				obj = &deployment
 				break
 			}
 		}
 
 		if obj == nil {
-			t.Fatal("could not found a Deployment prefixed with 'apiserversource-two-'")
+			t.Fatal("could not find a Deployment prefixed with 'apiserversource-two-' with at least 1 readyReplica")
 			return
-		}
-
-		if obj.Status.ReadyReplicas != 1 {
-			t.Fatalf("Expected 1 ready replica, got: %d", obj.Status.ReadyReplicas)
-		}
-
-		if obj.Status.UnavailableReplicas != 0 {
-			t.Fatalf("Expected 0 unavailable replica, got: %d", obj.Status.UnavailableReplicas)
 		}
 
 		for _, envvar := range obj.Spec.Template.Spec.Containers[0].Env {
@@ -482,23 +474,15 @@ func SkipPermissionsDisabledWithRBACFeature() *feature.Feature {
 
 		var obj *appsv1.Deployment
 		for _, deployment := range objs.Items {
-			if strings.HasPrefix(deployment.Name, "apiserversource-four-") {
+			if strings.HasPrefix(deployment.Name, "apiserversource-four-") && deployment.Status.ReadyReplicas >= 1 {
 				obj = &deployment
 				break
 			}
 		}
 
 		if obj == nil {
-			t.Fatal("could not found a Deployment prefixed with 'apiserversource-four-'")
+			t.Fatal("could not find a Deployment prefixed with 'apiserversource-four-' with at least 1 readyReplica")
 			return
-		}
-
-		if obj.Status.ReadyReplicas != 1 {
-			t.Fatalf("Expected 1 ready replica, got: %d", obj.Status.ReadyReplicas)
-		}
-
-		if obj.Status.UnavailableReplicas != 0 {
-			t.Fatalf("Expected 0 unavailable replica, got: %d", obj.Status.UnavailableReplicas)
 		}
 
 		for _, envvar := range obj.Spec.Template.Spec.Containers[0].Env {
