@@ -61,7 +61,7 @@ address = 'http://default-broker.event-example.svc.cluster.local/
 	})
 
 	// then
-	assert.Contains(t, errors, "[toml: literal strings cannot have new lines]")
+	assert.Contains(t, errors, "toml: literal strings cannot have new lines")
 }
 
 func TestReadIfNotPresent(t *testing.T) {
@@ -150,7 +150,7 @@ func withErrorsCaptured(t *testing.T, fn func()) []string {
 	defer func() { logFatal = origLogFatal }()
 	var errors []string
 	logFatal = func(args ...interface{}) {
-		errors = append(errors, fmt.Sprint(args))
+		errors = append(errors, fmt.Sprint(args...))
 	}
 	fn()
 	return errors
