@@ -61,7 +61,7 @@ address = 'http://default-broker.event-example.svc.cluster.local/
 	})
 
 	// then
-	assert.Contains(t, errors, "[toml: literal strings cannot have new lines]")
+	assert.Contains(t, errors, "toml: literal strings cannot have new lines")
 }
 
 func TestReadIfNotPresent(t *testing.T) {
