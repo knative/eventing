@@ -1371,16 +1371,16 @@ k8s.io/utils/pointer
 k8s.io/utils/ptr
 k8s.io/utils/strings/slices
 k8s.io/utils/trace
-# knative.dev/hack v0.0.0-20260415132636-9909d690ab4d
+# knative.dev/hack v0.0.0-20260415233235-54d1312ccc91
 ## explicit; go 1.24
 knative.dev/hack
-# knative.dev/hack/schema v0.0.0-20260415132636-9909d690ab4d
+# knative.dev/hack/schema v0.0.0-20260415233235-54d1312ccc91
 ## explicit; go 1.21
 knative.dev/hack/schema/commands
 knative.dev/hack/schema/docs
 knative.dev/hack/schema/registry
 knative.dev/hack/schema/schema
-# knative.dev/pkg v0.0.0-20260414003832-e65cbe95a718
+# knative.dev/pkg v0.0.0-20260415140041-388556d5c488
 ## explicit; go 1.25.0
 knative.dev/pkg/apiextensions/storageversion
 knative.dev/pkg/apiextensions/storageversion/cmd/migrate
@@ -1537,7 +1537,7 @@ knative.dev/pkg/webhook/resourcesemantics
 knative.dev/pkg/webhook/resourcesemantics/conversion
 knative.dev/pkg/webhook/resourcesemantics/defaulting
 knative.dev/pkg/webhook/resourcesemantics/validation
-# knative.dev/reconciler-test v0.0.0-20260415133838-f9452e44d0c0
+# knative.dev/reconciler-test v0.0.0-20260415143040-51affdaaa44f
 ## explicit; go 1.25.0
 knative.dev/reconciler-test/cmd/eventshub
 knative.dev/reconciler-test/pkg/environment
