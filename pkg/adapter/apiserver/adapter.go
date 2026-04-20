@@ -182,11 +182,14 @@ func (a *apiServerAdapter) startFailFast(ctx context.Context, stopCh <-chan stru
 	select {
 	case err := <-errorChan:
 		if err != nil {
+			cancelWatchers()
+			wg.Wait()
 			a.logger.Errorf("ApiServerSource failed: %v", err)
 			return err
 		}
 	case <-stopCh:
 		cancelWatchers()
+		wg.Wait()
 		return nil
 	}
 
