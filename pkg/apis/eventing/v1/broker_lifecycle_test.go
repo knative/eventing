@@ -18,6 +18,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 
@@ -499,13 +500,13 @@ func TestBrokerIsReady(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			bs := BrokerStatus{}
 			if test.markIngressReady != nil {
-				var ep *corev1.Endpoints
+				var epSlices []*discoveryv1.EndpointSlice
 				if *test.markIngressReady {
-					ep = TestHelper.AvailableEndpoints()
+					epSlices = TestHelper.AvailableEndpointSlices()
 				} else {
-					ep = TestHelper.UnavailableEndpoints()
+					epSlices = TestHelper.UnavailableEndpointSlices()
 				}
-				bs.PropagateIngressAvailability(ep)
+				bs.PropagateIngressAvailability(epSlices)
 			}
 			if test.markTriggerChannelReady != nil {
 				var c *eventingduckv1.ChannelableStatus
@@ -534,13 +535,13 @@ func TestBrokerIsReady(t *testing.T) {
 			}
 
 			if test.markFilterReady != nil {
-				var ep *corev1.Endpoints
+				var epSlices []*discoveryv1.EndpointSlice
 				if *test.markFilterReady {
-					ep = TestHelper.AvailableEndpoints()
+					epSlices = TestHelper.AvailableEndpointSlices()
 				} else {
-					ep = TestHelper.UnavailableEndpoints()
+					epSlices = TestHelper.UnavailableEndpointSlices()
 				}
-				bs.PropagateFilterAvailability(ep)
+				bs.PropagateFilterAvailability(epSlices)
 			}
 
 			if test.markAddressable == nil && test.address == nil {

@@ -74,15 +74,14 @@ func NewController(
 	eventPolicyInformer := eventpolicyinformer.Get(ctx)
 	rolebindingInformer := rolebindinginformer.Get(ctx)
 
-	// Create a custom informer as one in knative/pkg doesn't exist for endpoints.
-	jsonataEndpointFactory := informers.NewSharedInformerFactoryWithOptions(
+	jsonataEndpointSliceFactory := informers.NewSharedInformerFactoryWithOptions(
 		kubeclient.Get(ctx),
 		controller.DefaultResyncPeriod,
 		informers.WithTweakListOptions(func(options *metav1.ListOptions) {
 			options.LabelSelector = JsonataResourcesSelector
 		}),
 	)
-	jsonataEndpointInformer := jsonataEndpointFactory.Core().V1().Endpoints()
+	jsonataEndpointSliceInformer := jsonataEndpointSliceFactory.Discovery().V1().EndpointSlices()
 
 	env := &envConfig{}
 	if err := envconfig.Process("", env); err != nil {
@@ -115,7 +114,7 @@ func NewController(
 		jsonataConfigMapLister:     jsonataConfigMapInformer.Lister(),
 		jsonataDeploymentsLister:   jsonataDeploymentInformer.Lister(),
 		jsonataServiceLister:       jsonataServiceInformer.Lister(),
-		jsonataEndpointLister:      jsonataEndpointInformer.Lister(),
+		jsonataEndpointSliceLister: jsonataEndpointSliceInformer.Lister(),
 		jsonataSinkBindingLister:   jsonataSinkBindingInformer.Lister(),
 		cmCertificateLister:        dynamicCertificatesInformer.Lister(),
 		certificatesSecretLister:   certificatesSecretInformer.Lister(),
@@ -142,7 +141,7 @@ func NewController(
 
 	jsonataDeploymentInformer.Informer().AddEventHandler(controller.HandleAll(enqueueUsingNameLabel(impl)))
 	jsonataServiceInformer.Informer().AddEventHandler(controller.HandleAll(enqueueUsingNameLabel(impl)))
-	jsonataEndpointInformer.Informer().AddEventHandler(controller.HandleAll(enqueueUsingNameLabel(impl)))
+	jsonataEndpointSliceInformer.Informer().AddEventHandler(controller.HandleAll(enqueueUsingNameLabel(impl)))
 	jsonataConfigMapInformer.Informer().AddEventHandler(controller.HandleAll(enqueueUsingNameLabel(impl)))
 	jsonataSinkBindingInformer.Informer().AddEventHandler(controller.HandleAll(enqueueUsingNameLabel(impl)))
 
@@ -154,8 +153,8 @@ func NewController(
 	))
 
 	// Start the factory after creating all necessary informers.
-	jsonataEndpointFactory.Start(ctx.Done())
-	jsonataEndpointFactory.WaitForCacheSync(ctx.Done())
+	jsonataEndpointSliceFactory.Start(ctx.Done())
+	jsonataEndpointSliceFactory.WaitForCacheSync(ctx.Done())
 
 	return impl
 }

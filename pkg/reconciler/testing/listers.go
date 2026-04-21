@@ -19,6 +19,7 @@ package testing
 import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	fakeapiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/fake"
@@ -27,6 +28,7 @@ import (
 	fakekubeclientset "k8s.io/client-go/kubernetes/fake"
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
+	discoveryv1listers "k8s.io/client-go/listers/discovery/v1"
 	rbacv1listers "k8s.io/client-go/listers/rbac/v1"
 	"k8s.io/client-go/tools/cache"
 	sourcesv1beta2 "knative.dev/eventing/pkg/apis/sources/v1beta2"
@@ -136,6 +138,10 @@ func (l *Listers) GetRoleBindingLister() rbacv1listers.RoleBindingLister {
 
 func (l *Listers) GetEndpointsLister() corev1listers.EndpointsLister {
 	return corev1listers.NewEndpointsLister(l.indexerFor(&corev1.Endpoints{}))
+}
+
+func (l *Listers) GetEndpointSliceLister() discoveryv1listers.EndpointSliceLister {
+	return discoveryv1listers.NewEndpointSliceLister(l.indexerFor(&discoveryv1.EndpointSlice{}))
 }
 
 func (l *Listers) GetConfigMapLister() corev1listers.ConfigMapLister {

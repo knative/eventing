@@ -24,6 +24,7 @@ import (
 
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -33,6 +34,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 	corev1listers "k8s.io/client-go/listers/core/v1"
+	discoveryv1listers "k8s.io/client-go/listers/discovery/v1"
 	"k8s.io/utils/pointer"
 	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/resolver"
@@ -72,10 +74,10 @@ type Reconciler struct {
 	dynamicClientSet  dynamic.Interface
 
 	// listers index properties about resources
-	endpointsLister    corev1listers.EndpointsLister
-	subscriptionLister messaginglisters.SubscriptionLister
-	configmapLister    corev1listers.ConfigMapLister
-	secretLister       corev1listers.SecretLister
+	endpointSliceLister discoveryv1listers.EndpointSliceLister
+	subscriptionLister  messaginglisters.SubscriptionLister
+	configmapLister     corev1listers.ConfigMapLister
+	secretLister        corev1listers.SecretLister
 
 	channelableTracker ducklib.ListableTracker
 
@@ -188,21 +190,25 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 
 	b.Status.PropagateTriggerChannelReadiness(channelStatus)
 
-	filterEndpoints, err := r.endpointsLister.Endpoints(system.Namespace()).Get(names.BrokerFilterName)
+	filterEpSlices, err := r.endpointSliceLister.EndpointSlices(system.Namespace()).List(labels.SelectorFromSet(labels.Set{
+		discoveryv1.LabelServiceName: names.BrokerFilterName,
+	}))
 	if err != nil {
-		logging.FromContext(ctx).Errorw("Problem getting endpoints for filter", zap.String("namespace", system.Namespace()), zap.Error(err))
+		logging.FromContext(ctx).Errorw("Problem getting EndpointSlices for filter", zap.String("namespace", system.Namespace()), zap.Error(err))
 		b.Status.MarkFilterFailed("ServiceFailure", "%v", err)
 		return err
 	}
-	b.Status.PropagateFilterAvailability(filterEndpoints)
+	b.Status.PropagateFilterAvailability(filterEpSlices)
 
-	ingressEndpoints, err := r.endpointsLister.Endpoints(system.Namespace()).Get(names.BrokerIngressName)
+	ingressEpSlices, err := r.endpointSliceLister.EndpointSlices(system.Namespace()).List(labels.SelectorFromSet(labels.Set{
+		discoveryv1.LabelServiceName: names.BrokerIngressName,
+	}))
 	if err != nil {
-		logging.FromContext(ctx).Errorw("Problem getting endpoints for ingress", zap.String("namespace", system.Namespace()), zap.Error(err))
+		logging.FromContext(ctx).Errorw("Problem getting EndpointSlices for ingress", zap.String("namespace", system.Namespace()), zap.Error(err))
 		b.Status.MarkIngressFailed("ServiceFailure", "%v", err)
 		return err
 	}
-	b.Status.PropagateIngressAvailability(ingressEndpoints)
+	b.Status.PropagateIngressAvailability(ingressEpSlices)
 
 	if b.Spec.Delivery != nil && b.Spec.Delivery.DeadLetterSink != nil {
 		deadLetterSinkAddr, err := r.uriResolver.AddressableFromDestinationV1(ctx, *b.Spec.Delivery.DeadLetterSink, b)

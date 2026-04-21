@@ -27,7 +27,6 @@ rules:
       - "secrets"
       - "configmaps"
       - "services"
-      - "endpoints"
       - "events"
       - "serviceaccounts"
       - "pods"
@@ -39,6 +38,15 @@ rules:
       - "update"
       - "delete"
       - "patch"
+      - "watch"
+
+  - apiGroups:
+      - "discovery.k8s.io"
+    resources:
+      - "endpointslices"
+    verbs:
+      - "get"
+      - "list"
       - "watch"
 
   # Brokers and the namespace annotation controllers manipulate Deployments.

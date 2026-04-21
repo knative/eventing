@@ -28,6 +28,7 @@ import (
 	"go.uber.org/zap/zapcore"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -36,6 +37,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	appslister "k8s.io/client-go/listers/apps/v1"
 	corelister "k8s.io/client-go/listers/core/v1"
+	discoveryv1listers "k8s.io/client-go/listers/discovery/v1"
 	rbacv1listers "k8s.io/client-go/listers/rbac/v1"
 	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/eventing/pkg/auth"
@@ -65,7 +67,7 @@ type Reconciler struct {
 	jsonataConfigMapLister     corelister.ConfigMapLister
 	jsonataDeploymentsLister   appslister.DeploymentLister
 	jsonataServiceLister       corelister.ServiceLister
-	jsonataEndpointLister      corelister.EndpointsLister
+	jsonataEndpointSliceLister discoveryv1listers.EndpointSliceLister
 	jsonataSinkBindingLister   sourceslisters.SinkBindingLister
 	cmCertificateLister        *atomic.Pointer[cmlisters.CertificateLister]
 	certificatesSecretLister   corelister.SecretLister
@@ -329,15 +331,31 @@ func (r *Reconciler) reconcileJsonataTransformationSinkBinding(ctx context.Conte
 
 func (r *Reconciler) reconcileJsonataTransformationAddress(ctx context.Context, transform *eventing.EventTransform) error {
 	service := jsonataService(ctx, transform)
-	endpoint, err := r.jsonataEndpointLister.Endpoints(transform.GetNamespace()).Get(service.GetName())
-	if apierrors.IsNotFound(err) {
+	epSlices, err := r.jsonataEndpointSliceLister.EndpointSlices(transform.GetNamespace()).List(labels.SelectorFromSet(labels.Set{
+		discoveryv1.LabelServiceName: service.GetName(),
+	}))
+	if err != nil {
+		return fmt.Errorf("failed to list jsonata EndpointSlices: %w", err)
+	}
+	if len(epSlices) == 0 {
 		transform.Status.MarkWaitingForServiceEndpoints()
 		return controller.NewSkipKey("")
 	}
-	if err != nil {
-		return fmt.Errorf("failed to list jsonata endpoints: %w", err)
+
+	hasReadyEndpoint := false
+	hasPort := false
+	for _, eps := range epSlices {
+		if len(eps.Ports) > 0 {
+			hasPort = true
+		}
+		for _, ep := range eps.Endpoints {
+			if ep.Conditions.Ready == nil || *ep.Conditions.Ready {
+				hasReadyEndpoint = true
+				break
+			}
+		}
 	}
-	if len(endpoint.Subsets) == 0 || len(endpoint.Subsets[0].Ports) == 0 || len(endpoint.Subsets[0].Addresses) == 0 {
+	if !hasReadyEndpoint || !hasPort {
 		transform.Status.MarkWaitingForServiceEndpoints()
 		return controller.NewSkipKey("")
 	}
@@ -347,9 +365,9 @@ func (r *Reconciler) reconcileJsonataTransformationAddress(ctx context.Context, 
 		if f.IsOIDCAuthentication() {
 			expectedPort = 3129
 		}
-		for _, sub := range endpoint.Subsets {
-			for _, p := range sub.Ports {
-				if p.Port != expectedPort {
+		for _, eps := range epSlices {
+			for _, p := range eps.Ports {
+				if p.Port == nil || *p.Port != expectedPort {
 					transform.Status.MarkWaitingForServiceEndpoints()
 					return controller.NewSkipKey("")
 				}

@@ -45,7 +45,6 @@ import (
 	subscriptioninformer "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/subscription"
 	brokerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/broker"
 	"knative.dev/eventing/pkg/duck"
-	"knative.dev/eventing/pkg/reconciler/names"
 )
 
 const (
@@ -66,9 +65,9 @@ func NewController(
 	brokerInformer := brokerinformer.Get(ctx)
 	subscriptionInformer := subscriptioninformer.Get(ctx)
 
-	endpointsInformer := namespacedinformerfactory.Get(ctx).Core().V1().Endpoints()
-	if err := controller.StartInformers(ctx.Done(), endpointsInformer.Informer()); err != nil {
-		logger.Fatalw("Failed to start namespaced endpoints informer", zap.Error(err))
+	endpointSliceInformer := namespacedinformerfactory.Get(ctx).Discovery().V1().EndpointSlices()
+	if err := controller.StartInformers(ctx.Done(), endpointSliceInformer.Informer()); err != nil {
+		logger.Fatalw("Failed to start namespaced EndpointSlice informer", zap.Error(err))
 	}
 
 	configmapInformer := configmapinformer.Get(ctx)
@@ -95,14 +94,14 @@ func NewController(
 	brokerFilter := pkgreconciler.AnnotationFilterFunc(brokerreconciler.ClassAnnotationKey, eventing.MTChannelBrokerClassValue, false /*allowUnset*/)
 
 	r := &Reconciler{
-		eventingClientSet:  eventingclient.Get(ctx),
-		dynamicClientSet:   dynamicclient.Get(ctx),
-		endpointsLister:    endpointsInformer.Lister(),
-		subscriptionLister: subscriptionInformer.Lister(),
-		brokerClass:        eventing.MTChannelBrokerClassValue,
-		configmapLister:    configmapInformer.Lister(),
-		secretLister:       secretInformer.Lister(),
-		eventPolicyLister:  eventPolicyInformer.Lister(),
+		eventingClientSet:   eventingclient.Get(ctx),
+		dynamicClientSet:    dynamicclient.Get(ctx),
+		endpointSliceLister: endpointSliceInformer.Lister(),
+		subscriptionLister:  subscriptionInformer.Lister(),
+		brokerClass:         eventing.MTChannelBrokerClassValue,
+		configmapLister:     configmapInformer.Lister(),
+		secretLister:        secretInformer.Lister(),
+		eventPolicyLister:   eventPolicyInformer.Lister(),
 	}
 	impl := brokerreconciler.NewImpl(ctx, r, eventing.MTChannelBrokerClassValue, func(impl *controller.Impl) controller.Options {
 		return controller.Options{
@@ -128,19 +127,10 @@ func NewController(
 		logger.Info("Doing a global resync due to endpoint changes in shared broker component")
 		impl.FilteredGlobalResync(brokerFilter, brokerInformer.Informer())
 	}
-	// Resync for the filter.
-	endpointsInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: pkgreconciler.ChainFilterFuncs(
-			pkgreconciler.NamespaceFilterFunc(system.Namespace()),
-			pkgreconciler.NameFilterFunc(names.BrokerFilterName)),
-		Handler: controller.HandleAll(globalResync),
-	})
-	// Resync for the ingress.
-	endpointsInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: pkgreconciler.ChainFilterFuncs(
-			pkgreconciler.NamespaceFilterFunc(system.Namespace()),
-			pkgreconciler.NameFilterFunc(names.BrokerIngressName)),
-		Handler: controller.HandleAll(globalResync),
+	// Resync for changes to EndpointSlices backing filter/ingress services.
+	endpointSliceInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: pkgreconciler.NamespaceFilterFunc(system.Namespace()),
+		Handler:    controller.HandleAll(globalResync),
 	})
 	secretInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.FilterWithName(ingressServerTLSSecretName),

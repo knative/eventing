@@ -32,11 +32,14 @@ import (
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
+	discoveryv1listers "k8s.io/client-go/listers/discovery/v1"
 	rbacv1listers "k8s.io/client-go/listers/rbac/v1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -87,7 +90,7 @@ type Reconciler struct {
 	dispatcherImage      string
 	deploymentLister     appsv1listers.DeploymentLister
 	serviceLister        corev1listers.ServiceLister
-	endpointsLister      corev1listers.EndpointsLister
+	endpointSliceLister  discoveryv1listers.EndpointSliceLister
 	serviceAccountLister corev1listers.ServiceAccountLister
 	secretLister         corev1listers.SecretLister
 	roleBindingLister    rbacv1listers.RoleBindingLister
@@ -139,22 +142,36 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1.InMemoryChannel)
 	}
 	imc.Status.MarkServiceTrue()
 
-	// Get the Dispatcher Service Endpoints and propagate the status to the Channel
-	// endpoints has the same name as the service, so not a bug.
-	e, err := r.endpointsLister.Endpoints(dispatcherNamespace).Get(dispatcherName)
+	// Get the Dispatcher Service EndpointSlices and propagate the status to the Channel.
+	epSlices, err := r.endpointSliceLister.EndpointSlices(dispatcherNamespace).List(labels.SelectorFromSet(labels.Set{
+		discoveryv1.LabelServiceName: dispatcherName,
+	}))
 	if err != nil {
-		if apierrs.IsNotFound(err) {
-			logging.FromContext(ctx).Error("Endpoints do not exist for dispatcher service")
-			imc.Status.MarkEndpointsFailed("DispatcherEndpointsDoesNotExist", "Dispatcher Endpoints does not exist")
-		} else {
-			logging.FromContext(ctx).Error("Unable to get the dispatcher endpoints", zap.Error(err))
-			imc.Status.MarkEndpointsUnknown("DispatcherEndpointsGetFailed", "Failed to get dispatcher endpoints")
-		}
+		logging.FromContext(ctx).Error("Unable to get the dispatcher EndpointSlices", zap.Error(err))
+		imc.Status.MarkEndpointsUnknown("DispatcherEndpointsGetFailed", "Failed to get dispatcher EndpointSlices")
 		return err
 	}
 
-	if len(e.Subsets) == 0 {
-		logging.FromContext(ctx).Error("No endpoints found for Dispatcher service", zap.Error(err))
+	if len(epSlices) == 0 {
+		logging.FromContext(ctx).Error("No EndpointSlices found for Dispatcher service")
+		imc.Status.MarkEndpointsFailed("DispatcherEndpointsDoesNotExist", "Dispatcher EndpointSlices do not exist")
+		return errors.New("dispatcher EndpointSlices do not exist")
+	}
+
+	hasReady := false
+	for _, eps := range epSlices {
+		for _, ep := range eps.Endpoints {
+			if ep.Conditions.Ready == nil || *ep.Conditions.Ready {
+				hasReady = true
+				break
+			}
+		}
+		if hasReady {
+			break
+		}
+	}
+	if !hasReady {
+		logging.FromContext(ctx).Error("No ready endpoints found for Dispatcher service")
 		imc.Status.MarkEndpointsFailed("DispatcherEndpointsNotReady", "There are no endpoints ready for Dispatcher service")
 		return errors.New("there are no endpoints ready for Dispatcher service")
 	}

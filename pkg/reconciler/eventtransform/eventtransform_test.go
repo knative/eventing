@@ -28,6 +28,7 @@ import (
 	cmlisters "github.com/cert-manager/cert-manager/pkg/client/listers/certmanager/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -209,18 +210,18 @@ func TestReconcile(t *testing.T) {
 						UnavailableReplicas: 0,
 					}
 				}),
-				&corev1.Endpoints{
+				&discoveryv1.EndpointSlice{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: jsonataTestService(ctx).Namespace,
-						Name:      jsonataTestService(ctx).Name,
+						Name:      jsonataTestService(ctx).Name + "-abc12",
+						Labels: map[string]string{
+							discoveryv1.LabelServiceName: jsonataTestService(ctx).Name,
+						},
 					},
-					Subsets: []corev1.EndpointSubset{
+					AddressType: discoveryv1.AddressTypeIPv4,
+					Ports: []discoveryv1.EndpointPort{
 						{
-							Ports: []corev1.EndpointPort{
-								{
-									Port: 8080,
-								},
-							},
+							Port: ptr.Int32(8080),
 						},
 					},
 				},
@@ -268,23 +269,24 @@ func TestReconcile(t *testing.T) {
 						UnavailableReplicas: 0,
 					}
 				}),
-				&corev1.Endpoints{
+				&discoveryv1.EndpointSlice{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: jsonataTestService(ctx).Namespace,
-						Name:      jsonataTestService(ctx).Name,
+						Name:      jsonataTestService(ctx).Name + "-abc12",
+						Labels: map[string]string{
+							discoveryv1.LabelServiceName: jsonataTestService(ctx).Name,
+						},
 					},
-					Subsets: []corev1.EndpointSubset{
+					AddressType: discoveryv1.AddressTypeIPv4,
+					Ports: []discoveryv1.EndpointPort{
 						{
-							Ports: []corev1.EndpointPort{
-								{
-									Port: 8080,
-								},
-							},
-							Addresses: []corev1.EndpointAddress{
-								{
-									IP: "192.168.0.1",
-								},
-							},
+							Port: ptr.Int32(8080),
+						},
+					},
+					Endpoints: []discoveryv1.Endpoint{
+						{
+							Addresses:  []string{"192.168.0.1"},
+							Conditions: discoveryv1.EndpointConditions{Ready: ptr.Bool(true)},
 						},
 					},
 				},
@@ -338,23 +340,24 @@ func TestReconcile(t *testing.T) {
 						UnavailableReplicas: 0,
 					}
 				}),
-				&corev1.Endpoints{
+				&discoveryv1.EndpointSlice{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: jsonataTestService(ctx).Namespace,
-						Name:      jsonataTestService(ctx).Name,
+						Name:      jsonataTestService(ctx).Name + "-abc12",
+						Labels: map[string]string{
+							discoveryv1.LabelServiceName: jsonataTestService(ctx).Name,
+						},
 					},
-					Subsets: []corev1.EndpointSubset{
+					AddressType: discoveryv1.AddressTypeIPv4,
+					Ports: []discoveryv1.EndpointPort{
 						{
-							Ports: []corev1.EndpointPort{
-								{
-									Port: 8080,
-								},
-							},
-							Addresses: []corev1.EndpointAddress{
-								{
-									IP: "192.168.0.1",
-								},
-							},
+							Port: ptr.Int32(8080),
+						},
+					},
+					Endpoints: []discoveryv1.Endpoint{
+						{
+							Addresses:  []string{"192.168.0.1"},
+							Conditions: discoveryv1.EndpointConditions{Ready: ptr.Bool(true)},
 						},
 					},
 				},
@@ -408,23 +411,24 @@ func TestReconcile(t *testing.T) {
 						UnavailableReplicas: 0,
 					}
 				}),
-				&corev1.Endpoints{
+				&discoveryv1.EndpointSlice{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: jsonataTestService(ctx).Namespace,
-						Name:      jsonataTestService(ctx).Name,
+						Name:      jsonataTestService(ctx).Name + "-abc12",
+						Labels: map[string]string{
+							discoveryv1.LabelServiceName: jsonataTestService(ctx).Name,
+						},
 					},
-					Subsets: []corev1.EndpointSubset{
+					AddressType: discoveryv1.AddressTypeIPv4,
+					Ports: []discoveryv1.EndpointPort{
 						{
-							Ports: []corev1.EndpointPort{
-								{
-									Port: 8080,
-								},
-							},
-							Addresses: []corev1.EndpointAddress{
-								{
-									IP: "192.168.0.1",
-								},
-							},
+							Port: ptr.Int32(8080),
+						},
+					},
+					Endpoints: []discoveryv1.Endpoint{
+						{
+							Addresses:  []string{"192.168.0.1"},
+							Conditions: discoveryv1.EndpointConditions{Ready: ptr.Bool(true)},
 						},
 					},
 				},
@@ -479,23 +483,24 @@ func TestReconcile(t *testing.T) {
 						UnavailableReplicas: 0,
 					}
 				}),
-				&corev1.Endpoints{
+				&discoveryv1.EndpointSlice{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: jsonataTestService(ctx).Namespace,
-						Name:      jsonataTestService(ctx).Name,
+						Name:      jsonataTestService(ctx).Name + "-abc12",
+						Labels: map[string]string{
+							discoveryv1.LabelServiceName: jsonataTestService(ctx).Name,
+						},
 					},
-					Subsets: []corev1.EndpointSubset{
+					AddressType: discoveryv1.AddressTypeIPv4,
+					Ports: []discoveryv1.EndpointPort{
 						{
-							Ports: []corev1.EndpointPort{
-								{
-									Port: 8080,
-								},
-							},
-							Addresses: []corev1.EndpointAddress{
-								{
-									IP: "192.168.0.1",
-								},
-							},
+							Port: ptr.Int32(8080),
+						},
+					},
+					Endpoints: []discoveryv1.Endpoint{
+						{
+							Addresses:  []string{"192.168.0.1"},
+							Conditions: discoveryv1.EndpointConditions{Ready: ptr.Bool(true)},
 						},
 					},
 				},
@@ -553,23 +558,24 @@ func TestReconcile(t *testing.T) {
 						UnavailableReplicas: 0,
 					}
 				}),
-				&corev1.Endpoints{
+				&discoveryv1.EndpointSlice{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: jsonataTestService(ctx).Namespace,
-						Name:      jsonataTestService(ctx).Name,
+						Name:      jsonataTestService(ctx).Name + "-abc12",
+						Labels: map[string]string{
+							discoveryv1.LabelServiceName: jsonataTestService(ctx).Name,
+						},
 					},
-					Subsets: []corev1.EndpointSubset{
+					AddressType: discoveryv1.AddressTypeIPv4,
+					Ports: []discoveryv1.EndpointPort{
 						{
-							Ports: []corev1.EndpointPort{
-								{
-									Port: 8080,
-								},
-							},
-							Addresses: []corev1.EndpointAddress{
-								{
-									IP: "192.168.0.1",
-								},
-							},
+							Port: ptr.Int32(8080),
+						},
+					},
+					Endpoints: []discoveryv1.Endpoint{
+						{
+							Addresses:  []string{"192.168.0.1"},
+							Conditions: discoveryv1.EndpointConditions{Ready: ptr.Bool(true)},
 						},
 					},
 				},
@@ -617,23 +623,24 @@ func TestReconcile(t *testing.T) {
 						UnavailableReplicas: 0,
 					}
 				}),
-				&corev1.Endpoints{
+				&discoveryv1.EndpointSlice{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: jsonataTestService(ctx).Namespace,
-						Name:      jsonataTestService(ctx).Name,
+						Name:      jsonataTestService(ctx).Name + "-abc12",
+						Labels: map[string]string{
+							discoveryv1.LabelServiceName: jsonataTestService(ctx).Name,
+						},
 					},
-					Subsets: []corev1.EndpointSubset{
+					AddressType: discoveryv1.AddressTypeIPv4,
+					Ports: []discoveryv1.EndpointPort{
 						{
-							Ports: []corev1.EndpointPort{
-								{
-									Port: 8080,
-								},
-							},
-							Addresses: []corev1.EndpointAddress{
-								{
-									IP: "192.168.0.1",
-								},
-							},
+							Port: ptr.Int32(8080),
+						},
+					},
+					Endpoints: []discoveryv1.Endpoint{
+						{
+							Addresses:  []string{"192.168.0.1"},
+							Conditions: discoveryv1.EndpointConditions{Ready: ptr.Bool(true)},
 						},
 					},
 				},
@@ -682,23 +689,24 @@ func TestReconcile(t *testing.T) {
 						UnavailableReplicas: 0,
 					}
 				}),
-				&corev1.Endpoints{
+				&discoveryv1.EndpointSlice{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: jsonataTestService(ctx).Namespace,
-						Name:      jsonataTestService(ctx).Name,
+						Name:      jsonataTestService(ctx).Name + "-abc12",
+						Labels: map[string]string{
+							discoveryv1.LabelServiceName: jsonataTestService(ctx).Name,
+						},
 					},
-					Subsets: []corev1.EndpointSubset{
+					AddressType: discoveryv1.AddressTypeIPv4,
+					Ports: []discoveryv1.EndpointPort{
 						{
-							Ports: []corev1.EndpointPort{
-								{
-									Port: 8080,
-								},
-							},
-							Addresses: []corev1.EndpointAddress{
-								{
-									IP: "192.168.0.1",
-								},
-							},
+							Port: ptr.Int32(8080),
+						},
+					},
+					Endpoints: []discoveryv1.Endpoint{
+						{
+							Addresses:  []string{"192.168.0.1"},
+							Conditions: discoveryv1.EndpointConditions{Ready: ptr.Bool(true)},
 						},
 					},
 				},
@@ -750,23 +758,24 @@ func TestReconcile(t *testing.T) {
 						UnavailableReplicas: 0,
 					}
 				}),
-				&corev1.Endpoints{
+				&discoveryv1.EndpointSlice{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: jsonataTestService(ctx).Namespace,
-						Name:      jsonataTestService(ctx).Name,
+						Name:      jsonataTestService(ctx).Name + "-abc12",
+						Labels: map[string]string{
+							discoveryv1.LabelServiceName: jsonataTestService(ctx).Name,
+						},
 					},
-					Subsets: []corev1.EndpointSubset{
+					AddressType: discoveryv1.AddressTypeIPv4,
+					Ports: []discoveryv1.EndpointPort{
 						{
-							Ports: []corev1.EndpointPort{
-								{
-									Port: 8080,
-								},
-							},
-							Addresses: []corev1.EndpointAddress{
-								{
-									IP: "192.168.0.1",
-								},
-							},
+							Port: ptr.Int32(8080),
+						},
+					},
+					Endpoints: []discoveryv1.Endpoint{
+						{
+							Addresses:  []string{"192.168.0.1"},
+							Conditions: discoveryv1.EndpointConditions{Ready: ptr.Bool(true)},
 						},
 					},
 				},
@@ -832,23 +841,24 @@ func TestReconcile(t *testing.T) {
 						UnavailableReplicas: 0,
 					}
 				}),
-				&corev1.Endpoints{
+				&discoveryv1.EndpointSlice{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: jsonataTestService(ctx).Namespace,
-						Name:      jsonataTestService(ctx).Name,
+						Name:      jsonataTestService(ctx).Name + "-abc12",
+						Labels: map[string]string{
+							discoveryv1.LabelServiceName: jsonataTestService(ctx).Name,
+						},
 					},
-					Subsets: []corev1.EndpointSubset{
+					AddressType: discoveryv1.AddressTypeIPv4,
+					Ports: []discoveryv1.EndpointPort{
 						{
-							Ports: []corev1.EndpointPort{
-								{
-									Port: 8080,
-								},
-							},
-							Addresses: []corev1.EndpointAddress{
-								{
-									IP: "192.168.0.1",
-								},
-							},
+							Port: ptr.Int32(8080),
+						},
+					},
+					Endpoints: []discoveryv1.Endpoint{
+						{
+							Addresses:  []string{"192.168.0.1"},
+							Conditions: discoveryv1.EndpointConditions{Ready: ptr.Bool(true)},
 						},
 					},
 				},
@@ -919,23 +929,24 @@ func TestReconcile(t *testing.T) {
 						UnavailableReplicas: 0,
 					}
 				}),
-				&corev1.Endpoints{
+				&discoveryv1.EndpointSlice{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: jsonataTestService(ctx).Namespace,
-						Name:      jsonataTestService(ctx).Name,
+						Name:      jsonataTestService(ctx).Name + "-abc12",
+						Labels: map[string]string{
+							discoveryv1.LabelServiceName: jsonataTestService(ctx).Name,
+						},
 					},
-					Subsets: []corev1.EndpointSubset{
+					AddressType: discoveryv1.AddressTypeIPv4,
+					Ports: []discoveryv1.EndpointPort{
 						{
-							Ports: []corev1.EndpointPort{
-								{
-									Port: 8080,
-								},
-							},
-							Addresses: []corev1.EndpointAddress{
-								{
-									IP: "192.168.0.1",
-								},
-							},
+							Port: ptr.Int32(8080),
+						},
+					},
+					Endpoints: []discoveryv1.Endpoint{
+						{
+							Addresses:  []string{"192.168.0.1"},
+							Conditions: discoveryv1.EndpointConditions{Ready: ptr.Bool(true)},
 						},
 					},
 				},
@@ -1001,23 +1012,24 @@ func TestReconcile(t *testing.T) {
 					}
 				}),
 				jsonataReplyExpressionTestConfigMap(ctx),
-				&corev1.Endpoints{
+				&discoveryv1.EndpointSlice{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: jsonataTestService(ctx).Namespace,
-						Name:      jsonataTestService(ctx).Name,
+						Name:      jsonataTestService(ctx).Name + "-abc12",
+						Labels: map[string]string{
+							discoveryv1.LabelServiceName: jsonataTestService(ctx).Name,
+						},
 					},
-					Subsets: []corev1.EndpointSubset{
+					AddressType: discoveryv1.AddressTypeIPv4,
+					Ports: []discoveryv1.EndpointPort{
 						{
-							Ports: []corev1.EndpointPort{
-								{
-									Port: 8080,
-								},
-							},
-							Addresses: []corev1.EndpointAddress{
-								{
-									IP: "192.168.0.1",
-								},
-							},
+							Port: ptr.Int32(8080),
+						},
+					},
+					Endpoints: []discoveryv1.Endpoint{
+						{
+							Addresses:  []string{"192.168.0.1"},
+							Conditions: discoveryv1.EndpointConditions{Ready: ptr.Bool(true)},
 						},
 					},
 				},
@@ -1076,23 +1088,24 @@ func TestReconcile(t *testing.T) {
 					WithEventTransformSink(sink),
 				),
 				jsonataExpressionTestConfigMap(ctx),
-				&corev1.Endpoints{
+				&discoveryv1.EndpointSlice{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: jsonataTestService(ctx).Namespace,
-						Name:      jsonataTestService(ctx).Name,
+						Name:      jsonataTestService(ctx).Name + "-abc12",
+						Labels: map[string]string{
+							discoveryv1.LabelServiceName: jsonataTestService(ctx).Name,
+						},
 					},
-					Subsets: []corev1.EndpointSubset{
+					AddressType: discoveryv1.AddressTypeIPv4,
+					Ports: []discoveryv1.EndpointPort{
 						{
-							Ports: []corev1.EndpointPort{
-								{
-									Port: 8080,
-								},
-							},
-							Addresses: []corev1.EndpointAddress{
-								{
-									IP: "192.168.0.1",
-								},
-							},
+							Port: ptr.Int32(8080),
+						},
+					},
+					Endpoints: []discoveryv1.Endpoint{
+						{
+							Addresses:  []string{"192.168.0.1"},
+							Conditions: discoveryv1.EndpointConditions{Ready: ptr.Bool(true)},
 						},
 					},
 				},
@@ -1154,23 +1167,24 @@ func TestReconcile(t *testing.T) {
 					}
 				}),
 				jsonataExpressionTestConfigMap(ctx),
-				&corev1.Endpoints{
+				&discoveryv1.EndpointSlice{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: jsonataTestService(ctx).Namespace,
-						Name:      jsonataTestService(ctx).Name,
+						Name:      jsonataTestService(ctx).Name + "-abc12",
+						Labels: map[string]string{
+							discoveryv1.LabelServiceName: jsonataTestService(ctx).Name,
+						},
 					},
-					Subsets: []corev1.EndpointSubset{
+					AddressType: discoveryv1.AddressTypeIPv4,
+					Ports: []discoveryv1.EndpointPort{
 						{
-							Ports: []corev1.EndpointPort{
-								{
-									Port: 8080,
-								},
-							},
-							Addresses: []corev1.EndpointAddress{
-								{
-									IP: "192.168.0.1",
-								},
-							},
+							Port: ptr.Int32(8080),
+						},
+					},
+					Endpoints: []discoveryv1.Endpoint{
+						{
+							Addresses:  []string{"192.168.0.1"},
+							Conditions: discoveryv1.EndpointConditions{Ready: ptr.Bool(true)},
 						},
 					},
 				},
@@ -1236,23 +1250,24 @@ func TestReconcile(t *testing.T) {
 						UnavailableReplicas: 0,
 					}
 				}),
-				&corev1.Endpoints{
+				&discoveryv1.EndpointSlice{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: jsonataTestService(ctx).Namespace,
-						Name:      jsonataTestService(ctx).Name,
+						Name:      jsonataTestService(ctx).Name + "-abc12",
+						Labels: map[string]string{
+							discoveryv1.LabelServiceName: jsonataTestService(ctx).Name,
+						},
 					},
-					Subsets: []corev1.EndpointSubset{
+					AddressType: discoveryv1.AddressTypeIPv4,
+					Ports: []discoveryv1.EndpointPort{
 						{
-							Ports: []corev1.EndpointPort{
-								{
-									Port: 8443,
-								},
-							},
-							Addresses: []corev1.EndpointAddress{
-								{
-									IP: "192.168.0.1",
-								},
-							},
+							Port: ptr.Int32(8443),
+						},
+					},
+					Endpoints: []discoveryv1.Endpoint{
+						{
+							Addresses:  []string{"192.168.0.1"},
+							Conditions: discoveryv1.EndpointConditions{Ready: ptr.Bool(true)},
 						},
 					},
 				},
@@ -1353,23 +1368,24 @@ func TestReconcile(t *testing.T) {
 
 					d.Spec.Template.Annotations[JsonataCertificateRevisionKey] = "1"
 				}),
-				&corev1.Endpoints{
+				&discoveryv1.EndpointSlice{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: jsonataTestService(ctx).Namespace,
-						Name:      jsonataTestService(ctx).Name,
+						Name:      jsonataTestService(ctx).Name + "-abc12",
+						Labels: map[string]string{
+							discoveryv1.LabelServiceName: jsonataTestService(ctx).Name,
+						},
 					},
-					Subsets: []corev1.EndpointSubset{
+					AddressType: discoveryv1.AddressTypeIPv4,
+					Ports: []discoveryv1.EndpointPort{
 						{
-							Ports: []corev1.EndpointPort{
-								{
-									Port: 8443,
-								},
-							},
-							Addresses: []corev1.EndpointAddress{
-								{
-									IP: "192.168.0.1",
-								},
-							},
+							Port: ptr.Int32(8443),
+						},
+					},
+					Endpoints: []discoveryv1.Endpoint{
+						{
+							Addresses:  []string{"192.168.0.1"},
+							Conditions: discoveryv1.EndpointConditions{Ready: ptr.Bool(true)},
 						},
 					},
 				},
@@ -1449,26 +1465,27 @@ func TestReconcile(t *testing.T) {
 						UnavailableReplicas: 0,
 					}
 				}),
-				&corev1.Endpoints{
+				&discoveryv1.EndpointSlice{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: jsonataTestService(ctx).Namespace,
-						Name:      jsonataTestService(ctx).Name,
+						Name:      jsonataTestService(ctx).Name + "-abc12",
+						Labels: map[string]string{
+							discoveryv1.LabelServiceName: jsonataTestService(ctx).Name,
+						},
 					},
-					Subsets: []corev1.EndpointSubset{
+					AddressType: discoveryv1.AddressTypeIPv4,
+					Ports: []discoveryv1.EndpointPort{
 						{
-							Ports: []corev1.EndpointPort{
-								{
-									Port: 80,
-								},
-								{
-									Port: 443,
-								},
-							},
-							Addresses: []corev1.EndpointAddress{
-								{
-									IP: "192.168.0.1",
-								},
-							},
+							Port: ptr.Int32(80),
+						},
+						{
+							Port: ptr.Int32(443),
+						},
+					},
+					Endpoints: []discoveryv1.Endpoint{
+						{
+							Addresses:  []string{"192.168.0.1"},
+							Conditions: discoveryv1.EndpointConditions{Ready: ptr.Bool(true)},
 						},
 					},
 				},
@@ -1567,26 +1584,27 @@ func TestReconcile(t *testing.T) {
 
 					d.Spec.Template.Annotations[JsonataCertificateRevisionKey] = "1"
 				}),
-				&corev1.Endpoints{
+				&discoveryv1.EndpointSlice{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: jsonataTestService(ctx).Namespace,
-						Name:      jsonataTestService(ctx).Name,
+						Name:      jsonataTestService(ctx).Name + "-abc12",
+						Labels: map[string]string{
+							discoveryv1.LabelServiceName: jsonataTestService(ctx).Name,
+						},
 					},
-					Subsets: []corev1.EndpointSubset{
+					AddressType: discoveryv1.AddressTypeIPv4,
+					Ports: []discoveryv1.EndpointPort{
 						{
-							Ports: []corev1.EndpointPort{
-								{
-									Port: 8080,
-								},
-								{
-									Port: 8443,
-								},
-							},
-							Addresses: []corev1.EndpointAddress{
-								{
-									IP: "192.168.0.1",
-								},
-							},
+							Port: ptr.Int32(8080),
+						},
+						{
+							Port: ptr.Int32(8443),
+						},
+					},
+					Endpoints: []discoveryv1.Endpoint{
+						{
+							Addresses:  []string{"192.168.0.1"},
+							Conditions: discoveryv1.EndpointConditions{Ready: ptr.Bool(true)},
 						},
 					},
 				},
@@ -1818,26 +1836,27 @@ func TestReconcile(t *testing.T) {
 						UnavailableReplicas: 0,
 					}
 				}),
-				&corev1.Endpoints{
+				&discoveryv1.EndpointSlice{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: jsonataTestService(ctx).Namespace,
-						Name:      jsonataTestService(ctx).Name,
+						Name:      jsonataTestService(ctx).Name + "-abc12",
+						Labels: map[string]string{
+							discoveryv1.LabelServiceName: jsonataTestService(ctx).Name,
+						},
 					},
-					Subsets: []corev1.EndpointSubset{
+					AddressType: discoveryv1.AddressTypeIPv4,
+					Ports: []discoveryv1.EndpointPort{
 						{
-							Ports: []corev1.EndpointPort{
-								{
-									Port: 8080,
-								},
-								{
-									Port: 8443,
-								},
-							},
-							Addresses: []corev1.EndpointAddress{
-								{
-									IP: "192.168.0.1",
-								},
-							},
+							Port: ptr.Int32(8080),
+						},
+						{
+							Port: ptr.Int32(8443),
+						},
+					},
+					Endpoints: []discoveryv1.Endpoint{
+						{
+							Addresses:  []string{"192.168.0.1"},
+							Conditions: discoveryv1.EndpointConditions{Ready: ptr.Bool(true)},
 						},
 					},
 				},
@@ -1959,23 +1978,24 @@ func TestReconcile(t *testing.T) {
 
 					d.Spec.Template.Annotations[JsonataCertificateRevisionKey] = "1"
 				}),
-				&corev1.Endpoints{
+				&discoveryv1.EndpointSlice{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: jsonataTestService(ctx).Namespace,
-						Name:      jsonataTestService(ctx).Name,
+						Name:      jsonataTestService(ctx).Name + "-abc12",
+						Labels: map[string]string{
+							discoveryv1.LabelServiceName: jsonataTestService(ctx).Name,
+						},
 					},
-					Subsets: []corev1.EndpointSubset{
+					AddressType: discoveryv1.AddressTypeIPv4,
+					Ports: []discoveryv1.EndpointPort{
 						{
-							Ports: []corev1.EndpointPort{
-								{
-									Port: 80,
-								},
-							},
-							Addresses: []corev1.EndpointAddress{
-								{
-									IP: "192.168.0.1",
-								},
-							},
+							Port: ptr.Int32(80),
+						},
+					},
+					Endpoints: []discoveryv1.Endpoint{
+						{
+							Addresses:  []string{"192.168.0.1"},
+							Conditions: discoveryv1.EndpointConditions{Ready: ptr.Bool(true)},
 						},
 					},
 				},
@@ -2050,15 +2070,24 @@ func TestReconcile(t *testing.T) {
 						UnavailableReplicas: 0,
 					}
 				}),
-				&corev1.Endpoints{
+				&discoveryv1.EndpointSlice{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: testNS,
-						Name:      fmt.Sprintf("%s-%s", testName, "jsonata"),
+						Name:      fmt.Sprintf("%s-%s", testName, "jsonata") + "-abc12",
+						Labels: map[string]string{
+							discoveryv1.LabelServiceName: fmt.Sprintf("%s-%s", testName, "jsonata"),
+						},
 					},
-					Subsets: []corev1.EndpointSubset{
+					AddressType: discoveryv1.AddressTypeIPv4,
+					Ports: []discoveryv1.EndpointPort{
 						{
-							Ports:     []corev1.EndpointPort{{Port: 3128}},
-							Addresses: []corev1.EndpointAddress{{IP: "192.168.0.1"}},
+							Port: ptr.Int32(3128),
+						},
+					},
+					Endpoints: []discoveryv1.Endpoint{
+						{
+							Addresses:  []string{"192.168.0.1"},
+							Conditions: discoveryv1.EndpointConditions{Ready: ptr.Bool(true)},
 						},
 					},
 				},
@@ -2117,7 +2146,7 @@ func TestReconcile(t *testing.T) {
 			jsonataConfigMapLister:     listers.GetConfigMapLister(),
 			jsonataDeploymentsLister:   listers.GetDeploymentLister(),
 			jsonataServiceLister:       listers.GetServiceLister(),
-			jsonataEndpointLister:      listers.GetEndpointsLister(),
+			jsonataEndpointSliceLister: listers.GetEndpointSliceLister(),
 			jsonataSinkBindingLister:   listers.GetSinkBindingLister(),
 			cmCertificateLister:        cmCertificatesListerAtomic,
 			certificatesSecretLister:   listers.GetSecretLister(),

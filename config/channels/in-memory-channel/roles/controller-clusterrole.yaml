@@ -66,9 +66,9 @@ rules:
       - update
       - patch
   - apiGroups:
-      - ""
+      - "discovery.k8s.io"
     resources:
-      - endpoints
+      - endpointslices
     verbs:
       - get
       - list
