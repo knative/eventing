@@ -37,7 +37,7 @@ jobs:
           fi
       - name: Post reminder to Slack
         if: steps.check-week.outputs.should_run == 'true'
-        uses: rtCamp/action-slack-notify@v2.2.1
+        uses: rtCamp/action-slack-notify@v2.3.3
         env:
           SLACK_ICON: https://github.com/knative.png?size=48
           SLACK_USERNAME: github-actions
