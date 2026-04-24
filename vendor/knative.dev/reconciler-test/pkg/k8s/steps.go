@@ -75,6 +75,10 @@ func IsAddressable(gvr schema.GroupVersionResource, name string, timing ...time.
 					// keep polling
 					return false, nil
 				}
+				if isTransientError(err) {
+					t.Logf("Transient error checking addressable %s %s: %v", gvr, name, err)
+					return false, nil
+				}
 				return false, err
 			}
 			if addr == nil {
