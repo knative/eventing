@@ -42,7 +42,7 @@ process.
 
 ## Bug Triage
 
-- WG lead will form a bug triage team (TODO: Ville)
+- WG lead will form a bug triage team.
 - There will be one bug triage champion each week to triage incoming bugs and
   assign them correct priority. This role will be rotated among engineers in the
   bug triage team.
@@ -59,8 +59,9 @@ process.
     we should close the bug upon triaging. [Remember the goal](#Goal).
   - Bugs with priority/critical-urgent and priority/important-soon bugs should
     have an assigned owner who has acknowledged the ownership of the bug.
-  - TODO: Update these guidelines based on learning from triage meetings. Triage
-    team will own and update this document and WG lead will approve the changes.
+  - These guidelines should be updated based on learnings from triage meetings.
+    Triage team will own and update this document and WG lead will approve the
+    changes.
 - In case of conflict, final decision will be taken by WG lead.
 - WG lead will periodically monitor bug count and trend to make sure we meet our
   [goal](#Goal).

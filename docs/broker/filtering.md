@@ -387,17 +387,9 @@ spec:
 
 The main caveat is the choice of CEL as expression language.
 
-CEL is new and the language is not officially supported by Google. Participation
-by non-Google contributors is low. OPA is planning to replace their policy
-language Rego with CEL, but
-[no timeline has been announced for this migration](https://github.com/open-policy-agent/opa/issues/811#issuecomment-401844999).
-The KrakenD API Gateway has announced support for CEL
-[here](https://medium.com/devops-faith/krakend-api-gateway-0-9-released-9427c249dbcd).
-
-The CEL language is new and has limited exposure, despite being informed by
-experience and research at Google. We may discover issues that make it less
-suitable for Trigger filtering (e.g.
-[google/cel-go#203](https://github.com/google/cel-go/issues/203).
+CEL has since become widely adopted across the cloud-native ecosystem, including
+Kubernetes (e.g. validation rules, admission policies), Istio, and other
+projects. It is officially supported by Google.
 
 If CEL turns out to be a liability, a new expression language could be added
 alongside CEL without breaking existing triggers, allowing for an orderly
@@ -496,12 +488,10 @@ been judged less suitable for Trigger filtering than CEL.
 already as a policy expression language by
 [Open Policy Agent](https://www.openpolicyagent.org/). It could be an attractive
 choice, but
-[OPA has indicated a desire to replace Rego with CEL](https://github.com/open-policy-agent/opa/issues/811#issuecomment-401844999).
-Since Rego doesn't seem to be used outside OPA, choosing Rego for Trigger
-filters would likely make Triggers the only remaining use of Rego.
-
-The possible maintenance burden of being the only Rego user makes Rego less
-suitable for Trigger filtering than CEL.
+OPA has continued to develop Rego as its policy language. Since Rego is
+primarily used within the OPA ecosystem, choosing Rego for Trigger filters
+would add an additional dependency without broad ecosystem benefits, making
+Rego less suitable for Trigger filtering than CEL.
 
 #### Custom expression language
 

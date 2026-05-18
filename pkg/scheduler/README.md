@@ -87,10 +87,9 @@ changes.)
 
 * https://kubernetes.io/docs/concepts/scheduling-eviction/scheduling-framework/
 * https://github.com/kubernetes-sigs/descheduler
-* https://kubernetes.io/docs/reference/scheduling/policies/
-* https://kubernetes.io/docs/reference/config-api/kube-scheduler-policy-config.v1
+* https://kubernetes.io/docs/reference/config-api/kube-scheduler-config.v1/
 * https://github.com/virtual-kubelet/virtual-kubelet#how-it-works
-* https://github.com/kubernetes/enhancements/tree/master/keps/sig-scheduling/624-scheduling-framework
+* https://github.com/kubernetes/enhancements/tree/main/keps/sig-scheduling/624-scheduling-framework
 * https://medium.com/tailwinds-navigator/kubernetes-tip-how-statefulsets-behave-differently-than-deployments-when-node-fails-d29e36bca7d5
 * https://kubernetes.io/docs/concepts/architecture/nodes/#node-controller
 
@@ -100,4 +99,4 @@ To learn more about Knative, please visit the
 [/docs](https://github.com/knative/docs) repository.
 
 This repo falls under the
-[Knative Code of Conduct](https://github.com/knative/community/blob/master/CODE-OF-CONDUCT.md)
+[Knative Code of Conduct](https://github.com/knative/community/blob/main/CODE-OF-CONDUCT.md)

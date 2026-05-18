@@ -31,7 +31,7 @@ Before submitting a PR, see also [contribution guidelines](./CONTRIBUTING.md).
 You must install these tools:
 
 1. [`go`](https://golang.org/doc/install): The language `Knative Eventing` is
-   developed with (version 1.18 or higher)
+   developed with (version 1.25 or higher)
 1. [`git`](https://help.github.com/articles/set-up-git/): For source control
 1. [`ko`](https://github.com/google/ko): For building and deploying container
    images to Kubernetes in a single command.
@@ -160,14 +160,14 @@ kubectl -n knative-eventing logs $(kubectl -n knative-eventing get pods -l app=e
 Install the
 [In-Memory-Channel](https://github.com/knative/eventing/tree/main/config/channels/in-memory-channel)
 since this is the
-[default channel](https://github.com/knative/docs/blob/main/docs/eventing/channels/default-channels.md).
+[default channel](https://knative.dev/docs/eventing/configuration/channel-configuration/).
 
 ```shell
 ko apply -Rf config/channels/in-memory-channel/
 ```
 
 Depending on your needs you might want to install other
-[channel implementations](https://github.com/knative/docs/blob/main/docs/eventing/channels/channels-crds.md).
+[channel implementations](https://knative.dev/docs/eventing/channels/).
 
 ## Install Broker
 
@@ -284,7 +284,7 @@ To access Telemetry see:
 
 - [Accessing Metrics](https://knative.dev/docs/eventing/observability/metrics/collecting-metrics/)
 - [Accessing Logs](https://knative.dev/docs/eventing/observability/logging/collecting-logs/)
-- [Accessing Traces](https://www.knative.dev/docs/eventing/accessing-traces/)
+- [Accessing Traces](https://knative.dev/docs/eventing/observability/metrics/collecting-metrics/#traces)
 
 ## Packet sniffing
 
@@ -431,11 +431,11 @@ You can debug any component by applying its config with `--debug`:
 
 ```shell
 # Debug the in-memory channel dispatcher
-ko apply -f config/channels/in-memory-channel/300-dispatcher.yaml --debug
+ko apply -f config/channels/in-memory-channel/deployments/dispatcher.yaml --debug
 kubectl -n knative-eventing port-forward deploy/imc-dispatcher 40000:40000
 
 # Debug the MT broker ingress
-ko apply -f config/brokers/mt-channel-broker/500-ingress.yaml --debug
+ko apply -f config/brokers/mt-channel-broker/500-broker-ingress.yaml --debug
 kubectl -n knative-eventing port-forward deploy/mt-broker-ingress 40000:40000
 ```
 

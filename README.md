@@ -51,7 +51,7 @@ For complete Knative Eventing documentation, see
 
 If you are interested in contributing, see [the ready to work issues](https://clotributor.dev/search?ts_query_web=knative+eventing&page=1), [CONTRIBUTING.md](./CONTRIBUTING.md),
 [DEVELOPMENT.md](./DEVELOPMENT.md) and
-[Knative working groups](https://knative.dev/community/contributing/working-groups/working-groups/#eventing).
+[Knative working groups](https://github.com/knative/community/blob/main/working-groups/WORKING-GROUPS.md#eventing).
 
 Interested users should join
 [knative-users](https://groups.google.com/forum/#!forum/knative-users).

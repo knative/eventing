@@ -33,7 +33,7 @@ The `mt-broker-controller` is kind of the heart of the MTChannelBasedBroker cont
       name: config-br-default-channel
       namespace: knative-eventing
   ```
-* Updates the status on `Broker` resources with the `eventing.kantive.dev/broker.class: MTChannelBasedBroker` annotation with the address for the broker ingress.
+* Updates the status on `Broker` resources with the `eventing.knative.dev/broker.class: MTChannelBasedBroker` annotation with the address for the broker ingress.
 
 ### Channel specific controllers (e.g. `imc-controller`)
 
