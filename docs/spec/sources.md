@@ -5,7 +5,7 @@ relays that event to another endpoint on the cluster via
 [CloudEvents](https://cloudevents.io). Sourcing events is critical to developing
 a distributed system that reacts to events.
 
-A **Sink** is an [_addressable_](./interfaces.md#addressable) resource that
+A **Sink** is an _addressable_ resource that
 takes responsibility for the event. A **Sink** could be a consumer of events, or
 middleware. A **Sink** will respond with 2xx when it has accepted and processed
 the event.
@@ -42,7 +42,7 @@ For operators of a Kubernetes cluster, there are two states to sources:
    for that source for the current situation. While this resource is running, a
    cluster operator would like to inspect the resource without needing to be
    fully aware of the implementation. This is done by conforming to the
-   [Source]() ducktype. This topic is expanded upon in the
+   Source ducktype. This topic is expanded upon in the
    [Source Custom Objects](#source-custom-objects) section.
 
 The goal of requiring CRD labels and running resource shapes is to enable
@@ -230,10 +230,10 @@ unmarshalled by tooling (e.g., a CLI). In particular, each object in the array
 MUST contain the following fields:
 
 - type: String. Refers to the
-  [CloudEvents type](https://github.com/cloudevents/spec/blob/v1.0-rc1/spec.md#type)
+  [CloudEvents type](https://github.com/cloudevents/spec/blob/v1.0.2/cloudevents/spec.md#type)
   attribute. Mandatory.
 - schema: String. Refers to the
-  [CloudEvents dataschema](https://github.com/cloudevents/spec/blob/v1.0-rc1/spec.md#dataschema)
+  [CloudEvents dataschema](https://github.com/cloudevents/spec/blob/v1.0.2/cloudevents/spec.md#dataschema)
   attribute. Optional.
 - description: String describing the event. Optional.
 
