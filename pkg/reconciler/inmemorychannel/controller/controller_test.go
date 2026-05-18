@@ -37,9 +37,9 @@ import (
 
 	_ "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap/fake"
-	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/endpoints/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/service/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount/fake"
+	_ "knative.dev/pkg/client/injection/kube/informers/discovery/v1/endpointslice/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/rbac/v1/rolebinding/fake"
 	secretinformer "knative.dev/pkg/injection/clients/namespacedkube/informers/core/v1/secret/fake"
 )

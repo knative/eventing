@@ -22,11 +22,13 @@ import (
 	"knative.dev/eventing/pkg/auth"
 
 	"github.com/kelseyhightower/envconfig"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/client-go/tools/cache"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
+	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/system"
 
@@ -40,9 +42,9 @@ import (
 	"knative.dev/eventing/pkg/reconciler/inmemorychannel/controller/config"
 
 	"knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment"
-	"knative.dev/pkg/client/injection/kube/informers/core/v1/endpoints"
 	"knative.dev/pkg/client/injection/kube/informers/core/v1/service"
 	"knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount"
+	"knative.dev/pkg/client/injection/kube/informers/discovery/v1/endpointslice"
 	"knative.dev/pkg/client/injection/kube/informers/rbac/v1/rolebinding"
 	secretinformer "knative.dev/pkg/injection/clients/namespacedkube/informers/core/v1/secret"
 )
@@ -64,7 +66,7 @@ func NewController(
 	inmemorychannelInformer := inmemorychannel.Get(ctx)
 	deploymentInformer := deployment.Get(ctx)
 	serviceInformer := service.Get(ctx)
-	endpointsInformer := endpoints.Get(ctx)
+	endpointSliceInformer := endpointslice.Get(ctx)
 	serviceAccountInformer := serviceaccount.Get(ctx)
 	roleBindingInformer := rolebinding.Get(ctx)
 	secretInformer := secretinformer.Get(ctx)
@@ -75,7 +77,7 @@ func NewController(
 		systemNamespace:      system.Namespace(),
 		deploymentLister:     deploymentInformer.Lister(),
 		serviceLister:        serviceInformer.Lister(),
-		endpointsLister:      endpointsInformer.Lister(),
+		endpointSliceLister:  endpointSliceInformer.Lister(),
 		serviceAccountLister: serviceAccountInformer.Lister(),
 		roleBindingLister:    roleBindingInformer.Lister(),
 		secretLister:         secretInformer.Lister(),
@@ -128,8 +130,8 @@ func NewController(
 		FilterFunc: controller.FilterWithName(dispatcherName),
 		Handler:    controller.HandleAll(globalResync),
 	})
-	endpointsInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.FilterWithName(dispatcherName),
+	endpointSliceInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: endpointSliceServiceNameFilter(dispatcherName),
 		Handler:    controller.HandleAll(globalResync),
 	})
 	serviceAccountInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
@@ -157,4 +159,14 @@ func NewController(
 	r.eventDispatcherConfigStore = configStore
 
 	return impl
+}
+
+func endpointSliceServiceNameFilter(serviceName string) func(obj interface{}) bool {
+	return func(obj interface{}) bool {
+		acc, err := kmeta.DeletionHandlingAccessor(obj)
+		if err != nil {
+			return false
+		}
+		return acc.GetLabels()[discoveryv1.LabelServiceName] == serviceName
+	}
 }

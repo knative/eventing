@@ -156,13 +156,13 @@ func WithTriggerChannelReady() BrokerOption {
 
 func WithFilterAvailable() BrokerOption {
 	return func(b *v1.Broker) {
-		b.Status.PropagateFilterAvailability(v1.TestHelper.AvailableEndpoints())
+		b.Status.PropagateFilterAvailability(v1.TestHelper.AvailableEndpointSlices())
 	}
 }
 
 func WithIngressAvailable() BrokerOption {
 	return func(b *v1.Broker) {
-		b.Status.PropagateIngressAvailability(v1.TestHelper.AvailableEndpoints())
+		b.Status.PropagateIngressAvailability(v1.TestHelper.AvailableEndpointSlices())
 	}
 }
 

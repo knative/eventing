@@ -46,6 +46,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -179,7 +180,7 @@ func TestAllCases(t *testing.T) {
 			Objects: []runtime.Object{
 				makeFalseDeployment(),
 				makeService(),
-				makeReadyEndpoints(),
+				makeReadyEndpointSlice(),
 				NewInMemoryChannel(imcName, testNS),
 			},
 			WantErr: false,
@@ -203,7 +204,7 @@ func TestAllCases(t *testing.T) {
 			Objects: []runtime.Object{
 				makeUnknownDeployment(),
 				makeService(),
-				makeReadyEndpoints(),
+				makeReadyEndpointSlice(),
 				NewInMemoryChannel(imcName, testNS),
 			},
 			WantErr: false,
@@ -238,7 +239,7 @@ func TestAllCases(t *testing.T) {
 				Eventf(corev1.EventTypeWarning, "DispatcherServiceFailed", `Reconciling dispatcher Service failed: service "imc-dispatcher" not found`),
 			},
 		}, {
-			Name: "Endpoints does not exist",
+			Name: "EndpointSlices do not exist",
 			Key:  imcKey,
 			Objects: []runtime.Object{
 				makeReadyDeployment(),
@@ -251,19 +252,19 @@ func TestAllCases(t *testing.T) {
 					WithInitInMemoryChannelConditions,
 					WithInMemoryChannelDeploymentReady(),
 					WithInMemoryChannelServiceReady(),
-					WithInMemoryChannelEndpointsNotReady("DispatcherEndpointsDoesNotExist", "Dispatcher Endpoints does not exist"),
+					WithInMemoryChannelEndpointsNotReady("DispatcherEndpointsDoesNotExist", "Dispatcher EndpointSlices do not exist"),
 				),
 			}},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "InternalError", `endpoints "imc-dispatcher" not found`),
+				Eventf(corev1.EventTypeWarning, "InternalError", `dispatcher EndpointSlices do not exist`),
 			},
 		}, {
-			Name: "Endpoints not ready",
+			Name: "EndpointSlices not ready",
 			Key:  imcKey,
 			Objects: []runtime.Object{
 				makeReadyDeployment(),
 				makeService(),
-				makeEmptyEndpoints(),
+				makeNotReadyEndpointSlice(),
 				NewInMemoryChannel(imcName, testNS),
 			},
 			WantErr: true,
@@ -284,7 +285,7 @@ func TestAllCases(t *testing.T) {
 			Objects: []runtime.Object{
 				makeReadyDeployment(),
 				makeService(),
-				makeReadyEndpoints(),
+				makeReadyEndpointSlice(),
 				NewInMemoryChannel(imcName, testNS,
 					WithDeadLetterSink(imcDest),
 					WithInMemoryChannelGeneration(imcGeneration),
@@ -317,7 +318,7 @@ func TestAllCases(t *testing.T) {
 				makeDLSServiceAsUnstructured(),
 				makeReadyDeployment(),
 				makeService(),
-				makeReadyEndpoints(),
+				makeReadyEndpointSlice(),
 				NewInMemoryChannel(imcName, testNS,
 					WithDeadLetterSink(imcDest),
 					WithInMemoryChannelGeneration(imcGeneration),
@@ -349,7 +350,7 @@ func TestAllCases(t *testing.T) {
 				makeDLSServiceAsUnstructured(),
 				makeReadyDeployment(),
 				makeService(),
-				makeReadyEndpoints(),
+				makeReadyEndpointSlice(),
 				NewInMemoryChannel(imcName, testNS,
 					WithDeadLetterSink(duckv1.Destination{
 						Ref:     imcDest.Ref,
@@ -391,7 +392,7 @@ func TestAllCases(t *testing.T) {
 			Objects: []runtime.Object{
 				makeReadyDeployment(),
 				makeService(),
-				makeReadyEndpoints(),
+				makeReadyEndpointSlice(),
 				makeDLSServiceAsUnstructured(),
 				NewInMemoryChannel(imcName, testNS,
 					WithDeadLetterSink(imcDest)),
@@ -417,7 +418,7 @@ func TestAllCases(t *testing.T) {
 			Objects: []runtime.Object{
 				makeReadyDeployment(),
 				makeService(),
-				makeReadyEndpoints(),
+				makeReadyEndpointSlice(),
 				NewInMemoryChannel(imcName, testNS),
 				makeChannelServiceNotOwnedByUs(NewInMemoryChannel(imcName, testNS)),
 			},
@@ -440,7 +441,7 @@ func TestAllCases(t *testing.T) {
 			Objects: []runtime.Object{
 				makeReadyDeployment(),
 				makeService(),
-				makeReadyEndpoints(),
+				makeReadyEndpointSlice(),
 				makeDLSServiceAsUnstructured(),
 				NewInMemoryChannel(imcName, testNS,
 					WithInMemoryChannelSubscribers(subscribers),
@@ -468,7 +469,7 @@ func TestAllCases(t *testing.T) {
 			Objects: []runtime.Object{
 				makeReadyDeployment(),
 				makeService(),
-				makeReadyEndpoints(),
+				makeReadyEndpointSlice(),
 				makeDLSServiceAsUnstructured(),
 				NewInMemoryChannel(imcName, testNS,
 					WithInMemoryChannelSubscribers(subscribers),
@@ -499,7 +500,7 @@ func TestAllCases(t *testing.T) {
 			Objects: []runtime.Object{
 				makeReadyDeployment(),
 				makeService(),
-				makeReadyEndpoints(),
+				makeReadyEndpointSlice(),
 				NewInMemoryChannel(imcName, testNS),
 			},
 			WantErr: true,
@@ -529,7 +530,7 @@ func TestAllCases(t *testing.T) {
 				makeReadyDeployment(),
 				makeService(),
 				makeTLSSecret(),
-				makeReadyEndpoints(),
+				makeReadyEndpointSlice(),
 				NewInMemoryChannel(imcName, testNS,
 					WithDeadLetterSink(imcDest),
 					WithInMemoryChannelGeneration(imcGeneration),
@@ -574,7 +575,7 @@ func TestAllCases(t *testing.T) {
 				makeReadyDeployment(),
 				makeService(),
 				makeTLSSecret(),
-				makeReadyEndpoints(),
+				makeReadyEndpointSlice(),
 				NewInMemoryChannel(imcName, testNS,
 					WithDeadLetterSink(imcDest),
 					WithInMemoryChannelGeneration(imcGeneration),
@@ -620,7 +621,7 @@ func TestAllCases(t *testing.T) {
 				makeDLSServiceAsUnstructured(),
 				makeReadyDeployment(),
 				makeService(),
-				makeReadyEndpoints(),
+				makeReadyEndpointSlice(),
 				NewInMemoryChannel(imcName, testNS,
 					WithDeadLetterSink(imcDest),
 					WithInMemoryChannelGeneration(imcGeneration),
@@ -657,7 +658,7 @@ func TestAllCases(t *testing.T) {
 				makeDLSServiceAsUnstructured(),
 				makeReadyDeployment(),
 				makeService(),
-				makeReadyEndpoints(),
+				makeReadyEndpointSlice(),
 				NewInMemoryChannel(imcName, testNS,
 					WithDeadLetterSink(imcDest),
 					WithInMemoryChannelGeneration(imcGeneration),
@@ -692,7 +693,7 @@ func TestAllCases(t *testing.T) {
 				makeDLSServiceAsUnstructured(),
 				makeReadyDeployment(),
 				makeService(),
-				makeReadyEndpoints(),
+				makeReadyEndpointSlice(),
 				NewInMemoryChannel(imcName, testNS,
 					WithDeadLetterSink(imcDest),
 					WithInMemoryChannelGeneration(imcGeneration),
@@ -726,7 +727,7 @@ func TestAllCases(t *testing.T) {
 				makeDLSServiceAsUnstructured(),
 				makeReadyDeployment(),
 				makeService(),
-				makeReadyEndpoints(),
+				makeReadyEndpointSlice(),
 				NewInMemoryChannel(imcName, testNS,
 					WithDeadLetterSink(imcDest),
 					WithInMemoryChannelGeneration(imcGeneration),
@@ -774,14 +775,14 @@ func TestAllCases(t *testing.T) {
 		}
 
 		r := &Reconciler{
-			kubeClientSet:     fakekubeclient.Get(ctx),
-			systemNamespace:   testNS,
-			deploymentLister:  listers.GetDeploymentLister(),
-			serviceLister:     listers.GetServiceLister(),
-			endpointsLister:   listers.GetEndpointsLister(),
-			secretLister:      listers.GetSecretLister(),
-			eventPolicyLister: listers.GetEventPolicyLister(),
-			uriResolver:       resolver.NewURIResolverFromTracker(ctx, tracker.New(func(types.NamespacedName) {}, 0)),
+			kubeClientSet:       fakekubeclient.Get(ctx),
+			systemNamespace:     testNS,
+			deploymentLister:    listers.GetDeploymentLister(),
+			serviceLister:       listers.GetServiceLister(),
+			endpointSliceLister: listers.GetEndpointSliceLister(),
+			secretLister:        listers.GetSecretLister(),
+			eventPolicyLister:   listers.GetEventPolicyLister(),
+			uriResolver:         resolver.NewURIResolverFromTracker(ctx, tracker.New(func(types.NamespacedName) {}, 0)),
 		}
 		return inmemorychannel.NewReconciler(ctx, logger,
 			fakeeventingclient.Get(ctx), listers.GetInMemoryChannelLister(),
@@ -813,7 +814,7 @@ func TestInNamespace(t *testing.T) {
 					WithInMemoryScopeAnnotation(eventing.ScopeNamespace),
 					WithDeadLetterSink(imcDest)),
 				makeRoleBinding(systemNS, dispatcherName+"-"+testNS, "eventing-config-reader", NewInMemoryChannel(imcName, testNS)),
-				makeReadyEndpoints(),
+				makeReadyEndpointSlice(),
 			},
 			WantErr: false,
 			WantCreates: []runtime.Object{
@@ -857,7 +858,7 @@ func TestInNamespace(t *testing.T) {
 				makeRoleBinding(systemNS, dispatcherName+"-"+testNS, "eventing-config-reader", NewInMemoryChannel(imcName, "knative-testing")),
 				makeDispatcherDeployment(NewInMemoryChannel(imcName, testNS)),
 				makeDispatcherService(testNS),
-				makeReadyEndpoints(),
+				makeReadyEndpointSlice(),
 			},
 			WantErr: false,
 			WantCreates: []runtime.Object{
@@ -891,7 +892,7 @@ func TestInNamespace(t *testing.T) {
 			systemNamespace:            systemNS,
 			deploymentLister:           listers.GetDeploymentLister(),
 			serviceLister:              listers.GetServiceLister(),
-			endpointsLister:            listers.GetEndpointsLister(),
+			endpointSliceLister:        listers.GetEndpointSliceLister(),
 			serviceAccountLister:       listers.GetServiceAccountLister(),
 			roleBindingLister:          listers.GetRoleBindingLister(),
 			secretLister:               listers.GetSecretLister(),
@@ -1037,22 +1038,40 @@ func makeChannelServiceNotOwnedByUs(imc *v1.InMemoryChannel) *corev1.Service {
 	}
 }
 
-func makeEmptyEndpoints() *corev1.Endpoints {
-	return &corev1.Endpoints{
+func makeEmptyEndpointSlice() *discoveryv1.EndpointSlice {
+	return &discoveryv1.EndpointSlice{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "Endpoints",
+			APIVersion: "discovery.k8s.io/v1",
+			Kind:       "EndpointSlice",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: testNS,
-			Name:      dispatcherName,
+			Name:      dispatcherName + "-abc12",
+			Labels: map[string]string{
+				discoveryv1.LabelServiceName: dispatcherName,
+			},
 		},
+		AddressType: discoveryv1.AddressTypeIPv4,
 	}
 }
 
-func makeReadyEndpoints() *corev1.Endpoints {
-	e := makeEmptyEndpoints()
-	e.Subsets = []corev1.EndpointSubset{{Addresses: []corev1.EndpointAddress{{IP: "1.1.1.1"}}}}
+func makeNotReadyEndpointSlice() *discoveryv1.EndpointSlice {
+	ready := false
+	e := makeEmptyEndpointSlice()
+	e.Endpoints = []discoveryv1.Endpoint{{
+		Addresses:  []string{"1.1.1.1"},
+		Conditions: discoveryv1.EndpointConditions{Ready: &ready},
+	}}
+	return e
+}
+
+func makeReadyEndpointSlice() *discoveryv1.EndpointSlice {
+	ready := true
+	e := makeEmptyEndpointSlice()
+	e.Endpoints = []discoveryv1.Endpoint{{
+		Addresses:  []string{"1.1.1.1"},
+		Conditions: discoveryv1.EndpointConditions{Ready: &ready},
+	}}
 	return e
 }
 

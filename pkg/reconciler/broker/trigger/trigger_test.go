@@ -25,6 +25,7 @@ import (
 	authenticationv1 "k8s.io/api/authentication/v1"
 	authv1 "k8s.io/api/authorization/v1"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -2046,12 +2047,40 @@ func allBrokerObjectsReadyPlus(objs ...runtime.Object) []runtime.Object {
 			WithChannelNameAnnotation(triggerChannelName)),
 		createChannel(testNS, true),
 		imcConfigMap(),
-		NewEndpoints(filterServiceName, systemNS,
-			WithEndpointsLabels(FilterLabels()),
-			WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
-		NewEndpoints(ingressServiceName, systemNS,
-			WithEndpointsLabels(IngressLabels()),
-			WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
+		&discoveryv1.EndpointSlice{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: systemNS,
+				Name:      filterServiceName + "-abc12",
+				Labels: map[string]string{
+					discoveryv1.LabelServiceName:      filterServiceName,
+					"eventing.knative.dev/brokerRole": "filter",
+				},
+			},
+			AddressType: discoveryv1.AddressTypeIPv4,
+			Endpoints: []discoveryv1.Endpoint{
+				{
+					Addresses:  []string{"127.0.0.1"},
+					Conditions: discoveryv1.EndpointConditions{Ready: ptr.Bool(true)},
+				},
+			},
+		},
+		&discoveryv1.EndpointSlice{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: systemNS,
+				Name:      ingressServiceName + "-abc12",
+				Labels: map[string]string{
+					discoveryv1.LabelServiceName:      ingressServiceName,
+					"eventing.knative.dev/brokerRole": "ingress",
+				},
+			},
+			AddressType: discoveryv1.AddressTypeIPv4,
+			Endpoints: []discoveryv1.Endpoint{
+				{
+					Addresses:  []string{"127.0.0.1"},
+					Conditions: discoveryv1.EndpointConditions{Ready: ptr.Bool(true)},
+				},
+			},
+		},
 	}
 	return append(brokerObjs[:], objs...)
 }

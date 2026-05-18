@@ -18,7 +18,7 @@ package duck
 
 import (
 	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 )
 
 // DeploymentIsAvailable determines if the provided deployment is available. Note that if it cannot
@@ -33,11 +33,14 @@ func DeploymentIsAvailable(d *appsv1.DeploymentStatus, def bool) bool {
 	return def
 }
 
-// EndpointsAreAvailable determines if the provided Endpoints are available.
-func EndpointsAreAvailable(ep *corev1.Endpoints) bool {
-	for _, subset := range ep.Subsets {
-		if len(subset.Addresses) > 0 {
-			return true
+// EndpointSlicesAreAvailable determines if the provided EndpointSlices have any ready endpoints.
+func EndpointSlicesAreAvailable(epSlices []*discoveryv1.EndpointSlice) bool {
+	for _, eps := range epSlices {
+		for _, ep := range eps.Endpoints {
+			// Per the K8s API spec, a nil Ready value should be interpreted as ready.
+			if ep.Conditions.Ready == nil || *ep.Conditions.Ready {
+				return true
+			}
 		}
 	}
 	return false

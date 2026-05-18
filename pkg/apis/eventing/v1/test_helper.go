@@ -18,6 +18,7 @@ package v1
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -59,9 +60,9 @@ func (testHelper) ReadySubscriptionStatus() *messagingv1.SubscriptionStatus {
 
 func (t testHelper) ReadyBrokerStatus() *BrokerStatus {
 	bs := &BrokerStatus{}
-	bs.PropagateIngressAvailability(t.AvailableEndpoints())
+	bs.PropagateIngressAvailability(t.AvailableEndpointSlices())
 	bs.PropagateTriggerChannelReadiness(t.ReadyChannelStatus())
-	bs.PropagateFilterAvailability(t.AvailableEndpoints())
+	bs.PropagateFilterAvailability(t.AvailableEndpointSlices())
 	bs.SetAddress(&duckv1.Addressable{
 		URL: apis.HTTP("example.com"),
 	})
@@ -72,9 +73,9 @@ func (t testHelper) ReadyBrokerStatus() *BrokerStatus {
 
 func (t testHelper) ReadyBrokerStatusWithoutDLS() *BrokerStatus {
 	bs := &BrokerStatus{}
-	bs.PropagateIngressAvailability(t.AvailableEndpoints())
+	bs.PropagateIngressAvailability(t.AvailableEndpointSlices())
 	bs.PropagateTriggerChannelReadiness(t.ReadyChannelStatus())
-	bs.PropagateFilterAvailability(t.AvailableEndpoints())
+	bs.PropagateFilterAvailability(t.AvailableEndpointSlices())
 	bs.SetAddress(&duckv1.Addressable{
 		URL: apis.HTTP("example.com"),
 	})
@@ -102,26 +103,24 @@ func (testHelper) FalseBrokerStatus() *BrokerStatus {
 	return bs
 }
 
-func (testHelper) UnavailableEndpoints() *corev1.Endpoints {
-	ep := &corev1.Endpoints{}
-	ep.Name = "unavailable"
-	ep.Subsets = []corev1.EndpointSubset{{
-		NotReadyAddresses: []corev1.EndpointAddress{{
-			IP: "127.0.0.1",
+func (testHelper) UnavailableEndpointSlices() []*discoveryv1.EndpointSlice {
+	ready := false
+	return []*discoveryv1.EndpointSlice{{
+		Endpoints: []discoveryv1.Endpoint{{
+			Addresses:  []string{"127.0.0.1"},
+			Conditions: discoveryv1.EndpointConditions{Ready: &ready},
 		}},
 	}}
-	return ep
 }
 
-func (testHelper) AvailableEndpoints() *corev1.Endpoints {
-	ep := &corev1.Endpoints{}
-	ep.Name = "available"
-	ep.Subsets = []corev1.EndpointSubset{{
-		Addresses: []corev1.EndpointAddress{{
-			IP: "127.0.0.1",
+func (testHelper) AvailableEndpointSlices() []*discoveryv1.EndpointSlice {
+	ready := true
+	return []*discoveryv1.EndpointSlice{{
+		Endpoints: []discoveryv1.Endpoint{{
+			Addresses:  []string{"127.0.0.1"},
+			Conditions: discoveryv1.EndpointConditions{Ready: &ready},
 		}},
 	}}
-	return ep
 }
 
 func (testHelper) ReadyChannelStatus() *eventingduckv1.ChannelableStatus {
