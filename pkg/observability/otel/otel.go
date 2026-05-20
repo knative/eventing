@@ -19,8 +19,10 @@ package otel
 import (
 	"context"
 
+	ceo11y "github.com/cloudevents/sdk-go/v2/observability"
 	"go.opentelemetry.io/contrib/instrumentation/runtime"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric"
 	sdkresource "go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
@@ -60,10 +62,15 @@ func SetupObservabilityOrDie(
 
 	otelResource := resource.Default(component)
 
+	meterOpts := []metric.Option{metric.WithResource(otelResource)}
+	if cfg.DisableHighCardinalityMetrics {
+		meterOpts = append(meterOpts, metric.WithView(highCardinalityFilter()))
+	}
+
 	meterProvider, err := metrics.NewMeterProvider(
 		ctx,
 		cfg.Metrics,
-		metric.WithResource(otelResource),
+		meterOpts...,
 	)
 	if err != nil {
 		logger.Fatalw("failed to set up meter provider", zap.Error(err))
@@ -154,4 +161,16 @@ func GetObservabilityConfig(ctx context.Context) (*observability.Config, error) 
 	}
 
 	return configmap.Parse(cm)
+}
+
+func highCardinalityFilter() metric.View {
+	return metric.NewView(
+		metric.Instrument{Name: "kn.eventing.*"},
+		metric.Stream{
+			AttributeFilter: attribute.NewDenyKeysFilter(
+				attribute.Key(ceo11y.TypeAttr),                        // "cloudevents.type"
+				attribute.Key(observability.MessagingDestinationName), // "messaging.destination.name"
+			),
+		},
+	)
 }

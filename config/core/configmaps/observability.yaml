@@ -58,6 +58,11 @@ data:
     # If a zero or negative value is passed the default reporting OTel period is used (60 secs).
     metrics-export-interval: 60s
 
+    # metrics.high-cardinality.disable disables high-cardinality metric attributes such as
+    # cloudevents.type and messaging.destination.name. Enabling this can help prevent
+    # OOM issues caused by unbounded metric cardinality in production.
+    metrics.high-cardinality.disable: "false"
+
     # sink-event-error-reporting.enable whether the adapter reports a kube event to the CRD indicating
     # a failure to send a cloud event to the sink.
     sink-event-error-reporting.enable: "false"

@@ -23,8 +23,11 @@ import (
 )
 
 func TestNewFromMap(t *testing.T) {
-	configWithOverride := DefaultConfig()
-	configWithOverride.EnableSinkEventErrorReporting = true
+	configWithSinkEventErrorReporting := DefaultConfig()
+	configWithSinkEventErrorReporting.EnableSinkEventErrorReporting = true
+
+	configWithHighCardinalityDisabled := DefaultConfig()
+	configWithHighCardinalityDisabled.DisableHighCardinalityMetrics = true
 
 	testCases := map[string]struct {
 		m                map[string]string
@@ -39,7 +42,13 @@ func TestNewFromMap(t *testing.T) {
 			m: map[string]string{
 				EnableSinkEventErrorReportingKey: "true",
 			},
-			want: configWithOverride,
+			want: configWithSinkEventErrorReporting,
+		},
+		"disable high cardinality metrics": {
+			m: map[string]string{
+				DisableHighCardinalityMetricsKey: "true",
+			},
+			want: configWithHighCardinalityDisabled,
 		},
 		"valid keys, invalid sink event error reporting value": {
 			m: map[string]string{

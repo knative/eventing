@@ -32,6 +32,12 @@ const (
 	// DefaultEnableSinkEventErrorReporting is used to set the default sink event error reporting value
 	DefaultEnableSinkEventErrorReporting = false
 
+	// DisableHighCardinalityMetricsKey is the CM key to disable high-cardinality metric attributes
+	DisableHighCardinalityMetricsKey = "metrics.high-cardinality.disable"
+
+	// DefaultDisableHighCardinalityMetrics is the default value for disabling high-cardinality metrics
+	DefaultDisableHighCardinalityMetrics = false
+
 	// DefaultMetricsPort is the default port used for prometheus metrics if the prometheus protocol is used
 	DefaultMetricsPort = 9092
 )
@@ -50,12 +56,17 @@ type Config struct {
 	// EnableSinkEventErrorReporting specifies whether we should emit a k8s
 	// event when delivery to a sink fails
 	EnableSinkEventErrorReporting bool `json:"enableSinkEventErrorReporting"`
+
+	// DisableHighCardinalityMetrics specifies whether high-cardinality attributes
+	// (e.g. cloudevents.type, messaging.destination.name) are stripped from metrics
+	DisableHighCardinalityMetrics bool `json:"disableHighCardinalityMetrics"`
 }
 
 func DefaultConfig() *Config {
 	return &Config{
 		BaseConfig:                    *pkgo11y.DefaultConfig(),
 		EnableSinkEventErrorReporting: DefaultEnableSinkEventErrorReporting,
+		DisableHighCardinalityMetrics: DefaultDisableHighCardinalityMetrics,
 	}
 }
 
@@ -74,7 +85,10 @@ func NewFromMap(m map[string]string) (*Config, error) {
 		c.BaseConfig.Metrics.Endpoint = fmt.Sprintf(":%d", DefaultMetricsPort)
 	}
 
-	err := configmap.Parse(m, configmap.As(EnableSinkEventErrorReportingKey, &c.EnableSinkEventErrorReporting))
+	err := configmap.Parse(m,
+		configmap.As(EnableSinkEventErrorReportingKey, &c.EnableSinkEventErrorReporting),
+		configmap.As(DisableHighCardinalityMetricsKey, &c.DisableHighCardinalityMetrics),
+	)
 	if err != nil {
 		fmt.Printf("failed to parse enable-sink-error-reporting: %s\n", err.Error())
 		return c, err
