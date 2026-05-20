@@ -19,24 +19,21 @@ package otel
 import (
 	"testing"
 
-	ceo11y "github.com/cloudevents/sdk-go/v2/observability"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric"
-
-	"knative.dev/eventing/pkg/observability"
 )
 
-func TestHighCardinalityFilter(t *testing.T) {
-	view := highCardinalityFilter()
+func TestMetricAttributesDenyFilter(t *testing.T) {
+	view := metricAttributesDenyFilter([]string{"cloudevents.type", "messaging.destination.name"})
 
 	stream, ok := view(metric.Instrument{Name: "kn.eventing.dispatch.duration"})
 	assert.True(t, ok, "view should match kn.eventing.* instruments")
 	assert.NotNil(t, stream.AttributeFilter)
 
 	denied := []attribute.KeyValue{
-		attribute.String(ceo11y.TypeAttr, "com.example.event"),
-		attribute.String(string(observability.MessagingDestinationName), "my-destination"),
+		attribute.String("cloudevents.type", "com.example.event"),
+		attribute.String("messaging.destination.name", "my-destination"),
 	}
 	for _, kv := range denied {
 		assert.False(t, stream.AttributeFilter(kv), "attribute %s should be denied", kv.Key)
@@ -51,8 +48,8 @@ func TestHighCardinalityFilter(t *testing.T) {
 	}
 }
 
-func TestHighCardinalityFilterDoesNotMatchOtherInstruments(t *testing.T) {
-	view := highCardinalityFilter()
+func TestMetricAttributesDenyFilterDoesNotMatchOtherInstruments(t *testing.T) {
+	view := metricAttributesDenyFilter([]string{"cloudevents.type"})
 
 	_, ok := view(metric.Instrument{Name: "http.server.request.duration"})
 	assert.False(t, ok, "view should not match non kn.eventing.* instruments")

@@ -26,8 +26,8 @@ func TestNewFromMap(t *testing.T) {
 	configWithSinkEventErrorReporting := DefaultConfig()
 	configWithSinkEventErrorReporting.EnableSinkEventErrorReporting = true
 
-	configWithHighCardinalityDisabled := DefaultConfig()
-	configWithHighCardinalityDisabled.DisableHighCardinalityMetrics = true
+	configWithDenyList := DefaultConfig()
+	configWithDenyList.MetricAttributesDenyList = []string{"cloudevents.type", "messaging.destination.name"}
 
 	testCases := map[string]struct {
 		m                map[string]string
@@ -44,11 +44,11 @@ func TestNewFromMap(t *testing.T) {
 			},
 			want: configWithSinkEventErrorReporting,
 		},
-		"disable high cardinality metrics": {
+		"metric attributes deny list": {
 			m: map[string]string{
-				DisableHighCardinalityMetricsKey: "true",
+				MetricAttributesDenyListKey: "cloudevents.type, messaging.destination.name",
 			},
-			want: configWithHighCardinalityDisabled,
+			want: configWithDenyList,
 		},
 		"valid keys, invalid sink event error reporting value": {
 			m: map[string]string{

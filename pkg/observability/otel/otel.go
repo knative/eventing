@@ -19,7 +19,6 @@ package otel
 import (
 	"context"
 
-	ceo11y "github.com/cloudevents/sdk-go/v2/observability"
 	"go.opentelemetry.io/contrib/instrumentation/runtime"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -63,8 +62,8 @@ func SetupObservabilityOrDie(
 	otelResource := resource.Default(component)
 
 	meterOpts := []metric.Option{metric.WithResource(otelResource)}
-	if cfg.DisableHighCardinalityMetrics {
-		meterOpts = append(meterOpts, metric.WithView(highCardinalityFilter()))
+	if len(cfg.MetricAttributesDenyList) > 0 {
+		meterOpts = append(meterOpts, metric.WithView(metricAttributesDenyFilter(cfg.MetricAttributesDenyList)))
 	}
 
 	meterProvider, err := metrics.NewMeterProvider(
@@ -163,14 +162,15 @@ func GetObservabilityConfig(ctx context.Context) (*observability.Config, error) 
 	return configmap.Parse(cm)
 }
 
-func highCardinalityFilter() metric.View {
+func metricAttributesDenyFilter(denyList []string) metric.View {
+	keys := make([]attribute.Key, len(denyList))
+	for i, k := range denyList {
+		keys[i] = attribute.Key(k)
+	}
 	return metric.NewView(
 		metric.Instrument{Name: "kn.eventing.*"},
 		metric.Stream{
-			AttributeFilter: attribute.NewDenyKeysFilter(
-				attribute.Key(ceo11y.TypeAttr),                        // "cloudevents.type"
-				attribute.Key(observability.MessagingDestinationName), // "messaging.destination.name"
-			),
+			AttributeFilter: attribute.NewDenyKeysFilter(keys...),
 		},
 	)
 }
