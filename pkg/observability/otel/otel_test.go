@@ -48,9 +48,10 @@ func TestMetricAttributesDenyFilter(t *testing.T) {
 	}
 }
 
-func TestMetricAttributesDenyFilterDoesNotMatchOtherInstruments(t *testing.T) {
+func TestMetricAttributesDenyFilterMatchesAllInstruments(t *testing.T) {
 	view := metricAttributesDenyFilter([]string{"cloudevents.type"})
 
-	_, ok := view(metric.Instrument{Name: "http.server.request.duration"})
-	assert.False(t, ok, "view should not match non kn.eventing.* instruments")
+	stream, ok := view(metric.Instrument{Name: "http.server.request.duration"})
+	assert.True(t, ok, "view should match all instruments")
+	assert.NotNil(t, stream.AttributeFilter)
 }

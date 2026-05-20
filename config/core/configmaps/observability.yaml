@@ -23,7 +23,7 @@ metadata:
     app.kubernetes.io/version: devel
     app.kubernetes.io/name: knative-eventing
   annotations:
-    knative.dev/example-checksum: "6010dfc0"
+    knative.dev/example-checksum: "afa5507a"
 data:
   _example: |
     ################################
@@ -59,7 +59,7 @@ data:
     metrics-export-interval: 60s
 
     # metrics.attributes.deny is a comma-separated list of metric attribute keys to filter
-    # out from kn.eventing.* metrics. This can help prevent OOM issues caused by unbounded
+    # out from all metrics. This can help prevent OOM issues caused by unbounded
     # metric cardinality in production (e.g. cloudevents.type, messaging.destination.name).
     metrics.attributes.deny: ""
 

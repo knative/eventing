@@ -168,7 +168,7 @@ func metricAttributesDenyFilter(denyList []string) metric.View {
 		keys[i] = attribute.Key(k)
 	}
 	return metric.NewView(
-		metric.Instrument{Name: "kn.eventing.*"},
+		metric.Instrument{Name: "*"},
 		metric.Stream{
 			AttributeFilter: attribute.NewDenyKeysFilter(keys...),
 		},
