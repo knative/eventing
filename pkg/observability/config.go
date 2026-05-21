@@ -56,7 +56,7 @@ type Config struct {
 	EnableSinkEventErrorReporting bool `json:"enableSinkEventErrorReporting"`
 
 	// MetricAttributesDenyList is a list of metric attribute keys to filter out
-	// from kn.eventing.* metrics (e.g. cloudevents.type, messaging.destination.name)
+	// from all metrics (e.g. cloudevents.type, messaging.destination.name)
 	MetricAttributesDenyList []string `json:"metricAttributesDenyList,omitempty"`
 }
 
