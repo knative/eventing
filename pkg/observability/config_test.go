@@ -27,7 +27,7 @@ func TestNewFromMap(t *testing.T) {
 	configWithSinkEventErrorReporting.EnableSinkEventErrorReporting = true
 
 	configWithDenyList := DefaultConfig()
-	configWithDenyList.MetricAttributesDenyList = []string{"cloudevents.type", "messaging.destination.name"}
+	configWithDenyList.Metrics.AttributesDeny = "cloudevents.type, messaging.destination.name"
 
 	testCases := map[string]struct {
 		m                map[string]string
@@ -46,7 +46,7 @@ func TestNewFromMap(t *testing.T) {
 		},
 		"metric attributes deny list": {
 			m: map[string]string{
-				MetricAttributesDenyListKey: "cloudevents.type, messaging.destination.name",
+				"metrics-attributes-deny": "cloudevents.type, messaging.destination.name",
 			},
 			want: configWithDenyList,
 		},

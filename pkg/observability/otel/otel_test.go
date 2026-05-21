@@ -22,10 +22,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric"
+
+	"knative.dev/pkg/observability/metrics"
 )
 
 func TestMetricAttributesDenyFilter(t *testing.T) {
-	view := metricAttributesDenyFilter([]string{"cloudevents.type", "messaging.destination.name"})
+	view := metrics.MetricAttributesDenyFilter([]string{"cloudevents.type", "messaging.destination.name"})
 
 	stream, ok := view(metric.Instrument{Name: "kn.eventing.dispatch.duration"})
 	assert.True(t, ok, "view should match kn.eventing.* instruments")
@@ -49,7 +51,7 @@ func TestMetricAttributesDenyFilter(t *testing.T) {
 }
 
 func TestMetricAttributesDenyFilterMatchesAllInstruments(t *testing.T) {
-	view := metricAttributesDenyFilter([]string{"cloudevents.type"})
+	view := metrics.MetricAttributesDenyFilter([]string{"cloudevents.type"})
 
 	stream, ok := view(metric.Instrument{Name: "http.server.request.duration"})
 	assert.True(t, ok, "view should match all instruments")

@@ -21,7 +21,6 @@ import (
 
 	"go.opentelemetry.io/contrib/instrumentation/runtime"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric"
 	sdkresource "go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
@@ -62,8 +61,8 @@ func SetupObservabilityOrDie(
 	otelResource := resource.Default(component)
 
 	meterOpts := []metric.Option{metric.WithResource(otelResource)}
-	if len(cfg.MetricAttributesDenyList) > 0 {
-		meterOpts = append(meterOpts, metric.WithView(metricAttributesDenyFilter(cfg.MetricAttributesDenyList)))
+	if denyList := cfg.Metrics.AttributesDenyList(); len(denyList) > 0 {
+		meterOpts = append(meterOpts, metric.WithView(metrics.MetricAttributesDenyFilter(denyList)))
 	}
 
 	meterProvider, err := metrics.NewMeterProvider(
@@ -160,17 +159,4 @@ func GetObservabilityConfig(ctx context.Context) (*observability.Config, error) 
 	}
 
 	return configmap.Parse(cm)
-}
-
-func metricAttributesDenyFilter(denyList []string) metric.View {
-	keys := make([]attribute.Key, len(denyList))
-	for i, k := range denyList {
-		keys[i] = attribute.Key(k)
-	}
-	return metric.NewView(
-		metric.Instrument{Name: "*"},
-		metric.Stream{
-			AttributeFilter: attribute.NewDenyKeysFilter(keys...),
-		},
-	)
 }

@@ -19,7 +19,6 @@ package observability
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	configmap "knative.dev/pkg/configmap/parser"
 	pkgo11y "knative.dev/pkg/observability"
@@ -32,9 +31,6 @@ const (
 
 	// DefaultEnableSinkEventErrorReporting is used to set the default sink event error reporting value
 	DefaultEnableSinkEventErrorReporting = false
-
-	// MetricAttributesDenyListKey is the CM key for a comma-separated list of metric attribute keys to filter out
-	MetricAttributesDenyListKey = "metrics.attributes.deny"
 
 	// DefaultMetricsPort is the default port used for prometheus metrics if the prometheus protocol is used
 	DefaultMetricsPort = 9092
@@ -54,10 +50,6 @@ type Config struct {
 	// EnableSinkEventErrorReporting specifies whether we should emit a k8s
 	// event when delivery to a sink fails
 	EnableSinkEventErrorReporting bool `json:"enableSinkEventErrorReporting"`
-
-	// MetricAttributesDenyList is a list of metric attribute keys to filter out
-	// from all metrics (e.g. cloudevents.type, messaging.destination.name)
-	MetricAttributesDenyList []string `json:"metricAttributesDenyList,omitempty"`
 }
 
 func DefaultConfig() *Config {
@@ -80,16 +72,6 @@ func NewFromMap(m map[string]string) (*Config, error) {
 	// Force the port to the default queue user metrics port if it's not overridden
 	if c.BaseConfig.Metrics.Protocol == metrics.ProtocolPrometheus && c.BaseConfig.Metrics.Endpoint == "" {
 		c.BaseConfig.Metrics.Endpoint = fmt.Sprintf(":%d", DefaultMetricsPort)
-	}
-
-	if v, ok := m[MetricAttributesDenyListKey]; ok && v != "" {
-		parts := strings.Split(v, ",")
-		c.MetricAttributesDenyList = make([]string, 0, len(parts))
-		for _, p := range parts {
-			if t := strings.TrimSpace(p); t != "" {
-				c.MetricAttributesDenyList = append(c.MetricAttributesDenyList, t)
-			}
-		}
 	}
 
 	err := configmap.Parse(m,
