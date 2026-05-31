@@ -139,7 +139,7 @@ func withConfigContents(t *testing.T, content string, fn func()) {
 	t.Helper()
 	configFile := ensureConfigFileNotPresent(t)
 	data := []byte(content)
-	assert.NoError(t, os.WriteFile(configFile, data, 0644))
+	assert.NoError(t, os.WriteFile(configFile, data, 0o644))
 	defer func() { assert.NoError(t, os.RemoveAll(configFile)) }()
 	fn()
 }
@@ -150,7 +150,7 @@ func withErrorsCaptured(t *testing.T, fn func()) []string {
 	defer func() { logFatal = origLogFatal }()
 	var errors []string
 	logFatal = func(args ...interface{}) {
-		errors = append(errors, fmt.Sprint(args))
+		errors = append(errors, fmt.Sprint(args...))
 	}
 	fn()
 	return errors
