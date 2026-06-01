@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -424,16 +425,11 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) handleGet(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	logger := logging.FromContext(ctx)
-	parts := strings.Split(strings.TrimSuffix(r.RequestURI, "/"), "/")
-	if len(parts) != 9 {
+	ref, eventSource, eventID, err := parseLocation(r.RequestURI)
+	if err != nil {
 		logger.Info("Malformed uri", zap.String("URI", r.RequestURI))
 		w.WriteHeader(http.StatusBadRequest)
 		return
-	}
-
-	ref := types.NamespacedName{
-		Namespace: parts[2],
-		Name:      parts[4],
 	}
 
 	js, err := h.lister.JobSinks(ref.Namespace).Get(ref.Name)
@@ -450,10 +446,6 @@ func (h *Handler) handleGet(ctx context.Context, w http.ResponseWriter, r *http.
 		logger.Warn("Failed to verify AuthN and AuthZ.", zap.Error(err))
 		return
 	}
-
-	eventSource := parts[6]
-	eventID := parts[8]
-
 	jobName := toJobName(ref.Name, eventSource, eventID)
 
 	job, err := h.k8s.BatchV1().Jobs(ref.Namespace).Get(r.Context(), jobName, metav1.GetOptions{})
@@ -499,11 +491,43 @@ func getServerTLSConfig(ctx context.Context) (*tls.Config, error) {
 }
 
 func locationHeader(ref types.NamespacedName, source, id string) string {
-	return fmt.Sprintf("/namespaces/%s/name/%s/sources/%s/ids/%s", ref.Namespace, ref.Name, source, id)
+	return fmt.Sprintf(
+		"/namespaces/%s/name/%s/sources/%s/ids/%s",
+		url.PathEscape(ref.Namespace),
+		url.PathEscape(ref.Name),
+		url.PathEscape(source),
+		url.PathEscape(id),
+	)
 }
 
 func jobLabelSelector(ref types.NamespacedName, id string) string {
 	return fmt.Sprintf("%s=%s,%s=%s", sinks.JobSinkIDLabel, id, sinks.JobSinkNameLabel, ref.Name)
+}
+
+func parseLocation(requestURI string) (types.NamespacedName, string, string, error) {
+	parts := strings.Split(strings.TrimSuffix(requestURI, "/"), "/")
+	if len(parts) != 9 {
+		return types.NamespacedName{}, "", "", fmt.Errorf("unexpected path format")
+	}
+
+	namespace, err := url.PathUnescape(parts[2])
+	if err != nil {
+		return types.NamespacedName{}, "", "", fmt.Errorf("invalid namespace path segment: %w", err)
+	}
+	name, err := url.PathUnescape(parts[4])
+	if err != nil {
+		return types.NamespacedName{}, "", "", fmt.Errorf("invalid name path segment: %w", err)
+	}
+	source, err := url.PathUnescape(parts[6])
+	if err != nil {
+		return types.NamespacedName{}, "", "", fmt.Errorf("invalid source path segment: %w", err)
+	}
+	id, err := url.PathUnescape(parts[8])
+	if err != nil {
+		return types.NamespacedName{}, "", "", fmt.Errorf("invalid id path segment: %w", err)
+	}
+
+	return types.NamespacedName{Namespace: namespace, Name: name}, source, id, nil
 }
 
 func toJobName(js string, source, id string) string {
