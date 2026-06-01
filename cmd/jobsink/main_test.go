@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"k8s.io/apimachinery/pkg/api/validation"
+	"k8s.io/apimachinery/pkg/types"
 
 	"knative.dev/eventing/pkg/utils"
 )
@@ -103,4 +104,57 @@ func FuzzToJobName(f *testing.F) {
 			t.Errorf("toJobName produced invalid name %q given %q, %q, %q: errors: %#v", name, js, source, id, errs)
 		}
 	})
+}
+
+func TestLocationHeaderRoundTrip(t *testing.T) {
+	testCases := map[string]struct {
+		ref    types.NamespacedName
+		source string
+		id     string
+	}{
+		"simple": {
+			ref: types.NamespacedName{
+				Namespace: "test-namespace",
+				Name:      "job-sink",
+			},
+			source: "mysource3",
+			id:     "2234-5678",
+		},
+		"slashes in source and id": {
+			ref: types.NamespacedName{
+				Namespace: "test-namespace",
+				Name:      "job-sink",
+			},
+			source: "https://example.com/sources/my/source",
+			id:     "event/id/with/slashes",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			location := locationHeader(tc.ref, tc.source, tc.id)
+
+			gotRef, gotSource, gotID, err := parseLocation(location)
+			if err != nil {
+				t.Fatal("unexpected error:", err)
+			}
+
+			if gotRef != tc.ref {
+				t.Fatalf("unexpected ref: got %#v want %#v", gotRef, tc.ref)
+			}
+			if gotSource != tc.source {
+				t.Fatalf("unexpected source: got %q want %q", gotSource, tc.source)
+			}
+			if gotID != tc.id {
+				t.Fatalf("unexpected id: got %q want %q", gotID, tc.id)
+			}
+		})
+	}
+}
+
+func TestParseLocationRejectsUnescapedSourceSlashes(t *testing.T) {
+	_, _, _, err := parseLocation("/namespaces/test-namespace/name/job-sink/sources/https://example.com/source/ids/event-id")
+	if err == nil {
+		t.Fatal("expected error for malformed location")
+	}
 }
