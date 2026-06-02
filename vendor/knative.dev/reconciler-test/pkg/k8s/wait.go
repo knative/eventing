@@ -137,6 +137,10 @@ func WaitForResourceCondition(ctx context.Context, t feature.T, namespace, name 
 				// keep polling
 				return false, nil
 			}
+			if isTransientError(err) {
+				t.Logf("Transient error getting resource %s/%s: %v", namespace, name, err)
+				return false, nil
+			}
 			return false, err
 		}
 		obj := like.DeepCopy()
@@ -239,6 +243,15 @@ func readyCondition(obj duckv1.KResource) *apis.Condition {
 	return obj.Status.GetCondition(apis.ConditionReady)
 }
 
+// isTransientError returns true for transient Kubernetes API errors that should
+// be retried, such as temporary credential refresh failures on cloud providers.
+func isTransientError(err error) bool {
+	return apierrors.IsUnauthorized(err) ||
+		apierrors.IsServerTimeout(err) ||
+		apierrors.IsServiceUnavailable(err) ||
+		apierrors.IsTooManyRequests(err)
+}
+
 // ErrWaitingForServiceEndpoints if waiting for service endpoints failed.
 var ErrWaitingForServiceEndpoints = errors.New("waiting for service endpoints")
 
@@ -255,6 +268,10 @@ func WaitForServiceEndpoints(ctx context.Context, t feature.T, name string, numb
 			if apierrors.IsNotFound(err) {
 				t.Log("service", "namespace", ns, "name", name, err)
 				// keep polling
+				return false, nil
+			}
+			if isTransientError(err) {
+				t.Logf("Transient error getting service %s/%s: %v", ns, name, err)
 				return false, nil
 			}
 			return false, err
@@ -274,6 +291,10 @@ func WaitForServiceEndpoints(ctx context.Context, t feature.T, name string, numb
 			if apierrors.IsNotFound(err) {
 				t.Log("endpoint", "namespace", ns, "name", name, err)
 				// keep polling
+				return false, nil
+			}
+			if isTransientError(err) {
+				t.Logf("Transient error getting endpoints %s/%s: %v", ns, name, err)
 				return false, nil
 			}
 			return false, err
@@ -406,6 +427,10 @@ func WaitForPodReadyOrSucceededOrFail(ctx context.Context, t feature.T, podName 
 				// keep polling
 				return false, nil
 			}
+			if isTransientError(err) {
+				t.Logf("Transient error getting pod %s/%s: %v", ns, podName, err)
+				return false, nil
+			}
 			return true, err
 		}
 		isReady := podReadyOrSucceeded(p)
@@ -472,6 +497,10 @@ func WaitForAddress(ctx context.Context, gvr schema.GroupVersionResource, name s
 		}
 		if err != nil {
 			if apierrors.IsNotFound(err) {
+				// keep polling
+				return false, nil
+			}
+			if isTransientError(err) {
 				// keep polling
 				return false, nil
 			}
