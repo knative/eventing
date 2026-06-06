@@ -84,7 +84,7 @@ export PATH="${PATH}:${GOPATH}/bin"
 export KO_DOCKER_REPO='gcr.io/my-gcloud-project-id'
 ```
 
-> :information_source: You can use the command `export KO_DEFAULTPLATFORMS=linux/amd64, arm64` to set the correct architecture according to your local machine.
+> :information_source: You can use the command `export KO_DEFAULTPLATFORMS=linux/amd64,linux/arm64` to set the correct architectures according to your local machine.
 
 ### Checkout your fork
 
