@@ -99,7 +99,11 @@ func NewController(
 
 	r.sinkResolver = resolver.NewURIResolver(ctx, cmw, impl.Tracker)
 
-	pingSourceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
+	pingSourceInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    impl.Enqueue,
+		UpdateFunc: controller.PassNew(impl.Enqueue),
+		DeleteFunc: impl.Tracker.OnDeletedObserver,
+	})
 
 	// Tracker is used to notify us that the pingsource-mt-adapter Deployment has changed so that
 	// we can reconcile PingSources that depend on it

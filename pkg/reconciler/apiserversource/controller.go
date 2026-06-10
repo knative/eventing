@@ -115,7 +115,11 @@ func NewController(
 
 	r.sinkResolver = resolver.NewURIResolverFromTracker(ctx, impl.Tracker)
 
-	apiServerSourceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
+	apiServerSourceInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    impl.Enqueue,
+		UpdateFunc: controller.PassNew(impl.Enqueue),
+		DeleteFunc: impl.Tracker.OnDeletedObserver,
+	})
 
 	deploymentInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.FilterController(&v1.ApiServerSource{}),
