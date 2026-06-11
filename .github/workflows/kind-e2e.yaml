@@ -1,5 +1,8 @@
 name: KinD e2e tests
 
+# Third-party actions use immutable SHAs; Dependabot bumps them weekly
+# (.github/.dependabot.yaml, package-ecosystem: github-actions).
+
 on:
   pull_request:
     branches: [ 'main', 'master' ]
@@ -69,10 +72,10 @@ jobs:
 
     # Install the latest release of ko
     - name: Install ko
-      uses: ko-build/setup-ko@v0.9
+      uses: ko-build/setup-ko@d006021bd0c28d1ce33a07e7943d48b079944c8d # ko-build/setup-ko@v0.9 — https://github.com/ko-build/setup-ko/releases/tag/v0.9
 
     - name: Check out code onto GOPATH
-      uses: actions/checkout@v6
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # actions/checkout@v6 — https://github.com/actions/checkout/releases/tag/v6
 
     - name: Install KinD
       # TODO: replace with chainguard-dev/actions/setup-kind
@@ -156,7 +159,7 @@ jobs:
         fi
 
     - name: Post failure notice to Slack
-      uses: rtCamp/action-slack-notify@v2.3.3
+      uses: rtCamp/action-slack-notify@e31e87e03dd19038e411e38ae27cbad084a90661 # rtCamp/action-slack-notify@v2.3.3 — https://github.com/rtCamp/action-slack-notify/releases/tag/v2.3.3
       if: ${{ failure() && github.event_name != 'pull_request' }}
       env:
         SLACK_ICON: https://github.com/knative.png?size=48
