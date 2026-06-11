@@ -18,8 +18,6 @@
 
 # shellcheck disable=SC1090
 
-export GO111MODULE=on
-
 source "$(dirname "${BASH_SOURCE[0]}")/../vendor/knative.dev/hack/e2e-tests.sh"
 
 # If gcloud is not available make it a no-op, not an error.
