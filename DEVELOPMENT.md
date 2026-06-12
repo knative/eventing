@@ -231,7 +231,7 @@ To run a single rekt test using the `e2e-debug.sh` script, follow these instruct
    ./hack/e2e-debug.sh TestPingSourceWithSinkRef ./test/rekt
    ```
 
-   This will run the specified rekt test (`TestMyRektScenario` in this case) from the provided directory (`test/rekt/scenarios`).
+   This will run the specified rekt test (`TestPingSourceWithSinkRef` in this case) from the provided directory (`./test/rekt`).
 
    **Note:** Ensure that you have the necessary dependencies and configurations set up before running the test.
 
