@@ -24,7 +24,7 @@ creating releases.
 
 1. Click the Branch dropdown.
 1. Type the desired `release-X.Y` branch name into the search box.
-1. Click the `Create branch: release-X.Y from 'master'` button. _You must have
+1. Click the `Create branch: release-X.Y from 'main'` button. _You must have
    write permissions to the repo to create a branch._
 
    Prow will detect the new release branch and run the `release.sh` script. If
@@ -43,10 +43,10 @@ creating releases.
     git fetch upstream
     ```
 
-1.  Create a `release-X.Y` branch from `upstream/master`.
+1.  Create a `release-X.Y` branch from `upstream/main`.
 
     ```sh
-    git branch --no-track release-X.Y upstream/master
+    git branch --no-track release-X.Y upstream/main
     ```
 
 1.  Push the branch to upstream.
@@ -80,10 +80,10 @@ The major version release job is currently called
 1.  Create a branch based on the desired `release-X.Y` branch.
 
     ```sh
-    git co -b my-backport-branch upstream/release-X.Y
+    git checkout -b my-backport-branch upstream/release-X.Y
     ```
 
-1.  Cherry-pick desired commits from master into the new branch.
+1.  Cherry-pick desired commits from main into the new branch.
 
     ```sh
     git cherry-pick <commitid>
