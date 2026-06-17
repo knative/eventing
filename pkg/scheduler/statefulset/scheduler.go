@@ -387,7 +387,7 @@ func (s *StatefulSetScheduler) scheduleVPod(ctx context.Context, vpod scheduler.
 	// Cap at schedulable pods to avoid requeueing when pods aren't ready yet.
 	target := vpod.GetVReplicas()
 	if s.minReplicas > target {
-		schedulable := int32(len(state.SchedulablePods))
+		schedulable := int32(len(state.SchedulablePods)) //nolint:gosec // G115: len is bounded by cluster size, cannot overflow int32
 		if s.minReplicas < schedulable {
 			target = s.minReplicas
 		} else {
