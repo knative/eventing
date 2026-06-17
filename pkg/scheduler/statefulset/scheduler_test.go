@@ -60,6 +60,7 @@ func TestStatefulsetScheduler(t *testing.T) {
 		expectedReserved  map[types.NamespacedName]map[string]int32
 		unschedulablePods sets.Set[int32]
 		capacity          int32
+		minReplicas       int32
 	}{
 		{
 			name:      "no replicas, no vreplicas",
@@ -699,6 +700,76 @@ func TestStatefulsetScheduler(t *testing.T) {
 			},
 			unschedulablePods: sets.New[int32](1),
 		},
+		{
+			name:        "minReplicas=3, 1 vreplica, 3 replicas, spread across all pods",
+			vreplicas:   1,
+			replicas:    int32(3),
+			minReplicas: 3,
+			expected: []duckv1alpha1.Placement{
+				{PodName: "statefulset-name-0", VReplicas: 1},
+				{PodName: "statefulset-name-1", VReplicas: 1},
+				{PodName: "statefulset-name-2", VReplicas: 1},
+			},
+		},
+		{
+			name:        "minReplicas=3, 1 vreplica, 1 replica, place what we can",
+			vreplicas:   1,
+			replicas:    int32(1),
+			minReplicas: 3,
+			expected: []duckv1alpha1.Placement{
+				{PodName: "statefulset-name-0", VReplicas: 1},
+			},
+		},
+		{
+			name:        "minReplicas=3, 5 vreplicas, 3 replicas, vreplicas > minReplicas uses normal behavior",
+			vreplicas:   5,
+			replicas:    int32(3),
+			minReplicas: 3,
+			expected: []duckv1alpha1.Placement{
+				{PodName: "statefulset-name-0", VReplicas: 2},
+				{PodName: "statefulset-name-1", VReplicas: 2},
+				{PodName: "statefulset-name-2", VReplicas: 1},
+			},
+		},
+		{
+			name:        "minReplicas=0, 1 vreplica, 1 replica, disabled minReplicas uses normal behavior",
+			vreplicas:   1,
+			replicas:    int32(1),
+			minReplicas: 0,
+			expected: []duckv1alpha1.Placement{
+				{PodName: "statefulset-name-0", VReplicas: 1},
+			},
+		},
+		{
+			name:        "minReplicas=3, already spread across 3 pods, no change",
+			vreplicas:   1,
+			replicas:    int32(3),
+			minReplicas: 3,
+			placements: []duckv1alpha1.Placement{
+				{PodName: "statefulset-name-0", VReplicas: 1},
+				{PodName: "statefulset-name-1", VReplicas: 1},
+				{PodName: "statefulset-name-2", VReplicas: 1},
+			},
+			expected: []duckv1alpha1.Placement{
+				{PodName: "statefulset-name-0", VReplicas: 1},
+				{PodName: "statefulset-name-1", VReplicas: 1},
+				{PodName: "statefulset-name-2", VReplicas: 1},
+			},
+		},
+		{
+			name:        "minReplicas reduced from 3 to 1, scale down placements",
+			vreplicas:   1,
+			replicas:    int32(3),
+			minReplicas: 1,
+			placements: []duckv1alpha1.Placement{
+				{PodName: "statefulset-name-0", VReplicas: 1},
+				{PodName: "statefulset-name-1", VReplicas: 1},
+				{PodName: "statefulset-name-2", VReplicas: 1},
+			},
+			expected: []duckv1alpha1.Placement{
+				{PodName: "statefulset-name-0", VReplicas: 1},
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -753,6 +824,7 @@ func TestStatefulsetScheduler(t *testing.T) {
 				StatefulSetNamespace: testNs,
 				StatefulSetName:      sfsName,
 				VPodLister:           vpodClient.List,
+				MinReplicas:          tc.minReplicas,
 			}
 			s := newStatefulSetScheduler(ctx, cfg, sa, nil)
 			err = s.Promote(reconciler.UniversalBucket(), func(bucket reconciler.Bucket, name types.NamespacedName) {})
