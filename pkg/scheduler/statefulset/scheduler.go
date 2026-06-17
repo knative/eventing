@@ -115,6 +115,10 @@ type StatefulSetScheduler struct {
 	// replicas is the (cached) number of statefulset replicas.
 	replicas int32
 
+	// minReplicas is the minimum number of replicas for the statefulset.
+	// When set, the scheduler spreads vreplicas across at least this many pods.
+	minReplicas int32
+
 	// isLeader signals whether a given Scheduler instance is leader or not.
 	// The autoscaler is considered the leader when ephemeralLeaderElectionObject is in a
 	// bucket where we've been promoted.
@@ -225,6 +229,7 @@ func newStatefulSetScheduler(ctx context.Context,
 		stateAccessor:        stateAccessor,
 		reserved:             make(map[types.NamespacedName]map[string]int32),
 		autoscaler:           autoscaler,
+		minReplicas:          cfg.MinReplicas,
 	}
 
 	// Monitor our statefulset
@@ -377,9 +382,25 @@ func (s *StatefulSetScheduler) scheduleVPod(ctx context.Context, vpod scheduler.
 	// - allocates as many vreplicas as possible to the same pod(s)
 	// - allocates remaining vreplicas to new pods
 
+	// When minReplicas is set, ensure vreplicas are spread across at least
+	// that many pods by inflating the target to max(requested, minReplicas).
+	// Cap at schedulable pods to avoid requeueing when pods aren't ready yet.
+	target := vpod.GetVReplicas()
+	if s.minReplicas > target {
+		schedulable := int32(len(state.SchedulablePods))
+		if s.minReplicas < schedulable {
+			target = s.minReplicas
+		} else {
+			target = schedulable
+		}
+		if target < vpod.GetVReplicas() {
+			target = vpod.GetVReplicas()
+		}
+	}
+
 	// Exact number of vreplicas => do nothing
 	tr := scheduler.GetTotalVReplicas(placements)
-	if tr == vpod.GetVReplicas() {
+	if tr == target {
 		logger.Debug("scheduling succeeded (already scheduled)")
 
 		// Fully placed. Nothing to do
@@ -387,12 +408,12 @@ func (s *StatefulSetScheduler) scheduleVPod(ctx context.Context, vpod scheduler.
 	}
 
 	// Need less => scale down
-	if tr > vpod.GetVReplicas() {
-		logger.Debugw("scaling down", zap.Int32("vreplicas", tr), zap.Int32("new vreplicas", vpod.GetVReplicas()),
+	if tr > target {
+		logger.Debugw("scaling down", zap.Int32("vreplicas", tr), zap.Int32("new vreplicas", target),
 			zap.Any("placements", placements),
 			zap.Any("existingPlacements", existingPlacements))
 
-		placements = s.removeReplicas(tr-vpod.GetVReplicas(), placements)
+		placements = s.removeReplicas(tr-target, placements)
 
 		// Do not trigger the autoscaler to avoid unnecessary churn
 
@@ -400,11 +421,11 @@ func (s *StatefulSetScheduler) scheduleVPod(ctx context.Context, vpod scheduler.
 	}
 
 	// Need more => scale up
-	logger.Debugw("scaling up", zap.Int32("vreplicas", tr), zap.Int32("new vreplicas", vpod.GetVReplicas()),
+	logger.Debugw("scaling up", zap.Int32("vreplicas", tr), zap.Int32("new vreplicas", target),
 		zap.Any("placements", placements),
 		zap.Any("existingPlacements", existingPlacements))
 
-	placements, left := s.addReplicas(state, reservedByPodName, vpod, vpod.GetVReplicas()-tr, placements)
+	placements, left := s.addReplicas(state, reservedByPodName, vpod, target-tr, placements)
 
 	if left > 0 {
 		// Give time for the autoscaler to do its job
