@@ -23,8 +23,11 @@ import (
 )
 
 func TestNewFromMap(t *testing.T) {
-	configWithOverride := DefaultConfig()
-	configWithOverride.EnableSinkEventErrorReporting = true
+	configWithSinkEventErrorReporting := DefaultConfig()
+	configWithSinkEventErrorReporting.EnableSinkEventErrorReporting = true
+
+	configWithDenyList := DefaultConfig()
+	configWithDenyList.Metrics.AttributesDeny = "cloudevents.type, messaging.destination.name"
 
 	testCases := map[string]struct {
 		m                map[string]string
@@ -39,7 +42,13 @@ func TestNewFromMap(t *testing.T) {
 			m: map[string]string{
 				EnableSinkEventErrorReportingKey: "true",
 			},
-			want: configWithOverride,
+			want: configWithSinkEventErrorReporting,
+		},
+		"metric attributes deny list": {
+			m: map[string]string{
+				"metrics-attributes-deny": "cloudevents.type, messaging.destination.name",
+			},
+			want: configWithDenyList,
 		},
 		"valid keys, invalid sink event error reporting value": {
 			m: map[string]string{

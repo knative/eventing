@@ -60,10 +60,15 @@ func SetupObservabilityOrDie(
 
 	otelResource := resource.Default(component)
 
+	meterOpts := []metric.Option{metric.WithResource(otelResource)}
+	if denyList := cfg.Metrics.AttributesDenyList(); len(denyList) > 0 {
+		meterOpts = append(meterOpts, metric.WithView(metrics.MetricAttributesDenyFilter(denyList)))
+	}
+
 	meterProvider, err := metrics.NewMeterProvider(
 		ctx,
 		cfg.Metrics,
-		metric.WithResource(otelResource),
+		meterOpts...,
 	)
 	if err != nil {
 		logger.Fatalw("failed to set up meter provider", zap.Error(err))
