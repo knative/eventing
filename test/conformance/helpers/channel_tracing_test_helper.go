@@ -25,7 +25,7 @@ import (
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	cetest "github.com/cloudevents/sdk-go/v2/test"
 	"github.com/google/uuid"
-	"github.com/openzipkin/zipkin-go/model"
+	oteltrace "go.opentelemetry.io/otel/trace"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	ch "knative.dev/eventing/pkg/channel"
@@ -142,7 +142,7 @@ func setupChannelTracingWithReply(
 		// 1 is added below if it is needed.
 		// 2. Channel receives event from sending pod.
 		Span: tracinghelper.MatchHTTPSpanNoReply(
-			model.Server,
+			oteltrace.SpanKindServer,
 			tracinghelper.WithHTTPHostAndPath(
 				fmt.Sprintf("%s%s.%s.svc", channelName, ch.K8ServiceNameSuffix, client.Namespace),
 				"/",
@@ -156,7 +156,7 @@ func setupChannelTracingWithReply(
 					{
 						// 4. Channel sends event to Mutator pod.
 						Span: tracinghelper.MatchHTTPSpanWithReply(
-							model.Client,
+							oteltrace.SpanKindClient,
 							tracinghelper.WithHTTPURL(
 								fmt.Sprintf("%s.%s.svc", mutatingPod.Name, client.Namespace),
 								"",
@@ -166,7 +166,7 @@ func setupChannelTracingWithReply(
 							{
 								// 5. Mutator Pod receives event from Channel.
 								Span: tracinghelper.MatchHTTPSpanWithReply(
-									model.Server,
+									oteltrace.SpanKindServer,
 									tracinghelper.WithHTTPHostAndPath(
 										fmt.Sprintf("%s.%s.svc", mutatingPod.Name, client.Namespace),
 										"/",
@@ -183,7 +183,7 @@ func setupChannelTracingWithReply(
 							{
 								// 7. Channel sends reply from Mutator Pod to the reply Channel.
 								Span: tracinghelper.MatchHTTPSpanNoReply(
-									model.Client,
+									oteltrace.SpanKindClient,
 									tracinghelper.WithHTTPURL(
 										fmt.Sprintf("%s%s.%s.svc", replyChannelName, ch.K8ServiceNameSuffix, client.Namespace),
 										"",
@@ -193,7 +193,7 @@ func setupChannelTracingWithReply(
 									{
 										// 8. Reply Channel receives event from the original Channel's reply.
 										Span: tracinghelper.MatchHTTPSpanNoReply(
-											model.Server,
+											oteltrace.SpanKindServer,
 											tracinghelper.WithHTTPHostAndPath(
 												fmt.Sprintf("%s%s.%s.svc", replyChannelName, ch.K8ServiceNameSuffix, client.Namespace),
 												"/",
@@ -207,7 +207,7 @@ func setupChannelTracingWithReply(
 													{
 														// 10. Reply Channel sends event to the logging Pod.
 														Span: tracinghelper.MatchHTTPSpanNoReply(
-															model.Client,
+															oteltrace.SpanKindClient,
 															tracinghelper.WithHTTPURL(
 																fmt.Sprintf("%s.%s.svc", recordEventsPod.Name, client.Namespace),
 																"",
@@ -217,7 +217,7 @@ func setupChannelTracingWithReply(
 															{
 																// 11. Logging pod receives event from Channel.
 																Span: tracinghelper.MatchHTTPSpanNoReply(
-																	model.Server,
+																	oteltrace.SpanKindServer,
 																	tracinghelper.WithHTTPHostAndPath(
 																		fmt.Sprintf("%s.%s.svc", recordEventsPod.Name, client.Namespace),
 																		"/",
@@ -244,7 +244,7 @@ func setupChannelTracingWithReply(
 		expected = tracinghelper.TestSpanTree{
 			// 1. Sending pod sends event to Channel (only if the sending pod generates a span).
 			Span: tracinghelper.MatchHTTPSpanNoReply(
-				model.Client,
+				oteltrace.SpanKindClient,
 				tracinghelper.WithHTTPURL(
 					fmt.Sprintf("%s%s.%s.svc", channelName, ch.K8ServiceNameSuffix, client.Namespace),
 					"",
@@ -263,7 +263,7 @@ func setupChannelTracingWithReply(
 }
 
 func channelSpan(eventID, host, path string) *tracinghelper.SpanMatcher {
-	k := model.Client
+	k := oteltrace.SpanKindClient
 	return &tracinghelper.SpanMatcher{
 		Kind: &k,
 		Tags: map[string]*regexp.Regexp{
