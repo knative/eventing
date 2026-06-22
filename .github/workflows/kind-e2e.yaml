@@ -72,11 +72,11 @@ jobs:
       uses: ko-build/setup-ko@v0.9
 
     - name: Check out code onto GOPATH
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
 
     - name: Install KinD
       # TODO: replace with chainguard-dev/actions/setup-kind
-      uses: chainguard-dev/actions/setup-kind@c69a264ec2a5934c3186c618f368fc1c86f16cff # main
+      uses: chainguard-dev/actions/setup-kind@e1c4977ad9cb32b12c5b222ec0134a22bec60bd5 # main
       with:
         k8s-version: ${{ matrix.k8s-version }}
         kind-worker-count: 1
@@ -156,7 +156,7 @@ jobs:
         fi
 
     - name: Post failure notice to Slack
-      uses: rtCamp/action-slack-notify@v2.3.3
+      uses: rtCamp/action-slack-notify@v2.4.0
       if: ${{ failure() && github.event_name != 'pull_request' }}
       env:
         SLACK_ICON: https://github.com/knative.png?size=48
