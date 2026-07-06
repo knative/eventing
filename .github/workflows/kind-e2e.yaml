@@ -69,10 +69,10 @@ jobs:
 
     # Install the latest release of ko
     - name: Install ko
-      uses: ko-build/setup-ko@v0.9
+      uses: ko-build/setup-ko@v0.10
 
     - name: Check out code onto GOPATH
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
 
     - name: Install KinD
       # TODO: replace with chainguard-dev/actions/setup-kind
@@ -156,7 +156,7 @@ jobs:
         fi
 
     - name: Post failure notice to Slack
-      uses: rtCamp/action-slack-notify@v2.3.3
+      uses: rtCamp/action-slack-notify@v2.4.0
       if: ${{ failure() && github.event_name != 'pull_request' }}
       env:
         SLACK_ICON: https://github.com/knative.png?size=48
