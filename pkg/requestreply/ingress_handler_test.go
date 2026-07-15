@@ -24,6 +24,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
@@ -208,6 +209,51 @@ func TestHandlerServeHttp(t *testing.T) {
 			assert.Equal(t, testCase.statusCode, result.StatusCode)
 		})
 	}
+}
+
+func TestHandleReplyEventIgnoresDuplicateReplyWithoutBlocking(t *testing.T) {
+	t.Parallel()
+
+	ctx, _ := reconcilertesting.SetupFakeContext(t, setupInformerSelector)
+
+	rr := makeRequestReply("my-request-reply", "default")
+	inflight := cloudevents.NewEvent()
+	inflight.SetID("1234567890")
+
+	firstReply := inflight.Clone()
+	if err := SetCorrelationId(&firstReply, "replyid", exampleKey, 0); err != nil {
+		t.Fatalf("failed to create first reply id: %v", err)
+	}
+
+	duplicateReply := inflight.Clone()
+	if err := SetCorrelationId(&duplicateReply, "replyid", exampleKey, 0); err != nil {
+		t.Fatalf("failed to create duplicate reply id: %v", err)
+	}
+
+	keyStore := &AESKeyStore{}
+	keyStore.addAesKey(rr.GetNamespacedName(), "key", exampleKey)
+
+	handler := NewHandler(zap.NewNop(), requestreplyinformerfake.Get(ctx), configmapinformerfake.Get(ctx).Lister().ConfigMaps("ns"), keyStore, 0)
+
+	// Fill the reply channel once to simulate an already delivered reply.
+	pr := handler.addEvent(httptest.NewRecorder(), &inflight, rr)
+	pr.replyEvent <- &firstReply
+
+	recorder := httptest.NewRecorder()
+	done := make(chan struct{})
+
+	go func() {
+		handler.handleReplyEvent(recorder, &duplicateReply, rr)
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("handleReplyEvent blocked on duplicate reply")
+	}
+
+	assert.Equal(t, http.StatusAccepted, recorder.Result().StatusCode)
 }
 
 type testServerHandler struct {
