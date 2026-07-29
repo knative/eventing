@@ -589,6 +589,70 @@ func TestSinkBindingDo(t *testing.T) {
 			},
 		},
 	}, {
+		name: "preserves existing volumes and volumeMounts on subject",
+		in: &duckv1.WithPod{
+			Spec: duckv1.WithPodSpec{
+				Template: duckv1.PodSpecable{
+					Spec: corev1.PodSpec{
+						Volumes: []corev1.Volume{{
+							Name: "user-volume",
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: "user-config",
+									},
+								},
+							},
+						}},
+						Containers: []corev1.Container{{
+							Name:  "blah",
+							Image: "busybox",
+							VolumeMounts: []corev1.VolumeMount{{
+								Name:      "user-volume",
+								MountPath: "/user-volume",
+							}},
+						}},
+					},
+				},
+			},
+		},
+		want: &duckv1.WithPod{
+			Spec: duckv1.WithPodSpec{
+				Template: duckv1.PodSpecable{
+					Spec: corev1.PodSpec{
+						Volumes: []corev1.Volume{{
+							Name: "user-volume",
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: "user-config",
+									},
+								},
+							},
+						}},
+						Containers: []corev1.Container{{
+							Name:  "blah",
+							Image: "busybox",
+							VolumeMounts: []corev1.VolumeMount{{
+								Name:      "user-volume",
+								MountPath: "/user-volume",
+							}},
+							Env: []corev1.EnvVar{{
+								Name:  "K_SINK",
+								Value: destination.URI.String(),
+							}, {
+								Name:  "K_CA_CERTS",
+								Value: caCert,
+							}, {
+								Name:  "K_CE_OVERRIDES",
+								Value: `{"extensions":{"foo":"bar"}}`,
+							}},
+						}},
+					},
+				},
+			},
+		},
+	}, {
 		name: "add trust bundles",
 		want: &duckv1.WithPod{
 			Spec: duckv1.WithPodSpec{
