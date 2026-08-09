@@ -65,7 +65,7 @@ func TestJobSinkDeleteJobCascadeSecretDeletion(t *testing.T) {
 	env.Test(ctx, t, jobsink.DeleteJobsCascadeSecretsDeletion(jobSinkName))
 }
 
-func TestJobSinkSuccessTLS(t *testing.T) {
+func TestJobSinkTLSAndOIDC(t *testing.T) {
 	t.Parallel()
 
 	ctx, env := global.Environment(
@@ -76,23 +76,17 @@ func TestJobSinkSuccessTLS(t *testing.T) {
 		eventshub.WithTLS(t),
 		environment.Managed(t),
 	)
+	t.Cleanup(env.Finish)
 
-	env.Test(ctx, t, jobsink.SuccessTLS())
-}
+	t.Run("TLS", func(t *testing.T) {
+		t.Parallel()
+		env.Test(ctx, t, jobsink.SuccessTLS())
+	})
 
-func TestJobSinkOIDC(t *testing.T) {
-	t.Parallel()
-
-	ctx, env := global.Environment(
-		knative.WithKnativeNamespace(system.Namespace()),
-		knative.WithLoggingConfig,
-		knative.WithObservabilityConfig,
-		k8s.WithEventListener,
-		eventshub.WithTLS(t),
-		environment.Managed(t),
-	)
-
-	env.Test(ctx, t, jobsink.OIDC())
+	t.Run("OIDC", func(t *testing.T) {
+		t.Parallel()
+		env.Test(ctx, t, jobsink.OIDC())
+	})
 }
 
 func TestJobSinkSupportsAuthZ(t *testing.T) {

@@ -52,7 +52,7 @@ func TestParallel(t *testing.T) {
 	env.Test(ctx, t, parallel.ParallelWithTwoBranches(channel_template.ImmemoryChannelTemplate()))
 }
 
-func TestParallelTLS(t *testing.T) {
+func TestParallelTLSAndOIDC(t *testing.T) {
 	t.Parallel()
 
 	ctx, env := global.Environment(
@@ -65,7 +65,17 @@ func TestParallelTLS(t *testing.T) {
 	)
 	t.Cleanup(env.Finish)
 
-	env.Test(ctx, t, parallel.ParallelWithTwoBranchesTLS(channel_template.ImmemoryChannelTemplate()))
+	// TLS and OIDC two-branch flows share the TLS environment; keep OIDC audience
+	// compliance (TestParallelSupportsOIDC) separate as it is OIDC-specific.
+	t.Run("TLS", func(t *testing.T) {
+		t.Parallel()
+		env.Test(ctx, t, parallel.ParallelWithTwoBranchesTLS(channel_template.ImmemoryChannelTemplate()))
+	})
+
+	t.Run("OIDC", func(t *testing.T) {
+		t.Parallel()
+		env.Test(ctx, t, parallel.ParallelWithTwoBranchesOIDC(channel_template.ImmemoryChannelTemplate()))
+	})
 }
 
 func TestParallelSupportsOIDC(t *testing.T) {
@@ -87,21 +97,6 @@ func TestParallelSupportsOIDC(t *testing.T) {
 	})))
 
 	env.Test(ctx, t, parallel.ParallelHasAudienceOfInputChannel(name, env.Namespace(), channel_impl.GVR(), channel_impl.GVK().Kind))
-}
-
-func TestParallelTwoBranchesWithOIDC(t *testing.T) {
-	t.Parallel()
-
-	ctx, env := global.Environment(
-		knative.WithKnativeNamespace(system.Namespace()),
-		knative.WithLoggingConfig,
-		knative.WithObservabilityConfig,
-		k8s.WithEventListener,
-		environment.Managed(t),
-		eventshub.WithTLS(t),
-	)
-
-	env.Test(ctx, t, parallel.ParallelWithTwoBranchesOIDC(channel_template.ImmemoryChannelTemplate()))
 }
 
 func TestParallelSupportsAuthZ(t *testing.T) {
