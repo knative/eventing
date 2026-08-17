@@ -19,13 +19,13 @@ limitations under the License.
 package v1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
-	acmev1 "github.com/cert-manager/cert-manager/pkg/apis/acme/v1"
+	apisacmev1 "github.com/cert-manager/cert-manager/pkg/apis/acme/v1"
 	versioned "github.com/cert-manager/cert-manager/pkg/client/clientset/versioned"
 	internalinterfaces "github.com/cert-manager/cert-manager/pkg/client/informers/externalversions/internalinterfaces"
-	v1 "github.com/cert-manager/cert-manager/pkg/client/listers/acme/v1"
+	acmev1 "github.com/cert-manager/cert-manager/pkg/client/listers/acme/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -36,7 +36,7 @@ import (
 // Orders.
 type OrderInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1.OrderLister
+	Lister() acmev1.OrderLister
 }
 
 type orderInformer struct {
@@ -57,21 +57,33 @@ func NewOrderInformer(client versioned.Interface, namespace string, resyncPeriod
 // one. This reduces memory footprint and number of connections to the server.
 func NewFilteredOrderInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
-		&cache.ListWatch{
+		cache.ToListWatcherWithWatchListSemantics(&cache.ListWatch{
 			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.AcmeV1().Orders(namespace).List(context.TODO(), options)
+				return client.AcmeV1().Orders(namespace).List(context.Background(), options)
 			},
 			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.AcmeV1().Orders(namespace).Watch(context.TODO(), options)
+				return client.AcmeV1().Orders(namespace).Watch(context.Background(), options)
 			},
-		},
-		&acmev1.Order{},
+			ListWithContextFunc: func(ctx context.Context, options metav1.ListOptions) (runtime.Object, error) {
+				if tweakListOptions != nil {
+					tweakListOptions(&options)
+				}
+				return client.AcmeV1().Orders(namespace).List(ctx, options)
+			},
+			WatchFuncWithContext: func(ctx context.Context, options metav1.ListOptions) (watch.Interface, error) {
+				if tweakListOptions != nil {
+					tweakListOptions(&options)
+				}
+				return client.AcmeV1().Orders(namespace).Watch(ctx, options)
+			},
+		}, client),
+		&apisacmev1.Order{},
 		resyncPeriod,
 		indexers,
 	)
@@ -82,9 +94,9 @@ func (f *orderInformer) defaultInformer(client versioned.Interface, resyncPeriod
 }
 
 func (f *orderInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&acmev1.Order{}, f.defaultInformer)
+	return f.factory.InformerFor(&apisacmev1.Order{}, f.defaultInformer)
 }
 
-func (f *orderInformer) Lister() v1.OrderLister {
-	return v1.NewOrderLister(f.Informer().GetIndexer())
+func (f *orderInformer) Lister() acmev1.OrderLister {
+	return acmev1.NewOrderLister(f.Informer().GetIndexer())
 }
