@@ -40,6 +40,7 @@ import (
 
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1/containersource"
+	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/reconciler/containersource/resources"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
@@ -274,18 +275,54 @@ func TestAllCases(t *testing.T) {
 				Eventf(corev1.EventTypeNormal, sourceReconciled, `ContainerSource reconciled: "%s/%s"`, testNS, sourceName),
 			},
 		},
+		{
+			Name: "does not wipe SinkBinding-injected deployment fields when trust bundle configmap appears",
+			Objects: []runtime.Object{
+				NewContainerSource(sourceName, testNS,
+					WithContainerSourceUID(sourceUID),
+					WithContainerSourceSpec(makeContainerSourceSpec(sinkDest)),
+					WithContainerSourceObjectMetaGeneration(generation),
+				),
+				makeSinkBinding(NewContainerSource(sourceName, testNS,
+					WithContainerSourceSpec(makeContainerSourceSpec(sinkDest)),
+					WithContainerSourceUID(sourceUID),
+				), &conditionTrue),
+				makeDeploymentWithSinkBindingInjectedEnv(NewContainerSource(sourceName, testNS,
+					WithContainerSourceSpec(makeContainerSourceSpec(sinkDest)),
+					WithContainerSourceUID(sourceUID),
+				), &conditionTrue),
+				makeTrustBundleConfigMap(),
+			},
+			Key: testNS + "/" + sourceName,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, sourceReconciled, `ContainerSource reconciled: "%s/%s"`, testNS, sourceName),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewContainerSource(sourceName, testNS,
+					WithContainerSourceUID(sourceUID),
+					WithContainerSourceSpec(makeContainerSourceSpec(sinkDest)),
+					WithContainerSourceObjectMetaGeneration(generation),
+					WithInitContainerSourceConditions,
+					WithContainerSourceStatusObservedGeneration(generation),
+					WithContainerSourcePropagateSinkbindingStatus(makeSinkBindingStatus(&conditionTrue)),
+					WithContainerSourcePropagateReceiveAdapterStatus(makeDeploymentWithSinkBindingInjectedEnv(NewContainerSource(sourceName, testNS,
+						WithContainerSourceSpec(makeContainerSourceSpec(sinkDest)),
+						WithContainerSourceUID(sourceUID),
+					), &conditionTrue)),
+				),
+			}},
+		},
 	}
 
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		ctx = addressable.WithDuck(ctx)
 		r := &Reconciler{
-			kubeClientSet:              fakekubeclient.Get(ctx),
-			eventingClientSet:          fakeeventingclient.Get(ctx),
-			containerSourceLister:      listers.GetContainerSourceLister(),
-			deploymentLister:           listers.GetDeploymentLister(),
-			sinkBindingLister:          listers.GetSinkBindingLister(),
-			trustBundleConfigMapLister: listers.GetConfigMapLister(),
+			kubeClientSet:         fakekubeclient.Get(ctx),
+			eventingClientSet:     fakeeventingclient.Get(ctx),
+			containerSourceLister: listers.GetContainerSourceLister(),
+			deploymentLister:      listers.GetDeploymentLister(),
+			sinkBindingLister:     listers.GetSinkBindingLister(),
 		}
 		return containersource.NewReconciler(ctx, logging.FromContext(ctx), fakeeventingclient.Get(ctx), listers.GetContainerSourceLister(), controller.GetEventRecorder(ctx), r)
 	},
@@ -369,6 +406,35 @@ func makeDeployment(source *sourcesv1.ContainerSource, available *corev1.Conditi
 			Template: template,
 		},
 		Status: status,
+	}
+}
+
+// makeDeploymentWithSinkBindingInjectedEnv simulates a Deployment already mutated by
+// SinkBinding's independent reconciler, which injects K_SINK (and friends) into every
+// container once bound - regardless of what ContainerSource's own reconcile computes.
+func makeDeploymentWithSinkBindingInjectedEnv(source *sourcesv1.ContainerSource, available *corev1.ConditionStatus) *appsv1.Deployment {
+	d := makeDeployment(source, available)
+	for i := range d.Spec.Template.Spec.Containers {
+		d.Spec.Template.Spec.Containers[i].Env = append(d.Spec.Template.Spec.Containers[i].Env, corev1.EnvVar{
+			Name:  "K_SINK",
+			Value: "http://" + sinkName + "." + testNS + ".svc.cluster.local",
+		})
+	}
+	return d
+}
+
+func makeTrustBundleConfigMap() *corev1.ConfigMap {
+	return &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-trust-bundle",
+			Namespace: testNS,
+			Labels: map[string]string{
+				eventingtls.TrustBundleLabelKey: eventingtls.TrustBundleLabelValue,
+			},
+		},
+		Data: map[string]string{
+			"ca.crt": "test-cert-data",
+		},
 	}
 }
 

@@ -19,12 +19,7 @@ package containersource
 import (
 	"context"
 
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/cache"
-	configmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap/filtered"
-	"knative.dev/pkg/kmeta"
-	"knative.dev/pkg/system"
 
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	deploymentinformer "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment"
@@ -38,7 +33,6 @@ import (
 	containersourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1/containersource"
 	sinkbindinginformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1/sinkbinding"
 	v1containersource "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1/containersource"
-	"knative.dev/eventing/pkg/eventingtls"
 )
 
 // NewController creates a Reconciler for ContainerSource and returns the result of NewImpl.
@@ -52,7 +46,6 @@ func NewController(
 	containersourceInformer := containersourceinformer.Get(ctx)
 	sinkbindingInformer := sinkbindinginformer.Get(ctx)
 	deploymentInformer := deploymentinformer.Get(ctx)
-	trustBundleConfigMapInformer := configmapinformer.Get(ctx, eventingtls.TrustBundleLabelSelector)
 
 	var globalResync func(obj interface{})
 	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"),
@@ -64,12 +57,11 @@ func NewController(
 	featureStore.WatchConfigs(cmw)
 
 	r := &Reconciler{
-		kubeClientSet:              kubeClient,
-		eventingClientSet:          eventingClient,
-		containerSourceLister:      containersourceInformer.Lister(),
-		deploymentLister:           deploymentInformer.Lister(),
-		sinkBindingLister:          sinkbindingInformer.Lister(),
-		trustBundleConfigMapLister: trustBundleConfigMapInformer.Lister(),
+		kubeClientSet:         kubeClient,
+		eventingClientSet:     eventingClient,
+		containerSourceLister: containersourceInformer.Lister(),
+		deploymentLister:      deploymentInformer.Lister(),
+		sinkBindingLister:     sinkbindingInformer.Lister(),
 	}
 	impl := v1containersource.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
 		return controller.Options{ConfigStore: featureStore}
@@ -90,28 +82,6 @@ func NewController(
 		FilterFunc: controller.FilterController(&v1.ContainerSource{}),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
-
-	trustBundleConfigMapInformer.Informer().AddEventHandler(controller.HandleAll(func(i interface{}) {
-		obj, err := kmeta.DeletionHandlingAccessor(i)
-		if err != nil {
-			return
-		}
-		if obj.GetNamespace() == system.Namespace() {
-			globalResync(i)
-			return
-		}
-
-		sources, err := containersourceInformer.Lister().ContainerSources(obj.GetNamespace()).List(labels.Everything())
-		if err != nil {
-			return
-		}
-		for _, src := range sources {
-			impl.EnqueueKey(types.NamespacedName{
-				Namespace: src.Namespace,
-				Name:      src.Name,
-			})
-		}
-	}))
 
 	return impl
 }

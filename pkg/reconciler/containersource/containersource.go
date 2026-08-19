@@ -28,7 +28,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
-	corev1listers "k8s.io/client-go/listers/core/v1"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
 	pkgreconciler "knative.dev/pkg/reconciler"
@@ -37,7 +36,6 @@ import (
 	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
 	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1/containersource"
 	listers "knative.dev/eventing/pkg/client/listers/sources/v1"
-	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/reconciler/containersource/resources"
 )
 
@@ -62,10 +60,9 @@ type Reconciler struct {
 	eventingClientSet clientset.Interface
 
 	// listers index properties about resources
-	containerSourceLister      listers.ContainerSourceLister
-	sinkBindingLister          listers.SinkBindingLister
-	deploymentLister           appsv1listers.DeploymentLister
-	trustBundleConfigMapLister corev1listers.ConfigMapLister
+	containerSourceLister listers.ContainerSourceLister
+	sinkBindingLister     listers.SinkBindingLister
+	deploymentLister      appsv1listers.DeploymentLister
 }
 
 // Check that our Reconciler implements Interface
@@ -89,14 +86,10 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1.ContainerSour
 }
 
 func (r *Reconciler) reconcileReceiveAdapter(ctx context.Context, source *v1.ContainerSource) (*appsv1.Deployment, error) {
-	podTemplate, err := eventingtls.AddTrustBundleVolumes(r.trustBundleConfigMapLister, source, &source.Spec.Template.Spec)
-	if err != nil {
-		return nil, fmt.Errorf("failed to add trust bundle volumes: %w", err)
-	}
-
-	updatedSource := source.DeepCopy() // Avoid update Spec of the given object
-	updatedSource.Spec.Template.Spec = *podTemplate
-	expected := resources.MakeDeployment(updatedSource)
+	// Trust bundle volumes are injected by SinkBinding (which is always bound to this
+	// exact Deployment), not here - adding them again would race with SinkBinding's own
+	// independent injection and cause spurious podTemplateChanged overwrites.
+	expected := resources.MakeDeployment(source)
 
 	ra, err := r.deploymentLister.Deployments(expected.Namespace).Get(expected.Name)
 	if apierrors.IsNotFound(err) {
