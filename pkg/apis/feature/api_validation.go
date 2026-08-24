@@ -77,7 +77,7 @@ func walk(value reflect.Value, paths ...string) reflect.Value {
 			return newVal
 		}
 		return walk(value.FieldByName(paths[0]), paths[1:]...)
-	case reflect.Ptr:
+	case reflect.Pointer:
 		return walk(reflect.Indirect(value), paths...)
 	default:
 		return reflect.Zero(value.Type())

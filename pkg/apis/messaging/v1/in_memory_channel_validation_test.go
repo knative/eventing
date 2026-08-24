@@ -17,12 +17,12 @@ limitations under the License.
 package v1
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
 	"knative.dev/pkg/system"
 
-	"golang.org/x/net/context"
 	authenticationv1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/apis"

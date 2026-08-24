@@ -34,14 +34,15 @@ type Args struct {
 
 // MakeReceiveAdapterEnvVar generates the environment variables for the pingsources
 func MakeReceiveAdapterEnvVar(args Args) []corev1.EnvVar {
-	envs := []corev1.EnvVar{{
+	envs := make([]corev1.EnvVar, 0, 5+len(args.ConfigEnvVars))
+	envs = append(envs, corev1.EnvVar{
 		Name: adapter.EnvConfigNamespace,
 		ValueFrom: &corev1.EnvVarSource{
 			FieldRef: &corev1.ObjectFieldSelector{
 				FieldPath: "metadata.namespace",
 			},
 		},
-	}, {
+	}, corev1.EnvVar{
 		// Needed by leader elector.
 		Name: system.NamespaceEnvKey,
 		ValueFrom: &corev1.EnvVarSource{
@@ -49,16 +50,16 @@ func MakeReceiveAdapterEnvVar(args Args) []corev1.EnvVar {
 				FieldPath: "metadata.namespace",
 			},
 		},
-	}, {
+	}, corev1.EnvVar{
 		Name:  adapter.EnvConfigLeaderElectionConfig,
 		Value: args.LeConfig,
-	}, {
+	}, corev1.EnvVar{
 		Name:  mtping.EnvNoShutdownAfter,
 		Value: strconv.Itoa(args.NoShutdownAfter),
-	}, {
+	}, corev1.EnvVar{
 		Name:  adapter.EnvSinkTimeout,
 		Value: strconv.Itoa(args.SinkTimeout),
-	}}
+	})
 
 	return append(envs, args.ConfigEnvVars...)
 }

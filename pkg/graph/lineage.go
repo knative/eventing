@@ -22,7 +22,7 @@ import (
 
 func (g *Graph) Lineage() []*Vertex {
 	sources := g.Sources()
-	lineagePaths := make(Vertices, len(sources))
+	lineagePaths := make(Vertices, 0, len(sources))
 	for _, s := range sources {
 		lineagePaths = append(lineagePaths, s.Lineage(EmptyEventType(), TransformFunctionContext{}))
 	}

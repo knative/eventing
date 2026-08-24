@@ -272,7 +272,7 @@ func createEventReceiverFunction(f *FanoutEventHandler) func(context.Context, ch
 
 			parentSpan := trace.SpanFromContext(ctx)
 
-			go func(e event.Event, h nethttp.Header, s trace.Span) {
+			go func(e event.Event, h nethttp.Header, s trace.Span) { //nolint:gosec // intentional async dispatch, must outlive the request-scoped context
 				// Run async dispatch with background context.
 				ctx = trace.ContextWithSpan(context.Background(), s)
 				// Any returned error is already logged in f.dispatch().

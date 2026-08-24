@@ -31,7 +31,7 @@ func GenerateEnvVarsFromStruct(prefix string, s interface{}) []corev1.EnvVar {
 
 	// Use reflection to inspect the struct fields
 	v := reflect.ValueOf(s)
-	if v.Kind() == reflect.Ptr {
+	if v.Kind() == reflect.Pointer {
 		v = v.Elem()
 	}
 
@@ -67,7 +67,7 @@ func GenerateEnvVarsFromStruct(prefix string, s interface{}) []corev1.EnvVar {
 			envVarName = fmt.Sprintf("%s_%s", prefix, strings.ToUpper(tagName))
 		}
 
-		if field.Kind() == reflect.Ptr {
+		if field.Kind() == reflect.Pointer {
 			if field.IsNil() {
 				continue
 			}

@@ -40,12 +40,9 @@ linters:
     rules:
       - linters:
           - gosec
+          - prealloc
           - unparam
         path: test
-      - linters:
-          - staticcheck
-        text: "ST1003"  # A lot of "Api" instead of "API" names
-        path: pkg/reconciler/testing/v1/apiserversource.go
       - linters:
           - staticcheck
         text: "ST1001"  # Prohibit dot imports

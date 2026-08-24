@@ -122,6 +122,7 @@ func (r *Reconciler) reconcileController(ctx context.Context, crd *v1.CustomReso
 	}
 
 	// Source Duck controller context
+	//nolint:gosec // TODO: cancel is stored in runningController for cleanup on CRD deletion, which is not yet implemented (goroutine leak on CRD removal)
 	sdctx, cancel := context.WithCancel(r.ogctx)
 	// Source Duck controller instantiation
 	sd := sdc(sdctx, r.ogcmw)

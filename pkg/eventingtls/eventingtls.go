@@ -241,7 +241,7 @@ func loadCertPool(config ClientConfig) (*x509.CertPool, error) {
 			return nil
 		}
 
-		b, err := os.ReadFile(path)
+		b, err := os.ReadFile(path) //nolint:gosec // fixed platform-managed trust-bundle mount path
 		if err != nil {
 			return fmt.Errorf("failed to read file %q: %w", path, err)
 		}

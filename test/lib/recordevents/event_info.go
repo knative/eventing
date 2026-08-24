@@ -66,7 +66,7 @@ type EventInfo struct {
 func (ei *EventInfo) String() string {
 	var sb strings.Builder
 	sb.WriteString("-- EventInfo --\n")
-	sb.WriteString(fmt.Sprintf("--- Kind: %v ---\n", ei.Kind))
+	fmt.Fprintf(&sb, "--- Kind: %v ---\n", ei.Kind)
 	if ei.Event != nil {
 		sb.WriteString("--- Event ---\n")
 		sb.WriteString(ei.Event.String())
@@ -90,12 +90,12 @@ func (ei *EventInfo) String() string {
 		sb.WriteRune('\n')
 	}
 	if ei.StatusCode != 0 {
-		sb.WriteString(fmt.Sprintf("--- Status Code: %d ---\n", ei.StatusCode))
+		fmt.Fprintf(&sb, "--- Status Code: %d ---\n", ei.StatusCode)
 	}
 	sb.WriteString("--- Origin: '" + ei.Origin + "' ---\n")
 	sb.WriteString("--- Observer: '" + ei.Observer + "' ---\n")
 	sb.WriteString("--- Time: " + ei.Time.String() + " ---\n")
-	sb.WriteString(fmt.Sprintf("--- Sequence: %d ---\n", ei.Sequence))
+	fmt.Fprintf(&sb, "--- Sequence: %d ---\n", ei.Sequence)
 	sb.WriteString("--------------------\n")
 	return sb.String()
 }
@@ -112,8 +112,8 @@ type SearchedInfo struct {
 // Pretty print the SearchedInfor for error messages
 func (s *SearchedInfo) String() string {
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("%d events seen, last %d events (total events seen %d, events ignored %d):\n",
-		s.TotalEvent, len(s.LastNEvent), s.storeEventsSeen, s.storeEventsNotMine))
+	fmt.Fprintf(&sb, "%d events seen, last %d events (total events seen %d, events ignored %d):\n",
+		s.TotalEvent, len(s.LastNEvent), s.storeEventsSeen, s.storeEventsNotMine)
 	for _, ei := range s.LastNEvent {
 		sb.WriteString(ei.String())
 		sb.WriteRune('\n')

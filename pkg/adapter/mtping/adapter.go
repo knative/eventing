@@ -88,7 +88,7 @@ func GetNoShutDownAfterValue() int {
 	if str != "" {
 		second, err := strconv.Atoi(str)
 		if err != nil || second < 0 || second > 59 {
-			log.Printf("%s environment value is invalid. It must be a integer between 0 and 59. (got %s)", EnvNoShutdownAfter, str)
+			log.Printf("%s environment value is invalid. It must be a integer between 0 and 59. (got %s)", EnvNoShutdownAfter, str) //nolint:gosec // value is operator-controlled env var, not user input
 		} else {
 			return second
 		}

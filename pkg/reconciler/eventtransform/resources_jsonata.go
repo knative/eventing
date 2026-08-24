@@ -652,14 +652,15 @@ func jsonataCertificate(ctx context.Context, transform *eventing.EventTransform)
 // container, combining the transform file path, config watcher env vars, and
 // OTEL tracing env vars.
 func jsonataContainerEnvVars(cw *reconcilersource.ConfigWatcher) []corev1.EnvVar {
-	envVars := []corev1.EnvVar{
-		{
-			Name:  "JSONATA_TRANSFORM_FILE_NAME",
-			Value: filepath.Join(JsonataExpressionPath, JsonataExpressionDataKey),
-		},
-	}
-	envVars = append(envVars, cw.ToEnvVars()...)
-	envVars = append(envVars, otelTracingEnvVars(cw)...)
+	cwEnvVars := cw.ToEnvVars()
+	otelEnvVars := otelTracingEnvVars(cw)
+	envVars := make([]corev1.EnvVar, 0, 1+len(cwEnvVars)+len(otelEnvVars))
+	envVars = append(envVars, corev1.EnvVar{
+		Name:  "JSONATA_TRANSFORM_FILE_NAME",
+		Value: filepath.Join(JsonataExpressionPath, JsonataExpressionDataKey),
+	})
+	envVars = append(envVars, cwEnvVars...)
+	envVars = append(envVars, otelEnvVars...)
 	return envVars
 }
 
