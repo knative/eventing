@@ -18,11 +18,7 @@ package backoff_max
 
 import (
 	"context"
-	"fmt"
 	"net/http"
-	"sort"
-	"sync"
-	"time"
 
 	cetest "github.com/cloudevents/sdk-go/v2/test"
 	"github.com/stretchr/testify/require"
@@ -31,7 +27,6 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/eventshub"
-	"knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
 
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
@@ -67,12 +62,7 @@ func ChannelToSink() *feature.Feature {
 		eventshub.InputEvent(event),
 	))
 
-	f.Assert("receiver rejects the first four deliveries", assert.OnStore(receiverName).
-		MatchRejectedEvent(cetest.HasId(event.ID())).Exact(4))
-	f.Assert("receiver accepts the fifth delivery", assert.OnStore(receiverName).
-		MatchReceivedEvent(cetest.HasId(event.ID())).Exact(1))
-	f.Assert("retry delay stops growing at two seconds", assert.OnStore(receiverName).
-		Match(deliveriesFollowBackoff(event.ID(), []time.Duration{time.Second, 2 * time.Second, 2 * time.Second, 2 * time.Second})).Exact(5))
+	assertBackoffMax(f, receiverName, event.ID())
 
 	return f
 }
@@ -108,44 +98,5 @@ func installSubscription(channelName, subscriptionName, sinkName string) feature
 			},
 		}, metav1.CreateOptions{})
 		require.NoError(t, err)
-	}
-}
-
-func deliveriesFollowBackoff(id string, expected []time.Duration) eventshub.EventInfoMatcher {
-	type deliveryKey struct {
-		kind     eventshub.EventKind
-		sequence uint64
-	}
-
-	var mu sync.Mutex
-	seen := make(map[deliveryKey]eventshub.EventInfo, len(expected)+1)
-
-	return func(info eventshub.EventInfo) error {
-		if info.Event == nil || info.Event.ID() != id {
-			return fmt.Errorf("received a different event")
-		}
-
-		mu.Lock()
-		defer mu.Unlock()
-		seen[deliveryKey{kind: info.Kind, sequence: info.Sequence}] = info
-		if len(seen) < len(expected)+1 {
-			return nil
-		}
-
-		deliveries := make([]eventshub.EventInfo, 0, len(seen))
-		for _, delivery := range seen {
-			deliveries = append(deliveries, delivery)
-		}
-		sort.Slice(deliveries, func(i, j int) bool {
-			return deliveries[i].Time.Before(deliveries[j].Time)
-		})
-
-		for i, wait := range expected {
-			actual := deliveries[i+1].Time.Sub(deliveries[i].Time)
-			if actual < wait-500*time.Millisecond || actual > wait+3*time.Second {
-				return fmt.Errorf("delivery %d waited %s, expected %s", i+2, actual, wait)
-			}
-		}
-		return nil
 	}
 }

@@ -194,6 +194,9 @@ var WithDeadLetterSinkFromDestination = delivery.WithDeadLetterSinkFromDestinati
 // WithRetry adds the retry related config to a Trigger spec.
 var WithRetry = delivery.WithRetry
 
+// WithBackoffMax adds the maximum backoff duration to a Trigger spec.
+var WithBackoffMax = delivery.WithBackoffMax
+
 // WithTimeout adds the timeout related config to the config.
 var WithTimeout = delivery.WithTimeout
 
