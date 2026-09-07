@@ -18,6 +18,7 @@ package apiserver
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 
@@ -28,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
 	discoveryfake "k8s.io/client-go/discovery/fake"
 	"k8s.io/client-go/dynamic"
@@ -379,4 +381,241 @@ func TestAdapter_FailFast(t *testing.T) {
 			<-done
 		})
 	}
+}
+
+func TestAdapter_DisableCache(t *testing.T) {
+	ce := adaptertest.NewTestClient()
+
+	config := Config{
+		Namespaces: []string{"default"},
+		Resources: []ResourceWatch{{
+			GVR: schema.GroupVersionResource{
+				Version:  "v1",
+				Resource: "pods",
+			},
+		}},
+		EventMode:    "Resource",
+		DisableCache: true,
+	}
+
+	ctx, _ := pkgtesting.SetupFakeContext(t)
+
+	a := &apiServerAdapter{
+		ce:     ce,
+		logger: logging.FromContext(ctx),
+		config: config,
+
+		discover: makeDiscoveryClient(),
+		k8s:      makeDynamicClient(simplePod("foo", "default")),
+		source:   "unit-test",
+		name:     "unittest",
+	}
+
+	ctx, cancel := context.WithCancel(ctx)
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		err := a.Start(ctx)
+		if err != nil {
+			t.Logf("Start returned error: %v", err)
+		}
+	}()
+
+	cancel()
+	<-done
+}
+
+// TestAdapter_DisableCacheLightweightList verifies that DisableCache=true uses a
+// lightweight LIST (Limit=1) to obtain the current resourceVersion before watching,
+// rather than skipping LIST entirely (which would cause rv="" and replay all existing objects).
+func TestAdapter_DisableCacheLightweightList(t *testing.T) {
+	gvr := schema.GroupVersionResource{Version: "v1", Resource: "pods"}
+	tracker := &listOptionsTracker{}
+
+	dynClient := makeDynamicClient(simplePod("existing-pod", "default"))
+	trackedClient := &listOptsTrackingClient{Interface: dynClient, gvr: gvr, tracker: tracker}
+
+	config := Config{
+		Namespaces:   []string{"default"},
+		Resources:    []ResourceWatch{{GVR: gvr}},
+		EventMode:    "Resource",
+		DisableCache: true,
+	}
+
+	ctx, _ := pkgtesting.SetupFakeContext(t)
+	ctx, cancel := context.WithCancel(ctx)
+
+	a := &apiServerAdapter{
+		ce:       adaptertest.NewTestClient(),
+		logger:   logging.FromContext(ctx),
+		config:   config,
+		discover: makeDiscoveryClient(),
+		k8s:      trackedClient,
+		source:   "unit-test",
+		name:     "unittest",
+	}
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		_ = a.Start(ctx)
+	}()
+
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) && len(tracker.get()) == 0 {
+		time.Sleep(10 * time.Millisecond)
+	}
+	cancel()
+	<-done
+
+	opts := tracker.get()
+	if len(opts) == 0 {
+		t.Fatal("expected at least one LIST call to obtain resourceVersion, got none")
+	}
+	for _, o := range opts {
+		if o.Limit != 1 {
+			t.Errorf("expected LIST with Limit=1 (lightweight), got Limit=%d", o.Limit)
+		}
+	}
+}
+
+// TestAdapter_DisableCacheEventDelivery verifies that watch events are converted
+// to CloudEvents and delivered to the sink when DisableCache=true.
+func TestAdapter_DisableCacheEventDelivery(t *testing.T) {
+	testCE := adaptertest.NewTestClient()
+	gvr := schema.GroupVersionResource{Version: "v1", Resource: "pods"}
+
+	fakeWatcher := watch.NewRaceFreeFake()
+	scheme := runtime.NewScheme()
+	_ = corev1.AddToScheme(scheme)
+	dynClient := dynamicfake.NewSimpleDynamicClient(scheme, simplePod("existing-pod", "default"))
+	dynClient.PrependReactor("list", "pods", func(_ kubetesting.Action) (bool, runtime.Object, error) {
+		list := &unstructured.UnstructuredList{}
+		list.SetResourceVersion("100")
+		return true, list, nil
+	})
+	dynClient.PrependWatchReactor("pods", func(_ kubetesting.Action) (bool, watch.Interface, error) {
+		return true, fakeWatcher, nil
+	})
+
+	config := Config{
+		Namespaces:   []string{"default"},
+		Resources:    []ResourceWatch{{GVR: gvr}},
+		EventMode:    "Resource",
+		DisableCache: true,
+	}
+
+	ctx, _ := pkgtesting.SetupFakeContext(t)
+	ctx, cancel := context.WithCancel(ctx)
+
+	a := &apiServerAdapter{
+		ce:        testCE,
+		logger:    logging.FromContext(ctx),
+		config:    config,
+		discover:  makeDiscoveryClient(),
+		k8s:       dynClient,
+		source:    "unit-test",
+		name:      "unittest",
+		namespace: "default",
+	}
+
+	// Pre-buffer the event before starting the adapter. The fake watcher has a
+	// 100-item channel; the adapter will drain it once the Watch() call is made.
+	newPod := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "v1",
+			"kind":       "Pod",
+			"metadata": map[string]interface{}{
+				"name":            "new-pod",
+				"namespace":       "default",
+				"resourceVersion": "12345",
+			},
+		},
+	}
+	fakeWatcher.Add(newPod)
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		_ = a.Start(ctx)
+	}()
+
+	// Poll until at least one CloudEvent is sent (or timeout).
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) && len(testCE.Sent()) == 0 {
+		time.Sleep(50 * time.Millisecond)
+	}
+
+	cancel()
+	<-done
+
+	if len(testCE.Sent()) == 0 {
+		t.Error("expected at least one CloudEvent to be sent, but none were received")
+	}
+}
+
+// listOptionsTracker records ListOptions from List calls for later assertion.
+type listOptionsTracker struct {
+	mu      sync.Mutex
+	options []metav1.ListOptions
+}
+
+func (t *listOptionsTracker) record(opts metav1.ListOptions) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.options = append(t.options, opts)
+}
+
+func (t *listOptionsTracker) get() []metav1.ListOptions {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	result := make([]metav1.ListOptions, len(t.options))
+	copy(result, t.options)
+	return result
+}
+
+// listOptsTrackingClient wraps dynamic.Interface to record List calls for a specific GVR.
+type listOptsTrackingClient struct {
+	dynamic.Interface
+	gvr     schema.GroupVersionResource
+	tracker *listOptionsTracker
+}
+
+func (c *listOptsTrackingClient) Resource(gvr schema.GroupVersionResource) dynamic.NamespaceableResourceInterface {
+	return &listOptsTrackingResourceClient{
+		NamespaceableResourceInterface: c.Interface.Resource(gvr),
+		gvr:                            gvr,
+		targetGVR:                      c.gvr,
+		tracker:                        c.tracker,
+	}
+}
+
+type listOptsTrackingResourceClient struct {
+	dynamic.NamespaceableResourceInterface
+	gvr       schema.GroupVersionResource
+	targetGVR schema.GroupVersionResource
+	tracker   *listOptionsTracker
+}
+
+func (r *listOptsTrackingResourceClient) Namespace(ns string) dynamic.ResourceInterface {
+	return &listOptsTrackingNamespacedClient{
+		ResourceInterface: r.NamespaceableResourceInterface.Namespace(ns),
+		gvr:               r.gvr,
+		targetGVR:         r.targetGVR,
+		tracker:           r.tracker,
+	}
+}
+
+type listOptsTrackingNamespacedClient struct {
+	dynamic.ResourceInterface
+	gvr       schema.GroupVersionResource
+	targetGVR schema.GroupVersionResource
+	tracker   *listOptionsTracker
+}
+
+func (r *listOptsTrackingNamespacedClient) List(ctx context.Context, opts metav1.ListOptions) (*unstructured.UnstructuredList, error) {
+	if r.gvr == r.targetGVR {
+		r.tracker.record(opts)
+	}
+	return r.ResourceInterface.List(ctx, opts)
 }

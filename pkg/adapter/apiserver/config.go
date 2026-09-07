@@ -74,4 +74,9 @@ type Config struct {
 	// (via the features.knative.dev/apiserversource-skip-permissions-check annotation), and the ApiServerSource
 	// adapter should not keep trying to establish watches on resources that it perhaps does not have permissions for.
 	FailFast bool `json:"failFast,omitempty"`
+
+	// DisableCache if true, the adapter skips the initial LIST call and only watches for new events.
+	// This reduces API server load when watching resources across many namespaces.
+	// Pre-existing objects will not emit events on adapter startup.
+	DisableCache bool `json:"disableCache,omitempty"`
 }
