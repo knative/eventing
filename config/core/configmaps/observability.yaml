@@ -23,7 +23,7 @@ metadata:
     app.kubernetes.io/version: devel
     app.kubernetes.io/name: knative-eventing
   annotations:
-    knative.dev/example-checksum: "0270bb17"
+    knative.dev/example-checksum: "afa5507a"
 data:
   _example: |
     ################################
@@ -57,6 +57,11 @@ data:
     # metrics-export-interval specifies the global metrics reporting period for control and data plane components.
     # If a zero or negative value is passed the default reporting OTel period is used (60 secs).
     metrics-export-interval: 60s
+
+    # metrics-attributes-deny is a comma-separated list of metric attribute keys to filter
+    # out from all metrics. This can help prevent OOM issues caused by unbounded
+    # metric cardinality in production (e.g. cloudevents.type, messaging.destination.name).
+    metrics-attributes-deny: ""
 
     # sink-event-error-reporting.enable whether the adapter reports a kube event to the CRD indicating
     # a failure to send a cloud event to the sink.
