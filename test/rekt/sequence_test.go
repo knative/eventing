@@ -51,7 +51,7 @@ func TestSequence(t *testing.T) {
 	env.Test(ctx, t, sequence.SequenceTest(channel_template.ImmemoryChannelTemplate()))
 }
 
-func TestSequenceTLS(t *testing.T) {
+func TestSequenceTLSAndOIDC(t *testing.T) {
 	t.Parallel()
 
 	ctx, env := global.Environment(
@@ -62,8 +62,18 @@ func TestSequenceTLS(t *testing.T) {
 		environment.Managed(t),
 		eventshub.WithTLS(t),
 	)
+	t.Cleanup(env.Finish)
 
-	env.Test(ctx, t, sequence.SequenceTestTLS(channel_template.ImmemoryChannelTemplate()))
+	// Keep TestSequenceSupportsOIDC separate: audience/compliance only, no TLS path.
+	t.Run("TLS", func(t *testing.T) {
+		t.Parallel()
+		env.Test(ctx, t, sequence.SequenceTestTLS(channel_template.ImmemoryChannelTemplate()))
+	})
+
+	t.Run("OIDC", func(t *testing.T) {
+		t.Parallel()
+		env.TestSet(ctx, t, sequence.SequenceSendsEventWithOIDC())
+	})
 }
 
 func TestSequenceSupportsOIDC(t *testing.T) {
@@ -84,21 +94,6 @@ func TestSequenceSupportsOIDC(t *testing.T) {
 	})))
 
 	env.Test(ctx, t, sequence.SequenceHasAudienceOfInputChannel(name, env.Namespace(), channel_impl.GVR(), channel_impl.GVK().Kind))
-}
-
-func TestSequenceSendsEventsOIDC(t *testing.T) {
-	t.Parallel()
-
-	ctx, env := global.Environment(
-		knative.WithKnativeNamespace(system.Namespace()),
-		knative.WithLoggingConfig,
-		knative.WithObservabilityConfig,
-		k8s.WithEventListener,
-		environment.Managed(t),
-		eventshub.WithTLS(t),
-	)
-
-	env.TestSet(ctx, t, sequence.SequenceSendsEventWithOIDC())
 }
 
 func TestSequenceSupportsAuthZ(t *testing.T) {
