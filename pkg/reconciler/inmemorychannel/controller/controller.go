@@ -111,7 +111,11 @@ func NewController(
 	})
 	r.uriResolver = resolver.NewURIResolverFromTracker(ctx, impl.Tracker)
 
-	inmemorychannelInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
+	inmemorychannelInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    impl.Enqueue,
+		UpdateFunc: controller.PassNew(impl.Enqueue),
+		DeleteFunc: impl.Tracker.OnDeletedObserver,
+	})
 
 	// Set up watches for dispatcher resources we care about, since any changes to these
 	// resources will affect our Channels. So, set up a watch here, that will cause
