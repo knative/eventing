@@ -15,7 +15,6 @@ package testing
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
@@ -84,13 +83,13 @@ func WithInMemoryChannelSubscribers(subscribers []eventingv1.SubscriberSpec) InM
 
 func WithInMemoryChannelDeploymentFailed(reason, message string) InMemoryChannelOption {
 	return func(imc *v1.InMemoryChannel) {
-		imc.Status.MarkDispatcherFailed(reason, message)
+		imc.Status.MarkDispatcherFailed(reason, "%s", message)
 	}
 }
 
 func WithInMemoryChannelDeploymentUnknown(reason, message string) InMemoryChannelOption {
 	return func(imc *v1.InMemoryChannel) {
-		imc.Status.MarkDispatcherUnknown(reason, message)
+		imc.Status.MarkDispatcherUnknown(reason, "%s", message)
 	}
 }
 
@@ -108,7 +107,7 @@ func WithInMemoryChannelDeploymentReady() InMemoryChannelOption {
 
 func WithInMemoryChannelServicetNotReady(reason, message string) InMemoryChannelOption {
 	return func(imc *v1.InMemoryChannel) {
-		imc.Status.MarkServiceFailed(reason, message)
+		imc.Status.MarkServiceFailed(reason, "%s", message)
 	}
 }
 
@@ -120,7 +119,7 @@ func WithInMemoryChannelServiceReady() InMemoryChannelOption {
 
 func WithInMemoryChannelChannelServiceNotReady(reason, message string) InMemoryChannelOption {
 	return func(imc *v1.InMemoryChannel) {
-		imc.Status.MarkChannelServiceFailed(reason, message)
+		imc.Status.MarkChannelServiceFailed(reason, "%s", message)
 	}
 }
 
@@ -132,7 +131,7 @@ func WithInMemoryChannelChannelServiceReady() InMemoryChannelOption {
 
 func WithInMemoryChannelEndpointsNotReady(reason, message string) InMemoryChannelOption {
 	return func(imc *v1.InMemoryChannel) {
-		imc.Status.MarkEndpointsFailed(reason, message)
+		imc.Status.MarkEndpointsFailed(reason, "%s", message)
 	}
 }
 
@@ -150,7 +149,7 @@ func WithInMemoryChannelEventPoliciesReady() InMemoryChannelOption {
 
 func WithInMemoryChannelEventPoliciesNotReady(reason, message string) InMemoryChannelOption {
 	return func(imc *v1.InMemoryChannel) {
-		imc.Status.MarkEventPoliciesFailed(reason, message)
+		imc.Status.MarkEventPoliciesFailed(reason, "%s", message)
 	}
 }
 
@@ -269,9 +268,8 @@ func WithInMemoryChannelDLSResolvedFailed() InMemoryChannelOption {
 	return func(imc *v1.InMemoryChannel) {
 		imc.Status.MarkDeadLetterSinkResolvedFailed(
 			"Unable to get the DeadLetterSink's URI",
-			fmt.Sprintf(`failed to get object test-namespace/test-dls: services "%s" not found`,
-				imc.Spec.Delivery.DeadLetterSink.Ref.Name,
-			),
+			`failed to get object test-namespace/test-dls: services "%s" not found`,
+			imc.Spec.Delivery.DeadLetterSink.Ref.Name,
 		)
 	}
 }

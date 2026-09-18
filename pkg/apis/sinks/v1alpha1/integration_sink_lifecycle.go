@@ -132,13 +132,13 @@ func (s *IntegrationSinkStatus) PropagateDeploymentStatus(d *appsv1.Deployment) 
 		if cond.Type == appsv1.DeploymentAvailable {
 			deploymentAvailableFound = true
 			if cond.Status == corev1.ConditionFalse {
-				IntegrationSinkCondSet.Manage(s).MarkFalse(IntegrationSinkConditionDeploymentReady, cond.Reason, cond.Message)
+				IntegrationSinkCondSet.Manage(s).MarkFalse(IntegrationSinkConditionDeploymentReady, cond.Reason, "%s", cond.Message)
 				return
 			}
 		}
 		// Also check Progressing condition for failures (e.g., ImagePullBackOff, insufficient quota)
 		if cond.Type == appsv1.DeploymentProgressing && cond.Status == corev1.ConditionFalse {
-			IntegrationSinkCondSet.Manage(s).MarkFalse(IntegrationSinkConditionDeploymentReady, cond.Reason, cond.Message)
+			IntegrationSinkCondSet.Manage(s).MarkFalse(IntegrationSinkConditionDeploymentReady, cond.Reason, "%s", cond.Message)
 			return
 		}
 	}
@@ -171,13 +171,13 @@ func (s *IntegrationSinkStatus) PropagateCertificateStatus(cs cmv1.CertificateSt
 
 	if topLevel.Status == cmmeta.ConditionUnknown {
 		IntegrationSinkCondSet.Manage(s).MarkUnknown(IntegrationSinkConditionCertificateReady,
-			IntegrationSinkCertificateNotReady, "Certificate is progressing, "+topLevel.Reason+" Message: "+topLevel.Message)
+			IntegrationSinkCertificateNotReady, "Certificate is progressing, %s Message: %s", topLevel.Reason, topLevel.Message)
 		return false
 	}
 
 	if topLevel.Status == cmmeta.ConditionFalse {
 		IntegrationSinkCondSet.Manage(s).MarkFalse(IntegrationSinkConditionCertificateReady,
-			IntegrationSinkCertificateNotReady, "Certificate is not ready, "+topLevel.Reason+" Message: "+topLevel.Message)
+			IntegrationSinkCertificateNotReady, "Certificate is not ready, %s Message: %s", topLevel.Reason, topLevel.Message)
 		return false
 	}
 
@@ -201,7 +201,7 @@ func (s *IntegrationSinkStatus) SetAddresses(addresses ...duckv1.Addressable) {
 // MarkFailedTrustBundlePropagation marks the IntegrationSink's SinkBindingTrustBundlePropagated condition to False with
 // the provided reason and message.
 func (s *IntegrationSinkStatus) MarkFailedTrustBundlePropagation(reason, message string) {
-	IntegrationSinkCondSet.Manage(s).MarkFalse(IntegrationSinkTrustBundlePropagated, reason, message)
+	IntegrationSinkCondSet.Manage(s).MarkFalse(IntegrationSinkTrustBundlePropagated, reason, "%s", message)
 }
 
 // MarkTrustBundlePropagated marks the IntegrationSink's SinkBindingTrustBundlePropagated condition to True.

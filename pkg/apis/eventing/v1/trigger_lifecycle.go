@@ -92,11 +92,11 @@ func (ts *TriggerStatus) PropagateBrokerCondition(bc *apis.Condition) {
 
 	switch {
 	case bc.Status == corev1.ConditionUnknown:
-		ts.MarkBrokerUnknown(bc.Reason, bc.Message)
+		ts.MarkBrokerUnknown(bc.Reason, "%s", bc.Message)
 	case bc.Status == corev1.ConditionTrue:
 		triggerCondSet.Manage(ts).MarkTrue(TriggerConditionBroker)
 	case bc.Status == corev1.ConditionFalse:
-		ts.MarkBrokerFailed(bc.Reason, bc.Message)
+		ts.MarkBrokerFailed(bc.Reason, "%s", bc.Message)
 	default:
 		ts.MarkBrokerUnknown("BrokerUnknown", "The status of Broker is invalid: %v", bc.Status)
 	}
@@ -123,11 +123,11 @@ func (ts *TriggerStatus) PropagateSubscriptionCondition(sc *apis.Condition) {
 
 	switch {
 	case sc.Status == corev1.ConditionUnknown:
-		ts.MarkSubscribedUnknown(sc.Reason, sc.Message)
+		ts.MarkSubscribedUnknown(sc.Reason, "%s", sc.Message)
 	case sc.Status == corev1.ConditionTrue:
 		triggerCondSet.Manage(ts).MarkTrue(TriggerConditionSubscribed)
 	case sc.Status == corev1.ConditionFalse:
-		ts.MarkNotSubscribed(sc.Reason, sc.Message)
+		ts.MarkNotSubscribed(sc.Reason, "%s", sc.Message)
 	default:
 		ts.MarkSubscribedUnknown("SubscriptionUnknown", "The status of Subscription is invalid: %v", sc.Status)
 	}
@@ -196,11 +196,11 @@ func (ts *TriggerStatus) PropagateDependencyStatus(ks *duckv1.Source) {
 
 	switch {
 	case kc.Status == corev1.ConditionUnknown:
-		ts.MarkDependencyUnknown(kc.Reason, kc.Message)
+		ts.MarkDependencyUnknown(kc.Reason, "%s", kc.Message)
 	case kc.Status == corev1.ConditionTrue:
 		ts.MarkDependencySucceeded()
 	case kc.Status == corev1.ConditionFalse:
-		ts.MarkDependencyFailed(kc.Reason, kc.Message)
+		ts.MarkDependencyFailed(kc.Reason, "%s", kc.Message)
 	default:
 		ts.MarkDependencyUnknown("DependencyUnknown", "The status of Dependency is invalid: %v", kc.Status)
 	}

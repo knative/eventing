@@ -104,7 +104,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, s *v1.Sequence) pkgrecon
 		channelable, err := r.reconcileChannel(ctx, channelResourceInterface, s, channelObjRef)
 		if err != nil {
 			err = fmt.Errorf("failed to reconcile channel %s at step %d: %w", ingressChannelName, i, err)
-			s.Status.MarkChannelsNotReady("ChannelsNotReady", err.Error())
+			s.Status.MarkChannelsNotReady("ChannelsNotReady", "%s", err.Error())
 			return err
 		}
 		channels = append(channels, channelable)
@@ -118,7 +118,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, s *v1.Sequence) pkgrecon
 		sub, err := r.reconcileSubscription(ctx, i, s)
 		if err != nil {
 			err := fmt.Errorf("failed to reconcile subscription resource for step: %d : %s", i, err)
-			s.Status.MarkSubscriptionsNotReady("SubscriptionsNotReady", err.Error())
+			s.Status.MarkSubscriptionsNotReady("SubscriptionsNotReady", "%s", err.Error())
 			return err
 		}
 		subs = append(subs, sub)

@@ -15,7 +15,6 @@ package testing
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
@@ -129,21 +128,21 @@ func WithBrokerReadyWithDLS(b *v1.Broker) {
 // WithTriggerChannelFailed calls .Status.MarkTriggerChannelFailed on the Broker.
 func WithTriggerChannelFailed(reason, msg string) BrokerOption {
 	return func(b *v1.Broker) {
-		b.Status.MarkTriggerChannelFailed(reason, msg)
+		b.Status.MarkTriggerChannelFailed(reason, "%s", msg)
 	}
 }
 
 // WithFilterFailed calls .Status.MarkFilterFailed on the Broker.
 func WithFilterFailed(reason, msg string) BrokerOption {
 	return func(b *v1.Broker) {
-		b.Status.MarkFilterFailed(reason, msg)
+		b.Status.MarkFilterFailed(reason, "%s", msg)
 	}
 }
 
 // WithIngressFailed calls .Status.MarkIngressFailed on the Broker.
 func WithIngressFailed(reason, msg string) BrokerOption {
 	return func(b *v1.Broker) {
-		b.Status.MarkIngressFailed(reason, msg)
+		b.Status.MarkIngressFailed(reason, "%s", msg)
 	}
 }
 
@@ -274,9 +273,8 @@ func WithDLSResolvedFailed() BrokerOption {
 	return func(b *v1.Broker) {
 		b.Status.MarkDeadLetterSinkResolvedFailed(
 			"Unable to get the DeadLetterSink's URI",
-			fmt.Sprintf(`brokers.eventing.knative.dev "%s" not found`,
-				b.Spec.Delivery.DeadLetterSink.Ref.Name,
-			),
+			`brokers.eventing.knative.dev "%s" not found`,
+			b.Spec.Delivery.DeadLetterSink.Ref.Name,
 		)
 	}
 }
@@ -309,7 +307,7 @@ func WithBrokerEventPoliciesReady() BrokerOption {
 
 func WithBrokerEventPoliciesNotReady(reason, message string) BrokerOption {
 	return func(b *v1.Broker) {
-		b.Status.MarkEventPoliciesFailed(reason, message)
+		b.Status.MarkEventPoliciesFailed(reason, "%s", message)
 	}
 }
 

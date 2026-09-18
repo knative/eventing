@@ -46,7 +46,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, ep *v1alpha1.EventPolicy
 	// and accordingly set the eventpolicy status
 	subjects, err := auth.ResolveSubjects(r.authResolver, ep)
 	if err != nil {
-		ep.Status.MarkSubjectsResolvedFailed("SubjectsNotResolved", err.Error())
+		ep.Status.MarkSubjectsResolvedFailed("SubjectsNotResolved", "%s", err.Error())
 		return fmt.Errorf("failed to resolve .spec.from[].ref: %w", err)
 	}
 	ep.Status.MarkSubjectsResolvedSucceeded()

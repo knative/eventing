@@ -64,11 +64,11 @@ func (s *IntegrationSourceStatus) PropagateContainerSourceStatus(status *v1.Cont
 	case cond.Status == corev1.ConditionTrue:
 		IntegrationCondSet.Manage(s).MarkTrue(IntegrationSourceConditionContainerSourceReady)
 	case cond.Status == corev1.ConditionFalse:
-		IntegrationCondSet.Manage(s).MarkFalse(IntegrationSourceConditionContainerSourceReady, cond.Reason, cond.Message)
+		IntegrationCondSet.Manage(s).MarkFalse(IntegrationSourceConditionContainerSourceReady, cond.Reason, "%s", cond.Message)
 	case cond.Status == corev1.ConditionUnknown:
-		IntegrationCondSet.Manage(s).MarkUnknown(IntegrationSourceConditionContainerSourceReady, cond.Reason, cond.Message)
+		IntegrationCondSet.Manage(s).MarkUnknown(IntegrationSourceConditionContainerSourceReady, cond.Reason, "%s", cond.Message)
 	default:
-		IntegrationCondSet.Manage(s).MarkUnknown(IntegrationSourceConditionContainerSourceReady, cond.Reason, cond.Message)
+		IntegrationCondSet.Manage(s).MarkUnknown(IntegrationSourceConditionContainerSourceReady, cond.Reason, "%s", cond.Message)
 	}
 
 	// Propagate ContainerSources AuthStatus to IntegrationSources AuthStatus

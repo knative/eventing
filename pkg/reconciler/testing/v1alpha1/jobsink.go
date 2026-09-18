@@ -98,7 +98,7 @@ func WithJobSinkEventPoliciesReady() JobSinkOption {
 // WithJobSinkEventPoliciesNotReady sets the JobSink's EventPoliciesReady condition to false.
 func WithJobSinkEventPoliciesNotReady(reason, message string) JobSinkOption {
 	return func(js *sinksv1alpha1.JobSink) {
-		js.Status.MarkEventPoliciesFailed(reason, message)
+		js.Status.MarkEventPoliciesFailed(reason, "%s", message)
 	}
 }
 

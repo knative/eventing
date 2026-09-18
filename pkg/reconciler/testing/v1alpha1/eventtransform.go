@@ -143,6 +143,6 @@ func WithEventTransformEventPoliciesReadyBecauseNoPolicyAndOIDCEnabled() EventTr
 
 func WithEventTransformEventPoliciesReady(reason, message string) EventTransformOption {
 	return func(transform *eventing.EventTransform) {
-		transform.Status.MarkEventPoliciesTrueWithReason(reason, message)
+		transform.Status.MarkEventPoliciesTrueWithReason(reason, "%s", message)
 	}
 }

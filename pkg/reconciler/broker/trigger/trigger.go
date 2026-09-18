@@ -398,7 +398,7 @@ func (r *Reconciler) propagateDependencyReadiness(ctx context.Context, t *eventi
 		logging.FromContext(ctx).Infow("The ObjectMeta Generation of dependency is not equal to the observedGeneration of status",
 			zap.Any("objectMetaGeneration", dependency.GetGeneration()),
 			zap.Any("statusObservedGeneration", dependency.Status.ObservedGeneration))
-		t.Status.MarkDependencyUnknown("GenerationNotEqual", "The dependency's metadata.generation, %q, is not equal to its status.observedGeneration, %q.", dependency.GetGeneration(), dependency.Status.ObservedGeneration)
+		t.Status.MarkDependencyUnknown("GenerationNotEqual", "The dependency's metadata.generation, %d, is not equal to its status.observedGeneration, %d.", dependency.GetGeneration(), dependency.Status.ObservedGeneration)
 		return nil
 	}
 	t.Status.PropagateDependencyStatus(dependency)

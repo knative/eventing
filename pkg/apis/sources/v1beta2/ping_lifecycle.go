@@ -110,9 +110,9 @@ func (s *PingSourceStatus) PropagateDeploymentAvailability(d *appsv1.Deployment)
 			if cond.Status == corev1.ConditionTrue {
 				PingSourceCondSet.Manage(s).MarkTrue(PingSourceConditionDeployed)
 			} else if cond.Status == corev1.ConditionFalse {
-				PingSourceCondSet.Manage(s).MarkFalse(PingSourceConditionDeployed, cond.Reason, cond.Message)
+				PingSourceCondSet.Manage(s).MarkFalse(PingSourceConditionDeployed, cond.Reason, "%s", cond.Message)
 			} else if cond.Status == corev1.ConditionUnknown {
-				PingSourceCondSet.Manage(s).MarkUnknown(PingSourceConditionDeployed, cond.Reason, cond.Message)
+				PingSourceCondSet.Manage(s).MarkUnknown(PingSourceConditionDeployed, cond.Reason, "%s", cond.Message)
 			}
 		}
 	}

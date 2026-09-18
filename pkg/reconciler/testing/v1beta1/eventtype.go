@@ -103,13 +103,13 @@ func WithEventTypeBrokerExists(et *v1beta1.EventType) {
 
 func WithEventTypeBrokerFailed(reason, message string) EventTypeOption {
 	return func(et *v1beta1.EventType) {
-		et.Status.MarkBrokerFailed(reason, message)
+		et.Status.MarkBrokerFailed(reason, "%s", message)
 	}
 }
 
 func WithEventTypeBrokerUnknown(reason, message string) EventTypeOption {
 	return func(et *v1beta1.EventType) {
-		et.Status.MarkBrokerUnknown(reason, message)
+		et.Status.MarkBrokerUnknown(reason, "%s", message)
 	}
 }
 

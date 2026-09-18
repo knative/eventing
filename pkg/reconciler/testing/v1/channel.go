@@ -15,7 +15,6 @@ package testing
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
@@ -91,13 +90,13 @@ func WithChannelTemplate(typeMeta metav1.TypeMeta) ChannelOption {
 
 func WithBackingChannelFailed(reason, msg string) ChannelOption {
 	return func(c *messagingv1.Channel) {
-		c.Status.MarkBackingChannelFailed(reason, msg)
+		c.Status.MarkBackingChannelFailed(reason, "%s", msg)
 	}
 }
 
 func WithBackingChannelUnknown(reason, msg string) ChannelOption {
 	return func(c *messagingv1.Channel) {
-		c.Status.MarkBackingChannelUnknown(reason, msg)
+		c.Status.MarkBackingChannelUnknown(reason, "%s", msg)
 	}
 }
 
@@ -169,7 +168,7 @@ func WithChannelEventPoliciesReady() ChannelOption {
 
 func WithChannelEventPoliciesNotReady(reason, message string) ChannelOption {
 	return func(c *messagingv1.Channel) {
-		c.Status.MarkEventPoliciesFailed(reason, message)
+		c.Status.MarkEventPoliciesFailed(reason, "%s", message)
 	}
 }
 
@@ -200,9 +199,8 @@ func WithChannelDLSResolvedFailed() ChannelOption {
 	return func(c *messagingv1.Channel) {
 		c.Status.MarkDeadLetterSinkResolvedFailed(
 			"Unable to get the DeadLetterSink's URI",
-			fmt.Sprintf(`services "%s" not found`,
-				c.Spec.Delivery.DeadLetterSink.Ref.Name,
-			),
+			`services "%s" not found`,
+			c.Spec.Delivery.DeadLetterSink.Ref.Name,
 		)
 	}
 }
