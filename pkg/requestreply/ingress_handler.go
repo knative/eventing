@@ -215,7 +215,9 @@ func (h *IngressHandler) addEvent(responseWriter http.ResponseWriter, event *clo
 	pr := &proxiedRequest{
 		received:       time.Now(),
 		responseWriter: responseWriter,
-		replyEvent:     make(chan *cloudevents.Event, 1),
+		// capacity must stay 1: handleReplyEvent relies on a full buffer to
+		// detect and drop duplicate replies without blocking.
+		replyEvent: make(chan *cloudevents.Event, 1),
 	}
 	if h.entries[rr.GetNamespacedName()] == nil {
 		h.entries[rr.GetNamespacedName()] = make(map[string]*proxiedRequest)
@@ -230,6 +232,14 @@ func (h *IngressHandler) deleteEvent(event *cloudevents.Event, rr *v1alpha1.Requ
 	h.requestLock.Lock()
 	defer h.requestLock.Unlock()
 	delete(h.entries[rr.GetNamespacedName()], event.ID())
+}
+
+func (h *IngressHandler) getEvent(id string, rr *v1alpha1.RequestReply) (*proxiedRequest, bool) {
+	h.requestLock.RLock()
+	defer h.requestLock.RUnlock()
+
+	pr, ok := h.entries[rr.GetNamespacedName()][id]
+	return pr, ok
 }
 
 func (h *IngressHandler) handleNewEvent(ctx context.Context, responseWriter http.ResponseWriter, event *cloudevents.Event, rr *v1alpha1.RequestReply, headers http.Header) {
@@ -289,9 +299,6 @@ func (h *IngressHandler) handleNewEvent(ctx context.Context, responseWriter http
 }
 
 func (h *IngressHandler) handleReplyEvent(responseWriter http.ResponseWriter, event *cloudevents.Event, rr *v1alpha1.RequestReply) {
-	h.requestLock.RLock()
-	defer h.requestLock.RUnlock()
-
 	h.logger.Debug("handling a response event")
 
 	// TODO: with OIDC enabled, we can skip validation of the key if we validate the identity of the trigger making the request
@@ -336,15 +343,17 @@ func (h *IngressHandler) handleReplyEvent(responseWriter http.ResponseWriter, ev
 		return
 	}
 
-	responseWriter.WriteHeader(http.StatusAccepted)
-
 	id := strings.Split(replyIdString, ":")[0]
-	pr, ok := h.entries[rr.GetNamespacedName()][id]
+	pr, ok := h.getEvent(id, rr)
 	if !ok {
 		h.logger.Warn("no event found matching the reply id, discarding event", zap.String("reply id", id))
-		return
+	} else {
+		select {
+		case pr.replyEvent <- event:
+		default:
+			h.logger.Warn("reply event already delivered or duplicate reply received, discarding event", zap.String("reply id", id))
+		}
 	}
 
-	// send the reply event back to the original response writer
-	pr.replyEvent <- event
+	responseWriter.WriteHeader(http.StatusAccepted)
 }
