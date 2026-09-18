@@ -363,8 +363,11 @@ func TestReconcile(t *testing.T) {
 					WithTriggerOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled()),
 			}},
 		}, {
-			Name: "Creates subscription with retry from trigger",
+			Name: "Creates subscription with retry and backoff max from trigger",
 			Key:  testKey,
+			Ctx: feature.ToContext(context.Background(), feature.Flags{
+				feature.DeliveryBackoffMax: feature.Enabled,
+			}),
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
 					WithBrokerClass(eventing.MTChannelBrokerClassValue),
@@ -378,16 +381,54 @@ func TestReconcile(t *testing.T) {
 				NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
 					WithTriggerSubscriberURI(subscriberURI),
-					WithTriggerRetry(5, nil, nil)),
+					WithTriggerRetry(5, nil, nil),
+					withTriggerBackoffMax("PT2S")),
 			},
 			WantCreates: []runtime.Object{
-				resources.NewSubscription(ctx, makeTrigger(testNS), createTriggerChannelRef(), makeServiceURI(), makeBrokerRef(), makeDelivery(nil, ptr.Int32(5), nil, nil)),
+				resources.NewSubscription(ctx, makeTrigger(testNS), createTriggerChannelRef(), makeServiceURI(), makeBrokerRef(), makeDeliveryWithBackoffMax(nil, ptr.Int32(5), nil, nil, "PT2S")),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
 					WithTriggerSubscriberURI(subscriberURI),
 					WithTriggerRetry(5, nil, nil),
+					withTriggerBackoffMax("PT2S"),
+					WithTriggerBrokerReady(),
+					WithTriggerDependencyReady(),
+					WithTriggerSubscriberResolvedSucceeded(),
+					WithTriggerDeadLetterSinkNotConfigured(),
+					WithTriggerSubscribedUnknown("SubscriptionNotConfigured", "Subscription has not yet been reconciled."),
+					WithTriggerStatusSubscriberURI(subscriberURI),
+					WithTriggerOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled()),
+			}},
+		}, {
+			Name: "Creates subscription with backoff max from broker",
+			Key:  testKey,
+			Ctx: feature.ToContext(context.Background(), feature.Flags{
+				feature.DeliveryBackoffMax: feature.Enabled,
+			}),
+			Objects: []runtime.Object{
+				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
+					WithBrokerConfig(config()),
+					WithInitBrokerConditions,
+					WithBrokerReady,
+					WithChannelAddressAnnotation(triggerChannelURL),
+					WithChannelAPIVersionAnnotation(triggerChannelAPIVersion),
+					WithChannelKindAnnotation(triggerChannelKind),
+					WithChannelNameAnnotation(triggerChannelName),
+					withBrokerBackoffMax("PT2S")),
+				NewTrigger(triggerName, testNS, brokerName,
+					WithTriggerUID(triggerUID),
+					WithTriggerSubscriberURI(subscriberURI)),
+			},
+			WantCreates: []runtime.Object{
+				resources.NewSubscription(ctx, makeTrigger(testNS), createTriggerChannelRef(), makeServiceURI(), makeBrokerRef(), makeDeliveryWithBackoffMax(nil, nil, nil, nil, "PT2S")),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewTrigger(triggerName, testNS, brokerName,
+					WithTriggerUID(triggerUID),
+					WithTriggerSubscriberURI(subscriberURI),
 					WithTriggerBrokerReady(),
 					WithTriggerDependencyReady(),
 					WithTriggerSubscriberResolvedSucceeded(),
@@ -1993,6 +2034,24 @@ func makeBrokerRefInDifferentNamespace() *duckv1.Destination {
 	}
 }
 
+func withBrokerBackoffMax(backoffMax string) BrokerOption {
+	return func(b *eventingv1.Broker) {
+		if b.Spec.Delivery == nil {
+			b.Spec.Delivery = new(eventingduckv1.DeliverySpec)
+		}
+		b.Spec.Delivery.BackoffMax = pointer.String(backoffMax)
+	}
+}
+
+func withTriggerBackoffMax(backoffMax string) TriggerOption {
+	return func(t *eventingv1.Trigger) {
+		if t.Spec.Delivery == nil {
+			t.Spec.Delivery = new(eventingduckv1.DeliverySpec)
+		}
+		t.Spec.Delivery.BackoffMax = pointer.String(backoffMax)
+	}
+}
+
 func makeReplyDestinationViaBrokerFilter() *duckv1.Destination {
 	return &duckv1.Destination{
 		URI: &apis.URL{
@@ -2015,6 +2074,12 @@ func makeDelivery(dls *duckv1.Destination, retry *int32, backoffPolicy *eventing
 		BackoffDelay:   backoffDelay,
 		DeadLetterSink: dls,
 	}
+	return ds
+}
+
+func makeDeliveryWithBackoffMax(dls *duckv1.Destination, retry *int32, backoffPolicy *eventingduckv1.BackoffPolicyType, backoffDelay *string, backoffMax string) *eventingduckv1.DeliverySpec {
+	ds := makeDelivery(dls, retry, backoffPolicy, backoffDelay)
+	ds.BackoffMax = pointer.String(backoffMax)
 	return ds
 }
 

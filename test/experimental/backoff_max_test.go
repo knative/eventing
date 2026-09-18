@@ -42,4 +42,5 @@ func TestBackoffMax(t *testing.T) {
 	)
 
 	env.Test(ctx, t, backoff_max.ChannelToSink())
+	env.Test(ctx, t, backoff_max.BrokerToTrigger())
 }

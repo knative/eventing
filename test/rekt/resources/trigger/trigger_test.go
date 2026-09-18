@@ -287,6 +287,35 @@ func ExampleWithRetry() {
 	//     backoffDelay: "T0"
 }
 
+func ExampleWithBackoffMax() {
+	ctx := testlog.NewContext()
+	images := map[string]string{}
+	cfg := map[string]interface{}{
+		"name":       "foo",
+		"namespace":  "bar",
+		"brokerName": "baz",
+	}
+
+	trigger.WithBackoffMax("PT2S")(cfg)
+
+	files, err := manifest.ExecuteYAML(ctx, yaml, images, cfg)
+	if err != nil {
+		panic(err)
+	}
+
+	manifest.OutputYAML(os.Stdout, files)
+	// Output:
+	// apiVersion: eventing.knative.dev/v1
+	// kind: Trigger
+	// metadata:
+	//   name: foo
+	//   namespace: bar
+	// spec:
+	//   broker: baz
+	//   delivery:
+	//     backoffMax: "PT2S"
+}
+
 func ExampleWithNewFilters() {
 	ctx := testlog.NewContext()
 	images := map[string]string{}
