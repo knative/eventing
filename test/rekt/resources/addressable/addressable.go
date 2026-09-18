@@ -58,12 +58,34 @@ func Address(ctx context.Context, gvr schema.GroupVersionResource, name string, 
 
 func ValidateAddress(gvr schema.GroupVersionResource, name string, validate ValidateAddressFn, timings ...time.Duration) feature.StepFn {
 	return func(ctx context.Context, t feature.T) {
-		addr, err := Address(ctx, gvr, name, timings...)
+		interval, timeout := k8s.PollTimings(ctx, timings)
+		var validateErr error
+		err := wait.PollUntilContextTimeout(ctx, interval, timeout, true, func(ctx context.Context) (bool, error) {
+			addr, err := k8s.Address(ctx, gvr, name)
+			if err != nil {
+				if apierrors.IsNotFound(err) {
+					// keep polling
+					return false, nil
+				}
+				// seems fatal.
+				return false, err
+			}
+			if addr == nil {
+				// keep polling
+				return false, nil
+			}
+			if validateErr = validate(addr); validateErr != nil {
+				// address exists but doesn't satisfy validate yet, keep polling
+				return false, nil
+			}
+			// success!
+			return true, nil
+		})
 		if err != nil {
-			t.Error(err)
-			return
-		}
-		if err := validate(addr); err != nil {
+			if validateErr != nil {
+				t.Error(validateErr)
+				return
+			}
 			t.Error(err)
 			return
 		}
