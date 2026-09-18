@@ -93,11 +93,11 @@ func (et *EventTypeStatus) PropagateBrokerStatus(bs *eventingv1.BrokerStatus) {
 	}
 	switch {
 	case bc.Status == corev1.ConditionUnknown:
-		et.MarkBrokerUnknown(bc.Reason, bc.Message)
+		et.MarkBrokerUnknown(bc.Reason, "%s", bc.Message)
 	case bc.Status == corev1.ConditionTrue:
 		eventTypeCondSet.Manage(et).MarkTrue(EventTypeConditionBrokerReady)
 	case bc.Status == corev1.ConditionFalse:
-		et.MarkBrokerFailed(bc.Reason, bc.Message)
+		et.MarkBrokerFailed(bc.Reason, "%s", bc.Message)
 	default:
 		et.MarkBrokerUnknown("BrokerUnknown", "The status of Broker is invalid: %v", bc.Status)
 	}

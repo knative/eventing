@@ -1483,7 +1483,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerStatusSubscriberURI(subscriberURI),
 					WithTriggerSubscriberResolvedSucceeded(),
 					WithTriggerDeadLetterSinkNotConfigured(),
-					WithTriggerDependencyUnknown("GenerationNotEqual", fmt.Sprintf("The dependency's metadata.generation, %q, is not equal to its status.observedGeneration, %q.", currentGeneration, outdatedGeneration)),
+					WithTriggerDependencyUnknown("GenerationNotEqual", fmt.Sprintf("The dependency's metadata.generation, %d, is not equal to its status.observedGeneration, %d.", currentGeneration, outdatedGeneration)),
 					WithTriggerOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled()),
 			}},
 		},

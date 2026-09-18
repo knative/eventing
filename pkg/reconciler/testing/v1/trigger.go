@@ -178,7 +178,7 @@ func WithTriggerBrokerReady() TriggerOption {
 // WithTriggerBrokerFailed marks the Broker as failed
 func WithTriggerBrokerFailed(reason, message string) TriggerOption {
 	return func(t *v1.Trigger) {
-		t.Status.MarkBrokerFailed(reason, message)
+		t.Status.MarkBrokerFailed(reason, "%s", message)
 	}
 }
 
@@ -192,7 +192,7 @@ func WithTriggerBrokerNotConfigured() TriggerOption {
 // WithTriggerBrokerUnknown marks the Broker as unknown
 func WithTriggerBrokerUnknown(reason, message string) TriggerOption {
 	return func(t *v1.Trigger) {
-		t.Status.MarkBrokerUnknown(reason, message)
+		t.Status.MarkBrokerUnknown(reason, "%s", message)
 	}
 }
 
@@ -209,13 +209,13 @@ func WithTriggerBrokerRef(gvk metav1.GroupVersionKind, name string, namespace st
 
 func WithTriggerNotSubscribed(reason, message string) TriggerOption {
 	return func(t *v1.Trigger) {
-		t.Status.MarkNotSubscribed(reason, message)
+		t.Status.MarkNotSubscribed(reason, "%s", message)
 	}
 }
 
 func WithTriggerSubscribedUnknown(reason, message string) TriggerOption {
 	return func(t *v1.Trigger) {
-		t.Status.MarkSubscribedUnknown(reason, message)
+		t.Status.MarkSubscribedUnknown(reason, "%s", message)
 	}
 }
 
@@ -295,13 +295,13 @@ func WithTriggerDependencyReady() TriggerOption {
 
 func WithTriggerDependencyFailed(reason, message string) TriggerOption {
 	return func(t *v1.Trigger) {
-		t.Status.MarkDependencyFailed(reason, message)
+		t.Status.MarkDependencyFailed(reason, "%s", message)
 	}
 }
 
 func WithTriggerDependencyUnknown(reason, message string) TriggerOption {
 	return func(t *v1.Trigger) {
-		t.Status.MarkDependencyUnknown(reason, message)
+		t.Status.MarkDependencyUnknown(reason, "%s", message)
 	}
 }
 
@@ -313,7 +313,7 @@ func WithTriggerSubscriberResolvedSucceeded() TriggerOption {
 
 func WithTriggerSubscriberResolvedFailed(reason, message string) TriggerOption {
 	return func(t *v1.Trigger) {
-		t.Status.MarkSubscriberResolvedFailed(reason, message)
+		t.Status.MarkSubscriberResolvedFailed(reason, "%s", message)
 	}
 }
 
@@ -331,7 +331,7 @@ func WithTriggerOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled() Trigger
 
 func WithTriggerOIDCIdentityCreatedFailed(reason, message string) TriggerOption {
 	return func(t *v1.Trigger) {
-		t.Status.MarkOIDCIdentityCreatedFailed(reason, message)
+		t.Status.MarkOIDCIdentityCreatedFailed(reason, "%s", message)
 	}
 }
 
@@ -353,7 +353,7 @@ func WithTriggerOIDCServiceAccountName(name string) TriggerOption {
 
 func WithTriggerDeadLetterSinkResolvedFailed(reason, message string) TriggerOption {
 	return func(t *v1.Trigger) {
-		t.Status.MarkDeadLetterSinkResolvedFailed(reason, message)
+		t.Status.MarkDeadLetterSinkResolvedFailed(reason, "%s", message)
 	}
 }
 
@@ -377,7 +377,7 @@ func WithTriggerDeadLetterSinkNotConfigured() TriggerOption {
 
 func WithTriggerSubscriberResolvedUnknown(reason, message string) TriggerOption {
 	return func(t *v1.Trigger) {
-		t.Status.MarkSubscriberResolvedUnknown(reason, message)
+		t.Status.MarkSubscriberResolvedUnknown(reason, "%s", message)
 	}
 }
 

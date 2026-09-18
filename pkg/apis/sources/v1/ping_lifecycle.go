@@ -123,9 +123,9 @@ func (s *PingSourceStatus) PropagateDeploymentAvailability(d *appsv1.Deployment)
 					PingSourceCondSet.Manage(s).MarkUnknown(PingSourceConditionDeployed, "DeploymentUpdating", "Deployment has %d unavailable replica(s).", d.Status.UnavailableReplicas)
 				}
 			} else if cond.Status == corev1.ConditionFalse {
-				PingSourceCondSet.Manage(s).MarkFalse(PingSourceConditionDeployed, cond.Reason, cond.Message)
+				PingSourceCondSet.Manage(s).MarkFalse(PingSourceConditionDeployed, cond.Reason, "%s", cond.Message)
 			} else if cond.Status == corev1.ConditionUnknown {
-				PingSourceCondSet.Manage(s).MarkUnknown(PingSourceConditionDeployed, cond.Reason, cond.Message)
+				PingSourceCondSet.Manage(s).MarkUnknown(PingSourceConditionDeployed, cond.Reason, "%s", cond.Message)
 			}
 		}
 	}

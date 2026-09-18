@@ -120,11 +120,11 @@ func (ts *EventTransformStatus) PropagateJsonataCertificateStatus(cs cmv1.Certif
 		return false
 	}
 	if topLevel.Status == cmmeta.ConditionUnknown {
-		transformJsonataConditionSet.Manage(ts).MarkUnknown(TransformationJsonataDeploymentReady, TransformationJsonataCertificateNotReady, "Certificate is progressing, "+topLevel.Reason+" Message: "+topLevel.Message)
+		transformJsonataConditionSet.Manage(ts).MarkUnknown(TransformationJsonataDeploymentReady, TransformationJsonataCertificateNotReady, "Certificate is progressing, %s Message: %s", topLevel.Reason, topLevel.Message)
 		return false
 	}
 	if topLevel.Status == cmmeta.ConditionFalse {
-		transformJsonataConditionSet.Manage(ts).MarkFalse(TransformationJsonataDeploymentReady, TransformationJsonataCertificateNotReady, "Certificate is not ready, "+topLevel.Reason+" Message: "+topLevel.Message)
+		transformJsonataConditionSet.Manage(ts).MarkFalse(TransformationJsonataDeploymentReady, TransformationJsonataCertificateNotReady, "Certificate is not ready, %s Message: %s", topLevel.Reason, topLevel.Message)
 		return false
 	}
 	return true
@@ -155,10 +155,10 @@ func (ts *EventTransformStatus) PropagateJsonataSinkBindingStatus(sbs sourcesv1.
 		return true
 	}
 	if topLevel.IsFalse() {
-		transformJsonataConditionSet.Manage(ts).MarkFalse(TransformationJsonataSinkBindingReady, topLevel.Reason, topLevel.Message)
+		transformJsonataConditionSet.Manage(ts).MarkFalse(TransformationJsonataSinkBindingReady, topLevel.Reason, "%s", topLevel.Message)
 		return false
 	}
-	transformJsonataConditionSet.Manage(ts).MarkUnknown(TransformationJsonataSinkBindingReady, topLevel.Reason, topLevel.Message)
+	transformJsonataConditionSet.Manage(ts).MarkUnknown(TransformationJsonataSinkBindingReady, topLevel.Reason, "%s", topLevel.Message)
 	return false
 }
 
@@ -187,9 +187,9 @@ func (ts *EventTransformStatus) propagateTransformationConditionStatus(cond *api
 	} else if cond.IsTrue() {
 		ts.GetConditionSet().Manage(ts).MarkTrue(TransformationConditionReady)
 	} else if cond.IsFalse() {
-		ts.GetConditionSet().Manage(ts).MarkFalse(TransformationConditionReady, cond.Reason, cond.Message)
+		ts.GetConditionSet().Manage(ts).MarkFalse(TransformationConditionReady, cond.Reason, "%s", cond.Message)
 	} else {
-		ts.GetConditionSet().Manage(ts).MarkUnknown(TransformationConditionReady, cond.Reason, cond.Message)
+		ts.GetConditionSet().Manage(ts).MarkUnknown(TransformationConditionReady, cond.Reason, "%s", cond.Message)
 	}
 }
 

@@ -80,11 +80,11 @@ func (s *ContainerSourceStatus) PropagateSinkBindingStatus(status *SinkBindingSt
 	case cond.Status == corev1.ConditionTrue:
 		containerCondSet.Manage(s).MarkTrue(ContainerSourceConditionSinkBindingReady)
 	case cond.Status == corev1.ConditionFalse:
-		containerCondSet.Manage(s).MarkFalse(ContainerSourceConditionSinkBindingReady, cond.Reason, cond.Message)
+		containerCondSet.Manage(s).MarkFalse(ContainerSourceConditionSinkBindingReady, cond.Reason, "%s", cond.Message)
 	case cond.Status == corev1.ConditionUnknown:
-		containerCondSet.Manage(s).MarkUnknown(ContainerSourceConditionSinkBindingReady, cond.Reason, cond.Message)
+		containerCondSet.Manage(s).MarkUnknown(ContainerSourceConditionSinkBindingReady, cond.Reason, "%s", cond.Message)
 	default:
-		containerCondSet.Manage(s).MarkUnknown(ContainerSourceConditionSinkBindingReady, cond.Reason, cond.Message)
+		containerCondSet.Manage(s).MarkUnknown(ContainerSourceConditionSinkBindingReady, cond.Reason, "%s", cond.Message)
 	}
 
 	// Propagate SinkBindings AuthStatus to containersources AuthStatus
@@ -101,9 +101,9 @@ func (s *ContainerSourceStatus) PropagateReceiveAdapterStatus(d *appsv1.Deployme
 			if cond.Status == corev1.ConditionTrue {
 				containerCondSet.Manage(s).MarkTrue(ContainerSourceConditionReceiveAdapterReady)
 			} else if cond.Status == corev1.ConditionFalse {
-				containerCondSet.Manage(s).MarkFalse(ContainerSourceConditionReceiveAdapterReady, cond.Reason, cond.Message)
+				containerCondSet.Manage(s).MarkFalse(ContainerSourceConditionReceiveAdapterReady, cond.Reason, "%s", cond.Message)
 			} else if cond.Status == corev1.ConditionUnknown {
-				containerCondSet.Manage(s).MarkUnknown(ContainerSourceConditionReceiveAdapterReady, cond.Reason, cond.Message)
+				containerCondSet.Manage(s).MarkUnknown(ContainerSourceConditionReceiveAdapterReady, cond.Reason, "%s", cond.Message)
 			}
 		}
 	}

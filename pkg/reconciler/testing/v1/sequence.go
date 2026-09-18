@@ -101,19 +101,19 @@ func WithSequenceChannelStatuses(channelStatuses []flowsv1.SequenceChannelStatus
 
 func WithSequenceChannelsNotReady(reason, message string) SequenceOption {
 	return func(p *flowsv1.Sequence) {
-		p.Status.MarkChannelsNotReady(reason, message)
+		p.Status.MarkChannelsNotReady(reason, "%s", message)
 	}
 }
 
 func WithSequenceSubscriptionsNotReady(reason, message string) SequenceOption {
 	return func(p *flowsv1.Sequence) {
-		p.Status.MarkSubscriptionsNotReady(reason, message)
+		p.Status.MarkSubscriptionsNotReady(reason, "%s", message)
 	}
 }
 
 func WithSequenceAddressableNotReady(reason, message string) SequenceOption {
 	return func(p *flowsv1.Sequence) {
-		p.Status.MarkAddressableNotReady(reason, message)
+		p.Status.MarkAddressableNotReady(reason, "%s", message)
 	}
 }
 
@@ -125,7 +125,7 @@ func WithSequenceEventPoliciesReady() SequenceOption {
 
 func WithSequenceEventPoliciesNotReady(reason, message string) SequenceOption {
 	return func(p *flowsv1.Sequence) {
-		p.Status.MarkEventPoliciesFailed(reason, message)
+		p.Status.MarkEventPoliciesFailed(reason, "%s", message)
 	}
 }
 

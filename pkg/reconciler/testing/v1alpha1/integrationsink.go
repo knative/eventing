@@ -101,6 +101,6 @@ func WithIntegrationSinkTrustBundlePropagatedReady() IntegrationSinkOption {
 
 func WithIntegrationSinkEventPoliciesReady(reason, message string) IntegrationSinkOption {
 	return func(s *v1alpha1.IntegrationSink) {
-		s.Status.MarkEventPoliciesTrueWithReason(reason, message)
+		s.Status.MarkEventPoliciesTrueWithReason(reason, "%s", message)
 	}
 }

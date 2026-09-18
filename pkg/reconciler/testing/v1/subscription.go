@@ -289,7 +289,7 @@ func MarkAddedToChannel(s *v1.Subscription) {
 
 func MarkNotAddedToChannel(reason, msg string) SubscriptionOption {
 	return func(s *v1.Subscription) {
-		s.Status.MarkNotAddedToChannel(reason, msg)
+		s.Status.MarkNotAddedToChannel(reason, "%s", msg)
 	}
 }
 
@@ -299,13 +299,13 @@ func MarkReferencesResolved(s *v1.Subscription) {
 
 func WithSubscriptionReferencesNotResolved(reason, msg string) SubscriptionOption {
 	return func(s *v1.Subscription) {
-		s.Status.MarkReferencesNotResolved(reason, msg)
+		s.Status.MarkReferencesNotResolved(reason, "%s", msg)
 	}
 }
 
 func WithSubscriptionReferencesResolvedUnknown(reason, msg string) SubscriptionOption {
 	return func(s *v1.Subscription) {
-		s.Status.MarkReferencesResolvedUnknown(reason, msg)
+		s.Status.MarkReferencesResolvedUnknown(reason, "%s", msg)
 	}
 }
 
@@ -336,7 +336,7 @@ func WithSubscriptionOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled() Su
 
 func WithSubscriptionOIDCIdentityCreatedFailed(reason, message string) SubscriptionOption {
 	return func(s *v1.Subscription) {
-		s.Status.MarkOIDCIdentityCreatedFailed(reason, message)
+		s.Status.MarkOIDCIdentityCreatedFailed(reason, "%s", message)
 	}
 }
 

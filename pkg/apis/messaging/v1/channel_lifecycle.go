@@ -122,11 +122,11 @@ func (cs *ChannelStatus) PropagateStatuses(chs *eventingduck.ChannelableStatus) 
 	} else {
 		switch {
 		case readyCondition.Status == corev1.ConditionUnknown:
-			cs.MarkBackingChannelUnknown(readyCondition.Reason, readyCondition.Message)
+			cs.MarkBackingChannelUnknown(readyCondition.Reason, "%s", readyCondition.Message)
 		case readyCondition.Status == corev1.ConditionTrue:
 			cs.MarkBackingChannelReady()
 		case readyCondition.Status == corev1.ConditionFalse:
-			cs.MarkBackingChannelFailed(readyCondition.Reason, readyCondition.Message)
+			cs.MarkBackingChannelFailed(readyCondition.Reason, "%s", readyCondition.Message)
 		default:
 			cs.MarkBackingChannelUnknown("BackingChannelUnknown", "The status of BackingChannel is invalid: %v", readyCondition.Status)
 		}

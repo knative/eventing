@@ -110,7 +110,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, p *v1.Parallel) pkgrecon
 		channelable, err := r.reconcileChannel(ctx, channelResourceInterface, p, channelObjRef)
 		if err != nil {
 			err = fmt.Errorf("failed to reconcile channel %s at step %d: %w", channelName, i, err)
-			p.Status.MarkChannelsNotReady("ChannelsNotReady", err.Error())
+			p.Status.MarkChannelsNotReady("ChannelsNotReady", "%s", err.Error())
 			return err
 		}
 		logging.FromContext(ctx).Infof("Reconciled Channel Object: %s/%s %+v", p.Namespace, channelName, channelable)

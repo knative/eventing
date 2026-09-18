@@ -424,7 +424,7 @@ func (r *Reconciler) reconcileChannelService(ctx context.Context, dispatcherName
 	expected, err := resources.NewK8sService(imc, resources.ExternalService(dispatcherNamespace, dispatcherName))
 	if err != nil {
 		logging.FromContext(ctx).Error("failed to create the channel service object", zap.Error(err))
-		imc.Status.MarkChannelServiceFailed("ChannelServiceFailed", fmt.Sprint("Channel Service failed: ", err))
+		imc.Status.MarkChannelServiceFailed("ChannelServiceFailed", "Channel Service failed: %v", err)
 		return nil, err
 	}
 
@@ -436,13 +436,13 @@ func (r *Reconciler) reconcileChannelService(ctx context.Context, dispatcherName
 			svc, err = r.kubeClientSet.CoreV1().Services(imc.Namespace).Create(ctx, expected, metav1.CreateOptions{})
 			if err != nil {
 				logging.FromContext(ctx).Error("failed to create the channel service", zap.Error(err))
-				imc.Status.MarkChannelServiceFailed("ChannelServiceFailed", fmt.Sprint("Channel Service failed: ", err))
+				imc.Status.MarkChannelServiceFailed("ChannelServiceFailed", "Channel Service failed: %v", err)
 				return nil, err
 			}
 			return svc, nil
 		}
 		logging.FromContext(ctx).Error("Unable to get the channel service", zap.Error(err))
-		imc.Status.MarkChannelServiceUnknown("ChannelServiceGetFailed", fmt.Sprint("Unable to get the channel service: ", err))
+		imc.Status.MarkChannelServiceUnknown("ChannelServiceGetFailed", "Unable to get the channel service: %v", err)
 		return nil, err
 	} else if !equality.Semantic.DeepEqual(svc.Spec, expected.Spec) {
 		svc = svc.DeepCopy()
@@ -451,7 +451,7 @@ func (r *Reconciler) reconcileChannelService(ctx context.Context, dispatcherName
 		svc, err = r.kubeClientSet.CoreV1().Services(imc.Namespace).Update(ctx, svc, metav1.UpdateOptions{})
 		if err != nil {
 			logging.FromContext(ctx).Error("failed to update the channel service", zap.Error(err))
-			imc.Status.MarkChannelServiceFailed("ChannelServiceFailed", fmt.Sprint("Channel Service failed: ", err))
+			imc.Status.MarkChannelServiceFailed("ChannelServiceFailed", "Channel Service failed: %v", err)
 			return nil, err
 		}
 	}
@@ -459,7 +459,7 @@ func (r *Reconciler) reconcileChannelService(ctx context.Context, dispatcherName
 	// Check to make sure that our IMC owns this service and if not, complain.
 	if !metav1.IsControlledBy(svc, imc) {
 		err := fmt.Errorf("inmemorychannel: %s/%s does not own Service: %q", imc.Namespace, imc.Name, svc.Name)
-		imc.Status.MarkChannelServiceFailed("ChannelServiceFailed", fmt.Sprint("Channel Service failed: ", err))
+		imc.Status.MarkChannelServiceFailed("ChannelServiceFailed", "Channel Service failed: %v", err)
 		return nil, err
 	}
 	return svc, nil

@@ -171,7 +171,7 @@ func WithApiServerSourceOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled()
 
 func WithApiServerSourceOIDCIdentityCreatedFailed(reason, message string) ApiServerSourceOption {
 	return func(c *v1.ApiServerSource) {
-		c.Status.MarkOIDCIdentityCreatedFailed(reason, message)
+		c.Status.MarkOIDCIdentityCreatedFailed(reason, "%s", message)
 	}
 }
 

@@ -101,19 +101,19 @@ func WithFlowsParallelIngressChannelStatus(status flowsv1.ParallelChannelStatus)
 
 func WithFlowsParallelChannelsNotReady(reason, message string) FlowsParallelOption {
 	return func(p *flowsv1.Parallel) {
-		p.Status.MarkChannelsNotReady(reason, message)
+		p.Status.MarkChannelsNotReady(reason, "%s", message)
 	}
 }
 
 func WithFlowsParallelSubscriptionsNotReady(reason, message string) FlowsParallelOption {
 	return func(p *flowsv1.Parallel) {
-		p.Status.MarkSubscriptionsNotReady(reason, message)
+		p.Status.MarkSubscriptionsNotReady(reason, "%s", message)
 	}
 }
 
 func WithFlowsParallelAddressableNotReady(reason, message string) FlowsParallelOption {
 	return func(p *flowsv1.Parallel) {
-		p.Status.MarkAddressableNotReady(reason, message)
+		p.Status.MarkAddressableNotReady(reason, "%s", message)
 	}
 }
 
@@ -125,7 +125,7 @@ func WithFlowsParallelEventPoliciesReady() FlowsParallelOption {
 
 func WithFlowsParallelEventPoliciesNotReady(reason, message string) FlowsParallelOption {
 	return func(p *flowsv1.Parallel) {
-		p.Status.MarkEventPoliciesFailed(reason, message)
+		p.Status.MarkEventPoliciesFailed(reason, "%s", message)
 	}
 }
 

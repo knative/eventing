@@ -112,9 +112,9 @@ func (s *ApiServerSourceStatus) PropagateDeploymentAvailability(d *appsv1.Deploy
 					apiserverCondSet.Manage(s).MarkUnknown(ApiServerConditionDeployed, "DeploymentUpdating", "Deployment has %d unavailable replica(s).", d.Status.UnavailableReplicas)
 				}
 			} else if cond.Status == corev1.ConditionFalse {
-				apiserverCondSet.Manage(s).MarkFalse(ApiServerConditionDeployed, cond.Reason, cond.Message)
+				apiserverCondSet.Manage(s).MarkFalse(ApiServerConditionDeployed, cond.Reason, "%s", cond.Message)
 			} else if cond.Status == corev1.ConditionUnknown {
-				apiserverCondSet.Manage(s).MarkUnknown(ApiServerConditionDeployed, cond.Reason, cond.Message)
+				apiserverCondSet.Manage(s).MarkUnknown(ApiServerConditionDeployed, cond.Reason, "%s", cond.Message)
 			}
 		}
 	}

@@ -88,7 +88,7 @@ func (sbs *SinkBindingStatus) InitializeConditions() {
 // MarkBindingUnavailable marks the SinkBinding's Ready condition to False with
 // the provided reason and message.
 func (sbs *SinkBindingStatus) MarkBindingUnavailable(reason, message string) {
-	sbCondSet.Manage(sbs).MarkFalse(SinkBindingConditionAvailable, reason, message)
+	sbCondSet.Manage(sbs).MarkFalse(SinkBindingConditionAvailable, reason, "%s", message)
 }
 
 // MarkBindingAvailable marks the SinkBinding's Ready condition to True.
@@ -99,7 +99,7 @@ func (sbs *SinkBindingStatus) MarkBindingAvailable() {
 // MarkFailedTrustBundlePropagation marks the SinkBinding's SinkBindingTrustBundlePropagated condition to False with
 // the provided reason and message.
 func (sbs *SinkBindingStatus) MarkFailedTrustBundlePropagation(reason, message string) {
-	sbCondSet.Manage(sbs).MarkFalse(SinkBindingTrustBundlePropagated, reason, message)
+	sbCondSet.Manage(sbs).MarkFalse(SinkBindingTrustBundlePropagated, reason, "%s", message)
 }
 
 // MarkTrustBundlePropagated marks the SinkBinding's SinkBindingTrustBundlePropagated condition to True.

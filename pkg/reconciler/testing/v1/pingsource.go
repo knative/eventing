@@ -125,7 +125,7 @@ func WithPingSourceOIDCIdentityCreatedSucceededBecauseOIDCFeatureDisabled() Ping
 
 func WithPingSourceOIDCIdentityCreatedFailed(reason, message string) PingSourceOption {
 	return func(c *v1.PingSource) {
-		c.Status.MarkOIDCIdentityCreatedFailed(reason, message)
+		c.Status.MarkOIDCIdentityCreatedFailed(reason, "%s", message)
 	}
 }
 
