@@ -25,6 +25,14 @@ import (
 	"knative.dev/pkg/kmeta"
 )
 
+const (
+	// DisableCacheAnnotation controls whether the adapter skips the initial LIST
+	// and only watches for new events, reducing API server load in large clusters.
+	DisableCacheAnnotation = "features.knative.dev/apiserversource-disable-cache"
+	// SkipPermissionsAnnotation controls whether the adapter skips permission checks on startup.
+	SkipPermissionsAnnotation = "features.knative.dev/apiserversource-skip-permissions-check"
+)
+
 // +genclient
 // +genreconciler
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
