@@ -129,7 +129,11 @@ func NewController(
 		impl.GlobalResync(sbInformer.Informer())
 	}
 
-	sbInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
+	sbInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    impl.Enqueue,
+		UpdateFunc: controller.PassNew(impl.Enqueue),
+		DeleteFunc: impl.Tracker.OnDeletedObserver,
+	})
 	namespaceInformer.Informer().AddEventHandler(controller.HandleAll(func(obj interface{}) {
 		ns, err := kmeta.DeletionHandlingAccessor(obj)
 		if err != nil {

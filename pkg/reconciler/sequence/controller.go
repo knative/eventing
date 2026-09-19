@@ -77,7 +77,11 @@ func NewController(
 	}
 
 	r.channelableTracker = duck.NewListableTrackerFromTracker(ctx, channelable.Get, impl.Tracker)
-	sequenceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
+	sequenceInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    impl.Enqueue,
+		UpdateFunc: controller.PassNew(impl.Enqueue),
+		DeleteFunc: impl.Tracker.OnDeletedObserver,
+	})
 
 	// Register handler for Subscriptions that are owned by Sequence, so that
 	// we get notified if they change.

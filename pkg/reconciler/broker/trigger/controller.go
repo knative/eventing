@@ -95,7 +95,11 @@ func NewController(
 
 	triggerInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: filterTriggers(featureStore, r.brokerLister),
-		Handler:    controller.HandleAll(impl.Enqueue),
+		Handler: cache.ResourceEventHandlerFuncs{
+			AddFunc:    impl.Enqueue,
+			UpdateFunc: controller.PassNew(impl.Enqueue),
+			DeleteFunc: impl.Tracker.OnDeletedObserver,
+		},
 	})
 
 	// Filter Brokers and enqueue associated Triggers

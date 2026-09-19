@@ -115,7 +115,11 @@ func NewController(
 
 	brokerInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: brokerFilter,
-		Handler:    controller.HandleAll(impl.Enqueue),
+		Handler: cache.ResourceEventHandlerFuncs{
+			AddFunc:    impl.Enqueue,
+			UpdateFunc: controller.PassNew(impl.Enqueue),
+			DeleteFunc: impl.Tracker.OnDeletedObserver,
+		},
 	})
 
 	// When the endpoints in our multi-tenant filter/ingress change, do a global resync.
