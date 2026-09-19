@@ -28,6 +28,6 @@ import (
 )
 
 func TestBrokerTracing(t *testing.T) {
-	t.Skip("needs to be reworked for OTel (eventing#8637)")
+	t.Skip("OTel type migration done (eventing#8853), but needs cluster-side OTel collector infrastructure to run")
 	helpers.BrokerTracingTestHelperWithChannelTestRunner(context.Background(), t, brokerClass, channelTestRunner, testlib.SetupClientOptionNoop)
 }

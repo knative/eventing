@@ -25,7 +25,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/openzipkin/zipkin-go/model"
+	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
 // hostSuffix is an optional suffix that might appear at the end of hostnames.
@@ -43,8 +43,20 @@ import (
 // and then match anything prior to the path starting, e.g. '/'
 const HostSuffix = "[.][^/]+"
 
+// SpanData is a lightweight representation of an OTel span containing just the
+// fields needed for test assertions. This avoids depending on the full
+// ReadOnlySpan interface which is cumbersome to construct in tests.
+type SpanData struct {
+	SpanContext       oteltrace.SpanContext
+	Parent            oteltrace.SpanContext
+	Name              string
+	Kind              oteltrace.SpanKind
+	ServiceName       string
+	Attributes        map[string]string
+}
+
 // PrettyPrintTrace pretty prints a Trace.
-func PrettyPrintTrace(trace []model.SpanModel) string {
+func PrettyPrintTrace(trace []SpanData) string {
 	b, _ := json.Marshal(trace)
 	return string(b)
 }
@@ -52,7 +64,7 @@ func PrettyPrintTrace(trace []model.SpanModel) string {
 // SpanTree is the tree of Spans representation of a Trace.
 type SpanTree struct {
 	Root     bool
-	Span     model.SpanModel
+	Span     SpanData
 	Children []SpanTree
 }
 
@@ -62,16 +74,16 @@ func (t SpanTree) String() string {
 }
 
 type SpanMatcher struct {
-	Kind                     *model.Kind               `json:"a_Kind,omitempty"`
-	LocalEndpointServiceName string                    `json:"b_Name,omitempty"`
-	Tags                     map[string]*regexp.Regexp `json:"c_Tags,omitempty"`
+	Kind        *oteltrace.SpanKind       `json:"a_Kind,omitempty"`
+	ServiceName string                    `json:"b_Name,omitempty"`
+	Tags        map[string]*regexp.Regexp `json:"c_Tags,omitempty"`
 }
 
 type SpanMatcherOption func(*SpanMatcher)
 
 func WithLocalEndpointServiceName(s string) SpanMatcherOption {
 	return func(m *SpanMatcher) {
-		m.LocalEndpointServiceName = s
+		m.ServiceName = s
 	}
 }
 
@@ -88,7 +100,7 @@ func WithHTTPURL(host, path string) SpanMatcherOption {
 	}
 }
 
-func (m *SpanMatcher) MatchesSpan(span *model.SpanModel) error {
+func (m *SpanMatcher) MatchesSpan(span *SpanData) error {
 	if m == nil {
 		return nil
 	}
@@ -97,23 +109,23 @@ func (m *SpanMatcher) MatchesSpan(span *model.SpanModel) error {
 			return fmt.Errorf("mismatched kind: got %q, want %q", span.Kind, *m.Kind)
 		}
 	}
-	if m.LocalEndpointServiceName != "" {
-		if span.LocalEndpoint == nil {
-			return errors.New("missing local endpoint")
+	if m.ServiceName != "" {
+		if span.ServiceName == "" {
+			return errors.New("missing service name")
 		}
-		if m.LocalEndpointServiceName != span.LocalEndpoint.ServiceName {
-			return fmt.Errorf("mismatched LocalEndpoint ServiceName: got %q, want %q", span.LocalEndpoint.ServiceName, m.LocalEndpointServiceName)
+		if m.ServiceName != span.ServiceName {
+			return fmt.Errorf("mismatched ServiceName: got %q, want %q", span.ServiceName, m.ServiceName)
 		}
 	}
 	for k, v := range m.Tags {
-		if t := span.Tags[k]; !v.MatchString(t) {
+		if t := span.Attributes[k]; !v.MatchString(t) {
 			return fmt.Errorf("unexpected tag %s: got %q, want %q", k, t, v)
 		}
 	}
 	return nil
 }
 
-func MatchSpan(kind model.Kind, opts ...SpanMatcherOption) *SpanMatcher {
+func MatchSpan(kind oteltrace.SpanKind, opts ...SpanMatcherOption) *SpanMatcher {
 	m := &SpanMatcher{
 		Kind: &kind,
 	}
@@ -123,7 +135,7 @@ func MatchSpan(kind model.Kind, opts ...SpanMatcherOption) *SpanMatcher {
 	return m
 }
 
-func MatchHTTPSpanWithCode(kind model.Kind, statusCode int, opts ...SpanMatcherOption) *SpanMatcher {
+func MatchHTTPSpanWithCode(kind oteltrace.SpanKind, statusCode int, opts ...SpanMatcherOption) *SpanMatcher {
 	return MatchSpan(kind, WithCode(statusCode))
 }
 
@@ -136,11 +148,11 @@ func WithCode(statusCode int) SpanMatcherOption {
 	}
 }
 
-func MatchHTTPSpanNoReply(kind model.Kind, opts ...SpanMatcherOption) *SpanMatcher {
+func MatchHTTPSpanNoReply(kind oteltrace.SpanKind, opts ...SpanMatcherOption) *SpanMatcher {
 	return MatchHTTPSpanWithCode(kind, 202, opts...)
 }
 
-func MatchHTTPSpanWithReply(kind model.Kind, opts ...SpanMatcherOption) *SpanMatcher {
+func MatchHTTPSpanWithReply(kind oteltrace.SpanKind, opts ...SpanMatcherOption) *SpanMatcher {
 	return MatchHTTPSpanWithCode(kind, 200, opts...)
 }
 
@@ -160,13 +172,14 @@ func (tt TestSpanTree) String() string {
 	return string(b)
 }
 
-// GetTraceTree converts a set slice of spans into a SpanTree.
-func GetTraceTree(trace []model.SpanModel) (*SpanTree, error) {
-	var roots []model.SpanModel
-	parents := map[model.ID][]model.SpanModel{}
+// GetTraceTree converts a slice of SpanData into a SpanTree.
+func GetTraceTree(trace []SpanData) (*SpanTree, error) {
+	var roots []SpanData
+	parents := map[oteltrace.SpanID][]SpanData{}
 	for _, span := range trace {
-		if span.ParentID != nil {
-			parents[*span.ParentID] = append(parents[*span.ParentID], span)
+		if span.Parent.IsValid() && span.Parent.HasSpanID() {
+			parentID := span.Parent.SpanID()
+			parents[parentID] = append(parents[parentID], span)
 		} else {
 			roots = append(roots, span)
 		}
@@ -191,10 +204,11 @@ func GetTraceTree(trace []model.SpanModel) (*SpanTree, error) {
 	return &tree, nil
 }
 
-func getChildren(parents map[model.ID][]model.SpanModel, current []model.SpanModel) ([]SpanTree, error) {
+func getChildren(parents map[oteltrace.SpanID][]SpanData, current []SpanData) ([]SpanTree, error) {
 	children := make([]SpanTree, 0, len(current))
 	for _, span := range current {
-		grandchildren, err := getChildren(parents, parents[span.ID])
+		spanID := span.SpanContext.SpanID()
+		grandchildren, err := getChildren(parents, parents[spanID])
 		if err != nil {
 			return children, err
 		}
@@ -202,7 +216,7 @@ func getChildren(parents map[model.ID][]model.SpanModel, current []model.SpanMod
 			Span:     span,
 			Children: grandchildren,
 		})
-		delete(parents, span.ID)
+		delete(parents, spanID)
 	}
 
 	return children, nil
