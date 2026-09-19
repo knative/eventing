@@ -74,7 +74,9 @@ func NewFromMap(m map[string]string) (*Config, error) {
 		c.BaseConfig.Metrics.Endpoint = fmt.Sprintf(":%d", DefaultMetricsPort)
 	}
 
-	err := configmap.Parse(m, configmap.As(EnableSinkEventErrorReportingKey, &c.EnableSinkEventErrorReporting))
+	err := configmap.Parse(m,
+		configmap.As(EnableSinkEventErrorReportingKey, &c.EnableSinkEventErrorReporting),
+	)
 	if err != nil {
 		fmt.Printf("failed to parse enable-sink-error-reporting: %s\n", err.Error())
 		return c, err
