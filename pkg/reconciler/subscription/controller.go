@@ -79,7 +79,11 @@ func NewController(
 		impl.GlobalResync(subscriptionInformer.Informer())
 	}
 
-	subscriptionInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
+	subscriptionInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    impl.Enqueue,
+		UpdateFunc: controller.PassNew(impl.Enqueue),
+		DeleteFunc: impl.Tracker.OnDeletedObserver,
+	})
 
 	// Trackers used to notify us when the resources Subscription depends on change, so that the
 	// Subscription needs to reconcile again.

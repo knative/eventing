@@ -19,6 +19,7 @@ package eventtype
 import (
 	"context"
 
+	"k8s.io/client-go/tools/cache"
 	"knative.dev/eventing/pkg/resolver"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
@@ -38,7 +39,11 @@ func NewController(
 	r := &Reconciler{}
 	impl := eventtypereconciler.NewImpl(ctx, r)
 
-	eventTypeInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
+	eventTypeInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    impl.Enqueue,
+		UpdateFunc: controller.PassNew(impl.Enqueue),
+		DeleteFunc: impl.Tracker.OnDeletedObserver,
+	})
 
 	// Tracker is used to notify us that a EventType's Broker has changed so that
 	// we can reconcile.
