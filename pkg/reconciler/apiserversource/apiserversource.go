@@ -60,8 +60,7 @@ const (
 	apiserversourceDeploymentCreated = "ApiServerSourceDeploymentCreated"
 	apiserversourceDeploymentUpdated = "ApiServerSourceDeploymentUpdated"
 
-	component                 = "apiserversource"
-	skipPermissionsAnnotation = "features.knative.dev/apiserversource-skip-permissions-check"
+	component = "apiserversource"
 )
 
 func newWarningSinkNotFound(sink *duckv1.Destination) pkgreconciler.Event {
@@ -150,7 +149,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1.ApiServerSour
 	// We don't check if it really exists because in case it does not exist, the value is an empty string
 	// which also serves our purposes as by default we will check permissions
 	annotations := source.GetAnnotations()
-	skipPermissions := annotations[skipPermissionsAnnotation]
+	skipPermissions := annotations[v1.SkipPermissionsAnnotation]
 	if skipPermissions == "true" {
 		// If skip permissions, mark enough permissions directly
 		source.Status.MarkSufficientPermissions()
@@ -236,7 +235,7 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1.ApiServer
 	// }
 
 	annotations := src.GetAnnotations()
-	skipPermissions := annotations[skipPermissionsAnnotation]
+	skipPermissions := annotations[v1.SkipPermissionsAnnotation]
 
 	featureFlags := feature.FromContext(ctx)
 
@@ -252,6 +251,7 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1.ApiServer
 		AllNamespaces: allNamespaces,
 		NodeSelector:  featureFlags.NodeSelector(),
 		FailFast:      skipPermissions == "true",
+		DisableCache:  src.Annotations[v1.DisableCacheAnnotation] == "true",
 	}
 
 	expected, err := resources.MakeReceiveAdapter(&adapterArgs)
