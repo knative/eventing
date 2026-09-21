@@ -20,16 +20,16 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/openzipkin/zipkin-go/model"
+	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
 var (
-	serverKind = model.Server
-	clientKind = model.Client
+	serverKind = oteltrace.SpanKindServer
+	clientKind = oteltrace.SpanKindClient
 )
 
 type SpanCase struct {
-	Span        *model.SpanModel
+	Span        *SpanData
 	ShouldMatch bool
 }
 
@@ -43,15 +43,13 @@ func TestSpanMatcher(t *testing.T) {
 		Name:    "empty matcher",
 		Matcher: &SpanMatcher{},
 		Spans: []SpanCase{{
-			Span:        &model.SpanModel{},
+			Span:        &SpanData{},
 			ShouldMatch: true,
 		}, {
-			Span: &model.SpanModel{
-				Kind: model.Server,
-				LocalEndpoint: &model.Endpoint{
-					ServiceName: "test-service-name",
-				},
-				Tags: map[string]string{
+			Span: &SpanData{
+				Kind:        oteltrace.SpanKindServer,
+				ServiceName: "test-service-name",
+				Attributes: map[string]string{
 					"test-tag":  "test-tag-value",
 					"other-tag": "other-tag-value",
 				},
@@ -64,25 +62,23 @@ func TestSpanMatcher(t *testing.T) {
 			Kind: &serverKind,
 		},
 		Spans: []SpanCase{{
-			Span:        &model.SpanModel{},
+			Span:        &SpanData{},
 			ShouldMatch: false,
 		}, {
-			Span: &model.SpanModel{
-				Kind: model.Server,
+			Span: &SpanData{
+				Kind: oteltrace.SpanKindServer,
 			},
 			ShouldMatch: true,
 		}, {
-			Span: &model.SpanModel{
-				Kind: model.Client,
+			Span: &SpanData{
+				Kind: oteltrace.SpanKindClient,
 			},
 			ShouldMatch: false,
 		}, {
-			Span: &model.SpanModel{
-				Kind: model.Server,
-				LocalEndpoint: &model.Endpoint{
-					ServiceName: "test-service-name",
-				},
-				Tags: map[string]string{
+			Span: &SpanData{
+				Kind:        oteltrace.SpanKindServer,
+				ServiceName: "test-service-name",
+				Attributes: map[string]string{
 					"test-tag":  "test-tag-value",
 					"other-tag": "other-tag-value",
 				},
@@ -92,32 +88,26 @@ func TestSpanMatcher(t *testing.T) {
 	}, {
 		Name: "local endpoint service name matcher",
 		Matcher: &SpanMatcher{
-			LocalEndpointServiceName: "test-service-name",
+			ServiceName: "test-service-name",
 		},
 		Spans: []SpanCase{{
-			Span:        &model.SpanModel{},
+			Span:        &SpanData{},
 			ShouldMatch: false,
 		}, {
-			Span: &model.SpanModel{
-				LocalEndpoint: &model.Endpoint{
-					ServiceName: "test-service-name",
-				},
+			Span: &SpanData{
+				ServiceName: "test-service-name",
 			},
 			ShouldMatch: true,
 		}, {
-			Span: &model.SpanModel{
-				LocalEndpoint: &model.Endpoint{
-					ServiceName: "other-service-name",
-				},
+			Span: &SpanData{
+				ServiceName: "other-service-name",
 			},
 			ShouldMatch: false,
 		}, {
-			Span: &model.SpanModel{
-				Kind: model.Server,
-				LocalEndpoint: &model.Endpoint{
-					ServiceName: "test-service-name",
-				},
-				Tags: map[string]string{
+			Span: &SpanData{
+				Kind:        oteltrace.SpanKindServer,
+				ServiceName: "test-service-name",
+				Attributes: map[string]string{
 					"test-tag":  "test-tag-value",
 					"other-tag": "other-tag-value",
 				},
@@ -132,36 +122,34 @@ func TestSpanMatcher(t *testing.T) {
 			},
 		},
 		Spans: []SpanCase{{
-			Span:        &model.SpanModel{},
+			Span:        &SpanData{},
 			ShouldMatch: false,
 		}, {
-			Span: &model.SpanModel{
-				Tags: map[string]string{
+			Span: &SpanData{
+				Attributes: map[string]string{
 					"test-tag": "test-tag-value",
 				},
 			},
 			ShouldMatch: true,
 		}, {
-			Span: &model.SpanModel{
-				Tags: map[string]string{
+			Span: &SpanData{
+				Attributes: map[string]string{
 					"test-tag": "other-tag-value",
 				},
 			},
 			ShouldMatch: false,
 		}, {
-			Span: &model.SpanModel{
-				Tags: map[string]string{
+			Span: &SpanData{
+				Attributes: map[string]string{
 					"other-tag": "test-tag-value",
 				},
 			},
 			ShouldMatch: false,
 		}, {
-			Span: &model.SpanModel{
-				Kind: model.Server,
-				LocalEndpoint: &model.Endpoint{
-					ServiceName: "test-service-name",
-				},
-				Tags: map[string]string{
+			Span: &SpanData{
+				Kind:        oteltrace.SpanKindServer,
+				ServiceName: "test-service-name",
+				Attributes: map[string]string{
 					"test-tag":  "test-tag-value",
 					"other-tag": "other-tag-value",
 				},
@@ -204,16 +192,16 @@ func TestMatchesSubtree(t *testing.T) {
 			ShouldMatch: true,
 		}, {
 			SpanTree: &SpanTree{
-				Span: model.SpanModel{
-					Kind: model.Server,
+				Span: SpanData{
+					Kind: oteltrace.SpanKindServer,
 				},
 				Children: []SpanTree{{
-					Span: model.SpanModel{
-						Kind: model.Client,
+					Span: SpanData{
+						Kind: oteltrace.SpanKindClient,
 					},
 				}, {
-					Span: model.SpanModel{
-						Tags: map[string]string{
+					Span: SpanData{
+						Attributes: map[string]string{
 							"test-tag": "test-tag-value",
 						},
 					},
@@ -233,26 +221,26 @@ func TestMatchesSubtree(t *testing.T) {
 			ShouldMatch: false,
 		}, {
 			SpanTree: &SpanTree{
-				Span: model.SpanModel{
-					Kind: model.Server,
+				Span: SpanData{
+					Kind: oteltrace.SpanKindServer,
 				},
 			},
 			ShouldMatch: true,
 		}, {
 			SpanTree: &SpanTree{
-				Span: model.SpanModel{
-					Kind: model.Client,
+				Span: SpanData{
+					Kind: oteltrace.SpanKindClient,
 				},
 			},
 			ShouldMatch: false,
 		}, {
 			SpanTree: &SpanTree{
-				Span: model.SpanModel{
-					Kind: model.Client,
+				Span: SpanData{
+					Kind: oteltrace.SpanKindClient,
 				},
 				Children: []SpanTree{{
-					Span: model.SpanModel{
-						Kind: model.Server,
+					Span: SpanData{
+						Kind: oteltrace.SpanKindServer,
 					},
 				}},
 			},
@@ -272,24 +260,24 @@ func TestMatchesSubtree(t *testing.T) {
 		},
 		SpanTrees: []SpanTreeCase{{
 			SpanTree: &SpanTree{
-				Span: model.SpanModel{
-					Kind: model.Server,
+				Span: SpanData{
+					Kind: oteltrace.SpanKindServer,
 				},
 				Children: []SpanTree{{
-					Span: model.SpanModel{
-						Kind: model.Client,
+					Span: SpanData{
+						Kind: oteltrace.SpanKindClient,
 					},
 				}},
 			},
 			ShouldMatch: true,
 		}, {
 			SpanTree: &SpanTree{
-				Span: model.SpanModel{
-					Kind: model.Client,
+				Span: SpanData{
+					Kind: oteltrace.SpanKindClient,
 				},
 				Children: []SpanTree{{
-					Span: model.SpanModel{
-						Kind: model.Server,
+					Span: SpanData{
+						Kind: oteltrace.SpanKindServer,
 					},
 				}},
 			},
@@ -297,12 +285,12 @@ func TestMatchesSubtree(t *testing.T) {
 		}, {
 			SpanTree: &SpanTree{
 				Children: []SpanTree{{
-					Span: model.SpanModel{
-						Kind: model.Server,
+					Span: SpanData{
+						Kind: oteltrace.SpanKindServer,
 					},
 					Children: []SpanTree{{
-						Span: model.SpanModel{
-							Kind: model.Client,
+						Span: SpanData{
+							Kind: oteltrace.SpanKindClient,
 						},
 					}},
 				}},
@@ -310,13 +298,13 @@ func TestMatchesSubtree(t *testing.T) {
 			ShouldMatch: true,
 		}, {
 			SpanTree: &SpanTree{
-				Span: model.SpanModel{
-					Kind: model.Server,
+				Span: SpanData{
+					Kind: oteltrace.SpanKindServer,
 				},
 				Children: []SpanTree{{
 					Children: []SpanTree{{
-						Span: model.SpanModel{
-							Kind: model.Client,
+						Span: SpanData{
+							Kind: oteltrace.SpanKindClient,
 						},
 					}},
 				}},
@@ -324,12 +312,12 @@ func TestMatchesSubtree(t *testing.T) {
 			ShouldMatch: true,
 		}, {
 			SpanTree: &SpanTree{
-				Span: model.SpanModel{
-					Kind: model.Server,
+				Span: SpanData{
+					Kind: oteltrace.SpanKindServer,
 				},
 				Children: []SpanTree{{
-					Span: model.SpanModel{
-						Kind: model.Client,
+					Span: SpanData{
+						Kind: oteltrace.SpanKindClient,
 					},
 					Children: []SpanTree{{}},
 				}},
@@ -337,12 +325,12 @@ func TestMatchesSubtree(t *testing.T) {
 			ShouldMatch: true,
 		}, {
 			SpanTree: &SpanTree{
-				Span: model.SpanModel{
-					Kind: model.Server,
+				Span: SpanData{
+					Kind: oteltrace.SpanKindServer,
 				},
 				Children: []SpanTree{{
-					Span: model.SpanModel{
-						Kind: model.Client,
+					Span: SpanData{
+						Kind: oteltrace.SpanKindClient,
 					},
 				}, {}},
 			},
@@ -370,18 +358,18 @@ func TestMatchesSubtree(t *testing.T) {
 		},
 		SpanTrees: []SpanTreeCase{{
 			SpanTree: &SpanTree{
-				Span: model.SpanModel{
-					Kind: model.Server,
+				Span: SpanData{
+					Kind: oteltrace.SpanKindServer,
 				},
 				Children: []SpanTree{{
-					Span: model.SpanModel{
-						Tags: map[string]string{
+					Span: SpanData{
+						Attributes: map[string]string{
 							"child": "a",
 						},
 					},
 				}, {
-					Span: model.SpanModel{
-						Tags: map[string]string{
+					Span: SpanData{
+						Attributes: map[string]string{
 							"child": "b",
 						},
 					},
@@ -390,18 +378,18 @@ func TestMatchesSubtree(t *testing.T) {
 			ShouldMatch: true,
 		}, {
 			SpanTree: &SpanTree{
-				Span: model.SpanModel{
-					Kind: model.Server,
+				Span: SpanData{
+					Kind: oteltrace.SpanKindServer,
 				},
 				Children: []SpanTree{{
-					Span: model.SpanModel{
-						Tags: map[string]string{
+					Span: SpanData{
+						Attributes: map[string]string{
 							"child": "b",
 						},
 					},
 				}, {
-					Span: model.SpanModel{
-						Tags: map[string]string{
+					Span: SpanData{
+						Attributes: map[string]string{
 							"child": "a",
 						},
 					},
@@ -410,18 +398,18 @@ func TestMatchesSubtree(t *testing.T) {
 			ShouldMatch: true,
 		}, {
 			SpanTree: &SpanTree{
-				Span: model.SpanModel{
-					Kind: model.Server,
+				Span: SpanData{
+					Kind: oteltrace.SpanKindServer,
 				},
 				Children: []SpanTree{{
-					Span: model.SpanModel{
-						Tags: map[string]string{
+					Span: SpanData{
+						Attributes: map[string]string{
 							"child": "a",
 						},
 					},
 				}, {
-					Span: model.SpanModel{
-						Tags: map[string]string{
+					Span: SpanData{
+						Attributes: map[string]string{
 							"child": "a",
 						},
 					},
@@ -430,18 +418,18 @@ func TestMatchesSubtree(t *testing.T) {
 			ShouldMatch: false,
 		}, {
 			SpanTree: &SpanTree{
-				Span: model.SpanModel{
-					Kind: model.Server,
+				Span: SpanData{
+					Kind: oteltrace.SpanKindServer,
 				},
 				Children: []SpanTree{{
-					Span: model.SpanModel{
-						Tags: map[string]string{
+					Span: SpanData{
+						Attributes: map[string]string{
 							"child": "a",
 						},
 					},
 					Children: []SpanTree{{
-						Span: model.SpanModel{
-							Tags: map[string]string{
+						Span: SpanData{
+							Attributes: map[string]string{
 								"child": "b",
 							},
 						},
@@ -451,8 +439,8 @@ func TestMatchesSubtree(t *testing.T) {
 			ShouldMatch: false,
 		}, {
 			SpanTree: &SpanTree{
-				Span: model.SpanModel{
-					Kind: model.Server,
+				Span: SpanData{
+					Kind: oteltrace.SpanKindServer,
 				},
 				Children: []SpanTree{{
 					// This span is a red-herring. Although it matches child 'a',
@@ -460,20 +448,20 @@ func TestMatchesSubtree(t *testing.T) {
 					// match since it is a parent of child 'b'. The matcher must
 					// therefore look for alternative matches for 'a' by recursing
 					// into its children.
-					Span: model.SpanModel{
-						Tags: map[string]string{
+					Span: SpanData{
+						Attributes: map[string]string{
 							"child": "a",
 						},
 					},
 					Children: []SpanTree{{
-						Span: model.SpanModel{
-							Tags: map[string]string{
+						Span: SpanData{
+							Attributes: map[string]string{
 								"child": "a",
 							},
 						},
 					}, {
-						Span: model.SpanModel{
-							Tags: map[string]string{
+						Span: SpanData{
+							Attributes: map[string]string{
 								"child": "b",
 							},
 						},
@@ -483,19 +471,19 @@ func TestMatchesSubtree(t *testing.T) {
 			ShouldMatch: true,
 		}, {
 			SpanTree: &SpanTree{
-				Span: model.SpanModel{
-					Kind: model.Server,
+				Span: SpanData{
+					Kind: oteltrace.SpanKindServer,
 				},
 				Children: []SpanTree{{
 					Children: []SpanTree{{
-						Span: model.SpanModel{
-							Tags: map[string]string{
+						Span: SpanData{
+							Attributes: map[string]string{
 								"child": "a",
 							},
 						},
 					}, {
-						Span: model.SpanModel{
-							Tags: map[string]string{
+						Span: SpanData{
+							Attributes: map[string]string{
 								"child": "b",
 							},
 						},
@@ -526,18 +514,18 @@ func TestMatchesSubtree(t *testing.T) {
 		},
 		SpanTrees: []SpanTreeCase{{
 			SpanTree: &SpanTree{
-				Span: model.SpanModel{
-					Kind: model.Server,
+				Span: SpanData{
+					Kind: oteltrace.SpanKindServer,
 				},
 				Children: []SpanTree{{
-					Span: model.SpanModel{
-						Tags: map[string]string{
+					Span: SpanData{
+						Attributes: map[string]string{
 							"child": "a",
 						},
 					},
 				}, {
-					Span: model.SpanModel{
-						Tags: map[string]string{
+					Span: SpanData{
+						Attributes: map[string]string{
 							"child": "b",
 						},
 					},
@@ -546,12 +534,12 @@ func TestMatchesSubtree(t *testing.T) {
 			ShouldMatch: false,
 		}, {
 			SpanTree: &SpanTree{
-				Span: model.SpanModel{
-					Kind: model.Server,
+				Span: SpanData{
+					Kind: oteltrace.SpanKindServer,
 				},
 				Children: []SpanTree{{
-					Span: model.SpanModel{
-						Tags: map[string]string{
+					Span: SpanData{
+						Attributes: map[string]string{
 							"child": "a",
 						},
 					},
@@ -560,18 +548,18 @@ func TestMatchesSubtree(t *testing.T) {
 			ShouldMatch: false,
 		}, {
 			SpanTree: &SpanTree{
-				Span: model.SpanModel{
-					Kind: model.Server,
+				Span: SpanData{
+					Kind: oteltrace.SpanKindServer,
 				},
 				Children: []SpanTree{{
-					Span: model.SpanModel{
-						Tags: map[string]string{
+					Span: SpanData{
+						Attributes: map[string]string{
 							"child": "a",
 						},
 					},
 				}, {
-					Span: model.SpanModel{
-						Tags: map[string]string{
+					Span: SpanData{
+						Attributes: map[string]string{
 							"child": "a",
 						},
 					},
@@ -607,24 +595,24 @@ func TestMatchesSubtree(t *testing.T) {
 		},
 		SpanTrees: []SpanTreeCase{{
 			SpanTree: &SpanTree{
-				Span: model.SpanModel{
-					Kind: model.Server,
+				Span: SpanData{
+					Kind: oteltrace.SpanKindServer,
 				},
 				Children: []SpanTree{{
-					Span: model.SpanModel{
-						Tags: map[string]string{
+					Span: SpanData{
+						Attributes: map[string]string{
 							"child": "a",
 						},
 					},
 				}, {
-					Span: model.SpanModel{
-						Tags: map[string]string{
+					Span: SpanData{
+						Attributes: map[string]string{
 							"child": "b",
 						},
 					},
 				}, {
-					Span: model.SpanModel{
-						Tags: map[string]string{
+					Span: SpanData{
+						Attributes: map[string]string{
 							"child": "c",
 						},
 					},
@@ -633,27 +621,27 @@ func TestMatchesSubtree(t *testing.T) {
 			ShouldMatch: true,
 		}, {
 			SpanTree: &SpanTree{
-				Span: model.SpanModel{
-					Kind: model.Server,
+				Span: SpanData{
+					Kind: oteltrace.SpanKindServer,
 				},
 				Children: []SpanTree{{
 					Children: []SpanTree{{
-						Span: model.SpanModel{
-							Tags: map[string]string{
+						Span: SpanData{
+							Attributes: map[string]string{
 								"child": "a",
 							},
 						},
 					}, {
-						Span: model.SpanModel{
-							Tags: map[string]string{
+						Span: SpanData{
+							Attributes: map[string]string{
 								"child": "b",
 							},
 						},
 					}},
 				}, {
 					Children: []SpanTree{{
-						Span: model.SpanModel{
-							Tags: map[string]string{
+						Span: SpanData{
+							Attributes: map[string]string{
 								"child": "c",
 							},
 						},
