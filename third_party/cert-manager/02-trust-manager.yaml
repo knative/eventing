@@ -11,7 +11,6 @@ metadata:
     app.kubernetes.io/instance: cert-manager
     app.kubernetes.io/version: "v0.12.0"
     app.kubernetes.io/managed-by: Helm
-
 ---
 # Source: trust-manager/templates/crd-trust.cert-manager.io_bundles.yaml
 apiVersion: apiextensions.k8s.io/v1
@@ -458,7 +457,6 @@ subjects:
 - kind: ServiceAccount
   name: trust-manager
   namespace: cert-manager
-
 ---
 # Source: trust-manager/templates/role.yaml
 kind: Role
@@ -481,7 +479,6 @@ rules:
   - "get"
   - "list"
   - "watch"
-
 ---
 # Source: trust-manager/templates/role.yaml
 kind: Role
@@ -506,7 +503,6 @@ rules:
   - "update"
   - "watch"
   - "list"
-
 ---
 # Source: trust-manager/templates/rolebinding.yaml
 kind: RoleBinding
@@ -528,7 +524,6 @@ subjects:
 - kind: ServiceAccount
   name: trust-manager
   namespace: cert-manager
-
 ---
 # Source: trust-manager/templates/rolebinding.yaml
 kind: RoleBinding
@@ -550,7 +545,6 @@ subjects:
 - kind: ServiceAccount
   name: trust-manager
   namespace: cert-manager
-
 ---
 # Source: trust-manager/templates/metrics-service.yaml
 apiVersion: v1
@@ -574,7 +568,6 @@ spec:
       name: metrics
   selector:
     app: trust-manager
-
 ---
 # Source: trust-manager/templates/webhook.yaml
 apiVersion: v1
@@ -598,8 +591,6 @@ spec:
       name: webhook
   selector:
     app: trust-manager
-
-
 ---
 # Source: trust-manager/templates/deployment.yaml
 apiVersion: apps/v1
@@ -706,8 +697,44 @@ spec:
         secret:
           defaultMode: 420
           secretName: trust-manager-tls
-
-
+---
+# Source: trust-manager/templates/certificate.yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: trust-manager
+  namespace: cert-manager
+  labels:
+    app.kubernetes.io/name: trust-manager
+    helm.sh/chart: trust-manager-v0.12.0
+    app.kubernetes.io/instance: cert-manager
+    app.kubernetes.io/version: "v0.12.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  commonName: "trust-manager.cert-manager.svc"
+  dnsNames:
+  - "trust-manager.cert-manager.svc"
+  secretName: trust-manager-tls
+  revisionHistoryLimit: 1
+  issuerRef:
+    name: trust-manager
+    kind: Issuer
+    group: cert-manager.io
+---
+# Source: trust-manager/templates/certificate.yaml
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: trust-manager
+  namespace: cert-manager
+  labels:
+    app.kubernetes.io/name: trust-manager
+    helm.sh/chart: trust-manager-v0.12.0
+    app.kubernetes.io/instance: cert-manager
+    app.kubernetes.io/version: "v0.12.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  selfSigned: {}
 ---
 # Source: trust-manager/templates/webhook.yaml
 apiVersion: admissionregistration.k8s.io/v1
@@ -748,44 +775,3 @@ webhooks:
         name: trust-manager
         namespace: cert-manager
         path: /validate-trust-cert-manager-io-v1alpha1-bundle
-
----
-# Source: trust-manager/templates/certificate.yaml
-apiVersion: cert-manager.io/v1
-kind: Certificate
-metadata:
-  name: trust-manager
-  namespace: cert-manager
-  labels:
-    app.kubernetes.io/name: trust-manager
-    helm.sh/chart: trust-manager-v0.12.0
-    app.kubernetes.io/instance: cert-manager
-    app.kubernetes.io/version: "v0.12.0"
-    app.kubernetes.io/managed-by: Helm
-spec:
-  commonName: "trust-manager.cert-manager.svc"
-  dnsNames:
-  - "trust-manager.cert-manager.svc"
-  secretName: trust-manager-tls
-  revisionHistoryLimit: 1
-  issuerRef:
-    name: trust-manager
-    kind: Issuer
-    group: cert-manager.io
-
-
----
-# Source: trust-manager/templates/certificate.yaml
-apiVersion: cert-manager.io/v1
-kind: Issuer
-metadata:
-  name: trust-manager
-  namespace: cert-manager
-  labels:
-    app.kubernetes.io/name: trust-manager
-    helm.sh/chart: trust-manager-v0.12.0
-    app.kubernetes.io/instance: cert-manager
-    app.kubernetes.io/version: "v0.12.0"
-    app.kubernetes.io/managed-by: Helm
-spec:
-  selfSigned: {}
