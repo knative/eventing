@@ -41,7 +41,9 @@ func ValidateAddress(gvr schema.GroupVersionResource, name string, validate Vali
 	return func(ctx context.Context, t feature.T) {
 		_, validateErr, err := pollAddress(ctx, gvr, name, validate, timings...)
 		if err != nil {
-			if validateErr != nil {
+			if validateErr != nil && wait.Interrupted(err) {
+				// Timed out while the address still failed validation: the
+				// validation error says more than the generic timeout.
 				t.Error(validateErr)
 				return
 			}

@@ -18,6 +18,8 @@ package addressable
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -75,16 +77,39 @@ func newFakeBroker(url string) (context.Context, *dynamicfake.FakeDynamicClient)
 	return ctx, dc
 }
 
-// failFirstGets makes the first n gets of the Broker fail with err.
-func failFirstGets(dc *dynamicfake.FakeDynamicClient, n int, err error) {
+// failGets makes the Broker get number call (starting at 1) fail with
+// errFor(call); a nil error lets the get through to the fake object.
+func failGets(dc *dynamicfake.FakeDynamicClient, errFor func(call int) error) {
 	calls := 0
 	dc.PrependReactor("get", testGVR.Resource, func(clientgotesting.Action) (bool, runtime.Object, error) {
 		calls++
-		if calls <= n {
+		if err := errFor(calls); err != nil {
 			return true, nil, err
 		}
 		return false, nil, nil
 	})
+}
+
+// failFirstGets makes the first n gets of the Broker fail with err.
+func failFirstGets(dc *dynamicfake.FakeDynamicClient, n int, err error) {
+	failGets(dc, func(call int) error {
+		if call <= n {
+			return err
+		}
+		return nil
+	})
+}
+
+// recordingT records the errors reported by a step instead of failing the test.
+type recordingT struct {
+	*testing.T
+	errs []string
+}
+
+func (r *recordingT) Error(args ...interface{}) { r.errs = append(r.errs, fmt.Sprint(args...)) }
+
+func (r *recordingT) Errorf(format string, args ...interface{}) {
+	r.errs = append(r.errs, fmt.Sprintf(format, args...))
 }
 
 // TestValidateAddress_RetriesUntilValid ensures ValidateAddress keeps polling
@@ -149,5 +174,36 @@ func TestAddress_FailsFastOnNonTransientError(t *testing.T) {
 	}
 	if elapsed := time.Since(start); elapsed > time.Second {
 		t.Fatalf("Address() took %v, want it to stop polling on a non-transient error", elapsed)
+	}
+}
+
+func TestValidateAddress_ReportsValidationErrorOnTimeout(t *testing.T) {
+	ctx, _ := newFakeBroker("http://my-broker.test-ns.svc.cluster.local")
+
+	rt := &recordingT{T: t}
+	ValidateAddress(testGVR, testName, AssertHTTPSAddress, 10*time.Millisecond, 100*time.Millisecond)(ctx, rt)
+
+	if len(rt.errs) != 1 || !strings.Contains(rt.errs[0], "not HTTPS") {
+		t.Fatalf("ValidateAddress reported %q, want the last validation error", rt.errs)
+	}
+}
+
+func TestValidateAddress_ReportsFatalErrorAfterValidationFailure(t *testing.T) {
+	ctx, dc := newFakeBroker("http://my-broker.test-ns.svc.cluster.local")
+	// The first get returns the http address, which fails validation; the
+	// next one fails with a non-transient error that must not be hidden by
+	// that earlier validation error.
+	failGets(dc, func(call int) error {
+		if call > 1 {
+			return apierrors.NewForbidden(testGVR.GroupResource(), testName, nil)
+		}
+		return nil
+	})
+
+	rt := &recordingT{T: t}
+	ValidateAddress(testGVR, testName, AssertHTTPSAddress, 10*time.Millisecond, 5*time.Second)(ctx, rt)
+
+	if len(rt.errs) != 1 || !strings.Contains(rt.errs[0], "forbidden") {
+		t.Fatalf("ValidateAddress reported %q, want the Forbidden error", rt.errs)
 	}
 }
