@@ -79,7 +79,13 @@ func NewController(
 		impl.GlobalResync(subscriptionInformer.Informer())
 	}
 
-	subscriptionInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
+	// On delete the finalizer has already run, so only drop the Subscription from the tracker;
+	// otherwise stale tracker entries keep re-enqueueing the deleted Subscription.
+	subscriptionInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    impl.Enqueue,
+		UpdateFunc: controller.PassNew(impl.Enqueue),
+		DeleteFunc: impl.Tracker.OnDeletedObserver,
+	})
 
 	// Trackers used to notify us when the resources Subscription depends on change, so that the
 	// Subscription needs to reconcile again.
