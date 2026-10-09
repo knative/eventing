@@ -95,3 +95,8 @@ func (c *controllerFilter) Replace([]interface{}, string) error {
 func (c *controllerFilter) Resync() error {
 	return nil
 }
+
+// Implements cache.Store
+func (c *controllerFilter) Bookmark(obj interface{}) error {
+	return nil
+}
