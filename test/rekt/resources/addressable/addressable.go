@@ -33,41 +33,68 @@ type ValidateAddressFn func(addressable *duckv1.Addressable) error
 
 // Address returns a broker's address.
 func Address(ctx context.Context, gvr schema.GroupVersionResource, name string, timings ...time.Duration) (*duckv1.Addressable, error) {
+	addr, _, err := pollAddress(ctx, gvr, name, nil, timings...)
+	return addr, err
+}
+
+func ValidateAddress(gvr schema.GroupVersionResource, name string, validate ValidateAddressFn, timings ...time.Duration) feature.StepFn {
+	return func(ctx context.Context, t feature.T) {
+		_, validateErr, err := pollAddress(ctx, gvr, name, validate, timings...)
+		if err != nil {
+			if validateErr != nil && wait.Interrupted(err) {
+				// Timed out while the address still failed validation: the
+				// validation error says more than the generic timeout.
+				t.Error(validateErr)
+				return
+			}
+			t.Error(err)
+			return
+		}
+	}
+}
+
+// pollAddress polls for an addressable's Address until it is found and, if
+// validate is non-nil, satisfies validate, or the poll times out. Errors
+// that look transient (e.g. the resource not existing yet, a request
+// timeout, or the API server throttling requests) are retried instead of
+// failing the poll immediately.
+func pollAddress(ctx context.Context, gvr schema.GroupVersionResource, name string, validate ValidateAddressFn, timings ...time.Duration) (addr *duckv1.Addressable, validateErr error, err error) {
 	interval, timeout := k8s.PollTimings(ctx, timings)
-	var addr *duckv1.Addressable
-	err := wait.PollUntilContextTimeout(ctx, interval, timeout, true, func(ctx context.Context) (bool, error) {
+	err = wait.PollUntilContextTimeout(ctx, interval, timeout, true, func(ctx context.Context) (bool, error) {
 		var err error
 		addr, err = k8s.Address(ctx, gvr, name)
-		if err == nil && addr == nil {
-			// keep polling
-			return false, nil
-		}
 		if err != nil {
-			if apierrors.IsNotFound(err) {
+			if isRetryableError(err) {
 				// keep polling
 				return false, nil
 			}
 			// seems fatal.
 			return false, err
 		}
+		if addr == nil {
+			// keep polling
+			return false, nil
+		}
+		if validate != nil {
+			if validateErr = validate(addr); validateErr != nil {
+				// address exists but doesn't satisfy validate yet, keep polling
+				return false, nil
+			}
+		}
 		// success!
 		return true, nil
 	})
-	return addr, err
+	return addr, validateErr, err
 }
 
-func ValidateAddress(gvr schema.GroupVersionResource, name string, validate ValidateAddressFn, timings ...time.Duration) feature.StepFn {
-	return func(ctx context.Context, t feature.T) {
-		addr, err := Address(ctx, gvr, name, timings...)
-		if err != nil {
-			t.Error(err)
-			return
-		}
-		if err := validate(addr); err != nil {
-			t.Error(err)
-			return
-		}
-	}
+// isRetryableError reports whether err is transient enough to be worth
+// retrying while polling for an address: the resource not existing yet, a
+// request timeout, or the API server throttling requests.
+func isRetryableError(err error) bool {
+	return apierrors.IsNotFound(err) ||
+		apierrors.IsTimeout(err) ||
+		apierrors.IsServerTimeout(err) ||
+		apierrors.IsTooManyRequests(err)
 }
 
 func AssertHTTPSAddress(addr *duckv1.Addressable) error {
