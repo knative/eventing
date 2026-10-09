@@ -95,6 +95,18 @@ func TestControllerDeleteEventWithGoodControllerNoAPIVersion(t *testing.T) {
 	validateSent(t, tc, sources.ApiServerSourceDeleteRefEventType)
 }
 
+func TestControllerStub(t *testing.T) {
+	c, _ := makeController("v1", "Pod")
+
+	c.List()
+	c.ListKeys()
+	c.Get(nil)
+	c.GetByKey("")
+	c.Replace(nil, "")
+	c.Resync()
+	c.Bookmark(nil)
+}
+
 func makeController(apiVersion, kind string) (*controllerFilter, *adaptertest.TestCloudEventsClient) {
 	delegate, tc := makeRefAndTestingClient()
 	return &controllerFilter{

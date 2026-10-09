@@ -68,4 +68,5 @@ func TestRefStub(t *testing.T) {
 	d.GetByKey("")
 	d.Replace(nil, "")
 	d.Resync()
+	d.Bookmark(nil)
 }

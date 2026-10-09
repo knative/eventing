@@ -131,3 +131,8 @@ func (a *resourceDelegate) Replace([]interface{}, string) error {
 func (a *resourceDelegate) Resync() error {
 	return nil
 }
+
+// Implements cache.Store
+func (a *resourceDelegate) Bookmark(obj interface{}) error {
+	return nil
+}
