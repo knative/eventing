@@ -51,6 +51,7 @@ type ReceiveAdapterArgs struct {
 	AllNamespaces bool
 	NodeSelector  map[string]string
 	FailFast      bool
+	DisableCache  bool
 }
 
 // MakeReceiveAdapter generates (but does not insert into K8s) the Receive Adapter Deployment for
@@ -140,6 +141,7 @@ func makeEnv(args *ReceiveAdapterArgs) ([]corev1.EnvVar, error) {
 		AllNamespaces: args.AllNamespaces,
 		Filters:       args.Source.Spec.Filters,
 		FailFast:      args.FailFast,
+		DisableCache:  args.DisableCache,
 	}
 
 	for _, r := range args.Source.Spec.Resources {
