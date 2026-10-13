@@ -26,10 +26,11 @@ import (
 type controllerFilter struct {
 	apiVersion string
 	kind       string
-	delegate   cache.Store
+	delegate   cache.ReflectorStore
 }
 
-var _ cache.Store = (*controllerFilter)(nil)
+var _ cache.ReflectorStore = (*controllerFilter)(nil)
+var _ cache.ReflectorBookmarkStore = (*controllerFilter)(nil)
 
 // Implements Store
 
@@ -64,39 +65,32 @@ func (c *controllerFilter) filtered(obj interface{}) bool {
 		(c.kind != "" && c.kind != controller.Kind)
 }
 
-// Stub cache.Store impl
+// The remaining cache methods do not emit events; the adapter does not retain objects.
 
-// Implements cache.Store
 func (c *controllerFilter) List() []interface{} {
 	return nil
 }
 
-// Implements cache.Store
 func (c *controllerFilter) ListKeys() []string {
 	return nil
 }
 
-// Implements cache.Store
 func (c *controllerFilter) Get(obj interface{}) (item interface{}, exists bool, err error) {
 	return nil, false, nil
 }
 
-// Implements cache.Store
 func (c *controllerFilter) GetByKey(key string) (item interface{}, exists bool, err error) {
 	return nil, false, nil
 }
 
-// Implements cache.Store
 func (c *controllerFilter) Replace([]interface{}, string) error {
 	return nil
 }
 
-// Implements cache.Store
 func (c *controllerFilter) Resync() error {
 	return nil
 }
 
-// Implements cache.Store
-func (c *controllerFilter) Bookmark(obj interface{}) error {
+func (c *controllerFilter) Bookmark(resourceVersion string) error {
 	return nil
 }

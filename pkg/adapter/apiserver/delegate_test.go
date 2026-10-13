@@ -71,7 +71,7 @@ func TestResourceStub(t *testing.T) {
 	d.GetByKey("")
 	d.Replace(nil, "")
 	d.Resync()
-	d.Bookmark(nil)
+	d.Bookmark("")
 }
 
 func TestFilterFails(t *testing.T) {

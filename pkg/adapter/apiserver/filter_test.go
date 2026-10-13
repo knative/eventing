@@ -104,7 +104,7 @@ func TestControllerStub(t *testing.T) {
 	c.GetByKey("")
 	c.Replace(nil, "")
 	c.Resync()
-	c.Bookmark(nil)
+	c.Bookmark("")
 }
 
 func makeController(apiVersion, kind string) (*controllerFilter, *adaptertest.TestCloudEventsClient) {

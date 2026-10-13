@@ -53,7 +53,7 @@ type clientsHolder struct {
 }
 
 func init() {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.Background()) //nolint:gosec // G118: cancel is retained in clients and called when the cleanup loop restarts.
 	clients = clientsHolder{
 		clients:         make(map[string]*nethttp.Client),
 		cancelCleanup:   cancel,
@@ -183,7 +183,7 @@ func SetClientCleanupInterval(cleanupInterval time.Duration, forceRestart bool) 
 	if forceRestart {
 		clients.clientsMu.Lock()
 		clients.cancelCleanup()
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx, cancel := context.WithCancel(context.Background()) //nolint:gosec // G118: cancel is retained in clients for the next restart.
 		clients.cancelCleanup = cancel
 		clients.clientsMu.Unlock()
 		go cleanupClientsMap(ctx)

@@ -39,7 +39,8 @@ type resourceDelegate struct {
 	logger              *zap.SugaredLogger
 }
 
-var _ cache.Store = (*resourceDelegate)(nil)
+var _ cache.ReflectorStore = (*resourceDelegate)(nil)
+var _ cache.ReflectorBookmarkStore = (*resourceDelegate)(nil)
 
 func (a *resourceDelegate) Add(obj interface{}) error {
 	return a.handleKubernetesObject(events.MakeAddEvent, obj)
@@ -100,39 +101,32 @@ func (a *resourceDelegate) sendCloudEvent(ctx context.Context, event cloudevents
 	}
 }
 
-// Stub cache.Store impl
+// The remaining cache methods do not emit events; the adapter does not retain objects.
 
-// Implements cache.Store
 func (a *resourceDelegate) List() []interface{} {
 	return nil
 }
 
-// Implements cache.Store
 func (a *resourceDelegate) ListKeys() []string {
 	return nil
 }
 
-// Implements cache.Store
 func (a *resourceDelegate) Get(obj interface{}) (item interface{}, exists bool, err error) {
 	return nil, false, nil
 }
 
-// Implements cache.Store
 func (a *resourceDelegate) GetByKey(key string) (item interface{}, exists bool, err error) {
 	return nil, false, nil
 }
 
-// Implements cache.Store
 func (a *resourceDelegate) Replace([]interface{}, string) error {
 	return nil
 }
 
-// Implements cache.Store
 func (a *resourceDelegate) Resync() error {
 	return nil
 }
 
-// Implements cache.Store
-func (a *resourceDelegate) Bookmark(obj interface{}) error {
+func (a *resourceDelegate) Bookmark(resourceVersion string) error {
 	return nil
 }

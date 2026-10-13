@@ -524,7 +524,7 @@ func newClient(cfg eventingtls.ClientConfig, target duckv1.Addressable, mp metri
 }
 
 func (c *client) Do(req *http.Request) (*http.Response, error) {
-	return c.Client.Do(req)
+	return c.Client.Do(req) //nolint:gosec // G704: dispatching to the configured destination URL is this client's purpose.
 }
 
 func (c *client) DoWithRetries(req *http.Request, retryConfig *RetryConfig) (*http.Response, error) {
