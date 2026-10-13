@@ -1,6 +1,6 @@
 # Additional approvers for this component
 approvers:
-- technical-oversight-committee
+- steering-committee
 - eventing-writers
 - knative-release-leads
 - aavarghese

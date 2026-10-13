@@ -1,7 +1,7 @@
 # Approvers in this repo should also be added to the eventing-contrib
 # approvers list.
 approvers:
-- technical-oversight-committee
+- steering-committee
 - eventing-writers
 - knative-release-leads
 
