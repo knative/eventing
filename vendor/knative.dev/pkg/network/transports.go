@@ -85,7 +85,6 @@ func dialBackOffHelper(ctx context.Context, network, address string, bo wait.Bac
 	dialer := &net.Dialer{
 		Timeout:   bo.Duration, // Initial duration.
 		KeepAlive: 5 * time.Second,
-		DualStack: true,
 	}
 	start := time.Now()
 	for {
