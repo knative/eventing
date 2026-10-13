@@ -76,7 +76,7 @@ func TestRetryConfigBackoffMax(t *testing.T) {
 			policy:     linear,
 			delay:      "PT3S",
 			backoffMax: ptr.String("PT10S"),
-			attempts:   []int{1, 2, 3, 4, int(^uint(0) >> 1)},
+			attempts:   []int{0, 1, 2, 3, int(^uint(0) >> 1)},
 			wantBackoffs: []time.Duration{
 				3 * time.Second,
 				6 * time.Second,
@@ -110,7 +110,7 @@ func TestRetryConfigBackoffMax(t *testing.T) {
 			name:         "uncapped linear saturates",
 			policy:       linear,
 			delay:        "PT1S",
-			attempts:     []int{1, int(^uint(0) >> 1)},
+			attempts:     []int{0, int(^uint(0) >> 1)},
 			wantBackoffs: []time.Duration{time.Second, maxBackoffDuration},
 		},
 		{
@@ -189,6 +189,7 @@ func TestRetryConfigBackoffMax(t *testing.T) {
 func TestDoWithRetriesBackoffMax(t *testing.T) {
 	tests := []struct {
 		name          string
+		policy        v1.BackoffPolicyType
 		delay         string
 		backoffMax    *string
 		retryAfter    string
@@ -197,38 +198,61 @@ func TestDoWithRetriesBackoffMax(t *testing.T) {
 	}{
 		{
 			name:       "exponential backoff is capped",
+			policy:     v1.BackoffPolicyExponential,
 			delay:      "PT1S",
 			backoffMax: ptr.String("PT2S"),
 			wantTimes:  []time.Duration{0, time.Second, 3 * time.Second, 5 * time.Second, 7 * time.Second},
 		},
 		{
 			name:      "exponential backoff without a maximum",
+			policy:    v1.BackoffPolicyExponential,
 			delay:     "PT1S",
 			wantTimes: []time.Duration{0, time.Second, 3 * time.Second, 7 * time.Second, 15 * time.Second},
 		},
 		{
 			name:       "maximum below the initial delay",
+			policy:     v1.BackoffPolicyExponential,
 			delay:      "PT3S",
 			backoffMax: ptr.String("PT2S"),
 			wantTimes:  []time.Duration{0, 2 * time.Second, 4 * time.Second, 6 * time.Second, 8 * time.Second},
 		},
 		{
 			name:          "retry after can exceed the backoff maximum",
+			policy:        v1.BackoffPolicyExponential,
 			delay:         "PT1S",
 			backoffMax:    ptr.String("PT2S"),
 			retryAfter:    "3",
 			retryAfterMax: ptr.String("PT5S"),
 			wantTimes:     []time.Duration{0, 3 * time.Second, 6 * time.Second, 9 * time.Second, 12 * time.Second},
 		},
+		{
+			name:      "linear backoff waits one delay before the first retry",
+			policy:    v1.BackoffPolicyLinear,
+			delay:     "PT1S",
+			wantTimes: []time.Duration{0, time.Second, 3 * time.Second, 6 * time.Second, 10 * time.Second},
+		},
+		{
+			name:       "linear backoff is capped",
+			policy:     v1.BackoffPolicyLinear,
+			delay:      "PT1S",
+			backoffMax: ptr.String("PT2S"),
+			wantTimes:  []time.Duration{0, time.Second, 3 * time.Second, 5 * time.Second, 7 * time.Second},
+		},
+		{
+			name:       "linear maximum below the initial delay",
+			policy:     v1.BackoffPolicyLinear,
+			delay:      "PT3S",
+			backoffMax: ptr.String("PT2S"),
+			wantTimes:  []time.Duration{0, 2 * time.Second, 4 * time.Second, 6 * time.Second, 8 * time.Second},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			synctest.Test(t, func(t *testing.T) {
-				policy := v1.BackoffPolicyExponential
 				config, err := RetryConfigFromDeliverySpec(v1.DeliverySpec{
 					Retry:         ptr.Int32(4),
-					BackoffPolicy: &policy,
+					BackoffPolicy: &tt.policy,
 					BackoffDelay:  &tt.delay,
 					BackoffMax:    tt.backoffMax,
 					RetryAfterMax: tt.retryAfterMax,
@@ -328,22 +352,22 @@ func TestRetryConfigFromDeliverySpec(t *testing.T) {
 		backoffPolicy: v1.BackoffPolicyExponential,
 		backoffDelay:  "PT1.5S",
 		expectedBackoffDurations: []time.Duration{
+			1500 * time.Millisecond,
 			3 * time.Second,
 			6 * time.Second,
 			12 * time.Second,
 			24 * time.Second,
-			48 * time.Second,
 		},
 	}, {
 		name:          "Successful Exponential Backoff 500ms, 5 retries",
 		backoffPolicy: v1.BackoffPolicyExponential,
 		backoffDelay:  "PT0.5S",
 		expectedBackoffDurations: []time.Duration{
+			500 * time.Millisecond,
 			1 * time.Second,
 			2 * time.Second,
 			4 * time.Second,
 			8 * time.Second,
-			16 * time.Second,
 		},
 	}, {
 		name:          "Invalid Backoff Delay",
@@ -356,11 +380,11 @@ func TestRetryConfigFromDeliverySpec(t *testing.T) {
 		backoffDelay:  "PT0.5S",
 		timeout:       &validISO8601DurationString,
 		expectedBackoffDurations: []time.Duration{
+			500 * time.Millisecond,
 			1 * time.Second,
 			2 * time.Second,
 			4 * time.Second,
 			8 * time.Second,
-			16 * time.Second,
 		},
 	}, {
 		name:          "Invalid Timeout",
@@ -374,11 +398,11 @@ func TestRetryConfigFromDeliverySpec(t *testing.T) {
 		backoffDelay:  "PT0.5S",
 		retryAfterMax: &validISO8601DurationString,
 		expectedBackoffDurations: []time.Duration{
+			500 * time.Millisecond,
 			1 * time.Second,
 			2 * time.Second,
 			4 * time.Second,
 			8 * time.Second,
-			16 * time.Second,
 		},
 	}, {
 		name:          "Invalid RetryAfterMax",
@@ -422,8 +446,8 @@ func TestRetryConfigFromDeliverySpec(t *testing.T) {
 					assert.Nil(t, retryConfig.RetryAfterMaxDuration)
 				}
 
-				for i := 1; i < retry; i++ {
-					expectedBackoffDuration := tc.expectedBackoffDurations[i-1]
+				for i := 0; i < retry; i++ {
+					expectedBackoffDuration := tc.expectedBackoffDurations[i]
 					actualBackoffDuration := retryConfig.Backoff(i, nil)
 					assert.Equal(t, expectedBackoffDuration, actualBackoffDuration)
 				}

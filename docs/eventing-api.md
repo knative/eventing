@@ -479,7 +479,7 @@ More information on Duration format:
 - <a href="https://www.iso.org/iso-8601-date-and-time-format.html">https://www.iso.org/iso-8601-date-and-time-format.html</a>
 - <a href="https://en.wikipedia.org/wiki/ISO_8601">https://en.wikipedia.org/wiki/ISO_8601</a></p>
 <p>For linear policy, backoff delay is backoffDelay*<numberOfRetries>.
-For exponential policy, backoff delay is backoffDelay*2^<numberOfRetries>.</p>
+For exponential policy, backoff delay is backoffDelay*2^(<numberOfRetries>-1).</p>
 </td>
 </tr>
 <tr>
@@ -1512,7 +1512,7 @@ More information on Duration format:
 - <a href="https://www.iso.org/iso-8601-date-and-time-format.html">https://www.iso.org/iso-8601-date-and-time-format.html</a>
 - <a href="https://en.wikipedia.org/wiki/ISO_8601">https://en.wikipedia.org/wiki/ISO_8601</a></p>
 <p>For linear policy, backoff delay is backoffDelay*<numberOfRetries>.
-For exponential policy, backoff delay is backoffDelay*2^<numberOfRetries>.</p>
+For exponential policy, backoff delay is backoffDelay*2^(<numberOfRetries>-1).</p>
 </td>
 </tr>
 </tbody>

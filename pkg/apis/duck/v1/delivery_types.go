@@ -58,7 +58,7 @@ type DeliverySpec struct {
 	//  - https://en.wikipedia.org/wiki/ISO_8601
 	//
 	// For linear policy, backoff delay is backoffDelay*<numberOfRetries>.
-	// For exponential policy, backoff delay is backoffDelay*2^<numberOfRetries>.
+	// For exponential policy, backoff delay is backoffDelay*2^(<numberOfRetries>-1).
 	// +optional
 	BackoffDelay *string `json:"backoffDelay,omitempty"`
 
