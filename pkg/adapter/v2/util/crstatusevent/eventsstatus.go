@@ -158,6 +158,6 @@ func (a *crStatusEvent) createEvent(ctx context.Context, result protocol.Result)
 	}
 
 	recorder := a.getRecorder(&ctx, a.kubeEventSink, a.Logf, a.component)
-	recorder.Eventf(a.source, corev1.EventTypeWarning, "SinkSendFailed", reason+" "+msg)
+	recorder.Eventf(a.source, corev1.EventTypeWarning, "SinkSendFailed", "%s %s", reason, msg)
 
 }

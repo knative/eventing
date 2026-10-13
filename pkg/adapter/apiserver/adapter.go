@@ -97,7 +97,7 @@ func (a *apiServerAdapter) start(ctx context.Context, stopCh <-chan struct{}) er
 	return a.startResilient(ctx, stopCh, delegate, matches)
 }
 
-func (a *apiServerAdapter) startResilient(ctx context.Context, stopCh <-chan struct{}, delegate cache.Store, matches []resourceWatchMatch) error {
+func (a *apiServerAdapter) startResilient(ctx context.Context, stopCh <-chan struct{}, delegate cache.ReflectorStore, matches []resourceWatchMatch) error {
 	// Local stop channel.
 	stop := make(chan struct{})
 
@@ -132,7 +132,7 @@ func (a *apiServerAdapter) startResilient(ctx context.Context, stopCh <-chan str
 // startFailFast starts the ApiServerSource in fail fast mode, where it attempts to create watches only once.
 // If any single watch fails, it will return an error and stop all watches.
 // This would result in the APIServerSource status marked as failed.
-func (a *apiServerAdapter) startFailFast(ctx context.Context, stopCh <-chan struct{}, delegate cache.Store, matches []resourceWatchMatch) error {
+func (a *apiServerAdapter) startFailFast(ctx context.Context, stopCh <-chan struct{}, delegate cache.ReflectorStore, matches []resourceWatchMatch) error {
 	resyncPeriod := 10 * time.Hour
 
 	a.logger.Infof("STARTING -- %#v", a.config)
@@ -196,8 +196,8 @@ func (a *apiServerAdapter) startFailFast(ctx context.Context, stopCh <-chan stru
 	return nil
 }
 
-func (a *apiServerAdapter) setupDelegate() cache.Store {
-	var delegate cache.Store = &resourceDelegate{
+func (a *apiServerAdapter) setupDelegate() cache.ReflectorStore {
+	var delegate cache.ReflectorStore = &resourceDelegate{
 		ce:                  a.ce,
 		source:              a.source,
 		logger:              a.logger,
