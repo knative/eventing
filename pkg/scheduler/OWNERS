@@ -1,7 +1,0 @@
-# Additional approvers for this component
-approvers:
-- steering-committee
-- eventing-writers
-- knative-release-leads
-- aavarghese
-
