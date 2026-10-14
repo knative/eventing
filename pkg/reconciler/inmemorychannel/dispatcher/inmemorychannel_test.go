@@ -553,7 +553,8 @@ func TestReconciler_ReconcileKind(t *testing.T) {
 				WithInMemoryChannelEventPoliciesReady()),
 			subs: []fanout.Subscription{*previousSubscription},
 			wantBackoffs: map[int]time.Duration{
-				3:  3 * time.Second,
+				0:  1 * time.Second,
+				2:  3 * time.Second,
 				20: 10 * time.Second,
 			},
 			wantSubs: []fanout.Subscription{{

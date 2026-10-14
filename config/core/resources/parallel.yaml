@@ -57,7 +57,7 @@ spec:
                               - https://en.wikipedia.org/wiki/ISO_8601  For
                               linear policy, backoff delay is backoffDelay*<numberOfRetries>.
                               For exponential policy, backoff delay is
-                              backoffDelay*2^<numberOfRetries>.'
+                              backoffDelay*2^(<numberOfRetries>-1).'
                           type: string
                         backoffPolicy:
                           description: BackoffPolicy is the retry backoff

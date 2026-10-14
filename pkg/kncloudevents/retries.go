@@ -162,17 +162,17 @@ func saturatingPeriodDuration(p period.Period) time.Duration {
 }
 
 func linearBackoff(delay time.Duration, attemptNum int, configuredMax *time.Duration) time.Duration {
-	if attemptNum <= 0 || delay <= 0 {
+	if attemptNum < 0 || delay <= 0 {
 		return 0
 	}
 	limit := maxBackoffDuration
 	if configuredMax != nil {
 		limit = *configuredMax
 	}
-	if delay >= limit || time.Duration(attemptNum) > limit/delay {
+	if delay >= limit || time.Duration(attemptNum) >= limit/delay {
 		return limit
 	}
-	return delay * time.Duration(attemptNum)
+	return delay * (time.Duration(attemptNum) + 1)
 }
 
 func exponentialBackoff(delay time.Duration, attemptNum int, configuredMax *time.Duration) time.Duration {
