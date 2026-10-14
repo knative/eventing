@@ -1,7 +1,0 @@
-# The OWNERS file is used by prow to automatically merge approved PRs.
-
-reviewers:
-- channel-wg-leads
-
-labels:
-- area/pkg-channel
