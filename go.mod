@@ -53,10 +53,10 @@ require (
 	k8s.io/code-generator v0.36.5
 	k8s.io/klog/v2 v2.140.0
 	k8s.io/utils v0.0.0-20260210185600-b8788abfbbc2
-	knative.dev/hack v0.0.0-20260428014158-b2a37f1b6e7b
-	knative.dev/hack/schema v0.0.0-20260428014158-b2a37f1b6e7b
-	knative.dev/pkg v0.0.0-20261009131428-795a0f63c441
-	knative.dev/reconciler-test v0.0.0-20261012140414-fde2b5c55940
+	knative.dev/hack v0.0.0-20261013205032-c7ef19b7f274
+	knative.dev/hack/schema v0.0.0-20261013205032-c7ef19b7f274
+	knative.dev/pkg v0.0.0-20261013193643-0795cb87d2bd
+	knative.dev/reconciler-test v0.0.0-20261014132141-9ccf601d4e8c
 	sigs.k8s.io/randfill v1.0.0
 	sigs.k8s.io/yaml v1.6.0
 )
