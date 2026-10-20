@@ -31,10 +31,12 @@ func NewServer(addr string, h http.Handler) *http.Server {
 		ReadHeaderTimeout: time.Minute, // https://medium.com/a-journey-with-go/go-understand-and-mitigate-slowloris-attack-711c1b1403f6
 		Protocols:         new(http.Protocols),
 	}
-	// Serve HTTP/1.1 alongside unencrypted HTTP/2 (h2c) using the standard
-	// library instead of the deprecated golang.org/x/net/http2/h2c handler.
+	// Serve HTTP/1.1 and both cleartext (h2c) and TLS (h2) HTTP/2. Setting
+	// Protocols explicitly disables net/http's automatic ALPN, so SetHTTP2 is
+	// required for a TLS listener to advertise "h2"; it is harmless for h2c.
 	h1s.Protocols.SetHTTP1(true)
 	h1s.Protocols.SetUnencryptedHTTP2(true)
+	h1s.Protocols.SetHTTP2(true)
 
 	return h1s
 }
@@ -65,8 +67,11 @@ func newH2CTransport(disableCompression bool) http.RoundTripper {
 func newH2Transport(disableCompression bool, tlsContext DialTLSContextFunc) http.RoundTripper {
 	t := &http.Transport{
 		DisableCompression: disableCompression,
-		DialTLSContext:     tlsContext,
-		Protocols:          new(http.Protocols),
+		// Request h2 ALPN; dialer applies it when NextProtos is unset.
+		DialTLSContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+			return tlsContext(withH2ALPN(ctx), network, addr)
+		},
+		Protocols: new(http.Protocols),
 	}
 	// Serve encrypted HTTP/2 (h2)
 	t.Protocols.SetHTTP2(true)
