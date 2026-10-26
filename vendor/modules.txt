@@ -408,8 +408,8 @@ github.com/pkg/errors
 # github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2
 ## explicit
 github.com/pmezard/go-difflib/difflib
-# github.com/prometheus/client_golang v1.24.1
-## explicit; go 1.25.0
+# github.com/prometheus/client_golang v1.25.0
+## explicit; go 1.26.0
 github.com/prometheus/client_golang/internal/github.com/golang/gddo/httputil
 github.com/prometheus/client_golang/internal/github.com/golang/gddo/httputil/header
 github.com/prometheus/client_golang/prometheus
@@ -1418,16 +1418,16 @@ k8s.io/utils/pointer
 k8s.io/utils/ptr
 k8s.io/utils/strings/slices
 k8s.io/utils/trace
-# knative.dev/hack v0.0.0-20261021112836-4b87852b7bf9
+# knative.dev/hack v0.0.0-20261023132104-4a15c76c8f70
 ## explicit; go 1.24
 knative.dev/hack
-# knative.dev/hack/schema v0.0.0-20261021112836-4b87852b7bf9
+# knative.dev/hack/schema v0.0.0-20261023132104-4a15c76c8f70
 ## explicit; go 1.21
 knative.dev/hack/schema/commands
 knative.dev/hack/schema/docs
 knative.dev/hack/schema/registry
 knative.dev/hack/schema/schema
-# knative.dev/pkg v0.0.0-20261023092754-5823c20aa2a6
+# knative.dev/pkg v0.0.0-20261026113028-cfa0ac991c5a
 ## explicit; go 1.26.0
 knative.dev/pkg/apiextensions/storageversion
 knative.dev/pkg/apiextensions/storageversion/cmd/migrate
@@ -1586,7 +1586,7 @@ knative.dev/pkg/webhook/resourcesemantics
 knative.dev/pkg/webhook/resourcesemantics/conversion
 knative.dev/pkg/webhook/resourcesemantics/defaulting
 knative.dev/pkg/webhook/resourcesemantics/validation
-# knative.dev/reconciler-test v0.0.0-20261023015335-00f223580f3c
+# knative.dev/reconciler-test v0.0.0-20261026141430-d915e180051b
 ## explicit; go 1.26.0
 knative.dev/reconciler-test/cmd/eventshub
 knative.dev/reconciler-test/pkg/environment
