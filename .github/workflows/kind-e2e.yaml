@@ -75,7 +75,7 @@ jobs:
       uses: actions/checkout@v7
 
     - name: Install KinD
-      uses: chainguard-dev/actions/setup-kind@53668650c25af6e8864f1d1ddaa69ed4db4cdf09 # v1.6.42
+      uses: chainguard-dev/actions/setup-kind@e94104128fff55b3c5e1831a8bbbf198603156f9 # v1.7.1
       with:
         k8s-version: ${{ matrix.k8s-version }}
         kind-worker-count: 1
