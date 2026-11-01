@@ -33,8 +33,6 @@ jobs:
       fail-fast: false # Keep running if one leg fails.
       matrix:
         include:
-          - repo: eventing-autoscaler-keda
-            org: knative-extensions
           - repo: eventing-ceph
             org: knative-extensions
           - repo: eventing-github
