@@ -136,7 +136,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, t *eventingv1.Trigger) p
 		t.Spec.Subscriber.Ref.Namespace = t.GetNamespace()
 	}
 
-	subscriberAddr, err := r.uriResolver.AddressableFromDestinationV1(ctx, t.Spec.Subscriber, b)
+	subscriberAddr, err := r.uriResolver.AddressableFromDestinationV1(ctx, t.Spec.Subscriber, t)
 	if err != nil {
 		logging.FromContext(ctx).Errorw("Unable to get the Subscriber's URI", zap.Error(err))
 		t.Status.MarkSubscriberResolvedFailed("Unable to get the Subscriber's URI", "%v", err)
