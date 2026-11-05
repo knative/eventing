@@ -20,6 +20,7 @@ import (
 	"context"
 	"os"
 	"testing"
+	"time"
 
 	filteredFactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
 
@@ -30,12 +31,17 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/rest"
 
 	o11yconfigmap "knative.dev/eventing/pkg/observability/configmap"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/logging"
+	"knative.dev/pkg/tracker"
+
+	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
+	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 
 	_ "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment/fake"
 	// Fake injection informers
@@ -58,7 +64,15 @@ func TestNew(t *testing.T) {
 
 	os.Setenv("METRICS_DOMAIN", "knative.dev/eventing")
 	os.Setenv("APISERVER_RA_IMAGE", "knative.dev/example")
-	c := NewController(ctx, configmap.NewStaticWatcher(&corev1.ConfigMap{
+	c := NewController(ctx, testConfigMapWatcher())
+
+	if c == nil {
+		t.Fatal("Expected NewController to return a non-nil value")
+	}
+}
+
+func testConfigMapWatcher() configmap.Watcher {
+	return configmap.NewStaticWatcher(&corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      o11yconfigmap.Name(),
 			Namespace: "knative-eventing",
@@ -81,14 +95,65 @@ func TestNew(t *testing.T) {
 			Name:      feature.FlagsConfigName,
 			Namespace: "knative-eventing",
 		},
-	}))
-
-	if c == nil {
-		t.Fatal("Expected NewController to return a non-nil value")
-	}
+	})
 }
 
 func SetUpInformerSelector(ctx context.Context) context.Context {
 	ctx = filteredFactory.WithSelectors(ctx, eventingtls.TrustBundleLabelSelector, auth.OIDCLabelSelector)
 	return ctx
+}
+
+func TestApiServerSourceDeleteRemovesTrackerObservers(t *testing.T) {
+	ctx, cancel, informers := SetupFakeContextWithCancel(t, SetUpInformerSelector)
+	defer cancel()
+
+	ctx = withCfgHost(ctx, &rest.Config{Host: "unit_test"})
+	ctx = addressable.WithDuck(ctx)
+
+	t.Setenv("APISERVER_RA_IMAGE", "knative.dev/example")
+	impl := NewController(ctx, testConfigMapWatcher())
+
+	src := &sourcesv1.ApiServerSource{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "src"},
+	}
+	sinkRef := tracker.Reference{
+		APIVersion: "serving.knative.dev/v1",
+		Kind:       "Service",
+		Namespace:  "ns",
+		Name:       "sink",
+	}
+	if err := impl.Tracker.TrackReference(sinkRef, src); err != nil {
+		t.Fatal("TrackReference() =", err)
+	}
+
+	sink := &metav1.PartialObjectMetadata{
+		TypeMeta:   metav1.TypeMeta{APIVersion: "serving.knative.dev/v1", Kind: "Service"},
+		ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "sink"},
+	}
+	if got := impl.Tracker.GetObservers(sink); len(got) != 1 {
+		t.Fatalf("GetObservers() = %v, want 1 observer", got)
+	}
+
+	waitInformers, err := RunAndSyncInformers(ctx, informers...)
+	if err != nil {
+		t.Fatal("RunAndSyncInformers() =", err)
+	}
+	defer func() {
+		cancel()
+		waitInformers()
+	}()
+
+	srcs := fakeeventingclient.Get(ctx).SourcesV1().ApiServerSources("ns")
+	if _, err := srcs.Create(ctx, src, metav1.CreateOptions{}); err != nil {
+		t.Fatal("Create() =", err)
+	}
+	if err := srcs.Delete(ctx, src.Name, metav1.DeleteOptions{}); err != nil {
+		t.Fatal("Delete() =", err)
+	}
+
+	if err := wait.PollUntilContextTimeout(ctx, 10*time.Millisecond, 5*time.Second, true, func(context.Context) (bool, error) {
+		return len(impl.Tracker.GetObservers(sink)) == 0, nil
+	}); err != nil {
+		t.Error("Tracker still has observers after ApiServerSource deletion:", impl.Tracker.GetObservers(sink))
+	}
 }
