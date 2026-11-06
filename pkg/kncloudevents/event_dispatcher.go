@@ -583,16 +583,15 @@ func dispatchExecutionInfoTransformers(destination *apis.URL, dispatchExecutionI
 
 	destination = sanitizeURL(destination)
 
-	// Encodes response body as base64 for the resulting length.
-	bodyLen := len(httpResponseBody)
-	encodedLen := base64.StdEncoding.EncodedLen(bodyLen)
-	if encodedLen > attributes.KnativeErrorDataExtensionMaxLength {
-		encodedLen = attributes.KnativeErrorDataExtensionMaxLength
+	// Encodes response body as base64, keeping only as many bytes of the body
+	// as fit in the maximum length of the encoded extension value.
+	maxBodyLen := base64.StdEncoding.DecodedLen(attributes.KnativeErrorDataExtensionMaxLength)
+	if len(httpResponseBody) > maxBodyLen {
+		httpResponseBody = httpResponseBody[:maxBodyLen]
 	}
-	encodedBuf := make([]byte, encodedLen)
-	base64.StdEncoding.Encode(encodedBuf, httpResponseBody)
+	encodedBody := base64.StdEncoding.EncodeToString(httpResponseBody)
 
-	return attributes.KnativeErrorTransformers(*destination.URL(), dispatchExecutionInfo.ResponseCode, string(encodedBuf[:encodedLen]))
+	return attributes.KnativeErrorTransformers(*destination.URL(), dispatchExecutionInfo.ResponseCode, encodedBody)
 }
 
 // isFailure returns true if the status code is not a successful HTTP status.
