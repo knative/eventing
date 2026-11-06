@@ -20,8 +20,10 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
+	"github.com/google/go-cmp/cmp"
 	authenticationv1 "k8s.io/api/authentication/v1"
 	authv1 "k8s.io/api/authorization/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -1808,6 +1810,70 @@ func TestReconcile(t *testing.T) {
 			controller.GetEventRecorder(ctx),
 			r)
 
+	},
+		false,
+		logger,
+	))
+}
+
+func TestReconcileTracksSubscriberForTrigger(t *testing.T) {
+	subscriberTracker := tracker.New(func(types.NamespacedName) {}, time.Hour)
+
+	table := TableTest{{
+		Name: "Trigger is tracked as the observer of its subscriber",
+		Key:  testKey,
+		Objects: allBrokerObjectsReadyPlus([]runtime.Object{
+			NewTrigger(triggerName, testNS, brokerName,
+				WithTriggerUID(triggerUID),
+				WithTriggerSubscriberRef(subscriberGVK, subscriberName, testNS),
+				WithInitTriggerConditions,
+			)}...),
+		WantEvents: []string{
+			Eventf(corev1.EventTypeWarning, "InternalError", `failed to get object test-namespace/subscriber-name: services.serving.knative.dev "subscriber-name" not found`),
+		},
+		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: NewTrigger(triggerName, testNS, brokerName,
+				WithTriggerUID(triggerUID),
+				WithTriggerSubscriberRef(subscriberGVK, subscriberName, testNS),
+				WithInitTriggerConditions,
+				WithTriggerBrokerReady(),
+				WithTriggerSubscriberResolvedFailed("Unable to get the Subscriber's URI", `failed to get object test-namespace/subscriber-name: services.serving.knative.dev "subscriber-name" not found`),
+			),
+		}},
+		WantErr: true,
+		PostConditions: []func(*testing.T, *TableRow){
+			func(t *testing.T, _ *TableRow) {
+				got := subscriberTracker.GetObservers(makeSubscriberAddressableAsUnstructured(testNS))
+				want := []types.NamespacedName{{Namespace: testNS, Name: triggerName}}
+				if diff := cmp.Diff(want, got); diff != "" {
+					t.Errorf("Subscriber observers (-want, +got): %s", diff)
+				}
+			},
+		},
+	}}
+
+	logger := logtesting.TestLogger(t)
+	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
+		ctx = channelable.WithDuck(ctx)
+		ctx = v1addr.WithDuck(ctx)
+		ctx = source.WithDuck(ctx)
+		r := &Reconciler{
+			eventingClientSet:    fakeeventingclient.Get(ctx),
+			dynamicClientSet:     fakedynamicclient.Get(ctx),
+			kubeclient:           fakekubeclient.Get(ctx),
+			subscriptionLister:   listers.GetSubscriptionLister(),
+			triggerLister:        listers.GetTriggerLister(),
+			secretLister:         listers.GetSecretLister(),
+			serviceAccountLister: listers.GetServiceAccountLister(),
+			brokerLister:         listers.GetBrokerLister(),
+			configmapLister:      listers.GetConfigMapLister(),
+			sourceTracker:        duck.NewListableTrackerFromTracker(ctx, source.Get, tracker.New(func(types.NamespacedName) {}, 0)),
+			uriResolver:          resolver.NewURIResolverFromTracker(ctx, subscriberTracker),
+		}
+		return trigger.NewReconciler(ctx, logger,
+			fakeeventingclient.Get(ctx), listers.GetTriggerLister(),
+			controller.GetEventRecorder(ctx),
+			r)
 	},
 		false,
 		logger,
