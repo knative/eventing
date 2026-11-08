@@ -71,7 +71,13 @@ func NewController(
 	})
 
 	r.channelableTracker = duck.NewListableTrackerFromTracker(ctx, channelable.Get, impl.Tracker)
-	parallelInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
+	// On delete only drop the Parallel from the tracker; otherwise stale tracker
+	// entries keep re-enqueueing the deleted Parallel.
+	parallelInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    impl.Enqueue,
+		UpdateFunc: controller.PassNew(impl.Enqueue),
+		DeleteFunc: impl.Tracker.OnDeletedObserver,
+	})
 
 	// Register handler for Subscriptions that are owned by Parallel, so that
 	// we get notified if they change.
