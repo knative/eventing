@@ -19,6 +19,7 @@ package requestreply
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -368,4 +369,46 @@ func getValidEvent() io.Reader {
 func withUninitializedAnnotations(rr *v1alpha1.RequestReply) *v1alpha1.RequestReply {
 	rr.Status.Annotations = nil
 	return rr
+}
+
+func TestHandleNewEventDoesNotLeakOnDispatchFailure(t *testing.T) {
+	t.Parallel()
+
+	ctx, _ := reconcilertesting.SetupFakeContext(t, setupInformerSelector)
+
+	// A broker that is not listening, so the dispatch fails.
+	down := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+	brokerURL := down.URL
+	down.Close()
+
+	rr := makeRequestReply("my-request-reply", "default")
+	rr.Status.Annotations = map[string]string{
+		v1alpha1.RequestReplyBrokerAddressStatusAnnotationKey: brokerURL,
+	}
+	requestreplyinformerfake.Get(ctx).Informer().GetStore().Add(rr)
+
+	keyStore := &AESKeyStore{}
+	keyStore.addAesKey(rr.GetNamespacedName(), "key", exampleKey)
+
+	handler := NewHandler(zap.NewNop(), requestreplyinformerfake.Get(ctx),
+		configmapinformerfake.Get(ctx).Lister().ConfigMaps("ns"), keyStore, 0)
+
+	for i := 0; i < 5; i++ {
+		e := cloudevents.NewEvent()
+		e.SetType("type")
+		e.SetSource("source")
+		e.SetID(fmt.Sprintf("event-%d", i))
+		b, _ := e.MarshalJSON()
+
+		recorder := httptest.NewRecorder()
+		request := httptest.NewRequest(http.MethodPost, "/default/my-request-reply", bytes.NewBuffer(b))
+		request.Header.Add(cehttp.ContentType, cloudevents.ApplicationCloudEventsJSON)
+		handler.ServeHTTP(recorder, request)
+		assert.Equal(t, http.StatusInternalServerError, recorder.Result().StatusCode)
+	}
+
+	handler.requestLock.RLock()
+	defer handler.requestLock.RUnlock()
+	assert.Equal(t, 0, len(handler.entries[rr.GetNamespacedName()]),
+		"a failed dispatch must not leave the request registered")
 }
