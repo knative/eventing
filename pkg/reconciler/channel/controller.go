@@ -19,6 +19,8 @@ package channel
 import (
 	"context"
 
+	"k8s.io/client-go/tools/cache"
+
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	"knative.dev/eventing/pkg/auth"
 
@@ -73,7 +75,13 @@ func NewController(
 		impl.GlobalResync(channelInformer.Informer())
 	}
 
-	channelInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
+	// On delete only drop the Channel from the tracker; otherwise stale tracker
+	// entries keep re-enqueueing the deleted Channel.
+	channelInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    impl.Enqueue,
+		UpdateFunc: controller.PassNew(impl.Enqueue),
+		DeleteFunc: impl.Tracker.OnDeletedObserver,
+	})
 
 	channelGK := messagingv1.SchemeGroupVersion.WithKind("Channel").GroupKind()
 
