@@ -53,10 +53,10 @@ require (
 	k8s.io/code-generator v0.36.5
 	k8s.io/klog/v2 v2.140.0
 	k8s.io/utils v0.0.0-20260210185600-b8788abfbbc2
-	knative.dev/hack v0.0.0-20261023132104-4a15c76c8f70
-	knative.dev/hack/schema v0.0.0-20261023132104-4a15c76c8f70
-	knative.dev/pkg v0.0.0-20261026113028-cfa0ac991c5a
-	knative.dev/reconciler-test v0.0.0-20261026141430-d915e180051b
+	knative.dev/hack v0.0.0-20261106011541-9aee2b079953
+	knative.dev/hack/schema v0.0.0-20261106011541-9aee2b079953
+	knative.dev/pkg v0.0.0-20261110182720-ae1437a8b141
+	knative.dev/reconciler-test v0.0.0-20261111013624-789ae8467c7f
 	sigs.k8s.io/randfill v1.0.0
 	sigs.k8s.io/yaml v1.6.0
 )
@@ -125,7 +125,7 @@ require (
 	github.com/rickb777/plural v1.2.1 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/spf13/cobra v1.10.2 // indirect
-	github.com/spf13/pflag v1.0.10 // indirect
+	github.com/spf13/pflag v1.1.0 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
