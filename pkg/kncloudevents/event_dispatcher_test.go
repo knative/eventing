@@ -59,6 +59,7 @@ import (
 	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/eventingtls/eventingtlstesting"
 	"knative.dev/eventing/pkg/kncloudevents"
+	"knative.dev/eventing/pkg/kncloudevents/attributes"
 	"knative.dev/eventing/pkg/utils"
 )
 
@@ -416,6 +417,50 @@ func TestSendEvent(t *testing.T) {
 					"ce-specversion":     {cloudevents.VersionV1},
 				},
 				Body: io.NopCloser(bytes.NewBufferString("deadlettersink-response")),
+			},
+			lastReceiver: "deadLetter",
+		},
+		"invalid destination with a large response body and delivery option": {
+			sendToDestination: true,
+			hasDeadLetterSink: true,
+			header: map[string][]string{
+				"x-request-id": {"id123"},
+			},
+			body: "destination",
+			expectedDestRequest: &requestValidation{
+				Headers: map[string][]string{
+					"x-request-id":   {"id123"},
+					"prefer":         {"reply"},
+					"traceparent":    {"ignored-value-header"},
+					"ce-id":          {"ignored-value-header"},
+					"ce-time":        {"2002-10-02T15:00:00Z"},
+					"ce-source":      {testCeSource},
+					"ce-type":        {testCeType},
+					"ce-specversion": {cloudevents.VersionV1},
+				},
+				Body: `"destination"`,
+			},
+			expectedDeadLetterRequest: &requestValidation{
+				Headers: map[string][]string{
+					"x-request-id":        {"id123"},
+					"traceparent":         {"ignored-value-header"},
+					"ce-knativeerrorcode": {strconv.Itoa(http.StatusInternalServerError)},
+					"ce-knativeerrordata": {base64.StdEncoding.EncodeToString([]byte(strings.Repeat("a", 2000)))[:attributes.KnativeErrorDataExtensionMaxLength]},
+					"ce-id":               {"ignored-value-header"},
+					"ce-time":             {"2002-10-02T15:00:00Z"},
+					"ce-source":           {testCeSource},
+					"ce-type":             {testCeType},
+					"ce-specversion":      {cloudevents.VersionV1},
+				},
+				Body: `"destination"`,
+			},
+			fakeResponse: &http.Response{
+				StatusCode: http.StatusInternalServerError,
+				Body:       io.NopCloser(bytes.NewBufferString(strings.Repeat("a", 2000))),
+			},
+			fakeDeadLetterResponse: &http.Response{
+				StatusCode: http.StatusAccepted,
+				Body:       io.NopCloser(bytes.NewBufferString("")),
 			},
 			lastReceiver: "deadLetter",
 		},
