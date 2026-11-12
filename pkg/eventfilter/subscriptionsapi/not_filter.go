@@ -49,6 +49,9 @@ func (filter *notFilter) Filter(ctx context.Context, event cloudevents.Event) ev
 }
 
 func (filter *notFilter) Cleanup() {
+	if filter == nil || filter.filter == nil {
+		return
+	}
 	filter.filter.Cleanup()
 }
 

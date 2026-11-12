@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 )
@@ -53,5 +54,37 @@ func TestFiltersMap(t *testing.T) {
 
 	fm.Delete(prefixTrigger)
 	_, ok = fm.Get(prefixTrigger)
+	assert.False(t, ok)
+}
+
+func TestFiltersMapTriggerWithEmptyNotFilter(t *testing.T) {
+	// A Trigger with `not: {}` passes webhook validation, because ValidateOneOf
+	// only rejects filters that set more than one dialect. It materializes to a
+	// notFilter wrapping nothing.
+	trigger := &eventingv1.Trigger{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "empty-not",
+			Namespace: "default",
+		},
+		Spec: eventingv1.TriggerSpec{
+			Filters: []eventingv1.SubscriptionsAPIFilter{
+				{Not: &eventingv1.SubscriptionsAPIFilter{}},
+			},
+		},
+	}
+	logger := zap.NewNop()
+
+	fm := NewFiltersMap()
+	// The informer AddFunc and UpdateFunc both do exactly this, so the second
+	// Set runs Cleanup on the filter it replaces.
+	fm.Set(trigger, CreateSubscriptionsAPIFilters(logger, trigger.Spec.Filters))
+	fm.Set(trigger, CreateSubscriptionsAPIFilters(logger, trigger.Spec.Filters))
+
+	_, ok := fm.Get(trigger)
+	assert.True(t, ok)
+
+	// DeleteFunc path.
+	fm.Delete(trigger)
+	_, ok = fm.Get(trigger)
 	assert.False(t, ok)
 }
