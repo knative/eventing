@@ -17,11 +17,18 @@ limitations under the License.
 package eventpolicy
 
 import (
+	"context"
 	"testing"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"knative.dev/pkg/tracker"
+
+	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/apis/feature"
+	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 
 	"knative.dev/pkg/configmap"
 
@@ -35,14 +42,69 @@ import (
 func TestNew(t *testing.T) {
 	ctx, _ := SetupFakeContext(t)
 
-	c := NewController(ctx, configmap.NewStaticWatcher(&corev1.ConfigMap{
+	c := NewController(ctx, testConfigMapWatcher())
+
+	if c == nil {
+		t.Fatal("Expected NewController to return a non-nil value")
+	}
+}
+
+func testConfigMapWatcher() configmap.Watcher {
+	return configmap.NewStaticWatcher(&corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      feature.FlagsConfigName,
 			Namespace: "knative-eventing",
 		},
-	}))
+	})
+}
 
-	if c == nil {
-		t.Fatal("Expected NewController to return a non-nil value")
+func TestEventPolicyDeleteRemovesTrackerObservers(t *testing.T) {
+	ctx, cancel, informers := SetupFakeContextWithCancel(t)
+	defer cancel()
+
+	impl := NewController(ctx, testConfigMapWatcher())
+
+	obj := &eventingv1alpha1.EventPolicy{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "obj"},
+	}
+	ref := tracker.Reference{
+		APIVersion: "eventing.knative.dev/v1",
+		Kind:       "Broker",
+		Namespace:  "ns",
+		Name:       "from",
+	}
+	if err := impl.Tracker.TrackReference(ref, obj); err != nil {
+		t.Fatal("TrackReference() =", err)
+	}
+
+	tracked := &metav1.PartialObjectMetadata{
+		TypeMeta:   metav1.TypeMeta{APIVersion: "eventing.knative.dev/v1", Kind: "Broker"},
+		ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "from"},
+	}
+	if got := impl.Tracker.GetObservers(tracked); len(got) != 1 {
+		t.Fatalf("GetObservers() = %v, want 1 observer", got)
+	}
+
+	waitInformers, err := RunAndSyncInformers(ctx, informers...)
+	if err != nil {
+		t.Fatal("RunAndSyncInformers() =", err)
+	}
+	defer func() {
+		cancel()
+		waitInformers()
+	}()
+
+	client := fakeeventingclient.Get(ctx).EventingV1alpha1().EventPolicies("ns")
+	if _, err := client.Create(ctx, obj, metav1.CreateOptions{}); err != nil {
+		t.Fatal("Create() =", err)
+	}
+	if err := client.Delete(ctx, obj.Name, metav1.DeleteOptions{}); err != nil {
+		t.Fatal("Delete() =", err)
+	}
+
+	if err := wait.PollUntilContextTimeout(ctx, 10*time.Millisecond, 5*time.Second, true, func(context.Context) (bool, error) {
+		return len(impl.Tracker.GetObservers(tracked)) == 0, nil
+	}); err != nil {
+		t.Error("Tracker still has observers after EventPolicy deletion:", impl.Tracker.GetObservers(tracked))
 	}
 }
