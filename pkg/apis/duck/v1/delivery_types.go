@@ -123,7 +123,7 @@ func (ds *DeliverySpec) Validate(ctx context.Context) *apis.FieldError {
 	if ds.Timeout != nil {
 		if feature.FromContext(ctx).IsEnabled(feature.DeliveryTimeout) {
 			t, te := period.Parse(*ds.Timeout)
-			if te != nil || t.IsZero() {
+			if te != nil || t.IsZero() || t.IsNegative() {
 				errs = errs.Also(apis.ErrInvalidValue(*ds.Timeout, "timeout"))
 			}
 		} else {
@@ -141,8 +141,8 @@ func (ds *DeliverySpec) Validate(ctx context.Context) *apis.FieldError {
 	}
 
 	if ds.BackoffDelay != nil {
-		_, te := period.Parse(*ds.BackoffDelay)
-		if te != nil {
+		d, te := period.Parse(*ds.BackoffDelay)
+		if te != nil || d.IsNegative() {
 			errs = errs.Also(apis.ErrInvalidValue(*ds.BackoffDelay, "backoffDelay"))
 		}
 	}
