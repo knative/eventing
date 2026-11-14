@@ -131,8 +131,10 @@ if [ -d "${YAML_REPO_ROOT}/config/post-install" ]; then
       done
       ko resolve ${KO_YAML_FLAGS} "${POST_INSTALL_FLAGS[@]}" | "${LABEL_YAML_CMD[@]}" > "${EVENTING_POST_INSTALL_YAML}"
       echo "---" >> "${EVENTING_POST_INSTALL_YAML}"
+      # Standalone invocations can infer the repository name from the Go module.
+      REPO_NAME="${REPO_NAME:-$(basename "$(go list -m)")}"
       # Disable inherited naming flags, which otherwise take precedence over --bare.
-      KO_DOCKER_REPO="${KO_DOCKER_REPO}/knative.dev/eventing/storage-version-migration" \
+      KO_DOCKER_REPO="${KO_DOCKER_REPO}/knative.dev/${REPO_NAME}/storage-version-migration" \
         ko resolve ${KO_YAML_FLAGS} --preserve-import-paths=false --base-import-paths=false --bare \
         -f config/post-install/storage-version-migrator.yaml | "${LABEL_YAML_CMD[@]}" >> "${EVENTING_POST_INSTALL_YAML}"
       ;;
