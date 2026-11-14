@@ -118,15 +118,17 @@ if [ -d "${YAML_REPO_ROOT}/config/post-install" ]; then
 
   echo "Resolving post install manifests"
 
-  # The migrator is the only image in this directory. Keep local publishing unchanged.
-  if [[ "${KO_DOCKER_REPO}" == ko.local || "${KO_DOCKER_REPO}" == kind.local ]]; then
-    ko resolve ${KO_YAML_FLAGS} -f config/post-install/ | "${LABEL_YAML_CMD[@]}" > "${EVENTING_POST_INSTALL_YAML}"
-  else
-    REPO_NAME="${REPO_NAME:-$(basename "$(go list -m)")}"
-    KO_DOCKER_REPO="${KO_DOCKER_REPO}/knative.dev/${REPO_NAME}/storage-version-migration" \
-      ko resolve ${KO_YAML_FLAGS} --preserve-import-paths=false --base-import-paths=false --bare \
-      -f config/post-install/ | "${LABEL_YAML_CMD[@]}" > "${EVENTING_POST_INSTALL_YAML}"
-  fi
+  # Only the migrator gets a custom image name; other manifests use normal publishing.
+  for manifest in config/post-install/*.yaml; do
+    if [[ "${manifest##*/}" == storage-version-migrator.yaml && "${KO_DOCKER_REPO}" != ko.local && "${KO_DOCKER_REPO}" != kind.local ]]; then
+      REPO_NAME="${REPO_NAME:-$(basename "$(go list -m)")}"
+      KO_DOCKER_REPO="${KO_DOCKER_REPO}/knative.dev/${REPO_NAME}/storage-version-migration" \
+        ko resolve ${KO_YAML_FLAGS} --preserve-import-paths=false --base-import-paths=false --bare -f "${manifest}" || exit $?
+    else
+      ko resolve ${KO_YAML_FLAGS} -f "${manifest}" || exit $?
+    fi
+    echo "---"
+  done | "${LABEL_YAML_CMD[@]}" > "${EVENTING_POST_INSTALL_YAML}"
   all_yamls+=(${EVENTING_POST_INSTALL_YAML})
 fi
 
