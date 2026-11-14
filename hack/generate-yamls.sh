@@ -118,7 +118,25 @@ if [ -d "${YAML_REPO_ROOT}/config/post-install" ]; then
 
   echo "Resolving post install manifests"
 
-  ko resolve ${KO_YAML_FLAGS} -f config/post-install/ | "${LABEL_YAML_CMD[@]}" > "${EVENTING_POST_INSTALL_YAML}"
+  case "${KO_DOCKER_REPO}" in
+    ko.local|kind.local)
+      ko resolve ${KO_YAML_FLAGS} -f config/post-install/ | "${LABEL_YAML_CMD[@]}" > "${EVENTING_POST_INSTALL_YAML}"
+      ;;
+    *)
+      # Resolve the migrator separately so other post-install images keep their names.
+      POST_INSTALL_FLAGS=()
+      for manifest in config/post-install/*.yaml; do
+        [[ "${manifest}" == config/post-install/storage-version-migrator.yaml ]] && continue
+        POST_INSTALL_FLAGS+=(-f "${manifest}")
+      done
+      ko resolve ${KO_YAML_FLAGS} "${POST_INSTALL_FLAGS[@]}" | "${LABEL_YAML_CMD[@]}" > "${EVENTING_POST_INSTALL_YAML}"
+      echo "---" >> "${EVENTING_POST_INSTALL_YAML}"
+      # Disable inherited naming flags, which otherwise take precedence over --bare.
+      KO_DOCKER_REPO="${KO_DOCKER_REPO}/knative.dev/eventing/storage-version-migration" \
+        ko resolve ${KO_YAML_FLAGS} --preserve-import-paths=false --base-import-paths=false --bare \
+        -f config/post-install/storage-version-migrator.yaml | "${LABEL_YAML_CMD[@]}" >> "${EVENTING_POST_INSTALL_YAML}"
+      ;;
+  esac
   all_yamls+=(${EVENTING_POST_INSTALL_YAML})
 fi
 
