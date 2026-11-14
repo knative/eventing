@@ -118,27 +118,15 @@ if [ -d "${YAML_REPO_ROOT}/config/post-install" ]; then
 
   echo "Resolving post install manifests"
 
-  case "${KO_DOCKER_REPO}" in
-    ko.local|kind.local)
-      ko resolve ${KO_YAML_FLAGS} -f config/post-install/ | "${LABEL_YAML_CMD[@]}" > "${EVENTING_POST_INSTALL_YAML}"
-      ;;
-    *)
-      # Resolve the migrator separately so other post-install images keep their names.
-      POST_INSTALL_FLAGS=()
-      for manifest in config/post-install/*.yaml; do
-        [[ "${manifest}" == config/post-install/storage-version-migrator.yaml ]] && continue
-        POST_INSTALL_FLAGS+=(-f "${manifest}")
-      done
-      ko resolve ${KO_YAML_FLAGS} "${POST_INSTALL_FLAGS[@]}" | "${LABEL_YAML_CMD[@]}" > "${EVENTING_POST_INSTALL_YAML}"
-      echo "---" >> "${EVENTING_POST_INSTALL_YAML}"
-      # Standalone invocations can infer the repository name from the Go module.
-      REPO_NAME="${REPO_NAME:-$(basename "$(go list -m)")}"
-      # Disable inherited naming flags, which otherwise take precedence over --bare.
-      KO_DOCKER_REPO="${KO_DOCKER_REPO}/knative.dev/${REPO_NAME}/storage-version-migration" \
-        ko resolve ${KO_YAML_FLAGS} --preserve-import-paths=false --base-import-paths=false --bare \
-        -f config/post-install/storage-version-migrator.yaml | "${LABEL_YAML_CMD[@]}" >> "${EVENTING_POST_INSTALL_YAML}"
-      ;;
-  esac
+  # The migrator is the only image in this directory. Keep local publishing unchanged.
+  if [[ "${KO_DOCKER_REPO}" == ko.local || "${KO_DOCKER_REPO}" == kind.local ]]; then
+    ko resolve ${KO_YAML_FLAGS} -f config/post-install/ | "${LABEL_YAML_CMD[@]}" > "${EVENTING_POST_INSTALL_YAML}"
+  else
+    REPO_NAME="${REPO_NAME:-$(basename "$(go list -m)")}"
+    KO_DOCKER_REPO="${KO_DOCKER_REPO}/knative.dev/${REPO_NAME}/storage-version-migration" \
+      ko resolve ${KO_YAML_FLAGS} --preserve-import-paths=false --base-import-paths=false --bare \
+      -f config/post-install/ | "${LABEL_YAML_CMD[@]}" > "${EVENTING_POST_INSTALL_YAML}"
+  fi
   all_yamls+=(${EVENTING_POST_INSTALL_YAML})
 fi
 
