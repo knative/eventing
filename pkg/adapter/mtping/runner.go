@@ -154,7 +154,7 @@ func (a *cronJobsRunner) cronTick(ctx context.Context, client kncloudevents.Clie
 		a.Logger.Debugf("sending cloudevent id: %s, source: %s, target: %s", event.ID(), source, target)
 
 		// Add labels to context so otelhttp picks them up for metrics
-		ctx = observability.WithLabeler(ctx)
+		ctx := observability.WithLabeler(ctx)
 		ctx = observability.WithSourceLabels(ctx, types.NamespacedName{
 			Name:      src.Name,
 			Namespace: src.Namespace,

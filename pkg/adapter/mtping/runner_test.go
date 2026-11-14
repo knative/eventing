@@ -32,6 +32,9 @@ import (
 	"github.com/cloudevents/sdk-go/v2/binding"
 	bindingshttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel/attribute"
+	"go.uber.org/zap"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/pointer"
@@ -46,6 +49,7 @@ import (
 	"knative.dev/eventing/pkg/adapter/v2"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/eventing/pkg/eventingtls/eventingtlstesting"
+	"knative.dev/eventing/pkg/observability"
 )
 
 const (
@@ -446,4 +450,46 @@ func eventsAccumulator() (http.Handler, *[]cloudevents.Event) {
 		events = append(events, *event)
 		writer.WriteHeader(http.StatusOK)
 	}), &events
+}
+
+type labelCountClient struct {
+	cloudevents.Client
+	labels [][]attribute.KeyValue
+}
+
+func (c *labelCountClient) Send(ctx context.Context, _ cloudevents.Event) cloudevents.Result {
+	l, _ := otelhttp.LabelerFromContext(ctx)
+	c.labels = append(c.labels, l.Get())
+	return cloudevents.ResultACK
+}
+
+func (c *labelCountClient) CloseIdleConnections() {}
+
+func TestCronTickLabelsDoNotAccumulate(t *testing.T) {
+	r := NewCronJobsRunner(adapter.ClientConfig{}, nil, zap.NewNop().Sugar())
+
+	src := &sourcesv1.PingSource{
+		ObjectMeta: metav1.ObjectMeta{Name: "n", Namespace: "ns"},
+	}
+	src.Status.SinkURI, _ = apis.ParseURL("http://sink.example")
+
+	ev := cloudevents.NewEvent()
+	ev.SetType("t")
+	ev.SetSource("s")
+
+	c := &labelCountClient{}
+	tick := r.cronTick(context.Background(), c, src, ev)
+	for i := 0; i < 4; i++ {
+		tick()
+	}
+
+	want := []attribute.KeyValue{
+		observability.SourceName.With("n"),
+		observability.SourceNamespace.With("ns"),
+		observability.CloudEventType.With("t"),
+	}
+	require.Len(t, c.labels, 4)
+	for i, got := range c.labels {
+		require.ElementsMatch(t, want, got, "tick %d", i)
+	}
 }
