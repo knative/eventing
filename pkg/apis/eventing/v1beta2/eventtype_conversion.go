@@ -38,7 +38,7 @@ func (source *EventType) ConvertTo(ctx context.Context, to apis.Convertible) err
 		sink.Spec.Description = source.Spec.Description
 
 		if source.Spec.Reference == nil && source.Spec.Broker != "" {
-			source.Spec.Reference = &duckv1.KReference{
+			sink.Spec.Reference = &duckv1.KReference{
 				Kind:       "Broker",
 				Name:       source.Spec.Broker,
 				APIVersion: eventing.SchemeGroupVersion.String(),
