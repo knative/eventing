@@ -528,7 +528,6 @@ spec:
       storage: true
       subresources:
         status: {}
-
 ---
 # Source: trust-manager/templates/clusterrole-aggregate.yaml
 # Bundle is a cluster-scoped resource, so its read access is aggregated into
@@ -552,7 +551,6 @@ rules:
   resources:
   - "bundles"
   verbs: ["get", "list", "watch"]
-
 ---
 # Source: trust-manager/templates/clusterrole.yaml
 kind: ClusterRole
@@ -645,7 +643,6 @@ rules:
   - "get"
   - "list"
   - "watch"
-
 ---
 # Source: trust-manager/templates/role.yaml
 kind: Role
@@ -691,7 +688,6 @@ subjects:
 - kind: ServiceAccount
   name: trust-manager
   namespace: cert-manager
-
 ---
 # Source: trust-manager/templates/rolebinding.yaml
 kind: RoleBinding
@@ -737,7 +733,6 @@ spec:
       name: metrics
   selector:
     app: trust-manager
-
 ---
 # Source: trust-manager/templates/webhook.yaml
 apiVersion: v1
@@ -761,8 +756,6 @@ spec:
       name: webhook
   selector:
     app: trust-manager
-
-
 ---
 # Source: trust-manager/templates/deployment.yaml
 apiVersion: apps/v1
@@ -874,7 +867,6 @@ spec:
         secret:
           defaultMode: 420
           secretName: trust-manager-tls
-
 ---
 # Source: trust-manager/templates/webhook.yaml
 apiVersion: admissionregistration.k8s.io/v1
@@ -912,7 +904,6 @@ webhooks:
         name: trust-manager
         namespace: cert-manager
         path: /validate-trust-cert-manager-io-v1alpha1-bundle
-
 ---
 # Source: trust-manager/templates/certificate.yaml
 apiVersion: cert-manager.io/v1
@@ -938,8 +929,6 @@ spec:
     name: trust-manager
     kind: Issuer
     group: cert-manager.io
-
-
 ---
 # Source: trust-manager/templates/certificate.yaml
 apiVersion: cert-manager.io/v1
