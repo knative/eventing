@@ -215,6 +215,9 @@ func BrokerSendEventWithOIDCTokenToReply() *feature.Feature {
 
 	f.Requirement("Broker is ready", broker.IsReady(brokerName))
 	f.Requirement("trigger is ready", trigger.IsReady(triggerName))
+	// The helper trigger routes the reply to the reply sink, so it must be ready
+	// before the event is sent, otherwise the reply is dropped.
+	f.Requirement("helper trigger is ready", trigger.IsReady(helperTriggerName))
 
 	// Send events after data plane is ready.
 	f.Requirement("install source", eventshub.Install(source,
