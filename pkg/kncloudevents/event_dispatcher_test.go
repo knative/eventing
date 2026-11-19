@@ -1334,8 +1334,8 @@ func TestSendEventRecordsDroppedEventWhenDLSFails(t *testing.T) {
 	event.SetType("testtype")
 	event.SetSource("testsource")
 
-	// Keep a parent span active so the drop span event has a live span to
-	// attach to.
+	// Keep a parent span active so the drop is recorded within the request
+	// trace.
 	ctx, parentSpan := tp.Tracer("test").Start(ctx, "parent")
 	_, err := dispatcher.SendEvent(ctx, event,
 		duckv1.Addressable{URL: getOnlyDomainURL(t, true, destServer.URL)},
@@ -1358,34 +1358,38 @@ func TestSendEventRecordsDroppedEventWhenDLSFails(t *testing.T) {
 		),
 	)
 
-	// The drop span event must be recorded exactly once, on a live span, and
-	// carry the event details for attribution.
-	dropEvents := 0
-	for _, span := range exporter.GetSpans() {
-		for _, e := range span.Events {
-			if e.Name != "kn.eventing.event.dropped" {
-				continue
-			}
-			dropEvents++
+	assertSingleDropSpan(t, exporter, map[string]string{
+		string(observability.DropReason):       string(eventdrop.ReasonDeadLetterSinkFailed),
+		string(observability.TriggerName):      "test-trigger",
+		string(observability.TriggerNamespace): "test-ns",
+		string(observability.CloudEventID):     "test-event-id",
+	})
+}
 
-			attrs := map[string]string{}
-			for _, kv := range e.Attributes {
-				attrs[string(kv.Key)] = kv.Value.Emit()
-			}
-			for key, want := range map[string]string{
-				string(observability.DropReason):       string(eventdrop.ReasonDeadLetterSinkFailed),
-				string(observability.TriggerName):      "test-trigger",
-				string(observability.TriggerNamespace): "test-ns",
-				string(observability.CloudEventID):     "test-event-id",
-			} {
-				if got := attrs[key]; got != want {
-					t.Errorf("drop span event: expected attribute %s=%q, got %q", key, want, got)
-				}
+// assertSingleDropSpan asserts exactly one dedicated drop span was exported
+// and that its attributes include all the wanted entries.
+func assertSingleDropSpan(t *testing.T, exporter *tracetest.InMemoryExporter, want map[string]string) {
+	t.Helper()
+
+	dropSpans := 0
+	for _, span := range exporter.GetSpans() {
+		if span.Name != "kn.eventing.event.dropped" {
+			continue
+		}
+		dropSpans++
+
+		attrs := map[string]string{}
+		for _, kv := range span.Attributes {
+			attrs[string(kv.Key)] = kv.Value.Emit()
+		}
+		for key, wantValue := range want {
+			if got := attrs[key]; got != wantValue {
+				t.Errorf("drop span: expected attribute %s=%q, got %q", key, wantValue, got)
 			}
 		}
 	}
-	if dropEvents != 1 {
-		t.Errorf("expected exactly 1 drop span event, got %d", dropEvents)
+	if dropSpans != 1 {
+		t.Errorf("expected exactly 1 drop span, got %d", dropSpans)
 	}
 }
 
@@ -1520,17 +1524,101 @@ func TestSendEventRecordsDroppedEventWhenReplyAndDLSFail(t *testing.T) {
 		),
 	)
 
-	// The drop record must not claim the original event was lost.
+	// The drop is recorded without the original event's details: what was
+	// lost is the reply, and it must not claim the original event was lost.
+	assertSingleDropSpan(t, exporter, map[string]string{
+		string(observability.DropReason): string(eventdrop.ReasonDeadLetterSinkFailed),
+	})
 	for _, span := range exporter.GetSpans() {
-		for _, e := range span.Events {
-			if e.Name != "kn.eventing.event.dropped" {
-				continue
-			}
-			for _, kv := range e.Attributes {
-				if kv.Key == attribute.Key(string(observability.CloudEventID)) {
-					t.Errorf("drop span event must not carry the original event's ID, got %s", kv.Value.Emit())
-				}
+		if span.Name != "kn.eventing.event.dropped" {
+			continue
+		}
+		for _, kv := range span.Attributes {
+			if kv.Key == attribute.Key(string(observability.CloudEventID)) {
+				t.Errorf("drop span must not carry the original event's ID, got %s", kv.Value.Emit())
 			}
 		}
 	}
+}
+
+func TestSendEventConcurrentSharedOptionsSlice(t *testing.T) {
+	// Callers may reuse an options slice with spare capacity across concurrent
+	// SendEvent calls: the internally appended option must not write into it,
+	// and each drop record must carry its own event's identity.
+	ctx := context.Background()
+	ctx, _ = fakekubeclient.With(ctx)
+	ctx = injection.WithConfig(ctx, &rest.Config{})
+
+	reader := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(reader))
+	exporter := tracetest.NewInMemoryExporter()
+	tp := trace.NewTracerProvider(trace.WithSyncer(exporter))
+	otel.SetTextMapPropagator(propagation.TraceContext{})
+
+	oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
+	dispatcher := kncloudevents.NewDispatcher(eventingtls.NewDefaultClientConfig(), oidcTokenProvider,
+		kncloudevents.WithMeterProvider(mp),
+		kncloudevents.WithTraceProvider(tp),
+	)
+
+	destServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer destServer.Close()
+	deadLetterSinkServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer deadLetterSinkServer.Close()
+
+	// A slice with spare capacity, shared by all calls.
+	sharedOptions := make([]kncloudevents.SendOption, 0, 8)
+	sharedOptions = append(sharedOptions,
+		kncloudevents.WithDeadLetterSink(&duckv1.Addressable{URL: getOnlyDomainURL(t, true, deadLetterSinkServer.URL)}),
+	)
+
+	const calls = 8
+	var wg sync.WaitGroup
+	for i := range calls {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			event := cloudevents.NewEvent(cloudevents.VersionV1)
+			event.SetID(fmt.Sprintf("event-%d", i))
+			event.SetType("testtype")
+			event.SetSource("testsource")
+
+			_, err := dispatcher.SendEvent(ctx, event,
+				duckv1.Addressable{URL: getOnlyDomainURL(t, true, destServer.URL)},
+				sharedOptions...,
+			)
+			if err == nil {
+				t.Error("expected the dispatch to fail, got nil error")
+			}
+		}(i)
+	}
+	wg.Wait()
+
+	ids := map[string]int{}
+	for _, span := range exporter.GetSpans() {
+		if span.Name != "kn.eventing.event.dropped" {
+			continue
+		}
+		for _, kv := range span.Attributes {
+			if kv.Key == attribute.Key(string(observability.CloudEventID)) {
+				ids[kv.Value.Emit()]++
+			}
+		}
+	}
+	if len(ids) != calls {
+		t.Errorf("expected %d distinct event IDs on drop spans, got %v", calls, ids)
+	}
+	for id, n := range ids {
+		if n != 1 {
+			t.Errorf("event %s: expected exactly 1 drop span, got %d", id, n)
+		}
+	}
+
+	metricstest.AssertMetrics(t, reader,
+		metricstest.MetricsPresent(eventdrop.ScopeName, "kn.eventing.events.dropped"),
+	)
 }

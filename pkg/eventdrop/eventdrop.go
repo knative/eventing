@@ -105,16 +105,22 @@ func NewRecorder(mp metric.MeterProvider, tp trace.TracerProvider) *Recorder {
 	r := &Recorder{}
 	if mp != nil {
 		meter := mp.Meter(ScopeName)
-		r.droppedEvents, _ = meter.Int64Counter(
+		// The SDK may return a non-nil handle together with an error; only a
+		// nil error guarantees the counter records, so drop failing handles.
+		if dropped, err := meter.Int64Counter(
 			droppedEventsCountName,
 			metric.WithDescription("Number of events for which this data plane component exhausted its delivery options, e.g. neither the destination nor the dead letter sink accepted the event. Outer delivery layers may still handle the event."),
 			metric.WithUnit("1"),
-		)
-		r.rejectedEvents, _ = meter.Int64Counter(
+		); err == nil {
+			r.droppedEvents = dropped
+		}
+		if rejected, err := meter.Int64Counter(
 			rejectedEventsCountName,
 			metric.WithDescription("Number of events rejected by this data plane component, e.g. by the Broker ingress on TTL exhaustion. The caller decides the final outcome."),
 			metric.WithUnit("1"),
-		)
+		); err == nil {
+			r.rejectedEvents = rejected
+		}
 	}
 	if tp != nil {
 		r.tracer = tp.Tracer(ScopeName)
@@ -154,11 +160,16 @@ func (r *Recorder) RecordEventRejected(ctx context.Context, reason Reason, label
 	r.recordSpan(ctx, rejectedSpanName, reason, labels, event)
 }
 
-// recordSpan makes the drop or rejection visible on the trace: as an event on
-// the current span when it is still recording, e.g. while the request is being
-// served, or as a short-lived span of its own otherwise, e.g. for deliveries
-// continuing in the background after the request span already ended.
+// recordSpan makes the drop or rejection visible on the trace as a
+// short-lived span of its own, attached to the trace in ctx. The span
+// lifecycle is managed here instead of attaching an event to the current span,
+// whose owner may end it at any time, e.g. when a request finishes while a
+// delivery continues in the background.
 func (r *Recorder) recordSpan(ctx context.Context, name string, reason Reason, labels Labels, event *cloudevents.Event) {
+	if r.tracer == nil {
+		return
+	}
+
 	attrs := attributes(reason, labels)
 	if event != nil {
 		attrs = append(attrs,
@@ -166,14 +177,6 @@ func (r *Recorder) recordSpan(ctx context.Context, name string, reason Reason, l
 			observability.CloudEventType.With(event.Type()),
 			observability.CloudEventSource.With(event.Source()),
 		)
-	}
-
-	if span := trace.SpanFromContext(ctx); span.IsRecording() {
-		span.AddEvent(name, trace.WithAttributes(attrs...))
-		return
-	}
-	if r.tracer == nil {
-		return
 	}
 
 	_, span := r.tracer.Start(ctx, name, trace.WithAttributes(attrs...))

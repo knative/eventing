@@ -196,7 +196,7 @@ func TestRecordEventDroppedDoesNotTouchRejectedCounter(t *testing.T) {
 	}
 }
 
-func TestRecordEventSpanEvents(t *testing.T) {
+func TestRecordEventSpanRecords(t *testing.T) {
 	exporter := tracetest.NewInMemoryExporter()
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))
 	r := NewRecorder(nil, tp)
@@ -206,38 +206,34 @@ func TestRecordEventSpanEvents(t *testing.T) {
 	r.RecordEventRejected(ctx, ReasonTTLExhausted, Labels{}, makeEvent())
 	span.End()
 
-	spans := exporter.GetSpans()
-	if len(spans) != 1 {
-		t.Fatalf("expected 1 span, got %d", len(spans))
-	}
-	if len(spans[0].Events) != 2 {
-		t.Fatalf("expected 2 span events, got %d", len(spans[0].Events))
-	}
-
-	for _, e := range spans[0].Events {
-		attrs := map[string]string{}
-		for _, kv := range e.Attributes {
-			attrs[string(kv.Key)] = kv.Value.Emit()
-		}
-
-		var wantReason string
-		switch e.Name {
-		case droppedSpanName:
-			wantReason = string(ReasonDeadLetterSinkFailed)
-		case rejectedSpanName:
-			wantReason = string(ReasonTTLExhausted)
-		default:
-			t.Errorf("unexpected span event %q", e.Name)
+	records := map[string][]attribute.KeyValue{}
+	for _, s := range exporter.GetSpans() {
+		if s.Name != droppedSpanName && s.Name != rejectedSpanName {
 			continue
 		}
+		records[s.Name] = s.Attributes
+	}
+	if len(records) != 2 {
+		t.Fatalf("expected a dropped and a rejected span record, got %v", records)
+	}
 
+	for name, attrs := range records {
+		got := map[string]string{}
+		for _, kv := range attrs {
+			got[string(kv.Key)] = kv.Value.Emit()
+		}
+
+		wantReason := string(ReasonTTLExhausted)
+		if name == droppedSpanName {
+			wantReason = string(ReasonDeadLetterSinkFailed)
+		}
 		for key, want := range map[string]string{
 			string(observability.DropReason):     wantReason,
 			string(observability.CloudEventID):   "test-id",
 			string(observability.CloudEventType): "test-type",
 		} {
-			if got := attrs[key]; got != want {
-				t.Errorf("span event %q: expected attribute %s=%q, got %q", e.Name, key, want, got)
+			if got[key] != want {
+				t.Errorf("span record %q: expected attribute %s=%q, got %q", name, key, want, got[key])
 			}
 		}
 	}
