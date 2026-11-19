@@ -41,6 +41,7 @@ import (
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	"knative.dev/eventing/pkg/channel"
+	"knative.dev/eventing/pkg/eventdrop"
 	"knative.dev/eventing/pkg/eventtype"
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/observability"
@@ -373,6 +374,9 @@ func (f *FanoutEventHandler) makeFanoutRequest(ctx context.Context, event event.
 		kncloudevents.WithReply(sub.Reply),
 		kncloudevents.WithDeadLetterSink(sub.DeadLetter),
 		kncloudevents.WithRetryConfig(sub.RetryConfig),
+		kncloudevents.WithDropLabels(eventdrop.Labels{
+			Subscription: &types.NamespacedName{Namespace: sub.Namespace, Name: sub.Name},
+		}),
 	}
 
 	if f.eventTypeHandler != nil && sub.Name != "" && sub.Namespace != "" && sub.UID != types.UID("") {

@@ -379,7 +379,7 @@ func TestHandler_ServeHTTP(t *testing.T) {
 			assertions = append(assertions, metricstest.MetricsPresent(ScopeName, expectedMetricNames...))
 			if tc.expectedDropReason != "" {
 				assertions = append(assertions,
-					metricstest.HasAttributes(eventdrop.ScopeName, "kn.eventing.events.dropped",
+					metricstest.HasAttributes(eventdrop.ScopeName, "kn.eventing.events.rejected",
 						observability.DropReason.With(string(tc.expectedDropReason)),
 						observability.BrokerName.With("name"),
 						observability.BrokerNamespace.With("ns"),

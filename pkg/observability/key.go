@@ -49,6 +49,10 @@ var (
 	TriggerName      = attributekey.String("kn.trigger.name")
 	TriggerNamespace = attributekey.String("kn.trigger.namespace")
 
+	// attributes relating to the subscription
+	SubscriptionName      = attributekey.String("kn.subscription.name")
+	SubscriptionNamespace = attributekey.String("kn.subscription.namespace")
+
 	// attributes relating to dropped events
 	DropReason = attributekey.String("kn.drop.reason")
 

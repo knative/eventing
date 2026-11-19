@@ -432,7 +432,7 @@ func (h *Handler) handleDispatchToSubscriberRequest(ctx context.Context, trigger
 	if err != nil {
 		// Only messages sent by the Broker should be here. If the attribute isn't here, then the
 		// event wasn't sent by the Broker, so we can drop it.
-		h.eventDrops.RecordEventDropped(ctx, eventdrop.ReasonTTLMissing, eventdrop.Labels{
+		h.eventDrops.RecordEventRejected(ctx, eventdrop.ReasonTTLMissing, eventdrop.Labels{
 			Trigger: &triggerRef,
 		}, event)
 		h.logger.Warn("No TTL seen, dropping", zap.Any("triggerRef", triggerRef), zap.Any("event", event))
@@ -485,6 +485,9 @@ func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers 
 
 	opts := []kncloudevents.SendOption{
 		kncloudevents.WithHeader(additionalHeaders),
+		kncloudevents.WithDropLabels(eventdrop.Labels{
+			Trigger: &types.NamespacedName{Namespace: t.GetNamespace(), Name: t.GetName()},
+		}),
 	}
 
 	if h.EventTypeCreator != nil {

@@ -44,6 +44,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/rest"
 	"knative.dev/pkg/injection"
@@ -1328,14 +1329,21 @@ func TestSendEventRecordsDroppedEventWhenDLSFails(t *testing.T) {
 	defer deadLetterSinkServer.Close()
 
 	event := cloudevents.NewEvent(cloudevents.VersionV1)
-	event.SetID(uuid.New().String())
+	event.SetID("test-event-id")
 	event.SetType("testtype")
 	event.SetSource("testsource")
 
+	// Keep a parent span active so the drop span event has a live span to
+	// attach to.
+	ctx, parentSpan := tp.Tracer("test").Start(ctx, "parent")
 	_, err := dispatcher.SendEvent(ctx, event,
 		duckv1.Addressable{URL: getOnlyDomainURL(t, true, destServer.URL)},
 		kncloudevents.WithDeadLetterSink(&duckv1.Addressable{URL: getOnlyDomainURL(t, true, deadLetterSinkServer.URL)}),
+		kncloudevents.WithDropLabels(eventdrop.Labels{
+			Trigger: &types.NamespacedName{Namespace: "test-ns", Name: "test-trigger"},
+		}),
 	)
+	parentSpan.End()
 	if err == nil {
 		t.Fatal("expected the dispatch to fail, got nil error")
 	}
@@ -1344,6 +1352,38 @@ func TestSendEventRecordsDroppedEventWhenDLSFails(t *testing.T) {
 		metricstest.MetricsPresent(eventdrop.ScopeName, "kn.eventing.events.dropped"),
 		metricstest.HasAttributes(eventdrop.ScopeName, "kn.eventing.events.dropped",
 			observability.DropReason.With(string(eventdrop.ReasonDeadLetterSinkFailed)),
+			observability.TriggerName.With("test-trigger"),
+			observability.TriggerNamespace.With("test-ns"),
 		),
 	)
+
+	// The drop span event must be recorded exactly once, on a live span, and
+	// carry the event details for attribution.
+	dropEvents := 0
+	for _, span := range exporter.GetSpans() {
+		for _, e := range span.Events {
+			if e.Name != "kn.eventing.event.dropped" {
+				continue
+			}
+			dropEvents++
+
+			attrs := map[string]string{}
+			for _, kv := range e.Attributes {
+				attrs[string(kv.Key)] = kv.Value.Emit()
+			}
+			for key, want := range map[string]string{
+				string(observability.DropReason):       string(eventdrop.ReasonDeadLetterSinkFailed),
+				string(observability.TriggerName):      "test-trigger",
+				string(observability.TriggerNamespace): "test-ns",
+				string(observability.CloudEventID):     "test-event-id",
+			} {
+				if got := attrs[key]; got != want {
+					t.Errorf("drop span event: expected attribute %s=%q, got %q", key, want, got)
+				}
+			}
+		}
+	}
+	if dropEvents != 1 {
+		t.Errorf("expected exactly 1 drop span event, got %d", dropEvents)
+	}
 }

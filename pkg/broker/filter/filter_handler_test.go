@@ -573,8 +573,8 @@ func TestReceiver(t *testing.T) {
 
 			if tc.expectedDropReason != "" {
 				metricstest.AssertMetrics(t, reader,
-					metricstest.MetricsPresent(eventdrop.ScopeName, "kn.eventing.events.dropped"),
-					metricstest.HasAttributes(eventdrop.ScopeName, "kn.eventing.events.dropped",
+					metricstest.MetricsPresent(eventdrop.ScopeName, "kn.eventing.events.rejected"),
+					metricstest.HasAttributes(eventdrop.ScopeName, "kn.eventing.events.rejected",
 						observability.DropReason.With(string(tc.expectedDropReason)),
 						observability.TriggerName.With(triggerName),
 						observability.TriggerNamespace.With(testNS),

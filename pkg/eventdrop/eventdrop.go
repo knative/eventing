@@ -15,16 +15,21 @@ limitations under the License.
 */
 
 // Package eventdrop provides a centralized entry point for emitting telemetry
-// whenever an event is dropped by the Eventing data plane, e.g. by the Broker
-// ingress on TTL exhaustion or by the Dispatcher when neither the destination
-// nor the dead letter sink could be reached.
+// when the Eventing data plane drops or rejects an event.
 //
 // # Telemetry design
 //
 // Metrics only carry low-cardinality attributes (the drop reason and the
 // identities of the involved objects), because counters aggregate over all
-// dropped events. Event details (type, source, ID) vary per event and are
+// affected events. Event details (type, source, ID) vary per event and are
 // therefore only attached to the current span, which is sampled.
+//
+// Drops and rejections are counted separately: a component rejecting an event,
+// e.g. the Broker ingress on TTL exhaustion, hands the final outcome back to
+// the caller, which may still deliver the event to a dead letter sink. Only
+// components which know the event is terminally lost, e.g. the Dispatcher when
+// neither the destination nor the dead letter sink could be reached, count it
+// as dropped.
 package eventdrop
 
 import (
@@ -40,19 +45,17 @@ import (
 )
 
 const (
-	// ScopeName is the instrumentation scope under which the dropped events
-	// counter is recorded.
+	// ScopeName is the instrumentation scope under which the event drop
+	// telemetry is recorded.
 	ScopeName = "knative.dev/eventing/pkg/eventdrop"
 
-	// droppedEventsCountName is the name of the counter recording dropped events.
-	droppedEventsCountName = "kn.eventing.events.dropped"
-
-	// droppedEventSpanEventName is the name of the event added to the current
-	// span when an event is dropped.
-	droppedEventSpanEventName = "kn.eventing.event.dropped"
+	droppedEventsCountName  = "kn.eventing.events.dropped"
+	rejectedEventsCountName = "kn.eventing.events.rejected"
+	droppedEventSpanEvent   = "kn.eventing.event.dropped"
+	rejectedEventSpanEvent  = "kn.eventing.event.rejected"
 )
 
-// Reason describes why an event was dropped.
+// Reason describes why an event was dropped or rejected.
 type Reason string
 
 const (
@@ -71,19 +74,23 @@ const (
 	ReasonDeadLetterSinkFailed Reason = "dead_letter_sink_failed"
 )
 
-// Labels identify the objects involved in the drop. Nil fields are omitted.
+// Labels identify the objects involved in the drop or rejection. Nil fields
+// are omitted.
 type Labels struct {
-	Broker  *types.NamespacedName
-	Trigger *types.NamespacedName
+	Broker       *types.NamespacedName
+	Trigger      *types.NamespacedName
+	Subscription *types.NamespacedName
 }
 
-// Recorder emits telemetry about dropped events: a low-cardinality counter and,
-// when the current span is recording, a span event carrying the event details.
+// Recorder emits telemetry about dropped and rejected events: low-cardinality
+// counters and, when the current span is recording, span events carrying the
+// event details.
 //
-// The zero value is a no-op Recorder which only records span events, and
-// RecordEventDropped is safe to call on a nil *Recorder.
+// The zero value is a no-op Recorder which only records span events, and both
+// record methods are safe to call on a nil *Recorder.
 type Recorder struct {
-	droppedEvents metric.Int64Counter
+	droppedEvents  metric.Int64Counter
+	rejectedEvents metric.Int64Counter
 }
 
 // NewRecorder creates a Recorder emitting metrics under the given provider.
@@ -92,38 +99,76 @@ func NewRecorder(mp metric.MeterProvider) *Recorder {
 		return &Recorder{}
 	}
 
-	droppedEvents, err := mp.Meter(ScopeName).Int64Counter(
+	meter := mp.Meter(ScopeName)
+	droppedEvents, err := meter.Int64Counter(
 		droppedEventsCountName,
-		metric.WithDescription("Number of events dropped by the Eventing data plane"),
+		metric.WithDescription("Number of events dropped by the Eventing data plane, which could not be delivered anywhere"),
+		metric.WithUnit("1"),
+	)
+	if err != nil {
+		return &Recorder{}
+	}
+	rejectedEvents, err := meter.Int64Counter(
+		rejectedEventsCountName,
+		metric.WithDescription("Number of events rejected by Eventing data plane components, e.g. by the Broker ingress on TTL exhaustion"),
 		metric.WithUnit("1"),
 	)
 	if err != nil {
 		return &Recorder{}
 	}
 
-	return &Recorder{droppedEvents: droppedEvents}
+	return &Recorder{droppedEvents: droppedEvents, rejectedEvents: rejectedEvents}
 }
 
-// RecordEventDropped records that an event was dropped for the given reason.
+// RecordEventDropped records that an event was terminally lost for the given
+// reason, i.e. no component will deliver it anymore. Callers which only reject
+// an event and hand the final outcome back to the caller must use
+// RecordEventRejected instead, otherwise a single event may be counted more
+// than once.
 //
-// The counter only carries the reason and the involved object identities.
-// The current span, when recording, additionally gets the type, source and ID
-// of the dropped event, if available.
+// The counters only carry the reason and the involved object identities. The
+// current span, when recording, additionally gets the type, source and ID of
+// the dropped event, if available.
 func (r *Recorder) RecordEventDropped(ctx context.Context, reason Reason, labels Labels, event *cloudevents.Event) {
 	if r == nil {
 		return
 	}
 
 	if r.droppedEvents != nil {
-		r.droppedEvents.Add(ctx, 1, metric.WithAttributes(metricAttributes(reason, labels)...))
+		r.droppedEvents.Add(ctx, 1, metric.WithAttributes(attributes(reason, labels)...))
+	}
+	r.recordSpanEvent(ctx, droppedEventSpanEvent, reason, labels, event)
+}
+
+// RecordEventRejected records that a component refused an event for the given
+// reason, deferring the final outcome to the caller: the event may still be
+// delivered to a dead letter sink and is then not lost.
+func (r *Recorder) RecordEventRejected(ctx context.Context, reason Reason, labels Labels, event *cloudevents.Event) {
+	if r == nil {
+		return
 	}
 
+	if r.rejectedEvents != nil {
+		r.rejectedEvents.Add(ctx, 1, metric.WithAttributes(attributes(reason, labels)...))
+	}
+	r.recordSpanEvent(ctx, rejectedEventSpanEvent, reason, labels, event)
+}
+
+func (r *Recorder) recordSpanEvent(ctx context.Context, name string, reason Reason, labels Labels, event *cloudevents.Event) {
 	if span := trace.SpanFromContext(ctx); span.IsRecording() {
-		span.AddEvent(droppedEventSpanEventName, trace.WithAttributes(spanAttributes(reason, labels, event)...))
+		attrs := attributes(reason, labels)
+		if event != nil {
+			attrs = append(attrs,
+				observability.CloudEventID.With(event.ID()),
+				observability.CloudEventType.With(event.Type()),
+				observability.CloudEventSource.With(event.Source()),
+			)
+		}
+		span.AddEvent(name, trace.WithAttributes(attrs...))
 	}
 }
 
-func metricAttributes(reason Reason, labels Labels) []attribute.KeyValue {
+func attributes(reason Reason, labels Labels) []attribute.KeyValue {
 	attrs := []attribute.KeyValue{
 		observability.DropReason.With(string(reason)),
 	}
@@ -139,16 +184,10 @@ func metricAttributes(reason Reason, labels Labels) []attribute.KeyValue {
 			observability.TriggerNamespace.With(labels.Trigger.Namespace),
 		)
 	}
-	return attrs
-}
-
-func spanAttributes(reason Reason, labels Labels, event *cloudevents.Event) []attribute.KeyValue {
-	attrs := metricAttributes(reason, labels)
-	if event != nil {
+	if labels.Subscription != nil {
 		attrs = append(attrs,
-			observability.CloudEventID.With(event.ID()),
-			observability.CloudEventType.With(event.Type()),
-			observability.CloudEventSource.With(event.Source()),
+			observability.SubscriptionName.With(labels.Subscription.Name),
+			observability.SubscriptionNamespace.With(labels.Subscription.Namespace),
 		)
 	}
 	return attrs

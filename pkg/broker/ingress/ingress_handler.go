@@ -355,7 +355,7 @@ func (h *Handler) receive(ctx context.Context, headers http.Header, event *cloud
 			// The event was not sent by the Broker, so there is no valid TTL.
 			reason = eventdrop.ReasonTTLMissing
 		}
-		h.eventDrops.RecordEventDropped(ctx, reason, eventdrop.Labels{
+		h.eventDrops.RecordEventRejected(ctx, reason, eventdrop.Labels{
 			Broker: &types.NamespacedName{Namespace: brokerObj.Namespace, Name: brokerObj.Name},
 		}, event)
 		h.Logger.Debug("dropping event based on TTL status.", zap.Int32("TTL", ttl), zap.String("event.id", event.ID()), zap.Error(err))

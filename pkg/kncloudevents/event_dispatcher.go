@@ -143,6 +143,25 @@ func WithEventTypeAutoHandler(handler *eventtype.EventTypeAutoHandler, ref *duck
 	}
 }
 
+// WithDropLabels attaches the identities of the objects involved in the
+// delivery (e.g. the Trigger or Subscription) to the event drop telemetry
+// recorded by the Dispatcher, so drops can be attributed to them.
+func WithDropLabels(labels eventdrop.Labels) SendOption {
+	return func(sc *senderConfig) error {
+		sc.dropLabels = labels
+		return nil
+	}
+}
+
+// withDropEvent passes the event being sent to the drop telemetry, which
+// attaches its details to the recorded span events.
+func withDropEvent(event *event.Event) SendOption {
+	return func(sc *senderConfig) error {
+		sc.dropEvent = event
+		return nil
+	}
+}
+
 type senderConfig struct {
 	reply                *duckv1.Addressable
 	deadLetterSink       *duckv1.Addressable
@@ -154,6 +173,8 @@ type senderConfig struct {
 	eventTypeRef         *duckv1.KReference
 	eventTypeOnwerUID    types.UID
 	eventFormat          *v1.FormatType
+	dropLabels           eventdrop.Labels
+	dropEvent            *event.Event
 }
 
 type Dispatcher struct {
@@ -212,7 +233,7 @@ func (d *Dispatcher) SendEvent(ctx context.Context, event event.Event, destinati
 
 	message := binding.ToMessage(&c)
 
-	return d.SendMessage(ctx, message, destination, options...)
+	return d.SendMessage(ctx, message, destination, append(options, withDropEvent(&c))...)
 }
 
 // SendMessage sends the given message to the given destination.
@@ -235,6 +256,11 @@ func (d *Dispatcher) SendMessage(ctx context.Context, message binding.Message, d
 }
 
 func (d *Dispatcher) send(ctx context.Context, message binding.Message, destination duckv1.Addressable, config *senderConfig) (*DispatchInfo, error) {
+	// executeRequest returns a context whose span has already ended, so keep
+	// the parent context around to record event drop telemetry on a span which
+	// is still recording.
+	parentCtx := ctx
+
 	dispatchExecutionInfo := &DispatchInfo{}
 
 	// All messages that should be finished at the end of this function
@@ -299,7 +325,7 @@ func (d *Dispatcher) send(ctx context.Context, message binding.Message, destinat
 			if deadLetterErr != nil {
 				// The event could neither be delivered to the destination nor to the
 				// dead letter sink, so it is dropped.
-				d.eventDrops.RecordEventDropped(ctx, eventdrop.ReasonDeadLetterSinkFailed, eventdrop.Labels{}, nil)
+				d.eventDrops.RecordEventDropped(parentCtx, eventdrop.ReasonDeadLetterSinkFailed, config.dropLabels, config.dropEvent)
 				return dispatchExecutionInfo, fmt.Errorf("unable to complete request to either %s (%v) or %s (%v)", destination.URL, err, config.deadLetterSink.URL, deadLetterErr)
 			}
 			if deadLetterResponse != nil {
@@ -366,7 +392,7 @@ func (d *Dispatcher) send(ctx context.Context, message binding.Message, destinat
 			if deadLetterErr != nil {
 				// The event could neither be delivered to the destination nor to the
 				// dead letter sink, so it is dropped.
-				d.eventDrops.RecordEventDropped(ctx, eventdrop.ReasonDeadLetterSinkFailed, eventdrop.Labels{}, nil)
+				d.eventDrops.RecordEventDropped(parentCtx, eventdrop.ReasonDeadLetterSinkFailed, config.dropLabels, config.dropEvent)
 				return dispatchExecutionInfo, fmt.Errorf("failed to forward reply to %s (%v) and failed to send it to the dead letter sink %s (%v)", config.reply.URL, err, config.deadLetterSink.URL, deadLetterErr)
 			}
 			if deadLetterResponse != nil {
