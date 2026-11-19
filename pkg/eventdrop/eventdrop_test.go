@@ -319,3 +319,56 @@ func TestSubscriptionNamespaceOmittedWhenEmpty(t *testing.T) {
 		},
 	)
 }
+
+func TestNewRecorderOmitsFailedCounterOnly(t *testing.T) {
+	// A counter whose instrument creation fails must be omitted without
+	// disabling its sibling: the OTel SDK may return a non-nil handle together
+	// with an error, so the error must be honored.
+	for _, bad := range []string{droppedEventsCountName, rejectedEventsCountName} {
+		t.Run(bad, func(t *testing.T) {
+			reader := metric.NewManualReader()
+			// One view renaming the instrument and one with an aggregation
+			// incompatible with a counter make the SDK fail instrument
+			// creation while still returning a handle.
+			mp := metric.NewMeterProvider(metric.WithReader(reader), metric.WithView(
+				metric.NewView(metric.Instrument{Name: bad}, metric.Stream{Name: "partial.sum", Aggregation: metric.AggregationSum{}}),
+				metric.NewView(metric.Instrument{Name: bad}, metric.Stream{Name: "invalid.aggregation", Aggregation: metric.AggregationLastValue{}}),
+			))
+
+			if handle, err := mp.Meter(ScopeName).Int64Counter(bad); err == nil || handle == nil {
+				t.Fatalf("control: expected the SDK to return both an error and a handle, got handle=%v err=%v", handle, err)
+			}
+
+			rec := NewRecorder(mp, nil)
+			failedRetained := rec.droppedEvents != nil
+			if bad == rejectedEventsCountName {
+				failedRetained = rec.rejectedEvents != nil
+			}
+			if failedRetained {
+				t.Error("expected the failed counter to be omitted")
+			}
+
+			rec.RecordEventDropped(context.Background(), ReasonDeadLetterSinkFailed, Labels{}, nil)
+			rec.RecordEventRejected(context.Background(), ReasonTTLMissing, Labels{}, nil)
+
+			sums := map[string]int64{}
+			for _, sm := range collect(t, reader).ScopeMetrics {
+				for _, m := range sm.Metrics {
+					for _, dp := range m.Data.(metricdata.Sum[int64]).DataPoints {
+						sums[m.Name] += dp.Value
+					}
+				}
+			}
+			if sums["partial.sum"] != 0 {
+				t.Errorf("expected nothing recorded on the failed counter, got %d", sums["partial.sum"])
+			}
+			healthy := rejectedEventsCountName
+			if bad == rejectedEventsCountName {
+				healthy = droppedEventsCountName
+			}
+			if sums[healthy] != 1 {
+				t.Errorf("expected the healthy counter to record 1, got %d", sums[healthy])
+			}
+		})
+	}
+}

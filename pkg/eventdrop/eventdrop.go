@@ -88,9 +88,9 @@ type Labels struct {
 // Recorder emits telemetry about dropped and rejected events: low-cardinality
 // counters and span records carrying the event details.
 //
-// The zero value is a no-op Recorder which only records span events on an
-// already active span, and both record methods are safe to call on a nil
-// *Recorder.
+// The zero value records nothing at all; pass only a trace provider to
+// NewRecorder to record spans without metrics. Both record methods are safe
+// to call on a nil *Recorder.
 type Recorder struct {
 	droppedEvents  metric.Int64Counter
 	rejectedEvents metric.Int64Counter

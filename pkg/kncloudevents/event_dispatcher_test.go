@@ -1577,6 +1577,7 @@ func TestSendEventConcurrentSharedOptionsSlice(t *testing.T) {
 	)
 
 	const calls = 8
+	traceIDs := make([]string, calls)
 	var wg sync.WaitGroup
 	for i := range calls {
 		wg.Add(1)
@@ -1587,7 +1588,13 @@ func TestSendEventConcurrentSharedOptionsSlice(t *testing.T) {
 			event.SetType("testtype")
 			event.SetSource("testsource")
 
-			_, err := dispatcher.SendEvent(ctx, event,
+			// Each call runs under its own parent span, so every drop can be
+			// attributed to its call via the trace ID.
+			callCtx, parent := tp.Tracer("test").Start(ctx, fmt.Sprintf("call-%d", i))
+			traceIDs[i] = parent.SpanContext().TraceID().String()
+			defer parent.End()
+
+			_, err := dispatcher.SendEvent(callCtx, event,
 				duckv1.Addressable{URL: getOnlyDomainURL(t, true, destServer.URL)},
 				sharedOptions...,
 			)
@@ -1598,15 +1605,25 @@ func TestSendEventConcurrentSharedOptionsSlice(t *testing.T) {
 	}
 	wg.Wait()
 
+	expected := map[string]string{}
+	for i, traceID := range traceIDs {
+		expected[traceID] = fmt.Sprintf("event-%d", i)
+	}
+
 	ids := map[string]int{}
 	for _, span := range exporter.GetSpans() {
 		if span.Name != "kn.eventing.event.dropped" {
 			continue
 		}
 		for _, kv := range span.Attributes {
-			if kv.Key == attribute.Key(string(observability.CloudEventID)) {
-				ids[kv.Value.Emit()]++
+			if kv.Key != attribute.Key(string(observability.CloudEventID)) {
+				continue
 			}
+			got := kv.Value.Emit()
+			if want := expected[span.SpanContext.TraceID().String()]; got != want {
+				t.Errorf("drop span in trace of request %s is attributed to %s", want, got)
+			}
+			ids[got]++
 		}
 	}
 	if len(ids) != calls {
@@ -1621,4 +1638,63 @@ func TestSendEventConcurrentSharedOptionsSlice(t *testing.T) {
 	metricstest.AssertMetrics(t, reader,
 		metricstest.MetricsPresent(eventdrop.ScopeName, "kn.eventing.events.dropped"),
 	)
+}
+
+func TestSendEventDropRecordJoinsDeliveryTrace(t *testing.T) {
+	// From an entry context without a valid span context, the drop record
+	// must land in the same trace as the delivery attempts.
+	ctx := context.Background()
+	ctx, _ = fakekubeclient.With(ctx)
+	ctx = injection.WithConfig(ctx, &rest.Config{})
+
+	reader := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(reader))
+	exporter := tracetest.NewInMemoryExporter()
+	tp := trace.NewTracerProvider(trace.WithSyncer(exporter))
+	otel.SetTextMapPropagator(propagation.TraceContext{})
+
+	oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
+	dispatcher := kncloudevents.NewDispatcher(eventingtls.NewDefaultClientConfig(), oidcTokenProvider,
+		kncloudevents.WithMeterProvider(mp),
+		kncloudevents.WithTraceProvider(tp),
+	)
+
+	destServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer destServer.Close()
+	deadLetterSinkServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer deadLetterSinkServer.Close()
+
+	event := cloudevents.NewEvent(cloudevents.VersionV1)
+	event.SetID("test-event-id")
+	event.SetType("testtype")
+	event.SetSource("testsource")
+
+	_, err := dispatcher.SendEvent(ctx, event,
+		duckv1.Addressable{URL: getOnlyDomainURL(t, true, destServer.URL)},
+		kncloudevents.WithDeadLetterSink(&duckv1.Addressable{URL: getOnlyDomainURL(t, true, deadLetterSinkServer.URL)}),
+	)
+	if err == nil {
+		t.Fatal("expected the dispatch to fail, got nil error")
+	}
+
+	deliveryTraceIDs := map[string]bool{}
+	dropTraceID := ""
+	for _, span := range exporter.GetSpans() {
+		if strings.HasPrefix(span.Name, "send ") {
+			deliveryTraceIDs[span.SpanContext.TraceID().String()] = true
+		}
+		if span.Name == "kn.eventing.event.dropped" {
+			dropTraceID = span.SpanContext.TraceID().String()
+		}
+	}
+	if dropTraceID == "" {
+		t.Fatal("no drop span was recorded")
+	}
+	if !deliveryTraceIDs[dropTraceID] {
+		t.Errorf("drop span trace %s is not among the delivery traces %v", dropTraceID, deliveryTraceIDs)
+	}
 }

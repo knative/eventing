@@ -154,7 +154,7 @@ func WithDropLabels(labels eventdrop.Labels) SendOption {
 }
 
 // withDropEvent passes the event being sent to the drop telemetry, which
-// attaches its details to the recorded span events.
+// attaches its details to the recorded drop span.
 func withDropEvent(event *event.Event) SendOption {
 	return func(sc *senderConfig) error {
 		sc.dropEvent = event
@@ -295,10 +295,18 @@ func (d *Dispatcher) send(ctx context.Context, message binding.Message, destinat
 		return dispatchExecutionInfo, fmt.Errorf("can not dispatch message to nil destination.URL")
 	}
 
-	// sanitize eventual host-only URLs
+	// sanitize eventual host-only URLs. Sanitize copies of the pointed-to
+	// Addressables: they may be shared across concurrent SendEvent calls via
+	// the send options, and sanitizeAddressable writes in place.
 	destination = *sanitizeAddressable(&destination)
-	config.reply = sanitizeAddressable(config.reply)
-	config.deadLetterSink = sanitizeAddressable(config.deadLetterSink)
+	if config.reply != nil {
+		reply := *config.reply
+		config.reply = sanitizeAddressable(&reply)
+	}
+	if config.deadLetterSink != nil {
+		deadLetterSink := *config.deadLetterSink
+		config.deadLetterSink = sanitizeAddressable(&deadLetterSink)
+	}
 
 	// send to destination
 
