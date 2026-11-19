@@ -41,6 +41,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -56,10 +57,14 @@ import (
 
 	v1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/auth"
+	"knative.dev/eventing/pkg/eventdrop"
 	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/eventingtls/eventingtlstesting"
 	"knative.dev/eventing/pkg/kncloudevents"
+	"knative.dev/eventing/pkg/observability"
 	"knative.dev/eventing/pkg/utils"
+
+	"knative.dev/pkg/observability/metrics/metricstest"
 )
 
 var (
@@ -1293,4 +1298,52 @@ func canonicalizeHeaders(rvs ...requestValidation) {
 			}
 		}
 	}
+}
+
+func TestSendEventRecordsDroppedEventWhenDLSFails(t *testing.T) {
+	ctx := context.Background()
+	ctx, _ = fakekubeclient.With(ctx)
+	ctx = injection.WithConfig(ctx, &rest.Config{})
+
+	reader := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(reader))
+
+	exporter := tracetest.NewInMemoryExporter()
+	tp := trace.NewTracerProvider(trace.WithSyncer(exporter))
+	otel.SetTextMapPropagator(propagation.TraceContext{})
+
+	oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
+	dispatcher := kncloudevents.NewDispatcher(eventingtls.NewDefaultClientConfig(), oidcTokenProvider,
+		kncloudevents.WithMeterProvider(mp),
+		kncloudevents.WithTraceProvider(tp),
+	)
+
+	destServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer destServer.Close()
+	deadLetterSinkServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer deadLetterSinkServer.Close()
+
+	event := cloudevents.NewEvent(cloudevents.VersionV1)
+	event.SetID(uuid.New().String())
+	event.SetType("testtype")
+	event.SetSource("testsource")
+
+	_, err := dispatcher.SendEvent(ctx, event,
+		duckv1.Addressable{URL: getOnlyDomainURL(t, true, destServer.URL)},
+		kncloudevents.WithDeadLetterSink(&duckv1.Addressable{URL: getOnlyDomainURL(t, true, deadLetterSinkServer.URL)}),
+	)
+	if err == nil {
+		t.Fatal("expected the dispatch to fail, got nil error")
+	}
+
+	metricstest.AssertMetrics(t, reader,
+		metricstest.MetricsPresent(eventdrop.ScopeName, "kn.eventing.events.dropped"),
+		metricstest.HasAttributes(eventdrop.ScopeName, "kn.eventing.events.dropped",
+			observability.DropReason.With(string(eventdrop.ReasonDeadLetterSinkFailed)),
+		),
+	)
 }

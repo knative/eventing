@@ -63,7 +63,9 @@ import (
 	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/broker"
+	"knative.dev/eventing/pkg/eventdrop"
 	"knative.dev/eventing/pkg/eventfilter/subscriptionsapi"
+	"knative.dev/eventing/pkg/observability"
 
 	brokerinformerfake "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/broker/fake"
 	triggerinformerfake "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/trigger/fake"
@@ -117,6 +119,7 @@ func TestReceiver(t *testing.T) {
 		expectedEventDispatchTime   bool
 		expectedEventProcessingTime bool
 		expectedResponseHeaders     http.Header
+		expectedDropReason          eventdrop.Reason
 	}{
 		"Not POST": {
 			request:        httptest.NewRequest(http.MethodGet, validPath, nil),
@@ -158,7 +161,8 @@ func TestReceiver(t *testing.T) {
 					Attributes: map[string]string{"type": "some-other-type"},
 				})),
 			},
-			event: makeEventWithoutTTL(),
+			event:              makeEventWithoutTTL(),
+			expectedDropReason: eventdrop.ReasonTTLMissing,
 		},
 		"Wrong type": {
 			triggers: []*eventingv1.Trigger{
@@ -565,6 +569,17 @@ func TestReceiver(t *testing.T) {
 			}
 			if len(expectedMetricNames) > 0 {
 				metricstest.AssertMetrics(t, reader, metricstest.MetricsPresent(ScopeName, expectedMetricNames...))
+			}
+
+			if tc.expectedDropReason != "" {
+				metricstest.AssertMetrics(t, reader,
+					metricstest.MetricsPresent(eventdrop.ScopeName, "kn.eventing.events.dropped"),
+					metricstest.HasAttributes(eventdrop.ScopeName, "kn.eventing.events.dropped",
+						observability.DropReason.With(string(tc.expectedDropReason)),
+						observability.TriggerName.With(triggerName),
+						observability.TriggerNamespace.With(testNS),
+					),
+				)
 			}
 
 			if tc.expectedResponseEvent != nil {

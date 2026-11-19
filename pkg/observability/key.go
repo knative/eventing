@@ -45,6 +45,13 @@ var (
 	ChannelName      = attributekey.String("kn.channel.name")
 	ChannelNamespace = attributekey.String("kn.channel.namespace")
 
+	// attributes relating to the trigger
+	TriggerName      = attributekey.String("kn.trigger.name")
+	TriggerNamespace = attributekey.String("kn.trigger.namespace")
+
+	// attributes relating to dropped events
+	DropReason = attributekey.String("kn.drop.reason")
+
 	// attributes relating to the broker
 	SinkName      = attributekey.String("kn.sink.name")
 	SinkNamespace = attributekey.String("kn.sink.namespace")
@@ -56,6 +63,9 @@ var (
 	CloudEventSubject         = attributekey.String(ceo11y.SubjectAttr)
 	CloudEventDataContenttype = attributekey.String(ceo11y.DatacontenttypeAttr)
 	CloudEventSpecVersion     = attributekey.String(ceo11y.SpecversionAttr)
+
+	// the cloudevent ID, only for telemetry safe for high cardinality (e.g. traces)
+	CloudEventID = attributekey.String(ceo11y.IdAttr)
 
 	// attributes relating to the request
 	RequestScheme = attributekey.String("url.scheme")

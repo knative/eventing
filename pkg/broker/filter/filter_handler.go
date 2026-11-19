@@ -50,6 +50,7 @@ import (
 
 	"knative.dev/eventing/pkg/apis"
 	"knative.dev/eventing/pkg/auth"
+	"knative.dev/eventing/pkg/eventdrop"
 	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/utils"
 
@@ -91,6 +92,7 @@ var (
 // Handler parses Cloud Events, determines if they pass a filter, and sends them to a subscriber.
 type Handler struct {
 	eventDispatcher *kncloudevents.Dispatcher
+	eventDrops      *eventdrop.Recorder
 
 	triggerLister      eventinglisters.TriggerLister
 	brokerLister       eventinglisters.BrokerLister
@@ -181,6 +183,7 @@ func NewHandler(
 			kncloudevents.WithMeterProvider(meterProvider),
 			kncloudevents.WithTraceProvider(traceProvider),
 		),
+		eventDrops:         eventdrop.NewRecorder(meterProvider),
 		triggerLister:      triggerInformer.Lister(),
 		brokerLister:       brokerInformer.Lister(),
 		subscriptionLister: subscriptionInformer.Lister(),
@@ -429,6 +432,9 @@ func (h *Handler) handleDispatchToSubscriberRequest(ctx context.Context, trigger
 	if err != nil {
 		// Only messages sent by the Broker should be here. If the attribute isn't here, then the
 		// event wasn't sent by the Broker, so we can drop it.
+		h.eventDrops.RecordEventDropped(ctx, eventdrop.ReasonTTLMissing, eventdrop.Labels{
+			Trigger: &triggerRef,
+		}, event)
 		h.logger.Warn("No TTL seen, dropping", zap.Any("triggerRef", triggerRef), zap.Any("event", event))
 		// Return a BadRequest error, so the upstream can decide how to handle it, e.g. sending
 		// the message to a Dead Letter Sink.

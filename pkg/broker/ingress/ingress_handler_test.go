@@ -57,6 +57,8 @@ import (
 	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/broker"
+	"knative.dev/eventing/pkg/eventdrop"
+	"knative.dev/eventing/pkg/observability"
 
 	brokerinformerfake "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/broker/fake"
 	eventpolicyinformerfake "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventpolicy/fake"
@@ -89,6 +91,7 @@ func TestHandler_ServeHTTP(t *testing.T) {
 		defaulter              client.EventDefaulter
 		brokers                []*eventingv1.Broker
 		expectDispatchDuration bool
+		expectedDropReason     eventdrop.Reason
 	}{
 		{
 			name:       "invalid method PATCH",
@@ -194,6 +197,19 @@ func TestHandler_ServeHTTP(t *testing.T) {
 			brokers: []*eventingv1.Broker{
 				makeBroker("name", "ns"),
 			},
+			expectedDropReason: eventdrop.ReasonTTLMissing,
+		},
+		{
+			name:       "TTL exhausted drop event",
+			method:     nethttp.MethodPost,
+			uri:        "/ns/name",
+			body:       getEventWithTTL(0),
+			statusCode: nethttp.StatusBadRequest,
+			handler:    handler(),
+			brokers: []*eventingv1.Broker{
+				makeBroker("name", "ns"),
+			},
+			expectedDropReason: eventdrop.ReasonTTLExhausted,
 		},
 		{
 			name:       "malformed request URI",
@@ -361,6 +377,15 @@ func TestHandler_ServeHTTP(t *testing.T) {
 			}
 
 			assertions = append(assertions, metricstest.MetricsPresent(ScopeName, expectedMetricNames...))
+			if tc.expectedDropReason != "" {
+				assertions = append(assertions,
+					metricstest.HasAttributes(eventdrop.ScopeName, "kn.eventing.events.dropped",
+						observability.DropReason.With(string(tc.expectedDropReason)),
+						observability.BrokerName.With("name"),
+						observability.BrokerNamespace.With("ns"),
+					),
+				)
+			}
 			metricstest.AssertMetrics(t, reader, assertions...)
 		})
 	}
@@ -386,6 +411,18 @@ func getValidEvent() io.Reader {
 	e.SetType("type")
 	e.SetSource("source")
 	e.SetID("1234")
+	b, _ := e.MarshalJSON()
+	return bytes.NewBuffer(b)
+}
+
+func getEventWithTTL(ttl int32) io.Reader {
+	e := event.New()
+	e.SetType("type")
+	e.SetSource("source")
+	e.SetID("1234")
+	if err := broker.SetTTL(e.Context, ttl); err != nil {
+		panic(err)
+	}
 	b, _ := e.MarshalJSON()
 	return bytes.NewBuffer(b)
 }

@@ -46,6 +46,7 @@ import (
 	eventingapis "knative.dev/eventing/pkg/apis"
 	v1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/auth"
+	"knative.dev/eventing/pkg/eventdrop"
 	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/eventtype"
 	"knative.dev/eventing/pkg/observability"
@@ -160,6 +161,7 @@ type Dispatcher struct {
 	clientConfig      eventingtls.ClientConfig
 	traceProvider     trace.TracerProvider
 	meterProvider     metric.MeterProvider
+	eventDrops        *eventdrop.Recorder
 }
 
 type DispatcherOption func(*Dispatcher)
@@ -193,6 +195,8 @@ func NewDispatcher(clientConfig eventingtls.ClientConfig, oidcTokenProvider *aut
 	if d.meterProvider == nil {
 		d.meterProvider = otel.GetMeterProvider()
 	}
+
+	d.eventDrops = eventdrop.NewRecorder(d.meterProvider)
 
 	return d
 }
@@ -293,6 +297,9 @@ func (d *Dispatcher) send(ctx context.Context, message binding.Message, destinat
 				append(config.transformers, dispatchTransformers),
 			)
 			if deadLetterErr != nil {
+				// The event could neither be delivered to the destination nor to the
+				// dead letter sink, so it is dropped.
+				d.eventDrops.RecordEventDropped(ctx, eventdrop.ReasonDeadLetterSinkFailed, eventdrop.Labels{}, nil)
 				return dispatchExecutionInfo, fmt.Errorf("unable to complete request to either %s (%v) or %s (%v)", destination.URL, err, config.deadLetterSink.URL, deadLetterErr)
 			}
 			if deadLetterResponse != nil {
@@ -357,6 +364,9 @@ func (d *Dispatcher) send(ctx context.Context, message binding.Message, destinat
 				append(config.transformers, dispatchTransformers),
 			)
 			if deadLetterErr != nil {
+				// The event could neither be delivered to the destination nor to the
+				// dead letter sink, so it is dropped.
+				d.eventDrops.RecordEventDropped(ctx, eventdrop.ReasonDeadLetterSinkFailed, eventdrop.Labels{}, nil)
 				return dispatchExecutionInfo, fmt.Errorf("failed to forward reply to %s (%v) and failed to send it to the dead letter sink %s (%v)", config.reply.URL, err, config.deadLetterSink.URL, deadLetterErr)
 			}
 			if deadLetterResponse != nil {

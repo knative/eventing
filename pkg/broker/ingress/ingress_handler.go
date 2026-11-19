@@ -50,6 +50,7 @@ import (
 	"knative.dev/eventing/pkg/broker"
 	v1 "knative.dev/eventing/pkg/client/informers/externalversions/eventing/v1"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1"
+	"knative.dev/eventing/pkg/eventdrop"
 	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/eventtype"
 	"knative.dev/eventing/pkg/kncloudevents"
@@ -76,6 +77,7 @@ type Handler struct {
 	EvenTypeHandler  *eventtype.EventTypeAutoHandler
 	Logger           *zap.Logger
 	eventDispatcher  *kncloudevents.Dispatcher
+	eventDrops       *eventdrop.Recorder
 	tokenVerifier    *auth.Verifier
 	withContext      func(ctx context.Context) context.Context
 	tracer           trace.Tracer
@@ -146,6 +148,7 @@ func NewHandler(
 			kncloudevents.WithMeterProvider(meterProvider),
 			kncloudevents.WithTraceProvider(traceProvider),
 		),
+		eventDrops:    eventdrop.NewRecorder(meterProvider),
 		tokenVerifier: tokenVerifier,
 		withContext:   withContext,
 		tracer:        traceProvider.Tracer(ScopeName),
@@ -347,6 +350,14 @@ func (h *Handler) receive(ctx context.Context, headers http.Header, event *cloud
 	}
 
 	if ttl, err := broker.GetTTL(event.Context); err != nil || ttl <= 0 {
+		reason := eventdrop.ReasonTTLExhausted
+		if err != nil {
+			// The event was not sent by the Broker, so there is no valid TTL.
+			reason = eventdrop.ReasonTTLMissing
+		}
+		h.eventDrops.RecordEventDropped(ctx, reason, eventdrop.Labels{
+			Broker: &types.NamespacedName{Namespace: brokerObj.Namespace, Name: brokerObj.Name},
+		}, event)
 		h.Logger.Debug("dropping event based on TTL status.", zap.Int32("TTL", ttl), zap.String("event.id", event.ID()), zap.Error(err))
 		return http.StatusBadRequest, kncloudevents.NoDuration
 	}
