@@ -148,7 +148,7 @@ func NewHandler(
 			kncloudevents.WithMeterProvider(meterProvider),
 			kncloudevents.WithTraceProvider(traceProvider),
 		),
-		eventDrops:    eventdrop.NewRecorder(meterProvider),
+		eventDrops:    eventdrop.NewRecorder(meterProvider, traceProvider),
 		tokenVerifier: tokenVerifier,
 		withContext:   withContext,
 		tracer:        traceProvider.Tracer(ScopeName),

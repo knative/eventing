@@ -40,6 +40,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/trace"
@@ -1385,5 +1386,151 @@ func TestSendEventRecordsDroppedEventWhenDLSFails(t *testing.T) {
 	}
 	if dropEvents != 1 {
 		t.Errorf("expected exactly 1 drop span event, got %d", dropEvents)
+	}
+}
+
+func TestSendEventRecordsDroppedSpanWhenRequestSpanEnded(t *testing.T) {
+	// Background deliveries may continue after the request span already
+	// ended: the drop must still be traced as a span of its own.
+	ctx := context.Background()
+	ctx, _ = fakekubeclient.With(ctx)
+	ctx = injection.WithConfig(ctx, &rest.Config{})
+
+	reader := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(reader))
+	exporter := tracetest.NewInMemoryExporter()
+	tp := trace.NewTracerProvider(trace.WithSyncer(exporter))
+	otel.SetTextMapPropagator(propagation.TraceContext{})
+
+	oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
+	dispatcher := kncloudevents.NewDispatcher(eventingtls.NewDefaultClientConfig(), oidcTokenProvider,
+		kncloudevents.WithMeterProvider(mp),
+		kncloudevents.WithTraceProvider(tp),
+	)
+
+	destServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer destServer.Close()
+	deadLetterSinkServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer deadLetterSinkServer.Close()
+
+	event := cloudevents.NewEvent(cloudevents.VersionV1)
+	event.SetID("test-event-id")
+	event.SetType("testtype")
+	event.SetSource("testsource")
+
+	ctx, requestSpan := tp.Tracer("test").Start(ctx, "ended-request")
+	requestSpan.End()
+
+	_, err := dispatcher.SendEvent(ctx, event,
+		duckv1.Addressable{URL: getOnlyDomainURL(t, true, destServer.URL)},
+		kncloudevents.WithDeadLetterSink(&duckv1.Addressable{URL: getOnlyDomainURL(t, true, deadLetterSinkServer.URL)}),
+	)
+	if err == nil {
+		t.Fatal("expected the dispatch to fail, got nil error")
+	}
+
+	metricstest.AssertMetrics(t, reader,
+		metricstest.MetricsPresent(eventdrop.ScopeName, "kn.eventing.events.dropped"))
+
+	dropSpans := 0
+	for _, span := range exporter.GetSpans() {
+		if span.Name != "kn.eventing.event.dropped" {
+			continue
+		}
+		dropSpans++
+
+		attrs := map[string]string{}
+		for _, kv := range span.Attributes {
+			attrs[string(kv.Key)] = kv.Value.Emit()
+		}
+		for key, want := range map[string]string{
+			string(observability.DropReason):   string(eventdrop.ReasonDeadLetterSinkFailed),
+			string(observability.CloudEventID): "test-event-id",
+		} {
+			if got := attrs[key]; got != want {
+				t.Errorf("drop span: expected attribute %s=%q, got %q", key, want, got)
+			}
+		}
+	}
+	if dropSpans != 1 {
+		t.Errorf("expected exactly 1 drop span, got %d", dropSpans)
+	}
+}
+
+func TestSendEventRecordsDroppedEventWhenReplyAndDLSFail(t *testing.T) {
+	// When the reply cannot be delivered and the dead letter sink, which
+	// receives the original event, fails as well, the drop is recorded without
+	// the original event's details: what was lost is the reply.
+	ctx := context.Background()
+	ctx, _ = fakekubeclient.With(ctx)
+	ctx = injection.WithConfig(ctx, &rest.Config{})
+
+	reader := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(reader))
+	exporter := tracetest.NewInMemoryExporter()
+	tp := trace.NewTracerProvider(trace.WithSyncer(exporter))
+	otel.SetTextMapPropagator(propagation.TraceContext{})
+
+	oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
+	dispatcher := kncloudevents.NewDispatcher(eventingtls.NewDefaultClientConfig(), oidcTokenProvider,
+		kncloudevents.WithMeterProvider(mp),
+		kncloudevents.WithTraceProvider(tp),
+	)
+
+	// The destination replies with a CloudEvent.
+	destServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("content-type", "application/cloudevents+json; charset=UTF-8")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"id":"reply-id","source":"reply-source","type":"reply-type","specversion":"1.0"}`))
+	}))
+	defer destServer.Close()
+	// The reply destination rejects the reply event.
+	replyServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer replyServer.Close()
+	// The dead letter sink rejects the original event as well.
+	deadLetterSinkServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer deadLetterSinkServer.Close()
+
+	event := cloudevents.NewEvent(cloudevents.VersionV1)
+	event.SetID("original-id")
+	event.SetType("testtype")
+	event.SetSource("testsource")
+
+	_, err := dispatcher.SendEvent(context.Background(), event,
+		duckv1.Addressable{URL: getOnlyDomainURL(t, true, destServer.URL)},
+		kncloudevents.WithReply(&duckv1.Addressable{URL: getOnlyDomainURL(t, true, replyServer.URL)}),
+		kncloudevents.WithDeadLetterSink(&duckv1.Addressable{URL: getOnlyDomainURL(t, true, deadLetterSinkServer.URL)}),
+	)
+	if err == nil {
+		t.Fatal("expected the dispatch to fail, got nil error")
+	}
+
+	metricstest.AssertMetrics(t, reader,
+		metricstest.MetricsPresent(eventdrop.ScopeName, "kn.eventing.events.dropped"),
+		metricstest.HasAttributes(eventdrop.ScopeName, "kn.eventing.events.dropped",
+			observability.DropReason.With(string(eventdrop.ReasonDeadLetterSinkFailed)),
+		),
+	)
+
+	// The drop record must not claim the original event was lost.
+	for _, span := range exporter.GetSpans() {
+		for _, e := range span.Events {
+			if e.Name != "kn.eventing.event.dropped" {
+				continue
+			}
+			for _, kv := range e.Attributes {
+				if kv.Key == attribute.Key(string(observability.CloudEventID)) {
+					t.Errorf("drop span event must not carry the original event's ID, got %s", kv.Value.Emit())
+				}
+			}
+		}
 	}
 }

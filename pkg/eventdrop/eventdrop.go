@@ -22,14 +22,17 @@ limitations under the License.
 // Metrics only carry low-cardinality attributes (the drop reason and the
 // identities of the involved objects), because counters aggregate over all
 // affected events. Event details (type, source, ID) vary per event and are
-// therefore only attached to the current span, which is sampled.
+// therefore only attached to traces, which are sampled.
 //
-// Drops and rejections are counted separately: a component rejecting an event,
-// e.g. the Broker ingress on TTL exhaustion, hands the final outcome back to
-// the caller, which may still deliver the event to a dead letter sink. Only
-// components which know the event is terminally lost, e.g. the Dispatcher when
-// neither the destination nor the dead letter sink could be reached, count it
-// as dropped.
+// Drops and rejections are counted separately, and both are per-component
+// observations, not global verdicts: a Broker component rejecting an event,
+// e.g. the ingress on TTL exhaustion, hands the final outcome back to its
+// caller, and a Dispatcher counting a drop only knows that its own delivery
+// chain, including the dead letter sink, was exhausted. In nested delivery
+// chains, e.g. a Channel fanning out to a Trigger subscriber, an outer layer
+// may still handle an event which an inner layer dropped, e.g. by delivering
+// it to its own dead letter sink, so a single event may legitimately be
+// counted by several components along its path.
 package eventdrop
 
 import (
@@ -42,6 +45,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	"knative.dev/eventing/pkg/observability"
+	"knative.dev/pkg/observability/attributekey"
 )
 
 const (
@@ -51,8 +55,8 @@ const (
 
 	droppedEventsCountName  = "kn.eventing.events.dropped"
 	rejectedEventsCountName = "kn.eventing.events.rejected"
-	droppedEventSpanEvent   = "kn.eventing.event.dropped"
-	rejectedEventSpanEvent  = "kn.eventing.event.rejected"
+	droppedSpanName         = "kn.eventing.event.dropped"
+	rejectedSpanName        = "kn.eventing.event.rejected"
 )
 
 // Reason describes why an event was dropped or rejected.
@@ -69,13 +73,12 @@ const (
 	ReasonTTLExhausted Reason = "ttl_exhausted"
 
 	// ReasonDeadLetterSinkFailed is recorded when the delivery of an event
-	// failed and delivering it to the dead letter sink failed as well, so the
-	// event could not be delivered anywhere.
+	// failed and delivering it to the dead letter sink failed as well.
 	ReasonDeadLetterSinkFailed Reason = "dead_letter_sink_failed"
 )
 
 // Labels identify the objects involved in the drop or rejection. Nil fields
-// are omitted.
+// are omitted, and so are empty names and namespaces within them.
 type Labels struct {
 	Broker       *types.NamespacedName
 	Trigger      *types.NamespacedName
@@ -83,52 +86,49 @@ type Labels struct {
 }
 
 // Recorder emits telemetry about dropped and rejected events: low-cardinality
-// counters and, when the current span is recording, span events carrying the
-// event details.
+// counters and span records carrying the event details.
 //
-// The zero value is a no-op Recorder which only records span events, and both
-// record methods are safe to call on a nil *Recorder.
+// The zero value is a no-op Recorder which only records span events on an
+// already active span, and both record methods are safe to call on a nil
+// *Recorder.
 type Recorder struct {
 	droppedEvents  metric.Int64Counter
 	rejectedEvents metric.Int64Counter
+	tracer         trace.Tracer
 }
 
-// NewRecorder creates a Recorder emitting metrics under the given provider.
-func NewRecorder(mp metric.MeterProvider) *Recorder {
-	if mp == nil {
-		return &Recorder{}
+// NewRecorder creates a Recorder emitting metrics under the given meter
+// provider and spans under the given trace provider. A counter which fails to
+// initialize is omitted without disabling the other one, and nil providers
+// are supported.
+func NewRecorder(mp metric.MeterProvider, tp trace.TracerProvider) *Recorder {
+	r := &Recorder{}
+	if mp != nil {
+		meter := mp.Meter(ScopeName)
+		r.droppedEvents, _ = meter.Int64Counter(
+			droppedEventsCountName,
+			metric.WithDescription("Number of events for which this data plane component exhausted its delivery options, e.g. neither the destination nor the dead letter sink accepted the event. Outer delivery layers may still handle the event."),
+			metric.WithUnit("1"),
+		)
+		r.rejectedEvents, _ = meter.Int64Counter(
+			rejectedEventsCountName,
+			metric.WithDescription("Number of events rejected by this data plane component, e.g. by the Broker ingress on TTL exhaustion. The caller decides the final outcome."),
+			metric.WithUnit("1"),
+		)
 	}
-
-	meter := mp.Meter(ScopeName)
-	droppedEvents, err := meter.Int64Counter(
-		droppedEventsCountName,
-		metric.WithDescription("Number of events dropped by the Eventing data plane, which could not be delivered anywhere"),
-		metric.WithUnit("1"),
-	)
-	if err != nil {
-		return &Recorder{}
+	if tp != nil {
+		r.tracer = tp.Tracer(ScopeName)
 	}
-	rejectedEvents, err := meter.Int64Counter(
-		rejectedEventsCountName,
-		metric.WithDescription("Number of events rejected by Eventing data plane components, e.g. by the Broker ingress on TTL exhaustion"),
-		metric.WithUnit("1"),
-	)
-	if err != nil {
-		return &Recorder{}
-	}
-
-	return &Recorder{droppedEvents: droppedEvents, rejectedEvents: rejectedEvents}
+	return r
 }
 
-// RecordEventDropped records that an event was terminally lost for the given
-// reason, i.e. no component will deliver it anymore. Callers which only reject
-// an event and hand the final outcome back to the caller must use
-// RecordEventRejected instead, otherwise a single event may be counted more
-// than once.
+// RecordEventDropped records that this component exhausted its delivery
+// options for an event: neither the destination nor the dead letter sink
+// accepted it. Callers which only reject an event and hand the final outcome
+// back to their caller must use RecordEventRejected instead.
 //
 // The counters only carry the reason and the involved object identities. The
-// current span, when recording, additionally gets the type, source and ID of
-// the dropped event, if available.
+// event details, when available, are attached to the trace.
 func (r *Recorder) RecordEventDropped(ctx context.Context, reason Reason, labels Labels, event *cloudevents.Event) {
 	if r == nil {
 		return
@@ -137,12 +137,12 @@ func (r *Recorder) RecordEventDropped(ctx context.Context, reason Reason, labels
 	if r.droppedEvents != nil {
 		r.droppedEvents.Add(ctx, 1, metric.WithAttributes(attributes(reason, labels)...))
 	}
-	r.recordSpanEvent(ctx, droppedEventSpanEvent, reason, labels, event)
+	r.recordSpan(ctx, droppedSpanName, reason, labels, event)
 }
 
 // RecordEventRejected records that a component refused an event for the given
 // reason, deferring the final outcome to the caller: the event may still be
-// delivered to a dead letter sink and is then not lost.
+// delivered to a dead letter sink and then is not lost.
 func (r *Recorder) RecordEventRejected(ctx context.Context, reason Reason, labels Labels, event *cloudevents.Event) {
 	if r == nil {
 		return
@@ -151,21 +151,33 @@ func (r *Recorder) RecordEventRejected(ctx context.Context, reason Reason, label
 	if r.rejectedEvents != nil {
 		r.rejectedEvents.Add(ctx, 1, metric.WithAttributes(attributes(reason, labels)...))
 	}
-	r.recordSpanEvent(ctx, rejectedEventSpanEvent, reason, labels, event)
+	r.recordSpan(ctx, rejectedSpanName, reason, labels, event)
 }
 
-func (r *Recorder) recordSpanEvent(ctx context.Context, name string, reason Reason, labels Labels, event *cloudevents.Event) {
-	if span := trace.SpanFromContext(ctx); span.IsRecording() {
-		attrs := attributes(reason, labels)
-		if event != nil {
-			attrs = append(attrs,
-				observability.CloudEventID.With(event.ID()),
-				observability.CloudEventType.With(event.Type()),
-				observability.CloudEventSource.With(event.Source()),
-			)
-		}
-		span.AddEvent(name, trace.WithAttributes(attrs...))
+// recordSpan makes the drop or rejection visible on the trace: as an event on
+// the current span when it is still recording, e.g. while the request is being
+// served, or as a short-lived span of its own otherwise, e.g. for deliveries
+// continuing in the background after the request span already ended.
+func (r *Recorder) recordSpan(ctx context.Context, name string, reason Reason, labels Labels, event *cloudevents.Event) {
+	attrs := attributes(reason, labels)
+	if event != nil {
+		attrs = append(attrs,
+			observability.CloudEventID.With(event.ID()),
+			observability.CloudEventType.With(event.Type()),
+			observability.CloudEventSource.With(event.Source()),
+		)
 	}
+
+	if span := trace.SpanFromContext(ctx); span.IsRecording() {
+		span.AddEvent(name, trace.WithAttributes(attrs...))
+		return
+	}
+	if r.tracer == nil {
+		return
+	}
+
+	_, span := r.tracer.Start(ctx, name, trace.WithAttributes(attrs...))
+	span.End()
 }
 
 func attributes(reason Reason, labels Labels) []attribute.KeyValue {
@@ -173,22 +185,32 @@ func attributes(reason Reason, labels Labels) []attribute.KeyValue {
 		observability.DropReason.With(string(reason)),
 	}
 	if labels.Broker != nil {
-		attrs = append(attrs,
-			observability.BrokerName.With(labels.Broker.Name),
-			observability.BrokerNamespace.With(labels.Broker.Namespace),
-		)
+		attrs = appendNamedAttrs(attrs,
+			observability.BrokerName, labels.Broker.Name,
+			observability.BrokerNamespace, labels.Broker.Namespace)
 	}
 	if labels.Trigger != nil {
-		attrs = append(attrs,
-			observability.TriggerName.With(labels.Trigger.Name),
-			observability.TriggerNamespace.With(labels.Trigger.Namespace),
-		)
+		attrs = appendNamedAttrs(attrs,
+			observability.TriggerName, labels.Trigger.Name,
+			observability.TriggerNamespace, labels.Trigger.Namespace)
 	}
 	if labels.Subscription != nil {
-		attrs = append(attrs,
-			observability.SubscriptionName.With(labels.Subscription.Name),
-			observability.SubscriptionNamespace.With(labels.Subscription.Namespace),
-		)
+		// The data plane configuration only carries the channel namespace,
+		// not the namespace of the Subscription itself, so the namespace is
+		// usually empty here.
+		attrs = appendNamedAttrs(attrs,
+			observability.SubscriptionName, labels.Subscription.Name,
+			observability.SubscriptionNamespace, labels.Subscription.Namespace)
+	}
+	return attrs
+}
+
+func appendNamedAttrs(attrs []attribute.KeyValue, name attributekey.String, nameValue string, namespace attributekey.String, namespaceValue string) []attribute.KeyValue {
+	if nameValue != "" {
+		attrs = append(attrs, name.With(nameValue))
+	}
+	if namespaceValue != "" {
+		attrs = append(attrs, namespace.With(namespaceValue))
 	}
 	return attrs
 }

@@ -217,7 +217,7 @@ func NewDispatcher(clientConfig eventingtls.ClientConfig, oidcTokenProvider *aut
 		d.meterProvider = otel.GetMeterProvider()
 	}
 
-	d.eventDrops = eventdrop.NewRecorder(d.meterProvider)
+	d.eventDrops = eventdrop.NewRecorder(d.meterProvider, d.traceProvider)
 
 	return d
 }
@@ -233,7 +233,13 @@ func (d *Dispatcher) SendEvent(ctx context.Context, event event.Event, destinati
 
 	message := binding.ToMessage(&c)
 
-	return d.SendMessage(ctx, message, destination, append(options, withDropEvent(&c))...)
+	// Build a fresh slice: appending to the caller's options could write into
+	// its spare capacity and race with concurrent SendEvent calls sharing it.
+	opts := make([]SendOption, 0, len(options)+1)
+	opts = append(opts, options...)
+	opts = append(opts, withDropEvent(&c))
+
+	return d.SendMessage(ctx, message, destination, opts...)
 }
 
 // SendMessage sends the given message to the given destination.
@@ -390,9 +396,11 @@ func (d *Dispatcher) send(ctx context.Context, message binding.Message, destinat
 				append(config.transformers, dispatchTransformers),
 			)
 			if deadLetterErr != nil {
-				// The event could neither be delivered to the destination nor to the
-				// dead letter sink, so it is dropped.
-				d.eventDrops.RecordEventDropped(parentCtx, eventdrop.ReasonDeadLetterSinkFailed, config.dropLabels, config.dropEvent)
+				// The reply could not be delivered and the dead letter sink, which
+				// receives the original event, failed as well. The details of the
+				// original event are not attached: what was lost is the reply,
+				// which is a message and carries no event here.
+				d.eventDrops.RecordEventDropped(parentCtx, eventdrop.ReasonDeadLetterSinkFailed, config.dropLabels, nil)
 				return dispatchExecutionInfo, fmt.Errorf("failed to forward reply to %s (%v) and failed to send it to the dead letter sink %s (%v)", config.reply.URL, err, config.deadLetterSink.URL, deadLetterErr)
 			}
 			if deadLetterResponse != nil {

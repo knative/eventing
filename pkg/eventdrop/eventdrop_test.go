@@ -126,7 +126,7 @@ func collect(t *testing.T, reader *metric.ManualReader) *metricdata.ResourceMetr
 func TestRecordEventDroppedMetrics(t *testing.T) {
 	reader := metric.NewManualReader()
 	mp := metric.NewMeterProvider(metric.WithReader(reader))
-	r := NewRecorder(mp)
+	r := NewRecorder(mp, nil)
 
 	// Recording the same drop 8 times must aggregate into a single series.
 	for range 8 {
@@ -156,7 +156,7 @@ func TestRecordEventDroppedMetrics(t *testing.T) {
 func TestRecordEventRejectedMetrics(t *testing.T) {
 	reader := metric.NewManualReader()
 	mp := metric.NewMeterProvider(metric.WithReader(reader))
-	r := NewRecorder(mp)
+	r := NewRecorder(mp, nil)
 
 	r.RecordEventRejected(context.Background(), ReasonTTLExhausted, Labels{
 		Broker: &types.NamespacedName{Namespace: "test-ns", Name: "test-broker"},
@@ -177,7 +177,7 @@ func TestRecordEventRejectedMetrics(t *testing.T) {
 func TestRecordEventDroppedDoesNotTouchRejectedCounter(t *testing.T) {
 	reader := metric.NewManualReader()
 	mp := metric.NewMeterProvider(metric.WithReader(reader))
-	r := NewRecorder(mp)
+	r := NewRecorder(mp, nil)
 
 	r.RecordEventDropped(context.Background(), ReasonDeadLetterSinkFailed, Labels{}, nil)
 
@@ -199,7 +199,7 @@ func TestRecordEventDroppedDoesNotTouchRejectedCounter(t *testing.T) {
 func TestRecordEventSpanEvents(t *testing.T) {
 	exporter := tracetest.NewInMemoryExporter()
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))
-	r := NewRecorder(nil)
+	r := NewRecorder(nil, tp)
 
 	ctx, span := tp.Tracer("test").Start(context.Background(), "parent")
 	r.RecordEventDropped(ctx, ReasonDeadLetterSinkFailed, Labels{}, makeEvent())
@@ -222,9 +222,9 @@ func TestRecordEventSpanEvents(t *testing.T) {
 
 		var wantReason string
 		switch e.Name {
-		case droppedEventSpanEvent:
+		case droppedSpanName:
 			wantReason = string(ReasonDeadLetterSinkFailed)
-		case rejectedEventSpanEvent:
+		case rejectedSpanName:
 			wantReason = string(ReasonTTLExhausted)
 		default:
 			t.Errorf("unexpected span event %q", e.Name)
@@ -250,11 +250,76 @@ func TestRecordNoop(t *testing.T) {
 	nilRecorder.RecordEventDropped(context.Background(), ReasonDeadLetterSinkFailed, Labels{}, makeEvent())
 	nilRecorder.RecordEventRejected(context.Background(), ReasonTTLMissing, Labels{}, makeEvent())
 
-	r := NewRecorder(nil)
+	r := NewRecorder(nil, nil)
 	r.RecordEventDropped(context.Background(), ReasonDeadLetterSinkFailed, Labels{}, makeEvent())
 	r.RecordEventRejected(context.Background(), ReasonTTLMissing, Labels{}, makeEvent())
 
 	if r.droppedEvents != nil || r.rejectedEvents != nil {
 		t.Error("expected no counters to be created without a meter provider")
 	}
+}
+
+func TestRecordEventDroppedWithoutActiveSpan(t *testing.T) {
+	// Deliveries continuing in the background after the request span ended
+	// must still produce a trace record: a short-lived span of its own.
+	exporter := tracetest.NewInMemoryExporter()
+	tp := sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))
+	r := NewRecorder(nil, tp)
+
+	// The request context outlives its span, like a background delivery after
+	// the request already ended.
+	ctx, span := tp.Tracer("test").Start(context.Background(), "ended-request")
+	span.End()
+
+	r.RecordEventDropped(ctx, ReasonDeadLetterSinkFailed,
+		Labels{Trigger: &types.NamespacedName{Namespace: "test-ns", Name: "test-trigger"}}, makeEvent())
+
+	spans := exporter.GetSpans()
+	var drop *tracetest.SpanStub
+	for i := range spans {
+		if spans[i].Name == droppedSpanName {
+			drop = &spans[i]
+		}
+	}
+	if drop == nil {
+		t.Fatalf("expected a %q span, got %+v", droppedSpanName, spans)
+	}
+
+	attrs := map[string]string{}
+	for _, kv := range drop.Attributes {
+		attrs[string(kv.Key)] = kv.Value.Emit()
+	}
+	for key, want := range map[string]string{
+		string(observability.DropReason):       string(ReasonDeadLetterSinkFailed),
+		string(observability.TriggerName):      "test-trigger",
+		string(observability.TriggerNamespace): "test-ns",
+		string(observability.CloudEventID):     "test-id",
+	} {
+		if got := attrs[key]; got != want {
+			t.Errorf("drop span: expected attribute %s=%q, got %q", key, want, got)
+		}
+	}
+}
+
+func TestSubscriptionNamespaceOmittedWhenEmpty(t *testing.T) {
+	// The fanout data plane configuration only knows the Subscription's name,
+	// its namespace field carries the Channel's namespace: an empty namespace
+	// must not be emitted as an attribute.
+	reader := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(reader))
+	r := NewRecorder(mp, nil)
+
+	r.RecordEventDropped(context.Background(), ReasonDeadLetterSinkFailed, Labels{
+		Subscription: &types.NamespacedName{Name: "test-subscription"},
+	}, nil)
+
+	assertCounter(t, collect(t, reader), droppedEventsCountName,
+		seriesExpectation{
+			attrs: []attribute.KeyValue{
+				observability.DropReason.With(string(ReasonDeadLetterSinkFailed)),
+				observability.SubscriptionName.With("test-subscription"),
+			},
+			sum: 1,
+		},
+	)
 }

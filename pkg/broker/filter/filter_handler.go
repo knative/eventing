@@ -183,7 +183,7 @@ func NewHandler(
 			kncloudevents.WithMeterProvider(meterProvider),
 			kncloudevents.WithTraceProvider(traceProvider),
 		),
-		eventDrops:         eventdrop.NewRecorder(meterProvider),
+		eventDrops:         eventdrop.NewRecorder(meterProvider, traceProvider),
 		triggerLister:      triggerInformer.Lister(),
 		brokerLister:       brokerInformer.Lister(),
 		subscriptionLister: subscriptionInformer.Lister(),
