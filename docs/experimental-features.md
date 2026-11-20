@@ -57,9 +57,9 @@ is enabled or not: [`feature.FromContext(ctx).IsEnabled(featureName)`](../pkg/ap
 
 There are 3 feature states:
 
-* Enabled: the feature is enabled.
-* Allowed: the feature may be enabled (e.g. using an annotation or looser validation).
-* Disabled: the feature cannot be enabled.
+- Enabled: the feature is enabled.
+- Allowed: the feature may be enabled (e.g. using an annotation or looser validation).
+- Disabled: the feature cannot be enabled.
 
 The user can easily enable the features modifying a config map/environment
 variable of their knative setup:

@@ -8,6 +8,7 @@ This document synthesizes the
 Each specification for _Sources_ and _Channels_ define some more fine-grained
 delivery mechanism around their data plane. For details consult the respective
 specifications.
+
 - [Event Delivery](https://github.com/knative/specs/blob/main/specs/eventing/data-plane.md#event-delivery)
 
 ## Problem

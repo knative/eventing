@@ -57,7 +57,6 @@ User stories:
 - Upgrade Broker's backing infrastructure (eg. Kafka or RabbitMQ)
 - Grant access to developers
 
-
 ## Contributors
 
 Contributors are an important part of the Knative project. As such, we will also

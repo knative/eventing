@@ -22,7 +22,6 @@ Knative Eventing uses standard HTTP requests to route events from event producer
 
 Knative Eventing components are loosely coupled, and can be developed and deployed independently of each other. Any producer can generate events before there are active event consumers that are listening for those events. Any event consumer can express interest in a class of events before there are producers that are creating those events.
 
-
 ## What to expect here?
 
 This repository contains an eventing system that is designed to
