@@ -105,7 +105,6 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1.InMemoryChannel) rec
 		return err
 	}
 	var eventTypeAutoHandler *eventtype.EventTypeAutoHandler
-	var channelRef *duckv1.KReference
 	var UID *types.UID
 	if ownerReferences := imc.GetOwnerReferences(); r.featureStore.IsEnabled(feature.EvenTypeAutoCreate) &&
 		(len(ownerReferences) == 0 ||
@@ -118,7 +117,6 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1.InMemoryChannel) rec
 			Logger:          logging.FromContext(ctx).Desugar(),
 		}
 
-		channelRef = toKReference(imc)
 		UID = &imc.UID
 	}
 
@@ -134,7 +132,7 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1.InMemoryChannel) rec
 			logging.FromContext(ctx).Desugar(),
 			config.FanoutConfig,
 			eventTypeAutoHandler,
-			channelRef,
+			config.ChannelAddressable,
 			UID,
 			r.eventDispatcher,
 			r.meterProvider,
@@ -167,7 +165,7 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1.InMemoryChannel) rec
 			logging.FromContext(ctx).Desugar(),
 			config.FanoutConfig,
 			eventTypeAutoHandler,
-			channelRef,
+			config.ChannelAddressable,
 			UID,
 			r.eventDispatcher,
 			r.meterProvider,
@@ -265,10 +263,11 @@ func newConfigForInMemoryChannel(ctx context.Context, imc *v1.InMemoryChannel) (
 	}
 
 	return &multichannelfanout.ChannelConfig{
-		Namespace: imc.Namespace,
-		Name:      imc.Name,
-		HostName:  imc.Status.Address.URL.Host,
-		Path:      fmt.Sprintf("%s/%s", imc.Namespace, imc.Name),
+		ChannelAddressable: toKReference(imc),
+		Namespace:          imc.Namespace,
+		Name:               imc.Name,
+		HostName:           imc.Status.Address.URL.Host,
+		Path:               fmt.Sprintf("%s/%s", imc.Namespace, imc.Name),
 		FanoutConfig: fanout.Config{
 			AsyncHandler:  async,
 			Subscriptions: subs,

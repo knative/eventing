@@ -41,6 +41,7 @@ import (
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	"knative.dev/eventing/pkg/channel"
+	"knative.dev/eventing/pkg/eventdrop"
 	"knative.dev/eventing/pkg/eventtype"
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/observability"
@@ -371,8 +372,19 @@ func (f *FanoutEventHandler) makeFanoutRequest(ctx context.Context, event event.
 	dispatchOptions := []kncloudevents.SendOption{
 		kncloudevents.WithHeader(additionalHeaders),
 		kncloudevents.WithReply(sub.Reply),
-		kncloudevents.WithDeadLetterSink(sub.DeadLetter),
 		kncloudevents.WithRetryConfig(sub.RetryConfig),
+	}
+	if sub.DeadLetter != nil {
+		// SubscriberSpec carries the Subscription name and UID. Its namespace
+		// can differ from the Channel's and is unavailable to the fanout.
+		labels := eventdrop.Labels{Subscription: &types.NamespacedName{Name: sub.Name}}
+		if f.channelRef != nil {
+			labels.Channel = &types.NamespacedName{Name: f.channelRef.Name, Namespace: f.channelRef.Namespace}
+		}
+		dispatchOptions = append(dispatchOptions,
+			kncloudevents.WithDeadLetterSink(sub.DeadLetter),
+			kncloudevents.WithDropLabels(labels),
+		)
 	}
 
 	if f.eventTypeHandler != nil && sub.Name != "" && sub.Namespace != "" && sub.UID != types.UID("") {
