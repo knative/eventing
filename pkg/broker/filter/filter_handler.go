@@ -430,12 +430,11 @@ func (h *Handler) handleDispatchToSubscriberRequest(ctx context.Context, trigger
 	// Remove the TTL attribute that is used by the Broker.
 	ttl, err := eventingbroker.GetTTL(event.Context)
 	if err != nil {
-		// Only messages sent by the Broker should be here. If the attribute isn't here, then the
-		// event wasn't sent by the Broker, so we can drop it.
+		// Events sent by the Broker must carry a TTL.
 		h.eventDrops.RecordEventRejected(ctx, eventdrop.ReasonTTLMissing, eventdrop.Labels{
 			Trigger: &triggerRef,
 		}, event)
-		h.logger.Warn("No TTL seen, dropping", zap.Any("triggerRef", triggerRef), zap.Any("event", event))
+		h.logger.Warn("Rejecting event without a TTL", zap.Any("triggerRef", triggerRef), zap.Any("event", event))
 		// Return a BadRequest error, so the upstream can decide how to handle it, e.g. sending
 		// the message to a Dead Letter Sink.
 		writer.WriteHeader(http.StatusBadRequest)
@@ -485,9 +484,6 @@ func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers 
 
 	opts := []kncloudevents.SendOption{
 		kncloudevents.WithHeader(additionalHeaders),
-		kncloudevents.WithDropLabels(eventdrop.Labels{
-			Trigger: &types.NamespacedName{Namespace: t.GetNamespace(), Name: t.GetName()},
-		}),
 	}
 
 	if h.EventTypeCreator != nil {

@@ -18,8 +18,6 @@ package eventdrop
 
 import (
 	"context"
-	"slices"
-	"strings"
 	"testing"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
@@ -31,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	"knative.dev/eventing/pkg/observability"
+	"knative.dev/eventing/test/lib/metrics"
 )
 
 func makeEvent() *cloudevents.Event {
@@ -39,88 +38,6 @@ func makeEvent() *cloudevents.Event {
 	event.SetType("test-type")
 	event.SetSource("test-source")
 	return &event
-}
-
-// seriesExpectation describes one expected time series of a counter: the
-// exact attribute set and the cumulative sum.
-type seriesExpectation struct {
-	attrs []attribute.KeyValue
-	sum   int64
-}
-
-// assertCounter asserts the counter with the given name exists exactly once
-// and consists of exactly the expected time series, each with the exact
-// expected attribute set and cumulative sum. This catches counting errors as
-// well as unexpected (e.g. high-cardinality, per-event) attributes.
-func assertCounter(t *testing.T, rm *metricdata.ResourceMetrics, name string, want ...seriesExpectation) {
-	t.Helper()
-
-	found := false
-	for _, sm := range rm.ScopeMetrics {
-		if sm.Scope.Name != ScopeName {
-			continue
-		}
-		for _, m := range sm.Metrics {
-			if m.Name != name {
-				continue
-			}
-			found = true
-
-			data, ok := m.Data.(metricdata.Sum[int64])
-			if !ok {
-				t.Fatalf("metric %s: expected Sum[int64], got %T", name, m.Data)
-			}
-			if len(data.DataPoints) != len(want) {
-				t.Fatalf("metric %s: expected %d time series, got %d: %v", name, len(want), len(data.DataPoints), data.DataPoints)
-			}
-
-			got := map[string]int64{}
-			for _, dp := range data.DataPoints {
-				got[encodeAttrs(dp.Attributes.ToSlice())] += dp.Value
-			}
-			wantSeries := map[string]int64{}
-			for _, w := range want {
-				wantSeries[encodeAttrs(w.attrs)] = w.sum
-			}
-			for key, wantSum := range wantSeries {
-				if gotSum, ok := got[key]; !ok {
-					t.Errorf("metric %s: missing series %s", name, key)
-				} else if gotSum != wantSum {
-					t.Errorf("metric %s: series %s: expected sum %d, got %d", name, key, wantSum, gotSum)
-				}
-			}
-			for key := range got {
-				if _, ok := wantSeries[key]; !ok {
-					t.Errorf("metric %s: unexpected series %s", name, key)
-				}
-			}
-		}
-	}
-	if !found {
-		t.Fatalf("metric %s was not recorded", name)
-	}
-}
-
-func encodeAttrs(attrs []attribute.KeyValue) string {
-	sorted := make([]attribute.KeyValue, len(attrs))
-	copy(sorted, attrs)
-	slices.SortFunc(sorted, func(a, b attribute.KeyValue) int {
-		return strings.Compare(string(a.Key), string(b.Key))
-	})
-	parts := make([]string, len(sorted))
-	for i, kv := range sorted {
-		parts[i] = string(kv.Key) + "=" + kv.Value.Emit()
-	}
-	return strings.Join(parts, ",")
-}
-
-func collect(t *testing.T, reader *metric.ManualReader) *metricdata.ResourceMetrics {
-	t.Helper()
-	rm := &metricdata.ResourceMetrics{}
-	if err := reader.Collect(context.Background(), rm); err != nil {
-		t.Fatal("failed to collect metrics:", err)
-	}
-	return rm
 }
 
 func TestRecordEventDroppedMetrics(t *testing.T) {
@@ -132,24 +49,18 @@ func TestRecordEventDroppedMetrics(t *testing.T) {
 	for range 8 {
 		r.RecordEventDropped(context.Background(), ReasonDeadLetterSinkFailed, Labels{}, makeEvent())
 	}
-	// A drop attributable to a trigger gets its own series.
+	// A drop attributed to a Subscription gets its own series.
 	r.RecordEventDropped(context.Background(), ReasonDeadLetterSinkFailed, Labels{
-		Trigger: &types.NamespacedName{Namespace: "test-ns", Name: "test-trigger"},
+		Subscription: &types.NamespacedName{Namespace: "test-ns", Name: "test-subscription"},
 	}, nil)
 
-	assertCounter(t, collect(t, reader), droppedEventsCountName,
-		seriesExpectation{
-			attrs: []attribute.KeyValue{observability.DropReason.With(string(ReasonDeadLetterSinkFailed))},
-			sum:   8,
-		},
-		seriesExpectation{
-			attrs: []attribute.KeyValue{
-				observability.DropReason.With(string(ReasonDeadLetterSinkFailed)),
-				observability.TriggerName.With("test-trigger"),
-				observability.TriggerNamespace.With("test-ns"),
-			},
-			sum: 1,
-		},
+	metrics.AssertCounter(t, reader, ScopeName, droppedEventsCountName,
+		metrics.Point(8, observability.DropReason.With(string(ReasonDeadLetterSinkFailed))),
+		metrics.Point(1,
+			observability.DropReason.With(string(ReasonDeadLetterSinkFailed)),
+			observability.SubscriptionName.With("test-subscription"),
+			observability.SubscriptionNamespace.With("test-ns"),
+		),
 	)
 }
 
@@ -162,16 +73,11 @@ func TestRecordEventRejectedMetrics(t *testing.T) {
 		Broker: &types.NamespacedName{Namespace: "test-ns", Name: "test-broker"},
 	}, makeEvent())
 
-	assertCounter(t, collect(t, reader), rejectedEventsCountName,
-		seriesExpectation{
-			attrs: []attribute.KeyValue{
-				observability.DropReason.With(string(ReasonTTLExhausted)),
-				observability.BrokerName.With("test-broker"),
-				observability.BrokerNamespace.With("test-ns"),
-			},
-			sum: 1,
-		},
-	)
+	metrics.AssertCounter(t, reader, ScopeName, rejectedEventsCountName, metrics.Point(1,
+		observability.DropReason.With(string(ReasonTTLExhausted)),
+		observability.BrokerName.With("test-broker"),
+		observability.BrokerNamespace.With("test-ns"),
+	))
 }
 
 func TestRecordEventDroppedDoesNotTouchRejectedCounter(t *testing.T) {
@@ -181,19 +87,9 @@ func TestRecordEventDroppedDoesNotTouchRejectedCounter(t *testing.T) {
 
 	r.RecordEventDropped(context.Background(), ReasonDeadLetterSinkFailed, Labels{}, nil)
 
-	rm := collect(t, reader)
-	assertCounter(t, rm, droppedEventsCountName,
-		seriesExpectation{
-			attrs: []attribute.KeyValue{observability.DropReason.With(string(ReasonDeadLetterSinkFailed))},
-			sum:   1,
-		})
-	for _, sm := range rm.ScopeMetrics {
-		for _, m := range sm.Metrics {
-			if m.Name == rejectedEventsCountName {
-				t.Errorf("metric %s was recorded, expected none", rejectedEventsCountName)
-			}
-		}
-	}
+	metrics.AssertCounter(t, reader, ScopeName, droppedEventsCountName,
+		metrics.Point(1, observability.DropReason.With(string(ReasonDeadLetterSinkFailed))))
+	metrics.AssertCounter(t, reader, ScopeName, rejectedEventsCountName)
 }
 
 func TestRecordEventSpanRecords(t *testing.T) {
@@ -268,7 +164,7 @@ func TestRecordEventDroppedWithoutActiveSpan(t *testing.T) {
 	span.End()
 
 	r.RecordEventDropped(ctx, ReasonDeadLetterSinkFailed,
-		Labels{Trigger: &types.NamespacedName{Namespace: "test-ns", Name: "test-trigger"}}, makeEvent())
+		Labels{Subscription: &types.NamespacedName{Namespace: "test-ns", Name: "test-subscription"}}, makeEvent())
 
 	spans := exporter.GetSpans()
 	var drop *tracetest.SpanStub
@@ -286,10 +182,10 @@ func TestRecordEventDroppedWithoutActiveSpan(t *testing.T) {
 		attrs[string(kv.Key)] = kv.Value.Emit()
 	}
 	for key, want := range map[string]string{
-		string(observability.DropReason):       string(ReasonDeadLetterSinkFailed),
-		string(observability.TriggerName):      "test-trigger",
-		string(observability.TriggerNamespace): "test-ns",
-		string(observability.CloudEventID):     "test-id",
+		string(observability.DropReason):            string(ReasonDeadLetterSinkFailed),
+		string(observability.SubscriptionName):      "test-subscription",
+		string(observability.SubscriptionNamespace): "test-ns",
+		string(observability.CloudEventID):          "test-id",
 	} {
 		if got := attrs[key]; got != want {
 			t.Errorf("drop span: expected attribute %s=%q, got %q", key, want, got)
@@ -297,26 +193,23 @@ func TestRecordEventDroppedWithoutActiveSpan(t *testing.T) {
 	}
 }
 
-func TestSubscriptionNamespaceOmittedWhenEmpty(t *testing.T) {
-	// The fanout data plane configuration only knows the Subscription's name,
-	// its namespace field carries the Channel's namespace: an empty namespace
-	// must not be emitted as an attribute.
+func TestSubscriptionDropSeriesByNamespace(t *testing.T) {
 	reader := metric.NewManualReader()
 	mp := metric.NewMeterProvider(metric.WithReader(reader))
 	r := NewRecorder(mp, nil)
 
-	r.RecordEventDropped(context.Background(), ReasonDeadLetterSinkFailed, Labels{
-		Subscription: &types.NamespacedName{Name: "test-subscription"},
-	}, nil)
+	for _, ns := range []string{"ns-a", "ns-b", ""} {
+		r.RecordEventDropped(t.Context(), ReasonDeadLetterSinkFailed, Labels{
+			Subscription: &types.NamespacedName{Name: "test-subscription", Namespace: ns},
+		}, nil)
+	}
 
-	assertCounter(t, collect(t, reader), droppedEventsCountName,
-		seriesExpectation{
-			attrs: []attribute.KeyValue{
-				observability.DropReason.With(string(ReasonDeadLetterSinkFailed)),
-				observability.SubscriptionName.With("test-subscription"),
-			},
-			sum: 1,
-		},
+	reason := observability.DropReason.With(string(ReasonDeadLetterSinkFailed))
+	name := observability.SubscriptionName.With("test-subscription")
+	metrics.AssertCounter(t, reader, ScopeName, droppedEventsCountName,
+		metrics.Point(1, reason, name, observability.SubscriptionNamespace.With("ns-a")),
+		metrics.Point(1, reason, name, observability.SubscriptionNamespace.With("ns-b")),
+		metrics.Point(1, reason, name),
 	)
 }
 
@@ -352,7 +245,11 @@ func TestNewRecorderOmitsFailedCounterOnly(t *testing.T) {
 			rec.RecordEventRejected(context.Background(), ReasonTTLMissing, Labels{}, nil)
 
 			sums := map[string]int64{}
-			for _, sm := range collect(t, reader).ScopeMetrics {
+			var rm metricdata.ResourceMetrics
+			if err := reader.Collect(t.Context(), &rm); err != nil {
+				t.Fatal(err)
+			}
+			for _, sm := range rm.ScopeMetrics {
 				for _, m := range sm.Metrics {
 					for _, dp := range m.Data.(metricdata.Sum[int64]).DataPoints {
 						sums[m.Name] += dp.Value

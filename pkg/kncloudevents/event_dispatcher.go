@@ -143,9 +143,8 @@ func WithEventTypeAutoHandler(handler *eventtype.EventTypeAutoHandler, ref *duck
 	}
 }
 
-// WithDropLabels attaches the identities of the objects involved in the
-// delivery (e.g. the Trigger or Subscription) to the event drop telemetry
-// recorded by the Dispatcher, so drops can be attributed to them.
+// WithDropLabels attaches object identities to the Dispatcher's drop telemetry
+// when delivery to the dead letter sink fails.
 func WithDropLabels(labels eventdrop.Labels) SendOption {
 	return func(sc *senderConfig) error {
 		sc.dropLabels = labels

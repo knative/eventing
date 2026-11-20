@@ -375,9 +375,9 @@ func (f *FanoutEventHandler) makeFanoutRequest(ctx context.Context, event event.
 		kncloudevents.WithDeadLetterSink(sub.DeadLetter),
 		kncloudevents.WithRetryConfig(sub.RetryConfig),
 		kncloudevents.WithDropLabels(eventdrop.Labels{
-			// Only the name is passed: sub.Namespace carries the namespace of
-			// the Channel, not of the Subscription itself.
-			Subscription: &types.NamespacedName{Name: sub.Name},
+			// sub.Namespace is the Channel's namespace. It matches the Subscription's
+			// unless CrossNamespaceEventLinks is enabled.
+			Subscription: &types.NamespacedName{Name: sub.Name, Namespace: sub.Namespace},
 		}),
 	}
 

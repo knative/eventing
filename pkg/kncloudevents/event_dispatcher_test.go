@@ -1341,7 +1341,7 @@ func TestSendEventRecordsDroppedEventWhenDLSFails(t *testing.T) {
 		duckv1.Addressable{URL: getOnlyDomainURL(t, true, destServer.URL)},
 		kncloudevents.WithDeadLetterSink(&duckv1.Addressable{URL: getOnlyDomainURL(t, true, deadLetterSinkServer.URL)}),
 		kncloudevents.WithDropLabels(eventdrop.Labels{
-			Trigger: &types.NamespacedName{Namespace: "test-ns", Name: "test-trigger"},
+			Subscription: &types.NamespacedName{Namespace: "test-ns", Name: "test-subscription"},
 		}),
 	)
 	parentSpan.End()
@@ -1353,16 +1353,16 @@ func TestSendEventRecordsDroppedEventWhenDLSFails(t *testing.T) {
 		metricstest.MetricsPresent(eventdrop.ScopeName, "kn.eventing.events.dropped"),
 		metricstest.HasAttributes(eventdrop.ScopeName, "kn.eventing.events.dropped",
 			observability.DropReason.With(string(eventdrop.ReasonDeadLetterSinkFailed)),
-			observability.TriggerName.With("test-trigger"),
-			observability.TriggerNamespace.With("test-ns"),
+			observability.SubscriptionName.With("test-subscription"),
+			observability.SubscriptionNamespace.With("test-ns"),
 		),
 	)
 
 	assertSingleDropSpan(t, exporter, map[string]string{
-		string(observability.DropReason):       string(eventdrop.ReasonDeadLetterSinkFailed),
-		string(observability.TriggerName):      "test-trigger",
-		string(observability.TriggerNamespace): "test-ns",
-		string(observability.CloudEventID):     "test-event-id",
+		string(observability.DropReason):            string(eventdrop.ReasonDeadLetterSinkFailed),
+		string(observability.SubscriptionName):      "test-subscription",
+		string(observability.SubscriptionNamespace): "test-ns",
+		string(observability.CloudEventID):          "test-event-id",
 	})
 }
 

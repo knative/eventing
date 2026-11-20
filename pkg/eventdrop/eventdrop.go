@@ -29,10 +29,12 @@ limitations under the License.
 // e.g. the ingress on TTL exhaustion, hands the final outcome back to its
 // caller, and a Dispatcher counting a drop only knows that its own delivery
 // chain, including the dead letter sink, was exhausted. In nested delivery
-// chains, e.g. a Channel fanning out to a Trigger subscriber, an outer layer
-// may still handle an event which an inner layer dropped, e.g. by delivering
-// it to its own dead letter sink, so a single event may legitimately be
-// counted by several components along its path.
+// chains, an outer layer may still deliver a dropped event to its own dead
+// letter sink, so several components may count the same event along its path.
+//
+// Channel fanout attributes drops to the Subscription. For Trigger-managed
+// Subscriptions, the name (normally <broker>-<trigger>-<uid>) identifies the
+// Trigger indirectly. The Broker filter attributes TTL rejections to the Trigger.
 package eventdrop
 
 import (
@@ -198,9 +200,6 @@ func attributes(reason Reason, labels Labels) []attribute.KeyValue {
 			observability.TriggerNamespace, labels.Trigger.Namespace)
 	}
 	if labels.Subscription != nil {
-		// The data plane configuration only carries the channel namespace,
-		// not the namespace of the Subscription itself, so the namespace is
-		// usually empty here.
 		attrs = appendNamedAttrs(attrs,
 			observability.SubscriptionName, labels.Subscription.Name,
 			observability.SubscriptionNamespace, labels.Subscription.Namespace)
