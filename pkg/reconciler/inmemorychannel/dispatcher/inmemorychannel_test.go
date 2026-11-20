@@ -20,10 +20,14 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"reflect"
 	"testing"
 	"time"
 
+	cloudevents "github.com/cloudevents/sdk-go/v2"
+	"github.com/cloudevents/sdk-go/v2/binding"
+	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"go.opentelemetry.io/otel"
@@ -54,9 +58,12 @@ import (
 	"knative.dev/eventing/pkg/channel/fanout"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/inmemorychannel"
+	"knative.dev/eventing/pkg/eventdrop"
 	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/kncloudevents"
+	"knative.dev/eventing/pkg/observability"
 	. "knative.dev/eventing/pkg/reconciler/testing/v1"
+	testmetrics "knative.dev/eventing/test/lib/metrics"
 
 	v1addr "knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
 )
@@ -761,6 +768,54 @@ func (f *fakeMultiChannelHandler) GetChannelHandler(host string) fanout.EventHan
 
 func (f *fakeMultiChannelHandler) CountChannelHandlers() int {
 	return len(f.handlers)
+}
+
+// SubscriberSpec identifies subscriptions by name and UID. Cross-namespace
+// subscriptions with the same name can both point at this channel.
+func TestCrossNamespaceFanoutDropLabels(t *testing.T) {
+	ctx := feature.ToContext(t.Context(), feature.Flags{feature.CrossNamespaceEventLinks: feature.Enabled})
+	endpoint := httptest.NewServer(http.NotFoundHandler())
+	defer endpoint.Close()
+	url := apis.HTTP(endpoint.Listener.Addr().String())
+
+	imc := &v1.InMemoryChannel{ObjectMeta: metav1.ObjectMeta{Name: "bus", Namespace: "shared"}}
+	imc.Status.Address = &duckv1.Addressable{URL: apis.HTTP("bus.shared")}
+	for _, uid := range []types.UID{"blue-uid", "green-uid"} {
+		imc.Spec.Subscribers = append(imc.Spec.Subscribers, eventingduckv1.SubscriberSpec{
+			Name: ptr.String("orders"), UID: uid, SubscriberURI: url,
+			Delivery: &eventingduckv1.DeliverySpec{DeadLetterSink: &duckv1.Destination{URI: url}},
+		})
+	}
+	cfg, err := newConfigForInMemoryChannel(ctx, imc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reader := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(reader))
+	dispatcher := kncloudevents.NewDispatcher(eventingtls.NewDefaultClientConfig(), nil, kncloudevents.WithMeterProvider(mp))
+	handler, err := fanout.NewFanoutEventHandler(logtesting.TestLogger(t).Desugar(), cfg.FanoutConfig, nil, cfg.ChannelAddressable, nil, dispatcher, mp, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req := httptest.NewRequest(http.MethodPost, "http://bus.shared/", nil)
+	event := cloudevents.NewEvent()
+	event.SetID("drop")
+	event.SetSource("/test")
+	event.SetType("test.event")
+	if err := cehttp.WriteRequest(ctx, binding.ToMessage(&event), req); err != nil {
+		t.Fatal(err)
+	}
+	resp := httptest.NewRecorder()
+	handler.ServeHTTP(resp, req)
+	if resp.Code != http.StatusInternalServerError {
+		t.Fatalf("fanout returned HTTP %d, want 500", resp.Code)
+	}
+	testmetrics.AssertCounter(t, reader, eventdrop.ScopeName, "kn.eventing.events.dropped", testmetrics.Point(2,
+		observability.DropReason.With(string(eventdrop.ReasonDeadLetterSinkFailed)),
+		observability.ChannelName.With(imc.Name),
+		observability.ChannelNamespace.With(imc.Namespace),
+		observability.SubscriptionName.With("orders"),
+	))
 }
 
 func Test_newConfigForInMemoryChannelAsyncHandler(t *testing.T) {

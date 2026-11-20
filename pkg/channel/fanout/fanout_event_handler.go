@@ -372,13 +372,19 @@ func (f *FanoutEventHandler) makeFanoutRequest(ctx context.Context, event event.
 	dispatchOptions := []kncloudevents.SendOption{
 		kncloudevents.WithHeader(additionalHeaders),
 		kncloudevents.WithReply(sub.Reply),
-		kncloudevents.WithDeadLetterSink(sub.DeadLetter),
 		kncloudevents.WithRetryConfig(sub.RetryConfig),
-		kncloudevents.WithDropLabels(eventdrop.Labels{
-			// sub.Namespace is the Channel's namespace. It matches the Subscription's
-			// unless CrossNamespaceEventLinks is enabled.
-			Subscription: &types.NamespacedName{Name: sub.Name, Namespace: sub.Namespace},
-		}),
+	}
+	if sub.DeadLetter != nil {
+		// SubscriberSpec carries the Subscription name and UID. Its namespace
+		// can differ from the Channel's and is unavailable to the fanout.
+		labels := eventdrop.Labels{Subscription: &types.NamespacedName{Name: sub.Name}}
+		if f.channelRef != nil {
+			labels.Channel = &types.NamespacedName{Name: f.channelRef.Name, Namespace: f.channelRef.Namespace}
+		}
+		dispatchOptions = append(dispatchOptions,
+			kncloudevents.WithDeadLetterSink(sub.DeadLetter),
+			kncloudevents.WithDropLabels(labels),
+		)
 	}
 
 	if f.eventTypeHandler != nil && sub.Name != "" && sub.Namespace != "" && sub.UID != types.UID("") {

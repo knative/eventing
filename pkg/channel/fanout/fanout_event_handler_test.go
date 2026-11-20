@@ -369,7 +369,6 @@ func TestFanoutEventHandlerRecordsDropWhenDeadLetterSinkFails(t *testing.T) {
 	}
 	metrics.AssertCounter(t, reader, eventdrop.ScopeName, "kn.eventing.events.dropped", metrics.Point(1,
 		observability.SubscriptionName.With(sub.Name),
-		observability.SubscriptionNamespace.With(sub.Namespace),
 		observability.DropReason.With(string(eventdrop.ReasonDeadLetterSinkFailed)),
 	))
 }

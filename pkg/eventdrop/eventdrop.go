@@ -32,9 +32,9 @@ limitations under the License.
 // chains, an outer layer may still deliver a dropped event to its own dead
 // letter sink, so several components may count the same event along its path.
 //
-// Channel fanout attributes drops to the Subscription. For Trigger-managed
-// Subscriptions, the name (normally <broker>-<trigger>-<uid>) identifies the
-// Trigger indirectly. The Broker filter attributes TTL rejections to the Trigger.
+// Channel fanout reports the configured Channel and the Subscription name.
+// Trigger-managed Subscriptions carry a Trigger owner reference in Kubernetes.
+// The Broker filter attributes TTL rejections directly to the Trigger.
 package eventdrop
 
 import (
@@ -82,6 +82,7 @@ const (
 // Labels identify the objects involved in the drop or rejection. Nil fields
 // are omitted, and so are empty names and namespaces within them.
 type Labels struct {
+	Channel      *types.NamespacedName
 	Broker       *types.NamespacedName
 	Trigger      *types.NamespacedName
 	Subscription *types.NamespacedName
@@ -198,6 +199,11 @@ func attributes(reason Reason, labels Labels) []attribute.KeyValue {
 		attrs = appendNamedAttrs(attrs,
 			observability.TriggerName, labels.Trigger.Name,
 			observability.TriggerNamespace, labels.Trigger.Namespace)
+	}
+	if labels.Channel != nil {
+		attrs = appendNamedAttrs(attrs,
+			observability.ChannelName, labels.Channel.Name,
+			observability.ChannelNamespace, labels.Channel.Namespace)
 	}
 	if labels.Subscription != nil {
 		attrs = appendNamedAttrs(attrs,
