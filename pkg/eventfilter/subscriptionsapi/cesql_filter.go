@@ -65,7 +65,13 @@ func (filter *ceSQLFilter) Filter(ctx context.Context, event cloudevents.Event) 
 		return eventfilter.FailFilter
 	}
 
-	if !res.(bool) {
+	match, ok := res.(bool)
+	if !ok {
+		logger.Debugw("CESQL expression did not evaluate to a boolean.", zap.String("expression", filter.rawExpression), zap.Any("result", res))
+		return eventfilter.FailFilter
+	}
+
+	if !match {
 		logger.Debugw("CESOL match failed.", zap.String("expression", filter.rawExpression), zap.Any("event", event))
 		return eventfilter.FailFilter
 	}
