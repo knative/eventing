@@ -78,7 +78,7 @@ to get the final report.
 
 Diagram below describe the setup:
 
-```
+``````````````````````````````````````
                    K8s cluster                            |     Test machine
                                                           |
 (deployment)        (ksvc)           (deployment)         |
@@ -98,7 +98,7 @@ Diagram below describe the setup:
       `    (default)        +----------+  `               |
       `              (SUT)                `
       `````````````````````````````````````
-```
+``````````````````````````````````````
 
 #### Probe test configuration
 
@@ -129,14 +129,15 @@ Step event traces are stored as `$ARTIFACTS/traces/missed-events/step-<step_numb
 The finished event traces are stored as `$ARTIFACTS/traces/missed-events/finished.json`
 
 Traces can be viewed as follows:
+
 - Start a Zipkin container on localhost:
-   ```
-   $ docker run -d -p 9411:9411 ghcr.io/openzipkin/zipkin:2
-   ```
+  ```
+  $ docker run -d -p 9411:9411 ghcr.io/openzipkin/zipkin:2
+  ```
 - Send traces to the Zipkin endpoint:
-   ```
-   $ curl -v -X POST localhost:9411/api/v2/spans \
-     -H 'Content-Type: application/json' \
-     -d @$ARTIFACTS/traces/missed-events/step-<step_number>.json
-   ```
+  ```
+  $ curl -v -X POST localhost:9411/api/v2/spans \
+    -H 'Content-Type: application/json' \
+    -d @$ARTIFACTS/traces/missed-events/step-<step_number>.json
+  ```
 - View traces in Zipkin UI at `http://localhost:9411/zipkin`

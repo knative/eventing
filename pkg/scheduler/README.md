@@ -1,7 +1,7 @@
 # Knative Eventing Multi-Tenant Scheduler with High-Availability
 
 An eventing source instance (for example, KafkaSource, etc) gets materialized as a virtual pod (*
-*vpod**) and can be scaled up and down by increasing or decreasing the number of virtual pod
+_vpod_*) and can be scaled up and down by increasing or decreasing the number of virtual pod
 replicas (**vreplicas**). A vreplica corresponds to a resource in the source that can replicated for
 maximum distributed processing (for example, number of consumers running in a consumer group).
 
@@ -85,13 +85,13 @@ changes.)
 
 ## References:
 
-* https://kubernetes.io/docs/concepts/scheduling-eviction/scheduling-framework/
-* https://github.com/kubernetes-sigs/descheduler
-* https://kubernetes.io/docs/reference/config-api/kube-scheduler-config.v1/
-* https://github.com/virtual-kubelet/virtual-kubelet#how-it-works
-* https://github.com/kubernetes/enhancements/tree/main/keps/sig-scheduling/624-scheduling-framework
-* https://medium.com/tailwinds-navigator/kubernetes-tip-how-statefulsets-behave-differently-than-deployments-when-node-fails-d29e36bca7d5
-* https://kubernetes.io/docs/concepts/architecture/nodes/#node-controller
+- https://kubernetes.io/docs/concepts/scheduling-eviction/scheduling-framework/
+- https://github.com/kubernetes-sigs/descheduler
+- https://kubernetes.io/docs/reference/config-api/kube-scheduler-config.v1/
+- https://github.com/virtual-kubelet/virtual-kubelet#how-it-works
+- https://github.com/kubernetes/enhancements/tree/main/keps/sig-scheduling/624-scheduling-framework
+- https://medium.com/tailwinds-navigator/kubernetes-tip-how-statefulsets-behave-differently-than-deployments-when-node-fails-d29e36bca7d5
+- https://kubernetes.io/docs/concepts/architecture/nodes/#node-controller
 
 ---
 
