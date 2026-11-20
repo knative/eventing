@@ -40,7 +40,7 @@ spec:
       restartPolicy: OnFailure
       containers:
         - name: migrate
-          image: ko://knative.dev/pkg/apiextensions/storageversion/cmd/migrate
+          image: ko://knative.dev/eventing/cmd/storage-version-migration
           env:
             - name: IGNORE_NOT_FOUND
               value: "true"
