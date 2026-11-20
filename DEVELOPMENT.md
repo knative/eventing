@@ -4,7 +4,7 @@ This doc explains how to setup a development environment so you can get started
 [contributing](https://www.knative.dev/contributing/) to `Knative Eventing`.
 Also take a look at:
 
-- [The pull request workflow](https://knative.dev/docs/community/contributing/)
+- [The pull request workflow](https://github.com/knative/community/blob/main/CONTRIBUTING.md#pull-requests)
 - [Quick full build and install](#quick-full-build-and-install)
 - [How to add and run tests](./test/README.md)
 - [Iterating](#iterating)
