@@ -124,3 +124,37 @@ func TestEventTypeConversionV1Beta3(t *testing.T) {
 		t.Errorf("ConvertFrom(), (-want, +got)\n%s", diff)
 	}
 }
+
+func TestEventTypeConversionV1Beta3DeprecatedBroker(t *testing.T) {
+	in := &EventType{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "my-name",
+			Namespace: "my-ns",
+		},
+		Spec: EventTypeSpec{
+			Type: "t1",
+			// Only the deprecated Broker field is set, Reference is nil.
+			Broker: "my-broker",
+		},
+	}
+
+	wantRef := &duckv1.KReference{
+		Kind:       "Broker",
+		Name:       "my-broker",
+		APIVersion: "eventing.knative.dev/v1",
+	}
+
+	got := &v1beta3.EventType{}
+	if err := in.ConvertTo(context.Background(), got); err != nil {
+		t.Fatalf("ConvertTo() returned unexpected error: %v", err)
+	}
+
+	if diff := cmp.Diff(wantRef, got.Spec.Reference); diff != "" {
+		t.Errorf("ConvertTo() dropped the deprecated Broker reference, (-want, +got)\n%s", diff)
+	}
+
+	// ConvertTo must not mutate the source object.
+	if in.Spec.Reference != nil {
+		t.Errorf("ConvertTo() mutated source.Spec.Reference, got %#v, want nil", in.Spec.Reference)
+	}
+}
