@@ -157,8 +157,6 @@ func main() {
 		logger.Fatal("failed to create dispatch metric", zap.Error(err))
 	}
 
-	handler := otel.NewHandler(h, "receive", mp, tp)
-
 	tlsConfig, err := getServerTLSConfig(ctx)
 	if err != nil {
 		log.Fatal("Failed to get TLS config", err)
@@ -168,8 +166,9 @@ func main() {
 		kncloudevents.NewHTTPEventReceiver(8080),
 		kncloudevents.NewHTTPEventReceiver(8443,
 			kncloudevents.WithTLSConfig(tlsConfig)),
-		handler,
+		h,
 		configMapWatcher,
+		otel.HandlerOptions(mp, tp)...,
 	)
 	if err != nil {
 		logger.Fatal("failed to start eventingtls server", zap.Error(err))

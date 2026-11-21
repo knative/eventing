@@ -51,8 +51,18 @@ func NewServerManager(
 	httpReceiver := kncloudevents.NewHTTPEventReceiver(httpPort)
 	httpsReceiver := kncloudevents.NewHTTPEventReceiver(httpsPort, kncloudevents.WithTLSConfig(tlsConfig))
 
-	otelHandler := otel.NewHandler(handler, "broker.ingress", meterProvider, traceProvider)
-	return eventingtls.NewServerManager(ctx, httpReceiver, httpsReceiver, otelHandler, cmw)
+	return newServerManager(ctx, cmw, httpReceiver, httpsReceiver, meterProvider, traceProvider, handler)
+}
+
+func newServerManager(
+	ctx context.Context,
+	cmw configmap.Watcher,
+	httpReceiver, httpsReceiver eventingtls.Receiver,
+	meterProvider metric.MeterProvider,
+	traceProvider trace.TracerProvider,
+	handler *Handler,
+) (*eventingtls.ServerManager, error) {
+	return eventingtls.NewServerManager(ctx, httpReceiver, httpsReceiver, handler, cmw, otel.HandlerOptions(meterProvider, traceProvider)...)
 }
 
 func getServerTLSConfig(ctx context.Context) (*tls.Config, error) {

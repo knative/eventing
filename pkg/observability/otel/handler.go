@@ -23,34 +23,17 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
-
-	"knative.dev/pkg/network"
-	"knative.dev/pkg/observability/tracing"
 )
 
-func NewHandler(handler http.Handler, operation string, meterProvider metric.MeterProvider, traceProvider trace.TracerProvider, opts ...otelhttp.Option) http.Handler {
-	opts = append(
-		[]otelhttp.Option{
-			otelhttp.WithMeterProvider(meterProvider),
-			otelhttp.WithTracerProvider(traceProvider),
-			otelhttp.WithFilter(func(r *http.Request) bool {
-				return !network.IsKubeletProbe(r)
-			}),
-			otelhttp.WithPropagators(tracing.DefaultTextMapPropagator()),
-			otelhttp.WithSpanNameFormatter(func(operation string, r *http.Request) string {
-				if r.URL.Path == "" {
-					return r.Method + " /"
-				}
-				return fmt.Sprintf("%s %s", r.Method, r.URL.Path)
-			}),
-		},
-		opts...,
-	)
-	newHandler := otelhttp.NewHandler(
-		handler,
-		operation,
-		opts...,
-	)
-
-	return newHandler
+func HandlerOptions(meterProvider metric.MeterProvider, traceProvider trace.TracerProvider) []otelhttp.Option {
+	return []otelhttp.Option{
+		otelhttp.WithMeterProvider(meterProvider),
+		otelhttp.WithTracerProvider(traceProvider),
+		otelhttp.WithSpanNameFormatter(func(operation string, r *http.Request) string {
+			if r.URL.Path == "" {
+				return r.Method + " /"
+			}
+			return fmt.Sprintf("%s %s", r.Method, r.URL.Path)
+		}),
+	}
 }
