@@ -75,7 +75,7 @@ jobs:
       uses: actions/checkout@v7
 
     - name: Install KinD
-      uses: chainguard-dev/actions/setup-kind@53668650c25af6e8864f1d1ddaa69ed4db4cdf09 # v1.6.42
+      uses: chainguard-dev/actions/setup-kind@8f31e9482b447ff2c69eca944a09b4b31a4a85d0 # v1.7.2
       with:
         k8s-version: ${{ matrix.k8s-version }}
         kind-worker-count: 1
@@ -155,7 +155,7 @@ jobs:
         fi
 
     - name: Post failure notice to Slack
-      uses: rtCamp/action-slack-notify@v2.4.0
+      uses: rtCamp/action-slack-notify@v2.4.1
       if: ${{ failure() && github.event_name != 'pull_request' }}
       env:
         SLACK_ICON: https://github.com/knative.png?size=48
