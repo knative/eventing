@@ -27,8 +27,10 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/google/go-cmp/cmp"
@@ -502,4 +504,93 @@ func callableSucceed(writer http.ResponseWriter, _ *http.Request) {
 	writer.Header().Set("Content-Type", cloudevents.ApplicationJSON)
 	writer.WriteHeader(http.StatusOK)
 	_, _ = writer.Write([]byte("{}"))
+}
+
+func TestFanoutEventHandlerDispatchDurationWithDeadLetterSink(t *testing.T) {
+	testCases := map[string]struct {
+		deadLetterStatus int
+		expectedStatus   int
+	}{
+		"dead letter sink accepts the event": {
+			deadLetterStatus: http.StatusAccepted,
+			expectedStatus:   http.StatusAccepted,
+		},
+		"dead letter sink fails": {
+			deadLetterStatus: http.StatusInternalServerError,
+			expectedStatus:   http.StatusInternalServerError,
+		},
+	}
+	for n, tc := range testCases {
+		t.Run(n, func(t *testing.T) {
+			const subscriberDelay = 100 * time.Millisecond
+			subscriber := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				time.Sleep(subscriberDelay)
+				w.WriteHeader(http.StatusServiceUnavailable)
+			}))
+			defer subscriber.Close()
+			deadLetterSink := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(tc.deadLetterStatus)
+			}))
+			defer deadLetterSink.Close()
+
+			reader := metric.NewManualReader()
+			mp := metric.NewMeterProvider(metric.WithReader(reader))
+			dispatcher := kncloudevents.NewDispatcher(eventingtls.NewDefaultClientConfig(), nil)
+			sub := Subscription{
+				Name:       "test-subscription",
+				Namespace:  "channelnamespace",
+				Subscriber: duckv1.Addressable{URL: apis.HTTP(subscriber.Listener.Addr().String())},
+				DeadLetter: &duckv1.Addressable{URL: apis.HTTP(deadLetterSink.Listener.Addr().String())},
+			}
+			h, err := NewFanoutEventHandler(zap.NewNop(), Config{Subscriptions: []Subscription{sub}}, nil, nil, nil, dispatcher, mp, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			req := httptest.NewRequest(http.MethodPost, "http://channelname.channelnamespace/", nil)
+			event := makeCloudEvent()
+			if err := bindingshttp.WriteRequest(context.Background(), binding.ToMessage(&event), req); err != nil {
+				t.Fatal(err)
+			}
+			resp := httptest.NewRecorder()
+			h.ServeHTTP(resp, req)
+			if resp.Code != tc.expectedStatus {
+				t.Fatalf("Unexpected status code. Expected %v, Actual %v", tc.expectedStatus, resp.Code)
+			}
+
+			var points []metricdata.HistogramDataPoint[float64]
+			for start := time.Now(); len(points) == 0 && time.Since(start) < 5*time.Second; time.Sleep(10 * time.Millisecond) {
+				points = dispatchDurationPoints(t, reader)
+			}
+			if len(points) != 1 {
+				t.Fatalf("Expected 1 dispatch duration series, got %d", len(points))
+			}
+			status, _ := points[0].Attributes.Value(semconv.HTTPResponseStatusCodeKey)
+			if status.AsInt64() != http.StatusServiceUnavailable {
+				t.Errorf("Unexpected status code in the dispatch duration. Expected %v, Actual %v", http.StatusServiceUnavailable, status.AsInt64())
+			}
+			if points[0].Count != 1 || points[0].Sum < subscriberDelay.Seconds() {
+				t.Errorf("Expected 1 dispatch lasting at least %v, got %d lasting %vs", subscriberDelay, points[0].Count, points[0].Sum)
+			}
+		})
+	}
+}
+
+func dispatchDurationPoints(t *testing.T, reader *metric.ManualReader) []metricdata.HistogramDataPoint[float64] {
+	t.Helper()
+	var rm metricdata.ResourceMetrics
+	if err := reader.Collect(context.Background(), &rm); err != nil {
+		t.Fatal(err)
+	}
+	for _, sm := range rm.ScopeMetrics {
+		if sm.Scope.Name != ScopeName {
+			continue
+		}
+		for _, m := range sm.Metrics {
+			if m.Name == "kn.eventing.dispatch.duration" {
+				return m.Data.(metricdata.Histogram[float64]).DataPoints
+			}
+		}
+	}
+	return nil
 }

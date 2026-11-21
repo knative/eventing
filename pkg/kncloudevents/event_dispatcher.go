@@ -283,7 +283,7 @@ func (d *Dispatcher) send(ctx context.Context, message binding.Message, destinat
 		// If DeadLetter is configured, then send original message with knative error extensions
 		if config.deadLetterSink != nil {
 			dispatchTransformers := dispatchExecutionInfoTransformers(destination.URL, dispatchExecutionInfo)
-			_, deadLetterResponse, dispatchExecutionInfo, deadLetterErr := d.executeRequest(
+			_, deadLetterResponse, _, deadLetterErr := d.executeRequest(
 				ctx,
 				*config.deadLetterSink,
 				message,
@@ -347,7 +347,7 @@ func (d *Dispatcher) send(ctx context.Context, message binding.Message, destinat
 		// If DeadLetter is configured, then send original message with knative error extensions
 		if config.deadLetterSink != nil {
 			dispatchTransformers := dispatchExecutionInfoTransformers(config.reply.URL, dispatchExecutionInfo)
-			_, deadLetterResponse, dispatchExecutionInfo, deadLetterErr := d.executeRequest(
+			_, deadLetterResponse, _, deadLetterErr := d.executeRequest(
 				ctx,
 				*config.deadLetterSink,
 				message,
