@@ -180,3 +180,45 @@ func TestWithBrokerLabels(t *testing.T) {
 		})
 	}
 }
+
+func TestWithClientLabels(t *testing.T) {
+	tt := map[string]struct {
+		initialLabels []attribute.KeyValue
+		want          []attribute.KeyValue
+	}{
+		"labels set properly": {
+			want: []attribute.KeyValue{
+				SourceName.With("source"),
+			},
+		},
+		"other labels not clobbered": {
+			initialLabels: []attribute.KeyValue{
+				attributekey.Int("example.value").With(42),
+			},
+			want: []attribute.KeyValue{
+				attributekey.Int("example.value").With(42),
+				SourceName.With("source"),
+			},
+		},
+	}
+
+	for tName, tCase := range tt {
+		t.Run(tName, func(t *testing.T) {
+			ctx := context.Background()
+			if tCase.initialLabels != nil {
+				labeler := &otelhttp.Labeler{}
+				labeler.Add(tCase.initialLabels...)
+				ctx = otelhttp.ContextWithClientLabeler(ctx, labeler)
+			}
+
+			ctx = WithClientLabels(ctx, SourceName.With("source"))
+
+			labeler, ok := otelhttp.ClientLabelerFromContext(ctx)
+			assert.True(t, ok, "client labeler should be set on the context")
+			assert.ElementsMatch(t, tCase.want, labeler.Get())
+
+			_, ok = otelhttp.LabelerFromContext(ctx)
+			assert.False(t, ok, "server labeler should not be set on the context")
+		})
+	}
+}

@@ -44,6 +44,17 @@ func MessagingLabels(destination, operation string) []attribute.KeyValue {
 	}
 }
 
+func WithClientLabels(ctx context.Context, attrs ...attribute.KeyValue) context.Context {
+	labeler, ok := otelhttp.ClientLabelerFromContext(ctx)
+	if !ok {
+		ctx = otelhttp.ContextWithClientLabeler(ctx, labeler)
+	}
+
+	labeler.Add(attrs...)
+
+	return ctx
+}
+
 func WithMessagingLabels(ctx context.Context, destination, operation string) context.Context {
 	labeler, ok := otelhttp.LabelerFromContext(ctx)
 	if !ok {

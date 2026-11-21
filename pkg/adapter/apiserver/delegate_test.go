@@ -13,16 +13,27 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package apiserver
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
+	cloudevents "github.com/cloudevents/sdk-go/v2"
+	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.uber.org/zap"
+	"knative.dev/pkg/observability/metrics/metricstest"
+
+	adapter "knative.dev/eventing/pkg/adapter/v2"
 	adaptertest "knative.dev/eventing/pkg/adapter/v2/test"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/pkg/apis/sources"
 	"knative.dev/eventing/pkg/eventfilter/subscriptionsapi"
+	"knative.dev/eventing/pkg/observability"
 )
 
 func TestResourceAddEvent(t *testing.T) {
@@ -59,6 +70,35 @@ func TestResourceDeleteEventNil(t *testing.T) {
 	d, ce := makeResourceAndTestingClient()
 	d.Delete(nil)
 	validateNotSent(t, ce, sources.ApiServerSourceDeleteEventType)
+}
+
+func TestResourceEventClientMetricsHaveSourceLabels(t *testing.T) {
+	sink := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusAccepted)
+	}))
+	defer sink.Close()
+
+	reader := sdkmetric.NewManualReader()
+	ce, err := adapter.NewClient(adapter.ClientConfig{
+		MeterProvider: sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader)),
+		Options:       []cehttp.Option{cloudevents.WithTarget(sink.URL)},
+	})
+	if err != nil {
+		t.Fatal("Failed to create client:", err)
+	}
+
+	d, _ := makeResourceAndTestingClient()
+	d.ce = ce
+	d.apiServerSourceNS = "test-ns"
+	d.Add(simplePod("unit", "test"))
+
+	metricstest.AssertMetrics(t, reader,
+		metricstest.HasAttributes(otelhttp.ScopeName, "http.client.request.duration",
+			observability.SourceName.With(apiServerSourceNameTest),
+			observability.SourceNamespace.With("test-ns"),
+			observability.CloudEventType.With(sources.ApiServerSourceAddEventType),
+		),
+	)
 }
 
 // HACKHACKHACK For test coverage.
