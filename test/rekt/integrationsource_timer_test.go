@@ -49,7 +49,7 @@ func TestIntegrationSourceTimerWithSinkRef(t *testing.T) {
 	env.Test(ctx, t, integrationsource.SendsEventsWithSinkRef(integrationsourceresource.SourceTypeTimer))
 }
 
-func TestIntegrationSourceTimerWithTLS(t *testing.T) {
+func TestIntegrationSourceTimerTLSAndOIDC(t *testing.T) {
 	t.Parallel()
 
 	ctx, env := global.Environment(
@@ -61,23 +61,16 @@ func TestIntegrationSourceTimerWithTLS(t *testing.T) {
 		eventshub.WithTLS(t),
 		environment.WithPollTimings(5*time.Second, 4*time.Minute),
 	)
+	t.Cleanup(env.Finish)
 
-	env.ParallelTest(ctx, t, integrationsource.SendEventsWithTLSReceiverAsSink(integrationsourceresource.SourceTypeTimer))
-	env.ParallelTest(ctx, t, integrationsource.SendEventsWithTLSReceiverAsSinkTrustBundle(integrationsourceresource.SourceTypeTimer))
-}
+	t.Run("TLS", func(t *testing.T) {
+		t.Parallel()
+		env.ParallelTest(ctx, t, integrationsource.SendEventsWithTLSReceiverAsSink(integrationsourceresource.SourceTypeTimer))
+		env.ParallelTest(ctx, t, integrationsource.SendEventsWithTLSReceiverAsSinkTrustBundle(integrationsourceresource.SourceTypeTimer))
+	})
 
-func TestIntegrationSourceTimerSendsEventsWithOIDC(t *testing.T) {
-	t.Parallel()
-
-	ctx, env := global.Environment(
-		knative.WithKnativeNamespace(system.Namespace()),
-		knative.WithLoggingConfig,
-		knative.WithObservabilityConfig,
-		k8s.WithEventListener,
-		environment.Managed(t),
-		eventshub.WithTLS(t),
-		environment.WithPollTimings(5*time.Second, 4*time.Minute),
-	)
-
-	env.Test(ctx, t, integrationsource.SendsEventsWithSinkRefOIDC(integrationsourceresource.SourceTypeTimer))
+	t.Run("OIDC", func(t *testing.T) {
+		t.Parallel()
+		env.Test(ctx, t, integrationsource.SendsEventsWithSinkRefOIDC(integrationsourceresource.SourceTypeTimer))
+	})
 }
