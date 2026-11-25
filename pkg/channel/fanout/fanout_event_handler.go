@@ -32,6 +32,7 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
@@ -312,21 +313,10 @@ func (f *FanoutEventHandler) dispatch(ctx context.Context, subs []Subscription, 
 			h := additionalHeaders.Clone()
 			h.Set(apis.KnNamespaceHeader, s.Namespace)
 
-			dispatchedResultPerSub, err := f.makeFanoutRequest(ctx, event, h, s)
-			r := DispatchResult{err: err, info: dispatchedResultPerSub}
-			results <- r
+			info, err := f.makeFanoutRequest(ctx, event, h, s)
+			results <- DispatchResult{err: err, info: info}
 
-			ctxWithStatus := observability.WithHTTPStatusCodeLabel(ctx, dispatchedResultPerSub.ResponseCode)
-			labeler, _ := otelhttp.LabelerFromContext(ctxWithStatus)
-			labels := append(
-				observability.MessagingLabels(
-					tracing.SubscriptionMessagingDestination(types.NamespacedName{Name: s.Name, Namespace: s.Namespace}),
-					"send",
-				),
-				labeler.Get()...,
-			)
-			f.dispatchDuration.Record(ctxWithStatus, dispatchedResultPerSub.Duration.Seconds(), metric.WithAttributes(labels...))
-
+			f.recordDispatchDuration(ctx, s, info)
 		}(sub)
 	}
 
@@ -363,6 +353,21 @@ func (f *FanoutEventHandler) dispatch(ctx context.Context, subs []Subscription, 
 	}
 	// All Subscriptions returned err = nil.
 	return dispatchResultForFanout
+}
+
+func (f *FanoutEventHandler) recordDispatchDuration(ctx context.Context, sub Subscription, info *kncloudevents.DispatchInfo) {
+	if info == nil || info.Duration == kncloudevents.NoDuration {
+		return
+	}
+
+	labeler, _ := otelhttp.LabelerFromContext(ctx)
+	labels := observability.MessagingLabels(
+		tracing.SubscriptionMessagingDestination(types.NamespacedName{Name: sub.Name, Namespace: sub.Namespace}),
+		"send",
+	)
+	labels = append(labels, labeler.Get()...)
+	labels = append(labels, semconv.HTTPResponseStatusCode(info.ResponseCode))
+	f.dispatchDuration.Record(ctx, info.Duration.Seconds(), metric.WithAttributes(labels...))
 }
 
 // makeFanoutRequest sends the request to exactly one subscription. It handles both the `call` and
