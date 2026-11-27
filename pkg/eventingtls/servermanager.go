@@ -41,13 +41,14 @@ type ServerManager struct {
 	handler       http.Handler
 	cmw           configmap.Watcher
 	featureStore  *feature.Store
+	otelOpts      []otelhttp.Option
 }
 
 type Receiver interface {
 	StartListen(context.Context, http.Handler, ...otelhttp.Option) error
 }
 
-func NewServerManager(ctx context.Context, httpReceiver, httpsReceiver Receiver, handler http.Handler, cmw configmap.Watcher) (*ServerManager, error) {
+func NewServerManager(ctx context.Context, httpReceiver, httpsReceiver Receiver, handler http.Handler, cmw configmap.Watcher, otelOpts ...otelhttp.Option) (*ServerManager, error) {
 	if httpReceiver == nil || httpsReceiver == nil {
 		return nil, fmt.Errorf("message receiver not provided")
 	}
@@ -61,6 +62,7 @@ func NewServerManager(ctx context.Context, httpReceiver, httpsReceiver Receiver,
 		handler:       handler,
 		cmw:           cmw,
 		featureStore:  featureStore,
+		otelOpts:      otelOpts,
 	}, nil
 }
 
@@ -72,13 +74,13 @@ func (s *ServerManager) StartServers(ctx context.Context) error {
 	defer cancel()
 
 	go func() {
-		if err := s.httpReceiver.StartListen(ctx, s.httpHandler()); err != nil {
+		if err := s.httpReceiver.StartListen(ctx, s.httpHandler(), s.otelOpts...); err != nil {
 			errCh <- err
 		}
 	}()
 
 	go func() {
-		if err := s.httpsReceiver.StartListen(ctx, s.httpsHandler()); err != nil {
+		if err := s.httpsReceiver.StartListen(ctx, s.httpsHandler(), s.otelOpts...); err != nil {
 			errCh <- err
 		}
 	}()

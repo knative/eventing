@@ -23,6 +23,9 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -102,6 +105,51 @@ func TestStartServers(t *testing.T) {
 			assert.NoError(t, <-errChan)
 		})
 	}
+}
+
+func TestStartServersPassesOTelOptionsToReceivers(t *testing.T) {
+	ctx, cancelFunc := context.WithCancel(context.TODO())
+	httpReceiver := kncloudevents.NewHTTPEventReceiver(0, kncloudevents.WithDrainQuietPeriod(time.Millisecond))
+	httpsReceiver := kncloudevents.NewHTTPEventReceiver(0, kncloudevents.WithDrainQuietPeriod(time.Millisecond))
+	errChan := make(chan error)
+
+	reader := sdkmetric.NewManualReader()
+	mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+	cmw := newFeatureCMW(feature.Permissive)
+	sm, err := eventingtls.NewServerManager(ctx, httpReceiver, httpsReceiver, &basicHandler{}, cmw, otelhttp.WithMeterProvider(mp))
+	assert.NoError(t, err)
+	go func() {
+		errChan <- sm.StartServers(ctx)
+	}()
+
+	<-httpReceiver.Ready
+	<-httpsReceiver.Ready
+
+	for _, addr := range []string{httpReceiver.GetAddr(), httpsReceiver.GetAddr()} {
+		resp, err := http.Get("http://" + addr)
+		assert.NoError(t, err)
+		resp.Body.Close()
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+	}
+
+	cancelFunc()
+	assert.NoError(t, <-errChan)
+
+	var rm metricdata.ResourceMetrics
+	assert.NoError(t, reader.Collect(context.Background(), &rm))
+
+	var requests uint64
+	for _, scope := range rm.ScopeMetrics {
+		for _, m := range scope.Metrics {
+			if data, ok := m.Data.(metricdata.Histogram[float64]); ok && m.Name == "http.server.request.duration" {
+				for _, dp := range data.DataPoints {
+					requests += dp.Count
+				}
+			}
+		}
+	}
+	assert.Equal(t, uint64(2), requests, "both receivers should record their request with the given meter provider")
 }
 
 func TestStartServersHttpError(t *testing.T) {
