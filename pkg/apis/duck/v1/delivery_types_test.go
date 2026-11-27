@@ -84,6 +84,13 @@ func TestDeliverySpecValidation(t *testing.T) {
 			return apis.ErrInvalidValue("PT0S", "timeout")
 		}(),
 	}, {
+		name: "negative timeout",
+		spec: &DeliverySpec{Timeout: pointer.String("-PT10S")},
+		ctx:  deliveryTimeoutEnabledCtx,
+		want: func() *apis.FieldError {
+			return apis.ErrInvalidValue("-PT10S", "timeout")
+		}(),
+	}, {
 		name: "disabled timeout",
 		spec: &DeliverySpec{Timeout: &validDuration},
 		want: apis.ErrDisallowedFields("timeout"),
@@ -101,6 +108,14 @@ func TestDeliverySpecValidation(t *testing.T) {
 		want: func() *apis.FieldError {
 			return apis.ErrInvalidValue(invalidDuration, "backoffDelay")
 		}(),
+	}, {
+		name: "zero backoffDelay",
+		spec: &DeliverySpec{BackoffDelay: pointer.String("PT0S")},
+		want: nil,
+	}, {
+		name: "negative backoffDelay",
+		spec: &DeliverySpec{BackoffDelay: pointer.String("-PT1S")},
+		want: apis.ErrInvalidValue("-PT1S", "backoffDelay"),
 	}, {
 		name: "negative retry",
 		spec: &DeliverySpec{Retry: pointer.Int32(-1)},
