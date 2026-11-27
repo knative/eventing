@@ -674,15 +674,21 @@ func dispatchDurationPoints(t *testing.T, reader *metric.ManualReader) []metricd
 	if err := reader.Collect(context.Background(), &rm); err != nil {
 		t.Fatal(err)
 	}
+	var points []metricdata.HistogramDataPoint[float64]
 	for _, sm := range rm.ScopeMetrics {
 		if sm.Scope.Name != ScopeName {
 			continue
 		}
 		for _, m := range sm.Metrics {
-			if m.Name == "kn.eventing.dispatch.duration" {
-				return m.Data.(metricdata.Histogram[float64]).DataPoints
+			if m.Name != "kn.eventing.dispatch.duration" {
+				continue
+			}
+			for _, point := range m.Data.(metricdata.Histogram[float64]).DataPoints {
+				if point.Count > 0 {
+					points = append(points, point)
+				}
 			}
 		}
 	}
-	return nil
+	return points
 }
