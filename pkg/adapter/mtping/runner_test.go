@@ -32,6 +32,8 @@ import (
 	"github.com/cloudevents/sdk-go/v2/binding"
 	bindingshttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/pointer"
@@ -41,11 +43,13 @@ import (
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	_ "knative.dev/pkg/client/injection/kube/client/fake"
 	"knative.dev/pkg/logging"
+	"knative.dev/pkg/observability/metrics/metricstest"
 	rectesting "knative.dev/pkg/reconciler/testing"
 
 	"knative.dev/eventing/pkg/adapter/v2"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/eventing/pkg/eventingtls/eventingtlstesting"
+	"knative.dev/eventing/pkg/observability"
 )
 
 const (
@@ -307,6 +311,69 @@ func TestSendEventsTLS(t *testing.T) {
 
 	require.Equal(t, sourcesv1.PingSourceEventType, event.Type())
 	require.Equal(t, sourcesv1.PingSourceSource("test-ns", "test-name1"), event.Source())
+}
+
+func TestCronTickClientMetricsHaveSourceLabels(t *testing.T) {
+	ctx, _ := rectesting.SetupFakeContext(t)
+	logger := logging.FromContext(ctx)
+
+	h, events := eventsAccumulator()
+	s := httptest.NewServer(h)
+	defer s.Close()
+	sinkURI, _ := apis.ParseURL(s.URL)
+
+	src := &sourcesv1.PingSource{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-name",
+			Namespace: "test-ns",
+		},
+		Spec: sourcesv1.PingSourceSpec{
+			Schedule: "* * * * ?",
+			Data:     sampleData,
+		},
+		Status: sourcesv1.PingSourceStatus{
+			SourceStatus: duckv1.SourceStatus{
+				SinkURI: sinkURI,
+			},
+		},
+	}
+	event, err := makeEvent(src)
+	require.NoError(t, err)
+
+	reader := sdkmetric.NewManualReader()
+	client, err := adapter.NewClient(adapter.ClientConfig{
+		MeterProvider: sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader)),
+	})
+	require.NoError(t, err)
+
+	counting := &clientLabelCountingClient{Client: client}
+
+	runner := NewCronJobsRunner(adapter.ClientConfig{}, kubeclient.Get(ctx), logger)
+	tick := runner.cronTick(cloudevents.ContextWithTarget(context.Background(), sinkURI.String()), counting, src, event)
+	tick()
+	tick()
+	s.Close()
+
+	require.Len(t, *events, 2)
+	metricstest.AssertMetrics(t, reader,
+		metricstest.HasAttributes(otelhttp.ScopeName, "http.client.request.duration",
+			observability.SourceName.With("test-name"),
+			observability.SourceNamespace.With("test-ns"),
+			observability.CloudEventType.With(sourcesv1.PingSourceEventType),
+		),
+	)
+	require.Equal(t, []int{3, 3}, counting.counts)
+}
+
+type clientLabelCountingClient struct {
+	adapter.Client
+	counts []int
+}
+
+func (c *clientLabelCountingClient) Send(ctx context.Context, event cloudevents.Event) cloudevents.Result {
+	labeler, _ := otelhttp.ClientLabelerFromContext(ctx)
+	c.counts = append(c.counts, len(labeler.Get()))
+	return c.Client.Send(ctx, event)
 }
 
 func TestStartStopCron(t *testing.T) {
